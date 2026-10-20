@@ -1,4 +1,3 @@
-using Campus.Kernel.Boot;
 using Godot;
 
 namespace Campus.Kernel.Frame;

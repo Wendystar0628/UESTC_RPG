@@ -77,7 +77,7 @@ internal static class StraightFlight
 /// Collision: the WP-51a RampCollider (26–34°, top flush, bottom buried 0.2 m, StairSpec) and a SlopedWallCollider on
 /// every open side whose top is 1.5 m over the nosings.
 /// </summary>
-[Part(PartCatalog.StairStraight, Owner = "WP-11")]
+[Part(PartCatalog.StairStraight)]
 public sealed class StairStraightPart() : CirculationPart<StairParams>(new(660, 500))
 {
     private static Sides SidesOf(int variation) => variation switch
@@ -98,7 +98,7 @@ public sealed class StairStraightPart() : CirculationPart<StairParams>(new(660, 
 /// Open straight flight for atria and stair halls (WLD-INTERIORS "宽梯井"): both sides carry a stringer, balusters
 /// and handrail, and both sides get a SlopedWallCollider. Parameters as <see cref="StairStraightPart"/>.
 /// </summary>
-[Part(PartCatalog.StairOpen, Owner = "WP-11")]
+[Part(PartCatalog.StairOpen)]
 public sealed class StairOpenPart() : CirculationPart<StairParams>(new(860, 660))
 {
     private static readonly Sides Open = new(true, true);
@@ -117,7 +117,7 @@ public sealed class StairOpenPart() : CirculationPart<StairParams>(new(860, 660)
 /// Collision equals WP-51a's: two RampColliders, the landing SlabCollider and a full wall in the well from the lower
 /// floor to 1.5 m above the upper floor.
 /// </summary>
-[Part(PartCatalog.StairDouble, Owner = "WP-11")]
+[Part(PartCatalog.StairDouble)]
 public sealed class StairDoublePart() : CirculationPart<StairParams>(new(1200, 900))
 {
     private readonly record struct Layout(float W, float H, float D, float FlightWidth, float Landing, Flight Flight, float Mirror)

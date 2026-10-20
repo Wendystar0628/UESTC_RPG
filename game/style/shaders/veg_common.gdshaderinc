@@ -329,11 +329,6 @@ float veg_winter_far(vec3 cam, vec3 origin, VegInst inst) {
 // 远池替身由 MotherModels.FarStandIn 出模型，顶点里带记号：木质 CUSTOM2.w = 1，团块 CUSTOM2.w = −2。
 // 林下地被（Understorey 的 GroundPlant，INSTANCE_CUSTOM 外观变体位 1）没有远池，在绘制距离前抖动淡出，不在 100 m 上硬切。
 // 距离乘细节系数 quality.x（WLD-VEGETATION）。阴影通道不做（投影代理只在近池，抖动的影子会碎）。
-const vec2 VEG_POOL_FADE = vec2(135.0, 165.0);   // 近池 ↔ 远池替身的过渡带（m）；= VegFade.NearFadeStart/End
-const bool VEG_CLOUD_READY = false;              // 树冠云（L3，并入格子几何）还没有：替身一直画到远处，不淡出
-const vec2 VEG_CLOUD_FADE = vec2(360.0, 440.0);  // 替身 ↔ 树冠云的过渡带（m）；= VegFade.CloudFadeStart/End
-const vec2 VEG_UNDER_FADE = vec2(85.0, 100.0);   // 林下地被的淡出带（m），终点 = Understorey.DrawDistance
-const int VEG_VARIANT_UNDER = 2;                 // 外观变体位 1：林下地被（Understorey.UnderVariantBit）
 
 // cam 是主相机位置（vertex() 里的 MAIN_CAM_INV_VIEW_MATRIX[3].xyz）。编码成一个 flat 值：[0, 1] 近池（丢 b < v），[2, 3] 远池淡入（丢 b ≥ v − 2），[4, 5] 远池淡出（丢 b < v − 4）
 float veg_pool_code(vec3 cam, vec3 origin, VegInst inst, bool far_pool, bool shadow_pass) {

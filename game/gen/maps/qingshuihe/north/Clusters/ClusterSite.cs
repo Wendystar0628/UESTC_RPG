@@ -37,15 +37,6 @@ public sealed class ClusterSite(NorthTune.Cluster cluster) : ZoneSite
         gate.Frame.Rect(MathF.Min(gate.SpanMinus, -gate.LaneHalf - G.PierSize), -G.HouseDepth - G.HouseEave,
             MathF.Max(gate.SpanPlus, gate.Main ? gate.HouseEnd : gate.BankEnd + G.PierSize), G.HouseOut + G.HouseEave), G.HouseEave);
 
-    /// <summary>Q1 (walk, K1) outside the open main gate and Q6 (45° down, K2–K3) over its courtyard.</summary>
-    public override IReadOnlyList<InspectionProbe> Probes => Cluster.Key == NorthTune.Probes.OpenCluster
-        ?
-        [
-            Probe("Q1", Cluster.Id, NorthTune.Probes.GateEye, NorthTune.Probes.GateLook, 3f, 1f),
-            Probe("Q6", Cluster.Id, NorthTune.Probes.CourtEye, NorthTune.Probes.CourtLook, -45f, 40f),
-        ]
-        : [];
-
     public override void Build(SiteBuilder b)
     {
         if (ClusterLayout.Of(b.Context, Cluster) is not { } layout) return;

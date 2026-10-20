@@ -34,6 +34,7 @@ public sealed class VegetationContextTests
         var map = MapWorldLoading.CreateContext(fixture.Input.Entry, loaded, fixture.Input.SourceInputs);
         var prepared = new BuildContext
         {
+            CodeHash = "fixture", WindowNumbering = new((map.Descriptor).Id, new string('0', 64), []),
             World = map.World,
             Map = map.Descriptor,
             WorldSeed = map.Descriptor.Seed,
@@ -51,10 +52,10 @@ public sealed class VegetationContextTests
         AssertThat(ReferenceEquals(context.SourceInputs, fixture.Input.SourceInputs.Entries) &&
             context.SourceInputs.Keys.Any(path => path.Equals("world/center-east.json", StringComparison.Ordinal)) &&
             context.SourceInputs.ContainsKey("vegetation/planting.json")).OverrideFailureMessage("The prepared source lost the frozen input version.").IsTrue();
-        var (feature, aspect, owner) = fixture.Claims.Sources.Where(s => !s.Global)
-            .SelectMany(s => s.Claims.OfType<FeatureClaim>().Select(c => (c.Feature, Aspect: Lowest(c.Aspects), s.Owner)))
+        var (feature, aspect, module) = fixture.Claims.Sources.Where(s => !s.Global)
+            .SelectMany(s => s.Claims.OfType<FeatureClaim>().Select(c => (c.Feature, Aspect: Lowest(c.Aspects), s.Module)))
             .First(c => context.World.Features.ContainsKey(c.Feature));
-        AssertThat(context.ClaimedBy(feature, aspect) == owner).OverrideFailureMessage("The prepared source lost registered claims.").IsTrue();
+        AssertThat(context.ClaimedBy(feature, aspect) == module).OverrideFailureMessage("The prepared source lost registered claims.").IsTrue();
         AssertThat(ReferenceEquals(context, prepared) && source.Module == Module && ReferenceEquals(source.Context, map)).OverrideFailureMessage("Prepared context identity or source query changed.").IsTrue();
     }
 
@@ -83,12 +84,13 @@ public sealed class VegetationContextTests
         var palette = Palette();
         var prepared = new BuildContext
         {
+            WindowNumbering = new((map.Descriptor).Id, new string('0', 64), []),
             Catalog = Campus.Contracts.Tests.PaletteFixture.Catalog,
             World = map.World,
             Map = map.Descriptor,
             WorldSeed = 77,
             SourceInputs = map.SourceInputs.Entries,
-            ClaimedBy = (_, _) => new WpId("WP-99"),
+            ClaimedBy = (_, _) => "fixture.claim",
             CodeHash = "code"
         };
         var source = new PreparedSource(prepared);
@@ -97,7 +99,7 @@ public sealed class VegetationContextTests
         AssertThat(ReferenceEquals(context.World, prepared.World) && ReferenceEquals(context.SourceInputs, prepared.SourceInputs) &&
               ReferenceEquals(context.ClaimedBy, prepared.ClaimedBy) && context.WorldSeed == 77 &&
               context.CodeHash == "code" && ReferenceEquals(context.Catalog, prepared.Catalog)).OverrideFailureMessage("The prepared context lost a field or replaced the palette snapshot.").IsTrue();
-        var own = new BuildContext { World = prepared.World, Map = prepared.Map, WorldSeed = 1, Catalog = palette };
+        var own = new BuildContext { CodeHash = "fixture", WindowNumbering = new((prepared.Map).Id, new string('0', 64), []), World = prepared.World, Map = prepared.Map, WorldSeed = 1, Catalog = palette };
         AssertThat(ReferenceEquals(VegetationContext.Resolve(map, Module, new PreparedSource(own)), own)).OverrideFailureMessage("A context with a palette must be returned as is.").IsTrue();
     }
 
@@ -146,7 +148,7 @@ public sealed class VegetationContextTests
             var assemblies = new[] { "Campus.Gen", "Campus.Gen.Maps.Qingshuihe" }
                 .Select(System.Reflection.Assembly.Load).ToArray();
             var registry = new ServiceRegistry();
-            registry.Discover(assemblies);
+            registry.Discover(assemblies, _ => "fixture");
             var claims = MapClaimCapture.Capture(registry, id);
             return new(new MapLoadInput(entry, BuildInputSnapshot.Freeze(all, "fixture")), claims);
         }

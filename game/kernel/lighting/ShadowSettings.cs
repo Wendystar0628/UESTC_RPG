@@ -1,3 +1,4 @@
+using Campus.Contracts;
 using Campus.Contracts.Quality;
 
 namespace Campus.Kernel.Lighting;
@@ -10,13 +11,6 @@ namespace Campus.Kernel.Lighting;
 public readonly record struct ShadowSettings(int AtlasSize, int Splits, float MaxDistance,
     float Split1, float Split2, float Split3, uint CasterMask)
 {
-    /// <summary>VisualInstance3D layers are 1-based in ENG-PERF 4; this is the bit of layer n.</summary>
-    public static uint LayerBit(int layer) => 1u << (layer - 1);
-
-    /// <summary>Layers that never cast: ground, vegetation visuals, grass/particles, underground, water, far ring.</summary>
-    public static readonly uint NonCasters =
-        LayerBit(2) | LayerBit(4) | LayerBit(6) | LayerBit(7) | LayerBit(9) | LayerBit(10);
-
     // ENG-PERF: PSSM 4 at 1600 m splits at 48 / 192 / 640 m; PSSM 2 uses Split1 = 0.15.
     private const float Near1 = 48f, Near2 = 192f, Near3 = 640f;
 
@@ -38,7 +32,7 @@ public readonly record struct ShadowSettings(int AtlasSize, int Splits, float Ma
         };
         if (!float.IsFinite(distance) || distance < 600f || distance > 1600f)
             throw new ArgumentOutOfRangeException(nameof(distance), distance, "Shadow distance is 600–1600 m.");
-        var mask = ~NonCasters;
+        var mask = ~RenderLayers.NonCasters;
         if (splits == 2) return new(size, 2, distance, 0.15f, 0f, 0f, mask);
         // Keep the near cascades at their absolute size; the third boundary never exceeds 60 % of the range.
         var s1 = Near1 / distance;

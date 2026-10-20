@@ -9,7 +9,7 @@ namespace Campus.Gen.Parts.Roof;
 /// Split air-conditioner outdoor unit (空调外机) at real size: off-white casing on two rails, a dark fan disc
 /// on the front (−Z) face and a valve cover on the right. The whole unit stays inside its footprint.
 /// </summary>
-[Part(PartCatalog.AirConditioner, Owner = "WP-12")]
+[Part(PartCatalog.AirConditioner)]
 public sealed class AirConditionerPart : IPartDef<EquipmentParams>
 {
     private const float Rail = 0.04f;
@@ -72,7 +72,7 @@ public sealed class AirConditionerPart : IPartDef<EquipmentParams>
 /// gives a flat front panel; deeper grilles become a three-sided cage with a lid, open at the back (wall, +Z) and bottom (shelf).
 /// The front is −Z. One value step lighter than the building stand-in, so the facade strip reads clean, not dark.
 /// </summary>
-[Part(PartCatalog.EquipmentGrille, Owner = "WP-12")]
+[Part(PartCatalog.EquipmentGrille)]
 public sealed class EquipmentGrillePart : IPartDef<PanelParams>
 {
     private const float PanelDepth = 0.07f;
@@ -154,7 +154,7 @@ public sealed class EquipmentGrillePart : IPartDef<PanelParams>
 /// ART-FIDELITY), a hatch, a vent and a side ladder. Variation 0 sits on two rails; Variation ≥ 1 stands on a
 /// dark steel frame (the old teaching blocks, MAP-QSH-ADDITIONS). The ladder hangs off the +X side, outside the footprint.
 /// </summary>
-[Part(PartCatalog.WaterTank, Owner = "WP-12")]
+[Part(PartCatalog.WaterTank)]
 public sealed class WaterTankPart : IPartDef<EquipmentParams>
 {
     private const float LadderReach = 0.2f;
@@ -270,7 +270,7 @@ public sealed class WaterTankPart : IPartDef<EquipmentParams>
 /// Air-source heat pump (热泵): warm light-grey casing on rails, dark coil panels behind horizontal louvres on the long faces
 /// (±Z), and one or more top-discharge fan shrouds with dark fan discs. Usually stands inside an equipment fence.
 /// </summary>
-[Part(PartCatalog.HeatPump, Owner = "WP-12")]
+[Part(PartCatalog.HeatPump)]
 public sealed class HeatPumpPart : IPartDef<EquipmentParams>
 {
     private const float Proud = 0.035f;

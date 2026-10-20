@@ -120,7 +120,7 @@ public sealed class WeatherProcessTests
             double savedAt = season == Season.Winter ? 157.5 : 150.5;
             a.Step(Tick(savedAt, season)); a.Step(Tick(savedAt, season));
             var section = new WeatherSection(a, TestMaps(), source);
-            var saved = section.Capture(new CaptureContext(SaveReason.Quit, Map, true));
+            var saved = section.Capture(new CaptureContext(SaveReason.Quit, Map, true) { Moment = new WorldSaveMoment(savedAt, 0, season, 10) });
             var restored = JsonSerializer.Deserialize(JsonSerializer.Serialize(saved, section.TypeInfo), section.TypeInfo)!;
             var b = new WeatherProcess(source);
             new WeatherSection(b, TestMaps(), source).Restore(restored, new RestoreContext { Map = Map, FromVersion = 2, Missing = false });

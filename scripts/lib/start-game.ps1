@@ -79,7 +79,7 @@ function Test-UESTCLaunchBuild {
             if (-not $found) { return $false }
         }
     }
-    foreach ($name in @('global.json', 'version.txt', 'Directory.Build.props', 'Directory.Build.targets', 'Directory.Packages.props', 'scripts\build\build-info.ps1', 'scripts\build\generate-style-shaders.py', 'game\addons\build_import\plugin.cfg', 'game\addons\build_import\plugin.gd', 'scripts\build\fingerprints\Campus.CodeFingerprints.csproj', 'scripts\setup\install-test-runner.ps1')) {
+    foreach ($name in @('global.json', 'ownership.json', 'version.txt', 'Directory.Build.props', 'Directory.Build.targets', 'Directory.Packages.props', 'scripts\build\build-info.ps1', 'scripts\build\generate-style-shaders.py', 'game\style\palette\core.json', 'game\addons\build_import\plugin.cfg', 'game\addons\build_import\plugin.gd', 'scripts\build\fingerprints\Campus.CodeFingerprints.csproj', 'scripts\setup\install-test-runner.ps1')) {
         $inputs.Add((Get-Item -LiteralPath (Join-Path $Root $name)))
     }
     foreach ($name in @('NuGet.Config', 'nuget.config', '.editorconfig')) {

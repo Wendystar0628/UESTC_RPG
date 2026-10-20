@@ -24,7 +24,7 @@ public sealed class SaveFormatTests
         new SortedDictionary<string, RawSaveSection>(StringComparer.Ordinal)
         { ["world"] = new(1, "{\"v\":1,\"data\":{\"hours\":17.5}}"u8.ToArray()) }, null);
     private static SaveSections Sections(TestSection? section = null, int version = 1, RestorePhase phase = RestorePhase.World) =>
-        new([new(new("world") { Owner = "WP-50", Version = version, Phase = phase, Order = 10 }, section ?? new())]);
+        new([new(new("world") { Version = version, Phase = phase, Order = 10 }, section ?? new())]);
     private sealed class TempSaveDirectory : IDisposable
     {
         public string Path { get; } = System.IO.Path.Combine(System.IO.Path.GetTempPath(),

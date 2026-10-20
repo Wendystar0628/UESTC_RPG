@@ -27,7 +27,7 @@ public sealed class InteriorProviderScopeTests
         var featureA = new FeatureId("fixture:building:a");
         var featureB = new FeatureId("fixture:building:b");
         var reference = (BoxInteriorProvider)registry.Create(type, new MapId("fixture-global"));
-        reference.Configure([referenceFeature], [1], new Dictionary<FeatureId, IReadOnlyList<EntranceDecl>>());
+        reference.Configure(new([referenceFeature], [1], new Dictionary<FeatureId, IReadOnlyList<EntranceDecl>>(), null, []));
         var referenceContext = Context(new("fixture-global"), referenceFeature, -200f,
             new Dictionary<string, IInteriorProvider> { [providerId] = reference });
         var referenceLayout = reference.Layout(referenceContext, referenceFeature);
@@ -109,11 +109,25 @@ public sealed class InteriorProviderScopeTests
         AssertThrown(() => writableView.Add("another.provider", first)).IsInstanceOf<NotSupportedException>();
     }
 
+    [TestCase, TestCategory(TestReason.Contract)]
+    public async Task FactoryProductsHaveMapIdentityAndReleaseBeforeTheirFactory()
+    {
+        await using var registry=ProviderRegistry();var map=new MapId("factory-scope");
+        var factory=(FixtureFactory)registry.Create(typeof(FixtureFactory),map);
+        var first=registry.CreateInterior(typeof(FixtureFactory),"fixture.family.first",map);
+        var second=registry.CreateInterior(typeof(FixtureFactory),"fixture.family.second",map);
+        var other=registry.CreateInterior(typeof(FixtureFactory),"fixture.family.first",new("other-scope"));
+        AssertThat(ReferenceEquals(first,registry.CreateInterior(typeof(FixtureFactory),"fixture.family.first",map))&&
+            !ReferenceEquals(first,second)&&!ReferenceEquals(first,other)).IsTrue();
+        await registry.ReleaseMapAsync(map);
+        AssertThat(factory.Released.SequenceEqual(["fixture.family.second","fixture.family.first","factory"])).IsTrue();
+    }
+
     private static ServiceRegistry ProviderRegistry()
     {
         var registry = new ServiceRegistry();
         // The map-independent fixture declaration exercises the production box implementation across distinct test maps.
-        registry.Discover([typeof(FixtureBoxInterior).Assembly]);
+        registry.Discover([typeof(FixtureBoxInterior).Assembly], _ => "fixture");
         return registry;
     }
 
@@ -147,11 +161,11 @@ public sealed class InteriorProviderScopeTests
             "spawn", [new("spawn", new(new(0, 20, 30), 0, -15), null)],
             new(MapTimeRule.Shared, new(17.5, Season.Autumn), new("测试时刻", "Fixture"), false, "fixture"),
             new("sky.json", "backdrop.json", []), []);
-        return new BuildContext { Catalog = Campus.Contracts.Tests.PaletteFixture.Catalog, Map = descriptor, World = world, WorldSeed = 7, InteriorProviders = providers };
+        return new BuildContext { CodeHash="fixture",WindowNumbering=new(map,new string('0',64),[]),Catalog = Campus.Contracts.Tests.PaletteFixture.Catalog, Map = descriptor, World = world, WorldSeed = 7, InteriorProviders = providers };
     }
 
 
-    [InteriorProvider("fixture.box", Owner = "WP-00")]
+    [InteriorProvider("fixture.box")]
     public sealed class FixtureBoxInterior : BoxInteriorProvider
     {
     }
@@ -160,4 +174,14 @@ public sealed class InteriorProviderScopeTests
     private sealed class UnregisteredInterior : BoxInteriorProvider
     {
     }
+    [InteriorProviderFactory("fixture.family.")]
+    public sealed class FixtureFactory : IInteriorProviderFactory,IDisposable
+    {
+        public List<string> Released { get; }=[];
+        public IInteriorProvider Create(string providerId)=>new OwnedBox(providerId,Released);
+        public void Dispose()=>Released.Add("factory");
+    }
+    private sealed class OwnedBox(string id,List<string> released) : BoxInteriorProvider,IDisposable
+    { public void Dispose()=>released.Add(id); }
+
 }

@@ -2,18 +2,21 @@ using Campus.Contracts;
 using Campus.Contracts.Bake;
 using Campus.Contracts.Maps;
 using Godot;
-using AppBoot = Campus.Kernel.Boot.Boot;
+using KernelServices = Campus.Kernel.Registry.Kernel;
+using Campus.Contracts.Startup;
 
 namespace Campus.Kernel.Bake;
 
 /// <summary>Map lifecycle only; generation and disk access stay on bake workers.</summary>
-[KernelNode("bake", Owner = "WP-02a")]
+[KernelNode("bake")]
 public partial class BakeRuntime : Node, IMapAware, IMapDataParticipant
 {
     private readonly BakeService _service;
     private readonly BakeLightInventory _inventory;
     private BakeService.MapBuild? _map;
     private bool _finished;
+    private bool _strict;
+    public override void _Ready() => _strict = KernelServices.Get<BootRunOptions>().Bake.Strict;
     public BakeRuntime(BakeService service, BakeLightInventory inventory)
     {
         _service = service;
@@ -44,7 +47,7 @@ public partial class BakeRuntime : Node, IMapAware, IMapDataParticipant
         while (_service.TryTakeDiagnostic(out var collected))
         {
             var diagnostic = collected!.Diagnostic;
-            var message = $"[{collected.Owner.Value}] map={collected.Map.Value} module={collected.Module} stage={collected.Stage} entity={diagnostic.Feature?.Value ?? "-"} {diagnostic.Code}: {diagnostic.Message}";
+            var message = $"[{collected.Owner}] map={collected.Map.Value} module={collected.Module} stage={collected.Stage} entity={diagnostic.Feature?.Value ?? "-"} {diagnostic.Code}: {diagnostic.Message}";
             switch (diagnostic.Level)
             {
                 case DiagnosticLevel.Info: GD.Print(message); break;
@@ -55,7 +58,7 @@ public partial class BakeRuntime : Node, IMapAware, IMapDataParticipant
         }
         if (_finished || _map is null) return;
         var progress = _service.Progress;
-        if (AppBoot.Options.Bake.Strict && progress.Stage.StartsWith("生成失败", StringComparison.Ordinal))
+        if (_strict && progress.Stage.StartsWith("生成失败", StringComparison.Ordinal))
         {
             _finished = true; GD.PushError("WP-02a strict bake failure."); GetTree().Quit(2); return;
         }

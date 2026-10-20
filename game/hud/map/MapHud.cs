@@ -15,7 +15,7 @@ namespace Campus.Hud.Map;
 /// 不直接调 ICameraRig.Transit（ENG-ARCH）。界面在 CanvasLayer 10（HudRoot 那一层）；
 /// 小地图挂进 HudRoot 提供的左上角槽位。
 /// </summary>
-[KernelNode("hud-map", Owner = "WP-48b")]
+[KernelNode("hud-map")]
 public partial class MapHud : Node, IMapAware, IBootParticipant
 {
     private MapStyle _style = null!;

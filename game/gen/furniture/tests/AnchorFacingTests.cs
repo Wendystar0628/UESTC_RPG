@@ -92,7 +92,7 @@ public sealed class AnchorFacingTests
         var claimed = world.Interiors.EntrancesNear(Vector3.Zero, 1e5f).First(e => e.Open);
         var owner = world.Features.Keys.First(f => world.Interiors.Get(f)?.Entrances.Any(e => e.Id == claimed.Id) == true);
         var building = world.Interiors.Get(owner)!.Feature;
-        var skipped = Build(world, (f, a) => f == building && a == Aspects.Props ? new WpId("WP-18") : null);
+        var skipped = Build(world, (f, a) => f == building && a == Aspects.Props ? "zone.south" : null);
         AssertThat(!skipped.Items.Any(i => i.Key.StartsWith($"door:{claimed.Id}:", StringComparison.Ordinal))).OverrideFailureMessage("kit placed on a claimed building").IsTrue();
         AssertThat(skipped.Count(FurnitureKind.EntranceMat) == layout.Count(FurnitureKind.EntranceMat) - world.Interiors.Get(owner)!.Entrances.Count(e => e.Open)).OverrideFailureMessage("claim skipped other kits").IsTrue();
     }

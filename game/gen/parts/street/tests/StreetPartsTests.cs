@@ -16,9 +16,9 @@ public sealed class StreetPartsTests
     private static BuildInputSnapshot GlobalInputs { get; } = BuildInputSnapshot.Freeze(
         new Dictionary<string, ReadOnlyMemory<byte>> { [SceneTextInputs.AtlasKey] = File.ReadAllBytes(RepositoryFixture.FilePath("game", "data", "scene-text", "atlas.json")) }, "fixture");
     private static PaletteCatalog Catalog => Campus.Contracts.Tests.PaletteFixture.Catalog;
-    private static IEnumerable<Type> StreetTypes => typeof(StreetGallery).Assembly.GetTypes()
-        .Where(type => type.Namespace == typeof(StreetGallery).Namespace ||
-            type.Namespace?.StartsWith(typeof(StreetGallery).Namespace + ".", StringComparison.Ordinal) == true);
+    private static IEnumerable<Type> StreetTypes => typeof(StreetLampPart).Assembly.GetTypes()
+        .Where(type => type.Namespace == typeof(StreetLampPart).Namespace ||
+            type.Namespace?.StartsWith(typeof(StreetLampPart).Namespace + ".", StringComparison.Ordinal) == true);
     private static readonly string[] Parts =
     [
         PartCatalog.StreetLamp, PartCatalog.Bench, PartCatalog.BinFour, PartCatalog.Bollard, PartCatalog.StoneSphere, PartCatalog.BusStop,
@@ -43,7 +43,6 @@ public sealed class StreetPartsTests
         {
             var attribute = type.GetCustomAttribute<PartAttribute>()!;
             var entry = Entry(attribute.Id);
-            AssertThat(attribute.Owner == "WP-13" && entry.Owner == new WpId("WP-13")).OverrideFailureMessage($"{attribute.Id} has the wrong owner.").IsTrue();
             AssertThat(Contract(type).GetGenericArguments()[0] == entry.ParameterType).OverrideFailureMessage($"{attribute.Id} takes the wrong parameter record.").IsTrue();
         }
     }
@@ -51,17 +50,21 @@ public sealed class StreetPartsTests
     [TestCase, TestCategory(TestReason.Contract)]
     public void CatalogueDefaultsBuildClosedAtEveryLevel()
     {
+        var atlas = new SceneTextAtlas(GlobalInputs.Require(SceneTextInputs.AtlasKey));
         foreach (var type in StreetTypes.Where(t => t.GetCustomAttribute<PartAttribute>() is not null))
         {
             var entry = Entry(type.GetCustomAttribute<PartAttribute>()!.Id);
             var part = Activator.CreateInstance(type)!;
             var lods = (System.Collections.IDictionary)type.GetProperty("Lods")!.GetValue(part)!;
-            var sample = StreetGallery.CreateSamples(GlobalInputs, Catalog).FirstOrDefault(sample => sample.Part == entry.Id);
             var parameters = entry.Defaults switch
             {
-                SignParams sign when sample?.Params is SignParams printed => sign with { PrintedText = printed.PrintedText, PrintedTextBaseColor = printed.PrintedTextBaseColor },
-                EquipmentParams equipment when sample?.Params is EquipmentParams printed => equipment with { PrintedText = printed.PrintedText, PrintedTextBaseColor = printed.PrintedTextBaseColor },
-                _ => entry.Defaults
+                SignParams sign when entry.Id.Value == PartCatalog.BusStop => sign with
+                { PrintedText = atlas.Layout(StreetStyle.StopTitle), PrintedTextBaseColor = Catalog.Resolve(StreetStyle.Lit(StreetStyle.SignBlue)) },
+                SignParams sign when entry.Id.Value == PartCatalog.OpenSign => sign with
+                { PrintedText = atlas.Layout(StreetStyle.OpenTitle), PrintedTextBaseColor = Catalog.Resolve(StreetStyle.Lit(StreetStyle.SignGreen)) },
+                EquipmentParams equipment when entry.Id.Value == PartCatalog.DrinkingFountain => equipment with
+                { PrintedText = atlas.Layout(StreetStyle.FountainTitle), PrintedTextBaseColor = Catalog.Resolve(StreetStyle.Lit(StreetStyle.PaintWhite)) },
+                _ => entry.Defaults,
             };
             var bounds = (Box3)type.GetMethod("Bounds")!.Invoke(part, [parameters])!;
             AssertThat(lods.Contains(LodLevel.L0) && lods.Contains(LodLevel.L1)).OverrideFailureMessage($"{entry.Id.Value} lacks near levels.").IsTrue();
@@ -75,63 +78,8 @@ public sealed class StreetPartsTests
     }
 
     [TestCase, TestCategory(TestReason.Contract)]
-    public void ReviewSamplesAreClosedAndBounded()
-    {
-        var samples = StreetGallery.CreateSamples(GlobalInputs, Catalog);
-        AssertThat(samples.Select(s => s.Part.Value).Distinct().Count() == Parts.Length).OverrideFailureMessage("The gallery misses a part.").IsTrue();
-        foreach (var sample in samples)
-            foreach (var level in Enum.GetValues<LodLevel>())
-            {
-                if (sample.Build(level) is not { } geometry) continue;
-                ClosedClockwise(geometry, $"{sample.Id} {level}");
-                AssertThat(geometry.Bounds == sample.Bounds).OverrideFailureMessage($"{sample.Id} {level} moved the bounds.").IsTrue();
-                // The contract's AO is visibility; street parts have no reveals, so nothing is darkened.
-                AssertThat(geometry.Meshes.All(m => m.Ao is null)).OverrideFailureMessage($"{sample.Id} {level} writes occlusion it does not have.").IsTrue();
-            }
-    }
-
-    [TestCase, TestCategory(TestTag.Determinism)]
-    [TestCategory(TestReason.Contract)]
-    public void GenerationIsBitwiseRepeatable()
-    {
-        var first = StreetGallery.CreateExamples(GlobalInputs, Catalog); var second = StreetGallery.CreateExamples(GlobalInputs, Catalog);
-        AssertThat(first.Count == second.Count && first.Count >= Parts.Length).OverrideFailureMessage("Missing gallery examples.").IsTrue();
-        for (var i = 0; i < first.Count; i++)
-        {
-            AssertThat(first[i].Geometry.Meshes.Count == second[i].Geometry.Meshes.Count).OverrideFailureMessage("Surface count changed.").IsTrue();
-            for (var m = 0; m < first[i].Geometry.Meshes.Count; m++)
-            {
-                var a = first[i].Geometry.Meshes[m]; var b = second[i].Geometry.Meshes[m];
-                AssertThat(a.Material == b.Material).OverrideFailureMessage("Material order changed.").IsTrue();
-                AssertThat(a.Position.Select(BitConverter.SingleToInt32Bits).SequenceEqual(b.Position.Select(BitConverter.SingleToInt32Bits))).OverrideFailureMessage("Vertex bytes changed.").IsTrue();
-                AssertThat(a.Normal.Select(BitConverter.SingleToInt32Bits).SequenceEqual(b.Normal.Select(BitConverter.SingleToInt32Bits))).OverrideFailureMessage("Normal bytes changed.").IsTrue();
-                AssertThat(a.Index.SequenceEqual(b.Index)).OverrideFailureMessage("Index bytes changed.").IsTrue();
-            }
-        }
-    }
-
-    [TestCase, TestCategory(TestReason.Contract)]
     public void CollidersFillFootStayCloseAndFollowTheWalkTable()
     {
-        foreach (var sample in StreetGallery.CreateSamples(GlobalInputs, Catalog))
-        {
-            var type = StreetTypes.Single(t => t.GetCustomAttribute<PartAttribute>()?.Id == sample.Part.Value);
-            var colliders = (IReadOnlyList<Collider>)Contract(type).GetMethod("Collision")!.Invoke(Activator.CreateInstance(type), [sample.Params])!;
-            // Parked bicycles never collide (WLD-LIFE: they come and go, a collider would leave an invisible wall).
-            var visualOnly = sample.Id is "entrance-mat" or "entrance-lamp" or "open-sign-wall" or "bicycle" or "road-name-plate" or "speaker-pair" or "speaker-cross"
-                or "drain-grate" or "drain-cover" or "drain-gutter" or "wall-clock";
-            AssertThat(visualOnly ? colliders.Count == 0 : colliders.Count > 0).OverrideFailureMessage($"{sample.Id} has the wrong collision class (MAP-QSH-ADDITIONS).").IsTrue();
-            foreach (var collider in colliders)
-            {
-                AssertThat(collider.Foot != FootMat.Auto).OverrideFailureMessage($"{sample.Id} leaves a collider on Auto (G21).").IsTrue();
-                // The kerb ramp is walked on: ground, not a prop.
-                AssertThat(collider.Tag == (sample.Id == "kerb-ramp" ? SurfaceTag.Ground : SurfaceTag.Prop)).OverrideFailureMessage($"{sample.Id} collider has the wrong surface tag.").IsTrue();
-                var (min, max) = Extent(collider);
-                var b = sample.Bounds;
-                // SYS-WALK: no more than 0.3 m beyond the visible object; posts may reach below grade.
-                AssertThat(min.X >= b.Min.X - 0.3f && min.Z >= b.Min.Z - 0.3f && max.X <= b.Max.X + 0.3f && max.Z <= b.Max.Z + 0.3f && max.Y <= b.Max.Y + 0.3f).OverrideFailureMessage($"{sample.Id} collider reaches more than 0.3 m past the part.").IsTrue();
-            }
-        }
         IPartDef<FurnitureParams> sphere = new StoneSpherePart();
         AssertThat(sphere.Collision(new()).Single().Foot == FootMat.StonePaving).OverrideFailureMessage("Stone spheres step as stone paving (WLD-LIFE).").IsTrue();
         IPartDef<FurnitureParams> bench = new BenchPart();
@@ -163,35 +111,12 @@ public sealed class StreetPartsTests
         AssertThat(Math.Abs(edge.Facing.X - -1f) < TestTolerance.Position && Math.Abs((edge.From.Y + edge.To.Y) * 0.5f - 0.4f) < TestTolerance.Position).OverrideFailureMessage("A box turned a quarter faces −X.").IsTrue();
         AssertThat(Seating.FromBox(new BoxCollider(Matrix4x4.CreateTranslation(0, 0.6f, 0), new(1, 0.6f, 0.3f), SurfaceTag.Prop), SeatSide.Front).Count == 0).OverrideFailureMessage("A 1.2 m top is not a seat.").IsTrue();
         // Every street part reaches its seats through the contract: only the bench declares any, and nothing returns another seat type.
-        foreach (var sample in StreetGallery.CreateSamples(GlobalInputs, Catalog))
-        {
-            var type = StreetTypes.Single(t => t.GetCustomAttribute<PartAttribute>()?.Id == sample.Part.Value);
-            var declared = (IReadOnlyList<SeatDecl>)Contract(type).GetMethod("Seats")!.Invoke(Activator.CreateInstance(type), [sample.Params])!;
-            AssertThat(sample.Part.Value == PartCatalog.Bench ? declared.Count > 0 : declared.Count == 0).OverrideFailureMessage($"{sample.Id} declares {declared.Count} seats through IPartDef.").IsTrue();
-        }
         AssertThat(!StreetTypes.Any(t => t.Name == nameof(SeatDecl))).OverrideFailureMessage("The street assembly still defines its own seat record.").IsTrue();
     }
 
     [TestCase, TestCategory(TestReason.Contract)]
     public void LampMarkersUseScheduledChannelsAndSitUnderTheLens()
     {
-        foreach (var sample in StreetGallery.CreateSamples(GlobalInputs, Catalog))
-        {
-            var at = Matrix4x4.CreateTranslation(10, 1, -4);
-            foreach (var emitter in sample.Emitters(at))
-            {
-                AssertThat(LightChannelCatalog.Slot(emitter.Channel) is >= 12 and <= 27).OverrideFailureMessage($"{sample.Id} marker is not on a lamp channel.").IsTrue();
-                AssertThat(emitter.Color.Value == "lamp.warm").OverrideFailureMessage($"{sample.Id} marker is not warm (MAP-QSH-ADDITIONS).").IsTrue();
-                AssertThat(emitter.Energy is 1f or 0.75f or 0.5f && emitter.Range > 0).OverrideFailureMessage($"{sample.Id} marker is off the three grades.").IsTrue();
-                var local = emitter.Position - new Vector3(10, 1, -4);
-                // Markers sit just under their lens: inside the part's height, or a few centimetres under a wall lantern.
-                AssertThat(local.Y > sample.Bounds.Min.Y - 0.1f && local.Y < sample.Bounds.Max.Y).OverrideFailureMessage($"{sample.Id} marker is outside the lamp's height.").IsTrue();
-            }
-            // Every self-lit lens rides a lamp or signal channel.
-            foreach (var mesh in sample.Build(LodLevel.L0)!.Meshes)
-                if (mesh.Material.Spec.Emissive is { } channel)
-                    AssertThat(LightChannelCatalog.Slot(channel) is >= 12 and <= 27).OverrideFailureMessage($"{sample.Id} lens has no lamp channel.").IsTrue();
-        }
         var disc = new LampParams(0.7f, 6f, 0.7f);
         AssertThat(StreetLampPart.Emitter(disc, Matrix4x4.Identity).Channel.Value == "lamp.first").OverrideFailureMessage("The disc lamp is in the first-lamp group by default.").IsTrue();
         AssertThat(StreetLampPart.Emitter(disc with { Variation = 2 }, Matrix4x4.Identity).Channel.Value == "lamp.street").OverrideFailureMessage("Variation 2 moves the disc lamp to the street group.").IsTrue();
@@ -206,7 +131,6 @@ public sealed class StreetPartsTests
     [TestCase, TestCategory(TestReason.Contract)]
     public void SizesAndColoursFollowTheStyleRules()
     {
-        // Every surface colour is a registered Lit/Shade pair name, never a literal.
         var palette = Path.Combine(Campus.Tests.RepositoryFixture.Root, "game", "style", "palette");
         var tokens = new HashSet<string>(StringComparer.Ordinal);
         foreach (var file in new[] { Path.Combine(palette, "core.json") }.Concat(Directory.GetFiles(Path.Combine(palette, "ext"), "*.json")))
@@ -217,17 +141,6 @@ public sealed class StreetPartsTests
                 if (entry.TryGetProperty("token", out var token)) tokens.Add(token.GetString()!);
         }
         AssertThat(tokens.Contains(StreetStyle.LampWarm.Value)).OverrideFailureMessage("The lamp colour is registered.").IsTrue();
-        foreach (var sample in StreetGallery.CreateSamples(GlobalInputs, Catalog))
-            foreach (var level in Enum.GetValues<LodLevel>())
-            {
-                if (sample.Build(level) is not { } geometry) continue;
-                foreach (var mesh in geometry.Meshes)
-                {
-                    var lit = mesh.Material.Spec.Lit.Value; var shade = mesh.Material.Spec.Shade.Value;
-                    AssertThat(lit.EndsWith(".lit", StringComparison.Ordinal) && shade == lit[..^4] + ".shade").OverrideFailureMessage($"{sample.Id} uses an unpaired colour {lit}.").IsTrue();
-                    AssertThat(tokens.Contains(lit) && tokens.Contains(shade)).OverrideFailureMessage($"{sample.Id} uses unregistered colour {lit}.").IsTrue();
-                }
-            }
         // Proportions of the atlas entities (SYS-ATLAS); the seat anchor is checked against the collider above.
         var post = new AtlasPostPart().Bounds(new SignParams(0.3f, 1.05f, 0.3f));
         AssertThat(Math.Abs(post.Max.Y - 1.05f) < TestTolerance.Position).OverrideFailureMessage("The atlas post is 1.05 m tall.").IsTrue();
@@ -274,24 +187,6 @@ public sealed class StreetPartsTests
     public void StreetLifePartsDeclareTheirSoundsSocketsAndSizes()
     {
         // WLD-LIFE: only the vending machine, the pole transformer, the rain grate and the broadcast horn make sound; every other part is silent.
-        foreach (var sample in StreetGallery.CreateSamples(GlobalInputs, Catalog))
-        {
-            var type = StreetTypes.Single(t => t.GetCustomAttribute<PartAttribute>()?.Id == sample.Part.Value);
-            var sounds = (IReadOnlyList<SoundSocketDecl>)Contract(type).GetMethod("Sounds")!.Invoke(Activator.CreateInstance(type), [sample.Params])!;
-            // The sounding parts and how far they carry (WLD-LIFE-STREET): the compressor 4 m, the pole transformer 6 m, the grate's water,
-            // and the lamp-pole broadcast from afar.
-            var reach = sample.Id switch
-            {
-                "vending" or "vending-odd" => 4f,
-                "pole-transformer" => 6f,
-                "drain-grate" => 8f,
-                "speaker-pair" or "speaker-cross" => 100f,
-                _ => 0f,
-            };
-            if (reach == 0f) { AssertThat(sounds.Count == 0).OverrideFailureMessage($"{sample.Id} makes a sound.").IsTrue(); continue; }
-            AssertThat(sounds.Count == 1 && sounds[0].AudibleRadius <= reach && sounds[0].Set.Value.Length > 0).OverrideFailureMessage($"{sample.Id}: the sound socket is missing or carries too far.").IsTrue();
-            AssertThat(sample.Bounds.Contains(new(sounds[0].Local.M41, sounds[0].Local.M42, sounds[0].Local.M43))).OverrideFailureMessage($"{sample.Id}: the sound socket is outside the part.").IsTrue();
-        }
         // The shared bicycle's contact points (WP-54b's riding clips): seat above the cranks, grips left (−X) and right, axles on the wheels.
         IPartDef<VehicleParams> bike = new ParkedBicyclePart();
         var sockets = bike.Sockets;

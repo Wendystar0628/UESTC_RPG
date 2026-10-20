@@ -6,7 +6,7 @@ namespace Campus.Hud;
 /// 界面的只读入口（UI-NAV）：每次访问直接转发权威源，绘制刷新由界面根负责。
 /// 界面只读 IWorldState、ICameraRig 的速度与模式，写入一律经 IWorldControl、IViewControl。
 /// </summary>
-[KernelService(typeof(HudModel), Owner = "WP-35")]
+[KernelService(typeof(HudModel))]
 public sealed class HudModel(IWorldState world, ICameraRig rig, IRuleset ruleset)
 {
     public IWorldState World => world;

@@ -109,9 +109,9 @@ public sealed class BuildingOverlapValidatorTests
         try
         {
             CultureInfo.CurrentCulture = CultureInfo.GetCultureInfo("fr-FR");
-            Reject(World(a, b), (_, _) => new("WP-test"));
+            Reject(World(a, b), (_, _) => "fixture.claim");
             CultureInfo.CurrentCulture = CultureInfo.GetCultureInfo("en-US");
-            Reject(World(b, a with { Parts = a.Parts.Reverse().ToArray() }), (_, _) => new("WP-test"));
+            Reject(World(b, a with { Parts = a.Parts.Reverse().ToArray() }), (_, _) => "fixture.claim");
         }
         finally { CultureInfo.CurrentCulture = previousCulture; }
     }
@@ -127,7 +127,7 @@ public sealed class BuildingOverlapValidatorTests
             parts: [new(source, new PolygonGeometry(rings), 5, 1)]);
     static FakeWorld World(params WorldFeature[] features) => new() { Features = features.ToDictionary(f => f.Id) };
 
-    static void Reject(IWorldModel world, Func<FeatureId, Aspects, WpId?>? owner = null) =>
+    static void Reject(IWorldModel world, Func<FeatureId, Aspects, string?>? owner = null) =>
         AssertThrown(() => BuildingOverlapValidator.Validate(world, owner)).IsInstanceOf<InvalidDataException>();
 
 }

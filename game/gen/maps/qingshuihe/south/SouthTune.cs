@@ -15,9 +15,6 @@ namespace Campus.Gen.Maps.Qingshuihe.South;
 /// </summary>
 public static class SouthTune
 {
-    public const int BudgetTrianglesL0 = 90_000;
-    public const int BudgetTrianglesL1 = 45_000;
-    public const int BudgetDrawCalls = 18;
 
     /// <summary>Materials (ART-STYLE colour names only).</summary>
     public static class Look

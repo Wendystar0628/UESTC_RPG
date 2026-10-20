@@ -149,7 +149,7 @@ public sealed class LibraryShellTests
         var allocation = numbering.Get(CoreIds.Library, LibraryShell.WindowKey);
         AssertThat(allocation.BaseId == numbering.Allocations[0].Count).OverrideFailureMessage("a generic block in front moves the library base").IsTrue();
         var module = new CoreModule();
-        var ctx = new BuildContext { Catalog = Campus.Contracts.Tests.PaletteFixture.Catalog, World = world, Map = null!, WorldSeed = 1u, WindowNumbering = numbering, PartLods = PartLodFixture.Catalog };
+        var ctx = new BuildContext { CodeHash = "fixture", Catalog = Campus.Contracts.Tests.PaletteFixture.Catalog, World = world, Map = null!, WorldSeed = 1u, WindowNumbering = numbering, PartLods = PartLodFixture.Catalog };
         var output = module.Build(ctx, TileGrid.At(shell.Anchor, LodLevel.L0), LodLevel.L0);
         var glassIds = new SortedSet<int>();
         foreach (var g in output.Meshes.Where(m => m.Material.Spec.Kind is ToonKind.Glass or ToonKind.GlassNear))
@@ -185,7 +185,7 @@ public sealed class LibraryShellTests
         catch (InvalidOperationException ex) { wrongAllocation = ex; }
         catch (KeyNotFoundException ex) { wrongAllocation = ex; }
         AssertThat(wrongAllocation is InvalidOperationException or KeyNotFoundException).OverrideFailureMessage("an allocation of another size is refused").IsTrue();
-        var ctx = new BuildContext { Catalog = Campus.Contracts.Tests.PaletteFixture.Catalog, World = world, Map = null!, WorldSeed = 1u };
+        var ctx = new BuildContext { CodeHash = "fixture", WindowNumbering = new(new MapId("fixture"), new string('0', 64), []), Catalog = Campus.Contracts.Tests.PaletteFixture.Catalog, World = world, Map = null!, WorldSeed = 1u };
         Exception? missingSnapshot = null;
         try { new CoreModule().DescribeWindows(ctx); }
         catch (InvalidOperationException ex) { missingSnapshot = ex; }

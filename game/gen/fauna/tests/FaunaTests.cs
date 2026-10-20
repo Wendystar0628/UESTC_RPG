@@ -55,6 +55,7 @@ public sealed class FaunaTests
 
         var context = new BuildContext
         {
+            CodeHash = "fixture", WindowNumbering = new((RealMapFixture.Entry().Descriptor).Id, new string('0', 64), []),
             World = sourceOnly, WorldSeed = 1, Map = RealMapFixture.Entry().Descriptor,
             Catalog = Campus.Contracts.Tests.PaletteFixture.Catalog,
         };

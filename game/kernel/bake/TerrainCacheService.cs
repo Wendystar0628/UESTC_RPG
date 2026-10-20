@@ -6,12 +6,13 @@ using Campus.Contracts;
 using Campus.Contracts.Bake;
 using Campus.Contracts.Maps;
 using Campus.Gen.World;
+using Campus.Kernel.Registry;
 
 namespace Campus.Kernel.Bake;
 
 /// <summary>Owns layered product reads and local writes, preparing terrain before pure readers receive it.</summary>
-[KernelService(typeof(TerrainCacheService), Owner = "WP-02a")]
-[KernelService(typeof(ITerrainPreparation), Owner = "WP-02a")]
+[KernelService(typeof(TerrainCacheService))]
+[KernelService(typeof(ITerrainPreparation))]
 
 
 
@@ -32,10 +33,10 @@ public sealed class TerrainCacheService : ITerrainPreparation, IDisposable
     private readonly ConcurrentDictionary<(ITerrain Terrain, TileKey Block), Lazy<Task>> _preparing = new();
     private readonly BakeOptions _options;
     internal BakeCacheStore Store { get; }
-    internal BakeCodeFingerprints CodeFingerprints { get; }
+    internal BuildCodeIndex CodeFingerprints { get; }
     public TerrainCacheService() : this(BakeOptions.FromApplication()) { }
-    internal TerrainCacheService(BakeOptions options) : this(options, BakeCodeFingerprints.Load()) { }
-    internal TerrainCacheService(BakeOptions options, BakeCodeFingerprints codeFingerprints)
+    internal TerrainCacheService(BakeOptions options) : this(options, BuildCodeIndex.Shared) { }
+    internal TerrainCacheService(BakeOptions options, BuildCodeIndex codeFingerprints)
     { _options = options; CodeFingerprints = codeFingerprints; Store = new(options.CacheRoot, packagedRoot: options.PackagedCacheRoot); }
 
     internal WorldModelLoadResult Load(MapId map, WorldModelPreparation preparation)
@@ -140,7 +141,12 @@ public sealed class TerrainCacheService : ITerrainPreparation, IDisposable
     {
         if (world.Terrain is not IPreparedTerrain) return world;
         var session = RequireSession(world.Terrain);
-        lock (session.Sync) return session.AssetWorld ??= session.Preparation.WithTerrain(world, Assets(session));
+        lock (session.Sync)
+        {
+            if (session.AssetWorld is null || !ReferenceEquals(session.AssetWorld.Interiors, world.Interiors))
+                session.AssetWorld = session.Preparation.WithTerrain(world, Assets(session));
+            return session.AssetWorld;
+        }
     }
     internal TileKey[] SaveResidentPoints(IWorldModel world, string stamp)
     {

@@ -3,7 +3,7 @@ using Campus.Contracts;
 namespace Campus.Systems.Weather;
 
 /// <summary>The only engine IO in the weather process; a profile is loaded once per map profile.</summary>
-[KernelService(typeof(IWeatherProfileSource), Owner = "WP-45a")]
+[KernelService(typeof(IWeatherProfileSource))]
 public sealed class WeatherProfileSource : IWeatherProfileSource
 {
     private readonly Dictionary<string, WeatherProfile> _cache = new(StringComparer.Ordinal);

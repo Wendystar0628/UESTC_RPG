@@ -9,8 +9,8 @@ using Services = Campus.Kernel.Registry.Kernel;
 namespace Campus.Kernel.Inspect;
 
 /// <summary>One current-view export, using the existing HUD lease and viewport readback.</summary>
-[KernelService(typeof(IPhotoExport), Owner = "WP-01")]
-[KernelNode("photo-export", Owner = "WP-01")]
+[KernelService(typeof(IPhotoExport))]
+[KernelNode("photo-export")]
 public partial class PhotoExportNode : Node, IPhotoExport
 {
     private IAppFlow _flow = null!;

@@ -2,25 +2,18 @@ using System.Reflection;
 using Campus.Contracts;
 using Campus.Contracts.Bake;
 using Campus.Contracts.Maps;
-using Campus.Kernel.Materials;
 using Godot;
 using Services = Campus.Kernel.Registry.Kernel;
 using N = System.Numerics;
 
 namespace Campus.Kernel.Renderer;
 
-public interface IRenderReadiness
-{
-    string? Error { get; }
-    bool Pending { get; }
-}
-
 public readonly record struct RenderAccount(WpId Owner, int Handles, int Surfaces, int Triangles);
 
 /// <summary>Dynamic geometry host; static streamed TileBundles belong to WP-02.</summary>
-[KernelService(typeof(IRenderReadiness), Owner = "WP-01")]
-[KernelService(typeof(IRenderHost), Owner = "WP-01")]
-[KernelNode("render-host", Owner = "WP-01")]
+[KernelService(typeof(IRenderReadiness))]
+[KernelService(typeof(IRenderHost))]
+[KernelNode("render-host")]
 public partial class RenderHost : Node3D, IRenderHost, IRenderReadiness, IMapAware
 {
     private sealed class Entry(WpId owner, Node3D root)

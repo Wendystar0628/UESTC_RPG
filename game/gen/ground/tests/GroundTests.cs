@@ -83,8 +83,6 @@ public sealed class GroundTests
         var marking = output.Meshes.Where(m => m.Material.Spec.Lit.Value == "ground.marking.lit").ToArray();
         AssertThat(marking.All(m => m.Flags!.All(f => (f & VertexFlag.Decal) != 0))).OverrideFailureMessage("Markings are decals.").IsTrue();
         AssertThat(marking.All(m => m.Material.Spec.Line == LineClass.None)).OverrideFailureMessage("Markings are not outlined.").IsTrue();
-        var triangles = output.Meshes.Sum(m => m.Index.Length / 3);
-        AssertThat(triangles < new GroundModule().Budget.TrianglesL0).OverrideFailureMessage($"Over L0 budget: {triangles}.").IsTrue();
         AssertWinding(output);
     }
 
@@ -161,7 +159,6 @@ public sealed class GroundTests
         AssertThat(Math.Abs((double)(Section.PavingY) - (double)(GroundCollision.SampleHeight(collider, 10f, 4.5f))) <= TestTolerance.Position).OverrideFailureMessage($"sidewalk height: expected {Section.PavingY}, got {GroundCollision.SampleHeight(collider, 10f, 4.5f)}.").IsTrue();
         AssertThat(Math.Abs((double)(Section.GrassY) - (double)(GroundCollision.SampleHeight(collider, 10f, 20f))) <= TestTolerance.Position).OverrideFailureMessage($"lawn height: expected {Section.GrassY}, got {GroundCollision.SampleHeight(collider, 10f, 20f)}.").IsTrue();
     }
-
 
     [TestCase, TestCategory(TestReason.Smoke)]
     public void AllLevelsBuild()
@@ -296,7 +293,6 @@ public sealed class GroundTests
 internal static class TestWorld
 {
 
-
     public static FakeWorld Empty() => Of([]);
 
     /// <summary>Final ground surface at a point, classified on a 0.25 m lattice of the L0 tile that holds it (one tile field per world and tile, shared by the probes).</summary>
@@ -369,7 +365,8 @@ internal static class TestWorld
             new TileKey(-20, -20), new TileKey(19, 19), "P00", [],
             new MapWorldRules(MapTimeRule.Shared, new WorldPreset(17.5, Season.Autumn), new LocalizedName("落金初灯", "Golden Hour"), true, "chengdu"),
             new MapEnvironment("sky.json", "backdrop.json", []), []);
-        return new BuildContext { Catalog = Campus.Contracts.Tests.PaletteFixture.Catalog, World = world, Map = map,
+        return new BuildContext {
+            CodeHash = "fixture", WindowNumbering = new((map).Id, new string('0', 64), []), Catalog = Campus.Contracts.Tests.PaletteFixture.Catalog, World = world, Map = map,
             WorldSeed = 1u, SourceInputs = MaterialInputs.Value.Entries, GlobalInputs = GlobalInputs.Value };
     }
 

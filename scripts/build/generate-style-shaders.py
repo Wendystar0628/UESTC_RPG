@@ -1,50 +1,51 @@
-"""从 C# 规则值及共用雾源生成着色器 include；--check 检查随仓库的生成物是否最新。
-用法：python scripts/build/generate-style-shaders.py [--root 仓库根目录] [--check]
+"""从登记表、C# 规则值及共用雾源生成构建期着色器 include。
+用法：python scripts/build/generate-style-shaders.py [--root 仓库根目录]
 """
 from pathlib import Path
 import argparse
+import json
 import re
 
 # Explicit current consumers: path, C# literal member, shader name, shader type, enum (if any).
-BINDINGS = [('game/contracts/Foundation/PaletteEncoding.cs', 'FirstSeasonalRow', 'PAL_ROW_SEASON0', None, None),
- ('game/contracts/Foundation/PaletteEncoding.cs', 'LegacyHeight', 'PAL_BANK_ROWS', None, None),
- ('game/contracts/Foundation/PaletteEncoding.cs', 'Capacity', 'PAL_CAPACITY', None, None),
- ('game/contracts/Foundation/PaletteEncoding.cs', 'Width', 'PAL_WIDTH', None, None),
- ('game/contracts/Foundation/PaletteEncoding.cs', 'SeasonSampleCount', 'PAL_SEASON_SAMPLES', None, None),
- ('game/contracts/Foundation/PaletteEncoding.cs', 'ColorBankFlag', 'TOON_F_COLOR_BANK', None, None),
- ('game/contracts/Foundation/PaletteEncoding.cs', 'DecalBaseBankFlag', 'TOON_F_DECAL_BANK', None, None),
- ('game/contracts/Foundation/PaletteEncoding.cs', 'LampBankUnit', 'LAMP_COLOR_BANK_UNIT', None, None),
- ('game/contracts/Foundation/PaletteEncoding.cs', 'LampEnergyUnit', 'LAMP_ENERGY_UNIT', None, None),
- ('game/contracts/Foundation/PaletteEncoding.cs', 'LampMaxEnergyPercent', 'LAMP_ENERGY_PERCENT', None, None),
- ('game/contracts/Foundation/PaletteEncoding.cs', 'CurrentRow', 'PAL_ROW_CUR', None, None),
- ('game/contracts/Foundation/PaletteEncoding.cs', 'LampRow', 'PAL_ROW_LAMP', None, None),
- ('game/contracts/Foundation/PaletteEncoding.cs', 'InteriorShadeRow', 'PAL_ROW_IN_SHADE', None, None),
- ('game/contracts/Foundation/PaletteEncoding.cs', 'InteriorLitRow', 'PAL_ROW_IN_LIT', None, None),
- ('game/contracts/Foundation/PaletteEncoding.cs', 'ShadeOffset', 'PAL_SHADE_OFFSET', None, None),
- ('game/contracts/Foundation/Content.cs', 'Interior', 'TOON_F_INTERIOR', 'int', None),
- ('game/contracts/Foundation/Content.cs', 'Outskirts', 'TOON_F_OUTSKIRT', 'int', None),
- ('game/contracts/Foundation/Content.cs', 'Decal', 'TOON_F_DECAL', 'int', None),
- ('game/contracts/Foundation/Content.cs', 'NoShadow', 'TOON_F_NOSHADOW', 'int', None),
- ('game/contracts/Foundation/Style.cs', 'Two', 'TOON_STEPS_TWO', 'int', 'ShadeSteps'),
- ('game/contracts/Foundation/Style.cs', 'TwoHalf', 'TOON_STEPS_TWO_HALF', 'int', 'ShadeSteps'),
- ('game/contracts/Foundation/Style.cs', 'Soft', 'TOON_STEPS_SOFT', 'int', 'ShadeSteps'),
- ('game/contracts/Foundation/Style.cs', 'Three', 'TOON_STEPS_THREE', 'int', 'ShadeSteps'),
- ('game/contracts/Foundation/Style.cs', 'Escalator', 'MAT_ESCALATOR_FLAG', 'int', 'ToonFx'),
- ('game/contracts/Foundation/WetSurface.cs', 'ScaleA', 'PW_SCALE_A', None, None),
- ('game/contracts/Foundation/WetSurface.cs', 'ScaleB', 'PW_SCALE_B', None, None),
- ('game/contracts/Foundation/WetSurface.cs', 'WeightA', 'PW_WEIGHT_A', None, None),
- ('game/contracts/Foundation/WetSurface.cs', 'PuddleTop', 'PW_PUDDLE_TOP', None, None),
- ('game/contracts/Foundation/WetSurface.cs', 'PuddleSpan', 'PW_PUDDLE_SPAN', None, None),
- ('game/contracts/Foundation/WetSurface.cs', 'FlatFrom', 'PW_FLAT_FROM', None, None),
- ('game/contracts/Foundation/WetSurface.cs', 'FlatTo', 'PW_FLAT_TO', None, None),
- ('game/contracts/Foundation/WetSurface.cs', 'ResponseFrom', 'PW_RESPONSE_FROM', None, None),
- ('game/contracts/Foundation/WetSurface.cs', 'ResponseTo', 'PW_RESPONSE_TO', None, None),
- ('game/contracts/Foundation/WetSurface.cs', 'OffsetX', 'PW_OFFSET_X', None, None),
- ('game/contracts/Foundation/WetSurface.cs', 'OffsetZ', 'PW_OFFSET_Z', None, None),
- ('game/contracts/Foundation/WetSurface.cs', 'ExposureFrom', 'PW_EXPOSURE_FROM', None, None),
- ('game/contracts/Foundation/WetSurface.cs', 'ExposureSide', 'PW_EXPOSURE_SIDE', None, None),
- ('game/contracts/Foundation/WetSurface.cs', 'ExposureGain', 'PW_EXPOSURE_GAIN', None, None),
- ('game/contracts/Foundation/WetSurface.cs', 'ExposureTo', 'PW_EXPOSURE_TO', None, None),
+BINDINGS = [('game/contracts/Materials/PaletteEncoding.cs', 'FirstSeasonalRow', 'PAL_ROW_SEASON0', None, None),
+ ('game/contracts/Materials/PaletteEncoding.cs', 'LegacyHeight', 'PAL_BANK_ROWS', None, None),
+ ('game/contracts/Materials/PaletteEncoding.cs', 'Capacity', 'PAL_CAPACITY', None, None),
+ ('game/contracts/Materials/PaletteEncoding.cs', 'Width', 'PAL_WIDTH', None, None),
+ ('game/contracts/Materials/PaletteEncoding.cs', 'SeasonSampleCount', 'PAL_SEASON_SAMPLES', None, None),
+ ('game/contracts/Materials/PaletteEncoding.cs', 'ColorBankFlag', 'TOON_F_COLOR_BANK', None, None),
+ ('game/contracts/Materials/PaletteEncoding.cs', 'DecalBaseBankFlag', 'TOON_F_DECAL_BANK', None, None),
+ ('game/contracts/Materials/PaletteEncoding.cs', 'LampBankUnit', 'LAMP_COLOR_BANK_UNIT', None, None),
+ ('game/contracts/Materials/PaletteEncoding.cs', 'LampEnergyUnit', 'LAMP_ENERGY_UNIT', None, None),
+ ('game/contracts/Materials/PaletteEncoding.cs', 'LampMaxEnergyPercent', 'LAMP_ENERGY_PERCENT', None, None),
+ ('game/contracts/Materials/PaletteEncoding.cs', 'CurrentRow', 'PAL_ROW_CUR', None, None),
+ ('game/contracts/Materials/PaletteEncoding.cs', 'LampRow', 'PAL_ROW_LAMP', None, None),
+ ('game/contracts/Materials/PaletteEncoding.cs', 'InteriorShadeRow', 'PAL_ROW_IN_SHADE', None, None),
+ ('game/contracts/Materials/PaletteEncoding.cs', 'InteriorLitRow', 'PAL_ROW_IN_LIT', None, None),
+ ('game/contracts/Materials/PaletteEncoding.cs', 'ShadeOffset', 'PAL_SHADE_OFFSET', None, None),
+ ('game/contracts/Geometry/GeometryBundle.cs', 'Interior', 'TOON_F_INTERIOR', 'int', None),
+ ('game/contracts/Geometry/GeometryBundle.cs', 'Outskirts', 'TOON_F_OUTSKIRT', 'int', None),
+ ('game/contracts/Geometry/GeometryBundle.cs', 'Decal', 'TOON_F_DECAL', 'int', None),
+ ('game/contracts/Geometry/GeometryBundle.cs', 'NoShadow', 'TOON_F_NOSHADOW', 'int', None),
+ ('game/contracts/Materials/Style.cs', 'Two', 'TOON_STEPS_TWO', 'int', 'ShadeSteps'),
+ ('game/contracts/Materials/Style.cs', 'TwoHalf', 'TOON_STEPS_TWO_HALF', 'int', 'ShadeSteps'),
+ ('game/contracts/Materials/Style.cs', 'Soft', 'TOON_STEPS_SOFT', 'int', 'ShadeSteps'),
+ ('game/contracts/Materials/Style.cs', 'Three', 'TOON_STEPS_THREE', 'int', 'ShadeSteps'),
+ ('game/contracts/Materials/Style.cs', 'Escalator', 'MAT_ESCALATOR_FLAG', 'int', 'ToonFx'),
+ ('game/contracts/Materials/WetSurface.cs', 'ScaleA', 'PW_SCALE_A', None, None),
+ ('game/contracts/Materials/WetSurface.cs', 'ScaleB', 'PW_SCALE_B', None, None),
+ ('game/contracts/Materials/WetSurface.cs', 'WeightA', 'PW_WEIGHT_A', None, None),
+ ('game/contracts/Materials/WetSurface.cs', 'PuddleTop', 'PW_PUDDLE_TOP', None, None),
+ ('game/contracts/Materials/WetSurface.cs', 'PuddleSpan', 'PW_PUDDLE_SPAN', None, None),
+ ('game/contracts/Materials/WetSurface.cs', 'FlatFrom', 'PW_FLAT_FROM', None, None),
+ ('game/contracts/Materials/WetSurface.cs', 'FlatTo', 'PW_FLAT_TO', None, None),
+ ('game/contracts/Materials/WetSurface.cs', 'ResponseFrom', 'PW_RESPONSE_FROM', None, None),
+ ('game/contracts/Materials/WetSurface.cs', 'ResponseTo', 'PW_RESPONSE_TO', None, None),
+ ('game/contracts/Materials/WetSurface.cs', 'OffsetX', 'PW_OFFSET_X', None, None),
+ ('game/contracts/Materials/WetSurface.cs', 'OffsetZ', 'PW_OFFSET_Z', None, None),
+ ('game/contracts/Materials/WetSurface.cs', 'ExposureFrom', 'PW_EXPOSURE_FROM', None, None),
+ ('game/contracts/Materials/WetSurface.cs', 'ExposureSide', 'PW_EXPOSURE_SIDE', None, None),
+ ('game/contracts/Materials/WetSurface.cs', 'ExposureGain', 'PW_EXPOSURE_GAIN', None, None),
+ ('game/contracts/Materials/WetSurface.cs', 'ExposureTo', 'PW_EXPOSURE_TO', None, None),
  ('game/contracts/Determinism/IntegerNoise.cs', 'PuddleMixA', 'STYLE_HASH_MIX_A', None, None),
  ('game/contracts/Determinism/IntegerNoise.cs', 'PuddleMixB', 'STYLE_HASH_MIX_B', None, None),
  ('game/contracts/Determinism/IntegerNoise.cs', 'PuddleSaltX', 'PW_SALT_X', None, None),
@@ -72,7 +73,7 @@ BINDINGS = [('game/contracts/Foundation/PaletteEncoding.cs', 'FirstSeasonalRow',
  ('game/systems/nightlight/Lamps/LampTable.cs', 'HeadLevels', 'LAMP_HEAD_LEVELS', None, None),
  ('game/systems/nightlight/Lamps/LampTable.cs', 'HeadMetresPerUnit', 'LAMP_HEAD_METRES', None, None),
  ('game/systems/nightlight/Lamps/LampTable.cs', 'SequenceUnit', 'LAMP_SEQUENCE_UNIT', None, None),
- ('game/contracts/Foundation/LightingContracts.cs', 'Count', 'LIGHT_CHANNEL_COUNT', None, None),
+ ('game/contracts/Lighting/LightingContracts.cs', 'Count', 'LIGHT_CHANNEL_COUNT', None, None),
  ('game/systems/nightlight/Glow/GlowSets.cs', 'WindowHaloRatio', 'GLOW_WINDOW_RATIO', None, None),
  ('game/systems/nightlight/Glow/GlowSets.cs', 'OutskirtsFlag', 'GLOW_OUTSKIRTS_FLAG', None, None),
  ('game/systems/nightlight/Glow/GlowSets.cs', 'OutskirtsFirstId', 'WINDOW_CAMPUS_CAPACITY', None, None),
@@ -120,37 +121,100 @@ BINDINGS = [('game/contracts/Foundation/PaletteEncoding.cs', 'FirstSeasonalRow',
  ('game/style/shaders/cards/WindowCardTable.cs', 'Width', 'WCARD_WIDTH', None, None),
  ('game/style/shaders/cards/WindowCardTable.cs', 'Rows', 'WCARD_ROWS', None, None),
  ('game/style/shaders/cards/WindowCardTable.cs', 'Tag', 'WCARD_TAG', None, None),
- ('game/contracts/Foundation/WindowCardEncoding.cs', 'TypeMask', 'WCARD_TYPE_MASK', 'int', None),
- ('game/contracts/Foundation/WindowCardEncoding.cs',
+ ('game/contracts/Lighting/WindowCardEncoding.cs', 'TypeMask', 'WCARD_TYPE_MASK', 'int', None),
+ ('game/contracts/Lighting/WindowCardEncoding.cs',
   'PhysicalCurtainFlag',
   'WCARD_PHYSICAL_CURTAIN',
   'int',
-  None)]
+  None),
+ ('game/style/palette/keys/ColorScriptCurves.cs', 'NightSideFromDeg', 'SKY_NIGHT_SIDE_FROM', None, None),
+ ('game/style/palette/keys/ColorScriptCurves.cs', 'NightSideToDeg', 'SKY_NIGHT_SIDE_TO', None, None),
+ ('game/systems/vegetation/VegFade.cs', 'CloudReady', 'VEG_CLOUD_READY', None, None),
+ ('game/gen/vegetation/Understorey.cs', 'UnderVariantBit', 'VEG_VARIANT_UNDER', None, None)]
+
+# Only existing shader consumers are named here; their indices live in core.json.
+PALETTE_BINDINGS = [
+    ('sun.light', 'PAL_SUN_LIGHT'),
+    ('ambient.sky', 'PAL_AMBIENT_SKY'),
+    ('bounce.ground', 'PAL_BOUNCE_GROUND'),
+    ('interior.warm', 'PAL_INTERIOR_WARM'),
+    ('line.warm', 'PAL_LINE_WARM'),
+    ('line.cool', 'PAL_LINE_COOL'),
+    ('rim', 'PAL_RIM'),
+    ('glass.glare', 'PAL_GLASS_GLARE'),
+    ('window.warm', 'PAL_WINDOW_WARM'),
+    ('window.cool', 'PAL_WINDOW_COOL'),
+    ('shadow.1', 'PAL_SHADOW_1'),
+    ('fog.sun', 'PAL_FOG_SUN'),
+    ('fog.anti', 'PAL_FOG_ANTI'),
+    ('sky.sun.0', 'PAL_SKY_SUN0'),
+    ('sky.anti.0', 'PAL_SKY_ANTI0'),
+    ('sky.cloudLit', 'PAL_SKY_CLOUD_LIT'),
+    ('sky.cloudRim', 'PAL_SKY_CLOUD_RIM'),
+    ('sky.cloudBelly', 'PAL_SKY_CLOUD_BELLY'),
+    ('sky.cloudDeep', 'PAL_SKY_CLOUD_DEEP'),
+    ('sky.moon', 'PAL_SKY_MOON'),
+    ('weather.overcast', 'PAL_WEATHER_OVERCAST'),
+    ('weather.snowOvercast', 'PAL_WEATHER_SNOW_OVERCAST'),
+    ('weather.nightRain', 'PAL_WEATHER_NIGHT_RAIN'),
+    ('weather.cbBase', 'PAL_WEATHER_CB_BASE'),
+    ('weather.fog', 'PAL_WEATHER_FOG'),
+    ('weather.washedSky', 'PAL_WEATHER_WASHED_SKY'),
+    ('sign.green', 'PAL_SIGN_GREEN'),
+    ('firefly', 'PAL_FIREFLY'),
+    ('water.poolGlow', 'PAL_WATER_POOL_GLOW'),
+    ('lamp.warm', 'PAL_LAMP_WARM'),
+    ('lamp.amber', 'PAL_LAMP_AMBER'),
+    ('lamp.cool', 'PAL_LAMP_COOL'),
+]
+
+# Existing scalar rule pairs form the shader's distance bands.
+VECTOR_BINDINGS = [
+    ('game/systems/vegetation/VegFade.cs', 'NearFadeStart', 'NearFadeEnd', 'VEG_POOL_FADE'),
+    ('game/systems/vegetation/VegFade.cs', 'CloudFadeStart', 'CloudFadeEnd', 'VEG_CLOUD_FADE'),
+    ('game/gen/vegetation/Understorey.cs', 'FadeStart', 'DrawDistance', 'VEG_UNDER_FADE'),
+]
+
+
+def literal_rule(root, path, member, kind=None, enum=None):
+    source = (root / path).read_text(encoding="utf-8-sig")
+    if enum:
+        source = re.search(r"\benum " + enum + r"\b[^{}]*\{([^}]*)\}", source, re.S).group(1)
+        match = re.search(r"\b" + member + r"\s*=\s*(0x[0-9a-fA-F]+|[0-9]+)\b", source)
+        value = match.group(1) if match else None
+        kind = "int"
+    else:
+        match = re.search(r"\bconst\s+(int|byte|uint|float|double|bool)\s+" + member +
+                          r"\s*=\s*(-?(?:0x[0-9a-fA-F]+|[0-9]+(?:\.[0-9]+)?(?:[eE][+-]?[0-9]+)?)[fFdDuU]?|true|false)\s*;", source)
+        value = match.group(2) if match else None
+        if match and kind is None:
+            kind = {"byte": "int", "double": "float"}.get(match.group(1), match.group(1))
+    if value is None:
+        raise ValueError(f"Expected literal C# rule {path}: {member}")
+    if kind == "bool":
+        return kind, value
+    value = re.sub(r"[uU]$" if value.lstrip("-").startswith("0x") else r"[fFdDuU]$", "", value)
+    if kind == "float" and not re.search(r"[.eE]", value):
+        value += ".0"
+    if kind == "uint":
+        value += "u"
+    return kind, value
+
 
 def style_constants(root):
-    lines = ["// Generated by scripts/build/generate-style-shaders.py; edit the C# rule source.",
+    lines = ["// Generated by scripts/build/generate-style-shaders.py; edit the rule source or palette registry.",
              "#ifndef CAMPUS_STYLE_CONSTS_INCLUDED", "#define CAMPUS_STYLE_CONSTS_INCLUDED", ""]
     for path, member, name, kind, enum in BINDINGS:
-        source = (root / path).read_text(encoding="utf-8-sig")
-        if enum:
-            source = re.search(r"\benum " + enum + r"\b[^{}]*\{([^}]*)\}", source, re.S).group(1)
-            match = re.search(r"\b" + member + r"\s*=\s*(0x[0-9a-fA-F]+|[0-9]+)\b", source)
-            value = match.group(1) if match else None
-            kind = "int"
-        else:
-            match = re.search(r"\bconst\s+(int|byte|uint|float|double)\s+" + member +
-                              r"\s*=\s*(-?(?:0x[0-9a-fA-F]+|[0-9]+(?:\.[0-9]+)?(?:[eE][+-]?[0-9]+)?)[fFdDuU]?)\s*;", source)
-            value = match.group(2) if match else None
-            if match and kind is None:
-                kind = {"byte": "int", "double": "float"}.get(match.group(1), match.group(1))
-        if value is None:
-            raise ValueError(f"Expected literal C# rule {path}: {member}")
-        value = re.sub(r"[uU]$" if value.lstrip("-").startswith("0x") else r"[fFdDuU]$", "", value)
-        if kind == "float" and not re.search(r"[.eE]", value):
-            value += ".0"
-        if kind == "uint":
-            value += "u"
+        kind, value = literal_rule(root, path, member, kind, enum)
         lines.append(f"const {kind} {name} = {value};")
+    palette = json.loads((root / "game/style/palette/core.json").read_text(encoding="utf-8-sig"))
+    indices = {entry["token"]: entry["index"] for entry in palette["entries"]}
+    for token, name in PALETTE_BINDINGS:
+        lines.append(f"const int {name} = {indices[token]};")
+    for path, first, last, name in VECTOR_BINDINGS:
+        _, a = literal_rule(root, path, first, "float")
+        _, b = literal_rule(root, path, last, "float")
+        lines.append(f"const vec2 {name} = vec2({a}, {b});")
     return "\n".join(lines + ["", "#endif", ""])
 
 def fog_glsl(root):
@@ -166,19 +230,13 @@ def fog_glsl(root):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--root", type=Path, default=Path(__file__).resolve().parents[2])
-    parser.add_argument("--check", action="store_true")
     args = parser.parse_args()
     outputs = {"game/style/shaders/style_consts.gdshaderinc": style_constants(args.root),
                "game/style/outline/fog.glslinc": fog_glsl(args.root)}
-    stale = []
     for path, content in outputs.items():
         target = args.root / path
         if not target.exists() or target.read_bytes() != content.encode("utf-8"):
-            stale.append(path)
-            if not args.check:
-                target.write_bytes(content.encode("utf-8"))
-    if args.check and stale:
-        parser.exit(1, "Stale generated shaders; run scripts/build/generate-style-shaders.py: " + ", ".join(stale) + "\n")
+            target.write_bytes(content.encode("utf-8"))
 
 if __name__ == "__main__":
     main()

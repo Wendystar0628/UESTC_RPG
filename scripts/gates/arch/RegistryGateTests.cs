@@ -2,6 +2,7 @@ using Campus.Contracts;
 using Campus.Contracts.AppFlow;
 using Campus.Kernel.Registry;
 using Campus.Gates;
+using Campus.Pipeline.Map;
 using GdUnit4;
 using Godot;
 
@@ -15,16 +16,31 @@ public sealed class RegistryGateTests
     public void DeclarationValidationDoesNotConstructRegisteredImplementations()
     {
         var registry = new ServiceRegistry();
-        registry.Discover([typeof(ServiceRegistry).Assembly, typeof(ReplacementWorld).Assembly]);
+        registry.Discover([typeof(ServiceRegistry).Assembly, typeof(ReplacementWorld).Assembly], _ => "fixture");
         var chosen = registry.Entries.Single(entry => entry.Kind == RegistrationKind.Service && entry.Id == typeof(IWorldModel).FullName);
         if (chosen.Type != typeof(ReplacementWorld) || chosen.IsStub) throw new InvalidOperationException("Real world replacement was not selected.");
         RegistryGateRunner.ValidateConstructorGraph(registry,
             [typeof(IAppExit), typeof(Camera3D),
                 typeof(WorldEnvironment), typeof(Godot.Environment), typeof(CanvasLayer)]);
-        if (ReplacementWorld.Constructed) throw new InvalidOperationException("Declaration validation constructed the selected world implementation.");
+        var factory = RegistrationDiscovery.ResolveInterior(registry.Entries, "fixture.family.first");
+        if (factory.Type != typeof(InteriorFactory)) throw new InvalidOperationException("Factory prefix registration was not selected.");
+        if (ReplacementWorld.Constructed || InteriorFactory.Constructed)
+            throw new InvalidOperationException("Declaration validation constructed a registered implementation.");
     }
 
-    [KernelService(typeof(IWorldModel), Owner = "WP-08")]
+    [InteriorProviderFactory("fixture.family.")]
+    public sealed class InteriorFactory : IInteriorProviderFactory
+    {
+        public static bool Constructed { get; private set; }
+        public InteriorFactory()
+        {
+            Constructed = true;
+            throw new InvalidOperationException("Factory construction is unavailable in this declaration-only fixture.");
+        }
+        public IInteriorProvider Create(string providerId) => throw new NotSupportedException();
+    }
+
+    [KernelService(typeof(IWorldModel))]
     public sealed class ReplacementWorld : IWorldModel
     {
         public static bool Constructed { get; private set; }

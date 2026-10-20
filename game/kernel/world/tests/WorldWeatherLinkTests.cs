@@ -81,11 +81,11 @@ public sealed class WorldWeatherLinkTests
         AssertThat(weather.PinnedIntensity).IsEqual(1f);
         AssertThat(Math.Abs((weather.PinFrom) - (world.TargetHours - .5)) <= TestTolerance.WorldHours).OverrideFailureMessage($"Expected {world.TargetHours - .5:R}, got {weather.PinFrom:R}.").IsTrue();
         AssertThat(Math.Abs((weather.PinTo) - (world.TargetHours + 2)) <= TestTolerance.WorldHours).OverrideFailureMessage($"Expected {world.TargetHours + 2:R}, got {weather.PinTo:R}.").IsTrue();
-        var snapshot = world.Capture(default);
+        var snapshot = world.Capture(SaveContext(world));
         for (var i = 0; i < 60; i++) world.Tick(.1);
         AssertThat(Math.Abs((world.Clock) - (21)) <= TestTolerance.WorldHours).OverrideFailureMessage($"Expected {21:R}, got {world.Clock:R}.").IsTrue();
         AssertThat(world.SeasonTarget).IsEqual(Season.Winter);
-        AssertThat(world.Capture(default)).IsEqual(snapshot with { AnimTime = world.AnimTime });
+        AssertThat(world.Capture(SaveContext(world))).IsEqual(snapshot with { AnimTime = world.AnimTime });
     }
 
     [TestCase]

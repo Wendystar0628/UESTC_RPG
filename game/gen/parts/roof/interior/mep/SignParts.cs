@@ -11,7 +11,7 @@ namespace Campus.Gen.Parts.Roof.Mep;
 /// carry <see cref="ToonSpec.Emissive"/> = sign.signal (always on); placers also hand <see cref="Glow"/> to the lamp inventory
 /// for the night halo. Variation 0: door symbol. 1: arrow pointing left. 2: arrow pointing right. Back on +Z; visual only.
 /// </summary>
-[Part(PartCatalog.ExitSign, Owner = "WP-12")]
+[Part(PartCatalog.ExitSign)]
 public sealed class ExitSignPart() : MepPart<SignParams>(new(900, 60))
 {
     protected override Vector3 Minimum => new(0.24f, 0.09f, 0.015f);
@@ -88,7 +88,7 @@ public sealed class ExitSignPart() : MepPart<SignParams>(new(900, 60))
 /// field yet, so it draws the blank plate; placers that know the room number call <see cref="Build"/> (numerals and '-' only,
 /// "区-层-序号", WLD-INTERIORS). Back on +Z; visual only.
 /// </summary>
-[Part(PartCatalog.RoomSign, Owner = "WP-12")]
+[Part(PartCatalog.RoomSign)]
 public sealed class RoomSignPart() : MepPart<SignParams>(new(500, 60))
 {
     private static readonly RoomSignPart Shared = new();

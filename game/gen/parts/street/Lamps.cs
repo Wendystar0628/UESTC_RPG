@@ -24,7 +24,7 @@ public enum LampGrade
 /// (secondary roads). 2: the disc lamp on the street group (main lamps in grade-two areas, MAP-QSH-ADDITIONS).
 /// No OmniLight3D: the lens is self-lit on its channel and placers hand <see cref="Emitter"/> to the lamp inventory (contract-12).
 /// </summary>
-[Part(PartCatalog.StreetLamp, Owner = "WP-13")]
+[Part(PartCatalog.StreetLamp)]
 public sealed class StreetLampPart : IPartDef<LampParams>
 {
     public StreetLampPart() => Lods = Levels.Of<LampParams>(Build, LodLevel.L0, LodLevel.L1, LodLevel.L2);
@@ -193,7 +193,7 @@ public sealed class StreetLampPart : IPartDef<LampParams>
 /// above head height on the wall, whose collider stands in for it. Door lamps are lamp fixtures in the lamp table on the
 /// first-lamp group (on at dusk, on all night, never half off); no window or interior channel (WP-39, max-104).
 /// </summary>
-[Part(PartCatalog.EntranceLamp, Owner = "WP-13")]
+[Part(PartCatalog.EntranceLamp)]
 public sealed class EntranceLampPart : IPartDef<LampParams>
 {
     public EntranceLampPart() => Lods = Levels.Of<LampParams>(Build, LodLevel.L0, LodLevel.L1);

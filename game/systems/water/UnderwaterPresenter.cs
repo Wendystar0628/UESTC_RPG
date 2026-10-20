@@ -8,7 +8,7 @@ namespace Campus.Systems.Water;
 /// with these values; this package only supplies colour and visibility. Colours are palette names, so they follow
 /// the time of day and season like the water surface.
 /// </summary>
-[MediumPresenter("water.underwater", Owner = "WP-24")]
+[MediumPresenter("water.underwater")]
 public sealed class UnderwaterPresenter : IMediumPresenter
 {
     /// <summary>Visibility just under the surface and at depth (m); SYS-VIEW asks for 5–10 m.</summary>

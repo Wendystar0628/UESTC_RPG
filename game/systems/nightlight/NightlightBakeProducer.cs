@@ -17,7 +17,7 @@ namespace Campus.Systems.Nightlight;
 
 
 
-[BakeProducer("nightlight", Owner = "WP-39")]
+[BakeProducer("nightlight")]
 public sealed class NightlightBakeProducer : IBakeProducer, IBakeContentConsumer, INightlightCatalogBuilder
 {
     public BakePayloadClass PayloadClass => BakePayloadClass.Product;

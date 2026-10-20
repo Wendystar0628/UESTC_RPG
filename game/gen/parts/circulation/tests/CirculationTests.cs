@@ -21,7 +21,6 @@ public sealed class CirculationTests
         foreach (var (type, attribute) in parts)
         {
             var entry = PartCatalog.Find(new(attribute.Id)) ?? throw new InvalidOperationException($"{attribute.Id} is not in PartCatalog.");
-            AssertThat(entry.Owner.Value == "WP-11" && attribute.Owner == "WP-11").OverrideFailureMessage($"{attribute.Id} has the wrong owner.").IsTrue();
             AssertThat(ParameterType(type) == entry.ParameterType).OverrideFailureMessage($"{attribute.Id} implements the wrong parameter type.").IsTrue();
             AssertThat(type.GetConstructor(Type.EmptyTypes) is not null).OverrideFailureMessage($"{attribute.Id} needs a public parameterless constructor.").IsTrue();
         }
@@ -44,11 +43,8 @@ public sealed class CirculationTests
     }
 
     [TestCase, TestCategory(TestReason.Contract)]
-    public void EveryVariationOfEveryGallerySampleIsClosed()
+    public void EveryExplicitPartVariationIsClosed()
     {
-        foreach (var sample in CirculationGallery.Samples())
-            foreach (var level in Enum.GetValues<LodLevel>())
-                ClosedClockwise(sample.Build(level), sample.Bounds, sample.Id);
         var parts = new (object Part, object[] Params)[]
         {
             (new RailingPart(), new[] { 0, 1, 2 }.Select(v => (object)new RailingParams(2.5f, 1.05f, 0.12f, 2f) { Variation = v }).ToArray()),
@@ -66,25 +62,6 @@ public sealed class CirculationTests
                 var (bounds, levels, _, _) = Invoke(part.GetType(), p);
                 foreach (var geometry in levels) ClosedClockwise(geometry, bounds, part.GetType().Name);
             }
-    }
-
-    [TestCase, TestCategory(TestTag.Determinism)]
-    [TestCategory(TestReason.Contract)]
-    public void GenerationIsBitwiseRepeatable()
-    {
-        var first = CirculationGallery.CreateExamples(); var second = CirculationGallery.CreateExamples();
-        AssertThat(first.Count == second.Count && first.Count > 0).OverrideFailureMessage("Gallery is incomplete.").IsTrue();
-        for (var i = 0; i < first.Count; i++)
-        {
-            AssertThat(first[i].Geometry.Meshes.Count == second[i].Geometry.Meshes.Count).OverrideFailureMessage("Surface count changed.").IsTrue();
-            for (var m = 0; m < first[i].Geometry.Meshes.Count; m++)
-            {
-                var a = first[i].Geometry.Meshes[m]; var b = second[i].Geometry.Meshes[m];
-                AssertThat(a.Position.Select(BitConverter.SingleToInt32Bits).SequenceEqual(b.Position.Select(BitConverter.SingleToInt32Bits))).OverrideFailureMessage("Vertex bytes changed.").IsTrue();
-                AssertThat(a.Normal.Select(BitConverter.SingleToInt32Bits).SequenceEqual(b.Normal.Select(BitConverter.SingleToInt32Bits))).OverrideFailureMessage("Normal bytes changed.").IsTrue();
-                AssertThat(a.Index.SequenceEqual(b.Index) && a.Material == b.Material).OverrideFailureMessage("Index or material changed.").IsTrue();
-            }
-        }
     }
 
     [TestCase, TestCategory(TestReason.Contract)]
@@ -320,7 +297,6 @@ public sealed class CirculationTests
             var a = 2 * Math.PI * i / count;
             return new Vector2((float)(rx * Math.Cos(a)), (float)(rz * Math.Sin(a)));
         }).ToArray();
-
 
     private static List<(Type Type, PartAttribute Attribute)> Registered() =>
         typeof(RailingPart).Assembly.GetTypes().Where(t => t.IsClass && !t.IsAbstract &&

@@ -59,15 +59,6 @@ public sealed class PinxueFrameSite : ZoneSite
                     x + P.ColumnSize * 0.5f, -g.Depth * 0.5f + P.ColumnSize * 0.5f)))];
     }
 
-    public override IReadOnlyList<InspectionProbe> Probes
-    {
-        get
-        {
-            // Q1 (walk, K1): under the calligraphy beam's forecourt edge, looking up at the soffit and the plaque.
-            return [Probe("Q1", CenterEastIds.Pinxue.Complex, new(P.Q1Eye.X, P.PlatformY + WalkRules.StandingEye, P.Q1Eye.Y), P.Q1Look, 26f, 5f)];
-        }
-    }
-
     internal static float BaseY(BuildContext ctx) => ctx.World.Terrain.PadY(new(CenterEastIds.Pinxue.Complex));
 
     public override void Build(SiteBuilder b)

@@ -14,7 +14,7 @@ namespace Campus.Gen.Parts.Street;
 /// pole's flange. Lettering is a frozen native-font run and three timetable rules.
 /// Collision: the pole as a post, the board as a thin box (its bottom edge is near head height).
 /// </summary>
-[Part(PartCatalog.BusStop, Owner = "WP-13")]
+[Part(PartCatalog.BusStop)]
 public sealed class BusStopPart : IPartDef<SignParams>
 {
     public BusStopPart() => Lods = Levels.Of<SignParams>(Build, LodLevel.L0, LodLevel.L1, LodLevel.L2);
@@ -112,7 +112,7 @@ public sealed class BusStopPart : IPartDef<SignParams>
 /// sign by the door — Width is the panel, Height the overall height, Depth the base; collision is one thin box, Metal.
 /// The mainline sign carries its fixed title through the scene-text atlas.
 /// </summary>
-[Part(PartCatalog.OpenSign, Owner = "WP-13")]
+[Part(PartCatalog.OpenSign)]
 public sealed class OpenSignPart : IPartDef<SignParams>
 {
     private const float PanelDepth = 0.03f;
@@ -193,7 +193,7 @@ public sealed class OpenSignPart : IPartDef<SignParams>
 /// Entrance mat (地垫, WLD-INTERIORS): a dark rubber mat in a slightly lighter dark border, lying flat (Height is its
 /// thickness). Walkable: no collider; its RubberMat footstep comes from the floor or ground material grid (WLD-LIFE).
 /// </summary>
-[Part(PartCatalog.EntranceMat, Owner = "WP-13")]
+[Part(PartCatalog.EntranceMat)]
 public sealed class EntranceMatPart : IPartDef<PanelParams>
 {
     public EntranceMatPart() => Lods = Levels.Of<PanelParams>(Build, LodLevel.L0, LodLevel.L1);

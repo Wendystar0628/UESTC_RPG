@@ -1,5 +1,4 @@
 using Campus.Contracts;
-using Campus.Kernel.Materials;
 using Godot;
 using KernelRegistry = Campus.Kernel.Registry.Kernel;
 

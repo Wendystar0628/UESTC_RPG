@@ -60,7 +60,38 @@ public static class InteriorAssembly
             !layout.OpenStoreys.ToHashSet().SetEquals(binding.OpenFloors) ||
             layout.OpenStoreys.Any(floor => !layout.Storeys.Any(storey => storey.Index == floor)))
             throw new InvalidDataException($"Interior layout coverage differs from its catalog: {binding.ProviderId}/{feature.Value}.");
+        foreach (var storey in layout.Storeys)
+            if (!float.IsFinite(storey.FloorY) || !float.IsFinite(storey.Height) || storey.Height <= 0)
+                throw new InvalidDataException($"Interior provider returned invalid floor elevation/height: {binding.ProviderId}/{feature.Value}.");
+        if (context.World.Interiors.Get(feature) is { Storeys.Count: > 0 } indexed)
+        {
+            var expected = indexed.Storeys.OrderBy(s => s.Index).ThenBy(s => s.FloorY).ToArray();
+            var actual = layout.Storeys.OrderBy(s => s.Index).ThenBy(s => s.FloorY).ToArray();
+            if (actual.Length != expected.Length || actual.Zip(expected).Any(pair => pair.First.Index != pair.Second.Index ||
+                pair.First.FloorY != pair.Second.FloorY || pair.First.Height != pair.Second.Height))
+                throw new InvalidDataException($"Interior layout changed its baked FloorY/Height: {binding.ProviderId}/{feature.Value}.");
+        }
         return layout;
+    }
+
+    public static IReadOnlyList<InteriorIndexEntry> IndexEntries(IReadOnlyList<InteriorLayout> layouts,
+        IReadOnlyList<InteriorProviderBinding> bindings, IReadOnlyDictionary<string, IInteriorProvider> providers)
+    {
+        var byFeature = layouts.ToDictionary(layout => layout.Feature);
+        var result = new List<InteriorIndexEntry>();
+        foreach (var binding in bindings)
+            foreach (var feature in binding.FeatureIds)
+            {
+                if (!byFeature.Remove(feature, out var layout) || layout.OpenStoreys.Count == 0 ||
+                    !layout.OpenStoreys.ToHashSet().SetEquals(binding.OpenFloors) || layout.Storeys.Count == 0 ||
+                    layout.OpenStoreys.Any(floor => !layout.Storeys.Any(s => s.Index == floor)) ||
+                    layout.Storeys.Any(s => !float.IsFinite(s.FloorY) || !float.IsFinite(s.Height) || s.Height <= 0))
+                    throw new InvalidDataException($"Baked interior layout differs from catalog: {binding.ProviderId}/{feature.Value}.");
+                result.Add(new(feature, layout.Storeys, layout.Entrances, providers[binding.ProviderId].Walkable,
+                    binding.ProviderId, layout.OpenStoreys));
+            }
+        if (byFeature.Count != 0) throw new InvalidDataException("Baked interior layouts include unregistered features.");
+        return result.AsReadOnly();
     }
 
     private static IReadOnlyList<InteriorProviderBinding> ConfigureCore(ReadOnlyMemory<byte> interiorsBytes,
@@ -71,8 +102,7 @@ public static class InteriorAssembly
         if (document.RootElement.GetProperty("version").GetInt32() != 1) throw new JsonException("Unsupported interior catalog version.");
         _ = InteriorEntranceJson.ParseClosedEntrances(document.RootElement, terrain);
         var bindings = new List<InteriorProviderBinding>();
-        var configurations = new List<(IInteriorCatalogConfigurable Provider, FeatureId[] Features, int[] Floors,
-            IReadOnlyDictionary<FeatureId, IReadOnlyList<EntranceDecl>> Entrances)>();
+        var configurations = new List<(IInteriorCatalogConfigurable Provider, InteriorCatalogConfiguration Configuration)>();
         var claimed = new HashSet<FeatureId>();
         var providerIds = new HashSet<string>(StringComparer.Ordinal);
         foreach (JsonElement item in document.RootElement.GetProperty("interiors").EnumerateArray())
@@ -104,14 +134,32 @@ public static class InteriorAssembly
                 authoredEntranceCount++;
             }
             if (provider is IInteriorCatalogConfigurable configurable)
-                configurations.Add((configurable, features, floors, entranceLists.ToDictionary(pair => pair.Key,
-                    pair => (IReadOnlyList<EntranceDecl>)Array.AsReadOnly(pair.Value.ToArray()))));
+                configurations.Add((configurable, new(features, floors, entranceLists.ToDictionary(pair => pair.Key,
+                    pair => (IReadOnlyList<EntranceDecl>)Array.AsReadOnly(pair.Value.ToArray())),
+                    item.TryGetProperty("buildingType", out var buildingType) ? buildingType.Clone() : null,
+                    item.TryGetProperty("seals", out var seals)
+                        ? JsonSerializer.Deserialize<SealOp[]>(seals.GetRawText(), ContractJson.Options) ?? throw new JsonException("Null catalog seals.") : [])));
             bindings.Add(new(providerId, Array.AsReadOnly(features), Array.AsReadOnly(floors), authoredEntranceCount));
         }
         // Validate the entire catalog before mutating any fallback provider; no geometry is generated here.
         foreach (var configuration in configurations)
-            configuration.Provider.Configure(configuration.Features, configuration.Floors, configuration.Entrances);
+            configuration.Provider.Configure(configuration.Configuration);
         return bindings.AsReadOnly();
+    }
+
+    public static IReadOnlyList<(string ProviderId, Registration Registration)> ResolveRegistrations(ReadOnlyMemory<byte> catalog,
+        IReadOnlyList<Registration> registrations)
+    {
+        using var document = JsonDocument.Parse(catalog);
+        var result = new List<(string, Registration)>();
+        foreach (var item in document.RootElement.GetProperty("interiors").EnumerateArray())
+        {
+            var id = item.GetProperty("providerId").GetString() ?? throw new JsonException("Missing provider ID.");
+            result.Add((id, RegistrationDiscovery.ResolveInterior(registrations, id)));
+        }
+        if (result.Select(r => r.Item1).Distinct(StringComparer.Ordinal).Count() != result.Count)
+            throw new JsonException("Duplicate catalog interior provider ID.");
+        return result.OrderBy(r => r.Item1, StringComparer.Ordinal).ToArray();
     }
 
     /// <summary>Convenience for fresh, unpublished map-owned providers. Shared/global registry instances must not be passed.</summary>
@@ -142,15 +190,13 @@ public static class InteriorAssembly
             {
                 if (!context.World.Features.TryGetValue(pair.Key, out var feature))
                     throw new JsonException($"Closed entrance '{pair.Value[0].Id}' names missing feature '{pair.Key.Value}'.");
-                var storeys = BuildingStoreys(feature);
-                if (storeys.Count == 0)
-                    throw new JsonException($"Closed entrance '{pair.Value[0].Id}' feature '{pair.Key.Value}' has no building footprint.");
+                var existing = context.World.Interiors.Get(pair.Key)
+                    ?? throw new JsonException($"Closed entrance feature '{pair.Key.Value}' has no building footprint.");
                 if (bindings.Any(binding => binding.FeatureIds.Contains(pair.Key)))
                     throw new JsonException($"Closed entrance '{pair.Value[0].Id}' conflicts with configured interior '{pair.Key.Value}'.");
-                var existing = context.World.Interiors.Get(pair.Key);
-                if (existing is { Open: true } || existing?.ProviderId is not null)
+                if (existing is { Open: true } || existing.ProviderId is not null)
                     throw new JsonException($"Closed entrance '{pair.Value[0].Id}' conflicts with existing open interior '{pair.Key.Value}'.");
-                closedEntries.Add(new(pair.Key, existing?.Storeys ?? storeys, pair.Value, false, null, []));
+                closedEntries.Add(new(pair.Key, existing.Storeys, pair.Value, false, null, []));
             }
         }
         var meshes = new List<GeometryBundle>();
@@ -193,32 +239,6 @@ public static class InteriorAssembly
         }
         entries.AddRange(closedEntries);
         return new(new(meshes, []), colliders, entries, nodes, edges, portals);
-    }
-
-    private static IReadOnlyList<StoreyInfo> BuildingStoreys(WorldFeature feature)
-    {
-        var parts = feature.Parts.Count == 0
-            ? new[] { new WorldFeaturePart("", feature.Geometry, feature.Height, feature.Storeys) }
-            : feature.Parts;
-        var storeys = new List<StoreyInfo>();
-        foreach (var part in parts)
-        {
-            var kind = part.Props is { ValueKind: JsonValueKind.Object } props && props.TryGetProperty("kind", out var declared)
-                ? declared.GetString() : feature.Kind.Value;
-            if (kind != "building") continue;
-            IReadOnlyList<PolygonRings> polygons = part.Geometry switch
-            {
-                PolygonGeometry polygon => new[] { polygon.Rings },
-                MultiPolygonGeometry multi => multi.Polygons,
-                _ => []
-            };
-            var count = Math.Max(1, part.Storeys ?? (int)MathF.Ceiling((part.Height ?? 3.6f) / 3.6f));
-            var height = (part.Height ?? count * 3.6f) / count;
-            foreach (var polygon in polygons)
-                for (var floor = 1; floor <= count; floor++)
-                    storeys.Add(new(floor, (floor - 1) * height, height, polygon.Outer));
-        }
-        return storeys.AsReadOnly();
     }
 
 }

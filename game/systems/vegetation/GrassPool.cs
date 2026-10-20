@@ -18,7 +18,7 @@ internal sealed class GrassPool
     /// <summary>Key prefix of grass entries in IVegetationRuntimeSource.PrepareGrass (= Campus.Gen.Vegetation.GrassClumps.KeyPrefix).</summary>
     public const string KeyPrefix = "grass/";
 
-    private const uint Layer = 1u << 5;   // layer 6: grass, leaves, particles (ENG-PERF)
+    private const uint Layer = RenderLayers.GrassAndEffects;   // layer 6: grass, leaves, particles (ENG-PERF)
     private const float Cell = 8f;
     internal const float Reach = 24f;      // Capacity envelope covering all preset grass ranges plus clump sway; visibility reads quality.z.
     private const float Step = 2f;
@@ -58,7 +58,7 @@ internal sealed class GrassPool
 
     public void Mount(IInstancePoolHost host, MapId map)
     {
-        _pool = host.Mount(new GeometryInstancePoolSpec($"vegetation.{_tileId}.{_data.Key}", _data.Owner.Value, _data.Prototypes[0], Capacity, Parked,
+        _pool = host.Mount(new GeometryInstancePoolSpec($"vegetation.{_tileId}.{_data.Key}", _data.Prototypes[0], Capacity, Parked,
             Layer, GeometryInstance3D.ShadowCastingSetting.Off) { Map = map });
         _pool.WriteBuffer(_scratch);
         _at = null;

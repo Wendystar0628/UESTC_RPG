@@ -81,7 +81,6 @@ internal static class BuildingsTestSupport
     internal static Vector3 P(GeometryBundle b, int i) => new(b.Position[3 * i], b.Position[3 * i + 1], b.Position[3 * i + 2]);
     internal static Vector3 N(GeometryBundle b, int i) => new(b.Normal[3 * i], b.Normal[3 * i + 1], b.Normal[3 * i + 2]);
 
-
     internal static readonly MapDescriptor TestMap = new(new MapId("test"), new LocalizedName("测试", "Test"), MapKind.Outdoor, 1, 1u,
         new GeoFrame(0d, 0d, 32648, new(-1000f, -1000f), new(1000f, 1000f)), Vector2.Zero,
         new Box3(new(-1024f, -28f, -1024f), new(1024f, 2000f, 1024f)), new MapRect(new(-1024f, -1024f), new(1024f, 1024f)),
@@ -92,39 +91,46 @@ internal static class BuildingsTestSupport
     /// <summary>A build context as the kernel hands it out: <paramref name="claims"/> are facade claims of a zone pack.</summary>
     internal static BuildContext Ctx(IWorldModel world, uint seed, WindowNumberingSnapshot? numbering = null, string[]? claims = null) => new()
     {
+        CodeHash = "fixture",
         Catalog = Campus.Contracts.Tests.PaletteFixture.Catalog,
         World = world,
         Map = TestMap,
         SourceInputs = Campus.Tests.RealMapFixture.WindowInputs(TestMap.Id),
         WorldSeed = seed,
-        WindowNumbering = numbering,
-        ClaimedBy = (feature, aspect) => aspect == Aspects.Facade && claims?.Contains(feature.Value) == true ? new WpId("WP-18") : null,
+        WindowNumbering = numbering ?? new(TestMap.Id, new string('0', 64), []),
+        ClaimedBy = (feature, aspect) => aspect == Aspects.Facade && claims?.Contains(feature.Value) == true ? "zone.south" : null,
     };
 
     /// <summary>The kernel's prepass stand-in until WP-02 runs it: the provider's snapshot, published in the context.</summary>
     internal static BuildContext Prepared(BuildContext ctx) => new()
     {
-        Catalog = Campus.Contracts.Tests.PaletteFixture.Catalog,
+        CodeHash = ctx.CodeHash,
+        Catalog = ctx.Catalog,
         World = ctx.World,
         Map = ctx.Map,
         SourceInputs = ctx.SourceInputs,
+        GlobalInputs = ctx.GlobalInputs,
+        InteriorLayouts = ctx.InteriorLayouts,
+        InteriorProviders = ctx.InteriorProviders,
+        PartLods = ctx.PartLods,
+        GroundMaskContributors = ctx.GroundMaskContributors,
         WorldSeed = ctx.WorldSeed,
         ClaimedBy = ctx.ClaimedBy,
         WindowNumbering = new BuildingsModule().PrepareWindowNumbering(ctx, []),
     };
 
     /// <summary>
-    /// The claims ledger of the real campus (the kernel's MapClaimLedger, rebuilt): every zone pack's claims under its owner.
+    /// The claims ledger of the real campus (the kernel's MapClaimLedger, rebuilt): every zone pack's claims under its registered module ID.
     /// The other content modules (furniture, ground, vegetation, water) claim nothing.
     /// </summary>
-    internal static Func<FeatureId, Aspects, WpId?> RealClaims(IWorldModel world)
+    internal static Func<FeatureId, Aspects, string?> RealClaims(IWorldModel world)
     {
         IContentModule[] zones = [new Campus.Gen.Maps.Qingshuihe.Core.CoreModule(), new Campus.Gen.Maps.Qingshuihe.South.SouthModule(),
             new Campus.Gen.Maps.Qingshuihe.CenterEast.CenterEastModule(), new Campus.Gen.Maps.Qingshuihe.North.NorthModule()];
-        var owners = new Dictionary<(FeatureId, Aspects), WpId>();
+        var owners = new Dictionary<(FeatureId, Aspects), string>();
         foreach (var zone in zones)
         {
-            var owner = new WpId(zone.GetType().GetCustomAttributes(typeof(ContentModuleAttribute), false).OfType<ContentModuleAttribute>().Single().Owner);
+            var owner = zone.GetType().GetCustomAttributes(typeof(ContentModuleAttribute), false).OfType<ContentModuleAttribute>().Single().Id;
             foreach (var claim in zone.Claims)
             {
                 FeatureId[] claimed = claim switch

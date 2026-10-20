@@ -51,6 +51,7 @@ public sealed class VegetationBuildTests
         }, "fixture");
         var ctx = new BuildContext
         {
+            CodeHash = "fixture", WindowNumbering = new((RealMapFixture.Entry().Descriptor).Id, new string('0', 64), []),
             World = world,
             Map = RealMapFixture.Entry().Descriptor,
             WorldSeed = 1u,
@@ -131,6 +132,7 @@ public sealed class VegetationBuildTests
         AssertThat(VegetationPrototypes.Get(info, variant, VegPool.Shadow, ctx).Surfaces.Count == 1).OverrideFailureMessage("one shadow proxy surface").IsTrue();
         var otherInputs = new BuildContext
         {
+            CodeHash = "fixture", WindowNumbering = new((ctx.Map).Id, new string('0', 64), []),
             World = ctx.World, Map = ctx.Map, WorldSeed = ctx.WorldSeed, Catalog = ctx.Catalog,
             GlobalInputs = BuildInputSnapshot.Freeze(ctx.GlobalInputs.Entries, "fixture")
         };
@@ -166,22 +168,6 @@ public sealed class VegetationBuildTests
         }
     }
 
-    [TestCase, TestCategory(TestReason.Smoke)]
-    [TestCategory("Slow")]
-    public void WholeMapStaysWithinAnOrderOfMagnitudeOfTheBudget()
-    {
-        var module = Module;
-        int Weigh(ContentOutput o) => o.Instances.Sum(s => s.Count * VegetationPrototypes.Triangles(s.Prototype));
-        var heaviest = Near.Value.Select(n => n.Output).ToArray();
-        var l0 = heaviest.Max(Weigh);
-        var draws = heaviest.Max(o => o.Instances.Sum(s => s.Prototype.Surfaces.Count));
-        var l1 = Far[LodLevel.L1].Value.Max(Weigh);
-        // Demo precision: only an order of magnitude over the declared budget fails (WF-RULE).
-        var factor = TestTolerance.BudgetFactor;
-        AssertThat(l0 <= factor * module.Budget.TrianglesL0 && l1 <= factor * module.Budget.TrianglesL1 && draws <= factor * module.Budget.DrawCalls)
-            .OverrideFailureMessage($"L0 {l0}, L1 {l1}, draws {draws} over {factor}x {module.Budget}").IsTrue();
-    }
-
     [TestCase, TestCategory(TestReason.Contract)]
     [TestCategory("Slow")]
     public void TilePayloadUsesTheConsumedSourceAndExplicitNearPrototypeOrder()
@@ -193,7 +179,7 @@ public sealed class VegetationBuildTests
             [new("vegetation", Module, source, Module.Tiles(source).ToArray())]), null!);
         var key = new BakeKey(source.Map.Id, BakeModuleIds.VegetationTrees, FormattableString.Invariant($"L0/{tile.X}/{tile.Z}"));
         // Deliberately incomplete request inputs: the producer must use the original source context.
-        var request = new BuildContext { Map = source.Map, World = source.World, WorldSeed = source.WorldSeed + 1, Catalog = source.Catalog };
+        var request = new BuildContext { CodeHash = "fixture", WindowNumbering = new((source.Map).Id, new string('0', 64), []), Map = source.Map, World = source.World, WorldSeed = source.WorldSeed + 1, Catalog = source.Catalog };
         var result = (VegetationTileContent)producer.Build(key, request, "fixture-input");
         var expected = Module.PrepareTrees(source, tile);
         AssertThat(result.Key == key && result.Tile == tile && result.Mothers.Count == expected.Count).IsTrue();

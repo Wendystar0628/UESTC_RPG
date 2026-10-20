@@ -222,7 +222,7 @@ public sealed class FacadeOpenings
         var lod = level ?? _lod;
         if (!_parts.TryGetValue((part, parameters, lod), out var geometry))
         {
-            geometry = OpeningGallery.Build(new PartId(part), parameters, lod);
+            geometry = OpeningPartFactory.Build(new PartId(part), parameters, lod);
             _parts.Add((part, parameters, lod), geometry);
         }
         foreach (var mesh in geometry.Meshes)

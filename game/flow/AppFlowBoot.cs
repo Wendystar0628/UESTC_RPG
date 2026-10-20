@@ -6,8 +6,8 @@ using Campus.Contracts.Startup;
 
 namespace Campus.Flow;
 
-[KernelService(typeof(IAppFlow), Owner = "WP-49a")]
-[KernelService(typeof(IAppBootFlow), Owner = "WP-49a")]
+[KernelService(typeof(IAppFlow))]
+[KernelService(typeof(IAppBootFlow))]
 public sealed partial class AppFlowService : IAppBootFlow, IBootParticipant
 {
     private BootFlowRequest? _boot;

@@ -27,17 +27,18 @@ public sealed class StreamSchedulingTests
         var features = entry.GetProperty("featureIds").EnumerateArray().Select(item => new FeatureId(item.GetString()!)).ToArray();
         var floors = entry.GetProperty("openFloors").EnumerateArray().Select(item => item.GetInt32()).ToArray();
         var provider = new LibraryInteriorProvider();
-        provider.Configure(features, floors, new Dictionary<FeatureId, IReadOnlyList<EntranceDecl>>());
+        provider.Configure(new(features, floors, new Dictionary<FeatureId, IReadOnlyList<EntranceDecl>>(), null, []));
         var context = new TestMapContext(RealMapFixture.Entry().Descriptor, world);
         var layouts = new Dictionary<FeatureId, InteriorLayout>();
-        var generation = new BuildContext { Map = context.Descriptor, World = world, WorldSeed = 1, InteriorLayouts = layouts,
+        var generation = new BuildContext {
+            CodeHash = "fixture", WindowNumbering = new((context.Descriptor).Id, new string('0', 64), []), Map = context.Descriptor, World = world, WorldSeed = 1, InteriorLayouts = layouts,
             Catalog = Campus.Contracts.Tests.PaletteFixture.Catalog,
             InteriorProviders = new Dictionary<string, IInteriorProvider> { [providerId] = provider } };
         foreach (var feature in features) layouts.Add(feature, provider.Layout(generation, feature));
         var layout = layouts.Values.Single(item => item.AtriumVisibleStoreys.Count > 0);
         var atriumFloor = layout.AtriumVisibleStoreys.Min();
         var bake = new InteriorRequests();
-        var stream = new InteriorStream(bake, new StreamMountQueue(() => 0), new StreamMaterials(null!, null!), null!, _ => { });
+        var stream = new InteriorStream(bake, new StreamMountQueue(() => 0), new StreamMaterials(null!, null!), null!, _ => { }, false);
         stream.Load(context, generation);
         var expected = layout.OpenStoreys.Where(floor => Math.Abs(floor - atriumFloor) <= 1 || layout.AtriumVisibleStoreys.Contains(floor)).Order()
             .Select(floor => new BakeKey(context.Descriptor.Id, "interior." + providerId,
@@ -75,7 +76,7 @@ public sealed class StreamSchedulingTests
         foreach (bool knownDestination in new[] { false, true })
         {
             var bake = new InteriorRequests();
-            var stream = new InteriorStream(bake, new StreamMountQueue(() => 0), new StreamMaterials(null!, null!), null!, _ => { });
+            var stream = new InteriorStream(bake, new StreamMountQueue(() => 0), new StreamMaterials(null!, null!), null!, _ => { }, false);
             stream.Load(context);
             if (knownDestination) stream.Prefetch(new(building, checked((short)medium.Storey)));
             else stream.Select(medium);
@@ -95,6 +96,7 @@ public sealed class StreamSchedulingTests
     {
         var context = new BuildContext
         {
+            CodeHash = "fixture", WindowNumbering = new((BackdropInputsTests.Descriptor()).Id, new string('0', 64), []),
             Catalog = Campus.Contracts.Tests.PaletteFixture.Catalog,
             Map = BackdropInputsTests.Descriptor(),
             World = new FakeWorld { Boundary = new([]) },
@@ -193,7 +195,7 @@ public sealed class StreamSchedulingTests
         public BakeProgress Progress => default;
         public long CacheBytes => 0;
         public void Clear() => Keys.Clear();
-        public void ClearFailures() { }
+        public void ClearFailures() => throw new NotSupportedException();
         public BakeState State => BakeState.Pending;
         public object? Product => null;
         public string? Error => null;
@@ -206,7 +208,6 @@ public sealed class StreamSchedulingTests
         public BakeInputDependencies BakeInputs => BakeInputDependencies.World;
         public BakeInputDependencies CollisionInputs => BakeInputDependencies.World;
         public IReadOnlyList<Claim> Claims => [];
-        public ModuleBudget Budget => new(0, 0, 0);
         public IEnumerable<TileKey> Tiles(BuildContext context) => [new(79, -108), new(79, -108)];
         public ContentOutput Build(BuildContext context, TileKey tile, LodLevel level)
         { Calls++; Thread = Environment.CurrentManagedThreadId; Tile = tile; Level = level; return ContentOutput.Empty; }

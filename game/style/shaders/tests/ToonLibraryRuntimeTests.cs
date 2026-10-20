@@ -2,7 +2,6 @@ using System.Reflection;
 using Campus.Contracts;
 using Campus.Contracts.Bake;
 using Campus.Kernel.Bake;
-using Campus.Kernel.Materials;
 using Campus.Kernel.Renderer;
 using Campus.Kernel.Stream;
 using Campus.Style.Materials;

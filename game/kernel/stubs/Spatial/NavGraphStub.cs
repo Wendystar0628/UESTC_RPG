@@ -3,7 +3,7 @@ using Campus.Contracts;
 
 namespace Campus.Kernel.Stubs;
 
-[KernelService(typeof(INavGraph), Owner = "WP-00", IsStub = true)]
+[KernelService(typeof(INavGraph), IsStub = true)]
 public sealed class NavGraphStub : INavGraph
 {
     private IReadOnlyDictionary<NavNodeId, NavNode> _nodes = new Dictionary<NavNodeId, NavNode>();

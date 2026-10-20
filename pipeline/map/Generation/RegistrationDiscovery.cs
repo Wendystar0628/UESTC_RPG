@@ -9,32 +9,24 @@ public sealed record Registration(RegistrationKind Kind, string Id, string Owner
 /// <summary>One declaration discovery, fallback selection, ordering and constructor path for all hosts.</summary>
 public static class RegistrationDiscovery
 {
-    public static IReadOnlyList<Registration> Discover(IEnumerable<Assembly> assemblies)
+    public static IReadOnlyList<Registration> Discover(IEnumerable<Assembly> assemblies, Func<Type, string> ownerOf)
     {
+        ArgumentNullException.ThrowIfNull(ownerOf);
         var entries = new List<Registration>();
         foreach (var type in assemblies.Distinct().OrderBy(assembly => assembly.FullName, StringComparer.Ordinal)
             .SelectMany(assembly => assembly.GetTypes()).Where(type => type.IsClass && !type.IsAbstract && !type.ContainsGenericParameters)
             .OrderBy(type => type.FullName, StringComparer.Ordinal))
         foreach (var attribute in type.GetCustomAttributes<RegistrationAttribute>(false))
         {
-            if (string.IsNullOrWhiteSpace(attribute.Id) || string.IsNullOrWhiteSpace(attribute.Owner) ||
+            var owner = ownerOf(type);
+            if (string.IsNullOrWhiteSpace(attribute.Id) || string.IsNullOrWhiteSpace(owner) ||
                 !Enum.IsDefined(attribute.Kind) || !Enum.IsDefined(attribute.Lifetime))
                 throw new InvalidOperationException($"Invalid registration: {type.FullName}");
             if (attribute.Contract is { } contract && !contract.IsAssignableFrom(type))
                 throw new InvalidOperationException($"Invalid service binding: {type.FullName}");
-            var valid = attribute.Kind switch
-            {
-                RegistrationKind.Content => typeof(IContentModule).IsAssignableFrom(type),
-                RegistrationKind.Part => typeof(IPartDef).IsAssignableFrom(type),
-                RegistrationKind.Interior => typeof(IInteriorProvider).IsAssignableFrom(type),
-                RegistrationKind.Ambient => typeof(Campus.Contracts.Audio.IAmbientEmitterSource).IsAssignableFrom(type),
-                RegistrationKind.Bake => typeof(Campus.Contracts.Bake.IBakeProducer).IsAssignableFrom(type),
-                RegistrationKind.Service or RegistrationKind.Node or RegistrationKind.Medium or RegistrationKind.Save => true,
-                _ => throw new InvalidOperationException($"Unknown registration kind: {attribute.Kind}")
-            };
-            if (!valid) throw new InvalidOperationException($"Registration contract mismatch: {type.FullName}");
+            if (!MatchesKind(type, attribute.Kind)) throw new InvalidOperationException($"Registration contract mismatch: {type.FullName}");
             var map = string.IsNullOrEmpty(attribute.Map) ? type.Assembly.GetCustomAttribute<MapScopeAttribute>()?.Map : attribute.Map;
-            entries.Add(new(attribute.Kind, attribute.Id, attribute.Owner, map, type, attribute.IsStub,
+            entries.Add(new(attribute.Kind, attribute.Id, owner, map, type, attribute.IsStub,
                 attribute.Lifetime, attribute.Contract, attribute.IdentityScope));
         }
         var selected = new List<Registration>();
@@ -62,11 +54,44 @@ public static class RegistrationDiscovery
         where T : class => Order(entries.Where(entry => entry.Kind == kind && typeof(T).IsAssignableFrom(entry.Contract ?? entry.Type) &&
             (map is null || entry.Map is null || entry.Map == map.Value.Value))).ToArray();
 
+    public static bool MatchesKind(Type type, RegistrationKind kind) => kind switch
+    {
+        RegistrationKind.Service => true,
+        RegistrationKind.Content => typeof(IContentModule).IsAssignableFrom(type),
+        RegistrationKind.Part => typeof(IPartDef).IsAssignableFrom(type),
+        RegistrationKind.Interior => typeof(IInteriorProvider).IsAssignableFrom(type) || typeof(IInteriorProviderFactory).IsAssignableFrom(type),
+        RegistrationKind.Ambient => typeof(Campus.Contracts.Audio.IAmbientEmitterSource).IsAssignableFrom(type),
+        RegistrationKind.Bake => typeof(Campus.Contracts.Bake.IBakeProducer).IsAssignableFrom(type),
+        // Runtime-only contracts are checked by metadata so discovery remains pure .NET.
+        RegistrationKind.Medium => type.GetInterfaces().Any(contract => contract.FullName == "Campus.Contracts.IMediumPresenter"),
+        RegistrationKind.Save => type.GetInterfaces().Any(contract => contract.FullName == "Campus.Contracts.Save.ISaveSection"),
+        RegistrationKind.Node => BaseTypes(type).Any(current => current.FullName == "Godot.Node"),
+        _ => throw new InvalidOperationException($"Unknown registration kind: {kind}")
+    };
+
+    private static IEnumerable<Type> BaseTypes(Type type)
+    {
+        for (Type? current = type; current is not null; current = current.BaseType) yield return current;
+    }
+
+    public static Registration ResolveInterior(IEnumerable<Registration> entries, string providerId)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(providerId);
+        var matches = entries.Where(entry => entry.Kind == RegistrationKind.Interior &&
+            (typeof(IInteriorProvider).IsAssignableFrom(entry.Type) && entry.Id == providerId ||
+             typeof(IInteriorProviderFactory).IsAssignableFrom(entry.Type) && providerId.StartsWith(entry.Id, StringComparison.Ordinal))).ToArray();
+        if (matches.Length != 1)
+            throw new InvalidDataException($"Interior '{providerId}' needs exactly one provider or registered factory; found {matches.Length}.");
+        return matches[0];
+    }
+
+    public static ConstructorInfo SelectConstructor(Type type) => type.GetConstructors()
+        .OrderByDescending(item => item.GetParameters().Length).ThenBy(item => item.ToString(), StringComparer.Ordinal).FirstOrDefault()
+        ?? throw new InvalidOperationException($"No public constructor: {type.FullName}");
+
     public static object Construct(Type type, Func<ParameterInfo, object?> resolve)
     {
-        var constructor = type.GetConstructors().OrderByDescending(item => item.GetParameters().Length)
-            .ThenBy(item => item.ToString(), StringComparer.Ordinal).FirstOrDefault()
-            ?? throw new InvalidOperationException($"No public constructor: {type.FullName}");
+        var constructor = SelectConstructor(type);
         return constructor.Invoke(constructor.GetParameters().Select(resolve).ToArray());
     }
 }

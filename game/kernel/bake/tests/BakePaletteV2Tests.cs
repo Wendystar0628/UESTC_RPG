@@ -23,7 +23,7 @@ public sealed class BakePaletteV2Tests
             Version: 1, Seed: 1, Geo: default!, Center: default, Bounds: Bounds(), DataRect: default!,
             Roam: default!, TileMin: default, TileMax: default, DefaultSpawn: "fixture", Spawns: [],
             World: default!, Env: default!, Portals: []);
-        var context = new BuildContext { World = null!, Map = descriptor, WorldSeed = 1, Catalog = catalog };
+        var context = new BuildContext { CodeHash = "fixture", WindowNumbering = new((descriptor).Id, new string('0', 64), []), World = null!, Map = descriptor, WorldSeed = 1, Catalog = catalog };
         var key = BakeRequestKeys.Tile(descriptor.Id, "fixture.palette", new(0, 0), LodLevel.L0);
         var builder = new BakeGeometryBuilder(catalog, new ServiceRegistry());
         var diagnostics = new List<BuildDiagnostic>();
@@ -33,7 +33,7 @@ public sealed class BakePaletteV2Tests
         var quiet = builder.BuildOutput(key, context, new([source], []), new(0, 0), LodLevel.L0, diagnostics.AddRange);
         AssertThat(TileBundleCodec.Encode(BakePayloadClass.Tile, "fixture", result).SequenceEqual(TileBundleCodec.Encode(BakePayloadClass.Tile, "fixture", quiet))).OverrideFailureMessage("Diagnostics changed serialized geometry.").IsTrue();
         AssertThat(result.Surfaces.Single().AttributeData.Span[10] == 16).OverrideFailureMessage("The ordinary geometry path rejected or narrowed bank 1 before the packer.").IsTrue();
-        var other = new BuildContext { World = null!, Map = descriptor, WorldSeed = 1, Catalog = Catalog() };
+        var other = new BuildContext { CodeHash = "fixture", WindowNumbering = new((descriptor).Id, new string('0', 64), []), World = null!, Map = descriptor, WorldSeed = 1, Catalog = Catalog() };
         AssertThrown(() => builder.BuildOutput(key, other, new([source], []), new(0, 0), LodLevel.L0, _ => { })).IsInstanceOf<InvalidOperationException>();
     }
 

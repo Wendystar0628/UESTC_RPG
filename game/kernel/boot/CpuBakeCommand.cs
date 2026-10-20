@@ -11,7 +11,7 @@ using Godot;
 namespace Campus.Kernel.Boot;
 
 /// <summary>Loads frozen map inputs and runs CPU baking without the interactive service graph.</summary>
-[KernelService(typeof(IBakeCommand), Owner = "WP-01")]
+[KernelService(typeof(IBakeCommand))]
 public sealed class CpuBakeCommand : IBakeCommand
 {
     private readonly GlobalBuildInputs _globalInputs;

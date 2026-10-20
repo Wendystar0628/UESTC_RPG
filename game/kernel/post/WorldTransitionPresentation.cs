@@ -4,8 +4,8 @@ using Godot;
 
 namespace Campus.Kernel.Post;
 
-[KernelNode("post.world-transition", Owner = "WP-05")]
-[KernelService(typeof(IWorldTransitionPresentation), Owner = "WP-05")]
+[KernelNode("post.world-transition")]
+[KernelService(typeof(IWorldTransitionPresentation))]
 public partial class WorldTransitionPresentation : CanvasLayer, IWorldTransitionPresentation
 {
     private readonly TextureRect _previous = new()

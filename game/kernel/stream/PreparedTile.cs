@@ -158,7 +158,7 @@ public sealed class PreparedTile : IDisposable
         RenderingServer.InstanceSetVisible(instance, draw.Resident);
         RenderingServer.InstanceSetTransform(instance, draw.At);
         var water = draw.IsWater;
-        RenderingServer.InstanceSetLayerMask(instance, water ? 1u << 8 : 1u);
+        RenderingServer.InstanceSetLayerMask(instance, water ? RenderLayers.Water : RenderLayers.BuildingsAndProps);
         RenderingServer.InstanceGeometrySetCastShadowsSetting(instance, water || draw.Resident
             ? RenderingServer.ShadowCastingSetting.Off : RenderingServer.ShadowCastingSetting.On);
         RenderingServer.InstanceGeometrySetVisibilityRange(instance, 0, 0, 0, 0, RenderingServer.VisibilityRangeFadeMode.Disabled);

@@ -4,7 +4,7 @@ using Campus.Contracts.Maps;
 
 namespace Campus.Kernel.Bake;
 
-[KernelService(typeof(IMapContentSource), Owner = "WP-02a")]
+[KernelService(typeof(IMapContentSource))]
 public sealed partial class BakeService : IMapContentSource
 {
     public T GetModule<T>(IMapContext context, string moduleId) where T : class, IContentModule

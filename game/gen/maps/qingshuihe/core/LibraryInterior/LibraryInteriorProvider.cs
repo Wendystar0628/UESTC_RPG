@@ -1,3 +1,4 @@
+using Campus.Gen.Interior;
 using Campus.Contracts.Bake;
 using System.Globalization;
 using System.Numerics;
@@ -15,7 +16,7 @@ namespace Campus.Gen.Maps.Qingshuihe.Core.LibraryInterior;
 /// floor plates and wall linings until their rooms are built.
 /// </summary>
 
-[InteriorProvider("interior.library", Owner = "WP-17")]
+[InteriorProvider("interior.library")]
 public sealed class LibraryInteriorProvider : IInteriorProvider, IInteriorCatalogConfigurable
 {
     public BakeInputDependencies BakeInputs => BakeInputDependencies.World;
@@ -30,9 +31,11 @@ public sealed class LibraryInteriorProvider : IInteriorProvider, IInteriorCatalo
     public bool Walkable => true;
 
     /// <summary>Boot supplies the authoritative interiors.json fields; generators perform no file IO.</summary>
-    public void Configure(IEnumerable<FeatureId> features, IEnumerable<int> openFloors,
-        IReadOnlyDictionary<FeatureId, IReadOnlyList<EntranceDecl>> entrances)
+    public void Configure(InteriorCatalogConfiguration configuration)
     {
+        var (features, openFloors, entrances, buildingType, seals) = configuration;
+        if (buildingType is not null || seals.Count != 0)
+            throw new ArgumentException("This authored provider does not consume generated building configuration or catalog seals.", nameof(configuration));
         ArgumentNullException.ThrowIfNull(features);
         ArgumentNullException.ThrowIfNull(openFloors);
         ArgumentNullException.ThrowIfNull(entrances);
@@ -62,7 +65,7 @@ public sealed class LibraryInteriorProvider : IInteriorProvider, IInteriorCatalo
         };
         var catalog = Require(ctx, id);
         if (!catalog.Floors.Contains(storey)) return ContentOutput.Empty;
-        var sink = new InteriorSink(ctx.Catalog) { Full = full };
+        var sink = new InteriorGeometry(ctx.Catalog) { Full = full, SlabThickness = S.SlabThick, GlowMaterial = S.Glow };
         if (id == CoreIds.Library) Compose(ctx, id, storey, sink);
         else Plates(ctx, id, storey, sink);
         return sink.Finish();
@@ -72,7 +75,7 @@ public sealed class LibraryInteriorProvider : IInteriorProvider, IInteriorCatalo
     {
         var catalog = Require(ctx, id);
         if (id != CoreIds.Library || !catalog.Floors.Contains(storey)) return [];
-        var sink = new InteriorSink(ctx.Catalog) { Draw = false };
+        var sink = new InteriorGeometry(ctx.Catalog) { Draw = false, SlabThickness = S.SlabThick, GlowMaterial = S.Glow };
         Compose(ctx, id, storey, sink);
         return sink.Colliders.ToArray();
     }
@@ -130,7 +133,7 @@ public sealed class LibraryInteriorProvider : IInteriorProvider, IInteriorCatalo
         return new(id, (short)storey, nodes, edges);
     }
 
-    private static void Compose(BuildContext ctx, FeatureId id, int storey, InteriorSink sink)
+    private static void Compose(BuildContext ctx, FeatureId id, int storey, InteriorGeometry sink)
     {
         var f = LibraryFrame.Of(ctx);
         var rng = new Rng(StableHash.Hash32(ctx.WorldSeed, id.Value, "library.interior", storey.ToString(CultureInfo.InvariantCulture)));
@@ -230,7 +233,7 @@ public sealed class LibraryInteriorProvider : IInteriorProvider, IInteriorCatalo
     }
 
     /// <summary>Floor plate, its soffit and the wall lining of one storey of a neighbour block (simplified interior, no collision).</summary>
-    private static void Plates(BuildContext ctx, FeatureId id, int storey, InteriorSink sink)
+    private static void Plates(BuildContext ctx, FeatureId id, int storey, InteriorGeometry sink)
     {
         var (rings, height, floor, top, levels) = PlateSection(ctx, id);
         var y = PlateY(floor, height, top, storey);

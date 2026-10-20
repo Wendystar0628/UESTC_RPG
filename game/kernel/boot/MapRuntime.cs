@@ -1,6 +1,7 @@
 using Campus.Contracts;
 using Campus.Contracts.Maps;
 using Campus.Kernel.Maps;
+using Campus.Kernel.Bake;
 using Campus.Kernel.Registry;
 using Campus.Kernel.Renderer;
 using Godot;
@@ -9,9 +10,9 @@ using Services = Campus.Kernel.Registry.Kernel;
 namespace Campus.Kernel.Boot;
 
 /// <summary>Scene-side map lifetime. The map service owns transition ordering; this host owns engine nodes.</summary>
-[KernelService(typeof(IMapRuntime), Owner = "WP-01")]
-[KernelService(typeof(IMapLifetime), Owner = "WP-01")]
-[KernelNode("map-runtime", Owner = "WP-01")]
+[KernelService(typeof(IMapRuntime))]
+[KernelService(typeof(IMapLifetime))]
+[KernelNode("map-runtime")]
 public partial class MapRuntime : Node, IMapRuntime, IMapLifetime
 {
     private IMapStreamState? _stream;
@@ -47,7 +48,7 @@ public partial class MapRuntime : Node, IMapRuntime, IMapLifetime
 
     public override void _Ready()
     {
-        ProcessPriority = FramePriority.StreamMount + 1;
+        ProcessPriority = FramePriority.MapRuntime;
         _stream = Services.Get<IMapStreamState>();
         _collision = Services.Get<ICollisionWorld>();
         _renderer = Services.Get<IRenderReadiness>();
@@ -114,7 +115,7 @@ public partial class MapRuntime : Node, IMapRuntime, IMapLifetime
         try
         {
             var camera = Services.Get<Camera3D>();
-            camera.Far = BackdropInputs.CameraFar(context.Descriptor, context.SourceInputs, BootTuning.CameraFar, camera.Near);
+            camera.Far = BackdropInputs.CameraFar(context.Descriptor, context.SourceInputs, StageCamera.DefaultFarClip, camera.Near);
             var nodes = Services.Services.Query<Node>(RegistrationKind.Node, context.Descriptor.Id)
                 .Where(entry => entry.Lifetime == RegistrationLifetime.Map)
                 .OrderBy(entry => entry.Id, StringComparer.Ordinal)
@@ -122,6 +123,14 @@ public partial class MapRuntime : Node, IMapRuntime, IMapLifetime
                     ?? throw new InvalidOperationException($"KernelNode does not inherit Node: {entry.Id}.")))
                 .ToArray();
             foreach (var (_, node) in nodes) GetParent().AddChild(node);
+            // Merge map/global registration IDs so equal-priority nodes retain one tree order.
+            var nodeIds = Services.Services.Query<Node>(RegistrationKind.Node, context.Descriptor.Id)
+                .GroupBy(entry => entry.Type).ToDictionary(group => group.Key,
+                    group => group.OrderBy(entry => entry.Id, StringComparer.Ordinal).First().Id);
+            var stage = GetParent();
+            foreach (var node in stage.GetChildren().Where(node => nodeIds.ContainsKey(node.GetType()))
+                         .OrderBy(node => nodeIds[node.GetType()], StringComparer.Ordinal))
+                stage.MoveChild(node, stage.GetChildCount() - 1);
             if (nodes.Any(item => !item.Node.IsInsideTree()))
                 throw new InvalidOperationException("Every map kernel node must enter the tree before map callbacks.");
             _loaded = context.Descriptor.Id;
@@ -157,7 +166,8 @@ public partial class MapRuntime : Node, IMapRuntime, IMapLifetime
             // Submit it once while the caller's frontispiece/loading screen owns coverage.
             phase = "pipeline-precompile";
             receiver = typeof(PipelineWarmup).FullName;
-            await _pipelines!.PrepareAsync(_exit.Token);
+            await _pipelines!.PrepareAsync(BakePipelineCatalog.Read(),
+                TimeSpan.FromSeconds(BootTuning.StalledSeconds), _exit.Token);
             if (generation != _mapGeneration) return;
             foreach (var aware in receivers.OfType<IMapAware>())
             {

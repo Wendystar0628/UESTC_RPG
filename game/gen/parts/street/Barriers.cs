@@ -14,7 +14,7 @@ namespace Campus.Gen.Parts.Street;
 /// triangles near (Opus review 10:07): ten segments with smooth normals, the foot and dome rounded by normals, not by bands. A caller's Material (other than the record default) colours the
 /// body, so a site's marking paint or stone carries through. Collision: one vertical post, Metal (stone: StonePaving).
 /// </summary>
-[Part(PartCatalog.Bollard, Owner = "WP-13")]
+[Part(PartCatalog.Bollard)]
 public sealed class BollardPart : IPartDef<ColumnParams>
 {
     public BollardPart() => Lods = Levels.Of<ColumnParams>(Build, LodLevel.L0, LodLevel.L1);
@@ -94,7 +94,7 @@ public sealed class BollardPart : IPartDef<ColumnParams>
 /// stone (南门广场). A caller's Material colours both. The ball sits on the plinth, so its top is that smallest size.
 /// Collision: a post as tall as the ball — the contracts have no sphere primitive yet (WLD-LIFE asks for one; requested by WP-13).
 /// </summary>
-[Part(PartCatalog.StoneSphere, Owner = "WP-13")]
+[Part(PartCatalog.StoneSphere)]
 public sealed class StoneSpherePart : IPartDef<FurnitureParams>
 {
     public StoneSpherePart() => Lods = Levels.Of<FurnitureParams>(Build, LodLevel.L0, LodLevel.L1);

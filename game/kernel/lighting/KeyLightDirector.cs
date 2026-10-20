@@ -13,8 +13,8 @@ namespace Campus.Kernel.Lighting;
 /// key_dir, key_strength, shadow_strength, retreat_y and overcast_dir. Its colour and energy stay
 /// fixed: the key colour and intensity reach the toon materials only through the palette and globals.
 /// </summary>
-[KernelNode("key-light", Owner = "WP-03")]
-[QualityResponsive(Owns = [QualityKnob.ShadowQuality, QualityKnob.ShadowDistance])]
+[KernelNode("key-light")]
+[QualityResponsive(Order = 1, Owns = [QualityKnob.ShadowQuality, QualityKnob.ShadowDistance])]
 public partial class KeyLightDirector : Node, IQualityAware
 {
     private static readonly StringName _shaderGlobalKeyDir = ShaderGlobals.KeyDir;

@@ -16,16 +16,16 @@ namespace Campus.Gen.Furniture;
 /// Pure .NET; the layout is built once per world model and claims query and shared by every tile and level.
 /// </summary>
 
-[ContentModule("furniture", Owner = "WP-13")]
+[ContentModule(FurnitureModule.ModuleId)]
 public sealed class FurnitureModule : IContentModule, ILightMetadataSource
 {
+    public const string ModuleId = "furniture";
     public BakeInputDependencies BakeInputs { get; } = new(BakeInputKinds.World | BakeInputKinds.Furniture, [], [SceneTextInputs.AtlasKey]);
     public BakeInputDependencies CollisionInputs { get; } = new(BakeInputKinds.World | BakeInputKinds.Furniture, [], []);
 
     public IReadOnlyList<Claim> Claims { get; } = [];
 
     /// <summary>The heaviest L0 cell (an avenue cell with lamps on both sides and a rest stop) stays under these bounds.</summary>
-    public ModuleBudget Budget { get; } = new(S.BudgetTrianglesL0, S.BudgetTrianglesL1, S.BudgetDrawCalls);
 
     public IEnumerable<TileKey> Tiles(BuildContext ctx)
     {

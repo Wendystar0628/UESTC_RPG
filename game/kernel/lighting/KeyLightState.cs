@@ -8,8 +8,8 @@ public interface IKeyLightPublisher
     void Publish(in KeyLightFrame frame);
 }
 
-[KernelService(typeof(IKeyLightPublisher), Owner = "WP-03")]
-[KernelService(typeof(IKeyLightState), Owner = "WP-03")]
+[KernelService(typeof(IKeyLightPublisher))]
+[KernelService(typeof(IKeyLightState))]
 public sealed class KeyLightState : IKeyLightState, IKeyLightPublisher
 {
     public Vector3 KeyDir { get; private set; } = KeyLightModel.WithElevation(new(-0.870594f, 0f, 0.482578f), 5.48f);

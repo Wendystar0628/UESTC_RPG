@@ -16,7 +16,7 @@ namespace Campus.Gen.Parts.Street;
 /// <see cref="StreetStyle.Hatch"/>). The body colour is the caller's Material when it sets one, else <see cref="StreetStyle.CarBodies"/>[0].
 /// Collision (WLD-LIFE): one box, Metal; the roof is out of jumping reach.
 /// </summary>
-[Part(PartCatalog.ParkedCar, Owner = "WP-13")]
+[Part(PartCatalog.ParkedCar)]
 public sealed class ParkedCarPart : IPartDef<VehicleParams>
 {
     public ParkedCarPart() => Lods = Levels.Of<VehicleParams>(Build, LodLevel.L0, LodLevel.L1, LodLevel.L2);
@@ -59,7 +59,7 @@ public sealed class ParkedCarPart : IPartDef<VehicleParams>
 /// left and right pedals, front and rear axles (the sitter faces −Z, so the left grip is at −X). Parked bikes have no collision and
 /// make no sound (WLD-LIFE, SYS-AUDIO); the number on the plate waits for the scene-text atlas and WP-55's bay data.
 /// </summary>
-[Part(PartCatalog.ParkedBicycle, Owner = "WP-13")]
+[Part(PartCatalog.ParkedBicycle)]
 public sealed class ParkedBicyclePart : IPartDef<VehicleParams>
 {
     public ParkedBicyclePart() => Lods = Levels.Of<VehicleParams>(Build, LodLevel.L0, LodLevel.L1);

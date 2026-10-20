@@ -1,6 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup><LangVersion>14.0</LangVersion><TargetFramework>net10.0</TargetFramework><RootNamespace>Campus.Contracts</RootNamespace></PropertyGroup>
   <ItemGroup>
+    <PackageReference Include="GodotSharp" />
     <ProjectReference Include="../Campus.Contracts.csproj" />
     <AdditionalFiles Include="../../../scripts/gates/arch/BannedSymbols.Common.txt" />
   </ItemGroup>

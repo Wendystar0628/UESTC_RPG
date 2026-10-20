@@ -22,6 +22,12 @@ output/
 /game/data/build-commit.txt
 /game/data/build-code-fingerprints.json
 
+# 构建时生成的着色器 include 与本地资源 UID
+/game/style/shaders/style_consts.gdshaderinc
+/game/style/shaders/style_consts.gdshaderinc.uid
+/game/style/outline/fog.glslinc
+/game/style/outline/fog.glslinc.uid
+
 # 生产烘焙暂存与管线摘要
 /game/bake/
 

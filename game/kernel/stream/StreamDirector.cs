@@ -1,13 +1,12 @@
 using Campus.Contracts;
 using Campus.Contracts.Bake;
 using Campus.Contracts.Maps;
+using Campus.Contracts.Startup;
 using Campus.Kernel.Frame;
 using Campus.Kernel.Lod;
 using Campus.Kernel.Renderer;
-using Campus.Kernel.Materials;
 using Campus.Kernel.Bake;
 using Godot;
-using AppBoot = Campus.Kernel.Boot.Boot;
 using Services = Campus.Kernel.Registry.Kernel;
 using N = System.Numerics;
 
@@ -22,9 +21,9 @@ public interface IStreamVisualFrame
     void ReleaseRetired(double budgetMilliseconds);
 }
 
-[KernelService(typeof(IStreamVisualFrame), Owner = "WP-02b")]
-[KernelService(typeof(IMapStreamState), Owner = "WP-02b")]
-[KernelNode("stream.select", Owner = "WP-02b")]
+[KernelService(typeof(IStreamVisualFrame))]
+[KernelService(typeof(IMapStreamState))]
+[KernelNode("stream.select")]
 public partial class StreamDirector : Node, IMapAware, IMapStreamState, IStreamVisualFrame
 {
     private readonly StreamSettings _settings = new();
@@ -70,6 +69,7 @@ public partial class StreamDirector : Node, IMapAware, IMapStreamState, IStreamV
     private MapStreamDestination? _destinationState;
     private float _replan;
     private bool _exiting;
+    private bool _captureMode;
     private bool _destinationPlanned;
     private bool _destinationConsumed, _checkRetention;
     private long _destinationSequence, _mapRequestSequence, _arrivedSequence;
@@ -109,6 +109,7 @@ public partial class StreamDirector : Node, IMapAware, IMapStreamState, IStreamV
     public override void _Ready()
     {
         ProcessPriority = FramePriority.Stream;
+        _captureMode = Services.Get<BootRunOptions>().CaptureMode;
         _bake = Services.Get<IBakeService>(); _mount = Services.Get<IStreamMountQueue>();
         _camera = Services.Get<ICameraRig>(); _world = Services.Get<IWorldState>();
         _world.InstanceChanged += OnWorldInstanceChanged;
@@ -118,7 +119,7 @@ public partial class StreamDirector : Node, IMapAware, IMapStreamState, IStreamV
         _collision = Services.Get<ICollisionWorld>();
         _materials = new(Services.Get<IToonMaterialProvider>(), Services.Get<IShaderMaterialSource>());
         _reflections = Services.Get<IReflectionWorld>(); _reflections.Changed += OnReflectionChanged;
-        _interiors = new(_bake, _mount, _materials, _reflections, QueueRetirement);
+        _interiors = new(_bake, _mount, _materials, _reflections, QueueRetirement, _captureMode);
     }
     public void OnMapLoaded(IMapContext context)
     {
@@ -342,7 +343,7 @@ public partial class StreamDirector : Node, IMapAware, IMapStreamState, IStreamV
         RefreshReflectionWorld(remainingMilliseconds * .25);
         ResolveVisible();
         // Capture uses the existing no-fade path: new tiles get fade_t0=0 and old tiles hide immediately.
-        _visibility.Apply(_visible, FrameClock.FadeSeconds, !AppBoot.Options.CaptureMode, (tile, visible, fade) =>
+        _visibility.Apply(_visible, FrameClock.FadeSeconds, !_captureMode, (tile, visible, fade) =>
         {
             foreach (var bundle in _groups[tile].Bundles) bundle.SetVisible(visible, fade);
         });

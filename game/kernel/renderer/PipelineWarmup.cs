@@ -1,17 +1,14 @@
 using Campus.Contracts;
 using Campus.Contracts.Bake;
-using Campus.Kernel.Bake;
-using Campus.Kernel.Boot;
 using Campus.Kernel.Frame;
-using Campus.Kernel.Materials;
 using Godot;
 using Services = Campus.Kernel.Registry.Kernel;
 
 namespace Campus.Kernel.Renderer;
 
 /// <summary>Instantiates the offline combinations once; the engine owns pipeline precompilation and ubershaders.</summary>
-[KernelNode("pipeline-warmup", Owner = "WP-01")]
-[KernelService(typeof(PipelineWarmup), Owner = "WP-01")]
+[KernelNode("pipeline-warmup")]
+[KernelService(typeof(PipelineWarmup))]
 public sealed partial class PipelineWarmup : Node
 {
     private Font? _canvasFont;
@@ -26,7 +23,8 @@ public sealed partial class PipelineWarmup : Node
     }
 
     /// <summary>The first mounted map submits the global packaged catalog; later maps share that completed preparation.</summary>
-    public async Task PrepareAsync(CancellationToken cancellationToken = default)
+    public async Task PrepareAsync(IReadOnlyList<PipelineCombination> combinations, TimeSpan timeout,
+        CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
         if (_prepared) return;
@@ -35,7 +33,7 @@ public sealed partial class PipelineWarmup : Node
             await current.WaitAsync(cancellationToken);
             return;
         }
-        var preparation = PrepareCoreAsync(cancellationToken);
+        var preparation = PrepareCoreAsync(combinations, timeout, cancellationToken);
         _preparing = preparation;
         try
         {
@@ -45,13 +43,13 @@ public sealed partial class PipelineWarmup : Node
         finally { _preparing = null; }
     }
 
-    private async Task PrepareCoreAsync(CancellationToken cancellationToken)
+    private async Task PrepareCoreAsync(IReadOnlyList<PipelineCombination> combinations, TimeSpan timeout,
+        CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
         if (!IsInsideTree()) throw new InvalidOperationException("Pipeline preparation requires a mounted renderer.");
         if (OS.GetThreadCallerId() != OS.GetMainThreadId())
             throw new InvalidOperationException("Pipeline instances must be mounted on the main thread.");
-        var combinations = BakePipelineCatalog.Read();
         var toon = Services.Get<IToonMaterialProvider>();
         var shaders = Services.Get<IShaderMaterialSource>();
         var materials = new Dictionary<(ToonKind? Kind, ShaderId? Shader), Material>();
@@ -127,7 +125,7 @@ public sealed partial class PipelineWarmup : Node
             // One submission lets Godot see hidden spatial instances and actually draw the canvas types.
             // This is a frame boundary, not compilation evidence or a stable-frame threshold.
             await FrameAwaiter.ReadyDrawAsync(this, static () => true,
-                TimeSpan.FromSeconds(BootTuning.StalledSeconds), cancellationToken);
+                timeout, cancellationToken);
         }
         finally
         {

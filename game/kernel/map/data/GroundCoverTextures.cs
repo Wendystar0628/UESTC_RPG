@@ -8,7 +8,7 @@ using Godot;
 namespace Campus.Kernel.Maps;
 
 /// <summary>Prepares this map's two CPU ground masks before map readiness, then uploads them on the engine thread.</summary>
-[KernelNode("maps.ground-cover", Owner = "WP-15")]
+[KernelNode("maps.ground-cover")]
 public sealed partial class GroundCoverTextures(IMapContentSource content, IBakeContextSource builds)
     : Node, IMapDataParticipant, IMapAware
 {

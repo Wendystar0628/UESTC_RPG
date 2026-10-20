@@ -12,8 +12,8 @@ namespace Campus.Kernel.Lighting;
 /// spot, so node order inside that step does not matter. Readers (audio activity, point-light energy)
 /// get the cached L through <see cref="IChannelReader"/>; nothing reads the global back.
 /// </summary>
-[KernelService(typeof(IChannelReader), Owner = "WP-03")]
-[KernelService(typeof(ILightChannelSink), Owner = "WP-03")]
+[KernelService(typeof(IChannelReader))]
+[KernelService(typeof(ILightChannelSink))]
 public sealed class LightChannelService : IChannelReader, ILightChannelSink
 {
     private static readonly StringName _shaderGlobalLightChannels = ShaderGlobals.LightChannels;

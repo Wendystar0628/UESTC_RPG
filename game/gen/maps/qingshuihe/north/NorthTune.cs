@@ -15,9 +15,6 @@ namespace Campus.Gen.Maps.Qingshuihe.North;
 /// </summary>
 public static class NorthTune
 {
-    public const int BudgetTrianglesL0 = 24_000;
-    public const int BudgetTrianglesL1 = 24_000;
-    public const int BudgetDrawCalls = 14;
 
     /// <summary>Materials (ART-STYLE colour names only).</summary>
     public static class Look
@@ -127,23 +124,6 @@ public static class NorthTune
         public const float SideGateHeight = 2.0f, PierSize = 0.3f;
         /// <summary>Footways narrower than this are side gates; wider roads get the vehicle gate.</summary>
         public const float VehicleRoad = 4f;
-    }
-
-    /// <summary>
-    /// Inspection probes of 20a (MAP-QSH-NORTH 近景巡检点): Q1 outside 学知一组团's open gate at eye height (walk, K1),
-    /// Q4 against 学知苑 1 栋's ground floor at 0.5 m (首层贴墙, N-01), Q6 45° down over the 学知一 courtyard from about 40 m.
-    /// Review-camera input only: these fixed poses are not scene geometry.
-    /// </summary>
-    public static class Probes
-    {
-        /// <summary>The cluster whose main gate is the open walking route (overlay design:north-gate-xz1, props.open); Q1 and Q6 belong to it.</summary>
-        public const string OpenCluster = "xz1";
-        public static readonly Vector3 GateEye = new(100.4f, 3f + WalkRules.StandingEye, -468.9f);
-        public static readonly Vector2 GateLook = new(0.934f, 0.358f);
-        public static readonly Vector3 WallEye = new(130.7f, 3f + WalkRules.StandingEye, -482.7f);
-        public static readonly Vector2 WallLook = new(-0.386f, -0.922f);
-        public static readonly Vector3 CourtEye = new(146f, 3f + 30f, -431f);
-        public static readonly Vector2 CourtLook = new(0.57f, -0.82f);
     }
 
     /// <summary>

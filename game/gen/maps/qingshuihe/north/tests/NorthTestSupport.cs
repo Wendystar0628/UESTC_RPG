@@ -32,17 +32,19 @@ internal static class NorthTestSupport
         }, "fixture");
         var context = new BuildContext
         {
+            CodeHash = "fixture", WindowNumbering = new((RealMapFixture.Entry().Descriptor).Id, new string('0', 64), []),
             Catalog = Campus.Contracts.Tests.PaletteFixture.Catalog,
             World = world,
             Map = RealMapFixture.Entry().Descriptor,
             SourceInputs = RealMapFixture.WindowInputs(RealMapFixture.Entry().Descriptor.Id),
             WorldSeed = 1,
             GlobalInputs = inputs,
-            ClaimedBy = (feature, _) => claims.Contains(feature) ? new WpId("WP-20") : null,
+            ClaimedBy = (feature, _) => claims.Contains(feature) ? "zone.north" : null,
         };
         var numbering = new Campus.Gen.Buildings.BuildingsModule()
             .PrepareWindowNumbering(context, module.DescribeWindowLayouts(world, context.WorldSeed));
-        return new BuildContext { Catalog = context.Catalog, World = world, Map = context.Map,
+        return new BuildContext {
+            CodeHash = "fixture", Catalog = context.Catalog, World = world, Map = context.Map,
             WorldSeed = context.WorldSeed, GlobalInputs = inputs, ClaimedBy = context.ClaimedBy, WindowNumbering = numbering };
     }
 

@@ -18,9 +18,8 @@ using Campus.Gen.Maps.Qingshuihe.Core.Museum;
 namespace Campus.Gen.Maps.Qingshuihe.Core;
 
 /// <summary>The core's directly registered zone sites; source selection happens before layout construction.</summary>
-[ContentModule("zone.core", Owner = "WP-16")]
-public sealed class CoreModule() : ZoneModuleBase(CoreSite.Pieces, CoreRanges.All, CoreSite.Claims,
-    new(TrianglesL0: 60_000, TrianglesL1: 30_000, DrawCalls: 12)),
+[ContentModule("zone.core")]
+public sealed class CoreModule() : ZoneModuleBase(CoreSite.Pieces, CoreRanges.All, CoreSite.Claims),
     IWindowMetadataSource, ILightMetadataSource, IContentSourceTraceProvider
 {
     public override BakeInputDependencies BakeInputs { get; } = new(BakeInputKinds.World | BakeInputKinds.Windows, [], []);

@@ -22,7 +22,7 @@ public static class InstancePoolRuntimeFixture
     public static void Run(Node parent, ShaderMaterial material, InstancePoolHost host)
     {
         if (!parent.IsInsideTree()) throw new ArgumentException("Fixture parent must be in the scene tree.", nameof(parent));
-        var spec = new InstancePoolSpec("fixture", "WP-00",
+        var spec = new InstancePoolSpec("fixture.pool",
             [-1, -1, 0, 1, -1, 0, 1, 1, 0, -1, 1, 0],
             [0, 0, 1, 0, 1, 1, 0, 1], [0, 1, 2, 0, 2, 3],
             material, ShaderId.Precip, 8192, new Aabb(new(-100, -100, -100), new(200, 200, 200)), 1);
@@ -100,8 +100,7 @@ public static class InstancePoolRuntimeFixture
             AssertThat(pool.Capacity == 8192 && pool.VisibleCount == 0 && !pool.IsReady && !node.Visible).OverrideFailureMessage("Initial pool state is wrong.").IsTrue();
             AssertThat(multiMesh.InstanceCount == 8192 && multiMesh.UseCustomData && !multiMesh.UseColors &&
                 multiMesh.TransformFormat == MultiMesh.TransformFormatEnum.Transform3D).OverrideFailureMessage("Buffer format is wrong.").IsTrue();
-            AssertThat(node.GetMeta("owner_wp").AsString() == spec.OwnerWp &&
-                node.GetMeta("instance_pool_id").AsString() == spec.Id).OverrideFailureMessage("Instance attribution was lost.").IsTrue();
+            AssertThat(node.GetMeta("instance_pool_id").AsString() == spec.Id).OverrideFailureMessage("Instance attribution was lost.").IsTrue();
             AssertThat(node.MaterialOverride is null && ReferenceEquals(mesh.SurfaceGetMaterial(0), material)).OverrideFailureMessage("Borrowed surface material was replaced or cloned.").IsTrue();
             {
                 var thrown = false;
@@ -152,7 +151,7 @@ public static class InstancePoolRuntimeFixture
                 AssertThat(thrown).OverrideFailureMessage($"Expected {typeof(ArgumentOutOfRangeException).Name}.").IsTrue();
             }
             var stats = host.GetStatistics().Single();
-            AssertThat(stats.OwnerWp == spec.OwnerWp && stats.Id == spec.Id && stats.VisibleTriangles == 64 &&
+            AssertThat(stats.Id == spec.Id && stats.VisibleTriangles == 64 &&
                 stats.InstanceBufferBytes == 524288).OverrideFailureMessage("Ownership statistics are wrong.").IsTrue();
 
             var bounds = new Aabb(new(-200, -50, -200), new(400, 100, 400));

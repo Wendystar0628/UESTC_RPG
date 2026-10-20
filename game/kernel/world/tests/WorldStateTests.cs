@@ -42,7 +42,7 @@ public sealed class WorldStateTests
         world.SetSeason(Season.Winter);
         world.Advance(3);
         world.Tick(.0625);
-        var snapshot = world.Capture(default);
+        var snapshot = world.Capture(SaveContext(world));
         var readings = (world.Rev, world.Instance, world.WorldHours, world.Clock, world.SeasonPos,
             world.Sun, world.Moon, world.Transition, weather.Steps.Count, weather.Reseasons);
         foreach (var season in Enum.GetValues<Season>())
@@ -60,7 +60,7 @@ public sealed class WorldStateTests
         AssertThrown(() => world.SunAltDegAt(double.PositiveInfinity, Season.Spring)).IsInstanceOf<ArgumentOutOfRangeException>();
         AssertThrown(() => world.SunAltDegAt(double.NegativeInfinity, Season.Spring)).IsInstanceOf<ArgumentOutOfRangeException>();
         AssertThrown(() => world.SunAltDegAt(12, (Season)4)).IsInstanceOf<ArgumentOutOfRangeException>();
-        AssertThat(world.Capture(default)).IsEqual(snapshot);
+        AssertThat(world.Capture(SaveContext(world))).IsEqual(snapshot);
         AssertThat((world.Rev, world.Instance, world.WorldHours, world.Clock, world.SeasonPos,
             world.Sun, world.Moon, world.Transition, weather.Steps.Count, weather.Reseasons)).IsEqual(readings);
     }

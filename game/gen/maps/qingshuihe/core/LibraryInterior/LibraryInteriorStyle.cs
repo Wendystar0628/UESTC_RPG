@@ -1,3 +1,4 @@
+using Campus.Gen.Interior;
 using Campus.Contracts;
 using Campus.Gen.Maps.Qingshuihe.Core.Framework;
 using ZoneLooks = Campus.Gen.Sites.ZoneLooks;
@@ -96,10 +97,10 @@ internal static class LibraryInteriorStyle
 
     /// <summary>VF-A interior bit (GeometryBundle.Flags): interior shade rows, no rain wetting.</summary>
 
-    public static Paint Wall(string family) => new(CoreMaterial.Wall, family, VertexFlag.Interior);
-    public static Paint Trim(string family) => new(CoreMaterial.Trim, family, VertexFlag.Interior);
-    public static Paint Metal(string family) => new(CoreMaterial.Metal, family, VertexFlag.Interior);
-    public static Paint Stone(string family) => new(CoreMaterial.Stone, family, VertexFlag.Interior);
-    public static Paint Inlay(string family) => new(CoreMaterial.Inlay, family, (byte)(VertexFlag.Interior | VertexFlag.Decal | VertexFlag.NoShadow));
+    public static InteriorPaint Wall(string family) => new(CoreStyle.Spec(CoreMaterial.Wall, CoreStyle.DefaultFamily(CoreMaterial.Wall)), family, VertexFlag.Interior);
+    public static InteriorPaint Trim(string family) => new(CoreStyle.Spec(CoreMaterial.Trim, CoreStyle.DefaultFamily(CoreMaterial.Trim)), family, VertexFlag.Interior);
+    public static InteriorPaint Metal(string family) => new(CoreStyle.Spec(CoreMaterial.Metal, CoreStyle.DefaultFamily(CoreMaterial.Metal)), family, VertexFlag.Interior);
+    public static InteriorPaint Stone(string family) => new(CoreStyle.Spec(CoreMaterial.Stone, CoreStyle.DefaultFamily(CoreMaterial.Stone)), family, VertexFlag.Interior);
+    public static InteriorPaint Inlay(string family) => new(CoreStyle.Spec(CoreMaterial.Inlay, CoreStyle.DefaultFamily(CoreMaterial.Inlay)), family, (byte)(VertexFlag.Interior | VertexFlag.Decal | VertexFlag.NoShadow));
     public static ToonSpec Glow(string family) => ZoneLooks.S(family, line: LineClass.Fine, wet: 0f) with { Emissive = LightChannel };
 }

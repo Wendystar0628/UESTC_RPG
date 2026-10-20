@@ -14,9 +14,6 @@ namespace Campus.Gen.Maps.Qingshuihe.West;
 /// </summary>
 public static class WestTune
 {
-    public const int BudgetTrianglesL0 = 90_000;
-    public const int BudgetTrianglesL1 = 40_000;
-    public const int BudgetDrawCalls = 20;
 
     /// <summary>
     /// Window numbering (contract-29): 六号's stone blocks follow the lab curve (about 0.3 all night, SYS-TIME) with

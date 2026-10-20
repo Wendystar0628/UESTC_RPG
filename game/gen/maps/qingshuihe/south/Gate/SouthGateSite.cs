@@ -84,10 +84,6 @@ public sealed class SouthGateSite : ZoneSite
 
     public override IReadOnlyList<Claim> Claims { get; } = [new FeatureClaim(new(Feature), Aspects.Massing | Aspects.Facade | Aspects.Roof)];
 
-    public override IReadOnlyList<InspectionProbe> Probes =>
-        // Q2: the west pedestrian lane, 1 m behind the turnstile row, looking out to the street (a stand, not map data).
-        [Probe("Q2", Feature, new(-527.33f, WalkRules.StandingEye, 720.70f), new(-0.583f, 0.812f), -2f, 1f)];
-
     protected override IReadOnlyList<PolygonRings> OccupiedContours(IWorldModel world, LodLevel lod)
     {
         var g = LayoutOf(world);

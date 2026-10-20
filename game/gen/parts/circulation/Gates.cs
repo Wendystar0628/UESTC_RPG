@@ -12,7 +12,7 @@ namespace Campus.Gen.Parts.Circulation;
 /// at most <see cref="CirculationStyle.FoldTrack"/> of it). Variation 0: grey aluminium. 1: grey-green paint. 2: dark steel with a
 /// meeting stile in the middle (two leaves). Collision: a DoorClosed wall, top at least 1.5 m (SYS-WALK), like the iron gate.
 /// </summary>
-[Part(PartCatalog.FoldingGate, Owner = "WP-11")]
+[Part(PartCatalog.FoldingGate)]
 public sealed class FoldingGatePart() : CirculationPart<DoorParams>(new(1300, 450))
 {
     private static float Track(DoorParams p) => Math.Min(p.Depth, S.FoldTrack);
@@ -93,7 +93,7 @@ public sealed class FoldingGatePart() : CirculationPart<DoorParams>(new(1300, 45
 /// opening, Depth its footprint; the leaves stand 2 cm behind the frame's front. Variation 0: brushed stainless. 1: white paint. 2: dark
 /// steel. Closed lift doors only seal (WLD-INTERIORS-ACCESS): a DoorClosed wall, top at least 1.5 m.
 /// </summary>
-[Part(PartCatalog.ElevatorDoor, Owner = "WP-11")]
+[Part(PartCatalog.ElevatorDoor)]
 public sealed class ElevatorDoorPart() : CirculationPart<DoorParams>(new(520, 200))
 {
     private protected override Box3 BoundsOf(DoorParams p) => Centered(p.Width, 0, p.Height, p.Depth);

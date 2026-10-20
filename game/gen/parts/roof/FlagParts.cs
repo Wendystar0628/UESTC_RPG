@@ -44,7 +44,7 @@ internal static class FlagKit
 /// 2: blue with a lighter band near the hem and no mark. The pole is the host's; the bar is what its bracket holds. Visual only: flags
 /// never block the way and never come with the weather (they show in autumn by the season mask).
 /// </summary>
-[Part(PartCatalog.Pennant, Owner = "WP-12")]
+[Part(PartCatalog.Pennant)]
 public sealed class PennantPart : IPartDef<SignParams>
 {
     public PennantPart() => Lods = Levels.Of<SignParams>(Build, LodLevel.L0, LodLevel.L1);
@@ -103,7 +103,7 @@ public sealed class PennantPart : IPartDef<SignParams>
 /// its rods; Depth the cloth's thickness. Variation 0: white cloth, blue edge stripes and a blue band. 1: blue cloth with a white band.
 /// 2: low-saturation red cloth with a white band. Visual only; a seasonal summer piece (WLD-LIFE-FAUNA), so no collision.
 /// </summary>
-[Part(PartCatalog.Banner, Owner = "WP-12")]
+[Part(PartCatalog.Banner)]
 public sealed class BannerPart : IPartDef<SignParams>
 {
     public BannerPart() => Lods = Levels.Of<SignParams>(Build, LodLevel.L0, LodLevel.L1);

@@ -39,9 +39,6 @@ public sealed class HallEntranceSite : ZoneSite
             H.LandingWidth * .5f + .1f, H.WallFace + H.LandingDepth + H.MaxRisers * H.Tread + .1f))];
     }
 
-    public override IReadOnlyList<InspectionProbe> Probes =>
-        [Probe("Q4", NorthFeatureIds.Hall.Entity, NorthTune.Probes.WallEye, NorthTune.Probes.WallLook, -20f, 0.5f)];
-
     /// <summary>Porch frame and levels: origin on the footprint edge under the door, +Z out to the courtyard.</summary>
     internal sealed record Porch(PlanFrame Frame, float Ground, float Floor, int Risers, EntranceDecl Entrance)
     {

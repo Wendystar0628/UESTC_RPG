@@ -161,6 +161,6 @@ public sealed class PublicModuleTests
         return (c, ring.Min(p => Vector2.Distance(p, c)));
     }
 
-    private static BuildContext Context() => new() { Catalog = Campus.Contracts.Tests.PaletteFixture.Catalog, World = Loaded.Value, Map = null!, WorldSeed = 1 };
+    private static BuildContext Context() => new() { CodeHash = "fixture", WindowNumbering = new(new MapId("fixture"), new string('0', 64), []), Catalog = Campus.Contracts.Tests.PaletteFixture.Catalog, World = Loaded.Value, Map = null!, WorldSeed = 1 };
 
 }

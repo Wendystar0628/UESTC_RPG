@@ -10,9 +10,9 @@ using NVector3 = System.Numerics.Vector3;
 
 namespace Campus.Audio.Core;
 
-[KernelService(typeof(IAudioService), Owner = "WP-53a")]
-[KernelService(typeof(IAudioVoiceService), Owner = "WP-53a")]
-[KernelNode("audio", Owner = "WP-53a")]
+[KernelService(typeof(IAudioService))]
+[KernelService(typeof(IAudioVoiceService))]
+[KernelNode("audio")]
 public partial class AudioRuntime : Node, IAudioService, IAudioVoiceService, IMapAware, IBootParticipant
 {
     private readonly AudioBusTree _buses = new();

@@ -11,7 +11,7 @@ namespace Campus.Gen.Parts.Roof.Mep;
 /// Variation 0: red frame, glass door, white lettering. 1: red steel door with a small vision pane. 2: stainless frame, glass
 /// door, red lettering. Back on +Z; visual only (it sits inside the wall collider's clearance).
 /// </summary>
-[Part(PartCatalog.Hydrant, Owner = "WP-12")]
+[Part(PartCatalog.Hydrant)]
 public sealed class HydrantPart() : MepPart<EquipmentParams>(new(700, 120))
 {
     private const float Pull = 0.012f;
@@ -54,7 +54,7 @@ public sealed class HydrantPart() : MepPart<EquipmentParams>(new(700, 120))
 /// and a dark hose down the side. Variation 0: one on the floor. 1: a pair side by side. 2: one in a wall bracket with a strap.
 /// Floor-standing prop.
 /// </summary>
-[Part(PartCatalog.Extinguisher, Owner = "WP-12")]
+[Part(PartCatalog.Extinguisher)]
 public sealed class ExtinguisherPart() : MepPart<EquipmentParams>(new(1300, 200))
 {
     protected override Vector3 Minimum => new(0.12f, 0.3f, 0.12f);

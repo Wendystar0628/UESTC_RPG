@@ -17,7 +17,7 @@ internal static class PartLodFixture
     private static PartLodCatalog Capture()
     {
         var definitions = new List<KeyValuePair<PartId, IPartDef>>();
-        foreach (var entry in RegistrationDiscovery.Query<IPartDef>(RegistrationDiscovery.Discover([typeof(PartGeometryKernel).Assembly]), RegistrationKind.Part))
+        foreach (var entry in RegistrationDiscovery.Query<IPartDef>(RegistrationDiscovery.Discover([typeof(PartGeometryKernel).Assembly], _ => "fixture"), RegistrationKind.Part))
             definitions.Add(new(new PartId(entry.Id), (IPartDef)RegistrationDiscovery.Construct(entry.Type, parameter => parameter.HasDefaultValue ? parameter.DefaultValue : throw new InvalidOperationException("Fixture registration has an unresolved dependency."))));
         return new PartLodCatalog(definitions);
     }

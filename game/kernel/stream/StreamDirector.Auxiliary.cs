@@ -1,6 +1,6 @@
+using Campus.Kernel.Renderer;
 using Campus.Contracts;
 using Campus.Contracts.Bake;
-using Campus.Kernel.Boot;
 using Campus.Kernel.Lod;
 using Godot;
 using Services = Campus.Kernel.Registry.Kernel;
@@ -68,11 +68,7 @@ public partial class StreamDirector
                 projection = Projection.CreatePerspective(fov, projection.GetAspect(), camera.Near, camera.Far,
                     camera.KeepAspect == Camera3D.KeepAspectEnum.Width);
         }
-        for (var i = 0; i < _demandFrustum.Length; i++)
-        {
-            var plane = transform * projection.GetProjectionPlane((Projection.Planes)i);
-            _demandFrustum[i] = new(new(plane.Normal.X, plane.Normal.Y, plane.Normal.Z), -plane.D);
-        }
+        CameraFrustum.Fill(transform, projection, _demandFrustum);
         if (_demandNearBuffer.Length < required.Count) Array.Resize(ref _demandNearBuffer, required.Count);
         var nearCount = 0;
         foreach (var tile in required)
@@ -134,7 +130,7 @@ public partial class StreamDirector
                 var priority = item.DestinationRequired ? BakePriority.KnownDestination : BakePriority.Normal;
                 if (item.Error is not null && item.DestinationRequired) _error ??= item.Error;
                 if (!_issued.Contains(key))
-                    requests.Add(new(key, group.Tile, priority, LodTree.Distance(pose.Position, item.Entry.Bounds) / Math.Max(1, _camera.Speed)));
+                    requests.Add(new(key, group.Tile, priority, MathF.Sqrt(item.Entry.Bounds.DistanceSquared(pose.Position)) / Math.Max(1, _camera.Speed)));
                 else
                 {
                     PromotePreload(new(key, group.Tile, priority, 0), group, item);

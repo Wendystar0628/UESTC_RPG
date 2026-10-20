@@ -30,8 +30,8 @@ public sealed class LibraryInteriorTests
         var features = entry.GetProperty("featureIds").EnumerateArray().Select(e => new FeatureId(e.GetString()!)).ToArray();
         var floors = entry.GetProperty("openFloors").EnumerateArray().Select(e => e.GetInt32()).ToArray();
         var provider = new LibraryInteriorProvider();
-        provider.Configure(features, floors, new Dictionary<FeatureId, IReadOnlyList<EntranceDecl>>());
-        var ctx = new BuildContext { Catalog = Campus.Contracts.Tests.PaletteFixture.Catalog, World = world, Map = null!, WorldSeed = 1u };
+        provider.Configure(new(features, floors, new Dictionary<FeatureId, IReadOnlyList<EntranceDecl>>(), null, []));
+        var ctx = new BuildContext { CodeHash = "fixture", WindowNumbering = new(new MapId("fixture"), new string('0', 64), []), Catalog = Campus.Contracts.Tests.PaletteFixture.Catalog, World = world, Map = null!, WorldSeed = 1u };
         foreach (var feature in features)
         {
             var layout = provider.Layout(ctx, feature);

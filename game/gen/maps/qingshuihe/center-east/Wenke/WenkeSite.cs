@@ -507,21 +507,4 @@ public sealed class WenkeSite : ZoneSite
         c.Wall(f.P(-hw, d - 0.3f), f.P(hw, d - 0.3f), 0.15f, y, porchTop, SurfaceTag.DoorClosed, FootMat.Glass);
     }
 
-    // ---- Probes (MAP-QSH-CENTER-EAST Q2, Q8b) ----
-
-    public override IReadOnlyList<InspectionProbe> Probes
-    {
-        get
-        {
-            // Q2 (walk, K1): P14's proposed stand, eye height, looking past the tree and stone at the tower and the shut door.
-            var stand = CenterEastTune.Friendship.StandAt;
-            var q2 = Probe("Q2", CenterEastIds.Wenke.Entity, new(stand.X, WalkRules.StandingEye, stand.Y), CenterEastTune.Friendship.StandLookAt - stand, 6f, 7f);
-            // Q8b (baseline, fly only): 0.5 m off the tower's dark glass ribbon on its east face above the tenth storey.
-            Vector2 a = new(421.27f, 54.7f), e = new(430.27f, 100.87f);
-            var outward = PlanGeometry.RightUnitNormal(a, e);
-            var face = (a + e) * 0.5f + outward * (K.BandOut + 0.5f);
-            var q8 = Probe("Q8b", CenterEastIds.Wenke.Entity, new(face.X, Floor(11) + 1.6f, face.Y), -outward, 0f, 0.5f);
-            return [q2, q8];
-        }
-    }
 }

@@ -87,5 +87,5 @@ public static class WaterfrontTune
     public static ToonSpec RailSpec => S(Stainless, ToonFx.Rim | ToonFx.AnisoBand, LineClass.Fine, 0.4f) with { Steps = ShadeSteps.TwoHalf, Normal = ToonNormal.Smooth };
 
     // ---- Budget (PLAN-WP: WP-28 takes 1 % / 1 % from the building share; measured on the 28a bridges) ----
-    public const int BudgetTrianglesL0 = 24_000, BudgetTrianglesL1 = 12_000, BudgetDrawCalls = 8;
+
 }

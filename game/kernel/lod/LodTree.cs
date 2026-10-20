@@ -68,7 +68,7 @@ public sealed class LodTree
     {
         if (tile.Level <= minimum || tile.Level == LodLevel.L0) return;
         var threshold = _settings.Distances[(int)tile.Level - 1] * scale;
-        if (Distance(camera, _bounds[tile]) >= threshold) return;
+        if (MathF.Sqrt(_bounds[tile].DistanceSquared(camera)) >= threshold) return;
         refined.Add(tile);
         foreach (var child in Children(tile))
         {
@@ -76,7 +76,6 @@ public sealed class LodTree
             Visit(child, camera, minimum, scale, required, refined);
         }
     }
-    public static float Distance(Vector3 position, Box3 bounds) => Vector3.Distance(position, Vector3.Clamp(position, bounds.Min, bounds.Max));
 
     /// <summary>A parent disappears only when every real child has complete, pipeline-ready coverage.</summary>
     public void ResolveVisible(IReadOnlySet<StreamTile> refined, Func<StreamTile, bool> ready, HashSet<StreamTile> visible)

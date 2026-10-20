@@ -15,7 +15,7 @@ namespace Campus.Gen.Parts.Street;
 /// cabinet; the canopy reaches <see cref="StreetStyle.VendingCanopyOut"/> beyond the front. The window and header glow cold white at
 /// night on the shop-sign channel (WLD-LIFE). Sound: the compressor's hum within 4 m (WLD-LIFE). Collision: one box, Metal.
 /// </summary>
-[Part(PartCatalog.VendingMachine, Owner = "WP-13")]
+[Part(PartCatalog.VendingMachine)]
 public sealed class VendingMachinePart : IPartDef<EquipmentParams>
 {
     public VendingMachinePart() => Lods = Levels.Of<EquipmentParams>(Build, LodLevel.L0, LodLevel.L1);
@@ -103,7 +103,7 @@ public sealed class VendingMachinePart : IPartDef<EquipmentParams>
 /// front (−Z), the middle bank holding a small screen and a keypad. The screen glows cold white at night on the shop-sign channel.
 /// Width × Height × Depth is the cabinet. Silent (WLD-LIFE). Collision: one box, Metal (2 m, out of jumping reach).
 /// </summary>
-[Part(PartCatalog.DeliveryLocker, Owner = "WP-13")]
+[Part(PartCatalog.DeliveryLocker)]
 public sealed class DeliveryLockerPart : IPartDef<EquipmentParams>
 {
     public DeliveryLockerPart() => Lods = Levels.Of<EquipmentParams>(Build, LodLevel.L0, LodLevel.L1);
@@ -182,7 +182,7 @@ public sealed class DeliveryLockerPart : IPartDef<EquipmentParams>
 /// lit point at night, signal channel); a white plate printed "直饮水" on its left side (+X). Width × Height × Depth is the cabinet
 /// (the top at 1.1 m). Silent. Collision: one box, Metal; the top is jumpable (MAP-QSH-ADDITIONS).
 /// </summary>
-[Part(PartCatalog.DrinkingFountain, Owner = "WP-13")]
+[Part(PartCatalog.DrinkingFountain)]
 public sealed class DrinkingFountainPart : IPartDef<EquipmentParams>
 {
     public DrinkingFountainPart() => Lods = Levels.Of<EquipmentParams>(Build, LodLevel.L0, LodLevel.L1);

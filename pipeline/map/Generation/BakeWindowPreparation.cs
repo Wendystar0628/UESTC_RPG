@@ -5,7 +5,7 @@ namespace Campus.Pipeline.Map;
 /// <summary>Pure, map-filtered declaration collection. Only the registered provider allocates window IDs.</summary>
 public static class BakeWindowPreparation
 {
-    public sealed record Result(WindowNumberingSnapshot? Snapshot, WindowMetadata Metadata);
+    public sealed record Result(WindowNumberingSnapshot Snapshot, WindowMetadata Metadata);
 
     public static Result Prepare(BuildContext prepass, IReadOnlyDictionary<string, ContentModuleInput> modules)
     {
@@ -23,8 +23,8 @@ public static class BakeWindowPreparation
                     !prepass.World.Features.ContainsKey(layout.Feature))
                     throw new InvalidDataException($"Window layout references an absent feature: {id}/{layout?.Feature.Value}.");
                 var owner = prepass.ClaimedBy(layout.Feature, Aspects.Facade);
-                if (owner is null || owner != module.Owner)
-                    throw new InvalidDataException($"Window facade owner mismatch: {id}/{layout.Feature.Value}; registered={module.Owner.Value}, claimed={owner?.Value ?? "none"}.");
+                if (owner is null || owner != id)
+                    throw new InvalidDataException($"Window facade owner mismatch: {id}/{layout.Feature.Value}; registered={id}, claimed={owner ?? "none"}.");
                 if (layout.Grids is null) throw new InvalidDataException($"Window grids are null: {id}/{layout.Feature.Value}.");
                 var grids = new SortedDictionary<string, WindowGridSpec>(StringComparer.Ordinal);
                 foreach (var grid in layout.Grids)
@@ -42,24 +42,24 @@ public static class BakeWindowPreparation
         }
         var missing = prepass.World.Features.Keys.Select(feature => new { Feature = feature, Owner = prepass.ClaimedBy(feature, Aspects.Facade) })
             .Where(item => item.Owner is not null && !declarations.ContainsKey(item.Feature.Value))
-            .OrderBy(item => item.Owner!.Value.Value, StringComparer.Ordinal).ThenBy(item => item.Feature.Value, StringComparer.Ordinal).ToArray();
+            .OrderBy(item => item.Owner!, StringComparer.Ordinal).ThenBy(item => item.Feature.Value, StringComparer.Ordinal).ToArray();
         if (missing.Length != 0)
             throw new InvalidDataException($"Missing window layouts for {missing.Length} facade claims: " +
-                string.Join("; ", missing.Select(item => $"owner {item.Owner!.Value.Value}, feature {item.Feature.Value}")) +
+                string.Join("; ", missing.Select(item => $"owner {item.Owner!}, feature {item.Feature.Value}")) +
                 ". Declare Grids=[] explicitly only for an authored windowless feature.");
 
         var providers = ordered.Where(pair => pair.Value.Value is IWindowNumberingProvider).ToArray();
-        // Only genuinely windowless legacy fixtures may omit the optional capability. A real building may not.
+        // Windowless maps publish their explicit empty prepass allocation. A real building needs its provider.
         var requiresProvider = declarations.Count != 0 || ordered.Any(pair => pair.Value.Value is IWindowMetadataSource) ||
             prepass.World.Features.Values.Any(feature => feature.Kind.Value == "building" || feature.Parts.Any(part => part.Height.HasValue || part.Storeys.HasValue));
-        if (providers.Length == 0 && !requiresProvider) return new(null, new([], []));
+        if (providers.Length == 0 && !requiresProvider) return new(prepass.WindowNumbering, new([], []));
         if (providers.Length != 1)
             throw new InvalidDataException($"Map {prepass.Map.Id.Value} needs exactly one window numbering provider; found {providers.Length}: {string.Join(", ", providers.Select(pair => pair.Key))}.");
 
         var provider = providers[0];
         // The provider fingerprints its resolved allocation; the frozen context carries no per-product identity.
         var snapshot = ((IWindowNumberingProvider)provider.Value.Value).PrepareWindowNumbering(
-            Context(prepass, provider.Value.CodeHash, null), Array.AsReadOnly(declarations.Values.ToArray()))
+            Context(prepass, provider.Value.CodeHash, prepass.WindowNumbering), Array.AsReadOnly(declarations.Values.ToArray()))
             ?? throw new InvalidDataException($"Window provider {provider.Key} returned no snapshot.");
         if (snapshot.Map != prepass.Map.Id) throw new InvalidDataException("Window provider returned another map's snapshot.");
         foreach (var allocation in snapshot.Allocations)
@@ -93,7 +93,7 @@ public static class BakeWindowPreparation
         return new(snapshot, result);
     }
 
-    public static BuildContext Context(BuildContext input, string codeHash, WindowNumberingSnapshot? snapshot, IWorldModel? world = null) => new()
+    public static BuildContext Context(BuildContext input, string codeHash, WindowNumberingSnapshot snapshot, IWorldModel? world = null) => new()
     {
         World = world ?? input.World,
         Map = input.Map,
@@ -110,9 +110,9 @@ public static class BakeWindowPreparation
     };
 
     /// <summary>Validate logical cells, including duplicates between regular facades and individual windows.</summary>
-    public static void ValidateMetadata(WindowMetadata metadata, WindowNumberingSnapshot? snapshot)
+    public static void ValidateMetadata(WindowMetadata metadata, WindowNumberingSnapshot snapshot)
     {
-        var blocks = snapshot?.Allocations.ToDictionary(item => item.BaseId) ?? [];
+        var blocks = snapshot.Allocations.ToDictionary(item => item.BaseId);
         var seen = new HashSet<int>();
         foreach (var facade in metadata.Facades)
         {

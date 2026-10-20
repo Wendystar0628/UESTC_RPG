@@ -15,7 +15,7 @@ namespace Campus.Gen.Diorama;
 /// backdrop product (Tiles is empty).
 /// </summary>
 
-[ContentModule("diorama", Owner = "WP-22")]
+[ContentModule("diorama")]
 public sealed class DioramaModule : IContentModule
 {
     public BakeInputDependencies BakeInputs { get; } = new(BakeInputKinds.Backdrop, [], []);
@@ -24,7 +24,6 @@ public sealed class DioramaModule : IContentModule
     public IReadOnlyList<Claim> Claims => [];
 
     // ENG-BUDGET "diorama": 3 % of main triangles (75 k fine), 2 % of draw calls (30); no shadow casting at all.
-    public ModuleBudget Budget { get; } = new(75_000, 75_000, 30);
 
     public IEnumerable<TileKey> Tiles(BuildContext ctx)
     {

@@ -73,7 +73,7 @@ public partial class KernelStage : Node3D, IAppExit, IStageGateHost
     private void Compose()
     {
         var registry = Services.Services;
-        ProcessPriority = FramePriority.Save + 1;
+        ProcessPriority = FramePriority.Stage;
         var view = new StageCamera();
         _view = view;
         AddChild(view);

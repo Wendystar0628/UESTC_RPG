@@ -6,7 +6,7 @@ using Campus.Contracts.Maps;
 namespace Campus.Kernel.Collision;
 
 /// <summary>Queries frozen natural water geometry independently of visible tiles or collision residency.</summary>
-[KernelService(typeof(IWaterTraversalQuery), Owner = "WP-08")]
+[KernelService(typeof(IWaterTraversalQuery))]
 public sealed class WaterTraversalQuery(IMapService maps) : IWaterTraversalQuery
 {
     private IMapContext? _context;

@@ -22,8 +22,8 @@ public sealed class RoofPartTests
     public void RoofsTakeTheWp12PartsByTheirZone()
     {
         WorldFeature[] features = [WorldFeatureFixture.Create("t:dorm", "building", new PolygonGeometry(new PolygonRings(Rect(0, 0, 60, 18))), props: "{\"category\":\"residence\"}", height: 19.8f, storeys: 6), WorldFeatureFixture.Create("t:lab", "building", new PolygonGeometry(new PolygonRings(Rect(100, 0, 48, 20))), props: "{\"category\":\"research\"}", height: 21f, storeys: 5)];
-        var plain = BuildingSet.For(World(features), 2u);
-        var hero = BuildingSet.For(World(new ZonedFidelity(FidelityZone.K3, FidelityZone.K3, FidelityZone.K1), features), 2u);
+        var plain = BuildingSet.For(Ctx(World(features), 2u));
+        var hero = BuildingSet.For(Ctx(World(new ZonedFidelity(FidelityZone.K3, FidelityZone.K3, FidelityZone.K1), features), 2u));
         var module = new BuildingsModule();
         static bool Pump(GeometryBundle b) => HasColor(b, "equip.grey.lit");
         // The fence boards in the light metal grey of RoofRules.FenceBoard (the board class: building line, no effects).

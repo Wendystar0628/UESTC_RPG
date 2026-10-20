@@ -15,7 +15,7 @@ namespace Campus.Gen.Parts.Street;
 /// as a sound socket (WLD-LIFE-STREET: an original melody from 17:40, then voices too faint to follow, from the lamp-pole horns). Visual
 /// only: it hangs out of reach.
 /// </summary>
-[Part(PartCatalog.StreetSpeaker, Owner = "WP-13")]
+[Part(PartCatalog.StreetSpeaker)]
 public sealed class StreetSpeakerPart : IPartDef<EquipmentParams>
 {
     public StreetSpeakerPart() => Lods = Levels.Of<EquipmentParams>(Build, LodLevel.L0, LodLevel.L1);

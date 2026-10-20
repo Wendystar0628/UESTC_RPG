@@ -8,8 +8,8 @@ using Godot;
 
 namespace Campus.Kernel.Quality.Settings;
 
-[KernelNode("quality", Owner = "WP-32")]
-[QualityResponsive(Owns = [QualityKnob.DisplayMode, QualityKnob.WindowSize, QualityKnob.VSync,
+[KernelNode("quality")]
+[QualityResponsive(Order = 0, Owns = [QualityKnob.DisplayMode, QualityKnob.WindowSize, QualityKnob.VSync,
     QualityKnob.FrameCap, QualityKnob.RenderScale, QualityKnob.FoliageDensity])]
 public partial class QualityRuntime : Node, IQualityAware, IQualityRuntime
 {
@@ -145,7 +145,7 @@ public partial class QualityRuntime : Node, IQualityAware, IQualityRuntime
         var registrations = RuntimeKernel.Services.Query<IQualityAware>(RegistrationKind.Node, new MapId(currentMap))
             .Select(entry => (Entry: entry, Quality: entry.Type.GetCustomAttribute<QualityResponsiveAttribute>()))
             .Where(item => item.Quality is not null)
-            .OrderBy(item => notification.Loading ? OwnerOrder(item.Entry.Owner) : 0)
+            .OrderBy(item => notification.Loading ? item.Quality!.Order : 0)
             .ThenBy(item => item.Entry.Id, StringComparer.Ordinal).ToArray();
         foreach (var item in registrations)
         {
@@ -219,13 +219,5 @@ public partial class QualityRuntime : Node, IQualityAware, IQualityRuntime
         if (change.Has(QualityKnob.FrameCap))
             Engine.MaxFps = QualityCatalog.FrameLimit(view[QualityKnob.FrameCap], RefreshRate);
     }
-
-    private static int OwnerOrder(string owner) => owner switch
-    {
-        "WP-32" => 0,
-        "WP-03" => 1,
-        "WP-05" => 2,
-        _ => 3,
-    };
 
 }

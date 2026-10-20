@@ -2,7 +2,6 @@
 // 分支由材质 uniform fx_kind 选（材质库每种一份材质，不在运行时改 render_mode 或 #define）：
 //   0 窗灯光晕：贴立面的面片，边长 1.5 倍窗宽、离立面 2 cm，光晕半径不超过窗宽的一半；250 m 外淡出
 //   1 灯头光晕：朝镜头的面片；夜雾里半径 ×2
-//   2 光锥、3 室外软边光柱、4 室内棱柱光柱、5 细尘、6 萤火虫：主线留空（塌成 0 面积）
 // 实例数据（MultiMesh，每实例 Transform3D + INSTANCE_CUSTOM）：
 //   窗：基 = (右 × 面片宽, 上 × 面片高, 外法线)，原点 = 窗心 + 法线 × 2 cm；
 //       custom = (窗号, 楼基址, 槽位 + 32 × 楼窗网格总列数（与玻璃的 UV2.y 同一写法）, 标志：1 = 外围，跳过窗覆盖)
@@ -15,7 +14,7 @@ render_mode blend_add, unshaded, depth_draw_never, cull_disabled, fog_disabled, 
 
 #include "res://style/shaders/globals.gdshaderinc"
 
-uniform int fx_kind : hint_range(0, 6) = 0;
+uniform int fx_kind : hint_range(0, 1) = 0;
 
 // 灯光通道、窗阈值、灯表解码、单灯亮度与光斑的公共求值（WP-39；toon、降水、倒影共用同一份）
 #include "res://style/shaders/lamp.gdshaderinc"

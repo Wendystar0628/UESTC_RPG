@@ -340,5 +340,17 @@ public sealed class WorldModelTests
         ["world/test.json"] = features
     };
 
+    [TestCase, TestCategory(TestReason.Contract)]
+    public void PreparedProviderFloorElevationAndHeightDriveTheFrozenSpatialIndex()
+    {
+        var source=Load().World;var feature=new FeatureId("fixture:relation:1");
+        var ring=source.Interiors.Get(feature)!.Storeys.First().Footprint;
+        var levels=new StoreyInfo[]{new(7,2,3.2f,ring),new(8,5.2f,2.4f,ring)};
+        var prepared=WorldModelSnapshot.WithInteriors(source,[new(feature,levels,[],true,"fixture.provider",[7,8])]);
+        AssertThat(prepared.Spatial.MediumAt(new(-5,3,-5)).Storey==7&&prepared.Spatial.MediumAt(new(-5,6,-5)).Storey==8).IsTrue();
+        AssertThat(prepared.Spatial.MediumAt(new(-5,7.7f,-5)).Kind==MediumKind.Air).IsTrue();
+        AssertThat(source.Interiors.Get(feature)!.Storeys[0].Index==1&&prepared.Interiors.Get(feature)!.Storeys.SequenceEqual(levels)).IsTrue();
+    }
+
     private static WorldModelLoadResult Load() => WorldModelLoader.Load(new("test"), Files());
 }

@@ -42,10 +42,6 @@ public sealed class PinxueForecourtSite : ZoneSite
          SiteRanges.Point(world.Feature(CenterEastIds.Pinxue.RoundBedId).Point(), P.RoundBedRadius + P.SeatWidth),
          .. RampWalls(world).Select(wall => RampRange(Frame(world), wall.X, wall.Z0, wall.Z1))];
 
-    public override IReadOnlyList<InspectionProbe> Probes =>
-        // Q4 (wall-hugging, K1): 0.5 m from the A hall's ground-floor glazing and dark plinth, on the forecourt.
-        [Probe("Q4", CenterEastIds.Pinxue.WingA, new(P.Q4Eye.X, P.PlatformY + WalkRules.StandingEye, P.Q4Eye.Y), P.Q4Look, -20f, 0.5f)];
-
     public override void Build(SiteBuilder b)
     {
         var world = b.Context.World;

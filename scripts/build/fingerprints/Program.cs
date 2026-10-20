@@ -39,10 +39,10 @@ internal static class Program
         var production = await workspace.OpenProjectAsync(options.Project);
         var tool = await workspace.OpenProjectAsync(options.ToolProject);
         if (!failures.IsEmpty) throw new InvalidDataException(string.Join(Environment.NewLine, failures));
-        var fingerprints = await TargetSourceFingerprint.Create(production, tool, options.Properties);
+        var manifest = await TargetSourceFingerprint.Create(production, tool, options.Properties);
         if (!failures.IsEmpty) throw new InvalidDataException(string.Join(Environment.NewLine, failures));
         var bytes = JsonSerializer.SerializeToUtf8Bytes(
-            new BakeCodeManifest(BakeCodeManifest.CurrentSchema, fingerprints), ContractJson.Options);
+            manifest, ContractJson.Options);
         var output = Path.GetFullPath(options.Output);
         if (File.Exists(output) && File.ReadAllBytes(output).AsSpan().SequenceEqual(bytes)) return;
         Directory.CreateDirectory(Path.GetDirectoryName(output)!);
@@ -56,7 +56,7 @@ internal static class Program
         {
             if (File.Exists(temporary)) File.Delete(temporary);
         }
-        Console.WriteLine($"Code fingerprints: wrote {fingerprints.Count} roots to {output}.");
+        Console.WriteLine($"Code fingerprints: wrote {manifest.Roots.Count} roots and {manifest.Registrations.Count} registration owners to {output}.");
     }
 
     private sealed record Options(string Project, string ToolProject, string Output, Dictionary<string, string> Properties)

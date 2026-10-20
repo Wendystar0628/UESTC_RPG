@@ -4,7 +4,5 @@ namespace Campus.Kernel.Boot;
 public static class BootTuning
 {
     public const float TitleRevealSeconds = 1.2f;
-    public const float CameraNear = .05f;
-    public const float CameraFar = 12000f;
     public const double StalledSeconds = 60;
 }

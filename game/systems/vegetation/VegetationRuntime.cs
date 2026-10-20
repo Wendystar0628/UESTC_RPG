@@ -12,12 +12,12 @@ using Services = Campus.Kernel.Registry.Kernel;
 namespace Campus.Systems.Vegetation;
 
 /// <summary>Tile payload owner. StreamDirector alone requests, schedules and retires each tree/grass tile.</summary>
-[KernelNode("systems.vegetation", Owner = "WP-23")]
+[KernelNode("systems.vegetation")]
 public sealed partial class VegetationRuntime : Node, IMapAware, IViewContentReadiness, IViewCapturePreparation, IStreamTileParticipant
 {
     private static readonly StringName _shaderInstanceShadowProxy = InstanceShaderParameters.ShadowProxy;
-    private const uint VisibleLayer = 1u << 3;
-    private const uint ProxyLayer = 1u << 4;
+    private const uint VisibleLayer = RenderLayers.Vegetation;
+    private const uint ProxyLayer = RenderLayers.ShadowProxy;
     private const double Interval = 0.1;
     private readonly Dictionary<BakeKey, MountedTile> _tiles = [];
     private IInstancePoolHost? _host;
@@ -75,7 +75,7 @@ public sealed partial class VegetationRuntime : Node, IMapAware, IViewContentRea
         // Full near exit envelope; no view-frustum filter, because offscreen near trees still cast visible shadows.
         var eye = view.Eye.Position;
         var d = entry.Key.Module == BakeModuleIds.VegetationGrass
-            ? HorizontalDistance(eye, entry.Bounds) : N.Vector3.Distance(eye, N.Vector3.Clamp(eye, entry.Bounds.Min, entry.Bounds.Max));
+            ? MathF.Sqrt(entry.Bounds.HorizontalDistanceSquared(eye)) : MathF.Sqrt(entry.Bounds.DistanceSquared(eye));
         if (d <= reach) return StreamTileNeed.Required;
         return resident && entry.Key.Module == BakeModuleIds.VegetationTrees && d <= reach * VegetationBuckets.Hysteresis
             ? StreamTileNeed.Retain : StreamTileNeed.None;
@@ -148,13 +148,6 @@ public sealed partial class VegetationRuntime : Node, IMapAware, IViewContentRea
         _since = Interval;
     }
 
-    private static float HorizontalDistance(N.Vector3 eye, Box3 box)
-    {
-        var dx = MathF.Max(0f, MathF.Max(box.Min.X - eye.X, eye.X - box.Max.X));
-        var dz = MathF.Max(0f, MathF.Max(box.Min.Z - eye.Z, eye.Z - box.Max.Z));
-        return MathF.Sqrt(dx * dx + dz * dz);
-    }
-
     private sealed class MountedTile
     {
         private readonly Box3[] _bounds;
@@ -182,8 +175,8 @@ public sealed partial class VegetationRuntime : Node, IMapAware, IViewContentRea
             var reach = Grass.Length > 0 ? GrassPool.Reach : VegFade.NearFadeEnd * VegetationBuckets.Hysteresis;
             foreach (var bounds in _bounds)
             {
-                var distance = Grass.Length > 0 ? HorizontalDistance(eye, bounds) :
-                    N.Vector3.Distance(eye, N.Vector3.Clamp(eye, bounds.Min, bounds.Max));
+                var distance = Grass.Length > 0 ? MathF.Sqrt(bounds.HorizontalDistanceSquared(eye)) :
+                    MathF.Sqrt(bounds.DistanceSquared(eye));
                 if (distance <= reach) return true;
             }
             return false;
@@ -255,7 +248,6 @@ public sealed partial class VegetationRuntime : Node, IMapAware, IViewContentRea
                 return true;
             }
         }
-        private readonly WpId _owner;
         private readonly float[] _records;
         private readonly GeometryPrototype[] _prototypes;
         private readonly Box3[] _bounds;
@@ -269,7 +261,6 @@ public sealed partial class VegetationRuntime : Node, IMapAware, IViewContentRea
         public Mother(VegetationMotherData data, string tileId)
         {
             _key = tileId + "." + data.Key;
-            _owner = data.Owner;
             var records = data.Records.ToArray();
             var prototypes = data.Prototypes.ToArray();
             _records = records;
@@ -286,7 +277,7 @@ public sealed partial class VegetationRuntime : Node, IMapAware, IViewContentRea
         {
             var kind = Order[p];
             var shadow = kind == VegPool.Shadow;
-            var spec = new GeometryInstancePoolSpec($"vegetation.{_key}.{kind}", _owner.Value, _prototypes[p], Buckets.Count, Parked,
+            var spec = new GeometryInstancePoolSpec($"vegetation.{_key}.{kind}", _prototypes[p], Buckets.Count, Parked,
                 shadow ? ProxyLayer : VisibleLayer,
                 shadow ? GeometryInstance3D.ShadowCastingSetting.ShadowsOnly : GeometryInstance3D.ShadowCastingSetting.Off)
             { Map = map };

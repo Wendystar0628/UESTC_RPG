@@ -11,7 +11,7 @@ namespace Campus.Gen.Parts.Roof;
 /// MAP-QSH-ADDITIONS). Variation ≥ 1: a communication mast with three white panel antennas at 120° (tall-building corners).
 /// Bounds are measured over all levels, because the tilted and turned pieces do not reduce to a closed-form box.
 /// </summary>
-[Part(PartCatalog.Antenna, Owner = "WP-12")]
+[Part(PartCatalog.Antenna)]
 public sealed class AntennaPart : IPartDef<EquipmentParams>
 {
     private const float Shell = 0.03f;

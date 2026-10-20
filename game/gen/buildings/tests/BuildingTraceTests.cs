@@ -35,7 +35,7 @@ public sealed class BuildingTraceTests
         var world = World(Entrances(door), Falling(-1f, 0.9f), features);
         var ctx = Prepared(Ctx(world, 2u, claims: ["t:claimed"]));
         var module = new BuildingsModule();
-        var plans = BuildingSet.For(world, 2u).Plans;
+        var plans = BuildingSet.For(Ctx(world, 2u)).Plans;
         var mine = plans.Where(p => BuildingsModule.Unclaimed(ctx, p)).ToArray();
         AssertThat(plans.Count == 6 && mine.Length == 5 && mine.All(p => p.Key != "t:claimed")).OverrideFailureMessage("Expected: " + ("the claimed building is a plan but not WP-14's")).IsTrue();
 
@@ -82,9 +82,9 @@ public sealed class BuildingTraceTests
     public void TraceSourcesReproduceBuildAndCollideOnTheRealCampus()
     {
         var real = RealMapFixture.Load().World;
-        var ctx = Prepared(new BuildContext { Catalog = Campus.Contracts.Tests.PaletteFixture.Catalog, World = real, Map = TestMap, WorldSeed = 1u, ClaimedBy = RealClaims(real) });
+        var ctx = Prepared(new BuildContext { CodeHash = "fixture", SourceInputs = RealMapFixture.WindowInputs(TestMap.Id), WindowNumbering = new((TestMap).Id, new string('0', 64), []), Catalog = Campus.Contracts.Tests.PaletteFixture.Catalog, World = real, Map = TestMap, WorldSeed = 1u, ClaimedBy = RealClaims(real) });
         var module = new BuildingsModule();
-        var mine = BuildingSet.For(real, 1u).Plans.Where(p => BuildingsModule.Unclaimed(ctx, p)).ToArray();
+        var mine = BuildingSet.For(Ctx(real, 1u)).Plans.Where(p => BuildingsModule.Unclaimed(ctx, p)).ToArray();
         AssertThat(mine.Select(p => $"building/{p.Id.Value}/{p.Key}").Distinct(StringComparer.Ordinal).Count() == mine.Length).OverrideFailureMessage("Expected: " + ("a source ID per building part over the map")).IsTrue();
         foreach (var lod in new[] { LodLevel.L0, LodLevel.L2 })
         {

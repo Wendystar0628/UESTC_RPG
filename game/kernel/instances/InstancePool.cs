@@ -6,7 +6,7 @@ namespace Campus.Kernel.Instances;
 
 /// <summary>Owns one node, MultiMesh and multi-surface mesh. Materials belong to the provider or host cache.</summary>
 internal sealed class InstancePool(
-    InstancePoolHost host, string id, string ownerWp, int capacity, int meshTriangles,
+    InstancePoolHost host, string id, int capacity, int meshTriangles,
     GeometryInstance3D.ShadowCastingSetting shadows, MapId? map, int surfaceCount,
     MultiMeshInstance3D instance, MultiMesh multiMesh, ArrayMesh mesh) : IInstancePool
 {
@@ -23,7 +23,6 @@ internal sealed class InstancePool(
     private int _visibleCount;
 
     public string Id { get; } = id;
-    public string OwnerWp { get; } = ownerWp;
     public MapId? Map { get; } = map;
     public int Capacity { get; } = capacity;
     public bool IsReady
@@ -34,7 +33,7 @@ internal sealed class InstancePool(
             return _hasBuffer;
         }
     }
-    internal InstancePoolStatistics Statistics => new(Id, OwnerWp, Capacity, _visibleCount, meshTriangles,
+    internal InstancePoolStatistics Statistics => new(Id, Capacity, _visibleCount, meshTriangles,
         shadows != GeometryInstance3D.ShadowCastingSetting.Off)
     {
         Map = Map,

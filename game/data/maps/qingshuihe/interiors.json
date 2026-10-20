@@ -425,7 +425,7 @@
         "zh": "1F–2F 公共部分与一间 4 人间；2F–3F 楼梯口封闭",
         "en": "1F–2F public areas and one four-bed dormitory; stairs to 3F closed"
       },
-      "providerId": "interior.box.xuezhi-1",
+      "providerId": "interior.plan.xuezhi-1",
       "openFloors": [
         1,
         2
@@ -456,7 +456,20 @@
         }
       ],
       "seals": [],
-      "owner": "WP-31c"
+      "owner": "WP-31c",
+      "buildingType": {
+        "profile": "double-loaded",
+        "rooms": [
+          {
+            "wing": 0,
+            "storey": 2,
+            "bay": 2,
+            "side": 0,
+            "type": "dorm.four",
+            "open": true
+          }
+        ]
+      }
     },
     {
       "featureIds": [

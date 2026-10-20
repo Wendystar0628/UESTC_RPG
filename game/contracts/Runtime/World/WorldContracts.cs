@@ -135,17 +135,19 @@ public interface IWeatherProcess
     void Restore(WeatherProcessState s);                              // 读档：在遮挡下直接落到存档的状态，不做过渡、不调 Reset
 }
 
-// 帧顺序用 Node.ProcessPriority（值越小越先执行，与节点在树里的位置无关；对应旧网页版的 FramePhase / onPhase）
-// 共 18 步。任何两步都不得同值（同值时 Godot 按场景树顺序执行，就说不清先后，SYS-SAVE）。
-// Stream（−500）只做选级与请求，StreamMount（900）做挂载与碰撞入树。
-// ENG-PERF 的帧内顺序、SYS-TIME 的每帧顺序表、SYS-MAPS 和 SYS-AUDIO 的表与本表逐行一致（同样的 18 个值、同样的工作包）
+// 帧顺序由 Node.ProcessPriority 决定，值越小越先执行。
+// 同值的登记节点按节点 ID 序挂载；步内不声明前后关系，需要先后的节点使用不同登记值。
+// Stream 只做选级与请求，StreamMount 做挂载与碰撞入树；全部使用方直接引用登记项，不写偏移。
 public static class FramePriority
 {
+    public const int FadeClock = -1301;     // 在地图状态机之前推进独立的渲染淡入时钟
     public const int Map = -1300;           // WP-46：推进切图状态机；在雾幕全黑的帧里分发 IMapAware；Mount 时写 map_rect；
                                             // Current、Context 在这一步换，同一帧里所有系统看到同一张图（SYS-MAPS）
     public const int Quality = -1200;       // WP-32：即时类设置与自动调节生效、分发 IQualityAware、写全局参数 quality；
                                             // 先于相机，同一帧里所有系统看到同一版本的 QualityView（SYS-GRAPHICS）
     public const int Camera = -1100;        // WP-06（含可达空间求值、写 edge_fog）、WP-36、WP-42
+    public const int CameraSync = -1099;    // 观者位姿写入引擎相机
+    public const int Listener = -1098;      // 相机更新后同步听者
     public const int WorldState = -1000;    // WP-34：推进世界时间、钟点和季节，再调 IWeatherProcess.Step 求天气向量（WP-45）
     public const int KeyLight = -900;       // WP-03：含按阴度改投影（SYS-WEATHER）、室内抬高阴影方向的最低高度（ENG-PERF）
     public const int Palette = -800;        // WP-37、WP-04：含天气修正量
@@ -161,7 +163,9 @@ public static class FramePriority
     public const int Audio = 50;            // WP-53a、53b、53d：仲裁、权重、排程、写播放器音量（SYS-AUDIO）
     public const int Hud = 100;             // WP-35：HudModel、MotionHub、UiThemeClock（写 ui_night）；WP-48b 的小地图与大地图
     public const int StreamMount = 900;     // 可见期共享1 ms；实际全屏遮盖时批量挂载并给UI让帧；新挂室内房间与门户下一帧生效
-    public const int Save = 1000;           // WP-50：每帧最后一步，拍快照；读档时在这一步恢复，下一帧所有系统同时看到新世界（SYS-SAVE）
+    public const int MapRuntime = 901;      // 本帧挂载后推进地图就绪屏障
+    public const int Save = 1000;           // WP-50：业务状态的最后一步，拍快照；读档时在这一步恢复，下一帧所有系统同时看到新世界（SYS-SAVE）
+    public const int Stage = 1001;          // 存档快照后更新组合根的诊断与关闭编排
 }
 
 public readonly record struct WindSample(float Gust, float Phase);

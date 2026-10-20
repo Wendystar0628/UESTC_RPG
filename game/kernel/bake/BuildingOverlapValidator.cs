@@ -22,7 +22,7 @@ public static class BuildingOverlapValidator
     /// greater than 0.9. Conflicting aliases of one source fail before comparisons. Invoke once for
     /// each effective world before any cache hit or geometry generation can bypass validation.
     /// </summary>
-    public static void Validate(IWorldModel world, Func<FeatureId, Aspects, WpId?>? claimedBy = null)
+    public static void Validate(IWorldModel world, Func<FeatureId, Aspects, string?>? claimedBy = null)
     {
         ArgumentNullException.ThrowIfNull(world);
         var footprints = Collect(world, claimedBy);
@@ -45,7 +45,7 @@ public static class BuildingOverlapValidator
                 string.Join("\n\n", failures));
     }
 
-    private static List<Footprint> Collect(IWorldModel world, Func<FeatureId, Aspects, WpId?>? claimedBy)
+    private static List<Footprint> Collect(IWorldModel world, Func<FeatureId, Aspects, string?>? claimedBy)
     {
         var sources = new SortedDictionary<string, Source>(StringComparer.Ordinal);
         var errors = new SortedSet<string>(StringComparer.Ordinal);
@@ -125,13 +125,13 @@ public static class BuildingOverlapValidator
         _ => false
     };
 
-    private static string DescribeReference(WorldFeature feature, Func<FeatureId, Aspects, WpId?>? claimedBy) =>
+    private static string DescribeReference(WorldFeature feature, Func<FeatureId, Aspects, string?>? claimedBy) =>
         $"entity={Quote(feature.Id.Value)}, name={Quote(feature.Name ?? "")}, " +
         $"owner={{massing:{OwnerValue(claimedBy, feature.Id, Aspects.Massing)},facade:{OwnerValue(claimedBy, feature.Id, Aspects.Facade)},roof:{OwnerValue(claimedBy, feature.Id, Aspects.Roof)}}}";
 
     // The resolver reports actual claims. Absence is not assigned to a guessed generic owner.
-    private static string OwnerValue(Func<FeatureId, Aspects, WpId?>? resolver, FeatureId feature, Aspects aspect) =>
-        resolver is null ? "(unavailable)" : resolver(feature, aspect) is { } owner ? Quote(owner.Value) : "(unclaimed)";
+    private static string OwnerValue(Func<FeatureId, Aspects, string?>? resolver, FeatureId feature, Aspects aspect) =>
+        resolver is null ? "(unavailable)" : resolver(feature, aspect) is { } owner ? Quote(owner) : "(unclaimed)";
 
     private static string Describe(Footprint footprint) =>
         $"source={Quote(footprint.Source)}; polygon={footprint.PolygonIndex.ToString(CultureInfo.InvariantCulture)}; " +

@@ -4,7 +4,6 @@ using Campus.Contracts.Content;
 using Campus.Contracts.Maps;
 using Campus.Contracts.Quality;
 using Campus.Contracts.Water;
-using Campus.Kernel.Materials;
 using Campus.Kernel.Renderer;
 using Godot;
 using N = System.Numerics;
@@ -18,8 +17,8 @@ namespace Campus.Systems.Water;
 /// style floor: it never switches off, only its refresh interval follows the quality setting (2 / 3 / 4 frames).
 /// Water surfaces themselves are static content supplied by the map's water module.
 /// </summary>
-[KernelNode("systems.water", Owner = "WP-24")]
-[KernelService(typeof(IReflectionWorld), Owner = "WP-24")]
+[KernelNode("systems.water")]
+[KernelService(typeof(IReflectionWorld))]
 [QualityResponsive(Owns = [QualityKnob.ReflectionInterval])]
 public partial class WaterSystem : Node, IMapAware, IQualityAware, IReflectionWorld
 {
@@ -217,11 +216,7 @@ public partial class WaterSystem : Node, IMapAware, IQualityAware, IReflectionWo
         var cameraTransform = main.GetCameraTransform();
         var projection = main.GetCameraProjection();
         // Get the existing camera's six planes without allocating an engine Array or a second camera.
-        for (var i = 0; i < _renderFrustum.Length; i++)
-        {
-            var plane = cameraTransform * projection.GetProjectionPlane((Projection.Planes)i);
-            _renderFrustum[i] = new(new(plane.Normal.X, plane.Normal.Y, plane.Normal.Z), -plane.D);
-        }
+        CameraFrustum.Fill(cameraTransform, projection, _renderFrustum);
         if (!TrySelect(new(eye.X, eye.Y, eye.Z), _renderFrustum, out var slot, out var h))
         {
             _viewport.RenderTargetUpdateMode = SubViewport.UpdateMode.Disabled;

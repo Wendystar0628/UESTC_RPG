@@ -1,7 +1,7 @@
 using Godot;
 using Campus.Kernel.Registry;
+using KernelServices = Campus.Kernel.Registry.Kernel;
 using Campus.Contracts.Startup;
-using AppBoot = Campus.Kernel.Boot.Boot;
 
 namespace Campus.Kernel.Bake;
 
@@ -9,12 +9,12 @@ namespace Campus.Kernel.Bake;
 public sealed record BakeOptions(string CacheRoot, bool Live, bool Strict, bool Background,
     bool MapOnly, int LogicalProcessors, uint? SeedOverride)
 {
-    public const string Abi = "godot-4.7.2-tbin-13";
+    public const string Abi = "godot-4.7.2-tbin-14";
     public string? PackagedCacheRoot { get; init; }
     public int MaximumWorkers => Math.Max(1, LogicalProcessors - 2);
     public int PlayingWorkers => Math.Max(1, LogicalProcessors / 4);
 
-    public static BakeOptions FromApplication() => From(AppBoot.Options.Bake);
+    public static BakeOptions FromApplication() => From(KernelServices.Get<BootRunOptions>().Bake);
 
     public static BakeOptions From(BakeBootOptions options)
     {

@@ -12,7 +12,7 @@ public readonly record struct WindowBlock(FeatureId Feature, string Key, int Bas
 /// All building plans of one world with their generic window blocks: every building part of every feature, claimed or
 /// not, in FeatureId then part-key ordinal order. Plans are memoized by their build context; Build() calls on any tile
 /// agree. The blocks are the layout before claimed replacements; production numbers come from the map's
-/// WindowNumberingSnapshot (<see cref="WindowNumbering.Prepare"/>), which equals them while nothing is declared.
+/// WindowNumberingSnapshot (<see cref="WindowNumbering.Prepare"/>), which also preserves the persistent registry's addresses.
 /// </summary>
 public sealed class BuildingSet
 {
@@ -35,8 +35,6 @@ public sealed class BuildingSet
     public int WindowCount { get; }
 
     public WindowBlock BlockOf(BuildingPlan plan) => Blocks[_index[plan.Key]];
-
-    public static BuildingSet For(IWorldModel world, uint worldSeed) => Create(world, worldSeed);
 
     public static BuildingSet For(BuildContext context) =>
         context.Memo(typeof(BuildingSet), () => Create(context.World, context.WorldSeed));

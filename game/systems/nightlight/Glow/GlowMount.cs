@@ -11,10 +11,9 @@ namespace Campus.Systems.Nightlight.Glow;
 /// </summary>
 public sealed class GlowMount(GlowKind kind, string poolId)
 {
-    private const string Owner = "WP-39";
     private const int CapacityStep = 256;
     public const float BoundsPad = 8f;        // 灯头光晕随距离放大、夜雾里半径 ×2、朝镜头拉近，包围盒统一外扩
-    public const uint Layer = 1u << 5;         // 第 6 层：草、粒子、光晕、光锥、光柱（ENG-PERF 图层登记）
+    public const uint Layer = RenderLayers.GrassAndEffects;         // 第 6 层：草、粒子与光晕（ENG-PERF 图层登记）
 
     private static readonly float[] QuadPosition = [-0.5f, -0.5f, 0f, 0.5f, -0.5f, 0f, 0.5f, 0.5f, 0f, -0.5f, 0.5f, 0f];
     private static readonly float[] QuadUv = [0f, 1f, 1f, 1f, 1f, 0f, 0f, 0f];
@@ -54,7 +53,7 @@ public sealed class GlowMount(GlowKind kind, string poolId)
                 _material.SetShaderParameter("fx_kind", (int)Kind);
             }
             var capacity = (set.Count + CapacityStep - 1) / CapacityStep * CapacityStep;
-            _pool = host.Mount(new InstancePoolSpec(poolId, Owner, QuadPosition, QuadUv, QuadIndex, _material, ShaderId.FxGlow, capacity, box, Layer));
+            _pool = host.Mount(new InstancePoolSpec(poolId, QuadPosition, QuadUv, QuadIndex, _material, ShaderId.FxGlow, capacity, box, Layer));
         }
         var data = new float[_pool.Capacity * GlowSet.Stride];
         set.Buffer.AsSpan(0, set.Count * GlowSet.Stride).CopyTo(data);

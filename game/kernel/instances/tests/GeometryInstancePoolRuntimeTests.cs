@@ -1,7 +1,6 @@
 using Campus.Contracts;
 using Campus.Contracts.Maps;
 using Campus.Kernel.Instances;
-using Campus.Kernel.Materials;
 using Campus.Kernel.Renderer;
 using Campus.Style.Materials;
 using GdUnit4;
@@ -161,8 +160,9 @@ public sealed class GeometryInstancePoolRuntimeTests
         }
 
         fixture.Host.OnMapLoaded(Context(mapB));
-        var reloaded = fixture.Host.Mount(Spec("mapped", prototype) with { Map = mapB });
-        AssertThat(fixture.Host.GetStatistics().Single(stat => stat.Id == "mapped").Map == mapB).OverrideFailureMessage("Reload retained old map attribution.").IsTrue();
+        var reloadedSpec = Spec("mapped", prototype) with { Map = mapB };
+        var reloaded = fixture.Host.Mount(reloadedSpec);
+        AssertThat(fixture.Host.GetStatistics().Single(stat => stat.Id == reloadedSpec.Id).Map == mapB).OverrideFailureMessage("Reload retained old map attribution.").IsTrue();
         reloaded.Free();
         reloaded.Free();
         fixture.Host.Free();
@@ -345,7 +345,7 @@ public sealed class GeometryInstancePoolRuntimeTests
 
     private static GeometryPrototype Prototype(params GeometryBuffer[] surfaces) => new("native-pool-prototype", surfaces,
         new Box3(new N.Vector3(0, 0, 0), new N.Vector3(1, 1, 0)));
-    private static GeometryInstancePoolSpec Spec(string id, GeometryPrototype prototype) => new(id, "WP-00", prototype,
+    private static GeometryInstancePoolSpec Spec(string id, GeometryPrototype prototype) => new("fixture." + id, prototype,
         4, new Aabb(new Vector3(-100, -100, -100), new Vector3(200, 200, 200)), 1);
     private static float[] InstanceData(int count)
     {
@@ -394,7 +394,7 @@ public sealed class GeometryInstancePoolRuntimeTests
     private static MultiMeshInstance3D FindPool(InstancePoolHost host, string id)
     {
         foreach (var child in host.GetChildren())
-            if (child is MultiMeshInstance3D node && node.GetMeta("instance_pool_id").AsString() == id) return node;
+            if (child is MultiMeshInstance3D node && node.GetMeta("instance_pool_id").AsString() == "fixture." + id) return node;
         throw new InvalidOperationException("Missing native pool: " + id);
     }
     private static IMapContext Context(MapId id) => new TestMapContext(new MapDescriptor(

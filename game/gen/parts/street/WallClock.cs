@@ -14,7 +14,7 @@ namespace Campus.Gen.Parts.Street;
 /// does not glow at night (WLD-AMBIENCE: dark, or a faint ring light behind it that the placer's lamp table supplies). Visual only:
 /// it hangs on a stair tower, far out of reach.
 /// </summary>
-[Part(PartCatalog.WallClock, Owner = "WP-13")]
+[Part(PartCatalog.WallClock)]
 public sealed class WallClockPart : IPartDef<SignParams>
 {
     public WallClockPart() => Lods = Levels.Of<SignParams>(Build, LodLevel.L0, LodLevel.L1);

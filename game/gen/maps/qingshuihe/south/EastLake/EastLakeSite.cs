@@ -85,10 +85,6 @@ public sealed class EastLakeSite : ZoneSite
         return new(bank, wade, step.Number("width"), treads[0], treads[1], world.Feature(Statue).Point());
     }
 
-    public override IReadOnlyList<InspectionProbe> Probes =>
-        // Q3: on the wade step's second tread, looking out over the water at the boats (a stand, not map data).
-        [Probe("Q3", Lake, new(154.52f, -0.65f + WalkRules.StandingEye, 300.54f), new(-0.1789f, 0.9839f), -12f, 2f)];
-
     public override void Build(SiteBuilder b)
     {
         var shore = ShoreOf(b.Context);

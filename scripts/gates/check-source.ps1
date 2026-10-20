@@ -110,15 +110,15 @@ function Select-UESTCChanges {
 }
 
 function Get-UESTCScopedUidPaths {
-    param([string[]]$Paths)
-    @($Paths | Where-Object { $_ -match '^game/(?:.*\.uid|.*\.(cs|gdshader|gdshaderinc))$' -and $_ -notmatch '^game/addons/' } |
+    param([string[]]$Paths, [string[]]$Files)
+    $sources = [Collections.Generic.HashSet[string]]::new($Files, [StringComparer]::Ordinal)
+    @($Paths | Where-Object { $sources.Contains(($_ -replace '\.uid$', '')) -and $_ -match '^game/(?:.*\.uid|.*\.(cs|gdshader|gdshaderinc))$' -and $_ -notmatch '^game/addons/' } |
         ForEach-Object { if ($_ -match '\.uid$') { $_ } else { "$_.uid" } } | Sort-Object -Unique)
 }
 
 # Foreign work in progress must not change this invocation's UID baseline.
 function Get-UESTCUidInputs {
-    param([string]$Root, [string[]]$Changes)
-    $required = @(Get-UESTCScopedUidPaths $Changes)
+    param([string]$Root, [string[]]$Required)
     if (-not $required.Count) { return }
     $committed = @(Get-UESTCGitPaths $Root @('ls-tree','-z','-r','--name-only','HEAD','--','game') | Where-Object { $_ -match '\.uid$' })
     $dirty = @(Get-UESTCGitPaths $Root @('diff','-z','--no-renames','--name-only','HEAD','--','*.uid'))
@@ -142,9 +142,10 @@ function Test-UESTCOwnership {
         $failures.Add("Ownership: $($entry.Path) belongs to '$($entry.Owner)', requested $Wp")
     }
     $tracked = @(Get-UESTCGitPaths $Root @('ls-files', '-z', '--cached'))
-    $requiredUids = @(Get-UESTCScopedUidPaths $Changes)
+    $files = @(Get-UESTCFiles $Root)
+    $requiredUids = @(Get-UESTCScopedUidPaths $Changes $files)
     $uids = @{}
-    foreach ($input in (Get-UESTCUidInputs $Root $Changes)) {
+    foreach ($input in (Get-UESTCUidInputs $Root $requiredUids)) {
         $path = $input.Path
         $value = $input.Value
         if ($path -in $requiredUids -and (Test-Path -LiteralPath (Join-Path $Root $path) -PathType Leaf) -and $value -notmatch '^uid://[a-z0-9]+$') { $failures.Add("Invalid UID: $path") }

@@ -1,4 +1,5 @@
 using Campus.Gen.Geometry;
+using Campus.Gen.Parts.Core;
 using System.Globalization;
 using System.Numerics;
 using Campus.Contracts;
@@ -6,7 +7,7 @@ using Campus.Contracts.Audio;
 
 namespace Campus.Gen.Interior;
 
-/// <summary>Mainline double-loaded dormitory wings. Complex wings and landmark halls stay explicitly authored.</summary>
+/// <summary>One double-loaded convex-quadrilateral wing kernel; rectangular and oblique wings use the same path.</summary>
 public static class InteriorPlanGenerator
 {
     public static InteriorPlan Generate(InteriorPlanRequest request)
@@ -20,7 +21,7 @@ public static class InteriorPlanGenerator
         private readonly InteriorPlanRequest _request;
         private readonly DormitoryPlanOptions _options;
         private readonly FacadeGrid _grid;
-        private readonly Frame _frame;
+        private readonly InteriorWingFrame _frame;
         private readonly StoreyInfo[] _storeys;
         private readonly FacadeBay[] _near;
         private readonly FacadeBay[] _far;
@@ -34,6 +35,8 @@ public static class InteriorPlanGenerator
         private readonly List<InteriorStair> _stairs = [];
         private readonly List<InteriorRoomUse> _usedRooms = [];
         private readonly Dictionary<int, int[]> _coreZones = [];
+        private readonly int _firstRoom;
+        private readonly int _roomEnd;
         private readonly float _left;
         private readonly float _right;
         private readonly float _corridorLow;
@@ -45,7 +48,7 @@ public static class InteriorPlanGenerator
             _options = request.Options;
             ValidateRequest(request);
             _grid = FacadeGridGenerator.Generate(request.Footprint, _options.Facade);
-            _frame = Frame.From(_grid.Footprint);
+            _frame = InteriorWingFrame.From(_grid.Footprint);
             _storeys = request.Storeys.OrderBy(s => s.Index).Select(s => new StoreyInfo(s.Index,
                 PlanGeometry.Quantize(s.FloorY), PlanGeometry.Quantize(s.Height), _grid.Footprint.Outer)).ToArray();
             _near = _grid.Bays.Where(b => b.Edge == _frame.Edge && b.Ring == 0).ToArray();
@@ -53,8 +56,9 @@ public static class InteriorPlanGenerator
                 .OrderBy(b => _frame.U(b.Center)).ToArray();
             if (_near.Length < 4 || _near.Length != _far.Length)
                 throw new ArgumentException("A dormitory wing needs at least four paired facade bays.", nameof(request));
-            _left = _frame.U(_near[0].B);
-            _right = _frame.U(_near[^1].A);
+            (_firstRoom,_roomEnd)=_frame.RoomColumns(_grid,_options);
+            _left = _frame.U(_near[_firstRoom-1].B);
+            _right = _frame.U(_near[_roomEnd].A);
             _corridorLow = (_frame.Depth - _options.CorridorClearWidth - _options.PartitionThickness) * 0.5f;
             _corridorHigh = (_frame.Depth + _options.CorridorClearWidth + _options.PartitionThickness) * 0.5f;
             float minimumCoreWidth = 2f * _options.StairFlightWidth + _options.StairWellWidth + 2f * _options.ExteriorWallThickness;
@@ -100,11 +104,9 @@ public static class InteriorPlanGenerator
             int corridor = AddZone(s, ZoneKind.Corridor,
                 _frame.Ring(_left + half, _corridorLow + half, _right - half, _corridorHigh - half), true, "corridor");
             int leftStair = AddZone(s, ZoneKind.Stair,
-                _frame.Ring(_options.ExteriorWallThickness, _options.ExteriorWallThickness,
-                    _left - half, _frame.Depth - _options.ExteriorWallThickness), true, "stair.left");
+                _frame.Core(_left, true, _options.ExteriorWallThickness), true, "stair.left");
             int rightStair = AddZone(s, ZoneKind.Stair,
-                _frame.Ring(_right + half, _options.ExteriorWallThickness,
-                    _frame.Length - _options.ExteriorWallThickness, _frame.Depth - _options.ExteriorWallThickness), true, "stair.right");
+                _frame.Core(_right, false, _options.ExteriorWallThickness), true, "stair.right");
             _coreZones.Add(s.Index, [corridor, leftStair, rightStair]);
             for (int side = 0; side < 2; side++)
             {
@@ -116,7 +118,7 @@ public static class InteriorPlanGenerator
                     corridor, stair, true, DoorLeafKind.FireDoor, "stair." + side.ToString(CultureInfo.InvariantCulture));
             }
             for (int row = 0; row < 2; row++)
-                for (int bay = 1; bay + 1 < _near.Length; bay++) BuildRoom(s, corridor, row, bay);
+                for (int bay = _firstRoom; bay < _roomEnd; bay++) BuildRoom(s, corridor, row, bay);
             foreach (FacadeBay bay in _grid.Bays)
             {
                 var room = _rooms.LastOrDefault(r => r.Storey == s.Index && r.FacadeBayIndex == bay.Index);
@@ -151,7 +153,7 @@ public static class InteriorPlanGenerator
             float half = _options.PartitionThickness * 0.5f;
             float v0 = row == 0 ? _options.ExteriorWallThickness : wallV + half;
             float v1 = row == 0 ? wallV - half : _frame.Depth - _options.ExteriorWallThickness;
-            Vector2[] clear = _frame.Ring(u0 + half, v0, u1 - half, v1);
+            Vector2[] clear = _frame.Room(u0 + half, u1 - half, row == 0 ? v1 : v0, row == 0, _options.ExteriorWallThickness);
             bool open = use?.Open ?? false;
             string key = "room." + facade.Key;
             int zone = AddZone(s, use?.Kind ?? ZoneKind.Room, clear, open, key);
@@ -161,8 +163,12 @@ public static class InteriorPlanGenerator
             DoorWall(s, _frame.Point(u0, wallV), _frame.Point(u1, wallV),
                 _frame.Point(center - width * 0.5f, wallV), _frame.Point(center + width * 0.5f, wallV),
                 corridor, zone, open, use?.DoorKind ?? DoorLeafKind.RoomDoor, key);
-            if (bay + 2 < _near.Length)
-                Wall(s, _frame.Point(u1, v0), _frame.Point(u1, v1), s.FloorY, s.FloorY + s.Height, InteriorWallRole.Partition);
+            if (bay + 1 < _roomEnd)
+            {
+                var section=_frame.Section(u1);
+                Wall(s,_frame.Point(u1,row==0?section.Lower+_options.ExteriorWallThickness:v0),
+                    _frame.Point(u1,row==0?v1:section.Upper-_options.ExteriorWallThickness),s.FloorY,s.FloorY+s.Height,InteriorWallRole.Partition);
+            }
         }
 
         private int AddZone(StoreyInfo s, ZoneKind kind, Vector2[] ring, bool open, string role)
@@ -198,7 +204,7 @@ public static class InteriorPlanGenerator
         private void BuildStair(StoreyInfo lower, StoreyInfo upper, int side)
         {
             float halfRise = (upper.FloorY - lower.FloorY) * 0.5f;
-            int steps = (int)Math.Ceiling(halfRise / _options.MaximumRiserHeight);
+            int steps = (int)Math.Round(halfRise / _options.TargetRiserHeight, MidpointRounding.AwayFromZero);
             if (steps is < 3 or > 18) throw new ArgumentException("Each stair flight must contain 3 to 18 risers.");
             float run = steps * _options.StairTreadDepth;
             float start = _frame.Depth * 0.5f + _options.StairLandingDepth * 0.5f;
@@ -238,23 +244,13 @@ public static class InteriorPlanGenerator
 
         private void BuildFloorSlabs(StoreyInfo s)
         {
-            var holes = _stairs.Where(stair => stair.UpperStorey == s.Index)
-                .Select(stair => (U0: stair.FloorOpening.Min(_frame.U), U1: stair.FloorOpening.Max(_frame.U),
-                    V0: stair.FloorOpening.Min(_frame.V), V1: stair.FloorOpening.Max(_frame.V)))
-                .OrderBy(h => h.U0).ToArray();
-            float cursor = 0f;
-            foreach (var hole in holes)
+            var holes=_stairs.Where(stair=>stair.UpperStorey==s.Index).Select(stair=>stair.FloorOpening);
+            foreach(var polygon in _frame.FloorRings(holes))
             {
-                Slab(cursor, 0, hole.U0, _frame.Depth);
-                Slab(hole.U0, 0, hole.U1, hole.V0);
-                Slab(hole.U0, hole.V1, hole.U1, _frame.Depth);
-                cursor = hole.U1;
-            }
-            Slab(cursor, 0, _frame.Length, _frame.Depth);
-            void Slab(float u0, float v0, float u1, float v1)
-            {
-                if (u1 - u0 <= 0.002f || v1 - v0 <= 0.002f) return;
-                _slabs.Add(new(s.Index, _frame.Ring(u0, v0, u1, v1), s.FloorY, _options.SlabThickness));
+                var triangles=PolygonTriangulator.Triangulate(polygon);
+                for(var i=0;i<triangles.Indices.Length;i+=3)
+                    _slabs.Add(new(s.Index,[triangles.Vertices[triangles.Indices[i]],triangles.Vertices[triangles.Indices[i+1]],
+                        triangles.Vertices[triangles.Indices[i+2]]],s.FloorY,_options.SlabThickness));
             }
         }
 
@@ -282,7 +278,7 @@ public static class InteriorPlanGenerator
                         At(PlanGeometry.Quantize(a + tangent * end), s.FloorY), doorHeight,
                         entry.Open ? PortalKind.Door : PortalKind.Sealed));
                 }
-                foreach (FacadeBay bay in _grid.Bays.Where(bay => bay.Edge == edge && bay.WindowKind != FacadeWindowKind.Blank))
+                foreach (FacadeBay bay in _grid.Bays.Where(bay => bay.Edge == edge && bay.WindowKind != FacadeWindowKind.Blank && !_request.JoinedEdges.Contains(edge)))
                 {
                     float start = (float)PlanGeometry.Dot(bay.OpeningA - a, tangent);
                     float end = (float)PlanGeometry.Dot(bay.OpeningB - a, tangent);
@@ -376,10 +372,10 @@ public static class InteriorPlanGenerator
         if (r.ZoneIdBase < 0 || r.ZoneIdBase > int.MaxValue - 65536)
             throw new ArgumentOutOfRangeException(nameof(r), "Reserve room for the wing's zone IDs.");
         float[] dimensions = [o.CorridorClearWidth, o.ExteriorWallThickness, o.PartitionThickness, o.SlabThickness,
-            o.DoorClearWidth, o.DoorHeight, o.StairFlightWidth, o.StairWellWidth, o.StairLandingDepth, o.StairTreadDepth, o.MaximumRiserHeight];
+            o.DoorClearWidth, o.DoorHeight, o.StairFlightWidth, o.StairWellWidth, o.StairLandingDepth, o.StairTreadDepth, o.TargetRiserHeight];
         if (dimensions.Any(d => !float.IsFinite(d) || d <= 0f) || o.CorridorClearWidth < 2.2f || o.DoorClearWidth < 1.1f ||
             o.DoorHeight < WalkRules.MinimumDoorHeight || o.StairFlightWidth < 1.2f || o.StairLandingDepth < MathF.Max(o.StairFlightWidth, 1.5f) ||
-            o.StairWellWidth > 0.2f || o.MaximumRiserHeight > 0.165f || o.StairTreadDepth < 0.27f)
+            o.StairWellWidth > 0.2f || o.TargetRiserHeight > 0.165f || o.StairTreadDepth < 0.27f)
             throw new ArgumentException("Dormitory dimensions violate the mainline clearances.", nameof(r));
         StoreyInfo[] storeys = r.Storeys.OrderBy(s => s.Index).ToArray();
         if (storeys.Length is < 1 or > 32 || storeys.Select(s => s.Index).Distinct().Count() != storeys.Length)
@@ -387,7 +383,7 @@ public static class InteriorPlanGenerator
         for (int i = 0; i < storeys.Length; i++)
         {
             StoreyInfo s = storeys[i];
-            if (!float.IsFinite(s.FloorY) || !float.IsFinite(s.Height) || s.Height < 3.6f || s.Height > 5f ||
+            if (!float.IsFinite(s.FloorY) || !float.IsFinite(s.Height) || s.Height <= 0 ||
                 o.DoorHeight >= s.Height - o.SlabThickness || o.Facade.SillHeight + o.Facade.WindowHeight >= s.Height - o.SlabThickness)
                 throw new ArgumentException("Invalid dormitory floor elevation, height or opening clearance.", nameof(r));
             if (i > 0 && (s.Index != storeys[i - 1].Index + 1 ||
@@ -423,27 +419,4 @@ public static class InteriorPlanGenerator
                 throw new ArgumentException("A seal must reference this feature and a supplied storey.", nameof(r));
     }
 
-    private sealed record Frame(Vector2 Origin, Vector2 Along, Vector2 Inward, float Length, float Depth, int Edge)
-    {
-        internal float U(Vector2 p) => (float)PlanGeometry.Dot(p - Origin, Along);
-        internal float V(Vector2 p) => (float)PlanGeometry.Dot(p - Origin, Inward);
-        internal Vector2 Point(float u, float v) => PlanGeometry.Quantize(Origin + Along * u + Inward * v);
-        internal Vector3 Point3(float u, float y, float v) { Vector2 p = Point(u, v); return PlanGeometry.Quantize(new Vector3(p.X, y, p.Y)); }
-        internal Vector2[] Ring(float u0, float v0, float u1, float v1) => [Point(u0, v0), Point(u1, v0), Point(u1, v1), Point(u0, v1)];
-        internal static Frame From(PolygonRings footprint)
-        {
-            if (footprint.Outer.Count != 4 || footprint.Holes.Count != 0)
-                throw new ArgumentException("Supply an authored rectangular wing; arbitrary footprints require explicit decomposition.");
-            IReadOnlyList<Vector2> ring = footprint.Outer;
-            int edge = Enumerable.Range(0, 4).OrderByDescending(i => VectorMath.Length(ring[(i + 1) % 4] - ring[i])).ThenBy(i => i).First();
-            Vector2 origin = ring[edge], along = PlanGeometry.Unit(ring[(edge + 1) % 4] - origin), inward = new(-along.Y, along.X);
-            float length = VectorMath.Length(ring[(edge + 1) % 4] - origin);
-            float depth = (float)PlanGeometry.Dot(ring[(edge + 3) % 4] - origin, inward);
-            Frame frame = new(origin, along, inward, length, depth, edge);
-            if (depth <= 0f || VectorMath.Length(frame.Point(length, depth) - ring[(edge + 2) % 4]) > 0.005f ||
-                VectorMath.Length(frame.Point(0f, depth) - ring[(edge + 3) % 4]) > 0.005f)
-                throw new ArgumentException("The supplied wing is not rectangular within 5 mm.");
-            return frame;
-        }
-    }
 }

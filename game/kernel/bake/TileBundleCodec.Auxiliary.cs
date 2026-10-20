@@ -16,7 +16,7 @@ public static partial class TileBundleCodec
         foreach (var mother in content.Mothers)
         {
             ValidateMother(content.Key, mother);
-            Text(writer, mother.Key); Json(writer, mother.Owner);
+            Text(writer, mother.Key);
             Channel(writer, mother.Records.Span, key);
             writer.Write(mother.Bounds.Count);
             foreach (var bounds in mother.Bounds) Box(writer, bounds);
@@ -32,13 +32,13 @@ public static partial class TileBundleCodec
         var mothers = new VegetationMotherData[Count(reader)];
         for (var i = 0; i < mothers.Length; i++)
         {
-            var id = Text(reader, 1024); var owner = Json<WpId>(reader);
+            var id = Text(reader, 1024);
             var records = Channel<float>(reader, key);
             var bounds = new Box3[Count(reader, BakeCacheStore.MaximumProductBytes / 24)];
             for (var j = 0; j < bounds.Length; j++) bounds[j] = Box(reader);
             var prototypes = new GeometryPrototype[Count(reader, 4)];
             for (var j = 0; j < prototypes.Length; j++) prototypes[j] = Prototype(reader, key);
-            mothers[i] = new(id, owner, records, prototypes, bounds);
+            mothers[i] = new(id, records, prototypes, bounds);
             ValidateMother(key, mothers[i]);
         }
         if (mothers.Select(mother => mother.Key).Distinct(StringComparer.Ordinal).Count() != mothers.Length)
@@ -49,7 +49,7 @@ public static partial class TileBundleCodec
     private static void ValidateMother(BakeKey key, VegetationMotherData mother)
     {
         var count = mother.Records.Length / InstanceStreamLayout.FloatsPerInstance;
-        if (string.IsNullOrWhiteSpace(mother.Key) || string.IsNullOrWhiteSpace(mother.Owner.Value) ||
+        if (string.IsNullOrWhiteSpace(mother.Key) ||
             mother.Records.Length % InstanceStreamLayout.FloatsPerInstance != 0 || mother.Bounds.Count != count ||
             mother.Prototypes.Count != (key.Module == BakeModuleIds.VegetationTrees ? 4 : 1))
             throw new InvalidDataException("Invalid vegetation mother records or prototype slots.");

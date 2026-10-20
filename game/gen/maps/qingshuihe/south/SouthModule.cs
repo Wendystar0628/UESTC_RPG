@@ -11,15 +11,14 @@ namespace Campus.Gen.Maps.Qingshuihe.South;
 
 /// <summary>South-zone routing and window metadata over the shared site module.</summary>
 
-[ContentModule("zone.south", Owner = "WP-18")]
+[ContentModule("zone.south")]
 public sealed class SouthModule : ZoneModuleBase, IWindowMetadataSource, IContentSourceTraceProvider
 {
     public override BakeInputDependencies BakeInputs { get; } = new(BakeInputKinds.World | BakeInputKinds.Windows, [], []);
 
     public SouthModule() : this(SouthSites.All) { }
 
-    internal SouthModule(IReadOnlyList<ZoneSite> sites) : base(sites,
-        new(SouthTune.BudgetTrianglesL0, SouthTune.BudgetTrianglesL1, SouthTune.BudgetDrawCalls)) { }
+    internal SouthModule(IReadOnlyList<ZoneSite> sites) : base(sites) { }
 }
 
 /// <summary>

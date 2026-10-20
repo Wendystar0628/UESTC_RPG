@@ -11,7 +11,7 @@ namespace Campus.Gen.Parts.Openings;
 /// It closes the wall, so it casts shadow. L0: flat slats parted by V-grooves steep enough for a crease line, chamfered
 /// housing; L1: flat curtain; L2–L3: slabs; L4: nothing.
 /// </summary>
-[Part(PartCatalog.DoorRoller, Owner = "WP-10")]
+[Part(PartCatalog.DoorRoller)]
 public sealed class RollerShutterPart() : OpeningPart<DoorParams>(new(1100, 80))
 {
     protected override Box3 Extent(DoorParams p)
@@ -115,7 +115,7 @@ public sealed class RollerShutterPart() : OpeningPart<DoorParams>(new(1100, 80))
 /// 百叶. Variation 0: exterior louvre (frame, ≈ 35° blades, dark plenum behind; casts shadow). Variation 1: indoor
 /// venetian blind lowered fully; 2: lowered over the upper 55 % (the "窗帘或百叶" covering of ART-FIDELITY, no shadow).
 /// </summary>
-[Part(PartCatalog.Louvre, Owner = "WP-10")]
+[Part(PartCatalog.Louvre)]
 public sealed class LouvrePart() : OpeningPart<PanelParams>(new(420, 160))
 {
     protected override Box3 Extent(PanelParams p)

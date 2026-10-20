@@ -14,7 +14,7 @@ namespace Campus.Gen.Water;
 /// COLOR flag 8 = never casts. Banks, bridges and culvert structures belong to the zone packages.
 /// </summary>
 
-[ContentModule("water", Owner = "WP-24")]
+[ContentModule("water")]
 public sealed class WaterModule : IWaterContentSource
 {
     public BakeInputDependencies BakeInputs { get; } = new(BakeInputKinds.World | BakeInputKinds.ReflectLakes, [], []);
@@ -23,7 +23,6 @@ public sealed class WaterModule : IWaterContentSource
     public IReadOnlyList<Claim> Claims => [];
 
     // ENG-BUDGET water budget: 50 k main triangles, 45 draw calls, no shadow casting.
-    public ModuleBudget Budget { get; } = new(50_000, 50_000, 45);
 
     public IEnumerable<TileKey> Tiles(BuildContext ctx) => Surfaces(ctx).Tiles();
 

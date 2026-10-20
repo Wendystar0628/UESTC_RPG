@@ -19,15 +19,5 @@ public sealed class OrdinaryBuildingsSite : ZoneSite
 
     public override IReadOnlyList<Campus.Contracts.Maps.MapRect> Ranges(IWorldModel world) => [];
 
-    public override IReadOnlyList<InspectionProbe> Probes =>
-    [
-        // Q5 · K3: 20 m in front of A block's road front (osm:way:779496157, facing 37°), eye height.
-        Probe("Q5", InnovationA, new(-608.4f, WalkRules.StandingEye, 351.7f), new(-0.598f, 0.801f), 3f, 20f),
-        // Q6 · K4 (a): 45° down onto the roofs and back lanes of buildings 1–8 from about 40 m, over building 4.
-        Probe("Q6", Building4, new(215.9f, 36.1f, 675.5f), new(0.707f, -0.707f), -45f, 40f),
-        // Q8 (a), the first of its three rotating places: 2 m above C block's parapet on its north-east front, across the roof.
-        Probe("Q8", InnovationC, new(-675.7f, 33.2f, 537.3f), new(-0.653f, 0.757f), -25f, 2f),
-    ];
-
     public override void Build(SiteBuilder b) { }
 }

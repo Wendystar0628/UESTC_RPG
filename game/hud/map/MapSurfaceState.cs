@@ -3,8 +3,8 @@ using Campus.Contracts;
 namespace Campus.Hud.Map;
 
 /// <summary>Published map surfaces; controllers report their existing page and minimap visibility.</summary>
-[KernelService(typeof(IUiSurfaceState), Owner = "WP-48b")]
-[KernelService(typeof(IUiSurfaceSink), Owner = "WP-48b")]
+[KernelService(typeof(IUiSurfaceState))]
+[KernelService(typeof(IUiSurfaceSink))]
 public sealed class MapSurfaceState : IUiSurfaceState, IUiSurfaceSink
 {
     public UiSurface Open { get; private set; }

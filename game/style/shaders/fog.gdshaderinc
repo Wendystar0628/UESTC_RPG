@@ -34,41 +34,7 @@ const int PAL_INDEX_MAX = PAL_CAPACITY - 1;
 
 // 表面色名成对登记：影的色号 = 受光的色号 + 1；顶点 COLOR.r 写受光的色号（暂定，待主代理确认）。
 
-// 第 0 行的单色色名的色号，与 game/style/palette/core.json 一致（布局：随帧色名 0–31，退役 32–39，
-// 天气色与发光常量 40–63，表面色对从 64 起、受光偶数、影 = 受光 + 1）。以后由登记表生成，内容代码不写这些数。
-const int PAL_SUN_LIGHT = 0;
-const int PAL_AMBIENT_SKY = 1;      // 只用 a、b，着色器不拿它着色
-const int PAL_BOUNCE_GROUND = 2;
-const int PAL_INTERIOR_WARM = 3;    // 只用 a、b，着色器不拿它着色
-const int PAL_LINE_WARM = 4;
-const int PAL_LINE_COOL = 5;
-const int PAL_RIM = 8;
-const int PAL_GLASS_GLARE = 9;
-const int PAL_WINDOW_WARM = 10;
-const int PAL_WINDOW_COOL = 11;
-const int PAL_SHADOW_1 = 12;
-const int PAL_FOG_SUN = 13;
-const int PAL_FOG_ANTI = 14;
-const int PAL_SKY_SUN0 = 15;        // 15–19：朝主光一侧，地平线到天顶
-const int PAL_SKY_ANTI0 = 20;       // 20–24：背主光一侧，地平线到天顶
-const int PAL_SKY_CLOUD_LIT = 25;   // 云的受光、亮边、云腹、暗部（WP-40 天空、WP-49b 云卡）
-const int PAL_SKY_CLOUD_RIM = 26;
-const int PAL_SKY_CLOUD_BELLY = 27;
-const int PAL_SKY_CLOUD_DEEP = 28;
-const int PAL_SKY_MOON = 29;         // 月盘与星星（WP-40）
-// 30–31 留作余量；32–39 是退役色名（shadow.contact、line.building、line.tree、shadow.interior）的保留号，不得引用。
-const int PAL_WEATHER_OVERCAST = 40;      // 40–63：天气色与发光常量
-const int PAL_WEATHER_SNOW_OVERCAST = 41;
-const int PAL_WEATHER_NIGHT_RAIN = 42;
-const int PAL_WEATHER_CB_BASE = 43;
-const int PAL_WEATHER_FOG = 44;
-const int PAL_WEATHER_WASHED_SKY = 45;
-const int PAL_SIGN_GREEN = 48;
-const int PAL_FIREFLY = 49;
-const int PAL_WATER_POOL_GLOW = 50;
-const int PAL_LAMP_WARM = 51;
-const int PAL_LAMP_AMBER = 52;
-const int PAL_LAMP_COOL = 53;
+// 单色色名下标由构建期生成器读取 core.json，随 style_consts.gdshaderinc 引入。
 
 // 纹理存 sRGB 字节。globals.gdshaderinc 给 palette 声明了 source_color；P0 沙盒实测（Godot 4.7.2，Forward+）：
 // 全局采样器上的 source_color 生效，texelFetch 读出的已是线性值，所以这里不再手工解码（ART-STYLE 一项）。
@@ -155,8 +121,6 @@ vec3 ok_to_linear(vec3 o) {
 const float SKY_STOP_DEG[5] = { 0.0, 4.0, 12.0, 28.0, 90.0 };   // 五段的仰角（度），所有帧相同
 const float SKY_SIDE_SUN_DEG = 60.0;      // 与参照天体的方位差 ≤ 60° 全用太阳侧
 const float SKY_SIDE_ANTI_DEG = 90.0;     // ≥ 90° 全用背阳侧
-const float SKY_NIGHT_SIDE_FROM = -6.0;   // 太阳从 −6° 降到 −13° 时，参照天体换成月亮
-const float SKY_NIGHT_SIDE_TO = -13.0;
 const float SKY_HAZE_MIN_DEG = 0.5;       // 霾带高度 fog.y（度）的防越界
 const float SKY_HAZE_MAX_DEG = 8.0;
 const float SKY_FOG_MIX = 0.8;            // 雾天整片天向雾色靠拢的程度

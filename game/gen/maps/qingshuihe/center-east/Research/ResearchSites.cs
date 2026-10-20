@@ -101,21 +101,6 @@ public sealed class KeBSite : ResearchSite
         return Frame.Rect(min.X, min.Y, max.X, max.Y);
     }
 
-    public override IReadOnlyList<InspectionProbe> Probes
-    {
-        get
-        {
-            // Q5 (mid, K3): 22 m out from the east face over the statue lawn, eye height: stone grid, paired windows, plinth and cornice.
-            var eye = Frame.P(94f, -151f);
-            var q5 = Probe("Q5", CenterEastIds.Research.KeB, new(eye.X, WalkRules.StandingEye, eye.Y), Frame.P(72f, -143.8f) - eye, 8f, 22f);
-            // Q8a (baseline, fly only): 2 m over the attic parapet at its north end, looking along the roof at the dishes.
-            var top = Style.RoofTop + AtticStyle.Top + 2f;
-            var over = Frame.P(65.5f, -179.0f);
-            var q8 = Probe("Q8", CenterEastIds.Research.KeB, new(over.X, top, over.Y), Frame.P(65.5f, -158f) - over, -25f, 2f);
-            return [q5, q8];
-        }
-    }
-
     /// <summary>The five-storey blocks and the set-back attic over the east wing, its own window grid one row high.</summary>
     internal override IEnumerable<(string Key, IReadOnlyList<Vector2> Ring, GridStyle Style, float Lift, Func<GridEdgeInfo, GridEdge> Dress)> GridBlocks(Plan plan) =>
         base.GridBlocks(plan).Append(("attic", plan.Raised!, AtticStyle, Style.RoofTop, _ => new(EdgeKind.Plain)));

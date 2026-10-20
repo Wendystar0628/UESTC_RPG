@@ -15,7 +15,7 @@ namespace Campus.Gen.Parts.Street;
 /// hand notches in each. 2: a light concrete L-gutter in long slabs with a joint between them. The caller's Material colours the
 /// concrete. Walkable: no collider; the footstep comes from the ground grid patch, not from this part (SYS-AUDIO).
 /// </summary>
-[Part(PartCatalog.Drain, Owner = "WP-13")]
+[Part(PartCatalog.Drain)]
 public sealed class DrainPart : IPartDef<TrimParams>
 {
     public DrainPart() => Lods = Levels.Of<TrimParams>(Build, LodLevel.L0, LodLevel.L1, LodLevel.L2, LodLevel.L3, LodLevel.L4);

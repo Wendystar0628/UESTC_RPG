@@ -10,7 +10,7 @@ namespace Campus.Gen.Maps.Qingshuihe.CenterEast;
 
 /// <summary>Center-east sites share zone routing, geometry publication and window metadata.</summary>
 
-[ContentModule("zone.center-east", Owner = "WP-21")]
+[ContentModule("zone.center-east")]
 public sealed class CenterEastModule : ZoneModuleBase, IWindowMetadataSource, IContentSourceTraceProvider
 {
 
@@ -18,8 +18,7 @@ public sealed class CenterEastModule : ZoneModuleBase, IWindowMetadataSource, IC
 
     public CenterEastModule() : this(CenterEastSites.All) { }
 
-    internal CenterEastModule(IReadOnlyList<ZoneSite> sites) : base(sites,
-        new(CenterEastTune.BudgetTrianglesL0, CenterEastTune.BudgetTrianglesL1, CenterEastTune.BudgetDrawCalls)) { }
+    internal CenterEastModule(IReadOnlyList<ZoneSite> sites) : base(sites) { }
 }
 
 /// <summary>

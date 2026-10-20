@@ -3,7 +3,7 @@ using Campus.Contracts;
 
 namespace Campus.Gen.Interior;
 
-/// <summary>Dimensions for one rectangular double-loaded dormitory wing, not an entire bent building.</summary>
+/// <summary>Dimensions for one convex-quadrilateral double-loaded dormitory wing, not an entire bent building.</summary>
 public sealed record DormitoryPlanOptions
 {
     public FacadeGridOptions Facade { get; init; } = new();
@@ -17,7 +17,7 @@ public sealed record DormitoryPlanOptions
     public float StairWellWidth { get; init; } = 0.2f;
     public float StairLandingDepth { get; init; } = 1.5f;
     public float StairTreadDepth { get; init; } = 0.28f;
-    public float MaximumRiserHeight { get; init; } = 0.165f;
+    public float TargetRiserHeight { get; init; } = 0.164f;
     public ChannelId LightChannel { get; init; } = new("interior.main");
 }
 
@@ -29,8 +29,8 @@ public sealed record InteriorRoomUse(int Storey, int FacadeBayIndex, string Type
     ZoneKind Kind = ZoneKind.Room, DoorLeafKind DoorKind = DoorLeafKind.RoomDoor);
 
 /// <summary>
-/// The caller supplies an authored rectangular wing and its absolute storey heights.
-/// An irregular building must be split into wings by its provider; bounding-box substitution is rejected.
+/// The caller supplies an authored convex quadrilateral wing and its absolute storey heights.
+/// A concave building is split into convex quadrilateral wings; bounding-box substitution is rejected.
 /// Entrances and seals remain authoritative caller data. No registration or file IO occurs here.
 /// </summary>
 public sealed record InteriorPlanRequest(FeatureId Feature, string WingId, uint WorldSeed,
@@ -41,6 +41,8 @@ public sealed record InteriorPlanRequest(FeatureId Feature, string WingId, uint 
     public DormitoryPlanOptions Options { get; init; } = new();
     /// <summary>Reserve disjoint non-negative ranges when composing several generated wings.</summary>
     public int ZoneIdBase { get; init; }
+    /// <summary>Internal wing boundaries retain their door openings but never receive exterior windows.</summary>
+    public IReadOnlyList<int> JoinedEdges { get; init; } = [];
 }
 
 public enum InteriorWallRole : byte { Exterior, Partition, LockedDoor, WindowGlass, StairBarrier, Seal }

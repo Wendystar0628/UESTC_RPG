@@ -1,10 +1,9 @@
 using Campus.Contracts;
-using Campus.Kernel.Renderer;
 using Godot;
 
 namespace Campus.Kernel.Frame;
 
-[KernelNode("frame-clock", Owner = "WP-01")]
+[KernelNode("frame-clock")]
 public partial class FrameClockNode : Node
 {
     private static readonly StringName _shaderGlobalFadeClock = ShaderGlobals.FadeClock;
@@ -12,7 +11,7 @@ public partial class FrameClockNode : Node
     private double _elapsed;
     public override void _Ready()
     {
-        ProcessPriority = FramePriority.Map - 1;
+        ProcessPriority = FramePriority.FadeClock;
         ProcessMode = ProcessModeEnum.Always;
         FrameClock.FadeSeconds = 0;
     }

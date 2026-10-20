@@ -24,11 +24,11 @@ public sealed class BakeAuxiliaryCodecTests
         var bounds = new Box3(new(10, 1, 10), new(15, 8, 16));
         var key = BakeRequestKeys.Tile(new("fixture"), BakeModuleIds.VegetationTrees, default, LodLevel.L0);
         var trees = new VegetationTileContent(key, default,
-            [new("fixture.mother", new("WP-23"), record, [prototype, prototype, prototype, prototype], [bounds])]);
+            [new("fixture.mother", record, [prototype, prototype, prototype, prototype], [bounds])]);
         var bytes = BakeProductCodec.Encode(BakePayloadClass.Product, "fixture", trees);
         var decoded = (VegetationTileContent)BakeProductCodec.Decode(BakePayloadClass.Product, "fixture", key, bytes);
         var mother = decoded.Mothers.Single();
-        if (!mother.Records.Span.SequenceEqual(record) || mother.Owner != trees.Mothers[0].Owner || mother.Bounds.Single() != bounds)
+        if (!mother.Records.Span.SequenceEqual(record) || mother.Bounds.Single() != bounds)
             throw new InvalidOperationException("Vegetation lost frozen mother data.");
         Verify(mother.Prototypes[3].Surfaces.Single());
         if (!bytes.SequenceEqual(BakeProductCodec.Encode(BakePayloadClass.Product, "fixture", decoded)))

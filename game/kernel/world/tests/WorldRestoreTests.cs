@@ -28,7 +28,7 @@ public sealed class WorldRestoreTests
         var instance = world.Instance;
         var notifications = new List<long>();
         WorldSaveV1? notifiedWorld = null;
-        world.InstanceChanged += value => { notifications.Add(value); notifiedWorld = world.Capture(default); };
+        world.InstanceChanged += value => { notifications.Add(value); notifiedWorld = world.Capture(SaveContext(world)); };
         var dto = new WorldSaveV1(7, .2, 0, Season.Spring, 10, 10, 10.25);
         world.Restore(dto, Restore());
         AssertThat(world.Instance).IsEqual(instance);
@@ -41,7 +41,7 @@ public sealed class WorldRestoreTests
         AssertThat(notifications.Count).IsEqual(1);
         AssertThat(notifications[0]).IsEqual(instance + 1);
         AssertThat(notifiedWorld).IsEqual(dto);
-        AssertThat(world.Capture(default)).IsEqual(dto);
+        AssertThat(world.Capture(SaveContext(world))).IsEqual(dto);
         AssertThrown(world.CompleteRestore).IsInstanceOf<InvalidOperationException>();
         AssertThat(notifications.Count).IsEqual(1);
         AssertThrown(() => world.Freeze(1, Season.Spring, 0)).IsInstanceOf<InvalidOperationException>();
@@ -61,7 +61,8 @@ public sealed class WorldRestoreTests
         var before = (world.WorldHours, world.Clock, world.SeasonPos, world.AnimTime,
             world.Rev, world.Instance, weather.Steps.Count);
         var moment = world.GetSaveMoment();
-        var captured = world.Capture(default);
+        var context = new CaptureContext(SaveReason.Quit, new("test-world"), true) { Moment = moment };
+        var captured = world.Capture(in context);
         AssertThat(moment.WorldHours).IsEqual(captured.WorldHours);
         AssertThat(moment.ClockOffset).IsEqual(captured.ClockOffset);
         AssertThat(moment.Season).IsEqual(captured.SeasonTarget);
@@ -69,7 +70,6 @@ public sealed class WorldRestoreTests
         AssertThat(moment.WorldHours > world.WorldHours && moment.Season == Season.Winter).OverrideFailureMessage("Save moment used the last frame instead of the new settled endpoint.").IsTrue();
         AssertThat((world.WorldHours, world.Clock, world.SeasonPos, world.AnimTime,
             world.Rev, world.Instance, weather.Steps.Count)).IsEqual(before);
-        var context = new CaptureContext(SaveReason.Quit, new("test-world"), true) { Moment = moment };
         using var flow = world.AcquireFlow(FlowPriority.AppFlow, 0);
         world.SetClock(18);
         var shared = world.Capture(in context);
@@ -92,6 +92,7 @@ public sealed class WorldRestoreTests
         var instance = world.Instance;
         var notifications = new List<long>();
         world.InstanceChanged += notifications.Add;
+        var context = SaveContext(world);
         var failed = new WorldSaveV1(7, .2, 0, Season.Spring, 10, 10, 10.25);
         world.Restore(failed, Restore());
         AssertThrown(() => world.Tick(.1)).IsInstanceOf<InvalidOperationException>();
@@ -100,7 +101,7 @@ public sealed class WorldRestoreTests
         var frozen = LiveReadings(world, weather);
         for (var frame = 0; frame < 5; frame++) world.Tick(.1);
         AssertThat(LiveReadings(world, weather)).IsEqual(frozen);
-        AssertThrown(() => world.Capture(default)).IsInstanceOf<InvalidOperationException>();
+        AssertThrown(() => world.Capture(in context)).IsInstanceOf<InvalidOperationException>();
         AssertThrown(() => world.GetSaveMoment()).IsInstanceOf<InvalidOperationException>();
         AssertThrown(world.CompleteRestore).IsInstanceOf<InvalidOperationException>();
         AssertThrown(() => world.Restore(failed with { WorldHours = double.NaN }, Restore())).IsInstanceOf<JsonException>();
@@ -118,7 +119,7 @@ public sealed class WorldRestoreTests
         AssertThat(world.Instance).IsEqual(instance + 1);
         AssertThat(notifications.Count).IsEqual(1);
         AssertThat(notifications[0]).IsEqual(instance + 1);
-        AssertThat(world.Capture(default)).IsEqual(retry);
+        AssertThat(world.Capture(SaveContext(world))).IsEqual(retry);
         world.Tick(.1);
         AssertThat(world.WorldHours > retry.WorldHours && world.AnimTime > retry.AnimTime).OverrideFailureMessage("Successful recovery remained frozen.").IsTrue();
         AssertThat(weather.Steps.Count).IsEqual(frozen.Steps + 1);
@@ -138,7 +139,7 @@ public sealed class WorldRestoreTests
                 world.CompleteRestore();
             }
             using var flow = world.AcquireFlow(FlowPriority.AppFlow, world.Flow.Rate);
-            var moment = world.GetSaveMoment();
+            var context = SaveContext(world);
             var instance = world.Instance;
             world.AbortRestore();
             world.AbortRestore();
@@ -162,8 +163,8 @@ public sealed class WorldRestoreTests
                 world.ResetDefault,
                 () => world.Freeze(12, Season.Spring, 0),
                 () => world.GetSaveMoment(),
-                () => world.Capture(default),
-                () => world.Capture(new CaptureContext(SaveReason.Quit, new("test-world"), true) { Moment = moment }),
+                () => world.Capture(SaveContext(world)),
+                () => world.Capture(in context),
             ];
             foreach (var control in controls) AssertThrown(control).IsInstanceOf<InvalidOperationException>();
             AssertThrown(world.CompleteRestore).IsInstanceOf<InvalidOperationException>();
@@ -191,7 +192,7 @@ public sealed class WorldRestoreTests
         var typeInfo = world.TypeInfo;
         AssertThat(ContractJson.Options.IsReadOnly).OverrideFailureMessage("Shared contract options must be locked for this regression.").IsTrue();
         AssertThat(!ReferenceEquals(typeInfo.Options, ContractJson.Options)).OverrideFailureMessage("World source generation must own an independent copy of the shared options.").IsTrue();
-        var snapshot = world.Capture(default);
+        var snapshot = world.Capture(SaveContext(world));
         foreach (var (season, text) in new[]
         {
             (Season.Spring, "spring"), (Season.Summer, "summer"),
@@ -221,7 +222,7 @@ public sealed class WorldRestoreTests
         var a = CreateWorld(new TestWeatherProcess());
         a.SetFlow(60);
         for (var i = 0; i < 100; i++) a.Tick(.017);
-        var dto = a.Capture(default);
+        var dto = a.Capture(SaveContext(a));
         var json = JsonSerializer.Serialize(dto, a.TypeInfo);
         var parsed = JsonSerializer.Deserialize(json, a.TypeInfo)!;
         AssertThat(parsed).IsEqual(dto);
@@ -231,7 +232,7 @@ public sealed class WorldRestoreTests
         {
             var dt = i % 2 == 0 ? .013 : .027;
             a.Tick(dt); b.Tick(dt);
-            AssertThat(a.Capture(default)).IsEqual(b.Capture(default));
+            AssertThat(a.Capture(SaveContext(a))).IsEqual(b.Capture(SaveContext(b)));
             AssertThat(a.Sun).IsEqual(b.Sun);
         }
         AssertThrown(() => JsonSerializer.Deserialize(json[..^1] + ",\"unexpected\":1}", a.TypeInfo)).IsInstanceOf<JsonException>();
@@ -244,7 +245,7 @@ public sealed class WorldRestoreTests
     public void InvalidControlsAndInvalidCoreSaveAreRejectedWithoutMutation()
     {
         var world = CreateWorld(new TestWeatherProcess());
-        var initial = world.Capture(default);
+        var initial = world.Capture(SaveContext(world));
         AssertThrown(() => world.Advance(0)).IsInstanceOf<ArgumentOutOfRangeException>();
         AssertThrown(() => world.Advance(double.NaN)).IsInstanceOf<ArgumentOutOfRangeException>();
         AssertThrown(() => world.SetFlow(2)).IsInstanceOf<ArgumentOutOfRangeException>();
@@ -252,6 +253,6 @@ public sealed class WorldRestoreTests
         AssertThrown(() => world.SetSeason((Season)9)).IsInstanceOf<ArgumentOutOfRangeException>();
         AssertThrown(() => world.Restore(initial with { WorldHours = double.NaN }, Restore())).IsInstanceOf<JsonException>();
         AssertThrown(() => world.Restore(initial with { SeasonPos = 2.1 }, Restore())).IsInstanceOf<JsonException>();
-        AssertThat(world.Capture(default)).IsEqual(initial);
+        AssertThat(world.Capture(SaveContext(world))).IsEqual(initial);
     }
 }

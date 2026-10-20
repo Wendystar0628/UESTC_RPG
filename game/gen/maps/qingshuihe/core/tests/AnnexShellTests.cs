@@ -97,6 +97,7 @@ public sealed class AnnexShellTests
     {
         var context = new BuildContext
         {
+            CodeHash = "fixture", WindowNumbering = new(new MapId("fixture"), new string('0', 64), []),
             Catalog = Campus.Contracts.Tests.PaletteFixture.Catalog, PartLods = PartLodFixture.Catalog,
             World = null!, Map = null!, WorldSeed = 1u,
         };

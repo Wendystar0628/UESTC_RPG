@@ -9,7 +9,7 @@ namespace Campus.Gen.Parts.Openings;
 /// mullion depth. Glass comes from the building (window numbers per light, <see cref="OpeningGlass"/>).
 /// L0: caps and bodies; L1: caps only; L2 and further: nothing.
 /// </summary>
-[Part(PartCatalog.CurtainWall, Owner = "WP-10")]
+[Part(PartCatalog.CurtainWall)]
 public sealed class CurtainWallPart() : OpeningPart<WindowParams>(new(900, 200))
 {
     protected override Box3 Extent(WindowParams p) =>

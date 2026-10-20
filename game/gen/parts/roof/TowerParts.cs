@@ -11,7 +11,7 @@ namespace Campus.Gen.Parts.Roof;
 /// with a cross-arm. Width × Depth is the footprint at the foot, Height the top of the mast. Variation 0: four legs. 1: three legs on
 /// the footprint's ellipse. The roof is not walkable, so the part has no collision.
 /// </summary>
-[Part(PartCatalog.TestTower, Owner = "WP-12")]
+[Part(PartCatalog.TestTower)]
 public sealed class TestTowerPart : IPartDef<EquipmentParams>
 {
     public TestTowerPart() => Lods = Levels.Of<EquipmentParams>(Build, LodLevel.L0, LodLevel.L1, LodLevel.L2, LodLevel.L3, LodLevel.L4);
@@ -92,7 +92,7 @@ public sealed class TestTowerPart : IPartDef<EquipmentParams>
 /// dark teal cells with their grid lines (near). Variation 0: silver aluminium frame. 1: dark frame. A host tilts and mounts it
 /// (rooftop frames, the car-shelter row); the part has no collision.
 /// </summary>
-[Part(PartCatalog.SolarPanel, Owner = "WP-12")]
+[Part(PartCatalog.SolarPanel)]
 public sealed class SolarPanelPart : IPartDef<PanelParams>
 {
     public SolarPanelPart() => Lods = Levels.Of<PanelParams>(Build, LodLevel.L0, LodLevel.L1, LodLevel.L2, LodLevel.L3, LodLevel.L4);

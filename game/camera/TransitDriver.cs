@@ -10,7 +10,7 @@ namespace Campus.Camera;
 /// The camera resolves this driver after registration (parameterless constructor), so the camera
 /// must never be handed this driver through constructor injection.
 /// </summary>
-[KernelService(typeof(ITransitDriver), Owner = "WP-36")]
+[KernelService(typeof(ITransitDriver))]
 public sealed class TransitDriver(ICameraRig camera, IAppLoadingPresentation loading, IMapRuntime runtime,
     IMapService maps, ITerrainPreparation terrain, ICameraPoseValidator validator,
     IWalkController? walk = null) : ITransitDriver

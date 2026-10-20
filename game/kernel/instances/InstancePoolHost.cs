@@ -1,6 +1,5 @@
 using Campus.Contracts;
 using Campus.Contracts.Maps;
-using Campus.Kernel.Materials;
 using Campus.Kernel.Renderer;
 using Godot;
 using Services = Campus.Kernel.Registry.Kernel;
@@ -8,13 +7,13 @@ using Services = Campus.Kernel.Registry.Kernel;
 namespace Campus.Kernel.Instances;
 
 /// <summary>Kernel-owned dynamic instances, with map cleanup and shared material providers.</summary>
-[KernelNode("kernel.instance-pools", Owner = "WP-00")]
-[KernelService(typeof(IInstancePoolHost), Owner = "WP-00")]
+[KernelNode("kernel.instance-pools")]
+[KernelService(typeof(IInstancePoolHost))]
 public sealed partial class InstancePoolHost : Node3D, IInstancePoolHost, IMapAware
 {
     internal const int FloatsPerInstance = InstanceStreamLayout.FloatsPerInstance;
     private const uint ValidLayers = (1u << 20) - 1;
-    private readonly Dictionary<(string OwnerWp, string Id), InstancePool> _pools = [];
+    private readonly Dictionary<string, InstancePool> _pools = new(StringComparer.Ordinal);
     private readonly List<InstancePool> _orderedPools = [];
     private readonly Dictionary<ShaderId, ShaderMaterial> _shaderMaterials = [];
     private IToonMaterialProvider? _materials;
@@ -93,9 +92,9 @@ public sealed partial class InstancePoolHost : Node3D, IInstancePoolHost, IMapAw
     {
         RequireMounted();
         ArgumentNullException.ThrowIfNull(spec);
-        ValidateIdentityAndCapacity(spec.Id, spec.OwnerWp, spec.Capacity, spec.Layers, spec.CustomAabb);
+        ValidateIdentityAndCapacity(spec.Id, spec.Capacity, spec.Layers, spec.CustomAabb);
         ValidateRaw(spec);
-        RequireUnique(spec.OwnerWp, spec.Id);
+        RequireUnique(spec.Id);
         var vertices = new Vector3[spec.Position.Length / 3];
         var uv = new Vector2[vertices.Length];
         for (var i = 0; i < vertices.Length; i++)
@@ -117,7 +116,7 @@ public sealed partial class InstancePoolHost : Node3D, IInstancePoolHost, IMapAw
             mesh.SurfaceSetMaterial(0, spec.Material);
         }
         catch { mesh.Dispose(); throw; }
-        return Publish(spec.Id, spec.OwnerWp, spec.Capacity, spec.CustomAabb, spec.Layers,
+        return Publish(spec.Id, spec.Capacity, spec.CustomAabb, spec.Layers,
             spec.CastShadows ? GeometryInstance3D.ShadowCastingSetting.On : GeometryInstance3D.ShadowCastingSetting.Off,
             null, false, mesh, spec.Index.Length / 3);
     }
@@ -126,12 +125,12 @@ public sealed partial class InstancePoolHost : Node3D, IInstancePoolHost, IMapAw
     {
         RequireMounted();
         ArgumentNullException.ThrowIfNull(spec);
-        ValidateIdentityAndCapacity(spec.Id, spec.OwnerWp, spec.Capacity, spec.Layers, spec.CustomAabb);
+        ValidateIdentityAndCapacity(spec.Id, spec.Capacity, spec.Layers, spec.CustomAabb);
         ArgumentNullException.ThrowIfNull(spec.Prototype);
         if (spec.Prototype.Surfaces.Any(surface => surface.Material.Spec.SurfacePattern is not null))
             throw new NotSupportedException("Surface patterns currently require direct world-coordinate geometry, not instance pools.");
         ValidateShadows(spec.Shadows);
-        RequireUnique(spec.OwnerWp, spec.Id);
+        RequireUnique(spec.Id);
         if (spec.Map is { } map)
         {
             ValidateMapId(map);
@@ -173,11 +172,11 @@ public sealed partial class InstancePoolHost : Node3D, IInstancePoolHost, IMapAw
         }
         catch { mesh.Dispose(); throw; }
 
-        return Publish(spec.Id, spec.OwnerWp, spec.Capacity, spec.CustomAabb, spec.Layers, spec.Shadows,
+        return Publish(spec.Id, spec.Capacity, spec.CustomAabb, spec.Layers, spec.Shadows,
             spec.Map, spec.Prototype.Surfaces.Any(surface => surface.IgnoreOcclusionCulling), mesh, triangles);
     }
 
-    private IInstancePool Publish(string id, string owner, int capacity, Aabb bounds, uint layers,
+    private IInstancePool Publish(string id, int capacity, Aabb bounds, uint layers,
         GeometryInstance3D.ShadowCastingSetting shadows, MapId? map, bool ignoreOcclusion,
         ArrayMesh mesh, int triangles)
     {
@@ -206,20 +205,15 @@ public sealed partial class InstancePoolHost : Node3D, IInstancePoolHost, IMapAw
                 IgnoreOcclusionCulling = ignoreOcclusion,
                 Visible = false
             };
-            instance.SetMeta("owner_wp", owner);
             instance.SetMeta("instance_pool_id", id);
             if (map is { } mapId) instance.SetMeta("map_id", mapId.Value);
-            var pool = new InstancePool(this, id, owner, capacity, triangles, shadows, map,
+            var pool = new InstancePool(this, id, capacity, triangles, shadows, map,
                 mesh.GetSurfaceCount(), instance, multiMesh, mesh);
             AddChild(instance);
             if (instance.GetParent() != this) throw new InvalidOperationException("Godot rejected the pool node.");
-            _pools.Add((owner, id), pool);
+            _pools.Add(id, pool);
             _orderedPools.Add(pool);
-            _orderedPools.Sort(static (a, b) =>
-            {
-                var ownerOrder = StringComparer.Ordinal.Compare(a.OwnerWp, b.OwnerWp);
-                return ownerOrder != 0 ? ownerOrder : StringComparer.Ordinal.Compare(a.Id, b.Id);
-            });
+            _orderedPools.Sort(static (a, b) => StringComparer.Ordinal.Compare(a.Id, b.Id));
             return pool;
         }
         catch
@@ -244,7 +238,7 @@ public sealed partial class InstancePoolHost : Node3D, IInstancePoolHost, IMapAw
     internal bool IsExiting => _exiting;
     internal void Release(InstancePool pool)
     {
-        _pools.Remove((pool.OwnerWp, pool.Id));
+        _pools.Remove(pool.Id);
         _orderedPools.Remove(pool);
     }
 
@@ -259,9 +253,9 @@ public sealed partial class InstancePoolHost : Node3D, IInstancePoolHost, IMapAw
         if (!_mounted || _exiting || !IsInsideTree() || IsQueuedForDeletion())
             throw new InvalidOperationException("The instance-pool host must be mounted before its consumers.");
     }
-    private void RequireUnique(string owner, string id)
+    private void RequireUnique(string id)
     {
-        if (_pools.ContainsKey((owner, id))) throw new InvalidOperationException($"Instance pool already mounted: {owner}/{id}.");
+        if (_pools.ContainsKey(id)) throw new InvalidOperationException($"Instance pool already mounted: {id}.");
     }
     internal static void ValidateAabb(Aabb box)
     {
@@ -289,14 +283,10 @@ public sealed partial class InstancePoolHost : Node3D, IInstancePoolHost, IMapAw
             default: throw new ArgumentOutOfRangeException(nameof(shadows));
         }
     }
-    private static void ValidateIdentityAndCapacity(string id, string owner, int capacity, uint layers, Aabb bounds)
+    private static void ValidateIdentityAndCapacity(string id, int capacity, uint layers, Aabb bounds)
     {
-        if (string.IsNullOrWhiteSpace(id) || id.Length > 256 || id != id.Trim())
-            throw new ArgumentException("Pool Id must be nonempty, trimmed, and at most 256 characters.", nameof(id));
-        if (owner is null || owner.Length is < 5 or > 6 || !owner.StartsWith("WP-", StringComparison.Ordinal) ||
-            !char.IsAsciiDigit(owner[3]) || !char.IsAsciiDigit(owner[4]) ||
-            (owner.Length == 6 && owner[5] is not (>= 'a' and <= 'z')))
-            throw new ArgumentException("Owner must be a work-package ID such as WP-00 or WP-45b.", nameof(owner));
+        if (string.IsNullOrWhiteSpace(id) || id.Length > 256 || id != id.Trim() || id.IndexOf('.') is <= 0 || id.EndsWith('.'))
+            throw new ArgumentException("Pool Id must have a domain prefix and local name separated by a dot, be trimmed, and be at most 256 characters.", nameof(id));
         if (capacity <= 0 || capacity > System.Array.MaxLength / FloatsPerInstance)
             throw new ArgumentOutOfRangeException(nameof(capacity), "Capacity must fit a complete 16-float buffer.");
         if ((layers & ~ValidLayers) != 0) throw new ArgumentOutOfRangeException(nameof(layers));

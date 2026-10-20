@@ -4,15 +4,15 @@ namespace Campus.Contracts.Parts;
 
 /// <summary>Metres. Origin is the footprint centre at ground level; Y is up and depth runs along Z.</summary>
 public abstract record BoxPartParams(
-    [property: Param(Min = 0.01, Max = 200)] float Width,
-    [property: Param(Min = 0.01, Max = 200)] float Height,
-    [property: Param(Min = 0.01, Max = 200)] float Depth)
+    float Width,
+    float Height,
+    float Depth)
 {
     public ToonSpec Material { get; init; } = new(new("wall.lit"), new("wall.shade"));
     public FootMat Foot { get; init; } = FootMat.Auto;
-    [Param(Min = 0, Max = 0.5)] public float Bevel { get; init; } = 0.02f;
-    [Param(Min = 0, Max = 2)] public int Variation { get; init; }
-    [Param(Min = 0, Max = 1)] public float Wear { get; init; }
+    public float Bevel { get; init; } = 0.02f;
+    public int Variation { get; init; }
+    public float Wear { get; init; }
 }
 
 public sealed record BoxParams(float Width = 1f, float Height = 1f, float Depth = 1f)
@@ -24,25 +24,25 @@ public sealed record PanelParams(float Width = 2f, float Height = 2.8f, float De
 public sealed record TrimParams(float Width = 3f, float Height = 0.12f, float Depth = 0.3f)
     : BoxPartParams(Width, Height, Depth);
 public sealed record WindowParams(float Width = 1.8f, float Height = 1.5f, float Depth = 0.2f,
-    [property: Param(Min = 1, Max = 12)] int Columns = 2,
-    [property: Param(Min = 1, Max = 8)] int Rows = 1)
+    int Columns = 2,
+    int Rows = 1)
     : BoxPartParams(Width, Height, Depth);
 public sealed record DoorParams(float Width = 0.9f, float Height = WalkRules.DefaultDoorHeight, float Depth = 0.12f,
-    [property: Param(Min = 0, Max = 120)] float OpenAngleDeg = 0f,
-    [property: Param(Min = 1, Max = 4)] int Leaves = 1)
+    float OpenAngleDeg = 0f,
+    int Leaves = 1)
     : BoxPartParams(Width, Height, Depth);
 public sealed record RailingParams(float Width = 3f, float Height = 1.1f, float Depth = 0.12f,
-    [property: Param(Min = 0.1, Max = 2)] float PostSpacing = 1f)
+    float PostSpacing = 1f)
     : BoxPartParams(Width, Height, Depth);
 public sealed record StairParams(float Width = 1.8f, float Height = 1.5f, float Depth = 2.7f,
-    [property: Param(Min = 1, Max = 64)] int Steps = 10)
+    int Steps = 10)
     : BoxPartParams(Width, Height, Depth);
 public sealed record RampParams(float Width = 1.8f, float Height = 0.3f, float Depth = 3.6f)
     : BoxPartParams(Width, Height, Depth);
 public sealed record BalconyParams(float Width = 3.6f, float Height = 1.2f, float Depth = 1.2f)
     : BoxPartParams(Width, Height, Depth);
 public sealed record RoofParams(float Width = 4f, float Height = 0.3f, float Depth = 2f,
-    [property: Param(Min = 0, Max = 60)] float SlopeDeg = 0f)
+    float SlopeDeg = 0f)
     : BoxPartParams(Width, Height, Depth);
 public sealed record EquipmentParams(float Width = 0.8f, float Height = 1.2f, float Depth = 0.5f)
     : BoxPartParams(Width, Height, Depth)

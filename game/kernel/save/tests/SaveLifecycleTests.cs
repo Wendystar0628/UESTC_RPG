@@ -198,9 +198,9 @@ public sealed partial class SaveLifecycleTests
                 _ => { }, World, WaitDestination,
                 () => ThumbnailBarrier?.Task ?? Task.FromResult<byte[]?>(null), () => 1792082400, pose => Task.FromResult(pose));
             var sections = new SaveSections([
-                new(new("world") { Owner = "WP-50", Phase = RestorePhase.World, Order = 10 }, World),
-                new(new("weather") { Owner = "WP-50", Phase = RestorePhase.World, Order = 21 }, Weather),
-                new(new("view") { Owner = "WP-50", Phase = RestorePhase.Pose, Order = 60 }, Camera)]);
+                new(new("world") { Phase = RestorePhase.World, Order = 10 }, World),
+                new(new("weather") { Phase = RestorePhase.World, Order = 21 }, Weather),
+                new(new("view") { Phase = RestorePhase.Pose, Order = 60 }, Camera)]);
             await Pump(Save.Initialize(new(directory, "test", true, null, null, 1), bindings, sections));
         }
         private async Task WaitDestination(Pose pose, NavSpace? space, ViewMode mode)
@@ -256,7 +256,7 @@ public sealed partial class SaveLifecycleTests
         public void Tick() { if (!RestoreFaulted) AssertThat(!_pending).OverrideFailureMessage("An uncommitted World phase escaped into the next frame.").IsTrue(); }
         public LifecycleWorld Capture(in CaptureContext context)
         {
-            AssertThat(inFrame()).OverrideFailureMessage("Capture ran outside Save frame.").IsTrue(); var moment = context.Moment ?? GetSaveMoment();
+            AssertThat(inFrame()).OverrideFailureMessage("Capture ran outside Save frame.").IsTrue(); var moment = context.Moment;
             return new(moment.WorldHours, moment.ClockOffset, moment.Season, moment.FlowRate);
         }
         public void Restore(LifecycleWorld dto, RestoreContext context)
@@ -286,7 +286,7 @@ public sealed partial class SaveLifecycleTests
         public JsonTypeInfo<LifecycleWeather> TypeInfo => LifecycleJsonContext.Strict.LifecycleWeather;
         public LifecycleWeather Capture(in CaptureContext context)
         {
-            CapturedMoment = context.Moment ?? throw new InvalidOperationException("Missing shared capture moment.");
+            CapturedMoment = context.Moment;
             return new(new(WeatherMode.Auto, WeatherKind.Clear, 0), CapturedMoment.Value.WorldHours);
         }
         public void Restore(LifecycleWeather dto, RestoreContext context)
@@ -332,12 +332,12 @@ public sealed partial class SaveLifecycleTests
         public bool CanTravel(MarkerId id, TravelStyle style, out TravelRefusal why) { why = TravelRefusal.Unavailable; return false; }
         public ITransitHandle? Travel(MarkerId id, TravelStyle style) => null;
         public MarkerId? Tracked => null;
-        public void Track(MarkerId? id) { }
+        public void Track(MarkerId? id) => throw new NotSupportedException();
         public IReadOnlyList<CustomPin> Pins => [];
         public CustomPin? AddPin(Vector2 at, PinShape shape) => null;
-        public void MovePin(int id, Vector2 at) { }
-        public void SetPinShape(int id, PinShape shape) { }
-        public void RemovePin(int id) { }
+        public void MovePin(int id, Vector2 at) => throw new NotSupportedException();
+        public void SetPinShape(int id, PinShape shape) => throw new NotSupportedException();
+        public void RemovePin(int id) => throw new NotSupportedException();
         public string PolicyId => "test-policy";
     }
 }

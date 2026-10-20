@@ -10,8 +10,7 @@ namespace Campus.Gen.Ground;
 /// the default ground everywhere; zone packages that claim the Ground aspect of an area replace it there later.
 /// </summary>
 
-
-[ContentModule(GroundModule.Module, Owner = "WP-15")]
+[ContentModule(GroundModule.Module)]
 public sealed class GroundModule : IGroundCoverSource
 {
     public const string Module = "ground";
@@ -40,7 +39,6 @@ public sealed class GroundModule : IGroundCoverSource
     }
 
     /// <summary>Per-tile upper bounds measured on Qingshuihe (G8 checks the totals); draw calls are colour slots.</summary>
-    public ModuleBudget Budget { get; } = new(TrianglesL0: 60000, TrianglesL1: 30000, DrawCalls: 12);
 
     /// <summary>L0 tiles: the map's tile range clipped to the campus data plus a margin, inside the data rectangle.</summary>
     public IEnumerable<TileKey> Tiles(BuildContext ctx)

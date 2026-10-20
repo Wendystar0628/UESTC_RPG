@@ -318,7 +318,4 @@ public sealed class BoardwalkSite : ZoneSite, ILightMetadataSource
         if (flight is not null) c.Add(Steps.Collision(flight), frame.At(0, foot, -flight.Depth * 0.5f));
     }
 
-    /// <summary>Q2 (walk, K1, MAP-QSH-WEST 近景巡检点 2): P11's spot on the deck at eye height, looking 250° over the reeds.</summary>
-    public override IReadOnlyList<InspectionProbe> Probes =>
-        [Probe("Q2", W.Entity, new(W.P11.X, W.PavingTop + W.Lip + WalkRules.StandingEye, W.P11.Y), Angles.Heading(W.P11Bearing), -4f, 12f)];
 }

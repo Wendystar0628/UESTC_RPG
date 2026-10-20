@@ -16,7 +16,7 @@ namespace Campus.Gen.Parts.Circulation;
 /// Collision (WLD-TERRAIN, SYS-WALK): three or more risers give one RampCollider through every nosing, flush with
 /// the top tread and buried 0.2 m below the lower level; fewer risers give one box per step for auto-step.
 /// </summary>
-[Part(PartCatalog.Steps, Owner = "WP-11")]
+[Part(PartCatalog.Steps)]
 public sealed class StepsPart() : CirculationPart<StairParams>(new(300, 200))
 {
     private readonly record struct Layout(float W, float H, float D, int N, float R, float T, float Cheek, bool Rails, bool Middle)

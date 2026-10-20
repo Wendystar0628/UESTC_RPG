@@ -1,7 +1,6 @@
 using Campus.Contracts;
 using Campus.Contracts.Maps;
 using Campus.Contracts.Startup;
-using Campus.Kernel.Materials;
 using Campus.Kernel.Renderer;
 using Godot;
 using Services = Campus.Kernel.Registry.Kernel;
@@ -14,7 +13,7 @@ namespace Campus.Systems.Sky;
 /// Inputs: IWorldState (world time, anim time, weather vector) and IColorScriptFrame (star visibility, cloud cover);
 /// colours come from the palette texture inside the shader. Nothing is read back from shader globals.
 /// </summary>
-[KernelNode("systems.sky", Owner = "WP-40")]
+[KernelNode("systems.sky")]
 public partial class SkyNode : Node, IMapAware, IViewContentReadiness
 {
     private static readonly StringName _shaderGlobalCloud = ShaderGlobals.Cloud;

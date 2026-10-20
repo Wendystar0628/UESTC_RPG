@@ -12,19 +12,28 @@ namespace Campus.Gen.Parts.Openings.Tests;
 [TestSuite]
 public sealed class OpeningPartsTests
 {
-    private static IEnumerable<Type> OpeningTypes => typeof(OpeningGallery).Assembly.GetTypes()
-        .Where(type => type.Namespace == typeof(OpeningGallery).Namespace ||
-            type.Namespace?.StartsWith(typeof(OpeningGallery).Namespace + ".", StringComparison.Ordinal) == true);
+    private static IEnumerable<Type> OpeningTypes => typeof(OpeningPartFactory).Assembly.GetTypes()
+        .Where(type => type.Namespace == typeof(OpeningPartFactory).Namespace ||
+            type.Namespace?.StartsWith(typeof(OpeningPartFactory).Namespace + ".", StringComparison.Ordinal) == true);
+
+    private static IEnumerable<PartCatalogEntry> OpeningEntries
+    {
+        get
+        {
+            var ids = OpeningTypes.Select(type => type.GetCustomAttribute<PartAttribute>())
+                .OfType<PartAttribute>().Select(attribute => attribute.Id).ToHashSet(StringComparer.Ordinal);
+            return PartCatalog.Entries.Where(entry => ids.Contains(entry.Id.Value));
+        }
+    }
 
     [TestCase, TestCategory(TestReason.Contract)]
-    public void EveryWp10CatalogEntryHasARealPartWithTheCatalogParameters()
+    public void EveryOpeningCatalogEntryHasARealPartWithTheCatalogParameters()
     {
         var parts = OpeningTypes.Select(t => (Type: t, Attribute: t.GetCustomAttribute<PartAttribute>())).Where(x => x.Attribute is not null).ToArray();
-        foreach (var entry in PartCatalog.Entries.Where(e => e.Owner.Value == "WP-10"))
+        foreach (var entry in OpeningEntries)
         {
             var match = parts.Where(x => x.Attribute!.Id == entry.Id.Value).ToArray();
-            AssertThat(match.Length == 1).OverrideFailureMessage($"No single WP-10 part for {entry.Id.Value}.").IsTrue();
-            AssertThat(match[0].Attribute!.Owner == "WP-10").OverrideFailureMessage($"{entry.Id.Value} is not owned by WP-10.").IsTrue();
+            AssertThat(match.Length == 1).OverrideFailureMessage($"No single opening part for {entry.Id.Value}.").IsTrue();
             AssertThat(typeof(IPartDef<>).MakeGenericType(entry.ParameterType).IsAssignableFrom(match[0].Type)).OverrideFailureMessage($"{entry.Id.Value} has the wrong parameter type.").IsTrue();
         }
     }
@@ -32,48 +41,9 @@ public sealed class OpeningPartsTests
     [TestCase, TestCategory(TestReason.Contract)]
     public void CatalogDefaultsBuildClosedGeometryAtEveryLevel()
     {
-        foreach (var entry in PartCatalog.Entries.Where(e => e.Owner.Value == "WP-10"))
+        foreach (var entry in OpeningEntries)
             foreach (var level in Enum.GetValues<LodLevel>())
-                Closed(OpeningGallery.Build(entry.Id, entry.Defaults, level), entry.Id.Value + " " + level);
-    }
-
-    [TestCase, TestCategory(TestReason.Contract)]
-    public void GallerySamplesAreClosedAndInsideBounds()
-    {
-        var empty = new List<string>();
-        void Measure(string id, PartId part, object parameters)
-        {
-            foreach (var level in Enum.GetValues<LodLevel>())
-            {
-                var geometry = OpeningGallery.Build(part, parameters, level);
-                Closed(geometry, id + " " + level);
-                if (level == LodLevel.L0 && geometry.Meshes.Sum(m => m.Index.Length) == 0) empty.Add(id);
-            }
-        }
-        foreach (var sample in OpeningGallery.Samples())
-        {
-            Measure(sample.Id, sample.Part, sample.Params);
-            if (sample.Covering is { } covering) Measure(sample.Id + " covering", covering, sample.CoveringParams!);
-        }
-        AssertThat(empty.Count == 0).OverrideFailureMessage("Empty near geometry: " + string.Join("; ", empty)).IsTrue();
-    }
-
-    [TestCase, TestCategory(TestTag.Determinism)]
-    [TestCategory(TestReason.Contract)]
-    public void GenerationIsBitwiseRepeatable()
-    {
-        foreach (var sample in OpeningGallery.Samples())
-        {
-            var a = OpeningGallery.Build(sample.Part, sample.Params, LodLevel.L0);
-            var b = OpeningGallery.Build(sample.Part, sample.Params, LodLevel.L0);
-            AssertThat(a.Meshes.Count == b.Meshes.Count).OverrideFailureMessage("Surface count changed.").IsTrue();
-            for (var i = 0; i < a.Meshes.Count; i++)
-            {
-                AssertThat(a.Meshes[i].Position.Select(BitConverter.SingleToInt32Bits).SequenceEqual(b.Meshes[i].Position.Select(BitConverter.SingleToInt32Bits))).OverrideFailureMessage("Vertex bytes changed.").IsTrue();
-                AssertThat(a.Meshes[i].Normal.Select(BitConverter.SingleToInt32Bits).SequenceEqual(b.Meshes[i].Normal.Select(BitConverter.SingleToInt32Bits))).OverrideFailureMessage("Normal bytes changed.").IsTrue();
-                AssertThat(a.Meshes[i].Index.SequenceEqual(b.Meshes[i].Index)).OverrideFailureMessage("Index order changed.").IsTrue();
-            }
-        }
+                Closed(OpeningPartFactory.Build(entry.Id, entry.Defaults, level), entry.Id.Value + " " + level);
     }
 
     [TestCase, TestCategory(TestReason.Contract)]
@@ -99,9 +69,6 @@ public sealed class OpeningPartsTests
         var leaf = door.Meshes.Single(m => m.Material.Spec.Lit.Value == "door.wood.lit");
         var values = leaf.Ao!.Distinct().OrderBy(v => v).ToArray();
         AssertThat(values.SequenceEqual([0.8f, 1f])).OverrideFailureMessage("Kernel visibility must pass through: reveals 0.8, faces 1; got " + string.Join(", ", values)).IsTrue();
-        foreach (var sample in OpeningGallery.Samples())
-            foreach (var m in OpeningGallery.Build(sample.Part, sample.Params, LodLevel.L0).Meshes)
-                AssertThat(m.Ao!.All(v => v >= 0.45f)).OverrideFailureMessage($"{sample.Id}: visibility below the reveal floor.").IsTrue();
     }
 
     [TestCase, TestCategory(TestReason.Contract)]

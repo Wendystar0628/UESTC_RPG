@@ -8,14 +8,6 @@ using Services = Campus.Kernel.Registry.Kernel;
 
 namespace Campus.Kernel.Boot;
 
-public readonly record struct PipelineCounts(double Surface, double Draw, double Canvas)
-{
-    public static PipelineCounts Read(bool canvas = true) => new(
-        Performance.GetMonitor(Performance.Monitor.PipelineCompilationsSurface),
-        Performance.GetMonitor(Performance.Monitor.PipelineCompilationsDraw),
-        canvas ? Performance.GetMonitor(Performance.Monitor.PipelineCompilationsCanvas) : 0);
-}
-
 /// <summary>Snapshots the completed stage's producers once; polling reads their real mounted/uploaded state.</summary>
 public sealed class ViewContentReadiness
 {

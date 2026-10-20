@@ -20,8 +20,8 @@ public sealed record SaveRuntimeBindings(IWorldState World, IMapService Maps, IC
     Func<Pose, NavSpace?, ViewMode, Task> WaitDestination, Func<Task<byte[]?>> CaptureThumbnail, Func<long> UnixTime,
     Func<Pose, Task<Pose>>? PreparePose = null);
 
-[KernelService(typeof(SaveService), Owner = "WP-50")]
-[KernelService(typeof(ISaveService), Owner = "WP-50")]
+[KernelService(typeof(SaveService))]
+[KernelService(typeof(ISaveService))]
 public sealed partial class SaveService : ISaveService, IDisposable
 {
     private static readonly SlotId[] AutoSlots = [new("s1"), new("s2"), new("s3")];

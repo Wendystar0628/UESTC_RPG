@@ -25,7 +25,7 @@ public sealed class VegetationInputsTests
     public void InputsComeOnlyFromTheBoundary()
     {
         // No species table in the global inputs is an error naming the key; no planting file means a map without trees.
-        var empty = new BuildContext { World = new FakeWorld(), Map = null!, WorldSeed = 1u, Catalog = Catalog };
+        var empty = new BuildContext { CodeHash = "fixture", WindowNumbering = new(new MapId("fixture"), new string('0', 64), []), World = new FakeWorld(), Map = null!, WorldSeed = 1u, Catalog = Catalog };
         var caughtExpectedException = false;
         try { VegetationInputs.Layout(empty); }
         catch (KeyNotFoundException) { caughtExpectedException = true; }
@@ -101,7 +101,7 @@ public sealed class VegetationInputsTests
         var map = new Dictionary<string, ReadOnlyMemory<byte>>(StringComparer.Ordinal);
         if (withPlanting)
             map[VegetationInputs.PlantingKey] = RealMapFixture.ReadFiles()[VegetationInputs.PlantingKey];
-        return new BuildContext { World = withPlanting ? PavementTests.World() : new FakeWorld(), Map = null!, WorldSeed = 1u, Catalog = Catalog, GlobalInputs = global, SourceInputs = BuildInputSnapshot.Freeze(map, "fixture").Entries };
+        return new BuildContext { CodeHash = "fixture", WindowNumbering = new(new MapId("fixture"), new string('0', 64), []), World = withPlanting ? PavementTests.World() : new FakeWorld(), Map = null!, WorldSeed = 1u, Catalog = Catalog, GlobalInputs = global, SourceInputs = BuildInputSnapshot.Freeze(map, "fixture").Entries };
     }
 
     private static PaletteCatalog Catalog => MotherModelTests.Palette;

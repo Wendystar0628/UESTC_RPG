@@ -14,7 +14,7 @@ namespace Campus.Gen.Parts.Street;
 /// with two clamp tabs for a post or a wall; visual only, the front (−Z) printed. Variation 1: the two-post sign of a main junction
 /// (Height is the overall height, the plate near the top), both faces printed; collision is the two posts and the plate, Metal.
 /// </summary>
-[Part(PartCatalog.RoadNameSign, Owner = "WP-13")]
+[Part(PartCatalog.RoadNameSign)]
 public sealed class RoadNameSignPart : IPartDef<SignParams>
 {
     public RoadNameSignPart() => Lods = Levels.Of<SignParams>(Build, LodLevel.L0, LodLevel.L1);
@@ -144,7 +144,7 @@ public sealed class RoadNameSignPart : IPartDef<SignParams>
 /// <see cref="StreetStyle.NoticeCaseDepth"/> deep. Variation 0: the plain case (校内主路、宿舍区和食堂门口). Variation 1: with a small
 /// warm-wood eave sloping forward over the top, which uses the rest of the depth. Collision: one box over the footprint, Metal.
 /// </summary>
-[Part(PartCatalog.NoticeBoard, Owner = "WP-13")]
+[Part(PartCatalog.NoticeBoard)]
 public sealed class NoticeBoardPart : IPartDef<SignParams>
 {
     public NoticeBoardPart() => Lods = Levels.Of<SignParams>(Build, LodLevel.L0, LodLevel.L1);

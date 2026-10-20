@@ -14,7 +14,7 @@ namespace Campus.Gen.Parts.Street;
 /// and car parks. The uprights go beyond the near level into the rails (ART-MODELING: they fade first). Collision: one box over the
 /// run, Metal.
 /// </summary>
-[Part(PartCatalog.StreetFence, Owner = "WP-13")]
+[Part(PartCatalog.StreetFence)]
 public sealed class StreetFencePart : IPartDef<RailingParams>
 {
     public StreetFencePart() => Lods = Levels.Of<RailingParams>(Build, LodLevel.L0, LodLevel.L1);

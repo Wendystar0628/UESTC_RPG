@@ -11,8 +11,8 @@ public interface IStreamMountFrame
 }
 
 /// <summary>The sole owner of the shared collision/visual mount budget and covered-screen refresh slices.</summary>
-[KernelService(typeof(IStreamMountFrame), Owner = "WP-02b")]
-[KernelService(typeof(IStreamMountQueue), Owner = "WP-02b")]
+[KernelService(typeof(IStreamMountFrame))]
+[KernelService(typeof(IStreamMountQueue))]
 public sealed class StreamMountQueue : IStreamMountQueue, IStreamMountFrame
 {
     private readonly List<IStreamMountWork> _pending = [];

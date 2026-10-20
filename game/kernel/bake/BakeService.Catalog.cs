@@ -5,7 +5,6 @@ using Campus.Contracts.Bake;
 using Campus.Contracts.Maps;
 using Campus.Kernel.Collision;
 using Campus.Kernel.Lod;
-using Campus.Kernel.Stream;
 
 namespace Campus.Kernel.Bake;
 

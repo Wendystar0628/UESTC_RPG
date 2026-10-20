@@ -10,7 +10,7 @@ namespace Campus.Pipeline.Map;
 
 /// <summary>Discovered by the kernel. SourceInputs are an immutable snapshot loaded by the caller.</summary>
 
-[BakeProducer(MapBaker.Module, Owner = "WP-48a")]
+[BakeProducer(MapBaker.Module)]
 public sealed class MapBakeProducer : IBakeProducer
 {
     private const string LabelsFile = "atlas/labels.json";

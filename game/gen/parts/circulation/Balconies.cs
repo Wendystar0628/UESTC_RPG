@@ -13,7 +13,7 @@ namespace Campus.Gen.Parts.Circulation;
 /// upstand under a metal railing, 2 metal railing on the slab edge. Collision: the walkable slab and barrier walls on
 /// the three open edges, top 1.5 m over the balcony floor.
 /// </summary>
-[Part(PartCatalog.Balcony, Owner = "WP-11")]
+[Part(PartCatalog.Balcony)]
 public sealed class BalconyPart() : CirculationPart<BalconyParams>(new(400, 120))
 {
     private protected override Box3 BoundsOf(BalconyParams p) => Centered(p.Width, 0, p.Height, p.Depth);
@@ -87,7 +87,7 @@ public sealed class BalconyPart() : CirculationPart<BalconyParams>(new(400, 120)
 /// Variation: 0 a clipped shrub cushion rising 0.28 m over the rim, 1 low groundcover, 2 soil only (planted by WP-23).
 /// Collision: one box to the rim; people can step up and sit (SYS-WALK "花池").
 /// </summary>
-[Part(PartCatalog.Planter, Owner = "WP-11")]
+[Part(PartCatalog.Planter)]
 public sealed class PlanterPart() : CirculationPart<FurnitureParams>(new(480, 220))
 {
     private static float Crown(int variation) => variation switch

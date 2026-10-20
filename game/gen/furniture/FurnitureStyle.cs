@@ -374,7 +374,7 @@ public static class FurnitureStyle
     public const float DoorLampY = 2.55f;
 
     // ---- Module budget (ENG-BUDGET, WP-13 with WP-25: 8% of the main pass), heaviest 64 m cell ----
-    public const int BudgetTrianglesL0 = 9000;
-    public const int BudgetTrianglesL1 = 2400;
-    public const int BudgetDrawCalls = 24;
+    public const int ServiceCellMaxTriangles = 9000;
+
+    public const int ServiceCellMaxDraws = 24;
 }

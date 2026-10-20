@@ -6,6 +6,7 @@ using System.Numerics;
 using System.Text;
 using System.Text.Json;
 using Campus.Contracts;
+using Campus.Kernel.Registry;
 using Campus.Contracts.Bake;
 using Campus.Contracts.Maps;
 using Campus.Contracts.Parts;
@@ -228,7 +229,7 @@ public sealed class BakeInputTests
     public void WindowContextForwardsTheFrozenResourcesAndCapabilities()
     {
         var original = Context(new FakeWorld { Boundary = new([]) });
-        var forwarded = BakeWindowPreparation.Context(original, "module-code", null);
+        var forwarded = BakeWindowPreparation.Context(original, "module-code", original.WindowNumbering);
         if (!ReferenceEquals(original.SourceInputs, forwarded.SourceInputs) || !ReferenceEquals(original.GlobalInputs, forwarded.GlobalInputs) ||
             !ReferenceEquals(original.GroundMaskContributors, forwarded.GroundMaskContributors) || !ReferenceEquals(original.PartLods, forwarded.PartLods) ||
             !ReferenceEquals(original.Catalog, forwarded.Catalog))
@@ -281,13 +282,13 @@ public sealed class BakeInputTests
     public void BuildCodeManifestRejectsMissingOrDuplicateRoots()
     {
         var key = BakeCodeManifest.Chain(BakeCodeChains.Shared);
-        var table = new BakeCodeFingerprints(new(BakeCodeManifest.CurrentSchema, new Dictionary<string, string> { [key] = "shared-code" }));
+        var table = new BuildCodeIndex(new(BakeCodeManifest.CurrentSchema, new Dictionary<string, string> { [key] = "shared-code" }, new Dictionary<string, string>()));
         if (table.Chain(BakeCodeChains.Shared) != "shared-code") throw new InvalidOperationException("Build root lookup changed its stored hash.");
         ExpectInvalid(() => table.Chain(BakeCodeChains.Collision));
-        var duplicate = Encoding.UTF8.GetBytes("{\"schema\":1,\"roots\":{\"chain:shared\":\"a\",\"chain:shared\":\"b\"}}");
-        ExpectInvalid(() => BakeCodeFingerprints.Parse(duplicate));
-        ExpectInvalid(() => new BakeCodeFingerprints(new(BakeCodeManifest.CurrentSchema + 1,
-            new Dictionary<string, string> { [key] = "shared-code" })));
+        var duplicate = Encoding.UTF8.GetBytes("{\"schema\":2,\"registrations\":{},\"roots\":{\"chain:shared\":\"a\",\"chain:shared\":\"b\"}}");
+        ExpectInvalid(() => BuildCodeIndex.Parse(duplicate));
+        ExpectInvalid(() => new BuildCodeIndex(new(BakeCodeManifest.CurrentSchema + 1,
+            new Dictionary<string, string> { [key] = "shared-code" }, new Dictionary<string, string>())));
 
         static void ExpectInvalid(Action action)
         {
@@ -306,8 +307,8 @@ public sealed class BakeInputTests
         var context = Context(new FakeWorld { Boundary = new([]) });
         var directory = Path.Combine(Path.GetTempPath(), "uestc-rpg-code-index-" + Guid.NewGuid().ToString("N"));
         var options = new BakeOptions(directory, false, false, false, false, 1, null);
-        var table = new BakeCodeFingerprints(new(BakeCodeManifest.CurrentSchema,
-            new Dictionary<string, string> { [BakeCodeManifest.Chain(BakeCodeChains.Shared)] = "index-code" }));
+        var table = new BuildCodeIndex(new(BakeCodeManifest.CurrentSchema,
+            new Dictionary<string, string> { [BakeCodeManifest.Chain(BakeCodeChains.Shared)] = "index-code" }, new Dictionary<string, string>()));
         var resident = new string('a', 32);
         var key = BakeRequestKeys.Tile(context.Map.Id, "ground", default, LodLevel.L0);
         var index = new BakeSourceIndex(context);

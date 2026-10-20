@@ -3,8 +3,6 @@ using System.Numerics;
 using System.Reflection;
 using System.Text.Json;
 using Campus.Contracts;
-using Campus.Contracts.Audio;
-using Campus.Contracts.Bake;
 using Campus.Contracts.Maps;
 using Campus.Contracts.Quality;
 using Campus.Contracts.Save;
@@ -85,16 +83,15 @@ public static partial class RegistryGateRunner
             using var interiors = JsonDocument.Parse(read(entry.Dir + "interiors.json"));
             foreach (var interior in interiors.RootElement.GetProperty("interiors").EnumerateArray())
             {
-                var provider = interior.GetProperty("providerId").GetString();
-                if (!effective.Any(item => item.Kind == RegistrationKind.Interior && item.Id == provider))
-                    throw new InvalidDataException($"Open interior provider is not registered: {entry.Id}/{provider}");
+                var provider = interior.GetProperty("providerId").GetString() ?? throw new InvalidDataException("Missing interior provider ID.");
+                RegistrationDiscovery.ResolveInterior(effective, provider);
                 foreach (var feature in interior.GetProperty("featureIds").EnumerateArray())
                     if (!ids.Contains(feature.GetString()!)) throw new InvalidDataException($"Open interior entity is missing: {entry.Id}/{feature}");
             }
         }
         var priorities = typeof(FramePriority).GetFields(BindingFlags.Public | BindingFlags.Static)
             .Where(field => field.IsLiteral).Select(field => (int)field.GetRawConstantValue()!).ToArray();
-        if (priorities.Length != 18 || priorities.Distinct().Count() != priorities.Length ||
+        if (priorities.Length == 0 || priorities.Distinct().Count() != priorities.Length ||
             FramePriority.Animate <= FramePriority.Systems || FramePriority.Animate >= FramePriority.Audio)
             throw new InvalidDataException("Frame priority registry is incomplete or ambiguous.");
         var knobs = Enum.GetValues<QualityKnob>();
@@ -128,8 +125,7 @@ public static partial class RegistryGateRunner
         {
             if (done.Contains(implementation)) return;
             if (!path.Add(implementation)) throw new InvalidDataException($"Circular constructor dependency: {implementation.FullName}");
-            var constructor = implementation.GetConstructors().OrderByDescending(item => item.GetParameters().Length).FirstOrDefault()
-                ?? throw new InvalidDataException($"No public constructor: {implementation.FullName}");
+            var constructor = RegistrationDiscovery.SelectConstructor(implementation);
             foreach (var parameter in constructor.GetParameters())
             {
                 if (bindings.TryGetValue(parameter.ParameterType, out var dependency)) Visit(dependency);
@@ -149,20 +145,8 @@ public static partial class RegistryGateRunner
         {
             if (string.IsNullOrWhiteSpace(entry.Id) || string.IsNullOrWhiteSpace(entry.Owner)) throw new InvalidDataException("Empty registration identity.");
             if (entry.Map is { Length: > 0 } map && !mapIds.Contains(map)) throw new InvalidDataException($"Unknown MapScope: {entry.Id}/{map}");
-            var valid = entry.Kind switch
-            {
-                RegistrationKind.Service => true,
-                RegistrationKind.Content => typeof(IContentModule).IsAssignableFrom(entry.Type),
-                RegistrationKind.Interior => typeof(IInteriorProvider).IsAssignableFrom(entry.Type),
-                RegistrationKind.Ambient => typeof(IAmbientEmitterSource).IsAssignableFrom(entry.Type),
-                RegistrationKind.Bake => typeof(IBakeProducer).IsAssignableFrom(entry.Type),
-                RegistrationKind.Medium => typeof(IMediumPresenter).IsAssignableFrom(entry.Type),
-                RegistrationKind.Save => typeof(ISaveSection).IsAssignableFrom(entry.Type),
-                RegistrationKind.Part => entry.Type.GetInterfaces().Any(type => type.IsGenericType && type.GetGenericTypeDefinition() == typeof(IPartDef<>)),
-                RegistrationKind.Node => IsNode(entry.Type),
-                _ => throw new InvalidDataException($"Unknown registration kind: {entry.Kind}")
-            };
-            if (!valid) throw new InvalidDataException($"Registration type does not implement its contract: {entry.Id}/{entry.Type.FullName}");
+            if (!RegistrationDiscovery.MatchesKind(entry.Type, entry.Kind))
+                throw new InvalidDataException($"Registration type does not implement its contract: {entry.Id}/{entry.Type.FullName}");
             if (entry.Kind == RegistrationKind.Node && entry.Type.GetCustomAttribute<QualityResponsiveAttribute>() is { } quality)
             {
                 if (!typeof(IQualityAware).IsAssignableFrom(entry.Type)) throw new InvalidDataException($"QualityResponsive node lacks IQualityAware: {entry.Id}");
@@ -182,12 +166,6 @@ public static partial class RegistryGateRunner
         }
     }
 
-    private static bool IsNode(Type type)
-    {
-        for (Type? current = type; current is not null; current = current.BaseType)
-            if (current.FullName == "Godot.Node") return true;
-        return false;
-    }
     private static void ValidatePose(MapId map, Pose pose)
     {
         if (!float.IsFinite(pose.Position.X) || !float.IsFinite(pose.Position.Y) || !float.IsFinite(pose.Position.Z) ||

@@ -8,7 +8,7 @@ namespace Campus.Gen.Fauna;
 
 /// <summary>Produces only the requested owner tile from the registered source's frozen inputs.</summary>
 
-[BakeProducer(BakeModuleIds.FaunaRuntime, Owner = "WP-25")]
+[BakeProducer(BakeModuleIds.FaunaRuntime)]
 public sealed class FaunaBakeProducer : IBakeProducer, IBakeContentConsumer
 {
     public BakePayloadClass PayloadClass => BakePayloadClass.Product;

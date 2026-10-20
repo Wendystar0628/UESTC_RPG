@@ -5,7 +5,7 @@ using Godot;
 
 namespace Campus.Kernel.Maps;
 
-[KernelNode("map-service", Owner = "WP-46")]
+[KernelNode("map-service")]
 public partial class MapServiceNode : Node
 {
     private IMapFrame? _service;

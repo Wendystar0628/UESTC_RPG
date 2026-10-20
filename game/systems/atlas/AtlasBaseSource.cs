@@ -5,8 +5,8 @@ using Campus.Contracts.Maps;
 namespace Campus.Systems.Atlas;
 
 /// <summary>Publishes a frozen CPU view. HUD code does not depend on bake products, files, or cache keys.</summary>
-[KernelService(typeof(IAtlasBaseSource), Owner = "WP-48c")]
-[KernelService(typeof(AtlasBaseSource), Owner = "WP-48c")]
+[KernelService(typeof(IAtlasBaseSource))]
+[KernelService(typeof(AtlasBaseSource))]
 public sealed class AtlasBaseSource : IAtlasBaseSource
 {
     public long Rev { get; private set; }

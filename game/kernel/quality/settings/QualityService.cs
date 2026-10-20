@@ -32,8 +32,8 @@ public interface IQualityFrame : IQualityService
     void Tick(double delta);
 }
 
-[KernelService(typeof(IQualityFrame), Owner = "WP-32")]
-[KernelService(typeof(IQualityService), Owner = "WP-32")]
+[KernelService(typeof(IQualityFrame))]
+[KernelService(typeof(IQualityService))]
 public sealed class QualityService : IQualityFrame, IBootParticipant
 {
     private sealed class Binding

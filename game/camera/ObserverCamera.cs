@@ -9,13 +9,13 @@ using Services = Campus.Kernel.Registry.Kernel;
 
 namespace Campus.Camera;
 
-[KernelService(typeof(ICameraRig), Owner = "WP-06")]
-[KernelService(typeof(IObserverState), Owner = "WP-06")]
-[KernelService(typeof(IViewControl), Owner = "WP-06")]
-[KernelService(typeof(IInputRouter), Owner = "WP-06")]
-[KernelService(typeof(ICameraPoseValidator), Owner = "WP-06")]
-[KernelNode("observer-camera", Owner = "WP-06")]
-[SaveSection("view", Owner = "WP-06", Version = 1, Phase = RestorePhase.Pose, Order = 60)]
+[KernelService(typeof(ICameraRig))]
+[KernelService(typeof(IObserverState))]
+[KernelService(typeof(IViewControl))]
+[KernelService(typeof(IInputRouter))]
+[KernelService(typeof(ICameraPoseValidator))]
+[KernelNode("observer-camera")]
+[SaveSection("view", Version = 1, Phase = RestorePhase.Pose, Order = 60)]
 public partial class ObserverCamera : Node, ICameraRig, IObserverState, IViewControl, IInputRouter,
     ICameraPoseValidator, IMapAware, IMapDataParticipant, ISaveSection<ViewSaveData>
 {

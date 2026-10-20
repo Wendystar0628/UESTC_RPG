@@ -94,9 +94,10 @@ public sealed class CollisionInteriorIsolationTests
     public void MapWithoutDeclaredOrOpenInteriorsAllowsLegacyEmptySnapshot()
     {
         var map = new MapId("fixture-no-interiors");
-        var context = new BuildContext { Map = Descriptor(map), World = FixtureWorld(open: false), WorldSeed = 1, Catalog = Catalog };
+        var context = new BuildContext { CodeHash = "fixture", WindowNumbering = new((Descriptor(map)).Id, new string('0', 64), []), Map = Descriptor(map), World = FixtureWorld(open: false), WorldSeed = 1, Catalog = Catalog };
         var moduleContext = new BuildContext
         {
+            CodeHash = "fixture",
             Map = context.Map, World = context.World, WorldSeed = 2, Catalog = Catalog,
             SourceInputs = new ReadOnlyDictionary<string, ReadOnlyMemory<byte>>(
                 new Dictionary<string, ReadOnlyMemory<byte>> { ["module.json"] = new byte[] { 1 } }),
@@ -118,7 +119,6 @@ public sealed class CollisionInteriorIsolationTests
         public BakeInputDependencies BakeInputs => BakeInputDependencies.World;
         public BakeInputDependencies CollisionInputs => BakeInputDependencies.World;
         public IReadOnlyList<Claim> Claims => [];
-        public ModuleBudget Budget => new(0, 0, 0);
         public IEnumerable<TileKey> Tiles(BuildContext context) => throw new InvalidOperationException("Collision jobs must not enumerate Tiles.");
         public ContentOutput Build(BuildContext context, TileKey tile, LodLevel lod)
         {
@@ -155,6 +155,7 @@ public sealed class CollisionInteriorIsolationTests
         }));
         return new BuildContext
         {
+            CodeHash = "fixture", WindowNumbering = new((Descriptor(map)).Id, new string('0', 64), []),
             Map = Descriptor(map),
             World = FixtureWorld(open),
             WorldSeed = 1,

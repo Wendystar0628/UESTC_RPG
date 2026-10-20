@@ -14,7 +14,7 @@ public static partial class FurniturePlanner
     // Open entrances: mat, standing open sign and door lamp on the entrance anchor.
     // ---------------------------------------------------------------------------------------------------------
 
-    private static void Entrances(StreetSite site, List<FurnitureItem> items, Func<FeatureId, Aspects, WpId?> claimedBy, SignParams sign)
+    private static void Entrances(StreetSite site, List<FurnitureItem> items, Func<FeatureId, Aspects, string?> claimedBy, SignParams sign)
     {
         var seen = new HashSet<string>(StringComparer.Ordinal);
         foreach (var feature in site.World.Features.Keys.OrderBy(f => f.Value, StringComparer.Ordinal))

@@ -82,7 +82,7 @@ namespace Campus.Arch.Tests
         private static ServiceRegistry DiscoverFixtures()
         {
             var registry = new ServiceRegistry();
-            registry.Discover([typeof(ServiceRegistryTests).Assembly]);
+            registry.Discover([typeof(ServiceRegistryTests).Assembly], _ => "fixture");
             return registry;
         }
 
@@ -106,35 +106,35 @@ namespace Campus.Arch.Tests
     public interface ILifetimeExtra { }
     public interface ILifetimeUnrelated { }
 
-    [KernelService(typeof(ILifetimeFirst), Owner = "WP-00")]
-    [KernelService(typeof(ILifetimeSecond), Owner = "WP-00")]
+    [KernelService(typeof(ILifetimeFirst))]
+    [KernelService(typeof(ILifetimeSecond))]
     public sealed class LifetimeService : ILifetimeFirst, ILifetimeSecond, ILifetimeExtra, ILifetimeUnrelated, IDisposable
     {
         public bool Disposed { get; private set; }
         public void Dispose() => Disposed = true;
     }
 
-    [KernelService(typeof(MapLifetimeService), Owner = "WP-00", Lifetime = RegistrationLifetime.Map)]
+    [KernelService(typeof(MapLifetimeService), Lifetime = RegistrationLifetime.Map)]
     public sealed class MapLifetimeService : IDisposable
     {
         public bool Disposed { get; private set; }
         public void Dispose() => Disposed = true;
     }
 
-    [KernelService(typeof(SharedDependency), Owner = "WP-00")]
+    [KernelService(typeof(SharedDependency))]
     public sealed class SharedDependency : IDisposable
     {
         public void Dispose() => ServiceRegistryTests.DisposalLog.Add("dependency");
     }
 
-    [KernelService(typeof(TransientConsumer), Owner = "WP-00", Lifetime = RegistrationLifetime.Transient)]
+    [KernelService(typeof(TransientConsumer), Lifetime = RegistrationLifetime.Transient)]
     public sealed class TransientConsumer(SharedDependency dependency) : IDisposable
     {
         private readonly SharedDependency _dependency = dependency;
         public void Dispose() { GC.KeepAlive(_dependency); ServiceRegistryTests.DisposalLog.Add("consumer"); }
     }
 
-    [BakeProducer("fixture.bake", Owner = "WP-02a")]
+    [BakeProducer("fixture.bake")]
     public sealed class FixtureBakeProducer : IBakeProducer
     {
         public BakeInputDependencies Inputs(BakeKey key) => BakeInputDependencies.World;
@@ -154,15 +154,15 @@ namespace Campus.Arch.Tests
         public object CreateDefault(NewGameContext context) => throw new NotSupportedException();
     }
 
-    [SaveSection("fixture-weather", Owner = "WP-45a", Scope = SaveScope.Global, Phase = RestorePhase.World, Order = 991)]
+    [SaveSection("fixture-weather", Scope = SaveScope.Global, Phase = RestorePhase.World, Order = 991)]
     public sealed class GlobalWeatherSection : RegistrySaveFixture { }
 
-    [SaveSection("fixture-weather", Owner = "WP-45a", Scope = SaveScope.PerMap, Phase = RestorePhase.World, Order = 992)]
+    [SaveSection("fixture-weather", Scope = SaveScope.PerMap, Phase = RestorePhase.World, Order = 992)]
     public sealed class PerMapWeatherSection : RegistrySaveFixture { }
 }
 
 namespace Campus.Kernel.Stubs.Tests
 {
-    [SaveSection("fixture-weather", Owner = "WP-00", IsStub = true, Scope = SaveScope.Global, Phase = RestorePhase.World, Order = 991)]
+    [SaveSection("fixture-weather", IsStub = true, Scope = SaveScope.Global, Phase = RestorePhase.World, Order = 991)]
     public sealed class GlobalWeatherFallback : Campus.Arch.Tests.RegistrySaveFixture { }
 }

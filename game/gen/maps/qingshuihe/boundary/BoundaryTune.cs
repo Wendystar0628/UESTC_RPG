@@ -16,9 +16,6 @@ namespace Campus.Gen.Maps.Qingshuihe.Boundary;
 /// </summary>
 public static class BoundaryTune
 {
-    public const int BudgetTrianglesL0 = 24_000;
-    public const int BudgetTrianglesL1 = 16_000;
-    public const int BudgetDrawCalls = 12;
 
     /// <summary>Materials (ART-STYLE colour names only, no new names in 30a or 30b).</summary>
     public static class Look

@@ -13,7 +13,7 @@ namespace Campus.Gen.Parts.Circulation;
 /// only, for ramps whose deck is the terrain height field. Collision: one walkable RampCollider over the deck
 /// (none for variation 2, where the height field carries the walker).
 /// </summary>
-[Part(PartCatalog.Ramp, Owner = "WP-11")]
+[Part(PartCatalog.Ramp)]
 public sealed class RampPart() : CirculationPart<RampParams>(new(900, 400))
 {
     private const float StubRun = 0.15f;
@@ -67,7 +67,7 @@ public sealed class RampPart() : CirculationPart<RampParams>(new(900, 400))
 /// Raised platform or landing block: Width × Depth, top at Height, sunk 0.1 m. L0 chamfers its edges.
 /// Collision: a box whose top is walkable.
 /// </summary>
-[Part(PartCatalog.Platform, Owner = "WP-11")]
+[Part(PartCatalog.Platform)]
 public sealed class PlatformPart() : CirculationPart<PanelParams>(new(44, 12))
 {
     private protected override Box3 BoundsOf(PanelParams p) => Centered(p.Width, -S.Sink, p.Height, p.Depth);

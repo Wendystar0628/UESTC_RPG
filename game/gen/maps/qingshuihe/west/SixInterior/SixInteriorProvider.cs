@@ -1,10 +1,11 @@
+using Campus.Gen.Interior.Shell;
+using Campus.Gen.Interior;
 using System.Globalization;
 using System.Numerics;
 using Campus.Contracts;
 using Campus.Contracts.Audio;
 using Campus.Contracts.Parts;
 using Campus.Gen.Geometry;
-using Campus.Gen.Interior;
 using Campus.Gen.Parts.Circulation;
 using Campus.Gen.Parts.Core;
 using Campus.Gen.Parts.Roof.Mep;
@@ -34,9 +35,11 @@ public abstract class SixInteriorProvider : IInteriorProvider, IInteriorCatalogC
     public int Priority => 100;
     public bool Walkable => true;
 
-    public void Configure(IEnumerable<FeatureId> features, IEnumerable<int> openFloors,
-        IReadOnlyDictionary<FeatureId, IReadOnlyList<EntranceDecl>> entrances)
+    public void Configure(InteriorCatalogConfiguration configuration)
     {
+        var (features, openFloors, entrances, buildingType, seals) = configuration;
+        if (buildingType is not null || seals.Count != 0)
+            throw new ArgumentException("This authored provider does not consume generated building configuration or catalog seals.", nameof(configuration));
         _features = features.Distinct().OrderBy(f => f.Value, StringComparer.Ordinal).ToArray();
         _floors = openFloors.Distinct().Order().ToArray();
         _entrances = entrances;
@@ -99,7 +102,7 @@ public abstract class SixInteriorProvider : IInteriorProvider, IInteriorCatalogC
             _ => throw new ArgumentOutOfRangeException(nameof(detail))
         };
         if (!Open(id, storey)) return ContentOutput.Empty;
-        var sink = new SixInteriorGeometry(true);
+        var sink = new InteriorGeometry(ctx.Catalog);
         Compose(ctx, id, storey, sink, full);
         return sink.Finish();
     }
@@ -108,7 +111,7 @@ public abstract class SixInteriorProvider : IInteriorProvider, IInteriorCatalogC
     {
         Require(id);
         if (!Open(id, storey)) return [];
-        var sink = new SixInteriorGeometry(false);
+        var sink = new InteriorGeometry(ctx.Catalog) { Draw = false };
         Compose(ctx, id, storey, sink, false);
         return sink.Colliders;
     }
@@ -165,7 +168,7 @@ public abstract class SixInteriorProvider : IInteriorProvider, IInteriorCatalogC
         return new(id, (short)storey, nodes, edges);
     }
 
-    private static void Compose(BuildContext ctx, FeatureId id, int storey, SixInteriorGeometry sink, bool full)
+    private static void Compose(BuildContext ctx, FeatureId id, int storey, InteriorGeometry sink, bool full)
     {
         var p = SixInteriorPlan.Of(ctx);
         if (id.Value == S.EntityB)
@@ -199,7 +202,7 @@ public abstract class SixInteriorProvider : IInteriorProvider, IInteriorCatalogC
         }
     }
 
-    private static void Formula(SixInteriorGeometry sink, SixInteriorPlan p)
+    private static void Formula(InteriorGeometry sink, SixInteriorPlan p)
     {
         var run = p.FormulaFlightRun;
         var part = new StairOpenPart();
@@ -213,7 +216,7 @@ public abstract class SixInteriorProvider : IInteriorProvider, IInteriorCatalogC
             (p.FormulaLanding + run) * 0.5f), true);
     }
 
-    private static void ReturnStair(SixInteriorGeometry sink, SixInteriorPlan p, bool lower)
+    private static void ReturnStair(InteriorGeometry sink, SixInteriorPlan p, bool lower)
     {
         var frame = p.ReturnFrame;
         var thick = Rules.PartitionThickness;
@@ -237,7 +240,7 @@ public abstract class SixInteriorProvider : IInteriorProvider, IInteriorCatalogC
         if (!lower) sink.Plate(p.ReturnOpening, p.CeilingY, SixInteriorPlan.SlabThickness, WallMaterial);
     }
 
-    private static void Enclose(BuildContext ctx, SixInteriorGeometry sink, SixInteriorPlan p, PolygonRings area,
+    private static void Enclose(BuildContext ctx, InteriorGeometry sink, SixInteriorPlan p, PolygonRings area,
         PolygonRings source, float y, bool gallery)
     {
         foreach (var (a, b, atrium) in p.InteriorEdges(area, source, gallery))
@@ -253,7 +256,7 @@ public abstract class SixInteriorProvider : IInteriorProvider, IInteriorCatalogC
         }
     }
 
-    private static void BridgeSupport(BuildContext ctx, SixInteriorGeometry sink, SixInteriorPlan p)
+    private static void BridgeSupport(BuildContext ctx, InteriorGeometry sink, SixInteriorPlan p)
     {
         var link = SixSite.Plan(ctx.World, S.EntityC, S.LinkBC);
         sink.Support(link, p.GroundY + S.LinkDeck, 0.7f, FootMat.StonePaving);

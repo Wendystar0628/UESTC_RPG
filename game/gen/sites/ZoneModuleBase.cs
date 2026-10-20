@@ -9,33 +9,27 @@ public abstract class ZoneModuleBase : IContentModule
     private readonly Func<IWorldModel, Func<Campus.Contracts.Maps.MapRect, bool>?, IReadOnlyList<ZoneSite>> _sites;
     private readonly Func<IWorldModel, IReadOnlyList<Campus.Contracts.Maps.MapRect>> _ranges;
 
-    protected ZoneModuleBase(IReadOnlyList<ZoneSite> sites, ModuleBudget budget)
+    protected ZoneModuleBase(IReadOnlyList<ZoneSite> sites)
     {
         _sites = (world, includes) => includes is null ? sites : sites.Where(site => site.Ranges(world).Any(includes)).ToArray();
         _ranges = world => sites.SelectMany(site => site.Ranges(world)).ToArray();
-        Budget = budget;
         Claims = sites.SelectMany(site => site.Claims).ToArray();
-        Probes = sites.SelectMany(site => site.Probes).ToArray();
     }
 
     protected ZoneModuleBase(
         Func<IWorldModel, Func<Campus.Contracts.Maps.MapRect, bool>?, IReadOnlyList<ZoneSite>> sites,
         Func<IWorldModel, IReadOnlyList<Campus.Contracts.Maps.MapRect>> ranges,
-        IReadOnlyList<Claim> claims, ModuleBudget budget)
+        IReadOnlyList<Claim> claims)
     {
         _sites = sites;
         _ranges = ranges;
         Claims = claims;
-        Probes = [];
-        Budget = budget;
     }
 
     public virtual BakeInputDependencies BakeInputs => BakeInputDependencies.World;
     public virtual BakeInputDependencies CollisionInputs => BakeInputDependencies.World;
 
     public virtual IReadOnlyList<Claim> Claims { get; }
-    public virtual IReadOnlyList<InspectionProbe> Probes { get; }
-    public ModuleBudget Budget { get; }
 
     public IEnumerable<TileKey> Tiles(BuildContext context)
     {

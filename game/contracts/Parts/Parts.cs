@@ -3,15 +3,11 @@ using Campus.Contracts.Audio;
 
 namespace Campus.Contracts;
 
+public sealed record PartBudget(int L0, int L1);
+
 [AttributeUsage(AttributeTargets.Class, Inherited = false)]
 public sealed class PartAttribute(string id) : RegistrationAttribute(RegistrationKind.Part, id, RegistrationLifetime.Global)
 { }
-[AttributeUsage(AttributeTargets.Property)]
-public sealed class ParamAttribute : Attribute
-{
-    public double Min { get; set; }
-    public double Max { get; set; }
-}
 /// <summary>Parameter-independent part capabilities. The composition boundary freezes this list before workers run.</summary>
 public interface IPartDef
 {

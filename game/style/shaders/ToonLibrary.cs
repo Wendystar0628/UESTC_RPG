@@ -1,6 +1,5 @@
 using Campus.Contracts;
 using Campus.Style.Shaders.Cards;
-using Campus.Kernel.Materials;
 using Campus.Kernel.Renderer;
 using Godot;
 
@@ -11,7 +10,7 @@ namespace Campus.Style.Materials;
 /// 按 <see cref="ToonSpec"/> 取白名单着色器的材质，分配 7 位材质 ID（1–111；0 未分配，112–127 留给 WP-05 的特殊线类），
 /// 生产全局数据纹理 mat_table 与静态 window_cards（经 <see cref="IGlobalDataTextureRegistry"/> 登记，交出释放权）。调色板纹理归 WP-37。
 /// </summary>
-[KernelService(typeof(IToonMaterialProvider), Owner = "WP-04")]
+[KernelService(typeof(IToonMaterialProvider))]
 public sealed class ToonLibrary : IToonMaterialProvider, IDisposable
 {
     public const int FirstId = 1;

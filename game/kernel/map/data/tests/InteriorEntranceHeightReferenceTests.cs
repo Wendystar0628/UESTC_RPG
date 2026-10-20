@@ -27,18 +27,18 @@ public sealed class InteriorEntranceHeightReferenceTests
     [TestCategory(TestReason.Contract)]
     public void ConfigurePreservesAbsoluteButRejectsPadBeforeMutatingProviders()
     {
-        var box = new InteriorProviderScopeTests.FixtureBoxInterior();
-        var providers = new Dictionary<string, IInteriorProvider> { [Provider] = box };
-        AssertThrown(() => InteriorAssembly.Configure(Bytes("pad"), providers)).IsInstanceOf<JsonException>();
-        AssertThat(box.FeatureIds.Count == 0).OverrideFailureMessage("Missing terrain partially configured the provider.").IsTrue();
         foreach (var reference in new string?[] { null, "absolute" })
         {
+            var box = new InteriorProviderScopeTests.FixtureBoxInterior();
+            var providers = new Dictionary<string, IInteriorProvider> { [Provider] = box };
+            AssertThrown(() => InteriorAssembly.Configure(Bytes("pad"), providers)).IsInstanceOf<JsonException>();
+            AssertThat(box.FeatureIds.Count == 0).OverrideFailureMessage("Missing terrain partially configured the provider.").IsTrue();
             var bindings = InteriorAssembly.Configure(Bytes(reference), providers);
             var layout = box.Layout(Context(providers), Feature);
             AssertThat(bindings.Single().AuthoredEntranceCount == 1 && layout.Entrances.Single().Center.Y == .75f &&
                 layout.Entrances.Single().Outside.Y == .25f && layout.Entrances.Single().Inside.Y == .5f).OverrideFailureMessage("The terrain-free configuration moved absolute coordinates.").IsTrue();
+            AssertThrown(() => InteriorAssembly.Configure(Bytes("pad"), providers, null!)).IsInstanceOf<ArgumentNullException>();
         }
-        AssertThrown(() => InteriorAssembly.Configure(Bytes("pad"), providers, null!)).IsInstanceOf<ArgumentNullException>();
     }
 
     [TestCase]
@@ -103,6 +103,8 @@ public sealed class InteriorEntranceHeightReferenceTests
         var closedFeature = new FeatureId("fixture:closed");
         var source = context.World.Features[Feature];
         ((FakeWorld)context.World).Features = ((WorldFeature[])[source, source with { Id = closedFeature }]).ToDictionary(feature => feature.Id);
+        ((FakeWorld)context.World).Interiors = new FakeInteriors(context.World.Interiors.Get(Feature)!,
+            new(closedFeature,Campus.Gen.World.ClosedBuildingStoreys.ClosedBuilding(source with {Id=closedFeature},FlatTerrain.Default),[],false,null,[]));
         var baseline = InteriorAssembly.BuildConfigured(context, bindings, Bytes(null));
         int baselineCalls = probe.Calls;
         probe.Calls = 0;
@@ -150,6 +152,8 @@ public sealed class InteriorEntranceHeightReferenceTests
                 [new("must-not-be-called", [Feature], [1], 0)], Encoding.UTF8.GetBytes(catalog))).IsInstanceOf<JsonException>();
         var source = context.World.Features[Feature];
         ((FakeWorld)context.World).Features = ((WorldFeature[])[source with { Kind = new("water") }]).ToDictionary(feature => feature.Id);
+        // The loaded index contains only features with building footprints.
+        ((FakeWorld)context.World).Interiors = new FakeInteriors();
         AssertThrown(() => InteriorAssembly.BuildConfigured(context, [], Encoding.UTF8.GetBytes(ClosedCatalog()))).IsInstanceOf<JsonException>();
     }
 
@@ -165,13 +169,14 @@ public sealed class InteriorEntranceHeightReferenceTests
         world.Features = ((WorldFeature[])[new WorldFeature(Feature, new("building"), new PolygonGeometry(ring))
         { Bounds = bounds, Height = 8, Storeys = 2 }]).ToDictionary(feature => feature.Id);
         world.Boundary = ring;
+        world.Interiors = new FakeInteriors([new(Feature, providers.Count == 0 ? [new(1,0,4,ring.Outer),new(2,4,4,ring.Outer)] : [], [],false,null,[])]);
         var map = new MapDescriptor(new("height-test"), new("Test", "Test"), MapKind.Outdoor, 1, 1,
             new(0, 0, 32648, new(-64, -64), new(64, 64)), Vector2.Zero, bounds,
             new(new(-64, -64), new(64, 64)), new(.9f, 30, 3000, -28, 2000, 30, 40, 150),
             new(-1, -1), new(0, 0), "spawn", [],
             new(MapTimeRule.Shared, new(17.5, Season.Autumn), new("Test", "Test"), false, "test"),
             new("sky.json", "backdrop.json", []), []);
-        return new BuildContext { Catalog = Campus.Contracts.Tests.PaletteFixture.Catalog, Map = map, World = world, WorldSeed = 1, InteriorProviders = providers };
+        return new BuildContext { CodeHash = "fixture", WindowNumbering = new((map).Id, new string('0', 64), []), Catalog = Campus.Contracts.Tests.PaletteFixture.Catalog, Map = map, World = world, WorldSeed = 1, InteriorProviders = providers };
     }
 
     private sealed class ProbeTerrain : ITerrain

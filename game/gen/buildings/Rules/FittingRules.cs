@@ -19,7 +19,7 @@ public static class FittingRules
     /// </summary>
     public static readonly PanelParams Grille = new(0.95f, 0.8f, 0.36f);
     /// <summary>The outdoor unit inside the niche at its real size (the WP-12 gallery's dormitory unit).</summary>
-    public static readonly EquipmentParams Unit = RoofGallery.DormUnit;
+    public static readonly EquipmentParams Unit = RoofEquipment.DormUnit;
     /// <summary>The unit stands this far from the wall at its back.</summary>
     public const float UnitBackGap = 0.02f;
     /// <summary>Niches in this zone or a finer one (K1, K2) hold their unit at the building's L0; farther out the cage alone, at its far level.</summary>

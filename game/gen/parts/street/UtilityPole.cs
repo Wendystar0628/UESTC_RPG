@@ -16,7 +16,7 @@ namespace Campus.Gen.Parts.Street;
 /// short arm and a cold-white anti-crime lamp at 4.5–5 m (后巷防犯灯, WLD-AMBIENCE), its diffuser self-lit on the street lamp group.
 /// Collision: the pole as a post, Concrete.
 /// </summary>
-[Part(PartCatalog.UtilityPole, Owner = "WP-13")]
+[Part(PartCatalog.UtilityPole)]
 public sealed class UtilityPolePart : IPartDef<ColumnParams>
 {
     public UtilityPolePart() => Lods = Levels.Of<ColumnParams>(Build, LodLevel.L0, LodLevel.L1, LodLevel.L2);

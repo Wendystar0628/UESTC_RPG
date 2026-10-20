@@ -8,14 +8,11 @@ namespace Campus.Gen.Maps.Qingshuihe.CenterEast;
 /// <summary>
 /// Every tunable value of the center-east zone in one place, for review (WF-FLOW): materials as colour names, and
 /// the modelling sizes of each site. Positions, outlines, storeys and heights that world/center-east.json
-/// already holds are read from the world model by the IDs below (D-239); only inspection viewpoints remain here because probes have no world input. Local frames are described per block. Values marked "初值" are starting values awaiting the main
+/// already holds are read from the world model by the IDs below. Review viewpoints come only from map data. Local frames are described per block. Values marked "初值" are starting values awaiting the main
 /// session's call. 21b–21d add their own nested classes after <see cref="Pinxue"/>.
 /// </summary>
 public static class CenterEastTune
 {
-    public const int BudgetTrianglesL0 = 60_000;
-    public const int BudgetTrianglesL1 = 30_000;
-    public const int BudgetDrawCalls = 16;
 
     /// <summary>
     /// Window numbering (contract-29): the light channel (LightChannelCatalog) and window-card type (WLD-INTERIORS: 3 corridor,
@@ -107,8 +104,6 @@ public static class CenterEastTune
     /// </summary>
     public static class Pinxue
     {
-        /// <summary>Design level of the platform (MAP-QSH-TERRAIN): only for probe eye heights, which have no terrain to read.</summary>
-        public const float PlatformY = 1.5f;
 
         /// <summary>
         /// Gate frame (§2.2), read from the bar part (FrameBar): origin at its north-west corner on A's south wall, X south along
@@ -117,13 +112,6 @@ public static class CenterEastTune
         /// the wings' height, the link bridges storeys 2–3.
         /// </summary>
         public const int PassageStoreys = 2, BridgeFromStorey = 2, BridgeToStorey = 3;
-        /// <summary>
-        /// Inspection probes are fixed viewpoints (the module's Probes take no world), so their eyes are written out in world
-        /// (x, z) with the plan direction they look along: Q1 under the beam's forecourt edge looking east at the soffit and
-        /// plaque; Q4 0.5 m off the A hall's ground-floor glazing (door px.a.hall, bearing-216° facade) looking back at it.
-        /// </summary>
-        public static readonly Vector2 Q1Eye = new(160.46f, -64.12f), Q1Look = new(0.9899f, -0.1415f);
-        public static readonly Vector2 Q4Eye = new(142.58f, -87.16f), Q4Look = new(0.5939f, -0.8046f);
         /// <summary>Four square columns, one row on the bar's centre line, three bays with the middle one widest (四柱三间, 初值).</summary>
         public const float ColumnSize = 2.4f, ColumnPlinth = 0.45f;
         public static readonly float[] ColumnX = [2.6f, 13.0f, 24.72f, 35.12f];

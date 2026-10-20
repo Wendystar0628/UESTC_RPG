@@ -93,13 +93,6 @@ public sealed class MainBuildingSite : ZoneSite
 
     public override IReadOnlyList<Claim> Claims { get; } = [new FeatureClaim(new(FrontSteps), Aspects.Massing | Aspects.Facade | Aspects.Roof)];
 
-    public override IReadOnlyList<InspectionProbe> Probes =>
-    [
-        // Q1: on the portico platform beside the door axis, looking at the building; Q4: 3 m west of the platform's plinth (stands, not map data).
-        Probe("Q1", B2, new(-346.73f, M.FloorY + WalkRules.StandingEye, 504.50f), new(0.5904f, -0.8071f), 4f, 6f),
-        Probe("Q4", B2, new(-367.72f, WalkRules.StandingEye, 482.70f), new(0.5904f, -0.8071f), -25f, 0.5f),
-    ];
-
     public override IEnumerable<(FeatureId Feature, WindowGridSpec Grid)> WindowGrids(IWorldModel world)
     {
         var g = LayoutOf(world);

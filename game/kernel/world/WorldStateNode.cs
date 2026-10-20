@@ -2,13 +2,13 @@ using Campus.Contracts;
 using Campus.Contracts.Maps;
 using Campus.Contracts.Quality;
 using Godot;
-using AppBoot = Campus.Kernel.Boot.Boot;
+using Campus.Contracts.Startup;
 using Services = Campus.Kernel.Registry.Kernel;
 
 namespace Campus.Kernel.World;
 
 /// <summary>The sole frame driver of world time. Weather Step stays inside this ordered step.</summary>
-[KernelNode("world-state", Owner = "WP-34")]
+[KernelNode("world-state")]
 [QualityResponsive(Reads = new[] { QualityKnob.FrameCap })]
 public partial class WorldStateNode : Node, IMapAware, IQualityAware
 {
@@ -17,10 +17,12 @@ public partial class WorldStateNode : Node, IMapAware, IQualityAware
     private IMotionSettings? _motion;
     private ulong _transitionFrame = ulong.MaxValue;
     private int _stepRate = WorldTime.DefaultStepRate;
+    private bool _freezeAnimation;
 
     public override void _Ready()
     {
         ProcessPriority = FramePriority.WorldState;
+        _freezeAnimation = Services.Get<BootRunOptions>().FreezeAnimation;
         _world = Services.Get<IWorldFrame>();
         _transition = Services.Get<IWorldTransitionPresentation>();
         _motion = Services.Get<IMotionSettings>();
@@ -56,7 +58,7 @@ public partial class WorldStateNode : Node, IMapAware, IQualityAware
     {
         if (_world is null) return;
         _world.SetStepRate(_stepRate);
-        _world.Tick(delta, AppBoot.Options.FreezeAnimation);
+        _world.Tick(delta, _freezeAnimation);
         WriteGlobals();
     }
 

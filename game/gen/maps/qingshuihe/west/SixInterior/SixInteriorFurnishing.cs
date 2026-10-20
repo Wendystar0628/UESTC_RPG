@@ -1,3 +1,5 @@
+using Campus.Gen.Geometry;
+using Campus.Gen.Interior;
 using System.Numerics;
 using Campus.Contracts;
 using Campus.Contracts.Parts;
@@ -18,7 +20,7 @@ internal static class SixInteriorFurnishing
     private static readonly string[] Equations = ["E = mc²", "F = ma", "U = IR", "P = UI", "a² + b² = c²"];
     private static readonly ToonSpec Ink = PartMaterials.Grille("glass");
 
-    public static void Hall(BuildContext ctx, SixInteriorGeometry sink, SixInteriorPlan p)
+    public static void Hall(BuildContext ctx, InteriorGeometry sink, SixInteriorPlan p)
     {
         var rise = p.StairRise / 30;
         var tread = p.FormulaFlightRun / 15;
@@ -61,7 +63,7 @@ internal static class SixInteriorFurnishing
             wall.At(length * 0.5f, p.UpperY - WalkRules.DefaultDoorHeight * 0.5f, -0.11f));
     }
 
-    public static void PublicBay(BuildContext ctx, SixInteriorGeometry sink, SixInteriorPlan p)
+    public static void PublicBay(BuildContext ctx, InteriorGeometry sink, SixInteriorPlan p)
     {
         var data = ctx.World.Feature(S.EntityC).RequiredProps().GetProperty("interior").GetProperty("publicB");
         var a = new Vector2(data[2][0].GetSingle(), data[2][1].GetSingle());
@@ -72,7 +74,7 @@ internal static class SixInteriorFurnishing
         sink.Part(new ExitSignPart(), new SignParams(0.4f, 0.15f, 0.04f), frame.At(length * 0.5f, p.UpperY + WalkRules.DefaultDoorHeight, -0.13f));
     }
 
-    private static void Text(BuildContext ctx, SixInteriorGeometry sink, string text, float height,
+    private static void Text(BuildContext ctx, InteriorGeometry sink, string text, float height,
         ToonSpec ink, ToonSpec background, Matrix4x4 at)
     {
         var atlas = new SceneTextAtlas(ctx.GlobalInputs.Require(SceneTextInputs.AtlasKey));

@@ -3,7 +3,7 @@ using Campus.Contracts.Audio;
 
 namespace Campus.Kernel.Stubs.AudioUi;
 
-[KernelService(typeof(IAmbienceService), Owner = "WP-00", IsStub = true)]
+[KernelService(typeof(IAmbienceService), IsStub = true)]
 public sealed class AmbienceServiceStub : IAmbienceService
 {
     private int _nextHandle;
@@ -15,7 +15,7 @@ public sealed class AmbienceServiceStub : IAmbienceService
     public void RemoveDynamic(int handle) { }
 }
 
-[KernelService(typeof(IFoleyService), Owner = "WP-00", IsStub = true)]
+[KernelService(typeof(IFoleyService), IsStub = true)]
 public sealed class FoleyServiceStub : IFoleyService
 {
     public FoleyStats Stats => default;
@@ -24,7 +24,7 @@ public sealed class FoleyServiceStub : IFoleyService
     public void SetLoop(FoleyLoop loop, float level01, float param01) { }
 }
 
-[KernelService(typeof(IGroundCover), Owner = "WP-00", IsStub = true)]
+[KernelService(typeof(IGroundCover), IsStub = true)]
 public sealed class GroundCoverStub : IGroundCover
 {
     public GroundCover Sample(float x, float z) => default;

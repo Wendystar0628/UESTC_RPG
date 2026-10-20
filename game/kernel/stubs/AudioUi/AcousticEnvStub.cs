@@ -4,7 +4,7 @@ using Campus.Contracts.Audio;
 
 namespace Campus.Kernel.Stubs.AudioUi;
 
-[KernelService(typeof(IAcousticEnv), Owner = "WP-00", IsStub = true)]
+[KernelService(typeof(IAcousticEnv), IsStub = true)]
 public sealed class AcousticEnvStub(IMediumState medium, IAudioVoiceService voices) : IAcousticEnv
 {
     private bool _wasIndoor;

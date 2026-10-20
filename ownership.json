@@ -2,6 +2,10 @@
   "version": 1,
   "rules": [
     {
+      "pattern": "game/testing/**",
+      "owner": "WP-00"
+    },
+    {
       "pattern": "game/style/shaders/sky_params.gdshaderinc",
       "owner": "WP-40"
     },

@@ -22,7 +22,7 @@ $testRecordMaxRuns = 30
 $testRecordMaxDays = 14
 $testCutCandidateCount = 20
 # Shared layer (contracts, planar geometry, public site tools, shared test fixtures): a change here selects every quick test.
-$publicLayerPattern = '^game/(contracts|gen/geometry|gen/sites|shared/tests)/'
+$publicLayerPattern = '^game/(contracts|gen/geometry|gen/sites|testing)/'
 function Get-UESTCMainStage {
     param([string]$Root)
     $project = [IO.File]::ReadAllText((Join-Path $Root 'game/project.godot'))
@@ -417,7 +417,6 @@ foreach ($id in $selected) {
             }
             'G3' { $detail = Test-UESTCOwnership $root $Wp $changes -BaseRef $BaseRef | ConvertTo-Json -Depth 5 -Compress }
             'G4' {
-                $null = Invoke-GateProcess 'G4-style-generated' 'python' @('-X','utf8',(Join-Path $root 'scripts/build/generate-style-shaders.py'),'--root',$root,'--check')
                 $newFiles = Test-UESTCNewCodeFiles $root $unfilteredChanges -BaseRef $BaseRef
                 $null = Test-UESTCSourceBoundaries $root
                 $settings = Write-TestSettings

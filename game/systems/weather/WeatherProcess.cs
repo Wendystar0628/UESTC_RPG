@@ -6,8 +6,8 @@ namespace Campus.Systems.Weather;
 /// Automatic weather is a pure function of (seed, map, world time); see <see cref="WeatherTimeline"/>. This service keeps the
 /// world-level settings on top of it (manual choice, pin, quiet window, wetness residue), the visual blend, and the save mapping.
 /// </summary>
-[KernelService(typeof(IWeatherProcess), Owner = "WP-45a")]
-[KernelService(typeof(WeatherProcess), Owner = "WP-45a")]
+[KernelService(typeof(IWeatherProcess))]
+[KernelService(typeof(WeatherProcess))]
 public sealed class WeatherProcess(IWeatherProfileSource profiles, IMotionSettings? motion = null) : IWeatherProcess
 {
     private WeatherSettings _set = new();

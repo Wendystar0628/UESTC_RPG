@@ -9,7 +9,7 @@ namespace Campus.Gen.Vegetation;
 
 /// <summary>Fixed tile payloads from the original source and its exact prepared context.</summary>
 
-[BakeProducer("vegetation.runtime", Owner = "WP-23")]
+[BakeProducer("vegetation.runtime")]
 public sealed class VegetationBakeProducer : IBakeProducer, IBakeContentConsumer
 {
     public BakePayloadClass PayloadClass => BakePayloadClass.Product;

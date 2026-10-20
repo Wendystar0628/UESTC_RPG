@@ -17,7 +17,7 @@ namespace Campus.Kernel.Bake.Tests;
 public sealed class BakeWindowTests
 {
     private static readonly FeatureId Feature = new("fixture:facade");
-    private static readonly WpId Owner = new("WP-16");
+    private const string Owner = "WP-16";
 
     [TestCase]
     [TestCategory(TestReason.Contract)]
@@ -32,11 +32,12 @@ public sealed class BakeWindowTests
         {
             var context = new BuildContext
             {
+                CodeHash = "fixture", WindowNumbering = new((Map()).Id, new string('0', 64), []),
                 Catalog = Campus.Contracts.Tests.PaletteFixture.Catalog,
                 World = World(items),
                 Map = Map(),
                 WorldSeed = 9,
-                ClaimedBy = (feature, aspect) => aspect == Aspects.Facade ? new WpId(feature.Value == "fixture:a" ? "WP-16" : "WP-21") : null
+                ClaimedBy = (feature, aspect) => aspect == Aspects.Facade ? (feature.Value == "fixture:a" ? "source:a" : "source:z") : null
             };
             AssertThrown(() => BakeWindowPreparation.Prepare(context, new Dictionary<string, ContentModuleInput>()))
                 .IsInstanceOf<InvalidDataException>();
@@ -55,7 +56,7 @@ public sealed class BakeWindowTests
         if (provider.Calls != 0) throw new InvalidOperationException("An incomplete declaration reached the allocator.");
         source.Layouts = [new(Feature, [])];
         var result = BakeWindowPreparation.Prepare(context, modules);
-        if (result.Snapshot!.WindowCount != 0 || provider.Calls != 1 || provider.Layouts!.Single().Grids.Count != 0 ||
+        if (result.Snapshot.WindowCount != 0 || provider.Calls != 1 || provider.Layouts!.Single().Grids.Count != 0 ||
             !ReferenceEquals(result.Snapshot, source.SeenContext!.WindowNumbering))
             throw new InvalidOperationException("An explicit empty layout was lost or not shared with metadata.");
         // Source/Provider Tiles, Build and Collide throw; this entire two-phase path must remain geometry-free.
@@ -67,7 +68,7 @@ public sealed class BakeWindowTests
     {
         var source = new Source { Layouts = [new(Feature, [])] };
         var provider = new Provider(Snapshot([]));
-        AssertThrown(() => BakeWindowPreparation.Prepare(Context(new WpId("WP-18")), Modules(source, provider))).IsInstanceOf<InvalidDataException>();
+        AssertThrown(() => BakeWindowPreparation.Prepare(Context("different-module"), Modules(source, provider))).IsInstanceOf<InvalidDataException>();
         AssertThrown(() => BakeWindowPreparation.Prepare(Context(claimed: false), Modules(source, provider))).IsInstanceOf<InvalidDataException>();
         source.Layouts = [new(new("fixture:absent"), [])];
         AssertThrown(() => BakeWindowPreparation.Prepare(Context(), Modules(source, provider))).IsInstanceOf<InvalidDataException>();
@@ -89,20 +90,26 @@ public sealed class BakeWindowTests
 
     [TestCase]
     [TestCategory(TestReason.Contract)]
-    public void ProviderMustBeUniqueAndMapCorrectExceptForWindowlessLegacyFixture()
+    public void ProviderMustBeUniqueAndMapCorrectWithExplicitWindowlessAllocation()
     {
         var source = new Source { Layouts = [new(Feature, [])] };
         var modules = new Dictionary<string, ContentModuleInput>(StringComparer.Ordinal) { ["source"] = new(source, "source-code", Owner, false) };
         AssertThrown(() => BakeWindowPreparation.Prepare(Context(), modules)).IsInstanceOf<InvalidDataException>();
-        modules.Add("provider-a", new(new Provider(Snapshot([])), "a-code", new("WP-14"), true));
-        modules.Add("provider-b", new(new Provider(Snapshot([])), "b-code", new("WP-14"), true));
+        modules.Add("provider-a", new(new Provider(Snapshot([])), "a-code", "WP-14", true));
+        modules.Add("provider-b", new(new Provider(Snapshot([])), "b-code", "WP-14", true));
         AssertThrown(() => BakeWindowPreparation.Prepare(Context(), modules)).IsInstanceOf<InvalidDataException>();
         AssertThrown(() => BakeWindowPreparation.Prepare(Context(), Modules(source,
             new Provider(new(new("another-map"), new string('a', 64), []))))).IsInstanceOf<InvalidDataException>();
-        var empty = new BuildContext { Catalog = Campus.Contracts.Tests.PaletteFixture.Catalog, World = World([]), Map = Map(), WorldSeed = 9 };
-        if (BakeWindowPreparation.Prepare(empty, new Dictionary<string, ContentModuleInput>()).Snapshot is not null)
-            throw new InvalidOperationException("A windowless legacy fixture unexpectedly acquired an allocation.");
-        var building = new BuildContext { Catalog = Campus.Contracts.Tests.PaletteFixture.Catalog, World = World([new(Feature, new("building"), new PointGeometry(Vector3.Zero))]), Map = Map(), WorldSeed = 9 };
+        var empty = new BuildContext { CodeHash = "fixture", WindowNumbering = new((Map()).Id, new string('0', 64), []), Catalog = Campus.Contracts.Tests.PaletteFixture.Catalog, World = World([]), Map = Map(), WorldSeed = 9 };
+        if (!ReferenceEquals(BakeWindowPreparation.Prepare(empty, new Dictionary<string, ContentModuleInput>()).Snapshot, empty.WindowNumbering))
+            throw new InvalidOperationException("A windowless map lost its explicit empty allocation.");
+        var lighting = new LightInventoryDocument(empty.Map.Id, [], [], [], EmptyNightlight()) { WindowNumbering = empty.WindowNumbering };
+        var resident = new BakeResidentData(new(lighting, new(empty.Map.Id, [])), new([], []), [], [],
+            new(new Dictionary<string, IReadOnlyList<TileKey>>(), []), []);
+        BakeMapMetadataBuilder.ValidateResident(resident, empty.Map.Id, new Dictionary<string, ContentModuleInput>(), []);
+        AssertThrown(() => BakeMapMetadataBuilder.ValidateResident(resident with { Metadata = resident.Metadata with { Lighting = lighting with { WindowNumbering = null } } },
+            empty.Map.Id, new Dictionary<string, ContentModuleInput>(), [])).IsInstanceOf<InvalidDataException>();
+        var building = new BuildContext { CodeHash = "fixture", WindowNumbering = new((Map()).Id, new string('0', 64), []), Catalog = Campus.Contracts.Tests.PaletteFixture.Catalog, World = World([new(Feature, new("building"), new PointGeometry(Vector3.Zero))]), Map = Map(), WorldSeed = 9 };
         AssertThrown(() => BakeWindowPreparation.Prepare(building, new Dictionary<string, ContentModuleInput>())).IsInstanceOf<InvalidDataException>();
     }
 
@@ -157,6 +164,7 @@ public sealed class BakeWindowTests
         var partLods = new PartLodCatalog([new(new PartId("fixture.part"), new BakeFixturePart())]);
         var context = new BuildContext
         {
+            CodeHash = "fixture", WindowNumbering = new((baseline.Map).Id, new string('0', 64), []),
             Catalog = Campus.Contracts.Tests.PaletteFixture.Catalog,
             World = baseline.World,
             Map = baseline.Map,
@@ -176,9 +184,9 @@ public sealed class BakeWindowTests
         {
             reads++;
             var prepared = BakeWindowPreparation.Prepare(context, modules);
-            return new(9, context.SourceInputs, [], context.InteriorProviders, prepared);
+            return new(9, context.SourceInputs, [], context.InteriorProviders, prepared, []);
         });
-        Func<FeatureId, Aspects, WpId?> claimLookup = (feature, aspect) => claims.Value.ClaimedBy(feature, aspect);
+        Func<FeatureId, Aspects, string?> claimLookup = (feature, aspect) => claims.Value.ClaimedBy(feature, aspect);
         var map = new BakeService.MapBuild(mapContext, modules, new Dictionary<string, BakeService.Interior>(), [], null!, claims, claimLookup, data,
             context.GlobalInputs, context.GroundMaskContributors, partLods, context.Catalog);
         AssertThrown(() => map.GetPreparedContext(mapContext, "source")).IsInstanceOf<InvalidOperationException>();
@@ -203,7 +211,7 @@ public sealed class BakeWindowTests
             !ReferenceEquals(a.SourceInputs, producer.SourceInputs) || !ReferenceEquals(a.WindowNumbering, producer.WindowNumbering) ||
             !ReferenceEquals(a.GlobalInputs, producer.GlobalInputs) || !ReferenceEquals(a.GroundMaskContributors, producer.GroundMaskContributors) ||
             !ReferenceEquals(a.PartLods, producer.PartLods) || producer.CodeHash != "producer-code" ||
-            a.CodeHash != "source-code" || b.CodeHash != "provider-code" || a.ClaimedBy(Feature, Aspects.Facade) != Owner ||
+            a.CodeHash != "source-code" || b.CodeHash != "provider-code" || a.ClaimedBy(Feature, Aspects.Facade) != "source" ||
             !ReferenceEquals(a.GlobalInputs, globals) || !ReferenceEquals(b.GlobalInputs, globals) ||
             !ReferenceEquals(a.GroundMaskContributors, contributors) || !ReferenceEquals(b.GroundMaskContributors, contributors) ||
             !ReferenceEquals(a.PartLods, partLods) || !ReferenceEquals(b.PartLods, partLods) ||
@@ -282,7 +290,7 @@ public sealed class BakeWindowTests
         var map = new BakeService.MapBuild(mapContext, new Dictionary<string, ContentModuleInput>(),
             new Dictionary<string, BakeService.Interior>(), [new("cancelled", producer, "code")], null!,
             new(() => new(context.World, [])), (_, _) => null, new(() => new(9, snapshot.Entries, [],
-                new Dictionary<string, IInteriorProvider>(), new(null, new([], [])))),
+                new Dictionary<string, IInteriorProvider>(), new(context.WindowNumbering, new([], [])), [])),
             context.GlobalInputs, context.GroundMaskContributors, new PartLodCatalog([]), context.Catalog);
         var lighting = new LightInventoryDocument(context.Map.Id, [], [], [], EmptyNightlight())
             { WindowNumbering = map.Data.Value.Windows.Snapshot };
@@ -371,18 +379,19 @@ public sealed class BakeWindowTests
     private static Dictionary<string, ContentModuleInput> Modules(Source source, Provider provider) => new(StringComparer.Ordinal)
     {
         ["source"] = new(source, "source-code", Owner, false),
-        ["provider"] = new(provider, "provider-code", new("WP-14"), true)
+        ["provider"] = new(provider, "provider-code", "WP-14", true)
     };
     private static WindowNumberingSnapshot Snapshot(IReadOnlyList<WindowAllocation> allocations) => new(Map().Id, new string('a', 64), allocations);
     private static WindowDecl Window(int id) => new(id, 0, 2, new("window.general"), new(-100 + id, 5, 50), Vector3.UnitX, Vector3.UnitY, 1, 1);
-    private static BuildContext Context(WpId? owner = null, bool claimed = true) => new()
+    private static BuildContext Context(string? module = null, bool claimed = true) => new()
     {
+        CodeHash = "fixture", WindowNumbering = new((Map()).Id, new string('0', 64), []),
         Catalog = Campus.Contracts.Tests.PaletteFixture.Catalog,
         World = World([new(Feature, new("poi"), new PointGeometry(Vector3.Zero))]),
         Map = Map(),
         WorldSeed = 9,
         ClaimedBy = (feature, aspect) =>
-            claimed && feature == Feature && aspect == Aspects.Facade ? owner ?? Owner : null
+            claimed && feature == Feature && aspect == Aspects.Facade ? module ?? "source" : null
     };
     private static MapDescriptor Map() => new(new("fixture"), new("Fixture", "Fixture"), MapKind.Outdoor, 1, 1,
         new(0, 0, 32648, Vector2.Zero, new(64, 64)), new(32, 32), new(Vector3.Zero, new(64, 64, 64)),
@@ -396,7 +405,6 @@ public sealed class BakeWindowTests
         public bool PreparingDirectory { get; set; }
         public int TileCalls { get; private set; }
         public IReadOnlyList<Claim> Claims => [];
-        public ModuleBudget Budget => new(0, 0, 0);
         public virtual IEnumerable<TileKey> Tiles(BuildContext ctx)
         {
             if (!PreparingDirectory) throw new InvalidOperationException("Only explicit directory preparation may call Tiles.");
@@ -430,8 +438,9 @@ public sealed class BakeWindowTests
         public WindowNumberingSnapshot PrepareWindowNumbering(BuildContext prepass, IReadOnlyList<ClaimedWindowLayout> layouts)
         {
             Calls++; Layouts = layouts; SeenPartLods = prepass.PartLods;
-            if (prepass.WindowNumbering is not null || prepass.CodeHash != "provider-code")
-                throw new InvalidOperationException("Provider prepass has a final snapshot or the wrong code identity.");
+            if (prepass.WindowNumbering.Map != prepass.Map.Id || prepass.WindowNumbering.Allocations.Count != 0 ||
+                prepass.WindowNumbering.NextId != 0 || prepass.CodeHash != "provider-code")
+                throw new InvalidOperationException("Provider prepass lacks this map's explicit empty snapshot or has the wrong code identity.");
             return snapshot; // A fixed protocol fixture, never a second allocation implementation.
         }
     }

@@ -133,7 +133,7 @@ public sealed class MuseumShellTests
         var tile = TileGrid.At(museum.Anchor, LodLevel.L3);
         AssertThat(tile == TileGrid.At(library.Anchor, LodLevel.L3)).OverrideFailureMessage("library and museum share an L3 cell").IsTrue();
         var numbering = Numbering(museum.Columns, library.Columns);
-        var ctx = new BuildContext { World = world, Map = null!, WorldSeed = 1u, Catalog = palette ?? Campus.Contracts.Tests.PaletteFixture.Catalog, WindowNumbering = numbering, PartLods = PartLodFixture.Catalog };
+        var ctx = new BuildContext { CodeHash = "fixture", World = world, Map = null!, WorldSeed = 1u, Catalog = palette ?? Campus.Contracts.Tests.PaletteFixture.Catalog, WindowNumbering = numbering, PartLods = PartLodFixture.Catalog };
         var module = new CoreModule();
         foreach (var lod in new[] { LodLevel.L3, LodLevel.L4 })
         {

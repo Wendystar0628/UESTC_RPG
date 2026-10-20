@@ -253,42 +253,42 @@ public abstract class WindowPart(PartBudget budget) : OpeningPart<WindowParams>(
 }
 
 /// <summary>平开窗：side-hung sash in the even columns, fixed lights between, a fixed transom light when Rows ≥ 2.</summary>
-[Part(PartCatalog.WindowCasement, Owner = "WP-10")]
+[Part(PartCatalog.WindowCasement)]
 public sealed class CasementWindowPart() : WindowPart(new(480, 40))
 {
     private protected override WindowType Type => WindowType.Casement;
 }
 
 /// <summary>带形窗：sliding pairs between fin mullions; a fixed top row when Rows ≥ 2.</summary>
-[Part(PartCatalog.WindowRibbon, Owner = "WP-10")]
+[Part(PartCatalog.WindowRibbon)]
 public sealed class RibbonWindowPart() : WindowPart(new(640, 60))
 {
     private protected override WindowType Type => WindowType.Ribbon;
 }
 
 /// <summary>竖缝窗：deep, wide-faced frame; a top-hung sash in the middle light when Rows ≥ 2.</summary>
-[Part(PartCatalog.WindowSlit, Owner = "WP-10")]
+[Part(PartCatalog.WindowSlit)]
 public sealed class SlitWindowPart() : WindowPart(new(400, 40))
 {
     private protected override WindowType Type => WindowType.Slit;
 }
 
 /// <summary>走廊侧高窗：top-hung lights.</summary>
-[Part(PartCatalog.WindowHigh, Owner = "WP-10")]
+[Part(PartCatalog.WindowHigh)]
 public sealed class HighWindowPart() : WindowPart(new(440, 40))
 {
     private protected override WindowType Type => WindowType.High;
 }
 
 /// <summary>观察窗：fixed lights in a slim frame.</summary>
-[Part(PartCatalog.WindowObservation, Owner = "WP-10")]
+[Part(PartCatalog.WindowObservation)]
 public sealed class ObservationWindowPart() : WindowPart(new(240, 40))
 {
     private protected override WindowType Type => WindowType.Observation;
 }
 
 /// <summary>服务窗口：sliding pair over a counter shelf that runs through the wall.</summary>
-[Part(PartCatalog.WindowService, Owner = "WP-10")]
+[Part(PartCatalog.WindowService)]
 public sealed class ServiceWindowPart() : WindowPart(new(460, 60))
 {
     private protected override WindowType Type => WindowType.Service;

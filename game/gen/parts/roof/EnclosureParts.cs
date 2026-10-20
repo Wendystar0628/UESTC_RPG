@@ -12,7 +12,7 @@ namespace Campus.Gen.Parts.Roof;
 /// <see cref="Along"/> builds a whole enclosure ring with mitred boards and corner posts.
 /// Collision is a barrier wall for enclosures on the ground; on roofs the fence is visual only and placers leave it out.
 /// </summary>
-[Part(PartCatalog.EquipmentFence, Owner = "WP-12")]
+[Part(PartCatalog.EquipmentFence)]
 public sealed class EquipmentFencePart : IPartDef<RailingParams>
 {
     private const float CapOverhang = 0.015f;
@@ -113,7 +113,7 @@ public sealed class EquipmentFencePart : IPartDef<RailingParams>
 /// (wall at +Z, front at −Z), Height the edge band height. SlopeDeg (0–15) drops the front about the wall line.
 /// Variation ≥ 1 adds two tie rods to the wall.
 /// </summary>
-[Part(PartCatalog.Canopy, Owner = "WP-12")]
+[Part(PartCatalog.Canopy)]
 public sealed class CanopyPart : IPartDef<RoofParams>
 {
     private const float MaxSlope = 15f;
@@ -198,7 +198,7 @@ public sealed class CanopyPart : IPartDef<RoofParams>
 /// The ridge runs along X. SlopeDeg 0 takes the default pitch; pitches stay under 35° (outline crease band) and the
 /// rise is capped so the whole skylight fits in Height.
 /// </summary>
-[Part(PartCatalog.Skylight, Owner = "WP-12")]
+[Part(PartCatalog.Skylight)]
 public sealed class SkylightPart : IPartDef<RoofParams>
 {
     public SkylightPart() => Lods = Levels.Of<RoofParams>(Build, LodLevel.L0, LodLevel.L1, LodLevel.L2, LodLevel.L3);

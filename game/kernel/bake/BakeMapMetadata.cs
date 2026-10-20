@@ -13,8 +13,8 @@ internal sealed record BakeResidentData(BakeMapMetadata Metadata, WindowMetadata
     BakeService.InteriorCoverage[] Coverage, InteriorLayout[] Layouts, PreparedBakeTiles Directory, TileKey[] TerrainPoints);
 
 /// <summary>Runtime read-only inventory; map preparation publishes all three immutable tables together.</summary>
-[KernelService(typeof(BakeLightInventory), Owner = "WP-02a")]
-[KernelService(typeof(ILightInventory), Owner = "WP-02a")]
+[KernelService(typeof(BakeLightInventory))]
+[KernelService(typeof(ILightInventory))]
 public sealed class BakeLightInventory : ILightInventory
 {
     private LightInventoryDocument _current = new(default, [], [], [], new([], ReadOnlyMemory<float>.Empty, ReadOnlyMemory<float>.Empty, 0, 0));
@@ -70,7 +70,7 @@ internal static class BakeMapMetadataBuilder
             foreach (var feature in binding.FeatureIds.OrderBy(feature => feature.Value, StringComparer.Ordinal))
             {
                 if (!map.Active) throw new OperationCanceledException("Map unloaded while preparing interior metadata.");
-                var layout = InteriorAssembly.ValidatedLayout(interior.Value, binding, context, feature);
+                var layout = map.InteriorLayouts[feature];
                 foreach (var entrance in layout.Entrances)
                 {
                     var item = new BakedEntrance(id, entrance);
@@ -106,15 +106,18 @@ internal static class BakeMapMetadataBuilder
             resident.Directory.Modules.Count != modules.Count || modules.Keys.Any(id => !resident.Directory.Modules.ContainsKey(id)))
             throw new InvalidDataException("Incomplete resident metadata.");
         Validate(resident.Metadata.Lighting, resident.Metadata.Entrances);
-        BakeWindowPreparation.ValidateMetadata(resident.Windows, resident.Metadata.Lighting.WindowNumbering);
-        BakeWindowPreparation.ValidateMetadata(new(resident.Metadata.Lighting.Facades, resident.Metadata.Lighting.Windows), resident.Metadata.Lighting.WindowNumbering);
+        var snapshot = resident.Metadata.Lighting.WindowNumbering
+            ?? throw new InvalidDataException("Resident metadata has no window numbering snapshot.");
+        BakeWindowPreparation.ValidateMetadata(resident.Windows, snapshot);
+        BakeWindowPreparation.ValidateMetadata(new(resident.Metadata.Lighting.Facades, resident.Metadata.Lighting.Windows), snapshot);
         foreach (var pair in resident.Directory.Modules) BakeService.MapBuild.ValidateTiles(pair.Key, pair.Value);
         BakeService.MapBuild.ValidateAuxiliary(resident.Directory.Auxiliary, map, modules, producers);
     }
 
     private static void Validate(LightInventoryDocument lights, EntranceInventoryDocument doors)
     {
-        if (lights.Lamps is null || lights.Facades is null || lights.Windows is null || doors.Entrances is null ||
+        if (lights.WindowNumbering is not { } snapshot || snapshot.Map != lights.Map ||
+            lights.Lamps is null || lights.Facades is null || lights.Windows is null || doors.Entrances is null ||
             lights.Lamps.Count > 100000 || lights.Facades.Count > 100000 || lights.Windows.Count > 100000 || doors.Entrances.Count > 100000)
             throw new InvalidDataException("Invalid resident metadata collection.");
         foreach (var lamp in lights.Lamps)
@@ -125,7 +128,7 @@ internal static class BakeMapMetadataBuilder
             catalog.Lamps.Count > 0 && catalog.LampTable.Length != catalog.Lamps.Count * 8 ||
             catalog.Lamps.Count == 0 && catalog.LampTable.Length is not (0 or 8) ||
             catalog.LampGrid.Length != (long)catalog.GridWidth * catalog.GridHeight * 4 ||
-            lights.WindowNumbering?.WindowCount > 0 && catalog.WindowThresholds.Length != WindowNumberingSnapshot.Capacity ||
+            snapshot.WindowCount > 0 && catalog.WindowThresholds.Length != WindowNumberingSnapshot.Capacity ||
             catalog.Lamps.Count > 0 && (catalog.GridWidth == 0 || catalog.GridHeight == 0))
             throw new InvalidDataException("Missing or invalid resident nightlight catalog.");
         foreach (var lamp in catalog.Lamps)

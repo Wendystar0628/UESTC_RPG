@@ -69,7 +69,7 @@ public static class BuildInputAssembly
         var entries = RegistrationDiscovery.ForMap(registrations, map.Value);
         var modules = RegistrationDiscovery.Query<IContentModule>(entries, RegistrationKind.Content).ToDictionary(entry => entry.Id,
             entry => new ContentModuleInput((IContentModule)create(entry.Type), codeHash(entry.Type),
-                new WpId(entry.Owner), entry.Map is null), StringComparer.Ordinal);
+                entry.Owner, entry.Map is null), StringComparer.Ordinal);
         var interiors = RegistrationDiscovery.Query<IInteriorProvider>(entries, RegistrationKind.Interior).ToDictionary(entry => entry.Id,
             entry => (IInteriorProvider)create(entry.Type), StringComparer.Ordinal);
         var interiorCodeHashes = RegistrationDiscovery.Query<IInteriorProvider>(entries, RegistrationKind.Interior).ToDictionary(entry => entry.Id,

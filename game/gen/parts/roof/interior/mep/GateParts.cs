@@ -12,7 +12,7 @@ namespace Campus.Gen.Parts.Roof.Mep;
 /// lane on two hinge blocks, green. 2: a flap gate, two slots for retracted flaps, a red indicator (closed). The indicator is a plain
 /// colour here; the always-on glow is the lamp table's (WLD-INTERIORS-ACCESS). Floor-standing: one prop box.
 /// </summary>
-[Part(PartCatalog.Turnstile, Owner = "WP-12")]
+[Part(PartCatalog.Turnstile)]
 public sealed class TurnstilePart() : MepPart<EquipmentParams>(new(1000, 200))
 {
     private const float Side = 0.03f;
@@ -66,7 +66,7 @@ public sealed class TurnstilePart() : MepPart<EquipmentParams>(new(1000, 200))
 /// doors with louvres low and an indicator panel with three lamps above. 1: three narrow doors with a dark meter window each. 2: one
 /// large dark door with hinges and a red warning plate. Floor-standing: one prop box.
 /// </summary>
-[Part(PartCatalog.Switchgear, Owner = "WP-12")]
+[Part(PartCatalog.Switchgear)]
 public sealed class SwitchgearPart() : MepPart<EquipmentParams>(new(1100, 220))
 {
     protected override Vector3 Minimum => new(0.5f, 1.2f, 0.4f);

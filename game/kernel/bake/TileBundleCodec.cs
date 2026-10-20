@@ -7,7 +7,7 @@ using Campus.Contracts.Bake;
 
 namespace Campus.Kernel.Bake;
 
-/// <summary>TBIN v3 stores bounded physical render parts and preserves full-precision surface metadata.</summary>
+/// <summary>TBIN v4 stores bounded physical render parts and preserves full-precision surface metadata.</summary>
 
 
 
@@ -125,11 +125,11 @@ public static partial class TileBundleCodec
     }
 
     private static void Header(BinaryWriter writer, string identity)
-    { writer.Write(Magic); writer.Write(3); Text(writer, identity); }
+    { writer.Write(Magic); writer.Write(4); Text(writer, identity); }
 
     private static void Header(BinaryReader reader, string identity)
     {
-        if (reader.ReadUInt32() != Magic || reader.ReadInt32() != 3 || Text(reader, 2048) != identity)
+        if (reader.ReadUInt32() != Magic || reader.ReadInt32() != 4 || Text(reader, 2048) != identity)
             throw new InvalidDataException("Tile header/key mismatch.");
     }
 

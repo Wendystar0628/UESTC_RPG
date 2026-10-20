@@ -5,7 +5,6 @@ using Campus.Contracts.Bake;
 using Campus.Contracts.Startup;
 using Campus.Kernel.Instances;
 using Campus.Kernel.Lighting;
-using Campus.Kernel.Materials;
 using Campus.Kernel.Renderer;
 using Campus.Systems.Nightlight.Glow;
 using Campus.Systems.Nightlight.Schedule;
@@ -18,7 +17,7 @@ using Services = Campus.Kernel.Registry.Kernel;
 namespace Campus.Systems.Nightlight;
 
 /// <summary>Dynamic 32-channel lighting and resident lamp textures; large glow buffers belong to stream tiles.</summary>
-[KernelNode("light-schedule", Owner = "WP-39")]
+[KernelNode("light-schedule")]
 public partial class NightlightNode : Node, IMapAware, IViewContentReadiness, IViewCapturePreparation, IStreamTileParticipant
 {
     private static readonly StringName _shaderGlobalLampGrid = ShaderGlobals.LampGrid;

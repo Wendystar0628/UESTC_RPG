@@ -12,7 +12,7 @@ namespace Campus.Gen.Parts.Circulation;
 /// Variation: 0 balusters, 1 solid panel, 2 horizontal bars. Material overrides the aluminium default.
 /// Collision: one barrier wall, top max(Height, 1.5 m), reaching 1 m below the base for sloping ground (SYS-WALK).
 /// </summary>
-[Part(PartCatalog.Railing, Owner = "WP-11")]
+[Part(PartCatalog.Railing)]
 public sealed class RailingPart() : CirculationPart<RailingParams>(new(440, 240))
 {
     private protected override Box3 BoundsOf(RailingParams p) => Centered(p.Width, 0, p.Height, p.Depth);
@@ -37,7 +37,7 @@ public sealed class RailingPart() : CirculationPart<RailingParams>(new(440, 240)
 /// The rail bar alone, for wall-mounted handrails: Width is its length along X, Height and Depth its section, base at
 /// y = 0. The mounting height is the caller's placement. No collision: wall-side handrails do not block (WLD-INTERIORS).
 /// </summary>
-[Part(PartCatalog.Handrail, Owner = "WP-11")]
+[Part(PartCatalog.Handrail)]
 public sealed class HandrailPart() : CirculationPart<RailingParams>(new(44, 12))
 {
     private protected override Box3 BoundsOf(RailingParams p) => Centered(p.Width, 0, p.Height, p.Depth);
@@ -55,7 +55,7 @@ public sealed class HandrailPart() : CirculationPart<RailingParams>(new(44, 12))
 /// Clothes-drying rail: Width is the span along X, Depth the rack depth (one bar per 0.3 m, at least one), Height the
 /// bracket height. Bars are thin tubes held by end brackets. Small overhead item: no collision, no shadow (WLD-INTERIORS).
 /// </summary>
-[Part(PartCatalog.DryingRail, Owner = "WP-11")]
+[Part(PartCatalog.DryingRail)]
 public sealed class DryingRailPart() : CirculationPart<RailingParams>(new(150, 60))
 {
     private protected override Box3 BoundsOf(RailingParams p) => Centered(p.Width, 0, p.Height, p.Depth);
@@ -92,7 +92,7 @@ public sealed class DryingRailPart() : CirculationPart<RailingParams>(new(150, 6
 /// Steel bar gate used as a seal in open buildings (WLD-INTERIORS): Width × Height leaf area, Depth the frame depth,
 /// Leaves 1 or 2. Collision: a DoorClosed wall, top at least 1.5 m (SYS-WALK).
 /// </summary>
-[Part(PartCatalog.IronGate, Owner = "WP-11")]
+[Part(PartCatalog.IronGate)]
 public sealed class IronGatePart() : CirculationPart<DoorParams>(new(540, 300))
 {
     private protected override Box3 BoundsOf(DoorParams p) => Centered(p.Width, 0, p.Height, p.Depth);

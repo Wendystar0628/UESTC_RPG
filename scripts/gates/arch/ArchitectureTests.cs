@@ -1,5 +1,8 @@
 using System.Reflection;
 using System.Text.RegularExpressions;
+using Campus.Contracts;
+using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.CSharp.Syntax;
 
 using ArchUnitNET.Domain;
 using ArchUnitNET.Fluent;
@@ -50,6 +53,15 @@ public sealed class ArchitectureTests
             .WithoutRequiringPositiveResults());
         Check(Types().That().ResideInAssemblyMatching(@"^Campus\.Contracts(?:,|$)")
             .Should().NotDependOnAny(forbidden.Or().ResideInAssemblyMatching(@"^Campus(?:,|\.)(?!Contracts(?:,|$))"))
+            .WithoutRequiringPositiveResults());
+    }
+
+    [TestCase]
+    [TestCategory("Contract")]
+    public void RuntimeContractsCannotDependOnImplementations()
+    {
+        Check(Types().That().ResideInAssemblyMatching(@"^Campus\.Contracts\.Runtime(?:,|$)")
+            .Should().NotDependOnAny(Types().That().ResideInAssemblyMatching(@"^Campus(?:,|$)|^Campus\.(?:Gen|Pipeline)(?:\.|,|$)"))
             .WithoutRequiringPositiveResults());
     }
 
@@ -125,6 +137,79 @@ public sealed class ArchitectureTests
 
     }
 
+    [TestCase]
+    [TestCategory("Contract")]
+    public void KernelNamespacesOnlyDependDownward()
+    {
+        var owners = Model.Value.Types.Select(type => KernelOwner(type.Namespace.FullName))
+            .Where(owner => owner is not null).Select(owner => owner!).Distinct(StringComparer.Ordinal).ToArray();
+        foreach (var owner in owners)
+        {
+            var level = KernelLevel(owner);
+            var forbidden = owners.Where(target => KernelLevel(target) > level)
+                .Select(target => "^Campus\\.Kernel\\." + Regex.Escape(target) + @"(?:\.|$)").ToArray();
+            if (forbidden.Length == 0) continue;
+            Check(Types().That().ResideInNamespaceMatching("^Campus\\.Kernel\\." + Regex.Escape(owner) + @"(?:\.|$)")
+                .Should().NotDependOnAny(Types().That().ResideInNamespaceMatching(string.Join('|', forbidden)))
+                .Because("ENG-ARCH: kernel responsibilities only depend on lower responsibilities")
+                .WithoutRequiringPositiveResults());
+        }
+    }
+
+    private static string? KernelOwner(string space) => space.StartsWith("Campus.Kernel.", StringComparison.Ordinal)
+        ? space.Split('.')[2] : null;
+
+    // These are concrete responsibility homes, including order within each broad architecture layer.
+    private static int KernelLevel(string owner) => owner switch
+    {
+        "Frame" => 0, "Registry" => 1,
+        "Materials" => 2, "Lod" => 3, "Renderer" => 4, "Instances" => 5,
+        "Settings" => 6, "Stubs" => 7, "Collision" => 8, "Maps" => 9,
+        "Quality" => 10, "Lighting" => 11, "Post" => 12, "World" => 13,
+        "Bake" => 14, "Stream" => 15,
+        "Boot" => 16, "Save" => 17, "Inspect" => 18,
+        _ => throw new InvalidOperationException($"Kernel namespace has no declared layer: {owner}.")
+    };
+
+    [TestCase]
+    [TestCategory("Contract")]
+    public void FramePrioritiesUseTheRegisteredStepsWithoutOffsets()
+    {
+        var fields = typeof(FramePriority).GetFields(BindingFlags.Public | BindingFlags.Static)
+            .Where(field => field.IsLiteral && field.FieldType == typeof(int)).ToArray();
+        if (fields.Length == 0 || fields.Select(field => (int)field.GetRawConstantValue()!).Distinct().Count() != fields.Length)
+            throw new InvalidOperationException("FramePriority must declare distinct integer steps.");
+        var values = fields.OrderBy(field => field.MetadataToken).Select(field => (int)field.GetRawConstantValue()!).ToArray();
+        if (!values.SequenceEqual(values.Order()))
+            throw new InvalidOperationException("FramePriority declarations must follow execution order.");
+        var registered = fields.Select(field => field.Name).ToHashSet(StringComparer.Ordinal);
+        var errors = new List<string>();
+        foreach (var file in SourceModel.Production)
+        foreach (var assignment in file.Root.DescendantNodes().OfType<AssignmentExpressionSyntax>())
+        {
+            if (file.Model.GetSymbolInfo(assignment.Left).Symbol is not IPropertySymbol property ||
+                property.Name is not ("ProcessPriority" or "ProcessPhysicsPriority") ||
+                !SourceModel.Inherits(property.ContainingType, "Godot.Node")) continue;
+            if (file.Model.GetSymbolInfo(assignment.Right).Symbol is not IFieldSymbol field ||
+                SourceModel.Name(field.ContainingType) != "Campus.Contracts.FramePriority" ||
+                !registered.Contains(field.Name))
+                errors.Add(file.At(assignment, "Use a FramePriority step directly; register a new value when order is required."));
+        }
+        foreach (var file in SourceModel.Production)
+        foreach (var call in file.Root.DescendantNodes().OfType<InvocationExpressionSyntax>())
+        {
+            var method = SourceModel.Method(file, call);
+            if (method?.Name is not ("SetProcessPriority" or "SetPhysicsProcessPriority") ||
+                !SourceModel.Inherits(method.ContainingType, "Godot.Node")) continue;
+            if (call.ArgumentList.Arguments.Count != 1 ||
+                file.Model.GetSymbolInfo(call.ArgumentList.Arguments[0].Expression).Symbol is not IFieldSymbol field ||
+                SourceModel.Name(field.ContainingType) != "Campus.Contracts.FramePriority" ||
+                !registered.Contains(field.Name))
+                errors.Add(file.At(call, "Use a FramePriority step directly; register a new value when order is required."));
+        }
+        SourceModel.RequireNoViolations(errors);
+    }
+
     private static string? MapScope(ReflectionAssembly assembly) => assembly.GetCustomAttributesData()
         .SingleOrDefault(attribute => attribute.AttributeType.FullName == "Campus.Contracts.MapScopeAttribute")
         ?.ConstructorArguments[0].Value as string;
@@ -156,7 +241,7 @@ public sealed class ArchitectureTests
         if (!origin.StartsWith("Campus", StringComparison.Ordinal) || origin.EndsWith("Tests", StringComparison.Ordinal)) return;
         bool allowed;
         if (origin == "Campus") return;
-        if (target.StartsWith("GodotSharp", StringComparison.Ordinal)) allowed = false;
+        if (target.StartsWith("GodotSharp", StringComparison.Ordinal)) allowed = origin == "Campus.Contracts.Runtime";
         else if (!target.StartsWith("Campus", StringComparison.Ordinal)) return;
         else if (origin == "Campus.Contracts") allowed = false;
         else if (target == "Campus.Contracts") allowed = true;
@@ -220,8 +305,7 @@ public sealed class ArchitectureTests
             .WithoutRequiringPositiveResults());
         Check(Types().That().ResideInNamespaceMatching(@"^Campus\.Hud(?:\.|$)").Should()
             .NotDependOnAny(Types().That().ResideInNamespaceMatching(@"^Campus\.(Kernel|Style|Camera|Medium|Systems|Audio|Flow)(\.|$)")
-                .And().DoNotHaveFullName("Campus.Kernel.Registry.Kernel")
-                .And().DoNotHaveFullName("Campus.Kernel.Materials.IShaderMaterialSource"))
+                .And().DoNotHaveFullName("Campus.Kernel.Registry.Kernel"))
             .WithoutRequiringPositiveResults());
         var hudForbiddenCalls = Methods().Where(method =>
             method.DeclaringType.FullName == "Campus.Kernel.Registry.Kernel" && !Regex.IsMatch(method.Name, @"^Get(?:<|\(|$)") ||
@@ -236,8 +320,6 @@ public sealed class ArchitectureTests
         foreach (var system in systemNames)
         {
             // Vegetation.Seasons is the one permitted intra-system shader-hook extension.
-            // The approved Kernel.Materials.IShaderMaterialSource is outside this
-            // peer-system set; ShaderMaterial construction remains Style-only above.
             var pattern = "^" + Regex.Escape(system) + @"(\.|$)";
             Check(Types().That().ResideInNamespaceMatching(pattern).Should()
                 .NotDependOnAny(Types().That().ResideInNamespaceMatching(@"^Campus\.Systems\.")

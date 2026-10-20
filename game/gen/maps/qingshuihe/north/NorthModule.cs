@@ -13,7 +13,7 @@ namespace Campus.Gen.Maps.Qingshuihe.North;
 /// identity parts. Pure .NET: reads the world model, the interior index and the terrain only.
 /// </summary>
 
-[ContentModule("zone.north", Owner = "WP-20")]
+[ContentModule("zone.north")]
 public sealed class NorthModule : ZoneModuleBase, IWindowMetadataSource, IContentSourceTraceProvider
 {
 
@@ -22,7 +22,7 @@ public sealed class NorthModule : ZoneModuleBase, IWindowMetadataSource, IConten
     public NorthModule() : this(NorthSites.All) { }
 
     internal NorthModule(IReadOnlyList<ZoneSite> sites)
-        : base(sites, new(NorthTune.BudgetTrianglesL0, NorthTune.BudgetTrianglesL1, NorthTune.BudgetDrawCalls)) { }
+        : base(sites) { }
 }
 
 /// <summary>

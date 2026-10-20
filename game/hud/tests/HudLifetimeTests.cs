@@ -9,7 +9,6 @@ using Campus.Hud;
 using Campus.Hud.Motion;
 using Campus.Hud.Style;
 using Campus.Hud.Widgets;
-using Campus.Kernel.Materials;
 using Campus.Kernel.Registry;
 using Campus.Kernel.Settings;
 using Campus.Kernel.World;

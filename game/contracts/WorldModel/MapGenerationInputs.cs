@@ -4,11 +4,11 @@ using Campus.Contracts.Parts;
 namespace Campus.Contracts;
 
 /// <summary>A captured registration and its detached declarations; workers never consult a registry.</summary>
-public sealed class ContentModuleInput(IContentModule value, string codeHash, WpId owner, bool global)
+public sealed class ContentModuleInput(IContentModule value, string codeHash, string owner, bool global)
 {
     public IContentModule Value { get; } = value;
     public string CodeHash { get; } = codeHash;
-    public WpId Owner { get; } = owner;
+    public string Owner { get; } = owner;
     public bool Global { get; } = global;
     public IReadOnlyList<Claim> Claims { get; } = Array.AsReadOnly(value.Claims.ToArray());
 }

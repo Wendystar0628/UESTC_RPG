@@ -25,7 +25,7 @@ public sealed class StreamLifecycleTests
                 { Spatial = new FlatSpatial(forbidden: "Terrain has not been prepared.") });
             var catalog = ModuleTileCatalog.Build(new(new Dictionary<string, IReadOnlyList<TileKey>>(), []));
             BindUnrenderedCatalog(director, context, Task.FromResult(catalog));
-            var interiors = new InteriorStream(null!, null!, null!, null!, _ => { }); interiors.Load(context);
+            var interiors = new InteriorStream(null!, null!, null!, null!, _ => { }, false); interiors.Load(context);
             Set(director, "_catalog", catalog); Set(director, "_maps", new TestMapService()); Set(director, "_interiors", interiors);
             Set(director, "_destinationConsumed", true); Set(director, "_destinationPlanned", true); Set(director, "_selectionApplied", true);
             if (!director.DestinationReady || director.ViewReady)

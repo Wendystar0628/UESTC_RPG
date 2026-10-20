@@ -17,7 +17,7 @@ namespace Campus.Gen.Maps.Qingshuihe.West;
 /// Pure .NET: reads the world model and terrain only.
 /// </summary>
 
-[ContentModule("zone.west", Owner = "WP-19")]
+[ContentModule("zone.west")]
 public sealed class WestModule : ZoneModuleBase, IWindowMetadataSource, ILightMetadataSource, IContentSourceTraceProvider
 {
 
@@ -25,8 +25,7 @@ public sealed class WestModule : ZoneModuleBase, IWindowMetadataSource, ILightMe
 
     public WestModule() : this(WestSites.All) { }
 
-    internal WestModule(IReadOnlyList<ZoneSite> sites) : base(sites,
-        new(TrianglesL0: WestTune.BudgetTrianglesL0, TrianglesL1: WestTune.BudgetTrianglesL1, DrawCalls: WestTune.BudgetDrawCalls)) { }
+    internal WestModule(IReadOnlyList<ZoneSite> sites) : base(sites) { }
 }
 
 /// <summary>

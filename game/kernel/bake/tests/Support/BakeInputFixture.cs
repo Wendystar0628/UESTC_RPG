@@ -8,15 +8,16 @@ using Campus.Contracts;
 using Campus.Contracts.Bake;
 using Campus.Contracts.Maps;
 using Campus.Contracts.Parts;
+using Campus.Kernel.Registry;
 
 namespace Campus.Kernel.Bake.Tests;
 
 internal static class BakeInputFixture
 {
     internal static TerrainCacheService CreateTerrainCache(BakeOptions options) => new(options,
-        new BakeCodeFingerprints(new(BakeCodeManifest.CurrentSchema,
+        new BuildCodeIndex(new(BakeCodeManifest.CurrentSchema,
             new[] { BakeCodeChains.Shared, BakeCodeChains.Collision, BakeCodeChains.Nightlight }
-                .ToDictionary(BakeCodeManifest.Chain, chain => "fixture-code/" + chain, StringComparer.Ordinal))));
+                .ToDictionary(BakeCodeManifest.Chain, chain => "fixture-code/" + chain, StringComparer.Ordinal), new Dictionary<string, string>())));
 
     internal static WorldFeature Feature(string id, float x, string name, string note, string text) =>
         WorldFeatureFixture.Create(id, "prop", new PointGeometry(new(x, 0, 10))) with
@@ -27,7 +28,7 @@ internal static class BakeInputFixture
     internal static BuildContext Context(IWorldModel world, string species = "one", WindowNumberingSnapshot? numbering = null, string? planting = null,
         BuildInputSnapshot? global = null, string? interiors = null) => new()
     {
-        Catalog = Campus.Contracts.Tests.PaletteFixture.Catalog, World = world, WorldSeed = 1, CodeHash = "module-code", WindowNumbering = numbering,
+        Catalog = Campus.Contracts.Tests.PaletteFixture.Catalog, World = world, WorldSeed = 1, CodeHash = "module-code", WindowNumbering = numbering ?? new(new MapId("fixture"), new string('0', 64), []),
         Map = new(new("fixture"), new("Fixture", "Fixture"), MapKind.Outdoor, 1, 1,
             new(0, 0, 32648, Vector2.Zero, new(64, 64)), new(32, 32), new(Vector3.Zero, new(64, 64, 64)),
             new(Vector2.Zero, new(64, 64)), new(1, 0, 64, 0, 64, 1, 1, 1), new(0, 0), new(0, 0), "start", [],

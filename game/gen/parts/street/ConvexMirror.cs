@@ -13,7 +13,7 @@ namespace Campus.Gen.Parts.Street;
 /// mirror is never a live reflection: it takes the glass class, which paints the sky gradient, an opposite-side silhouette and a diagonal
 /// streak (ART-STYLE). Collision: the pole as a post, Metal; the mirror is out of reach.
 /// </summary>
-[Part(PartCatalog.ConvexMirror, Owner = "WP-13")]
+[Part(PartCatalog.ConvexMirror)]
 public sealed class ConvexMirrorPart : IPartDef<SignParams>
 {
     public ConvexMirrorPart() => Lods = Levels.Of<SignParams>(Build, LodLevel.L0, LodLevel.L1, LodLevel.L2);

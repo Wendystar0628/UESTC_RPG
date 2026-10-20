@@ -289,6 +289,6 @@ public sealed class BoundaryModuleTests
         return stream.ToArray();
     }
 
-    private static BuildContext Context() => new() { Catalog = Campus.Contracts.Tests.PaletteFixture.Catalog, World = RealMapFixture.Load().World, Map = null!, WorldSeed = 1 };
+    private static BuildContext Context() => new() { CodeHash = "fixture", WindowNumbering = new(new MapId("fixture"), new string('0', 64), []), Catalog = Campus.Contracts.Tests.PaletteFixture.Catalog, World = RealMapFixture.Load().World, Map = null!, WorldSeed = 1 };
 
 }

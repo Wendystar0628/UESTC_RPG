@@ -1,5 +1,4 @@
 using Campus.Contracts;
-using Campus.Kernel.Boot;
 using Godot;
 
 namespace Campus.Kernel.Renderer;
@@ -7,6 +6,8 @@ namespace Campus.Kernel.Renderer;
 /// <summary>Owns the engine camera. Pose/input and explicit listener policy remain with WP-06.</summary>
 public partial class StageCamera : Node
 {
+    public const float NearClip = .05f;
+    public const float DefaultFarClip = 12000f;
     private ICameraRig? _rig;
     public Camera3D Camera { get; } = new()
     {
@@ -15,15 +16,15 @@ public partial class StageCamera : Node
         TopLevel = true,
         PhysicsInterpolationMode = PhysicsInterpolationModeEnum.Off,
         KeepAspect = Camera3D.KeepAspectEnum.Height,
-        Near = BootTuning.CameraNear,
-        Far = BootTuning.CameraFar,
+        Near = NearClip,
+        Far = DefaultFarClip,
         Fov = 60f
     };
 
     public void Bind(ICameraRig rig) => _rig = rig;
     public override void _Ready()
     {
-        ProcessPriority = FramePriority.Camera + 1;
+        ProcessPriority = FramePriority.CameraSync;
         AddChild(Camera);
     }
     public override void _Process(double delta) => Sync();

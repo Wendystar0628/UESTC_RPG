@@ -15,7 +15,7 @@ namespace Campus.Gen.Parts.Street;
 /// the only light is a small warm downlight under the canopy (grade three, first-lamp group, all night), handed out by
 /// <see cref="Emitter"/>. Collision: a post per side and a thin box over the panel, Metal.
 /// </summary>
-[Part(PartCatalog.AtlasKiosk, Owner = "WP-13")]
+[Part(PartCatalog.AtlasKiosk)]
 public sealed class AtlasKioskPart : IPartDef<SignParams>
 {
     public AtlasKioskPart() => Lods = Levels.Of<SignParams>(Build, LodLevel.L0, LodLevel.L1, LodLevel.L2);
@@ -103,7 +103,7 @@ public sealed class AtlasKioskPart : IPartDef<SignParams>
 /// lamp with a milky lens on the front at 0.85 m (grade three, first-lamp group, all night, a pool about 1.5 m across). Width
 /// and Depth are the base, Height the top of the slant. Collision: one vertical post, Metal.
 /// </summary>
-[Part(PartCatalog.AtlasPost, Owner = "WP-13")]
+[Part(PartCatalog.AtlasPost)]
 public sealed class AtlasPostPart : IPartDef<SignParams>
 {
     private const float CapThickness = 0.035f;

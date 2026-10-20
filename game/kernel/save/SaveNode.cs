@@ -13,7 +13,7 @@ using Godot;
 
 namespace Campus.Kernel.Save;
 
-[KernelNode("save", Owner = "WP-50")]
+[KernelNode("save")]
 public partial class SaveNode : Node, IBootParticipant
 {
     private SaveService _save = null!;

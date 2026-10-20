@@ -10,10 +10,11 @@ public static class BakeCodeChains
     public const string Nightlight = "nightlight";
 }
 
-/// <summary>The single packaged build-time code fingerprint table; no source or IL hashing at runtime.</summary>
-public sealed record BakeCodeManifest(int Schema, IReadOnlyDictionary<string, string> Roots)
+/// <summary>The single packaged build-time code and diagnostic registration index; no source or IL hashing at runtime.</summary>
+public sealed record BakeCodeManifest(int Schema, IReadOnlyDictionary<string, string> Roots,
+    IReadOnlyDictionary<string, string> Registrations)
 {
-    public const int CurrentSchema = 1;
+    public const int CurrentSchema = 2;
     public static string Chain(string key) => "chain:" + key;
     public static string TypeKey(string assembly, string metadataName) => assembly + ":" + metadataName;
     public static string TypeKey(Type type) => TypeKey(

@@ -378,42 +378,42 @@ public abstract class DoorPart(PartBudget budget) : OpeningPart<DoorParams>(budg
 }
 
 /// <summary>门（出入口）：aluminium glass leaves with kick rails and pull bars; transom light above tall openings.</summary>
-[Part(PartCatalog.Door, Owner = "WP-10")]
+[Part(PartCatalog.Door)]
 public sealed class EntranceDoorPart() : DoorPart(new(700, 280))
 {
     private protected override DoorStyle Style => DoorStyle.Entrance;
 }
 
 /// <summary>木门：flush leaf with a lock-side vision panel, lever handles, painted casing proud of both wall faces.</summary>
-[Part(PartCatalog.DoorWood, Owner = "WP-10")]
+[Part(PartCatalog.DoorWood)]
 public sealed class WoodDoorPart() : DoorPart(new(500, 120))
 {
     private protected override DoorStyle Style => DoorStyle.Wood;
 }
 
 /// <summary>防火门：painted steel leaf, narrow vision panel, push bar on the back face.</summary>
-[Part(PartCatalog.DoorFire, Owner = "WP-10")]
+[Part(PartCatalog.DoorFire)]
 public sealed class FireDoorPart() : DoorPart(new(560, 120))
 {
     private protected override DoorStyle Style => DoorStyle.Fire;
 }
 
 /// <summary>玻璃地弹门：frameless glass leaves between metal rails, long pull bars.</summary>
-[Part(PartCatalog.DoorGlass, Owner = "WP-10")]
+[Part(PartCatalog.DoorGlass)]
 public sealed class GlassDoorPart() : DoorPart(new(700, 280))
 {
     private protected override DoorStyle Style => DoorStyle.Glass;
 }
 
 /// <summary>屏蔽门：heavy steel leaf with raised panels and visible hinges in a deep frame.</summary>
-[Part(PartCatalog.DoorScreen, Owner = "WP-10")]
+[Part(PartCatalog.DoorScreen)]
 public sealed class ScreenDoorPart() : DoorPart(new(700, 120))
 {
     private protected override DoorStyle Style => DoorStyle.Screen;
 }
 
 /// <summary>隔间门：laminate partition leaf lifted off the floor, occupancy latch.</summary>
-[Part(PartCatalog.DoorStall, Owner = "WP-10")]
+[Part(PartCatalog.DoorStall)]
 public sealed class StallDoorPart() : DoorPart(new(120, 40))
 {
     private protected override DoorStyle Style => DoorStyle.Stall;

@@ -303,7 +303,7 @@ public sealed class MapServiceTests
     public void MapsSaveUsesStringIdsAndVectorArraysAndRejectsUnknownFields()
     {
         var f = new Fixture(); f.Boot();
-        var context = new CaptureContext(SaveReason.Test, f.A, false);
+        var context = new CaptureContext(SaveReason.Test, f.A, false) { Moment = new WorldSaveMoment(0, 0, Season.Autumn, 0) };
         var dto = f.Service.Capture(in context);
         var json = JsonSerializer.Serialize(dto, f.Service.TypeInfo);
         AssertThat(json.Contains("\"current\":\"map-a\"", StringComparison.Ordinal) && json.Contains("\"position\":[", StringComparison.Ordinal)).OverrideFailureMessage("Map save lost contract ID/vector encoding.").IsTrue();

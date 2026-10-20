@@ -56,6 +56,7 @@ public static class FacadeGridGenerator
         var rings = new List<IReadOnlyList<Vector2>> { outer };
         rings.AddRange(holes);
         var bays = new List<FacadeBay>();
+        var wing = outer.Length == 4 && holes.Length == 0 ? InteriorWingFrame.From(new(outer)) : null;
         for (int ringIndex = 0; ringIndex < rings.Count; ringIndex++)
         {
             IReadOnlyList<Vector2> ring = rings[ringIndex];
@@ -65,13 +66,21 @@ public static class FacadeGridGenerator
                 Vector2 tangent = PlanGeometry.Unit(b - a);
                 Vector2 inward = new(-tangent.Y, tangent.X);
                 float length = VectorMath.Length(b - a);
-                int count = BayCount(length, options);
+                bool paired=wing is not null && (edge==wing.Edge || edge==(wing.Edge+2)%4);
+                int count = BayCount(paired ? wing!.Length : length, options);
                 if (bays.Count + count > 65536)
                     throw new ArgumentException("A single footprint exceeds the supported facade bay count.", nameof(footprint));
                 for (int bay = 0; bay < count; bay++)
                 {
-                    Vector2 start = PlanGeometry.Lerp(a, b, (double)bay / count);
-                    Vector2 end = PlanGeometry.Lerp(a, b, (double)(bay + 1) / count);
+                    Vector2 start, end;
+                    if(paired)
+                    {
+                        var axis=wing!;float ua=axis.U(a),ub=axis.U(b); bool forward=ub>ua;
+                        float first=forward?(bay==0?ua:axis.Length*bay/count):(bay==0?ua:axis.Length*(count-bay)/count);
+                        float last=forward?(bay+1==count?ub:axis.Length*(bay+1)/count):(bay+1==count?ub:axis.Length*(count-bay-1)/count);
+                        start=PlanGeometry.Lerp(a,b,(first-ua)/(ub-ua));end=PlanGeometry.Lerp(a,b,(last-ua)/(ub-ua));
+                    }
+                    else { start=PlanGeometry.Lerp(a,b,(double)bay/count);end=PlanGeometry.Lerp(a,b,(double)(bay+1)/count); }
                     float width = VectorMath.Length(end - start);
                     float openingWidth = MathF.Min(options.WindowWidth, width - 2f * options.JambClearance);
                     bool blank = width < options.MinimumBayWidth || openingWidth < 0.5f;

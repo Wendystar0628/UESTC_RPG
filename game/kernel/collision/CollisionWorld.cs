@@ -29,8 +29,8 @@ public sealed record CollisionDiagnostics(int Tiles, int ReadyTiles, int Bodies,
 
 /// <summary>The collision service owns every body it mounts. All entry points are main-thread only.</summary>
 // Registration activates with the formal Boot composition.
-[KernelService(typeof(ICollisionMountRuntime), Owner = "WP-43")]
-[KernelService(typeof(ICollisionWorld), Owner = "WP-43")]
+[KernelService(typeof(ICollisionMountRuntime))]
+[KernelService(typeof(ICollisionWorld))]
 public sealed class CollisionWorld : ICollisionMountRuntime
 {
     public const uint WalkMask = 479;

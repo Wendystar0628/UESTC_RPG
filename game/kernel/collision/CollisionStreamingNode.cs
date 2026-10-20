@@ -9,7 +9,7 @@ using Services = Campus.Kernel.Registry.Kernel;
 namespace Campus.Kernel.Collision;
 
 /// <summary>Requests C tiles at Stream; WP-02b alone executes their work at StreamMount.</summary>
-[KernelNode("collision.streaming", Owner = "WP-43")]
+[KernelNode("collision.streaming")]
 public partial class CollisionStreamingNode : Node3D, IMapAware
 {
     public const float LoadRadius = 96f;
@@ -142,9 +142,8 @@ public partial class CollisionStreamingNode : Node3D, IMapAware
     private static float DistanceSquared(TileKey tile, N.Vector3 feet)
     {
         var origin = TileGrid.Origin(tile);
-        var dx = MathF.Max(MathF.Max(origin.X - feet.X, feet.X - origin.X - TileGrid.BaseEdge), 0);
-        var dz = MathF.Max(MathF.Max(origin.Y - feet.Z, feet.Z - origin.Y - TileGrid.BaseEdge), 0);
-        return dx * dx + dz * dz;
+        var box = new Box3(new(origin.X, 0, origin.Y), new(origin.X + TileGrid.BaseEdge, 0, origin.Y + TileGrid.BaseEdge));
+        return box.HorizontalDistanceSquared(feet);
     }
     private static bool IsWalk(ViewMode mode) => mode switch { ViewMode.Walk => true, ViewMode.Fly => false, _ => throw new InvalidOperationException("Unknown observer mode.") };
 }

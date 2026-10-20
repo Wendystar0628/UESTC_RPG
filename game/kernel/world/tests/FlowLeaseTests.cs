@@ -47,7 +47,7 @@ public sealed class FlowLeaseTests
         using var pause = world.AcquireFlow(FlowPriority.Pause, 0);
         var start = world.WorldHours;
         world.Tick(.1);
-        var saved = world.Capture(default);
+        var saved = world.Capture(SaveContext(world));
         AssertThat(world.WorldHours).IsEqual(start);
         AssertThat(world.GetSaveMoment().FlowRate).IsEqual(60);
         AssertThat(saved.FlowRate).IsEqual(60);
@@ -58,7 +58,7 @@ public sealed class FlowLeaseTests
         world.Tick(.1);
         AssertThat(world.WorldHours).IsEqual(loaded.WorldHours);
         AssertThat(world.Flow.Rate).IsEqual(0);
-        AssertThat(world.Capture(default).FlowRate).IsEqual(10);
+        AssertThat(world.Capture(SaveContext(world)).FlowRate).IsEqual(10);
         var fresh = world.CreateDefault(new NewGameContext(5, Restore().Map, new WorldPreset(start, Season.Autumn), ViewMode.Walk));
         world.Restore(fresh, Restore());
         world.CompleteRestore();

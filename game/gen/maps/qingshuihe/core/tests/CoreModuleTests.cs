@@ -201,12 +201,12 @@ public sealed class CoreModuleTests
         var tile = TileGrid.At(Anchor(plaza), LodLevel.L0);
         var module = new CoreModule();
         _ = module.Build(Context(world), tile, LodLevel.L0);
-        var bare = new BuildContext { Catalog = Campus.Contracts.Tests.PaletteFixture.Catalog, World = world, Map = null!, WorldSeed = 1u };
+        var bare = new BuildContext { CodeHash = "fixture", WindowNumbering = new(new MapId("fixture"), new string('0', 64), []), Catalog = Campus.Contracts.Tests.PaletteFixture.Catalog, World = world, Map = null!, WorldSeed = 1u };
         InvalidOperationException? missingLods = null;
         try { module.Build(bare, tile, LodLevel.L0); }
         catch (InvalidOperationException ex) { missingLods = ex; }
         AssertThat(missingLods is InvalidOperationException).OverrideFailureMessage("placed parts without BuildContext.PartLods are refused").IsTrue();
-        var empty = new BuildContext { Catalog = Campus.Contracts.Tests.PaletteFixture.Catalog, World = world, Map = null!, WorldSeed = 1u, PartLods = new PartLodCatalog([]) };
+        var empty = new BuildContext { CodeHash = "fixture", WindowNumbering = new(new MapId("fixture"), new string('0', 64), []), Catalog = Campus.Contracts.Tests.PaletteFixture.Catalog, World = world, Map = null!, WorldSeed = 1u, PartLods = new PartLodCatalog([]) };
         KeyNotFoundException? unknownPart = null;
         try { module.Build(empty, tile, LodLevel.L0); }
         catch (KeyNotFoundException ex) { unknownPart = ex; }
@@ -356,6 +356,7 @@ public sealed class CoreModuleTests
 
     private static BuildContext Context(IWorldModel world, PaletteCatalog? palette = null) => new()
     {
+        CodeHash = "fixture", WindowNumbering = new(new MapId("fixture"), new string('0', 64), []),
         World = world,
         Map = null!,
         WorldSeed = 1u,

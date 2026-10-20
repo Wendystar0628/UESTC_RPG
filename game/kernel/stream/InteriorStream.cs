@@ -4,13 +4,12 @@ using Campus.Contracts.Maps;
 using Campus.Kernel.Frame;
 using Campus.Kernel.Renderer;
 using Godot;
-using AppBoot = Campus.Kernel.Boot.Boot;
 
 namespace Campus.Kernel.Stream;
 
 /// <summary>Destination/current-floor IF and adjacent IS use the same bake and mount paths as outdoor tiles.</summary>
 internal sealed class InteriorStream(IBakeService bake, IStreamMountQueue mount, StreamMaterials materials,
-    IReflectionWorld reflections, Action<PreparedTile> retire)
+    IReflectionWorld reflections, Action<PreparedTile> retire, bool captureMode)
 {
     private readonly Dictionary<BakeKey, Layer> _layers = [];
     private readonly List<Layer> _draining = [];
@@ -123,7 +122,7 @@ internal sealed class InteriorStream(IBakeService bake, IStreamMountQueue mount,
             if (layer.Visible == visible) continue;
             layer.Visible = visible;
             // Zero is the shader's fully visible sentinel, rather than a zero-duration interpolation.
-            layer.Prepared.SetVisible(visible, visible && !AppBoot.Options.CaptureMode ? FrameClock.FadeSeconds : 0);
+            layer.Prepared.SetVisible(visible, visible && !captureMode ? FrameClock.FadeSeconds : 0);
         }
         for (var i = _draining.Count - 1; i >= 0; i--)
         {
@@ -152,8 +151,7 @@ internal sealed class InteriorStream(IBakeService bake, IStreamMountQueue mount,
             if (_context.World.Features.TryGetValue(layer.Building, out var building))
             {
                 var p = new System.Numerics.Vector2(camera.X, camera.Z);
-                var nearest = System.Numerics.Vector2.Clamp(p, new(building.Bounds.Min.X, building.Bounds.Min.Z), new(building.Bounds.Max.X, building.Bounds.Max.Z));
-                outside = System.Numerics.Vector2.DistanceSquared(p, nearest) > 40 * 40;
+                outside = building.Bounds.HorizontalDistanceSquared(new(p.X, 0, p.Y)) > 40 * 40;
             }
             if (!outside && layer.IdleSeconds < 20) continue;
             layer.Work?.Abandon();

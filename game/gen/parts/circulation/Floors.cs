@@ -13,7 +13,7 @@ namespace Campus.Gen.Parts.Circulation;
 /// in modules (a machine-room floor). The caller's Material replaces the finish. Collision: one walkable box, Ground; the foot follows
 /// the finish (tile, wood, steel plate) unless the caller sets one.
 /// </summary>
-[Part(PartCatalog.RaisedFloor, Owner = "WP-11")]
+[Part(PartCatalog.RaisedFloor)]
 public sealed class RaisedFloorPart() : CirculationPart<PanelParams>(new(420, 90))
 {
     private protected override Box3 BoundsOf(PanelParams p) => Centered(p.Width, 0, p.Height, p.Depth);
@@ -71,7 +71,7 @@ public sealed class RaisedFloorPart() : CirculationPart<PanelParams>(new(420, 90
 /// (0.25–1.5 m) and risers low (0.08–0.25 m); the aisle stairs and seats are the host's. Collision: one box per tier (each rise is
 /// within auto-step), Stair, the foot Terrazzo unless set.
 /// </summary>
-[Part(PartCatalog.TieredFloor, Owner = "WP-11")]
+[Part(PartCatalog.TieredFloor)]
 public sealed class TieredFloorPart() : CirculationPart<StairParams>(new(300, 120))
 {
     private protected override Box3 BoundsOf(StairParams p) => Centered(p.Width, -S.Sink, p.Height, p.Depth);

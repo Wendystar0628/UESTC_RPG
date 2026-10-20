@@ -10,8 +10,8 @@ using Services = Campus.Kernel.Registry.Kernel;
 namespace Campus.Kernel.Boot;
 
 /// <summary>Mounts the authored T0 cloud cards once; application flow changes only their visible counts.</summary>
-[KernelService(typeof(IAppTitlePresentation), Owner = "WP-49b")]
-[KernelNode("title.clouds", Owner = "WP-49b")]
+[KernelService(typeof(IAppTitlePresentation))]
+[KernelNode("title.clouds")]
 public sealed partial class TitleCloudNode : Node, IAppTitlePresentation, IMapAware
 {
     private readonly List<IInstancePool> _layers = [];
@@ -57,7 +57,7 @@ public sealed partial class TitleCloudNode : Node, IAppTitlePresentation, IMapAw
                 }
             }
             var bounds = new Aabb(new Vector3(min.X, min.Y, min.Z), new Vector3(max.X - min.X, max.Y - min.Y, max.Z - min.Z));
-            var pool = host.Mount(new GeometryInstancePoolSpec($"title.clouds.{layer.Layer}", "WP-49b",
+            var pool = host.Mount(new GeometryInstancePoolSpec($"title.clouds.{layer.Layer}",
                 prototype, layer.Cards.Count, bounds, 1, GeometryInstance3D.ShadowCastingSetting.Off)
                 { Map = context.Descriptor.Id });
             _layers.Add(pool);

@@ -5,6 +5,7 @@ using System.Text.Json;
 using Campus.Contracts;
 using Campus.Contracts.AppFlow;
 using Campus.Contracts.Atlas;
+using Campus.Contracts.Audio;
 using Campus.Contracts.Maps;
 using Campus.Kernel.Maps;
 using Campus.Contracts.Save;
@@ -30,7 +31,7 @@ public sealed class AtlasServiceTests
         AssertThat(!ReferenceEquals(test.Atlas.TypeInfo.Options, ContractJson.Options)).OverrideFailureMessage("Atlas context bound the shared options instance.").IsTrue();
         var pin = test.Atlas.AddPin(new(10, 20), PinShape.Flag)!;
         test.Atlas.Track(new("pin:" + pin.Id));
-        var capture = new CaptureContext(SaveReason.Test, test.Context.Descriptor.Id, false);
+        var capture = new CaptureContext(SaveReason.Test, test.Context.Descriptor.Id, false) { Moment = new WorldSaveMoment(0, 0, Season.Autumn, 0) };
         var saved = test.Atlas.Capture(in capture);
         var bytes = JsonSerializer.SerializeToUtf8Bytes(saved, test.Atlas.TypeInfo);
         var decoded = JsonSerializer.Deserialize(bytes, test.Atlas.TypeInfo)!;
@@ -93,17 +94,20 @@ public sealed class AtlasServiceTests
         test.Flow.ActivitySource = activitySource;
         test.Atlas.Travel(new("test-kiosk"), TravelStyle.Teleport);
         AssertThat(test.Camera.Options?.Prefer == TransitPreference.Teleport && test.Camera.Options.Entry is null).OverrideFailureMessage("Teleport used flight path options.").IsTrue();
+        AssertThat(test.Audio.Cues.SequenceEqual(new[] { UiCue.TeleportConfirm })).OverrideFailureMessage("Teleport confirmation sound was not emitted exactly once.").IsTrue();
         AssertThat(test.Camera.Locks == 1 && !test.Atlas.IsSettled).OverrideFailureMessage("Travel lock or unsettled state missing.").IsTrue();
         AssertThat(!test.Atlas.CanTravel(new("test-post"), TravelStyle.Fly, out var why) && why == TravelRefusal.Busy).OverrideFailureMessage("Concurrent travel was allowed.").IsTrue();
         test.Camera.Handle!.Completion.SetResult(TransitResult.Arrived);
         test.Atlas.Tick();
         AssertThat(test.Camera.Locks == 0 && test.Atlas.IsSettled).OverrideFailureMessage("Arrival did not release input.").IsTrue();
+        AssertThat(test.Audio.Cues.SequenceEqual(new[] { UiCue.TeleportConfirm, UiCue.TeleportArrive })).OverrideFailureMessage("Teleport arrival sound did not follow confirmation.").IsTrue();
         test.Atlas.Travel(new("test-post"), TravelStyle.Fly);
         AssertThat(test.Camera.Options?.Prefer == TransitPreference.Teleport).OverrideFailureMessage("Far fly-there did not use teleport.").IsTrue();
         AssertThat(test.Camera.Locks == 1).OverrideFailureMessage("Teleport did not retain input through loading.").IsTrue();
         test.Camera.Handle!.Completion.SetResult(TransitResult.Cancelled);
         test.Atlas.Tick();
         AssertThat(test.Camera.Locks == 0).OverrideFailureMessage("Cancelled transit retained the input lock.").IsTrue();
+        AssertThat(test.Audio.Cues.SequenceEqual(new[] { UiCue.TeleportConfirm, UiCue.TeleportArrive, UiCue.TeleportConfirm })).OverrideFailureMessage("Cancelled far travel emitted an arrival sound or lost its confirmation.").IsTrue();
     }
 
     [TestCase]
@@ -199,8 +203,8 @@ public sealed class AtlasServiceTests
         var test = new Fixture();
         test.Observer.Feet = new(100, 0, 100);
         test.Atlas.Travel(new("test-kiosk"), TravelStyle.Teleport);
-        var forced = new CaptureContext(SaveReason.Quit, test.Context.Descriptor.Id, true);
-        var settled = new CaptureContext(SaveReason.Test, test.Context.Descriptor.Id, false);
+        var forced = new CaptureContext(SaveReason.Quit, test.Context.Descriptor.Id, true) { Moment = new WorldSaveMoment(0, 0, Season.Autumn, 0) };
+        var settled = new CaptureContext(SaveReason.Test, test.Context.Descriptor.Id, false) { Moment = new WorldSaveMoment(0, 0, Season.Autumn, 0) };
         AssertThat(test.Atlas.Capture(in forced).VisitedAnchors.Contains("test-kiosk")).OverrideFailureMessage("Forced snapshot omitted terminal anchor.").IsTrue();
         AssertThat(test.Atlas.Capture(in settled).VisitedAnchors.Count == 0).OverrideFailureMessage("Forced capture changed live visit state.").IsTrue();
         test.Camera.Handle!.Cancel();
@@ -258,7 +262,7 @@ public sealed class AtlasServiceTests
             .Where(item => item.Registration is not null)
             .ToDictionary(item => item.Registration!.Id, item => (IInteriorProvider)Activator.CreateInstance(item.Type)!, StringComparer.Ordinal);
         var built = InteriorAssembly.Build(interiorBytes,
-            new BuildContext { Catalog = Campus.Contracts.Tests.PaletteFixture.Catalog, Map = descriptor, World = world, WorldSeed = descriptor.Seed }, providers);
+            new BuildContext { CodeHash = "fixture", WindowNumbering = new((descriptor).Id, new string('0', 64), []), Catalog = Campus.Contracts.Tests.PaletteFixture.Catalog, Map = descriptor, World = world, WorldSeed = descriptor.Seed }, providers);
         world.Interiors = new FakeInteriors(built.Entries.ToArray());
         var doors = built.Entries.SelectMany(entry => entry.Entrances.Where(door => door.Open)
             .Select(door => (Feature: entry.Feature, Door: door))).ToArray();
@@ -299,6 +303,7 @@ public sealed class AtlasServiceTests
         internal Driver Driver { get; } = new();
         internal TestView View { get; }
         internal TestAppFlow Flow { get; } = new();
+        internal TestAudio Audio { get; } = new();
         internal Observer Observer { get; } = new();
         internal FakeWorld World { get; }
         internal TestMapContext Context { get; }
@@ -319,7 +324,7 @@ public sealed class AtlasServiceTests
             Flow.ActivitySource = () =>
                 (maps.Transition is { Done.IsCompleted: false } ? AppActivity.MapTransition : AppActivity.None) |
                 (Camera.ActiveTransit is { Done.IsCompleted: false } ? AppActivity.CameraTransition : AppActivity.None);
-            Atlas.Connect(maps, Flow, new TestAudio(), View);
+            Atlas.Connect(maps, Flow, Audio, View);
             Reload();
         }
         internal void Reload() => Atlas.LoadMap(Context, new(1, Context.Descriptor.DataRect,
@@ -389,16 +394,17 @@ public sealed class AtlasServiceTests
         public Pose? Destination => null;
         public ITransitHandle Start(Pose from, Pose to, TransitOptions? options = null) => throw new NotSupportedException();
     }
-    private sealed class TestAudio : Campus.Contracts.Audio.IAudioService
+    private sealed class TestAudio : IAudioService
     {
-        public Campus.Contracts.Audio.AudioSettings Settings { get; } = new();
-        public Campus.Contracts.Audio.AudioSnapshot Snapshot => default!;
-        public event Action<Campus.Contracts.Audio.AudioSettings>? SettingsChanged { add { } remove { } }
-        public void ApplySettings(Campus.Contracts.Audio.AudioSettings settings) => throw new NotSupportedException();
-        public void PlayUi(Campus.Contracts.Audio.UiCue cue) { }
-        public void SetMusic(Campus.Contracts.Audio.MusicCue cue, float fadeSeconds = 1.5f) => throw new NotSupportedException();
-        public void Duck(Campus.Contracts.Audio.DuckReason reason, float db, float attackSeconds, float releaseSeconds) { }
-        public void ReleaseDuck(Campus.Contracts.Audio.DuckReason reason) { }
+        public List<UiCue> Cues { get; } = [];
+        public AudioSettings Settings { get; } = new();
+        public AudioSnapshot Snapshot => default;
+        public event Action<AudioSettings>? SettingsChanged { add { } remove { } }
+        public void ApplySettings(AudioSettings settings) => throw new NotSupportedException();
+        public void PlayUi(UiCue cue) => Cues.Add(cue);
+        public void SetMusic(MusicCue cue, float fadeSeconds = 1.5f) => throw new NotSupportedException();
+        public void Duck(DuckReason reason, float db, float attackSeconds, float releaseSeconds) => throw new NotSupportedException();
+        public void ReleaseDuck(DuckReason reason) => throw new NotSupportedException();
     }
 
 }

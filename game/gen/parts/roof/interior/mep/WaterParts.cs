@@ -11,7 +11,7 @@ namespace Campus.Gen.Parts.Roof.Mep;
 /// Variation 0: floor cabinet on feet, two taps. 1: wider cabinet on a kick plinth, three taps. 2: wall-hung tank, one tap
 /// at the bottom (the placer mounts it about 1 m up). Front is −Z.
 /// </summary>
-[Part(PartCatalog.Boiler, Owner = "WP-12")]
+[Part(PartCatalog.Boiler)]
 public sealed class BoilerPart() : MepPart<EquipmentParams>(new(1300, 160))
 {
     private const float Lid = 0.035f;
@@ -96,7 +96,7 @@ public sealed class BoilerPart() : MepPart<EquipmentParams>(new(1300, 160))
 /// cabinet with a top control strip. 2: stainless purifier with a dark display and three taps. All have a dark tap niche with a
 /// red hot lever and a drip tray. Floor-standing; front is −Z.
 /// </summary>
-[Part(PartCatalog.WaterDispenser, Owner = "WP-12")]
+[Part(PartCatalog.WaterDispenser)]
 public sealed class WaterDispenserPart() : MepPart<EquipmentParams>(new(700, 200))
 {
     private const float Reach = 0.035f;

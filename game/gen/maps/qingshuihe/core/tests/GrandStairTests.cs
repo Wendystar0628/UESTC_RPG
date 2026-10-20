@@ -115,8 +115,8 @@ public sealed class GrandStairTests
     public void WpThirteenDressesTheLibraryFrontDoor()
     {
         var world = Campus.Tests.RealMapFixture.Load().World;
-        var zone = new WpId("WP-16");
-        WpId? ClaimedBy(FeatureId feature, Aspects aspects) =>
+        var zone = "zone.core";
+        string? ClaimedBy(FeatureId feature, Aspects aspects) =>
             CoreSite.Claims.OfType<FeatureClaim>().Any(c => c.Feature == feature && (c.Aspects & aspects) == aspects) ? zone : null;
         AssertThat(ClaimedBy(CoreIds.Library, Aspects.Props) is null).OverrideFailureMessage("the zone leaves the library's props unclaimed").IsTrue();
         var entrance = world.Interiors.Get(CoreIds.Library)!.Entrances.Single(e => e.Open && e.Id == "lib.main");

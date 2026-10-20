@@ -14,7 +14,7 @@ internal partial class ObserverListener : AudioListener3D
         Name = "ObserverListener";
         TopLevel = true;
         PhysicsInterpolationMode = PhysicsInterpolationModeEnum.Off;
-        ProcessPriority = FramePriority.Camera + 2;
+        ProcessPriority = FramePriority.Listener;
     }
 
     public override void _Ready()

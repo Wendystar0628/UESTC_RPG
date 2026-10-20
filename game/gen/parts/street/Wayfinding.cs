@@ -14,7 +14,7 @@ namespace Campus.Gen.Parts.Street;
 /// The place names (white, with pinyin) wait for the scene-text atlas; the boards stay clean until then. Collision: the two posts and a
 /// thin box over the boards, Metal.
 /// </summary>
-[Part(PartCatalog.Signpost, Owner = "WP-13")]
+[Part(PartCatalog.Signpost)]
 public sealed class SignpostPart : IPartDef<SignParams>
 {
     public SignpostPart() => Lods = Levels.Of<SignParams>(Build, LodLevel.L0, LodLevel.L1, LodLevel.L2);
@@ -110,7 +110,7 @@ public sealed class SignpostPart : IPartDef<SignParams>
 /// height. The number waits for WP-55's bay data and the scene-text atlas. Collision: the sign only, a thin box, Metal; the painted
 /// frame is ground (WLD-LIFE). Variation 0 is the open bay; a roofed shelter (自行车棚) is a later variation.
 /// </summary>
-[Part(PartCatalog.BicycleShelter, Owner = "WP-13")]
+[Part(PartCatalog.BicycleShelter)]
 public sealed class BicycleBayPart : IPartDef<RoofParams>
 {
     public BicycleBayPart() => Lods = Levels.Of<RoofParams>(Build, LodLevel.L0, LodLevel.L1);
@@ -185,7 +185,7 @@ public sealed class BicycleBayPart : IPartDef<RoofParams>
 /// the kerb, Height is the kerb's rise, Depth the run. Collision: one walkable ramp, Ground, Concrete. The part ID waits for its
 /// catalogue entry (contract request): <see cref="StreetStyle.KerbRampId"/>.
 /// </summary>
-[Part(StreetStyle.KerbRampId, Owner = "WP-13")]
+[Part(StreetStyle.KerbRampId)]
 public sealed class KerbRampPart : IPartDef<RampParams>
 {
     public KerbRampPart() => Lods = Levels.Of<RampParams>(Build, LodLevel.L0, LodLevel.L1);

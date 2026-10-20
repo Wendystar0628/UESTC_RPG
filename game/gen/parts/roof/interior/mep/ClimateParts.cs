@@ -11,7 +11,7 @@ namespace Campus.Gen.Parts.Roof.Mep;
 /// cabinet (柜机) with louvred outlet at the top and an intake grille at the foot. Wall units are visual only; the cabinet is a
 /// floor prop. Front is −Z.
 /// </summary>
-[Part(PartCatalog.IndoorAirConditioner, Owner = "WP-12")]
+[Part(PartCatalog.IndoorAirConditioner)]
 public sealed class IndoorAirConditionerPart() : MepPart<EquipmentParams>(new(800, 90))
 {
     protected override Vector3 Minimum => new(0.4f, 0.2f, 0.12f);
@@ -101,7 +101,7 @@ public sealed class IndoorAirConditionerPart() : MepPart<EquipmentParams>(new(80
 /// lowest point of the motor; Height is the drop to the ceiling. Variation 0: three white blades. 1: three tapered grey
 /// blades, aluminium motor. 2: four white blades. Overhead, so visual only. Blades are static here (SYS-MOTION animates).
 /// </summary>
-[Part(PartCatalog.CeilingFan, Owner = "WP-12")]
+[Part(PartCatalog.CeilingFan)]
 public sealed class CeilingFanPart() : MepPart<EquipmentParams>(new(800, 220))
 {
     protected override Vector3 Minimum => new(0.6f, 0.25f, 0.6f);

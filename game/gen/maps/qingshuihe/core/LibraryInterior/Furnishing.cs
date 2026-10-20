@@ -1,3 +1,4 @@
+using Campus.Gen.Interior;
 using System.Numerics;
 using Campus.Contracts;
 using Campus.Contracts.Audio;
@@ -26,7 +27,7 @@ internal static class Furnishing
     /// A bookshelf seal (书架墙) on the run a → b: shelves facing the room side with books, a wood-faced wall behind them
     /// up to the ceiling, and one DoorClosed wall collider (WLD-INTERIORS-ACCESS 封口, top ≥ 1.5 m).
     /// </summary>
-    public static void ShelfWall(InteriorSink sink, Vector2 a, Vector2 b, Vector2 room, float y, float top, ref Rng books)
+    public static void ShelfWall(InteriorGeometry sink, Vector2 a, Vector2 b, Vector2 room, float y, float top, ref Rng books)
     {
         var length = Vector2.Distance(a, b);
         if (length < 0.05f) return;
@@ -61,7 +62,7 @@ internal static class Furnishing
     }
 
     /// <summary>One shelf's row of books: blocks of varied width, height and colour flush near the front, with a few gaps.</summary>
-    public static void Books(InteriorSink sink, Vector2 c, Vector2 u, Vector2 room, float width, float y, float height, ref Rng rng)
+    public static void Books(InteriorGeometry sink, Vector2 c, Vector2 u, Vector2 room, float width, float y, float height, ref Rng rng)
     {
         var x = -width * 0.5f;
         while (x < width * 0.5f - 0.05f)
@@ -77,7 +78,7 @@ internal static class Furnishing
     }
 
     /// <summary>A small pile of closed books lying on a surface, turned a little each.</summary>
-    public static void BookPile(InteriorSink sink, Vector2 c, Vector2 u, float y, int count, ref Rng rng)
+    public static void BookPile(InteriorGeometry sink, Vector2 c, Vector2 u, float y, int count, ref Rng rng)
     {
         for (var i = 0; i < count; i++)
         {
@@ -91,7 +92,7 @@ internal static class Furnishing
     }
 
     /// <summary>An open book with a plain bookmark: cover and two page blocks either side of the spine (spine along u).</summary>
-    public static void OpenBook(InteriorSink sink, Vector2 c, Vector2 u, float y, string cover)
+    public static void OpenBook(InteriorGeometry sink, Vector2 c, Vector2 u, float y, string cover)
     {
         var side = Across(u);
         sink.Box(S.Trim(cover), c, u, 0.25f, 0.36f, y, y + 0.006f);
@@ -101,7 +102,7 @@ internal static class Furnishing
     }
 
     /// <summary>A wooden chair: seat, four legs, a back toward the far side from where its user looks.</summary>
-    public static void Chair(InteriorSink sink, Vector2 c, Vector2 facing, float y, string colour)
+    public static void Chair(InteriorGeometry sink, Vector2 c, Vector2 facing, float y, string colour)
     {
         if (!sink.Full) return;
         var side = Across(facing);
@@ -115,7 +116,7 @@ internal static class Furnishing
     }
 
     /// <summary>A metal-framed armchair with a coloured shell (橙黄与孔雀蓝金属框扶手椅).</summary>
-    public static void Armchair(InteriorSink sink, Vector2 c, Vector2 facing, float y, string colour)
+    public static void Armchair(InteriorGeometry sink, Vector2 c, Vector2 facing, float y, string colour)
     {
         if (!sink.Full) return;
         var side = Across(facing);
@@ -133,7 +134,7 @@ internal static class Furnishing
     }
 
     /// <summary>A sofa: seat block, back and two arms (奶白沙发).</summary>
-    public static void Sofa(InteriorSink sink, Vector2 c, Vector2 facing, float length, float y, string colour)
+    public static void Sofa(InteriorGeometry sink, Vector2 c, Vector2 facing, float length, float y, string colour)
     {
         var side = Across(facing);
         var paint = S.Trim(colour);
@@ -143,7 +144,7 @@ internal static class Furnishing
     }
 
     /// <summary>A barrel chair (果绿桶形椅): round seat and a low curved-looking back.</summary>
-    public static void Barrel(InteriorSink sink, Vector2 c, Vector2 facing, float y, string colour)
+    public static void Barrel(InteriorGeometry sink, Vector2 c, Vector2 facing, float y, string colour)
     {
         var paint = S.Trim(colour);
         sink.Cylinder(paint, c, 0.3f, y, y + 0.45f, 16);
@@ -151,7 +152,7 @@ internal static class Furnishing
     }
 
     /// <summary>Wooden step seats (木质台阶座): tiers rising away from the front edge at c.</summary>
-    public static void StepSeat(InteriorSink sink, Vector2 c, Vector2 facing, float width, int tiers, float y)
+    public static void StepSeat(InteriorGeometry sink, Vector2 c, Vector2 facing, float width, int tiers, float y)
     {
         const float Depth = 0.6f, Rise = 0.42f;
         var paint = S.Trim(S.LightWood);
@@ -167,7 +168,7 @@ internal static class Furnishing
     public const float TableTop = 0.76f;
 
     /// <summary>A rectangular table: chamfered top on four legs; u is the long side.</summary>
-    public static void Table(InteriorSink sink, Vector2 c, Vector2 u, float length, float width, float y, string top, string legs)
+    public static void Table(InteriorGeometry sink, Vector2 c, Vector2 u, float length, float width, float y, string top, string legs)
     {
         const float Height = TableTop;
         sink.Beveled(S.Trim(top), c, u, length, width, y + Height - 0.045f, y + Height, 0.012f);
@@ -179,7 +180,7 @@ internal static class Furnishing
     }
 
     /// <summary>A white round table on a pedestal.</summary>
-    public static void RoundTable(InteriorSink sink, Vector2 c, float radius, float y)
+    public static void RoundTable(InteriorGeometry sink, Vector2 c, float radius, float y)
     {
         var white = S.Trim(S.WallWhite);
         sink.Cylinder(white, c, radius, y + 0.72f, y + 0.75f, 20);
@@ -189,7 +190,7 @@ internal static class Furnishing
     }
 
     /// <summary>A green-shaded reading lamp (绿罩台灯) on a table top: brass foot and stem, the shade, a self-lit mouth.</summary>
-    public static void BankerLamp(InteriorSink sink, Vector2 c, Vector2 u, float y)
+    public static void BankerLamp(InteriorGeometry sink, Vector2 c, Vector2 u, float y)
     {
         if (!sink.Full) return;
         var brass = S.Metal("panel.paleGold");
@@ -204,7 +205,7 @@ internal static class Furnishing
     /// <paramref name="target"/> with a self-lit mouth, and the warm pool of light on the table (window.library: faint by day,
     /// full after sunset).
     /// </summary>
-    public static void DeskLamp(InteriorSink sink, Vector2 foot, Vector2 target, float y)
+    public static void DeskLamp(InteriorGeometry sink, Vector2 foot, Vector2 target, float y)
     {
         if (!sink.Full) return;
         var white = S.Trim(S.WallWhite);
@@ -221,7 +222,7 @@ internal static class Furnishing
     }
 
     /// <summary>A vacuum flask with its cap off beside it (没拧盖的保温杯).</summary>
-    public static void Flask(InteriorSink sink, Vector2 c, Vector2 cap, float y)
+    public static void Flask(InteriorGeometry sink, Vector2 c, Vector2 cap, float y)
     {
         if (!sink.Full) return;
         sink.Cylinder(S.Metal(S.Steel), c, 0.036f, y, y + 0.21f, 14);
@@ -230,7 +231,7 @@ internal static class Furnishing
     }
 
     /// <summary>A glass of water left on a table, its surface catching the light (桌上一杯没喝完的水).</summary>
-    public static void Cup(InteriorSink sink, Vector2 c, float y)
+    public static void Cup(InteriorGeometry sink, Vector2 c, float y)
     {
         if (!sink.Full) return;
         sink.Cylinder(S.Trim("curtain.cream"), c, 0.035f, y, y + 0.1f, 14);
@@ -238,7 +239,7 @@ internal static class Furnishing
     }
 
     /// <summary>A square paper lantern (方形纸灯笼) hanging from the ceiling on a rod.</summary>
-    public static void Lantern(InteriorSink sink, Vector2 c, Vector2 u, float bottom, float ceiling)
+    public static void Lantern(InteriorGeometry sink, Vector2 c, Vector2 u, float bottom, float ceiling)
     {
         sink.Glow(S.LampGlow, c, u, 0.36f, 0.36f, bottom, bottom + 0.46f);
         sink.Bar(S.Metal(S.Frame), new Vector3(c.X, bottom + 0.46f, c.Y), new Vector3(c.X, ceiling, c.Y), 0.012f);

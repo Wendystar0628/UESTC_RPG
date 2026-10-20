@@ -47,10 +47,9 @@ public sealed class InteriorProviderAttribute(string id) : RegistrationAttribute
 /// <summary>Configure a fresh map-owned provider from the authoritative catalog before publishing it to workers.</summary>
 public interface IInteriorCatalogConfigurable
 {
-    void Configure(IEnumerable<FeatureId> features, IEnumerable<int> openFloors,
-        IReadOnlyDictionary<FeatureId, IReadOnlyList<EntranceDecl>> entrances);
+    void Configure(InteriorCatalogConfiguration configuration);
 }
-public interface IInteriorProvider           // gen 里实现，纯函数；注册即开放（G19c 核对开放清单 = 注册的提供者 = 门开着的楼）
+public interface IInteriorProvider           // gen 里实现；加载期配置后 Layout/Build/Collision/Nav 为纯函数；目录声明才开放（G19c 核对开放清单 = 注册的提供者 = 门开着的楼）
 {
     BakeInputDependencies BakeInputs { get; }
     BakeInputDependencies CollisionInputs { get; }

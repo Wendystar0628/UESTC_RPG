@@ -12,7 +12,7 @@ namespace Campus.Gen.Parts.Roof;
 /// (the host's trim colour); the material class is the building trim class.
 /// <see cref="Along"/> sweeps the same section round a parapet ring with mitred corners.
 /// </summary>
-[Part(PartCatalog.ParapetCap, Owner = "WP-12")]
+[Part(PartCatalog.ParapetCap)]
 public sealed class ParapetCapPart : IPartDef<TrimParams>
 {
     public ParapetCapPart() => Lods = Levels.Of<TrimParams>(Build, LodLevel.L0, LodLevel.L1, LodLevel.L2, LodLevel.L3);
@@ -72,7 +72,7 @@ public sealed class ParapetCapPart : IPartDef<TrimParams>
 /// (raised to the prop minimum section, ART-FIDELITY). Variation 0 puts one support near each end;
 /// Variation ≥ 1 (precision zone K1) puts one every metre.
 /// </summary>
-[Part(PartCatalog.LightningStrip, Owner = "WP-12")]
+[Part(PartCatalog.LightningStrip)]
 public sealed class LightningStripPart : IPartDef<TrimParams>
 {
     public LightningStripPart() => Lods = Levels.Of<TrimParams>(Build, LodLevel.L0, LodLevel.L1);
@@ -142,7 +142,7 @@ public sealed class LightningStripPart : IPartDef<TrimParams>
 /// Variation ≥ 1 is the dark condensate drain beside a unit grille: no hopper.
 /// Colours come from <see cref="BoxPartParams.Material"/> (main wall or dark grey, ART-FIDELITY).
 /// </summary>
-[Part(PartCatalog.Downpipe, Owner = "WP-12")]
+[Part(PartCatalog.Downpipe)]
 public sealed class DownpipePart : IPartDef<ColumnParams>
 {
     public DownpipePart() => Lods = Levels.Of<ColumnParams>(Build, LodLevel.L0, LodLevel.L1);

@@ -79,7 +79,7 @@ public partial class StreamDirector
             var priority = tile == StreamTile.Root || _destinationRequired.Contains(tile) ? BakePriority.KnownDestination : BakePriority.Normal;
             if (group.Error is not null && priority == BakePriority.KnownDestination) _error ??= group.Error;
             group.Priority = priority;
-            var distance = LodTree.Distance(pose.Position, tree.Bounds(tile));
+            var distance = MathF.Sqrt(tree.Bounds(tile).DistanceSquared(pose.Position));
             var toTile = tree.Bounds(tile).Center - pose.Position;
             var approach = toTile.LengthSquared() > 0 ? N.Vector3.Dot(_velocity, N.Vector3.Normalize(toTile)) : 0;
             var radius = _settings.Distances[Math.Min((int)tile.Level, 3)];

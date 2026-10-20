@@ -9,7 +9,7 @@ namespace Campus.Gen.Parts.Openings;
 /// glass it covers; Depth bounds the pleats. Curtains cast no shadow (ART-MODELING).
 /// L0: six segments per pleat; L1: two; L2 and further: nothing (toon_glass draws the state far away).
 /// </summary>
-[Part(PartCatalog.Curtain, Owner = "WP-10")]
+[Part(PartCatalog.Curtain)]
 public sealed class CurtainPart() : OpeningPart<PanelParams>(new(900, 300))
 {
     protected override Box3 Extent(PanelParams p)
@@ -62,7 +62,7 @@ public sealed class CurtainPart() : OpeningPart<PanelParams>(new(900, 300))
 }
 
 /// <summary>PVC 门帘: overlapping translucent strips under a rail, alternating slightly in depth. No collision (WLD-INTERIORS).</summary>
-[Part(PartCatalog.PvcCurtain, Owner = "WP-10")]
+[Part(PartCatalog.PvcCurtain)]
 public sealed class PvcCurtainPart() : OpeningPart<PanelParams>(new(160, 100))
 {
     private const float Strip = 0.2f;
@@ -97,7 +97,7 @@ public sealed class PvcCurtainPart() : OpeningPart<PanelParams>(new(160, 100))
 /// 室内视差卡: a stand-alone toon_glass slab for places that need a window card without a wall block (Variation picks
 /// classroom, office or dormitory). The parallax itself is drawn by toon_glass.
 /// </summary>
-[Part(PartCatalog.InteriorCard, Owner = "WP-10")]
+[Part(PartCatalog.InteriorCard)]
 public sealed class InteriorCardPart() : OpeningPart<PanelParams>(new(12, 12))
 {
     protected override Box3 Extent(PanelParams p) => new(new(-p.Width * 0.5f, 0, -p.Depth * 0.5f), new(p.Width * 0.5f, p.Height, p.Depth * 0.5f));

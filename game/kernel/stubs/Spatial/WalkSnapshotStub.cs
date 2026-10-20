@@ -4,7 +4,7 @@ using Campus.Contracts.Maps;
 namespace Campus.Kernel.Stubs;
 
 /// <summary>No physical publisher is installed. Default positions/shapes are undefined behind Absent/Pending.</summary>
-[KernelService(typeof(IWalkSnapshot), Owner = "WP-00", IsStub = true)]
+[KernelService(typeof(IWalkSnapshot), IsStub = true)]
 public sealed class WalkSnapshotStub(IWorldState world, IMapService maps, IViewControl view) : IWalkSnapshot
 {
     public WalkSnapshot Previous => Current;

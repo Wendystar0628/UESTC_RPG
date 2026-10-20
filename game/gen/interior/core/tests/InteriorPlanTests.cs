@@ -2,6 +2,7 @@ using System.Globalization;
 using System.Numerics;
 using Campus.Contracts;
 using Campus.Contracts.Audio;
+using Campus.Gen.Parts.Core;
 using Campus.Tests;
 using GdUnit4;
 
@@ -212,6 +213,53 @@ public sealed class InteriorPlanTests
             AssertThat(EqualityComparer<string>.Default.Equals(string.Join(';', expected.Doors.Select(d => d.Id)), string.Join(';', actual.Doors.Select(d => d.Id)))).OverrideFailureMessage($"Expected {string.Join(';', expected.Doors.Select(d => d.Id))}; got {string.Join(';', actual.Doors.Select(d => d.Id))}.").IsTrue();
         }
         finally { CultureInfo.CurrentCulture = previous; }
+    }
+
+    [TestCase, TestCategory(TestReason.Contract)]
+    public void ConvexWingKeepsSlopingWorldEdgesAndUsesThreePointTwoMetreStoreys()
+    {
+        var footprint=new PolygonRings([new(0,0),new(36,0),new(40,15),new(0,13.6f)]);
+        var request=Request() with {Footprint=footprint,Storeys=[new(1,0,3.2f,footprint.Outer),new(2,3.2f,3.2f,footprint.Outer)]};
+        var plan=InteriorPlanGenerator.Generate(request);
+        AssertThat(plan.Storeys.All(s=>s.Height==3.2f)&&plan.Storeys[1].FloorY==3.2f).IsTrue();
+        AssertThat(plan.Stairs.All(s => s.UpFlight.Stair is { Count: 10 } && s.ReturnFlight.Stair is { Count: 10 })).IsTrue();
+        var floor=plan.Slabs.Where(s=>s.Storey==1).Sum(s=>Math.Abs(Campus.Gen.Geometry.PlanGeometry.SignedArea(s.Ring)));
+        var footprintArea=Math.Abs(Campus.Gen.Geometry.PlanGeometry.SignedArea(footprint.Outer));
+        AssertThat(Math.Abs(floor-footprintArea)/footprintArea<TestTolerance.FloatRelative).IsTrue();
+        AssertThat(plan.Rooms.SelectMany(r=>r.ClearRing).Any(p=>p.Y>13.6f)).IsTrue();
+    }
+
+    [TestCase, TestCategory(TestReason.Regression)]
+    public void GeneratedWallsKeepThinWindowFillsAndTheirCollisionDimensions()
+    {
+        InteriorPlanRequest request = Request();
+        InteriorPlan plan = InteriorPlanGenerator.Generate(request with
+        { Storeys = request.Storeys.Select(s => s with { FloorY = (s.Index - 1) * 3.2f, Height = 3.2f }).ToArray() });
+        AssertThat(plan.Walls.Any(w => w.Role == InteriorWallRole.WindowGlass && w.Thickness < 2 * PartStyleDefaults.TrimEdgeBevel)).IsTrue();
+        foreach (InteriorWallSpan span in plan.Walls)
+        {
+            var sink = new InteriorGeometry();
+            var material = span.Role == InteriorWallRole.WindowGlass ? PartMaterials.Glazing() : new ToonSpec(new("wall.lit"), new("wall.shade"));
+            sink.Wall(span.A, span.B, span.BottomY, span.TopY, span.Thickness, material);
+            var meshes = sink.Finish().Meshes;
+            AssertThat(meshes.Count > 0 && meshes.All(m => m.Index.Length > 0 && m.Position.All(float.IsFinite)))
+                .OverrideFailureMessage($"A valid {span.Role} wall disappeared or produced invalid vertices.").IsTrue();
+            AssertThat(sink.Colliders.Single()).IsEqual(new WallCollider(span.A, span.B, span.Thickness * 0.5f,
+                span.BottomY, span.TopY, SurfaceTag.Wall) { Foot = FootMat.Concrete });
+        }
+    }
+
+    [TestCase, TestCategory(TestReason.Contract)]
+    public void ObliqueBentFootprintSplitsIntoTwoConvexWingsWithoutInventedVertices()
+    {
+        var footprint=new PolygonRings([new(0,0),new(40,0),new(48,30),new(32,34),new(25,14),new(0,14)]);
+        var wings=InteriorWingDecomposition.Split(footprint,"fixture:oblique");
+        var reversed=InteriorWingDecomposition.Split(new(footprint.Outer.Reverse().ToArray()),"fixture:oblique");
+        AssertThat(wings.Count==2&&wings.All(w=>w.Outer.Count==4&&w.Outer.All(footprint.Outer.Contains))).IsTrue();
+        AssertThat(wings.Zip(reversed).All(pair=>pair.First.Outer.SequenceEqual(pair.Second.Outer))).IsTrue();
+        var footprintArea=Math.Abs(Campus.Gen.Geometry.PlanGeometry.SignedArea(footprint.Outer));
+        AssertThat(Math.Abs(wings.Sum(w=>Math.Abs(Campus.Gen.Geometry.PlanGeometry.SignedArea(w.Outer)))-
+            footprintArea)/footprintArea<TestTolerance.FloatRelative).IsTrue();
     }
 
     private static InteriorPlanRequest Request()

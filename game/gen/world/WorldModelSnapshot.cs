@@ -27,20 +27,34 @@ public sealed class WorldModelSnapshot : IWorldModel
     public IInteriorIndex Interiors { get; }
     public IOutskirtsModel? Outskirts { get; }
     public IFidelityModel Fidelity { get; }
-    public IReadOnlyList<InteriorOverlayFile> InteriorOverlays { get; }
     public ITerrain Terrain { get; }
 
     internal WorldModelSnapshot(IReadOnlyDictionary<FeatureId, WorldFeature> features, PolygonRings boundary,
         WorldNetwork network, IInteriorIndex interiors, IOutskirtsModel? outskirts,
-        IReadOnlyList<InteriorOverlayFile> interiorOverlays, IFidelityModel fidelity,
+        IFidelityModel fidelity,
         IReadOnlyDictionary<string, TerrainOp> terrainOperations, ITerrain terrain)
     {
         Features = features; Boundary = boundary; Network = network; Interiors = interiors;
-        Outskirts = outskirts; Fidelity = fidelity; InteriorOverlays = interiorOverlays;
+        Outskirts = outskirts; Fidelity = fidelity;
         Terrain = terrain;
         TerrainOperations = terrainOperations;
         Spatial = new WorldSpatialIndex(features, boundary, network, interiors, Terrain);
     }
+    /// <summary>Complete the world before publication using already baked provider layouts; no provider executes here.</summary>
+    public static IWorldModel WithInteriors(IWorldModel source, IReadOnlyList<InteriorIndexEntry> completed)
+    {
+        var entries = source.Features.Keys.Select(source.Interiors.Get).OfType<InteriorIndexEntry>()
+            .ToDictionary(entry => entry.Feature);
+        foreach (var entry in completed)
+        {
+            if (!source.Features.ContainsKey(entry.Feature))
+                throw new InvalidDataException($"Completed interior has no building: {entry.Feature.Value}.");
+            entries[entry.Feature] = entry;
+        }
+        return new WorldModelSnapshot(source.Features, source.Boundary, source.Network,
+            new WorldInteriorIndex(entries.Values), source.Outskirts, source.Fidelity, source.TerrainOperations, source.Terrain);
+    }
+
 }
 
 internal static class WorldFeatureKinds
@@ -70,18 +84,8 @@ internal sealed class WorldInteriorIndex : IInteriorIndex
         var entries = new Dictionary<FeatureId, InteriorIndexEntry>();
         foreach (var feature in features.OrderBy(f => f.Id.Value, StringComparer.Ordinal))
         {
-            var storeys = new List<StoreyInfo>();
-            var parts = WorldFeatureKinds.Parts(feature, "building").ToArray();
-            var padY = parts.Length == 0 ? 0 : terrain?.PadY(feature.Id) ?? 0;
-            foreach (var part in parts)
-            {
-                var count = Math.Max(1, part.Storeys ?? (int)MathF.Ceiling((part.Height ?? WorldModelLoader.DefaultStoreyHeight) / WorldModelLoader.DefaultStoreyHeight));
-                var height = (part.Height ?? count * WorldModelLoader.DefaultStoreyHeight) / count;
-                foreach (var polygon in WorldFeatureGeometry.PolygonsOf(part.Geometry))
-                    for (var floor = 1; floor <= count; floor++)
-                        storeys.Add(new(floor, padY + (floor - 1) * height, height, polygon.Outer));
-            }
-            if (storeys.Count > 0) entries.Add(feature.Id, new(feature.Id, storeys.AsReadOnly(), [], false, null, []));
+            var storeys = ClosedBuildingStoreys.ClosedBuilding(feature, terrain ?? FlatTerrain.Default);
+            if (storeys.Count > 0) entries.Add(feature.Id, new(feature.Id, storeys, [], false, null, []));
         }
         if (catalog is not null)
         {
@@ -113,12 +117,14 @@ internal sealed class WorldInteriorIndex : IInteriorIndex
                         { throw new WorldDataException("interiors.json", WorldModelLoader.Text(door, "id"), error.Message, error); }
                         entrances.Add(entrance);
                     }
-                    entries[id] = entry with { Open = true, ProviderId = provider, Entrances = entrances.AsReadOnly(), OpenStoreys = openStoreys };
+                    entries[id] = entry with { Storeys = [], Open = true, ProviderId = provider, Entrances = entrances.AsReadOnly(), OpenStoreys = openStoreys };
                 }
             }
         }
         _entries = new ReadOnlyDictionary<FeatureId, InteriorIndexEntry>(entries);
     }
+    internal WorldInteriorIndex(IEnumerable<InteriorIndexEntry> entries) =>
+        _entries = new ReadOnlyDictionary<FeatureId, InteriorIndexEntry>(entries.ToDictionary(entry => entry.Feature));
     public InteriorIndexEntry? Get(FeatureId id) => _entries.GetValueOrDefault(id);
     public IReadOnlyList<EntranceDecl> EntrancesNear(Vector3 p, float r) => _entries.OrderBy(e => e.Key.Value, StringComparer.Ordinal)
         .SelectMany(e => e.Value.Entrances).Where(e => Vector3.DistanceSquared(e.Center, p) <= r * r).ToArray();
@@ -176,18 +182,18 @@ internal sealed class WorldSpatialIndex : ISpatialIndex
         foreach (var feature in At(p.X, p.Z))
         {
             var point = new Vector2(p.X, p.Z);
-            var part = WorldFeatureKinds.Parts(feature, "building").FirstOrDefault(part => p.Y >= ground && p.Y < ground + (part.Height ?? WorldModelLoader.DefaultStoreyHeight)
-                && WorldFeatureGeometry.PolygonsOf(part.Geometry).Any(r => PlanGeometry.Contains(r, point)));
+            var part = WorldFeatureKinds.Parts(feature, "building").FirstOrDefault(part =>
+                WorldFeatureGeometry.PolygonsOf(part.Geometry).Any(r => PlanGeometry.Contains(r, point)));
             if (part is not null)
             {
                 var storeys = _interiors.Get(feature.Id)?.Storeys;
                 var storey = storeys?.Where(s => p.Y >= s.FloorY && p.Y < s.FloorY + s.Height && PlanGeometry.PointInRing(point, s.Footprint)).OrderBy(s => s.Index).FirstOrDefault();
                 var distance = WorldFeatureGeometry.PolygonsOf(part.Geometry).Where(r => PlanGeometry.Contains(r, point))
                     .SelectMany(r => new[] { r.Outer }.Concat(r.Holes)).Min(r => PlanGeometry.DistanceToRing(new(p.X, p.Z), r));
-                var localFloor = _interiors is WorldInteriorIndex
-                    ? 1 + (int)MathF.Floor((p.Y - ground) / ((part.Height ?? WorldModelLoader.DefaultStoreyHeight) / Math.Max(1, part.Storeys ?? 1)))
-                    : storey?.Index ?? 1;
-                return new(MediumKind.Interior, feature.Id, localFloor, distance);
+                if (storeys is null || storeys.Count == 0)
+                    throw new InvalidOperationException($"Interior layout is not prepared: {feature.Id.Value}.");
+                if (storey is null) continue;
+                return new(MediumKind.Interior, feature.Id, storey.Index, distance);
             }
             if (_terrain is FlatTerrain && p.Y < ground && p.Y >= ground - 6 && WorldFeatureKinds.Parts(feature, "water")
                 .Any(water => WorldFeatureGeometry.PolygonsOf(water.Geometry).Any(r => PlanGeometry.Contains(r, point))))

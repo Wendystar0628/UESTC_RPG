@@ -7,7 +7,7 @@ using Campus.Contracts.Maps;
 
 namespace Campus.Systems.Atlas;
 
-[KernelNode("atlas", Owner = "WP-48c")]
+[KernelNode("atlas")]
 public partial class AtlasRuntime : Godot.Node, IMapAware, IMapDataParticipant
 {
     private readonly AtlasService _atlas;

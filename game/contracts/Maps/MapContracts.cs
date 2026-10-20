@@ -1,5 +1,4 @@
 using System.Numerics;
-using Campus.Contracts.Save;
 
 namespace Campus.Contracts.Maps;
 

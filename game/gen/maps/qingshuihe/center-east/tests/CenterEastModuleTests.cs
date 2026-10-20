@@ -76,36 +76,6 @@ public sealed partial class CenterEastModuleTests
 
     [TestCase, TestCategory(TestReason.Contract)]
     [TestCategory("Slow")]
-    public void ClaimsNameExistingFeaturesAndCoverTheirBuildings()
-    {
-        var world = World();
-        var module = new CenterEastModule();
-        var claims = module.Claims.OfType<FeatureClaim>().ToDictionary(c => c.Feature.Value, StringComparer.Ordinal);
-        AssertThat(module.Claims.Count == CenterEastSites.All.SelectMany(site => site.Claims).Count() && claims.Count == module.Claims.Count).OverrideFailureMessage("品学楼's frame entity, the three research buildings and 文科楼群 are claimed, once each").IsTrue();
-        foreach (var claim in claims.Values)
-        {
-            AssertThat(world.Features.ContainsKey(claim.Feature)).OverrideFailureMessage($"claimed feature {claim.Feature.Value} exists").IsTrue();
-            AssertThat((claim.Aspects & Aspects.Massing) != 0).OverrideFailureMessage("claims cover massing so WP-14 skips the extrusion").IsTrue();
-        }
-        foreach (var probe in module.Probes)
-            AssertThat(world.Features.ContainsKey(probe.Feature)).OverrideFailureMessage($"probe {probe.Id} names an existing feature").IsTrue();
-        string[] Parts(string id) => world.Features[new(id)].Parts.Select(p => p.SourceId).OrderBy(s => s, StringComparer.Ordinal).ToArray();
-        AssertThat(Parts(CenterEastIds.Pinxue.Complex).SequenceEqual([CenterEastIds.Pinxue.FrameBar, CenterEastIds.Pinxue.BridgeBC, CenterEastIds.Pinxue.BridgeAC])).OverrideFailureMessage("the 品学楼 claim holds exactly the frame bar and the two bridges").IsTrue();
-        // Every part of a claimed research building is built by its site: blocks as gridded blocks, the hall as the lens hall.
-        foreach (var site in CenterEastSites.All.OfType<ResearchSite>())
-        {
-            AssertThat(claims.ContainsKey(site.Entity)).OverrideFailureMessage($"{site.Id} claims its entity").IsTrue();
-            var hall = site.Entity switch { var id when id == CenterEastIds.Research.KeA => CenterEastIds.Research.KeAHall, var id when id == CenterEastIds.Research.KeB => CenterEastIds.Research.KeBHall, _ => CenterEastIds.Research.KeCHall };
-            AssertThat(Parts(site.Entity).SequenceEqual(site.Blocks.Select(b => b.Source).Append(hall).OrderBy(s => s, StringComparer.Ordinal))).OverrideFailureMessage($"{site.Id} builds every part of {site.Entity}").IsTrue();
-        }
-        // 文科楼群: every building part is one of the site's blocks; the only other part is the site outline itself.
-        var wenke = world.Features[new(CenterEastIds.Wenke.Entity)].Parts;
-        AssertThat(wenke.Where(p => p.SourceId != CenterEastIds.Wenke.SourceOutline).Select(p => p.SourceId).OrderBy(s => s, StringComparer.Ordinal)
-            .SequenceEqual(K.Blocks.Select(b => b.Part).OrderBy(s => s, StringComparer.Ordinal))).OverrideFailureMessage("文科楼群's five buildings are the site's five blocks").IsTrue();
-    }
-
-    [TestCase, TestCategory(TestReason.Contract)]
-    [TestCategory("Slow")]
     public void ResearchRegistrationsMatchWhatIsBuilt()
     {
         var world = World();
@@ -206,7 +176,7 @@ public sealed partial class CenterEastModuleTests
     private static BuildContext Context()
     {
         // The center-east sites never read the map descriptor; the world model and seed are their whole input.
-        return new BuildContext { GlobalInputs = TextInputs(), Catalog = Campus.Contracts.Tests.PaletteFixture.Catalog, World = World(), Map = Descriptor(), WorldSeed = 1 };
+        return new BuildContext { CodeHash = "fixture", WindowNumbering = new((Descriptor()).Id, new string('0', 64), []), GlobalInputs = TextInputs(), Catalog = Campus.Contracts.Tests.PaletteFixture.Catalog, World = World(), Map = Descriptor(), WorldSeed = 1 };
     }
 
     private static BuildInputSnapshot TextInputs() => BuildInputSnapshot.Freeze(new Dictionary<string, ReadOnlyMemory<byte>>

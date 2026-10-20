@@ -15,7 +15,7 @@ namespace Campus.Gen.Parts.Street;
 /// Collision (WLD-LIFE): the seat block, jumpable and standable, plus a thin block behind it for the backrest. The seat
 /// declaration (<see cref="IPartDef{TParams}.Seats"/>, contract-33) is read off that same seat block (<see cref="Seating.FromBox"/>).
 /// </summary>
-[Part(PartCatalog.Bench, Owner = "WP-13")]
+[Part(PartCatalog.Bench)]
 public sealed class BenchPart : IPartDef<FurnitureParams>
 {
     public BenchPart() => Lods = Levels.Of<FurnitureParams>(Build, LodLevel.L0, LodLevel.L1);

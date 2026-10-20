@@ -19,11 +19,11 @@ namespace Campus.Hud;
 /// 不显示的页不留件（引擎只在释放节点时归还实例参数槽，<see cref="UiKit.Holders"/>）：大页与开始页打开时建、关上就释放，
 /// 四角的常驻件在进入漫游时建、回到开始页时释放。
 /// </summary>
-[KernelNode("hud", Owner = "WP-35")]
-[KernelService(typeof(HudRoot), Owner = "WP-35")]
-[KernelService(typeof(IAppLoadingPresentation), Owner = "WP-35")]
-[KernelService(typeof(IAppScreenCoverage), Owner = "WP-35")]
-[KernelService(typeof(IAppFrontispiecePresentation), Owner = "WP-35")]
+[KernelNode("hud")]
+[KernelService(typeof(HudRoot))]
+[KernelService(typeof(IAppLoadingPresentation))]
+[KernelService(typeof(IAppScreenCoverage))]
+[KernelService(typeof(IAppFrontispiecePresentation))]
 public partial class HudRoot : CanvasLayer, IBootParticipant, IAppLoadingPresentation, IAppScreenCoverage, IAppFrontispiecePresentation
 {
     private const float IdleFade = 4f;

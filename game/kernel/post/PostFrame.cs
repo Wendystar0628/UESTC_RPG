@@ -1,3 +1,4 @@
+using Campus.Contracts;
 using Campus.Kernel.Renderer;
 using Godot;
 

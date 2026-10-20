@@ -11,7 +11,7 @@ namespace Campus.Gen.Parts.Roof.Mep;
 /// a square plate with a dark round opening, four blades and a hub. The origin is the footprint's bottom centre; the guard hangs at the
 /// top of the height. Front is −Z, back on +Z; visual only.
 /// </summary>
-[Part(PartCatalog.WallFan, Owner = "WP-12")]
+[Part(PartCatalog.WallFan)]
 public sealed class WallFanPart() : MepPart<EquipmentParams>(new(900, 220))
 {
     protected override Vector3 Minimum => new(0.3f, 0.3f, 0.26f);
@@ -87,7 +87,7 @@ public sealed class WallFanPart() : MepPart<EquipmentParams>(new(900, 220))
 /// arm, a white sphere with a smoked window band. The origin is the footprint's bottom centre; the part hangs from its top (the ceiling
 /// or the wall bracket). Back on +Z; visual only.
 /// </summary>
-[Part(PartCatalog.SecurityCamera, Owner = "WP-12")]
+[Part(PartCatalog.SecurityCamera)]
 public sealed class SecurityCameraPart() : MepPart<EquipmentParams>(new(700, 160))
 {
     protected override Vector3 Minimum => new(0.1f, 0.1f, 0.2f);
@@ -154,7 +154,7 @@ public sealed class SecurityCameraPart() : MepPart<EquipmentParams>(new(700, 160
 /// bracket. 1: pendant horn on a rod from the ceiling, a white trumpet pointing −Z. 2: slim wall column with three small drivers
 /// behind a dark grille. Back on +Z; visual only.
 /// </summary>
-[Part(PartCatalog.IndoorSpeaker, Owner = "WP-12")]
+[Part(PartCatalog.IndoorSpeaker)]
 public sealed class IndoorSpeakerPart() : MepPart<EquipmentParams>(new(800, 200))
 {
     protected override Vector3 Minimum => new(0.12f, 0.25f, 0.15f);

@@ -32,7 +32,7 @@ internal static class FurnitureTestSupport
     internal static IReadOnlyDictionary<string, ReadOnlyMemory<byte>> Inputs(byte[]? planting = null) =>
         planting is null ? RealInputs.Value : new Dictionary<string, ReadOnlyMemory<byte>>(StringComparer.Ordinal) { [FurnitureStyle.PlantingKey] = planting };
 
-    internal static FurnitureLayout Build(IWorldModel world, Func<FeatureId, Aspects, WpId?>? claimedBy = null, IReadOnlyDictionary<string, ReadOnlyMemory<byte>>? inputs = null) =>
+    internal static FurnitureLayout Build(IWorldModel world, Func<FeatureId, Aspects, string?>? claimedBy = null, IReadOnlyDictionary<string, ReadOnlyMemory<byte>>? inputs = null) =>
         FurniturePlanner.Build(FurnitureTestSupport.GlobalInputs, Campus.Contracts.Tests.PaletteFixture.Catalog, world, claimedBy, inputs ?? Inputs());
 
     /// <summary>The real map's furniture layout, planned once; tests that only read the default result share it.</summary>

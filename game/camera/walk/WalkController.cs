@@ -14,10 +14,10 @@ using Services = Campus.Kernel.Registry.Kernel;
 namespace Campus.Camera.Walk;
 
 /// <summary>Feet-origin cylinder; input ownership and camera orientation remain with WP-06.</summary>
-[KernelService(typeof(IWalkController), Owner = "WP-42")]
-[KernelService(typeof(IWalkTelemetry), Owner = "WP-42")]
-[KernelNode("walk-controller", Owner = "WP-42")]
-[SaveSection("walk", Owner = "WP-42", Version = 1, Phase = RestorePhase.Pose, Order = 61)]
+[KernelService(typeof(IWalkController))]
+[KernelService(typeof(IWalkTelemetry))]
+[KernelNode("walk-controller")]
+[SaveSection("walk", Version = 1, Phase = RestorePhase.Pose, Order = 61)]
 public partial class WalkController : CharacterBody3D, IWalkController, IMapAware, ISaveSection<WalkSave>, IViewContentReadiness
 {
     // WP-43 assigns one layer per SurfaceTag. Water is semantic, never a blocking surface.

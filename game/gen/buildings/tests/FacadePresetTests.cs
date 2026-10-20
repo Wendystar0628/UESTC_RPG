@@ -27,9 +27,9 @@ public sealed class FacadePresetTests
             WorldFeatureFixture.Create("t:court", "building", new PolygonGeometry(Courtyard(0, 100)), props: "{\"category\":\"teaching\"}", height: 12f, storeys: 3), WorldFeatureFixture.Create("t:hall", "building", new PolygonGeometry(new PolygonRings(Rect(200, 0, 40, 30))), props: "{\"category\":\"sport\"}", height: 9f, storeys: 1),
             WorldFeatureFixture.Create("t:small", "building", new PolygonGeometry(new PolygonRings(Rect(300, 0, 5, 6))), props: "{\"category\":\"service\"}", height: 3f, storeys: 1),
         };
-        var plain = BuildingSet.For(World(features), 4u);
-        AssertThat(Layout(BuildingSet.For(World(features), 4u)) == Layout(plain)).OverrideFailureMessage("Expected: " + ("the same input lays out ordinary buildings cell for cell")).IsTrue();
-        var anchored = BuildingSet.For(World(Entrances(Anchor("t:dorm", "a", new(21.3f, 0f, 0f), 0f)), features), 4u);
+        var plain = BuildingSet.For(Ctx(World(features), 4u));
+        AssertThat(Layout(BuildingSet.For(Ctx(World(features), 4u))) == Layout(plain)).OverrideFailureMessage("Expected: " + ("the same input lays out ordinary buildings cell for cell")).IsTrue();
+        var anchored = BuildingSet.For(Ctx(World(Entrances(Anchor("t:dorm", "a", new(21.3f, 0f, 0f), 0f)), features), 4u));
         AssertThat(anchored.Blocks.SequenceEqual(plain.Blocks)).OverrideFailureMessage("Expected: " + ("an entrance anchor leaves every window block as it was")).IsTrue();
         AssertThat(Layout(anchored).Replace(Layout(anchored, "t:dorm"), "") == Layout(plain).Replace(Layout(plain, "t:dorm"), "")).OverrideFailureMessage("Expected: " + ("the other buildings keep their layout")).IsTrue();
     }
@@ -46,8 +46,8 @@ public sealed class FacadePresetTests
             WorldFeatureFixture.Create("t:dorm", "building", new PolygonGeometry(new PolygonRings(Rect(0, 0, 60, 18))), props: "{\"category\":\"residence\"}", height: 19.8f, storeys: 6), WorldFeatureFixture.Create("t:lab", "building", new PolygonGeometry(new PolygonRings(LShape(100, 0))), props: "{\"category\":\"research\"}", height: 15.6f, storeys: 4),
             WorldFeatureFixture.Create("t:court", "building", new PolygonGeometry(Courtyard(0, 100)), props: "{\"category\":\"teaching\"}", height: 12f, storeys: 3), WorldFeatureFixture.Create("t:hall", "building", new PolygonGeometry(new PolygonRings(Rect(200, 0, 40, 30))), props: "{\"category\":\"sport\"}", height: 9f, storeys: 1),
         };
-        var plain = BuildingSet.For(World(features), 4u);
-        var styled = BuildingSet.For(World([.. features.Select(f => f.Id.Value == "t:lab" ? f with { Facade = new FacadePreset(preset.Key) } : f)]), 4u);
+        var plain = BuildingSet.For(Ctx(World(features), 4u));
+        var styled = BuildingSet.For(Ctx(World([.. features.Select(f => f.Id.Value == "t:lab" ? f with { Facade = new FacadePreset(preset.Key) } : f)]), 4u));
         AssertThat(styled.Blocks.SequenceEqual(plain.Blocks)).OverrideFailureMessage("Expected: " + ("every window block as before")).IsTrue();
         AssertThat(Layout(styled, where: p => p.Key != "t:lab") == Layout(plain, where: p => p.Key != "t:lab")).OverrideFailureMessage("Expected: " + ("the other buildings cell for cell")).IsTrue();
         var (before, after) = (plain.Plans.Single(p => p.Key == "t:lab"), styled.Plans.Single(p => p.Key == "t:lab"));
@@ -75,15 +75,15 @@ public sealed class FacadePresetTests
                 AssertThat(!bundles.Any(Fabric)).OverrideFailureMessage("Expected: " + ($"{name} {lod}: curtain walls hang no curtains")).IsTrue();
             }
         }
-        AssertThat(BuildingsModule.UnknownPreset(BuildingSet.For(World(lab), 4u).Plans.Single()).Single().Level == DiagnosticLevel.Warning &&
-            BuildingSet.For(World(lab), 4u).Plans.Single().Profile.Preset is null).OverrideFailureMessage("Expected: " + ("a key WP-14 does not know keeps the family, with a warning")).IsTrue();
+        AssertThat(BuildingsModule.UnknownPreset(BuildingSet.For(Ctx(World(lab), 4u)).Plans.Single()).Single().Level == DiagnosticLevel.Warning &&
+            BuildingSet.For(Ctx(World(lab), 4u)).Plans.Single().Profile.Preset is null).OverrideFailureMessage("Expected: " + ("a key WP-14 does not know keeps the family, with a warning")).IsTrue();
 
         // The real campus with the innovation centre's five buildings on the preset (the authored world/south.json): no
         // window number of the map moves, the other buildings stay cell for cell, and every footprint of the five takes it.
         var real = RealMapFixture.Load().World;
         var innovation = real.Features.Values.Where(f => f.Facade?.Value == preset.Key).Select(f => f.Id.Value).ToHashSet(StringComparer.Ordinal);
         var withPreset = Styled(real, f => innovation.Contains(f.Id.Value) ? f with { Family = new BuildingFamily("research"), Facade = new FacadePreset(preset.Key) } : f);
-        var (was, now) = (BuildingSet.For(real, 1u), BuildingSet.For(withPreset, 1u));
+        var (was, now) = (BuildingSet.For(Ctx(real, 1u)), BuildingSet.For(Ctx(withPreset, 1u)));
         AssertThat(now.Blocks.SequenceEqual(was.Blocks)).OverrideFailureMessage("Expected: " + ("real campus: every window block as before")).IsTrue();
         AssertThat(Layout(now, where: p => !innovation.Contains(p.Id.Value)) == Layout(was, where: p => !innovation.Contains(p.Id.Value))).OverrideFailureMessage("Expected: " + ("real campus: the other buildings cell for cell")).IsTrue();
         var centre = now.Plans.Where(p => innovation.Contains(p.Id.Value)).ToArray();
@@ -116,7 +116,7 @@ public sealed class FacadePresetTests
         var feature = WorldFeatureFixture.Create("t:dorm", "building", new PolygonGeometry(new PolygonRings(Rect(0, 0, 60, 18))), props: "{\"category\":\"residence\"}", height: 19.2f, storeys: 6);
         uint? seedA = null, seedB = null;
         for (var seed = 1u; seed <= 64u && (seedA is null || seedB is null); seed++)
-            switch (BuildingSet.For(World(feature), seed).Plans[0].Profile.Accent)
+            switch (BuildingSet.For(Ctx(World(feature), seed)).Plans[0].Profile.Accent)
             {
                 case "panel.pinkSand": seedA ??= seed; break;
                 case "panel.brown": seedB ??= seed; break;
@@ -127,7 +127,7 @@ public sealed class FacadePresetTests
         {
             var (key, frame, trim, accent) = (look.Key, look.Frame!, look.Trim!, look.Accent!);
             var styled = feature with { Facade = new FacadePreset(key) };
-            var (a, b) = (BuildingSet.For(World(styled), seedA!.Value), BuildingSet.For(World(styled), seedB!.Value));
+            var (a, b) = (BuildingSet.For(Ctx(World(styled), seedA!.Value)), BuildingSet.For(Ctx(World(styled), seedB!.Value)));
             AssertThat(a.Plans[0].Profile == b.Plans[0].Profile && a.Plans[0].Profile.Accent == accent).OverrideFailureMessage("Expected: " + ($"{key}: one profile under either hash")).IsTrue();
             foreach (var set in new[] { a, b })
             {
@@ -163,7 +163,6 @@ public sealed class FacadePresetTests
         }
     }
 
-
     [TestCase, TestCategory(TestReason.Contract)]
     [TestCategory("Slow")]
     public void DormPresetsKeepEveryWindowNumber()
@@ -175,11 +174,11 @@ public sealed class FacadePresetTests
             WorldFeatureFixture.Create("t:slab", "building", new PolygonGeometry(new PolygonRings(Rect(0, 0, 60, 18))), props: "{\"category\":\"residence\"}", height: 19.2f, storeys: 6), WorldFeatureFixture.Create("t:ell", "building", new PolygonGeometry(new PolygonRings(LShape(100, 0))), props: "{\"category\":\"residence\"}", height: 19.2f, storeys: 6),
             WorldFeatureFixture.Create("t:court", "building", new PolygonGeometry(Courtyard(0, 100)), props: "{\"category\":\"residence\"}", height: 16f, storeys: 5), WorldFeatureFixture.Create("t:lab", "building", new PolygonGeometry(new PolygonRings(Rect(300, 0, 40, 16))), props: "{\"category\":\"research\"}", height: 15.6f, storeys: 4),
         };
-        var plain = BuildingSet.For(World(features), 4u);
+        var plain = BuildingSet.For(Ctx(World(features), 4u));
         foreach (var look in DormLooks)
         {
             var key = look.Key;
-            var styled = BuildingSet.For(World([.. features.Select(f => f.Id.Value != "t:lab" ? f with { Facade = new FacadePreset(key) } : f)]), 4u);
+            var styled = BuildingSet.For(Ctx(World([.. features.Select(f => f.Id.Value != "t:lab" ? f with { Facade = new FacadePreset(key) } : f)]), 4u));
             AssertThat(styled.Blocks.SequenceEqual(plain.Blocks)).OverrideFailureMessage("Expected: " + ($"{key}: every window block as before")).IsTrue();
             AssertThat(Layout(styled, where: p => p.Key == "t:lab") == Layout(plain, where: p => p.Key == "t:lab")).OverrideFailureMessage("Expected: " + ($"{key}: the other buildings cell for cell")).IsTrue();
             for (var i = 0; i < plain.Plans.Count; i++)
@@ -192,11 +191,11 @@ public sealed class FacadePresetTests
         }
 
         var real = RealMapFixture.Load().World;
-        var was = BuildingSet.For(real, 1u);
+        var was = BuildingSet.For(Ctx(real, 1u));
         var dorms = was.Plans.Where(p => p.Style == Rules.BuildingStyle.Dormitory).Select(p => p.Id).Distinct().ToArray();
         AssertThat(dorms.Length > 0).OverrideFailureMessage("Expected: " + ($"the campus has dormitories ({dorms.Length})")).IsTrue();
         var keyOf = dorms.Select((id, i) => (id, key: DormLooks[i % DormLooks.Length].Key)).ToDictionary(x => x.id, x => x.key);
-        var now = BuildingSet.For(Styled(real, f => keyOf.TryGetValue(f.Id, out var k) ? f with { Facade = new FacadePreset(k) } : f), 1u);
+        var now = BuildingSet.For(Ctx(Styled(real, f => keyOf.TryGetValue(f.Id, out var k) ? f with { Facade = new FacadePreset(k) } : f), 1u));
         AssertThat(now.Blocks.SequenceEqual(was.Blocks)).OverrideFailureMessage("Expected: " + ("real campus: every window block as before")).IsTrue();
         AssertThat(Layout(now, where: p => !keyOf.ContainsKey(p.Id)) == Layout(was, where: p => !keyOf.ContainsKey(p.Id))).OverrideFailureMessage("Expected: " + ("real campus: the other buildings cell for cell")).IsTrue();
         for (var i = 0; i < was.Plans.Count; i++)
@@ -213,7 +212,7 @@ public sealed class FacadePresetTests
     {
         // Presets supply nominal window dimensions; the authored storey height can cap a row's clear opening.
         var real = RealMapFixture.Load().World;
-        var set = BuildingSet.For(real, 1u);
+        var set = BuildingSet.For(Ctx(real, 1u));
         var keyed = real.Features.Values.Where(f => f.Facade is { } facade &&
             (facade.Value.StartsWith("annex.", StringComparison.Ordinal) || facade.Value.StartsWith("dorm.", StringComparison.Ordinal)))
             .Select(f => (Way: f.Id.Value, Key: f.Facade!.Value.Value)).ToArray();
@@ -245,12 +244,12 @@ public sealed class FacadePresetTests
         // Sample dormitories take their authored keys; each takes the
         // preset over whatever family the data gives it, and not one window changes its number (contract-29).
         var real = RealMapFixture.Load().World;
-        var was = BuildingSet.For(real, 1u);
+        var was = BuildingSet.For(Ctx(real, 1u));
         var candidates = was.Plans.Where(p => p.Style == Rules.BuildingStyle.Dormitory).Select(p => p.Id.Value).Distinct().Take(3).ToArray();
         AssertThat(candidates.Length > 0).IsTrue();
         var keyOf = candidates.Select((id, i) => (id, key: i == candidates.Length - 1 ? Rules.FacadePresets.DormMasterCreamCoffeeWhite.Key : Rules.FacadePresets.DormMasterCreamCoffee.Key))
             .ToDictionary(p => p.id, p => p.key, StringComparer.Ordinal);
-        var now = BuildingSet.For(Styled(real, f => keyOf.TryGetValue(f.Id.Value, out var k) ? f with { Facade = new FacadePreset(k) } : f), 1u);
+        var now = BuildingSet.For(Ctx(Styled(real, f => keyOf.TryGetValue(f.Id.Value, out var k) ? f with { Facade = new FacadePreset(k) } : f), 1u));
         AssertThat(now.Blocks.SequenceEqual(was.Blocks)).OverrideFailureMessage("Expected: " + ("every window block as before")).IsTrue();
         AssertThat(Layout(now, where: p => !keyOf.ContainsKey(p.Id.Value)) == Layout(was, where: p => !keyOf.ContainsKey(p.Id.Value))).OverrideFailureMessage("Expected: " + ("the other buildings cell for cell")).IsTrue();
         var seen = new HashSet<string>(StringComparer.Ordinal);

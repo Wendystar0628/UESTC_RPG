@@ -2,7 +2,6 @@ using Campus.Contracts;
 using Campus.Contracts.Bake;
 using Campus.Kernel.Bake;
 using Campus.Kernel.Instances;
-using Campus.Kernel.Materials;
 using Godot;
 using N = System.Numerics;
 
@@ -165,17 +164,7 @@ internal static class GlowDemand
             var farthest = N.Vector3.Distance(eye, bounds.Center) + bounds.Size.Length() * 0.5f;
             pad += farthest * LampMinimumAngle + LampPull;
         }
-        return Visible(new(bounds.Min - new N.Vector3(pad), bounds.Max + new N.Vector3(pad)), view.Frustum.Span);
+        return new Box3(bounds.Min - new N.Vector3(pad), bounds.Max + new N.Vector3(pad)).Intersects(view.Frustum.Span);
     }
 
-    private static bool Visible(Box3 bounds, ReadOnlySpan<N.Plane> planes)
-    {
-        foreach (var plane in planes)
-        {
-            var p = new N.Vector3(plane.Normal.X >= 0 ? bounds.Min.X : bounds.Max.X,
-                plane.Normal.Y >= 0 ? bounds.Min.Y : bounds.Max.Y, plane.Normal.Z >= 0 ? bounds.Min.Z : bounds.Max.Z);
-            if (N.Vector3.Dot(plane.Normal, p) + plane.D > 0f) return false;
-        }
-        return true;
-    }
 }

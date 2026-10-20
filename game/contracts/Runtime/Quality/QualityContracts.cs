@@ -14,7 +14,7 @@ public enum QualityKnob : byte                      // 共 11 项，连续序号
     ReflectionInterval, ParticleDensity,
 }
 
-public sealed record KnobSpec(QualityKnob Knob, string OwnerWp, ApplyClass Apply, KnobKind Kind,
+public sealed record KnobSpec(QualityKnob Knob, ApplyClass Apply, KnobKind Kind,
     float Min, float Max, float Step, float WorstAllowed, bool HigherIsBetter,
     string LabelKey, string Group, KnobUnit Unit)                               // 界面按它自动生成控件；枚举类的项按序号编码成 float
 {
@@ -116,7 +116,7 @@ public interface IQualityService                    // Kernel 服务（WP-32）�
 public interface IQualityAware                      // 标了 [QualityResponsive] 的 [KernelNode] 实现
 {
     // WP-32 在 FramePriority.Quality 那一步调用：启动时以全部项调用一次，之后只在 Owns 或 Reads 里的项变化时调用。
-    // 即时类按节点 ID 顺序调用；加载界面类在加载界面完全遮盖时按 SYS-GRAPHICS 第 3 步的负责方顺序调用；
+    // 即时类按节点 ID 顺序调用；加载界面类在完全遮盖时按 QualityResponsive.Order、节点 ID 顺序调用；
     // 分帧类由负责方自己分帧完成，每帧不超过 0.3 ms。
     void ApplyQuality(QualityView view, in QualityChange change);
 }
@@ -124,6 +124,8 @@ public interface IQualityAware                      // 标了 [QualityResponsive
 [AttributeUsage(AttributeTargets.Class, Inherited = false)]
 public sealed class QualityResponsiveAttribute : Attribute   // 标在 Godot 侧包的 [KernelNode] 上
 {
+    /// <summary>Loading-screen application order; ties and immediate changes use the node ID.</summary>
+    public int Order { get; init; } = 3;
     public QualityKnob[] Owns { get; init; } = [];   // 我负责落到引擎上；G5 核对每项恰有一个负责方
     public QualityKnob[] Reads { get; init; } = [];  // 只读，或按它调整自己的对象、但不对这一项的效果负责
 }

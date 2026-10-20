@@ -15,7 +15,7 @@ namespace Campus.Gen.Vegetation;
 /// variant) at every static geometry level. Near trees and their shadows belong exclusively to the streamed runtime.
 /// </summary>
 
-[ContentModule("vegetation", Owner = "WP-23")]
+[ContentModule("vegetation")]
 public sealed class VegetationModule : IVegetationRuntimeSource, IGroundMaskContributor, IContentSourceTraceProvider
 {
     public BakeInputDependencies BakeInputs { get; } = new(BakeInputKinds.World | BakeInputKinds.Vegetation, [], [VegetationInputs.SpeciesKey]);
@@ -28,11 +28,6 @@ public sealed class VegetationModule : IVegetationRuntimeSource, IGroundMaskCont
     public IReadOnlyList<Claim> Claims => [];
 
     /// <summary>Heaviest 64 m cell on the L0 mother models, heaviest 128 m far tile, most streams × surfaces (VegetationBuildTests).</summary>
-    public ModuleBudget Budget { get; } = new(BudgetTrianglesL0, BudgetTrianglesL1, BudgetDrawCalls);
-
-    public const int BudgetTrianglesL0 = 340_000;
-    public const int BudgetTrianglesL1 = 30_000;
-    public const int BudgetDrawCalls = 40;
 
     public IEnumerable<TileKey> Tiles(BuildContext ctx) => VegetationTiles.Read(ctx);
 
@@ -77,7 +72,7 @@ public sealed class VegetationModule : IVegetationRuntimeSource, IGroundMaskCont
                 bounds[i] = VegetationPrototypes.WorldBounds(prototypes[0].Bounds,
                     InstanceMatrix(records.AsSpan(i * InstanceStreamLayout.FloatsPerInstance, InstanceStreamLayout.FloatsPerInstance)));
             built.Add(new(first.Species.Id + "." + first.Variant.ToString(CultureInfo.InvariantCulture),
-                new WpId(VegetationPrototypes.Owner), records, prototypes, bounds));
+                records, prototypes, bounds));
         }
         return built.AsReadOnly();
     }

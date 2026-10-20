@@ -8,18 +8,16 @@ public enum VegPool : byte { L0Plus = 0, L0 = 1, L1 = 2, Far = 3, Shadow = 4 }
 /// <summary>Prepared geometry and complete instance records for one vegetation mother model.</summary>
 public sealed class VegetationMotherData
 {
-    public VegetationMotherData(string key, WpId owner, ReadOnlyMemory<float> records,
+    public VegetationMotherData(string key, ReadOnlyMemory<float> records,
         IReadOnlyList<GeometryPrototype> prototypes, IReadOnlyList<Box3> bounds)
     {
         Key = key;
-        Owner = owner;
         Records = records.ToArray();
         Prototypes = Array.AsReadOnly(prototypes.ToArray());
         Bounds = Array.AsReadOnly(bounds.ToArray());
     }
 
     public string Key { get; }
-    public WpId Owner { get; }
     public ReadOnlyMemory<float> Records { get; }
     public IReadOnlyList<GeometryPrototype> Prototypes { get; }
     /// <summary>World-space L0+ bounds in the same tree order as Records.</summary>

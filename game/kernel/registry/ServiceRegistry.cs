@@ -12,6 +12,7 @@ public sealed class ServiceRegistry : IDisposable, IAsyncDisposable
     private readonly Dictionary<Type, object> _supplied = [];
     private readonly Dictionary<(Type Type, MapId? Map), object> _instances = [];
     private readonly HashSet<(Type Type, MapId? Map)> _constructing = [];
+    private readonly Dictionary<(Type Factory, string Id, MapId Map), IInteriorProvider> _interiors = [];
     private readonly List<(object Instance, MapId? Map)> _created = [];
     private IReadOnlyList<Registration> _entries = [];
     private bool _closing;
@@ -79,12 +80,33 @@ public sealed class ServiceRegistry : IDisposable, IAsyncDisposable
         finally { _constructing.Remove(key); }
     }
 
-    public void Discover(IEnumerable<Assembly> assemblies)
+    /// <summary>Factory products join the same map-owned cache and reverse-release sequence as every registration.</summary>
+    public IInteriorProvider CreateInterior(Type factoryType, string providerId, MapId map)
+    {
+        ObjectDisposedException.ThrowIf(_disposed, this);
+        var registration = RegistrationDiscovery.ResolveInterior(ForMap(map.Value), providerId);
+        if (registration.Type != factoryType || !typeof(IInteriorProviderFactory).IsAssignableFrom(registration.Type))
+            throw new InvalidOperationException($"Interior factory is not registered for '{providerId}'.");
+        if (registration.Lifetime != RegistrationLifetime.Map)
+            throw new InvalidOperationException("An interior factory must declare map lifetime.");
+        var key = (factoryType, providerId, map);
+        if (_interiors.TryGetValue(key, out var existing)) return existing;
+        if (_closing || _releasingMaps.Contains(map)) throw new InvalidOperationException("Map scope is closing.");
+        var factory = (IInteriorProviderFactory)Create(factoryType, map);
+        var provider = factory.Create(providerId) ?? throw new InvalidOperationException("Interior factory returned null.");
+        if (_created.Any(item => ReferenceEquals(item.Instance, provider)))
+            throw new InvalidOperationException("Interior factory must create a fresh map-owned provider instance.");
+        _interiors.Add(key, provider);
+        _created.Add((provider, map));
+        return provider;
+    }
+
+    public void Discover(IEnumerable<Assembly> assemblies, Func<Type, string>? ownerOf = null)
     {
         ObjectDisposedException.ThrowIf(_disposed, this);
         if (_closing) throw new InvalidOperationException("Registry is shutting down.");
         if (_entries.Count > 0 || _created.Count > 0) throw new InvalidOperationException("Registry discovery runs once.");
-        _entries = RegistrationDiscovery.Discover(assemblies);
+        _entries = RegistrationDiscovery.Discover(assemblies, ownerOf ?? BuildCodeIndex.Shared.Owner);
     }
 
     public IReadOnlyList<Registration> ForMap(string map) => RegistrationDiscovery.ForMap(_entries, map);
@@ -185,6 +207,7 @@ public sealed class ServiceRegistry : IDisposable, IAsyncDisposable
     private void Forget(object instance)
     {
         _created.RemoveAll(item => ReferenceEquals(item.Instance, instance));
+        foreach (var key in _interiors.Where(pair => ReferenceEquals(pair.Value, instance)).Select(pair => pair.Key).ToArray()) _interiors.Remove(key);
         foreach (var alias in _supplied.Where(pair => ReferenceEquals(pair.Value, instance)).Select(pair => pair.Key).ToArray()) _supplied.Remove(alias);
         foreach (var key in _instances.Where(pair => ReferenceEquals(pair.Value, instance)).Select(pair => pair.Key).ToArray()) _instances.Remove(key);
     }

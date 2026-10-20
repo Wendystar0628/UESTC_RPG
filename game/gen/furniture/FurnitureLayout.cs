@@ -64,7 +64,7 @@ public static partial class FurniturePlanner
     private static readonly KerbRampPart RampDef = new();
     private static readonly SignpostPart SignpostDef = new();
     private static readonly DrinkingFountainPart FountainDef = new();
-    private static readonly WpId Self = new("WP-13");
+    private const string Self = FurnitureModule.ModuleId;
 
     /// <summary>Pole footprint radius used for clearances and landing (the lamp's base flange).</summary>
     private const float PoleRadius = 0.25f;
@@ -76,7 +76,7 @@ public static partial class FurniturePlanner
     /// <param name="claimedBy">The claims query (<see cref="BuildContext.ClaimedBy"/>); none means nothing is claimed.</param>
     /// <param name="inputs">The map's preloaded source inputs (<see cref="BuildContext.SourceInputs"/>): the tree rows come from its <see cref="S.PlantingKey"/>.</param>
     public static FurnitureLayout Build(BuildInputSnapshot globalInputs, PaletteCatalog catalog, IWorldModel world,
-        Func<FeatureId, Aspects, WpId?>? claimedBy = null, IReadOnlyDictionary<string, ReadOnlyMemory<byte>>? inputs = null)
+        Func<FeatureId, Aspects, string?>? claimedBy = null, IReadOnlyDictionary<string, ReadOnlyMemory<byte>>? inputs = null)
     {
         ArgumentNullException.ThrowIfNull(world);
         claimedBy ??= (_, _) => null;

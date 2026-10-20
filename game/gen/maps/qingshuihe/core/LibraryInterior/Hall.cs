@@ -1,3 +1,4 @@
+using Campus.Gen.Interior;
 using System.Numerics;
 using Campus.Contracts;
 using Campus.Contracts.Audio;
@@ -14,7 +15,7 @@ namespace Campus.Gen.Maps.Qingshuihe.Core.LibraryInterior;
 /// </summary>
 internal static class Hall
 {
-    public static void Build(LibraryFrame f, InteriorSink sink, ref Rng rng)
+    public static void Build(LibraryFrame f, InteriorGeometry sink, ref Rng rng)
     {
         var y = f.FloorY(1);
         Floor(f, sink, y);
@@ -29,7 +30,7 @@ internal static class Hall
         Lounges(f, sink, y);
     }
 
-    private static void Floor(LibraryFrame f, InteriorSink sink, float y)
+    private static void Floor(LibraryFrame f, InteriorGeometry sink, float y)
     {
         var voidRing = f.Octagon(f.VoidApothem, S.OctagonChamfer);
         sink.Plate(S.Inlay(S.Carpet), new PolygonRings(f.Octagon(f.GalleryApothem), [voidRing]), y + 0.002f, true);
@@ -64,7 +65,7 @@ internal static class Hall
     }
 
     /// <summary>The four corridor mouths (四条走廊口): wood-faced side walls and a closed fire door pair at the far end.</summary>
-    private static void CorridorMouths(LibraryFrame f, InteriorSink sink, float y)
+    private static void CorridorMouths(LibraryFrame f, InteriorGeometry sink, float y)
     {
         var top = f.SoffitY(1);
         float r0 = f.GalleryApothem, r1 = r0 + S.CorridorMouth, half = S.CorridorWidth * 0.5f;
@@ -91,7 +92,7 @@ internal static class Hall
     /// Sector fronts A (E) and D (S), open 7 m past the hall edge: bookshelf seals along both sides and shelf ends joined
     /// into a wall at the back (扇区深处书架端板连成的墙).
     /// </summary>
-    private static void SectorFronts(LibraryFrame f, InteriorSink sink, float y, ref Rng rng)
+    private static void SectorFronts(LibraryFrame f, InteriorGeometry sink, float y, ref Rng rng)
     {
         var top = f.SoffitY(1);
         float r0 = f.GalleryApothem, r1 = r0 + S.SectorDepth, t = Atrium.SectorHalf(f);
@@ -104,7 +105,7 @@ internal static class Hall
     }
 
     /// <summary>A wall of shelf end panels: wood with a white edge every 1.2 m, closing the stacks behind it.</summary>
-    private static void ShelfEnds(InteriorSink sink, Vector2 a, Vector2 b, Vector2 room, float y, float top)
+    private static void ShelfEnds(InteriorGeometry sink, Vector2 a, Vector2 b, Vector2 room, float y, float top)
     {
         var back = room * -0.15f;
         sink.Run(S.Wall(S.Wood), a + back, b + back, 0.3f, y - 0.01f, top);
@@ -121,7 +122,7 @@ internal static class Hall
     /// The motto plaque (校训木匾) on the axis between the stair feet, facing the hall: stone plinth, two posts and a wood board
     /// with a gold frame. Its carved text waits for the glyphs (StrokeText has none of them yet).
     /// </summary>
-    private static void Plaque(LibraryFrame f, InteriorSink sink, float y)
+    private static void Plaque(LibraryFrame f, InteriorGeometry sink, float y)
     {
         var feet = (TwinStair.FootRadius(f) + S.StairWidth * 0.5f) * MathF.Cos(LibraryFrame.Step);
         var c = f.At(4, feet + 0.8f, 0f);
@@ -139,7 +140,7 @@ internal static class Hall
     }
 
     /// <summary>Three curved boards round the centre (白、蓝弧形展板), an opening toward the entrance; exhibits without portraits.</summary>
-    private static void Exhibition(LibraryFrame f, InteriorSink sink, float y)
+    private static void Exhibition(LibraryFrame f, InteriorGeometry sink, float y)
     {
         const float Radius = 1.9f, Span = 1.4f;
         const int Chords = 4;
@@ -165,7 +166,7 @@ internal static class Hall
     /// The red table (视觉落点) 3.6 m toward the entrance: an open book with a bookmark, a flask with its cap off, one chair
     /// pushed out about 30°, and the low white desk lamp whose pool covers book and flask.
     /// </summary>
-    private static void RedTable(LibraryFrame f, InteriorSink sink, float y)
+    private static void RedTable(LibraryFrame f, InteriorGeometry sink, float y)
     {
         const float Along = 3.6f;
         var c = f.At(0, Along, 0f);
@@ -188,7 +189,7 @@ internal static class Hall
     }
 
     /// <summary>Dark wood reading tables with green lamps under the galleries along the W and N edges (阅览桌在中厅边缘).</summary>
-    private static void ReadingTables(LibraryFrame f, InteriorSink sink, float y, ref Rng rng)
+    private static void ReadingTables(LibraryFrame f, InteriorGeometry sink, float y, ref Rng rng)
     {
         var r = (f.VoidApothem + f.GalleryApothem) * 0.5f + 0.4f;
         foreach (var j in S.StairFaces)
@@ -212,7 +213,7 @@ internal static class Hall
     }
 
     /// <summary>Lounge seating and paper lanterns in the sector fronts (橙黄、孔雀蓝扶手椅，奶白沙发，果绿桶形椅，木质台阶座).</summary>
-    private static void Lounges(LibraryFrame f, InteriorSink sink, float y)
+    private static void Lounges(LibraryFrame f, InteriorGeometry sink, float y)
     {
         var a = f.GalleryApothem;
         var ceiling = f.SoffitY(1);

@@ -10,6 +10,8 @@ namespace Campus.Tests.World;
 /// <summary>Builders and assertions shared by the world-state test classes.</summary>
 internal static class WorldTestKit
 {
+    public static CaptureContext SaveContext(WorldStateService world) =>
+        new(SaveReason.Quit, new("test-world"), true) { Moment = world.GetSaveMoment() };
     public static RestoreContext Restore() => new() { Map = new("test-world"), FromVersion = 1, Missing = false };
     public static (double Hours, double Clock, double Target, double Season, WorldFlow Flow, double Anim,
         Body Sun, Body Moon, long Rev, long Instance, int Steps) LiveReadings(WorldStateService world, TestWeatherProcess weather) =>

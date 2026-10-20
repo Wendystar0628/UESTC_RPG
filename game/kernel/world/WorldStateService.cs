@@ -18,11 +18,11 @@ public interface IWorldFrame : IWorldState, IMapAware
 }
 
 /// <summary>One monotone world timeline. Only Tick consumes real delta; restoring a save commits a new instance.</summary>
-[KernelService(typeof(IWorldFrame), Owner = "WP-34")]
-[KernelService(typeof(IWorldState), Owner = "WP-34")]
-[KernelService(typeof(IWorldControl), Owner = "WP-34")]
-[KernelService(typeof(IWorldRestore), Owner = "WP-34")]
-[SaveSection("world", Owner = "WP-34", Version = 1, Phase = RestorePhase.World, Order = 10)]
+[KernelService(typeof(IWorldFrame))]
+[KernelService(typeof(IWorldState))]
+[KernelService(typeof(IWorldControl))]
+[KernelService(typeof(IWorldRestore))]
+[SaveSection("world", Version = 1, Phase = RestorePhase.World, Order = 10)]
 public sealed partial class WorldStateService(IWeatherProcess weather, IMotionSettings? motion = null) : IWorldFrame, IWorldControl,
     IWorldRestore, ISaveSection<WorldSaveV1>
 {
@@ -359,7 +359,7 @@ public sealed partial class WorldStateService(IWeatherProcess weather, IMotionSe
     {
         EnsureUsable();
         if (!_initializationApplied) throw new InvalidOperationException("World state has not been initialized.");
-        var moment = context.Moment ?? GetSaveMoment();
+        var moment = context.Moment;
         return new(moment.WorldHours, moment.ClockOffset, (int)moment.Season, moment.Season,
             moment.FlowRate, _flowBeforePause, AnimTime);
     }

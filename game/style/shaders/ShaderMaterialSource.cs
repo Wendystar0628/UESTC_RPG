@@ -1,5 +1,4 @@
 using Campus.Contracts;
-using Campus.Kernel.Materials;
 using Godot;
 
 namespace Campus.Style.Materials;
@@ -9,7 +8,7 @@ namespace Campus.Style.Materials;
 /// 调用方只写 uniform，不换着色器、不改 render_mode 和 #define。卡通系仍经 ToonSpec 走材质库。
 /// 着色器文件归各自的包，这里只建材质。
 /// </summary>
-[KernelService(typeof(IShaderMaterialSource), Owner = "WP-04")]
+[KernelService(typeof(IShaderMaterialSource))]
 public sealed class ShaderMaterialSource : IShaderMaterialSource
 {
     private readonly Dictionary<ShaderId, Shader> _shaders = [];

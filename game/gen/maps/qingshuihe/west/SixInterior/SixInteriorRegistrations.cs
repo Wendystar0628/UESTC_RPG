@@ -8,12 +8,12 @@ using Campus.Contracts;
 
 namespace Campus.Gen.Maps.Qingshuihe.West.SixInterior;
 
-[InteriorProvider("interior.research-six", Owner = "WP-31b")]
+[InteriorProvider("interior.research-six")]
 public sealed class SixCInteriorProvider : SixInteriorProvider
 {
 }
 
-[InteriorProvider("interior.research-six.b", Owner = "WP-31b")]
+[InteriorProvider("interior.research-six.b")]
 public sealed class SixBInteriorProvider : SixInteriorProvider
 {
 }

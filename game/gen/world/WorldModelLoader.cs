@@ -32,7 +32,7 @@ public sealed class WorldDataException(string file, string entry, string message
 public static partial class WorldModelLoader
 {
     /// <summary>Fallback storey height when a building's world record gives no height.</summary>
-    public const float DefaultStoreyHeight = 3.6f;
+    public const float DefaultStoreyHeight = ClosedBuildingStoreys.DefaultHeight;
     private static readonly Encoding Utf8 = new UTF8Encoding(false, true);
     private static readonly GeometryFactory Factory = new();
 
@@ -79,6 +79,8 @@ public static partial class WorldModelLoader
                 throw new WorldDataException(pair.Key, "path", "Expected a relative path within the current map.");
             if (key == "fidelity.json" || key.StartsWith("overlay/fidelity/", StringComparison.Ordinal))
                 throw new WorldDataException(key, "path", "Retired fidelity overlay input; precision is compiled from the authored world.");
+            if (key.StartsWith("overlay/interior/", StringComparison.Ordinal))
+                throw new WorldDataException(key,"path","Retired interior overlay input; configure the provider in interiors.json.");
             if (key.StartsWith("overlay/", StringComparison.Ordinal) && key["overlay/".Length..].Split('/')[0].EndsWith(".d", StringComparison.Ordinal))
                 throw new WorldDataException(key, "path", "Retired feature overlay input; edit world/<zone>.json.");
             if (!input.TryAdd(key, pair.Value)) throw new WorldDataException(key, "path", "Duplicate normalized path.");
@@ -177,7 +179,6 @@ public static partial class WorldModelLoader
         if (inputs is not null)
             for (var index = 0; index < inputs.Descriptor.Env.ReflectLakes.Count; index++)
                 RequireReference("map.json", map.Value, $"env.reflectLakes[{index}]", inputs.Descriptor.Env.ReflectLakes[index], featureIds);
-        var interiorOverlays = ReadInteriorOverlays(map, input, frozen);
         var sources = ReadTerrainSources(map, input);
         ValidateTerrainReferences(sources, featureIds, roadReferences);
         var terrainContext = PrepareTerrain(inputs, sources, boundary, frozen, network, prefix);
@@ -195,7 +196,7 @@ public static partial class WorldModelLoader
         IInteriorIndex Interiors(ITerrain terrain) => options.Interiors ??
             new WorldInteriorIndex(frozen.Values, input.GetValueOrDefault("interiors.json"), inputs is null ? null : terrain);
         WorldModelSnapshot Snapshot(ITerrain terrain, IInteriorIndex interiors, IFidelityModel fidelity) =>
-            new(frozen, boundary, network, interiors, outskirts, interiorOverlays, fidelity, operations, terrain);
+            new(frozen, boundary, network, interiors, outskirts, fidelity, operations, terrain);
         var fidelitySourceStamp = Convert.ToHexStringLower(SHA256.HashData(JsonSerializer.SerializeToUtf8Bytes(new
         {
             world = input.Where(pair => pair.Key.StartsWith("world/", StringComparison.Ordinal) && !pair.Key.EndsWith(".terrain.json", StringComparison.Ordinal)).ToArray(),
@@ -308,25 +309,6 @@ public static partial class WorldModelLoader
         foreach (var key in keys)
             if (!values.ContainsKey(key) && parent.TryGetProperty(key, out var value)) values.Add(key, value);
         return JsonSerializer.SerializeToElement(values, ContractJson.Options);
-    }
-
-    private static IReadOnlyList<InteriorOverlayFile> ReadInteriorOverlays(MapId map, SortedDictionary<string, string> input,
-        IReadOnlyDictionary<FeatureId, WorldFeature> features)
-    {
-        var overlays = new List<InteriorOverlayFile>();
-        foreach (var (file, text) in input.Where(pair => pair.Key.StartsWith("overlay/interior/", StringComparison.Ordinal)
-            && pair.Key.EndsWith(".interior.json", StringComparison.Ordinal)))
-        {
-            var overlay = Deserialize<InteriorOverlayFile>(file, text);
-            CheckMap(map, overlay.Map, file);
-            foreach (var op in overlay.Ops)
-            {
-                var id = op switch { SealOp seal => seal.Building, InteriorConfigOp config => config.Building, _ => throw new WorldDataException(file, "op", "Unknown interior operation.") };
-                if (!features.ContainsKey(id)) throw new WorldDataException(file, id.Value, $"building references nonexistent world ID '{id.Value}'.");
-            }
-            overlays.Add(overlay);
-        }
-        return overlays.AsReadOnly();
     }
 
     private static RoamLimits? ReadRoam(MapId map, SortedDictionary<string, string> input)

@@ -20,7 +20,7 @@ internal static class AutoDoor
 /// 自动门门框 (WLD-INTERIORS): the static half of a runtime door, frame, threshold and transom only.
 /// The runtime body and its collision belong to WP-07 and WP-43.
 /// </summary>
-[Part(PartCatalog.AutomaticDoorFrame, Owner = "WP-10")]
+[Part(PartCatalog.AutomaticDoorFrame)]
 public sealed class AutomaticDoorFramePart() : OpeningPart<DoorParams>(new(260, 60))
 {
     protected override Box3 Extent(DoorParams p) => DoorBuilder.Extent(p with { OpenAngleDeg = 0 }, AutoDoor.Style(p.Variation));
@@ -38,7 +38,7 @@ public sealed class AutomaticDoorFramePart() : OpeningPart<DoorParams>(new(260, 
 /// 自动门门扇: one leaf with its hinge axis on the local Y axis (origin at the hinge foot, leaf along +X, mid-plane z = 0),
 /// so the runtime turns the MultiMesh instance about its origin (DoorLeafDecl.Hinge). Width × Height is the leaf.
 /// </summary>
-[Part(PartCatalog.AutomaticDoorLeaf, Owner = "WP-10")]
+[Part(PartCatalog.AutomaticDoorLeaf)]
 public sealed class AutomaticDoorLeafPart() : OpeningPart<DoorParams>(new(420, 40))
 {
     protected override Box3 Extent(DoorParams p)
@@ -62,7 +62,7 @@ public sealed class AutomaticDoorLeafPart() : OpeningPart<DoorParams>(new(420, 4
 }
 
 /// <summary>闭门器 (WLD-INTERIORS B): dark grey body with a folded arm in front of it. The back face (+Z) mounts on the leaf.</summary>
-[Part(PartCatalog.DoorCloser, Owner = "WP-10")]
+[Part(PartCatalog.DoorCloser)]
 public sealed class DoorCloserPart() : OpeningPart<EquipmentParams>(new(140, 12))
 {
     private const float Arm = 0.16f;
@@ -87,7 +87,7 @@ public sealed class DoorCloserPart() : OpeningPart<EquipmentParams>(new(140, 12)
 }
 
 /// <summary>门吸: floor-mounted stop, base plate, post and a dark rubber cap.</summary>
-[Part(PartCatalog.DoorStop, Owner = "WP-10")]
+[Part(PartCatalog.DoorStop)]
 public sealed class DoorStopPart() : OpeningPart<EquipmentParams>(new(100, 24))
 {
     protected override Box3 Extent(EquipmentParams p) => new(new(-p.Width * 0.5f, 0, -p.Depth * 0.5f), new(p.Width * 0.5f, p.Height, p.Depth * 0.5f));
@@ -107,7 +107,7 @@ public sealed class DoorStopPart() : OpeningPart<EquipmentParams>(new(100, 24))
 }
 
 /// <summary>门上视窗: glass insert with a bead frame proud of both leaf faces; Depth is the leaf thickness.</summary>
-[Part(PartCatalog.DoorVisionPanel, Owner = "WP-10")]
+[Part(PartCatalog.DoorVisionPanel)]
 public sealed class DoorVisionPanelPart() : OpeningPart<WindowParams>(new(80, 40))
 {
     private const float Bead = 0.022f;

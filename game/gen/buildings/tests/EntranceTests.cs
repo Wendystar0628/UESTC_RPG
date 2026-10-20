@@ -35,8 +35,8 @@ public sealed class EntranceTests
             WorldFeatureFixture.Create("t:block", "building", new PolygonGeometry(new PolygonRings(Rect(320, 0, 20, 16))), props: "{\"category\":\"teaching\"}", height: 18f, storeys: 5),
         };
         var world = World(index, features);
-        var set = BuildingSet.For(world, 2u);
-        var generic = BuildingSet.For(World(features), 2u);
+        var set = BuildingSet.For(Ctx(world, 2u));
+        var generic = BuildingSet.For(Ctx(World(features), 2u));
         var module = new BuildingsModule();
         foreach (var (plan, i) in set.Plans.Select((p, i) => (p, i)))
         {
@@ -88,23 +88,23 @@ public sealed class EntranceTests
         var features = new[] { WorldFeatureFixture.Create("t:dorm", "building", new PolygonGeometry(new PolygonRings(Rect(0, 0, 60, 18))), props: "{\"category\":\"residence\"}", height: 19.8f, storeys: 6), WorldFeatureFixture.Create("t:lab", "building", new PolygonGeometry(new PolygonRings(Rect(200, 0, 40, 16))), props: "{\"category\":\"research\"}", height: 15.6f, storeys: 4) };
         var world = World(Entrances(Anchor("t:dorm", "dorm.south", new(21.3f, 0f, 0f), 0f)), features);
         var module = new BuildingsModule();
-        var dorm = BuildingSet.For(world, 2u).Plans.Single(p => p.Key == "t:dorm");
+        var dorm = BuildingSet.For(Ctx(world, 2u)).Plans.Single(p => p.Key == "t:dorm");
         var tile = dorm.Tile(LodLevel.L0);
         AssertThat(dorm.Entrances.Single().Anchor == "dorm.south" && module.Collide(Ctx(world, 2u), tile).OfType<WallCollider>().Any() &&
             !module.Collide(Ctx(world, 2u), tile).OfType<WallCollider>().Any(w => w.Tag == SurfaceTag.DoorClosed)).OverrideFailureMessage("Expected: " + ("unclaimed, WP-14 opens the anchor door")).IsTrue();
         foreach (var aspect in new[] { Aspects.Facade, Aspects.Massing })
         {
-            var ctx = Prepared(new BuildContext { Catalog = Campus.Contracts.Tests.PaletteFixture.Catalog, World = world, Map = TestMap, WorldSeed = 2u, ClaimedBy = (f, a) => a == aspect && f.Value == "t:dorm" ? new WpId("WP-18") : null });
+            var ctx = Prepared(new BuildContext { CodeHash = "fixture", SourceInputs = RealMapFixture.WindowInputs(TestMap.Id), WindowNumbering = new((TestMap).Id, new string('0', 64), []), Catalog = Campus.Contracts.Tests.PaletteFixture.Catalog, World = world, Map = TestMap, WorldSeed = 2u, ClaimedBy = (f, a) => a == aspect && f.Value == "t:dorm" ? "zone.south" : null });
             AssertThat(!module.Tiles(ctx).Contains(tile) && module.Build(ctx, tile, LodLevel.L0) == ContentOutput.Empty && module.Collide(ctx, tile).Count == 0).OverrideFailureMessage("Expected: " + ($"{aspect} claimed: no door, landing, canopy or collider of WP-14")).IsTrue();
-            AssertThat(module.Build(ctx, BuildingSet.For(world, 2u).Plans.Single(p => p.Key == "t:lab").Tile(LodLevel.L0), LodLevel.L0).Meshes.Count > 0).OverrideFailureMessage("Expected: " + ("the neighbour stays")).IsTrue();
+            AssertThat(module.Build(ctx, BuildingSet.For(Ctx(world, 2u)).Plans.Single(p => p.Key == "t:lab").Tile(LodLevel.L0), LodLevel.L0).Meshes.Count > 0).OverrideFailureMessage("Expected: " + ("the neighbour stays")).IsTrue();
         }
 
         // The real campus under every zone pack's claims (the kernel's ledger rebuilt from the content modules): WP-14's
         // authored openings at open anchors remain clear. The library (16b), Xuanbang's clock tower
         // (18b) and, since 18c2, the gym deck are claimed: their doors are the zone packs'.
         var real = RealMapFixture.Load().World;
-        var rctx = new BuildContext { Catalog = Campus.Contracts.Tests.PaletteFixture.Catalog, World = real, Map = TestMap, WorldSeed = 1u, ClaimedBy = RealClaims(real) };
-        var anchored = BuildingSet.For(real, 1u).Plans.SelectMany(p => p.Entrances.Where(e => e.Anchor is not null).Select(e => (Plan: p, Door: e))).ToArray();
+        var rctx = new BuildContext { CodeHash = "fixture", WindowNumbering = new((TestMap).Id, new string('0', 64), []), Catalog = Campus.Contracts.Tests.PaletteFixture.Catalog, World = real, Map = TestMap, WorldSeed = 1u, ClaimedBy = RealClaims(real) };
+        var anchored = BuildingSet.For(Ctx(real, 1u)).Plans.SelectMany(p => p.Entrances.Where(e => e.Anchor is not null).Select(e => (Plan: p, Door: e))).ToArray();
         foreach (var (plan, e) in anchored)
         {
             var mine = BuildingsModule.Unclaimed(rctx, plan);
@@ -126,7 +126,7 @@ public sealed class EntranceTests
         PlanEntrance? Door(float head, out BuildingPlan plan)
         {
             var (feature, decl) = Anchor("t:dorm", "dorm.south", new(21.3f, 0f, 0f), 0f);
-            plan = BuildingSet.For(World(Entrances((feature, decl with { HeadY = head })), dorm), 2u).Plans.Single();
+            plan = BuildingSet.For(Ctx(World(Entrances((feature, decl with { HeadY = head })), dorm), 2u)).Plans.Single();
             return plan.Entrances.SingleOrDefault(e => e.Anchor == "dorm.south");
         }
         var known = Door(2.6f, out var p1)!;
@@ -140,20 +140,20 @@ public sealed class EntranceTests
         var lab = WorldFeatureFixture.Create("t:lab", "building", new PolygonGeometry(new PolygonRings(Rect(100, 0, 40, 16))), props: "{\"category\":\"research\"}", height: 15.6f, storeys: 4) with { Zone = new ZoneId("north") };
         var porch = Entrances(Anchor("t:lab", "lab.porch", new(112f, 1.2f, 0f), 0f, outsideY: 1.2f));
         var deck = WorldFeatureFixture.Create("t:deck", "building", new PolygonGeometry(new PolygonRings(Rect(100, -6, 40, 6))), props: "{\"category\":\"service\"}", height: 1.2f, storeys: 1);
-        string Log(FakeWorld w, Func<FeatureId, Aspects, WpId?> claims)
+        string Log(FakeWorld w, Func<FeatureId, Aspects, string?> claims)
         {
-            var ctx = new BuildContext { Catalog = Campus.Contracts.Tests.PaletteFixture.Catalog, World = w, Map = TestMap, WorldSeed = 2u, ClaimedBy = claims };
-            var plan = BuildingSet.For(w, 2u).Plans.Single(p => p.Key == "t:lab");
+            var ctx = new BuildContext { CodeHash = "fixture", WindowNumbering = new((TestMap).Id, new string('0', 64), []), Catalog = Campus.Contracts.Tests.PaletteFixture.Catalog, World = w, Map = TestMap, WorldSeed = 2u, ClaimedBy = claims };
+            var plan = BuildingSet.For(Ctx(w, 2u)).Plans.Single(p => p.Key == "t:lab");
             return BuildingsModule.DoorsAlone(ctx, plan).Single(d => d.Level == DiagnosticLevel.Info && d.Code == "wp14.door.alone" && d.Feature == plan.Id).Message;
         }
         var byZone = Log(World(porch, lab), (_, _) => null);
         AssertThat(byZone.Contains("lab.porch", StringComparison.Ordinal) && byZone.Contains("1.20 m", StringComparison.Ordinal) && byZone.Contains("north zone pack", StringComparison.Ordinal)).OverrideFailureMessage("Expected: " + (byZone)).IsTrue();
-        var byDeck = Log(World(porch, lab, deck), (f, a) => f.Value == "t:deck" && a == Aspects.Massing ? new WpId("WP-21") : null);
-        AssertThat(byDeck.Contains("WP-21, which builds the deck block t:deck", StringComparison.Ordinal)).OverrideFailureMessage("Expected: " + (byDeck)).IsTrue();
+        var byDeck = Log(World(porch, lab, deck), (f, a) => f.Value == "t:deck" && a == Aspects.Massing ? "zone.center-east" : null);
+        AssertThat(byDeck.Contains("zone.center-east, which builds the deck block t:deck", StringComparison.Ordinal)).OverrideFailureMessage("Expected: " + (byDeck)).IsTrue();
         var nobody = Log(World(porch, lab with { Zone = null }), (_, _) => null);
         AssertThat(nobody.Contains("undecided", StringComparison.Ordinal)).OverrideFailureMessage("Expected: " + (nobody)).IsTrue();
         var ctx0 = Prepared(Ctx(World(porch, lab), 2u));
-        var plan0 = BuildingSet.For(ctx0.World, 2u).Plans.Single();
+        var plan0 = BuildingSet.For(Ctx(ctx0.World, 2u)).Plans.Single();
         AssertThat(new BuildingsModule().Build(ctx0, plan0.Tile(LodLevel.L0), LodLevel.L0).Diagnostics.Count == 1 &&
             new BuildingsModule().Build(ctx0, plan0.Tile(LodLevel.L1), LodLevel.L1).Diagnostics.Count == 0).OverrideFailureMessage("Expected: " + ("logged once, with the L0 cell")).IsTrue();
     }
@@ -164,7 +164,7 @@ public sealed class EntranceTests
         // The ground south of the dorm (z < -1) lies 0.9 m below its pad; the lab stands on level ground (WLD-TERRAIN).
         var world = World(Entrances(Anchor("t:dorm", "dorm.south", new(21.3f, 0f, 0f), 0f, outsideY: -0.9f)),
             Falling(-1f, 0.9f), WorldFeatureFixture.Create("t:dorm", "building", new PolygonGeometry(new PolygonRings(Rect(0, 0, 60, 18))), props: "{\"category\":\"residence\"}", height: 19.8f, storeys: 6), WorldFeatureFixture.Create("t:lab", "building", new PolygonGeometry(new PolygonRings(Rect(100, 20, 40, 16))), props: "{\"category\":\"research\"}", height: 15.6f, storeys: 4));
-        var set = BuildingSet.For(world, 2u);
+        var set = BuildingSet.For(Ctx(world, 2u));
         var dorm = set.Plans.Single(p => p.Key == "t:dorm");
         var steps = EntranceKit.Pieces(dorm, dorm.Entrances.Single());
         AssertThat(steps.Select(p => p.Part).SequenceEqual([PartCatalog.Platform, PartCatalog.Railing, PartCatalog.Railing, PartCatalog.Steps])).OverrideFailureMessage("Expected: " + ("landing, guard railings on its sides (over 1.0 m) and one flight")).IsTrue();

@@ -1,3 +1,4 @@
+using Campus.Gen.Interior;
 using System.Numerics;
 using Campus.Contracts;
 using Campus.Contracts.Audio;
@@ -33,7 +34,7 @@ internal static class WestBand
         return back / Vector2.Dot(f.Dir(West), wall.Out);
     }
 
-    public static void Build(LibraryFrame f, InteriorSink sink, ref Rng rng)
+    public static void Build(LibraryFrame f, InteriorGeometry sink, ref Rng rng)
     {
         var wall = Wall(f);
         float y = f.FloorY(f.Storeys), top = f.SoffitY(f.Storeys);
@@ -61,7 +62,7 @@ internal static class WestBand
     }
 
     /// <summary>A desk under each of the shell's windows on this wall that lies inside the band, the chair facing the window.</summary>
-    private static void Desks(LibraryFrame f, InteriorSink sink, WallPiece wall, Func<float, float, Vector2> at, float u0, float u1, float y, ref Rng rng)
+    private static void Desks(LibraryFrame f, InteriorGeometry sink, WallPiece wall, Func<float, float, Vector2> at, float u0, float u1, float y, ref Rng rng)
     {
         var windows = f.Holes[Face.Of(wall)].Where(h => h.Y0 > y && h.Y0 < y + 2.5f)
             .Select(h => (h.U0 + h.U1) * 0.5f).Where(u => u > u0 + 0.9f && u < u1 - 0.9f).OrderBy(u => u).ToArray();

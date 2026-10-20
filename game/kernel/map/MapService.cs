@@ -18,9 +18,9 @@ public interface IMapFrame : IDisposable
     void Step();
 }
 
-[KernelService(typeof(IMapFrame), Owner = "WP-46")]
-[KernelService(typeof(IMapService), Owner = "WP-46")]
-[SaveSection("maps", Owner = "WP-46", Version = 1, Phase = RestorePhase.World, Order = 0)]
+[KernelService(typeof(IMapFrame))]
+[KernelService(typeof(IMapService))]
+[SaveSection("maps", Version = 1, Phase = RestorePhase.World, Order = 0)]
 public sealed class MapService : IMapService, IMapFrame, ISaveSection<MapsSave>, IBootParticipant, IDisposable
 {
     private readonly ICameraRig _camera;

@@ -44,25 +44,25 @@ public abstract class CoreBoxPart<TParams> : IPartDef<TParams> where TParams : B
     }
 }
 
-[Part(PartCatalog.Box, Owner = "WP-09")]
+[Part(PartCatalog.Box)]
 public sealed class BoxPart : CoreBoxPart<BoxParams> { }
 
-[Part(PartCatalog.Column, Owner = "WP-09")]
+[Part(PartCatalog.Column)]
 public sealed class ColumnPart : CoreBoxPart<ColumnParams> { }
 
-[Part(PartCatalog.WallPanel, Owner = "WP-09")]
+[Part(PartCatalog.WallPanel)]
 public sealed class WallPanelPart : CoreBoxPart<PanelParams>
 {
     protected override SurfaceTag CollisionTag => SurfaceTag.Wall;
 }
 
-[Part(PartCatalog.Slab, Owner = "WP-09")]
+[Part(PartCatalog.Slab)]
 public sealed class SlabPart : CoreBoxPart<PanelParams>
 {
     protected override SurfaceTag CollisionTag => SurfaceTag.Ground;
 }
 
-[Part(PartCatalog.Trim, Owner = "WP-09")]
+[Part(PartCatalog.Trim)]
 public sealed class TrimPart : CoreBoxPart<TrimParams>
 {
     protected override PartGeometry Build(TrimParams p, bool close)

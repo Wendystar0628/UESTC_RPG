@@ -15,8 +15,6 @@ namespace Campus.Gen.Vegetation;
 /// </summary>
 public static class VegetationPrototypes
 {
-    public const string Owner = "WP-23";
-
     /// <summary>Crown sway and card flutter reach (m) around the model bounds (veg_* wind, WLD-VEGETATION CustomAabb).</summary>
     public const float SwayPad = 0.6f;
 

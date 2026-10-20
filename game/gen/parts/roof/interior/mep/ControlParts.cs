@@ -9,7 +9,7 @@ namespace Campus.Gen.Parts.Roof.Mep;
 /// 86-type switch plate (开关面板): a white plate with one, two or three rocker keys (Variation 0, 1, 2), each key with a fine
 /// grey rocker line. Every room has one by the door (WLD-INTERIORS). Back on +Z; visual only.
 /// </summary>
-[Part(PartCatalog.SwitchPanel, Owner = "WP-12")]
+[Part(PartCatalog.SwitchPanel)]
 public sealed class SwitchPanelPart() : MepPart<PanelParams>(new(260, 16))
 {
     protected override Vector3 Minimum => new(0.06f, 0.06f, 0.008f);
@@ -40,7 +40,7 @@ public sealed class SwitchPanelPart() : MepPart<PanelParams>(new(260, 16))
 /// dark card window and a card mark. 1: dark reader with a small screen and a 3 × 4 keypad. 2: face tablet: dark screen in a
 /// thin aluminium bezel with a camera dot. Back on +Z; visual only.
 /// </summary>
-[Part(PartCatalog.CardReader, Owner = "WP-12")]
+[Part(PartCatalog.CardReader)]
 public sealed class CardReaderPart() : MepPart<EquipmentParams>(new(300, 40))
 {
     protected override Vector3 Minimum => new(0.07f, 0.1f, 0.015f);

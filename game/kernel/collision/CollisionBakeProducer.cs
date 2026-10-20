@@ -15,7 +15,7 @@ namespace Campus.Kernel.Collision;
 
 
 
-[BakeProducer("collision.world", Owner = "WP-43")]
+[BakeProducer("collision.world")]
 public sealed class CollisionBakeProducer : IBakeProducer, IBakeContentConsumer
 {
     public bool UsesModule(IContentModule module) => true;

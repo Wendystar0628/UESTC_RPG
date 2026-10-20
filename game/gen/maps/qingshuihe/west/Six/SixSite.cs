@@ -67,24 +67,4 @@ public sealed partial class SixSite : ZoneSite
 
     // ---- Inspection probes (MAP-QSH-WEST Q4, Q8a, Q8c) ----
 
-    public override IReadOnlyList<InspectionProbe> Probes
-    {
-        get
-        {
-            // Probe pins are fixed coordinates (no world access here). Q4 (ground-floor close-up, K1): 0.5 m from C's set-back
-            // glass beside the east door (six.c.east), on the walk, looking along it.
-            var door = new Vector2(-588.3f, 230f);
-            var outward = Angles.Heading(77f);
-            var along = new Vector2(-outward.Y, outward.X);
-            var eye4 = door + outward * (-S.Recess + 0.5f) + along * (S.VestibuleWidth * 0.5f + 2.0f);
-            var q4 = Probe("Q4", S.EntityC, new(eye4.X, WalkRules.StandingEye, eye4.Y), along, 6f, 0.5f);
-            // Q8a (baseline, fly only): 2 m over A's parapet at the corner of its two wings, looking along the south wing.
-            var corner = new Vector2(-840.26f, 133.59f) + S.Axis * 3f + new Vector2(-S.Axis.Y, S.Axis.X) * 3f;
-            var q8a = Probe("Q8a", S.EntityA, new(corner.X, 41.5f + 2f, corner.Y), S.Axis, -20f, 2f);
-            // Q8c (baseline, fly only): 2 m below ground at C's corner by the motto plaza, looking up at the corner.
-            var c8 = new Vector2(-583.28f, 251.04f) + outward * 1.5f;
-            var q8c = Probe("Q8c", S.EntityC, new(c8.X, -2f, c8.Y), -outward, 30f, 1.5f);
-            return [q4, q8a, q8c];
-        }
-    }
 }

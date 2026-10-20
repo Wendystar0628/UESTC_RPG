@@ -14,9 +14,9 @@ using Campus.Kernel.Stubs;
 namespace Campus.Kernel.Bake;
 
 /// <summary>One path for live generation and per-cell local caching. Ready always means validated CPU data.</summary>
-[KernelService(typeof(BakeService), Owner = "WP-02a")]
-[KernelService(typeof(IBakeService), Owner = "WP-02a")]
-[KernelService(typeof(IBakeContextSource), Owner = "WP-02a")]
+[KernelService(typeof(BakeService))]
+[KernelService(typeof(IBakeService))]
+[KernelService(typeof(IBakeContextSource))]
 
 
 
@@ -126,11 +126,21 @@ public sealed partial class BakeService : IBakeService, IBakeContextSource, IDis
             var registry = Campus.Kernel.Registry.Kernel.Services;
             // Instantiate all generators on the main thread. Their Build methods receive only a captured pure context.
             var modules = registry.Query<IContentModule>(RegistrationKind.Content, context.Descriptor.Id).ToDictionary(e => e.Id,
-                e => new ContentModuleInput((IContentModule)registry.Create(e.Type, context.Descriptor.Id), _terrain.CodeFingerprints.Type(e.Type), new WpId(e.Owner), e.Map is null), StringComparer.Ordinal);
+                e => new ContentModuleInput((IContentModule)registry.Create(e.Type, context.Descriptor.Id), _terrain.CodeFingerprints.Type(e.Type), e.Owner, e.Map is null), StringComparer.Ordinal);
             var producers = registry.Query<IBakeProducer>(RegistrationKind.Bake, context.Descriptor.Id).Select(e =>
                 new Producer(e.Id, (IBakeProducer)registry.Create(e.Type, context.Descriptor.Id), _terrain.CodeFingerprints.Type(e.Type))).ToArray();
-            var interiors = registry.Query<IInteriorProvider>(RegistrationKind.Interior, context.Descriptor.Id).ToDictionary(e => "interior." + e.Id,
-                e => new Interior(e.Id, e.IsStub, (IInteriorProvider)registry.Create(e.Type, context.Descriptor.Id), _terrain.CodeFingerprints.Type(e.Type), new WpId(e.Owner)), StringComparer.Ordinal);
+            var registrations = registry.ForMap(context.Descriptor.Id.Value);
+            var interiorBindings = context.SourceInputs.Entries.TryGetValue("interiors.json", out var interiorCatalog)
+                ? InteriorAssembly.ResolveRegistrations(interiorCatalog, registrations) : [];
+            var interiors = interiorBindings.ToDictionary(binding => "interior." + binding.ProviderId, binding =>
+            {
+                var declaration = binding.Registration;
+                var value = typeof(IInteriorProviderFactory).IsAssignableFrom(declaration.Type)
+                    ? registry.CreateInterior(declaration.Type, binding.ProviderId, context.Descriptor.Id)
+                    : (IInteriorProvider)registry.Create(declaration.Type, context.Descriptor.Id);
+                return new Interior(binding.ProviderId, declaration.IsStub, value,
+                    _terrain.CodeFingerprints.Type(declaration.Type), declaration.Owner);
+            }, StringComparer.Ordinal);
             // Capture one immutable source snapshot per MapBuild; never load extensions on a worker.
             var catalog = registry.Get<IPaletteCatalogSource>().Catalog;
             var globalInputs = _globalInputs;
@@ -140,7 +150,7 @@ public sealed partial class BakeService : IBakeService, IBakeContextSource, IDis
             var seed = _options.SeedOverride ?? context.Descriptor.Seed;
             var claims = MapClaimCapture.Capture(registry, context.Descriptor.Id);
             var ledger = new Lazy<MapClaimLedger>(() => claims.Build(context.World), LazyThreadSafetyMode.ExecutionAndPublication);
-            Func<FeatureId, Aspects, WpId?> claimLookup = (feature, aspects) => ledger.Value.ClaimedBy(feature, aspects);
+            Func<FeatureId, Aspects, string?> claimLookup = (feature, aspects) => ledger.Value.ClaimedBy(feature, aspects);
             var sourceCache = new BakeSourceIndexCache(_terrain, context.Descriptor.Id,
                 SourceVersion(context, seed, globalInputs, modules, interiors, producers),
                 IndexCode(modules, interiors, producers));
@@ -176,10 +186,10 @@ public sealed partial class BakeService : IBakeService, IBakeContextSource, IDis
         var metadata = await Task.Run(() =>
         {
             var data = map.Data.Value;
+            foreach (var layout in data.Layouts) map.InteriorLayouts.Add(layout.Feature, layout);
             if (data.Resident is { } cached)
             {
                 map.InteriorCoverage = cached.Coverage;
-                foreach (var layout in cached.Layouts) map.InteriorLayouts.Add(layout.Feature, layout);
                 map.PrepareDirectory(cached.Metadata, cached.Directory);
                 return cached.Metadata;
             }
@@ -274,7 +284,7 @@ public sealed partial class BakeService : IBakeService, IBakeContextSource, IDis
     }
 
     private LoadedMap Load(IMapContext context, uint seed, PaletteCatalog catalog, IReadOnlyDictionary<string, Interior> interiors,
-        IReadOnlyDictionary<string, ContentModuleInput> modules, Func<FeatureId, Aspects, WpId?> claimLookup, BuildInputSnapshot globalInputs,
+        IReadOnlyDictionary<string, ContentModuleInput> modules, Func<FeatureId, Aspects, string?> claimLookup, BuildInputSnapshot globalInputs,
         IReadOnlyList<IGroundMaskContributor> groundContributors, PartLodCatalog partLods, BakeSourceIndexCache sourceCache, Producer[] producers)
     {
         if (!_options.Live)
@@ -282,6 +292,8 @@ public sealed partial class BakeService : IBakeService, IBakeContextSource, IDis
             _cache.Initialize();
         }
         var inputs = BakeInputFingerprint.ReadInputs(context);
+        var publication = context as IMapInteriorPreparation
+            ?? throw new InvalidOperationException("The loading map does not support interior publication.");
         // These instances belong to this MapBuild, never the registry's global cache or an older map's jobs.
         // Configure once before the Lazy publishes them to any consumer of this map's generation context.
         var providers = interiors.Values.ToDictionary(interior => interior.ProviderId, interior => interior.Value, StringComparer.Ordinal);
@@ -302,11 +314,16 @@ public sealed partial class BakeService : IBakeService, IBakeContextSource, IDis
                 throw new InvalidDataException("Resident metadata has missing terrain points.");
         });
         if (resident is not null)
+        {
+            publication.PublishInteriors(InteriorAssembly.IndexEntries(resident.Layouts, bindings, activeInteriors));
             return new(seed, inputs, bindings, activeInteriors,
-                new(resident.Metadata.Lighting.WindowNumbering, resident.Windows), resident, residentStamp);
+                new(resident.Metadata.Lighting.WindowNumbering
+                    ?? throw new InvalidDataException("Resident metadata has no window numbering snapshot."), resident.Windows), resident.Layouts, resident, residentStamp);
+        }
         _terrain.RequireMiss(new(context.Descriptor.Id, "resident", "meta"));
         var prepass = new BuildContext
         {
+            CodeHash = residentStamp, WindowNumbering = new((context.Descriptor).Id, new string('0', 64), []),
             World = _terrain.AssetWorld(context.World),
             Map = context.Descriptor,
             WorldSeed = seed,
@@ -318,9 +335,13 @@ public sealed partial class BakeService : IBakeService, IBakeContextSource, IDis
             GroundMaskContributors = groundContributors,
             PartLods = partLods
         };
+        var layouts = bindings.SelectMany(binding => binding.FeatureIds.Select(feature =>
+            InteriorAssembly.ValidatedLayout(activeInteriors[binding.ProviderId], binding, prepass, feature))).ToArray();
+        publication.PublishInteriors(InteriorAssembly.IndexEntries(layouts, bindings, activeInteriors));
+        prepass = prepass.WithWorld(_terrain.AssetWorld(context.World));
         // This Lazy is completed before any catalog Tiles, geometry Build, or producer Collide can run.
         var windows = BakeWindowPreparation.Prepare(prepass, modules);
-        return new(seed, inputs, bindings, activeInteriors, windows, null, residentStamp);
+        return new(seed, inputs, bindings, activeInteriors, windows, layouts, null, residentStamp);
     }
 
     private IReadOnlyList<byte[]> Encode(BakePayloadClass payloadClass, string identity, object product, CancellationToken cancellation) =>
@@ -356,13 +377,11 @@ public sealed partial class BakeService : IBakeService, IBakeContextSource, IDis
         foreach (var binding in data.InteriorBindings.OrderBy(binding => binding.ProviderId, StringComparer.Ordinal))
         {
             var interior = map.Interiors["interior." + binding.ProviderId];
-            var context = map.CreateAssetContext(interior.CodeHash);
             var floors = 0;
             var entrances = new HashSet<string>(StringComparer.Ordinal);
             foreach (var feature in binding.FeatureIds.OrderBy(feature => feature.Value, StringComparer.Ordinal))
             {
-                var layout = InteriorAssembly.ValidatedLayout(interior.Value, binding, context, feature);
-                map.InteriorLayouts.Add(feature, layout);
+                var layout = map.InteriorLayouts[feature];
                 floors += layout.OpenStoreys.Count;
                 foreach (var entrance in layout.Entrances) entrances.Add(System.Text.Json.JsonSerializer.Serialize(entrance, ContractJson.Options));
             }
@@ -434,16 +453,16 @@ public sealed partial class BakeService : IBakeService, IBakeContextSource, IDis
     }
 
     internal sealed record Producer(string Id, IBakeProducer Value, string CodeHash);
-    internal sealed record Interior(string ProviderId, bool IsStub, IInteriorProvider Value, string CodeHash, WpId Owner);
-    internal sealed record CollectedDiagnostic(MapId Map, WpId Owner, string Module, string Stage, BuildDiagnostic Diagnostic);
+    internal sealed record Interior(string ProviderId, bool IsStub, IInteriorProvider Value, string CodeHash, string Owner);
+    internal sealed record CollectedDiagnostic(MapId Map, string Owner, string Module, string Stage, BuildDiagnostic Diagnostic);
     internal sealed record InteriorCoverage(string ProviderId, bool IsStub, int CatalogFeatures, int BoundFeatures,
         int CatalogFeatureStoreys, int ProducedFeatureStoreys, int AuthoredEntrances, int ProducedEntrances);
     internal sealed record LoadedMap(uint Seed, IReadOnlyDictionary<string, ReadOnlyMemory<byte>> Inputs,
         IReadOnlyList<InteriorProviderBinding> InteriorBindings, IReadOnlyDictionary<string, IInteriorProvider> InteriorProviders,
-        BakeWindowPreparation.Result Windows, BakeResidentData? Resident = null, string ResidentStamp = "");
+        BakeWindowPreparation.Result Windows, IReadOnlyList<InteriorLayout> Layouts, BakeResidentData? Resident = null, string ResidentStamp = "");
 
     internal sealed partial record MapBuild(IMapContext Context, IReadOnlyDictionary<string, ContentModuleInput> Modules, IReadOnlyDictionary<string, Interior> Interiors, Producer[] Producers,
-        BakeGeometryBuilder Geometry, Lazy<MapClaimLedger> Claims, Func<FeatureId, Aspects, WpId?> ClaimLookup, Lazy<LoadedMap> Data,
+        BakeGeometryBuilder Geometry, Lazy<MapClaimLedger> Claims, Func<FeatureId, Aspects, string?> ClaimLookup, Lazy<LoadedMap> Data,
         BuildInputSnapshot GlobalInputs, IReadOnlyList<IGroundMaskContributor> GroundMaskContributors, PartLodCatalog PartLods, PaletteCatalog Catalog)
     {
         internal TerrainCacheService? TerrainCache { get; init; }

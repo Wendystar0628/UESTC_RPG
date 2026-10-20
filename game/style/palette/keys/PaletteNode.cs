@@ -15,9 +15,9 @@ namespace Campus.Style.Palette.Keys;
 /// <c>fog</c> and <c>fog_low</c>, and publishes IColorScriptFrame. Also implements IPaletteProbe for the time ring.
 /// <c>--inspect=palette</c> shows a debug overlay of the live texture.
 /// </summary>
-[KernelNode("style.palette", Owner = "WP-37")]
-[KernelService(typeof(IColorScriptFrame), Owner = "WP-37")]
-[KernelService(typeof(IPaletteProbe), Owner = "WP-37")]
+[KernelNode("style.palette")]
+[KernelService(typeof(IColorScriptFrame))]
+[KernelService(typeof(IPaletteProbe))]
 public partial class PaletteNode : Node, IColorScriptFrame, IPaletteProbe, IMapAware
 {
     private static readonly StringName _shaderGlobalFog = ShaderGlobals.Fog;

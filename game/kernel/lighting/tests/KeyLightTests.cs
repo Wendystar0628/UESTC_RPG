@@ -140,7 +140,7 @@ public sealed class KeyLightTests
         AssertThat(fine.Split1).AppendFailureMessage("split 1").IsEqualApprox(0.03f, TestTolerance.FloatRelative);
         AssertThat(fine.Split2).AppendFailureMessage("split 2").IsEqualApprox(0.12f, TestTolerance.FloatRelative);
         AssertThat(fine.Split3).AppendFailureMessage("split 3").IsEqualApprox(0.40f, TestTolerance.FloatRelative);
-        AssertThat((fine.CasterMask & ShadowSettings.LayerBit(2)) == 0 && (fine.CasterMask & ShadowSettings.LayerBit(1)) != 0).OverrideFailureMessage("layers").IsTrue();
+        AssertThat((fine.CasterMask & RenderLayers.Ground) == 0 && (fine.CasterMask & RenderLayers.BuildingsAndProps) != 0).OverrideFailureMessage("layers").IsTrue();
         var twoSplits = ShadowSettings.From(0, 600f);
         AssertThat(twoSplits is { AtlasSize: 2048, Splits: 2, MaxDistance: 600f, Split1: 0.15f }).OverrideFailureMessage("two-split preset").IsTrue();
         var custom = ShadowSettings.From(2, 600f);

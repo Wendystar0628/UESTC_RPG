@@ -290,7 +290,7 @@ public static partial class FurniturePlanner
             int draws = inCell.Any(i => i.Pad is not null) ? 1 : 0, triangles = 0;
             foreach (var look in inCell.Select(i => (i.Part.Part.Value, i.Part.Params)).Distinct()) draws += Measure(look.Value, look.Params, cache).Meshes;
             foreach (var item in inCell) triangles += Measure(item.Part.Part.Value, item.Part.Params, cache).Triangles;
-            if (draws > S.BudgetDrawCalls || triangles > S.BudgetTrianglesL0) return false;
+            if (draws > S.ServiceCellMaxDraws || triangles > S.ServiceCellMaxTriangles) return false;
         }
         return true;
     }

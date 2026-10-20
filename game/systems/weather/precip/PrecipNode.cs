@@ -2,7 +2,6 @@ using Campus.Contracts;
 using Campus.Contracts.Maps;
 using Campus.Contracts.Quality;
 using Campus.Kernel.Instances;
-using Campus.Kernel.Materials;
 using Campus.Kernel.Renderer;
 using Godot;
 using Services = Campus.Kernel.Registry.Kernel;
@@ -17,8 +16,8 @@ namespace Campus.Systems.Weather.Precip;
 /// 负责画面设置的"降水与粒子密度"（SYS-GRAPHICS）。
 /// 降水池由内核建（ENG-ARCH，IInstancePoolHost）：启动时就挂上、整块写一次实例缓冲，运行时只改可见数与 instance uniform。
 /// </summary>
-[KernelNode("systems.weather.precip", Owner = "WP-45b")]
-[KernelService(typeof(IWeatherRenderState), Owner = "WP-45b")]
+[KernelNode("systems.weather.precip")]
+[KernelService(typeof(IWeatherRenderState))]
 [QualityResponsive(Owns = [QualityKnob.ParticleDensity])]
 public partial class PrecipNode : Node, IQualityAware, IMapAware, IWeatherRenderState
 {
@@ -31,7 +30,7 @@ public partial class PrecipNode : Node, IQualityAware, IMapAware, IWeatherRender
     private static readonly StringName _shaderGlobalWeatherFog = ShaderGlobals.WeatherFog;
 
     /// <summary>降水池在 ENG-PERF 图层登记里的第 6 层（粒子）：相机可见、不投影、不进倒影世界。</summary>
-    private const uint PoolLayers = 1u << 5;
+    private const uint PoolLayers = RenderLayers.GrassAndEffects;
 
     private readonly PrecipModel _model = new();
     private IWorldState? _world;
@@ -68,7 +67,7 @@ public partial class PrecipNode : Node, IQualityAware, IMapAware, IWeatherRender
         _material = Services.Get<IShaderMaterialSource>().Create(ShaderId.Precip);
         var (position, uv, index) = PrecipModel.BuildQuad();
         _pool = Services.Get<IInstancePoolHost>().Mount(new InstancePoolSpec(
-            "precip", "WP-45b", position, uv, index, _material, ShaderId.Precip,
+            "weather.precip", position, uv, index, _material, ShaderId.Precip,
             PrecipTuning.Capacity, ToAabb(PoolBounds), PoolLayers));
         _pool.WriteBuffer(PrecipModel.BuildBuffer());
     }

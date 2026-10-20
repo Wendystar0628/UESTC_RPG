@@ -13,7 +13,7 @@ namespace Campus.Gen.Parts.Street;
 /// throw-in slot. No lettering or icons on the mainline; doors are separate materials, so the material line draws their edges.
 /// Collision: one box, Metal; its 1 m top is reachable by a jump (WLD-LIFE).
 /// </summary>
-[Part(PartCatalog.BinFour, Owner = "WP-13")]
+[Part(PartCatalog.BinFour)]
 public sealed class BinFourPart : IPartDef<FurnitureParams>
 {
     public BinFourPart() => Lods = Levels.Of<FurnitureParams>(Build, LodLevel.L0, LodLevel.L1);

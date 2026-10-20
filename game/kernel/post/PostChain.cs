@@ -16,8 +16,8 @@ namespace Campus.Kernel.Post;
 /// shader globals back. Quality knobs owned here take effect without pipeline compilation (SYS-GRAPHICS).
 /// Glow runs at the standard level; the finish pass applies the highlight shoulder and vignette.
 /// </summary>
-[KernelNode("post.chain", Owner = "WP-05")]
-[QualityResponsive(Owns = [QualityKnob.AntiAliasing], Reads = [QualityKnob.RenderScale])]
+[KernelNode("post.chain")]
+[QualityResponsive(Order = 2, Owns = [QualityKnob.AntiAliasing], Reads = [QualityKnob.RenderScale])]
 public partial class PostChain : Node, IQualityAware, IMapAware, IViewContentReadiness
 {
     private const float FadeSeconds = 0.5f;            // glow level changes fade, never cut

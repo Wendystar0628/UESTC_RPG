@@ -96,15 +96,4 @@ public sealed class MottoStoneSite : ZoneSite
         c.Box(PlanMath.Facing(at, M.Facing).At(0, y + M.Height * 0.5f, 0), new(M.Length * 0.5f, M.Height * 0.5f, M.Depth * 0.5f), SurfaceTag.Prop, FootMat.StonePaving);
     }
 
-    /// <summary>Q1 (walk, K1): 3 m in front of the face, eye height, looking at the characters and the stone's foot.</summary>
-    public override IReadOnlyList<InspectionProbe> Probes
-    {
-        get
-        {
-            // Probe pins are fixed coordinates (no world access here): the stone's node anchor.
-            var out1 = Angles.Heading(M.Facing);
-            var eye = new Vector2(-554.76f, 233.83f) + out1 * (M.Depth * 0.5f + 3f);
-            return [Probe("Q1", M.Entity, new(eye.X, WalkRules.StandingEye, eye.Y), -out1, -8f, 3f)];
-        }
-    }
 }

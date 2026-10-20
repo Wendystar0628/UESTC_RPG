@@ -12,7 +12,7 @@ using Services = Campus.Kernel.Registry.Kernel;
 namespace Campus.Systems.Fauna;
 
 /// <summary>Streamed animal owner tiles with per-site display latches (WLD-LIFE).</summary>
-[KernelNode("systems.fauna", Owner = "WP-25")]
+[KernelNode("systems.fauna")]
 public partial class FaunaNode : Node, IMapAware, IViewContentReadiness, IViewCapturePreparation, IStreamTileParticipant
 {
     private const double CheckSeconds = 0.25;
@@ -161,11 +161,7 @@ public partial class FaunaNode : Node, IMapAware, IViewContentReadiness, IViewCa
             {
                 var projection = camera.GetCameraProjection();
                 var transform = camera.GetCameraTransform();
-                for (var i = 0; i < _planes.Length; i++)
-                {
-                    var plane = transform * projection.GetProjectionPlane((Projection.Planes)i);
-                    _planes[i] = new(new(plane.Normal.X, plane.Normal.Y, plane.Normal.Z), -plane.D);
-                }
+                CameraFrustum.Fill(transform, projection, _planes);
                 hasView = true;
                 var view = new StreamDemandView(_rig!.Pose, _planes, ReadOnlyMemory<Box3>.Empty);
                 mirrored = _reflection!.TryGetDemand(in view, out reflection);
@@ -175,7 +171,7 @@ public partial class FaunaNode : Node, IMapAware, IViewContentReadiness, IViewCa
                 for (var i = 0; i < tile.Latches.Length; i++)
                 {
                     var site = tile.Content.Content.Sites[i];
-                    var visible = !hasView || FaunaDemand.InView(site.Bounds, _planes) || mirrored && FaunaDemand.InView(site.Bounds, reflection.Frustum.Span);
+                    var visible = !hasView || site.Bounds.Intersects(_planes) || mirrored && site.Bounds.Intersects(reflection.Frustum.Span);
                     Request(tile.Latches[i], Target(site), anywhere, visible);
                 }
                 if (tile.Work is null && NeedsWork(tile))
@@ -214,14 +210,10 @@ public partial class FaunaNode : Node, IMapAware, IViewContentReadiness, IViewCa
         if (GetViewport()?.GetCamera3D() is not { } camera) return true;
         var projection = camera.GetCameraProjection();
         var transform = camera.GetCameraTransform();
-        for (var i = 0; i < _planes.Length; i++)
-        {
-            var plane = transform * projection.GetProjectionPlane((Projection.Planes)i);
-            _planes[i] = new(new(plane.Normal.X, plane.Normal.Y, plane.Normal.Z), -plane.D);
-        }
-        if (FaunaDemand.InView(bounds, _planes)) return true;
+        CameraFrustum.Fill(transform, projection, _planes);
+        if (bounds.Intersects(_planes)) return true;
         var view = new StreamDemandView(_rig!.Pose, _planes, ReadOnlyMemory<Box3>.Empty);
-        return _reflection!.TryGetDemand(in view, out var reflected) && FaunaDemand.InView(bounds, reflected.Frustum.Span);
+        return _reflection!.TryGetDemand(in view, out var reflected) && bounds.Intersects(reflected.Frustum.Span);
     }
 
     private static bool NeedsWork(TileState tile)

@@ -3,6 +3,8 @@
 using System.Reflection;
 using System.Security.Cryptography;
 using System.Text;
+using System.Text.Json;
+using System.Text.RegularExpressions;
 using Campus.Contracts;
 using Campus.Contracts.Bake;
 using Microsoft.CodeAnalysis;
@@ -20,14 +22,17 @@ internal static class TargetSourceFingerprint
     {
         [typeof(ContentModuleAttribute).FullName!] = typeof(IContentModule).FullName!,
         [typeof(InteriorProviderAttribute).FullName!] = typeof(IInteriorProvider).FullName!,
+        [typeof(InteriorProviderFactoryAttribute).FullName!] = typeof(IInteriorProviderFactory).FullName!,
         [typeof(BakeProducerAttribute).FullName!] = typeof(IBakeProducer).FullName!
     };
 
-    public static async Task<IReadOnlyDictionary<string, string>> Create(Project production, Project tool,
+    public static async Task<BakeCodeManifest> Create(Project production, Project tool,
         IReadOnlyDictionary<string, string> properties)
     {
         var repository = Directory.GetParent(Path.GetDirectoryName(production.FilePath!)!)!.FullName;
         var projects = await LoadGraph(production);
+        var ownership = ReadOwnership(repository);
+        var owners = new SortedDictionary<string, string>(StringComparer.Ordinal);
         var toolGraph = await LoadGraph(tool);
         var salt = new SortedSet<string>(StringComparer.Ordinal) { "target-source-v2" };
         foreach (var property in properties.OrderBy(pair => pair.Key, StringComparer.Ordinal))
@@ -114,6 +119,20 @@ internal static class TargetSourceFingerprint
             }
             foreach (var type in Types(compilation.Assembly.GlobalNamespace))
             {
+                if (!type.IsAbstract && !type.IsGenericType)
+                {
+                    var ownerDeclarations = type.GetAttributes().Where(attribute => IsRegistration(attribute.AttributeClass)).ToArray();
+                    if (ownerDeclarations.Length != 0)
+                    {
+                        var declaredOwners = ownerDeclarations.Select(attribute => OwnerOf(repository, ownership,
+                            attribute.ApplicationSyntaxReference?.SyntaxTree.FilePath
+                                ?? throw new InvalidDataException($"Registration {TypeKey(type)} has no source declaration.")))
+                            .Distinct(StringComparer.Ordinal).ToArray();
+                        if (declaredOwners.Length != 1)
+                            throw new InvalidDataException($"Registration {TypeKey(type)} spans different source owners.");
+                        owners.Add(TypeKey(type), declaredOwners[0]);
+                    }
+                }
                 var registrations = type.GetAttributes().Where(attribute =>
                     Registrations.ContainsKey(attribute.AttributeClass?.ToDisplayString() ?? "")).ToArray();
                 if (registrations.Length == 0) continue;
@@ -158,10 +177,40 @@ internal static class TargetSourceFingerprint
                 Hash(sources.Where(item => item.Group == responsibility)
                     .Select(item => "source:" + item.Path + ":" + item.Hash).Append("common:" + common)));
         }
-        return hashes;
+        return new(BakeCodeManifest.CurrentSchema, hashes, owners);
     }
 
-    // The only source-ownership policy. Membership always intersects the actual production Compile graph.
+    private static bool IsRegistration(INamedTypeSymbol? type)
+    {
+        for (; type is not null; type = type.BaseType)
+            if (type.ToDisplayString() == typeof(RegistrationAttribute).FullName) return true;
+        return false;
+    }
+
+    // Same most-specific-first policy and glob semantics as check-source.ps1.
+    private static (Regex Pattern, string Owner)[] ReadOwnership(string repository)
+    {
+        using var document = JsonDocument.Parse(File.ReadAllBytes(Path.Combine(repository, "ownership.json")));
+        return document.RootElement.GetProperty("rules").EnumerateArray()
+            .Select(rule => (Pattern: rule.GetProperty("pattern").GetString()!, Owner: rule.GetProperty("owner").GetString()!))
+            .OrderByDescending(rule => rule.Pattern.Count(c => c is not ('*' or '?')))
+            .Select(rule => (new Regex("^" + Regex.Escape(rule.Pattern.Replace('\\', '/'))
+                .Replace("\\*\\*", "__DOUBLE_STAR__").Replace("\\*", "[^/]*")
+                .Replace("__DOUBLE_STAR__", ".*").Replace("\\?", "[^/]") + "$", RegexOptions.CultureInvariant), rule.Owner))
+            .ToArray();
+    }
+
+    private static string OwnerOf(string repository, (Regex Pattern, string Owner)[] rules, string source)
+    {
+        var path = Relative(repository, source);
+        foreach (var rule in rules)
+            if (rule.Pattern.IsMatch(path))
+                return !string.IsNullOrWhiteSpace(rule.Owner) ? rule.Owner
+                    : throw new InvalidDataException($"Source owner is empty: {path}.");
+        throw new InvalidDataException($"Registered source has no ownership rule: {path}.");
+    }
+
+    // The CPU fingerprint responsibility policy. Membership always intersects the actual production Compile graph.
     private static string SourceGroup(string path, string project, IReadOnlySet<string> generated)
     {
         // SDK Compile items are recognized by their evaluated MSBuild paths.
@@ -179,9 +228,13 @@ internal static class TargetSourceFingerprint
         if (path.StartsWith("game/gen/", StringComparison.Ordinal) && !path.StartsWith("game/gen/maps/", StringComparison.Ordinal)) return "shared";
         if (path.StartsWith("pipeline/map/", StringComparison.Ordinal) ||
             path.StartsWith("game/kernel/bake/", StringComparison.Ordinal) ||
-            path.StartsWith("game/kernel/map/data/", StringComparison.Ordinal) ||
-            path.StartsWith("game/kernel/registry/", StringComparison.Ordinal) ||
-            path.StartsWith("game/kernel/stubs/", StringComparison.Ordinal)) return "shared";
+            path is "game/kernel/map/data/GlobalBuildInputs.cs" or
+                "game/kernel/map/data/MapClaimCapture.cs" or
+                "game/kernel/map/data/GenerationInputCapture.cs" or
+                "game/kernel/map/data/MapDataSource.cs" or
+                "game/kernel/map/data/MapWorldLoading.cs" or
+                "game/kernel/map/data/MapContext.cs" ||
+            path == "game/kernel/lod/ModuleTileCatalog.cs") return "shared";
         if (path.StartsWith("game/kernel/collision/", StringComparison.Ordinal)) return "runtime:kernel/collision";
         if (path.StartsWith("game/systems/nightlight/", StringComparison.Ordinal)) return "runtime:systems/nightlight";
         if (path.StartsWith("game/gen/maps/", StringComparison.Ordinal))
@@ -199,6 +252,7 @@ internal static class TargetSourceFingerprint
             "game/kernel/lighting/", "game/kernel/lod/", "game/kernel/map/", "game/kernel/materials/",
             "game/kernel/post/", "game/kernel/quality/", "game/kernel/renderer/", "game/kernel/save/",
             "game/kernel/settings/", "game/kernel/stream/", "game/kernel/world/",
+            "game/kernel/registry/", "game/kernel/stubs/",
             "game/systems/atlas/", "game/systems/fauna/", "game/systems/sky/", "game/systems/vegetation/",
             "game/systems/water/", "game/systems/weather/"
         })

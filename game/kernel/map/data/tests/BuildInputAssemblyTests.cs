@@ -79,7 +79,6 @@ public sealed class BuildInputAssemblyTests
         AssertThrown(() => collision.Collision(new(new("unregistered"), new object(), Matrix4x4.Identity))).IsInstanceOf<InvalidOperationException>();
     }
 
-
     // No registration attributes or test-assembly scanning: this exercises a detached capability list only.
     private sealed class Contributor(string id, GroundMaskChannels channels) : IContentModule, IGroundMaskContributor
     {
@@ -89,7 +88,6 @@ public sealed class BuildInputAssemblyTests
         GroundMaskChannels IGroundMaskContributor.Channels => channels;
         public int PaintCalls { get; private set; }
         public IReadOnlyList<Claim> Claims => [];
-        public ModuleBudget Budget { get; } = new(0, 0, 0);
         public IEnumerable<TileKey> Tiles(BuildContext context) => [];
         public ContentOutput Build(BuildContext context, TileKey tile, LodLevel lod) => ContentOutput.Empty;
         public void Paint(BuildContext context, in GroundMaskGrid grid, Span<byte> mask1, Span<byte> mask2) => PaintCalls++;

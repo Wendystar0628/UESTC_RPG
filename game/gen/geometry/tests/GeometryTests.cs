@@ -62,7 +62,7 @@ public sealed class GeometryTests
             AssertThat(input.Position[0] == 0 && input.Index[0] == 0 && (input.Custom0 is null || input.Custom0[0] == 0) &&
                 (input.Lods is null || input.Lods[0].Index[0] == 2)).OverrideFailureMessage("singleton or passthrough kept mutable input storage").IsTrue();
         }
-        var builder = new SiteBuilder(new BuildContext { World = null!, Map = null!, Catalog = null!, WorldSeed = 1 }, LodLevel.L0, SiteDetail.Full);
+        var builder = new SiteBuilder(new BuildContext { CodeHash = "fixture", WindowNumbering = new(new MapId("fixture"), new string('0', 64), []), World = null!, Map = null!, Catalog = null!, WorldSeed = 1 }, LodLevel.L0, SiteDetail.Full);
         builder.Add(source with { Lods = [] }, Matrix4x4.Identity);
         var item = builder.Items.Single();
         var restored = GeometryPublication.Publish(item.Mesh!, item.HasLodChannel);

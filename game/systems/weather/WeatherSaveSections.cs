@@ -8,15 +8,15 @@ namespace Campus.Systems.Weather;
 /// <summary>The whole weather save: the seed plus the manual choice, pin, quiet window and wetness residue. Automatic weather is not saved.</summary>
 public sealed record WeatherSave(uint Seed, WeatherProcessState Process);
 
-[KernelService(typeof(WeatherSection), Owner = "WP-45a")]
-[SaveSection("weather", Owner = "WP-45a", Version = 2, Scope = SaveScope.Global, Phase = RestorePhase.World, Order = 20)]
+[KernelService(typeof(WeatherSection))]
+[SaveSection("weather", Version = 2, Scope = SaveScope.Global, Phase = RestorePhase.World, Order = 20)]
 public sealed class WeatherSection(WeatherProcess weather, IMapService maps, IWeatherProfileSource profiles) : ISaveSection<WeatherSave>
 {
     public JsonTypeInfo<WeatherSave> TypeInfo => WeatherJsonContext.Contract.WeatherSave;
     public bool IsSettled => !weather.Transitioning;
 
     public WeatherSave Capture(in CaptureContext c) =>
-        new(weather.Seed, c.Moment is { } moment ? weather.CaptureAt(in moment) : weather.Capture());
+        new(weather.Seed, weather.CaptureAt(c.Moment));
 
     public void Restore(WeatherSave dto, RestoreContext c)
     {

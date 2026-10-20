@@ -13,7 +13,7 @@ namespace Campus.Kernel.Settings;
 /// JSON parsing never creates objects from file content; wrong-typed or out-of-range keys fall back to
 /// the caller's default, unknown keys are ignored, missing sections read as defaults.
 /// </summary>
-[KernelService(typeof(ISettingsStore), Owner = "WP-32")]
+[KernelService(typeof(ISettingsStore))]
 public sealed class SettingsStore : ISettingsStore
 {
     private const int MaxBytes = 256 * 1024;

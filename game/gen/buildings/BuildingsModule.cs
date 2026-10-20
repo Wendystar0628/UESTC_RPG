@@ -20,8 +20,7 @@ namespace Campus.Gen.Buildings;
 /// Pure .NET: reads only the world model, outputs contract geometry for the WP-02 baker.
 /// </summary>
 
-
-[ContentModule("buildings", Owner = "WP-14")]
+[ContentModule("buildings")]
 public sealed class BuildingsModule : IContentModule, IWindowNumberingProvider, IWindowMetadataSource, IContentSourceTraceProvider
 {
     public BakeInputDependencies BakeInputs { get; } = new(BakeInputKinds.World | BakeInputKinds.Windows, [SurfaceMaterialCatalog.SourcePath], []);
@@ -37,11 +36,6 @@ public sealed class BuildingsModule : IContentModule, IWindowNumberingProvider, 
     /// Draw calls: about fourteen material classes per merged block (the six of the shell, sash, curtain fabric, curtain
     /// rail and door astragal, and the roof plant's fence board, casing, curved shroud and pipe).
     /// </summary>
-    public ModuleBudget Budget { get; } = new(TrianglesL0: 130_000, TrianglesL1: 130_000, DrawCalls: 40);
-
-    public IReadOnlyList<ChannelDecl> Channels { get; } = LightSlots.Declared
-        .Select(c => new ChannelDecl(new ChannelId(c.Name), ChannelKind.Scalar, 0f, 1f, ChannelRate.Continuous, c.Name))
-        .ToArray();
 
     /// <summary>
     /// Which buildings this module generates: those whose massing and facade no zone module has claimed (the map's
@@ -107,9 +101,9 @@ public sealed class BuildingsModule : IContentModule, IWindowNumberingProvider, 
             var decl = anchors.First(a => a.Id == e.Anchor);
             var above = decl.Outside.Y - world.Terrain.HeightAt(decl.Outside.X, decl.Outside.Z);
             var expected = BuildingPlanner.DeckUnder(world, plan.Id, new(decl.Outside.X, decl.Outside.Z), decl.Outside.Y) is { } deck
-                ? ctx.ClaimedBy(deck, Aspects.Massing) is { } builder ? $"{builder.Value}, which builds the deck block {deck.Value}"
+                ? ctx.ClaimedBy(deck, Aspects.Massing) is { } builder ? $"{builder}, which builds the deck block {deck.Value}"
                     : $"no one yet: the deck block {deck.Value} is a plain WP-14 building"
-                : (ctx.ClaimedBy(plan.Id, Aspects.Ground) ?? ctx.ClaimedBy(plan.Id, Aspects.Props)) is { } around ? $"{around.Value}, which claims the ground round it"
+                : (ctx.ClaimedBy(plan.Id, Aspects.Ground) ?? ctx.ClaimedBy(plan.Id, Aspects.Props)) is { } around ? $"{around}, which claims the ground round it"
                 : plan.Feature.Zone is { } zone ? $"the {zone.Value} zone pack (zoning)"
                 : "no one yet (undecided)";
             yield return new BuildDiagnostic(DiagnosticLevel.Info, "wp14.door.alone", string.Create(CultureInfo.InvariantCulture,

@@ -23,7 +23,7 @@ public static class HudSettingDefinitions
 /// 界面的观者设置（UI-NAV），存 user://settings.json 的 ui 节（档案级，不进存档）。
 /// 读写经 ISettingsStore（越界或类型不对用默认值）；改动后 0.5 s 写一次（SYS-SAVE-FORMAT）。
 /// </summary>
-[KernelService(typeof(HudSettings), Owner = "WP-35")]
+[KernelService(typeof(HudSettings))]
 public sealed class HudSettings
 {
     private readonly ISettingsStore _store;

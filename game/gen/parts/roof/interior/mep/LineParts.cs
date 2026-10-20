@@ -11,7 +11,7 @@ namespace Campus.Gen.Parts.Roof.Mep;
 /// and rungs every 0.3 m. 2: a wire-basket tray, floor wires, cross wires and side wires. Hung from a ceiling or wall, so visual
 /// only. The part is the tray itself; its hangers are the host's (they would leave the footprint).
 /// </summary>
-[Part(PartCatalog.CableTray, Owner = "WP-12")]
+[Part(PartCatalog.CableTray)]
 public sealed class CableTrayPart() : MepPart<TrimParams>(new(1100, 220))
 {
     protected override Vector3 Minimum => new(0.5f, 0.05f, 0.12f);
@@ -97,7 +97,7 @@ public sealed class CableTrayPart() : MepPart<TrimParams>(new(1100, 220))
 /// plate, dark header. 1: brushed-aluminium plate with a dark face and white numerals. 2: warm-wood plate with a dark header. Back on +Z
 /// (a wall); visual only.
 /// </summary>
-[Part(PartCatalog.DirectorySign, Owner = "WP-12")]
+[Part(PartCatalog.DirectorySign)]
 public sealed class DirectorySignPart() : MepPart<SignParams>(new(1500, 160))
 {
     protected override Vector3 Minimum => new(0.3f, 0.4f, 0.015f);

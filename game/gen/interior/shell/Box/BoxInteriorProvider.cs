@@ -1,173 +1,115 @@
+using System.Globalization;
 using System.Numerics;
 using Campus.Contracts;
 using Campus.Contracts.Audio;
+using Campus.Gen.Geometry;
+using Campus.Gen.Parts.Core;
 
 namespace Campus.Gen.Interior.Shell.Box;
 
-/// <summary>Demo box interior: one rectangular plan, an open entry and straight stairs per registered building.</summary>
-public abstract class BoxInteriorProvider : IInteriorProvider, IInteriorCatalogConfigurable
+/// <summary>Lightweight world-shaped interior shell; complete rooms and traffic cores belong to GenericInteriorProvider.</summary>
+public class BoxInteriorProvider : IInteriorProvider, IInteriorCatalogConfigurable
 {
+    private InteriorCatalogConfiguration? _configuration;
     public BakeInputDependencies BakeInputs => BakeInputDependencies.World;
     public BakeInputDependencies CollisionInputs => BakeInputDependencies.World;
-
-    private FeatureId[] _features = [];
-    private int[] _floors = [1];
-    private IReadOnlyDictionary<FeatureId, IReadOnlyList<EntranceDecl>> _entrances =
-        new Dictionary<FeatureId, IReadOnlyList<EntranceDecl>>();
-    public IReadOnlyList<FeatureId> FeatureIds => _features;
+    public IReadOnlyList<FeatureId> FeatureIds => _configuration?.Features ?? [];
     public int Priority => -1000;
     public bool Walkable => true;
 
-    /// <summary>Boot supplies the authoritative interiors.json fields; generators perform no file IO.</summary>
-    public void Configure(IEnumerable<FeatureId> features, IEnumerable<int> openFloors,
-        IReadOnlyDictionary<FeatureId, IReadOnlyList<EntranceDecl>> entrances)
+    public void Configure(InteriorCatalogConfiguration configuration)
     {
-        _features = features.Distinct().OrderBy(x => x.Value, StringComparer.Ordinal).ToArray();
-        _floors = openFloors.Distinct().Order().ToArray();
-        if (_features.Length == 0 || _floors.Length == 0) throw new ArgumentException("Box interior requires features and open floors.");
-        if (_floors.Any(f => f < short.MinValue || f > short.MaxValue)) throw new ArgumentOutOfRangeException(nameof(openFloors));
-        _entrances = entrances;
+        if (_configuration is not null) throw new InvalidOperationException("An interior provider is configured once per map.");
+        if (configuration.BuildingType is not null || configuration.Seals.Count != 0)
+            throw new ArgumentException("The lightweight shell takes its dimensions from the world; configured rooms and seals require a plan provider.");
+        if (configuration.Features.Count == 0 || configuration.OpenFloors.Count == 0)
+            throw new ArgumentException("Interior catalog requires features and open floors.");
+        _configuration=configuration;
+    }
+    private InteriorCatalogConfiguration Require(FeatureId feature)
+    {
+        var config=_configuration ?? throw new InvalidOperationException("Interior provider is not configured.");
+        if (!config.Features.Contains(feature)) throw new ArgumentException("Feature is outside this provider.");
+        return config;
+    }
+    private IReadOnlyList<InteriorBuildingPart> Parts(BuildContext context,FeatureId feature) =>
+        context.Memo((this,feature),()=>InteriorBuildingSource.Read(context.World,feature,Require(feature).Entrances.GetValueOrDefault(feature) ?? [],Require(feature).OpenFloors));
+
+    public InteriorLayout Layout(BuildContext context,FeatureId feature)
+    {
+        var config=Require(feature); var parts=Parts(context,feature);
+        var levels=parts.SelectMany(p=>p.Storeys).ToArray();
+        if(config.OpenFloors.Any(f=>!levels.Any(s=>s.Index==f))) throw new InvalidDataException($"Open floor is outside world storeys: {feature.Value}.");
+        var zones=new List<ZoneVolume>();
+        foreach(var part in parts) foreach(var floor in config.OpenFloors)
+            zones.Add(new(floor,zones.Count,ZoneKind.Lobby,part.Footprint.Outer,new("interior.main"),
+                StableHash.Hash32(context.WorldSeed,feature.Value,part.Key,floor.ToString(CultureInfo.InvariantCulture)),true));
+        var entrances=config.Entrances.GetValueOrDefault(feature) ?? [];
+        var points=levels.SelectMany(s=>s.Footprint).ToArray();
+        return new(feature,levels,zones,[],entrances,[],config.OpenFloors,[],
+            new(new(points.Min(p=>p.X),levels.Min(s=>s.FloorY)-0.25f,points.Min(p=>p.Y)),
+                new(points.Max(p=>p.X),levels.Max(s=>s.FloorY+s.Height),points.Max(p=>p.Y))),
+            StableHash.Hash32(context.WorldSeed,feature.Value,"interior.world-shell"));
     }
 
-    public InteriorLayout Layout(BuildContext ctx, FeatureId id)
+    private void Compose(BuildContext context,FeatureId feature,int storey,InteriorGeometry sink)
     {
-        var plan = Plan(ctx, id);
-        var storeys = _floors.Select(f => new StoreyInfo(f, plan.Y(f), 4, plan.Ring(-plan.Width / 2, 0, plan.Width / 2, plan.Depth))).ToArray();
-        var zones = _floors.Select(f => new ZoneVolume(f, f, ZoneKind.Lobby, storeys.First(s => s.Index == f).Footprint,
-            new ChannelId("interior.main"), StableHash.Hash32(ctx.WorldSeed, id.Value, "interior.light"), true)).ToArray();
-        float halfDoor = Math.Clamp(plan.Entrances[0].ClearWidth / 2, 0.55f, plan.Width / 4);
-        var portals = new List<PortalDecl> { new(_floors[0], -1, _floors[0],
-            plan.P(-halfDoor, plan.Y(_floors[0]), 0), plan.P(halfDoor, plan.Y(_floors[0]), 0), 2.8f, PortalKind.Door) };
-        for (int i = 1; i < _floors.Length; i++)
-            portals.Add(new(_floors[i], _floors[i - 1], _floors[i], plan.P(plan.Width / 2 - 4, plan.Y(_floors[i]), 11.5f),
-                plan.P(plan.Width / 2 - 1, plan.Y(_floors[i]), 11.5f), 3, PortalKind.StairOpening));
-        var corners = storeys[0].Footprint;
-        Vector3 min = new(corners.Min(p => p.X), storeys[0].FloorY - 0.25f, corners.Min(p => p.Y));
-        Vector3 max = new(corners.Max(p => p.X), storeys[^1].FloorY + 4, corners.Max(p => p.Y));
-        return new(id, storeys, zones, portals, plan.Entrances, [], _floors, [], new(min, max),
-            StableHash.Hash32(ctx.WorldSeed, id.Value, "d0.interior.plan.v1"));
+        var config=Require(feature); if(!config.OpenFloors.Contains(storey)) return;
+        var material=new ToonSpec(new("wall.lit"),new("wall.shade"));
+        foreach(var part in Parts(context,feature))
+        {
+            var floor=part.Storeys.FirstOrDefault(s=>s.Index==storey);
+            if(floor is null) continue;
+            sink.Floor(part.Footprint,floor.FloorY,0.25f,material,FootMat.Concrete);
+            if(storey==config.OpenFloors.Max()) sink.Plate(part.Footprint,floor.FloorY+floor.Height,0.25f,material);
+            foreach(var ring in new[]{part.Footprint.Outer}.Concat(part.Footprint.Holes))
+                for(var i=0;i<ring.Count;i++)
+                {
+                    var a=ring[i]; var b=ring[(i+1)%ring.Count]; var delta=b-a; float length=delta.Length();
+                    var direction=delta/length;
+                    var openings=new List<(float Start,float End,float Top)>();
+                    foreach(var entrance in config.Entrances.GetValueOrDefault(feature) ?? [])
+                    {
+                        var point=new Vector2(entrance.Center.X,entrance.Center.Z);
+                        float along=Vector2.Dot(point-a,direction);
+                        if(along<0 || along>length || Vector2.Distance(point,a+direction*along)>0.5f ||
+                            entrance.Center.Y<floor.FloorY || entrance.Center.Y>=floor.FloorY+floor.Height) continue;
+                        float top=entrance.HeadY==0?entrance.Center.Y+WalkRules.DefaultDoorHeight:entrance.HeadY;
+                        openings.Add((Math.Max(0,along-entrance.ClearWidth*0.5f),Math.Min(length,along+entrance.ClearWidth*0.5f),top));
+                    }
+                    float cursor=0;
+                    foreach(var opening in openings.OrderBy(o=>o.Start))
+                    {
+                        if(opening.Start<cursor) throw new InvalidDataException($"Interior entrance openings overlap: {feature.Value}.");
+                        Wall(cursor,opening.Start,floor.FloorY,floor.FloorY+floor.Height);
+                        Wall(opening.Start,opening.End,opening.Top,floor.FloorY+floor.Height);
+                        cursor=opening.End;
+                    }
+                    Wall(cursor,length,floor.FloorY,floor.FloorY+floor.Height);
+                    void Wall(float from,float to,float bottom,float top)
+                    {
+                        if(to-from<=PlanGeometry.Tolerance || top-bottom<=PlanGeometry.Tolerance) return;
+                        sink.Wall(a+direction*from,a+direction*to,bottom,top,0.24f,material);
+                    }
+                }
+        }
     }
-
-    public IReadOnlyList<Collider> CollisionStorey(BuildContext ctx, FeatureId id, int storey)
+    public ContentOutput BuildStorey(BuildContext context,FeatureId feature,int storey,InteriorDetail detail)
     {
-        var p = Plan(ctx, id);
-        if (Array.IndexOf(_floors, storey) < 0) return [];
-        var result = new List<Collider>();
-        float y = p.Y(storey), left = -p.Width / 2, right = p.Width / 2;
-        float stairLeft = right - 4, stairRight = right - 1;
-        bool incoming = Array.IndexOf(_floors, storey) > 0;
-        void Slab(float x0, float z0, float x1, float z1) => result.Add(new SlabCollider(p.Ring(x0, z0, x1, z1), y, 0.25f, SurfaceTag.Ground) { Foot = FootMat.Concrete });
-        if (incoming)
-        {
-            Slab(left, 0, stairLeft, p.Depth);
-            Slab(stairRight, 0, right, p.Depth);
-            Slab(stairLeft, 0, stairRight, 3);
-            Slab(stairLeft, 11.5f, stairRight, p.Depth);
-        }
-        else Slab(left, 0, right, p.Depth);
-        void Wall(float x0, float z0, float x1, float z1, float bottom, float top) =>
-            result.Add(new WallCollider(p.Xz(x0, z0), p.Xz(x1, z1), 0.12f, bottom, top, SurfaceTag.Wall) { Foot = FootMat.Concrete });
-        Wall(left, 0, left, p.Depth, y, y + 4);
-        Wall(right, p.Depth, right, 0, y, y + 4);
-        Wall(left, p.Depth, right, p.Depth, y, y + 4);
-        float halfDoor = Math.Clamp(p.Entrances[0].ClearWidth / 2, 0.55f, p.Width / 4);
-        if (storey == _floors[0])
-        {
-            Wall(left, 0, -halfDoor, 0, y, y + 4);
-            Wall(halfDoor, 0, right, 0, y, y + 4);
-            Wall(-halfDoor, 0, halfDoor, 0, y + 2.8f, y + 4);
-        }
-        else
-        {
-            Wall(left, 0, right, 0, y, y + 4);
-            Wall(stairLeft, 3, stairLeft, 11.5f, y, y + WalkRules.BarrierHeight);
-            Wall(stairRight, 3, stairRight, 11.5f, y, y + WalkRules.BarrierHeight);
-        }
-        int next = Array.IndexOf(_floors, storey) + 1;
-        if (next < _floors.Length)
-        {
-            float top = p.Y(_floors[next]);
-            const float run = 8.5f;
-            if (top - y > 5) throw new InvalidOperationException("Box interior straight stair requires consecutive open storeys.");
-            result.Add(new RampCollider(p.P(stairLeft, y - 0.2f, 3), p.P(stairRight, y - 0.2f, 3),
-                p.P(stairRight, top, 3 + run), p.P(stairLeft, top, 3 + run), 0.2f, SurfaceTag.Stair)
-            { Foot = FootMat.Concrete, Stair = new((top - y) / 24, run / 24, 24) });
-        }
-        if (next == _floors.Length)
-            result.Add(new SlabCollider(p.Ring(left, 0, right, p.Depth), y + 4, 0.25f, SurfaceTag.Ground) { Foot = FootMat.Concrete });
-        return result;
+        _=detail switch { InteriorDetail.Proxy or InteriorDetail.Shell or InteriorDetail.Full=>0,_=>throw new ArgumentOutOfRangeException(nameof(detail)) };
+        var sink=new InteriorGeometry(context.Catalog); Compose(context,feature,storey,sink); return sink.Finish();
     }
-
-    public ContentOutput BuildStorey(BuildContext ctx, FeatureId id, int storey, InteriorDetail detail)
+    public IReadOnlyList<Collider> CollisionStorey(BuildContext context,FeatureId feature,int storey)
     {
-        _ = detail switch
-        {
-            InteriorDetail.Proxy or InteriorDetail.Shell or InteriorDetail.Full => 0,
-            _ => throw new ArgumentOutOfRangeException(nameof(detail))
-        };
-        var builder = new BoxInteriorMeshBuilder();
-        foreach (Collider collider in CollisionStorey(ctx, id, storey))
-        {
-            if (collider is RampCollider ramp) builder.AddSteps(ramp);
-            else builder.Add(collider);
-        }
-        return new(builder.Build(ctx.Toon(new(new("wall.lit"), new("wall.shade")))), []);
+        var sink=new InteriorGeometry(context.Catalog){Draw=false}; Compose(context,feature,storey,sink); return sink.Colliders;
     }
-
-    public NavFloorGraph Nav(BuildContext ctx, FeatureId id, int storey)
+    public NavFloorGraph Nav(BuildContext context,FeatureId feature,int storey)
     {
-        var p = Plan(ctx, id);
-        int index = Array.IndexOf(_floors, storey);
-        if (index < 0) return NavFloorGraph.Empty(id, storey);
-        float y = p.Y(storey), stairX = p.Width / 2 - 2.5f, sideX = p.Width / 2 - 5;
-        NavNodeId NodeId(int floor, string role) => new(StableHash.Hash32(ctx.WorldSeed, id.Value, floor.ToString(System.Globalization.CultureInfo.InvariantCulture), role));
-        NavNode Node(string role, float x, float z) => new(NodeId(storey, role), p.P(x, y, z), new(id, (short)storey), role);
-        var nodes = new List<NavNode> { Node("entry", 0, 2), Node("center", 0, p.Depth / 2),
-            Node("lower-approach", sideX, 2), Node("lower", stairX, 3 + 8.5f * 0.2f / 4.2f),
-            Node("upper-approach", sideX, 12), Node("upper", stairX, 11.5f) };
-        var edges = new List<NavEdge>();
-        void Connect(NavNode a, NavNode b, NavEdgeKind kind) => edges.Add(new(a.Id, b.Id, kind,
-            Vector3.Distance(a.P, b.P), 1.5f, b.P.Y - a.P.Y, NavFlags.Indoor, "d0.interior"));
-        Connect(nodes[0], nodes[1], NavEdgeKind.Corridor);
-        Connect(nodes[0], nodes[2], NavEdgeKind.Corridor);
-        Connect(nodes[2], nodes[3], NavEdgeKind.Corridor);
-        Connect(nodes[1], nodes[4], NavEdgeKind.Corridor);
-        Connect(nodes[4], nodes[5], NavEdgeKind.Corridor);
-        if (index + 1 < _floors.Length)
-        {
-            int next = _floors[index + 1];
-            var upper = new NavNode(NodeId(next, "upper"), p.P(stairX, p.Y(next), 11.5f), new(id, (short)next), "upper");
-            nodes.Add(upper);
-            Connect(nodes[3], upper, NavEdgeKind.Stair);
-        }
-        return new(id, (short)storey, nodes, edges);
-    }
-
-    private PlanData Plan(BuildContext ctx, FeatureId id)
-    {
-        if (!_features.Contains(id)) throw new ArgumentException("Feature is not assigned to this provider.", nameof(id));
-        if (!ctx.World.Features.TryGetValue(id, out var feature)) throw new KeyNotFoundException(id.Value);
-        float width = Math.Clamp(feature.Bounds.Max.X - feature.Bounds.Min.X, 24, 48);
-        float depth = Math.Clamp(feature.Bounds.Max.Z - feature.Bounds.Min.Z, 24, 48);
-        width = (int)(width * 2) / 2f; depth = (int)(depth * 2) / 2f;
-        IReadOnlyList<EntranceDecl> entrances = _entrances.GetValueOrDefault(id) ?? [];
-        if (entrances.Count == 0)
-        {
-            var center = new Vector3((feature.Bounds.Min.X + feature.Bounds.Max.X) / 2, feature.Bounds.Min.Y, feature.Bounds.Min.Z);
-            entrances = [new(id.Value + "/box-entry", center - new Vector3(0, 0, 2.5f), center + new Vector3(0, 0, 3), 2.4f, true)
-                { Center = center, YawDeg = 0 }];
-        }
-        float angle = entrances[0].YawDeg * (float.Pi / 180f);
-        return new(width, depth, entrances[0].Center, new(MathF.Cos(angle), 0, MathF.Sin(angle)),
-            new(-MathF.Sin(angle), 0, MathF.Cos(angle)), _floors[0], entrances);
-    }
-
-    private sealed record PlanData(float Width, float Depth, Vector3 Origin, Vector3 Right, Vector3 Inward,
-        int FirstFloor, IReadOnlyList<EntranceDecl> Entrances)
-    {
-        public float Y(int floor) => Origin.Y + (floor - FirstFloor) * 4;
-        public Vector3 P(float x, float y, float z) => Origin + Right * x + Inward * z + Vector3.UnitY * (y - Origin.Y);
-        public Vector2 Xz(float x, float z) { var p = P(x, Origin.Y, z); return new(p.X, p.Z); }
-        public IReadOnlyList<Vector2> Ring(float x0, float z0, float x1, float z1) => [Xz(x0, z0), Xz(x1, z0), Xz(x1, z1), Xz(x0, z1)];
+        var config=Require(feature); if(!config.OpenFloors.Contains(storey)) return NavFloorGraph.Empty(feature,storey);
+        // A lightweight shell declares only its actual entry landings. It does not invent stairs or room connectivity.
+        var nodes=(config.Entrances.GetValueOrDefault(feature) ?? []).Where(e=>e.Open).Where(e=>Parts(context,feature)
+            .Any(p=>p.Storeys.Any(s=>s.Index==storey && e.Inside.Y>=s.FloorY && e.Inside.Y<s.FloorY+s.Height)))
+            .Select(e=>new NavNode(new(StableHash.Hash32(context.WorldSeed,feature.Value,e.Id)),e.Inside,new(feature,checked((short)storey)),e.Id)).ToArray();
+        return new(feature,checked((short)storey),nodes,[]);
     }
 }

@@ -9,14 +9,14 @@ namespace Campus.Gen.Maps.Qingshuihe.Public;
 
 /// <summary>WP-29 pocket greens from world/public.json; paving and trees remain with their respective producers.</summary>
 
-[ContentModule("zone.public", Owner = "WP-29")]
+[ContentModule("zone.public")]
 public sealed class PublicModule : ZoneModuleBase
 {
     public override BakeInputDependencies BakeInputs { get; } = new(BakeInputKinds.World | BakeInputKinds.Windows, [], []);
 
     private static readonly IReadOnlyList<ZoneSite> Sites = [new PocketGreenSite()];
 
-    public PublicModule() : base(Sites, new(TrianglesL0: 12_000, TrianglesL1: 6_000, DrawCalls: 4)) { }
+    public PublicModule() : base(Sites) { }
 
     public override ContentOutput Build(BuildContext context, TileKey tile, LodLevel lod)
     {

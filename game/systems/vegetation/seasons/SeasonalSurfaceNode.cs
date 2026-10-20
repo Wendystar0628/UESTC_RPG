@@ -12,7 +12,7 @@ namespace Campus.Systems.Vegetation;
 
 /// <summary>Publishes the per-species render table and seasonal surface amounts. Seasonal anchors are
 /// evaluated once by the colour script; weather owns snow accumulation and its world-time decay.</summary>
-[KernelNode("systems.season-globals", Owner = "WP-38")]
+[KernelNode("systems.season-globals")]
 public sealed partial class SeasonalSurfaceNode : Node, IMapAware
 {
     private static readonly StringName _shaderGlobalTreeSpecies = ShaderGlobals.TreeSpecies;

@@ -1,3 +1,4 @@
+using Campus.Gen.Interior;
 using System.Numerics;
 using Campus.Contracts;
 using Campus.Contracts.Audio;
@@ -26,12 +27,12 @@ internal static class TwinStair
     /// <summary>Distance of a flight's foot from the centre, along its face direction.</summary>
     public static float FootRadius(LibraryFrame f) => f.VoidApothem - Section(f).Total;
 
-    public static void Build(LibraryFrame f, InteriorSink sink)
+    public static void Build(LibraryFrame f, InteriorGeometry sink)
     {
         foreach (var j in S.StairFaces) Flight(f, sink, j);
     }
 
-    private static void Flight(LibraryFrame f, InteriorSink sink, int j)
+    private static void Flight(LibraryFrame f, InteriorGeometry sink, int j)
     {
         var (riser, run, total) = Section(f);
         var foot = FootRadius(f);
@@ -90,7 +91,7 @@ internal static class TwinStair
     /// One side of one stretch from x a to x b: the white stringer from its bottom line to 0.1 m over the nosing line, the
     /// wood panel above it and the white cap at <see cref="LibraryInteriorStyle.StairRail"/> over the nosings.
     /// </summary>
-    private static void Side(InteriorSink sink, Func<float, float, float, Vector3> q, float t, float a, float b,
+    private static void Side(InteriorGeometry sink, Func<float, float, float, Vector3> q, float t, float a, float b,
         float bottomA, float bottomB, float nosingA, float nosingB)
     {
         float h = S.Stringer * 0.5f, p = S.RailInfill * 0.5f, cap = S.RailCapWidth * 0.5f;

@@ -6,8 +6,8 @@ using NVector3 = System.Numerics.Vector3;
 namespace Campus.Kernel.Renderer;
 
 /// <summary>The single OSM credit layer. UI styling may update Credit/theme and the reserved right-hand space.</summary>
-[KernelNode("attribution", Owner = "WP-01")]
-[KernelService(typeof(AttributionLayer), Owner = "WP-01")]
+[KernelNode("attribution")]
+[KernelService(typeof(AttributionLayer))]
 public partial class AttributionLayer : CanvasLayer
 {
     private readonly NVector3[] _horizon = new NVector3[24];

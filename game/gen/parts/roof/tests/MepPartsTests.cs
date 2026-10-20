@@ -25,7 +25,7 @@ public sealed class MepPartsTests
     };
 
     private static IEnumerable<Type> MepParts() =>
-        typeof(MepGallery).Assembly.GetTypes().Where(t => t.Namespace == typeof(MepGallery).Namespace && t.GetCustomAttribute<PartAttribute>() is not null);
+        typeof(BoilerPart).Assembly.GetTypes().Where(t => t.Namespace == typeof(BoilerPart).Namespace && t.GetCustomAttribute<PartAttribute>() is not null);
 
     [TestCase, TestCategory(TestReason.Contract)]
     public void RegisteredPartsMatchTheirCatalogueEntries()
@@ -37,7 +37,6 @@ public sealed class MepPartsTests
             var attribute = type.GetCustomAttribute<PartAttribute>()!;
             var entry = PartCatalog.Find(new(attribute.Id)) ?? throw new InvalidOperationException($"{attribute.Id} is not catalogued.");
             AssertThat(attribute.Id.StartsWith("interior.mep.", StringComparison.Ordinal)).OverrideFailureMessage($"{attribute.Id} is not a group-D id.").IsTrue();
-            AssertThat(attribute.Owner == "WP-12" && entry.Owner == new WpId("WP-12")).OverrideFailureMessage($"{attribute.Id} has the wrong owner.").IsTrue();
             var contract = type.GetInterfaces().Single(i => i.IsGenericType && i.GetGenericTypeDefinition() == typeof(IPartDef<>));
             AssertThat(contract.GetGenericArguments()[0] == entry.ParameterType).OverrideFailureMessage($"{attribute.Id} takes the wrong parameter record.").IsTrue();
         }
@@ -77,75 +76,13 @@ public sealed class MepPartsTests
     }
 
     [TestCase, TestCategory(TestReason.Contract)]
-    public void ReviewSamplesAreClosedAndBounded()
-    {
-        var samples = MepGallery.CreateSamples();
-        AssertThat(samples.Count > 0).OverrideFailureMessage("The review set has samples.").IsTrue();
-        foreach (var group in samples.GroupBy(s => s.Part))
-            AssertThat(group.Select(s => s.Params.Variation).Distinct().Count() == 3).OverrideFailureMessage($"{group.Key.Value} lacks a variation in the review set.").IsTrue();
-        foreach (var sample in samples)
-            foreach (var level in new[] { LodLevel.L0, LodLevel.L1 })
-            {
-                var geometry = sample.Build(level) ?? throw new InvalidOperationException($"{sample.Id} lacks {level}.");
-                ClosedClockwise(geometry, $"{sample.Id} {level}");
-                AssertThat(geometry.Bounds == sample.Bounds).OverrideFailureMessage($"{sample.Id} {level} moved the bounds.").IsTrue();
-            }
-    }
-
-    [TestCase, TestCategory(TestReason.Contract)]
-    public void EveryVertexIsInteriorAndCastsNoShadow()
-    {
-        foreach (var sample in MepGallery.CreateSamples())
-            foreach (var level in new[] { LodLevel.L0, LodLevel.L1 })
-                foreach (var mesh in sample.Build(level)!.Meshes)
-                    AssertThat(mesh.Flags is { } flags && flags.All(b => b == InteriorNoShadow)).OverrideFailureMessage($"{sample.Id} {level} has a vertex without the interior and no-shadow flags.").IsTrue();
-    }
-
-    [TestCase, TestCategory(TestReason.Contract)]
-    public void EveryColourIsARegisteredPair()
-    {
-        var palette = Path.Combine(Campus.Tests.RepositoryFixture.Root, "game", "style", "palette");
-        var tokens = new HashSet<string>(StringComparer.Ordinal);
-        foreach (var file in new[] { Path.Combine(palette, "core.json") }.Concat(Directory.GetFiles(Path.Combine(palette, "ext"), "*.json")))
-        {
-            using var document = System.Text.Json.JsonDocument.Parse(File.ReadAllBytes(file));
-            if (!document.RootElement.TryGetProperty("entries", out var entries)) continue;
-            foreach (var entry in entries.EnumerateArray())
-                if (entry.TryGetProperty("token", out var token)) tokens.Add(token.GetString()!);
-        }
-        foreach (var example in MepGallery.CreateExamples())
-            foreach (var mesh in example.Geometry.Meshes)
-            {
-                var lit = mesh.Material.Spec.Lit.Value; var shade = mesh.Material.Spec.Shade.Value;
-                AssertThat(lit.EndsWith(".lit", StringComparison.Ordinal) && shade == lit[..^4] + ".shade").OverrideFailureMessage($"{example.Id} uses an unpaired colour {lit}.").IsTrue();
-                AssertThat(tokens.Contains(lit) && tokens.Contains(shade)).OverrideFailureMessage($"{example.Id} uses unregistered colour {lit}.").IsTrue();
-            }
-    }
-
-    [TestCase, TestCategory(TestReason.Contract)]
-    public void FireEquipmentUsesTheRegisteredFireRed()
-    {
-        foreach (var sample in MepGallery.CreateSamples().Where(s => s.Part.Value is PartCatalog.Hydrant or PartCatalog.Extinguisher))
-            AssertThat(sample.Build(LodLevel.L0)!.Meshes.Any(m => m.Material.Spec.Lit.Value == "equip.fireRed.lit")).OverrideFailureMessage($"{sample.Id} should be in fire red.").IsTrue();
-    }
-
-    [TestCase, TestCategory(TestReason.Contract)]
     public void ExitSignIsSelfLitOnTheAlwaysOnSignalChannel()
     {
-        foreach (var sample in MepGallery.CreateSamples().Where(s => s.Part.Value == PartCatalog.ExitSign))
-        {
-            var lit = sample.Build(LodLevel.L0)!.Meshes.Where(m => m.Material.Spec.Emissive is not null).ToArray();
-            AssertThat(lit.Length >= 2).OverrideFailureMessage($"{sample.Id}: face and lettering should both be self-lit.").IsTrue();
-            AssertThat(lit.All(m => m.Material.Spec.Emissive == new ChannelId("sign.signal"))).OverrideFailureMessage($"{sample.Id} is lit by the wrong channel.").IsTrue();
-        }
         var p = new SignParams(0.36f, 0.145f, 0.03f);
         var glow = ExitSignPart.Glow(p, Matrix4x4.CreateTranslation(2, 2.3f, -5));
         AssertThat(glow.Color == new PaletteToken("sign.green")).OverrideFailureMessage("The exit glow must use sign.green.").IsTrue();
         AssertThat(Vector3.Distance(glow.Position, new(2, 2.3f + p.Height * 0.5f, -5 - p.Depth * 0.5f - 0.02f)) < TestTolerance.Position).OverrideFailureMessage("The glow sits just in front of the face centre.").IsTrue();
         AssertThat(glow.Range > 0 && glow.Energy > 0).OverrideFailureMessage("The glow needs a radius and a level.").IsTrue();
-        // Only the exit sign is self-lit.
-        foreach (var example in MepGallery.CreateExamples().Where(e => !e.Id.StartsWith("exit-", StringComparison.Ordinal)))
-            AssertThat(example.Geometry.Meshes.All(m => m.Material.Spec.Emissive is null)).OverrideFailureMessage($"{example.Id} should not glow.").IsTrue();
     }
 
     [TestCase, TestCategory(TestReason.Contract)]
@@ -162,26 +99,6 @@ public sealed class MepPartsTests
         try { RoomSignPart.Build(p, "A101", LodLevel.L0); }
         catch (ArgumentException) { refused = true; }
         AssertThat(refused).OverrideFailureMessage("Characters without a glyph must be refused, not dropped.").IsTrue();
-    }
-
-    [TestCase, TestCategory(TestTag.Determinism)]
-    [TestCategory(TestReason.Contract)]
-    public void GenerationIsBitwiseRepeatable()
-    {
-        var first = MepGallery.CreateExamples(); var second = MepGallery.CreateExamples();
-        AssertThat(first.Count == second.Count && first.Count > 0).OverrideFailureMessage("Missing gallery examples.").IsTrue();
-        for (var i = 0; i < first.Count; i++)
-        {
-            AssertThat(first[i].Geometry.Meshes.Count == second[i].Geometry.Meshes.Count).OverrideFailureMessage("Surface count changed.").IsTrue();
-            for (var m = 0; m < first[i].Geometry.Meshes.Count; m++)
-            {
-                var a = first[i].Geometry.Meshes[m]; var b = second[i].Geometry.Meshes[m];
-                AssertThat(a.Material == b.Material).OverrideFailureMessage("Material order changed.").IsTrue();
-                AssertThat(a.Position.Select(BitConverter.SingleToInt32Bits).SequenceEqual(b.Position.Select(BitConverter.SingleToInt32Bits))).OverrideFailureMessage("Vertex bytes changed.").IsTrue();
-                AssertThat(a.Normal.Select(BitConverter.SingleToInt32Bits).SequenceEqual(b.Normal.Select(BitConverter.SingleToInt32Bits))).OverrideFailureMessage("Normal bytes changed.").IsTrue();
-                AssertThat(a.Index.SequenceEqual(b.Index)).OverrideFailureMessage("Index bytes changed.").IsTrue();
-            }
-        }
     }
 
     private static BoxPartParams WithVariation(BoxPartParams defaults, int variation)

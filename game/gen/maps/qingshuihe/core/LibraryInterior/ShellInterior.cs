@@ -1,3 +1,4 @@
+using Campus.Gen.Interior;
 using System.Numerics;
 using Campus.Contracts;
 using Campus.Contracts.Audio;
@@ -15,14 +16,14 @@ namespace Campus.Gen.Maps.Qingshuihe.Core.LibraryInterior;
 /// </summary>
 internal static class ShellInterior
 {
-    public static void Build(LibraryFrame f, int storey, InteriorSink sink)
+    public static void Build(LibraryFrame f, int storey, InteriorGeometry sink)
     {
         Floors(f, storey, sink);
         Ceilings(f, storey, sink);
         Linings(f, storey, sink);
     }
 
-    private static void Floors(LibraryFrame f, int storey, InteriorSink sink)
+    private static void Floors(LibraryFrame f, int storey, InteriorGeometry sink)
     {
         var y = f.FloorY(storey);
         var voidRing = f.Octagon(f.VoidApothem, S.OctagonChamfer);
@@ -31,7 +32,7 @@ internal static class ShellInterior
             var core = ReferenceEquals(block, f.Core);
             IReadOnlyList<IReadOnlyList<Vector2>> holes = core && storey > 1 ? [voidRing] : [];
             var rings = new PolygonRings(block.Ring, holes);
-            Paint? soffit = storey == 1 || core ? null : S.Wall(S.CeilingWhite);
+            InteriorPaint? soffit = storey == 1 || core ? null : S.Wall(S.CeilingWhite);
             sink.Slab(rings, y, S.Stone(S.Floor), soffit, S.Wall(S.WallWhite));
             if (core && storey > 1)
             {
@@ -50,7 +51,7 @@ internal static class ShellInterior
         }
     }
 
-    private static void Ceilings(LibraryFrame f, int storey, InteriorSink sink)
+    private static void Ceilings(LibraryFrame f, int storey, InteriorGeometry sink)
     {
         foreach (var block in f.BlocksAt(storey).Where(b => !f.Continues(b, storey)))
         {
@@ -63,7 +64,7 @@ internal static class ShellInterior
     }
 
     /// <summary>The beige ring beam round the skylight opening, closing the shell's curb from inside up to the glass.</summary>
-    private static void RingBeam(LibraryFrame f, InteriorSink sink, float ceiling)
+    private static void RingBeam(LibraryFrame f, InteriorGeometry sink, float ceiling)
     {
         var inner = f.Octagon(f.GalleryApothem);
         var outer = f.Octagon(f.GalleryApothem + S.RingBeamWidth);
@@ -77,7 +78,7 @@ internal static class ShellInterior
     /// top), from <see cref="LibraryInteriorStyle.LiningOut"/> to <see cref="LibraryInteriorStyle.LiningIn"/> behind the face,
     /// cut by the shell's holes on that face, its ends mitred onto the neighbouring pieces.
     /// </summary>
-    private static void Linings(LibraryFrame f, int storey, InteriorSink sink)
+    private static void Linings(LibraryFrame f, int storey, InteriorGeometry sink)
     {
         if (!sink.Draw) return;
         var blocks = f.BlocksAt(storey).ToHashSet();
@@ -118,7 +119,7 @@ internal static class ShellInterior
         return MathF.Abs(u - square) <= 1f ? u : square;
     }
 
-    private static void Lining(InteriorSink sink, Face face, float y0, float y1, IReadOnlyList<Rect> holes,
+    private static void Lining(InteriorGeometry sink, Face face, float y0, float y1, IReadOnlyList<Rect> holes,
         (float Outer, float Inner) start, (float Outer, float Inner) end)
     {
         var paint = S.Wall(S.WallWhite);

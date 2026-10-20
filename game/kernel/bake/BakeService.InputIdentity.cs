@@ -20,7 +20,7 @@ public sealed partial class BakeService
 
     private string ResidentStamp(IMapContext context, uint seed, PaletteCatalog catalog,
         IReadOnlyDictionary<string, Interior> interiors, IReadOnlyDictionary<string, ContentModuleInput> modules,
-        BuildInputSnapshot globals, Func<FeatureId, Aspects, WpId?> claimLookup, IReadOnlyList<Producer> producers)
+        BuildInputSnapshot globals, Func<FeatureId, Aspects, string?> claimLookup, IReadOnlyList<Producer> producers)
     {
         var hash = new BakeInputHash();
         hash.Add(new { seed, code = _terrain.CodeFingerprints.Chain(BakeCodeChains.Shared), map = context.Descriptor,

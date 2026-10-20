@@ -7,7 +7,7 @@ namespace Campus.Gen.Fauna;
 
 /// <summary>Produces complete latched animal states; runtime owns visibility changes and mounting.</summary>
 
-[ContentModule("fauna", Owner = "WP-25")]
+[ContentModule("fauna")]
 public sealed class FaunaModule : IFaunaContentSource
 {
     public BakeInputDependencies BakeInputs { get; } = new(BakeInputKinds.World | BakeInputKinds.ReflectLakes, [], []);
@@ -16,7 +16,6 @@ public sealed class FaunaModule : IFaunaContentSource
     public IReadOnlyList<Claim> Claims => [];
 
     // Animals are mounted from their prepared states, with no static streamed tile geometry.
-    public ModuleBudget Budget { get; } = new(0, 0, 0);
     public IEnumerable<TileKey> Tiles(BuildContext context) => [];
     public ContentOutput Build(BuildContext context, TileKey tile, LodLevel lod) => ContentOutput.Empty;
 
