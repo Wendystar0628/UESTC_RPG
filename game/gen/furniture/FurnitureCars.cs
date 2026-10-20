@@ -3,12 +3,15 @@ using System.Numerics;
 using Campus.Contracts;
 using Campus.Contracts.Parts;
 using Campus.Gen.Parts.Street;
-using Campus.Gen.World;
 using S = Campus.Gen.Furniture.FurnitureStyle;
+using static Campus.Gen.Furniture.FurniturePlacement;
+using static Campus.Gen.Furniture.FurniturePlanner;
+using static Campus.Gen.Furniture.FurnitureParts;
 
 namespace Campus.Gen.Furniture;
 
-public static partial class FurniturePlanner
+/// <summary>Places sparse parked cars with stable per-cell appearances.</summary>
+internal static class FurnitureCars
 {
     // ---------------------------------------------------------------------------------------------------------
     // Parked cars (WLD-LIFE): a few in each car park.
@@ -20,7 +23,7 @@ public static partial class FurniturePlanner
     /// in one of the low-saturation body colours. A car stands whole inside the lot, clear of trees and of each other, on ground that
     /// drops less than <see cref="FurnitureStyle.CarMaxDrop"/> under it.
     /// </summary>
-    private static void Cars(StreetSite site, List<FurnitureItem> items)
+    internal static void Plan(StreetSite site, List<FurnitureItem> items)
     {
         var terrain = site.World.Terrain;
         // Each car look (shape and colour) is its own mesh set: a 64 m cell keeps to a few of them (draw calls, ART-MODELING).

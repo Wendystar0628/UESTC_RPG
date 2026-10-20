@@ -67,7 +67,7 @@ public class BoxInteriorProvider : IInteriorProvider, IInteriorCatalogConfigurab
             var floor=part.Storeys.FirstOrDefault(s=>s.Index==storey);
             if(floor is null) continue;
             sink.Floor(part.Footprint,floor.FloorY,0.25f,material,FootMat.Concrete);
-            if(storey==Floors(config,feature,part.SourceId).Max()) sink.Plate(part.Footprint,floor.FloorY+floor.Height,0.25f,material);
+            if(storey==Floors(config,feature,part.SourceId).Max()) sink.Parts.Plate(part.Footprint,floor.FloorY+floor.Height,0.25f,material);
             foreach(var ring in new[]{part.Footprint.Outer}.Concat(part.Footprint.Holes))
                 for(var i=0;i<ring.Count;i++)
                 {
@@ -107,7 +107,7 @@ public class BoxInteriorProvider : IInteriorProvider, IInteriorCatalogConfigurab
     }
     public IReadOnlyList<Collider> CollisionStorey(BuildContext context,FeatureId feature,int storey)
     {
-        var sink=new InteriorGeometry(context.Catalog){Draw=false}; Compose(context,feature,storey,sink); return sink.Colliders;
+        var sink=new InteriorGeometry(context.Catalog, draw: false); Compose(context,feature,storey,sink); return sink.Collision.Items;
     }
     public NavFloorGraph Nav(BuildContext context,FeatureId feature,int storey)
     {

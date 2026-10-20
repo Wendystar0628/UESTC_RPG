@@ -29,6 +29,42 @@ public static class WorldFidelityCompiler
         foreach (var feature in ordered)
             if (Declared(feature) is { } zone) featureZones.Add(feature.Id, zone);
         var buildings = ordered.Where(feature => WorldFeatureGeometry.FacadePolygonsOf(feature, "building").Any()).ToArray();
+        var blockers = BuildBlockers(buildings);
+
+        var walk = new WorldWalkRegions(ordered, boundary, network);
+        var samples = SampleVisibility(network, walk);
+        var stands = waypoints.Where(point => point.Stand is not null)
+            .Select(point => new Vector2(point.Stand!.Feet.X, point.Stand.Feet.Z)).ToArray();
+        foreach (var stand in stands) samples.AddPoint(stand, stand);
+
+        var main = IndexMainCorridors(network);
+        bool Corridor(Vector2 point) => main.In(point).Any(line =>
+            PlanLines.SegmentDistanceSquared(point, line.A, line.B) <= WalkHalfWidth * WalkHalfWidth);
+        var heroPaths = IndexHeroPaths(network);
+
+        var areas = IndexAreas(ordered, featureZones, interiors, outskirts);
+
+        var (facades, roofs) = CompileBuildingZones(buildings, featureZones, stands, Visible, Corridor);
+        var (min, width, height, groundCells) = CompileGroundCells(boundary, outskirts, walk, areas, heroPaths, stands, Corridor);
+        var data = new FidelityFrozenData(min, width, height, groundCells, facades.ToArray(), roofs.ToArray(), featureZones, "");
+        return data with { InputHash = Convert.ToHexStringLower(SHA256.HashData(JsonSerializer.SerializeToUtf8Bytes(data, ContractJson.Options))) };
+
+        bool Visible(Vector2 point, Vector2 normal)
+        {
+            var start = point + normal * .5f;
+            foreach (var source in samples.CellsAround(point).SelectMany(cell => cell))
+            {
+                var delta = source - point;
+                if (delta.LengthSquared() > VisibilityReach * VisibilityReach || Vector2.Dot(delta, normal) <= 0) continue;
+                var ray = Factory.CreateLineString([new(start.X, start.Y), new(source.X, source.Y)]);
+                if (blockers.Query(ray.EnvelopeInternal).All(blocker => !blocker.Intersects(ray))) return true;
+            }
+            return false;
+        }
+    }
+
+    private static STRtree<Polygon> BuildBlockers(IReadOnlyList<WorldFeature> buildings)
+    {
         var blockers = new STRtree<Polygon>();
         foreach (var feature in buildings)
             foreach (var part in WorldFeatureKinds.Parts(feature, "building"))
@@ -39,7 +75,11 @@ public static class WorldFidelityCompiler
                 }
         blockers.Build();
 
-        var walk = new WorldWalkRegions(ordered, boundary, network);
+        return blockers;
+    }
+
+    private static SpatialGrid<Vector2> SampleVisibility(WorldNetwork network, WorldWalkRegions walk)
+    {
         var samples = new SpatialGrid<Vector2>(VisibilityReach);
         foreach (var road in network.Roads)
         {
@@ -51,10 +91,11 @@ public static class WorldFidelityCompiler
                 if (walk.At(point.X, point.Y) == WalkClass.Walk) samples.AddPoint(point, point);
             }
         }
-        var stands = waypoints.Where(point => point.Stand is not null)
-            .Select(point => new Vector2(point.Stand!.Feet.X, point.Stand.Feet.Z)).ToArray();
-        foreach (var stand in stands) samples.AddPoint(stand, stand);
+        return samples;
+    }
 
+    private static SpatialGrid<(Vector2 A, Vector2 B)> IndexMainCorridors(WorldNetwork network)
+    {
         var main = new SpatialGrid<(Vector2 A, Vector2 B)>(WalkHalfWidth * 2);
         foreach (var road in network.Roads.Where(road => road.Props.TryText("walkNetwork") == "main"))
             for (var i = 1; i < road.Line.Points.Count; i++)
@@ -62,8 +103,11 @@ public static class WorldFidelityCompiler
                 var a = road.Line.Points[i - 1]; var b = road.Line.Points[i];
                 main.AddBox(Vector2.Min(a, b) - new Vector2(WalkHalfWidth), Vector2.Max(a, b) + new Vector2(WalkHalfWidth), (a, b));
             }
-        bool Corridor(Vector2 point) => main.In(point).Any(line =>
-            PlanLines.SegmentDistanceSquared(point, line.A, line.B) <= WalkHalfWidth * WalkHalfWidth);
+        return main;
+    }
+
+    private static SpatialGrid<(Vector2 A, Vector2 B, float Radius)> IndexHeroPaths(WorldNetwork network)
+    {
         var heroPaths = new SpatialGrid<(Vector2 A, Vector2 B, float Radius)>(TileGrid.BaseEdge);
         foreach (var road in network.Roads.Where(road => road.Width > 0 && road.Props.TryText("fidelity") == "K1"))
             for (var i = 1; i < road.Line.Points.Count; i++)
@@ -72,6 +116,13 @@ public static class WorldFidelityCompiler
                 heroPaths.AddBox(Vector2.Min(a, b) - new Vector2(radius), Vector2.Max(a, b) + new Vector2(radius), (a, b, radius));
             }
 
+        return heroPaths;
+    }
+
+    private static SpatialGrid<(PolygonRings Rings, FidelityZone Zone)> IndexAreas(
+        IReadOnlyList<WorldFeature> ordered, IReadOnlyDictionary<FeatureId, FidelityZone> featureZones,
+        IInteriorIndex interiors, IOutskirtsModel? outskirts)
+    {
         var areas = new SpatialGrid<(PolygonRings Rings, FidelityZone Zone)>(TileGrid.BaseEdge);
         foreach (var feature in ordered)
         {
@@ -91,6 +142,17 @@ public static class WorldFidelityCompiler
             _ => throw new InvalidDataException("Unknown outskirts fidelity band.")
         });
 
+        return areas;
+
+        void Area(PolygonRings rings, FidelityZone zone) => areas.AddBox(
+            new(rings.Outer.Min(p => p.X), rings.Outer.Min(p => p.Y)),
+            new(rings.Outer.Max(p => p.X), rings.Outer.Max(p => p.Y)), (rings, zone));
+    }
+
+    private static (List<FacadeSegment> Facades, List<RoofZone> Roofs) CompileBuildingZones(
+        IReadOnlyList<WorldFeature> buildings, IReadOnlyDictionary<FeatureId, FidelityZone> featureZones,
+        Vector2[] stands, Func<Vector2, Vector2, bool> Visible, Func<Vector2, bool> Corridor)
+    {
         var facades = new List<FacadeSegment>(); var roofs = new List<RoofZone>();
         foreach (var feature in buildings)
         {
@@ -133,6 +195,14 @@ public static class WorldFidelityCompiler
                     facades.AddRange(edges.SelectMany(edge => edge));
                 }
         }
+        return (facades, roofs);
+    }
+
+    private static (Vector2 Min, int Width, int Height, byte[] Cells) CompileGroundCells(
+        PolygonRings boundary, IOutskirtsModel? outskirts, WorldWalkRegions walk,
+        SpatialGrid<(PolygonRings Rings, FidelityZone Zone)> areas,
+        SpatialGrid<(Vector2 A, Vector2 B, float Radius)> heroPaths, Vector2[] stands, Func<Vector2, bool> Corridor)
+    {
         var extent = boundary.Outer.Concat(outskirts?.Blocks.SelectMany(block => block.Footprint) ?? []).ToArray();
         var min = new Vector2(MathF.Floor(extent.Min(p => p.X) / GroundCell) * GroundCell,
             MathF.Floor(extent.Min(p => p.Y) / GroundCell) * GroundCell);
@@ -160,25 +230,7 @@ public static class WorldFidelityCompiler
                 if (zone != FidelityZone.K5 && stands.Any(stand => Vector2.DistanceSquared(stand, point) <= WaypointReach * WaypointReach)) zone = FidelityZone.K1;
                 groundCells[row * width + column] = (byte)zone;
             }
-        var data = new FidelityFrozenData(min, width, height, groundCells, facades.ToArray(), roofs.ToArray(), featureZones, "");
-        return data with { InputHash = Convert.ToHexStringLower(SHA256.HashData(JsonSerializer.SerializeToUtf8Bytes(data, ContractJson.Options))) };
-
-        void Area(PolygonRings rings, FidelityZone zone) => areas.AddBox(
-            new(rings.Outer.Min(p => p.X), rings.Outer.Min(p => p.Y)),
-            new(rings.Outer.Max(p => p.X), rings.Outer.Max(p => p.Y)), (rings, zone));
-
-        bool Visible(Vector2 point, Vector2 normal)
-        {
-            var start = point + normal * .5f;
-            foreach (var source in samples.CellsAround(point).SelectMany(cell => cell))
-            {
-                var delta = source - point;
-                if (delta.LengthSquared() > VisibilityReach * VisibilityReach || Vector2.Dot(delta, normal) <= 0) continue;
-                var ray = Factory.CreateLineString([new(start.X, start.Y), new(source.X, source.Y)]);
-                if (blockers.Query(ray.EnvelopeInternal).All(blocker => !blocker.Intersects(ray))) return true;
-            }
-            return false;
-        }
+        return (min, width, height, groundCells);
     }
 
     private static FidelityZone? Declared(WorldFeature feature) => feature.Props.TryText("fidelity") switch

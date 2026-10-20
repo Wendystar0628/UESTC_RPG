@@ -39,6 +39,20 @@ internal static class CarBody
         var r = S.WheelRadius; var ra = S.ArchRadius;
         var b = new PartBuilder();
 
+        AddLowerBody(b, shape, near, far, body, zN, zT, hw, zCowl, zRear, axles, belt, r, ra);
+        var yB = belt - 0.03f;
+        float XAt(float y) => hw - S.CarLedge - (y - yB) * S.CarTumblehome;
+        var (gz, gTop, gRoof, gEdge) = AddGlasshouse(b, near, body, h, belt, yB, zCowl, zRoofF, zRoofR, zRear, XAt);
+        AddGlass(b, shape, far, glass, belt, h - S.CarRoofEdge, zCowl, zRoofF, zRoofR, zRear, gz, gTop, gRoof, gEdge, XAt);
+        AddWheels(b, near, far, hw, axles, r, ra);
+        if (!near) return b.Finish(bounds);
+        AddNearDetails(b, p, shape, body, hw, zN, zT, zCowl, belt, XAt);
+        return b.Finish(bounds);
+    }
+
+    private static void AddLowerBody(PartBuilder b, CarShape shape, bool near, bool far, ToonSpec body,
+        float zN, float zT, float hw, float zCowl, float zRear, float[] axles, float belt, float r, float ra)
+    {
         // ---- Lower body: hood, sides, boot; the arches cut its underside over the wheels ----
         float Top(float z) => z <= zCowl ? ScalarMath.Lerp(shape.HoodNose, belt, (z - zN) / (zCowl - zN))
             : z <= zRear ? belt : ScalarMath.Lerp(belt, shape.TailTop, (z - zRear) / (zT - zRear));
@@ -88,9 +102,12 @@ internal static class CarBody
         bool[] lowerChamfers = near ? [false, true, false, true, false, true, false, true] : [false, false, false, false];
         b.Add(Loft.Solid([.. lower.Select(s => s.Z)], rings, lowerChamfers, [.. lower.Select(s => s.Crease)], roundEnds: true, body));
 
+    }
+
+    private static (float[] Z, float[] Top, float[] Roof, float[] Edge) AddGlasshouse(PartBuilder b, bool near,
+        ToonSpec body, float h, float belt, float yB, float zCowl, float zRoofF, float zRoofR, float zRear, Func<float, float> XAt)
+    {
         // ---- Glasshouse: in from the body side behind a ledge, leaning in; feet sunk into the body at the windscreen and rear window ----
-        var yB = belt - 0.03f;
-        float XAt(float y) => hw - S.CarLedge - (y - yB) * S.CarTumblehome;
         var footTop = belt + 0.025f; var footRoof = belt + 0.04f; const float footEdge = 0.012f;
         var railTop = h - S.CarRoofEdge;
         float[] gz = [zCowl, zRoofF, zRoofR, zRear];
@@ -115,6 +132,13 @@ internal static class CarBody
         bool[] houseChamfers = near ? [false, true, false, true, false, false] : [false, false, false, false];
         b.Add(Loft.Solid(gz, house, houseChamfers, [true, true, true, true], roundEnds: false, body));
 
+        return (gz, gTop, gRoof, gEdge);
+    }
+
+    private static void AddGlass(PartBuilder b, CarShape shape, bool far, ToonSpec glass, float belt, float railTop,
+        float zCowl, float zRoofF, float zRoofR, float zRear, float[] gz, float[] gTop, float[] gRoof, float[] gEdge, Func<float, float> XAt)
+    {
+        var footTop = belt + 0.025f;
         // ---- Glass: windscreen and rear window inside their surrounds, side glass between the sill strip and the roof rail ----
         Vector3 Band(int i, float side) => new(side * (XAt(gTop[i]) - gEdge[i]), gRoof[i], gz[i]);
         void Screen(int i0, int i1, float footGap, float headGap, bool footFirst)
@@ -157,6 +181,10 @@ internal static class CarBody
             else { Pane(b, Map(front), normal, glass); Pane(b, Map(rear), normal, glass); }
         }
 
+    }
+
+    private static void AddWheels(PartBuilder b, bool near, bool far, float hw, float[] axles, float r, float ra)
+    {
         // ---- Wheels under the arches, dark wells inboard of them ----
         var w = S.WheelWidth;
         var wheelX = hw - S.WheelInset - w * 0.5f;
@@ -181,8 +209,11 @@ internal static class CarBody
                         12, S.Pole(S.GreyMetal), at, VertexFlag.NoShadow);
             }
         }
-        if (!near) return b.Finish(bounds);
+    }
 
+    private static void AddNearDetails(PartBuilder b, VehicleParams p, CarShape shape, ToonSpec body,
+        float hw, float zN, float zT, float zCowl, float belt, Func<float, float> XAt)
+    {
         // ---- Near only: bumpers parted from the nose and tail by a line, lamps (never lit, WLD-LIFE), the intake, wing mirrors ----
         var noseX = hw - shape.Nose.Side; var noseTop = shape.HoodNose - shape.Nose.Top; var noseUnder = S.CarClearance + shape.Nose.Bottom;
         var tailX = hw - shape.Tail.Side; var tailTop = shape.TailTop - shape.Tail.Top; var tailUnder = S.CarClearance + shape.Tail.Bottom;
@@ -200,7 +231,6 @@ internal static class CarBody
             var mirror = XAt(belt + 0.1f);
             b.AddBox(new(sx > 0 ? mirror - 0.03f : -p.Width * 0.5f, belt + 0.06f, zCowl + 0.12f), new(sx > 0 ? p.Width * 0.5f : -mirror + 0.03f, belt + 0.15f, zCowl + 0.27f), 0, body, VertexFlag.NoShadow);
         }
-        return b.Finish(bounds);
     }
 
     /// <summary>Stations in Z order; two closer than 12 mm become one (a crease if either was).</summary>

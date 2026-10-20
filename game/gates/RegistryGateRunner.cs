@@ -12,7 +12,7 @@ namespace Campus.Gates;
 public sealed record RegistryGateReport(string Scope, int Maps, int Services, int Declarations,
     int Entities, int FramePriorities, int QualityKnobs, IReadOnlyList<string> NotImplemented);
 
-/// <summary>Headless declaration checks (this file) plus the command-line test drivers (RegistryGateRunner.Stage.cs, StageGateDriver*.cs). Declaration checks never construct services, nodes, or geometry.</summary>
+/// <summary>Headless declaration checks (this file) plus the command-line test drivers (RegistryGateRunner.Stage.cs, StageGateDriver, CoreLifecycleDriver and StageCapture). Declaration checks never construct services, nodes, or geometry.</summary>
 public static partial class RegistryGateRunner
 {
     public static RegistryGateReport Run(ServiceRegistry registry, string indexPath, string requestedMap,
@@ -34,64 +34,7 @@ public static partial class RegistryGateRunner
         var prefixes = new Dictionary<string, MapId>(StringComparer.Ordinal);
         var selected = index.Maps.Where(entry => requested == "*" || entry.Id.Value == requested).ToArray();
         foreach (var entry in selected)
-        {
-            if (!entry.Dir.StartsWith("res://", StringComparison.Ordinal) || !entry.Dir.EndsWith('/') ||
-                entry.Dir.Split('/').Any(part => part is "." or ".."))
-                throw new InvalidDataException($"Invalid map data root: {entry.Id}");
-            var map = JsonSerializer.Deserialize<MapFile>(read(entry.Dir + "map.json"), ContractJson.Options)
-                ?? throw new InvalidDataException($"Map descriptor is null: {entry.Id}");
-            var points = JsonSerializer.Deserialize<WaypointFile>(read(entry.Dir + "waypoints.json"), ContractJson.Options)
-                ?? throw new InvalidDataException($"Waypoints are null: {entry.Id}");
-            if (map.Id != entry.Id || map.Version < 1 || points.Version < 1)
-                throw new InvalidDataException($"Map identity or version mismatch: {entry.Id}");
-            var rect = map.DataRect;
-            if (!VectorMath.Finite(rect.Min) || !VectorMath.Finite(rect.Max) || rect.Max.X <= rect.Min.X || rect.Max.Y <= rect.Min.Y)
-                throw new InvalidDataException($"Invalid dataRect: {entry.Id}");
-            if (map.Spawns.Select(spawn => spawn.Id).Distinct(StringComparer.Ordinal).Count() != map.Spawns.Count ||
-                points.Waypoints.Select(point => point.Id).Distinct(StringComparer.Ordinal).Count() != points.Waypoints.Count)
-                throw new InvalidDataException($"Duplicate spawn or waypoint: {entry.Id}");
-            var spawn = map.Spawns.FirstOrDefault(item => item.Id == map.DefaultSpawn)?.Fly ??
-                points.Waypoints.FirstOrDefault(item => item.Id == map.DefaultSpawn)?.Fly ??
-                throw new InvalidDataException($"Default spawn cannot be resolved: {entry.Id}/{map.DefaultSpawn}");
-            foreach (var pose in map.Spawns.Select(item => item.Fly).Concat(points.Waypoints.Select(item => item.Fly)).Append(spawn))
-                ValidatePose(entry.Id, pose);
-
-            var ids = new HashSet<string>(StringComparer.Ordinal);
-            foreach (var name in files(entry.Dir + "world/").Where(name => name != "geo.json" && !name.EndsWith(".terrain.json", StringComparison.Ordinal) && name.EndsWith(".json", StringComparison.Ordinal))
-                         .Order(StringComparer.Ordinal))
-            {
-                using var world = JsonDocument.Parse(read(entry.Dir + "world/" + name));
-                foreach (var entity in world.RootElement.GetProperty("features").EnumerateArray())
-                {
-                    var id = entity.GetProperty("id").GetString();
-                    if (string.IsNullOrWhiteSpace(id) || !ids.Add(id)) throw new InvalidDataException($"Empty or duplicate entity ID: {entry.Id}/{id}");
-                    var prefix = id.Split(':', 2)[0];
-                    if (prefix is "npc" or "item" or "quest") throw new InvalidDataException($"Reserved RPG entity prefix: {id}");
-                    if (prefixes.TryGetValue(prefix, out var owner) && owner != entry.Id)
-                        throw new InvalidDataException($"Entity prefix shared by maps: {prefix} ({owner}, {entry.Id})");
-                    prefixes[prefix] = entry.Id;
-                }
-            }
-            if (map.Env.ReflectLakes.Select(id => id.Value).Distinct(StringComparer.Ordinal).Count() != map.Env.ReflectLakes.Count ||
-                map.Env.ReflectLakes.Any(id => !ids.Contains(id.Value)))
-                throw new InvalidDataException($"Reflection lake is duplicate or absent from map entities: {entry.Id}");
-            entityCount += ids.Count;
-            var effective = registry.ForMap(entry.Id.Value);
-            if (effective.Where(item => item.Kind != RegistrationKind.Service).GroupBy(item => (item.Kind, item.Id, item.Scope)).Any(group => group.Count() > 1))
-                throw new InvalidDataException($"Generic/map registrations conflict in map: {entry.Id}");
-            using var interiors = JsonDocument.Parse(read(entry.Dir + "interiors.json"));
-            foreach (var interior in interiors.RootElement.GetProperty("interiors").EnumerateArray())
-            {
-                var openParts = InteriorEntranceJson.ParseOpenParts(interior);
-                if (openParts.Any(part => InteriorOpenPart.IsIndoor(part.Kind)))
-                {
-                    var provider = interior.GetProperty("providerId").GetString() ?? throw new InvalidDataException("Missing interior provider ID.");
-                    RegistrationDiscovery.ResolveInterior(effective, provider);
-                }
-                foreach (var feature in interior.GetProperty("featureIds").EnumerateArray())
-                    if (!ids.Contains(feature.GetString()!)) throw new InvalidDataException($"Open interior entity is missing: {entry.Id}/{feature}");
-            }
-        }
+            entityCount += ValidateMap(registry, entry, read, files, prefixes);
         var priorities = typeof(FramePriority).GetFields(BindingFlags.Public | BindingFlags.Static)
             .Where(field => field.IsLiteral).Select(field => (int)field.GetRawConstantValue()!).ToArray();
         if (priorities.Length == 0 || priorities.Distinct().Count() != priorities.Length ||
@@ -110,6 +53,67 @@ public static partial class RegistryGateRunner
                 "WP-27/owners: service/node startup, save TypeInfo/ownership, audio buses/emitters, UI theme and reserved-directory checks.",
                 "WP-27: provider FeatureIds/door-state equality and generated palette material usage."
             ]);
+    }
+
+    private static int ValidateMap(ServiceRegistry registry, MapIndexEntry entry, Func<string, byte[]> read,
+        Func<string, IEnumerable<string>> files, Dictionary<string, MapId> prefixes)
+    {
+        if (!entry.Dir.StartsWith("res://", StringComparison.Ordinal) || !entry.Dir.EndsWith('/') ||
+            entry.Dir.Split('/').Any(part => part is "." or ".."))
+            throw new InvalidDataException($"Invalid map data root: {entry.Id}");
+        var map = JsonSerializer.Deserialize<MapFile>(read(entry.Dir + "map.json"), ContractJson.Options)
+            ?? throw new InvalidDataException($"Map descriptor is null: {entry.Id}");
+        var points = JsonSerializer.Deserialize<WaypointFile>(read(entry.Dir + "waypoints.json"), ContractJson.Options)
+            ?? throw new InvalidDataException($"Waypoints are null: {entry.Id}");
+        if (map.Id != entry.Id || map.Version < 1 || points.Version < 1)
+            throw new InvalidDataException($"Map identity or version mismatch: {entry.Id}");
+        var rect = map.DataRect;
+        if (!VectorMath.Finite(rect.Min) || !VectorMath.Finite(rect.Max) || rect.Max.X <= rect.Min.X || rect.Max.Y <= rect.Min.Y)
+            throw new InvalidDataException($"Invalid dataRect: {entry.Id}");
+        if (map.Spawns.Select(spawn => spawn.Id).Distinct(StringComparer.Ordinal).Count() != map.Spawns.Count ||
+            points.Waypoints.Select(point => point.Id).Distinct(StringComparer.Ordinal).Count() != points.Waypoints.Count)
+            throw new InvalidDataException($"Duplicate spawn or waypoint: {entry.Id}");
+        var spawn = map.Spawns.FirstOrDefault(item => item.Id == map.DefaultSpawn)?.Fly ??
+            points.Waypoints.FirstOrDefault(item => item.Id == map.DefaultSpawn)?.Fly ??
+            throw new InvalidDataException($"Default spawn cannot be resolved: {entry.Id}/{map.DefaultSpawn}");
+        foreach (var pose in map.Spawns.Select(item => item.Fly).Concat(points.Waypoints.Select(item => item.Fly)).Append(spawn))
+            ValidatePose(entry.Id, pose);
+
+        var ids = new HashSet<string>(StringComparer.Ordinal);
+        foreach (var name in files(entry.Dir + "world/").Where(name => name != "geo.json" && !name.EndsWith(".terrain.json", StringComparison.Ordinal) && name.EndsWith(".json", StringComparison.Ordinal))
+                     .Order(StringComparer.Ordinal))
+        {
+            using var world = JsonDocument.Parse(read(entry.Dir + "world/" + name));
+            foreach (var entity in world.RootElement.GetProperty("features").EnumerateArray())
+            {
+                var id = entity.GetProperty("id").GetString();
+                if (string.IsNullOrWhiteSpace(id) || !ids.Add(id)) throw new InvalidDataException($"Empty or duplicate entity ID: {entry.Id}/{id}");
+                var prefix = id.Split(':', 2)[0];
+                if (prefix is "npc" or "item" or "quest") throw new InvalidDataException($"Reserved RPG entity prefix: {id}");
+                if (prefixes.TryGetValue(prefix, out var owner) && owner != entry.Id)
+                    throw new InvalidDataException($"Entity prefix shared by maps: {prefix} ({owner}, {entry.Id})");
+                prefixes[prefix] = entry.Id;
+            }
+        }
+        if (map.Env.ReflectLakes.Select(id => id.Value).Distinct(StringComparer.Ordinal).Count() != map.Env.ReflectLakes.Count ||
+            map.Env.ReflectLakes.Any(id => !ids.Contains(id.Value)))
+            throw new InvalidDataException($"Reflection lake is duplicate or absent from map entities: {entry.Id}");
+        var effective = registry.ForMap(entry.Id.Value);
+        if (effective.Where(item => item.Kind != RegistrationKind.Service).GroupBy(item => (item.Kind, item.Id, item.Scope)).Any(group => group.Count() > 1))
+            throw new InvalidDataException($"Generic/map registrations conflict in map: {entry.Id}");
+        using var interiors = JsonDocument.Parse(read(entry.Dir + "interiors.json"));
+        foreach (var interior in interiors.RootElement.GetProperty("interiors").EnumerateArray())
+        {
+            var openParts = InteriorEntranceJson.ParseOpenParts(interior);
+            if (openParts.Any(part => InteriorOpenPart.IsIndoor(part.Kind)))
+            {
+                var provider = interior.GetProperty("providerId").GetString() ?? throw new InvalidDataException("Missing interior provider ID.");
+                RegistrationDiscovery.ResolveInterior(effective, provider);
+            }
+            foreach (var feature in interior.GetProperty("featureIds").EnumerateArray())
+                if (!ids.Contains(feature.GetString()!)) throw new InvalidDataException($"Open interior entity is missing: {entry.Id}/{feature}");
+        }
+        return ids.Count;
     }
 
     public static void ValidateConstructorGraph(ServiceRegistry registry, IReadOnlyCollection<Type> compositionInputs)

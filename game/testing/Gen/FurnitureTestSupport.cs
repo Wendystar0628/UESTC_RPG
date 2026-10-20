@@ -43,7 +43,7 @@ internal static class FurnitureTestSupport
 
     /// <summary>The real map's road groups (lamps and rest stops by class), as the planner forms them from the real planting rules.</summary>
     internal static readonly Lazy<IReadOnlyList<RoadGroup>> Groups = new(() =>
-        FurniturePlanner.RoadGroups(World.Value, PlantingRows.Resolve(Inputs()).Roads));
+        FurnitureRoads.Groups(World.Value, PlantingRows.Resolve(Inputs()).Roads));
 
     /// <summary>The avenue's group: the one tree-lined road the planting rules give a row and a band.</summary>
     internal static RoadGroup Avenue => Groups.Value.Single(g => g.Tier == RoadTier.Avenue);
@@ -68,7 +68,7 @@ internal static class FurnitureTestSupport
 
     internal static Vector2 OpenSpot => Vector2.Zero;
 
-    internal static RoadGroup OpenAvenue => FurniturePlanner.RoadGroups(OpenWorld.Value,
+    internal static RoadGroup OpenAvenue => FurnitureRoads.Groups(OpenWorld.Value,
         PlantingRows.Resolve(Inputs()).Roads).Single(g => g.Tier == RoadTier.Avenue);
 
     /// <summary>The real planting rules, edited by <paramref name="change"/>, as the bytes the loader would supply.</summary>

@@ -70,12 +70,7 @@ public static class BuildingPlanner
         if (!CleanRings(src.Rings, out var outerClean, out var holesClean)) return null;
 
         var style = FacadeRules.StyleOf(feature.Family, src.Props, feature.Props);
-        var centroidClean = PlanGeometry.Centroid(new PolygonRings(outerClean.Points, [.. holesClean.Select(h => (IReadOnlyList<Vector2>)h.Points)]), outerClean.Points[0]);
-        var cell = new Vector2(MathF.Floor(centroidClean.X / 160f), MathF.Floor(centroidClean.Y / 160f));
-        var cluster = StableHash.Hash32(worldSeed, "wp14.cluster",
-            cell.X.ToString(CultureInfo.InvariantCulture), cell.Y.ToString(CultureInfo.InvariantCulture));
-        var profile = FacadePresets.Apply(FacadeRules.ProfileFor(style, cluster), FacadePresets.Find(feature.Facade, presets));
-        profile = FacadePresets.ApplyColors(profile, feature);
+        var profile = ProfileFor(src, outerClean, holesClean, style, worldSeed, presets);
         var seed = StableHash.Hash32(worldSeed, feature.Id.Value, src.Key, "wp14.building");
 
         // Facade bay grid from the WP-51a plan kernel: canonical rings (mm, fixed start vertex), bays on the glass
@@ -109,33 +104,8 @@ public static class BuildingPlanner
         var canopy = doorHead + 0.25f;
         if (small) { doorHead = threshold + Math.Clamp(height - FacadeRules.FloorAbovePad - 0.5f, 1.9f, 2.2f); canopy = doorHead + 0.15f; }
 
-        var longest = 0;
-        for (var i = 1; i < outer.Count; i++) if (outer.Length[i] > outer.Length[longest]) longest = i;
-        var axis = outer.Dir[longest];
-
-        var facades = PlanFacades.Layouts(grid, rings, skins);
-        var (entranceFacade, entranceBay) = PlanFacades.SkeletonColumns(facades, outer, longest, axis, storeys, hs);
-        var uRange = PlanFacades.OpeningRanges(facades, skins);
-
-        // Doors at the interior index's anchors replace the generic door; its column keeps its windows.
-        var doorRise = small ? Math.Clamp(height - FacadeRules.FloorAbovePad - 0.5f, 1.9f, 2.2f) : Math.Clamp(hs - 1.0f, 2.1f, 2.4f);
-        var anchors = PlanEntrances.AnchorDoors(world, feature, rings, facades, uRange, k => baseY + FacadeRules.FloorAbovePad + k * hs, storeys,
-            baseY + wallTopRel, doorRise);
-        if (anchors.Count > 0 && entranceFacade >= 0)
-        {
-            facades[entranceFacade].Kinds[entranceBay] = BayKind.Window;
-            entranceFacade = -1;
-            entranceBay = -1;
-        }
-
-        var openings = PlanFacades.Openings(facades, uRange, anchors, sill, head, storeys, threshold, doorHead, entranceFacade, entranceBay);
-        if (entranceFacade >= 0 && !openings[entranceFacade].Any(o => o.Kind == BayKind.Door))
-        {
-            facades[entranceFacade].Kinds[entranceBay] = BayKind.Window;
-            entranceFacade = -1;
-            entranceBay = -1;
-        }
-        var entrances = PlanEntrances.Entrances(world, facades, openings, skins, anchors, entranceFacade, entranceBay, canopy, small);
+        var (axis, facades, openings, entrances) = PlanFacadeOpenings(world, feature, grid, rings, skins, outer,
+            storeys, hs, height, small, baseY, wallTopRel, sill, head, threshold, doorHead, canopy);
 
         return new BuildingPlan
         {
@@ -169,6 +139,55 @@ public static class BuildingPlanner
             Axis = axis,
             Entrances = entrances,
         };
+    }
+
+    private static FacadeProfile ProfileFor(BuildingSource src, PlanRing outerClean, IReadOnlyList<PlanRing> holesClean,
+        BuildingStyle style, uint worldSeed, IReadOnlyList<FacadeLook>? presets)
+    {
+        var feature = src.Feature;
+        var centroidClean = PlanGeometry.Centroid(new PolygonRings(outerClean.Points, [.. holesClean.Select(h => (IReadOnlyList<Vector2>)h.Points)]), outerClean.Points[0]);
+        var cell = new Vector2(MathF.Floor(centroidClean.X / 160f), MathF.Floor(centroidClean.Y / 160f));
+        var cluster = StableHash.Hash32(worldSeed, "wp14.cluster",
+            cell.X.ToString(CultureInfo.InvariantCulture), cell.Y.ToString(CultureInfo.InvariantCulture));
+        var profile = FacadePresets.Apply(FacadeRules.ProfileFor(style, cluster), FacadePresets.Find(feature.Facade, presets));
+        profile = FacadePresets.ApplyColors(profile, feature);
+        return profile;
+    }
+
+    private static (Vector2 Axis, List<FacadeLayout> Facades, List<Opening[]> Openings, List<PlanEntrance> Entrances)
+        PlanFacadeOpenings(IWorldModel world, WorldFeature feature, FacadeGrid grid, IReadOnlyList<PlanRing> rings,
+        IReadOnlyList<PlanRing> skins, PlanRing outer, int storeys, float hs, float height, bool small, float baseY,
+        float wallTopRel, float[] sill, float[] head, float threshold, float doorHead, float canopy)
+    {
+        var longest = 0;
+        for (var i = 1; i < outer.Count; i++) if (outer.Length[i] > outer.Length[longest]) longest = i;
+        var axis = outer.Dir[longest];
+
+        var facades = PlanFacades.Layouts(grid, rings, skins);
+        var (entranceFacade, entranceBay) = PlanFacades.SkeletonColumns(facades, outer, longest, axis, storeys, hs);
+        var uRange = PlanFacades.OpeningRanges(facades, skins);
+
+        // Doors at the interior index's anchors replace the generic door; its column keeps its windows.
+        var doorRise = small ? Math.Clamp(height - FacadeRules.FloorAbovePad - 0.5f, 1.9f, 2.2f) : Math.Clamp(hs - 1.0f, 2.1f, 2.4f);
+        var anchors = PlanEntrances.AnchorDoors(world, feature, rings, facades, uRange, k => baseY + FacadeRules.FloorAbovePad + k * hs, storeys,
+            baseY + wallTopRel, doorRise);
+        if (anchors.Count > 0 && entranceFacade >= 0)
+        {
+            facades[entranceFacade].Kinds[entranceBay] = BayKind.Window;
+            entranceFacade = -1;
+            entranceBay = -1;
+        }
+
+        var openings = PlanFacades.Openings(facades, uRange, anchors, sill, head, storeys, threshold, doorHead, entranceFacade, entranceBay);
+        if (entranceFacade >= 0 && !openings[entranceFacade].Any(o => o.Kind == BayKind.Door))
+        {
+            facades[entranceFacade].Kinds[entranceBay] = BayKind.Window;
+            entranceFacade = -1;
+            entranceBay = -1;
+        }
+        var entrances = PlanEntrances.Entrances(world, facades, openings, skins, anchors, entranceFacade, entranceBay, canopy, small);
+
+        return (axis, facades, openings, entrances);
     }
 
     /// <summary>The cleaned outer ring and the holes that survive (big enough and inside the outer ring); false when the outer ring is unusable.</summary>

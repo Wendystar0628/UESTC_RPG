@@ -148,4 +148,24 @@ public static class TerrainMath
 
     internal static void RequireFinite(double value, string name)
     { if (!double.IsFinite(value)) throw new ArgumentOutOfRangeException(name, "Value must be finite."); }
+
+    internal static (double Value, double Derivative) LimitedEase(double t, double peak)
+    {
+        if (t <= 0) return (0, 0); if (t >= 1) return (1, 0);
+        peak = Math.Min(peak, 1.5);
+        if (!(peak > 1)) throw new ArgumentOutOfRangeException(nameof(peak), "A C1 blend needs a slope budget above its mean slope.");
+        var end = 1 - 1 / peak;
+        if (t < end) return (peak * t * t / (2 * end), peak * t / end);
+        if (t > 1 - end) return (1 - peak * (1 - t) * (1 - t) / (2 * end), peak * (1 - t) / end);
+        return (peak * (t - end / 2), peak);
+    }
+
+    internal static double LimitedEasePeakDerivative(double t, double peak)
+    {
+        if (t <= 0 || t >= 1 || peak >= 1.5) return 0;
+        var end = 1 - 1 / peak;
+        if (t < end) return t * t / (2 * end) - t * t / (2 * end * end * peak);
+        if (t > 1 - end) return -(1 - t) * (1 - t) / (2 * end) + (1 - t) * (1 - t) / (2 * end * end * peak);
+        return t - 0.5;
+    }
 }

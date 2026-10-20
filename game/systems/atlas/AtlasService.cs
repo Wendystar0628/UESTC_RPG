@@ -66,12 +66,35 @@ public sealed class AtlasService(ICameraRig camera, IObserverState observer, IRu
 
     public void LoadMap(IMapContext context, AtlasMarkerFile file, AtlasLabelFile labels, WaypointFile waypoints)
     {
+        ValidateMapConfiguration(file, labels, waypoints);
+        var hidden = new HashSet<string>(file.Hidden, StringComparer.Ordinal);
+        var markers = AssembleWaypointMarkers(file, waypoints);
+        AddInteriorMarkers(context, markers);
+        var visible = markers.Where(m => !hidden.Contains(m.Id.Value)).OrderBy(m => m.Id.Value, StringComparer.Ordinal).ToArray();
+        ValidateVisibleMarkers(visible);
+        var regions = labels.Regions.Concat(labels.Places).OrderBy(r => r.Id, StringComparer.Ordinal).ToArray();
+        if (regions.Select(r => r.Id).Distinct(StringComparer.Ordinal).Count() != regions.Length)
+            throw new JsonException("Atlas region and place IDs must be unique.");
+        ReleaseTransit();
+        _context = context; Map = context.Descriptor.Id; _atlasRect = file.AtlasRect; _zoomMin = file.ZoomMin; _zoomMax = file.ZoomMax; _regionAt = null;
+        _baseMarkers = Array.AsReadOnly(visible); Regions = Array.AsReadOnly(regions);
+        _policy = AtlasPolicies.Create(ruleset.Current.UnlockPolicy);
+        _pins.Clear(); _unlock.Clear(); _visited.Clear(); _inside.Clear(); _nextPinId = 1; Tracked = null;
+        RefreshMarkers();
+        Publish();
+    }
+
+    private static void ValidateMapConfiguration(AtlasMarkerFile file, AtlasLabelFile labels, WaypointFile waypoints)
+    {
         if (file.Version != 1 || labels.Version != 1 || waypoints.Version != 1)
             throw new JsonException("Unsupported Atlas input version.");
         if (!VectorMath.Finite(file.AtlasRect.Min) || !VectorMath.Finite(file.AtlasRect.Max)
             || file.AtlasRect.Min.X >= file.AtlasRect.Max.X || file.AtlasRect.Min.Y >= file.AtlasRect.Max.Y)
             throw new JsonException("Invalid Atlas page rectangle.");
-        var hidden = new HashSet<string>(file.Hidden, StringComparer.Ordinal);
+    }
+
+    private static List<AtlasMarker> AssembleWaypointMarkers(AtlasMarkerFile file, WaypointFile waypoints)
+    {
         var markers = new List<AtlasMarker>();
         foreach (var marker in file.Markers)
         {
@@ -91,6 +114,11 @@ public sealed class AtlasService(ICameraRig camera, IObserverState observer, IRu
                 markers.Add(new(new(point.Id), MarkerKind.Viewpoint, point.Name, Plan(point.Fly.Position),
                     "viewpoint", 50, 1, null, new(point.Fly, point.Stand, point.Entry), WaypointId: point.Id)
                 { Group = point.Group, Recommend = point.Recommend });
+        return markers;
+    }
+
+    private static void AddInteriorMarkers(IMapContext context, List<AtlasMarker> markers)
+    {
         // The world interior index is the authority for open entrances. No duplicate entrance table.
         foreach (var feature in context.World.Features.Values.OrderBy(f => f.Id.Value, StringComparer.Ordinal))
         {
@@ -107,7 +135,10 @@ public sealed class AtlasService(ICameraRig camera, IObserverState observer, IRu
                     "interior", 40, 2, null, new(fly, new(door.Outside, yaw)), feature.Id));
             }
         }
-        var visible = markers.Where(m => !hidden.Contains(m.Id.Value)).OrderBy(m => m.Id.Value, StringComparer.Ordinal).ToArray();
+    }
+
+    private static void ValidateVisibleMarkers(AtlasMarker[] visible)
+    {
         var ids = new HashSet<string>(StringComparer.Ordinal);
         foreach (var marker in visible)
         {
@@ -135,16 +166,6 @@ public sealed class AtlasService(ICameraRig camera, IObserverState observer, IRu
                     throw new JsonException("Invalid Atlas standing pose.");
             }
         }
-        var regions = labels.Regions.Concat(labels.Places).OrderBy(r => r.Id, StringComparer.Ordinal).ToArray();
-        if (regions.Select(r => r.Id).Distinct(StringComparer.Ordinal).Count() != regions.Length)
-            throw new JsonException("Atlas region and place IDs must be unique.");
-        ReleaseTransit();
-        _context = context; Map = context.Descriptor.Id; _atlasRect = file.AtlasRect; _zoomMin = file.ZoomMin; _zoomMax = file.ZoomMax; _regionAt = null;
-        _baseMarkers = Array.AsReadOnly(visible); Regions = Array.AsReadOnly(regions);
-        _policy = AtlasPolicies.Create(ruleset.Current.UnlockPolicy);
-        _pins.Clear(); _unlock.Clear(); _visited.Clear(); _inside.Clear(); _nextPinId = 1; Tracked = null;
-        RefreshMarkers();
-        Publish();
     }
 
     public void SetRegionLookup(Func<float, float, string?> lookup)

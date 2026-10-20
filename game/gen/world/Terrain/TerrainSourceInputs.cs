@@ -17,7 +17,7 @@ internal static class TerrainSourceInputs
         var sources = new List<Source>();
         var references = new TerrainReferences(context);
         var operations = files.OrderBy(file => file.File, StringComparer.Ordinal).SelectMany(file => file.Data.Ops).ToArray();
-        var range = TerrainCompiler.SourceRangeBound(operations);
+        var range = TerrainFieldGrading.SourceRangeBound(operations);
         var waterGrade = new[] { context.Defaults?.LakeBankGrade ?? 1, context.Defaults?.ChannelBankGrade ?? 1 }
             .Concat(operations.OfType<TerrainLakeOp>().Select(op => TerrainReferences.Grade(op.Bank.Slope!)))
             .Concat(operations.OfType<TerrainChannelOp>().Where(op => !op.Dry).Select(op => TerrainReferences.Grade(op.Bank.Slope!))).Min();
@@ -25,6 +25,19 @@ internal static class TerrainSourceInputs
             .Concat(operations.OfType<TerrainLakeOp>().Select(op => op.Bed.MaxDepth))
             .Concat(operations.OfType<TerrainChannelOp>().Where(op => !op.Dry).Select(op => op.Depth)).Max();
         var waterReach = (range + TerrainSampling.MaximumHeight + waterDepth) / waterGrade + 4;
+        AddFeatureSources(context, operations, references, waterReach, sources);
+        AddNetworkSources(context, operations, references, range, sources);
+        foreach (var op in operations) sources.Add(OperationSource(op, operations, references, range, waterReach));
+
+        var closures = FreezeDependencies(sources);
+        var cells = IndexCellSources(context, sources, closures);
+        return new(Stamp(new { context.Map, context.DataRect, context.Boundary, context.EntityPrefix, context.Defaults }),
+            cells.Select(pair => new TerrainInputCell(pair.Key, Stamp(pair.Value.Distinct(StringComparer.Ordinal).Order(StringComparer.Ordinal).ToArray()))).ToArray());
+    }
+
+    private static void AddFeatureSources(TerrainCompileContext context, IReadOnlyList<TerrainOp> operations,
+        TerrainReferences references, double waterReach, List<Source> sources)
+    {
         var pads = operations.OfType<TerrainPadOp>().Select(op => op.Feature).ToHashSet();
         var waters = operations.Select(op => op switch
         { TerrainLakeOp lake => (FeatureId?)lake.Water, TerrainChannelOp channel => channel.Water, _ => null })
@@ -33,7 +46,7 @@ internal static class TerrainSourceInputs
         {
             sources.Add(new("feature/" + feature.Id.Value, Stamp(feature), FeatureBounds(feature), false, []));
             if (!pads.Contains(feature.Id) && references.StructuralPadArea(feature) is { } pad)
-                sources.Add(new("auto-pad/" + feature.Id.Value, Stamp(feature), Expand(pad.Bounds, TerrainCompiler.AutomaticPadApron + TerrainCompiler.AutomaticPadGrade), true, ["feature/" + feature.Id.Value]));
+                sources.Add(new("auto-pad/" + feature.Id.Value, Stamp(feature), Expand(pad.Bounds, TerrainPadCompiler.AutomaticPadApron + TerrainPadCompiler.AutomaticPadGrade), true, ["feature/" + feature.Id.Value]));
             if (waters.Contains(feature.Id)) continue;
             var polygons = WorldFeatureKinds.Parts(feature, "water").SelectMany(part => WorldFeatureGeometry.PolygonsOf(part.Geometry)).ToArray();
             if (polygons.Length == 0) continue;
@@ -41,6 +54,11 @@ internal static class TerrainSourceInputs
             var support = Expand(new TerrainRegion(polygons).Bounds, waterReach);
             sources.Add(new("auto-water/" + feature.Id.Value, Stamp(feature), support, true, ["feature/" + feature.Id.Value]));
         }
+    }
+
+    private static void AddNetworkSources(TerrainCompileContext context, IReadOnlyList<TerrainOp> operations,
+        TerrainReferences references, double range, List<Source> sources)
+    {
         AddLines("road", context.Network.Roads);
         AddLines("waterway", context.Network.Waterways);
         AddLines("bridge", context.Network.Bridges);
@@ -49,71 +67,90 @@ internal static class TerrainSourceInputs
         {
             var authored = operations.OfType<TerrainCorridorOp>().Where(op => references.Road(op.Road, "world", op.Id).Source == road.Source).ToArray();
             var shoulder = Math.Max(context.Defaults?.CorridorShoulder ?? 0, authored.Select(op => op.Shoulder).DefaultIfEmpty(0).Max());
-            var cross = Math.Max(TerrainCompiler.AutomaticRoadCrossFall, authored.Select(op => Math.Abs(op.CrossFall)).DefaultIfEmpty(0).Max());
+            var cross = Math.Max(TerrainCorridorCompiler.AutomaticRoadCrossFall, authored.Select(op => Math.Abs(op.CrossFall)).DefaultIfEmpty(0).Max());
             sources.Add(new("auto-road/" + road.Source.Value, Stamp(new { road.Source, road.Path.Line, road.Width, road.Kind, footprint = road.Footprint?.Polygons }),
-                RoadBounds(road, shoulder, cross), true, ["road/" + road.Source.Value]));
-        }
-        foreach (var op in operations)
-        {
-            var refs = new List<string>();
-            MapRect support;
-            var reads = true;
-            switch (op)
-            {
-                case TerrainMoundOp mound: support = ShapeBounds(mound.Shape); reads = false; break;
-                case TerrainBasinOp basin: support = ShapeBounds(basin.Shape); reads = false; break;
-                case TerrainPlatformOp platform:
-                    support = Constraint(new TerrainRegion([platform.Rings]).Bounds, platform.Side, platform.Fillet); reads = false; break;
-                case TerrainSlopeOp slope:
-                    support = Constraint(Expand(GeometryBounds(slope.Geometry), (slope.Width ?? 0) / 2), slope.Side, slope.Fillet, slope.CrossFall); reads = false; break;
-                case TerrainTerraceOp terrace:
-                    support = TerrainCompiler.ConstraintBounds(range, Expand(Bounds(terrace.Front.Points), terrace.Tiers * terrace.Tread), .5, .5, 2); reads = false; break;
-                case TerrainPadOp pad:
-                    support = Expand(references.PadArea(pad.Feature, "world", pad.Id).Bounds, pad.Apron + pad.Grade);
-                    refs.Add("feature/" + pad.Feature.Value);
-                    if (pad.Edge is { } edge) refs.Add("feature/" + edge.StructureId);
-                    break;
-                case TerrainCorridorOp corridor:
-                    var road = references.Road(corridor.Road, "world", corridor.Id);
-                    // Ranged intervals share one full-road solve and its maximum shoulder/crossfall.
-                    var siblings = operations.OfType<TerrainCorridorOp>().Where(other => references.Road(other.Road, "world", other.Id).Source == road.Source).ToArray();
-                    support = RoadBounds(road, siblings.Max(other => other.Shoulder), siblings.Max(other => Math.Abs(other.CrossFall)));
-                    refs.Add("feature/" + corridor.Road.Value); refs.Add("road/" + road.Source.Value);
-                    refs.AddRange(corridor.Steps.Select(step => "feature/" + step.Structure.Value));
-                    break;
-                case TerrainLakeOp lake:
-                    support = Expand(references.Area(lake.Water, "water", "world", lake.Id).Bounds, waterReach);
-                    refs.Add("feature/" + lake.Water.Value); break;
-                case TerrainChannelOp channel:
-                    if (channel.Dry)
-                    {
-                        var radius = channel.Width!.Value / 2 + channel.Depth / TerrainReferences.Grade(channel.Bank.Inner!);
-                        support = Expand(Bounds(channel.Line!.Points), radius + (channel.Bank.Outer is { } outer ? range / TerrainReferences.Grade(outer) : 0));
-                    }
-                    else
-                    {
-                        var region = references.Area(channel.Water!.Value, "water", "world", channel.Id);
-                        var (path, width) = channel.Line is { } line ? (new TerrainPath(line), channel.Width!.Value) : references.WaterLine(channel.Water.Value, "world", channel.Id);
-                        var grade = TerrainReferences.Grade(channel.Bank.Slope!);
-                        support = Union(Expand(region.Bounds, waterReach),
-                            TerrainCompiler.ConstraintBounds(range, Expand(path.Bounds, width / 2), grade, grade, 2));
-                        refs.Add("feature/" + channel.Water.Value.Value);
-                    }
-                    foreach (var weir in channel.Weirs)
-                    {
-                        refs.Add("feature/" + weir.Structure.Value); refs.Add("feature/" + weir.Upstream.Value); refs.Add("feature/" + weir.Downstream.Value);
-                    }
-                    foreach (var crossing in channel.Crossings)
-                    {
-                        refs.Add("feature/" + crossing.Road.Value);
-                        refs.Add("road/" + references.Road(crossing.Road, "world", channel.Id).Source.Value);
-                    }
-                    break;
-                default: throw new ArgumentException("Unknown terrain source operation.");
-            }
-            sources.Add(new("operation/" + op.Id, Stamp<TerrainOp>(op), support, reads, refs));
+                RoadBounds(road, shoulder, cross, range), true, ["road/" + road.Source.Value]));
         }
 
+        void AddLines(string kind, IReadOnlyList<NetworkLine> lines)
+        {
+            foreach (var line in lines.OrderBy(line => line.Id.Value, StringComparer.Ordinal))
+                sources.Add(new(kind + "/" + line.Id.Value, Stamp(line), Expand(Bounds(line.Line.Points), line.Width / 2), false, []));
+        }
+    }
+
+    private static Source OperationSource(TerrainOp op, IReadOnlyList<TerrainOp> operations,
+        TerrainReferences references, double range, double waterReach)
+    {
+        var refs = new List<string>();
+        MapRect support;
+        var reads = true;
+        switch (op)
+        {
+            case TerrainMoundOp mound: support = ShapeBounds(mound.Shape); reads = false; break;
+            case TerrainBasinOp basin: support = ShapeBounds(basin.Shape); reads = false; break;
+            case TerrainPlatformOp platform:
+                support = Constraint(new TerrainRegion([platform.Rings]).Bounds, platform.Side, platform.Fillet, range); reads = false; break;
+            case TerrainSlopeOp slope:
+                support = Constraint(Expand(GeometryBounds(slope.Geometry), (slope.Width ?? 0) / 2), slope.Side, slope.Fillet, range, slope.CrossFall); reads = false; break;
+            case TerrainTerraceOp terrace:
+                support = TerrainFieldGrading.ConstraintBounds(range, Expand(Bounds(terrace.Front.Points), terrace.Tiers * terrace.Tread), .5, .5, 2); reads = false; break;
+            case TerrainPadOp pad:
+                support = Expand(references.PadArea(pad.Feature, "world", pad.Id).Bounds, pad.Apron + pad.Grade);
+                refs.Add("feature/" + pad.Feature.Value);
+                if (pad.Edge is { } edge) refs.Add("feature/" + edge.StructureId);
+                break;
+            case TerrainCorridorOp corridor:
+                var road = references.Road(corridor.Road, "world", corridor.Id);
+                // Ranged intervals share one full-road solve and its maximum shoulder/crossfall.
+                var siblings = operations.OfType<TerrainCorridorOp>().Where(other => references.Road(other.Road, "world", other.Id).Source == road.Source).ToArray();
+                support = RoadBounds(road, siblings.Max(other => other.Shoulder), siblings.Max(other => Math.Abs(other.CrossFall)), range);
+                refs.Add("feature/" + corridor.Road.Value); refs.Add("road/" + road.Source.Value);
+                refs.AddRange(corridor.Steps.Select(step => "feature/" + step.Structure.Value));
+                break;
+            case TerrainLakeOp lake:
+                support = Expand(references.Area(lake.Water, "water", "world", lake.Id).Bounds, waterReach);
+                refs.Add("feature/" + lake.Water.Value); break;
+            case TerrainChannelOp channel:
+                support = ChannelSourceBounds(channel, references, range, waterReach, refs);
+                break;
+            default: throw new ArgumentException("Unknown terrain source operation.");
+        }
+        return new("operation/" + op.Id, Stamp<TerrainOp>(op), support, reads, refs);
+    }
+
+    private static MapRect ChannelSourceBounds(TerrainChannelOp channel, TerrainReferences references,
+        double range, double waterReach, List<string> refs)
+    {
+        MapRect support;
+        if (channel.Dry)
+        {
+            var radius = channel.Width!.Value / 2 + channel.Depth / TerrainReferences.Grade(channel.Bank.Inner!);
+            support = Expand(Bounds(channel.Line!.Points), radius + (channel.Bank.Outer is { } outer ? range / TerrainReferences.Grade(outer) : 0));
+        }
+        else
+        {
+            var region = references.Area(channel.Water!.Value, "water", "world", channel.Id);
+            var (path, width) = channel.Line is { } line ? (new TerrainPath(line), channel.Width!.Value) : references.WaterLine(channel.Water.Value, "world", channel.Id);
+            var grade = TerrainReferences.Grade(channel.Bank.Slope!);
+            support = Union(Expand(region.Bounds, waterReach),
+                TerrainFieldGrading.ConstraintBounds(range, Expand(path.Bounds, width / 2), grade, grade, 2));
+            refs.Add("feature/" + channel.Water.Value.Value);
+        }
+        foreach (var weir in channel.Weirs)
+        {
+            refs.Add("feature/" + weir.Structure.Value); refs.Add("feature/" + weir.Upstream.Value); refs.Add("feature/" + weir.Downstream.Value);
+        }
+        foreach (var crossing in channel.Crossings)
+        {
+            refs.Add("feature/" + crossing.Road.Value);
+            refs.Add("road/" + references.Road(crossing.Road, "world", channel.Id).Source.Value);
+        }
+        return support;
+    }
+
+    private static string[] FreezeDependencies(IReadOnlyList<Source> sources)
+    {
         // A pad median reads its whole source footprint; road fits and water groups read whole connected
         // sources. Follow those source dependencies transitively, including explicit remote structures.
         var dependencies = sources.Select(source => source.ReadsTerrain || source.References.Count != 0
@@ -140,6 +177,12 @@ internal static class TerrainSourceInputs
                 .Select(source => new { source.Key, source.Stamp, source.Support }).ToArray());
             foreach (var reader in readers) closures[reader] = stamp;
         }
+        return closures;
+    }
+
+    private static Dictionary<TileKey, List<string>> IndexCellSources(TerrainCompileContext context,
+        IReadOnlyList<Source> sources, IReadOnlyList<string> closures)
+    {
         var cells = new Dictionary<TileKey, List<string>>();
         var coverage = Expand(context.DataRect, TileGrid.BaseEdge);
         for (var index = 0; index < sources.Count; index++)
@@ -155,22 +198,17 @@ internal static class TerrainSourceInputs
                 stamps.Add(closures[index]);
             }
         }
-        return new(Stamp(new { context.Map, context.DataRect, context.Boundary, context.EntityPrefix, context.Defaults }),
-            cells.Select(pair => new TerrainInputCell(pair.Key, Stamp(pair.Value.Distinct(StringComparer.Ordinal).Order(StringComparer.Ordinal).ToArray()))).ToArray());
+        return cells;
+    }
 
-        void AddLines(string kind, IReadOnlyList<NetworkLine> lines)
-        {
-            foreach (var line in lines.OrderBy(line => line.Id.Value, StringComparer.Ordinal))
-                sources.Add(new(kind + "/" + line.Id.Value, Stamp(line), Expand(Bounds(line.Line.Points), line.Width / 2), false, []));
-        }
-        MapRect Constraint(MapRect box, TerrainSide side, double fillet, double cross = 0) =>
-            TerrainCompiler.ConstraintBounds(range, box, TerrainReferences.Grade(side.Fill), TerrainReferences.Grade(side.Cut), fillet, cross);
-        MapRect RoadBounds(TerrainRoad road, double shoulder, double cross)
-        {
-            var width = road.Width / 2 + shoulder;
-            var reach = TerrainCompiler.CorridorReach(range, width, cross);
-            return Union(Expand(road.Path.Bounds, reach), road.Footprint?.Bounds ?? road.Path.Bounds);
-        }
+    private static MapRect Constraint(MapRect box, TerrainSide side, double fillet, double range, double cross = 0) =>
+        TerrainFieldGrading.ConstraintBounds(range, box, TerrainReferences.Grade(side.Fill), TerrainReferences.Grade(side.Cut), fillet, cross);
+
+    private static MapRect RoadBounds(TerrainRoad road, double shoulder, double cross, double range)
+    {
+        var width = road.Width / 2 + shoulder;
+        var reach = TerrainFieldGrading.CorridorReach(range, width, cross);
+        return Union(Expand(road.Path.Bounds, reach), road.Footprint?.Bounds ?? road.Path.Bounds);
     }
 
     private static MapRect FeatureBounds(WorldFeature feature) => new(new(feature.Bounds.Min.X, feature.Bounds.Min.Z), new(feature.Bounds.Max.X, feature.Bounds.Max.Z));

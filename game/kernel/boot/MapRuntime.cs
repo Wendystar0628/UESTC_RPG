@@ -328,8 +328,11 @@ public partial class MapRuntime : Node, IMapRuntime, IMapLifetime
         }
     }
 
-    private static void ReportFailure(MapId map, string phase, string? receiver, Exception error) =>
-        GD.PushError($"[WP-01][map={map.Value}][phase={phase}][receiver={receiver ?? "-"}] {error}");
+    private void ReportFailure(MapId map, string phase, string? receiver, Exception error)
+    {
+        var id = KernelServices.Services.Entries.Single(entry => entry.Kind == RegistrationKind.Node && entry.Type == GetType()).Id;
+        GD.PushError($"[{id}][map={map.Value}][phase={phase}][receiver={receiver ?? "-"}] {error}");
+    }
 
     private static IEnumerable<object> Instances(MapId map) => KernelServices.Services.RuntimeInstances<object>(map);
 }

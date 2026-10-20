@@ -63,7 +63,7 @@ public sealed class LibraryInteriorProvider : IInteriorProvider, IInteriorCatalo
         };
         var catalog = Require(ctx, id);
         if (!catalog.Floors.Contains(storey)) return ContentOutput.Empty;
-        var sink = new InteriorGeometry(ctx.Catalog) { Full = full, SlabThickness = S.SlabThick, GlowMaterial = S.Glow };
+        var sink = new InteriorGeometry(ctx.Catalog, full: full, slabThickness: S.SlabThick, glowMaterial: S.Glow);
         if (id == CoreIds.Library) Compose(ctx, id, storey, sink);
         else Plates(ctx, id, catalog, storey, sink);
         return sink.Finish();
@@ -73,9 +73,9 @@ public sealed class LibraryInteriorProvider : IInteriorProvider, IInteriorCatalo
     {
         var catalog = Require(ctx, id);
         if (id != CoreIds.Library || !catalog.Floors.Contains(storey)) return [];
-        var sink = new InteriorGeometry(ctx.Catalog) { Draw = false, SlabThickness = S.SlabThick, GlowMaterial = S.Glow };
+        var sink = new InteriorGeometry(ctx.Catalog, draw: false, slabThickness: S.SlabThick, glowMaterial: S.Glow);
         Compose(ctx, id, storey, sink);
-        return sink.Colliders.ToArray();
+        return sink.Collision.Items.ToArray();
     }
 
     public NavFloorGraph Nav(BuildContext ctx, FeatureId id, int storey)
@@ -251,17 +251,17 @@ public sealed class LibraryInteriorProvider : IInteriorProvider, IInteriorCatalo
             if (level is null) continue;
             var roof = storey == part.Storeys.Max(candidate => candidate.Index);
             var top = level.FloorY + level.Height - (roof ? S.CeilingGap : 0f);
-            sink.Plate(S.Stone(S.Floor), part.Footprint, level.FloorY, true);
-            sink.Plate(S.Wall(S.CeilingWhite), part.Footprint, level.FloorY - S.SlabThick, false);
+            sink.Shapes.Plate(S.Stone(S.Floor), part.Footprint, level.FloorY, true);
+            sink.Shapes.Plate(S.Wall(S.CeilingWhite), part.Footprint, level.FloorY - S.SlabThick, false);
             foreach (var ring in new[] { part.Footprint.Outer }.Concat(part.Footprint.Holes))
                 for (var i = 0; i < ring.Count; i++)
                 {
                     Vector2 a = ring[i], b = ring[(i + 1) % ring.Count];
                     if (Vector2.Distance(a, b) < 0.1f) continue;
                     var n = PlanGeometry.RightUnitNormal(a, b);
-                    sink.Prism(S.Wall(S.WallWhite), [a - n * S.LiningOut, b - n * S.LiningOut, b - n * S.LiningIn, a - n * S.LiningIn], level.FloorY, top);
+                    sink.Shapes.Prism(S.Wall(S.WallWhite), [a - n * S.LiningOut, b - n * S.LiningOut, b - n * S.LiningIn, a - n * S.LiningIn], level.FloorY, top);
                 }
-            sink.Plate(S.Wall(S.CeilingWhite), part.Footprint, roof ? top : top - S.SlabThick, false);
+            sink.Shapes.Plate(S.Wall(S.CeilingWhite), part.Footprint, roof ? top : top - S.SlabThick, false);
         }
     }
 }

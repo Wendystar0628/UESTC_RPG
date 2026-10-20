@@ -64,7 +64,7 @@ public static class GrassField
         if (data.Areas.Count == 0) return [];
         var origin = TileGrid.Origin(tile);
         var end = origin + new Vector2(TileGrid.BaseEdge);
-        var site = new Planting.Site(world, seed);
+        var site = new PlantingSite(world, seed);
         var trunks = new SpatialGrid<Vector2>(4f);
         foreach (var tree in trees.Trees)
         {
@@ -134,7 +134,7 @@ public static class GrassField
     }
 
     /// <summary>Lawn ground, clear of every non-lawn surface by the edge rule of each, of tree pits and of trunks.</summary>
-    private static bool OnLawn(Planting.Site site, SpatialGrid<Vector2> trunks, Vector2 p, float reach) =>
+    private static bool OnLawn(PlantingSite site, SpatialGrid<Vector2> trunks, Vector2 p, float reach) =>
         PlanGeometry.Contains(site.World.Boundary, p) && !site.InPit(p) &&
         !site.Blocked(p, reach + CleanGap) &&
         !site.OnRoad(p, reach + CleanGap + KerbWidth, reach + CleanGap, reach - SoftReach, reach + EntranceSetback) &&

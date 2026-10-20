@@ -10,6 +10,23 @@ public static class BakeWindowPreparation
     public static Result Prepare(BuildContext prepass, IReadOnlyDictionary<string, ContentModuleInput> modules)
     {
         var ordered = modules.OrderBy(pair => pair.Key, StringComparer.Ordinal).ToArray();
+        var declarations = CollectLayouts(prepass, ordered);
+        var providers = ordered.Where(pair => pair.Value.Value is IWindowNumberingProvider).ToArray();
+        // Windowless maps publish their explicit empty prepass allocation. A real building needs its provider.
+        var requiresProvider = declarations.Count != 0 || ordered.Any(pair => pair.Value.Value is IWindowMetadataSource) ||
+            prepass.World.Features.Values.Any(feature => feature.Kind.Value == "building" || feature.Parts.Any(part => part.Height.HasValue || part.Storeys.HasValue));
+        if (providers.Length == 0 && !requiresProvider) return new(prepass.WindowNumbering, new([], []));
+        if (providers.Length != 1)
+            throw new InvalidDataException($"Map {prepass.Map.Id.Value} needs exactly one window numbering provider; found {providers.Length}: {string.Join(", ", providers.Select(pair => pair.Key))}.");
+
+        var snapshot = AllocateWindows(prepass, providers[0], declarations);
+        var result = CollectMetadata(prepass, ordered, snapshot);
+        return new(snapshot, result);
+    }
+
+    private static SortedDictionary<string, ClaimedWindowLayout> CollectLayouts(BuildContext prepass,
+        KeyValuePair<string, ContentModuleInput>[] ordered)
+    {
         var declarations = new SortedDictionary<string, ClaimedWindowLayout>(StringComparer.Ordinal);
         var origins = new Dictionary<string, string>(StringComparer.Ordinal);
         foreach (var (id, module) in ordered)
@@ -48,15 +65,13 @@ public static class BakeWindowPreparation
                 string.Join("; ", missing.Select(item => $"owner {item.Owner!}, feature {item.Feature.Value}")) +
                 ". Declare Grids=[] explicitly only for an authored windowless feature.");
 
-        var providers = ordered.Where(pair => pair.Value.Value is IWindowNumberingProvider).ToArray();
-        // Windowless maps publish their explicit empty prepass allocation. A real building needs its provider.
-        var requiresProvider = declarations.Count != 0 || ordered.Any(pair => pair.Value.Value is IWindowMetadataSource) ||
-            prepass.World.Features.Values.Any(feature => feature.Kind.Value == "building" || feature.Parts.Any(part => part.Height.HasValue || part.Storeys.HasValue));
-        if (providers.Length == 0 && !requiresProvider) return new(prepass.WindowNumbering, new([], []));
-        if (providers.Length != 1)
-            throw new InvalidDataException($"Map {prepass.Map.Id.Value} needs exactly one window numbering provider; found {providers.Length}: {string.Join(", ", providers.Select(pair => pair.Key))}.");
+        return declarations;
+    }
 
-        var provider = providers[0];
+    private static WindowNumberingSnapshot AllocateWindows(BuildContext prepass,
+        KeyValuePair<string, ContentModuleInput> provider,
+        SortedDictionary<string, ClaimedWindowLayout> declarations)
+    {
         // The provider fingerprints its resolved allocation; the frozen context carries no per-product identity.
         var snapshot = ((IWindowNumberingProvider)provider.Value.Value).PrepareWindowNumbering(
             Context(prepass, provider.Value.CodeHash, prepass.WindowNumbering), Array.AsReadOnly(declarations.Values.ToArray()))
@@ -73,6 +88,12 @@ public static class BakeWindowPreparation
                 throw new InvalidDataException($"Window provider did not replace the complete declared layout: {layout.Feature.Value}.");
         }
 
+        return snapshot;
+    }
+
+    private static WindowMetadata CollectMetadata(BuildContext prepass,
+        KeyValuePair<string, ContentModuleInput>[] ordered, WindowNumberingSnapshot snapshot)
+    {
         var facades = new List<WindowFacadeDecl>();
         var windows = new List<WindowDecl>();
         foreach (var (id, module) in ordered)
@@ -90,7 +111,7 @@ public static class BakeWindowPreparation
         }
         var result = new WindowMetadata(Array.AsReadOnly(facades.ToArray()), Array.AsReadOnly(windows.ToArray()));
         ValidateMetadata(result, snapshot);
-        return new(snapshot, result);
+        return result;
     }
 
     public static BuildContext Context(BuildContext input, string codeHash, WindowNumberingSnapshot snapshot, IWorldModel? world = null) => new()

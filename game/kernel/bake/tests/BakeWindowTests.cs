@@ -187,24 +187,25 @@ public sealed class BakeWindowTests
             return new(9, context.SourceInputs, [], context.InteriorProviders, prepared, []);
         });
         Func<FeatureId, Aspects, string?> claimLookup = (feature, aspect) => claims.Value.ClaimedBy(feature, aspect);
-        var map = new BakeService.MapBuild(mapContext, modules, new Dictionary<string, BakeService.Interior>(), [], null!, claims, claimLookup, data,
-            context.GlobalInputs, context.GroundMaskContributors, partLods, context.Catalog);
-        AssertThrown(() => map.GetPreparedContext(mapContext, "source")).IsInstanceOf<InvalidOperationException>();
-        AssertThrown(() => map.GetPreparedModuleTilesAsync(mapContext)).IsInstanceOf<InvalidOperationException>();
+        var map = new BakeService.MapBuild(mapContext, modules, new Dictionary<string, BakeService.Interior>(), [], null!, claimLookup, data,
+            context.GlobalInputs, context.GroundMaskContributors, partLods, context.Catalog, null, null);
+        AssertThrown(() => map.Content.GetPreparedContext(mapContext, "source")).IsInstanceOf<InvalidOperationException>();
+        AssertThrown(() => map.Directory.GetPreparedModuleTilesAsync(mapContext)).IsInstanceOf<InvalidOperationException>();
         if (reads != 0) throw new InvalidOperationException("Reading an unprepared context triggered lazy IO.");
         var loaded = data.Value;
         _ = claims.Value;
-        var producer = map.CreateBuildContext("producer-code");
-        AssertThrown(() => map.GetPreparedContext(mapContext, "source")).IsInstanceOf<InvalidOperationException>();
+        var producer = map.Content.CreateBuildContext("producer-code");
+        AssertThrown(() => map.Content.GetPreparedContext(mapContext, "source")).IsInstanceOf<InvalidOperationException>();
         var lighting = new LightInventoryDocument(context.Map.Id, [], [], [], EmptyNightlight()) { WindowNumbering = loaded.Windows.Snapshot };
         // Metadata still cannot enumerate cells; the explicit cold-resident directory phase can.
         source.PreparingDirectory = provider.PreparingDirectory = true;
-        map.PrepareDirectory(new(lighting, new(context.Map.Id, [])));
+        map.Directory.Prepare(new(lighting, new(context.Map.Id, [])));
         source.PreparingDirectory = provider.PreparingDirectory = false;
-        map.CompletePreparation(new(lighting, new(context.Map.Id, [])));
-        var a = map.GetPreparedContext(mapContext, "source");
-        var b = map.GetPreparedContext(mapContext, "provider");
-        if (!ReferenceEquals(a, map.GetPreparedContext(mapContext, "source")) || !ReferenceEquals(a.WindowNumbering, b.WindowNumbering) ||
+        map.Content.CompletePreparation(new(lighting, new(context.Map.Id, [])));
+        map.Directory.PublishDirectory();
+        var a = map.Content.GetPreparedContext(mapContext, "source");
+        var b = map.Content.GetPreparedContext(mapContext, "provider");
+        if (!ReferenceEquals(a, map.Content.GetPreparedContext(mapContext, "source")) || !ReferenceEquals(a.WindowNumbering, b.WindowNumbering) ||
             !ReferenceEquals(a.World, context.World) || !ReferenceEquals(a.SourceInputs, context.SourceInputs) ||
             !ReferenceEquals(a.ClaimedBy, b.ClaimedBy) || !ReferenceEquals(a.ClaimedBy, claimLookup) ||
             !ReferenceEquals(a.ClaimedBy, producer.ClaimedBy) || !ReferenceEquals(a.Catalog, producer.Catalog) ||
@@ -218,44 +219,46 @@ public sealed class BakeWindowTests
             !ReferenceEquals(source.SeenContext!.PartLods, partLods) ||
             !ReferenceEquals(((Provider)modules["provider"].Value).SeenPartLods, partLods))
             throw new InvalidOperationException("Catalog contexts mixed preparation generations or module identities.");
-        AssertThrown(() => map.GetPreparedContext(mapContext with { }, "source")).IsInstanceOf<InvalidOperationException>();
-        AssertThrown(() => map.GetPreparedContext(mapContext, "unknown")).IsInstanceOf<InvalidOperationException>();
+        AssertThrown(() => map.Content.GetPreparedContext(mapContext with { }, "source")).IsInstanceOf<InvalidOperationException>();
+        AssertThrown(() => map.Content.GetPreparedContext(mapContext, "unknown")).IsInstanceOf<InvalidOperationException>();
         var counted = new TilesOnlyModule();
         var auxiliary = new DirectoryProducer();
         var indexed = new BakeService.MapBuild(mapContext,
             new Dictionary<string, ContentModuleInput> { ["counted"] = new(counted, "counted-code", Owner, false) },
-            new Dictionary<string, BakeService.Interior>(), [new("fixture.auxiliary", auxiliary, "auxiliary-code")], null!, claims, claimLookup, data,
-            context.GlobalInputs, context.GroundMaskContributors, partLods, context.Catalog);
-        indexed.PrepareDirectory(map.Metadata!);
-        indexed.CompletePreparation(map.Metadata!);
-        var firstTiles = indexed.GetPreparedModuleTilesAsync(mapContext);
-        var secondTiles = indexed.GetPreparedModuleTilesAsync(mapContext);
+            new Dictionary<string, BakeService.Interior>(), [new("fixture.auxiliary", auxiliary, "auxiliary-code")], null!, claimLookup, data,
+            context.GlobalInputs, context.GroundMaskContributors, partLods, context.Catalog, null, null);
+        indexed.Directory.Prepare(map.Content.Metadata!);
+        indexed.Content.CompletePreparation(map.Content.Metadata!);
+        indexed.Directory.PublishDirectory();
+        var firstTiles = indexed.Directory.GetPreparedModuleTilesAsync(mapContext);
+        var secondTiles = indexed.Directory.GetPreparedModuleTilesAsync(mapContext);
         var tiles = firstTiles.GetAwaiter().GetResult();
         if (!ReferenceEquals(firstTiles, secondTiles) || !ReferenceEquals(tiles, secondTiles.GetAwaiter().GetResult()) ||
-            counted.Calls != 1 || !ReferenceEquals(counted.Context!.World, indexed.GetPreparedContext(mapContext, "counted").World) ||
+            counted.Calls != 1 || !ReferenceEquals(counted.Context!.World, indexed.Content.GetPreparedContext(mapContext, "counted").World) ||
             !tiles.Modules["counted"].SequenceEqual(counted.Cells.Distinct().OrderBy(tile => tile.X).ThenBy(tile => tile.Z)))
             throw new InvalidOperationException("Prepared map consumers re-enumerated Tiles or lost the frozen module context.");
-        AssertThrown(() => indexed.GetPreparedModuleTilesAsync(mapContext with { })).IsInstanceOf<InvalidOperationException>();
+        AssertThrown(() => indexed.Directory.GetPreparedModuleTilesAsync(mapContext with { })).IsInstanceOf<InvalidOperationException>();
         if (tiles.Auxiliary.Count != 1 || auxiliary.DirectoryCalls != 1 || auxiliary.PrepareCalls != 1)
             throw new InvalidOperationException("Auxiliary directory did not use the already prepared content source.");
-        var restored = new BakeService.MapBuild(mapContext, indexed.Modules, indexed.Interiors,
-            [new("fixture.auxiliary", auxiliary, "auxiliary-code")], null!, claims, claimLookup, data,
-            context.GlobalInputs, context.GroundMaskContributors, partLods, context.Catalog);
-        restored.PrepareDirectory(map.Metadata!, tiles);
-        restored.CompletePreparation(map.Metadata!);
+        var restored = new BakeService.MapBuild(mapContext, indexed.Content.Modules, indexed.Content.Interiors,
+            [new("fixture.auxiliary", auxiliary, "auxiliary-code")], null!, claimLookup, data,
+            context.GlobalInputs, context.GroundMaskContributors, partLods, context.Catalog, null, null);
+        restored.Directory.Prepare(map.Content.Metadata!, tiles);
+        restored.Content.CompletePreparation(map.Content.Metadata!);
+        restored.Directory.PublishDirectory();
         if (auxiliary.DirectoryCalls != 1 || auxiliary.PrepareCalls != 2 || counted.Calls != 1 ||
-            restored.GetPreparedModuleTilesAsync(mapContext).Result.Auxiliary.Single() != tiles.Auxiliary.Single())
+            restored.Directory.GetPreparedModuleTilesAsync(mapContext).Result.Auxiliary.Single() != tiles.Auxiliary.Single())
             throw new InvalidOperationException("Restoring resident directories reran source or producer layout enumeration.");
         restored.Lifetime.Dispose();
-        var catalogue = BakeService.CatalogKeys(indexed, mapOnly: false).ToArray();
+        var catalogue = BakeCatalog.Keys(indexed, mapOnly: false).ToArray();
         var tree = new Campus.Kernel.Lod.LodTree(context.Map.Bounds, new Campus.Kernel.Lod.StreamSettings());
         if (catalogue.Distinct().Count() != catalogue.Length || counted.Calls != 1 ||
             !catalogue.Any(key => BakeRequestKeys.Parse(key).Level == LodLevel.L4) ||
             catalogue.Any(key => { var request = BakeRequestKeys.Parse(key); return !tree.Contains(new(request.Tile, request.Level)); }) ||
-            BakeService.CatalogKeys(indexed, mapOnly: true).Any())
+            BakeCatalog.Keys(indexed, mapOnly: true).Any())
             throw new InvalidOperationException("Full baking duplicated or re-enumerated modules, escaped the stream tree, or ignored map-only mode.");
         indexed.Lifetime.Cancel();
-        AssertThrown(() => BakeService.CatalogKeys(indexed, mapOnly: false).ToArray()).IsInstanceOf<OperationCanceledException>();
+        AssertThrown(() => BakeCatalog.Keys(indexed, mapOnly: false).ToArray()).IsInstanceOf<OperationCanceledException>();
         var warning = new BuildDiagnostic(DiagnosticLevel.Warning, "fixture.warning", "fixture warning");
         map.Collect("source", "metadata", [warning], Feature);
         if (!map.Diagnostics.TryDequeue(out var diagnostic) || diagnostic.Map != context.Map.Id || diagnostic.Owner != Owner ||
@@ -267,10 +270,10 @@ public sealed class BakeWindowTests
         if (!map.Diagnostics.IsEmpty) throw new InvalidOperationException("Invalid diagnostics partially entered the collection.");
         map.Active = false;
         indexed.Active = false;
-        AssertThrown(() => indexed.GetPreparedModuleTilesAsync(mapContext)).IsInstanceOf<InvalidOperationException>();
+        AssertThrown(() => indexed.Directory.GetPreparedModuleTilesAsync(mapContext)).IsInstanceOf<InvalidOperationException>();
         map.Collect("source", "geometry", [warning]);
         if (!map.Diagnostics.IsEmpty) throw new InvalidOperationException("Unloaded map accepted late diagnostics.");
-        AssertThrown(() => map.GetPreparedContext(mapContext, "source")).IsInstanceOf<InvalidOperationException>();
+        AssertThrown(() => map.Content.GetPreparedContext(mapContext, "source")).IsInstanceOf<InvalidOperationException>();
         if (reads != 1) throw new InvalidOperationException("Context lookup re-ran preparation.");
         if (source.TileCalls != 1 || provider.TileCalls != 1)
             throw new InvalidOperationException("Prepared lookups re-enumerated the cold-resident directory.");
@@ -289,18 +292,19 @@ public sealed class BakeWindowTests
         var producer = new PausedProducer(started, release);
         var map = new BakeService.MapBuild(mapContext, new Dictionary<string, ContentModuleInput>(),
             new Dictionary<string, BakeService.Interior>(), [new("cancelled", producer, "code")], null!,
-            new(() => new(context.World, [])), (_, _) => null, new(() => new(9, snapshot.Entries, [],
+            (_, _) => null, new(() => new(9, snapshot.Entries, [],
                 new Dictionary<string, IInteriorProvider>(), new(context.WindowNumbering, new([], [])), [])),
-            context.GlobalInputs, context.GroundMaskContributors, new PartLodCatalog([]), context.Catalog);
+            context.GlobalInputs, context.GroundMaskContributors, new PartLodCatalog([]), context.Catalog, null, null);
         var lighting = new LightInventoryDocument(context.Map.Id, [], [], [], EmptyNightlight())
             { WindowNumbering = map.Data.Value.Windows.Snapshot };
         var metadata = new BakeMapMetadata(lighting, new(context.Map.Id, []));
-        map.PrepareDirectory(metadata);
-        map.CompletePreparation(metadata);
+        map.Directory.Prepare(metadata);
+        map.Content.CompletePreparation(metadata);
+        map.Directory.PublishDirectory();
         var cache = Path.Combine(Path.GetTempPath(), "uestc-rpg-bake-cancel-" + Guid.NewGuid().ToString("N"));
         var options = new BakeOptions(cache, true, false, false, false, 1, null);
         using var terrain = BakeInputFixture.CreateTerrainCache(options);
-        using var service = new BakeService(options, terrain, snapshot);
+        var products = new BakeProductBuilder(options, terrain);
         var queue = new BakeQueue(1, static () => { });
         Exception? stopped = null;
         try
@@ -308,7 +312,7 @@ public sealed class BakeWindowTests
             var key = BakeRequestKeys.Tile(context.Map.Id, "cancelled", default, LodLevel.L0);
             var handle = queue.Ensure(key, BakePriority.Background, () =>
             {
-                try { return service.Build(map, key); }
+                try { return products.Build(map, key); }
                 catch (Exception error) { stopped = error; failed.Set(); throw; }
             });
             var signal = WaitHandle.WaitAny([started.WaitHandle, failed.WaitHandle], TimeSpan.FromSeconds(5));

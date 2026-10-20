@@ -67,6 +67,8 @@ public sealed class ClusterLayout
     private readonly record struct Crossing(float S, Vector2 Point, float Width, float RoadWidth, Vector2 Along, Vector2 Inward);
     private readonly record struct Sample(float S, Vector2 Ring, Vector2 Inward, Vector2 Tangent);
 
+    private readonly record struct GateCut(float From, float To, Vector2 FromEnd, Vector2 ToEnd, Vector2 Inward);
+
     private static ClusterLayout? Compute(IWorldModel world, NorthTune.Cluster cluster)
     {
         if (!world.Features.TryGetValue(new(cluster.Id), out var feature)) return null;
@@ -80,12 +82,24 @@ public sealed class ClusterLayout
         float minX = ring.Min(p => p.X) - 20, maxX = ring.Max(p => p.X) + 20, minZ = ring.Min(p => p.Y) - 20, maxZ = ring.Max(p => p.Y) + 20;
         bool Near(Vector2 p) => p.X >= minX && p.X <= maxX && p.Y >= minZ && p.Y <= maxZ;
 
+        var roads = NearbyRoads(world, cluster, Near);
+        var (samples, perimeter) = SampleRing(ring, sign);
+        var (posts, hedge) = FencePoints(samples, roads);
+        var crossings = RoadCrossings(samples, perimeter, posts, roads);
+        var (gates, spans) = PlaceGates(crossings, mainGate, clusterOpen);
+        var buildings = NearbyBuildings(world, Near);
+        var runs = FenceRuns(samples, perimeter, posts, hedge, spans, buildings);
+        return new(cluster, gates, runs);
+    }
+
+    private static IReadOnlyList<Road> NearbyRoads(IWorldModel world, NorthTune.Cluster cluster, Func<Vector2, bool> near)
+    {
         var roads = new List<Road>();
         void AddRoad(IReadOnlyList<Vector2> pts, float width)
         {
             var half = (width > 0 ? width : F.DefaultRoadWidth) * 0.5f;
             for (var i = 0; i + 1 < pts.Count; i++)
-                if (Near(pts[i]) || Near(pts[i + 1]))
+                if (near(pts[i]) || near(pts[i + 1]))
                 {
                     var dir = VectorMath.Unit(pts[i + 1] - pts[i], Vector2.Zero, 1e-9);
                     if (dir != Vector2.Zero) roads.Add(new(pts[i], pts[i + 1], dir, half));
@@ -97,6 +111,11 @@ public sealed class ClusterLayout
             .OrderBy(f => f.Id.Value, StringComparer.Ordinal))
             AddRoad(((PolylineGeometry)drive.Geometry).Line.Points, drive.TryNumber("width") ?? 0f);
 
+        return roads;
+    }
+
+    private static (IReadOnlyList<Sample> Samples, float Perimeter) SampleRing(IReadOnlyList<Vector2> ring, float sign)
+    {
         // Resample the ring; inward normals are mitred at the original corners.
         var samples = new List<Sample>();
         var perimeter = 0f;
@@ -123,6 +142,11 @@ public sealed class ClusterLayout
             perimeter += length;
         }
 
+        return (samples, perimeter);
+    }
+
+    private static (Vector2[] Posts, Vector2[] Hedge) FencePoints(IReadOnlyList<Sample> samples, IReadOnlyList<Road> roads)
+    {
         // Inset per sample (signed, along the inward normal): roads alongside push the fence away from themselves, inward
         // when the road is outside the fence, outward when it runs just inside the polygon.
         var inset = new float[samples.Count];
@@ -165,6 +189,11 @@ public sealed class ClusterLayout
             hedge[i] = samples[i].Ring + samples[i].Inward * (smooth[i] + F.HedgeOffset);
         }
 
+        return (posts, hedge);
+    }
+
+    private static IReadOnlyList<Crossing> RoadCrossings(IReadOnlyList<Sample> samples, float perimeter, IReadOnlyList<Vector2> posts, IReadOnlyList<Road> roads)
+    {
         // Road crossings on the fence line itself, merged when closer than 3 m along the ring (the wider road wins).
         var crossings = new List<Crossing>();
         for (var i = 0; i < samples.Count; i++)
@@ -189,9 +218,14 @@ public sealed class ClusterLayout
         }
         crossings.Sort((x, y) => x.S.CompareTo(y.S));
 
+        return crossings;
+    }
+
+    private static (IReadOnlyList<GateSpot> Gates, IReadOnlyList<GateCut> Cuts) PlaceGates(IReadOnlyList<Crossing> crossings, Vector2 mainGate, bool clusterOpen)
+    {
         // Gates: the frame sits on the fence line at the crossing; X follows the ring direction or its reverse so +Z is outward.
         var gates = new List<GateSpot>();
-        var spans = new List<(float From, float To, Vector2 FromEnd, Vector2 ToEnd, Vector2 Inward)>();
+        var spans = new List<GateCut>();
         var mainIndex = -1;
         var best = 15f;
         for (var c = 0; c < crossings.Count; c++)
@@ -220,15 +254,26 @@ public sealed class ClusterLayout
             }
             gates.Add(probe with { SpanMinus = minus, SpanPlus = plus });
             Vector2 lo = frame.P(-minus, 0), hi = frame.P(plus, 0);
-            spans.Add(forward ? (crossing.S - minus, crossing.S + plus, lo, hi, inward) : (crossing.S - plus, crossing.S + minus, hi, lo, inward));
+            spans.Add(forward ? new(crossing.S - minus, crossing.S + plus, lo, hi, inward) : new(crossing.S - plus, crossing.S + minus, hi, lo, inward));
         }
 
+        return (gates, spans);
+    }
+
+    private static IReadOnlyList<IReadOnlyList<Vector2>> NearbyBuildings(IWorldModel world, Func<Vector2, bool> near)
+    {
         // Building rings near the cluster close the fence where it runs into them.
         var buildings = new List<IReadOnlyList<Vector2>>();
         foreach (var other in world.Features.Values)
             foreach (var r in NorthBuildings.Rings(other))
-                if (r.Count >= 3 && r.Any(Near)) buildings.Add(r);
+                if (r.Count >= 3 && r.Any(near)) buildings.Add(r);
 
+        return buildings;
+    }
+
+    private static IReadOnlyList<FenceRun> FenceRuns(IReadOnlyList<Sample> samples, float perimeter, Vector2[] posts, Vector2[] hedge,
+        IReadOnlyList<GateCut> spans, IReadOnlyList<IReadOnlyList<Vector2>> buildings)
+    {
         var keep = new bool[samples.Count];
         for (var i = 0; i < samples.Count; i++)
             keep[i] = !spans.Any(sp => InSpan(samples[i].S, sp.From, sp.To, perimeter)) && !buildings.Any(r => PlanGeometry.InsideByCrossings(r, posts[i]));
@@ -239,7 +284,7 @@ public sealed class ClusterLayout
         if (startAt < 0)
         {
             runs.Add(Divided([.. posts, posts[0]], [.. hedge, hedge[0]]));
-            return new(cluster, gates, runs);
+            return runs;
         }
         var current = new List<int>();
         for (var k = 1; k <= samples.Count; k++)
@@ -250,7 +295,7 @@ public sealed class ClusterLayout
             current = [];
         }
         Flush(current, startAt);
-        return new(cluster, gates, runs);
+        return runs;
 
         void Flush(List<int> run, int next)
         {

@@ -99,26 +99,8 @@ internal sealed class TerrainBridgeBanks
             ringIndex = i; nearest = candidate.Distance; hit = candidate;
         }
         if (ringIndex < 0) return (TerrainDifferential.Constant(0), null);
-        var ring = _rings[ringIndex]; var shortest = double.PositiveInfinity; var signed = 0d;
-        foreach (var contact in Contacts)
-        {
-            if (contact.Polygon != ring.Polygon || contact.Ring != ring.Ring) continue;
-            var delta = hit.Station - contact.ShoreStation;
-            if (delta > contact.RingLength / 2) delta -= contact.RingLength;
-            if (delta < -contact.RingLength / 2) delta += contact.RingLength;
-            if (Math.Abs(delta) < shortest) { shortest = Math.Abs(delta); signed = delta; }
-        }
-        var weight = Taper(shortest - HardHalfLength, signed < 0 ? -1 : 1);
-        foreach (var interval in RegisteredHard)
-        {
-            if (interval.Polygon != ring.Polygon || interval.Ring != ring.Ring) continue;
-            var station = hit.Station;
-            while (station < interval.From - TransitionLength) station += interval.Length;
-            while (station > interval.To + TransitionLength && station - interval.Length >= interval.From - TransitionLength) station -= interval.Length;
-            var outside = station < interval.From ? interval.From - station : station > interval.To ? station - interval.To : 0;
-            var candidate = Taper(outside, station < interval.From ? -1 : 1);
-            weight += TerrainDifferential.Product(TerrainDifferential.Constant(1) - weight, candidate);
-        }
+        var ring = _rings[ringIndex];
+        var weight = ContactWeight(ring, hit, Taper);
         TerrainDifferential? top = null;
         foreach (var span in spans)
         {
@@ -136,47 +118,7 @@ internal sealed class TerrainBridgeBanks
                 if (contact is { } value) contributors.Add((road.Road, AlongShore(value.Distance), AlongShore(value.Top)));
             }
             if (contributors.Count == 0) continue;
-            var cores = contributors.Where(value => value.Distance.Height == 0).ToArray();
-            TerrainDifferential roadTop;
-            if (cores.Length > 0)
-            {
-                // A fixed core is never averaged away. Equal-height cores retain the first
-                // ordinal road's derivative; incompatible shared-core heights remain an error.
-                roadTop = cores[0].Top;
-                if (cores.Any(value => Math.Abs(value.Top.Height - roadTop.Height) > TerrainMath.HeightTolerance))
-                    throw new WorldDataException(string.Join(",", cores.Select(value => _sourceFile?.Invoke(value.Road) ?? "world").Distinct(StringComparer.Ordinal)), string.Join(",", cores.Select(value => value.Road.Value)),
-                        $"Coincident road cores have incompatible bank tops at ({x:R},{z:R}): "
-                        + string.Join("; ", cores.Select(value => $"{value.Road.Value}={value.Top.Height:R}")));
-            }
-            else if (contributors.Count == 1) roadTop = contributors[0].Top;
-            else
-            {
-                var scale = contributors.Min(value => value.Distance.Height);
-                var influences = contributors.Select(value =>
-                {
-                    var ratio = scale / value.Distance.Height;
-                    return ratio * ratio;
-                }).ToArray();
-                var sum = 0d; var height = 0d;
-                for (var i = 0; i < contributors.Count; i++)
-                {
-                    sum += influences[i]; height += influences[i] * contributors[i].Top.Height;
-                }
-                height /= sum;
-                var dx = 0d; var dz = 0d;
-                for (var i = 0; i < contributors.Count; i++)
-                {
-                    var value = contributors[i]; var influence = influences[i];
-                    // The common scale² cancels in the normalized quotient, including its
-                    // derivative. Every individual inverse-distance derivative remains here.
-                    var distanceTerm = -2 * influence * ((value.Top.Height - height) / value.Distance.Height);
-                    dx += influence * value.Top.Dx + distanceTerm * value.Distance.Dx;
-                    dz += influence * value.Top.Dz + distanceTerm * value.Distance.Dz;
-                }
-                roadTop = new(height, dx / sum, dz / sum);
-                if (!Finite(roadTop)) throw new WorldDataException(string.Join(",", contributors.Select(value => _sourceFile?.Invoke(value.Road) ?? "world").Distinct(StringComparer.Ordinal)), string.Join(",", contributors.Select(value => value.Road.Value)),
-                    $"Road bank composition is non-finite at ({x:R},{z:R}).");
-            }
+            var roadTop = ComposeRoadTop(contributors, x, z);
             // Smooth union of overlapping transition bands. Choosing the largest weight and
             // switching its road would jump in height when the two frozen road profiles differ.
             var retained = TerrainDifferential.Product(weight, TerrainDifferential.Constant(1) - candidate);
@@ -201,6 +143,79 @@ internal sealed class TerrainBridgeBanks
             var tangent = value.Dx * hit.StationDx + value.Dz * hit.StationDz;
             return new(value.Height, tangent * hit.StationDx, tangent * hit.StationDz);
         }
+    }
+
+    private TerrainDifferential ComposeRoadTop(
+        IReadOnlyList<(FeatureId Road, TerrainDifferential Distance, TerrainDifferential Top)> contributors, double x, double z)
+    {
+        var cores = contributors.Where(value => value.Distance.Height == 0).ToArray();
+        TerrainDifferential roadTop;
+        if (cores.Length > 0)
+        {
+            // A fixed core is never averaged away. Equal-height cores retain the first
+            // ordinal road's derivative; incompatible shared-core heights remain an error.
+            roadTop = cores[0].Top;
+            if (cores.Any(value => Math.Abs(value.Top.Height - roadTop.Height) > TerrainMath.HeightTolerance))
+                throw new WorldDataException(string.Join(",", cores.Select(value => _sourceFile?.Invoke(value.Road) ?? "world").Distinct(StringComparer.Ordinal)), string.Join(",", cores.Select(value => value.Road.Value)),
+                    $"Coincident road cores have incompatible bank tops at ({x:R},{z:R}): "
+                    + string.Join("; ", cores.Select(value => $"{value.Road.Value}={value.Top.Height:R}")));
+        }
+        else if (contributors.Count == 1) roadTop = contributors[0].Top;
+        else
+        {
+            var scale = contributors.Min(value => value.Distance.Height);
+            var influences = contributors.Select(value =>
+            {
+                var ratio = scale / value.Distance.Height;
+                return ratio * ratio;
+            }).ToArray();
+            var sum = 0d; var height = 0d;
+            for (var i = 0; i < contributors.Count; i++)
+            {
+                sum += influences[i]; height += influences[i] * contributors[i].Top.Height;
+            }
+            height /= sum;
+            var dx = 0d; var dz = 0d;
+            for (var i = 0; i < contributors.Count; i++)
+            {
+                var value = contributors[i]; var influence = influences[i];
+                // The common scale² cancels in the normalized quotient, including its
+                // derivative. Every individual inverse-distance derivative remains here.
+                var distanceTerm = -2 * influence * ((value.Top.Height - height) / value.Distance.Height);
+                dx += influence * value.Top.Dx + distanceTerm * value.Distance.Dx;
+                dz += influence * value.Top.Dz + distanceTerm * value.Distance.Dz;
+            }
+            roadTop = new(height, dx / sum, dz / sum);
+            if (!Finite(roadTop)) throw new WorldDataException(string.Join(",", contributors.Select(value => _sourceFile?.Invoke(value.Road) ?? "world").Distinct(StringComparer.Ordinal)), string.Join(",", contributors.Select(value => value.Road.Value)),
+                $"Road bank composition is non-finite at ({x:R},{z:R}).");
+        }
+        return roadTop;
+    }
+
+    private TerrainDifferential ContactWeight((int Polygon, int Ring, TerrainPath Path) ring, TerrainPathHit hit,
+        Func<double, double, TerrainDifferential> Taper)
+    {
+        var shortest = double.PositiveInfinity; var signed = 0d;
+        foreach (var contact in Contacts)
+        {
+            if (contact.Polygon != ring.Polygon || contact.Ring != ring.Ring) continue;
+            var delta = hit.Station - contact.ShoreStation;
+            if (delta > contact.RingLength / 2) delta -= contact.RingLength;
+            if (delta < -contact.RingLength / 2) delta += contact.RingLength;
+            if (Math.Abs(delta) < shortest) { shortest = Math.Abs(delta); signed = delta; }
+        }
+        var weight = Taper(shortest - HardHalfLength, signed < 0 ? -1 : 1);
+        foreach (var interval in RegisteredHard)
+        {
+            if (interval.Polygon != ring.Polygon || interval.Ring != ring.Ring) continue;
+            var station = hit.Station;
+            while (station < interval.From - TransitionLength) station += interval.Length;
+            while (station > interval.To + TransitionLength && station - interval.Length >= interval.From - TransitionLength) station -= interval.Length;
+            var outside = station < interval.From ? interval.From - station : station > interval.To ? station - interval.To : 0;
+            var candidate = Taper(outside, station < interval.From ? -1 : 1);
+            weight += TerrainDifferential.Product(TerrainDifferential.Constant(1) - weight, candidate);
+        }
+        return weight;
     }
 
     public string ExplainProfileAt(double x, double z)

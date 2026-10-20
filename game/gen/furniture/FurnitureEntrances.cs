@@ -3,18 +3,17 @@ using Campus.Contracts;
 using Campus.Contracts.Parts;
 using Campus.Gen.Parts.Core;
 using Campus.Gen.Parts.Street;
-using Campus.Gen.World;
 using S = Campus.Gen.Furniture.FurnitureStyle;
+using static Campus.Gen.Furniture.FurniturePlacement;
+using static Campus.Gen.Furniture.FurniturePlanner;
+using static Campus.Gen.Furniture.FurnitureParts;
 
 namespace Campus.Gen.Furniture;
 
-public static partial class FurniturePlanner
+/// <summary>Dresses unclaimed open entrances on their authored landing.</summary>
+internal static class FurnitureEntrances
 {
-    // ---------------------------------------------------------------------------------------------------------
-    // Open entrances: mat, standing open sign and door lamp on the entrance anchor.
-    // ---------------------------------------------------------------------------------------------------------
-
-    private static void Entrances(StreetSite site, List<FurnitureItem> items, Func<FeatureId, Aspects, string?> claimedBy, SignParams sign)
+    internal static void Plan(StreetSite site, List<FurnitureItem> items, Func<FeatureId, Aspects, string?> claimedBy, SignParams sign)
     {
         var seen = new HashSet<string>(StringComparer.Ordinal);
         foreach (var feature in site.World.Features.Keys.OrderBy(f => f.Value, StringComparer.Ordinal))
@@ -44,35 +43,6 @@ public static partial class FurniturePlanner
                     [EntranceLampPart.Emitter(lamp, lampAt)]));
                 site.Occupy(front, matWidth * 0.5f + 0.5f);
                 site.Occupy(new(signAt.M41, signAt.M43), sign.Width * 0.5f);
-            }
-        }
-    }
-
-    // ---------------------------------------------------------------------------------------------------------
-    // Shuttle stops: a sign at the kerb of the carriageway nearest each bus feature (WLD-LIFE).
-    // ---------------------------------------------------------------------------------------------------------
-
-    private static void Stops(StreetSite site, List<FurnitureItem> items, SignParams p)
-    {
-        var terrain = site.World.Terrain;
-        foreach (var feature in site.World.Features.Values.OrderBy(f => f.Id.Value, StringComparer.Ordinal))
-        {
-            if (WorldProps.TryText(feature.Props, "subcategory") != "bus") continue;
-            var anchor = Anchor(feature);
-            if (site.NearestCarriageway(anchor, 45f) is not { } near) continue;
-            var normal = new Vector2(-near.Along.Y, near.Along.X);
-            var side = Vector2.Dot(anchor - near.Point, normal) >= 0f ? 1f : -1f;
-            var offset = StreetSite.HalfWidth(near.Line) + S.StopKerbGap;
-            foreach (var shift in Shifts(S.LampMaxShift))
-            {
-                var pos = near.Point + near.Along * shift + normal * (side * offset);
-                // The board runs along the kerb: test it as a thin capsule, not a disc of its width.
-                var reach = near.Along * (p.Width * 0.5f - StopHalfDepth);
-                if (!site.Free(pos - reach, pos + reach, StopHalfDepth) || Land.Point(terrain, pos, PoleRadius) is not { } y) continue;
-                var at = Frame(pos, -normal * side, y);
-                items.Add(Item("stop:" + feature.Id.Value, FurnitureKind.BusStop, PartCatalog.BusStop, p, at, StopDef.Collision(p), []));
-                site.Occupy(pos - reach, pos + reach, StopHalfDepth);
-                break;
             }
         }
     }

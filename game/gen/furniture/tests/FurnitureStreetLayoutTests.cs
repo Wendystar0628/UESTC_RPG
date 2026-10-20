@@ -178,7 +178,7 @@ public sealed class FurnitureStreetLayoutTests
                     if (MathF.Abs(u) < hw - 1e-3f && MathF.Abs(v) < hd - 1e-3f) continue;
                     var q = Xf.Point(item.Part.At, new(u, 0, v));
                     samples++;
-                    if (site.PavingEdgeFacing(new(q.X, q.Z)) is not { Gap: <= 0f }) outside++;
+                    if (site.Paving.PavingEdgeFacing(new(q.X, q.Z)) is not { Gap: <= 0f }) outside++;
                 }
             AssertThat(outside == 0).OverrideFailureMessage($"{item.Key}: {outside}/{samples} outline points of its apron off the paving").IsTrue();
         }

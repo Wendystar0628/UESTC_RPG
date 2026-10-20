@@ -115,7 +115,7 @@ internal sealed class TerrainRegion
         // point resolves that case without a raster scan that could miss a sub-metre overlap.
         foreach (var polygon in Polygons)
         {
-            var sample = TerrainCompiler.InteriorPoint(new TerrainRegion([polygon]));
+            var sample = TerrainGeometry.InteriorPoint(new TerrainRegion([polygon]));
             if (other.Distance(sample.X, sample.Y).Height < 0) return true;
         }
         return false;
@@ -157,7 +157,6 @@ internal sealed class TerrainRegion
 
     private static bool SegmentsTouch(Vector2 a, Vector2 b, Vector2 c, Vector2 d)
     {
-
         static bool On(Vector2 p, Vector2 q, Vector2 r) => r.X >= Math.Min(p.X, q.X) && r.X <= Math.Max(p.X, q.X)
             && r.Y >= Math.Min(p.Y, q.Y) && r.Y <= Math.Max(p.Y, q.Y);
         var a0 = VectorMath.Cross(a, b, c); var a1 = VectorMath.Cross(a, b, d); var b0 = VectorMath.Cross(c, d, a); var b1 = VectorMath.Cross(c, d, b);

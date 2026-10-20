@@ -1,23 +1,14 @@
 using Campus.Contracts;
 using Campus.Contracts.AppFlow;
 using Campus.Contracts.Audio;
-using Campus.Contracts.Maps;
 using Campus.Contracts.Startup;
-using Campus.Hud.Motion;
 using Campus.Hud.Pages;
-using Campus.Hud.Style;
 using Campus.Hud.Widgets;
 using Godot;
 
 namespace Campus.Hud;
 
-/// <summary>
-/// 界面根（UI-VISUAL、UI-NAV）：CanvasLayer 10，搭控件树、挂唯一的 Theme。
-/// 漫游态（鼠标被捕获）只留小地图槽位和临时提示；界面态（鼠标可见）四角出现，4 秒没有操作后淡出；
-/// 大页（设置卡、存档页）打开时占用观者输入；开始页只在 IAppFlow 的 Title 状态出现。
-/// 不显示的页不留件（引擎只在释放节点时归还实例参数槽，<see cref="UiKit.Holders"/>）：大页与开始页打开时建、关上就释放，
-/// 四角的常驻件在进入漫游时建、回到开始页时释放。
-/// </summary>
+/// <summary>The HUD composition boundary; each retained responsibility owns its state and subscriptions.</summary>
 [KernelNode("hud")]
 [KernelService(typeof(HudRoot))]
 [KernelService(typeof(IAppLoadingPresentation))]
@@ -25,47 +16,31 @@ namespace Campus.Hud;
 [KernelService(typeof(IAppFrontispiecePresentation))]
 public partial class HudRoot : CanvasLayer, IBootParticipant, IAppLoadingPresentation, IAppScreenCoverage, IAppFrontispiecePresentation
 {
-    private const float IdleFade = 4f;
-    private const double RefreshInterval = 0.1;
-
     private HudRootDependencies _dependencies = null!;
     private UiBootOptions _args = new();
-    private UiThemeBuilder _theme = null!;
+    private HudView _view = null!;
+    private HudPages _pages = null!;
+    private HudResidents _residents = null!;
+    private HudInput _input = null!;
+    private HudLoading _loading = null!;
+    private bool _initialized, _galleryTitle;
 
-    private UiKit _kit = null!;
-    private HudSettings _settings = null!;
-    private HudModel _model = null!;
-    private MotionPolicy _motion = null!;
-    private IWorldControl _control = null!;
-    private IAppFlow _flow = null!;
-    private IAudioService _audio = null!;
-    private UiThemeClock _clock = null!;
-    private Control _root = null!, _safeFrame = null!, _corners = null!, _minimapSlot = null!;
-    private Control _loadingHost = null!;
-    private Control _backgroundHost = null!, _pageHost = null!, _dialogHost = null!, _hintHost = null!;
-    private VBoxContainer _topLeft = null!, _topRight = null!, _bottomLeft = null!, _bottomRight = null!;
-    private float _cornerAlpha = 1;
-    private Resident? _resident;
-    private PerfReadout? _perf;
-    private Toast _toast = null!;
-    private SettingsCard _settingsCard = null!;
-    private SavePage _savePage = null!;
-    private TitleMenu _title = null!;
-    private bool _timeOpen = true, _clean, _hidden, _weatherHeld, _primed, _galleryTitle;   // 时间卡在界面态默认展开，T 收起（UI-VISUAL）
-    private float _idle, _weatherHold, _scaleDebounce = -1;
-    private ViewMode _lastMode;
-    private Season _lastSeason;
-    private bool _initialized, _bound;
-    private double _refreshClock = RefreshInterval;
-
-    public Control MinimapSlot => _minimapSlot;
-    public Control BackgroundHost => _backgroundHost;
-    public Control SafeFrame => _safeFrame;
-    public Control CornerHost => _corners;
-    public Control PageHost => _pageHost;
-    public Control DialogHost => _dialogHost;
-    public Control HintHost => _hintHost;
-    public UiKit Ui => _kit;
+    public Control MinimapSlot => _view.MinimapSlot;
+    public Control BackgroundHost => _view.BackgroundHost;
+    public Control SafeFrame => _view.SafeFrame;
+    public Control CornerHost => _view.Corners;
+    public Control PageHost => _view.PageHost;
+    public Control DialogHost => _view.DialogHost;
+    public Control HintHost => _view.HintHost;
+    public UiKit Ui => _view.Kit;
+    internal Font CanvasFont => _view.Kit.Theme.Theme.DefaultFont;
+    public bool Active => _loading.Active;
+    public bool IsCovered => _loading.IsCovered;
+    public float Progress => _loading.Progress;
+    bool IAppScreenCoverage.IsCovered => ((IAppScreenCoverage)_loading).IsCovered;
+    public IAppLoadingLease Show(EnterRequest? request = null) => _loading.Show(request);
+    Task IAppFrontispiecePresentation.Show() => ((IAppFrontispiecePresentation)_loading).Show();
+    Task IAppFrontispiecePresentation.Hide(float seconds) => ((IAppFrontispiecePresentation)_loading).Hide(seconds);
 
     public HudRoot()
     {
@@ -77,179 +52,186 @@ public partial class HudRoot : CanvasLayer, IBootParticipant, IAppLoadingPresent
     public void Bind(HudRootDependencies dependencies)
     {
         ArgumentNullException.ThrowIfNull(dependencies);
+        if (_initialized) throw new InvalidOperationException("Bind the HUD before its first tree entry.");
         _dependencies = dependencies;
     }
 
     public override void _Ready()
     {
-        RenderingServer.Singleton.FramePostDraw += OnCoverageDrawn;
-        if (_initialized)
-        {
-            ConnectInput();
-            BindHostInput();
-            BindEvents();
-            _kit.SetResidentFollows(_settings.Resident == ResidentTheme.Follow);
-            _primed = false;
-            _lastMode = _model.Mode;
-            _lastSeason = _model.Season;
-            ApplyScale();
-            Layout();
-            SyncState();
-            return;
-        }
-        _settings = _dependencies.Settings;
-        _model = _dependencies.Model;
-        _motion = _dependencies.Motion;
-        _control = _dependencies.WorldControl;
-        _flow = _dependencies.Flow;
-        _audio = _dependencies.Audio;
-
-        var tokens = UiTokens.Load();
-        var colors = UiColors.Load(_dependencies.PaletteCatalog.Catalog);
-        var materials = new UiMaterials(tokens, colors, _dependencies.ShaderMaterials);
-        var theme = new UiThemeBuilder(tokens, colors);
-        _clock = _dependencies.ThemeClock;
-        _kit = new UiKit(tokens, colors, materials, theme, _motion, _clock);
-        _theme = theme;
-
-        AddChild(_clock);
-
-        _root = new Control
-        {
-            Name = "Root",
-            Theme = theme.Theme,
-            MouseFilter = Control.MouseFilterEnum.Ignore,
-            TextureFilter = CanvasItem.TextureFilterEnum.LinearWithMipmaps
-        };
-        AddChild(_root);
-        _root.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.FullRect);
-
-        // 必需应用边界与普通 HUD 分开显隐；同一 CanvasLayer 内后绘制，--ui=0 也真实覆盖。
-        _loadingHost = new Control
-        {
-            Name = "LoadingHost",
-            Theme = theme.Theme,
-            MouseFilter = Control.MouseFilterEnum.Ignore,
-            TextureFilter = CanvasItem.TextureFilterEnum.LinearWithMipmaps
-        };
-        AddChild(_loadingHost);
-        _loadingHost.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.FullRect);
-
-        _frontispiece = new ColorRect { Name = "Frontispiece", Color = colors.Resolve("loading.background"),
-            Visible = false, MouseFilter = Control.MouseFilterEnum.Ignore };
-        AddChild(_frontispiece);
-        MoveChild(_frontispiece, 0);
-        _frontispiece.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.FullRect);
-        _backgroundHost = _kit.Layout.Host(_root, "BackgroundHost");
-        _safeFrame = _kit.Layout.SafeFrame(_root);
-        _corners = _kit.Layout.Host(_safeFrame, "CornerHost");
-        // 树顺序就是 Tab 阅读序：左上、右上、左下、右下。
-        _topLeft = _kit.Layout.Corner(_corners, Control.LayoutPreset.TopLeft);
-        _topRight = _kit.Layout.Corner(_corners, Control.LayoutPreset.TopRight);
-        _bottomLeft = _kit.Layout.Corner(_corners, Control.LayoutPreset.BottomLeft);
-        _bottomRight = _kit.Layout.Corner(_corners, Control.LayoutPreset.BottomRight);
-        _minimapSlot = _kit.Layout.Add(_topLeft, new Control
-        {
-            Name = "MinimapSlot", CustomMinimumSize = tokens.V2("metrics", "size", "minimap")
-        });
-        _pageHost = _kit.Layout.Host(_safeFrame, "PageHost");
-        _dialogHost = _kit.Layout.Host(_safeFrame, "DialogHost");
-        _hintHost = _kit.Layout.Host(_safeFrame, "HintHost");
-        UiLayout.SetInteractive(_backgroundHost, false);
-        UiLayout.SetInteractive(_hintHost, false);
-
-        _title = TitleMenu.Create(_kit, _pageHost, _backgroundHost);
-        _title.SavesRequested += () => OpenSaves(fromTitle: true);
-        _title.OverwriteRequested += () => OpenSaves(fromTitle: true, SaveIntent.NewGame);
-        _title.SettingsRequested += () => OpenSettings(SettingsPage.General, fromTitle: true);
-        _title.CreditsRequested += () => OpenSettings(SettingsPage.Licenses, fromTitle: true);
-        _title.QuitRequested += RequestQuit;
-        _title.Notice += text => _toast.Show(text);
-        ConnectInput();
-        _settingsCard = SettingsCard.Create(_kit, _pageHost, _settings, _router);
-        _settingsCard.CloseRequested += CloseSettings;
-        _settingsCard.QuitRequested += RequestQuit;
-        _settingsCard.ToTitleRequested += () => { CloseSettings(); _ = _flow.ReturnToTitle(); };
-        _savePage = SavePage.Create(_kit, _pageHost, _dialogHost);
-        _savePage.CloseRequested += CloseSaves;
-        _toast = Toast.Create(_kit, _hintHost);
-        _initialized = true;
-        BindHostInput();
-        BindEvents();
-        _kit.SetResidentFollows(_settings.Resident == ResidentTheme.Follow);
-        _lastMode = _model.Mode;
-        _lastSeason = _model.Season;
-        ApplyScale();
-        Layout();
+        if (!_initialized) CreatePresentation();
+        _view.Enter();
+        _input.Enter();
+        _residents.Enter();
+        _loading.Enter();
+        _pages.StateChanged += SyncCorners;
+        _dependencies.Flow.Changed += OnFlowChanged;
+        _dependencies.ThemeClock.Switched += OnThemeSwitched;
         SyncState();
+    }
+
+    private void CreatePresentation()
+    {
+        _view = new HudView(this, _dependencies);
+        _pages = new HudPages(this, _dependencies, _view);
+        _residents = new HudResidents(_dependencies, _view, _pages);
+        _loading = new HudLoading(this, _dependencies, _view, () => _input.SyncHostInput());
+        _input = new HudInput(this, _dependencies, _view, _pages, _residents, () => _loading.Active);
+        _initialized = true;
     }
 
     public override void _Process(double delta)
     {
-        _settings.Tick(delta);
-        if (_scaleDebounce >= 0 && (_scaleDebounce += (float)delta) >= 0.2f) { _scaleDebounce = -1; ApplyScale(); }
-        SyncCorners();
-        _refreshClock += delta;
-        if (_refreshClock >= RefreshInterval) RefreshHud();
-        // 只把真正交给玩家、未被遮住的界面时间算作空闲；图库保留待评审的 HUD。
-        if (Playing && InterfaceState && _corners.IsVisibleInTree() && !Active
-            && _flow.Activity == AppActivity.None && _args.Gallery != "hud" && !BigPage
-            && _root.GetViewport().GuiGetFocusOwner() is null && DisplayServer.AccessibilityScreenReaderActive() == 0)
-            _idle += (float)delta;
-        else _idle = 0;
-        var target = _idle >= IdleFade ? 0f : 1f;
-        var step = (float)delta / _motion.Fade(target < _cornerAlpha ? 1.2f : 0.18f);
-        _cornerAlpha = Mathf.MoveToward(_cornerAlpha, target, _motion.Level == MotionLevel.Instant ? 1 : step);
-        FadeResidents(_cornerAlpha, target > 0);
-        SyncHostInput();
-        if (_weatherHeld)
-        {
-            _weatherHold += (float)delta;
-            if (_weatherHold >= 0.6f)
-            {
-                _weatherHeld = false;
-                _control.SetWeatherAuto();
-                RefreshHud();
-                _toast.Show(UiKit.T("weather.auto_toast"), "weather_auto");
-            }
-        }
+        _view.Tick(delta);
+        _residents.Tick(delta, Active, _args.Gallery == "hud");
+        _input.Tick(delta);
     }
+
+    public override void _Input(InputEvent e) => _input.Input(e);
+    public override void _UnhandledInput(InputEvent e) => _input.UnhandledInput(e);
 
     public override void _ExitTree()
     {
-        RenderingServer.Singleton.FramePostDraw -= OnCoverageDrawn;
-        _loadingCovered = _frontispieceCovered = false;
-        UnbindHostInput();
-        if (_bound)
-        {
-            _bound = false;
-            _clock.Switched -= OnThemeSwitched;
-            _root.Resized -= Layout;
-            _safeFrame.Resized -= Layout;
-            _settings.Changed -= OnSettingsChanged;
-            _flow.Changed -= OnFlowChanged;
-            _model.World.InstanceChanged -= OnWorldChanged;
-            _dependencies.ViewControl.WalkEntryRefused -= OnWalkEntryRefused;
-        }
-        _router.InterfaceModeChanged -= OnInterfaceModeChanged;
-        foreach (var layer in _layers) layer.Dispose();
-        _layers.Clear();
-        if (_initialized)
-        {
-            _settingsCard.Close();
-            _savePage.Close();
-            ReleaseResident();
-            FreePerf();
-            _weatherHeld = false;
-            // 同实例重新入树时复用根控件，恢复订阅并重建已释放的四角。
-            RequestReady();
-        }
+        if (!_initialized) return;
+        _loading.Exit();
+        // Stop observing host children before page/resident removal emits child signals.
+        _input.Exit();
+        _pages.StateChanged -= SyncCorners;
+        _dependencies.Flow.Changed -= OnFlowChanged;
+        _dependencies.ThemeClock.Switched -= OnThemeSwitched;
+        _view.Exit();
+        _residents.Exit();
+        _pages.Exit();
+        RequestReady();
     }
 
     public override void _Notification(int what)
     {
-        // 失焦切到界面态归 WP-06 的 IInputRouter
-        if (what == NotificationApplicationFocusIn) _motion.Refresh();
-        else if (what == NotificationWMCloseRequest) _settings.Flush();
+        if (what == NotificationApplicationFocusIn) _dependencies.Motion.Refresh();
+        else if (what == NotificationWMCloseRequest) _dependencies.Settings.Flush();
     }
+
+    private void SyncCorners()
+    {
+        _residents.Sync();
+        _input.SyncHostInput();
+    }
+
+    private void SyncState()
+    {
+        switch (_dependencies.Flow.State)
+        {
+            case AppState.Title:
+                _residents.Release();
+                _input.CancelWeatherHold();
+                if (!_pages.Title.Visible) _pages.Title.Open();
+                _view.MinimapSlot.Visible = false;
+                break;
+            case AppState.Playing:
+                _residents.Build();
+                if (!_galleryTitle) _pages.Title.Close();
+                if (_args.Gallery == "hud") _dependencies.InputRouter.SetInterfaceMode(true);
+                break;
+            case AppState.Entering:
+            case AppState.Leaving:
+                _residents.Build();
+                goto case AppState.Quitting;
+            case AppState.Boot:
+            case AppState.Quitting:
+                _pages.Title.Close();
+                if (_pages.Settings.Visible) _pages.CloseSettings();
+                if (_pages.Saves.Visible) _pages.CloseSaves();
+                break;
+            default: throw new InvalidOperationException("Unknown application state.");
+        }
+        SyncCorners();
+    }
+
+    private void OnFlowChanged(AppState previous, AppState current)
+    {
+        if (current == AppState.Playing) _residents.ResetIdle();
+        SyncState();
+        if (previous == AppState.Boot && current == AppState.Title && _dependencies.Flow.LastError is { } errorKey)
+            _pages.Toast.Show(UiKit.T(errorKey), bar: "warning.fill");
+    }
+
+    private void OnThemeSwitched(bool dark)
+    {
+        if (_pages.BigPage || _view.Kit.ResidentFollows) _dependencies.Audio.PlayUi(UiCue.ShiftDayNight);
+    }
+    public string Id => "hud";
+    public int Order => 0;
+
+    /// <summary>启动参数在 BeforeMap 才到：_Ready 时先按默认搭好，这里把 --ui、--ui-scale、--ui-gallery、--ui-export-theme 和交给动效、主题时钟的参数补上。</summary>
+    public Task Initialize(BootPhase phase, BootContext context)
+    {
+        if (phase != BootPhase.BeforeMap) return Task.CompletedTask;
+        _args = context.Run.Ui;
+        _dependencies.Motion.Apply(_args);
+        if (_args.ExportTheme is { } exportPath)
+        {
+            var error = _view.Kit.Theme.Export(exportPath);
+            GD.Print($"UI theme exported: {exportPath} ({error})");
+            GetTree().Quit(error == Error.Ok ? 0 : 2);
+            return Task.CompletedTask;
+        }
+        _dependencies.ThemeClock.Apply(_args);
+        _view.Configure(_args);
+        if (_args.Gallery is { } gallery) CallDeferred(MethodName.OpenGallery, gallery);
+        return Task.CompletedTask;
+    }
+
+    /// <summary>--ui-gallery=&lt;页名&gt;：启动时直接打开一页，供截图与评审（UI-VISUAL；完整的组件画廊归 35c）。</summary>
+    private void OpenGallery(string page)
+    {
+        switch (page)
+        {
+            case "settings": _pages.OpenSettings(SettingsPage.General, fromTitle: false); break;
+            case "graphics": _pages.OpenSettings(SettingsPage.Graphics, fromTitle: false); break;
+            case "sound": _pages.OpenSettings(SettingsPage.Sound, fromTitle: false); break;
+            case "keys": _pages.OpenSettings(SettingsPage.Keys, fromTitle: false); break;
+            case "rebind": _pages.OpenSettings(SettingsPage.Rebind, fromTitle: false); break;
+            case "licenses": _pages.OpenSettings(SettingsPage.Licenses, fromTitle: false); break;
+            case "saves": _pages.OpenSaves(fromTitle: true); break;
+            case "title": _residents.Clean = _galleryTitle = true; _pages.Title.Open(); break;
+            case "hud": _dependencies.InputRouter.SetInterfaceMode(true); _residents.ResetIdle(); break;
+            case "layout": Widgets.UiLayoutGallery.Create(_view.Kit, _view.PageHost); break;
+            case "census": Census(3); break;
+            default: throw new ArgumentException($"Unknown --ui-gallery page: {page}");
+        }
+    }
+
+    /// <summary>
+    /// --ui-gallery=census：数界面占着实例参数槽的件数（<see cref="UiKit.Holders"/>）。先在漫游中数一次，再经 IAppFlow 回到开始页，然后把设置卡、存档页各开关 <paramref name="cycles"/> 次，
+    /// 每步记一行日志，最后走正常退出。
+    /// </summary>
+    private async void Census(int cycles)
+    {
+        try
+        {
+            for (var i = 0; i < 600 && !_dependencies.Flow.IsPlaying; i++) await NextFrame();
+            for (var i = 0; i < 10; i++) await NextFrame();
+            CensusLine("playing");
+            await _dependencies.Flow.ReturnToTitle();
+            for (var i = 0; i < 10; i++) await NextFrame();
+            CensusLine($"title ({_dependencies.Flow.State})");
+            for (var i = 1; i <= cycles; i++)
+            {
+                _pages.OpenSettings(SettingsPage.Graphics, fromTitle: true);
+                await NextFrame();
+                CensusLine($"settings open #{i}");
+                _pages.CloseSettings();
+                _pages.OpenSaves(fromTitle: true);
+                await NextFrame();
+                CensusLine($"saves open #{i}");
+                _pages.CloseSaves();
+                await NextFrame();
+                CensusLine($"closed #{i}");
+            }
+        }
+        finally { _pages.RequestQuit(); }
+    }
+
+    private SignalAwaiter NextFrame() => ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
+
+    private void CensusLine(string step) => GD.Print($"UI census - {step}: {_view.Kit.Holders(_view.Root)} items hold shader instance slots");
 }

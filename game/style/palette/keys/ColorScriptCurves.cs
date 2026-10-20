@@ -65,10 +65,21 @@ public static class SeasonComposer
     {
         var info = data.Keys[keyIndex];
         var f = data.AutumnFrames[keyIndex].Clone();
-        var v = f.V;
         var seasons = data.Seasons;
         var sd = seasons.Seasons.For(season);
         var kid = info.Id;
+        ApplySky(f, seasons, sd, kid);
+        ApplyKeyLight(f, seasons, sd, kid);
+        ApplyShadeAndLimits(f, seasons, sd, info);
+        ApplyFog(f, seasons, sd, kid);
+        f.V[GlowIntensity] *= sd.Post.GlowIntensityMul;
+        f.V[LampPoolGain] = sd.LampPoolGain;
+        ApplyOverrides(f, sd, kid);
+        return f;
+    }
+
+    private static void ApplySky(FrameVector f, SeasonsFile seasons, SeasonDeltaJson sd, string kid)
+    {
         // Sky: zenith delta spread over the five bands by skyFalloff.
         var z = sd.Sky.Zenith;
         var wSky = seasons.ScopeWeight(sd.Sky.Scope, kid);
@@ -81,6 +92,10 @@ public static class SeasonComposer
                 f.SetColor(i, ShiftLch(f.Color(i), z.DL, z.DC, z.Dh, wSky * fall[band]));
             }
         }
+    }
+
+    private static void ApplyKeyLight(FrameVector f, SeasonsFile seasons, SeasonDeltaJson sd, string kid)
+    {
         // Key light.
         foreach (var op in sd.Key)
         {
@@ -94,6 +109,12 @@ public static class SeasonComposer
                 f.SetColor(Key, Oklab.FromLch(k.L, k.Chroma * (1.0 + (op.Mul!.Value - 1.0) * w), k.Hue));
             }
         }
+    }
+
+    private static void ApplyShadeAndLimits(FrameVector f, SeasonsFile seasons, SeasonDeltaJson sd, KeyframeInfo info)
+    {
+        var v = f.V;
+        var kid = info.Id;
         // Shade: ambient.sky and r, clamped by limits.
         var shade = sd.Shade;
         var ws = seasons.ScopeWeight(shade.Scope, kid);
@@ -114,6 +135,11 @@ public static class SeasonComposer
                 if (c.Chroma < zmin) f.SetColor(i, Oklab.FromLch(c.L, zmin, c.Hue));
             }
         }
+    }
+
+    private static void ApplyFog(FrameVector f, SeasonsFile seasons, SeasonDeltaJson sd, string kid)
+    {
+        var v = f.V;
         // Fog.
         var fog = sd.Fog;
         var wf = seasons.ScopeWeight(fog.Scope, kid);
@@ -132,8 +158,11 @@ public static class SeasonComposer
         v[FogStart] *= fog.VisibilityMul;
         v[FogSilhouette] *= fog.VisibilityMul;
         v[HazeDeg] *= fog.HazeMul;
-        v[GlowIntensity] *= sd.Post.GlowIntensityMul;
-        v[LampPoolGain] = sd.LampPoolGain;
+    }
+
+    private static void ApplyOverrides(FrameVector f, SeasonDeltaJson sd, string kid)
+    {
+        var v = f.V;
         // Season-specific overrides (hand-tuned colours).
         foreach (var ov in sd.Overrides)
         {
@@ -144,7 +173,6 @@ public static class SeasonComposer
             if (ov.SkyFx?.CloudAmountAdd is { } add)
                 v[CloudAmount] = Math.Min(1.0, v[CloudAmount] + add);
         }
-        return f;
     }
 }
 

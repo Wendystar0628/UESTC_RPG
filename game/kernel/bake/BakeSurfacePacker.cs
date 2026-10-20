@@ -83,27 +83,7 @@ public static class BakeSurfacePacker
             var n = Normalize(new(mesh.Normal.Span[i * 3], mesh.Normal.Span[i * 3 + 1], mesh.Normal.Span[i * 3 + 2]));
             var vertex = vertices.AsSpan(i * vertexStride, vertexStride);
             var normal = vertices.AsSpan(count * vertexStride + i * normalStride, normalStride);
-            if (compressed)
-            {
-                var delta = p - bounds.Min;
-                // A planar prototype may have a zero-width axis. Keep its exact bounds and encode that constant axis as zero.
-                var unit = new Vector3(size.X == 0 ? 0 : delta.X / size.X,
-                    size.Y == 0 ? 0 : delta.Y / size.Y, size.Z == 0 ? 0 : delta.Z / size.Z);
-                U16(vertex, 0, unit.X); U16(vertex, 2, unit.Y); U16(vertex, 4, unit.Z);
-                var (axis, angle) = NormalRotation(n);
-                var oct = Octahedral(axis);
-                U16(normal, 0, oct.X); U16(normal, 2, oct.Y);
-                U16(vertex, 6, Math.Clamp(angle / 3.14159265358979323846f * .5f + .5f, .500008f, 1f));
-            }
-            else
-            {
-                F32(vertex, 0, p.X); F32(vertex, 4, p.Y); F32(vertex, 8, p.Z);
-                var oct = Octahedral(n);
-                U16(normal, 0, oct.X); U16(normal, 2, oct.Y);
-                var tangent = Normalize(Vector3.Cross(Math.Abs(n.Z) < .9f ? Vector3.UnitZ : Vector3.UnitY, n));
-                var encoded = Octahedral(tangent);
-                U16(normal, 4, encoded.X); U16(normal, 6, Math.Max(encoded.Y, 1f / 32767f) * .5f + .5f);
-            }
+            PackVertexFrame(p, n, bounds, size, compressed, vertex, normal);
             var attribute = attributes.AsSpan(i * attributeStride, attributeStride);
             var color = mesh.ColorIndices is { } logical ? Registered(logical.Span[i])
                 : lit;
@@ -143,6 +123,32 @@ public static class BakeSurfacePacker
             var index = new PaletteIndex(value);
             _ = catalog.Get(index);
             return index;
+        }
+    }
+
+    private static void PackVertexFrame(Vector3 p, Vector3 n, Box3 bounds, Vector3 size,
+        bool compressed, Span<byte> vertex, Span<byte> normal)
+    {
+        if (compressed)
+        {
+            var delta = p - bounds.Min;
+            // A planar prototype may have a zero-width axis. Keep its exact bounds and encode that constant axis as zero.
+            var unit = new Vector3(size.X == 0 ? 0 : delta.X / size.X,
+                size.Y == 0 ? 0 : delta.Y / size.Y, size.Z == 0 ? 0 : delta.Z / size.Z);
+            U16(vertex, 0, unit.X); U16(vertex, 2, unit.Y); U16(vertex, 4, unit.Z);
+            var (axis, angle) = NormalRotation(n);
+            var oct = Octahedral(axis);
+            U16(normal, 0, oct.X); U16(normal, 2, oct.Y);
+            U16(vertex, 6, Math.Clamp(angle / 3.14159265358979323846f * .5f + .5f, .500008f, 1f));
+        }
+        else
+        {
+            F32(vertex, 0, p.X); F32(vertex, 4, p.Y); F32(vertex, 8, p.Z);
+            var oct = Octahedral(n);
+            U16(normal, 0, oct.X); U16(normal, 2, oct.Y);
+            var tangent = Normalize(Vector3.Cross(Math.Abs(n.Z) < .9f ? Vector3.UnitZ : Vector3.UnitY, n));
+            var encoded = Octahedral(tangent);
+            U16(normal, 4, encoded.X); U16(normal, 6, Math.Max(encoded.Y, 1f / 32767f) * .5f + .5f);
         }
     }
 

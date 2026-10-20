@@ -1,14 +1,16 @@
 using Campus.Gen.Geometry;
 using System.Numerics;
 using Campus.Contracts;
-using Campus.Contracts.Parts;
 using Campus.Gen.Parts.Street;
-using Campus.Gen.World;
 using S = Campus.Gen.Furniture.FurnitureStyle;
+using static Campus.Gen.Furniture.FurniturePlacement;
+using static Campus.Gen.Furniture.FurniturePlanner;
+using static Campus.Gen.Furniture.FurnitureParts;
 
 namespace Campus.Gen.Furniture;
 
-public static partial class FurniturePlanner
+/// <summary>Places kerb ramps where pedestrian lines reach a ramped road.</summary>
+internal static class FurnitureKerbRamps
 {
     // ---------------------------------------------------------------------------------------------------------
     // Kerb ramps (13c2b): where a walk reaches the kerb of a ramped road, at its end or where it crosses the road.
@@ -21,9 +23,9 @@ public static partial class FurniturePlanner
     /// <see cref="FurnitureStyle.RampSlide"/> to find it, never onto a verge), <see cref="FurnitureStyle.RampGap"/> clear of the next; none inside a
     /// junction (on another road's surface), which WP-15 marks and paves. The count and the refusals go to the layout diagnostics.
     /// </summary>
-    private static void KerbRamps(StreetSite site, List<FurnitureItem> items, List<BuildDiagnostic> diagnostics, RoadGroup road)
+    internal static void Plan(StreetSite site, List<FurnitureItem> items, List<BuildDiagnostic> diagnostics, RoadGroup road)
     {
-        var lines = road.Lines.Where(StreetSite.Carriageway).OrderBy(l => l.Id.Value, StringComparer.Ordinal).ToList();
+        var lines = road.Lines.Where(StreetNetwork.Carriageway).OrderBy(l => l.Id.Value, StringComparer.Ordinal).ToList();
         if (lines.Count == 0) return;
         var p = S.KerbRamp;
         var placed = new List<Vector2>();
@@ -39,7 +41,7 @@ public static partial class FurniturePlanner
             foreach (var (spot, crossing) in spots)
             {
                 if (Nearest(lines, spot) is not { } near) continue;
-                var half = StreetSite.HalfWidth(near.Line);
+                var half = StreetNetwork.HalfWidth(near.Line);
                 var normal = new Vector2(-near.Along.Y, near.Along.X);
                 var offset = Vector2.Dot(spot - near.Point, normal);
                 float[] sides;
@@ -55,13 +57,13 @@ public static partial class FurniturePlanner
                     {
                         var kerb = near.Point + near.Along * shift + normal * (side * half);
                         if (Nearest(lines, kerb) is not { } on || Vector2.Distance(on.Point, near.Point + near.Along * shift) > 0.5f) continue;
-                        if (site.PavingEdgeFacing(kerb + normal * (side * S.RampWalkBehind)) is not { Gap: <= 0f }) continue;
+                        if (site.Paving.PavingEdgeFacing(kerb + normal * (side * S.RampWalkBehind)) is not { Gap: <= 0f }) continue;
                         found = near.Point + near.Along * shift + normal * (side * (half - p.Depth * 0.5f));
                         break;
                     }
                     if (found is not { } centre) { verge++; continue; }
                     if (placed.Any(q => Vector2.Distance(q, centre) < S.RampGap)) { crowded++; continue; }
-                    if (site.World.Network.Roads.Any(o => !lines.Contains(o) && StreetSite.Carriageway(o) && MathF.Sqrt(PlanLines.PolylineDistanceSquared(o.Line.Points, centre)) < StreetSite.HalfWidth(o) + p.Width * 0.5f))
+                    if (site.World.Network.Roads.Any(o => !lines.Contains(o) && StreetNetwork.Carriageway(o) && MathF.Sqrt(PlanLines.PolylineDistanceSquared(o.Line.Points, centre)) < StreetNetwork.HalfWidth(o) + p.Width * 0.5f))
                     {
                         junction++;
                         continue;
@@ -90,5 +92,4 @@ public static partial class FurniturePlanner
         }
         return best;
     }
-
 }

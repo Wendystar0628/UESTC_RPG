@@ -42,7 +42,7 @@ internal static class SixInteriorFurnishing
         flask.AddLathe(PartShapes.Creased(new(0, 0.21f), new(0.039f, 0.21f), new(0.039f, 0.255f), new(0, 0.255f)),
             14, steel, Matrix4x4.Identity, VertexFlag.Interior | VertexFlag.NoShadow);
         var (min, max) = flask.Measure();
-        sink.Add(flask.Finish(new(min, max)), p.FormulaFrame.At(-p.FormulaWidth * 0.25f,
+        sink.Parts.Add(flask.Finish(new(min, max)), p.FormulaFrame.At(-p.FormulaWidth * 0.25f,
             p.LandingY, 0), VertexFlag.Interior | VertexFlag.NoShadow);
 
         var data = ctx.World.Feature(S.EntityC).RequiredProps().GetProperty("interior");
@@ -50,15 +50,15 @@ internal static class SixInteriorFurnishing
         var wall = PlanFrame.Toward(service[0], service[1]);
         var length = Vector2.Distance(service[0], service[1]);
         var door = new DoorParams(0.95f, WalkRules.DefaultDoorHeight, 0.2f);
-        sink.Part(new FireDoorPart(), door, wall.At(length * 0.25f, p.FloorY, 0));
-        sink.Part(new ElevatorDoorPart(), new DoorParams(1.2f, 2.2f, 0.1f), wall.At(length * 0.75f, p.FloorY, 0));
+        sink.Parts.Part(new FireDoorPart(), door, wall.At(length * 0.25f, p.FloorY, 0));
+        sink.Parts.Part(new ElevatorDoorPart(), new DoorParams(1.2f, 2.2f, 0.1f), wall.At(length * 0.75f, p.FloorY, 0));
         Text(ctx, sink, "报告厅", 0.15f, Ink, SixInteriorProvider.WallMaterial,
             wall.At(length * 0.25f, p.FloorY + door.Height + 0.15f, -0.11f));
         Text(ctx, sink, "电梯厅", 0.15f, Ink, SixInteriorProvider.WallMaterial,
             wall.At(length * 0.75f, p.FloorY + 2.2f + 0.15f, -0.11f));
-        sink.Part(new BenchPart(), new FurnitureParams(), wall.At(length * 0.5f, p.FloorY, -0.4f));
-        sink.Part(new DirectorySignPart(), new SignParams(0.6f, 1f, 0.04f), wall.At(length * 0.5f, p.FloorY + 1.2f, -0.13f));
-        sink.Part(new HydrantPart(), new EquipmentParams(0.7f, 1f, 0.2f), wall.At(0.4f, p.FloorY + 0.8f, -0.13f));
+        sink.Parts.Part(new BenchPart(), new FurnitureParams(), wall.At(length * 0.5f, p.FloorY, -0.4f));
+        sink.Parts.Part(new DirectorySignPart(), new SignParams(0.6f, 1f, 0.04f), wall.At(length * 0.5f, p.FloorY + 1.2f, -0.13f));
+        sink.Parts.Part(new HydrantPart(), new EquipmentParams(0.7f, 1f, 0.2f), wall.At(0.4f, p.FloorY + 0.8f, -0.13f));
         Text(ctx, sink, "基础与前沿研究院", 0.3f, Ink, SixInteriorProvider.WallMaterial,
             wall.At(length * 0.5f, p.UpperY - WalkRules.DefaultDoorHeight * 0.5f, -0.11f));
     }
@@ -70,8 +70,8 @@ internal static class SixInteriorFurnishing
         var b = new Vector2(data[3][0].GetSingle(), data[3][1].GetSingle());
         var frame = PlanFrame.Toward(a, b);
         var length = Vector2.Distance(a, b);
-        sink.Part(new FireDoorPart(), new DoorParams(0.95f, WalkRules.DefaultDoorHeight, 0.2f), frame.At(length * 0.5f, p.UpperY, 0));
-        sink.Part(new ExitSignPart(), new SignParams(0.4f, 0.15f, 0.04f), frame.At(length * 0.5f, p.UpperY + WalkRules.DefaultDoorHeight, -0.13f));
+        sink.Parts.Part(new FireDoorPart(), new DoorParams(0.95f, WalkRules.DefaultDoorHeight, 0.2f), frame.At(length * 0.5f, p.UpperY, 0));
+        sink.Parts.Part(new ExitSignPart(), new SignParams(0.4f, 0.15f, 0.04f), frame.At(length * 0.5f, p.UpperY + WalkRules.DefaultDoorHeight, -0.13f));
     }
 
     private static void Text(BuildContext ctx, InteriorGeometry sink, string text, float height,
@@ -81,6 +81,6 @@ internal static class SixInteriorFurnishing
         var builder = new PartBuilder();
         Lettering.Write(builder, atlas.Layout(text), ctx.Catalog.Resolve(background.Lit), 0, 0, 0, false, height, ink);
         var (min, max) = builder.Measure();
-        sink.Add(builder.Finish(new(min, max)), at, VertexFlag.Interior | VertexFlag.NoShadow);
+        sink.Parts.Add(builder.Finish(new(min, max)), at, VertexFlag.Interior | VertexFlag.NoShadow);
     }
 }

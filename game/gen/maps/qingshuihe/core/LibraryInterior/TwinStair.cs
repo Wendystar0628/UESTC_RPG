@@ -45,15 +45,15 @@ internal static class TwinStair
 
         // Lower flight and landing: solid stepped base from the floor.
         for (var i = 1; i < S.FlightRisers; i++)
-            sink.Box(stone, P((i - 0.5f) * S.Tread, 0f), up, S.Tread, S.StairWidth - 2 * S.Stringer, y0, y0 + i * riser);
-        sink.Box(stone, P(run + S.StairLanding * 0.5f, 0f), up, S.StairLanding, S.StairWidth - 2 * S.Stringer, y0, landing);
+            sink.Shapes.Box(stone, P((i - 0.5f) * S.Tread, 0f), up, S.Tread, S.StairWidth - 2 * S.Stringer, y0, y0 + i * riser);
+        sink.Shapes.Box(stone, P(run + S.StairLanding * 0.5f, 0f), up, S.StairLanding, S.StairWidth - 2 * S.Stringer, y0, landing);
         // Upper flight: step blocks on a sloped waist.
         var x0 = run + S.StairLanding;
         for (var i = 1; i < S.FlightRisers; i++)
-            sink.Box(stone, P(x0 + (i - 0.5f) * S.Tread, 0f), up, S.Tread, S.StairWidth - 2 * S.Stringer, landing + (i - 1) * riser, landing + i * riser);
+            sink.Shapes.Box(stone, P(x0 + (i - 0.5f) * S.Tread, 0f), up, S.Tread, S.StairWidth - 2 * S.Stringer, landing + (i - 1) * riser, landing + i * riser);
         float w = half - S.Stringer;
         Vector3 Q(float x, float t, float y) => LibraryFrame.V(P(x, t), y);
-        sink.Hexa(white, [Q(x0, -w, landing - S.Waist), Q(total, -w, y2 - riser - S.Waist), Q(total, w, y2 - riser - S.Waist), Q(x0, w, landing - S.Waist)],
+        sink.Shapes.Hexa(white, [Q(x0, -w, landing - S.Waist), Q(total, -w, y2 - riser - S.Waist), Q(total, w, y2 - riser - S.Waist), Q(x0, w, landing - S.Waist)],
             [Q(x0, -w, landing), Q(total, -w, y2 - riser), Q(total, w, y2 - riser), Q(x0, w, landing)]);
 
         foreach (var s in new[] { -1f, 1f })
@@ -67,24 +67,24 @@ internal static class TwinStair
 
         // Collision.
         var bury = (riser + 0.2f) * S.Tread / riser;
-        sink.Colliders.Add(new RampCollider(Q(-bury, -half, y0 - 0.2f), Q(-bury, half, y0 - 0.2f), Q(run, half, landing), Q(run, -half, landing),
+        sink.Collision.Add(new RampCollider(Q(-bury, -half, y0 - 0.2f), Q(-bury, half, y0 - 0.2f), Q(run, half, landing), Q(run, -half, landing),
             S.Waist, SurfaceTag.Stair) { Foot = FootMat.PolishedStone, Stair = new(riser, S.Tread, S.FlightRisers) });
-        sink.Colliders.Add(new SlabCollider([P(run, -half), P(run, half), P(x0, half), P(x0, -half)], landing, S.SlabThick, SurfaceTag.Ground)
+        sink.Collision.Add(new SlabCollider([P(run, -half), P(run, half), P(x0, half), P(x0, -half)], landing, S.SlabThick, SurfaceTag.Ground)
             { Foot = FootMat.PolishedStone });
-        sink.Colliders.Add(new RampCollider(Q(x0 - bury, -half, landing - 0.2f), Q(x0 - bury, half, landing - 0.2f), Q(total, half, y2), Q(total, -half, y2),
+        sink.Collision.Add(new RampCollider(Q(x0 - bury, -half, landing - 0.2f), Q(x0 - bury, half, landing - 0.2f), Q(total, half, y2), Q(total, -half, y2),
             S.Waist, SurfaceTag.Stair) { Foot = FootMat.PolishedStone, Stair = new(riser, S.Tread, S.FlightRisers) });
         foreach (var s in new[] { -1f, 1f })
         {
             var t = s * (half - S.Stringer * 0.5f);
             var barrier = S.Stringer * 0.5f;
-            sink.Colliders.Add(new SlopedWallCollider(P(0f, t), P(run, t), barrier, y0, y0 + riser + WalkRules.BarrierHeight, y0, landing + WalkRules.BarrierHeight,
+            sink.Collision.Add(new SlopedWallCollider(P(0f, t), P(run, t), barrier, y0, y0 + riser + WalkRules.BarrierHeight, y0, landing + WalkRules.BarrierHeight,
                 SurfaceTag.Barrier) { Foot = FootMat.WoodDoor });
-            sink.Wall(P(run, t), P(x0, t), barrier, y0, landing + WalkRules.BarrierHeight, SurfaceTag.Barrier, FootMat.WoodDoor);
-            sink.Colliders.Add(new SlopedWallCollider(P(x0, t), P(total, t), barrier, landing - S.Waist, landing + riser + WalkRules.BarrierHeight,
+            sink.Collision.Wall(P(run, t), P(x0, t), barrier, y0, landing + WalkRules.BarrierHeight, SurfaceTag.Barrier, FootMat.WoodDoor);
+            sink.Collision.Add(new SlopedWallCollider(P(x0, t), P(total, t), barrier, landing - S.Waist, landing + riser + WalkRules.BarrierHeight,
                 y2 - riser - S.Waist, y2 + WalkRules.BarrierHeight, SurfaceTag.Barrier) { Foot = FootMat.WoodDoor });
         }
         // The back of the solid base, under the start of the upper flight.
-        sink.Wall(P(x0, -half), P(x0, half), 0.05f, y0, landing - 0.05f, SurfaceTag.Wall, FootMat.Concrete);
+        sink.Collision.Wall(P(x0, -half), P(x0, half), 0.05f, y0, landing - 0.05f, SurfaceTag.Wall, FootMat.Concrete);
     }
 
     /// <summary>
@@ -97,9 +97,9 @@ internal static class TwinStair
         float h = S.Stringer * 0.5f, p = S.RailInfill * 0.5f, cap = S.RailCapWidth * 0.5f;
         Vector3[] Band(float half, float lowA, float lowB) =>
             [q(a, t - half, lowA), q(b, t - half, lowB), q(b, t + half, lowB), q(a, t + half, lowA)];
-        sink.Hexa(S.Wall(S.WallWhite), Band(h, bottomA, bottomB), Band(h, nosingA + 0.1f, nosingB + 0.1f));
-        sink.Hexa(S.Trim(S.Wood), Band(p, nosingA + 0.1f, nosingB + 0.1f), Band(p, nosingA + S.StairRail - S.RailCap, nosingB + S.StairRail - S.RailCap));
-        sink.Hexa(S.Trim(S.WallWhite), Band(cap, nosingA + S.StairRail - S.RailCap, nosingB + S.StairRail - S.RailCap),
+        sink.Shapes.Hexa(S.Wall(S.WallWhite), Band(h, bottomA, bottomB), Band(h, nosingA + 0.1f, nosingB + 0.1f));
+        sink.Shapes.Hexa(S.Trim(S.Wood), Band(p, nosingA + 0.1f, nosingB + 0.1f), Band(p, nosingA + S.StairRail - S.RailCap, nosingB + S.StairRail - S.RailCap));
+        sink.Shapes.Hexa(S.Trim(S.WallWhite), Band(cap, nosingA + S.StairRail - S.RailCap, nosingB + S.StairRail - S.RailCap),
             Band(cap, nosingA + S.StairRail, nosingB + S.StairRail));
     }
 }

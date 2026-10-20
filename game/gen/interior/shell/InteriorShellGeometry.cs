@@ -18,16 +18,16 @@ public static class InteriorShellGeometry
         if (sink.Draw)
         {
             var panel = CirculationStyle.PanelThickness;
-            sink.Add(PartGeometryKernel.BeveledBox(length, height - CirculationStyle.TopRailHeight - CirculationStyle.BottomRailClearance,
+            sink.Parts.Add(PartGeometryKernel.BeveledBox(length, height - CirculationStyle.TopRailHeight - CirculationStyle.BottomRailClearance,
                 panel, 0, PartMaterials.Glazing()), frame.At(length * 0.5f, y + CirculationStyle.BottomRailClearance, 0),
                 VertexFlag.Interior | VertexFlag.NoShadow);
-            sink.Add(PartGeometryKernel.BeveledBox(length, CirculationStyle.TopRailHeight, p.Depth, CirculationStyle.RailBevel,
+            sink.Parts.Add(PartGeometryKernel.BeveledBox(length, CirculationStyle.TopRailHeight, p.Depth, CirculationStyle.RailBevel,
                 CirculationStyle.Metal), frame.At(length * 0.5f, y + height - CirculationStyle.TopRailHeight, 0));
             var count = Math.Max(1, (int)MathF.Ceiling(length / p.PostSpacing));
             for (var i = 0; i <= count; i++)
-                sink.Add(PartGeometryKernel.BeveledBox(CirculationStyle.PostSize, height - CirculationStyle.TopRailHeight,
+                sink.Parts.Add(PartGeometryKernel.BeveledBox(CirculationStyle.PostSize, height - CirculationStyle.TopRailHeight,
                     CirculationStyle.PostSize, CirculationStyle.PostBevel, CirculationStyle.Metal), frame.At(length * i / count, y, 0));
         }
-        sink.Colliders.Add(new WallCollider(a, b, p.Depth * 0.5f, y, y + WalkRules.BarrierHeight, SurfaceTag.Barrier) { Foot = FootMat.Glass });
+        sink.Collision.Add(new WallCollider(a, b, p.Depth * 0.5f, y, y + WalkRules.BarrierHeight, SurfaceTag.Barrier) { Foot = FootMat.Glass });
     }
 }

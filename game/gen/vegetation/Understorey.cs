@@ -93,7 +93,7 @@ public static class Understorey
         ArgumentNullException.ThrowIfNull(species);
         ArgumentNullException.ThrowIfNull(rules);
         ArgumentNullException.ThrowIfNull(trees);
-        var site = new Planting.Site(world, seed);
+        var site = new PlantingSite(world, seed);
         var trunks = new TrunkGrid(trees.Trees);
         var plants = new List<GroundPlant>();
         var u = rules.Understorey;
@@ -106,7 +106,7 @@ public static class Understorey
     // Tree pits: four corner cushions in a square pit, a row along a strip, a ring in a round bed.
     // ---------------------------------------------------------------------------------------------------------
 
-    private static void PitCover(Planting.Site site, SpeciesInfo info, PitCover cover, PlantingLayout trees, List<GroundPlant> plants)
+    private static void PitCover(PlantingSite site, SpeciesInfo info, PitCover cover, PlantingLayout trees, List<GroundPlant> plants)
     {
         foreach (var pit in site.Pits)
         {
@@ -152,7 +152,7 @@ public static class Understorey
     // Borders along the green edges that face a road or a walk: loose clumps and clipped hedge runs.
     // ---------------------------------------------------------------------------------------------------------
 
-    private static void Borders(Planting.Site site, SpeciesTable species, BorderPlanting rule, TrunkGrid trunks, List<GroundPlant> plants)
+    private static void Borders(PlantingSite site, SpeciesTable species, BorderPlanting rule, TrunkGrid trunks, List<GroundPlant> plants)
     {
         for (var g = 0; g < site.Green.Count; g++)
         {
@@ -194,18 +194,18 @@ public static class Understorey
     }
 
     /// <summary>A road or a walk lies within <paramref name="reach"/>: the edge is a verge, not the far side of a lawn.</summary>
-    private static bool Facing(Planting.Site site, Vector2 p, float reach) => site.OnRoad(p, reach) || site.IsPaved(p, reach);
+    private static bool Facing(PlantingSite site, Vector2 p, float reach) => site.OnRoad(p, reach) || site.IsPaved(p, reach);
 
     // ---------------------------------------------------------------------------------------------------------
     // Common.
     // ---------------------------------------------------------------------------------------------------------
 
     /// <summary>Off pavement and roads, clear of buildings, water, courts and car parks, of trunks, on a gentle grade, inside the boundary.</summary>
-    private static bool Clear(Planting.Site site, TrunkGrid trunks, Vector2 p, float trunkGap) =>
+    private static bool Clear(PlantingSite site, TrunkGrid trunks, Vector2 p, float trunkGap) =>
         PlanGeometry.Contains(site.World.Boundary, p) && !site.InPit(p) && !site.IsPaved(p, PaveClearance) && !site.OnRoad(p, PaveClearance) &&
         !site.Blocked(p, BlockClearance) && !trunks.Near(p, trunkGap) && site.World.Terrain.FactsAt(p.X, p.Y).Grade <= MaxGrade;
 
-    private static void Add(Planting.Site site, List<GroundPlant> plants, string key, SpeciesInfo info, int variant, Vector2 p, float lift,
+    private static void Add(PlantingSite site, List<GroundPlant> plants, string key, SpeciesInfo info, int variant, Vector2 p, float lift,
         float yaw, Vector3 size, UnderKind kind)
     {
         var y = site.World.Terrain.HeightAt(p.X, p.Y) + lift;
@@ -245,7 +245,7 @@ public static class Understorey
     /// Points every <paramref name="step"/> m along a parcel's outer ring, with the unit tangent, the unit normal pointing into
     /// the parcel and the arc length.
     /// </summary>
-    private static IEnumerable<(Vector2 P, Vector2 Tangent, Vector2 Inward, float S)> Walk(Planting.Parcel parcel, float step)
+    private static IEnumerable<(Vector2 P, Vector2 Tangent, Vector2 Inward, float S)> Walk(PlantingParcel parcel, float step)
     {
         var ring = parcel.Rings.Outer;
         // Counter-clockwise rings (positive signed area) have the interior on the left of the direction of travel.

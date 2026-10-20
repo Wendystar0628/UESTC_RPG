@@ -60,6 +60,19 @@ internal sealed class TileField
         // Exact up to the largest threshold plus three cells, so contours and their gradients are never clamped.
         var limit = section.MaxIso + 3f * cell + 0.05f;
         var field = new TileField(n, cell, tile.X0, tile.Z0, limit);
+        var (kinds, core, rim, soil) = RasterSources(field, layout, section);
+        WriteSurfaceFields(field, section, kinds, core, rim, soil);
+        SampleTerrainAndTones(field, section, terrain, seed, toneCell);
+        NudgeContours(field.V, section);
+        return field;
+    }
+
+    private static (float[][] Kinds, float[] Core, float[] Rim, float[] Soil) RasterSources(
+        TileField field, GroundLayout layout, GroundSection section)
+    {
+        var n = field.N;
+        var cell = field.Cell;
+        var limit = field.Limit;
         var count = field.S * field.S;
         var kinds = new float[10][];
         for (var k = 0; k < kinds.Length; k++)
@@ -96,6 +109,13 @@ internal sealed class TileField
             });
         }
 
+        return (kinds, core, rim, soil);
+    }
+
+    private static void WriteSurfaceFields(TileField field, GroundSection section,
+        float[][] kinds, float[] core, float[] rim, float[] soil)
+    {
+        var count = field.S * field.S;
         var v = field.V;
         for (var k = 0; k < count; k++)
         {
@@ -122,6 +142,15 @@ internal sealed class TileField
             v[o + Building] = kinds[(int)SurfaceKind.Building][k];
             v[o + LawnEdge] = MathF.Min(MathF.Min(v[o + P], v[o + A] - section.CurbWidth), v[o + Building]);
         }
+    }
+
+    private static void SampleTerrainAndTones(TileField field, GroundSection section, TerrainGrid terrain,
+        uint seed, float toneCell)
+    {
+        var v = field.V;
+        var count = field.S * field.S;
+        var cell = field.Cell;
+        var n = field.N;
         for (var j = 0; j < field.S; j++)
             for (var i = 0; i < field.S; i++)
                 v[(j * field.S + i) * Count + H] = terrain.At(field.X(i), field.Z(j));
@@ -149,6 +178,10 @@ internal sealed class TileField
                     v[(j * field.S + i) * Count + Tone] = CellSplit.Lerp(T(0, 0), T(1, 0), T(0, 1), T(1, 1), u, w);
                 }
         }
+    }
+
+    private static void NudgeContours(float[] v, GroundSection section)
+    {
         // Building coverage keeps exact boundary zeros: treating its aligned corner as outside can leave a lawn triangle
         // entirely inside the footprint. It uses closed-set coverage, unlike the height-step contours below.
         // No height-step contour may pass (almost) exactly through a lattice point: a contour lying on a lattice line would never be
@@ -162,7 +195,6 @@ internal sealed class TileField
             foreach (var iso in isos)
                 if (MathF.Abs(v[k] - iso) < 1e-6f) v[k] = iso + 1e-5f;
         }
-        return field;
     }
 
     /// <summary>Lattice index range [lo, hi] covering coordinates in [a, b], clipped to the lattice.</summary>

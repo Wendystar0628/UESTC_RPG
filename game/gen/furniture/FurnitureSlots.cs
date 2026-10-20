@@ -1,20 +1,16 @@
 using System.Numerics;
 using Campus.Contracts;
 using Campus.Contracts.Parts;
-using Campus.Gen.Parts.Street;
-using Campus.Gen.World;
 using S = Campus.Gen.Furniture.FurnitureStyle;
+using static Campus.Gen.Furniture.FurniturePlacement;
+using static Campus.Gen.Furniture.FurniturePlanner;
+using static Campus.Gen.Furniture.FurniturePavingFit;
 
 namespace Campus.Gen.Furniture;
 
-public static partial class FurniturePlanner
+/// <summary>Admits bench, bin and amenity footprints on or beside pedestrian paving.</summary>
+internal static class FurnitureSlots
 {
-    /// <summary>
-    /// A small entity standing at a walk's edge, facing the walk, with the bay that joins it to the walk (or on a plaza, on the paving
-    /// itself: no bay where the paving is level enough), and the height it stands at.
-    /// </summary>
-    private readonly record struct WalkFit(Vector2 Centre, Vector2 Facing, (Vector2 A, Vector2 B, float R) Ends, Pad? Bay, float Top);
-
     /// <summary>
     /// A small entity at arc length <paramref name="at"/> of a walk, on side <paramref name="bside"/> of it (along the walk's left
     /// normal), its front <see cref="FurnitureStyle.WalkGap"/> off the walk's edge and facing the walk, if it fits: free of
@@ -22,10 +18,10 @@ public static partial class FurniturePlanner
     /// off carriageways; a bench (<paramref name="facesWalk"/>) with no carriageway <see cref="FurnitureStyle.FaceClear"/> ahead.
     /// Its bay reaches <see cref="FurnitureStyle.PadJoin"/> over the walk's edge and <see cref="FurnitureStyle.BayBehind"/> behind it.
     /// </summary>
-    private static WalkFit? WalkSlot(StreetSite site, StreetSite.Run path, float at, float bside, NetworkLine walk, FurnitureParams p, bool facesWalk)
+    internal static WalkFit? WalkSlot(StreetSite site, StreetNetwork.Run path, float at, float bside, NetworkLine walk, FurnitureParams p, bool facesWalk)
     {
         if (path.Normal(at) is not { } n) return null;
-        var whalf = StreetSite.HalfWidth(walk);
+        var whalf = StreetNetwork.HalfWidth(walk);
         var away = n * bside;
         var centre = path.At(at) + away * (whalf + S.WalkGap + p.Depth * 0.5f);
         return Slot(site, centre, -away, p, facesWalk, walk).Fit;
@@ -37,7 +33,7 @@ public static partial class FurniturePlanner
     /// (<paramref name="walk"/>: the network walk the paving is, which the entity only has to stay off the surface of). A refusal
     /// names the rule that refused it.
     /// </summary>
-    private static (WalkFit? Fit, string? Reason) PavingSlot(StreetSite site, Vector2 edge, Vector2 inward, NetworkLine? walk, BoxPartParams p, bool facesWalk) =>
+    internal static (WalkFit? Fit, string? Reason) PavingSlot(StreetSite site, Vector2 edge, Vector2 inward, NetworkLine? walk, BoxPartParams p, bool facesWalk) =>
         Slot(site, edge - inward * (S.WalkGap + p.Depth * 0.5f), inward, p, facesWalk, walk);
 
     /// <summary>
@@ -76,7 +72,7 @@ public static partial class FurniturePlanner
     {
         if (site.PlantingNear(back, S.PlazaBackPlanting)) return true;
         var out1 = back - inward * 1f;
-        return !site.OnPavedGround(out1) && site.Blocker(out1, 0.2f, outlineClear: S.PlazaWallClear) is null;
+        return !site.Paving.OnPavedGround(out1) && site.Blocker(out1, 0.2f, outlineClear: S.PlazaWallClear) is null;
     }
 
     /// <summary>
@@ -86,7 +82,7 @@ public static partial class FurniturePlanner
     /// rules hold: free of outlines, trees, rows and placed things, <see cref="FurnitureStyle.RoadSetback"/> off carriageways, no carriageway
     /// <see cref="FurnitureStyle.FaceClear"/> ahead. It stands on the paving, a plinth only where the paving is steeper than 5%.
     /// </summary>
-    private static (WalkFit? Fit, string? Reason) PlazaSlot(StreetSite site, Vector2 edge, Vector2 inward, FurnitureParams p, int tier = 0)
+    internal static (WalkFit? Fit, string? Reason) PlazaSlot(StreetSite site, Vector2 edge, Vector2 inward, FurnitureParams p, int tier = 0)
     {
         var centre = edge + inward * (S.PlazaBenchClear + p.Depth * 0.5f);
         var tangent = new Vector2(inward.Y, -inward.X);
@@ -100,7 +96,7 @@ public static partial class FurniturePlanner
         // never sits across the line itself.
         for (var u = -1; u <= 1; u++)
             for (var v = -1; v <= 1; v++)
-                if (!site.OnPlaza(feet + tangent * (u * p.Width * 0.5f) + inward * (v * (p.Depth + S.FeetReach) * 0.5f))) return (null, "on a walk, not a plaza");
+                if (!site.Paving.OnPlaza(feet + tangent * (u * p.Width * 0.5f) + inward * (v * (p.Depth + S.FeetReach) * 0.5f))) return (null, "on a walk, not a plaza");
         // Backed onto planting, never onto bare paving or a wall (Opus review 13c2c): a tree or tree row behind either end or the middle.
         var behind = -inward * (p.Depth * 0.5f + S.PlazaBenchClear);
         // Tier 0: backed on lawn or planting. Tier 1 (no such edge): beside a tree, a tree or row within PlazaBesideTree. Tier 2 (no tree
@@ -114,7 +110,7 @@ public static partial class FurniturePlanner
             for (var u = -1; u <= 1; u++)
             {
                 var q = centre + inward * (p.Depth * 0.5f + S.FeetReach + d) + tangent * (u * p.Width * 0.5f);
-                if (!site.OnPavedGround(q)) return (null, $"less than {Num(S.PlazaPass)} m of paving in front");
+                if (!site.Paving.OnPavedGround(q)) return (null, $"less than {Num(S.PlazaPass)} m of paving in front");
                 if (site.Blocker(q, 0f, walksPass: true) is { } ahead) return (null, $"{ahead} within {Num(S.PlazaPass)} m in front");
             }
         foreach (var q in new[] { ends.Item1, centre, ends.Item2 })
@@ -144,10 +140,10 @@ public static partial class FurniturePlanner
     /// things, <see cref="FurnitureStyle.RoadSetback"/> off carriageways, none <see cref="FurnitureStyle.FaceClear"/> ahead). It stands on
     /// the paving, a plinth only where the paving is steeper than 5%.
     /// </summary>
-    private static (WalkFit? Fit, string? Reason) WalkEdgeSlot(StreetSite site, Vector2 edge, Vector2 inward, NetworkLine? walk, FurnitureParams p)
+    internal static (WalkFit? Fit, string? Reason) WalkEdgeSlot(StreetSite site, Vector2 edge, Vector2 inward, NetworkLine? walk, FurnitureParams p)
     {
         if (walk is null) return (null, "not a walk's edge");
-        var width = 2f * StreetSite.HalfWidth(walk);
+        var width = 2f * StreetNetwork.HalfWidth(walk);
         if (width < S.NodeWalkMin) return (null, $"on a walk {Fixed(width)} m wide, under {Num(S.NodeWalkMin)} m");
         if (width - (S.WalkBenchClear + p.Depth + S.FeetReach) < S.NodeWalkPass) return (null, $"less than {Num(S.NodeWalkPass)} m left to pass");
         var centre = edge + inward * (S.WalkBenchClear + p.Depth * 0.5f);
@@ -157,7 +153,7 @@ public static partial class FurniturePlanner
         var feet = centre + inward * (S.FeetReach * 0.5f);
         for (var u = -1; u <= 1; u++)
             for (var v = -1; v <= 1; v++)
-                if (!site.OnPavedGround(feet + tangent * (u * p.Width * 0.5f) + inward * (v * (p.Depth + S.FeetReach) * 0.5f))) return (null, "not whole on paved ground");
+                if (!site.Paving.OnPavedGround(feet + tangent * (u * p.Width * 0.5f) + inward * (v * (p.Depth + S.FeetReach) * 0.5f))) return (null, "not whole on paved ground");
         if (site.Blocker(ends.Item1, ends.Item2, ends.Item3, walk, onBeside: true) is { } blocker) return (null, $"blocked by {blocker}");
         foreach (var q in new[] { ends.Item1, centre, ends.Item2 })
         {
@@ -175,11 +171,5 @@ public static partial class FurniturePlanner
                 if (terrain.HeightAt(q.X, q.Y) > paving + S.PlazaBankRise) return (null, "against a bank");
             }
         return ground.Plinth ? (new WalkFit(centre, inward, ends, ground, ground.Top), null) : (new WalkFit(centre, inward, ends, null, ground.Top - S.PadProud), null);
-    }
-
-    private static FurnitureItem Placed(string key, FurnitureKind kind, string part, BoxPartParams p, WalkFit fit, IReadOnlyList<Collider> local)
-    {
-        var item = Item(key, kind, part, p, Frame(fit.Centre, fit.Facing, fit.Top), local, []);
-        return fit.Bay is { } bay ? item with { Pad = bay, Colliders = [.. item.Colliders, bay.Collider()] } : item;
     }
 }

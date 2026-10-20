@@ -37,11 +37,7 @@ public static class CaptureSequence
             var previousPhase = started;
             LogPhase("start");
             cancellationToken.ThrowIfCancellationRequested();
-            if (id == "FRONTIS") throw new NotSupportedException("FRONTIS capture requires the unconnected frontispiece presentation.");
-            var pose = id == "T0"
-                ? shotOptions.Title ? context.Descriptor.Title?.T0 ?? throw new InvalidDataException("This map has no title pose.")
-                    : throw new ArgumentException("T0 requires --title=1.")
-                : ReviewPoseResolver.Resolve(id, context);
+            var pose = ResolvePose(id, shotOptions, context);
             await using var cover = loading.Show();
             await cover.Covered;
             cancellationToken.ThrowIfCancellationRequested();
@@ -49,16 +45,8 @@ public static class CaptureSequence
             await KernelServices.Get<ITerrainPreparation>().PrepareRegion(context, new(terrainPoint, terrainPoint), cancellationToken);
             if (id != "T0") validatePose?.Invoke(pose);
             LogPhase("terrain-ready");
-            if (AppBoot.FixedShots.Count > 0) CaptureWorldState.Start(shotOptions, context.Descriptor);
-            rig.SetPose(pose);
-            syncCamera();
-            var appliedPose = rig.Pose;
-            producers.PrepareCapture(appliedPose);
-            var medium = context.World.Spatial.MediumAt(appliedPose.Position);
-            NavSpace? space = medium is { Kind: MediumKind.Interior, Feature: { } building }
-                ? new(building, checked((short)medium.Storey)) : null;
-            // Both outdoor rings and the current indoor floor use the production destination barrier.
-            var arrival = runtime.Arrive(appliedPose, rig.Mode, space);
+            var appliedPose = ApplyPose(pose, shotOptions, context, rig, syncCamera, producers);
+            var arrival = BeginArrival(context, appliedPose, runtime, rig);
             void ReportProgress() => cover.Report(arrival.Completed, arrival.Total);
             arrival.ProgressChanged += ReportProgress;
             try
@@ -101,5 +89,34 @@ public static class CaptureSequence
                 previousPhase = now;
             }
         }
+    }
+
+    private static Pose ResolvePose(string id, BootRunOptions options, IMapContext context)
+    {
+        if (id == "FRONTIS") throw new NotSupportedException("FRONTIS capture requires the unconnected frontispiece presentation.");
+        return id == "T0"
+            ? options.Title ? context.Descriptor.Title?.T0 ?? throw new InvalidDataException("This map has no title pose.")
+                : throw new ArgumentException("T0 requires --title=1.")
+            : ReviewPoseResolver.Resolve(id, context);
+    }
+
+    private static Pose ApplyPose(Pose pose, BootRunOptions options, IMapContext context,
+        ICameraRig rig, Action syncCamera, ViewContentReadiness producers)
+    {
+        if (AppBoot.FixedShots.Count > 0) CaptureWorldState.Start(options, context.Descriptor);
+        rig.SetPose(pose);
+        syncCamera();
+        var appliedPose = rig.Pose;
+        producers.PrepareCapture(appliedPose);
+        return appliedPose;
+    }
+
+    private static IMapArrival BeginArrival(IMapContext context, Pose appliedPose, IMapRuntime runtime, ICameraRig rig)
+    {
+        var medium = context.World.Spatial.MediumAt(appliedPose.Position);
+        NavSpace? space = medium is { Kind: MediumKind.Interior, Feature: { } building }
+            ? new(building, checked((short)medium.Storey)) : null;
+        // Both outdoor rings and the current indoor floor use the production destination barrier.
+        return runtime.Arrive(appliedPose, rig.Mode, space);
     }
 }

@@ -18,15 +18,15 @@ public partial class SettingsCard : Control
     private readonly Dictionary<SettingsPage, IEnumerator> _builders = [];
     private readonly List<TechButton> _tabs = [];
     private UiKit _kit = null!;
-    private IInputRouter _router = null!;
     private HudSettings _settings = null!;
     private UiPageFrame _frame = null!;
     private VBoxContainer _pageActions = null!;
     private TechButton _toTitle = null!;
     private IDisposable? _lock;
     private SettingsPage _page = SettingsPage.Graphics;
-    private string? _rebindAction;
-    private IDisposable? _rebindLock;
+    private SettingsCardContent _content = null!;
+    private SettingsCardGraphics _graphics = null!;
+    private SettingsCardBindings _bindings = null!;
     private Tween? _opening;
     private bool _built;
     private int _fillRevision;
@@ -35,15 +35,19 @@ public partial class SettingsCard : Control
     public event Action? QuitRequested;
     public event Action? ToTitleRequested;
     public SettingsPage Page => _page;
-    public bool Capturing => _rebindAction is not null;
+    public bool Capturing => _bindings.Capturing;
 
     public static SettingsCard Create(UiKit kit, Control parent, HudSettings settings, IInputRouter router)
     {
         var card = new SettingsCard
         {
-            _kit = kit, _settings = settings, _router = router,
+            _kit = kit, _settings = settings,
             MouseFilter = MouseFilterEnum.Ignore, Visible = false,
         };
+        card._bindings = new SettingsCardBindings(kit, router);
+        card._content = new SettingsCardContent(kit, settings, card._bindings);
+        card._graphics = new SettingsCardGraphics(kit);
+        card._bindings.BindingsChanged += card.InvalidateKeys;
         parent.AddChild(card);
         card.SetAnchorsAndOffsetsPreset(LayoutPreset.FullRect);
         return card;
@@ -114,18 +118,18 @@ public partial class SettingsCard : Control
         if (!Visible)
         {
             Visible = true;
-            _lock ??= Lock(InputLockReason.Menu);
+            _lock ??= Campus.Kernel.Registry.Kernel.Get<ICameraRig>().LockInput(InputLockReason.Menu);
             Modulate = new Color(1, 1, 1, 0);
             _opening?.Kill();
             _opening = CreateTween();
             _opening.TweenProperty(this, "modulate:a", 1f, _kit.Motion.Fade(0.26f));
         }
-        RefreshGraphics();
+        _graphics.Refresh();
     }
 
     public void Close()
     {
-        EndCapture();
+        _bindings.EndCapture();
         _opening?.Kill();
         _opening = null;
         Visible = false;
@@ -148,12 +152,8 @@ public partial class SettingsCard : Control
         _pages.Clear();
         _filled.Clear();
         _tabs.Clear();
-        _rebindRows.Clear();
-        _knobSync.Clear();
-        _preset = null;
-        _applyStatus = null;
-        _apply = null;
-        _graphicsActions = null;
+        _bindings.Release();
+        _graphics.Release();
         _built = false;
     }
 
@@ -165,12 +165,12 @@ public partial class SettingsCard : Control
         {
             IEnumerable steps = page switch
             {
-                SettingsPage.Keys => BuildKeys(content),
-                SettingsPage.General => BuildGeneral(content),
-                SettingsPage.Graphics => BuildGraphics(content),
-                SettingsPage.Sound => BuildSound(content),
-                SettingsPage.Rebind => BuildRebind(content),
-                SettingsPage.Licenses => BuildLicenses(content),
+                SettingsPage.Keys => _content.BuildKeys(content),
+                SettingsPage.General => _content.BuildGeneral(content),
+                SettingsPage.Graphics => _graphics.Build(content, _pageActions),
+                SettingsPage.Sound => _content.BuildSound(content),
+                SettingsPage.Rebind => _bindings.Build(content),
+                SettingsPage.Licenses => _content.BuildLicenses(content),
                 _ => throw new InvalidOperationException("Unknown settings page."),
             };
             _builders[page] = builder = steps.GetEnumerator();
@@ -188,9 +188,26 @@ public partial class SettingsCard : Control
                 _filled.Add(page);
                 content.Visible = true;
                 _pageActions.Visible = page == SettingsPage.Graphics;
-                RefreshGraphics();
+                _graphics.Refresh();
                 return;
             }
+        }
+    }
+
+    public string KeyLabel(string action) => _bindings.KeyLabel(action);
+
+    /// <summary>HudRoot 在捕获期间把下一个按键交到这里；Esc 取消，冲突返回提示。</summary>
+    public string? Capture(InputEventKey key) => _bindings.Capture(key);
+
+    private void InvalidateKeys()
+    {
+        // 键位页如已打开过，同步反映本次改键；不重建可交互的改键行。
+        if (!_filled.Remove(SettingsPage.Keys)) return;
+        var content = _pages[SettingsPage.Keys];
+        foreach (var child in content.GetChildren())
+        {
+            content.RemoveChild(child);
+            child.QueueFree();
         }
     }
 
@@ -198,13 +215,20 @@ public partial class SettingsCard : Control
 
     private void Show(SettingsPage page)
     {
-        if (_page != page) EndCapture();
+        if (_page != page) _bindings.EndCapture();
         _page = page;
         _ = Fill(page, ++_fillRevision);
         foreach (var (p, content) in _pages) content.Visible = p == page && _filled.Contains(p);
         for (var i = 0; i < _tabs.Count; i++) _tabs[i].Selected = Order[i] == page;
-        if (_graphicsActions is not null) _graphicsActions.Visible = page == SettingsPage.Graphics;
+        _graphics.ShowActions(page == SettingsPage.Graphics);
         _pageActions.Visible = page == SettingsPage.Graphics && _filled.Contains(page);
         _frame.Scroll.ScrollVertical = 0;
     }
+
+    private static string Key(SettingsPage page) => page switch
+    {
+        SettingsPage.Keys => "keys", SettingsPage.General => "general", SettingsPage.Graphics => "graphics",
+        SettingsPage.Sound => "sound", SettingsPage.Rebind => "rebind", SettingsPage.Licenses => "licenses",
+        _ => throw new ArgumentOutOfRangeException(nameof(page)),
+    };
 }

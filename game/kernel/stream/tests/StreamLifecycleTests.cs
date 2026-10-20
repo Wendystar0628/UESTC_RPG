@@ -26,14 +26,14 @@ public sealed class StreamLifecycleTests
             var catalog = ModuleTileCatalog.Build(new(new Dictionary<string, IReadOnlyList<TileKey>>(), []));
             BindUnrenderedCatalog(director, context, Task.FromResult(catalog));
             var interiors = new InteriorStream(null!, null!, null!, null!, _ => { }, false); interiors.Load(context);
-            Set(director, "_catalog", catalog); Set(director, "_maps", new TestMapService()); Set(director, "_interiors", interiors);
-            Set(director, "_destinationConsumed", true); Set(director, "_destinationPlanned", true); Set(director, "_selectionApplied", true);
+            Set(Field(director, "_preparation")!, "_catalog", catalog); Set(director, "_maps", new TestMapService()); Set(director, "_interiors", interiors);
+            Set(Field(director, "_selection")!, "_destinationConsumed", true); Set(Field(director, "_selection")!, "_destinationPlanned", true); Set(Field(director, "_selection")!, "_selectionApplied", true);
             if (!director.DestinationReady || director.ViewReady)
                 throw new InvalidOperationException("The consumed arrival inherited readiness from an unrelated unprepared view.");
             var target = new Pose(new(1, 2, 3), 0, 0);
             director.Prefetch(target, ViewMode.Fly);
             // A mount finishing for the old view must not certify this newly registered destination.
-            Set(director, "_selectionApplied", true);
+            Set(Field(director, "_selection")!, "_selectionApplied", true);
             if (director.Destination?.Pose != target || !director.HasPendingDestination || director.DestinationReady || director.ViewReady)
                 throw new InvalidOperationException("A pending unprepared destination inherited the previous view's readiness.");
             var destination = director.Destination;
@@ -61,31 +61,31 @@ public sealed class StreamLifecycleTests
             var pose = new Pose(new(64, 2, 64), 0, 0, 60);
             var catalog = ModuleTileCatalog.Build(new(new Dictionary<string, IReadOnlyList<TileKey>>(), []));
             BindUnrenderedCatalog(director, context, Task.FromResult(catalog));
-            Set(director, "_catalog", catalog); Set(director, "_maps", new TestMapService());
+            Set(Field(director, "_preparation")!, "_catalog", catalog); Set(director, "_maps", new TestMapService());
             Set(director, "_camera", new TestCameraRig(pose: pose));
-            Set(director, "_plannedContext", context); Set(director, "_plannedWorld", context.World);
-            Set(director, "_plannedPose", pose); Set(director, "_plannedLive", true); Set(director, "_planReady", true);
-            Set(director, "_selectionApplied", true); Set(director, "_destinationPlanned", true);
-            Set(director, "_destination", pose); Set(director, "_destinationMode", ViewMode.Fly);
-            var required = (HashSet<StreamTile>)Field(director, "_viewRequired")!;
-            var refined = (HashSet<StreamTile>)Field(director, "_refined")!;
+            Set(Field(director, "_selection")!, "_plannedContext", context); Set(Field(director, "_selection")!, "_plannedWorld", context.World);
+            Set(Field(director, "_selection")!, "_plannedPose", pose); Set(Field(director, "_selection")!, "_plannedLive", true); Set(Field(director, "_selection")!, "_planReady", true);
+            Set(Field(director, "_selection")!, "_selectionApplied", true); Set(Field(director, "_selection")!, "_destinationPlanned", true);
+            Set(Field(director, "_selection")!, "_destination", pose); Set(Field(director, "_selection")!, "_destinationMode", ViewMode.Fly);
+            var required = (HashSet<StreamTile>)Field(Field(director, "_selection")!, "_viewRequired")!;
+            var refined = (HashSet<StreamTile>)Field(Field(director, "_selection")!, "_refined")!;
             var tree = new LodTree(new(new(0, 0, 0), new(128, 10, 128)), new());
-            Set(director, "_tree", tree);
+            Set(Field(director, "_selection")!, "_tree", tree);
             tree.Select(pose.Position, 0, 1080, pose.FovDeg!.Value, LodLevel.L1, required, refined);
-            ((HashSet<StreamTile>)Field(director, "_destinationRequired")!).UnionWith(required);
-            ((HashSet<StreamTile>)Field(director, "_destinationRefined")!).UnionWith(refined);
+            ((HashSet<StreamTile>)Field(Field(director, "_selection")!, "_destinationRequired")!).UnionWith(required);
+            ((HashSet<StreamTile>)Field(Field(director, "_selection")!, "_destinationRefined")!).UnionWith(refined);
             var fine = required.Single(tile => tile.Level == LodLevel.L1);
             var ready = required.Where(tile => tile != fine).ToHashSet();
-            var getGroup = typeof(StreamDirector).GetMethod("GetGroup", BindingFlags.Instance | BindingFlags.NonPublic)!;
+            var getGroup = Field(director, "_residency")!.GetType().GetMethod("GetGroup", BindingFlags.Instance | BindingFlags.NonPublic)!;
             object? fineGroup = null;
             foreach (var tile in required)
             {
-                var group = getGroup.Invoke(director, [tile])!;
+                var group = getGroup.Invoke(Field(director, "_residency"), [tile])!;
                 group.GetType().GetField("GeometryRequested")!.SetValue(group, true);
                 group.GetType().GetField("Mounted")!.SetValue(group, ready.Contains(tile));
                 if (tile == fine) fineGroup = group;
             }
-            var visibility = (TileVisibility)Field(director, "_visibility")!;
+            var visibility = (TileVisibility)Field(Field(director, "_selection")!, "_visibility")!;
             var visible = new HashSet<StreamTile>();
             tree.ResolveVisible(refined, ready.Contains, visible);
             visibility.Apply(visible, 0, false, (_, _, _) => { });
@@ -102,7 +102,7 @@ public sealed class StreamLifecycleTests
             var children = tree.Children(fine);
             foreach (var child in children)
             {
-                var group = getGroup.Invoke(director, [child])!;
+                var group = getGroup.Invoke(Field(director, "_residency"), [child])!;
                 group.GetType().GetField("GeometryRequested")!.SetValue(group, true);
                 group.GetType().GetField("Mounted")!.SetValue(group, true);
             }
@@ -114,17 +114,17 @@ public sealed class StreamLifecycleTests
                 throw new InvalidOperationException("Complete finer coverage failed because its selected parent was no longer drawn.");
 
             // Both orderings share the real display frontier: current finer, then destination finer.
-            var destinationRequired = (HashSet<StreamTile>)Field(director, "_destinationRequired")!;
-            var destinationRefined = (HashSet<StreamTile>)Field(director, "_destinationRefined")!;
-            var resolve = typeof(StreamDirector).GetMethod("ResolveVisible", BindingFlags.Instance | BindingFlags.NonPublic)!;
+            var destinationRequired = (HashSet<StreamTile>)Field(Field(director, "_selection")!, "_destinationRequired")!;
+            var destinationRefined = (HashSet<StreamTile>)Field(Field(director, "_selection")!, "_destinationRefined")!;
+            var resolve = Field(director, "_selection")!.GetType().GetMethod("ResolveVisible", BindingFlags.Instance | BindingFlags.NonPublic)!;
             foreach (var currentFiner in new[] { true, false })
             {
                 tree.Select(pose.Position, 0, 1080, pose.FovDeg.Value,
                     currentFiner ? LodLevel.L0 : LodLevel.L1, required, refined);
                 tree.Select(pose.Position, 0, 1080, pose.FovDeg.Value,
                     currentFiner ? LodLevel.L1 : LodLevel.L0, destinationRequired, destinationRefined);
-                resolve.Invoke(director, null);
-                var displayed = (HashSet<StreamTile>)Field(director, "_visible")!;
+                resolve.Invoke(Field(director, "_selection"), null);
+                var displayed = (HashSet<StreamTile>)Field(Field(director, "_selection")!, "_visible")!;
                 visibility.Apply(displayed, 0, false, (_, _, _) => { });
                 if (!displayed.SetEquals(children) || !director.ViewReady || !director.DestinationReady)
                     throw new InvalidOperationException("An active destination and current eye could not share the finer complete display frontier.");
@@ -145,35 +145,35 @@ public sealed class StreamLifecycleTests
             var pose = new Pose(new(-193, 158, 111), 0, -68, 60);
             var catalog = ModuleTileCatalog.Build(new(new Dictionary<string, IReadOnlyList<TileKey>>(), []));
             BindUnrenderedCatalog(director, context, Task.FromResult(catalog));
-            Set(director, "_catalog", catalog); Set(director, "_maps", new TestMapService());
+            Set(Field(director, "_preparation")!, "_catalog", catalog); Set(director, "_maps", new TestMapService());
             Set(director, "_camera", new TestCameraRig(pose: pose));
-            Set(director, "_plannedContext", context); Set(director, "_plannedWorld", context.World);
-            Set(director, "_plannedPose", pose); Set(director, "_plannedLive", true); Set(director, "_planReady", true);
-            Set(director, "_selectionApplied", true); Set(director, "_destinationPlanned", true);
-            Set(director, "_destination", pose); Set(director, "_destinationMode", ViewMode.Fly);
-            var required = (HashSet<StreamTile>)Field(director, "_viewRequired")!;
-            var refined = (HashSet<StreamTile>)Field(director, "_refined")!;
+            Set(Field(director, "_selection")!, "_plannedContext", context); Set(Field(director, "_selection")!, "_plannedWorld", context.World);
+            Set(Field(director, "_selection")!, "_plannedPose", pose); Set(Field(director, "_selection")!, "_plannedLive", true); Set(Field(director, "_selection")!, "_planReady", true);
+            Set(Field(director, "_selection")!, "_selectionApplied", true); Set(Field(director, "_selection")!, "_destinationPlanned", true);
+            Set(Field(director, "_selection")!, "_destination", pose); Set(Field(director, "_selection")!, "_destinationMode", ViewMode.Fly);
+            var required = (HashSet<StreamTile>)Field(Field(director, "_selection")!, "_viewRequired")!;
+            var refined = (HashSet<StreamTile>)Field(Field(director, "_selection")!, "_refined")!;
             var tree = new LodTree(new(new(-512, 0, -512), new(512, 10, 512)), new());
-            Set(director, "_tree", tree);
+            Set(Field(director, "_selection")!, "_tree", tree);
             tree.Select(pose.Position, 0, 1080, pose.FovDeg!.Value, LodLevel.L0, required, refined);
-            ((HashSet<StreamTile>)Field(director, "_destinationRequired")!).UnionWith(required);
-            ((HashSet<StreamTile>)Field(director, "_destinationRefined")!).UnionWith(refined);
+            ((HashSet<StreamTile>)Field(Field(director, "_selection")!, "_destinationRequired")!).UnionWith(required);
+            ((HashSet<StreamTile>)Field(Field(director, "_selection")!, "_destinationRefined")!).UnionWith(refined);
             var frontier = required.Where(tile => !refined.Contains(tile)).ToHashSet();
             if (frontier.Select(tile => tile.Level).Distinct().Count() < 2)
                 throw new InvalidOperationException("The elevated fixture must select a mixed detail frontier.");
-            var getGroup = typeof(StreamDirector).GetMethod("GetGroup", BindingFlags.Instance | BindingFlags.NonPublic)!;
-            var groups = required.ToDictionary(tile => tile, tile => getGroup.Invoke(director, [tile])!);
+            var getGroup = Field(director, "_residency")!.GetType().GetMethod("GetGroup", BindingFlags.Instance | BindingFlags.NonPublic)!;
+            var groups = required.ToDictionary(tile => tile, tile => getGroup.Invoke(Field(director, "_residency"), [tile])!);
             foreach (var (tile, group) in groups)
             {
                 group.GetType().GetField("GeometryRequested")!.SetValue(group, true);
                 group.GetType().GetField("Mounted")!.SetValue(group, tile == StreamTile.Root || frontier.Contains(tile));
             }
-            var resolve = typeof(StreamDirector).GetMethod("ResolveVisible", BindingFlags.Instance | BindingFlags.NonPublic)!;
-            var visibility = (TileVisibility)Field(director, "_visibility")!;
+            var resolve = Field(director, "_selection")!.GetType().GetMethod("ResolveVisible", BindingFlags.Instance | BindingFlags.NonPublic)!;
+            var visibility = (TileVisibility)Field(Field(director, "_selection")!, "_visibility")!;
             void Present()
             {
-                resolve.Invoke(director, null);
-                visibility.Apply((HashSet<StreamTile>)Field(director, "_visible")!, 0, false, (_, _, _) => { });
+                resolve.Invoke(Field(director, "_selection"), null);
+                visibility.Apply((HashSet<StreamTile>)Field(Field(director, "_selection")!, "_visible")!, 0, false, (_, _, _) => { });
             }
             Present();
             if (!visibility.Drawn.SetEquals(frontier) || !director.ViewReady || !director.DestinationReady)
@@ -250,7 +250,7 @@ public sealed class StreamLifecycleTests
                 if (fail) work.SetException(new InvalidOperationException("Retired catalog failed."));
                 else work.SetResult(ModuleTileCatalog.Build(new(new Dictionary<string, IReadOnlyList<TileKey>>(), [])));
                 director._Process(0);
-                if (!director.IsUnloaded || director.ResidentReady || director.Error is not null || Field(director, "_catalog") is not null)
+                if (!director.IsUnloaded || director.ResidentReady || director.Error is not null || Field(Field(director, "_preparation")!, "_catalog") is not null)
                     throw new InvalidOperationException("A retired catalog became active map data or an active-map error.");
                 director._ExitTree();
             }
@@ -272,12 +272,12 @@ public sealed class StreamLifecycleTests
                 var work = new TaskCompletionSource<ModuleTileCatalog>();
                 BindUnrenderedCatalog(director, context, work.Task);
                 director._ExitTree();
-                if (Field(director, "_catalogTask") is not null) throw new InvalidOperationException("Exited node retained catalog publication ownership.");
+                if (Field(Field(director, "_preparation")!, "_catalogTask") is not null) throw new InvalidOperationException("Exited node retained catalog publication ownership.");
                 if (fail) work.SetException(new InvalidOperationException("Exited catalog failed."));
                 else work.SetResult(ModuleTileCatalog.Build(new(new Dictionary<string, IReadOnlyList<TileKey>>(), [])));
                 await Task.Yield();
                 director._Process(0);
-                if (director.ResidentReady || Field(director, "_catalog") is not null)
+                if (director.ResidentReady || Field(Field(director, "_preparation")!, "_catalog") is not null)
                     throw new InvalidOperationException("A late result published after the real stream node exited.");
             }
             finally { director.Free(); }
@@ -287,14 +287,14 @@ public sealed class StreamLifecycleTests
     private static void BindUnrenderedCatalog(StreamDirector director, IMapContext context, Task<ModuleTileCatalog> task)
     {
         // Drive the actual node's CPU lifecycle without constructing a renderer, scene or parallel resident.
-        Set(director, "_context", context); Set(director, "_mapGeneration", 1L); Set(director, "_catalogGeneration", 1L);
-        Set(director, "_catalogTask", task); Set(director, "_mount", new StreamMountQueue(() => 0));
-        Set(director, "_visibility", new TileVisibility(.25f)); Set(director, "_materials", new StreamMaterials(null!, null!));
+        Set(director, "_context", context); Set(director, "_mapGeneration", 1L); Set(Field(director, "_preparation")!, "_catalogGeneration", 1L);
+        Set(Field(director, "_preparation")!, "_catalogTask", task); Set(director, "_mount", new StreamMountQueue(() => 0));
+        Set(Field(director, "_selection")!, "_visibility", new TileVisibility(.25f)); Set(Field(director, "_residency")!, "_materials", new StreamMaterials(null!, null!));
     }
-    private static object? Field(StreamDirector target, string name) =>
-        typeof(StreamDirector).GetField(name, BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(target);
-    private static void Set(StreamDirector target, string name, object value) =>
-        typeof(StreamDirector).GetField(name, BindingFlags.Instance | BindingFlags.NonPublic)!.SetValue(target, value);
+    private static object? Field(object target, string name) =>
+        target.GetType().GetField(name, BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(target);
+    private static void Set(object target, string name, object value) =>
+        target.GetType().GetField(name, BindingFlags.Instance | BindingFlags.NonPublic)!.SetValue(target, value);
     private static IMapContext Context() => new TestMapContext(BackdropInputsTests.Descriptor(), new FakeWorld { Boundary = new([]) },
         BuildInputSnapshot.Freeze(new Dictionary<string, ReadOnlyMemory<byte>>(), "fixture"), "res://fixture/");
 }

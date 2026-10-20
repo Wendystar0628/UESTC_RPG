@@ -45,16 +45,16 @@ internal static class Atrium
         foreach (var (a, b) in f.OctagonRuns(f.VoidApothem + S.RailThick * 0.5f, Gaps))
         {
             Rail(sink, a, b, y);
-            sink.Wall(a, b, S.RailThick * 0.5f, y, y + WalkRules.BarrierHeight, SurfaceTag.Barrier, FootMat.WoodDoor);
+            sink.Collision.Wall(a, b, S.RailThick * 0.5f, y, y + WalkRules.BarrierHeight, SurfaceTag.Barrier, FootMat.WoodDoor);
         }
     }
 
     /// <summary>White curb and cap with a red-brown wood infill panel (白色板边加红褐木格栅, solid panel by default).</summary>
     public static void Rail(InteriorGeometry sink, Vector2 a, Vector2 b, float y)
     {
-        sink.Run(S.Wall(S.WallWhite), a, b, S.RailThick, y - 0.01f, y + S.RailCurb);
-        sink.Run(S.Trim(S.Wood), a, b, S.RailInfill, y + S.RailCurb, y + S.RailHeight - S.RailCap);
-        sink.Run(S.Trim(S.WallWhite), a, b, S.RailCapWidth, y + S.RailHeight - S.RailCap, y + S.RailHeight);
+        sink.Shapes.Run(S.Wall(S.WallWhite), a, b, S.RailThick, y - 0.01f, y + S.RailCurb);
+        sink.Shapes.Run(S.Trim(S.Wood), a, b, S.RailInfill, y + S.RailCurb, y + S.RailHeight - S.RailCap);
+        sink.Shapes.Run(S.Trim(S.WallWhite), a, b, S.RailCapWidth, y + S.RailHeight - S.RailCap, y + S.RailHeight);
     }
 
     private static void Columns(LibraryFrame f, int storey, InteriorGeometry sink)
@@ -66,8 +66,8 @@ internal static class Atrium
             var u = LibraryFrame.Angle(f.Front + (k + 0.5f) * LibraryFrame.Step);
             var c = f.Centre + u * radius;
             var hall = storey == 1;
-            sink.Beveled(hall ? S.Wall(S.ColumnBlue) : S.Wall(S.WallWhite), c, u, S.ColumnSize, S.ColumnSize, y0, y1, 0.03f);
-            sink.Colliders.Add(new PostCollider(c, S.ColumnSize * 0.6f, y0, y1, SurfaceTag.Wall) { Foot = FootMat.Concrete });
+            sink.Shapes.Beveled(hall ? S.Wall(S.ColumnBlue) : S.Wall(S.WallWhite), c, u, S.ColumnSize, S.ColumnSize, y0, y1, 0.03f);
+            sink.Collision.Add(new PostCollider(c, S.ColumnSize * 0.6f, y0, y1, SurfaceTag.Wall) { Foot = FootMat.Concrete });
             if (hall) HallColumn(sink, c, u, y0, y1, k);
         }
     }
@@ -89,17 +89,17 @@ internal static class Atrium
                 var offset = (line - 1) * 0.22f + ((index + line) % 3 - 1) * 0.03f;
                 var top = y1 - 0.4f - ((index * 3 + line) % 4) * 0.5f;
                 var foot = y0 + 0.3f + ((index + line * 2) % 3) * 0.35f;
-                sink.Glow(S.CircuitBlue, face + along * offset, along, 0.025f, 0.004f, foot, top);
+                sink.Lights.Box(S.CircuitBlue, face + along * offset, along, 0.025f, 0.004f, foot, top);
                 // A short branch and a pad at the line's top end.
                 var branch = (line % 2 == 0 ? 1f : -1f) * 0.08f;
-                sink.Glow(S.CircuitBlue, face + along * (offset + branch * 0.5f), along, MathF.Abs(branch), 0.004f, top - 0.025f, top);
-                sink.Glow(S.CircuitBlue, face + along * (offset + branch), along, 0.05f, 0.004f, top - 0.04f, top + 0.01f);
+                sink.Lights.Box(S.CircuitBlue, face + along * (offset + branch * 0.5f), along, MathF.Abs(branch), 0.004f, top - 0.025f, top);
+                sink.Lights.Box(S.CircuitBlue, face + along * (offset + branch), along, 0.05f, 0.004f, top - 0.04f, top + 0.01f);
             }
         }
         // Light box with the ginkgo fan toward the void.
         var front = c - u * (S.ColumnSize * 0.5f + 0.04f);
         float b0 = y0 + 2.5f, b1 = y0 + 3.2f;
-        sink.Box(S.Trim(S.WallWhite), front, v, 0.5f, 0.08f, b0, b1);
+        sink.Shapes.Box(S.Trim(S.WallWhite), front, v, 0.5f, 0.08f, b0, b1);
         Fan(sink, front - u * 0.042f, v, -u, (b0 + b1) * 0.5f - 0.1f, 0.2f);
     }
 
@@ -112,12 +112,12 @@ internal static class Atrium
         for (var k = 0; k < Bars; k++)
         {
             float y = baseY + k * size / Bars, half = size * (0.2f + 0.8f * k / (Bars - 1));
-            if (k < Bars - 2) sink.Box(gold, face, across, 2f * half, 0.004f, y, y + size / Bars * 0.75f);
+            if (k < Bars - 2) sink.Shapes.Box(gold, face, across, 2f * half, 0.004f, y, y + size / Bars * 0.75f);
             else
                 foreach (var side in new[] { -1f, 1f })
-                    sink.Box(gold, face + across * (side * (half + 0.03f) * 0.5f), across, half - 0.03f, 0.004f, y, y + size / Bars * 0.75f);
+                    sink.Shapes.Box(gold, face + across * (side * (half + 0.03f) * 0.5f), across, half - 0.03f, 0.004f, y, y + size / Bars * 0.75f);
         }
-        sink.Box(gold, face, across, 0.02f, 0.004f, baseY - size * 0.6f, baseY);
+        sink.Shapes.Box(gold, face, across, 0.02f, 0.004f, baseY - size * 0.6f, baseY);
     }
 
     /// <summary>Downlights in the dark soffit of this storey's slab over the ring below (亮起来像一片星空).</summary>
@@ -132,7 +132,7 @@ internal static class Atrium
                 for (var i = 0; i <= count; i++)
                 {
                     var t = -h + (2f * h) * i / Math.Max(1, count);
-                    sink.Glow(S.LampGlow, f.At(j, r, t), f.Dir(j + 2), S.StarSize, S.StarSize, soffit - 0.015f, soffit);
+                    sink.Lights.Box(S.LampGlow, f.At(j, r, t), f.Dir(j + 2), S.StarSize, S.StarSize, soffit - 0.015f, soffit);
                 }
             }
     }

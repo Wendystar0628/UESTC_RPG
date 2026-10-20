@@ -34,7 +34,7 @@ public partial class BakeRuntime : Node, IMapAware, IMapDataParticipant
     public void OnMapLoaded(IMapContext context)
     {
         _map = _service.Mount(context);
-        if (_map.Metadata is null)
+        if (_map.Content.Metadata is null)
             throw new InvalidOperationException("Bake map preparation must complete before OnMapLoaded.");
         _finished = false;
         _service.Prebake(context);

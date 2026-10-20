@@ -244,7 +244,7 @@ public sealed class InteriorPlanTests
             var meshes = sink.Finish().Meshes;
             AssertThat(meshes.Count > 0 && meshes.All(m => m.Index.Length > 0 && m.Position.All(float.IsFinite)))
                 .OverrideFailureMessage($"A valid {span.Role} wall disappeared or produced invalid vertices.").IsTrue();
-            AssertThat(sink.Colliders.Single()).IsEqual(new WallCollider(span.A, span.B, span.Thickness * 0.5f,
+            AssertThat(sink.Collision.Items.Single()).IsEqual(new WallCollider(span.A, span.B, span.Thickness * 0.5f,
                 span.BottomY, span.TopY, SurfaceTag.Wall) { Foot = FootMat.Concrete });
         }
     }

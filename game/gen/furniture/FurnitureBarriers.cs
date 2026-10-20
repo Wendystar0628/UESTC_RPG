@@ -1,14 +1,17 @@
+using Campus.Gen.Geometry;
 using System.Numerics;
 using Campus.Contracts;
 using Campus.Contracts.Parts;
-using Campus.Gen.Parts.Street;
 using S = Campus.Gen.Furniture.FurnitureStyle;
+using static Campus.Gen.Furniture.FurniturePlacement;
+using static Campus.Gen.Furniture.FurniturePlanner;
+using static Campus.Gen.Furniture.FurnitureParts;
 
 namespace Campus.Gen.Furniture;
 
-public static partial class FurniturePlanner
+/// <summary>Places capacity-admitted stone rows at wide walk mouths.</summary>
+internal static class FurnitureBarriers
 {
-    private static readonly StoneSpherePart SphereDef = new();
 
     // ---------------------------------------------------------------------------------------------------------
     // Barriers (WLD-LIFE-STREET 路障): white stone spheres across the mouth of a wide walk at a carriageway.
@@ -24,24 +27,24 @@ public static partial class FurniturePlanner
     /// fit (an outline, a tree, a tree row, a road, steep ground, another item) is left out; a row over its cell's budget is left out whole.
     /// The south gate's forecourt spheres and bollards are its zone site's, not this planner's.
     /// </summary>
-    private static void Barriers(StreetSite site, List<FurnitureItem> items, List<BuildDiagnostic> diagnostics)
+    internal static void Plan(StreetSite site, List<FurnitureItem> items, List<BuildDiagnostic> diagnostics)
     {
         var roads = site.World.Network.Roads
-            .Where(l => l.Line.Points.Count >= 2 && StreetSite.Carriageway(l) && !StreetSite.Covered(l))
+            .Where(l => l.Line.Points.Count >= 2 && StreetNetwork.Carriageway(l) && !StreetNetwork.Covered(l))
             .OrderBy(l => l.Id.Value, StringComparer.Ordinal)
-            .Select(l => new BarrierRoad(l, l.Line.Points.Aggregate(new Vector2(float.MaxValue), Vector2.Min) - new Vector2(StreetSite.HalfWidth(l) + S.RampKerbReach),
-                l.Line.Points.Aggregate(new Vector2(float.MinValue), Vector2.Max) + new Vector2(StreetSite.HalfWidth(l) + S.RampKerbReach))).ToList();
+            .Select(l => new BarrierRoad(l, l.Line.Points.Aggregate(new Vector2(float.MaxValue), Vector2.Min) - new Vector2(StreetNetwork.HalfWidth(l) + S.RampKerbReach),
+                l.Line.Points.Aggregate(new Vector2(float.MinValue), Vector2.Max) + new Vector2(StreetNetwork.HalfWidth(l) + S.RampKerbReach))).ToList();
         if (roads.Count == 0) return;
         var p = S.BarrierSphere;
         var radius = ((PostCollider)SphereDef.Collision(p)[0]).R;
-        var cache = new Dictionary<(string, object), (int Meshes, int Triangles)>();
+        var capacity = new FurnitureCapacity();
         var rows = new List<Vector2>();
         int junctions = 0, spheres = 0, heavy = 0;
         foreach (var walk in site.PedestrianLines())
         {
-            if (!StreetSite.Strollable(walk) || walk.Width < S.BarrierWalkMin || StreetSite.Covered(walk)) continue;
-            var path = new StreetSite.Run([.. walk.Line.Points]);
-            var half = StreetSite.HalfWidth(walk);
+            if (!StreetNetwork.Strollable(walk) || walk.Width < S.BarrierWalkMin || StreetNetwork.Covered(walk)) continue;
+            var path = new StreetNetwork.Run([.. walk.Line.Points]);
+            var half = StreetNetwork.HalfWidth(walk);
             var mouths = Mouths(walk, path, roads);
             for (var m = 0; m < mouths.Count; m++)
             {
@@ -63,11 +66,11 @@ public static partial class FurniturePlanner
                     if (Land.Point(site.World.Terrain, pos, radius) is not { } lawn || !site.OffRows(pos, radius)
                         || site.Blocker(pos, radius, walk, onBeside: true, walksPass: true) is not null) continue;
                     // On paving the sphere stands on the paving; on the end of a strip WP-15 may leave lawn, so it lands as a post.
-                    var y = site.OnPavedGround(pos) ? site.World.Terrain.HeightAt(pos.X, pos.Y) + GroundLevels.Paving : lawn;
+                    var y = site.Paving.OnPavedGround(pos) ? site.World.Terrain.HeightAt(pos.X, pos.Y) + GroundLevels.Paving : lawn;
                     row.Add(Item($"barrier:{walk.Id.Value}:{Num(m)}:{Num(k)}", FurnitureKind.Barrier, PartCatalog.StoneSphere, p, Frame(pos, normal, y), SphereDef.Collision(p), []));
                 }
                 if (row.Count == 0) continue;
-                if (!WithinBudget(items, row, cache)) { heavy++; continue; }
+                if (!capacity.Allows(items, row)) { heavy++; continue; }
                 items.AddRange(row);
                 foreach (var sphere in row) site.Occupy(sphere.Anchor, radius);
                 rows.Add(centre);
@@ -82,12 +85,12 @@ public static partial class FurniturePlanner
     /// The places on <paramref name="walk"/> where it meets a carriageway, as (arc length, direction into the walk: +1 or −1): each end within
     /// <see cref="FurnitureStyle.RampKerbReach"/> of a carriageway's kerb looks into the walk, and a crossing looks both ways.
     /// </summary>
-    private static List<(float Station, float Dir)> Mouths(NetworkLine walk, StreetSite.Run path, IReadOnlyList<BarrierRoad> roads)
+    private static List<(float Station, float Dir)> Mouths(NetworkLine walk, StreetNetwork.Run path, IReadOnlyList<BarrierRoad> roads)
     {
         var points = walk.Line.Points;
         var mouths = new List<(float, float)>();
         bool Reaches(Vector2 q) => roads.Any(r => q.X >= r.Min.X && q.X <= r.Max.X && q.Y >= r.Min.Y && q.Y <= r.Max.Y
-            && MathF.Sqrt(PlanLines.PolylineDistanceSquared(r.Line.Line.Points, q)) <= StreetSite.HalfWidth(r.Line) + S.RampKerbReach);
+            && MathF.Sqrt(PlanLines.PolylineDistanceSquared(r.Line.Line.Points, q)) <= StreetNetwork.HalfWidth(r.Line) + S.RampKerbReach);
         if (Reaches(points[0])) mouths.Add((0f, 1f));
         if (Reaches(points[^1])) mouths.Add((path.Length, -1f));
         var min = points.Aggregate(new Vector2(float.MaxValue), Vector2.Min);

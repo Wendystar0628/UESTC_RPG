@@ -74,6 +74,12 @@ internal sealed partial class RoadMarkings
         Curve(Arc(0f, 0f, radius, 0f, MathF.Tau, 1f, 1f, spec.Chord));
         Spot(0f, 0f);
 
+        AddPitchEnds(spec, hl, hw, su, sv, mean, radius, Line, Curve, Spot);
+    }
+
+    private static void AddPitchEnds(PitchSpec spec, float hl, float hw, float su, float sv, float mean, float radius,
+        Action<float, float, float, float> Line, Action<List<Vector2>> Curve, Action<float, float> Spot)
+    {
         foreach (var g in new[] { -1f, 1f })
         {
             // g is the end: the goal line lies at u = g * hl and u grows toward it.

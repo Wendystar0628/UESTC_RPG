@@ -22,7 +22,7 @@ public interface IStreamMountWork
     void Cancel();
 }
 
-/// <summary>WP-02b owns the unique FramePriority.StreamMount executor and all shared mount time accounting.</summary>
+/// <summary>The sole stream-mount executor owns FramePriority.StreamMount and all shared mount time accounting.</summary>
 public interface IStreamMountQueue
 {
     /// <summary>Monotonically increases on map unload, including unloading and reloading the same map.</summary>
@@ -30,7 +30,7 @@ public interface IStreamMountQueue
     /// <summary>Main-thread enqueue. Rejects stale revisions or maps and cancels their unfinished work.</summary>
     void Enqueue(IStreamMountWork work);
     /// <summary>Cancels this map's queued work and invalidates prior request revisions.</summary>
-    /// <remarks>Only WP-02b calls this from its map-unload callback. Producers separately cancel their own work
+    /// <remarks>Only the map-unload coordinator calls this from its map-unload callback. Producers separately cancel their own work
     /// and release completed mounts; they do not advance the shared queue revision.</remarks>
     void RemoveMap(MapId map);
 }

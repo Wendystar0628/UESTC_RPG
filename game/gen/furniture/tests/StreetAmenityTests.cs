@@ -32,13 +32,13 @@ public sealed class StreetAmenityTests
         var layout = RealLayout.Value;
         var site = Site.Value;
         var signs = layout.Items.Where(i => i.Kind == FurnitureKind.Signpost).ToList();
-        var junctions = FurniturePlanner.Junctions(site).Where(j => j.Branches >= FurnitureStyle.SignpostBranches).ToList();
+        var junctions = FurnitureWayfinding.Junctions(site).Where(j => j.Branches >= FurnitureStyle.SignpostBranches).ToList();
         foreach (var sign in signs)
         {
             var junction = junctions.MinBy(j => Vector2.Distance(j.At, sign.Anchor));
             AssertThat(Vector2.Distance(junction.At, sign.Anchor) <= FurnitureStyle.SignpostReach + 1f).OverrideFailureMessage($"{sign.Key} stands {Vector2.Distance(junction.At, sign.Anchor):F1} m from a junction of three walks").IsTrue();
             var facing = Front(sign.Part.At);
-            AssertThat(site.PavingEdgeFacing(sign.Anchor + facing * 0.6f) is { Gap: < 0.3f }).OverrideFailureMessage($"{sign.Key} does not face the paving").IsTrue();
+            AssertThat(site.Paving.PavingEdgeFacing(sign.Anchor + facing * 0.6f) is { Gap: < 0.3f }).OverrideFailureMessage($"{sign.Key} does not face the paving").IsTrue();
             AssertThat(sign.Pad is not null).OverrideFailureMessage($"{sign.Key} has no bay").IsTrue();
         }
         for (var a = 0; a < signs.Count; a++)
@@ -93,7 +93,7 @@ public sealed class StreetAmenityTests
             var away = fountain.Anchor - plan;
             AssertThat(away.Length() is >= FurnitureStyle.FountainNear - 1.5f and <= FurnitureStyle.FountainFar + 1.5f).OverrideFailureMessage($"{fountain.Key} stands {away.Length():F1} m from its door").IsTrue();
             AssertThat(Vector2.Dot(away, Angles.Heading(door.YawDeg)) > 0f).OverrideFailureMessage($"{fountain.Key} stands behind its door").IsTrue();
-            AssertThat(fountain.Pad is not null && site.PavingEdgeFacing(fountain.Anchor + Front(fountain.Part.At) * 0.6f) is { Gap: < 0.3f }).OverrideFailureMessage($"{fountain.Key} is not on a bay facing the paving").IsTrue();
+            AssertThat(fountain.Pad is not null && site.Paving.PavingEdgeFacing(fountain.Anchor + Front(fountain.Part.At) * 0.6f) is { Gap: < 0.3f }).OverrideFailureMessage($"{fountain.Key} is not on a bay facing the paving").IsTrue();
         }
     }
 
@@ -109,7 +109,7 @@ public sealed class StreetAmenityTests
         bool Serves(FurnitureItem item, float front)
         {
             var q = item.Anchor + Front(item.Part.At) * (((BoxPartParams)item.Part.Params).Depth * 0.5f + front + 0.3f);
-            return site.PavingEdgeFacing(q) is { Gap: <= 0f } || !site.OffCarriageways(q, 0f, 0f);
+            return site.Paving.PavingEdgeFacing(q) is { Gap: <= 0f } || !site.OffCarriageways(q, 0f, 0f);
         }
         var groups = layout.Items.Where(i => i.Kind == FurnitureKind.VendingMachine).GroupBy(i => i.Key[..i.Key.LastIndexOf(':')]).ToList();
         AssertThat(groups.Count > 0).OverrideFailureMessage($"{groups.Count} vending groups").IsTrue();

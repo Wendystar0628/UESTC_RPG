@@ -30,7 +30,7 @@ public sealed class AnchorFacingTests
         var world = World.Value;
         var site = Site.Value;
         var spot = new Vector2(120f, -65f);
-        AssertThat(site.PavingEdgeFacing(spot) is { Gap: > 1f }).OverrideFailureMessage("the notch is not off the paving any more: pick another spot").IsTrue();
+        AssertThat(site.Paving.PavingEdgeFacing(spot) is { Gap: > 1f }).OverrideFailureMessage("the notch is not off the paving any more: pick another spot").IsTrue();
         var original = world.Features.Values.Where(f => f.Kind.Value == "anchor" && WorldProps.TryText(f.Props, "form") == "kiosk" && f.Props!.Value.TryGetProperty("groundY", out var y) && y.GetSingle() < 0.5f)
             .OrderBy(f => f.Id.Value, StringComparer.Ordinal).First();
         var ring = new List<Vector2> { spot + new Vector2(-0.4f, -1f), spot + new Vector2(-0.4f, 1f), spot + new Vector2(0.4f, 1f), spot + new Vector2(0.4f, -1f) };
@@ -46,13 +46,13 @@ public sealed class AnchorFacingTests
         // The whole outline of the apron is on paving.
         for (var u = -apron.HalfWidth; u <= apron.HalfWidth + 1e-3f; u += 0.25f)
             foreach (var v in new[] { -apron.HalfDepth, apron.HalfDepth })
-                AssertThat(site.PavingEdgeFacing(item.Anchor + right * u + facing * v) is { Gap: <= 0f }).OverrideFailureMessage($"the apron's outline leaves the paving at ({u:F2}, {v:F2})").IsTrue();
+                AssertThat(site.Paving.PavingEdgeFacing(item.Anchor + right * u + facing * v) is { Gap: <= 0f }).OverrideFailureMessage($"the apron's outline leaves the paving at ({u:F2}, {v:F2})").IsTrue();
         for (var v = -apron.HalfDepth; v <= apron.HalfDepth + 1e-3f; v += 0.25f)
             foreach (var u in new[] { -apron.HalfWidth, apron.HalfWidth })
-                AssertThat(site.PavingEdgeFacing(item.Anchor + right * u + facing * v) is { Gap: <= 0f }).OverrideFailureMessage($"the apron's side leaves the paving at ({u:F2}, {v:F2})").IsTrue();
+                AssertThat(site.Paving.PavingEdgeFacing(item.Anchor + right * u + facing * v) is { Gap: <= 0f }).OverrideFailureMessage($"the apron's side leaves the paving at ({u:F2}, {v:F2})").IsTrue();
         // The back edge runs along the paving edge, 0.5 m inside it: stepping 0.7 m behind the back edge's middle reaches 0.2 m past the edge.
         var back = item.Anchor - facing * apron.HalfDepth;
-        var behind = site.PavingEdgeFacing(back - facing * (FurnitureStyle.ApronPavingClear + 0.2f)) ?? throw new InvalidOperationException("no paving edge behind the kiosk");
+        var behind = site.Paving.PavingEdgeFacing(back - facing * (FurnitureStyle.ApronPavingClear + 0.2f)) ?? throw new InvalidOperationException("no paving edge behind the kiosk");
         AssertThat(behind.Gap is > 0.05f and < 0.35f).OverrideFailureMessage($"the paving edge lies {behind.Gap + FurnitureStyle.ApronPavingClear:F2} m behind the back edge, not 0.5 m").IsTrue();
         AssertThat(Vector2.Dot(behind.Inward, facing) > 0.98f).OverrideFailureMessage("the back edge is not parallel to the paving edge, or the face looks at it").IsTrue();
     }

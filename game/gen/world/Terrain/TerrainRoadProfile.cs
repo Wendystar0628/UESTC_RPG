@@ -64,66 +64,17 @@ internal sealed class TerrainRoadProfile
         public NetworkFit(IReadOnlyList<Request> requests, TerrainProgram terrain,
             IReadOnlyList<(TerrainRoad Road, TerrainRoadProfile Profile)> authored, Func<double, double, bool> protectedZeroBand)
         {
-            static (long X, long Z) Key(double x, double z) => ((long)Math.Round(x * 1000, MidpointRounding.ToEven), (long)Math.Round(z * 1000, MidpointRounding.ToEven));
-            var ownership = new Dictionary<(long X, long Z), HashSet<FeatureId>>();
-            var locked = new Dictionary<(long X, long Z), double>();
-            var firstLockedSource = new Dictionary<(long X, long Z), (TerrainRoad Road, TerrainRoadProfile Profile, double X, double Z, double Height)>();
-            foreach (var road in requests.Select(r => r.Road).Concat(authored.Select(r => r.Road)).OrderBy(r => r.Source.Value, StringComparer.Ordinal))
-                foreach (var p in road.Path.Line.Points)
-                {
-                    var key = Key(p.X, p.Y);
-                    if (!ownership.TryGetValue(key, out var owners)) ownership.Add(key, owners = []);
-                    owners.Add(road.Source);
-                }
-            foreach (var entry in authored)
-                foreach (var p in entry.Road.Path.Line.Points)
-                {
-                    var value = entry.Profile.At(entry.Road.Path.Project(p.X, p.Y).Station).Y; var key = Key(p.X, p.Y);
-                    if (locked.TryGetValue(key, out var prior) && Math.Abs(prior - value) > JunctionHeightTolerance)
-                    {
-                        var first = firstLockedSource[key];
-                        throw new WorldDataException(entry.Profile._authoredFile ?? "world", entry.Profile._authoredEntry ?? "corridor",
-                            $"Authored road profiles disagree at a shared source node: world=({p.X:R},{p.Y:R}), millimetreKey=({key.X},{key.Z}); "
-                            + $"firstSource='{first.Road.Source.Value}', firstWorld=({first.X:R},{first.Z:R}), firstHeight={first.Height:R}, firstFile='{first.Profile._authoredFile ?? "<automatic>"}', firstEntry='{first.Profile._authoredEntry ?? "<automatic>"}'; "
-                            + $"secondSource='{entry.Road.Source.Value}', secondHeight={value:R}, secondFile='{entry.Profile._authoredFile ?? "<automatic>"}', secondEntry='{entry.Profile._authoredEntry ?? "<automatic>"}', deltaSecondMinusFirst={value - first.Height:R}, comparedLockedHeight={prior:R}, deltaSecondMinusLocked={value - prior:R}.");
-                    }
-                    locked[key] = value;
-                    firstLockedSource.TryAdd(key, (entry.Road, entry.Profile, p.X, p.Y, value));
-                }
-            foreach (var request in requests)
-                foreach (var interval in request.Intervals ?? [])
-                    foreach (var anchor in interval.Anchors)
-                    {
-                        var p = request.Road.Path.AtDouble(anchor.S); var key = Key(p.X, p.Z);
-                        if (locked.TryGetValue(key, out var prior) && Math.Abs(prior - anchor.Y) > JunctionHeightTolerance)
-                            throw new WorldDataException(interval.File, interval.Id, "Fixed corridor anchors disagree at a shared source-road node.");
-                        locked[key] = anchor.Y;
-                    }
+            var ownership = SourceOwnership(requests, authored);
+            var locked = LockedHeights(requests, authored);
             var keys = new Dictionary<(long X, long Z), int>(); var values = new List<double>(); var fixedValues = new List<bool>();
             var paths = new List<NetworkPath>();
             var edges = new List<NetworkEdge>();
             foreach (var request in requests.OrderBy(r => r.Road.Source.Value, StringComparer.Ordinal))
             {
-                var path = request.Road.Path; var stations = new SortedSet<double> { 0, path.Length };
-                for (var s = 5d; s < path.Length; s += 5) stations.Add(s);
-                var junctions = new List<double>(); var accumulated = 0d;
-                for (var i = 0; i < path.Line.Points.Count; i++)
-                {
-                    if (i > 0)
-                    {
-                        var a = path.Line.Points[i - 1]; var c = path.Line.Points[i];
-                        var dx = (double)c.X - a.X; var dz = (double)c.Y - a.Y;
-                        accumulated += Math.Sqrt(dx * dx + dz * dz);
-                    }
-                    stations.Add(accumulated);
-                    if (ownership[Key(path.Line.Points[i].X, path.Line.Points[i].Y)].Count > 1) junctions.Add(accumulated);
-                }
-                foreach (var s in junctions)
-                    foreach (var offset in new[] { -12.5, -10, 10, 12.5 }) stations.Add(Math.Max(0, Math.Min(path.Length, s + offset)));
-                foreach (var e in request.Exclusions) { stations.Add(e.From); stations.Add(e.To); }
-                foreach (var interval in request.Intervals ?? [])
-                    foreach (var anchor in interval.Anchors) stations.Add(anchor.S);
-                var sampled = stations.ToArray(); var nodes = new int[sampled.Length]; var fixedJunctions = new bool[sampled.Length];
+                var path = request.Road.Path;
+                var (sampled, junctions) = SampleStations(request, ownership);
+                var nodes = new int[sampled.Length];
+                var fixedJunctions = new bool[sampled.Length];
                 for (var i = 0; i < sampled.Length; i++)
                 {
                     var p = path.At(sampled[i]); var key = Key(p.X, p.Y);
@@ -178,6 +129,80 @@ internal sealed class TerrainRoadProfile
                 var p = item.Request.Road.Path.At(station); var node = item.Nodes[index];
                 return new Sample(item.Request.Road.Source, index, station, p.X, p.Y, node, _fixed[node]);
             })).ToArray();
+        }
+
+        private static (long X, long Z) Key(double x, double z) =>
+            ((long)Math.Round(x * 1000, MidpointRounding.ToEven), (long)Math.Round(z * 1000, MidpointRounding.ToEven));
+
+        private static Dictionary<(long X, long Z), HashSet<FeatureId>> SourceOwnership(IReadOnlyList<Request> requests,
+            IReadOnlyList<(TerrainRoad Road, TerrainRoadProfile Profile)> authored)
+        {
+            var ownership = new Dictionary<(long X, long Z), HashSet<FeatureId>>();
+            foreach (var road in requests.Select(r => r.Road).Concat(authored.Select(r => r.Road)).OrderBy(r => r.Source.Value, StringComparer.Ordinal))
+                foreach (var p in road.Path.Line.Points)
+                {
+                    var key = Key(p.X, p.Y);
+                    if (!ownership.TryGetValue(key, out var owners)) ownership.Add(key, owners = []);
+                    owners.Add(road.Source);
+                }
+            return ownership;
+        }
+
+        private static Dictionary<(long X, long Z), double> LockedHeights(IReadOnlyList<Request> requests,
+            IReadOnlyList<(TerrainRoad Road, TerrainRoadProfile Profile)> authored)
+        {
+            var locked = new Dictionary<(long X, long Z), double>();
+            var firstLockedSource = new Dictionary<(long X, long Z), (TerrainRoad Road, TerrainRoadProfile Profile, double X, double Z, double Height)>();
+            foreach (var entry in authored)
+                foreach (var p in entry.Road.Path.Line.Points)
+                {
+                    var value = entry.Profile.At(entry.Road.Path.Project(p.X, p.Y).Station).Y; var key = Key(p.X, p.Y);
+                    if (locked.TryGetValue(key, out var prior) && Math.Abs(prior - value) > JunctionHeightTolerance)
+                    {
+                        var first = firstLockedSource[key];
+                        throw new WorldDataException(entry.Profile._authoredFile ?? "world", entry.Profile._authoredEntry ?? "corridor",
+                            $"Authored road profiles disagree at a shared source node: world=({p.X:R},{p.Y:R}), millimetreKey=({key.X},{key.Z}); "
+                            + $"firstSource='{first.Road.Source.Value}', firstWorld=({first.X:R},{first.Z:R}), firstHeight={first.Height:R}, firstFile='{first.Profile._authoredFile ?? "<automatic>"}', firstEntry='{first.Profile._authoredEntry ?? "<automatic>"}'; "
+                            + $"secondSource='{entry.Road.Source.Value}', secondHeight={value:R}, secondFile='{entry.Profile._authoredFile ?? "<automatic>"}', secondEntry='{entry.Profile._authoredEntry ?? "<automatic>"}', deltaSecondMinusFirst={value - first.Height:R}, comparedLockedHeight={prior:R}, deltaSecondMinusLocked={value - prior:R}.");
+                    }
+                    locked[key] = value;
+                    firstLockedSource.TryAdd(key, (entry.Road, entry.Profile, p.X, p.Y, value));
+                }
+            foreach (var request in requests)
+                foreach (var interval in request.Intervals ?? [])
+                    foreach (var anchor in interval.Anchors)
+                    {
+                        var p = request.Road.Path.AtDouble(anchor.S); var key = Key(p.X, p.Z);
+                        if (locked.TryGetValue(key, out var prior) && Math.Abs(prior - anchor.Y) > JunctionHeightTolerance)
+                            throw new WorldDataException(interval.File, interval.Id, "Fixed corridor anchors disagree at a shared source-road node.");
+                        locked[key] = anchor.Y;
+                    }
+            return locked;
+        }
+
+        private static (double[] Stations, List<double> Junctions) SampleStations(Request request,
+            IReadOnlyDictionary<(long X, long Z), HashSet<FeatureId>> ownership)
+        {
+            var path = request.Road.Path; var stations = new SortedSet<double> { 0, path.Length };
+            for (var s = 5d; s < path.Length; s += 5) stations.Add(s);
+            var junctions = new List<double>(); var accumulated = 0d;
+            for (var i = 0; i < path.Line.Points.Count; i++)
+            {
+                if (i > 0)
+                {
+                    var a = path.Line.Points[i - 1]; var c = path.Line.Points[i];
+                    var dx = (double)c.X - a.X; var dz = (double)c.Y - a.Y;
+                    accumulated += Math.Sqrt(dx * dx + dz * dz);
+                }
+                stations.Add(accumulated);
+                if (ownership[Key(path.Line.Points[i].X, path.Line.Points[i].Y)].Count > 1) junctions.Add(accumulated);
+            }
+            foreach (var s in junctions)
+                foreach (var offset in new[] { -12.5, -10, 10, 12.5 }) stations.Add(Math.Max(0, Math.Min(path.Length, s + offset)));
+            foreach (var e in request.Exclusions) { stations.Add(e.From); stations.Add(e.To); }
+            foreach (var interval in request.Intervals ?? [])
+                foreach (var anchor in interval.Anchors) stations.Add(anchor.S);
+            return (stations.ToArray(), junctions);
         }
 
         public bool Require(FeatureId source, int sampleIndex, Bound bound)

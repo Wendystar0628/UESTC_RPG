@@ -182,6 +182,110 @@ internal static class DoorBuilder
     public static void Leaf(PartMesh mesh, DoorStyle s, ToonSpec spec, Place turn, float a, float b, float y0, float y1, bool hingeLeft,
         LodLevel lod)
     {
+        switch (s)
+        {
+            case DoorStyle.Entrance:
+                EntranceLeaf(mesh, s, spec, turn, a, b, y0, y1, hingeLeft, lod);
+                break;
+            case DoorStyle.Glass:
+                GlassLeaf(mesh, s, spec, turn, a, b, y0, y1, hingeLeft, lod);
+                break;
+            case DoorStyle.Wood:
+            case DoorStyle.Fire:
+                VisionLeaf(mesh, s, spec, turn, a, b, y0, y1, hingeLeft, lod);
+                break;
+            case DoorStyle.Screen:
+                ScreenLeaf(mesh, s, spec, turn, a, b, y0, y1, hingeLeft, lod);
+                break;
+            case DoorStyle.Stall:
+                StallLeaf(mesh, s, spec, turn, a, b, y0, y1, hingeLeft, lod);
+                break;
+            default:
+                throw new ArgumentOutOfRangeException(nameof(s), s, "Unknown door style.");
+        }
+    }
+
+    private static void EntranceLeaf(PartMesh mesh, DoorStyle s, ToonSpec spec, Place turn,
+        float a, float b, float y0, float y1, bool hingeLeft, LodLevel lod)
+    {
+        var t = Thickness(s) * 0.5f;
+        const byte cast = 0;
+        var full = lod == LodLevel.L0;
+        var lockX = hingeLeft ? b : a;
+        var toHinge = hingeLeft ? -1f : 1f;
+        // Stiles, rails and kick rail are one flush slab around the glass.
+        var st = OpeningStyle.DoorStile;
+        var kick = Math.Min(OpeningStyle.DoorKickRail, (y1 - y0) * 0.2f);
+        Solid.Grid(mesh, spec, cast, turn, [a, a + st, b - st, b], [y0, y0 + kick, y1 - st, y1], (i, j) => i != 1 || j != 1, -t, t);
+        Solid.Glass(mesh, cast, turn, a + st - 0.01f, y0 + kick - 0.01f, -0.006f, b - st + 0.01f, y1 - st + 0.01f, 0.006f,
+            OpeningStyle.DoorCard, DoorUv2);
+        if (full) PullPair(mesh, turn, lockX + toHinge * st * 0.5f, y0 + kick + 0.05f, y1 - st - 0.05f, t, OpeningStyle.PullLength);
+    }
+
+    private static void GlassLeaf(PartMesh mesh, DoorStyle s, ToonSpec spec, Place turn,
+        float a, float b, float y0, float y1, bool hingeLeft, LodLevel lod)
+    {
+        var t = Thickness(s) * 0.5f;
+        const byte cast = 0;
+        var full = lod == LodLevel.L0;
+        var lockX = hingeLeft ? b : a;
+        var toHinge = hingeLeft ? -1f : 1f;
+        var rail = OpeningStyle.GlassDoorRail;
+        Solid.Glass(mesh, cast, turn, a, y0 + rail - 0.01f, -t, b, y1 - rail + 0.01f, t, OpeningStyle.DoorCard, DoorUv2);
+        Solid.Box(mesh, OpeningStyle.Metal, cast, turn, a, y0, -t - 0.007f, b, y0 + rail, t + 0.007f);
+        Solid.Box(mesh, OpeningStyle.Metal, cast, turn, a, y1 - rail, -t - 0.007f, b, y1, t + 0.007f);
+        if (full) PullPair(mesh, turn, lockX + toHinge * 0.1f, y0 + rail + 0.1f, y1 - rail - 0.1f, t, 1.2f);
+    }
+
+    private static void VisionLeaf(PartMesh mesh, DoorStyle s, ToonSpec spec, Place turn,
+        float a, float b, float y0, float y1, bool hingeLeft, LodLevel lod)
+    {
+        var t = Thickness(s) * 0.5f;
+        const byte cast = 0;
+        const byte small = VertexFlag.NoShadow;
+        var full = lod == LodLevel.L0;
+        var lockX = hingeLeft ? b : a;
+        var toHinge = hingeLeft ? -1f : 1f;
+        var vw = s == DoorStyle.Wood ? OpeningStyle.VisionWidth : OpeningStyle.VisionWidth * 0.75f;
+        var vh = s == DoorStyle.Wood ? OpeningStyle.VisionHeight : OpeningStyle.VisionHeight * 0.8f;
+        var vx1 = lockX + toHinge * 0.12f;
+        var vx0 = vx1 + toHinge * vw;
+        var vy1 = y1 - OpeningStyle.VisionTopGap;
+        var vy0 = vy1 - vh;
+        float hx0 = Math.Min(vx0, vx1), hx1 = Math.Max(vx0, vx1);
+        var vision = full && vy0 > y0 + 0.9f;
+        if (vision)
+        {
+            var c = (a + b) * 0.5f;
+            IReadOnlyList<Vector2> hole = [new(hx0 - c, vy0 - y0), new(hx1 - c, vy0 - y0), new(hx1 - c, vy1 - y0), new(hx0 - c, vy1 - y0)];
+            Solid.Panel(mesh, spec, cast, turn, a, y0, b, y1, 0, 2 * t, [hole]);
+            // A flush bead filling the hole edge: a material line around the glass, no thin step to stipple.
+            const float bead = 0.018f;
+            Solid.Ring(mesh, OpeningStyle.Metal, small, hx0, vy0, hx1, vy1, bead, -t, t, 0f, turn);
+            Solid.Glass(mesh, cast, turn, hx0 + bead - 0.004f, vy0 + bead - 0.004f, -0.004f, hx1 - bead + 0.004f, vy1 - bead + 0.004f, 0.004f,
+                OpeningStyle.DoorCard, DoorUv2);
+        }
+        else
+        {
+            Solid.Box(mesh, spec, cast, turn, a, y0, -t, b, y1, t);
+        }
+        if (!full) return;
+        var lx = lockX + toHinge * 0.065f;
+        if (s == DoorStyle.Fire)
+        {
+            PanicBar(mesh, turn, a, b, t);
+            Lever(mesh, turn, lx, OpeningStyle.LeverCentreY, -t, -1, toHinge);
+        }
+        else
+        {
+            Lever(mesh, turn, lx, OpeningStyle.LeverCentreY, -t, -1, toHinge);
+            Lever(mesh, turn, lx, OpeningStyle.LeverCentreY, t, 1, toHinge);
+        }
+    }
+
+    private static void ScreenLeaf(PartMesh mesh, DoorStyle s, ToonSpec spec, Place turn,
+        float a, float b, float y0, float y1, bool hingeLeft, LodLevel lod)
+    {
         var t = Thickness(s) * 0.5f;
         var ins = OpeningStyle.Insert;
         const byte cast = 0;
@@ -189,95 +293,34 @@ internal static class DoorBuilder
         var full = lod == LodLevel.L0;
         var lockX = hingeLeft ? b : a;
         var toHinge = hingeLeft ? -1f : 1f;
-        switch (s)
-        {
-            case DoorStyle.Entrance:
-                {
-                    // Stiles, rails and kick rail are one flush slab around the glass.
-                    var st = OpeningStyle.DoorStile;
-                    var kick = Math.Min(OpeningStyle.DoorKickRail, (y1 - y0) * 0.2f);
-                    Solid.Grid(mesh, spec, cast, turn, [a, a + st, b - st, b], [y0, y0 + kick, y1 - st, y1], (i, j) => i != 1 || j != 1, -t, t);
-                    Solid.Glass(mesh, cast, turn, a + st - 0.01f, y0 + kick - 0.01f, -0.006f, b - st + 0.01f, y1 - st + 0.01f, 0.006f,
-                        OpeningStyle.DoorCard, DoorUv2);
-                    if (full) PullPair(mesh, turn, lockX + toHinge * st * 0.5f, y0 + kick + 0.05f, y1 - st - 0.05f, t, OpeningStyle.PullLength);
-                    break;
-                }
-            case DoorStyle.Glass:
-                {
-                    var rail = OpeningStyle.GlassDoorRail;
-                    Solid.Glass(mesh, cast, turn, a, y0 + rail - 0.01f, -t, b, y1 - rail + 0.01f, t, OpeningStyle.DoorCard, DoorUv2);
-                    Solid.Box(mesh, OpeningStyle.Metal, cast, turn, a, y0, -t - 0.007f, b, y0 + rail, t + 0.007f);
-                    Solid.Box(mesh, OpeningStyle.Metal, cast, turn, a, y1 - rail, -t - 0.007f, b, y1, t + 0.007f);
-                    if (full) PullPair(mesh, turn, lockX + toHinge * 0.1f, y0 + rail + 0.1f, y1 - rail - 0.1f, t, 1.2f);
-                    break;
-                }
-            case DoorStyle.Wood:
-            case DoorStyle.Fire:
-                {
-                    var vw = s == DoorStyle.Wood ? OpeningStyle.VisionWidth : OpeningStyle.VisionWidth * 0.75f;
-                    var vh = s == DoorStyle.Wood ? OpeningStyle.VisionHeight : OpeningStyle.VisionHeight * 0.8f;
-                    var vx1 = lockX + toHinge * 0.12f;
-                    var vx0 = vx1 + toHinge * vw;
-                    var vy1 = y1 - OpeningStyle.VisionTopGap;
-                    var vy0 = vy1 - vh;
-                    float hx0 = Math.Min(vx0, vx1), hx1 = Math.Max(vx0, vx1);
-                    var vision = full && vy0 > y0 + 0.9f;
-                    if (vision)
-                    {
-                        var c = (a + b) * 0.5f;
-                        IReadOnlyList<Vector2> hole = [new(hx0 - c, vy0 - y0), new(hx1 - c, vy0 - y0), new(hx1 - c, vy1 - y0), new(hx0 - c, vy1 - y0)];
-                        Solid.Panel(mesh, spec, cast, turn, a, y0, b, y1, 0, 2 * t, [hole]);
-                        // A flush bead filling the hole edge: a material line around the glass, no thin step to stipple.
-                        const float bead = 0.018f;
-                        Solid.Ring(mesh, OpeningStyle.Metal, small, hx0, vy0, hx1, vy1, bead, -t, t, 0f, turn);
-                        Solid.Glass(mesh, cast, turn, hx0 + bead - 0.004f, vy0 + bead - 0.004f, -0.004f, hx1 - bead + 0.004f, vy1 - bead + 0.004f, 0.004f,
-                            OpeningStyle.DoorCard, DoorUv2);
-                    }
-                    else
-                    {
-                        Solid.Box(mesh, spec, cast, turn, a, y0, -t, b, y1, t);
-                    }
-                    if (!full) break;
-                    var lx = lockX + toHinge * 0.065f;
-                    if (s == DoorStyle.Fire)
-                    {
-                        PanicBar(mesh, turn, a, b, t);
-                        Lever(mesh, turn, lx, OpeningStyle.LeverCentreY, -t, -1, toHinge);
-                    }
-                    else
-                    {
-                        Lever(mesh, turn, lx, OpeningStyle.LeverCentreY, -t, -1, toHinge);
-                        Lever(mesh, turn, lx, OpeningStyle.LeverCentreY, t, 1, toHinge);
-                    }
-                    break;
-                }
-            case DoorStyle.Screen:
-                {
-                    Solid.Box(mesh, spec, cast, turn, a, y0, -t, b, y1, t);
-                    if (!full) break;
-                    var inset = OpeningStyle.ScreenPanelInset;
-                    var proud = OpeningStyle.ScreenPanelProud;
-                    Solid.Ring(mesh, spec, small, a + inset, y0 + inset, b - inset, y1 - inset, 0.035f, -t - proud, -t + ins, 0f, turn);
-                    Solid.Ring(mesh, spec, small, a + inset, y0 + inset, b - inset, y1 - inset, 0.035f, t - ins, t + proud, 0f, turn);
-                    var hingeX = hingeLeft ? a : b;
-                    foreach (var hy in new[] { y0 + 0.28f, (y0 + y1) * 0.5f, y1 - 0.28f })
-                        Solid.Box(mesh, OpeningStyle.DarkMetal, small, turn, hingeX - 0.017f, hy - 0.07f, -t - 0.012f, hingeX + 0.017f, hy + 0.07f, -t + 0.02f);
-                    var lx = lockX + toHinge * 0.08f;
-                    Lever(mesh, turn, lx, OpeningStyle.LeverCentreY, -t - proud, -1, toHinge);
-                    Lever(mesh, turn, lx, OpeningStyle.LeverCentreY, t + proud, 1, toHinge);
-                    break;
-                }
-            case DoorStyle.Stall:
-                {
-                    Solid.Box(mesh, spec, cast, turn, a, y0, -t, b, y1, t);
-                    if (!full) break;
-                    var lx = lockX + toHinge * 0.05f;
-                    Solid.Box(mesh, OpeningStyle.Metal, small, turn, lx - 0.025f, 0.985f, -t - 0.012f, lx + 0.025f, 1.015f, -t + ins);
-                    break;
-                }
-            default:
-                throw new ArgumentOutOfRangeException(nameof(s), s, "Unknown door style.");
-        }
+        Solid.Box(mesh, spec, cast, turn, a, y0, -t, b, y1, t);
+        if (!full) return;
+        var inset = OpeningStyle.ScreenPanelInset;
+        var proud = OpeningStyle.ScreenPanelProud;
+        Solid.Ring(mesh, spec, small, a + inset, y0 + inset, b - inset, y1 - inset, 0.035f, -t - proud, -t + ins, 0f, turn);
+        Solid.Ring(mesh, spec, small, a + inset, y0 + inset, b - inset, y1 - inset, 0.035f, t - ins, t + proud, 0f, turn);
+        var hingeX = hingeLeft ? a : b;
+        foreach (var hy in new[] { y0 + 0.28f, (y0 + y1) * 0.5f, y1 - 0.28f })
+            Solid.Box(mesh, OpeningStyle.DarkMetal, small, turn, hingeX - 0.017f, hy - 0.07f, -t - 0.012f, hingeX + 0.017f, hy + 0.07f, -t + 0.02f);
+        var lx = lockX + toHinge * 0.08f;
+        Lever(mesh, turn, lx, OpeningStyle.LeverCentreY, -t - proud, -1, toHinge);
+        Lever(mesh, turn, lx, OpeningStyle.LeverCentreY, t + proud, 1, toHinge);
+    }
+
+    private static void StallLeaf(PartMesh mesh, DoorStyle s, ToonSpec spec, Place turn,
+        float a, float b, float y0, float y1, bool hingeLeft, LodLevel lod)
+    {
+        var t = Thickness(s) * 0.5f;
+        var ins = OpeningStyle.Insert;
+        const byte cast = 0;
+        const byte small = VertexFlag.NoShadow;
+        var full = lod == LodLevel.L0;
+        var lockX = hingeLeft ? b : a;
+        var toHinge = hingeLeft ? -1f : 1f;
+        Solid.Box(mesh, spec, cast, turn, a, y0, -t, b, y1, t);
+        if (!full) return;
+        var lx = lockX + toHinge * 0.05f;
+        Solid.Box(mesh, OpeningStyle.Metal, small, turn, lx - 0.025f, 0.985f, -t - 0.012f, lx + 0.025f, 1.015f, -t + ins);
     }
 
     /// <summary>Dark astragal over a meeting line, on both faces, carried by the leaf on the +X side.</summary>

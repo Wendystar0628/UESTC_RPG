@@ -41,12 +41,32 @@ public sealed class GenericInteriorProvider : IInteriorProvider, IInteriorCatalo
         if(!config.Features.Contains(feature)) throw new ArgumentException("Feature is outside this provider.");
         var entrances=config.Entrances.GetValueOrDefault(feature) ?? [];
         var source=InteriorBuildingSource.Read(context.World,feature,entrances,config.OpenParts);
+        var wings=BuildWings(source,config,feature);
+        var joins=FindJunctions(wings);
+        var assignments=AssignEntrances(wings,joins,entrances);
+        AddJunctionEntrances(wings,joins,assignments);
+        var plans=BuildPlans(context,feature,config,wings,joins,assignments);
+        var portals=ConnectPortals(wings,joins,assignments,plans);
+        var levels=source.SelectMany(part=>part.Storeys).ToArray();var points=levels.SelectMany(s=>s.Footprint).ToArray();
+        var layout=new InteriorLayout(feature,levels,plans.SelectMany(p=>p.Zones).ToArray(),portals,entrances,[],config.FloorsFor(feature),[],
+            new(new(points.Min(p=>p.X),levels.Min(s=>s.FloorY),points.Min(p=>p.Y)),new(points.Max(p=>p.X),levels.Max(s=>s.FloorY+s.Height),points.Max(p=>p.Y))),
+            StableHash.Hash32(context.WorldSeed,feature.Value,string.Join("/",plans.Select(p=>p.PlanHash.ToString(CultureInfo.InvariantCulture)))))
+            {Doors=plans.SelectMany(p=>p.Doors).ToArray()};
+        return new(layout,plans);
+    }
+    private static List<Wing> BuildWings(IReadOnlyList<InteriorBuildingPart> source,
+        InteriorCatalogConfiguration config,FeatureId feature)
+    {
         var wings=new List<Wing>();
         foreach(var part in source.Where(part=>config.OpenParts.Any(scope=>scope.FeatureId==feature && scope.SourceId==part.SourceId && InteriorOpenPart.IsIndoor(scope.Kind))))
             foreach(var polygon in InteriorWingDecomposition.Split(part.Footprint,feature.Value+"/"+part.Key))
                 wings.Add(new(wings.Count,"wing-"+wings.Count.ToString(CultureInfo.InvariantCulture),polygon,
                     part.Storeys.Select(s=>s with { Footprint=polygon.Outer }).ToArray(),
                     config.OpenParts.Single(scope=>scope.FeatureId==feature && scope.SourceId==part.SourceId && InteriorOpenPart.IsIndoor(scope.Kind)).Floors));
+        return wings;
+    }
+    private static List<Junction> FindJunctions(IReadOnlyList<Wing> wings)
+    {
         var joins=new List<Junction>();
         for(var a=0;a<wings.Count;a++) for(var b=a+1;b<wings.Count;b++)
             for(var ea=0;ea<4;ea++) for(var eb=0;eb<4;eb++)
@@ -55,6 +75,11 @@ public sealed class GenericInteriorProvider : IInteriorProvider, IInteriorCatalo
                 if(Vector2.Distance(x[ea],y[(eb+1)%4])<=PlanGeometry.Tolerance && Vector2.Distance(x[(ea+1)%4],y[eb])<=PlanGeometry.Tolerance)
                     joins.Add(new(a,ea,b,eb,x[ea],x[(ea+1)%4]));
             }
+        return joins;
+    }
+    private static Dictionary<int,List<EntranceDecl>> AssignEntrances(IReadOnlyList<Wing> wings,
+        IReadOnlyList<Junction> joins,IReadOnlyList<EntranceDecl> entrances)
+    {
         var assignments=wings.ToDictionary(w=>w.Index,_=>new List<EntranceDecl>());
         foreach(var entrance in entrances)
         {
@@ -69,6 +94,11 @@ public sealed class GenericInteriorProvider : IInteriorProvider, IInteriorCatalo
             var on=owner.a+d*Math.Clamp(t,0,1);
             assignments[owner.wing.Index].Add(entrance with { Center=new(on.X,entrance.Center.Y,on.Y) });
         }
+        return assignments;
+    }
+    private void AddJunctionEntrances(IReadOnlyList<Wing> wings,IReadOnlyList<Junction> joins,
+        Dictionary<int,List<EntranceDecl>> assignments)
+    {
         foreach(var join in joins)
         {
             foreach(var wing in new[]{wings[join.A],wings[join.B]})
@@ -84,6 +114,11 @@ public sealed class GenericInteriorProvider : IInteriorProvider, IInteriorCatalo
                 }
             }
         }
+    }
+    private List<InteriorPlan> BuildPlans(BuildContext context,FeatureId feature,
+        InteriorCatalogConfiguration config,IReadOnlyList<Wing> wings,IReadOnlyList<Junction> joins,
+        Dictionary<int,List<EntranceDecl>> assignments)
+    {
         var plans=new List<InteriorPlan>();var remainingSeals=config.Seals.Where(s=>s.Building==feature).ToList();
         foreach(var wing in wings)
         {
@@ -117,6 +152,11 @@ public sealed class GenericInteriorProvider : IInteriorProvider, IInteriorCatalo
                     .Select(j=>j.A==wing.Index?j.EdgeA:j.EdgeB).ToArray()}));
         }
         if(remainingSeals.Count!=0) throw new InvalidDataException("A catalog seal has no owning wing.");
+        return plans;
+    }
+    private static List<PortalDecl> ConnectPortals(IReadOnlyList<Wing> wings,IReadOnlyList<Junction> joins,
+        Dictionary<int,List<EntranceDecl>> assignments,IReadOnlyList<InteriorPlan> plans)
+    {
         var portals=plans.SelectMany(p=>p.Portals).Where(p=>p.ZoneA!=-1 || !joins.Any(j=>PlanLines.SegmentDistanceSquared(new((p.A.X+p.B.X)*0.5f,(p.A.Z+p.B.Z)*0.5f),j.Start,j.End)<=0.000001f)).ToList();
         foreach(var join in joins) foreach(var floor in wings[join.A].OpenFloors.Intersect(wings[join.B].OpenFloors).Order())
         {
@@ -127,12 +167,7 @@ public sealed class GenericInteriorProvider : IInteriorProvider, IInteriorCatalo
             var b=second.Portals.Single(p=>p.Storey==floor&&p.ZoneA==-1&&p.Kind==PortalKind.Door&&Vector3.Distance((p.A+p.B)*0.5f,other.Center)<=0.01f);
             portals.Add(a with {ZoneA=a.ZoneB,ZoneB=b.ZoneB});
         }
-        var levels=source.SelectMany(part=>part.Storeys).ToArray();var points=levels.SelectMany(s=>s.Footprint).ToArray();
-        var layout=new InteriorLayout(feature,levels,plans.SelectMany(p=>p.Zones).ToArray(),portals,entrances,[],config.FloorsFor(feature),[],
-            new(new(points.Min(p=>p.X),levels.Min(s=>s.FloorY),points.Min(p=>p.Y)),new(points.Max(p=>p.X),levels.Max(s=>s.FloorY+s.Height),points.Max(p=>p.Y))),
-            StableHash.Hash32(context.WorldSeed,feature.Value,string.Join("/",plans.Select(p=>p.PlanHash.ToString(CultureInfo.InvariantCulture)))))
-            {Doors=plans.SelectMany(p=>p.Doors).ToArray()};
-        return new(layout,plans);
+        return portals;
     }
     public InteriorLayout Layout(BuildContext context,FeatureId feature)=>Of(context,feature).Layout;
     public IReadOnlyList<Collider> CollisionStorey(BuildContext context,FeatureId feature,int storey)=>
@@ -148,9 +183,9 @@ public sealed class GenericInteriorProvider : IInteriorProvider, IInteriorCatalo
             foreach(var span in plan.Walls.Where(w=>w.Storey==storey)) sink.Wall(span.A,span.B,span.BottomY,span.TopY,span.Thickness,
                 span.Role==InteriorWallRole.WindowGlass?PartMaterials.Glazing():wall);
             foreach(var stair in plan.Stairs.Where(s=>s.LowerStorey==storey))
-            {sink.AddSteps(stair.UpFlight,wall);sink.AddSteps(stair.ReturnFlight,wall);sink.Floor(new(stair.MidLanding.Ring),stair.MidLanding.TopY,stair.MidLanding.Thickness,wall,FootMat.Concrete);}
+            {sink.Shapes.Steps(stair.UpFlight,wall);sink.Shapes.Steps(stair.ReturnFlight,wall);sink.Floor(new(stair.MidLanding.Ring),stair.MidLanding.TopY,stair.MidLanding.Thickness,wall,FootMat.Concrete);}
             var level=plan.Storeys.Single(s=>s.Index==storey);
-            sink.Plate(plan.Facade.Footprint,level.FloorY+level.Height,_options.SlabThickness,wall);
+            sink.Parts.Plate(plan.Facade.Footprint,level.FloorY+level.Height,_options.SlabThickness,wall);
         }
         return sink.Finish();
     }

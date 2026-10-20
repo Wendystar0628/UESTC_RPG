@@ -64,7 +64,7 @@ public sealed class FurniturePlantingRowTests
         // the walk altogether); the other roads' benches stay where they were.
         var world = World.Value;
         var before = RealLayout.Value;
-        var avenue = world.Network.Roads.Where(l => StreetSite.RoadName(l) == Avenue.Name).ToList();
+        var avenue = world.Network.Roads.Where(l => StreetNetwork.RoadName(l) == Avenue.Name).ToList();
         var restKey = $"rest:{Avenue.Key}:";
         var bench = before.Items.First(i => i.Kind == FurnitureKind.Bench && i.Key.StartsWith(restKey, StringComparison.Ordinal));
         var offset = avenue.Min(l => (float)PlanLines.Project(l.Line.Points, bench.Anchor).Distance);

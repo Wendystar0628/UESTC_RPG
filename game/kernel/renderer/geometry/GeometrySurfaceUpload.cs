@@ -115,40 +115,12 @@ public static class GeometrySurfaceUpload
         if (compressAttributes && source.Uv2 is not null)
             throw new ArgumentException("UV2 must remain fp32; compressed attributes cannot be requested.", nameof(compressAttributes));
 
-        var levels = source.Lods.OrderBy(lod => lod.Error).ToArray();
-        float? previousError = null;
-        foreach (var lod in levels)
-        {
-            // Locked Godot's mesh_create_surface_data_from_arrays skips these entries; reject instead of silently losing them.
-            if (!float.IsFinite(lod.Error) || lod.Error <= 0f || lod.Index.Length == 0 || lod.Index.Length >= source.Index.Length)
-                throw new ArgumentException("A native LOD needs a positive error and fewer nonempty indices than the base surface.", nameof(source));
-            if (previousError == lod.Error)
-                throw new ArgumentException("Duplicate LOD error keys would discard an index buffer.", nameof(source));
-            previousError = lod.Error;
-        }
+        var levels = OrderedLevels(source);
 
         var positions = new Vector3[count];
         var normals = new Vector3[count];
         var colors = new Color[count];
-        var defaultId = default(PaletteIndex);
-        if (tint.HasValue || source.ColorIndices is null)
-            defaultId = catalog.Resolve(tint ?? source.Spec.Lit);
-        var p = source.Position.Span;
-        var n = source.Normal.Span;
-        for (var i = 0; i < count; i++)
-        {
-            positions[i] = new(p[i * 3], p[i * 3 + 1], p[i * 3 + 2]);
-            normals[i] = new(n[i * 3], n[i * 3 + 1], n[i * 3 + 2]);
-            var color = tint.HasValue ? defaultId : source.ColorIndices is { } logical ? Registered(logical.Span[i])
-                : defaultId;
-            // Match WP-02's established AO byte truncation, then use the existing native UNORM8 input bias.
-            var ao = (byte)Math.Clamp(At(source.Ao, i, 1f) * 255f, 0f, 255f);
-            PaletteIndex? decalBase = source.DecalBaseColorIndices is { } backgrounds ? Registered(backgrounds.Span[i]) : null;
-            var rgba = PaletteEncoding.EncodeColor(color, ao, At(source.Flags, i, (byte)0),
-                At(source.Reserved, i, (byte)0), decalBase);
-            colors[i] = new(PaletteEncoding.Unorm8Input(rgba.R), PaletteEncoding.Unorm8Input(rgba.G),
-                PaletteEncoding.Unorm8Input(rgba.B), PaletteEncoding.Unorm8Input(rgba.A));
-        }
+        FillVertices(source, tint, catalog, positions, normals, colors);
 
         using var arrays = new Godot.Collections.Array();
         if (arrays.Resize((int)Mesh.ArrayType.Max) != Error.Ok)
@@ -171,18 +143,58 @@ public static class GeometrySurfaceUpload
             throw new InvalidOperationException("Godot rejected the complete geometry surface.");
         return surface;
 
-        PaletteIndex Registered(ushort value)
-        {
-            var index = new PaletteIndex(value);
-            _ = catalog.Get(index);
-            return index;
-        }
-
         void SetCustom(Mesh.ArrayType channel, ReadOnlyMemory<float>? data, Mesh.ArrayFormat shift)
         {
             if (data is not { } values) return;
             arrays[(int)channel] = values.ToArray();
             flags |= (Mesh.ArrayFormat)((ulong)Mesh.ArrayCustomFormat.RgbaFloat << (int)shift);
+        }
+    }
+
+    private static LodView[] OrderedLevels(SurfaceView source)
+    {
+        var levels = source.Lods.OrderBy(lod => lod.Error).ToArray();
+        float? previousError = null;
+        foreach (var lod in levels)
+        {
+            // Locked Godot's mesh_create_surface_data_from_arrays skips these entries; reject instead of silently losing them.
+            if (!float.IsFinite(lod.Error) || lod.Error <= 0f || lod.Index.Length == 0 || lod.Index.Length >= source.Index.Length)
+                throw new ArgumentException("A native LOD needs a positive error and fewer nonempty indices than the base surface.", nameof(source));
+            if (previousError == lod.Error)
+                throw new ArgumentException("Duplicate LOD error keys would discard an index buffer.", nameof(source));
+            previousError = lod.Error;
+        }
+        return levels;
+    }
+
+    private static void FillVertices(SurfaceView source, PaletteToken? tint, PaletteCatalog catalog,
+        Vector3[] positions, Vector3[] normals, Color[] colors)
+    {
+        var defaultId = default(PaletteIndex);
+        if (tint.HasValue || source.ColorIndices is null)
+            defaultId = catalog.Resolve(tint ?? source.Spec.Lit);
+        var p = source.Position.Span;
+        var n = source.Normal.Span;
+        for (var i = 0; i < positions.Length; i++)
+        {
+            positions[i] = new(p[i * 3], p[i * 3 + 1], p[i * 3 + 2]);
+            normals[i] = new(n[i * 3], n[i * 3 + 1], n[i * 3 + 2]);
+            var color = tint.HasValue ? defaultId : source.ColorIndices is { } logical ? Registered(logical.Span[i])
+                : defaultId;
+            // Match WP-02's established AO byte truncation, then use the existing native UNORM8 input bias.
+            var ao = (byte)Math.Clamp(At(source.Ao, i, 1f) * 255f, 0f, 255f);
+            PaletteIndex? decalBase = source.DecalBaseColorIndices is { } backgrounds ? Registered(backgrounds.Span[i]) : null;
+            var rgba = PaletteEncoding.EncodeColor(color, ao, At(source.Flags, i, (byte)0),
+                At(source.Reserved, i, (byte)0), decalBase);
+            colors[i] = new(PaletteEncoding.Unorm8Input(rgba.R), PaletteEncoding.Unorm8Input(rgba.G),
+                PaletteEncoding.Unorm8Input(rgba.B), PaletteEncoding.Unorm8Input(rgba.A));
+        }
+
+        PaletteIndex Registered(ushort value)
+        {
+            var index = new PaletteIndex(value);
+            _ = catalog.Get(index);
+            return index;
         }
     }
 

@@ -73,6 +73,19 @@ public partial class KernelStage : Node3D, IAppExit, IStageGateHost
     private void Compose()
     {
         var registry = KernelServices.Services;
+        var view = CreateStagePresentation(registry);
+        registry.InstantiateServices();
+        BindHudDependencies(registry);
+        AttachGlobalNodes(registry);
+        BindRuntimeServices(registry, view);
+        _statistics = new(GetViewport());
+        _statistics.Enable();
+        DisplayServer.WindowSetTitle("电光年华");
+        GD.Print($"[WP-01][map=-][phase=compose] build={BuildInfo.Build}; global objects={registry.Created.Count}");
+    }
+
+    private StageCamera CreateStagePresentation(ServiceRegistry registry)
+    {
         ProcessPriority = FramePriority.Stage;
         var view = new StageCamera();
         _view = view;
@@ -100,7 +113,11 @@ public partial class KernelStage : Node3D, IAppExit, IStageGateHost
         registry.Add(environment.Environment);
         registry.Add(ui);
         registry.Add<IAppExit>(this);
-        registry.InstantiateServices();
+        return view;
+    }
+
+    private static void BindHudDependencies(ServiceRegistry registry)
+    {
         registry.Get<Campus.Hud.HudRoot>().Bind(new Campus.Hud.HudRootDependencies(
             Settings: registry.Get<Campus.Hud.HudSettings>(),
             Model: registry.Get<Campus.Hud.HudModel>(),
@@ -118,6 +135,10 @@ public partial class KernelStage : Node3D, IAppExit, IStageGateHost
             WorldState: registry.Get<IWorldState>(),
             Saves: registry.Get<ISaveService>(),
             PaletteProbe: registry.Get<IPaletteProbe>()));
+    }
+
+    private void AttachGlobalNodes(ServiceRegistry registry)
+    {
         // Build the complete batch, attach every node, then invoke lifecycle hooks. An fx.* consumer
         // must not depend on its instance-pool host sorting ahead of it; _Ready only prepares structure.
         var globalNodes = registry.Query<Node>(RegistrationKind.Node).Where(entry => entry.Lifetime == RegistrationLifetime.Global && entry.Map is null)
@@ -129,6 +150,10 @@ public partial class KernelStage : Node3D, IAppExit, IStageGateHost
         if (globalNodes.Any(node => !node.IsInsideTree()))
             throw new InvalidOperationException("Every global kernel node must enter the tree before startup callbacks.");
         _ = registry.RuntimeInstances<object>();
+    }
+
+    private void BindRuntimeServices(ServiceRegistry registry, StageCamera view)
+    {
         _flow = registry.Get<IAppFlow>();
         _flow.PhaseReached += static phase =>
             GD.Print(FormattableString.Invariant($"STARTUP_PHASE {phase} {FrameClock.MonotonicMilliseconds:R} frame={Engine.GetProcessFrames()}"));
@@ -137,10 +162,6 @@ public partial class KernelStage : Node3D, IAppExit, IStageGateHost
         _flow.Changed += OnFlowChanged;
         _mapRuntime = registry.Get<IMapRuntime>();
         view.Bind(registry.Get<ICameraRig>());
-        _statistics = new(GetViewport());
-        _statistics.Enable();
-        DisplayServer.WindowSetTitle("电光年华");
-        GD.Print($"[WP-01][map=-][phase=compose] build={BuildInfo.Build}; global objects={registry.Created.Count}");
     }
 
     private async Task StartWorld()
@@ -219,6 +240,23 @@ public partial class KernelStage : Node3D, IAppExit, IStageGateHost
             return true;
         }, _captureLifetime.Token);
         CheckStartupActive();
+        await RevealBoot(frontispiece, bootLoading, appBoot, showTitle, maps);
+
+        async Task Initialize(BootPhase phase)
+        {
+            Phase = phase.ToString();
+            foreach (var participant in participants)
+            {
+                CheckStartupActive();
+                await participant.Initialize(phase, context);
+            }
+            CheckStartupActive();
+        }
+    }
+
+    private async Task RevealBoot(IAppFrontispiecePresentation frontispiece, IAppLoadingLease? bootLoading,
+        IAppBootFlow appBoot, bool showTitle, IMapService maps)
+    {
         Phase = "reveal";
         _statistics!.MarkRealtime();
         // Retire the boot-only image independently of foreground loading ownership. A player
@@ -232,17 +270,6 @@ public partial class KernelStage : Node3D, IAppExit, IStageGateHost
         Phase = "realtime";
         GD.Print($"[WP-01][map={maps.Current.Value}][phase=realtime] flow={_flow!.State}; startup complete");
         await _gate.OnRealtime();
-
-        async Task Initialize(BootPhase phase)
-        {
-            Phase = phase.ToString();
-            foreach (var participant in participants)
-            {
-                CheckStartupActive();
-                await participant.Initialize(phase, context);
-            }
-            CheckStartupActive();
-        }
     }
 
     private void CheckStartupActive()

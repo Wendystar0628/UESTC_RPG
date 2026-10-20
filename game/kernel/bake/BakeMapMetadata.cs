@@ -59,21 +59,21 @@ internal static class BakeMapMetadataBuilder
         {
             foreach (var lamp in source.DescribeLights(context)) lamps.TryAdd(Canonical(lamp), lamp);
         }
-        foreach (var module in map.Modules.OrderBy(pair => pair.Key, StringComparer.Ordinal).Select(pair => pair.Value))
+        foreach (var module in map.Content.Modules.OrderBy(pair => pair.Key, StringComparer.Ordinal).Select(pair => pair.Value))
         {
             if (!map.Active) throw new OperationCanceledException("Map unloaded while preparing resident metadata.");
-            if (module.Value is ILightMetadataSource source) CollectLights(source, map.CreateAssetContext(module.CodeHash));
+            if (module.Value is ILightMetadataSource source) CollectLights(source, map.Content.CreateAssetContext(module.CodeHash));
         }
         foreach (var binding in data.InteriorBindings.Where(binding => binding.InteriorFeatures.Count > 0).OrderBy(binding => binding.ProviderId, StringComparer.Ordinal))
         {
             var id = "interior." + binding.ProviderId;
-            var interior = map.Interiors[id];
-            var context = map.CreateAssetContext(interior.CodeHash);
+            var interior = map.Content.Interiors[id];
+            var context = map.Content.CreateAssetContext(interior.CodeHash);
             if (interior.Value is ILightMetadataSource source) CollectLights(source, context);
             foreach (var feature in binding.InteriorFeatures.OrderBy(feature => feature.Value, StringComparer.Ordinal))
             {
                 if (!map.Active) throw new OperationCanceledException("Map unloaded while preparing interior metadata.");
-                var layout = map.InteriorLayouts[feature];
+                var layout = map.Content.Layouts[feature];
                 foreach (var entrance in layout.Entrances)
                 {
                     var item = new BakedEntrance(id, entrance);
@@ -82,12 +82,12 @@ internal static class BakeMapMetadataBuilder
             }
         }
         var emitters = Array.AsReadOnly(lamps.Values.ToArray());
-        var builders = map.Producers.Where(producer => producer.Value is INightlightCatalogBuilder).ToArray();
+        var builders = map.Content.Producers.Where(producer => producer.Value is INightlightCatalogBuilder).ToArray();
         if (builders.Length > 1 || emitters.Count > 0 && builders.Length == 0)
             throw new InvalidDataException("Lamp declarations require exactly one nightlight catalog builder.");
         var nightlight = builders.Length == 0
             ? new NightlightCatalog([], ReadOnlyMemory<float>.Empty, ReadOnlyMemory<float>.Empty, 0, 0)
-            : ((INightlightCatalogBuilder)builders[0].Value).BuildCatalog(map.CreateAssetContext(builders[0].CodeHash), emitters);
+            : ((INightlightCatalogBuilder)builders[0].Value).BuildCatalog(map.Content.CreateAssetContext(builders[0].CodeHash), emitters);
         nightlight = new(Array.AsReadOnly(nightlight.Lamps.ToArray()), nightlight.LampTable.ToArray(), nightlight.LampGrid.ToArray(), nightlight.GridWidth, nightlight.GridHeight) { WindowThresholds = nightlight.WindowThresholds.ToArray() };
         var lightData = new LightInventoryDocument(map.Context.Descriptor.Id,
             emitters, Array.AsReadOnly(facades.OrderBy(facade => Canonical(facade), StringComparer.Ordinal).ToArray()),
@@ -113,8 +113,8 @@ internal static class BakeMapMetadataBuilder
             ?? throw new InvalidDataException("Resident metadata has no window numbering snapshot.");
         BakeWindowPreparation.ValidateMetadata(resident.Windows, snapshot);
         BakeWindowPreparation.ValidateMetadata(new(resident.Metadata.Lighting.Facades, resident.Metadata.Lighting.Windows), snapshot);
-        foreach (var pair in resident.Directory.Modules) BakeService.MapBuild.ValidateTiles(pair.Key, pair.Value);
-        BakeService.MapBuild.ValidateAuxiliary(resident.Directory.Auxiliary, map, modules, producers);
+        foreach (var pair in resident.Directory.Modules) BakeModuleTiles.ValidateTiles(pair.Key, pair.Value);
+        BakeModuleTiles.ValidateAuxiliary(resident.Directory.Auxiliary, map, modules, producers);
     }
 
     private static void Validate(LightInventoryDocument lights, EntranceInventoryDocument doors)

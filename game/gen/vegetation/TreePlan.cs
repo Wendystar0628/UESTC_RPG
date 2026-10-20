@@ -199,30 +199,7 @@ internal sealed class TreePlan
     {
         var stems = Math.Max(1, Form.Stems);
         var trunkTop = Form.Leader ? Height * 0.94f : ScalarMath.Lerp(BranchY, Height, 0.16f);
-        var stemTops = new List<Limb>();
-        var stemAngle = Next() * Tau;
-        for (var s = 0; s < stems; s++)
-        {
-            // Multi-stem forms splay outwards from a shared root; single trunks wander a little.
-            var splay = stems > 1 ? Azimuth(stemAngle + s * Tau / stems) * (Height * Range(0.06f, 0.1f)) : Vector3.Zero;
-            var wander = Azimuth(Next() * Tau) * (Height * 0.012f);
-            var trunk = new Limb(0);
-            AddTrunkPoint(trunk, -MotherModels.Burial, Vector3.Zero, 1f);
-            var steps = Math.Max(4, (int)MathF.Ceiling(trunkTop / 1.1f));
-            for (var i = 0; i <= steps; i++)
-            {
-                var y = trunkTop * i / steps;
-                var f = y / trunkTop;
-                var offset = splay * (f * f * 0.8f + f * 0.2f) + wander * MathF.Sin(f * 3.1f) + (CrownCenter with { Y = 0f }) * (f * f * 0.5f);
-                var radius = Form.Leader
-                    ? (y < BranchY ? 1f - 0.35f * y / BranchY : 0.65f - 0.53f * (y - BranchY) / MathF.Max(0.1f, trunkTop - BranchY))
-                    : 1f - 0.4f * f;
-                AddTrunkPoint(trunk, y, offset, radius / MathF.Sqrt(stems));
-            }
-            if (Form.Leader) trunk.Radii[^1] = TrunkRadius * 0.1f;
-            Limbs.Add(trunk);
-            stemTops.Add(trunk);
-        }
+        var stemTops = BuildStems(stems, trunkTop);
 
         var mains = Count(Form.MainMin, Form.MainMax);
         var phase = Next() * Tau;
@@ -284,6 +261,36 @@ internal sealed class TreePlan
         }
         // Neighbouring masses step front and back along the crown radius, so their seams show a depth step (max-110 110c-4).
         CrownStagger.Apply(this);
+    }
+
+    private List<Limb> BuildStems(int stems, float trunkTop)
+    {
+        var stemTops = new List<Limb>();
+        var stemAngle = Next() * Tau;
+        for (var s = 0; s < stems; s++)
+        {
+            // Multi-stem forms splay outwards from a shared root; single trunks wander a little.
+            var splay = stems > 1 ? Azimuth(stemAngle + s * Tau / stems) * (Height * Range(0.06f, 0.1f)) : Vector3.Zero;
+            var wander = Azimuth(Next() * Tau) * (Height * 0.012f);
+            var trunk = new Limb(0);
+            AddTrunkPoint(trunk, -MotherModels.Burial, Vector3.Zero, 1f);
+            var steps = Math.Max(4, (int)MathF.Ceiling(trunkTop / 1.1f));
+            for (var i = 0; i <= steps; i++)
+            {
+                var y = trunkTop * i / steps;
+                var f = y / trunkTop;
+                var offset = splay * (f * f * 0.8f + f * 0.2f) + wander * MathF.Sin(f * 3.1f) + (CrownCenter with { Y = 0f }) * (f * f * 0.5f);
+                var radius = Form.Leader
+                    ? (y < BranchY ? 1f - 0.35f * y / BranchY : 0.65f - 0.53f * (y - BranchY) / MathF.Max(0.1f, trunkTop - BranchY))
+                    : 1f - 0.4f * f;
+                AddTrunkPoint(trunk, y, offset, radius / MathF.Sqrt(stems));
+            }
+            if (Form.Leader) trunk.Radii[^1] = TrunkRadius * 0.1f;
+            Limbs.Add(trunk);
+            stemTops.Add(trunk);
+        }
+
+        return stemTops;
     }
 
     /// <summary>Radius of the leader-body masses as a fraction of the crown envelope at their height.</summary>

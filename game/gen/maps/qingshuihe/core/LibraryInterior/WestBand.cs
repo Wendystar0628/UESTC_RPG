@@ -54,8 +54,8 @@ internal static class WestBand
         foreach (var (u, sign) in new[] { (u0, 1f), (u1, -1f) })
         {
             Vector2 a = At(u, S.LiningIn), b = At(u, back + S.ShelfDepth + S.SealBack);
-            sink.Run(S.Wall(S.Wood), a - wall.Along * (sign * 0.1f), b - wall.Along * (sign * 0.1f), 0.2f, y - 0.01f, top);
-            sink.Wall(a - wall.Along * (sign * 0.1f), b - wall.Along * (sign * 0.1f), 0.1f, y, y + 3f, SurfaceTag.DoorClosed, FootMat.WoodDoor);
+            sink.Shapes.Run(S.Wall(S.Wood), a - wall.Along * (sign * 0.1f), b - wall.Along * (sign * 0.1f), 0.2f, y - 0.01f, top);
+            sink.Collision.Wall(a - wall.Along * (sign * 0.1f), b - wall.Along * (sign * 0.1f), 0.1f, y, y + 3f, SurfaceTag.DoorClosed, FootMat.WoodDoor);
         }
         if (!sink.Full) return;
         Desks(f, sink, wall, At, u0, u1, y, ref rng);
@@ -77,7 +77,7 @@ internal static class WestBand
         {
             var c = at(windows[i], S.LiningIn + 0.47f);
             Furnishing.Table(sink, c, wall.Along, 1.5f, 0.8f, y, S.DarkWood, S.DarkWood);
-            sink.Solid(at(windows[i], S.LiningIn + 0.85f), wall.Along, 1.6f, 1.6f, y, surface, SurfaceTag.Prop, FootMat.WoodDoor);
+            sink.Collision.Solid(at(windows[i], S.LiningIn + 0.85f), wall.Along, 1.6f, 1.6f, y, surface, SurfaceTag.Prop, FootMat.WoodDoor);
             var pushed = rng.NextFloat() < 0.3f;
             var facing = pushed ? Furnishing.Rotate(wall.Out, (rng.NextFloat() - 0.5f) * 0.9f) : wall.Out;
             Furnishing.Chair(sink, at(windows[i] + (pushed ? 0.2f : 0f), S.LiningIn + (pushed ? 1.35f : 1.05f)), facing, y, S.Wood);

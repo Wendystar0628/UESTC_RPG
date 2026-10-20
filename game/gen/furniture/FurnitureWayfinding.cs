@@ -2,13 +2,16 @@ using Campus.Gen.Geometry;
 using System.Numerics;
 using Campus.Contracts;
 using Campus.Contracts.Parts;
-using Campus.Gen.Parts.Street;
 using Campus.Gen.World;
 using S = Campus.Gen.Furniture.FurnitureStyle;
+using static Campus.Gen.Furniture.FurniturePlacement;
+using static Campus.Gen.Furniture.FurnitureParts;
+using static Campus.Gen.Furniture.FurnitureSlots;
 
 namespace Campus.Gen.Furniture;
 
-public static partial class FurniturePlanner
+/// <summary>Places fountains and landmark-junction signposts on admitted paving slots.</summary>
+internal static class FurnitureWayfinding
 {
     // ---------------------------------------------------------------------------------------------------------
     // Drinking fountains and signposts (Opus review 13c2b 21:05): interim rules until WP-44's walk: points replace them.
@@ -20,7 +23,7 @@ public static partial class FurniturePlanner
     /// <see cref="FurnitureStyle.FountainFar"/> in front of the door, the nearest spot that fits first, on a bay joined to the paving and
     /// facing it, under the walk furniture's rules (<see cref="PavingSlot"/>). The count and the buildings left without go to the diagnostics.
     /// </summary>
-    private static void Fountains(StreetSite site, List<FurnitureItem> items, List<BuildDiagnostic> diagnostics, EquipmentParams p)
+    internal static void Fountains(StreetSite site, List<FurnitureItem> items, List<BuildDiagnostic> diagnostics, EquipmentParams p)
     {
         var done = new HashSet<FeatureId>();
         var placed = 0;
@@ -34,7 +37,7 @@ public static partial class FurniturePlanner
             var plan = new Vector2(door.Center.X, door.Center.Z);
             var facing = Angles.Heading(door.YawDeg);
             WalkFit? fit = null;
-            foreach (var edge in site.PavingEdgesNear(plan, S.FountainFar, S.NodeStep))
+            foreach (var edge in site.Paving.PavingEdgesNear(plan, S.FountainFar, S.NodeStep))
             {
                 var away = edge.Edge - plan;
                 if (away.Length() < S.FountainNear || Vector2.Dot(away, facing) <= 0f) continue;
@@ -43,7 +46,7 @@ public static partial class FurniturePlanner
                 break;
             }
             if (fit is not { } at) { left.Add(door.Id); continue; }
-            items.Add(Placed($"fountain:{door.Id}", FurnitureKind.DrinkingFountain, PartCatalog.DrinkingFountain, p, at, FountainDef.Collision(p)));
+            items.Add(Fitted($"fountain:{door.Id}", FurnitureKind.DrinkingFountain, PartCatalog.DrinkingFountain, p, at, FountainDef.Collision(p)));
             site.Occupy(at.Ends.A, at.Ends.B, at.Ends.R);
             placed++;
         }
@@ -58,7 +61,7 @@ public static partial class FurniturePlanner
     /// line of sight). Each stands beside the paving nearest its junction, within <see cref="FurnitureStyle.SignpostReach"/>, facing it, on a
     /// bay joined to the paving (<see cref="PavingSlot"/>). The counts go to the diagnostics.
     /// </summary>
-    private static void Signposts(StreetSite site, List<FurnitureItem> items, List<BuildDiagnostic> diagnostics)
+    internal static void Signposts(StreetSite site, List<FurnitureItem> items, List<BuildDiagnostic> diagnostics)
     {
         var p = S.Signpost;
         var landmarks = site.World.Features.Values.OrderBy(f => f.Id.Value, StringComparer.Ordinal)
@@ -78,10 +81,10 @@ public static partial class FurniturePlanner
         {
             if (placed.Any(q => Vector2.Distance(q, at) < S.SignpostSpacing)) { crowded++; continue; }
             WalkFit? fit = null;
-            foreach (var edge in site.PavingEdgesNear(at, S.SignpostReach, 0.5f))
+            foreach (var edge in site.Paving.PavingEdgesNear(at, S.SignpostReach, 0.5f))
                 if (PavingSlot(site, edge.Edge, edge.Inward, edge.Road, p, facesWalk: false).Fit is { } slot) { fit = slot; break; }
             if (fit is not { } spot) { cramped++; continue; }
-            items.Add(Placed($"signpost:{Num(placed.Count)}", FurnitureKind.Signpost, PartCatalog.Signpost, p, spot, SignpostDef.Collision(p)));
+            items.Add(Fitted($"signpost:{Num(placed.Count)}", FurnitureKind.Signpost, PartCatalog.Signpost, p, spot, SignpostDef.Collision(p)));
             site.Occupy(spot.Ends.A, spot.Ends.B, spot.Ends.R);
             placed.Add(at);
         }

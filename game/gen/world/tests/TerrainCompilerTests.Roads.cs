@@ -213,13 +213,13 @@ public sealed partial class TerrainCompilerTests
     public void EndCapDistanceHasBoundedSlopeAtBothFlanksAndObliqueRoadClearance()
     {
         const double radius = 3;
-        var tip = TerrainCompiler.EndCapDistance(3, 0, Vector2.Zero, 1, 0, radius);
-        var flank = TerrainCompiler.EndCapDistance(0, 3, Vector2.Zero, 1, 0, radius);
-        var centreline = TerrainCompiler.EndCapDistance(1, 0, Vector2.Zero, 1, 0, radius);
+        var tip = TerrainDryChannels.EndCapDistance(3, 0, Vector2.Zero, 1, 0, radius);
+        var flank = TerrainDryChannels.EndCapDistance(0, 3, Vector2.Zero, 1, 0, radius);
+        var centreline = TerrainDryChannels.EndCapDistance(1, 0, Vector2.Zero, 1, 0, radius);
         AssertThat(Math.Abs((double)(0) - (double)(tip.Height)) <= TestTolerance.Position).IsTrue(); AssertThat(Math.Abs((double)(-1) - (double)(tip.Dx)) <= TestTolerance.Position).IsTrue(); AssertThat(Math.Abs((double)(0) - (double)(flank.Height)) <= TestTolerance.Position).IsTrue(); AssertThat(Math.Abs((double)(-1) - (double)(flank.Dz)) <= TestTolerance.Position).IsTrue(); AssertThat(Math.Abs((double)(2) - (double)(centreline.Height)) <= TestTolerance.Position).IsTrue();
         foreach (var point in new[] { new Vector2(0.01f, 2.99f), new Vector2(-0.01f, 2.99f), new Vector2(1, 2), new Vector2(-1, 2) })
         {
-            var d = TerrainCompiler.EndCapDistance(point.X, point.Y, Vector2.Zero, 1, 0, radius);
+            var d = TerrainDryChannels.EndCapDistance(point.X, point.Y, Vector2.Zero, 1, 0, radius);
             AssertThat(double.IsFinite(d.Dx) && double.IsFinite(d.Dz) && d.Dx * d.Dx + d.Dz * d.Dz <= 1.01).OverrideFailureMessage("End-cap distance has an unbounded flank derivative.").IsTrue();
         }
         // A 4 m-wide north/south road occupies x >= -2 on its near side. A radius-3
@@ -275,18 +275,18 @@ public sealed partial class TerrainCompilerTests
             // including the part of the shoulder past the source-end plane.
             foreach (var point in new[] { new Vector2(43.6f, 235.8f), new Vector2(44, 235.8f) })
             {
-                var contact = TerrainCompiler.CorridorContactAt(road, 0.75, point.X, point.Y);
+                var contact = TerrainRoadCoreGeometry.CorridorContactAt(road, 0.75, point.X, point.Y);
                 AssertThat(contact.Distance.Height <= 0).OverrideFailureMessage("Fixture must be inside the fixed source core/shoulder.").IsTrue();
                 var expected = path.Project(point.X, point.Y);
-                var actual = TerrainCompiler.CorridorOffsetAt(road, contact, point.X, point.Y);
+                var actual = TerrainRoadCoreGeometry.CorridorOffsetAt(road, contact, point.X, point.Y);
                 AssertThat(Math.Abs(actual.Height - expected.Offset) < TestTolerance.Position).OverrideFailureMessage("Exterior continuity repair changed fixed core/shoulder crossfall.").IsTrue();
             }
 
             double Top(double px, double pz)
             {
-                var contact = TerrainCompiler.CorridorContactAt(road, 0, px, pz);
+                var contact = TerrainRoadCoreGeometry.CorridorContactAt(road, 0, px, pz);
                 var along = profile.SurfaceAt(path, px, pz, road.Width, path.Project(px, pz));
-                return along.Height + 0.015 * TerrainCompiler.CorridorOffsetAt(road, contact, px, pz).Height;
+                return along.Height + 0.015 * TerrainRoadCoreGeometry.CorridorOffsetAt(road, contact, px, pz).Height;
             }
         }
     }

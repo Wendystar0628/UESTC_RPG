@@ -69,31 +69,12 @@ public static partial class WorldModelLoader
     private static WorldModelPreparation PrepareCore(MapId map, IReadOnlyDictionary<string, string> files,
         WorldLoadOptions options, WorldModelLoadInputs? inputs)
     {
-        var input = new SortedDictionary<string, string>(StringComparer.Ordinal);
-        foreach (var pair in files.OrderBy(p => p.Key, StringComparer.Ordinal))
-        {
-            var key = pair.Key.Replace('\\', '/');
-            if (key.StartsWith('/') || key.Contains(':') || key.Split('/').Any(s => s is ".." or "." or ""))
-                throw new WorldDataException(pair.Key, "path", "Expected a relative path within the current map.");
-            if (key == "fidelity.json" || key.StartsWith("overlay/fidelity/", StringComparison.Ordinal))
-                throw new WorldDataException(key, "path", "Retired fidelity overlay input; precision is compiled from the authored world.");
-            if (key.StartsWith("overlay/interior/", StringComparison.Ordinal))
-                throw new WorldDataException(key,"path","Retired interior overlay input; configure the provider in interiors.json.");
-            if (key.StartsWith("overlay/", StringComparison.Ordinal) && key["overlay/".Length..].Split('/')[0].EndsWith(".d", StringComparison.Ordinal))
-                throw new WorldDataException(key, "path", "Retired feature overlay input; edit world/<zone>.json.");
-            if (!input.TryAdd(key, pair.Value)) throw new WorldDataException(key, "path", "Duplicate normalized path.");
-        }
+        var input = NormalizeInputs(files);
         const string geoFile = "world/geo.json";
         if (!input.TryGetValue(geoFile, out var geoText)) throw new WorldDataException(geoFile, "root", "Required map data is missing.");
         using var document = Parse(geoFile, geoText);
         var root = document.RootElement;
-        var origin = root.GetProperty("origin");
-        var limits = root.GetProperty("bounds");
-        var geo = new GeoFrame(origin[0].GetDouble(), origin[1].GetDouble(),
-            int.Parse(Text(root, "crs").Split(':')[^1], CultureInfo.InvariantCulture),
-            new(Finite(limits[0]), Finite(limits[1])), new(Finite(limits[2]), Finite(limits[3])));
-        if (geo.BoundaryMin.X >= geo.BoundaryMax.X || geo.BoundaryMin.Y >= geo.BoundaryMax.Y)
-            throw new WorldDataException(geoFile, "bounds", "Invalid bounds.");
+        var geo = ReadGeoFrame(root, geoFile);
         var boundary = Value<PolygonRings>(root.GetProperty("boundary"));
         var prefix = Text(root, "entityPrefix");
         var features = new SortedDictionary<string, WorldFeature>(StringComparer.Ordinal);
@@ -103,65 +84,7 @@ public static partial class WorldModelLoader
         var roads = new List<NetworkLine>();
         var waterways = new List<NetworkLine>();
         var trees = new List<NetworkTree>();
-        foreach (var (file, text) in input.Where(pair => pair.Key.StartsWith("world/", StringComparison.Ordinal)
-            && pair.Key.EndsWith(".json", StringComparison.Ordinal) && !pair.Key.EndsWith(".terrain.json", StringComparison.Ordinal) && pair.Key.Split('/').Length == 2 && pair.Key != geoFile))
-        {
-            using var zoneDocument = Parse(file, text);
-            var zone = new ZoneId(file["world/".Length..^".json".Length]);
-            foreach (var raw in zoneDocument.RootElement.GetProperty("features").EnumerateArray())
-            {
-                var id = Text(raw, "id");
-                try
-                {
-                    var kind = new DesignKind(Text(raw, "kind"));
-                    var parts = new List<WorldFeaturePart>();
-                    if (raw.TryGetProperty("parts", out var members))
-                        foreach (var member in members.EnumerateArray())
-                        {
-                            var partId = Text(member, "id");
-                            if (!partIds.Add(partId)) throw new WorldDataException(file, partId, "Duplicate part ID.");
-                            Polyline? line = member.TryGetProperty("line", out var nodes) ? new(Value<Vector2[]>(nodes)) : null;
-                            var width = OptionalFloat(member, "width") ?? 0;
-                            var geometry = member.TryGetProperty("geometry", out var shape) ? Value<WorldGeometry>(shape)
-                                : Buffer(line ?? throw new ArgumentException("Missing part geometry: " + partId), width, boundary)
-                                    ?? throw new ArgumentException("Empty buffered part: " + partId);
-                            var part = new WorldFeaturePart(partId, geometry, OptionalFloat(member, "height"), OptionalInteger(member, "storeys"))
-                            {
-                                Props = Props(member),
-                                FacadeGeometry = ReadFacadeGeometry(member, WorldFeatureGeometry.PolygonsOf(geometry))
-                            };
-                            parts.Add(part);
-                            if (line is not null)
-                                AddLine(new(new(WorldFeatureIds.FromPart(prefix, partId).Source), line, width)
-                                    { Props = NetworkPrecisionProps(part.Props, Props(raw)) }, kind.Value, file);
-                        }
-                    var combined = parts.Count == 0 ? Value<WorldGeometry>(raw.GetProperty("geometry"))
-                        : Geometry(parts.SelectMany(part => WorldFeatureGeometry.PolygonsOf(part.Geometry)).ToArray());
-                    var height = OptionalFloat(raw, "height");
-                    var feature = new WorldFeature(new(id), kind, combined)
-                    {
-                        Parts = parts.ToArray(), Zone = zone, Name = OptionalText(raw, "name"), Height = height,
-                        Storeys = OptionalInteger(raw, "storeys"), Props = Props(raw), Bounds = BoundsOf(combined, height ?? 0),
-                        Family = OptionalText(raw, "family") is { } family ? new(family) : null,
-                        Facade = OptionalText(raw, "facade") is { } facade ? new(facade) : null
-                    };
-                    if (!features.TryAdd(id, feature)) throw new WorldDataException(file, id, "Duplicate world feature ID.");
-                    var sourceLine = WorldFeatureIds.TryFromSource(prefix, id, out _);
-                    var designRoad = kind.Value == "road" && feature.TryText("highway") is "footway" or "path" or "pedestrian";
-                    if (parts.Count == 0 && combined is PolylineGeometry polyline && (sourceLine || designRoad && feature.TryText("area") != "yes"))
-                        AddLine(new(feature.Id, polyline.Line, feature.TryNumber("width") ?? 0) { Props = feature.Props }, kind.Value, file);
-                }
-                catch (Exception error) when (error is JsonException or ArgumentException or InvalidOperationException or KeyNotFoundException or FormatException)
-                { throw new WorldDataException(file, id, error.Message, error); }
-            }
-            foreach (var raw in zoneDocument.RootElement.GetProperty("trees").EnumerateArray())
-            {
-                var tree = Value<NetworkTree>(raw);
-                if (!treeIds.Add(tree.Id)) throw new WorldDataException(file, tree.Id.Value, "Duplicate tree ID.");
-                if (!VectorMath.Finite(tree.Position)) throw new WorldDataException(file, tree.Id.Value, "Invalid tree coordinate.");
-                trees.Add(tree);
-            }
-        }
+        ReadZones(input, geoFile, prefix, boundary, features, partIds, treeIds, trees, AddLine);
         var orderedRoads = OrderNetwork(roads, line => line.Id, prefix).ToArray();
         var orderedWater = OrderNetwork(waterways, line => line.Id, prefix).ToArray();
         var network = new WorldNetwork(orderedRoads, orderedWater,
@@ -218,6 +141,116 @@ public static partial class WorldModelLoader
             if (kind == "road" || line.Props.TryText("highway") is not null) roads.Add(line);
             else if (kind is "water" or "weir" || line.Props.TryText("waterway") is not null) waterways.Add(line);
             else throw new WorldDataException(file, line.Id.Value, "Unclassified network line.");
+        }
+    }
+
+    private static GeoFrame ReadGeoFrame(JsonElement root, string geoFile)
+    {
+        var origin = root.GetProperty("origin");
+        var limits = root.GetProperty("bounds");
+        var geo = new GeoFrame(origin[0].GetDouble(), origin[1].GetDouble(),
+            int.Parse(Text(root, "crs").Split(':')[^1], CultureInfo.InvariantCulture),
+            new(Finite(limits[0]), Finite(limits[1])), new(Finite(limits[2]), Finite(limits[3])));
+        if (geo.BoundaryMin.X >= geo.BoundaryMax.X || geo.BoundaryMin.Y >= geo.BoundaryMax.Y)
+            throw new WorldDataException(geoFile, "bounds", "Invalid bounds.");
+        return geo;
+    }
+
+    private static SortedDictionary<string, string> NormalizeInputs(IReadOnlyDictionary<string, string> files)
+    {
+        var input = new SortedDictionary<string, string>(StringComparer.Ordinal);
+        foreach (var pair in files.OrderBy(p => p.Key, StringComparer.Ordinal))
+        {
+            var key = pair.Key.Replace('\\', '/');
+            if (key.StartsWith('/') || key.Contains(':') || key.Split('/').Any(s => s is ".." or "." or ""))
+                throw new WorldDataException(pair.Key, "path", "Expected a relative path within the current map.");
+            if (key == "fidelity.json" || key.StartsWith("overlay/fidelity/", StringComparison.Ordinal))
+                throw new WorldDataException(key, "path", "Retired fidelity overlay input; precision is compiled from the authored world.");
+            if (key.StartsWith("overlay/interior/", StringComparison.Ordinal))
+                throw new WorldDataException(key,"path","Retired interior overlay input; configure the provider in interiors.json.");
+            if (key.StartsWith("overlay/", StringComparison.Ordinal) && key["overlay/".Length..].Split('/')[0].EndsWith(".d", StringComparison.Ordinal))
+                throw new WorldDataException(key, "path", "Retired feature overlay input; edit world/<zone>.json.");
+            if (!input.TryAdd(key, pair.Value)) throw new WorldDataException(key, "path", "Duplicate normalized path.");
+        }
+        return input;
+    }
+
+    private static List<WorldFeaturePart> ReadParts(JsonElement raw, string kind, string file, string prefix,
+        PolygonRings boundary, HashSet<string> partIds, Action<NetworkLine, string, string> AddLine)
+    {
+        var parts = new List<WorldFeaturePart>();
+        if (raw.TryGetProperty("parts", out var members))
+            foreach (var member in members.EnumerateArray())
+            {
+                var partId = Text(member, "id");
+                if (!partIds.Add(partId)) throw new WorldDataException(file, partId, "Duplicate part ID.");
+                Polyline? line = member.TryGetProperty("line", out var nodes) ? new(Value<Vector2[]>(nodes)) : null;
+                var width = OptionalFloat(member, "width") ?? 0;
+                var geometry = member.TryGetProperty("geometry", out var shape) ? Value<WorldGeometry>(shape)
+                    : Buffer(line ?? throw new ArgumentException("Missing part geometry: " + partId), width, boundary)
+                        ?? throw new ArgumentException("Empty buffered part: " + partId);
+                var part = new WorldFeaturePart(partId, geometry, OptionalFloat(member, "height"), OptionalInteger(member, "storeys"))
+                {
+                    Props = Props(member),
+                    FacadeGeometry = ReadFacadeGeometry(member, WorldFeatureGeometry.PolygonsOf(geometry))
+                };
+                parts.Add(part);
+                if (line is not null)
+                    AddLine(new(new(WorldFeatureIds.FromPart(prefix, partId).Source), line, width)
+                        { Props = NetworkPrecisionProps(part.Props, Props(raw)) }, kind, file);
+            }
+        return parts;
+    }
+
+    private static WorldFeature ReadFeature(JsonElement raw, string id, ZoneId zone, string file, string prefix,
+        PolygonRings boundary, HashSet<string> partIds, Action<NetworkLine, string, string> AddLine)
+    {
+        var kind = new DesignKind(Text(raw, "kind"));
+        var parts = ReadParts(raw, kind.Value, file, prefix, boundary, partIds, AddLine);
+        var combined = parts.Count == 0 ? Value<WorldGeometry>(raw.GetProperty("geometry"))
+            : Geometry(parts.SelectMany(part => WorldFeatureGeometry.PolygonsOf(part.Geometry)).ToArray());
+        var height = OptionalFloat(raw, "height");
+        var feature = new WorldFeature(new(id), kind, combined)
+        {
+            Parts = parts.ToArray(), Zone = zone, Name = OptionalText(raw, "name"), Height = height,
+            Storeys = OptionalInteger(raw, "storeys"), Props = Props(raw), Bounds = BoundsOf(combined, height ?? 0),
+            Family = OptionalText(raw, "family") is { } family ? new(family) : null,
+            Facade = OptionalText(raw, "facade") is { } facade ? new(facade) : null
+        };
+        return feature;
+    }
+
+    private static void ReadZones(SortedDictionary<string, string> input, string geoFile, string prefix,
+        PolygonRings boundary, SortedDictionary<string, WorldFeature> features, HashSet<string> partIds,
+        HashSet<FeatureId> treeIds, List<NetworkTree> trees, Action<NetworkLine, string, string> AddLine)
+    {
+        foreach (var (file, text) in input.Where(pair => pair.Key.StartsWith("world/", StringComparison.Ordinal)
+            && pair.Key.EndsWith(".json", StringComparison.Ordinal) && !pair.Key.EndsWith(".terrain.json", StringComparison.Ordinal) && pair.Key.Split('/').Length == 2 && pair.Key != geoFile))
+        {
+            using var zoneDocument = Parse(file, text);
+            var zone = new ZoneId(file["world/".Length..^".json".Length]);
+            foreach (var raw in zoneDocument.RootElement.GetProperty("features").EnumerateArray())
+            {
+                var id = Text(raw, "id");
+                try
+                {
+                    var feature = ReadFeature(raw, id, zone, file, prefix, boundary, partIds, AddLine);
+                    if (!features.TryAdd(id, feature)) throw new WorldDataException(file, id, "Duplicate world feature ID.");
+                    var sourceLine = WorldFeatureIds.TryFromSource(prefix, id, out _);
+                    var designRoad = feature.Kind.Value == "road" && feature.TryText("highway") is "footway" or "path" or "pedestrian";
+                    if (feature.Parts.Count == 0 && feature.Geometry is PolylineGeometry polyline && (sourceLine || designRoad && feature.TryText("area") != "yes"))
+                        AddLine(new(feature.Id, polyline.Line, feature.TryNumber("width") ?? 0) { Props = feature.Props }, feature.Kind.Value, file);
+                }
+                catch (Exception error) when (error is JsonException or ArgumentException or InvalidOperationException or KeyNotFoundException or FormatException)
+                { throw new WorldDataException(file, id, error.Message, error); }
+            }
+            foreach (var raw in zoneDocument.RootElement.GetProperty("trees").EnumerateArray())
+            {
+                var tree = Value<NetworkTree>(raw);
+                if (!treeIds.Add(tree.Id)) throw new WorldDataException(file, tree.Id.Value, "Duplicate tree ID.");
+                if (!VectorMath.Finite(tree.Position)) throw new WorldDataException(file, tree.Id.Value, "Invalid tree coordinate.");
+                trees.Add(tree);
+            }
         }
     }
 

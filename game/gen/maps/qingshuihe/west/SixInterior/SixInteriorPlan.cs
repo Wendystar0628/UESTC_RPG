@@ -27,15 +27,15 @@ internal sealed record SixInteriorPlan(float GroundY, PolygonRings CBase, Polygo
 
     public static SixInteriorPlan Of(BuildContext ctx)
     {
-        var c = SixSite.BasePlan(SixSite.Plan(ctx.World, S.EntityC, S.PartC));
-        var b = SixSite.BasePlan(SixSite.Plan(ctx.World, S.EntityB, S.PartB));
+        var c = SixLayout.BasePlan(SixLayout.Plan(ctx.World, S.EntityC, S.PartC));
+        var b = SixLayout.BasePlan(SixLayout.Plan(ctx.World, S.EntityB, S.PartB));
         var data = ctx.World.Feature(S.EntityC).RequiredProps().GetProperty("interior");
         var formula = data.GetProperty("formula");
         var bottom = formula.Pair("bottom"); var top = formula.Pair("top");
         var returning = data.GetProperty("return");
         var axis = returning.Pair("axis");
         var upper = (Polygon)Polygon(Ring(data, "upperC")).Union(Polygon(Ring(data, "upperPlatform")));
-        return new(SixSite.BaseY(ctx, S.EntityC), c, b,
+        return new(SixLayout.BaseY(ctx, S.EntityC), c, b,
             Clip(c, Ring(data, "hall")), Clip(c, From(upper)), Clip(b, Ring(data, "publicB")),
             PlanFrame.Along((bottom + top) * 0.5f, new Vector2(top.Y - bottom.Y, bottom.X - top.X)),
             formula.Number("width"), Vector2.Distance(bottom, top),

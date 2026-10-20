@@ -4,19 +4,21 @@ using Campus.Contracts;
 using Campus.Contracts.Bake;
 using Campus.Contracts.Maps;
 
+using static Campus.Kernel.Bake.BakeService;
+
 namespace Campus.Kernel.Bake;
 
-public sealed partial class BakeService
+internal sealed class BakeTerrainPreparation(TerrainCacheService terrain)
 {
-    private void PrepareResidentTerrain(MapBuild map)
+    internal void PrepareResident(MapBuild map)
     {
-        foreach (var module in map.Modules.OrderBy(pair => pair.Key, StringComparer.Ordinal).Select(pair => pair.Value))
+        foreach (var module in map.Content.Modules.OrderBy(pair => pair.Key, StringComparer.Ordinal).Select(pair => pair.Value))
         {
-            var context = map.CreateAssetContext(module.CodeHash);
+            var context = map.Content.CreateAssetContext(module.CodeHash);
             if (module.Value is IGroundCoverSource ground) _ = ground.PrepareGroundCover(context);
         }
     }
-    private void PrepareProductTerrain(MapBuild map, BakeKey key)
+    internal void PrepareProduct(MapBuild map, BakeKey key)
     {
         if (!(key.Detail.StartsWith("C/", StringComparison.Ordinal) || key.Detail.StartsWith('L'))) return;
         var request = BakeRequestKeys.Parse(key);
@@ -24,7 +26,7 @@ public sealed partial class BakeService
         // height field or L0 ground tile publishes a runtime raster footprint here.
         if (!request.Collision && !(key.Module == GroundModule.Module && request.Level == LodLevel.L0)) return;
         var origin = TileGrid.Origin(request.Tile, LodLevel.L0);
-        _terrain.PrepareRegion(map.Context, new(origin, origin + new Vector2(TileGrid.BaseEdge)), map.Lifetime.Token)
+        terrain.PrepareRegion(map.Context, new(origin, origin + new Vector2(TileGrid.BaseEdge)), map.Lifetime.Token)
             .GetAwaiter().GetResult();
     }
 }

@@ -33,21 +33,21 @@ internal static class ShellInterior
             IReadOnlyList<IReadOnlyList<Vector2>> holes = core && storey > 1 ? [voidRing] : [];
             var rings = new PolygonRings(block.Ring, holes);
             InteriorPaint? soffit = storey == 1 || core ? null : S.Wall(S.CeilingWhite);
-            sink.Slab(rings, y, S.Stone(S.Floor), soffit, S.Wall(S.WallWhite));
+            sink.Shapes.Slab(rings, y, S.Stone(S.Floor), soffit, S.Wall(S.WallWhite));
             if (core && storey > 1)
             {
                 // The gallery ring's soffit is the dark star ceiling (回廊顶棚深灰色); the sectors beyond take plain white.
                 var ring = f.Octagon(f.GalleryApothem);
-                sink.Plate(S.Wall(S.StarCeiling), new PolygonRings(ring, [voidRing]), y - S.SlabThick, false);
-                sink.Plate(S.Wall(S.CeilingWhite), new PolygonRings(block.Ring, [ring]), y - S.SlabThick, false);
+                sink.Shapes.Plate(S.Wall(S.StarCeiling), new PolygonRings(ring, [voidRing]), y - S.SlabThick, false);
+                sink.Shapes.Plate(S.Wall(S.CeilingWhite), new PolygonRings(block.Ring, [ring]), y - S.SlabThick, false);
             }
             if (core && storey == 1)
             {
                 // The hall's carpet and the atrium's polished stone are separate floors (SYS-AUDIO).
-                sink.Floor(new PolygonRings(block.Ring, [voidRing]), y, FootMat.Carpet);
-                sink.Floor(new PolygonRings(voidRing), y, FootMat.PolishedStone);
+                sink.Collision.Floor(new PolygonRings(block.Ring, [voidRing]), y, FootMat.Carpet);
+                sink.Collision.Floor(new PolygonRings(voidRing), y, FootMat.PolishedStone);
             }
-            else sink.Floor(rings, y, FootMat.PolishedStone);
+            else sink.Collision.Floor(rings, y, FootMat.PolishedStone);
         }
     }
 
@@ -58,7 +58,7 @@ internal static class ShellInterior
             var y = block.Y1 - S.CeilingGap;
             var core = ReferenceEquals(block, f.Core);
             IReadOnlyList<IReadOnlyList<Vector2>> holes = core ? [f.Octagon(f.GalleryApothem)] : [];
-            sink.Plate(S.Wall(S.CeilingWhite), new PolygonRings(block.Ring, holes), y, false);
+            sink.Shapes.Plate(S.Wall(S.CeilingWhite), new PolygonRings(block.Ring, holes), y, false);
             if (core) RingBeam(f, sink, y);
         }
     }
@@ -70,7 +70,7 @@ internal static class ShellInterior
         var outer = f.Octagon(f.GalleryApothem + S.RingBeamWidth);
         var top = LibraryRoof.SkylightBaseY(f.Plan) - S.CeilingGap;
         for (var k = 0; k < 8; k++)
-            sink.Prism(S.Wall(S.RingBeam), [inner[k], inner[(k + 1) % 8], outer[(k + 1) % 8], outer[k]], ceiling - S.RingBeamDrop, top);
+            sink.Shapes.Prism(S.Wall(S.RingBeam), [inner[k], inner[(k + 1) % 8], outer[(k + 1) % 8], outer[k]], ceiling - S.RingBeamDrop, top);
     }
 
     /// <summary>
@@ -139,7 +139,7 @@ internal static class ShellInterior
             float o1 = i + 2 == u.Length ? end.Outer : u[i + 1], n1 = i + 2 == u.Length ? end.Inner : u[i + 1];
             Vector2[] ring = [Point(face, o0, S.LiningOut), Point(face, o1, S.LiningOut), Point(face, n1, S.LiningIn), Point(face, n0, S.LiningIn)];
             foreach (var (a, b) in Solid(y0, y1, band.Where(h => h.U0 <= mid && h.U1 >= mid)))
-                sink.Prism(paint, ring, a, b);
+                sink.Shapes.Prism(paint, ring, a, b);
         }
     }
 

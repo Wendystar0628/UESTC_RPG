@@ -26,7 +26,7 @@ internal static class VegetationTiles
                     Add(Vector2.Min(points[i - 1], points[i]) - new Vector2(reach), Vector2.Max(points[i - 1], points[i]) + new Vector2(reach));
             }
         }
-        var site = new Planting.Site(world, context.WorldSeed);
+        var site = new PlantingSite(world, context.WorldSeed);
         foreach (var parcel in site.Green) Add(parcel.Min, parcel.Max);
         foreach (var pit in site.Pits)
         {

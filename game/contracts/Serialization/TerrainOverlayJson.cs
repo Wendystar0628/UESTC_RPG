@@ -238,21 +238,7 @@ public static class TerrainOverlayJson
             case TerrainBasinOp b:
                 Shape(b.Shape); Positive(b.Height, "height"); Profile(b.Profile); break;
             case TerrainSlopeOp s:
-                Elevation(s.Y0, "y0"); Elevation(s.Y1, "y1"); Finite(s.CrossFall, "crossFall"); Side(s.Side); Minimum(s.Fillet, 2, "fillet");
-                switch (s.Geometry)
-                {
-                    case PolygonGeometry polygon:
-                        Polygon(polygon.Rings);
-                        if (s.From is not { } from || s.To is not { } to || from == to || s.Width is not null)
-                            throw new ArgumentException("Polygon slope requires distinct from/to points and no width.");
-                        Point(from); Point(to); break;
-                    case PolylineGeometry polyline:
-                        Line(polyline.Line);
-                        if (s.Width is not { } width || s.From is not null || s.To is not null)
-                            throw new ArgumentException("Polyline slope requires width and no from/to points.");
-                        Positive(width, "width"); break;
-                    default: throw new ArgumentException("Stage 1 slopes accept only polygon or polyline geometry.");
-                }
+                ValidateSlope(s);
                 break;
             case TerrainTerraceOp t:
                 Line(t.Front); Point(t.Inward);
@@ -262,50 +248,7 @@ public static class TerrainOverlayJson
                 foreach (var station in t.StairAt) Minimum(station, 0, "stairAt");
                 break;
             case TerrainChannelOp c:
-                Positive(c.Depth, "depth"); Bank(c.Bank);
-                if (c.Line is not null) { Line(c.Line); if (c.Width is null) throw new ArgumentException("An explicit channel line requires width."); }
-                if (c.Width is { } channelWidth) Positive(channelWidth, "width");
-                ArgumentNullException.ThrowIfNull(c.Weirs);
-                ArgumentNullException.ThrowIfNull(c.Wade);
-                if (c.Dry && c.Wade.Count != 0) throw new ArgumentException("A dry channel cannot register wade polygons.");
-                foreach (var polygon in c.Wade) Polygon(polygon);
-                if (c.Dry)
-                {
-                    if (c.Water is not null || c.WaterY is not null || c.Line is null || c.Width is null || c.Weirs.Count != 0)
-                        throw new ArgumentException("Explicit dry channels require null water/waterY, line/width, and no water-level weirs.");
-                    if (c.Bank.Kind != TerrainBankKind.Swale) throw new ArgumentException("Stage 1 dry channels require a swale bank.");
-                }
-                else
-                {
-                    if (c.Water is not { } water || c.WaterY is not { } waterY)
-                        throw new ArgumentException("A wet channel needs a real water ID and constant waterY; null does not imply a dry channel.");
-                    Reference(water, "water"); Elevation(waterY, "waterY");
-                    if (c.Bank.Kind == TerrainBankKind.Swale) throw new ArgumentException("A wet channel cannot use swale bank geometry.");
-                }
-                foreach (var weir in c.Weirs)
-                {
-                    ArgumentNullException.ThrowIfNull(weir);
-                    Minimum(weir.S, 0, "weirs.s"); Range(weir.Drop, 0.3, 0.6, "weirs.drop");
-                    Reference(weir.Structure, "weirs.structure"); Reference(weir.Upstream, "weirs.upstream"); Reference(weir.Downstream, "weirs.downstream");
-                    if (weir.Upstream == weir.Downstream || weir.Structure == weir.Upstream || weir.Structure == weir.Downstream ||
-                        c.Water != weir.Upstream && c.Water != weir.Downstream)
-                        throw new ArgumentException("A weir needs a distinct structure and two distinct water IDs, including this channel's water ID.");
-                    _ = weir.Kind switch { TerrainWeirKind.Weir or TerrainWeirKind.Gate or TerrainWeirKind.Culvert => 0, _ => throw new ArgumentException("Unknown weir kind.") };
-                }
-                for (var i = 0; i < c.Weirs.Count; i++)
-                    for (var j = i + 1; j < c.Weirs.Count; j++)
-                    {
-                        var a = c.Weirs[i]; var b = c.Weirs[j];
-                        if (a.Kind != TerrainWeirKind.Weir || b.Kind != TerrainWeirKind.Weir ||
-                            a.Downstream != b.Upstream && b.Downstream != a.Upstream) continue;
-                        if (a.Structure == b.Structure)
-                            throw new ArgumentException("Chained weirs require distinct structures.");
-                        if (Math.Abs(a.S - b.S) < 1.5)
-                            throw new ArgumentException("Chained weirs require at least 1.5 m absolute station separation on this channel's centreline.");
-                    }
-                ArgumentNullException.ThrowIfNull(c.Crossings);
-                if (!c.Dry && c.Crossings.Count != 0) throw new ArgumentException("Stage 1 crossings are dry-channel-only; wet channels use their real network structures.");
-                foreach (var crossing in c.Crossings) Crossing(crossing);
+                ValidateChannel(c);
                 break;
             case TerrainLakeOp l:
                 Reference(l.Water, "water"); Elevation(l.WaterY, "waterY"); Bank(l.Bank); ArgumentNullException.ThrowIfNull(l.Bed);
@@ -323,39 +266,111 @@ public static class TerrainOverlayJson
                 }
                 break;
             case TerrainCorridorOp c:
-                Reference(c.Road, "road"); Range(c.CrossFall, -0.02, 0.02, "crossFall"); Range(c.Shoulder, 0.5, 1, "shoulder");
-                double firstStation = 0;
-                if (c.Range is { } stationRange)
-                {
-                    Minimum(stationRange.S0, 0, "range.s0"); Finite(stationRange.S1, "range.s1");
-                    if (stationRange.S1 <= stationRange.S0)
-                        throw new ArgumentException("Corridor range must be a nonempty interval with s1 > s0.");
-                    firstStation = stationRange.S0;
-                }
-                ArgumentNullException.ThrowIfNull(c.Anchors);
-                if (c.Anchors.Count < 2 || c.Anchors[0] is null || c.Anchors[0].S != firstStation)
-                    throw new ArgumentException("Corridor needs at least two anchors, starting at range.s0 or zero when range is absent.");
-                double previous = -1;
-                foreach (var anchor in c.Anchors)
-                {
-                    ArgumentNullException.ThrowIfNull(anchor); Minimum(anchor.S, 0, "anchors.s"); Elevation(anchor.Y, "anchors.y");
-                    if (anchor.S <= previous) throw new ArgumentException("Corridor anchor stations must strictly increase.");
-                    previous = anchor.S;
-                }
-                if (c.Range is { } authoredRange && c.Anchors[^1].S != authoredRange.S1)
-                    throw new ArgumentException("Corridor last anchor must equal range.s1.");
-                ArgumentNullException.ThrowIfNull(c.Steps);
-                double previousEnd = -1;
-                foreach (var step in c.Steps)
-                {
-                    ArgumentNullException.ThrowIfNull(step); Reference(step.Structure, "steps.structure");
-                    Minimum(step.S0, 0, "steps.s0"); Finite(step.S1, "steps.s1");
-                    if (step.S1 <= step.S0 || step.S0 < firstStation || step.S1 > c.Anchors[^1].S || step.S0 < previousEnd)
-                        throw new ArgumentException("Step intervals must be ordered, nonoverlapping and inside the authored corridor span.");
-                    previousEnd = step.S1;
-                }
+                ValidateCorridor(c);
                 break;
             default: throw new ArgumentException("Unknown terrain operation type.");
+        }
+    }
+
+    private static void ValidateSlope(TerrainSlopeOp s)
+    {
+        Elevation(s.Y0, "y0"); Elevation(s.Y1, "y1"); Finite(s.CrossFall, "crossFall"); Side(s.Side); Minimum(s.Fillet, 2, "fillet");
+        switch (s.Geometry)
+        {
+            case PolygonGeometry polygon:
+                Polygon(polygon.Rings);
+                if (s.From is not { } from || s.To is not { } to || from == to || s.Width is not null)
+                    throw new ArgumentException("Polygon slope requires distinct from/to points and no width.");
+                Point(from); Point(to); break;
+            case PolylineGeometry polyline:
+                Line(polyline.Line);
+                if (s.Width is not { } width || s.From is not null || s.To is not null)
+                    throw new ArgumentException("Polyline slope requires width and no from/to points.");
+                Positive(width, "width"); break;
+            default: throw new ArgumentException("Stage 1 slopes accept only polygon or polyline geometry.");
+        }
+    }
+
+    private static void ValidateChannel(TerrainChannelOp c)
+    {
+        Positive(c.Depth, "depth"); Bank(c.Bank);
+        if (c.Line is not null) { Line(c.Line); if (c.Width is null) throw new ArgumentException("An explicit channel line requires width."); }
+        if (c.Width is { } channelWidth) Positive(channelWidth, "width");
+        ArgumentNullException.ThrowIfNull(c.Weirs);
+        ArgumentNullException.ThrowIfNull(c.Wade);
+        if (c.Dry && c.Wade.Count != 0) throw new ArgumentException("A dry channel cannot register wade polygons.");
+        foreach (var polygon in c.Wade) Polygon(polygon);
+        if (c.Dry)
+        {
+            if (c.Water is not null || c.WaterY is not null || c.Line is null || c.Width is null || c.Weirs.Count != 0)
+                throw new ArgumentException("Explicit dry channels require null water/waterY, line/width, and no water-level weirs.");
+            if (c.Bank.Kind != TerrainBankKind.Swale) throw new ArgumentException("Stage 1 dry channels require a swale bank.");
+        }
+        else
+        {
+            if (c.Water is not { } water || c.WaterY is not { } waterY)
+                throw new ArgumentException("A wet channel needs a real water ID and constant waterY; null does not imply a dry channel.");
+            Reference(water, "water"); Elevation(waterY, "waterY");
+            if (c.Bank.Kind == TerrainBankKind.Swale) throw new ArgumentException("A wet channel cannot use swale bank geometry.");
+        }
+        foreach (var weir in c.Weirs)
+        {
+            ArgumentNullException.ThrowIfNull(weir);
+            Minimum(weir.S, 0, "weirs.s"); Range(weir.Drop, 0.3, 0.6, "weirs.drop");
+            Reference(weir.Structure, "weirs.structure"); Reference(weir.Upstream, "weirs.upstream"); Reference(weir.Downstream, "weirs.downstream");
+            if (weir.Upstream == weir.Downstream || weir.Structure == weir.Upstream || weir.Structure == weir.Downstream ||
+                c.Water != weir.Upstream && c.Water != weir.Downstream)
+                throw new ArgumentException("A weir needs a distinct structure and two distinct water IDs, including this channel's water ID.");
+            _ = weir.Kind switch { TerrainWeirKind.Weir or TerrainWeirKind.Gate or TerrainWeirKind.Culvert => 0, _ => throw new ArgumentException("Unknown weir kind.") };
+        }
+        for (var i = 0; i < c.Weirs.Count; i++)
+            for (var j = i + 1; j < c.Weirs.Count; j++)
+            {
+                var a = c.Weirs[i]; var b = c.Weirs[j];
+                if (a.Kind != TerrainWeirKind.Weir || b.Kind != TerrainWeirKind.Weir ||
+                    a.Downstream != b.Upstream && b.Downstream != a.Upstream) continue;
+                if (a.Structure == b.Structure)
+                    throw new ArgumentException("Chained weirs require distinct structures.");
+                if (Math.Abs(a.S - b.S) < 1.5)
+                    throw new ArgumentException("Chained weirs require at least 1.5 m absolute station separation on this channel's centreline.");
+            }
+        ArgumentNullException.ThrowIfNull(c.Crossings);
+        if (!c.Dry && c.Crossings.Count != 0) throw new ArgumentException("Stage 1 crossings are dry-channel-only; wet channels use their real network structures.");
+        foreach (var crossing in c.Crossings) Crossing(crossing);
+    }
+
+    private static void ValidateCorridor(TerrainCorridorOp c)
+    {
+        Reference(c.Road, "road"); Range(c.CrossFall, -0.02, 0.02, "crossFall"); Range(c.Shoulder, 0.5, 1, "shoulder");
+        double firstStation = 0;
+        if (c.Range is { } stationRange)
+        {
+            Minimum(stationRange.S0, 0, "range.s0"); Finite(stationRange.S1, "range.s1");
+            if (stationRange.S1 <= stationRange.S0)
+                throw new ArgumentException("Corridor range must be a nonempty interval with s1 > s0.");
+            firstStation = stationRange.S0;
+        }
+        ArgumentNullException.ThrowIfNull(c.Anchors);
+        if (c.Anchors.Count < 2 || c.Anchors[0] is null || c.Anchors[0].S != firstStation)
+            throw new ArgumentException("Corridor needs at least two anchors, starting at range.s0 or zero when range is absent.");
+        double previous = -1;
+        foreach (var anchor in c.Anchors)
+        {
+            ArgumentNullException.ThrowIfNull(anchor); Minimum(anchor.S, 0, "anchors.s"); Elevation(anchor.Y, "anchors.y");
+            if (anchor.S <= previous) throw new ArgumentException("Corridor anchor stations must strictly increase.");
+            previous = anchor.S;
+        }
+        if (c.Range is { } authoredRange && c.Anchors[^1].S != authoredRange.S1)
+            throw new ArgumentException("Corridor last anchor must equal range.s1.");
+        ArgumentNullException.ThrowIfNull(c.Steps);
+        double previousEnd = -1;
+        foreach (var step in c.Steps)
+        {
+            ArgumentNullException.ThrowIfNull(step); Reference(step.Structure, "steps.structure");
+            Minimum(step.S0, 0, "steps.s0"); Finite(step.S1, "steps.s1");
+            if (step.S1 <= step.S0 || step.S0 < firstStation || step.S1 > c.Anchors[^1].S || step.S0 < previousEnd)
+                throw new ArgumentException("Step intervals must be ordered, nonoverlapping and inside the authored corridor span.");
+            previousEnd = step.S1;
         }
     }
 

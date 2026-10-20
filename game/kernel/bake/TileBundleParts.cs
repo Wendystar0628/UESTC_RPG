@@ -39,6 +39,34 @@ internal static class TileBundleParts
 
     internal static IReadOnlyList<byte[]> Encode(string identity, TileBundle tile, Func<byte[], bool> fits)
     {
+        var units = DeliveryUnits(tile);
+        var groups = GroupUnits(units);
+
+        var result = new List<byte[]>();
+        var firstSurface = 0;
+        for (var index = 0; index < groups.Count; index++)
+        {
+            var part = MakePart(tile, groups[index], index, groups.Count, firstSurface);
+            var encoded = TileBundleCodec.EncodePartCandidate(identity, part);
+            if (encoded is not null && fits(encoded))
+            {
+                result.Add(encoded);
+                firstSurface += part.Tile.Surfaces.Count;
+                continue;
+            }
+            var (left, right) = SplitGroup(groups[index]);
+            groups[index] = left;
+            groups.Insert(index + 1, right);
+            // A split changes every part's total count; check the final bytes of every ordinal again.
+            result.Clear();
+            firstSurface = 0;
+            index = -1;
+        }
+        return result;
+    }
+
+    private static List<Unit> DeliveryUnits(TileBundle tile)
+    {
         var units = new List<Unit>();
         foreach (var surface in tile.Surfaces) units.Add(new(surface, null, null));
         for (var index = 0; index < tile.MultiMeshes.Count; index++)
@@ -55,7 +83,11 @@ internal static class TileBundleParts
                 start += count;
             } while (start < multi.InstanceCount);
         }
+        return units;
+    }
 
+    private static List<List<Unit>> GroupUnits(IReadOnlyList<Unit> units)
+    {
         var groups = new List<List<Unit>>();
         var current = new List<Unit>();
         long bytes = 0;
@@ -73,51 +105,30 @@ internal static class TileBundleParts
             bytes += unit.Bytes;
         }
         if (current.Count != 0 || groups.Count == 0) groups.Add(current);
+        return groups;
+    }
 
-        var result = new List<byte[]>();
-        var firstSurface = 0;
-        for (var index = 0; index < groups.Count; index++)
+    private static Part MakePart(TileBundle tile, IReadOnlyList<Unit> group, int index, int count, int surfaceStart) => new(
+        new(tile.Key, tile.Tile, tile.Level, tile.Bounds,
+            group.Where(unit => unit.Surface is not null).Select(unit => unit.Surface!).ToArray(),
+            group.Where(unit => unit.Multi is not null).Select(unit => unit.Multi!).ToArray(), tile.StatisticsJson),
+        new(index, count, surfaceStart, tile.Surfaces.Count, tile.MultiMeshes.Count,
+            group.Where(unit => unit.Slice is not null).Select(unit => unit.Slice!).ToArray()));
+
+    private static (List<Unit> Left, List<Unit> Right) SplitGroup(List<Unit> group)
+    {
+        if (group.Count > 1)
         {
-            var part = Make(groups[index], index, groups.Count, firstSurface);
-            var encoded = TileBundleCodec.EncodePartCandidate(identity, part);
-            if (encoded is not null && fits(encoded))
-            {
-                result.Add(encoded);
-                firstSurface += part.Tile.Surfaces.Count;
-                continue;
-            }
-            var (left, right) = Split(groups[index]);
-            groups[index] = left;
-            groups.Insert(index + 1, right);
-            // A split changes every part's total count; check the final bytes of every ordinal again.
-            result.Clear();
-            firstSurface = 0;
-            index = -1;
+            var middle = group.Count / 2;
+            return (group.GetRange(0, middle), group.GetRange(middle, group.Count - middle));
         }
-        return result;
-
-        Part Make(IReadOnlyList<Unit> group, int index, int count, int surfaceStart) => new(
-            new(tile.Key, tile.Tile, tile.Level, tile.Bounds,
-                group.Where(unit => unit.Surface is not null).Select(unit => unit.Surface!).ToArray(),
-                group.Where(unit => unit.Multi is not null).Select(unit => unit.Multi!).ToArray(), tile.StatisticsJson),
-            new(index, count, surfaceStart, tile.Surfaces.Count, tile.MultiMeshes.Count,
-                group.Where(unit => unit.Slice is not null).Select(unit => unit.Slice!).ToArray()));
-
-        static (List<Unit> Left, List<Unit> Right) Split(List<Unit> group)
+        if (group.Count == 1 && group[0] is { Multi: { InstanceCount: > 1 } multi, Slice: { } slice })
         {
-            if (group.Count > 1)
-            {
-                var middle = group.Count / 2;
-                return (group.GetRange(0, middle), group.GetRange(middle, group.Count - middle));
-            }
-            if (group.Count == 1 && group[0] is { Multi: { InstanceCount: > 1 } multi, Slice: { } slice })
-            {
-                var first = multi.InstanceCount / 2;
-                return ([Instance(multi, slice.MultiMesh, 0, first, slice.Start, slice.Total)],
-                    [Instance(multi, slice.MultiMesh, first, multi.InstanceCount - first, slice.Start, slice.Total)]);
-            }
-            throw new InvalidDataException("A packed surface cannot fit the compressed physical delivery limit.");
+            var first = multi.InstanceCount / 2;
+            return ([Instance(multi, slice.MultiMesh, 0, first, slice.Start, slice.Total)],
+                [Instance(multi, slice.MultiMesh, first, multi.InstanceCount - first, slice.Start, slice.Total)]);
         }
+        throw new InvalidDataException("A packed surface cannot fit the compressed physical delivery limit.");
     }
 
     private static Unit Instance(BakedMultiMesh multi, int index, int start, int count, int origin = 0, int? total = null) =>
@@ -177,7 +188,7 @@ internal static class TileBundleParts
     {
         using var stream = new MemoryStream();
         using var writer = new BinaryWriter(stream, new UTF8Encoding(false, true), true);
-        TileBundleCodec.WriteSurface(writer, surface);
+        TileRenderSection.WriteSurface(writer, surface);
         return stream.ToArray();
     }
 }

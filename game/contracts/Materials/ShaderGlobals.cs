@@ -75,7 +75,7 @@ public static class ShaderGlobals
     public const string Quality = "quality";
     /// <summary>Sole writer: Campus.Kernel.Maps.MapDataSource.</summary>
     public const string MapRect = "map_rect";
-    /// <summary>Sole writer: Campus.Camera.ObserverCamera.</summary>
+    /// <summary>Sole writer: Campus.Camera.ObserverFlight.</summary>
     public const string EdgeFog = "edge_fog";
     /// <summary>Reserved: project.godot default only; no runtime writer.</summary>
     public const string InteriorLight = "interior_light";

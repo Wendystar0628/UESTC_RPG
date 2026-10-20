@@ -1,7 +1,7 @@
 using Campus.Gen.BakeInput;
-using System.Globalization;
+using Campus.Contracts.Content;
 using System.Collections.Concurrent;
-using System.Collections.ObjectModel;
+
 using Campus.Contracts;
 using Campus.Contracts.AppFlow;
 using Campus.Contracts.Bake;
@@ -17,18 +17,9 @@ namespace Campus.Kernel.Bake;
 [KernelService(typeof(BakeService))]
 [KernelService(typeof(IBakeService))]
 [KernelService(typeof(IBakeContextSource))]
+[KernelService(typeof(IMapContentSource))]
 
-
-
-
-
-
-
-
-
-
-
-public sealed partial class BakeService : IBakeService, IBakeContextSource, IDisposable, IRegistryExitParticipant
+public sealed class BakeService : IBakeService, IBakeContextSource, IMapContentSource, IDisposable, IRegistryExitParticipant
 {
     private readonly IMapService? _maps;
     private readonly IAppFlow? _flow;
@@ -40,11 +31,11 @@ public sealed partial class BakeService : IBakeService, IBakeContextSource, IDis
     private readonly Dictionary<MapId, MapBuild> _contexts = [];
     private readonly object _sync = new();
     private readonly object _inputIdentitySync = new();
-    private long _cacheGeneration;
-    private Task? _clearing;
+    private readonly BakeProductBuilder _products;
+    private readonly BakeMapPreparation _preparation;
+    private readonly BakeCatalog _catalog;
     private bool _stopped;
     private bool _exiting;
-    private AppState _phase;
 
     public BakeService(IMapService maps, IAppFlow flow, TerrainCacheService terrain, GlobalBuildInputs globalInputs)
         : this(BakeOptions.FromApplication(), terrain, globalInputs.Snapshot)
@@ -61,6 +52,9 @@ public sealed partial class BakeService : IBakeService, IBakeContextSource, IDis
         _queue = new(_options.MaximumWorkers, FlushInputIdentities);
         _terrain = terrain;
         _cache = terrain.Store;
+        _products = new(options, terrain);
+        _preparation = new(options, terrain);
+        _catalog = new(options, _queue, (map, key, priority) => Schedule(map, key, priority), ReportCatalogFailure);
         ApplyPhase(AppState.Boot);
     }
 
@@ -83,7 +77,7 @@ public sealed partial class BakeService : IBakeService, IBakeContextSource, IDis
         {
             if (!_contexts.TryGetValue(context.Descriptor.Id, out var map))
                 throw new InvalidOperationException("The requested map has no prepared bake context.");
-            return map.GetPreparedContext(context, moduleId);
+            return map.Content.GetPreparedContext(context, moduleId);
         }
     }
 
@@ -106,8 +100,7 @@ public sealed partial class BakeService : IBakeService, IBakeContextSource, IDis
         lock (_sync)
         {
             ObjectDisposedException.ThrowIf(_stopped, this);
-            Interlocked.Increment(ref _cacheGeneration);
-            _clearing = Task.Run(_cache.Clear);
+            _products.Clear();
         }
     }
     public void ClearFailures() => _queue.ClearFailures();
@@ -152,12 +145,12 @@ public sealed partial class BakeService : IBakeService, IBakeContextSource, IDis
             var ledger = new Lazy<MapClaimLedger>(() => claims.Build(context.World), LazyThreadSafetyMode.ExecutionAndPublication);
             Func<FeatureId, Aspects, string?> claimLookup = (feature, aspects) => ledger.Value.ClaimedBy(feature, aspects);
             var sourceCache = new BakeSourceIndexCache(_terrain, context.Descriptor.Id,
-                SourceVersion(context, seed, globalInputs, modules, interiors, producers),
-                IndexCode(modules, interiors, producers));
+                BakeInputIdentity.SourceVersion(_terrain.CodeFingerprints, context, seed, globalInputs, modules, interiors, producers),
+                BakeInputIdentity.IndexCode(_terrain.CodeFingerprints, modules, interiors, producers));
             var map = new MapBuild(context, modules, interiors, producers, geometry,
-                ledger, claimLookup, new(() => Load(context, seed, catalog, interiors, modules, claimLookup, globalInputs,
+                claimLookup, new(() => _preparation.Load(context, seed, catalog, interiors, modules, claimLookup, globalInputs,
                     groundContributors, partLods, sourceCache, producers), LazyThreadSafetyMode.ExecutionAndPublication),
-                globalInputs, groundContributors, partLods, catalog) { TerrainCache = _terrain, SourceCache = sourceCache };
+                globalInputs, groundContributors, partLods, catalog, _terrain, sourceCache);
             _contexts.Add(context.Descriptor.Id, map);
             return map;
         }
@@ -172,6 +165,7 @@ public sealed partial class BakeService : IBakeService, IBakeContextSource, IDis
             if (removed is not null) removed.Active = false;
         }
         _queue.ForgetMap(map);
+        if (removed is not null) _catalog.Forget(removed);
         removed?.Lifetime.Cancel(); // Forget first: cancellation is not a failed active-map build.
         if (removed is not null)
         {
@@ -183,32 +177,13 @@ public sealed partial class BakeService : IBakeService, IBakeContextSource, IDis
     internal async Task<BakeMapMetadata> PrepareMapData(IMapContext context)
     {
         var map = Mount(context);
-        var metadata = await Task.Run(() =>
-        {
-            var data = map.Data.Value;
-            foreach (var layout in data.Layouts) map.InteriorLayouts.Add(layout.Feature, layout);
-            if (data.Resident is { } cached)
-            {
-                map.InteriorCoverage = cached.Coverage;
-                map.PrepareDirectory(cached.Metadata, cached.Directory);
-                return cached.Metadata;
-            }
-            map.InteriorCoverage = InspectInteriorCoverage(map);
-            var generated = BakeMapMetadataBuilder.Build(map);
-            RequireEntranceCoverage(map, generated);
-            map.PrepareDirectory(generated);
-            PrepareResidentTerrain(map);
-            var terrainPoints = _terrain.SaveResidentPoints(context.World, data.ResidentStamp);
-            _terrain.WriteProduct(new(context.Descriptor.Id, "resident", "meta"), data.ResidentStamp,
-                new BakeResidentData(generated, data.Windows.Metadata, map.InteriorCoverage.ToArray(), map.InteriorLayouts.Values.ToArray(),
-                    map.PreparedTiles, terrainPoints) { OutdoorAccess = data.OutdoorAccess });
-            return generated;
-        });
+        var metadata = await Task.Run(() => _preparation.Prepare(map));
         lock (_sync)
         {
             if (!map.Active || !_contexts.TryGetValue(context.Descriptor.Id, out var current) || !ReferenceEquals(map, current))
                 throw new OperationCanceledException("Map unloaded while preparing resident metadata.");
-            map.CompletePreparation(metadata);
+            map.Content.CompletePreparation(metadata);
+            map.Directory.PublishDirectory();
         }
         return metadata;
     }
@@ -218,192 +193,14 @@ public sealed partial class BakeService : IBakeService, IBakeContextSource, IDis
         lock (_sync)
         {
             if (_stopped || !map.Active) throw new OperationCanceledException("Map unloaded before request scheduling.");
-            return _queue.Ensure(key, priority, () => Build(map, key));
+            return _queue.Ensure(key, priority, () => _products.Build(map, key));
         }
     }
 
-    internal object Build(MapBuild map, BakeKey key)
-    {
-        var cancellation = map.Lifetime.Token;
-        cancellation.ThrowIfCancellationRequested();
-        var generation = Interlocked.Read(ref _cacheGeneration);
-        Task? clearing;
-        lock (_sync) clearing = _clearing;
-        clearing?.WaitAsync(cancellation).GetAwaiter().GetResult();
-        cancellation.ThrowIfCancellationRequested();
-        _ = map.Data.Value;
-        cancellation.ThrowIfCancellationRequested();
-        var module = map.Modules.GetValueOrDefault(key.Module);
-        var interior = map.Interiors.GetValueOrDefault(key.Module);
-        var matches = map.Producers.Where(p => p.Value.CanBuild(key)).ToArray();
-        if (matches.Length > 1 || (module is not null || interior is not null) && matches.Length != 0)
-            throw new InvalidDataException("More than one producer claims this bake key.");
-        if (module is null && interior is null && matches.Length == 0) throw new InvalidDataException("No bake producer is registered for this key.");
-        var payloadClass = module is not null || interior is not null ? BakePayloadClass.Tile : matches[0].Value.PayloadClass;
-        var context = map.GetPreparedBuildContext(module is not null ? module.Value :
-            interior is not null ? interior.Value : matches[0].Value);
-        var sources = map.SourceIndex(context);
-        var inputHash = sources.TryProduct(key, out var preparedHash) ? preparedHash : ProductInputHash(map, context, key);
-        sources.RememberProduct(key, inputHash);
-        var identity = BakeInputFingerprint.Identity(key, inputHash);
-        PrepareProductTerrain(map, key);
-        if (!_options.Live)
-        {
-            var cached = _cache.TryReadParts(key, payloadClass, payload =>
-            {
-                var product = Decode(payloadClass, identity, key, payload);
-                RequireInteriorProduct(map, key, product);
-                RequireAuxiliaryProduct(map, key, product);
-                return product;
-            }, cancellation);
-            if (cached is not null)
-            {
-                map.PipelineStatistics?.Add(cached, map.Geometry);
-                return cached;
-            }
-            if (_options.Strict) throw new InvalidDataException($"Strict cache miss: {identity}");
-        }
-        // Only a cache miss needs the evaluator; cached products keep the published read-only world.
-        var buildContext = map.CreateAssetContext(context);
-        var built = module is not null ? map.Geometry!.Build(key, buildContext, module.Value, diagnostics => map.Collect(key.Module, "geometry", diagnostics)) :
-            interior is not null ? BuildInterior(map, key, buildContext, interior.Value) : matches[0].Value.Build(key, buildContext, inputHash);
-        cancellation.ThrowIfCancellationRequested();
-        var bytes = Encode(payloadClass, identity, built, cancellation);
-        cancellation.ThrowIfCancellationRequested();
-        // Validate exactly the bytes about to be written before publishing Ready; malformed producer output is terminal.
-        var validated = Decode(payloadClass, identity, key, bytes);
-        cancellation.ThrowIfCancellationRequested();
-        RequireInteriorProduct(map, key, validated);
-        RequireAuxiliaryProduct(map, key, validated);
-        map.PipelineStatistics?.Add(validated, map.Geometry);
-        if (!_options.Live && generation == Interlocked.Read(ref _cacheGeneration))
-        {
-            _cache.WriteParts(key, payloadClass, bytes, cancellation);
-        }
-        return validated;
-    }
-
-    private LoadedMap Load(IMapContext context, uint seed, PaletteCatalog catalog, IReadOnlyDictionary<string, Interior> interiors,
-        IReadOnlyDictionary<string, ContentModuleInput> modules, Func<FeatureId, Aspects, string?> claimLookup, BuildInputSnapshot globalInputs,
-        IReadOnlyList<IGroundMaskContributor> groundContributors, PartLodCatalog partLods, BakeSourceIndexCache sourceCache, Producer[] producers)
-    {
-        if (!_options.Live)
-        {
-            _cache.Initialize();
-        }
-        var inputs = BakeInputFingerprint.ReadInputs(context);
-        var publication = context as IMapInteriorPreparation
-            ?? throw new InvalidOperationException("The loading map does not support interior publication.");
-        // These instances belong to this MapBuild, never the registry's global cache or an older map's jobs.
-        // Configure once before the Lazy publishes them to any consumer of this map's generation context.
-        var providers = interiors.Values.ToDictionary(interior => interior.ProviderId, interior => interior.Value, StringComparer.Ordinal);
-        IReadOnlyList<InteriorProviderBinding> bindings = inputs.TryGetValue("interiors.json", out var interiorCatalogBytes)
-            ? InteriorAssembly.ConfigureForWorld(interiorCatalogBytes, providers, context.World) : [];
-        var activeInteriors = new ReadOnlyDictionary<string, IInteriorProvider>(bindings.Where(binding => binding.InteriorFeatures.Count > 0).ToDictionary(binding => binding.ProviderId,
-            binding => providers[binding.ProviderId], StringComparer.Ordinal));
-        var residentStamp = sourceCache.ResolveResidentStamp(() =>
-        {
-            // Revalidate changed inputs before publishing a replacement resident version.
-            BuildingOverlapValidator.Validate(context.World, claimLookup);
-            return ResidentStamp(context, seed, catalog, interiors, modules, globalInputs, claimLookup, producers);
-        });
-        var resident = _terrain.ReadProduct<BakeResidentData>(new(context.Descriptor.Id, "resident", "meta"), residentStamp, candidate =>
-        {
-            BakeMapMetadataBuilder.ValidateResident(candidate, context.Descriptor.Id, modules, producers);
-            if (!_terrain.RestoreResidentPoints(context.World, residentStamp, candidate.TerrainPoints))
-                throw new InvalidDataException("Resident metadata has missing terrain points.");
-        });
-        if (resident is not null)
-        {
-            publication.PublishInteriors(InteriorAssembly.IndexEntries(resident.Layouts, bindings, activeInteriors, context.World, resident.OutdoorAccess));
-            return new(seed, inputs, bindings, activeInteriors,
-                new(resident.Metadata.Lighting.WindowNumbering
-                    ?? throw new InvalidDataException("Resident metadata has no window numbering snapshot."), resident.Windows), resident.Layouts, resident, residentStamp) { OutdoorAccess = resident.OutdoorAccess };
-        }
-        _terrain.RequireMiss(new(context.Descriptor.Id, "resident", "meta"));
-        var prepass = new BuildContext
-        {
-            CodeHash = residentStamp, WindowNumbering = new((context.Descriptor).Id, new string('0', 64), []),
-            World = _terrain.AssetWorld(context.World),
-            Map = context.Descriptor,
-            WorldSeed = seed,
-            Catalog = catalog,
-            ClaimedBy = claimLookup,
-            SourceInputs = inputs,
-            InteriorProviders = activeInteriors,
-            GlobalInputs = globalInputs,
-            GroundMaskContributors = groundContributors,
-            PartLods = partLods
-        };
-        var outdoor = InteriorAssembly.CaptureOutdoorAccess(prepass, bindings,
-            modules.OrderBy(pair => pair.Key, StringComparer.Ordinal).Select(pair => pair.Value.Value).OfType<IOutdoorAccessSource>());
-        var layouts = bindings.SelectMany(binding => binding.InteriorFeatures.Select(feature =>
-            InteriorAssembly.ValidatedLayout(activeInteriors[binding.ProviderId], binding, prepass, feature))).ToArray();
-        publication.PublishInteriors(InteriorAssembly.IndexEntries(layouts, bindings, activeInteriors, context.World, outdoor));
-        prepass = prepass.WithWorld(_terrain.AssetWorld(context.World));
-        // This Lazy is completed before any catalog Tiles, geometry Build, or producer Collide can run.
-        var windows = BakeWindowPreparation.Prepare(prepass, modules);
-        return new(seed, inputs, bindings, activeInteriors, windows, layouts, null, residentStamp) { OutdoorAccess = outdoor };
-    }
-
-    private IReadOnlyList<byte[]> Encode(BakePayloadClass payloadClass, string identity, object product, CancellationToken cancellation) =>
-        BakeProductCodec.EncodeParts(payloadClass, identity, product, bytes => _cache.Fits(payloadClass, bytes, cancellation));
-    private static object Decode(BakePayloadClass payloadClass, string identity, BakeKey key, IReadOnlyList<byte[]> parts) => BakeProductCodec.DecodeParts(payloadClass, identity, key, parts);
-    private static void RequireInteriorProduct(MapBuild map, BakeKey key, object product)
-    {
-        if (map.Interiors.ContainsKey(key.Module) && (product is not TileBundle tile || tile.Stats.Surfaces == 0 || tile.Stats.Triangles == 0))
-            throw new InvalidDataException($"Open interior product is empty: {key.Map.Value}/{key.Module}/{key.Detail}.");
-    }
-    private static TileBundle BuildInterior(MapBuild map, BakeKey key, BuildContext context, IInteriorProvider provider)
-    {
-        var fields = key.Detail.Split('/');
-        if (fields.Length != 3 || !int.TryParse(fields[1], NumberStyles.Integer, CultureInfo.InvariantCulture, out var storey))
-            throw new ArgumentException("Invalid interior bake detail.");
-        var feature = new FeatureId(fields[0]);
-        var binding = map.Data.Value.InteriorBindings.SingleOrDefault(binding => "interior." + binding.ProviderId == key.Module);
-        if (binding is null || !binding.FeatureIds.Contains(feature) || !provider.FeatureIds.Contains(feature))
-            throw new InvalidDataException("Interior feature is not bound to this map's authoritative catalog.");
-        var detail = fields[2] switch { "IF" => InteriorDetail.Full, "IS" => InteriorDetail.Shell, _ => throw new InvalidDataException("Interior detail must be IF or IS.") };
-        if (!context.InteriorLayouts.TryGetValue(feature, out var layout))
-            throw new InvalidDataException($"Interior layout is not prepared: {feature.Value}.");
-        if (!layout.OpenStoreys.Contains(storey)) throw new InvalidDataException("Interior storey is not open.");
-        var center = layout.Bounds.Center;
-        var tile = TileGrid.At(center);
-        return map.Geometry!.BuildOutput(key, context, provider.BuildStorey(context, feature, storey, detail), tile, LodLevel.L0,
-            diagnostics => map.Collect(key.Module, "interior-geometry", diagnostics, feature));
-    }
-
-    private static IReadOnlyList<InteriorCoverage> InspectInteriorCoverage(MapBuild map)
-    {
-        var data = map.Data.Value;
-        var coverage = new List<InteriorCoverage>();
-        foreach (var binding in data.InteriorBindings.Where(binding => binding.InteriorFeatures.Count > 0).OrderBy(binding => binding.ProviderId, StringComparer.Ordinal))
-        {
-            var interior = map.Interiors["interior." + binding.ProviderId];
-            var floors = 0;
-            var entrances = new HashSet<string>(StringComparer.Ordinal);
-            foreach (var feature in binding.InteriorFeatures.OrderBy(feature => feature.Value, StringComparer.Ordinal))
-            {
-                var layout = map.InteriorLayouts[feature];
-                floors += layout.OpenStoreys.Count;
-                foreach (var entrance in layout.Entrances) entrances.Add(System.Text.Json.JsonSerializer.Serialize(entrance, ContractJson.Options));
-            }
-            coverage.Add(new(binding.ProviderId, interior.IsStub, binding.InteriorFeatures.Count, interior.Value.FeatureIds.Count,
-                binding.InteriorFeatures.Sum(feature => binding.FloorsFor(feature).Count), floors, binding.AuthoredEntranceCount, entrances.Count));
-        }
-        return coverage.AsReadOnly();
-    }
-
-    private static void RequireEntranceCoverage(MapBuild map, BakeMapMetadata metadata)
-    {
-        foreach (var coverage in map.InteriorCoverage)
-            if (metadata.Entrances.Entrances.Count(item => item.Module == "interior." + coverage.ProviderId) < coverage.ProducedEntrances)
-                throw new InvalidDataException($"Entrance inventory omits configured interior entries: {coverage.ProviderId}.");
-    }
     private void PhaseChanged(AppState previous, AppState next) => ApplyPhase(next);
     private void ApplyPhase(AppState state)
     {
-        _phase = state;
+        _catalog.SetPhase(state);
         _queue.SetLimit(state switch
         {
             AppState.Boot or AppState.Title => _options.MaximumWorkers,
@@ -412,7 +209,7 @@ public sealed partial class BakeService : IBakeService, IBakeContextSource, IDis
         });
         if (state is not (AppState.Title or AppState.Playing)) return;
         MapBuild[] maps;
-        lock (_sync) maps = _contexts.Values.Where(map => map.Active && map.Metadata is not null).ToArray();
+        lock (_sync) maps = _contexts.Values.Where(map => map.Active && map.Content.Metadata is not null).ToArray();
         foreach (var map in maps) StartBackgroundCatalog(map);
     }
     /// <summary>Called by the registry only after saving has allowed process exit. Remaining workers own CPU snapshots only.</summary>
@@ -455,6 +252,80 @@ public sealed partial class BakeService : IBakeService, IBakeContextSource, IDis
         }
     }
 
+    public T GetModule<T>(IMapContext context, string moduleId) where T : class, IContentModule
+    {
+        ArgumentNullException.ThrowIfNull(context);
+        lock (_sync)
+        {
+            if (!_contexts.TryGetValue(context.Descriptor.Id, out var map))
+                throw new InvalidOperationException("The requested map has no prepared bake context.");
+            // Reuse the same preparation/identity checks as worker context publication.
+            return map.Content.GetModule<T>(context, moduleId);
+        }
+    }
+    public Task<PreparedBakeTiles> GetPreparedModuleTilesAsync(IMapContext context)
+    {
+        MapBuild map;
+        lock (_sync)
+        {
+            if (!_contexts.TryGetValue(context.Descriptor.Id, out map!))
+                throw new InvalidOperationException("The requested map has no prepared bake context.");
+            map.Directory.RequirePreparedTiles(context);
+        }
+        return map.Directory.GetPreparedModuleTilesAsync(context);
+    }
+
+    internal void Prebake(IMapContext context)
+    {
+        var map = Mount(context);
+        if (!_options.MapOnly && !_options.Background) return;
+        var mapKey = new BakeKey(context.Descriptor.Id, MapBaker.Module, MapBaker.Detail);
+        if (map.Content.Producers.Any(producer => producer.Value.CanBuild(mapKey))) Schedule(map, mapKey, BakePriority.Normal);
+        StartBackgroundCatalog(map);
+    }
+
+    private void StartBackgroundCatalog(MapBuild map)
+    {
+        Thread? enumeration;
+        lock (_sync)
+        {
+            if (_stopped) return;
+            enumeration = _catalog.Begin(map);
+        }
+        enumeration?.Start();
+    }
+
+    private void ReportCatalogFailure(MapBuild map, Exception error)
+    {
+        lock (_sync)
+            if (map.Active && !_stopped)
+                _queue.Ensure(new(map.Context.Descriptor.Id, "bake.catalog", "enumerate"), BakePriority.Background,
+                    () => throw new InvalidDataException("Background catalog failed: " + error.Message, error));
+    }
+
+    internal Task BakeOffline(IMapContext context, BakePipelineCatalog? pipelines = null) =>
+        new BakeOffline(Mount(context), pipelines, _catalog, _queue).Run();
+
+    private void FlushInputIdentities()
+    {
+        lock (_inputIdentitySync)
+        {
+            MapBuild[] maps;
+            lock (_sync)
+            {
+                if (_stopped) return;
+                maps = _contexts.Values.Where(map => map.Active).ToArray();
+            }
+            foreach (var map in maps) map.Inputs.PersistInputIdentities();
+        }
+    }
+
+    private void PersistInputIdentities(IEnumerable<MapBuild> maps)
+    {
+        lock (_inputIdentitySync)
+            foreach (var map in maps) map.Inputs.PersistInputIdentities();
+    }
+
     internal sealed record Producer(string Id, IBakeProducer Value, string CodeHash);
     internal sealed record Interior(string ProviderId, bool IsStub, IInteriorProvider Value, string CodeHash, string Owner);
     internal sealed record CollectedDiagnostic(MapId Map, string Owner, string Module, string Stage, BuildDiagnostic Diagnostic);
@@ -467,113 +338,38 @@ public sealed partial class BakeService : IBakeService, IBakeContextSource, IDis
         public IReadOnlyList<OutdoorAccessArea> OutdoorAccess { get; init; } = [];
     }
 
-    internal sealed partial record MapBuild(IMapContext Context, IReadOnlyDictionary<string, ContentModuleInput> Modules, IReadOnlyDictionary<string, Interior> Interiors, Producer[] Producers,
-        BakeGeometryBuilder Geometry, Lazy<MapClaimLedger> Claims, Func<FeatureId, Aspects, string?> ClaimLookup, Lazy<LoadedMap> Data,
-        BuildInputSnapshot GlobalInputs, IReadOnlyList<IGroundMaskContributor> GroundMaskContributors, PartLodCatalog PartLods, PaletteCatalog Catalog)
+    internal sealed class MapBuild
     {
-        internal TerrainCacheService? TerrainCache { get; init; }
+        internal IMapContext Context { get; }
+        internal Lazy<LoadedMap> Data { get; }
+        internal BakeContentSource Content { get; }
+        internal BakeModuleTiles Directory { get; }
+        internal BakeInputIdentity Inputs { get; }
         internal BakePipelineCatalog? PipelineStatistics;
-        internal BakeSourceIndexCache? SourceCache { get; init; }
-        internal BuildContext CreateAssetContext(string codeHash) => CreateAssetContext(CreateBuildContext(codeHash));
-
-        internal BuildContext CreateAssetContext(BuildContext context)
-        {
-            if (TerrainCache is null) return context;
-            var world = TerrainCache.AssetWorld(context.World);
-            return context.Memo(world, () => context.WithWorld(world));
-        }
-        private readonly object _sourceIndexLock = new();
-        private BakeSourceIndex? _sourceIndex;
-        internal BakeSourceIndex SourceIndex(BuildContext context)
-        {
-            lock (_sourceIndexLock)
-                return _sourceIndex ??= new BakeSourceIndex(context, SourceCache);
-        }
-        internal void PersistInputIdentities() => Volatile.Read(ref _sourceIndex)?.Persist();
+        internal volatile bool Active = true;
+        internal CancellationTokenSource Lifetime { get; } = new();
         internal ConcurrentQueue<CollectedDiagnostic> Diagnostics { get; } = new();
+
+        internal MapBuild(IMapContext context, IReadOnlyDictionary<string, ContentModuleInput> modules,
+            IReadOnlyDictionary<string, Interior> interiors, Producer[] producers, BakeGeometryBuilder geometry,
+            Func<FeatureId, Aspects, string?> claimLookup, Lazy<LoadedMap> data,
+            BuildInputSnapshot globalInputs, IReadOnlyList<IGroundMaskContributor> contributors,
+            PartLodCatalog partLods, PaletteCatalog catalog, TerrainCacheService? terrain, BakeSourceIndexCache? sourceCache)
+        {
+            Context = context; Data = data; Inputs = new(sourceCache);
+            Content = new(context, modules, interiors, producers, geometry, claimLookup, data,
+                globalInputs, contributors, partLods, catalog, () => Active, terrain);
+            Directory = new(context, Content, Lifetime.Token, () => Active);
+        }
 
         internal void Collect(string module, string stage, IReadOnlyList<BuildDiagnostic> diagnostics, FeatureId? feature = null)
         {
             if (!Active || diagnostics.Count == 0) return;
             foreach (var diagnostic in diagnostics) diagnostic.Validate();
-            var owner = Modules.TryGetValue(module, out var content) ? content.Owner : Interiors[module].Owner;
+            var owner = Content.Modules.TryGetValue(module, out var content) ? content.Owner : Content.Interiors[module].Owner;
             foreach (var diagnostic in diagnostics)
                 Diagnostics.Enqueue(new(Context.Descriptor.Id, owner, module, stage,
                     diagnostic.Feature is null && feature is not null ? diagnostic with { Feature = feature } : diagnostic));
-        }
-
-        public volatile bool EnumerationComplete;
-        public bool EnumerationStarted;
-        public volatile bool Active = true;
-        internal CancellationTokenSource Lifetime { get; } = new();
-        public BakeMapMetadata? Metadata { get; private set; }
-        public IReadOnlyList<InteriorCoverage> InteriorCoverage { get; set; } = [];
-        internal Dictionary<FeatureId, InteriorLayout> InteriorLayouts { get; } = [];
-        private IReadOnlyDictionary<string, BuildContext>? _preparedContexts;
-        private IReadOnlyDictionary<object, BuildContext>? _preparedBuildContexts;
-
-        internal BuildContext CreateBuildContext(string codeHash)
-        {
-            var data = Data.Value;
-            return new()
-            {
-                World = Context.World,
-                Map = Context.Descriptor,
-                WorldSeed = data.Seed,
-                Catalog = Catalog,
-                ClaimedBy = ClaimLookup,
-                SourceInputs = data.Inputs,
-                CodeHash = codeHash,
-                InteriorProviders = data.InteriorProviders,
-                WindowNumbering = data.Windows.Snapshot,
-                InteriorLayouts = new ReadOnlyDictionary<FeatureId, InteriorLayout>(InteriorLayouts),
-                GlobalInputs = GlobalInputs,
-                GroundMaskContributors = GroundMaskContributors,
-                PartLods = PartLods
-            };
-        }
-
-        internal void CompletePreparation(BakeMapMetadata metadata)
-        {
-            if (!Active || !Data.IsValueCreated)
-                throw new InvalidOperationException("Map preparation has not completed.");
-            var data = Data.Value;
-            if (!ReferenceEquals(metadata.Lighting.WindowNumbering, data.Windows.Snapshot))
-                throw new InvalidDataException("Lighting publication must retain the prepared window snapshot instance.");
-            Metadata = metadata;
-            PublishDirectory();
-        }
-
-        private void FreezeInputs(BakeMapMetadata metadata)
-        {
-            if (!Active || !Data.IsValueCreated || !ReferenceEquals(metadata.Lighting.WindowNumbering, Data.Value.Windows.Snapshot))
-                throw new InvalidOperationException("Map preparation inputs are not ready.");
-            var contexts = new Dictionary<object, BuildContext>(ReferenceEqualityComparer.Instance);
-            foreach (var module in Modules.OrderBy(pair => pair.Key, StringComparer.Ordinal))
-                contexts.Add(module.Value.Value, CreateBuildContext(module.Value.CodeHash));
-            foreach (var interior in Interiors.OrderBy(pair => pair.Key, StringComparer.Ordinal))
-                contexts.Add(interior.Value.Value, CreateBuildContext(interior.Value.CodeHash));
-            foreach (var producer in Producers.OrderBy(producer => producer.Id, StringComparer.Ordinal))
-                contexts.Add(producer.Value, CreateBuildContext(producer.CodeHash));
-            _preparedBuildContexts = new ReadOnlyDictionary<object, BuildContext>(contexts);
-            _preparedContexts = new ReadOnlyDictionary<string, BuildContext>(Modules.OrderBy(pair => pair.Key, StringComparer.Ordinal)
-                .ToDictionary(pair => pair.Key, pair => contexts[pair.Value.Value], StringComparer.Ordinal));
-        }
-
-        internal BuildContext GetPreparedBuildContext(object producer)
-        {
-            if (!Active || _preparedBuildContexts is null || !_preparedBuildContexts.TryGetValue(producer, out var context))
-                throw new InvalidOperationException("The producer has no frozen build context.");
-            return context;
-        }
-
-        internal BuildContext GetPreparedContext(IMapContext context, string moduleId)
-        {
-            if (!Active || context.Descriptor.Id != Context.Descriptor.Id || !ReferenceEquals(context, Context) ||
-                Metadata is null || _preparedContexts is null)
-                throw new InvalidOperationException("Map context identity is stale or its bake preparation is not ready.");
-            return _preparedContexts.TryGetValue(moduleId, out var prepared) ? prepared :
-                throw new InvalidOperationException($"No prepared content module '{moduleId}' in map {context.Descriptor.Id.Value}.");
         }
     }
 }

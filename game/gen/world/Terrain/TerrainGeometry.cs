@@ -71,4 +71,31 @@ public static class TerrainGeometry
 
     private static void Check(Vector2 point)
     { if (!VectorMath.Finite(point)) throw new ArgumentException("Plan coordinates must be finite."); }
+
+    internal static Vector2 InteriorPoint(TerrainRegion region)
+    {
+        foreach (var polygon in region.Polygons)
+        {
+            var rings = new[] { polygon.Outer }.Concat(polygon.Holes).ToArray();
+            var levels = rings.SelectMany(ring => ring).Select(p => (double)p.Y).Distinct().OrderBy(z => z).ToArray();
+            for (var row = 0; row + 1 < levels.Length; row++)
+            {
+                var z = (levels[row] + levels[row + 1]) / 2; var cuts = new List<double>();
+                foreach (var ring in rings)
+                    for (var i = 0; i < ring.Count; i++)
+                    {
+                        var a = ring[i]; var c = ring[(i + 1) % ring.Count];
+                        if ((a.Y > z) == (c.Y > z)) continue;
+                        cuts.Add(a.X + ((double)c.X - a.X) * (z - a.Y) / (c.Y - a.Y));
+                    }
+                cuts.Sort();
+                for (var i = 0; i + 1 < cuts.Count; i++)
+                {
+                    var x = (cuts[i] + cuts[i + 1]) / 2;
+                    if (region.Contains(x, z)) return new((float)x, (float)z);
+                }
+            }
+        }
+        throw new ArgumentException("Pad footprint has no usable interior sample; its holes or dimensions need correction.");
+    }
 }

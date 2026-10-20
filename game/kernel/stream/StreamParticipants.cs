@@ -1,0 +1,251 @@
+using Campus.Contracts;
+using Campus.Contracts.Bake;
+using Campus.Kernel.Bake;
+using Campus.Kernel.Collision;
+using Campus.Kernel.Lod;
+using Campus.Kernel.Renderer;
+using Godot;
+using KernelServices = Campus.Kernel.Registry.Kernel;
+using N = System.Numerics;
+using TileGroup = Campus.Kernel.Stream.StreamResidency.TileGroup;
+using Pending = Campus.Kernel.Stream.StreamPreparation.Pending;
+
+namespace Campus.Kernel.Stream;
+
+internal sealed class StreamParticipants(StreamDirector host)
+{
+    private readonly StreamDirector _host = host;
+    private IStreamTileParticipant[] _participants = [];
+    private ParticipantEntry[] _participantEntries = [];
+    private readonly N.Plane[] _demandFrustum = new N.Plane[6];
+    private Box3[] _demandNearBuffer = [];
+    private readonly List<BakeKey> _retiredParticipants = [];
+
+    internal void LoadParticipants(MapId map) => _participants = KernelServices.Services.RuntimeInstances<IStreamTileParticipant>(map).ToArray();
+
+    private IStreamTileParticipant Participant(BakeKey key)
+    {
+        IStreamTileParticipant? result = null;
+        foreach (var participant in _participants)
+        {
+            if (!participant.CanMount(key)) continue;
+            if (result is not null) throw new InvalidOperationException($"Multiple stream participants own {key}.");
+            result = participant;
+        }
+        return result ?? throw new InvalidOperationException($"No stream participant owns {key}.");
+    }
+
+    internal void LoadParticipantEntries(ModuleTileCatalog catalog)
+    {
+        var entries = new List<ParticipantEntry>(catalog.Auxiliary.Count);
+        foreach (var auxiliary in catalog.Auxiliary)
+        {
+            var entry = auxiliary.Content;
+            if (entry.Key.Map != _host.Context!.Descriptor.Id)
+                throw new InvalidDataException($"Invalid auxiliary directory key: {entry.Key}.");
+            entries.Add(new(auxiliary.Tile, entry, Participant(entry.Key)));
+        }
+        var map = _host.Context!.Descriptor;
+        for (var x = map.TileMin.X; x <= map.TileMax.X; x++)
+            for (var z = map.TileMin.Z; z <= map.TileMax.Z; z++)
+            {
+                var tile = new TileKey(x, z);
+                var origin = TileGrid.Origin(tile);
+                var bounds = new Box3(new(origin.X, map.Bounds.Min.Y, origin.Y),
+                    new(origin.X + TileGrid.BaseEdge, map.Bounds.Max.Y, origin.Y + TileGrid.BaseEdge));
+                var entry = new BakeTileEntry(CollisionBakeProducer.Key(map.Id, tile), bounds);
+                entries.Add(new(new(tile, LodLevel.L0), entry, Participant(entry.Key)));
+            }
+        _participantEntries = entries.ToArray();
+    }
+
+    internal void ResetParticipantDemand()
+    {
+        foreach (var group in _host.Residency.Groups.Values)
+            foreach (var item in group.Participants.Values)
+            { item.Need = StreamTileNeed.None; item.CurrentRequired = item.DestinationRequired = false; }
+    }
+
+    internal void SelectParticipants(Pose pose, HashSet<StreamTile> required, bool destination, bool live,
+        List<StreamRequest>? preload = null, N.Vector3? walkingCenter = null, N.Vector3? walkingDestination = null)
+    {
+        var camera = _host.GetViewport().GetCamera3D()
+            ?? throw new InvalidOperationException("Stream demand requires the existing view camera.");
+        var projection = camera.GetCameraProjection();
+        var transform = camera.GetCameraTransform();
+        if (!live)
+        {
+            var basis = Basis.FromEuler(new(Mathf.DegToRad(pose.PitchDeg), -Mathf.DegToRad(pose.YawDeg), 0));
+            var eye = new Vector3(pose.Position.X, pose.Position.Y, pose.Position.Z);
+            transform = new(basis, eye + basis.X * camera.HOffset + basis.Y * camera.VOffset);
+            if (camera.Projection == Camera3D.ProjectionType.Perspective && pose.FovDeg is { } fov)
+                projection = Projection.CreatePerspective(fov, projection.GetAspect(), camera.Near, camera.Far,
+                    camera.KeepAspect == Camera3D.KeepAspectEnum.Width);
+        }
+        CameraFrustum.Fill(transform, projection, _demandFrustum);
+        if (_demandNearBuffer.Length < required.Count) Array.Resize(ref _demandNearBuffer, required.Count);
+        var nearCount = 0;
+        foreach (var tile in required)
+            if (tile.Level == LodLevel.L0) _demandNearBuffer[nearCount++] = _host.Selection.Tree!.Bounds(tile);
+        var view = new StreamDemandView(pose, _demandFrustum, _demandNearBuffer.AsMemory(0, nearCount))
+        { WalkingCenter = walkingCenter, WalkingDestination = walkingDestination };
+        ApplyParticipantDemand(in view, destination, preload);
+        // The real reflection bridge reuses its own scratch; consume it before querying the next source view.
+        if (_host.Reflections.TryGetDemand(in view, out var reflected)) ApplyParticipantDemand(in reflected, destination, preload);
+    }
+
+    private void ApplyParticipantDemand(in StreamDemandView view, bool destination, List<StreamRequest>? preload)
+    {
+        foreach (var payload in _participantEntries)
+        {
+            var entry = payload.Content;
+            var tile = payload.Tile;
+            ParticipantTile? item = null;
+            if (_host.Residency.Groups.TryGetValue(tile, out var existing)) existing.Participants.TryGetValue(entry.Key, out item);
+            var participant = payload.Participant;
+            // Collision keeps an in-flight tile inside its release envelope, just as a completed tile.
+            var resident = participant.Kind == StreamMountKind.Collision ? item is not null : item is { Mounted: true };
+            var need = participant.Demand(in entry, in view, resident);
+            if (preload is not null)
+            {
+                switch (need)
+                {
+                    case StreamTileNeed.None:
+                    case StreamTileNeed.Retain: break;
+                    case StreamTileNeed.Required: _host.Preparation.QueueCpuRead(entry.Key, tile, preload); break;
+                    default: throw new ArgumentOutOfRangeException(nameof(need));
+                }
+                continue;
+            }
+            switch (need)
+            {
+                case StreamTileNeed.None: continue;
+                case StreamTileNeed.Retain:
+                    if (item is null) continue;
+                    break;
+                case StreamTileNeed.Required:
+                    if (item is null)
+                    {
+                        item = new(entry, participant);
+                        _host.Residency.GetGroup(tile).Participants.Add(entry.Key, item);
+                    }
+                    if (destination) item.DestinationRequired = true;
+                    else item.CurrentRequired = true;
+                    break;
+                default: throw new ArgumentOutOfRangeException(nameof(need));
+            }
+            if ((byte)need > (byte)item.Need) item.Need = need;
+        }
+    }
+
+    internal void QueueParticipants(List<StreamRequest> requests, Pose pose)
+    {
+        foreach (var group in _host.Residency.Groups.Values)
+            foreach (var (key, item) in group.Participants)
+            {
+                if (item.Need == StreamTileNeed.None) continue;
+                var priority = ParticipantPriority(item);
+                if (item.Error is not null && (item.DestinationRequired || priority == BakePriority.Collision)) _host.RecordError(item.Error);
+                if (!_host.Preparation.IsIssued(key))
+                    requests.Add(new(key, group.Tile, priority, MathF.Sqrt(item.Entry.Bounds.DistanceSquared(pose.Position)) / Math.Max(1, _host.Camera.Speed)));
+                else
+                {
+                    _host.Preparation.PromotePreload(new(key, group.Tile, priority, 0), group, item);
+                    if (priority is BakePriority.Collision or BakePriority.KnownDestination) _host.Bake.Ensure(key, priority);
+                }
+            }
+    }
+
+    private static BakePriority ParticipantPriority(ParticipantTile item) => item.Participant.Kind switch
+    {
+        StreamMountKind.Collision => BakePriority.Collision,
+        StreamMountKind.Auxiliary => item.DestinationRequired ? BakePriority.KnownDestination : BakePriority.Normal,
+        StreamMountKind.Visual => throw new InvalidOperationException("Visual geometry is not a tile participant."),
+        _ => throw new ArgumentOutOfRangeException(nameof(item))
+    };
+
+    internal void MountParticipant(Pending pending, ParticipantTile item)
+    {
+        try
+        {
+            var product = pending.Handle.Product ?? throw new InvalidDataException($"Bake returned no product for {pending.Request.Key}.");
+            var priority = ParticipantPriority(item);
+            var work = item.Participant.CreateMount(pending.Request.Key, product, priority, pending.Revision);
+            if (work.Key != pending.Request.Key || work.Revision != pending.Revision || work.Kind != item.Participant.Kind)
+            {
+                work.Cancel();
+                throw new InvalidDataException($"Participant mount identity mismatch: {pending.Request.Key}.");
+            }
+            item.Work = new(work, () => _host.Residency.IsCurrent(pending), () => item.Mounted = true,
+                error => FailParticipant(pending.Group!, item, error));
+            _host.Mount.Enqueue(item.Work);
+        }
+        catch (Exception error) { FailParticipant(pending.Group!, item, error.GetBaseException().Message); }
+    }
+
+    internal bool ParticipantsReady(bool destination)
+    {
+        foreach (var group in _host.Residency.Groups.Values)
+            foreach (var (key, item) in group.Participants)
+                if ((destination ? item.DestinationRequired : item.CurrentRequired) &&
+                    (item.Error is not null || !item.Mounted || !item.Participant.IsReady(key))) return false;
+        return true;
+    }
+
+    internal void PollParticipantErrors()
+    {
+        foreach (var group in _host.Residency.Groups.Values)
+            foreach (var item in group.Participants.Values)
+                if (item.Need == StreamTileNeed.Required && item.Error is null && item.Participant.Error is { } error)
+                    FailParticipant(group, item, error);
+    }
+
+    private void FailParticipant(TileGroup group, ParticipantTile item, string error)
+    {
+        _host.Fail(group.Tile, error, item);
+    }
+
+    internal void RetireParticipants()
+    {
+        foreach (var group in _host.Residency.Groups.Values)
+        {
+            _retiredParticipants.Clear();
+            foreach (var (key, item) in group.Participants)
+            {
+                if (item.Need != StreamTileNeed.None) continue;
+                // Keep mounted near content until geometry covering its owner is actually drawn.
+                if (item.Participant.Kind == StreamMountKind.Auxiliary && item.Mounted && !_host.Residency.HasGeometryCoverage(group.Tile)) continue;
+                ReleaseParticipant(key, item); _host.Preparation.Forget(key); _retiredParticipants.Add(key);
+            }
+            foreach (var key in _retiredParticipants) group.Participants.Remove(key);
+        }
+        _retiredParticipants.Clear();
+    }
+
+    private static void ReleaseParticipant(BakeKey key, ParticipantTile item)
+    {
+        item.Work?.Cancel();
+        item.Participant.Unmount(key);
+        item.Mounted = false;
+    }
+
+    internal void UnloadParticipants()
+    {
+        foreach (var group in _host.Residency.Groups.Values)
+            foreach (var (key, item) in group.Participants) ReleaseParticipant(key, item);
+        _participants = [];
+        _participantEntries = [];
+    }
+
+    private readonly record struct ParticipantEntry(StreamTile Tile, BakeTileEntry Content, IStreamTileParticipant Participant);
+
+    internal sealed class ParticipantTile(BakeTileEntry entry, IStreamTileParticipant participant)
+    {
+        public BakeTileEntry Entry { get; } = entry;
+        public IStreamTileParticipant Participant { get; } = participant;
+        public ParticipantMountWork? Work;
+        public StreamTileNeed Need;
+        public bool CurrentRequired, DestinationRequired, Mounted;
+        public string? Error;
+    }
+}

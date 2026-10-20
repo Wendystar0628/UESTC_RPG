@@ -84,24 +84,24 @@ public sealed class BakeInputTests
         var expected = keys.Select(key => BakeInputFingerprint.Compute(reference, key, "runtime-code", new(reference), BakeInputDependencies.World)).ToArray();
         var actual = new string[keys.Length];
         Parallel.For(0, keys.Length, index => actual[index] =
-            BakeInputFingerprint.Compute(context, keys[index], "runtime-code", sources: map.SourceIndex(context), dependencies: BakeInputDependencies.World));
+            BakeInputFingerprint.Compute(context, keys[index], "runtime-code", sources: map.Inputs.SourceIndex(context), dependencies: BakeInputDependencies.World));
         if (!actual.SequenceEqual(expected) || !field.PointReads.IsEmpty || !field.TileReads.IsEmpty ||
-            !ReferenceEquals(map.SourceIndex(context), map.SourceIndex(context)))
+            !ReferenceEquals(map.Inputs.SourceIndex(context), map.Inputs.SourceIndex(context)))
             throw new InvalidOperationException("Concurrent keys changed source stamps, queried terrain, or rebuilt the map index.");
 
         var changedField = new CountingFingerprintField(2);
         var changed = Context(new FakeWorld { Boundary = new([]), Terrain = changedField });
         var nextMap = Map(changed);
         using var nextLifetime = nextMap.Lifetime;
-        var next = BakeInputFingerprint.Compute(changed, keys[0], "runtime-code", sources: nextMap.SourceIndex(changed), dependencies: BakeInputDependencies.World);
+        var next = BakeInputFingerprint.Compute(changed, keys[0], "runtime-code", sources: nextMap.Inputs.SourceIndex(changed), dependencies: BakeInputDependencies.World);
         if (next == actual[0] || !changedField.PointReads.IsEmpty || !changedField.TileReads.IsEmpty ||
             next != BakeInputFingerprint.Compute(changed, keys[0], "runtime-code", new(changed), BakeInputDependencies.World))
             throw new InvalidOperationException("The next MapBuild reused the preceding world's source index or queried terrain.");
 
         static BakeService.MapBuild Map(BuildContext context) => new(
             new TestMapContext(context.Map, context.World), new Dictionary<string, ContentModuleInput>(),
-            new Dictionary<string, BakeService.Interior>(), [], null!, null!, context.ClaimedBy, null!,
-            context.GlobalInputs, context.GroundMaskContributors, context.PartLods!, context.Catalog);
+            new Dictionary<string, BakeService.Interior>(), [], null!, context.ClaimedBy, null!,
+            context.GlobalInputs, context.GroundMaskContributors, context.PartLods!, context.Catalog, null, null);
     }
 
     [TestCase]

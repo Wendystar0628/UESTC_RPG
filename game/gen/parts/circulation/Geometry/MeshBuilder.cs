@@ -124,34 +124,9 @@ internal sealed class MeshBuilder
         double area = 2d * PlanGeometry.SignedArea(section);
         if (!(Math.Abs(area) > 1e-12)) throw new ArgumentException("A section must enclose area.");
         var sign = area > 0 ? 1f : -1f;
-        // Outward section-edge normals in (lateral, up); counterclockwise means outward = (du, −dl).
-        var edge = new Vector2[n];
-        for (var k = 0; k < n; k++)
-        {
-            var d = section[(k + 1) % n] - section[k];
-            var length = (float)Math.Sqrt(VectorMath.Dot(d, d));
-            if (!(length > 1e-7f)) throw new ArgumentException("A section has a repeated point.");
-            edge[k] = new(sign * d.Y / length, -sign * d.X / length);
-        }
+        var edge = SectionEdgeNormals(section, sign);
         var segments = closed ? m : m - 1;
-        var tangent = new Vector3[segments]; var right = new Vector3[segments];
-        for (var s = 0; s < segments; s++)
-        {
-            var a = path[s]; var b = path[(s + 1) % m];
-            tangent[s] = VectorMath.Unit(new Vector3(b.X - a.X, 0, b.Z - a.Z));
-            right[s] = new(tangent[s].Z, 0, -tangent[s].X);
-        }
-        var miter = new Vector3[m];
-        for (var i = 0; i < m; i++)
-        {
-            if (!closed && i == 0) { miter[i] = right[0]; continue; }
-            if (!closed && i == m - 1) { miter[i] = right[^1]; continue; }
-            var ra = right[(i + segments - 1) % segments]; var rb = right[i % segments];
-            var denominator = 1 + VectorMath.Dot(ra, rb);
-            if (denominator < 1e-8) throw new ArgumentException("A sweep cannot reverse direction at a join.");
-            miter[i] = Vector3.Multiply(Vector3.Add(ra, rb), (float)(1 / denominator));
-            if (VectorMath.Dot(miter[i], miter[i]) > (double)miterLimit * miterLimit + 1e-6) throw new ArgumentException("A sweep join exceeds the miter limit.");
-        }
+        var (tangent, right, miter) = PathJoins(path, closed, miterLimit);
         Vector3 Pos(int i, Vector2 p) => new(path[i].X + miter[i].X * p.X, path[i].Y + p.Y, path[i].Z + miter[i].Z * p.X);
         Vector3 Lift(Vector3 lateral, Vector2 n2) => new(lateral.X * n2.X, n2.Y, lateral.Z * n2.X);
         var layer = For(material, flags);
@@ -201,7 +176,13 @@ internal sealed class MeshBuilder
             along += length;
         }
         if (closed) return;
-        var (capPoints, capIndices) = capTriangles is null ? Earcut(section) : Explicit(section, capTriangles, Math.Abs(area) * 0.5);
+        CapPath(layer, section, capTriangles, Math.Abs(area) * 0.5, tangent, m, frame, Pos);
+    }
+
+    private static void CapPath(Layer layer, IReadOnlyList<Vector2> section, IReadOnlyList<int>? capTriangles,
+        double area, Vector3[] tangent, int m, Frame frame, Func<int, Vector2, Vector3> Pos)
+    {
+        var (capPoints, capIndices) = capTriangles is null ? Earcut(section) : Explicit(section, capTriangles, area);
         for (var end = 0; end < 2; end++)
         {
             var i = end == 0 ? 0 : m - 1;
@@ -211,6 +192,47 @@ internal sealed class MeshBuilder
             for (var t = 0; t < capIndices.Count; t += 3)
                 Triangle(layer, ids[capIndices[t]], ids[capIndices[t + 1]], ids[capIndices[t + 2]], frame.Direction(outward));
         }
+    }
+
+    private static Vector2[] SectionEdgeNormals(IReadOnlyList<Vector2> section, float sign)
+    {
+        var n = section.Count;
+        // Outward section-edge normals in (lateral, up); counterclockwise means outward = (du, −dl).
+        var edge = new Vector2[n];
+        for (var k = 0; k < n; k++)
+        {
+            var d = section[(k + 1) % n] - section[k];
+            var length = (float)Math.Sqrt(VectorMath.Dot(d, d));
+            if (!(length > 1e-7f)) throw new ArgumentException("A section has a repeated point.");
+            edge[k] = new(sign * d.Y / length, -sign * d.X / length);
+        }
+        return edge;
+    }
+
+    private static (Vector3[] Tangent, Vector3[] Right, Vector3[] Miter) PathJoins(IReadOnlyList<Vector3> path,
+        bool closed, float miterLimit)
+    {
+        var m = path.Count;
+        var segments = closed ? m : m - 1;
+        var tangent = new Vector3[segments]; var right = new Vector3[segments];
+        for (var s = 0; s < segments; s++)
+        {
+            var a = path[s]; var b = path[(s + 1) % m];
+            tangent[s] = VectorMath.Unit(new Vector3(b.X - a.X, 0, b.Z - a.Z));
+            right[s] = new(tangent[s].Z, 0, -tangent[s].X);
+        }
+        var miter = new Vector3[m];
+        for (var i = 0; i < m; i++)
+        {
+            if (!closed && i == 0) { miter[i] = right[0]; continue; }
+            if (!closed && i == m - 1) { miter[i] = right[^1]; continue; }
+            var ra = right[(i + segments - 1) % segments]; var rb = right[i % segments];
+            var denominator = 1 + VectorMath.Dot(ra, rb);
+            if (denominator < 1e-8) throw new ArgumentException("A sweep cannot reverse direction at a join.");
+            miter[i] = Vector3.Multiply(Vector3.Add(ra, rb), (float)(1 / denominator));
+            if (VectorMath.Dot(miter[i], miter[i]) > (double)miterLimit * miterLimit + 1e-6) throw new ArgumentException("A sweep join exceeds the miter limit.");
+        }
+        return (tangent, right, miter);
     }
 
     /// <summary>Kernel sweep laid into the vertical plane through x (see <see cref="Frame.VerticalPlane"/>).</summary>

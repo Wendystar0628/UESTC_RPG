@@ -215,8 +215,7 @@ public sealed class QualityService : IQualityFrame, IBootParticipant
             await runtime.NextFrame(cancellationToken).WaitAsync(cancellationToken);
             cancellationToken.ThrowIfCancellationRequested();
             applied = true;
-            var change = _state.Commit(request.Profile, request.Origin, loading);
-            if (change.Knobs != 0) runtime.Dispatch(Effective, change);
+            var change = CommitRequest(binding, request, loading);
             cancellationToken.ThrowIfCancellationRequested();
             if (loading)
             {
@@ -246,14 +245,7 @@ public sealed class QualityService : IQualityFrame, IBootParticipant
         {
             var recoveryErrors = new List<Exception>();
             _durableProfile = previousDurable;
-            if (applied)
-            {
-                var rollback = _state.Restore(snapshot, request.Origin, screen is not null);
-                try { runtime.Dispatch(Effective, rollback); }
-                catch (Exception recovery) { recoveryErrors.Add(recovery); }
-                if (cancellationToken.IsCancellationRequested) return;
-                Notify(binding, rollback);
-            }
+            if (applied) RestoreAppliedState(binding, request, snapshot, screen is not null, recoveryErrors);
             if (cancellationToken.IsCancellationRequested) return;
             if (screen is not null)
             {
@@ -277,6 +269,24 @@ public sealed class QualityService : IQualityFrame, IBootParticipant
             throw;
         }
         finally { if (screen is not null) await screen.DisposeAsync(); }
+    }
+
+    private QualityChange CommitRequest(Binding binding, Request request, bool loading)
+    {
+        var change = _state.Commit(request.Profile, request.Origin, loading);
+        if (change.Knobs != 0) binding.Runtime.Dispatch(Effective, change);
+        return change;
+    }
+
+    private void RestoreAppliedState(Binding binding, Request request, QualityState.Snapshot snapshot,
+        bool loading, List<Exception> recoveryErrors)
+    {
+        var cancellationToken = binding.Token;
+        var rollback = _state.Restore(snapshot, request.Origin, loading);
+        try { binding.Runtime.Dispatch(Effective, rollback); }
+        catch (Exception recovery) { recoveryErrors.Add(recovery); }
+        if (cancellationToken.IsCancellationRequested) return;
+        Notify(binding, rollback);
     }
 
     private void Publish(Binding binding, in QualityChange change)

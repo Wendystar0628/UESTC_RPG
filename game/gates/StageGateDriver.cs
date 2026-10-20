@@ -4,7 +4,6 @@ using Campus.Contracts.Atlas;
 using Campus.Contracts.Maps;
 using Campus.Kernel.Boot;
 using Campus.Kernel.Frame;
-using Campus.Kernel.Inspect;
 using Godot;
 using AppBoot = Campus.Kernel.Boot.Boot;
 using KernelServices = Campus.Kernel.Registry.Kernel;
@@ -31,7 +30,7 @@ public interface IStageGateHost
 /// Drives the production stage from the command line: screenshot runs (--shots, --frames)
 /// and the startup/exit core lifecycle (--gate=save-close, save-resume). No second scene or service graph is created.
 /// </summary>
-public sealed partial class StageGateDriver(IStageGateHost host)
+public sealed class StageGateDriver(IStageGateHost host)
 {
     private double? _closeAt;
     private bool _awaitingClose;
@@ -71,10 +70,12 @@ public sealed partial class StageGateDriver(IStageGateHost host)
         }
         if (options.Capture.Gate is "save-close" or "save-resume")
         {
-            await RunCoreLifecycle(options.Capture.Gate);
+            var window = await new CoreLifecycleDriver(host).Run(options.Capture.Gate);
+            _awaitingClose = true;
+            GD.Print("CORE_READY_CLOSE " + window);
             return;
         }
-        if (options.Capture.Gate is null && options.Capture.Shots.Count > 0 && options.Capture.FrameLimit is null) { _finishing = true; _ = FinishRun(); }
+        if (options.Capture.Gate is null && options.Capture.Shots.Count > 0 && options.Capture.FrameLimit is null) { _finishing = true; _ = StageCapture.FinishRun(host); }
     }
 
     private async Task RunTravelSequence(IReadOnlyList<string> sequence)
@@ -133,26 +134,6 @@ public sealed partial class StageGateDriver(IStageGateHost host)
         if (!host.Ready || host.Closing || _finishing) return;
         _frames++;
         if (AppBoot.Options.Capture.Gate is null && AppBoot.Options.Capture.FrameLimit is { } limit && _frames >= limit)
-        { _finishing = true; _ = FinishRun(); }
-    }
-
-    private async Task FinishRun()
-    {
-        try
-        {
-            if (AppBoot.Options.Capture.Shots.Count > 0)
-                await CaptureSequence.RunAsync(host.Stage, host.Readiness, AppBoot.Options, host.SyncView, () =>
-                {
-                    host.CheckActive();
-                    return host.Ready;
-                }, host.Lifetime, pose =>
-                {
-                    if (!KernelServices.Get<ICameraPoseValidator>().IsLegal(pose, outsideBuffer: true))
-                        throw new ArgumentException("Capture pose is outside the reachable space or inside its buffer.");
-                });
-            await host.Close();
-        }
-        catch (OperationCanceledException) when (host.Closing) { }
-        catch (Exception error) { host.Fail(error); }
+        { _finishing = true; _ = StageCapture.FinishRun(host); }
     }
 }

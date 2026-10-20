@@ -1,19 +1,26 @@
 using Campus.Contracts;
+using Campus.Contracts.Maps;
 using Campus.Contracts.AppFlow;
 using Campus.Contracts.Save;
 
 namespace Campus.Flow;
 
-public sealed partial class AppFlowService
+internal sealed class AppFlowRecovery(ISaveService saves, IMapService maps,
+    AppFlowContinuation continuation, AppFlowResources resources, Func<bool> isQuitting,
+    Action<AppState> changeState, Action<string> diagnostic)
 {
-    private const string RestoreErrorKey = "save.error.restore_world";
+    internal const string RestoreErrorKey = "save.error.restore_world";
     private Task? _faultHold;
-
-    private void RequireHealthyWorld()
+    internal string? LastError { get; private set; }
+    internal void ResetHold() => _faultHold = null;
+    internal void BeginEntry() { LastError = null; ResetHold(); }
+    internal void CaptureFailure(Exception error, AppState state)
     {
-        if (restore.RestoreFaulted) throw new InvalidOperationException(RestoreErrorKey);
+        LastError = error.Message;
+        diagnostic($"[WP-49a][map:{maps.Current.Value}][flow:{state}] {error.ToString()}");
     }
-    private Task HoldRestoreFailure(bool keepBoot = false)
+    internal void RetainRestoreError() => LastError = RestoreErrorKey;
+    internal Task HoldRestoreFailure(bool keepBoot = false)
     {
         if (_faultHold is not null) return _faultHold;
         var done = new TaskCompletionSource(); _faultHold = done.Task;
@@ -25,44 +32,32 @@ public sealed partial class AppFlowService
         try
         {
             LastError = RestoreErrorKey;
-            _preview = null; _livePreview = false; _newTimeline = false; _resumeEndpoint = null;
-            HoldInput(); HoldTitleFlow(); HoldLoadingFlow();
-            await BeginLoading(null, save: false);
+            continuation.ResetFaultedWorld();
+            resources.HoldInput(); resources.HoldTitleFlow(); resources.HoldLoadingFlow();
+            await resources.BeginLoading(null, save: false);
             var result = await saves.RestoreTitlePreview();
-            if (!Loaded(result.Status))
+            if (!AppFlowContinuation.Loaded(result.Status))
             {
-                // Default data itself failed: retain the covered fault for boot/close handling.
-                if (!_quitting && !keepBoot) Change(AppState.Title);
+                // Default data failed: retain cover for boot/close handling.
+                if (!isQuitting() && !keepBoot) changeState(AppState.Title);
                 done.TrySetResult(); return;
             }
-            RequireHealthyWorld(); _titleArrival = null;
-            CompleteWorldPreparation();
-            await PrepareTitleDestination();
-            await FinishLoading(); ReleaseLoadingFlow();
-            if (!_quitting && !keepBoot) Change(AppState.Title);
+            continuation.RequireHealthyWorld(); continuation.InvalidateTitleDestination();
+            resources.CompleteWorldPreparation();
+            await continuation.PrepareTitleDestination();
+            await resources.FinishLoading(); resources.ReleaseLoadingFlow();
+            if (!isQuitting() && !keepBoot) changeState(AppState.Title);
             done.TrySetResult();
         }
         catch (Exception error) { done.TrySetException(error); }
     }
-    private async Task RecoverTitle()
+    internal async Task RecoverTitle()
     {
-        HoldInput(); HoldTitleFlow(); HoldLoadingFlow();
-        if (_quitting) return;
-        await BeginLoading(null, save: false);
-        CompleteWorldPreparation();
-        await PrepareTitleDestination();
-        await FinishLoading(); ReleaseLoadingFlow(); Change(AppState.Title);
-    }
-    private async Task<bool> QuitFaultedWorld()
-    {
-        await HoldRestoreFailure(); Change(AppState.Quitting);
-        try
-        {
-            var result = await saves.FlushForQuit(SaveReason.Quit, TimeSpan.FromSeconds(FlowTuning.SaveTimeoutSeconds));
-            if (CanLeave(result.Status)) return true;
-        }
-        catch (Exception error) when (error is not OutOfMemoryException) { CaptureFailure(error); LastError = RestoreErrorKey; }
-        _quitting = false; Change(AppState.Title);
-        return false;
+        resources.HoldInput(); resources.HoldTitleFlow(); resources.HoldLoadingFlow();
+        if (isQuitting()) return;
+        await resources.BeginLoading(null, save: false);
+        resources.CompleteWorldPreparation();
+        await continuation.PrepareTitleDestination();
+        await resources.FinishLoading(); resources.ReleaseLoadingFlow(); changeState(AppState.Title);
     }
 }

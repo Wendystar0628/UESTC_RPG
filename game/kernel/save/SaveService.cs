@@ -1,5 +1,4 @@
 using System.Collections.Concurrent;
-using System.Security.Cryptography;
 using System.Text.Json;
 using Campus.Contracts;
 using Campus.Contracts.AppFlow;
@@ -22,7 +21,7 @@ public sealed record SaveRuntimeBindings(IWorldState World, IMapService Maps, IC
 
 [KernelService(typeof(SaveService))]
 [KernelService(typeof(ISaveService))]
-public sealed partial class SaveService : ISaveService, IDisposable
+public sealed class SaveService : ISaveService, IDisposable
 {
     private static readonly SlotId[] AutoSlots = [new("s1"), new("s2"), new("s3")];
     private readonly ConcurrentQueue<Action> _frames = new();
@@ -33,15 +32,13 @@ public sealed partial class SaveService : ISaveService, IDisposable
     private SaveSections _sections = null!;
     private SaveRepository? _repository;
     private IReadOnlyDictionary<string, RawSaveSection> _unknown = new Dictionary<string, RawSaveSection>();
-    private PreparedSave? _pendingPose;
+    private SaveRestoreOperation? _restore;
     private Task<SaveResult>? _writing;
     private Task<SaveResult>? _flush;
     private SaveReason? _request;
     private double _requestAge, _interval, _playSeconds;
     private ulong _line;
-    private bool _newLine, _restoring, _initialized, _disposed, _authorizedOverwrite;
-    private bool _restoreMutationStarted, _restoreBlocked, _restoreAbortApplied;
-    private IDisposable? _restoreInput;
+    private bool _newLine, _initialized, _disposed, _authorizedOverwrite;
     private int _frame;
     private byte[]? _thumbnail;
     private RulesetId _defaultRuleset;
@@ -54,7 +51,7 @@ public sealed partial class SaveService : ISaveService, IDisposable
     public SlotId? Active { get; private set; }
     public bool Busy => _writing is { IsCompleted: false };
     public SaveState State { get; private set; } = new(null, null, null, null, ReadOnlyReason.None);
-    public bool HasPendingPose => _pendingPose is not null;
+    public bool HasPendingPose => _restore?.PendingPose is not null;
     public event Action? SlotsChanged;
 
     public async Task Initialize(SaveRuntimeOptions options, SaveRuntimeBindings bindings, SaveSections sections)
@@ -62,6 +59,7 @@ public sealed partial class SaveService : ISaveService, IDisposable
         if (_initialized) throw new InvalidOperationException("Save service was initialized twice.");
         _options = options; _runtime = bindings; _sections = sections;
         _defaultRuleset = bindings.Ruleset.Current.Id;
+        _restore = new(bindings, PublishRestoreFault, PublishRestoreSuccess);
         var data = await Task.Run(() =>
         {
             var repository = new SaveRepository(options.Directory, options.Enabled, sections);
@@ -86,7 +84,7 @@ public sealed partial class SaveService : ISaveService, IDisposable
         _frame++;
         var dt = Math.Clamp(double.IsFinite(delta) ? delta : 0, 0, .1);
         if (_request.HasValue) _requestAge += dt;
-        if (Playing && !_restoring && !RestoreFaulted)
+        if (Playing && !Restoring && !RestoreFaulted)
         {
             _playSeconds += dt; _interval += dt;
             if (_flush is { IsCompleted: true }) _flush = null;
@@ -94,7 +92,7 @@ public sealed partial class SaveService : ISaveService, IDisposable
         }
         if (_options.SaveAtFrame is { } at && _frame >= at && !_saveAtDone && Safe)
         { _saveAtDone = true; _ = SaveNow(SaveReason.Test); }
-        if (_request is { } reason && !Busy && (Safe || _requestAge >= 60) && !_restoring &&
+        if (_request is { } reason && !Busy && (Safe || _requestAge >= 60) && !Restoring &&
             Playing && !HasPendingPose)
         {
             var forced = !Safe;
@@ -110,7 +108,7 @@ public sealed partial class SaveService : ISaveService, IDisposable
     {
         get
         {
-            if (RestoreFaulted || _restoring || !Playing || _runtime.Loading.Active || MapTransitioning) return false;
+            if (RestoreFaulted || Restoring || !Playing || _runtime.Loading.Active || MapTransitioning) return false;
             foreach (var registration in _sections.Registered) if (!registration.Section.IsSettled) return false;
             return true;
         }
@@ -122,7 +120,7 @@ public sealed partial class SaveService : ISaveService, IDisposable
         if (!Enum.IsDefined(reason)) throw new ArgumentOutOfRangeException(nameof(reason));
         if (reason is SaveReason.Quit or SaveReason.ToTitle) throw new ArgumentException("Use FlushForQuit.", nameof(reason));
         if (reason is not (SaveReason.Interval or SaveReason.Test)) return;
-        if (!_initialized || !Enabled || Active is null || _restoring || RestoreFaulted || HasPendingPose ||
+        if (!_initialized || !Enabled || Active is null || Restoring || RestoreFaulted || HasPendingPose ||
             !Playing || MapTransitioning) return;
         if (_request is null) _requestAge = 0;
         _request = reason;
@@ -148,7 +146,7 @@ public sealed partial class SaveService : ISaveService, IDisposable
         {
             if (await OnFrame(() => RestoreFaulted).ConfigureAwait(false))
                 return new(SaveStatus.Failed, Active, 0, "save.error.restore_world");
-            var disabled = await OnFrame(() => !Enabled || Active is null || HasPendingPose || _restoring).ConfigureAwait(false);
+            var disabled = await OnFrame(() => !Enabled || Active is null || HasPendingPose || Restoring).ConfigureAwait(false);
             if (disabled) return new(Enabled ? SaveStatus.Deferred : SaveStatus.Disabled, Active, 0);
             var active = Active!.Value;
             var current = await Task.Run(() => _repository!.Scan(active)).ConfigureAwait(false);
@@ -269,6 +267,47 @@ public sealed partial class SaveService : ISaveService, IDisposable
         return meta;
     }
 
+    public Task<LoadResult> NewGame(SlotId slot, uint? seed = null, WorldPreset? start = null)
+    {
+        if (!AutoSlots.Contains(slot)) throw new ArgumentOutOfRangeException(nameof(slot));
+        return RestoreDefaultWorld(slot, seed, start);
+    }
+
+    public Task<LoadResult> RestoreTitlePreview() => RestoreDefaultWorld(null, null, null);
+
+    private async Task<LoadResult> RestoreDefaultWorld(SlotId? slot, uint? seed, WorldPreset? start)
+    {
+        await _operation.WaitAsync().ConfigureAwait(false);
+        try
+        {
+            await BeginRestoreOperation().ConfigureAwait(false);
+            NewGameContext? defaults = null;
+            var prepared = await OnFrame(() =>
+            {
+                var result = _restore!.PrepareDefaultWorld(_options, _sections, _defaultRuleset, AutoSlots[0],
+                    slot, seed, start, selected => checked(_slots[selected].MaxGeneration + 1));
+                defaults = result.Defaults;
+                Active = slot.HasValue ? _options.WriteSlot ?? slot : null; _newLine = slot.HasValue; _line = 0; _playSeconds = 0;
+                _authorizedOverwrite = slot.HasValue && Active == slot;
+                _thumbnail = null; _unknown = new Dictionary<string, RawSaveSection>(); _restore.ClearPendingPose();
+                return result.Save;
+            }).ConfigureAwait(false);
+            await Travel(prepared.Document.Meta.Map, null, null, _runtime.Maps.Context is null ? MapTravelCause.Boot : MapTravelCause.NewGame).ConfigureAwait(false);
+            await OnFrame(() => _restore!.RestorePhaseOf(prepared, RestorePhase.Content, [], defaults)).ConfigureAwait(false);
+            prepared = await PrepareViewPose(prepared, [], defaults).ConfigureAwait(false);
+            var wait = await OnFrame(() =>
+            {
+                _restore!.RestorePhaseOf(prepared, RestorePhase.Pose, [], defaults);
+                return _runtime.WaitDestination(_runtime.Camera.Pose, _runtime.Observer.Space, _runtime.Observer.Mode);
+            }).ConfigureAwait(false);
+            await wait.ConfigureAwait(false);
+            await OnFrame(_restore!.Succeed).ConfigureAwait(false);
+            return new(LoadStatus.Loaded, Active, 0, []);
+        }
+        catch (Exception error) { return await RestoreFailed(slot, error).ConfigureAwait(false); }
+        finally { await OnFrame(() => _restore?.End()).ConfigureAwait(false); _operation.Release(); }
+    }
+
     public async Task<LoadResult> Load(SlotId slot, LoadScope scope = LoadScope.Full)
     {
         if (!AutoSlots.Contains(slot) || !Enum.IsDefined(scope)) throw new ArgumentOutOfRangeException(nameof(slot));
@@ -288,7 +327,7 @@ public sealed partial class SaveService : ISaveService, IDisposable
             return await Restore(scan.Save, _options.WriteSlot ?? slot, scope).ConfigureAwait(false);
         }
         catch (Exception error) { return await RestoreFailed(slot, error).ConfigureAwait(false); }
-        finally { await OnFrame(EndRestoreOperation).ConfigureAwait(false); _operation.Release(); }
+        finally { await OnFrame(() => _restore?.End()).ConfigureAwait(false); _operation.Release(); }
     }
 
     public async Task<LoadResult> LoadFile(string path)
@@ -300,10 +339,10 @@ public sealed partial class SaveService : ISaveService, IDisposable
             var prepared = await Task.Run(() => _repository!.ReadExternal(path)).ConfigureAwait(false);
             return await Restore(prepared, _options.WriteSlot, LoadScope.Full).ConfigureAwait(false);
         }
-        catch (SaveFormatException error) when (!_restoreMutationStarted)
+        catch (SaveFormatException error) when (_restore?.MutationStarted != true)
         { return new(LoadStatus.Corrupt, null, 0, [], error.Message); }
         catch (Exception error) { return await RestoreFailed(null, error).ConfigureAwait(false); }
-        finally { await OnFrame(EndRestoreOperation).ConfigureAwait(false); _operation.Release(); }
+        finally { await OnFrame(() => _restore?.End()).ConfigureAwait(false); _operation.Release(); }
     }
 
     private async Task<LoadResult> Restore(PreparedSave prepared, SlotId? active, LoadScope scope)
@@ -313,28 +352,12 @@ public sealed partial class SaveService : ISaveService, IDisposable
         string? fallbackSpawn = null;
         await OnFrame(() =>
         {
-            _restoreMutationStarted = true;
-            _runtime.SelectRuleset(new(meta.Ruleset));
-            if (!_runtime.Maps.Maps.Any(m => m.Id == meta.Map))
-            {
-                var fallback = _runtime.Maps.Maps.First(m => m.Id == _runtime.Maps.Default);
-                fallbackSpawn = fallback.DefaultSpawn;
-                repairs.Add("Missing map replaced with the default map: " + meta.Map.Value);
-                meta = meta with { Map = fallback.Id, Mode = _runtime.Ruleset.Current.DefaultViewMode, Space = null };
-                prepared = prepared with
-                {
-                    Document = prepared.Document with { Meta = meta },
-                    Sections = prepared.Sections.Select(s => s.Registration.Attribute.Scope == SaveScope.Global
-                        ? s with { Map = fallback.Id, Dto = s.Registration.Attribute.Phase == RestorePhase.Pose || s.Registration.Attribute.Id == "maps" ? null : s.Dto }
-                        : s).ToArray()
-                };
-            }
-            RestorePhaseOf(prepared, RestorePhase.World, repairs);
-            _runtime.WorldRestore.CompleteRestore();
+            (prepared, fallbackSpawn) = _restore!.PrepareLoadedWorld(prepared, repairs);
+            meta = prepared.Document.Meta;
             Active = active; _line = active == meta.Slot ? meta.Line : 0; _newLine = active != meta.Slot;
             _authorizedOverwrite = false;
             _playSeconds = meta.PlaySeconds; _thumbnail = prepared.Document.Thumbnail; _unknown = prepared.Document.Sections;
-            _pendingPose = null;
+            _restore.ClearPendingPose();
         }).ConfigureAwait(false);
         await Travel(meta.Map, fallbackSpawn is null && scope == LoadScope.Full ? meta.Pose : null,
             scope == LoadScope.Full ? meta.Mode : null, MapTravelCause.LoadSave, fallbackSpawn).ConfigureAwait(false);
@@ -343,43 +366,25 @@ public sealed partial class SaveService : ISaveService, IDisposable
             meta = await OnFrame(() => meta with { Pose = _runtime.Camera.Pose }).ConfigureAwait(false);
             prepared = prepared with { Document = prepared.Document with { Meta = meta } };
         }
-        await OnFrame(() => RestorePhaseOf(prepared, RestorePhase.Content, repairs)).ConfigureAwait(false);
+        await OnFrame(() => _restore!.RestorePhaseOf(prepared, RestorePhase.Content, repairs)).ConfigureAwait(false);
         if (scope == LoadScope.Full)
         {
             prepared = await PrepareViewPose(prepared, repairs).ConfigureAwait(false);
             var wait = await OnFrame(() =>
             {
-                RestorePhaseOf(prepared, RestorePhase.Pose, repairs);
+                _restore!.RestorePhaseOf(prepared, RestorePhase.Pose, repairs);
                 return _runtime.WaitDestination(_runtime.Camera.Pose, _runtime.Observer.Space, _runtime.Observer.Mode);
             }).ConfigureAwait(false);
             await wait.ConfigureAwait(false);
         }
-        else await OnFrame(() => _pendingPose = prepared).ConfigureAwait(false);
+        else await OnFrame(() => _restore!.DeferPose(prepared)).ConfigureAwait(false);
         await OnFrame(() =>
         {
             if (fallbackSpawn is not null && _slots.TryGetValue(meta.Slot, out var slot))
                 _slots[meta.Slot] = slot with { Info = slot.Info with { Meta = meta }, Save = prepared };
-            _interval = 0; RestoreSucceeded();
+            _interval = 0; _restore!.Succeed();
         }).ConfigureAwait(false);
         return new(LoadStatus.Loaded, active, meta.Gen, repairs);
-    }
-
-    private void RestorePhaseOf(PreparedSave prepared, RestorePhase phase, List<string> repairs, NewGameContext? defaults = null)
-    {
-        foreach (var item in prepared.Sections.Where(s => s.Registration.Attribute.Phase == phase))
-        {
-            var context = new RestoreContext { Map = item.Map, FromVersion = item.FromVersion, Missing = item.Dto is null };
-            if (item.Repair is not null) context.Repair(item.Repair);
-            var map = _runtime.Maps.Maps.FirstOrDefault(m => m.Id == item.Map);
-            if (map is null && item.Registration.Attribute.Scope == SaveScope.PerMap)
-            { repairs.Add("Removed section for missing map: " + item.Key); continue; }
-            map ??= _runtime.Maps.Maps.First(m => m.Id == _runtime.Maps.Default);
-            var dto = item.Dto ?? item.Registration.Section.CreateDefault(defaults ??
-                new(_runtime.World.WeatherSeed, item.Map, map.World.Default,
-                    _runtime.Ruleset.Current.DefaultViewMode));
-            item.Registration.Section.Restore(dto, context);
-            repairs.AddRange(context.Repairs);
-        }
     }
 
     private async Task<PreparedSave> PrepareViewPose(PreparedSave prepared, List<string> repairs, NewGameContext? defaults = null)
@@ -407,37 +412,37 @@ public sealed partial class SaveService : ISaveService, IDisposable
         try
         {
             if (RestoreFaulted) throw new InvalidOperationException("A faulted world requires Load or NewGame.");
-            var prepared = _pendingPose;
+            var prepared = _restore?.PendingPose;
             if (prepared is null) return;
             await BeginRestoreOperation().ConfigureAwait(false);
             prepared = await PrepareViewPose(prepared, []).ConfigureAwait(false);
             var wait = await OnFrame(() =>
             {
-                _restoreMutationStarted = true;
-                RestorePhaseOf(prepared, RestorePhase.Pose, []);
+                _restore!.BeginMutation();
+                _restore!.RestorePhaseOf(prepared, RestorePhase.Pose, []);
                 return _runtime.WaitDestination(_runtime.Camera.Pose, _runtime.Observer.Space, _runtime.Observer.Mode);
             }).ConfigureAwait(false);
             await wait.ConfigureAwait(false);
-            await OnFrame(() => { _pendingPose = null; RestoreSucceeded(); }).ConfigureAwait(false);
+            await OnFrame(() => { _restore!.ClearPendingPose(); _restore.Succeed(); }).ConfigureAwait(false);
         }
         catch (Exception error)
         {
             await RestoreFailed(Active, error).ConfigureAwait(false);
             throw;
         }
-        finally { await OnFrame(EndRestoreOperation).ConfigureAwait(false); _operation.Release(); }
+        finally { await OnFrame(() => _restore?.End()).ConfigureAwait(false); _operation.Release(); }
     }
 
-    private bool RestoreFaulted => _restoreBlocked || _initialized && _runtime.WorldRestore.RestoreFaulted;
+    private bool Restoring => _restore?.IsActive == true;
+    private bool RestoreFaulted => _restore?.Blocked == true || _initialized && _runtime.WorldRestore.RestoreFaulted;
 
     private async Task BeginRestoreOperation()
     {
         var previousMap = await OnFrame(() =>
         {
             if (!_initialized) throw new InvalidOperationException("Save service is not initialized.");
-            _restoring = true; _request = null; _restoreMutationStarted = false; _restoreAbortApplied = false; _flush = null;
-            _restoreInput ??= _runtime.Camera.LockInput(InputLockReason.MapTravel);
-            return _runtime.Maps.Transition?.Done;
+            _request = null; _flush = null;
+            return _restore!.Begin();
         }).ConfigureAwait(false);
         // A new restore must not race the previous entry's pending map or pose work.
         // Its Arrived/Failed outcome belongs to the old request; either terminal result allows reconstruction.
@@ -446,36 +451,23 @@ public sealed partial class SaveService : ISaveService, IDisposable
 
     private Task<LoadResult> RestoreFailed(SlotId? slot, Exception error) => OnFrame(() =>
     {
-        if (!_restoreMutationStarted) return new LoadResult(LoadStatus.Failed, slot, 0, [], error.Message);
+        if (_restore?.MutationStarted != true) return new LoadResult(LoadStatus.Failed, slot, 0, [], error.Message);
         var detail = error.Message;
-        try { MarkRestoreFault(); }
+        try { _restore.MarkFault(); }
         catch (Exception abortError) { detail += "; abort failed: " + abortError.Message; }
         return new LoadResult(LoadStatus.Failed, slot, 0, [], "save.error.restore_world: " + detail);
     });
 
-    private void MarkRestoreFault()
+    private void PublishRestoreFault()
     {
-        if (_restoreAbortApplied) return;
-        _restoreBlocked = true; _request = null; _pendingPose = null; _restoreAbortApplied = true;
-        // This runs inside the failing Save-frame callback, before the next World tick can observe pending state.
-        try { _runtime.WorldRestore.AbortRestore(); }
-        finally { Publish(new(SaveStatus.Failed, Active, 0, "save.error.restore_world")); }
+        _request = null;
+        Publish(new(SaveStatus.Failed, Active, 0, "save.error.restore_world"));
     }
 
-    private void RestoreSucceeded()
+    private void PublishRestoreSuccess()
     {
-        if (_runtime.WorldRestore.RestoreFaulted)
-            throw new InvalidOperationException("World restore has not committed successfully.");
-        _restoreBlocked = false;
         if (State.ErrorKey == "save.error.restore_world") State = State with { Last = null, ErrorKey = null };
         Publish(null);
-    }
-
-    private void EndRestoreOperation()
-    {
-        _restoring = false; _restoreMutationStarted = false;
-        if (RestoreFaulted) return;
-        _restoreInput?.Dispose(); _restoreInput = null;
     }
 
     private async Task Travel(MapId map, Pose? pose, ViewMode? mode, MapTravelCause cause, string? spawn = null)
@@ -535,7 +527,6 @@ public sealed partial class SaveService : ISaveService, IDisposable
         SaveFormatException => "save.error.verification",
         _ => "save.error.snapshot"
     };
-    private static uint NewSeed() => System.Buffers.Binary.BinaryPrimitives.ReadUInt32LittleEndian(RandomNumberGenerator.GetBytes(4));
 
     public Task<T> OnFrame<T>(Func<T> function)
     {
@@ -545,9 +536,9 @@ public sealed partial class SaveService : ISaveService, IDisposable
             try { completion.SetResult(function()); }
             catch (Exception error)
             {
-                if (_restoring && _restoreMutationStarted)
+                if (Restoring && _restore?.MutationStarted == true)
                 {
-                    try { MarkRestoreFault(); }
+                    try { _restore!.MarkFault(); }
                     catch (Exception abortError) { error = new AggregateException(error, abortError); }
                 }
                 completion.SetException(error);
@@ -559,7 +550,7 @@ public sealed partial class SaveService : ISaveService, IDisposable
     public void Dispose()
     {
         _disposed = true;
-        _restoreInput?.Dispose(); _restoreInput = null;
+        _restore?.Dispose();
         // If the application deliberately exits during a write, retain the process lock until OS teardown.
         if (!Busy) _repository?.Dispose();
     }

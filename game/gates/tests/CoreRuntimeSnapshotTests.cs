@@ -19,7 +19,7 @@ public sealed class CoreRuntimeSnapshotTests
         var restored = JsonNode.Parse(Snapshot)!.AsObject();
         foreach (var position in Positions(restored)) position[1] = position[1]!.GetValue<double>() - .01;
         var captured = restored.ToJsonString();
-        AssertThat(StageGateDriver.CoreSnapshotsMatch(Snapshot, captured))
+        AssertThat(CoreRuntimeSnapshot.Matches(Snapshot, captured))
             .OverrideFailureMessage("A 1 cm support correction should match all allowed runtime positions.").IsTrue();
     }
 
@@ -33,7 +33,7 @@ public sealed class CoreRuntimeSnapshotTests
             var position = Positions(restored)[index];
             // Each axis stays below 2 cm, while the combined displacement exceeds it.
             for (var axis = 0; axis < 3; axis++) position[axis] = position[axis]!.GetValue<double>() + .015;
-            AssertThat(!StageGateDriver.CoreSnapshotsMatch(Snapshot, restored.ToJsonString()))
+            AssertThat(!CoreRuntimeSnapshot.Matches(Snapshot, restored.ToJsonString()))
                 .OverrideFailureMessage("Runtime position " + index + " exceeded the 2 cm distance limit.").IsTrue();
         }
     }
@@ -73,10 +73,10 @@ public sealed class CoreRuntimeSnapshotTests
         {
             var restored = JsonNode.Parse(Snapshot)!.AsObject();
             changes[i](restored);
-            AssertThat(!StageGateDriver.CoreSnapshotsMatch(Snapshot, restored.ToJsonString()))
+            AssertThat(!CoreRuntimeSnapshot.Matches(Snapshot, restored.ToJsonString()))
                 .OverrideFailureMessage("Non-position or array change " + i + " must not match.").IsTrue();
         }
-        AssertThat(StageGateDriver.CoreSnapshotsMatch(Snapshot, Snapshot.Replace("\"rate\":0", "\"rate\":0.0", StringComparison.Ordinal)))
+        AssertThat(CoreRuntimeSnapshot.Matches(Snapshot, Snapshot.Replace("\"rate\":0", "\"rate\":0.0", StringComparison.Ordinal)))
             .OverrideFailureMessage("Non-position numeric spelling must remain exact.").IsFalse();
     }
 

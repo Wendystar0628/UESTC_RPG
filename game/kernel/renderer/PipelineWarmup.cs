@@ -76,51 +76,12 @@ public sealed partial class PipelineWarmup : Node
                     throw new InvalidDataException("Pipeline material has no authored shader.");
                 if (shader.GetMode() == Shader.Mode.CanvasItem)
                 {
-                    if (combination.Canvas == PipelineCanvasDraw.MsdfText &&
-                        (_canvasFont is null || !GodotObject.IsInstanceValid(_canvasFont)))
-                        throw new InvalidOperationException("The formal UI font must be registered before canvas preparation.");
-                    if (combination.Canvas == PipelineCanvasDraw.TexturedRect && white is null)
-                    {
-                        using var image = Image.CreateFromData(1, 1, false, Image.Format.Rgba8, [255, 255, 255, 255]);
-                        white = ImageTexture.CreateFromImage(image);
-                        owned.Add(white);
-                    }
-                    canvas.AddChild(new PipelineCanvas
-                    {
-                        Material = material, DrawType = combination.Canvas, Font = _canvasFont, Texture = white
-                    });
+                    MountCanvas(combination, material, canvas, owned, ref white);
                     continue;
                 }
                 if (shader.GetMode() != Shader.Mode.Spatial || combination.Canvas != PipelineCanvasDraw.None)
                     throw new InvalidDataException("The baked combination does not describe a spatial or canvas pipeline.");
-                var mesh = CreateMesh(combination);
-                owned.Add(mesh);
-                mesh.SurfaceSetMaterial(0, material);
-                GeometryInstance3D instance;
-                if (combination.Instanced)
-                {
-                    var multi = new MultiMesh
-                    {
-                        TransformFormat = MultiMesh.TransformFormatEnum.Transform3D,
-                        UseColors = false, UseCustomData = true, Mesh = mesh, InstanceCount = 1
-                    };
-                    owned.Add(multi);
-                    multi.SetInstanceTransform(0, Transform3D.Identity);
-                    instance = new MultiMeshInstance3D { Multimesh = multi };
-                }
-                else instance = new MeshInstance3D { Mesh = mesh };
-                // Reflection proxies use an override in production; ordinary surfaces bind on the mesh.
-                if (combination.Reflect) instance.MaterialOverride = material;
-                instance.CastShadow = combination.Shadows switch
-                {
-                    PipelineShadowMode.Off => GeometryInstance3D.ShadowCastingSetting.Off,
-                    PipelineShadowMode.On => GeometryInstance3D.ShadowCastingSetting.On,
-                    PipelineShadowMode.ShadowsOnly => GeometryInstance3D.ShadowCastingSetting.ShadowsOnly,
-                    PipelineShadowMode.DoubleSided => GeometryInstance3D.ShadowCastingSetting.DoubleSided,
-                    _ => throw new InvalidDataException("Unknown pipeline shadow state.")
-                };
-                instance.Visible = false;
-                spatial.AddChild(instance);
+                MountSpatial(combination, material, spatial, owned);
             }
             // One submission lets Godot see hidden spatial instances and actually draw the canvas types.
             // This is a frame boundary, not compilation evidence or a stable-frame threshold.
@@ -134,6 +95,57 @@ public sealed partial class PipelineWarmup : Node
             for (var i = owned.Count - 1; i >= 0; i--)
                 if (GodotObject.IsInstanceValid(owned[i])) owned[i].Dispose();
         }
+    }
+
+    private void MountCanvas(PipelineCombination combination, Material material, CanvasLayer canvas,
+        List<Resource> owned, ref ImageTexture? white)
+    {
+        if (combination.Canvas == PipelineCanvasDraw.MsdfText &&
+            (_canvasFont is null || !GodotObject.IsInstanceValid(_canvasFont)))
+            throw new InvalidOperationException("The formal UI font must be registered before canvas preparation.");
+        if (combination.Canvas == PipelineCanvasDraw.TexturedRect && white is null)
+        {
+            using var image = Image.CreateFromData(1, 1, false, Image.Format.Rgba8, [255, 255, 255, 255]);
+            white = ImageTexture.CreateFromImage(image);
+            owned.Add(white);
+        }
+        canvas.AddChild(new PipelineCanvas
+        {
+            Material = material, DrawType = combination.Canvas, Font = _canvasFont, Texture = white
+        });
+    }
+
+    private static void MountSpatial(PipelineCombination combination, Material material, Node3D spatial,
+        List<Resource> owned)
+    {
+        var mesh = CreateMesh(combination);
+        owned.Add(mesh);
+        mesh.SurfaceSetMaterial(0, material);
+        GeometryInstance3D instance;
+        if (combination.Instanced)
+        {
+            var multi = new MultiMesh
+            {
+                TransformFormat = MultiMesh.TransformFormatEnum.Transform3D,
+                UseColors = false, UseCustomData = true, Mesh = mesh, InstanceCount = 1
+            };
+            owned.Add(multi);
+            multi.SetInstanceTransform(0, Transform3D.Identity);
+            instance = new MultiMeshInstance3D { Multimesh = multi };
+        }
+        else instance = new MeshInstance3D { Mesh = mesh };
+        // Reflection proxies use an override in production; ordinary surfaces bind on the mesh.
+        if (combination.Reflect) instance.MaterialOverride = material;
+        instance.CastShadow = combination.Shadows switch
+        {
+            PipelineShadowMode.Off => GeometryInstance3D.ShadowCastingSetting.Off,
+            PipelineShadowMode.On => GeometryInstance3D.ShadowCastingSetting.On,
+            PipelineShadowMode.ShadowsOnly => GeometryInstance3D.ShadowCastingSetting.ShadowsOnly,
+            PipelineShadowMode.DoubleSided => GeometryInstance3D.ShadowCastingSetting.DoubleSided,
+            _ => throw new InvalidDataException("Unknown pipeline shadow state.")
+        };
+        instance.Visible = false;
+        spatial.AddChild(instance);
     }
 
     private static ArrayMesh CreateMesh(PipelineCombination combination)

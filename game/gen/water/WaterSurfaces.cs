@@ -46,12 +46,10 @@ public sealed class WaterSurfaces
     {
         var whole = lod == LodLevel.L4;
         if (whole && tile != new TileKey(0, 0)) return null;
-        var position = new List<float>();
-        var uv = new List<float>();
-        var uv2 = new List<float>();
-        var poolData = new List<float>();
-        var poolProfile = new List<float>();
-        var poolLanes = new List<float>();
+        var vertices = new List<GeometryVertex>();
+        var poolData = new List<Vector4>();
+        var poolProfile = new List<Vector4>();
+        var poolLanes = new List<Vector4>();
         var index = new List<int>();
         foreach (var mesh in Meshes)
         {
@@ -64,52 +62,34 @@ public sealed class WaterSurfaces
                     var v = mesh.Index[3 * t + k];
                     if (!remap.TryGetValue(v, out var n))
                     {
-                        n = position.Count / 3;
+                        n = vertices.Count;
                         remap.Add(v, n);
-                        position.Add(mesh.Position[3 * v]);
-                        position.Add(mesh.Position[3 * v + 1]);
-                        position.Add(mesh.Position[3 * v + 2]);
-                        uv.Add(mesh.Body.Kind == WaterKind.Pool ? WaterPoolRules.LineWidth : mesh.Flow[2 * v]);
-                        uv.Add(mesh.Flow[2 * v + 1]);
-                        uv2.Add(mesh.Shore[v]);
-                        uv2.Add(mesh.Body.ReflectSlot);
-                        if (mesh.Body.PoolFrame is { } frame)
-                        {
-                            var local = frame.Coordinates(new(mesh.Position[3 * v], mesh.Position[3 * v + 2]));
-                            poolData.AddRange([1f, local.X, local.Y, frame.Length]);
-                            poolProfile.AddRange([WaterPoolRules.ShallowDepth, WaterPoolRules.DeepDepth,
-                                WaterPoolRules.ShallowFraction, WaterPoolRules.LaneCount(frame.Width)]);
-                            poolLanes.AddRange([WaterPoolRules.LaneCenter(0, WaterPoolRules.LaneCount(frame.Width)),
-                                WaterPoolRules.LaneWidth, WaterPoolRules.LaneEndBarLength, WaterPoolRules.LaneEndInset]);
-                        }
-                        else
-                        {
-                            poolData.AddRange([0f, 0f, 0f, 0f]);
-                            poolProfile.AddRange([0f, 0f, 0f, 0f]);
-                            poolLanes.AddRange([0f, 0f, 0f, 0f]);
-                        }
+                        vertices.Add(Vertex(mesh, v));
+                        var (data, profile, lanes) = PoolChannels(mesh, v);
+                        poolData.Add(data); poolProfile.Add(profile); poolLanes.Add(lanes);
                     }
                     index.Add(n);
                 }
             }
         }
         if (index.Count == 0) return null;
-        var count = position.Count / 3;
-        GeometryVertexLimits.Require(count);
-        var normal = new float[count * 3];
-        for (var i = 0; i < count; i++) normal[3 * i + 1] = 1f;
-        var flags = new byte[count];
-        Array.Fill(flags, VertexFlag.NoShadow);   // no shadow: the water never casts (WLD-WATER)
-        var bundle = new GeometryBundle(new ToonRef(WaterPalette.Surface), position.ToArray(), normal, index.ToArray(),
-            Uv: uv.ToArray(), Uv2: uv2.ToArray())
-        {
-            Flags = flags,
-            Custom0 = poolData.ToArray(),
-            Custom1 = poolProfile.ToArray(),
-            Custom2 = poolLanes.ToArray(),
-        };
-        bundle.ValidateVertexData();
-        return bundle;
+        return GeometrySink.Indexed(WaterPalette.Surface, vertices, index,
+            GeometryChannels.Uv | GeometryChannels.Uv2 | GeometryChannels.Flags, poolData, poolProfile, poolLanes);
+    }
+
+    private static GeometryVertex Vertex(WaterMesh mesh, int v) =>
+        new(new(mesh.Position[3 * v], mesh.Position[3 * v + 1], mesh.Position[3 * v + 2]), Vector3.UnitY,
+            new(mesh.Body.Kind == WaterKind.Pool ? WaterPoolRules.LineWidth : mesh.Flow[2 * v], mesh.Flow[2 * v + 1]),
+            new(mesh.Shore[v], mesh.Body.ReflectSlot), Flags: VertexFlag.NoShadow);
+
+    private static (Vector4 Data, Vector4 Profile, Vector4 Lanes) PoolChannels(WaterMesh mesh, int v)
+    {
+        if (mesh.Body.PoolFrame is not { } frame) return (Vector4.Zero, Vector4.Zero, Vector4.Zero);
+        var local = frame.Coordinates(new(mesh.Position[3 * v], mesh.Position[3 * v + 2]));
+        return (new(1f, local.X, local.Y, frame.Length),
+            new(WaterPoolRules.ShallowDepth, WaterPoolRules.DeepDepth, WaterPoolRules.ShallowFraction, WaterPoolRules.LaneCount(frame.Width)),
+            new(WaterPoolRules.LaneCenter(0, WaterPoolRules.LaneCount(frame.Width)), WaterPoolRules.LaneWidth,
+                WaterPoolRules.LaneEndBarLength, WaterPoolRules.LaneEndInset));
     }
 
     private static TileKey CellOf(WaterMesh mesh, int triangle, LodLevel lod)

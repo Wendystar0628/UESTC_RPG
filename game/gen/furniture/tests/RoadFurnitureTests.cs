@@ -48,12 +48,12 @@ public sealed class RoadFurnitureTests
         var ramped = Groups.Value.First(g => g.KerbRamps);
         var ramps = layout.Items.Where(i => i.Kind == FurnitureKind.KerbRamp).ToList();
         AssertThat(ramps.All(r => r.Key.StartsWith($"ramp:{ramped.Key}:", StringComparison.Ordinal))).OverrideFailureMessage("a kerb ramp on another road").IsTrue();
-        var road = ramped.Lines.Where(StreetSite.Carriageway).ToList();
+        var road = ramped.Lines.Where(StreetNetwork.Carriageway).ToList();
         foreach (var ramp in ramps)
         {
             var p = (RampParams)ramp.Part.Params;
             var back = ramp.Anchor - Front(ramp.Part.At) * (p.Depth * 0.5f);
-            var kerb = road.Min(l => (float)PlanLines.Project(l.Line.Points, back).Distance - StreetSite.HalfWidth(l));
+            var kerb = road.Min(l => (float)PlanLines.Project(l.Line.Points, back).Distance - StreetNetwork.HalfWidth(l));
             AssertThat(MathF.Abs(kerb) < TestTolerance.Layout).OverrideFailureMessage($"{ramp.Key}: its top edge is {kerb:F2} m off the kerb").IsTrue();
             AssertThat(road.Min(l => (float)PlanLines.Project(l.Line.Points, ramp.Anchor + Front(ramp.Part.At) * 2f).Distance) < road.Min(l => (float)PlanLines.Project(l.Line.Points, ramp.Anchor).Distance)).OverrideFailureMessage($"{ramp.Key} does not face the road").IsTrue();
         }
@@ -93,8 +93,8 @@ public sealed class RoadFurnitureTests
         {
             var rule = FurnitureStyle.Rule(tier);
             var runs = Groups.Value.Where(g => g.Tier == tier)
-                .SelectMany(g => StreetSite.Chains(g.Lines).Select(chain => (g.Key, Chain: chain, Reach: g.Lines.Max(StreetSite.HalfWidth) + FurnitureStyle.LampKerbGap + FurnitureStyle.LampMaxShift)))
-                .Where(r => new StreetSite.Run(r.Chain).Length >= 3f * rule.LampSpacing && r.Chain.All(p => PlanGeometry.Contains(world.Boundary, p)))
+                .SelectMany(g => StreetNetwork.Chains(g.Lines).Select(chain => (g.Key, Chain: chain, Reach: g.Lines.Max(StreetNetwork.HalfWidth) + FurnitureStyle.LampKerbGap + FurnitureStyle.LampMaxShift)))
+                .Where(r => new StreetNetwork.Run(r.Chain).Length >= 3f * rule.LampSpacing && r.Chain.All(p => PlanGeometry.Contains(world.Boundary, p)))
                 .ToList();
             AssertThat(runs.Count > 0).OverrideFailureMessage($"no long {tier} run inside the campus").IsTrue();
             var lit = runs.Count(r => lamps.Any(l => l.Key.StartsWith($"lamp:{r.Key}:", StringComparison.Ordinal) && (float)PlanLines.Project(r.Chain, l.Anchor).Distance <= r.Reach));

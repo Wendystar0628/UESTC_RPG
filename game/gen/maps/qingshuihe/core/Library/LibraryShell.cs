@@ -24,7 +24,7 @@ namespace Campus.Gen.Maps.Qingshuihe.Core.Library;
 /// </para>
 /// <para>
 /// Windows: one grid <see cref="WindowKey"/> for the whole entity, <see cref="Columns"/> × 6 (rows are storeys 0–5,
-/// columns allocated per row by the immutable opening layout below). The glass and the window declarations both read
+/// columns allocated per row by the immutable opening layout). The glass and the window declarations both read
 /// the map's allocation of that grid; nothing here numbers windows itself.
 /// </para>
 /// </summary>
@@ -33,27 +33,14 @@ public sealed class LibraryShell : ZoneSite, IWindowedPiece
     /// <summary>Key of the library's single window grid in the map's WindowNumberingSnapshot.</summary>
     public const string WindowKey = "library-shell";
     public const int Rows = 6;
-    private readonly IReadOnlyList<Opening> _openings;
-    private readonly IReadOnlyList<(Face Face, Rect Hole, int Column)> _mech;
+    private readonly LibraryOpeningLayout _windowLayout;
+    private readonly LibraryTerrace _terrace;
 
     private LibraryShell(LibraryPlan plan)
     {
         Plan = plan;
-        var next = new int[Rows];
-        int Allocate(int cells, IEnumerable<int> rows)
-        {
-            var list = rows.ToArray();
-            var column = list.Max(r => next[r]);
-            foreach (var r in list) next[r] = column + cells;
-            return column;
-        }
-        var openings = new List<Opening>();
-        foreach (var piece in plan.Pieces)
-            openings.AddRange(Layout(piece, Allocate));
-        _openings = openings;
-        SkylightColumn = Allocate(1, [5]);
-        _mech = LibraryRoof.MechWindows(plan).Select(w => (w.Face, w.Hole, Allocate(1, [5]))).ToArray();
-        Columns = next.Max();
+        _windowLayout = new(plan);
+        _terrace = new(plan);
     }
 
     public static LibraryShell? From(IWorldModel world)
@@ -76,7 +63,7 @@ public sealed class LibraryShell : ZoneSite, IWindowedPiece
 
     private (Vector2 A, Vector2 B)? WalkFrom(IWorldModel world)
     {
-        if (_openings.FirstOrDefault(o => o.Kind == OpeningKind.Entry) is not { } entry) return null;
+        if (Openings.FirstOrDefault(o => o.Kind == OpeningKind.Entry) is not { } entry) return null;
         var (u0, u1, depth) = Apron(entry);
         var front = entry.Face.At((u0 + u1) * 0.5f, depth, 0f);
         var p = new Vector2(front.X, front.Z);
@@ -125,10 +112,10 @@ public sealed class LibraryShell : ZoneSite, IWindowedPiece
     public override IReadOnlyList<Claim> Claims => DeclaredClaims;
 
     public LibraryPlan Plan { get; }
-    public IReadOnlyList<Opening> Openings => _openings;
+    public IReadOnlyList<Opening> Openings => _windowLayout.Openings;
     /// <summary>Columns of the library's window grid (rows are storeys 0–5).</summary>
-    public int Columns { get; }
-    public int SkylightColumn { get; }
+    public int Columns => _windowLayout.Columns;
+    public int SkylightColumn => _windowLayout.SkylightColumn;
     public int WindowCount => Columns * Rows;
 
     /// <summary>
@@ -136,11 +123,11 @@ public sealed class LibraryShell : ZoneSite, IWindowedPiece
     /// horizontal outward normal, and the bay's width and height up to the door transom. Null when the slot has no door.
     /// </summary>
     public (Vector3 Origin, Vector3 Outward, float Width, float Height, Face Face, float Depth)? EntranceDoor =>
-        Bay(_openings.FirstOrDefault(x => x.Kind == OpeningKind.Slot && x.Door is not null));
+        Bay(Openings.FirstOrDefault(x => x.Kind == OpeningKind.Slot && x.Door is not null));
 
     /// <summary>The 1F cafe door bay (lib.cafe, 16d) in the same terms; the shell places its glass door itself.</summary>
     public (Vector3 Origin, Vector3 Outward, float Width, float Height, Face Face, float Depth)? CafeDoor =>
-        Bay(_openings.FirstOrDefault(x => x.Kind == OpeningKind.Entry && x.Door is not null));
+        Bay(Openings.FirstOrDefault(x => x.Kind == OpeningKind.Entry && x.Door is not null));
 
     private static (Vector3 Origin, Vector3 Outward, float Width, float Height, Face Face, float Depth)? Bay(Opening? o)
     {
@@ -184,7 +171,7 @@ public sealed class LibraryShell : ZoneSite, IWindowedPiece
     public IEnumerable<(int Column, int Row, Vector3 Centre, Vector3 Right, Vector3 Up, float Width, float Height)> Cells()
     {
         var up = Vector3.UnitY;
-        foreach (var o in _openings)
+        foreach (var o in Openings)
             foreach (var (y0, y1, row) in o.Rows)
                 for (var c = 0; c < o.Cells; c++)
                 {
@@ -193,104 +180,8 @@ public sealed class LibraryShell : ZoneSite, IWindowedPiece
                 }
         var sky = (LibraryRoof.SkylightBaseY(Plan) + LibraryRoof.SkylightApexY(Plan)) * 0.5f;
         yield return (SkylightColumn, 5, new Vector3(Plan.Centre.X, sky, Plan.Centre.Y), Vector3.UnitX, -Vector3.UnitZ, S.SkylightAcross, S.SkylightAcross);
-        foreach (var (face, hole, column) in _mech)
+        foreach (var (face, hole, column) in _windowLayout.MechanicalWindows)
             yield return (column, 5, face.At((hole.U0 + hole.U1) * 0.5f, -S.Reveal, (hole.Y0 + hole.Y1) * 0.5f), -face.T, up, hole.U1 - hole.U0, hole.Y1 - hole.Y0);
-    }
-
-    // ------------------------------------------------------------------ layout
-
-    private IEnumerable<Opening> Layout(WallPiece piece, Func<int, IEnumerable<int>, int> allocate)
-    {
-        var f = Face.Of(piece);
-        var length = piece.Length;
-        if (length < S.MinWindowFace) yield break;
-        var plan = Plan;
-        switch (piece.Block.Kind)
-        {
-            case BlockKind.Podium:
-                {
-                    float y0 = plan.FloorY + S.PodiumSill, y1 = y0 + S.PodiumHeight;
-                    if (piece.Y0 > plan.FloorY + 0.01f || piece.Y1 < y1 + 0.3f || length < 2 * S.RibbonMargin + S.PodiumModule) yield break;
-                    float u0 = S.RibbonMargin, u1 = length - S.RibbonMargin;
-                    // lib.cafe (16d): the end of the ribbon at the store front becomes a door bay from the floor up, the door
-                    // open to the ribbon's transom line, its light above; a pier, then the rest of the ribbon.
-                    if (plan.CafeFace is { } cafe && ReferenceEquals(cafe.Piece, piece) && length > 2 * S.RibbonMargin + (S.CafeDoorCells + 2) * S.PodiumModule + S.CafeDoorPier)
-                    {
-                        var width = S.CafeDoorCells * S.PodiumModule;
-                        var bay = cafe.AtA ? new Rect(u0, u0 + width, plan.FloorY, y1) : new Rect(u1 - width, u1, plan.FloorY, y1);
-                        yield return new Opening(f, OpeningKind.Entry, bay, S.CafeDoorCells, [(plan.FloorY, y1, 0)], allocate(S.CafeDoorCells, [0]), S.CardReading)
-                        { Door = (0, S.CafeDoorCells, y0 + S.PodiumTransom) };
-                        if (cafe.AtA) u0 = bay.U1 + S.CafeDoorPier; else u1 = bay.U0 - S.CafeDoorPier;
-                    }
-                    var cells = Math.Max(1, (int)MathF.Round((u1 - u0) / S.PodiumModule));
-                    yield return new(f, OpeningKind.Podium, new(u0, u1, y0, y1), cells, [(y0, y1, 0)], allocate(cells, [0]), S.CardReading);
-                    break;
-                }
-            case BlockKind.Wing:
-                if (length < 2 * S.RibbonMargin + S.RibbonModule) yield break;
-                for (var k = 0; k < S.LibraryStoreys.Length - 1; k++)
-                {
-                    float y0 = plan.StoreyY(k) + S.RibbonSill, y1 = y0 + S.RibbonHeight;
-                    if (plan.StoreyY(k) < piece.Y0 - 0.05f || y1 > piece.Y1 - 0.3f) continue;
-                    var cells = Math.Max(1, (int)MathF.Round((length - 2 * S.RibbonMargin) / S.RibbonModule));
-                    yield return new(f, OpeningKind.Ribbon, new(S.RibbonMargin, length - S.RibbonMargin, y0, y1), cells, [(y0, y1, k)], allocate(cells, [k]), S.CardReading);
-                }
-                break;
-            case BlockKind.Setback:
-                {
-                    var row = S.LibraryStoreys.Length - 1;
-                    var count = (int)MathF.Floor((length - 1.8f + (S.SquarePitch - S.SquareSize)) / S.SquarePitch);
-                    float y0 = plan.StoreyY(row) + S.SquareSill, y1 = y0 + S.SquareSize;
-                    for (var i = 0; i < count; i++)
-                    {
-                        var u = length * 0.5f + (i - (count - 1) * 0.5f) * S.SquarePitch;
-                        yield return new(f, OpeningKind.Square, new(u - S.SquareSize * 0.5f, u + S.SquareSize * 0.5f, y0, y1), 1, [(y0, y1, row)], allocate(1, [row]), S.CardReading);
-                    }
-                    break;
-                }
-            case BlockKind.Tower when length >= 8f && piece.Y1 - piece.Y0 > 6f:
-                {
-                    var count = Math.Min(S.TowerSlits, (int)MathF.Floor((length - 2f) / S.SlitPitch) + 1);
-                    float y0 = MathF.Max(piece.Y0, plan.SecondFloorY) + 0.9f, y1 = piece.Y1 - S.SlitTopGap;
-                    var rows = StoreyRows(y0, y1);
-                    for (var i = 0; i < count; i++)
-                    {
-                        var u = length * 0.5f + (i - (count - 1) * 0.5f) * S.SlitPitch;
-                        yield return new(f, OpeningKind.Slit, new(u - S.SlitWidth * 0.5f, u + S.SlitWidth * 0.5f, y0, y1), 1, rows, allocate(1, rows.Select(r => r.Row)), S.CardStair);
-                    }
-                    break;
-                }
-            case BlockKind.FrontTower when length >= 8f && piece.Y1 - piece.Y0 > 6f:
-                {
-                    float y0 = MathF.Max(piece.Y0, plan.SecondFloorY), y1 = piece.Y1 - S.SlotTopGap;
-                    var rows = StoreyRows(y0, y1);
-                    var cells = S.SlotMullions + 1;
-                    // The 2F front door (16c) opens the slot's middle cells below the door transom.
-                    var door = MathF.Abs(y0 - plan.SecondFloorY) < 0.01f ? ((cells - S.DoorCells) / 2, S.DoorCells, y0 + S.SlotDoorHeight) : ((int, int, float)?)null;
-                    var slot = new Opening(f, OpeningKind.Slot, new((length - S.SlotWidth) * 0.5f, (length + S.SlotWidth) * 0.5f, y0, y1), cells, rows,
-                        allocate(cells, rows.Select(r => r.Row)), S.CardReading);
-                    yield return slot with { Door = door };
-                    break;
-                }
-            case BlockKind.Tower or BlockKind.FrontTower or BlockKind.Core:
-                break;
-            case BlockKind.Annex or BlockKind.Neighbour:
-                throw new InvalidOperationException("The north blocks (16e) are not part of the library plan.");
-            default:
-                throw new ArgumentOutOfRangeException(nameof(piece), piece.Block.Kind, "Unknown block kind.");
-        }
-    }
-
-    /// <summary>The span y0…y1 cut at the storey floors it crosses, each part tagged with its storey (window row).</summary>
-    private IReadOnlyList<(float Y0, float Y1, int Row)> StoreyRows(float y0, float y1)
-    {
-        var list = new List<(float, float, int)>();
-        for (var k = 0; k < Rows; k++)
-        {
-            float a = MathF.Max(y0, Plan.StoreyY(k)), b = MathF.Min(y1, Plan.StoreyY(k + 1));
-            if (b - a > 0.3f) list.Add((a, b, k));
-        }
-        return list;
     }
 
     // ------------------------------------------------------------------ build
@@ -303,7 +194,7 @@ public sealed class LibraryShell : ZoneSite, IWindowedPiece
         var clear = build.Glass(S.ClearGlass, windowBase, Columns, S.LibraryWindowChannel);
         var landmark = new GeometrySink(build.Palette);
         Walls(mesh, lod);
-        foreach (var o in _openings)
+        foreach (var o in Openings)
             LibraryFacade.Window(o.Kind == OpeningKind.Slot ? landmark : mesh, o.Kind == OpeningKind.Slot ? clear : glass, o, lod);
         if (lod <= LodLevel.L1) Bands(mesh);
         Tops(mesh);
@@ -315,7 +206,7 @@ public sealed class LibraryShell : ZoneSite, IWindowedPiece
             build.Parts.Add(new PlacedPart(new PartId(PartCatalog.DoorGlass),
                 new DoorParams(cafe.Width, cafe.Height, S.DoorDepth, S.DoorOpenDeg, S.DoorLeaves) { Foot = FootMat.Glass },
                 OpeningPlacement.Frame(cafe.Origin, cafe.Outward)));
-        if (lod <= LodLevel.L2 && _openings.FirstOrDefault(o => o.Kind == OpeningKind.Entry) is { } entry)
+        if (lod <= LodLevel.L2 && Openings.FirstOrDefault(o => o.Kind == OpeningKind.Entry) is { } entry)
         {
             var (u0, u1, depth) = Apron(entry);
             LibraryFacade.Box(mesh, S.Roof(S.LibraryTerrace), entry.Face, u0, u1, 0f, depth, Plan.PadY - S.Sink, entry.Hole.Y0 + ApronLift);
@@ -328,7 +219,7 @@ public sealed class LibraryShell : ZoneSite, IWindowedPiece
     private void Walls(GeometrySink mesh, LodLevel lod)
     {
         var wall = S.Wall(S.LibraryWall);
-        var byPiece = _openings.ToLookup(o => o.Face);
+        var byPiece = Openings.ToLookup(o => o.Face);
         foreach (var piece in Plan.Pieces)
         {
             var f = Face.Of(piece);
@@ -349,7 +240,7 @@ public sealed class LibraryShell : ZoneSite, IWindowedPiece
             {
                 // The plinth band breaks at a ground-floor door bay (lib.cafe).
                 var u = -ext;
-                foreach (var hole in _openings.Where(o => o.Door is not null && o.Face == f && o.Hole.Y0 < Plan.PlinthTopY).Select(o => o.Hole).OrderBy(h => h.U0))
+                foreach (var hole in Openings.Where(o => o.Door is not null && o.Face == f && o.Hole.Y0 < Plan.PlinthTopY).Select(o => o.Hole).OrderBy(h => h.U0))
                 {
                     LibraryFacade.Box(mesh, trim, f, u, hole.U0, 0f, S.PlinthProject, piece.Y0, Plan.PlinthTopY);
                     u = hole.U1;
@@ -452,7 +343,7 @@ public sealed class LibraryShell : ZoneSite, IWindowedPiece
         float y0 = Plan.RoofY - 0.02f, y1 = Plan.RoofY + S.MechHeight;
         var faces = LibraryRoof.MechFaces(Plan);
         var windows = lod <= LodLevel.L2
-            ? _mech.Select(m => new Opening(m.Face, OpeningKind.Mech, m.Hole, 1, [(m.Hole.Y0, m.Hole.Y1, 5)], m.Column, S.CardMech)).ToArray()
+            ? _windowLayout.MechanicalWindows.Select(m => new Opening(m.Face, OpeningKind.Mech, m.Hole, 1, [(m.Hole.Y0, m.Hole.Y1, 5)], m.Column, S.CardMech)).ToArray()
             : [];
         foreach (var f in faces)
             LibraryFacade.Wall(mesh, wall, f, 0f, f.Length, y0, y1, lod <= LodLevel.L1 ? windows.Where(o => o.Face == f).Select(o => o.Hole).ToArray() : []);
@@ -464,6 +355,8 @@ public sealed class LibraryShell : ZoneSite, IWindowedPiece
 
     // ------------------------------------------------------------------ collision
 
+    public override IReadOnlyList<OutdoorAccessArea> DescribeOutdoorAccess(BuildContext context) => _terrace.DescribeAccess();
+
     /// <summary>
     /// Walls standing on the ground block from their foot to 300 m (the roof is out of reach, MAP-QSH-CORE), except
     /// the podium, whose walls stop 1.5 m above its terrace; walls rising from the terrace block from there up. The
@@ -474,25 +367,6 @@ public sealed class LibraryShell : ZoneSite, IWindowedPiece
     /// over the two open leaves, so the clear way is the open leaves' width (WLD-INTERIORS).
     /// </para>
     /// </summary>
-    private IEnumerable<Block> PodiumDecks => Plan.Blocks.Where(block => block.Kind == BlockKind.Podium);
-
-    public override IReadOnlyList<OutdoorAccessArea> DescribeOutdoorAccess(BuildContext context)
-    {
-        var areas = new List<StoreyInfo>();
-        var covers = Plan.Blocks.Where(block => block.Kind != BlockKind.Podium && block.Y1 > Plan.SecondFloorY)
-            .Select(block => new PolygonRings(block.Ring)).ToArray();
-        foreach (var podium in PodiumDecks)
-        {
-            var minimum = podium.Ring.Aggregate(Vector2.Min);
-            var maximum = podium.Ring.Aggregate(Vector2.Max);
-            var north = new PolygonRings([minimum, new(maximum.X, minimum.Y),
-                new(maximum.X, Plan.Centre.Y), new(minimum.X, Plan.Centre.Y)]);
-            foreach (var ring in PlanGeometry.IntersectionTriangles(new(podium.Ring), north, covers))
-                areas.Add(new(2, Plan.SecondFloorY, Plan.StoreyY(2) - Plan.SecondFloorY, ring));
-        }
-        return [new("library.terrace-f", CoreIds.Library, areas.AsReadOnly())];
-    }
-
     public IReadOnlyList<Collider> Collide()
     {
         var list = new List<Collider>();
@@ -503,7 +377,7 @@ public sealed class LibraryShell : ZoneSite, IWindowedPiece
             var onTerrace = MathF.Abs(piece.Y0 - Plan.SecondFloorY) < 0.01f;
             if (!onGround && !onTerrace) continue;
             var face = Face.Of(piece);
-            var doors = _openings.Where(o => o.Door is not null && o.Face == face).ToArray();
+            var doors = Openings.Where(o => o.Door is not null && o.Face == face).ToArray();
             if (piece.Block.Kind == BlockKind.Podium)
             {
                 foreach (var (a, b, landing) in Split((piece.A, piece.B), Plan.Landing))
@@ -528,7 +402,7 @@ public sealed class LibraryShell : ZoneSite, IWindowedPiece
             foreach (var (p, q) in Open(face, piece.A, piece.B, doors)) list.Add(Wall(p, q, piece.Y0, top));
             foreach (var o in doors) list.AddRange(DoorBay(o, top));
         }
-        foreach (var podium in PodiumDecks)
+        foreach (var podium in _terrace.Decks)
             list.Add(new SlabCollider([.. podium.Ring], Plan.SecondFloorY, 0.3f, SurfaceTag.Ground) { Foot = FootMat.StonePaving });
         return list;
     }

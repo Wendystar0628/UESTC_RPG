@@ -61,6 +61,7 @@ public sealed class CollisionCoreTests
         var loaded = await Task.Run(() => MapWorldLoading.LoadPrepared(new WorldModelLoaderAdapter(terrain), input, claims));
         var context = MapWorldLoading.CreateContext(entry, loaded, input.SourceInputs);
         using var bake = new BakeService(options, terrain, new GlobalBuildInputs().Snapshot);
+        var products = new BakeProductBuilder(options, terrain);
         var map = bake.Mount(context);
         await bake.PrepareMapData(context);
         using var native = new World3D();
@@ -124,7 +125,7 @@ public sealed class CollisionCoreTests
             foreach (var tile in needed.OrderBy(tile => tile.Z).ThenBy(tile => tile.X))
             {
                 if (resident.Contains(tile)) continue;
-                var product = await Task.Run(() => bake.Build(map, CollisionBakeProducer.Key(id, tile))) as CollisionTile
+                var product = await Task.Run(() => products.Build(map, CollisionBakeProducer.Key(id, tile))) as CollisionTile
                     ?? throw new InvalidDataException("The formal collision producer returned another product.");
                 var work = new CollisionMountWork(collision, product, 0);
                 while (!work.Step(.3)) await root.ToSignal(tree, SceneTree.SignalName.ProcessFrame);

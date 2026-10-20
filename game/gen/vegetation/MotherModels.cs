@@ -1,4 +1,9 @@
 using Campus.Contracts;
+using System.Numerics;
+using static Campus.Gen.Vegetation.CrownCards;
+using static Campus.Gen.Vegetation.CrownMasses;
+using static Campus.Gen.Vegetation.TreeWoodGeometry;
+using static Campus.Gen.Vegetation.WinterTwigGeometry;
 
 namespace Campus.Gen.Vegetation;
 
@@ -11,7 +16,7 @@ namespace Campus.Gen.Vegetation;
 /// 2 + rank when drawn at L0+ only). NORMAL on the crown is the shell normal; on cards it is the shell normal at the card
 /// centre (palm fronds: the frond's own normal).
 /// </summary>
-public static partial class MotherModels
+public static class MotherModels
 {
     /// <summary>Trunks start this far below the local ground (WLD-TERRAIN: HeightAt minus burial).</summary>
     public const float Burial = 0.3f;
@@ -170,105 +175,18 @@ public static partial class MotherModels
         var plan = new TreePlan(species, variant);
         var shell = new CrownShell(plan);
         var ids = IdsOf(species, palette);
-        var wood = new VegetationPrototypeWriter(withUv: false);
-        var crown = new VegetationPrototypeWriter(withUv: true);
+        var wood = new VegetationPrototypeGeometry(withUv: false);
+        var crown = new VegetationPrototypeGeometry(withUv: true);
 
         WriteWood(wood, plan, level, ids);
         var twig = TwigMass(plan, palette, tag: 0f);
-        var palm = species.Form == "palm";
-        var cardTarget = palm ? (level switch { VegLevel.L0Plus => 20, VegLevel.L0 => 16, _ => 10 }) : CardCount(species.Crown, level);
-        var allCards = palm ? PalmFronds(plan, 20) : PlaceCards(plan, shell, CardCount(species.Crown, VegLevel.L0Plus));
-        // Lower levels keep whole clusters: the prefix ends on the cluster that crosses the card target.
-        var take = Math.Min(cardTarget, allCards.Count);
-        while (take < allCards.Count && take > 0 && allCards[take].Cluster == allCards[take - 1].Cluster) take++;
-        var drawn = allCards.Take(take).ToList();
-        foreach (var card in drawn) WriteCard(crown, plan, shell, card, ids, Importance(plan, card));
-        // The underside layer follows the outline cards: all of it at L0+, a leading share of whole clusters at L0 (card and
-        // mixed crowns), none at L1. Its rank is its own (tier 1 or 2 plus the cluster's place in the layer).
-        var under = palm ? new List<Card>() : PlaceUnderCards(plan, shell);
-        var underTier = species.Crown == CrownType.Cloud ? 2f : 1f;
-        var underTake = (level, species.Crown) switch
-        {
-            (VegLevel.L0Plus, _) => under.Count,
-            (VegLevel.L0, not CrownType.Cloud) => (int)MathF.Ceiling(under.Count * UnderKeepL0),
-            _ => 0
-        };
-        while (underTake < under.Count && underTake > 0 && under[underTake].Cluster == under[underTake - 1].Cluster) underTake++;
-        foreach (var card in under.Take(underTake)) WriteCard(crown, plan, shell, card, ids, underTier + card.Cluster / (float)under.Count);
-        drawn.AddRange(under.Take(underTake));
+        var (drawn, underTake) = CrownCards.Draw(plan, shell, level, ids, crown);
         var cards = crown.Cards;
-        // Masses that carry a drawn card stay, so no card is left floating where its mass was dropped.
-        var hosts = drawn.Select(c => c.Owner).ToHashSet();
-
-        var blobs = BlobsFor(plan, level);
-        // Near levels draw only the faces of each mass that no other mass swallows (23d), so the triangles go to the
-        // outline: every mass can be a finer icosphere within the same budget.
-        var hidden = level == VegLevel.L1 ? null : new HiddenFaces(plan, blobs);
-        int Total() => wood.Triangles + crown.Triangles + (twig?.Triangles ?? 0) + (hidden?.Cost(blobs) ?? CostOf(blobs));
-        // Fits the masses under a triangle limit: the least exposed step down one icosphere level (not below minDetail; cores
-        // last), and only when none can step down does the least exposed free non-core mass go (which may unhide faces of others).
-        void Fit(int limit, int minDetail)
-        {
-            List<int> Order() => ByExposure(plan, blobs).Concat(Enumerable.Range(0, blobs.Count).Where(i => blobs[i].Blob.Core)).ToList();
-            var order = Order();
-            while (Total() > limit)
-            {
-                var step = order.FindIndex(i => blobs[i].Detail > minDetail);
-                if (step >= 0)
-                {
-                    var (blob, index, scale, detail) = blobs[order[step]];
-                    blobs[order[step]] = (blob, index, scale, detail - 1);
-                    continue;
-                }
-                var free = order.FindIndex(i => !blobs[i].Blob.Core && !hosts.Contains(blobs[i].Index));
-                if (free < 0) break;
-                blobs.RemoveAt(order[free]);
-                hidden?.Reset(blobs);
-                order = Order();
-            }
-        }
-        if (level == VegLevel.L0Plus)
-        {
-            // Keep the hard ceiling: the least exposed masses step down to icosphere level 1 (they barely show), and only
-            // if that is not enough do free non-core masses go, least exposed first.
-            Fit(MaxTrianglesL0Plus - 100, minDetail: 1);
-        }
-        else if (level == VegLevel.L0)
-        {
-            var cloud = species.Crown == CrownType.Cloud;
-            if (cloud)
-            {
-                Prune(plan, blobs, hosts, CloudTrianglesL0 - wood.Triangles - crown.Triangles, minDetail: 0, () => hidden?.Cost(blobs) ?? CostOf(blobs));
-                hidden?.Reset(blobs);
-            }
-            // Cores first (the big masses), then the others from the most exposed down, step up to icosphere level 2 while
-            // the outline allowance lasts (cloud crowns 3.5k; card and mixed crowns the top of the 3–4k L0 band), after the
-            // least exposed card and mixed masses stepped down to the icosahedron if level 1 alone does not fit.
-            var limit = cloud ? CloudTrianglesL0Outline : CardTrianglesL0;
-            if (!cloud) Fit(limit, minDetail: 0);
-            var order = ByExposure(plan, blobs);
-            order.Reverse();
-            order.InsertRange(0, Enumerable.Range(0, blobs.Count).Where(i => blobs[i].Blob.Core));
-            foreach (var i in order)
-            {
-                var (blob, index, scale, detail) = blobs[i];
-                if (detail >= 2) continue;
-                blobs[i] = (blob, index, scale, 2);
-                if (Total() > limit)
-                {
-                    blobs[i] = (blob, index, scale, detail);
-                    break;
-                }
-            }
-        }
-        else if (plan.Species.Deciduous)
-        {
-            // A bare crown spends its L1 budget on the branch hierarchy too. Keep every merged mass, but let masses
-            // step down to the same coarse icosphere as the far stand-in within the existing L1 allowance.
-            Fit(TrianglesL1, minDetail: 0);
-        }
-        foreach (var (blob, index, scale, detail) in blobs)
-            WriteBlob(crown, plan, shell, blob, index, scale, detail, ids, faces: hidden?.Kept(index, detail));
+        var masses = new CrownMassBudget(plan, level, drawn.Select(c => c.Owner).ToHashSet(),
+            wood.Triangles + crown.Triangles, twig?.Triangles ?? 0);
+        masses.FitLevel();
+        foreach (var (blob, index, scale, detail) in masses.Blobs)
+            WriteBlob(crown, plan, shell, blob, index, scale, detail, ids, faces: masses.Hidden?.Kept(index, detail));
 
         var woodBundle = wood.Bundle(WoodSpec(), flags: 0);
         var crownBundle = crown.Bundle(CrownSpec(species), flags: 8);
@@ -293,7 +211,7 @@ public static partial class MotherModels
         var plan = new TreePlan(species, variant);
         var shell = new CrownShell(plan);
         var ids = IdsOf(species, palette);
-        var w = new VegetationPrototypeWriter(withUv: false);
+        var w = new VegetationPrototypeGeometry(withUv: false);
         WriteWood(w, plan, VegLevel.L1, ids);
         foreach (var (blob, index, _, detail) in BlobsFor(plan, VegLevel.L1))
             WriteBlob(w, plan, shell, blob, index, ProxyScale, detail, ids);
@@ -327,8 +245,8 @@ public static partial class MotherModels
         var plan = new TreePlan(species, variant);
         var shell = new CrownShell(plan);
         var ids = IdsOf(species, palette);
-        var wood = new VegetationPrototypeWriter(withUv: false);
-        var crown = new VegetationPrototypeWriter(withUv: true);
+        var wood = new VegetationPrototypeGeometry(withUv: false);
+        var crown = new VegetationPrototypeGeometry(withUv: true);
         var limb = TreeForms.IsBall(plan.Form.Id) ? null : plan.Limbs.FirstOrDefault(l => l.Level == 0);
         if (limb is { Points.Count: >= 2 })
         {
@@ -348,9 +266,46 @@ public static partial class MotherModels
             TwigMass(plan, palette, FarWoodTag)?.Bundle(TwigMassSpec(), flags: 8));
     }
 
-    private static Ids IdsOf(SpeciesInfo species, PaletteCatalog palette) =>
+    private static MotherColorIds IdsOf(SpeciesInfo species, PaletteCatalog palette) =>
         new(palette.Resolve(species.LeafLit).Value, palette.Resolve(Bark).Value);
 
-    private readonly record struct Ids(ushort Leaf, ushort Bark);
+    private static Box3 Union(Box3 a, Box3 b) => new(Vector3.Min(a.Min, b.Min), Vector3.Max(a.Max, b.Max));
+
+    // ---------------------------------------------------------------------------------------------------------
+    // Winter twig mass (Q-057): the usual middle-distance stand-in for a bare deciduous crown, a see-through shell on
+    // the crown outline that veg_twig_mass alpha-blends in the twig colour and cross-fades against the near twig strokes.
+    // Deciduous needle crowns (metasequoia) only: a narrowed cone around the crown axis, widest low and pointed at the
+    // top, so neighbouring trees in a row keep a gap. Drawn at every level and by the far stand-in; it casts no shadow.
+    // ---------------------------------------------------------------------------------------------------------
+
+    /// <summary>Species with a winter twig mass: deciduous needle crowns. Also decides the species-table winter colour.</summary>
+    public static bool HasTwigMass(SpeciesInfo species)
+    {
+        ArgumentNullException.ThrowIfNull(species);
+        return species.Deciduous && species.Card == CardShape.Needle;
+    }
+
+    /// <summary>Twig-mass radius as a fraction of the crown envelope at the same height (narrower than the leafy crown).</summary>
+    public const float TwigMassWidth = 0.68f;
+
+    /// <summary>Relative crown height (0 bottom … 1 top) where the twig mass is widest; below it the base rounds in.</summary>
+    public const float TwigMassWidest = 0.16f;
+
+    /// <summary>Radial wobble of the shell, ±, so the cone is not a lathe-turned solid.</summary>
+    public const float TwigMassWobble = 0.07f;
+
+    /// <summary>Warm red-brown of the twig mass (ext/tree_bark.json); also packed into the species table.</summary>
+    public static readonly PaletteToken WinterTwig = new("tree.winterTwig.lit");
+    public static readonly PaletteToken WinterTwigShade = new("tree.winterTwig.shade");
+
+    public static ToonSpec TwigMassSpec() => new(WinterTwig, WinterTwigShade)
+    {
+        Kind = ToonKind.VegTwigMass,
+        Steps = ShadeSteps.Soft,
+        Normal = ToonNormal.Smooth,
+        Line = LineClass.None,
+        Translucency = 0f,
+        Wet = 0f
+    };
 
 }

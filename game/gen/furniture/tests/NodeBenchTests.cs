@@ -45,7 +45,7 @@ public sealed class NodeBenchTests
             var p = (FurnitureParams)bench.Part.Params;
             var front = bench.Anchor + facing * (p.Depth * 0.5f);
             AssertThat(Vector2.Distance(bench.Anchor, spot) <= FurnitureStyle.NodeReach + TestTolerance.Layout * 2).OverrideFailureMessage($"{bench.Key} is {Vector2.Distance(bench.Anchor, spot):F1} m from its node").IsTrue();
-            AssertThat(site.PavingEdgeFacing(front + facing * 0.3f) is { Gap: <= 0f }).OverrideFailureMessage($"{bench.Key} does not face pedestrian paving").IsTrue();
+            AssertThat(site.Paving.PavingEdgeFacing(front + facing * 0.3f) is { Gap: <= 0f }).OverrideFailureMessage($"{bench.Key} does not face pedestrian paving").IsTrue();
             AssertThat(site.OffCarriageways(bench.Anchor, p.Depth * 0.5f, FurnitureStyle.RoadSetback - 0.1f)).OverrideFailureMessage($"{bench.Key} is within {FurnitureStyle.RoadSetback} m of a carriageway").IsTrue();
             AssertThat(!site.CarriagewayAhead(front, facing, FurnitureStyle.FaceClear)).OverrideFailureMessage($"{bench.Key} faces a carriageway within {FurnitureStyle.FaceClear} m").IsTrue();
             AssertThat(bench.Pad is { } bay && MathF.Abs(bay.Top - bench.Part.At.M42) < TestTolerance.Position).OverrideFailureMessage($"{bench.Key} is off its bay").IsTrue();
@@ -75,7 +75,7 @@ public sealed class NodeBenchTests
         // plaza, wholly on its paving and off the walks' strips, 3 m off carriageways (judged in general on a made-up plaza below).
         var site = Site.Value;
         var standing = layout.Items.Where(i => i.Key.StartsWith($"node:{group.Key}:", StringComparison.Ordinal) && i.Pad is null).ToList();
-        var plaza = standing.Where(b => site.OnPlaza(b.Anchor)).ToList();
+        var plaza = standing.Where(b => site.Paving.OnPlaza(b.Anchor)).ToList();
         var walk = standing.Except(plaza).ToList();
         CheckPlazaBenches(site, plaza);
         // Opus review 13c2b 21:05: or on a walk 4 m or wider, at its edge, back to it, 2.5 m left to pass.
@@ -140,7 +140,7 @@ public sealed class NodeBenchTests
         var layout = FurniturePlanner.Build(FurnitureTestSupport.GlobalInputs, Campus.Contracts.Tests.PaletteFixture.Catalog, world, null, Inputs());
         var benches = layout.Items.Where(i => i.Key.StartsWith($"node:{OpenAvenue.Key}:0:", StringComparison.Ordinal)).ToList();
         var site = new StreetSite(world);
-        AssertThat(benches.Count is >= 1 and <= FurnitureStyle.NodeBenches && benches.All(b => site.OnPlaza(b.Anchor))).OverrideFailureMessage($"{benches.Count} benches on the square").IsTrue();
+        AssertThat(benches.Count is >= 1 and <= FurnitureStyle.NodeBenches && benches.All(b => site.Paving.OnPlaza(b.Anchor))).OverrideFailureMessage($"{benches.Count} benches on the square").IsTrue();
         CheckPlazaBenches(site, benches);
     }
 
@@ -172,7 +172,7 @@ public sealed class NodeBenchTests
             var front = bench.Anchor + facing * (p.Depth * 0.5f);
             var edge = (float)PlanLines.Project(line.Line.Points, front).Distance - Half(line);
             AssertThat(edge >= -TestTolerance.Position && edge <= FurnitureStyle.WalkGap + TestTolerance.Layout * 2).OverrideFailureMessage($"{bench.Key}: front {edge:F2} m off the walk's edge").IsTrue();
-            AssertThat(site.PavingEdgeFacing(front + facing * 0.3f) is { Gap: <= 0f, Road: { } walk } && walk.Id == line.Id).OverrideFailureMessage($"{bench.Key} does not face the walk").IsTrue();
+            AssertThat(site.Paving.PavingEdgeFacing(front + facing * 0.3f) is { Gap: <= 0f, Road: { } walk } && walk.Id == line.Id).OverrideFailureMessage($"{bench.Key} does not face the walk").IsTrue();
         }
         foreach (var (name, filed) in new[] { ("line only", Layout(line, null)), ("feature only", Layout(null, feature)) })
             AssertThat(Benches(filed).Select(b => (b.Key, b.Anchor, b.Part.Params)).SequenceEqual(benches.Select(b => (b.Key, b.Anchor, b.Part.Params)))).OverrideFailureMessage($"the walk filed as {name} has other node benches than filed twice").IsTrue();
@@ -220,8 +220,8 @@ public sealed class NodeBenchTests
             var p = (FurnitureParams)bench.Part.Params;
             foreach (var u in new[] { -p.Width * 0.5f, 0f, p.Width * 0.5f })
                 foreach (var v in new[] { -p.Depth * 0.5f, p.Depth * 0.5f + FurnitureStyle.FeetReach })
-                    AssertThat(site.OnPlaza(bench.Anchor + right * u + facing * v)).OverrideFailureMessage($"{bench.Key} leaves the plaza at ({u:F2}, {v:F2})").IsTrue();
-            var behind = site.PavingEdgeFacing(bench.Anchor - facing * (p.Depth * 0.5f + FurnitureStyle.PlazaBenchClear + 0.2f));
+                    AssertThat(site.Paving.OnPlaza(bench.Anchor + right * u + facing * v)).OverrideFailureMessage($"{bench.Key} leaves the plaza at ({u:F2}, {v:F2})").IsTrue();
+            var behind = site.Paving.PavingEdgeFacing(bench.Anchor - facing * (p.Depth * 0.5f + FurnitureStyle.PlazaBenchClear + 0.2f));
             AssertThat(behind is { Gap: > 0f } edge && Vector2.Dot(edge.Inward, facing) > 0.95f).OverrideFailureMessage($"{bench.Key} does not have its back to the plaza's edge").IsTrue();
             AssertThat(site.OffCarriageways(bench.Anchor, p.Depth * 0.5f, FurnitureStyle.RoadSetback - 0.1f)).OverrideFailureMessage($"{bench.Key} is within {FurnitureStyle.RoadSetback} m of a carriageway").IsTrue();
             AssertThat(!site.CarriagewayAhead(bench.Anchor + facing * (p.Depth * 0.5f), facing, FurnitureStyle.FaceClear)).OverrideFailureMessage($"{bench.Key} faces a carriageway within {FurnitureStyle.FaceClear} m").IsTrue();
@@ -229,7 +229,7 @@ public sealed class NodeBenchTests
             foreach (var u in new[] { -p.Width * 0.5f, 0f, p.Width * 0.5f })
             {
                 var ahead = bench.Anchor + right * u + facing * (p.Depth * 0.5f + FurnitureStyle.FeetReach + FurnitureStyle.PlazaPass);
-                AssertThat(site.OnPavedGround(ahead)).OverrideFailureMessage($"{bench.Key} has less than {FurnitureStyle.PlazaPass} m of paving in front at {u:F2}").IsTrue();
+                AssertThat(site.Paving.OnPavedGround(ahead)).OverrideFailureMessage($"{bench.Key} has less than {FurnitureStyle.PlazaPass} m of paving in front at {u:F2}").IsTrue();
             }
             AssertThat(!site.NearWalkLine([bench.Anchor], p.Depth * 0.5f)).OverrideFailureMessage($"{bench.Key} sits across a walk line").IsTrue();
         }

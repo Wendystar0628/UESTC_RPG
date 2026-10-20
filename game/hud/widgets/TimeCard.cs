@@ -76,6 +76,13 @@ public partial class TimeCard : PanelContainer
         _flowText = k.Text(header, "1×", "data", "text.1", pin, wrap: false);
         _flowText.SizeFlagsHorizontal = SizeFlags.ShrinkEnd;
 
+        BuildDial(stack, pin);
+        BuildControls(stack, pin);
+    }
+
+    private void BuildDial(Control stack, bool pin)
+    {
+        var k = _kit;
         var center = k.Layout.Add(stack, new CenterContainer());
         var dial = k.Layout.Add(center, new Control { CustomMinimumSize = new Vector2((Ring + 26) * 2, (Ring + 26) * 2) });
         dial.MouseFilter = MouseFilterEnum.Stop;
@@ -108,6 +115,11 @@ public partial class TimeCard : PanelContainer
         _period = k.Text(readouts, "", "small", "text.2", pin, wrap: false, align: HorizontalAlignment.Center);
         _tag = k.Text(readouts, "", "mono-caps", "text.2", pin, wrap: false, align: HorizontalAlignment.Center);
 
+    }
+
+    private void BuildControls(Control stack, bool pin)
+    {
+        var k = _kit;
         var presets = k.Layout.Flow(stack);
         _presets = Segmented.Create(k, presets,
             [UiKit.T("hud.time.preset.morning"), UiKit.T("hud.time.preset.noon"), UiKit.T("hud.time.preset.dusk"), UiKit.T("hud.time.preset.night")], pin);

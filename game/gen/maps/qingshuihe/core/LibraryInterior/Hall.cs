@@ -33,11 +33,11 @@ internal static class Hall
     private static void Floor(LibraryFrame f, InteriorGeometry sink, float y)
     {
         var voidRing = f.Octagon(f.VoidApothem, S.OctagonChamfer);
-        sink.Plate(S.Inlay(S.Carpet), new PolygonRings(f.Octagon(f.GalleryApothem), [voidRing]), y + 0.002f, true);
+        sink.Shapes.Plate(S.Inlay(S.Carpet), new PolygonRings(f.Octagon(f.GalleryApothem), [voidRing]), y + 0.002f, true);
         foreach (var j in new[] { 1, 7 })
         {
             var t = Atrium.SectorHalf(f);
-            sink.Flat(S.Inlay(S.Carpet), [f.At(j, f.GalleryApothem - 0.05f, -t), f.At(j, f.GalleryApothem + S.SectorDepth, -t),
+            sink.Shapes.Flat(S.Inlay(S.Carpet), [f.At(j, f.GalleryApothem - 0.05f, -t), f.At(j, f.GalleryApothem + S.SectorDepth, -t),
                 f.At(j, f.GalleryApothem + S.SectorDepth, t), f.At(j, f.GalleryApothem - 0.05f, t)], y + 0.002f);
         }
         // Black strips across the atrium's stone, parallel to the entrance axis (p) at a 3 m pitch in q.
@@ -45,7 +45,7 @@ internal static class Hall
         {
             var (p0, p1) = Chord(f, q, f.VoidApothem - 0.4f);
             if (p1 - p0 < 0.5f) continue;
-            sink.Flat(S.Inlay(S.FloorStrip), [f.At(0, p0, q - 0.1f), f.At(0, p1, q - 0.1f), f.At(0, p1, q + 0.1f), f.At(0, p0, q + 0.1f)], y + 0.002f);
+            sink.Shapes.Flat(S.Inlay(S.FloorStrip), [f.At(0, p0, q - 0.1f), f.At(0, p1, q - 0.1f), f.At(0, p1, q + 0.1f), f.At(0, p0, q + 0.1f)], y + 0.002f);
         }
     }
 
@@ -74,17 +74,17 @@ internal static class Hall
             foreach (var s in new[] { -1f, 1f })
             {
                 Vector2 a = f.At(j, r0, s * (half + 0.1f)), b = f.At(j, r1 + 0.1f, s * (half + 0.1f));
-                sink.Run(S.Wall(S.Wood), a, b, 0.2f, y - 0.01f, top);
-                sink.Wall(a, b, 0.1f, y, y + 3f, SurfaceTag.Wall, FootMat.Concrete);
+                sink.Shapes.Run(S.Wall(S.Wood), a, b, 0.2f, y - 0.01f, top);
+                sink.Collision.Wall(a, b, 0.1f, y, y + 3f, SurfaceTag.Wall, FootMat.Concrete);
             }
             Vector2 e0 = f.At(j, r1, -half - 0.2f), e1 = f.At(j, r1, half + 0.2f);
-            sink.Run(S.Wall(S.WallWhite), e0, e1, 0.2f, y - 0.01f, top);
-            sink.Wall(e0, e1, 0.1f, y, y + 3f, SurfaceTag.DoorClosed, FootMat.Metal);
+            sink.Shapes.Run(S.Wall(S.WallWhite), e0, e1, 0.2f, y - 0.01f, top);
+            sink.Collision.Wall(e0, e1, 0.1f, y, y + 3f, SurfaceTag.DoorClosed, FootMat.Metal);
             if (!sink.Draw) continue;
             // Closed fire door pair (封口的防火门) on the corridor side of the end wall.
             var face = f.At(j, r1 - 0.102f, 0f);
-            sink.Box(S.Trim(S.DoorGrey), face, f.Dir(j + 2), 1.8f, 0.004f, y, y + 2.1f);
-            sink.Box(S.Trim(S.Frame), face - f.Dir(j) * 0.003f, f.Dir(j + 2), 0.02f, 0.004f, y, y + 2.1f);
+            sink.Shapes.Box(S.Trim(S.DoorGrey), face, f.Dir(j + 2), 1.8f, 0.004f, y, y + 2.1f);
+            sink.Shapes.Box(S.Trim(S.Frame), face - f.Dir(j) * 0.003f, f.Dir(j + 2), 0.02f, 0.004f, y, y + 2.1f);
         }
     }
 
@@ -108,14 +108,14 @@ internal static class Hall
     private static void ShelfEnds(InteriorGeometry sink, Vector2 a, Vector2 b, Vector2 room, float y, float top)
     {
         var back = room * -0.15f;
-        sink.Run(S.Wall(S.Wood), a + back, b + back, 0.3f, y - 0.01f, top);
-        sink.Wall(a + back, b + back, 0.15f, y, y + 3f, SurfaceTag.DoorClosed, FootMat.WoodDoor);
+        sink.Shapes.Run(S.Wall(S.Wood), a + back, b + back, 0.3f, y - 0.01f, top);
+        sink.Collision.Wall(a + back, b + back, 0.15f, y, y + 3f, SurfaceTag.DoorClosed, FootMat.WoodDoor);
         if (!sink.Full) return;
         var length = Vector2.Distance(a, b);
         var u = (b - a) / length;
         for (var x = 0.6f; x < length - 0.3f; x += 1.2f)
-            sink.Box(S.Trim(S.WallWhite), a + u * x + room * 0.005f, u, 0.05f, 0.01f, y, y + S.ShelfHeight);
-        sink.Box(S.Trim(S.WallWhite), (a + b) * 0.5f + room * 0.005f, u, length, 0.01f, y + S.ShelfHeight, y + S.ShelfHeight + 0.05f);
+            sink.Shapes.Box(S.Trim(S.WallWhite), a + u * x + room * 0.005f, u, 0.05f, 0.01f, y, y + S.ShelfHeight);
+        sink.Shapes.Box(S.Trim(S.WallWhite), (a + b) * 0.5f + room * 0.005f, u, length, 0.01f, y + S.ShelfHeight, y + S.ShelfHeight + 0.05f);
     }
 
     /// <summary>
@@ -128,15 +128,15 @@ internal static class Hall
         var c = f.At(4, feet + 0.8f, 0f);
         var across = f.Dir(2);
         var front = f.Dir(0);
-        sink.Beveled(S.Stone(S.RingBeam), c, across, 3f, 0.6f, y, y + 0.45f, 0.03f);
-        foreach (var s in new[] { -1f, 1f }) sink.Box(S.Trim(S.Wood), c + across * (s * 1.05f), across, 0.1f, 0.1f, y + 0.45f, y + 1.05f);
-        sink.Beveled(S.Trim(S.Wood), c, across, 2.6f, 0.12f, y + 1.0f, y + 2.05f, 0.02f);
+        sink.Shapes.Beveled(S.Stone(S.RingBeam), c, across, 3f, 0.6f, y, y + 0.45f, 0.03f);
+        foreach (var s in new[] { -1f, 1f }) sink.Shapes.Box(S.Trim(S.Wood), c + across * (s * 1.05f), across, 0.1f, 0.1f, y + 0.45f, y + 1.05f);
+        sink.Shapes.Beveled(S.Trim(S.Wood), c, across, 2.6f, 0.12f, y + 1.0f, y + 2.05f, 0.02f);
         var face = c + front * 0.062f;
         var gold = S.Trim(S.Gold);
-        sink.Box(gold, face, across, 2.44f, 0.006f, y + 1.9f, y + 1.94f);
-        sink.Box(gold, face, across, 2.44f, 0.006f, y + 1.11f, y + 1.15f);
-        foreach (var s in new[] { -1f, 1f }) sink.Box(gold, face + across * (s * 1.2f), across, 0.04f, 0.006f, y + 1.11f, y + 1.94f);
-        sink.Solid(c, across, 3f, 0.6f, y, y + 2.05f, SurfaceTag.Prop, FootMat.WoodDoor);
+        sink.Shapes.Box(gold, face, across, 2.44f, 0.006f, y + 1.9f, y + 1.94f);
+        sink.Shapes.Box(gold, face, across, 2.44f, 0.006f, y + 1.11f, y + 1.15f);
+        foreach (var s in new[] { -1f, 1f }) sink.Shapes.Box(gold, face + across * (s * 1.2f), across, 0.04f, 0.006f, y + 1.11f, y + 1.94f);
+        sink.Collision.Solid(c, across, 3f, 0.6f, y, y + 2.05f, SurfaceTag.Prop, FootMat.WoodDoor);
     }
 
     /// <summary>Three curved boards round the centre (白、蓝弧形展板), an opening toward the entrance; exhibits without portraits.</summary>
@@ -152,12 +152,12 @@ internal static class Hall
             {
                 float a0 = mid - Span * 0.5f + Span * i / Chords, a1 = a0 + Span / Chords;
                 Vector2 p0 = f.Centre + LibraryFrame.Angle(a0) * Radius, p1 = f.Centre + LibraryFrame.Angle(a1) * Radius;
-                sink.Run(paint, p0, p1, 0.06f, y, y + 2.1f);
-                sink.Wall(p0, p1, 0.03f, y, y + 2.1f, SurfaceTag.Wall, FootMat.Metal);
+                sink.Shapes.Run(paint, p0, p1, 0.06f, y, y + 2.1f);
+                sink.Collision.Wall(p0, p1, 0.03f, y, y + 2.1f, SurfaceTag.Wall, FootMat.Metal);
                 if (!sink.Full || i is 0 or Chords - 1) continue;
                 var outward = LibraryFrame.Angle((a0 + a1) * 0.5f);
                 var exhibit = S.Exhibits[(k * 2 + i) % S.Exhibits.Length];
-                sink.Box(S.Inlay(exhibit), (p0 + p1) * 0.5f + outward * 0.032f, Vector2.Normalize(p1 - p0), Vector2.Distance(p0, p1) * 0.8f, 0.004f, y + 1.0f, y + 1.75f);
+                sink.Shapes.Box(S.Inlay(exhibit), (p0 + p1) * 0.5f + outward * 0.032f, Vector2.Normalize(p1 - p0), Vector2.Distance(p0, p1) * 0.8f, 0.004f, y + 1.0f, y + 1.75f);
             }
         }
     }
@@ -173,7 +173,7 @@ internal static class Hall
         var across = f.Dir(2);
         var front = f.Dir(0);
         Furnishing.Table(sink, c, across, 1.8f, 0.9f, y, S.RedTable, S.DarkWood);
-        sink.Solid(c, across, 1.8f, 0.9f, y, y + WalkRules.BarrierHeight, SurfaceTag.Prop, FootMat.WoodDoor);
+        sink.Collision.Solid(c, across, 1.8f, 0.9f, y, y + WalkRules.BarrierHeight, SurfaceTag.Prop, FootMat.WoodDoor);
         var top = y + Furnishing.TableTop;
         foreach (var t in new[] { -0.45f, 0.45f })
         {
@@ -199,7 +199,7 @@ internal static class Hall
                 var u = f.Dir(j + 2);
                 var v = f.Dir(j);
                 Furnishing.Table(sink, c, u, 2.4f, 1.0f, y, S.DarkWood, S.DarkWood);
-                sink.Solid(c, u, 2.6f, 2.2f, y, y + Furnishing.TableTop, SurfaceTag.Prop, FootMat.WoodDoor);
+                sink.Collision.Solid(c, u, 2.6f, 2.2f, y, y + Furnishing.TableTop, SurfaceTag.Prop, FootMat.WoodDoor);
                 foreach (var x in new[] { -0.8f, 0f, 0.8f })
                     foreach (var s in new[] { -1f, 1f })
                     {
@@ -232,7 +232,7 @@ internal static class Hall
         }
         var sofa = f.At(1, a + 3.4f, 0f);
         Furnishing.Sofa(sink, sofa, -d, 2.1f, y, S.Sofa);
-        sink.Solid(sofa, f.Dir(3), 2.1f, 0.86f, y, y + 0.43f, SurfaceTag.Prop, FootMat.Carpet);
+        sink.Collision.Solid(sofa, f.Dir(3), 2.1f, 0.86f, y, y + 0.43f, SurfaceTag.Prop, FootMat.Carpet);
         // A (E): barrel chairs round a low table, a pair of sofas facing each other, low step seats at the back.
         var e = f.Dir(7);
         var ring = f.At(7, a + 2.8f, -2.8f);
@@ -242,15 +242,15 @@ internal static class Hall
             var dir = LibraryFrame.Angle(f.Front + k * MathF.Tau / 5f);
             var seat = ring + dir * 1.0f;
             Furnishing.Barrel(sink, seat, -dir, y, S.BarrelLime);
-            sink.Solid(seat, dir, 0.6f, 0.6f, y, y + 0.45f, SurfaceTag.Prop, FootMat.Carpet);
+            sink.Collision.Solid(seat, dir, 0.6f, 0.6f, y, y + 0.45f, SurfaceTag.Prop, FootMat.Carpet);
         }
         foreach (var s in new[] { -1f, 1f })
         {
             var at = f.At(7, a + 3.2f + s * 0.95f, 3.0f);
             Furnishing.Sofa(sink, at, -e * s, 1.8f, y, S.Sofa);
-            sink.Solid(at, f.Dir(1), 1.8f, 0.86f, y, y + 0.43f, SurfaceTag.Prop, FootMat.Carpet);
+            sink.Collision.Solid(at, f.Dir(1), 1.8f, 0.86f, y, y + 0.43f, SurfaceTag.Prop, FootMat.Carpet);
         }
-        sink.Beveled(S.Trim(S.LightWood), f.At(7, a + 3.2f, 3.0f), f.Dir(1), 1.0f, 0.55f, y, y + 0.4f, 0.015f);
+        sink.Shapes.Beveled(S.Trim(S.LightWood), f.At(7, a + 3.2f, 3.0f), f.Dir(1), 1.0f, 0.55f, y, y + 0.4f, 0.015f);
         Furnishing.StepSeat(sink, f.At(7, a + S.SectorDepth - 1.25f, 0f), -e, 5f, 2, y);
         // Paper lanterns over both fronts.
         foreach (var j in new[] { 1, 7 })

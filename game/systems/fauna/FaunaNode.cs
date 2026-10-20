@@ -16,7 +16,7 @@ namespace Campus.Systems.Fauna;
 public partial class FaunaNode : Node, IMapAware, IViewContentReadiness, IViewCapturePreparation, IStreamTileParticipant
 {
     private const double CheckSeconds = 0.25;
-    private readonly Dictionary<BakeKey, TileState> _tiles = [];
+    private readonly FaunaTileMounts _tileMounts = new();
     private readonly N.Plane[] _planes = new N.Plane[6];
     private IWorldState? _world;
     private IRenderHost? _host;
@@ -24,8 +24,6 @@ public partial class FaunaNode : Node, IMapAware, IViewContentReadiness, IViewCa
     private IStreamMountQueue? _mount;
     private ICameraRig? _rig;
     private IReflectionWorld? _reflection;
-    private MapId? _map;
-    private long _generation;
     private long _captureEpoch;
     private double _sinceCheck;
     private bool _force = true;
@@ -33,31 +31,7 @@ public partial class FaunaNode : Node, IMapAware, IViewContentReadiness, IViewCa
     public StreamMountKind Kind => StreamMountKind.Auxiliary;
     public string? Error => _error ?? _renderReadiness?.Error;
 
-    private sealed class Latch
-    {
-        public bool Applied;
-        public FaunaSet? Set;
-        public FaunaSet? Desired;
-        public bool Requested;
-        public long Epoch;
-        public long AppliedEpoch = -1;
-        public long Version;
-        public bool AllowVisible;
-        public readonly List<RenderHandle> Handles = [];
-    }
-
-    private sealed class TileState(FaunaTileContent content, BakePriority priority, long revision, long generation)
-    {
-        public readonly FaunaTileContent Content = content;
-        public readonly BakePriority Priority = priority;
-        public readonly long Revision = revision;
-        public readonly long Generation = generation;
-        public readonly Latch[] Latches = content.Content.Sites.Select(_ => new Latch()).ToArray();
-        public TileWork? Work;
-        public bool Mounted;
-    }
-
-    public IReadOnlyDictionary<string, FaunaSet?> Applied => _tiles.Values
+    public IReadOnlyDictionary<string, FaunaSet?> Applied => _tileMounts.Tiles
         .SelectMany(tile => tile.Content.Content.Sites.Select((site, i) => (site.Key, tile.Latches[i].Set)))
         .ToDictionary(pair => pair.Key, pair => pair.Set, StringComparer.Ordinal);
 
@@ -68,7 +42,7 @@ public partial class FaunaNode : Node, IMapAware, IViewContentReadiness, IViewCa
 
     public IStreamMountWork CreateMount(BakeKey key, object product, BakePriority priority, long revision)
     {
-        if (!CanMount(key) || _map != key.Map || product is not FaunaTileContent content || content.Key != key)
+        if (!CanMount(key) || _tileMounts.Map != key.Map || product is not FaunaTileContent content || content.Key != key)
             throw new ArgumentException("Fauna mount product does not match its key or current map.");
         var request = BakeRequestKeys.Parse(key);
         if (request.Collision || request.Level != LodLevel.L0 || request.Tile != content.Tile)
@@ -79,20 +53,19 @@ public partial class FaunaNode : Node, IMapAware, IViewContentReadiness, IViewCa
             if (TileGrid.At(site.Bounds.Center) != content.Tile || site.Sets.Count != Enum.GetValues<FaunaSet>().Length || !keys.Add(site.Key))
                 throw new ArgumentException("Fauna tile contains invalid site ownership or display states.");
         }
-        var tile = new TileState(content, priority, revision, _generation);
-        return tile.Work = new TileWork(this, tile, initial: true);
+        return _tileMounts.CreateMount(content, priority, revision);
     }
 
-    public bool IsReady(BakeKey key) => Error is null && !_force && _tiles.TryGetValue(key, out var tile) && TileReady(tile);
+    public bool IsReady(BakeKey key) => Error is null && !_force && _tileMounts.TryGet(key, out var tile) && TileReady(tile);
 
     public bool IsReady(Pose pose)
     {
-        if (Error is not null || _map is null || _force) return false;
-        foreach (var tile in _tiles.Values) if (!TileReady(tile)) return false;
+        if (Error is not null || _tileMounts.Map is null || _force) return false;
+        foreach (var tile in _tileMounts.Tiles) if (!TileReady(tile)) return false;
         return true;
     }
 
-    private bool TileReady(TileState tile)
+    private bool TileReady(FaunaTile tile)
     {
         if (!tile.Mounted) return false;
         for (var i = 0; i < tile.Latches.Length; i++)
@@ -123,6 +96,7 @@ public partial class FaunaNode : Node, IMapAware, IViewContentReadiness, IViewCa
         _mount = KernelServices.Get<IStreamMountQueue>();
         _rig = KernelServices.Get<ICameraRig>();
         _reflection = KernelServices.Get<IReflectionWorld>();
+        _tileMounts.Initialize(_host, InitializeTile, VisibleNow, error => _error = error);
         _world.InstanceChanged += OnWorldInstanceChanged;
     }
 
@@ -134,20 +108,20 @@ public partial class FaunaNode : Node, IMapAware, IViewContentReadiness, IViewCa
         Release();
     }
 
-    public void OnMapUnloading(MapId from) { Release(); _map = null; }
+    public void OnMapUnloading(MapId from) { Release(); _tileMounts.ClearMap(); }
 
     public void OnMapLoaded(IMapContext context)
     {
         ArgumentNullException.ThrowIfNull(context);
         Release();
-        _map = context.Descriptor.Id;
+        _tileMounts.LoadMap(context.Descriptor.Id);
         _error = null;
         _force = true;
     }
 
     public override void _Process(double delta)
     {
-        if (Error is not null || _world is null || _map is null) return;
+        if (Error is not null || _world is null || _tileMounts.Map is null) return;
         _sinceCheck += Math.Min(delta, 0.1);
         if (!_force && _sinceCheck < CheckSeconds) return;
         _sinceCheck = 0;
@@ -166,7 +140,7 @@ public partial class FaunaNode : Node, IMapAware, IViewContentReadiness, IViewCa
                 var view = new StreamDemandView(_rig!.Pose, _planes, ReadOnlyMemory<Box3>.Empty);
                 mirrored = _reflection!.TryGetDemand(in view, out reflection);
             }
-            foreach (var tile in _tiles.Values)
+            foreach (var tile in _tileMounts.Tiles)
             {
                 for (var i = 0; i < tile.Latches.Length; i++)
                 {
@@ -176,7 +150,7 @@ public partial class FaunaNode : Node, IMapAware, IViewContentReadiness, IViewCa
                 }
                 if (tile.Work is null && NeedsWork(tile))
                 {
-                    tile.Work = new TileWork(this, tile, initial: false);
+                    tile.Work = _tileMounts.CreateUpdate(tile);
                     _mount!.Enqueue(tile.Work);
                 }
             }
@@ -188,7 +162,7 @@ public partial class FaunaNode : Node, IMapAware, IViewContentReadiness, IViewCa
     private FaunaSet? Target(FaunaSiteContent site) =>
         FaunaSchedule.Target(site.Kind, _world!.Sun.AltDeg, _world.Clock, _world.WeatherNow);
 
-    private void Request(Latch latch, FaunaSet? target, bool anywhere, bool visible)
+    private void Request(FaunaLatch latch, FaunaSet? target, bool anywhere, bool visible)
     {
         if (latch.Applied && !anywhere && visible)
         {
@@ -216,36 +190,23 @@ public partial class FaunaNode : Node, IMapAware, IViewContentReadiness, IViewCa
         return _reflection!.TryGetDemand(in view, out var reflected) && bounds.Intersects(reflected.Frustum.Span);
     }
 
-    private static bool NeedsWork(TileState tile)
+    private static bool NeedsWork(FaunaTile tile)
     {
         foreach (var latch in tile.Latches) if (!latch.Applied || latch.Requested) return true;
         return false;
     }
 
-    public void Unmount(BakeKey key)
+    private void InitializeTile(FaunaTile tile)
     {
-        if (!_tiles.Remove(key, out var tile)) return;
-        tile.Work?.Cancel();
-        Free(tile);
+        for (var i = 0; i < tile.Latches.Length; i++)
+            Request(tile.Latches[i], Target(tile.Content.Content.Sites[i]), anywhere: true, visible: false);
     }
 
-    private void Free(TileState tile)
-    {
-        tile.Mounted = false;
-        foreach (var latch in tile.Latches)
-        {
-            foreach (var handle in latch.Handles) _host!.Unmount(handle);
-            latch.Handles.Clear();
-            latch.Applied = false;
-            latch.Requested = false;
-        }
-    }
+    public void Unmount(BakeKey key) => _tileMounts.Unmount(key);
 
     private void Release()
     {
-        _generation++;
-        foreach (var tile in _tiles.Values) { tile.Work?.Cancel(); Free(tile); }
-        _tiles.Clear();
+        _tileMounts.Release();
         _sinceCheck = 0;
     }
 }

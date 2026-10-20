@@ -169,87 +169,107 @@ public sealed class MapService : IMapService, IMapFrame, ISaveSection<MapsSave>,
         switch (_active!.Stage)
         {
             case MapStage.LoadData:
-                if (!_started)
-                {
-                    var input = _data.ReadLoadInput(_target!);
-                    var claims = _data.ReadClaims(_target!.Descriptor.Id);
-                    _load = new(input, Task.Run(() => MapWorldLoading.LoadPrepared(_loader, input, claims)));
-                    _started = true;
-                }
-                var operation = _load ?? throw new InvalidOperationException("Map load operation is missing.");
-                if (!operation.Work.IsCompleted) return;
-                var loaded = operation.Work.GetAwaiter().GetResult();
-                _prepared = MapWorldLoading.CreateContext(operation.Input.Entry, loaded, operation.Input.SourceInputs);
-                _load = null;
-                PrepareDestination();
-                Move(MapStage.Mount);
+                AdvanceLoadData();
                 break;
             case MapStage.Mount:
-                if (!_started)
-                {
-                    if (_sameMap) PrepareDestination(); // The mounted map stays; only the pose is re-placed.
-                    else
-                    {
-                        Context = _prepared ?? throw new InvalidOperationException("Map world was not prepared.");
-                        _prepared = null;
-                        _data.WriteMapRect(Context.Descriptor.DataRect);
-                        _mount = _lifetime.Mount(Context);
-                    }
-                    _started = true;
-                }
-                if (_mount is { } mounting)
-                {
-                    if (!mounting.IsCompleted) return;
-                    mounting.GetAwaiter().GetResult();
-                    _mount = null;
-                }
-                _legalize ??= PrepareDestinationTerrain();
-                if (!_legalize.IsCompleted) return;
-                LegalizeDestination(_legalize.GetAwaiter().GetResult());
-                _camera.SetPose(_destination);
-                _arrival = _runtime.Arrive(_destination, _destinationMode);
-                Move(MapStage.Arrival);
+                AdvanceMount();
                 break;
             case MapStage.Arrival:
-                var arrival = _arrival ?? throw new InvalidOperationException("Map arrival is missing.");
-                if (!arrival.Done.IsCompleted) return;
-                arrival.Done.GetAwaiter().GetResult();
-                if (!ReferenceEquals(_runtime.Arrival, arrival))
-                    throw new InvalidOperationException("Map arrival was replaced before spawn.");
-                Move(MapStage.Spawn);
+                AdvanceArrival();
                 break;
             case MapStage.Spawn:
-                if (!ReferenceEquals(_runtime.Arrival, _arrival))
-                    throw new InvalidOperationException("Map arrival was replaced during spawn.");
-                if (!_spawnStarted) { _camera.SetPose(_destination); _spawnStarted = true; }
-                if (!_modeStarted)
-                {
-                    _modeChange = _view.SetMode(_destinationMode, ModeSwitchVia.Ui);
-                    _modeStarted = true;
-                }
-                if (!_modeChange!.IsCompleted) return;
-                switch (_modeChange.GetAwaiter().GetResult())
-                {
-                    case ModeSwitchResult.Ok: break;
-                    case ModeSwitchResult.Relocated: _stand = null; break;
-                    case ModeSwitchResult.Refused: throw new InvalidOperationException("Destination observer mode was refused.");
-                    default: throw new InvalidOperationException("Unknown mode-switch result.");
-                }
-                _modeChange = null;
-                if (_stand is { } stand)
-                {
-                    if (_walk is null) throw new InvalidOperationException("Walking spawn requires the walk controller.");
-                    _walk.Warp(new(stand.Feet, stand.YawDeg, 0));
-                }
-                Current = _target!.Descriptor.Id;
-                _savedCurrent = Current;
-                Rev++;
-                if (_request!.Cause != MapTravelCause.LoadSave || _request.Pose is not null) RememberCurrent();
-                Finish(MapTravelResult.Arrived);
+                AdvanceSpawn();
                 break;
             default:
                 throw new InvalidOperationException("Map transition is in an unsupported stage: " + _active.Stage);
         }
+    }
+
+    private void AdvanceLoadData()
+    {
+        if (!_started)
+        {
+            var input = _data.ReadLoadInput(_target!);
+            var claims = _data.ReadClaims(_target!.Descriptor.Id);
+            _load = new(input, Task.Run(() => MapWorldLoading.LoadPrepared(_loader, input, claims)));
+            _started = true;
+        }
+        var operation = _load ?? throw new InvalidOperationException("Map load operation is missing.");
+        if (!operation.Work.IsCompleted) return;
+        var loaded = operation.Work.GetAwaiter().GetResult();
+        _prepared = MapWorldLoading.CreateContext(operation.Input.Entry, loaded, operation.Input.SourceInputs);
+        _load = null;
+        PrepareDestination();
+        Move(MapStage.Mount);
+    }
+
+    private void AdvanceMount()
+    {
+        if (!_started)
+        {
+            if (_sameMap) PrepareDestination(); // The mounted map stays; only the pose is re-placed.
+            else
+            {
+                Context = _prepared ?? throw new InvalidOperationException("Map world was not prepared.");
+                _prepared = null;
+                _data.WriteMapRect(Context.Descriptor.DataRect);
+                _mount = _lifetime.Mount(Context);
+            }
+            _started = true;
+        }
+        if (_mount is { } mounting)
+        {
+            if (!mounting.IsCompleted) return;
+            mounting.GetAwaiter().GetResult();
+            _mount = null;
+        }
+        _legalize ??= PrepareDestinationTerrain();
+        if (!_legalize.IsCompleted) return;
+        LegalizeDestination(_legalize.GetAwaiter().GetResult());
+        _camera.SetPose(_destination);
+        _arrival = _runtime.Arrive(_destination, _destinationMode);
+        Move(MapStage.Arrival);
+    }
+
+    private void AdvanceArrival()
+    {
+        var arrival = _arrival ?? throw new InvalidOperationException("Map arrival is missing.");
+        if (!arrival.Done.IsCompleted) return;
+        arrival.Done.GetAwaiter().GetResult();
+        if (!ReferenceEquals(_runtime.Arrival, arrival))
+            throw new InvalidOperationException("Map arrival was replaced before spawn.");
+        Move(MapStage.Spawn);
+    }
+
+    private void AdvanceSpawn()
+    {
+        if (!ReferenceEquals(_runtime.Arrival, _arrival))
+            throw new InvalidOperationException("Map arrival was replaced during spawn.");
+        if (!_spawnStarted) { _camera.SetPose(_destination); _spawnStarted = true; }
+        if (!_modeStarted)
+        {
+            _modeChange = _view.SetMode(_destinationMode, ModeSwitchVia.Ui);
+            _modeStarted = true;
+        }
+        if (!_modeChange!.IsCompleted) return;
+        switch (_modeChange.GetAwaiter().GetResult())
+        {
+            case ModeSwitchResult.Ok: break;
+            case ModeSwitchResult.Relocated: _stand = null; break;
+            case ModeSwitchResult.Refused: throw new InvalidOperationException("Destination observer mode was refused.");
+            default: throw new InvalidOperationException("Unknown mode-switch result.");
+        }
+        _modeChange = null;
+        if (_stand is { } stand)
+        {
+            if (_walk is null) throw new InvalidOperationException("Walking spawn requires the walk controller.");
+            _walk.Warp(new(stand.Feet, stand.YawDeg, 0));
+        }
+        Current = _target!.Descriptor.Id;
+        _savedCurrent = Current;
+        Rev++;
+        if (_request!.Cause != MapTravelCause.LoadSave || _request.Pose is not null) RememberCurrent();
+        Finish(MapTravelResult.Arrived);
     }
 
     private void PrepareDestination()

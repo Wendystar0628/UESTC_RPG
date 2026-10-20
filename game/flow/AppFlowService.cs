@@ -3,42 +3,48 @@ using Campus.Contracts.AppFlow;
 using Campus.Contracts.Maps;
 using Campus.Contracts.Save;
 using Campus.Contracts.Settings;
+using Campus.Contracts.Startup;
 
 namespace Campus.Flow;
 
-public sealed partial class AppFlowService(ICameraRig camera, IAppLoadingPresentation loading, IAppTitlePresentation titlePresentation, ISaveService saves,
-    IMapService maps, IWorldState world, IWorldControl control, IViewControl view,
-    IWorldRestore restore, IAppExit appExit, IMapRuntime mapRuntime, IMapStreamState stream,
-    ISettingsStore? profileSettings = null) : IAppFlow
+[KernelService(typeof(IAppFlow))]
+[KernelService(typeof(IAppBootFlow))]
+public sealed class AppFlowService : IAppFlow, IAppBootFlow, IBootParticipant, IDisposable
 {
-    internal Action<string>? DiagnosticSink { get; init; }
-    private IDisposable? _input;
+    private readonly ICameraRig camera;
+    private readonly IAppLoadingPresentation loading;
+    private readonly ISaveService saves;
+    private readonly IMapService maps;
+    private readonly IWorldState world;
+    private readonly IWorldRestore restore;
+    private readonly IAppExit appExit;
+    private readonly IMapStreamState stream;
+    private readonly AppFlowResources _resources;
+    private readonly AppFlowContinuation _continuation;
+    private readonly AppFlowStartup _startup;
+    private readonly AppFlowRecovery _recovery;
     private Task<EnterResult>? _entry;
     private Task? _quit;
     private Task? _leaving;
     private bool _leaveSaved;
     private Pose _leavePose;
-    private IMapArrival? _titleArrival;
-    private bool TitlePrepared => _titleArrival is { } arrival &&
-        ReferenceEquals(mapRuntime.Arrival, arrival) && arrival.Done.IsCompletedSuccessfully;
-    private SlotId? _preview;
-    private bool _livePreview;
-    private Pose _destination;
-    private ViewMode _destinationMode;
-    private readonly ISettingsSection? _cameraSettings = profileSettings?.Section("ui");
-    private float UserFov(ViewMode mode)
-    {
-        var definition = mode switch
-        {
-            ViewMode.Fly => UiSettingDefinitions.FlyFov,
-            ViewMode.Walk => UiSettingDefinitions.WalkFov,
-            _ => throw new ArgumentOutOfRangeException(nameof(mode))
-        };
-        return _captureMode ? definition.Default : _cameraSettings?.Get(definition) ?? definition.Default;
-    }
-    private bool _newTimeline;
     private bool _quitting;
     private EnterRequest? _request;
+    internal Action<string>? DiagnosticSink { get; init; }
+
+    public AppFlowService(ICameraRig camera, IAppLoadingPresentation loading, IAppTitlePresentation titlePresentation,
+        ISaveService saves, IMapService maps, IWorldState world, IWorldControl control, IViewControl view,
+        IWorldRestore restore, IAppExit appExit, IMapRuntime mapRuntime, IMapStreamState stream,
+        ISettingsStore? profileSettings = null)
+    {
+        this.camera = camera; this.loading = loading; this.saves = saves; this.maps = maps;
+        this.world = world; this.restore = restore; this.appExit = appExit; this.stream = stream;
+        _resources = new(camera, restore, control, loading, titlePresentation, mapRuntime, MarkPhase);
+        _continuation = new(camera, saves, maps, world, restore, view, mapRuntime, stream,
+            titlePresentation, _resources, profileSettings);
+        _recovery = new(saves, maps, _continuation, _resources, () => _quitting, Change, ReportDiagnostic);
+        _startup = new(saves, maps, _continuation, _resources, titlePresentation, _recovery);
+    }
     public AppState State { get; private set; } = AppState.Boot;
     public bool IsPlaying => State switch
     {
@@ -66,11 +72,10 @@ public sealed partial class AppFlowService(ICameraRig camera, IAppLoadingPresent
             _ => throw new ArgumentOutOfRangeException(nameof(request)),
         };
         if (slot is null || !saves.Slots.Any(s => s.Slot == slot)) return Task.FromResult(EnterResult.Rejected);
-        if (request.Kind is EnterKind.Continue or EnterKind.LoadSlot && !Readable(Info(slot.Value))) return Task.FromResult(EnterResult.Rejected);
+        if (request.Kind is EnterKind.Continue or EnterKind.LoadSlot && !AppFlowContinuation.Readable(_continuation.Info(slot.Value))) return Task.FromResult(EnterResult.Rejected);
         _request = request with { Slot = slot }; _quitting = false;
-        LastError = null; _faultHold = null; _newTimeline = false;
-        _resumeEndpoint = null; _resumeRequested = false;
-        HoldInput(); HoldLoadingFlow(); Change(AppState.Entering);
+        _recovery.BeginEntry(); _continuation.BeginEntry();
+        _resources.HoldInput(); _resources.HoldLoadingFlow(); Change(AppState.Entering);
         if (request.Kind is EnterKind.NewGame) MarkPhase("new-game-enter");
         _entry = EnterCore(); return _entry;
     }
@@ -84,101 +89,78 @@ public sealed partial class AppFlowService(ICameraRig camera, IAppLoadingPresent
                 EnterKind.Continue or EnterKind.LoadSlot => false,
                 _ => throw new ArgumentOutOfRangeException(nameof(_request)),
             };
-            await BeginLoading(_request, newGame);
+            await _resources.BeginLoading(_request, newGame);
             // A faulted world's NewGame transaction owns its recovery preparation.
             if (!newGame || !restore.RestoreFaulted) await WorldReady;
-            if (newGame) await StartNewTimeline(); else await RestoreRequested();
-            RequireHealthyWorld();
-            if (!newGame) { await PrepareResumeEndpoint(); RequirePreparedResume(); }
-            else await PreparePlayableDestination();
+            if (newGame) await _continuation.StartNewTimeline(_request.Slot!.Value, _startup.Seed);
+            else await _continuation.RestoreRequested(_request.Slot!.Value);
+            _continuation.RequireHealthyWorld();
+            if (!newGame) { await _continuation.PrepareResumeEndpoint(); _continuation.RequirePreparedResume(_request!.Slot!.Value); }
+            else await _continuation.PreparePlayableDestination(_startup.CaptureMode);
             // The real destination now owns residency; keep the pins through its terrain preparation.
             stream.SetPinnedDestinations([]);
             if (newGame)
             {
                 // The first generation belongs to this prepared Walk endpoint.
                 var saved = await saves.SaveNow(SaveReason.NewGame);
-                if (!CanLeave(saved.Status)) throw new IOException(saved.Error ?? "The new game could not be saved.");
-                CompleteSavePreparation();
+                if (!AppFlowContinuation.CanLeave(saved.Status)) throw new IOException(saved.Error ?? "The new game could not be saved.");
+                _resources.CompleteSavePreparation();
             }
-            RequireHealthyWorld();
-            if (_quitting) { CompleteLoadingProgress(); ReleaseFlow(); return EnterResult.Entered; }
-            await FinishLoading();
-            RequireHealthyWorld();
-            ReleaseFlow(); Change(AppState.Playing); ReleaseInput();
+            _continuation.RequireHealthyWorld();
+            if (_quitting) { _resources.CompleteLoadingProgress(); _resources.ReleaseFlow(); return EnterResult.Entered; }
+            await _resources.FinishLoading();
+            _continuation.RequireHealthyWorld();
+            _resources.ReleaseFlow(); Change(AppState.Playing); _resources.ReleaseInput();
             return EnterResult.Entered;
         }
         catch (OperationCanceledException) when (_quitting) { return EnterResult.Rejected; }
         catch (Exception error) when (error is not OutOfMemoryException)
         {
-            CaptureFailure(error);
-            if (restore.RestoreFaulted) { await HoldRestoreFailure(); return EnterResult.Failed; }
-            await RecoverTitle();
+            _recovery.CaptureFailure(error, State);
+            if (restore.RestoreFaulted) { await _recovery.HoldRestoreFailure(); return EnterResult.Failed; }
+            await _recovery.RecoverTitle();
             return EnterResult.Failed;
         }
     }
-    private async Task StartNewTimeline()
-    {
-        if (_newTimeline) return;
-        // Save owns the complete restore transaction and keeps the existing same-map geometry.
-        var result = await saves.NewGame(_request!.Slot!.Value, seed: _boot?.Seed);
-        RequireLoaded(result); _newTimeline = true; _preview = null; _livePreview = false;
-        RequireHealthyWorld(); HoldLoadingFlow();
-        _destination = camera.Pose; _destinationMode = camera.Mode;
-        CompleteWorldPreparation();
-    }
-    private async Task RestoreRequested()
-    {
-        var slot = _request!.Slot!.Value;
-        if (restore.RestoreFaulted || _preview != slot || (!saves.HasPendingPose && !_livePreview))
-        {
-            var result = await saves.Load(slot, LoadScope.Preview); RequireLoaded(result);
-            _preview = slot; _livePreview = false;
-        }
-        RequireHealthyWorld(); HoldLoadingFlow();
-        _destination = Info(slot)?.Meta?.Pose ?? camera.Pose;
-        _destinationMode = Info(slot)?.Meta?.Mode ?? camera.Mode;
-        _resumeRequested = true;
-        CompleteWorldPreparation();
-    }
     public Task ReturnToTitle()
     {
-        if (restore.RestoreFaulted) return HoldRestoreFailure();
+        if (restore.RestoreFaulted) return _recovery.HoldRestoreFailure();
         if (!In(AppState.Playing)) return Task.CompletedTask;
-        _leaveSaved = false; _titleArrival = null; _leavePose = camera.Pose;
-        HoldInput(); HoldLoadingFlow(); Change(AppState.Leaving);
+        _leaveSaved = false; _continuation.InvalidateTitleDestination(); _leavePose = camera.Pose;
+        _resources.HoldInput(); _resources.HoldLoadingFlow(); Change(AppState.Leaving);
         _leaving = ReturnToTitleCore(); return _leaving;
     }
     private async Task ReturnToTitleCore()
     {
         try
         {
-            await BeginLoading(null, save: true);
+            await _resources.BeginLoading(null, save: true);
             var saved = await saves.FlushForQuit(SaveReason.ToTitle, TimeSpan.FromSeconds(FlowTuning.SaveTimeoutSeconds));
-            if (restore.RestoreFaulted) { await HoldRestoreFailure(); return; }
-            if (!CanLeave(saved.Status))
+            if (restore.RestoreFaulted) { await _recovery.HoldRestoreFailure(); return; }
+            if (!AppFlowContinuation.CanLeave(saved.Status))
             {
-                CompleteWorldPreparation(); CompleteSavePreparation();
-                await PreparePlayableDestination(); await FinishLoading();
-                ReleaseFlow(); Change(AppState.Playing); ReleaseInput(); return;
+                _resources.CompleteWorldPreparation(); _resources.CompleteSavePreparation();
+                await _continuation.PreparePlayableDestination(_startup.CaptureMode); await _resources.FinishLoading();
+                _resources.ReleaseFlow(); Change(AppState.Playing); _resources.ReleaseInput(); return;
             }
-            _leaveSaved = true; CompleteSavePreparation();
-            _preview = saves.Active; _livePreview = true;
+            _leaveSaved = true; _resources.CompleteSavePreparation();
+            _continuation.RetainLivePreview();
             // Keep this instance and its saved playable pose; only the presented destination changes.
-            HoldTitleFlow(); CompleteWorldPreparation();
-            await PrepareTitleDestination();
-            if (!_quitting) { await FinishLoading(); ReleaseLoadingFlow(); Change(AppState.Title); }
+            _resources.HoldTitleFlow(); _resources.CompleteWorldPreparation();
+            await _continuation.PrepareTitleDestination();
+            if (!_quitting) { await _resources.FinishLoading(); _resources.ReleaseLoadingFlow(); Change(AppState.Title); }
         }
         catch (Exception error) when (error is not OutOfMemoryException)
         {
-            CaptureFailure(error);
-            if (restore.RestoreFaulted) { await HoldRestoreFailure(); return; }
+            _recovery.CaptureFailure(error, State);
+            if (restore.RestoreFaulted) { await _recovery.HoldRestoreFailure(); return; }
             if (!_leaveSaved)
             {
                 camera.SetPose(_leavePose);
-                await PreparePlayableDestination(); await FinishLoading(); ReleaseFlow();
-                if (!_quitting) { Change(AppState.Playing); ReleaseInput(); }
+                await _continuation.PreparePlayableDestination(_startup.CaptureMode); await _resources.FinishLoading(); _resources.ReleaseFlow();
+                if (!_quitting) { Change(AppState.Playing); _resources.ReleaseInput(); }
             }
-            else await RecoverTitle();
+            else await _recovery.RecoverTitle();
         }
     }
     public Task Quit()
@@ -197,8 +179,8 @@ public sealed partial class AppFlowService(ICameraRig camera, IAppLoadingPresent
     }
     private async Task QuitCore()
     {
-        var previous = State; _quitting = true; HoldInput();
-        _worldReady.TrySetCanceled();
+        var previous = State; _quitting = true; _resources.HoldInput();
+        _startup.Cancel();
         if (restore.RestoreFaulted)
         {
             // Save returns Deferred for a faulted restore: intentionally preserve the old generation.
@@ -231,12 +213,12 @@ public sealed partial class AppFlowService(ICameraRig camera, IAppLoadingPresent
         if (save)
         {
             var result = await saves.FlushForQuit(SaveReason.Quit, TimeSpan.FromSeconds(FlowTuning.SaveTimeoutSeconds));
-            if (!CanLeave(result.Status))
+            if (!AppFlowContinuation.CanLeave(result.Status))
             {
-                if (restore.RestoreFaulted) { _quitting = false; await HoldRestoreFailure(); return; }
+                if (restore.RestoreFaulted) { _quitting = false; await _recovery.HoldRestoreFailure(); return; }
                 _quitting = false;
-                if (loading.Active) await FinishLoading();
-                ReleaseFlow(); Change(AppState.Playing); ReleaseInput();
+                if (loading.Active) await _resources.FinishLoading();
+                _resources.ReleaseFlow(); Change(AppState.Playing); _resources.ReleaseInput();
                 return;
             }
         }
@@ -244,62 +226,90 @@ public sealed partial class AppFlowService(ICameraRig camera, IAppLoadingPresent
         // close merely because Changed announced the start of Quitting.
         await appExit.FinishQuit();
     }
-    private IMapContext Context() => maps.Context ?? throw new InvalidOperationException("No map is loaded.");
-    public string? LastError { get; private set; }
-    private void CaptureFailure(Exception error)
+    public string? LastError => _recovery.LastError;
+    private void ReportDiagnostic(string details)
     {
-        LastError = error.Message;
-        var details = $"[WP-49a][map:{maps.Current.Value}][flow:{State}] {error.ToString()}";
-        // Plain fixture execution supplies a managed sink. Runtime keeps the same
-        // full exception diagnostics without requiring tests to initialize Godot.
+        // Managed fixtures supply their own sink; runtime retains full exception diagnostics.
         if (DiagnosticSink is { } sink) { sink(details); return; }
         if (restore.RestoreFaulted) Godot.GD.Print(details);
         else Godot.GD.PushError(details);
     }
-    private Pose TitlePose() => Context().Descriptor.Title?.T0 ?? maps.Maps.FirstOrDefault(m => m.Id == maps.Default)?.Title?.T0 ?? maps.ResolveSpawn(Context().Descriptor.Id).Fly;
-    private SlotInfo? Info(SlotId slot) => saves.Slots.FirstOrDefault(s => s.Slot == slot);
-    private static bool Readable(SlotInfo? slot) => slot?.Health switch
-    {
-        SlotHealth.Ok => slot.Meta is not null,
-        SlotHealth.Empty or SlotHealth.Corrupt or null => false,
-        _ => throw new InvalidOperationException("Unknown slot health."),
-    };
-    private static bool Loaded(LoadStatus status) => status switch { LoadStatus.Loaded => true, LoadStatus.Empty or LoadStatus.Corrupt or LoadStatus.Failed => false, _ => throw new ArgumentOutOfRangeException(nameof(status)) };
-    private static void RequireLoaded(LoadResult result) { if (!Loaded(result.Status)) throw new InvalidDataException(result.Error ?? "The requested world could not be restored."); }
-    private static bool CanLeave(SaveStatus status) => status switch { SaveStatus.Saved or SaveStatus.Deferred or SaveStatus.Disabled => true, SaveStatus.Failed => false, _ => throw new ArgumentOutOfRangeException(nameof(status)) };
     private bool In(AppState expected) => State switch { AppState.Boot or AppState.Title or AppState.Entering or AppState.Playing or AppState.Leaving or AppState.Quitting => State == expected, _ => throw new InvalidOperationException("Unknown application state.") };
-    private void HoldInput() => _input ??= camera.LockInput(InputLockReason.AppFlow);
-    private void ReleaseInput() { if (restore.RestoreFaulted) return; _input?.Dispose(); _input = null; }
     private void Change(AppState state)
     {
-        if (state is AppState.Playing) RequireHealthyWorld();
+        if (state is AppState.Playing) _continuation.RequireHealthyWorld();
         if (State == state) return;
         var old = State;
-        if (old is AppState.Title) saves.SlotsChanged -= RefreshTitlePrefetch;
+        if (old is AppState.Title) _continuation.StopTitlePrefetch();
         State = state; Rev++;
-        switch (state)
-        {
-            case AppState.Title:
-                saves.SlotsChanged += RefreshTitlePrefetch;
-                RefreshTitlePrefetch();
-                break;
-            case AppState.Entering: break;
-            case AppState.Boot: case AppState.Playing: case AppState.Leaving: case AppState.Quitting:
-                stream.SetPinnedDestinations([]);
-                break;
-            default: throw new ArgumentOutOfRangeException(nameof(state));
-        }
+        _continuation.OnStateChange(state);
         Changed?.Invoke(old, state);
     }
-    private void RefreshTitlePrefetch()
+    private void MarkPhase(string phase) => PhaseReached?.Invoke(phase);
+
+    public Task WorldReady => _startup.WorldReady;
+    public bool WillRestoreWorld => _startup.WillRestoreWorld;
+    public string Id => "app-flow";
+    public int Order => 100;
+    public void FailBoot(Exception error) => _startup.Fail(error);
+    public Task Initialize(BootPhase phase, BootContext context) => _startup.Initialize(phase, context);
+    public Task<MapId> PrepareBoot(BootFlowRequest request)
     {
-        if (State is not AppState.Title || restore.RestoreFaulted || maps.Context is null)
-        { stream.SetPinnedDestinations([]); return; }
-        var destinations = new List<MapStreamDestination>(2);
-        if (maps.Default == maps.Current)
-            destinations.Add(new(maps.ResolveSpawn(maps.Default).ViewPose(ViewMode.Walk), ViewMode.Walk));
-        if (saves.Continue is { } slot && Info(slot) is { Health: SlotHealth.Ok, Meta: { } meta } && meta.Map == maps.Current)
-            destinations.Add(new(meta.Pose, meta.Mode, meta.Space));
-        stream.SetPinnedDestinations(destinations);
+        if (!In(AppState.Boot)) throw new InvalidOperationException("Boot preparation is only accepted during Boot.");
+        return Task.FromResult(_startup.Select(request));
+    }
+    public async Task PrepareWorld()
+    {
+        if (State is not (AppState.Boot or AppState.Title or AppState.Entering) || !_startup.HasRequest)
+            throw new InvalidOperationException("PrepareBoot must run before PrepareWorld.");
+        try { await _startup.PrepareWorld(); }
+        catch (Exception error) when (error is not OutOfMemoryException)
+        {
+            _recovery.CaptureFailure(error, State);
+            await _recovery.HoldRestoreFailure(keepBoot: true);
+            if (restore.RestoreFaulted || !_continuation.TitlePrepared) throw;
+            _startup.RecoverAsTitle();
+        }
+    }
+    public Task OpenTitle()
+    {
+        if (!In(AppState.Boot) || !_startup.ShowTitle)
+            throw new InvalidOperationException("Title can open only after title boot preparation.");
+        _resources.HoldTitleFlow();
+        Change(AppState.Title);
+        MarkPhase("title-ready");
+        return Task.CompletedTask;
+    }
+    public Task CompleteBoot()
+    {
+        _continuation.RequireHealthyWorld(); _startup.RequirePrepared();
+        MarkPhase("world-ready"); _startup.Complete();
+        if (_startup.ShowTitle)
+        {
+            if (In(AppState.Boot)) Change(AppState.Title);
+            else if (In(AppState.Title)) _continuation.RefreshTitlePrefetch();
+        }
+        else { Change(AppState.Playing); _resources.ReleaseInput(); }
+        return Task.CompletedTask;
+    }
+    private async Task<bool> QuitFaultedWorld()
+    {
+        await _recovery.HoldRestoreFailure(); Change(AppState.Quitting);
+        try
+        {
+            var result = await saves.FlushForQuit(SaveReason.Quit, TimeSpan.FromSeconds(FlowTuning.SaveTimeoutSeconds));
+            if (AppFlowContinuation.CanLeave(result.Status)) return true;
+        }
+        catch (Exception error) when (error is not OutOfMemoryException)
+        {
+            _recovery.CaptureFailure(error, State); _recovery.RetainRestoreError();
+        }
+        _quitting = false; Change(AppState.Title);
+        return false;
+    }
+    public void Dispose()
+    {
+        try { _continuation.Dispose(); }
+        finally { _resources.Dispose(); }
     }
 }

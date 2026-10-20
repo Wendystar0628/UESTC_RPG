@@ -8,6 +8,10 @@ namespace Campus.Gen.Geometry;
 public readonly record struct GeometryVertex(Vector3 Position, Vector3 Normal, Vector2? Uv = null,
     Vector2? Uv2 = null, float? Ao = null, ushort? ColorIndex = null, byte? Flags = null, byte? Reserved = null, ushort? DecalBaseColorIndex = null);
 
+/// <summary>Present ordinary vertex channels, including the layout of an empty indexed surface.</summary>
+[Flags]
+public enum GeometryChannels { None = 0, Ao = 1, Uv = 2, Uv2 = 4, Colors = 8, Flags = 16, Reserved = 32, DecalBase = 64 }
+
 /// <summary>One indexed clockwise triangle stream per material class, sharing identical vertices within each batch.</summary>
 public sealed class GeometrySink(PaletteCatalog? palette = null, bool withUv2 = false)
 {
@@ -40,7 +44,7 @@ public sealed class GeometrySink(PaletteCatalog? palette = null, bool withUv2 = 
         if (indices.Count % 3 != 0) throw new ArgumentException("A polygon needs complete triangles.", nameof(indices));
         var map = new Dictionary<int, int>();
         var channels = ChannelsOf(spec, vertices);
-        if (hasUv2 is { } uv2) channels = uv2 ? channels | Channels.Uv2 : channels & ~Channels.Uv2;
+        if (hasUv2 is { } uv2) channels = uv2 ? channels | GeometryChannels.Uv2 : channels & ~GeometryChannels.Uv2;
         Stream? previous = null;
         for (var t = 0; t < indices.Count; t += 3)
         {
@@ -86,33 +90,68 @@ public sealed class GeometrySink(PaletteCatalog? palette = null, bool withUv2 = 
         return _done.OrderBy(x => x.Key, StringComparer.Ordinal).Select(x => x.Mesh).ToArray();
     }
 
+    /// <summary>
+    /// Packs an authored indexed surface without welding, sorting, normalising normals or changing winding.
+    /// Unused vertices and explicitly present empty channels are retained; custom channels are four floats per vertex.
+    /// </summary>
+    public static GeometryBundle Indexed(ToonSpec spec, IReadOnlyList<GeometryVertex> vertices, IReadOnlyList<int> index,
+        GeometryChannels channels, IReadOnlyList<Vector4>? custom0 = null, IReadOnlyList<Vector4>? custom1 = null,
+        IReadOnlyList<Vector4>? custom2 = null)
+    {
+        bool Has(GeometryChannels channel) => (channels & channel) != 0;
+        var bundle = new GeometryBundle(new(spec), Positions(vertices.Select(v => v.Position).ToArray()),
+            Positions(vertices.Select(v => v.Normal).ToArray()), [.. index],
+            Has(GeometryChannels.Ao) ? vertices.Select(v => v.Ao ?? 1f).ToArray() : null,
+            Has(GeometryChannels.Uv) ? Coordinates(vertices.Select(v => v.Uv ?? Vector2.Zero)) : null,
+            Has(GeometryChannels.Uv2) ? Coordinates(vertices.Select(v => v.Uv2 ?? Vector2.Zero)) : null)
+        {
+            ColorIndices = Has(GeometryChannels.Colors) ? vertices.Select(v => v.ColorIndex ?? throw new InvalidOperationException("Missing vertex colour.")).ToArray() : null,
+            Flags = Has(GeometryChannels.Flags) ? vertices.Select(v => v.Flags ?? (byte)0).ToArray() : null,
+            Reserved = Has(GeometryChannels.Reserved) ? vertices.Select(v => v.Reserved ?? (byte)0).ToArray() : null,
+            DecalBaseColorIndices = Has(GeometryChannels.DecalBase) ? vertices.Select(v => v.DecalBaseColorIndex ?? throw new InvalidOperationException("Missing decal base colour.")).ToArray() : null,
+            Custom0 = CustomCoordinates(custom0), Custom1 = CustomCoordinates(custom1), Custom2 = CustomCoordinates(custom2)
+        };
+        bundle.ValidateVertexData();
+        return bundle;
+    }
+
+    /// <summary>Packs geometric points in their authored order, including meshes that have not yet been divided into surfaces.</summary>
+    public static float[] Positions(IReadOnlyList<Vector3> points) =>
+        points.SelectMany(p => new[] { p.X, p.Y, p.Z }).ToArray();
+
+    private static float[] Coordinates(IEnumerable<Vector2> values) =>
+        values.SelectMany(v => new[] { v.X, v.Y }).ToArray();
+
+    private static float[]? CustomCoordinates(IReadOnlyList<Vector4>? values) =>
+        values?.SelectMany(v => new[] { v.X, v.Y, v.Z, v.W }).ToArray();
+
     private bool UsesUv2(ToonSpec spec) => withUv2 || spec.Kind == ToonKind.Glass || spec.SurfacePattern is not null;
 
-    private Channels RequiredChannels(ToonSpec spec) => UsesUv2(spec) ? Channels.Uv2 : Channels.None;
+    private GeometryChannels RequiredChannels(ToonSpec spec) => UsesUv2(spec) ? GeometryChannels.Uv2 : GeometryChannels.None;
 
-    private Channels ChannelsOf(ToonSpec spec, IReadOnlyList<GeometryVertex> vertices)
+    private GeometryChannels ChannelsOf(ToonSpec spec, IReadOnlyList<GeometryVertex> vertices)
     {
         var channels = RequiredChannels(spec);
         foreach (var vertex in vertices) channels |= ChannelsOf(vertex);
         return channels;
     }
 
-    private static Channels ChannelsOf(in GeometryVertex vertex)
+    private static GeometryChannels ChannelsOf(in GeometryVertex vertex)
     {
-        var channels = Channels.None;
-        if (vertex.Ao.HasValue) channels |= Channels.Ao;
-        if (vertex.Uv.HasValue) channels |= Channels.Uv;
-        if (vertex.Uv2.HasValue) channels |= Channels.Uv2;
-        if (vertex.ColorIndex.HasValue) channels |= Channels.Colors;
-        if (vertex.Flags.HasValue) channels |= Channels.Flags;
-        if (vertex.Reserved.HasValue) channels |= Channels.Reserved;
-        if (vertex.DecalBaseColorIndex.HasValue) channels |= Channels.DecalBase;
+        var channels = GeometryChannels.None;
+        if (vertex.Ao.HasValue) channels |= GeometryChannels.Ao;
+        if (vertex.Uv.HasValue) channels |= GeometryChannels.Uv;
+        if (vertex.Uv2.HasValue) channels |= GeometryChannels.Uv2;
+        if (vertex.ColorIndex.HasValue) channels |= GeometryChannels.Colors;
+        if (vertex.Flags.HasValue) channels |= GeometryChannels.Flags;
+        if (vertex.Reserved.HasValue) channels |= GeometryChannels.Reserved;
+        if (vertex.DecalBaseColorIndex.HasValue) channels |= GeometryChannels.DecalBase;
         return channels;
     }
 
-    private Stream Get(ToonSpec spec, int extra, Channels channels)
+    private Stream Get(ToonSpec spec, int extra, GeometryChannels channels)
     {
-        var key = ClassKey(spec, (channels & Channels.Colors) != 0) + "|" + ((int)channels).ToString("D3", CultureInfo.InvariantCulture);
+        var key = ClassKey(spec, (channels & GeometryChannels.Colors) != 0) + "|" + ((int)channels).ToString("D3", CultureInfo.InvariantCulture);
         if (!_streams.TryGetValue(key, out var stream)) _streams.Add(key, stream = new(spec, channels));
         if (stream.Vertices.Count + extra > GeometryVertexLimits.Batch)
         {
@@ -140,26 +179,23 @@ public sealed class GeometrySink(PaletteCatalog? palette = null, bool withUv2 = 
         var vertices = stream.Vertices;
         var mesh = new GeometryBundle(new(stream.Spec), vertices.SelectMany(v => new[] { v.Position.X, v.Position.Y, v.Position.Z }).ToArray(),
             vertices.SelectMany(v => { var n = VectorMath.Unit(v.Normal, Vector3.UnitY, 1e-8f); return new[] { n.X, n.Y, n.Z }; }).ToArray(),
-            [.. stream.Index], stream.Has(Channels.Ao) ? vertices.Select(v => v.Ao ?? 1f).ToArray() : null,
-            stream.Has(Channels.Uv) ? vertices.SelectMany(v => new[] { v.Uv?.X ?? 0f, v.Uv?.Y ?? 0f }).ToArray() : null,
-            stream.Has(Channels.Uv2) ? vertices.SelectMany(v => new[] { v.Uv2?.X ?? 0f, v.Uv2?.Y ?? 0f }).ToArray() : null)
+            [.. stream.Index], stream.Has(GeometryChannels.Ao) ? vertices.Select(v => v.Ao ?? 1f).ToArray() : null,
+            stream.Has(GeometryChannels.Uv) ? vertices.SelectMany(v => new[] { v.Uv?.X ?? 0f, v.Uv?.Y ?? 0f }).ToArray() : null,
+            stream.Has(GeometryChannels.Uv2) ? vertices.SelectMany(v => new[] { v.Uv2?.X ?? 0f, v.Uv2?.Y ?? 0f }).ToArray() : null)
         {
-            ColorIndices = stream.Has(Channels.Colors) ? vertices.Select(v => v.ColorIndex ?? throw new InvalidOperationException("Missing vertex colour.")).ToArray() : null,
-            DecalBaseColorIndices = stream.Has(Channels.DecalBase) ? vertices.Select(v => v.DecalBaseColorIndex ?? throw new InvalidOperationException("Missing decal base colour.")).ToArray() : null,
-            Flags = stream.Has(Channels.Flags) ? vertices.Select(v => v.Flags ?? (byte)0).ToArray() : null,
-            Reserved = stream.Has(Channels.Reserved) && !stream.Has(Channels.DecalBase) ? vertices.Select(v => v.Reserved ?? (byte)0).ToArray() : null,
+            ColorIndices = stream.Has(GeometryChannels.Colors) ? vertices.Select(v => v.ColorIndex ?? throw new InvalidOperationException("Missing vertex colour.")).ToArray() : null,
+            DecalBaseColorIndices = stream.Has(GeometryChannels.DecalBase) ? vertices.Select(v => v.DecalBaseColorIndex ?? throw new InvalidOperationException("Missing decal base colour.")).ToArray() : null,
+            Flags = stream.Has(GeometryChannels.Flags) ? vertices.Select(v => v.Flags ?? (byte)0).ToArray() : null,
+            Reserved = stream.Has(GeometryChannels.Reserved) && !stream.Has(GeometryChannels.DecalBase) ? vertices.Select(v => v.Reserved ?? (byte)0).ToArray() : null,
         };
         _done.Add((key + "|" + _done.Count.ToString("D8", CultureInfo.InvariantCulture), mesh));
     }
 
-    [Flags]
-    private enum Channels { None = 0, Ao = 1, Uv = 2, Uv2 = 4, Colors = 8, Flags = 16, Reserved = 32, DecalBase = 64 }
-
-    private sealed class Stream(ToonSpec spec, Channels channels)
+    private sealed class Stream(ToonSpec spec, GeometryChannels channels)
     {
         private readonly Dictionary<GeometryVertex, int> _vertices = [];
         public ToonSpec Spec { get; } = spec;
-        public bool Has(Channels channel) => (channels & channel) != 0;
+        public bool Has(GeometryChannels channel) => (channels & channel) != 0;
         public List<GeometryVertex> Vertices { get; } = [];
         public List<int> Index { get; } = [];
         public int Vertex(in GeometryVertex vertex)

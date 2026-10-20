@@ -18,9 +18,9 @@ public sealed partial class TerrainCompilerTests
     [TestCase, TestCategory(TestReason.Contract)]
     public void ZeroBandTaperHasPrescribedValuesAndZeroEndpointSlopes()
     {
-        var left = TerrainCompiler.ZeroBandWeight(new(20, 1, 0));
-        var right = TerrainCompiler.ZeroBandWeight(new(30, 1, 0));
-        var middle = TerrainCompiler.ZeroBandWeight(new(25, 1, 0));
+        var left = TerrainFieldGrading.ZeroBandWeight(new(20, 1, 0));
+        var right = TerrainFieldGrading.ZeroBandWeight(new(30, 1, 0));
+        var middle = TerrainFieldGrading.ZeroBandWeight(new(25, 1, 0));
         AssertThat(Math.Abs((double)(0) - (double)(left.Height)) <= TestTolerance.Position).IsTrue(); AssertThat(Math.Abs((double)(0) - (double)(left.Dx)) <= TestTolerance.Position).IsTrue(); AssertThat(Math.Abs((double)(1) - (double)(right.Height)) <= TestTolerance.Position).IsTrue(); AssertThat(Math.Abs((double)(0) - (double)(right.Dx)) <= TestTolerance.Position).IsTrue();
         AssertThat(Math.Abs((double)(0.5) - (double)(middle.Height)) <= TestTolerance.Position).IsTrue(); AssertThat(Math.Abs((double)(0.15) - (double)(middle.Dx)) <= TestTolerance.Position).IsTrue();
     }
@@ -163,13 +163,13 @@ public sealed partial class TerrainCompilerTests
     {
         var road = new TerrainRoad(new("fixture:approach"), new("fixture:source:way:1"),
             new(new([new(-20, 0), new(0, 0)])), 2, "footway", new([Box(-20, -1, 0, 1)]));
-        var end = TerrainCompiler.CorridorContactAt(road, 0.75, 2, 0);
+        var end = TerrainRoadCoreGeometry.CorridorContactAt(road, 0.75, 2, 0);
         AssertThat(Math.Abs((double)(1.25) - (double)(end.Distance.Height)) <= TestTolerance.Position).IsTrue(); AssertThat(Math.Abs((double)(0.75) - (double)(end.X)) <= TestTolerance.Position).IsTrue(); AssertThat(Math.Abs((double)(0) - (double)(end.Z)) <= TestTolerance.Position).IsTrue();
-        var side = TerrainCompiler.CorridorContactAt(road, 0.75, -10, 3);
+        var side = TerrainRoadCoreGeometry.CorridorContactAt(road, 0.75, -10, 3);
         AssertThat(Math.Abs((double)(1.25) - (double)(side.Distance.Height)) <= TestTolerance.Position).IsTrue(); AssertThat(Math.Abs((double)(-10) - (double)(side.X)) <= TestTolerance.Position).IsTrue(); AssertThat(Math.Abs((double)(1.75) - (double)(side.Z)) <= TestTolerance.Position).IsTrue();
-        var corner = TerrainCompiler.CorridorContactAt(road, 0.75, 2, 2);
+        var corner = TerrainRoadCoreGeometry.CorridorContactAt(road, 0.75, 2, 2);
         AssertThat(Math.Abs((double)(Math.Sqrt(5) - 0.75) - (double)(corner.Distance.Height)) <= TestTolerance.Position).IsTrue();
-        var fallback = TerrainCompiler.CorridorContactAt(road with { Footprint = null }, 0.75, 2, 0);
+        var fallback = TerrainRoadCoreGeometry.CorridorContactAt(road with { Footprint = null }, 0.75, 2, 0);
         AssertThat(Math.Abs((double)(0.25) - (double)(fallback.Distance.Height)) <= TestTolerance.Position).IsTrue();
         AssertThat(end.Distance.Height > fallback.Distance.Height).OverrideFailureMessage("Real rectangular port was inflated into a line capsule.").IsTrue();
     }
@@ -205,7 +205,7 @@ public sealed partial class TerrainCompilerTests
         // while the real core interior reaches five metres from it.
         var road = new TerrainRoad(new("fixture:wide-core"), new("fixture:wide-core"),
             new(new([new(-5, -5), new(5, -5), new(5, 5), new(-5, 5), new(-5, -5)])), 2.5, "footway", new([Box(-5, -5, 5, 5)]));
-        var bound = TerrainCompiler.RoadCorePathRadius(road);
+        var bound = TerrainRoadCoreGeometry.RoadCorePathRadius(road);
         AssertThat(bound >= 5 && bound < 5.4).OverrideFailureMessage("Core radius was inferred from vertices or introduced an unrelated art margin.").IsTrue();
     }
 

@@ -23,9 +23,20 @@ public interface IWorldFrame : IWorldState, IMapAware
 [KernelService(typeof(IWorldControl))]
 [KernelService(typeof(IWorldRestore))]
 [SaveSection("world", Version = 1, Phase = RestorePhase.World, Order = 10)]
-public sealed partial class WorldStateService(IWeatherProcess weather, IMotionSettings? motion = null) : IWorldFrame, IWorldControl,
+public sealed class WorldStateService : IWorldFrame, IWorldControl,
     IWorldRestore, ISaveSection<WorldSaveV1>
 {
+    private readonly IWeatherProcess _weather;
+    private readonly IMotionSettings? _motion;
+    private readonly WorldFlowArbiter _flow;
+
+    public WorldStateService(IWeatherProcess weather, IMotionSettings? motion = null)
+    {
+        _weather = weather;
+        _motion = motion;
+        _flow = new(EnsureUsable, () => Rev++);
+    }
+
     private double _targetHours;
     private double _offset;
     private double _velocity;
@@ -43,7 +54,6 @@ public sealed partial class WorldStateService(IWeatherProcess weather, IMotionSe
     private double _seasonArc;
     private double _seasonStartArcClock;
     private double _finalOffset;
-    private int _flowBeforePause = 1;
     private int _stepRate = WorldTime.DefaultStepRate;
     private bool _initializationApplied;
     private bool _restorePending;
@@ -64,18 +74,18 @@ public sealed partial class WorldStateService(IWeatherProcess weather, IMotionSe
     public Body Moon { get; private set; } = new(-System.Numerics.Vector3.UnitY, 0, 0, 0);
     public float MoonPhase => 1;
     public float Omega { get; private set; }
-    public WorldFlow Flow => new(_activeFlow?.Rate ?? BaseFlow.Rate);
-    public WorldFlow BaseFlow { get; private set; }
-    public int LastFlowRate => _flowBeforePause;
+    public WorldFlow Flow => _flow.Current;
+    public WorldFlow BaseFlow => _flow.Base;
+    public int LastFlowRate => _flow.LastRateBeforePause;
     public bool Scrubbing => _dragging && _dragIdle < WorldTimeTuning.DragIdleSeconds;
     public WorldTransition Transition =>
         (TimeMoving ? WorldTransition.Time : WorldTransition.None) |
         (SeasonMoving ? WorldTransition.Season : WorldTransition.None) |
-        (weather.Transitioning ? WorldTransition.Weather : WorldTransition.None);
-    public WeatherSel Weather => weather.Selection;
-    public WeatherVec WeatherNow => weather.Now;
-    public IReadOnlyList<WeatherSpan> WeatherAhead => weather.Ahead;
-    public uint WeatherSeed => weather.Seed;
+        (_weather.Transitioning ? WorldTransition.Weather : WorldTransition.None);
+    public WeatherSel Weather => _weather.Selection;
+    public WeatherVec WeatherNow => _weather.Now;
+    public IReadOnlyList<WeatherSpan> WeatherAhead => _weather.Ahead;
+    public uint WeatherSeed => _weather.Seed;
     public double AnimTime { get; private set; }
     public bool RestoreFaulted { get; private set; }
     public double Step12 => Math.Floor(AnimTime * _stepRate) / _stepRate;
@@ -87,7 +97,7 @@ public sealed partial class WorldStateService(IWeatherProcess weather, IMotionSe
     {
         get
         {
-            if (!SeasonMoving || motion?.ReduceMotion == true) return 0f;
+            if (!SeasonMoving || _motion?.ReduceMotion == true) return 0f;
             // Use the same four-second phases for both durations; interruptions keep the current fog weight.
             var phase = SeasonProgress * WorldTimeTuning.SeasonSingleSeconds;
             var rise = ScalarMath.Smoothstep(WorldTimeTuning.SeasonFogStart, WorldTimeTuning.SeasonFogPeak, phase);
@@ -108,7 +118,7 @@ public sealed partial class WorldStateService(IWeatherProcess weather, IMotionSe
         if (!Enum.IsDefined(season)) throw new ArgumentOutOfRangeException(nameof(season));
         return ArtEphemeris.Evaluate(ArtEphemeris.Wrap(clock, 24), (int)season).Sun.AltDeg;
     }
-    public bool IsNative(WeatherKind kind) => weather.IsNative(kind, SeasonTarget);
+    public bool IsNative(WeatherKind kind) => _weather.IsNative(kind, SeasonTarget);
 
     public void Tick(double delta, bool freezeAnimation = false)
     {
@@ -132,10 +142,10 @@ public sealed partial class WorldStateService(IWeatherProcess weather, IMotionSe
             {
                 _jumpElapsed = AdvanceElapsed(_jumpElapsed, dt, _jumpDuration);
                 WorldHours = Math.Clamp(ScalarMath.Lerp(_jumpFrom, _targetHours,
-                    motion?.ReduceMotion == true ? 1 : ScalarMath.Smoothstep(_jumpElapsed / _jumpDuration)), WorldHours, _targetHours);
-                if (motion?.ReduceMotion == true || _jumpElapsed >= _jumpDuration) LandClock();
+                    _motion?.ReduceMotion == true ? 1 : ScalarMath.Smoothstep(_jumpElapsed / _jumpDuration)), WorldHours, _targetHours);
+                if (_motion?.ReduceMotion == true || _jumpElapsed >= _jumpDuration) LandClock();
             }
-            else if (motion?.ReduceMotion == true) LandClock();
+            else if (_motion?.ReduceMotion == true) LandClock();
             else
             {
                 const double damping = WorldTimeTuning.ClockDamping;
@@ -157,7 +167,7 @@ public sealed partial class WorldStateService(IWeatherProcess weather, IMotionSe
         if (SeasonMoving)
         {
             _seasonElapsed = AdvanceElapsed(_seasonElapsed, dt, _seasonDuration);
-            var blend = motion?.ReduceMotion == true ? 1 : ScalarMath.Smoothstep(_seasonElapsed / _seasonDuration);
+            var blend = _motion?.ReduceMotion == true ? 1 : ScalarMath.Smoothstep(_seasonElapsed / _seasonDuration);
             SeasonPos = ArtEphemeris.Wrap(ScalarMath.Lerp(_seasonFrom, _seasonTo, blend), 4);
             _offset = _seasonStartOffset + ArtEphemeris.ClockAtPhase(_seasonArc, SeasonPos) - _seasonStartArcClock;
             if (_seasonElapsed >= _seasonDuration)
@@ -172,7 +182,7 @@ public sealed partial class WorldStateService(IWeatherProcess weather, IMotionSe
         Omega = dt > 0 ? AngularSpeed(Sun.AltDeg >= WorldTimeTuning.AngularSpeedSunAltitude ? previousSun : previousMoon,
             Sun.AltDeg >= WorldTimeTuning.AngularSpeedSunAltitude ? Sun : Moon, dt) : 0;
         if (!_mapUnavailable)
-            weather.Step(new WeatherTick(WorldHours, TargetHours, _offset, SeasonTarget, Sun.AltDeg, Flow.Rate, dt));
+            _weather.Step(new WeatherTick(WorldHours, TargetHours, _offset, SeasonTarget, Sun.AltDeg, Flow.Rate, dt));
         Rev++;
     }
 
@@ -213,9 +223,14 @@ public sealed partial class WorldStateService(IWeatherProcess weather, IMotionSe
     {
         EnsureUsable();
         ValidateRate(rate);
-        if (rate > 0) _flowBeforePause = rate;
-        BaseFlow = new(rate);
+        _flow.SetBase(rate);
         Rev++;
+    }
+
+    public IFlowLease AcquireFlow(FlowPriority priority, int rate)
+    {
+        EnsureUsable();
+        return _flow.Acquire(priority, rate);
     }
 
     public void SetSeason(Season season)
@@ -229,13 +244,13 @@ public sealed partial class WorldStateService(IWeatherProcess weather, IMotionSe
         _seasonTo = _seasonFrom + distance;
         _seasonAtmosphereFrom = SeasonAtmosphere;
         _seasonElapsed = 0;
-        _seasonDuration = motion?.ReduceMotion == true ? WorldTimeTuning.ReducedTransitionSeconds : distance <= 1 ? WorldTimeTuning.SeasonSingleSeconds : WorldTimeTuning.SeasonMultipleSeconds;
+        _seasonDuration = _motion?.ReduceMotion == true ? WorldTimeTuning.ReducedTransitionSeconds : distance <= 1 ? WorldTimeTuning.SeasonSingleSeconds : WorldTimeTuning.SeasonMultipleSeconds;
         _seasonStartOffset = _offset;
         _seasonArc = ArtEphemeris.Phase(Clock, SeasonPos);
         _seasonStartArcClock = ArtEphemeris.ClockAtPhase(_seasonArc, SeasonPos);
         _finalOffset = _offset + ArtEphemeris.ClockAtPhase(_seasonArc, (int)season) - _seasonStartArcClock;
         SeasonTarget = season;
-        weather.Reseason(WorldHours, season, _finalOffset);
+        _weather.Reseason(WorldHours, season, _finalOffset);
         Rev++;
     }
 
@@ -245,7 +260,7 @@ public sealed partial class WorldStateService(IWeatherProcess weather, IMotionSe
         ValidateWeather(kind, intensity);
         if (!IsNative(kind)) return;
         BeginReducedTransition();
-        weather.Select(new WeatherSel(WeatherMode.Manual, kind, intensity ?? .5f));
+        _weather.Select(new WeatherSel(WeatherMode.Manual, kind, intensity ?? .5f));
         Rev++;
     }
 
@@ -254,7 +269,7 @@ public sealed partial class WorldStateService(IWeatherProcess weather, IMotionSe
         EnsureUsable();
         ValidateWeather(Weather.Kind, intensity);
         BeginReducedTransition();
-        weather.Select(Weather with { Intensity = intensity });
+        _weather.Select(Weather with { Intensity = intensity });
         Rev++;
     }
 
@@ -262,7 +277,7 @@ public sealed partial class WorldStateService(IWeatherProcess weather, IMotionSe
     {
         EnsureUsable();
         BeginReducedTransition();
-        weather.Select(Weather with { Mode = WeatherMode.Auto });
+        _weather.Select(Weather with { Mode = WeatherMode.Auto });
         Rev++;
     }
 
@@ -272,10 +287,10 @@ public sealed partial class WorldStateService(IWeatherProcess weather, IMotionSe
         ValidatePreset(preset);
         SetSeason(preset.Season);
         SetClock(preset.Clock);
-        var kind = weather.MapToSeason(preset.Weather ?? WeatherKind.Clear, preset.Season);
+        var kind = _weather.MapToSeason(preset.Weather ?? WeatherKind.Clear, preset.Season);
         var intensity = preset.Weather == WeatherKind.Thunderstorm &&
             preset.Season is Season.Autumn or Season.Winter ? 1f : preset.Intensity;
-        weather.Pin(WorldHours, kind, intensity, _targetHours - WorldTimeTuning.WeatherPinBeforeHours, _targetHours + WorldTimeTuning.WeatherPinAfterHours);
+        _weather.Pin(WorldHours, kind, intensity, _targetHours - WorldTimeTuning.WeatherPinBeforeHours, _targetHours + WorldTimeTuning.WeatherPinAfterHours);
         Rev++;
     }
 
@@ -294,10 +309,10 @@ public sealed partial class WorldStateService(IWeatherProcess weather, IMotionSe
         if (rules.QuietUntilDusk)
         {
             var end = ArtEphemeris.DuskEnd(SeasonTarget);
-            weather.Quiet(WorldHours, _targetHours + ForwardHours(end,
+            _weather.Quiet(WorldHours, _targetHours + ForwardHours(end,
                 ArtEphemeris.Wrap(_targetHours + PlannedOffset, 24)));
         }
-        else weather.Pin(WorldHours, weather.MapToSeason(rules.Default.Weather ?? WeatherKind.Clear, SeasonTarget),
+        else _weather.Pin(WorldHours, _weather.MapToSeason(rules.Default.Weather ?? WeatherKind.Clear, SeasonTarget),
             rules.Default.Intensity, _targetHours - WorldTimeTuning.WeatherPinBeforeHours, _targetHours + WorldTimeTuning.WeatherPinAfterHours);
         Rev++;
     }
@@ -338,7 +353,7 @@ public sealed partial class WorldStateService(IWeatherProcess weather, IMotionSe
         if (_map != context.Descriptor.Id)
         {
             _map = context.Descriptor.Id;
-            weather.Enter(context.Descriptor.Id, rules.WeatherProfile, WorldHours);
+            _weather.Enter(context.Descriptor.Id, rules.WeatherProfile, WorldHours);
         }
     }
 
@@ -361,7 +376,7 @@ public sealed partial class WorldStateService(IWeatherProcess weather, IMotionSe
         if (!_initializationApplied) throw new InvalidOperationException("World state has not been initialized.");
         var moment = context.Moment;
         return new(moment.WorldHours, moment.ClockOffset, (int)moment.Season, moment.Season,
-            moment.FlowRate, _flowBeforePause, AnimTime);
+            moment.FlowRate, _flow.LastRateBeforePause, AnimTime);
     }
 
     public WorldSaveV1 CreateDefault(NewGameContext context)
@@ -415,8 +430,7 @@ public sealed partial class WorldStateService(IWeatherProcess weather, IMotionSe
         _offset = _finalOffset = dto.ClockOffset;
         SeasonPos = _seasonFrom = _seasonTo = dto.SeasonPos;
         SeasonTarget = dto.SeasonTarget;
-        BaseFlow = new(dto.FlowRate);
-        _flowBeforePause = dto.FlowRateBeforePause;
+        _flow.RestoreBase(dto.FlowRate, dto.FlowRateBeforePause);
         AnimTime = dto.AnimTime;
         _velocity = _jumpDuration = _jumpElapsed = _seasonDuration = _seasonElapsed = 0;
         _seasonAtmosphereFrom = 0;
@@ -428,7 +442,7 @@ public sealed partial class WorldStateService(IWeatherProcess weather, IMotionSe
 
     private void BeginReducedTransition()
     {
-        if (motion?.ReduceMotion == true) ReducedTransitionRequested?.Invoke();
+        if (_motion?.ReduceMotion == true) ReducedTransitionRequested?.Invoke();
     }
 
     private void StartJump(double target)
@@ -440,7 +454,7 @@ public sealed partial class WorldStateService(IWeatherProcess weather, IMotionSe
         _jumpFrom = WorldHours;
         _jumpElapsed = 0;
         _jumpDuration = _targetHours > WorldHours
-            ? motion?.ReduceMotion == true ? WorldTimeTuning.ReducedTransitionSeconds : Math.Min(WorldTimeTuning.JumpMaxSeconds, WorldTimeTuning.JumpBaseSeconds + WorldTimeTuning.JumpSecondsPerHour * (_targetHours - WorldHours)) : 0;
+            ? _motion?.ReduceMotion == true ? WorldTimeTuning.ReducedTransitionSeconds : Math.Min(WorldTimeTuning.JumpMaxSeconds, WorldTimeTuning.JumpBaseSeconds + WorldTimeTuning.JumpSecondsPerHour * (_targetHours - WorldHours)) : 0;
         _velocity = 0;
     }
 
