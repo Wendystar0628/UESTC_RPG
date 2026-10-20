@@ -17,6 +17,32 @@ namespace Campus.Kernel.Inspect;
 [KernelNode("game-capture")]
 public partial class GameCaptureNode : Node, IGameCapture, IRegistryExitParticipant
 {
+    /// <summary>The exact prepared request; a moving Walk eye is presentation, not destination identity.</summary>
+    public sealed record CaptureDestination(string RequestId, ViewMode Mode, IMapContext Context,
+        long WorldInstance, IMapArrival Arrival, Pose FixedPose)
+    {
+        internal Pose ReadCurrentPose(IMapContext? context, long worldInstance, ICameraRig rig,
+            IMapRuntime runtime, CancellationToken cancellationToken)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            if (runtime.Failure is { } failure)
+                System.Runtime.ExceptionServices.ExceptionDispatchInfo.Capture(failure).Throw();
+            if (Arrival.Done.IsCompleted) Arrival.Done.GetAwaiter().GetResult();
+            if (!ReferenceEquals(context, Context) || worldInstance != WorldInstance || rig.Mode != Mode ||
+                !ReferenceEquals(runtime.Arrival, Arrival))
+                throw new OperationCanceledException("Capture destination was replaced.");
+            var livePose = rig.Pose;
+            if (Mode switch
+                {
+                    ViewMode.Fly => livePose != FixedPose,
+                    ViewMode.Walk => false,
+                    _ => throw new ArgumentOutOfRangeException(nameof(Mode))
+                })
+                throw new OperationCanceledException("Capture fixed view was replaced.");
+            return livePose;
+        }
+    }
+
     // Win32 HRESULTs reported by CreateNew when the destination already exists.
     private const int FileExists = unchecked((int)0x80070050);
     private const int AlreadyExists = unchecked((int)0x800700B7);
@@ -119,7 +145,16 @@ public partial class GameCaptureNode : Node, IGameCapture, IRegistryExitParticip
             await WaitForFrameAsync(ready, cancellationToken);
             cancellationToken.ThrowIfCancellationRequested();
             var image = GetViewport().GetTexture().GetImage();
-            if (!image.IsEmpty()) return image;
+            if (!image.IsEmpty())
+            {
+                try
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
+                    if (ready?.Invoke() == false) throw new InvalidOperationException("Capture content changed during viewport readback.");
+                    return image;
+                }
+                catch { image.Dispose(); throw; }
+            }
             image.Dispose();
             throw new IOException("The capture viewport returned an empty image.");
         }
@@ -228,7 +263,7 @@ public partial class GameCaptureNode : Node, IGameCapture, IRegistryExitParticip
 
     /// <summary>Every fixed destination uses the same service owner, presentation and image export as F12.</summary>
     public async Task RunSequenceAsync(Node host, ViewContentReadiness producers, BootRunOptions options,
-        Action syncCamera, Func<bool> contentReady, CancellationToken cancellationToken = default,
+        CaptureDestination? startupCapture, Action syncCamera, Func<bool> contentReady, CancellationToken cancellationToken = default,
         Action<Pose>? validatePose = null)
     {
         RequireMainThread();
@@ -242,6 +277,7 @@ public partial class GameCaptureNode : Node, IGameCapture, IRegistryExitParticip
         try
         {
             var context = KernelServices.Get<IMapService>().Context ?? throw new InvalidOperationException("Capture requires a loaded map.");
+            var worldInstance = KernelServices.Get<IWorldState>().Instance;
             Directory.CreateDirectory(destination);
             var shots = AppBoot.FixedShots.Count > 0 ? AppBoot.FixedShots
                 : options.Capture.Shots.Select(id => new FixedShot(id, id, options)).ToArray();
@@ -251,21 +287,32 @@ public partial class GameCaptureNode : Node, IGameCapture, IRegistryExitParticip
                 MovieCapture.RequireMovieMaker();
             }
             foreach (var shot in shots)
-                await CaptureShotAsync(host, producers, shot, destination, context, syncCamera, contentReady, validatePose, lifetime.Token);
+                await CaptureShotAsync(host, producers, shot, destination, context, worldInstance,
+                    AppBoot.FixedShots.Count == 0 && shots.Count == 1 ? startupCapture : null,
+                    syncCamera, contentReady, validatePose, lifetime.Token);
         }
         finally { EndCapture(); }
     }
 
     private async Task CaptureShotAsync(Node host, ViewContentReadiness producers, FixedShot shot,
-        string destination, IMapContext context, Action syncCamera, Func<bool> contentReady,
+        string destination, IMapContext context, long worldInstance, CaptureDestination? startupCapture,
+        Action syncCamera, Func<bool> contentReady,
         Action<Pose>? validatePose, CancellationToken cancellationToken)
     {
         var rig = KernelServices.Get<ICameraRig>();
         var runtime = KernelServices.Get<IMapRuntime>();
+        var maps = KernelServices.Get<IMapService>();
+        var world = KernelServices.Get<IWorldState>();
         var started = FrameClock.MonotonicMilliseconds;
         var previousPhase = started;
         LogPhase("start");
         cancellationToken.ThrowIfCancellationRequested();
+        var mode = shot.Options.World.ViewMode ?? startupCapture?.Mode ?? rig.Mode;
+        var capture = startupCapture is { } startup && startup.RequestId == shot.Pose && startup.Mode == mode
+            ? startup : null;
+        if (capture is null && (mode != ViewMode.Fly || rig.Mode != ViewMode.Fly))
+            throw new NotSupportedException("Walk capture requires the matching prepared startup request; live walking relocation is not supported.");
+        if (capture is not null) ValidateDestination();
         var pose = ResolvePose(shot.Pose, shot.Options, context);
         await using var cover = _loading.Show();
         await cover.Covered;
@@ -274,45 +321,44 @@ public partial class GameCaptureNode : Node, IGameCapture, IRegistryExitParticip
         await KernelServices.Get<ITerrainPreparation>().PrepareRegion(context, new(terrainPoint, terrainPoint), cancellationToken);
         if (shot.Pose != "T0") validatePose?.Invoke(pose);
         LogPhase("terrain-ready");
-        var appliedPose = ApplyPose(pose, shot.Options, context, rig, syncCamera, producers);
-        var arrival = BeginArrival(context, appliedPose, runtime, rig);
+        if (!host.IsInsideTree() || !ReferenceEquals(maps.Context, context) || world.Instance != worldInstance || rig.Mode != mode)
+            throw new OperationCanceledException("Capture stage or view was replaced during preparation.");
+        if (capture is null)
+        {
+            var appliedPose = ApplyPose(pose, shot.Options, context, rig, syncCamera);
+            capture = new(shot.Pose, mode, context, worldInstance, BeginArrival(context, appliedPose, runtime, rig), appliedPose);
+        }
+        // A startup handoff already placed the real body; each capture prepares only its current view.
+        producers.PrepareCapture(ValidateDestination());
+        var arrival = capture.Arrival;
         void ReportProgress() => cover.Report(arrival.Completed, arrival.Total);
         arrival.ProgressChanged += ReportProgress;
         try
         {
             ReportProgress();
             LogPhase("pose-applied");
-            await producers.WaitForReadyAsync(host, arrival, contentReady, cancellationToken);
-            if (rig.Pose != appliedPose) throw new OperationCanceledException("Capture pose was replaced.");
+            await producers.WaitForReadyAsync(host, arrival, () => { ValidateDestination(); return contentReady(); }, cancellationToken);
+            ValidateDestination();
             LogPhase("destination-ready");
             cover.Report(arrival.Total, arrival.Total);
             await cover.Hide();
-            await CaptureBarrier.WaitForPresentedAsync(host, appliedPose, ReadyForShot, cancellationToken);
+            await CaptureBarrier.WaitForPresentedAsync(host, ReadyForShot, cancellationToken);
             LogPhase("scene-presented");
         }
         finally { arrival.ProgressChanged -= ReportProgress; }
         cancellationToken.ThrowIfCancellationRequested();
-        if (shot.Options.Capture.MovieFrames is not null)
-        {
-            await RecordMovieAsync(shot.Options.Capture, appliedPose, ReadyForShot, destination, cancellationToken);
-            LogPhase("movie-complete");
-        }
-        else
-        {
-            _path = Path.Combine(destination, shot.Name + ".png");
-            await SaveFrameAsync(_path, hideUi: false, unique: false, cancellationToken, ReadyForShot);
-            LogPhase("png-written");
-            GD.Print($"[{_diagnosticId}][phase=capture] pose={shot.Pose} {_path}");
-        }
+        await CaptureOutputAsync(shot, destination, ReadyForShot, ValidateDestination, LogPhase, cancellationToken);
 
         bool ReadyForShot()
         {
-            cancellationToken.ThrowIfCancellationRequested();
-            if (rig.Pose != appliedPose || !ReferenceEquals(runtime.Arrival, arrival))
-                throw new OperationCanceledException("Capture destination was replaced.");
-            if (runtime.Failure is { } failure)
-                System.Runtime.ExceptionServices.ExceptionDispatchInfo.Capture(failure).Throw();
-            return contentReady() && producers.IsReady(appliedPose);
+            var livePose = ValidateDestination();
+            return contentReady() && arrival.Done.IsCompletedSuccessfully && producers.IsReady(livePose);
+        }
+
+        Pose ValidateDestination()
+        {
+            if (!host.IsInsideTree()) throw new OperationCanceledException("Capture stage left the tree.");
+            return capture!.ReadCurrentPose(maps.Context, world.Instance, rig, runtime, cancellationToken);
         }
 
         void LogPhase(string stage)
@@ -323,14 +369,33 @@ public partial class GameCaptureNode : Node, IGameCapture, IRegistryExitParticip
         }
     }
 
-    private async Task RecordMovieAsync(CaptureBootOptions options, Pose pose, Func<bool> ready,
+    private async Task CaptureOutputAsync(FixedShot shot, string destination, Func<bool> ready,
+        Func<Pose> validateDestination, Action<string> logPhase, CancellationToken cancellationToken)
+    {
+        if (shot.Options.Capture.MovieFrames is not null)
+        {
+            await RecordMovieAsync(shot.Options.Capture, ready, destination, cancellationToken);
+            validateDestination();
+            logPhase("movie-complete");
+        }
+        else
+        {
+            _path = Path.Combine(destination, shot.Name + ".png");
+            await SaveFrameAsync(_path, hideUi: false, unique: false, cancellationToken, ready);
+            validateDestination();
+            logPhase("png-written");
+            GD.Print($"[{_diagnosticId}][phase=capture] pose={shot.Pose} {_path}");
+        }
+    }
+
+    private async Task RecordMovieAsync(CaptureBootOptions options, Func<bool> ready,
         string destination, CancellationToken cancellationToken)
     {
         HideUi(hideUi: false);
         try
         {
             await WaitForFrameAsync(ready, cancellationToken);
-            var segment = await MovieCapture.RunAsync(this, options, pose, ready, _diagnosticId, cancellationToken);
+            var segment = await MovieCapture.RunAsync(this, options, ready, _diagnosticId, cancellationToken);
             // Godot retains its native prelude and tail. Only this interval belongs to the requested clip.
             var metadata = JsonSerializer.SerializeToUtf8Bytes(segment, ContractJson.Options);
             await File.WriteAllBytesAsync(Path.Combine(destination, "movie-segment.json"), metadata, cancellationToken);
@@ -348,14 +413,12 @@ public partial class GameCaptureNode : Node, IGameCapture, IRegistryExitParticip
     }
 
     private static Pose ApplyPose(Pose pose, BootRunOptions options, IMapContext context,
-        ICameraRig rig, Action syncCamera, ViewContentReadiness producers)
+        ICameraRig rig, Action syncCamera)
     {
         if (AppBoot.FixedShots.Count > 0) CaptureWorldState.Start(options, context.Descriptor);
         rig.SetPose(pose);
         syncCamera();
-        var appliedPose = rig.Pose;
-        producers.PrepareCapture(appliedPose);
-        return appliedPose;
+        return rig.Pose;
     }
 
     private static IMapArrival BeginArrival(IMapContext context, Pose appliedPose, IMapRuntime runtime, ICameraRig rig)

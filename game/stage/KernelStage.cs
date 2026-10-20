@@ -39,6 +39,7 @@ public partial class KernelStage : Node3D, IAppExit, IStageGateHost
     private Task? _shutdownTask;
     private readonly CancellationTokenSource _captureLifetime = new();
     private ViewContentReadiness? _contentReadiness;
+    private GameCaptureNode.CaptureDestination? _startupCapture;
     private IAppLoadingLease? _failureLoading;
     private IFlowLease? _failureFlow;
     private readonly StageGateDriver _gate;
@@ -248,11 +249,13 @@ public partial class KernelStage : Node3D, IAppExit, IStageGateHost
         if (options.Capture.Gate is not ("save-close" or "save-resume")) startupFlow.Dispose();
         await appBoot.PrepareWorld();
         CheckStartupActive();
-        await BootWorldOverrides.ApplyView(options, registry, appBoot.WillRestoreWorld, showTitle);
+        var poseId = await BootWorldOverrides.ApplyView(options, registry, appBoot.WillRestoreWorld, showTitle);
         CheckStartupActive();
         _view!.Sync();
         var rig = registry.Get<ICameraRig>();
         var arrival = _mapRuntime!.Arrive(rig.Pose, rig.Mode);
+        _startupCapture = poseId is null ? null : new GameCaptureNode.CaptureDestination(
+            poseId, rig.Mode, maps.Context!, registry.Get<IWorldState>().Instance, arrival, rig.Pose);
         await Initialize(BootPhase.BeforeReveal);
         _contentReadiness = ViewContentReadiness.Capture(this);
         Phase = "warm-final-view";
@@ -394,10 +397,13 @@ public partial class KernelStage : Node3D, IAppExit, IStageGateHost
         catch (Exception error) { DiagnosticLog.Error("[WP-01][phase=exit-tree]", error); }
     }
 
-    public Task FinishQuit()
+    public Task FinishQuit() => BeginShutdownAndQuit(0);
+
+    private Task BeginShutdownAndQuit(int exitCode)
     {
         if (_shutdownTask is not null) return _shutdownTask;
         var completion = new TaskCompletionSource();
+        // Publish before cancellation or shutdown can reenter this boundary.
         _shutdownTask = completion.Task;
         _closing = true;
         _ = Finish();
@@ -405,7 +411,12 @@ public partial class KernelStage : Node3D, IAppExit, IStageGateHost
 
         async Task Finish()
         {
-            try { await ShutdownAndQuit(0); completion.TrySetResult(); }
+            try
+            {
+                _captureLifetime.Cancel();
+                await ShutdownAndQuit(exitCode);
+                completion.TrySetResult();
+            }
             catch (Exception error) { completion.TrySetException(error); }
         }
     }
@@ -423,7 +434,7 @@ public partial class KernelStage : Node3D, IAppExit, IStageGateHost
         _gate.TraceClose("shutdown-complete");
         foreach (var error in failures) DiagnosticLog.Error("[WP-01][phase=shutdown]", error);
         _gate.ReportShutdown();
-        GetTree().Quit(failures.Count == 0 ? exitCode : 2);
+        GetTree().Quit(_failed || failures.Count > 0 ? 2 : exitCode);
     }
     private void Fail([FailureHandler("ENG-ARCH")] Exception error)
     {
@@ -435,7 +446,13 @@ public partial class KernelStage : Node3D, IAppExit, IStageGateHost
         DiagnosticLog.Error($"[WP-01][phase={Phase}]", error);
         HoldFailure();
         // Automated runs must never turn an incomplete startup or a failed screenshot into success.
-        if (_cpuCommand || AppBoot.Options.CaptureMode || !AppBoot.Options.Title) GetTree().Quit(2);
+        if (_cpuCommand || AppBoot.Options.CaptureMode || !AppBoot.Options.Title) _ = ObserveFailureShutdown();
+
+        async Task ObserveFailureShutdown()
+        {
+            try { await BeginShutdownAndQuit(2); }
+            catch (Exception shutdownError) { DiagnosticLog.Error("[WP-01][phase=failure-shutdown]", shutdownError); }
+        }
     }
 
     private void HoldFailure()
@@ -458,6 +475,7 @@ public partial class KernelStage : Node3D, IAppExit, IStageGateHost
     IAppFlow IStageGateHost.Flow => _flow!;
     IMapRuntime IStageGateHost.MapRuntime => _mapRuntime!;
     ViewContentReadiness IStageGateHost.Readiness => _contentReadiness!;
+    GameCaptureNode.CaptureDestination? IStageGateHost.StartupCapture => _startupCapture;
     CancellationToken IStageGateHost.Lifetime => _captureLifetime.Token;
     bool IStageGateHost.Ready => _ready;
     bool IStageGateHost.Closing => _closing;

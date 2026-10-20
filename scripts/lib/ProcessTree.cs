@@ -14,6 +14,7 @@ namespace Uestc.Tools
     {
         private IntPtr job;
         private IntPtr process;
+        private IntPtr desktop;
         private readonly StringBuilder stdout = new StringBuilder();
         private readonly StringBuilder stderr = new StringBuilder();
         private Task stdoutTask;
@@ -35,13 +36,20 @@ namespace Uestc.Tools
             }
         }
 
-        public ProcessTree(string executable, string arguments, string directory, bool visible, Encoding encoding)
+        public ProcessTree(string executable, string arguments, string directory, bool visible, Encoding encoding, bool isolatedDesktop)
         {
             IntPtr outputRead = IntPtr.Zero, outputWrite = IntPtr.Zero;
             IntPtr errorRead = IntPtr.Zero, errorWrite = IntPtr.Zero, input = IntPtr.Zero;
             ProcessInformation started = new ProcessInformation();
             try
             {
+                string desktopName = null;
+                if (isolatedDesktop)
+                {
+                    desktopName = "UESTC_Capture_" + Guid.NewGuid().ToString("N");
+                    desktop = CreateDesktop(desktopName, null, IntPtr.Zero, 0, 0x01FF, IntPtr.Zero);
+                    Check(desktop != IntPtr.Zero);
+                }
                 job = CreateJobObject(IntPtr.Zero, null);
                 Check(job != IntPtr.Zero);
                 ExtendedLimits limits = new ExtendedLimits();
@@ -58,6 +66,7 @@ namespace Uestc.Tools
                 Check(input != new IntPtr(-1));
                 StartupInfo startup = new StartupInfo();
                 startup.Size = Marshal.SizeOf(typeof(StartupInfo));
+                startup.Desktop = desktopName;
                 startup.Flags = 0x100; // STARTF_USESTDHANDLES
                 startup.Input = input; startup.Output = outputWrite; startup.Error = errorWrite;
                 uint flags = 4; // CREATE_SUSPENDED
@@ -74,8 +83,15 @@ namespace Uestc.Tools
             catch
             {
                 // Also terminate a suspended process if assignment itself failed.
-                if (process != IntPtr.Zero) { TerminateProcess(process, 1); }
-                Dispose();
+                try
+                {
+                    if (process != IntPtr.Zero)
+                    {
+                        Check(TerminateProcess(process, 1));
+                        Check(WaitForSingleObject(process, 5000) == 0);
+                    }
+                }
+                finally { Dispose(); }
                 throw;
             }
             finally
@@ -136,7 +152,15 @@ namespace Uestc.Tools
         public void Dispose()
         {
             try { Finish(); }
-            finally { Close(ref process); }
+            finally
+            {
+                Close(ref process);
+                if (desktop != IntPtr.Zero)
+                {
+                    IntPtr owned = desktop; desktop = IntPtr.Zero;
+                    Check(CloseDesktop(owned));
+                }
+            }
         }
 
         private static void Check(bool success) { if (!success) { throw new Win32Exception(Marshal.GetLastWin32Error()); } }
@@ -184,5 +208,7 @@ namespace Uestc.Tools
         [DllImport("kernel32.dll", SetLastError = true)] private static extern uint WaitForSingleObject(IntPtr handle, uint milliseconds);
         [DllImport("kernel32.dll", SetLastError = true)] private static extern bool TerminateProcess(IntPtr process, uint exitCode);
         [DllImport("kernel32.dll")] private static extern bool CloseHandle(IntPtr handle);
+        [DllImport("user32.dll", CharSet = CharSet.Unicode, SetLastError = true)] private static extern IntPtr CreateDesktop(string name, string device, IntPtr mode, uint flags, uint access, IntPtr attributes);
+        [DllImport("user32.dll", SetLastError = true)] private static extern bool CloseDesktop(IntPtr desktop);
     }
 }

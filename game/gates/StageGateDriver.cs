@@ -4,6 +4,7 @@ using Campus.Contracts.Atlas;
 using Campus.Contracts.Maps;
 using Campus.Kernel.Boot;
 using Campus.Kernel.Frame;
+using Campus.Kernel.Inspect;
 using Godot;
 using AppBoot = Campus.Kernel.Boot.Boot;
 using KernelServices = Campus.Kernel.Registry.Kernel;
@@ -17,6 +18,7 @@ public interface IStageGateHost
     IAppFlow Flow { get; }
     IMapRuntime MapRuntime { get; }
     ViewContentReadiness Readiness { get; }
+    GameCaptureNode.CaptureDestination? StartupCapture { get; }
     CancellationToken Lifetime { get; }
     bool Ready { get; }
     bool Closing { get; }

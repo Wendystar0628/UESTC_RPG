@@ -35,6 +35,7 @@ public partial class MapHud : Node, IMapAware, IBootParticipant
     private bool _uiEnabled = true;
     private bool _night;
     private bool _pure;
+    private bool _galleryPending;
 
     // 两个控制共用的状态与依赖
     internal MapHudServices Services => _services!;
@@ -145,6 +146,11 @@ public partial class MapHud : Node, IMapAware, IBootParticipant
         ApplyNight(_services!.Theme.Dark);
         _base!.Poll(_map?.Id);
         var playing = _services!.Flow.IsPlaying;
+        if (_galleryPending && playing)
+        {
+            _galleryPending = false;
+            _atlasCtl.Open(AtlasTab.Layers);
+        }
         _atlasCtl.Frame(dt, playing);
         _minimapCtl.Frame(dt, playing, hidden: !_uiEnabled || _pure || MinimapOff || _atlasCtl.IsOpen || _map is null);
     }
@@ -168,6 +174,7 @@ public partial class MapHud : Node, IMapAware, IBootParticipant
         if (phase != BootPhase.BeforeMap) return Task.CompletedTask;
         var args = context.Run.Ui;
         _uiEnabled = args.Visible != false;
+        _galleryPending = args.Gallery == "atlas";
         Instant = args.Motion == MotionLevel.Instant;   // 界面截图用 instant（ENG-GATES）
         return Task.CompletedTask;
     }

@@ -78,7 +78,7 @@ function Invoke-UESTCProcess {
         [Parameter(Mandatory)][string]$WorkingDirectory, [string]$Log = '',
         [int]$TimeoutSeconds = 1800, [switch]$AllowFailure, [switch]$Visible,
         [int[]]$SuccessExitCodes = @(0), [Text.Encoding]$TextEncoding = $null,
-        [scriptblock]$ObserveOutput = $null)
+        [scriptblock]$ObserveOutput = $null, [switch]$IsolatedDesktop)
     if ($Log) { $null = [IO.Directory]::CreateDirectory((Split-Path $Log -Parent)) }
     if (-not ('Uestc.Tools.ProcessTree' -as [type])) { Add-Type -Path (Join-Path $PSScriptRoot 'ProcessTree.cs') }
     $path = @(Get-Command $Executable -CommandType Application -ErrorAction Stop)[0].Source
@@ -86,7 +86,7 @@ function Invoke-UESTCProcess {
     if (-not $TextEncoding) { $TextEncoding = [Console]::OutputEncoding }
     $process = $null
     try {
-        $process = New-Object Uestc.Tools.ProcessTree($path, $commandLine, $WorkingDirectory, [bool]$Visible, $TextEncoding)
+        $process = New-Object Uestc.Tools.ProcessTree($path, $commandLine, $WorkingDirectory, [bool]$Visible, $TextEncoding, [bool]$IsolatedDesktop)
         $deadline = [DateTime]::UtcNow.AddSeconds($TimeoutSeconds)
         while (-not $process.HasExited) {
             if ([DateTime]::UtcNow -ge $deadline) { throw "Process timeout: $Executable" }

@@ -10,12 +10,11 @@ namespace Campus.Kernel.Inspect;
 public static class CaptureBarrier
 {
     /// <summary>Draw the destination after the loading screen has disappeared.</summary>
-    public static async Task WaitForPresentedAsync(Node host, Pose pose, Func<bool> contentReady,
+    public static async Task WaitForPresentedAsync(Node host, Func<bool> contentReady,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(host);
         ArgumentNullException.ThrowIfNull(contentReady);
-        var rig = KernelServices.Get<ICameraRig>();
         var loading = KernelServices.Get<IAppLoadingPresentation>();
         var world = KernelServices.Get<IWorldState>();
         var weather = KernelServices.Get<IWeatherProcess>();
@@ -35,7 +34,6 @@ public static class CaptureBarrier
         {
             cancellationToken.ThrowIfCancellationRequested();
             if (!host.IsInsideTree()) throw new OperationCanceledException("Capture stage left the tree.");
-            if (rig.Pose != pose) throw new OperationCanceledException("Capture pose was replaced.");
             content = contentReady();
             loadingActive = loading.Active;
             return content && !loadingActive && !world.Scrubbing && world.Transition == WorldTransition.None && !weather.Transitioning;

@@ -24,7 +24,7 @@ internal static class MovieCapture
         return fps;
     }
 
-    internal static async Task<Segment> RunAsync(Node host, CaptureBootOptions options, Pose pose,
+    internal static async Task<Segment> RunAsync(Node host, CaptureBootOptions options,
         Func<bool> contentReady, string diagnosticId, CancellationToken cancellationToken)
     {
         var fps = RequireMovieMaker();
@@ -33,13 +33,10 @@ internal static class MovieCapture
             ? Path.GetFileNameWithoutExtension(nativePath) + "%08d.png" : Path.GetFileName(nativePath);
         var limit = options.MovieFrames ?? throw new ArgumentException("Movie capture requires --movie-frames.");
         var tree = host.GetTree();
-        var rig = KernelServices.Get<ICameraRig>();
-        var runtime = KernelServices.Get<IMapRuntime>();
         var stream = KernelServices.Get<IMapStreamState>();
         var loading = KernelServices.Get<IAppLoadingPresentation>();
         var control = KernelServices.Get<IWorldControl>();
         var world = KernelServices.Get<IWorldState>();
-        var arrival = runtime.Arrival ?? throw new InvalidOperationException("Movie capture requires a prepared destination.");
         var completion = new TaskCompletionSource<Segment>();
         ulong? firstFrame = null;
         var nextEvent = 0;
@@ -64,6 +61,9 @@ internal static class MovieCapture
             try
             {
                 cancellationToken.ThrowIfCancellationRequested();
+                if (!host.IsInsideTree()) throw new OperationCanceledException("Movie capture stage left the tree.");
+                if (!contentReady() || !stream.DestinationReady || loading.Active)
+                    throw new InvalidOperationException("Movie frame destination is not ready.");
                 var engineFrame = Engine.GetProcessFrames();
                 if (firstFrame is { } first && engineFrame - first >= (ulong)limit)
                 {
@@ -71,10 +71,6 @@ internal static class MovieCapture
                     completion.TrySetResult(new(first, limit, fps, pattern, nativePath));
                     return;
                 }
-                if (!host.IsInsideTree() || rig.Pose != pose || !ReferenceEquals(runtime.Arrival, arrival))
-                    throw new OperationCanceledException("Movie capture destination was replaced.");
-                if (!arrival.Done.IsCompletedSuccessfully || !stream.DestinationReady || loading.Active || !contentReady())
-                    throw new InvalidOperationException("Movie frame destination is not ready.");
                 if (!RenderingServer.RenderLoopEnabled)
                     throw new InvalidOperationException("Movie capture requires the production render loop.");
                 if (firstFrame is null)

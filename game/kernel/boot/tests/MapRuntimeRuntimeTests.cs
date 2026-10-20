@@ -3,6 +3,7 @@ using Campus.Contracts.Maps;
 using Campus.Contracts.Startup;
 using Campus.Kernel.Boot;
 using Campus.Kernel.Frame;
+using Campus.Kernel.Inspect;
 using GdUnit4;
 using static GdUnit4.Assertions;
 using Godot;
@@ -15,6 +16,68 @@ namespace Campus.Tests;
 [TestSuite]
 public sealed class MapRuntimeRuntimeTests
 {
+    [TestCase, TestCategory(TestReason.Regression)]
+    [RequireGodotRuntime]
+    public void CaptureKeepsArrivalIdentityWhileWalkingViewChanges()
+    {
+        var context = new TestMapContext(BackdropInputsTests.Descriptor());
+        using var fixture = new MapRuntimeFixture(context: context);
+        var runtime = fixture.Runtime;
+        var rig = fixture.Camera;
+        var initial = rig.Pose;
+        fixture.Stream.ResidentReady = fixture.Stream.DestinationReady = true;
+        fixture.Collision.CollisionReady = fixture.Producer.ContentReady = true;
+        runtime._Process(0);
+        var arrival = runtime.Arrive(initial, ViewMode.Walk);
+        rig.Mode = ViewMode.Walk;
+        runtime._Process(0);
+        AssertThat(arrival.Done.IsCompletedSuccessfully).IsTrue();
+        var capture = new GameCaptureNode.CaptureDestination(nameof(CaptureKeepsArrivalIdentityWhileWalkingViewChanges),
+            rig.Mode, context, 1, arrival, initial);
+        Pose Read(IMapContext? current = null, long instance = 1, CancellationToken token = default) =>
+            capture.ReadCurrentPose(current ?? context, instance, rig, runtime, token);
+        void Cancelled(Action read)
+        {
+            try { read(); throw new InvalidOperationException("A replaced capture remained current."); }
+            catch (OperationCanceledException) { }
+        }
+        var live = initial with { Position = initial.Position + N.Vector3.UnitY };
+        rig.SetPose(live);
+        fixture.Producer.RequiredPose = live;
+        var producers = ViewContentReadiness.Capture(fixture.Producer);
+        AssertThat(Read() == live && producers.IsReady(Read()) && !producers.IsReady(initial)).IsTrue();
+        Cancelled(() => Read(new TestMapContext(context.Descriptor)));
+        Cancelled(() => Read(instance: capture.WorldInstance + 1));
+        using var cancellation = new CancellationTokenSource();
+        cancellation.Cancel();
+        Cancelled(() => Read(token: cancellation.Token));
+        rig.Mode = ViewMode.Fly;
+        Cancelled(() => Read());
+        capture = capture with { Mode = ViewMode.Fly };
+        Cancelled(() => Read());
+        rig.SetPose(initial);
+        AssertThat(Read() == initial).IsTrue();
+        rig.Mode = ViewMode.Walk;
+        capture = capture with { Mode = ViewMode.Walk };
+        fixture.Producer.RequiredPose = null;
+        var replacement = runtime.Arrive(initial, ViewMode.Walk);
+        AssertThat(arrival.Done.IsCompletedSuccessfully && replacement.Destination == arrival.Destination).IsTrue();
+        Cancelled(() => Read());
+        arrival.Cancel();
+        runtime._Process(0);
+        AssertThat(replacement.Done.IsCompletedSuccessfully).IsTrue();
+        var pending = runtime.Arrive(initial, ViewMode.Walk);
+        capture = capture with { Arrival = pending };
+        pending.Cancel();
+        Cancelled(() => Read());
+        capture = capture with { Arrival = runtime.Arrive(initial, ViewMode.Walk) };
+        var failure = new InvalidDataException("capture producer failure");
+        fixture.Stream.Failure = failure;
+        runtime._Process(0);
+        try { Read(); throw new InvalidOperationException("A producer failure became capture success."); }
+        catch (InvalidDataException actual) { AssertThat(ReferenceEquals(actual, failure)).IsTrue(); }
+    }
+
     [TestCase]
     [TestCategory(TestReason.Regression)]
     [TestCategory("NativeRender")]
@@ -227,6 +290,7 @@ public sealed class MapRuntimeRuntimeTests
 internal sealed partial class MapRuntimeReadinessProducer : Node, IViewContentReadiness
 {
     public bool ContentReady { get; set; }
-    public bool IsReady(Pose pose) => ContentReady;
+    public Pose? RequiredPose { get; set; }
+    public bool IsReady(Pose pose) => ContentReady && (RequiredPose is null || pose == RequiredPose);
     public Exception? Failure { get; set; }
 }

@@ -51,10 +51,10 @@ public static class BootWorldOverrides
     }
 
     /// <summary>Only view/flow overrides remain after PrepareWorld. Never Freeze, Reset or reseason a live process here.</summary>
-    public static async Task ApplyView(BootRunOptions args, ServiceRegistry services,
+    public static async Task<string?> ApplyView(BootRunOptions args, ServiceRegistry services,
         bool restoringWorld, bool showTitle)
     {
-        if (restoringWorld || args.HasLoad || showTitle && !args.CaptureMode) return;
+        if (restoringWorld || args.HasLoad || showTitle && !args.CaptureMode) return null;
         var options = args.World;
         var context = services.Get<IMapService>().Context ?? throw new InvalidOperationException("View overrides require a loaded map.");
         var control = services.Get<IWorldControl>();
@@ -75,6 +75,7 @@ public static class BootWorldOverrides
         {
             await services.Get<IViewControl>().SetMode(mode, ModeSwitchVia.Key);
         }
+        return poseId;
     }
 
     public static async Task ApplyQuality(BootRunOptions args, IQualityService quality)

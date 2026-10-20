@@ -194,6 +194,7 @@ public partial class HudRoot : CanvasLayer, IBootParticipant, IAppLoadingPresent
             case "saves": _pages.OpenSaves(fromTitle: true); break;
             case "title": _residents.Clean = _galleryTitle = true; _pages.Title.Open(); break;
             case "hud": _dependencies.InputRouter.SetInterfaceMode(true); _residents.ResetIdle(); break;
+            case "atlas": break; // The map HUD opens its own gallery after entering Playing.
             case "layout": Widgets.UiLayoutGallery.Create(_view.Kit, _view.PageHost); break;
             case "census": Census(3); break;
             default: throw new ArgumentException($"Unknown --ui-gallery page: {page}");
