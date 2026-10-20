@@ -1,10 +1,10 @@
-# Gate entry point: select gates from the work package and changes, run them in order, and report passes, failures, or incomplete results.
-# Output: output/build/gates/, output/build/test-record.tsv, build/windows/ (G7)
-# Usage: powershell scripts\gate.ps1 -Wp WP-xx [-Only G1,G2,... [-Full] | -Smoke | -Full] [-Plan] [-Paths <paths...>] [-BaseRef <base-ref>] [-Map qingshuihe] [-Frames 300]
-#   Default: G1, G2 and G4 for affected modules, plus affected startup, walking, and save core checks (core checks drive the production stage).
-#   -Plan is read-only and lists planned gates; -Full requests all 12 retained gates, with unfinished gates returning NotImplemented.
-#   -Full can combine with -Only to limit gates; selecting G2 runs the full suite (including Slow) and NativeRender.
-#   Exit codes: 0 all implemented gates in the requested scope passed; 1 failures; 2 scope incomplete.
+﻿# 门禁总入口：按工作包和改动选出要跑的门禁，依次执行并汇报通过、失败或未完成。
+# 产出：output/build/gates/、output/build/test-record.tsv、build/windows/（G7）
+# 用法：powershell scripts\gate.ps1 -Wp WP-xx [-Only G1,G2,... [-Full] | -Smoke | -Full] [-Plan] [-Paths <路径...>] [-BaseRef <基线>] [-Map qingshuihe] [-Frames 300]
+#   默认：G1、受影响模块的 G2 和 G4，再加受影响的启动、行走、存档核心专项（核心专项驱动正式生产舞台）
+#   -Plan 只读，只列出会跑什么；-Full 请求保留的 12 道门，没做完的门返回 NotImplemented
+#   -Full 可与 -Only 组合限定门禁；选中 G2 时跑全量（含 Slow）及 NativeRender
+#   退出码：0 请求范围内已实现的都通过；1 有失败；2 范围未完成
 [CmdletBinding()]
 param([Parameter(Mandatory)][ValidatePattern('^WP-\d{2}[a-z]?$')][string]$Wp,
     [string[]]$Only = @(), [switch]$Smoke, [switch]$Full,
@@ -411,7 +411,7 @@ foreach ($id in $selected) {
                 }
                 if (-not @($g2Selection | Where-Object { $_.Selected }).Count) {
                     $status = 'NotRun'
-                    $notes += 'No applicable tests; not run'
+                    $notes += '无适用测试、未运行'
                 } elseif ($runCount -eq 0) { $status = 'Incomplete' }
                 if ($Full) {
                     Write-UESTCCutCandidates $testRecordPath

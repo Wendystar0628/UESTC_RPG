@@ -1,6 +1,6 @@
-# Source and ownership checks: list changed files, validate ownership and UIDs against ownership.json, and check new-code placement, naming, and source boundaries.
-# Output: none (read-only source and ownership checks return in-memory results).
-# Usage: dot-source from scripts\gate.ps1 (. scripts\gates\check-source.ps1), then call Test-UESTCOwnership, Test-UESTCNewCodeFiles, Test-UESTCSourceBoundaries, etc.; do not run directly.
+﻿# 源码与归属检查函数库：列出改动文件，按 ownership.json 核对归属与 UID，并检查新增代码放置、命名及源码边界规则。
+# 产出：无（只读检查源码与归属并返回内存结果）。
+# 用法：由 scripts\gate.ps1 点引用（. scripts\gates\check-source.ps1）后调用 Test-UESTCOwnership、Test-UESTCNewCodeFiles、Test-UESTCSourceBoundaries 等函数，不单独运行
 function Get-UESTCFiles {
     param([string]$Root)
     Get-UESTCGitPaths $Root @('ls-files', '-z', '--cached', '--others', '--exclude-standard') | Sort-Object -Unique
@@ -33,13 +33,20 @@ function Test-UESTCChangedText {
         if (-not (Test-Path -LiteralPath $absolute -PathType Leaf)) { continue }
         $checked++
         $bytes = [IO.File]::ReadAllBytes($absolute)
-        if ($bytes.Length -ge 3 -and $bytes[0] -eq 239 -and $bytes[1] -eq 187 -and $bytes[2] -eq 191) {
-            $failures.Add("${path}: UTF-8 BOM is not allowed")
-        }
+        $hasBom = $bytes.Length -ge 3 -and $bytes[0] -eq 239 -and $bytes[1] -eq 187 -and $bytes[2] -eq 191
         try { $text = $utf8.GetString($bytes) }
         catch [Text.DecoderFallbackException] { $failures.Add("${path}: invalid UTF-8"); continue }
+        # Strip exactly one actual UTF-8 BOM before classifying the body.
+        if ($hasBom) { $text = $text.Substring(1) }
+        $hasNonAscii = $text -match '[^\x00-\x7f]'
+        $requiresBom = $path -match '\.(ps1|psm1|psd1)$' -and $hasNonAscii
+        if ($requiresBom -and -not $hasBom) {
+            $failures.Add("${path}: non-ASCII PowerShell text requires UTF-8 BOM")
+        } elseif ($hasBom -and -not $requiresBom) {
+            $failures.Add("${path}: UTF-8 BOM is not allowed")
+        }
         if ($text.Contains([string][char]0xfffd)) { $failures.Add("${path}: literal Unicode replacement character") }
-        if ($path -notin $basePaths -or $text -notmatch '[^\x00-\x7f]') { continue }
+        if ($path -notin $basePaths -or -not $hasNonAscii) { continue }
         $before = (Invoke-UESTCGit $Root @('show', "${base}:$path")).StdOut
         # Existing Chinese in this same file supplies evidence; ordinary printable Chinese
         # and private-use icon characters are never classified from a character blacklist.
