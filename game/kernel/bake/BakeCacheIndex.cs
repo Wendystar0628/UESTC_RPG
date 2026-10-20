@@ -30,7 +30,7 @@ internal static class BakeCacheIndex
         return count;
     }
 
-    private static string DirectoryPath(string indexPath) => indexPath[..^".tbin".Length] + ".parts";
+    internal static string DirectoryPath(string indexPath) => indexPath[..^".tbin".Length] + ".parts";
     internal static string PartPath(string indexPath, int index) => Path.Combine(DirectoryPath(indexPath),
         index.ToString("D10", CultureInfo.InvariantCulture) + ".tbin");
 

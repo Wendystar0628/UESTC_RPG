@@ -84,6 +84,8 @@ public sealed class BakeDeliveryTests
                 bytes => package.Fits(BakePayloadClass.Tile, bytes, default));
             package.WriteParts(tile.Key, BakePayloadClass.Tile, parts);
             local.WriteParts(tile.Key, BakePayloadClass.Tile, parts);
+            local = new BakeCacheStore(localRoot, "delivery-fixture", packageRoot);
+            local.Initialize();
             var index = Directory.GetFiles(localRoot, "*.tbin", SearchOption.AllDirectories)
                 .Single(path => !Path.GetDirectoryName(path)!.EndsWith(".parts", StringComparison.Ordinal));
             foreach (var path in BakeCacheIndex.Files(index))
@@ -102,7 +104,11 @@ public sealed class BakeDeliveryTests
             local.WriteParts(tile.Key, BakePayloadClass.Tile, Encode(empty));
             if (BakeCacheIndex.Files(index).Count() != 1 || Read()?.Stats != empty.Stats)
                 throw new InvalidOperationException("A smaller replacement retained obsolete parts or old geometry.");
+            RequireBytes();
+            local.WriteParts(tile.Key, BakePayloadClass.Tile, Encode(empty));
+            RequireBytes();
             local.Clear();
+            if (local.CacheBytes != 0) throw new InvalidOperationException("Clearing retained counted cache bytes.");
             if (Directory.GetFiles(localRoot, "*.tbin", SearchOption.AllDirectories).Length != 0 || Read()?.Stats != tile.Stats)
                 throw new InvalidOperationException("Clearing missed physical parts or damaged the packaged candidate.");
             local.Stop();
@@ -113,6 +119,12 @@ public sealed class BakeDeliveryTests
             {
                 if (Read()?.Stats != tile.Stats || File.Exists(index) || BakeCacheIndex.Files(index).Any())
                     throw new InvalidOperationException("An incomplete local group became ready or survived candidate rejection.");
+            }
+            void RequireBytes()
+            {
+                var bytes = Directory.GetFiles(localRoot, "*.tbin", SearchOption.AllDirectories).Sum(path => new FileInfo(path).Length);
+                if (local.CacheBytes != bytes)
+                    throw new InvalidOperationException("A reopened cache lost its exact byte total after replacement or removal.");
             }
         }
         finally

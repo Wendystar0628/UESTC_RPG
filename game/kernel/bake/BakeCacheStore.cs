@@ -31,11 +31,13 @@ public sealed class BakeCacheStore
     private readonly string _root;
     private readonly string? _packagedRoot;
     private readonly string _version;
-    private readonly object _sync = new();
+    // Readers keep a whole logical group stable; mutation and native shutdown wait for them.
+    private readonly ReaderWriterLockSlim _sync = new();
     private long _bytes;
-    private bool _initialized;
+    private bool _bytesKnown;
+    private volatile bool _initialized;
     private bool _packagedAvailable;
-    private bool _stopped;
+    private volatile bool _stopped;
     private static long _temporarySequence;
 
     public BakeCacheStore(string root, string? version = null, string? packagedRoot = null)
@@ -52,12 +54,35 @@ public sealed class BakeCacheStore
         _version = (version ?? BuildInfo.Version) + "/" + BakeOptions.Abi;
     }
 
-    public long CacheBytes => Interlocked.Read(ref _bytes);
+    public long CacheBytes
+    {
+        get
+        {
+            Initialize();
+            _sync.EnterWriteLock();
+            try
+            {
+                ThrowIfStopped();
+                // This total is only used by the storage settings; cache reads do not need an inventory.
+                if (!_bytesKnown)
+                {
+                    _bytes = SafeFiles(_root).Where(path => path.EndsWith(".tbin", StringComparison.Ordinal))
+                        .Sum(path => new FileInfo(path).Length);
+                    _bytesKnown = true;
+                }
+                return _bytes;
+            }
+            finally { _sync.ExitWriteLock(); }
+        }
+    }
 
     /// <summary>Version changes discard player products before a worker can read one.</summary>
     public void Initialize()
     {
-        lock (_sync)
+        ThrowIfStopped();
+        if (_initialized) return;
+        _sync.EnterWriteLock();
+        try
         {
             ThrowIfStopped();
             if (_initialized) return;
@@ -68,9 +93,8 @@ public sealed class BakeCacheStore
             {
                 DeleteProducts();
                 AtomicWrite(marker, System.Text.Encoding.UTF8.GetBytes(_version));
+                _bytesKnown = true;
             }
-            _bytes = SafeFiles(_root).Where(path => path.EndsWith(".tbin", StringComparison.Ordinal))
-                .Sum(path => new FileInfo(path).Length);
             if (_packagedRoot is not null && Directory.Exists(_packagedRoot) && !IsLink(_packagedRoot))
             {
                 var packagedMarker = Path.Combine(_packagedRoot, "cache.version");
@@ -79,6 +103,7 @@ public sealed class BakeCacheStore
             }
             _initialized = true;
         }
+        finally { _sync.ExitWriteLock(); }
     }
 
     public T? TryRead<T>(BakeKey key, BakePayloadClass payload, Func<byte[], T> decode,
@@ -117,7 +142,6 @@ public sealed class BakeCacheStore
     {
         cancellationToken.ThrowIfCancellationRequested();
         var path = FilePath(root, key);
-        if (!File.Exists(path)) return null;
         try
         {
             var parts = new List<byte[]>();
@@ -125,16 +149,19 @@ public sealed class BakeCacheStore
             try
             {
                 ThrowIfStopped();
+                if (!File.Exists(path)) return null;
+                ValidatePath(root, path);
                 var count = BakeCacheIndex.Read(path, payload);
+                ValidateEntry(BakeCacheIndex.DirectoryPath(path));
                 for (var index = 0; index < count; index++)
                 {
                     cancellationToken.ThrowIfCancellationRequested();
                     var partPath = BakeCacheIndex.PartPath(path, index);
-                    ValidatePath(root, partPath);
+                    ValidateEntry(partPath);
                     parts.Add(DecodeFile(ReadBounded(partPath, MaximumFile(payload)), MaximumPayload(payload), key));
                 }
             }
-            finally { Monitor.Exit(_sync); }
+            finally { _sync.ExitReadLock(); }
             cancellationToken.ThrowIfCancellationRequested();
             var product = decode(parts) ?? throw new InvalidDataException("Empty cached product.");
             cancellationToken.ThrowIfCancellationRequested();
@@ -159,20 +186,24 @@ public sealed class BakeCacheStore
             ThrowIfStopped();
             return bytes.Length <= MaximumPayload(payload) && EncodeFile(bytes).Length <= MaximumFile(payload);
         }
-        finally { Monitor.Exit(_sync); }
+        finally { _sync.ExitReadLock(); }
     }
 
     internal void WriteParts(BakeKey key, BakePayloadClass payload, IReadOnlyList<byte[]> parts, CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
         Initialize();
-        EnterCache(cancellationToken);
+        EnterCache(cancellationToken, write: true);
         try
         {
             ThrowIfStopped();
             if (parts.Count == 0) throw new InvalidDataException("A cached product needs at least one delivery part.");
             var path = FilePath(_root, key);
+            ValidatePath(_root, path);
             Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+            var partDirectory = BakeCacheIndex.DirectoryPath(path);
+            ValidateEntry(partDirectory);
+            Directory.CreateDirectory(partDirectory);
             for (var index = 0; index < parts.Count; index++)
             {
                 cancellationToken.ThrowIfCancellationRequested();
@@ -184,35 +215,36 @@ public sealed class BakeCacheStore
                 if (encoded.Length > MaximumFile(payload))
                     throw new InvalidDataException($"Compressed bake part {key}: {encoded.Length} bytes exceeds limit {MaximumFile(payload)}.");
                 var partPath = BakeCacheIndex.PartPath(path, index);
-                ValidatePath(_root, partPath);
-                Directory.CreateDirectory(Path.GetDirectoryName(partPath)!);
+                ValidateEntry(partPath);
                 Publish(partPath, encoded, cancellationToken);
             }
             // Publishing the small logical index is the commit point; it never contains geometry buffers.
             Publish(path, BakeCacheIndex.Encode(payload, parts.Count), cancellationToken);
             foreach (var obsolete in BakeCacheIndex.Files(path).Skip(parts.Count)) DeleteProductFile(obsolete);
         }
-        finally { Monitor.Exit(_sync); }
+        finally { _sync.ExitWriteLock(); }
     }
 
     private void Publish(string path, byte[] bytes, CancellationToken cancellationToken)
     {
-        var oldLength = File.Exists(path) ? new FileInfo(path).Length : 0;
+        var oldLength = _bytesKnown && File.Exists(path) ? new FileInfo(path).Length : 0;
         AtomicWrite(path, bytes, cancellationToken);
-        _bytes += bytes.Length - oldLength;
+        if (_bytesKnown) _bytes += bytes.Length - oldLength;
     }
 
     private void DeleteProductFile(string path)
     {
         if (!File.Exists(path)) return;
-        _bytes -= new FileInfo(path).Length;
+        if (_bytesKnown) _bytes -= new FileInfo(path).Length;
         File.Delete(path);
     }
 
     // After this returns, no worker can enter Godot's compression API or publish another cache file.
     internal void Stop()
     {
-        lock (_sync) _stopped = true;
+        _sync.EnterWriteLock();
+        try { _stopped = true; }
+        finally { _sync.ExitWriteLock(); }
     }
 
     private void ThrowIfStopped()
@@ -220,27 +252,34 @@ public sealed class BakeCacheStore
         if (_stopped) throw new OperationCanceledException("Bake cache stopped.");
     }
 
-    private void EnterCache(CancellationToken cancellationToken)
+    private void EnterCache(CancellationToken cancellationToken, bool write = false)
     {
-        if (!cancellationToken.CanBeCanceled) { Monitor.Enter(_sync); return; }
+        if (!cancellationToken.CanBeCanceled)
+        {
+            if (write) _sync.EnterWriteLock(); else _sync.EnterReadLock();
+            return;
+        }
         while (true)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            if (!Monitor.TryEnter(_sync, 50)) continue;
+            if (!(write ? _sync.TryEnterWriteLock(50) : _sync.TryEnterReadLock(50))) continue;
             if (!cancellationToken.IsCancellationRequested) return;
-            Monitor.Exit(_sync);
+            if (write) _sync.ExitWriteLock(); else _sync.ExitReadLock();
             cancellationToken.ThrowIfCancellationRequested();
         }
     }
 
     public void Clear()
     {
-        lock (_sync)
+        _sync.EnterWriteLock();
+        try
         {
             ThrowIfStopped();
             DeleteProducts();
             _bytes = 0;
+            _bytesKnown = true;
         }
+        finally { _sync.ExitWriteLock(); }
     }
 
     private void DeleteProducts()
@@ -252,15 +291,16 @@ public sealed class BakeCacheStore
 
     private void Remove(BakeKey key, CancellationToken cancellationToken = default)
     {
-        EnterCache(cancellationToken);
+        EnterCache(cancellationToken, write: true);
         try
         {
             ThrowIfStopped();
             var path = FilePath(_root, key);
+            ValidatePath(_root, path);
             DeleteProductFile(path);
             foreach (var part in BakeCacheIndex.Files(path)) DeleteProductFile(part);
         }
-        finally { Monitor.Exit(_sync); }
+        finally { _sync.ExitWriteLock(); }
     }
 
     public static byte[] EncodeFile(byte[] payload)
@@ -321,20 +361,23 @@ public sealed class BakeCacheStore
         var detail = key.Detail.Split('/');
         var segments = new List<string> { root, Segment(key.Map.Value), Segment(key.Module) };
         segments.AddRange(detail.Select(Segment));
-        var path = Path.Combine(segments.ToArray()) + ".tbin";
-        ValidatePath(root, path);
-        return path;
+        return Path.Combine(segments.ToArray()) + ".tbin";
     }
 
     private static void ValidatePath(string root, string path)
     {
         for (var current = path; current != root; current = Path.GetDirectoryName(current)!)
-        {
-            // Exists refreshes FileInfo's attributes; reuse them for the reparse check.
-            var entry = new FileInfo(current);
-            if ((entry.Exists || Directory.Exists(current)) && (entry.Attributes & FileAttributes.ReparsePoint) != 0)
-                throw new IOException("Cache paths must not be reparse points.");
-        }
+            ValidateEntry(current);
+    }
+
+    private static void ValidateEntry(string path)
+    {
+        FileAttributes attributes;
+        try { attributes = File.GetAttributes(path); }
+        catch (FileNotFoundException) { return; }
+        catch (DirectoryNotFoundException) { return; }
+        if ((attributes & FileAttributes.ReparsePoint) != 0)
+            throw new IOException("Cache paths must not be reparse points.");
     }
 
     private static string Segment(string value)
