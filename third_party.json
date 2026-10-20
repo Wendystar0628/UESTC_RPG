@@ -1185,6 +1185,24 @@
         "status": "ALLOWLIST_DECLARATION_VERIFIED",
         "scope": "Pinned wheel and bundled notices only; no blanket approval of other artifacts or versions."
       }
+    },
+    {
+      "name": "Apache ECharts",
+      "version": "5.5.1",
+      "kind": "browser-script",
+      "managedBy": "manual",
+      "license": "Apache-2.0",
+      "licenseUrl": "https://github.com/apache/echarts/blob/5.5.1/LICENSE",
+      "source": "https://cdn.jsdelivr.net/npm/echarts@5.5.1/dist/echarts.min.js",
+      "projectUrl": "https://echarts.apache.org/",
+      "sha256": "e84270bd0cd5bdf60fefc26d00c2a391cb2e81f4d26a7a9ee16185a54773a3cf",
+      "bytes": 1030855,
+      "path": "dashboard/vendor/echarts.min.js",
+      "licenseFile": "dashboard/vendor/echarts-LICENSE.txt",
+      "noticeFile": "dashboard/vendor/echarts-NOTICE.txt",
+      "modified": false,
+      "exported": false,
+      "scope": "Author dashboard charts (dashboard/app); loaded by dashboard/index.html, not part of the game build."
     }
   ],
   "nugetClosure": {

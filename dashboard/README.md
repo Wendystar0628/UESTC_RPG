@@ -1,26 +1,30 @@
 # 作者观察台
 
-作者了解项目的唯一入口：一个本地网页，像后台控制面板一样给作者看高层信息——项目结构、各种状态、文档地图、正在运行的模型与脚本、在做的工作、健康检查、需要作者审的东西、给作者的通知。双击 `打开观察台.cmd`（或直接用浏览器打开 `index.html`）即可，不需要服务器。
+作者了解项目的唯一入口：一个本地网页，像后台控制面板一样回答七件事——要不要作者动手、每件活走到哪一步、两个指挥说了什么、谁在用什么模型、钩子脚本文档检查怎么相互作用、哪里不健康、资料在哪。双击 `打开观察台.cmd`（或直接用浏览器打开 `index.html`）即可；"知道了"这类写回操作要求页面由本地服务打开（见 §3.3 `Dash.ack`）。
 
-**只放高层信息**。作者注意力有限：每块先给一句状态和要紧的数字，细节放在点开或展开里；一条信息不长（约 120 字以内）就直接全文，真长的才给"一句话摘要 + 展开全文"，不靠省略号硬截；测得到的数一律写确切值，不报数量级。谁更新、更新什么见 WF-COMMS（作者观察台一节），本文件只讲架构与扩展。
+**只放高层信息**。作者注意力有限：每块先给一句状态和要紧的数字，细节放在点开或展开里；一条信息不长（约 120 字以内）就直接全文，真长的才给"一句话摘要 + 展开全文"，不靠省略号硬截；测得到的数一律写确切值，不报数量级。业务判断都在采集侧，浏览器只画。谁更新、更新什么见 WF-COMMS（作者观察台一节），本文件只讲架构与扩展。
 
 ## 1 目录
 
 ```
 dashboard/
-  index.html            外壳：页眉、导航、页面容器；按 app/manifest.js 加载面板与数据
+  index.html            外壳：页眉、导航、页面容器、右下角提示条；按序加载 vendor/echarts、manifest、core、ui、palette、charts、ui-live
   打开观察台.cmd         启动实时采集（没在跑时）、跑一次项目采集、用默认浏览器打开 index.html
+  vendor/
+    echarts.min.js      Apache ECharts 单文件；许可文本在同目录 echarts-LICENSE.txt、echarts-NOTICE.txt
   app/
-    manifest.js         页面、面板、数据源与刷新间隔的唯一清单；加页面或数据源只改这里
-    core.js             Dash 运行时：数据注册与定时重载、页面路由、面板注册与渲染
-    ui.js               通用格式化与小组件（确切个数、时刻、h()、卡片、行、树、已看标记、待看汇总）；在 core.js 之后加载
-    ui-live.js          实时状态的共用渲染：谁在干活 Dash.who（总览与模型页共用）、后台脚本 Dash.scripts、临时工作树 Dash.worktrees、钩子卡 Dash.hooks、长文字 Dash.longText、空状态说明 Dash.liveGap；在 ui.js 之后加载
-    style.css           颜色与字体令牌、通用组件样式（含 ui-live.js 的组件）
-    panels/<id>.js      一个面板一个文件（可带同名 .css）；只经 Dash 读数据
+    manifest.js         页面（含资料页子标签）与数据源的唯一清单；加页面、子标签、数据源只改这里
+    core.js             Dash 运行时：数据按需加载与版本索引、路由、面板注册与渲染、页内选中状态、页眉与导航角标
+    ui.js               格式化与小组件：确切个数与时刻、h()、签条、状态条、折叠、行、表格、树、状态灯、分段开关
+    palette.js          色表：语义（组、键）→ CSS 变量与中文名；签条、图例
+    charts.js           共用图组件（Dash.charts，基于 ECharts）
+    ui-live.js          实时数据的共用渲染：时长、长文字、空状态原因、子代理签条、后台脚本、临时工作树
+    style.css           令牌（颜色、字号、间距、字体，浅色与深色各一份）与通用组件样式
+    pages/<页>.js|css   一页一个文件（可带同名 .css）；资料页每个子标签一个：library-<子标签>.js|css；只经 Dash 读数据
   data/                 本地状态，不进 git（.gitignore）
     auto/<名字>.js      采集脚本生成，任何人不手改
     curated/<名字>.js   只经 tools/post.py 改
-    demo/<名字>.js      演示数据（?demo）
+    demo/<名字>.js      演示数据（?demo），与 manifest 的数据源一一对应
   tools/
     datafile.py         数据文件读写（唯一入口）
     collect.py          项目采集：读权威来源，写 data/auto 下的项目数据；live.py --loop 每 10 分钟跑一次
@@ -32,7 +36,7 @@ dashboard/
 
 ## 2 数据文件
 
-每个数据文件只有一行：`Dash.put("<名字>", <JSON>);`。页面用 `<script>` 加载，所以 `file://` 下也能读；定时重载时换一个带时间戳的 `<script>`。读写一律经 `tools/datafile.py`（写入先写临时文件再改名）。每份数据都带 `updated`（ISO 时刻）和 `source`（哪个脚本或哪个会话写的），页面据此显示"更新于 HH:MM"，过期变灰。**数据存全文**，不在采集里截断。
+每个数据文件只有一行：`Dash.put("<名字>", <JSON>);`。页面用 `<script>` 加载，所以 `file://` 下也能读；定时重载时换一个带时间戳的 `<script>`。读写一律经 `tools/datafile.py`（写入先写临时文件再改名）。每份数据都带 `updated`（ISO 时刻）和 `source`（哪个脚本或哪个会话写的），页面据此显示"更新 HH:MM"，过期变灰。**数据存全文**，不在采集里截断。
 
 | 名字 | 种类 | 写的人 | 刷新 | 内容 |
 | --- | --- | --- | --- | --- |
@@ -101,64 +105,166 @@ audit:     { items: [{ id, at, from, title, why, link, status: "open"|"done" }] 
 - 字段存全文。通知与审计项是模型写的：标题与通知一两句、120 字内，`why` 200 字内（`post.py` 会拒绝超长）。
 - 不放会话号、本机绝对路径之外的隐私信息；会话号只在 `id` 里给页面去重用，不显示。
 
-## 3 页面运行时（app/core.js、ui.js、ui-live.js 提供）
+## 3 页面运行时
+
+### 3.1 数据与加载
+
+`manifest.js` 的 `data` 登记 19 份数据：`name`、`label`（页眉弹层与"等数据"提示里的名字）、`path`（相对 `dashboard/`）、`every`（秒，定时拉取间隔）、`stale`（秒，超过算"数据旧了"，`null` 不判断），以及两个开关：
+
+- `poll: true`：不看版本索引，每 `every` 秒拉一次，永远要（`live`、`index`）。
+- `keep: true`：页眉与导航要用，不管在哪一页都保持最新（`attention`、`health`、`queue`）。
+- 其余数据只在当前页有面板 `needs` 它、或代码调过 `Dash.need` 时才拉。
+
+**版本索引**：`index` 是 `{ versions: { 名字: 版本串 } }`，每 15 s 拉一次；某份数据在索引里的版本变了才重拉。索引没到、没有 `versions`、超过 120 s 没更新，或索引里没列这份数据时，这份数据退回按自己的 `every` 定时拉，右下角提示条写"数据索引未就绪：各份数据按定时拉取"（旧了写"数据索引旧了（HH:MM）：…"）。第一次读完索引之前不拉非 `poll` 数据。
+
+**整页刷新**：`live` 带 `appStamp`（界面代码最后改动时刻），变了就 `location.reload()`，开着的页面不跑旧代码。数据文件格式与 `Dash.put` 见 §2。
+
+**`?demo`**：地址带 `?demo` 时所有数据改读 `data/demo/<名字>.js`（同一格式），不判旧，页眉写"演示数据"，`Dash.ack` 直接失败；用来在采集没跑时开发和预览。演示数据只放 `data/demo/`，不进 `auto/`、`curated/`。
+
+**页眉**：一句总述（进行中的行数、在跑的会话数、阶段）；右侧"实时 HH:MM"按钮，点开列每份数据的更新时刻、旧不旧、拉取方式（定时 / 按版本 / 定时（无索引））。导航角标：现在页是 `attention` 里没点"知道了"的条数（有 `urgency` ≥ 3 的转红），健康页是 `health` 里不是 `ok` 的检查数。
+
+### 3.2 面板
 
 ```
-Dash.put(name, data)          数据文件调用；存下并重绘依赖它的面板；live 带来的 appStamp（界面代码最后改动时刻）变了就整页刷新
-Dash.get(name)                取当前数据（没有返回 null）
-Dash.panel({ id, page, title, order, needs: [名字...], render(el, data) })
-                              面板注册；data 是 { 名字: 数据 }；needs 里任一数据变了就重绘
-Dash.num(n)                   测得到的个数一律用它：确切值，千位加逗号（12,345）；没有数据写 —
-Dash.at(iso)                  确切时刻：今天 "HH:MM"，不是今天 "M-D HH:MM"；解析不了写 "—"
-Dash.atAgo(iso)               确切时刻后面带一个灰色的"多久前"（节点）
-Dash.ago(iso)                 "多久前"：只作 Dash.at 后面的灰色补充
-Dash.elapsed(iso)             到现在的整分钟数，写成 "12 分钟""1 小时 5 分钟"（确切值）
-Dash.stale(data, seconds)     超过期限没更新返回 true（面板据此变灰并标"数据旧了"）
-Dash.link(path)               仓库根相对路径 → 本页可点的链接
-Dash.chip(text, tone)         状态小签：tone 取 "ok" "warn" "risk" "claude" "codex" "author" "auto" "muted"
-Dash.tree({ key, nodes, label(n, depth), kids?(n), id?(n), openDepth? })
-                              可展开、收起的树（结构页、文档页共用），键盘与展开状态见 ui.js 注释
-Dash.who(live)                谁在干活：每个会话一块，名下在跑的子代理逐个列出（行号或名字、型号、推理档、开始多久），已交回的折叠（总览与模型页共用）
-Dash.scripts(live)            构建锁 + 逐个进程列出的后台脚本 + 巡逻（总览与模型页共用）
-Dash.worktrees(live)          临时工作树：每个登记的工作树一行（名字、路径、HEAD 与离 main 的提交数、未提交文件数、在跑什么或闲置多久、最近一次门禁、状态签条：在用 / 闲置 / 不在指定目录 / 失效）（施工页与总览共用）
-Dash.worktreeFold(live)       总览用：一行"临时工作树 N 个"，点开是 Dash.worktrees
-Dash.hooks(live)              钩子卡：每个登记的钩子一行，点开看最近 20 条（含角色与消息类别，不含测试会话；卡上注明列表来自日志、计数来自统计文件）
-Dash.gist(text)               { text 摘要（不长就是全文）, long 是否真长 }，longText 与脚本页共用
-Dash.longText(text)           不长直接全文，真长的先给一句话摘要、点开看全文
-Dash.liveGap(live, key, 块名们, 空时的话)
-                              实时数据某一项没有内容时说清真实原因（没有数据 / 没有这个字段 / 读源失败原文 / 确实为空）；有内容返回 null
+Dash.panel({ id, page, tab?, title?, note?, span?, order?, needs?, uses?, partial?, watch?, render(el, data) })
 ```
 
-**数字口径**：能直接读出的数写确切值——时刻（`Dash.at`）、份数与个数（文档、队列行、子代理、待审、测试个数、提交号等）、代码行、文档字数、引用次数都一样（`Dash.num`），不报数量级。
+| 字段 | 含义 |
+| --- | --- |
+| `id` | 面板 id，全局唯一；也是 `#页/块` 路由的块名 |
+| `page`、`tab` | 挂在哪一页（manifest 的页 id）；资料页的面板必须写 `tab`，其余页不写 |
+| `title`、`note` | 卡片标题与标题下一行小字；不写 `title` 就没有卡片头 |
+| `span` | 占 12 栏里的几栏：12（默认）、7、5（`style.css` 只定义了这几种，1180 px 以下一律整行；要别的宽度先在那里加） |
+| `order` | 页内排序，小的在上（默认 100） |
+| `needs` | 数据名数组：进到本页就拉，全部到齐才画（`partial: true` 时到一份就画，没到的是 `null`）；任一份变了重绘 |
+| `uses` | 不主动拉，只在这份数据变了时重绘（配合 `Dash.need` 按需拉的数据） |
+| `watch` | `Dash.select` 的键数组，选中变了就重绘 |
+| `render(el, data)` | 往 `el` 里画；`data` 是 `{ 名字: 数据 }`；抛异常时这块显示"这块出错了"，不影响别的面板 |
 
-- 页面路由用地址里的 `#页名`，`#页名/块` 滚到那一页的某一块（块 id 就是面板 id，如 `#work/work-doing`、`#work/work-pending`）；页面清单在 `app/manifest.js`。
-- 面板只用 `Dash.*` 与 `style.css` 的通用类，面板自己的样式写在同名 `.css`，只用令牌，不写颜色字面量。
-- 已看标记（作者点"知道了"）只存在浏览器本地（localStorage），不回写数据文件；要真正结项由模型用 `post.py done`。
-- **演示数据**：地址带 `?demo` 时，所有数据改从 `data/demo/<名字>.js` 读（同一格式），用来在采集脚本没跑时开发和预览面板；演示数据只放这里，不写进 `auto/`、`curated/`。
-- **本地预览**：`file://` 直接打开即可；要用浏览器工具截图时，在仓库根起 `python -m http.server <端口>`，打开 `http://localhost:<端口>/dashboard/`。
+只画当前页（和子标签）的面板，别的页记着脏，切过去再画。重绘时面板里 `<details>` 的开合状态在个数不变时保持。卡片右上角自动写"更新 HH:MM"（`needs` 里最旧的一份），数据旧了变灰并写"数据旧了 · HH:MM"。数据还没读到时画骨架，读过一次仍没有写"等数据"并列出缺哪份、期望路径。
+
+### 3.3 运行时接口
+
+```
+Dash.put(name, data)            数据文件调用（§2）
+Dash.get(name)                  取当前数据，没有返回 null
+Dash.need(names)                面板之外要数据：返回 Promise，读过一次（有没有都算）就兑现；切页后不再跟着版本更新
+Dash.dataState(name)            "wait" 读取中 / "missing" 读过但没有 / "ok"
+Dash.select(key, value)         页内选中状态；值相同再选一次取消；watch 里有这个键的面板重绘
+Dash.selected(key)              当前选中值，没有是 null
+Dash.redraw(id) / redrawAll()   重画面板（本地交互改了显示方式）；主题切换时 core 与图组件自己调 redrawAll
+Dash.go(path)                   跳路由
+Dash.ack(id, revision?)         "知道了"写回：POST /api/attention/ack，成功后重读 attention 与 index；
+                                页面不是由本地服务打开（file://）、演示模式、服务没在跑时 Promise 失败，面板把原因写出来；不存浏览器
+Dash.isStale(name)              按 manifest 的 stale 判断；没有数据、演示、stale 为 null 都是 false
+Dash.stale(data, seconds)       按数据自带的 updated 判断
+Dash.demo                       是否 ?demo
+```
+
+路由是地址里的 `#页` / `#页/子标签` / `#页/块` / `#页/子标签/块`（块 id 就是面板 id，如 `#work/work-flow`、`#library/docs/lib-docs-refs`）；资料页缺子标签取第一个，页名不认识取第一页。
+
+### 3.4 格式化与小组件（ui.js、ui-live.js）
+
+数字口径：能直接读出的数写确切值——份数与个数、代码行、字数、引用次数用 `Dash.num`，时刻用 `Dash.at`，不报数量级。
+
+```
+Dash.h(tag.cls, props?, ...kids)  建节点；props 有 cls、text、on:{事件}、dataset，其余当属性；kids 可为节点、文字、数组
+Dash.esc(s)                       转义 HTML
+Dash.num(n)                       千位加逗号（12,345）；没有数据写 —
+Dash.at(iso)                      今天 "HH:MM"，不是今天 "M-D HH:MM"；解析不了写 —
+Dash.elapsed(iso)                 到现在的整分钟数："不到 1 分钟""12 分钟""1 小时 5 分钟"
+Dash.parseTime(iso)               解析为毫秒数
+Dash.chip(text, tone)             状态小签；tone：ok warn risk claude codex author auto muted
+Dash.status(text, tone)           面板第一行的一句状态；statusLine(tone) 返回 <p>，内容往 .body 追加
+Dash.a(path, text?, cls?)         指向仓库文件的链接（新标签页）；path 相对仓库根，换算成相对 dashboard/ 的链接
+Dash.empty(title, sub?, compact?) 空状态
+Dash.fold(summary, content, open?)  折叠，默认合上
+Dash.row({ lead, title, meta, act })  列表行：前导、标题、右侧小字、操作节点数组
+Dash.table(cols, rows, opts)      cols [{ key, label, num?, width?, cell?(row) }]；opts: onRow、selected(row)、empty
+Dash.lights(items)                一排状态灯：[{ label, tone: [组, 键], sub?, href? }]
+Dash.segment(options, value, onPick)  页内分段开关：options [{ id, label }]
+Dash.tree({ key, nodes, label(n, depth), kids?, id?, openDepth? })
+                                  可展开收起的树；key 是展开状态的名字（只记在本页内存）；openDepth 默认 1；键盘见 ui.js 注释
+Dash.sideTone(from, side?)        按来源挑色：返回 codex / claude / author / muted
+Dash.expired(item)                item.expires 已过
+Dash.modelName(m)                 claude-opus-5-5 → Opus 5.5；别的照原样
+Dash.gist(text) → { text, long }  不长（约 120 字内）是全文，真长的取第一句
+Dash.longText(text, cls?)         不长直接全文，真长的给摘要 + 展开全文
+Dash.liveGap(live, key, labels, emptyText)
+                                  live 某一项没有内容时说清原因（没数据 / 采集是旧版本 / 读源失败原文 / 确实为空）；有内容返回 null
+Dash.agentLabel(a)                子代理签条文字
+Dash.scripts(live)                构建锁 + 逐进程后台脚本 + 巡逻
+Dash.worktrees(live)              临时工作树，每个一行
+```
+
+### 3.5 颜色语义（palette.js）
+
+颜色只按语义定一套：值写在 `style.css` 的 CSS 变量里（浅色与深色各一份），`Dash.palette` 登记"（组, 键）→ 变量 + 中文名"，签条、图例和所有图都从这里取；页面与图不写颜色字面量，图里的项只传 `tone: [组, 键]`（如 `['queue', '进行中']`、`['tag', '需定']`）。
+
+| 组 | 键 |
+| --- | --- |
+| `status` | `done` `doing` `fail` `todo` `na`（流水阶段与行状态） |
+| `queue` | `进行中` `待编译` `可派` `等前置` `暂停` `已推`（施工队列状态列，借用上面的色） |
+| `side` | `claude` `codex` `author` `auto` |
+| `tag` | `需定` `待审` `知会` `插队` `无`（来信标签） |
+| `model` | `opus` `sonnet` `haiku` `gpt-6.1-sol` `gpt-6-luna` `gpt-6-astra` `other`（Claude 一族紫、Codex 一族青，按深浅分） |
+| `level` | `ok` `warn` `bad`（健康检查等级） |
+| `node` | `event` `hook` `doc` `script` `data` `check` `gate` `path`（体系关系图节点种类） |
+| `edge` | `inject` `route` `govern` `readwrite` `generate` `call` `check` `gate`（边种类） |
+| `layer` | 数组 6 项，键是下标（按层的顺序取，不按名字） |
+| `scale` | 数组 2 项：单色渐变两端 |
+
+```
+Dash.color(组, 键)        当前主题下的色值（给 ECharts）；Dash.colorVar(组, 键) 是 CSS 变量名；Dash.cssVar(name) 读任一 CSS 变量
+Dash.label(组, 键)        中文名
+Dash.mark(组, 键, 字?)    语义签条（节点），字省略用中文名
+Dash.legend(组, 键们?)    一行图例，键省略列整组
+Dash.modelKey(型号)       型号 → 色表键：claude-opus-5-5 → opus；gpt-6.1-sol 原样；认不出是 other
+Dash.stages               流水阶段的键与中文名，按先后：dispatch 派工、build 施工、pending 待编译、gate 快检、pushed 已推、audit 收口审计、shots 截图评审、prebake 预烘
+```
+
+### 3.6 图组件（charts.js）
+
+7 个组件，各返回一个节点，直接 append；节点进到可见页面且有了宽度才初始化，容器变宽变窄自动重排，面板重绘时 core 释放旧图，主题切换自动重画。第二个参数 `opts` 通用项：`height`（像素，省略按数据算）、`onClick(项, 事件)`、`legend: [[组, 键们?], ...]`（图上方图例）、`empty`（空数据时的话）、`key`（同一张图的稳定名，只有第一次画有动画）、`label`（无障碍名）。
+
+| `Dash.charts.` | 数据 | 用途与专有参数 |
+| --- | --- | --- |
+| `swimlane` | `{ columns:[{id,label}], lanes:[{id,label,sub?,side?,head?}], cells:[{lane,col,status,at?,note?}] }` | 泳道矩阵：一行一道（`head` 为真是分组标题行），一列一阶段，格子按状态着色写时刻；`opts.selected` 高亮一道，`opts.labelWidth` 标签宽 |
+| `dag` | `{ nodes:[{id,label,tone,side?,title?,mark?,markNote?}], edges:[{from,to,strong?,critical?}], critical? }` | 有向依赖图：按前置分层从左到右，`tone` 着色，按 `side` 分形状（Claude 胶囊、Codex 方块、其他六边形）；`mark` 加红色虚线外圈（`opts.markText` 是图例名），`opts.selected` 加主色外圈，`critical` 边主色加粗；没有前后置的节点在图下排成签条 |
+| `layered` | `{ columns:[{kind,label}], nodes:[{id,label,kind,group?,title?}], edges:[{from,to,kind,title?}] }` | 分层关系图：按列从左到右、列内按 `group` 分段；节点色取 `node` 组、边色取 `edge` 组；图上方按边种开关；点节点高亮上下游；`opts.fold`（可折叠的节点种类）、`foldOver`（节点多于它默认折起）、`through`（高亮时继续往下走的种类）、`state`（调用方保存的交互状态，重画后保留）；返回的节点带 `pick(id)` |
+| `heatmap` | `{ x:[名], y:[名], cells:[{x,y,value?,tone?,title?}], mode:'count' 或 'tone' }` | 热力矩阵：`count` 按数值深浅（`scale` 组），`tone` 每格按语义色；`x`、`y` 是下标 |
+| `treemap` | `{ nodes:[{name,value,tone?,children?,title?}] }` | 矩形树图：面积为 `value`，顶层按顺序取 `layer` 组色（或 `tone`）；`opts.unit` 数值单位；点格子下钻 |
+| `timeline` | `{ lanes:[{id,label}], items:[{lane,at,end?,tone,label,title?}], from?, to? }` | 时间线：横轴时刻，一道一行；有 `end` 画成一段否则是点；竖线标现在 |
+| `bars` | `{ categories:[名], series:[{name,tone,values:[数]}], stack?, horizontal? }` | 条形图（可堆叠） |
+
+另有 `Dash.charts.loading(height)`（加载占位）与 `Dash.charts.release(root)`（释放 root 里的图，core 在重绘时调）。
 
 ## 4 页面与面板
 
-| 页 | 面板（文件） | 看什么 |
-| --- | --- | --- |
-| `#overview` 总览 | `overview.js` | 第一行：一句项目状态、阶段与优先级、数据新旧；第二行三栏：需要你看（审计项与【需定】，最多 5 条）、在做（队列里进行中与待编译的行，最多 8 条，谁的签条；末尾"进行中 N 项、待编译 M 项"两个数分别链到施工页的进行中与待编译）、谁在干活（每个主会话一块，名下在跑的子代理逐个列，已交回的折叠）；第三行两栏：后台脚本（构建锁、逐个进程、巡逻，末尾一行"临时工作树 N 个"可展开）、健康摘要（只列不正常的项，最多 5 条，另有 N 项正常）；钩子与生效记录；最新通知 3 条。宽屏（≥1280 px）按此排，窄屏同顺序叠成一列 |
-| `#work` 施工 | `work.js` | 自上而下五块：① 两个主会话现在在干什么；② 进行中（`work-doing`）：进行中的行（与有子代理在跑却不是待编译的行），一行一张详细卡（行、状态、谁、按行号对上的子代理的签条、改动的目录与文件数、任务单链接、程序算出的不一致），末尾是没挂队列行的子代理；③ 待编译（`work-pending`）：待编译的行，每行一张卡——行、做什么、谁编、待编译文件数（点开看全部清单）、同名工作树及它的门禁进度（在跑的门禁走到哪一门、Godot 在拍哪个机位）或最近一次门禁结果、截图张数、已等多久（估算，注明依据），没有工作树写"还没开始统一编译"；④ 排着的（`work-queued`）：可派、等前置、暂停三栏的紧凑卡片，暂停默认收起；⑤ 临时工作树（`work-trees`）一张卡 |
-| `#health` 健康 | `health.js` | 全部检查按分组列出，每项一行：状态点、标题、一句话；点开看细节、建议、链接；分组标题写几项正常、几项要看 |
-| `#models` 模型 | `models.js` | 会话 → 子代理（与总览同一个 `Dash.who`）；后台脚本与构建锁（同一个 `Dash.scripts`） |
-| `#structure` 结构 | `structure.js` | 层 → 目录 → 子目录的树，默认展开第一层；每行文件数与代码行（都写确切值）、一句说明 |
-| `#docs` 文档 | `docs.js` | 域 → 主文档 → 子文档 → 节的树，默认只展开到域，点文档或节打开文件；树下是引用关系图 |
-| `#scripts` 脚本 | `scripts.js` | 所有脚本与作用，全部由程序从脚本自己读出：顶部一行“共几个脚本、几个没写开头说明”；按组（仓库工程脚本、观察台入口、数据管线、本机协作工具、双击入口）各一张卡，组内按子目录成可展开的树；每个脚本一行：文件名、作用（长的给摘要）、签条（语言、进 git 或仅本机、在跑、缺说明）；点开看用法、开头说明全文、路径、行数、修改时刻。写法见 STD-CODE 接入要点“写或改脚本时”，改了脚本页面自动跟着变 |
-| `#audit` 审计 | `audit.js` | 需要作者审的事（自动发现 + 模型挂的），可点开对应文件 |
-| `#notices` 通知 | `notices.js` | 通知时间线，过期自动收起 |
-| `#decisions` 决策 | `decisions.js` | 最近的决策 |
+导航 7 页，每页顶部一句"这页回答什么"（`manifest.js` 的 `ask`）；共 32 个面板。
 
-加一个页面或面板：在 `app/panels/` 新建文件，用 `Dash.panel` 注册，再把它加进 `app/manifest.js`。加一个数据源：采集脚本里加一个写出函数，并在 manifest 里登记名字与刷新间隔。
+| 页 | 回答什么 | 面板（id，用到的数据） |
+| --- | --- | --- |
+| `#now` 现在 | 要不要我动手、此刻在发生什么 | `now-pulse` 系统脉搏（巡逻、来信监视、采集、钩子、构建锁的灯，`live`）；`now-attention` 需要你（需定来信、作者级审计、待看截图、待审调研，一条一行按紧急排序，"知道了"经 `Dash.ack`，`attention`，7 栏）；`now-recent` 最近（最近 5 次推送、3 条通知，`history`、`notices`，5 栏）；`now-lanes` 两条指挥泳道（各自在做的行、所处阶段、挂的子代理，`live`、`pipeline`）；`now-flow` 本批流水（未收口行 × 阶段的小矩阵，`pipeline`） |
+| `#work` 施工 | 每件活走到哪一步、谁挡着谁 | `work-flow` 流水线（行 × 阶段泳道，同一次推送收口的行归一批，`pipeline`）；`work-history` 行的历史（选中行的时间线，`pipeline`、`queue`，按需 `rowhistory`）；`work-deps` 依赖图（关键路径与"前置已完成却没解锁"，`queue`）；`work-board` 看板（可派、等前置、暂停，`queue`）；`work-trees` 临时工作树（`live`） |
+| `#collab` 协作 | 两边在说什么、审了什么 | `collab-letters` 来信（两道时间线，按标签着色，点开看全文，未送达标出，`letters`）；`collab-audits` 收口审计（谁派、哪个模型、交回没有、查出几处补丁、转成哪些行，`audits`）；`collab-files` 任务单、契约申请、调研与交接材料（`letters`） |
+| `#models` 模型 | 谁在用什么模型干什么 | `models-table` 会话与子代理（`models`）；`models-usage` 近 24 小时各型号的派工个数与时长（`models`，7 栏）；`models-rules` 分工对照（WF-MODEL 的分工与实际使用，偏离标出，`models`，5 栏）；`models-tree` 派工树（`models`） |
+| `#system` 体系 | 钩子、脚本、文档、检查怎么相互作用 | `system-graph` 关系图（点节点高亮上下游，可按边种过滤，`relations`）；`system-hooks` 钩子明细（事件、时机、近 24 小时各文档注入次数、降级与挤掉，`live`、`relations`、`history`）；`system-scripts` 脚本明细（作用、用法、谁调用、读写什么、最近运行，`catalog`、`history`、`relations`，按需 `catalogdetail`） |
+| `#health` 健康 | 系统哪里不对 | `health-matrix` 检查矩阵（6 组 × 各项方块，下方 24 小时历史条带，`health`、`history`）；`health-detail` 细节与建议（`health`、`history`）；`health-checks` 全部检查（每组要看的在前，点开看明细、建议、链接，`health`）；`health-procs` 后台进程与构建锁（`live`） |
+| `#library` 资料 | 文档、结构、决策、通知和脚本都在哪 | 子标签 5 个：`docs` 文档（`lib-docs-tree` 文档树：顶层 → 域 → 主文档 → 子文档 → 节，点开打开文件，`docs`；`lib-docs-refs` 引用矩阵：域 × 域热力，点格展开到文档，`docs`、`docrefs`）；`structure` 结构（`lib-structure-map` 代码分布矩形树图、`lib-structure-tests` 测试占比、`lib-structure-tree` 目录树，`structure`）；`decisions` 决策（`lib-decisions` 按 D 编号一格一条，颜色是状态，`decisions`）；`notices` 通知（`lib-notices` 按发布方分道，颜色是等级，`notices`）；`scripts` 脚本目录（`lib-scripts` 按根目录分组，每个一句作用，`catalog`；详情在体系页） |
+
+**加页面、子标签、面板、数据源**：
+- 加页面或子标签：在 `manifest.js` 的 `pages` 加一项（`id`、`title`、`ask`、`file`、`css`；有子标签的页写 `tabs`，每个子标签自带 `title`、`file`、`css`），建对应的 `pages/*.js` 并用 `Dash.panel` 注册；`css: true` 时同名 `.css` 一并加载。
+- 加面板：在所属页文件里再写一个 `Dash.panel`。
+- 加数据源：采集脚本加一个写出函数，在 `manifest.js` 的 `data` 登记名字、路径、`every`、`stale`，让版本索引列出它的版本，并在 `data/demo/` 放一份同格式演示数据。
+- 面板只用 `Dash.*` 与 `style.css` 的通用类，自己的样式写进同名 `.css`，只用令牌，不写颜色字面量。
 
 ## 5 视觉
 
-- **颜色有固定语义**，与协作方法海报一致：玫红＝作者，紫＝Claude 侧，青绿＝Codex 侧，琥珀＝自动机制（钩子、巡逻、脚本、构建锁）与要看的小字，红＝问题与风险、要作者动手，绿＝通过与正常；结构、文字、分隔一律用中性蓝灰的深浅。不为装饰换色。
+- **颜色有固定语义**（§3.5），与协作方法海报一致：玫红＝作者，紫＝Claude 侧，青绿＝Codex 侧，琥珀＝自动机制（钩子、巡逻、脚本、构建锁）与要看的小字，红＝问题与风险、要作者动手，绿＝通过与正常；结构、文字、分隔一律用中性蓝灰的深浅。不为装饰换色。
 - **低注意力**：每块第一行是一句状态；红色只给要作者动手的事；默认只露最重要的几条，其余折叠；数字一律写确切值；时刻写具体时间，"多久前"只作灰色补充。
-- 浅色为主，跟随系统深色；字体用系统中文无衬线，数字等宽对齐。
+- 浅色为主，跟随系统深色（`prefers-color-scheme`，`style.css` 令牌各一份）；字体用系统中文无衬线，数字等宽对齐；图统一用 ECharts，不手写 SVG。
+- **本地预览**：`file://` 直接打开即可（写回操作除外）；要用浏览器工具截图时，在仓库根起 `python -m http.server <端口>`，打开 `http://localhost:<端口>/dashboard/`，演示数据加 `?demo`。
 
 ## 6 采集与维护
 

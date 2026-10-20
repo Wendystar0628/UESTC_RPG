@@ -1,5 +1,4 @@
-/* 结构页：树的行内布局。只用令牌。 */
-.st .status { margin-bottom: 1rem; }
+/* 资料页 · 结构：树的行内布局。只用令牌。 */
 .st-line { flex: 1; min-width: 0; display: flex; align-items: baseline; gap: 0.2rem 0.8rem; flex-wrap: wrap; }
 .st-name { font-family: var(--mono); font-weight: 600; flex: none; }
 .st-name.st-layer { font-family: inherit; font-weight: 700; }
@@ -7,4 +6,3 @@
 .st-files, .st-loc { flex: none; color: var(--text-3); font-size: var(--fs-xs); white-space: nowrap; }
 .st-files { min-width: 5.5em; text-align: right; }
 .st-loc { min-width: 5em; text-align: right; }
-.st-foot { margin: 1rem 0 0; color: var(--text-3); font-size: var(--fs-sm); }

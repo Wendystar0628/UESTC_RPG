@@ -1,0 +1,53 @@
+/* 体系页。只用令牌。 */
+.sys-graph { display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: var(--s4); align-items: start; margin-top: var(--s2); }
+.sys-main { min-width: 0; }
+.sys-side { position: sticky; top: 72px; max-height: calc(100vh - 96px); overflow: auto; padding: var(--s3); border-radius: var(--radius-sm);
+  background: var(--surface-2); border: 1px solid var(--line-2); display: flex; flex-direction: column; gap: var(--s2); min-width: 0; }
+.sys-side .empty { background: transparent; }
+.sys-side-head { display: flex; align-items: baseline; flex-wrap: wrap; gap: var(--s2); }
+.sys-side-name { font-size: var(--fs-lg); overflow-wrap: anywhere; }
+.sys-dir { margin: var(--s2) 0 0; }
+.sys-rel { display: flex; flex-direction: column; gap: 4px; }
+.sys-rel-title { display: flex; align-items: center; gap: 6px; font-size: var(--fs-sm); font-weight: 600; color: var(--text-2); }
+.sys-bar { flex: none; width: 3px; height: 14px; border-radius: 2px; background: var(--tone); }
+.sys-rel-list, .sys-chips { display: flex; flex-wrap: wrap; gap: 4px; }
+.sys-node { display: inline-flex; align-items: center; gap: 5px; max-width: 100%; padding: 2px 8px; border-radius: 6px; cursor: pointer;
+  border: 1px solid var(--line); background: var(--surface); color: var(--text); font: inherit; font-size: var(--fs-xs); text-align: left; }
+.sys-node:hover { border-color: var(--accent); }
+.sys-node.is-plain { cursor: default; }
+.sys-node-name { font-family: var(--mono); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+.sys-dot { flex: none; width: 7px; height: 7px; border-radius: 50%; background: var(--tone); }
+.sys-when { flex: none; color: var(--text-3); white-space: nowrap; }
+
+.sys-hooks { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: var(--s5); align-items: start; }
+.sys-hook-list { display: flex; flex-direction: column; gap: var(--s4); min-width: 0; }
+.sys-hook { display: flex; flex-direction: column; gap: var(--s2); padding-bottom: var(--s4); border-bottom: 1px solid var(--line-2); }
+.sys-hook:last-child { border-bottom: 0; }
+.sys-hook-head { display: flex; align-items: baseline; flex-wrap: wrap; gap: var(--s2); }
+.sys-flag { color: var(--warn); font-size: var(--fs-sm); }
+.sys-stats { display: grid; grid-template-columns: repeat(auto-fill, minmax(92px, 1fr)); gap: 6px; }
+.sys-stat { display: flex; flex-direction: column; padding: 6px 10px; border-radius: var(--radius-sm); background: var(--surface-2); }
+.sys-stat-n { font-size: var(--fs-lg); font-weight: 650; font-variant-numeric: tabular-nums; }
+.sys-stat-l { font-size: var(--fs-xs); color: var(--text-3); }
+.sys-stat.is-bad { background: var(--warn-bg); }
+.sys-stat.is-bad .sys-stat-n { color: var(--warn); }
+.sys-hook-charts { display: flex; flex-direction: column; gap: var(--s4); min-width: 0; }
+.sys-hook-charts .sub-title { margin: 0; }
+.sys-recs { display: flex; flex-direction: column; gap: 2px; font-size: var(--fs-xs); }
+.sys-rec { display: flex; flex-wrap: wrap; gap: 2px var(--s3); padding: 3px 0; border-top: 1px solid var(--line-2); }
+.sys-rec.is-bad, .sys-warn, .sys-fail { color: var(--warn); }
+
+.sys-scripts { display: grid; grid-template-columns: minmax(0, 1fr) 380px; gap: var(--s4); align-items: start; margin-top: var(--s3); }
+.sys-scripts-list { display: flex; flex-direction: column; gap: var(--s2); min-width: 0; }
+.sys-scripts-list .segment { flex-wrap: wrap; }
+.sys-purpose { margin: 0; color: var(--text-2); font-size: var(--fs-sm); }
+.sys-usage { max-height: 260px; overflow: auto; white-space: pre-wrap; overflow-wrap: anywhere; font-size: var(--fs-xs); }
+
+@media (max-width: 1180px) {
+  .sys-graph, .sys-hooks, .sys-scripts { grid-template-columns: minmax(0, 1fr); }
+  .sys-side { position: static; max-height: none; }
+}
+.sys-scripts-list td:first-child { white-space: nowrap; }
+.sys-main { overflow-x: auto; }
+.sys-hook .tbl { min-width: 520px; }
+.sys-hook .tbl td:nth-child(2) { white-space: nowrap; }

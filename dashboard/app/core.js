@@ -1,27 +1,31 @@
-/* 观察台运行时：数据注册与定时重载、页面路由、面板注册与渲染；通用格式化与小组件在 ui.js。
-   接口见 dashboard/README.md §3；面板只经 Dash.* 读数据，不直接碰 DOM 之外的全局。 */
+/* 观察台运行时：数据按需加载（版本索引）、页面与子标签路由、面板注册与渲染、页内选中状态。
+   通用格式化与小组件在 ui.js，色表在 palette.js，图组件在 charts.js；接口见 dashboard/README.md。
+   面板只经 Dash.* 读数据，不直接拉文件。 */
 (function () {
   'use strict';
 
-  var M = window.DashManifest || { pages: [], panels: [], data: [] };
+  var M = window.DashManifest || { pages: [], data: [] };
   var DEMO = /[?&]demo(?:[=&]|$)/.test(location.search);
   var Dash = window.Dash = { demo: DEMO };
 
   var store = {};      // 数据名 -> 数据
-  var meta = {};       // 数据名 -> { sig, tried, missing, loading }
+  var meta = {};       // 数据名 -> { sig, tried, missing, loading, at, ver, reqVer, waiters }
   var panels = {};     // 面板 id -> 面板记录
   var srcs = {};       // 数据名 -> manifest 条目
   var dirty = {};      // 待重绘的面板 id
+  var picks = {};      // 页内选中状态：键 -> 值（Dash.select）
+  var asked = {};      // 当前页用 Dash.need 要过的数据名
   var flushTimer = 0;
   var booted = false;
-  var currentPage = null;
+  var view = { page: null, tab: null };
+  var index = { state: 'wait', versions: null };   // wait | ready | missing | stale
 
   M.data.forEach(function (s) { srcs[s.name] = s; });
   Dash.internal = { store: store, srcs: srcs };
 
-  // 通用组件在 ui.js（晚于本文件加载），这里只在运行时取用
   function h() { return Dash.h.apply(null, arguments); }
   function parseTime(iso) { return Dash.parseTime(iso); }
+  function pageOf(id) { return M.pages.filter(function (p) { return p.id === id; })[0] || null; }
 
   /* ================= 数据 ================= */
 
@@ -31,7 +35,7 @@
     } catch (e) { return String(Math.random()); }
   }
 
-  var appStamp = null;   // 界面代码的时刻（live.js 带来）：变了就整页刷新，开着的页面不跑旧代码
+  var appStamp = null;   // 界面代码的时刻（live 带来）：变了就整页刷新，开着的页面不跑旧代码
   Dash.put = function (name, data) {
     if (name === 'live' && data && data.appStamp) {
       if (appStamp === null) appStamp = data.appStamp;
@@ -42,43 +46,44 @@
     var changed = m.sig !== sig;
     store[name] = data;
     m.sig = sig; m.missing = false; m.tried = true;
-    if (changed) {
-      dependents(name).forEach(schedule);
-      afterData();
-    } else {
-      refreshMeta();
-    }
+    if (name === 'index') readIndex(data);
+    if (changed) dependents(name).forEach(schedule);
+    afterData();
   };
 
   Dash.get = function (name) { return store[name] || null; };
 
-  Dash.touch = function (names) {
-    var set = {};
-    names.forEach(function (n) { dependents(n).forEach(function (p) { set[p.id] = p; }); });
-    Object.keys(set).forEach(function (id) { schedule(set[id]); });
-    updateBadges();
-  };
+  /* 索引就绪：有 versions、且没旧；否则其余数据按 every 定时拉 */
+  function readIndex(data) {
+    var ok = data && data.versions && typeof data.versions === 'object';
+    index.versions = ok ? data.versions : null;
+    index.state = !ok ? 'missing' : (!DEMO && Dash.stale(data, srcs.index.stale) ? 'stale' : 'ready');
+    sync();
+  }
 
   function srcPath(s) { return DEMO ? 'data/demo/' + s.name + '.js' : s.path; }
 
-  function loadData(s) {
+  function loadData(s, ver) {
     var m = meta[s.name] || (meta[s.name] = {});
     if (m.loading && Date.now() - m.loading < 15000) return;
     m.loading = Date.now();
-    var old = document.querySelectorAll('script[data-dash="' + s.name + '"]');
-    Array.prototype.forEach.call(old, function (e) { e.remove(); });
+    m.at = Date.now();
+    m.reqVer = ver == null ? null : ver;
+    Array.prototype.forEach.call(document.querySelectorAll('script[data-dash="' + s.name + '"]'), function (e) { e.remove(); });
     var el = document.createElement('script');
     el.dataset.dash = s.name;
     el.src = srcPath(s) + '?t=' + Date.now();
     function done(ok) {
       m.loading = 0;
+      if (ok && store[s.name]) m.ver = m.reqVer;
       if (!m.tried) {
         m.tried = true;
-        if (!store[s.name]) m.missing = true;
         dependents(s.name).forEach(schedule);   // 第一次读完仍没有：从"读取中"变成"等数据"
       }
-      if (!ok && !store[s.name]) m.missing = true;
+      if (!store[s.name]) m.missing = true;
       el.remove();
+      if (s.name === 'index' && !ok) { index.state = 'missing'; index.versions = null; sync(); }
+      (m.waiters || []).splice(0).forEach(function (f) { f(); });
       afterData();
     }
     el.onload = function () { done(true); };
@@ -86,43 +91,116 @@
     document.head.appendChild(el);
   }
 
-  function startData() {
-    M.data.forEach(function (s) {
-      loadData(s);
-      setInterval(function () { if (!document.hidden) loadData(s); }, Math.max(5, s.every || 30) * 1000);
-    });
-    document.addEventListener('visibilitychange', function () {
-      if (!document.hidden) M.data.forEach(loadData);
-    });
+  /* 这份数据此刻要不要：页眉导航要用的、当前页面板要用的、当前页用 Dash.need 要过的 */
+  function wanted(name) {
+    var s = srcs[name];
+    if (!s) return false;
+    if (s.poll || s.keep || asked[name]) return true;
+    return Object.keys(panels).some(function (id) { var p = panels[id]; return isActive(p) && p.needs.indexOf(name) >= 0; });
   }
+
+  /* 数据的拉取方式：poll（定时）、version（按版本）、timer（索引没就绪或没列这份，按 every 定时） */
+  function modeOf(s) {
+    if (s.poll) return 'poll';
+    return index.state === 'ready' && index.versions && s.name in index.versions ? 'version' : 'timer';
+  }
+
+  function sync() {
+    if (!booted || index.state === 'wait') return;   // 先等索引第一次读完，免得同一份数据开头拉两遍
+    M.data.forEach(function (s) {
+      if (s.poll || !wanted(s.name)) return;
+      var m = meta[s.name] || {};
+      if (modeOf(s) === 'version') {
+        var v = index.versions[s.name];
+        if (m.ver !== v && !m.loading) loadData(s, v);
+      } else if (!m.at || Date.now() - m.at >= Math.max(5, s.every || 60) * 1000) {
+        loadData(s, null);
+      }
+    });
+    updateCorner();
+  }
+
+  function tick() {
+    if (document.hidden) return;
+    M.data.forEach(function (s) {
+      if (!s.poll) return;
+      var m = meta[s.name] || {};
+      if (!m.at || Date.now() - m.at >= Math.max(5, s.every || 15) * 1000 - 500) loadData(s, null);
+    });
+    if (index.state === 'ready' && store.index && Dash.stale(store.index, srcs.index.stale) && !DEMO) index.state = 'stale';
+    sync();
+  }
+
+  /* 面板之外要数据（例如点开行详情才拉 rowhistory）：返回 Promise，读过一次（有没有都算）就兑现；切页后不再跟着版本更新 */
+  Dash.need = function (names) {
+    names = [].concat(names);
+    return Promise.all(names.map(function (n) {
+      var s = srcs[n];
+      if (!s) return Promise.reject(new Error('manifest 里没有数据 ' + n));
+      asked[n] = true;
+      var m = meta[n] || (meta[n] = {});
+      return new Promise(function (resolve) {
+        if (store[n] && !m.loading) { resolve(store[n]); return; }
+        (m.waiters || (m.waiters = [])).push(function () { resolve(store[n] || null); });
+        sync();
+      });
+    }));
+  };
+
+  /* "知道了"写回采集侧：本地服务 POST /api/attention/ack {id, revision?} → {ok: true}；成功后马上重读 attention 与索引。
+     页面不是由本地服务打开的（file://）或服务没在跑时 Promise 失败，面板把原因写出来；不存浏览器。 */
+  Dash.ack = function (id, revision) {
+    if (DEMO) return Promise.reject(new Error('演示数据不写回'));
+    if (!/^https?:$/.test(location.protocol)) return Promise.reject(new Error('页面不是由观察台本地服务打开的，写不回去'));
+    var body = { id: id };
+    if (revision != null) body.revision = revision;
+    return fetch('/api/attention/ack', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
+      .then(function (r) { return r.json().then(function (j) { if (!r.ok || !j || j.ok !== true) throw new Error((j && j.error) || '本地服务返回 ' + r.status); return j; }); })
+      .then(function (j) { loadData(srcs.attention, null); loadData(srcs.index, null); return j; });
+  };
+
+  /* 数据状态，给面板说清"没有"的原因：wait 读取中 / missing 没有这份文件 / ok */
+  Dash.dataState = function (name) {
+    var m = meta[name];
+    if (store[name]) return 'ok';
+    return m && m.tried ? 'missing' : 'wait';
+  };
 
   /* ================= 面板 ================= */
 
+  function isActive(p) { return p.page === view.page && (!p.tab || p.tab === view.tab); }
+
   function dependents(name) {
     return Object.keys(panels).map(function (id) { return panels[id]; })
-      .filter(function (p) { return p.needs.indexOf(name) >= 0; });
+      .filter(function (p) { return p.needs.indexOf(name) >= 0 || p.uses.indexOf(name) >= 0; });
   }
 
+  /* Dash.panel({ id, page, tab?, title?, note?, span?, order?, needs?, uses?, partial?, watch?, render(el, data) })
+     needs 打开这页就拉、到齐才画（partial 为真时到一份就画）；uses 不主动拉、只在它变了时重绘（配合 Dash.need 按需拉的数据）；
+     span 占 12 栏里的几栏：12（默认）、7 或 5（style.css 只定义了这几种，要别的宽度先在那里加）；watch 是 Dash.select 的键，选中变了就重绘；note 是标题下一行小字 */
   Dash.panel = function (def) {
     if (!def || !def.id) return;
-    var p = panels[def.id] = Object.assign({ needs: [], order: 100 }, def);
-    p.needs = p.needs || [];
-    if (booted) mount(p);
+    var p = panels[def.id] = Object.assign({ needs: [], uses: [], watch: [], order: 100, span: 12 }, def);
+    if (booted) { mount(p); sync(); }
   };
 
-  function mount(p) {
+  function hostOf(p) {
     var page = document.getElementById('page-' + p.page);
-    if (!page) { console.warn('[Dash] 面板 ' + p.id + ' 的页面 ' + p.page + ' 不在 manifest 里'); return; }
-    var host = page.querySelector('.page-body');
-    var box = h('div.panel' + (p.card === false ? '' : '.card'), { dataset: { panel: p.id, order: p.order } });
-    if (p.card !== false) {
-      p.metaEl = h('span.card-meta');
-      if (p.title) box.appendChild(h('div.card-head', h('span.card-title', p.title), p.metaEl));
-      p.bodyEl = h('div.card-body');
-      box.appendChild(p.bodyEl);
-    } else {
-      p.bodyEl = box;
+    if (!page) return null;
+    if (p.tab) return page.querySelector('.page-tab[data-tab="' + p.tab + '"] .page-body');
+    return page.querySelector('.page-body');
+  }
+
+  function mount(p) {
+    var host = hostOf(p);
+    if (!host) { console.warn('[Dash] 面板 ' + p.id + ' 的页面 ' + p.page + (p.tab ? '/' + p.tab : '') + ' 不在 manifest 里'); return; }
+    var box = h('section.panel.card.span-' + p.span, { dataset: { panel: p.id, order: p.order } });
+    p.metaEl = h('span.card-meta');
+    if (p.title) {
+      box.appendChild(h('header.card-head', h('div.card-titles', h('h2.card-title', p.title), p.note ? h('p.card-note', p.note) : null), p.metaEl));
     }
+    p.bodyEl = h('div.card-body');
+    box.appendChild(p.bodyEl);
     p.el = box;
     var after = null;
     Array.prototype.forEach.call(host.children, function (c) {
@@ -138,11 +216,15 @@
     if (!flushTimer) flushTimer = setTimeout(flush, 30);
   }
 
+  /* 只画当前页的面板；别的页记着脏，切过去再画 */
   function flush() {
     flushTimer = 0;
-    var list = Object.keys(dirty).map(function (id) { return dirty[id]; });
-    dirty = {};
-    list.forEach(renderPanel);
+    Object.keys(dirty).forEach(function (id) {
+      var p = dirty[id];
+      if (!isActive(p)) return;
+      delete dirty[id];
+      renderPanel(p);
+    });
     refreshMeta();
   }
 
@@ -158,11 +240,12 @@
     });
     var ready = p.needs.length === 0 || (p.partial ? have > 0 : missing.length === 0);
     var body = p.bodyEl;
+    if (Dash.charts) Dash.charts.release(body);
     p.el.classList.remove('is-error', 'is-loading');
     if (!ready) {
-      if (waiting) { p.el.classList.add('is-loading'); body.replaceChildren(); return; }
-      var names = missing.map(function (n) { return (srcs[n] && srcs[n].label) || n; }).join('、');
-      body.replaceChildren(Dash.empty('等数据', names + ' 还没有数据，采集脚本跑过之后会自动出现'));
+      if (waiting) { p.el.classList.add('is-loading'); body.replaceChildren(h('div.skeleton')); return; }
+      var names = missing.map(function (n) { var s = srcs[n]; return s ? (s.label || n) + '（' + srcPath(s) + '）' : n; }).join('、');
+      body.replaceChildren(Dash.empty('等数据', names + ' 还没有数据，采集侧写出之后会自动出现', true));
       return;
     }
     var opens = Array.prototype.map.call(body.querySelectorAll('details'), function (d) { return d.open; });
@@ -173,7 +256,7 @@
     } catch (e) {
       console.error('[Dash] 面板 ' + p.id + ' 出错', e);
       p.el.classList.add('is-error');
-      body.replaceChildren(Dash.empty('这块出错了', String(e && e.message || e)));
+      body.replaceChildren(Dash.empty('这块出错了', String(e && e.message || e), true));
       return;
     }
     var ds = inner.querySelectorAll('details');
@@ -184,29 +267,38 @@
   function refreshMeta() {
     Object.keys(panels).forEach(function (id) {
       var p = panels[id];
-      if (!p.el) return;
+      if (!p.el || !isActive(p)) return;
       var oldest = NaN, stale = false;
       p.needs.forEach(function (n) {
         var s = srcs[n];
-        if (!store[n] || !s || s.stale == null) return;
+        if (!store[n] || !s) return;
         var t = parseTime(store[n].updated);
         if (!isNaN(t) && (isNaN(oldest) || t < oldest)) oldest = t;
         if (Dash.isStale(n)) stale = true;
       });
-      if (p.card !== false) {
-        p.el.classList.toggle('is-stale', stale);
-        if (p.metaEl) {
-          p.metaEl.textContent = stale ? '数据旧了 · 更新于 ' + Dash.at(oldest) : (isNaN(oldest) ? '' : '更新 ' + Dash.at(oldest));
-        }
-      }
+      p.el.classList.toggle('is-stale', stale);
+      p.metaEl.textContent = stale ? '数据旧了 · ' + Dash.at(oldest) : (isNaN(oldest) ? '' : '更新 ' + Dash.at(oldest));
     });
     updateHeader();
   }
 
-  /* ================= 页眉与导航 ================= */
+  /* ================= 页内选中状态 ================= */
+
+  /* Dash.select('row', 'C-239')：面板 watch 里有 'row' 的都会重绘；值相同再选一次就取消 */
+  Dash.select = function (key, value) {
+    picks[key] = picks[key] === value ? null : value;
+    Object.keys(panels).forEach(function (id) { if (panels[id].watch.indexOf(key) >= 0) schedule(panels[id]); });
+  };
+  Dash.selected = function (key) { return picks[key] == null ? null : picks[key]; };
+
+  /* 重画面板（例如本地交互改了显示方式） */
+  Dash.redraw = function (id) { schedule(panels[id]); };
+  Dash.redrawAll = function () { Object.keys(panels).forEach(function (id) { schedule(panels[id]); }); };
+
+  /* ================= 页眉、导航、角标 ================= */
 
   function headlineText() {
-    var q = store['queue'], l = store['live'], parts = [];
+    var q = store.queue, l = store.live, parts = [];
     if (q && q.counts && q.counts['进行中']) parts.push('施工 ' + q.counts['进行中'] + ' 项在做');
     if (l) {
       var running = (l.sessions || []).filter(function (s) { return s.state === 'running'; }).length;
@@ -218,52 +310,49 @@
 
   function updateHeader() {
     var hl = document.getElementById('headline');
-    if (hl) hl.textContent = headlineText();
+    if (hl) { hl.textContent = headlineText(); hl.title = hl.textContent; }
     var dot = document.getElementById('fresh-dot'), txt = document.getElementById('fresh-text');
     if (!dot || !txt) return;
-    var newest = NaN, anyStale = false, any = false;
-    M.data.forEach(function (s) {
-      var d = store[s.name];
-      if (!d) return;
-      any = true;
-      if (s.stale == null) return;
-      var t = parseTime(d.updated);
-      if (!isNaN(t) && (isNaN(newest) || t > newest)) newest = t;
-      if (Dash.isStale(s.name)) anyStale = true;
-    });
-    var tone = !any ? 'muted' : (anyStale ? 'warn' : 'ok');
-    dot.className = 'dot t-' + tone;
-    txt.textContent = !any ? '等数据' : (anyStale ? '部分数据旧了' : (isNaN(newest) ? '数据已就绪' : '数据 ' + Dash.at(newest)));
-    if (DEMO) txt.textContent = '演示数据';
+    var l = store.live, stale = Dash.isStale('live');
+    dot.className = 'dot t-' + (!l ? 'muted' : stale ? 'warn' : 'ok');
+    txt.textContent = DEMO ? '演示数据' : !l ? '等数据' : (stale ? '实时数据旧了 · ' : '实时 ') + Dash.at(l.updated);
     var pop = document.getElementById('fresh-pop');
     if (pop && !pop.hidden) fillPop(pop);
   }
 
+  var MODE_TEXT = { poll: '定时', version: '按版本', timer: '定时（无索引）' };
   function fillPop(pop) {
     var rows = M.data.map(function (s) {
-      var d = store[s.name], tone, text;
-      if (!d) { tone = 'muted'; text = meta[s.name] && meta[s.name].tried ? '没有数据' : '读取中'; }
-      else if (s.stale == null) { tone = 'ok'; text = Dash.at(d.updated) + ' 改动'; }
+      var d = store[s.name], m = meta[s.name] || {}, tone, text;
+      if (!d) { tone = 'muted'; text = m.tried ? '没有数据' : (wanted(s.name) ? '读取中' : '这页用不到，没拉'); }
       else if (Dash.isStale(s.name)) { tone = 'warn'; text = '旧了 · ' + Dash.at(d.updated); }
       else { tone = 'ok'; text = Dash.at(d.updated); }
-      return h('div.pop-row.t-' + tone, h('span.dot'), h('span.grow', s.label || s.name), h('span.ago', text));
+      return h('div.pop-row.t-' + tone, h('span.dot'), h('span.grow', s.label || s.name), h('span.pop-mode', MODE_TEXT[modeOf(s)]), h('span.ago', text));
     });
-    pop.replaceChildren(h('div.pop-title', DEMO ? '正在看演示数据（?demo）' : '数据新鲜度'), rows);
+    pop.replaceChildren(h('div.pop-title', DEMO ? '正在看演示数据（?demo）' : '各份数据'), rows);
   }
 
+  function updateCorner() {
+    var c = document.getElementById('corner');
+    if (!c) return;
+    var text = index.state === 'missing' ? '数据索引未就绪：各份数据按定时拉取'
+      : index.state === 'stale' ? '数据索引旧了（' + Dash.at(store.index && store.index.updated) + '）：各份数据按定时拉取' : '';
+    c.hidden = !text;
+    c.textContent = text;
+  }
+
+  /* 导航角标：现在页是没点"知道了"的待办数，健康页是要看的检查数 */
   function updateBadges() {
-    var nav = document.getElementById('nav');
-    if (!nav) return;
-    var att = Dash.attention();
-    var needN = att.open.filter(function (x) { return x.need; }).length;
-    var notice = ((store['notices'] && store['notices'].items) || []).filter(function (it) {
-      return it.level === 'attention' && !Dash.expired(it) && !Dash.seen('notice:' + it.id);
-    }).length;
-    Dash.badge('audit', att.open.length ? String(att.open.length) : '', needN ? 'risk' : 'muted');
-    Dash.badge('notices', notice ? String(notice) : '', 'warn');
+    var att = store.attention && store.attention.items || [];
+    var open = att.filter(function (x) { return !x.acked; });
+    var urgent = open.some(function (x) { return x.urgency >= 3; });
+    badge('now', open.length ? String(open.length) : '', urgent ? 'risk' : 'muted');
+    var checks = store.health && store.health.checks || [];
+    var bad = checks.filter(function (c) { return c.level !== 'ok'; });
+    badge('health', bad.length ? String(bad.length) : '', bad.some(function (c) { return c.level === 'bad'; }) ? 'risk' : 'warn');
   }
 
-  Dash.badge = function (pageId, text, tone) {
+  function badge(pageId, text, tone) {
     var a = document.querySelector('#nav a[data-page="' + pageId + '"]');
     if (!a) return;
     var b = a.querySelector('.nav-badge');
@@ -271,40 +360,59 @@
     if (!b) { b = h('span.nav-badge'); a.appendChild(b); }
     b.className = 'nav-badge t-' + (tone || 'muted');
     b.textContent = text;
-  };
+  }
 
   function afterData() {
     refreshMeta();
     updateBadges();
+    updateCorner();
   }
 
   /* ================= 路由 ================= */
+  /* #页 、#页/子标签 、#页/块 、#页/子标签/块（块 id 就是面板 id） */
 
-  Dash.go = function (id) { location.hash = '#' + id; };
-  Dash.page = function () { return currentPage; };
+  Dash.go = function (path) { location.hash = '#' + path; };
 
   function route() {
-    var hash = (location.hash || '').replace(/^#/, '').split('/');   // #页名 或 #页名/块 id（面板 id），后者滚到那一块
-    var id = hash[0];
-    if (!M.pages.some(function (p) { return p.id === id; })) id = M.pages.length ? M.pages[0].id : '';
-    currentPage = id;
+    var parts = (location.hash || '').replace(/^#/, '').split('/').map(decodeURIComponent);
+    var pg = pageOf(parts[0]) || M.pages[0];
+    var tab = null, block = null;
+    if (pg.tabs && pg.tabs.length) {
+      var t = pg.tabs.filter(function (x) { return x.id === parts[1]; })[0];
+      tab = t ? t.id : pg.tabs[0].id;
+      block = t ? parts[2] : parts[1];
+    } else {
+      block = parts[1];
+    }
+    var changed = view.page !== pg.id || view.tab !== tab;
+    view.page = pg.id; view.tab = tab;
+    if (changed) asked = {};
     M.pages.forEach(function (p) {
       var sec = document.getElementById('page-' + p.id);
-      if (sec) sec.classList.toggle('is-active', p.id === id);
+      if (sec) sec.classList.toggle('is-active', p.id === pg.id);
     });
+    if (tab) {
+      var sec = document.getElementById('page-' + pg.id);
+      Array.prototype.forEach.call(sec.querySelectorAll('.page-tab'), function (el) { el.hidden = el.dataset.tab !== tab; });
+      Array.prototype.forEach.call(sec.querySelectorAll('.tabs a'), function (a) {
+        if (a.dataset.tab === tab) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current');
+      });
+    }
     Array.prototype.forEach.call(document.querySelectorAll('#nav a'), function (a) {
-      if (a.dataset.page === id) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current');
+      if (a.dataset.page === pg.id) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current');
     });
-    var pg = M.pages.filter(function (p) { return p.id === id; })[0];
-    document.title = (pg ? pg.title + ' · ' : '') + '作者观察台';
-    window.scrollTo(0, 0);
-    if (hash[1]) {
+    var tabTitle = tab ? pg.tabs.filter(function (x) { return x.id === tab; })[0].title + ' · ' : '';
+    document.title = tabTitle + pg.title + ' · 作者观察台';
+    if (changed) window.scrollTo(0, 0);
+    if (!flushTimer) flushTimer = setTimeout(flush, 0);
+    sync();
+    if (block) {
       var jump = function () {
-        var box = document.querySelector('#page-' + id + ' [data-panel="' + hash[1] + '"]');
-        if (box) box.scrollIntoView();
+        var box = document.querySelector('#page-' + pg.id + ' [data-panel="' + block + '"]');
+        if (box) box.scrollIntoView({ block: 'start' });
       };
-      jump();
-      setTimeout(jump, 400);   // 刚打开页面时面板还没画完
+      setTimeout(jump, 60);
+      setTimeout(jump, 500);   // 刚打开页面时面板还没画完
     }
   }
 
@@ -316,13 +424,29 @@
     document.head.appendChild(el);
   }
 
+  function pageSection(p) {
+    var head = h('header.page-head',
+      h('div.page-kicker', p.title),
+      h('h1.page-ask', p.ask || p.title));
+    var sec = h('section.page', { id: 'page-' + p.id }, head);
+    if (p.tabs && p.tabs.length) {
+      sec.appendChild(h('nav.tabs', { 'aria-label': p.title + '子标签' }, p.tabs.map(function (t) {
+        return h('a', { href: '#' + p.id + '/' + t.id, dataset: { tab: t.id } }, t.title);
+      })));
+      p.tabs.forEach(function (t) {
+        sec.appendChild(h('div.page-tab', { dataset: { tab: t.id }, hidden: true }, h('div.page-body')));
+      });
+    } else {
+      sec.appendChild(h('div.page-body'));
+    }
+    return sec;
+  }
+
   function boot() {
     var nav = document.getElementById('nav'), main = document.getElementById('main');
     M.pages.forEach(function (p) {
-      nav.appendChild(h('a', { href: '#' + p.id, dataset: { page: p.id } }, h('span', p.title)));
-      main.appendChild(h('section.page', { id: 'page-' + p.id },
-        h('div.page-head', h('h1', p.title), p.desc ? h('p', p.desc) : null),
-        h('div.page-body')));
+      nav.appendChild(h('a', { href: '#' + p.id, dataset: { page: p.id }, title: p.ask || '' }, h('span.nav-title', p.title)));
+      main.appendChild(pageSection(p));
     });
 
     var btn = document.getElementById('fresh'), pop = document.getElementById('fresh-pop');
@@ -336,26 +460,25 @@
       if (!pop.hidden && !pop.contains(e.target)) { pop.hidden = true; btn.setAttribute('aria-expanded', 'false'); }
     });
 
+    booted = true;
+    var stamp = '?t=' + Date.now();
+    var files = [];
+    M.pages.forEach(function (p) {
+      if (p.file) files.push(p);
+      (p.tabs || []).forEach(function (t) { files.push(t); });
+    });
+    files.forEach(function (f) {
+      if (f.css) loadAsset('css', 'app/' + f.file.replace(/\.js$/, '.css') + stamp);
+      loadAsset('js', 'app/' + f.file + stamp, function () { console.warn('[Dash] 页面文件没找到：' + f.file); });
+    });
+    Object.keys(panels).forEach(function (id) { mount(panels[id]); });
+
     window.addEventListener('hashchange', route);
     route();
-    booted = true;
-
-    var stamp = '?t=' + Date.now();
-    M.panels.forEach(function (pm) {
-      if (pm.css) loadAsset('css', 'app/' + pm.file.replace(/\.js$/, '.css') + stamp);
-      loadAsset('js', 'app/' + pm.file + stamp, function () {
-        console.warn('[Dash] 面板文件没找到：' + pm.file);
-        if (panels[pm.id]) return;
-        Dash.panel({
-          id: pm.id, page: pm.page, title: '', order: 100, needs: [], card: true,
-          render: function (el) { el.appendChild(Dash.empty('这块还没有写好', pm.file, true)); }
-        });
-      });
-    });
-    Object.keys(panels).forEach(function (id) { mount(panels[id]); });   // 挂载 HTML 同步加载的面板
-
-    startData();
+    tick();
+    setInterval(tick, 5000);
     setInterval(refreshMeta, 20000);
+    document.addEventListener('visibilitychange', function () { if (!document.hidden) tick(); });
     updateHeader();
   }
 

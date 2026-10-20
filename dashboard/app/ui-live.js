@@ -1,4 +1,4 @@
-/* 实时状态的共用渲染：总览的"谁在干活"与模型页是同一个函数 Dash.who；后台脚本列表 Dash.scripts 总览与模型页共用。
+/* 实时状态的共用渲染：子代理签条文字 Dash.agentLabel、后台脚本与构建锁 Dash.scripts、临时工作树 Dash.worktrees、长文字 Dash.longText、空状态原因 Dash.liveGap。
    依赖 core.js、ui.js 先加载；数据形状见 dashboard/README.md §2.1 的 live。 */
 (function () {
   'use strict';
@@ -48,73 +48,20 @@
   };
 
   /* 在跑的写"HH:MM 起，已 N 分钟"，已交回的写"HH:MM 交回" */
-  Dash.sinceText = function (a) {
+  function sinceText(a) {
     if (a.state === 'unknown') return '记录不足，状态未知';
     if (a.stalled) return '未收尾，最后记录 ' + Dash.at(a.last) + '（可能卡住）';
     if (a.state === 'done') return Dash.at(a.last) + ' 交回';
     return Dash.at(a.started || a.since) + ' 起，已 ' + Dash.elapsed(a.started || a.since);
-  };
+  }
 
   /* 子代理的签条文字：名字 · 型号 · 推理档 · 在跑/已交回 · 开始多久 */
   Dash.agentLabel = function (a) {
-    return [a.side === 'codex' ? 'Codex' : 'Claude', a.name, Dash.modelName(a.model), a.effort, a.stalled ? '未收尾、可能卡住' : STATE[a.state] || a.state, Dash.sinceText(a)]
+    return [a.side === 'codex' ? 'Codex' : 'Claude', a.name, Dash.modelName(a.model), a.effort, a.stalled ? '未收尾、可能卡住' : STATE[a.state] || a.state, sinceText(a)]
       .filter(Boolean).join(' · ');
   };
 
-  function dot(kind) { return h('span.who-dot.who-dot--' + kind); }
-
-  function agentRow(a) {
-    var title = a.row || a.name;
-    var task = a.task && a.task.indexOf(a.row) === 0 ? a.task.slice(a.row.length).replace(/^\s+/, '') : a.task;
-    return h('div.who-row.who-agent.is-' + a.state,
-      dot(a.state),
-      h('span.who-name', title),
-      h('span.who-task', { title: a.task || '', on: { click: function (e) { e.currentTarget.classList.toggle('is-open'); } } }, task || (a.row ? a.name : '')),
-      h('span.who-sigs', Dash.chip(Dash.modelName(a.model), a.side), a.effort ? Dash.chip(a.effort, 'muted') : null),
-      h('span.who-when', Dash.sinceText(a)));
-  }
-
-  function head(s) {
-    return h('div.who-row.who-main.is-' + s.state,
-      dot(s.state),
-      h('span.who-name', s.name),
-      h('span.who-sigs', Dash.chip(Dash.modelName(s.model) || '—', s.side), s.effort ? Dash.chip(s.effort, 'muted') : null,
-        Dash.chip(STATE[s.state] || s.state, s.state === 'running' ? 'ok' : 'muted')),
-      h('span.who-when', Dash.at(s.since) + (s.state === 'running' ? ' 起' : '')),
-      s.task ? h('div.who-main-task', Dash.longText(s.task)) : null);
-  }
-
-  function group(root, kids) {
-    var run = kids.filter(function (a) { return a.state !== 'done'; });
-    var done = kids.filter(function (a) { return a.state === 'done'; });
-    var box = h('div.who-group.who-group--' + root.side, root.virtual ? h('div.who-orphan', root.name) : head(root));
-    run.forEach(function (a) { box.appendChild(agentRow(a)); });
-    if (!run.length && !root.virtual) box.appendChild(h('div.who-none', '没有在跑的子代理'));
-    if (done.length) box.appendChild(Dash.fold('另有 ' + done.length + ' 个已交回', done.map(agentRow)));
-    return box;
-  }
-
-  /* 会话 → 它名下的子代理：每个会话一块，在跑的逐个列出（行号或名字、型号、推理档、开始多久），已交回的折叠 */
-  Dash.who = function (live) {
-    var sessions = live.sessions || [], agents = live.agents || [];
-    var owners = {};
-    sessions.forEach(function (s) { owners[s.id] = s.id; });
-    var changed = true;
-    while (changed) {
-      changed = false;
-      agents.forEach(function (a) { if (!owners[a.id] && owners[a.parent]) { owners[a.id] = owners[a.parent]; changed = true; } });
-    }
-    var box = h('div.who');
-    sessions.forEach(function (s) {
-      box.appendChild(group(s, agents.filter(function (a) { return owners[a.id] === s.id; })));
-    });
-    var orphans = agents.filter(function (a) { return !owners[a.id]; });
-    if (orphans.length) box.appendChild(group({ name: '没有挂到会话的子代理', side: 'claude', virtual: true }, orphans));
-    if (!sessions.length && !orphans.length) {
-      box.appendChild(Dash.liveGap(live, 'sessions', ['Codex', 'Claude'], '没有会话') || Dash.empty('没有会话', '', true));
-    }
-    return box;
-  };
+  function dot(kind) { return h('span.sc-dot.is-' + kind); }
 
   /* ---------- 后台脚本 ---------- */
 
@@ -197,59 +144,5 @@
   Dash.worktrees = function (live) {
     var gap = Dash.liveGap(live, 'worktrees', ['临时工作树'], '确实没有登记着的临时工作树');
     return gap || h('div.wt', live.worktrees.items.map(treeRow));
-  };
-
-  /* 总览用：一行"临时工作树 N 个"，点开看清单；没有内容时说清原因 */
-  Dash.worktreeFold = function (live) {
-    var w = live && live.worktrees;
-    if (!w || !w.items || !w.items.length) return Dash.worktrees(live);
-    var flagged = w.items.filter(function (x) { return x.flags.length; }).length;
-    return Dash.fold('临时工作树 ' + w.items.length + ' 个' + (flagged ? '，' + flagged + ' 个要看' : ''), Dash.worktrees(live));
-  };
-
-  /* ---------- 钩子与生效记录 ---------- */
-
-  function hookRow(x) {
-    var sideName = x.side === 'claude' ? 'Claude' : 'Codex';
-    var line1 = h('div.hk-main',
-      Dash.chip(sideName, x.side),
-      h('span.hk-name', x.name),
-      x.desc ? h('span.hk-desc', x.desc) : null,
-      x.tracked
-        ? h('span.hk-last', x.last ? '最后触发 ' + Dash.at(x.last) : '没有触发记录')
-        : h('span.hk-last', '无记账'));
-    var line2;
-    if (x.tracked) {
-      var a = x.h1, b = x.h24;
-      line2 = h('div.hk-sub',
-        '近 1 小时触发 ' + a.n + ' 次、注入 ' + a.inj + ' 次；近 24 小时触发 ' + b.n + ' 次、注入 ' + b.inj + ' 次；报错 ' + b.err + '、被挤掉 ' + b.dropped + '、取不到 ' + b.miss,
-        x.lastInj ? h('div', '最近一次注入 ' + Dash.at(x.lastInj.at) + '：' + (x.lastInj.inj.join('、') || '—') + '（' + x.lastInj.chars + ' 字）') : h('div', '还没有成功注入的记录'),
-        x.note ? h('div', x.note) : null,
-        x.scope ? h('div.hk-scope', x.scope) : null);
-    } else {
-      line2 = h('div.hk-sub', '挂的事件：' + x.events.join('、') + '；' + (x.note || ''));
-    }
-    var body = h('div.hk-body', h('div.hk-sub', '挂的事件：' + x.events.join('、')), h('div.hk-sub.mono', x.script));
-    if (x.tracked) {
-      if (!x.recent.length) body.appendChild(h('div.hk-sub', '日志里还没有这个钩子的记录'));
-      x.recent.forEach(function (r) {
-        body.appendChild(h('div.hk-rec' + (r.err ? '.is-err' : ''),
-          h('span.hk-t', Dash.at(r.at) + ' ' + r.at.slice(17, 19) + '″'),
-          h('span.hk-role', r.role + (r.cls ? ' · ' + r.cls : '')),
-          h('span.hk-ev', r.event + (r.tool ? ' ' + r.tool : '')),
-          h('span.hk-inj', r.err ? '报错：' + r.err : (r.inj.length ? r.inj.join('、') + '（' + r.chars + ' 字）' : '没有注入')),
-          (r.dropped.length || r.miss.length || r.cut.length) ? h('span.hk-warn',
-            [r.dropped.length ? '挤掉 ' + r.dropped.join('、') : '', r.miss.length ? '取不到 ' + r.miss.join('、') : '', r.cut.length ? '降级 ' + r.cut.join('、') : ''].filter(Boolean).join('；')) : null));
-      });
-    }
-    var item = h('details.hk-item' + (x.flag ? '.is-flag' : ''), h('summary', line1, x.flag ? h('div.hk-flag', x.flag) : null, line2), body);
-    return item;
-  }
-
-  /* 每个登记的钩子一行：最后触发、近 1 小时与 24 小时触发/注入次数、最近一次注入了什么、报错/挤掉/取不到；点开看最近 20 条。
-     琥珀色：登记了但一次都没触发、触发了但没有一次成功注入、只有报错 */
-  Dash.hooks = function (live) {
-    var gap = Dash.liveGap(live, 'hooks', ['钩子'], '没有登记的钩子');
-    return gap || h('div.hk', live.hooks.map(hookRow));
   };
 })();
