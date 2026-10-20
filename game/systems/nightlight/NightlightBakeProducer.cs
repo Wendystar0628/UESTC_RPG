@@ -1,3 +1,4 @@
+using Campus.Gen.World;
 using System.Numerics;
 using System.Text.Json;
 using Campus.Contracts;
@@ -11,6 +12,11 @@ using Campus.Systems.Nightlight.Windows;
 namespace Campus.Systems.Nightlight;
 
 /// <summary>Resident lamp numbering and independently baked lamp/window owner tiles.</summary>
+
+
+
+
+
 [BakeProducer("nightlight", Owner = "WP-39")]
 public sealed class NightlightBakeProducer : IBakeProducer, IBakeContentConsumer, INightlightCatalogBuilder
 {

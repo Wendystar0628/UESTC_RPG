@@ -19,6 +19,7 @@ namespace Campus.Gen.Maps.Qingshuihe.South.Liren;
 /// columns at both open faces (§6.3), and the two-storey east link between A and B. The void stays open from the paved
 /// plaza into the courtyard; its floor is paved.
 /// </summary>
+
 public sealed class LirenSite : ZoneSite
 {
     public static readonly string Connector = SouthIds.LirenConnector.Entity;

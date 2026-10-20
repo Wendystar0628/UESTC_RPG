@@ -1,3 +1,8 @@
+using Campus.Gen.World;
+using Campus.Gen.Parts.Street;
+using Campus.Gen.Parts.Openings;
+using Campus.Gen.Parts.Circulation;
+using Campus.Contracts.Bake;
 using Campus.Contracts;
 using Campus.Gen.Geometry;
 using Campus.Gen.Sites;
@@ -5,9 +10,14 @@ using Campus.Gen.Sites;
 namespace Campus.Gen.Maps.Qingshuihe.South;
 
 /// <summary>South-zone routing and window metadata over the shared site module.</summary>
+
+
 [ContentModule("zone.south", Owner = "WP-18")]
 public sealed class SouthModule : ZoneModuleBase, IWindowMetadataSource, IContentSourceTraceProvider
 {
+    public override BakeInputDependencies BakeInputs { get; } = new(BakeInputKinds.World | BakeInputKinds.Windows, [], []);
+    public override BakeInputDependencies CollisionInputs => BakeInputDependencies.World;
+
     public SouthModule() : this(SouthSites.All) { }
 
     internal SouthModule(IReadOnlyList<ZoneSite> sites) : base(sites,

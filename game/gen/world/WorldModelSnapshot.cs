@@ -1,3 +1,4 @@
+using Campus.Contracts.Bake;
 using Campus.Gen.Geometry;
 using System.Collections.ObjectModel;
 using System.Numerics;
@@ -5,6 +6,16 @@ using System.Text.Json;
 using Campus.Contracts;
 
 namespace Campus.Gen.World;
+
+
+
+
+
+
+
+
+
+
 
 public sealed class WorldModelSnapshot : IWorldModel
 {

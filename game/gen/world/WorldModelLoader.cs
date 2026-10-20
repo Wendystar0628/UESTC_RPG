@@ -1,3 +1,4 @@
+using Campus.Contracts.Bake;
 using Campus.Gen.Geometry;
 using System.Collections.ObjectModel;
 using System.Globalization;
@@ -27,6 +28,7 @@ public sealed class WorldDataException(string file, string entry, string message
 }
 
 /// <summary>Pure parser. The kernel supplies only the active map's relative filenames and bytes.</summary>
+
 public static partial class WorldModelLoader
 {
     /// <summary>Fallback storey height when a building's world record gives no height.</summary>

@@ -115,6 +115,8 @@ public sealed class CollisionInteriorIsolationTests
     private sealed class PreparedModule(BuildContext prepared, IWorldModel assetWorld) : IContentModule
     {
         public int Builds, Collisions;
+        public BakeInputDependencies BakeInputs => BakeInputDependencies.World;
+        public BakeInputDependencies CollisionInputs => BakeInputDependencies.World;
         public IReadOnlyList<Claim> Claims => [];
         public ModuleBudget Budget => new(0, 0, 0);
         public IEnumerable<TileKey> Tiles(BuildContext context) => throw new InvalidOperationException("Collision jobs must not enumerate Tiles.");
@@ -184,6 +186,8 @@ public sealed class CollisionInteriorIsolationTests
     private sealed class FixtureProvider(MapId map, float height, IReadOnlyList<FeatureId> features, Action? beforeCollision = null) : IInteriorProvider
     {
         private static readonly Vector2[] Ring = [new(1, 1), new(3, 1), new(3, 3), new(1, 3)];
+        public BakeInputDependencies BakeInputs => BakeInputDependencies.World;
+        public BakeInputDependencies CollisionInputs => BakeInputDependencies.World;
         public IReadOnlyList<FeatureId> FeatureIds => features;
         public int Priority => 1;
         public InteriorLayout Layout(BuildContext context, FeatureId id)

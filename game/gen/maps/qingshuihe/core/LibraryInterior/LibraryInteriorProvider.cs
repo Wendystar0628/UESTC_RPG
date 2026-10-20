@@ -1,3 +1,4 @@
+using Campus.Contracts.Bake;
 using System.Globalization;
 using System.Numerics;
 using Campus.Contracts;
@@ -13,9 +14,13 @@ namespace Campus.Gen.Maps.Qingshuihe.Core.LibraryInterior;
 /// The other catalogue features of the library entry (the north-east connector and the cafe store front) get plain
 /// floor plates and wall linings until their rooms are built.
 /// </summary>
+
 [InteriorProvider("interior.library", Owner = "WP-17")]
 public sealed class LibraryInteriorProvider : IInteriorProvider, IInteriorCatalogConfigurable
 {
+    public BakeInputDependencies BakeInputs => BakeInputDependencies.World;
+    public BakeInputDependencies CollisionInputs => BakeInputDependencies.World;
+
     private sealed record CatalogState(FeatureId[] Features, int[] Floors, IReadOnlyDictionary<FeatureId, IReadOnlyList<EntranceDecl>> Entrances);
 
     private CatalogState _catalog = new([], [], new Dictionary<FeatureId, IReadOnlyList<EntranceDecl>>());

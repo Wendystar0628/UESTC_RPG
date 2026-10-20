@@ -1,3 +1,6 @@
+using Campus.Gen.World;
+using Campus.Gen.Parts.Circulation;
+using Campus.Contracts.Bake;
 using System.Numerics;
 using Campus.Contracts;
 using Campus.Gen.Geometry;
@@ -9,9 +12,14 @@ using T = Campus.Gen.Maps.Qingshuihe.Waterfront.WaterfrontTune;
 namespace Campus.Gen.Maps.Qingshuihe.Waterfront;
 
 /// <summary>WP-28 registered bridges and hard-bank structures, resolved against the compiled terrain.</summary>
+
+
 [ContentModule("zone.waterfront", Owner = "WP-28")]
 public sealed class WaterfrontModule : ZoneModuleBase
 {
+    public override BakeInputDependencies BakeInputs { get; } = new(BakeInputKinds.World | BakeInputKinds.Windows, [], []);
+    public override BakeInputDependencies CollisionInputs => BakeInputDependencies.World;
+
     private static readonly IReadOnlyList<ZoneSite> Sites = [new BridgeSite(), new BankSite()];
 
     public WaterfrontModule() : base(Sites, new(T.BudgetTrianglesL0, T.BudgetTrianglesL1, T.BudgetDrawCalls)) { }

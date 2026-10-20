@@ -7,6 +7,9 @@ namespace Campus.Gen.Interior.Shell.Box;
 /// <summary>Demo box interior: one rectangular plan, an open entry and straight stairs per registered building.</summary>
 public abstract class BoxInteriorProvider : IInteriorProvider, IInteriorCatalogConfigurable
 {
+    public abstract BakeInputDependencies BakeInputs { get; }
+    public abstract BakeInputDependencies CollisionInputs { get; }
+
     private FeatureId[] _features = [];
     private int[] _floors = [1];
     private IReadOnlyDictionary<FeatureId, IReadOnlyList<EntranceDecl>> _entrances =

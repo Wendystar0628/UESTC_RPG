@@ -1,3 +1,5 @@
+using Campus.Gen.World;
+using Campus.Contracts.Bake;
 using System.Numerics;
 using Campus.Contracts;
 
@@ -12,10 +14,12 @@ namespace Campus.Gen.Diorama;
 /// rectangle (the ground's extent) or the outskirts cut line for the fog sea's inner edge. A map without that file has no
 /// backdrop product (Tiles is empty). Section and water-column surfaces (diorama_section) are not built here yet.
 /// </summary>
+
 [ContentModule("diorama", Owner = "WP-22")]
 public sealed class DioramaModule : IContentModule
 {
     public BakeInputDependencies BakeInputs { get; } = new(BakeInputKinds.Backdrop, [], []);
+    public BakeInputDependencies CollisionInputs => BakeInputDependencies.World;
 
     private readonly object _gate = new();
     private (IWorldModel World, MapId Map, IReadOnlyList<GeometryBundle> Meshes)? _cache;

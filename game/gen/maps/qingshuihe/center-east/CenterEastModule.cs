@@ -1,12 +1,21 @@
+using Campus.Gen.World;
+using Campus.Gen.Parts.Roof;
+using Campus.Gen.Parts.Openings;
+using Campus.Gen.Parts.Circulation;
+using Campus.Contracts.Bake;
 using Campus.Contracts;
 using Campus.Gen.Sites;
 
 namespace Campus.Gen.Maps.Qingshuihe.CenterEast;
 
 /// <summary>Center-east sites share zone routing, geometry publication and window metadata.</summary>
+
+
 [ContentModule("zone.center-east", Owner = "WP-21")]
 public sealed class CenterEastModule : ZoneModuleBase, IWindowMetadataSource, IContentSourceTraceProvider
 {
+    public override BakeInputDependencies CollisionInputs => BakeInputDependencies.World;
+
     public override BakeInputDependencies BakeInputs { get; } = new(BakeInputKinds.World | BakeInputKinds.Windows, [], [SceneTextInputs.AtlasKey]);
 
     public CenterEastModule() : this(CenterEastSites.All) { }

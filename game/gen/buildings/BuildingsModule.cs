@@ -1,3 +1,7 @@
+using Campus.Gen.Parts.Roof;
+using Campus.Gen.Parts.Openings;
+using Campus.Gen.Parts.Circulation;
+using Campus.Contracts.Bake;
 using System.Globalization;
 using System.Numerics;
 using Campus.Contracts;
@@ -14,10 +18,13 @@ namespace Campus.Gen.Buildings;
 /// bays and numbered windows from the facade rules (MAP-QSH-ADDITIONS, ART-MODELING).
 /// Pure .NET: reads only the world model, outputs contract geometry for the WP-02 baker.
 /// </summary>
+
+
 [ContentModule("buildings", Owner = "WP-14")]
 public sealed class BuildingsModule : IContentModule, IWindowNumberingProvider, IWindowMetadataSource, IContentSourceTraceProvider
 {
     public BakeInputDependencies BakeInputs { get; } = new(BakeInputKinds.World | BakeInputKinds.Windows, [SurfaceMaterialCatalog.SourcePath], []);
+    public BakeInputDependencies CollisionInputs => BakeInputDependencies.World;
 
     /// <summary>Generic module: claims no specific feature (SYS-MAPS).</summary>
     public IReadOnlyList<Claim> Claims { get; } = [];

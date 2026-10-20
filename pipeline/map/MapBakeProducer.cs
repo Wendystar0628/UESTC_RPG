@@ -1,3 +1,4 @@
+using Campus.Gen.World;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
@@ -8,12 +9,14 @@ using Campus.Contracts.Maps;
 namespace Campus.Pipeline.Map;
 
 /// <summary>Discovered by the kernel. SourceInputs are an immutable snapshot loaded by the caller.</summary>
-[BakeProducer("map", Owner = "WP-48a")]
+
+[BakeProducer(MapBaker.Module, Owner = "WP-48a")]
 public sealed class MapBakeProducer : IBakeProducer
 {
     private const string LabelsFile = "atlas/labels.json";
     private const string MarkersFile = "atlas/markers.json";
     private static readonly IReadOnlyList<string> MapFiles = Array.AsReadOnly(new[] { LabelsFile, MarkersFile, "waypoints.json" });
+    public bool UsesModule(IContentModule module) => false;
     public BakePayloadClass PayloadClass => BakePayloadClass.Product;
     public BakeProductKind ProductKind => BakeProductKind.Map;
     public BakeInputDependencies Inputs(BakeKey key) => new(BakeInputKinds.World | BakeInputKinds.ReflectLakes | BakeInputKinds.OutskirtsBlocks,

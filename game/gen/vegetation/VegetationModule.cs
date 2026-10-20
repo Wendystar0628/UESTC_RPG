@@ -1,3 +1,5 @@
+using Campus.Gen.World;
+using Campus.Contracts.Bake;
 using System.Globalization;
 using Campus.Contracts;
 using Campus.Contracts.Vegetation;
@@ -12,6 +14,7 @@ namespace Campus.Gen.Vegetation;
 /// Build gives far stand-ins as static instance streams (<see cref="ContentOutput.Instances"/>), one per mother model (species ×
 /// variant) at every static geometry level. Near trees and their shadows belong exclusively to the streamed runtime.
 /// </summary>
+
 [ContentModule("vegetation", Owner = "WP-23")]
 public sealed class VegetationModule : IVegetationRuntimeSource, IGroundMaskContributor, IContentSourceTraceProvider
 {

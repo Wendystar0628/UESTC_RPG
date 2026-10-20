@@ -19,7 +19,8 @@ public abstract class ZoneModuleBase : IContentModule
         Probes = sites.SelectMany(site => site.Probes).ToArray();
     }
 
-    public virtual BakeInputDependencies BakeInputs { get; } = new(BakeInputKinds.World | BakeInputKinds.Windows, [], []);
+    public abstract BakeInputDependencies BakeInputs { get; }
+    public abstract BakeInputDependencies CollisionInputs { get; }
 
     public virtual IReadOnlyList<Claim> Claims { get; }
     public virtual IReadOnlyList<InspectionProbe> Probes { get; }

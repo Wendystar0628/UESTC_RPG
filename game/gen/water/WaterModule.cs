@@ -1,3 +1,5 @@
+using Campus.Gen.World;
+using Campus.Contracts.Bake;
 using Campus.Contracts;
 using Campus.Contracts.Water;
 
@@ -11,10 +13,12 @@ namespace Campus.Gen.Water;
 /// CUSTOM2 = (first lane centre, lane spacing, end-bar length, end inset).
 /// COLOR flag 8 = never casts. Banks, bridges and culvert structures belong to the zone packages.
 /// </summary>
+
 [ContentModule("water", Owner = "WP-24")]
 public sealed class WaterModule : IWaterContentSource
 {
     public BakeInputDependencies BakeInputs { get; } = new(BakeInputKinds.World | BakeInputKinds.ReflectLakes, [], []);
+    public BakeInputDependencies CollisionInputs => BakeInputDependencies.World;
 
     private readonly object _gate = new();
     private (IWorldModel World, MapId Map, WaterSurfaces Surfaces)? _cache;

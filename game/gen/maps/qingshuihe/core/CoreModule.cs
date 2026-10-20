@@ -1,3 +1,9 @@
+using Campus.Gen.World;
+using Campus.Gen.Parts.Street;
+using Campus.Gen.Parts.Roof;
+using Campus.Gen.Parts.Openings;
+using Campus.Gen.Parts.Circulation;
+using Campus.Contracts.Bake;
 using Campus.Gen.Geometry;
 using Campus.Gen.Sites;
 using Campus.Contracts;
@@ -17,10 +23,16 @@ namespace Campus.Gen.Maps.Qingshuihe.Core;
 /// only routes them to tiles, merges their output and unions their claims. Sub-packages 16b onward add their pieces
 /// to <see cref="CoreSite.Pieces"/>, their entries to world/core.json and their terrain to core.terrain.json.
 /// </summary>
+
+
 [ContentModule("zone.core", Owner = "WP-16")]
 public sealed class CoreModule() : ZoneModuleBase([new CoreZoneSite()],
     new(TrianglesL0: 60_000, TrianglesL1: 30_000, DrawCalls: 12)),
-    IWindowMetadataSource, ILightMetadataSource, IContentSourceTraceProvider { }
+    IWindowMetadataSource, ILightMetadataSource, IContentSourceTraceProvider
+{
+    public override BakeInputDependencies BakeInputs { get; } = new(BakeInputKinds.World | BakeInputKinds.Windows, [], []);
+    public override BakeInputDependencies CollisionInputs => BakeInputDependencies.World;
+}
 
 /// <summary>Keeps the core's shared stone and glass sinks together while common owns routing and metadata.</summary>
 internal sealed class CoreZoneSite : ZoneSite, ILightMetadataSource

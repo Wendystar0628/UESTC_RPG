@@ -203,6 +203,8 @@ public sealed class StreamSchedulingTests
         public int Calls, Thread;
         public TileKey Tile;
         public LodLevel Level;
+        public BakeInputDependencies BakeInputs => BakeInputDependencies.World;
+        public BakeInputDependencies CollisionInputs => BakeInputDependencies.World;
         public IReadOnlyList<Claim> Claims => [];
         public ModuleBudget Budget => new(0, 0, 0);
         public IEnumerable<TileKey> Tiles(BuildContext context) => [new(79, -108), new(79, -108)];

@@ -99,6 +99,7 @@ namespace Campus.Arch.Tests
     public sealed class FixtureBakeProducer : IBakeProducer
     {
         public BakeInputDependencies Inputs(BakeKey key) => BakeInputDependencies.World;
+        public bool UsesModule(IContentModule module) => false;
         public BakePayloadClass PayloadClass => BakePayloadClass.Product;
         public BakeProductKind ProductKind => BakeProductKind.Collision;
         public IReadOnlyList<BakeTileEntry> Tiles(BuildContext context) => [];

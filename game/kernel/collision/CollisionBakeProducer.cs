@@ -1,3 +1,4 @@
+using Campus.Gen.World;
 using System.Globalization;
 using Campus.Contracts;
 using Campus.Contracts.Bake;
@@ -10,9 +11,14 @@ namespace Campus.Kernel.Collision;
 
 /// <summary>Consumes prepared map content and snapshots part generators on the main thread.</summary>
 // Registration activates with the formal Boot composition.
+
+
+
+
 [BakeProducer("collision.world", Owner = "WP-43")]
 public sealed class CollisionBakeProducer : IBakeProducer, IBakeContentConsumer
 {
+    public bool UsesModule(IContentModule module) => true;
     public BakePayloadClass PayloadClass => BakePayloadClass.Tile;
     public BakeProductKind ProductKind => BakeProductKind.Collision;
     public BakeInputDependencies Inputs(BakeKey key) => BakeInputDependencies.World;

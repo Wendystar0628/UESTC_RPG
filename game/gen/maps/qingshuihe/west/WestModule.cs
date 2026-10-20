@@ -1,3 +1,9 @@
+using Campus.Gen.World;
+using Campus.Gen.Parts.Street;
+using Campus.Gen.Parts.Roof;
+using Campus.Gen.Parts.Openings;
+using Campus.Gen.Parts.Circulation;
+using Campus.Contracts.Bake;
 using Campus.Contracts;
 using Campus.Gen.Sites;
 
@@ -10,9 +16,13 @@ namespace Campus.Gen.Maps.Qingshuihe.West;
 /// metadata source (contract-29) it declares a complete grid set for every Facade-claimed feature, gathered from its sites.
 /// Pure .NET: reads the world model and terrain only.
 /// </summary>
+
+
 [ContentModule("zone.west", Owner = "WP-19")]
 public sealed class WestModule : ZoneModuleBase, IWindowMetadataSource, ILightMetadataSource, IContentSourceTraceProvider
 {
+    public override BakeInputDependencies CollisionInputs => BakeInputDependencies.World;
+
     public override BakeInputDependencies BakeInputs { get; } = new(BakeInputKinds.World | BakeInputKinds.Windows, [], [SceneTextInputs.AtlasKey]);
 
     public WestModule() : this(WestSites.All) { }

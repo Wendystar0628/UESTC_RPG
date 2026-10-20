@@ -1,3 +1,4 @@
+using Campus.Gen.World;
 using System.Globalization;
 using System.Numerics;
 using Campus.Contracts;
@@ -7,6 +8,8 @@ using Campus.Contracts.Vegetation;
 namespace Campus.Gen.Vegetation;
 
 /// <summary>Fixed tile payloads from the original source and its exact prepared context.</summary>
+
+
 [BakeProducer("vegetation.runtime", Owner = "WP-23")]
 public sealed class VegetationBakeProducer : IBakeProducer, IBakeContentConsumer
 {

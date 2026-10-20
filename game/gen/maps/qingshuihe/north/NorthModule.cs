@@ -1,3 +1,6 @@
+using Campus.Gen.World;
+using Campus.Gen.Parts.Circulation;
+using Campus.Contracts.Bake;
 using Campus.Contracts;
 using Campus.Gen.Sites;
 
@@ -9,9 +12,13 @@ namespace Campus.Gen.Maps.Qingshuihe.North;
 /// and adds the zone's own parts next to the generic massing: cluster fences and gates, entrances, canteen and street
 /// identity parts. Pure .NET: reads the world model, the interior index and the terrain only.
 /// </summary>
+
+
 [ContentModule("zone.north", Owner = "WP-20")]
 public sealed class NorthModule : ZoneModuleBase, IWindowMetadataSource, IContentSourceTraceProvider
 {
+    public override BakeInputDependencies CollisionInputs => BakeInputDependencies.World;
+
     public override BakeInputDependencies BakeInputs { get; } = new(BakeInputKinds.World | BakeInputKinds.Windows, [], [SceneTextInputs.AtlasKey]);
 
     public NorthModule() : this(NorthSites.All) { }

@@ -1,3 +1,5 @@
+using Campus.Gen.World;
+using Campus.Contracts.Bake;
 using System.Numerics;
 using System.Runtime.CompilerServices;
 using Campus.Contracts;
@@ -14,6 +16,8 @@ namespace Campus.Gen.Furniture;
 /// inventory reading <see cref="DescribeLights"/>, and colliders through <see cref="Collide"/>. Claims nothing: furniture stands between the features other packages own.
 /// Pure .NET; the layout is built once per world model and claims query and shared by every tile and level.
 /// </summary>
+
+
 [ContentModule("furniture", Owner = "WP-13")]
 public sealed class FurnitureModule : IContentModule, ILightMetadataSource
 {

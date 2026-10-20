@@ -1,3 +1,6 @@
+using Campus.Gen.World;
+using Campus.Gen.Parts.Street;
+using Campus.Contracts.Bake;
 using Campus.Contracts;
 using Campus.Gen.Geometry;
 using Campus.Gen.Sites;
@@ -10,9 +13,14 @@ namespace Campus.Gen.Maps.Qingshuihe.Boundary;
 /// the north gate; 30b adds 西北门, 西二门 and 东南口, and the fence all the way round with its side gates and river grates. Every closure collider
 /// is tagged <see cref="SurfaceTag.Boundary"/>. Pure .NET: reads the world model and the terrain only.
 /// </summary>
+
+
 [ContentModule("zone.boundary", Owner = "WP-30")]
 public sealed class BoundaryModule : ZoneModuleBase
 {
+    public override BakeInputDependencies BakeInputs { get; } = new(BakeInputKinds.World | BakeInputKinds.Windows, [], []);
+    public override BakeInputDependencies CollisionInputs => BakeInputDependencies.World;
+
     public BoundaryModule() : this(BoundarySites.All) { }
 
     internal BoundaryModule(IReadOnlyList<ZoneSite> sites) : base(sites,

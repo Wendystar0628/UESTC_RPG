@@ -1,3 +1,4 @@
+using Campus.Contracts.Bake;
 using Campus.Contracts;
 using Campus.Gen.World;
 
@@ -8,10 +9,15 @@ namespace Campus.Gen.Ground;
 /// parking, lawn edging, centre lines and zebra crossings, plus the walking height field. It owns no feature: it is
 /// the default ground everywhere; zone packages that claim the Ground aspect of an area replace it there later.
 /// </summary>
-[ContentModule("ground", Owner = "WP-15")]
+
+
+[ContentModule(GroundModule.Module, Owner = "WP-15")]
 public sealed class GroundModule : IGroundCoverSource
 {
+    public const string Module = "ground";
+
     public BakeInputDependencies BakeInputs { get; } = new(BakeInputKinds.World, [SurfaceMaterialCatalog.SourcePath], [SceneTextInputs.AtlasKey]);
+    public BakeInputDependencies CollisionInputs => BakeInputDependencies.World;
 
     /// <summary>Tiles beyond the source data that still get lawn (the campus edge before the outskirts take over).</summary>
     public const int MarginTiles = 2;

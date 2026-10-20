@@ -1,13 +1,17 @@
+using Campus.Gen.World;
+using Campus.Contracts.Bake;
 using Campus.Contracts;
 using Campus.Contracts.Fauna;
 
 namespace Campus.Gen.Fauna;
 
 /// <summary>Produces complete latched animal states; runtime owns visibility changes and mounting.</summary>
+
 [ContentModule("fauna", Owner = "WP-25")]
 public sealed class FaunaModule : IFaunaContentSource
 {
     public BakeInputDependencies BakeInputs { get; } = new(BakeInputKinds.World | BakeInputKinds.ReflectLakes, [], []);
+    public BakeInputDependencies CollisionInputs => BakeInputDependencies.World;
 
     private readonly System.Runtime.CompilerServices.ConditionalWeakTable<BuildContext, FaunaLayout> _layouts = new();
     public IReadOnlyList<Claim> Claims => [];

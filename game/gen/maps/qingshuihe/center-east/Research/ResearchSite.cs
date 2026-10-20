@@ -23,6 +23,7 @@ namespace Campus.Gen.Maps.Qingshuihe.CenterEast.Research;
 /// collide as DoorClosed. Each gridded block is one named window grid (contract-29) sized from the same layout as its
 /// geometry; the lens halls' glass and the entrance glazing stay unnumbered.
 /// </summary>
+
 public abstract class ResearchSite : ZoneSite
 {
     /// <summary>The shared research frame R: X along the blocks' long faces, +Z roughly south.</summary>

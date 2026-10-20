@@ -18,7 +18,8 @@ namespace Campus.Gen.Maps.Qingshuihe.West.SixInterior;
 /// <summary>The C east hall, its formula stair and the authored northern route to B's short public bay.</summary>
 public abstract class SixInteriorProvider : IInteriorProvider, IInteriorCatalogConfigurable
 {
-    public BakeInputDependencies BakeInputs { get; } = new(BakeInputKinds.World, [], [SceneTextInputs.AtlasKey]);
+    public abstract BakeInputDependencies BakeInputs { get; }
+    public abstract BakeInputDependencies CollisionInputs { get; }
 
     private FeatureId[] _features = [];
     private int[] _floors = [];
