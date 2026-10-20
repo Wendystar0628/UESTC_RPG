@@ -8,7 +8,7 @@
 
 ```
 dashboard/
-  index.html            外壳：页眉、导航、页面容器、右下角提示条；按序加载 vendor/echarts、manifest、core、ui、palette、charts、ui-live
+  index.html            外壳：页眉、导航、页面容器、右下角提示条；按序加载 vendor/echarts、manifest、core、ui、palette、charts、charts-flow、charts-layered、charts-stats、ui-live
   打开观察台.cmd         启动实时采集（没在跑时）、跑一次项目采集、用默认浏览器打开 index.html
   vendor/
     echarts.min.js      Apache ECharts 单文件；许可文本在同目录 echarts-LICENSE.txt、echarts-NOTICE.txt
@@ -17,7 +17,10 @@ dashboard/
     core.js             Dash 运行时：数据按需加载与版本索引、路由、面板注册与渲染、页内选中状态、页眉与导航角标
     ui.js               格式化与小组件：确切个数与时刻、h()、签条、状态条、折叠、行、表格、树、状态灯、分段开关
     palette.js          色表：语义（组、键）→ CSS 变量与中文名；签条、图例
-    charts.js           共用图组件（Dash.charts，基于 ECharts）
+    charts.js           共用图组件的底座（基于 ECharts）：主题色、尺寸自适应、空数据、加载占位、释放；建 Dash.charts，并经 Dash.internal.chartKit 把共用函数交给下面三份
+    charts-flow.js      swimlane 泳道矩阵、dag 依赖图、timeline 时间线
+    charts-layered.js   layered 分层关系图
+    charts-stats.js     heatmap 热力矩阵、treemap 矩形树图、bars 条形图
     ui-live.js          实时数据的共用渲染：时长、长文字、空状态原因、子代理签条、后台脚本、临时工作树
     style.css           令牌（颜色、字号、间距、字体，浅色与深色各一份）与通用组件样式
     pages/<页>.js|css   一页一个文件（可带同名 .css）；资料页每个子标签一个：library-<子标签>.js|css；只经 Dash 读数据
@@ -113,9 +116,9 @@ audit:     { items: [{ id, at, from, title, why, link, status: "open"|"done" }] 
 
 - `poll: true`：不看版本索引，每 `every` 秒拉一次，永远要（`live`、`index`）。
 - `keep: true`：页眉与导航要用，不管在哪一页都保持最新（`attention`、`health`、`queue`）。
-- 其余数据只在当前页有面板 `needs` 它、或代码调过 `Dash.need` 时才拉。
+- 其余数据只在当前页有面板 `needs` 它、或面板的 `wants()` 此刻点名它时才拉。
 
-**版本索引**：`index` 是 `{ versions: { 名字: 版本串 } }`，每 15 s 拉一次；某份数据在索引里的版本变了才重拉。索引没到、没有 `versions`、超过 120 s 没更新，或索引里没列这份数据时，这份数据退回按自己的 `every` 定时拉，右下角提示条写"数据索引未就绪：各份数据按定时拉取"（旧了写"数据索引旧了（HH:MM）：…"）。第一次读完索引之前不拉非 `poll` 数据。
+**版本索引**：`index` 是 `{ versions: { 名字: 版本串 } }`，每 15 s 拉一次；某份数据在索引里的版本变了才重拉；版本只在这次请求的文件真的执行了 `Dash.put` 之后才记下，下载失败或文件执行出错不推进版本、隔 15 s 再试，期间这份数据按读取失败处理（`Dash.get` 返回 null，面板写"读取失败"），旧缓存不冒充新数据。索引没到、没有 `versions`、超过 120 s 没更新，或索引里没列这份数据时，这份数据退回按自己的 `every` 定时拉，右下角提示条写"数据索引未就绪：各份数据按定时拉取"（旧了写"数据索引旧了（HH:MM）：…"）。第一次读完索引之前不拉非 `poll` 数据。
 
 **整页刷新**：`live` 带 `appStamp`（界面代码最后改动时刻），变了就 `location.reload()`，开着的页面不跑旧代码。数据文件格式与 `Dash.put` 见 §2。
 
@@ -126,7 +129,7 @@ audit:     { items: [{ id, at, from, title, why, link, status: "open"|"done" }] 
 ### 3.2 面板
 
 ```
-Dash.panel({ id, page, tab?, title?, note?, span?, order?, needs?, uses?, partial?, watch?, render(el, data) })
+Dash.panel({ id, page, tab?, title?, note?, span?, order?, needs?, uses?, wants?, partial?, watch?, render(el, data) })
 ```
 
 | 字段 | 含义 |
@@ -137,19 +140,19 @@ Dash.panel({ id, page, tab?, title?, note?, span?, order?, needs?, uses?, partia
 | `span` | 占 12 栏里的几栏：12（默认）、7、5（`style.css` 只定义了这几种，1180 px 以下一律整行；要别的宽度先在那里加） |
 | `order` | 页内排序，小的在上（默认 100） |
 | `needs` | 数据名数组：进到本页就拉，全部到齐才画（`partial: true` 时到一份就画，没到的是 `null`）；任一份变了重绘 |
-| `uses` | 不主动拉，只在这份数据变了时重绘（配合 `Dash.need` 按需拉的数据） |
+| `uses` | 不主动拉，只在这份数据变了时重绘（配合 `wants` 按需拉的数据） |
+| `wants` | 函数，返回此刻要按需拉的数据名（取自 `uses`，如"选中了一行才拉它的历史"）；面板在当前页时每次同步都点名，切页回来仍按版本更新；`Dash.select` 之后立即重新点名 |
 | `watch` | `Dash.select` 的键数组，选中变了就重绘 |
 | `render(el, data)` | 往 `el` 里画；`data` 是 `{ 名字: 数据 }`；抛异常时这块显示"这块出错了"，不影响别的面板 |
 
-只画当前页（和子标签）的面板，别的页记着脏，切过去再画。重绘时面板里 `<details>` 的开合状态在个数不变时保持。卡片右上角自动写"更新 HH:MM"（`needs` 里最旧的一份），数据旧了变灰并写"数据旧了 · HH:MM"。数据还没读到时画骨架，读过一次仍没有写"等数据"并列出缺哪份、期望路径。
+只画当前页（和子标签）的面板，别的页记着脏，切过去再画。重绘时面板里 `<details>` 的开合状态在个数不变时保持。卡片右上角自动写"更新 HH:MM"（`needs` 里最旧的一份），数据旧了变灰并写"数据旧了 · HH:MM"。数据还没读到时画骨架，读过一次仍没有写"等数据"并列出缺哪份、期望路径；`needs`、`uses` 里有读取失败的数据时，面板顶部写"读取失败"（`needs` 没到齐则整块写）。
 
 ### 3.3 运行时接口
 
 ```
 Dash.put(name, data)            数据文件调用（§2）
-Dash.get(name)                  取当前数据，没有返回 null
-Dash.need(names)                面板之外要数据：返回 Promise，读过一次（有没有都算）就兑现；切页后不再跟着版本更新
-Dash.dataState(name)            "wait" 读取中 / "missing" 读过但没有 / "ok"
+Dash.get(name)                  取当前数据，没有或最近一次读取失败返回 null
+Dash.dataState(name)            "wait" 读取中 / "missing" 读过但没有这份文件 / "error" 读取失败 / "ok"
 Dash.select(key, value)         页内选中状态；值相同再选一次取消；watch 里有这个键的面板重绘
 Dash.selected(key)              当前选中值，没有是 null
 Dash.redraw(id) / redrawAll()   重画面板（本地交互改了显示方式）；主题切换时 core 与图组件自己调 redrawAll
@@ -223,7 +226,7 @@ Dash.modelKey(型号)       型号 → 色表键：claude-opus-5-5 → opus；gp
 Dash.stages               流水阶段的键与中文名，按先后：dispatch 派工、build 施工、pending 待编译、gate 快检、pushed 已推、audit 收口审计、shots 截图评审、prebake 预烘
 ```
 
-### 3.6 图组件（charts.js）
+### 3.6 图组件（charts*.js）
 
 7 个组件，各返回一个节点，直接 append；节点进到可见页面且有了宽度才初始化，容器变宽变窄自动重排，面板重绘时 core 释放旧图，主题切换自动重画。第二个参数 `opts` 通用项：`height`（像素，省略按数据算）、`onClick(项, 事件)`、`legend: [[组, 键们?], ...]`（图上方图例）、`empty`（空数据时的话）、`key`（同一张图的稳定名，只有第一次画有动画）、`label`（无障碍名）。
 

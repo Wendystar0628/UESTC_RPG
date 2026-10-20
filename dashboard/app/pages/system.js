@@ -239,8 +239,8 @@
   /* 选中一个脚本（已选中的不取消） */
   function pickScript(path) { if (Dash.selected('script') !== path) Dash.select('script', path); }
 
-  /* history.runs 里的 script 是文件名：按名字对到目录里的脚本 */
-  function runsOf(hist, s) { return ((hist && hist.runs) || []).filter(function (r) { return r.script === s.name || r.script === s.path; }); }
+  /* history.runs[].script 与目录里脚本的 path 都是仓库相对路径：按路径对上 */
+  function runsOf(hist, s) { return ((hist && hist.runs) || []).filter(function (r) { return r.script === s.path; }); }
 
   function runTone(r) { return r.event === 'start' ? ['status', 'doing'] : ['status', r.exitCode === 0 ? 'done' : 'fail']; }
 
@@ -258,9 +258,9 @@
         : { lane: r.script, at: new Date(t - dur * 1000).toISOString(), end: r.at, tone: runTone(r), label: label, script: r.script };
     });
     return Dash.charts.timeline({ lanes: names.map(function (n) { return { id: n, label: n }; }), items: items },
-      { rowHeight: 26, labelWidth: 120, symbolSize: 9, legend: [['status', ['done', 'fail', 'doing']]], key: 'system-runs',
+      { rowHeight: 26, labelWidth: 210, symbolSize: 9, legend: [['status', ['done', 'fail', 'doing']]], key: 'system-runs',
         empty: hist ? '近 48 小时没有运行记录' : '等短期历史（history.runs，C-239 给常用脚本记开始与结束）',
-        onClick: function (it) { var s = list.filter(function (x) { return x.name === it.script; })[0]; if (s) pickScript(s.path); } });
+        onClick: function (it) { var s = list.filter(function (x) { return x.path === it.script; })[0]; if (s) pickScript(s.path); } });
   }
 
   function relList(title, nodes) {
@@ -271,7 +271,7 @@
   }
 
   function scriptDetail(s, d, ix) {
-    var det = Dash.get('catalogdetail');
+    var det = Dash.get('catalogdetail'), detState = Dash.dataState('catalogdetail');
     var item = det && (det.items || []).filter(function (x) { return x.path === s.path; })[0];
     var id = 'script:' + s.path, node = ix && ix.byId[id];
     var es = ix ? ix.edges : [];
@@ -280,7 +280,7 @@
     }
     var callers = others('in', ['call']);
     ((item && item.callers) || []).forEach(function (c) {
-      if (!callers.some(function (o) { return o.label === c || scriptPath(o.id) === c; })) callers.push({ label: c });
+      if (!callers.some(function (o) { return scriptPath(o.id) === c; })) callers.push({ label: c });
     });
     var runs = runsOf(d.history, s).filter(function (r) { return r.event !== 'start'; }).sort(function (a, b) { return Dash.parseTime(b.at) - Dash.parseTime(a.at); });
     var last = runs[0] || (item && item.lastRun);
@@ -290,7 +290,7 @@
       h('p.sys-purpose', s.purpose || '没写开头说明'),
       h('div.muted.small', last ? '最近一次运行 ' + Dash.at(last.at) + (last.exitCode != null ? ' · 退出码 ' + last.exitCode : '') + (last.durationSeconds != null ? ' · ' + Dash.num(last.durationSeconds) + ' 秒' : '')
         : (d.history ? '近 48 小时没有运行记录' : '运行记录等短期历史（history.runs）')),
-      !det ? Dash.charts.loading(60) : !item ? Dash.empty('脚本详情里没有这个脚本', '', true) : (item.usage ? h('pre.pre.sys-usage', item.usage) : h('div.muted.small', '开头说明里没写用法')),
+      !det ? (detState === 'wait' ? Dash.charts.loading(60) : Dash.empty('脚本详情没有读到', detState === 'error' ? '读取失败，会自动重试' : '还没有这份数据', true)) : !item ? Dash.empty('脚本详情里没有这个脚本', '', true) : (item.usage ? h('pre.pre.sys-usage', item.usage) : h('div.muted.small', '开头说明里没写用法')),
       ix ? null : Dash.empty('读写与调用关系等体系关系数据', '', true),
       relList('被谁调用', callers), relList('它调用', others('out', ['call'])), relList('它读写', others('out', ['readwrite'])),
       relList('它生成', others('out', ['generate'])), relList('哪些巡逻检查读它', others('in', ['check']))
@@ -301,13 +301,13 @@
   var groupPick = 'all';
   Dash.panel({
     id: 'system-scripts', page: 'system', title: '脚本明细', order: 30, partial: true, needs: ['catalog', 'history', 'relations'], uses: ['catalogdetail'], watch: ['script'],
+    wants: function () { return Dash.selected('script') ? ['catalogdetail'] : []; },
     note: '常用脚本近 48 小时的运行，下面是全部脚本；点一行看用法、谁调用它、它读写什么',
     render: function (el, d) {
       if (!d.catalog) { el.appendChild(Dash.empty('等脚本目录', 'catalog 还没有数据', true)); return; }
       var ix = d.relations ? index(d.relations) : null;
       var list = flatScripts(d.catalog);
       var pick = Dash.selected('script'), cur = list.filter(function (s) { return s.path === pick; })[0];
-      if (cur) Dash.need(['catalogdetail']);
       var callIn = {};
       if (ix) ix.edges.forEach(function (e) { if (e.kind === 'call' && ix.byId[e.from].kind === 'script') callIn[e.to] = (callIn[e.to] || 0) + 1; });
       var lastRun = {};
@@ -322,7 +322,7 @@
         { label: '脚本', cell: function (s) { return h('span.mono', s.name); } },
         { label: '作用', cell: function (s) { return s.purpose ? Dash.gist(s.purpose).text : h('span.muted', '没写开头说明'); } },
         { label: '被调用', num: true, cell: function (s) { return ix ? Dash.num(callIn['script:' + s.path] || 0) : ''; } },
-        { label: '最近运行', num: true, cell: function (s) { var r = lastRun[s.name] || lastRun[s.path]; return r ? h('span', { cls: r.exitCode === 0 ? '' : 'sys-fail' }, Dash.at(r.at) + (r.exitCode === 0 ? '' : ' · 退出码 ' + r.exitCode)) : ''; } }
+        { label: '最近运行', num: true, cell: function (s) { var r = lastRun[s.path]; return r ? h('span', { cls: r.exitCode === 0 ? '' : 'sys-fail' }, Dash.at(r.at) + (r.exitCode === 0 ? '' : ' · 退出码 ' + r.exitCode)) : ''; } }
       ], shown, { onRow: function (s) { pickScript(s.path); }, selected: function (s) { return s.path === pick; } });
       el.appendChild(h('div.sys-scripts',
         h('div.sys-scripts-list',

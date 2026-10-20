@@ -1,5 +1,5 @@
 /* 观察台运行时：数据按需加载（版本索引）、页面与子标签路由、面板注册与渲染、页内选中状态。
-   通用格式化与小组件在 ui.js，色表在 palette.js，图组件在 charts.js；接口见 dashboard/README.md。
+   通用格式化与小组件在 ui.js，色表在 palette.js，图组件在 charts*.js；接口见 dashboard/README.md。
    面板只经 Dash.* 读数据，不直接拉文件。 */
 (function () {
   'use strict';
@@ -9,12 +9,11 @@
   var Dash = window.Dash = { demo: DEMO };
 
   var store = {};      // 数据名 -> 数据
-  var meta = {};       // 数据名 -> { sig, tried, missing, loading, at, ver, reqVer, waiters }
+  var meta = {};       // 数据名 -> { sig, tried, loading, at, ver, reqVer, got, fail }；got 本次请求的文件执行了 Dash.put，fail 最近一次读取失败的原因（fetch 下载失败 / run 执行出错 / null）
   var panels = {};     // 面板 id -> 面板记录
   var srcs = {};       // 数据名 -> manifest 条目
   var dirty = {};      // 待重绘的面板 id
   var picks = {};      // 页内选中状态：键 -> 值（Dash.select）
-  var asked = {};      // 当前页用 Dash.need 要过的数据名
   var flushTimer = 0;
   var booted = false;
   var view = { page: null, tab: null };
@@ -45,13 +44,19 @@
     var sig = signature(data);
     var changed = m.sig !== sig;
     store[name] = data;
-    m.sig = sig; m.missing = false; m.tried = true;
+    m.sig = sig; m.tried = true;
     if (name === 'index') readIndex(data);
     if (changed) dependents(name).forEach(schedule);
+    m.got = true;   // 走到这里才算交付（上面任何一步抛错，loadData 都不会记新版本）
     afterData();
   };
 
-  Dash.get = function (name) { return store[name] || null; };
+  /* 当前数据；最近一次读取失败的数据不给（旧缓存不冒充新数据），原因看 dataState */
+  function have(name) {
+    var m = meta[name];
+    return m && m.fail ? null : (store[name] || null);
+  }
+  Dash.get = have;
 
   /* 索引就绪：有 versions、且没旧；否则其余数据按 every 定时拉 */
   function readIndex(data) {
@@ -69,21 +74,24 @@
     m.loading = Date.now();
     m.at = Date.now();
     m.reqVer = ver == null ? null : ver;
+    m.got = false;
     Array.prototype.forEach.call(document.querySelectorAll('script[data-dash="' + s.name + '"]'), function (e) { e.remove(); });
     var el = document.createElement('script');
     el.dataset.dash = s.name;
     el.src = srcPath(s) + '?t=' + Date.now();
+    /* 只有这次请求的文件真的执行了 Dash.put 才算交付：版本在此时才记，失败不推进版本 */
     function done(ok) {
       m.loading = 0;
-      if (ok && store[s.name]) m.ver = m.reqVer;
-      if (!m.tried) {
-        m.tried = true;
-        dependents(s.name).forEach(schedule);   // 第一次读完仍没有：从"读取中"变成"等数据"
+      var delivered = ok && m.got, before = m.fail || null;
+      if (delivered) { m.ver = m.reqVer; m.fail = null; }
+      else {
+        m.fail = ok ? 'run' : 'fetch';
+        console.warn('[Dash] 数据 ' + s.name + (ok ? ' 的文件执行出错或没有调用 Dash.put：' : ' 下载失败：') + srcPath(s));
       }
-      if (!store[s.name]) m.missing = true;
+      if (!m.tried) m.tried = true;
+      if (!delivered || before) dependents(s.name).forEach(schedule);   // 第一次读完仍没有、读取失败、从失败恢复：重画面板
       el.remove();
-      if (s.name === 'index' && !ok) { index.state = 'missing'; index.versions = null; sync(); }
-      (m.waiters || []).splice(0).forEach(function (f) { f(); });
+      if (s.name === 'index' && !delivered) { index.state = 'missing'; index.versions = null; sync(); }
       afterData();
     }
     el.onload = function () { done(true); };
@@ -91,12 +99,15 @@
     document.head.appendChild(el);
   }
 
-  /* 这份数据此刻要不要：页眉导航要用的、当前页面板要用的、当前页用 Dash.need 要过的 */
+  /* 这份数据此刻要不要：页眉导航要用的、当前页面板 needs 的、当前页面板的 wants() 此刻点名的 */
   function wanted(name) {
     var s = srcs[name];
     if (!s) return false;
-    if (s.poll || s.keep || asked[name]) return true;
-    return Object.keys(panels).some(function (id) { var p = panels[id]; return isActive(p) && p.needs.indexOf(name) >= 0; });
+    if (s.poll || s.keep) return true;
+    return Object.keys(panels).some(function (id) {
+      var p = panels[id];
+      return isActive(p) && (p.needs.indexOf(name) >= 0 || (p.wants && [].concat(p.wants()).indexOf(name) >= 0));
+    });
   }
 
   /* 数据的拉取方式：poll（定时）、version（按版本）、timer（索引没就绪或没列这份，按 every 定时） */
@@ -112,7 +123,7 @@
       var m = meta[s.name] || {};
       if (modeOf(s) === 'version') {
         var v = index.versions[s.name];
-        if (m.ver !== v && !m.loading) loadData(s, v);
+        if (m.ver !== v && !m.loading && !(m.fail && Date.now() - m.at < 15000)) loadData(s, v);   // 读取失败后隔 15 s 再试
       } else if (!m.at || Date.now() - m.at >= Math.max(5, s.every || 60) * 1000) {
         loadData(s, null);
       }
@@ -131,22 +142,6 @@
     sync();
   }
 
-  /* 面板之外要数据（例如点开行详情才拉 rowhistory）：返回 Promise，读过一次（有没有都算）就兑现；切页后不再跟着版本更新 */
-  Dash.need = function (names) {
-    names = [].concat(names);
-    return Promise.all(names.map(function (n) {
-      var s = srcs[n];
-      if (!s) return Promise.reject(new Error('manifest 里没有数据 ' + n));
-      asked[n] = true;
-      var m = meta[n] || (meta[n] = {});
-      return new Promise(function (resolve) {
-        if (store[n] && !m.loading) { resolve(store[n]); return; }
-        (m.waiters || (m.waiters = [])).push(function () { resolve(store[n] || null); });
-        sync();
-      });
-    }));
-  };
-
   /* "知道了"写回采集侧：本地服务 POST /api/attention/ack {id, revision?} → {ok: true}；成功后马上重读 attention 与索引。
      页面不是由本地服务打开的（file://）或服务没在跑时 Promise 失败，面板把原因写出来；不存浏览器。 */
   Dash.ack = function (id, revision) {
@@ -159,9 +154,10 @@
       .then(function (j) { loadData(srcs.attention, null); loadData(srcs.index, null); return j; });
   };
 
-  /* 数据状态，给面板说清"没有"的原因：wait 读取中 / missing 没有这份文件 / ok */
+  /* 数据状态，给面板说清"没有"的原因：wait 读取中 / missing 读过但没有这份文件 / error 读取失败（文件执行出错，或已有数据后重读失败）/ ok */
   Dash.dataState = function (name) {
     var m = meta[name];
+    if (m && m.fail && (m.fail === 'run' || store[name])) return 'error';
     if (store[name]) return 'ok';
     return m && m.tried ? 'missing' : 'wait';
   };
@@ -176,7 +172,7 @@
   }
 
   /* Dash.panel({ id, page, tab?, title?, note?, span?, order?, needs?, uses?, partial?, watch?, render(el, data) })
-     needs 打开这页就拉、到齐才画（partial 为真时到一份就画）；uses 不主动拉、只在它变了时重绘（配合 Dash.need 按需拉的数据）；
+     needs 打开这页就拉、到齐才画（partial 为真时到一份就画）；uses 不主动拉、只在它变了时重绘；wants() 返回此刻要按需拉的数据名（取自 uses，例如选中了才拉），面板在当前页时每次同步都点名，切页回来照样按版本更新；
      span 占 12 栏里的几栏：12（默认）、7 或 5（style.css 只定义了这几种，要别的宽度先在那里加）；watch 是 Dash.select 的键，选中变了就重绘；note 是标题下一行小字 */
   Dash.panel = function (def) {
     if (!def || !def.id) return;
@@ -229,28 +225,32 @@
   }
 
   function renderPanel(p) {
-    var data = {}, have = 0, missing = [], waiting = false;
+    var data = {}, got = 0, missing = [], waiting = false;
     p.needs.forEach(function (n) {
-      data[n] = store[n] || null;
-      if (store[n]) have++;
+      data[n] = have(n);
+      if (data[n]) got++;
       else {
         missing.push(n);
         if (!(meta[n] && meta[n].tried)) waiting = true;
       }
     });
-    var ready = p.needs.length === 0 || (p.partial ? have > 0 : missing.length === 0);
+    var failed = p.needs.concat(p.uses).filter(function (n) { return Dash.dataState(n) === 'error'; });
+    function nameOf(n) { var s = srcs[n]; return s ? (s.label || n) + '（' + srcPath(s) + '）' : n; }
+    var failText = failed.map(nameOf).join('、') + ' 读取失败，上一次读到的内容不再显示；会自动重试';
+    var ready = p.needs.length === 0 || (p.partial ? got > 0 : missing.length === 0);
     var body = p.bodyEl;
     if (Dash.charts) Dash.charts.release(body);
     p.el.classList.remove('is-error', 'is-loading');
     if (!ready) {
       if (waiting) { p.el.classList.add('is-loading'); body.replaceChildren(h('div.skeleton')); return; }
-      var names = missing.map(function (n) { var s = srcs[n]; return s ? (s.label || n) + '（' + srcPath(s) + '）' : n; }).join('、');
-      body.replaceChildren(Dash.empty('等数据', names + ' 还没有数据，采集侧写出之后会自动出现', true));
+      body.replaceChildren(failed.length ? Dash.empty('读取失败', failText, true)
+        : Dash.empty('等数据', missing.map(nameOf).join('、') + ' 还没有数据，采集侧写出之后会自动出现', true));
       return;
     }
     var opens = Array.prototype.map.call(body.querySelectorAll('details'), function (d) { return d.open; });
     var inner = h('div.panel-inner');
     body.replaceChildren(inner);
+    if (failed.length) inner.appendChild(Dash.status(failText, 'risk'));
     try {
       p.render(inner, data);
     } catch (e) {
@@ -271,7 +271,7 @@
       var oldest = NaN, stale = false;
       p.needs.forEach(function (n) {
         var s = srcs[n];
-        if (!store[n] || !s) return;
+        if (!have(n) || !s) return;
         var t = parseTime(store[n].updated);
         if (!isNaN(t) && (isNaN(oldest) || t < oldest)) oldest = t;
         if (Dash.isStale(n)) stale = true;
@@ -288,6 +288,7 @@
   Dash.select = function (key, value) {
     picks[key] = picks[key] === value ? null : value;
     Object.keys(panels).forEach(function (id) { if (panels[id].watch.indexOf(key) >= 0) schedule(panels[id]); });
+    sync();   // 选中可能改变面板 wants() 点名的数据
   };
   Dash.selected = function (key) { return picks[key] == null ? null : picks[key]; };
 
@@ -298,7 +299,7 @@
   /* ================= 页眉、导航、角标 ================= */
 
   function headlineText() {
-    var q = store.queue, l = store.live, parts = [];
+    var q = have('queue'), l = have('live'), parts = [];
     if (q && q.counts && q.counts['进行中']) parts.push('施工 ' + q.counts['进行中'] + ' 项在做');
     if (l) {
       var running = (l.sessions || []).filter(function (s) { return s.state === 'running'; }).length;
@@ -313,9 +314,9 @@
     if (hl) { hl.textContent = headlineText(); hl.title = hl.textContent; }
     var dot = document.getElementById('fresh-dot'), txt = document.getElementById('fresh-text');
     if (!dot || !txt) return;
-    var l = store.live, stale = Dash.isStale('live');
-    dot.className = 'dot t-' + (!l ? 'muted' : stale ? 'warn' : 'ok');
-    txt.textContent = DEMO ? '演示数据' : !l ? '等数据' : (stale ? '实时数据旧了 · ' : '实时 ') + Dash.at(l.updated);
+    var l = have('live'), stale = Dash.isStale('live'), bad = Dash.dataState('live') === 'error';
+    dot.className = 'dot t-' + (bad ? 'risk' : !l ? 'muted' : stale ? 'warn' : 'ok');
+    txt.textContent = DEMO ? '演示数据' : bad ? '实时数据读取失败' : !l ? '等数据' : (stale ? '实时数据旧了 · ' : '实时 ') + Dash.at(l.updated);
     var pop = document.getElementById('fresh-pop');
     if (pop && !pop.hidden) fillPop(pop);
   }
@@ -323,8 +324,9 @@
   var MODE_TEXT = { poll: '定时', version: '按版本', timer: '定时（无索引）' };
   function fillPop(pop) {
     var rows = M.data.map(function (s) {
-      var d = store[s.name], m = meta[s.name] || {}, tone, text;
-      if (!d) { tone = 'muted'; text = m.tried ? '没有数据' : (wanted(s.name) ? '读取中' : '这页用不到，没拉'); }
+      var d = have(s.name), m = meta[s.name] || {}, tone, text;
+      if (Dash.dataState(s.name) === 'error') { tone = 'risk'; text = '读取失败'; }
+      else if (!d) { tone = 'muted'; text = m.tried ? '没有数据' : (wanted(s.name) ? '读取中' : '这页用不到，没拉'); }
       else if (Dash.isStale(s.name)) { tone = 'warn'; text = '旧了 · ' + Dash.at(d.updated); }
       else { tone = 'ok'; text = Dash.at(d.updated); }
       return h('div.pop-row.t-' + tone, h('span.dot'), h('span.grow', s.label || s.name), h('span.pop-mode', MODE_TEXT[modeOf(s)]), h('span.ago', text));
@@ -343,11 +345,11 @@
 
   /* 导航角标：现在页是没点"知道了"的待办数，健康页是要看的检查数 */
   function updateBadges() {
-    var att = store.attention && store.attention.items || [];
+    var att = have('attention') && store.attention.items || [];
     var open = att.filter(function (x) { return !x.acked; });
     var urgent = open.some(function (x) { return x.urgency >= 3; });
     badge('now', open.length ? String(open.length) : '', urgent ? 'risk' : 'muted');
-    var checks = store.health && store.health.checks || [];
+    var checks = have('health') && store.health.checks || [];
     var bad = checks.filter(function (c) { return c.level !== 'ok'; });
     badge('health', bad.length ? String(bad.length) : '', bad.some(function (c) { return c.level === 'bad'; }) ? 'risk' : 'warn');
   }
@@ -386,7 +388,6 @@
     }
     var changed = view.page !== pg.id || view.tab !== tab;
     view.page = pg.id; view.tab = tab;
-    if (changed) asked = {};
     M.pages.forEach(function (p) {
       var sec = document.getElementById('page-' + p.id);
       if (sec) sec.classList.toggle('is-active', p.id === pg.id);

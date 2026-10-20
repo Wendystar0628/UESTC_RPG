@@ -1,6 +1,6 @@
 /* 施工页：每件活走到哪一步、谁挡着谁。
    块（面板 id）：work-flow 流水线泳道 · work-history 行的历史 · work-deps 依赖图 · work-board 看板 · work-trees 临时工作树。
-   选中的行放在 Dash.select('row')，泳道、依赖图、看板、现在页的卡片都能选；行的历史 watch 它，选中后才拉 rowhistory。 */
+   选中的行放在 Dash.select('row')，泳道、依赖图、看板、现在页的卡片都能选；行的历史 watch 它，选中后 wants() 才点名 rowhistory（每次回到本页都继续按版本更新）。 */
 (function () {
   var h = Dash.h;
 
@@ -54,6 +54,7 @@
   Dash.panel({
     id: 'work-history', page: 'work', title: '行的历史', note: '选中的那一行什么时候加进来、状态怎么变、各阶段几点走完、提交了什么', order: 15,
     needs: ['pipeline', 'queue'], partial: true, uses: ['rowhistory'], watch: ['row'],
+    wants: function () { return Dash.selected('row') ? ['rowhistory'] : []; },
     render: function (el, d) {
       var id = Dash.selected('row');
       if (!id) { el.appendChild(Dash.empty('还没选行', '在上面的流水线、下面的依赖图或看板里点一行', true)); return; }
@@ -68,15 +69,11 @@
           h('button.btn.wh-close', { type: 'button', on: { click: function () { Dash.select('row', id); } } }, '取消选中')),
         info.title ? h('div.wh-title', Dash.longText(info.title)) : h('div.wh-title.muted', '队列与流水里都没有这一行（可能已删行）')));
 
-      var hist = Dash.get('rowhistory');
+      var hist = Dash.get('rowhistory'), hs = Dash.dataState('rowhistory');
       if (!hist) {
-        if (Dash.dataState('rowhistory') === 'missing') {
-          el.appendChild(Dash.empty('行的历史还没有数据', '状态变化来自 rowhistory，等后端 C-239 写出 data/auto/rowhistory.js；下面先画阶段与提交', true));
-        } else {
-          el.appendChild(Dash.charts.loading(120));
-          Dash.need(['rowhistory']);   // 到了以后经 uses 重绘这一块
-          return;
-        }
+        if (hs === 'wait') { el.appendChild(Dash.charts.loading(120)); return; }   // 到了以后经 uses 重绘这一块
+        if (hs === 'missing') el.appendChild(Dash.empty('行的历史还没有数据', '状态变化来自 rowhistory，等后端 C-239 写出 data/auto/rowhistory.js；下面先画阶段与提交', true));
+        // error：面板顶部已有读取失败条，下面先画阶段与提交
       }
       var states = (hist && hist[id]) || [];
       var items = states.map(function (s, i) {
