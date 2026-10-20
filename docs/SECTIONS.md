@@ -63,7 +63,7 @@
   - ART-COLORSCRIPT §1.4 难看时段的改造 · L84 · 254
   - ART-COLORSCRIPT §1.5 英雄帧 · L92 · 438
 - ART-COLORSCRIPT §2 四季内容 · L109 · 1.2k
-- ART-COLORSCRIPT §3 灯光与生活痕迹的时刻表 · L135 · 1.1k
+- ART-COLORSCRIPT §3 灯光与生活痕迹的时刻表 · L135 · 1.2k
 
 ## ART-FIDELITY · 视觉精度标准
 
@@ -199,10 +199,10 @@
 
 - ART-STYLE-LINES §0 结论 · L22 · 473
   - ★ ART-STYLE-LINES §0.1 接入要点 · L30 · 156
-- ART-STYLE-LINES §1 描线 · L35 · 1.3k
+- ART-STYLE-LINES §1 描线 · L35 · 1.4k
   - ART-STYLE-LINES §1.1 描哪些线 · L39 · 258
   - ART-STYLE-LINES §1.2 线色 · L47 · 141
-  - ART-STYLE-LINES §1.3 线宽 · L52 · 187
+  - ART-STYLE-LINES §1.3 线宽 · L52 · 240
   - ART-STYLE-LINES §1.4 逐材质调线与轻重 · L56 · 94
   - ART-STYLE-LINES §1.5 后处理描边 · L61 · 216
   - ART-STYLE-LINES §1.6 折角线与低模 · L67 · 184
@@ -225,7 +225,7 @@
 - ART-STYLE-SHADING §0 结论 · L22 · 591
   - ★ ART-STYLE-SHADING §0.1 接入要点 · L31 · 245
 - ART-STYLE-SHADING §1 明暗分阶 · L38 · 1.4k
-  - ART-STYLE-SHADING §1.1 阶数 · L40 · 485
+  - ART-STYLE-SHADING §1.1 阶数 · L40 · 518
   - ART-STYLE-SHADING §1.2 法线展平 · L54 · 138
   - ART-STYLE-SHADING §1.3 树冠法线 · L61 · 70
   - ART-STYLE-SHADING §1.4 平涂与渐变 · L65 · 126
@@ -1134,7 +1134,7 @@
 
 ## SYS-MAPS · 多地图
 
-`docs/systems/SYS-MAPS-多地图.md` · 10.7k 字 · 按图数据与全局的划分、map.json 约定、归属、map_rect、单图规模；先卸后装的切图运行时在主线之后
+`docs/systems/SYS-MAPS-多地图.md` · 11.0k 字 · 按图数据与全局的划分、map.json 约定、归属、map_rect、单图规模；先卸后装的切图运行时在主线之后
 关键词：多地图、换图、切图、地图服务、按图数据、先卸后装、同图重载、天气按图、单图半径、本机烘焙缓存、IMapService、IMapAware、MapScope、MapDescriptor、map.json、map_rect
 
 - SYS-MAPS §0 结论 · L23 · 1.5k
@@ -1143,19 +1143,19 @@
   - SYS-MAPS §1.1 按图与全局 · L47 · 787
   - SYS-MAPS §1.2 烘焙缓存 · L65 · 151
 - SYS-MAPS §2 地图描述 `map.json` · L70 · 677
-- SYS-MAPS §3 切换 · L82 · 2.4k
+- SYS-MAPS §3 切换 · L82 · 2.5k
   - SYS-MAPS §3.1 一个 World3D，先卸后装 · L86 · 151
-  - SYS-MAPS §3.2 切图的步骤（切图部分主线之后） · L90 · 1.0k
+  - SYS-MAPS §3.2 切图的步骤（切图部分主线之后） · L90 · 1.1k
   - SYS-MAPS §3.3 规则（主线之后） · L104 · 588
   - SYS-MAPS §3.4 入口 · L113 · 313
-  - SYS-MAPS §3.5 同图重载不泄漏（主线之后） · L122 · 179
-- SYS-MAPS §4 世界状态：时间与季节全局，天气按图求值 · L126 · 612
-- SYS-MAPS §5 相机、行走与安全点（主线之后） · L144 · 422
-- SYS-MAPS §6 归属与 `MapScope` · L155 · 786
-- SYS-MAPS §7 全局参数 `map_rect` · L163 · 700
-- SYS-MAPS §8 内存、包体与单图半径 · L173 · 296
-- SYS-MAPS §9 以后的方向 · L179 · 252
-- SYS-MAPS §10 待验证（P0） · L183 · 276
+  - SYS-MAPS §3.5 同图重载不泄漏（主线之后） · L122 · 280
+- SYS-MAPS §4 世界状态：时间与季节全局，天气按图求值 · L128 · 612
+- SYS-MAPS §5 相机、行走与安全点（主线之后） · L146 · 422
+- SYS-MAPS §6 归属与 `MapScope` · L157 · 871
+- SYS-MAPS §7 全局参数 `map_rect` · L165 · 700
+- SYS-MAPS §8 内存、包体与单图半径 · L175 · 296
+- SYS-MAPS §9 以后的方向 · L181 · 252
+- SYS-MAPS §10 待验证（P0） · L185 · 276
 
 ## SYS-MOTION · 动态与事件
 
@@ -1545,7 +1545,7 @@
 
 ## ENG-ARCH · 工程架构
 
-`docs/engineering/ENG-ARCH-工程架构.md` · 10.1k 字 · 当前分层、依赖方向与唯一生产链，边界、确定性、契约、烘焙与桩的架构准则与后续导向；实现细节以代码为准
+`docs/engineering/ENG-ARCH-工程架构.md` · 10.5k 字 · 当前分层、依赖方向与唯一生产链，边界、确定性、契约、烘焙与桩的架构准则与后续导向；实现细节以代码为准
 关键词：工程架构、分层、依赖方向、命名空间边界、程序集、唯一生产链、KernelStage、组合根、数据流、自动发现、特性注册、Autoload、原生资源创建方、确定性、同机同输入同输出、StableHash、Rng、BannedApiAnalyzers、生命周期、契约、契约申请、契约分批冻结、枚举穷举、本机烘焙、.tbin、英雄资产、桩、架构导向、net10.0、技术栈
 
 - ENG-ARCH §0 结论 · L23 · 1.4k
@@ -1555,18 +1555,18 @@
   - ENG-ARCH 分层 · L52 · 821
   - ENG-ARCH 生产链 · L64 · 267
   - ENG-ARCH 数据流 · L72 · 95
-- ENG-ARCH §2 边界与确定性 · L76 · 2.3k
+- ENG-ARCH §2 边界与确定性 · L76 · 2.6k
   - ENG-ARCH 依赖方向 · L78 · 1.0k
   - ENG-ARCH 确定性与禁用写法 · L88 · 573
-  - ENG-ARCH 自动发现与模块接入 · L100 · 315
+  - ENG-ARCH 自动发现与模块接入 · L100 · 458
   - ENG-ARCH 仓库脚本自成一体 · L107 · 101
-  - ENG-ARCH 生命周期与发布 · L111 · 281
-- ENG-ARCH §3 契约 · L118 · 842
-- ENG-ARCH §4 资源与烘焙 · L129 · 1.9k
-- ENG-ARCH §5 未交付能力的占位边界 · L142 · 257
-- ENG-ARCH §6 架构导向 · L150 · 448
-- ENG-ARCH §7 扩展点（RPG） · L158 · 69
-- ENG-ARCH §8 待验证（P0） · L162 · 363
+  - ENG-ARCH 生命周期与发布 · L111 · 470
+- ENG-ARCH §3 契约 · L120 · 842
+- ENG-ARCH §4 资源与烘焙 · L131 · 2.0k
+- ENG-ARCH §5 未交付能力的占位边界 · L146 · 257
+- ENG-ARCH §6 架构导向 · L154 · 448
+- ENG-ARCH §7 扩展点（RPG） · L162 · 69
+- ENG-ARCH §8 待验证（P0） · L166 · 361
 
 ## ENG-BUDGET · 性能预算
 
@@ -1710,10 +1710,10 @@
 `docs/engineering/ENG-PREVIEW-内容预览.md` · 2.2k 字 · 开发时预览与回看自己做的内容：用 --pose 放机位、预览只读不写、改了以后重启回看；按实体定位与机位恢复在主线之后
 关键词：内容预览、预览、回看、开发构建、机位、--pose、预览只读不写、同图重载、按实体定位、机位恢复、开发工具
 
-- ENG-PREVIEW §0 结论 · L22 · 682
-  - ★ ENG-PREVIEW §0.1 接入要点 · L29 · 395
+- ENG-PREVIEW §0 结论 · L22 · 673
+  - ★ ENG-PREVIEW §0.1 接入要点 · L29 · 386
 - ENG-PREVIEW §1 启动 · L37 · 167
-- ENG-PREVIEW §2 改了以后怎么回看 · L44 · 265
+- ENG-PREVIEW §2 改了以后怎么回看 · L44 · 256
 - ENG-PREVIEW §3 主线之后 · L54 · 335
 
 ## ENG-RELEASE · 发布与交付
@@ -1795,15 +1795,15 @@
 - WF-BUILD §1 改哪里 · L42 · 498
 - WF-BUILD §2 G4 拦不住的约定在哪 · L50 · 144
 - WF-BUILD §3 契约申请与冻结 · L54 · 331
-- WF-BUILD §4 构建与测试排队 · L61 · 860
+- WF-BUILD §4 构建与测试排队 · L61 · 859
 
 ## WF-COMMS · 交接与通信
 
-`docs/workflow/WF-COMMS-交接与通信.md` · 6.4k 字 · .collab 交接目录与文件布局，命名与写法，任务单与请求文件的格式，契约申请短头部，完成回报格式，来信与消息，Codex 会话与引导信箱，作者观察台
+`docs/workflow/WF-COMMS-交接与通信.md` · 6.5k 字 · .collab 交接目录与文件布局，命名与写法，任务单与请求文件的格式，契约申请短头部，完成回报格式，来信与消息，Codex 会话与引导信箱，作者观察台
 关键词：.collab、交接目录、文件布局、结案即删、任务单、旁路单、调研目录、契约申请、评审请求、六行短头部、完成回报、回报格式、文件命名、来信、收件箱、一条一个文件、【需定】【待审】【知会】、Codex 会话、引导信箱、steer、HANDOVER.md、D-207、D-208、D-228、作者观察台、dashboard、post.py、审计项、通知
 
-- WF-COMMS §0 结论 · L24 · 717
-  - ★ WF-COMMS §0.1 接入要点 · L34 · 217
+- WF-COMMS §0 结论 · L24 · 705
+  - ★ WF-COMMS §0.1 接入要点 · L34 · 205
 - WF-COMMS §1 交接目录与文件 · L41 · 1.1k
 - WF-COMMS §2 命名与写法 · L62 · 391
 - WF-COMMS §3 任务单、请求文件、契约申请与完成回报 · L69 · 893
@@ -1811,13 +1811,13 @@
   - WF-COMMS §3.2 请求文件 · L76 · 50
   - WF-COMMS §3.3 契约申请的短头部（D-201） · L80 · 170
   - WF-COMMS §3.4 完成回报 · L90 · 412
-- WF-COMMS §4 来信与消息 · L107 · 1.4k
-  - WF-COMMS §4.1 什么时候发 · L109 · 253
-  - WF-COMMS §4.2 一条来信一个新文件（D-207） · L118 · 268
+- WF-COMMS §4 来信与消息 · L107 · 1.5k
+  - WF-COMMS §4.1 什么时候发 · L109 · 259
+  - WF-COMMS §4.2 一条来信一个新文件（D-207） · L118 · 258
   - WF-COMMS §4.3 三级标记与写法 · L124 · 429
-  - WF-COMMS §4.4 来信、排队消息与引导信箱 · L132 · 438
-- WF-COMMS §5 Codex 会话与引导信箱 · L144 · 268
-- WF-COMMS §6 作者观察台 · L150 · 731
+  - WF-COMMS §4.4 来信、排队消息与引导信箱 · L132 · 518
+- WF-COMMS §5 Codex 会话与引导信箱 · L145 · 268
+- WF-COMMS §6 作者观察台 · L151 · 731
 
 ## WF-ENTRY · 角色入口卡
 

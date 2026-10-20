@@ -62,7 +62,7 @@ paths: ["game/**/*.cs", "game/**/*.gdshader*"]
 
 Codex 侧的代理共用主检出 `E:\Project\UESTC_RPG`，`bin/`、`obj/`、`.godot/` 和烘焙缓存也共用；Claude 侧的施工在临时工作树里（WF-FLOW §3.1）。git 与回滚见 WF-RULE §7，防打架见 WF-FLOW §2，共享文件谁能改见 §1。引擎路径从环境变量 `UESTC_GODOT` 读命令行版 exe，门禁比对 `--version` 与 `tools/godot-version.txt`。
 
-1. **一次只跑一个**：`dotnet build`、`--headless --import`、烘焙、`gate.ps1`、截图和基准同一时刻只许一个在跑，用 `scripts\` 里那把锁（容量 1）排队。拿不到就等，不绕过：不另起进程抢跑，不删锁文件，不为赶时间并行。施工子代理默认不编译，构建由指挥在一批交回后统一跑（WF-FLOW §3.1）。
+1. **一次只跑一个**：`dotnet build`、导入（`--build-import`）、烘焙、`gate.ps1`、截图和基准同一时刻只许一个在跑，用 `scripts\` 里那把锁（容量 1）排队。拿不到就等，不绕过：不另起进程抢跑，不删锁文件，不为赶时间并行。施工子代理默认不编译，构建由指挥在一批交回后统一跑（WF-FLOW §3.1）。
 2. **只走命令行**：不在编辑器里打开或重存场景，场景由代码生成；导入日志里不得有 `ERROR` 或 `SCRIPT ERROR`（G1）。截图类和性能类门禁要在交互式会话的窗口模式下跑。测量、验证一律后台跑：用命令行启动、读日志里的时间戳和结果，不用 computer use 去点击、截屏或操作作者的桌面。
 3. **先选检查，再决定烘不烘**：`gate.ps1` 先按改动选出要跑的检查（测试节奏以 ENG-GATES §1 为准），再按所选检查的需要补烘共享缓存；快检不烘焙。
 4. **归属与 `.uid`**：改动路径必须在 `ownership.json` 划给本包的范围内（G3）；`.uid` 跟着源文件走、一起提交，复制文件时删掉复制来的 `.uid`。仓库的换行、二进制与忽略规则以 `.gitattributes`、`.gitignore` 为准；`game/override.cfg` 让开发态用独立的用户目录，不进 git。

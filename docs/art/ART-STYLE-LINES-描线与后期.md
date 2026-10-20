@@ -51,7 +51,7 @@ gates: [G7]
 
 ### 1.3 线宽
 
-以 1080p 为基准按内部分辨率换算：外轮廓约 1.25 px（INV-5），随距离变细，400 m 外为 0、只靠剪影的色差；主折角、物体分界与材质交界比外轮廓更细；贴脸上限 2 px（ART-FIDELITY §2.0 的 B11）。距离曲线与各类倍率以 `game/style/outline/post_outline.glsl` 为准。
+以 1080p 为基准按内部分辨率换算：外轮廓约 1.25 px（INV-5），随距离变细，400 m 外为 0、只靠剪影的色差；主折角、物体分界与材质交界比外轮廓更细；贴脸上限 2 px（ART-FIDELITY §2.0 的 B11）。距离曲线在 `game/style/outline/post_outline_mask.glslinc`，描线可调倍率在 `post_outline.glsl`；四个既有 pass 由各自 include 实现。
 
 ### 1.4 逐材质调线与轻重
 

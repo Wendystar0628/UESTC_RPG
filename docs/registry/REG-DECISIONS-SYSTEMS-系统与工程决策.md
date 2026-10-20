@@ -144,7 +144,7 @@ gates: []
 | D-139 | 按图的数据一律从 `IMapContext` 取，通用代码里不写死数据路径、实体 ID 和地图 ID | 全部包 | SYS-MAPS §6 | 生效 |
 | D-141 | 开放室内的室内包与碰撞包也是本机烘焙，进本图的本机缓存，不另设 PCK | 打包 | SYS-MAPS §1.2；ENG-PERF-STREAM §4；WLD-INTERIORS-BUILD §1.1 | 生效 |
 | D-142 | 白名单着色器含 `ui_panel`、`ui_screen`、`cine_cloud`、`map_base`、`precip`；外围不新增着色器 | 渲染 | ENG-PERF §1.4 | 生效 |
-| D-143 | 全局参数（含 `map_rect`、`edge_fog`、`shaft`、`interior_light` 等）一律登记在 ENG-PERF §1.5 | 渲染 | ENG-PERF §1.5；WF-BUILD §3 | 生效 |
+| D-143 | 全局参数（含 `map_rect`、`edge_fog`、`interior_light` 等）一律登记在 ENG-PERF §1.5 | 渲染 | ENG-PERF §1.5；WF-BUILD §3 | 生效 |
 | D-146 | 截图与门禁的默认参数串固定：默认状态、流逝暂停、界面隐藏、精致预设、自动调节关、清水河、不写存档、不开声音 | 门禁 | ENG-GATES-SHOTS §1 | 生效 |
 | D-160 | 最小预留做 ENG-ROADMAP §3 的六条预留：规则集、观者状态、按原因计数的输入占用、枚举穷举纪律、偶发事件数据化、RPG 名字占位；观光规则本身不变，写进 `sightseeing` 规则集 | 全项目 | ENG-ROADMAP §3；ENG-ARCH §2；ENG-ARCH §3；PLAN-WP-LIST §1；STD-CONVENTIONS §3.6 | 生效 |
 | D-167 | 测试按最小必要：推送前只跑快检，核心体验改动涉及时跑核心专项，其余集中做一次 | 全部包 | ENG-GATES §1；WF-RULE §9 | 生效 |
