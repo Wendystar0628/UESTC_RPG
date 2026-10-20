@@ -55,29 +55,29 @@ internal sealed class SaveRestoreOperation(SaveRuntimeBindings runtime, Action f
 
     public void Dispose() { _input?.Dispose(); _input = null; }
 
-    public (PreparedSave Save, string? FallbackSpawn) PrepareLoadedWorld(PreparedSave prepared, List<string> repairs)
+    public (PreparedSave Save, string? DefaultMapSpawn) PrepareLoadedWorld(PreparedSave prepared, List<string> repairs)
     {
         var meta = prepared.Document.Meta;
-        string? fallbackSpawn = null;
+        string? defaultMapSpawn = null;
         MutationStarted = true;
         _runtime.SelectRuleset(new(meta.Ruleset));
         if (!_runtime.Maps.Maps.Any(m => m.Id == meta.Map))
         {
-            var fallback = _runtime.Maps.Maps.First(m => m.Id == _runtime.Maps.Default);
-            fallbackSpawn = fallback.DefaultSpawn;
+            var defaultMap = _runtime.Maps.Maps.First(m => m.Id == _runtime.Maps.Default);
+            defaultMapSpawn = defaultMap.DefaultSpawn;
             repairs.Add("Missing map replaced with the default map: " + meta.Map.Value);
-            meta = meta with { Map = fallback.Id, Mode = _runtime.Ruleset.Current.DefaultViewMode, Space = null };
+            meta = meta with { Map = defaultMap.Id, Mode = _runtime.Ruleset.Current.DefaultViewMode, Space = null };
             prepared = prepared with
             {
                 Document = prepared.Document with { Meta = meta },
                 Sections = prepared.Sections.Select(s => s.Registration.Attribute.Scope == SaveScope.Global
-                    ? s with { Map = fallback.Id, Dto = s.Registration.Attribute.Phase == RestorePhase.Pose || s.Registration.Attribute.Id == "maps" ? null : s.Dto }
+                    ? s with { Map = defaultMap.Id, Dto = s.Registration.Attribute.Phase == RestorePhase.Pose || s.Registration.Attribute.Id == "maps" ? null : s.Dto }
                     : s).ToArray()
             };
         }
         RestorePhaseOf(prepared, RestorePhase.World, repairs);
         _runtime.WorldRestore.CompleteRestore();
-        return (prepared, fallbackSpawn);
+        return (prepared, defaultMapSpawn);
     }
 
     public (PreparedSave Save, NewGameContext Defaults) PrepareDefaultWorld(SaveRuntimeOptions options,

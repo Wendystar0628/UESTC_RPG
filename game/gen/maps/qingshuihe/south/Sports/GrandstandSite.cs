@@ -38,7 +38,7 @@ public sealed class GrandstandSite : ZoneSite
         var p = LayoutOf(world);
         return [StationRange(p.Stations), .. (p.Low.Count > 0 ? new[] { StationRange(p.Low) } : []),
             SiteRanges.Point(p.Centre), SiteRanges.Point(PlanPolygons.Centroid(
-                world.Feature(PlatformSite.Feature).Contour(SouthIds.Platform.Part), meanIfDegenerate: true))];
+                world.Feature(PlatformSite.Feature).Contour(SouthIds.Platform.Part)))];
     }
 
     public override IReadOnlyList<Claim> Claims { get; } = [new FeatureClaim(new(Feature), Aspects.Massing | Aspects.Facade | Aspects.Roof)];
@@ -64,7 +64,7 @@ public sealed class GrandstandSite : ZoneSite
             throw new InvalidOperationException($"Stand {Feature} is missing from the world model.");
         var ring = PlanRings.DeduplicateRing(feature.Contour(Part));
         var track = world.Features.TryGetValue(new(Track), out var t) ? t.Contour() : null;
-        var centre = PlanPolygons.Centroid(track ?? ring, meanIfDegenerate: true);
+        var centre = PlanPolygons.Centroid(track ?? ring);
         var found = new List<Station>();
         var count = (int)MathF.Round(360f / T.StationStep);
         for (var i = 0; i < count; i++)

@@ -80,8 +80,8 @@ public static class StreetStyle
     /// A caller that sets <see cref="Campus.Contracts.Parts.BoxPartParams.Material"/> away from the record default chooses the
     /// body colour (stone spheres and bollards follow the site's stone or marking paint); otherwise the style colour stands.
     /// </summary>
-    public static ToonSpec BodyColour(ToonSpec requested, string fallback) =>
-        requested.Lit.Value == "wall.lit" ? Pair(fallback) : new(requested.Lit, requested.Shade);
+    public static ToonSpec BodyColour(ToonSpec requested, string styleFamily) =>
+        requested.Lit.Value == "wall.lit" ? Pair(styleFamily) : new(requested.Lit, requested.Shade);
 
     // ---- Shared ----
     public const int RoundSegments = 16;

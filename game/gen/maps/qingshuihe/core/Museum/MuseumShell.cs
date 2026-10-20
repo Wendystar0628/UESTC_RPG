@@ -371,7 +371,7 @@ public sealed class MuseumShell : ZoneSite, IWindowedPiece
         {
             var j = (k + 1) % eave.Count;
             Vector3 a = new(eave[k].X, y0, eave[k].Y), b = new(eave[j].X, y0, eave[j].Y), c = new(apex[j].X, y1, apex[j].Y), d = new(apex[k].X, y1, apex[k].Y);
-            var n = VectorMath.Unit(Vector3.Cross(b - a, d - a), Vector3.UnitY, 1e-8);
+            var n = VectorMath.Unit(Vector3.Cross(b - a, d - a), 1e-8);
             if (n.Y < 0) n = -n;
             mesh.Quad(sheet, a, b, c, d, n);
         }

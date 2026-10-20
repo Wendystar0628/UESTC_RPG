@@ -96,14 +96,7 @@ public sealed partial class TerrainCompilerTests
         var line = new NetworkLine(water.Id, new([new(-10, 0), new(10, 0)]), 4)
             { Props = JsonSerializer.SerializeToElement(new { waterway = "drain", tunnel = "culvert", layer = "-1" }) };
         var context = Context([water]) with { Network = new([], [line], [], [line], []) };
-        var terrain = TerrainCompiler.Compile(context, []);
-        AssertThat(Math.Abs((double)(0) - (double)(terrain.HeightAt(0, 0))) <= TestTolerance.Position).IsTrue(); AssertThat(Math.Abs((double)(-1.2) - (double)(terrain.WaterY(water.Id)!.Value)) <= TestTolerance.Position).IsTrue();
-        AssertThat(terrain.WaterAt(0, 0) is null && !terrain.IsSurfaceWater(water.Id)).OverrideFailureMessage("Buried water was exposed as surface water.").IsTrue();
-        AssertThat(terrain.Waters.Count == 0).OverrideFailureMessage("The immutable surface-water directory exposed a buried channel.").IsTrue();
-        var plateau = new TerrainPlatformOp("design:terrain:over-pipe", "raised land preserves buried metadata",
-            Box(-40, -40, 40, 40), 3, new("1:4", "1:4"), 2) { Zone = Zone };
-        var raised = TerrainCompiler.Compile(context, [Source([plateau])]);
-        AssertThat(Math.Abs((double)(3) - (double)(raised.HeightAt(0, 0))) <= TestTolerance.Position).IsTrue(); AssertThat(Math.Abs((double)(-1.2) - (double)(raised.WaterY(water.Id)!.Value)) <= TestTolerance.Position).IsTrue();
+        AssertThrown(() => TerrainCompiler.Compile(context, [])).IsInstanceOf<WorldDataException>();
         var lake = WorldFeatureFixture.Create("fixture:pipe-lake", "water", new PolygonGeometry(Box(-15, -5, -5, 5)));
         var connected = TerrainCompiler.Compile(Context([water, lake]) with { Network = context.Network }, []);
         AssertThat(Math.Abs((double)(-0.5) - (double)(connected.WaterY(water.Id)!.Value)) <= TestTolerance.Position).IsTrue(); AssertThat(Math.Abs((double)(0) - (double)(connected.HeightAt(0, 0))) <= TestTolerance.Position).IsTrue();

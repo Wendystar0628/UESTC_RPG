@@ -9,7 +9,7 @@ namespace Campus.Gen.Furniture;
 /// <summary>
 /// WP-13 placement (13b): pure and deterministic from the world model and the map's claims.
 /// <list type="bullet">
-/// <item>Atlas anchors (SYS-ATLAS): a kiosk or a post on every <c>anchor</c> feature of WP-48c's <c>overlay/atlas.d/</c>,
+/// <item>Atlas anchors (SYS-ATLAS): a kiosk or a post on every <c>anchor</c> feature in <c>world/atlas.json</c>,
 /// at its footprint, facing its <c>yawDeg</c>; the kiosk on its pad (or the deck the overlay names), the post landed as a point.
 /// A footprint more than <see cref="FurnitureStyle.AnchorPavingGap"/> off pedestrian paving moves the shortest way to its edge.</item>
 /// <item>Open entrances (WLD-INTERIORS): mat, standing open sign and door lamp at every open entrance of the interior index,

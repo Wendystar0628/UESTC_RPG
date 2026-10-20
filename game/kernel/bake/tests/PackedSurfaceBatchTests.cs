@@ -81,7 +81,7 @@ public sealed class PackedSurfaceBatchTests
         var custom = Surface(0, true, 1);
         var differentCustomEncoding = Copy(custom, format: custom.Format ^ (1UL << (int)Format.FormatCustom0Shift));
         if (PackedSurfaceBatcher.Merge([differentCustomEncoding, differentCustomEncoding]).Count != 2)
-            throw new InvalidOperationException("A non-RGBAFloat custom layout was guessed as compatible.");
+            throw new InvalidOperationException("A non-RGBAFloat custom layout was accepted with a matching layout.");
     }
 
     [TestCase]
@@ -138,7 +138,7 @@ public sealed class PackedSurfaceBatchTests
         {
             ColorIndices = [64, 66, 64],
             Flags = [1, 2, 8],
-            Reserved = [7, 251, 9],
+            Reserved = [7, (byte)(7 | WindowCardEncoding.PhysicalCurtainFlag), 9],
             Custom0 = (customMask & 1) != 0 ? Custom(0) : null,
             Custom1 = (customMask & 2) != 0 ? Custom(1) : null,
             Custom2 = (customMask & 4) != 0 ? Custom(2) : null

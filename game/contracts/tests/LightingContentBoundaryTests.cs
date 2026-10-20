@@ -53,6 +53,15 @@ public sealed class LightingContentBoundaryTests
             Reserved = [15, 15, 15],
             Reflect = true
         };
+        foreach (var type in new byte[] { 0, WindowCardEncoding.PhysicalCurtainFlag, WindowCardEncoding.Lobby + 1 })
+            AssertThrown(() => (glass with { Reserved = [type, type, type] }).ValidateVertexData()).IsInstanceOf<ArgumentException>();
+        AssertThrown(() => (glass with { Reserved = null }).ValidateVertexData()).IsInstanceOf<ArgumentException>();
+        (glass with { Reserved = [WindowCardEncoding.Lobby, WindowCardEncoding.Lobby, WindowCardEncoding.Lobby] }).ValidateVertexData();
+        var curtainedType = (byte)(WindowCardEncoding.PhysicalCurtainFlag | 1);
+        (glass with { Reserved = [curtainedType, curtainedType, curtainedType] }).ValidateVertexData();
+        (glass with { Reserved = null, Uv2 = null }).ValidateVertexData();
+        (glass with { Reserved = null, Uv2 = [0, 0, 0, 0, 0, 0] }).ValidateVertexData();
+        (glass with { Reserved = null, Material = new(glass.Material.Spec with { Kind = ToonKind.GlassNear }) }).ValidateVertexData();
         var water = new GeometryBundle(new ToonRef(new ToonSpec(new("water.far.lit"), new("water.far.shade"))),
             positions, normals, [0, 1, 2], Uv: [.2f, 0, .2f, 0, .2f, 0], Uv2: [12, -1, 12, -1, 12, -1])
         {

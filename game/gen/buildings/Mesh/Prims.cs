@@ -26,7 +26,7 @@ public sealed class Profile
         {
             var ds = points[i + 1].S - points[i].S;
             var dy = points[i + 1].Y - points[i].Y;
-            seg[i] = VectorMath.Unit(new Vector2(dy, -ds), Vector2.UnitX, 1e-6f);
+            seg[i] = VectorMath.Unit(new Vector2(dy, -ds), 1e-6f);
         }
         SegmentNormal = seg;
     }

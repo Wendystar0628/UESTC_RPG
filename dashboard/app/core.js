@@ -347,7 +347,7 @@
         });
       });
     });
-    Object.keys(panels).forEach(function (id) { mount(panels[id]); });   // 理论上面板在 boot 之后才到，这里兜底
+    Object.keys(panels).forEach(function (id) { mount(panels[id]); });   // 挂载 HTML 同步加载的面板
 
     startData();
     setInterval(refreshMeta, 20000);

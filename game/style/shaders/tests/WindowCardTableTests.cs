@@ -77,6 +77,9 @@ public sealed class WindowCardTableTests
         AssertThrown(() => WindowCardTable.Pack([new WindowCardSpec(WindowCardKind.None) { Depth3 = 1f }])).IsInstanceOf<ArgumentException>();
         AssertThrown(() => WindowCardTable.Pack([good with { Screen = CardScreen.None }])).IsInstanceOf<ArgumentException>();
         AssertThrown(() => WindowCardCatalog.Get(WindowCardKind.None)).IsInstanceOf<ArgumentException>();
+        AssertThrown(() => WindowCardTable.Pack([good])).IsInstanceOf<ArgumentException>();
+        AssertThrown(() => WindowCardTable.Pack(WindowCardCatalog.All.Where(card => card.Kind != good.Kind).ToArray())).IsInstanceOf<ArgumentException>();
+        AssertThrown(() => WindowCardTable.Pack([good with { Kind = (WindowCardKind)((int)WindowCardKind.Lobby + 1) }])).IsInstanceOf<ArgumentException>();
     }
 
     private static float[] Texel(float[] data, int row, int x)

@@ -74,7 +74,7 @@ internal sealed class WalkBodyCollision(CharacterBody3D body)
     {
         var from = body.GlobalPosition;
         if (HasSupport(from + motion)) return motion;
-        // Axis fallback lets the player slide along a ledge instead of dropping over it.
+        // Axis-wise support checks let the player slide along a ledge without stepping past its edge.
         var zOnly = new Vector3(0, 0, motion.Z);
         if (HasSupport(from + zOnly)) return zOnly;
         var xOnly = new Vector3(motion.X, 0, 0);

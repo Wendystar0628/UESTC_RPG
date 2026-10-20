@@ -176,12 +176,12 @@ public sealed class XuanbangSite : ZoneSite
     {
         var f = Rings(ctx.World);
         float Ground(Vector2 p) => ctx.World.Terrain.HeightAt(p.X, p.Y);
-        var y0 = Ground(PlanPolygons.Centroid(f.Main, meanIfDegenerate: true));
+        var y0 = Ground(PlanPolygons.Centroid(f.Main));
         GridFacade.Declare(facades, f.Main, y0, f.MainStyle, e => MainEdge(e, f), MainNumbering,
             WindowNumbers.Required(ctx, MainNumbering.Feature, MainKey));
-        GridFacade.Declare(facades, f.Tower, Ground(PlanPolygons.Centroid(f.Tower, meanIfDegenerate: true)), f.TowerStyle, _ => new(EdgeKind.Plain), TowerNumbering,
+        GridFacade.Declare(facades, f.Tower, Ground(PlanPolygons.Centroid(f.Tower)), f.TowerStyle, _ => new(EdgeKind.Plain), TowerNumbering,
             WindowNumbers.Required(ctx, TowerNumbering.Feature, TowerKey));
-        var y = Ground(PlanPolygons.Centroid(f.Clock, meanIfDegenerate: true));
+        var y = Ground(PlanPolygons.Centroid(f.Clock));
         WindowNumbers.Declare(windows, ClockTower.Slits(f.ClockPlan, y), ClockAllocation(ctx, ShaftKey, true)!.Value, W.Research);
         WindowNumbers.Declare(windows, ClockTower.Portals(f.ClockPlan, y), ClockAllocation(ctx, PortalKey, true)!.Value, W.Research);
         var porticoes = Porticoes(f);
@@ -250,7 +250,7 @@ public sealed class XuanbangSite : ZoneSite
     public override void Build(SiteBuilder b)
     {
         var f = Rings(b.Context.World);
-        float MainY() => b.Ground(PlanPolygons.Centroid(f.Main, meanIfDegenerate: true));
+        float MainY() => b.Ground(PlanPolygons.Centroid(f.Main));
         if (b.Includes(MainRange(f)))
         {
             var y = MainY();
@@ -263,8 +263,8 @@ public sealed class XuanbangSite : ZoneSite
         for (var i = 0; i < porticoes.Count; i++)
             if (b.Includes(PorticoRange(porticoes[i]))) Portico(b, porticoes[i], MainY(), i, hall);
         if (b.Includes(SkylightRange(f))) Skylight(b, f, MainY());
-        if (b.Includes(TowerRange(f))) GridFacade.Build(b, f.Tower, b.Ground(PlanPolygons.Centroid(f.Tower, meanIfDegenerate: true)), f.TowerStyle, _ => new(EdgeKind.Plain), TowerNumbering);
-        if (b.Includes(ClockRange(f))) ClockTower.Build(b, f.ClockPlan, f.ClockTop, b.Ground(PlanPolygons.Centroid(f.Clock, meanIfDegenerate: true)));
+        if (b.Includes(TowerRange(f))) GridFacade.Build(b, f.Tower, b.Ground(PlanPolygons.Centroid(f.Tower)), f.TowerStyle, _ => new(EdgeKind.Plain), TowerNumbering);
+        if (b.Includes(ClockRange(f))) ClockTower.Build(b, f.ClockPlan, f.ClockTop, b.Ground(PlanPolygons.Centroid(f.Clock)));
     }
 
     // ---- Pediment portico (§5.6): four round columns, entablature with dentils, pediment with the name panel ----
@@ -403,7 +403,7 @@ public sealed class XuanbangSite : ZoneSite
     public override IReadOnlyList<OutdoorAccessArea> DescribeOutdoorAccess(BuildContext context)
     {
         var plan = Rings(context.World);
-        var centre = PlanPolygons.Centroid(plan.Clock, meanIfDegenerate: true);
+        var centre = PlanPolygons.Centroid(plan.Clock);
         var ground = context.World.Terrain.HeightAt(centre.X, centre.Y);
         return [new("xuanbang.lantern-gallery", new(Feature), ClockTower.Lantern(plan.ClockPlan, ground, context.World).Areas)];
     }
@@ -411,13 +411,13 @@ public sealed class XuanbangSite : ZoneSite
     public override void Collide(SiteColliders c)
     {
         var f = Rings(c.Context.World);
-        var centre = PlanPolygons.Centroid(f.Main, meanIfDegenerate: true);
+        var centre = PlanPolygons.Centroid(f.Main);
         if (c.Includes(MainRange(f))) GridFacade.Collide(c, f.Main, c.Ground(centre.X, centre.Y), f.MainStyle, e => MainEdge(e, f), FootMat.StonePaving);
-        var t = PlanPolygons.Centroid(f.Tower, meanIfDegenerate: true);
+        var t = PlanPolygons.Centroid(f.Tower);
         if (c.Includes(TowerRange(f))) GridFacade.Collide(c, f.Tower, c.Ground(t.X, t.Y), f.TowerStyle, _ => new(EdgeKind.Plain), FootMat.StonePaving);
         foreach (var p in Porticoes(f))
             if (c.Includes(PorticoRange(p))) PorticoCollide(c, p, c.Ground(centre.X, centre.Y));
-        var k = PlanPolygons.Centroid(f.Clock, meanIfDegenerate: true);
+        var k = PlanPolygons.Centroid(f.Clock);
         if (c.Includes(ClockRange(f))) ClockTower.Collide(c, f.ClockPlan, c.Ground(k.X, k.Y));
     }
 

@@ -46,18 +46,18 @@ public sealed class CharacterWaterBoundaryTests
 
     [TestCase]
     [TestCategory(TestReason.Contract)]
-    public void LegacyRulesetConstructorAndJsonKeepBodyPermissionOffUnlessExplicit()
+    public void RulesetConstructionAndJsonKeepBodyPermissionOffUnlessExplicit()
     {
-        var legacy = new RulesetDescriptor(new("legacy"), [ViewMode.Fly, ViewMode.Walk],
+        var baseRuleset = new RulesetDescriptor(new("legacy"), [ViewMode.Fly, ViewMode.Walk],
             ViewMode.Fly, WorldControlMask.None, "all-unlocked", []);
-        AssertThat(!legacy.PlayerBody && !legacy.Characters).OverrideFailureMessage("A legacy ruleset unexpectedly enabled a character.").IsTrue();
-        string json = JsonSerializer.Serialize(legacy, ContractJson.Options);
+        AssertThat(!baseRuleset.PlayerBody && !baseRuleset.Characters).OverrideFailureMessage("A ruleset without a body permission declaration unexpectedly enabled a character.").IsTrue();
+        string json = JsonSerializer.Serialize(baseRuleset, ContractJson.Options);
         using var parsed = JsonDocument.Parse(json);
         var withoutBody = parsed.RootElement.EnumerateObject().Where(p => p.Name != "playerBody")
             .ToDictionary(p => p.Name, p => p.Value.Clone(), StringComparer.Ordinal);
         var restored = JsonSerializer.Deserialize<RulesetDescriptor>(JsonSerializer.Serialize(withoutBody), ContractJson.Options)!;
         AssertThat(!restored.PlayerBody).OverrideFailureMessage("Omitting the additive permission no longer preserves old rulesets.").IsTrue();
-        var withBody = legacy with { PlayerBody = true };
+        var withBody = baseRuleset with { PlayerBody = true };
         AssertThat(withBody.PlayerBody && !withBody.Characters).OverrideFailureMessage("Player-body permission enabled NPCs or other people.").IsTrue();
     }
 

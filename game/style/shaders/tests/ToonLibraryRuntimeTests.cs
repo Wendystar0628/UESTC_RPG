@@ -32,7 +32,7 @@ public sealed class ToonLibraryRuntimeTests
             spec.SurfacePattern.Value with { PeriodMeters = new(3, 1) },
             spec.SurfacePattern.Value with { JointMeters = new(.01f, .03f) } })
             AssertThat(!key.Equals(Key(spec with { SurfacePattern = pattern }))).OverrideFailureMessage("Material cache identity dropped a surface-profile field.").IsTrue();
-        AssertThat(!key.Equals(Key(spec with { SurfacePattern = null }))).OverrideFailureMessage("Pattern and legacy classes collapsed.").IsTrue();
+        AssertThat(!key.Equals(Key(spec with { SurfacePattern = null }))).OverrideFailureMessage("Pattern and ordinary classes collapsed.").IsTrue();
     }
 
     [TestCase]
@@ -111,23 +111,21 @@ public sealed class ToonLibraryRuntimeTests
     [TestCategory(TestReason.Contract)]
     [TestCategory("NativeRender")]
     [RequireGodotRuntime]
-    public async Task RealGlassDrawsCardMaskAndUnboundOrUndersizedTableFallback()
+    public async Task RealGlassDrawsDeclaredCardMaskAndUnencodedGlass()
     {
         await using var fixture = new Fixture();
         var tree = Engine.GetMainLoop() as SceneTree ?? throw new InvalidOperationException("Godot runtime required.");
         var parent = new Node3D();
         tree.Root.AddChild(parent);
         using var mesh = new ArrayMesh();
-        using var tinyImage = Image.CreateFromData(1, 1, false, Image.Format.Rgbaf, new byte[16]);
-        using var tiny = ImageTexture.CreateFromImage(tinyImage);
         try
         {
             parent.AddChild(new Camera3D { Current = true, Near = .05f, Far = 100f });
-            // Four real VF-B surfaces: office, physical curtain flag, invalid row, and existing cols=0 glass.
+            // Four real VF-B surfaces: office, physical curtain flag, lobby, and existing cols=0 glass.
             for (var i = 0; i < 4; i++)
             {
                 var left = -1.5f + .8f * i;
-                var spare = i == 1 ? (byte)(5 | WindowCardEncoding.PhysicalCurtainFlag) : i == 2 ? (byte)31 : (byte)5;
+                var spare = i == 1 ? (byte)(5 | WindowCardEncoding.PhysicalCurtainFlag) : i == 2 ? WindowCardEncoding.Lobby : i == 3 ? (byte)0 : (byte)5;
                 var spec = fixture.Spec with { Kind = ToonKind.Glass };
                 var source = new GeometryBundle(new(spec),
                     [left, -.5f, -3f, left + .7f, -.5f, -3f, left + .7f, .5f, -3f, left, .5f, -3f],
@@ -135,21 +133,21 @@ public sealed class ToonLibraryRuntimeTests
                     Uv: [.01f, .01f, .99f, .01f, .99f, .99f, .01f, .99f],
                     Uv2: [0, i == 3 ? 0 : 32, 0, i == 3 ? 0 : 32, 0, i == 3 ? 0 : 32, 0, i == 3 ? 0 : 32])
                 { ColorIndices = [64, 64, 64, 64], Reserved = [spare, spare, spare, spare] };
+                if (i == 0)
+                {
+                    AssertThrown(() => (source with { Reserved = null }).ValidateVertexData()).IsInstanceOf<ArgumentException>();
+                    AssertThrown(() => (source with { Reserved = [0, 0, 0, 0] }).ValidateVertexData()).IsInstanceOf<ArgumentException>();
+                    AssertThrown(() => (source with { Reserved = [31, 31, 31, 31] }).ValidateVertexData()).IsInstanceOf<ArgumentException>();
+                }
                 GeometrySurfaceUpload.Append(mesh, source, new Palettes().Catalog);
             }
             parent.AddChild(new MeshInstance3D { Mesh = mesh });
-            foreach (var state in new[] { "registered", "unbound", "undersized" })
-            {
-                if (state == "unbound") RenderingServer.GlobalShaderParameterSet(new StringName(ShaderGlobals.WindowCards), default(Variant));
-                if (state == "undersized") RenderingServer.GlobalShaderParameterSet(new StringName(ShaderGlobals.WindowCards), tiny);
-                for (var frame = 0; frame < 8; frame++)
-                    await parent.ToSignal(RenderingServer.Singleton, RenderingServer.SignalName.FramePostDraw);
-            }
-            GD.Print("WINDOW_CARDS_NATIVE exercised=real_toon_glass,type_mask,invalid_row,unbound,undersized_1x1,cols0 pixel_assertions=False");
+            for (var frame = 0; frame < 8; frame++)
+                await parent.ToSignal(RenderingServer.Singleton, RenderingServer.SignalName.FramePostDraw);
+            GD.Print("WINDOW_CARDS_NATIVE exercised=real_toon_glass,type_mask,lobby,cols0 invalid_card_input_rejected=True pixel_assertions=False");
         }
         finally
         {
-            RenderingServer.GlobalShaderParameterSet(new StringName(ShaderGlobals.WindowCards), default(Variant));
             parent.Free();
         }
     }
@@ -158,7 +156,7 @@ public sealed class ToonLibraryRuntimeTests
     [TestCategory(TestReason.Contract)]
     [TestCategory("NativeRender")]
     [RequireGodotRuntime]
-    public async Task ExtensionSpecsValidateAgainstTheCatalogButNeverThroughTheLegacyByte()
+    public async Task ExtensionSpecsValidateAgainstTheCatalogWithoutBank0ByteConversion()
     {
         await using var fixture = new Fixture();
         var library = fixture.Library;

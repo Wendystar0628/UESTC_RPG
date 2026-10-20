@@ -81,7 +81,7 @@ public static class BuildingPlanner
         var holes = grid.Footprint.Holes.Select(h => PlanRing.FromPoints([.. h], hole: true)).ToList();
         var area = (float)PlanRings.SignedArea(outer.Points) - holes.Sum(h => MathF.Abs((float)PlanRings.SignedArea(h.Points)));
         if (area < 6f) return null;
-        var centroid = PlanPolygons.Centroid(new PolygonRings(outer.Points, [.. holes.Select(h => (IReadOnlyList<Vector2>)h.Points)]), outer.Points[0]);
+        var centroid = PlanPolygons.Centroid(new PolygonRings(outer.Points, [.. holes.Select(h => (IReadOnlyList<Vector2>)h.Points)]));
 
         var (height, storeys, hs) = Heights(src, profile);
         var small = area < 40f || height < 3.2f;
@@ -145,7 +145,7 @@ public static class BuildingPlanner
         BuildingStyle style, uint worldSeed, IReadOnlyList<FacadeLook>? presets)
     {
         var feature = src.Feature;
-        var centroidClean = PlanPolygons.Centroid(new PolygonRings(outerClean.Points, [.. holesClean.Select(h => (IReadOnlyList<Vector2>)h.Points)]), outerClean.Points[0]);
+        var centroidClean = PlanPolygons.Centroid(new PolygonRings(outerClean.Points, [.. holesClean.Select(h => (IReadOnlyList<Vector2>)h.Points)]));
         var cell = new Vector2(MathF.Floor(centroidClean.X / 160f), MathF.Floor(centroidClean.Y / 160f));
         var cluster = StableHash.Hash32(worldSeed, "wp14.cluster",
             cell.X.ToString(CultureInfo.InvariantCulture), cell.Y.ToString(CultureInfo.InvariantCulture));

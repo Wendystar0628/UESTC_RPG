@@ -243,7 +243,7 @@ public sealed class GroundTests
         var palette = RepositoryFixture.FilePath("game", "style", "palette");
         var ids = new Dictionary<string, int>();
         var core = System.IO.Path.Combine(palette, "core.json");
-        foreach (var path in new[] { System.IO.File.Exists(core) ? core : System.IO.Path.Combine(palette, "keys", "registry.fallback.json"),
+        foreach (var path in new[] { core,
                      System.IO.Path.Combine(palette, "ext", "ground.json") })
         {
             using var doc = JsonDocument.Parse(System.IO.File.ReadAllBytes(path));

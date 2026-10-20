@@ -169,9 +169,9 @@ public sealed partial class TerrainCompilerTests
         AssertThat(Math.Abs((double)(1.25) - (double)(side.Distance.Height)) <= TestTolerance.Position).IsTrue(); AssertThat(Math.Abs((double)(-10) - (double)(side.X)) <= TestTolerance.Position).IsTrue(); AssertThat(Math.Abs((double)(1.75) - (double)(side.Z)) <= TestTolerance.Position).IsTrue();
         var corner = TerrainRoadCoreGeometry.CorridorContactAt(road, 0.75, 2, 2);
         AssertThat(Math.Abs((double)(Math.Sqrt(5) - 0.75) - (double)(corner.Distance.Height)) <= TestTolerance.Position).IsTrue();
-        var fallback = TerrainRoadCoreGeometry.CorridorContactAt(road with { Footprint = null }, 0.75, 2, 0);
-        AssertThat(Math.Abs((double)(0.25) - (double)(fallback.Distance.Height)) <= TestTolerance.Position).IsTrue();
-        AssertThat(end.Distance.Height > fallback.Distance.Height).OverrideFailureMessage("Real rectangular port was inflated into a line capsule.").IsTrue();
+        var centerline = TerrainRoadCoreGeometry.CorridorContactAt(road with { Footprint = null }, 0.75, 2, 0);
+        AssertThat(Math.Abs((double)(0.25) - (double)(centerline.Distance.Height)) <= TestTolerance.Position).IsTrue();
+        AssertThat(end.Distance.Height > centerline.Distance.Height).OverrideFailureMessage("Real rectangular port was inflated into a line capsule.").IsTrue();
     }
 
     [TestCase, TestCategory(TestReason.Contract)]

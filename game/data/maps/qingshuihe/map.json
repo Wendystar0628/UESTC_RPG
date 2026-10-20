@@ -32,7 +32,7 @@
     "ceilY": 2000,
     "buffer": 30,
     "softFloorClearance": 40,
-    "fallbackMargin": 150
+    "campusExpansionMargin": 150
   },
   "defaultSpawn": "P01",
   "spawns": [],

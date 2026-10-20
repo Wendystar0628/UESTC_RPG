@@ -82,7 +82,7 @@ public sealed class RestoreFailureFlowTests
 
     [TestCase]
     [TestCategory(TestReason.Smoke)]
-    public async Task FailedAutomaticPreviewCannotFallBackAndRevealDuringBoot()
+    public async Task FailedAutomaticPreviewCannotChooseAnotherMapAndRevealDuringBoot()
     {
         var f = new Fixture();
         await f.Flow.PrepareBoot(new());

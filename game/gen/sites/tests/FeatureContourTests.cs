@@ -82,7 +82,7 @@ public sealed class FeatureContourTests
                    "props":{"parent":"fixture:source:way:1"},"note":"Test contour reference, without rendered geometry."}
                 ],"trees":[]}
                 """
-        }).World;
+        }, new() { Terrain = FlatTerrain.Default }).World;
         AssertThat(world.ContourSegment(Selection).SequenceEqual(new[] { Square[1], Square[2], Square[3], Square[0] })).IsTrue();
         AssertThat(world.Network.Roads.Count == 0 && world.Network.Waterways.Count == 0 && world.Network.Bridges.Count == 0)
             .OverrideFailureMessage("A contour reference must not enter the rendered network.").IsTrue();

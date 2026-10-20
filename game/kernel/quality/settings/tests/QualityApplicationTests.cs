@@ -82,7 +82,7 @@ public sealed partial class QualityApplicationTests
 
     [TestCase]
     [TestCategory(TestReason.Contract)]
-    public async Task CliProfileStaysTemporaryWhileUserDeltaIsSaved()
+    public async Task CliProfileStaysSessionOnlyWhileUserDeltaIsSaved()
     {
         var (service, _, store) = await CliSession("cli-user");
         using var cleanup = store;

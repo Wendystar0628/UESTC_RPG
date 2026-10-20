@@ -15,7 +15,7 @@ namespace Campus.Arch.Tests
     {
         [TestCase]
         [TestCategory("Contract")]
-        public void SaveScopesKeepTheRawIdAndReplaceOnlyTheirOwnFallback()
+        public void SaveScopesKeepTheRawIdAndReplaceOnlyTheirOwnStub()
         {
             var registry = DiscoverFixtures();
             var sections = registry.Entries.Where(entry => entry.Kind == RegistrationKind.Save && entry.Id == "fixture-weather").ToArray();
@@ -23,7 +23,7 @@ namespace Campus.Arch.Tests
                 throw new InvalidOperationException("Global and per-map sections must coexist without rewriting their IDs or maps.");
             if (sections.Single(entry => entry.Scope == SaveScope.Global.ToString()).Type != typeof(GlobalWeatherSection) ||
                 sections.Single(entry => entry.Scope == SaveScope.PerMap.ToString()).Type != typeof(PerMapWeatherSection))
-                throw new InvalidOperationException("Fallback replacement crossed a save scope.");
+                throw new InvalidOperationException("Stub replacement crossed a save scope.");
             // Exercise the runner's effective-map grouping and attribute selection too.
             RegistryGateRunner.Run(registry, "fixture/index.json", "*", ReadFixture, [], FixtureFiles);
         }
@@ -164,5 +164,5 @@ namespace Campus.Arch.Tests
 namespace Campus.Kernel.Stubs.Tests
 {
     [SaveSection("fixture-weather", IsStub = true, Scope = SaveScope.Global, Phase = RestorePhase.World, Order = 991)]
-    public sealed class GlobalWeatherFallback : Campus.Arch.Tests.RegistrySaveFixture { }
+    public sealed class GlobalWeatherStub : Campus.Arch.Tests.RegistrySaveFixture { }
 }

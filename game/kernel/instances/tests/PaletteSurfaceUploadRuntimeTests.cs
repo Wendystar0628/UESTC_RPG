@@ -64,10 +64,10 @@ public sealed class PaletteSurfaceUploadRuntimeTests
     [TestCategory(TestReason.Contract)]
     [TestCategory("NativeRender")]
     [RequireGodotRuntime]
-    public void ActualNativeUploadRetainsAllLegacyColorBytesAndIndependentDecalBanks()
+    public void ActualNativeUploadRetainsAllBank0ColorBytesAndIndependentDecalBanks()
     {
         var catalog = Catalog();
-        var legacy = Geometry(256) with
+        var bank0 = Geometry(256) with
         {
             ColorIndices = Enumerable.Range(0, 256).Select(i => (ushort)i).ToArray(),
             Ao = Enumerable.Range(0, 256).Select(i => i / 255f).ToArray(),
@@ -77,16 +77,16 @@ public sealed class PaletteSurfaceUploadRuntimeTests
         using (var oldMesh = new ArrayMesh())
         using (var catalogMesh = new ArrayMesh())
         {
-            GeometrySurfaceUpload.Append(oldMesh, GeometryBuffer.Freeze(legacy), catalog);
-            GeometrySurfaceUpload.Append(catalogMesh, legacy, catalog: catalog);
+            GeometrySurfaceUpload.Append(oldMesh, GeometryBuffer.Freeze(bank0), catalog);
+            GeometrySurfaceUpload.Append(catalogMesh, bank0, catalog: catalog);
             using var oldArrays = oldMesh.SurfaceGetArrays(0);
             using var nextArrays = catalogMesh.SurfaceGetArrays(0);
             var oldColors = oldArrays[(int)Mesh.ArrayType.Color].AsColorArray();
             var nextColors = nextArrays[(int)Mesh.ArrayType.Color].AsColorArray();
             for (var i = 0; i < 256; i++)
             {
-                AssertThat(oldColors[i] == nextColors[i]).OverrideFailureMessage("Catalog selection changed legacy native COLOR values.").IsTrue();
-                AssertThat(Byte(nextColors[i].R) == i && Byte(nextColors[i].G) == (byte)(legacy.Ao![i] * 255f) &&
+                AssertThat(oldColors[i] == nextColors[i]).OverrideFailureMessage("Catalog selection changed bank0 native COLOR values.").IsTrue();
+                AssertThat(Byte(nextColors[i].R) == i && Byte(nextColors[i].G) == (byte)(bank0.Ao![i] * 255f) &&
                     Byte(nextColors[i].B) == (i & 15) && Byte(nextColors[i].A) == 255 - i).OverrideFailureMessage("A real native COLOR byte differs from the frozen v1 meaning.").IsTrue();
             }
         }
@@ -128,7 +128,7 @@ public sealed class PaletteSurfaceUploadRuntimeTests
     [TestCategory(TestReason.Contract)]
     [TestCategory("NativeRender")]
     [RequireGodotRuntime]
-    public void HighFallbackAndTintUseTheSharedCatalog()
+    public void HighSpecColorAndTintUseTheSharedCatalog()
     {
         var catalog = Catalog();
         using var mesh = new ArrayMesh();
@@ -138,7 +138,7 @@ public sealed class PaletteSurfaceUploadRuntimeTests
         for (var surface = 0; surface < 2; surface++)
         {
             using var arrays = mesh.SurfaceGetArrays(surface);
-            AssertThat(arrays[(int)Mesh.ArrayType.Color].AsColorArray().All(color => Byte(color.R) == 254 && Byte(color.B) == 16)).OverrideFailureMessage("High token fallback/tint called the byte provider or lost bank 1.").IsTrue();
+            AssertThat(arrays[(int)Mesh.ArrayType.Color].AsColorArray().All(color => Byte(color.R) == 254 && Byte(color.B) == 16)).OverrideFailureMessage("High token spec color/tint called the byte provider or lost bank 1.").IsTrue();
         }
         GeometrySurfaceUpload.Append(mesh, GeometryBuffer.Freeze(high), catalog);
         {
@@ -156,10 +156,10 @@ public sealed class PaletteSurfaceUploadRuntimeTests
     private static ToonSpec Spec(int index) => new(Token(index), Token(index + 1));
     private static PaletteCatalog Catalog()
     {
-        var legacy = new PaletteRegistry(Enumerable.Range(0, 256).Select(i => new PaletteEntry(Token(i), new(i),
+        var bank0 = new PaletteRegistry(Enumerable.Range(0, 256).Select(i => new PaletteEntry(Token(i), new(i),
             new N.Vector3(.5f), "fixture", false, i < 32 ? PaletteRole.Frame : i < 40 ? PaletteRole.Retired :
                 i < 64 ? PaletteRole.Weather : (i & 1) == 0 ? PaletteRole.Lit : PaletteRole.Shade)));
-        return new(legacy, Enumerable.Range(256, 256).Select(i => new PaletteEntry(Token(i), new(i), new(.5f),
+        return new(bank0, Enumerable.Range(256, 256).Select(i => new PaletteEntry(Token(i), new(i), new(.5f),
             "fixture", false, (i & 1) == 0 ? PaletteRole.Lit : PaletteRole.Shade)));
     }
     private static GeometryBundle Geometry(int count = 3) => new(new(Spec(64)),

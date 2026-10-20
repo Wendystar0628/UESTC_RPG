@@ -105,7 +105,7 @@ vec4 edge_strengths(Surf s0, LineCls l0, ivec2 c, out float qz) {
 
 	// Side for crease and ID lines (one-sided, full width): the face turned more toward the camera draws, which is
 	// constant along an edge and so cannot zigzag; parallel faces (an ID boundary on one plane, a protruding
-	// strip) fall back to the lower material ID. Silhouettes always sit on the nearer side (e_depth above).
+	// strip) use the lower material ID. Silhouettes always sit on the nearer side (e_depth above).
 	float f0 = dot(s0.nrm, -normalize(s0.pos));
 	float fq = dot(q.nrm, -normalize(q.pos));
 	float side;

@@ -331,7 +331,7 @@ public sealed class MapService : IMapService, IMapFrame, ISaveSection<MapsSave>,
         if (_stand is not null && legalized.Position != original.Position) _stand = null;
     }
 
-    /// <summary>A failed startup load is terminal: the caller presents the failure; there is no fallback map.</summary>
+    /// <summary>A failed startup load is terminal: the caller presents the failure and stops startup.</summary>
     private void Fail(Exception error)
     {
         _data.ReportError($"Map load failed [stage={_active?.Stage}, cause={_active?.Cause}, " +

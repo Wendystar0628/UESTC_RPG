@@ -72,7 +72,7 @@ public readonly record struct WorldSaveMoment(double WorldHours, double ClockOff
 public interface IWorldRestore
 {
     // Get once per capture on the main Save frame, after all control requests for that frame.
-    // WorldHours/ClockOffset/Season are the settled target; FlowRate is BaseFlow, never a temporary lease rate.
+    // WorldHours/ClockOffset/Season are the settled target; FlowRate is BaseFlow, never the rate of an active control lease.
     // No time advancement, weather Step, random draws, or live-state mutation is permitted.
     WorldSaveMoment GetSaveMoment();
 

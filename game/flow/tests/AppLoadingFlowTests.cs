@@ -40,7 +40,7 @@ public sealed class AppLoadingFlowTests
         if (maps.Context!.Descriptor.Spawns.Count != 0) throw new InvalidOperationException("Fixture must use waypoint-only spawns.");
         await flow.PrepareBoot(new()); await flow.PrepareWorld(); await flow.CompleteBoot();
         if (flow.State != AppState.Title || flow.IsPlaying || !rig.Title.Visible || rig.Camera.Pose != entry.ResolveSpawn(entry.Descriptor.DefaultSpawn).Fly)
-            throw new InvalidOperationException("Title fallback did not use the catalogue's default waypoint.");
+            throw new InvalidOperationException("Title default view did not use the catalogue's default waypoint.");
         var spawnPose = maps.ResolveSpawn(maps.Default).ViewPose(ViewMode.Walk);
         if (rig.Runtime.PinnedDestinations is not [{ Mode: ViewMode.Walk } prefetched] || prefetched.Pose != spawnPose ||
             rig.Runtime.Arrivals != 0 || saves.NewGames != 0 || saves.Active is not null)

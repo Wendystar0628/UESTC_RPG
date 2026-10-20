@@ -101,7 +101,7 @@ public sealed class ClusterLayout
             for (var i = 0; i + 1 < pts.Count; i++)
                 if (near(pts[i]) || near(pts[i + 1]))
                 {
-                    var dir = VectorMath.Unit(pts[i + 1] - pts[i], Vector2.Zero, 1e-9);
+                    var dir = VectorMath.Unit(pts[i + 1] - pts[i], 1e-9);
                     if (dir != Vector2.Zero) roads.Add(new(pts[i], pts[i + 1], dir, half));
                 }
         }
@@ -131,9 +131,9 @@ public sealed class ClusterLayout
                 var normal = inward;
                 if (k == 0)
                 {
-                    var prev = VectorMath.Unit(a - ring[(e + ring.Count - 1) % ring.Count], Vector2.Zero, 1e-9);
+                    var prev = VectorMath.Unit(a - ring[(e + ring.Count - 1) % ring.Count], 1e-9);
                     var prevInward = new Vector2(-prev.Y, prev.X) * sign;
-                    var mid = VectorMath.Unit(prevInward + inward, Vector2.Zero, 1e-9);
+                    var mid = VectorMath.Unit(prevInward + inward, 1e-9);
                     var cos = Vector2.Dot(mid, inward);
                     normal = mid == Vector2.Zero ? inward : mid / MathF.Max(cos, 0.5f);
                 }

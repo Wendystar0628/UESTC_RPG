@@ -349,19 +349,19 @@ public sealed class SaveService : ISaveService, IDisposable
     {
         var meta = prepared.Document.Meta;
         var repairs = new List<string>();
-        string? fallbackSpawn = null;
+        string? defaultMapSpawn = null;
         await OnFrame(() =>
         {
-            (prepared, fallbackSpawn) = _restore!.PrepareLoadedWorld(prepared, repairs);
+            (prepared, defaultMapSpawn) = _restore!.PrepareLoadedWorld(prepared, repairs);
             meta = prepared.Document.Meta;
             Active = active; _line = active == meta.Slot ? meta.Line : 0; _newLine = active != meta.Slot;
             _authorizedOverwrite = false;
             _playSeconds = meta.PlaySeconds; _thumbnail = prepared.Document.Thumbnail; _unknown = prepared.Document.Sections;
             _restore.ClearPendingPose();
         }).ConfigureAwait(false);
-        await Travel(meta.Map, fallbackSpawn is null && scope == LoadScope.Full ? meta.Pose : null,
-            scope == LoadScope.Full ? meta.Mode : null, MapTravelCause.LoadSave, fallbackSpawn).ConfigureAwait(false);
-        if (fallbackSpawn is not null)
+        await Travel(meta.Map, defaultMapSpawn is null && scope == LoadScope.Full ? meta.Pose : null,
+            scope == LoadScope.Full ? meta.Mode : null, MapTravelCause.LoadSave, defaultMapSpawn).ConfigureAwait(false);
+        if (defaultMapSpawn is not null)
         {
             meta = await OnFrame(() => meta with { Pose = _runtime.Camera.Pose }).ConfigureAwait(false);
             prepared = prepared with { Document = prepared.Document with { Meta = meta } };
@@ -380,7 +380,7 @@ public sealed class SaveService : ISaveService, IDisposable
         else await OnFrame(() => _restore!.DeferPose(prepared)).ConfigureAwait(false);
         await OnFrame(() =>
         {
-            if (fallbackSpawn is not null && _slots.TryGetValue(meta.Slot, out var slot))
+            if (defaultMapSpawn is not null && _slots.TryGetValue(meta.Slot, out var slot))
                 _slots[meta.Slot] = slot with { Info = slot.Info with { Meta = meta }, Save = prepared };
             _interval = 0; _restore!.Succeed();
         }).ConfigureAwait(false);

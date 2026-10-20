@@ -73,7 +73,7 @@ public sealed record WorldNetwork(
 public interface IWorldModel
 {
     /// <summary>Current map terrain; maps without authored terrain use a flat surface.</summary>
-    ITerrain Terrain => FlatTerrain.Default;
+    ITerrain Terrain { get; }
     /// <summary>Actual campus boundary from source geometry, including holes; never the map's bounding rectangle.</summary>
     PolygonRings Boundary { get; }
     IReadOnlyDictionary<FeatureId, WorldFeature> Features { get; }

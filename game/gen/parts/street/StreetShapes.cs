@@ -9,7 +9,7 @@ namespace Campus.Gen.Parts.Street;
 /// <summary>Small shared pieces of the street-set completion parts (poles, boards, mirror, clock, drain, fence).</summary>
 internal static class StreetShapes
 {
-    public static FootMat Foot(FootMat given, FootMat fallback) => given == FootMat.Auto ? fallback : given;
+    public static FootMat Foot(FootMat given, FootMat styleFoot) => given == FootMat.Auto ? styleFoot : given;
 
     /// <summary>Self-lit-free sky-reflecting glass (notice-board pane, convex mirror): the glass class of ART-STYLE.</summary>
     public static ToonSpec Glazing() => new(S.Lit(S.CarGlass), S.Shade(S.CarGlass)) { Kind = ToonKind.Glass, Fx = ToonFx.GlassStreak | ToonFx.Glare, Wet = 0f };

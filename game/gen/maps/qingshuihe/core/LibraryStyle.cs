@@ -60,7 +60,7 @@ public static class LibraryStyle
     /// Paved link from the cafe apron to the nearest footway (16d-2): width, reach, how far it starts inside the apron and runs
     /// onto the walk, the walk width when the network has none; pavers and edging band as WP-15 lays a footway (review).
     /// </summary>
-    public const float CafeWalkWidth = 1.8f, CafeWalkReach = 15f, CafeWalkInset = 0.3f, CafeWalkOverlap = 0.05f, CafeWalkFallbackWidth = 2f;
+    public const float CafeWalkWidth = 1.8f, CafeWalkReach = 15f, CafeWalkInset = 0.3f, CafeWalkOverlap = 0.05f;
     public const float CafeWalkEdging = 0.12f;
     public const string CafeWalkPaving = "ground.paver", CafeWalkEdge = "ground.curb";
     /// <summary>Faces shorter than this get no openings (tower returns, short notches).</summary>

@@ -36,7 +36,7 @@ public static class Xf
         var x = n.X * m.M11 + n.Y * m.M21 + n.Z * m.M31;
         var y = n.X * m.M12 + n.Y * m.M22 + n.Z * m.M32;
         var z = n.X * m.M13 + n.Y * m.M23 + n.Z * m.M33;
-        return VectorMath.Unit(new Vector3(x, y, z), n);
+        return VectorMath.Unit(new Vector3(x, y, z));
     }
 
     /// <summary>Right-handed frame whose local +X follows <paramref name="axis"/>; lays swept pipes along any direction.</summary>

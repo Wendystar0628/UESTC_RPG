@@ -39,7 +39,7 @@ public interface IGlobalDataTextureRegistry : IDisposable
     /// First stop producer updates and new post callbacks, and clear their global bindings. Already acquired
     /// leases must still be returned by their callbacks. Await this task; never use Wait, Result or a blocking
     /// render-thread fence. The engine must keep processing callbacks until completion, including when the
-    /// main and render threads are the same. Dispose alone is a non-awaiting exit-tree fallback.
+    /// main and render threads are the same. Dispose starts exit-tree shutdown without awaiting native disposal.
     /// </remarks>
     Task ShutdownAsync();
 }

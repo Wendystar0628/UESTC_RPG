@@ -187,12 +187,12 @@ public sealed class StreamLifecycleTests
             groups[missing.Parent].GetType().GetField("Mounted")!.SetValue(groups[missing.Parent], true);
             Present();
             if (!visibility.Drawn.Contains(missing.Parent) || director.ViewReady || director.DestinationReady)
-                throw new InvalidOperationException("A fallback parent certified a missing selected leaf.");
+                throw new InvalidOperationException("A coarser parent certified a missing selected leaf.");
             groups[missing.Parent].GetType().GetField("Mounted")!.SetValue(groups[missing.Parent], false);
             groups[StreamTile.Root].GetType().GetField("Mounted")!.SetValue(groups[StreamTile.Root], false);
             Present();
             if (visibility.Drawn.Count != 0 || director.ViewReady || director.DestinationReady)
-                throw new InvalidOperationException("An incomplete frontier was shown without complete fallback coverage.");
+                throw new InvalidOperationException("An incomplete frontier was shown without complete coarser coverage.");
         }
         finally { director.Free(); }
     }
@@ -201,13 +201,13 @@ public sealed class StreamLifecycleTests
     [TestCategory(TestReason.Regression)]
     [TestCategory("NativeRender")]
     [RequireGodotRuntime]
-    public void ResidentBackdropAppearsEvenWhenReadyChildrenSkipTheRootFallback()
+    public void ResidentBackdropAppearsEvenWhenReadyChildrenSkipTheCoarseRoot()
     {
         var bounds = new Box3(System.Numerics.Vector3.Zero, System.Numerics.Vector3.One);
         var tree = new LodTree(bounds, new StreamSettings());
         var visible = new HashSet<StreamTile>();
         tree.ResolveVisible(new HashSet<StreamTile> { StreamTile.Root }, _ => true, visible);
-        if (visible.Contains(StreamTile.Root)) throw new InvalidOperationException("The fixture must skip the ready root fallback.");
+        if (visible.Contains(StreamTile.Root)) throw new InvalidOperationException("The fixture must skip the ready coarse root.");
 
         var source = new GeometryBundle(new(new ToonSpec(new("wall.lit"), new("wall.shade"))),
             [0, 0, 0, 1, 0, 0, 0, 0, 1], [0, 1, 0, 0, 1, 0, 0, 1, 0], [0, 1, 2]);
@@ -224,7 +224,7 @@ public sealed class StreamLifecycleTests
             for (var i = 0; i < prepared.Draws.Count; i++) prepared.MountOne(i, scenario, material);
             var resident = prepared.Draws.Count(draw => draw.Resident);
             if (prepared.VisibleInstanceCount != resident || resident == 0 || resident == prepared.Draws.Count)
-                throw new InvalidOperationException("Resident background stayed hidden until a root selection, or ordinary fallback geometry appeared early.");
+                throw new InvalidOperationException("Resident background stayed hidden until a root selection, or ordinary coarse geometry appeared early.");
             prepared.SetVisible(false, 0);
             if (prepared.VisibleInstanceCount != resident)
                 throw new InvalidOperationException("Refining the root hid its resident background.");

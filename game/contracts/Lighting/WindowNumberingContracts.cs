@@ -142,7 +142,7 @@ public sealed class WindowNumberingSnapshot
     public bool ContainsId(int id) => Allocations.Any(a => id >= a.BaseId && id - a.BaseId < a.Count);
     public IReadOnlyList<WindowAllocation> Allocations { get; }
 
-    /// <summary>Exact lookup; absent declarations fail instead of falling back to a temporary or generic base.</summary>
+    /// <summary>Exact lookup; an absent declaration raises KeyNotFoundException.</summary>
     public WindowAllocation Get(FeatureId feature, string key) => _byKey.TryGetValue((feature, key), out var value)
         ? value : throw new KeyNotFoundException($"No window allocation for {feature.Value} / {key} in map {Map.Value}.");
 }

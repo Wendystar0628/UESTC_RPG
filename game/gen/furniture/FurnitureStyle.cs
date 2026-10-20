@@ -346,7 +346,7 @@ public static class FurnitureStyle
     public static FurnitureParams Bin { get; } = new(2f, 1f, 0.55f);
     public static SignParams Stop { get; } = new(1.2f, 2.5f, 0.18f);
 
-    // ---- Atlas anchors (SYS-ATLAS): sizes come from the overlay footprint and height; these are the fallbacks ----
+    // ---- Atlas anchors (SYS-ATLAS): sizes come from the overlay footprint and height; these are the standard proportions ----
     public static SignParams Kiosk { get; } = new(2f, 2.6f, 0.8f);
     public static SignParams Post { get; } = new(0.3f, 1.05f, 0.3f);
 

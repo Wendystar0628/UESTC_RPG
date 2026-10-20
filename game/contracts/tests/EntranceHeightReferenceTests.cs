@@ -19,10 +19,10 @@ public sealed class EntranceHeightReferenceTests
 
     [TestCase]
     [TestCategory(TestReason.Contract)]
-    public void LegacyAndAbsolutePreserveAllFieldsWithoutQueryingTerrain()
+    public void OmittedAndAbsoluteHeightReferencesPreserveFieldsWithoutQueryingTerrain()
     {
         var terrain = new ProbeTerrain(9, new NotSupportedException("Pad lookup must not run."));
-        AssertThat(Parse(Entry) == Absolute && Parse(WithRef("\"absolute\"")) == Absolute).OverrideFailureMessage("Legacy absolute coordinates changed without terrain.").IsTrue();
+        AssertThat(Parse(Entry) == Absolute && Parse(WithRef("\"absolute\"")) == Absolute).OverrideFailureMessage("Coordinates with an omitted height reference changed without terrain.").IsTrue();
         AssertThat(Parse(Entry, terrain) == Absolute && Parse(WithRef("\"absolute\""), terrain) == Absolute && terrain.Calls == 0).OverrideFailureMessage("Absolute coordinates queried terrain or changed authored values.").IsTrue();
     }
 

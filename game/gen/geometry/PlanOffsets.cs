@@ -39,13 +39,13 @@ public static class PlanOffsets
     {
         var v = new Vector2(b.Y - a.Y, a.X - b.X);
         var length = MathF.Sqrt(v.X * v.X + v.Y * v.Y);
-        return length > 1e-9f ? v / length : Vector2.UnitX;
+        return length > 1e-9f ? v / length : throw new ArgumentException("An offset edge must have nonzero length.");
     }
 
 
     /// <summary>
     /// Closed-ring inset with one vertex per corner and scalar double normals/intersections. Positive distance moves left;
-    /// zero-length edges fail. Unlike <see cref="MitreOffset"/>, no fallback normal or miter limit is applied.
+    /// zero-length edges fail. Unlike <see cref="MitreOffset"/>, no substituted normal or miter limit is applied.
     /// </summary>
     public static Vector2[] MitreInset(IReadOnlyList<Vector2> ring, float distance)
     {

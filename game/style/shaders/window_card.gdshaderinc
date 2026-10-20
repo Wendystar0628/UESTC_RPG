@@ -47,27 +47,8 @@ struct WCard {
 	float rise;
 };
 
-WCard wcard_default() {
-	// 表未上传或没有有效默认行：沿用已批办公卡常量。
-	return WCard(0.45, 1.0, 0.3, 0.45, WC_F_DESKS, 1.4, WC_F_SHELF, WC_S_SHELF, WC_SCR_VENETIAN, 0.6, 0.15, 0.7,
-			1.0, 0.95, WC_C_PANELS, 0, 0.9, 0.4);
-}
-
-WCard wcard_fetch(int kind) {
-	// 未绑定 sampler 的默认纹理可能只有 1×1；任何 texelFetch 前先核尺寸。
-	ivec2 size = textureSize(window_cards, 0);
-	if (size.x != WCARD_WIDTH || size.y != WCARD_ROWS) {
-		return wcard_default();
-	}
-	int row = kind <= 0 || kind >= WCARD_ROWS ? WCARD_DEFAULT : kind;
-	vec4 x5 = texelFetch(window_cards, ivec2(5, row), 0);
-	if (x5.w != WCARD_TAG) {
-		row = WCARD_DEFAULT;
-		x5 = texelFetch(window_cards, ivec2(5, row), 0);
-	}
-	if (x5.w != WCARD_TAG) {
-		return wcard_default();
-	}
+WCard wcard_fetch(int row) {
+	// CPU 生产入口保证整表已上传，玻璃输入只引用已登记的窗卡类型。
 	vec4 x0 = texelFetch(window_cards, ivec2(0, row), 0);
 	vec4 x1 = texelFetch(window_cards, ivec2(1, row), 0);
 	vec4 x2 = texelFetch(window_cards, ivec2(2, row), 0);

@@ -2,7 +2,7 @@
 并顺手删掉 curated/notices 里过期的通知。形状见 dashboard/README.md §2.1。
 只读来源、不改它们；任何一份采集失败只跳过那一份，在 stderr 说一句，不影响其余。
 
-用法：python -I -X utf8 dashboard/tools/collect.py          （live.py --loop 在输入一变时跑、不变时每 2 分钟兜底；也可手动）
+用法：python -I -X utf8 dashboard/tools/collect.py          （live.py --loop 在输入一变时跑、无变化时每 2 分钟周期刷新；也可手动）
       from collect import main; main()                       （live.py import 调用，不交互、不退出）
 """
 import glob

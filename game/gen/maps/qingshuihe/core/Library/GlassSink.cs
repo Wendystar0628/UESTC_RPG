@@ -40,8 +40,7 @@ public sealed class GlassBatch(ToonSpec spec, PaletteCatalog palette, bool numbe
 /// <see cref="OpeningGlass"/>, the one VF-B writer (floor(UV) = (building-grid column, row), UV2 = (window base, channel
 /// slot + 32 × total columns), spare byte = window card), and placed with <see cref="OpeningPlacement.Frame"/>; the batch
 /// only merges the cells into bundles under the glass material. The base is the building's allocation from the map's
-/// WindowNumberingSnapshot; without one (legacy and no-window fixtures, BuildContext) the glass carries no UV or UV2 at
-/// all, never a made-up base.
+/// WindowNumberingSnapshot; explicitly unnumbered glass carries no UV or UV2 and no allocated base.
 /// </summary>
 public sealed class GlassSink
 {

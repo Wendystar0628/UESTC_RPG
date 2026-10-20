@@ -41,7 +41,7 @@ public sealed class LodTreeTests
     }
     [TestCase]
     [TestCategory(TestReason.Contract)]
-    public void CoarseRootRemainsAValidFallbackForTheWholeMap()
+    public void CoarseRootRemainsValidForTheWholeMap()
     {
         var tree = new LodTree(new(new(-1500, -30, -1500), new(1500, 100, 1500)), new());
         var required = new HashSet<StreamTile>(); var refined = new HashSet<StreamTile>(); var visible = new HashSet<StreamTile>();

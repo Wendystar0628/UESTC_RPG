@@ -32,7 +32,7 @@ public sealed class PaletteCatalog : IPaletteIndexResolver
             ValidateExtension(entry);
             Add(entry);
         }
-        for (var index = PaletteLayout.LegacyCapacity; index < PaletteLayout.Capacity; index += 2)
+        for (var index = PaletteLayout.Bank0Capacity; index < PaletteLayout.Capacity; index += 2)
             if ((_byIndex[index] is null) != (_byIndex[index + 1] is null))
                 throw new ArgumentException($"Palette extension pair {index}/{index + 1} is incomplete.", nameof(extensions));
 
@@ -78,8 +78,8 @@ public sealed class PaletteCatalog : IPaletteIndexResolver
         ArgumentNullException.ThrowIfNull(data);
         if (data.Schema != PaletteRegistryData.CurrentSchema)
             throw new ArgumentException($"Expected palette registry schema {PaletteRegistryData.CurrentSchema}.", nameof(data));
-        return new(new PaletteRegistry(data.Entries.Where(entry => entry.Index.Value < PaletteLayout.LegacyCapacity)),
-            data.Entries.Where(entry => entry.Index.Value >= PaletteLayout.LegacyCapacity));
+        return new(new PaletteRegistry(data.Entries.Where(entry => entry.Index.Value < PaletteLayout.Bank0Capacity)),
+            data.Entries.Where(entry => entry.Index.Value >= PaletteLayout.Bank0Capacity));
     }
 
     public PaletteIndex Resolve(PaletteToken token) => Get(token).Index;
@@ -110,7 +110,7 @@ public sealed class PaletteCatalog : IPaletteIndexResolver
 
     private static void ValidateExtension(PaletteEntry entry)
     {
-        if (entry.Index.Value < PaletteLayout.LegacyCapacity || entry.Seasonal || entry.Row is not null)
+        if (entry.Index.Value < PaletteLayout.Bank0Capacity || entry.Seasonal || entry.Row is not null)
             throw new ArgumentException("Extensions require indices 256..511 and no seasonal row.", nameof(entry));
         var validRole = entry.Role switch
         {

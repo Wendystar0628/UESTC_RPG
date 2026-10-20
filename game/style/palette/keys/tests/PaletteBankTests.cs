@@ -32,7 +32,7 @@ public sealed class PaletteBankTests
                 for (var row = 0; row < rows; row++)
                 {
                     var (col, texelRow) = PaletteLayout.FrameTexel(e.Index, row);
-                    var expectedRow = e.Index.Value < PaletteLayout.LegacyCapacity ? row : PaletteLayout.LegacyHeight + row;
+                    var expectedRow = e.Index.Value < PaletteLayout.Bank0Capacity ? row : PaletteLayout.Bank0Height + row;
                     AssertThat(texelRow == expectedRow && col == (e.Index.Value & 255)).OverrideFailureMessage($"{e.Token.Value} maps to the wrong texel.").IsTrue();
                     AssertThat(full.Pixels[(texelRow * PaletteLayout.Width + col) * 4 + 3] == 255).OverrideFailureMessage($"{e.Token.Value} row {row} was not written at {season} {clock}.").IsTrue();
                 }
@@ -42,10 +42,10 @@ public sealed class PaletteBankTests
                             AssertThat(full.Pixels[(row * PaletteLayout.Width + sample) * 4 + 3] == 255).OverrideFailureMessage($"{e.Token.Value} seasonal row {row} sample {sample} was not written at {season} {clock}.").IsTrue();
             }
         }
-        // The pair derives like a legacy pair of the same class and albedo: lit brighter than shade under the default frame.
+        // The pair derives like a bank-0 pair of the same class and albedo: lit brighter than shade under the default frame.
         var at = script.EvaluateWorld(17.5, (double)Season.Autumn, null, default);
         full.ComposeCurrent(at);
-        foreach (var e in catalog.Entries.Where(e => e.Index.Value >= PaletteLayout.LegacyCapacity && e.Role == PaletteRole.Lit))
+        foreach (var e in catalog.Entries.Where(e => e.Index.Value >= PaletteLayout.Bank0Capacity && e.Role == PaletteRole.Lit))
         {
             var lit = Texel(full, e.Index.Value);
             var shade = Texel(full, e.Index.Value + 1);
@@ -70,7 +70,7 @@ public sealed class PaletteBankTests
         var entries = new List<PaletteEntry>();
         foreach (var file in new[] { Path.Combine(palette, "core.json") }
             .Concat(Directory.GetFiles(Path.Combine(palette, "ext"), "*.json").Where(path => Path.GetFileName(path) != "ui.json").Order(StringComparer.Ordinal)))
-            entries.AddRange(JsonSerializer.Deserialize<PaletteRegistryData>(File.ReadAllBytes(file), ContractJson.Options)!.Entries.Where(entry => entry.Index.Value < PaletteLayout.LegacyCapacity));
+            entries.AddRange(JsonSerializer.Deserialize<PaletteRegistryData>(File.ReadAllBytes(file), ContractJson.Options)!.Entries.Where(entry => entry.Index.Value < PaletteLayout.Bank0Capacity));
         var extensions = new List<PaletteEntry>();
         foreach (var (lit, cls, albedo) in new[]
         {

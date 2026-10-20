@@ -13,7 +13,7 @@ public sealed class TerrainChannelContractTests
 {
     [TestCase]
     [TestCategory(TestReason.Contract)]
-    public void ChannelWadePreservesLegacyConstructorAndDeconstructSignatures()
+    public void ChannelConstructionAndDeconstructionKeepWadeEmptyUnlessDeclared()
     {
         var parsed = TerrainOverlayJson.Parse(Encoding.UTF8.GetBytes(Fixture));
         var source = (TerrainChannelOp)parsed.Ops[5];
@@ -32,7 +32,7 @@ public sealed class TerrainChannelContractTests
             bank != source.Bank || waterY != source.WaterY || weirs != source.Weirs || line != source.Line ||
             width != source.Width || priority != source.Priority || crossings != source.Crossings ||
             minimal.Wade is not { Count: 0 } || full.Wade is not { Count: 0 })
-            throw new InvalidOperationException("Legacy channel construction or deconstruction changed.");
+            throw new InvalidOperationException("Channel construction or deconstruction changed without a Wade declaration.");
     }
 
     [TestCase]

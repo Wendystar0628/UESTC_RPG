@@ -13,22 +13,22 @@ public sealed class SeatDeclarationTests
     [TestCategory(TestReason.Contract)]
     public void ExistingPartImplementationNeedsNoSeatsOverride()
     {
-        IPartDef<int> legacy = new LegacyPart();
-        if (legacy.Seats(0).Count != 0) throw new InvalidOperationException("Legacy parts must default to no declared seats.");
+        IPartDef<int> part = new DefaultSeatsPart();
+        if (part.Seats(0).Count != 0) throw new InvalidOperationException("Parts without a Seats override must expose no declared seats.");
     }
 
     [TestCase]
     [TestCategory(TestReason.Contract)]
-    public void ExistingContentOutputConstructorAndDeconstructionRemainCompatible()
+    public void EmptyContentOutputConstructionAndDeconstructionPreserveDeclaredDefaults()
     {
-        var legacy = new ContentOutput([], []);
-        var (meshes, parts, emitters, occupancy) = legacy;
-        if (legacy.Seats.Count != 0 || ContentOutput.Empty.Seats.Count != 0 ||
+        var emptyOutput = new ContentOutput([], []);
+        var (meshes, parts, emitters, occupancy) = emptyOutput;
+        if (emptyOutput.Seats.Count != 0 || ContentOutput.Empty.Seats.Count != 0 ||
             meshes.Count != 0 || parts.Count != 0 || emitters is not null || occupancy is not null)
-            throw new InvalidOperationException("Legacy ContentOutput semantics changed.");
+            throw new InvalidOperationException("Empty ContentOutput defaults changed.");
         var seat = Seat();
-        var declared = legacy with { Seats = [seat] };
-        if (declared.Seats.Count != 1 || declared.Seats[0] != seat || legacy.Seats.Count != 0)
+        var declared = emptyOutput with { Seats = [seat] };
+        if (declared.Seats.Count != 1 || declared.Seats[0] != seat || emptyOutput.Seats.Count != 0)
             throw new InvalidOperationException("Init-only seat declarations were not retained.");
     }
 
@@ -71,8 +71,8 @@ public sealed class SeatDeclarationTests
 
     private static SeatDecl Seat() => new(new(0, .45f, 0), new(1.5f, .45f, 0), -Vector3.UnitZ, .5f, true, 2);
 
-    // Deliberately implements only the pre-seat abstract surface.
-    private sealed class LegacyPart : IPartDef<int>
+    // Implements the required part members and uses the default empty seat declaration.
+    private sealed class DefaultSeatsPart : IPartDef<int>
     {
         public IReadOnlyDictionary<LodLevel, Func<int, PartGeometry>> Lods { get; } =
             new Dictionary<LodLevel, Func<int, PartGeometry>>();

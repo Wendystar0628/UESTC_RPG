@@ -117,7 +117,7 @@ public static class TerrainSampling
 
 }
 
-/// <summary>Immutable, pure flat fallback for maps whose terrain evaluator is not attached yet.</summary>
+/// <summary>Immutable constant zero-elevation terrain with explicitly supplied water levels.</summary>
 /// <remarks>Water levels are a caller-supplied classified snapshot. No feature IDs, names, geometry or files are guessed here.</remarks>
 public sealed class FlatTerrain : ITerrain
 {

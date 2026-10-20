@@ -48,7 +48,11 @@ internal static class TerrainWaterNetwork
                     if (connected) anchors.Add((surface[j].Feature, surface[j].Level));
                 }
             }
-            var level = anchors.Count == 0 ? -1.2 : anchors.OrderBy(anchor => anchor.Id.Value, StringComparer.Ordinal).First().Level;
+            if (anchors.Count == 0)
+                throw new WorldDataException(b.References.SourceFiles(group.Select(i => pipes[i].Id).ToArray()),
+                    string.Join(",", group.Select(i => pipes[i].Id.Value)),
+                    "Required waterY is missing: underground water has no explicit level or connected authored water-level anchor.");
+            var level = anchors.OrderBy(anchor => anchor.Id.Value, StringComparer.Ordinal).First().Level;
             if (anchors.Any(anchor => Math.Abs(anchor.Level - level) > TerrainMath.HeightTolerance))
                 throw new WorldDataException(b.References.SourceFiles(group.Select(i => pipes[i].Id).Concat(anchors.Select(anchor => anchor.Id)).ToArray()), string.Join(",", group.Select(i => pipes[i].Id.Value)),
                     "Registered underground water connects incompatible explicit/resolved constant levels without a separating weir; no pipe gradient is inferred. Anchors: "
@@ -57,7 +61,7 @@ internal static class TerrainWaterNetwork
             {
                 var pipe = pipes[i]; b.Water.Add(new(pipe.Id, pipe.Region, level, pipe.Wade, pipe.Channel, Underground: true));
                 b.Diagnostics.Add($"Underground water '{pipe.Id.Value}': constant metadata level={level:R}, "
-                    + (anchors.Count == 0 ? "isolated legacy base-datum default" : "explicit level or actual registered endpoint connection")
+                    + "explicit level or actual registered endpoint connection"
                     + "; no surface carving, bank/open-water generation or inferred pipe slope. Raised terrain does not raise this water metadata.");
             }
         }

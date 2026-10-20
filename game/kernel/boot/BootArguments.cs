@@ -39,7 +39,7 @@ public sealed class BootArguments
     private bool Title => Value("title", "1") == "1";
     private bool HasLoad => Has("slot") || Has("load");
     private bool Has(string key) => _provided.Contains(key);
-    private string Value(string key, string fallback = "") => _values.GetValueOrDefault(key, fallback);
+    private string Value(string key, string absentValue = "") => _values.GetValueOrDefault(key, absentValue);
 
     public static BootRunOptions Parse(IEnumerable<string> args, bool development) => Parse(args, development, out _);
 

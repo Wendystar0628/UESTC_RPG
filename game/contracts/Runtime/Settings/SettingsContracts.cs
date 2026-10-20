@@ -14,9 +14,9 @@ public interface ISettingsSection
     ISettingsSection Child(string name);
     bool Has(string key);
     IReadOnlyList<string> Keys();
-    bool Bool(string key, bool fallback);
-    int Int(string key, int fallback, int min, int max);
-    float Float(string key, float fallback, float min, float max);
+    bool Bool(string key, bool defaultValue);
+    int Int(string key, int defaultValue, int min, int max);
+    float Float(string key, float defaultValue, float min, float max);
     bool TryFloat(string key, out float value);
     string? String(string key);
     void Set(string key, bool value);

@@ -135,7 +135,7 @@ public sealed class PaletteRegistry
 
     private static void ValidateEntry(PaletteEntry entry)
     {
-        if (entry.Index.Value >= PaletteLayout.LegacyCapacity)
+        if (entry.Index.Value >= PaletteLayout.Bank0Capacity)
             throw new ArgumentException("Bank 0 requires indices 0..255.", nameof(entry));
         if (string.IsNullOrWhiteSpace(entry.Token.Value) || entry.Token.Value != entry.Token.Value.Trim())
             throw new ArgumentException("Palette token must be non-empty and have no surrounding whitespace.", nameof(entry));

@@ -134,12 +134,12 @@ public sealed partial class TerrainCompilerTests
         AssertThat(Math.Abs(fitted[automatic.Source].At(0).Y - interiorHeight) < TestTolerance.Position).OverrideFailureMessage("The existing last-authored lock value was replaced or averaged.").IsTrue();
         AssertThat(endAnchors[0].Y == endpointHeight && endAnchors[1].Y == endpointHeight
             && throughAnchors[0].Y == interiorHeight - 0.1 && throughAnchors[1].Y == interiorHeight + 0.1).OverrideFailureMessage("Junction matching mutated the original authored anchor values.").IsTrue();
-        var incompatible = new TerrainRoadProfile([new(0, interiorHeight - 0.1 + 0.05), new(20, interiorHeight + 0.1 + 0.05)],
+        var conflicting = new TerrainRoadProfile([new(0, interiorHeight - 0.1 + 0.05), new(20, interiorHeight + 0.1 + 0.05)],
             20, [], 1d / 12, "through.terrain.json", "design:terrain:incompatible-road");
         {
             WorldDataException? rejection = null;
             try { TerrainRoadProfile.SmoothNetwork([], new TerrainProgram([]),
-            [(endRoad, endProfile), (throughRoad, incompatible)], (_, _) => false); } catch (WorldDataException error) { rejection = error; }
+            [(endRoad, endProfile), (throughRoad, conflicting)], (_, _) => false); } catch (WorldDataException error) { rejection = error; }
             AssertThat(rejection is not null).IsTrue();
         }
     }

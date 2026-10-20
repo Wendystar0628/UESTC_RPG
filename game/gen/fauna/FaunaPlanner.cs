@@ -35,7 +35,7 @@ public sealed record FaunaInstance(FaunaModelKey Model, Vector3 Position, float 
 }
 
 public enum FaunaHeightSource : byte { Ground, Water, Pad }
-public readonly record struct FaunaElevation(FaunaHeightSource Source, FeatureId Feature, Vector2 WaterFallback);
+public readonly record struct FaunaElevation(FaunaHeightSource Source, FeatureId Feature);
 
 /// <summary>
 /// One place with its own latch (WLD-LIFE): the animals it shows in each set. A set may be empty (the pigeons' night
@@ -197,7 +197,7 @@ public static class FaunaPlanner
             ?? MathF.Sqrt(plaza.Area / float.Pi) * 0.9f;
         // Toward the library when there is one (the flock keeps to the plaza and the library's great steps, WLD-LIFE).
         var library = buildings.Where(b => b.Category == "library").OrderByDescending(b => b.Area).FirstOrDefault();
-        var toward = library is null ? Vector2.UnitY : VectorMath.Unit(VertexMean(library.Ring) - centre, Vector2.UnitY, 1e-6f);
+        var toward = library is null ? Vector2.UnitY : VectorMath.Unit(VertexMean(library.Ring) - centre, 1e-6f);
         var flock = centre + toward * (foot * S.PigeonRingFraction);
         var rng = new Rng(StableHash.Hash32(seed, "fauna.pigeons", "flock"));
         var day = new List<FaunaInstance>();
@@ -288,10 +288,10 @@ public static class FaunaPlanner
         {
             var lake = chosen[li];
             var count = li == 0 ? S.SwansFirstLake : S.SwansSecondLake;
-            // One normal water level per body: ITerrain.WaterY, else the water module's rule (bank - 0.5 m + 0.004 m).
+            // One normal water level per body, supplied by ITerrain.WaterY (WLD-TERRAIN-SHAPE).
             var centre = VertexMean(lake.Ring);
             const float y = 0f;
-            var elevation = new FaunaElevation(FaunaHeightSource.Water, lake.Feature.Id, centre);
+            var elevation = new FaunaElevation(FaunaHeightSource.Water, lake.Feature.Id);
             var rng = new Rng(StableHash.Hash32(seed, lake.Feature.Id.Value, "fauna.swans"));
             bool Open(Vector2 p, float margin) => Inside(lake, p) && PlanRings.DistanceToRing(p, lake.Ring) >= margin && !buildings.Any(b => Inside(b, p));
             var day = new List<FaunaInstance>();
@@ -310,7 +310,7 @@ public static class FaunaPlanner
             // Night and heavy rain: tucked in together near the shore point closest to a building (the swan house on the
             // first lake, a bank on the second), asleep.
             var anchor = lake.Ring.OrderBy(v => buildings.Length == 0 ? 0 : buildings.Min(b => PlanRings.DistanceToRing(v, b.Ring))).ThenBy(v => v.X).First();
-            var inward = VectorMath.Unit(centre - anchor, Vector2.UnitY, 1e-6f);
+            var inward = VectorMath.Unit(centre - anchor, 1e-6f);
             var huddle = anchor + inward * S.SwanHuddleOut;
             for (var step = 0; step < 20 && !Open(huddle, 2.5f); step++) huddle += inward * 1.5f;
             var night = new List<FaunaInstance>();
@@ -357,7 +357,7 @@ public static class FaunaPlanner
                 var p = mid + along * at;
                 var heading = Vector2.TransformNormal(outward, Matrix3x2.CreateRotation((rng.NextFloat() - 0.5f) * 1.6f));
                 crows.Add(new(FaunaModelKey.CrowOf(), new(p.X, y, p.Y), Yaw(heading), S.Scale)
-                    { Elevation = new(FaunaHeightSource.Pad, b.Feature.Id, default) });
+                    { Elevation = new(FaunaHeightSource.Pad, b.Feature.Id) });
                 at += 0.8f + rng.NextFloat() * 0.9f;
             }
             groups.Add(mid);
@@ -400,7 +400,8 @@ public static class FaunaPlanner
             {
                 FaunaHeightSource.Ground => world.Spatial.GroundY(animal.Position.X, animal.Position.Z),
                 FaunaHeightSource.Water => world.Terrain.WaterY(source.Feature) ??
-                    world.Spatial.GroundY(source.WaterFallback.X, source.WaterFallback.Y) - 0.5f + 0.004f,
+                    throw new WorldDataException(world.Features.TryGetValue(source.Feature, out var water) && water.Zone is { } zone
+                        ? $"world/{zone.Value}.json" : "world", source.Feature.Value, "Required waterY is missing from terrain."),
                 FaunaHeightSource.Pad => world.Terrain.PadY(source.Feature),
                 _ => throw new ArgumentOutOfRangeException(nameof(site), source.Source, "Unknown fauna height source."),
             };

@@ -206,8 +206,8 @@ public sealed class WorldRestoreTests
             AssertThat(document.RootElement.GetProperty("worldHours").GetDouble()).IsEqual(dto.WorldHours);
             AssertThat(JsonSerializer.Deserialize(json, typeInfo)).IsEqual(dto);
             // Previously written PascalCase strings remain readable; new writes use the canonical casing.
-            var legacy = json.Replace($"\"{text}\"", $"\"{season}\"", StringComparison.Ordinal);
-            AssertThat(JsonSerializer.Deserialize(legacy, typeInfo)).IsEqual(dto);
+            var numericJson = json.Replace($"\"{text}\"", $"\"{season}\"", StringComparison.Ordinal);
+            AssertThat(JsonSerializer.Deserialize(numericJson, typeInfo)).IsEqual(dto);
         }
         var autumn = JsonSerializer.Serialize(snapshot, typeInfo);
         AssertThrown(() => JsonSerializer.Deserialize(

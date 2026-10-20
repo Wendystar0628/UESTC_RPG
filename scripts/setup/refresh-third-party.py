@@ -67,8 +67,8 @@ def main():
     existing = json.loads(manifest_path.read_text(encoding="utf-8"))
     allowed = existing["allowedLicenses"]
     scopes, projects = package_scopes()
-    with tempfile.TemporaryDirectory(prefix="uestc-licenses-") as temporary:
-        inputs = Path(temporary) / "projects.json"
+    with tempfile.TemporaryDirectory(prefix="uestc-licenses-") as workDirectory:
+        inputs = Path(workDirectory) / "projects.json"
         inputs.write_text(json.dumps([str(ROOT / project) for project in projects]),
                           encoding="utf-8")
         licenses = run_json("dotnet", "tool", "run", "nuget-license", "--",

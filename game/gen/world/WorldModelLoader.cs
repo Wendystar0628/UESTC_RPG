@@ -16,6 +16,7 @@ namespace Campus.Gen.World;
 
 public sealed record WorldLoadOptions
 {
+    public ITerrain? Terrain { get; init; }
     public IInteriorIndex? Interiors { get; init; }
     public IOutskirtsModel? Outskirts { get; init; }
 }
@@ -34,7 +35,7 @@ public static class WorldModelLoader
     internal static readonly Encoding Utf8 = new UTF8Encoding(false, true);
     private static readonly GeometryFactory Factory = new();
 
-    /// <summary>Load a world without terrain; terrain files require the descriptor-based production entry.</summary>
+    /// <summary>Load a world against an explicitly supplied terrain; terrain source files require descriptor-based inputs.</summary>
     public static WorldModelLoadResult Load(MapId map, IReadOnlyDictionary<string, ReadOnlyMemory<byte>> files, WorldLoadOptions? options = null) =>
         Load(map, files.ToDictionary(p => p.Key, p => Decode(p.Key, p.Value), StringComparer.Ordinal), options);
 
@@ -69,7 +70,8 @@ public static class WorldModelLoader
     private static WorldModelPreparation PrepareCore(MapId map, IReadOnlyDictionary<string, string> files,
         WorldLoadOptions options, WorldModelLoadInputs? inputs)
     {
-        var input = NormalizeInputs(files);
+        ValidateTerrainInputs(options, inputs);
+        var input = NormalizeInputs(files, inputs);
         const string geoFile = "world/geo.json";
         if (!input.TryGetValue(geoFile, out var geoText)) throw new WorldDataException(geoFile, "root", "Required map data is missing.");
         using var document = Parse(geoFile, geoText);
@@ -103,19 +105,20 @@ public static class WorldModelLoader
         var sources = WorldTerrainInputs.ReadSources(map, input);
         WorldTerrainInputs.ValidateReferences(sources, featureIds, roadReferences);
         var terrainContext = WorldTerrainInputs.Prepare(inputs, sources, boundary, frozen, network, prefix);
-        if (input.ContainsKey("outskirts.json") && options.Outskirts is null)
-            throw new WorldDataException("outskirts.json", "root", "A parsed outskirts model is required until the producer's file contract is available.");
+        var outskirtsFile = inputs?.Descriptor.Env.Outskirts;
+        if ((outskirtsFile is not null && input.ContainsKey(outskirtsFile) || input.ContainsKey("outskirts.json")) && options.Outskirts is null)
+            throw new WorldDataException(outskirtsFile ?? "outskirts.json", "root", "A parsed outskirts model is required for the authored input.");
         var outskirts = options.Outskirts;
         var operations = WorldTerrainInputs.Operations(sources);
         var limitRing = outskirts?.CutLine is { Count: >= 3 } cutLine ? cutLine : boundary.Outer;
         var roam = ReadRoam(map, input);
-        var margin = outskirts is null ? roam?.FallbackMargin ?? 0 : 0;
+        var margin = outskirts is null ? roam?.CampusExpansionMargin ?? 0 : 0;
         var bounds = new Box3(new(limitRing.Min(p => p.X) - margin, roam?.FloorY ?? 0, limitRing.Min(p => p.Y) - margin),
             new(limitRing.Max(p => p.X) + margin, roam?.CeilY ?? Math.Max(1, frozen.Count > 0 ? frozen.Values.Max(f => f.Bounds.Max.Y) : 0), limitRing.Max(p => p.Y) + margin));
         var waypoints = input.TryGetValue("waypoints.json", out var waypointText)
             ? Deserialize<WaypointFile>("waypoints.json", waypointText).Waypoints : [];
         IInteriorIndex Interiors(ITerrain terrain) => options.Interiors ??
-            new WorldInteriorIndex(frozen.Values, input.GetValueOrDefault("interiors.json"), inputs is null ? null : terrain);
+            new WorldInteriorIndex(frozen.Values, terrain, input.GetValueOrDefault("interiors.json"));
         WorldModelSnapshot Snapshot(ITerrain terrain, IInteriorIndex interiors, IFidelityModel fidelity) =>
             new(frozen, boundary, network, interiors, outskirts, fidelity, operations, terrain);
         var fidelitySourceStamp = Convert.ToHexStringLower(SHA256.HashData(JsonSerializer.SerializeToUtf8Bytes(new
@@ -123,7 +126,7 @@ public static class WorldModelLoader
             world = input.Where(pair => pair.Key.StartsWith("world/", StringComparison.Ordinal) && !pair.Key.EndsWith(".terrain.json", StringComparison.Ordinal)).ToArray(),
             waypoints, interiors = input.GetValueOrDefault("interiors.json"), outskirts = outskirts?.Blocks
         }, ContractJson.Options)));
-        return new(terrainContext is null ? FlatTerrain.Default.SourceInputs : TerrainSourceInputs.Prepare(terrainContext, sources),
+        return new(terrainContext is null ? options.Terrain!.SourceInputs : TerrainSourceInputs.Prepare(terrainContext, sources),
             terrainContext is null ? null : () => TerrainCompiler.Compile(terrainContext, sources),
             fidelitySourceStamp,
             terrain => WorldFidelityCompiler.Compile(frozen, boundary, network, Interiors(terrain), outskirts, waypoints),
@@ -131,7 +134,7 @@ public static class WorldModelLoader
             {
                 var world = Snapshot(terrain, Interiors(terrain), new WorldFidelityModel(fidelity));
                 return new(world, geo, PlanPolygons.Centroid(boundary.Outer), bounds, TileGrid.At(bounds.Min), TileGrid.At(bounds.Max)) { Diagnostics = diagnostics };
-            }, (world, terrain) => Snapshot(terrain, world.Interiors, world.Fidelity));
+            }, (world, terrain) => Snapshot(terrain, world.Interiors, world.Fidelity), options.Terrain);
 
         void AddLine(NetworkLine line, string kind, string file)
         {
@@ -142,6 +145,14 @@ public static class WorldModelLoader
             else if (kind is "water" or "weir" || line.Props.TryText("waterway") is not null) waterways.Add(line);
             else throw new WorldDataException(file, line.Id.Value, "Unclassified network line.");
         }
+    }
+
+    private static void ValidateTerrainInputs(WorldLoadOptions options, WorldModelLoadInputs? inputs)
+    {
+        if (inputs is null && options.Terrain is null)
+            throw new WorldDataException("map.json", "terrain", "World loading requires descriptor-based inputs or an explicit ITerrain instance.");
+        if (inputs is not null && options.Terrain is not null)
+            throw new WorldDataException("map.json", "terrain", "Descriptor-based loading compiles its own terrain; an alternate terrain input is not allowed.");
     }
 
     private static GeoFrame ReadGeoFrame(JsonElement root, string geoFile)
@@ -156,7 +167,7 @@ public static class WorldModelLoader
         return geo;
     }
 
-    private static SortedDictionary<string, string> NormalizeInputs(IReadOnlyDictionary<string, string> files)
+    private static SortedDictionary<string, string> NormalizeInputs(IReadOnlyDictionary<string, string> files, WorldModelLoadInputs? inputs)
     {
         var input = new SortedDictionary<string, string>(StringComparer.Ordinal);
         foreach (var pair in files.OrderBy(p => p.Key, StringComparer.Ordinal))
@@ -164,15 +175,21 @@ public static class WorldModelLoader
             var key = pair.Key.Replace('\\', '/');
             if (key.StartsWith('/') || key.Contains(':') || key.Split('/').Any(s => s is ".." or "." or ""))
                 throw new WorldDataException(pair.Key, "path", "Expected a relative path within the current map.");
-            if (key == "fidelity.json" || key.StartsWith("overlay/fidelity/", StringComparison.Ordinal))
-                throw new WorldDataException(key, "path", "Retired fidelity overlay input; precision is compiled from the authored world.");
-            if (key.StartsWith("overlay/interior/", StringComparison.Ordinal))
-                throw new WorldDataException(key,"path","Retired interior overlay input; configure the provider in interiors.json.");
-            if (key.StartsWith("overlay/", StringComparison.Ordinal) && key["overlay/".Length..].Split('/')[0].EndsWith(".d", StringComparison.Ordinal))
-                throw new WorldDataException(key, "path", "Retired feature overlay input; edit world/<zone>.json.");
+            if (!KnownInput(key, inputs))
+                throw new WorldDataException(key, "path", "Unknown authored map input.");
             if (!input.TryAdd(key, pair.Value)) throw new WorldDataException(key, "path", "Duplicate normalized path.");
         }
         return input;
+    }
+
+    private static bool KnownInput(string key, WorldModelLoadInputs? inputs)
+    {
+        if (key is "map.json" or "interiors.json" or "waypoints.json" or "review.json" or "materials.json"
+            or "sky.json" or "backdrop.json" or "title-clouds.json" or "lighting-schedule.json" or "window-numbering.json"
+            or "outskirts.json" or "atlas/labels.json" or "atlas/markers.json" or "vegetation/planting.json") return true;
+        if (key.StartsWith("world/", StringComparison.Ordinal) && key.EndsWith(".json", StringComparison.Ordinal)
+            && key.Split('/').Length == 2) return true;
+        return inputs is not null && (key == inputs.Descriptor.Env.Sky || key == inputs.Descriptor.Env.Backdrop || key == inputs.Descriptor.Env.Outskirts);
     }
 
     private static List<WorldFeaturePart> ReadParts(JsonElement raw, string kind, string file, string prefix,
@@ -350,9 +367,9 @@ public static class WorldModelLoader
         if (OptionalText(root, "id") is { } id && id != map.Value) throw new WorldDataException("map.json", "id", "Map descriptor belongs to another map.");
         if (!root.TryGetProperty("roam", out var element)) throw new WorldDataException("map.json", "roam", "Required roam limits are missing.");
         var roam = Deserialize<RoamLimits>("map.json", element.GetRawText());
-        if (!float.IsFinite(roam.FallbackMargin) || roam.FallbackMargin < 0 || !float.IsFinite(roam.FloorY)
+        if (!float.IsFinite(roam.CampusExpansionMargin) || roam.CampusExpansionMargin < 0 || !float.IsFinite(roam.FloorY)
             || !float.IsFinite(roam.CeilY) || roam.FloorY >= roam.CeilY)
-            throw new WorldDataException("map.json", "roam", "Invalid fallback margin or vertical limits.");
+            throw new WorldDataException("map.json", "roam", "Invalid campus expansion margin or vertical limits.");
         return roam;
     }
 

@@ -13,7 +13,7 @@ namespace Campus.Kernel.Renderer;
 /// Shutdown order: stop producers and new post callbacks, clear their global bindings, then await ShutdownAsync
 /// while the main loop and RenderingServer are alive. Already queued callbacks finish and dispose their leases;
 /// the task completes after the resulting native texture disposals, before the host calls SceneTree.Quit.
-/// The exit-tree fallback may call Dispose but cannot replace this earlier asynchronous shutdown step.
+/// Exit-tree disposal cannot replace this earlier asynchronous shutdown step.
 /// Dispose is idempotent, rejects future registrations and makes future TryAcquire calls return false.
 /// This service does not dispose producer-owned Images, shaders or compute bindings.
 /// </remarks>

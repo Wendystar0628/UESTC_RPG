@@ -40,7 +40,7 @@ public sealed class FlowLeaseTests
 
     [TestCase]
     [TestCategory(TestReason.Contract)]
-    public void TemporaryPauseSavesTheUserRateAndSurvivesLoadAndNewGame()
+    public void PauseLeaseSavesTheUserRateAndSurvivesLoadAndNewGame()
     {
         var world = CreateWorld(new TestWeatherProcess());
         world.SetFlow(60);

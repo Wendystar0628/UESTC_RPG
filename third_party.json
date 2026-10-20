@@ -923,7 +923,7 @@
       "hashStatus": "VERIFIED_LOCAL_WHEEL_MATCHES_REQUIREMENTS_LOCK",
       "lockfile": "scripts/requirements.lock",
       "lockfileOwner": "WP-08",
-      "lockfileSha256": "35609c932379f172d5e8e2c217e9d86c2479464dcbad195c945f4bc83e446557",
+      "lockfileSha256": "47197fd43016d7da2d3bb6bee35dff457e65ced0d593d6e29e00c99c63ae07be",
       "licenseEvidence": {
         "metadata": "pillow-12.3.0.dist-info/METADATA",
         "declaration": "MIT-CMU",
@@ -1039,7 +1039,7 @@
       "hashStatus": "VERIFIED_LOCAL_WHEEL_MATCHES_REQUIREMENTS_LOCK",
       "lockfile": "scripts/requirements.lock",
       "lockfileOwner": "WP-08",
-      "lockfileSha256": "35609c932379f172d5e8e2c217e9d86c2479464dcbad195c945f4bc83e446557",
+      "lockfileSha256": "47197fd43016d7da2d3bb6bee35dff457e65ced0d593d6e29e00c99c63ae07be",
       "licenseEvidence": {
         "metadata": "pyyaml-6.0.3.dist-info/METADATA",
         "declaration": "MIT",
@@ -1109,6 +1109,82 @@
       "exported": false,
       "vendored": false,
       "scope": "SDK-provided Roslyn/MSBuildWorkspace and BuildHost-netcore; build-time fingerprint generation only."
+    },
+    {
+      "name": "tree-sitter",
+      "version": "0.25.2",
+      "kind": "python-wheel",
+      "managedBy": "manual",
+      "provider": "WP-00",
+      "license": "MIT",
+      "source": "https://github.com/tree-sitter/py-tree-sitter",
+      "packageIndex": "https://pypi.org/project/tree-sitter/0.25.2/",
+      "sourceStatus": "VERIFIED_OFFICIAL_PYPI_METADATA_AND_WHEEL_DOWNLOAD",
+      "archive": "output/C225-deps/wheels/tree_sitter-0.25.2-cp313-cp313-win_amd64.whl",
+      "bytes": 127157,
+      "sha256": "463c032bd02052d934daa5f45d183e0521ceb783c2548501cf034b0beba92c9b",
+      "hashStatus": "VERIFIED_LOCAL_WHEEL_MATCHES_REQUIREMENTS_LOCK_AND_PYPI",
+      "lockfile": "scripts/requirements.lock",
+      "lockfileOwner": "WP-00",
+      "lockfileSha256": "47197fd43016d7da2d3bb6bee35dff457e65ced0d593d6e29e00c99c63ae07be",
+      "licenseEvidence": {
+        "metadata": "tree_sitter-0.25.2.dist-info/METADATA",
+        "declaration": "License :: OSI Approved :: MIT License",
+        "files": [
+          {
+            "member": "tree_sitter-0.25.2.dist-info/licenses/LICENSE",
+            "sha256": "c40a115b3d7d429c839bc51ace3464c2f37c9559bad6c6251a86281c27ea5431",
+            "bytes": 1109
+          }
+        ],
+        "declaredLicenseFilesMissing": []
+      },
+      "developmentOnly": true,
+      "exported": false,
+      "vendored": false,
+      "scope": "WP-00 source-policy gate JavaScript AST parsing only; not part of the game export or vendored project source.",
+      "licenseReview": {
+        "status": "ALLOWLIST_DECLARATION_VERIFIED",
+        "scope": "Pinned wheel and bundled notices only; no blanket approval of other artifacts or versions."
+      }
+    },
+    {
+      "name": "tree-sitter-javascript",
+      "version": "0.25.0",
+      "kind": "python-wheel",
+      "managedBy": "manual",
+      "provider": "WP-00",
+      "license": "MIT",
+      "source": "https://github.com/tree-sitter/tree-sitter-javascript",
+      "packageIndex": "https://pypi.org/project/tree-sitter-javascript/0.25.0/",
+      "sourceStatus": "VERIFIED_OFFICIAL_PYPI_METADATA_AND_WHEEL_DOWNLOAD",
+      "archive": "output/C225-deps/wheels/tree_sitter_javascript-0.25.0-cp310-abi3-win_amd64.whl",
+      "bytes": 62975,
+      "sha256": "e5ed840f5bd4a3f0272e441d19429b26eedc257abe5574c8546da6b556865e3c",
+      "hashStatus": "VERIFIED_LOCAL_WHEEL_MATCHES_REQUIREMENTS_LOCK_AND_PYPI",
+      "lockfile": "scripts/requirements.lock",
+      "lockfileOwner": "WP-00",
+      "lockfileSha256": "47197fd43016d7da2d3bb6bee35dff457e65ced0d593d6e29e00c99c63ae07be",
+      "licenseEvidence": {
+        "metadata": "tree_sitter_javascript-0.25.0.dist-info/METADATA",
+        "declaration": "MIT",
+        "files": [
+          {
+            "member": "tree_sitter_javascript-0.25.0.dist-info/licenses/LICENSE",
+            "sha256": "2e0110e07abef7c2548b26ec9d6969775617ca539a0dc8dbeeb14d6452c711d1",
+            "bytes": 1080
+          }
+        ],
+        "declaredLicenseFilesMissing": []
+      },
+      "developmentOnly": true,
+      "exported": false,
+      "vendored": false,
+      "scope": "WP-00 source-policy gate JavaScript AST parsing only; not part of the game export or vendored project source.",
+      "licenseReview": {
+        "status": "ALLOWLIST_DECLARATION_VERIFIED",
+        "scope": "Pinned wheel and bundled notices only; no blanket approval of other artifacts or versions."
+      }
     }
   ],
   "nugetClosure": {

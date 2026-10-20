@@ -11,28 +11,28 @@ public static class PaletteLayout
 
     public const int EncodingVersion = 2;
     public const string LayoutId = "banked9-rows-v1";
-    public const int LegacyCapacity = 256;
+    public const int Bank0Capacity = 256;
     public const int Capacity = 512;
     public const int Width = 256;
-    public const int LegacyHeight = 64;
+    public const int Bank0Height = 64;
     public const int Height = 68;
     public const int FrameRowCount = 4;
     public const int FirstSeasonalRow = 4;
     public const int SeasonalRowCount = 60;
     public const int SeasonSampleCount = 256;
-    public const int LegacyByteCount = Width * LegacyHeight * 4;
+    public const int Bank0ByteCount = Width * Bank0Height * 4;
     public const int ByteCount = Width * Height * 4;
 
     public static (int Column, int Row) FrameTexel(PaletteIndex index, int frameRow)
     {
         if (frameRow is < 0 or >= FrameRowCount) throw new ArgumentOutOfRangeException(nameof(frameRow));
-        return (index.Value & 255, frameRow + (index.Value >> 8) * LegacyHeight);
+        return (index.Value & 255, frameRow + (index.Value >> 8) * Bank0Height);
     }
 
     public static (int Column, int Row) SeasonalTexel(int sample, int row)
     {
         if (sample is < 0 or >= SeasonSampleCount) throw new ArgumentOutOfRangeException(nameof(sample));
-        if (row is < FirstSeasonalRow or >= LegacyHeight) throw new ArgumentOutOfRangeException(nameof(row));
+        if (row is < FirstSeasonalRow or >= Bank0Height) throw new ArgumentOutOfRangeException(nameof(row));
         return (sample, row);
     }
 }
@@ -69,14 +69,14 @@ public static class PaletteEncoding
     public static PaletteIndex DecodeColor(byte lowByte, byte packedFlags)
     {
         ValidatePackedFlags(packedFlags);
-        return new(lowByte + ((packedFlags & ColorBankFlag) != 0 ? PaletteLayout.LegacyCapacity : 0));
+        return new(lowByte + ((packedFlags & ColorBankFlag) != 0 ? PaletteLayout.Bank0Capacity : 0));
     }
 
     public static PaletteIndex DecodeDecalBase(byte reserved, byte packedFlags)
     {
         ValidatePackedFlags(packedFlags);
         if ((packedFlags & VertexFlag.Decal) == 0) throw new ArgumentException("Reserved is not a colour index on a non-decal.", nameof(packedFlags));
-        return new(reserved + ((packedFlags & DecalBaseBankFlag) != 0 ? PaletteLayout.LegacyCapacity : 0));
+        return new(reserved + ((packedFlags & DecalBaseBankFlag) != 0 ? PaletteLayout.Bank0Capacity : 0));
     }
 
     /// <summary>Godot float upload input with the existing UNORM8 truncation bias. Not a substitute for native byte readback.</summary>
@@ -90,7 +90,7 @@ public static class PaletteEncoding
             throw new ArgumentException("Invalid packed palette flag bits.", nameof(packedFlags));
     }
 
-    /// <summary>Existing low byte + 256 * energy percentage, plus bank in bit 15. Every finite legacy input stays bit-identical.</summary>
+    /// <summary>Existing low byte + 256 * energy percentage, plus bank in bit 15. Bank-0 inputs retain the same packed bits.</summary>
     public static float PackLampColor(PaletteIndex index, float energy)
     {
         if (!float.IsFinite(energy)) throw new ArgumentOutOfRangeException(nameof(energy));
@@ -106,6 +106,6 @@ public static class PaletteEncoding
         var value = (int)packed;
         var percent = (value % LampBankUnit) / LampEnergyUnit;
         if (percent > LampMaxEnergyPercent) throw new ArgumentOutOfRangeException(nameof(packed), "Unused energy bits are not valid lamp data.");
-        return (new((value & 255) + PaletteLayout.LegacyCapacity * (value / LampBankUnit)), percent / 100f);
+        return (new((value & 255) + PaletteLayout.Bank0Capacity * (value / LampBankUnit)), percent / 100f);
     }
 }

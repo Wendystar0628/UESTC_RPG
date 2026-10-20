@@ -6,7 +6,7 @@ namespace Campus.Contracts;
 /// <summary>
 /// Pure .NET resolver for ui.json. Results are normalized sRGB RGBA, without premultiplication.
 /// Names resolve through special, then ramps (split at the first dot), then PaletteCatalog.Albedo.
-/// The scene fallback is the registered intrinsic/constant color, not a GPU or current-frame palette read.
+/// Scene names resolve to registered intrinsic/constant colors without GPU or current-frame palette reads.
 /// The reserved name none means do not draw and always resolves to fully transparent black.
 /// </summary>
 public sealed class UiPalette

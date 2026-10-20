@@ -91,7 +91,7 @@ public sealed class MapCatalog
         if (file.DataRect.Min.X > min.X || file.DataRect.Min.Y > min.Y || file.DataRect.Max.X < max.X || file.DataRect.Max.Y < max.Y)
             throw new InvalidDataException("Data rectangle does not cover the map boundary.");
         var center = BoundaryCenter(meta.GetProperty("boundary"));
-        var margin = new Vector2(file.Roam.FallbackMargin);
+        var margin = new Vector2(file.Roam.CampusExpansionMargin);
         var box = new Box3(new(min.X - margin.X, file.Roam.FloorY, min.Y - margin.Y),
             new(max.X + margin.X, file.Roam.CeilY, max.Y + margin.Y));
         var tileMin = TileGrid.At(box.Min);
@@ -127,9 +127,9 @@ public sealed class MapCatalog
         if (size.X % TileGrid.BaseEdge != 0 || size.Y % TileGrid.BaseEdge != 0) throw new InvalidDataException("Data rectangle dimensions must be multiples of 64 metres.");
         var r = file.Roam;
         float[] limits = [r.HeightFactor, r.HeightStart, r.MaxRadius, r.FloorY, r.CeilY, r.Buffer,
-            r.SoftFloorClearance, r.FallbackMargin];
+            r.SoftFloorClearance, r.CampusExpansionMargin];
         if (limits.Any(v => !float.IsFinite(v)) || r.MaxRadius <= 0 || r.MaxRadius > 8000 || r.FloorY >= r.CeilY ||
-            r.HeightFactor < 0 || r.Buffer < 0 || r.FallbackMargin < 0 || r.SoftFloorClearance < 0)
+            r.HeightFactor < 0 || r.Buffer < 0 || r.CampusExpansionMargin < 0 || r.SoftFloorClearance < 0)
             throw new InvalidDataException("Invalid map roam limits.");
         if (file.Spawns.Select(s => s.Id).Distinct(StringComparer.Ordinal).Count() != file.Spawns.Count)
             throw new InvalidDataException("Duplicate map spawn ID.");

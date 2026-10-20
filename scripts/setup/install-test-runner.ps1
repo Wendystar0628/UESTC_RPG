@@ -7,7 +7,7 @@ $directory = Join-Path $rootPath 'game/gdunit4_testadapter_v5'
 $null = [IO.Directory]::CreateDirectory($directory)
 # gdUnit4.api 5.1.0-rc5 installs this bridge but invokes an ambiguous bare dotnet build
 # when a Godot root contains several csproj files. Preinstall the identical bridge so
-# our explicit solution build compiles it and the adapter skips that fallback build.
+# our explicit solution build compiles it and the adapter skips its own build step.
 # The game and tests are separate assemblies: load the test assembly into Godot's own
 # context before the runner resolves test types (the API assumes a single assembly).
 $source = @'

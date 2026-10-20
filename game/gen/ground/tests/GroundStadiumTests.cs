@@ -85,8 +85,8 @@ public sealed class GroundStadiumTests
         // A concave outline cannot be offset outward: it falls back to a band centred on the outline, never a filled area.
         var dent = new PolygonRings([new(0f, 0f), new(60f, 0f), new(60f, 40f), new(40f, 40f), new(40f, 20f), new(20f, 20f), new(20f, 40f), new(0f, 40f)]);
         var concave = TestWorld.Of([Entity("test:way:13", """{"leisure":"track","sport":"running"}""", """{"kind":"sport","sport":"running"}""", dent)]);
-        var fallback = GroundSources.Read(concave).Shapes.Single(s => s.Kind == SurfaceKind.Track);
-        AssertThat(fallback.Line is not null && fallback.Rings is null).OverrideFailureMessage("A concave track polygon becomes a band along its outline.").IsTrue();
+        var outlineBand = GroundSources.Read(concave).Shapes.Single(s => s.Kind == SurfaceKind.Track);
+        AssertThat(outlineBand.Line is not null && outlineBand.Rings is null).OverrideFailureMessage("A concave track polygon becomes a band along its outline.").IsTrue();
     }
 
     [TestCase, TestCategory(TestReason.Contract)]

@@ -95,7 +95,7 @@ public sealed class SouthSiteTests
         var ring = ((PolygonGeometry)plaza.Geometry).Rings;
         // WP-13's kiosk (2 × 0.8 m) on the A01 anchor (WP-48c's world record): on the paving, at least 3 m from every carriageway edge.
         var a01 = AtlasAnchor(world, "A01");
-        var kioskSpot = PlanPolygons.Centroid(((PolygonGeometry)a01.Geometry).Rings.Outer, meanIfDegenerate: true);
+        var kioskSpot = PlanPolygons.Centroid(((PolygonGeometry)a01.Geometry).Rings.Outer);
         var yaw = a01.Number("yawDeg") * MathF.PI / 180f;
         var face = new Vector2(MathF.Sin(yaw), -MathF.Cos(yaw));
         var side = new Vector2(-face.Y, face.X);
@@ -137,7 +137,7 @@ public sealed class SouthSiteTests
         var f = Liren.LirenSite.Rings(ctx.World);
         var walls = module.Tiles(ctx).SelectMany(t => module.Collide(ctx, t)).Where(c => c.Tag is SurfaceTag.Wall or SurfaceTag.DoorClosed).ToArray();
         var open = GridFacade.Edges(f.Bridge).Select(e => e.Info).First(e => Liren.LirenSite.Dress(e, f.BridgeNeighbours).Kind != EdgeKind.Hidden);
-        var centre = PlanPolygons.Centroid(f.Bridge, meanIfDegenerate: true);
+        var centre = PlanPolygons.Centroid(f.Bridge);
         for (var t = -14f; t <= 14f; t += 0.25f)
         {
             var p = centre + open.Frame.W * t;
@@ -187,7 +187,7 @@ public sealed class SouthSiteTests
         // A06's kiosk (2 × 0.8 m, WP-13's) on the deck between the gym and the natatorium, its panel toward the stadium: every corner
         // on the deck and at least 3 m from the deck's edges and the parapets' inner faces.
         var stadium = Sports.GrandstandSite.PlanOf(ctx.World).Centre;
-        var anchor = PlanPolygons.Centroid(a06.Outer(), meanIfDegenerate: true);
+        var anchor = PlanPolygons.Centroid(a06.Outer());
         var yaw = a06.Number("yawDeg");
         var a = yaw * MathF.PI / 180f;
         var face = new Vector2(MathF.Sin(a), -MathF.Cos(a));

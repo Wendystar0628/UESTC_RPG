@@ -83,7 +83,7 @@ public sealed class WorldModelTests
         var first = root["features"]![0]!["parts"]![0]!;
         first["facadePolygons"] = System.Text.Json.Nodes.JsonNode.Parse("""[{"outer":[[-10,-10],[-2,-10],[-2,-2],[-10,-2]],"holes":[]}]""");
         first["geometry"]!["rings"]!["outer"] = System.Text.Json.Nodes.JsonNode.Parse("""[[-10,-10],[-6,-10.02],[-2,-10],[-2,-2],[-10,-2]]""");
-        var world = WorldModelLoader.Load(new("test"), Files(root.ToJsonString())).World;
+        var world = WorldModelLoader.Load(new("test"), Files(root.ToJsonString()), new() { Terrain = FlatTerrain.Default }).World;
         var feature = world.Features[new("fixture:relation:1")];
         var part = feature.Parts[0];
         AssertThat(((PolygonGeometry)part.Geometry).Rings.Outer.Count == 5).OverrideFailureMessage("Physical source detail was simplified.").IsTrue();
@@ -102,7 +102,7 @@ public sealed class WorldModelTests
             root["features"]![0]!["parts"]![0]!["facadePolygons"] = System.Text.Json.Nodes.JsonNode.Parse(value);
             try
             {
-                WorldModelLoader.Load(new("test"), Files(root.ToJsonString()));
+                WorldModelLoader.Load(new("test"), Files(root.ToJsonString()), new() { Terrain = FlatTerrain.Default });
                 throw new InvalidOperationException("Malformed facade footprint accepted: " + value);
             }
             catch (WorldDataException error)
@@ -142,7 +142,7 @@ public sealed class WorldModelTests
         var spatial = Load().World.Spatial;
         AssertThat(spatial.WalkClassAt(-6, 6) == WalkClass.Walk).OverrideFailureMessage("Water polygon hole filled.").IsTrue();
         AssertThat(spatial.WalkClassAt(-9, 3) == WalkClass.Water).OverrideFailureMessage("Water missing.").IsTrue();
-        AssertThat(spatial.MediumAt(new(-9, -1, 3)).Kind == MediumKind.Underwater).OverrideFailureMessage("Underwater classification missing.").IsTrue();
+        AssertThat(spatial.MediumAt(new(-9, -1, 3)).Kind == MediumKind.Underground).OverrideFailureMessage("Missing water metadata must not invent an underwater column.").IsTrue();
         AssertThat(spatial.WalkClassAt(21, 0) == WalkClass.Outside).OverrideFailureMessage("Exterior became walkable.").IsTrue();
         AssertThat(spatial.WalkClassAt(-5, -5) == WalkClass.Walk).OverrideFailureMessage("A building projection blocked its physical openings.").IsTrue();
     }
@@ -229,13 +229,23 @@ public sealed class WorldModelTests
             ClosedDoor.Replace("fixture:relation:1", "missing", StringComparison.Ordinal),
             ClosedDoor.Replace("fixture:relation:1", "fixture:source:way:20", StringComparison.Ordinal),
             ClosedDoor + "," + ClosedDoor,
-            ClosedDoor.Replace("\"open\":false", "\"open\":false,\"heightRef\":\"pad\"", StringComparison.Ordinal)
+            ClosedDoor.Replace("\"open\":false", "\"open\":false,\"heightRef\":\"unknown\"", StringComparison.Ordinal)
         })
         {
             try { LoadClosed(record); throw new InvalidOperationException("Invalid closed entrance accepted."); }
             catch (WorldDataException error)
             { AssertThat(error.File == "interiors.json" && error.Entry == "entry.closed").OverrideFailureMessage("Closed error lost its catalog or door ID.").IsTrue(); }
         }
+        var padDoor = ClosedDoor.Replace("\"open\":false", "\"open\":false,\"heightRef\":\"pad\"", StringComparison.Ordinal);
+        var files = Files();
+        files["interiors.json"] = "{\"version\":3,\"interiors\":[],\"closedEntrances\":[" + padDoor + "]}";
+        try { WorldModelLoader.Load(new("test"), files); throw new InvalidOperationException("World without explicit terrain accepted."); }
+        catch (WorldDataException error)
+        { AssertThat(error.File == "map.json" && error.Entry == "terrain").OverrideFailureMessage("Missing terrain lost its map input diagnostic.").IsTrue(); }
+        var resolved = WorldModelLoader.Load(new("test"), files, new() { Terrain = FlatTerrain.Default })
+            .World.Interiors.Get(new("fixture:relation:1"))!.Entrances.Single();
+        var absolute = LoadClosed().World.Interiors.Get(new("fixture:relation:1"))!.Entrances.Single();
+        AssertThat(resolved == absolute).OverrideFailureMessage("Explicit zero pad elevation changed closed entrance coordinates or metadata.").IsTrue();
         const string open = """{"featureIds":["fixture:relation:1"],"providerId":"fixture.provider","entrances":[]}""";
         try { LoadClosed(open: open); throw new InvalidOperationException("Open/closed feature overlap accepted."); }
         catch (WorldDataException error) { AssertThat(error.File == "interiors.json" && error.Entry == "entry.closed").OverrideFailureMessage("Lost overlap diagnostic.").IsTrue(); }
@@ -261,7 +271,7 @@ public sealed class WorldModelTests
             ["world/geo.json"] = Geo,
             ["world/test.json"] = Features,
             ["interiors.json"] = "{\"version\":3,\"interiors\":[" + open + "],\"closedEntrances\":[" + record + "]}"
-        });
+        }, new() { Terrain = FlatTerrain.Default });
 
     [TestCase, TestCategory(TestReason.Regression)]
     [TestCategory("Slow")]
@@ -308,25 +318,25 @@ public sealed class WorldModelTests
         {
             ["world/geo.json"] = Geo,
             ["world/test.json"] = Features,
-            ["map.json"] = """{"id":"test","roam":{"heightFactor":0.9,"heightStart":30,"maxRadius":3000,"floorY":-40,"ceilY":1500,"buffer":30,"softFloorClearance":40,"fallbackMargin":25}}"""
+            ["map.json"] = """{"id":"test","roam":{"heightFactor":0.9,"heightStart":30,"maxRadius":3000,"floorY":-40,"ceilY":1500,"buffer":30,"softFloorClearance":40,"campusExpansionMargin":25}}"""
         };
-        var result = WorldModelLoader.Load(new("test"), files);
+        var result = WorldModelLoader.Load(new("test"), files, new() { Terrain = FlatTerrain.Default });
         AssertThat(result.Bounds == new Box3(new(-45, -40, -45), new(45, 1500, 45))).OverrideFailureMessage($"Authored roam bounds ignored: {result.Bounds}.").IsTrue();
         var real = RealMapFixture.Load();
         var roam = RealMapFixture.Entry().Descriptor.Roam;
         AssertThat(real.Bounds.Min.Y == roam.FloorY && real.Bounds.Max.Y == roam.CeilY).OverrideFailureMessage("Real campus vertical roam bounds were replaced with building heights.").IsTrue();
-        AssertThat(Math.Abs(real.Bounds.Min.X - (real.Boundary.Outer.Min(p => p.X) - roam.FallbackMargin)) < TestTolerance.Position).OverrideFailureMessage("Real campus fallback margin missing.").IsTrue();
+        AssertThat(Math.Abs(real.Bounds.Min.X - (real.Boundary.Outer.Min(p => p.X) - roam.CampusExpansionMargin)) < TestTolerance.Position).OverrideFailureMessage("Real campus campus expansion margin missing.").IsTrue();
     }
 
     [TestCase, TestCategory(TestReason.Contract)]
-    public void RetiredOverlayInputsAreRejectedWithoutChangingPublishedWorld()
+    public void UnknownInputsAreRejectedWithoutChangingPublishedWorld()
     {
         var previous = Load().World;
-        foreach (var path in new[] { "overlay/test.d/0000-fixture.json", "fidelity.json", "overlay/fidelity/fixture.json" })
+        foreach (var path in new[] { "unknown.json", "atlas/unknown.json", "world/nested/unknown.json" })
         {
             var files = Files();
             files[path] = "{\"ops\":[]}";
-            AssertThrown(() => WorldModelLoader.Load(new("test"), files)).IsInstanceOf<WorldDataException>();
+            AssertThrown(() => WorldModelLoader.Load(new("test"), files, new() { Terrain = FlatTerrain.Default })).IsInstanceOf<WorldDataException>();
         }
         AssertThat(previous.Features.Keys.SequenceEqual(Load().World.Features.Keys)).IsTrue();
     }
@@ -352,5 +362,5 @@ public sealed class WorldModelTests
         AssertThat(source.Interiors.Get(feature)!.Storeys[0].Index==1&&prepared.Interiors.Get(feature)!.Storeys.SequenceEqual(levels)).IsTrue();
     }
 
-    private static WorldModelLoadResult Load() => WorldModelLoader.Load(new("test"), Files());
+    private static WorldModelLoadResult Load() => WorldModelLoader.Load(new("test"), Files(), new() { Terrain = FlatTerrain.Default });
 }

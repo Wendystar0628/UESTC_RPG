@@ -151,14 +151,14 @@ public sealed class GroundSourcesTests
     [TestCase, TestCategory(TestReason.Contract)]
     public void SingleSourceFeaturesReadTheSameWithOrWithoutParts()
     {
-        foreach (var legacy in new[] { TestWorld.Street(), TestWorld.Junction() })
+        foreach (var authored in new[] { TestWorld.Street(), TestWorld.Junction() })
         {
             // The same features, each wrapped as its only part with the same props: the old single-source path.
-            var wrapped = TestWorld.Of(legacy.Features.Values.Select(f => f with
+            var wrapped = TestWorld.Of(authored.Features.Values.Select(f => f with
             {
                 Parts = [new WorldFeaturePart(f.Id.Value, f.Geometry, f.Height, f.Storeys) { Props = f.Props }]
-            }), legacy.Network);
-            var a = GroundSources.Read(legacy);
+            }), authored.Network);
+            var a = GroundSources.Read(authored);
             var b = GroundSources.Read(wrapped);
             AssertThat(a.Shapes.Count == b.Shapes.Count && a.Roads.Count == b.Roads.Count).OverrideFailureMessage("Shape or road count differs.").IsTrue();
             for (var k = 0; k < a.Shapes.Count; k++)
@@ -169,7 +169,7 @@ public sealed class GroundSourcesTests
                 AssertThat((x.Rings is null && y.Rings is null) ||
                     (x.Rings!.Length == y.Rings!.Length && x.Rings.Zip(y.Rings).All(r => r.First.SequenceEqual(r.Second)))).OverrideFailureMessage($"Rings {k} differ.").IsTrue();
             }
-            var ground = new GroundModule().Build(TestWorld.Context(legacy), new TileKey(0, 0), LodLevel.L0);
+            var ground = new GroundModule().Build(TestWorld.Context(authored), new TileKey(0, 0), LodLevel.L0);
             var again = new GroundModule().Build(TestWorld.Context(wrapped), new TileKey(0, 0), LodLevel.L0);
             AssertThat(ground.Meshes.Count == again.Meshes.Count).OverrideFailureMessage("Bundle count differs.").IsTrue();
             for (var k = 0; k < ground.Meshes.Count; k++)

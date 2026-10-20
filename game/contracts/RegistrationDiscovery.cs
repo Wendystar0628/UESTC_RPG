@@ -5,7 +5,7 @@ namespace Campus.Contracts;
 public sealed record Registration(RegistrationKind Kind, string Id, string Owner, string? Map,
     Type Type, bool IsStub, RegistrationLifetime Lifetime, Type? Contract, string? Scope);
 
-/// <summary>One declaration discovery, fallback selection, ordering and constructor path for all hosts.</summary>
+/// <summary>Shared declaration discovery, real-over-stub selection, ordering and constructor path for all hosts.</summary>
 public static class RegistrationDiscovery
 {
     public static IReadOnlyList<Registration> Discover(IEnumerable<Assembly> assemblies, Func<Type, string> ownerOf)

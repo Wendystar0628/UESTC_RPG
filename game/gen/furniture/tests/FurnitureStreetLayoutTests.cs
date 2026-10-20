@@ -93,28 +93,16 @@ public sealed class FurnitureStreetLayoutTests
 
     [TestCase, TestCategory(TestReason.Contract)]
     [TestCategory("Slow")]
-    public void AnchorsOnACarriagewayInWaterOrInABuildingAreLeftOutAndLogged()
+    public void AnchorsOnACarriagewayInWaterOrInABuildingAreRejected()
     {
-        // An anchor whose point lands on a carriageway, in water or in a building gets nothing and one structured diagnostic. Judged from the world data (StreetSite.LandingAt), not by anchor ID: moving an anchor needs no change here.
         var world = World.Value;
         var layout = RealLayout.Value;
         var landings = AnchorLandings();
-        foreach (var (feature, form, _, landing) in landings)
+        foreach (var (feature, _, _, landing) in landings)
         {
-            var id = feature.Id.Value;
-            var placed = layout.Items.Any(i => i.Key == "anchor:" + id);
-            var left = layout.Diagnostics.Where(d => d.Feature == feature.Id && d.Code == "wp13.anchor.not-placed").ToList();
-            if (landing == Landing.Open)
-            {
-                AssertThat(placed).OverrideFailureMessage($"{id} lands on open ground but is not placed").IsTrue();
-                AssertThat(left.Count == 0).OverrideFailureMessage($"{id} is placed but logged as not placed").IsTrue();
-                continue;
-            }
-            AssertThat(!placed).OverrideFailureMessage($"{id} placed, though its point lands {Where(landing)}").IsTrue();
-            AssertThat(left.Count == 1 && left[0].Level == DiagnosticLevel.Warning).OverrideFailureMessage($"{id} not logged once as {Where(landing)}").IsTrue();
+            AssertThat(landing == Landing.Open).OverrideFailureMessage($"{feature.Id.Value} has an invalid authored landing.").IsTrue();
+            AssertThat(layout.Items.Any(item => item.Key == "anchor:" + feature.Id.Value)).IsTrue();
         }
-        AssertThat(layout.Diagnostics.Count(d => d.Code == "wp13.anchor.not-placed") == landings.Count(l => l.Landing != Landing.Open)).OverrideFailureMessage("a diagnostic message without a left-out anchor").IsTrue();
-        // A building: a placed anchor moved onto a building's centre is left out too, and nothing else changes.
         var building = world.Features.Values.Where(f => f.Kind.Value == "building" && f.Geometry is PolygonGeometry).OrderBy(f => f.Id.Value, StringComparer.Ordinal)
             .Select(f => (Feature: f, Centre: PlanPolygons.Centroid(((PolygonGeometry)f.Geometry).Rings.Outer)))
             .First(b => PlanRings.Contains(((PolygonGeometry)b.Feature.Geometry).Rings, b.Centre) && PlanRings.DistanceToRing(b.Centre, ((PolygonGeometry)b.Feature.Geometry).Rings.Outer) > 3f);
@@ -122,11 +110,7 @@ public sealed class FurnitureStreetLayoutTests
         var ring = ((PolygonGeometry)anchor.Feature.Geometry).Rings.Outer;
         var shift = building.Centre - anchor.Centre;
         var moved = anchor.Feature with { Geometry = new PolygonGeometry(new PolygonRings([.. ring.Select(p => p + shift)], [])) };
-        var indoors = Build(MadeWorld(world, [], [moved]));
-        var name = anchor.Feature.Id.Value;
-        AssertThat(!indoors.Items.Any(i => i.Key == "anchor:" + name)).OverrideFailureMessage("an anchor's furniture stands in a building").IsTrue();
-        AssertThat(indoors.Diagnostics.Any(d => d.Feature == anchor.Feature.Id && d.Code == "wp13.anchor.not-placed" && d.Level == DiagnosticLevel.Warning)).OverrideFailureMessage("the building fallback is not logged").IsTrue();
-        AssertThat(indoors.Items.Count == layout.Items.Count - 1).OverrideFailureMessage("the building fallback changed other furniture").IsTrue();
+        AssertThrown(() => Build(MadeWorld(world, [], [moved]))).IsInstanceOf<WorldDataException>();
     }
 
     [TestCase, TestCategory(TestReason.Contract)]
@@ -206,14 +190,6 @@ public sealed class FurnitureStreetLayoutTests
         }
         return found;
     }
-
-    private static string Where(Landing landing) => landing switch
-    {
-        Landing.Carriageway => "on a carriageway",
-        Landing.Water => "in water",
-        Landing.Building => "in a building",
-        _ => throw new ArgumentOutOfRangeException(nameof(landing), landing, "Open ground is not a fallback."),
-    };
 
     private static bool Carriageway(NetworkLine line) => Highway(line) is "service" or "residential" or "tertiary" or "secondary" or "primary" or "unclassified" or "living_street";
 }

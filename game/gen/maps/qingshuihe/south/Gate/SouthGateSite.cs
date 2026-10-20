@@ -57,10 +57,10 @@ public sealed class SouthGateSite : ZoneSite
     {
         var gate = world.Feature(Feature);
         IReadOnlyList<Vector2> Ring(string sourceId) => gate.Contour(sourceId);
-        Vector2[] houses = [PlanPolygons.Centroid(Ring(SouthIds.WestHouse.Part), meanIfDegenerate: true), PlanPolygons.Centroid(Ring(SouthIds.EastHouse.Part), meanIfDegenerate: true)];
+        Vector2[] houses = [PlanPolygons.Centroid(Ring(SouthIds.WestHouse.Part)), PlanPolygons.Centroid(Ring(SouthIds.EastHouse.Part))];
         var frame = PlanFrame.Along((houses[0] + houses[1]) * 0.5f, houses[1] - houses[0]);
         IReadOnlyList<Vector2>[] islands = [Ring(SouthIds.WestIsland.Part), Ring(SouthIds.EastIsland.Part)];
-        var at = islands.Select(r => frame.Local(PlanPolygons.Centroid(r, meanIfDegenerate: true))).ToArray();
+        var at = islands.Select(r => frame.Local(PlanPolygons.Centroid(r))).ToArray();
         // An island is a thin rotated rectangle: its width and length are the means of its short and long sides.
         static float[] Sides(IReadOnlyList<Vector2> r) => [.. Enumerable.Range(0, r.Count).Select(i => Vector2.Distance(r[i], r[(i + 1) % r.Count])).Order()];
         var sides = islands.Select(Sides).ToArray();

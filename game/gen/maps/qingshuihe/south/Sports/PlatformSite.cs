@@ -83,7 +83,7 @@ public sealed class PlatformSite : ZoneSite
     internal static Plan PlanOf(IWorldModel world)
     {
         var p = LayoutOf(world);
-        var centre = PlanPolygons.Centroid(p.Decks[0], meanIfDegenerate: true);
+        var centre = PlanPolygons.Centroid(p.Decks[0]);
         return p with { Y = world.Terrain.HeightAt(centre.X, centre.Y) };
     }
 

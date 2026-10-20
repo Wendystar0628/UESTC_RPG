@@ -98,7 +98,7 @@ public sealed class WindowNumberingContractTests
 
     [TestCase]
     [TestCategory(TestReason.Contract)]
-    public void EmptySnapshotIsExplicitAndMissingIdentityDoesNotProduceFallbacks()
+    public void EmptySnapshotIsExplicitAndMissingIdentityRaisesAnError()
     {
         var empty = Create();
         AssertThat(empty.Map == new MapId("fixture") && empty.WindowCount == 0 && empty.Allocations.Count == 0).OverrideFailureMessage("An empty map needs an explicit empty snapshot.").IsTrue();

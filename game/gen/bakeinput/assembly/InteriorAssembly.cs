@@ -29,7 +29,7 @@ public sealed record InteriorAssemblyResult(
 public static class InteriorAssembly
 {
     /// <summary>
-    /// Pure CPU configuration only: parse the authoritative catalog and configure fresh map-owned fallback providers.
+    /// Pure CPU configuration only: parse the authoritative catalog and configure fresh map-owned catalog-bound providers.
     /// Call once before publishing the map's worker context, before any provider Layout/Build/Collision/Nav call.
     /// The returned bindings, not every globally registered provider's mutable FeatureIds, define this map's coverage.
     /// </summary>
@@ -254,7 +254,7 @@ public static class InteriorAssembly
                         ? JsonSerializer.Deserialize<SealOp[]>(seals.GetRawText(), ContractJson.Options) ?? throw new JsonException("Null catalog seals.") : [])));
             bindings.Add(new(providerId, Array.AsReadOnly(features), openParts, authoredEntranceCount));
         }
-        // Validate the entire catalog before mutating any fallback provider; no geometry is generated here.
+        // Validate the entire catalog before mutating any catalog-bound provider; no geometry is generated here.
         foreach (var configuration in configurations)
             configuration.Provider.Configure(configuration.Configuration);
         return bindings.AsReadOnly();

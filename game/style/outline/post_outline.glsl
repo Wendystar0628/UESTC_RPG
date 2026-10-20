@@ -29,7 +29,7 @@ VERSION_DEFINES
 // Placement: every line is one-sided and takes its colour from its own pixel, so no pixel ever reads a colour
 // that another invocation is writing. Silhouettes sit on the nearer side (inside the foreground object, the
 // "colour from the nearer side" of ART-STYLE §4.5); crease and material lines sit on the face turned more toward
-// the camera (constant along an edge, so they cannot zigzag), parallel faces fall back to the lower material ID.
+// the camera (constant along an edge, so they cannot zigzag), parallel faces use the lower material ID.
 //
 // Inputs from C#: inv_proj = RenderSceneData.GetCamProjection().Inverse() as is — that projection is already
 // the device one (y flipped, reverse-Z remapped).

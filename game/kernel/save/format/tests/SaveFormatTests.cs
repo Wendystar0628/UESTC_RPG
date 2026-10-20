@@ -249,7 +249,7 @@ public sealed class SaveFormatTests
 
     [TestCase]
     [TestCategory(TestReason.Contract)]
-    public void NewerGenerationFallsBackAndUnreadableNewLineCannotBeWrittenOver()
+    public void NewerGenerationUsesPreviousGenerationAndUnreadableNewLineCannotBeWrittenOver()
     {
         using var temp = new TempSaveDirectory();
         var root = temp.Path;
@@ -257,7 +257,7 @@ public sealed class SaveFormatTests
         repository.Write(Document());
         var newer = SaveContainer.Encode(Document(2)); newer[8] = 2; Rehash(newer);
         var path = Path.Combine(root, "s1", "g000002.sav"); File.WriteAllBytes(path, newer);
-        AssertThat(repository.Scan(new("s1")).Info.Meta?.Gen == 1).OverrideFailureMessage("A newer-format generation did not fall back to the older one.").IsTrue();
+        AssertThat(repository.Scan(new("s1")).Info.Meta?.Gen == 1).OverrideFailureMessage("A newer-format generation did not select the older one.").IsTrue();
         var invalidNewLine = Document(2, 2) with
         { Sections = new Dictionary<string, RawSaveSection> { ["world"] = new(1, "{\"v\":1,\"data\":{\"hours\":\"bad\"}}"u8.ToArray()) } };
         File.WriteAllBytes(path, SaveContainer.Encode(invalidNewLine));

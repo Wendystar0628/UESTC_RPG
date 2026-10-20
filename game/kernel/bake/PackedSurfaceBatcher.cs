@@ -8,7 +8,7 @@ using CustomFormat = Godot.RenderingServer.ArrayCustomFormat;
 
 namespace Campus.Kernel.Bake;
 
-/// <summary>Concatenates adjacent compatible opaque surfaces without decoding or changing any vertex bytes.</summary>
+/// <summary>Concatenates adjacent opaque surfaces with matching layouts without decoding or changing any vertex bytes.</summary>
 /// <remarks>
 /// Only the pinned BakeSurfacePacker layouts are accepted. An unsupported surface is retained by reference and
 /// ends the current batch. Global surface order and every source's vertex/triangle order remain unchanged.

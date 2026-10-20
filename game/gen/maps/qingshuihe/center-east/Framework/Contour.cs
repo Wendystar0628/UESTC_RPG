@@ -23,7 +23,7 @@ public static class Contour
     public static Vector2[] Clip(IReadOnlyList<Vector2> ring, Vector2 at, Vector2 dir, float keep)
     {
         ArgumentNullException.ThrowIfNull(ring);
-        var n = VectorMath.Unit(dir, Vector2.UnitX);
+        var n = VectorMath.Unit(dir);
         var output = new List<Vector2>();
         for (var i = 0; i < ring.Count; i++)
         {
@@ -115,8 +115,8 @@ public static class Contour
             m.Quad(m.Vertex(new(a.X, y0, a.Y), na, new(0, 0)), m.Vertex(new(b.X, y0, b.Y), nb, new(1, 0)),
                 m.Vertex(new(b.X, sideTop, b.Y), nb, new(1, 1)), m.Vertex(new(a.X, sideTop, a.Y), na, new(0, 1)), outward);
             if (chamfer > 0)
-                m.Quad(m.Vertex(new(a.X, sideTop, a.Y), VectorMath.Unit(na + up, Vector3.UnitY, minimumLength: 1e-12f), new(0, 0)), m.Vertex(new(b.X, sideTop, b.Y), VectorMath.Unit(nb + up, Vector3.UnitY, minimumLength: 1e-12f), new(1, 0)),
-                    m.Vertex(new(top[j].X, y1, top[j].Y), VectorMath.Unit(nb + up, Vector3.UnitY, minimumLength: 1e-12f), new(1, 1)), m.Vertex(new(top[i].X, y1, top[i].Y), VectorMath.Unit(na + up, Vector3.UnitY, minimumLength: 1e-12f), new(0, 1)), outward + up);
+                m.Quad(m.Vertex(new(a.X, sideTop, a.Y), VectorMath.Unit(na + up, minimumLength: 1e-12f), new(0, 0)), m.Vertex(new(b.X, sideTop, b.Y), VectorMath.Unit(nb + up, minimumLength: 1e-12f), new(1, 0)),
+                    m.Vertex(new(top[j].X, y1, top[j].Y), VectorMath.Unit(nb + up, minimumLength: 1e-12f), new(1, 1)), m.Vertex(new(top[i].X, y1, top[i].Y), VectorMath.Unit(na + up, minimumLength: 1e-12f), new(0, 1)), outward + up);
         }
         if (caps)
         {
@@ -156,7 +156,7 @@ public static class Contour
     {
         var count = ring.Count;
         Vector2 n0 = PlanOffsets.RightUnitNormal(ring[(i + count - 1) % count], ring[i]), n1 = PlanOffsets.RightUnitNormal(ring[i], ring[(i + 1) % count]);
-        var n = Vector2.Dot(n0, n1) >= SmoothCos ? VectorMath.Unit(n0 + n1, Vector2.UnitX) : edge;
+        var n = Vector2.Dot(n0, n1) >= SmoothCos ? VectorMath.Unit(n0 + n1) : edge;
         return new(n.X, 0, n.Y);
     }
 

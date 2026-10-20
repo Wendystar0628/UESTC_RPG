@@ -80,7 +80,7 @@ public sealed class GymSite : ZoneSite
         var door = Angles.Heading(S.GymDoorBearing);
         var deckTop = world.Feature(PlatformSite.Feature).Height ?? throw new InvalidOperationException($"Platform {PlatformSite.Feature} has no height.");
         var top = feature.Height ?? throw new InvalidOperationException($"Gym {Feature} has no height.");
-        return new(PlanPolygons.Centroid(ring, meanIfDegenerate: true), radius, MathF.Atan2(door.Y, door.X) - MathF.PI / bays, bays, deckTop, top);
+        return new(PlanPolygons.Centroid(ring), radius, MathF.Atan2(door.Y, door.X) - MathF.PI / bays, bays, deckTop, top);
     }
 
     /// <summary>Row sills and heights of the ring hall's glass, above the ground: the platform storey, then the upper hall over the transom.</summary>

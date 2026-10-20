@@ -55,7 +55,7 @@ public sealed class GroundPavingTests
             new GroundFaceInput(GroundSurface.Granite, GroundFaceRole.Vertical, sources).PavingAt(new(20, 0)) is null &&
             new GroundFaceInput(GroundSurface.PlazaBorder, GroundFaceRole.Top, sources).PavingAt(new(20, 0)) is null).OverrideFailureMessage("Other plazas, vertical faces and plaza borders take no frame.").IsTrue();
         var plain = meshes.Where(m => m.Material.Spec.SurfacePattern is null).ToArray();
-        AssertThat(plain.All(m => m.Uv is null && m.Uv2 is null)).OverrideFailureMessage("Plain chunks keep the legacy vertex layout.").IsTrue();
+        AssertThat(plain.All(m => m.Uv is null && m.Uv2 is null)).OverrideFailureMessage("Plain chunks keep the plain vertex layout.").IsTrue();
         AssertThat(plain.Any(m => m.Material.Spec == GroundPalette.Spec(GroundMaterial.Plaza))).OverrideFailureMessage("Other plaza tops stay plain granite.").IsTrue();
     }
 

@@ -52,16 +52,16 @@ public sealed class OrganicMesh
         {
             var a = rings[Math.Max(0, i - 1)].Centre;
             var b = rings[Math.Min(count - 1, i + 1)].Centre;
-            tangents[i] = VectorMath.Unit(b - a, Vector3.UnitZ, 1e-8f);
+            tangents[i] = VectorMath.Unit(b - a, 1e-8f);
         }
         // Parallel-transported frame: v is the "height" axis, s the "width" axis.
         var hint = up ?? (MathF.Abs(tangents[0].Y) > 0.9f ? Vector3.UnitZ : Vector3.UnitY);
-        var v = VectorMath.Unit(hint - tangents[0] * Vector3.Dot(hint, tangents[0]), Vector3.UnitY, 1e-8f);
+        var v = VectorMath.Unit(hint - tangents[0] * Vector3.Dot(hint, tangents[0]), 1e-8f);
         var local = new List<Vector3>(count * segments + 2);
         for (var i = 0; i < count; i++)
         {
             var t = tangents[i];
-            v = VectorMath.Unit(v - t * Vector3.Dot(v, t), v, 1e-8f);
+            v = VectorMath.Unit(v - t * Vector3.Dot(v, t), 1e-8f);
             var s = Vector3.Cross(v, t);
             var ring = rings[i];
             for (var k = 0; k < segments; k++)
@@ -103,8 +103,8 @@ public sealed class OrganicMesh
         Paint paint, int segments = 14, int rings = 8)
     {
         rings = (int)MathF.Round(rings * 1.4f);
-        var a = VectorMath.Unit(axis, Vector3.UnitZ, 1e-8f);
-        var u = VectorMath.Unit(up - a * Vector3.Dot(up, a), Vector3.UnitY, 1e-8f);
+        var a = VectorMath.Unit(axis, 1e-8f);
+        var u = VectorMath.Unit(up - a * Vector3.Dot(up, a), 1e-8f);
         var list = new List<Ring>(rings - 1);
         for (var i = 1; i < rings; i++)
         {
@@ -190,13 +190,13 @@ public sealed class OrganicMesh
             normals[a] += face; normals[b] += face; normals[c] += face;
             oriented.Add((a, b, c));
         }
-        for (var i = 0; i < normals.Length; i++) normals[i] = VectorMath.Unit(normals[i], Vector3.UnitY, 1e-8f);
+        for (var i = 0; i < normals.Length; i++) normals[i] = VectorMath.Unit(normals[i], 1e-8f);
         // Split vertices where the paint changes: one output vertex per (source vertex, colour).
         var map = new Dictionary<(int, string), int>();
         foreach (var (a, b, c) in oriented)
         {
             var centre = (local[a] + local[b] + local[c]) / 3f;
-            var n = VectorMath.Unit(normals[a] + normals[b] + normals[c], Vector3.UnitY, 1e-8f);
+            var n = VectorMath.Unit(normals[a] + normals[b] + normals[c], 1e-8f);
             var color = paint(centre, n);
             // Godot's front face is clockwise seen from outside: emit the outward counter-clockwise triangle reversed.
             _index.Add(Vertex(a)); _index.Add(Vertex(c)); _index.Add(Vertex(b));

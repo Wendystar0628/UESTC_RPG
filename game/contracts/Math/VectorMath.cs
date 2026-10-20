@@ -45,16 +45,4 @@ public static class VectorMath
         return new((float)(v.X / length), (float)(v.Y / length), (float)(v.Z / length));
     }
 
-    /// <summary>Explicit fallback for existing mesh/sampling algorithms whose degenerate directions are allowed.</summary>
-    public static Vector2 Unit(Vector2 v, Vector2 fallback, double minimumLength = 1e-12)
-    {
-        double length = Math.Sqrt(Dot(v, v));
-        return Finite(v) && length > minimumLength ? new((float)(v.X / length), (float)(v.Y / length)) : fallback;
-    }
-
-    public static Vector3 Unit(Vector3 v, Vector3 fallback, double minimumLength = 1e-12)
-    {
-        double length = Math.Sqrt(Dot(v, v));
-        return Finite(v) && length > minimumLength ? new((float)(v.X / length), (float)(v.Y / length), (float)(v.Z / length)) : fallback;
-    }
 }

@@ -106,7 +106,7 @@ public sealed class CollisionInteriorIsolationTests
     }
 
     [TestCase, TestCategory(TestReason.Contract)]
-    public void MapWithoutDeclaredOrOpenInteriorsAllowsLegacyEmptySnapshot()
+    public void MapWithoutDeclaredOrOpenInteriorsAllowsEmptySnapshot()
     {
         var map = new MapId("fixture-no-interiors");
         var context = new BuildContext { CodeHash = "fixture", WindowNumbering = new((Descriptor(map)).Id, new string('0', 64), []), Map = Descriptor(map), World = FixtureWorld(open: false), WorldSeed = 1, Catalog = Catalog };

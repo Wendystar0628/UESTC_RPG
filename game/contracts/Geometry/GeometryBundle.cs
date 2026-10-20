@@ -67,9 +67,9 @@ public sealed record GeometryBundle(
     // Input bit values: 1 interior, 2 outskirts, 4 decal, 8 no shadow. Upper input bits remain reserved.
     // Encoding-2 bank bits are produced by the packer, never supplied through this array.
     public byte[]? Flags { get; init; }
-    // VF-B glass: WindowCardEncoding.TypeMask (low 7 bits) carries 0 unspecified; 1-15 W-CLS, W-LEC, W-COR,
+    // VF-B glass: WindowCardEncoding.TypeMask (low 7 bits) carries a declared card type for numbered windows; 1-15 W-CLS, W-LEC, W-COR,
     // W-STR, W-OFF, W-LAB, W-CLEAN, W-DORM, W-WC, W-CAN, W-SHOP, W-MED, W-GYM, W-POOL, W-MECH.
-    // 16 = lobby card (closed entrance glass, WLD-INTERIORS). PhysicalCurtainFlag (0x80)
+    // 16 = lobby card (closed entrance glass, WLD-INTERIORS); 0 is allowed only without a window-card grid. PhysicalCurtainFlag (0x80)
     // means this LOD actually contains a physical curtain; suppress only the card's window screen layer.
     // This occupies COLOR's fourth (Reserved) byte; non-glass surfaces retain their existing semantics.
     public byte[]? Reserved { get; init; }
@@ -81,7 +81,7 @@ public sealed record GeometryBundle(
     // UV2 MUST retain fp32 components through packing/cache/GPU upload: half/UNorm16 loses integer IDs.
     // Flags bit 2 marks outskirts windows (dedicated IDs >= 65536), which skip window_override lookup.
     // Water shader payload instead uses Uv=(flow vx,vz) m/s, Uv2=(shore distance m, reflection lake or -1),
-    // Flags bit 8 for no shadow, upward normals, and optional ColorIndices falling back to water.far.lit.
+    // Flags bit 8 for no shadow, upward normals, and optional ColorIndices using the water.far.lit material index when absent.
     // VF-C channels: card centre/h2, branch anchor/h3, cluster centre/reserved; all are xyzw per vertex.
     public float[]? Custom0 { get; init; }
     public float[]? Custom1 { get; init; }
@@ -140,6 +140,14 @@ public sealed record GeometryBundle(
                 if (lod is null || !float.IsFinite(lod.Error) || lod.Error < 0f)
                     throw new ArgumentException("Each mesh LOD needs a finite, non-negative error.", nameof(Lods));
                 RequireIndices(lod.Index, count, nameof(Lods));
+            }
+        if (Material.Spec.Kind == ToonKind.Glass && Uv2 is not null)
+            for (var vertex = 0; vertex < count; vertex++)
+            {
+                if (Uv2[vertex * 2 + 1] < LightChannelCatalog.Count) continue;
+                var type = (Reserved?[vertex] ?? 0) & WindowCardEncoding.TypeMask;
+                if (type == 0 || type > WindowCardEncoding.Lobby)
+                    throw new ArgumentException($"Glass vertex {vertex} requires a declared window-card type in [1, {WindowCardEncoding.Lobby}]; found {type}.", nameof(Reserved));
             }
         ValidateSurfacePatternVertices(count);
     }

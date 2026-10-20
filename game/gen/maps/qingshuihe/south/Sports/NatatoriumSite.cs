@@ -64,7 +64,7 @@ public sealed class NatatoriumSite : ZoneSite
         if (!world.Features.TryGetValue(new(Feature), out var feature))
             throw new InvalidOperationException($"Natatorium {Feature} is missing from the world model.");
         var ring = feature.Contour(Part);
-        var centre = PlanPolygons.Centroid(ring, meanIfDegenerate: true);
+        var centre = PlanPolygons.Centroid(ring);
         // Second moments about the centroid; a filled ellipse has variance (a/2)² and (b/2)² along its axes.
         double area = 0, sxx = 0, szz = 0, sxz = 0;
         for (var i = 0; i < ring.Count; i++)

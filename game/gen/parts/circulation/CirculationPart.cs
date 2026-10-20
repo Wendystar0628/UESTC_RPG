@@ -64,9 +64,9 @@ public abstract class CirculationPart<TParams> : IPartDef<TParams> where TParams
         new(new(-width * 0.5f, y0, -depth * 0.5f), new(width * 0.5f, y1, depth * 0.5f));
 
     /// <summary>The caller's material wins unless it is the untouched BoxPartParams default (plain wall).</summary>
-    private protected static ToonSpec Pick(ToonSpec given, ToonSpec fallback) => given == DefaultMaterial ? fallback : given;
+    private protected static ToonSpec Pick(ToonSpec given, ToonSpec styleMaterial) => given == DefaultMaterial ? styleMaterial : given;
 
-    private protected static FootMat Foot(FootMat given, FootMat fallback) => given == FootMat.Auto ? fallback : given;
+    private protected static FootMat Foot(FootMat given, FootMat styleFoot) => given == FootMat.Auto ? styleFoot : given;
 
     private protected static void Positive(float value, string name)
     {

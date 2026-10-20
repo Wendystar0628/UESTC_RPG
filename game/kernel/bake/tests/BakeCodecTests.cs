@@ -230,7 +230,7 @@ public sealed class BakeCodecTests
             updated.Initialize();
             if (updated.CacheBytes != 0 || updated.TryRead(key, BakePayloadClass.Tile, Decode) is not null ||
                 !File.ReadAllBytes(packagedPath).SequenceEqual(packagedBytes))
-                throw new InvalidOperationException("Version migration reused incompatible products or changed the installation.");
+                throw new InvalidOperationException("Version migration reused products with a different format or changed the installation.");
             File.WriteAllBytes(packagedPath, [1, 2, 3]);
             var corrupt = new BakeCacheStore(localRoot, "version-one", packagedRoot);
             if (corrupt.TryRead(key, BakePayloadClass.Tile, Decode) is not null || !File.ReadAllBytes(packagedPath).SequenceEqual(new byte[] { 1, 2, 3 }))
@@ -251,9 +251,9 @@ public sealed class BakeCodecTests
                 writer.TryRead(cpuKey, BakePayloadClass.Product, value => value) is not { } restoredCpu || !restoredCpu.SequenceEqual(cpuBytes))
                 throw new InvalidOperationException("A CPU cache product retained the compressed or decoded render-tile limit.");
             writer.Write(cpuKey, BakePayloadClass.Product, [1, 2, 3]);
-            var fallbackCpu = writer.TryRead(cpuKey, BakePayloadClass.Product, value => value.Length == cpuBytes.Length ? value :
+            var packagedCpu = writer.TryRead(cpuKey, BakePayloadClass.Product, value => value.Length == cpuBytes.Length ? value :
                 throw new InvalidDataException("Malformed local CPU fixture."));
-            if (fallbackCpu is null || !fallbackCpu.SequenceEqual(cpuBytes) || !File.ReadAllBytes(cpuPath).SequenceEqual(cpuFile))
+            if (packagedCpu is null || !packagedCpu.SequenceEqual(cpuBytes) || !File.ReadAllBytes(cpuPath).SequenceEqual(cpuFile))
                 throw new InvalidOperationException("CPU candidate validation hid or modified the packaged product.");
             AssertThrown(() => writer.Write(key, BakePayloadClass.Tile, cpuBytes)).IsInstanceOf<InvalidDataException>();
             writer.Stop();

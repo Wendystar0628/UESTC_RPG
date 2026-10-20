@@ -134,9 +134,9 @@ public sealed class UiThemeBuilder
         var chain = _t.Get("metrics", "type", "chains", r.GetProperty("chain").GetString()!);
         var families = chain.EnumerateArray().Select(e => e.GetString()!).ToArray();
         var fv = new FontVariation { BaseFont = File(families[0], weight) };
-        var fallbacks = new Godot.Collections.Array<Font>();
-        foreach (var family in families.Skip(1)) fallbacks.Add(File(family, weight));
-        fv.Fallbacks = fallbacks;
+        var fontChain = new Godot.Collections.Array<Font>();
+        foreach (var family in families.Skip(1)) fontChain.Add(File(family, weight));
+        fv.Fallbacks = fontChain;
         fv.SpacingGlyph = (int)Math.Round(r.GetProperty("tracking").GetSingle() * size);
         if (r.TryGetProperty("tnum", out var tnum) && tnum.GetBoolean())
         {

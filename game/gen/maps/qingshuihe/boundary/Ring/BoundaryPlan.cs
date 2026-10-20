@@ -255,9 +255,9 @@ public sealed class BoundaryPlan
             var result = new Vector2[points.Count];
             for (var k = 0; k < points.Count; k++)
             {
-                var before = VectorMath.Unit(points[Math.Max(k, 1)] - points[Math.Max(k, 1) - 1], Vector2.UnitX, minimumLength: 1e-6);
-                var after = VectorMath.Unit(points[Math.Min(k + 1, points.Count - 1)] - points[Math.Min(k + 1, points.Count - 1) - 1], Vector2.UnitX, minimumLength: 1e-6);
-                var n = VectorMath.Unit(new Vector2(-before.Y, before.X) + new Vector2(-after.Y, after.X), Vector2.UnitX, minimumLength: 1e-6);
+                var before = VectorMath.Unit(points[Math.Max(k, 1)] - points[Math.Max(k, 1) - 1], minimumLength: 1e-6);
+                var after = VectorMath.Unit(points[Math.Min(k + 1, points.Count - 1)] - points[Math.Min(k + 1, points.Count - 1) - 1], minimumLength: 1e-6);
+                var n = VectorMath.Unit(new Vector2(-before.Y, before.X) + new Vector2(-after.Y, after.X), minimumLength: 1e-6);
                 var cos = MathF.Max(Vector2.Dot(n, new Vector2(-after.Y, after.X)), 0.5f);
                 result[k] = points[k] + n * (sign * off / cos);
             }
@@ -307,8 +307,8 @@ public sealed class BoundaryPlan
         {
             var p = line[k];
             if (Vector2.Distance(p, kept[^1]) < F.MinSegment) continue;
-            var a = VectorMath.Unit(p - kept[^1], Vector2.UnitX, minimumLength: 1e-6);
-            var b = VectorMath.Unit(line[k + 1] - p, Vector2.UnitX, minimumLength: 1e-6);
+            var a = VectorMath.Unit(p - kept[^1], minimumLength: 1e-6);
+            var b = VectorMath.Unit(line[k + 1] - p, minimumLength: 1e-6);
             if (Vector2.Dot(a, b) > 0.99985f) continue;
             kept.Add(p);
         }

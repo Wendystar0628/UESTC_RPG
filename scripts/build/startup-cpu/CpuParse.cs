@@ -41,12 +41,12 @@ var snapshots = root.GetProperty("cpuSnapshots").EnumerateArray().Select(x => ne
         Utc(t.GetProperty("threadStartUtc")), t.GetProperty("cpuSeconds").GetDouble(), Utc(t.GetProperty("readUtc")))).ToArray(),
     x.GetProperty("unreadableThreads").GetArrayLength())).ToDictionary(x => x.Name, StringComparer.Ordinal);
 
-var temporaryEtlx = Path.Combine(directory, "threads.etlx");
+var traceIndexPath = Path.Combine(directory, "threads.etlx");
 try
 {
     // TraceEvent associates captured managed stacks and CLR rundown names; no custom stack unwinder.
-    TraceLog.CreateFromEventPipeDataFile(Path.Combine(directory, "threads.nettrace"), temporaryEtlx);
-    using var trace = new TraceLog(temporaryEtlx);
+    TraceLog.CreateFromEventPipeDataFile(Path.Combine(directory, "threads.nettrace"), traceIndexPath);
+    using var trace = new TraceLog(traceIndexPath);
     var samples = new List<ThreadSample>();
     var clrThreadIds = new Dictionary<int, HashSet<long>>();
     var frameNames = new Dictionary<CallStackIndex, Frame[]>();
@@ -239,7 +239,7 @@ try
         };
     }
 }
-finally { if (File.Exists(temporaryEtlx)) File.Delete(temporaryEtlx); }
+finally { if (File.Exists(traceIndexPath)) File.Delete(traceIndexPath); }
 static object[] Top(ThreadSample[] samples, bool inclusive)
 {
     var counts = new Dictionary<string, int>(StringComparer.Ordinal);

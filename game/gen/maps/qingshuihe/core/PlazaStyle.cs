@@ -6,9 +6,6 @@ namespace Campus.Gen.Maps.Qingshuihe.Core;
 public static class PlazaStyle
 {
     // ---- Time plaza (MAP-QSH-CORE, MAP-QSH-TERRAIN) ----
-    /// <summary>Axis bearing used only if the library stair feature is missing (P02 looks along 307°).</summary>
-    public const float AxisBearingFallback = 307.5f;
-
     /// <summary>Below this terrain drop between rim and floor the plaza is flat and gets no ring steps (flat stub).</summary>
     public const float StepMinRise = 0.3f;
 

@@ -148,8 +148,8 @@ public static class LandmarkSolids
     /// </summary>
     public static Matrix4x4 Along(Vector3 a, Vector3 c, Vector3 normal)
     {
-        var u = VectorMath.Unit(c - a, Vector3.UnitY);
-        var n = VectorMath.Unit(normal - u * Vector3.Dot(normal, u), Vector3.UnitY);
+        var u = VectorMath.Unit(c - a);
+        var n = VectorMath.Unit(normal - u * Vector3.Dot(normal, u));
         var s = VectorMath.Cross(u, n);
         return new(s.X, s.Y, s.Z, 0, u.X, u.Y, u.Z, 0, n.X, n.Y, n.Z, 0, a.X, a.Y, a.Z, 1);
     }
@@ -159,7 +159,7 @@ public static class LandmarkSolids
     {
         var t = s[Math.Min(s.Length - 1, j + 1)] - s[Math.Max(0, j - 1)];
         var n = new Vector2(t.Y, -t.X);
-        return VectorMath.Unit(n, new Vector2(0, -1), 1e-9);
+        return VectorMath.Unit(n, 1e-9);
     }
 
 }

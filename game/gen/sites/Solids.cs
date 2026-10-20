@@ -44,7 +44,7 @@ public static class Solids
                 var a = 2f * MathF.PI * (i % segments) / segments;
                 float c = MathF.Cos(a), s = MathF.Sin(a);
                 var r = profile[k].X;
-                var normal = VectorMath.Unit(new Vector3(c * normals[k].X / sx, normals[k].Y, s * normals[k].X / sz), Vector3.UnitY, minimumLength: 1e-12f);
+                var normal = VectorMath.Unit(new Vector3(c * normals[k].X / sx, normals[k].Y, s * normals[k].X / sz), minimumLength: 1e-12f);
                 rings[k][i] = m.Vertex(new(c * r * sx, profile[k].Y, s * r * sz), normal, new(2f * MathF.PI * i / segments, arc));
             }
         }
@@ -109,29 +109,33 @@ public static class Solids
         int n = p.GetLength(0), segments = p.GetLength(1);
         var m = new Shapes.Writer(material);
         var rings = new int[n][];
+        var poles = new bool[n];
+        poles[0] = Pole(p, centres, 0);
+        poles[n - 1] = Pole(p, centres, n - 1);
         var arc = 0f;
         for (var k = 0; k < n; k++)
         {
             if (k > 0) arc += uvProfile is null ? Vector3.Distance(p[k, 0], p[k - 1, 0]) : Vector2.Distance(uvProfile[k], uvProfile[k - 1]);
             rings[k] = new int[segments + 1];
+            Vector3? poleNormal = poles[k] ? PoleNormal(p, k) : null;
             for (var i = 0; i <= segments; i++)
             {
                 var j = i % segments;
-                var around = p[k, (j + 1) % segments] - p[k, (j + segments - 1) % segments];
-                var up = p[Math.Min(n - 1, k + 1), j] - p[Math.Max(0, k - 1), j];
-                var normal = VectorMath.Unit(new Vector3(up.Y * around.Z - up.Z * around.Y, up.Z * around.X - up.X * around.Z, up.X * around.Y - up.Y * around.X), Vector3.UnitY, minimumLength: 1e-12f);
-                var radial = p[k, j] - centres[k];
-                if (normal.X * radial.X + normal.Z * radial.Z < 0) normal = -normal;
-                if (Pole(p, centres, k)) normal = new(0, k == 0 ? -1 : 1, 0);
+                var normal = poleNormal ?? GridNormal(p, centres, k, j);
                 rings[k][i] = m.Vertex(p[k, j], normal, new(2f * MathF.PI * (uvProfile is null ? 1f : uvProfile[k].X) * i / segments, arc));
             }
         }
         for (var k = 0; k + 1 < n; k++)
             for (var i = 0; i < segments; i++)
-                m.Quad(rings[k][i], rings[k][i + 1], rings[k + 1][i + 1], rings[k + 1][i], m.Normal(rings[k][i]) + m.Normal(rings[k + 1][i + 1]));
+            {
+                var outward = m.Normal(rings[k][i]) + m.Normal(rings[k + 1][i + 1]);
+                if (poles[k]) m.Triangle(rings[k][i], rings[k + 1][i + 1], rings[k + 1][i], outward);
+                else if (poles[k + 1]) m.Triangle(rings[k][i], rings[k][i + 1], rings[k + 1][i + 1], outward);
+                else m.Quad(rings[k][i], rings[k][i + 1], rings[k + 1][i + 1], rings[k + 1][i], outward);
+            }
         foreach (var (k, sign) in new[] { (0, -1f), (n - 1, 1f) })
         {
-            if (Pole(p, centres, k)) continue;
+            if (poles[k]) continue;
             var normal = new Vector3(0, sign, 0);
             var centre = m.Vertex(centres[k], normal, Vector2.Zero);
             var ring = new int[segments];
@@ -139,6 +143,33 @@ public static class Solids
             for (var i = 0; i < segments; i++) m.Triangle(centre, ring[i], ring[(i + 1) % segments], normal);
         }
         return m.Finish();
+    }
+
+    private static Vector3 GridNormal(Vector3[,] p, Vector3[] centres, int k, int j)
+    {
+        int n = p.GetLength(0), segments = p.GetLength(1);
+        var around = p[k, (j + 1) % segments] - p[k, (j + segments - 1) % segments];
+        var up = p[Math.Min(n - 1, k + 1), j] - p[Math.Max(0, k - 1), j];
+        var normal = VectorMath.Unit(new Vector3(up.Y * around.Z - up.Z * around.Y, up.Z * around.X - up.X * around.Z, up.X * around.Y - up.Y * around.X), minimumLength: 1e-12f);
+        var radial = p[k, j] - centres[k];
+        return normal.X * radial.X + normal.Z * radial.Z < 0 ? -normal : normal;
+    }
+
+    private static Vector3 PoleNormal(Vector3[,] p, int k)
+    {
+        var segments = p.GetLength(1);
+        var adjacent = k == 0 ? 1 : k - 1;
+        var normal = Vector3.Zero;
+        // Use the same non-degenerate triangles as the end fan, oriented by the grid's ring order.
+        for (var i = 0; i < segments; i++)
+        {
+            var next = (i + 1) % segments;
+            var pole = p[k, k == 0 ? i : next];
+            var a = p[adjacent, i] - pole;
+            var b = p[adjacent, next] - pole;
+            normal += k == 0 ? Vector3.Cross(a, b) : Vector3.Cross(b, a);
+        }
+        return VectorMath.Unit(normal, minimumLength: 1e-12f);
     }
 
     private static bool Pole(Vector3[,] p, Vector3[] centres, int k)

@@ -13,19 +13,19 @@ public sealed class TerrainCorridorRangeTests
 {
     [TestCase]
     [TestCategory(TestReason.Contract)]
-    public void LegacyConstructorAndMissingRangeKeepTheFullRoadWireContract()
+    public void OmittedRangeConstructionAndJsonKeepTheFullRoadContract()
     {
-        var legacy = new TerrainCorridorOp("design:terrain:legacy", "Synthetic range boundary", new("source:road"),
+        var fullRoad = new TerrainCorridorOp("design:terrain:legacy", "Synthetic range boundary", new("source:road"),
             [new(0, 1), new(100, 1)], .015, .75)
         { Zone = new("fixture") };
-        var bytes = TerrainOverlayJson.ToUtf8Bytes(new(new("fixture"), [legacy]));
+        var bytes = TerrainOverlayJson.ToUtf8Bytes(new(new("fixture"), [fullRoad]));
         using var wire = JsonDocument.Parse(bytes);
-        AssertThat(!wire.RootElement.GetProperty("ops")[0].TryGetProperty("range", out _)).OverrideFailureMessage("Legacy serialization must not acquire a range field.").IsTrue();
+        AssertThat(!wire.RootElement.GetProperty("ops")[0].TryGetProperty("range", out _)).OverrideFailureMessage("Full-road serialization must not acquire a range field.").IsTrue();
         var restored = (TerrainCorridorOp)TerrainOverlayJson.Parse(bytes).Ops[0];
-        AssertThat(restored.Range is null && restored.Anchors[0].S == 0 && restored.Anchors[^1].S == 100 && restored.Steps.Count == 0).OverrideFailureMessage("Missing range changed legacy source-road anchor semantics.").IsTrue();
+        AssertThat(restored.Range is null && restored.Anchors[0].S == 0 && restored.Anchors[^1].S == 100 && restored.Steps.Count == 0).OverrideFailureMessage("Missing range changed full source-road anchor semantics.").IsTrue();
         var explicitNull = JsonNode.Parse(Encoding.UTF8.GetString(bytes))!.AsObject();
         explicitNull["ops"]![0]!["range"] = null;
-        AssertThat(((TerrainCorridorOp)Parse(explicitNull).Ops[0]).Range is null).OverrideFailureMessage("Nullable range must canonicalize to the legacy absence state.").IsTrue();
+        AssertThat(((TerrainCorridorOp)Parse(explicitNull).Ops[0]).Range is null).OverrideFailureMessage("Nullable range must canonicalize to the omitted full-road state.").IsTrue();
         explicitNull["ops"]![0]!["anchors"]![0]!["s"] = 20;
         {
             bool rejected = false;

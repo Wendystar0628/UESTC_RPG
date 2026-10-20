@@ -61,7 +61,7 @@ public sealed class VegetationContextTests
 
     [TestCase]
     [TestCategory(TestReason.Contract)]
-    public void AFailingFormalSourceThrowsAndNeverFallsBackToAnotherWorld()
+    public void AFailingFormalSourceThrowsWithoutReadingAnotherWorld()
     {
         var map = new TestMapContext(RealMapFixture.Entry().Descriptor, new FakeWorld());
         var unsupported = new FailingSource(new NotSupportedException());

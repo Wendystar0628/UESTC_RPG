@@ -5,7 +5,7 @@ using Campus.Systems.Nightlight.Schedule;
 namespace Campus.Systems.Nightlight.Lamps;
 
 /// <summary>灯表输入的统计：给日志和门禁看，哪些灯具标记没能登记、为什么。</summary>
-public sealed record LampSetReport(int Accepted, int UnknownChannel, int NotLamp, int UnknownColor, int Duplicates);
+public sealed record LampSetReport(int Accepted, int UnknownChannel, int NotLamp, int Duplicates);
 
 /// <summary>
 /// 把各内容包给出的灯具标记（LightEmitter：灯头位置、所属通道、色名、级别、光斑半径）整理成灯表。
@@ -26,15 +26,15 @@ public static class LampSetBuilder
         ArgumentNullException.ThrowIfNull(schedule);
         ArgumentNullException.ThrowIfNull(paletteColumn);
         ArgumentNullException.ThrowIfNull(groundY);
-        int unknownChannel = 0, notLamp = 0, unknownColor = 0, duplicates = 0;
+        int unknownChannel = 0, notLamp = 0, duplicates = 0;
         var byKey = new SortedDictionary<string, LampRecord>(StringComparer.Ordinal);
         foreach (var e in emitters)
         {
             if (!schedule.TrySlotOf(e.Channel, out var slot)) { unknownChannel++; continue; }
             var group = schedule.GroupOf(slot);
             if (group is null) { notLamp++; continue; }
-            var column = paletteColumn(e.Color) ?? (schedule.Spec(slot).Color is { } fallback ? paletteColumn(fallback) : null);
-            if (column is null) { unknownColor++; continue; }
+            var column = paletteColumn(e.Color)
+                ?? throw new InvalidDataException($"Lamp channel {e.Channel.Value} references unregistered color {e.Color.Value}.");
             var ground = groundY(e.Position.X, e.Position.Z);
             if (!float.IsFinite(ground)) throw new InvalidDataException("A lamp base needs prepared finite terrain.");
             var basePoint = new Vector3(e.Position.X, ground, e.Position.Z);
@@ -43,12 +43,12 @@ public static class LampSetBuilder
             var energy = Math.Clamp(e.Energy, 0f, 1f);
             var radius = Math.Max(e.Range, 0f);
             byKey.Add(key, new LampRecord(
-                basePoint, Math.Max(e.Position.Y - ground, 0f), radius, column.Value, energy, slot,
+                basePoint, Math.Max(e.Position.Y - ground, 0f), radius, column, energy, slot,
                 LampTable.Threshold(group, seed, key), LampTable.KeepHash(seed, key), 0,
                 LampTable.GlowFor(radius, energy)));
         }
         var lamps = byKey.Values.ToList();
-        report = new(lamps.Count, unknownChannel, notLamp, unknownColor, duplicates);
+        report = new(lamps.Count, unknownChannel, notLamp, duplicates);
         return lamps;
     }
 }

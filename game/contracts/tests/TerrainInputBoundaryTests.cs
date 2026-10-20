@@ -84,7 +84,7 @@ public sealed class TerrainInputBoundaryTests
             catch (JsonException) { rejected = true; }
             AssertThat(rejected).OverrideFailureMessage("Expected JsonException.").IsTrue();
         }
-        // The local converter must not change the repository-wide compatibility options.
+        // The local converter must not change the repository-wide case-insensitive property option.
         if (!ContractJson.Options.PropertyNameCaseInsensitive) throw new InvalidOperationException("Global JSON options were changed.");
     }
 

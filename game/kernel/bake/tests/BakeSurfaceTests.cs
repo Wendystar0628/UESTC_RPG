@@ -58,7 +58,7 @@ public sealed class BakeSurfaceTests
             var empty = builder.BuildOutput(key, context, new([], []), new(0, 0), level, _ => { });
             var emptyBounds = level == LodLevel.L4 ? mapBounds : new Box3(new(0, -28, 0), new(64, 2000, 64));
             if (empty.Bounds != emptyBounds || empty.Surfaces.Count != 0)
-                throw new InvalidOperationException("Empty tile fallback bounds changed.");
+                throw new InvalidOperationException("Empty tile bounds changed.");
         }
     }
 

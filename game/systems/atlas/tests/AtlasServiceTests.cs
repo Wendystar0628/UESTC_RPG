@@ -272,7 +272,7 @@ public sealed class AtlasServiceTests
             .OrderBy(id => id.Value, StringComparer.Ordinal).SequenceEqual(expectedIndexFeatures)).OverrideFailureMessage("Regression did not assemble the complete campus and registered interior index.").IsTrue();
         AssertThat(built.Entries.Where(entry => entry.Open).Select(entry => entry.Feature)
             .OrderBy(id => id.Value, StringComparer.Ordinal).SequenceEqual(open.OrderBy(id => id.Value, StringComparer.Ordinal))).OverrideFailureMessage("Closed registration changed the open interior feature set.").IsTrue();
-        AssertThat(doors.Count(item => !authoredDoorIds.Contains(item.Door.Id)) > 1).OverrideFailureMessage("Regression no longer exercises multiple generated fallback entrances.").IsTrue();
+        AssertThat(doors.Count(item => !authoredDoorIds.Contains(item.Door.Id)) > 1).OverrideFailureMessage("Regression no longer exercises multiple generated closed entrances.").IsTrue();
         AssertThat(doors.Select(item => item.Door.Id).Distinct(StringComparer.Ordinal).Count() == doors.Length).OverrideFailureMessage("Interior provider reused an entrance ID across different building features.").IsTrue();
         var atlas = new AtlasService(NewCamera(), new Observer(), new TestRuleset());
         atlas.LoadMap(new TestMapContext(descriptor, world),
@@ -288,7 +288,7 @@ public sealed class AtlasServiceTests
                 && marker.Teleport?.Stand?.Feet == item.Door.Outside).OverrideFailureMessage("A real interior marker lost its owner, center, or outside landing.").IsTrue();
         }
         foreach (var id in authoredDoorIds)
-            AssertThat(atlas.Find(new("door:" + id)) is not null).OverrideFailureMessage("An authored entrance ID changed during fallback repair.").IsTrue();
+            AssertThat(atlas.Find(new("door:" + id)) is not null).OverrideFailureMessage("An authored entrance ID changed during closed-entrance generation.").IsTrue();
         foreach (var door in closed)
         {
             var feature = new FeatureId(door.GetProperty("featureId").GetString()!);

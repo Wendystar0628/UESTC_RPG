@@ -8,7 +8,7 @@ using GdUnit4;
 namespace Campus.Tests;
 
 [TestSuite]
-public sealed class WorldInputCompatibilityTests
+public sealed class WorldInputConversionTests
 {
     [TestCase]
     [TestCategory(TestReason.Contract)]
@@ -23,7 +23,7 @@ public sealed class WorldInputCompatibilityTests
     [TestCategory(TestReason.Contract)]
     public void WorldIntegerStoreysAcceptDecimalAndExponentEncoding()
     {
-        using var stream = typeof(WorldInputCompatibilityTests).Assembly.GetManifestResourceStream("Campus.Tests.world-levels-integer.json")!;
+        using var stream = typeof(WorldInputConversionTests).Assembly.GetManifestResourceStream("Campus.Tests.world-levels-integer.json")!;
         using var reader = new StreamReader(stream);
         var json = reader.ReadToEnd();
         foreach (var encoded in new[] { "2.0", "2e0" })
@@ -37,7 +37,7 @@ public sealed class WorldInputCompatibilityTests
                          "boundary":{"outer":[[0,0],[10,0],[10,10],[0,10]],"holes":[]}}
                         """),
                     ["world/fixture.json"] = bytes
-                });
+                }, new() { Terrain = FlatTerrain.Default });
             if (data.World.Features.Single().Value.Storeys != 2)
                 throw new InvalidOperationException("Integral world storey encoding was lost.");
         }

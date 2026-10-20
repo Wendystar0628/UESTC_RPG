@@ -32,7 +32,6 @@ public static class WorldInputFiles
             ValidateRelative(outskirts);
             files[outskirts] = Required(source, outskirts);
         }
-        ReadJsonDirectory(source, "overlay/", files);
         return new ReadOnlyDictionary<string, ReadOnlyMemory<byte>>(files);
     }
 

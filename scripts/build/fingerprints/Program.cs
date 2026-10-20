@@ -46,15 +46,15 @@ internal static class Program
         var output = Path.GetFullPath(options.Output);
         if (File.Exists(output) && File.ReadAllBytes(output).AsSpan().SequenceEqual(bytes)) return;
         Directory.CreateDirectory(Path.GetDirectoryName(output)!);
-        var temporary = output + ".tmp";
+        var stagingPath = output + ".tmp";
         try
         {
-            await File.WriteAllBytesAsync(temporary, bytes);
-            File.Move(temporary, output, overwrite: true);
+            await File.WriteAllBytesAsync(stagingPath, bytes);
+            File.Move(stagingPath, output, overwrite: true);
         }
         finally
         {
-            if (File.Exists(temporary)) File.Delete(temporary);
+            if (File.Exists(stagingPath)) File.Delete(stagingPath);
         }
         Console.WriteLine($"Code fingerprints: wrote {manifest.Roots.Count} roots and {manifest.Registrations.Count} registration owners to {output}.");
     }

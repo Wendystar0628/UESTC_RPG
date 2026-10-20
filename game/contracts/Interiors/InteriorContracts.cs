@@ -6,7 +6,7 @@ namespace Campus.Contracts;
 
 // 室内（照 WLD-INTERIORS：IInteriorProvider 按层提供；只开放 WLD-INTERIORS 的开放清单，
 // 以后加一栋楼只在 interiors.json 加一项、再注册一个提供者或给通用提供者加一条楼型配置，不改契约，也不改流式架构，WLD-INTERIORS）
-public enum InteriorDetail : byte { Proxy = 0, Shell = 1, Full = 2 }   // I0 兜底、IS 只留壳、IF 完整
+public enum InteriorDetail : byte { Proxy = 0, Shell = 1, Full = 2 }   // I0 楼板与内皮体块、IS 只留壳、IF 完整（SYS-VIEW-MEDIUM）
 public enum ZoneKind : byte { Room, Corridor, Stair, Atrium, Lobby, Wc, Service, Gallery }
 public enum PortalKind : byte { Door, StairOpening, AtriumOpening, Window, Sealed, ElevatorStop }   // Sealed：封口
 public sealed record StoreyInfo(int Index, float FloorY, float Height, IReadOnlyList<Vector2> Footprint);

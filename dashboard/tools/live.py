@@ -1,7 +1,7 @@
 """实时采集：谁在跑（会话、子代理）、在做的工作、后台脚本、构建锁、临时工作树、钩子，写 data/auto/live.js，作者观察台的总览、施工、模型页读它；
 另每 60 s 写一次脚本目录 data/auto/catalog.js（所有脚本与开头说明，脚本页读它）；协作文件、文档或 git 一变就立即重跑 collect.py。
 用法：python -I -X utf8 dashboard/tools/live.py          写一次
-      python -I -X utf8 dashboard/tools/live.py --loop   每 15 s 写一次；已有一个在跑就直接退出；输入一变就跑一次 collect.py，不变时每 2 分钟兜底
+      python -I -X utf8 dashboard/tools/live.py --loop   每 15 s 写一次；已有一个在跑就直接退出；输入一变就跑一次 collect.py，无变化时每 2 分钟周期刷新
 入口只组装：数据都经监控库（.collab/tools/monitor/，与巡逻共用，只读）的 view/ 取，不在这里另写读法；本机协作数据（.collab）经它读，
 这是仓库代码引用 .collab 的唯一例外。每一块独立取，失败的那块留空并把原因记进 errors，不拖垮其余。形状见 dashboard/README.md §2.1。
 改了 live.py 或 monitor 以后要重启 --loop（它把代码读进内存，只有项目采集那部分会自动重新加载）。
@@ -20,7 +20,7 @@ from monitor.check import build as gate_check  # noqa: E402
 from monitor.view import catalog, hooks, people, running, trees, work  # noqa: E402
 
 EVERY_S = 15            # --loop 的间隔
-COLLECT_EVERY_S = 120   # 项目采集（collect.py）的兜底间隔；输入一变就立即采（见 inputs_stamp）
+COLLECT_INTERVAL_S = 120   # 项目采集（collect.py）的周期刷新间隔；输入一变就立即采（见 inputs_stamp）
 CATALOG_EVERY_S = 60    # 脚本目录（catalog.js）的间隔，扫描很轻
 LOCK_FILE = U.REPO + "/output/.locks/live.lock"
 
@@ -161,7 +161,7 @@ def main():
             print(f"{U.iso(t)} 写 live.js 失败：{type(e).__name__} {e}", file=sys.stderr)
         # 项目数据也由这个循环定时刷新：没有 Claude 会话（巡逻停了）时观察台照样更新
         stamp = inputs_stamp()
-        if stamp != last_stamp or t - last_collect >= COLLECT_EVERY_S:
+        if stamp != last_stamp or t - last_collect >= COLLECT_INTERVAL_S:
             last_collect, last_stamp = t, stamp
             try:
                 reload_monitor()

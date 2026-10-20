@@ -19,7 +19,7 @@ public static class WindowCardCatalog
     public static WindowCardSpec Get(WindowCardKind kind) => kind switch
     {
         >= WindowCardKind.Classroom and <= WindowCardKind.Lobby => All[(int)kind - 1],
-        WindowCardKind.None => throw new ArgumentOutOfRangeException(nameof(kind), "Card 0 is 'unspecified'; the shader picks Office."),
+        WindowCardKind.None => throw new ArgumentOutOfRangeException(nameof(kind), "Card 0 does not name a window-card row."),
         _ => throw new ArgumentOutOfRangeException(nameof(kind)),
     };
 

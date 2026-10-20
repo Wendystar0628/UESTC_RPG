@@ -67,8 +67,6 @@ public partial class SaveNode : Node, IBootParticipant
 
     private async Task<byte[]?> CaptureThumbnail()
     {
-        // A loading-covered save must never hide its cover for a thumbnail readback.
-        if (_loading?.Active == true) return null;
         try
         {
             var bytes = await RuntimeKernel.Get<IGameCapture>().CaptureThumbnailAsync(_exit.Token);
@@ -87,7 +85,7 @@ public partial class SaveNode : Node, IBootParticipant
             RuntimeKernel.Get<IMapService>().Current,
             Body: mode == ViewMode.Walk ? RuntimeKernel.Get<IWalkController>() : null), cancellation).ConfigureAwait(false);
         var body = identity.Body;
-        Task<ModeSwitchResult>? fallback = null;
+        Task<ModeSwitchResult>? flyModeSwitch = null;
         var arrival = await InSaveFrame(() =>
         {
             if (body?.PlacementArrival is { } placement && ReferenceEquals(_mapRuntime.Arrival, placement)) return placement;
@@ -107,9 +105,9 @@ public partial class SaveNode : Node, IBootParticipant
             }
             if (body?.ExitRequested == true)
             {
-                fallback ??= RuntimeKernel.Get<IViewControl>().SetMode(ViewMode.Fly, ModeSwitchVia.Ui);
-                if (!fallback.IsCompleted) return false;
-                if (fallback.GetAwaiter().GetResult() == ModeSwitchResult.Refused)
+                flyModeSwitch ??= RuntimeKernel.Get<IViewControl>().SetMode(ViewMode.Fly, ModeSwitchVia.Ui);
+                if (!flyModeSwitch.IsCompleted) return false;
+                if (flyModeSwitch.GetAwaiter().GetResult() == ModeSwitchResult.Refused)
                     throw new InvalidOperationException("Invalid walking save could not return to fly mode.");
                 body = null;
                 mode = ViewMode.Fly;

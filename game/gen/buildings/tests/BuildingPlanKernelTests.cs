@@ -82,7 +82,7 @@ public sealed class BuildingPlanKernelTests
 
     /// <summary>
     /// Shared-boundary restoration (WP-08) gives a building part a detailed physical outline with extra collinear vertices and keeps
-    /// the legacy outline as its facade outline. The generic building's footprint, bay grid and window block must follow the facade
+    /// the physical outline as its facade outline. The generic building's footprint, bay grid and window block must follow the facade
     /// outline, vertex for vertex, so a part with a facade outline lays out exactly the windows the old data gave it.
     /// </summary>
     [TestCase, TestCategory(TestReason.Contract)]

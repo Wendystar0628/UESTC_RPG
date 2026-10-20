@@ -164,7 +164,7 @@ public sealed class LirenSite : ZoneSite
     public override void DescribeWindows(BuildContext ctx, ICollection<WindowFacadeDecl> facades, ICollection<WindowDecl> windows)
     {
         var f = Rings(ctx.World);
-        var centre = PlanPolygons.Centroid(f.Bridge, meanIfDegenerate: true);
+        var centre = PlanPolygons.Centroid(f.Bridge);
         var y = ctx.World.Terrain.HeightAt(centre.X, centre.Y);
         foreach (var (ring, style, dress, lift, numbering) in Blocks(f))
             GridFacade.Declare(facades, ring, y + lift, style, dress, numbering, WindowNumbers.Required(ctx, numbering.Feature, numbering.Key));
@@ -182,7 +182,7 @@ public sealed class LirenSite : ZoneSite
     public override void Build(SiteBuilder b)
     {
         var f = Rings(b.Context.World);
-        var y = b.Ground(PlanPolygons.Centroid(f.Bridge, meanIfDegenerate: true));
+        var y = b.Ground(PlanPolygons.Centroid(f.Bridge));
         // Piers, the east link and the bridge storey over the void; the soffit slab under it reads the void's ceiling at three storeys.
         foreach (var (ring, style, dress, lift, numbering) in Blocks(f))
             if (b.Includes(BlockRange(ring, style))) GridFacade.Build(b, ring, y + lift, style, dress, numbering);
@@ -217,7 +217,7 @@ public sealed class LirenSite : ZoneSite
     public override void Collide(SiteColliders c)
     {
         var f = Rings(c.Context.World);
-        var centre = PlanPolygons.Centroid(f.Bridge, meanIfDegenerate: true);
+        var centre = PlanPolygons.Centroid(f.Bridge);
         var y = c.Ground(centre.X, centre.Y);
         foreach (var pier in f.Piers)
             if (c.Includes(BlockRange(pier, f.PierStyle))) GridFacade.Collide(c, pier, y, f.PierStyle, e => Dress(e, f.PierNeighbours), FootMat.Concrete);

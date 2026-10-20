@@ -79,12 +79,13 @@ internal static class WorldFeatureKinds
 internal sealed class WorldInteriorIndex : IInteriorIndex
 {
     private readonly IReadOnlyDictionary<FeatureId, InteriorIndexEntry> _entries;
-    public WorldInteriorIndex(IEnumerable<WorldFeature> features, string? catalog = null, ITerrain? terrain = null)
+    public WorldInteriorIndex(IEnumerable<WorldFeature> features, ITerrain terrain, string? catalog = null)
     {
+        ArgumentNullException.ThrowIfNull(terrain);
         var entries = new Dictionary<FeatureId, InteriorIndexEntry>();
         foreach (var feature in features.OrderBy(f => f.Id.Value, StringComparer.Ordinal))
         {
-            var storeys = ClosedBuildingStoreys.ClosedBuilding(feature, terrain ?? FlatTerrain.Default);
+            var storeys = ClosedBuildingStoreys.ClosedBuilding(feature, terrain);
             if (storeys.Count > 0) entries.Add(feature.Id, new(feature.Id, storeys, [], false, null, [], []));
         }
         if (catalog is not null)
@@ -175,7 +176,6 @@ internal sealed class WorldSpatialIndex : ISpatialIndex
     private readonly ITerrain _terrain;
     private readonly WorldWalkRegions _walkRegions;
     private readonly Dictionary<FeatureId, PolygonRings[]> _buildingRings = [];
-    private readonly Dictionary<FeatureId, PolygonRings[]> _waterRings = [];
     public WorldSpatialIndex(IReadOnlyDictionary<FeatureId, WorldFeature> features, PolygonRings boundary,
         WorldNetwork network, IInteriorIndex interiors, ITerrain terrain)
     {
@@ -184,7 +184,6 @@ internal sealed class WorldSpatialIndex : ISpatialIndex
         foreach (var feature in features.Values.OrderBy(f => f.Id.Value, StringComparer.Ordinal))
         {
             _buildingRings.Add(feature.Id, WorldFeatureKinds.Parts(feature, "building").SelectMany(part => WorldFeatureGeometry.PolygonsOf(part.Geometry)).ToArray());
-            _waterRings.Add(feature.Id, WorldFeatureKinds.Parts(feature, "water").SelectMany(part => WorldFeatureGeometry.PolygonsOf(part.Geometry)).ToArray());
         }
         foreach (var feature in features.Values.OrderBy(f => f.Id.Value, StringComparer.Ordinal))
             for (var z = Cell(feature.Bounds.Min.Z); z <= Cell(feature.Bounds.Max.Z); z++)
@@ -244,12 +243,6 @@ internal sealed class WorldSpatialIndex : ISpatialIndex
                     var distance = PlanRings.DistanceToRing(point, ring.Outer);
                     for (var hole = 0; hole < ring.Holes.Count; hole++) distance = MathF.Min(distance, PlanRings.DistanceToRing(point, ring.Holes[hole]));
                     return new(MediumKind.Interior, id, storey.Index, distance);
-                }
-                if (_terrain is FlatTerrain && p.Y < ground && p.Y >= ground - 6)
-                {
-                    var waters = _waterRings[id];
-                    for (var ringIndex = 0; ringIndex < waters.Length; ringIndex++)
-                        if (Contains(waters[ringIndex], point)) return new(MediumKind.Underwater, id, Depth: ground - p.Y);
                 }
             }
         }

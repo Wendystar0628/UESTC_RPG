@@ -197,7 +197,7 @@ public static class BakeSurfacePacker
 
     // The untyped null branch otherwise selects the array-to-ROM conversion and produces HasValue=true, Length=0.
     private static ReadOnlyMemory<T>? Borrow<T>(T[]? values) => values is null ? (ReadOnlyMemory<T>?)null : new ReadOnlyMemory<T>(values);
-    private static T Value<T>(ReadOnlyMemory<T>? values, int index, T fallback) => values is { } memory ? memory.Span[index] : fallback;
+    private static T Value<T>(ReadOnlyMemory<T>? values, int index, T absentValue) => values is { } memory ? memory.Span[index] : absentValue;
     private readonly record struct LodInput(float Error, ReadOnlyMemory<int> Index);
     private sealed record PackInput(ToonRef Material, ShaderId? Shader, ReadOnlyMemory<float> Position,
         ReadOnlyMemory<float> Normal, ReadOnlyMemory<int> Index, ReadOnlyMemory<float>? Ao,

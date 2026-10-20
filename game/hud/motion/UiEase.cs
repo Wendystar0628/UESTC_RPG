@@ -6,7 +6,7 @@ namespace Campus.Hud.Motion;
 /// </summary>
 public static class UiEase
 {
-    /// <summary>三次贝塞尔 (0,0)-(x1,y1)-(x2,y2)-(1,1) 在 x = t 处的 y；牛顿迭代加二分兜底。</summary>
+    /// <summary>三次贝塞尔 (0,0)-(x1,y1)-(x2,y2)-(1,1) 在 x = t 处的 y；先牛顿迭代，再用区间二分求根。</summary>
     public static float Bezier(float t, float x1, float y1, float x2, float y2)
     {
         if (t <= 0) return 0;

@@ -87,7 +87,7 @@ public sealed class ColorScript
 /// current colours, row 1 lamp pools, rows 2–3 interior shade/lit, rows 4–63 seasonal rows along the season axis
 /// (256 samples), rows 64–67 the same four rows for colour IDs 256–511 (bank 1). Colour IDs reach a texel only through
 /// <see cref="PaletteLayout.FrameTexel"/>, season samples only through the seasonal rows, so the first 256×64 bytes are the
-/// legacy layout byte for byte. Bytes are sRGB. Seasonal rows refresh one family per call to <see cref="StepSeasonal"/>
+/// bank-0 layout byte for byte. Bytes are sRGB. Seasonal rows refresh one family per call to <see cref="StepSeasonal"/>
 /// unless a full refresh is requested.
 /// </summary>
 public sealed class PaletteComposer

@@ -278,7 +278,7 @@ public sealed class PavementTests
                 [{"id":"fixture:tree-a","position":[-30,0,-20]},{"id":"fixture:tree-b","position":[-30,0,0]},{"id":"fixture:tree-on-plaza","position":[-30,0,45]}]
                 """ + "}"
         };
-        return WorldModelLoader.Load(new("qingshuihe"), files).World;
+        return WorldModelLoader.Load(new("qingshuihe"), files, new() { Terrain = FlatTerrain.Default }).World;
     }
 
     internal static IWorldModel World() => Authored.Value;

@@ -9,7 +9,7 @@ using S = Campus.Gen.Maps.Qingshuihe.Core.CoreStyle;
 namespace Campus.Gen.Maps.Qingshuihe.Core.Library;
 
 /// <summary>
-/// The library roof (MAP-QSH-CORE): the octagonal low-cone skylight over the atrium (port of the legacy
+/// The library roof (MAP-QSH-CORE): the octagonal low-cone skylight over the atrium (port of the original
 /// libraryRoof.ts: eight facets to a central ring, main ribs on the facet seams, a triangular steel grid between them,
 /// clear glass), the curved metal roofs alternating with the flat ring roof, and the raised mechanical box north of
 /// the skylight. Octagon vertices sit half-way between the face normals of <see cref="LibraryPlan.FaceAngle"/>.
@@ -53,14 +53,14 @@ public static class LibraryRoof
         {
             var a = Vertex(plan, k, r, y0);
             var b = Vertex(plan, (k + 1) % 8, r, y0);
-            var n = VectorMath.Unit(Vector3.Cross(b - a, apex - a), Vector3.UnitY, 1e-8);
+            var n = VectorMath.Unit(Vector3.Cross(b - a, apex - a), 1e-8);
             if (n.Y < 0) n = -n;
             glass.Triangle(a, b, apex, n, column, 5, 0);
             // Main rib on the seam at vertex k: normal halfway between the two facets it joins.
             var prev = Vertex(plan, (k + 7) % 8, r, y0);
-            var np = VectorMath.Unit(Vector3.Cross(a - prev, apex - prev), Vector3.UnitY, 1e-8);
+            var np = VectorMath.Unit(Vector3.Cross(a - prev, apex - prev), 1e-8);
             if (np.Y < 0) np = -np;
-            Beam(steel, metal, a, Vector3.Lerp(a, apex, 1f - hub), VectorMath.Unit(n + np, Vector3.UnitY, 1e-8), LibraryStyle.RibWidth, LibraryStyle.RibDepth);
+            Beam(steel, metal, a, Vector3.Lerp(a, apex, 1f - hub), VectorMath.Unit(n + np, 1e-8), LibraryStyle.RibWidth, LibraryStyle.RibDepth);
             Beam(steel, metal, a, b, n, LibraryStyle.EdgeBeam, LibraryStyle.RibDepth * 0.8f);
             if (rows < 2) continue;
             // Triangular grid: G(j, i) is point i of row j, row 0 on the base, rows − j + 1 points per row. Bars on the
@@ -97,7 +97,7 @@ public static class LibraryRoof
         {
             Vector3 ia = Vertex(plan, k, r0, y0), ib = Vertex(plan, (k + 1) % 8, r0, y0), oa = Vertex(plan, k, r1, y0), ob = Vertex(plan, (k + 1) % 8, r1, y0);
             var up = new Vector3(0, y1 - y0, 0);
-            var outward = VectorMath.Unit((oa + ob) * 0.5f - new Vector3(plan.Centre.X, y0, plan.Centre.Y), Vector3.UnitY, 1e-8) with { Y = 0 };
+            var outward = VectorMath.Unit((oa + ob) * 0.5f - new Vector3(plan.Centre.X, y0, plan.Centre.Y), 1e-8) with { Y = 0 };
             mesh.Quad(trim, oa, ob, ob + up, oa + up, outward);
             mesh.Quad(trim, ia, ib, ib + up, ia + up, -outward);
             mesh.Quad(trim, ia + up, ib + up, ob + up, oa + up, Vector3.UnitY);
@@ -110,9 +110,9 @@ public static class LibraryRoof
         var t = b - a;
         if (t.LengthSquared() < 1e-6f) return;
         t = Vector3.Normalize(t);
-        var side = VectorMath.Unit(Vector3.Cross(up, t), Vector3.UnitY, 1e-8) * (width * 0.5f);
-        var lift = VectorMath.Unit(up, Vector3.UnitY, 1e-8) * depth;
-        var sink = VectorMath.Unit(up, Vector3.UnitY, 1e-8) * -0.02f;
+        var side = VectorMath.Unit(Vector3.Cross(up, t), 1e-8) * (width * 0.5f);
+        var lift = VectorMath.Unit(up, 1e-8) * depth;
+        var sink = VectorMath.Unit(up, 1e-8) * -0.02f;
         mesh.Quad(paint, a - side + lift, a + side + lift, b + side + lift, b - side + lift, up);
         mesh.Quad(paint, a + side + sink, b + side + sink, b + side + lift, a + side + lift, side);
         mesh.Quad(paint, a - side + sink, b - side + sink, b - side + lift, a - side + lift, -side);
@@ -128,7 +128,7 @@ public static class LibraryRoof
         {
             Vector2 a = ring[k], b = ring[(k + 1) % ring.Count];
             var mid = (a + b) * 0.5f - c;
-            var n = VectorMath.Unit(new Vector3(mid.X, 0, mid.Y), Vector3.UnitY, 1e-8);
+            var n = VectorMath.Unit(new Vector3(mid.X, 0, mid.Y), 1e-8);
             mesh.Quad(paint, new(a.X, y0, a.Y), new(b.X, y0, b.Y), new(b.X, y1, b.Y), new(a.X, y1, a.Y), n);
         }
         for (var k = 1; k + 1 < ring.Count; k++)

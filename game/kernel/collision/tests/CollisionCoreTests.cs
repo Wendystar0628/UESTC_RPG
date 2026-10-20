@@ -29,7 +29,7 @@ public sealed class CollisionCoreTests
     {
         AssertThat(Engine.GetMainLoop() is SceneTree && OS.GetThreadCallerId() == OS.GetMainThreadId()).OverrideFailureMessage("G15 core requires the Godot test runner on the main thread.").IsTrue();
         var tree = (SceneTree)Engine.GetMainLoop();
-        using var cache = new TemporaryCache();
+        using var cache = new CacheDirectory();
         var options = new BakeOptions(cache.Path, Live: false, Strict: false, Background: false, MapOnly: false, LogicalProcessors: 3, SeedOverride: null);
         using var terrain = new TerrainCacheService(options);
         var registry = Campus.Kernel.Registry.Kernel.Services;
@@ -172,7 +172,7 @@ public sealed class CollisionCoreTests
         return character;
     }
 
-    private sealed class TemporaryCache : IDisposable
+    private sealed class CacheDirectory : IDisposable
     {
         public string Path { get; } = System.IO.Path.Combine(System.IO.Path.GetTempPath(),
             "uestc-rpg-g15-cache-" + Guid.NewGuid().ToString("N"));

@@ -113,7 +113,7 @@ public sealed class InteriorEntranceHeightReferenceTests
         var again = InteriorAssembly.BuildConfigured(context, bindings, catalog);
         AssertThat(ReferenceEquals(again.Entries.Single().Storeys, entry.Storeys) &&
             again.Entries.Single().Entrances.Count == 1).OverrideFailureMessage("Existing closed index duplicated doors or replaced storeys.").IsTrue();
-        AssertThat(InteriorAssembly.Build(catalog, context, context.InteriorProviders).Entries.Single().Entrances.Count == 1).OverrideFailureMessage("Legacy Interior assembly Build omitted the closed register.").IsTrue();
+        AssertThat(InteriorAssembly.Build(catalog, context, context.InteriorProviders).Entries.Single().Entrances.Count == 1).OverrideFailureMessage("Interior assembly Build omitted the closed register.").IsTrue();
         var terrain = new ProbeTerrain();
         using var pad = JsonDocument.Parse(ClosedCatalog(extra: ",\"heightRef\":\"pad\",\"headY\":2"));
         var resolved = InteriorEntranceJson.ParseClosedEntrances(pad.RootElement, terrain)[Feature].Single();
@@ -124,10 +124,10 @@ public sealed class InteriorEntranceHeightReferenceTests
     [TestCategory(TestReason.Contract)]
     public void ClosedRegisterDoesNotChangeOpenProviderCallsOrNavigation()
     {
-        var fallback = new InteriorProviderScopeTests.FixtureBoxInterior();
-        var sourceProviders = new Dictionary<string, IInteriorProvider> { [Provider] = fallback };
+        var provider = new InteriorProviderScopeTests.FixtureBoxInterior();
+        var sourceProviders = new Dictionary<string, IInteriorProvider> { [Provider] = provider };
         var bindings = InteriorAssembly.Configure(Bytes(null), sourceProviders);
-        var probe = new CountingProvider(fallback);
+        var probe = new CountingProvider(provider);
         var context = Context(new Dictionary<string, IInteriorProvider> { [Provider] = probe });
         var closedFeature = new FeatureId("fixture:closed");
         var source = context.World.Features[Feature];

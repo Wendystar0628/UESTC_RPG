@@ -227,7 +227,7 @@ public sealed class MapServiceTests
         var travel = f.Service.Travel(new(f.A, Cause: MapTravelCause.Boot));
         f.Until(() => travel.Done.IsCompleted);
         AssertThat(travel.Done.Result == MapTravelResult.Failed && f.Poses.LegalizeCalls == 1 &&
-            f.Runtime.Arrivals == 0 && f.Camera.Pose == original).OverrideFailureMessage("Non-finite legalization output was applied or replaced by an invented fallback position.").IsTrue();
+            f.Runtime.Arrivals == 0 && f.Camera.Pose == original).OverrideFailureMessage("Non-finite legalization output was applied or replaced by an invented position.").IsTrue();
     }
 
     [TestCase]

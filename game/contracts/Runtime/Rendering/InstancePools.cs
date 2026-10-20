@@ -78,7 +78,7 @@ public sealed record InstancePoolStatistics(
     int MeshTriangles,
     bool CastShadows)
 {
-    /// <summary>Null denotes an explicitly global or legacy pool.</summary>
+    /// <summary>Null denotes a pool without map scope.</summary>
     public MapId? Map { get; init; }
     public int SurfaceCount { get; init; } = 1;
     public GeometryInstance3D.ShadowCastingSetting Shadows { get; init; }

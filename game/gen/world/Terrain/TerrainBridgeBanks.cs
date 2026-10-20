@@ -153,7 +153,7 @@ internal sealed class TerrainBridgeBanks
         if (cores.Length > 0)
         {
             // A fixed core is never averaged away. Equal-height cores retain the first
-            // ordinal road's derivative; incompatible shared-core heights remain an error.
+            // ordinal road's derivative; conflicting shared-core heights remain an error.
             roadTop = cores[0].Top;
             if (cores.Any(value => Math.Abs(value.Top.Height - roadTop.Height) > TerrainMath.HeightTolerance))
                 throw new WorldDataException(string.Join(",", cores.Select(value => _sourceFile?.Invoke(value.Road) ?? "world").Distinct(StringComparer.Ordinal)), string.Join(",", cores.Select(value => value.Road.Value)),

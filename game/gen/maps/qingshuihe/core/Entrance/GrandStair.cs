@@ -359,7 +359,7 @@ public sealed class GrandStair : ZoneSite
             if ((b - a).LengthSquared() < 1e-8f) continue;
             var d = Vector2.Normalize(b - a);
             var n = new Vector2(d.Y, -d.X) * sign;
-            var normal = VectorMath.Unit(Out3 * n.X + Vector3.UnitY * n.Y, Vector3.UnitY, 1e-8);
+            var normal = VectorMath.Unit(Out3 * n.X + Vector3.UnitY * n.Y, 1e-8);
             mesh.Quad(paint, At(a.X, w0, a.Y), At(b.X, w0, b.Y), At(b.X, w1, b.Y), At(a.X, w1, a.Y), normal);
         }
         var polygon = PolygonTriangulator.Triangulate(new PolygonRings([.. ring]));

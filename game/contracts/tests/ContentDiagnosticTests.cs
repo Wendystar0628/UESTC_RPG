@@ -45,20 +45,20 @@ public sealed class ContentDiagnosticTests
     [TestCategory(TestReason.Contract)]
     public void DiagnosticsAreAnOptionalSidecarAndDoNotChangeContentSerialization()
     {
-        var legacy = new ContentOutput([], []);
-        var (meshes, parts, emitters, occupancy) = legacy;
+        var plain = new ContentOutput([], []);
+        var (meshes, parts, emitters, occupancy) = plain;
         AssertThat(meshes.Count == 0 && parts.Count == 0 && emitters is null && occupancy is null &&
-            legacy.Diagnostics.Count == 0 && ContentOutput.Empty.Diagnostics.Count == 0).OverrideFailureMessage("Existing constructors, deconstruction and default diagnostics must remain compatible.").IsTrue();
-        var enriched = legacy with
+            plain.Diagnostics.Count == 0 && ContentOutput.Empty.Diagnostics.Count == 0).OverrideFailureMessage("Existing constructors, deconstruction and default diagnostics must retain their declared defaults.").IsTrue();
+        var enriched = plain with
         {
             Diagnostics = [new(DiagnosticLevel.Warning, "anchor.invalid", "Placement was skipped.")]
         };
-        AssertThat(enriched.Diagnostics.Count == 1 && legacy.Diagnostics.Count == 0).OverrideFailureMessage("Diagnostics must remain available to the in-memory collector.").IsTrue();
-        var plainBytes = JsonSerializer.SerializeToUtf8Bytes(legacy, ContractJson.Options);
+        AssertThat(enriched.Diagnostics.Count == 1 && plain.Diagnostics.Count == 0).OverrideFailureMessage("Diagnostics must remain available to the in-memory collector.").IsTrue();
+        var plainBytes = JsonSerializer.SerializeToUtf8Bytes(plain, ContractJson.Options);
         var enrichedBytes = JsonSerializer.SerializeToUtf8Bytes(enriched, ContractJson.Options);
         AssertThat(plainBytes.AsSpan().SequenceEqual(enrichedBytes)).OverrideFailureMessage("Diagnostics must not enter ContentOutput serialization or its byte-derived hashes.").IsTrue();
         var restored = JsonSerializer.Deserialize<ContentOutput>("""{"meshes":[],"parts":[]}""", ContractJson.Options)
-            ?? throw new JsonException("Null legacy content fixture.");
-        AssertThat(restored.Diagnostics.Count == 0).OverrideFailureMessage("Legacy content without diagnostics must deserialize with an empty sidecar.").IsTrue();
+            ?? throw new JsonException("Null content fixture without diagnostics.");
+        AssertThat(restored.Diagnostics.Count == 0).OverrideFailureMessage("Content without diagnostics must deserialize with an empty sidecar.").IsTrue();
     }
 }

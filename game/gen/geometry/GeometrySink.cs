@@ -73,13 +73,13 @@ public sealed class GeometrySink(PaletteCatalog? palette = null, bool withUv2 = 
             throw new ArgumentException("Specialised surface channels cannot enter an ordinary geometry stream.", nameof(mesh));
         var transform = at;
         var vertices = new GeometryVertex[mesh.Position.Length / 3];
-        ushort? fallback = palette is null ? null : ColorIndex(mesh.Material.Spec.Lit);
+        ushort? materialColor = palette is null ? null : ColorIndex(mesh.Material.Spec.Lit);
         for (var i = 0; i < vertices.Length; i++)
             vertices[i] = new(Vector3.Transform(new(mesh.Position[3 * i], mesh.Position[3 * i + 1], mesh.Position[3 * i + 2]), transform),
                 Vector3.TransformNormal(new(mesh.Normal[3 * i], mesh.Normal[3 * i + 1], mesh.Normal[3 * i + 2]), transform),
                 mesh.Uv is { } uv ? new Vector2(uv[2 * i], uv[2 * i + 1]) : null,
                 mesh.Uv2 is { } uv2 ? new Vector2(uv2[2 * i], uv2[2 * i + 1]) : null,
-                mesh.Ao?[i], mesh.ColorIndices?[i] ?? fallback, mesh.Flags?[i], mesh.Reserved?[i], mesh.DecalBaseColorIndices?[i]);
+                mesh.Ao?[i], mesh.ColorIndices?[i] ?? materialColor, mesh.Flags?[i], mesh.Reserved?[i], mesh.DecalBaseColorIndices?[i]);
         Polygon(mesh.Material.Spec, vertices, mesh.Index, mesh.Uv2 is not null);
     }
 
@@ -178,7 +178,7 @@ public sealed class GeometrySink(PaletteCatalog? palette = null, bool withUv2 = 
         if (stream.Index.Count == 0) return;
         var vertices = stream.Vertices;
         var mesh = new GeometryBundle(new(stream.Spec), vertices.SelectMany(v => new[] { v.Position.X, v.Position.Y, v.Position.Z }).ToArray(),
-            vertices.SelectMany(v => { var n = VectorMath.Unit(v.Normal, Vector3.UnitY, 1e-8f); return new[] { n.X, n.Y, n.Z }; }).ToArray(),
+            vertices.SelectMany(v => { var n = VectorMath.Unit(v.Normal, 1e-8f); return new[] { n.X, n.Y, n.Z }; }).ToArray(),
             [.. stream.Index], stream.Has(GeometryChannels.Ao) ? vertices.Select(v => v.Ao ?? 1f).ToArray() : null,
             stream.Has(GeometryChannels.Uv) ? vertices.SelectMany(v => new[] { v.Uv?.X ?? 0f, v.Uv?.Y ?? 0f }).ToArray() : null,
             stream.Has(GeometryChannels.Uv2) ? vertices.SelectMany(v => new[] { v.Uv2?.X ?? 0f, v.Uv2?.Y ?? 0f }).ToArray() : null)

@@ -74,7 +74,7 @@ public sealed class VegetationBuildTests
         AssertThat(near.All(o => o.Meshes.Count == 0 && o.Parts.Count == 0)).OverrideFailureMessage("vegetation must hand over instance streams only").IsTrue();
         Records(near, trees, VegPool.Far);
 
-        // Every geometry level, including whole-map fallback, covers the same far trees.
+        // Every geometry level, including whole-map coverage, covers the same far trees.
         foreach (var lod in new[] { LodLevel.L1, LodLevel.L2, LodLevel.L3, LodLevel.L4 })
             Records(Far[lod].Value, trees, VegPool.Far);
         AssertThat(module.Build(ctx, new(100000, 100000), LodLevel.L0) == ContentOutput.Empty).OverrideFailureMessage("an empty cell must stay empty").IsTrue();

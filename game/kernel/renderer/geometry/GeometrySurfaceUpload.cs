@@ -200,7 +200,7 @@ public static class GeometrySurfaceUpload
 
     private static ReadOnlyMemory<T>? Memory<T>(T[]? values) => values is null
         ? (ReadOnlyMemory<T>?)null : new ReadOnlyMemory<T>(values);
-    private static T At<T>(ReadOnlyMemory<T>? values, int index, T fallback) => values is { } memory ? memory.Span[index] : fallback;
+    private static T At<T>(ReadOnlyMemory<T>? values, int index, T absentValue) => values is { } memory ? memory.Span[index] : absentValue;
     private static Vector2[] Pairs(ReadOnlySpan<float> values)
     {
         var result = new Vector2[values.Length / 2];

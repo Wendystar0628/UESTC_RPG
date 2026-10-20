@@ -167,7 +167,7 @@ internal sealed class StreetSite
     }
 
     /// <summary>
-    /// What a point lands on, for an anchor's fallback (SYS-ATLAS data still under review): a building's or water's outline,
+    /// What an anchor point lands on (SYS-ATLAS-TRAVEL): a building's or water's outline,
     /// a carriageway (a vehicle road's surface or paved area), else open ground. Checked in that order.
     /// </summary>
     public Landing LandingAt(Vector2 p)

@@ -36,13 +36,13 @@ public sealed class SurfacePatternContractTests
     [TestCategory(TestReason.Contract)]
     public void NullProfilePreservesExistingUv2AndOptionalChannels()
     {
-        var legacy = Surface() with { Material = new(Plain), Uv = null, Uv2 = [65537, -1, 2, 9, 1, 8, 4, 7, 1, 6, 1, 5] };
-        legacy.ValidateVertexData();
+        var unpatterned = Surface() with { Material = new(Plain), Uv = null, Uv2 = [65537, -1, 2, 9, 1, 8, 4, 7, 1, 6, 1, 5] };
+        unpatterned.ValidateVertexData();
         var json = JsonSerializer.Serialize(Plain, ContractJson.Options);
-        AssertThat(!json.Contains("surfacePattern", StringComparison.Ordinal)).OverrideFailureMessage("Null profile changed legacy JSON shape.").IsTrue();
-        AssertThat(JsonSerializer.Deserialize<ToonSpec>(json, ContractJson.Options)!.SurfacePattern is null).OverrideFailureMessage("Old material input must not invent a pattern.").IsTrue();
-        var frozen = GeometryBuffer.Freeze(legacy);
-        AssertThat(frozen.Uv is null && frozen.Uv2!.Value.Span.SequenceEqual(legacy.Uv2!)).OverrideFailureMessage("Absent profile must not reinterpret existing window/water-like UV2 values.").IsTrue();
+        AssertThat(!json.Contains("surfacePattern", StringComparison.Ordinal)).OverrideFailureMessage("Null profile changed unpatterned JSON shape.").IsTrue();
+        AssertThat(JsonSerializer.Deserialize<ToonSpec>(json, ContractJson.Options)!.SurfacePattern is null).OverrideFailureMessage("Material input without a profile must not invent a pattern.").IsTrue();
+        var frozen = GeometryBuffer.Freeze(unpatterned);
+        AssertThat(frozen.Uv is null && frozen.Uv2!.Value.Span.SequenceEqual(unpatterned.Uv2!)).OverrideFailureMessage("Absent profile must not reinterpret existing window/water-like UV2 values.").IsTrue();
     }
 
     [TestCase]

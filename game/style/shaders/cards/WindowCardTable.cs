@@ -4,14 +4,14 @@ namespace Campus.Style.Shaders.Cards;
 /// Packs <see cref="WindowCardCatalog"/> into the window_cards global data texture that toon_glass reads by the VF-B
 /// window-type byte (WLD-INTERIORS); ToonLibrary uploads the global table. Static data:
 /// uploaded once, independent of map, time, season and weather. RGBA32F, <see cref="Width"/> × <see cref="Rows"/>,
-/// row = card kind, row 0 unused (unspecified glass falls back to Office in the shader):
+/// row = registered card kind; row 0 is unused because unencoded glass does not request a card:
 /// <list type="bullet">
 /// <item>x0 (cumulative weight of 3 m, cumulative weight of 3 + 4.5 m, partition chance, side wall offset m)</item>
 /// <item>x1 (near furniture, near plane depth m, far furniture, side walls)</item>
 /// <item>x2 (screen, screen chance, coverage min, coverage max)</item>
 /// <item>x3 (day luminance, night gain, ceiling, accent)</item>
 /// <item>x4 (sill drop m, ceiling rise m, cool share, layer base)</item>
-/// <item>x5 (layer count, 0, 0, <see cref="Tag"/>): a default or unset texture never carries the tag</item>
+/// <item>x5 (layer count, 0, 0, <see cref="Tag"/>): identifies authored card rows</item>
 /// </list>
 /// Enum fields are stored as their numeric values; the build generates shader constants from WindowCardKinds.cs.
 /// </summary>
@@ -31,7 +31,7 @@ public static class WindowCardTable
         foreach (var c in cards)
         {
             var row = (int)c.Kind;
-            if (row is <= 0 or >= Rows) throw new ArgumentOutOfRangeException(nameof(cards), $"Card kind {c.Kind} has no table row.");
+            if (row <= 0 || row > (int)WindowCardKind.Lobby) throw new ArgumentOutOfRangeException(nameof(cards), $"Card kind {c.Kind} has no registered table row.");
             if (seen[row]) throw new ArgumentException($"Card kind {c.Kind} appears twice.", nameof(cards));
             seen[row] = true;
             Validate(c);
@@ -43,6 +43,8 @@ public static class WindowCardTable
             Put(data, row, 4, c.SillDrop, c.CeilingRise, c.CoolShare, c.LayerBase);
             Put(data, row, 5, c.LayerCount, 0f, 0f, Tag);
         }
+        foreach (var card in WindowCardCatalog.All)
+            if (!seen[(int)card.Kind]) throw new ArgumentException($"Missing window-card row {card.Kind}.", nameof(cards));
         return data;
     }
 

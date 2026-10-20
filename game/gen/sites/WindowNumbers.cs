@@ -13,13 +13,13 @@ namespace Campus.Gen.Sites;
 public static class WindowNumbers
 {
     /// <summary>
-    /// The grid's allocation, or null when the context carries no snapshot: legacy and no-window contexts, where the glass stays
-    /// unnumbered (WindowNumberingContracts). A snapshot of another map, or one without this grid, is an error.
+    /// The grid's allocation from the explicitly supplied snapshot (ENG-ARCH).
+    /// A snapshot of another map, or one without this grid, is an error.
     /// </summary>
     public static WindowAllocation? Allocation(BuildContext ctx, FeatureId feature, string key)
     {
         ArgumentNullException.ThrowIfNull(ctx);
-        if (ctx.WindowNumbering is not { } snapshot) return null;
+        var snapshot = ctx.WindowNumbering ?? throw new InvalidOperationException("An explicit window-numbering snapshot is required.");
         if (snapshot.Map != ctx.Map.Id)
             throw new InvalidOperationException($"Window numbering for map {snapshot.Map.Value} handed to a build of {ctx.Map.Id.Value}.");
         return snapshot.Get(feature, key);

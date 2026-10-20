@@ -58,9 +58,14 @@ public sealed class TimePlaza : ZoneSite, ILightMetadataSource
         if (!world.Features.TryGetValue(CoreIds.TimePlaza, out var plaza)) return null;
         var (centre, radius) = Plan(plaza);
         // The axis points from the plaza centre to the library's grand stair (MAP-QSH-CORE).
-        var axis = world.Features.TryGetValue(CoreIds.LibraryStair, out var stair)
-            ? Vector2.Normalize(PlanPolygons.Centroid(WorldFeatureGeometry.PolygonsOf(stair.Parts.Count > 0 ? stair.Parts[0].Geometry : stair.Geometry).Select(r => r.Outer)) - centre)
-            : Angles.Heading(PlazaStyle.AxisBearingFallback);
+        if (!world.Features.TryGetValue(CoreIds.LibraryStair, out var stair))
+            throw new Campus.Gen.World.WorldDataException("world/core.json", plaza.Id.Value,
+                $"Required axis target '{CoreIds.LibraryStair.Value}' is missing (MAP-QSH-CORE).");
+        var direction = PlanPolygons.Centroid(WorldFeatureGeometry.PolygonsOf(stair.Parts.Count > 0 ? stair.Parts[0].Geometry : stair.Geometry).Select(r => r.Outer)) - centre;
+        if (!VectorMath.Finite(direction) || direction == Vector2.Zero)
+            throw new Campus.Gen.World.WorldDataException("world/core.json", plaza.Id.Value,
+                $"Axis target '{stair.Id.Value}' must differ from the plaza centre (MAP-QSH-CORE).");
+        var axis = Vector2.Normalize(direction);
         var benches = world.Features.Values
             .Where(f => f.Id.Value.StartsWith(CoreIds.PlazaBenchPrefix, StringComparison.Ordinal) && f.Geometry is PointGeometry)
             .OrderBy(f => f.Id.Value, StringComparer.Ordinal)
@@ -340,7 +345,7 @@ public sealed class TimePlaza : ZoneSite, ILightMetadataSource
                 var radial = new Vector3(MathF.Cos(mid), 0, MathF.Sin(mid));
                 var p0 = P(i, q0); var p1 = P(i, q1);
                 // Outward normal of a counterclockwise section edge (dr, dy) is (dy, −dr).
-                var normal = VectorMath.Unit(radial * (p1.Y - p0.Y) - Vector3.UnitY * (q1.R - q0.R), Vector3.UnitY, 1e-8);
+                var normal = VectorMath.Unit(radial * (p1.Y - p0.Y) - Vector3.UnitY * (q1.R - q0.R), 1e-8);
                 mesh.Quad(paint, p0, p1, P(i + 1, q1), P(i + 1, q0), normal);
             }
         foreach (var (i, sign) in new[] { (0, -1f), (n - 1, 1f) })
@@ -435,7 +440,7 @@ public sealed class TimePlaza : ZoneSite, ILightMetadataSource
                     return new(p.X, y, p.Y);
                 }
                 var a = V(i, y0, w0); var b = V(i + 1, y0, w0); var c = V(i + 1, y1, w1); var d = V(i, y1, w1);
-                var n = VectorMath.Unit(Vector3.Cross(b - a, d - a), Vector3.UnitY, 1e-8);
+                var n = VectorMath.Unit(Vector3.Cross(b - a, d - a), 1e-8);
                 mesh.Quad(paint, a, b, c, d, n);
                 mesh.Quad(paint, a, b, c, d, -n);
             }

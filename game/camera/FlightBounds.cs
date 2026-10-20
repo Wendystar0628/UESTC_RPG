@@ -20,9 +20,9 @@ public sealed class FlightBounds(IMapContext context, PolygonRings boundary)
         Vector2 xz = new(p.X, p.Z);
         float campusDistance = RingDistance(xz, boundary, out Vector2 campusNormal);
         var outskirts = context.World.Outskirts;
-        float front = outskirts?.FrontDistance(p.X, p.Z) ?? Math.Max(0, campusDistance - limits.FallbackMargin);
+        float front = outskirts?.FrontDistance(p.X, p.Z) ?? Math.Max(0, campusDistance - limits.CampusExpansionMargin);
         Vector2 frontNormal = campusNormal;
-        float signedFront = campusDistance - limits.FallbackMargin;
+        float signedFront = campusDistance - limits.CampusExpansionMargin;
         if (outskirts is not null && outskirts.FrontLine.Count >= 3)
             signedFront = RingDistance(xz, outskirts.FrontLine, out frontNormal);
         else if (outskirts is not null && front > 0)

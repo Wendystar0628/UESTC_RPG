@@ -1,3 +1,4 @@
+using Campus.Gen.World;
 using Campus.Gen.Sites;
 using Campus.Gen.Geometry;
 using System.Numerics;
@@ -71,7 +72,14 @@ public sealed class LibraryShell : ZoneSite, IWindowedPiece
         foreach (var road in world.Network.Roads.OrderBy(r => r.Id.Value, StringComparer.Ordinal))
         {
             if (WorldProps.TryText(road.Props, "highway") is not ("footway" or "path" or "pedestrian")) continue;
-            var half = (road.Width > 0f ? road.Width : LibraryStyle.CafeWalkFallbackWidth) * 0.5f;
+            if (!float.IsFinite(road.Width) || road.Width <= 0f)
+            {
+                var owner = world.Features.Values.FirstOrDefault(feature => feature.Id == road.Id || feature.Parts.Any(part => part.SourceId.Contains(':') &&
+                    WorldFeatureIds.FromPart(road.Id.Value.Split(':')[0], part.SourceId).Source == road.Id.Value));
+                throw new WorldDataException(owner?.Zone is { } zone ? $"world/{zone.Value}.json" : "world", road.Id.Value,
+                    "Required positive width is missing for the cafe's pedestrian walk target (MAP-QSH-CORE).");
+            }
+            var half = road.Width * 0.5f;
             var line = road.Line.Points;
             if (line.Count < 2) continue;
             var projection = PlanLines.Project(line, p);

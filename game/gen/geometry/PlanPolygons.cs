@@ -10,28 +10,18 @@ public static class PlanPolygons
     private static readonly GeometryFactory Factory = new();
 
 
-    /// <summary>Area centroid; callers that allow a degenerate ring can retain the scalar-float vertex-mean fallback.</summary>
-    public static Vector2 Centroid(IReadOnlyList<Vector2> ring, bool meanIfDegenerate = false)
-    {
-        Vector2? fallback = null;
-        if (meanIfDegenerate)
-        {
-            float x = 0, z = 0;
-            foreach (var point in ring) { x += point.X; z += point.Y; }
-            fallback = new(x / ring.Count, z / ring.Count);
-        }
-        return Centroid(new PolygonRings(ring), fallback);
-    }
+    /// <summary>Area centroid of a nondegenerate ring.</summary>
+    public static Vector2 Centroid(IReadOnlyList<Vector2> ring) => Centroid(new PolygonRings(ring));
 
-    public static Vector2 Centroid(PolygonRings polygon, Vector2? degenerateFallback = null)
+    public static Vector2 Centroid(PolygonRings polygon)
     {
         var area = Math.Abs(PlanRings.SignedArea(polygon.Outer)) - polygon.Holes.Sum(hole => Math.Abs(PlanRings.SignedArea(hole)));
         if (area < 0.000001)
-            return degenerateFallback ?? throw new ArgumentException("Degenerate polygon.", nameof(polygon));
+            throw new ArgumentException("Degenerate polygon.", nameof(polygon));
         var shape = Factory.CreatePolygon(Factory.CreateLinearRing(ClosedCoordinates(polygon.Outer)),
             polygon.Holes.Select(hole => Factory.CreateLinearRing(ClosedCoordinates(hole))).ToArray());
         if (shape.Area < 0.000001)
-            return degenerateFallback ?? throw new ArgumentException("Degenerate polygon.", nameof(polygon));
+            throw new ArgumentException("Degenerate polygon.", nameof(polygon));
         var center = shape.Centroid;
         return new((float)center.X, (float)center.Y);
     }

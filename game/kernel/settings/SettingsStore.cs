@@ -10,7 +10,7 @@ namespace Campus.Kernel.Settings;
 /// <summary>
 /// The only reader/writer of the profile-level settings file user://settings.json (SYS-SAVE-FORMAT).
 /// Top-level sections: ui, input, graphics, audio. Each system reads and writes only its own section.
-/// JSON parsing never creates objects from file content; wrong-typed or out-of-range keys fall back to
+/// JSON parsing never creates objects from file content; wrong-typed or out-of-range keys use
 /// the caller's default, unknown keys are ignored, missing sections read as defaults.
 /// </summary>
 [KernelService(typeof(ISettingsStore))]
@@ -132,7 +132,7 @@ public sealed class SettingsStore : ISettingsStore
     }
 }
 
-/// <summary>One object inside settings.json. Readers take the caller's fallback and range; writers set a single primitive.</summary>
+/// <summary>One object inside settings.json. Readers take the caller's default value and range; writers set a single primitive.</summary>
 public sealed class SettingsSection : ISettingsSection
 {
     private readonly SettingsStore _store;
@@ -150,19 +150,19 @@ public sealed class SettingsSection : ISettingsSection
 
     public IReadOnlyList<string> Keys() => _store.Read<IReadOnlyList<string>>(_path, node => node?.Select(pair => pair.Key).ToArray() ?? []);
 
-    public bool Bool(string key, bool fallback) =>
+    public bool Bool(string key, bool defaultValue) =>
         _store.Read(_path, node => node?[key] is JsonValue value && value.GetValueKind() is JsonValueKind.True or JsonValueKind.False
-            ? value.GetValue<bool>() : fallback);
+            ? value.GetValue<bool>() : defaultValue);
 
-    public int Int(string key, int fallback, int min, int max) =>
+    public int Int(string key, int defaultValue, int min, int max) =>
         _store.Read(_path, node =>
         {
-            if (!TryNumber(node, key, out var number) || number != Math.Floor(number) || number < min || number > max) return fallback;
+            if (!TryNumber(node, key, out var number) || number != Math.Floor(number) || number < min || number > max) return defaultValue;
             return (int)number;
         });
 
-    public float Float(string key, float fallback, float min, float max) =>
-        _store.Read(_path, node => TryNumber(node, key, out var number) && number >= min && number <= max ? (float)number : fallback);
+    public float Float(string key, float defaultValue, float min, float max) =>
+        _store.Read(_path, node => TryNumber(node, key, out var number) && number >= min && number <= max ? (float)number : defaultValue);
 
     /// <summary>The value when it is a finite number, so the caller can apply its own validity rule.</summary>
     public bool TryFloat(string key, out float value)

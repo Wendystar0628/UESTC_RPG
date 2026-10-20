@@ -38,7 +38,7 @@ public sealed class BakeCacheStore
     private volatile bool _initialized;
     private bool _packagedAvailable;
     private volatile bool _stopped;
-    private static long _temporarySequence;
+    private static long _stagingSequence;
 
     public BakeCacheStore(string root, string? version = null, string? packagedRoot = null)
     {
@@ -341,19 +341,19 @@ public sealed class BakeCacheStore
 
     public static void AtomicWrite(string path, byte[] bytes, CancellationToken cancellationToken = default)
     {
-        var temporary = path + "." + System.Environment.ProcessId + "." + Interlocked.Increment(ref _temporarySequence) + ".tmp";
+        var stagingPath = path + "." + System.Environment.ProcessId + "." + Interlocked.Increment(ref _stagingSequence) + ".tmp";
         try
         {
             cancellationToken.ThrowIfCancellationRequested();
-            using (var file = new FileStream(temporary, FileMode.Create, FileAccess.Write, FileShare.None))
+            using (var file = new FileStream(stagingPath, FileMode.Create, FileAccess.Write, FileShare.None))
             {
                 file.Write(bytes);
                 file.Flush(flushToDisk: true);
             }
             cancellationToken.ThrowIfCancellationRequested();
-            File.Move(temporary, path, overwrite: true);
+            File.Move(stagingPath, path, overwrite: true);
         }
-        finally { if (File.Exists(temporary)) File.Delete(temporary); }
+        finally { if (File.Exists(stagingPath)) File.Delete(stagingPath); }
     }
 
     private static string FilePath(string root, BakeKey key)

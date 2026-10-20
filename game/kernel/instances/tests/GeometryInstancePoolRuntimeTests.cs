@@ -177,12 +177,12 @@ public sealed class GeometryInstancePoolRuntimeTests
     [RequireGodotRuntime]
     public void CatalogPoolsUploadBothBanksWithoutReinterpretingTheirFrozenVersion()
     {
-        var legacy = new PaletteRegistry([
+        var bank0 = new PaletteRegistry([
             new(new("fixture.first.lit"), new(64), new N.Vector3(.5f), "fixture", false, PaletteRole.Lit),
             new(new("fixture.first.shade"), new(65), new N.Vector3(.5f), "fixture", false, PaletteRole.Shade),
             new(new("fixture.edge.lit"), new(254), new N.Vector3(.5f), "fixture", false, PaletteRole.Lit),
             new(new("fixture.edge.shade"), new(255), new N.Vector3(.5f), "fixture", false, PaletteRole.Shade)]);
-        var catalog = new PaletteCatalog(legacy, new PaletteEntry[] {
+        var catalog = new PaletteCatalog(bank0, new PaletteEntry[] {
             new(new("fixture.high.lit"), new(256), new(.5f), "fixture", false, PaletteRole.Lit),
             new(new("fixture.high.shade"), new(257), new(.5f), "fixture", false, PaletteRole.Shade),
             new(new("fixture.last.lit"), new(510), new(.5f), "fixture", false, PaletteRole.Lit),

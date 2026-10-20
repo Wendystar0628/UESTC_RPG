@@ -13,17 +13,17 @@ public sealed class PartLodCatalogTests
     [TestCategory(TestReason.Contract)]
     public void ExistingGenericDefinitionsExposeSortedReadOnlyCapabilitiesWithoutNewMembers()
     {
-        var legacy = new LegacyPart(LodLevel.L4, LodLevel.L0, LodLevel.L2);
-        IPartDef<int> typed = legacy;
+        var definition = new DefaultCapabilitiesPart(LodLevel.L4, LodLevel.L0, LodLevel.L2);
+        IPartDef<int> typed = definition;
         IPartDef untyped = typed;
         var levels = untyped.SupportedLods;
         AssertThat(levels.SequenceEqual([LodLevel.L0, LodLevel.L2, LodLevel.L4])).OverrideFailureMessage("Default bridge lost numeric order or keys.").IsTrue();
         AssertThrown(() => ((IList<LodLevel>)levels)[0] = LodLevel.L1).IsInstanceOf<NotSupportedException>();
-        legacy.Builders.Clear();
-        legacy.Builders.Add(LodLevel.L1, _ => throw new InvalidOperationException("A capability query ran a builder."));
+        definition.Builders.Clear();
+        definition.Builders.Add(LodLevel.L1, _ => throw new InvalidOperationException("A capability query ran a builder."));
         AssertThat(levels.SequenceEqual([LodLevel.L0, LodLevel.L2, LodLevel.L4])).OverrideFailureMessage("A returned default-interface list aliases mutable Lods.Keys.").IsTrue();
         AssertThat(untyped.SupportedLods.SequenceEqual([LodLevel.L1])).OverrideFailureMessage("The generic bridge did not read this object's current builders.").IsTrue();
-        legacy.Builders.Add((LodLevel)255, _ => throw new InvalidOperationException("A capability query ran a builder."));
+        definition.Builders.Add((LodLevel)255, _ => throw new InvalidOperationException("A capability query ran a builder."));
         AssertThrown(() => { _ = untyped.SupportedLods; }).IsInstanceOf<ArgumentOutOfRangeException>();
     }
 
@@ -31,7 +31,7 @@ public sealed class PartLodCatalogTests
     [TestCategory(TestReason.Contract)]
     public void CatalogRejectsUnknownIdsDuplicatesAndInvalidDefinitions()
     {
-        var valid = new LegacyPart(LodLevel.L0);
+        var valid = new DefaultCapabilitiesPart(LodLevel.L0);
         var catalog = new PartLodCatalog([Pair("known", valid)]);
         AssertThat(catalog.Supports(new("known"), LodLevel.L0) && !catalog.Supports(new("known"), LodLevel.L2)).OverrideFailureMessage("Known supported/unsupported LOD query changed.").IsTrue();
         AssertThrown(() => catalog.Supports(new("missing"), LodLevel.L0)).IsInstanceOf<KeyNotFoundException>();
@@ -54,18 +54,18 @@ public sealed class PartLodCatalogTests
     [TestCategory(TestReason.Contract)]
     public void CatalogCapturesOnceAndIsIndependentOfInputOrderAndLaterMutation()
     {
-        var legacy = new LegacyPart(LodLevel.L2, LodLevel.L0);
+        var definition = new DefaultCapabilitiesPart(LodLevel.L2, LodLevel.L0);
         var mutable = new[] { LodLevel.L4, LodLevel.L1 };
         var raw = new RawDefinition(mutable);
-        var source = new List<KeyValuePair<PartId, IPartDef>> { Pair("z", raw), Pair("a", legacy) };
+        var source = new List<KeyValuePair<PartId, IPartDef>> { Pair("z", raw), Pair("a", definition) };
         var frozen = new PartLodCatalog(source);
         AssertThat(raw.Reads == 1).OverrideFailureMessage("Catalog queried the definition more than once during capture.").IsTrue();
-        var reversed = new PartLodCatalog([Pair("a", new LegacyPart(LodLevel.L0, LodLevel.L2)),
+        var reversed = new PartLodCatalog([Pair("a", new DefaultCapabilitiesPart(LodLevel.L0, LodLevel.L2)),
             Pair("z", new RawDefinition([LodLevel.L1, LodLevel.L4]))]);
         foreach (var id in new[] { new PartId("a"), new PartId("z") })
             AssertThat(frozen.SupportedLods(id).SequenceEqual(reversed.SupportedLods(id))).OverrideFailureMessage("Insertion order changed the catalog.").IsTrue();
         source.Clear();
-        legacy.Builders.Clear();
+        definition.Builders.Clear();
         mutable[0] = LodLevel.L0;
         raw.ThrowOnRead = true;
         AssertThat(frozen.SupportedLods(new("a")).SequenceEqual([LodLevel.L0, LodLevel.L2])).OverrideFailureMessage("Frozen catalog still reads a definition's Lods.").IsTrue();
@@ -77,7 +77,7 @@ public sealed class PartLodCatalogTests
     private static KeyValuePair<PartId, IPartDef> Pair(string id, IPartDef definition) => new(new(id), definition);
 
     // Implements only the existing generic contract's abstract members: no SupportedLods member.
-    private sealed class LegacyPart(params LodLevel[] levels) : IPartDef<int>
+    private sealed class DefaultCapabilitiesPart(params LodLevel[] levels) : IPartDef<int>
     {
         public Dictionary<LodLevel, Func<int, PartGeometry>> Builders { get; } = levels.ToDictionary(level => level,
             level => (Func<int, PartGeometry>)(parameter => throw new InvalidOperationException("A capability query ran a builder.")));
