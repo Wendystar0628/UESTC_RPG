@@ -12,10 +12,15 @@ public sealed class WindowCardTableTests
 {
     [TestCase]
     [TestCategory(TestReason.Contract)]
-    public void TableHasTheDeclaredDimensions()
+    public void EveryVfbCardTypeAndTheLobbyHaveARow()
     {
         var data = WindowCardTable.Pack();
         AssertThat(data.Length == WindowCardTable.Width * WindowCardTable.Rows * 4).OverrideFailureMessage("Table size changed.").IsTrue();
+        for (var kind = 1; kind <= (int)WindowCardKind.Lobby; kind++)
+            AssertThat(Enumerable.Range(0, WindowCardTable.Width).SelectMany(x => Texel(data, kind, x)).Any(value => value != 0f)).OverrideFailureMessage($"Card {(WindowCardKind)kind} has no table data.").IsTrue();
+        AssertThat(Enumerable.Range(0, WindowCardTable.Width).SelectMany(x => Texel(data, 0, x)).All(value => value == 0f)).OverrideFailureMessage("Row 0 (unspecified glass) must stay empty.").IsTrue();
+        for (var row = (int)WindowCardKind.Lobby + 1; row < WindowCardTable.Rows; row++)
+            AssertThat(Enumerable.Range(0, WindowCardTable.Width).SelectMany(x => Texel(data, row, x)).All(value => value == 0f)).OverrideFailureMessage($"Unused row {row} carries table data.").IsTrue();
     }
 
     [TestCase]

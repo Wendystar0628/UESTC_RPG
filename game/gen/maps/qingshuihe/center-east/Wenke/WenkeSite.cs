@@ -208,6 +208,8 @@ public sealed class WenkeSite : ZoneSite
         var detail = b.Detail;
         var chamfer = detail == SiteDetail.Full ? K.BandChamfer : 0f;
         var n = block.Storeys;
+        var allocation = block.Windowed ? WindowNumbers.Allocation(b.Context, new(CenterEastIds.Wenke.Entity), block.Key) : (WindowAllocation?)null;
+        if (allocation is { } fit) WindowNumbers.Fit(block.Columns, block.Storeys, new(CenterEastIds.Wenke.Entity), block.Key, fit);
         for (var k = 0; k < n; k++)
         {
             var outline = block.Outlines[k];
@@ -224,7 +226,7 @@ public sealed class WenkeSite : ZoneSite
                     if (detail != SiteDetail.Mass) Rails(b, plan, block, k, y);
                 }
             }
-            Glass(b, block, k, y);
+            Glass(b, block, k, y, allocation);
             // A dark core just inside the glass line, so the seams where blocks meet never show through the shell.
             b.Add(Contour.Slab(PlanOffsets.MitreOffset(outline, -K.CoreInset, closed: true, limit: 2.5f), y + GlassBottom(k) - 0.05f, y + GlassTop(k) + 0.05f, L.DarkFrame, 0f, caps: false), Matrix4x4.Identity);
         }
@@ -269,7 +271,7 @@ public sealed class WenkeSite : ZoneSite
     }
 
     /// <summary>Storey k's ribbon: numbered glass, yellow-green panels, and mullions at L0.</summary>
-    private static void Glass(SiteBuilder b, Block block, int k, float y)
+    private static void Glass(SiteBuilder b, Block block, int k, float y, WindowAllocation? allocation)
     {
         float y0 = y + GlassBottom(k), y1 = y + GlassTop(k), h = y1 - y0;
         var cells = block.Rows[k];
@@ -289,8 +291,7 @@ public sealed class WenkeSite : ZoneSite
                     }
                     break;
                 case CellKind.Window:
-                    var numbers = WindowNumbers.Allocation(b.Context, new(CenterEastIds.Wenke.Entity), block.Key);
-                    WindowNumbers.Fit(block.Columns, block.Storeys, new(CenterEastIds.Wenke.Entity), block.Key, numbers);
+                    var numbers = allocation!.Value;
                     for (var i = 0; i + 1 < cell.Path.Length; i++)
                     {
                         Vector2 p = cell.Path[i], q = cell.Path[i + 1];
