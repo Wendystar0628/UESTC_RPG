@@ -105,7 +105,7 @@ internal sealed class BakeContentSource
 
     internal BuildContext GetPreparedBuildContext(object producer)
     {
-        if (!_active() || _preparedBuildContexts is null || !_preparedBuildContexts.TryGetValue(producer, out var context))
+        if (_preparedBuildContexts is null || !_preparedBuildContexts.TryGetValue(producer, out var context))
             throw new InvalidOperationException("The producer has no frozen build context.");
         return context;
     }

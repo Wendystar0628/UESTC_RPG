@@ -62,7 +62,7 @@ internal sealed class BakeInputIdentity
         if (key.Detail.StartsWith("C/", StringComparison.Ordinal))
         {
             var area = BakeInputFingerprint.Area(context, key);
-            var moduleTiles = map.Directory.GetPreparedModuleTilesAsync(map.Context).GetAwaiter().GetResult();
+            var moduleTiles = map.Directory.PreparedTiles;
             foreach (var (id, tiles) in moduleTiles.Modules)
                 if (tiles.Any(tile =>
                     (tile.X + 1) * TileGrid.BaseEdge >= area.Min.X && tile.X * TileGrid.BaseEdge <= area.Max.X &&

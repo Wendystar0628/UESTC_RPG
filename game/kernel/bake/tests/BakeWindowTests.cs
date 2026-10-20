@@ -190,6 +190,7 @@ public sealed class BakeWindowTests
         var map = new BakeService.MapBuild(mapContext, modules, new Dictionary<string, BakeService.Interior>(), [], null!, claimLookup, data,
             context.GlobalInputs, context.GroundMaskContributors, partLods, context.Catalog, null, null);
         AssertThrown(() => map.Content.GetPreparedContext(mapContext, "source")).IsInstanceOf<InvalidOperationException>();
+        AssertThrown(() => map.Content.GetPreparedBuildContext(source)).IsInstanceOf<InvalidOperationException>();
         AssertThrown(() => map.Directory.GetPreparedModuleTilesAsync(mapContext)).IsInstanceOf<InvalidOperationException>();
         if (reads != 0) throw new InvalidOperationException("Reading an unprepared context triggered lazy IO.");
         var loaded = data.Value;
@@ -257,6 +258,13 @@ public sealed class BakeWindowTests
             catalogue.Any(key => { var request = BakeRequestKeys.Parse(key); return !tree.Contains(new(request.Tile, request.Level)); }) ||
             BakeCatalog.Keys(indexed, mapOnly: true).Any())
             throw new InvalidOperationException("Full baking duplicated or re-enumerated modules, escaped the stream tree, or ignored map-only mode.");
+        indexed.Active = false;
+        if (!ReferenceEquals(indexed.Content.GetPreparedBuildContext(counted), counted.Context) ||
+            !ReferenceEquals(indexed.Directory.PreparedTiles, tiles) || !BakeCatalog.Keys(indexed, mapOnly: false).SequenceEqual(catalogue))
+            throw new InvalidOperationException("Retiring a map revoked its already frozen content or catalog directory.");
+        AssertThrown(() => indexed.Content.GetPreparedBuildContext(new object())).IsInstanceOf<InvalidOperationException>();
+        AssertThrown(() => indexed.Content.GetPreparedContext(mapContext, "counted")).IsInstanceOf<InvalidOperationException>();
+        AssertThrown(() => indexed.Directory.GetPreparedModuleTilesAsync(mapContext)).IsInstanceOf<InvalidOperationException>();
         indexed.Lifetime.Cancel();
         AssertThrown(() => BakeCatalog.Keys(indexed, mapOnly: false).ToArray()).IsInstanceOf<OperationCanceledException>();
         var warning = new BuildDiagnostic(DiagnosticLevel.Warning, "fixture.warning", "fixture warning");
@@ -269,11 +277,12 @@ public sealed class BakeWindowTests
         catch (ArgumentException) { }
         if (!map.Diagnostics.IsEmpty) throw new InvalidOperationException("Invalid diagnostics partially entered the collection.");
         map.Active = false;
-        indexed.Active = false;
-        AssertThrown(() => indexed.Directory.GetPreparedModuleTilesAsync(mapContext)).IsInstanceOf<InvalidOperationException>();
         map.Collect("source", "geometry", [warning]);
         if (!map.Diagnostics.IsEmpty) throw new InvalidOperationException("Unloaded map accepted late diagnostics.");
         AssertThrown(() => map.Content.GetPreparedContext(mapContext, "source")).IsInstanceOf<InvalidOperationException>();
+        AssertThrown(() => map.Content.GetModule<Source>(mapContext, "source")).IsInstanceOf<InvalidOperationException>();
+        AssertThrown(() => map.Content.FreezeInputs(map.Content.Metadata!)).IsInstanceOf<InvalidOperationException>();
+        AssertThrown(() => map.Content.CompletePreparation(map.Content.Metadata!)).IsInstanceOf<InvalidOperationException>();
         if (reads != 1) throw new InvalidOperationException("Context lookup re-ran preparation.");
         if (source.TileCalls != 1 || provider.TileCalls != 1)
             throw new InvalidOperationException("Prepared lookups re-enumerated the cold-resident directory.");
@@ -282,6 +291,22 @@ public sealed class BakeWindowTests
     [TestCase]
     [TestCategory(TestReason.Contract)]
     public void UnloadedBuildStopsBeforeEncodingAndNeverPublishesItsOldHandle()
+        => AssertUnloadedBuild(beforeContext: false, collision: false, fault: false);
+
+    [TestCase]
+    [TestCategory(TestReason.Regression)]
+    public void AcceptedBuildRetainsItsFrozenContextAndCollisionDirectoryAfterRetirement()
+    {
+        AssertUnloadedBuild(beforeContext: true, collision: false, fault: false);
+        AssertUnloadedBuild(beforeContext: false, collision: true, fault: false);
+    }
+
+    [TestCase]
+    [TestCategory(TestReason.Regression)]
+    public void RealProducerFaultAfterRetirementReachesEveryDrain()
+        => AssertUnloadedBuild(beforeContext: false, collision: false, fault: true);
+
+    private static void AssertUnloadedBuild(bool beforeContext, bool collision, bool fault)
     {
         var context = Context();
         var snapshot = BuildInputSnapshot.Freeze(context.SourceInputs, "fixture");
@@ -289,7 +314,8 @@ public sealed class BakeWindowTests
         using var started = new ManualResetEventSlim();
         using var failed = new ManualResetEventSlim();
         using var release = new ManualResetEventSlim();
-        var producer = new PausedProducer(started, release);
+        var original = fault ? new InvalidDataException("Producer failed after map cancellation.") : null;
+        var producer = new PausedProducer(started, release, collision) { Failure = original };
         var map = new BakeService.MapBuild(mapContext, new Dictionary<string, ContentModuleInput>(),
             new Dictionary<string, BakeService.Interior>(), [new("cancelled", producer, "code")], null!,
             (_, _) => null, new(() => new(9, snapshot.Entries, [],
@@ -301,6 +327,9 @@ public sealed class BakeWindowTests
         map.Directory.Prepare(metadata);
         map.Content.CompletePreparation(metadata);
         map.Directory.PublishDirectory();
+        // Arm after preparation; CanBuild precedes the frozen context read, Inputs precedes the collision directory read.
+        producer.PauseBeforeContext = beforeContext;
+        producer.PauseBeforeDirectory = collision;
         var cache = Path.Combine(Path.GetTempPath(), "uestc-rpg-bake-cancel-" + Guid.NewGuid().ToString("N"));
         var options = new BakeOptions(cache, true, false, false, false, 1, null);
         using var terrain = BakeInputFixture.CreateTerrainCache(options);
@@ -309,7 +338,8 @@ public sealed class BakeWindowTests
         Exception? stopped = null;
         try
         {
-            var key = BakeRequestKeys.Tile(context.Map.Id, "cancelled", default, LodLevel.L0);
+            var key = collision ? BakeRequestKeys.Collision(context.Map.Id, "cancelled", default) :
+                BakeRequestKeys.Tile(context.Map.Id, "cancelled", default, LodLevel.L0);
             var handle = queue.Ensure(map.Work, key, BakePriority.Background, () =>
             {
                 try { return products.Build(map, key); }
@@ -319,12 +349,27 @@ public sealed class BakeWindowTests
             if (signal == 1) ExceptionDispatchInfo.Capture(stopped!).Throw();
             if (signal == WaitHandle.WaitTimeout) throw new TimeoutException("Build did not start.");
             map.Active = false;
-            queue.ForgetMap(map.Work);
+            var firstDrain = queue.ForgetMap(map.Work);
+            var secondDrain = queue.ForgetMap(map.Work);
             map.Lifetime.Cancel();
+            AssertThrown(() => queue.Ensure(map.Work, key, BakePriority.Background, () => new object()))
+                .IsInstanceOf<OperationCanceledException>();
+            if (firstDrain.IsCompleted || secondDrain.IsCompleted || handle.Done.IsCompleted)
+                throw new InvalidOperationException("A drain completed before the accepted producer stopped.");
             release.Set();
             queue.Dispose();
-            if (stopped is not OperationCanceledException || handle.State != BakeState.Failed || handle.Product is not null ||
-                queue.Failure is not null || Directory.Exists(cache))
+            if (original is null)
+                Task.WhenAll(firstDrain, secondDrain).GetAwaiter().GetResult();
+            else
+                foreach (var task in new[] { firstDrain, secondDrain, handle.Done })
+                {
+                    try { task.GetAwaiter().GetResult(); throw new InvalidOperationException("A producer failure was lost."); }
+                    catch (AggregateException aggregate) when (aggregate.Flatten().InnerExceptions.Any(error => ReferenceEquals(error, original))) { }
+                    catch (InvalidDataException error) when (ReferenceEquals(error, original)) { }
+                }
+            if ((original is null ? stopped is not OperationCanceledException || !handle.Done.IsCanceled : !ReferenceEquals(stopped, original)) ||
+                handle.State != BakeState.Failed || handle.Product is not null || !ReferenceEquals(queue.Failure, original) || Directory.Exists(cache) ||
+                original is not null && !ReferenceEquals(handle.Failure, original))
                 throw new InvalidOperationException("An unloaded build entered encoding, published Ready, or wrote cache data.");
         }
         finally
@@ -360,21 +405,37 @@ public sealed class BakeWindowTests
         public object Build(BakeKey key, BuildContext context, string inputHash) => throw new InvalidOperationException("Directory preparation generated a payload.");
     }
 
-    private sealed class PausedProducer(ManualResetEventSlim started, ManualResetEventSlim release) : IBakeProducer
+    private sealed class PausedProducer(ManualResetEventSlim started, ManualResetEventSlim release, bool collision) : IBakeProducer
     {
-        public BakePayloadClass PayloadClass => BakePayloadClass.Product;
-        public BakeProductKind ProductKind => BakeProductKind.Fauna;
-        public BakeInputDependencies Inputs(BakeKey key) => BakeInputDependencies.World;
+        public BakePayloadClass PayloadClass => collision ? BakePayloadClass.Tile : BakePayloadClass.Product;
+        public BakeProductKind ProductKind => collision ? BakeProductKind.Collision : BakeProductKind.Fauna;
+        public bool PauseBeforeContext;
+        public bool PauseBeforeDirectory;
+        public Exception? Failure;
+        public BakeInputDependencies Inputs(BakeKey key)
+        {
+            if (PauseBeforeDirectory) Pause();
+            return BakeInputDependencies.World;
+        }
         public bool UsesModule(IContentModule module) => false;
         public IReadOnlyList<BakeTileEntry> Tiles(BuildContext context) =>
-            [new(BakeRequestKeys.Tile(context.Map.Id, "cancelled", default, LodLevel.L0), context.Map.Bounds)];
-        public bool CanBuild(BakeKey key) => key.Module == "cancelled";
+            collision ? [] : [new(BakeRequestKeys.Tile(context.Map.Id, "cancelled", default, LodLevel.L0), context.Map.Bounds)];
+        public bool CanBuild(BakeKey key)
+        {
+            if (PauseBeforeContext) Pause();
+            return key.Module == "cancelled";
+        }
         public object Build(BakeKey key, BuildContext context, string inputHash)
+        {
+            if (!PauseBeforeContext && !PauseBeforeDirectory) Pause();
+            if (Failure is not null) throw Failure;
+            // Encoding this unsupported result would fail; cancellation must stop before the codec is called.
+            return new object();
+        }
+        private void Pause()
         {
             started.Set();
             if (!release.Wait(TimeSpan.FromSeconds(5))) throw new TimeoutException("Build was not released.");
-            // Encoding this unsupported result would fail; cancellation must stop before the codec is called.
-            return new object();
         }
     }
 

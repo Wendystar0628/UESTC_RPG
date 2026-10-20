@@ -40,7 +40,7 @@ internal sealed class BakeCatalog
         cancellation.ThrowIfCancellationRequested();
         if (!mapOnly)
         {
-            var directory = map.Directory.GetPreparedModuleTilesAsync(context).GetAwaiter().GetResult();
+            var directory = map.Directory.PreparedTiles;
             var tree = new LodTree(context.Descriptor.Bounds, new StreamSettings());
             var catalog = ModuleTileCatalog.Build(directory);
             var pending = new Stack<StreamTile>();

@@ -49,6 +49,8 @@ public sealed class BakeQueueTests
             var second = queue.ForgetMap(session);
             if (first.IsCompleted || second.IsCompleted || handle.Done.IsCompleted)
                 throw new InvalidOperationException("Unload completed before the worker.");
+            AssertThrown(() => queue.Ensure(session, key, BakePriority.Normal, () => new object()))
+                .IsInstanceOf<OperationCanceledException>();
             release.Set();
             foreach (var task in new[] { first, second, handle.Done })
             {
