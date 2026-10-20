@@ -209,12 +209,12 @@ public sealed class BakeCodecTests
         try
         {
             package.Write(key, BakePayloadClass.Tile, TileBundleCodec.Encode(BakePayloadClass.Tile, "fixture/identity", original));
-            var packagedPath = Directory.GetFiles(packagedRoot, "*.tbin", SearchOption.AllDirectories).Single();
+            var packagedPath = CacheIndexes(packagedRoot).Single();
             var packagedBytes = File.ReadAllBytes(packagedPath);
             writer.Write(key, BakePayloadClass.Tile, TileBundleCodec.Encode(BakePayloadClass.Tile, "fixture/identity", local));
             if (writer.TryRead(key, BakePayloadClass.Tile, Decode)?.Bounds != local.Bounds)
                 throw new InvalidOperationException("A packaged product hid a valid local override.");
-            var localPath = Directory.GetFiles(localRoot, "*.tbin", SearchOption.AllDirectories).Single();
+            var localPath = CacheIndexes(localRoot).Single();
             File.WriteAllBytes(localPath, [1, 2, 3]);
             RequirePackaged();
             foreach (var invalid in new[] { TileBundleCodec.Encode(BakePayloadClass.Tile, "stale/identity", local), new byte[] { 1, 2, 3 } })
@@ -244,7 +244,8 @@ public sealed class BakeCodecTests
             for (var offset = 0; offset < cpuBytes.Length; offset += sizeof(int))
                 BinaryPrimitives.WriteInt32LittleEndian(cpuBytes.AsSpan(offset), rng.NextInt(int.MaxValue));
             package.Write(cpuKey, BakePayloadClass.Product, cpuBytes);
-            var cpuPath = Directory.GetFiles(packagedRoot, "*.tbin", SearchOption.AllDirectories).Single(path => path != packagedPath);
+            var cpuIndex = CacheIndexes(packagedRoot).Single(path => path != packagedPath);
+            var cpuPath = BakeCacheIndex.Files(cpuIndex).Single();
             var cpuFile = File.ReadAllBytes(cpuPath);
             if (cpuFile.Length <= BakeCacheStore.MaximumCompressedTileBytes ||
                 writer.TryRead(cpuKey, BakePayloadClass.Product, value => value) is not { } restoredCpu || !restoredCpu.SequenceEqual(cpuBytes))
@@ -282,4 +283,6 @@ public sealed class BakeCodecTests
             throw new InvalidOperationException("Tile request identity did not round trip.");
     }
 
+    private static IEnumerable<string> CacheIndexes(string root) => Directory.GetFiles(root, "*.tbin", SearchOption.AllDirectories)
+        .Where(path => !Path.GetDirectoryName(path)!.EndsWith(".parts", StringComparison.Ordinal));
 }

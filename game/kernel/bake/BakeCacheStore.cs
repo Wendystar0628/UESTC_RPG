@@ -7,7 +7,7 @@ using FileAccess = System.IO.FileAccess;
 
 namespace Campus.Kernel.Bake;
 
-/// <summary>Local writable products over an optional read-only packaged tree. Each candidate must decode before acceptance.</summary>
+/// <summary>Local writable logical indexes and bounded parts over a read-only packaged tree. Every part must decode before acceptance.</summary>
 public sealed class BakeCacheStore
 {
     public const int MaximumTileUploadBytes = 8 * 1024 * 1024;
@@ -91,6 +91,20 @@ public sealed class BakeCacheStore
     internal IEnumerable<T> ReadCandidates<T>(BakeKey key, BakePayloadClass payload, Func<byte[], T> decode,
         CancellationToken cancellationToken = default) where T : class
     {
+        return ReadPartCandidates(key, payload, parts => parts.Count == 1 ? decode(parts[0]) :
+            throw new InvalidDataException("A single-payload product has multiple delivery parts."), cancellationToken);
+    }
+
+    internal T? TryReadParts<T>(BakeKey key, BakePayloadClass payload, Func<IReadOnlyList<byte[]>, T> decode,
+        CancellationToken cancellationToken = default) where T : class
+    {
+        foreach (var value in ReadPartCandidates(key, payload, decode, cancellationToken)) return value;
+        return null;
+    }
+
+    private IEnumerable<T> ReadPartCandidates<T>(BakeKey key, BakePayloadClass payload, Func<IReadOnlyList<byte[]>, T> decode,
+        CancellationToken cancellationToken) where T : class
+    {
         cancellationToken.ThrowIfCancellationRequested();
         Initialize();
         if (ReadCandidate(_root, key, payload, decode, cancellationToken) is { } local) yield return local;
@@ -98,7 +112,7 @@ public sealed class BakeCacheStore
             yield return packaged;
     }
 
-    private T? ReadCandidate<T>(string root, BakeKey key, BakePayloadClass payload, Func<byte[], T> decode,
+    private T? ReadCandidate<T>(string root, BakeKey key, BakePayloadClass payload, Func<IReadOnlyList<byte[]>, T> decode,
         CancellationToken cancellationToken) where T : class
     {
         cancellationToken.ThrowIfCancellationRequested();
@@ -106,17 +120,23 @@ public sealed class BakeCacheStore
         if (!File.Exists(path)) return null;
         try
         {
-            var file = ReadBounded(path, MaximumFile(payload));
-            byte[] bytes;
+            var parts = new List<byte[]>();
             EnterCache(cancellationToken);
             try
             {
                 ThrowIfStopped();
-                bytes = DecodeFile(file, MaximumPayload(payload), key);
+                var count = BakeCacheIndex.Read(path, payload);
+                for (var index = 0; index < count; index++)
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
+                    var partPath = BakeCacheIndex.PartPath(path, index);
+                    ValidatePath(root, partPath);
+                    parts.Add(DecodeFile(ReadBounded(partPath, MaximumFile(payload)), MaximumPayload(payload), key));
+                }
             }
             finally { Monitor.Exit(_sync); }
             cancellationToken.ThrowIfCancellationRequested();
-            var product = decode(bytes) ?? throw new InvalidDataException("Empty cached product.");
+            var product = decode(parts) ?? throw new InvalidDataException("Empty cached product.");
             cancellationToken.ThrowIfCancellationRequested();
             return product;
         }
@@ -129,6 +149,20 @@ public sealed class BakeCacheStore
     }
 
     public void Write(BakeKey key, BakePayloadClass payload, byte[] bytes, CancellationToken cancellationToken = default)
+        => WriteParts(key, payload, [bytes], cancellationToken);
+
+    internal bool Fits(BakePayloadClass payload, byte[] bytes, CancellationToken cancellationToken)
+    {
+        EnterCache(cancellationToken);
+        try
+        {
+            ThrowIfStopped();
+            return bytes.Length <= MaximumPayload(payload) && EncodeFile(bytes).Length <= MaximumFile(payload);
+        }
+        finally { Monitor.Exit(_sync); }
+    }
+
+    internal void WriteParts(BakeKey key, BakePayloadClass payload, IReadOnlyList<byte[]> parts, CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
         Initialize();
@@ -136,20 +170,43 @@ public sealed class BakeCacheStore
         try
         {
             ThrowIfStopped();
-            var maximum = MaximumPayload(payload);
-            if (bytes.Length <= 0 || bytes.Length > maximum)
-                throw new InvalidDataException($"Bake payload {key.Map.Value}/{key.Module}/{key.Detail}: {bytes.Length} bytes exceeds limit {maximum}.");
-            var encoded = EncodeFile(bytes);
-            cancellationToken.ThrowIfCancellationRequested();
-            if (encoded.Length > MaximumFile(payload))
-                throw new InvalidDataException($"Compressed bake product {key.Map.Value}/{key.Module}/{key.Detail}: {encoded.Length} bytes exceeds limit {MaximumFile(payload)}.");
+            if (parts.Count == 0) throw new InvalidDataException("A cached product needs at least one delivery part.");
             var path = FilePath(_root, key);
             Directory.CreateDirectory(Path.GetDirectoryName(path)!);
-            var oldLength = File.Exists(path) ? new FileInfo(path).Length : 0;
-            AtomicWrite(path, encoded, cancellationToken);
-            _bytes += encoded.Length - oldLength;
+            for (var index = 0; index < parts.Count; index++)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                var bytes = parts[index];
+                var maximum = MaximumPayload(payload);
+                if (bytes.Length <= 0 || bytes.Length > maximum)
+                    throw new InvalidDataException($"Bake part {key}: {bytes.Length} bytes exceeds limit {maximum}.");
+                var encoded = EncodeFile(bytes);
+                if (encoded.Length > MaximumFile(payload))
+                    throw new InvalidDataException($"Compressed bake part {key}: {encoded.Length} bytes exceeds limit {MaximumFile(payload)}.");
+                var partPath = BakeCacheIndex.PartPath(path, index);
+                ValidatePath(_root, partPath);
+                Directory.CreateDirectory(Path.GetDirectoryName(partPath)!);
+                Publish(partPath, encoded, cancellationToken);
+            }
+            // Publishing the small logical index is the commit point; it never contains geometry buffers.
+            Publish(path, BakeCacheIndex.Encode(payload, parts.Count), cancellationToken);
+            foreach (var obsolete in BakeCacheIndex.Files(path).Skip(parts.Count)) DeleteProductFile(obsolete);
         }
         finally { Monitor.Exit(_sync); }
+    }
+
+    private void Publish(string path, byte[] bytes, CancellationToken cancellationToken)
+    {
+        var oldLength = File.Exists(path) ? new FileInfo(path).Length : 0;
+        AtomicWrite(path, bytes, cancellationToken);
+        _bytes += bytes.Length - oldLength;
+    }
+
+    private void DeleteProductFile(string path)
+    {
+        if (!File.Exists(path)) return;
+        _bytes -= new FileInfo(path).Length;
+        File.Delete(path);
     }
 
     // After this returns, no worker can enter Godot's compression API or publish another cache file.
@@ -200,7 +257,8 @@ public sealed class BakeCacheStore
         {
             ThrowIfStopped();
             var path = FilePath(_root, key);
-            if (File.Exists(path)) { _bytes -= new FileInfo(path).Length; File.Delete(path); }
+            DeleteProductFile(path);
+            foreach (var part in BakeCacheIndex.Files(path)) DeleteProductFile(part);
         }
         finally { Monitor.Exit(_sync); }
     }
@@ -264,6 +322,12 @@ public sealed class BakeCacheStore
         var segments = new List<string> { root, Segment(key.Map.Value), Segment(key.Module) };
         segments.AddRange(detail.Select(Segment));
         var path = Path.Combine(segments.ToArray()) + ".tbin";
+        ValidatePath(root, path);
+        return path;
+    }
+
+    private static void ValidatePath(string root, string path)
+    {
         for (var current = path; current != root; current = Path.GetDirectoryName(current)!)
         {
             // Exists refreshes FileInfo's attributes; reuse them for the reparse check.
@@ -271,7 +335,6 @@ public sealed class BakeCacheStore
             if ((entry.Exists || Directory.Exists(current)) && (entry.Attributes & FileAttributes.ReparsePoint) != 0)
                 throw new IOException("Cache paths must not be reparse points.");
         }
-        return path;
     }
 
     private static string Segment(string value)

@@ -7,7 +7,7 @@ using Campus.Contracts.Bake;
 
 namespace Campus.Kernel.Bake;
 
-/// <summary>TBIN v2 preserves shader/reflection metadata and full-precision UV2 without executable type metadata.</summary>
+/// <summary>TBIN v3 stores bounded physical render parts and preserves full-precision surface metadata.</summary>
 
 
 
@@ -47,6 +47,7 @@ public static partial class TileBundleCodec
         var productKey = product switch
         {
             TileBundle tile => tile.Key,
+            TileBundleParts.Part part => part.Tile.Key,
             CollisionTile collision => collision.Key,
             Campus.Contracts.Vegetation.VegetationTileContent vegetation => vegetation.Key,
             Campus.Contracts.Fauna.FaunaTileContent fauna => fauna.Key,
@@ -59,7 +60,8 @@ public static partial class TileBundleCodec
         Header(writer, identity);
         switch (product)
         {
-            case TileBundle tile: RenderTile(writer, tile); break;
+            case TileBundle tile: RenderTile(writer, TileBundleParts.Whole(tile)); break;
+            case TileBundleParts.Part part: RenderTile(writer, part); break;
             case CollisionTile collision: Collision(writer, collision); break;
             case Campus.Contracts.Vegetation.VegetationTileContent vegetation:
                 writer.Write(VegetationKind); Key(writer, vegetation.Key); Vegetation(writer, vegetation);
@@ -77,6 +79,21 @@ public static partial class TileBundleCodec
     }
 
     public static object Decode(BakePayloadClass payloadClass, string identity, BakeKey expectedKey, byte[] bytes)
+    {
+        var product = DecodePart(payloadClass, identity, expectedKey, bytes);
+        return product is TileBundleParts.Part part ? TileBundleParts.Join([part]) : product;
+    }
+
+    internal static byte[]? EncodePartCandidate(string identity, TileBundleParts.Part part)
+    {
+        using var stream = new MemoryStream();
+        using var writer = new BinaryWriter(stream, new UTF8Encoding(false, true), true);
+        Header(writer, identity);
+        RenderTile(writer, part);
+        return stream.Length <= BakeCacheStore.MaximumPayloadBytes ? stream.ToArray() : null;
+    }
+
+    internal static object DecodePart(BakePayloadClass payloadClass, string identity, BakeKey expectedKey, byte[] bytes)
     {
         var maximum = BakeCacheStore.MaximumPayload(payloadClass);
         if (bytes.Length <= 0 || bytes.Length > maximum)
@@ -100,8 +117,7 @@ public static partial class TileBundleCodec
                 default: throw new InvalidDataException("Unknown tile payload kind.");
             }
             if (stream.Position != stream.Length) throw new InvalidDataException("Trailing bytes in tile payload.");
-            if (result is TileBundle render && render.Stats.Bytes > BakeCacheStore.MaximumTileUploadBytes)
-                throw new InvalidDataException($"Raw surface upload {render.Key.Map.Value}/{render.Key.Module}/{render.Key.Detail}: {render.Stats.Bytes} bytes exceeds limit {BakeCacheStore.MaximumTileUploadBytes}.");
+            if (result is TileBundleParts.Part part) TileBundleParts.Validate(part);
             return result;
         }
         catch (Exception error) when (error is EndOfStreamException or JsonException or ArgumentException or OverflowException)
@@ -109,35 +125,37 @@ public static partial class TileBundleCodec
     }
 
     private static void Header(BinaryWriter writer, string identity)
-    { writer.Write(Magic); writer.Write(2); Text(writer, identity); }
+    { writer.Write(Magic); writer.Write(3); Text(writer, identity); }
 
     private static void Header(BinaryReader reader, string identity)
     {
-        if (reader.ReadUInt32() != Magic || reader.ReadInt32() != 2 || Text(reader, 2048) != identity)
+        if (reader.ReadUInt32() != Magic || reader.ReadInt32() != 3 || Text(reader, 2048) != identity)
             throw new InvalidDataException("Tile header/key mismatch.");
     }
 
-    private static void RenderTile(BinaryWriter writer, TileBundle tile)
+    private static void RenderTile(BinaryWriter writer, TileBundleParts.Part part)
     {
-        if (tile.Stats.Bytes > BakeCacheStore.MaximumTileUploadBytes)
-            throw new InvalidDataException($"Raw surface upload {tile.Key.Map.Value}/{tile.Key.Module}/{tile.Key.Detail}: {tile.Stats.Bytes} bytes exceeds limit {BakeCacheStore.MaximumTileUploadBytes}.");
+        TileBundleParts.Validate(part);
+        var tile = part.Tile;
         writer.Write(GeometryKind); Key(writer, tile.Key); Json(writer, tile.Tile); writer.Write((byte)tile.Level); Json(writer, tile.Bounds);
+        Json(writer, part.Location);
         writer.Write(tile.Surfaces.Count);
-        foreach (var surface in tile.Surfaces) Surface(writer, surface);
+        foreach (var surface in tile.Surfaces) WriteSurface(writer, surface);
         writer.Write(tile.MultiMeshes.Count);
         foreach (var multi in tile.MultiMeshes)
         {
-            Surface(writer, multi.Surface); writer.Write(multi.InstanceCount); Bytes(writer, multi.InstanceData); Json(writer, multi.Bounds);
+            WriteSurface(writer, multi.Surface); writer.Write(multi.InstanceCount); Bytes(writer, multi.InstanceData); Json(writer, multi.Bounds);
         }
         Text(writer, tile.StatisticsJson);
     }
 
-    private static TileBundle RenderTile(BinaryReader reader, BakeKey key)
+    private static TileBundleParts.Part RenderTile(BinaryReader reader, BakeKey key)
     {
         var tile = Json<TileKey>(reader);
         var level = (LodLevel)reader.ReadByte();
         if (!Enum.IsDefined(level)) throw new InvalidDataException("Unknown tile LOD.");
         var bounds = Json<Box3>(reader);
+        var location = Json<TileBundleParts.Location>(reader);
         var surfaces = new BakedSurface[Count(reader)];
         for (var i = 0; i < surfaces.Length; i++) surfaces[i] = Surface(reader);
         var multis = new BakedMultiMesh[Count(reader)];
@@ -146,7 +164,7 @@ public static partial class TileBundleCodec
             var surface = Surface(reader); var count = reader.ReadInt32(); var data = Bytes(reader); var box = Json<Box3>(reader);
             multis[i] = new(surface, count, data, box);
         }
-        return new(key, tile, level, bounds, surfaces, multis, Statistics(reader));
+        return new(new(key, tile, level, bounds, surfaces, multis, Statistics(reader)), location);
     }
 
     private static void Collision(BinaryWriter writer, CollisionTile collision)
@@ -164,7 +182,7 @@ public static partial class TileBundleCodec
         return new(key, tile, bounds, colliders, Statistics(reader));
     }
 
-    private static void Surface(BinaryWriter writer, BakedSurface surface)
+    internal static void WriteSurface(BinaryWriter writer, BakedSurface surface)
     {
         Json(writer, new SurfaceMetadata(surface.Material, surface.Format, surface.Primitive, surface.VertexCount,
             surface.IndexCount, surface.Bounds, surface.At, surface.UvScale, surface.Variant, surface.IgnoreOcclusionCulling, surface.Shader, surface.Reflect));

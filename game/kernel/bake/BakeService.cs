@@ -240,7 +240,7 @@ public sealed partial class BakeService : IBakeService, IBakeContextSource, IDis
         PrepareProductTerrain(map, key);
         if (!_options.Live)
         {
-            var cached = _cache.TryRead(key, payloadClass, payload =>
+            var cached = _cache.TryReadParts(key, payloadClass, payload =>
             {
                 var product = Decode(payloadClass, identity, key, payload);
                 RequireInteriorProduct(map, key, product);
@@ -258,7 +258,7 @@ public sealed partial class BakeService : IBakeService, IBakeContextSource, IDis
         var built = module is not null ? map.Geometry!.Build(key, buildContext, module.Value, diagnostics => map.Collect(key.Module, "geometry", diagnostics)) :
             interior is not null ? BuildInterior(map, key, buildContext, interior.Value) : matches[0].Value.Build(key, buildContext, inputHash);
         cancellation.ThrowIfCancellationRequested();
-        var bytes = Encode(payloadClass, identity, built);
+        var bytes = Encode(payloadClass, identity, built, cancellation);
         cancellation.ThrowIfCancellationRequested();
         // Validate exactly the bytes about to be written before publishing Ready; malformed producer output is terminal.
         var validated = Decode(payloadClass, identity, key, bytes);
@@ -268,7 +268,7 @@ public sealed partial class BakeService : IBakeService, IBakeContextSource, IDis
         map.PipelineStatistics?.Add(validated, map.Geometry);
         if (!_options.Live && generation == Interlocked.Read(ref _cacheGeneration))
         {
-            _cache.Write(key, payloadClass, bytes, cancellation);
+            _cache.WriteParts(key, payloadClass, bytes, cancellation);
         }
         return validated;
     }
@@ -323,8 +323,9 @@ public sealed partial class BakeService : IBakeService, IBakeContextSource, IDis
         return new(seed, inputs, bindings, activeInteriors, windows, null, residentStamp);
     }
 
-    private static byte[] Encode(BakePayloadClass payloadClass, string identity, object product) => BakeProductCodec.Encode(payloadClass, identity, product);
-    private static object Decode(BakePayloadClass payloadClass, string identity, BakeKey key, byte[] bytes) => BakeProductCodec.Decode(payloadClass, identity, key, bytes);
+    private IReadOnlyList<byte[]> Encode(BakePayloadClass payloadClass, string identity, object product, CancellationToken cancellation) =>
+        BakeProductCodec.EncodeParts(payloadClass, identity, product, bytes => _cache.Fits(payloadClass, bytes, cancellation));
+    private static object Decode(BakePayloadClass payloadClass, string identity, BakeKey key, IReadOnlyList<byte[]> parts) => BakeProductCodec.DecodeParts(payloadClass, identity, key, parts);
     private static void RequireInteriorProduct(MapBuild map, BakeKey key, object product)
     {
         if (map.Interiors.ContainsKey(key.Module) && (product is not TileBundle tile || tile.Stats.Surfaces == 0 || tile.Stats.Triangles == 0))

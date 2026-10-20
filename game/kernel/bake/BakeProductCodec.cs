@@ -9,6 +9,22 @@ namespace Campus.Kernel.Bake;
 internal static class BakeProductCodec
 {
     private const uint MapMagic = 0x3150414D;
+    internal static IReadOnlyList<byte[]> EncodeParts(BakePayloadClass payloadClass, string identity, object product, Func<byte[], bool> fits) =>
+        product is TileBundle tile ? TileBundleParts.Encode(identity, tile, fits) : [Encode(payloadClass, identity, product)];
+
+    internal static object DecodeParts(BakePayloadClass payloadClass, string identity, BakeKey key, IReadOnlyList<byte[]> parts)
+    {
+        if (parts.Count == 0) throw new InvalidDataException("Missing bake delivery parts.");
+        if (key.Module == MapBaker.Module)
+            return parts.Count == 1 ? Decode(payloadClass, identity, key, parts[0]) :
+                throw new InvalidDataException("Map products must have one delivery part.");
+        var decoded = parts.Select(bytes => TileBundleCodec.DecodePart(payloadClass, identity, key, bytes)).ToArray();
+        if (decoded[0] is not TileBundleParts.Part)
+            return decoded.Length == 1 ? decoded[0] : throw new InvalidDataException("Non-render products must have one delivery part.");
+        if (decoded.Any(value => value is not TileBundleParts.Part)) throw new InvalidDataException("Mixed bake delivery parts.");
+        return TileBundleParts.Join(decoded.Cast<TileBundleParts.Part>().ToArray());
+    }
+
     public static byte[] Encode(BakePayloadClass payloadClass, string identity, object product)
     {
         if (product is not MapBakeProduct map) return TileBundleCodec.Encode(payloadClass, identity, product);
