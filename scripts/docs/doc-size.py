@@ -16,7 +16,7 @@ import sys
 ROOT = os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..'))
 D = os.path.join(ROOT, 'docs')
 # STD-DOC §5 表里"部分"一栏的开头 → 本脚本的键；放宽上限只改那张表
-ROWS = {'CORE-INDEX §0': 'core0', 'CORE-INDEX §1': 'core1', 'WF-ENTRY': 'entry', '每份文档的 §0': 's0',
+ROWS = {'CORE-INDEX 除 §1 外的各节': 'core0', 'CORE-INDEX §1': 'core1', 'WF-ENTRY': 'entry', '每份文档的 §0': 's0',
         '§0.1': 'hooks', '单节': 'section', '单份规格': 'doc', '单份地图': 'map'}
 
 
@@ -85,12 +85,12 @@ def check(path):
         if total > cap:
             over.append(('全文', total, cap))
     for title, n in secs:
-        if title.startswith('0 ') or (code == 'CORE-INDEX' and title.startswith('0.2 ')):   # 核心准则两块同一上限
-            cap = LIMIT['core0'] if code == 'CORE-INDEX' else LIMIT['s0']
+        if code == 'CORE-INDEX' and re.match(r'^\d+ ', title):   # 顶层各节整节注入：§1 信息地图一档，其余一档
+            cap = LIMIT['core1'] if title.startswith('1 ') else LIMIT['core0']
+        elif title.startswith('0 '):
+            cap = LIMIT['s0']
         elif '接入要点' in title:
             cap = LIMIT['hooks']
-        elif code == 'CORE-INDEX' and title.startswith('1 '):
-            cap = LIMIT['core1']
         elif code == 'WF-ENTRY' and re.match(r'^[1-9] ', title):
             cap = LIMIT['entry']
         elif registry(code):
