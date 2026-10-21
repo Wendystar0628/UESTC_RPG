@@ -67,7 +67,7 @@ gates: []
 | D-030 | 托幼园和楼里的洁净室不开放；地下层不可进 | 清水河 | WLD-INTERIORS-BUILD §2；MAP-QSH-WEST §7；ENG-GATES §1 | 生效 |
 | D-032 | 展陈不出现人物肖像，只用实物、文献、模型、风景照；实验室门牌的楼层单位用真实名称、房间级用通用名称；主楼一楼按柱厅做主题墙，不用《沁园春·雪》书法墙 | 开放室内 | WLD-INTERIORS-BUILD §4；MAP-QSH-INTERIORS §1 | 生效 |
 | D-033 | 观景点共 P00–P23，其中 P16–P23 以 WLD-INTERIORS为准；再新增的点位从 P24 起编 | 点位 | WLD-INTERIORS-ACCESS §1；UI-NAV-WAYPOINTS §1；STD-CONVENTIONS §3.2 | 生效 |
-| D-140 | 门的状态机在 `Medium` 帧步（介质呈现与室内运行时（SYS-VIEW-MEDIUM）），运行时门体归 碰撞代理生成与流式加载（SYS-WALK-BOUNDS）；触发距离与开关速度取值以细则为准 | 开放室内 | SYS-WALK-BOUNDS §3；ENG-ARCH §3 | 生效 |
+| D-140 | 门的状态机在 `Medium` 帧步（SYS-VIEW-MEDIUM），运行时门体归 碰撞代理生成与流式加载（SYS-WALK-BOUNDS）；触发距离与开关速度取值以细则为准 | 开放室内 | SYS-WALK-BOUNDS §3；ENG-ARCH §3 | 生效 |
 | D-157 | 外围分层编号 O0–O3：O0 街道带、O1 外围街区、O2 雾中楼顶、O3 远景卡片与雪山；E 只指审查视角 E1–E7 | 全项目 | WLD-OUTSKIRTS-BAND §2.2；STD-CONVENTIONS §3.2；STD-CONVENTIONS §3.3 | 生效 |
 | D-173 | 现实中老旧的外观一律翻新：位置、体量、层数和身份特征不动，褪色、水渍、破损、锈、陈旧门窗、散挂的空调外机与管线、防盗网全部换成与新楼同标准的设计，会脏的位置换成设计构件；清单见 MAP-QSH-RENOVATION | 全部建模包 | WLD-RENOVATION；MAP-QSH-RENOVATION | 生效 |
 | D-175 | 日式日常街景按"主轴留给成电，次路与后巷给日式"分区；传统和式建筑构件和教室推拉门不用；店头布篷、卷帘门、外挂钢楼梯、波纹铁皮雨棚只用在商业街和后勤小楼；黄昏有 2–3 只静止的乌鸦剪影，夜里和雨天不出现，不画成群飞过 | 全项目 | WLD-AMBIENCE；MAP-QSH-ADDITIONS §4；WLD-LIFE | 生效 |

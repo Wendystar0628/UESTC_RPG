@@ -28,7 +28,7 @@ paths: ["game/gen/maps/qingshuihe/boundary/**", "game/data/maps/qingshuihe/world
 
 - **在校界上做栏杆、校门、闸机、车道抬杆或河渠格栅**：碰撞表面类型一律登记 `SurfaceTag.Boundary`，不用校内挡路物的 `Barrier`；碰撞顶栏杆 2.2 m，闸机、抬杆、格栅 1.5 m；河渠穿过处用格栅或节制闸（§1.1）
 - **行走控制器靠近校界**：离 `Boundary` 0.6 m 内衰减朝外的水平速度，其余不变；校内其他挡路物不做缓停；安全点不放在离校界 1 m 以内（§1.2）
-- **旁观活动范围、缓冲带、推回和 `edge_fog`**：可达空间按 §2.1，参数只写在 `map.json` 的 `roam` 一处；只在旁观模式、漫游态作用，不锁输入；`edge_fog` 只由 相机与输入（SYS-VIEW） 写，其他包只读（§2）
+- **旁观活动范围、缓冲带、推回和 `edge_fog`**：可达空间按 §2.1，参数只写在 `map.json` 的 `roam` 一处；只在旁观模式、漫游态作用，不锁输入；`edge_fog` 只由 相机与输入（SYS-VIEW） 写，其他模块只读（§2）
 - **定审查视角、点位、锚点、跳转路径，读档、换图或 `--pose` 出生**：位姿必须在可达空间内且不在缓冲带里，否则就近投影或拒绝；跳转途中不推回，弧线越界时抬高弧顶（§2.4）
 
 ## 1 行走阻挡
@@ -38,7 +38,7 @@ paths: ["game/gen/maps/qingshuihe/boundary/**", "game/data/maps/qingshuihe/world
 | 地点 | 用什么挡 | 碰撞 |
 | --- | --- | --- |
 | 校界一圈 | 2.2 m 透空栏杆、石柱，内侧绿篱；栏杆外侧就是 O0 的人行道 | 碰撞顶 2.2 m，水平外扩不超过 0.3 m，缝隙小于 0.5 m |
-| 各校门（南门归 南区（MAP-QSH-SOUTH），其余归 校界与门（game/gen/maps/qingshuihe/boundary/）） | 车道抬杆放下，人行闸机关闭，值班室亮灯 | 闸机、抬杆碰撞顶 1.5 m；校门处允许一段到 2.2 m 的隐形墙 |
+| 各校门（南门归 MAP-QSH-SOUTH，其余归 game/gen/maps/qingshuihe/boundary/） | 车道抬杆放下，人行闸机关闭，值班室亮灯 | 闸机、抬杆碰撞顶 1.5 m；校门处允许一段到 2.2 m 的隐形墙 |
 | 河渠穿过校界处 | 拦污格栅或节制闸，与两岸栏杆接上 | 格栅碰撞顶 1.5 m |
 
 这些碰撞体的表面类型都登记为 `SurfaceTag.Boundary`，与校内的挡路物 `Barrier` 区分开；缓停靠它认出校界。南门闸机、抬杆、岗亭的细节以 MAP-QSH-SOUTH §1 为准；河渠穿过校界处的格栅做法见 MAP-QSH-OUTSKIRTS §6.1。

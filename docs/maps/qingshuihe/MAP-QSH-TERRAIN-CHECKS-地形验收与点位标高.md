@@ -27,14 +27,14 @@ paths: ["game/gen/maps/qingshuihe/center-east/**", "game/gen/maps/qingshuihe/nor
 
 ### 0.1 接入要点
 
-- **定点位、锚点、传送落点的 y（点位与跳转（UI-NAV-WAYPOINTS）、标记、锚点（SYS-ATLAS-TRAVEL）、可行走范围、边界与安全点（SYS-WALK-BOUNDS））**：一律读地形求值，P02、P09、P13、P22、P23 和 A03、A04、A05、A11、A12 按 §3 重定
+- **定点位、锚点、传送落点的 y（UI-NAV-WAYPOINTS、SYS-ATLAS-TRAVEL、SYS-WALK-BOUNDS）**：一律读地形求值，P02、P09、P13、P22、P23 和 A03、A04、A05、A11、A12 按 §3 重定
 - **室内同位点（UI-NAV-WAYPOINTS）**：落脚 y 按室内索引的楼面加眼高求值（§3）
-- **开放室内（图书馆与博物馆室内（MAP-QSH-INTERIORS-LIBRARY）、MAP-QSH-INTERIORS（西区与中东区精选室内）、MAP-QSH-NORTH（北区精选室内））**：图书馆与博物馆垫层锁 0；品学楼楼面随台基升 1.5 m，学知苑 1 栋与朝阳餐厅随宿舍上台升 3.0 m（§2）
+- **开放室内（MAP-QSH-INTERIORS-LIBRARY、MAP-QSH-INTERIORS、MAP-QSH-NORTH）**：图书馆与博物馆垫层锁 0；品学楼楼面随台基升 1.5 m，学知苑 1 栋与朝阳餐厅随宿舍上台升 3.0 m（§2）
 - **行走范围（SYS-WALK-BOUNDS）**：丘、堤、台地边坡都算可走，不登记禁行，陡坡由控制器按坡度挡；栏杆与台缘带的碰撞顶按两侧地形取（§2）
 
 ## 1 验收镜头
 
-默认状态秋 17:30，各区包交付本区地形时从下列四处各看一眼总览，其余机位不单列。
+默认状态秋 17:30，各区交付本区地形时从下列四处各看一眼总览，其余机位不单列。
 
 | 镜头 | 地点 | 看什么 |
 | --- | --- | --- |

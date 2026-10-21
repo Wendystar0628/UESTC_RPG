@@ -27,7 +27,7 @@ paths: ["game/gen/maps/qingshuihe/boundary/**", "game/data/maps/qingshuihe/world
 
 | 子文档 | 简题 | 什么时候读 |
 | --- | --- | --- |
-| WLD-OUTSKIRTS-BAND | 外围环境带 | 做或判外围街区、截面线位置、外围数据与精度（外围环境带（WLD-OUTSKIRTS-BAND）、箱庭截面与远景（WLD-OUTSKIRTS-DIORAMA）） |
+| WLD-OUTSKIRTS-BAND | 外围环境带 | 做或判外围街区、截面线位置、外围数据与精度（WLD-OUTSKIRTS-BAND、WLD-OUTSKIRTS-DIORAMA） |
 | WLD-OUTSKIRTS-DIORAMA | 箱庭截面与远景 | 做截面、河渠水柱、雾海、远景卡片与雪山 |
 
 清水河外围的周边结构、截面线距离、身份地标、灯光、农田与氛围增补见 MAP-QSH-OUTSKIRTS。

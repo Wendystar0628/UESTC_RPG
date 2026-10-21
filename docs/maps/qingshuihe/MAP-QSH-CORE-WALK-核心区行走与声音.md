@@ -29,8 +29,8 @@ paths: ["game/gen/maps/qingshuihe/core/**", "game/data/maps/qingshuihe/world/cor
 ### 0.1 接入要点
 
 - **点位与跳转（UI-NAV-WAYPOINTS） 定点位时**：P01、P02、P05、P06、P08 的落点按 §2；P03 仅旁观
-- **平面地图锚点（街道家具（WLD-LIFE-STREET）、标记、锚点（SYS-ATLAS-TRAVEL）、可行走范围、边界与安全点（SYS-WALK-BOUNDS））**：A02 导览亭、A07 导览桩按 §2 摆放；本区开放入口只画门口标记，不另设锚点
-- **声音（环境声（SYS-AUDIO-AMBIENCE））**：喷泉、两处堰、天鹅屋是手工发声器，清单待建（§3）
+- **平面地图锚点（WLD-LIFE-STREET、SYS-ATLAS-TRAVEL、SYS-WALK-BOUNDS）**：A02 导览亭、A07 导览桩按 §2 摆放；本区开放入口只画门口标记，不另设锚点
+- **声音（SYS-AUDIO-AMBIENCE）**：喷泉、两处堰、天鹅屋是手工发声器，清单待建（§3）
 
 ## 1 行走：主网、挡路物与开放入口（主线之后）
 

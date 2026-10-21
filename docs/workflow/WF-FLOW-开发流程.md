@@ -36,10 +36,10 @@ paths: [".collab/tasks/**", "scripts/requirements.*", "game/testing/**", "game/d
 
 | 步 | 谁做 | 产出 |
 | --- | --- | --- |
-| 1 派工 | 主会话（Claude 侧的包）；Codex 主线（Codex 侧的包） | 任务单（命名见 STD-CONVENTIONS §3.8，内容格式见 WF-COMMS §3.1），或 Codex 主线给子代理的简报；简报写邻居（§2.1） |
+| 1 派工 | 主会话（Claude 侧的活）；Codex 主线（Codex 侧的活） | 任务单（命名见 STD-CONVENTIONS §3.8，内容格式见 WF-COMMS §3.1），或 Codex 主线给子代理的简报；简报写邻居（§2.1） |
 | 2 施工 | 施工子代理，在简报给的路径上写 | 简报允许路径里的改动；默认不编译、不跑测试、不提交（§3.1） |
 | 3 回报 | 子代理向派它的一方回报 | 改动路径与要点（WF-COMMS §3.4）；指挥把施工队列对应行改待集成；代码类旁路单同样交 Codex 主线 |
-| 4 统一编译、提交推送 | 指挥：Codex 主线管 Codex 侧的包，主会话管 Claude 侧的包 | 核对改动；一批交回后编译一次、修错、跑快检，按子代理分路径提交并推送，提交后删队列行（§3.1、WF-RULE §7） |
+| 4 统一编译、提交推送 | 指挥：Codex 主线管 Codex 侧的活，主会话管 Claude 侧的活 | 核对改动；一批交回后编译一次、修错、跑快检，按子代理分路径提交并推送，提交后删队列行（§3.1、WF-RULE §7） |
 | 5 评审 | 主会话管审美与取值；Codex 主线管契约与架构 | 任务单末尾的"主会话评审"小节；Codex 侧有可见或可听的结果，另写评审请求 `requests/review-<队列行号>-<主题>.md`，结论写在其末尾；不合格就派返工单，在最新版本上改 |
 | 6 施工状态 | 主会话 | 更新施工状态（WF-STATUS §1） |
 
@@ -47,9 +47,9 @@ paths: [".collab/tasks/**", "scripts/requirements.*", "game/testing/**", "game/d
 
 **从施工队列派**：要做的活先进施工队列（WF-STATUS §2；调研审计采纳的见 WF-STATUS §4）。主会话与 Codex 主线按优先级与并发余量（WF-MODEL §9）从"就绪"的行里派，派出后改进行中、写上谁。
 
-**Claude 侧的包**：主会话写任务单 `.collab/tasks/claude/`（命名见 STD-CONVENTIONS §3.8，内容格式见 WF-COMMS §3.1），一张单对应一件完整且工作量受控的事。单子写：目标；给子代理的简报（WF-MODEL §8 模板）；Opus 还是 Sonnet 与推理档（WF-MODEL §1–§4）；交付标准（截图、快检）；评审方式；然后直接开子代理（WF-MODEL §6）。派单分批，按 WF-MODEL §9 的并发与队列平衡（WF-STATUS §2）。
+**Claude 侧的活**：主会话写任务单 `.collab/tasks/claude/`（命名见 STD-CONVENTIONS §3.8，内容格式见 WF-COMMS §3.1），一张单对应一件完整且工作量受控的事。单子写：目标；给子代理的简报（WF-MODEL §8 模板）；Opus 还是 Sonnet 与推理档（WF-MODEL §1–§4）；交付标准（截图、快检）；评审方式；然后直接开子代理（WF-MODEL §6）。派单分批，按 WF-MODEL §9 的并发与队列平衡（WF-STATUS §2）。
 
-**Codex 侧的包**：Codex 主线用 `spawn_agent` 开子代理，简报照 WF-MODEL §8，写明邻居；施工模型按 WF-ROLE §6。
+**Codex 侧的活**：Codex 主线用 `spawn_agent` 开子代理，简报照 WF-MODEL §8，写明邻居；施工模型按 WF-ROLE §6。
 
 **旁路单**：旁路和量大的机械活，主会话写旁路单放进 `side/cards/`，交 Codex 主线开子代理做（WF-STATUS §4.1、WF-COMMS §5）；调研由主会话派 Sonnet 子代理做（WF-STATUS §4）。
 
@@ -97,4 +97,4 @@ paths: [".collab/tasks/**", "scripts/requirements.*", "game/testing/**", "game/d
 
 **可调参数集中放**：Codex 主线的包有可见或可听的结果时，把可调参数放在一处（数据文件或集中的常量类），评审请求里写明截图或录像路径、参数在哪、现值。主会话评审后在评审文件里写新值，或派人在参数文件里改，改完推送。
 
-**契约与共享工程文件**谁改、怎么申请与冻结见 WF-BUILD §3；**画面相关的契约**由 Codex 主线起草、主会话确认后才冻结（ENG-ARCH §3，D-134）。**Claude 侧的包需要工程支持时**（性能结构、线程、确定性、契约），在 `requests/contract-<队列行号>-<主题>.md` 或 Codex 主线的收件箱 `notes/codex/` 里找 Codex 主线。
+**契约与共享工程文件**谁改、怎么申请与冻结见 WF-BUILD §3；**画面相关的契约**由 Codex 主线起草、主会话确认后才冻结（ENG-ARCH §3，D-134）。**Claude 侧的活需要工程支持时**（性能结构、线程、确定性、契约），在 `requests/contract-<队列行号>-<主题>.md` 或 Codex 主线的收件箱 `notes/codex/` 里找 Codex 主线。

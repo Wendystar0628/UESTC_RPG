@@ -42,7 +42,7 @@ paths: ["scripts/requirements.*", "game/testing/**", "game/data/build-code-finge
 ## 1 版本号与构建信息
 
 - **版本号**：`version.txt` 一行 `主.次.修订`，只由主会话在发版时改。
-- **引擎与框架版本**：Godot 4.7.2 与 net10.0（C# 14）以 `tools/godot-version.txt`、`global.json`、csproj 为准，三处一致，门禁比对引擎 `--version`；升级单独评估，经主会话（D-177，ENG-BUDGET-RULES §1 第 10 条），升级后按 `docs/godot-api/README.md` 重新生成 API 参考并通知各包。导出链的验证见 ENG-ARCH §8，导出模板的下载见 WF-RULE §6。
+- **引擎与框架版本**：Godot 4.7.2 与 net10.0（C# 14）以 `tools/godot-version.txt`、`global.json`、csproj 为准，三处一致，门禁比对引擎 `--version`；升级单独评估，经主会话（D-177，ENG-BUDGET-RULES §1 第 10 条），升级后按 `docs/godot-api/README.md` 重新生成 API 参考并通知各施工方。导出链的验证见 ENG-ARCH §8，导出模板的下载见 WF-RULE §6。
 - **构建信息**写作 `<版本>+<提交>`；工作区有未提交改动时提交号带 `-dirty`，带 `-dirty` 的构建不对外发布。
 - **谁读它**：开始页版本行、存档 meta 的 `build`、日志第一行与诊断摘要、两个压缩包的文件名（只取版本号）。
 - **兼容性**只看存档自己的各层版本号（SYS-SAVE-FORMAT §1.4）。拿到诊断包或存档，按里面的提交号检出代码即可复现。

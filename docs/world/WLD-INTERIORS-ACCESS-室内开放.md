@@ -35,7 +35,7 @@ paths: ["game/gen/maps/qingshuihe/core/LibraryInterior/**", "game/gen/maps/qings
 - **做门**：开放入口的门固定敞开；能进的房门和防火门登记为 `DoorLeafDecl`；封口和锁着的门是静态几何，表面类型 `DoorClosed`（§2、WLD-INTERIORS-BUILD §5）
 - **读自动门的开度或阶段（声音、声学门户）**：读 `IInteriorDoors`，不自己推算；运行时规则见 SYS-WALK-BOUNDS §3，门的状态不进存档（§2.1）
 - **画关着的楼**：窗里是窗卡，门玻璃里是门厅卡，门后不做实体门厅；简化室内和 I0 的显示规则见 SYS-VIEW-MEDIUM §2，由 `interior.shell` 统一生成（§3）
-- **区域包做楼的外观**：每栋楼的入口都登记进室内索引（关着的记 `Open = false`）；立面开间网格和窗位类型调平面内核取（§3、WLD-INTERIORS-BUILD §2）
+- **各区做楼的外观**：每栋楼的入口都登记进室内索引（关着的记 `Open = false`）；立面开间网格和窗位类型调平面内核取（§3、WLD-INTERIORS-BUILD §2）
 
 ## 1 开放原则与共用约定
 

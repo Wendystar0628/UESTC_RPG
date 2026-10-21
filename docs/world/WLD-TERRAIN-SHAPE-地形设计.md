@@ -29,7 +29,7 @@ paths: ["game/style/palette/ext/ground.json", "game/kernel/map/data/GroundCoverT
 ### 0.1 接入要点
 
 - **做竖直落差**：0.35 m 以上按连接表做实体，同一高差至少两条路，不许 1.1–1.5 m 的可站落差；栏杆设置见 §3.4（§2.2、§3）
-- **画水面或做岸（水体系统（WLD-WATER）、滨水与桥（game/gen/maps/qingshuihe/waterfront/））**：水面高读 `ITerrain.WaterY`；岸线与水体多边形重合；岸型按 §4
+- **画水面或做岸（WLD-WATER）**：水面高读 `ITerrain.WaterY`；岸线与水体多边形重合；岸型按 §4
 - **校界**：校界内侧 20 m 是零带，地形恒为 0；镜头路径按地面高度核定，离地形不小于 3 m（§2.4）
 
 ## 1 设计原则
@@ -137,7 +137,7 @@ paths: ["game/style/palette/ext/ground.json", "game/kernel/map/data/GroundCoverT
 ### 3.4 防护与谁来做
 
 - **防护**：岸顶高出水面 > 0.5 m 设栏杆（高度见 `game/contracts/Parts/PartParameters.cs` 的默认值，碰撞顶 1.5 m）；临空落差 > 1.0 m 且边缘可走，同样设栏杆。
-- **分工**：由操作和连接规则推出的实体（台缘带、退台墙、自动生成的台阶与坡道）归 地表、道路、铺装（WLD-TERRAIN-APPLY）；有名字的竖向构筑物（大台阶、草阶看台、亲水台阶、驳岸、桥）归各区包与 滨水与桥（game/gen/maps/qingshuihe/waterfront/），按本节尺寸做。
+- **分工**：由操作和连接规则推出的实体（台缘带、退台墙、自动生成的台阶与坡道）归 地表、道路、铺装（WLD-TERRAIN-APPLY）；有名字的竖向构筑物（大台阶、草阶看台、亲水台阶、驳岸、桥）归各区与 滨水与桥（game/gen/maps/qingshuihe/waterfront/），按本节尺寸做。
 
 ## 4 水位与岸型
 
@@ -156,7 +156,7 @@ paths: ["game/style/palette/ext/ground.json", "game/kernel/map/data/GroundCoverT
 | **台阶岸** | 平到第一级踏口；每级 0.14–0.15 m，每降 1.5 m 有 ≥ 1.2 m 平台；最下一级略没入水面 | 接涉水带，其外按 `bank.slope` 加深 | 最下一级登记涉水区；开放泳区可作泳岸 |
 | **湿地栈桥岸** | 1:8–1:12 的极缓草与水生植物坡入水；栈道架在水面以上 0.3–0.5 m | 栈道下水深 ≤ 0.5 m | 栈道是桥面类碰撞 |
 
-- 同一水体可分岸段用不同岸型，交界处 2 m 内过渡，由驳岸收头或置石盖住。构筑物外观归各区包与 滨水与桥（game/gen/maps/qingshuihe/waterfront/），水面归 水体系统（WLD-WATER）。
+- 同一水体可分岸段用不同岸型，交界处 2 m 内过渡，由驳岸收头或置石盖住。构筑物外观归各区与 滨水与桥（game/gen/maps/qingshuihe/waterfront/），水面归 水体系统（WLD-WATER）。
 
 ### 4.3 涉水带、湖盆与河渠
 

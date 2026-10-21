@@ -28,19 +28,19 @@ paths: ["game/style/shaders/diorama_far.gdshader.uid", "game/style/shaders/diora
 6. **雾海**：不透明的面片环，非雾天顶面比校园地面低 12–20 m，不用 FogVolume 和体积雾（共用雾函数，ART-SKYLIGHT-ATMOSPHERE §3.5）；雾天升到截面上缘、散雾回落，连续不硬切；深夜顶面微微发光；顶面上有一条静止的河流银带（§4）。
 7. **远景**：每个方位都要有内容，三层同心环，箱庭里已做成三维的街道、高架和灯不进远景（§5）。
 8. **雪山**：画在远景环的远层，可见度与雪线随季节和天气，数据在 `backdrop.json`；清水河的山名与方位见 MAP-QSH-OUTSKIRTS §7.3（§6）。
-9. **颜色不在本包调**：地层四色、雪山的玫瑰色、日照金山的金色和金边都是色名，由 箱庭截面与远景（WLD-OUTSKIRTS-DIORAMA） 登记、日相与季节调色板（game/style/palette/keys/） 按关键帧给值；雾海引用关键帧雾色，不另写色值。
-10. **数据与着色器**：清水河的数值全在 `backdrop.json`，代码里不写清水河的常数和实体 ID；本包只用 `diorama_section`、`diorama_far` 两个着色器，换时段、季节、天气只改参数值。
+9. **颜色不在本文调**：地层四色、雪山的玫瑰色、日照金山的金色和金边都是色名，由本文登记、日相与季节调色板（game/style/palette/keys/） 按关键帧给值；雾海引用关键帧雾色，不另写色值。
+10. **数据与着色器**：清水河的数值全在 `backdrop.json`，代码里不写清水河的常数和实体 ID；本文只用 `diorama_section`、`diorama_far` 两个着色器，换时段、季节、天气只改参数值。
 
 ### 0.1 接入要点
 
 - **用雾色，或做换季起雾**：按视线方向调共用雾函数（ART-SKYLIGHT-ATMOSPHERE §3.5），与雾海同一套雾色，不另写色值（§4）
-- **判定镜头是否在雾海里（介质呈现与室内运行时（SYS-VIEW-MEDIUM））**：用雾天抬升后的雾海顶面高度（抬升量读 `weather_fog`）；雾海顶面以下归介质呈现，不开 Environment 雾、不用 FogVolume（§4）
-- **外围 O1 地面与截面相接（外围环境带（WLD-OUTSKIRTS-BAND））**：共用截面线上的采样点，不留厚度缝；截面上缘与 O1 地面用同一套季节潜势阈值（§2）
+- **判定镜头是否在雾海里（SYS-VIEW-MEDIUM）**：用雾天抬升后的雾海顶面高度（抬升量读 `weather_fog`）；雾海顶面以下归介质呈现，不开 Environment 雾、不用 FogVolume（§4）
+- **外围 O1 地面与截面相接（WLD-OUTSKIRTS-BAND）**：共用截面线上的采样点，不留厚度缝；截面上缘与 O1 地面用同一套季节潜势阈值（§2）
 - **O2 雾中楼顶、外围街道高架站台招牌的灯（WLD-OUTSKIRTS-BAND）**：都在箱庭里做成三维，楼身下部由雾海顶面盖住；远景不替它们补画（§4、§5）
 - **主相机远裁剪**：`Camera3D.Far` 取 `backdrop.json` 的值，要盖住雾海外缘和远景环（§4）
-- **导出关键帧色值（日相与季节调色板（game/style/palette/keys/））**：地层四层、雪山的玫瑰色、日照金山的金色和金边按关键帧出值；雾海和远景直接读关键帧的雾色和天色
-- **改天空着色器（全日天空（ART-SKYLIGHT-ATMOSPHERE））**：雪山默认留在远景环的远层，要并进天空着色器须与 箱庭截面与远景（WLD-OUTSKIRTS-DIORAMA） 商定（§6、§7）
-- **河渠穿过截面线（WLD-OUTSKIRTS-BAND、水体系统（WLD-WATER））**：交点由管线写进外围数据，不手写；水柱水色按 §3
+- **导出关键帧色值（game/style/palette/keys/）**：地层四层、雪山的玫瑰色、日照金山的金色和金边按关键帧出值；雾海和远景直接读关键帧的雾色和天色
+- **改天空着色器（ART-SKYLIGHT-ATMOSPHERE）**：雪山默认留在远景环的远层；要并进天空着色器，先改本文 §6、§7 的远景分层
+- **河渠穿过截面线（WLD-OUTSKIRTS-BAND、WLD-WATER）**：交点由管线写进外围数据，不手写；水柱水色按 §3
 - **代码要用清水河的箱庭数值**：读 `backdrop.json`，不写常数和实体 ID（SYS-MAPS §6）
 
 ## 1 截面线与校界
@@ -53,7 +53,7 @@ paths: ["game/style/shaders/diorama_far.gdshader.uid", "game/style/shaders/diora
 
 自上而下四层，每层平涂一种颜色：草皮与铺装（草坪处是草皮断面，道路处是铺装和垫层）、深褐表土、黄褐黏土，最下是最厚的一层，约占六成；表土与黏土偶尔几道浅色横纹；最下层的颗粒每颗只画受光的一面，用卡通高光块表示，放大到视觉上 1.5–3 m 一颗，在 300–900 m 的距离上仍有 2–5 px。
 
-四层色名由 箱庭截面与远景（WLD-OUTSKIRTS-DIORAMA） 登记（ART-STYLE §2.5），各格的值由 日相与季节调色板（game/style/palette/keys/） 按 ART-STYLE §2.3 推导。
+四层色名由本文登记（ART-STYLE §2.5），各格的值由 日相与季节调色板（game/style/palette/keys/） 按 ART-STYLE §2.3 推导。
 
 - **地下水线**：最下层上部三分之一处，夹着一道会反光的浅蓝线；高光颜色跟随主光，夜间是一线月光银色，动态见 SYS-MOTION-ENV §3。
 - **截面上缘**最常被看到：顶边要有干净的描线，路面在这里收一道细边。上缘那一层读季节：春夏一线浓绿，冬季一线积雪，与 O1 地面用同一套阈值（积雪取季节基线与天气累积的较大者，SYS-WEATHER §2）。上缘不读校内的地面遮罩，改读顶点里的季节潜势，因为截面线南北两侧落在地图范围以外。
@@ -72,15 +72,15 @@ paths: ["game/style/shaders/diorama_far.gdshader.uid", "game/style/shaders/diora
 
 河渠穿过截面线的地方，截面画成"嵌在玻璃里的水柱"；河底是卵石，有几株倒伏的水草，摆动见 SYS-MOTION-ENV §3；水柱上缘就是水面线，和箱庭里的水面接上，高度取交点记录的 `waterY`，与校内该段河渠的常水位一致；水色与 WLD-WATER §1 一致：上层浅青绿 #7FB8B0，下层深青绿 #2F5C5E（初值），分层处一条略亮的细线，侧面像玻璃，边缘一道白色高光竖线；其他时段由 日相与季节调色板（game/style/palette/keys/） 推导，夜间不低于暗部下限；可选的分级色带默认不开，看图决定。每个交点一个不透明盒体，暗涵段正好穿过截面线时画成一个圆形或方形涵洞断面，里面是水。
 
-交点由管线用河道几何与截面线求交，写进外围数据（WLD-OUTSKIRTS-BAND §6），不手写；`backdrop.json` 只写例外。河渠穿出校界的地方不画水柱，做拦污格栅或节制闸，与两岸栏杆接上（校界与门（game/gen/maps/qingshuihe/boundary/））；清水河见 MAP-QSH-OUTSKIRTS §6.1。
+交点由管线用河道几何与截面线求交，写进外围数据（WLD-OUTSKIRTS-BAND §6），不手写；`backdrop.json` 只写例外。河渠穿出校界的地方不画水柱，做拦污格栅或节制闸，与两岸栏杆接上（game/gen/maps/qingshuihe/boundary/）；清水河见 MAP-QSH-OUTSKIRTS §6.1。
 
 ## 4 截面下缘与雾海
 
 - **下缘不收底**：截面越往下越淡，不透明地渐变到雾色，雾色按视线方向取（ART-SKYLIGHT-ATMOSPHERE §3.1），不走透明通道；截面底面再画一层兜底，从雾海里斜着往上看也不露空洞。正常飞行看不到底面（校界以内镜头最低 −28 m，截面线以外最低合法高度约 300 m）。
 - **雾海**：箱庭四周是一片低平的雾海。内缘压在截面线下方；非雾天顶面比校园地面低约 12–20 m（数据在 `backdrop.json`），所以截面上部露在雾上、下部没在雾里。雾面是动画式的分层平涂，顶面亮、向下变暗；顶面上有几道缓慢流动的亮纹，颜色跟随主光（白天黄昏偏暖，夜间月光银灰）。
 - **河流银带**（WLD-OUTSKIRTS-BAND §1.1）：留在截面线外的河流，在雾海顶面上沿它的真实走向画一条静止的银色亮带，颜色读主光色，夜间是月光银；清水河的走向见 MAP-QSH-OUTSKIRTS §1.2。
-- **雾中楼顶**：截面线以外的 O2 楼顶从雾里探出，雾海顶面要能盖住它们的下部（O2 归 外围环境带（WLD-OUTSKIRTS-BAND））。
-- **颜色**按视线方向过渡，引用 日相与季节调色板（game/style/palette/keys/） 导出的关键帧雾色（ART-COLORSCRIPT §1.2、§1.3），本包不另写色值；换季起雾与雾海用同一套雾色；加载界面底色也取雾色。
+- **雾中楼顶**：截面线以外的 O2 楼顶从雾里探出，雾海顶面要能盖住它们的下部（O2 归 WLD-OUTSKIRTS-BAND）。
+- **颜色**按视线方向过渡，引用 日相与季节调色板（game/style/palette/keys/） 导出的关键帧雾色（ART-COLORSCRIPT §1.2、§1.3），本文不另写色值；换季起雾与雾海用同一套雾色；加载界面底色也取雾色。
 - **深夜**雾海顶面微微发光，作为城市和雪山剪影的底（ART-COLORSCRIPT §1.4）：太阳从 −12° 降到 −24° 时逐渐亮起，黎明前反向退去，用平涂提亮，不做体积光。
 - **雾天雾海上升**（SYS-WEATHER §2）：雾天雾海从低于地面升到截面上缘（不与截面线内侧的地面共面，留约 1 m），把截面整段没进雾里，箱庭像浮在一整片雾上，远景只剩近层剪影。起雾时先从湖面和低洼起，雾海随后爬上截面；散雾时自上而下退回。升降随天气向量的雾密度连续变化，不硬切；雨天略微升高变暗，雨后初晴回落变清透。
 
@@ -118,6 +118,6 @@ paths: ["game/style/shaders/diorama_far.gdshader.uid", "game/style/shaders/diora
 
 | 待验证 | 验证方法与负责包 | 验证前的初值 |
 | --- | --- | --- |
-| 雾海顶面以下的分层环层数（§4） | P0 看图定；箱庭截面与远景（WLD-OUTSKIRTS-DIORAMA） | 一两层 |
-| 四季的雪山可见度与雪线（§6） | 在截图联表（SYS-TIME §4）里微调，写回 `backdrop.json`；WLD-OUTSKIRTS-DIORAMA、日相与季节调色板（game/style/palette/keys/） | `backdrop.json` 现值 |
-| 雪山是否并进天空着色器（§6） | 两包商定；WLD-OUTSKIRTS-DIORAMA、全日天空（ART-SKYLIGHT-ATMOSPHERE） | 留在远景环的远层 |
+| 雾海顶面以下的分层环层数（§4） | P0 看图定；本文 | 一两层 |
+| 四季的雪山可见度与雪线（§6） | 在截图联表（SYS-TIME §4）里微调，写回 `backdrop.json`；本文、日相与季节调色板（game/style/palette/keys/） | `backdrop.json` 现值 |
+| 雪山是否并进天空着色器（§6） | 两份文档商定；本文、全日天空（ART-SKYLIGHT-ATMOSPHERE） | 留在远景环的远层 |

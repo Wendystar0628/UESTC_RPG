@@ -31,7 +31,7 @@ paths: ["game/gen/maps/qingshuihe/south/**", "game/data/maps/qingshuihe/world/so
 
 - **点位与跳转（UI-NAV-WAYPOINTS） 定 P07、P09、P17–P19 时**：P09 落在草阶看台平整的一级；坐标以 `waypoints.json` 为准（§2）
 - **标记、锚点（SYS-ATLAS-TRAVEL）、可行走范围、边界与安全点（SYS-WALK-BOUNDS） 登记导览亭 A01、A03、A06 时**：坐标与朝向以 `world/atlas.json` 为准，A06 的 y 取平台顶面（§2）
-- **南区精选室内（MAP-QSH-SOUTH） 做主楼、宣邦楼、两馆、立人楼室内时**：门洞、门前台阶、门口表现和立面对位归本区，楼板、楼梯、碰撞和室内灯归 MAP-QSH-SOUTH；钟室铜钟的几何归 MAP-QSH-SOUTH（MAP-QSH-SOUTH §5.4、MAP-QSH-SOUTH-WALK §1）
+- **南区精选室内（MAP-QSH-SOUTH） 做主楼、宣邦楼、两馆、立人楼室内时**：门洞、门前台阶、门口表现和立面对位归本区，楼板、楼梯、碰撞和室内灯归 MAP-QSH-SOUTH；钟室铜钟的几何归 MAP-QSH-SOUTH（MAP-QSH-SOUTH §5.4、本文 §1）
 - **外围环境带（WLD-OUTSKIRTS-BAND）、校界与门（game/gen/maps/qingshuihe/boundary/） 做南门外和校界时**：南门外的 O0、O1 归 WLD-OUTSKIRTS-BAND；看街长椅与河渠穿出处的格栅归 game/gen/maps/qingshuihe/boundary/，护岸归 滨水与桥（game/gen/maps/qingshuihe/waterfront/）；本区的绿带和路灯不挡长椅视线（MAP-QSH-SOUTH §1.5、§10）
 
 ## 1 行走：主网、挡路物与开放入口（主线之后）

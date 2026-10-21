@@ -43,7 +43,7 @@ paths: ["game/project.godot", "game/export_presets.cfg", "Directory.Build.props"
 2. **不得新增**光源、SubViewport、CompositorEffect、全屏通道、WorldEnvironment、Environment；只有渲染内核与舞台（ENG-ARCH）、主光与阴影（`game/kernel/lighting/`）、描线与后期（ART-STYLE-LINES）可以，先申请；水体系统（WLD-WATER）倒影视口已登记。
 3. **几何经登记处按格交付**，烘焙器按级别给一个典型误差，不逐件上报；全部级别烘焙成 TileBundle，`Build()` 在工作线程上跑，主线程不生成几何；只有内核创建渲染实例（`MeshInstance3D`、`MultiMeshInstance3D`、`OccluderInstance3D`，ENG-ARCH §2），静态几何经 RenderingServer 挂载。
 4. **计时与逐帧路径**：计时只由 动态与偶发事件（SYS-MOTION）的通道驱动（世界时间例外）；钟点、季节、天气只在 WorldState 那一步推进；风、水、一拍二、雨丝只读 `anim_time`；`Engine.TimeScale` 固定 1，着色器不用 `TIME`；禁用写法见 ENG-ARCH §2（G4）；逐帧零托管分配，不在 `_Process` 里 `GetNode`；界面每秒刷新 ≤ 10 次，动效只改 `Modulate`、非容器的 `Position` / `Rotation`、instance uniform 和 `ui_night`，小地图与大地图是登记例外。
-5. **纹理**：导入为 VRAM Compressed，数据纹理运行时创建；区域包不得自带大于 512² 的贴图。
+5. **纹理**：导入为 VRAM Compressed，数据纹理运行时创建；各区不得自带大于 512² 的贴图。
 6. **容器**按 ENG-PERF §1.1 选；MultiMesh 不用实例色、成批整块写；GPUParticles3D 只作备选，用要批准。
 7. **顶点格式**：内核或烘焙器打包成压缩 20 B/顶点，每个表面 ≤ 65 536 个顶点，只用 ENG-PERF §2 登记的格式。
 8. **discard**：不透明着色器里的 `discard` 与 `ALPHA_SCISSOR_THRESHOLD` 只用于白名单里的镂空类和抖动淡化。
@@ -59,7 +59,7 @@ paths: ["game/project.godot", "game/export_presets.cfg", "Directory.Build.props"
 15. **着色器里按距离判断**用 `MAIN_CAM_INV_VIEW_MATRIX[3].xyz`，不用 `CAMERA_POSITION_WORLD`（阴影通道里它是灯的位置）；不用 `LIGHT_COLOR`（G4）。
 16. **线程边界**：工作线程只做纯 .NET 计算、读写本机缓存、`res://` 后台加载和 RenderingServer 资源创建；场景树、`RenderingServer.Instance*`、PhysicsServer3D 的 body 只在主线程；gen 里禁用 `Parallel`、`Task.Run`；在途生成任务不超过 max(2, 逻辑核数 − 2)。
 17. **风格底线不可关**（清单见 ART-STYLE-LINES §2）：任何预设、手动值和自动调节级别都不能关；实时阴影不低于 2048²、2 级，西湖倒影不低于每轴 1/4、每 4 帧；只有移轴、镜头光斑、光柱、暗角可关。最差值写在 `KnobSpec.WorstAllowed`，集中测试时在最差值配置下截图看一眼（G7）。
-18. **画面设置不改烘焙、碰撞和世界状态**：`Build()` 与 `Campus.Gen.*` 不感知画面设置；各包只经 `IQualityService` 与 `[QualityResponsive]` 接收设置，不直接读设置文件；每个单项恰有一个负责方（G5）。
+18. **画面设置不改烘焙、碰撞和世界状态**：`Build()` 与 `Campus.Gen.*` 不感知画面设置；各模块只经 `IQualityService` 与 `[QualityResponsive]` 接收设置，不直接读设置文件；每个单项恰有一个负责方（G5）。
 19. **存档只走一条路**：只经 `ISaveService` 与 `[SaveSection]`，禁用 Godot Resource、ConfigFile、`StrToVar`、`BytesToVar*`、`GetVar`；只有 `Campus.Kernel.Save` 写 `user://saves`；快照不造成可见卡顿（主线程单帧 ≲ 1 ms），其余在线程池（SYS-SAVE-FORMAT §4）。
 20. **室内只在开放清单里**（WLD-INTERIORS-BUILD §5）：清单外的楼没有完整室内和楼内碰撞；可走性不随钟点、季节、天气变；会动的门只由观者位置触发，剧情锁门也只走运行时门体。
 21. **音频硬上限**：同时在播的声源数以 `game/audio/core/AudioVoicePool.cs` 为准；不在主线程同步加载素材；只有 `Campus.Audio.*` 能建播放器和改总线（SYS-AUDIO §1、§9）。

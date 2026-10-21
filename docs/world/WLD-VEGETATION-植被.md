@@ -16,7 +16,7 @@ paths: ["game/style/palette/ext/tree_bark.json", "game/style/shaders/veg_common.
 # WLD-VEGETATION · 植被
 
 > **范围**：本文规定全校树木、灌木、绿篱、草坪与水生植物的卡通观感，树种的色名与季相行，落叶、花瓣与积雪的地面覆盖，季相与天气下植被的规则，行走碰撞，声音要用的数据。
-> **不在本文**：清水河各树种的种植位置、四季观感、线性与片区种植、地面覆盖的具体位置、水生植物的位置（MAP-QSH-VEGETATION）；外围的树与氛围元素（MAP-QSH-OUTSKIRTS）；树的摆动节奏、季节转场时间线与氛围粒子（SYS-MOTION）；季相参数的逐帧求值（SYS-TIME）；地面着色与积雪潜势通道（地表、道路、铺装（WLD-TERRAIN-APPLY））；天气的湿润、积水与降水（SYS-WEATHER）；单片落叶（WLD-LIFE 与各区）；外围作物的季相色（WLD-OUTSKIRTS）；发声（SYS-AUDIO）；树种四季的叶量、开花、摆幅等数值（`game/data/vegetation/species.json`）；色值（`game/style/palette/core.json`）；分级距离、近池远池、L2 替身、着色器与数据通道的写法（ENG-PERF 的植被部分）。
+> **不在本文**：清水河各树种的种植位置、四季观感、线性与片区种植、地面覆盖的具体位置、水生植物的位置（MAP-QSH-VEGETATION）；外围的树与氛围元素（MAP-QSH-OUTSKIRTS）；树的摆动节奏、季节转场时间线与氛围粒子（SYS-MOTION）；季相参数的逐帧求值（SYS-TIME）；地面着色与积雪潜势通道（WLD-TERRAIN-APPLY）；天气的湿润、积水与降水（SYS-WEATHER）；单片落叶（WLD-LIFE 与各区）；外围作物的季相色（WLD-OUTSKIRTS）；发声（SYS-AUDIO）；树种四季的叶量、开花、摆幅等数值（`game/data/vegetation/species.json`）；色值（`game/style/palette/core.json`）；分级距离、近池远池、L2 替身、着色器与数据通道的写法（ENG-PERF 的植被部分）。
 > **查阅**：先读 §0；树冠与冬季裸枝看 §1；树种规则与色名看 §2；草坪看 §3；落叶、花瓣、积雪看 §4；水生植物看 §5；季相与天气看 §6；碰撞、画面设置与声音看 §7；树种表、种植位置和具体覆盖看 MAP-QSH-VEGETATION
 
 ## 0 结论
@@ -33,16 +33,16 @@ paths: ["game/style/palette/ext/tree_bark.json", "game/style/shaders/veg_common.
 
 ### 0.1 接入要点
 
-- **区包种树**：银杏占比很小，只种在登记处，不当画面母题（§2）
+- **区内种树**：银杏占比很小，只种在登记处，不当画面母题（§2）
 - **做画面设置或自适应降级**：乔木株数不降，只降草叶、近处落叶和花境（§7.2）
-- **用某树种的颜色、叶量或开花**：读 `species.json` 与调色板；改色值先登记进调色板，区域包和别的着色器不另调（§2）
-- **重组过渡绿地（区包、公共空间设计（game/gen/maps/qingshuihe/public/））**：疏林只用 MAP-QSH-VEGETATION §1、§2 已有的树种；野花斑块、观赏草丛按 §3.4 做，色名只用已有的，不新增季相行
+- **用某树种的颜色、叶量或开花**：读 `species.json` 与调色板；改色值先登记进调色板，各区和别的着色器不另调（§2）
+- **重组过渡绿地（game/gen/maps/qingshuihe/public/）**：疏林只用 MAP-QSH-VEGETATION §1、§2 已有的树种；野花斑块、观赏草丛按 §3.4 做，色名只用已有的，不新增季相行
 - **放单片落叶（车筐、长椅、雕像肩头、台阶）**：叶形与本文一致；春季换成花瓣，冬季换成一小撮雪，夏季缩到 0（§4）
-- **做地面着色（地表、道路、铺装（WLD-TERRAIN-APPLY））**：落叶与花瓣的潜势由本文按树冠投影生成，积雪潜势由 WLD-TERRAIN-APPLY 生成；叠放顺序从上到下是雪、银杏叶、其他落叶和花瓣、草或铺装（§4）
+- **做地面着色（WLD-TERRAIN-APPLY）**：落叶与花瓣的潜势由本文按树冠投影生成，积雪潜势由 WLD-TERRAIN-APPLY 生成；叠放顺序从上到下是雪、银杏叶、其他落叶和花瓣、草或铺装（§4）
 - **建筑、车顶、长椅覆雪**：按法线覆雪，与树冠同一套写法（§6.4）
-- **写季节、风、雪的全局参数（世界状态与美术星历（game/kernel/world/）、物候、季节植被与季节氛围（SYS-TIME）、动态与偶发事件（SYS-MOTION））**：植被只读全局参数，不从脚本读回（§6）
-- **外围的树（世界模型与世界数据（SYS-MAPS）、外围环境带（WLD-OUTSKIRTS-BAND））**：SYS-MAPS 给外围树点，本文实例化，份额计入 WLD-OUTSKIRTS-BAND（§7.1）
-- **烘焙行走碰撞（碰撞代理生成与流式加载（SYS-WALK-BOUNDS））**：树干是竖直圆柱、挡路绿篱是盒体，其余植被不碰撞（§7.1）
+- **写季节、风、雪的全局参数（SYS-TIME、SYS-MOTION）**：植被只读全局参数，不从脚本读回（§6）
+- **外围的树（SYS-MAPS、WLD-OUTSKIRTS-BAND）**：SYS-MAPS 给外围树点，本文实例化，份额计入 WLD-OUTSKIRTS-BAND（§7.1）
+- **烘焙行走碰撞（SYS-WALK-BOUNDS）**：树干是竖直圆柱、挡路绿篱是盒体，其余植被不碰撞（§7.1）
 - **音频（SYS-AUDIO）**：叶声音色按树种分四类；脚下的落叶读地面遮罩的 CPU 副本（§7.3）
 
 ## 1 卡通树冠的画法
@@ -97,7 +97,7 @@ paths: ["game/style/palette/ext/tree_bark.json", "game/style/shaders/veg_common.
 
 ### 2.1 色名与季相行
 
-- 色名（`ginkgo.*`、`metaseq.*`、`camphor.*`、`grass.*`、`bloom.*`、`plume.*`、`tree.bare` 等）与四季的受光 / 影色值以 `game/style/palette/core.json` 为准；受光色按各季英雄帧（春清晨、夏午后、秋黄金、冬雪后正午）给出，其他关键帧由脚本按 ART-STYLE 推导，本文和区域包都不另调。
+- 色名（`ginkgo.*`、`metaseq.*`、`camphor.*`、`grass.*`、`bloom.*`、`plume.*`、`tree.bare` 等）与四季的受光 / 影色值以 `game/style/palette/core.json` 为准；受光色按各季英雄帧（春清晨、夏午后、秋黄金、冬雪后正午）给出，其他关键帧由脚本按 ART-STYLE 推导，本文和各区都不另调。
 - **影色一律推导**：植被的影色按 ART-STYLE 的影色规则（明度比 r 默认格 0.78、彩度略降、色相只向天光小转，黄、橙不往绿转）推导；深影由着色器从影色算出，不另登记色名。受光一栏春夏草坪在英雄帧的受光彩度不低于 0.14，其余帧不超过英雄帧。
 - **行数**：季相行有上限（上限见调色板，ART-COLORSCRIPT）。新增色名之前先看能不能合并；开花色四季不变，必要时可挪到第 0 行。外围其余植物不新增色名，复用已有色名；清水河外围的对应见 MAP-QSH-OUTSKIRTS §5。
 
@@ -110,7 +110,7 @@ paths: ["game/style/palette/ext/tree_bark.json", "game/style/shaders/veg_common.
 
 ### 3.2 开阔草坪
 
-现有景观算法留出的开敞区是默认状态。两个方向都在约 40 m 以上的，由所在区包按 MAP-QSH-ADDITIONS §3 归为两类之一，无主的由 公共空间设计（game/gen/maps/qingshuihe/public/） 归类（D-185）：
+现有景观算法留出的开敞区是默认状态。两个方向都在约 40 m 以上的，由所在区按 MAP-QSH-ADDITIONS §3 归为两类之一，无主的由 公共空间设计（game/gen/maps/qingshuihe/public/） 归类（D-185）：
 
 - **功能开敞面**：中心不种树，保持空旷；边缘做足林缘和花境。作地标的前景（清水河的归类见 MAP-QSH-ADDITIONS §3）。
 - **过渡绿地**：可以重组成疏林草地，或加季节花田、野花斑块、观赏草丛和高草（§3.4）；树种只用 MAP-QSH-VEGETATION §1、§2 已有的，银杏仍只种在登记的位置；草丘和浅洼走本区地形覆盖层。
@@ -123,7 +123,7 @@ paths: ["game/style/palette/ext/tree_bark.json", "game/style/shaders/veg_common.
 
 ### 3.4 过渡绿地的草本与草面（D-185）
 
-- **野花斑块**：成片的低矮草本花，做法同季节花境，花色只从已有开花色里取，取哪几种、哪一季开，由区包在任务单里提，评审时定。
+- **野花斑块**：成片的低矮草本花，做法同季节花境，花色只从已有开花色里取，取哪几种、哪一季开，由各区在任务单里提，评审时定。
 - **观赏草丛**：成丛的观赏草，叶用 `reed.*`，穗用 `plume.*`。
 - **高低两种草**：草坪表面分常规矮草和成片高草，高草作重组绿地的变化，范围的数据格式待定。
 - **不做割草条纹**：它只是纹理装饰，不改空间。以上都复用已有色名，不新增季相行。
@@ -196,7 +196,7 @@ paths: ["game/style/palette/ext/tree_bark.json", "game/style/shaders/veg_common.
 
 - **树干**：竖直圆柱，半径取胸径处，从地面到分枝点，所以树冠下面可以走；接触材质是树皮，不留自动。
 - **挡路的绿篱**（如组团外 1.2 m 的绿篱）：沿折线每段一个盒体，厚度 = 绿篱厚度 + 两侧各不超过 0.3 m 的外扩，碰撞顶取 max(视觉高度, 1.5 m)；接触材质是绿篱（碰到一阵沙沙，贴着走是连续的枝叶声）。
-- 其余灌木、草、季节花境、芦苇、芒草、荷不参与碰撞；树池沿由部件包提供。
+- 其余灌木、草、季节花境、芦苇、芒草、荷不参与碰撞；树池沿由部件库提供。
 - **外围的树**：外围的植被由本文按 世界模型与世界数据（SYS-MAPS） 给出的外围树点实例化，用校内同一套树种和季相，份额计入 外围环境带（WLD-OUTSKIRTS-BAND），只是视觉，没有碰撞；清水河外围种什么见 MAP-QSH-OUTSKIRTS §5。
 
 ### 7.2 画面设置（SYS-GRAPHICS）

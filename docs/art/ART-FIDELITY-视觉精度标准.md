@@ -39,7 +39,7 @@ paths: ["game/style/palette/ext/openings.json", "game/style/palette/ext/roof_equ
 - **要知道表面属于哪个精度区**：只读构建期冻结的 `IFidelityModel`（契约以 `game/contracts/WorldModel/Fidelity.cs` 为准），不自己判；已定的 K1/K2 登记在世界特征的 `props.fidelity`，主网登记在 `props.walkNetwork`，不读精度覆盖文件；常被看到的面被判成 K4 时，在世界特征 `props.fidelity` 里提级并写理由（INV-9），只能提不能降（§1.4）
 - **交付任何建模或内容**：逐条自查 B1–B13，任一条不满足即一票否决，只能飞到的位置也要过（§2.0、§3）
 - **决定某处做多密**：按区查取用表；L0+ 专用几何只给 K1、K2，几何铺装块只放 K1 的英雄机位和热点簇（§1.3、ART-FIDELITY-DETAIL §2）
-- **设巡检点**：每个内容包在本区设 3–4 个巡检点（编号 1–4）（§4）
+- **设巡检点**：每个内容模块在本区设 3–4 个巡检点（编号 1–4）（§4）
 - **按像素或距离判**：基准是精致预设、1080p 原生、自动调节关（§1.5）
 - **做立面、地面、痕迹、倒角或贴花**：读 ART-FIDELITY-DETAIL
 
@@ -122,7 +122,7 @@ paths: ["game/style/palette/ext/openings.json", "game/style/palette/ext/roof_equ
 
 ## 4 巡检点
 
-- 每个内容包在本区设 3–4 个巡检点（编号 1–4），登记在按图的审查视角数据 `game/data/maps/<图>/review.json`（ENG-GATES-SHOTS §1），不写进代码（D-265）：行走眼高 1.62 m 1 个（在本区 K1 内）；K3 立面前 15–30 m 1 个；斜 45° 俯视 30–60 m 1 个；有室内的包加楼内 1 个。外围包的巡检点见 ENG-GATES-SHOTS §1.3。
+- 每个内容模块在本区设 3–4 个巡检点（编号 1–4），登记在按图的审查视角数据 `game/data/maps/<图>/review.json`（ENG-GATES-SHOTS §1），不写进代码（D-265）：行走眼高 1.62 m 1 个（在本区 K1 内）；K3 立面前 15–30 m 1 个；斜 45° 俯视 30–60 m 1 个；有室内的模块加楼内 1 个。外围街区的巡检点见 ENG-GATES-SHOTS §1.3。
 - 集中测试时在这些点各看一眼，K1、K2 要比 K3 更精；截图与时季轮换的执行以 ENG-GATES 的 G7 为准。
 
 ## 5 行走走廊

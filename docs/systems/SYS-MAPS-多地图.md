@@ -33,7 +33,7 @@ paths: ["game/data/maps/**", "game/data/maps/index.json", "game/data/maps/*/map.
 
 - **改地图数据**：只改项目的世界文件 `game/data/maps/<图>/world/`，增删改写明理由；不从 OSM 或其他在线地图取数据，也不照着改；OSM 只剩署名与随版本发的地图数据包（D-252、ENG-RELEASE §5）
 - **读本图的数据文件**：路径由 `IMapContext.DataRoot` 拼出，烘焙产物用 `BakeRoot`；内核、系统、界面和通用程序集里不写地图 ID、`res://data/maps/…` 路径和完整实体 ID 的字面量（G4，§6）
-- **加数据或资源**：放 `game/data/maps/<地图>/` 下本包自己的文件，资源放各资源目录的 `<地图>/` 子目录；`map.json` 归 地图服务与多地图（SYS-MAPS），字段增改须经主会话批准（§1、§2）
+- **加数据或资源**：放 `game/data/maps/<地图>/` 下本地图自己的文件，资源放各资源目录的 `<地图>/` 子目录；`map.json` 归本文，字段增改须经主会话批准（§1、§2）
 - **写区内容**：区代码靠程序集的 `MapScope`；通用模块只读 `BuildContext.Map` 和本图数据，不认领具体实体，出现 `FeatureClaim` 由 G5 报错（§6）
 - **全局常驻的 `[KernelNode]` 用到按图的数据**：实现 `IMapAware`，在 `OnMapLoaded` 重建；`OnMapUnloading` 释放本图的实例、纹理内容和缓存，随切图运行时在主线之后；不得跨图持有 `IWorldModel`、`FeatureId`、格子句柄或纹理内容（§3.3）
 - **写或采样全图数据纹理**：按 `map_rect` 换算，在 `OnMapLoaded` 里重建；罩住整张图的 `CustomAabb` 切图时重设（§7）
@@ -155,14 +155,14 @@ paths: ["game/data/maps/**", "game/data/maps/index.json", "game/data/maps/*/map.
 ## 6 归属与 `MapScope`
 
 - **求法**：注册器照常扫描全部程序集，给每个模块求所属的图：类上的 `Map` → 程序集的 `MapScope` → 都没有就是通用模块。每次 LoadData 只启用"通用 + 当前图"的模块。
-- **区代码**（core、south、west 等各区）每张图一个程序集 `Campus.Gen.Maps.<图>`，在 `game/gen/maps/<图>/`，各区是它的子目录与命名空间 `Campus.Gen.Maps.<图>.<区>`；`MapScope` 由该程序集的 csproj 标一次，各区包自己不写。跨图共用的区站点基类与几何在通用程序集 `Campus.Gen` 的 `Campus.Gen.Sites`，不属于任何图。程序集清单和模块名单由 MSBuild 实际构建的项目引用推出，不手改。**通用程序集**（建筑、地面、植被、水、家具、碰撞、外围、室内生成器等）不标归属，每张图都跑，只读 `BuildContext.Map` 和本图数据，不认识任何具体的图。
+- **区代码**（core、south、west 等各区）每张图一个程序集 `Campus.Gen.Maps.<图>`，在 `game/gen/maps/<图>/`，各区是它的子目录与命名空间 `Campus.Gen.Maps.<图>.<区>`；`MapScope` 由该程序集的 csproj 标一次，各区自己不写。跨图共用的区站点基类与几何在通用程序集 `Campus.Gen` 的 `Campus.Gen.Sites`，不属于任何图。程序集清单和模块名单由 MSBuild 实际构建的项目引用推出，不手改。**通用程序集**（建筑、地面、植被、水、家具、碰撞、外围、室内生成器等）不标归属，每张图都跑，只读 `BuildContext.Map` 和本图数据，不认识任何具体的图。
 - `KernelNode` 的寿命固定为 `Global`，由 `KernelStage` 在启动时统一创建并入树；地图挂载不创建节点。其他注册对象按声明的 `Lifetime` 管理寿命，地图作用域由注册器在卸图时逆序释放；`Map` 和程序集 `MapScope` 只筛选适用地图。世界文件按图，只读当前图的目录。
 - **规则**：归属不同图的程序集互不引用；通用程序集不得引用带 `MapScope` 的程序集。**通用模块里出现 `FeatureClaim`（认领具体实体）直接报错**，因为它说明该模块属于某张图（G5）。
 - **G4**：通用程序集、内核、系统、界面代码里不得出现完整实体 ID、地图 ID 和 `res://data/maps/…` 的字面量，数据路径一律由 `IMapContext.DataRoot` 拼出；例外只有 `kernel/map` 和门禁夹具。
 
 ## 7 全局参数 `map_rect`
 
-`map_rect`（vec4：xz 起点与宽深的倒数）是全图数据纹理的覆盖范围，取 `map.json` 的 `dataRect`，由 地图服务与多地图（SYS-MAPS）在切图的 Mount 一步写入，登记在 ENG-PERF §1.5。
+`map_rect`（vec4：xz 起点与宽深的倒数）是全图数据纹理的覆盖范围，取 `map.json` 的 `dataRect`，由本文在切图的 Mount 一步写入，登记在 ENG-PERF §1.5。
 
 - **用它的纹理**：`ground_mask`、`ground_mask2`、`terrain_height`、`precip_occ`、`lamp_grid`，以及以后任何全图纹理；它们共用同一个 `map_rect`，分辨率可以不同。不按"全校"隐式换算，否则换一张尺寸不同的图就会错位，这是最典型的"以为只有一张图"。
 - **范围外**取"无数据"的默认值：遮罩为 0、`precip_occ` 视为没有顶面、地形高度取 0（着色器用 `map_uv()`、`in_map()`）。
@@ -184,6 +184,6 @@ paths: ["game/data/maps/**", "game/data/maps/index.json", "game/data/maps/*/map.
 
 | 待验证 | 初值 |
 | --- | --- |
-| 热切图整体是否在几秒内（§3.2，主线之后，地图服务与多地图（SYS-MAPS）用同图重载看） | 几秒内 |
+| 热切图整体是否在几秒内（§3.2，主线之后，用同图重载看） | 几秒内 |
 | 给全局 sampler 换一张尺寸不同的 `ImageTexture` 后，RID 是否保持、材质是否失效、是否触发管线编译（§7） | 按可行处理；不行就各图一律同尺寸、范围外留空 |
 | 加载界面下清材质缓存、按本图重新分配材质 ID 是否触发编译（全场 128 个，ENG-PERF §3） | 不行就把全部图的材质并集控制在 128 以内 |

@@ -16,12 +16,12 @@ paths: ["game/kernel/save/**"]
 # SYS-SAVE · 存档与持久化
 
 > **范围**：本文规定存档服务 `ISaveService` 的存档位与世界线、各存档段存什么与不存什么。保存时机、读档流程与格式、损坏处理、安全在子文档。
-> **不在本文**：文件布局、DTO、写盘步骤（`game/kernel/save/`）；契约签名（`game/contracts/Runtime/Save/`）；帧顺序（契约 `FramePriority`）；命令行与 G20（ENG-GATES）；性能份额（ENG-BUDGET §3）；各段的字段（各包）；开始页与进入游戏（SYS-TITLE）；换图（SYS-MAPS）；天气过程（SYS-WEATHER）。
+> **不在本文**：文件布局、DTO、写盘步骤（`game/kernel/save/`）；契约签名（`game/contracts/Runtime/Save/`）；帧顺序（契约 `FramePriority`）；命令行与 G20（ENG-GATES）；性能份额（ENG-BUDGET §3）；各段的字段（各模块）；开始页与进入游戏（SYS-TITLE）；换图（SYS-MAPS）；天气过程（SYS-WEATHER）。
 > **查阅**：先读 §0；存档位与世界线看 §1；各段存什么看 §2；保存时机、读档与一致性看 SYS-SAVE-FLOW；格式、损坏与安全看 SYS-SAVE-FORMAT
 
 ## 0 结论
 
-1. **存档是 Kernel 服务 `ISaveService`，不加 Autoload**。各系统用 `[SaveSection]` 声明一段，自动发现。存档包只管容器、版本、保存时机、可靠性；各段存什么由各包负责（§2）。
+1. **存档是 Kernel 服务 `ISaveService`，不加 Autoload**。各系统用 `[SaveSection]` 声明一段，自动发现。存档服务只管容器、版本、保存时机、可靠性；各段存什么由各模块负责（§2）。
 2. **3 个存档位 `s1`–`s3`**，各装一条世界线，进入后持续自动保存；"继续"取最近保存的存档位（§1）。
 3. **子文档**：
    - SYS-SAVE-FLOW「保存时机与读档流程」：保存时机、安全时刻、退出、读档顺序、世界实例、状态一致、新游戏、校验修复、关着游戏的现实时间不计。写 `Capture`、`Restore` 或接保存、读档编排时读它。
@@ -29,7 +29,7 @@ paths: ["game/kernel/save/**"]
 
 ### 0.1 接入要点
 
-- **有要跨读档保留的状态**：在本包的 `[KernelService]` 或 `[KernelNode]` 上实现 `ISaveSection<T>` 并标 `[SaveSection]`；不自己读写 `user://`，不加 Autoload（§2）
+- **有要跨读档保留的状态**：在本模块的 `[KernelService]` 或 `[KernelNode]` 上实现 `ISaveSection<T>` 并标 `[SaveSection]`；不自己读写 `user://`，不加 Autoload（§2）
 - **做传送、跳转、换图的到达或读档**：到达不触发保存（D-241），保存时机只有 SYS-SAVE-FLOW §1.1 那几种
 - **决定一段存什么**：只存读档后重建不出来的落定状态；音频状态、打开的面板、偶发事件计时、画质统计、烘焙缓存、玩家身体与动物的瞬态都不进存档（§2、SYS-SAVE-FLOW §2.3）
 

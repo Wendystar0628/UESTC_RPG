@@ -20,7 +20,7 @@ paths: ["game/**/*.cs", "scripts/requirements.*", "game/testing/**", "game/data/
 
 ## 0 结论
 
-1. **四层，依赖只朝下**：契约 → 世界与公共几何 → 内容生成 → 运行时；同层的内容包互不引用；程序集只有契约两个、通用生成一个、每张图一个、运行时一个，层间与包间的边界由命名空间规则（G4）守（§1、§2，D-232）。
+1. **四层，依赖只朝下**：契约 → 世界与公共几何 → 内容生成 → 运行时；同层的内容模块互不引用；程序集只有契约两个、通用生成一个、每张图一个、运行时一个，层间与内容模块间的边界由命名空间规则（G4）守（§1、§2，D-232）。
 2. **生成是纯 .NET 的纯函数**：生成侧契约 `Campus.Contracts` 与生成层不引用 Godot，只给运行时用的 `Campus.Contracts.Runtime` 可以用 Godot 类型；`Build()` 只读冻结的地图输入，不读运行时状态、画面设置和时间（§2）。
 3. **一条生产链**：正式运行由 `KernelStage` 装配；每类状态一个写入方；原生资源只由所属的内核服务创建（§1、§2）。
 4. **打特性即接入**：模块、部件、服务、节点、存档段靠特性自动发现，不改共享文件；Autoload 只有 `Boot`，`Kernel` 是静态入口（§2）。
@@ -32,7 +32,7 @@ paths: ["game/**/*.cs", "scripts/requirements.*", "game/testing/**", "game/data/
 ### 0.1 接入要点
 
 - **新建或修改文件**：只改派工简报允许的路径；`project.godot`、csproj、`Directory.*.props`、契约、`scripts/gates/shader-whitelist.json`、`docs/`，以及新的着色器全局参数、着色器文件、项目引用、NuGet 包，向 Codex 主线申请（WF-BUILD §1、§3）。
-- **写 `Campus.Contracts`、生成层或烘焙子任务**：不引用 GodotSharp，不读文件路径和运行时状态，不引用其他内容包的命名空间（§2）。
+- **写 `Campus.Contracts`、生成层或烘焙子任务**：不引用 GodotSharp，不读文件路径和运行时状态，不引用其他内容模块的命名空间（§2）。
 - **要显示、用材质或出声**：显示经 `IRenderHost`，材质经 `ToonSpec`，声音经音频服务；不自己创建网格实例、`ShaderMaterial` 和音频播放器（§2）。
 - **接入新模块、节点、服务或存档段**：打对应的特性，不加 Autoload，不改 `main.tscn`（§2）。
 - **写随机、计时或哈希**：用契约的 `Rng`、`StableHash`，遍历字典先排序；禁用写法以各程序集的 `BannedSymbols.txt` 和 G4 为准（§2）。
@@ -51,9 +51,9 @@ paths: ["game/**/*.cs", "scripts/requirements.*", "game/testing/**", "game/data/
 
 | 层 | 程序集 | 责任 |
 | --- | --- | --- |
-| 契约 | `Campus.Contracts`；`Campus.Contracts.Runtime`（运行时边界契约，生成层不引用） | 数据、命令、只读状态与确定性工具；`Campus.Contracts` 只引用基础类库；`Campus.Contracts.Runtime` 可暴露引擎类型并引用 GodotSharp，但不引用 Kernel、系统层或生成实现；跨包运行时能力统一经它发布 |
+| 契约 | `Campus.Contracts`；`Campus.Contracts.Runtime`（运行时边界契约，生成层不引用） | 数据、命令、只读状态与确定性工具；`Campus.Contracts` 只引用基础类库；`Campus.Contracts.Runtime` 可暴露引擎类型并引用 GodotSharp，但不引用 Kernel、系统层或生成实现；跨模块运行时能力统一经它发布 |
 | 世界与公共几何 | `Campus.Gen`（世界、几何、部件内核等通用生成，以及 `Campus.Gen.BakeInput` 的冻结输入装配与底图烘焙） | 解释冻结的地图输入（世界文件、地形、室内索引；路网由世界文件派生），提供权威查询和共享几何 |
-| 内容生成 | 通用内容包在 `Campus.Gen`（建筑、地面、植被、水、碰撞、可行走、外围、声学等，及跨图共用的公共站点 `Campus.Gen.Sites`）；每张图一个 `Campus.Gen.Maps.<图>`，在 `game/gen/maps/<图>/`，各区是它下面的子目录与命名空间 `Campus.Gen.Maps.<图>.<区>` | 按格生成几何、碰撞与声明数据；纯函数，命名空间互不引用 |
+| 内容生成 | 通用内容模块在 `Campus.Gen`（建筑、地面、植被、水、碰撞、可行走、外围、声学等，及跨图共用的公共站点 `Campus.Gen.Sites`）；每张图一个 `Campus.Gen.Maps.<图>`，在 `game/gen/maps/<图>/`，各区是它下面的子目录与命名空间 `Campus.Gen.Maps.<图>.<区>` | 按格生成几何、碰撞与声明数据；纯函数，命名空间互不引用 |
 | 运行时 | 主程序集 `Campus`（kernel、stage、flow、camera、medium、systems、style、audio、hud、gates） | 装配、烘焙与流式、世界状态、表现与界面 |
 
 - 程序集与目录的对应以仓库本身为准，路径归属以各文档文件头的 `paths` 为准。程序集只按"契约 / 通用生成 / 每图一个 / 运行时"划分，模块与模块、层与层之间的边界靠命名空间规则（§2）；加一张图只新增 `game/gen/maps/<图>/`，不改共享清单（SYS-MAPS §6）。
@@ -75,13 +75,13 @@ paths: ["game/**/*.cs", "scripts/requirements.*", "game/testing/**", "game/data/
 
 ### 依赖方向
 
-- 上层可以引用下层，反过来不行；同层的内容包、归属不同地图的程序集互不引用；通用生成不引用任何 `Campus.Gen.Maps.*`，每图程序集只引用契约和 `Campus.Gen`（SYS-MAPS §6）。程序集并少之后，这些边界由 `scripts/gates/arch/` 的命名空间架构规则（G4）挡，不靠多建程序集；增删规则要 Codex 主线批准。
+- 上层可以引用下层，反过来不行；同层的内容模块、归属不同地图的程序集互不引用；通用生成不引用任何 `Campus.Gen.Maps.*`，每图程序集只引用契约和 `Campus.Gen`（SYS-MAPS §6）。程序集并少之后，这些边界由 `scripts/gates/arch/` 的命名空间架构规则（G4）挡，不靠多建程序集；增删规则要 Codex 主线批准。
 - **kernel 内部**：自底向上为 Diagnostics/Frame/Registry、Renderer/Materials/Lod/Instances、地图与烘焙流式及状态驱动、Boot/Save/Inspect（Diagnostics 是唯一的诊断输出入口，在最底层，纯 .NET、只写标准错误，不经引擎日志，纯 .NET 测试也能装配；上层经契约 `IDiagnosticLog` 取用；Inspect 是最高层的拍摄与检视）；完整顺序以 G4 的 `KernelLevel` 声明为准，低层不依赖高层，不留双向依赖或豁免。
 - **生成层看不到运行时**：`BuildContext` 里没有世界状态、画面设置和规则集。`BuildContext` 的 `Memo` 跟随实例的世界范围：同一世界复用，换世界新建作用域。随时间、季节和天气变化的东西，只能通过调色板、灯光通道、变体掩码和全局着色器参数表达（ENG-BUDGET-RULES §1）。
 - **门禁与专项驱动在 `game/gates`**：`kernel/registry` 只提供服务注册与查找；`RulesetService`、`GlobalBuildInputs` 是注入的服务，不放在 registry。
 - **几何只经 `gen/geometry/GeometrySink`**：普通表面按完整顶点共享，保留材质及可选通道的边界；Indexed 保持已给定的顶点、索引、法线和自定义通道顺序，Positions 装配尚未分格的点集；`VertexFlag`、`GeometryVertexLimits` 只在契约里定义，生成器不自带位置法线数组。
-- **运行时内部**：各命名空间之间只经契约和 Kernel 服务交互；界面除 GodotSharp 外只依赖契约和 `Kernel.Get<T>()`，不用其他包的内部类型。
-- **原生资源各有唯一创建方**：网格与渲染实例只由内核创建，其他包经 `IRenderHost` 申请并按挂载句柄释放；`ShaderMaterial` 只由 Style 按白名单创建，其余经 `ToonSpec` 取；音频播放器与总线只由 Audio 创建；计时只出现在内核的帧、画质、巡检、存档和门禁里。这样每类资源只有一处记账与释放；逐条硬规则见 ENG-BUDGET-RULES §1。
+- **运行时内部**：各命名空间之间只经契约和 Kernel 服务交互；界面除 GodotSharp 外只依赖契约和 `Kernel.Get<T>()`，不用其他模块的内部类型。
+- **原生资源各有唯一创建方**：网格与渲染实例只由内核创建，其他模块经 `IRenderHost` 申请并按挂载句柄释放；`ShaderMaterial` 只由 Style 按白名单创建，其余经 `ToonSpec` 取；音频播放器与总线只由 Audio 创建；计时只出现在内核的帧、画质、巡检、存档和门禁里。这样每类资源只有一处记账与释放；逐条硬规则见 ENG-BUDGET-RULES §1。
 - **`user://` 每个文件一个读写方**：存档只由内核存档服务读写，本机烘焙缓存只由烘焙服务读写；不用 `ResourceLoader`、`ResourceSaver`，因为 Resource 能嵌入脚本、读入即执行（ENG-BUDGET-RULES §1 第 19、23 条）。
 
 ### 确定性与禁用写法
@@ -137,7 +137,7 @@ paths: ["game/**/*.cs", "scripts/requirements.*", "game/testing/**", "game/data/
 - **开放高处的许可源**：与可见布局、碰撞共用真实几何，只在冷烘捕获并随常驻元数据冻结；运行时只读冻结区域，不调用生成来源。
 - **查找顺序**：本机缓存 → 随包缓存 → 本机补烘。玩家的缓存在 `user://cache/bake/`；开发与 CI 用 `UESTC_BAKE_CACHE` 指向的共享缓存，默认位置以 `BakeOptions` 源码为准。缓存上限、淘汰与启动耗时目标以 `budgets.json` 的 `cache` 为准，补烘时机见 ENG-PERF-STREAM §1.1。
 - **格式**：缓存用自定义的 `.tbin`，不用 Godot 资源格式；顶点、索引、实例变换、高度栅格这类大块数值一律走二进制通道，JSON 只放键、ID、包围盒这类小元数据；格包只存产物运行数据，不存诊断归属；格式变化升级格式版本和缓存 ABI，不留旧格式兼容；逻辑格（一个烘焙键的完整产物）超过单个物理分片上限时，由烘焙层统一拆成物理分片并写逻辑索引，索引最后发布、分片齐全才算就绪，对外只交付拼好的完整格包，消费方不感知分片；读坏了删掉重烘一次，仍不行报失败。
-- **判鲜**（D-229）：每个生产方（内容模块、室内提供者、烘焙生产方）声明实际用到的数据类别与地图文件或全局文件键。每格只看这些数据输入与该产物实际用到的生成代码改没改，改了只重烘这一格，没改的直接用；代码那一半由构建期生成代码指纹清单（`scripts/build/fingerprints`），在生产源码、构建输入或归属表有变时更新，运行时只读这份清单；指纹的输入范围、分组与例外以 `scripts/build/fingerprints` 为准，`Shared` 只纳实际烘焙源码和冻结输入装配，注册器、规则集与纹理上传不因同目录关系进入指纹，室内按楼判鲜，改一栋只重烘这一栋。玩家侧游戏版本一变就清缓存重烘。
+- **判鲜**（D-229）：每个生产方（内容模块、室内提供者、烘焙生产方）声明实际用到的数据类别与地图文件或全局文件键。每格只看这些数据输入与该产物实际用到的生成代码改没改，改了只重烘这一格，没改的直接用；代码那一半由构建期生成代码指纹清单（`scripts/build/fingerprints`），在生产源码、构建输入或文档文件头的 paths 有变时更新，运行时只读这份清单；指纹的输入范围、分组与例外以 `scripts/build/fingerprints` 为准，`Shared` 只纳实际烘焙源码和冻结输入装配，注册器、规则集与纹理上传不因同目录关系进入指纹，室内按楼判鲜，改一栋只重烘这一栋。玩家侧游戏版本一变就清缓存重烘。
 - **窗号**：窗号地址由本图 `window-numbering.json` 持久登记，新网格与扩容追加地址，退役不复用；显式预烘成功后写回登记表，正常启动只读。
 - **构建期做完，运行时只读**（D-256）：能在构建期或收口预烘里算好的不放到运行时。启动路径只读不建：双击启动不编译、不导入，现成构建对不上时才编，收口预烘时一并编好；启动到能走只起引擎与服务、核对缓存、读首视角与出生点要的格；核对只比输入标识，生成只在缓存缺失时发生；全图级的系统随格挂载，不在启动时整图挂。
 - **管线输入**：`pipeline/` 离线生成按图数据。同一台机器上用同一份已提交输入重建，输出逐字节相同；世界文件不由管线生成（D-252）；Python 依赖按 `scripts/requirements.lock`（工程脚本）与 `pipeline/audio/requirements.lock`（离线音频）锁定。
@@ -172,5 +172,5 @@ paths: ["game/**/*.cs", "scripts/requirements.*", "game/testing/**", "game/data/
 
 | 待验证 | 验证方法与负责 | 验证前用的初值 |
 | --- | --- | --- |
-| 导出版里的反射与程序集加载，注册结果是否与开发态一致（§2） | 跑通 `dotnet build` → 导入（`--build-import`）→ `--export-release` → 导出版启动，比对两边的注册结果；契约、桩与拆除（ENG-ARCH） | 注册器按构建时生成的程序集清单逐个显式加载 |
-| 导出包里能否读到 `data/` 下的 JSON（§4） | 导出验证；ENG-ARCH、格子分级、烘焙与流式加载（ENG-PERF-STREAM） | 导出过滤器显式包含按图与全局的 JSON 数据 |
+| 导出版里的反射与程序集加载，注册结果是否与开发态一致（§2） | 跑通 `dotnet build` → 导入（`--build-import`）→ `--export-release` → 导出版启动，比对两边的注册结果 | 注册器按构建时生成的程序集清单逐个显式加载 |
+| 导出包里能否读到 `data/` 下的 JSON（§4） | 导出验证；格子分级、烘焙与流式加载（ENG-PERF-STREAM） | 导出过滤器显式包含按图与全局的 JSON 数据 |

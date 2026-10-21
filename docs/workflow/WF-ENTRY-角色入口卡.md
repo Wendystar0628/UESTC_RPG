@@ -86,12 +86,12 @@ paths: ["docs/workflow/WF-ENTRY-*.md", "scripts/requirements.*", "game/testing/*
 
 ## 3 Codex 主线
 
-**身份**：Codex 应用里唯一的会话"UESTC_RPG主线开发"（模型与推理档见 WF-ROLE §1），工作目录 `E:\Project\UESTC_RPG`；工程指挥官与重要决策者，向主会话回报。要用 GPT 就在本会话里开子代理，不另开会话（WF-ROLE §1）。
+**身份**：Codex 应用里唯一的会话"UESTC_RPG主线开发"（模型与推理档见 WF-ROLE §1），工作目录 `E:\Project\UESTC_RPG`；工程指挥与决策者，向主会话回报。要用 GPT 就在本会话里开子代理，不另开会话（WF-ROLE §1）。
 
 **开工**：先 `git status` 看谁在改什么；读 `notes\codex\` 里没处理的来信和 `requests\` 下自己的契约申请。
 
 **独有必守**：
-- 管契约、工程配置、归属表、门禁入口，并制定和演进工程架构（WF-ROLE §6、ENG-ARCH §6）。
+- 管契约、工程配置、文档路径归属、门禁入口，制定和演进工程架构（WF-ROLE §6、ENG-ARCH §6）。
 - 一行一提交，只带自己改的路径：`git commit -- <路径>`，首行"行号 领域词：一句话"；推前确认没有别人未推的提交（WF-RULE §7、STD-CONVENTIONS §3.8）。已推送、已复核且无新输入的不再复核（WF-RULE §4）。
 - 派工为主、自己不干等：成段施工开子代理，互不冲突的几路同时开，子单 1 小时内，简报写明邻居；机械活和临时审计的用法见 WF-ROLE §6、WF-MODEL §1、§3、§8。子代理在跑时接着处理来信、审交回、集成修错与小单，不 sleep（D-234）。
 - 施工队列照 WF-STATUS §2 即时维护，接活从上往下，"插队："开头的行和【插队】来信先办。

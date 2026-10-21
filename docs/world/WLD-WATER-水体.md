@@ -16,7 +16,7 @@ paths: ["game/style/palette/ext/water.json", "game/style/shaders/reflect_flat.gd
 # WLD-WATER · 水体
 
 > **范围**：本文规定全校水面的动画式画法（底色与色带、波纹线、反光带、泡沫线、倒影、四季与天气），涉水与开放泳区的规则入口，水体系统的规则。
-> **不在本文**：某张图各水体的具体水面和开放泳区名单（清水河见 MAP-QSH-WATER）；截面水柱的画法（WLD-OUTSKIRTS-DIORAMA §3）；驳岸、栈桥、拱桥、亭子（各区 MAP-QSH 文档）；游泳的控制器与进出阈值（SYS-WALK-BOUNDS §4）；岸型与水深剖面、常水位（WLD-TERRAIN、MAP-QSH-TERRAIN）；水边的动物（WLD-LIFE）；荷和水生植物（WLD-VEGETATION）；水的动态节奏（SYS-MOTION）；路面积水（SYS-WEATHER，降水与湿润（game/systems/weather/precip/））；水下的介质呈现（SYS-VIEW）；水声（SYS-AUDIO）；水面材质、倒影视口、数据通道的写法与份额（ENG-PERF 的水面部分，`game/systems/water/`）。
+> **不在本文**：某张图各水体的具体水面和开放泳区名单（清水河见 MAP-QSH-WATER）；截面水柱的画法（WLD-OUTSKIRTS-DIORAMA §3）；驳岸、栈桥、拱桥、亭子（各区 MAP-QSH 文档）；游泳的控制器与进出阈值（SYS-WALK-BOUNDS §4）；岸型与水深剖面、常水位（WLD-TERRAIN、MAP-QSH-TERRAIN）；水边的动物（WLD-LIFE）；荷和水生植物（WLD-VEGETATION）；水的动态节奏（SYS-MOTION）；路面积水（SYS-WEATHER）；水下的介质呈现（SYS-VIEW）；水声（SYS-AUDIO）；水面材质、倒影视口、数据通道的写法与份额（ENG-PERF 的水面部分，`game/systems/water/`）。
 > **查阅**：先读 §0；水面通用画法与硬质驳岸的接水看 §1；反光带与倒影看 §2；四季与天气看 §3；涉水与开放泳区看 §4；系统规则看 §5；待定参数看 §6；各图水体的具体水面看各图水体文档（清水河是 MAP-QSH-WATER）
 
 ## 0 结论
@@ -32,13 +32,13 @@ paths: ["game/style/palette/ext/water.json", "game/style/shaders/reflect_flat.gd
 
 ### 0.1 接入要点
 
-- **湿地面或积水要画倒影（降水与湿润（game/systems/weather/precip/））**：读共用灯条表，复用本文的解析天空与灯条函数，不另建灯表，不做平面反射（§2.2、§5）
-- **改灯光通道或偶发事件的提亮（夜景灯光与时刻表（MAP-QSH-ATMOSPHERE）、SYS-MOTION）**：水面和湿地面的灯条按灯光通道和开灯阈值自己算亮度，CPU 不写，亮灭自动与岸上一致（§2.2）
-- **行走踩进涉水区或游泳（行走控制器与模式切换（game/camera/walk/））**：涉水每步落脚发落脚事件，游泳入水、出水各发一次水声；不画水面反馈（§4）
-- **地标、岸树、荷要出现在倒影里（区域包、植被系统（WLD-VEGETATION））**：倒影世界里只放平涂的代理，复用已有资源，与本体同格加载；地标不超过 10 个（§2.3）
+- **湿地面或积水要画倒影（game/systems/weather/precip/）**：读共用灯条表，复用本文的解析天空与灯条函数，不另建灯表，不做平面反射（§2.2、§5）
+- **改灯光通道或偶发事件的提亮（MAP-QSH-ATMOSPHERE、SYS-MOTION）**：水面和湿地面的灯条按灯光通道和开灯阈值自己算亮度，CPU 不写，亮灭自动与岸上一致（§2.2）
+- **行走踩进涉水区或游泳（game/camera/walk/）**：涉水每步落脚发落脚事件，游泳入水、出水各发一次水声；不画水面反馈（§4）
+- **地标、岸树、荷要出现在倒影里（WLD-VEGETATION）**：倒影世界里只放平涂的代理，复用已有资源，与本体同格加载；地标不超过 10 个（§2.3）
 - **地图数据声明倒影候选湖（SYS-MAPS）**：写在本图 `map.json` 的 `env.reflectLakes`，列表顺序就是湖号（§2.3）
-- **画面设置（设备分档、画面设置与自适应（SYS-GRAPHICS））**：倒影不能关，刷新间隔见 §2.3
-- **定水位、做岸或湖底（世界模型与世界数据（SYS-MAPS）、各区包、滨水与桥（game/gen/maps/qingshuihe/waterfront/））**：水面高一律读 `ITerrain.WaterY`，岸线与水体多边形重合；水体 ID 稳定，同一个 ID 供水面、水域查询和倒影共用（§5）
+- **画面设置（SYS-GRAPHICS）**：倒影不能关，刷新间隔见 §2.3
+- **定水位、做岸或湖底（SYS-MAPS）**：水面高一律读 `ITerrain.WaterY`，岸线与水体多边形重合；水体 ID 稳定，同一个 ID 供水面、水域查询和倒影共用（§5）
 
 ## 1 水面的通用画法
 
@@ -125,6 +125,6 @@ paths: ["game/style/palette/ext/water.json", "game/style/shaders/reflect_flat.gd
 
 ## 6 待验证
 
-- **透明变体、截面水柱分级色带**：P0 原型在荷区、桥墩、截面近景看图决定，初值都不启用（水体系统（WLD-WATER））。
+- **透明变体、截面水柱分级色带**：P0 原型在荷区、桥墩、截面近景看图决定，初值都不启用。
 
 清水河的待验证项（反光带、湿路面灯条）见 MAP-QSH-WATER §7。

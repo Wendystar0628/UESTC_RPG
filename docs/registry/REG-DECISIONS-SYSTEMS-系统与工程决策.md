@@ -138,7 +138,7 @@ gates: []
 | D-135 | 帧顺序的每一步有唯一的优先级值，用节点 `ProcessPriority` 固定，任何两步不同值；权威是契约里的 `FramePriority` | 全项目 | `game/contracts/` 源码；ENG-ARCH §3；SYS-TIME §1 | 生效 |
 | D-136 | 流式拆成两步：`Stream`（−500）只做选级与请求，`StreamMount`（900）做挂载与碰撞入树 | 内核 | ENG-PERF-STREAM §1；ENG-ARCH §3 | 生效 |
 | D-137 | 地图 ID 一律写 `MapId("qingshuihe")`，不用 "qsh"；实体 ID 的 `qsh:` 前缀是 OSM 数据的写法，不是地图 ID | 全项目 | SYS-MAPS §1.1；SYS-ATLAS §2；STD-CONVENTIONS §3.1 | 生效 |
-| D-138 | 服务命名：`IMapService` 管地图加载与切换（地图服务与多地图（SYS-MAPS）），`IAtlasService` 管平面地图的标记、解锁、追踪与传送（平面地图、标记与传送（SYS-ATLAS）），两者不得混名 | 全项目 | ENG-ARCH §3 | 生效 |
+| D-138 | 服务命名：`IMapService` 管地图加载与切换（SYS-MAPS），`IAtlasService` 管平面地图的标记、解锁、追踪与传送（SYS-ATLAS），两者不得混名 | 全项目 | ENG-ARCH §3 | 生效 |
 | D-139 | 按图的数据一律从 `IMapContext` 取，通用代码里不写死数据路径、实体 ID 和地图 ID | 全部包 | SYS-MAPS §6 | 生效 |
 | D-141 | 开放室内的室内包与碰撞包也是本机烘焙，进本图的本机缓存，不另设 PCK | 打包 | SYS-MAPS §1.2；ENG-PERF-STREAM §4；WLD-INTERIORS-BUILD §1.1 | 生效 |
 | D-142 | 白名单着色器含 `ui_panel`、`ui_screen`、`cine_cloud`、`map_base`、`precip`；外围不新增着色器 | 渲染 | ENG-PERF §1.4 | 生效 |
@@ -188,5 +188,5 @@ gates: []
 | D-047 | 彩虹只在雨后初晴出现，主虹半径随太阳升高在 30–42° 之间放大（不按真实的固定 42°），太阳在 34–40° 之间时淡出 | 天气 | SYS-WEATHER §5；ART-SKYLIGHT-ATMOSPHERE §1 | 生效 |
 | D-049 | 下雪由天气过程决定（冬季夜雪多在 19–23 时开始），不按固定时段 | 冬季 | SYS-WEATHER-PROCESS §1.3；ART-COLORSCRIPT §2 | 生效 |
 | D-050 | 阴雨天两阶不丢：投影强度乘 (1 − 0.8 × 阴度)，白天不低于 0.2 | 天气 | SYS-WEATHER §6；ENG-PERF-LIGHT §2.1 | 生效 |
-| D-158 | 一拍二的 CPU 侧节拍（`IWorldState.Step12`、飘落池的发射时刻）与着色器同读 `step_rate`（设备分档、画面设置与自适应（SYS-GRAPHICS） 写：一般 12 Hz，帧率上限 30 时 15 Hz），两侧在同一帧换姿态 | 全项目 | SYS-MOTION §2.2；ENG-ARCH §3；ENG-PERF §1.5 | 生效 |
+| D-158 | 一拍二的 CPU 侧节拍（`IWorldState.Step12`、飘落池的发射时刻）与着色器同读 `step_rate`（SYS-GRAPHICS 写：一般 12 Hz，帧率上限 30 时 15 Hz），两侧在同一帧换姿态 | 全项目 | SYS-MOTION §2.2；ENG-ARCH §3；ENG-PERF §1.5 | 生效 |
 | D-162 | 秋季黄昏带（太阳 +8° 到 −7°）约 17:16–19:36；初灯组开始亮灯的时刻、SYS-AUDIO声景的"黄昏"段和默认状态"保持晴"的终点都与它一致 | 清水河 | SYS-WEATHER-PROCESS §1.2；ART-COLORSCRIPT §3；SYS-AUDIO-AMBIENCE §1.1 | 生效 |

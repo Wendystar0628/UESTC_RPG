@@ -68,11 +68,11 @@ paths: ["game/**/*.cs", "pipeline/**/*.py", "scripts/**/*.py", "scripts/**/*.ps1
 - **盒体、视锥与图层只有一个入口**：盒体与外向平面体相交、点到盒体距离只经 `Box3`；从正式或合成相机投影填六个视锥平面只经 `CameraFrustum`；3D 渲染层只用 `RenderLayers` 命名位掩码，`NonCasters` 由这些名称组合。
 - **公共函数清单由 G4 守**：清单上的函数（点到线段距离、点在多边形内、质心、平滑、插值、方位换算、角度包裹之类）只能在登记的公共类型里定义，别处定义同名函数即不过；清单以 `scripts/gates/arch` 的规则为准。
 - **新文件放哪**：按模块分层（ENG-ARCH §1）和文档文件头的 `paths` 找家，找不到先改结构并报主会话，不用补丁式命名（WF-RULE §16）。
-- **测试放哪**：各包的行为测试放自己目录的 `tests/`，编进 `Campus.Gen.Tests` 或 `Campus.Tests`；夹具统一放 `game/testing`（共用的在 `Support`，只给生成或运行时宿主的在 `Gen`、`Runtime`）。
+- **测试放哪**：各模块的行为测试放自己目录的 `tests/`，编进 `Campus.Gen.Tests` 或 `Campus.Tests`；夹具统一放 `game/testing`（共用的在 `Support`，只给生成或运行时宿主的在 `Gen`、`Runtime`）。
 - **`.uid` 与 `.gdignore`**：纯 .NET 的 `game/contracts`、`game/gen`、`game/testing` 和运行时各 `tests` 目录用 `.gdignore` 排除 Godot 导入，不登记其中 C# 的 `.uid`；运行时资源的 `.uid` 由 Godot 生成维护。
 - 第二份相同或只差参数的代码出现时就收进公共层，原处改引用；不复制整个模块或框架类再改。
 - 各区的差异写成数据或参数，不靠每区一套同构的类来表达。
-- **部件按 ID 编目**：共享部件的 ID 与参数在 `game/contracts/Parts/`；区域包按 ID 放置部件，特有部件建在自己目录、ID 加区名前缀，证明能复用再申请提升为共享部件。
+- **部件按 ID 编目**：共享部件的 ID 与参数在 `game/contracts/Parts/`；各区按 ID 放置部件，特有部件建在自己目录、ID 加区名前缀，证明能复用再申请提升为共享部件。
 
 ## 4 不留死代码，不写补丁
 

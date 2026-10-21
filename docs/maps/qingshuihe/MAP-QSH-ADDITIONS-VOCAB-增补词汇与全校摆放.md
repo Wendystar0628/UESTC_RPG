@@ -30,7 +30,7 @@ paths: ["game/gen/maps/qingshuihe/waterfront/**", "game/gen/maps/qingshuihe/boun
 
 ### 0.1 接入要点
 
-- **做导览亭、导览桩（街道家具（WLD-LIFE-STREET）、平面地图、标记与传送（SYS-ATLAS））**：只是场景物件，不发光、不做传送特效，按 `world/atlas.json` 摆放；牌面只用场景调色板里已有的颜色（§5，放置与挪位 SYS-ATLAS-TRAVEL §2）
+- **做导览亭、导览桩（WLD-LIFE-STREET、SYS-ATLAS）**：只是场景物件，不发光、不做传送特效，按 `world/atlas.json` 摆放；牌面只用场景调色板里已有的颜色（§5，放置与挪位 SYS-ATLAS-TRAVEL §2）
 
 ## 1 宿舍组团、食堂与商业街前
 

@@ -38,7 +38,7 @@ paths: ["game/kernel/quality/**", "game/kernel/settings/**", "game/data/quality-
 - **新增画面单项**：在 `QualityKnob` 末尾追加（契约只增不改），写好 `KnobSpec` 和 `quality-presets.json` 里各预设的取值
 - **新增引擎设置、后期效果或着色器变体**：会清空管线的设置不做成选项；新的可达组合要进构建期预热全集（§3，ENG-PERF §2）
 - **负责会被自动调节的单项**（主线之后）：每级降档渐变淡化、不硬切；分帧生效，不卡顿
-- **界面或其他包改画面设置**：只调 `IQualityService.Plan()`、`Apply()`；跳转、传送、换季、切图、读档、加载界面等遮挡期间返回 `Deferred`（§4）
+- **界面或其他模块改画面设置**：只调 `IQualityService.Plan()`、`Apply()`；跳转、传送、换季、切图、读档、加载界面等遮挡期间返回 `Deferred`（§4）
 - **临时改画面相关的引擎参数**（如开放室内的阴影范围）：作为介质覆盖自己记，不登记 `Owns`，也不进 `QualityView`（§3）
 - **门禁、截图、基准要指定画质**：用命令行参数，不读 `user://`；视觉基准是精致预设、自动调节关（ENG-GATES-SHOTS §1）
 
@@ -129,6 +129,6 @@ paths: ["game/kernel/quality/**", "game/kernel/settings/**", "game/data/quality-
 
 | 待验证 | 验证方法 / 负责 | 初值 |
 | --- | --- | --- |
-| 各预设的数值 | 开发机和一台最低配置的笔记本实测校准，设备分档、画面设置与自适应（SYS-GRAPHICS） | `quality-presets.json` 中的值 |
+| 各预设的数值 | 开发机和一台最低配置的笔记本实测校准 | `quality-presets.json` 中的值 |
 | 低渲染比例下描线是否仍清楚 | 0.5、0.59、0.67 三档截图比较，描线与后期（ART-STYLE-LINES） | 线宽随内部高度换算，设最小宽度 |
 | 进入开放室内时阴影方向的最低高度 | P0 原型核实，主光、阴影与灯光通道（game/kernel/lighting/）、介质呈现与室内运行时（SYS-VIEW-MEDIUM） | 约 14° |

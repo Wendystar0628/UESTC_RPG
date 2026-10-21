@@ -30,11 +30,11 @@ gates: [G7]
 
 ### 0.1 接入要点
 
-- **做河渠格栅或看街长椅（校界与门（game/gen/maps/qingshuihe/boundary/）、可行走范围、边界与安全点（SYS-WALK-BOUNDS）、水体系统（WLD-WATER）、滨水与桥（game/gen/maps/qingshuihe/waterfront/））**：格栅归 game/gen/maps/qingshuihe/boundary/，水面归 WLD-WATER、护岸归 game/gen/maps/qingshuihe/waterfront/；长椅归 game/gen/maps/qingshuihe/boundary/ 做、SYS-WALK-BOUNDS 选点，朝南正对电子科大站，可以跳上去（§6）
-- **在清水河外围加或改内容（外围环境带（WLD-OUTSKIRTS-BAND））**：身份地标按 §4 保留，新增元素写进外围覆盖层，登记写法见 MAP-QSH-ADDITIONS §1，并写明理由；横切 V1、P00 或 E6 主体的高压线用覆盖层挪线（§4）
-- **种外围的树与作物（植被系统（WLD-VEGETATION）、WLD-OUTSKIRTS-BAND）**：树种与份额按 §5
-- **做截面、远景与雪山（箱庭截面与远景（WLD-OUTSKIRTS-DIORAMA））**：清水河的地层、方位表和山名按 §7，画法与规则读 WLD-OUTSKIRTS-DIORAMA
-- **外围的灯（夜景灯光与时刻表（MAP-QSH-ATMOSPHERE））**：按 §3.1 的表接时刻表，不新增灯光通道
+- **做河渠格栅或看街长椅（SYS-WALK-BOUNDS、WLD-WATER）**：格栅归 game/gen/maps/qingshuihe/boundary/，水面归 WLD-WATER、护岸归 game/gen/maps/qingshuihe/waterfront/；长椅归 game/gen/maps/qingshuihe/boundary/ 做、SYS-WALK-BOUNDS 选点，朝南正对电子科大站，可以跳上去（§6）
+- **在清水河外围加或改内容（WLD-OUTSKIRTS-BAND）**：身份地标按 §4 保留，新增元素写进外围覆盖层，登记写法见 MAP-QSH-ADDITIONS §1，并写明理由；横切 V1、P00 或 E6 主体的高压线用覆盖层挪线（§4）
+- **种外围的树与作物（WLD-VEGETATION、WLD-OUTSKIRTS-BAND）**：树种与份额按 §5
+- **做截面、远景与雪山（WLD-OUTSKIRTS-DIORAMA）**：清水河的地层、方位表和山名按 §7，画法与规则读 WLD-OUTSKIRTS-DIORAMA
+- **外围的灯（MAP-QSH-ATMOSPHERE）**：按 §3.1 的表接时刻表，不新增灯光通道
 
 ## 1 周边结构与截面线距离
 

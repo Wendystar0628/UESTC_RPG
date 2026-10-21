@@ -60,7 +60,7 @@ paths: ["game/style/outline/post_outline.glsl", "game/style/outline/fog.glslinc"
 ### 1.5 后处理描边
 
 - 用深度、法线、材质 ID 在后处理里检测，不用外扩反面网格（穿模时糊满屏、顶点翻倍），英雄件也不例外。
-- 材质 ID 存在 ROUGHNESS 里，任何效果都不许改写；ID 由 调色板、卡通材质与贴图（ART-STYLE） 按材质类分配，特殊 ID 向 描线与后期（ART-STYLE-LINES） 申请。
+- 材质 ID 存在 ROUGHNESS 里，任何效果都不许改写；ID 由 调色板、卡通材质与贴图（ART-STYLE） 按材质类分配，特殊 ID 向本文申请。
 - 不足 1 px 的线按覆盖率画，放大后仍是清楚的细线；剖切面也出线（SYS-VIEW-MEDIUM §1）。
 
 ### 1.6 折角线与低模

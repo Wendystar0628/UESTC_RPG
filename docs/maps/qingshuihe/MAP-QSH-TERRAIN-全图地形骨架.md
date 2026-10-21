@@ -37,9 +37,9 @@ paths: ["game/gen/maps/qingshuihe/center-east/**", "game/gen/maps/qingshuihe/nor
 
 ### 0.1 接入要点
 
-- **新增任何起伏（各区包）**：理由取 WLD-TERRAIN-SHAPE §1.2 五类，写进 `reason`；形式见 §0 第 6 条；铺装面整块平或单坡（§1.1）
-- **画水面（水体系统（WLD-WATER））**：各水体常水位按 §2；箱涵段、暗涵段不画水面；跌水处画白色翻花
-- **护岸、亲水台阶与桥（滨水与桥（game/gen/maps/qingshuihe/waterfront/））**：落差按 §2 的水位与岸顶算，最下一级没入水中（MAP-QSH-TERRAIN-DISTRICTS §6）
+- **新增任何起伏（各区）**：理由取 WLD-TERRAIN-SHAPE §1.2 五类，写进 `reason`；形式见 §0 第 6 条；铺装面整块平或单坡（§1.1）
+- **画水面（WLD-WATER）**：各水体常水位按 §2；箱涵段、暗涵段不画水面；跌水处画白色翻花
+- **护岸、亲水台阶与桥（game/gen/maps/qingshuihe/waterfront/）**：落差按 §2 的水位与岸顶算，最下一级没入水中（MAP-QSH-TERRAIN-DISTRICTS §6）
 
 ## 1 全图骨架
 

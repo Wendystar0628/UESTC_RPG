@@ -4,7 +4,7 @@ title: 验收与门禁
 category: engineering
 parent: ENG-INDEX
 summary: 测试三档与何时跑、12 项门禁各验什么、入口与交付分工；审查视角与截图、一票否决与收尾清单在子文档
-keywords: [门禁, 验收, 测试三档, 快检, 核心专项, 集中测试, gate.ps1, 门禁表, 门禁编号, D-238, 入口与交付分工, 测试只锁本包输出, 构建锁]
+keywords: [门禁, 验收, 测试三档, 快检, 核心专项, 集中测试, gate.ps1, 门禁表, 门禁编号, D-238, 入口与交付分工, 测试只锁本模块输出, 构建锁]
 depends: [CORE-INDEX, ART-FIDELITY, ENG-ARCH, ENG-BUDGET, ENG-PERF, SYS-TIME, SYS-WEATHER, SYS-WALK, SYS-SAVE, SYS-AUDIO]
 related: [ART-STYLE, SYS-GRAPHICS, SYS-MAPS, SYS-TITLE, SYS-ATLAS, UI-NAV, UI-VISUAL, WLD-INTERIORS, WLD-OUTSKIRTS, ENG-ROADMAP, ENG-PREVIEW]
 contracts: []
@@ -59,7 +59,7 @@ paths: ["scripts/gates/native-render.ps1", "game/data/maps/*/review.json", "scri
 - **增长预算**：测试代码不超过生产代码的四成；一次提交新增的测试代码不超过生产新增的一半（提交后钩子提示）；巡逻按周比对测试个数与代码量，超出就提示精简。
 - **定期削减**：集中测试时列出长期没失败过又慢的、与别的测试守同一件事的，由主会话决定删。
 - **按依赖选**：改了公共层（契约、平面几何、分区公共工具、共用测试夹具），带上依赖它的全部测试。
-- **测试只锁本包输出**（D-199）：可以锁本包产物和"原有条目的字节与顺序不变"；不锁别的包会合法增减的全局集合或指纹，跨包不变量写成按 id 核对的规则。
+- **测试只锁本模块输出**（D-199）：可以锁本模块产物和"原有条目的字节与顺序不变"；不锁别的模块会合法增减的全局集合或指纹，跨模块不变量写成按 id 核对的规则。
 - **G5 范围**：完整 G5 只在主线最终闸口要求，局部证据不标"完整 G5 通过"。
 - **集中测试发现的问题**：按回报格式登记，主会话按"核心体验优先"排序后分派，按提交定位引入的包。
 - **看画面**：改了看得见的东西，施工方在回报或【知会】里注明一句；推送后怎么看见 ENG-GATES-SHOTS §1.3。集中测试时主会话只看固定机位总览一份，风格负责人看英雄帧，声音听评可由同一人或另一个子代理担任。
@@ -94,4 +94,4 @@ paths: ["scripts/gates/native-render.ps1", "game/data/maps/*/review.json", "scri
 
 | 待验证 | 位置 | 负责 | 初值 |
 | --- | --- | --- | --- |
-| G10 冷缓存子项的耗时与 GC 暂停 | G10 | 门禁、截图与巡检自动化（ENG-GATES）、格子分级、烘焙与流式加载（ENG-PERF-STREAM）空缓存实测 | 首次进入半分钟内，不出现明显冻结 |
+| G10 冷缓存子项的耗时与 GC 暂停 | G10 | 本文、格子分级、烘焙与流式加载（ENG-PERF-STREAM）空缓存实测 | 首次进入半分钟内，不出现明显冻结 |
