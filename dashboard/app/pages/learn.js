@@ -45,7 +45,7 @@
 
   function refNode(r) {
     var open = r[1] ? function () { Dash.openDoc(r[1], { sec: r[2] }); }
-      : /^D-\d+$/.test(r[0]) ? function () { Dash.openDoc(DECISION_VOLUME[r[0]] || 'REG-DECISIONS-PROCESS', { find: '| ' + r[0] + ' |' }); }
+      : /^D-\d+$/.test(r[0]) ? function () { Dash.openDoc(DECISION_VOLUME[r[0]] || 'REG-DECISIONS-PROCESS', { find: r[0] }); }
       : null;
     if (!open) return h('span.id.muted', r[0]);
     return h('button.btn.learn-ref', { type: 'button', on: { click: open } }, r[0]);
