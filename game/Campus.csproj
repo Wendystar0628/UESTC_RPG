@@ -35,13 +35,33 @@
   <PropertyGroup>
     <_CampusCodeFingerprintTool>$([MSBuild]::NormalizePath('$(MSBuildProjectDirectory)', '../scripts/build/fingerprints/Campus.CodeFingerprints.csproj'))</_CampusCodeFingerprintTool>
     <_CampusCodeFingerprintManifest>$(MSBuildProjectDirectory)/data/build-code-fingerprints.json</_CampusCodeFingerprintManifest>
+    <_CampusCodeFingerprintToolBuildTarget>Build</_CampusCodeFingerprintToolBuildTarget>
+    <_CampusLaunchBuildProperties>Configuration=$(Configuration);Platform=$(Platform);TargetFramework=$(TargetFramework);RuntimeIdentifier=$(RuntimeIdentifier);SelfContained=$(SelfContained)</_CampusLaunchBuildProperties>
   </PropertyGroup>
-  <Target Name="PrepareCampusCodeFingerprints" DependsOnTargets="GetCampusCodeFingerprintInputs">
-    <!-- Build the host tool inside this Build invocation; it is not a game module. -->
+  <Target Name="RestoreCampusCodeFingerprintTool">
     <MSBuild Projects="$(_CampusCodeFingerprintTool)" Targets="Restore"
              Properties="Configuration=$(Configuration);Platform=$(Platform)"
              RemoveProperties="TargetFramework;RuntimeIdentifier;SelfContained" BuildInParallel="false" />
-    <MSBuild Projects="$(_CampusCodeFingerprintTool)" Targets="Build;GetTargetPath"
+  </Target>
+  <!-- SDK Rebuild is BeforeRebuild -> Clean -> Build -> AfterRebuild.
+       Begin before Clean; a timestamp-incremental Build alone cannot verify new bytes. -->
+  <Target Name="BeginCampusLaunchRebuildReceipt" BeforeTargets="BeforeRebuild"
+          DependsOnTargets="RestoreCampusCodeFingerprintTool" Condition="'$(DesignTimeBuild)' != 'true'">
+    <Exec Command="powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File &quot;$(MSBuildProjectDirectory)/../scripts/lib/start-game.ps1&quot; -BuildReceiptPhase BeginRebuild -BuildReceiptRoot &quot;$(MSBuildProjectDirectory)/..&quot; -BuildReceiptProperties &quot;$(_CampusLaunchBuildProperties)&quot;" />
+    <PropertyGroup>
+      <_CampusLaunchBuildReceiptStarted>true</_CampusLaunchBuildReceiptStarted>
+      <_CampusLaunchRebuild>true</_CampusLaunchRebuild>
+      <_CampusCodeFingerprintToolBuildTarget>Rebuild</_CampusCodeFingerprintToolBuildTarget>
+    </PropertyGroup>
+  </Target>
+  <Target Name="BeginCampusLaunchBuildReceipt" BeforeTargets="GenerateStyleShaders;PrepareForBuild"
+          DependsOnTargets="RestoreCampusCodeFingerprintTool" Condition="'$(DesignTimeBuild)' != 'true' And '$(_CampusLaunchBuildReceiptStarted)' != 'true'">
+    <Exec Command="powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File &quot;$(MSBuildProjectDirectory)/../scripts/lib/start-game.ps1&quot; -BuildReceiptPhase Begin -BuildReceiptRoot &quot;$(MSBuildProjectDirectory)/..&quot; -BuildReceiptProperties &quot;$(_CampusLaunchBuildProperties)&quot;" />
+    <PropertyGroup><_CampusLaunchBuildReceiptStarted>true</_CampusLaunchBuildReceiptStarted></PropertyGroup>
+  </Target>
+  <Target Name="PrepareCampusCodeFingerprints" DependsOnTargets="GetCampusCodeFingerprintInputs;RestoreCampusCodeFingerprintTool">
+    <!-- Build the host tool inside this Build invocation; it is not a game module. -->
+    <MSBuild Projects="$(_CampusCodeFingerprintTool)" Targets="$(_CampusCodeFingerprintToolBuildTarget);GetTargetPath"
              Properties="Configuration=$(Configuration);Platform=$(Platform)"
              RemoveProperties="TargetFramework;RuntimeIdentifier;SelfContained" BuildInParallel="false">
       <Output TaskParameter="TargetOutputs" ItemName="_CampusCodeFingerprintToolOutput" />
@@ -75,5 +95,18 @@
     <Exec Command="dotnet &quot;@(_CampusCodeFingerprintToolTargetPath)&quot; --project &quot;$(MSBuildProjectFullPath)&quot; --tool-project &quot;$(_CampusCodeFingerprintTool)&quot; --output &quot;$(_CampusCodeFingerprintManifest)&quot; @(_CampusCodeFingerprintProperty-&gt;'--property &quot;%(Identity)&quot;', ' ')" />
     <Touch Files="$(_CampusCodeFingerprintStamp)" AlwaysCreate="true" />
     <ItemGroup><FileWrites Include="$(_CampusCodeFingerprintStamp)" /></ItemGroup>
+  </Target>
+  <Target Name="RecordCampusCodeFingerprintCompletion" AfterTargets="GenerateCampusCodeFingerprints"
+          Condition="'$(DesignTimeBuild)' != 'true' And '$(IsTestProject)' != 'true'">
+    <PropertyGroup><_CampusLaunchFingerprintsCompleted>true</_CampusLaunchFingerprintsCompleted></PropertyGroup>
+    <CallTarget Targets="CompleteCampusLaunchBuildReceipt" Condition="'$(_CampusLaunchRebuild)' != 'true'" />
+  </Target>
+  <Target Name="CompleteCampusLaunchRebuildReceipt" AfterTargets="AfterRebuild"
+          Condition="'$(DesignTimeBuild)' != 'true' And '$(_CampusLaunchRebuild)' == 'true'">
+    <CallTarget Targets="CompleteCampusLaunchBuildReceipt" />
+  </Target>
+  <Target Name="CompleteCampusLaunchBuildReceipt"
+          Condition="'$(DesignTimeBuild)' != 'true' And '$(_CampusLaunchBuildReceiptStarted)' == 'true' And '$(_CampusLaunchFingerprintsCompleted)' == 'true'">
+    <Exec Command="powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File &quot;$(MSBuildProjectDirectory)/../scripts/lib/start-game.ps1&quot; -BuildReceiptPhase Complete -BuildReceiptRoot &quot;$(MSBuildProjectDirectory)/..&quot; -BuildReceiptProperties &quot;$(_CampusLaunchBuildProperties)&quot;" />
   </Target>
 </Project>
