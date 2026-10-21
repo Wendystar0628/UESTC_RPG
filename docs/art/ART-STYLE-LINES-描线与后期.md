@@ -10,7 +10,7 @@ related: [ART-STYLE-SHADING, ART-FIDELITY, ART-SKYLIGHT, SYS-VIEW, SYS-WEATHER, 
 contracts: [LineClass]
 data: ["game/style/outline/"]
 gates: [G7]
-paths: ["game/style/outline/post_outline.glsl", "game/style/outline/fog.glslinc", "game/style/outline/**", "game/kernel/post/**"]
+paths: ["game/style/outline/post_outline.glsl", "game/style/outline/**", "game/kernel/post/**"]
 ---
 # ART-STYLE-LINES · 描线与后期
 

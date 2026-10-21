@@ -63,7 +63,7 @@ public partial class UiThemeClock : Node, IUiTheme
     private void OnSettingsChanged() => Judge(force: true);
 
     /// <summary>
-    /// 开始页期间没有世界，自动主题取浅色（SYS-TITLE §2.2）；离开开始页回到按世界太阳高度判定。
+    /// 开始页期间没有世界，自动主题取浅色（SYS-TITLE）；离开开始页回到按世界太阳高度判定。
     /// 只在进出开始页时调用，直接落到新值、不扫。
     /// </summary>
     public void SetTitle(bool title)

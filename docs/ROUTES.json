@@ -501,12 +501,6 @@
   },
   {
    "docs": [
-    "ENG-ARCH"
-   ],
-   "glob": "game/data/build-code-fingerprints.json"
-  },
-  {
-   "docs": [
     "SYS-MAPS"
    ],
    "glob": "game/data/maps/**"
@@ -1405,12 +1399,6 @@
     "ART-STYLE-LINES"
    ],
    "glob": "game/style/outline/**"
-  },
-  {
-   "docs": [
-    "ART-STYLE-LINES"
-   ],
-   "glob": "game/style/outline/fog.glslinc"
   },
   {
    "docs": [

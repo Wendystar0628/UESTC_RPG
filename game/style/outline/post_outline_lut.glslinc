@@ -1,11 +1,11 @@
 #ifdef PASS_LUT
 
-// ---- version lut. Writes the runtime colour-grading LUT: CDL ∘ base table (ART-STYLE §7.2, ENG-PERF).
+// ---- version lut. Writes the runtime colour-grading LUT: CDL ∘ base table (ART-STYLE, ENG-PERF).
 //
 // The LUT is sampled by the engine's tonemap pass through Environment.AdjustmentColorCorrection, after
 // linear_to_srgb, so both its input coordinate and its output are sRGB-encoded values in 0..1.
 //
-// base table (static; split toning and saturation, ART-STYLE §7.2 / §7.8), evaluated in linear light:
+// base table (static; split toning and saturation, ART-STYLE), evaluated in linear light:
 //   shadows    x (0.97, 1.00, 1.04), weight 1 - smoothstep(0.08, 0.60, L)
 //   highlights x (1.03, 1.00, 0.97), weight smoothstep(0.55, 0.95, L)      L = OKLab lightness
 //   saturation 1.02

@@ -18,7 +18,7 @@ float outer_width_nominal(float z) {
 }
 
 // Nominal -> internal pixels. Lines whose nominal width reaches 1 px keep at least one internal pixel so that
-// they stay a clear ~1 px line after FSR1 upscaling (SYS-GRAPHICS §2); the floor ramps in over 0.85-1.0 px.
+// they stay a clear ~1 px line after FSR1 upscaling (SYS-GRAPHICS); the floor ramps in over 0.85-1.0 px.
 float to_internal(float w_nom) {
 	return max(w_nom * P.line_a.y, smoothstep(0.85, 1.0, w_nom));
 }
@@ -42,7 +42,7 @@ float hash_f(ivec3 cell, uint seed) {
 	return float(hash_u(uvec4(uvec3(cell + ivec3(1 << 20)), seed)) & 0xffffu) / 65535.0;
 }
 
-// Line weight variation (ART-STYLE §4.4): smooth value noise on a 0.4 m world grid, seeded by material ID,
+// Line weight variation (ART-STYLE): smooth value noise on a 0.4 m world grid, seeded by material ID,
 // so it is anchored to geometry and does not swim with the camera or change over time.
 float weight_noise(vec3 world, uint id) {
 	vec3 g = world / 0.4;
@@ -127,7 +127,7 @@ vec4 edge_strengths(Surf s0, LineCls l0, ivec2 c, out float qz) {
 			if ((l0.flags & LF_INNER_SOFT) != 0u && (lq.flags & LF_INNER_SOFT) != 0u) {
 				e_crease *= INNER_SOFT_GAIN;
 			}
-			// Convex bright line candidate (ART-STYLE §4.7): convex when (P_b - P_a) . N_a < 0, and the centre
+			// Convex bright line candidate (ART-STYLE): convex when (P_b - P_a) . N_a < 0, and the centre
 			// is the face turned more toward the key light.
 			if (e_crease > 0.25 && s0.z < BRIGHT_FAR1) {
 				float lp = dot(s0.nrm, P.key_light.xyz);
@@ -362,7 +362,7 @@ void main() {
 		}
 	}
 
-	// Small-item fade (lines go before the geometry is culled, ART-STYLE §4.1).
+	// Small-item fade (lines go before the geometry is culled, ART-STYLE).
 	if (l0.fade_end > 0.0) {
 		cov *= 1.0 - smoothstep(0.42 * l0.fade_end, l0.fade_end, s0.z);
 	}

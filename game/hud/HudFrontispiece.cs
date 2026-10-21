@@ -7,7 +7,7 @@ using System.Threading;
 namespace Campus.Hud;
 
 /// <summary>
-/// 开始页的扉页层（SYS-TITLE §2.1）：雾色底上贴一张固定的扉页图，界面层的片名块与菜单画在它上面。
+/// 开始页的扉页层（SYS-TITLE）：雾色底上贴一张固定的扉页图，界面层的片名块与菜单画在它上面。
 /// 只由流程的 Show、Hide 出现与退场，后台资源就绪与否都不动它。
 /// </summary>
 internal sealed class HudFrontispiece : IAppFrontispiecePresentation
@@ -72,7 +72,7 @@ internal sealed class HudFrontispiece : IAppFrontispiecePresentation
 
     private async Task ShowAsync(Task previous, bool fogOnly, CancellationToken lifetime)
     {
-        // 失败页的雾色独立接管：前一次扉页显示的故障已由它的调用方交给启动失败处理（SYS-TITLE §1），这里只等它结束、不再重抛。
+        // 失败页的雾色独立接管：前一次扉页显示的故障已由它的调用方交给启动失败处理（SYS-TITLE），这里只等它结束、不再重抛。
         if (fogOnly) await previous.WaitAsync(lifetime).ConfigureAwait(ConfigureAwaitOptions.SuppressThrowing | ConfigureAwaitOptions.ContinueOnCapturedContext);
         else await previous.WaitAsync(lifetime);
         lifetime.ThrowIfCancellationRequested();
@@ -108,7 +108,7 @@ internal sealed class HudFrontispiece : IAppFrontispiecePresentation
             lifetime.ThrowIfCancellationRequested();
         }
         _view.Frontispiece.Visible = false;
-        // 进入游戏后释放扉页，回到开始页时 Show 重新载入同一张（SYS-TITLE §2.1）。
+        // 进入游戏后释放扉页，回到开始页时 Show 重新载入同一张（SYS-TITLE）。
         _image.Texture = null;
     }
 

@@ -12,10 +12,10 @@ vec3 line_colour(vec3 base, uint id, ivec2 at) {
 	float bl = dot(base, vec3(0.2126, 0.7152, 0.0722));
 	float warm = smoothstep(-0.01, 0.03, oklab_b(base));   // warm base -> warm brown, cool -> blue-grey
 	vec3 tint = mix(pal_cur(PAL_LINE_COOL), pal_cur(PAL_LINE_WARM), warm);   // line.cool / line.warm
-	float darken = P.line_a.x * (1.0 - 0.3 * P.line_a.z);   // lightning flash: line_darken x 0.7 (SYS-WEATHER §5)
+	float darken = P.line_a.x * (1.0 - 0.3 * P.line_a.z);   // lightning flash: line_darken x 0.7 (SYS-WEATHER)
 	vec3 lc = mix(base, vec3(bl), 0.35) * darken;
 	lc = mix(lc, tint, l.tint);
-	// Toward the fog with distance, same fog function as the materials (ART-STYLE §4.2).
+	// Toward the fog with distance, same fog function as the materials (ART-STYLE).
 	float d = texelFetch(depth_tex, at, 0).r;
 	vec3 vp = view_pos(at, d);
 	vec3 wp = (P.inv_view * vec4(vp, 1.0)).xyz;
@@ -71,7 +71,7 @@ void main() {
 	vec4 col = imageLoad(color_image, c);
 	vec3 rgb = col.rgb;
 
-	// Convex bright line on the lit side, next to the dark crease line (ART-STYLE §4.7, ENG-PERF).
+	// Convex bright line on the lit side, next to the dark crease line (ART-STYLE, ENG-PERF).
 	if (any_flag && m0 < 0.5) {
 		bool bright = (g[4] & 128u) != 0u;
 		Surf s = fetch_surf(c);

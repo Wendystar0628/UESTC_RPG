@@ -168,7 +168,7 @@ public partial class HudRoot : CanvasLayer, IBootParticipant, IAppLoadingPresent
         SyncCorners();
     }
 
-    /// <summary>开始页期间没有世界，自动主题取浅色（SYS-TITLE §2.2）；其余状态按世界太阳高度。</summary>
+    /// <summary>开始页期间没有世界，自动主题取浅色（SYS-TITLE）；其余状态按世界太阳高度。</summary>
     private void SyncTitleTheme() => _dependencies.ThemeClock.SetTitle(_dependencies.Flow.State == AppState.Title);
 
     private void OnFlowChanged(AppState previous, AppState current)

@@ -18,17 +18,17 @@ VERSION_DEFINES
 //   lut             : the runtime colour-grading LUT (section PASS_LUT),
 //   finish  : the compose dispatch in CompositorEffect POST_TRANSPARENT (section PASS_FINISH).
 //
-// Outline (ART-STYLE §4.5, ENG-PERF), two dispatches:
+// Outline (ART-STYLE, ENG-PERF), two dispatches:
 //   mask      : reads depth + normal_roughness (7-bit material ID in alpha) + mat_table row 0, writes a RG8 mask
 //               R = line coverage (sub-pixel widths drawn as coverage),
 //               G = material ID of the side the line takes its colour from (bits 0-6) + convex-lit flag (bit 7).
 //   composite : fragment filter (3x3 count and 5x5 ring, below),
-//               line colour = own base darkened + warm/cool tint + fog (ART-STYLE §4.2), mixed into the colour
+//               line colour = own base darkened + warm/cool tint + fog (ART-STYLE), mixed into the colour
 //               buffer in place; convex bright line on the lit side (ART-STYLE).
 //
 // Placement: every line is one-sided and takes its colour from its own pixel, so no pixel ever reads a colour
 // that another invocation is writing. Silhouettes sit on the nearer side (inside the foreground object, the
-// "colour from the nearer side" of ART-STYLE §4.5); crease and material lines sit on the face turned more toward
+// "colour from the nearer side" of ART-STYLE); crease and material lines sit on the face turned more toward
 // the camera (constant along an edge, so they cannot zigzag), parallel faces use the lower material ID.
 //
 // Inputs from C#: inv_proj = RenderSceneData.GetCamProjection().Inverse() as is — that projection is already
@@ -50,7 +50,7 @@ VERSION_DEFINES
 //                     of a part about one pixel thick toward THIN_KEEP (steady along the edge, so no dashes),
 //   fragment filter : a line pixel keeps its ink only if the line leaves the 5x5 window around it (the reference
 //                     counts line pixels in that window; see the composite pass for why the ring is counted here);
-//                     the convex bright line (ART-STYLE §4.7) follows the same rule on its own flags,
+//                     the convex bright line (ART-STYLE) follows the same rule on its own flags,
 //   foliage depth   : card canopies outline clump against clump by the reference's foliage depth step (0.07 of 1/z
 //                     there, FOLIAGE_DEPTH_REL here, on both sides of the pair), fading out with distance; the speck
 //                     rule and the filters above keep the crowns clean.

@@ -142,7 +142,7 @@ paths: ["docs/**"]
 | --- | --- |
 | CORE-INDEX 除 §1 外的各节 | 2,700 字 |
 | CORE-INDEX §1 信息地图 | 2,300 字 |
-| Claude 子代理开工注入合计（CORE-INDEX 各节加 WF-ENTRY 最长一节） | 8,400 字 |
+| Claude 子代理开工注入合计（CORE-INDEX 各节加 WF-ENTRY 最长一节） | 9,000 字 |
 | WF-ENTRY 每个角色一节 | 1,250 字 |
 | 每份文档的 §0 结论 | 1,000 字 |
 | §0.1 接入要点 | 1,000 字 |

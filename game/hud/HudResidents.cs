@@ -203,7 +203,7 @@ internal sealed class HudResidents
 
     private void SyncNotices()
     {
-        // 开始页、加载与退场期间不出常驻提示（SYS-TITLE §3）；回到 Playing 后先记值再比较
+        // 开始页、加载与退场期间不出常驻提示（SYS-TITLE）；回到 Playing 后先记值再比较
         if (!_dependencies.Flow.IsPlaying) { _primed = false; return; }
         if (!_primed)
         {
