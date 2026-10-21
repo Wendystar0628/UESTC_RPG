@@ -112,6 +112,8 @@ function Test-UESTCOwnershipRules {
         # Ignored collaboration tools are real owned files, even though git omits them.
         $prefix = ($rule.pattern -split '[*?]', 2)[0]
         if ($prefix -eq $rule.pattern) {
+            $ignored = Invoke-UESTCGit $Root @('check-ignore', '--quiet', '--', $prefix.Replace('\','/')) -SuccessExitCodes @(0, 1)
+            if ($ignored.ExitCode -eq 0) { continue }
             $matched = Test-Path -LiteralPath (Join-Path $Root $prefix) -PathType Leaf
         } else {
             $directory = if ($prefix.EndsWith('/')) { $prefix.TrimEnd('/') } else { Split-Path $prefix -Parent }
