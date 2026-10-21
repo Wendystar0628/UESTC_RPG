@@ -197,24 +197,13 @@ public static class Prims
         sink.Polygon(face, verts, tris);
     }
 
-    /// <summary>
-    /// Strict earcut (parts kernel) first; it rejects touching or self-touching rings, in which case the
-    /// unchecked earcut entry keeps the cap closed instead of dropping it.
-    /// </summary>
+    /// <summary>Triangulates simple, non-touching rings through the parts kernel; invalid topology is reported.</summary>
     public static (Vector2[] Points, int[] Triangles) Triangulate(IReadOnlyList<Vector2> outer, IReadOnlyList<IReadOnlyList<Vector2>> holes)
     {
         // PolygonTriangulator orients the rings itself.
         var rings = new Campus.Contracts.PolygonRings(outer, holes);
-        try
-        {
-            var t = Campus.Gen.Parts.Core.PolygonTriangulator.Triangulate(rings);
-            return (t.Vertices, t.Indices);
-        }
-        catch (ArgumentException)
-        {
-            var t = Campus.Gen.Parts.Core.PolygonTriangulator.TriangulateUnchecked(rings);
-            return (t.Vertices, t.Indices);
-        }
+        var t = Campus.Gen.Parts.Core.PolygonTriangulator.Triangulate(rings);
+        return (t.Vertices, t.Indices);
     }
 
     private static Vector3 N(Vector2 plan, Vector2 section) =>

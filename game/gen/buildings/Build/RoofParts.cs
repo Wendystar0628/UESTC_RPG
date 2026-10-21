@@ -35,8 +35,8 @@ public sealed class RoofParts(BuildingPlan plan, LodLevel lod, GeometrySink sink
     /// <summary>
     /// Coping on every parapet ring, from the parapet's outer face <paramref name="sOuter"/> to its inner face
     /// <paramref name="sInner"/> (skin offsets) plus a lip each side, between <paramref name="y0"/> and <paramref name="top"/>;
-    /// coloured as <paramref name="trim"/>. Returns false, having emitted nothing, when a ring cannot carry the part's
-    /// section (an edge too short for its mitres); the caller then keeps its own coping profile.
+    /// coloured as <paramref name="trim"/>. Returns false, having emitted nothing, when a ring has no centreline offset;
+    /// the caller then uses its closed coping profile. A part sweep failure is reported to the caller.
     /// </summary>
     public bool Coping(float sOuter, float sInner, float y0, float top, ToonSpec trim)
     {
@@ -51,8 +51,7 @@ public sealed class RoofParts(BuildingPlan plan, LodLevel lod, GeometrySink sink
         foreach (var path in Centrelines((sOuter + sInner) * 0.5f))
         {
             if (path is null) return false;
-            try { pieces.Add(ParapetCapPart.Along(path, true, p, level)); }
-            catch (ArgumentException) { return false; }
+            pieces.Add(ParapetCapPart.Along(path, true, p, level));
         }
         var at = Matrix4x4.CreateTranslation(0f, y0, 0f);
         foreach (var piece in pieces)
@@ -73,9 +72,7 @@ public sealed class RoofParts(BuildingPlan plan, LodLevel lod, GeometrySink sink
         foreach (var path in Centrelines((sOuter + sInner) * 0.5f))
         {
             if (path is null) continue;
-            PartGeometry strip;
-            try { strip = LightningStripPart.Along(path, true, p, level); }
-            catch (ArgumentException) { continue; }
+            var strip = LightningStripPart.Along(path, true, p, level);
             foreach (var mesh in strip.Meshes) sink.Append(mesh, at);
         }
     }

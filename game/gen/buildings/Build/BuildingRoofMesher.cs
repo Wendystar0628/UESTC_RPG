@@ -48,7 +48,7 @@ internal sealed class BuildingRoofMesher(BuildingPlan plan, LodLevel lod, Geomet
     /// <summary>
     /// Coping on the parapet from its outer face s0 to the inner face, y0 to top: the game/gen/parts/roof/ parapet cap (60 mm lip each
     /// side, drip under the outer one near) with the lightning strip on it, and the parapet's inner face down to the roof.
-    /// Without a valid inner offset, or where the part cannot sweep a ring, game/gen/buildings/'s own coping profile.
+    /// Without a valid inner or centreline offset, uses game/gen/buildings/'s own closed coping profile.
     /// </summary>
     public void BuildCoping(float s0, float y0, float top)
     {

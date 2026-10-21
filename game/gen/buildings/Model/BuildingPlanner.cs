@@ -76,7 +76,6 @@ public static class BuildingPlanner
         // Facade bay grid from the game/gen/interior/core/ plan kernel: canonical rings (mm, fixed start vertex), bays on the glass
         // plane, indices contiguous over all rings. The same call gives the interiors their partition lines.
         var grid = Grid(outerClean, holesClean, GridOptions(profile));
-        if (grid is null) return null;
         var outer = PlanRing.FromPoints([.. grid.Footprint.Outer], hole: false);
         var holes = grid.Footprint.Holes.Select(h => PlanRing.FromPoints([.. h], hole: true)).ToList();
         var area = (float)PlanRings.SignedArea(outer.Points) - holes.Sum(h => MathF.Abs((float)PlanRings.SignedArea(h.Points)));
@@ -268,23 +267,9 @@ public static class BuildingPlanner
         SillHeight = profile.Sill,
     };
 
-    /// <summary>The kernel rejects touching or crossing holes; such courtyards are dropped rather than the building.</summary>
-    private static FacadeGrid? Grid(PlanRing outer, IReadOnlyList<PlanRing> holes, FacadeGridOptions options)
-    {
-        try
-        {
-            return FacadeGridGenerator.Generate(new PolygonRings(outer.Points, holes.Select(h => (IReadOnlyList<Vector2>)h.Points).ToArray()), options);
-        }
-        catch (ArgumentException) when (holes.Count > 0)
-        {
-            try { return FacadeGridGenerator.Generate(new PolygonRings(outer.Points), options); }
-            catch (ArgumentException) { return null; }
-        }
-        catch (ArgumentException)
-        {
-            return null;
-        }
-    }
+    /// <summary>The facade grid keeps every cleaned courtyard; invalid topology is reported by the kernel.</summary>
+    private static FacadeGrid Grid(PlanRing outer, IReadOnlyList<PlanRing> holes, FacadeGridOptions options) =>
+        FacadeGridGenerator.Generate(new PolygonRings(outer.Points, holes.Select(h => (IReadOnlyList<Vector2>)h.Points).ToArray()), options);
 
     private static PlanRing? Skin(PlanRing ring, float d)
     {

@@ -120,11 +120,11 @@ public sealed class InteriorShapes(GeometrySink mesh, bool draw, float slabThick
         }
     }
 
-    /// <summary>A horizontal plate of any polygon with holes, facing up or down (ceilings are their underside only).</summary>
+    /// <summary>A horizontal plate of simple, non-touching polygon rings, facing up or down (ceilings are their underside only).</summary>
     public void Plate(in InteriorPaint paint, PolygonRings rings, float y, bool up)
     {
         if (!draw) return;
-        var t = PolygonTriangulator.TriangulateUnchecked(rings);
+        var t = PolygonTriangulator.Triangulate(rings);
         var n = up ? Vector3.UnitY : -Vector3.UnitY;
         for (var i = 0; i + 2 < t.Indices.Length; i += 3)
         {

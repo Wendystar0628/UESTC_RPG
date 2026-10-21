@@ -232,8 +232,8 @@ public sealed class LibraryPlan
 
     /// <summary>
     /// The 5F strip of a wing: its run of outer edges (those not standing against the core or a tower) moved inward by
-    /// <paramref name="setback"/>, the two end points slid along the neighbouring edges. Null when the wing has no clean
-    /// outer run or the result is not a simple polygon; the wing then rises to the roof without a terrace.
+    /// <paramref name="setback"/>, the two end points slid along the neighbouring edges. Null when the run leaves fewer
+    /// than two unshifted edges or its ends leave the neighbouring edges. Invalid resulting topology is reported.
     /// </summary>
     public static IReadOnlyList<Vector2>? SetBack(IReadOnlyList<Vector2> wing, IReadOnlyList<Vector2> selected, float setback)
     {
@@ -260,8 +260,7 @@ public sealed class LibraryPlan
         // The end points must stay on their neighbouring edges, and the strip must triangulate.
         if (!Between(result[0], wing[(start + n - 1) % n], wing[start]) || !Between(result[count], wing[(start + count) % n], wing[(start + count + 1) % n]))
             return null;
-        try { _ = PolygonTriangulator.Triangulate(new PolygonRings(result)); }
-        catch (ArgumentException) { return null; }
+        _ = PolygonTriangulator.Triangulate(new PolygonRings(result));
         return PlanRings.OpenRing(result);
     }
 

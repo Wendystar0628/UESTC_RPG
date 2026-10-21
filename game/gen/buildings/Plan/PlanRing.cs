@@ -94,8 +94,8 @@ public sealed class PlanRing
     }
 
     /// <summary>
-    /// Offsets the whole ring by s. Returns null when an edge would flip or the result self-intersects,
-    /// so callers fall back to a simpler, still closed form.
+    /// Offsets the whole ring by s. Returns null when an edge would flip or the result self-intersects.
+    /// This marks an unavailable offset form; it does not represent a failed part sweep.
     /// </summary>
     public Vector2[]? Offset(float s)
     {

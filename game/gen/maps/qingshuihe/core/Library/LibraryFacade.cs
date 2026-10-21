@@ -193,7 +193,7 @@ public static class LibraryFacade
 
     /// <summary>
     /// Sweeps a section along chained wall pieces (each chain one polyline, closed when it comes back to its start);
-    /// lateral +X of the section is the pieces' outward side. A chain the kernel cannot miter is swept piece by piece.
+    /// lateral +X of the section is the pieces' outward side. The kernel reports chains it cannot miter.
     /// </summary>
     public static void Sweep(GeometrySink mesh, in Paint paint, IReadOnlyList<IReadOnlyList<Vector2>> chains, IReadOnlyList<bool> closed,
         SweepProfile profile, float baseY)
@@ -201,21 +201,7 @@ public static class LibraryFacade
         var spec = S.Spec(paint.Material, paint.Family);
         for (var i = 0; i < chains.Count; i++)
         {
-            var path = chains[i];
-            try
-            {
-                mesh.Add(paint, PartSweeps.Sweep(profile, path, spec, closed[i], baseY), Matrix4x4.Identity);
-            }
-            catch (ArgumentException)
-            {
-                var count = closed[i] ? path.Count : path.Count - 1;
-                for (var k = 0; k < count; k++)
-                {
-                    Vector2 a = path[k], b = path[(k + 1) % path.Count];
-                    if (Vector2.Distance(a, b) < 0.02f) continue;
-                    mesh.Add(paint, PartSweeps.Sweep(profile, [a, b], spec, false, baseY), Matrix4x4.Identity);
-                }
-            }
+            mesh.Add(paint, PartSweeps.Sweep(profile, chains[i], spec, closed[i], baseY), Matrix4x4.Identity);
         }
     }
 
