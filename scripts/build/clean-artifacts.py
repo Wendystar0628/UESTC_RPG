@@ -141,6 +141,9 @@ def references():
             if item.get('status') != 'done' and link.startswith('output/'):
                 audit.append(link)
     pattern = None
+    with open(os.path.join(ROOT, 'scripts', 'git-hooks', 'row-kinds.json'), encoding='utf-8') as stream:
+        kinds = json.load(stream)
+    row_id_pattern = re.compile('(?:' + '|'.join(re.escape(item['key']) for item in kinds) + r')-[0-9]{3}[a-z]?')
     queue = os.path.join(ROOT, '.collab', 'status', '施工状态.md')
     text = open(queue, encoding='utf-8').read()
     if '## 施工队列' in text:
@@ -157,7 +160,7 @@ def references():
             if '号' not in columns or columns['号'] >= len(cells):
                 continue
             row_id = cells[columns['号']]
-            if re.fullmatch(r'(?:GAME|TOOL|BATCH)-[0-9]{3}[a-z]?', row_id):
+            if row_id_pattern.fullmatch(row_id):
                 ids.add(row_id)
         if ids:
             pattern = re.compile(r'^(?:' + '|'.join(re.escape(i) for i in sorted(ids)) + r')(?=$|[^A-Za-z0-9])')

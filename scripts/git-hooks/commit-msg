@@ -2,20 +2,35 @@
 # 提交首行格式检查（STD-CONVENTIONS §3.8，D-251）：不合格式就拒绝提交，改好再提交。
 # 用法：git config core.hooksPath scripts/git-hooks；仓库只维护本目录这一份 Git 钩子，提交时自动运行。
 first=$(head -n 1 "$1")
-if python - "$first" "$(dirname "$0")/row-kinds.json" <<'PY'
+if ! command -v python >/dev/null 2>&1; then
+  echo "row-kinds.json 读取失败：找不到 python。" >&2
+  exit 1
+fi
+python -I -X utf8 - "$first" "$(dirname "$0")/row-kinds.json" <<'PY'
 import json
 import re
 import sys
 
-with open(sys.argv[2], encoding="utf-8") as stream:
-    kinds = json.load(stream)
-row = "(?:" + "|".join(re.escape(item["key"]) for item in kinds) + r")-[0-9]{3}[a-z]?"
+try:
+    with open(sys.argv[2], encoding="utf-8") as stream:
+        kinds = json.load(stream)
+    keys = [item["key"] for item in kinds]
+    if not keys or any(not isinstance(key, str) or not key for key in keys):
+        raise ValueError("种类 key 必须是非空字符串，种类表不能为空")
+    row = "(?:" + "|".join(re.escape(key) for key in keys) + r")-[0-9]{3}[a-z]?"
+except (OSError, ValueError, TypeError, KeyError) as error:
+    print(f"row-kinds.json 读取失败：{error}", file=sys.stderr)
+    sys.exit(2)
 pattern = r"^(?:" + row + r"(?:/" + row + r")* |(?:文档|工具|数据)[：:]|Merge |Revert |fixup! |squash! )"
 sys.exit(0 if re.match(pattern, sys.argv[1]) else 1)
 PY
-then
-  exit 0
-fi
+result=$?
+case "$result" in
+  0) exit 0 ;;
+  1) ;;
+  2) exit 1 ;;
+  *) echo "row-kinds.json 读取失败：python 退出码 $result。" >&2; exit 1 ;;
+esac
 echo "提交首行不合 STD-CONVENTIONS §3.8：写 \`<队列行号> <领域词>：一句话\`（如 \`GAME-034a 街道家具：主路口横排白色石球\`），没有行号的用 \`文档：\`、\`工具：\`、\`数据：\` 开头。" >&2
 echo "这次的首行：$first" >&2
 exit 1
