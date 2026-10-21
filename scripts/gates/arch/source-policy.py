@@ -7,6 +7,7 @@ import io
 import json
 from pathlib import Path
 import re
+import shutil
 import subprocess
 import sys
 import tokenize
@@ -23,7 +24,7 @@ $violations = [Collections.Generic.List[string]]::new()
 function Add-SourceViolation {
     param([string]$Path, [int]$Line, [string]$Kind, [string]$Value)
     foreach ($term in $request.terms) {
-        if ($Value.Contains($term, [StringComparison]::OrdinalIgnoreCase)) {
+        if ($Value.IndexOf($term, [StringComparison]::OrdinalIgnoreCase) -ge 0) {
             $violations.Add("${Path}:${Line}: $Kind contains '$term'; name and explain the responsibility (STD-CODE).")
         }
     }
@@ -112,7 +113,10 @@ def inspect_python(text, path, terms, errors):
 def inspect_powershell(root, files, terms, errors):
     if not files:
         return
-    command = ["pwsh", "-NoProfile", "-NonInteractive", "-Command", PS_SOURCE]
+    executable = shutil.which("powershell")
+    if executable is None:
+        raise FileNotFoundError("PowerShell host not found on PATH: powershell")
+    command = [executable, "-NoProfile", "-NonInteractive", "-Command", PS_SOURCE]
     result = subprocess.run(command, input=json.dumps({"root": str(root), "files": files, "terms": terms}),
                             text=True, encoding="utf-8", stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True)
     errors.extend(json.loads(result.stdout))
