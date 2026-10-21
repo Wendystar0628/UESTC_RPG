@@ -4,11 +4,12 @@ using Godot;
 
 namespace Campus.Kernel.Instances;
 
-/// <summary>Owns one node, MultiMesh and multi-surface mesh. Materials belong to the provider or host cache.</summary>
+/// <summary>Owns one node and MultiMesh, and returns its mesh ownership or shared borrow to the host.</summary>
 internal sealed class InstancePool(
     InstancePoolHost host, string id, int capacity, int meshTriangles,
     GeometryInstance3D.ShadowCastingSetting shadows, MapId? map, int surfaceCount,
-    MultiMeshInstance3D instance, MultiMesh multiMesh, ArrayMesh mesh) : IInstancePool
+    MultiMeshInstance3D instance, MultiMesh multiMesh, ArrayMesh mesh,
+    InstancePoolHost.SharedPrototypeMesh? sharedMesh) : IInstancePool
 {
     private static readonly StringName _shaderInstancePrecipD = InstanceShaderParameters.PrecipD;
     private static readonly StringName _shaderInstancePrecipK = InstanceShaderParameters.PrecipK;
@@ -18,6 +19,7 @@ internal sealed class InstancePool(
     private MultiMeshInstance3D? _instance = instance;
     private MultiMesh? _multiMesh = multiMesh;
     private ArrayMesh? _mesh = mesh;
+    private InstancePoolHost.SharedPrototypeMesh? _sharedMesh = sharedMesh;
     private bool _freed;
     private bool _hasBuffer;
     private int _visibleCount;
@@ -104,9 +106,11 @@ internal sealed class InstancePool(
         var ownedInstance = _instance;
         var ownedMultiMesh = _multiMesh;
         var ownedMesh = _mesh;
+        var borrowedMesh = _sharedMesh;
         _instance = null;
         _multiMesh = null;
         _mesh = null;
+        _sharedMesh = null;
         try
         {
             if (GodotObject.IsInstanceValid(ownedInstance))
@@ -119,7 +123,7 @@ internal sealed class InstancePool(
         finally
         {
             try { ownedMultiMesh?.Dispose(); }
-            finally { ownedMesh?.Dispose(); }
+            finally { if (ownedMesh is not null) host.ReleaseMesh(ownedMesh, borrowedMesh); }
         }
     }
 

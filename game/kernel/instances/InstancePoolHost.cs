@@ -6,7 +6,7 @@ using KernelServices = Campus.Kernel.Registry.Kernel;
 
 namespace Campus.Kernel.Instances;
 
-/// <summary>Kernel-owned dynamic instances, with map cleanup and shared material providers.</summary>
+/// <summary>Kernel-owned dynamic instances, sharing immutable prototype meshes within each map load.</summary>
 [KernelNode("kernel.instance-pools")]
 [KernelService(typeof(IInstancePoolHost))]
 public sealed partial class InstancePoolHost : Node3D, IInstancePoolHost, IMapAware
@@ -15,6 +15,7 @@ public sealed partial class InstancePoolHost : Node3D, IInstancePoolHost, IMapAw
     private const uint ValidLayers = (1u << 20) - 1;
     private readonly Dictionary<string, InstancePool> _pools = new(StringComparer.Ordinal);
     private readonly List<InstancePool> _orderedPools = [];
+    private readonly Dictionary<string, SharedPrototypeMesh> _prototypeMeshes = new(StringComparer.Ordinal);
     private readonly Dictionary<ShaderId, ShaderMaterial> _shaderMaterials = [];
     private IToonMaterialProvider? _materials;
     private PaletteCatalog? _catalog;
@@ -55,6 +56,7 @@ public sealed partial class InstancePoolHost : Node3D, IInstancePoolHost, IMapAw
         }
         finally
         {
+            _prototypeMeshes.Clear();
             // Created shader materials are cached for this host lifetime; borrowed Toon materials are never disposed.
             foreach (var pair in _shaderMaterials.OrderBy(pair => pair.Key)) pair.Value.Dispose();
             _shaderMaterials.Clear();
@@ -65,8 +67,10 @@ public sealed partial class InstancePoolHost : Node3D, IInstancePoolHost, IMapAw
     {
         RequireMainThread();
         ValidateMapId(from);
-        if (_activeMap == from) _activeMap = null;
+        var unloadingActiveMap = _activeMap == from;
+        if (unloadingActiveMap) _activeMap = null;
         foreach (var pool in _orderedPools.Where(pool => pool.Map == from).ToArray()) pool.Free();
+        if (unloadingActiveMap) _prototypeMeshes.Clear();
     }
 
     public void OnMapLoaded(IMapContext ctx)
@@ -127,8 +131,6 @@ public sealed partial class InstancePoolHost : Node3D, IInstancePoolHost, IMapAw
         ArgumentNullException.ThrowIfNull(spec);
         ValidateIdentityAndCapacity(spec.Id, spec.Capacity, spec.Layers, spec.CustomAabb);
         ArgumentNullException.ThrowIfNull(spec.Prototype);
-        if (spec.Prototype.Surfaces.Any(surface => surface.Material.Spec.SurfacePattern is not null))
-            throw new NotSupportedException("Surface patterns currently require direct world-coordinate geometry, not instance pools.");
         ValidateShadows(spec.Shadows);
         RequireUnique(spec.Id);
         if (spec.Map is { } map)
@@ -137,6 +139,8 @@ public sealed partial class InstancePoolHost : Node3D, IInstancePoolHost, IMapAw
             if (_activeMap != map)
                 throw new InvalidOperationException("The pool map is not active; stale or pre-load mounts are rejected.");
         }
+        if (spec.Prototype.Surfaces.Any(surface => surface.Material.Spec.SurfacePattern is not null))
+            throw new NotSupportedException("Surface patterns currently require direct world-coordinate geometry, not instance pools.");
         _materials ??= KernelServices.Get<IToonMaterialProvider>();
         var catalog = _catalog ??= KernelServices.Get<IPaletteCatalogSource>().Catalog;
         var triangles = 0;
@@ -155,8 +159,17 @@ public sealed partial class InstancePoolHost : Node3D, IInstancePoolHost, IMapAw
             triangles = checked(triangles + surface.Index.Length / 3);
         }
 
+        if (spec.Map is not null && _prototypeMeshes.TryGetValue(spec.Prototype.Id, out var shared))
+        {
+            shared.References = checked(shared.References + 1);
+            return Publish(spec.Id, spec.Capacity, spec.CustomAabb, spec.Layers, spec.Shadows,
+                spec.Map, shared.IgnoreOcclusion, shared.Mesh, shared.Triangles, shared);
+        }
+
         var provider = _materials ??= KernelServices.Get<IToonMaterialProvider>();
         var mesh = new ArrayMesh();
+        SharedPrototypeMesh? sharedMesh = null;
+        var ignoreOcclusion = spec.Prototype.Surfaces.Any(surface => surface.IgnoreOcclusionCulling);
         try
         {
             for (var index = 0; index < spec.Prototype.Surfaces.Count; index++)
@@ -169,48 +182,54 @@ public sealed partial class InstancePoolHost : Node3D, IInstancePoolHost, IMapAw
                 if (slot != index) throw new InvalidOperationException("Prototype material slots changed during upload.");
                 mesh.SurfaceSetMaterial(slot, material);
             }
+            if (spec.Map is not null)
+            {
+                sharedMesh = new(spec.Prototype.Id, mesh, triangles, ignoreOcclusion);
+                _prototypeMeshes.Add(sharedMesh.Id, sharedMesh);
+            }
         }
         catch { mesh.Dispose(); throw; }
 
         return Publish(spec.Id, spec.Capacity, spec.CustomAabb, spec.Layers, spec.Shadows,
-            spec.Map, spec.Prototype.Surfaces.Any(surface => surface.IgnoreOcclusionCulling), mesh, triangles);
+            spec.Map, ignoreOcclusion, mesh, triangles, sharedMesh);
     }
 
     private IInstancePool Publish(string id, int capacity, Aabb bounds, uint layers,
         GeometryInstance3D.ShadowCastingSetting shadows, MapId? map, bool ignoreOcclusion,
-        ArrayMesh mesh, int triangles)
+        ArrayMesh mesh, int triangles, SharedPrototypeMesh? sharedMesh = null)
     {
         MultiMesh? multiMesh = null;
         MultiMeshInstance3D? instance = null;
+        InstancePool? pool = null;
         try
         {
-            multiMesh = new MultiMesh
-            {
-                TransformFormat = MultiMesh.TransformFormatEnum.Transform3D,
-                UseColors = false,
-                UseCustomData = true,
-                Mesh = mesh,
-                CustomAabb = bounds,
-                InstanceCount = capacity,
-                VisibleInstanceCount = 0
-            };
+            multiMesh = new MultiMesh();
+            multiMesh.TransformFormat = MultiMesh.TransformFormatEnum.Transform3D;
+            multiMesh.UseColors = false;
+            multiMesh.UseCustomData = true;
+            multiMesh.Mesh = mesh;
+            multiMesh.CustomAabb = bounds;
+            multiMesh.InstanceCount = capacity;
+            multiMesh.VisibleInstanceCount = 0;
             if (multiMesh.InstanceCount != capacity) throw new InvalidOperationException("Godot rejected pool capacity.");
-            instance = new MultiMeshInstance3D
-            {
-                Name = $"InstancePool_{checked(++_nextNodeId)}",
-                Multimesh = multiMesh,
-                Layers = layers,
-                CustomAabb = bounds,
-                CastShadow = shadows,
-                IgnoreOcclusionCulling = ignoreOcclusion,
-                Visible = false
-            };
+            instance = new MultiMeshInstance3D();
+            instance.Name = $"InstancePool_{checked(++_nextNodeId)}";
+            instance.Multimesh = multiMesh;
+            instance.Layers = layers;
+            instance.CustomAabb = bounds;
+            instance.CastShadow = shadows;
+            instance.IgnoreOcclusionCulling = ignoreOcclusion;
+            instance.Visible = false;
             instance.SetMeta("instance_pool_id", id);
             if (map is { } mapId) instance.SetMeta("map_id", mapId.Value);
-            var pool = new InstancePool(this, id, capacity, triangles, shadows, map,
-                mesh.GetSurfaceCount(), instance, multiMesh, mesh);
+            pool = new InstancePool(this, id, capacity, triangles, shadows, map,
+                mesh.GetSurfaceCount(), instance, multiMesh, mesh, sharedMesh);
             AddChild(instance);
             if (instance.GetParent() != this) throw new InvalidOperationException("Godot rejected the pool node.");
+            RequireMounted();
+            if (sharedMesh is not null && (_activeMap != map ||
+                !_prototypeMeshes.TryGetValue(sharedMesh.Id, out var current) || !ReferenceEquals(current, sharedMesh)))
+                throw new InvalidOperationException("The pool map was unloaded during publication.");
             _pools.Add(id, pool);
             _orderedPools.Add(pool);
             _orderedPools.Sort(static (a, b) => StringComparer.Ordinal.Compare(a.Id, b.Id));
@@ -218,9 +237,19 @@ public sealed partial class InstancePoolHost : Node3D, IInstancePoolHost, IMapAw
         }
         catch
         {
-            if (GodotObject.IsInstanceValid(instance)) instance!.Free();
-            multiMesh?.Dispose();
-            mesh.Dispose();
+            if (pool is not null) pool.Free();
+            else
+            {
+                try
+                {
+                    if (GodotObject.IsInstanceValid(instance)) instance!.Free();
+                }
+                finally
+                {
+                    try { multiMesh?.Dispose(); }
+                    finally { ReleaseMesh(mesh, sharedMesh); }
+                }
+            }
             throw;
         }
     }
@@ -238,8 +267,29 @@ public sealed partial class InstancePoolHost : Node3D, IInstancePoolHost, IMapAw
     internal bool IsExiting => _exiting;
     internal void Release(InstancePool pool)
     {
-        _pools.Remove(pool.Id);
+        if (_pools.TryGetValue(pool.Id, out var mounted) && ReferenceEquals(mounted, pool)) _pools.Remove(pool.Id);
         _orderedPools.Remove(pool);
+    }
+
+    internal void ReleaseMesh(ArrayMesh mesh, SharedPrototypeMesh? sharedMesh)
+    {
+        if (sharedMesh is not null)
+        {
+            if (--sharedMesh.References != 0) return;
+            if (_prototypeMeshes.TryGetValue(sharedMesh.Id, out var current) && ReferenceEquals(current, sharedMesh))
+                _prototypeMeshes.Remove(sharedMesh.Id);
+        }
+        mesh.Dispose();
+    }
+
+    /// <summary>Outstanding borrows include publication in progress; no entry survives its map load.</summary>
+    internal sealed class SharedPrototypeMesh(string id, ArrayMesh mesh, int triangles, bool ignoreOcclusion)
+    {
+        internal string Id { get; } = id;
+        internal ArrayMesh Mesh { get; } = mesh;
+        internal int Triangles { get; } = triangles;
+        internal bool IgnoreOcclusion { get; } = ignoreOcclusion;
+        internal int References { get; set; } = 1;
     }
 
     internal static void RequireMainThread()

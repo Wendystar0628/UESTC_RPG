@@ -48,6 +48,8 @@ public sealed class GeometryInstancePoolRuntimeTests
     public async Task FrozenMultiSurfaceGeometryRetainsNativeChannelsSlotsAndInstanceBytes()
     {
         using var fixture = Fixture.Create();
+        var map = new MapId("pool-fixture-shared");
+        fixture.Host.OnMapLoaded(Context(map));
         var first = Surface(fixture.Provider.FirstSpec);
         var second = Surface(fixture.Provider.SecondSpec) with { Shader = ShaderId.VegTrunk };
         var frozenFirst = GeometryBuffer.Freeze(first);
@@ -58,7 +60,7 @@ public sealed class GeometryInstancePoolRuntimeTests
         first.Custom0![0] = -999;
         first.Ao![0] = 1;
 
-        var pool = fixture.Host.Mount(Spec("channels", prototype));
+        var pool = fixture.Host.Mount(Spec("channels", prototype) with { Map = map });
         AssertThat(!pool.IsReady).OverrideFailureMessage("A pool without its complete buffer must not be ready.").IsTrue();
         var node = fixture.Host.GetChild<MultiMeshInstance3D>(0);
         var multi = node.Multimesh;
@@ -112,13 +114,38 @@ public sealed class GeometryInstancePoolRuntimeTests
         var statistics = fixture.Host.GetStatistics().Single();
         AssertThat(statistics.SurfaceCount == 2 && statistics.MeshTriangles == 4 && statistics.VisibleTriangles == 8 &&
             statistics.InstanceBufferBytes == pool.Capacity * 64L).OverrideFailureMessage("Multi-surface allocation statistics are wrong.").IsTrue();
-        var shared = fixture.Host.Mount(Spec("shared-ready", prototype));
+        // Separate decoded prototype objects with the same complete Id share the native mesh.
+        fixture.Provider.ThrowAtGet = 1;
+        var shared = fixture.Host.Mount(Spec("shared-ready", Prototype(frozenFirst, frozenSecond)) with
+        {
+            Map = map, Capacity = 2, Layers = 2, Shadows = GeometryInstance3D.ShadowCastingSetting.ShadowsOnly
+        });
         var sharedNode = FindPool(fixture.Host, "shared-ready");
+        var sharedMulti = sharedNode.Multimesh;
+        AssertThat(sharedMulti.Mesh.GetInstanceId() == meshIdentity && sharedMulti.Mesh.GetRid() == mesh.GetRid() &&
+            sharedMulti.GetInstanceId() != multi.GetInstanceId()).OverrideFailureMessage("Mapped pools did not share one native mesh with independent MultiMeshes.").IsTrue();
         AssertThat(!shared.IsReady).OverrideFailureMessage("Ready shared materials must not bypass the complete buffer requirement.").IsTrue();
         shared.WriteBuffer(new float[shared.Capacity * InstanceStreamLayout.FloatsPerInstance]);
         shared.VisibleCount = 1;
-        AssertThat(shared.IsReady && sharedNode.Visible).OverrideFailureMessage("A complete zero buffer did not become ready.").IsTrue();
-
+        var sharedBounds = new Aabb(Vector3.Zero, Vector3.One);
+        shared.SetAabb(sharedBounds);
+        shared.SetParameter(_shaderInstanceShadowProxy, 1f);
+        AssertThat(shared.IsReady && sharedNode.Visible && sharedMulti.InstanceCount == shared.Capacity &&
+            multi.InstanceCount == pool.Capacity && multi.VisibleInstanceCount == pool.VisibleCount &&
+            sharedMulti.VisibleInstanceCount == shared.VisibleCount && multi.GetBuffer().SequenceEqual(submitted) &&
+            sharedMulti.GetBuffer().All(value => value == 0)).OverrideFailureMessage("Sharing the mesh leaked instance capacity, visibility or buffer state.").IsTrue();
+        AssertThat(sharedNode.CustomAabb == sharedBounds && sharedMulti.CustomAabb == sharedBounds &&
+            node.CustomAabb != sharedBounds && multi.CustomAabb != sharedBounds && node.Layers != sharedNode.Layers &&
+            node.CastShadow != sharedNode.CastShadow && sharedNode.GetInstanceShaderParameter(_shaderInstanceShadowProxy).AsSingle() == 1f &&
+            node.GetInstanceShaderParameter(_shaderInstanceShadowProxy).AsSingle() == 0f).OverrideFailureMessage("Sharing the mesh leaked bounds, layers, shadow policy or instance uniforms.").IsTrue();
+        pool.Free();
+        pool.Free();
+        AssertThat(GodotObject.IsInstanceValid(mesh) && !GodotObject.IsInstanceValid(multi)).OverrideFailureMessage("Freeing one borrower disposed the shared mesh or kept its own MultiMesh.").IsTrue();
+        shared.WriteBuffer(InstanceData(shared.Capacity));
+        shared.Free();
+        shared.Free();
+        AssertThat(!GodotObject.IsInstanceValid(mesh) && !GodotObject.IsInstanceValid(sharedMulti) &&
+            GodotObject.IsInstanceValid(fixture.Provider.FirstMaterial)).OverrideFailureMessage("The last borrower retained its native mesh or disposed a provider material.").IsTrue();
     }
 
     [TestCase]
@@ -134,15 +161,20 @@ public sealed class GeometryInstancePoolRuntimeTests
         var mapB = new MapId("pool-fixture-b");
         fixture.Host.OnMapLoaded(Context(mapA));
         var mapped = fixture.Host.Mount(Spec("mapped", prototype) with { Map = mapA });
+        var mappedPeer = fixture.Host.Mount(Spec("mapped-peer", prototype) with { Map = mapA });
         var global = fixture.Host.Mount(Spec("global", prototype));
         var mappedNode = FindPool(fixture.Host, "mapped");
         var mappedMulti = mappedNode.Multimesh;
         var mappedMesh = mappedMulti.Mesh;
+        var mappedMeshIdentity = mappedMesh.GetInstanceId();
+        var globalMesh = FindPool(fixture.Host, "global").Multimesh.Mesh;
+        AssertThat(globalMesh.GetInstanceId() != mappedMeshIdentity).OverrideFailureMessage("A global pool borrowed a map-owned mesh.").IsTrue();
         AssertThat(fixture.Source.Created.Count == 1).OverrideFailureMessage("The same ShaderId was created again for another live pool.").IsTrue();
         AssertThat(mappedNode.GetMeta("map_id").AsString() == mapA.Value).OverrideFailureMessage("The native pool lost map attribution.").IsTrue();
         fixture.Host.OnMapUnloading(mapA);
         fixture.Host.OnMapUnloading(mapA);
         mapped.Free();
+        mappedPeer.Free();
         AssertThat(!GodotObject.IsInstanceValid(mappedNode) && !GodotObject.IsInstanceValid(mappedMulti) &&
             !GodotObject.IsInstanceValid(mappedMesh)).OverrideFailureMessage("Map cleanup retained owned native resources.").IsTrue();
         AssertThat(fixture.Host.GetStatistics().Count == 1 && fixture.Host.GetStatistics()[0].Map is null).OverrideFailureMessage("Map cleanup freed a global pool or retained the mapped pool.").IsTrue();
@@ -160,16 +192,67 @@ public sealed class GeometryInstancePoolRuntimeTests
             AssertThat(thrown).OverrideFailureMessage($"Expected {typeof(InvalidOperationException).Name}.").IsTrue();
         }
 
+        fixture.Host.OnMapLoaded(Context(mapA));
+        var sameMap = fixture.Host.Mount(Spec("mapped", Prototype(GeometryBuffer.Freeze(Surface(fixture.Provider.SecondSpec)))) with { Map = mapA });
+        var sameMapMesh = FindPool(fixture.Host, "mapped").Multimesh.Mesh;
+        AssertThat(sameMapMesh.GetInstanceId() != mappedMeshIdentity && sameMapMesh.GetSurfaceCount() == 1 &&
+            GodotObject.IsInstanceValid(globalMesh)).OverrideFailureMessage("Reloading the same map reused its previous load's mesh or changed the global pool.").IsTrue();
+        fixture.Host.OnMapUnloading(mapA);
+        sameMap.Free();
+        AssertThat(!GodotObject.IsInstanceValid(sameMapMesh)).OverrideFailureMessage("Reload cleanup retained a map-owned mesh.").IsTrue();
         fixture.Host.OnMapLoaded(Context(mapB));
         var reloadedSpec = Spec("mapped", prototype) with { Map = mapB };
         var reloaded = fixture.Host.Mount(reloadedSpec);
         AssertThat(fixture.Host.GetStatistics().Single(stat => stat.Id == reloadedSpec.Id).Map == mapB).OverrideFailureMessage("Reload retained old map attribution.").IsTrue();
         reloaded.Free();
         reloaded.Free();
+        var exitA = fixture.Host.Mount(Spec("exit-a", prototype) with { Map = mapB });
+        var exitB = fixture.Host.Mount(Spec("exit-b", prototype) with { Map = mapB });
+        var exitMesh = FindPool(fixture.Host, "exit-a").Multimesh.Mesh;
         fixture.Host.Free();
+        exitA.Free();
+        exitB.Free();
         global.Free();
+        AssertThat(!GodotObject.IsInstanceValid(exitMesh) && !GodotObject.IsInstanceValid(globalMesh)).OverrideFailureMessage("Host exit retained shared or exclusive meshes.").IsTrue();
         AssertThat(!GodotObject.IsInstanceValid(fixture.Source.Created.Single())).OverrideFailureMessage("Host exit did not dispose its cached ShaderMaterial.").IsTrue();
         AssertThat(GodotObject.IsInstanceValid(fixture.Provider.FirstMaterial) && GodotObject.IsInstanceValid(fixture.Provider.SecondMaterial)).OverrideFailureMessage("Host exit disposed provider-owned Toon materials.").IsTrue();
+    }
+
+    [TestCase]
+    [TestCategory(TestReason.Contract)]
+    [TestCategory("NativeRender")]
+    [RequireGodotRuntime]
+    public void MapReloadDuringPublicationReturnsTheUnpublishedMeshBorrow()
+    {
+        using var fixture = Fixture.Create();
+        var map = new MapId("pool-fixture-publish");
+        var spec = Spec("cancelled", Prototype(GeometryBuffer.Freeze(Surface(fixture.Provider.FirstSpec)))) with { Map = map };
+        fixture.Host.OnMapLoaded(Context(map));
+        MultiMeshInstance3D? cancelledNode = null;
+        MultiMesh? cancelledMulti = null;
+        Mesh? cancelledMesh = null;
+        ulong cancelledIdentity = 0;
+        void Reload(Node child)
+        {
+            cancelledNode = (MultiMeshInstance3D)child;
+            cancelledMulti = cancelledNode.Multimesh;
+            cancelledMesh = cancelledMulti.Mesh;
+            cancelledIdentity = cancelledMesh.GetInstanceId();
+            fixture.Host.OnMapUnloading(map);
+            fixture.Host.OnMapLoaded(Context(map));
+        }
+        fixture.Host.ChildEnteredTree += Reload;
+        var thrown = false;
+        try { fixture.Host.Mount(spec); }
+        catch (InvalidOperationException) { thrown = true; }
+        finally { fixture.Host.ChildEnteredTree -= Reload; }
+        AssertThat(thrown && cancelledMesh is not null && !GodotObject.IsInstanceValid(cancelledNode) &&
+            !GodotObject.IsInstanceValid(cancelledMulti) && !GodotObject.IsInstanceValid(cancelledMesh) &&
+            fixture.Host.GetChildCount() == 0 && fixture.Host.GetStatistics().Count == 0).OverrideFailureMessage("Cancelled publication retained a node, MultiMesh, mesh borrow or pool record.").IsTrue();
+        var next = fixture.Host.Mount(spec);
+        AssertThat(FindPool(fixture.Host, "cancelled").Multimesh.Mesh.GetInstanceId() != cancelledIdentity &&
+            GodotObject.IsInstanceValid(fixture.Provider.FirstMaterial)).OverrideFailureMessage("Publication rollback reused a previous load's mesh or disposed its provider material.").IsTrue();
+        next.Free();
     }
 
     [TestCase]
@@ -262,16 +345,22 @@ public sealed class GeometryInstancePoolRuntimeTests
         }
         AssertThat(fixture.Host.GetChildCount() == 0 && fixture.Host.GetStatistics().Count == 0).OverrideFailureMessage("Unsupported input allocated or published a partial pool.").IsTrue();
 
+        var map = new MapId("pool-fixture-failed-upload");
+        fixture.Host.OnMapLoaded(Context(map));
         fixture.Provider.ThrowAtGet = 2;
         var two = Prototype(GeometryBuffer.Freeze(basic), GeometryBuffer.Freeze(Surface(fixture.Provider.SecondSpec)));
         {
             var thrown = false;
-            try { fixture.Host.Mount(Spec("failed-material", two)); }
+            try { fixture.Host.Mount(Spec("failed-material", two) with { Map = map }); }
             catch (InvalidOperationException) { thrown = true; }
             AssertThat(thrown).OverrideFailureMessage($"Expected {typeof(InvalidOperationException).Name}.").IsTrue();
         }
         AssertThat(fixture.Host.GetChildCount() == 0 && fixture.Host.GetStatistics().Count == 0).OverrideFailureMessage("A later material resolution failure published a partial pool.").IsTrue();
         AssertThat(GodotObject.IsInstanceValid(fixture.Provider.FirstMaterial) && GodotObject.IsInstanceValid(fixture.Provider.SecondMaterial)).OverrideFailureMessage("Rollback disposed a borrowed material.").IsTrue();
+        fixture.Provider.ThrowAtGet = -1;
+        var retry = fixture.Host.Mount(Spec("failed-material", two) with { Map = map });
+        AssertThat(FindPool(fixture.Host, "failed-material").Multimesh.Mesh.GetSurfaceCount() == two.Surfaces.Count).OverrideFailureMessage("A failed first upload left a partial shared mesh for retry.").IsTrue();
+        retry.Free();
     }
 
     [TestCase]
@@ -286,6 +375,7 @@ public sealed class GeometryInstancePoolRuntimeTests
         var body = fixture.Host.Mount(Spec("body", prototype));
         var proxyNode = FindPool(fixture.Host, "proxy");
         var bodyNode = FindPool(fixture.Host, "body");
+        AssertThat(proxyNode.Multimesh.Mesh.GetInstanceId() != bodyNode.Multimesh.Mesh.GetInstanceId()).OverrideFailureMessage("Pools without Map must keep exclusive native meshes even for the same prototype.").IsTrue();
         AssertThat(proxyNode.CastShadow == GeometryInstance3D.ShadowCastingSetting.ShadowsOnly &&
             bodyNode.CastShadow == GeometryInstance3D.ShadowCastingSetting.Off).OverrideFailureMessage("Explicit body/proxy shadow policy changed.").IsTrue();
         proxy.SetParameter(_shaderInstanceShadowProxy, 1f);

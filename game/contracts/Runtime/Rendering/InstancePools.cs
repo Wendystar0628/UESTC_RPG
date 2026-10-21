@@ -53,7 +53,8 @@ public interface IInstancePool
 
     void SetAabb(Aabb box);
 
-    /// <summary>Idempotently releases the instance, MultiMesh and mesh, but never the borrowed material.</summary>
+    /// <summary>Idempotently releases the instance and MultiMesh, and returns its mesh ownership or shared borrow.
+    /// A shared mesh is released after its last pool; borrowed materials are never released.</summary>
     void Free();
 }
 
@@ -87,13 +88,17 @@ public sealed record InstancePoolStatistics(
 }
 
 /// <summary>Complete immutable prototype for a dynamic native pool.</summary>
-/// <remarks>Prototype vertices are local and immutable. The pool copies/uploads them at mount, not on each WriteBuffer.
+/// <remarks>Prototype vertices are local and immutable. Within one map load, the same complete Prototype.Id denotes
+/// identical complete geometry, materials and ordered surface slots. The host uploads that mesh once while pools
+/// borrow it; each pool retains its own MultiMesh, buffer, bounds, visibility and instance parameters.
+/// A pool without Map owns its uploaded mesh exclusively. WriteBuffer never uploads prototype geometry.
 /// Material resolution uses the existing ToonRef/ShaderId provider; there is no caller-supplied material override.</remarks>
 public sealed record GeometryInstancePoolSpec(
     string Id, GeometryPrototype Prototype, int Capacity,
     Aabb CustomAabb, uint Layers,
     GeometryInstance3D.ShadowCastingSetting Shadows = GeometryInstance3D.ShadowCastingSetting.Off)
 {
-    /// <summary>Optional map ownership for unload cleanup; null is reserved for explicitly global pools.</summary>
+    /// <summary>Optional map ownership for unload cleanup and mesh sharing within that map load.
+    /// Null is reserved for explicitly global pools with exclusive mesh ownership.</summary>
     public MapId? Map { get; init; }
 }
