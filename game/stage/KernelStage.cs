@@ -37,6 +37,18 @@ public partial class KernelStage : Node3D, IAppExit, IStageGateHost
     private bool _shutdownStarted;
     private bool _failed;
     private Task? _shutdownTask;
+    private Task<int>? _bakeCommandTask;
+    private SceneTree? _sceneTree;
+    private bool _treeExited;
+    private bool _shutdownComplete;
+    private bool _quitIssued;
+    private int _exitCode;
+    private readonly List<Exception> _failures = [];
+    private string? _failurePhase;
+    private bool _failurePresentationAttempted;
+    private IAppLoadingLease? _bootLoading;
+    private Task? _bootLoadingDisposal;
+    private IFlowLease? _startupFlow;
     private readonly CancellationTokenSource _captureLifetime = new();
     private ViewContentReadiness? _contentReadiness;
     private GameCaptureNode.CaptureDestination? _startupCapture;
@@ -61,18 +73,19 @@ public partial class KernelStage : Node3D, IAppExit, IStageGateHost
     public override async void _Ready()
     {
         if (AppBoot.Failed) return;
+        _sceneTree = GetTree();
         try
         {
             var registry = KernelServices.Services;
             registry.Discover(BuildInfo.ModuleAssemblies.Select(name => Assembly.Load(new AssemblyName(name))).SelectMany(assembly => assembly.GetTypes()));
             GD.Print($"Kernel registry: {registry.Entries.Count} declarations; build {BuildInfo.Build}");
-            if (RegistryStageGate.TryRun(this)) return;
+            if (RegistryStageGate.TryRun()) { await FinishQuit(); return; }
             if (AppBoot.Options.CpuBakeMode) { await RunBakeCommand(); return; }
             Compose();
             await StartWorld();
         }
         catch (OperationCanceledException) when (_closing) { }
-        catch (Exception error) { Fail(error); }
+        catch (Exception error) { await Fail(error); }
     }
 
     private void Compose()
@@ -130,6 +143,7 @@ public partial class KernelStage : Node3D, IAppExit, IStageGateHost
             Motion: registry.Get<Campus.Hud.Motion.MotionPolicy>(),
             WorldControl: registry.Get<IWorldControl>(),
             Flow: registry.Get<IAppFlow>(),
+            Exit: registry.Get<IAppExit>(),
             Audio: registry.Get<Campus.Contracts.Audio.IAudioService>(),
             PaletteCatalog: registry.Get<IPaletteCatalogSource>(),
             ShaderMaterials: registry.Get<IShaderMaterialSource>(),
@@ -191,18 +205,45 @@ public partial class KernelStage : Node3D, IAppExit, IStageGateHost
     {
         var registry = KernelServices.Services;
         var frontispiece = registry.Get<IAppFrontispiecePresentation>();
-        IAppLoadingLease? bootLoading = null;
-        if (AppBoot.Options.Flow.ShowTitle) await frontispiece.Show();
-        else { bootLoading = registry.Get<IAppLoadingPresentation>().Show(); await bootLoading.Covered; }
-        using var startupFlow = registry.Get<IWorldControl>().AcquireFlow(FlowPriority.Pause, 0);
-        try { await StartWorld(frontispiece, bootLoading, startupFlow); }
-        catch (OperationCanceledException) when (_closing) { throw; }
-        catch
+        var failures = new List<Exception>();
+        try
         {
-            HoldFailure();
-            throw;
+            if (AppBoot.Options.Flow.ShowTitle) await frontispiece.Show();
+            else { _bootLoading = registry.Get<IAppLoadingPresentation>().Show(); await _bootLoading.Covered; }
+            CheckStartupActive();
+            _startupFlow = registry.Get<IWorldControl>().AcquireFlow(FlowPriority.Pause, 0);
+            await StartWorld(frontispiece, _bootLoading, _startupFlow);
         }
-        finally { if (bootLoading is not null) await bootLoading.DisposeAsync(); }
+        catch (OperationCanceledException error) when (_closing) { failures.Add(error); }
+        catch (Exception error)
+        {
+            failures.Add(error);
+            try { HoldFailure(); } catch (Exception coverError) { failures.Add(coverError); }
+            // Publish the original failure before any cleanup await can race a window-close exit.
+            _ = Fail(new AggregateException("Stage startup failed.", failures));
+        }
+        finally
+        {
+            try { ReleaseStartupFlow(); } catch (Exception error) { failures.Add(error); _ = Fail(error); }
+            try { await DisposeBootLoading(); } catch (Exception error) { failures.Add(error); _ = Fail(error); }
+        }
+        if (failures.Count == 1) System.Runtime.ExceptionServices.ExceptionDispatchInfo.Capture(failures[0]).Throw();
+        if (failures.Count > 0) throw new AggregateException("Stage startup and presentation cleanup failed.", failures);
+    }
+
+    private void ReleaseStartupFlow()
+    {
+        var flow = _startupFlow;
+        _startupFlow = null;
+        flow?.Dispose();
+    }
+
+    private Task DisposeBootLoading()
+    {
+        if (_bootLoadingDisposal is not null) return _bootLoadingDisposal;
+        var loading = _bootLoading;
+        _bootLoading = null;
+        return _bootLoadingDisposal = loading?.DisposeAsync().AsTask() ?? Task.CompletedTask;
     }
 
     private async Task StartWorld(IAppFrontispiecePresentation frontispiece, IAppLoadingLease? bootLoading, IFlowLease startupFlow)
@@ -324,8 +365,9 @@ public partial class KernelStage : Node3D, IAppExit, IStageGateHost
         // Only the requested command and its declared constructor dependencies are resolved.
         var command = KernelServices.Get<IBakeCommand>();
         if (command is Node node) AddChild(node);
-        var exitCode = await command.Run(CreateBootContext());
-        if (!_closing) GetTree().Quit(exitCode);
+        _bakeCommandTask = command.Run(CreateBootContext());
+        var exitCode = await _bakeCommandTask;
+        await FinishQuit(exitCode);
     }
 
     private static BootContext CreateBootContext()
@@ -337,7 +379,7 @@ public partial class KernelStage : Node3D, IAppExit, IStageGateHost
     public override void _Process(double delta)
     {
         if (!_closing && !_failed && _mapRuntime?.Failure is { } failure && failure is not OperationCanceledException)
-            Fail(failure);
+            _ = Fail(failure);
         _statistics?.Sample();
         if (_startupProfiling && _statistics is { } statistics)
         {
@@ -362,12 +404,12 @@ public partial class KernelStage : Node3D, IAppExit, IStageGateHost
             if (_shutdownTask is not null) { await _shutdownTask; return; }
             _closing = true;
             _captureLifetime.Cancel();
-            if (_cpuCommand) { GetTree().Quit(130); return; }
+            if (_cpuCommand) { await FinishQuit(130); return; }
             if (_flow is null) { await FinishQuit(); return; }
             // All requests, including repeats, use the flow's shared quit task. It calls IAppExit
             // only after saving and the user's final decision; observing Quitting is not permission to exit.
             await _flow.Quit();
-            if (_shutdownStarted) return;
+            if (_shutdownStarted) { await _shutdownTask!; return; }
             switch (_flow.State)
             {
                 case AppState.Quitting: throw new InvalidOperationException("Quit completed without the IAppExit shutdown bridge.");
@@ -379,96 +421,136 @@ public partial class KernelStage : Node3D, IAppExit, IStageGateHost
                 default: throw new InvalidOperationException("Quit completed without a final quit or resume decision.");
             }
         }
-        catch (Exception error) { _closing = false; Fail(error); }
+        catch (Exception error) { await Fail(error); }
     }
+
     public override void _ExitTree()
     {
-        _closing = true;
-        if (_flow is not null) _flow.Changed -= OnFlowChanged;
-        _captureLifetime.Cancel();
-        if (_failureLoading is not null) _ = _failureLoading.DisposeAsync();
-        _failureFlow?.Dispose();
-        _ = ObserveRegistryShutdown();
+        _treeExited = true;
+        if (AppBoot.Failed || _shutdownComplete) return;
+        // Leaving the tree first destroys the lifetime required by async cleanup. Reject that
+        // ownership violation synchronously; never start a replacement shutdown on a dead stage.
+        var error = new InvalidOperationException("KernelStage left the tree before its awaited shutdown completed.");
+        _ = Fail(error);
+        QuitEngine();
+        throw error;
     }
 
-    private static async Task ObserveRegistryShutdown()
-    {
-        try { await KernelServices.Services.ShutdownAsync(); }
-        catch (Exception error) { DiagnosticLog.Error("[WP-01][phase=exit-tree]", error); }
-    }
-
-    public Task FinishQuit() => BeginShutdownAndQuit(0);
+    public Task FinishQuit(int exitCode = 0) => BeginShutdownAndQuit(exitCode);
 
     private Task BeginShutdownAndQuit(int exitCode)
     {
+        if (_exitCode == 0 || exitCode == 2) _exitCode = exitCode;
         if (_shutdownTask is not null) return _shutdownTask;
+        if (_treeExited) throw new InvalidOperationException("Stage shutdown must begin before leaving the tree.");
         var completion = new TaskCompletionSource();
         // Publish before cancellation or shutdown can reenter this boundary.
         _shutdownTask = completion.Task;
+        _shutdownStarted = true;
         _closing = true;
         _ = Finish();
         return _shutdownTask;
 
         async Task Finish()
         {
-            try
+            try { await ShutdownAndQuit(); }
+            catch (Exception error)
             {
-                _captureLifetime.Cancel();
-                await ShutdownAndQuit(exitCode);
-                completion.TrySetResult();
+                _ = Fail(error);
+                QuitEngine();
             }
-            catch (Exception error) { completion.TrySetException(error); }
+            finally { completion.TrySetResult(); }
         }
     }
 
-    private async Task ShutdownAndQuit(int exitCode)
+    private async Task ShutdownAndQuit()
     {
-        if (_shutdownStarted) return;
-        _shutdownStarted = true;
         _ready = false;
         _statistics = null;
-        Phase = "shutdown";
         var failures = new List<Exception>();
+        try { Phase = "shutdown"; } catch (Exception error) { failures.Add(error); }
+        if (_failed)
+        {
+            try
+            {
+                if (_flow is IAppBootFlow bootFlow)
+                    bootFlow.FailBoot(new AggregateException("Stage failed.", _failures));
+            }
+            catch (Exception error) { failures.Add(error); }
+            try { HoldFailure(); } catch (Exception coverError) { failures.Add(coverError); }
+        }
+        try { _captureLifetime.Cancel(); } catch (Exception error) { failures.Add(error); }
+        try { if (_flow is not null) _flow.Changed -= OnFlowChanged; } catch (Exception error) { failures.Add(error); }
+        // The command owns its own baking resources; a close request must let its finally blocks
+        // finish before the registry can release its dependencies and the engine can quit.
+        if (_bakeCommandTask is not null)
+            try
+            {
+                var commandExit = await _bakeCommandTask;
+                if (commandExit != 0) _exitCode = commandExit;
+            }
+            catch (Exception error) { failures.Add(error); }
+        try { ReleaseStartupFlow(); } catch (Exception error) { failures.Add(error); }
+        try { await DisposeBootLoading(); } catch (Exception error) { failures.Add(error); }
+        if (_failureLoading is { } loading)
+        {
+            _failureLoading = null;
+            try { await loading.DisposeAsync(); } catch (Exception error) { failures.Add(error); }
+        }
+        if (_failureFlow is { } flow)
+        {
+            _failureFlow = null;
+            try { flow.Dispose(); } catch (Exception error) { failures.Add(error); }
+        }
         try { await KernelServices.Services.ShutdownAsync(this, _gate.TraceClose); }
         catch (Exception error) { failures.Add(error); }
-        _gate.TraceClose("shutdown-complete");
-        foreach (var error in failures) DiagnosticLog.Error("[WP-01][phase=shutdown]", error);
-        _gate.ReportShutdown();
-        GetTree().Quit(_failed || failures.Count > 0 ? 2 : exitCode);
+        try { _gate.TraceClose("shutdown-complete"); } catch (Exception error) { failures.Add(error); }
+        try { _gate.ReportShutdown(); } catch (Exception error) { failures.Add(error); }
+        if (failures.Count > 0) _ = Fail(new AggregateException("Stage cleanup failed.", failures));
+        _shutdownComplete = true;
+        QuitEngine();
     }
-    private void Fail([FailureHandler("ENG-ARCH")] Exception error)
+
+    private Task Fail([FailureHandler("ENG-ARCH")] Exception error)
     {
-        if (_failed) return;
+        // Later errors belong to this same failure boundary, including cleanup failures while
+        // shutdown is already running. Never discard them merely because the first failure won.
+        IEnumerable<Exception> failures = error is AggregateException aggregate ? aggregate.Flatten().InnerExceptions : [error];
+        foreach (var failure in failures)
+            if (!_failures.Any(existing => ReferenceEquals(existing, failure))) _failures.Add(failure);
+        _failurePhase ??= Phase;
         _failed = true;
         _ready = false;
-        Failure = error.GetBaseException().Message;
-        if (_flow is IAppBootFlow bootFlow) bootFlow.FailBoot(error);
-        DiagnosticLog.Error($"[WP-01][phase={Phase}]", error);
-        HoldFailure();
-        // Automated runs must never turn an incomplete startup or a failed screenshot into success.
-        if (_cpuCommand || AppBoot.Options.CaptureMode || !AppBoot.Options.Title) _ = ObserveFailureShutdown();
+        Failure = new AggregateException("Stage failed.", _failures).GetBaseException().Message;
+        return _treeExited ? Task.CompletedTask : BeginShutdownAndQuit(2);
+    }
 
-        async Task ObserveFailureShutdown()
-        {
-            try { await BeginShutdownAndQuit(2); }
-            catch (Exception shutdownError) { DiagnosticLog.Error("[WP-01][phase=failure-shutdown]", shutdownError); }
-        }
+    private void QuitEngine()
+    {
+        if (_quitIssued) return;
+        _quitIssued = true;
+        if (_failures.Count > 0) DiagnosticLog.Error($"[WP-01][phase={_failurePhase}]", new AggregateException("Stage failed.", _failures));
+        (_sceneTree ?? throw new InvalidOperationException("Stage has no live scene-tree owner.")).Quit(_failed ? 2 : _exitCode);
     }
 
     private void HoldFailure()
     {
+        if (_failurePresentationAttempted) return;
+        _failurePresentationAttempted = true;
+        var failures = new List<Exception>();
         var loading = KernelServices.Services.Created.OfType<IAppLoadingPresentation>().SingleOrDefault();
         if (loading is not null)
         {
             try { _failureLoading ??= loading.Show(); }
-            catch (Exception coverError) { DiagnosticLog.Error("[WP-01][phase=failure-cover]", coverError); }
+            catch (Exception error) { failures.Add(error); }
         }
         var world = KernelServices.Services.Created.OfType<IWorldControl>().SingleOrDefault();
         if (world is not null)
         {
             try { _failureFlow ??= world.AcquireFlow(FlowPriority.AppFlow, 0); }
-            catch (Exception flowError) { DiagnosticLog.Error("[WP-01][phase=failure-flow]", flowError); }
+            catch (Exception error) { failures.Add(error); }
         }
+        if (failures.Count > 0) throw new AggregateException("Stage failure presentation could not be held.", failures);
     }
 
     Node IStageGateHost.Stage => this;
@@ -482,5 +564,5 @@ public partial class KernelStage : Node3D, IAppExit, IStageGateHost
     void IStageGateHost.CheckActive() => CheckStartupActive();
     void IStageGateHost.SyncView() => _view!.Sync();
     Task IStageGateHost.Close() => CloseAsync();
-    void IStageGateHost.Fail(Exception error) => Fail(error);
+    void IStageGateHost.Fail(Exception error) => _ = Fail(error);
 }

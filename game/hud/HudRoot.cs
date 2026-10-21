@@ -171,8 +171,7 @@ public partial class HudRoot : CanvasLayer, IBootParticipant, IAppLoadingPresent
         {
             var error = _view.Kit.Theme.Export(exportPath);
             GD.Print($"UI theme exported: {exportPath} ({error})");
-            GetTree().Quit(error == Error.Ok ? 0 : 2);
-            return Task.CompletedTask;
+            return _dependencies.Exit.FinishQuit(error == Error.Ok ? 0 : 2);
         }
         _dependencies.ThemeClock.Apply(_args);
         _view.Configure(_args);

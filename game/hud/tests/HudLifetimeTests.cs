@@ -90,6 +90,7 @@ public sealed class HudLifetimeTests
                 Motion: motion,
                 WorldControl: world,
                 Flow: flow,
+                Exit: new UnusedExit(),
                 Audio: audio,
                 PaletteCatalog: new PaletteRegistrySource(),
                 ShaderMaterials: new ShaderMaterialSource(),
@@ -161,6 +162,11 @@ public sealed class HudLifetimeTests
     {
         public void SampleHorizon(Season season, WeatherVec weather, Span<System.Numerics.Vector3> srgb24) =>
             srgb24.Fill(System.Numerics.Vector3.Zero);
+    }
+
+    private sealed class UnusedExit : IAppExit
+    {
+        public Task FinishQuit(int exitCode = 0) => throw new NotSupportedException();
     }
 
     private sealed class UnusedCapture : IGameCapture

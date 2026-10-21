@@ -16,6 +16,7 @@ public sealed record HudRootDependencies(
     MotionPolicy Motion,
     IWorldControl WorldControl,
     IAppFlow Flow,
+    IAppExit Exit,
     IAudioService Audio,
     IPaletteCatalogSource PaletteCatalog,
     IShaderMaterialSource ShaderMaterials,

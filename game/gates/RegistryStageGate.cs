@@ -11,15 +11,14 @@ namespace Campus.Gates;
 // Command-line gate entries invoked by the production stage.
 public static class RegistryStageGate
 {
-    /// <summary>--gate=registry: runs the declaration checks inside the engine and quits. False when the gate is not requested.</summary>
-    public static bool TryRun(Node stage)
+    /// <summary>--gate=registry: runs the declaration checks inside the engine. The stage owns shutdown. False when the gate is not requested.</summary>
+    public static bool TryRun()
     {
         if (AppBoot.Options.Capture.Gate != "registry") return false;
         var report = RegistryGateRunner.Run(KernelServices.Services, ProjectSettings.GetSetting("campus/maps/index").AsString(),
             AppBoot.Options.Flow.Map?.Value ?? "", ReadData, [typeof(IAppExit),
                 typeof(Camera3D), typeof(WorldEnvironment), typeof(Godot.Environment), typeof(CanvasLayer)], DirAccess.GetFilesAt);
         GD.Print("G5_REGISTRY_RESULT " + JsonSerializer.Serialize(report, ContractJson.Options));
-        stage.GetTree().Quit();
         return true;
     }
 
