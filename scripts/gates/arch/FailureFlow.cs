@@ -11,6 +11,7 @@ internal sealed class FailureFlow(SourceFile file, CatchClauseSyntax? origin, Ha
     HashSet<IMethodSymbol>? activeFactories = null)
 {
     private readonly HashSet<IMethodSymbol> factories = activeFactories ?? new(SymbolEqualityComparer.Default);
+    private readonly HashSet<IMethodSymbol> continuations = new(SymbolEqualityComparer.Default);
     private enum End { Running, Return, Break, Continue, Throw }
     private sealed record ObjectReference(ISymbol Symbol, string Receiver);
     private sealed class ReferenceComparer : IEqualityComparer<ObjectReference>
@@ -24,11 +25,16 @@ internal sealed class FailureFlow(SourceFile file, CatchClauseSyntax? origin, Ha
         public HashSet<ObjectReference> Objects { get; } = new(new ReferenceComparer());
         public bool Handled;
         public bool ReturnRetains;
+        public bool ThrowRetains;
+        public HashSet<SyntaxNode> Values { get; } = [];
+        public Dictionary<ObjectReference, HashSet<string>> Data { get; } = new(new ReferenceComparer());
         public End Exit;
         public PathState Copy()
         {
-            var copy = new PathState { Handled = Handled, ReturnRetains = ReturnRetains, Exit = Exit };
+            var copy = new PathState { Handled = Handled, ReturnRetains = ReturnRetains, ThrowRetains = ThrowRetains, Exit = Exit };
             copy.Objects.UnionWith(Objects);
+            copy.Values.UnionWith(Values);
+            foreach (var pair in Data) copy.Data.Add(pair.Key, new(pair.Value, StringComparer.Ordinal));
             return copy;
         }
     }
@@ -49,7 +55,7 @@ internal sealed class FailureFlow(SourceFile file, CatchClauseSyntax? origin, Ha
         if (clause.Declaration is { } caught && file.Model.GetDeclaredSymbol(caught) is { } symbol) start.Objects.Add(new(symbol, ""));
         var paths = flow.Statement(clause.Block, [start]);
         paths = flow.ContinueOutside(clause, paths);
-        return paths.All(path => path.Handled);
+        return flow.Complete(clause, paths);
     }
 
     private static bool PureCancellation(SourceFile file, CatchClauseSyntax clause, ExpressionSyntax condition)
@@ -79,8 +85,12 @@ internal sealed class FailureFlow(SourceFile file, CatchClauseSyntax? origin, Ha
                 return paths;
             if (parent is BlockSyntax block && current is StatementSyntax statement)
                 paths = Statements(block.Statements.Skip(block.Statements.IndexOf(statement) + 1), paths);
-            if (parent is TryStatementSyntax attempt && (current is CatchClauseSyntax || current == attempt.Block) && attempt.Finally is { } cleanup)
-                paths = Finally(cleanup.Block, paths);
+            if (parent is TryStatementSyntax attempt)
+            {
+                if (current == attempt.Block) paths = CatchThrows(attempt, paths);
+                if ((current is CatchClauseSyntax || current == attempt.Block) && attempt.Finally is { } cleanup)
+                    paths = Finally(cleanup.Block, paths);
+            }
             if (parent is ForStatementSyntax or ForEachStatementSyntax or WhileStatementSyntax or DoStatementSyntax or SwitchStatementSyntax)
                 foreach (var path in paths.Where(path => path.Exit is End.Break or End.Continue)) path.Exit = End.Running;
             current = parent;
@@ -119,7 +129,10 @@ internal sealed class FailureFlow(SourceFile file, CatchClauseSyntax? origin, Ha
             case IfStatementSyntax branch:
                 return Expression(branch.Condition, state).SelectMany(path => Branch(branch, path)).ToList();
             case ThrowStatementSyntax thrown:
-                state.Handled = thrown.Expression is null ? origin is not null && thrown.Ancestors().OfType<CatchClauseSyntax>().FirstOrDefault() == origin : Retains(thrown.Expression, state);
+                var caught = thrown.Ancestors().OfType<CatchClauseSyntax>().FirstOrDefault();
+                state.ThrowRetains = thrown.Expression is not null ? Retains(thrown.Expression, state) :
+                    caught == origin || caught?.Declaration is { } caughtDeclaration &&
+                    file.Model.GetDeclaredSymbol(caughtDeclaration) is { } caughtSymbol && Has(new(caughtSymbol, ""), state);
                 state.Exit = End.Throw;
                 return [state];
             case ReturnStatementSyntax returned:
@@ -134,7 +147,10 @@ internal sealed class FailureFlow(SourceFile file, CatchClauseSyntax? origin, Ha
             case BreakStatementSyntax: state.Exit = End.Break; return [state];
             case TryStatementSyntax attempt:
                 var alternatives = Statement(attempt.Block, [state.Copy()]);
-                foreach (var clause in attempt.Catches) alternatives.AddRange(Statement(clause.Block, [state.Copy()]));
+                var mayComplete = alternatives.Any(path => path.Exit == End.Running);
+                alternatives = CatchThrows(attempt, alternatives);
+                if (mayComplete)
+                    foreach (var clause in attempt.Catches) alternatives.AddRange(Statement(clause.Block, [state.Copy()]));
                 return attempt.Finally is null ? alternatives : Finally(attempt.Finally.Block, alternatives);
             case UsingStatementSyntax resource: return Statement(resource.Statement, [state]);
             case LockStatementSyntax locked: return Statement(locked.Statement, [state]);
@@ -188,14 +204,18 @@ internal sealed class FailureFlow(SourceFile file, CatchClauseSyntax? origin, Ha
     private List<PathState> Expression(ExpressionSyntax expression, PathState state)
     {
         if (expression is ConditionalExpressionSyntax conditional)
+        {
+            var known = KnownCondition(conditional.Condition, state);
+            if (known is { } selected) return Expression(selected ? conditional.WhenTrue : conditional.WhenFalse, state);
             return Expression(conditional.WhenTrue, state.Copy()).Concat(Expression(conditional.WhenFalse, state.Copy())).ToList();
+        }
         if (expression is BinaryExpressionSyntax binary && binary.Kind() is SyntaxKind.LogicalAndExpression or SyntaxKind.LogicalOrExpression or SyntaxKind.CoalesceExpression)
             return Expression(binary.Left, state.Copy()).SelectMany(left => new[] { left.Copy() }.Concat(Expression(binary.Right, left.Copy()))).ToList();
         if (expression is ConditionalAccessExpressionSyntax access)
             return new[] { state.Copy() }.Concat(Expression(access.WhenNotNull, state.Copy())).ToList();
         if (expression is ThrowExpressionSyntax thrown)
         {
-            state.Handled = Retains(thrown.Expression, state);
+            state.ThrowRetains = Retains(thrown.Expression, state);
             state.Exit = End.Throw;
             return [state];
         }
@@ -204,7 +224,13 @@ internal sealed class FailureFlow(SourceFile file, CatchClauseSyntax? origin, Ha
             var retains = Retains(assignment.Right, state) ||
                 assignment.IsKind(SyntaxKind.CoalesceAssignmentExpression) && Retains(assignment.Left, state);
             var paths = Expression(assignment.Right, state);
-            foreach (var path in paths) Set(assignment.Left, retains, path);
+            foreach (var path in paths)
+                if (DataSlot(assignment.Left) is { } slot)
+                {
+                    if (!path.Data.TryGetValue(slot.Owner, out var keys)) path.Data.Add(slot.Owner, keys = new(StringComparer.Ordinal));
+                    if (retains) keys.Add(slot.Key); else keys.Remove(slot.Key);
+                }
+                else Set(assignment.Left, retains, path);
             return paths;
         }
         if (expression is InvocationExpressionSyntax call && file.Model.GetOperation(call) is IInvocationOperation operation)
@@ -236,7 +262,7 @@ internal sealed class FailureFlow(SourceFile file, CatchClauseSyntax? origin, Ha
             retainsArgument) state.Handled = true;
         if (method.Name == "Throw" && BclMethod(method, "System.Runtime.ExceptionServices.ExceptionDispatchInfo"))
         {
-            state.Handled = method.IsStatic ? retainsArgument : operation.Instance is { } dispatched && Retains(dispatched, state);
+            state.ThrowRetains = method.IsStatic ? retainsArgument : operation.Instance is { } dispatched && Retains(dispatched, state);
             state.Exit = End.Throw;
         }
         if (operation.Instance?.Syntax is ExpressionSyntax receiver && method.Name is "Add" or "AddRange" or "Enqueue" or "Push" &&
@@ -244,6 +270,13 @@ internal sealed class FailureFlow(SourceFile file, CatchClauseSyntax? origin, Ha
             operation.Arguments.Any(argument => Retains(argument.Value, state))) Set(receiver, true, state);
         if (operation.Instance?.Syntax is ExpressionSyntax cleared && method.Name == "Clear" &&
             method.ContainingNamespace.ToDisplayString().StartsWith("System.Collections", StringComparison.Ordinal)) Set(cleared, false, state);
+        if (operation.Instance?.Syntax is ExpressionSyntax data && DataOwner(data) is { } owner &&
+            method.ContainingNamespace.ToDisplayString().StartsWith("System.Collections", StringComparison.Ordinal))
+        {
+            if (method.Name == "Clear") state.Data.Remove(owner);
+            if (method.Name == "Remove" && operation.Arguments.Length == 1 && ConstantKey(operation.Arguments[0].Value.Syntax) is { } key &&
+                state.Data.TryGetValue(owner, out var keys)) keys.Remove(key);
+        }
         foreach (var argument in operation.Arguments.Where(argument => argument.Parameter?.RefKind is RefKind.Ref or RefKind.Out))
             if (argument.Value.Syntax is ExpressionSyntax changed) Set(changed, false, state);
     }
@@ -254,7 +287,7 @@ internal sealed class FailureFlow(SourceFile file, CatchClauseSyntax? origin, Ha
 
     private bool Retains(ExpressionSyntax expression, PathState state)
     {
-        if (Reference(expression) is { } reference && state.Objects.Contains(reference)) return true;
+        if (state.Values.Contains(expression) || Reference(expression) is { } reference && Has(reference, state)) return true;
         if (expression is MemberAccessExpressionSyntax property && ExceptionCarrier(file.Model.GetTypeInfo(expression).Type))
         {
             if (Retains(property.Expression, state)) return true;
@@ -268,7 +301,9 @@ internal sealed class FailureFlow(SourceFile file, CatchClauseSyntax? origin, Ha
             case CastExpressionSyntax cast: return Retains(cast.Expression, state);
             case PostfixUnaryExpressionSyntax suppressed when suppressed.IsKind(SyntaxKind.SuppressNullableWarningExpression): return Retains(suppressed.Operand, state);
             case AwaitExpressionSyntax awaited: return Retains(awaited.Expression, state);
-            case ConditionalExpressionSyntax choice: return Retains(choice.WhenTrue, state) && Retains(choice.WhenFalse, state);
+            case ConditionalExpressionSyntax choice:
+                return KnownCondition(choice.Condition, state) is { } selected ? Retains(selected ? choice.WhenTrue : choice.WhenFalse, state) :
+                    Retains(choice.WhenTrue, state) && Retains(choice.WhenFalse, state);
             case SwitchExpressionSyntax choice: return choice.Arms.Count != 0 && choice.Arms.All(arm => Retains(arm.Expression, state));
             case BinaryExpressionSyntax coalesce when coalesce.IsKind(SyntaxKind.CoalesceExpression): return Retains(coalesce.Left, state) && Retains(coalesce.Right, state);
             case ArrayCreationExpressionSyntax array: return array.Initializer?.Expressions.Any(value => Retains(value, state)) == true;
@@ -335,9 +370,91 @@ internal sealed class FailureFlow(SourceFile file, CatchClauseSyntax? origin, Ha
         finally { factories.Remove(method); }
     }
 
+    private bool Has(ObjectReference reference, PathState state) => state.Objects.Contains(reference) ||
+        state.Data.TryGetValue(reference, out var keys) && keys.Count != 0;
+
+    private ObjectReference? DataOwner(SyntaxNode expression) => expression is MemberAccessExpressionSyntax data &&
+        file.Model.GetSymbolInfo(data).Symbol is IPropertySymbol { Name: "Data" } property &&
+        !property.Locations.Any(location => location.IsInSource) && property.ContainingType.ToDisplayString() == "System.Exception"
+            ? Reference(data.Expression) : null;
+
+    private (ObjectReference Owner, string Key)? DataSlot(SyntaxNode target) =>
+        target is ElementAccessExpressionSyntax access && access.ArgumentList.Arguments.Count == 1 &&
+        DataOwner(access.Expression) is { } owner && ConstantKey(access.ArgumentList.Arguments[0].Expression) is { } key ? (owner, key) : null;
+
+    private string? ConstantKey(SyntaxNode node) => node is ExpressionSyntax expression &&
+        file.Model.GetConstantValue(expression) is { HasValue: true, Value: { } value } ? value.GetType().FullName + ":" + value : null;
+
+    // Only an unfiltered catch-all is known to consume an explicit throw here.
+    private List<PathState> CatchThrows(TryStatementSyntax attempt, List<PathState> paths)
+    {
+        var result = paths.Where(path => path.Exit != End.Throw).ToList();
+        foreach (var path in paths.Where(path => path.Exit == End.Throw))
+        {
+            var consumed = false;
+            foreach (var clause in attempt.Catches)
+            {
+                var caught = path.Copy();
+                caught.Exit = End.Running;
+                caught.ThrowRetains = false;
+                if (clause.Declaration is { } declaration) Set(declaration, path.ThrowRetains, caught);
+                result.AddRange(Statement(clause.Block, [caught]));
+                if (clause.Filter is null && (clause.Declaration is null ||
+                    file.Model.GetTypeInfo(clause.Declaration.Type).Type?.ToDisplayString() == "System.Exception"))
+                { consumed = true; break; }
+            }
+            if (!consumed) result.Add(path);
+        }
+        return result;
+    }
+
+    // Bounded to direct calls of a private helper in this source file. Delegates,
+    // virtual dispatch, external callers and recursive continuations stay unproved.
+    private bool Complete(SyntaxNode current, List<PathState> paths)
+    {
+        if (paths.All(DeliveredPath)) return true;
+        var declaration = current.Ancestors().OfType<MethodDeclarationSyntax>().FirstOrDefault();
+        if (declaration is null || file.Model.GetDeclaredSymbol(declaration) is not { DeclaredAccessibility: Accessibility.Private } method ||
+            method.IsVirtual || method.IsOverride || !LocalType(method.ContainingType) || !continuations.Add(method)) return false;
+        try
+        {
+            var names = file.Root.DescendantNodes().OfType<IdentifierNameSyntax>().Where(name =>
+                SymbolEqualityComparer.Default.Equals(file.Model.GetSymbolInfo(name).Symbol, method)).ToArray();
+            if (names.Length == 0) return false;
+            foreach (var name in names)
+            {
+                var call = name.Parent is MemberAccessExpressionSyntax member ? member.Parent as InvocationExpressionSyntax : name.Parent as InvocationExpressionSyntax;
+                if (call is null || call.Ancestors().Any(node => node is AnonymousFunctionExpressionSyntax or LocalFunctionStatementSyntax) ||
+                    file.Model.GetOperation(call) is not IInvocationOperation invocation) return false;
+                var statement = call.Ancestors().OfType<StatementSyntax>().FirstOrDefault();
+                if (statement is not ExpressionStatementSyntax and not LocalDeclarationStatementSyntax and not ThrowStatementSyntax and not ReturnStatementSyntax) return false;
+                foreach (var path in paths.Where(path => !DeliveredPath(path)))
+                {
+                    var start = new PathState();
+                    if (path.Exit == End.Return && path.ReturnRetains) start.Values.Add(call);
+                    foreach (var argument in invocation.Arguments)
+                        if (argument.Parameter is { } parameter && ExceptionCarrier(parameter.Type) && Has(new(parameter, ""), path) &&
+                            argument.Value.Syntax is ExpressionSyntax value) Set(value, true, start);
+                    if (start.Values.Count == 0 && start.Objects.Count == 0) return false;
+                    var resumed = ContinueOutside(statement, Statement(statement, [start]));
+                    if (!Complete(statement, resumed)) return false;
+                }
+            }
+            return true;
+        }
+        finally { continuations.Remove(method); }
+    }
+
+    private bool LocalType(INamedTypeSymbol type) => type.DeclaringSyntaxReferences.Length != 0 &&
+        type.DeclaringSyntaxReferences.All(reference => reference.SyntaxTree == file.Tree) &&
+        (type.ContainingType is null || LocalType(type.ContainingType));
+
+    private static bool DeliveredPath(PathState path) => path.Handled || path.Exit == End.Throw && path.ThrowRetains;
+
     private void Set(SyntaxNode target, bool retains, PathState state)
     {
         if (Reference(target) is not { } reference) return;
+        state.Data.Remove(reference);
         if (retains) state.Objects.Add(reference); else state.Objects.Remove(reference);
     }
 
@@ -346,7 +463,8 @@ internal sealed class FailureFlow(SourceFile file, CatchClauseSyntax? origin, Ha
         if (target is ParenthesizedExpressionSyntax group) return Reference(group.Expression);
         if (target is AssignmentExpressionSyntax assignment && assignment.IsKind(SyntaxKind.CoalesceAssignmentExpression))
             return file.Model.GetSymbolInfo(assignment.Left).Symbol is ILocalSymbol ? Reference(assignment.Left) : null;
-        var symbol = target is VariableDeclaratorSyntax variable ? file.Model.GetDeclaredSymbol(variable) : file.Model.GetSymbolInfo(target).Symbol;
+        var symbol = target is VariableDeclaratorSyntax variable ? file.Model.GetDeclaredSymbol(variable) :
+            target is CatchDeclarationSyntax caught ? file.Model.GetDeclaredSymbol(caught) : file.Model.GetSymbolInfo(target).Symbol;
         if (symbol is null) return null;
         var receiver = "";
         if (!symbol.IsStatic && symbol is IFieldSymbol or IPropertySymbol)
