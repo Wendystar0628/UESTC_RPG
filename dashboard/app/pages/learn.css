@@ -1,9 +1,0 @@
-/* 学习清单页：条目一行，名称与理由在左，指向在右 */
-.learn-item { align-items: center; }
-.learn-why { color: var(--text-2); }
-.learn-refs { flex: none; display: flex; flex-wrap: wrap; gap: var(--s2); justify-content: flex-end; }
-.learn-ref { font-size: var(--fs-xs); }
-@media (max-width: 700px) {
-  .learn-item { flex-direction: column; align-items: flex-start; }
-  .learn-refs { justify-content: flex-start; }
-}

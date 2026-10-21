@@ -12,7 +12,6 @@ window.DashManifest = {
     { id: 'health', title: '健康', ask: '这套开发机器正不正常，游戏本体最近在哪类失败', file: 'pages/health.js' },
     { id: 'system', title: '体系', ask: '钩子与脚本怎么搭起来、在送什么', file: 'pages/system.js', filters: ['side'] },
     { id: 'feed',   title: '动态', ask: '最近发生了什么', file: 'pages/feed.js', filters: ['range', 'side', 'type'] },
-    { id: 'learn',   title: '学习', ask: '先懂哪些关键的', file: 'pages/learn.js' },
     { id: 'docs',   title: '文档', ask: '查文档、读文档', file: 'pages/docs.js' }
   ],
   data: (function (names, meta) {
