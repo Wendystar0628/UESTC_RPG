@@ -162,7 +162,13 @@ public partial class ObserverCamera : Node, ICameraRig, IObserverState, IViewCon
     }
 
     public Task Prepare(IMapContext context) => _flight.Prepare(context, _presentation.Value);
-    public Task UnloadAsync(MapId from) => Task.CompletedTask;
+    public async Task UnloadAsync(MapId from)
+    {
+        var transit = _transit?.CancelAsync() ?? Task.CompletedTask;
+        var draining = Task.WhenAll(transit, _flight.DrainAsync());
+        try { await draining; }
+        catch { throw draining.Exception!; }
+    }
 
     public void OnMapUnloading(MapId from)
     {

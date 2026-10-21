@@ -15,6 +15,7 @@ public sealed class ServiceRegistry
     private IReadOnlyList<Registration> _entries = [];
     private bool _closing;
     private bool _disposed;
+    private Task? _mapPreparationStop;
     private Task? _shutdown;
     private readonly HashSet<MapId> _releasingMaps = [];
     public IReadOnlyList<Registration> Entries => _entries;
@@ -141,24 +142,37 @@ public sealed class ServiceRegistry
         finally { _releasingMaps.Remove(map); }
     }
 
+    /// <summary>Stop owned map producers synchronously, then observe their submitted data preparation before release.</summary>
+    public Task StopMapPreparationAsync() => _mapPreparationStop ??= StopMapPreparation();
+
+    private async Task StopMapPreparation()
+    {
+        // Supplied bindings belong to their caller; teardown never resolves or constructs an absent service.
+        var maps = CreatedInstances<IMapService>().SingleOrDefault();
+        var lifetime = CreatedInstances<IMapLifetime>().SingleOrDefault();
+        var failures = new List<Exception>();
+        try { maps?.StopNewWork(); } catch (Exception error) { failures.Add(error); }
+        try { lifetime?.StopNewWork(); } catch (Exception error) { failures.Add(error); }
+        if (maps is not null)
+            try { await maps.DrainAsync(); } catch (Exception error) { failures.Add(error); }
+        if (failures.Count > 0) throw new AggregateException("Map preparation stop failed.", failures);
+    }
+
     /// <summary>Stop map/background work, exit nodes with bindings intact, then release owned objects and scene children.</summary>
     public Task ShutdownAsync(Node? scene = null, Action<string>? trace = null) => _shutdown ??= Shutdown(scene, trace);
 
     private async Task Shutdown(Node? scene, Action<string>? trace)
     {
-        _closing = true;
         var failures = new List<Exception>();
         trace?.Invoke("shutdown-map");
+        try { await StopMapPreparationAsync(); } catch (Exception error) { failures.Add(error); }
         try
         {
             var lifetime = CreatedInstances<IMapLifetime>().SingleOrDefault();
-            if (lifetime is not null)
-            {
-                var maps = Get<IMapService>();
-                await lifetime.ShutdownAsync(maps.Context?.Descriptor.Id ?? maps.Current);
-            }
+            if (lifetime is not null) await lifetime.ShutdownAsync();
         }
         catch (Exception error) { failures.Add(error); }
+        _closing = true;
         foreach (var participant in _created.AsEnumerable().Reverse().Select(item => item.Instance).OfType<IRegistryExitParticipant>())
             try { participant.PrepareForExit(); } catch (Exception error) { failures.Add(error); }
         trace?.Invoke("shutdown-nodes");

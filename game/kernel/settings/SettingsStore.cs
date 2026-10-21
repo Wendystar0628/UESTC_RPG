@@ -15,7 +15,7 @@ namespace Campus.Kernel.Settings;
 /// the caller's default, unknown keys are ignored, missing sections read as defaults.
 /// </summary>
 [KernelService(typeof(ISettingsStore))]
-public sealed class SettingsStore : ISettingsStore
+public sealed class SettingsStore : ISettingsStore, IAsyncDisposable
 {
     private const int MaxBytes = 256 * 1024;
 
@@ -23,6 +23,10 @@ public sealed class SettingsStore : ISettingsStore
     private readonly object _gate = new();      // guards _root
     private readonly object _fileGate = new();  // serializes disk writes
     private readonly JsonObject _root;
+    private readonly object _saveGate = new();  // owns actual retry tasks independently of caller waits
+    private readonly HashSet<Task> _saves = [];
+    private Task? _disposal;
+    private bool _disposed;
 
     public SettingsStore() : this(ProjectSettings.GlobalizePath("user://settings.json")) { }
 
@@ -36,6 +40,15 @@ public sealed class SettingsStore : ISettingsStore
 
     /// <summary>One write attempt: temp file, flush, replace keeping a .bak. False when the disk refused; the memory copy stays valid.</summary>
     public bool TrySave()
+    {
+        lock (_saveGate)
+        {
+            ObjectDisposedException.ThrowIf(_disposed, this);
+            return TrySaveCore();
+        }
+    }
+
+    private bool TrySaveCore()
     {
         lock (_fileGate)
         {
@@ -52,11 +65,33 @@ public sealed class SettingsStore : ISettingsStore
     }
 
     /// <summary>Retrying write for callers that can wait; gives up after four attempts.</summary>
-    public async Task SaveAsync()
+    public Task SaveAsync()
+    {
+        lock (_saveGate)
+        {
+            ObjectDisposedException.ThrowIf(_disposed, this);
+            _saves.RemoveWhere(save => save.IsCompletedSuccessfully);
+            var save = SaveCoreAsync();
+            if (!save.IsCompletedSuccessfully) _saves.Add(save);
+            return save;
+        }
+    }
+
+    public ValueTask DisposeAsync()
+    {
+        lock (_saveGate)
+        {
+            _disposed = true;
+            // Only pure settings IO remains here; node exit may cancel a caller's wait, never this work.
+            return new(_disposal ??= Task.WhenAll(_saves));
+        }
+    }
+
+    private async Task SaveCoreAsync()
     {
         for (var attempt = 0; attempt < 4; attempt++)
         {
-            if (TrySave()) return;
+            if (TrySaveCore()) return;
             await Task.Delay(50);
         }
     }

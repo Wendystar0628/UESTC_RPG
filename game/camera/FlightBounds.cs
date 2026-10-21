@@ -94,14 +94,17 @@ public sealed class FlightBounds(IMapContext context, PolygonRings boundary)
         if (!VectorMath.Finite(p)) throw new ArgumentOutOfRangeException(nameof(p));
         for (int iteration = 0; iteration < 64; iteration++)
         {
+            cancellation.ThrowIfCancellationRequested();
             p = ProjectHorizontal(p);
             var point = new Vector2(p.X, p.Z);
             if (!terrain.IsPrepared(context.World, point)) await terrain.PreparePoints(context, [point], cancellation);
+            cancellation.ThrowIfCancellationRequested();
             if (ProjectStep(ref p)) return p;
         }
         p = ProjectHorizontal(p);
         var final = new Vector2(p.X, p.Z);
         await terrain.PreparePoints(context, [final], cancellation);
+        cancellation.ThrowIfCancellationRequested();
         if (!IsLegal(p)) throw new InvalidDataException("Map reachable volume has no stable nearby projection.");
         return p;
     }

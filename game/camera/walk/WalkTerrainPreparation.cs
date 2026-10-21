@@ -12,6 +12,7 @@ internal sealed class WalkTerrainPreparation
     private IMapContext? _map;
     private Task? _terrainPreparation;
     private Task? _landingPointsPreparation;
+    private Task _unloading = Task.CompletedTask;
 
     public bool LandingPointsPending => _landingPointsPreparation is not null;
     public Exception? Failure { get; private set; }
@@ -54,9 +55,18 @@ internal sealed class WalkTerrainPreparation
     public void Unload()
     {
         _map = null;
+        _unloading = Task.WhenAll(new[] { _unloading, _terrainPreparation, _landingPointsPreparation }.OfType<Task>());
         _terrainPreparation = null;
         _landingPointsPreparation = null;
         Failure = null;
+    }
+
+    public async Task DrainAsync()
+    {
+        var draining = _unloading;
+        try { await draining; }
+        catch (OperationCanceledException) when (draining.IsCanceled) { }
+        catch { throw draining.Exception!; }
     }
 
     public bool TerrainReady(N.Vector3 point, float radius)

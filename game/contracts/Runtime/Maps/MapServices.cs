@@ -48,6 +48,10 @@ public interface IMapService                 // Kernel 服务（SYS-MAPS）
     MapSpawn ResolveSpawn(MapId map, string? spawn = null);
     /// <summary>Loads and mounts the map foundation without selecting a camera destination. Same-map calls reuse it.</summary>
     Task Prepare(MapId map);
+    /// <summary>Rejects new preparation and cancels its publication, retaining every started task for DrainAsync.</summary>
+    void StopNewWork();
+    /// <summary>Observes all started data preparation before its inputs/services can be released; retains real failures.</summary>
+    Task DrainAsync();
 }
 public interface IMapAware                   // [KernelNode] 可选实现；雾幕全黑时按节点 ID 顺序调用
 {

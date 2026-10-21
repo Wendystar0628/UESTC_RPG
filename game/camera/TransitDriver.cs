@@ -1,5 +1,6 @@
 using Campus.Contracts;
 using Campus.Contracts.Maps;
+using Campus.Kernel.Diagnostics;
 using Godot;
 using N = System.Numerics;
 
@@ -13,11 +14,14 @@ namespace Campus.Camera;
 [KernelService(typeof(ITransitDriver))]
 public sealed class TransitDriver(ICameraRig camera, IAppLoadingPresentation loading, IMapRuntime runtime,
     IMapService maps, ITerrainPreparation terrain, ICameraPoseValidator validator,
-    IWalkController? walk = null) : ITransitDriver
+    IWalkController? walk = null) : ITransitDriver, IAsyncDisposable
 {
     private TransitRun? _active;
+    private readonly List<TransitRun> _executions = [];
+    private Task? _drain;
+    private bool _disposed;
 
-    public bool IsReady => true;
+    public bool IsReady => !_disposed;
     public Pose? Destination => _active is { Finished: false } active
         ? active.Arrival?.Destination.Pose ?? (active.TerrainReady ? active.To : null) : null;
 
@@ -28,21 +32,61 @@ public sealed class TransitDriver(ICameraRig camera, IAppLoadingPresentation loa
             TransitPreference.Auto or TransitPreference.Teleport => TransitKind.Teleport,
             _ => throw new ArgumentOutOfRangeException(nameof(options))
         };
-        _active?.Cancel();
         var run = new TransitRun(kind, to, options?.LandOn);
-        _active = run;
-        _ = Execute(run);
-        return run;
+        return Begin(run);
     }
 
     public ITransitHandle SwitchMode(Func<CancellationToken, Task<ModeSwitchResult>> apply)
     {
         ArgumentNullException.ThrowIfNull(apply);
-        _active?.Cancel();
         var run = new TransitRun(TransitKind.Teleport, camera.Pose, null) { ApplyMode = apply };
+        return Begin(run);
+    }
+
+    private ITransitHandle Begin(TransitRun run)
+    {
+        ObjectDisposedException.ThrowIf(_disposed, this);
+        if (_drain is not null) throw new InvalidOperationException("Transit execution is draining.");
+        _active?.Cancel();
+        _executions.RemoveAll(execution => execution.Execution.IsCompleted && execution.Done.IsCompleted);
+        _executions.Add(run);
         _active = run;
-        _ = Execute(run);
+        run.Execution = Execute(run);
         return run;
+    }
+
+    public Task CancelAsync()
+    {
+        if (_drain is not null) return _drain;
+        var completion = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        _drain = completion.Task;
+        _ = Drain(completion);
+        return completion.Task;
+    }
+
+    private async Task Drain(TaskCompletionSource completion)
+    {
+        _executions.RemoveAll(execution => execution.Execution.IsCompleted && execution.Done.IsCompleted);
+        var runs = _executions.ToArray();
+        Exception? failure = null;
+        foreach (var run in runs)
+            try { run.Cancel(); }
+            catch (Exception error) { failure = RetainedFailure.Append(failure, error); }
+        foreach (var task in runs.SelectMany(run => new Task[] { run.Execution, run.Done }))
+        {
+            try { await task; }
+            catch (Exception error) { failure = RetainedFailure.Append(failure, task.Exception ?? error); }
+        }
+        foreach (var run in runs) _executions.Remove(run);
+        _drain = null;
+        if (failure is not null) completion.TrySetException(failure);
+        else completion.TrySetResult();
+    }
+
+    public ValueTask DisposeAsync()
+    {
+        _disposed = true;
+        return new(CancelAsync());
     }
 
     private async Task Execute(TransitRun run)
@@ -137,16 +181,19 @@ public sealed class TransitDriver(ICameraRig camera, IAppLoadingPresentation loa
     {
         var context = maps.Context ?? throw new InvalidOperationException("Transit has no mounted map.");
         _ = await validator.LegalizePrepared(run.To, run.Token);
+        run.Token.ThrowIfCancellationRequested();
         if (!validator.IsLegal(run.To, false)) throw new ArgumentOutOfRangeException(nameof(run), "Transit destination is outside the reachable volume.");
         var target = new N.Vector2(run.To.Position.X, run.To.Position.Z);
-        await terrain.PrepareRegion(context, new(target, target));
+        await terrain.PrepareRegion(context, new(target, target), run.Token);
+        run.Token.ThrowIfCancellationRequested();
         if (run.LandOn is { } land)
         {
             var standing = new Pose(land + N.Vector3.UnitY * WalkRules.StandingEye, run.To.YawDeg, 0);
             _ = await validator.LegalizePrepared(standing, run.Token);
+            run.Token.ThrowIfCancellationRequested();
             if (!validator.IsLegal(standing, false)) throw new ArgumentOutOfRangeException(nameof(run), "Transit stand is outside the reachable volume.");
             var feet = new N.Vector2(land.X, land.Z);
-            await terrain.PrepareRegion(context, new(feet, feet));
+            await terrain.PrepareRegion(context, new(feet, feet), run.Token);
         }
         if (run.Cancelled) return false;
         if (!ReferenceEquals(maps.Context, context)) throw new OperationCanceledException("Transit map was replaced.");
@@ -174,10 +221,11 @@ public sealed class TransitDriver(ICameraRig camera, IAppLoadingPresentation loa
 
     private sealed class TransitRun(TransitKind kind, Pose to, N.Vector3? landOn) : ITransitHandle
     {
-        private readonly TaskCompletionSource<TransitResult> _done = new();
+        private readonly TaskCompletionSource<TransitResult> _done = new(TaskCreationOptions.RunContinuationsAsynchronously);
         public TransitKind Kind => kind;
         public float Progress { get; set; }
         public Task<TransitResult> Done => _done.Task;
+        public Task Execution { get; set; } = Task.CompletedTask;
         public Pose To => to;
         public N.Vector3? LandOn => landOn;
         public bool Cancelled { get; private set; }
@@ -192,15 +240,14 @@ public sealed class TransitDriver(ICameraRig camera, IAppLoadingPresentation loa
         {
             if (_done.Task.IsCompleted) return;
             Cancelled = true;
-            Arrival?.Cancel();
             _cancellation.Cancel();
-            _done.TrySetResult(TransitResult.Cancelled);
         }
 
         public void Finish(TransitResult result, [FailureHandler("UI-NAV-WAYPOINTS")] Exception? failure = null)
         {
+            _cancellation.Dispose();
             if (failure is not null) _done.TrySetException(failure);
-            else _done.TrySetResult(result);
+            else _done.TrySetResult(Cancelled ? TransitResult.Cancelled : result);
         }
     }
 }

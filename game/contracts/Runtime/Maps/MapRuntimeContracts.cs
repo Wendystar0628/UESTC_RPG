@@ -42,7 +42,8 @@ public interface IMapLifetime
     Task Mount(IMapContext context);
     /// <summary>Synchronously rejects/cancels new map work before the owner awaits background preparation.</summary>
     void StopNewWork();
-    Task ShutdownAsync(MapId map);
+    /// <summary>Drains and releases the map captured by this lifetime; never resolves a new map service during shutdown.</summary>
+    Task ShutdownAsync();
     string DescribeReadiness();
 }
 

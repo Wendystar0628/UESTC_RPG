@@ -4,6 +4,7 @@ using Campus.Contracts;
 using Campus.Contracts.AppFlow;
 using Campus.Contracts.Maps;
 using Campus.Contracts.Quality;
+using Campus.Kernel.Frame;
 using RuntimeKernel = Campus.Kernel.Registry.Kernel;
 using Godot;
 
@@ -117,6 +118,13 @@ public partial class QualityRuntime : Node, IQualityAware, IQualityRuntime
     public async Task WaitForDestination(CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
+        // SYS-TITLE has no world destination, even when a previous map/camera remains resident.
+        if (_world.Instance == 0)
+        {
+            await FrameAwaiter.ReadyDrawAsync(this, static () => true,
+                TimeSpan.FromSeconds(DestinationWaitSeconds), cancellationToken);
+            return;
+        }
         var runtime = RuntimeKernel.Get<IMapRuntime>();
         var camera = RuntimeKernel.Get<ICameraRig>();
         var arrival = runtime.Arrive(camera.Pose, camera.Mode, RuntimeKernel.Get<IObserverState>().Space);

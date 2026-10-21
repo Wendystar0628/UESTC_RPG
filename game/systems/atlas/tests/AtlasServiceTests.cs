@@ -375,6 +375,7 @@ public sealed class AtlasServiceTests
         public Pose? Destination => null;
         public ITransitHandle Start(Pose from, Pose to, TransitOptions? options = null) => throw new NotSupportedException();
         public ITransitHandle SwitchMode(Func<CancellationToken, Task<ModeSwitchResult>> apply) => throw new NotSupportedException();
+        public Task CancelAsync() => Task.CompletedTask;
     }
     private sealed class TestAudio : IAudioService
     {

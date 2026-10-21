@@ -2,7 +2,6 @@ using System.Collections.Concurrent;
 using System.Text.Json;
 using Campus.Contracts;
 using Campus.Contracts.AppFlow;
-using Campus.Contracts.Atlas;
 using Campus.Contracts.Maps;
 using Campus.Contracts.Save;
 using Campus.Kernel.Save.Format;
@@ -12,21 +11,16 @@ using Campus.Kernel.Diagnostics;
 
 namespace Campus.Kernel.Save;
 
-public sealed record SaveRuntimeOptions(string Directory, string Build, bool Enabled, SlotId? WriteSlot,
-    int? SaveAtFrame, uint? WeatherSeed);
-
-/// <summary>Engine adapters are supplied once at boot. None are called on the disk worker.</summary>
-public sealed record SaveRuntimeBindings(IWorldState World, IMapService Maps, ICameraRig Camera,
-    IObserverState Observer, IRuleset Ruleset, IAtlasService Atlas, IAppLoadingPresentation Loading,
-    IAppFlow AppFlow, Action<RulesetId> SelectRuleset, IWorldRestore WorldRestore,
-    Func<Pose, NavSpace?, ViewMode, Task> WaitDestination, Func<Task<byte[]?>> CaptureThumbnail, Func<long> UnixTime,
-    Func<Pose, Task<Pose>>? PreparePose = null);
-
 [KernelService(typeof(SaveService))]
 [KernelService(typeof(ISaveService))]
-public sealed class SaveService : ISaveService, IDisposable
+public sealed class SaveService : ISaveService, IDisposable, IAsyncDisposable
 {
     private readonly ConcurrentQueue<Action> _frames = new();
+    private readonly object _frameGate = new();
+    private readonly CancellationTokenSource _stop = new();
+    private readonly CancellationToken _lifetime;
+    private readonly List<Task<SaveResult>> _writes = [];
+    private Task? _initialization, _disposal;
     private readonly SemaphoreSlim _operation = new(1, 1);
     private readonly Dictionary<SlotId, SlotSnapshot> _slots = [];
     private SaveRuntimeOptions _options = null!;
@@ -42,11 +36,12 @@ public sealed class SaveService : ISaveService, IDisposable
     private SaveReason? _request;
     private double _requestAge, _interval, _playSeconds;
     private ulong _line;
-    private bool _newLine, _initialized, _disposed, _authorizedOverwrite;
+    private bool _newLine, _initialized, _stopping, _authorizedOverwrite;
     private int _frame;
     private byte[]? _thumbnail;
     private RulesetId _defaultRuleset;
     private IReadOnlyList<SlotInfo> _slotInfos = SaveSlots.Auto.Select(s => new SlotInfo(s, SlotKind.Auto, SlotHealth.Empty, null, 0)).ToArray();
+    public SaveService() => _lifetime = _stop.Token;
 
     public bool Enabled => _initialized && _repository?.Enabled == true;
     public IReadOnlyList<SlotInfo> Slots => _slotInfos;
@@ -57,21 +52,21 @@ public sealed class SaveService : ISaveService, IDisposable
     public SaveState State { get; private set; } = new(null, null, null, null, ReadOnlyReason.None);
     public event Action? SlotsChanged;
 
-    public async Task Initialize(SaveRuntimeOptions options, SaveRuntimeBindings bindings, SaveSections sections)
+    public Task Initialize(SaveRuntimeOptions options, SaveRuntimeBindings bindings, SaveSections sections)
     {
-        if (_initialized) throw new InvalidOperationException("Save service was initialized twice.");
+        ObjectDisposedException.ThrowIf(_stopping, this);
+        if (_initialization is not null) throw new InvalidOperationException("Save service was initialized twice.");
         _options = options; _runtime = bindings; _sections = sections;
         _defaultRuleset = bindings.Ruleset.Current.Id;
         _restore = new(bindings, PublishRestoreFault, PublishRestoreSuccess);
-        var data = await Task.Run(() =>
-        {
-            var repository = new SaveRepository(options.Directory, options.Enabled, sections);
-            try { return (Repository: repository, Slots: SaveSlots.Auto.Select(repository.Scan).ToArray()); }
-            catch { repository.Dispose(); throw; }
-        }).ConfigureAwait(false);
+        return _initialization = InitializeRepository(options, sections);
+    }
+    private async Task InitializeRepository(SaveRuntimeOptions options, SaveSections sections)
+    {
+        using var data = await SaveInitialization.Prepare(options, sections, _lifetime).ConfigureAwait(false);
         await OnFrame(() =>
         {
-            _repository = data.Repository;
+            _repository = data.TakeRepository();
             foreach (var slot in data.Slots) _slots[slot.Info.Slot] = slot;
             _initialized = true;
             Publish(null);
@@ -83,7 +78,7 @@ public sealed class SaveService : ISaveService, IDisposable
     {
         var callbacks = _frames.Count;
         for (var i = 0; i < callbacks && _frames.TryDequeue(out var action); i++) action();
-        if (!_initialized || _disposed) return;
+        if (!_initialized || _stopping) return;
         _frame++;
         var dt = Math.Clamp(double.IsFinite(delta) ? delta : 0, 0, .1);
         if (_request.HasValue) _requestAge += dt;
@@ -140,8 +135,11 @@ public sealed class SaveService : ISaveService, IDisposable
 
     private Task<SaveResult> StartSave(SaveReason reason, bool forced)
     {
+        ObjectDisposedException.ThrowIf(_stopping, this);
         var operation = new SaveWriteOperation();
         var task = SaveOperation(operation, reason, forced);
+        _writes.RemoveAll(write => write.IsCompletedSuccessfully);
+        _writes.Add(task);
         _writingOperation = operation;
         _writing = task;
         return task;
@@ -149,7 +147,7 @@ public sealed class SaveService : ISaveService, IDisposable
 
     private async Task<SaveResult> SaveOperation(SaveWriteOperation operation, SaveReason reason, bool forced)
     {
-        await _operation.WaitAsync().ConfigureAwait(false);
+        await _operation.WaitAsync(_lifetime).ConfigureAwait(false);
         try
         {
             if (await OnFrame(() => RestoreFaulted).ConfigureAwait(false))
@@ -196,15 +194,16 @@ public sealed class SaveService : ISaveService, IDisposable
             {
                 return await WriteFailed(operation, error, active, snapshot.Meta.Gen).ConfigureAwait(false);
             }
-            return await OnFrame(() =>
+            var result = new SaveResult(SaveStatus.Saved, active, saved.Info.Meta!.Gen);
+            return await PublishWriteResult(result, () =>
             {
                 _slots[active] = saved; _line = saved.Info.Meta!.Line; _newLine = false; _authorizedOverwrite = false;
                 _thumbnail = saved.Save!.Document.Thumbnail; _unknown = saved.Save.Document.Sections;
                 _interval = 0;
-                var result = new SaveResult(SaveStatus.Saved, active, saved.Info.Meta.Gen);
-                Publish(result); return result;
             }).ConfigureAwait(false);
         }
+        catch (OperationCanceledException error) when (_stop.IsCancellationRequested && error.CancellationToken == _lifetime)
+        { throw; }
         catch (Exception error)
         {
             return await WriteFailed(operation, error, null, 0).ConfigureAwait(false);
@@ -213,13 +212,15 @@ public sealed class SaveService : ISaveService, IDisposable
     }
 
     private Task<SaveResult> WriteFailed(SaveWriteOperation operation,
-        [FailureHandler("SYS-SAVE-FLOW")] Exception error, SlotId? slot, ulong generation) => OnFrame(() =>
+        [FailureHandler("SYS-SAVE-FLOW")] Exception error, SlotId? slot, ulong generation) =>
+        PublishWriteResult(operation.Fail(error, slot ?? Active, generation));
+
+    private async Task<SaveResult> PublishWriteResult(SaveResult result, Action? apply = null)
     {
-        // Failures before a snapshot resolve Active at the same frame boundary as the published result.
-        var result = operation.Fail(error, slot ?? Active, generation);
-        Publish(result);
-        return result;
-    });
+        try { return await OnFrame(() => { apply?.Invoke(); Publish(result); return result; }).ConfigureAwait(false); }
+        catch (OperationCanceledException error) when (_stop.IsCancellationRequested && error.CancellationToken == _lifetime)
+        { return result; }
+    }
 
     private sealed record Snapshot(SaveMeta Meta, WorldSaveMoment Moment, IReadOnlyList<CapturedSection> Sections,
         IReadOnlyDictionary<string, RawSaveSection> Unknown, byte[]? Thumbnail);
@@ -528,27 +529,62 @@ public sealed class SaveService : ISaveService, IDisposable
     public Task<T> OnFrame<T>(Func<T> function)
     {
         var completion = new TaskCompletionSource<T>(TaskCreationOptions.RunContinuationsAsynchronously);
-        _frames.Enqueue(() =>
+        lock (_frameGate)
         {
-            try { completion.SetResult(function()); }
-            catch (Exception error)
+            if (_stopping) return Task.FromCanceled<T>(_lifetime);
+            _frames.Enqueue(() =>
             {
-                if (Restoring && _restore?.MutationStarted == true)
+                lock (_frameGate)
                 {
-                    try { _restore!.MarkFault(error); }
-                    catch (Exception abortError) { _restore!.RetainAbortFailure(error, abortError); }
+                    if (_stopping) { completion.TrySetCanceled(_lifetime); return; }
+                    try { completion.SetResult(function()); }
+                    catch (Exception error)
+                    {
+                        if (Restoring && _restore?.MutationStarted == true)
+                        {
+                            try { _restore!.MarkFault(error); }
+                            catch (Exception abortError) { _restore!.RetainAbortFailure(error, abortError); }
+                        }
+                        completion.SetException(error);
+                    }
                 }
-                completion.SetException(error);
-            }
-        });
+            });
+        }
         return completion.Task;
     }
     public Task OnFrame(Action action) => OnFrame(() => { action(); return true; });
-    public void Dispose()
+    public void StopNewWork()
     {
-        _disposed = true;
-        _restore?.Dispose();
-        // If the application deliberately exits during a write, retain the process lock until OS teardown.
-        if (!Busy) _repository?.Dispose();
+        lock (_frameGate)
+        {
+            if (_stopping) return;
+            _stopping = true;
+            try { _stop.Cancel(); }
+            finally { while (_frames.TryDequeue(out var action)) action(); }
+        }
     }
+    public ValueTask DisposeAsync() => new(_disposal ??= DrainAndRelease());
+    private async Task DrainAndRelease()
+    {
+        Exception? failure = null;
+        try { StopNewWork(); }
+        catch (Exception error) { failure = RetainedFailure.Append(failure, error); }
+        try { _restore?.Dispose(); }
+        catch (Exception error) { failure = RetainedFailure.Append(failure, error); }
+        var pending = _writes.Cast<Task>().ToList();
+        if (_initialization is { } initialization) pending.Add(initialization);
+        foreach (var task in pending)
+        {
+            try { await task.ConfigureAwait(false); }
+            catch (OperationCanceledException error) when (_stop.IsCancellationRequested && error.CancellationToken == _lifetime) { }
+            catch (Exception error) { failure = RetainedFailure.Append(failure, task.Exception ?? error); }
+        }
+        try { _repository?.Dispose(); }
+        catch (Exception error) { failure = RetainedFailure.Append(failure, error); }
+        finally { _repository = null; }
+        try { _stop.Dispose(); }
+        catch (Exception error) { failure = RetainedFailure.Append(failure, error); }
+        if (failure is not null) System.Runtime.ExceptionServices.ExceptionDispatchInfo.Capture(failure).Throw();
+    }
+    public void Dispose() => DisposeAsync().AsTask().GetAwaiter().GetResult();
 }

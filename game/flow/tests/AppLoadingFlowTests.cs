@@ -80,6 +80,60 @@ public sealed class AppLoadingFlowTests
         }
     }
 
+    [TestCase, TestCategory(TestReason.Regression)]
+    public async Task BackgroundCancellationWaitsForItsSiblingAndRemainsCanceled()
+    {
+        var rig = new FlowTestRig(); var saves = new FullSave(rig);
+        using var flow = rig.CreateFlow(saves, Maps(), new TestAppExit(false));
+        await flow.PrepareBoot(new());
+        var map = new TaskCompletionSource(); var global = new TaskCompletionSource();
+        var work = flow.PrepareBackground(map.Task, global.Task);
+        map.SetCanceled();
+        try { await flow.MapReady; throw new InvalidOperationException("Map cancellation became success."); }
+        catch (OperationCanceledException) when (flow.MapReady.IsCanceled) { }
+        if (work.IsCompleted) throw new InvalidOperationException("Canceled background abandoned its running sibling.");
+        global.SetResult();
+        try { await work; throw new InvalidOperationException("Background cancellation became success."); }
+        catch (OperationCanceledException) when (work.IsCanceled) { }
+        if (!flow.BackgroundReady.IsCanceled || rig.Runtime.PinnedDestinations.Count != 0)
+            throw new InvalidOperationException("Background cancellation faulted readiness or retained title pins.");
+    }
+
+    [TestCase, TestCategory(TestReason.Regression)]
+    public async Task BackgroundCancellationCannotHideItsSiblingsRealFailure()
+    {
+        var rig = new FlowTestRig(); var saves = new FullSave(rig);
+        using var flow = rig.CreateFlow(saves, Maps(), new TestAppExit(false));
+        await flow.PrepareBoot(new());
+        var map = new TaskCompletionSource(); var global = new TaskCompletionSource();
+        var work = flow.PrepareBackground(map.Task, global.Task);
+        map.SetCanceled();
+        var failure = new InvalidDataException("Global preparation failed during exit.");
+        global.SetException(failure);
+        try { await work; throw new InvalidOperationException("Background cancellation hid its sibling failure."); }
+        catch (AggregateException error) when (error.Flatten().InnerExceptions.Contains(failure)) { }
+        if (!work.IsFaulted) throw new InvalidOperationException("A real background fault became cancellation.");
+    }
+
+    [TestCase, TestCategory(TestReason.Regression)]
+    public async Task QuitDuringEarlyEntryCancelsItsBackgroundWaitBeforeCreatingAWorld()
+    {
+        var rig = new FlowTestRig(); var saves = new FullSave(rig);
+        var exit = new TestAppExit();
+        using var flow = rig.CreateFlow(saves, Maps(), exit);
+        await flow.PrepareBoot(new());
+        var map = new TaskCompletionSource(); var global = new TaskCompletionSource();
+        var work = flow.PrepareBackground(map.Task, global.Task);
+        await rig.Title.Show(); await flow.OpenTitle();
+        var entering = flow.Enter(new(EnterKind.NewGame, new("s1")));
+        await flow.Quit();
+        if (await entering != EnterResult.Rejected || saves.NewGames != 0 || flow.State != AppState.Quitting || exit.Calls != 1 || work.IsCompleted)
+            throw new InvalidOperationException("Early quit created a world or abandoned its background task owner.");
+        map.SetCanceled(); global.SetResult();
+        try { await work; throw new InvalidOperationException("Canceled background completed successfully."); }
+        catch (OperationCanceledException) when (work.IsCanceled) { }
+    }
+
     [TestCase, TestCategory(TestReason.Smoke)]
     public async Task ReturningToTitleClearsTheWorldWithoutLoadingAnotherEndpoint()
     {
@@ -107,6 +161,25 @@ public sealed class AppLoadingFlowTests
         if (flow.State != AppState.Playing || saves.NewGames != 1 || saves.Active is not null || saves.Saves != 0 ||
             !ReferenceEquals(arrival, rig.Runtime.Arrival) || rig.Runtime.Arrivals != 1 || rig.Title.Visible)
             throw new InvalidOperationException("Direct entry activated a save slot or constructed a title world.");
+    }
+
+    [TestCase, TestCategory(TestReason.Regression)]
+    public async Task ReturnAndQuitWaitForTransitCleanupBeforeSavingOrClosing()
+    {
+        var rig = new FlowTestRig(); var saves = new FullSave(rig); var exit = new TestAppExit();
+        using var flow = rig.CreateFlow(saves, Maps(), exit);
+        await Title(flow, rig); await flow.Enter(new(EnterKind.NewGame, new("s1")));
+        var transit = new TaskCompletionSource(); rig.Transit.Draining = transit.Task;
+        var leaving = flow.ReturnToTitle();
+        if (leaving.IsCompleted || saves.Flushes != 0)
+            throw new InvalidOperationException("Return captured the world before transit cleanup.");
+        transit.SetResult(); await leaving;
+        transit = new(); rig.Transit.Draining = transit.Task;
+        var quitting = flow.Quit();
+        if (quitting.IsCompleted || exit.Calls != 0)
+            throw new InvalidOperationException("Quit released resources before transit cleanup.");
+        transit.SetResult(); await quitting;
+        if (exit.Calls != 1) throw new InvalidOperationException("Drained title quit did not finish.");
     }
 
     private static async Task Title(AppFlowService flow, FlowTestRig rig)

@@ -65,6 +65,7 @@ public sealed class ObserverCameraRuntimeTests
                     !aggregate.InnerExceptions.Contains(cleanup))
                     throw new InvalidOperationException("Transit lost a preparation or cleanup cause.");
             }
+            await driver.CancelAsync();
         }
         var success = new TransitDriver(camera, new TransitPresentation(Task.CompletedTask),
             new FlowRuntimeTestStub(() => true), maps, terrain, terrain);
@@ -78,18 +79,96 @@ public sealed class ObserverCameraRuntimeTests
             throw new InvalidOperationException("Cancelled transit was treated as failure.");
     }
 
-    private sealed class TransitPresentation(Task covered, Exception? cleanup = null) : IAppLoadingPresentation
+    [TestCase, TestCategory(TestReason.Regression), RequireGodotRuntime]
+    public async Task CancelledModeEntryWaitsForItsExecutionAndLoadingCleanupFailure()
+    {
+        var camera = new TestCameraRig();
+        var terrain = new FlowTerrainPreparation();
+        var maps = new TestMapService { Context = FlightBoundsTests.CreateContext() };
+        var cleanup = new InvalidDataException("loading cleanup failed after cancellation");
+        var loading = new TransitPresentation(Task.CompletedTask, cleanup, holdCleanup: true);
+        var runtime = new FlowRuntimeTestStub(() => true);
+        var driver = new TransitDriver(camera, loading, runtime, maps, terrain, terrain);
+        var applying = new TaskCompletionSource<ModeSwitchResult>();
+        var handle = driver.SwitchMode(_ => applying.Task);
+        handle.Cancel();
+        var drain = driver.CancelAsync();
+        if (handle.Done.IsCompleted || drain.IsCompleted || loading.Leases.Single().Releasing.Task.IsCompleted)
+            throw new InvalidOperationException("Cancellation completed before the mode execution returned.");
+        if (!ReferenceEquals(drain, driver.CancelAsync()))
+            throw new InvalidOperationException("Concurrent cancellation did not share its drain.");
+
+        applying.SetResult(ModeSwitchResult.Ok);
+        var lease = loading.Leases.Single();
+        await lease.Releasing.Task;
+        if (handle.Done.IsCompleted || drain.IsCompleted || runtime.Arrivals != 0)
+            throw new InvalidOperationException("Cancelled execution completed before loading cleanup or published an arrival.");
+        lease.Released.SetResult();
+        try { await drain; throw new InvalidOperationException("Drain lost cancelled execution cleanup failure."); }
+        catch (Exception error) when (ReferenceEquals(error, cleanup)) { }
+        try { await handle.Done; throw new InvalidOperationException("Done lost cancelled execution cleanup failure."); }
+        catch (Exception error) when (ReferenceEquals(error, cleanup)) { }
+        await driver.CancelAsync();
+    }
+
+    [TestCase, TestCategory(TestReason.Regression), RequireGodotRuntime]
+    public async Task ReplacedRunsDrainTogetherAndTheDriverCanRunAgain()
+    {
+        var camera = new TestCameraRig();
+        var terrain = new FlowTerrainPreparation();
+        var maps = new TestMapService { Context = FlightBoundsTests.CreateContext() };
+        var covered = new TaskCompletionSource();
+        var loading = new TransitPresentation(covered.Task, holdCleanup: true);
+        var driver = new TransitDriver(camera, loading, new FlowRuntimeTestStub(() => true), maps, terrain, terrain);
+        var first = driver.Start(camera.Pose, camera.Pose);
+        var second = driver.Start(camera.Pose, camera.Pose);
+        var drain = driver.CancelAsync();
+        await Task.WhenAll(loading.Leases.Select(lease => lease.Releasing.Task));
+        var firstLease = loading.Leases[0];
+        var secondLease = loading.Leases[1];
+        secondLease.Released.SetResult();
+        if (await second.Done != TransitResult.Cancelled || drain.IsCompleted || first.Done.IsCompleted)
+            throw new InvalidOperationException("Drain forgot the superseded execution's loading ownership.");
+        firstLease.Released.SetResult();
+        await drain;
+        if (await first.Done != TransitResult.Cancelled)
+            throw new InvalidOperationException("Replaced transit changed its cancellation result.");
+
+        covered.SetResult();
+        var next = driver.Start(camera.Pose, camera.Pose);
+        var nextLease = loading.Leases[^1];
+        await nextLease.Releasing.Task;
+        nextLease.Released.SetResult();
+        if (await next.Done != TransitResult.Arrived)
+            throw new InvalidOperationException("A drained driver could not execute the next transit.");
+        await driver.DisposeAsync();
+    }
+
+    private sealed class TransitPresentation(Task covered, Exception? cleanup = null, bool holdCleanup = false) : IAppLoadingPresentation
     {
         public bool Active => true;
         public bool IsCovered => covered.IsCompletedSuccessfully;
         public float Progress => 0;
-        public IAppLoadingLease Show(EnterRequest? request = null) => new Lease(covered, cleanup);
-        private sealed class Lease(Task covered, Exception? cleanup) : IAppLoadingLease
+        public List<Lease> Leases { get; } = [];
+        public IAppLoadingLease Show(EnterRequest? request = null)
         {
+            var lease = new Lease(covered, cleanup, holdCleanup);
+            Leases.Add(lease);
+            return lease;
+        }
+        public sealed class Lease(Task covered, Exception? cleanup, bool holdCleanup) : IAppLoadingLease
+        {
+            public TaskCompletionSource Releasing { get; } = new();
+            public TaskCompletionSource Released { get; } = new();
             public Task Covered => covered;
             public void Report(int completed, int total) { }
             public Task Hide() => Task.CompletedTask;
-            public ValueTask DisposeAsync() => cleanup is null ? ValueTask.CompletedTask : new(Task.FromException(cleanup));
+            public async ValueTask DisposeAsync()
+            {
+                Releasing.TrySetResult();
+                if (holdCleanup) await Released.Task;
+                if (cleanup is not null) throw cleanup;
+            }
         }
     }
 }

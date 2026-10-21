@@ -22,6 +22,8 @@ internal class TestMapService : IMapService
     public virtual MapSpawn ResolveSpawn(MapId map, string? spawn = null) =>
         SpawnResolver is { } resolve ? resolve(map, spawn) : throw new NotSupportedException();
     public virtual Task Prepare(MapId map) => Task.CompletedTask;
+    public virtual void StopNewWork() { }
+    public virtual Task DrainAsync() => Task.CompletedTask;
 }
 
 /// <summary>A map transition whose outcome is already decided by the test.</summary>

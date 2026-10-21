@@ -114,6 +114,7 @@ internal sealed class FlowTestRig
     public TestAppLoadingPresentation Loading { get; } = new();
     public TestAppFrontispiecePresentation Title { get; } = new();
     public FlowRuntimeTestStub Runtime { get; }
+    public FlowTransitDriver Transit { get; } = new();
     public List<string> Diagnostics { get; } = [];
     public FlowTestRig(bool completeArrivalImmediately = true)
     {
@@ -122,7 +123,7 @@ internal sealed class FlowTestRig
     }
     public AppFlowService CreateFlow(ISaveService saves, IMapService maps, IAppExit exit, IWorldRestore? restore = null) =>
         new(Camera, Loading, Title, saves, maps, World, World, restore ?? World, exit, Runtime, Runtime,
-            new FlowDiagnostics(Diagnostics));
+            Transit, new FlowDiagnostics(Diagnostics));
 
     private sealed class FlowDiagnostics(List<string> messages) : IDiagnosticLog
     {
@@ -140,4 +141,17 @@ internal sealed class FlowTerrainPreparation : ITerrainPreparation, ICameraPoseV
     public Task PrepareRegion(IMapContext context, MapRect region, CancellationToken cancellation = default) => Task.CompletedTask;
     public Task PreparePoints(IMapContext context, IReadOnlyList<System.Numerics.Vector2> points,
         CancellationToken cancellation = default) => Task.CompletedTask;
+}
+
+/// <summary>Flow owns the decision to drain; camera tests execute the real transit lifecycle.</summary>
+internal sealed class FlowTransitDriver : ITransitDriver
+{
+    public bool IsReady => true;
+    public Pose? Destination => null;
+    public Task Draining { get; set; } = Task.CompletedTask;
+    public Task CancelAsync() => Draining;
+    public ITransitHandle Start(Pose from, Pose to, TransitOptions? options = null) =>
+        throw new NotSupportedException("Flow does not start camera transit.");
+    public ITransitHandle SwitchMode(Func<CancellationToken, Task<ModeSwitchResult>> apply) =>
+        throw new NotSupportedException("Flow does not commit camera modes.");
 }

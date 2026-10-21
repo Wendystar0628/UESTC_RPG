@@ -30,7 +30,10 @@ public sealed class MapService(ICameraRig camera, IMapLifetime lifetime, IWorldM
     private Task<PendingMapLoad>? _load;
     private Task? _mount;
     private IDisposable? _input;
+    private readonly CancellationTokenSource _exit = new();
+    private Task? _drain;
     private bool _stopped;
+    private bool _disposed;
     private MapId _savedCurrent;
 
     public long Rev { get; private set; }
@@ -93,10 +96,11 @@ public sealed class MapService(ICameraRig camera, IMapLifetime lifetime, IWorldM
         await AwaitPreparation(transition);
     }
 
-    private static async Task AwaitPreparation(MapTransition transition)
+    private async Task AwaitPreparation(MapTransition transition)
     {
+        var cancellation = _exit.Token;
         if (await transition.Done != MapTravelResult.Arrived)
-            throw transition.Failure ?? new OperationCanceledException("Map preparation stopped.");
+            throw transition.Failure ?? new OperationCanceledException("Map preparation stopped.", cancellation);
     }
 
     /// <summary>Only MapServiceNode advances map state, at FramePriority.Map.</summary>
@@ -147,7 +151,7 @@ public sealed class MapService(ICameraRig camera, IMapLifetime lifetime, IWorldM
         }
     }
 
-    private void Finish(MapTravelResult result, [FailureHandler("SYS-MAPS")] Exception? failure = null)
+    private Exception? Finish(MapTravelResult result, [FailureHandler("SYS-MAPS")] Exception? failure = null)
     {
         var finished = _active!;
         _active = null; _target = null; _load = null; _mount = null;
@@ -155,23 +159,58 @@ public sealed class MapService(ICameraRig camera, IMapLifetime lifetime, IWorldM
         try { input?.Dispose(); }
         catch (Exception error) { failure = Campus.Kernel.Diagnostics.RetainedFailure.Append(failure, error); }
         finished.Complete(failure is null ? result : MapTravelResult.Failed, failure);
+        return failure;
+    }
+
+    public void StopNewWork()
+    {
+        if (_stopped) return;
+        _stopped = true;
+        _exit.Cancel();
+    }
+
+    public Task DrainAsync() => _drain ??= Drain();
+
+    private async Task Drain()
+    {
+        StopNewWork();
+        Exception? failure = null;
+        // Step cannot consume these tasks after StopNewWork. Keep every started producer owned until observed.
+        foreach (var task in new Task?[] { _catalogTask, _load, _mount })
+        {
+            if (task is null) continue;
+            try { await task; }
+            catch (OperationCanceledException) when (_exit.IsCancellationRequested && task.IsCanceled) { }
+            catch (Exception error)
+            { failure = Campus.Kernel.Diagnostics.RetainedFailure.Append(failure, task.Exception ?? error); }
+        }
+        _catalogTask = null;
+        if (_active is not null) failure = Finish(MapTravelResult.Failed, failure);
+        if (failure is null) _initialization?.TrySetCanceled(_exit.Token);
+        else _initialization?.TrySetException(failure);
+        if (failure is not null) System.Runtime.ExceptionServices.ExceptionDispatchInfo.Capture(failure).Throw();
     }
 
     public void Dispose()
     {
-        if (_stopped) return;
-        _stopped = true;
-        if (_active is not null) Finish(MapTravelResult.Failed);
-        _catalogTask = null; Context = null;
-        _initialization?.TrySetCanceled();
+        if (_disposed) return;
+        StopNewWork();
+        if ((_catalogTask is not null || _load is not null || _mount is not null || _active is not null) &&
+            _drain?.IsCompleted != true)
+            throw new InvalidOperationException("Map preparation must be drained before disposing its dependencies.");
+        _disposed = true;
+        Context = null;
+        _exit.Dispose();
     }
 
     private async Task<PendingMapLoad> LoadMap(MapCatalogEntry entry)
     {
+        var cancellation = _exit.Token;
         // Registry claims and input-source selection are captured before the first await.
         var claims = _data.ReadClaims(entry.Descriptor.Id);
         var input = await _data.ReadLoadInputAsync(entry).ConfigureAwait(false);
-        var world = await Task.Run(() => MapWorldLoading.LoadPrepared(_loader, input, claims)).ConfigureAwait(false);
+        cancellation.ThrowIfCancellationRequested();
+        var world = await Task.Run(() => MapWorldLoading.LoadPrepared(_loader, input, claims), cancellation).ConfigureAwait(false);
         return new(input, world);
     }
 

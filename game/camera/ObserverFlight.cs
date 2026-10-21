@@ -15,6 +15,8 @@ internal sealed class ObserverFlight
     private Task? _terrainPending;
     private Task<Pose>? _flowProjection;
     private Task<N.Vector3>? _projection;
+    private readonly List<Task> _retired = [];
+    private CancellationTokenSource? _projectionLifetime;
     private N.Vector3 _projectedVelocity;
     private float _projectedFog;
     private FlightBounds? _bounds;
@@ -75,7 +77,11 @@ internal sealed class ObserverFlight
         return _bounds?.IsLegal(pose.Position, outsideBuffer) ?? false;
     }
 
-    public void BeginFlowProjection(Pose pose) => _flowProjection = LegalizePrepared(pose);
+    public void BeginFlowProjection(Pose pose)
+    {
+        Retain(_flowProjection);
+        _flowProjection = LegalizePrepared(pose, ProjectionToken);
+    }
 
     public bool AdvanceFlowProjection(ObserverPresentation presentation)
     {
@@ -108,7 +114,7 @@ internal sealed class ObserverFlight
         {
             _projectedVelocity = _motion.Velocity;
             _projectedFog = fog;
-            _projection = ProjectAfterTerrain(target, _terrainPending!, _bounds);
+            _projection = ProjectAfterTerrain(target, _terrainPending!, _bounds, ProjectionToken);
             return;
         }
         // Projection can cross a terrain-block boundary even when the requested move does not.
@@ -117,7 +123,7 @@ internal sealed class ObserverFlight
         {
             _projectedVelocity = _motion.Velocity;
             _projectedFog = fog;
-            _projection = _bounds.ProjectPrepared(target, Terrain);
+            _projection = _bounds.ProjectPrepared(target, Terrain, ProjectionToken);
             if (!_projection.IsCompleted) return;
             position = _projection.GetAwaiter().GetResult();
             _projection = null;
@@ -126,13 +132,47 @@ internal sealed class ObserverFlight
     }
 
     public void Reset() => _motion.Reset();
-    public void DiscardMotionProjection() => _projection = null;
+    public void DiscardMotionProjection()
+    {
+        Retain(_projection);
+        _projection = null;
+    }
 
     public void ClearProjection()
     {
+        Retain(_projection ?? _terrainPending);
+        Retain(_flowProjection);
         _projection = null;
         _terrainPending = null;
         _flowProjection = null;
+        if (_projectionLifetime is { } lifetime)
+        {
+            lifetime.Cancel();
+            lifetime.Dispose();
+            _projectionLifetime = null;
+        }
+    }
+
+    public async Task DrainAsync()
+    {
+        var failures = new List<Exception>();
+        while (_retired.Count > 0)
+        {
+            var tasks = _retired.ToArray();
+            var draining = Task.WhenAll(tasks);
+            try { await draining; }
+            catch (OperationCanceledException) when (draining.IsCanceled) { }
+            catch { failures.AddRange(draining.Exception!.InnerExceptions); }
+            foreach (var task in tasks) _retired.Remove(task);
+        }
+        if (failures.Count > 0) throw new AggregateException(failures);
+    }
+
+    private void Retain(Task? task)
+    {
+        _retired.RemoveAll(pending => pending.IsCompletedSuccessfully || pending.IsCanceled);
+        if (task is not null && !task.IsCompletedSuccessfully && !task.IsCanceled && !_retired.Contains(task))
+            _retired.Add(task);
     }
 
     public void SetSpeedStep(int step) => SpeedStep = Math.Clamp(step, 1, _tuning.SpeedSteps);
@@ -145,6 +185,7 @@ internal sealed class ObserverFlight
     }
 
     private ITerrainPreparation Terrain => _terrain ??= KernelServices.Get<ITerrainPreparation>();
+    private CancellationToken ProjectionToken => (_projectionLifetime ??= new()).Token;
 
     private bool TerrainReady(N.Vector3 point, N.Vector3? from = null)
     {
@@ -159,17 +200,19 @@ internal sealed class ObserverFlight
         var at = new N.Vector2(point.X, point.Z);
         if (terrain.IsPrepared(Map.World, at)) return true;
         var start = from is { } p ? new N.Vector2(p.X, p.Z) : at;
-        _terrainPending = terrain.PrepareRegion(Map, new(N.Vector2.Min(start, at), N.Vector2.Max(start, at)));
+        _terrainPending = terrain.PrepareRegion(Map, new(N.Vector2.Min(start, at), N.Vector2.Max(start, at)), ProjectionToken);
         if (!_terrainPending.IsCompleted) return false;
         _terrainPending.GetAwaiter().GetResult();
         _terrainPending = null;
         return true;
     }
 
-    private async Task<N.Vector3> ProjectAfterTerrain(N.Vector3 target, Task preparation, FlightBounds bounds)
+    private async Task<N.Vector3> ProjectAfterTerrain(N.Vector3 target, Task preparation, FlightBounds bounds,
+        CancellationToken cancellation)
     {
         await preparation;
-        return await bounds.ProjectPrepared(target, _terrain!);
+        cancellation.ThrowIfCancellationRequested();
+        return await bounds.ProjectPrepared(target, _terrain!, cancellation);
     }
 
     private void ApplyPosition(N.Vector3 position, float fog, float seconds, ObserverPresentation presentation)

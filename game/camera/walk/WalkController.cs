@@ -19,7 +19,8 @@ namespace Campus.Camera.Walk;
 [KernelService(typeof(IWalkTelemetry))]
 [KernelNode("walk-controller")]
 [SaveSection("walk", Version = 1, Phase = RestorePhase.Pose, Order = 61)]
-public partial class WalkController : CharacterBody3D, IWalkController, IWalkTelemetry, IMapAware, ISaveSection<WalkSave>, IViewContentReadiness
+public partial class WalkController : CharacterBody3D, IWalkController, IWalkTelemetry, IMapAware, IMapDataParticipant,
+    ISaveSection<WalkSave>, IViewContentReadiness
 {
     private readonly WalkBodyCollision _bodyCollision;
     private readonly WalkLocomotion _locomotion;
@@ -444,6 +445,9 @@ public partial class WalkController : CharacterBody3D, IWalkController, IWalkTel
         if (!VectorMath.Finite(pose.Position) || !float.IsFinite(pose.YawDeg) || !float.IsFinite(pose.PitchDeg))
             throw new ArgumentOutOfRangeException(nameof(pose));
     }
+
+    public Task Prepare(IMapContext context) => Task.CompletedTask;
+    public Task UnloadAsync(MapId from) => _terrain.DrainAsync();
 
     public void OnMapUnloading(MapId from)
     {

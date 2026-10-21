@@ -68,21 +68,45 @@ public sealed class FlightBoundsTests
         }
     }
 
-    private sealed class ProjectionTerrain(HashSet<Vector2> prepared, MapDescriptor descriptor) : ITerrainPreparation
+    [TestCase, TestCategory(TestReason.Regression)]
+    public async Task CancelledPreparedProjectionDoesNotReadTheOldWorldAfterTerrainCompletes()
+    {
+        using var cancellation = new CancellationTokenSource();
+        var preparation = new TaskCompletionSource();
+        var reads = 0;
+        var descriptor = Descriptor();
+        var world = new FakeWorld
+        {
+            Boundary = new(Square(100)), Outskirts = new Outskirts(),
+            Spatial = new FlatSpatial((x, z) => { reads++; return 0; })
+        };
+        var context = new TestMapContext(descriptor, world, BuildInputSnapshot.Empty);
+        var terrain = new ProjectionTerrain([], descriptor, preparation.Task);
+        var projection = new FlightBounds(context, world.Boundary).ProjectPrepared(Vector3.Zero, terrain, cancellation.Token);
+        cancellation.Cancel();
+        if (projection.IsCompleted)
+            throw new InvalidOperationException("Projection discarded its actual terrain consumer before completion.");
+        preparation.SetResult();
+        try { await projection; throw new InvalidOperationException("Cancelled projection published a late result."); }
+        catch (OperationCanceledException) when (projection.IsCanceled) { }
+        if (reads != 0) throw new InvalidOperationException("Cancelled projection read the unloaded world after preparation.");
+    }
+
+    private sealed class ProjectionTerrain(HashSet<Vector2> prepared, MapDescriptor descriptor, Task? preparation = null) : ITerrainPreparation
     {
         public bool IsPrepared(IWorldModel world, Vector2 point) => prepared.Contains(point);
         public Task PrepareRegion(IMapContext context, MapRect region, CancellationToken cancellation = default) =>
             PreparePoints(context, [region.Min, region.Max], cancellation);
-        public Task PreparePoints(IMapContext context, IReadOnlyList<Vector2> points, CancellationToken cancellation = default)
+        public async Task PreparePoints(IMapContext context, IReadOnlyList<Vector2> points, CancellationToken cancellation = default)
         {
             cancellation.ThrowIfCancellationRequested();
+            if (preparation is not null) await preparation;
             foreach (var point in points)
             {
                 if (!VectorMath.Finite(point) || Vector2.Distance(point, descriptor.Center) > descriptor.Roam.MaxRadius + TestTolerance.Position)
                     throw new InvalidOperationException("Projection submitted a raw out-of-radius terrain coordinate.");
                 prepared.Add(point);
             }
-            return Task.CompletedTask;
         }
     }
 

@@ -61,6 +61,7 @@ public partial class KernelStage : Node3D, IAppExit, IStageGateHost
     {
         if (AppBoot.Failed) return;
         _sceneTree = GetTree();
+        Task? startup = null;
         try
         {
             var registry = KernelServices.Services;
@@ -73,9 +74,9 @@ public partial class KernelStage : Node3D, IAppExit, IStageGateHost
             if (RegistryStageGate.TryRun()) { await FinishQuit(); return; }
             if (AppBoot.Options.CpuBakeMode) { await RunBakeCommand(); return; }
             Compose();
-            await StartWorld();
+            await (startup = StartWorld());
         }
-        catch (OperationCanceledException) when (_closing || _startupFailure.Failed) { }
+        catch (OperationCanceledException) when (_captureLifetime.IsCancellationRequested && startup?.IsCanceled == true) { }
         catch (Exception error) { await _startupFailure.Fail(error); }
     }
 
@@ -263,7 +264,7 @@ public partial class KernelStage : Node3D, IAppExit, IStageGateHost
                     await CloseAsync();
                     return;
                 }
-                await _backgroundPreparation;
+                await _backgroundPreparation.WaitAsync(_captureLifetime.Token);
                 await titleInputReady;
                 CheckStartupActive();
                 _contentReadiness = ViewContentReadiness.Capture(this);
@@ -275,7 +276,8 @@ public partial class KernelStage : Node3D, IAppExit, IStageGateHost
             _startupFailure.CompleteBoot();
             if (_flow!.IsPlaying) await CompletePlayingStartup();
         }
-        catch (OperationCanceledException error) when (_closing || _startupFailure.Failed) { failures.Add(error); }
+        catch (OperationCanceledException error) when (_captureLifetime.IsCancellationRequested &&
+            (error.CancellationToken == _captureLifetime.Token || _backgroundPreparation?.IsCanceled == true)) { failures.Add(error); }
         catch (Exception error)
         {
             failures.Add(error);
@@ -297,7 +299,10 @@ public partial class KernelStage : Node3D, IAppExit, IStageGateHost
         foreach (var participant in participants)
         {
             CheckStartupActive();
-            await participant.Initialize(phase, context);
+            var initialization = participant.Initialize(phase, context);
+            try { await initialization; }
+            catch (OperationCanceledException) when (_captureLifetime.IsCancellationRequested && initialization.IsCanceled)
+            { throw new OperationCanceledException(_captureLifetime.Token); }
         }
         CheckStartupActive();
     }
@@ -314,7 +319,7 @@ public partial class KernelStage : Node3D, IAppExit, IStageGateHost
     {
         _bootLoading = registry.Get<IAppLoadingPresentation>().Show();
         await _bootLoading.Covered;
-        await appBoot.MapReady;
+        await appBoot.MapReady.WaitAsync(_captureLifetime.Token);
         CheckStartupActive();
         WorldPreset? start = null; NewGameBoot? boot = null;
         if (!options.HasLoad) (start, boot) = await BootWorldOverrides.PrepareFreshEntry(options, registry);
@@ -335,7 +340,7 @@ public partial class KernelStage : Node3D, IAppExit, IStageGateHost
     private async Task ObserveBackgroundFailure(IAppBootFlow boot)
     {
         try { await boot.BackgroundReady; }
-        catch (OperationCanceledException) when (boot.BackgroundReady.IsCanceled || _closing || _startupFailure.Failed) { }
+        catch (OperationCanceledException) when (boot.BackgroundReady.IsCanceled) { }
         catch (Exception error) { await _startupFailure.Fail(error); }
     }
 
@@ -368,8 +373,7 @@ public partial class KernelStage : Node3D, IAppExit, IStageGateHost
 
     private void CheckStartupActive()
     {
-        if (_startupFailure.Failed) throw new OperationCanceledException("Startup stopped by the terminal stage failure.");
-        if (_closing || _shutdownStarted) throw new OperationCanceledException("Startup stopped by the exit request.");
+        _captureLifetime.Token.ThrowIfCancellationRequested();
     }
 
     private string _phase = "compose";
@@ -391,7 +395,7 @@ public partial class KernelStage : Node3D, IAppExit, IStageGateHost
             CheckStartupActive();
             StageStartupTrace.TraceTitleInputReady(boot);
         }
-        catch (OperationCanceledException) when (_captureLifetime.IsCancellationRequested || _closing || _startupFailure.Failed) { }
+        catch (OperationCanceledException error) when (_captureLifetime.IsCancellationRequested && error.CancellationToken == _captureLifetime.Token) { }
         catch (Exception error) { await _startupFailure.Fail(error); }
     }
 
@@ -555,7 +559,7 @@ public partial class KernelStage : Node3D, IAppExit, IStageGateHost
                 if (commandExit != 0) _exitCode = Math.Max(_exitCode, commandExit);
             }
             catch (Exception error) { failures.Add(error); }
-        try { KernelServices.Services.Get<IMapLifetime>().StopNewWork(); } catch (Exception error) { failures.Add(error); }
+        try { await KernelServices.Services.StopMapPreparationAsync(); } catch (Exception error) { failures.Add(error); }
         if (_backgroundPreparation is not null)
             try { await _backgroundPreparation; }
             catch (OperationCanceledException) when (_captureLifetime.IsCancellationRequested && _backgroundPreparation.IsCanceled) { }

@@ -50,6 +50,7 @@ internal sealed class AppFlowStartup(IMapService maps, AppFlowContinuation conti
             var map = Map();
             var combined = Task.WhenAll(map, Global());
             try { await combined; _backgroundReady.TrySetResult(); }
+            catch (OperationCanceledException) when (combined.IsCanceled) { Cancel(); throw; }
             catch (Exception error)
             {
                 var failure = (Exception?)combined.Exception ?? error;
@@ -60,6 +61,7 @@ internal sealed class AppFlowStartup(IMapService maps, AppFlowContinuation conti
         async Task Global()
         {
             try { await globalPreparation; }
+            catch (OperationCanceledException) when (globalPreparation.IsCanceled) { Cancel(); throw; }
             catch (Exception error) { Fail(error); throw; }
         }
         async Task Map()
@@ -70,6 +72,7 @@ internal sealed class AppFlowStartup(IMapService maps, AppFlowContinuation conti
                 continuation.RefreshTitlePrefetch();
                 _mapReady.TrySetResult();
             }
+            catch (OperationCanceledException) when (mapPreparation.IsCanceled) { Cancel(); throw; }
             catch (Exception error) { Fail(error); throw; }
         }
     }

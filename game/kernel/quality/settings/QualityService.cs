@@ -105,7 +105,6 @@ public sealed class QualityService : IQualityFrame, IBootParticipant, IAsyncDisp
         _pending = null;
         _initialized = false;
         _initializing = false;
-        _lastSave = Task.CompletedTask;
         binding.Lifetime.Cancel();
         binding.Lifetime.Dispose();
         pending?.Completion?.TrySetCanceled(binding.Token);

@@ -145,12 +145,15 @@ public sealed class QualityApplicationLifetimeTests
             var replacement = new FakeRuntime();
             service.Bind(replacement);
             await service.Initialize(BootPhase.AfterMapWarm, Context());
-            await service.Initialize(BootPhase.BeforeReveal, Context()).WaitAsync(TimeSpan.FromSeconds(5));
+            var reveal = service.Initialize(BootPhase.BeforeReveal, Context());
+            if (boundary == "save")
+                AssertThat(!reveal.IsCompleted).OverrideFailureMessage("Rebinding discarded the real settings write.").IsTrue();
             replacement.Booting = false;
             var afterRebind = replacement.DispatchCount;
             var notificationsAfterRebind = changes.Count;
             runtime.Held.TrySetResult(.1);
             store.HeldWrite?.TrySetResult();
+            await reveal.WaitAsync(TimeSpan.FromSeconds(5));
             await Task.Yield();
             service.Unbind(runtime); // A stale node's exit cannot detach the replacement.
             service.Tick(0);

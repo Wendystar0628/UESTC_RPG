@@ -68,6 +68,72 @@ namespace Campus.Arch.Tests
 
         public static readonly List<string> DisposalLog = [];
 
+        [TestCase, TestCategory("Regression")]
+        public async Task ShutdownStopsOwnedProducersAndAwaitsBothDrainsBeforeRelease()
+        {
+            var probe = new ShutdownProbe(); var registry = DiscoverMapOwners(probe);
+            registry.Get<IMapService>(); registry.Get<IMapLifetime>();
+            var stopping = registry.StopMapPreparationAsync();
+            var shutdown = registry.ShutdownAsync();
+            if (!ReferenceEquals(stopping, registry.StopMapPreparationAsync()) || stopping.IsCompleted || shutdown.IsCompleted ||
+                !probe.Calls.SequenceEqual(["map-stop", "runtime-stop", "map-drain"]))
+                throw new InvalidOperationException("Owned producers were not stopped before awaiting their shared drain.");
+            probe.MapDrain.SetResult(); await probe.RuntimeEntered.Task;
+            if (shutdown.IsCompleted || probe.Calls.Any(call => call.EndsWith("release", StringComparison.Ordinal)))
+                throw new InvalidOperationException("An owned object was released before runtime preparation drained.");
+            registry.Get<SharedDependency>(); // Preparation may still resolve dependencies until its drain completes.
+            probe.RuntimeDrain.SetResult(); await shutdown;
+            if (!probe.Calls.SequenceEqual(["map-stop", "runtime-stop", "map-drain", "runtime-drain", "runtime-release", "map-release"]) ||
+                !ReferenceEquals(shutdown, registry.ShutdownAsync()))
+                throw new InvalidOperationException("Shutdown did not retain one task and reverse owned release order.");
+        }
+
+        [TestCase, TestCategory("Regression")]
+        public async Task RuntimeOnlyShutdownNeverConstructsAnAbsentMapService()
+        {
+            var probe = new ShutdownProbe(); probe.RuntimeDrain.SetResult();
+            var registry = DiscoverMapOwners(probe); registry.Get<IMapLifetime>();
+            await registry.ShutdownAsync();
+            if (probe.MapsConstructed != 0 || !probe.Calls.SequenceEqual(["runtime-stop", "runtime-drain", "runtime-release"]))
+                throw new InvalidOperationException("Runtime-only shutdown constructed a map service or lost its owned runtime.");
+        }
+
+        [TestCase, TestCategory("Contract")]
+        public async Task ShutdownLeavesSuppliedMapAndRuntimeOwnersUntouched()
+        {
+            var probe = new ShutdownProbe(); var registry = DiscoverMapOwners(probe);
+            registry.Add<IMapService>(new ShutdownMapService(probe));
+            registry.Add<IMapLifetime>(new ShutdownMapLifetime(probe));
+            await registry.ShutdownAsync();
+            if (probe.Calls.Count != 0) throw new InvalidOperationException("Shutdown stopped or disposed a supplied map owner.");
+        }
+
+        [TestCase, TestCategory("Regression")]
+        public async Task StopDrainAndReleaseFailuresAllSurviveShutdown()
+        {
+            var stop = new IOException("stop"); var data = new IOException("data");
+            var runtime = new IOException("runtime"); var release = new IOException("release");
+            var probe = new ShutdownProbe { StopFailure = stop, ReleaseFailure = release };
+            probe.MapDrain.SetException(data); probe.RuntimeDrain.SetException(runtime);
+            var registry = DiscoverMapOwners(probe); registry.Get<IMapService>(); registry.Get<IMapLifetime>();
+            try { await registry.ShutdownAsync(); throw new InvalidOperationException("Shutdown lost its original failures."); }
+            catch (AggregateException error)
+            {
+                var causes = error.Flatten().InnerExceptions;
+                Exception[] expected = [stop, data, runtime, release];
+                if (causes.Count != expected.Length || expected.Any(cause => !causes.Contains(cause)) ||
+                    !probe.Calls.SequenceEqual(["map-stop", "runtime-stop", "map-drain", "runtime-drain", "runtime-release", "map-release"]))
+                    throw new InvalidOperationException("A failed phase prevented another phase or lost its original cause.", error);
+            }
+        }
+
+        private static ServiceRegistry DiscoverMapOwners(ShutdownProbe probe)
+        {
+            var registry = new ServiceRegistry(); registry.Add(probe);
+            registry.Discover([typeof(ShutdownMapService), typeof(ShutdownMapLifetime), typeof(SharedDependency)], _ => "fixture");
+            return registry;
+        }
+
         [TestCase]
         [TestCategory("Contract")]
         public void BakeProducerIsDiscoveredAndConstructibleFromItsEntry()
@@ -107,6 +173,49 @@ namespace Campus.Arch.Tests
     public interface ILifetimeSecond { }
     public interface ILifetimeExtra { }
     public interface ILifetimeUnrelated { }
+
+    public sealed class ShutdownProbe
+    {
+        public List<string> Calls { get; } = [];
+        public TaskCompletionSource MapDrain { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        public TaskCompletionSource RuntimeDrain { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        public TaskCompletionSource RuntimeEntered { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        public int MapsConstructed { get; set; }
+        public Exception? StopFailure { get; init; }
+        public Exception? ReleaseFailure { get; init; }
+    }
+
+    [KernelService(typeof(IMapService))]
+    public sealed class ShutdownMapService : IMapService, IDisposable
+    {
+        private readonly ShutdownProbe _probe;
+        public ShutdownMapService(ShutdownProbe probe) { _probe = probe; probe.MapsConstructed++; }
+        public long Rev => throw new NotSupportedException();
+        public MapId Default => throw new NotSupportedException();
+        public IReadOnlyList<MapDescriptor> Maps => throw new NotSupportedException();
+        public IReadOnlyList<MapVisit> Visits => throw new NotSupportedException();
+        public MapId Current => throw new NotSupportedException();
+        public IMapContext? Context => throw new NotSupportedException();
+        public IMapTransition? Transition => throw new NotSupportedException();
+        public MapSpawn ResolveSpawn(MapId map, string? spawn = null) => throw new NotSupportedException();
+        public Task Prepare(MapId map) => throw new NotSupportedException();
+        public void StopNewWork() { _probe.Calls.Add("map-stop"); if (_probe.StopFailure is { } error) throw error; }
+        public Task DrainAsync() { _probe.Calls.Add("map-drain"); return _probe.MapDrain.Task; }
+        public void Dispose() => _probe.Calls.Add("map-release");
+    }
+
+    [KernelService(typeof(IMapLifetime))]
+    public sealed class ShutdownMapLifetime(ShutdownProbe probe) : IMapLifetime, IDisposable
+    {
+        public Task Mount(IMapContext context) => throw new NotSupportedException();
+        public string DescribeReadiness() => throw new NotSupportedException();
+        public void StopNewWork() => probe.Calls.Add("runtime-stop");
+        public async Task ShutdownAsync()
+        {
+            probe.Calls.Add("runtime-drain"); probe.RuntimeEntered.TrySetResult(); await probe.RuntimeDrain.Task;
+        }
+        public void Dispose() { probe.Calls.Add("runtime-release"); if (probe.ReleaseFailure is { } error) throw error; }
+    }
 
     [KernelService(typeof(ILifetimeFirst))]
     [KernelService(typeof(ILifetimeSecond))]

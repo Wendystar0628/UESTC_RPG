@@ -109,24 +109,24 @@ public partial class MapRuntime : Node, IMapRuntime, IMapLifetime
     }
 
     /// <summary>Stage exit only: stop producers, drain preparation and release every map-owned resource.</summary>
-    public Task ShutdownAsync(MapId map)
+    public Task ShutdownAsync()
     {
-        if (_shutdown is null || _shutdown.IsCompleted && _loaded.HasValue) _shutdown = ShutdownMap(map);
+        if (_shutdown is null || _shutdown.IsCompleted && _loaded.HasValue) _shutdown = ShutdownMap();
         return _shutdown;
     }
 
-    private async Task ShutdownMap(MapId from)
+    private async Task ShutdownMap()
     {
         try { StopNewWork(); } catch (Exception error) { ReportFailure(error); }
         _mountPrepared = false;
         _contentReadiness = null;
         _mapGeneration++;
-        await ReleaseAfterPreparation(from, _preparing);
+        await ReleaseAfterPreparation(_loaded, _preparing);
         PollFailures();
         if (Failure is { } failure) System.Runtime.ExceptionServices.ExceptionDispatchInfo.Capture(failure).Throw();
     }
 
-    private async Task ReleaseAfterPreparation(MapId from, Task? preparation)
+    private async Task ReleaseAfterPreparation(MapId? loaded, Task? preparation)
     {
         // Each phase runs even when an earlier phase failed. Await actual producer tasks before destroying their data.
         if (preparation is not null)
@@ -139,18 +139,20 @@ public partial class MapRuntime : Node, IMapRuntime, IMapLifetime
             catch (Exception error) { ReportFailure(error); }
         _arrivalPreparations.Clear();
         // Keep identities captured at preparation: never resolve new transient receivers during teardown.
-        foreach (var aware in _receivers.OfType<IMapAware>())
-            try { aware.OnMapUnloading(from); }
-            catch (Exception error) { ReportFailure(error); }
+        if (loaded is { } from)
+            foreach (var aware in _receivers.OfType<IMapAware>())
+                try { aware.OnMapUnloading(from); }
+                catch (Exception error) { ReportFailure(error); }
         if (_stream is not null)
             try { await _stream.DrainAsync(); }
             catch (Exception error) { ReportFailure(error); }
         // A failed native release still owns map inputs and bindings; a later explicit shutdown resumes the drain.
         if (_stream?.IsUnloaded == false) return;
-        foreach (var participant in _receivers.OfType<IMapDataParticipant>())
-            try { await participant.UnloadAsync(from); }
-            catch (Exception error) { ReportFailure(error); }
-        try { await _owner!.ReleaseMapAsync(from); }
+        if (loaded is { } map)
+            foreach (var participant in _receivers.OfType<IMapDataParticipant>())
+                try { await participant.UnloadAsync(map); }
+                catch (Exception error) { ReportFailure(error); }
+        try { if (loaded is { } owned) await _owner!.ReleaseMapAsync(owned); }
         catch (Exception error) { ReportFailure(error); }
         finally
         {
@@ -204,7 +206,7 @@ public partial class MapRuntime : Node, IMapRuntime, IMapLifetime
             _contentReadiness = ViewContentReadiness.Capture(GetParent());
             _mountPrepared = true;
         }
-        catch (OperationCanceledException) when (_exit.IsCancellationRequested && preparation?.IsFaulted != true) { }
+        catch (OperationCanceledException) when (_exit.IsCancellationRequested && preparation?.IsCanceled == true) { }
         catch (Exception error)
         {
             // Await exposes only one cause; the combined task retains every independently failed branch.
@@ -271,7 +273,7 @@ public partial class MapRuntime : Node, IMapRuntime, IMapLifetime
             _stream!.Prefetch(destination.Pose, destination.Mode, destination.Space, destination.CollisionFeet);
             arrival.Prepared = true;
         }
-        catch (OperationCanceledException) when (cancellation.IsCancellationRequested) { }
+        catch (OperationCanceledException error) when (cancellation.IsCancellationRequested && error.CancellationToken == cancellation) { }
         catch (Exception error)
         {
             // Replaced/cancelled arrivals cannot publish readiness, but their genuine failures still belong to this map lifetime.

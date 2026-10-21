@@ -27,6 +27,8 @@ public interface ITransitDriver
     ITransitHandle SwitchMode(Func<CancellationToken, Task<ModeSwitchResult>> apply);
     /// <summary>The settled destination while a transit is active; null when no transit is running.</summary>
     Pose? Destination { get; }
+    /// <summary>Cancels and drains all current and superseded executions, including loading cleanup; the driver remains reusable.</summary>
+    Task CancelAsync();
 }
 
 public interface ICameraPoseValidator

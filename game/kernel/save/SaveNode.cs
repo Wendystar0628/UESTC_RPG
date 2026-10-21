@@ -147,6 +147,7 @@ public partial class SaveNode : Node, IBootParticipant
     public override void _ExitTree()
     {
         _exiting = true;
+        _save.StopNewWork();
         RenderingServer.FramePostDraw -= OnFramePostDraw;
         _exit.Cancel();
         _exit.Dispose();

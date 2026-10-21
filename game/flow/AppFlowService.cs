@@ -13,6 +13,7 @@ namespace Campus.Flow;
 public sealed class AppFlowService : IAppFlow, IAppBootFlow, IBootParticipant, IDisposable
 {
     private readonly ICameraRig camera;
+    private readonly ITransitDriver transit;
     private readonly IAppLoadingPresentation loading;
     private readonly ISaveService saves;
     private readonly IMapService maps;
@@ -39,10 +40,10 @@ public sealed class AppFlowService : IAppFlow, IAppBootFlow, IBootParticipant, I
     public AppFlowService(ICameraRig camera, IAppLoadingPresentation loading, IAppFrontispiecePresentation frontispiece,
         ISaveService saves, IMapService maps, IWorldState world, IWorldControl control,
         IWorldRestore restore, IAppExit appExit, IMapRuntime mapRuntime, IMapStreamState stream,
-        IDiagnosticLog diagnostics, ISettingsStore? profileSettings = null)
+        ITransitDriver transit, IDiagnosticLog diagnostics, ISettingsStore? profileSettings = null)
     {
         _mapRuntime = mapRuntime;
-        this.camera = camera; this.loading = loading; this.saves = saves; this.maps = maps;
+        this.camera = camera; this.transit = transit; this.loading = loading; this.saves = saves; this.maps = maps;
         this.world = world; this.restore = restore; this.appExit = appExit; this.stream = stream;
         _resources = new(camera, restore, control, loading, frontispiece, mapRuntime, MarkPhase);
         _continuation = new(camera, saves, maps, restore, mapRuntime, stream,
@@ -104,6 +105,7 @@ public sealed class AppFlowService : IAppFlow, IAppBootFlow, IBootParticipant, I
     }
     private async Task<EnterResult> EnterCore()
     {
+        var joiningBackground = false;
         try
         {
             var newGame = _request!.Kind switch
@@ -114,7 +116,12 @@ public sealed class AppFlowService : IAppFlow, IAppBootFlow, IBootParticipant, I
             };
             await _resources.BeginLoading(_request, newGame && _request.Slot is not null);
             // A faulted world's NewGame transaction owns its recovery preparation.
-            if (!newGame || !restore.RestoreFaulted) await BackgroundReady;
+            if (!newGame || !restore.RestoreFaulted)
+            {
+                joiningBackground = true;
+                await BackgroundReady;
+                joiningBackground = false;
+            }
             if (newGame) await _continuation.StartNewTimeline(_request.Slot, _startup.Seed, _directEntry ? _directStart : null, _directEntry ? _directBoot : null);
             else if (_directEntry && _startup.Request.LoadFile is { } file)
             {
@@ -140,7 +147,7 @@ public sealed class AppFlowService : IAppFlow, IAppBootFlow, IBootParticipant, I
             _resources.ReleaseFlow(); Change(AppState.Playing); _resources.ReleaseInput();
             return EnterResult.Entered;
         }
-        catch (OperationCanceledException) when (_quitting) { return EnterResult.Rejected; }
+        catch (OperationCanceledException) when (_quitting && joiningBackground && BackgroundReady.IsCanceled) { return EnterResult.Rejected; }
         catch (Exception error) when (error is not OutOfMemoryException)
         {
             _recovery.CaptureFailure(error, State);
@@ -163,6 +170,8 @@ public sealed class AppFlowService : IAppFlow, IAppBootFlow, IBootParticipant, I
     {
         try
         {
+            await transit.CancelAsync();
+            _leavePose = camera.Pose;
             await _resources.BeginLoading(null, save: true);
             var saved = await saves.FlushForQuit(SaveReason.ToTitle, TimeSpan.FromSeconds(FlowTuning.TitleSaveTimeoutSeconds));
             if (restore.RestoreFaulted) { await _recovery.HoldRestoreFailure(); return; }
@@ -216,12 +225,14 @@ public sealed class AppFlowService : IAppFlow, IAppBootFlow, IBootParticipant, I
         if (restore.RestoreFaulted)
         {
             // Save returns Deferred for a faulted restore: intentionally preserve the old generation.
+            await transit.CancelAsync();
             if (await QuitFaultedWorld()) await appExit.FinishQuit();
             return;
         }
         var save = previous switch
         {
-            AppState.Boot or AppState.Title => false,
+            AppState.Boot => false,
+            AppState.Title => true,
             AppState.Entering or AppState.Playing => true,
             AppState.Leaving => false,
             AppState.Quitting => false,
@@ -234,8 +245,11 @@ public sealed class AppFlowService : IAppFlow, IAppBootFlow, IBootParticipant, I
         if (previous == AppState.Leaving && _leaving is not null)
         {
             await _leaving;
-            save = !_leaveSaved;
+            save = true;
         }
+        await transit.CancelAsync();
+        // ToTitle may have returned after detaching its immutable snapshot while disk I/O continues.
+        save |= saves.Busy;
         Change(AppState.Quitting);
         if (restore.RestoreFaulted)
         {
@@ -250,6 +264,11 @@ public sealed class AppFlowService : IAppFlow, IAppBootFlow, IBootParticipant, I
                 if (restore.RestoreFaulted) { _quitting = false; await _recovery.HoldRestoreFailure(); return; }
                 _quitting = false;
                 if (loading.Active) await _resources.FinishLoading();
+                if (world.Instance == 0)
+                {
+                    _resources.HoldTitleFlow(); _resources.ReleaseLoadingFlow(); Change(AppState.Title);
+                    return;
+                }
                 _resources.ReleaseFlow(); Change(AppState.Playing); _resources.ReleaseInput();
                 return;
             }
