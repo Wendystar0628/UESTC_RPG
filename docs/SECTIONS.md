@@ -1891,14 +1891,14 @@
 
 ## WF-STATUS · 施工状态、队列与调研入队
 
-`docs/workflow/WF-STATUS-施工状态、队列与调研入队.md` · 5.8k 字 · 施工状态文件怎么填、阶段与主线闸口、施工队列的格式与即时维护、队列平衡、交接单、调研入队流水线与旁路单
+`docs/workflow/WF-STATUS-施工状态、队列与调研入队.md` · 5.9k 字 · 施工状态文件怎么填、阶段与主线闸口、施工队列的格式与即时维护、队列平衡、交接单、调研入队流水线与旁路单
 关键词：阶段、主线闸口、P0–P3、施工队列、一行一件、即时维护、拆分重活、等前置、就绪、进行中、待集成、暂停、行号、施工状态、状态文件、当前 main、最近可运行入口、已冻结的契约组、队列平衡、积压、交接单、HANDOVER.md、接手、已集成、调研入队流水线、审计、调研简报、旁路单、DECISION-224
 
 - WF-STATUS §0 结论 · L22 · 620
   - ★ WF-STATUS §0.1 接入要点 · L31 · 231
 - WF-STATUS §1 施工状态文件怎么填 · L38 · 969
   - WF-STATUS §1.1 阶段与闸口 · L46 · 534
-- WF-STATUS §2 施工队列与队列平衡 · L56 · 1.9k
+- WF-STATUS §2 施工队列与队列平衡 · L56 · 2.0k
 - WF-STATUS §3 交接单 · L94 · 89
 - WF-STATUS §4 调研入队流水线 · L98 · 1.5k
   - WF-STATUS §4.1 调研与旁路单 · L111 · 789
@@ -1993,12 +1993,12 @@
 
 ## REG-DECISIONS-PROCESS · 协作与流程决策
 
-`docs/registry/REG-DECISIONS-PROCESS-协作与流程决策.md` · 16.0k 字 · 计划、协作、规范、登记四个域的已定决策：协作、流程、文档与代码规范、门禁流程
+`docs/registry/REG-DECISIONS-PROCESS-协作与流程决策.md` · 16.3k 字 · 计划、协作、规范、登记四个域的已定决策：协作、流程、文档与代码规范、门禁流程
 关键词：决策、流程、协作、文档规则、门禁流程、派工、主会话、子代理
 
 - REG-DECISIONS-PROCESS §0 结论 · L21 · 129
   - ★ REG-DECISIONS-PROCESS §0.1 接入要点 · L25 · 56
-- REG-DECISIONS-PROCESS §1 流程 · L29 · 15.4k
+- REG-DECISIONS-PROCESS §1 流程 · L29 · 15.6k
 
 ## REG-DECISIONS-SYSTEMS · 系统与工程决策
 
