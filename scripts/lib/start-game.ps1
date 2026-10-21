@@ -113,12 +113,14 @@ function Get-UESTCLaunchBuildIdentity {
 
 function Get-UESTCLaunchBuildGraph {
     param([string]$Root, [string]$Properties)
+    # TargetPath describes the built output; do not override referenced projects with it.
+    $graphProperties = ($Properties -split ';' | Where-Object { $_ -notmatch '^TargetPath=' }) -join ';'
     foreach ($project in @('game\Campus.csproj', 'scripts\build\fingerprints\Campus.CodeFingerprints.csproj')) {
         # The existing target owns Compile/reference selection. Query only: no
         # Build/CoreCompile, project-reference build or success-receipt recursion.
         $result = Invoke-UESTCProcess 'dotnet' @('msbuild', (Join-Path $Root $project),
             '-target:GetCampusCodeFingerprintInputs', '-getTargetResult:GetCampusCodeFingerprintInputs',
-            "-property:$Properties;DesignTimeBuild=true;BuildProjectReferences=false", '-verbosity:quiet', '-nologo') $Root
+            "-property:$graphProperties;DesignTimeBuild=true;BuildProjectReferences=false", '-verbosity:quiet', '-nologo') $Root
         $graph = $result.StdOut | ConvertFrom-Json
         foreach ($item in $graph.TargetResults.GetCampusCodeFingerprintInputs.Items) { $item.Identity }
     }
@@ -127,6 +129,18 @@ function Get-UESTCLaunchBuildGraph {
 function Update-UESTCLaunchBuildReceipt {
     param([string]$Root, [string]$Phase, [string]$Properties)
     $Root = [IO.Path]::GetFullPath($Root).TrimEnd('\', '/')
+    # Only the formal local Debug output owns the launch receipt.
+    $configuration = @{}
+    foreach ($property in ($Properties -split ';')) {
+        $pair = $property -split '=', 2
+        if ($pair.Count -eq 2) { $configuration[$pair[0]] = $pair[1] }
+    }
+    if ($configuration['Configuration'] -ne 'Debug' -or $configuration['RuntimeIdentifier'] -or
+        $configuration['SelfContained'] -notin @($null, '', 'false') -or -not $configuration['TargetPath']) { return }
+    $targetPath = $configuration['TargetPath']
+    if (-not [IO.Path]::IsPathRooted($targetPath)) { $targetPath = Join-Path (Join-Path $Root 'game') $targetPath }
+    $expectedTarget = Join-Path $Root 'game\.godot\mono\temp\bin\Debug\Campus.dll'
+    if ([IO.Path]::GetFullPath($targetPath) -ne $expectedTarget) { return }
     $path = Join-Path $Root 'output\start_game\build.succeeded'
     if ($Phase -in @('Begin', 'BeginRebuild')) {
         # Invalidate before any output can be overwritten, including if querying
@@ -146,11 +160,15 @@ function Update-UESTCLaunchBuildReceipt {
     } else {
         $before = [IO.File]::ReadAllText($path) | ConvertFrom-Json
         if ($before.format -ne 1 -or $before.status -ne 'building' -or $before.properties -ne $Properties) {
-            throw 'Build input receipt was not started by this build.'
+            Write-Warning 'Build input receipt was not started by this build; no success receipt was written.'
+            return
         }
         $graphInputs = @(Get-UESTCLaunchBuildGraph $Root $Properties)
         $identity = Get-UESTCLaunchBuildIdentity $Root $graphInputs $Properties
-        if ($identity -ne $before.identity) { throw 'Build inputs changed during the build; rebuild before launching.' }
+        if ($identity -ne $before.identity) {
+            Write-Warning 'Build inputs changed during the build; rebuild before launching.'
+            return
+        }
         if (-not $before.rebuild -and -not $before.verified) {
             Write-Warning 'Build inputs have no matching verified receipt; use dotnet build -t:Rebuild before launching.'
             return

@@ -46,17 +46,17 @@
   <!-- SDK Rebuild is BeforeRebuild -> Clean -> Build -> AfterRebuild.
        Begin before Clean; a timestamp-incremental Build alone cannot verify new bytes. -->
   <Target Name="BeginCampusLaunchRebuildReceipt" BeforeTargets="BeforeRebuild"
-          DependsOnTargets="RestoreCampusCodeFingerprintTool" Condition="'$(DesignTimeBuild)' != 'true'">
-    <Exec Command="powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File &quot;$(MSBuildProjectDirectory)/../scripts/lib/start-game.ps1&quot; -BuildReceiptPhase BeginRebuild -BuildReceiptRoot &quot;$(MSBuildProjectDirectory)/..&quot; -BuildReceiptProperties &quot;$(_CampusLaunchBuildProperties)&quot;" />
+          DependsOnTargets="RestoreCampusCodeFingerprintTool" Condition="'$(DesignTimeBuild)' != 'true' And '$(Configuration)' == 'Debug' And '$(RuntimeIdentifier)' == '' And '$(SelfContained)' != 'true' And '$(TargetPath)' == '$(MSBuildProjectDirectory)\.godot\mono\temp\bin\Debug\Campus.dll'">
+    <Exec Command="powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File &quot;$(MSBuildProjectDirectory)/../scripts/lib/start-game.ps1&quot; -BuildReceiptPhase BeginRebuild -BuildReceiptRoot &quot;$(MSBuildProjectDirectory)/..&quot; -BuildReceiptProperties &quot;$(_CampusLaunchBuildProperties);TargetPath=$(TargetPath)&quot;" />
     <PropertyGroup>
       <_CampusLaunchBuildReceiptStarted>true</_CampusLaunchBuildReceiptStarted>
       <_CampusLaunchRebuild>true</_CampusLaunchRebuild>
       <_CampusCodeFingerprintToolBuildTarget>Rebuild</_CampusCodeFingerprintToolBuildTarget>
     </PropertyGroup>
   </Target>
-  <Target Name="BeginCampusLaunchBuildReceipt" BeforeTargets="GenerateStyleShaders;PrepareForBuild"
-          DependsOnTargets="RestoreCampusCodeFingerprintTool" Condition="'$(DesignTimeBuild)' != 'true' And '$(_CampusLaunchBuildReceiptStarted)' != 'true'">
-    <Exec Command="powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File &quot;$(MSBuildProjectDirectory)/../scripts/lib/start-game.ps1&quot; -BuildReceiptPhase Begin -BuildReceiptRoot &quot;$(MSBuildProjectDirectory)/..&quot; -BuildReceiptProperties &quot;$(_CampusLaunchBuildProperties)&quot;" />
+  <Target Name="BeginCampusLaunchBuildReceipt" BeforeTargets="BeforeBuild"
+          DependsOnTargets="RestoreCampusCodeFingerprintTool" Condition="'$(DesignTimeBuild)' != 'true' And '$(_CampusLaunchBuildReceiptStarted)' != 'true' And '$(Configuration)' == 'Debug' And '$(RuntimeIdentifier)' == '' And '$(SelfContained)' != 'true' And '$(TargetPath)' == '$(MSBuildProjectDirectory)\.godot\mono\temp\bin\Debug\Campus.dll'">
+    <Exec Command="powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File &quot;$(MSBuildProjectDirectory)/../scripts/lib/start-game.ps1&quot; -BuildReceiptPhase Begin -BuildReceiptRoot &quot;$(MSBuildProjectDirectory)/..&quot; -BuildReceiptProperties &quot;$(_CampusLaunchBuildProperties);TargetPath=$(TargetPath)&quot;" />
     <PropertyGroup><_CampusLaunchBuildReceiptStarted>true</_CampusLaunchBuildReceiptStarted></PropertyGroup>
   </Target>
   <Target Name="PrepareCampusCodeFingerprints" DependsOnTargets="GetCampusCodeFingerprintInputs;RestoreCampusCodeFingerprintTool">
@@ -99,14 +99,15 @@
   <Target Name="RecordCampusCodeFingerprintCompletion" AfterTargets="GenerateCampusCodeFingerprints"
           Condition="'$(DesignTimeBuild)' != 'true' And '$(IsTestProject)' != 'true'">
     <PropertyGroup><_CampusLaunchFingerprintsCompleted>true</_CampusLaunchFingerprintsCompleted></PropertyGroup>
-    <CallTarget Targets="CompleteCampusLaunchBuildReceipt" Condition="'$(_CampusLaunchRebuild)' != 'true'" />
   </Target>
+  <Target Name="CompleteCampusLaunchNormalBuildReceipt" AfterTargets="RecordCampusCodeFingerprintCompletion"
+          DependsOnTargets="CompleteCampusLaunchBuildReceipt"
+          Condition="'$(DesignTimeBuild)' != 'true' And '$(_CampusLaunchRebuild)' != 'true'" />
   <Target Name="CompleteCampusLaunchRebuildReceipt" AfterTargets="AfterRebuild"
-          Condition="'$(DesignTimeBuild)' != 'true' And '$(_CampusLaunchRebuild)' == 'true'">
-    <CallTarget Targets="CompleteCampusLaunchBuildReceipt" />
-  </Target>
+          DependsOnTargets="CompleteCampusLaunchBuildReceipt"
+          Condition="'$(DesignTimeBuild)' != 'true' And '$(_CampusLaunchRebuild)' == 'true'" />
   <Target Name="CompleteCampusLaunchBuildReceipt"
-          Condition="'$(DesignTimeBuild)' != 'true' And '$(_CampusLaunchBuildReceiptStarted)' == 'true' And '$(_CampusLaunchFingerprintsCompleted)' == 'true'">
-    <Exec Command="powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File &quot;$(MSBuildProjectDirectory)/../scripts/lib/start-game.ps1&quot; -BuildReceiptPhase Complete -BuildReceiptRoot &quot;$(MSBuildProjectDirectory)/..&quot; -BuildReceiptProperties &quot;$(_CampusLaunchBuildProperties)&quot;" />
+          Condition="'$(DesignTimeBuild)' != 'true' And '$(_CampusLaunchBuildReceiptStarted)' == 'true' And '$(_CampusLaunchFingerprintsCompleted)' == 'true' And '$(Configuration)' == 'Debug' And '$(RuntimeIdentifier)' == '' And '$(SelfContained)' != 'true' And '$(TargetPath)' == '$(MSBuildProjectDirectory)\.godot\mono\temp\bin\Debug\Campus.dll'">
+    <Exec Command="powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File &quot;$(MSBuildProjectDirectory)/../scripts/lib/start-game.ps1&quot; -BuildReceiptPhase Complete -BuildReceiptRoot &quot;$(MSBuildProjectDirectory)/..&quot; -BuildReceiptProperties &quot;$(_CampusLaunchBuildProperties);TargetPath=$(TargetPath)&quot;" />
   </Target>
 </Project>
