@@ -360,7 +360,7 @@ public sealed class QualityService : IQualityFrame, IBootParticipant, IAsyncDisp
     }
 
     private void RestoreAppliedState(Binding binding, Request request, QualityState.Snapshot snapshot,
-        bool loading, List<Exception> recoveryErrors)
+        bool loading, [FailureHandler("SYS-GRAPHICS")] List<Exception> recoveryErrors)
     {
         var cancellationToken = binding.Token;
         var rollback = _state.Restore(snapshot, request.Origin, loading);

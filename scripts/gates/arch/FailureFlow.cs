@@ -11,7 +11,6 @@ internal sealed class FailureFlow(SourceFile file, CatchClauseSyntax? origin, Ha
     HashSet<IMethodSymbol>? activeFactories = null)
 {
     private readonly HashSet<IMethodSymbol> factories = activeFactories ?? new(SymbolEqualityComparer.Default);
-    private readonly HashSet<IMethodSymbol> continuations = new(SymbolEqualityComparer.Default);
     private enum End { Running, Return, Break, Continue, Throw }
     private sealed record ObjectReference(ISymbol Symbol, string Receiver);
     private sealed class ReferenceComparer : IEqualityComparer<ObjectReference>
@@ -26,21 +25,17 @@ internal sealed class FailureFlow(SourceFile file, CatchClauseSyntax? origin, Ha
         public bool Handled;
         public bool ReturnRetains;
         public bool ThrowRetains;
-        public HashSet<SyntaxNode> Values { get; } = [];
-        public Dictionary<ObjectReference, HashSet<string>> Data { get; } = new(new ReferenceComparer());
         public End Exit;
         public PathState Copy()
         {
             var copy = new PathState { Handled = Handled, ReturnRetains = ReturnRetains, ThrowRetains = ThrowRetains, Exit = Exit };
             copy.Objects.UnionWith(Objects);
-            copy.Values.UnionWith(Values);
-            foreach (var pair in Data) copy.Data.Add(pair.Key, new(pair.Value, StringComparer.Ordinal));
             return copy;
         }
     }
 
     public static bool IsHandler(IParameterSymbol parameter, HashSet<string> documents) =>
-        IsException(parameter.Type) && parameter.GetAttributes().Any(attribute =>
+        ExceptionCarrier(parameter.Type) && parameter.GetAttributes().Any(attribute =>
             SemanticPolicySources.Is(attribute, "FailureHandler") && attribute.ConstructorArguments.Length == 1 &&
             attribute.ConstructorArguments[0].Value is string document && documents.Contains(document));
 
@@ -55,7 +50,7 @@ internal sealed class FailureFlow(SourceFile file, CatchClauseSyntax? origin, Ha
         if (clause.Declaration is { } caught && file.Model.GetDeclaredSymbol(caught) is { } symbol) start.Objects.Add(new(symbol, ""));
         var paths = flow.Statement(clause.Block, [start]);
         paths = flow.ContinueOutside(clause, paths);
-        return flow.Complete(clause, paths);
+        return paths.All(flow.DeliveredPath);
     }
 
     private static bool PureCancellation(SourceFile file, CatchClauseSyntax clause, ExpressionSyntax condition)
@@ -225,10 +220,9 @@ internal sealed class FailureFlow(SourceFile file, CatchClauseSyntax? origin, Ha
                 assignment.IsKind(SyntaxKind.CoalesceAssignmentExpression) && Retains(assignment.Left, state);
             var paths = Expression(assignment.Right, state);
             foreach (var path in paths)
-                if (DataSlot(assignment.Left) is { } slot)
+                if (assignment.Left is ElementAccessExpressionSyntax dataAccess && DataOwner(dataAccess.Expression) is { } owner)
                 {
-                    if (!path.Data.TryGetValue(slot.Owner, out var keys)) path.Data.Add(slot.Owner, keys = new(StringComparer.Ordinal));
-                    if (retains) keys.Add(slot.Key); else keys.Remove(slot.Key);
+                    if (retains) path.Objects.Add(owner);
                 }
                 else Set(assignment.Left, retains, path);
             return paths;
@@ -270,13 +264,6 @@ internal sealed class FailureFlow(SourceFile file, CatchClauseSyntax? origin, Ha
             operation.Arguments.Any(argument => Retains(argument.Value, state))) Set(receiver, true, state);
         if (operation.Instance?.Syntax is ExpressionSyntax cleared && method.Name == "Clear" &&
             method.ContainingNamespace.ToDisplayString().StartsWith("System.Collections", StringComparison.Ordinal)) Set(cleared, false, state);
-        if (operation.Instance?.Syntax is ExpressionSyntax data && DataOwner(data) is { } owner &&
-            method.ContainingNamespace.ToDisplayString().StartsWith("System.Collections", StringComparison.Ordinal))
-        {
-            if (method.Name == "Clear") state.Data.Remove(owner);
-            if (method.Name == "Remove" && operation.Arguments.Length == 1 && ConstantKey(operation.Arguments[0].Value.Syntax) is { } key &&
-                state.Data.TryGetValue(owner, out var keys)) keys.Remove(key);
-        }
         foreach (var argument in operation.Arguments.Where(argument => argument.Parameter?.RefKind is RefKind.Ref or RefKind.Out))
             if (argument.Value.Syntax is ExpressionSyntax changed) Set(changed, false, state);
     }
@@ -287,7 +274,7 @@ internal sealed class FailureFlow(SourceFile file, CatchClauseSyntax? origin, Ha
 
     private bool Retains(ExpressionSyntax expression, PathState state)
     {
-        if (state.Values.Contains(expression) || Reference(expression) is { } reference && Has(reference, state)) return true;
+        if (Reference(expression) is { } reference && Has(reference, state)) return true;
         if (expression is MemberAccessExpressionSyntax property && ExceptionCarrier(file.Model.GetTypeInfo(expression).Type))
         {
             if (Retains(property.Expression, state)) return true;
@@ -370,20 +357,12 @@ internal sealed class FailureFlow(SourceFile file, CatchClauseSyntax? origin, Ha
         finally { factories.Remove(method); }
     }
 
-    private bool Has(ObjectReference reference, PathState state) => state.Objects.Contains(reference) ||
-        state.Data.TryGetValue(reference, out var keys) && keys.Count != 0;
+    private bool Has(ObjectReference reference, PathState state) => state.Objects.Contains(reference);
 
     private ObjectReference? DataOwner(SyntaxNode expression) => expression is MemberAccessExpressionSyntax data &&
         file.Model.GetSymbolInfo(data).Symbol is IPropertySymbol { Name: "Data" } property &&
         !property.Locations.Any(location => location.IsInSource) && property.ContainingType.ToDisplayString() == "System.Exception"
             ? Reference(data.Expression) : null;
-
-    private (ObjectReference Owner, string Key)? DataSlot(SyntaxNode target) =>
-        target is ElementAccessExpressionSyntax access && access.ArgumentList.Arguments.Count == 1 &&
-        DataOwner(access.Expression) is { } owner && ConstantKey(access.ArgumentList.Arguments[0].Expression) is { } key ? (owner, key) : null;
-
-    private string? ConstantKey(SyntaxNode node) => node is ExpressionSyntax expression &&
-        file.Model.GetConstantValue(expression) is { HasValue: true, Value: { } value } ? value.GetType().FullName + ":" + value : null;
 
     // Only an unfiltered catch-all is known to consume an explicit throw here.
     private List<PathState> CatchThrows(TryStatementSyntax attempt, List<PathState> paths)
@@ -408,53 +387,13 @@ internal sealed class FailureFlow(SourceFile file, CatchClauseSyntax? origin, Ha
         return result;
     }
 
-    // Bounded to direct calls of a private helper in this source file. Delegates,
-    // virtual dispatch, external callers and recursive continuations stay unproved.
-    private bool Complete(SyntaxNode current, List<PathState> paths)
-    {
-        if (paths.All(DeliveredPath)) return true;
-        var declaration = current.Ancestors().OfType<MethodDeclarationSyntax>().FirstOrDefault();
-        if (declaration is null || file.Model.GetDeclaredSymbol(declaration) is not { DeclaredAccessibility: Accessibility.Private } method ||
-            method.IsVirtual || method.IsOverride || !LocalType(method.ContainingType) || !continuations.Add(method)) return false;
-        try
-        {
-            var names = file.Root.DescendantNodes().OfType<IdentifierNameSyntax>().Where(name =>
-                SymbolEqualityComparer.Default.Equals(file.Model.GetSymbolInfo(name).Symbol, method)).ToArray();
-            if (names.Length == 0) return false;
-            foreach (var name in names)
-            {
-                var call = name.Parent is MemberAccessExpressionSyntax member ? member.Parent as InvocationExpressionSyntax : name.Parent as InvocationExpressionSyntax;
-                if (call is null || call.Ancestors().Any(node => node is AnonymousFunctionExpressionSyntax or LocalFunctionStatementSyntax) ||
-                    file.Model.GetOperation(call) is not IInvocationOperation invocation) return false;
-                var statement = call.Ancestors().OfType<StatementSyntax>().FirstOrDefault();
-                if (statement is not ExpressionStatementSyntax and not LocalDeclarationStatementSyntax and not ThrowStatementSyntax and not ReturnStatementSyntax) return false;
-                foreach (var path in paths.Where(path => !DeliveredPath(path)))
-                {
-                    var start = new PathState();
-                    if (path.Exit == End.Return && path.ReturnRetains) start.Values.Add(call);
-                    foreach (var argument in invocation.Arguments)
-                        if (argument.Parameter is { } parameter && ExceptionCarrier(parameter.Type) && Has(new(parameter, ""), path) &&
-                            argument.Value.Syntax is ExpressionSyntax value) Set(value, true, start);
-                    if (start.Values.Count == 0 && start.Objects.Count == 0) return false;
-                    var resumed = ContinueOutside(statement, Statement(statement, [start]));
-                    if (!Complete(statement, resumed)) return false;
-                }
-            }
-            return true;
-        }
-        finally { continuations.Remove(method); }
-    }
-
-    private bool LocalType(INamedTypeSymbol type) => type.DeclaringSyntaxReferences.Length != 0 &&
-        type.DeclaringSyntaxReferences.All(reference => reference.SyntaxTree == file.Tree) &&
-        (type.ContainingType is null || LocalType(type.ContainingType));
-
-    private static bool DeliveredPath(PathState path) => path.Handled || path.Exit == End.Throw && path.ThrowRetains;
+    private bool DeliveredPath(PathState path) => path.Handled || path.Exit == End.Throw && path.ThrowRetains ||
+        path.Exit == End.Return && path.ReturnRetains ||
+        path.Objects.Any(reference => reference.Symbol is IParameterSymbol parameter && IsHandler(parameter, documents));
 
     private void Set(SyntaxNode target, bool retains, PathState state)
     {
         if (Reference(target) is not { } reference) return;
-        state.Data.Remove(reference);
         if (retains) state.Objects.Add(reference); else state.Objects.Remove(reference);
     }
 

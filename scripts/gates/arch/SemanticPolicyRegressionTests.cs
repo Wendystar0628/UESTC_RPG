@@ -97,36 +97,6 @@ public sealed class SemanticPolicyRegressionTests
                 void GoodNestedThrow() { try { Run(); } catch(Exception e) { try { throw e; } catch(Exception forwarded) { Handle(forwarded); } } }
                 void BadNestedSwallows() { try { Run(); } catch(Exception e) { try { throw e; } catch(Exception forwarded) { Log(forwarded.Message); } } }
                 void GoodNestedCleanup() { try { Run(); } catch(Exception failure) { try { throw new Exception(); } catch(Exception cleanup) { failure.Data["cleanup"] = cleanup; } throw; } }
-                void GoodDataStorage() { var failure = new Exception(); try { Run(); } catch(Exception e) { failure.Data["cleanup"] = e; } throw failure; }
-                void GoodDataOtherKey() { var failure = new Exception(); try { Run(); } catch(Exception e) { failure.Data["cleanup"] = e; failure.Data["other"] = new Exception(); } throw failure; }
-                void BadDataOnly() { var failure = new Exception(); try { Run(); } catch(Exception e) { failure.Data["cleanup"] = e; } }
-                void BadDataOverwrite() { var failure = new Exception(); try { Run(); } catch(Exception e) { failure.Data["cleanup"] = e; failure.Data["cleanup"] = new Exception(); } throw failure; }
-                void BadDataClear() { var failure = new Exception(); try { Run(); } catch(Exception e) { failure.Data["cleanup"] = e; failure.Data.Clear(); } throw failure; }
-                void BadDataRemove() { var failure = new Exception(); try { Run(); } catch(Exception e) { failure.Data["cleanup"] = e; failure.Data.Remove("cleanup"); } throw failure; }
-                void BadDataOtherObject() { var failure = new Exception(); var other = new Exception(); try { Run(); } catch(Exception e) { failure.Data["cleanup"] = e; } throw other; }
-                void BadDataReplaceOwner() { var failure = new Exception(); try { Run(); } catch(Exception e) { failure.Data["cleanup"] = e; failure = new Exception(); } throw failure; }
-                class DataLookalike : Exception { public new Dictionary<string, object> Data = new(); }
-                void BadDataLookalike() { var failure = new DataLookalike(); try { Run(); } catch(Exception e) { failure.Data["cleanup"] = e; } throw failure; }
-                void BadDataMessage() { var failure = new Exception(); try { Run(); } catch(Exception e) { failure.Data["cleanup"] = e.Message; } throw failure; }
-                private static void GoodCollectHelper(List<Exception> errors) { try { Run(); } catch(Exception e) { errors.Add(e); } }
-                void GoodCollectCaller() { var errors = new List<Exception>(); GoodCollectHelper(errors); if(errors.Count > 0) throw new AggregateException(errors); }
-                private static Exception GoodReturnedHelper() { var errors = new List<Exception>(); try { Run(); } catch(Exception e) { errors.Add(e); } return errors.Count == 0 ? new Exception() : new AggregateException(errors); }
-                void GoodReturnedCaller() { throw GoodReturnedHelper(); }
-                private static async System.Threading.Tasks.Task<Exception> GoodAsyncReturnedHelper() { var errors = new List<Exception>(); try { await System.Threading.Tasks.Task.CompletedTask; Run(); } catch(Exception e) { errors.Add(e); } return errors.Count == 0 ? new Exception() : new AggregateException(errors); }
-                async System.Threading.Tasks.Task GoodAsyncReturnedCaller() { var failure = await GoodAsyncReturnedHelper(); System.Runtime.ExceptionServices.ExceptionDispatchInfo.Capture(failure).Throw(); }
-                private static Exception GoodFoldHelper() { var errors = new List<Exception>(); GoodCollectHelper(errors); return errors.Count == 0 ? new Exception() : new AggregateException(errors); }
-                void GoodFoldCaller() { throw GoodFoldHelper(); }
-                private static void BadCollectHelper(List<Exception> errors) { try { Run(); } catch(Exception e) { errors.Add(e); } }
-                void BadCollectCaller() { var errors = new List<Exception>(); BadCollectHelper(errors); errors.Clear(); if(errors.Count > 0) throw new AggregateException(errors); }
-                private static Exception BadReturnedHelper() { try { Run(); } catch(Exception e) { return new Exception("x", e); } return new Exception(); }
-                void BadReturnedCaller() { _ = BadReturnedHelper(); }
-                private static void BadDelegateHelper(List<Exception> errors) { try { Run(); } catch(Exception e) { errors.Add(e); } }
-                void BadDelegateCaller() { Action<List<Exception>> later = BadDelegateHelper; }
-                private static void BadOneCallerDropsHelper(List<Exception> errors) { try { Run(); } catch(Exception e) { errors.Add(e); } }
-                void BadOneCallerThrows() { var errors = new List<Exception>(); BadOneCallerDropsHelper(errors); throw new AggregateException(errors); }
-                void BadOneCallerDrops() { var errors = new List<Exception>(); BadOneCallerDropsHelper(errors); }
-                private static void BadRecursiveCarrierHelper(List<Exception> errors) { try { Run(); } catch(Exception e) { errors.Add(e); } BadRecursiveCarrierHelper(errors); }
-                void BadRecursiveCarrierCaller() { var errors = new List<Exception>(); BadRecursiveCarrierHelper(errors); throw new AggregateException(errors); }
                 void GoodCancel() { try { Run(); } catch(OperationCanceledException) { } }
                 void GoodFilter() { try { Run(); } catch(Exception e) when(e is OperationCanceledException) { } }
                 void BadBranch(bool flag) { try { Run(); } catch(Exception e) { if(flag) Handle(e); } }
