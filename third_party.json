@@ -1226,7 +1226,7 @@
       "version": "6.0.0",
       "kind": "python-wheel",
       "managedBy": "manual",
-      "provider": "C-260",
+      "provider": "TOOL-260",
       "license": "Apache-2.0",
       "source": "https://github.com/gorakhargosh/watchdog",
       "packageIndex": "https://pypi.org/project/watchdog/6.0.0/",
@@ -1236,7 +1236,7 @@
       "sha256": "cbafb470cf848d93b5d013e2ecb245d4aa1c8fd0504e863ccefa32445359d680",
       "hashStatus": "VERIFIED_PYPI_WHEEL_DOWNLOAD_MATCHES_REQUIREMENTS_LOCK_AND_PYPI",
       "lockfile": "scripts/requirements.lock",
-      "lockfileOwner": "C-260",
+      "lockfileOwner": "TOOL-260",
       "lockfileSha256": "47367ea6344735ff4ec0cd9ebf62765aa214b5acdb3ca036f580e08df56341d8",
       "licenseEvidence": {
         "metadata": "watchdog-6.0.0.dist-info/METADATA",
@@ -1253,7 +1253,7 @@
       "developmentOnly": true,
       "exported": false,
       "vendored": false,
-      "scope": "C-260 author dashboard document filesystem event watcher only; not part of the game export or vendored project source.",
+      "scope": "TOOL-260 author dashboard document filesystem event watcher only; not part of the game export or vendored project source.",
       "licenseReview": {
         "status": "ALLOWLIST_DECLARATION_VERIFIED",
         "scope": "Pinned Windows amd64 wheel and its bundled license only."

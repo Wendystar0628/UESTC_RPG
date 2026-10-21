@@ -1,0 +1,14 @@
+[
+  {
+    "key": "GAME",
+    "label": "游戏本体"
+  },
+  {
+    "key": "TOOL",
+    "label": "协作与工具"
+  },
+  {
+    "key": "BATCH",
+    "label": "批量机械活"
+  }
+]
