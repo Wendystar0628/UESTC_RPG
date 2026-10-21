@@ -4,13 +4,11 @@ using N = System.Numerics;
 
 namespace Campus.Camera;
 
-/// <summary>Presentation pose and preference-driven fly FOV interpolation.</summary>
-internal sealed class ObserverPresentation(FlightTuning tuning)
+/// <summary>Presentation pose and current mode FOV preferences.</summary>
+internal sealed class ObserverPresentation
 {
     private ISettingsSection? _settings;
-    private float _fovFrom;
-    private float _fovTarget;
-    private float _fovElapsed;
+    private float _appliedFlyFov;
 
     public Pose Value { get; private set; }
     private float FlyFov => _settings?.Get(UiSettingDefinitions.FlyFov) ?? UiSettingDefinitions.FlyFov.Default;
@@ -28,37 +26,20 @@ internal sealed class ObserverPresentation(FlightTuning tuning)
     public void Set(Pose pose, float fov)
     {
         Value = pose with { FovDeg = fov };
-        _fovFrom = Value.FovDeg.Value;
-        _fovTarget = FlyFov;
-        _fovElapsed = tuning.ModeFovSeconds;
-    }
-
-    public void BeginFly(Pose pose)
-    {
-        Value = pose;
-        _fovFrom = Value.FovDeg ?? FlyFov;
-        _fovTarget = FlyFov;
-        _fovElapsed = 0;
+        _appliedFlyFov = FlyFov;
     }
 
     public void ApplyProjection(Pose pose) => Value = pose;
     public void MoveTo(N.Vector3 position) => Value = Value with { Position = position };
     public void Look(Pose pose) => Value = pose;
 
-    public void AdvanceFlyFov(float seconds)
+    public void RefreshFlyFov()
     {
         float target = FlyFov;
-        if (target != _fovTarget)
-        {
-            _fovFrom = Value.FovDeg ?? target;
-            _fovTarget = target;
-            _fovElapsed = 0;
-        }
-        // Keep an explicitly supplied review FOV until a mode or preference change.
-        if (_fovElapsed >= tuning.ModeFovSeconds) return;
-        _fovElapsed = MathF.Min(_fovElapsed + seconds, tuning.ModeFovSeconds);
-        float t = ScalarMath.Smootherstep(_fovElapsed / tuning.ModeFovSeconds);
-        Value = Value with { FovDeg = _fovFrom + (_fovTarget - _fovFrom) * t };
+        // Preserve an explicit review FOV until the preference itself changes.
+        if (target == _appliedFlyFov) return;
+        _appliedFlyFov = target;
+        Value = Value with { FovDeg = target };
     }
 
     public static bool IsFinite(Pose pose) =>

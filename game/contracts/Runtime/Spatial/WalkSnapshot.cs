@@ -15,7 +15,7 @@ public enum WalkHold : ushort
     None = 0, CollisionNotReady = 1,
     MapTransition = 4, PhysicsPaused = 8, PlacementInvalid = 16
 }
-public enum WalkTransition : byte { None, Landing, SafetyReturn, Elevator }
+public enum WalkTransition : byte { None = 0, SafetyReturn = 2, Elevator = 3 }
 public enum WalkReset : byte
 {
     None, ModeChanged, Teleport, SafetyReturn, Elevator, MapChanged, Restore, NewGame, Resume, DataReload

@@ -135,7 +135,6 @@ internal sealed class ObserverFlight
         _flowProjection = null;
     }
 
-    public void ConstrainVelocity(N.Vector3 velocity) => _motion.ConstrainVelocity(velocity);
     public void SetSpeedStep(int step) => SpeedStep = Math.Clamp(step, 1, _tuning.SpeedSteps);
     public void ChangeSpeed(int steps) => SetSpeedStep(SpeedStep + steps);
 

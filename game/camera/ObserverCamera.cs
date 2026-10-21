@@ -32,6 +32,7 @@ public partial class ObserverCamera : Node, ICameraRig, IObserverState, IViewCon
     private bool _worldResetPending = true;
     private IWorldState? _world;
     private TaskCompletionSource<ModeSwitchResult>? _walkEntry;
+    private bool _modeSwitchRunning;
     private ObserverListener? _listener;
 
     public event Action? WalkEntryRefused;
@@ -40,7 +41,7 @@ public partial class ObserverCamera : Node, ICameraRig, IObserverState, IViewCon
 
     public ObserverCamera()
     {
-        _presentation = new(Tuning);
+        _presentation = new();
         _flight = new(Tuning);
         _controls = new(this, Tuning);
         ProcessPriority = FramePriority.Camera;
@@ -96,7 +97,7 @@ public partial class ObserverCamera : Node, ICameraRig, IObserverState, IViewCon
         SyncWalkPlacementPresentation();
         if (AdvanceWalkEntry()) { _flight.Reset(); _flight.SetEdgeFog(0); return; }
         if (!IsPlaying || _mode is null) { _flight.Reset(); _flight.SetEdgeFog(0); return; }
-        if (Mode == ViewMode.Fly && ActiveTransit is null) _presentation.AdvanceFlyFov(seconds);
+        if (Mode == ViewMode.Fly && ActiveTransit is null) _presentation.RefreshFlyFov();
         if (Mode == ViewMode.Walk && _walk is { ExitRequested: true })
         {
             _ = SetMode(ViewMode.Fly, ModeSwitchVia.Key);
@@ -123,7 +124,8 @@ public partial class ObserverCamera : Node, ICameraRig, IObserverState, IViewCon
 
     private void SyncWalkPlacementPresentation()
     {
-        if (_flow?.State is not (AppState.Boot or AppState.Entering) || _flight.Map is null
+        bool coveredWalkEntry = _flow?.State == AppState.Playing && _modeSwitchRunning && _walkEntry is not null;
+        if ((_flow?.State is not (AppState.Boot or AppState.Entering) && !coveredWalkEntry) || _flight.Map is null
             || _walk is not { ExitRequested: false, PlacementArrival: { } arrival }
             || (!_walk.Active && _walkEntry is null)
             || arrival.Done.IsCanceled || arrival.Done.IsFaulted
@@ -291,14 +293,42 @@ public partial class ObserverCamera : Node, ICameraRig, IObserverState, IViewCon
     public Task<ModeSwitchResult> SetMode(ViewMode mode, ModeSwitchVia via)
     {
         _ = mode switch { ViewMode.Fly or ViewMode.Walk => 0, _ => throw new ArgumentOutOfRangeException(nameof(mode)) };
-        if (_walkEntry is not null)
-        {
-            CancelWalkEntry();
-            return Task.FromResult(ModeSwitchResult.Refused);
-        }
+        if (_modeSwitchRunning || _walkEntry is not null) return Task.FromResult(ModeSwitchResult.Refused);
         if (_rules is null || !_rules.Current.ViewModes.Contains(mode)) return Task.FromResult(ModeSwitchResult.Refused);
         if (mode == _mode) return Task.FromResult(ModeSwitchResult.Ok);
         ActiveTransit?.Cancel(); ActiveTransit = null;
+        return IsPlaying && _mode is not null ? SwitchModeCovered(mode) : ApplyMode(mode);
+    }
+
+    private async Task<ModeSwitchResult> SwitchModeCovered(ViewMode mode)
+    {
+        if (_transit is null || !_transit.IsReady)
+            throw new InvalidOperationException("Mode switching requires the production transit driver.");
+        _modeSwitchRunning = true;
+        ITransitHandle? handle = null;
+        var applied = ModeSwitchResult.Refused;
+        try
+        {
+            ClearInputMotion();
+            handle = _transit.SwitchMode(async cancellation =>
+            {
+                using var registration = cancellation.Register(CancelWalkEntry);
+                cancellation.ThrowIfCancellationRequested();
+                applied = await ApplyMode(mode).WaitAsync(cancellation);
+                return applied;
+            });
+            ActiveTransit = handle;
+            return await handle.Done == TransitResult.Arrived ? applied : ModeSwitchResult.Refused;
+        }
+        finally
+        {
+            if (ReferenceEquals(ActiveTransit, handle)) ActiveTransit = null;
+            _modeSwitchRunning = false;
+        }
+    }
+
+    private Task<ModeSwitchResult> ApplyMode(ViewMode mode)
+    {
         switch (mode)
         {
             case ViewMode.Walk:
@@ -310,25 +340,16 @@ public partial class ObserverCamera : Node, ICameraRig, IObserverState, IViewCon
                 _flight.Reset(); _controls.State.Clear(); _flight.SetEdgeFog(0);
                 return _walkEntry.Task;
             case ViewMode.Fly:
-                return SwitchToFly();
+                bool landingRefused = _walk?.ExitRequested == true && !PlacementReadFailed();
+                var origin = _walk is { Active: true } ? _walk.EyePose : Pose;
+                _walk?.Leave();
+                _mode = ViewMode.Fly;
+                SetPose(origin with { FovDeg = _presentation.DefaultFov(ViewMode.Fly) });
+                _flight.Reset(); _controls.State.Clear(); _flight.SetEdgeFog(0);
+                if (landingRefused) WalkEntryRefused?.Invoke();
+                return Task.FromResult(ModeSwitchResult.Ok);
             default: throw new ArgumentOutOfRangeException(nameof(mode));
         }
-    }
-
-    private async Task<ModeSwitchResult> SwitchToFly()
-    {
-        bool landingRefused = _walk?.ExitRequested == true && !PlacementReadFailed();
-        var map = _flight.Map;
-        var origin = _walk is { Active: true } ? _walk.EyePose : Pose;
-        var pose = await LegalizePrepared(origin);
-        if (!ReferenceEquals(map, _flight.Map)) return ModeSwitchResult.Refused;
-        N.Vector3 inheritedVelocity = _walk is { Active: true } body ? new(body.Velocity.X, 0, body.Velocity.Z) : default;
-        _walk?.Leave();
-        _presentation.BeginFly(pose);
-        _mode = ViewMode.Fly; _flight.Reset(); _controls.State.Clear(); _flight.SetEdgeFog(0);
-        _flight.ConstrainVelocity(inheritedVelocity);
-        if (landingRefused) WalkEntryRefused?.Invoke();
-        return ModeSwitchResult.Ok;
     }
 
     private bool AdvanceWalkEntry()
@@ -338,10 +359,15 @@ public partial class ObserverCamera : Node, ICameraRig, IObserverState, IViewCon
         if (_walk.ExitRequested)
         {
             bool readFailed = PlacementReadFailed();
+            var failedArrival = _walk.PlacementArrival;
             _walkEntry = null;
             _walk.Leave();
-            completion.TrySetResult(ModeSwitchResult.Refused);
-            if (!readFailed) WalkEntryRefused?.Invoke();
+            if (readFailed && failedArrival is { } failed)
+            {
+                if (failed.Done.IsCanceled) completion.TrySetCanceled();
+                else completion.TrySetException(failed.Done.Exception!.InnerExceptions);
+            }
+            else { completion.TrySetResult(ModeSwitchResult.Refused); WalkEntryRefused?.Invoke(); }
             return false;
         }
         if (!_walk.CollisionReady) return true;
@@ -357,7 +383,9 @@ public partial class ObserverCamera : Node, ICameraRig, IObserverState, IViewCon
     {
         if (_walkEntry is not { } completion) return;
         _walkEntry = null;
+        var arrival = _walk?.PlacementArrival;
         _walk?.Leave();
+        if (arrival is { Done.IsCompleted: false }) arrival.Cancel();
         completion.TrySetResult(ModeSwitchResult.Refused);
     }
 

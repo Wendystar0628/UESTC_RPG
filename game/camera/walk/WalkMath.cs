@@ -79,5 +79,4 @@ public static class WalkMath
         return velocity;
     }
 
-    public static float DescentSeconds(float height) => Math.Clamp(.4f + .4f * MathF.Log10(MathF.Max(height, 1f)), WalkTuning.NearLandingSeconds, 1.6f);
 }

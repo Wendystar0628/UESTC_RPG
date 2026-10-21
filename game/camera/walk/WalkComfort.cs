@@ -6,7 +6,7 @@ using N = System.Numerics;
 
 namespace Campus.Camera.Walk;
 
-/// <summary>Stair smoothing, gait presentation, FOV response and entry descent.</summary>
+/// <summary>Stair smoothing, gait presentation, FOV response.</summary>
 internal sealed class WalkComfort(CharacterBody3D body, WalkMovementTelemetry telemetry)
 {
     private float _stepCameraOffset;
@@ -19,16 +19,11 @@ internal sealed class WalkComfort(CharacterBody3D body, WalkMovementTelemetry te
 
     private ISettingsSection? _uiSettings;
     private float _fov = UiSettingDefinitions.WalkFov.Default;
-    private Pose _descentFrom;
-    private float _descentDuration;
-    private float _descentElapsed;
 
-    public bool Descending => _descentDuration > 0;
     public float Fov => _fov;
     private float WalkFov => _uiSettings?.Get(UiSettingDefinitions.WalkFov) ?? UiSettingDefinitions.WalkFov.Default;
     private static float RenderFraction => (float)Math.Clamp(Engine.GetPhysicsInterpolationFraction(), 0, 1);
     public void BindSettings(ISettingsSection? settings) => _uiSettings = settings;
-    public void UseEntryFov(Pose from) => _fov = from.FovDeg ?? UiSettingDefinitions.FlyFov.Default;
     public void UseWalkFov() => _fov = WalkFov;
     public float EyeRollDeg(bool suppressed) => suppressed ? 0 : float.Lerp(_previousBobRoll, _bobRoll, RenderFraction);
 
@@ -50,42 +45,6 @@ internal sealed class WalkComfort(CharacterBody3D body, WalkMovementTelemetry te
         _stepCameraOffset = _previousStepCameraOffset = 0;
         _bobWeight = _bobRoll = _previousBobRoll = 0;
         _bobOffset = _previousBobOffset = N.Vector3.Zero;
-    }
-
-    public void ClearDescent()
-    {
-        _descentFrom = default;
-        _descentDuration = _descentElapsed = 0;
-    }
-
-    public void CancelDescent() => _descentDuration = 0;
-
-    public void BeginDescent(Pose from, N.Vector3 feet, float eyeHeight)
-    {
-        _descentFrom = from;
-        float height = from.Position.Y - (feet.Y + eyeHeight);
-        float distance = N.Vector3.Distance(from.Position, feet + N.Vector3.UnitY * eyeHeight);
-        _descentDuration = distance <= WalkTuning.NearLandingDistance ? WalkTuning.NearLandingSeconds
-            : WalkMath.DescentSeconds(MathF.Max(height, distance));
-        _descentElapsed = 0;
-    }
-
-    public bool AdvanceDescent(float dt)
-    {
-        _descentElapsed += dt;
-        if (_descentElapsed < _descentDuration) { Reset(); return false; }
-        _descentDuration = 0;
-        _fov = WalkFov;
-        return true;
-    }
-
-    public Pose DescentEye(N.Vector3 feet, float eyeHeight, float yaw, float pitch)
-    {
-        float t = ScalarMath.Smootherstep(_descentElapsed / _descentDuration);
-        var destination = feet + N.Vector3.UnitY * eyeHeight;
-        var position = N.Vector3.Lerp(_descentFrom.Position, destination, t);
-        float fromFov = _descentFrom.FovDeg ?? UiSettingDefinitions.FlyFov.Default;
-        return new(position, yaw, pitch, fromFov + (WalkFov - fromFov) * t);
     }
 
     public Pose RenderEye(WalkMotionSample sample, float eyeHeight, float pitch)

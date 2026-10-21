@@ -23,6 +23,8 @@ public interface ITransitDriver
     /// <summary>True only when real transit execution and its readiness dependencies are available. Stub implementations remain false.</summary>
     bool IsReady { get; }
     ITransitHandle Start(Pose from, Pose to, TransitOptions? options = null);
+    /// <summary>Runs a camera-owned mode commit under the same loading, cancellation and arrival lifecycle as teleport.</summary>
+    ITransitHandle SwitchMode(Func<CancellationToken, Task<ModeSwitchResult>> apply);
     /// <summary>The settled destination while a transit is active; null when no transit is running.</summary>
     Pose? Destination { get; }
 }

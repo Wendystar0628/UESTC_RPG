@@ -18,7 +18,8 @@ public sealed class TransitDriver(ICameraRig camera, IAppLoadingPresentation loa
     private TransitRun? _active;
 
     public bool IsReady => true;
-    public Pose? Destination => _active is { Finished: false, TerrainReady: true } active ? active.To : null;
+    public Pose? Destination => _active is { Finished: false } active
+        ? active.Arrival?.Destination.Pose ?? (active.TerrainReady ? active.To : null) : null;
 
     public ITransitHandle Start(Pose from, Pose to, TransitOptions? options = null)
     {
@@ -29,6 +30,16 @@ public sealed class TransitDriver(ICameraRig camera, IAppLoadingPresentation loa
         };
         _active?.Cancel();
         var run = new TransitRun(kind, to, options?.LandOn);
+        _active = run;
+        _ = Execute(run);
+        return run;
+    }
+
+    public ITransitHandle SwitchMode(Func<CancellationToken, Task<ModeSwitchResult>> apply)
+    {
+        ArgumentNullException.ThrowIfNull(apply);
+        _active?.Cancel();
+        var run = new TransitRun(TransitKind.Teleport, camera.Pose, null) { ApplyMode = apply };
         _active = run;
         _ = Execute(run);
         return run;
@@ -51,38 +62,39 @@ public sealed class TransitDriver(ICameraRig camera, IAppLoadingPresentation loa
             run.Progress = 0.25f;
             if (run.Cancelled) return;
 
-            if (!await PrepareDestinationTerrain(run)) return;
-
-            Pose arrival;
-            if (body is not null)
+            IMapArrival? destination;
+            if (run.ApplyMode is { } apply)
             {
-                arrival = new Pose(run.LandOn ?? run.To.Position, run.To.YawDeg, 0);
-                body.Warp(arrival);
+                // The camera owns mode and presentation writes. The driver retains the same
+                // covered-screen, arrival, cancellation and failure lifecycle for every entry.
+                var applied = await apply(run.Token);
+                run.Token.ThrowIfCancellationRequested();
+                destination = applied switch
+                {
+                    ModeSwitchResult.Ok or ModeSwitchResult.Relocated => camera.Mode switch
+                    {
+                        ViewMode.Walk => walk?.PlacementArrival ?? throw new InvalidOperationException("Mode entry has no walking arrival."),
+                        ViewMode.Fly => runtime.Arrive(camera.Pose, ViewMode.Fly),
+                        _ => throw new InvalidOperationException("Unknown view mode.")
+                    },
+                    ModeSwitchResult.Refused => null,
+                    _ => throw new ArgumentOutOfRangeException(nameof(applied))
+                };
             }
             else
             {
-                arrival = run.To;
-                camera.SetPose(arrival);
+                if (!await PrepareDestinationTerrain(run)) return;
+                destination = await PlaceDestination(tree, body, run);
             }
             run.Progress = 0.5f;
-            IMapArrival destination;
-            if (body is not null)
-            {
-                while (body.PlacementArrival is null && !body.ExitRequested)
-                {
-                    await tree.ToSignal(tree, SceneTree.SignalName.ProcessFrame);
-                    run.Token.ThrowIfCancellationRequested();
-                }
-                destination = body.PlacementArrival ?? throw new InvalidOperationException("Transit could not place its walking destination.");
-            }
-            else destination = runtime.Arrive(arrival, ViewMode.Fly);
             run.Arrival = destination;
-
-            await destination.Done.WaitAsync(run.Token);
-            RequireCurrentArrival(destination);
-            if (body is not null && !await WaitForWalkSettle(tree, body, run)) return;
-
-            RequireCurrentArrival(destination);
+            if (destination is not null)
+            {
+                await destination.Done.WaitAsync(run.Token);
+                RequireCurrentArrival(destination);
+                if (body is not null && run.ApplyMode is null && !await WaitForWalkSettle(tree, body, run)) return;
+                RequireCurrentArrival(destination);
+            }
             run.Progress = 0.75f;
             screen.Report(1, 1);
             await screen.Hide().WaitAsync(run.Token);
@@ -103,6 +115,22 @@ public sealed class TransitDriver(ICameraRig camera, IAppLoadingPresentation loa
             var failure = failures is null ? null : failures.Count == 1 ? failures[0] : new AggregateException(failures);
             run.Finish(result, failure);
         }
+    }
+
+    private async Task<IMapArrival> PlaceDestination(SceneTree tree, IWalkController? body, TransitRun run)
+    {
+        if (body is null)
+        {
+            camera.SetPose(run.To);
+            return runtime.Arrive(run.To, ViewMode.Fly);
+        }
+        body.Warp(new Pose(run.LandOn ?? run.To.Position, run.To.YawDeg, 0));
+        while (!body.CollisionReady && !body.ExitRequested)
+        {
+            await tree.ToSignal(tree, SceneTree.SignalName.ProcessFrame);
+            run.Token.ThrowIfCancellationRequested();
+        }
+        return body.PlacementArrival ?? throw new InvalidOperationException("Transit could not place its walking destination.");
     }
 
     private async Task<bool> PrepareDestinationTerrain(TransitRun run)
@@ -156,6 +184,7 @@ public sealed class TransitDriver(ICameraRig camera, IAppLoadingPresentation loa
         public bool TerrainReady { get; set; }
         public bool Finished => _done.Task.IsCompleted;
         public IMapArrival? Arrival { get; set; }
+        public Func<CancellationToken, Task<ModeSwitchResult>>? ApplyMode { get; init; }
         private readonly CancellationTokenSource _cancellation = new();
         public CancellationToken Token => _cancellation.Token;
 

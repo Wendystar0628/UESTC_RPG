@@ -50,14 +50,14 @@ public partial class WalkController : CharacterBody3D, IWalkController, IWalkTel
     public int SpeedStep => _locomotion.SpeedStep;
     public int SafetyReturnCount => _placement.SafetyReturnCount;
     public bool IsSettled => !_terrain.LandingPointsPending && (!Active || (!_swimming.Active && Grounded && CollisionReady
-        && !_comfort.Descending && !ExitRequested && _map is not null && !WalkSafetyQueries.InWater(_map.World.Spatial, _feet)));
+        && !ExitRequested && _map is not null && !WalkSafetyQueries.InWater(_map.World.Spatial, _feet)));
     public bool IsReady(Pose pose) => !_terrain.LandingPointsPending && !_persistence.HistoryPending;
     public Exception? Failure => _terrain.Failure;
     public Pose BodyPose => new(_feet, _yaw, _pitch);
     public N.Vector3 ObserverEye => _feet + N.Vector3.UnitY * EyeHeight;
     N.Vector3 IWalkController.Velocity => Velocity.ToNumerics();
     public Pose SettledEyePose => new(ResolveSettledFeet().Position + N.Vector3.UnitY * ShoreEyeHeight, _yaw, _pitch, _comfort.Fov);
-    public float EyeRollDeg => _comfort.EyeRollDeg(_appFrozen || _placement.EntryFrom is not null || _comfort.Descending
+    public float EyeRollDeg => _comfort.EyeRollDeg(_appFrozen || _placement.EntryPending
         || _placement.NeedsCheck || !Active);
     private float EyeHeight => _swimming.Active ? WaterMotionRules.FeetBelowSurface + WaterMotionRules.EyeAboveSurface : ShoreEyeHeight;
     private float ShoreEyeHeight => _locomotion.Crouching ? WalkRules.CrouchingEye : WalkRules.StandingEye;
@@ -82,9 +82,7 @@ public partial class WalkController : CharacterBody3D, IWalkController, IWalkTel
     {
         get
         {
-            if (_placement.EntryFrom is { } pending) return pending with { YawDeg = _yaw, PitchDeg = _pitch };
             if (_appFrozen) return EyeAt(_feet);
-            if (_comfort.Descending) return _comfort.DescentEye(_feet, EyeHeight, _yaw, _pitch);
             return _comfort.RenderEye(MotionSample, EyeHeight, _pitch);
         }
     }
@@ -164,26 +162,22 @@ public partial class WalkController : CharacterBody3D, IWalkController, IWalkTel
         ValidatePose(from);
         ResolveServices();
         if (_map is null) return ModeSwitchResult.Refused;
+        if (_placement.RecoveryTarget(from, manual: false) is not { } target) return ModeSwitchResult.Refused;
         _appFrozen = false;
         _locomotion.Enter();
         ApplyHeight();
-        Place(from, WalkTuning.LandingLift);
-        _placement.BeginEntry(from);
-        _terrain.PrepareEntry(from);
-        _comfort.UseEntryFov(from);
+        Place(target);
+        _placement.BeginEntry();
         return ModeSwitchResult.Ok;
     }
 
     public void Leave()
     {
-        _telemetry.QueueTakeoff(Active);
         ResetSwimming();
         ResetGait();
         _appFrozen = false;
         _locomotion.ClearInput();
-        _comfort.CancelDescent();
         _placement.Leave();
-        _terrain.CancelEntry();
         Velocity = Vector3.Zero;
         Grounded = false;
         CollisionReady = false;
@@ -195,8 +189,6 @@ public partial class WalkController : CharacterBody3D, IWalkController, IWalkTel
         ResetGait();
         _placement.Fail();
         _locomotion.ClearInput();
-        _comfort.CancelDescent();
-        _terrain.CancelEntry();
         Velocity = Vector3.Zero;
         Grounded = false;
         CollisionReady = false;
@@ -211,16 +203,15 @@ public partial class WalkController : CharacterBody3D, IWalkController, IWalkTel
 
     public void SetInput(WalkInput input) => _locomotion.SetInput(input);
     public void SetSpeedStep(int step) => _locomotion.SetSpeedStep(step);
-    public void Warp(Pose feet) { Place(feet, 0); _telemetry.QueueTeleport(); }
+    public void Warp(Pose feet) { Place(feet); _telemetry.QueueTeleport(); }
 
-    private void Place(Pose feet, float lift, float searchRadius = float.PositiveInfinity)
+    private void Place(Pose feet, float searchRadius = float.PositiveInfinity)
     {
         ValidatePose(feet);
         SetLook(feet.YawDeg, feet.PitchDeg);
         ResetSwimming();
         ResetGait();
-        _telemetry.ClearTouchdown();
-        _placement.Begin(feet, lift, searchRadius);
+        _placement.Begin(feet, searchRadius);
         _feet = _previousFeet = feet.Position;
         if (IsInsideTree()) GlobalPosition = _feet.ToGodot();
         else Position = _feet.ToGodot();
@@ -229,7 +220,6 @@ public partial class WalkController : CharacterBody3D, IWalkController, IWalkTel
         Grounded = false;
         CollisionReady = false;
         _locomotion.ResetPlacement();
-        _comfort.ClearDescent();
         _comfort.UseWalkFov();
     }
 
@@ -246,9 +236,8 @@ public partial class WalkController : CharacterBody3D, IWalkController, IWalkTel
 
     private void StepPhysics(double delta)
     {
-        if ((!Active && _placement.EntryFrom is null) || !_bodyCollision.Initialized || _map is null || _collision is null || ExitRequested) return;
+        if ((!Active && !_placement.EntryPending) || !_bodyCollision.Initialized || _map is null || _collision is null || ExitRequested) return;
         if (!_terrain.TerrainReady(_feet, _bodyCollision.Radius)) { _previousFeet = _feet; return; }
-        if (!PrepareEntryCandidate()) return;
         // Resolve only after the node is live, never while constructing the flow/save/view dependency graph.
         _appFlow ??= KernelServices.Get<IAppFlow>();
         CollisionReady = _collision.Ready(_feet, _bodyCollision.Radius);
@@ -267,17 +256,6 @@ public partial class WalkController : CharacterBody3D, IWalkController, IWalkTel
         var plan = _locomotion.Integrate(dt, wasGrounded, _swimming.Active, _feet, _yaw,
             Velocity.ToNumerics(), water, _map, _collision, _uiSettings);
         IntegrateMotion(dt, wasGrounded, plan);
-    }
-
-    private bool PrepareEntryCandidate()
-    {
-        if (!_placement.EntryCandidatePending) return true;
-        if (!_terrain.CompleteEntry()) return false;
-        _placement.CompleteEntryCandidate();
-        var origin = _placement.EntryFrom!.Value;
-        var candidate = _placement.EntryCandidate(origin);
-        if (candidate.Position != origin.Position) MovePlacementFocus(candidate);
-        return true;
     }
 
     private bool FreezeUnlessPlaying()
@@ -302,18 +280,10 @@ public partial class WalkController : CharacterBody3D, IWalkController, IWalkTel
             _worldResetPending = false;
             ResetGait();
             _previousFeet = _feet;
-            if (!_comfort.Descending && _placement.EntryFrom is null) _comfort.UseWalkFov();
+            _comfort.UseWalkFov();
         }
         // Ready covers the current 64 m tile plus eight neighbours. Never integrate into an unmounted tile.
         if (!CollisionReady) { _previousFeet = _feet; _comfort.Reset(); return false; }
-        if (_comfort.Descending)
-        {
-            if (!_comfort.AdvanceDescent(dt)) return false;
-            _previousFeet = _feet;
-            ResetGait();
-            _telemetry.QueueTouchdown();
-            Velocity = Vector3.Down * WalkTuning.LandingSpeed;
-        }
         return true;
     }
 
@@ -408,7 +378,7 @@ public partial class WalkController : CharacterBody3D, IWalkController, IWalkTel
         Velocity = Vector3.Zero;
         _comfort.Reset();
     }
-    private Pose PlacementEye() => _placement.EntryFrom ?? EyeAt(_feet);
+    private Pose PlacementEye() => EyeAt(_feet);
 
     private Pose EyeAt(N.Vector3 feet) => new(feet + N.Vector3.UnitY * EyeHeight, _yaw, _pitch, _comfort.Fov);
     private Pose ResolveSettledFeet() => _placement.ResolveSettledFeet(Active, IsSettled, BodyPose);
@@ -437,16 +407,11 @@ public partial class WalkController : CharacterBody3D, IWalkController, IWalkTel
         _placement.CommitResolution();
         CollisionReady = true;
         _placement.WarnIfRepaired();
-        if (resolution.DescentFrom is { } from) _comfort.BeginDescent(from, resolution.Target.Position, EyeHeight);
-        else
-        {
-            if (resolution.Relocated) _telemetry.QueueTeleport();
-            _comfort.ClearDescent();
-            _comfort.UseWalkFov();
-            _locomotion.ClearInput();
-        }
+        if (resolution.Relocated) _telemetry.QueueTeleport();
+        _comfort.UseWalkFov();
+        _locomotion.ClearInput();
         _placement.FinishResolution();
-        Velocity = resolution.DescentFrom is not null ? Vector3.Down * WalkTuning.LandingSpeed : Vector3.Zero;
+        Velocity = Vector3.Zero;
         return true;
     }
 
@@ -467,9 +432,9 @@ public partial class WalkController : CharacterBody3D, IWalkController, IWalkTel
 
     private bool Recover(bool manual = false)
     {
-        if (_placement.RecoveryTarget(BodyPose, _bodyCollision.Height, manual) is not { } target)
+        if (_placement.RecoveryTarget(BodyPose, manual) is not { } target)
         { RequestExit(); return false; }
-        Place(target, 0);
+        Place(target);
         _placement.CommitRecovery();
         return true;
     }
@@ -514,7 +479,7 @@ public partial class WalkController : CharacterBody3D, IWalkController, IWalkTel
         ApplyHeight();
         _locomotion.RestoreSpeedStep(dto.SpeedStep);
         if (SpeedStep != dto.SpeedStep) context.Repair("walk: speed step clamped");
-        Place(_persistence.RestoreFeet(dto, context, _map!), 0, WalkTuning.SaveRepairRadius);
+        Place(_persistence.RestoreFeet(dto, context, _map!), WalkTuning.SaveRepairRadius);
     }
 
     public WalkSave CreateDefault(NewGameContext context) => _persistence.CreateDefault(context);
@@ -539,7 +504,5 @@ public partial class WalkController : CharacterBody3D, IWalkController, IWalkTel
     public event Action<ulong, float> WaterEnter { add => _telemetry.WaterEnter += value; remove => _telemetry.WaterEnter -= value; }
     public event Action<ulong> WaterExit { add => _telemetry.WaterExit += value; remove => _telemetry.WaterExit -= value; }
     public event Action<ulong, float>? TurnInPlace { add => _telemetry.TurnInPlace += value; remove => _telemetry.TurnInPlace -= value; }
-    public event Action<ulong>? ModeTouchdown { add => _telemetry.ModeTouchdown += value; remove => _telemetry.ModeTouchdown -= value; }
-    public event Action<ulong>? ModeTakeoff { add => _telemetry.ModeTakeoff += value; remove => _telemetry.ModeTakeoff -= value; }
     public event Action<ulong>? Teleport { add => _telemetry.Teleport += value; remove => _telemetry.Teleport -= value; }
 }

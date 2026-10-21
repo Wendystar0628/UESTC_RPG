@@ -20,24 +20,20 @@ internal sealed class WalkPlacement(CharacterBody3D body, Func<NavSpace?> space,
     private IMapArrival? _placementArrival;
     private bool _placementRelocated;
     private float _placementSearchRadius;
-    private bool _entrySightPending;
     private float _sinceReturn = float.PositiveInfinity;
     private int _returnSkip;
     private Pose _placementTarget;
     private bool _hasPlacement;
     private bool _placementNeedsCheck;
-    private float _placementLift;
-    private Pose? _entryFrom;
     private bool _safetyFailed;
     private float _sinceSafe;
-    private bool _entryCandidatePending;
+    private bool _entryPending;
     private readonly WalkSafePoints _safePoints = new();
 
     public bool HasPlacement => _hasPlacement;
     public bool NeedsCheck => _placementNeedsCheck;
     public bool ExitRequested => _safetyFailed;
-    public Pose? EntryFrom => _entryFrom;
-    public bool EntryCandidatePending => _entryCandidatePending;
+    public bool EntryPending => _entryPending;
     public IMapArrival? Arrival => _placementArrival;
     public WalkSafePoints History => _safePoints;
     public int SafetyReturnCount { get; private set; }
@@ -56,48 +52,33 @@ internal sealed class WalkPlacement(CharacterBody3D body, Func<NavSpace?> space,
         _admission = null;
     }
 
-    public void Begin(Pose feet, float lift, float searchRadius)
+    public void Begin(Pose feet, float searchRadius)
     {
         _placementTarget = feet;
         _hasPlacement = true;
         _sinceSafe = 0;
         _placementNeedsCheck = true;
-        _placementLift = lift;
         _placementSearchRadius = searchRadius;
         _placementArrival = null;
         _placementRelocated = false;
-        _entrySightPending = false;
         _placementAlternatives.Clear();
         _placementAlternative = -1;
-        _entryFrom = null;
+        _entryPending = false;
         _safetyFailed = false;
     }
 
-    public void BeginEntry(Pose from)
-    {
-        _entryFrom = from;
-        _entryCandidatePending = true;
-    }
-
-    public void CompleteEntryCandidate() => _entryCandidatePending = false;
-
-    private void ClearEntry()
-    {
-        _entryFrom = null;
-        _entryCandidatePending = false;
-    }
+    public void BeginEntry() { _entryPending = true; _placementRelocated = true; }
 
     public void Leave()
     {
         _placementArrival = null;
-        _entrySightPending = false;
-        ClearEntry();
+        _entryPending = false;
     }
 
     public void Fail()
     {
         _safetyFailed = true;
-        ClearEntry();
+        _entryPending = false;
     }
 
     public void WorldChanged()
@@ -127,45 +108,9 @@ internal sealed class WalkPlacement(CharacterBody3D body, Func<NavSpace?> space,
         _placementArrival = null;
     }
 
-    public Pose EntryCandidate(Pose origin)
-    {
-        float ground = _collision!.SupportY(origin.Position.X, origin.Position.Z, origin.Position.Y)?.Y
-            ?? _map!.World.Spatial.GroundY(origin.Position.X, origin.Position.Z);
-        if (origin.Position.Y - ground <= WalkTuning.DirectLandingHeight) return origin;
-        var direction = Angles.Forward(origin.YawDeg, origin.PitchDeg);
-        var end = origin.Position + direction * WalkRules.LandingSightDistance;
-        var hit = _collision!.SupportRay(origin.Position, end);
-        if (SightAllows(hit)) return origin with { Position = hit!.Value.Point };
-        if (direction.Y >= 0) return origin;
-        // Flight need not have native walking tiles. Terrain only hints where to prefetch;
-        // the mounted support ray must confirm the intersection before this becomes a landing.
-        float distance = (ground - origin.Position.Y) / direction.Y;
-        for (int i = 0; i < WalkTuning.LandingSightHintIterations; i++)
-        {
-            if (!(distance > 0) || distance > WalkRules.LandingSightDistance) return origin;
-            var hint = origin.Position + direction * distance;
-            ground = _map!.World.Spatial.GroundY(hint.X, hint.Z);
-            distance = (ground - origin.Position.Y) / direction.Y;
-        }
-        if (!(distance > 0) || distance > WalkRules.LandingSightDistance) return origin;
-        _entrySightPending = true;
-        return origin with { Position = origin.Position + direction * distance };
-    }
-
-    private bool SightAllows(SweepHit? hit) => hit is { } support && support.Normal.Y >= MathF.Cos(body.FloorMaxAngle)
-        && WalkSafetyQueries.AllowsFeet(_map!.World.Spatial, support.Point)
-        && !WalkSafetyQueries.InWater(_map.World.Spatial, support.Point);
-
     public WalkPlacementResult Resolve(float yaw, float pitch, float height)
     {
         if (!PlacementReady() || !_collision!.Ready(_placementTarget.Position, WalkRules.Radius)) return default;
-        if (_entrySightPending && _entryFrom is { } eye)
-        {
-            _entrySightPending = false;
-            var hit = _collision.SupportRay(eye.Position,
-                eye.Position + Angles.Forward(eye.YawDeg, eye.PitchDeg) * WalkRules.LandingSightDistance);
-            return new(WalkPlacementStatus.Refocused, SightAllows(hit) ? eye with { Position = hit!.Value.Point } : eye);
-        }
         var candidate = _placementTarget.Position;
         var floor = _admission!.Resolve(_map!.World.Spatial, _collision!, candidate, height);
         if (floor is { } possible && _placementRelocated && !SafeLanding(possible, height)) floor = null;
@@ -180,22 +125,23 @@ internal sealed class WalkPlacement(CharacterBody3D body, Func<NavSpace?> space,
             Fail();
             return default;
         }
-        bool descend = _entryFrom is not null && !_placementRelocated;
-        if (!descend) _placementLift = 0;
+        // Support admission can adjust the candidate floor. Select that actual eye/feet endpoint
+        // before accepting readiness; the next pass adopts only its matching arrival.
+        if (feet != _placementTarget.Position)
+            return new(WalkPlacementStatus.Refocused, new(feet, yaw, pitch));
         _placementTarget = new(feet, yaw, pitch);
-        return new(WalkPlacementStatus.Resolved, _placementTarget,
-            feet + N.Vector3.UnitY * _placementLift, descend ? _entryFrom : null, _placementRelocated);
+        return new(WalkPlacementStatus.Resolved, _placementTarget, feet, _placementRelocated);
     }
 
     public void CommitResolution() => _placementNeedsCheck = false;
 
     public void WarnIfRepaired()
     {
-        if (_placementRelocated && _entryFrom is null && float.IsFinite(_placementSearchRadius))
+        if (_placementRelocated && !_entryPending && float.IsFinite(_placementSearchRadius))
             KernelServices.Get<IDiagnosticLog>().Warning("", "walk: invalid feet repaired to a nearby shore safety point.");
     }
 
-    public void FinishResolution() => _entryFrom = null;
+    public void FinishResolution() => _entryPending = false;
 
     public void MarkRelocated() => _placementRelocated = true;
 
@@ -242,7 +188,13 @@ internal sealed class WalkPlacement(CharacterBody3D body, Func<NavSpace?> space,
         if (atlas.Map == map.Descriptor.Id)
             foreach (var marker in atlas.Markers)
                 if (marker.Teleport?.Stand is { } stand) Add(new(stand.Feet, stand.YawDeg, 0));
-        _placementAlternatives.Sort((a, b) => N.Vector3.DistanceSquared(from, a.Position).CompareTo(N.Vector3.DistanceSquared(from, b.Position)));
+        foreach (var feature in map.World.Features.Keys.OrderBy(id => id.Value, StringComparer.Ordinal))
+            if (map.World.Interiors.Get(feature) is { } interior)
+                foreach (var entrance in interior.Entrances) Add(new(entrance.Outside, 0, 0));
+        var projected = new N.Vector2(from.X, from.Z);
+        _placementAlternatives.Sort((a, b) =>
+            N.Vector2.DistanceSquared(projected, new(a.Position.X, a.Position.Z))
+                .CompareTo(N.Vector2.DistanceSquared(projected, new(b.Position.X, b.Position.Z))));
         _placementAlternative = 0;
 
         void Add(Pose pose)
@@ -252,8 +204,8 @@ internal sealed class WalkPlacement(CharacterBody3D body, Func<NavSpace?> space,
             if (distance <= WalkTuning.SaveSupportTolerance * WalkTuning.SaveSupportTolerance
                 || distance < minimumDistance * minimumDistance
                 || distance > _placementSearchRadius * _placementSearchRadius) return;
-            if (WalkSafetyQueries.InWater(map.World.Spatial, pose.Position)
-                || !WalkSafetyQueries.AllowsFeet(map.World.Spatial, pose.Position)) return;
+            // Future candidates have no mounted terrain/collision yet. Common placement admission
+            // checks water, region permission, support and body clearance after selecting one.
             float boundary = FlightBounds.RingDistance(new(pose.Position.X, pose.Position.Z), map.World.Boundary, out _);
             if (boundary > -WalkTuning.BoundaryClearance || _placementAlternatives.Contains(pose)) return;
             _placementAlternatives.Add(pose);
@@ -276,7 +228,7 @@ internal sealed class WalkPlacement(CharacterBody3D body, Func<NavSpace?> space,
     public bool NeedsRecovery(N.Vector3 feet, WaterQueryResult water) => WalkSafetyQueries.NeedsRecovery(_map!.World.Spatial, feet,
         water.Sample is { CanSwim: true });
 
-    public Pose? RecoveryTarget(Pose bodyPose, float height, bool manual)
+    public Pose? RecoveryTarget(Pose bodyPose, bool manual)
     {
         if (_map is null) { Fail(); return null; }
         var feet = bodyPose.Position;
@@ -284,14 +236,9 @@ internal sealed class WalkPlacement(CharacterBody3D body, Func<NavSpace?> space,
         float minimumDistance = manual ? WalkTuning.SafetyReturnMinimumDistance : 0;
         Pose? target = manual && _returnSkip > 0
             ? _safePoints.Nearest(feet, minimumDistance, _returnSkip) : null;
-        // A map with no history first tries real support directly below the body.
-        if (target is null && _safePoints.Count == 0 && _collision!.Ready(feet, WalkRules.Radius)
-            && _collision.SupportY(feet.X, feet.Z, feet.Y) is { } support)
-        {
-            var below = feet with { Y = support.Y };
-            if (_admission!.Resolve(_map.World.Spatial, _collision, below, height) is { } floor
-                && SafeLanding(floor, height)) target = new(floor, bodyPose.YawDeg, bodyPose.PitchDeg);
-        }
+        // With no history, common placement admission resolves support below this origin
+        // after its collision is mounted, then uses the same registered alternatives if needed.
+        if (_safePoints.Count == 0) return bodyPose;
         if (target is null)
         {
             _placementSearchRadius = float.PositiveInfinity;
@@ -331,7 +278,7 @@ internal sealed class WalkPlacement(CharacterBody3D body, Func<NavSpace?> space,
         _safePoints.Clear();
         _placementAlternatives.Clear();
         _placementArrival = null;
-        _entryFrom = null;
+        _entryPending = false;
         _placementNeedsCheck = false;
         _hasPlacement = false;
         _sinceSafe = 0;
@@ -340,4 +287,4 @@ internal sealed class WalkPlacement(CharacterBody3D body, Func<NavSpace?> space,
 
 internal enum WalkPlacementStatus { Pending, Refocused, Resolved }
 internal readonly record struct WalkPlacementResult(WalkPlacementStatus Status, Pose Target,
-    N.Vector3 Feet = default, Pose? DescentFrom = null, bool Relocated = false);
+    N.Vector3 Feet = default, bool Relocated = false);

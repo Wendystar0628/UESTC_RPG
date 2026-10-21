@@ -69,8 +69,8 @@ internal static class TerrainBlockCoverage
         foreach (var feature in context.World.Features.Keys.OrderBy(id => id.Value, StringComparer.Ordinal))
             if (context.World.Interiors.Get(feature) is { Open: true } interior)
                 foreach (var door in interior.Entrances.Where(door => door.Open)) Include(door.Outside);
-        // The existing sight ray is the longest terrain query beyond an observer/landing origin.
-        var probe = new Vector2(Math.Max(WalkRules.LandingSightDistance, WalkRules.ArrivalCollisionRadius));
+        // Arrival collision coverage remains required around every reachable or authored endpoint.
+        var probe = new Vector2(WalkRules.ArrivalCollisionRadius);
         return new(min - probe, max + probe);
 
         void Include(Vector3 position)

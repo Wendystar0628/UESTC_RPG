@@ -374,6 +374,7 @@ public sealed class AtlasServiceTests
         public bool IsReady { get; set; } = true;
         public Pose? Destination => null;
         public ITransitHandle Start(Pose from, Pose to, TransitOptions? options = null) => throw new NotSupportedException();
+        public ITransitHandle SwitchMode(Func<CancellationToken, Task<ModeSwitchResult>> apply) => throw new NotSupportedException();
     }
     private sealed class TestAudio : IAudioService
     {

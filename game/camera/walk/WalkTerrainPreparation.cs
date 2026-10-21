@@ -5,13 +5,12 @@ using KernelServices = Campus.Kernel.Registry.Kernel;
 
 namespace Campus.Camera.Walk;
 
-/// <summary>Current-map terrain coverage and in-flight entry, landing and motion preparations.</summary>
+/// <summary>Current-map terrain coverage, authored landing points and motion preparation.</summary>
 internal sealed class WalkTerrainPreparation
 {
     private ITerrainPreparation? _terrain;
     private IMapContext? _map;
     private Task? _terrainPreparation;
-    private Task? _entryTerrainPreparation;
     private Task? _landingPointsPreparation;
 
     public bool LandingPointsPending => _landingPointsPreparation is not null;
@@ -52,29 +51,10 @@ internal sealed class WalkTerrainPreparation
         return true;
     }
 
-    public void PrepareEntry(Pose from)
-    {
-        var end = from.Position + Angles.Forward(from.YawDeg, from.PitchDeg) * WalkRules.LandingSightDistance;
-        var begin = new N.Vector2(from.Position.X, from.Position.Z);
-        var finish = new N.Vector2(end.X, end.Z);
-        _entryTerrainPreparation = _terrain!.PrepareRegion(_map!, new(N.Vector2.Min(begin, finish), N.Vector2.Max(begin, finish)));
-    }
-
-    public bool CompleteEntry()
-    {
-        if (_entryTerrainPreparation is not { IsCompleted: true }) return false;
-        _entryTerrainPreparation.GetAwaiter().GetResult();
-        _entryTerrainPreparation = null;
-        return true;
-    }
-
-    public void CancelEntry() => _entryTerrainPreparation = null;
-
     public void Unload()
     {
         _map = null;
         _terrainPreparation = null;
-        _entryTerrainPreparation = null;
         _landingPointsPreparation = null;
         Failure = null;
     }

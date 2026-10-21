@@ -12,7 +12,6 @@ public sealed record FlightTuning
     public float SprintMultiplier { get; init; } = 2f;
     public float Acceleration { get; init; } = 20f;
     public float Deceleration { get; init; } = 15f;
-    public float ModeFovSeconds { get; init; } = .3f;
     public float PitchLimit { get; init; } = 89f;
     public float SensitivityPercent { get; init; } = 100f;
     public float DoublePressSeconds { get; init; } = .35f;

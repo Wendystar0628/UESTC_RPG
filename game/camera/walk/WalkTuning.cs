@@ -20,8 +20,6 @@ public static class WalkTuning
     public const float CoyoteSeconds = .1f;
     public const float JumpBufferSeconds = .12f;
     public const float HeldJumpInterval = .5f;
-    public const float LandingLift = .3f;
-    public const float LandingSpeed = 2f;
     public const float SprintFovMultiplier = 1.1f;
     public const float FovResponseSeconds = .2f;
     public const float StepUpCameraSeconds = .10f;
@@ -44,10 +42,6 @@ public static class WalkTuning
     public const float SaveRepairRadius = 50f;
     public const float SafetyReturnMinimumDistance = 3f;
     public const float SafetyReturnRepeatSeconds = 1f;
-    public const float NearLandingDistance = 3f;
-    public const float NearLandingSeconds = .5f;
-    public const float DirectLandingHeight = 30f;
-    public const int LandingSightHintIterations = 4;
     public const float BoundaryClearance = 1f;
     public const float BelowSupportLimit = 3f;
     public const float SaveSupportTolerance = .2f;

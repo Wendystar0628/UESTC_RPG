@@ -12,7 +12,7 @@ using KernelServices = Campus.Kernel.Registry.Kernel;
 
 namespace Campus.Gates;
 
-// G5/G20 core lifecycle: Title -> NewGame -> Walk -> Title -> Continue -> window close/save; a second process restores it.
+// G5/G20 core lifecycle: Title -> NewGame -> Walk/Fly/Walk -> Title -> Continue -> window close/save; a second process restores it.
 internal sealed class CoreLifecycleDriver(IStageGateHost host)
 {
     public async Task<nint> Run(string gate)
@@ -41,7 +41,7 @@ internal sealed class CoreLifecycleDriver(IStageGateHost host)
 
     private static void RequireFormalServices()
     {
-        foreach (var service in new[] { typeof(ICameraRig), typeof(IObserverState), typeof(IWalkController),
+        foreach (var service in new[] { typeof(ICameraRig), typeof(IViewControl), typeof(ITransitDriver), typeof(IObserverState), typeof(IWalkController),
             typeof(ICollisionWorld), typeof(IMapService), typeof(IMapRuntime), typeof(ISaveService), typeof(IAppFlow) })
         {
             var registration = KernelServices.Services.Entries.SingleOrDefault(entry => entry.Kind == RegistrationKind.Service && entry.Id == service.FullName);
@@ -62,6 +62,7 @@ internal sealed class CoreLifecycleDriver(IStageGateHost host)
             throw new InvalidOperationException("New game did not enter Playing in Walk mode.");
         await CoreWait(() => walk.Grounded && walk.CollisionReady && walk.IsSettled,
             "New game did not prepare its standing collision and settle.");
+        await ExerciseModes(camera, walk, observer);
         await ExerciseInput(camera, walk, input);
         var saved = await saves.SaveNow(SaveReason.Test);
         if (saved.Status != SaveStatus.Saved) throw new InvalidOperationException("Core save failed: " + saved.Error);
@@ -84,6 +85,60 @@ internal sealed class CoreLifecycleDriver(IStageGateHost host)
         GD.Print($"CORE_CONTINUE_READY {FrameClock.MonotonicMilliseconds:R}");
         GD.Print("CORE_ROUNDTRIP_READY");
     }
+
+    private async Task ExerciseModes(ICameraRig camera, IWalkController walk, IObserverState observer)
+    {
+        // Hold idle through the loading fade; this runs before the first movement input.
+        using var idle = camera.LockInput(InputLockReason.AppFlow);
+        var eye = walk.EyePose.Position;
+        await SwitchMode(ViewMode.Fly, camera, observer, eye);
+        if (walk.Active) throw new InvalidOperationException("Fly retained an active walking body.");
+        RequireModeArrival(ViewMode.Fly, observer);
+        await SwitchMode(ViewMode.Walk, camera, observer);
+        await CoreWait(() => walk.Grounded && walk.CollisionReady && walk.IsSettled,
+            "Mode return did not prepare standing collision and settle.");
+        if (!walk.Active || walk.ExitRequested)
+            throw new InvalidOperationException("Mode return did not restore the production walk controller.");
+        var arrival = RequireModeArrival(ViewMode.Walk, observer);
+        if (!ReferenceEquals(arrival, walk.PlacementArrival) || arrival.Destination.CollisionFeet is not { } feet
+            || !SameCorePosition(feet, walk.BodyPose.Position))
+            throw new InvalidOperationException("Mode return did not retain its final walking placement arrival.");
+        GD.Print("CORE_MODE_ROUNDTRIP_READY");
+    }
+
+    private async Task SwitchMode(ViewMode mode, ICameraRig camera, IObserverState observer,
+        System.Numerics.Vector3? fixedEye = null)
+    {
+        var change = KernelServices.Get<IViewControl>().SetMode(mode, ModeSwitchVia.Key);
+        var transit = camera.ActiveTransit
+            ?? throw new InvalidOperationException("Playing mode switch did not use the production transit driver.");
+        await CoreWait(() =>
+        {
+            if (fixedEye is { } eye && observer.Mode == mode && !SameCorePosition(eye, observer.Eye))
+                throw new InvalidOperationException("Idle Walk to Fly moved away from the standing eye position.");
+            return change.IsCompleted;
+        }, "The production mode switch did not finish.");
+        if (await change == ModeSwitchResult.Refused || await transit.Done != TransitResult.Arrived)
+            throw new InvalidOperationException("The production mode switch was refused or cancelled.");
+        host.CheckActive();
+        if (host.Flow.State != AppState.Playing || camera.Mode != mode || observer.Mode != mode
+            || camera.ActiveTransit is not null)
+            throw new InvalidOperationException("Mode switch did not finish in the requested Playing mode.");
+    }
+
+    private IMapArrival RequireModeArrival(ViewMode mode, IObserverState observer)
+    {
+        var arrival = host.MapRuntime.Arrival;
+        if (arrival is null || !arrival.Done.IsCompletedSuccessfully || arrival.Destination.Mode != mode
+            || !SameCorePosition(arrival.Destination.Pose.Position, observer.Eye))
+            throw new InvalidOperationException("Mode switch did not leave a ready arrival at its actual endpoint.");
+        return arrival;
+    }
+
+    private static bool SameCorePosition(System.Numerics.Vector3 before, System.Numerics.Vector3 after) =>
+        CoreRuntimeSnapshot.Matches(
+            JsonSerializer.Serialize(new { position = new[] { before.X, before.Y, before.Z } }),
+            JsonSerializer.Serialize(new { position = new[] { after.X, after.Y, after.Z } }));
 
     private async Task ExerciseInput(ICameraRig camera, IWalkController walk, IInputRouter input)
     {

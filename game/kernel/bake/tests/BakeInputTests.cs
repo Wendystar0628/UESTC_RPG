@@ -347,7 +347,7 @@ public sealed class BakeInputTests
     }
 
     [TestCase, TestCategory(TestReason.Regression)]
-    public void OfflineTerrainCoversRoamingFixedPosesAndExistingSightReach()
+    public void OfflineTerrainCoversRoamingFixedPosesAndArrivalCollisionReach()
     {
         var source = Context(new FakeWorld());
         var title = new Pose(new(3000.2f, 495, -2928.1f), 13, -2.5f);
@@ -355,9 +355,9 @@ public sealed class BakeInputTests
         var context = new TestMapContext(descriptor, source.World, BuildInputSnapshot.Empty);
         var domain = TerrainBlockCoverage.OfflineDomain(context);
         var blocks = TerrainBlockCoverage.Region(domain).ToHashSet();
-        var reach = descriptor.Roam.MaxRadius + WalkRules.LandingSightDistance;
+        var reach = descriptor.Roam.MaxRadius + WalkRules.ArrivalCollisionRadius;
         Vector2[] queries = [descriptor.Center - new Vector2(reach), descriptor.Center + new Vector2(reach),
-            new(title.Position.X, title.Position.Z), new(title.Position.X + WalkRules.LandingSightDistance, title.Position.Z)];
+            new(title.Position.X, title.Position.Z), new(title.Position.X + WalkRules.ArrivalCollisionRadius, title.Position.Z)];
         foreach (var point in queries)
             if (TerrainBlockCoverage.Points([point]).Any(block => !blocks.Contains(block)))
                 throw new InvalidOperationException("Offline terrain omitted a legal/fixed query or its interpolation edge.");

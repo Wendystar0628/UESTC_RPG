@@ -143,8 +143,6 @@ public interface IWalkTelemetry                            // game/camera/walk/�
     event Action<ulong, float> WaterEnter;                 // 水深
     event Action<ulong> WaterExit;
     event Action<ulong, float> TurnInPlace;                // 角度
-    event Action<ulong> ModeTouchdown;
-    event Action<ulong> ModeTakeoff;
     event Action<ulong> Teleport;
     float StepPhase { get; }                               // 0–1，晃动和脚步共用
 }

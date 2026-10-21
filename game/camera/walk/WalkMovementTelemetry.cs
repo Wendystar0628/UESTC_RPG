@@ -13,8 +13,6 @@ internal sealed class WalkMovementTelemetry(CharacterBody3D body, WalkBodyCollis
     private float _stepPhase;
     private bool _nextFootRight;
     private bool _teleportPending;
-    private bool _takeoffPending;
-    private bool _touchdownPending;
     private float _telemetryYaw;
     private Action<ulong, float>? _waterEnter;
     private Action<ulong>? _waterExit;
@@ -27,9 +25,6 @@ internal sealed class WalkMovementTelemetry(CharacterBody3D body, WalkBodyCollis
         FlushPlacementEvents();
     }
     public void QueueTeleport() => _teleportPending = true;
-    public void QueueTakeoff(bool active) => _takeoffPending |= active;
-    public void ClearTouchdown() => _touchdownPending = false;
-    public void QueueTouchdown() => _touchdownPending = true;
     public void PublishWaterEnter(float depth) => _waterEnter?.Invoke(_telemetryTick, depth);
     public void PublishWaterExit() => _waterExit?.Invoke(_telemetryTick);
     public event Action<FootfallInfo>? Footfall;
@@ -43,8 +38,6 @@ internal sealed class WalkMovementTelemetry(CharacterBody3D body, WalkBodyCollis
     public event Action<ulong, float> WaterEnter { add => _waterEnter += value; remove => _waterEnter -= value; }
     public event Action<ulong> WaterExit { add => _waterExit += value; remove => _waterExit -= value; }
     public event Action<ulong, float>? TurnInPlace;
-    public event Action<ulong>? ModeTouchdown;
-    public event Action<ulong>? ModeTakeoff;
     public event Action<ulong>? Teleport;
 
     public void ResetGait(float yaw)
@@ -57,7 +50,6 @@ internal sealed class WalkMovementTelemetry(CharacterBody3D body, WalkBodyCollis
     private void FlushPlacementEvents()
     {
         if (_teleportPending) { _teleportPending = false; Teleport?.Invoke(_telemetryTick); }
-        if (_takeoffPending) { _takeoffPending = false; ModeTakeoff?.Invoke(_telemetryTick); }
     }
 
     public void PublishMovement(WalkMotionSample sample, float dt, bool wasGrounded, bool jumped, bool stepped, N.Vector3 incomingVelocity, float previousSpeed)
@@ -69,7 +61,6 @@ internal sealed class WalkMovementTelemetry(CharacterBody3D body, WalkBodyCollis
         {
             _stepPhase = .5f;
             Landed?.Invoke(_telemetryTick, MathF.Max(0, -incomingVelocity.Y), sample.Feet);
-            if (_touchdownPending) { _touchdownPending = false; ModeTouchdown?.Invoke(_telemetryTick); }
         }
         else if (sample.Grounded && !jumped && distance > 0)
         {
