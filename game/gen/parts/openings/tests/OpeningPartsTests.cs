@@ -100,7 +100,7 @@ public sealed class OpeningPartsTests
     }
 
     [TestCase, TestCategory(TestReason.Contract)]
-    public void ClosedDoorsAndLoweredShuttersBlockAsDoorValidateVisibleGeometry()
+    public void ClosedDoorsAndLoweredShuttersBlockAsDoorClosed()
     {
         var shut = (BoxCollider)new WoodDoorPart().Collision(new DoorParams(0.9f, 2.1f, 0.2f)).Single();
         AssertThat(shut.Tag == SurfaceTag.DoorClosed && shut.Foot == FootMat.WoodDoor && shut.At.M42 == 1.05f).OverrideFailureMessage("A shut door is a DoorClosed closure.").IsTrue();
@@ -156,7 +156,7 @@ public sealed class OpeningPartsTests
     }
 
     [TestCase, TestCategory(TestReason.Contract)]
-    public void InvalidParametersFailValidateVisibleGeometry()
+    public void InvalidParametersFailClosed()
     {
         AssertThrown(() => new CasementWindowPart().Lods[LodLevel.L0](new WindowParams(0.4f, 0.4f, 0.07f, 6, 1))).IsInstanceOf<ArgumentException>();
         AssertThrown(() => new EntranceDoorPart().Bounds(new DoorParams(1.8f, 2.4f, 0.12f, 200f))).IsInstanceOf<ArgumentException>();

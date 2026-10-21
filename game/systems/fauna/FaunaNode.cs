@@ -1,3 +1,4 @@
+using Campus.Kernel.Diagnostics;
 using Campus.Contracts;
 using Campus.Contracts.Bake;
 using Campus.Contracts.Fauna;
@@ -161,19 +162,7 @@ public partial class FaunaNode : Node, IMapAware, IViewContentReadiness, IViewCa
 
     // Both readiness consumers observe the original producer failure (ENG-PERF-STREAM).
     private void RecordFailure([FailureHandler("ENG-PERF-STREAM")] Exception error)
-    {
-        if (_error is { } previous && Contains(previous, error)) return;
-        _error = _error is null ? error : new AggregateException(_error, error);
-
-        static bool Contains(Exception retained, Exception next)
-        {
-            if (ReferenceEquals(retained, next)) return true;
-            if (retained is AggregateException aggregate)
-                foreach (var inner in aggregate.InnerExceptions)
-                    if (Contains(inner, next)) return true;
-            return false;
-        }
-    }
+        => _error = RetainedFailure.Append(_error, error);
 
     private FaunaSet? Target(FaunaSiteContent site) =>
         FaunaSchedule.Target(site.Kind, _world!.Sun.AltDeg, _world.Clock, _world.WeatherNow);

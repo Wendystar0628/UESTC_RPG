@@ -140,19 +140,7 @@ public partial class RenderHost : Node3D, IRenderHost, IRenderReadiness, IMapAwa
 
     // Readiness publishes this retained failure to the map loading failure flow (ENG-PERF-STREAM).
     private void RecordFailure([FailureHandler("ENG-PERF-STREAM")] Exception error)
-    {
-        if (Failure is { } previous && Contains(previous, error)) return;
-        Failure = Failure is null ? error : new AggregateException(Failure, error);
-
-        static bool Contains(Exception retained, Exception next)
-        {
-            if (ReferenceEquals(retained, next)) return true;
-            if (retained is AggregateException aggregate)
-                foreach (var inner in aggregate.InnerExceptions)
-                    if (Contains(inner, next)) return true;
-            return false;
-        }
-    }
+        => Failure = RetainedFailure.Append(Failure, error);
 
     private static List<Surface> PrepareSurfaces(IReadOnlyList<GeometryBundle> geometry,
         (PlacedPart Part, object Definition)[] parts, PaletteCatalog catalog)

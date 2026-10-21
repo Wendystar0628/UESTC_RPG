@@ -1,3 +1,5 @@
+using Campus.Kernel.Diagnostics;
+using Campus.Kernel.Post;
 using Campus.Contracts;
 using Campus.Contracts.AppFlow;
 using Campus.Contracts.Bake;
@@ -17,6 +19,31 @@ namespace Campus.Tests;
 [TestSuite]
 public sealed class MapRuntimeFailureTests
 {
+    [TestCase, TestCategory(TestReason.Regression)]
+    public void SharedRetentionPreservesNestedAndEmptyCausesAndConcurrentEffectFailures()
+    {
+        var original = new InvalidDataException("producer failed");
+        var empty = new AggregateException();
+        AssertThat(ReferenceEquals(RetainedFailure.Append(null, original), original) &&
+            ReferenceEquals(RetainedFailure.Append(null, empty), empty)).IsTrue();
+        var nested = new AggregateException(original, new AggregateException(empty, original));
+        var retained = RetainedFailure.Append(null, nested);
+        var causes = retained as AggregateException ?? throw new InvalidOperationException("Producer causes were not retained.");
+        AssertThat(causes.InnerExceptions.Count == 2 && ReferenceEquals(causes.InnerExceptions[0], original) &&
+            ReferenceEquals(causes.InnerExceptions[1], empty) &&
+            ReferenceEquals(RetainedFailure.Append(retained, nested), retained) &&
+            ReferenceEquals(RetainedFailure.Append(retained, original), retained)).IsTrue();
+        Exception? effects = null;
+        var errors = Enumerable.Range(0, 16).Select(index => new InvalidOperationException($"effect {index}")).ToArray();
+        Parallel.For(0, errors.Length * 2, index => EffectFailure.Record(ref effects, errors[index % errors.Length]));
+        var effectCauses = (effects as AggregateException ?? throw new InvalidOperationException("Concurrent effect failures were lost."))
+            .Flatten().InnerExceptions;
+        AssertThat(effectCauses.Count == errors.Length && errors.All(error => effectCauses.Any(cause => ReferenceEquals(cause, error)))).IsTrue();
+        var observed = effects;
+        foreach (var error in errors) EffectFailure.Record(ref effects, error);
+        AssertThat(ReferenceEquals(effects, observed)).IsTrue();
+    }
+
     [TestCase, TestCategory(TestReason.Regression), RequireGodotRuntime]
     public void VisibleProducerFailureReachesTheGlobalProjectionWithoutAPendingArrival()
     {

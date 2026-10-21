@@ -1,3 +1,4 @@
+using Campus.Kernel.Diagnostics;
 using Campus.Contracts.Diagnostics;
 using Campus.Contracts;
 using Campus.Contracts.Maps;
@@ -77,18 +78,10 @@ public partial class SkyNode : Node, IMapAware, IViewContentReadiness
     // View readiness publishes the retained producer failure to map loading (ENG-PERF-STREAM).
     private void RecordFailure([FailureHandler("ENG-PERF-STREAM")] Exception error)
     {
-        if (Failure is { } previous && Contains(previous, error)) return;
-        Failure = Failure is null ? error : new AggregateException(Failure, error);
+        var combined = RetainedFailure.Append(Failure, error);
+        if (ReferenceEquals(combined, Failure)) return;
+        Failure = combined;
         KernelServices.Get<IDiagnosticLog>().Error("ART-SKYLIGHT-ATMOSPHERE: sky content failed:", error);
-
-        static bool Contains(Exception retained, Exception next)
-        {
-            if (ReferenceEquals(retained, next)) return true;
-            if (retained is AggregateException aggregate)
-                foreach (var inner in aggregate.InnerExceptions)
-                    if (Contains(inner, next)) return true;
-            return false;
-        }
     }
 
     private void UpdateContent()

@@ -1,3 +1,4 @@
+using Campus.Kernel.Diagnostics;
 using Campus.Contracts;
 using Campus.Contracts.Bake;
 using Campus.Kernel.Stream;
@@ -142,19 +143,7 @@ public sealed partial class VegetationRuntime : Node, IMapAware, IViewContentRea
 
     // StreamDirector and view readiness publish this same producer failure (ENG-PERF-STREAM).
     private void RecordFailure([FailureHandler("ENG-PERF-STREAM")] Exception error)
-    {
-        if (Failure is { } previous && Contains(previous, error)) return;
-        Failure = Failure is null ? error : new AggregateException(Failure, error);
-
-        static bool Contains(Exception retained, Exception next)
-        {
-            if (ReferenceEquals(retained, next)) return true;
-            if (retained is AggregateException aggregate)
-                foreach (var inner in aggregate.InnerExceptions)
-                    if (Contains(inner, next)) return true;
-            return false;
-        }
-    }
+        => Failure = RetainedFailure.Append(Failure, error);
 
     private void FreeAll()
     {

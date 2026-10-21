@@ -8,6 +8,7 @@ using Campus.Contracts.Atlas;
 using Campus.Contracts.Audio;
 using Campus.Contracts.Maps;
 using Campus.Contracts.Save;
+using KernelServices = Campus.Kernel.Registry.Kernel;
 
 namespace Campus.Systems.Atlas;
 
@@ -269,6 +270,12 @@ public sealed class AtlasService(ICameraRig camera, IObserverState observer, IRu
             var destination = _destination;
             var style = _travelStyle;
             ReleaseTransit();
+            if (handle.Done.Exception is { } failure)
+            {
+                var runtime = KernelServices.Get<IMapRuntime>();
+                foreach (var error in failure.InnerExceptions) runtime.ReportFailure(error);
+                return;
+            }
             if (arrived)
             {
                 if (destination is { } id && Find(id) is { Kind: MarkerKind.Anchor } anchor)
