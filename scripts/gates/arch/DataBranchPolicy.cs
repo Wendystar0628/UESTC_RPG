@@ -41,7 +41,8 @@ internal sealed class DataBranchPolicy(SourceFile file)
         {
             if (file.Model.GetOperation(match) is not IIsPatternOperation operation) continue;
             var facts = Facts((ExpressionSyntax)operation.Value.Syntax);
-            if (facts.HasFlag(Fact.Id) && match.DescendantNodes().OfType<ConstantPatternSyntax>().Any(pattern => StringLiteral(pattern.Expression)))
+            if (facts.HasFlag(Fact.Id) && operation.Pattern.DescendantsAndSelf().OfType<IConstantPatternOperation>().Any(pattern =>
+                pattern.Value.Syntax is ExpressionSyntax value && StringLiteral(value)))
                 yield return file.At(match, "Identity patterns reference catalog declarations instead of string literals (STD-CODE).");
             if (facts.HasFlag(Fact.Version) && !RejectsOnly(match))
                 yield return file.At(match, "Version patterns may reject unsupported input, not select readers (STD-CODE).");

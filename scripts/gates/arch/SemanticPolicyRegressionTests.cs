@@ -121,6 +121,10 @@ public sealed class SemanticPolicyRegressionTests
                 bool BadIdentity(Key renamed) { var copy = renamed.Value; return copy == "tree"; }
                 bool GoodIdentityPattern(Key renamed) => renamed.Value is CatalogEntry;
                 bool BadIdentityPattern(Key renamed) => renamed.Value is "tree";
+                bool GoodIdentityPatternWithLeftPattern(Key renamed, string mode) => (mode is "preview" ? renamed.Value : renamed.Value) is CatalogEntry;
+                bool GoodIdentityNestedPatternWithLeftPattern(Key renamed, string mode) => (mode is "preview" ? renamed.Value : renamed.Value) is (CatalogEntry or null);
+                bool BadIdentityNestedPattern(Key renamed) => renamed.Value is (CatalogEntry or ("other" and not null));
+                bool BadIdentityPropertyPattern(Key renamed) => renamed is { Value: "tree" };
                 int GoodIdentitySwitch(Key renamed) { switch(renamed.Value) { case CatalogEntry: return 1; default: return 0; } }
                 int BadIdentitySwitch(Key renamed) { switch(renamed.Value) { case "tree": return 1; default: return 0; } }
                 int GoodIdentityExpression(Key renamed) => renamed.Value switch { CatalogEntry => 1, _ => 0 };
