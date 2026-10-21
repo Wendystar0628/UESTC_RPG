@@ -1,6 +1,6 @@
-﻿# 正式启动的内部共用步骤：只读 fingerprints host 的当前构建身份，在同一构建锁内更新并创建游戏进程。
+﻿# 正式启动的内部共用步骤：同一构建锁内只查已集成产物，存在即启动；首次缺失与显式准备共用普通构建及按需导入。
 # 用法：点引用 common.ps1 与本文件，再 Invoke-UESTCStartGame -Root <仓库> -Godot <引擎> [-BuildLease <已持有的锁>]。
-# 产出：output/start_game/；output/.locks/build.lock（按需构建与导入后启动游戏）。
+# 产出：output/start_game/；output/.locks/build.lock（默认玩上次集成版本，工作区半成品不触发编译）。
 function Get-UESTCLaunchImportFiles {
     param([string]$Directory)
     foreach ($entry in [IO.Directory]::EnumerateFileSystemEntries($Directory)) {
@@ -13,20 +13,6 @@ function Get-UESTCLaunchImportFiles {
     }
 }
 
-function Test-UESTCLaunchBuild {
-    param([string]$Root)
-    $Root = [IO.Path]::GetFullPath($Root).TrimEnd('\', '/')
-    $toolProject = Join-Path $Root 'scripts\build\fingerprints\Campus.CodeFingerprints.csproj'
-    $target = Invoke-UESTCProcess 'dotnet' @('msbuild', $toolProject, '-nologo', '-getProperty:TargetPath', '-property:Configuration=Debug') $Root
-    $hostPath = $target.StdOut.Trim()
-    if (-not [IO.File]::Exists($hostPath)) { return $false }
-    $arguments = @($hostPath, '--mode', 'check', '--project', (Join-Path $Root 'game\Campus.csproj'),
-        '--tool-project', $toolProject,
-        '--output', (Join-Path $Root 'game\data\build-code-fingerprints.json'), '--property', 'Configuration=Debug')
-    $result = Invoke-UESTCProcess 'dotnet' $arguments $Root -SuccessExitCodes @(0, 3)
-    if ($result.StdErr.Trim()) { Write-Warning $result.StdErr.Trim() }
-    return $result.ExitCode -eq 0
-}
 function Test-UESTCLaunchImport {
     param([string]$Root, [string]$Godot)
     $game = Join-Path $Root 'game'
@@ -83,35 +69,55 @@ function New-UESTCLaunchTiming {
     return [ordered]@{ scriptEnteredUtc=$ScriptEnteredUtc.ToString('O'); scriptEnteredTimestamp=$ScriptEnteredTimestamp;
         stopwatchFrequency=[Diagnostics.Stopwatch]::Frequency; lockWaitStatus='NOT_MEASURED';
         lockRequestedTimestamp=$null; lockAcquiredTimestamp=$null;
-        freshnessStartedTimestamp=$null; freshnessCompletedTimestamp=$null;
+        outputCheckStartedTimestamp=$null; outputCheckCompletedTimestamp=$null;
+        preparationStartedTimestamp=$null; preparationCompletedTimestamp=$null;
         buildInvoked=$null; importInvoked=$null; engineLaunchRequestedTimestamp=$null;
         engineStartUtc=$null; status='INITIALIZING' }
 }
 
-function Initialize-UESTCLaunch {
+# DECISION-302：Godot 正式 Debug 输出约定仅在这里定义，启动不查询 MSBuild。
+function Get-UESTCGameAssemblyPath {
+    param([Parameter(Mandatory)][string]$Root)
+    return Join-Path $Root 'game\.godot\mono\temp\bin\Debug\Campus.dll'
+}
+
+# 显式准备与首次缺产物走同一链；普通构建失败直接交出，不改成 Rebuild。
+function Update-UESTCGameBuild {
     param([Parameter(Mandatory)][string]$Root, [Parameter(Mandatory)][string]$Godot,
-        [Parameter(Mandatory)][IO.FileStream]$BuildLease, [Collections.IDictionary]$Timing = $null, [switch]$RequireFresh)
-    if ($Timing) { $Timing['freshnessStartedTimestamp'] = [Diagnostics.Stopwatch]::GetTimestamp() }
+        [Parameter(Mandatory)][IO.FileStream]$BuildLease, [Collections.IDictionary]$Timing = $null)
+    if ($Timing) {
+        $Timing['preparationStartedTimestamp'] = [Diagnostics.Stopwatch]::GetTimestamp()
+        $Timing['preparationCompletedTimestamp'] = $null
+        $Timing['buildInvoked'] = $false
+        $Timing['importInvoked'] = $false
+    }
     $out = Join-Path $Root 'output\start_game'
     $null = [IO.Directory]::CreateDirectory($out)
-    $built = -not (Test-UESTCLaunchBuild $Root)
-    if ($Timing) { $Timing['buildInvoked'] = $false; $Timing['importInvoked'] = $false }
-    if ($built -and $RequireFresh) { throw 'Existing build is stale; prepare it before the measurement.' }
-    if ($built) {
-        if ($Timing) { $Timing['buildInvoked'] = $true }
-        Write-Host '构建有变化，编译中……'
-        Invoke-UESTCProcess 'dotnet' @('build', "$Root\game\Campus.csproj", '-t:Rebuild', '-c', 'Debug', '-v', 'q') $Root (Join-Path $out 'build.log') | Out-Null
-    }
-    # A build can change generated includes without changing an RD main source.
-    $imported = $built -or -not (Test-UESTCLaunchImport $Root $Godot)
-    if ($imported -and $RequireFresh) { throw 'Existing import is stale; prepare it before the measurement.' }
-    if ($imported) {
-        if ($Timing) { $Timing['importInvoked'] = $true }
+    Write-Host '准备游戏，增量编译中……'
+    if ($Timing) { $Timing['buildInvoked'] = $true }
+    Invoke-UESTCProcess 'dotnet' @('build', (Join-Path $Root 'game\Campus.csproj'), '-c', 'Debug', '-warnaserror', '-v', 'q') $Root (Join-Path $out 'build.log') | Out-Null
+    if (-not (Test-UESTCLaunchImport $Root $Godot)) {
         Write-Host '导入资源有变化，导入中……'
-        $import = Invoke-UESTCProcess $Godot @('--headless', '--editor', '--path', "$Root\game", '--', '--build-import') $Root (Join-Path $out 'import.log') -TimeoutSeconds 600
+        if ($Timing) { $Timing['importInvoked'] = $true }
+        $import = Invoke-UESTCProcess $Godot @('--headless', '--editor', '--path', (Join-Path $Root 'game'), '--', '--build-import') $Root (Join-Path $out 'import.log') -TimeoutSeconds 600
         Assert-UESTCCleanGodotLog $import
     }
-    if ($Timing) { $Timing['freshnessCompletedTimestamp'] = [Diagnostics.Stopwatch]::GetTimestamp() }
+    if ($Timing) { $Timing['preparationCompletedTimestamp'] = [Diagnostics.Stopwatch]::GetTimestamp() }
+}
+
+# DECISION-302：默认启动只看正式程序集存在；不读取工作区输入、回执或导入元数据。
+function Initialize-UESTCLaunch {
+    param([Parameter(Mandatory)][string]$Root, [Parameter(Mandatory)][string]$Godot,
+        [Parameter(Mandatory)][IO.FileStream]$BuildLease, [Collections.IDictionary]$Timing = $null)
+    if ($Timing) {
+        $Timing['buildInvoked'] = $false
+        $Timing['importInvoked'] = $false
+        $Timing['outputCheckStartedTimestamp'] = [Diagnostics.Stopwatch]::GetTimestamp()
+    }
+    $exists = [IO.File]::Exists((Get-UESTCGameAssemblyPath -Root $Root))
+    if ($Timing) { $Timing['outputCheckCompletedTimestamp'] = [Diagnostics.Stopwatch]::GetTimestamp() }
+    if ($exists) { return }
+    Update-UESTCGameBuild -Root $Root -Godot $Godot -BuildLease $BuildLease -Timing $Timing
 }
 
 function Invoke-UESTCStartGame {
