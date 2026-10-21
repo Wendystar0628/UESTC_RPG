@@ -5,7 +5,6 @@
 (function () {
   var h = Dash.h;
   var SIDE_NAME = { claude: 'Claude', codex: 'Codex' };
-  var KIND_TONE = { Q: ['seq', 0], C: ['seq', 2] };
   var CAL = {
     lead: '从入队到推送删行；箱体是 25%–80%，横线是中位',
     stage: '近 7 天删除的行在各段停留的中位；五段相加不等于流转中位',
@@ -160,10 +159,12 @@
     caliber: CAL.lead, window: '14d',
     needs: ['flow'], uses: ['side'],
     render: function (el, d, ctx) {
-      var side = ctx.filters.side, list = d.flow.leadTime || [];
+      var side = ctx.filters.side, list = d.flow.leadTime || [], kinds = d.flow.kinds || [];
+      // 行号种类与名称由后端 flow.kinds 给（GAME、TOOL、BATCH 等），前端不写死
+      var byKind = kinds.map(function (k, i) { return { s: side, k: k.key, label: k.label, tone: ['cat', i] }; });
       var specs = side === 'all'
-        ? [{ s: 'claude', k: 'all' }, { s: 'codex', k: 'all' }, { s: 'all', k: 'Q' }, { s: 'all', k: 'C' }]
-        : [{ s: side, k: 'all' }, { s: side, k: 'Q' }, { s: side, k: 'C' }];
+        ? [{ s: 'claude', k: 'all' }, { s: 'codex', k: 'all' }].concat(byKind)
+        : [{ s: side, k: 'all' }].concat(byKind);
       var empty = true, hasPrev = false;
       var groups = specs.map(function (sp) {
         var e = list.filter(function (x) { return x.side === sp.s && x.kind === sp.k; })[0] || {};
@@ -171,10 +172,10 @@
         if ((cur && cur.n) || (prev && prev.n)) empty = false;
         if (prev) hasPrev = true;
         var name = sp.k === 'all' ? SIDE_NAME[sp.s] + (side === 'all' ? '' : ' · 全部')
-          : (side === 'all' ? '' : SIDE_NAME[side] + ' · ') + sp.k + ' 类';
+          : (side === 'all' ? '' : SIDE_NAME[side] + ' · ') + sp.label;
         return {
           key: sp.s + '-' + sp.k, label: name,
-          tone: sp.k === 'all' ? ['side', sp.s] : KIND_TONE[sp.k], cur: cur, prev: prev
+          tone: sp.k === 'all' ? ['side', sp.s] : sp.tone, cur: cur, prev: prev
         };
       });
       if (empty) { el.appendChild(Dash.empty('近 7 天还没有推送删行', '有了就在这里画')); return; }
