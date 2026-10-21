@@ -115,6 +115,7 @@ try
         measurement = "diagnostic; not an experience-target pass",
         captureEndpoint = root.GetProperty("captureEndpoint").GetString(),
         launcher = root.GetProperty("launcher").Clone(),
+        preparation = root.GetProperty("preparation").Clone(),
         cacheCondition = root.GetProperty("condition").Clone(),
         observedTiming = root.GetProperty("timing").Clone(),
         budgetObservations = root.GetProperty("budgetObservations").Clone(),

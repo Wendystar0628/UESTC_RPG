@@ -239,7 +239,6 @@ if (-not ($Full -or $Smoke -or $Only.Count)) {
         $_ -notin $existingBasePaths -or -not (Test-UESTCCommentOnlyChange $root $_ $BaseRef)
     })
 }
-$importRequired = $Full -or @($changes | Where-Object { $_ -match '^game/' -and $_ -notmatch '^game/(contracts|gen)/' -and $_ -notmatch '\.(md|txt|csproj|sln|props|lock\.json)$' }).Count -gt 0
 $textOnlyQuick = -not ($Full -or $Smoke -or $Only.Count) -and $changes.Count -gt 0 -and $runtimeChanges.Count -eq 0
 $selected = New-Object 'Collections.Generic.List[string]'
 $gateIds = @('G1','G2','G3','G4','G5','G6','G7','G10','G14','G15','G20','G21')
@@ -268,7 +267,7 @@ if (-not ($Full -or $Smoke -or $Only.Count)) {
     if ($saveChanges.Count) { $selected.Add('G20Core') }
 }
 $scope = if ($Full) { 'Full' } elseif ($Only.Count) { 'Selected' } elseif ($Smoke) { 'Core' } else { 'Quick' }
-$planObject = [ordered]@{ Scope = $scope; BaseRef = $BaseRef; Branch = $branch; Gates = $selected.ToArray(); ImportRequired = $importRequired; ChangedPaths = $changes; Godot = $godot; Locks = $layout.Locks; BuildCapacity = 1; FormatPaths = $formatPaths; Bake = 'No pre-bake in quick/core; centralized bake gates not implemented' }
+$planObject = [ordered]@{ Scope = $scope; BaseRef = $BaseRef; Branch = $branch; Gates = $selected.ToArray(); Preparation = 'Ordinary Campus.csproj Debug build and metadata-selected import before game consumers; test hosts build in their test entries'; ChangedPaths = $changes; Godot = $godot; Locks = $layout.Locks; BuildCapacity = 1; FormatPaths = $formatPaths; Bake = 'No pre-bake in quick/core; centralized bake gates not implemented' }
 $g2Selection = if ($selected.Contains('G2')) { @(Get-UESTCG2ProjectSelection $root $runtimeChanges ([bool]$Full) $Configuration) } else { @() }
 $planObject['G2Selection'] = $g2Selection
 $selectionIncomplete = @(
@@ -289,6 +288,8 @@ $results = New-Object 'Collections.Generic.List[object]'
 $utf8 = New-Object Text.UTF8Encoding $false
 $g2TrxPaths = New-Object 'Collections.Generic.List[string]'
 $sourcePreflight = $false
+$gamePrepared = $false
+$gamePreparation = New-UESTCLaunchTiming
 if ($runtimeChanges.Count -and $selected.Count -eq 0) {
     $results.Add([pscustomobject]@{ Gate='Selection'; Status='Incomplete'; Scope=$scope; Detail='Runtime changes selected no gates.' })
 }
@@ -308,33 +309,25 @@ function Invoke-GateProcess {
             }
         }
     }
-    try {
-        $result = Invoke-UESTCProcess $Executable $Arguments $root (Join-Path $work "$Name.log") -Visible:$Visible -AllowFailure:$isTest -TimeoutSeconds $TimeoutSeconds
-        if ($isTest) {
-            # Failed runs still leave a TRX; the test record needs them.
-            if ($Name -like 'G2-*' -and (Test-Path -LiteralPath $trxPath -PathType Leaf)) { $g2TrxPaths.Add($trxPath) }
-            if ($result.ExitCode -ne 0) { throw "${Name}: test process exited $($result.ExitCode). See $($result.Log)" }
-            $executed = 0
-            if (Test-Path -LiteralPath $trxPath -PathType Leaf) {
-                [xml]$trx = Get-Content -Raw -LiteralPath $trxPath
-                $counters = $trx.SelectSingleNode('//*[local-name()="ResultSummary"]/*[local-name()="Counters"]')
-                if ($counters) { $executed = [int]$counters.GetAttribute('executed') }
-            }
-            if ($executed -eq 0) {
-                $failure = New-Object InvalidOperationException("${Name}: zero executed tests or missing TRX. See $($result.Log)")
-                $failure.Data['Incomplete'] = $true
-                throw $failure
-            }
-            $result | Add-Member -NotePropertyName Tests -NotePropertyValue $executed
+    $result = Invoke-UESTCProcess $Executable $Arguments $root (Join-Path $work "$Name.log") -Visible:$Visible -AllowFailure:$isTest -TimeoutSeconds $TimeoutSeconds
+    if ($isTest) {
+        # Failed runs still leave a TRX; the test record needs them.
+        if ($Name -like 'G2-*' -and (Test-Path -LiteralPath $trxPath -PathType Leaf)) { $g2TrxPaths.Add($trxPath) }
+        if ($result.ExitCode -ne 0) { throw "${Name}: test process exited $($result.ExitCode). See $($result.Log)" }
+        $executed = 0
+        if (Test-Path -LiteralPath $trxPath -PathType Leaf) {
+            [xml]$trx = Get-Content -Raw -LiteralPath $trxPath
+            $counters = $trx.SelectSingleNode('//*[local-name()="ResultSummary"]/*[local-name()="Counters"]')
+            if ($counters) { $executed = [int]$counters.GetAttribute('executed') }
         }
-        return $result
+        if ($executed -eq 0) {
+            $failure = New-Object InvalidOperationException("${Name}: zero executed tests or missing TRX. See $($result.Log)")
+            $failure.Data['Incomplete'] = $true
+            throw $failure
+        }
+        $result | Add-Member -NotePropertyName Tests -NotePropertyValue $executed
     }
-    catch {
-        # A known native import failure is retried once; ordinary failures and ERROR logs are never masked.
-        if ($Name -ne 'G1-import' -or $_.Exception.Data['ExitCode'] -ne -1073741819) { throw }
-        Write-Warning "Godot import exited 0xC0000005; retrying once. Original log preserved: $(Join-Path $work "$Name.log")"
-        Invoke-UESTCProcess $Executable $Arguments $root (Join-Path $work "$Name-retry.log") -Visible:$Visible -TimeoutSeconds $TimeoutSeconds
-    }
+    return $result
 }
 function Assert-GodotVersion {
     if (-not (Test-Path -LiteralPath $godot -PathType Leaf)) { throw "Godot missing: $godot" }
@@ -364,24 +357,21 @@ foreach ($id in $selected) {
             $null = Test-UESTCOwnershipRules $root
             $sourcePreflight = $true
         }
+        if (-not $gamePrepared -and $id -in @('G1','G2','G5','G5Smoke','G6','G15Core','G20Core')) {
+            Assert-GodotVersion
+            Update-UESTCGameBuild -Root $root -Godot $godot -BuildLease $gateLease -Timing $gamePreparation
+            $gamePrepared = $true
+        }
         switch ($id) {
             'G1' {
                 $naming = Test-UESTCSourceNaming $root
-                Assert-GodotVersion
-                $null = Invoke-GateProcess 'G1-build' dotnet @('build',(Join-Path $game 'Campus.sln'),'-c',$Configuration,'-warnaserror')
                 if ($formatPaths.Count) {
-                    $formatArgs = @('format',(Join-Path $game 'Campus.sln'),'--verify-no-changes','--no-restore','--include') + @($formatPaths | ForEach-Object { Join-Path $root $_ })
+                    # Formatting includes test sources; game preparation no longer restores every solution project.
+                    $formatArgs = @('format',(Join-Path $game 'Campus.sln'),'--verify-no-changes','--include') + @($formatPaths | ForEach-Object { Join-Path $root $_ })
                     $null = Invoke-GateProcess 'G1-format' dotnet $formatArgs
                 }
-                # The build can refresh generated includes even when the changed
-                # paths themselves do not select a resource import (for example contracts).
-                $importRequired = $importRequired -or -not (Test-UESTCLaunchImport $root $godot)
-                if ($importRequired) {
-                    $r = Invoke-GateProcess 'G1-import' $godot @('--headless','--editor','--path',$game,'--','--build-import')
-                    Assert-UESTCCleanGodotLog $r
-                }
                 $formatDetail = "changed-source format verified ($($formatPaths.Count) files)"
-                $detail = "Naming files=$($naming.CheckedFiles); build verified; $formatDetail; import=$importRequired"
+                $detail = "Naming files=$($naming.CheckedFiles); Campus.csproj build verified; $formatDetail; import=$($gamePreparation.importInvoked)"
             }
             'G2' {
                 $settings = Write-TestSettings
@@ -506,7 +496,7 @@ foreach ($id in $selected) {
         break
     }
 }
-$report = [ordered]@{ Plan=$planObject; Results=$results.ToArray(); GeneratedAt=[DateTime]::UtcNow.ToString('o') }
+$report = [ordered]@{ Plan=$planObject; Preparation=$gamePreparation; Results=$results.ToArray(); GeneratedAt=[DateTime]::UtcNow.ToString('o') }
 $reportPath = Join-Path $work 'gate-result.json'
 [IO.File]::WriteAllText($reportPath, ($report | ConvertTo-Json -Depth 10), $utf8)
 Write-Host "Report: $reportPath"

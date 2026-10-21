@@ -1,4 +1,4 @@
-﻿# 私有桌面启动体验/诊断：本轮从脚本进入计，包含等锁和同一正式判鲜，诊断显式选择。
+﻿# 私有桌面启动体验/诊断：本轮从脚本进入计，包含等锁和正式输出检查，批次准备另记，诊断显式选择。
 # 用法：由 isolated-launch.py 传入 -Output、-Mode、-ConditionPath。
 # 产出：-Output 指定目录（采样日志、跟踪、JSON 记录与隔离存档；父目录由调用方传入）。
 param([Parameter(Mandatory)][string]$Output, [ValidateSet('title','immediate','dwell')][string]$Mode,
@@ -138,8 +138,12 @@ try {
     $timing['lockAcquiredTimestamp'] = [Diagnostics.Stopwatch]::GetTimestamp()
     $timing['lockWaitStatus'] = 'MEASURED_IN_TOTAL'
     $godot = Get-UESTCGodot
-    # Measurements use existing outputs only; a stale build/import is a failed preparation, never hidden time.
-    Initialize-UESTCLaunch -Root $toolRoot -Godot $godot -BuildLease $lease -Timing $timing -RequireFresh
+    # Batch preparation is outside this script-entry clock. Require its output so
+    # the measured default-launch path can only take the existing-output branch.
+    if (-not [IO.File]::Exists((Get-UESTCGameAssemblyPath -Root $toolRoot))) {
+        throw 'Prepared game output is missing; no build is allowed inside the measured launch interval.'
+    }
+    Initialize-UESTCLaunch -Root $toolRoot -Godot $godot -BuildLease $lease -Timing $timing
     $window = $godot -replace '_console\.exe$', '.exe'
     if (-not [IO.File]::Exists($window)) { $window = $godot }
     $log = Join-Path $Output 'godot.log'
@@ -303,6 +307,7 @@ try {
     [ordered]@{ gamePid=$gameProcess.Id; mainOsThreadId=$mainThreadId; engineStartUtc=$processStart.ToString('O');
         mainThreadIdentification='CreateProcessW primary OS thread ID; compare only OS IDs, never CLR ManagedThreadID';
         mode=$Mode; captureEndpoint=$captureEndpoint; commandLine=$line; measurement=$condition.measurement; condition=$condition; launcher=$timing;
+        preparation=$condition.preparation;
         collector=if($diagnostic){'EventPipe dotnet-sampled-thread-time; NOT on-CPU'}else{'OFF'};
         attachRequestedUtc=$attachRequestedUtc; collectorPid=if($trace){$trace.Id}else{$null}; collectorStopRequestedUtc=$stopRequestedUtc;
         collectorStoppedWhileTargetAlive=if($diagnostic){$stopped}else{$null}; collectorFinishedUtc=if($diagnostic){[DateTime]::UtcNow.ToString('O')}else{$null};
@@ -312,12 +317,12 @@ try {
         timing=[ordered]@{ origin='script-entry Stopwatch timestamp; phase milliseconds retain the separate engine origin';
             scriptToEngineLaunchRequestSeconds=(Elapsed-Seconds $scriptEnteredTimestamp $timing.engineLaunchRequestedTimestamp);
             lockWaitSeconds=(Elapsed-Seconds $timing.lockRequestedTimestamp $timing.lockAcquiredTimestamp);
-            freshnessSeconds=(Elapsed-Seconds $timing.freshnessStartedTimestamp $timing.freshnessCompletedTimestamp);
+            outputCheckSeconds=(Elapsed-Seconds $timing.outputCheckStartedTimestamp $timing.outputCheckCompletedTimestamp);
             scriptToMenuObservedSeconds=$titleSeconds; scriptToPlayingRealtimeObservedSeconds=$realtimeSeconds;
             scriptToNewGamePreloadReadyObservedSeconds=(Observed-Seconds 'preload-ready' $scriptEnteredTimestamp);
             directedRequestToWalkInputReleaseObservedSeconds=$inputSeconds;
             movementResponseSeconds=$null; movementStatus='NOT_MEASURED_IN_TIMING_ROUND; core smoke checks real directional displacement';
-            limit='Observed log boundaries include flush/poll/scheduling delay, nominal poll 20ms; no guessed overhead subtraction. Worker native-binding setup is included before lock/freshness, conservatively beyond the product launcher. Process StartTime UTC and engine phase milliseconds have separate origins.' };
+            limit='Observed log boundaries include flush/poll/scheduling delay, nominal poll 20ms; no guessed overhead subtraction. Worker native-binding setup is included before lock/output check, conservatively beyond the product launcher. Explicit preparation is recorded separately outside script-entry time. Process StartTime UTC and engine phase milliseconds have separate origins.' };
         budgetObservations=$checks;
         input=[ordered]@{ method='PID-directed private-desktop WM_KEYDOWN/UP Enter; normal TitleMenu NewGame focus';
             requestedUtc=$inputRequestedUtc; requestedTimestamp=$inputRequestedTimestamp; targetWindowHandle=$inputWindowHandle;

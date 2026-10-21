@@ -1,4 +1,4 @@
-﻿# 使用现成构建测一次 immediate 体验；与常规批次共用判鲜、私桌面与计时，不跳过启动器等待。
+﻿# 显式准备后测一次 immediate 体验；与常规批次共用正式输出检查、私桌面与计时，不跳过启动器等待。
 # 用法：powershell -File scripts/build/startup-cpu/run-existing-immediate.ps1 -Output <新目录> -BuiltRevision <构建提交>。
 # 产出：output/start_game/TOOL-215-profile/；output/.locks/build.lock。
 param([Parameter(Mandatory)][string]$Output, [Parameter(Mandatory)][string]$BuiltRevision,

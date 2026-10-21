@@ -1,4 +1,4 @@
-﻿# 收口预烘：照正式启动入口编译、导入，再后台全图烘进同一份本机 CPU 缓存，全程持构建锁。
+﻿# 收口预烘：显式准备正式游戏构建与按需导入，再后台全图烘进同一份本机 CPU 缓存，全程持构建锁。
 # 产出：output/prebake_game/、本机CPU烘焙缓存
 # 用法：powershell -NoProfile -ExecutionPolicy Bypass -File scripts\build\prebake-game.ps1
 $ErrorActionPreference = 'Stop'
@@ -13,7 +13,7 @@ $lease = $null
 $code = 1
 try {
     $lease = Enter-UESTCBuildLock $layout.Locks
-    Initialize-UESTCLaunch -Root $repo -Godot $godot -BuildLease $lease
+    Update-UESTCGameBuild -Root $repo -Godot $godot -BuildLease $lease
     $result = Invoke-UESTCProcess $godot @('--headless', '--path', "$repo\game", '--', '--bake=all', '--map=*') $repo (Join-Path $out 'bake.log') -TimeoutSeconds 14400 -AllowFailure
     $code = $result.ExitCode
     foreach ($line in ($result.StdOut -split '\r?\n')) {

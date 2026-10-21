@@ -5,10 +5,12 @@ param([Parameter(Mandatory)][string]$Root, [IO.FileStream]$BuildLease = $null)
 $ErrorActionPreference = 'Stop'
 $rootPath = [IO.Path]::GetFullPath($Root)
 . (Join-Path $rootPath 'scripts/lib/common.ps1')
+. (Join-Path $rootPath 'scripts/lib/start-game.ps1')
 $layout = Get-UESTCLayout $rootPath
 $work = Join-Path $rootPath 'output/build/native-render'
 $null = [IO.Directory]::CreateDirectory($work)
-$godot = [Security.SecurityElement]::Escape((Get-UESTCGodot))
+$engine = Get-UESTCGodot
+$godot = [Security.SecurityElement]::Escape($engine)
 $escapedRoot = [Security.SecurityElement]::Escape($rootPath)
 $settings = Join-Path $work 'window.runsettings'
 $xml = @"
@@ -19,10 +21,12 @@ $lease = $null
 try {
     if (-not $BuildLease) {
         $lease = Enter-UESTCBuildLock $layout.Locks
-        & (Join-Path $rootPath 'scripts/setup/install-test-runner.ps1') -Root $rootPath
-        $null = Invoke-UESTCProcess dotnet @('build',(Join-Path $rootPath 'game/Campus.Tests.csproj'),'-c','Debug','-warnaserror') `
-            $rootPath (Join-Path $work 'native-render-build.log')
+        Update-UESTCGameBuild -Root $rootPath -Godot $engine -BuildLease $lease
     }
+    # G1 prepares only the game; this entry owns the NativeRender test host.
+    & (Join-Path $rootPath 'scripts/setup/install-test-runner.ps1') -Root $rootPath
+    $null = Invoke-UESTCProcess dotnet @('build',(Join-Path $rootPath 'game/Campus.Tests.csproj'),'-c','Debug','-warnaserror') `
+        $rootPath (Join-Path $work 'native-render-build.log')
 
     $trxName = 'native-render-' + [Guid]::NewGuid().ToString('N') + '.trx'
     $trxPath = Join-Path $work $trxName

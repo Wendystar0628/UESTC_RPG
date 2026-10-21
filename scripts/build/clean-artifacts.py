@@ -41,7 +41,6 @@ DEPTH = 3
 COMMITS = 20
 FORMAT_DIR = re.compile(r'^(.+)-tbin-(\d+)$')
 TASK_LINK = re.compile(r'output/[\w./-]+', re.ASCII)  # 任务单里写的产物路径；只取 ASCII 段，中文名截在前缀
-START_GAME_KEEP = tuple(os.path.join('start_game', name) for name in ('build.succeeded', 'build.log', 'import.log'))
 
 
 def git(*args):
@@ -181,7 +180,7 @@ def keep_set(out_root, refs):
     """out_root 里受保护的路径（normcase 后的绝对路径）：被引用的路径本身及其里面；审计项与通知引用的文件连同所在目录。"""
     audit, tasks, pattern = refs
     base = os.path.dirname(out_root)  # 引用以 output/ 开头，相对 output 根的上一级
-    keep = {os.path.join(out_root, name) for name in START_GAME_KEEP}
+    keep = set()
     for link in audit:
         path = os.path.normpath(os.path.join(base, link))
         keep.add(path)

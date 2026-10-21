@@ -1,16 +1,17 @@
 ﻿# 启动游戏内统一拍摄服务；录像每机位独立进程，保留 Godot 原生文件，以服务元数据说明有效区间。
 # 产出：output/shots/、output/shots/ui/、output/movies/
-# 用法：powershell -NoProfile -File scripts/shots/fixed-shots.ps1 [-Ui] [-Only 名字,名字] [-Build] [-Poses 机位文件] [-MovieFrames 600] [-MovieEvents '60:season=winter;90:season=spring']
-#   -Build：按共享 Directory.Build.props 编译优化 Debug 并导入（代码改过、还没编译时用）
+# 用法：powershell -NoProfile -File scripts/shots/fixed-shots.ps1 [-Ui] [-Only 名字,名字] [-Poses 机位文件] [-MovieFrames 600] [-MovieEvents '60:season=winter;90:season=spring']
+# 每轮先显式准备正式游戏构建与按需导入。
 #   -Poses：换一份机位表（格式同 poses.txt），临时加拍的机位放仓库外，不改 poses.txt
 #   -Ui：在隔离桌面采集 ui-poses.txt 的开始页、行走 HUD 与地图页，1920×1080；不能与 -Poses 或录像组合。
 # 事件也可写在机位表第三列 --movie-events=...；帧号零起始，60 fps，第 60 帧即第 1 秒。
 # 整轮持有构建锁（WF-BUILD），不开声音；截图 output/shots/、总览 总览.jpg；录像 output/movies/机位名/，有效区间见 movie-segment.json。
-param([string[]]$Only = @(), [switch]$Build, [string]$Poses = '', [switch]$Ui,
+param([string[]]$Only = @(), [string]$Poses = '', [switch]$Ui,
     [ValidateRange(0, 2147483647)][int]$MovieFrames = 0, [string]$MovieEvents = '')
 $ErrorActionPreference = 'Stop'
 $repo = (Resolve-Path (Join-Path $PSScriptRoot '..\..')).Path
 . (Join-Path $repo 'scripts\lib\common.ps1')
+. (Join-Path $repo 'scripts\lib\start-game.ps1')
 $layout = Get-UESTCLayout $repo
 $godot = Get-UESTCGodot
 if ($MovieEvents -and -not $MovieFrames) { throw '-MovieEvents 需要 -MovieFrames。' }
@@ -33,11 +34,7 @@ $lease = Enter-UESTCBuildLock $layout.Locks
 try {
     # 拿到锁后清掉上一轮截图、日志和总览，整轮出图与拼图共用这把锁。
     Get-ChildItem -LiteralPath $out -File | Where-Object { $_.Extension -in '.png', '.log', '.jpg' } | ForEach-Object { Remove-Item -LiteralPath $_.FullName -Force }
-    if ($Build) {
-        Invoke-UESTCProcess 'dotnet' @('build', "$repo\game\Campus.sln", '-c', 'Debug', '-v', 'q') $repo (Join-Path $out 'build.log') | Out-Null
-        $import = Invoke-UESTCProcess $godot @('--headless', '--editor', '--path', "$repo\game", '--', '--build-import') $repo (Join-Path $out 'import.log') -TimeoutSeconds 600
-        Assert-UESTCCleanGodotLog $import
-    }
+    Update-UESTCGameBuild -Root $repo -Godot $godot -BuildLease $lease
     if ($Ui) {
         # 每页独立启动，真实标题/行走模式不经过只接受旁观世界的批量机位计划。
         foreach ($row in $rows) {

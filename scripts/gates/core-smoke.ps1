@@ -1,6 +1,7 @@
 ﻿# 核心冒烟：正式场景从标题经新游戏、行走、返回标题与继续，再关闭存档和重启恢复，拒绝引擎错误/泄漏，报告实例参数需求与容量，供 G5 与 G20 核心共用。
 # 产出：output/build/gates/；output/render-review/（核心专项日志、测试结果、隔离存档与截图）。
 # 用法：由 scripts\gate.ps1 点引用（. scripts\gates\core-smoke.ps1）后调用 Invoke-UESTCMainlineSmoke 与 Invoke-UESTCSaveCore，不单独运行
+. (Join-Path $PSScriptRoot '../lib/start-game.ps1')
 if (-not (Get-Variable UESTCCoreSmokeResults -Scope Script -ErrorAction SilentlyContinue)) {
     $script:UESTCCoreSmokeResults = @{}
 }
@@ -51,7 +52,10 @@ function Invoke-UESTCMainlineSmoke {
     $lease = $null
     try {
         $godotFailurePattern = '(?im)(?:SCRIPT )?ERROR:|shader[^\r\n]*(?:compilation failed|compile error)|\bleaked\b|\bRIDs?\b[^\r\n]*\bleak\w*|\bleak\w*[^\r\n]*\bRIDs?\b'
-        if (-not $BuildLease) { $lease = Enter-UESTCBuildLock $Locks }
+        if (-not $BuildLease) {
+            $lease = Enter-UESTCBuildLock $Locks
+            Update-UESTCGameBuild -Root $rootPath -Godot $Godot -BuildLease $lease
+        }
         $engineArgs = @('--path',(Join-Path $rootPath 'game'),'--rendering-method','forward_plus',
             '--rendering-driver','d3d12','--resolution','1280x720','--fixed-fps','60','--')
         $captureArgs = @("--save-dir=$saves","--out=$shots",'--shots=V1','--ui=0','--audio=off','--quality=fine')
@@ -149,7 +153,11 @@ function Invoke-UESTCSaveCore {
     $rootPath = [IO.Path]::GetFullPath($Root)
     $lease = $null
     try {
-        if (-not $BuildLease) { $lease = Enter-UESTCBuildLock $Locks; $BuildLease = $lease }
+        if (-not $BuildLease) {
+            $lease = Enter-UESTCBuildLock $Locks
+            $BuildLease = $lease
+            Update-UESTCGameBuild -Root $rootPath -Godot $Godot -BuildLease $BuildLease
+        }
         if (-not $SaveTestsAlreadyPassed) {
             $work = Join-Path $rootPath 'output/build/gates/save-core'
             $null = [IO.Directory]::CreateDirectory($work)
@@ -160,8 +168,8 @@ function Invoke-UESTCSaveCore {
             [IO.File]::WriteAllText($settings,$xml,(New-Object Text.UTF8Encoding $false))
             $trxName = 'save-core-' + [Guid]::NewGuid().ToString('N') + '.trx'
             $trxPath = Join-Path $work $trxName
-            $saveTests = Invoke-UESTCProcess dotnet @('test',(Join-Path $rootPath 'game/Campus.Tests.csproj'),'--no-build',
-                '--no-restore','--settings',$settings,'--filter','FullyQualifiedName~Campus.Kernel.Save',
+            $saveTests = Invoke-UESTCProcess dotnet @('test',(Join-Path $rootPath 'game/Campus.Tests.csproj'),'-c','Debug',
+                '--settings',$settings,'--filter','FullyQualifiedName~Campus.Kernel.Save',
                 '--logger',"trx;LogFileName=$trxName",'--results-directory',$work) $rootPath (Join-Path $work 'save-core.log') -TimeoutSeconds 600 -AllowFailure
             $executed = 0
             if (Test-Path -LiteralPath $trxPath -PathType Leaf) {
