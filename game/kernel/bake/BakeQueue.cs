@@ -19,7 +19,6 @@ internal sealed class BakeQueue : IDisposable
     private long _order;
     private int _total;
     private int _done;
-    private int _failed;
     private bool _persisting;
     private bool _disposed;
     private readonly List<Exception> _failures = [];
@@ -41,7 +40,10 @@ internal sealed class BakeQueue : IDisposable
         {
             lock (_sync)
             {
-                return new(_total, Math.Max(0, _done - (_persisting ? 1 : 0)), _failed > 0 ? $"生成失败 {_failed} 项" : !_persisting && _done == _total ? "已完成" : "正在本机生成校园");
+                var failed = 0;
+                foreach (var job in _jobs.Values)
+                    if (job.Counted && job.Handle.Failure is not null and not OperationCanceledException) failed++;
+                return new(_total, Math.Max(0, _done - (_persisting ? 1 : 0)), failed > 0 ? $"生成失败 {failed} 项" : !_persisting && _done == _total ? "已完成" : "正在本机生成校园");
             }
         }
     }
@@ -93,7 +95,7 @@ internal sealed class BakeQueue : IDisposable
     {
         lock (_sync)
             foreach (var key in _jobs.Where(p => p.Value.Handle.State == BakeState.Failed && p.Value.Handle.Done.IsCompleted).Select(p => p.Key).ToArray())
-            { var job = _jobs[key]; _jobs.Remove(key); if (job.Counted) { _total--; _done--; if (job.Failure is not OperationCanceledException) _failed--; } }
+            { var job = _jobs[key]; _jobs.Remove(key); if (job.Counted) { _total--; _done--; } }
     }
 
     public Task ForgetMap(MapSession session)
@@ -110,7 +112,6 @@ internal sealed class BakeQueue : IDisposable
                 var pending = job.Handle.State == BakeState.Pending;
                 job.Counted = false; _total--;
                 if (job.Handle.State is BakeState.Ready or BakeState.Failed) _done--;
-                if (job.Handle.State == BakeState.Failed && job.Handle.Failure is not OperationCanceledException) _failed--;
                 if (job.Handle.State is BakeState.Pending or BakeState.Running)
                     job.Handle.Fail(new OperationCanceledException("Map unloaded before this bake request completed."));
                 if (pending) job.Handle.Finish(job.Failure);
@@ -224,22 +225,21 @@ internal sealed class BakeQueue : IDisposable
     }
 
     // Classify once at publication; handles and drain tasks keep their original worker errors.
-    internal void RecordFailure([FailureHandler("ENG-ARCH")] Exception error)
+    internal Exception RecordFailure([FailureHandler("ENG-ARCH")] Exception error)
     {
-        if (error is OperationCanceledException) return;
+        if (error is OperationCanceledException) return error;
         lock (_sync)
         {
-            if (ReferenceEquals(error, _failure)) return;
-            _failed++;
+            if (ReferenceEquals(error, _failure)) return error;
             _failures.Add(error);
             if (_failures.Count == 1 && error is AppStartupException)
             {
                 _failure = error;
-                return;
+                return error;
             }
             var code = _failure is AppStartupException startup ? startup.Code : AppStartupFailureCodes.BakeFailed;
             var cause = _failures.Count == 1 ? error : new AggregateException("Bake work failed.", _failures);
-            _failure = new AppStartupException(code, "Local bake work failed.", cause);
+            return _failure = new AppStartupException(code, "Local bake work failed.", cause);
         }
     }
 
@@ -257,10 +257,9 @@ internal sealed class BakeQueue : IDisposable
             foreach (var job in _jobs.Values.Where(j => j.Handle.State is BakeState.Pending or BakeState.Running))
             {
                 var running = job.Handle.State == BakeState.Running;
-                job.Counted = false;
+                if (job.Counted) { job.Counted = false; _total--; }
                 job.Handle.Fail(new OperationCanceledException("Bake service stopped."));
                 if (!running) job.Handle.Finish(null);
-                _done++;
             }
             _queue.Clear();
             Monitor.PulseAll(_sync);

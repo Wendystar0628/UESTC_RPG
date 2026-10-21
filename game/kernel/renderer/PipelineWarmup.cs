@@ -101,7 +101,7 @@ public sealed partial class PipelineWarmup : Node, IPipelinePreparation
             }
             // One submission lets Godot see hidden spatial instances and actually draw the canvas types.
             // This is a frame boundary, not compilation evidence or a stable-frame threshold.
-            await FrameAwaiter.ReadyDrawAsync(this, static () => true,
+            await FrameAwaiter.StartupReadyDrawAsync(this, static () => true,
                 timeout, cancellationToken);
         }
         finally

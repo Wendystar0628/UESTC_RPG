@@ -5,6 +5,8 @@ using System.Numerics;
 using System.Reflection;
 using System.Text.Json;
 using Campus.Contracts;
+using Campus.Contracts.AppFlow;
+using Campus.Contracts.Bake;
 using Campus.Contracts.Maps;
 using Campus.Kernel.Maps;
 using Campus.Gen.Interior.Shell.Box;
@@ -143,6 +145,65 @@ public sealed class InteriorProviderScopeTests
             provider.BuildStorey(context, first, 3, InteriorDetail.Full).Meshes.Count == 0 &&
             provider.BuildStorey(context, second, 1, InteriorDetail.Full).Meshes.Count == 0)
             .OverrideFailureMessage("A feature acquired another feature's floor authorization.").IsTrue();
+    }
+
+    [TestCase, TestCategory(TestReason.Regression)]
+    public void PackagedDiscoveryUsesItsOwnResourcesAndDoesNotCacheReadFailures()
+    {
+        var first = new ServiceRegistry(); var second = new ServiceRegistry();
+        var reads = 0;
+        var error = new IOException("Build manifest temporarily unavailable.");
+        first.Add<IRequiredResources>(new ManifestResources(() =>
+        {
+            if (++reads == 1) throw error;
+            return Manifest("first");
+        }));
+        second.Add<IRequiredResources>(new ManifestResources(() => Manifest("second")));
+        Exception? failure = null;
+        try { first.Discover([typeof(ThrowingService)]); } catch (IOException actual) { failure = actual; }
+        AssertThat(ReferenceEquals(failure, error) && first.Entries.Count == 0).IsTrue();
+        second.Discover([typeof(ThrowingService)]);
+        first.Discover([typeof(ThrowingService)]);
+        AssertThat(reads == 2 && first.Entries.Single().Owner == "first" && second.Entries.Single().Owner == "second" &&
+            first.CodeFingerprints.Chain(BakeCodeChains.Shared) == "first" &&
+            second.CodeFingerprints.Chain(BakeCodeChains.Shared) == "second" &&
+            ReferenceEquals(first.Get<ServiceRegistry>(), first)).IsTrue();
+
+        static byte[] Manifest(string owner) => JsonSerializer.SerializeToUtf8Bytes(new BakeCodeManifest(
+            BakeCodeManifest.CurrentSchema, new Dictionary<string, string> { [BakeCodeManifest.Chain(BakeCodeChains.Shared)] = owner },
+            new Dictionary<string, string> { [BakeCodeManifest.TypeKey(typeof(ThrowingService))] = owner }), ContractJson.Options);
+    }
+
+    [TestCase, TestCategory(TestReason.Regression)]
+    public void ConstructorBoundaryPreservesOriginalFailuresAndReflectionErrors()
+    {
+        foreach (var error in new Exception[] { new IOException("Constructor resource failed."),
+            new AppStartupException(AppStartupFailureCodes.Installation, "Required constructor resource failed.") })
+        {
+            var registry = new ServiceRegistry();
+            registry.Discover([typeof(ThrowingService)], _ => "fixture");
+            registry.Add<Exception>(error);
+            Exception? failure = null;
+            try { registry.Create(typeof(ThrowingService)); } catch (Exception actual) { failure = actual; }
+            AssertThat(ReferenceEquals(failure, error) && failure?.StackTrace?.Contains(nameof(ThrowingService), StringComparison.Ordinal) == true).IsTrue();
+            failure = null;
+            try { RegistrationDiscovery.Construct(typeof(ThrowingService), _ => throw error); } catch (Exception actual) { failure = actual; }
+            AssertThat(ReferenceEquals(failure, error)).IsTrue();
+        }
+        AssertThrown(() => RegistrationDiscovery.Construct(typeof(ThrowingService), _ => new object())).IsInstanceOf<ArgumentException>();
+    }
+
+    private sealed class ManifestResources(Func<byte[]> read) : IRequiredResources
+    {
+        public byte[] ReadBytes(string path) => path == BuildCodeIndex.AssetPath ? read() : throw new InvalidOperationException("Unexpected manifest path.");
+        public string ReadText(string path) => throw new NotSupportedException();
+        public T Load<T>(string path) where T : Godot.Resource => throw new NotSupportedException();
+    }
+
+    [KernelService(typeof(ThrowingService))]
+    public sealed class ThrowingService
+    {
+        public ThrowingService(Exception error) => throw error;
     }
 
     private static ServiceRegistry ProviderRegistry()

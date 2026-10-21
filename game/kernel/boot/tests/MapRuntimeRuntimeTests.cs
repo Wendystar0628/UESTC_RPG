@@ -120,7 +120,7 @@ public sealed class MapRuntimeRuntimeTests
         fixture.Stream.Failure = failure;
         runtime._Process(0);
         try { Read(); throw new InvalidOperationException("A producer failure became capture success."); }
-        catch (InvalidDataException actual) { AssertThat(ReferenceEquals(actual, failure)).IsTrue(); }
+        catch (AppStartupException actual) { AssertThat(actual.Code == AppStartupFailureCodes.MapPreparation && ReferenceEquals(actual.InnerException, failure)).IsTrue(); }
     }
 
     [TestCase]
@@ -167,7 +167,15 @@ public sealed class MapRuntimeRuntimeTests
             try { await pending; throw new InvalidOperationException("Disabled rendering did not remain cancellable."); }
             catch (OperationCanceledException) { }
             try { await FrameAwaiter.ReadyDrawAsync(host, Ready, TimeSpan.FromMilliseconds(50)); throw new InvalidOperationException("Disabled rendering completed instead of timing out."); }
-            catch (AppStartupException error) when (error.Code == AppStartupFailureCodes.Stalled) { }
+            catch (TimeoutException error) { AssertThat(error.InnerException is OperationCanceledException).IsTrue(); }
+            try { await FrameAwaiter.StartupReadyDrawAsync(host, Ready, TimeSpan.FromMilliseconds(50)); throw new InvalidOperationException("Startup rendering completed instead of timing out."); }
+            catch (AppStartupException error)
+            {
+                AssertThat(error.Code == AppStartupFailureCodes.Stalled && error.InnerException is TimeoutException
+                    { InnerException: OperationCanceledException }).IsTrue();
+            }
+            try { await FrameAwaiter.StartupReadyDrawAsync(host, Ready, TimeSpan.FromSeconds(5), cancellation.Token); throw new InvalidOperationException("Startup rendering ignored cancellation."); }
+            catch (OperationCanceledException) { }
         }
         finally
         {
@@ -223,15 +231,18 @@ public sealed class MapRuntimeRuntimeTests
         AssertThat(runtime.Failure is null && !failed.Done.IsCompleted).OverrideFailureMessage("Reading failure advanced runtime collection.").IsTrue();
         runtime._Process(0);
         AssertThat(failed.Done.IsFaulted).IsTrue();
-        AssertThat(ReferenceEquals(failed.Done.Exception!.InnerException, original) && ReferenceEquals(runtime.Failure, original)).IsTrue();
+        var published = runtime.Failure as AppStartupException ?? throw new InvalidOperationException("Map failure has no startup code.");
+        AssertThat(published.Code == AppStartupFailureCodes.MapPreparation && ReferenceEquals(published.InnerException, original) &&
+            ReferenceEquals(failed.Done.Exception!.InnerException, published)).IsTrue();
         var rendering = new InvalidDataException("rendering failed");
         var physical = new InvalidOperationException("collision failed");
         fixture.Renderer.Failure = rendering; collision.Failure = physical;
-        AssertThat(ReferenceEquals(runtime.Failure, original)).OverrideFailureMessage("Reading failure collected new producer faults.").IsTrue();
+        AssertThat(ReferenceEquals(runtime.Failure, published)).OverrideFailureMessage("Reading failure collected new producer faults.").IsTrue();
         runtime._Process(0);
-        var collected = runtime.Failure as AggregateException ?? throw new InvalidOperationException("Producer failures were not collected by Update.");
-        AssertThat(collected.Flatten().InnerExceptions.Count == 3 && collected.Flatten().InnerExceptions.Contains(original) &&
-            collected.Flatten().InnerExceptions.Contains(rendering) && collected.Flatten().InnerExceptions.Contains(physical)).IsTrue();
+        var collected = runtime.Failure as AppStartupException ?? throw new InvalidOperationException("Producer failures have no startup code.");
+        var causes = collected.InnerException as AggregateException ?? throw new InvalidOperationException("Producer failures were not collected by Update.");
+        AssertThat(collected.Code == AppStartupFailureCodes.MapPreparation && causes.InnerExceptions.Count == 3 &&
+            causes.InnerExceptions.Contains(original) && causes.InnerExceptions.Contains(rendering) && causes.InnerExceptions.Contains(physical)).IsTrue();
         runtime._Process(0);
         AssertThat(ReferenceEquals(runtime.Failure, collected)).OverrideFailureMessage("Unchanged faults were collected twice.").IsTrue();
     }
@@ -278,11 +289,13 @@ public sealed class MapRuntimeRuntimeTests
             AssertThat(!shutdown.IsCompleted).IsTrue();
             second.Completion.SetResult();
             try { await shutdown; throw new InvalidOperationException("Shutdown lost its preparation and cleanup failures."); }
-            catch (AggregateException error)
+            catch (AppStartupException error)
             {
-                var failures = error.Flatten().InnerExceptions;
-                AssertThat(failures.OfType<AppStartupException>().Any(failure => failure.Code == AppStartupFailureCodes.MapPreparation &&
-                    ReferenceEquals(failure.InnerException, original)) && failures.Contains(stopping) && failures.Contains(draining) && failures.Contains(releasing)).IsTrue();
+                var causes = error.InnerException as AggregateException ?? throw new InvalidOperationException("Shutdown lost its diagnostic causes.");
+                var failures = causes.Flatten().InnerExceptions;
+                AssertThat(error.Code == AppStartupFailureCodes.MapPreparation && failures.Count == 4 && failures.Contains(original) &&
+                    failures.Contains(stopping) && failures.Contains(draining) && failures.Contains(releasing)).IsTrue();
+                AssertThat(ReferenceEquals(runtime.Failure, error) && original.StackTrace is not null).IsTrue();
             }
             AssertThat(order.SequenceEqual(["stop-first", "stop-second", "stream", "data-first", "data-second"])).IsTrue();
             AssertThat(stream.IsUnloaded && !mounting.IsCompletedSuccessfully && ReferenceEquals(runtime.ShutdownAsync(map), shutdown)).IsTrue();

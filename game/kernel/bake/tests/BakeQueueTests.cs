@@ -26,6 +26,10 @@ public sealed class BakeQueueTests
         if (!ReferenceEquals(awaited, error) || !ReferenceEquals(handle.Failure, error) ||
             queue.Failure is not AppStartupException { Code: AppStartupFailureCodes.BakeFailed } coded || !ReferenceEquals(coded.InnerException, error))
             throw new InvalidOperationException("Bake failure lost its code or original exception object.");
+        if (queue.Progress.Stage != "生成失败 1 项") throw new InvalidOperationException("A counted worker failure was omitted from progress.");
+        queue.ClearFailures();
+        if (queue.Progress.Total != 0 || queue.Progress.Done != 0 || queue.Progress.Stage != "已完成")
+            throw new InvalidOperationException("Clearing failed work left a stale progress failure.");
         var cleanup = new IOException("Bake publication cleanup failed.");
         queue.RecordFailure(cleanup);
         if (queue.Failure is not AppStartupException { Code: AppStartupFailureCodes.BakeFailed,
@@ -69,6 +73,15 @@ public sealed class BakeQueueTests
             if (!ReferenceEquals(handle.Failure, error) ||
                 queue.Failure is not AppStartupException { Code: AppStartupFailureCodes.BakeFailed } coded || !ReferenceEquals(coded.InnerException, error))
                 throw new InvalidOperationException("Unload changed the worker failure identity.");
+            queue.ClearFailures();
+            if (queue.Progress.Total != 0 || queue.Progress.Done != 0 || queue.Progress.Stage != "已完成")
+                throw new InvalidOperationException("A retired late failure leaked into counted progress.");
+            var next = new BakeQueue.MapSession(new("fixture"));
+            var retry = queue.Ensure(next, key, BakePriority.Normal, () => throw new IOException("Current map failure."));
+            try { retry.Done.GetAwaiter().GetResult(); } catch (IOException) { }
+            if (queue.Progress.Stage != "生成失败 1 项") throw new InvalidOperationException("A later map inherited retired failure accounting.");
+            try { queue.ForgetMap(next).GetAwaiter().GetResult(); } catch (AggregateException) { }
+            if (queue.Progress.Stage != "已完成") throw new InvalidOperationException("Forgetting a completed failed map retained its progress failure.");
         }
         finally { release.Set(); }
     }

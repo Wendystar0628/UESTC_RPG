@@ -237,10 +237,9 @@ public sealed class BakeService : IBakeService, IBakeContextSource, IMapContentS
         catch (OperationCanceledException) { throw; }
         catch (Exception error)
         {
-            _queue.RecordFailure(error);
+            var failure = _queue.RecordFailure(error);
             if (error is AppStartupException) throw;
-            _queue.ThrowIfFailed();
-            throw;
+            throw failure;
         }
     }
 

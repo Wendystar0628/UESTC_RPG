@@ -165,7 +165,7 @@ internal sealed class HudLoading : IAppLoadingPresentation, IAppScreenCoverage, 
         lifetime.ThrowIfCancellationRequested();
         _view.Frontispiece.Modulate = Colors.White;
         _view.Frontispiece.Visible = true;
-        await FrameAwaiter.ReadyDrawAsync(_owner, () => CoversViewport(_view.Frontispiece, _owner.GetViewport().GetVisibleRect().Size),
+        await FrameAwaiter.StartupReadyDrawAsync(_owner, () => CoversViewport(_view.Frontispiece, _owner.GetViewport().GetVisibleRect().Size),
             TimeSpan.FromSeconds(BootTuning.StalledSeconds), lifetime);
         lifetime.ThrowIfCancellationRequested();
         _frontispieceDrawSize = _owner.GetViewport().GetVisibleRect().Size;

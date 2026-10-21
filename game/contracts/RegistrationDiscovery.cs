@@ -1,4 +1,5 @@
 using System.Reflection;
+using System.Runtime.ExceptionServices;
 
 namespace Campus.Contracts;
 
@@ -91,6 +92,12 @@ public static class RegistrationDiscovery
     public static object Construct(Type type, Func<ParameterInfo, object?> resolve)
     {
         var constructor = SelectConstructor(type);
-        return constructor.Invoke(constructor.GetParameters().Select(resolve).ToArray());
+        var arguments = constructor.GetParameters().Select(resolve).ToArray();
+        try { return constructor.Invoke(arguments); }
+        catch (TargetInvocationException error) when (error.InnerException is not null)
+        {
+            ExceptionDispatchInfo.Capture(error.InnerException).Throw();
+            throw;
+        }
     }
 }

@@ -17,15 +17,13 @@ internal sealed class StageStartupFailure(KernelStage stage)
     private bool _handlingFailure;
     private bool _bootCompleted;
     private Task? _failureTask;
-    private IAppStartupFailurePresentation _startupFailurePresentation = null!;
-    private bool _presentationBound;
+    private IAppStartupFailurePresentation? _startupFailurePresentation;
     private StartupFailureSession? _startupFailureSession;
     internal bool Failed { get; private set; }
 
     internal void BindPresentation(ServiceRegistry registry)
     {
         _startupFailurePresentation = registry.Get<IAppStartupFailurePresentation>();
-        _presentationBound = true;
     }
 
     internal void CompleteBoot() => _bootCompleted = true;
@@ -62,7 +60,7 @@ internal sealed class StageStartupFailure(KernelStage stage)
         {
             try
             {
-                if (_presentationBound && CanPresentStartupFailure())
+                if (_startupFailurePresentation is { } presentation && CanPresentStartupFailure())
                 {
                     // Join the existing cleanup; its fade must not run after failure-page acknowledgement.
                     await _stage.ReleaseStartupPresentation();
@@ -70,7 +68,7 @@ internal sealed class StageStartupFailure(KernelStage stage)
                     {
                         var session = new StartupFailureSession(this, DescribeStartupFailure(error));
                         _startupFailureSession = session;
-                        var acknowledged = await _startupFailurePresentation.Show(session);
+                        var acknowledged = await presentation.Show(session);
                         if (acknowledged && CanPresentStartupFailure())
                         {
                             session.Accept();

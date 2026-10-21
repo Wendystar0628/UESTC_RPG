@@ -11,8 +11,6 @@ internal sealed class BuildCodeIndex
     internal const string AssetPath = "res://data/build-code-fingerprints.json";
     private readonly FrozenDictionary<string, string> _roots;
     private readonly FrozenDictionary<string, string> _owners;
-    private static readonly Lazy<BuildCodeIndex> Packaged = new(Load);
-    internal static BuildCodeIndex Shared => Packaged.Value;
 
     internal BuildCodeIndex(BakeCodeManifest manifest)
     {
@@ -28,9 +26,9 @@ internal sealed class BuildCodeIndex
         _owners = manifest.Registrations.ToFrozenDictionary(StringComparer.Ordinal);
     }
 
-    internal static BuildCodeIndex Load()
+    internal static BuildCodeIndex Load(IRequiredResources resources)
     {
-        return Parse(Kernel.Get<IRequiredResources>().ReadBytes(AssetPath));
+        return Parse(resources.ReadBytes(AssetPath));
     }
 
     internal static BuildCodeIndex Parse(ReadOnlyMemory<byte> bytes)

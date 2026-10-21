@@ -17,7 +17,10 @@ public sealed class CpuBakeCommand : IBakeCommand
 {
     private readonly GlobalBuildInputs _globalInputs;
 
-    public CpuBakeCommand(GlobalBuildInputs globalInputs) => _globalInputs = globalInputs;
+    private readonly ServiceRegistry _registry;
+
+    public CpuBakeCommand(GlobalBuildInputs globalInputs, ServiceRegistry registry)
+    { _globalInputs = globalInputs; _registry = registry; }
 
     public async Task<int> Run(BootContext context)
     {
@@ -29,7 +32,7 @@ public sealed class CpuBakeCommand : IBakeCommand
         var failures = new List<Exception>();
         try
         {
-            terrain = new TerrainCacheService(options);
+            terrain = new TerrainCacheService(options, _registry.CodeFingerprints);
             bake = new BakeService(options, terrain, _globalInputs.Snapshot);
             var source = new MapDataSource();
             var catalog = await source.ReadCatalog();

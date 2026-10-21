@@ -39,8 +39,7 @@ public sealed class TerrainCacheService : ITerrainPreparation, IDisposable, IAsy
     private volatile bool _stopped;
     internal BakeCacheStore Store { get; }
     internal BuildCodeIndex CodeFingerprints { get; }
-    public TerrainCacheService() : this(BakeOptions.FromApplication()) { }
-    internal TerrainCacheService(BakeOptions options) : this(options, BuildCodeIndex.Shared) { }
+    public TerrainCacheService(ServiceRegistry registry) : this(BakeOptions.FromApplication(), registry.CodeFingerprints) { }
     internal TerrainCacheService(BakeOptions options, BuildCodeIndex codeFingerprints)
     { _options = options; CodeFingerprints = codeFingerprints; Store = new(options.CacheRoot, packagedRoot: options.PackagedCacheRoot); }
 

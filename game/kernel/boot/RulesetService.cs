@@ -27,6 +27,7 @@ public sealed class RulesetService : IRuleset, IRulesetActivation
             id.Value.Any(c => !(char.IsAsciiLetterOrDigit(c) || c is '-' or '_')))
             throw new ArgumentException("Invalid ruleset identifier.", nameof(id));
         var path = "res://data/rulesets/" + id.Value + ".json";
+        if (!Godot.FileAccess.FileExists(path)) throw new ArgumentException("Unknown ruleset identifier.", nameof(id));
         var next = Read(path);
         if (next.Id != id) throw new InvalidDataException("Ruleset identity is invalid.");
         Current = next;

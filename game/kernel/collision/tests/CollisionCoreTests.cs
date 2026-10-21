@@ -34,11 +34,11 @@ public sealed class CollisionCoreTests
         var options = new BakeOptions(cache.Path, Live: false, Strict: false, Background: false, MapOnly: false, LogicalProcessors: 3, SeedOverride: null);
         var registry = Campus.Kernel.Registry.Kernel.Services;
         registry.Add<IRequiredResources>(new RequiredResources());
-        using var terrain = new TerrainCacheService(options);
+        // Match the production discovery boundary before ReadClaims captures content instances.
+        registry.Discover(BuildInfo.ModuleAssemblies.Select(name => Assembly.Load(new AssemblyName(name))).SelectMany(assembly => assembly.GetTypes()));
+        using var terrain = new TerrainCacheService(options, registry.CodeFingerprints);
         try
         {
-            // Match the production discovery boundary before ReadClaims captures content instances.
-            registry.Discover(BuildInfo.ModuleAssemblies.Select(name => Assembly.Load(new AssemblyName(name))).SelectMany(assembly => assembly.GetTypes()));
             // These bindings borrow the same terrain/cache session used by world loading and CPU baking.
             registry.Add(terrain);
             registry.Add<ITerrainPreparation>(terrain);

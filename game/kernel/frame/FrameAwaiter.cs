@@ -47,6 +47,16 @@ public static class FrameAwaiter
         }
     }
 
+    public static async Task StartupReadyDrawAsync(Node host, Func<bool> ready, TimeSpan timeout,
+        CancellationToken cancellationToken = default)
+    {
+        try { await ReadyDrawAsync(host, ready, timeout, cancellationToken); }
+        catch (TimeoutException error)
+        {
+            throw AppStartupException.Stalled("Startup frame presentation stalled.", error);
+        }
+    }
+
     public static async Task ReadyDrawAsync(Node host, Func<bool> ready, TimeSpan timeout,
         CancellationToken cancellationToken = default)
     {
@@ -68,7 +78,7 @@ public static class FrameAwaiter
         }
         catch (OperationCanceledException error) when (deadline.IsCancellationRequested && !cancellationToken.IsCancellationRequested)
         {
-            throw AppStartupException.Stalled("Frame presentation stalled.", error);
+            throw new TimeoutException("Frame presentation stalled.", error);
         }
     }
 }
