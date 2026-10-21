@@ -7,7 +7,7 @@ summary: "按图数据与全局的划分、map.json 约定、归属、map_rect�
 keywords: [多地图, 换图, 切图, 地图服务, 按图数据, 先卸后装, 同图重载, 天气按图, 单图半径, 本机烘焙缓存, IMapService, IMapAware, MapScope, MapDescriptor, map.json, map_rect]
 depends: [SYS-VIEW, ENG-ARCH, ENG-PERF, SYS-TIME, SYS-WEATHER, SYS-SAVE, WLD-OUTSKIRTS]
 related: [CORE-INDEX, WLD-OUTSKIRTS-DIORAMA, ENG-GATES, ENG-BUDGET, UI-NAV, SYS-WALK, SYS-GRAPHICS, SYS-ATLAS, SYS-TITLE, WLD-INTERIORS, SYS-AUDIO, ENG-ROADMAP]
-contracts: [MapId, WaypointRef, MapKind, MapTimeRule, GeoFrame, MapRect, RoamLimits, MapTitle, MapSpawn, MapWorldRules, MapEnvironment, MapPortal, MapDescriptor, MapScopeAttribute, IMapContext, MapTravelCause, MapTravelRequest, MapStage, MapTravelResult, IMapTransition, IMapService, IMapAware, MapVisit]
+contracts: [MapId, WaypointRef, MapKind, MapTimeRule, GeoFrame, MapRect, RoamLimits, MapTitle, MapSpawn, MapWorldRules, MapEnvironment, MapPortal, MapDescriptor, MapScopeAttribute, IMapContext, MapStage, MapTravelResult, IMapTransition, IMapService, IMapAware, MapVisit]
 data: ["game/data/maps/index.json", "game/data/maps/qingshuihe/map.json", "game/data/maps/qingshuihe/"]
 gates: [G2, G4, G5, G6, G7]
 paths: ["game/data/maps/**", "game/data/maps/index.json", "game/data/maps/*/map.json", "game/data/maps/qingshuihe/map.json", "game/kernel/map/**"]
@@ -25,7 +25,7 @@ paths: ["game/data/maps/**", "game/data/maps/index.json", "game/data/maps/*/map.
 3. **切图在数据层完成，不换场景**：本作的静态内容不在场景树里，按图记账，卸一张图就是按账逐项释放（§3.1）。
 4. **一个 World3D，先卸后装**：加载界面盖起（SYS-TITLE §3.1）→ 卸旧图 → 装新图 → 出生 → 加载界面淡出；内存峰值是一张图加全局常驻，不做无缝切换（§3、§8）。切图运行时在主线之后。
 5. **时间与季节全局，天气按图求值**：世界时间切图时照常向前；自动天气是（种子、地图、世界时间）的纯函数，不存按图的状态，切图不需要补算（§4）。
-6. **同图重载不泄漏**（`Travel` 到当前图 3 次，旧模型能回收）在主线之后，到第二张图立项时再做（§3.5）。
+6. **同图重载不泄漏**（对当前图连续 `Prepare` 3 次，旧模型能回收）在主线之后，到第二张图立项时再做（§3.5）。
 7. **全图数据纹理一律按 `map_rect` 采样**，不按"全校"隐式换算（§7）。
 8. **单图半径不超过 8 km**（§8）。
 
@@ -38,7 +38,7 @@ paths: ["game/data/maps/**", "game/data/maps/index.json", "game/data/maps/*/map.
 - **全局常驻的 `[KernelNode]` 用到按图的数据**：实现 `IMapAware`，在 `OnMapLoaded` 重建；`OnMapUnloading` 释放本图的实例、纹理内容和缓存，随切图运行时在主线之后；不得跨图持有 `IWorldModel`、`FeatureId`、格子句柄或纹理内容（§3.3）
 - **写或采样全图数据纹理**：按 `map_rect` 换算，在 `OnMapLoaded` 里重建；罩住整张图的 `CustomAabb` 切图时重设（§7）
 - **在切图途中被调用**（主线之后）：`IMapService.Context` 在 Unload 到 Mount 之间为 null，要判空（§3）
-- **同图内移动**（跳转、传送、回位）：交给 `ICameraRig.Transit` 和 `IAtlasService`，不调 `Travel`（§3.3、§4）
+- **同图内移动**（跳转、传送、回位）：交给 `ICameraRig.Transit` 和 `IAtlasService`，不调 `Prepare`（§3.3、§4）
 
 ## 1 数据归属
 
@@ -79,7 +79,7 @@ paths: ["game/data/maps/**", "game/data/maps/index.json", "game/data/maps/*/map.
 
 ## 3 切换
 
-**主线范围**：只有一张图，启动时在扉页后面加载当前图（§3.2 的装载、预热、出生），新游戏与读档只摆位姿、不切图。遮挡、卸载与图和图之间的切换，以及 §3.3 的规则和 §3.5 的门禁，在主线之后。
+**主线范围**：只有一张图，启动时在扉页后面装配当前图（§3.2 的装载与预热），进入游戏、读档、传送与模式切换都只准备一个真实终点（§3.2），不先到默认总览视角。遮挡、卸载与图和图之间的切换，以及 §3.3 的规则和 §3.5 的门禁，在主线之后。
 
 ### 3.1 一个 World3D，先卸后装
 
@@ -91,9 +91,9 @@ paths: ["game/data/maps/**", "game/data/maps/index.json", "game/data/maps/*/map.
 
 1. **遮挡**：加载界面盖满；占用观者输入；取消进行中的跳转与预取；小地图淡出；存档暂停拍快照；World 声音组压低。
 2. **记录与卸载**：记下旧图的 `MapVisit`（位姿、模式）；流式停发请求；按账释放本图的实例、碰撞 body、L4、遮挡体；各 `IMapAware` 收到 `OnMapUnloading`；地图内容、室内提供者与生产者由注册器的地图作用域持有，消费者卸载和数据参与者 Unload 后统一释放该作用域，失败路径也清理；`Context` 置空；`GC.Collect()` 一次。
-3. **装载**（`MapStage` 的 LoadData、Mount）：建世界模型，按"通用 + 本图"筛选模块；同步加载 L4 与遮挡体，写 `map_rect`，重建全图数据纹理，实例化本图节点，各 `IMapAware` 收到 `OnMapLoaded`，预取出生点周围。
-4. **预热与出生**（Warm、Spawn）：只预热本图新出现的"着色器 × 顶点格式 × 渲染状态"组合，一批交给引擎预编译（同图重载为 0，ENG-PERF §2，DECISION-261）；设位姿并合法化，行走模式等碰撞就绪，清相机插值缓冲，重判介质，`Current` 换成新图。
-5. **撤遮挡**：加载界面淡出，环境声淡入；跨图到达显示一次到达标题；释放输入占用，返回 `Arrived`。
+3. **装载**（`MapStage` 的 LoadData、Mount；`IMapService.Prepare` 只做到这里：装图与挂载常驻，同图复用，不移动相机、不选终点）：建世界模型，按"通用 + 本图"筛选模块；同步加载 L4 与遮挡体，写 `map_rect`，重建全图数据纹理，实例化本图节点，各 `IMapAware` 收到 `OnMapLoaded`，预取出生点周围。
+4. **预热与到达**（Warm、到达）：只预热本图新出现的"着色器 × 顶点格式 × 渲染状态"组合，一批交给引擎预编译（同图重载为 0，ENG-PERF §2，DECISION-261）；随后由调用方经 `IMapService.ResolveSpawn` 与存档位姿选定唯一真实终点（带实际眼位与视场角，行走模式另带碰撞脚位），到达流程只准备这一个终点，行走模式等碰撞就绪，清相机插值缓冲，重判介质，`Current` 换成新图。
+5. **撤遮挡**：加载界面淡出，环境声淡入；跨图到达显示一次到达标题；释放输入占用，到达完成。
 
 - **热切图目标**：整体几秒内（按出生点周围已在缓存里计）；冷启动目标见 SYS-TITLE §1。缓存里没有出生点周围的格时现场本机烘焙，遮挡保持到就绪，不限时；预取清单有键进入 `BakeState.Failed` 或连续 60 s 没有进展，按 Failed 处理（§3.3）。
 - **Boot**：窗口启动时就是扉页，跳过卸载，从装载起在扉页后面完成（SYS-TITLE）。
@@ -103,10 +103,10 @@ paths: ["game/data/maps/**", "game/data/maps/index.json", "game/data/maps/*/map.
 
 - **不可取消**：请求一经接受就走完。
 - **只留最后一次**：途中再来请求只保留最后一次，当前这次走到出生后不撤遮挡，直接接着走下一次；目标相同就合并。
-- **Rejected**：未知的图、尚未实现的规则（`Fixed`）、`Kind` 不是 `Outdoor`。
+- **拒绝**：未知的图或出生点直接报错，不进入装载。
 - **Failed**：加载出错时留在加载界面下，退回上一张图；上一张也失败就进默认图；都失败就在加载界面上显示失败页（重试 / 复制错误信息 / 退出，SYS-TITLE §1），不无限重试。退出不写新的一代存档，换图之前的那一代仍有效（SYS-SAVE），也不出保存失败的三选一。`--title=0` 与门禁下不出页，写日志后以非零退出码结束。
 - **全局节点不重建**：天空、植被、水、灯光、天气、界面、平面地图、音频等跨图常驻，只靠 `IMapAware` 换数据，不得跨图持有 `IWorldModel`、`FeatureId`、格子句柄或纹理内容。
-- **同图内的移动不走地图服务**：点位跳转、回位交给 `ICameraRig.Transit`，传送交给 `IAtlasService`（同图传送也经加载界面，SYS-ATLAS-TRAVEL §3.2）；`IAtlasService` 只在目标标记属于别的图时才调 `Travel`。
+- **同图内的移动不走地图服务**：点位跳转、回位交给 `ICameraRig.Transit`，传送交给 `IAtlasService`（同图传送也经加载界面，SYS-ATLAS-TRAVEL §3.2）；目标标记属于别的图时，加载界面下先 `Prepare` 目标图，再按同一到达流程只准备该标记这一个终点（第二张图立项时再接）。
 
 ### 3.4 入口
 
@@ -114,12 +114,12 @@ paths: ["game/data/maps/**", "game/data/maps/index.json", "game/data/maps/*/map.
 | --- | --- |
 | 冷启动 | 起始图 = 命令行 `--map` > 最近存档的图 > 默认图；LoadData–Warm 在扉页后面完成 |
 | 新游戏 | 起始图是默认图；当前已是这张图就不切图，只按 SYS-SAVE 重置世界，经加载界面进入（SYS-TITLE §3.1） |
-| 继续 / 读档 | 先恢复世界段与天气段，再 `Travel`，最后恢复其余段（SYS-SAVE）；读档是换一个世界实例，切图本身不改 `Instance`，到达后也不请求保存 |
+| 继续 / 读档 | 先恢复世界段与天气段，再 `Prepare` 该图并以存档位姿为唯一终点到达，最后恢复其余段（SYS-SAVE）；读档是换一个世界实例，换图本身不改 `Instance`，到达后也不请求保存 |
 | 平面地图传送（主线之后） | 只有目标标记在别的图时才用（SYS-ATLAS） |
 
 ### 3.5 同图重载不泄漏（主线之后）
 
-连续 `Travel` 到当前图 3 次：旧 `IWorldModel` 的弱引用必须能被回收，每个 `IMapAware` 各收到一次卸载与加载通知，显存、内核账、对象数、托管堆不持续增长，热重载几秒内。**一票否决**：同图重载后旧 `IWorldModel` 无法回收，或显存、对象数持续增长（泄漏）。
+对当前图连续 `Prepare` 3 次：旧 `IWorldModel` 的弱引用必须能被回收，每个 `IMapAware` 各收到一次卸载与加载通知，显存、内核账、对象数、托管堆不持续增长，热重载几秒内。**一票否决**：同图重载后旧 `IWorldModel` 无法回收，或显存、对象数持续增长（泄漏）。
 
 **关闭顺序**：见 ENG-ARCH §2「生命周期与发布」。关闭期间禁止新建，借用对象不纳入拥有列表。
 
@@ -144,9 +144,9 @@ paths: ["game/data/maps/**", "game/data/maps/index.json", "game/data/maps/*/map.
 ## 5 相机、行走与安全点（主线之后）
 
 - **不变的**：速度档、视场角、灵敏度、改键、冲刺方式都是设置，切图不变。
-- **位姿优先级**：请求里的位姿 > 请求里的出生点 > 本图的 `MapVisit.LastPose` > 默认出生点。
+- **位姿优先级**：调用方给的位姿 > 给定的出生点 > 本图的 `MapVisit.LastPose` > 默认出生点；选定后只准备这一个终点。
 - **观察模式**：请求给了模式就用，否则保持；目标出生点没有行走落点时自动切到旁观并提示一次。
-- **行走模式**：Spawn 时不开物理，等角色所在格和邻格的碰撞就绪（SYS-WALK），交接时清相机插值缓冲；切图的遮挡可以多停，停得过久写日志。
+- **行走模式**：到达时不开物理，等角色所在格和邻格的碰撞就绪（SYS-WALK），交接时清相机插值缓冲；切图的遮挡可以多停，停得过久写日志。
 - **活动范围**读新图的 `roam`，推回状态清零。
 - **安全点**环形缓冲在 Unload 时清空，不把旧图的点带进新图。切图途中回位不响应。
 - **介质**在出生后重判，过渡在遮挡下直接落定（SYS-VIEW-MEDIUM §1）。

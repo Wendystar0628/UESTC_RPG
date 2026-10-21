@@ -221,7 +221,7 @@ gates: []
 - **地图包围盒**（`Bounds`）：箱庭包围盒，取截面线的包围盒（SYS-MAPS §2）。
 - **`MapScope`**：各区 gen 程序集的特性，标明它属于哪张图；加载一张图只启用"通用 + 当前图"的模块（SYS-MAPS §6、ENG-ARCH §2）。
 - **通用模块**：不认识任何具体图、只读本图数据的生成模块（SYS-MAPS §6）。
-- **切图**（`IMapService.Travel`）：只用一个 World3D，先卸后装；世界时间、季节和实例都不变（SYS-MAPS §3.2）。
+- **切图**（`IMapService.Prepare` 加唯一终点到达）：只用一个 World3D，先卸后装；世界时间、季节和实例都不变（SYS-MAPS §3.2）。
 - **`IMapAware`**：跨图常驻的节点换数据的接口，在加载界面下调用（ENG-ARCH §3）。
 
 ## 11 界面

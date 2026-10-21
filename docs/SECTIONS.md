@@ -994,8 +994,8 @@
 `docs/systems/SYS-ATLAS-平面地图与传送.md` · 3.1k 字 · 平面地图总则：允许与禁止什么、多图数据归属、设置里存什么；界面与传送见子文档
 关键词：平面地图、地图只活在界面层、3D 里不标注、IAtlasService、MarkerId、前往方式、图层筛选、AtlasSave、TransitPreference、小地图、大地图、传送、锚点、全开放、自定义标记、追踪
 
-- SYS-ATLAS §0 结论 · L21 · 662
-  - ★ SYS-ATLAS §0.1 接入要点 · L32 · 323
+- SYS-ATLAS §0 结论 · L21 · 699
+  - ★ SYS-ATLAS §0.1 接入要点 · L32 · 360
 - SYS-ATLAS §1 允许什么、禁止什么 · L38 · 399
 - SYS-ATLAS §2 多地图下的数据 · L50 · 537
 - SYS-ATLAS §3 存档里存什么、设置里存什么 · L57 · 426
@@ -1138,23 +1138,23 @@
 
 ## SYS-MAPS · 多地图
 
-`docs/systems/SYS-MAPS-多地图.md` · 10.8k 字 · 按图数据与全局的划分、map.json 约定、归属、map_rect、单图规模；先卸后装的切图运行时在主线之后
+`docs/systems/SYS-MAPS-多地图.md` · 11.0k 字 · 按图数据与全局的划分、map.json 约定、归属、map_rect、单图规模；先卸后装的切图运行时在主线之后
 关键词：多地图、换图、切图、地图服务、按图数据、先卸后装、同图重载、天气按图、单图半径、本机烘焙缓存、IMapService、IMapAware、MapScope、MapDescriptor、map.json、map_rect
 
 - SYS-MAPS §0 结论 · L21 · 1.5k
-  - ★ SYS-MAPS §0.1 接入要点 · L32 · 887
+  - ★ SYS-MAPS §0.1 接入要点 · L32 · 888
 - SYS-MAPS §1 数据归属 · L43 · 957
   - SYS-MAPS §1.1 按图与全局 · L45 · 788
   - SYS-MAPS §1.2 烘焙缓存 · L63 · 158
 - SYS-MAPS §2 地图描述 `map.json` · L68 · 677
-- SYS-MAPS §3 切换 · L80 · 2.5k
+- SYS-MAPS §3 切换 · L80 · 2.6k
   - SYS-MAPS §3.1 一个 World3D，先卸后装 · L84 · 151
-  - SYS-MAPS §3.2 切图的步骤（切图部分主线之后） · L88 · 1.1k
-  - SYS-MAPS §3.3 规则（主线之后） · L102 · 588
-  - SYS-MAPS §3.4 入口 · L111 · 313
+  - SYS-MAPS §3.2 切图的步骤（切图部分主线之后） · L88 · 1.2k
+  - SYS-MAPS §3.3 规则（主线之后） · L102 · 582
+  - SYS-MAPS §3.4 入口 · L111 · 330
   - SYS-MAPS §3.5 同图重载不泄漏（主线之后） · L120 · 234
 - SYS-MAPS §4 世界状态：时间与季节全局，天气按图求值 · L126 · 612
-- SYS-MAPS §5 相机、行走与安全点（主线之后） · L144 · 422
+- SYS-MAPS §5 相机、行走与安全点（主线之后） · L144 · 430
 - SYS-MAPS §6 归属与 `MapScope` · L155 · 868
 - SYS-MAPS §7 全局参数 `map_rect` · L163 · 686
 - SYS-MAPS §8 内存、包体与单图半径 · L173 · 296
@@ -1258,7 +1258,7 @@
   - SYS-SAVE-FLOW §1.4 退出 · L60 · 306
   - SYS-SAVE-FLOW §1.5 保存状态与失败反馈 · L69 · 87
 - SYS-SAVE-FLOW §2 加载与一致性 · L73 · 2.5k
-  - SYS-SAVE-FLOW §2.1 加载流程 · L75 · 904
+  - SYS-SAVE-FLOW §2.1 加载流程 · L75 · 909
   - SYS-SAVE-FLOW §2.2 世界实例：`IWorldState.Instance` · L89 · 384
   - SYS-SAVE-FLOW §2.3 "状态一致"的定义 · L95 · 391
   - SYS-SAVE-FLOW §2.4 天气 · L103 · 103
@@ -2039,7 +2039,7 @@
 - REG-GLOSSARY §7 观察模式、行走与跳转 · L154 · 1.4k
 - REG-GLOSSARY §8 平面地图与传送 · L178 · 944
 - REG-GLOSSARY §9 开始页与存档 · L195 · 1.1k
-- REG-GLOSSARY §10 多地图 · L215 · 611
+- REG-GLOSSARY §10 多地图 · L215 · 620
 - REG-GLOSSARY §11 界面 · L227 · 1.4k
 - REG-GLOSSARY §12 音频 · L254 · 1.1k
 - REG-GLOSSARY §13 画面设置与性能 · L275 · 1.7k

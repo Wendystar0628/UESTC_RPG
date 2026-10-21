@@ -33,7 +33,7 @@ gates: [G2]
 
 - **想在 3D 画面里标出地点、路线、选中或追踪**：不许，只画在小地图和大地图上（§1、SYS-ATLAS-TRAVEL §2）
 - **要知道玩家在哪、在哪个区**：观者位置读 `IObserverState`，区域名用 `IAtlasService.RegionAt()`；`ICameraRig.Pose` 不当观者位置（SYS-ATLAS-UI §2）
-- **从界面发起传送或飞过去**：一律调 `IAtlasService.Travel`；同图走 `ICameraRig.Transit`，目标在别的图上才走 `IMapService.Travel`（SYS-ATLAS-TRAVEL §3.1）
+- **从界面发起传送或飞过去**：一律调 `IAtlasService.Travel`；同图走 `ICameraRig.Transit`，目标在别的图上时加载界面下先 `IMapService.Prepare` 目标图、再只到达该标记这一个终点（SYS-ATLAS-TRAVEL §3.1，SYS-MAPS §3.2）
 
 ## 1 允许什么、禁止什么
 
