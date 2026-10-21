@@ -18,6 +18,8 @@ $trace = $null
 $gameProcess = $null
 $stopped = $false
 $stopAttempted = $false
+$inputWindowHandle = $null
+$inputReleasedUtc = $null
 $snapshots = [Collections.Generic.List[object]]::new()
 # Native launch returns the PRIMARY OS thread ID. It inherits this worker's private desktop.
 # This small launch binding runs before the game; it is not a CPU sampler.
@@ -185,10 +187,9 @@ try {
     $titleInputReadyAt = $null
     $inputRequestedUtc = $null
     $inputRequestedClockSeconds = $null
-    $inputWindowHandle = $null
     $inputRequestedTimestamp = $null
-    $inputReleasedUtc = $null
-    $inputReleaseMarker = $null
+    $inputReleasedTimestamp = $null
+    $shortPressMilliseconds = 100
     while ($clock.Elapsed.TotalSeconds -lt 300) {
         if ($gameProcess.HasExited) { throw "Target exited before sampling boundary: $($gameProcess.ExitCode)" }
         if ($trace -and $trace.HasExited) { throw "Collector exited before boundary: $($trace.ExitCode)" }
@@ -223,18 +224,22 @@ try {
             $inputRequestedClockSeconds = $clock.Elapsed.TotalSeconds
             $inputWindowHandle = [C215Launch]::NewGameEnter($gameProcess.Id)
         }
-        if ($null -ne $inputWindowHandle -and $null -eq $inputReleasedUtc -and $seen.Contains('new-game-enter')) {
-            # Request acceptance proves keydown crossed normal input processing; no per-frame log is needed.
+        if ($null -ne $inputWindowHandle -and $null -eq $inputReleasedUtc -and
+            ([Diagnostics.Stopwatch]::GetTimestamp() - $inputRequestedTimestamp) * 1000.0 /
+                [Diagnostics.Stopwatch]::Frequency -ge $shortPressMilliseconds) {
+            # Normal short press: release on elapsed request time, then observe acceptance.
+            # Wall time does not prove that the game processed any particular frame.
             [C215Launch]::ReleaseEnter($inputWindowHandle)
+            $inputReleasedTimestamp = [Diagnostics.Stopwatch]::GetTimestamp()
             $inputReleasedUtc = [DateTime]::UtcNow.ToString('O')
-            $inputReleaseMarker = 'new-game-enter'
         }
         if ($null -ne $inputRequestedClockSeconds -and -not $seen.Contains('new-game-enter') -and
             $clock.Elapsed.TotalSeconds -gt $inputRequestedClockSeconds + 15) {
             throw "Directed Enter did not reach new-game-enter within 15s; hwnd=$inputWindowHandle titleFrame=$titleReadyFrame; no valid immediate/dwell result."
         }
         $completed = $seen.Contains('realtime') -and
-            ($Mode -eq 'title' -or ($text -match '(?m)^STARTUP_PHASE input-ready [^\r\n]*mode=Walk'))
+            ($Mode -eq 'title' -or ($null -ne $inputReleasedTimestamp -and $seen.Contains('new-game-enter') -and
+                ($text -match '(?m)^STARTUP_PHASE input-ready [^\r\n]*mode=Walk')))
         if ($completed) { break }
         Start-Sleep -Milliseconds 20
     }
@@ -295,11 +300,14 @@ try {
         budgetObservations=$checks;
         input=[ordered]@{ method='PID-directed private-desktop WM_KEYDOWN/UP Enter; normal TitleMenu NewGame focus';
             requestedUtc=$inputRequestedUtc; requestedTimestamp=$inputRequestedTimestamp; targetWindowHandle=$inputWindowHandle;
-            titleReadyFrame=$titleReadyFrame; releasedUtc=$inputReleasedUtc; releaseAfterMarker=$inputReleaseMarker;
+            titleReadyFrame=$titleReadyFrame; releasedUtc=$inputReleasedUtc; releasedTimestamp=$inputReleasedTimestamp;
+            shortPressTargetMilliseconds=if($Mode -eq 'title'){$null}else{$shortPressMilliseconds};
+            observedRequestToReleaseMilliseconds=if($null -eq $inputReleasedTimestamp){$null}else{
+                (Elapsed-Seconds $inputRequestedTimestamp $inputReleasedTimestamp) * 1000};
             spawnPreloadedAtAcceptance=$preloadReady;
             requestedDwellSeconds=if($Mode -eq 'title'){$null}else{$delay};
             observedTitleToRequestSeconds=if($null -eq $inputRequestedClockSeconds){$null}else{$inputRequestedClockSeconds-$titleObservedAt}};
-        caveat='Normal --title=1 with isolated empty save/log, no CaptureMode. Sparse title-input-ready precedes directed Enter; accepted request releases it. Dwell duration does not prove spawn preload. Unknown cache states do not qualify budgets. Experience has no EventPipe/per-frame log/CPU snapshots; diagnostics never establish experience-target passes. First Walk input release is a proxy; real movement is checked separately by the existing core smoke.'
+        caveat='Normal --title=1 with isolated empty save/log, no CaptureMode. Sparse title-input-ready precedes directed Enter; elapsed wall time releases the short press, then new-game-enter proves acceptance. The full request-to-Walk interval includes the press; no game-frame crossing is inferred. Dwell duration does not prove spawn preload. Unknown cache states do not qualify budgets. Experience has no EventPipe/per-frame log/CPU snapshots; diagnostics never establish experience-target passes. First Walk input release is a proxy; real movement is checked separately by the existing core smoke.'
     } | ConvertTo-Json -Depth 12 | Set-Content -LiteralPath (Join-Path $Output 'result.json') -Encoding UTF8
 
 } catch {
@@ -307,6 +315,12 @@ try {
     $_ | Out-String | Set-Content -LiteralPath (Join-Path $Output 'failure.txt') -Encoding UTF8
     throw
 } finally {
+    # A failure after keydown still releases only this run's target window before cleanup.
+    if ($null -ne $inputWindowHandle -and $null -eq $inputReleasedUtc -and
+        $gameProcess -and -not $gameProcess.HasExited) {
+        [C215Launch]::ReleaseEnter($inputWindowHandle)
+        $inputReleasedUtc = [DateTime]::UtcNow.ToString('O')
+    }
     $timing | ConvertTo-Json -Depth 5 | Set-Content -LiteralPath (Join-Path $Output 'launcher-timing.json') -Encoding UTF8
     if ($diagnostic) { $snapshots.ToArray() | ConvertTo-Json -Depth 7 | Set-Content -LiteralPath (Join-Path $Output 'cpu-snapshots.json') -Encoding UTF8 }
     if ($trace -and -not $stopped -and -not $stopAttempted) { Stop-OwnTrace }
