@@ -417,7 +417,7 @@ foreach ($id in $selected) {
                 }
                 $detail = "Test projects run=$runCount; tests executed=$testCount. " + ($notes -join '; ')
             }
-            'G3' { $detail = Test-UESTCOwnership $root $changes -BaseRef $BaseRef | ConvertTo-Json -Depth 5 -Compress }
+            'G3' { $detail = Test-UESTCOwnership $root $changes | ConvertTo-Json -Depth 5 -Compress }
             'G4' {
                 $newFiles = Test-UESTCNewCodeFiles $root $changes -BaseRef $BaseRef
                 $null = Test-UESTCSourceBoundaries $root

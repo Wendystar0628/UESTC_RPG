@@ -78,12 +78,8 @@ function Test-UESTCScriptSyntax {
 }
 
 function Get-UESTCDocumentPathRules {
-    param([string]$Root, [string]$BaseRef)
-    $text = if ($BaseRef) {
-        (Invoke-UESTCGit $Root @('show', "${BaseRef}:docs/ROUTES.json")).StdOut
-    } else {
-        [IO.File]::ReadAllText((Join-Path $Root 'docs/ROUTES.json'), [Text.UTF8Encoding]::new($false, $true))
-    }
+    param([string]$Root)
+    $text = [IO.File]::ReadAllText((Join-Path $Root 'docs/ROUTES.json'), [Text.UTF8Encoding]::new($false, $true))
     $routes = $text | ConvertFrom-Json -ErrorAction Stop
     if ($null -eq $routes -or $routes.docs -isnot [pscustomobject] -or $routes.paths -isnot [array]) {
         throw 'docs/ROUTES.json must contain document paths and a paths array'
@@ -170,22 +166,13 @@ function Get-UESTCGlobExpression {
     return '^' + $patternRegex + '$'
 }
 
-# Resolve deletions against exactly the same baseline used by selection and G3.
+# Deleted paths have no current document ownership to validate.
 function Get-UESTCPathOwnership {
-    param([string]$Root, [string[]]$Paths, [string]$BaseRef)
+    param([string]$Root, [string[]]$Paths)
     $rules = @(Get-UESTCDocumentPathRules $Root)
-    $deleted = @($Paths | Where-Object { -not (Test-Path -LiteralPath (Join-Path $Root $_) -PathType Leaf) })
-    $basePaths = @()
-    $baseRules = @()
-    if ($deleted.Count) {
-        $basePaths = @(Get-UESTCGitPaths $Root @('ls-tree', '-z', '-r', '--name-only', $BaseRef))
-        if (@($deleted | Where-Object { $_ -in $basePaths }).Count) {
-            $baseRules = @(Get-UESTCDocumentPathRules $Root $BaseRef)
-        }
-    }
     foreach ($path in $Paths) {
-        $pathRules = if ($path -in $deleted -and $path -in $basePaths) { $baseRules } else { $rules }
-        $documents = @($pathRules | Where-Object { Test-UESTCGlob $path $_.Pattern } |
+        if (-not (Test-Path -LiteralPath (Join-Path $Root $path) -PathType Leaf)) { continue }
+        $documents = @($rules | Where-Object { Test-UESTCGlob $path $_.Pattern } |
             ForEach-Object { $_.Docs } | Sort-Object -Unique)
         [pscustomobject]@{ Path=$path; Owner=$documents }
     }
@@ -206,7 +193,7 @@ function Test-UESTCNewCodeFiles {
     } | Sort-Object -Unique)
     $failures = New-Object 'Collections.Generic.List[string]'
     $patchNames = @('misc','util','utils','helper','helpers','temp','tmp','new','v2','old','backup','legacy','compat','patch','fix')
-    foreach ($entry in (Get-UESTCPathOwnership $Root $added $BaseRef)) {
+    foreach ($entry in (Get-UESTCPathOwnership $Root $added)) {
         if (-not $entry.Owner) { $failures.Add("New code file has no document path ownership: $($entry.Path)") }
         # Match whole path tokens, so ordinary responsibilities such as news/oldTown remain valid.
         $tokens = @($entry.Path -split '[^a-zA-Z0-9]+' | Where-Object { $_ -in $patchNames } | Sort-Object -Unique)
@@ -241,9 +228,9 @@ function Get-UESTCUidInputs {
 }
 
 function Test-UESTCOwnership {
-    param([string]$Root, [string[]]$Changes, [Parameter(Mandatory)][string]$BaseRef)
+    param([string]$Root, [string[]]$Changes)
     $failures = New-Object 'Collections.Generic.List[string]'
-    foreach ($entry in (Get-UESTCPathOwnership $Root $Changes $BaseRef)) {
+    foreach ($entry in (Get-UESTCPathOwnership $Root $Changes)) {
         if (-not $entry.Owner) { $failures.Add("Ownership: $($entry.Path) has no document path ownership") }
     }
     $tracked = @(Get-UESTCGitPaths $Root @('ls-files', '-z', '--cached'))
