@@ -9,6 +9,8 @@ using Microsoft.Diagnostics.Tracing.Parsers.Clr;
 var directory = Path.GetFullPath(args.Single());
 using var result = JsonDocument.Parse(File.ReadAllText(Path.Combine(directory, "result.json")));
 var root = result.RootElement;
+if (root.GetProperty("measurement").GetString() != "diagnostic")
+    throw new InvalidDataException("CpuParse requires an explicit diagnostic round; experience has no EventPipe trace.");
 var pid = root.GetProperty("gamePid").GetInt32();
 var mainId = root.GetProperty("mainOsThreadId").GetInt32();
 var processStart = Utc(root.GetProperty("engineStartUtc"));
@@ -106,6 +108,11 @@ try
     var report = new
     {
         pid, mode = root.GetProperty("mode").GetString(), mainOsThreadId = mainId,
+        measurement = "diagnostic; not an experience-target pass",
+        launcher = root.GetProperty("launcher").Clone(),
+        cacheCondition = root.GetProperty("condition").Clone(),
+        observedTiming = root.GetProperty("timing").Clone(),
+        budgetObservations = root.GetProperty("budgetObservations").Clone(),
         mainThreadIdentification = root.GetProperty("mainThreadIdentification").GetString(),
         threadIdJoin = "ProcessThread.Id == EventPipe sample header ThreadID == CLR OSThreadID; never join CLR ManagedThreadID. ThreadStartUtc guards counter differences against OS TID reuse.",
         clrOsThreadIdCrossCheck = clrThreadIds.OrderBy(x => x.Key).Select(x => new {

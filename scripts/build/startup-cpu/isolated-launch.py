@@ -1,6 +1,6 @@
-"""Private-desktop launcher for startup CPU sampling; never switches desktops.
+"""Private-desktop launcher for startup measurement; never switches desktops.
 
-用法：python -I isolated-launch.py <output> <title|immediate|dwell> <dwell-seconds>
+用法：python -I isolated-launch.py <output> <title|immediate|dwell> <dwell-seconds> <condition-json>
 产出：第一个参数指定目录（采样子进程日志与记录；父目录由调用方传入）。
 """
 import base64
@@ -41,6 +41,7 @@ mode = sys.argv[2]
 if mode not in ("title", "immediate", "dwell"):
     raise ValueError("Expected title, immediate or dwell")
 dwell_seconds = float(sys.argv[3])
+condition_path = Path(sys.argv[4]).resolve()
 out.mkdir(parents=True, exist_ok=False)
 desktop_name = "UESTC_STARTUP_CPU_" + str(time.time_ns())
 desktop = user.CreateDesktopW(desktop_name, None, None, 0, 0x01FF, None)
@@ -60,7 +61,8 @@ try:
 
     capture_arguments = ["&", ps_literal(Path(__file__).with_name("capture.ps1")),
         "-Output", ps_literal(out), "-Mode", ps_literal(mode),
-        "-TitleDwellSeconds", ps_literal(dwell_seconds)]
+        "-TitleDwellSeconds", ps_literal(dwell_seconds),
+        "-ConditionPath", ps_literal(condition_path)]
     stdout = ps_literal(out / "worker.stdout.txt")
     stderr = ps_literal(out / "worker.stderr.txt")
     script = ("$ErrorActionPreference = 'Stop'\ntry {\n    " + " ".join(capture_arguments) +

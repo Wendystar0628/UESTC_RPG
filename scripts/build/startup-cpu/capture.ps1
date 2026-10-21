@@ -1,11 +1,19 @@
-﻿# Only via isolated-launch.py from a run entry point, which owns the shared build lease.
-# 用法：由 isolated-launch.py 在私有桌面传入 -Output、-Mode、-TitleDwellSeconds。
+﻿# 私有桌面启动体验/诊断：本轮从脚本进入计，包含等锁和同一正式判鲜，诊断显式选择。
+# 用法：由 isolated-launch.py 传入 -Output、-Mode、-TitleDwellSeconds、-ConditionPath。
 # 产出：-Output 指定目录（采样日志、跟踪、JSON 记录与隔离存档；父目录由调用方传入）。
 param([Parameter(Mandatory)][string]$Output, [ValidateSet('title','immediate','dwell')][string]$Mode,
-    [ValidateRange(1,120)][double]$TitleDwellSeconds = 10)
+    [ValidateRange(1,120)][double]$TitleDwellSeconds = 10, [Parameter(Mandatory)][string]$ConditionPath)
+$scriptEnteredTimestamp = [Diagnostics.Stopwatch]::GetTimestamp()
+$scriptEnteredUtc = [DateTime]::UtcNow
 $ErrorActionPreference = 'Stop'
 $toolRoot = (Resolve-Path (Join-Path $PSScriptRoot '..\..\..')).Path
 . "$toolRoot\scripts\lib\common.ps1"
+. "$toolRoot\scripts\lib\start-game.ps1"
+$condition = Get-Content -LiteralPath $ConditionPath -Raw -Encoding UTF8 | ConvertFrom-Json
+if ($condition.measurement -notin @('experience','diagnostic')) { throw 'Unknown measurement condition.' }
+$diagnostic = $condition.measurement -eq 'diagnostic'
+$timing = New-UESTCLaunchTiming -ScriptEnteredUtc $scriptEnteredUtc -ScriptEnteredTimestamp $scriptEnteredTimestamp
+$lease = $null
 $trace = $null
 $gameProcess = $null
 $stopped = $false
@@ -123,7 +131,13 @@ function Stop-OwnTrace {
     $script:stopped = $true
 }
 try {
+    $timing['lockRequestedTimestamp'] = [Diagnostics.Stopwatch]::GetTimestamp()
+    $lease = Enter-UESTCBuildLock (Get-UESTCLayout $toolRoot).Locks
+    $timing['lockAcquiredTimestamp'] = [Diagnostics.Stopwatch]::GetTimestamp()
+    $timing['lockWaitStatus'] = 'MEASURED_IN_TOTAL'
     $godot = Get-UESTCGodot
+    # Measurements use existing outputs only; a stale build/import is a failed preparation, never hidden time.
+    Initialize-UESTCLaunch -Root $toolRoot -Godot $godot -BuildLease $lease -Timing $timing -RequireFresh
     $window = $godot -replace '_console\.exe$', '.exe'
     if (-not [IO.File]::Exists($window)) { $window = $godot }
     $log = Join-Path $Output 'godot.log'
@@ -132,44 +146,52 @@ try {
     # All three conditions use normal production defaults; no gate/shots/frames CaptureMode.
     $arguments = @('--path', "$toolRoot\game", '--log-file', $log, '--') + $gameArgs
     $line = ($arguments | ForEach-Object { ConvertTo-UESTCProcessArgument $_ }) -join ' '
-    $env:UESTC_STARTUP_PROFILE = '1' # root-approved opt-in, only this private worker/game process tree
+    # Explicitly override inherited telemetry: experience must never enable per-frame logging.
+    $env:UESTC_STARTUP_PROFILE = if ($diagnostic) { '1' } else { '0' }
+    $timing['engineLaunchRequestedTimestamp'] = [Diagnostics.Stopwatch]::GetTimestamp()
     $launched = [C215Launch]::Start($window, $line, $toolRoot)
     $gameProcess = [Diagnostics.Process]::GetProcessById($launched[0])
     $mainThreadId = $launched[1]
-    # Attach immediately to this new PID; OS/process/log metadata is recorded afterwards.
-    $traceInfo = [Diagnostics.ProcessStartInfo]::new()
-    $traceInfo.FileName = "$toolRoot\output\tools\dotnet-diagnostics\dotnet-trace.exe"
-    $traceInfo.Arguments = 'collect --process-id ' + $gameProcess.Id +
-        ' --profile dotnet-sampled-thread-time --output ' +
-        (ConvertTo-UESTCProcessArgument (Join-Path $Output 'threads.nettrace'))
-    $traceInfo.UseShellExecute = $false; $traceInfo.CreateNoWindow = $false
-    $traceInfo.RedirectStandardInput = $false # inherit private real console; never redirect stdin
-    $traceInfo.RedirectStandardOutput = $true; $traceInfo.RedirectStandardError = $true
-    $attachRequestedUtc = [DateTime]::UtcNow.ToString('O')
-    $trace = [Diagnostics.Process]::Start($traceInfo)
-    $traceStdout = $trace.StandardOutput.ReadToEndAsync()
-    $traceStderr = $trace.StandardError.ReadToEndAsync()
     $processStart = $gameProcess.StartTime.ToUniversalTime()
-    [ordered]@{gamePid=$gameProcess.Id; mainOsThreadId=$mainThreadId;
-        engineStartUtc=$processStart.ToString('O'); collectorPid=$trace.Id; attachRequestedUtc=$attachRequestedUtc} |
-        ConvertTo-Json | Set-Content -LiteralPath (Join-Path $Output 'launch.json') -Encoding UTF8
-    Read-CpuSnapshot 'attach-request'
+    $timing['engineStartUtc'] = $processStart.ToString('O')
+    $timing['status'] = 'ENGINE_STARTED'
+    $attachRequestedUtc = $null
+    $stopRequestedUtc = $null
+    if ($diagnostic) {
+        $traceInfo = [Diagnostics.ProcessStartInfo]::new()
+        $traceInfo.FileName = "$toolRoot\output\tools\dotnet-diagnostics\dotnet-trace.exe"
+        $traceInfo.Arguments = 'collect --process-id ' + $gameProcess.Id +
+            ' --profile dotnet-sampled-thread-time --output ' +
+            (ConvertTo-UESTCProcessArgument (Join-Path $Output 'threads.nettrace'))
+        $traceInfo.UseShellExecute = $false; $traceInfo.CreateNoWindow = $false
+        $traceInfo.RedirectStandardInput = $false # inherit private real console for Stop
+        $traceInfo.RedirectStandardOutput = $true; $traceInfo.RedirectStandardError = $true
+        $attachRequestedUtc = [DateTime]::UtcNow.ToString('O')
+        $trace = [Diagnostics.Process]::Start($traceInfo)
+        $traceStdout = $trace.StandardOutput.ReadToEndAsync()
+        $traceStderr = $trace.StandardError.ReadToEndAsync()
+        Read-CpuSnapshot 'attach-request'
+    }
+    [ordered]@{ gamePid=$gameProcess.Id; mainOsThreadId=$mainThreadId;
+        engineStartUtc=$processStart.ToString('O'); launcher=$timing;
+        collectorPid=if($trace){$trace.Id}else{$null}; attachRequestedUtc=$attachRequestedUtc } |
+        ConvertTo-Json -Depth 5 | Set-Content -LiteralPath (Join-Path $Output 'launch.json') -Encoding UTF8
     $anchors = [Collections.Generic.List[object]]::new()
     $seen = [Collections.Generic.HashSet[string]]::new()
     $clock = [Diagnostics.Stopwatch]::StartNew()
     $completed = $false
     $titleObservedAt = $null
     $titleReadyFrame = $null
-    $latestProcessFrame = -1L
+    $titleInputReadyAt = $null
     $inputRequestedUtc = $null
     $inputRequestedClockSeconds = $null
     $inputWindowHandle = $null
-    $inputDownProcessFrame = $null
+    $inputRequestedTimestamp = $null
     $inputReleasedUtc = $null
-    $inputUpProcessFrame = $null
+    $inputReleaseMarker = $null
     while ($clock.Elapsed.TotalSeconds -lt 300) {
         if ($gameProcess.HasExited) { throw "Target exited before sampling boundary: $($gameProcess.ExitCode)" }
-        if ($trace.HasExited) { throw "Collector exited before boundary: $($trace.ExitCode)" }
+        if ($trace -and $trace.HasExited) { throw "Collector exited before boundary: $($trace.ExitCode)" }
         $text = ''
         if ([IO.File]::Exists($log)) {
             $stream = [IO.FileStream]::new($log, [IO.FileMode]::Open, [IO.FileAccess]::Read,
@@ -179,39 +201,37 @@ try {
         }
         $observed = [DateTime]::UtcNow.ToString('O')
         foreach ($m in [regex]::Matches($text, '(?m)^STARTUP_PHASE ([^ ]+) ([0-9.]+)([^\r\n]*)')) {
+            if ($m.Groups[1].Value -eq 'input-ready' -and $m.Groups[3].Value -notmatch '(?:^|\s)mode=Walk(?:\s|$)') { continue }
             if ($seen.Add($m.Groups[1].Value)) {
                 $anchors.Add([ordered]@{name=$m.Groups[1].Value;
                     milliseconds=[double]::Parse($m.Groups[2].Value, [Globalization.CultureInfo]::InvariantCulture);
-                    observedUtc=$observed; suffix=$m.Groups[3].Value})
-                Read-CpuSnapshot $m.Groups[1].Value
+                    observedUtc=$observed; observedTimestamp=[Diagnostics.Stopwatch]::GetTimestamp(); suffix=$m.Groups[3].Value})
+                if ($diagnostic) { Read-CpuSnapshot $m.Groups[1].Value }
                 if ($m.Groups[1].Value -eq 'title-ready') {
                     $titleObservedAt = $clock.Elapsed.TotalSeconds
                     $titleReadyFrame = [long][regex]::Match($m.Groups[3].Value, 'frame=(\d+)').Groups[1].Value
                 }
+                if ($m.Groups[1].Value -eq 'title-input-ready') { $titleInputReadyAt = $clock.Elapsed.TotalSeconds }
             }
         }
-        foreach ($m in [regex]::Matches($text, '(?m)^STARTUP_FRAME [0-9.]+ frame=(\d+) ')) {
-            $latestProcessFrame = [Math]::Max($latestProcessFrame, [long]$m.Groups[1].Value)
-        }
         $delay = if ($Mode -eq 'dwell') { $TitleDwellSeconds } else { 0 }
-        if ($Mode -ne 'title' -and $null -ne $titleObservedAt -and $null -eq $inputRequestedUtc -and
-            $clock.Elapsed.TotalSeconds -ge $titleObservedAt + $delay -and $latestProcessFrame -gt $titleReadyFrame) {
-            # title-ready is synchronous inside a frame, before Travel can perform work which
-            # pumps and drops OS input. Wait for a real subsequent process frame, then hold Enter through
-            # another process frame so down/up cross the normal Godot input-processing boundary.
+        if ($Mode -ne 'title' -and $null -ne $titleInputReadyAt -and $null -eq $inputRequestedUtc -and
+            $clock.Elapsed.TotalSeconds -ge $titleObservedAt + $delay) {
+            # A sparse post-title process-frame marker proves the normal menu can accept input.
             $inputRequestedUtc = [DateTime]::UtcNow.ToString('O')
+            $inputRequestedTimestamp = [Diagnostics.Stopwatch]::GetTimestamp()
             $inputRequestedClockSeconds = $clock.Elapsed.TotalSeconds
-            $inputDownProcessFrame = $latestProcessFrame
             $inputWindowHandle = [C215Launch]::NewGameEnter($gameProcess.Id)
         }
-        if ($null -ne $inputWindowHandle -and $null -eq $inputReleasedUtc -and $latestProcessFrame -gt $inputDownProcessFrame) {
+        if ($null -ne $inputWindowHandle -and $null -eq $inputReleasedUtc -and $seen.Contains('new-game-enter')) {
+            # Request acceptance proves keydown crossed normal input processing; no per-frame log is needed.
             [C215Launch]::ReleaseEnter($inputWindowHandle)
             $inputReleasedUtc = [DateTime]::UtcNow.ToString('O')
-            $inputUpProcessFrame = $latestProcessFrame
+            $inputReleaseMarker = 'new-game-enter'
         }
         if ($null -ne $inputRequestedClockSeconds -and -not $seen.Contains('new-game-enter') -and
             $clock.Elapsed.TotalSeconds -gt $inputRequestedClockSeconds + 15) {
-            throw "Directed Enter did not reach new-game-enter within 15s; hwnd=$inputWindowHandle titleFrame=$titleReadyFrame downAfterProcess=$inputDownProcessFrame upAfterProcess=$inputUpProcessFrame; no valid immediate/dwell result."
+            throw "Directed Enter did not reach new-game-enter within 15s; hwnd=$inputWindowHandle titleFrame=$titleReadyFrame; no valid immediate/dwell result."
         }
         $completed = $seen.Contains('realtime') -and
             ($Mode -eq 'title' -or ($text -match '(?m)^STARTUP_PHASE input-ready [^\r\n]*mode=Walk'))
@@ -219,28 +239,76 @@ try {
         Start-Sleep -Milliseconds 20
     }
     if (-not $completed) { throw 'Startup phase deadline exceeded.' }
-    Stop-OwnTrace
+    if ($diagnostic) { Stop-OwnTrace }
     if ($gameProcess.HasExited) { throw 'Target exited before collector Stop/rundown completed.' }
+    $phaseByName = @{}
+    foreach ($anchor in $anchors) { $phaseByName[$anchor.name] = $anchor }
+    function Elapsed-Seconds([long]$From, [long]$To) {
+        return ($To - $From) / [double][Diagnostics.Stopwatch]::Frequency
+    }
+    function Observed-Seconds([string]$Name, [long]$From) {
+        if (-not $phaseByName.ContainsKey($Name)) { return $null }
+        return Elapsed-Seconds $From $phaseByName[$Name].observedTimestamp
+    }
+    $preloadReady = $null
+    if ($phaseByName.ContainsKey('new-game-enter')) {
+        $preload = [regex]::Match($phaseByName['new-game-enter'].suffix, '(?:^|\s)preloadReady=(true|false)(?:\s|$)', 'IgnoreCase')
+        if ($preload.Success) { $preloadReady = [bool]::Parse($preload.Groups[1].Value) }
+    }
+    $titleSeconds = Observed-Seconds 'title-ready' $scriptEnteredTimestamp
+    $realtimeSeconds = Observed-Seconds 'realtime' $scriptEnteredTimestamp
+    $inputSeconds = if ($null -ne $inputRequestedTimestamp) { Observed-Seconds 'input-ready' $inputRequestedTimestamp } else { $null }
+    $budgets = (Get-Content -LiteralPath (Join-Path $toolRoot 'budgets.json') -Raw | ConvertFrom-Json).cache
+    $validGeometry = $condition.geometryCache -eq 'valid'
+    $warmPipelines = $condition.pipelineCache -eq 'warm'
+    function Budget-Observation([string]$Key, $Actual, [bool]$Applicable, [string]$Endpoint) {
+        $limit = $budgets.$Key
+        $status = if ($diagnostic) { 'DIAGNOSTIC_ONLY' }
+            elseif (-not $Applicable -or $null -eq $Actual) { 'NOT_MEASURED' }
+            elseif ($Actual -le $limit) { 'MEETS_OBSERVED_PROXY_TARGET' } else { 'EXCEEDS_OBSERVED_PROXY_TARGET' }
+        return [ordered]@{ key=$Key; targetSeconds=$limit; observedSeconds=$Actual; status=$status; endpoint=$Endpoint }
+    }
+    $checks = @(
+        (Budget-Observation 'warmLauncherToTitleSecondsMax' $titleSeconds ($validGeometry -and $warmPipelines -and $condition.systemFileCache -eq 'warm') 'script-entry to menu-operable observation'),
+        (Budget-Observation 'coldLauncherToTitleSecondsMax' $titleSeconds ($validGeometry -and $warmPipelines -and $condition.systemFileCache -eq 'reboot-first-run') 'script-entry to menu-operable observation'),
+        (Budget-Observation 'firstRunLauncherToRealtimeSecondsMax' $realtimeSeconds ($validGeometry -and $condition.pipelineCache -eq 'first-run') 'script-entry to first realtime observation'),
+        (Budget-Observation 'preloadedNewGameToWalkSecondsMax' $inputSeconds ($validGeometry -and $warmPipelines -and $preloadReady -eq $true) 'directed request to first Walk input-release observation; movement checked by core smoke'),
+        (Budget-Observation 'immediateNewGameToWalkSecondsMax' $inputSeconds ($validGeometry -and $warmPipelines -and $Mode -eq 'immediate') 'directed request to first Walk input-release observation; movement checked by core smoke')
+    )
     [ordered]@{ gamePid=$gameProcess.Id; mainOsThreadId=$mainThreadId; engineStartUtc=$processStart.ToString('O');
         mainThreadIdentification='CreateProcessW primary OS thread ID; compare only OS IDs, never CLR ManagedThreadID';
-        mode=$Mode; commandLine=$line; collector='dotnet-trace 10 EventPipe dotnet-sampled-thread-time (all managed thread stacks; NOT on-CPU)';
-        attachRequestedUtc=$attachRequestedUtc; collectorPid=$trace.Id; collectorStopRequestedUtc=$stopRequestedUtc;
-        collectorStoppedWhileTargetAlive=$true; collectorFinishedUtc=[DateTime]::UtcNow.ToString('O');
+        mode=$Mode; commandLine=$line; measurement=$condition.measurement; condition=$condition; launcher=$timing;
+        collector=if($diagnostic){'EventPipe dotnet-sampled-thread-time; NOT on-CPU'}else{'OFF'};
+        attachRequestedUtc=$attachRequestedUtc; collectorPid=if($trace){$trace.Id}else{$null}; collectorStopRequestedUtc=$stopRequestedUtc;
+        collectorStoppedWhileTargetAlive=if($diagnostic){$stopped}else{$null}; collectorFinishedUtc=if($diagnostic){[DateTime]::UtcNow.ToString('O')}else{$null};
         phaseObservations=$anchors.ToArray(); cpuSnapshots=$snapshots.ToArray(); phasePollingMilliseconds=20;
         baseline=(git -C $toolRoot rev-parse HEAD); captureMode=$false; cpuFunctionShare='NOT_MEASURED';
-        frameTelemetryEnvironment='UESTC_STARTUP_PROFILE=1';
-        input=[ordered]@{method='PID-directed private-desktop WM_KEYDOWN/UP Enter; normal TitleMenu NewGame focus';
-            requestedUtc=$inputRequestedUtc; targetWindowHandle=$inputWindowHandle; titleReadyFrame=$titleReadyFrame;
-            downAfterProcessFrame=$inputDownProcessFrame; releasedUtc=$inputReleasedUtc; upAfterProcessFrame=$inputUpProcessFrame;
+        frameTelemetryEnvironment=if($diagnostic){'UESTC_STARTUP_PROFILE=1'}else{'UESTC_STARTUP_PROFILE=0'};
+        timing=[ordered]@{ origin='script-entry Stopwatch timestamp; phase milliseconds retain the separate engine origin';
+            scriptToEngineLaunchRequestSeconds=(Elapsed-Seconds $scriptEnteredTimestamp $timing.engineLaunchRequestedTimestamp);
+            lockWaitSeconds=(Elapsed-Seconds $timing.lockRequestedTimestamp $timing.lockAcquiredTimestamp);
+            freshnessSeconds=(Elapsed-Seconds $timing.freshnessStartedTimestamp $timing.freshnessCompletedTimestamp);
+            scriptToMenuObservedSeconds=$titleSeconds; scriptToRealtimeObservedSeconds=$realtimeSeconds;
+            directedRequestToWalkInputReleaseObservedSeconds=$inputSeconds;
+            movementResponseSeconds=$null; movementStatus='NOT_MEASURED_IN_TIMING_ROUND; core smoke checks real directional displacement';
+            limit='Observed log boundaries include flush/poll/scheduling delay, nominal poll 20ms; no guessed overhead subtraction. Worker native-binding setup is included before lock/freshness, conservatively beyond the product launcher. Process StartTime UTC and engine phase milliseconds have separate origins.' };
+        budgetObservations=$checks;
+        input=[ordered]@{ method='PID-directed private-desktop WM_KEYDOWN/UP Enter; normal TitleMenu NewGame focus';
+            requestedUtc=$inputRequestedUtc; requestedTimestamp=$inputRequestedTimestamp; targetWindowHandle=$inputWindowHandle;
+            titleReadyFrame=$titleReadyFrame; releasedUtc=$inputReleasedUtc; releaseAfterMarker=$inputReleaseMarker;
+            spawnPreloadedAtAcceptance=$preloadReady;
             requestedDwellSeconds=if($Mode -eq 'title'){$null}else{$delay};
             observedTitleToRequestSeconds=if($null -eq $inputRequestedClockSeconds){$null}else{$inputRequestedClockSeconds-$titleObservedAt}};
-        caveat='Normal Title, isolated empty save/log only; no CaptureMode. Menu-ready, world-ready and first Walk are separate boundaries. Immediate means first log-poll-directed Enter after an actual post-title process frame, released after another process frame; not zero-delay human input. Per-frame renderer telemetry, when enabled, adds diagnostic overhead; renderer CPU is viewport render time, not OS thread CPU.'
-    } | ConvertTo-Json -Depth 9 | Set-Content -LiteralPath (Join-Path $Output 'result.json') -Encoding UTF8
+        caveat='Normal --title=1 with isolated empty save/log, no CaptureMode. Sparse title-input-ready precedes directed Enter; accepted request releases it. Dwell duration does not prove spawn preload. Unknown cache states do not qualify budgets. Experience has no EventPipe/per-frame log/CPU snapshots; diagnostics never establish experience-target passes. First Walk input release is a proxy; real movement is checked separately by the existing core smoke.'
+    } | ConvertTo-Json -Depth 12 | Set-Content -LiteralPath (Join-Path $Output 'result.json') -Encoding UTF8
+
 } catch {
+    $timing['status'] = 'FAILED'
     $_ | Out-String | Set-Content -LiteralPath (Join-Path $Output 'failure.txt') -Encoding UTF8
     throw
 } finally {
-    $snapshots.ToArray() | ConvertTo-Json -Depth 7 | Set-Content -LiteralPath (Join-Path $Output 'cpu-snapshots.json') -Encoding UTF8
+    $timing | ConvertTo-Json -Depth 5 | Set-Content -LiteralPath (Join-Path $Output 'launcher-timing.json') -Encoding UTF8
+    if ($diagnostic) { $snapshots.ToArray() | ConvertTo-Json -Depth 7 | Set-Content -LiteralPath (Join-Path $Output 'cpu-snapshots.json') -Encoding UTF8 }
     if ($trace -and -not $stopped -and -not $stopAttempted) { Stop-OwnTrace }
     # A failed collector Stop leaves this exact collector/target alive, identified in launch.json.
     if ($gameProcess -and ($stopped -or -not $trace) -and -not $gameProcess.HasExited) {
@@ -248,6 +316,7 @@ try {
         if (-not $gameProcess.WaitForExit(15000)) { $gameProcess.Kill(); $gameProcess.WaitForExit() }
     }
     if ($trace -and $trace.HasExited) { $trace.Dispose() }
+    Exit-UESTCBuildLock $lease
 }
 
 

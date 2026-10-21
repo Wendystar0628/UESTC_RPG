@@ -161,18 +161,38 @@ function Test-UESTCLaunchImport {
     return $true
 }
 
+# DECISION-256: keep the script-entry and engine clocks separate; external lock wait is never fabricated.
+function New-UESTCLaunchTiming {
+    param([DateTime]$ScriptEnteredUtc = [DateTime]::UtcNow,
+        [long]$ScriptEnteredTimestamp = [Diagnostics.Stopwatch]::GetTimestamp())
+    return [ordered]@{ scriptEnteredUtc=$ScriptEnteredUtc.ToString('O'); scriptEnteredTimestamp=$ScriptEnteredTimestamp;
+        stopwatchFrequency=[Diagnostics.Stopwatch]::Frequency; lockWaitStatus='NOT_MEASURED';
+        lockRequestedTimestamp=$null; lockAcquiredTimestamp=$null;
+        freshnessStartedTimestamp=$null; freshnessCompletedTimestamp=$null;
+        buildInvoked=$null; importInvoked=$null; engineLaunchRequestedTimestamp=$null;
+        engineStartUtc=$null; status='INITIALIZING' }
+}
+
 function Initialize-UESTCLaunch {
     param([Parameter(Mandatory)][string]$Root, [Parameter(Mandatory)][string]$Godot,
-        [Parameter(Mandatory)][IO.FileStream]$BuildLease)
+        [Parameter(Mandatory)][IO.FileStream]$BuildLease, [Collections.IDictionary]$Timing = $null, [switch]$RequireFresh)
+    if ($Timing) { $Timing['freshnessStartedTimestamp'] = [Diagnostics.Stopwatch]::GetTimestamp() }
     $out = Join-Path $Root 'output\start_game'
+    $null = [IO.Directory]::CreateDirectory($out)
     $files = @(Get-UESTCLaunchFiles (Join-Path $Root 'game'))
     $built = -not (Test-UESTCLaunchBuild $Root $files)
+    if ($Timing) { $Timing['buildInvoked'] = $false; $Timing['importInvoked'] = $false }
+    if ($built -and $RequireFresh) { throw 'Existing build is stale; prepare it before the measurement.' }
     if ($built) {
+        if ($Timing) { $Timing['buildInvoked'] = $true }
         Write-Host '构建有变化，编译中……'
         Invoke-UESTCProcess 'dotnet' @('build', "$Root\game\Campus.csproj", '-c', 'Debug', '-v', 'q') $Root (Join-Path $out 'build.log') | Out-Null
     }
     # A build can change generated includes without changing an RD main source.
-    if ($built -or -not (Test-UESTCLaunchImport $Root $Godot)) {
+    $imported = $built -or -not (Test-UESTCLaunchImport $Root $Godot)
+    if ($imported -and $RequireFresh) { throw 'Existing import is stale; prepare it before the measurement.' }
+    if ($imported) {
+        if ($Timing) { $Timing['importInvoked'] = $true }
         Write-Host '导入资源有变化，导入中……'
         $import = Invoke-UESTCProcess $Godot @('--headless', '--editor', '--path', "$Root\game", '--', '--build-import') $Root (Join-Path $out 'import.log') -TimeoutSeconds 600
         Assert-UESTCCleanGodotLog $import
@@ -180,22 +200,44 @@ function Initialize-UESTCLaunch {
     # Import can create .uid/.import files beside sources. Record success after
     # that step too, so generated sidecars do not cause another no-op build.
     if ($built) { [IO.File]::WriteAllText((Join-Path $out 'build.succeeded'), '') }
+    if ($Timing) { $Timing['freshnessCompletedTimestamp'] = [Diagnostics.Stopwatch]::GetTimestamp() }
 }
 
 function Invoke-UESTCStartGame {
     param([Parameter(Mandatory)][string]$Root, [Parameter(Mandatory)][string]$Godot,
-        [string[]]$GameArgs = @(), [IO.FileStream]$BuildLease = $null)
+        [string[]]$GameArgs = @(), [IO.FileStream]$BuildLease = $null,
+        [DateTime]$ScriptEnteredUtc = [DateTime]::UtcNow,
+        [long]$ScriptEnteredTimestamp = [Diagnostics.Stopwatch]::GetTimestamp())
     $Root = [IO.Path]::GetFullPath($Root).TrimEnd('\', '/')
+    $timing = New-UESTCLaunchTiming -ScriptEnteredUtc $ScriptEnteredUtc -ScriptEnteredTimestamp $ScriptEnteredTimestamp
     $lease = $null
     try {
-        if (-not $BuildLease) { $lease = Enter-UESTCBuildLock (Get-UESTCLayout $Root).Locks }
+        if (-not $BuildLease) {
+            $timing['lockRequestedTimestamp'] = [Diagnostics.Stopwatch]::GetTimestamp()
+            $lease = Enter-UESTCBuildLock (Get-UESTCLayout $Root).Locks
+            $timing['lockAcquiredTimestamp'] = [Diagnostics.Stopwatch]::GetTimestamp()
+            $timing['lockWaitStatus'] = 'MEASURED_IN_TOTAL'
+        } else { $timing['lockWaitStatus'] = 'ALREADY_HELD; external wait NOT_MEASURED' }
         $heldLease = if ($BuildLease) { $BuildLease } else { $lease }
-        Initialize-UESTCLaunch -Root $Root -Godot $Godot -BuildLease $heldLease
+        Initialize-UESTCLaunch -Root $Root -Godot $Godot -BuildLease $heldLease -Timing $timing
         $window = $Godot -replace '_console\.exe$', '.exe'
         if (-not [IO.File]::Exists($window)) { $window = $Godot }
         $arguments = @('--path', "$Root\game")
         if ($GameArgs.Count) { $arguments += @('--') + $GameArgs }
         $commandLine = ($arguments | ForEach-Object { ConvertTo-UESTCProcessArgument $_ }) -join ' '
-        return Start-Process -FilePath $window -ArgumentList $commandLine -WorkingDirectory $Root -WindowStyle Normal -PassThru
-    } finally { Exit-UESTCBuildLock $lease }
+        $timing['engineLaunchRequestedTimestamp'] = [Diagnostics.Stopwatch]::GetTimestamp()
+        $process = Start-Process -FilePath $window -ArgumentList $commandLine -WorkingDirectory $Root -WindowStyle Normal -PassThru
+        $timing['engineStartUtc'] = $process.StartTime.ToUniversalTime().ToString('O')
+        $timing['gamePid'] = $process.Id
+        $timing['menuRequested'] = -not ($GameArgs -contains '--title=0')
+        $timing['status'] = 'ENGINE_STARTED'
+        return $process
+    } catch { $timing['status'] = 'FAILED'; throw }
+    finally {
+        try {
+            $out = Join-Path $Root 'output\start_game'
+            $null = [IO.Directory]::CreateDirectory($out)
+            $timing | ConvertTo-Json -Depth 5 | Set-Content -LiteralPath (Join-Path $out 'launch.json') -Encoding UTF8
+        } finally { Exit-UESTCBuildLock $lease }
+    }
 }
