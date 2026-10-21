@@ -135,9 +135,9 @@ public sealed class TransitDriver(ICameraRig camera, IAppLoadingPresentation loa
             if (destination is not null)
             {
                 await destination.Done.WaitAsync(run.Token);
-                RequireCurrentArrival(destination);
+                RequireCurrentArrival(run);
                 if (body is not null && run.ApplyMode is null && !await WaitForWalkSettle(tree, body, run)) return;
-                RequireCurrentArrival(destination);
+                RequireCurrentArrival(run);
             }
             run.Progress = 0.75f;
             screen.Report(1, 1);
@@ -146,14 +146,17 @@ public sealed class TransitDriver(ICameraRig camera, IAppLoadingPresentation loa
             run.Progress = 1;
             result = TransitResult.Arrived;
         }
-        catch (OperationCanceledException) { }
+        catch (OperationCanceledException) when (run.Token.IsCancellationRequested ||
+            (run.Arrival is { } arrival && arrival.Done.IsCanceled && !ReferenceEquals(runtime.Arrival, arrival)))
+        {
+            run.Cancel();
+        }
         catch (Exception error) { CollectFailure(error); }
         finally
         {
             try { if (run.Arrival is { } pending && !pending.Done.IsCompleted) pending.Cancel(); }
             catch (Exception error) { CollectFailure(error); }
             try { if (screen is not null) await screen.DisposeAsync(); }
-            catch (OperationCanceledException) { result = TransitResult.Cancelled; }
             catch (Exception error) { CollectFailure(error); }
             if (ReferenceEquals(_active, run)) _active = null;
             var failure = failures is null ? null : failures.Count == 1 ? failures[0] : new AggregateException(failures);
@@ -196,7 +199,11 @@ public sealed class TransitDriver(ICameraRig camera, IAppLoadingPresentation loa
             await terrain.PrepareRegion(context, new(feet, feet), run.Token);
         }
         if (run.Cancelled) return false;
-        if (!ReferenceEquals(maps.Context, context)) throw new OperationCanceledException("Transit map was replaced.");
+        if (!ReferenceEquals(maps.Context, context))
+        {
+            run.Cancel();
+            return false;
+        }
         run.TerrainReady = true;
         return true;
     }
@@ -214,9 +221,13 @@ public sealed class TransitDriver(ICameraRig camera, IAppLoadingPresentation loa
         return true;
     }
 
-    private void RequireCurrentArrival(IMapArrival arrival)
+    private void RequireCurrentArrival(TransitRun run)
     {
-        if (!ReferenceEquals(runtime.Arrival, arrival)) throw new OperationCanceledException("Transit arrival was replaced.");
+        if (!ReferenceEquals(runtime.Arrival, run.Arrival))
+        {
+            run.Cancel();
+            run.Token.ThrowIfCancellationRequested();
+        }
     }
 
     private sealed class TransitRun(TransitKind kind, Pose to, N.Vector3? landOn) : ITransitHandle

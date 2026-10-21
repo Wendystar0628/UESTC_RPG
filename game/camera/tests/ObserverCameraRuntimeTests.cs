@@ -80,6 +80,30 @@ public sealed class ObserverCameraRuntimeTests
     }
 
     [TestCase, TestCategory(TestReason.Regression), RequireGodotRuntime]
+    public async Task IndependentTransitAndCleanupCancellationsKeepTheirOriginalFailures()
+    {
+        if (Engine.GetMainLoop() is not SceneTree)
+            throw new InvalidOperationException("Transit regression requires a real Godot scene tree.");
+        var camera = new TestCameraRig();
+        var terrain = new FlowTerrainPreparation();
+        var maps = new TestMapService { Context = FlightBoundsTests.CreateContext() };
+        var original = new OperationCanceledException("arrival preparation cancelled independently");
+        var cleanup = new OperationCanceledException("loading lifetime cancelled independently");
+        var runtime = new FlowRuntimeTestStub(() => true) { Failure = original };
+        var driver = new TransitDriver(camera, new TransitPresentation(Task.CompletedTask, cleanup),
+            runtime, maps, terrain, terrain);
+        var handle = driver.Start(camera.Pose, camera.Pose);
+        try { await handle.Done; throw new InvalidOperationException("Independent cancellation was converted into a transit result."); }
+        catch (Exception error) when (handle.Done.IsFaulted)
+        {
+            if (error is not AggregateException aggregate || !aggregate.InnerExceptions.Contains(original) ||
+                !aggregate.InnerExceptions.Contains(cleanup))
+                throw new InvalidOperationException("Transit lost an independent cancellation cause.");
+        }
+        await driver.CancelAsync();
+    }
+
+    [TestCase, TestCategory(TestReason.Regression), RequireGodotRuntime]
     public async Task CancelledModeEntryWaitsForItsExecutionAndLoadingCleanupFailure()
     {
         var camera = new TestCameraRig();
