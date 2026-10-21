@@ -31,7 +31,7 @@ internal static class FurniturePavingFit
             {
                 var at = hit.Edge + along * slide + inward * (S.ApronPavingClear + halfDepth);
                 if (Vector2.Distance(at, centre) > S.AnchorPavingReach || !OnPaving(site, at, inward, halfWidth, halfDepth)) continue;
-                diagnostics.Add(new(DiagnosticLevel.Info, "wp13.anchor.turned", $"anchor {id.Value} (kiosk) turned onto paving: yawDeg {Fixed(Angles.Bearing(inward))} (data {Fixed(Angles.Bearing(facing))}), centre ({Fixed(at.X)}, {Fixed(at.Y)}) (data ({Fixed(centre.X)}, {Fixed(centre.Y)}))", id));
+                diagnostics.Add(new(DiagnosticLevel.Info, "furniture.anchor.turned", $"anchor {id.Value} (kiosk) turned onto paving: yawDeg {Fixed(Angles.Bearing(inward))} (data {Fixed(Angles.Bearing(facing))}), centre ({Fixed(at.X)}, {Fixed(at.Y)}) (data ({Fixed(centre.X)}, {Fixed(centre.Y)}))", id));
                 return (at, inward);
             }
         }
@@ -88,7 +88,7 @@ internal static class FurniturePavingFit
             if (near is { } n) centre += Vector2.Normalize(n.Edge - n.From) * (n.Gap + S.PadJoin);
             if (near is null || Vector2.Distance(start, centre) > S.AnchorPavingReach)
             {
-                diagnostics.Add(new(DiagnosticLevel.Warning, "wp13.anchor.no-paving", $"anchor {id.Value} ({form}) left in place: no pedestrian paving within {Num(S.AnchorPavingReach)} m", id));
+                diagnostics.Add(new(DiagnosticLevel.Warning, "furniture.anchor.no-paving", $"anchor {id.Value} ({form}) left in place: no pedestrian paving within {Num(S.AnchorPavingReach)} m", id));
                 return start;
             }
         }

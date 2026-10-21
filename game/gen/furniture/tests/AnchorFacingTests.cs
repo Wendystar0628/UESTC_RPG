@@ -67,7 +67,7 @@ public sealed class AnchorFacingTests
         {
             if (layout.Items.SingleOrDefault(i => i.Key == "anchor:" + feature.Id.Value) is not { } item)
             {
-                AssertThat(layout.Diagnostics.Any(d => d.Feature == feature.Id && d.Code == "wp13.anchor.not-placed")).OverrideFailureMessage($"{feature.Id.Value} missing without a diagnostic message").IsTrue();
+                AssertThat(layout.Diagnostics.Any(d => d.Feature == feature.Id && d.Code == "furniture.anchor.not-placed")).OverrideFailureMessage($"{feature.Id.Value} missing without a diagnostic message").IsTrue();
                 continue;
             }
             var ring = ((PolygonGeometry)feature.Geometry).Rings.Outer;

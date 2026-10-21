@@ -71,7 +71,7 @@ public static class BuildingPlanner
 
         var style = FacadeRules.StyleOf(feature.Family, src.Props, feature.Props);
         var profile = ProfileFor(src, outerClean, holesClean, style, worldSeed, presets);
-        var seed = StableHash.Hash32(worldSeed, feature.Id.Value, src.Key, "wp14.building");
+        var seed = StableHash.Hash32(worldSeed, feature.Id.Value, src.Key, "buildings.building");
 
         // Facade bay grid from the game/gen/interior/core/ plan kernel: canonical rings (mm, fixed start vertex), bays on the glass
         // plane, indices contiguous over all rings. The same call gives the interiors their partition lines.
@@ -147,7 +147,7 @@ public static class BuildingPlanner
         var feature = src.Feature;
         var centroidClean = PlanPolygons.Centroid(new PolygonRings(outerClean.Points, [.. holesClean.Select(h => (IReadOnlyList<Vector2>)h.Points)]));
         var cell = new Vector2(MathF.Floor(centroidClean.X / 160f), MathF.Floor(centroidClean.Y / 160f));
-        var cluster = StableHash.Hash32(worldSeed, "wp14.cluster",
+        var cluster = StableHash.Hash32(worldSeed, "buildings.cluster",
             cell.X.ToString(CultureInfo.InvariantCulture), cell.Y.ToString(CultureInfo.InvariantCulture));
         var profile = FacadePresets.Apply(FacadeRules.ProfileFor(style, cluster), FacadePresets.Find(feature.Facade, presets));
         profile = FacadePresets.ApplyColors(profile, feature);

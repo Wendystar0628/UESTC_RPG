@@ -311,7 +311,7 @@ public sealed class WestModuleTests
 
     [TestCase, TestCategory(TestReason.Contract)]
     [TestCategory("Slow")]
-    public void OtherWestBuildingsGoToWp14WithTheirFamilies()
+    public void OtherWestBuildingsGoToBuildingsWithTheirFamilies()
     {
         var world = World();
         foreach (var (id, family) in new[]

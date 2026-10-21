@@ -50,7 +50,7 @@ internal static class FurnitureWayfinding
             site.Occupy(at.Ends.A, at.Ends.B, at.Ends.R);
             placed++;
         }
-        diagnostics.Add(new(DiagnosticLevel.Info, "wp13.fountains.summary", $"drinking fountains: {placed} by the main entrances of sports and teaching buildings" +
+        diagnostics.Add(new(DiagnosticLevel.Info, "furniture.fountains.summary", $"drinking fountains: {placed} by the main entrances of sports and teaching buildings" +
             (left.Count == 0 ? "" : $"; no room {Num(S.FountainNear)} to {Num(S.FountainFar)} m out at {string.Join(", ", left)}")));
     }
 
@@ -88,7 +88,7 @@ internal static class FurnitureWayfinding
             site.Occupy(spot.Ends.A, spot.Ends.B, spot.Ends.R);
             placed.Add(at);
         }
-        diagnostics.Add(new(DiagnosticLevel.Info, "wp13.signposts.summary", $"signposts: {placed.Count} at walk junctions of {S.SignpostBranches}+ branches within {Num(S.SignpostLandmarkReach)} m of a landmark " +
+        diagnostics.Add(new(DiagnosticLevel.Info, "furniture.signposts.summary", $"signposts: {placed.Count} at walk junctions of {S.SignpostBranches}+ branches within {Num(S.SignpostLandmarkReach)} m of a landmark " +
             $"({junctions.Count(j => j.Branches >= S.SignpostBranches)} such junctions, {candidates.Count} near a landmark; {crowded} within {Num(S.SignpostSpacing)} m of another, {cramped} with no room beside the paving)"));
     }
 

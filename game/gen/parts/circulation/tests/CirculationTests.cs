@@ -14,7 +14,7 @@ namespace Campus.Gen.Parts.Circulation.Tests;
 public sealed class CirculationTests
 {
     [TestCase, TestCategory(TestReason.Contract)]
-    public void EveryWp11PartIsInTheCatalogWithItsParameterType()
+    public void EveryCirculationPartIsInTheCatalogWithItsParameterType()
     {
         var parts = Registered();
         AssertThat(parts.Count > 0).OverrideFailureMessage("Missing game/gen/parts/circulation/ part registrations.").IsTrue();
@@ -104,7 +104,7 @@ public sealed class CirculationTests
     }
 
     [TestCase, TestCategory(TestReason.Contract)]
-    public void IndoorStairsMatchTheWp51aColliderRules()
+    public void IndoorStairsMatchTheInteriorColliderRules()
     {
         // game/gen/interior/core/ default plan: 1.45 m flights, 0.2 m well, 1.5 m landing, 0.28 m treads, 3.3 m storey in 2 × 11 risers.
         var p = new StairParams(3.1f, 3.3f, 11 * 0.28f + 1.5f, 11);

@@ -19,7 +19,7 @@ using static GdUnit4.Assertions;
 public sealed class RoofPartTests
 {
     [TestCase, TestCategory(TestReason.Contract)]
-    public void RoofsTakeTheWp12PartsByTheirZone()
+    public void RoofsTakeTheRoofEquipmentPartsByTheirZone()
     {
         WorldFeature[] features = [WorldFeatureFixture.Create("t:dorm", "building", new PolygonGeometry(new PolygonRings(Rect(0, 0, 60, 18))), props: "{\"category\":\"residence\"}", height: 19.8f, storeys: 6), WorldFeatureFixture.Create("t:lab", "building", new PolygonGeometry(new PolygonRings(Rect(100, 0, 48, 20))), props: "{\"category\":\"research\"}", height: 21f, storeys: 5)];
         var plain = BuildingSet.For(Ctx(World(features), 2u));

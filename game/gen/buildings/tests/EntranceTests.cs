@@ -144,7 +144,7 @@ public sealed class EntranceTests
         {
             var ctx = new BuildContext { CodeHash = "fixture", WindowNumbering = new((TestMap).Id, new string('0', 64), []), Catalog = Campus.Contracts.Tests.PaletteFixture.Catalog, World = w, Map = TestMap, WorldSeed = 2u, ClaimedBy = claims };
             var plan = BuildingSet.For(Ctx(w, 2u)).Plans.Single(p => p.Key == "t:lab");
-            return BuildingsModule.DoorsAlone(ctx, plan).Single(d => d.Level == DiagnosticLevel.Info && d.Code == "wp14.door.alone" && d.Feature == plan.Id).Message;
+            return BuildingsModule.DoorsAlone(ctx, plan).Single(d => d.Level == DiagnosticLevel.Info && d.Code == "buildings.door.alone" && d.Feature == plan.Id).Message;
         }
         var byZone = Log(World(porch, lab), (_, _) => null);
         AssertThat(byZone.Contains("lab.porch", StringComparison.Ordinal) && byZone.Contains("1.20 m", StringComparison.Ordinal) && byZone.Contains("north zone pack", StringComparison.Ordinal)).OverrideFailureMessage("Expected: " + (byZone)).IsTrue();

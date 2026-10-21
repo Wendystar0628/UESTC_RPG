@@ -38,7 +38,7 @@ public sealed class NodeBenchTests
         AssertThat(layout.Items.Count(i => i.Key.StartsWith($"lamp:{Avenue.Key}:", StringComparison.Ordinal)) == baseline.Items.Count(i => i.Key.StartsWith($"lamp:{Avenue.Key}:", StringComparison.Ordinal))).OverrideFailureMessage("the node rule changed the road's lamps").IsTrue();
         var benches = layout.Items.Where(i => i.Key.StartsWith($"node:{Avenue.Key}:0:", StringComparison.Ordinal)).ToList();
         AssertThat(benches.Count is >= 1 and <= FurnitureStyle.NodeBenches).OverrideFailureMessage($"{benches.Count} benches at the node").IsTrue();
-        AssertThat(!layout.Diagnostics.Any(d => d.Code == "wp13.node.no-bench" && d.Message.Contains(TestNode, StringComparison.Ordinal))).OverrideFailureMessage("a node with benches logs 'no bench'").IsTrue();
+        AssertThat(!layout.Diagnostics.Any(d => d.Code == "furniture.node.no-bench" && d.Message.Contains(TestNode, StringComparison.Ordinal))).OverrideFailureMessage("a node with benches logs 'no bench'").IsTrue();
         foreach (var bench in benches)
         {
             var facing = Front(bench.Part.At);
@@ -68,7 +68,7 @@ public sealed class NodeBenchTests
         {
             var node = group.Nodes[n];
             var placed = layout.Items.Count(i => i.Key.StartsWith($"node:{group.Key}:{n}:", StringComparison.Ordinal));
-            var says = layout.Diagnostics.Where(d => d.Code == "wp13.node.no-bench" && d.Message.StartsWith($"road {group.Name} node {node.Id.Value} ", StringComparison.Ordinal)).Select(d => d.Message).ToList();
+            var says = layout.Diagnostics.Where(d => d.Code == "furniture.node.no-bench" && d.Message.StartsWith($"road {group.Name} node {node.Id.Value} ", StringComparison.Ordinal)).Select(d => d.Message).ToList();
             AssertThat(placed > 0 ? says.Count == 0 : says.Count == 1).OverrideFailureMessage($"node {node.Id.Value}: {placed} benches and {says.Count} 'no bench' lines").IsTrue();
         }
         // Opus review 17:28: a node bench may stand on the plaza, its back to the paving edge and parallel to it, facing into the
@@ -160,10 +160,10 @@ public sealed class NodeBenchTests
         var none = Layout(null, null);
         var both = Layout(line, feature);
         var benches = Benches(both);
-        AssertThat(Benches(none).Count == 0 && none.Diagnostics.Any(d => d.Code == "wp13.node.no-bench" && d.Message.Contains(TestNode, StringComparison.Ordinal))).OverrideFailureMessage("a node with no walk has benches or no diagnostic message").IsTrue();
+        AssertThat(Benches(none).Count == 0 && none.Diagnostics.Any(d => d.Code == "furniture.node.no-bench" && d.Message.Contains(TestNode, StringComparison.Ordinal))).OverrideFailureMessage("a node with no walk has benches or no diagnostic message").IsTrue();
         AssertThat(benches.Count is >= 1 and <= FurnitureStyle.NodeBenches).OverrideFailureMessage($"{benches.Count} benches at the node of a walk filed twice").IsTrue();
         AssertThat(benches.Count < 2 || Vector2.Distance(benches[0].Anchor, benches[1].Anchor) >= FurnitureStyle.NodeBenchGap - TestTolerance.Position).OverrideFailureMessage("the walk's node benches stand closer than the gap").IsTrue();
-        AssertThat(both.Items.Count == none.Items.Count + benches.Count && !both.Diagnostics.Any(d => d.Code == "wp13.node.no-bench" && d.Message.Contains(TestNode, StringComparison.Ordinal))).OverrideFailureMessage("the walk changed more than its node's benches").IsTrue();
+        AssertThat(both.Items.Count == none.Items.Count + benches.Count && !both.Diagnostics.Any(d => d.Code == "furniture.node.no-bench" && d.Message.Contains(TestNode, StringComparison.Ordinal))).OverrideFailureMessage("the walk changed more than its node's benches").IsTrue();
         var site = new StreetSite(WalkWorld(open, line, feature));
         foreach (var bench in benches)
         {

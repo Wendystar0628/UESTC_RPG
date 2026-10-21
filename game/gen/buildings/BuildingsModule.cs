@@ -80,7 +80,7 @@ public sealed class BuildingsModule : IContentModule, IWindowNumberingProvider, 
     {
         ArgumentNullException.ThrowIfNull(plan);
         if (plan.Feature.Facade is { Value: { Length: > 0 } key } && plan.Profile.Preset is null)
-            yield return new BuildDiagnostic(DiagnosticLevel.Warning, "wp14.preset.unknown",
+            yield return new BuildDiagnostic(DiagnosticLevel.Warning, "buildings.preset.unknown",
                 $"Facade preset '{key}' of {plan.Id.Value} ({plan.Key}) is not a game/gen/buildings/ preset: the {plan.Style} family profile stays.", plan.Id);
     }
 
@@ -106,7 +106,7 @@ public sealed class BuildingsModule : IContentModule, IWindowNumberingProvider, 
                 : (ctx.ClaimedBy(plan.Id, Aspects.Ground) ?? ctx.ClaimedBy(plan.Id, Aspects.Props)) is { } around ? $"{around}, which claims the ground round it"
                 : plan.Feature.Zone is { } zone ? $"the {zone.Value} zone pack (zoning)"
                 : "no one yet (undecided)";
-            yield return new BuildDiagnostic(DiagnosticLevel.Info, "wp14.door.alone", string.Create(CultureInfo.InvariantCulture,
+            yield return new BuildDiagnostic(DiagnosticLevel.Info, "buildings.door.alone", string.Create(CultureInfo.InvariantCulture,
                 $"Door {e.Anchor} of {plan.Id.Value} ({plan.Key}, storey {e.Row + 1}) opens alone, its outside landing {above:0.00} m above the terrain: porch or deck expected from {expected}."),
                 plan.Id);
         }

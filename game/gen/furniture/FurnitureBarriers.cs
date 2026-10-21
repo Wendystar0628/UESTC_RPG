@@ -78,7 +78,7 @@ internal static class FurnitureBarriers
                 spheres += row.Count;
             }
         }
-        diagnostics.Add(new(DiagnosticLevel.Info, "wp13.barriers.summary", $"barriers: {Num(spheres)} stone spheres in {Num(junctions)} rows at walk mouths ({Num(heavy)} rows over a cell's budget, left out)"));
+        diagnostics.Add(new(DiagnosticLevel.Info, "furniture.barriers.summary", $"barriers: {Num(spheres)} stone spheres in {Num(junctions)} rows at walk mouths ({Num(heavy)} rows over a cell's budget, left out)"));
     }
 
     /// <summary>

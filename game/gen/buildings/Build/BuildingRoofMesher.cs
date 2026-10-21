@@ -177,11 +177,11 @@ internal sealed class BuildingRoofMesher(BuildingPlan plan, LodLevel lod, Geomet
     /// </summary>
     private Vector2? MastSpot(List<(PlanRing Ring, float Height, bool Plant, Vector2 Centre)> boxes)
     {
-        if (plan.Storeys < RoofRules.MastFromStoreys || (StableHash.Hash32(plan.Seed, "wp14.mast") & 1u) != 0u) return null;
+        if (plan.Storeys < RoofRules.MastFromStoreys || (StableHash.Hash32(plan.Seed, "buildings.mast") & 1u) != 0u) return null;
         var ring = plan.Outer;
         var corners = Enumerable.Range(0, ring.Count).Where(i => ring.Convex[i] && ring.TurnCos[i] < 0.5f).ToArray();
         if (corners.Length == 0) return null;
-        var first = (int)(StableHash.Hash32(plan.Seed, "wp14.mast.corner") % (uint)corners.Length);
+        var first = (int)(StableHash.Hash32(plan.Seed, "buildings.mast.corner") % (uint)corners.Length);
         for (var k = 0; k < corners.Length; k++)
         {
             var i = corners[(first + k) % corners.Length];

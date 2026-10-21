@@ -62,7 +62,7 @@ public sealed class WindowPartTests
     }
 
     [TestCase, TestCategory(TestReason.Contract)]
-    public void K1AndK2OpeningsTakeTheWp10Parts()
+    public void K1AndK2OpeningsTakeTheOpeningParts()
     {
         // The walking corridor's ground band is K2, the facade above it K3 (ENG-ARCH FacadeSegment).
         var world = World(new ZonedFidelity(FidelityZone.K3, FidelityZone.K2), WorldFeatureFixture.Create("t:dorm", "building", new PolygonGeometry(new PolygonRings(Rect(0, 0, 60, 18))), props: "{\"category\":\"residence\"}", height: 19.8f, storeys: 6));

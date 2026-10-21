@@ -60,7 +60,7 @@ internal static class FurnitureServices
             groups.Add(spot);
             if (withLocker) lockerSpots.Add(spot);
         }
-        diagnostics.Add(new(DiagnosticLevel.Info, "wp13.vending.summary", $"vending: {machines} machines in {groups.Count} groups at {string.Join(", ", groups.Select(g => g.Label))} " +
+        diagnostics.Add(new(DiagnosticLevel.Info, "furniture.vending.summary", $"vending: {machines} machines in {groups.Count} groups at {string.Join(", ", groups.Select(g => g.Label))} " +
             $"({axial} sites on the main axis, {crowded} within {Num(S.VendingSpacing)} m of a group, {cramped} with no room, {heavy} over a cell's budget, left out)"));
 
         return lockerSpots;
@@ -79,7 +79,7 @@ internal static class FurnitureServices
             site.Occupy(fit.Ends.A, fit.Ends.B, fit.Ends.R);
             lockers.Add(spot.Label);
         }
-        diagnostics.Add(new(DiagnosticLevel.Info, "wp13.lockers.summary", $"delivery lockers: {lockers.Count} at {string.Join(", ", lockers)}"));
+        diagnostics.Add(new(DiagnosticLevel.Info, "furniture.lockers.summary", $"delivery lockers: {lockers.Count} at {string.Join(", ", lockers)}"));
     }
 
     private static void Bicycles(StreetSite site, List<FurnitureItem> items, List<BuildDiagnostic> diagnostics, List<ServiceSite> gates, FurnitureCapacity capacity)
@@ -123,6 +123,6 @@ internal static class FurnitureServices
             placedAt.Add(spot.At);
             bays.Add(spot.Label);
         }
-        diagnostics.Add(new(DiagnosticLevel.Info, "wp13.bicycles.summary", $"bicycle bays: {bays.Count} with {bikes} stand-in bikes at {string.Join(", ", bays)} ({heavy} over a cell's budget, left out)"));
+        diagnostics.Add(new(DiagnosticLevel.Info, "furniture.bicycles.summary", $"bicycle bays: {bays.Count} with {bikes} stand-in bikes at {string.Join(", ", bays)} ({heavy} over a cell's budget, left out)"));
     }
 }

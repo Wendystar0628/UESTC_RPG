@@ -66,7 +66,7 @@ internal static class FurnitureNodeSeating
                 Seat(bench);
             }
             if (placed.Count == 0)
-                diagnostics.Add(new(DiagnosticLevel.Info, "wp13.node.no-bench", $"road {road} node {node.Id.Value} has no bench: {plaza.Count} plaza edge spots within {Num(S.NodePlazaReach)} m and {candidates.Count} paving edge spots within {Num(S.NodeReach)} m, " +
+                diagnostics.Add(new(DiagnosticLevel.Info, "furniture.node.no-bench", $"road {road} node {node.Id.Value} has no bench: {plaza.Count} plaza edge spots within {Num(S.NodePlazaReach)} m and {candidates.Count} paving edge spots within {Num(S.NodeReach)} m, " +
                     (why.Count == 0 ? "none of them on pedestrian paving" : string.Join(", ", why.Select(w => $"{w.Value} {w.Key}")))));
         }
     }

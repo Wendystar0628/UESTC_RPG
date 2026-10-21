@@ -81,7 +81,7 @@ internal static class FurnitureTestSupport
 
     internal static (float Yaw, Vector2 Centre)? Turned(FurnitureLayout layout, string id)
     {
-        var line = layout.Diagnostics.Where(d => d.Feature?.Value == id && d.Code == "wp13.anchor.turned").Select(d => d.Message).SingleOrDefault();
+        var line = layout.Diagnostics.Where(d => d.Feature?.Value == id && d.Code == "furniture.anchor.turned").Select(d => d.Message).SingleOrDefault();
         if (line is null) return null;
         var m = System.Text.RegularExpressions.Regex.Match(line, @"yawDeg (-?\d+\.\d+) \(data -?\d+\.\d+\), centre \((-?\d+\.\d+), (-?\d+\.\d+)\) \(data");
         AssertThat(m.Success).OverrideFailureMessage("unreadable diagnostic message: " + line).IsTrue();

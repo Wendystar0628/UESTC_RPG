@@ -17,7 +17,7 @@ public partial class OutlineEffect : CompositorEffect
     internal const string ShaderPath = "res://style/outline/post_outline.glsl";   // every game/kernel/post/ kernel is a version of it
     private const int UboFloats = 76;   // layout of OutlineParams in post_outline.glsl
 
-    private static readonly StringName Context = "wp05_outline";
+    private static readonly StringName Context = "outline";
     private static readonly StringName MaskName = "line_mask";
     private static readonly StringName ForwardContext = "forward_clustered";
     private static readonly StringName NormalRoughness = "normal_roughness";

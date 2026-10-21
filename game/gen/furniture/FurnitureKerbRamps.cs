@@ -74,7 +74,7 @@ internal static class FurnitureKerbRamps
                 }
             }
         }
-        diagnostics.Add(new(DiagnosticLevel.Info, "wp13.kerb-ramps.summary", $"road {road.Name}: {Num(placed.Count)} kerb ramps where walks reach its kerb ({Num(junction)} spots inside junctions, {Num(verge)} with no walk behind the kerb, {Num(crowded)} next to a ramp, left out)"));
+        diagnostics.Add(new(DiagnosticLevel.Info, "furniture.kerb-ramps.summary", $"road {road.Name}: {Num(placed.Count)} kerb ramps where walks reach its kerb ({Num(junction)} spots inside junctions, {Num(verge)} with no walk behind the kerb, {Num(crowded)} next to a ramp, left out)"));
     }
 
     /// <summary>The nearest point of any of <paramref name="lines"/> to <paramref name="p"/>, with the unit direction of its segment.</summary>

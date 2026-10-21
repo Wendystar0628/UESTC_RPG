@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """程序合成的占位音：傍晚广播的旋律（八音盒音色，原创曲调）与单音铜钟。
 
-自有版权（SYS-AUDIO “程序合成”）。旋律为占位，正式的原创曲及录音由委托完成（§6.3、WP-53e 后续）。
+自有版权（SYS-AUDIO “程序合成”）。旋律为占位，正式的原创曲及录音由委托完成（§6.3、后续）。
 产物：
   music/broadcast_melody_dry.ogg   干声，单声道
   music/broadcast_melody_mid.ogg   过喇叭频带（300 Hz–4 kHz）+ 很轻的房间感，“中”档
