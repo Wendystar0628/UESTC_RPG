@@ -75,8 +75,11 @@ public partial class KernelStage : Node3D, IAppExit, IStageGateHost
         try
         {
             var registry = KernelServices.Services;
-            registry.Add<IRequiredResources>(new RequiredResources());
-            registry.Discover(LoadModuleTypes());
+            IRequiredResources resources = new RequiredResources();
+            registry.Add(resources);
+            var codeFingerprints = new BuildCodeIndex(resources);
+            registry.Add(codeFingerprints);
+            registry.Discover(LoadModuleTypes(), codeFingerprints.Owner);
             GD.Print($"Kernel registry: {registry.Entries.Count} declarations; build {BuildInfo.Build}");
             if (RegistryStageGate.TryRun()) { await FinishQuit(); return; }
             if (AppBoot.Options.CpuBakeMode) { await RunBakeCommand(); return; }
@@ -172,8 +175,9 @@ public partial class KernelStage : Node3D, IAppExit, IStageGateHost
 
     private static void BindMapDependencies(ServiceRegistry registry, Camera3D viewCamera)
     {
+        var resources = registry.Get<IRequiredResources>();
         registry.Get<PipelineWarmup>().Bind(registry.Get<IToonMaterialProvider>(), registry.Get<IShaderMaterialSource>(),
-            BakePipelineCatalog.Read, TimeSpan.FromSeconds(BootTuning.StalledSeconds));
+            () => BakePipelineCatalog.Read(resources), TimeSpan.FromSeconds(BootTuning.StalledSeconds));
         ((MapRuntime)registry.Create(typeof(MapRuntime))).Bind(new(registry,
             registry.Get<IMapStreamState>(), registry.Get<IBakeService>(), registry.Get<ICollisionWorld>(),
             registry.Get<IRenderReadiness>(), registry.Get<IPipelinePreparation>(), registry.Get<ICameraRig>(),
@@ -314,13 +318,7 @@ public partial class KernelStage : Node3D, IAppExit, IStageGateHost
         _startupCapture = poseId is null ? null : new GameCaptureNode.CaptureDestination(
             poseId, rig.Mode, maps.Context!, registry.Get<IWorldState>().Instance, arrival, rig.Pose);
         await Initialize(BootPhase.BeforeReveal);
-        _contentReadiness = ViewContentReadiness.Capture(this);
-        Phase = "warm-final-view";
-        await _contentReadiness.WaitForReadyAsync(this, arrival, () =>
-        {
-            CheckStartupActive();
-            return true;
-        }, _captureLifetime.Token);
+        await WaitForStartupViewReadiness(arrival);
         CheckStartupActive();
         await RevealBoot(frontispiece, bootLoading, appBoot, showTitle, maps);
 
@@ -333,6 +331,24 @@ public partial class KernelStage : Node3D, IAppExit, IStageGateHost
                 await participant.Initialize(phase, context);
             }
             CheckStartupActive();
+        }
+    }
+
+    private async Task WaitForStartupViewReadiness(IMapArrival arrival)
+    {
+        _contentReadiness = ViewContentReadiness.Capture(this);
+        Phase = "warm-final-view";
+        try
+        {
+            await _contentReadiness.WaitForReadyAsync(this, arrival, () =>
+            {
+                CheckStartupActive();
+                return true;
+            }, _captureLifetime.Token);
+        }
+        catch (TimeoutException error)
+        {
+            throw AppStartupException.Stalled("Startup view readiness stalled.", error);
         }
     }
 

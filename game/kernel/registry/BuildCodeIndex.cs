@@ -6,11 +6,14 @@ using Campus.Contracts.Bake;
 namespace Campus.Kernel.Registry;
 
 /// <summary>The immutable packaged build index shared by registration discovery and CPU input identity.</summary>
-internal sealed class BuildCodeIndex
+[KernelService(typeof(BuildCodeIndex))]
+public sealed class BuildCodeIndex
 {
     internal const string AssetPath = "res://data/build-code-fingerprints.json";
     private readonly FrozenDictionary<string, string> _roots;
     private readonly FrozenDictionary<string, string> _owners;
+
+    public BuildCodeIndex(IRequiredResources resources) : this(ReadManifest(resources.ReadBytes(AssetPath))) { }
 
     internal BuildCodeIndex(BakeCodeManifest manifest)
     {
@@ -26,12 +29,9 @@ internal sealed class BuildCodeIndex
         _owners = manifest.Registrations.ToFrozenDictionary(StringComparer.Ordinal);
     }
 
-    internal static BuildCodeIndex Load(IRequiredResources resources)
-    {
-        return Parse(resources.ReadBytes(AssetPath));
-    }
+    internal static BuildCodeIndex Parse(ReadOnlyMemory<byte> bytes) => new(ReadManifest(bytes));
 
-    internal static BuildCodeIndex Parse(ReadOnlyMemory<byte> bytes)
+    private static BakeCodeManifest ReadManifest(ReadOnlyMemory<byte> bytes)
     {
         using var document = JsonDocument.Parse(bytes);
         var fields = new HashSet<string>(ContractJson.Options.PropertyNameCaseInsensitive ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal);
@@ -47,8 +47,8 @@ internal sealed class BuildCodeIndex
         var keys = new HashSet<string>(StringComparer.Ordinal);
         foreach (var entry in roots.EnumerateObject())
             if (!keys.Add(entry.Name)) throw new InvalidDataException($"Duplicate build code fingerprint: {entry.Name}.");
-        return new(JsonSerializer.Deserialize<BakeCodeManifest>(bytes.Span, ContractJson.Options)
-            ?? throw new InvalidDataException("Missing build code fingerprint manifest."));
+        return JsonSerializer.Deserialize<BakeCodeManifest>(bytes.Span, ContractJson.Options)
+            ?? throw new InvalidDataException("Missing build code fingerprint manifest.");
     }
 
     internal string Owner(Type type)

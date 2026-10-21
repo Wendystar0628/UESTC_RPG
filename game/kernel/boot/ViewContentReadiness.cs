@@ -1,5 +1,4 @@
 using Campus.Contracts;
-using Campus.Contracts.AppFlow;
 using Campus.Contracts.Bake;
 using Campus.Contracts.Maps;
 using Campus.Contracts.Startup;
@@ -68,7 +67,7 @@ public sealed class ViewContentReadiness
         }
         catch (OperationCanceledException error) when (deadline.IsCancellationRequested && !cancellationToken.IsCancellationRequested)
         {
-            throw AppStartupException.Stalled($"Stage arrival stalled; arrival={progress.Item2},completed={completed},total={total},bake={progress.Item1}," +
+            throw new TimeoutException($"Stage arrival stalled; arrival={progress.Item2},completed={completed},total={total},bake={progress.Item1}," +
                 $"content={content},producersReady={producersReady},scrubbing={scrubbing},worldTransition={transition}," +
                 $"weatherTransitioning={weatherTransitioning},pose={lastPose}", error);
         }

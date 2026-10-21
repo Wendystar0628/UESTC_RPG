@@ -6,7 +6,6 @@ using Campus.Contracts.Bake;
 using Campus.Contracts.Fauna;
 using Campus.Contracts.Vegetation;
 using Campus.Kernel.Renderer;
-using KernelServices = Campus.Kernel.Registry.Kernel;
 using Format = Godot.RenderingServer.ArrayFormat;
 
 namespace Campus.Kernel.Bake;
@@ -18,9 +17,9 @@ internal sealed class BakePipelineCatalog
     private readonly ConcurrentDictionary<PipelineCombination, byte> _combinations = [];
 
     /// <summary>Reads the global shipped asset; player CPU cache state never participates in pipeline preparation.</summary>
-    internal static IReadOnlyList<PipelineCombination> Read()
+    internal static IReadOnlyList<PipelineCombination> Read(IRequiredResources resources)
     {
-        var bytes = KernelServices.Get<IRequiredResources>().ReadBytes(ResourcePath);
+        var bytes = resources.ReadBytes(ResourcePath);
         try
         {
             var combinations = JsonSerializer.Deserialize<PipelineCombination[]>(bytes, ContractJson.Options)

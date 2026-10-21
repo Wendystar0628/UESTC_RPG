@@ -33,23 +33,26 @@ public sealed class CollisionCoreTests
         using var cache = new CacheDirectory();
         var options = new BakeOptions(cache.Path, Live: false, Strict: false, Background: false, MapOnly: false, LogicalProcessors: 3, SeedOverride: null);
         var registry = Campus.Kernel.Registry.Kernel.Services;
-        registry.Add<IRequiredResources>(new RequiredResources());
+        IRequiredResources resources = new RequiredResources();
+        registry.Add(resources);
+        var codeFingerprints = new BuildCodeIndex(resources);
+        registry.Add(codeFingerprints);
         // Match the production discovery boundary before ReadClaims captures content instances.
-        registry.Discover(BuildInfo.ModuleAssemblies.Select(name => Assembly.Load(new AssemblyName(name))).SelectMany(assembly => assembly.GetTypes()));
-        using var terrain = new TerrainCacheService(options, registry.CodeFingerprints);
+        registry.Discover(BuildInfo.ModuleAssemblies.Select(name => Assembly.Load(new AssemblyName(name))).SelectMany(assembly => assembly.GetTypes()), codeFingerprints.Owner);
+        using var terrain = new TerrainCacheService(options, codeFingerprints);
         try
         {
             // These bindings borrow the same terrain/cache session used by world loading and CPU baking.
             registry.Add(terrain);
             registry.Add<ITerrainPreparation>(terrain);
-            await CheckNearbyWalking(tree, options, terrain);
+            await CheckNearbyWalking(tree, options, terrain, resources);
         }
         finally { await registry.ShutdownAsync(); }
     }
 
-    private static async Task CheckNearbyWalking(SceneTree tree, BakeOptions options, TerrainCacheService terrain)
+    private static async Task CheckNearbyWalking(SceneTree tree, BakeOptions options, TerrainCacheService terrain, IRequiredResources resources)
     {
-        var source = new MapDataSource();
+        var source = new MapDataSource(resources);
         var catalog = await source.ReadCatalog();
         var requested = System.Environment.GetEnvironmentVariable("UESTC_G15_MAP");
         var id = string.IsNullOrWhiteSpace(requested) ? catalog.Default : new MapId(requested);
@@ -62,7 +65,7 @@ public sealed class CollisionCoreTests
         var input = source.ReadLoadInput(entry);
         var loaded = await Task.Run(() => MapWorldLoading.LoadPrepared(new WorldModelLoaderAdapter(terrain), input, claims));
         var context = MapWorldLoading.CreateContext(entry, loaded, input.SourceInputs);
-        using var bake = new BakeService(options, terrain, new GlobalBuildInputs(new RequiredResources()).Snapshot);
+        using var bake = new BakeService(options, terrain, new GlobalBuildInputs(resources).Snapshot);
         using var productQueue = new BakeQueue(options.MaximumWorkers, static () => { });
         var products = new BakeProductBuilder(options, terrain, productQueue);
         var map = bake.Mount(context);

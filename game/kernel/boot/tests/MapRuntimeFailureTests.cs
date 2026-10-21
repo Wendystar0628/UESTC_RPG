@@ -68,6 +68,30 @@ public sealed class MapRuntimeFailureTests
     }
 
     [TestCase, TestCategory(TestReason.Regression), RequireGodotRuntime]
+    public void EmptyAggregateRemainsAPublishedFailureAcrossRepeatedPollingAndAggregation()
+    {
+        using var fixture = new MapRuntimeFixture();
+        var original = new AggregateException();
+        fixture.Stream.Failure = original;
+        fixture.Runtime._Process(0);
+        var published = fixture.Runtime.Failure as AppStartupException ?? throw new InvalidOperationException("Empty aggregate was not published.");
+        AssertThat(published.Code == AppStartupFailureCodes.MapPreparation && ReferenceEquals(published.InnerException, original) &&
+            ReferenceEquals(fixture.Mount.Exception!.InnerException, published)).IsTrue();
+        fixture.Runtime._Process(0);
+        AssertThat(ReferenceEquals(fixture.Runtime.Failure, published)).IsTrue();
+        var later = new AppStartupException(AppStartupFailureCodes.Installation, "map resource is missing");
+        var nested = new AggregateException();
+        fixture.Producer.Failure = new AggregateException(original, later, nested);
+        fixture.Runtime._Process(0);
+        var collected = fixture.Runtime.Failure as AppStartupException ?? throw new InvalidOperationException("Aggregate failure was not published.");
+        var causes = collected.InnerException as AggregateException ?? throw new InvalidOperationException("Aggregate failure lost its diagnostic causes.");
+        AssertThat(collected.Code == AppStartupFailureCodes.Installation && causes.InnerExceptions.Count == 3 &&
+            causes.InnerExceptions.Contains(original) && causes.InnerExceptions.Contains(later) && causes.InnerExceptions.Contains(nested)).IsTrue();
+        fixture.Runtime._Process(0);
+        AssertThat(ReferenceEquals(fixture.Runtime.Failure, collected)).IsTrue();
+    }
+
+    [TestCase, TestCategory(TestReason.Regression), RequireGodotRuntime]
     public async Task RetainedParticipantFailuresReachTheSameGlobalProjectionAndKeepTheirIdentity()
     {
         using var stream = new StreamFixture();

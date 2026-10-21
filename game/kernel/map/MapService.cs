@@ -58,11 +58,11 @@ public sealed class MapService : IMapService, IMapFrame, ISaveSection<MapsSave>,
     private MapId _savedCurrent;
 
     public MapService(ICameraRig camera, IViewControl view, IMapRuntime runtime, IMapLifetime lifetime,
-        IWorldModelLoader loader, ICameraPoseValidator poses, MapDataSource? data = null, IWalkController? walk = null,
+        IWorldModelLoader loader, ICameraPoseValidator poses, MapDataSource data, IWalkController? walk = null,
         ITerrainPreparation? terrain = null)
     {
         _camera = camera; _view = view; _runtime = runtime; _lifetime = lifetime;
-        _loader = loader; _data = data ?? new();
+        _loader = loader; _data = data;
         _poses = poses ?? throw new ArgumentNullException(nameof(poses));
         _walk = walk;
         _terrain = terrain;

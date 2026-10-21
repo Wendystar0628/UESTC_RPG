@@ -15,7 +15,7 @@ namespace Campus.Kernel.Bake.Tests;
 internal static class BakeInputFixture
 {
     internal static TerrainCacheService CreateTerrainCache(BakeOptions options) => new(options,
-        new BuildCodeIndex(new(BakeCodeManifest.CurrentSchema,
+        new BuildCodeIndex(new BakeCodeManifest(BakeCodeManifest.CurrentSchema,
             new[] { BakeCodeChains.Shared, BakeCodeChains.Collision, BakeCodeChains.Nightlight }
                 .ToDictionary(BakeCodeManifest.Chain, chain => "fixture-code/" + chain, StringComparer.Ordinal), new Dictionary<string, string>())));
 

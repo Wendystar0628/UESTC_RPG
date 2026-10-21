@@ -6,13 +6,13 @@ using Campus.Contracts.AppFlow;
 using System.Text.Json;
 using Campus.Contracts.Maps;
 using Campus.Kernel.Registry;
-using KernelServices = Campus.Kernel.Registry.Kernel;
 using Godot;
 
 namespace Campus.Kernel.Maps;
 
 /// <summary>All resource I/O stays on the engine side; workers receive detached byte arrays.</summary>
-public class MapDataSource
+[KernelService(typeof(MapDataSource))]
+public class MapDataSource(IRequiredResources resources)
 {
     private static readonly StringName _shaderGlobalMapRect = ShaderGlobals.MapRect;
 
@@ -21,10 +21,10 @@ public class MapDataSource
         try
         {
             var indexPath = ProjectSettings.GetSetting("campus/maps/index").AsString();
-            var index = MapCatalog.ReadIndex(ReadRequired(indexPath));
+            var index = MapCatalog.ReadIndex(ReadRequired(resources, indexPath));
             var bytes = index.Maps.Select(entry => (Entry: entry,
-                Map: ReadRequired(entry.Dir + "map.json"), Geo: ReadRequired(entry.Dir + "world/geo.json"),
-                Waypoints: ReadOptional(entry.Dir + "waypoints.json"))).ToArray();
+                Map: ReadRequired(resources, entry.Dir + "map.json"), Geo: ReadRequired(resources, entry.Dir + "world/geo.json"),
+                Waypoints: ReadOptional(resources, entry.Dir + "waypoints.json"))).ToArray();
             return await Task.Run(() => new MapCatalog(index, bytes.Select(b =>
                 MapCatalog.ReadEntry(b.Entry, b.Map, b.Geo, b.Waypoints)).ToArray()));
         }
@@ -33,14 +33,14 @@ public class MapDataSource
     }
 
     public virtual IReadOnlyDictionary<string, ReadOnlyMemory<byte>> ReadWorldFiles(MapCatalogEntry entry) =>
-        WorldInputFiles.ReadWorldFiles(entry.Descriptor, new ResourceInputs(entry.DataRoot));
+        WorldInputFiles.ReadWorldFiles(entry.Descriptor, new ResourceInputs(entry.DataRoot, resources));
 
     /// <summary>Capture authored map resources on the engine thread before worker loading.</summary>
     public virtual MapLoadInput ReadLoadInput(MapCatalogEntry entry)
     {
         try
         {
-            var files = WorldInputFiles.ReadLoadInput(entry.Descriptor, new ResourceInputs(entry.DataRoot), ReadWorldFiles(entry));
+            var files = WorldInputFiles.ReadLoadInput(entry.Descriptor, new ResourceInputs(entry.DataRoot, resources), ReadWorldFiles(entry));
             var input = new MapLoadInput(entry, BuildInputSnapshot.Freeze(files,
                 CaptureInputVersion(files.Keys.Select(key => entry.DataRoot + key))));
             return input with { Entry = MapCatalog.ReadEntry(entry, input.Files) };
@@ -69,12 +69,12 @@ public class MapDataSource
 
     public virtual void ReportError(string context, Exception error) => DiagnosticLog.Error(context, error);
 
-    private sealed class ResourceInputs(string root) : IWorldInputSource
+    private sealed class ResourceInputs(string root, IRequiredResources resources) : IWorldInputSource
     {
         public ReadOnlyMemory<byte>? Read(string relativePath)
         {
             if (!Godot.FileAccess.FileExists(root + relativePath)) return null;
-            return ReadRequired(root + relativePath);
+            return ReadRequired(resources, root + relativePath);
         }
         public IEnumerable<string> Files(string relativeDirectory) =>
             DirAccess.DirExistsAbsolute(root + relativeDirectory) ? DirAccess.GetFilesAt(root + relativeDirectory) : [];
@@ -82,11 +82,11 @@ public class MapDataSource
             DirAccess.DirExistsAbsolute(root + relativeDirectory) ? DirAccess.GetDirectoriesAt(root + relativeDirectory) : [];
     }
 
-    private static byte[] ReadOptional(string path) => Godot.FileAccess.FileExists(path) ? ReadRequired(path) : [];
-    private static byte[] ReadRequired(string path)
+    private static byte[] ReadOptional(IRequiredResources resources, string path) => Godot.FileAccess.FileExists(path) ? ReadRequired(resources, path) : [];
+    private static byte[] ReadRequired(IRequiredResources resources, string path)
     {
         if (string.IsNullOrWhiteSpace(path) || !path.StartsWith("res://", StringComparison.Ordinal))
             throw new AppStartupException(AppStartupFailureCodes.DataInvalid, "Map resources must use res:// paths.");
-        return KernelServices.Get<IRequiredResources>().ReadBytes(path);
+        return resources.ReadBytes(path);
     }
 }

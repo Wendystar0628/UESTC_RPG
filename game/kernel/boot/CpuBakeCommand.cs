@@ -17,10 +17,11 @@ public sealed class CpuBakeCommand : IBakeCommand
 {
     private readonly GlobalBuildInputs _globalInputs;
 
-    private readonly ServiceRegistry _registry;
+    private readonly BuildCodeIndex _codeFingerprints;
+    private readonly IRequiredResources _resources;
 
-    public CpuBakeCommand(GlobalBuildInputs globalInputs, ServiceRegistry registry)
-    { _globalInputs = globalInputs; _registry = registry; }
+    public CpuBakeCommand(GlobalBuildInputs globalInputs, BuildCodeIndex codeFingerprints, IRequiredResources resources)
+    { _globalInputs = globalInputs; _codeFingerprints = codeFingerprints; _resources = resources; }
 
     public async Task<int> Run(BootContext context)
     {
@@ -32,9 +33,9 @@ public sealed class CpuBakeCommand : IBakeCommand
         var failures = new List<Exception>();
         try
         {
-            terrain = new TerrainCacheService(options, _registry.CodeFingerprints);
+            terrain = new TerrainCacheService(options, _codeFingerprints);
             bake = new BakeService(options, terrain, _globalInputs.Snapshot);
-            var source = new MapDataSource();
+            var source = new MapDataSource(_resources);
             var catalog = await source.ReadCatalog();
             var requested = context.Run.Flow.Map ?? catalog.Default;
             var maps = requested.Value == "*" ? catalog.Maps : catalog.Maps.Where(map => map.Id == requested).ToArray();

@@ -13,17 +13,12 @@ public sealed class ServiceRegistry
     private readonly Dictionary<(Type Factory, string Id, MapId Map), IInteriorProvider> _interiors = [];
     private readonly List<(object Instance, MapId? Map)> _created = [];
     private IReadOnlyList<Registration> _entries = [];
-    private BuildCodeIndex? _codeFingerprints;
-    internal BuildCodeIndex CodeFingerprints => _codeFingerprints
-        ?? throw new InvalidOperationException("Discover packaged registrations before requesting build fingerprints.");
     private bool _closing;
     private bool _disposed;
     private Task? _shutdown;
     private readonly HashSet<MapId> _releasingMaps = [];
     public IReadOnlyList<Registration> Entries => _entries;
     public IReadOnlyList<object> Created => _created.Select(item => item.Instance).ToArray();
-
-    public ServiceRegistry() => Add(this);
 
     public void Add<T>(T instance) where T : class
     {
@@ -104,20 +99,12 @@ public sealed class ServiceRegistry
         return provider;
     }
 
-    public void Discover(IEnumerable<Type> types, Func<Type, string>? ownerOf = null)
+    public void Discover(IEnumerable<Type> types, Func<Type, string> ownerOf)
     {
         ObjectDisposedException.ThrowIf(_disposed, this);
         if (_closing) throw new InvalidOperationException("Registry is shutting down.");
         if (_entries.Count > 0 || _created.Count > 0) throw new InvalidOperationException("Registry discovery runs once.");
-        if (ownerOf is not null)
-        {
-            _entries = RegistrationDiscovery.Discover(types, ownerOf);
-            return;
-        }
-        var codeFingerprints = BuildCodeIndex.Load(Get<IRequiredResources>());
-        var entries = RegistrationDiscovery.Discover(types, codeFingerprints.Owner);
-        _codeFingerprints = codeFingerprints;
-        _entries = entries;
+        _entries = RegistrationDiscovery.Discover(types, ownerOf);
     }
 
     public IReadOnlyList<Registration> ForMap(string map) => RegistrationDiscovery.ForMap(_entries, map);

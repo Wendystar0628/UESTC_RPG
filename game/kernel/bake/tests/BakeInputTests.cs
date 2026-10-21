@@ -282,12 +282,12 @@ public sealed class BakeInputTests
     public void BuildCodeManifestRejectsMissingOrDuplicateRoots()
     {
         var key = BakeCodeManifest.Chain(BakeCodeChains.Shared);
-        var table = new BuildCodeIndex(new(BakeCodeManifest.CurrentSchema, new Dictionary<string, string> { [key] = "shared-code" }, new Dictionary<string, string>()));
+        var table = new BuildCodeIndex(new BakeCodeManifest(BakeCodeManifest.CurrentSchema, new Dictionary<string, string> { [key] = "shared-code" }, new Dictionary<string, string>()));
         if (table.Chain(BakeCodeChains.Shared) != "shared-code") throw new InvalidOperationException("Build root lookup changed its stored hash.");
         ExpectInvalid(() => table.Chain(BakeCodeChains.Collision));
         var duplicate = Encoding.UTF8.GetBytes("{\"schema\":2,\"registrations\":{},\"roots\":{\"chain:shared\":\"a\",\"chain:shared\":\"b\"}}");
         ExpectInvalid(() => BuildCodeIndex.Parse(duplicate));
-        ExpectInvalid(() => new BuildCodeIndex(new(BakeCodeManifest.CurrentSchema + 1,
+        ExpectInvalid(() => new BuildCodeIndex(new BakeCodeManifest(BakeCodeManifest.CurrentSchema + 1,
             new Dictionary<string, string> { [key] = "shared-code" }, new Dictionary<string, string>())));
 
         static void ExpectInvalid(Action action)
@@ -307,7 +307,7 @@ public sealed class BakeInputTests
         var context = Context(new FakeWorld { Boundary = new([]) });
         var directory = Path.Combine(Path.GetTempPath(), "uestc-rpg-code-index-" + Guid.NewGuid().ToString("N"));
         var options = new BakeOptions(directory, false, false, false, false, 1, null);
-        var table = new BuildCodeIndex(new(BakeCodeManifest.CurrentSchema,
+        var table = new BuildCodeIndex(new BakeCodeManifest(BakeCodeManifest.CurrentSchema,
             new Dictionary<string, string> { [BakeCodeManifest.Chain(BakeCodeChains.Shared)] = "index-code" }, new Dictionary<string, string>()));
         var resident = new string('a', 32);
         var key = BakeRequestKeys.Tile(context.Map.Id, "ground", default, LodLevel.L0);

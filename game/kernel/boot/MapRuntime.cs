@@ -66,27 +66,31 @@ public partial class MapRuntime : Node, IMapRuntime, IMapLifetime
                 if (producer.Failure is { } failure) RecordFailure(failure);
     }
 
-    private void RecordFailure(Exception error)
+    private AppStartupException RecordFailure(Exception error)
     {
         // Classify only at publication; keep each original producer and cleanup cause intact.
-        if (ReferenceEquals(error, _failure)) return;
-        IEnumerable<Exception> causes = error is AggregateException aggregate ? aggregate.Flatten().InnerExceptions : [error];
+        if (_failure is { } published && ReferenceEquals(error, published)) return published;
+        var causes = new Queue<Exception>();
+        causes.Enqueue(error);
         var added = false;
-        foreach (var cause in causes)
+        while (causes.TryDequeue(out var cause))
         {
+            if (cause is AggregateException { InnerExceptions.Count: > 0 } aggregate)
+            {
+                foreach (var inner in aggregate.InnerExceptions) causes.Enqueue(inner);
+                continue;
+            }
+            // An empty aggregate is itself a failure, even when nested beside another cause.
             if (_failures.Contains(cause)) continue;
             _failures.Add(cause);
             added = true;
         }
-        if (!added) return;
+        if (!added && _failure is { } existing) return existing;
         if (_failures.Count == 1 && _failures[0] is AppStartupException startup)
-        {
-            _failure = startup;
-            return;
-        }
+            return _failure = startup;
         var code = _failures.OfType<AppStartupException>().FirstOrDefault()?.Code ?? AppStartupFailureCodes.MapPreparation;
         var diagnostic = _failures.Count == 1 ? _failures[0] : new AggregateException("Map runtime failed.", _failures);
-        _failure = new AppStartupException(code, "Map preparation failed.", diagnostic);
+        return _failure = new AppStartupException(code, "Map preparation failed.", diagnostic);
     }
 
     public void Bind(MapRuntimeDependencies dependencies)
@@ -176,9 +180,9 @@ public partial class MapRuntime : Node, IMapRuntime, IMapLifetime
         }
         catch (Exception error)
         {
-            RecordFailure(error);
-            _mountCompletion.TrySetException(_failure!);
-            System.Runtime.ExceptionServices.ExceptionDispatchInfo.Capture(_failure!).Throw();
+            var failure = RecordFailure(error);
+            _mountCompletion.TrySetException(failure);
+            System.Runtime.ExceptionServices.ExceptionDispatchInfo.Capture(failure).Throw();
         }
         return _mountCompletion.Task;
     }
@@ -208,8 +212,7 @@ public partial class MapRuntime : Node, IMapRuntime, IMapLifetime
         catch (OperationCanceledException) when (_exit.IsCancellationRequested) { }
         catch (Exception error)
         {
-            RecordFailure(error);
-            FailArrival(_failure!);
+            FailArrival(RecordFailure(error));
             // The private preparation task retains its original cause for the awaited cleanup drain.
             throw;
         }
@@ -256,9 +259,9 @@ public partial class MapRuntime : Node, IMapRuntime, IMapLifetime
         catch (Exception error)
         {
             // Replaced/cancelled arrivals cannot publish readiness, but their genuine failures still belong to this map lifetime.
-            RecordFailure(error);
+            var failure = RecordFailure(error);
             if (!_stopping && generation == _mapGeneration && ReferenceEquals(_arrival, arrival) && !arrival.Done.IsCompleted)
-                FailArrival(_failure!);
+                FailArrival(failure);
         }
         finally { arrival.FinishPreparation(); }
     }
@@ -296,8 +299,7 @@ public partial class MapRuntime : Node, IMapRuntime, IMapLifetime
         }
         catch (Exception error)
         {
-            RecordFailure(error);
-            FailArrival(_failure!);
+            FailArrival(RecordFailure(error));
         }
     }
 

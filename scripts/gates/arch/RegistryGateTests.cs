@@ -20,7 +20,7 @@ public sealed class RegistryGateTests
         var chosen = registry.Entries.Single(entry => entry.Kind == RegistrationKind.Service && entry.Id == typeof(IWorldModel).FullName);
         if (chosen.Type != typeof(ReplacementWorld) || chosen.IsStub) throw new InvalidOperationException("Real world replacement was not selected.");
         RegistryGateRunner.ValidateConstructorGraph(registry,
-            [typeof(IAppExit), typeof(ServiceRegistry), typeof(Camera3D),
+            [typeof(IAppExit), typeof(Camera3D),
                 typeof(WorldEnvironment), typeof(Godot.Environment), typeof(CanvasLayer)]);
         var factory = RegistrationDiscovery.ResolveInterior(registry.Entries, "fixture.family.first");
         if (factory.Type != typeof(InteriorFactory)) throw new InvalidOperationException("Factory prefix registration was not selected.");

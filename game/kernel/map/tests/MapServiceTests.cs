@@ -418,7 +418,7 @@ public sealed class MapServiceTests
         }
     }
 
-    private sealed class TestData(MapCatalog catalog) : MapDataSource
+    private sealed class TestData(MapCatalog catalog) : MapDataSource(new Campus.Kernel.Boot.RequiredResources())
     {
         private readonly Dictionary<MapId, int> _versions = [];
         private readonly Dictionary<MapId, int> _reads = [];

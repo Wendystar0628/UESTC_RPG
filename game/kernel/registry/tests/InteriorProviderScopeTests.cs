@@ -148,26 +148,30 @@ public sealed class InteriorProviderScopeTests
     }
 
     [TestCase, TestCategory(TestReason.Regression)]
-    public void PackagedDiscoveryUsesItsOwnResourcesAndDoesNotCacheReadFailures()
+    public void ExplicitBuildIndicesUseTheirOwnResourcesAndDoNotCacheReadFailures()
     {
         var first = new ServiceRegistry(); var second = new ServiceRegistry();
         var reads = 0;
         var error = new IOException("Build manifest temporarily unavailable.");
-        first.Add<IRequiredResources>(new ManifestResources(() =>
+        var firstResources = new ManifestResources(() =>
         {
             if (++reads == 1) throw error;
             return Manifest("first");
-        }));
-        second.Add<IRequiredResources>(new ManifestResources(() => Manifest("second")));
+        });
+        var secondResources = new ManifestResources(() => Manifest("second"));
         Exception? failure = null;
-        try { first.Discover([typeof(ThrowingService)]); } catch (IOException actual) { failure = actual; }
+        try { _ = new BuildCodeIndex(firstResources); } catch (IOException actual) { failure = actual; }
         AssertThat(ReferenceEquals(failure, error) && first.Entries.Count == 0).IsTrue();
-        second.Discover([typeof(ThrowingService)]);
-        first.Discover([typeof(ThrowingService)]);
+        var secondIndex = new BuildCodeIndex(secondResources);
+        second.Add(secondIndex);
+        second.Discover([typeof(ThrowingService)], secondIndex.Owner);
+        var firstIndex = new BuildCodeIndex(firstResources);
+        first.Add(firstIndex);
+        first.Discover([typeof(ThrowingService)], firstIndex.Owner);
         AssertThat(reads == 2 && first.Entries.Single().Owner == "first" && second.Entries.Single().Owner == "second" &&
-            first.CodeFingerprints.Chain(BakeCodeChains.Shared) == "first" &&
-            second.CodeFingerprints.Chain(BakeCodeChains.Shared) == "second" &&
-            ReferenceEquals(first.Get<ServiceRegistry>(), first)).IsTrue();
+            firstIndex.Chain(BakeCodeChains.Shared) == "first" &&
+            secondIndex.Chain(BakeCodeChains.Shared) == "second" &&
+            ReferenceEquals(first.Get<BuildCodeIndex>(), firstIndex) && ReferenceEquals(second.Get<BuildCodeIndex>(), secondIndex)).IsTrue();
 
         static byte[] Manifest(string owner) => JsonSerializer.SerializeToUtf8Bytes(new BakeCodeManifest(
             BakeCodeManifest.CurrentSchema, new Dictionary<string, string> { [BakeCodeManifest.Chain(BakeCodeChains.Shared)] = owner },
