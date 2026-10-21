@@ -14,7 +14,7 @@
 - CORE-INDEX §3 协作与分工 · L97 · 904
 - CORE-INDEX §4 文档规范 · L105 · 400
 - CORE-INDEX §5 代码规范 · L111 · 1.1k
-- CORE-INDEX §6 运行时与可靠性 · L122 · 943
+- CORE-INDEX §6 运行时与可靠性 · L122 · 948
 
 ## PRD-INDEX · 作品总纲
 
