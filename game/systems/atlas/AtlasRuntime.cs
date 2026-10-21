@@ -13,31 +13,23 @@ public partial class AtlasRuntime : Godot.Node, IMapAware, IMapDataParticipant
     private readonly AtlasService _atlas;
     private readonly IBakeService _bake;
     private readonly AtlasBaseSource _baseSource;
-    private readonly ITerrainPreparation _terrain;
     private IBakeHandle? _mapBake;
     private bool _productPublished;
 
     public AtlasRuntime(AtlasService atlas, AtlasBaseSource baseSource, IMapService maps, IAppFlow flow,
-        IAudioService audio, IBakeService bake, IViewControl view, ITerrainPreparation terrain)
+        IAudioService audio, IBakeService bake, IViewControl view)
     {
         _atlas = atlas;
         _bake = bake;
         _baseSource = baseSource;
-        _terrain = terrain;
         _atlas.Connect(maps, flow, audio, view);
     }
 
     public Task Prepare(IMapContext context)
     {
         _atlas.OnMapLoaded(context);
-        var points = _atlas.Markers.Where(m => m.Teleport is not null).SelectMany(m =>
-        {
-            var destination = m.Teleport!;
-            var fly = new System.Numerics.Vector2(destination.Fly.Position.X, destination.Fly.Position.Z);
-            return destination.Stand is { } stand
-                ? new[] { fly, new System.Numerics.Vector2(stand.Feet.X, stand.Feet.Z) } : new[] { fly };
-        }).Distinct().ToArray();
-        return _terrain.PreparePoints(context, points);
+        // The catalogue is available before MapAware consumers; actual transit prepares its selected destination.
+        return Task.CompletedTask;
     }
     public Task UnloadAsync(MapId from) => Task.CompletedTask;
 
