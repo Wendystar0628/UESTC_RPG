@@ -13,7 +13,7 @@ public enum WeatherMode : byte { Auto, Manual }
 public readonly record struct WeatherSel(WeatherMode Mode, WeatherKind Kind, float Intensity);
 public readonly record struct WeatherSpan(double FromHours, double ToHours, WeatherKind Kind, float Intensity);   // 按 WorldHours 计
 
-public interface IWorldState                // Kernel 的服务（WP-34），不单独做 Autoload
+public interface IWorldState                // Kernel 的服务（game/kernel/world/），不单独做 Autoload
 {
     long Rev { get; }
     long Instance { get; }                  // 世界实例号。启动后第一次得到世界状态为 1，此后每次 Load、LoadFile、NewGame 加 1；
@@ -32,7 +32,7 @@ public interface IWorldState                // Kernel 的服务（WP-34），不
     float SunAltDegAt(double clock, Season season);
     Body Moon { get; }
     float MoonPhase { get; }                // 默认 1 = 满月
-    float Omega { get; }                    // 主光角速度 °/s；WP-03 据此决定量化转灯还是连续转动（ENG-PERF）
+    float Omega { get; }                    // 主光角速度 °/s；game/kernel/lighting/ 据此决定量化转灯还是连续转动（ENG-PERF）
     Flow Flow { get; }
     Flow BaseFlow { get; }                  // 用户基础倍率；临时租约不改它，存档保存它
     int LastFlowRate { get; }               // 用户最近一次非零基础倍率，供暂停后恢复
@@ -49,7 +49,7 @@ public interface IWorldState                // Kernel 的服务（WP-34），不
 }
 
 public enum ClockSetMode { Drag, Jump }
-public interface IWorldControl              // 没有任何让世界时间倒退的方法；读档由 WP-34 自己的 world 存档段恢复，不经过 IWorldControl（SYS-SAVE）
+public interface IWorldControl              // 没有任何让世界时间倒退的方法；读档由 game/kernel/world/ 自己的 world 存档段恢复，不经过 IWorldControl（SYS-SAVE）
 {
     void SetClock(double hours, ClockSetMode mode = ClockSetMode.Jump);   // 跳到"下一次出现"的 hours（见 §3"世界时间与天气的语义"）
     void Advance(double hours);                                // 前推 hours 小时（> 0，否则抛 ArgumentOutOfRangeException）：句点键 +1 h、脚本"前推 24 小时"
@@ -82,7 +82,7 @@ public interface IWorldRestore
     void AbortRestore();
     bool RestoreFaulted { get; }
 
-    // WP-50 在 FramePriority.Save 内、maps/world/weather/各图天气段全部恢复成功后调用一次，
+    // game/kernel/save/ 在 FramePriority.Save 内、maps/world/weather/各图天气段全部恢复成功后调用一次，
     // 然后才执行地图 Travel 及 Content/Pose 阶段；新游戏同序，CompleteResume 不调用。
     // world.Restore 只恢复本段并清瞬态，不增加 Instance，也不调用天气 Reset/Quiet/Step。
     // 此处增加 Instance/Rev 并落定日月、季节读数；天气由自己的 Restore 立即求值，不再推进。
@@ -90,8 +90,8 @@ public interface IWorldRestore
     void CompleteRestore();
 }
 
-// 天气过程：WP-45 实现，注册为 Kernel 服务；只有 WorldState（WP-34）和 WP-45a 自己的存档段调用它
-// （Reset 由新游戏调用，见 WeatherBoot），其他代码一律读 IWorldState 和天气类全局参数。有了这一层，WP-34 和 WP-45 可以并行开发
+// 天气过程：game/systems/weather/ 实现，注册为 Kernel 服务；只有 WorldState和 game/systems/weather/ 自己的存档段调用它
+// （Reset 由新游戏调用，见 WeatherBoot），其他代码一律读 IWorldState 和天气类全局参数。有了这一层，game/kernel/world/ 和 game/systems/weather/ 可以并行开发
 public readonly record struct WeatherTick(
     double WorldHours,
     double TargetHours,                      // 大于 WorldHours 表示正在快进（跳转、拨时间环、Advance、ResetDefault、Apply）
@@ -141,35 +141,35 @@ public interface IWeatherProcess
 public static class FramePriority
 {
     public const int FadeClock = -1301;     // 在地图状态机之前推进独立的渲染淡入时钟
-    public const int Map = -1300;           // WP-46：推进切图状态机；在雾幕全黑的帧里分发 IMapAware；Mount 时写 map_rect；
+    public const int Map = -1300;           // game/kernel/map/：推进切图状态机；在雾幕全黑的帧里分发 IMapAware；Mount 时写 map_rect；
                                             // Current、Context 在这一步换，同一帧里所有系统看到同一张图（SYS-MAPS）
-    public const int Quality = -1200;       // WP-32：即时类设置与自动调节生效、分发 IQualityAware、写全局参数 quality；
+    public const int Quality = -1200;       // game/kernel/quality/：即时类设置与自动调节生效、分发 IQualityAware、写全局参数 quality；
                                             // 先于相机，同一帧里所有系统看到同一版本的 QualityView（SYS-GRAPHICS）
-    public const int Camera = -1100;        // WP-06（含可达空间求值、写 edge_fog）、WP-36、WP-42
+    public const int Camera = -1100;        // game/camera/（含可达空间求值、写 edge_fog 与点位跳转）、game/camera/walk/
     public const int CameraSync = -1099;    // 观者位姿写入引擎相机
     public const int Listener = -1098;      // 相机更新后同步听者
-    public const int WorldState = -1000;    // WP-34：推进世界时间、钟点和季节，再调 IWeatherProcess.Step 求天气向量（WP-45）
-    public const int KeyLight = -900;       // WP-03：含按阴度改投影（SYS-WEATHER）、室内抬高阴影方向的最低高度（ENG-PERF）
-    public const int Palette = -800;        // WP-37、WP-04：含天气修正量
-    public const int Channels = -700;       // WP-03 通道求值、WP-39 时刻表：按有效太阳高度 h_eff 求值（SYS-WEATHER）
-    public const int Motion = -650;         // WP-26 风场（含天气系数）、一拍二、偶发事件、钟面指针与钟室钟锤（SYS-MOTION）；WP-45 降水数量与闪电
-    public const int SeasonFx = -640;       // WP-38 季节氛围
-    public const int Medium = -600;         // WP-07：介质判定，写介质全局参数与 interior_light，更新 IMediumState；室内运行时（按层显示、软停信号，WLD-INTERIORS）；
+    public const int WorldState = -1000;    // game/kernel/world/：推进世界时间、钟点和季节，再调 IWeatherProcess.Step 求天气向量（SYS-WEATHER）
+    public const int KeyLight = -900;       // game/kernel/lighting/：含按阴度改投影（SYS-WEATHER）、室内抬高阴影方向的最低高度（ENG-PERF）
+    public const int Palette = -800;        // game/style/palette/keys/、game/style/：含天气修正量
+    public const int Channels = -700;       // 通道求值、game/systems/nightlight/ 时刻表：按有效太阳高度 h_eff 求值（SYS-WEATHER）
+    public const int Motion = -650;         // 风场（含天气系数）、一拍二、偶发事件、钟面指针与钟室钟锤（SYS-MOTION）；降水数量与闪电
+    public const int SeasonFx = -640;       // 季节氛围
+    public const int Medium = -600;         // game/camera/：介质判定，写介质全局参数与 interior_light，更新 IMediumState；室内运行时（按层显示、软停信号，WLD-INTERIORS）；
                                             // 自动门的状态机：读本帧行走物理之后的观者位置，推进推开与闭门器，阶段变化时发 IInteriorDoors.Changed（WLD-INTERIORS）
-    public const int Acoustics = -590;      // WP-53c：本帧听者处的声学与路由，含门户开度（自动门读 IInteriorDoors，SYS-AUDIO）
-    public const int Stream = -500;         // WP-02 流式选级与请求、WP-43 碰撞格请求；切图期间（Unload 到 Mount）不发新请求
-    public const int Systems = 0;           // 其余系统（含 WP-48c 的 IAtlasService：10 Hz 的区域查询与追踪到达检查）
-    public const int Animate = 20;         // WP-54a: animation/IK after Systems; never feeds back into physics or the earlier camera.
-    public const int Audio = 50;            // WP-53a、53b、53d：仲裁、权重、排程、写播放器音量（SYS-AUDIO）
-    public const int Hud = 100;             // WP-35：HudModel、MotionHub、UiThemeClock（写 ui_night）；WP-48b 的小地图与大地图
+    public const int Acoustics = -590;      // game/gen/acoustics/：本帧听者处的声学与路由，含门户开度（自动门读 IInteriorDoors，SYS-AUDIO）
+    public const int Stream = -500;         // 流式选级与请求、碰撞格请求；切图期间（Unload 到 Mount）不发新请求
+    public const int Systems = 0;           // 其余系统（含 IAtlasService：10 Hz 的区域查询与追踪到达检查）
+    public const int Animate = 20;         // game/camera/walk/: animation/IK after Systems; never feeds back into physics or the earlier camera.
+    public const int Audio = 50;            // game/audio/core/、game/gen/ambience/：仲裁、权重、排程、写播放器音量（SYS-AUDIO）
+    public const int Hud = 100;             // game/hud/：HudModel、MotionHub、UiThemeClock（写 ui_night）；game/hud/map/ 的小地图与大地图
     public const int StreamMount = 900;     // 可见期共享1 ms；实际全屏遮盖时批量挂载并给UI让帧；新挂室内房间与门户下一帧生效
     public const int MapRuntime = 901;      // 本帧挂载后推进地图就绪屏障
-    public const int Save = 1000;           // WP-50：业务状态的最后一步，拍快照；读档时在这一步恢复，下一帧所有系统同时看到新世界（SYS-SAVE）
+    public const int Save = 1000;           // game/kernel/save/：业务状态的最后一步，拍快照；读档时在这一步恢复，下一帧所有系统同时看到新世界（SYS-SAVE）
     public const int Stage = 1001;          // 存档快照后更新组合根的诊断与关闭编排
 }
 
 public readonly record struct WindSample(float Gust, float Phase);
-public interface IWindField                 // WP-26
+public interface IWindField                 // game/systems/
 {
     /// <summary>Normalized horizontal direction of air travel in world X/Z coordinates; zero means calm.</summary>
     Vector2 Direction { get; }

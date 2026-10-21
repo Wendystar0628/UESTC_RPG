@@ -27,7 +27,7 @@
         "yawDeg": 307,
         "groundY": 0
       },
-      "note": "按 SYS-ATLAS 设置导览设施，补足主网节点导览；位置与落点为待 WP-44/G15 复核的设计初值。",
+      "note": "按 SYS-ATLAS 设置导览设施，补足主网节点导览；位置与落点为待 game/gen/walkable/ 与 G15 复核的设计初值。",
       "geometry": {
         "type": "polygon",
         "rings": {
@@ -63,7 +63,7 @@
         "yawDeg": 171.6199951171875,
         "groundY": 0
       },
-      "note": "按 SYS-ATLAS 设置导览设施，补足主网节点导览；位置与落点为待 WP-44/G15 复核的设计初值。",
+      "note": "按 SYS-ATLAS 设置导览设施，补足主网节点导览；位置与落点为待 game/gen/walkable/ 与 G15 复核的设计初值。",
       "geometry": {
         "type": "polygon",
         "rings": {
@@ -81,7 +81,7 @@
         "yawDeg": 165,
         "groundY": 0
       },
-      "note": "按 SYS-ATLAS 设置导览设施，补足主网节点导览；位置与落点为待 WP-44/G15 复核的设计初值。",
+      "note": "按 SYS-ATLAS 设置导览设施，补足主网节点导览；位置与落点为待 game/gen/walkable/ 与 G15 复核的设计初值。",
       "geometry": {
         "type": "polygon",
         "rings": {
@@ -99,7 +99,7 @@
         "yawDeg": 99,
         "groundY": 5
       },
-      "note": "按 SYS-ATLAS 设置导览设施，补足主网节点导览；位置与落点为待 WP-44/G15 复核的设计初值。 体育中心设于 y=5 m 平台顶面。",
+      "note": "按 SYS-ATLAS 设置导览设施，补足主网节点导览；位置与落点为待 game/gen/walkable/ 与 G15 复核的设计初值。 体育中心设于 y=5 m 平台顶面。",
       "geometry": {
         "type": "polygon",
         "rings": {
@@ -117,7 +117,7 @@
         "yawDeg": 250,
         "groundY": 0
       },
-      "note": "按 SYS-ATLAS 设置导览设施，补足主网节点导览；位置与落点为待 WP-44/G15 复核的设计初值。",
+      "note": "按 SYS-ATLAS 设置导览设施，补足主网节点导览；位置与落点为待 game/gen/walkable/ 与 G15 复核的设计初值。",
       "geometry": {
         "type": "polygon",
         "rings": {
@@ -171,7 +171,7 @@
         "yawDeg": 250,
         "groundY": 0
       },
-      "note": "按 SYS-ATLAS 设置导览设施，补足主网节点导览；位置与落点为待 WP-44/G15 复核的设计初值。",
+      "note": "按 SYS-ATLAS 设置导览设施，补足主网节点导览；位置与落点为待 game/gen/walkable/ 与 G15 复核的设计初值。",
       "geometry": {
         "type": "polygon",
         "rings": {
@@ -207,7 +207,7 @@
         "yawDeg": 15,
         "groundY": 0
       },
-      "note": "按 SYS-ATLAS 设置导览设施，补足主网节点导览；位置与落点为待 WP-44/G15 复核的设计初值。",
+      "note": "按 SYS-ATLAS 设置导览设施，补足主网节点导览；位置与落点为待 game/gen/walkable/ 与 G15 复核的设计初值。",
       "geometry": {
         "type": "polygon",
         "rings": {
@@ -225,7 +225,7 @@
         "yawDeg": 60,
         "groundY": 0
       },
-      "note": "按 SYS-ATLAS 设置导览设施，补足主网节点导览；位置与落点为待 WP-44/G15 复核的设计初值。",
+      "note": "按 SYS-ATLAS 设置导览设施，补足主网节点导览；位置与落点为待 game/gen/walkable/ 与 G15 复核的设计初值。",
       "geometry": {
         "type": "polygon",
         "rings": {

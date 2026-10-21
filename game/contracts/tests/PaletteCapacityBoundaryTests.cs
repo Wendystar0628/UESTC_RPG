@@ -179,7 +179,7 @@ public sealed class PaletteCapacityBoundaryTests
             if (id < 256)
                 AssertThat(BitConverter.SingleToInt32Bits(packed) == BitConverter.SingleToInt32Bits(id + 256f * percent)).OverrideFailureMessage("Bank-0 lamp bits changed.").IsTrue();
         }
-        // Oracle is the existing WP-39 PackColor formula, including clamping and midpoint rounding.
+        // Oracle is the existing PackColor formula, including clamping and midpoint rounding.
         foreach (var energy in new[] { -1f, 0.005f, 0.015f, 0.333f, 0.755f, 2f })
         {
             var bank0Packed = 255f + 256f * MathF.Round(Math.Clamp(energy, 0f, 1f) * 100f);

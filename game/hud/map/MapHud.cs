@@ -8,7 +8,7 @@ using Godot;
 namespace Campus.Hud.Map;
 
 /// <summary>
-/// WP-48b 的宿主：左上角常驻小地图与 M / G 打开的大地图（SYS-ATLAS）。
+/// 地图界面的宿主：左上角常驻小地图与 M / G 打开的大地图（SYS-ATLAS）。
 /// 宿主只管依赖、底图（map_base 材质与 SDF 绑定）的生命周期和两边共用的数据（当前图、标记条目、主题、显隐开关）；
 /// 小地图与图集页各自的行为在 <see cref="MinimapController"/> 与 <see cref="AtlasController"/>。
 /// 标记、区域与传送经 IAtlasService；玩家箭头与所在区域读 IObserverState；视锥读 ICameraRig.Pose；

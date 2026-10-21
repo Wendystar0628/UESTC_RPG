@@ -47,11 +47,11 @@ public static class RegistryGateRunner
             registry.Entries.Count(entry => entry.Kind == RegistrationKind.Service), registry.Entries.Count, entityCount,
             priorities.Length, knobs.Length,
             [
-                "WP-27/WP-08: evaluate runtime Claims against each loaded world, including generic FeatureClaim rejection and overlapping claims.",
-                "WP-27/WP-08/WP-44: overlay difference reports and fidelity input freshness/coverage.",
-                "WP-27/WP-32: selected IQualityService.Knobs values and complete QualityResponsive ownership on runtime consumers.",
-                "WP-27/owners: service/node startup, save TypeInfo/ownership, audio buses/emitters, UI theme and reserved-directory checks.",
-                "WP-27: provider FeatureIds/door-state equality and generated palette material usage."
+                "game/gates/ and game/gen/world/: evaluate runtime Claims against each loaded world, including generic FeatureClaim rejection and overlapping claims.",
+                "game/gates/ and game/gen/world/ and game/gen/walkable/: overlay difference reports and fidelity input freshness/coverage.",
+                "game/gates/ and game/kernel/quality/: selected IQualityService.Knobs values and complete QualityResponsive ownership on runtime consumers.",
+                "game/gates/ owners: service/node startup, save TypeInfo/ownership, audio buses/emitters, UI theme and reserved-directory checks.",
+                "game/gates/: provider FeatureIds/door-state equality and generated palette material usage."
             ]);
     }
 

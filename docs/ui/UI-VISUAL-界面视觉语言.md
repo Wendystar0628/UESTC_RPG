@@ -5,13 +5,12 @@ category: ui
 parent: UI-INDEX
 summary: 界面外观的根：设计原则、色彩分工与令牌、晶白与深屏两套主题、实现边界；字体形状图标组件布局与动效见子文档
 keywords: [界面视觉, 色彩令牌, 清蓝, 晶白, 深屏, 昼夜交班, 常驻件, 对比度规则, ui.json, ui_night, UiThemeBuilder, UiThemeClock, ui_panel, ui_screen]
-owners: [WP-35]
-contributors: [WP-01, WP-04, WP-27, WP-37, WP-48, WP-49, WP-50, WP-53]
 depends: [ART-STYLE, ENG-ARCH, SYS-TIME, UI-NAV]
 related: [CORE-INDEX, ART-SKYLIGHT, SYS-MOTION, SYS-VIEW, ENG-GATES, ENG-BUDGET, ENG-PERF, SYS-WEATHER, SYS-GRAPHICS, SYS-ATLAS, SYS-TITLE, SYS-SAVE, SYS-MAPS, WLD-OUTSKIRTS, WLD-INTERIORS, SYS-AUDIO]
 contracts: []
 data: ["game/style/palette/ext/ui.json", "game/hud/style/ui_metrics.json"]
 gates: [G4, G5, G14]
+paths: ["game/style/palette/ext/ui.json", "game/hud/**", "game/style/shaders/ui_screen.gdshader.uid", "game/style/shaders/ui_panel.gdshader.uid", "game/style/shaders/ui_screen.gdshader", "game/style/shaders/ui_panel.gdshader", "game/hud/widgets/**", "game/hud/style/**"]
 ---
 # UI-VISUAL · 界面视觉语言
 
@@ -37,7 +36,7 @@ gates: [G4, G5, G14]
 
 ### 0.1 接入要点
 
-- **取色**：只用 `game/style/palette/ext/ui.json` 里的色名，经 `UiPalette` 读；代码和着色器里不写十六进制色值（G4）；缺色名由 WP-35（界面） 登记（§3.6）
+- **取色**：只用 `game/style/palette/ext/ui.json` 里的色名，经 `UiPalette` 读；代码和着色器里不写十六进制色值（G4）；缺色名由 界面（UI-NAV） 登记（§3.6）
 - **画面板、按钮、文字**：用 `UiThemeBuilder` 生成的那一个 Theme，不写零散的 `theme_override_*`；随主题变的颜色走 `ui_panel` 着色器按 `ui_night` 取值；界面着色器只用白名单里的 `ui_panel` 与 `ui_screen`（§4）
 
 ## 1 设计原则
@@ -117,13 +116,13 @@ gates: [G4, G5, G14]
 
 ### 3.6 登记
 
-`ui.json` 由 WP-35（界面） 登记（ART-STYLE §2.5：界面色不分色号、不进调色板纹理）；`map` 部分是地图的色名 `map.*`，SYS-ATLAS 只引用色名。地图上不用暖色点；玩家、选中、追踪和可传送标记的"通电"状态是地图上唯一出现清蓝的地方。
+`ui.json` 由 界面（UI-NAV） 登记（ART-STYLE §2.5：界面色不分色号、不进调色板纹理）；`map` 部分是地图的色名 `map.*`，SYS-ATLAS 只引用色名。地图上不用暖色点；玩家、选中、追踪和可传送标记的"通电"状态是地图上唯一出现清蓝的地方。
 
 ## 4 实现边界
 
 - **一个 Theme，由代码生成**：`UiThemeBuilder` 从 `ui.json`（色名）和 `ui_metrics.json`（尺寸、字号、时长）生成唯一的 Theme，运行时不修改；唯一例外是下拉框的展开列表，它是独立窗口挂不了 `ui_panel`，打开前按当前主题改写它那几个样式的颜色。G4 禁止代码里写十六进制色值和 `main.tscn` 以外的共享 `.tres`。随主题变的颜色全部由 `ui_panel` 按全局参数 `ui_night` 取日、夜两值；悬停、流光、焦点、量化、常驻件的固定主题用 instance uniform。
 - **界面缩放只用一个系数**：`Window.ContentScaleFactor`，锚点与容器按缩放后的逻辑视口自动重排；不另缩 Theme 字号或根节点，也不乘系统 DPI（拉伸比例已让界面随窗口等比放大，乘了会算两遍）；设置的最终值夹在"字不小于设计字号的 85%"与"逻辑视口不小于 1280×720"之间（D-245）。
 - **两个白名单着色器分成两个文件**：`ui_panel`（切角、发丝线、辉光、M1/M5/M6/M7、交班前沿，不读屏幕）与 `ui_screen`（整页揭示与大页磨砂，读屏幕纹理）；着色器一旦出现屏幕纹理就会触发一次背景拷贝，不管分支走没走到。发丝线与辉光不用 `StyleBoxFlat` 的整数边框，也不走 3D 的 bloom。
-- **主题切换**：唯一写 `ui_night` 的是 WP-35（界面） 的 `UiThemeClock`，它是扫描前沿的位置，不是颜色插值量；常驻件的材质写 instance uniform `pin_night = 1`，始终是夜值。凡是画面板和文字的地方都必须走这个机制，否则夜里会出现"浅底浅字"（G14 要抓的典型错误）。
+- **主题切换**：唯一写 `ui_night` 的是 界面（UI-NAV） 的 `UiThemeClock`，它是扫描前沿的位置，不是颜色插值量；常驻件的材质写 instance uniform `pin_night = 1`，始终是夜值。凡是画面板和文字的地方都必须走这个机制，否则夜里会出现"浅底浅字"（G14 要抓的典型错误）。
 - **`hdr_2d` 固定为关**：界面画在后期之后，颜色逐像素原样上屏。动效只改 `Modulate`、不在容器里的 `Position` 与 `Rotation`、instance uniform 和 `ui_night`。
 - **大页按需创建、关闭即释放**：挂上 `ui_panel` 材质就占一个全局实例参数池的槽，只有释放节点才归还。

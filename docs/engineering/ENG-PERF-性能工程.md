@@ -5,13 +5,12 @@ category: engineering
 parent: ENG-INDEX
 summary: 性能总原则与绘制管线：容器与合批、着色器白名单与全局参数、预热、填充率、剔除与图层
 keywords: [着色器白名单, 全局着色器参数, ShaderGlobals, 数据纹理, 合批, 自动实例化, MultiMesh, 容器选型, 管线预热, 抖动淡化, 级别过渡, 填充率, 遮挡剔除, 渲染图层, 顶点格式, D3D12]
-owners: [WP-01]
-contributors: [WP-02, WP-03, WP-04, WP-05, WP-07, WP-23, WP-24, WP-27, WP-32, WP-33, WP-34, WP-37, WP-38, WP-39, WP-40, WP-42, WP-43, WP-45, WP-46, WP-47, WP-48, WP-49, WP-50, WP-51, WP-53]
 depends: [ENG-ARCH, ENG-BUDGET, SYS-TIME, UI-NAV, SYS-WALK, SYS-WEATHER, SYS-GRAPHICS, UI-VISUAL, SYS-ATLAS, SYS-TITLE, SYS-SAVE, SYS-MAPS, WLD-OUTSKIRTS, WLD-INTERIORS, SYS-AUDIO]
-related: [ART-STYLE, ART-SKYLIGHT, WLD-VEGETATION, WLD-WATER, SYS-MOTION, SYS-VIEW, ENG-GATES, ART-FIDELITY, PLAN-WP, WLD-TERRAIN]
+related: [ART-STYLE, ART-SKYLIGHT, WLD-VEGETATION, WLD-WATER, SYS-MOTION, SYS-VIEW, ENG-GATES, ART-FIDELITY, WLD-TERRAIN]
 contracts: [ShaderGlobals]
 data: ["game/style/shaders/", "game/style/outline/"]
 gates: [G5, G7, G20, G21]
+paths: ["game/data/pipeline-combinations.json", "game/style/shaders/globals.gdshaderinc.uid", "game/style/shaders/globals.gdshaderinc", "game/kernel/renderer/**", "game/kernel/diagnostics/**", "game/kernel/inspect/**", "game/kernel/frame/**", "game/kernel/boot/**", "game/stage/**"]
 ---
 # ENG-PERF · 性能工程
 
@@ -64,7 +63,7 @@ gates: [G5, G7, G20, G21]
 
 ### 1.4 着色器白名单
 
-白名单以 `ownership.json` 的 `shaderWhitelist` 为准，新增要主会话批准。原则：
+白名单以 `scripts/gates/shader-whitelist.json` 的根数组为准，新增要主会话批准。原则：
 
 - **功能并进现有着色器的分支，不新增文件**：天空类（星空、云、雨幕前锋、闪电、彩虹）并进 `sky`，光晕并进 `fx_glow`（当前只有窗灯光晕和灯头光晕两个分支；光柱、光锥、细尘与萤火虫没有现成分支，实际交付时按消费者接入），湿面与天光方向并进 `toon.gdshaderinc`，雨点环并进 `water`；外围与室内用现有着色器的分支与图层；季相、覆雪、月影是全局参数分支。
 - 读屏幕纹理的界面效果必须单独成文件（`ui_screen`）：着色器里只要出现 `hint_screen_texture`，引擎就在它之前做背景拷贝，与分支是否执行无关。

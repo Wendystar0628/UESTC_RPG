@@ -2,7 +2,7 @@ namespace Campus.Contracts;
 
 /// <summary>
 /// 湿润与积水判定及共用规则值（SYS-WEATHER）；着色器规则值由构建步骤生成。
-/// 只用整数哈希与加减乘除，结果不依赖平台数学库。contract-5 第 4 条批准后整份移进契约（纯静态类），供 IGroundCover（WP-38）调用。
+/// 只用整数哈希与加减乘除，结果不依赖平台数学库。contract-5 第 4 条批准后整份移进契约（纯静态类），供 IGroundCover（SYS-TIME）调用。
 /// 主线版：积水潜势是程序噪声（地面遮罩 2 交付后改读它的 R 通道），遮蔽只按朝向。
 /// </summary>
 public static class WetSurface

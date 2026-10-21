@@ -5,18 +5,17 @@ category: engineering
 parent: ENG-INDEX
 summary: 测试三档与何时跑、12 项门禁各验什么、入口与交付分工；审查视角与截图、一票否决与收尾清单在子文档
 keywords: [门禁, 验收, 测试三档, 快检, 核心专项, 集中测试, gate.ps1, 门禁表, 门禁编号, D-238, 入口与交付分工, 测试只锁本包输出, 构建锁]
-owners: [WP-27]
-contributors: [WP-00, WP-01, WP-02, WP-06, WP-32, WP-35, WP-36, WP-41, WP-42, WP-43, WP-44, WP-45, WP-46, WP-48, WP-49, WP-50, WP-53]
 depends: [CORE-INDEX, ART-FIDELITY, ENG-ARCH, ENG-BUDGET, ENG-PERF, SYS-TIME, SYS-WEATHER, SYS-WALK, SYS-SAVE, SYS-AUDIO]
-related: [ART-STYLE, SYS-GRAPHICS, SYS-MAPS, SYS-TITLE, SYS-ATLAS, UI-NAV, UI-VISUAL, WLD-INTERIORS, WLD-OUTSKIRTS, PLAN-WP, ENG-ROADMAP, ENG-PREVIEW]
+related: [ART-STYLE, SYS-GRAPHICS, SYS-MAPS, SYS-TITLE, SYS-ATLAS, UI-NAV, UI-VISUAL, WLD-INTERIORS, WLD-OUTSKIRTS, ENG-ROADMAP, ENG-PREVIEW]
 contracts: []
 data: []
 gates: [G1, G2, G3, G4, G5, G6, G7, G10, G14, G15, G20, G21]
+paths: ["scripts/gates/native-render.ps1", "game/data/maps/*/review.json", "scripts/shots/**", "scripts/gates/**", "game/gates/**", "scripts/gates/check-naming.ps1", "scripts/gates/check-source.ps1"]
 ---
 # ENG-GATES · 验收与门禁
 
 > **范围**：测试三档与何时跑、12 项门禁各验什么（各文档文件头 `gates` 字段以这里的编号为准）、入口与交付分工。
-> **不在本文**：审查视角、命令行规则与截图方式（ENG-GATES-SHOTS）；一票否决与收尾清单（ENG-GATES-VETO）；门禁命令、选域、缓存和阈值实现，以 `scripts/gate.ps1` 和 `scripts/gates/` 为准；各门禁的判据细则在对应系统文档的验收节；预算数值见 ENG-BUDGET；工作包分工见 PLAN-WP。
+> **不在本文**：审查视角、命令行规则与截图方式（ENG-GATES-SHOTS）；一票否决与收尾清单（ENG-GATES-VETO）；门禁命令、选域、缓存和阈值实现，以 `scripts/gate.ps1` 和 `scripts/gates/` 为准；各门禁的判据细则在对应系统文档的验收节；预算数值见 ENG-BUDGET。
 > **查阅**：先读 §0；测试三档看 §1.1；门禁表看 §1.2；入口看 §1.3
 
 ## 0 结论
@@ -73,7 +72,7 @@ gates: [G1, G2, G3, G4, G5, G6, G7, G10, G14, G15, G20, G21]
 | --- | --- | --- |
 | G1 类型 | 编译警告当错误（含非穷举 `switch`）、命名与格式；导入日志无 ERROR | 快检（编译）；集中测试（导入日志） |
 | G2 单元测试 | 纯 .NET 与引擎内单测，测行为；类别标签与写法见 STD-CODE §6 | 快检（受影响模块）；集中测试（全部） |
-| G3 归属 | 改动在 `ownership.json` 给本包的范围内；当前 Git 源码（含未跟踪但非忽略的新源码）的 `.uid` 齐全且不重复；构建产物及其本地 UID 不纳入入库检查 | 集中测试 |
+| G3 归属 | 改动文件在文档文件头的 `paths` 中有归属；当前 Git 源码（含未跟踪但非忽略的新源码）的 `.uid` 齐全且不重复；构建产物及其本地 UID 不纳入入库检查 | 集中测试 |
 | G4 边界 | 命名空间依赖方向、禁用 API、创建权与读写权、着色器白名单、自有生产手写代码的类型合计约 600 行与方法约 80 行规模（STD-CODE §5）、新文件放置与补丁式命名（WF-RULE §16）、补丁式代码（STD-CODE §4；规则在 `scripts/gates/arch/` 与各程序集的 `BannedSymbols.txt`，ENG-ARCH §2） | 快检 |
 | G5 注册与启动进出 | 无界面注册检查（模块与 ID、认领、调色板、世界文件、存档段）；启动核心 = Boot → Title → 新游戏 → 关窗口退出不报错 | 核心专项（启动核心）；集中测试（注册检查） |
 | G6 构建 | 导出 release 能跑；报安装目录与压缩包体积，按数量级判断与内容相称（D-125）；素材与代码许可已登记 | 集中测试 |
@@ -88,7 +87,6 @@ gates: [G1, G2, G3, G4, G5, G6, G7, G10, G14, G15, G20, G21]
 
 入口 `scripts\gate.ps1 [-Paths <路径...>] [-BaseRef <基线>]`：默认跑快检，改动碰到核心体验时加核心专项；`-Smoke` 只跑主线冒烟；`-Full` 跑集中测试全量；`-Only G7,G10` 只跑指定门禁；入口先核对引擎版本，要显卡的门禁经构建锁一次只跑一个（WF-BUILD §4）。
 
-各检查器与测试的交付分工见 PLAN-WP；全部由 WP-27（门禁、截图与巡检自动化）接进同一个入口。
 
 ## 2 待验证（P0）
 
@@ -96,4 +94,4 @@ gates: [G1, G2, G3, G4, G5, G6, G7, G10, G14, G15, G20, G21]
 
 | 待验证 | 位置 | 负责 | 初值 |
 | --- | --- | --- | --- |
-| G10 冷缓存子项的耗时与 GC 暂停 | G10 | WP-27（门禁、截图与巡检自动化）、WP-02（格子分级、烘焙与流式加载）空缓存实测 | 首次进入半分钟内，不出现明显冻结 |
+| G10 冷缓存子项的耗时与 GC 暂停 | G10 | 门禁、截图与巡检自动化（ENG-GATES）、格子分级、烘焙与流式加载（ENG-PERF-STREAM）空缓存实测 | 首次进入半分钟内，不出现明显冻结 |

@@ -37,7 +37,7 @@ public sealed class FurnitureStreetLayoutTests
         var rest = a.Items.Count(i => i.Kind == FurnitureKind.Bench && i.Key.StartsWith("rest:", StringComparison.Ordinal));
         AssertThat(a.Count(FurnitureKind.Bin) * FurnitureStyle.RestBinEvery >= rest * 0.6f && a.Count(FurnitureKind.Bin) <= rest).OverrideFailureMessage("a bin at about every other rest stop").IsTrue();
         // SYS-ATLAS: a kiosk or a post on every anchor on open ground or an authored elevated deck. The counts follow the anchor data, so
-        // moving an anchor (WP-48c) never needs a new number here.
+        // moving an anchor (SYS-ATLAS-TRAVEL) never needs a new number here.
         var landings = AnchorLandings();
         var kiosks = landings.Count(l => l.Form == "kiosk" && l.Landing == Landing.Open);
         var posts = landings.Count(l => l.Form == "post" && l.Landing == Landing.Open);

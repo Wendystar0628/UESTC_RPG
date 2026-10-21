@@ -187,7 +187,7 @@ public sealed class StreetPartsTests
     public void StreetLifePartsDeclareTheirSoundsSocketsAndSizes()
     {
         // WLD-LIFE: only the vending machine, the pole transformer, the rain grate and the broadcast horn make sound; every other part is silent.
-        // The shared bicycle's contact points (WP-54b's riding clips): seat above the cranks, grips left (−X) and right, axles on the wheels.
+        // The shared bicycle's contact points (game/camera/walk/'s riding clips): seat above the cranks, grips left (−X) and right, axles on the wheels.
         IPartDef<VehicleParams> bike = new ParkedBicyclePart();
         var sockets = bike.Sockets;
         AssertThat(new[] { "seat", "grip.left", "grip.right", "pedal.left", "pedal.right", "axle.front", "axle.rear" }.All(sockets.ContainsKey)).OverrideFailureMessage("The bicycle lacks a riding socket.").IsTrue();

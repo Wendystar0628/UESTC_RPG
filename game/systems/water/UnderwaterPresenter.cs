@@ -4,7 +4,7 @@ using Campus.Contracts.Water;
 namespace Campus.Systems.Water;
 
 /// <summary>
-/// Underwater look (SYS-VIEW, WLD-WATER): WP-07's medium service tints the frame and runs the shared fog
+/// Underwater look (SYS-VIEW, WLD-WATER): game/camera/'s medium service tints the frame and runs the shared fog
 /// with these values; this package only supplies colour and visibility. Colours are palette names, so they follow
 /// the time of day and season like the water surface.
 /// </summary>

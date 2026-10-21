@@ -8,7 +8,7 @@ namespace Campus.Gen.Parts.Circulation;
 /// <summary>Infill of a guard railing between its bottom and top rails (BoxPartParams.Variation 0–2).</summary>
 internal enum Infill { Balusters, Panel, Bars }
 
-/// <summary>Railing and handrail builders shared by every WP-11 part (ART-MODELING "围墙栏杆").</summary>
+/// <summary>Railing and handrail builders shared by every game/gen/parts/circulation/ part (ART-MODELING "围墙栏杆").</summary>
 internal static class RailKit
 {
     /// <summary>

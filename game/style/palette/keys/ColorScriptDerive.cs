@@ -21,7 +21,7 @@ public sealed class HeroRef
 
 public readonly record struct MaterialColors(Lab Lit, Lab Shade, Lab ShadeIn, Lab LitIn);
 
-/// <summary>Lit/shade derivation of ART-STYLE with the WP-37 rules in derive.json.</summary>
+/// <summary>Lit/shade derivation of ART-STYLE with the game/style/palette/keys/ rules in derive.json.</summary>
 public sealed class Deriver
 {
     public const double LampIntensityM = 0.95;

@@ -18,7 +18,7 @@ namespace Campus.Gen.Maps.Qingshuihe.North.Clusters;
 /// with the 1.2 m clipped hedge inside it, a gate at every road crossing — vehicle lane with the deep grey barrier arm down,
 /// a face-scan turnstile bank beside it, the guard house at the main gate — and a closed steel side gate on footways.
 /// Walk mode (SYS-WALK): every gate is closed (wings shut, red cross) except an open cluster's main gate, whose wings are
-/// retracted and arrows green; its barrier arm stays down (WLD-INTERIORS). The buildings stay with WP-14.
+/// retracted and arrows green; its barrier arm stays down (WLD-INTERIORS). The buildings stay with game/gen/buildings/.
 /// </summary>
 public sealed class ClusterSite(NorthTune.Cluster cluster) : ZoneSite
 {

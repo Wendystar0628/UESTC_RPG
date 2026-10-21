@@ -44,7 +44,7 @@ internal static class AuthoredTreePlanting
     }
 
     /// <summary>
-    /// Trees the overlays place and hand to WP-23 (kind tree, props.planter WP-23, props.species): planted where they stand,
+    /// Trees the overlays place and hand to game/gen/vegetation/ (kind tree, props.planter WP-23, props.species): planted where they stand,
     /// with the mother model whose height is nearest to the feature's height, scaled to it. A design tree on top of an already
     /// planted one (within <see cref="SameTree"/>) is that tree.
     /// </summary>

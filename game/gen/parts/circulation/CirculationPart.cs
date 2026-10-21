@@ -11,7 +11,7 @@ namespace Campus.Gen.Parts.Circulation;
 internal enum Detail { Full, Plain, Coarse, Mass }
 
 /// <summary>
-/// Shared plumbing for WP-11 parts: one build per semantic level through the WP-09 kernel, the declared bounds as the
+/// Shared plumbing for game/gen/parts/circulation/ parts: one build per semantic level through the game/gen/parts/core/ kernel, the declared bounds as the
 /// geometry bounds, and a budget that holds for the PartCatalog default instance (parameters scale the real count).
 /// </summary>
 public abstract class CirculationPart<TParams> : IPartDef<TParams> where TParams : BoxPartParams

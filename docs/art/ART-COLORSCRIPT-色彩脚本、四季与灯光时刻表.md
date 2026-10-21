@@ -5,13 +5,12 @@ category: art
 parent: ART-INDEX
 summary: 色彩脚本的组织与情绪、四季修正与英雄帧、四季内容的通用取向与阈值生长、灯光与生活痕迹的时刻表设计意图
 keywords: [色彩脚本, 关键帧, 英雄帧, 四季内容, 阈值生长, 四季修正, 难看时段, 灯光时刻表, 有效太阳高度, 初灯组, 生活痕迹]
-owners: [WP-37, WP-38, WP-39]
-contributors: [WP-03, WP-04, WP-22, WP-40, WP-47]
 depends: [SYS-TIME, ART-STYLE, ART-SKYLIGHT, ENG-PERF, SYS-WEATHER]
 related: [WLD-VEGETATION, WLD-OUTSKIRTS, WLD-INTERIORS, SYS-MOTION, ENG-GATES, UI-NAV, SYS-AUDIO]
 contracts: []
 data: ["game/data/maps/<地图>/lighting-schedule.json", "game/style/palette/keys/"]
 gates: [G7]
+paths: ["game/style/shaders/lamp.gdshaderinc", "game/style/shaders/lamp.gdshaderinc.uid", "game/style/shaders/reflection_lamps.gdshaderinc", "game/style/shaders/reflection_lamps.gdshaderinc.uid", "game/style/shaders/fx_glow.gdshader.uid", "game/data/maps/*/lighting-schedule.json", "game/style/shaders/fx_glow.gdshader", "game/systems/vegetation/seasons/**", "game/style/palette/keys/**", "game/systems/nightlight/**"]
 ---
 
 # ART-COLORSCRIPT · 色彩脚本、四季与灯光时刻表
@@ -32,7 +31,7 @@ gates: [G7]
 ### 0.1 接入要点
 
 - **内容随时刻、季节、天气变化**：不换模型、不重建格子、不切特化开关、不新增管线编译；颜色读调色板纹理（§1、§2）
-- **灯、窗、屏幕随时刻亮灭**：接 WP-39（夜景灯光与时刻表） 的灯光通道，曲线写进本图 `lighting-schedule.json`；按太阳高度求值的曲线用有效太阳高度 h_eff（§3）
+- **灯、窗、屏幕随时刻亮灭**：接 夜景灯光与时刻表（MAP-QSH-ATMOSPHERE） 的灯光通道，曲线写进本图 `lighting-schedule.json`；按太阳高度求值的曲线用有效太阳高度 h_eff（§3）
 
 ## 1 色彩脚本
 

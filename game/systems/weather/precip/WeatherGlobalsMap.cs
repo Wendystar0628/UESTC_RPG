@@ -4,7 +4,7 @@ using Campus.Contracts;
 namespace Campus.Systems.Weather.Precip;
 
 /// <summary>
-/// 天气向量 → 天气类全局参数（ENG-PERF；写入方 WP-45b，FramePriority.Motion，contract-5 第 5 条）。
+/// 天气向量 → 天气类全局参数（ENG-PERF；写入方 game/systems/weather/precip/，FramePriority.Motion，contract-5 第 5 条）。
 /// 45a 只交出 WeatherVec，全局参数只在这里换算，所以两边不会各写一份。
 /// </summary>
 public static class WeatherGlobalsMap

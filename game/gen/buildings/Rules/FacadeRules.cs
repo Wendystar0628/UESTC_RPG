@@ -25,7 +25,7 @@ public enum WindowCard : byte
 
 /// <summary>
 /// Light channel slots (32-slot light_channels texture). Provisional until the contract LightChannelCatalog lands
-/// (agreed with WP-39): general 0, dorm 1, teach 2, library 3, lab 4, canteen 5, allnight 7, cafe 8, venue 9, gym 10.
+/// (agreed with game/systems/nightlight/): general 0, dorm 1, teach 2, library 3, lab 4, canteen 5, allnight 7, cafe 8, venue 9, gym 10.
 /// </summary>
 public static class LightSlots
 {
@@ -85,9 +85,9 @@ public sealed record FacadeProfile(
     public float PlinthProjection { get; init; } = 0.05f;
     /// <summary>Secondary mix for the window cards: (card, weight) by window hash.</summary>
     public (WindowCard Card, int Weight)[] CardMix { get; init; } = [];
-    /// <summary>WP-10 part (PartCatalog ID) filling the window openings; doors take <see cref="PartCatalog.Door"/>.</summary>
+    /// <summary>game/gen/parts/openings/ part (PartCatalog ID) filling the window openings; doors take <see cref="PartCatalog.Door"/>.</summary>
     public string Window { get; init; } = PartCatalog.WindowCasement;
-    /// <summary>Room windows get WP-10 curtains (OpeningPlacement.Curtain picks which, and their state and colour).</summary>
+    /// <summary>Room windows get game/gen/parts/openings/ curtains (OpeningPlacement.Curtain picks which, and their state and colour).</summary>
     public bool Curtains { get; init; } = true;
     /// <summary>Colour family of the window and door glass.</summary>
     public string Glass { get; init; } = Families.Glass;

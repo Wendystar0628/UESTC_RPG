@@ -15,7 +15,7 @@ using W = Campus.Gen.Maps.Qingshuihe.South.SouthTune.Windows;
 namespace Campus.Gen.Maps.Qingshuihe.South.MainBuilding;
 
 /// <summary>
-/// Main building identity parts (MAP-QSH-SOUTH). The wings' massing, storeys and window bays stay with WP-14's facade
+/// Main building identity parts (MAP-QSH-SOUTH). The wings' massing, storeys and window bays stay with game/gen/buildings/'s facade
 /// rules (heights set by the height fields in world/south.json); this site adds what makes the building read as the main
 /// building: the front platform at the 2.6 m first floor with its grand steps, the flat-roofed square-column portico with
 /// round-headed windows and door in its back wall, the colonnaded roof gallery (空廊) with railing parapets on B2, and the
@@ -25,7 +25,7 @@ public sealed class MainBuildingSite : ZoneSite
 {
     public static readonly string B2 = SouthIds.MainB2.Entity;
     public static readonly string FrontSteps = SouthIds.MainSteps.Entity;
-    /// <summary>Window grids of the claimed front-steps feature (contract-29); B2's own windows stay WP-14's.</summary>
+    /// <summary>Window grids of the claimed front-steps feature (contract-29); B2's own windows stay game/gen/buildings/'s.</summary>
     public const string FrontPorchKey = "front-porch", RearPorchKey = "rear-porch";
 
     /// <summary>The rear entrance block: front face out from the facade, its round-headed door.</summary>
@@ -277,7 +277,7 @@ public sealed class MainBuildingSite : ZoneSite
         b.Add(PartSolids.BeveledBox(M.DoorWidth + 0.2f, 0.12f, 0.15f, 0.015f, L.Metal), g.F.At(g.Xc, floor + M.DoorSpring, glassZ + 0.08f));
         foreach (var side in new[] { -1f, 1f })
             b.Add(PartSolids.BeveledBox(0.06f, M.DoorSpring - 0.1f, 1.5f, 0.012f, L.Wood), g.F.At(g.Xc + side * (M.DoorWidth * 0.5f - 0.05f), floor, glassZ + 0.85f));
-        // The mat, open sign and door lamp are WP-13's, placed on the b2.front entrance anchor (WLD-INTERIORS).
+        // The mat, open sign and door lamp are game/gen/furniture/'s, placed on the b2.front entrance anchor (WLD-INTERIORS).
     }
 
     // ---- Roof gallery (空廊, §2.3): a covered walkway ring of square columns, railing between the outer columns ----
@@ -423,7 +423,7 @@ public sealed class MainBuildingSite : ZoneSite
         WindowNumbers.Panes(b, openings, Allocation(b.Context, RearPorchKey, openings.Length), W.Hall, W.Corridor);
         foreach (var side in new[] { -1f, 1f })
             b.Add(PartSolids.BeveledBox(1.15f, 2.65f, 0.07f, 0.015f, L.Wood), g.R.At(side * 1.85f, floor, blockFront + 0.04f));
-        // The mat, open sign and door lamp are WP-13's, placed on the b2.rear entrance anchor (WLD-INTERIORS).
+        // The mat, open sign and door lamp are game/gen/furniture/'s, placed on the b2.rear entrance anchor (WLD-INTERIORS).
     }
 
     public override void Collide(SiteColliders c)
@@ -451,7 +451,7 @@ public sealed class MainBuildingSite : ZoneSite
             c.Wall(g.F.P(x, pz0), g.F.P(x, pz1), 0.18f, floor, floor + WalkRules.BarrierHeight, SurfaceTag.Barrier, FootMat.StonePaving);
         foreach (var dx in M.SingleColumns.Concat(M.PairColumns))
             c.Box(g.F.At(g.Xc + dx, floor + M.PorticoHeight * 0.5f, M.ColumnZ), new(M.ColumnSize * 0.5f + 0.05f, M.PorticoHeight * 0.5f, M.ColumnSize * 0.5f + 0.05f), SurfaceTag.Wall, FootMat.StonePaving);
-        // Back wall either side of the open door (the doorway itself belongs to WP-31a's interior entrance).
+        // Back wall either side of the open door (the doorway itself belongs to game/gen/maps/qingshuihe/south/'s interior entrance).
         var hw = M.PorticoHalfWidth;
         c.Wall(g.F.P(g.Xc - hw, M.BackWall), g.F.P(g.Xc - M.DoorWidth * 0.5f, M.BackWall), 0.15f, floor, floor + M.PorticoHeight, SurfaceTag.Wall, FootMat.StonePaving);
         c.Wall(g.F.P(g.Xc + M.DoorWidth * 0.5f, M.BackWall), g.F.P(g.Xc + hw, M.BackWall), 0.15f, floor, floor + M.PorticoHeight, SurfaceTag.Wall, FootMat.StonePaving);

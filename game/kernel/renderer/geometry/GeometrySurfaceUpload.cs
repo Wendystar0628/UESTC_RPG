@@ -181,7 +181,7 @@ public static class GeometrySurfaceUpload
             normals[i] = new(n[i * 3], n[i * 3 + 1], n[i * 3 + 2]);
             var color = tint.HasValue ? defaultId : source.ColorIndices is { } logical ? Registered(logical.Span[i])
                 : defaultId;
-            // Match WP-02's established AO byte truncation, then use the existing native UNORM8 input bias.
+            // Match game/kernel/bake/'s established AO byte truncation, then use the existing native UNORM8 input bias.
             var ao = (byte)Math.Clamp(At(source.Ao, i, 1f) * 255f, 0f, 255f);
             PaletteIndex? decalBase = source.DecalBaseColorIndices is { } backgrounds ? Registered(backgrounds.Span[i]) : null;
             var rgba = PaletteEncoding.EncodeColor(color, ao, At(source.Flags, i, (byte)0),

@@ -10,7 +10,7 @@ public enum PaletteRole : byte { Frame, Retired, Lit, Shade, Weather, Emissive }
 
 /// <summary>
 /// Albedo is normalized sRGB in [0, 1], not a current-frame evaluated colour.
-/// Seasonal Albedo is reference-only; seasonal values come from WP-37 keys/vegetation.json.
+/// Seasonal Albedo is reference-only; seasonal values come from game/style/palette/keys/vegetation.json.
 /// MaterialClass is an extensible data key. Token names are case-sensitive.
 /// </summary>
 [JsonUnmappedMemberHandling(JsonUnmappedMemberHandling.Disallow)]

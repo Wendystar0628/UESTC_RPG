@@ -24,7 +24,7 @@ public sealed class CenterEastModule : ZoneModuleBase, IWindowMetadataSource, IC
 /// <summary>
 /// The center-east zone's sites in a fixed order. 21a: 品学楼 (gate frame and link bridges, forecourt and cascade stone,
 /// curved end bay); 21b1: the three research buildings of 中部科研区 (科 A, 科 B, 科 C); 21b2: the statue lawn (林为干像,
-/// 麦克斯韦像 and the equation stone) and the 科研楼 stele (the 银杏大道 bridge is WP-28's); 21c: 文科楼群 (tower, terraced
+/// 麦克斯韦像 and the equation stone) and the 科研楼 stele (the 银杏大道 bridge is game/gen/maps/qingshuihe/waterfront/'s); 21c: 文科楼群 (tower, terraced
 /// podium, atrium) and its forecourt with the friendship tree's stakes and stone. 21d (training hall, courts, east edge)
 /// appends its own entries after these.
 /// </summary>

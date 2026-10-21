@@ -31,7 +31,7 @@ public interface IMapTransition
     float Progress { get; }                  // 0–1，加载界面的真实加载进度（UI-VISUAL）
     Task<MapTravelResult> Done { get; }      // 主线程完成；不可取消
 }
-public interface IMapService                 // Kernel 服务（WP-46）
+public interface IMapService                 // Kernel 服务（SYS-MAPS）
 {
     long Rev { get; }                        // 每次 Spawn 完成 + 1
     MapId Default { get; }                   // index.json 的默认图

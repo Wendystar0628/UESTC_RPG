@@ -5,13 +5,12 @@ category: maps
 parent: MAP-QSH-INDEX
 summary: 设计增补的登记与用色、默认状态与作用代号、空地整理、参照转译、行走分类，以及区文档共同口径
 keywords: [设计增补, 增补物, 增补登记, 作用代号, 默认状态规则, 大片空地, 功能开敞面, 过渡绿地, 参照与转译, 刻字景观石, 可跳上, 增补物行走分类, 区文档共同口径, 身份特征, 近景要求]
-owners: [WP-13, WP-14, WP-29]
-contributors: [WP-04, WP-12, WP-15, WP-16, WP-18, WP-19, WP-20, WP-21, WP-23, WP-24, WP-26, WP-28, WP-30, WP-31a, WP-31b, WP-31c, WP-37, WP-38, WP-39, WP-43, WP-44, WP-45, WP-47, WP-48, WP-51, WP-52]
 depends: [CORE-INDEX, ART-STYLE, ART-FIDELITY, ART-MODELING, SYS-TIME, SYS-WALK]
-related: [WLD-VEGETATION, WLD-LIFE, SYS-MOTION, ENG-GATES, ENG-ARCH, ENG-BUDGET, PLAN-WP, SYS-ATLAS, SYS-MAPS, WLD-OUTSKIRTS, WLD-INTERIORS, SYS-AUDIO, SYS-WEATHER, WLD-RENOVATION, WLD-AMBIENCE, MAP-QSH-RENOVATION, MAP-QSH-OUTSKIRTS]
+related: [WLD-VEGETATION, WLD-LIFE, SYS-MOTION, ENG-GATES, ENG-ARCH, ENG-BUDGET, SYS-ATLAS, SYS-MAPS, WLD-OUTSKIRTS, WLD-INTERIORS, SYS-AUDIO, SYS-WEATHER, WLD-RENOVATION, WLD-AMBIENCE, MAP-QSH-RENOVATION, MAP-QSH-OUTSKIRTS]
 contracts: []
 data: ["game/data/maps/qingshuihe/world/"]
 gates: [G5, G7, G15]
+paths: ["game/gen/maps/qingshuihe/public/**", "game/data/maps/qingshuihe/world/public.json", "game/data/maps/*/window-numbering.json", "game/gen/parts/street/**", "game/gen/buildings/**", "game/gen/furniture/**"]
 ---
 
 # MAP-QSH-ADDITIONS · 设计增补
@@ -39,7 +38,7 @@ gates: [G5, G7, G15]
 ### 0.1 接入要点
 
 - **新增增补物（各内容包）**：在本区世界文件加记录，ID 以 `design:` 开头并写 `note`，只用调色板色名，写明夜间作用和四季状态；禁做清单按 WLD-AMBIENCE §1.5，新颜色先在 ART-STYLE §2.7 登记（§1）
-- **整理较大的草坪和空地（各区包、WP-29（公共空间设计））**：两个方向都在约 40 m 以上的，先归类；草丘、浅洼相对高差 ≤ 1.5 m，写进本区地形覆盖层（§3）
+- **整理较大的草坪和空地（各区包、公共空间设计（game/gen/maps/qingshuihe/public/））**：两个方向都在约 40 m 以上的，先归类；草丘、浅洼相对高差 ≤ 1.5 m，写进本区地形覆盖层（§3）
 - **做有碰撞的增补物**：按 §7 的归类和 SYS-WALK-BOUNDS §7 的通则给碰撞，可跳上的东西不能和楼顶连成跳跃链
 - **写区文档的身份特征、近景要求、四季昼夜（各区包）**：口径按 §8，区文档不重抄，只写本区的表和条目
 
@@ -76,7 +75,7 @@ gates: [G5, G7, G15]
 
 ## 3 大片空地的整理
 
-空地按游戏设计组织，不照校内实际布局；开阔草坪不默认中心留白。两个方向都在约 40 m 以上的草坪和空地，由所在区包归为下面两类之一，无主的由 WP-29（公共空间设计） 归类（WP-29 要草丘或浅洼时提需求，由所属区包代为登记）：
+空地按游戏设计组织，不照校内实际布局；开阔草坪不默认中心留白。两个方向都在约 40 m 以上的草坪和空地，由所在区包归为下面两类之一，无主的由 公共空间设计（game/gen/maps/qingshuihe/public/） 归类（game/gen/maps/qingshuihe/public/ 要草丘或浅洼时提需求，由所属区包代为登记）：
 
 - **功能开敞面**：中心保持空旷，但要说明用途（框住地标的视野、活动草坪，或压缩之后的释放）；边缘照样做足：林缘、花境、坐憩、入口停点。时间广场周边的大草坪是功能开敞面，作图书馆穹顶的前景。
 - **过渡绿地**：原样只是让人走过去等待的，就重组。手段：疏林草地、穿越小路加停留点、季节花田或野花斑块、草丘、雨水花园（植物做法见 WLD-VEGETATION §3.2、§3.4）。
@@ -125,5 +124,5 @@ gates: [G5, G7, G15]
 
 - **视觉效果优先**：四季和昼夜一律视觉效果优先，真实花期和作息只作参考，不同时开的花可以同框。
 - **默认状态**：秋 17:30。区文档四季表的"秋"一列就是该区外观各节写的现状，"—"或"同秋"表示相同。
-- **怎么做**：全部靠 ART-COLORSCRIPT §2 的连续参数（季相行、地面遮罩、按法线覆雪）和灯光通道完成，季节小物做进同一组实例，不换模型；植被由 WP-23（植被系统） 种、WP-38（物候、季节植被与季节氛围） 驱动季相，生活痕迹由 WP-25（动物与生活痕迹） 放置，颜色取自调色板。
+- **怎么做**：全部靠 ART-COLORSCRIPT §2 的连续参数（季相行、地面遮罩、按法线覆雪）和灯光通道完成，季节小物做进同一组实例，不换模型；植被由 植被系统（WLD-VEGETATION） 种、物候、季节植被与季节氛围（SYS-TIME） 驱动季相，生活痕迹由 动物与生活痕迹（WLD-LIFE-FAUNA） 放置，颜色取自调色板。
 - **夜间角色**：用 §2 的作用代号，夜间暗部亮度下限见 SYS-TIME §4。

@@ -109,7 +109,7 @@ internal static class TerrainFootwayBankClosure
                 var a = plan.Shore.Banks.At(span, span.From); var c = plan.Shore.Banks.At(span, span.To); var length = span.To - span.From;
                 b.Diagnostics.Add($"Footway Hard bank '{plan.Shore.Id}': ring={span.Polygon}/{span.Ring}, core=({a.X:R},{a.Y:R})->({c.X:R},{c.Y:R}), length={length:R} m, conflict extended 3 m at both ends plus 2 m Soft joins; roads={string.Join(",", span.Roads.Select(r => r.Road.Value))}."
                     + (length > 30 ? " AUTHOR_REVIEW_REQUIRED: continuous Hard segment exceeds 30 m; report independently to Opus without concealing it." : "")
-                    + " NOT_VERIFIED: WP-28 0.15 m waterside stone edge and physical bank coverage.");
+                    + " NOT_VERIFIED: game/gen/maps/qingshuihe/waterfront/ 0.15 m waterside stone edge and physical bank coverage.");
             }
         }
     }

@@ -5,13 +5,12 @@ category: art
 parent: ART-INDEX
 summary: 三渲二日式动画背景的全局画风：目标与参照、调色板与色名用法、排除元素、场景文字与情绪；明暗影色材质与描线后期在子文档
 keywords: [三渲二, 清透干净, 质感参照, 色名, 退役色名, 跳色, 色名登记, 界面色, 日本元素边界, 场景文字, 原创徽记, 情绪弧线]
-owners: [WP-04]
-contributors: [WP-05, WP-23, WP-37, WP-39, WP-45]
 depends: [CORE-INDEX, ENG-ARCH, SYS-TIME]
 related: [ART-SKYLIGHT, ART-FIDELITY, WLD-AMBIENCE, WLD-RENOVATION, UI-VISUAL, SYS-WEATHER, ENG-GATES]
 contracts: [PaletteToken]
 data: ["game/style/palette/", "game/style/palette/ext/ui.json"]
 gates: [G4, G5]
+paths: ["game/assets/scene-text/**", "game/data/scene-text/**", "game/style/text/**", "game/style/shaders/toon_scene_text.gdshader", "game/style/shaders/toon_scene_text.gdshader.uid", "game/style/palette/ext/landmark_materials.json", "game/style/palette/ext/street_furniture.json", "game/style/shaders/toon_static.gdshader.uid", "game/style/shaders/toon_glass.gdshader.uid", "game/style/shaders/toon.gdshaderinc.uid", "game/style/shaders/toon_static.gdshader", "game/style/shaders/fog.gdshaderinc.uid", "game/style/shaders/toon_glass.gdshader", "game/style/shaders/toon.gdshaderinc", "game/style/shaders/fog.gdshaderinc", "game/style/palette/**", "game/style/shaders/**", "game/data/maps/*/materials.json"]
 ---
 # ART-STYLE · 风格基础
 
@@ -87,8 +86,8 @@ gates: [G4, G5]
 ### 2.5 色名登记
 
 - 色名是唯一的取色途径：色名 → 色号 → 调色板纹理的一列。内容和代码只写色名，不写十六进制色值（G4）。
-- 核心表归 WP-04（调色板、卡通材质与贴图），其他包写自己的扩展文件；色名与色号全局唯一、只增不改，冲突由 G5 报错。
-- bank 0（`core.json`）已分完，新色名一律进 bank 1（`ext/`，成对、不带季相），色号分段以 `ext/` 的数据为准，段用完向 WP-04 申请。
+- 核心表归 调色板、卡通材质与贴图（ART-STYLE），其他包写自己的扩展文件；色名与色号全局唯一、只增不改，冲突由 G5 报错。
+- bank 0（`core.json`）已分完，新色名一律进 bank 1（`ext/`，成对、不带季相），色号分段以 `ext/` 的数据为准，段用完向 ART-STYLE 申请。
 - **色数限额**：同一时季格约 24 色；天空和雾的渐变不计；季节色名按季轮换，不同季的花色不叠在同一格；室内色名单独计数（WLD-INTERIORS-BUILD §3.3）。
 - **登记口径**：评审给的色值是默认格画面上的受光色，不是固有色；登记时反推固有色（暖色有彩件只按明度反解，免得发焦糖色；冷色与中性件整色反解），再核对 17:30 的受光与目标看不出差别。
 
@@ -99,7 +98,7 @@ gates: [G4, G5]
 
 ### 2.7 待登记的新色名
 
-下面是白天的固有色，各时季格的颜色按 §2.3 推导，WP-04（调色板、卡通材质与贴图） 统一登记，登记后以 `ext/` 为准；新色先登记再用，不自己调色。
+下面是白天的固有色，各时季格的颜色按 §2.3 推导，调色板、卡通材质与贴图（ART-STYLE） 统一登记，登记后以 `ext/` 为准；新色先登记再用，不自己调色。
 
 | 名称 | 色值 |
 | --- | --- |
@@ -109,10 +108,10 @@ gates: [G4, G5]
 | 爬山虎暗紫红 | #7A3646 |
 | 乒乓台灰绿 | 沿用 MAP-QSH-CENTER-EAST §4.3 的低饱和绿 |
 | 消防红 | 与消防栓共用一个色名；WLD-AMBIENCE §4 的邮筒与电话亭也用它 |
-| 凸面镜橙 | 压低彩度的橙，WP-04 定色值；只用在 WLD-AMBIENCE §6 凸面镜的杆和镜框 |
+| 凸面镜橙 | 压低彩度的橙，ART-STYLE 定色值；只用在 WLD-AMBIENCE §6 凸面镜的杆和镜框 |
 | PVC 门帘灰蓝 | 玻璃色提亮 |
-| 剖切色 | 偏暖的灰紫，WP-04 定色值（SYS-VIEW-MEDIUM §2） |
-| 季节花色：紫藤紫、凌霄橙红、鸢尾蓝紫 | 进季相行，WP-37（日相与季节调色板） 定色值；面积小，不算新的跳色（§2.2） |
+| 剖切色 | 偏暖的灰紫，ART-STYLE 定色值（SYS-VIEW-MEDIUM §2） |
+| 季节花色：紫藤紫、凌霄橙红、鸢尾蓝紫 | 进季相行，日相与季节调色板（game/style/palette/keys/） 定色值；面积小，不算新的跳色（§2.2） |
 | 直饮水台指示灯绿 | 与闸机待机的绿灯共用一个色名 |
 
 老楼翻新的墙色见 WLD-RENOVATION §3.3，室内色名在 `game/style/palette/ext/`，都不在本表；导览亭牌面、桩铭牌只用场景调色板里已有的颜色。

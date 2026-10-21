@@ -454,7 +454,8 @@ public sealed class ArchitectureTests
         var current = new DirectoryInfo(AppContext.BaseDirectory);
         while (current is not null)
         {
-            if (File.Exists(Path.Combine(current.FullName, "ownership.json"))) return current.FullName;
+            if (File.Exists(Path.Combine(current.FullName, "game", "project.godot")) &&
+                File.Exists(Path.Combine(current.FullName, "docs", "README.md"))) return current.FullName;
             current = current.Parent;
         }
         throw new InvalidOperationException("UESTC_REPOSITORY or a repository ancestor is required.");

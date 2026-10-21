@@ -55,9 +55,9 @@ public sealed class ParkedCarPart : IPartDef<VehicleParams>
 /// Anonymous shared bicycle (匿名共享单车, WLD-LIFE, D-066): a low-step milk-white frame with the electronic blue on the down
 /// tube and the number plate only, a front basket and a rear lock box in dark grey, solid mudguard, dark tyres on light solid
 /// wheels. No brand, no colours of a real scheme. Width × Height × Depth is the bike (handlebar width, bar height, wheel to wheel),
-/// its front at −Z. The ride's contact points are part sockets shared with WP-54b's riding clips: seat, left and right grips,
+/// its front at −Z. The ride's contact points are part sockets shared with game/camera/walk/'s riding clips: seat, left and right grips,
 /// left and right pedals, front and rear axles (the sitter faces −Z, so the left grip is at −X). Parked bikes have no collision and
-/// make no sound (WLD-LIFE, SYS-AUDIO); the number on the plate waits for the scene-text atlas and WP-55's bay data.
+/// make no sound (WLD-LIFE, SYS-AUDIO); the number on the plate waits for the scene-text atlas and game/camera/walk/'s bay data.
 /// </summary>
 [Part(PartCatalog.ParkedBicycle)]
 public sealed class ParkedBicyclePart : IPartDef<VehicleParams>

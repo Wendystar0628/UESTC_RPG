@@ -13,7 +13,7 @@ namespace Campus.Gen.Maps.Qingshuihe.Boundary.Waterfront;
 
 /// <summary>
 /// The waterside plaza inside the north gate (design:boundary-north-a05-plaza): the foot of the A05 atlas kiosk and the first
-/// stop of R4 after the gate (MAP-QSH-NORTH R4, SYS-ATLAS). The paving, its kerbs and edging are WP-15 ground drawn from
+/// stop of R4 after the gate (MAP-QSH-NORTH R4, SYS-ATLAS). The paving, its kerbs and edging are game/gen/ground/ ground drawn from
 /// the overlay polygon; this site adds a light steel railing along the water edge and two benches whose sitters face the
 /// channel and the north gate bridge. Frame: t along the bank, n off the water edge toward the road (<see cref="P"/>).
 /// </summary>
@@ -59,7 +59,7 @@ public sealed class NorthPlazaSite : ZoneSite
     /// <summary>
     /// Railing on the water side: square posts at most <see cref="P.PostPitch"/> apart, a handrail and a bottom rail, 20 mm bars
     /// between them; the two end posts are a size heavier, the gate-side one with a cap (收头); the campus-side one carries on
-    /// into WP-20's canal-bank railing (20a-4) and keeps no cap. Stands on the paving.
+    /// into game/gen/maps/qingshuihe/north/'s canal-bank railing (20a-4) and keeps no cap. Stands on the paving.
     /// </summary>
     private static void Railing(SiteBuilder b, PlanFrame frame)
     {
@@ -79,7 +79,7 @@ public sealed class NorthPlazaSite : ZoneSite
             var end = k == 0 || k == panels;
             var size = end ? P.EndPostSize(world) : P.PostSize;
             b.Box(L.LightSteel, at, u, size, size, y - 0.02f, y + P.RailHeight - 0.01f);
-            // The campus-side end post (k = 0) is shared with WP-20's canal-bank railing, which carries on from it: no cap there.
+            // The campus-side end post (k = 0) is shared with game/gen/maps/qingshuihe/north/'s canal-bank railing, which carries on from it: no cap there.
             if (end && k == panels && b.Detail == SiteDetail.Full)
                 b.Add(PartSolids.BeveledBox(size + 0.04f, 0.04f, size + 0.04f, 0.008f, L.LightSteel), PlanFrame.Along(at, u).At(0, y + P.RailHeight, 0));
         }

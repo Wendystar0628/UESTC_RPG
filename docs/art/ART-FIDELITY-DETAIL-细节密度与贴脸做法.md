@@ -5,13 +5,12 @@ category: art
 parent: ART-FIDELITY
 summary: 每栋楼的构件与立面密度、窗、地面与热点簇、倒角表与不做旧、夜间四季天气，贴脸要求，穿楼入地，细节词汇
 keywords: [细节密度, 十类构件, 立面密度, 事件贴花, 热点簇, 倒角表, 不做旧, 贴脸距离, L0+ 专用几何, 切面, 细节词汇, 防止细节堆成噪点, 最值得做的细节]
-owners: [WP-27]
-contributors: [WP-10, WP-12, WP-14, WP-15, WP-23, WP-24, WP-47, WP-51, WP-52]
 depends: [CORE-INDEX, ART-FIDELITY, ART-STYLE, ART-MODELING, ENG-BUDGET, WLD-INTERIORS]
 related: [WLD-RENOVATION, WLD-AMBIENCE, MAP-QSH-ADDITIONS, SYS-VIEW, SYS-TIME, SYS-WEATHER, ENG-GATES]
 contracts: []
 data: []
 gates: [G15]
+paths: ["scripts/gates/native-render.ps1", "game/data/maps/*/review.json", "scripts/shots/**", "scripts/gates/**", "game/gates/**", "scripts/gates/check-naming.ps1", "scripts/gates/check-source.ps1"]
 ---
 # ART-FIDELITY-DETAIL · 细节密度与贴脸做法
 

@@ -1,6 +1,6 @@
-// map_base.gdshader（WP-48b，白名单；SYS-ATLAS、ENG-PERF）
+// map_base.gdshader（白名单；SYS-ATLAS、ENG-PERF）
 // 平面地图唯一的画布着色器，小地图与大地图共用。两种用法由材质 uniform mode 区分（不用 #define）：
-//   0 底图：按本机烘焙的精确矢量距离场（WP-48a）逐层上色，画层顺序与色名见 SYS-ATLAS；
+//   0 底图：按本机烘焙的精确矢量距离场（底图烘焙 game/systems/atlas）逐层上色，画层顺序与色名见 SYS-ATLAS；
 //   1 地标线描：从 map_glyphs（MSDF 图集）里画一枚，颜色取 map.landmark 的描边色。
 // 颜色只来自色表 pal_day / pal_night（下标见 C_*，与 Campus.Hud.Map.MapPalette.Roles 同序，
 // 由界面从 ui.json 的 map.light / map.dark 写入）；这里不写字面色值。
@@ -39,7 +39,7 @@ const int C_INTERIOR = 24;
 const int C_INTERIOR_LINE = 25;
 const int ROLE_COUNT = 32;
 
-// ---- map_sdf_b.G 的要素类别（最近邻、膨胀 2 纹素；编码由 WP-48a 的 map.manifest.json 定，这里是约定的初值） ----
+// ---- map_sdf_b.G 的要素类别（最近邻、膨胀 2 纹素；编码由底图烘焙的 map.manifest.json 定，这里是约定的初值） ----
 const int CAT_BUILDING = 1;
 const int CAT_LANDMARK = 2;
 const int CAT_PLAZA = 3;

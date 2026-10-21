@@ -5,8 +5,6 @@ category: systems
 parent: SYS-INDEX
 summary: 两个时钟与一拍二、动作幅度上限、转场的唯一详述；风与环境动态、生命体与偶发事件见子文档
 keywords: [动态, 两个时钟, 动画时钟, AnimTime, 一拍二, step_rate, 480 s 回绕, 转场, 换季转场, 改时间, 同时转场, 减少动态效果]
-owners: [WP-26]
-contributors: [WP-34, WP-45, WP-46, WP-53]
 depends: [ART-STYLE, ART-SKYLIGHT, ENG-ARCH, ENG-PERF, SYS-TIME, SYS-WEATHER]
 related: [WLD-VEGETATION, UI-NAV, SYS-WALK, SYS-GRAPHICS, UI-VISUAL, SYS-ATLAS, SYS-TITLE, SYS-SAVE, SYS-MAPS, SYS-AUDIO]
 contracts: []

@@ -102,7 +102,7 @@ public sealed record ApplyResult(
     bool RestartPending,                            // 有重启类改动：已写盘，下次启动生效（SYS-GRAPHICS 第 4 步）
     IReadOnlyList<QualityKnob> Rejected);
 
-public interface IQualityService                    // Kernel 服务（WP-32）；界面与门禁的唯一入口
+public interface IQualityService                    // Kernel 服务（SYS-GRAPHICS）；界面与门禁的唯一入口
 {
     QualityProfile Requested { get; }
     QualityView Effective { get; }                  // 实际生效值，读取无分配
@@ -115,7 +115,7 @@ public interface IQualityService                    // Kernel 服务（WP-32）�
 
 public interface IQualityAware                      // 标了 [QualityResponsive] 的 [KernelNode] 实现
 {
-    // WP-32 在 FramePriority.Quality 那一步调用：启动时以全部项调用一次，之后只在 Owns 或 Reads 里的项变化时调用。
+    // game/kernel/quality/ 在 FramePriority.Quality 那一步调用：启动时以全部项调用一次，之后只在 Owns 或 Reads 里的项变化时调用。
     // 即时类按节点 ID 顺序调用；加载界面类在完全遮盖时按 QualityResponsive.Order、节点 ID 顺序调用；
     // 分帧类由负责方自己分帧完成，每帧不超过 0.3 ms。
     void ApplyQuality(QualityView view, in QualityChange change);
@@ -129,6 +129,6 @@ public sealed class QualityResponsiveAttribute : Attribute   // 标在 Godot 侧
     public QualityKnob[] Owns { get; init; } = [];   // 我负责落到引擎上；G5 核对每项恰有一个负责方
     public QualityKnob[] Reads { get; init; } = [];  // 只读，或按它调整自己的对象、但不对这一项的效果负责
 }
-// ParticleDensity：WP-45 Owns（降水池），WP-38 Reads（飘落池按同一系数降；萤火虫不降，SYS-GRAPHICS）
-// 着色器要的植被密度由 WP-32 合成全局参数 quality（vec4，ENG-PERF）
+// ParticleDensity：Owns（降水池），Reads（飘落池按同一系数降；萤火虫不降，SYS-GRAPHICS）
+// 着色器要的植被密度由 game/kernel/quality/ 合成全局参数 quality（vec4，ENG-PERF）
 // 设置由 settings.json 的统一读写方持久化；各包只经 IQualityService 和 IQualityAware 接收画面设置（SYS-GRAPHICS）

@@ -1,4 +1,4 @@
-// precip.gdshader：降水池（WP-45b）。雨丝、雪花、溅落共用；檐滴（precip_k.z = 1）留到檐滴点表交付后接。
+// precip.gdshader：降水池（game/systems/weather/precip/）。雨丝、雪花、溅落共用；檐滴（precip_k.z = 1）留到檐滴点表交付后接。
 // 规格：SYS-WEATHER（雨的可读性）、§7（降水池）；ENG-PERF；SYS-MOTION。
 //
 // 实例数据（C# 侧 PrecipModel 写一次，之后不改）：变换是单位阵；INSTANCE_CUSTOM.xyz = 单位立方体里的起点 p0，
@@ -108,7 +108,7 @@ float pc_air() {
 	return mix(from_air, to_air, clamp(medium.z, 0.0, 1.0));
 }
 
-// 雨丝与雪花的灯锥：灯头到地面光斑半径的圆锥（灯表与亮度用 WP-39 的 lamp.gdshaderinc）。
+// 雨丝与雪花的灯锥：灯头到地面光斑半径的圆锥（灯表与亮度用 game/systems/nightlight/ 的 lamp.gdshaderinc）。
 // 返回 x = 锥里的亮度 0–1，yzw = 该灯的灯照色；没有灯表（尺寸不对）时为 0
 vec4 pc_lamp(vec3 p) {
 	if (!in_map(p)) {

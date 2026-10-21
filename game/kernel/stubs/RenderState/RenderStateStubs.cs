@@ -3,7 +3,7 @@ using Campus.Contracts;
 
 namespace Campus.Kernel.Stubs.RenderState;
 
-/// <summary>Explicit air-medium shader defaults; replaced by WP-07's publisher.</summary>
+/// <summary>Explicit air-medium shader defaults; replaced by game/camera/'s publisher.</summary>
 [KernelService(typeof(IMediumRenderState), IsStub = true)]
 public sealed class MediumRenderStateStub : IMediumRenderState
 {

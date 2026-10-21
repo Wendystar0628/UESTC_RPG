@@ -11,7 +11,7 @@ namespace Campus.Gen.Maps.Qingshuihe.Public.Tests;
 
 using static GdUnit4.Assertions;
 
-/// <summary>WP-29 29a: the registered corner pocket greens of world/public.json, loaded with every other world file of the map.</summary>
+/// <summary>game/gen/maps/qingshuihe/public/ 29a: the registered corner pocket greens of world/public.json, loaded with every other world file of the map.</summary>
 [TestSuite]
 public sealed class PublicModuleTests
 {
@@ -31,7 +31,7 @@ public sealed class PublicModuleTests
         {
             var pad = Pad(world, bench);
             AssertThat(pad.Zone?.Value == "public").OverrideFailureMessage($"{pad.Id.Value} is filed under the public zone").IsTrue();
-            AssertThat(pad.TryText("highway") == "pedestrian").OverrideFailureMessage($"{pad.Id.Value} is a pedestrian area WP-15 paves").IsTrue();
+            AssertThat(pad.TryText("highway") == "pedestrian").OverrideFailureMessage($"{pad.Id.Value} is a pedestrian area game/gen/ground/ paves").IsTrue();
         }
     }
 

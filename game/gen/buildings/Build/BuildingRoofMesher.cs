@@ -46,9 +46,9 @@ internal sealed class BuildingRoofMesher(BuildingPlan plan, LodLevel lod, Geomet
     }
 
     /// <summary>
-    /// Coping on the parapet from its outer face s0 to the inner face, y0 to top: the WP-12 parapet cap (60 mm lip each
+    /// Coping on the parapet from its outer face s0 to the inner face, y0 to top: the game/gen/parts/roof/ parapet cap (60 mm lip each
     /// side, drip under the outer one near) with the lightning strip on it, and the parapet's inner face down to the roof.
-    /// Without a valid inner offset, or where the part cannot sweep a ring, WP-14's own coping profile.
+    /// Without a valid inner offset, or where the part cannot sweep a ring, game/gen/buildings/'s own coping profile.
     /// </summary>
     public void BuildCoping(float s0, float y0, float top)
     {
@@ -79,7 +79,7 @@ internal sealed class BuildingRoofMesher(BuildingPlan plan, LodLevel lod, Geomet
 
     // ---------------------------------------------------------------------------------------------
     // Roof relief: stair-core penthouses every ~30 m, one fenced plant enclosure and on some tall roofs a mast at a
-    // corner (B7, ART-MODELING; the plant and mast are WP-12 parts, RoofParts).
+    // corner (B7, ART-MODELING; the plant and mast are game/gen/parts/roof/ parts, RoofParts).
     // ---------------------------------------------------------------------------------------------
     public void BuildRelief()
     {

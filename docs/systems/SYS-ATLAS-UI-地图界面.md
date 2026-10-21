@@ -5,13 +5,12 @@ category: systems
 parent: SYS-ATLAS
 summary: 平面地图的界面：底图与上色、外围与校界画法、标注、小地图、大地图；自定义标记与追踪在主线之后
 keywords: [底图, 小地图, 大地图, 地图页, atlasRect, 距离场, map.* 色值, 区域名, 地名标注, labels.json, 缩放档, 目录页, 传送卡, 图层]
-owners: [WP-48a, WP-48b]
-contributors: [WP-01, WP-04, WP-06, WP-27, WP-35, WP-36, WP-39, WP-51, WP-53a]
 depends: [SYS-ATLAS, ENG-ARCH, UI-NAV, UI-VISUAL, WLD-OUTSKIRTS, SYS-TITLE]
 related: [SYS-ATLAS-TRAVEL, SYS-VIEW, SYS-MAPS, ENG-GATES, ENG-BUDGET, ENG-PERF, SYS-AUDIO]
 contracts: [AtlasLayer, AtlasRegion, CustomPin, PinShape]
 data: ["game/data/maps/qingshuihe/atlas/labels.json"]
 gates: [G14]
+paths: ["game/style/shaders/map_base.gdshader.uid", "game/style/shaders/map_base.gdshader", "game/data/maps/*/atlas/labels.json", "game/hud/map/**", "game/gen/bakeinput/**"]
 ---
 
 # SYS-ATLAS-UI · 地图界面

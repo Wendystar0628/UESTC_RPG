@@ -331,7 +331,7 @@ public static class FaunaPlanner
 
     private static void Crows(IWorldModel world, uint seed, Footprint[] buildings, List<FaunaSite> sites, List<string> log)
     {
-        // Dorm roofs with a known height (WP-14 draws their parapet coping at pad + height + about 0.95 m).
+        // Dorm roofs with a known height (game/gen/buildings/ draws their parapet coping at pad + height + about 0.95 m).
         var roofs = Ranked(buildings.Where(b => b.Category == S.Residence && b.Feature.Height is >= 9f), seed, "fauna.crow").ToArray();
         var groups = new List<Vector2>();
         foreach (var b in roofs)

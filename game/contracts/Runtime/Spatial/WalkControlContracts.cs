@@ -7,7 +7,7 @@ namespace Campus.Contracts;
 /// <remarks>JumpPressed is a press edge: the producer must not repeat it across physics steps.</remarks>
 public readonly record struct WalkInput(Vector2 Move, bool Sprint, bool JumpHeld, bool JumpPressed, bool Crouch);
 
-/// <summary>WP-42 physical controller. It consumes snapshots and never depends on ICameraRig.</summary>
+/// <summary>game/camera/walk/ physical controller. It consumes snapshots and never depends on ICameraRig.</summary>
 public interface IWalkController
 {
     /// <summary>Interpolated render eye pose, including current eye height and stair smoothing.</summary>

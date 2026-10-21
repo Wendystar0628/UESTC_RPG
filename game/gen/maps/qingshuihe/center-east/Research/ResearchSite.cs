@@ -15,7 +15,7 @@ using W = Campus.Gen.Maps.Qingshuihe.CenterEast.CenterEastTune.Windows;
 namespace Campus.Gen.Maps.Qingshuihe.CenterEast.Research;
 
 /// <summary>
-/// One research building of 中部科研区 (MAP-QSH-CENTER-EAST), claimed from WP-14 and built by this zone: its
+/// One research building of 中部科研区 (MAP-QSH-CENTER-EAST), claimed from game/gen/buildings/ and built by this zone: its
 /// block parts as five-storey <see cref="GridFacade"/> blocks in the renovated research family, its lens hall as a glass
 /// hall with slab bands and an arc front, one entrance (a portal on a block face or doors in the hall's arc), stair
 /// penthouses and fenced plant on the roofs. Subclasses add each building's own roof features. Footprints come from the

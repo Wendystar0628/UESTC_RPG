@@ -110,7 +110,7 @@ internal sealed class AtlasController : IDisposable
 
     /// <summary>
     /// 大地图打开时小地图和其余界面隐藏（SYS-ATLAS），署名任何时刻只出现一份：地图纸右下角那条（ODbL）。
-    /// 角区由 HudRoot 的四层宿主仲裁；这里只收起 WP-01 的重复署名（CanvasLayer 11），关上时恢复。
+    /// 角区由 HudRoot 的四层宿主仲裁；这里只收起渲染内核 AttributionLayer 的重复署名（CanvasLayer 11），关上时恢复。
     /// </summary>
     private void CoverOthers(bool cover)
     {

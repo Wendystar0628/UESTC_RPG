@@ -5,8 +5,6 @@ category: systems
 parent: SYS-MOTION
 summary: 风及其连锁反应、飘落物与瞬时痕迹、流体、光与远景的缓慢变化、季节氛围、粒子类的解析运动
 keywords: [风场, 阵风, IWindField, 飘落池, 飘落物, 萤火虫, 解析运动, 季节氛围, 风量, 雾海, 云漂移, MultiMesh]
-owners: [WP-26]
-contributors: [WP-38, WP-40, WP-45]
 depends: [SYS-MOTION, ART-STYLE, ART-SKYLIGHT, ENG-PERF, SYS-TIME, SYS-WEATHER]
 related: [WLD-VEGETATION, WLD-WATER, WLD-OUTSKIRTS-DIORAMA, WLD-INTERIORS, SYS-WALK, SYS-AUDIO]
 contracts: [IWindField, WindSample]
@@ -81,7 +79,7 @@ gates: []
 ### 5.1 雾海、山、云与星空
 
 - **雾海**缓缓流动，亮纹以约 0.5–1 m/s 平移，不步进；雾天升到截面上缘，散雾时自上而下退去。**九顶山**的颜色随太阳高度变化：低太阳淡玫瑰，落下后褪成灰蓝，夜里银灰。
-- **云**的漂移 = 世界时间项 + 动画时钟项：快进时云像延时摄影一样掠过，暂停时云也在走；方向和速度读同一个风场；形态归 WP-40（全日天空）。**星空**的闪烁按 T12 步进，阴雨雾时随云量藏起来。
+- **云**的漂移 = 世界时间项 + 动画时钟项：快进时云像延时摄影一样掠过，暂停时云也在走；方向和速度读同一个风场；形态归 全日天空（ART-SKYLIGHT-ATMOSPHERE）。**星空**的闪烁按 T12 步进，阴雨雾时随云量藏起来。
 
 ### 5.2 闪电、远雷与彩虹
 

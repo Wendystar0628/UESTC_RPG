@@ -5,8 +5,6 @@ category: registry
 parent: REG-DECISIONS
 summary: 界面、存档、音频、性能与画面设置、工程五个领域的已定决策
 keywords: [决策, 系统, 工程, 界面, 存档, 音频, 性能, 画面设置, 预算, 契约]
-owners: []
-contributors: []
 depends: [REG-DECISIONS]
 related: []
 contracts: []
@@ -26,7 +24,7 @@ gates: []
 
 ### 0.1 接入要点
 
-本文只约束登记，对其他包没有要求；用法见 REG-DECISIONS §0。
+本文只约束登记，对其他施工方没有要求；用法见 REG-DECISIONS §0。
 
 ## 1 界面
 
@@ -98,7 +96,7 @@ gates: []
 | D-114 | 没有听得清的人声：人迹只用远处、听不清、来自看不见处的群声；界面悬停默认无声，不加语音提示 | 全项目 | SYS-AUDIO §4；SYS-AUDIO §5；INV-3 | 生效 |
 | D-115 | 一次性声一律按真实秒排程，任何流逝倍率下任意 1 s 不超过 3 个 | 全项目 | SYS-AUDIO §3；INV-10 | 生效 |
 | D-116 | 音频预算：主线程不到 1 ms（从帧时余量里划出），同时在播的声源有上限（以 `AudioVoicePool` 为准），常驻内存与导出包里的音频都在百兆级 | 性能 | SYS-AUDIO §9 | 生效 |
-| D-159 | 空间声学（WP-53c）的主线程占用含在音频合计里，不另列份额 | 音频 | SYS-AUDIO §9；SYS-AUDIO §10 | 生效 |
+| D-159 | 空间声学（SYS-AUDIO-FOLEY）的主线程占用含在音频合计里，不另列份额 | 音频 | SYS-AUDIO §9；SYS-AUDIO §10 | 生效 |
 
 ## 4 性能与画面设置
 
@@ -136,21 +134,21 @@ gates: []
 | D-005 | 引擎用 Godot 4.7.2-stable .NET，代码全部用 C#、不写 GDScript，渲染器 Forward+，默认 D3D12 | 全项目 | ENG-ARCH §1；PRD-SCOPE §1；ENG-BUDGET-RULES §2 | 生效 |
 | D-010 | RPG（入学到毕业）方向暂缓，只留架构接口（存档段与迁移、地图服务、解锁策略 `proximity`、多地图、门的锁状态），重新提出之前不展开设计 | 全项目 | ENG-ROADMAP；ENG-ARCH §7 | 生效 |
 | D-132 | 门禁编号以 ENG-GATES §1.2 的门禁表为准；全局不变量改名为 INV-1 至 INV-12，与门禁区分（引用写法见 D-156） | 全项目 | ENG-GATES §1；PRD-INVARIANTS §1；STD-CONVENTIONS §3.3 | 生效 |
-| D-133 | 权威文档分工：契约与帧顺序以 `game/contracts/` 源码为准（说明见 ENG-ARCH §3），全局参数以 ENG-PERF §1.5 为准，预算与硬规则以 ENG-BUDGET 为准，门禁以 ENG-GATES 为准，工作包以 PLAN-WP 为准，某系统的细则以该系统自己的文档为准 | 全项目 | ENG-ARCH §3；ENG-PERF §1.5；ENG-BUDGET §1；ENG-BUDGET-RULES §1；ENG-GATES §1；PLAN-WP-LIST §1 | 生效 |
+| D-133 | 权威文档分工：契约与帧顺序以 `game/contracts/` 源码为准（说明见 ENG-ARCH §3），全局参数以 ENG-PERF §1.5 为准，预算与硬规则以 ENG-BUDGET 为准，门禁以 ENG-GATES 为准，某系统的细则以该系统自己的文档为准 | 全项目 | ENG-ARCH §3；ENG-PERF §1.5；ENG-BUDGET §1；ENG-BUDGET-RULES §1；ENG-GATES §1 | 生效 |
 | D-135 | 帧顺序的每一步有唯一的优先级值，用节点 `ProcessPriority` 固定，任何两步不同值；权威是契约里的 `FramePriority` | 全项目 | `game/contracts/` 源码；ENG-ARCH §3；SYS-TIME §1 | 生效 |
 | D-136 | 流式拆成两步：`Stream`（−500）只做选级与请求，`StreamMount`（900）做挂载与碰撞入树 | 内核 | ENG-PERF-STREAM §1；ENG-ARCH §3 | 生效 |
 | D-137 | 地图 ID 一律写 `MapId("qingshuihe")`，不用 "qsh"；实体 ID 的 `qsh:` 前缀是 OSM 数据的写法，不是地图 ID | 全项目 | SYS-MAPS §1.1；SYS-ATLAS §2；STD-CONVENTIONS §3.1 | 生效 |
-| D-138 | 服务命名：`IMapService` 管地图加载与切换（WP-46（地图服务与多地图）），`IAtlasService` 管平面地图的标记、解锁、追踪与传送（WP-48（平面地图、标记与传送）），两者不得混名 | 全项目 | ENG-ARCH §3 | 生效 |
+| D-138 | 服务命名：`IMapService` 管地图加载与切换（地图服务与多地图（SYS-MAPS）），`IAtlasService` 管平面地图的标记、解锁、追踪与传送（平面地图、标记与传送（SYS-ATLAS）），两者不得混名 | 全项目 | ENG-ARCH §3 | 生效 |
 | D-139 | 按图的数据一律从 `IMapContext` 取，通用代码里不写死数据路径、实体 ID 和地图 ID | 全部包 | SYS-MAPS §6 | 生效 |
 | D-141 | 开放室内的室内包与碰撞包也是本机烘焙，进本图的本机缓存，不另设 PCK | 打包 | SYS-MAPS §1.2；ENG-PERF-STREAM §4；WLD-INTERIORS-BUILD §1.1 | 生效 |
 | D-142 | 白名单着色器含 `ui_panel`、`ui_screen`、`cine_cloud`、`map_base`、`precip`；外围不新增着色器 | 渲染 | ENG-PERF §1.4 | 生效 |
 | D-143 | 全局参数（含 `map_rect`、`edge_fog`、`interior_light` 等）一律登记在 ENG-PERF §1.5 | 渲染 | ENG-PERF §1.5；WF-BUILD §3 | 生效 |
 | D-146 | 截图与门禁的默认参数串固定：默认状态、流逝暂停、界面隐藏、精致预设、自动调节关、清水河、不写存档、不开声音 | 门禁 | ENG-GATES-SHOTS §1 | 生效 |
-| D-160 | 最小预留做 ENG-ROADMAP §3 的六条预留：规则集、观者状态、按原因计数的输入占用、枚举穷举纪律、偶发事件数据化、RPG 名字占位；观光规则本身不变，写进 `sightseeing` 规则集 | 全项目 | ENG-ROADMAP §3；ENG-ARCH §2；ENG-ARCH §3；PLAN-WP-LIST §1；STD-CONVENTIONS §3.6 | 生效 |
+| D-160 | 最小预留做 ENG-ROADMAP §3 的六条预留：规则集、观者状态、按原因计数的输入占用、枚举穷举纪律、偶发事件数据化、RPG 名字占位；观光规则本身不变，写进 `sightseeing` 规则集 | 全项目 | ENG-ROADMAP §3；ENG-ARCH §2；ENG-ARCH §3；STD-CONVENTIONS §3.6 | 生效 |
 | D-167 | 测试按最小必要：推送前只跑快检，核心体验改动涉及时跑核心专项，其余集中做一次 | 全部包 | ENG-GATES §1；WF-RULE §9 | 生效 |
 | D-170 | 许可：代码与脚本用 MIT；原创美术、音频、文案与设计文档保留所有权利；OSM 派生数据按 ODbL 1.0，每个公开版本附地图数据包；第三方素材按各自许可；公开说明这是个人创作、不是校方作品 | 全项目 | ENG-RELEASE；根目录 LICENSE 与 README | 生效 |
 | D-172 | 网格的细节级别契约改为"误差加该级自己的索引数组"，不再只靠截取同一索引的前缀；前缀只用于整件移除独立小件 | 全部建模包 | ENG-ARCH §3；ENG-PERF §1.2 | 生效 |
-| D-181 | 本项目是作者的个人实验性作品：不上 Steam 或其他商业平台，不做商店页、宣传素材、成就、云存档和平台集成；对外只按 ENG-RELEASE 的 GitHub 整包方式发布；调研与工作包都不再考虑商业发行与上架要求 | 全项目 | ENG-RELEASE；PLAN-WP 候选包表 | 生效 |
+| D-181 | 本项目是作者的个人实验性作品：不上 Steam 或其他商业平台，不做商店页、宣传素材、成就、云存档和平台集成；对外只按 ENG-RELEASE 的 GitHub 整包方式发布；调研与施工都不再考虑商业发行与上架要求 | 全项目 | ENG-RELEASE | 生效 |
 | D-214 | 契约程序集不再用 PublicApiAnalyzers 与 `PublicAPI.*.txt` 清单；契约改动照旧先申请、与全部使用方同批改，签名只在源码里 | `game/contracts/` | ENG-ARCH §2、§3；WF-BUILD §1 | 生效 |
 | D-254 | 删去从未实现的 G18 地图一致性与 G19 连通（含 G19a–c），门禁收到 12 项；连通与可达由 G15 行走路线兜底，标记一致性靠集中测试的截图与界面检查；编号不复用 | 全部工程 | ENG-GATES §1.2 | 生效 |
 | D-255 | 加载链路按根因整改：开发、游玩与测量的构建一律开编译优化；缓存判新旧只哈希源数据与代码戳且先于任何生成；流送目录由站点声明的范围得出；地形烘成 1 m 高度栅格供地面、碰撞与贴地查询 | 构建、流式、地形 | ENG-ARCH §4；ENG-PERF-STREAM §1.1 | 生效 |
@@ -169,7 +167,7 @@ gates: []
 | D-019 | 世界时间、季节、流逝倍率和 `AnimTime` 全局共享一条时间线；天气按图各一份前向过程，进图时补算到当前时间 | 多地图 | SYS-MAPS §4；SYS-WEATHER-PROCESS §1.5 | 生效 |
 | D-020 | 跨图切换经加载界面（D-263），一个 World3D，先卸后装；`MapTimeRule.Fixed` 预留不用 | 多地图 | SYS-MAPS §2；SYS-MAPS §3 | 生效 |
 | D-031 | 室外的道路、广场、桥、台阶、球场、看台、草坪全部可走；室内只有开放部分可走 | 行走模式 | SYS-WALK §0；SYS-WALK-BOUNDS §1 | 生效 |
-| D-186 | 共享单车：载具只做匿名共享单车，不用真实品牌；骑行是行走模式里的运动分支，与步行、游泳互斥，不新增 ViewMode，用运动学解算、不做刚体平衡；只在许可区骑，固定停放点借还，切旁观、传送、换图时自动回收，读档一律恢复成步行；归新包 WP-55（共享单车运行与取还），按 D-183 排在建模包之后 | 行走模式 | SYS-WALK-BIKE §1；SYS-WALK §3.2；SYS-SAVE §2；UI-NAV §4；WLD-LIFE-STREET §1；PLAN-WP-LIST §1 | 待原型验证 |
+| D-186 | 共享单车：载具只做匿名共享单车，不用真实品牌；骑行是行走模式里的运动分支，与步行、游泳互斥，不新增 ViewMode，用运动学解算、不做刚体平衡；只在许可区骑，固定停放点借还，切旁观、传送、换图时自动回收，读档一律恢复成步行；归 SYS-WALK-BIKE（共享单车运行与取还），按 D-183 排在建模活之后 | 行走模式 | SYS-WALK-BIKE §1；SYS-WALK §3.2；SYS-SAVE §2；UI-NAV §4；WLD-LIFE-STREET §1 | 待原型验证 |
 ## 7 时间、季节、天气
 
 | 编号 | 决定 | 适用范围 | 细则所在 | 状态 |
@@ -190,5 +188,5 @@ gates: []
 | D-047 | 彩虹只在雨后初晴出现，主虹半径随太阳升高在 30–42° 之间放大（不按真实的固定 42°），太阳在 34–40° 之间时淡出 | 天气 | SYS-WEATHER §5；ART-SKYLIGHT-ATMOSPHERE §1 | 生效 |
 | D-049 | 下雪由天气过程决定（冬季夜雪多在 19–23 时开始），不按固定时段 | 冬季 | SYS-WEATHER-PROCESS §1.3；ART-COLORSCRIPT §2 | 生效 |
 | D-050 | 阴雨天两阶不丢：投影强度乘 (1 − 0.8 × 阴度)，白天不低于 0.2 | 天气 | SYS-WEATHER §6；ENG-PERF-LIGHT §2.1 | 生效 |
-| D-158 | 一拍二的 CPU 侧节拍（`IWorldState.Step12`、飘落池的发射时刻）与着色器同读 `step_rate`（WP-32（设备分档、画面设置与自适应） 写：一般 12 Hz，帧率上限 30 时 15 Hz），两侧在同一帧换姿态 | 全项目 | SYS-MOTION §2.2；ENG-ARCH §3；ENG-PERF §1.5 | 生效 |
+| D-158 | 一拍二的 CPU 侧节拍（`IWorldState.Step12`、飘落池的发射时刻）与着色器同读 `step_rate`（设备分档、画面设置与自适应（SYS-GRAPHICS） 写：一般 12 Hz，帧率上限 30 时 15 Hz），两侧在同一帧换姿态 | 全项目 | SYS-MOTION §2.2；ENG-ARCH §3；ENG-PERF §1.5 | 生效 |
 | D-162 | 秋季黄昏带（太阳 +8° 到 −7°）约 17:16–19:36；初灯组开始亮灯的时刻、SYS-AUDIO声景的"黄昏"段和默认状态"保持晴"的终点都与它一致 | 清水河 | SYS-WEATHER-PROCESS §1.2；ART-COLORSCRIPT §3；SYS-AUDIO-AMBIENCE §1.1 | 生效 |

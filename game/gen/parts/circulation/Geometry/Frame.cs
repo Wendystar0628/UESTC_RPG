@@ -14,7 +14,7 @@ internal readonly record struct Frame(Vector3 Origin, Vector3 X, Vector3 Y, Vect
     internal static Frame At(float x, float y, float z) => Identity with { Origin = new(x, y, z) };
 
     /// <summary>
-    /// Lays a WP-09 sweep (path in kernel X/Z, section up along kernel Y) into the vertical plane through x:
+    /// Lays a game/gen/parts/core/ sweep (path in kernel X/Z, section up along kernel Y) into the vertical plane through x:
     /// kernel X → z, kernel Y → x, kernel Z → y. Path points are therefore (z, y) pairs; positive lateral is below an
     /// ascending path and the section's up axis runs across +x.
     /// </summary>

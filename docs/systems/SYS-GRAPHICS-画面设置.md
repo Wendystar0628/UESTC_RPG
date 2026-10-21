@@ -5,13 +5,12 @@ category: systems
 parent: SYS-INDEX
 summary: 主线三个画面预设与约 10 个单项、风格底线、应用方式、持久化；自动调节与首次分档在主线之后
 keywords: [画面设置, 画质, 画面预设, 设备档, 均衡, 精致, 极致, 单项, 风格底线, 风格默认, 渲染比例, 加载类设置, 画面页, IQualityService, IQualityAware, QualityResponsive, QualityKnob, quality-presets.json, settings.json]
-owners: [WP-32]
-contributors: [WP-01, WP-02, WP-03, WP-04, WP-05, WP-07, WP-23, WP-24, WP-27, WP-35, WP-38, WP-41, WP-45, WP-47]
 depends: [ART-STYLE, ENG-ARCH, ENG-BUDGET, ENG-PERF]
 related: [CORE-INDEX, ENG-GATES, ART-FIDELITY, SYS-TIME, UI-NAV, UI-VISUAL, SYS-TITLE, SYS-SAVE, SYS-MAPS, WLD-OUTSKIRTS, WLD-INTERIORS, SYS-AUDIO, ENG-RELEASE]
 contracts: [QualityPreset, DeviceTier, ApplyClass, KnobKind, QualityKnob, KnobSpec, QualityProfile, QualityView, ApplyOrigin, QualityChange, KnobDelta, ApplyPlan, ApplyStatus, ApplyResult, IQualityService, IQualityAware, QualityResponsiveAttribute]
 data: ["game/data/quality-presets.json", "user://settings.json"]
 gates: [G2, G5, G7, G10, G14]
+paths: ["game/kernel/quality/**", "game/kernel/settings/**", "game/data/quality-presets.json", "game/kernel/quality/settings/**"]
 ---
 
 # SYS-GRAPHICS · 画面设置
@@ -130,6 +129,6 @@ gates: [G2, G5, G7, G10, G14]
 
 | 待验证 | 验证方法 / 负责 | 初值 |
 | --- | --- | --- |
-| 各预设的数值 | 开发机和一台最低配置的笔记本实测校准，WP-32（设备分档、画面设置与自适应） | `quality-presets.json` 中的值 |
-| 低渲染比例下描线是否仍清楚 | 0.5、0.59、0.67 三档截图比较，WP-05（描线与后期） | 线宽随内部高度换算，设最小宽度 |
-| 进入开放室内时阴影方向的最低高度 | P0 原型核实，WP-03（主光、阴影与灯光通道）、WP-07（介质呈现与室内运行时） | 约 14° |
+| 各预设的数值 | 开发机和一台最低配置的笔记本实测校准，设备分档、画面设置与自适应（SYS-GRAPHICS） | `quality-presets.json` 中的值 |
+| 低渲染比例下描线是否仍清楚 | 0.5、0.59、0.67 三档截图比较，描线与后期（ART-STYLE-LINES） | 线宽随内部高度换算，设最小宽度 |
+| 进入开放室内时阴影方向的最低高度 | P0 原型核实，主光、阴影与灯光通道（game/kernel/lighting/）、介质呈现与室内运行时（SYS-VIEW-MEDIUM） | 约 14° |

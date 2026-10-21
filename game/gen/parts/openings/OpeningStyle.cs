@@ -3,7 +3,7 @@ using Campus.Contracts;
 namespace Campus.Gen.Parts.Openings;
 
 /// <summary>
-/// Every tunable of the WP-10 openings in one place (WF-FLOW): stylised sections in metres, after
+/// Every tunable of the game/gen/parts/openings/ openings in one place (WF-FLOW): stylised sections in metres, after
 /// ART-FIDELITY, ART-MODELING. Initial values; the main session sets the final ones at review.
 /// Local frame of all glazed parts: origin at the bottom centre of the clear opening on the glass plane,
 /// X along the facade, Y up, exterior towards −Z.
@@ -89,7 +89,7 @@ public static class OpeningStyle
     public const float GlassDoorRail = 0.085f;
     public const float StallLift = 0.15f;
     public const float ScreenFrameFace = 0.12f, ScreenPanelInset = 0.08f, ScreenPanelProud = 0.015f;
-    /// <summary>Window type written into door glass: W-COR = 3 (VF-B glass byte), as WP-14 does for door bays; the lobby card of WLD-INTERIORS has no type yet.</summary>
+    /// <summary>Window type written into door glass: W-COR = 3 (VF-B glass byte), as game/gen/buildings/ does for door bays; the lobby card of WLD-INTERIORS has no type yet.</summary>
     public const byte DoorCard = 3;
 
     // ---- Roller shutter and louvres ---------------------------------------------------------------------------
@@ -124,11 +124,11 @@ public static class OpeningStyle
     public const float CurtainShare = 0.6f;
 
     // ---- Materials ---------------------------------------------------------------------------------------------
-    // Registered tokens only: the toon library validates every token. curtain.cream and door.wood are WP-10's own
+    // Registered tokens only: the toon library validates every token. curtain.cream and door.wood are game/gen/parts/openings/'s own
     // pairs (game/style/palette/ext/openings.json, IDs 244–247, albedo solved from the default-cell lit); the gasket uses
-    // WP-12's equip.fence; the rest are core.
+    // game/gen/parts/roof/'s equip.fence; the rest are core.
     public static ToonSpec Metal { get; } = Spec("frame.alu") with { Fx = ToonFx.Rim | ToonFx.AnisoBand, Line = LineClass.Fine, Wet = 0.4f };
-    /// <summary>Dark gaskets, seams and plenums: WP-12's blue-grey equipment steel (equip.fence, 248/249).</summary>
+    /// <summary>Dark gaskets, seams and plenums: game/gen/parts/roof/'s blue-grey equipment steel (equip.fence, 248/249).</summary>
     public static ToonSpec Gasket { get; } = Spec("equip.fence") with { Line = LineClass.None, Wet = 0.3f };
     public static ToonSpec DarkMetal { get; } = Spec("roof.grey") with { Fx = ToonFx.Rim | ToonFx.AnisoBand, Line = LineClass.Fine, Wet = 0.4f };
     public static ToonSpec Counter { get; } = Spec("stone.beige") with { Wet = 0.55f };

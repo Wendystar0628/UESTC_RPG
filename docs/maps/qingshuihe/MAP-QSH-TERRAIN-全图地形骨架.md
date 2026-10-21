@@ -5,13 +5,12 @@ category: maps
 parent: MAP-QSH-INDEX
 summary: 清水河地形的全图骨架：层分布、红枫丘、遮挡与揭示路线、各水体常水位、坡度与着色的本图实例
 keywords: [地形骨架, 红枫丘, 地标丘, 下沉时间广场, 常水位表, 湖口跌水, 箱涵堰口, 遮挡与揭示, 揭示路线, 中轴落金线, 湿地堤, 起伏的理由, 水位阶梯, 分面平法线]
-owners: [WP-16, WP-18, WP-19, WP-20, WP-21]
-contributors: [WP-08, WP-15, WP-24, WP-28]
 depends: [CORE-INDEX, WLD-TERRAIN, MAP-QSH-CORE, MAP-QSH-SOUTH, MAP-QSH-WEST, MAP-QSH-NORTH, MAP-QSH-CENTER-EAST, SYS-WALK]
-related: [MAP-QSH-INTERIORS-LIBRARY, MAP-QSH-ADDITIONS, WLD-WATER, WLD-OUTSKIRTS-DIORAMA, WLD-OUTSKIRTS, WLD-INTERIORS, WLD-VEGETATION, SYS-TITLE, UI-NAV, SYS-ATLAS, ART-SKYLIGHT, ENG-GATES, PLAN-WP]
+related: [MAP-QSH-INTERIORS-LIBRARY, MAP-QSH-ADDITIONS, WLD-WATER, WLD-OUTSKIRTS-DIORAMA, WLD-OUTSKIRTS, WLD-INTERIORS, WLD-VEGETATION, SYS-TITLE, UI-NAV, SYS-ATLAS, ART-SKYLIGHT, ENG-GATES]
 contracts: []
 data: ["game/data/maps/qingshuihe/world/*.terrain.json"]
 gates: [G2, G7, G15]
+paths: ["game/gen/maps/qingshuihe/center-east/**", "game/gen/maps/qingshuihe/north/**", "game/gen/maps/qingshuihe/south/**", "game/gen/maps/qingshuihe/core/**", "game/gen/maps/qingshuihe/west/**", "game/data/maps/qingshuihe/world/core.terrain.json", "game/data/maps/qingshuihe/world/south.terrain.json", "game/data/maps/qingshuihe/world/west.terrain.json", "game/data/maps/qingshuihe/world/north.terrain.json", "game/data/maps/qingshuihe/world/center-east.terrain.json", "game/data/maps/qingshuihe/world/center-east.json", "game/data/maps/qingshuihe/world/north.json", "game/data/maps/qingshuihe/world/south.json", "game/data/maps/qingshuihe/world/core.json", "game/data/maps/qingshuihe/world/west.json", "game/gen/parts/sport/**"]
 ---
 
 # MAP-QSH-TERRAIN · 全图地形骨架
@@ -39,8 +38,8 @@ gates: [G2, G7, G15]
 ### 0.1 接入要点
 
 - **新增任何起伏（各区包）**：理由取 WLD-TERRAIN-SHAPE §1.2 五类，写进 `reason`；形式见 §0 第 6 条；铺装面整块平或单坡（§1.1）
-- **画水面（WP-24（水体系统））**：各水体常水位按 §2；箱涵段、暗涵段不画水面；跌水处画白色翻花
-- **护岸、亲水台阶与桥（WP-28（滨水与桥））**：落差按 §2 的水位与岸顶算，最下一级没入水中（MAP-QSH-TERRAIN-DISTRICTS §6）
+- **画水面（水体系统（WLD-WATER））**：各水体常水位按 §2；箱涵段、暗涵段不画水面；跌水处画白色翻花
+- **护岸、亲水台阶与桥（滨水与桥（game/gen/maps/qingshuihe/waterfront/））**：落差按 §2 的水位与岸顶算，最下一级没入水中（MAP-QSH-TERRAIN-DISTRICTS §6）
 
 ## 1 全图骨架
 

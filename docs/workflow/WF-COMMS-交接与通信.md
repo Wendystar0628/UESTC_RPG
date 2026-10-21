@@ -5,20 +5,18 @@ category: workflow
 parent: WF-INDEX
 summary: .collab 交接目录与文件布局，命名与写法，任务单与请求文件的格式，契约申请短头部，完成回报格式，来信与消息，Codex 会话与引导信箱，作者观察台
 keywords: [.collab, 交接目录, 文件布局, 结案即删, 任务单, 旁路单, 调研目录, 契约申请, 评审请求, 六行短头部, 完成回报, 回报格式, 文件命名, 来信, 收件箱, 一条一个文件, 【需定】【待审】【知会】, Codex 会话, 引导信箱, steer, HANDOVER.md, D-207, D-208, D-228, 作者观察台, dashboard, post.py, 审计项, 通知]
-owners: [WP-00]
-contributors: []
 depends: [WF-RULE]
 related: [WF-ENTRY, WF-FLOW, WF-STATUS, WF-ROLE]
 contracts: []
 data: []
 gates: []
-paths: [".collab/notes/**", ".collab/requests/**", ".collab/tasks/**"]
+paths: [".collab/notes/**", ".collab/requests/**", ".collab/tasks/**", "scripts/requirements.*", "game/testing/**", "game/data/build-code-fingerprints.json", "game/gen/maps/qingshuihe/Campus.Gen.Maps.Qingshuihe.csproj", "game/gen/sites/**", ".collab/tools/**", "dashboard/**", "game/gen/Campus.Gen.csproj", "game/kernel/map/data/**", "game/kernel/renderer/geometry/**", "game/kernel/renderer/render-state/**", "game/kernel/instances/**", "game/gen/geometry/**", "scripts/gates/arch/Campus.Arch.Tests.csproj", "scripts/godot-api/ApiDump/ApiDump.csproj", "game/contracts/Runtime/Campus.Contracts.Runtime.csproj", "game/contracts/Campus.Contracts.csproj", "game/data/maps/*/interiors.json", "game/Campus.Gen.Tests.csproj", "game/Campus.Tests.csproj", "game/contracts/.gdignore", "game/export_presets.cfg", "game/contracts/*.csproj", "game/kernel/registry/**", "game/data/rulesets/**", "scripts/gates/arch/**", "**/Directory.*.targets", "game/Campus.csproj", "game/gen/.gdignore", "game/project.godot", "Directory.*.targets", "game/kernel/stubs/**", "scripts/godot-api/**", "**/Directory.*.props", "scripts/gate.ps1", "third_party.json", "Directory.*.props", "docs/godot-api/**", "game/contracts/**", ".gitattributes", "scripts/build/**", "scripts/setup/**", "game/gen/bakeinput/assembly/**", "scripts/docs/**", "budgets.json", "game/addons/**", "global.json", "version.txt", "scripts/lib/**", ".gitignore", ".ignore", "AGENTS.md", "CLAUDE.md", "README.md", "启动游戏.cmd", "**/*.csproj", "LICENSE", "tools/**", "**/*.sln", "game/.editorconfig", "scripts/git-hooks/**"]
 ---
 
 # WF-COMMS · 交接与通信
 
 > **范围**：本文规定会话之间经哪些文件交接、`.collab` 里文件怎么放、怎么命名和写、任务单与请求文件的格式、契约申请与完成回报的格式、来信怎么发、Codex 会话怎么派活、向作者的观察台发通知与挂审计项。
-> **不在本文**：一个包从派工到评审的各步：WF-FLOW；git 与推送：WF-RULE §7；全员的来信与等待规则：WF-RULE §2–§5；命令行与会话号：`.collab/tools/README.md`。
+> **不在本文**：一项任务从派工到评审的各步：WF-FLOW；git 与推送：WF-RULE §7；全员的来信与等待规则：WF-RULE §2–§5；命令行与会话号：`.collab/tools/README.md`。
 > **查阅**：先读 §0；三种渠道怎么选看 §4.4；目录与文件看 §1；命名与写法看 §2；任务单、请求文件、契约申请与完成回报看 §3；来信与消息看 §4；Codex 会话与引导信箱看 §5；向作者发通知、挂审计项看 §6。
 
 ## 0 结论
@@ -92,14 +90,14 @@ paths: [".collab/notes/**", ".collab/requests/**", ".collab/tasks/**"]
 中文，交给派你的一方，不超过 8 行；条目只写编号，不复述内容，证据只给路径：
 
 ```
-工作包：WP-18（南区）· 提交 <短号>或"未提交"
+任务：<施工队列行号与标题>· 提交 <短号>或"未提交"
 改动：game/gen/maps/qingshuihe/south/**
 新文件：进项目结构的新文件路径与归属（目录或文档树的哪一级），或"无"
 完成：MAP-QSH-SOUTH §1–§5；未完成：MAP-QSH-SOUTH §6（可选），未做
 检查：跑了什么、结果；没跑写"未跑"
 根因：撞到的架构问题与去向（本批已修，或新开的行号），或"无"
 截图或可调参数：路径与现值（结果看得见或听得见时）
-假设与申请：做过的假设；契约修改申请 <路径>或"无"；需其他包配合的事
+假设与申请：做过的假设；契约修改申请 <路径>或"无"；需其他施工方配合的事
 ```
 
 - 截图存 `output/render-review/`（不进 git），命名格式见 STD-CONVENTIONS §3.8。
@@ -114,7 +112,7 @@ paths: [".collab/notes/**", ".collab/requests/**", ".collab/tasks/**"]
 | 方向 | 什么时候发 |
 | --- | --- |
 | Codex 主线 → 主会话 | 门禁失败、旁路单完成、待评审、受阻需要决定；写进 `notes/claude/` |
-| 主会话 → Codex 主线 | 文档改了、契约冻结了、某个包阻塞了、新任务；写进 `notes/codex/`；Codex 空闲时再按 §4.4 叫醒 |
+| 主会话 → Codex 主线 | 文档改了、契约冻结了、某项任务阻塞了、新任务；写进 `notes/codex/`；Codex 空闲时再按 §4.4 叫醒 |
 
 ### 4.2 一条来信一个新文件（D-207）
 

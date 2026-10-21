@@ -74,7 +74,7 @@ internal sealed class HudInput
         SyncHostInput();
     }
     // ---------------- 输入（UI-NAV）：三层，经 IInputRouter 分发 ----------------
-    // 层的先后：数值小的先跑（IInputRouter.RegisterLayer）。第 4 层"漫游"归 WP-06。
+    // 层的先后：数值小的先跑（IInputRouter.RegisterLayer）。第 4 层"漫游"归相机（game/camera）。
     public const int LayerDialog = 100, LayerPage = 200, LayerHud = 300;
     private static readonly string[] Actions = ["menu", "help", "time_panel", "time_forward", "toggle_flow", "next_season", "weather", "clean_view"];
     private readonly List<IDisposable> _layers = [];
@@ -84,9 +84,9 @@ internal sealed class HudInput
     private void ConnectInput()
     {
         if (_layers.Count > 0) return;
-        _layers.Add(_dependencies.InputRouter.RegisterLayer("WP-35.dialog", LayerDialog, DialogLayer));
-        _layers.Add(_dependencies.InputRouter.RegisterLayer("WP-35.page", LayerPage, PageLayer));
-        _layers.Add(_dependencies.InputRouter.RegisterLayer("WP-35.hud", LayerHud, HudLayer));
+        _layers.Add(_dependencies.InputRouter.RegisterLayer("hud.dialog", LayerDialog, DialogLayer));
+        _layers.Add(_dependencies.InputRouter.RegisterLayer("hud.page", LayerPage, PageLayer));
+        _layers.Add(_dependencies.InputRouter.RegisterLayer("hud.hud", LayerHud, HudLayer));
         _dependencies.InputRouter.InterfaceModeChanged += OnInterfaceModeChanged;
     }
 
@@ -149,7 +149,7 @@ internal sealed class HudInput
     private static bool HasVisibleContent(Control host) => host.GetChildren()
         .OfType<Control>().Any(child => !child.IsQueuedForDeletion() && child.IsVisibleInTree());
 
-    /// <summary>漫游态 ⇄ 界面态：经 IInputRouter.SetInterfaceMode，由 WP-06 统一改鼠标捕获。</summary>
+    /// <summary>漫游态 ⇄ 界面态：经 IInputRouter.SetInterfaceMode，由相机（game/camera）统一改鼠标捕获。</summary>
     private void SetInterface(bool on) => _dependencies.InputRouter.SetInterfaceMode(on);
 
     // 第 1 层：改键捕获期间吞掉所有动作；具体按下的物理键由 _Input 交给设置卡

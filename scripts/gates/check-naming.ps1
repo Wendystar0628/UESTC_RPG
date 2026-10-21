@@ -57,8 +57,8 @@ function Test-UESTCSourceNaming {
             $checked++
         }
         if ($path -match '^game/data/') {
-            if ($fileName -match 'v2|^WP-') {
-                $failures.Add("${path}: data leaf file names must not contain v2 or start with WP- (STD-CONVENTIONS)")
+            if ($fileName -match 'v2') {
+                $failures.Add("${path}: data leaf file names must not contain v2 (STD-CONVENTIONS)")
             }
             $checked++
         }

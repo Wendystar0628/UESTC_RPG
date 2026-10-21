@@ -12,7 +12,7 @@
     "影色按 ART-STYLE 的公式；另加三条：C1 再乘 m（暗光下彩度随明度同比缩，白天 m = 1 不影响）；黄橙护栏的范围见 shade.yellowGuard；绿色护栏 shade.greenGuard：绿色材质的最短方向朝黄（色相减小）时改向青转，免得日出日落的粉橙天光把绿影转进橄榄（与「黄橙不往绿转」对称）。",
     "室内：第 2 行的 L = 窗光斑目标 L × interior.shadeLRatio；中性材质按 neutralCEdge 混向 interior.warm，暖偏彩度不超过 neutralCEdge 低端；彩色材质保留固有色自身彩度，固有色相向室内暖调最多转 interior.shadeHueMax 度，不混天光、不乘室外材质压暗系数。第 3 行是窗光斑的目标色：只在 OKLab 里抬 L（L = min(interior.litLMax, 受光 L × interior.litGain)），C 取受光色的 C，色相不变。toon 在室内按 影 + g × (受光 − 影) 合成（线性 RGB，g = interior_light.x，默认格 interior.shaderGain），所以第 3 行存的是反算过 g 的色 影 + (目标 − 影) / g，光斑里合成出来的正是目标色；litGain 只定目标亮度，shaderGain 必须等于着色器实际使用的 interior_light.x（着色器改掉这一乘法时改为 1）。",
     "植被（vegetation.json）：固有色只反解明度，(a, b) 直接取该季英雄帧的受光值；其他帧的受光 (a, b) = m × (satGain / satGain_英雄帧 × 固有 + vegetationTintK × (主光 − 主光_英雄帧))，所以英雄帧上逐值等于 vegetation.json 的受光值，影按 ART-STYLE 从这个固有色推导。",
-    "frameTokens：WP-37 每帧写进调色板第 0 行的随帧色名（色号 0–31 由登记表分配）；weather.snowOvercast、weather.nightRain、weather.fog、weather.washedSky 只是天气修正的混合目标，求值器直接改写天空与雾的色带，不占纹理列。"
+    "frameTokens：game/style/palette/keys/ 每帧写进调色板第 0 行的随帧色名（色号 0–31 由登记表分配）；weather.snowOvercast、weather.nightRain、weather.fog、weather.washedSky 只是天气修正的混合目标，求值器直接改写天空与雾的色带，不占纹理列。"
   ],
   "lit": {
     "adaptRef": 0.7,

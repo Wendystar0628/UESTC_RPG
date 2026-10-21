@@ -5,13 +5,12 @@ category: world
 parent: WLD-INDEX
 summary: 日式日常街景的边界与分区规则，各元素的形、色、限定与三渲二做法；声音清单在 SYS-AUDIO-AMBIENCE
 keywords: [日式街景, 日式氛围, 日系, 日本味, 电线杆, 架空线, 自动售货机, 售货机光岛, 弯道凸面镜, 驻轮场式车棚, 屋顶围网, 高架水箱, 通长雨庇, 推拉铝窗, 象牙色窗帘, 开放外廊, 次路标线, 让行牌, L 形边沟, 砌块墙, 樱花行道树, 绣球, 夏季绿帘, 杆上防犯灯, 便利店夜景, 暖帘, 防球网, 外墙圆钟, 电车道口]
-owners: [WP-13]
-contributors: [WP-04, WP-14, WP-15, WP-16, WP-18, WP-19, WP-20, WP-21, WP-23, WP-25, WP-47, WP-53]
 depends: [CORE-INDEX, ART-STYLE, ART-MODELING, ART-FIDELITY, MAP-QSH-ADDITIONS]
 related: [WLD-RENOVATION, ART-SKYLIGHT, MAP-QSH-CORE, MAP-QSH-RENOVATION, WLD-LIFE, WLD-VEGETATION, WLD-WATER, WLD-OUTSKIRTS, WLD-INTERIORS, SYS-AUDIO, SYS-MOTION, SYS-TIME]
 contracts: []
 data: []
 gates: [G5, G7]
+paths: ["game/gen/parts/street/**", "game/gen/furniture/**"]
 ---
 # WLD-AMBIENCE · 日式日常街景
 
@@ -72,7 +71,7 @@ gates: [G5, G7]
 
 ### 1.4 颜色
 
-凸面镜橙与消防红登记在 ART-STYLE §2.7。本文另需的色名由 WP-04（调色板、卡通材质与贴图） 按 ART-STYLE §2.5 登记，计入色数限额：
+凸面镜橙与消防红登记在 ART-STYLE §2.7。本文另需的色名由 调色板、卡通材质与贴图（ART-STYLE） 按 ART-STYLE §2.5 登记，计入色数限额：
 
 - **灰绿路侧带**：次路步行路侧带，C ≤ 0.06。
 - **城市自行车车色**（3–4 个）：低彩度的银、米白、灰蓝、墨绿、深棕，不用纯红。
@@ -187,6 +186,6 @@ gates: [G5, G7]
 
 | 待验证 | 验证方法与负责包 | 验证前的初值 |
 | --- | --- | --- |
-| 架空线的宽度、覆盖率画法与淡出（§5） | 固定机位截图看一眼；WP-13（街道家具） | 不足 1 px 按覆盖率画，400 m 外淡出 |
-| 围网、防球网、格栅的摩尔纹淡化阈值（§2、§6、§9） | 固定机位截图看一眼；WP-13、WP-15（地表、道路、铺装） | 周期小于 4 px 时淡成色片 |
-| 凸面镜"反天"的观感（§6） | 默认状态与夜间截图；WP-13 | 天色竖向渐变加对面剪影和一条斜高光 |
+| 架空线的宽度、覆盖率画法与淡出（§5） | 固定机位截图看一眼；街道家具（WLD-LIFE-STREET） | 不足 1 px 按覆盖率画，400 m 外淡出 |
+| 围网、防球网、格栅的摩尔纹淡化阈值（§2、§6、§9） | 固定机位截图看一眼；WLD-LIFE-STREET、地表、道路、铺装（WLD-TERRAIN-APPLY） | 周期小于 4 px 时淡成色片 |
+| 凸面镜"反天"的观感（§6） | 默认状态与夜间截图；WLD-LIFE-STREET | 天色竖向渐变加对面剪影和一条斜高光 |

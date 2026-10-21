@@ -9,7 +9,7 @@ using KernelServices = Campus.Kernel.Registry.Kernel;
 namespace Campus.Systems.Weather.Precip;
 
 /// <summary>
-/// 降水与湿润的运行时节点（WP-45b）：在 FramePriority.Motion 那一步
+/// 降水与湿润的运行时节点（game/systems/weather/precip/）：在 FramePriority.Motion 那一步
 /// ① 把天气向量换算成天气类全局参数 weather_a、weather_b、weather_fog（contract-5 第 5 条）；
 /// ② 求降水池这一帧的可见实例数与 instance uniform（PrecipModel），写进内核的动态实例池；
 /// 切图时重建 precip_occ（主线版是常量纹理）并重设降水池的 CustomAabb。
@@ -117,7 +117,7 @@ public partial class PrecipNode : Node, IQualityAware, IMapAware, IWeatherRender
         var d = ctx.Descriptor;
         PoolBounds = PrecipModel.PoolBounds(d.Center, d.Roam.MaxRadius, d.Roam.FloorY, d.Roam.CeilY);
         _pool?.SetAabb(ToAabb(PoolBounds));
-        // 主线版：precip_occ 是常量顶面（遮蔽高度图的烘焙在后置细节里，PLAN-WP）；全图纹理按 map_rect 采样，尺寸不影响取值。
+        // 主线版：precip_occ 是常量顶面（遮蔽高度图的烘焙在后置细节里，SYS-WEATHER）；全图纹理按 map_rect 采样，尺寸不影响取值。
         var size = PrecipTuning.OccConstantSize;
         _occImage ??= Image.CreateEmpty(size, size, false, Image.Format.Rh);
         _occImage.Fill(new Color(PrecipTuning.OccConstantTop, 0f, 0f, 1f));

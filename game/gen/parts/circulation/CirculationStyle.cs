@@ -4,13 +4,13 @@ using Campus.Contracts.Audio;
 namespace Campus.Gen.Parts.Circulation;
 
 /// <summary>
-/// Every tunable value of WP-11 lives here (WF-FLOW). Sizes are metres. Sources: ART-MODELING and §7.8 (stylised
+/// Every tunable value of game/gen/parts/circulation/ lives here (WF-FLOW). Sizes are metres. Sources: ART-MODELING and §7.8 (stylised
 /// proportions; human-scale anchors kept real), WLD-TERRAIN (step, landing and ramp rules), WLD-INTERIORS and
 /// SYS-WALK (collision). Values marked "review" are mainline initial values awaiting the main session's call.
 /// </summary>
 public static class CirculationStyle
 {
-    // ---- Materials (core palette tokens; WP-11 has no extension segment yet, ART-STYLE) ----
+    // ---- Materials (core palette tokens; game/gen/parts/circulation/ has no extension segment yet, ART-STYLE) ----
     /// <summary>Railing posts, top rails and gate frames: grey aluminium.</summary>
     public static readonly ToonSpec Metal = new(new("frame.alu.lit"), new("frame.alu.shade")) { Fx = ToonFx.BevelLift };
     /// <summary>Balusters and bars: same colour, small-item line fade (ART-MODELING), no shadow (ART-MODELING).</summary>
@@ -112,7 +112,7 @@ public static class CirculationStyle
     public const float RampMaxSegmentRise = 0.75f, RampLandingMin = 1.5f;
     public const float RampCurbWidth = 0.15f, RampCurbRise = 0.1f;
 
-    // ---- Indoor stairs (WLD-INTERIORS, WP-51a plan options) ----
+    // ---- Indoor stairs (WLD-INTERIORS, game/gen/interior/core/ plan options) ----
     public const float WaistThickness = 0.18f;
     public const float LandingThickness = 0.18f;
     public const float WellWidth = 0.2f;

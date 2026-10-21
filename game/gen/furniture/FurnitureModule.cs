@@ -9,7 +9,7 @@ using S = Campus.Gen.Furniture.FurnitureStyle;
 namespace Campus.Gen.Furniture;
 
 /// <summary>
-/// WP-13 street furniture on the map (13b placement, <see cref="FurniturePlanner"/>). Each 64 m cell gets the catalogue parts
+/// game/gen/furniture/ street furniture on the map (13b placement, <see cref="FurniturePlanner"/>). Each 64 m cell gets the catalogue parts
 /// whose anchors fall in it, as <see cref="PlacedPart"/>s (the kernel instances them by part ID); pads (rest-stop bays, kiosk
 /// aprons, plinths) come as merged meshes, lamp markers as <see cref="ContentOutput.Emitters"/> (L0 only), with the resident
 /// inventory reading <see cref="DescribeLights"/>, and colliders through <see cref="Collide"/>. Claims nothing: furniture stands between the features other packages own.

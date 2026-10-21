@@ -6,7 +6,7 @@
 #include "res://style/shaders/fog.gdshaderinc"
 
 // ---------------------------------------------------------------------------
-// 灯光通道、窗与灯表的公共求值（WP-39）。toon（WP-04）、fx_glow（WP-39）、precip（WP-45b）都 include 本文件，
+// 灯光通道、窗与灯表的公共求值（MAP-QSH-ATMOSPHERE）。toon（ART-STYLE）、fx_glow（MAP-QSH-ATMOSPHERE）、precip（game/systems/weather/precip/）都 include 本文件，
 // C# 一侧（ScheduleMath、LampTable）用同一套常数；G2 用同一组输入比对。只含函数与常量，不定义 uniform、varying。
 // ---------------------------------------------------------------------------
 const int LAMP_SLOT_LAMP_FIRST = 12;     // 灯具类槽位 12–27（LightChannelCatalog）：L 是保留比例，开灯另按每盏灯的太阳高度阈值
@@ -219,7 +219,7 @@ float lamp_env_dark() {
 }
 
 // 光斑的强度随环境：白天（h_eff 10° 以上）不画；之后按环境暗度从黄昏的 DUSK 升到入夜的 1。
-// 降水的灯锥（WP-45b 的 precip）也乘这个值
+// 降水的灯锥（game/systems/weather/precip/ 的 precip）也乘这个值
 float lamp_pool_visibility(float h_eff) {
 	float day = 1.0 - smoothstep(LAMP_POOL_DAY_DEG.x, LAMP_POOL_DAY_DEG.y, h_eff);
 	return day * mix(LAMP_POOL_DUSK, 1.0, lamp_env_dark());

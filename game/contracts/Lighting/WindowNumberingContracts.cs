@@ -40,11 +40,11 @@ public interface IWindowMetadataSource
     WindowMetadata DescribeWindows(BuildContext context);
 }
 
-/// <summary>Optional pure numbering capability of an already registered content module; implemented by WP-14 BuildingsModule.</summary>
+/// <summary>Optional pure numbering capability of an already registered content module; implemented by BuildingsModule.</summary>
 /// <remarks>
 /// The kernel selects exactly one provider from the current map's active modules. No KernelService or separate registry is used.
 /// The kernel supplies validated, snapshotted layouts and calls this protocol rather than referencing a generator implementation.
-/// The provider alone runs the WP-14 numbering algorithm. It must not call Tiles, Build or Collide, create geometry, perform IO,
+/// The provider alone runs the game/gen/buildings/ numbering algorithm. It must not call Tiles, Build or Collide, create geometry, perform IO,
 /// consult mutable runtime state, or resolve a snapshot from a global side-table. The returned snapshot is published by the caller.
 /// </remarks>
 public interface IWindowNumberingProvider
@@ -52,7 +52,7 @@ public interface IWindowNumberingProvider
     WindowNumberingSnapshot PrepareWindowNumbering(BuildContext prepass, IReadOnlyList<ClaimedWindowLayout> validatedLayouts);
 }
 
-/// <summary>A shared read-only view of WP-14's one allocation. This type does not allocate any IDs.</summary>
+/// <summary>A shared read-only view of game/gen/buildings/'s one allocation. This type does not allocate any IDs.</summary>
 /// <remarks>
 /// For generic buildings Key remains the existing BuildingPlanner source key, including any polygon suffix.
 /// For a claimed facade it is the WindowGridSpec.Key. BaseId is shared by VF-B, WindowFacadeDecl and WindowDecl.
@@ -74,7 +74,7 @@ public readonly record struct WindowAllocation(FeatureId Feature, string Key, in
     }
 }
 
-/// <summary>The immutable campus allocation for one map, prepared by WP-14 and shared by every producer and consumer.</summary>
+/// <summary>The immutable campus allocation for one map, prepared by game/gen/buildings/ and shared by every producer and consumer.</summary>
 /// <remarks>
 /// The constructor validates an already allocated table; it never assigns, sorts, truncates or wraps IDs.
 /// Inputs are in ordinal (Feature.Value, Key) order. Active ranges do not overlap; gaps are retired addresses.

@@ -124,7 +124,7 @@ public partial class ObserverCamera : Node, ICameraRig, IObserverState, IViewCon
     {
         _flight.SetEdgeFog(0);
         if (_walk is null)
-            throw new InvalidOperationException("Walk mode requires the restored WP-42 controller.");
+            throw new InvalidOperationException("Walk mode requires the restored game/camera/walk/ controller.");
         var input = _controls.State;
         _walk.SetInput(_controls.Locked ? default : new WalkInput(input.Move, input.Sprint,
             input.JumpHeld, input.TakeJump(), input.Crouch));

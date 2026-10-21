@@ -5,13 +5,12 @@ category: maps
 parent: MAP-QSH-INDEX
 summary: 清水河各树种的四季观感与种在哪、线性与片区种植、地面覆盖与水生植物的位置
 keywords: [种在哪, 银杏大道, 水杉路, 丹桂路, 春季粉带, 森林公园红枫, 校友林, 湿地公园, 友谊树, 银杏林, 樱花林, 蓝花楹, 入水口荷, 水下森林位置, 油菜花带位置]
-owners: [WP-23]
-contributors: [WP-15, WP-20, WP-25, WP-26, WP-37, WP-38, WP-43]
 depends: [CORE-INDEX, WLD-VEGETATION, ART-STYLE, SYS-TIME]
 related: [MAP-QSH-CORE, MAP-QSH-SOUTH, MAP-QSH-WEST, MAP-QSH-NORTH, MAP-QSH-CENTER-EAST, MAP-QSH-OUTSKIRTS, MAP-QSH-WATER, WLD-WATER]
 contracts: []
 data: []
 gates: [G7]
+paths: ["game/style/palette/ext/tree_bark.json", "game/style/shaders/veg_common.gdshaderinc", "game/style/shaders/veg_common.gdshaderinc.uid", "game/style/shaders/veg_grass.gdshader.uid", "game/style/shaders/veg_trunk.gdshader.uid", "game/style/shaders/veg_twig_mass.gdshader.uid", "game/style/shaders/veg_card.gdshader.uid", "game/style/shaders/veg_grass.gdshader", "game/style/shaders/veg_trunk.gdshader", "game/style/shaders/veg_twig_mass.gdshader", "game/style/shaders/veg_card.gdshader", "game/systems/vegetation/**", "game/data/vegetation/**", "game/data/maps/*/vegetation/**", "game/gen/vegetation/**"]
 ---
 
 # MAP-QSH-VEGETATION · 清水河植被
@@ -46,7 +45,7 @@ gates: [G7]
 | 红枫 | 春新叶鲜红；夏暗红；秋正红 | 森林公园（一片） |
 | 杏树 | 春先花后叶、满树粉白；秋叶黄落 | 湿地公园（一小片） |
 | 垂柳 | 春新绿下垂；夏浓绿；秋黄绿；冬只剩下垂细枝 | 西湖、东湖、河渠边，学生活动中心门前，荟文楼旁 |
-| 蓝花楹 | 春满树蓝紫"一条紫色的路"；夏羽状绿叶；秋叶稀疏无花；冬半落 | 食堂与宿舍之间的一段路和湖边（路段由 WP-20（北部生活区） 定） |
+| 蓝花楹 | 春满树蓝紫"一条紫色的路"；夏羽状绿叶；秋叶稀疏无花；冬半落 | 食堂与宿舍之间的一段路和湖边（路段由 北部生活区（MAP-QSH-NORTH） 定） |
 | 玉兰 | 春白花开在裸枝上；冬枝头带毛茸茸的花苞 | 银桦餐厅门口、东湖岸 |
 | 海棠 | 春红粉花；秋叶黄半落 | 主楼后的樱花林边、西湖旁 |
 | 紫薇 | 夏满树紫红花；秋叶转橙红；冬光滑的浅褐裸枝 | 两湖岸边点植，夏季与荷花同框 |
@@ -109,4 +108,4 @@ gates: [G7]
 
 ## 7 待验证
 
-- **银杏大道的树高**：WP-23（植被系统） 在金样阶段按画面定。
+- **银杏大道的树高**：植被系统（WLD-VEGETATION） 在金样阶段按画面定。

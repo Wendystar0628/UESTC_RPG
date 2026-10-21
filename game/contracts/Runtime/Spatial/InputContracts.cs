@@ -17,7 +17,7 @@ public interface IInputRouter
     void SaveBindings();
 }
 
-/// <summary>WP-36 transit execution. The camera resolves the driver after registration to avoid a constructor cycle.</summary>
+/// <summary>game/camera/ transit execution. The camera resolves the driver after registration to avoid a constructor cycle.</summary>
 public interface ITransitDriver
 {
     /// <summary>True only when real transit execution and its readiness dependencies are available. Stub implementations remain false.</summary>

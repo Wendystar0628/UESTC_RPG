@@ -27,7 +27,7 @@ public static class NorthTune
         public static readonly ToonSpec RoofSlab = S("roof.grey", ToonFx.Mottle, LineClass.Building, 0.85f);
         /// <summary>Thresholds, islands, the hall landing and its steps: warm granite.</summary>
         public static readonly ToonSpec Granite = S("stone.beige", ToonFx.BevelLift);
-        /// <summary>Fence posts and rails, barrier arms: deep grey steel (MAP-QSH-NORTH). 初值：借 WP-12 的围挡深灰。</summary>
+        /// <summary>Fence posts and rails, barrier arms: deep grey steel (MAP-QSH-NORTH). 初值：借 game/gen/parts/roof/ 的围挡深灰。</summary>
         public static readonly ToonSpec Steel = S("equip.fence", ToonFx.BevelLift, LineClass.Fine, 0.4f);
         /// <summary>Fence bars: same colour, no outline, so the 25 mm bars read as a veil, not hatching (WLD-AMBIENCE).</summary>
         public static readonly ToonSpec SteelBar = S("equip.fence", ToonFx.None, LineClass.None, 0.4f);
@@ -38,14 +38,14 @@ public static class NorthTune
         public static readonly ToonSpec Hedge = new(new("hedge.lit"), new("hedge.shade"))
         { Normal = ToonNormal.Smooth, Steps = ShadeSteps.Soft, Line = LineClass.Tree, Wet = WetSurface.PorousResponse };
         /// <summary>
-        /// Open-lane arrow. 借用：`ground.turf`（WP-12 出口牌同样借它），`sign.green` 是发光色名、没有受光/影色对；
-        /// WP-04 的发光着色与 `sign.exitGreen` 到位后换。
+        /// Open-lane arrow. 借用：`ground.turf`（game/gen/parts/roof/ 出口牌同样借它），`sign.green` 是发光色名、没有受光/影色对；
+        /// game/style/ 的发光着色与 `sign.exitGreen` 到位后换。
         /// </summary>
         public static readonly ToonSpec ArrowGreen = S("ground.turf", ToonFx.None, LineClass.None, 0.2f);
-        /// <summary>Closed-lane cross. 借用：`maple`；WP-12 的 `equip.fireRed`（全校的红）进 main 后换。</summary>
+        /// <summary>Closed-lane cross. 借用：`maple`；game/gen/parts/roof/ 的 `equip.fireRed`（全校的红）进 main 后换。</summary>
         public static readonly ToonSpec CrossRed = S("maple", ToonFx.None, LineClass.None, 0.2f);
         public static readonly ToonSpec Wood = S("door.wood", ToonFx.BevelLift, LineClass.Fine);
-        /// <summary>Canal-bank railing: light painted steel, the north-gate plaza's (WP-30 30a, MAP-QSH-WEST 浅色栏杆), so the two runs read as one.</summary>
+        /// <summary>Canal-bank railing: light painted steel, the north-gate plaza's (game/gen/maps/qingshuihe/boundary/ 30a, MAP-QSH-WEST 浅色栏杆), so the two runs read as one.</summary>
         public static readonly ToonSpec LightSteel = S("wall.greyWhite", ToonFx.None, LineClass.Fine, 0.4f);
         /// <summary>Canal-bank railing bars: same colour, no outline.</summary>
         public static readonly ToonSpec LightBar = S("wall.greyWhite", ToonFx.None, LineClass.None, 0.4f);
@@ -144,7 +144,7 @@ public static class NorthTune
         public const float SeatWidth = 0.5f, SeatThickness = 0.07f, SeatBevel = 0.015f, SeatHoldBack = 0.15f;
         /// <summary>Paver pad in front of the wall, out to a straight edge <see cref="PadReach"/> from the chord toward the walk,
         /// stopping 2 cm short of the walk's carriageway: 1.5 m deep at the wall ends, 2.0 m at the middle. Its top is at
-        /// WP-15 paving level (GroundSection.PavingY, 0.15 m over the terrain, 5 cm above the lawn) plus <see cref="PadLift"/>,
+        /// game/gen/ground/ paving level (GroundSection.PavingY, 0.15 m over the terrain, 5 cm above the lawn) plus <see cref="PadLift"/>,
         /// so where it laps over the kerb stone it covers it instead of flickering against it; the seat stands 0.45 m above it.</summary>
         public const float PadReach = 1.69f, PadThickness = 0.08f, PadLift = 0.01f;
         public static readonly ToonSpec Pad = new(new("ground.paver.lit"), new("ground.paver.shade")) { Fx = ToonFx.BevelLift, Line = LineClass.Fine, Wet = 0.6f };
@@ -153,7 +153,7 @@ public static class NorthTune
     /// <summary>
     /// Canal-bank railing along the 商业街 side of 红光右支渠北段 (20a-4; MAP-QSH-NORTH 碰撞体, MAP-QSH-TERRAIN: the bank is
     /// a stone wall with a railing, 1.05 m at least, collision top 1.5 m). It starts where the north-gate plaza's railing
-    /// (WP-30 30a, design:boundary-north-a05-plaza, commit 04767c7) ends and runs south along the east bank to the street's far
+    /// (game/gen/maps/qingshuihe/boundary/ 30a, design:boundary-north-a05-plaza, commit 04767c7) ends and runs south along the east bank to the street's far
     /// end. Frame as the plaza's, read from the registered bank selection: <c>t</c> along the straight water edge (toward bearing 21.8°, so the run south into the campus
     /// is toward negative t), <c>n</c> off the water toward the road. The railing language is the plaza's: 1.1 m, square posts at most 1.6 m apart, handrail and bottom
     /// rail, 20 mm bars at 0.12 m, an end post a size heavier with a cap. The plaza's end post at <see cref="JointT"/> is shared:
@@ -198,7 +198,7 @@ public static class NorthTune
         /// <summary>Ground floor raised about 1.0 m above the courtyard (MAP-QSH-TERRAIN), reached by 6–8 risers.</summary>
         public const float FloorRaise = 1.0f, Tread = 0.33f;
         public const int MinRisers = 6, MaxRisers = 8;
-        /// <summary>WP-14's wall face stands one reveal outside the footprint.</summary>
+        /// <summary>game/gen/buildings/'s wall face stands one reveal outside the footprint.</summary>
         public const float WallFace = 0.3f;
         /// <summary>Landing reaches past the 2.5 m teleport landing in front of the door (SYS-ATLAS).</summary>
         public const float LandingWidth = 6.4f, LandingDepth = 3.2f, StepsWidth = 3.2f;

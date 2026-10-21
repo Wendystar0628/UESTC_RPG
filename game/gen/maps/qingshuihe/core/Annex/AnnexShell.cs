@@ -251,7 +251,7 @@ public sealed class AnnexShell : ZoneSite, IWindowedPiece
         }
     }
 
-    /// <summary>The closed glass door (WP-10, leaves shut) in its bay, the granite step-free threshold and a stone canopy.</summary>
+    /// <summary>The closed glass door (game/gen/parts/openings/, leaves shut) in its bay, the granite step-free threshold and a stone canopy.</summary>
     private void DoorBay(CoreBuild build, Opening door, LodLevel lod)
     {
         var f = door.Face;

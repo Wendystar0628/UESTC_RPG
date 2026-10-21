@@ -6,7 +6,7 @@ namespace Campus.Contracts;
 public enum KeyBody : byte { Sun, Moon }
 
 /// <summary>
-/// WP-03 publishes the values written during the current frame's key-light step.
+/// game/kernel/lighting/ publishes the values written during the current frame's key-light step.
 /// Consumers copy these values on the main thread after that step, before queuing render-thread work.
 /// Do not derive replacements from the unquantized world bodies or read shader globals back.
 /// </summary>
@@ -24,7 +24,7 @@ public interface IKeyLightState
 }
 
 /// <summary>
-/// WP-45b publishes the same values it writes to weather_fog during the current frame's motion step.
+/// game/systems/weather/precip/ publishes the same values it writes to weather_fog during the current frame's motion step.
 /// Consumers copy on the main thread after that step, before queuing render-thread work.
 /// </summary>
 public interface IWeatherRenderState
@@ -34,7 +34,7 @@ public interface IWeatherRenderState
 }
 
 /// <summary>
-/// WP-07 publishes the same values it writes during the current frame's medium step.
+/// game/camera/ publishes the same values it writes during the current frame's medium step.
 /// Consumers copy on the main thread after that step, before queuing render-thread work.
 /// </summary>
 public interface IMediumRenderState

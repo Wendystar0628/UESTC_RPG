@@ -154,7 +154,7 @@ public sealed class FlatTerrain : ITerrain
     public TerrainFacts FactsAt(float x, float z) => new(0, TerrainClass.Flat, float.PositiveInfinity, float.PositiveInfinity);
 }
 
-/// <summary>Per-zone terrain input. Bytes are read by the kernel and interpreted by the WP-08 evaluator.</summary>
+/// <summary>Per-zone terrain input. Bytes are read by the kernel and interpreted by the game/gen/world/ evaluator.</summary>
 [JsonUnmappedMemberHandling(JsonUnmappedMemberHandling.Disallow)]
 public sealed record TerrainOverlayFile(ZoneId Zone, IReadOnlyList<TerrainOp> Ops)
 {

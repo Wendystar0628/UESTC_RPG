@@ -7,7 +7,7 @@ using Campus.Contracts;
 namespace Campus.Gen.Buildings.Model;
 
 /// <summary>
-/// The campus window numbering. WP-14 preserves persisted addresses and appends newly required ranges. BuildingsModule.PrepareWindowNumbering runs it once per map, with the
+/// The campus window numbering. game/gen/buildings/ preserves persisted addresses and appends newly required ranges. BuildingsModule.PrepareWindowNumbering runs it once per map, with the
 /// zone packs' claimed layouts replacing whole features, and every producer then reads that snapshot from
 /// BuildContext.WindowNumbering instead of numbering again.
 /// </summary>

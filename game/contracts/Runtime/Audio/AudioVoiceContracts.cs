@@ -3,7 +3,7 @@ using System.Numerics;
 namespace Campus.Contracts.Audio;
 
 /// <summary>
-/// Opaque voice identity owned by WP-53a. Zero is invalid/refused; handles are not reused for later voices.
+/// Opaque voice identity owned by game/audio/core/. Zero is invalid/refused; handles are not reused for later voices.
 /// A finished, stopped or unloaded voice becomes invalid and IsPlaying returns false.
 /// </summary>
 public readonly record struct AudioVoiceHandle(long Value)
@@ -15,7 +15,7 @@ public readonly record struct AudioVoiceHandle(long Value)
 /// <summary>
 /// A request from the ambience/foley pipelines to the audio core, not a public world-content playback API.
 /// ResourcePath must name a licensed resource beneath res://assets/audio/. No Godot objects cross this boundary.
-/// Group volume, master volume, ducking and background behavior are applied by WP-53a on the player.
+/// Group volume, master volume, ducking and background behavior are applied by game/audio/core/ on the player.
 /// </summary>
 /// <param name="ResourcePath">Licensed resource path beneath res://assets/audio/.</param>
 /// <param name="Group">The settings volume group, applied by the core.</param>
@@ -49,7 +49,7 @@ public readonly record struct AudioVoiceRequest(
     bool MapScoped = true);
 
 /// <summary>
-/// WP-53a's main-thread voice pool boundary, consumed by WP-53b/WP-53d.
+/// game/audio/core/'s main-thread voice pool boundary, consumed by game/gen/ambience/ and game/audio/core/.
 /// Only the core creates players. World content continues to use IAudioService, IAmbienceService or IFoleyService.
 /// No separate boot protocol: the audio core participates in the shared startup readiness mechanism.
 /// </summary>

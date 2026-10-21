@@ -52,7 +52,7 @@ def validate_manual_license(entry, allowed):
         return
     development_wheel = (
         entry.get("kind") == "python-wheel"
-        and entry.get("provider") == "WP-08"
+        and entry.get("provider") == "SYS-MAPS"
         and entry.get("developmentOnly") is True
         and entry.get("exported") is False
         and entry.get("vendored") is False

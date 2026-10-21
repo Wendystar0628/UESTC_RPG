@@ -5,7 +5,7 @@ using Godot;
 namespace Campus.Contracts;
 
 /// <summary>
-/// Kernel handoff for existing global data textures: WP-37 owns palette production and WP-04 owns mat_table
+/// Kernel handoff for existing global data textures: game/style/palette/keys/ owns palette production and game/style/ owns mat_table
 /// production. No texture is created or shader global read by this service.
 /// </summary>
 public interface IGlobalDataTextureRegistry : IDisposable
@@ -65,7 +65,7 @@ public sealed class GlobalDataTextureLease : IDisposable
 
     /// <summary>
     /// Call inside the current frame's render callback. SetImage can replace the underlying RD texture, so
-    /// WP-05 must obtain this RID again each frame and refresh dependent bindings when it changes.
+    /// game/kernel/post/ must obtain this RID again each frame and refresh dependent bindings when it changes.
     /// Pass srgb=true for palette colour sampling and false for mat_table data. An invalid RID means the
     /// current renderer has no RD texture; skip that compute work. Never free this borrowed RID.
     /// </summary>

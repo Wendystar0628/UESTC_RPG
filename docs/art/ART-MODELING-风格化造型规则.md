@@ -5,13 +5,12 @@ category: art
 parent: ART-INDEX
 summary: 几何怎么做对：每类对象的最低合格构件、几何细节的四道门槛、收边倒角、深度层、模块修边条、贴面几何、法线与换级；比例颜色与金样在子文档
 keywords: [最低合格构件, 四道门槛, 收边构件, 倒角做法, 自定义法线, 硬边法线, 解析法线, 修边条, 贴面几何, 换级不跳变, 深度层, 避开描线临界角]
-owners: [WP-09, WP-11]
-contributors: [WP-10, WP-11, WP-12, WP-13, WP-14, WP-15, WP-23, WP-31c, WP-37, WP-51, WP-52]
 depends: [CORE-INDEX, ART-STYLE, ART-FIDELITY, SYS-TIME, WLD-INTERIORS]
 related: [ART-MODELING-PROPORTION, WLD-VEGETATION, ENG-GATES, ENG-ARCH, ENG-BUDGET, ENG-PERF, SYS-WEATHER, SYS-GRAPHICS, WLD-RENOVATION, WLD-TERRAIN]
 contracts: []
 data: []
 gates: [G2, G7]
+paths: ["game/gen/parts/circulation/**", "game/gen/parts/core/**"]
 ---
 # ART-MODELING · 风格化造型规则
 
@@ -132,4 +131,4 @@ gates: [G2, G7]
 
 | 待验证 | 验证方法与负责包 | 验证前的初值 |
 | --- | --- | --- |
-| 最低配置下窗洞和檐下的层次能否靠 AO 推阈值撑住（§1.1） | 均衡预设真机，金样 30 m 机位；WP-04（调色板、卡通材质与贴图）、WP-14（通用建筑生成器） | 窗洞内壁、檐底 0.5 m 内写 AO |
+| 最低配置下窗洞和檐下的层次能否靠 AO 推阈值撑住（§1.1） | 均衡预设真机，金样 30 m 机位；调色板、卡通材质与贴图（ART-STYLE）、通用建筑生成器（WLD-RENOVATION） | 窗洞内壁、檐底 0.5 m 内写 AO |

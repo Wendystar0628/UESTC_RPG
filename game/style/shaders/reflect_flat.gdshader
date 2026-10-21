@@ -1,8 +1,8 @@
-// reflect_flat.gdshader：倒影世界里的平涂 REFLECT 代理（WP-24；WLD-WATER，ENG-PERF）
+// reflect_flat.gdshader：倒影世界里的平涂 REFLECT 代理（WLD-WATER；WLD-WATER，ENG-PERF）
 //
 // 只在倒影 SubViewport 的独立世界里用：没有光、不投影，颜色只读调色板行 0。
 // 顶点 COLOR 与 toon 相同（R 是受光色号低字节，B 的 bank 位补第 9 位，影 = 受光 + 1）；按主光方向分受光与影两块，倒影里的明暗与岸上一致。
-// 取色与雾用 fog.gdshaderinc（WP-04），与岸上同源。
+// 取色与雾用 fog.gdshaderinc（ART-STYLE），与岸上同源。
 // 倒影相机在水面以下，4.7 的 Camera3D 没有斜裁剪，所以丢弃水面以下的片元。
 shader_type spatial;
 render_mode unshaded, cull_back, shadows_disabled, ambient_light_disabled;

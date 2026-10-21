@@ -9,7 +9,7 @@ using KernelServices = Campus.Kernel.Registry.Kernel;
 namespace Campus.Systems.Sky;
 
 /// <summary>
-/// WP-40 all-day sky (ART-SKYLIGHT; SYS-WEATHER). Owns the Sky resource and its material,
+/// game/systems/sky/ all-day sky (ART-SKYLIGHT; SYS-WEATHER). Owns the Sky resource and its material,
 /// the global texture cloud_noise and the globals stars and cloud (ENG-PERF).
 /// Inputs: IWorldState (world time, anim time, weather vector) and IColorScriptFrame (star visibility, cloud cover);
 /// colours come from the palette texture inside the shader. Nothing is read back from shader globals.
@@ -75,7 +75,7 @@ public partial class SkyNode : Node, IMapAware, IViewContentReadiness
         catch (Exception error)
         {
             Failure = error;
-            KernelServices.Get<IDiagnosticLog>().Error("WP-40: sky content failed:", error);
+            KernelServices.Get<IDiagnosticLog>().Error("ART-SKYLIGHT-ATMOSPHERE: sky content failed:", error);
         }
     }
 
@@ -153,7 +153,7 @@ public partial class SkyNode : Node, IMapAware, IViewContentReadiness
         var environment = GetViewport()?.FindWorld3D()?.Environment;
         if (environment is null) return;
         // 字段边界（Opus 定案）：本节点只写 BackgroundMode 和 Sky。环境光源、反射源、雾、Glow、Tonemap、
-        // Adjustment 等归 WP-05 / WP-01，一概不碰（ENG-BUDGET"Environment 与 Sky"）。
+        // Adjustment 等归 game/kernel/post/ / game/kernel/renderer/，一概不碰（ENG-BUDGET"Environment 与 Sky"）。
         environment.Sky = _sky;
         environment.BackgroundMode = Godot.Environment.BGMode.Sky;
         _environment = environment;

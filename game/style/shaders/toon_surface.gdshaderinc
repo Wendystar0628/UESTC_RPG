@@ -1,5 +1,5 @@
 // ---------------------------------------------------------------------------
-// 材质表 mat_table（128×4 RGBA8，最近邻；行 0 线表归 WP-05 的布局）
+// 材质表 mat_table（128×4 RGBA8，最近邻；行 0 线表归 game/kernel/post/ 的布局）
 //   行 1：R 明暗档；G half_level×255；B 过渡带（两阶、三阶存固定半宽 ×1000，两阶半、软物存 fwidth 倍数 ×50）；A 湿润响应×255
 //   行 2：R 透光 k_t×255；G 受光侧暖边 k_rim×255；B 闪点系数×255；A 自发光通道（槽位 + 1，0 = 不自发光）
 //   行 3：R 低两位解析法线（0 不用、1 球、2 柱）、bit7 扶梯滚动；G 倒角提亮的受光幅度、B 影里幅度（值/255×0.25 L，0 = 不提亮）；A 硬卡通高光强度
@@ -103,8 +103,8 @@ bool toon_fade_discard(vec2 frag_xy) {
 // ---------------------------------------------------------------------------
 // 天气挂点
 // ---------------------------------------------------------------------------
-// 湿润的暴露度（SYS-WEATHER）：公共函数归 WP-45b，要读地面遮罩 2 的建筑遮蔽和树冠遮蔽。
-// 世界坐标、世界法线与室内/外围标志直接交给 WP-45b 的公共求值。
+// 湿润的暴露度（SYS-WEATHER）：公共函数归 game/systems/weather/precip/，要读地面遮罩 2 的建筑遮蔽和树冠遮蔽。
+// 世界坐标、世界法线与室内/外围标志直接交给 game/systems/weather/precip/ 的公共求值。
 float toon_wet_exposure(ToonCtx c) {
 	return precip_wet_exposure(c.wpos, c.n_w,
 			(c.flags & TOON_F_INTERIOR) != 0, (c.flags & TOON_F_OUTSKIRT) != 0);
@@ -115,14 +115,14 @@ float toon_wet(ToonCtx c, ToonMat m) {
 	return clamp(weather_b.x, 0.0, 1.0) * toon_wet_exposure(c) * m.wet;
 }
 
-// 积水（SYS-WEATHER，公共函数归 WP-45b）：在湿润变暗之后，按积水遮罩把受光色、影色换成积水色；ROUGHNESS 不动。
+// 积水（SYS-WEATHER，公共函数归 game/systems/weather/precip/）：在湿润变暗之后，按积水遮罩把受光色、影色换成积水色；ROUGHNESS 不动。
 // response 使用材质表行 1 的 A，已经由 toon_mat 解码为 m.wet。
 void toon_puddle(ToonCtx c, ToonMat m, inout vec3 lit, inout vec3 shade) {
 	precip_puddle_apply(c.wpos, c.cam, c.n_w,
 			(c.flags & TOON_F_INTERIOR) != 0, (c.flags & TOON_F_OUTSKIRT) != 0, m.wet, lit, shade);
 }
 
-// 地面云影（SYS-WEATHER，云噪声归 WP-40）：主线版没有云影，恒为 1。
+// 地面云影（SYS-WEATHER，云噪声归 game/systems/sky/）：主线版没有云影，恒为 1。
 float toon_cloud_shadow(vec3 wpos) {
 	return 1.0;
 }
@@ -130,7 +130,7 @@ float toon_cloud_shadow(vec3 wpos) {
 // ---------------------------------------------------------------------------
 // 窗灯（ENG-PERF）：亮灭只由窗号哈希、灯光通道和窗覆盖决定，与怎样到达这个钟点无关。
 // 哈希、阈值、亮灭与冷暖用 lamp.gdshaderinc 的 lamp_hash01、lamp_window_*（与 fx_glow、C# 的 ScheduleMath 同一份）。
-// window_override（RGBA8，纹素 = (id % 256, id / 256)，归 WP-39）：R 亮灭（0 不覆盖、128 强制灭、255 强制亮），
+// window_override（RGBA8，纹素 = (id % 256, id / 256)，归 game/systems/nightlight/）：R 亮灭（0 不覆盖、128 强制灭、255 强制亮），
 // G 冷暖（0 按哈希、128 强制暖、255 强制冷），B 窗帘（0 按哈希、128 无帘、255 拉上），A 保留。
 // ---------------------------------------------------------------------------
 
@@ -145,7 +145,7 @@ int toon_window_curtain(vec4 o) {
 }
 
 // ---------------------------------------------------------------------------
-// 路灯光斑（SYS-TIME、ENG-PERF；公共求值 lamp_pool_shade 归 WP-39）：
+// 路灯光斑（SYS-TIME、ENG-PERF；公共求值 lamp_pool_shade 归 game/systems/nightlight/）：
 // 地面和 4 m 以下立面上的两阶光斑（亮芯 + 收边外圈），灯光加在受光色和影色上、不替换底色，强度随环境变暗升起；
 // 观感参数都在 lamp.gdshaderinc 开头。室内不画（室内灯另走室内光）。
 // 竖直面按世界法线 c.n_w 判（含插值与解析法线），曲面上光斑的分界是光滑的；边缘过渡宽度 c.pool_aa 在 TOON_FRAGMENT_BEGIN 里按统一控制流算好。
@@ -158,7 +158,7 @@ void toon_lamp_pool(ToonCtx c, vec3 lamp, inout vec3 lit, inout vec3 shade) {
 }
 
 // ---------------------------------------------------------------------------
-// 自发光（ToonSpec.Emissive；SYS-TIME、ENG-PERF）：亮度读材质登记的灯光通道，随时刻表亮灭（lamp_fixture_level，WP-39）。
+// 自发光（ToonSpec.Emissive；SYS-TIME、ENG-PERF）：亮度读材质登记的灯光通道，随时刻表亮灭（lamp_fixture_level，MAP-QSH-ATMOSPHERE）。
 // 窗灯类通道取 L。灯具类通道（灯罩、灯牌）跟着灯头在 1 m 以内的那盏灯，与它的光斑、光晕同时亮灭：白天灯灭，灯罩也不亮；
 // 附近没有登记的灯时取 L（保留比例 ×(1 + Δ)，夹到 0–1，"熄一半"这类时段整面按比例变暗）。
 // ---------------------------------------------------------------------------

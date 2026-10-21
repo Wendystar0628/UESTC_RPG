@@ -5,13 +5,12 @@ category: art
 parent: ART-INDEX
 summary: 处处不粗糙、细节按区分级：精度底线 B1–B13、五个精度区、一票否决、巡检点、行走走廊加密与外围分级；细节做法在子文档
 keywords: [视觉精度, 精度区, K1–K5, 判定距离, 底线清单, B1–B13, 不粗糙, 一票否决, 区界规则, 可读规则, 巡检点, 行走走廊, 外围分级]
-owners: [WP-27, WP-10, WP-12]
-contributors: [WP-04, WP-07, WP-10, WP-12, WP-14, WP-15, WP-23, WP-24, WP-44, WP-47, WP-51, WP-52]
 depends: [CORE-INDEX, ART-STYLE, ART-MODELING, ENG-BUDGET, SYS-TIME, SYS-WALK, SYS-WEATHER, SYS-GRAPHICS, WLD-OUTSKIRTS, WLD-INTERIORS]
-related: [MAP-QSH-CORE, MAP-QSH-SOUTH, WLD-WATER, SYS-VIEW, ENG-GATES, MAP-QSH-ADDITIONS, ENG-ARCH, PLAN-WP, ENG-PERF, WLD-RENOVATION, WLD-AMBIENCE]
+related: [MAP-QSH-CORE, MAP-QSH-SOUTH, WLD-WATER, SYS-VIEW, ENG-GATES, MAP-QSH-ADDITIONS, ENG-ARCH, ENG-PERF, WLD-RENOVATION, WLD-AMBIENCE]
 contracts: []
 data: []
 gates: [G2, G7]
+paths: ["game/style/palette/ext/openings.json", "game/style/palette/ext/roof_equipment.json", "scripts/gates/native-render.ps1", "game/data/maps/*/review.json", "game/gen/parts/openings/**", "game/gen/parts/roof/**", "scripts/shots/**", "scripts/gates/**", "game/gates/**", "scripts/gates/check-naming.ps1", "scripts/gates/check-source.ps1"]
 ---
 # ART-FIDELITY · 视觉精度标准
 
@@ -78,7 +77,7 @@ gates: [G2, G7]
 
 ### 1.4 划分与数据
 
-- WP-44（可行走范围、边界与安全点） 在构建期划分：立面段从主网、道路、点位落点做可见性采样，60 m 内主网或道路旁能正面看到记 K3，否则记 K4 (b)；屋顶默认 K4 (a)，K1 楼的屋顶随楼；外围沿用 WLD-OUTSKIRTS-BAND §2 的级别。立面段、屋顶和 2 m 地面栅格经世界构建缓存冻结，启动只读结果。身份楼、主轴和提级登记在既有世界特征的 `props.fidelity`，主网线登记 `props.walkNetwork=main`，点位读取既有 `waypoints.json` 的 `Stand`；元数据为实体级，源道路段继承，禁止降级。点和无宽线只标自身实体，不外扩面域；正式 Terrain 先于 PAD 室内与精度构建。
+- 可行走范围、边界与安全点（SYS-WALK-BOUNDS） 在构建期划分：立面段从主网、道路、点位落点做可见性采样，60 m 内主网或道路旁能正面看到记 K3，否则记 K4 (b)；屋顶默认 K4 (a)，K1 楼的屋顶随楼；外围沿用 WLD-OUTSKIRTS-BAND §2 的级别。立面段、屋顶和 2 m 地面栅格经世界构建缓存冻结，启动只读结果。身份楼、主轴和提级登记在既有世界特征的 `props.fidelity`，主网线登记 `props.walkNetwork=main`，点位读取既有 `waypoints.json` 的 `Stand`；元数据为实体级，源道路段继承，禁止降级。点和无宽线只标自身实体，不外扩面域；正式 Terrain 先于 PAD 室内与精度构建。
 - ENG-BUDGET 的上限不因分区而变。
 
 ### 1.5 换算基准
@@ -130,7 +129,7 @@ gates: [G2, G7]
 
 ### 5.1 范围与画面构成
 
-- 行走走廊是主网中线两侧各 10 m，多边形由 WP-44（可行走范围、边界与安全点） 导出；开放室内的可走部分同等对待。它们就是 K2 的主体。
+- 行走走廊是主网中线两侧各 10 m，多边形由 可行走范围、边界与安全点（SYS-WALK-BOUNDS） 导出；开放室内的可走部分同等对待。它们就是 K2 的主体。
 - 观者以 3.6 m/s 慢慢看过每段路；眼高 1.62 m、视场 70° 时，画面下半幅四分之三以上是前方 10 m 内的地面，最常看到的是脚前 3–10 m。
 
 ### 5.2 走廊里的加密
@@ -151,7 +150,7 @@ gates: [G2, G7]
 5. **脚下的高差**：≥ 5 cm 的边在 3 m 外读得出，靠描线或上下明度差。
 6. **阳台晾晒**：逆光时衣服透亮。
 
-俯仰 −60° 低头看时，脚前 1–2 m 仍满足 ART-FIDELITY-DETAIL §2 的地面一行；每 30–50 m 一处小拍、150–250 m 一处大拍，各区把节奏锚点报给 WP-44（SYS-WALK-BOUNDS §5）。
+俯仰 −60° 低头看时，脚前 1–2 m 仍满足 ART-FIDELITY-DETAIL §2 的地面一行；每 30–50 m 一处小拍、150–250 m 一处大拍，各区把节奏锚点报给 SYS-WALK-BOUNDS（SYS-WALK-BOUNDS §5）。
 
 ## 6 外围分级精度
 

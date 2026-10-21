@@ -43,7 +43,7 @@ public sealed class AtlasBaseSource : IAtlasBaseSource
 
         var warnings = new SortedSet<string>(product.Manifest.Warnings, StringComparer.Ordinal);
         if (!labelsReady) warnings.Add("label-layout-awaits-runtime-font-measurements");
-        // WP-48a has not produced the landmark MSDF atlas or its glyph layout yet.
+        // game/gen/bakeinput/ has not produced the landmark MSDF atlas or its glyph layout yet.
         warnings.Add("landmark-glyphs-deferred");
         var placeIds = product.Regions.Ids;
         if (placeIds.Length is < 1 or > 256 || placeIds[0] != ""

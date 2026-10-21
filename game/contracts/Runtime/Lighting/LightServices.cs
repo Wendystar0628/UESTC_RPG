@@ -2,7 +2,7 @@ using System.Numerics;
 
 namespace Campus.Contracts;
 
-/// <summary>WP-02's map-wide baked lighting inventory, ready after Mount and before MapAware.OnMapLoaded.</summary>
+/// <summary>game/kernel/bake/'s map-wide baked lighting inventory, ready after Mount and before MapAware.OnMapLoaded.</summary>
 public interface ILightInventory
 {
     /// <summary>The same numbering snapshot used to bake these declarations. Formal inventories publish it atomically with their current map data.</summary>
@@ -16,7 +16,7 @@ public interface ILightInventory
 }
 
 /// <summary>
-/// WP-03 service. Submit immediately uploads the 32x1 RGF light_channels texture in Channels phase.
+/// game/kernel/lighting/ service. Submit immediately uploads the 32x1 RGF light_channels texture in Channels phase.
 /// Exactly 32 finite (L, delta) pairs are required; wrong length/non-finite input throws ArgumentException.
 /// Window slots 0-11 use lit-window proportions (normally at most 0.85, library at most 0.9).
 /// Lamp slots 12-22 and 24-27 use retained proportion * (1 + delta), so full retention lights every threshold kappa below 1.

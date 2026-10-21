@@ -5,13 +5,12 @@ category: ui
 parent: UI-VISUAL
 summary: 界面字体与字号、形状与材质、图标体系，组件外观（含时间环、存档卡、加载界面）与画面布局（含大地图、设置卡、制作人员与许可）
 keywords: [加载界面, 制作人员与许可, 界面字体, 思源黑体, 字号阶梯, 切角, 1号脚, 发丝线, 过孔灯, 走线, 衍射光边, 面板材质, 轻度磨砂, 图标体系, 窗口图标, 八角晶片, 气象填图符号, 通电隐喻, 时间环外观, 天气签条, 速度LED条, 存档卡, 存储模组, 等待灯, 画面布局, 中央60%, ui_metrics.json, IPaletteProbe]
-owners: [WP-35]
-contributors: [WP-01, WP-27, WP-48, WP-49, WP-50, WP-53]
 depends: [UI-VISUAL, ART-STYLE, SYS-TIME, UI-NAV]
 related: [SYS-ATLAS, SYS-TITLE, SYS-SAVE, SYS-VIEW, SYS-GRAPHICS, SYS-AUDIO]
 contracts: [IPaletteProbe]
 data: ["game/hud/style/ui_metrics.json", "game/assets/hud/icons/", "game/assets/hud/manifest.json"]
 gates: [G14]
+paths: ["game/style/palette/ext/ui.json", "game/hud/**", "game/assets/hud/**"]
 ---
 # UI-VISUAL-COMPONENTS · 字体、形状、图标、组件与布局
 

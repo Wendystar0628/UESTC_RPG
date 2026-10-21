@@ -3,7 +3,7 @@ using System.Numerics;
 namespace Campus.Contracts.Maps;
 
 public enum MapKind : byte { Outdoor, Interior, Instance }       // 现在只有 Outdoor；精选室内属于所在的图（SYS-MAPS）
-public enum MapTimeRule : byte { Shared, Fixed }                 // Fixed 预留，WP-34 现在只实现 Shared（SYS-MAPS）
+public enum MapTimeRule : byte { Shared, Fixed }                 // Fixed 预留，game/kernel/world/ 现在只实现 Shared（SYS-MAPS）
 public sealed record GeoFrame(double OriginLon, double OriginLat, int Epsg,
     Vector2 BoundaryMin, Vector2 BoundaryMax);                   // 从 world/geo.json 读，不手写
 public sealed record MapRect(Vector2 Min, Vector2 Max);          // 全图数据纹理的 xz 范围，边长为 64 m 的整数倍；清水河 ±1280 m（SYS-MAPS）

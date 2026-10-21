@@ -158,7 +158,7 @@ public sealed class WestModuleTests
             AssertThat(meshes > 0).OverrideFailureMessage($"{lod} emits meshes").IsTrue();
             AssertThat(items.Count(i => i.Part is not null) == parts).OverrideFailureMessage($"{lod}: every placed part is emitted exactly once").IsTrue();
             string[] kit = [Contracts.Parts.PartCatalog.EntranceMat, Contracts.Parts.PartCatalog.OpenSign, Contracts.Parts.PartCatalog.EntranceLamp];
-            AssertThat(!items.Any(i => i.Part is { } p && kit.Contains(p.Part.Value))).OverrideFailureMessage($"{lod}: no entrance kit placed by the zone (WP-13's)").IsTrue();
+            AssertThat(!items.Any(i => i.Part is { } p && kit.Contains(p.Part.Value))).OverrideFailureMessage($"{lod}: no entrance kit placed by the zone (game/gen/furniture/'s)").IsTrue();
         }
     }
 
@@ -321,7 +321,7 @@ public sealed class WestModuleTests
             (WestIds.Relation11032065.Entity, "research"), (WestIds.Way795677483.Entity, "research"), (WestIds.Way795677482.Entity, "research"),
             (WestIds.Way570145228.Entity, "office"), (WestIds.Way779496151.Entity, "research"), (WestIds.Way779496154.Entity, "research"),
         })
-            AssertThat(world.Features[new(id)].Family?.Value == family).OverrideFailureMessage($"{id} is styled {family} for WP-14").IsTrue();
+            AssertThat(world.Features[new(id)].Family?.Value == family).OverrideFailureMessage($"{id} is styled {family} for game/gen/buildings/").IsTrue();
         foreach (var id in new[] { F4.EntityA, F4.EntityB, F4.EntityC, WestIds.Relation8426842.Entity })
             AssertThat(world.Features[new(id)].Facade?.Value == "research.stoneFrame").OverrideFailureMessage($"{id} takes the stone-and-glass preset").IsTrue();
     }

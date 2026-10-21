@@ -26,7 +26,7 @@ public enum CoreMaterial : byte
     Roof,
     /// <summary>Sheet-metal roofs and eaves: rim and anisotropic band, building line.</summary>
     Sheet,
-    /// <summary>Lawn on built terraces: the ground lawn's response (WP-15), no outline on the turf.</summary>
+    /// <summary>Lawn on built terraces: the ground lawn's response (WLD-TERRAIN-APPLY), no outline on the turf.</summary>
     Lawn,
     /// <summary>Clipped hedges: smooth normals, soft steps, the tree line class.</summary>
     Foliage,

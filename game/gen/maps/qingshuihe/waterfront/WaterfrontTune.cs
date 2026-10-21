@@ -5,7 +5,7 @@ using static Campus.Gen.Sites.ZoneLooks;
 namespace Campus.Gen.Maps.Qingshuihe.Waterfront;
 
 /// <summary>
-/// Every tunable value of the WP-28 bridges in one place (WF-FLOW). Lengths in metres; heights are relative to the
+/// Every tunable value of the game/gen/maps/qingshuihe/waterfront/ bridges in one place (WF-FLOW). Lengths in metres; heights are relative to the
 /// carriageway surface at the bridge ends (the road level, WLD-TERRAIN: "桥面标高等于两端路面").
 /// </summary>
 public static class WaterfrontTune
@@ -65,7 +65,7 @@ public static class WaterfrontTune
     // ---- Bridge-head stone (桥头卧石) ----
     public const float StoneLength = 1.8f, StoneDepth = 0.75f, StoneHeight = 0.62f, StoneBevel = 0.06f;
 
-    // ---- Collision (SYS-WALK; MAP-QSH-ADDITIONS WP-28 行) ----
+    // ---- Collision (SYS-WALK; MAP-QSH-ADDITIONS game/gen/maps/qingshuihe/waterfront/ 行) ----
     /// <summary>Deck ramps are cut every 2 m along the bridge; each is a sloped box this thick.</summary>
     public const float RampStep = 2.0f, RampThick = 0.3f;
     public const FootMat CarriageFoot = FootMat.Asphalt, WalkFoot = FootMat.StonePaving, RailFoot = FootMat.Metal, StoneFoot = FootMat.StonePaving;
@@ -78,7 +78,7 @@ public static class WaterfrontTune
     public const string Paver = "ground.paver";
     public const string Kerb = "ground.curb";
 
-    // ---- Material classes, matched to the WP-15 ground so deck and approach read as one surface ----
+    // ---- Material classes, matched to the game/gen/ground/ ground so deck and approach read as one surface ----
     public static ToonSpec AsphaltSpec => S(Asphalt, ToonFx.Mottle, LineClass.Building, 1f);
     public static ToonSpec PaverSpec => S(Paver, ToonFx.DetailTiling | ToonFx.Mottle, LineClass.Building);
     public static ToonSpec KerbSpec => S(Kerb, ToonFx.BevelLift | ToonFx.DetailTiling, LineClass.Building);
@@ -86,6 +86,6 @@ public static class WaterfrontTune
     public static ToonSpec ConcreteSpec => S(Concrete, ToonFx.BevelLift, LineClass.Building, 0.7f);
     public static ToonSpec RailSpec => S(Stainless, ToonFx.Rim | ToonFx.AnisoBand, LineClass.Fine, 0.4f) with { Steps = ShadeSteps.TwoHalf, Normal = ToonNormal.Smooth };
 
-    // ---- Budget (PLAN-WP: WP-28 takes 1 % / 1 % from the building share; measured on the 28a bridges) ----
+    // ---- Budget (ENG-BUDGET: game/gen/maps/qingshuihe/waterfront/ takes 1 % / 1 % from the building share; measured on the 28a bridges) ----
 
 }

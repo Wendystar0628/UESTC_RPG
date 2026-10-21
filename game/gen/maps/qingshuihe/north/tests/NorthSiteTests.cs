@@ -85,7 +85,7 @@ public sealed class NorthSiteTests
     /// international students' cluster: the main gate faces the highest-grade road beside the cluster (within 15 m of its
     /// outline) — 丹桂路 and 银杏大道, then the other 6 m campus roads, then 5 m service roads: it opens within
     /// <see cref="Faces"/> of such a road, or no vehicle gate is nearer one; and its guard house stands on the right of the
-    /// way in. 学知一组团's gate is the open walking route (P13, A11, WP-31c) and keeps its place.
+    /// way in. 学知一组团's gate is the open walking route (P13, A11, MAP-QSH-NORTH) and keeps its place.
     /// </summary>
     [TestCase, TestCategory(TestReason.Contract)]
     [TestCategory("Slow")]
@@ -161,7 +161,7 @@ public sealed class NorthSiteTests
     }
 
     /// <summary>
-    /// 20a-4: the canal-bank railing carries on from the north-gate plaza's railing (WP-30 30a: the same water edge, railing
+    /// 20a-4: the canal-bank railing carries on from the north-gate plaza's railing (game/gen/maps/qingshuihe/boundary/ 30a: the same water edge, railing
     /// at 0.35 m off the water from t −24.6 to −11.4). It starts flush on the
     /// plaza's end post and its collision on the post's centre, panel after panel without a gap or an overlap, runs past the
     /// far end of the street (商业街 reaches t −110.5; the run heads south into the campus, toward negative t), and keeps clear of buildings and road edges.

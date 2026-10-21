@@ -35,7 +35,7 @@ public sealed class VendingMachinePart : IPartDef<EquipmentParams>
             { Foot = p.Foot == FootMat.Auto ? S.MetalFoot : p.Foot }];
     }
 
-    /// <summary>The compressor at the back of the toe, heard within 4 m (SYS-AUDIO); the set is registered by WP-53b.</summary>
+    /// <summary>The compressor at the back of the toe, heard within 4 m (SYS-AUDIO); the set is registered by game/gen/ambience/.</summary>
     public IReadOnlyList<SoundSocketDecl> Sounds(EquipmentParams p)
     {
         Validate(p);

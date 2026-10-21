@@ -68,7 +68,7 @@ internal static class FurnitureServices
 
     private static void Lockers(StreetSite site, List<FurnitureItem> items, List<BuildDiagnostic> diagnostics, List<ServiceSite> lockerSpots, FurnitureCapacity capacity)
     {
-        // Delivery lockers: beside the first gates that hold a vending group (their WLD-LIFE places wait for WP-30's gates).
+        // Delivery lockers: beside the first gates that hold a vending group (their WLD-LIFE places wait for game/gen/maps/qingshuihe/boundary/'s gates).
         var lockers = new List<string>();
         foreach (var spot in lockerSpots)
         {
@@ -99,7 +99,7 @@ internal static class FurnitureServices
             var p = S.BikeBay;
             if (FurnitureServiceSlots.ServiceFit(site, spot, p.Width, p.Depth, S.WalkGap, spot.Front is null ? S.ServiceReach : S.BayFar) is not { } fit) continue;
             var bay = new List<FurnitureItem> { Fitted($"bay:{spot.Label}", FurnitureKind.BicycleBay, PartCatalog.BicycleShelter, p, fit, BayDef.Collision(p)) };
-            // Stand-in stock until WP-55 mounts the rentable bikes: every other slot, front wheel to the back line.
+            // Stand-in stock until game/camera/walk/ mounts the rentable bikes: every other slot, front wheel to the back line.
             var hash = StableHash.Hash32(0x13C2Cu, "bay", spot.Label);
             var count = S.BayBikesMax <= 0 ? 0 : S.BayBikesMin + (int)(hash % (uint)(S.BayBikesMax - S.BayBikesMin + 1));
             var tangent = new Vector2(fit.Facing.Y, -fit.Facing.X);
@@ -110,7 +110,7 @@ internal static class FurnitureServices
                 var centre = fit.Centre + tangent * ((first + k - (slots - 1) * 0.5f) * S.BayBikePitch);
                 bay.Add(Item($"bay:{spot.Label}:bike:{Num(k)}", FurnitureKind.ParkedBicycle, PartCatalog.ParkedBicycle, S.Bike, Frame(centre, -fit.Facing, fit.Top), [], []));
             }
-            // Over the cell's budget with its stand-in bikes, an open gate's bay stands empty for WP-55's stock; any other is left out.
+            // Over the cell's budget with its stand-in bikes, an open gate's bay stands empty for game/camera/walk/'s stock; any other is left out.
             if (!capacity.Allows(items, bay))
             {
                 if (!spot.Open) { heavy++; continue; }

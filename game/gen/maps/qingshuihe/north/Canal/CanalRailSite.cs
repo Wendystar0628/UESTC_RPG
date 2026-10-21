@@ -11,7 +11,7 @@ namespace Campus.Gen.Maps.Qingshuihe.North.Canal;
 
 /// <summary>
 /// The canal-bank railing on the 商业街 side of 红光右支渠北段 (20a-4): a light steel railing along the east water edge that
-/// carries on from the north-gate plaza's railing (WP-30 30a) to the far end of the street. Same railing language as the
+/// carries on from the north-gate plaza's railing (game/gen/maps/qingshuihe/boundary/ 30a) to the far end of the street. Same railing language as the
 /// plaza's, so the two read as one run: square posts at most <see cref="B.PostPitch"/> apart, a handrail and a bottom rail, 20 mm
 /// bars between them, an end post a size heavier with a cap (收头) at the far end. The plaza's end post at
 /// <see cref="B.JointT"/> is shared: the first rail panel starts flush on its campus-side face and the first collider overlaps its

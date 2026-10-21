@@ -37,7 +37,7 @@ public sealed record BuildingFrame(FeatureId Feature, IReadOnlyList<PolygonRings
 
     /// <summary>
     /// Frame of a building feature from the world model. The footprints are the facade outlines of its source parts when it has any
-    /// (a multi-wing entity keeps each wing; WP-08 keeps the physical shared-edge outline for terrain and pads), otherwise its own polygon geometry. PadY comes from the terrain (WP-08;
+    /// (a multi-wing entity keeps each wing; game/gen/world/ keeps the physical shared-edge outline for terrain and pads), otherwise its own polygon geometry. PadY comes from the terrain (SYS-MAPS;
     /// the flat stub returns 0), never from a literal.
     /// </summary>
     public static BuildingFrame Of(IWorldModel world, FeatureId feature, IReadOnlyList<float> storeyHeights)

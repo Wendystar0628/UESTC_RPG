@@ -8,7 +8,7 @@ using static GdUnit4.Assertions;
 namespace Campus.Tests.Style;
 
 /// <summary>
-/// lit.heroGuard of the WP-37 colour script: yellow-orange hero colours never turn past their hero-frame hue towards green and
+/// lit.heroGuard of the game/style/palette/keys/ colour script: yellow-orange hero colours never turn past their hero-frame hue towards green and
 /// keep a chroma floor in dim light; every other colour derives exactly as without the guard. Pure .NET: reads the key data.
 /// </summary>
 [TestSuite]

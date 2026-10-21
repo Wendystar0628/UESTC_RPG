@@ -5,13 +5,12 @@ category: art
 parent: ART-STYLE
 summary: 后处理描线的线类、线色、线宽与折角线，凸边亮线；后期的风格底线与可关项、柔光色调映射光斑移轴与抗锯齿
 keywords: [描线, 线类, 线色, 线宽, 材质 ID, 后处理描边, 折角线, 凸边亮线, 风格底线, 柔光, 色调映射, 镜头光斑, 移轴景深, 窗灯光晕, 光柱, 抗锯齿, 暗角]
-owners: [WP-05]
-contributors: [WP-04, WP-45]
 depends: [CORE-INDEX, ART-STYLE, SYS-GRAPHICS]
 related: [ART-STYLE-SHADING, ART-FIDELITY, ART-SKYLIGHT, SYS-VIEW, SYS-WEATHER, UI-VISUAL, WLD-INTERIORS]
 contracts: [LineClass]
 data: ["game/style/outline/"]
 gates: [G7]
+paths: ["game/style/outline/post_outline.glsl", "game/style/outline/fog.glslinc", "game/style/outline/**", "game/kernel/post/**"]
 ---
 # ART-STYLE-LINES · 描线与后期
 
@@ -61,7 +60,7 @@ gates: [G7]
 ### 1.5 后处理描边
 
 - 用深度、法线、材质 ID 在后处理里检测，不用外扩反面网格（穿模时糊满屏、顶点翻倍），英雄件也不例外。
-- 材质 ID 存在 ROUGHNESS 里，任何效果都不许改写；ID 由 WP-04（调色板、卡通材质与贴图） 按材质类分配，特殊 ID 向 WP-05（描线与后期） 申请。
+- 材质 ID 存在 ROUGHNESS 里，任何效果都不许改写；ID 由 调色板、卡通材质与贴图（ART-STYLE） 按材质类分配，特殊 ID 向 描线与后期（ART-STYLE-LINES） 申请。
 - 不足 1 px 的线按覆盖率画，放大后仍是清楚的细线；剖切面也出线（SYS-VIEW-MEDIUM §1）。
 
 ### 1.6 折角线与低模

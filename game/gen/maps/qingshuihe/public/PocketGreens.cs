@@ -20,12 +20,12 @@ namespace Campus.Gen.Maps.Qingshuihe.Public;
 /// </summary>
 public sealed record ArcBench(FeatureId Id, Vector2 Centre, float Radius, float From, float To);
 
-/// <summary>A round tree pit whose kerb and soil this package builds (props stone = site); WP-23 plants the tree.</summary>
+/// <summary>A round tree pit whose kerb and soil this package builds (props stone = site); game/gen/vegetation/ plants the tree.</summary>
 public sealed record RoundPit(FeatureId Id, Vector2 Centre, float Radius);
 
 /// <summary>
-/// WP-29's pocket greens read from the world model: every <c>design:public-</c> curved bench and site-built tree pit.
-/// The paving under them is a pedestrian polygon in the same overlay, paved by WP-15 like every plaza; the tree is WP-23's.
+/// game/gen/maps/qingshuihe/public/'s pocket greens read from the world model: every <c>design:public-</c> curved bench and site-built tree pit.
+/// The paving under them is a pedestrian polygon in the same overlay, paved by game/gen/ground/ like every plaza; the tree is game/gen/vegetation/'s.
 /// Pure .NET: reads the world model and terrain only, angles through MathF.
 /// </summary>
 public static class PocketGreens
@@ -119,7 +119,7 @@ public static class PocketGreens
         AddWorld(output, PartSolids.Extrude(new PolygonRings(soil), K.KerbHeight - K.SoilBelow + 0.05f, L.Soil, deck - 0.05f));
     }
 
-    /// <summary>The paving level under a bench: WP-15's paving over the highest ground under the arc.</summary>
+    /// <summary>The paving level under a bench: game/gen/ground/'s paving over the highest ground under the arc.</summary>
     public static float Paving(ArcBench bench, Func<Vector2, float> ground)
     {
         var top = float.MinValue;
@@ -154,7 +154,7 @@ public static class PocketGreens
         return SeatBoxes(bench, ground).SelectMany(box => Seating.FromBox(box, SeatSide.Front, back: true, baseY: deck)).ToArray();
     }
 
-    /// <summary>The pit kerb as a low post (0.2 m, stepped onto automatically); the trunk's collider is WP-23's.</summary>
+    /// <summary>The pit kerb as a low post (0.2 m, stepped onto automatically); the trunk's collider is game/gen/vegetation/'s.</summary>
     public static PostCollider PitPost(RoundPit pit, Func<Vector2, float> ground)
     {
         var deck = ground(pit.Centre) + GroundLevels.Paving;

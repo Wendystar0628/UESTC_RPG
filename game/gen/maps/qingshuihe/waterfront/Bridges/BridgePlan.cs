@@ -168,7 +168,7 @@ internal sealed class BridgePlan
     /// Fits the deck to the water it crosses (MAP-QSH-ADDITIONS; the network lines often run on well past the banks):
     /// two explicitly registered source-bank segments intersect sample lines near the deck's outer edges to give the bank
     /// lines. An abutment stands just behind each, and the deck ends a bearing margin behind the abutment, its end line
-    /// parallel to the bank; the rest of each line is ordinary ground (WP-15).
+    /// parallel to the bank; the rest of each line is ordinary ground (WLD-TERRAIN-APPLY).
     /// </summary>
     private void FitToWater(IWorldModel world, string startBank, string endBank)
     {

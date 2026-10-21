@@ -65,7 +65,7 @@ public static class MuseumStyle
     public const float MuseumSlitWidth = 0.7f, MuseumSlitSill = 0.9f, MuseumSlitPitch = 6f, MuseumSlitMargin = 4.5f;
     /// <summary>Clerestory ribbon round the hall (高窗): sill above the flat roof, height, module and end margin.</summary>
     public const float ClerestorySill = 1.4f, ClerestoryHeight = 3.2f, ClerestoryModule = 1.6f, ClerestoryMargin = 0.8f;
-    /// <summary>Glass doors (WP-10): the main door four leaves, inner two open; the lake door two leaves, both open.</summary>
+    /// <summary>Glass doors (game/gen/parts/openings/): the main door four leaves, inner two open; the lake door two leaves, both open.</summary>
     public const int MuseumDoorLeaves = 4, LakeDoorLeaves = 2;
 
     // ---- Lights (灯走 interior.public): every museum window on the public-interior curve. ----

@@ -10,7 +10,7 @@ using L = Campus.Gen.Maps.Qingshuihe.West.WestTune.Look;
 namespace Campus.Gen.Maps.Qingshuihe.West.Innovation;
 
 /// <summary>
-/// 创新中心 (MAP-QSH-WEST; MAP-QSH-RENOVATION W-01). The bars and cross wings are WP-14's research family, renewed by its
+/// 创新中心 (MAP-QSH-WEST; MAP-QSH-RENOVATION W-01). The bars and cross wings are game/gen/buildings/'s research family, renewed by its
 /// rules (new windows, rooftop plant in its fenced enclosure, stair penthouses under the main coping: no sheds on the roof).
 /// This site adds the two identity pieces:
 /// <list type="bullet">

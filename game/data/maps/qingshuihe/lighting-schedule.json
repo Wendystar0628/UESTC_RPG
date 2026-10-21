@@ -1,7 +1,7 @@
 {
   "format": 1,
   "map": "qingshuihe",
-  "note": "清水河的灯光时刻表（WP-39）。曲线以 SYS-TIME、MAP-QSH-ADDITIONS 为准；数值是初值，P0 按截图校准。窗灯类 curve 是使用率 occ，L = clamp(dark(h_eff) × occ, 0, cap)；灯具类 curve 是保留比例，每盏灯另按 lamp_table 的太阳高度阈值与 h_eff 比较。钟点一律是美术钟点。",
+  "note": "清水河的灯光时刻表（MAP-QSH-ATMOSPHERE）。曲线以 SYS-TIME、MAP-QSH-ADDITIONS 为准；数值是初值，P0 按截图校准。窗灯类 curve 是使用率 occ，L = clamp(dark(h_eff) × occ, 0, cap)；灯具类 curve 是保留比例，每盏灯另按 lamp_table 的太阳高度阈值与 h_eff 比较。钟点一律是美术钟点。",
   "delta": { "min": 0.005, "max": 0.15, "seconds": 0.3 },
   "dayFloor": { "overcast": 0.25, "rain": 0.3, "overcastRamp": [0.45, 0.9], "rainRamp": [0.08, 0.4], "occupancyRamp": [0.1, 0.45] },
   "groups": {

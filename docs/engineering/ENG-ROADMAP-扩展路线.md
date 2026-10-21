@@ -5,18 +5,17 @@ category: engineering
 parent: ENG-INDEX
 summary: 观光到 RPG 的扩展原则、现在不能写死的地方、写法纪律和 6 条最小预留
 keywords: [扩展路线, 从观光到 RPG, 扩展原则, 规则集, sightseeing, 观光规则集, 观者状态, 输入占用按原因计, 枚举的穷举纪律, 偶发事件数据化, 名字占位, RPG 预留目录, 实体 ID 前缀, 存档预留段名, 最小预留, 写法纪律]
-owners: [WP-00]
-contributors: [WP-06, WP-07, WP-26, WP-27, WP-35, WP-39, WP-42, WP-46, WP-48b, WP-48c, WP-49a, WP-50]
 depends: [CORE-INDEX, ENG-ARCH, SYS-SAVE, SYS-MAPS]
-related: [PLAN-WP, ENG-BUDGET, ENG-PERF, SYS-MOTION, SYS-TIME, SYS-WALK, SYS-ATLAS, SYS-TITLE, WLD-INTERIORS, SYS-AUDIO]
+related: [ENG-BUDGET, ENG-PERF, SYS-MOTION, SYS-TIME, SYS-WALK, SYS-ATLAS, SYS-TITLE, WLD-INTERIORS, SYS-AUDIO]
 contracts: []
 data: []
 gates: [G4, G5, G20]
+paths: ["scripts/requirements.*", "game/testing/**", "game/data/build-code-fingerprints.json", "game/gen/maps/qingshuihe/Campus.Gen.Maps.Qingshuihe.csproj", "game/gen/sites/**", ".collab/tools/**", "dashboard/**", "game/gen/Campus.Gen.csproj", "game/kernel/map/data/**", "game/kernel/renderer/geometry/**", "game/kernel/renderer/render-state/**", "game/kernel/instances/**", "game/gen/geometry/**", "scripts/gates/arch/Campus.Arch.Tests.csproj", "scripts/godot-api/ApiDump/ApiDump.csproj", "game/contracts/Runtime/Campus.Contracts.Runtime.csproj", "game/contracts/Campus.Contracts.csproj", "game/data/maps/*/interiors.json", "game/Campus.Gen.Tests.csproj", "game/Campus.Tests.csproj", "game/contracts/.gdignore", "game/export_presets.cfg", "game/contracts/*.csproj", "game/kernel/registry/**", "game/data/rulesets/**", "scripts/gates/arch/**", "**/Directory.*.targets", "game/Campus.csproj", "game/gen/.gdignore", "game/project.godot", "Directory.*.targets", "game/kernel/stubs/**", "scripts/godot-api/**", "**/Directory.*.props", "scripts/gate.ps1", "third_party.json", "Directory.*.props", "docs/godot-api/**", "game/contracts/**", ".gitattributes", "scripts/build/**", "scripts/setup/**", "game/gen/bakeinput/assembly/**", "scripts/docs/**", "budgets.json", "game/addons/**", "global.json", "version.txt", "scripts/lib/**", ".gitignore", ".ignore", "AGENTS.md", "CLAUDE.md", "README.md", "启动游戏.cmd", "**/*.csproj", "LICENSE", "tools/**", "**/*.sln", "game/.editorconfig", "scripts/git-hooks/**"]
 ---
 # ENG-ROADMAP · 扩展路线
 
 > **范围**：本文只规定架构上的扩展原则、现在不能写死什么、写法纪律，以及 6 条最小预留。不设计 RPG 玩法。
-> **不在本文**：RPG 子系统挂点、预算余量与开工待办（RPG 开工时按当时的代码重写）；契约签名与冻结（ENG-ARCH §3）；各系统细则（各系统文档）；预算数值（ENG-BUDGET）；工作包划分（PLAN-WP）。契约名、数据路径以 `game/contracts/` 源码与各文档为准。
+> **不在本文**：RPG 子系统挂点、预算余量与开工待办（RPG 开工时按当时的代码重写）；契约签名与冻结（ENG-ARCH §3）；各系统细则（各系统文档）；预算数值（ENG-BUDGET）。契约名、数据路径以 `game/contracts/` 源码与各文档为准。
 > **查阅**：先读 §0；扩展原则看 §1；写死的规定与写法纪律看 §2；最小预留看 §3
 
 ## 0 结论
@@ -64,7 +63,7 @@ gates: [G4, G5, G20]
 3. **输入占用按原因计**：接管观者输入一律按原因占用，不设布尔开关，没有占用时才接受观者输入；原因有大地图、开始页、加载界面、菜单、改键捕获，以后末尾追加。
 4. **枚举的穷举纪律**：见 STD-CONVENTIONS §3.6。
 5. **偶发事件数据化**：事件 ID、路线实体、选树选灯规则、各版本开关记在数据里，导演只跑规则集允许的事件。
-6. **名字占位**：RPG 预留的目录（在 `ownership.json` 登记）、实体 ID 前缀 `npc:`、`item:`、`quest:`（G5 拒绝观光数据使用）、存档预留段名，以及 E、I 两个键和交互、背包两个动作名，观光期不写入、不分配给观光功能。
+6. **名字占位**：RPG 预留的目录（归属登记在相关文档的 `paths`）、实体 ID 前缀 `npc:`、`item:`、`quest:`（G5 拒绝观光数据使用）、存档预留段名，以及 E、I 两个键和交互、背包两个动作名，观光期不写入、不分配给观光功能。
 
 ### 3.2 不需要现在预留的
 

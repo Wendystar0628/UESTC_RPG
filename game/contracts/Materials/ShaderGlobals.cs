@@ -116,7 +116,7 @@ public static class ShaderGlobals
 /// <summary>Per-instance shader parameter names; these are not global uniforms.</summary>
 public static class InstanceShaderParameters
 {
-    /// <summary>Player body context: indoor blend, wetness, snow and reserved zero; produced by WP-54a and written by its figure host.</summary>
+    /// <summary>Player body context: indoor blend, wetness, snow and reserved zero; produced by game/camera/walk/ and written by its figure host.</summary>
     public const string FigCtx = "fig_ctx";
 
     /// <summary>Signed fade start on FadeClock; zero means no active fade.</summary>
@@ -128,15 +128,15 @@ public static class InstanceShaderParameters
     /// <summary>Enables noise cutout on vegetation shadow proxies.</summary>
     public const string ShadowProxy = "shadow_proxy";
 
-    /// <summary>Landmark fog exemption, from zero to one; defaults to zero and is owned by WP-40.</summary>
+    /// <summary>Landmark fog exemption, from zero to one; defaults to zero and is owned by game/systems/sky/.</summary>
     public const string FogExempt = "fog_exempt";
 
-    /// <summary>Precipitation loop-box displacement in xyz and half-size in w; owned by WP-45b.</summary>
+    /// <summary>Precipitation loop-box displacement in xyz and half-size in w; owned by game/systems/weather/precip/.</summary>
     public const string PrecipD = "precip_d";
 
-    /// <summary>Precipitation direction in xyz and streak length in w; owned by WP-45b.</summary>
+    /// <summary>Precipitation direction in xyz and streak length in w; owned by game/systems/weather/precip/.</summary>
     public const string PrecipV = "precip_v";
 
-    /// <summary>Precipitation kind, intensity, role and reserved value; owned by WP-45b.</summary>
+    /// <summary>Precipitation kind, intensity, role and reserved value; owned by game/systems/weather/precip/.</summary>
     public const string PrecipK = "precip_k";
 }

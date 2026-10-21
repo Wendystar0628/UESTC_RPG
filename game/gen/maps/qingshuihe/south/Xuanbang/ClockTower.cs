@@ -16,8 +16,8 @@ namespace Campus.Gen.Maps.Qingshuihe.South.Xuanbang;
 /// door xb.clock); a corniced setback stage carrying four metal-rimmed dials (the north-west one faces the lake and P09);
 /// a cylindrical lantern of slit columns round a solid core; and the dark grey bullet dome. Lantern and dome together read
 /// as the electron tube. The dome has a material of its own, so it stays a separate bundle for the retreat-line bias; the
-/// hands are WP-26's moving geometry on the dial pivots (DialCentre). The clock room and the lantern floor and railings
-/// are WP-31a's.
+/// hands are game/systems/'s moving geometry on the dial pivots (DialCentre). The clock room and the lantern floor and railings
+/// are game/gen/maps/qingshuihe/south/'s.
 /// </summary>
 internal static class ClockTower
 {
@@ -60,7 +60,7 @@ internal static class ClockTower
         yield return (new(f.P(-hx, 0), f.W), 2 * hz, false);
     }
 
-    /// <summary>Centre of each dial (world) and its outward plan direction: the pivots WP-26 turns the hands about.</summary>
+    /// <summary>Centre of each dial (world) and its outward plan direction: the pivots game/systems/ turns the hands about.</summary>
     internal static IEnumerable<(Vector3 Centre, Vector2 Normal)> DialCentres(FeatureRectangle plan, float y)
     {
         var (f, hx, hz) = FrameOf(plan);
@@ -229,7 +229,7 @@ internal static class ClockTower
                     b.Add(PartSolids.BeveledBox(X.SlitWidth + 0.24f, 0.1f, 0.22f, 0.015f, L.BeigeTrim),
                         g.At(side * (X.SlitGap * 0.5f + X.SlitWidth * 0.5f), y + X.SlitFirst + r * X.SlitPitch - 0.1f, 0.42f));
         }
-        // Portal infill: a glazed door, open on the door face (leaves back; mat, sign and lamp are WP-13's), closed elsewhere.
+        // Portal infill: a glazed door, open on the door face (leaves back; mat, sign and lamp are game/gen/furniture/'s), closed elsewhere.
         if (!door)
         {
             b.Add(PartSolids.BeveledBox(0.1f, X.PortalSpring, 0.1f, 0, L.DarkFrame), g.At(0, y, -0.08f));
@@ -240,7 +240,7 @@ internal static class ClockTower
             b.Add(PartSolids.BeveledBox(0.06f, X.PortalSpring - 0.1f, 1.1f, 0.012f, L.Wood), g.At(side * (X.PortalWidth * 0.5f - 0.05f), y, 0.2f));
     }
 
-    /// <summary>A dial on a stage face: pale disc, dark bezel ring, hour marks and the pivot boss (no hands: WP-26).</summary>
+    /// <summary>A dial on a stage face: pale disc, dark bezel ring, hour marks and the pivot boss (no hands: game/systems/).</summary>
     private static void Dial(SiteBuilder b, PlanFrame g, float y, int segments)
     {
         var r = X.DialRadius;

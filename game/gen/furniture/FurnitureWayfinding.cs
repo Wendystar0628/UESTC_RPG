@@ -14,7 +14,7 @@ namespace Campus.Gen.Furniture;
 internal static class FurnitureWayfinding
 {
     // ---------------------------------------------------------------------------------------------------------
-    // Drinking fountains and signposts (Opus review 13c2b 21:05): interim rules until WP-44's walk: points replace them.
+    // Drinking fountains and signposts (Opus review 13c2b 21:05): interim rules until game/gen/walkable/'s walk: points replace them.
     // ---------------------------------------------------------------------------------------------------------
 
     /// <summary>
@@ -93,7 +93,7 @@ internal static class FurnitureWayfinding
     }
 
     /// <summary>
-    /// Junctions of the pedestrian lines (WP-08's effective network): line ends gathered within <see cref="FurnitureStyle.JunctionSnap"/> of
+    /// Junctions of the pedestrian lines (game/gen/world/'s effective network): line ends gathered within <see cref="FurnitureStyle.JunctionSnap"/> of
     /// the first end of their group (lines in ID order), each with its branch count, a line that runs through the point without ending
     /// there counting two. Only points where two or more lines meet are kept.
     /// </summary>

@@ -1,4 +1,4 @@
-// ui_panel.gdshader（WP-35，白名单；UI-VISUAL）
+// ui_panel.gdshader（界面，白名单；UI-VISUAL）
 // 界面层唯一的不读屏幕的画布着色器。kind 区分四种用法：
 //   0 面板：StyleBoxFlat 只作载体（白色不透明底，ExpandMargin = margin），本着色器画切角 SDF、
 //     物理像素发丝线、顶边内高光、悬停、焦点衍射边（M5）、走线流光（M1）、量化出入场（M6）、

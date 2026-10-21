@@ -5,13 +5,12 @@ category: engineering
 parent: ENG-INDEX
 summary: 版本号与构建信息、正式用户目录、导出与发布、安装更新卸载、地图数据包、故障诊断、许可、署名与图标
 keywords: [发布, 交付, 版本号, version.txt, 构建信息, 导出, 导出入口, scripts/release, 引擎版本, 插件清单, UESTC-<版本>-win64.7z, 地图数据包, map-data-<版本>.zip, ODbL, 正式用户目录, '%APPDATA%\UESTC', 安装, 更新, 卸载, 诊断包, 导出诊断, 许可, MIT, third_party.json, 干净环境验证, OSM 署名, 许可页, 窗口标题, 窗口图标, 八角晶片]
-owners: [WP-00]
-contributors: [WP-01, WP-02, WP-08, WP-35, WP-47, WP-50]
 depends: [ENG-ARCH, ENG-PERF, ENG-GATES]
-related: [PLAN-WP, STD-CONVENTIONS, SYS-SAVE, SYS-TITLE, SYS-GRAPHICS, UI-NAV, UI-VISUAL, SYS-AUDIO, WLD-OUTSKIRTS]
+related: [STD-CONVENTIONS, SYS-SAVE, SYS-TITLE, SYS-GRAPHICS, UI-NAV, UI-VISUAL, SYS-AUDIO, WLD-OUTSKIRTS]
 contracts: []
 data: ["LICENSES.txt"]
 gates: [G6]
+paths: ["scripts/requirements.*", "game/testing/**", "game/data/build-code-fingerprints.json", "game/gen/maps/qingshuihe/Campus.Gen.Maps.Qingshuihe.csproj", "game/gen/sites/**", ".collab/tools/**", "dashboard/**", "game/gen/Campus.Gen.csproj", "game/kernel/map/data/**", "game/kernel/renderer/geometry/**", "game/kernel/renderer/render-state/**", "game/kernel/instances/**", "game/gen/geometry/**", "scripts/gates/arch/Campus.Arch.Tests.csproj", "scripts/godot-api/ApiDump/ApiDump.csproj", "game/contracts/Runtime/Campus.Contracts.Runtime.csproj", "game/contracts/Campus.Contracts.csproj", "game/data/maps/*/interiors.json", "game/Campus.Gen.Tests.csproj", "game/Campus.Tests.csproj", "game/contracts/.gdignore", "game/export_presets.cfg", "game/contracts/*.csproj", "game/kernel/registry/**", "game/data/rulesets/**", "scripts/gates/arch/**", "**/Directory.*.targets", "game/Campus.csproj", "game/gen/.gdignore", "game/project.godot", "Directory.*.targets", "game/kernel/stubs/**", "scripts/godot-api/**", "**/Directory.*.props", "scripts/gate.ps1", "third_party.json", "Directory.*.props", "docs/godot-api/**", "game/contracts/**", ".gitattributes", "scripts/build/**", "scripts/setup/**", "game/gen/bakeinput/assembly/**", "scripts/docs/**", "budgets.json", "game/addons/**", "global.json", "version.txt", "scripts/lib/**", ".gitignore", ".ignore", "AGENTS.md", "CLAUDE.md", "README.md", "启动游戏.cmd", "**/*.csproj", "LICENSE", "tools/**", "**/*.sln", "game/.editorconfig", "scripts/git-hooks/**"]
 ---
 # ENG-RELEASE · 发布与交付
 
@@ -35,7 +34,7 @@ gates: [G6]
 - **判断存档能不能读**：只看存档自己的各层版本号，构建信息只用于显示和定位问题（§1）。
 - **读写用户数据**：正式版 `user://` 是 `%APPDATA%\UESTC\`，不改名；开发态用 `UESTC_DEV`（§2）。
 - **改了导出配置、用户目录或存档格式**：再走一遍干净环境验证，在回报里点明改了哪一项（§3）。
-- **打地图数据包**：与安装包里是同一份字节，分工见 PLAN-WP-LIST（§5）。
+- **打地图数据包**：与安装包里是同一份字节，详见本文 §5。
 - **引入第三方素材、代码或插件**：只收白名单里的许可，登记后汇总进 `LICENSES.txt`；插件进 `third_party.json`（§7）。
 - **改署名、窗口标题或图标，写许可页、`LICENSES.txt` 或数据包说明**：署名只有一行 OSM 文字，`--ui=0` 时也保留；各处对同一类内容写同一种许可，并指向本版本的 `map-data-<版本>.zip`（§5、§7、§7.1）。
 - **场景或文案涉及学校标识**：本作不是校方作品，校徽、红十字换成原创图形（§7）。
@@ -85,7 +84,7 @@ gates: [G6]
 
 ## 6 故障处理与诊断
 
-- **日志**：`user://logs/godot.log`，每次启动轮换、保留最近 5 次；每行带所属工作包、当前图和流程阶段，第一行是构建信息；本机路径写成 `user://…`，不写出 Windows 用户名。
+- **日志**：`user://logs/godot.log`，每次启动轮换、保留最近 5 次；每行带归属文档编码（按文档文件头 paths 得到，仅作诊断）、当前图和流程阶段，第一行是构建信息；本机路径写成 `user://…`，不写出 Windows 用户名。
 - **导出诊断**：操作说明页的"导出诊断"（UI-NAV §3.5）把日志和诊断摘要打成 `UESTC-diag-<版本>-<序号>.zip`，写进 `user://diagnostics/`并打开该目录；默认只含日志和摘要，存档由玩家另勾选；游戏不联网，诊断包由试玩者自己发回。
 - **试玩者交回**：诊断包加一句话（在哪、做了什么、看到了什么）。代理按提交号检出代码复现，结论写进回报（WF-COMMS §3.4）。
 

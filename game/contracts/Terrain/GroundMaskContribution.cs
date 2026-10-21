@@ -15,7 +15,7 @@ public readonly record struct GroundMaskGrid(MapRect Rect, int Width, int Height
         if (Width <= 0 || Height <= 0 || !float.IsFinite(MetersPerPixel) || MetersPerPixel <= 0 ||
             !float.IsFinite(Rect.Min.X) || !float.IsFinite(Rect.Min.Y) || !float.IsFinite(Rect.Max.X) || !float.IsFinite(Rect.Max.Y))
             throw new ArgumentException("Mask layout must have positive finite dimensions.");
-        // Preserve the existing WP-15 / WP-23 grid rounding rule, including non-integral extents.
+        // Preserve the existing game/gen/ground/ / game/gen/vegetation/ grid rounding rule, including non-integral extents.
         if (Width != MathF.Round((Rect.Max.X - Rect.Min.X) / MetersPerPixel) ||
             Height != MathF.Round((Rect.Max.Y - Rect.Min.Y) / MetersPerPixel) ||
             mask1Bytes != ByteCount || mask2Bytes != ByteCount)
@@ -31,6 +31,6 @@ public interface IGroundMaskContributor
     GroundMaskChannels Channels { get; }
     /// <summary>Pure CPU contribution. Only declared channels may change: Mask1.R/G/A or Mask2.B; never retain spans.</summary>
     /// <remarks>Mask1.A is maple potential, a subset of OtherLeaves in Mask1.G. A contributor may overwrite its own channel;
-    /// global max-merging is not implied. Existing WP-23 corridor reductions therefore remain representable.</remarks>
+    /// global max-merging is not implied. Existing game/gen/vegetation/ corridor reductions therefore remain representable.</remarks>
     void Paint(BuildContext context, in GroundMaskGrid grid, Span<byte> mask1, Span<byte> mask2);
 }

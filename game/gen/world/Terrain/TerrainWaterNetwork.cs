@@ -137,7 +137,7 @@ internal static class TerrainWaterNetwork
             }
             if (members.Length > 1) b.Diagnostics.Add($"Same-level surface union: {string.Join(",", members.Select(spec => spec.Id.Value))}; only exposed union rings are shores, member IDs and original depth profiles retained.");
             if (bridgeBanks?.Contacts.Count > 0)
-                b.Diagnostics.Add($"Automatic bridge banks: {bridgeBanks.Contacts.Count} actual crossings on the exposed union shore, ±5 m Hard plus 2 m transitions. NOT_VERIFIED: corresponding WP-28 bank geometry.");
+                b.Diagnostics.Add($"Automatic bridge banks: {bridgeBanks.Contacts.Count} actual crossings on the exposed union shore, ±5 m Hard plus 2 m transitions. NOT_VERIFIED: corresponding game/gen/maps/qingshuihe/waterfront/ bank geometry.");
         }
     }
 

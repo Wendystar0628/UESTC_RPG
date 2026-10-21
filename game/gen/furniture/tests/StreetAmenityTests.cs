@@ -26,7 +26,7 @@ public sealed class StreetAmenityTests
     [TestCategory("Slow")]
     public void SignpostsStandAtLandmarkJunctionsOneToALineOfSight()
     {
-        // Opus review 13c2b 21:05 (until WP-44's points): a signpost only by a junction of three or more walks with a landmark within
+        // Opus review 13c2b 21:05 (until game/gen/walkable/'s points): a signpost only by a junction of three or more walks with a landmark within
         // 50 m, beside the paving, facing it; no two within 80 m (one to a line of sight). Judged from the network, not by place names.
         var world = World.Value;
         var layout = RealLayout.Value;
@@ -72,7 +72,7 @@ public sealed class StreetAmenityTests
     [TestCategory("Slow")]
     public void FountainsStandOutsideTheMainEntrancesOfSportsAndTeachingBuildings()
     {
-        // Opus review 13c2b 21:05 (until WP-44's points): one drinking fountain a building, by the main entrance of a sports venue or a
+        // Opus review 13c2b 21:05 (until game/gen/walkable/'s points): one drinking fountain a building, by the main entrance of a sports venue or a
         // teaching building (its first open entrance), 10–20 m in front of the door, beside the paving on a bay, facing it.
         var world = World.Value;
         var layout = RealLayout.Value;

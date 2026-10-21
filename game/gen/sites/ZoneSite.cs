@@ -17,7 +17,7 @@ public abstract class ZoneSite
     /// <summary>Conservative plan ranges covering output anchors, geometry and height reads; reads source data only, without building or terrain queries.</summary>
     public abstract IReadOnlyList<MapRect> Ranges(IWorldModel world);
 
-    /// <summary>Features this site builds instead of the generic producers (WP-14 skips claimed Massing).</summary>
+    /// <summary>Features this site builds instead of the generic producers (game/gen/buildings/ skips claimed Massing).</summary>
     public virtual IReadOnlyList<Claim> Claims => [];
 
     /// <summary>Geometry and placed parts for builder.Lod, in world space.</summary>

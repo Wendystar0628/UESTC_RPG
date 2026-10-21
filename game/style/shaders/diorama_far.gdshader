@@ -1,4 +1,4 @@
-// diorama_far.gdshader：远景环与雾海（WP-22；WLD-OUTSKIRTS-DIORAMA；ENG-PERF）
+// diorama_far.gdshader：远景环与雾海（WLD-OUTSKIRTS-DIORAMA；WLD-OUTSKIRTS-DIORAMA；ENG-PERF）
 //
 // 不透明、双面、不受影也不投影（顶点标志 8，宿主关投影）；颜色全部来自调色板与共用雾函数（fog.gdshaderinc），着色器里不写色值。
 // 顶点格式 VF-B（与水面同）：COLOR = 受光色号（影 = +1）、AO 字节、标志、备用字节 = 种类；UV、UV2 按远景顶点种类：

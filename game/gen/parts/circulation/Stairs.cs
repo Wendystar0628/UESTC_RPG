@@ -71,10 +71,10 @@ internal static class StraightFlight
 }
 
 /// <summary>
-/// Straight indoor flight (WLD-INTERIORS group C) in the WP-51a convention: Steps risers over Depth = Steps × tread,
+/// Straight indoor flight (WLD-INTERIORS group C) in the game/gen/interior/core/ convention: Steps risers over Depth = Steps × tread,
 /// the strip [0, tread] at the front is the lower floor and the last riser is the upper slab's edge. Height is floor to
 /// floor. Variation: 0 wall on −X and balustrade on +X, 1 walls on both sides (wall handrails only), 2 open both sides.
-/// Collision: the WP-51a RampCollider (26–34°, top flush, bottom buried 0.2 m, StairSpec) and a SlopedWallCollider on
+/// Collision: the RampCollider (26–34°, top flush, bottom buried 0.2 m, StairSpec) and a SlopedWallCollider on
 /// every open side whose top is 1.5 m over the nosings.
 /// </summary>
 [Part(PartCatalog.StairStraight)]
@@ -109,12 +109,12 @@ public sealed class StairOpenPart() : CirculationPart<StairParams>(new(860, 660)
 }
 
 /// <summary>
-/// Dog-leg stair of one storey (WLD-INTERIORS, the golden-sample stair), laid out exactly like WP-51a's plan:
+/// Dog-leg stair of one storey (WLD-INTERIORS, the golden-sample stair), laid out exactly like game/gen/interior/core/'s plan:
 /// Width = 2 flights + a 0.2 m well, Height = floor to floor, Steps = risers per flight, Depth = flight run + landing,
 /// where the landing is max(1.5 m, flight width) deep and the tread is what remains over Steps. The lower floor is
 /// in front (−Z); flight 1 climbs to the landing at the back, flight 2 returns to the upper slab edge at the front.
 /// Variation: 0 flight 1 on −X, 1 flight 1 on +X (mirror).
-/// Collision equals WP-51a's: two RampColliders, the landing SlabCollider and a full wall in the well from the lower
+/// Collision equals game/gen/interior/core/'s: two RampColliders, the landing SlabCollider and a full wall in the well from the lower
 /// floor to 1.5 m above the upper floor.
 /// </summary>
 [Part(PartCatalog.StairDouble)]

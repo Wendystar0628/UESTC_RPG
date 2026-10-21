@@ -7,7 +7,7 @@ using Campus.Contracts.Vegetation;
 namespace Campus.Gen.Vegetation;
 
 /// <summary>
-/// WP-23's content module (contract-32): reads its inputs through <see cref="VegetationInputs"/>, gives the trunk
+/// game/gen/vegetation/'s content module (contract-32): reads its inputs through <see cref="VegetationInputs"/>, gives the trunk
 /// colliders per 64 m cell (WLD-VEGETATION) and owns the canopy channels of the ground masks — ground_mask R
 /// (ginkgo leaves), G (other leaves and petals), A (the maple subset of G) and ground_mask2 B (canopy shelter), painted from one crown projection.
 /// The claim is exclusive: this contributor clears and paints these channels, so the values are the projection's own.

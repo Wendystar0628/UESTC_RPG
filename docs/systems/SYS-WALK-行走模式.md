@@ -5,13 +5,12 @@ category: systems
 parent: SYS-INDEX
 summary: 行走模式的玩家身体与步相、手感目标、第一与第三人称镜头与舒适度、旁观与行走的切换、控制器的规则
 keywords: [行走模式, 手感, 模式切换, 玩家身体, 步相, 自动登阶, 视角舒适度, 视角晃动, 第一人称, 第三人称, 吊杆, 身体淡入淡出, 控制器规则, 运动快照, 土狼时间, IViewControl, ModeSwitchVia, ModeSwitchResult, IWalkTelemetry]
-owners: [WP-42]
-contributors: [WP-00, WP-01, WP-06, WP-07, WP-08, WP-10, WP-11, WP-13, WP-15, WP-16, WP-17, WP-18, WP-20, WP-23, WP-24, WP-28, WP-30, WP-31a, WP-31b, WP-31c, WP-35, WP-36, WP-47, WP-48c, WP-50, WP-51, WP-53d, WP-54a, WP-54b]
 depends: [CORE-INDEX, SYS-VIEW, ENG-ARCH, ENG-BUDGET, ENG-PERF, UI-NAV, WLD-OUTSKIRTS, WLD-INTERIORS, SYS-AUDIO]
-related: [SYS-MOTION, ENG-GATES, ART-FIDELITY, MAP-QSH-ADDITIONS, PLAN-WP, SYS-TIME, SYS-WEATHER, SYS-GRAPHICS, SYS-ATLAS, SYS-TITLE, SYS-SAVE, SYS-MAPS, WLD-TERRAIN, WLD-WATER, WLD-LIFE]
+related: [SYS-MOTION, ENG-GATES, ART-FIDELITY, MAP-QSH-ADDITIONS, SYS-TIME, SYS-WEATHER, SYS-GRAPHICS, SYS-ATLAS, SYS-TITLE, SYS-SAVE, SYS-MAPS, WLD-TERRAIN, WLD-WATER, WLD-LIFE]
 contracts: [IViewControl, ModeSwitchVia, ModeSwitchResult, IWalkTelemetry]
 data: []
 gates: [G15, G21]
+paths: ["game/camera/walk/**"]
 ---
 
 # SYS-WALK · 行走模式

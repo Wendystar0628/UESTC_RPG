@@ -56,7 +56,7 @@
     </PropertyGroup>
     <ItemGroup>
       <_CampusCodeFingerprintToolPath Include="@(_CampusCodeFingerprintToolOutput)" />
-      <_CampusCodeFingerprintInput Include="$(MSBuildProjectDirectory)/../global.json;$(MSBuildProjectDirectory)/../ownership.json" />
+      <_CampusCodeFingerprintInput Include="$(MSBuildProjectDirectory)/../global.json;$(MSBuildProjectDirectory)/../docs/ROUTES.json" />
       <_CampusCodeFingerprintProperty Include="Configuration=$(Configuration);Platform=$(Platform);TargetFramework=$(TargetFramework)" />
       <_CampusCodeFingerprintProperty Include="RuntimeIdentifier=$(RuntimeIdentifier)" Condition="'$(RuntimeIdentifier)' != ''" />
       <_CampusCodeFingerprintProperty Include="SelfContained=$(SelfContained)" Condition="'$(SelfContained)' != ''" />

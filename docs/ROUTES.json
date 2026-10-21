@@ -56,9 +56,6 @@
   "MAP-QSH-WEST": "docs/maps/qingshuihe/MAP-QSH-WEST-西区与西北区.md",
   "MAP-QSH-WEST-SEASONS": "docs/maps/qingshuihe/MAP-QSH-WEST-SEASONS-西区与西北区四季昼夜与天气.md",
   "MAP-QSH-WEST-WALK": "docs/maps/qingshuihe/MAP-QSH-WEST-WALK-西区与西北区行走与声音.md",
-  "PLAN-INDEX": "docs/plan/PLAN-INDEX-计划总纲.md",
-  "PLAN-WP": "docs/plan/PLAN-WP-工作包与阶段.md",
-  "PLAN-WP-LIST": "docs/plan/PLAN-WP-LIST-工作包一览与子包拆法.md",
   "PRD-INDEX": "docs/product/PRD-INDEX-作品总纲.md",
   "PRD-INVARIANTS": "docs/product/PRD-INVARIANTS-全局不变量.md",
   "PRD-SCOPE": "docs/product/PRD-SCOPE-作品与范围.md",
@@ -133,6 +130,86 @@
  "paths": [
   {
    "docs": [
+    "ENG-ARCH",
+    "ENG-BUDGET",
+    "ENG-BUDGET-RULES",
+    "ENG-RELEASE",
+    "ENG-ROADMAP",
+    "STD-CODE",
+    "STD-CONVENTIONS",
+    "WF-BUILD",
+    "WF-COMMS",
+    "WF-ENTRY",
+    "WF-FLOW",
+    "WF-MODEL",
+    "WF-ROLE",
+    "WF-RULE",
+    "WF-STATUS"
+   ],
+   "glob": "**/*.csproj"
+  },
+  {
+   "docs": [
+    "ENG-ARCH",
+    "ENG-BUDGET",
+    "ENG-BUDGET-RULES",
+    "ENG-RELEASE",
+    "ENG-ROADMAP",
+    "STD-CODE",
+    "STD-CONVENTIONS",
+    "WF-BUILD",
+    "WF-COMMS",
+    "WF-ENTRY",
+    "WF-FLOW",
+    "WF-MODEL",
+    "WF-ROLE",
+    "WF-RULE",
+    "WF-STATUS"
+   ],
+   "glob": "**/*.sln"
+  },
+  {
+   "docs": [
+    "ENG-ARCH",
+    "ENG-BUDGET",
+    "ENG-BUDGET-RULES",
+    "ENG-RELEASE",
+    "ENG-ROADMAP",
+    "STD-CODE",
+    "STD-CONVENTIONS",
+    "WF-BUILD",
+    "WF-COMMS",
+    "WF-ENTRY",
+    "WF-FLOW",
+    "WF-MODEL",
+    "WF-ROLE",
+    "WF-RULE",
+    "WF-STATUS"
+   ],
+   "glob": "**/Directory.*.props"
+  },
+  {
+   "docs": [
+    "ENG-ARCH",
+    "ENG-BUDGET",
+    "ENG-BUDGET-RULES",
+    "ENG-RELEASE",
+    "ENG-ROADMAP",
+    "STD-CODE",
+    "STD-CONVENTIONS",
+    "WF-BUILD",
+    "WF-COMMS",
+    "WF-ENTRY",
+    "WF-FLOW",
+    "WF-MODEL",
+    "WF-ROLE",
+    "WF-RULE",
+    "WF-STATUS"
+   ],
+   "glob": "**/Directory.*.targets"
+  },
+  {
+   "docs": [
     "WF-COMMS"
    ],
    "glob": ".collab/notes/**"
@@ -159,6 +236,26 @@
   },
   {
    "docs": [
+    "ENG-ARCH",
+    "ENG-BUDGET",
+    "ENG-BUDGET-RULES",
+    "ENG-RELEASE",
+    "ENG-ROADMAP",
+    "STD-CODE",
+    "STD-CONVENTIONS",
+    "WF-BUILD",
+    "WF-COMMS",
+    "WF-ENTRY",
+    "WF-FLOW",
+    "WF-MODEL",
+    "WF-ROLE",
+    "WF-RULE",
+    "WF-STATUS"
+   ],
+   "glob": ".collab/tools/**"
+  },
+  {
+   "docs": [
     "ENG-FAILS"
    ],
    "glob": ".collab/tools/fail.py"
@@ -171,9 +268,229 @@
   },
   {
    "docs": [
+    "ENG-ARCH",
+    "ENG-BUDGET",
+    "ENG-BUDGET-RULES",
+    "ENG-RELEASE",
+    "ENG-ROADMAP",
+    "STD-CODE",
+    "STD-CONVENTIONS",
+    "WF-BUILD",
+    "WF-COMMS",
+    "WF-ENTRY",
+    "WF-FLOW",
+    "WF-MODEL",
+    "WF-ROLE",
+    "WF-RULE",
+    "WF-STATUS"
+   ],
+   "glob": ".gitattributes"
+  },
+  {
+   "docs": [
+    "ENG-ARCH",
+    "ENG-BUDGET",
+    "ENG-BUDGET-RULES",
+    "ENG-RELEASE",
+    "ENG-ROADMAP",
+    "STD-CODE",
+    "STD-CONVENTIONS",
+    "WF-BUILD",
+    "WF-COMMS",
+    "WF-ENTRY",
+    "WF-FLOW",
+    "WF-MODEL",
+    "WF-ROLE",
+    "WF-RULE",
+    "WF-STATUS"
+   ],
+   "glob": ".gitignore"
+  },
+  {
+   "docs": [
+    "ENG-ARCH",
+    "ENG-BUDGET",
+    "ENG-BUDGET-RULES",
+    "ENG-RELEASE",
+    "ENG-ROADMAP",
+    "STD-CODE",
+    "STD-CONVENTIONS",
+    "WF-BUILD",
+    "WF-COMMS",
+    "WF-ENTRY",
+    "WF-FLOW",
+    "WF-MODEL",
+    "WF-ROLE",
+    "WF-RULE",
+    "WF-STATUS"
+   ],
+   "glob": ".ignore"
+  },
+  {
+   "docs": [
+    "ENG-ARCH",
+    "ENG-BUDGET",
+    "ENG-BUDGET-RULES",
+    "ENG-RELEASE",
+    "ENG-ROADMAP",
+    "STD-CODE",
+    "STD-CONVENTIONS",
+    "WF-BUILD",
+    "WF-COMMS",
+    "WF-ENTRY",
+    "WF-FLOW",
+    "WF-MODEL",
+    "WF-ROLE",
+    "WF-RULE",
+    "WF-STATUS"
+   ],
+   "glob": "AGENTS.md"
+  },
+  {
+   "docs": [
+    "ENG-ARCH",
+    "ENG-BUDGET",
+    "ENG-BUDGET-RULES",
+    "ENG-RELEASE",
+    "ENG-ROADMAP",
+    "STD-CODE",
+    "STD-CONVENTIONS",
+    "WF-BUILD",
+    "WF-COMMS",
+    "WF-ENTRY",
+    "WF-FLOW",
+    "WF-MODEL",
+    "WF-ROLE",
+    "WF-RULE",
+    "WF-STATUS"
+   ],
+   "glob": "CLAUDE.md"
+  },
+  {
+   "docs": [
+    "ENG-ARCH",
+    "ENG-BUDGET",
+    "ENG-BUDGET-RULES",
+    "ENG-RELEASE",
+    "ENG-ROADMAP",
+    "STD-CODE",
+    "STD-CONVENTIONS",
+    "WF-BUILD",
+    "WF-COMMS",
+    "WF-ENTRY",
+    "WF-FLOW",
+    "WF-MODEL",
+    "WF-ROLE",
+    "WF-RULE",
+    "WF-STATUS"
+   ],
+   "glob": "Directory.*.props"
+  },
+  {
+   "docs": [
+    "ENG-ARCH",
+    "ENG-BUDGET",
+    "ENG-BUDGET-RULES",
+    "ENG-RELEASE",
+    "ENG-ROADMAP",
+    "STD-CODE",
+    "STD-CONVENTIONS",
+    "WF-BUILD",
+    "WF-COMMS",
+    "WF-ENTRY",
+    "WF-FLOW",
+    "WF-MODEL",
+    "WF-ROLE",
+    "WF-RULE",
+    "WF-STATUS"
+   ],
+   "glob": "Directory.*.targets"
+  },
+  {
+   "docs": [
     "ENG-BUDGET-RULES"
    ],
    "glob": "Directory.Build.props"
+  },
+  {
+   "docs": [
+    "ENG-ARCH",
+    "ENG-BUDGET",
+    "ENG-BUDGET-RULES",
+    "ENG-RELEASE",
+    "ENG-ROADMAP",
+    "STD-CODE",
+    "STD-CONVENTIONS",
+    "WF-BUILD",
+    "WF-COMMS",
+    "WF-ENTRY",
+    "WF-FLOW",
+    "WF-MODEL",
+    "WF-ROLE",
+    "WF-RULE",
+    "WF-STATUS"
+   ],
+   "glob": "LICENSE"
+  },
+  {
+   "docs": [
+    "ENG-ARCH",
+    "ENG-BUDGET",
+    "ENG-BUDGET-RULES",
+    "ENG-RELEASE",
+    "ENG-ROADMAP",
+    "STD-CODE",
+    "STD-CONVENTIONS",
+    "WF-BUILD",
+    "WF-COMMS",
+    "WF-ENTRY",
+    "WF-FLOW",
+    "WF-MODEL",
+    "WF-ROLE",
+    "WF-RULE",
+    "WF-STATUS"
+   ],
+   "glob": "README.md"
+  },
+  {
+   "docs": [
+    "ENG-ARCH",
+    "ENG-BUDGET",
+    "ENG-BUDGET-RULES",
+    "ENG-RELEASE",
+    "ENG-ROADMAP",
+    "STD-CODE",
+    "STD-CONVENTIONS",
+    "WF-BUILD",
+    "WF-COMMS",
+    "WF-ENTRY",
+    "WF-FLOW",
+    "WF-MODEL",
+    "WF-ROLE",
+    "WF-RULE",
+    "WF-STATUS"
+   ],
+   "glob": "budgets.json"
+  },
+  {
+   "docs": [
+    "ENG-ARCH",
+    "ENG-BUDGET",
+    "ENG-BUDGET-RULES",
+    "ENG-RELEASE",
+    "ENG-ROADMAP",
+    "STD-CODE",
+    "STD-CONVENTIONS",
+    "WF-BUILD",
+    "WF-COMMS",
+    "WF-ENTRY",
+    "WF-FLOW",
+    "WF-MODEL",
+    "WF-ROLE",
+    "WF-RULE",
+    "WF-STATUS"
+   ],
+   "glob": "dashboard/**"
   },
   {
    "docs": [
@@ -201,15 +518,29 @@
   },
   {
    "docs": [
-    "MAP-QSH-INDEX"
+    "ENG-ARCH",
+    "ENG-BUDGET",
+    "ENG-BUDGET-RULES",
+    "ENG-RELEASE",
+    "ENG-ROADMAP",
+    "STD-CODE",
+    "STD-CONVENTIONS",
+    "WF-BUILD",
+    "WF-COMMS",
+    "WF-ENTRY",
+    "WF-FLOW",
+    "WF-MODEL",
+    "WF-ROLE",
+    "WF-RULE",
+    "WF-STATUS"
    ],
-   "glob": "docs/maps/qingshuihe/**"
+   "glob": "docs/godot-api/**"
   },
   {
    "docs": [
-    "PLAN-INDEX"
+    "MAP-QSH-INDEX"
    ],
-   "glob": "docs/plan/**"
+   "glob": "docs/maps/qingshuihe/**"
   },
   {
    "docs": [
@@ -276,15 +607,1037 @@
   },
   {
    "docs": [
+    "ENG-ARCH",
+    "ENG-BUDGET",
+    "ENG-BUDGET-RULES",
+    "ENG-RELEASE",
+    "ENG-ROADMAP",
+    "STD-CODE",
+    "STD-CONVENTIONS",
+    "WF-BUILD",
+    "WF-COMMS",
+    "WF-ENTRY",
+    "WF-FLOW",
+    "WF-MODEL",
+    "WF-ROLE",
+    "WF-RULE",
+    "WF-STATUS"
+   ],
+   "glob": "game/.editorconfig"
+  },
+  {
+   "docs": [
+    "ENG-ARCH",
+    "ENG-BUDGET",
+    "ENG-BUDGET-RULES",
+    "ENG-RELEASE",
+    "ENG-ROADMAP",
+    "STD-CODE",
+    "STD-CONVENTIONS",
+    "WF-BUILD",
+    "WF-COMMS",
+    "WF-ENTRY",
+    "WF-FLOW",
+    "WF-MODEL",
+    "WF-ROLE",
+    "WF-RULE",
+    "WF-STATUS"
+   ],
+   "glob": "game/Campus.Gen.Tests.csproj"
+  },
+  {
+   "docs": [
+    "ENG-ARCH",
+    "ENG-BUDGET",
+    "ENG-BUDGET-RULES",
+    "ENG-RELEASE",
+    "ENG-ROADMAP",
+    "STD-CODE",
+    "STD-CONVENTIONS",
+    "WF-BUILD",
+    "WF-COMMS",
+    "WF-ENTRY",
+    "WF-FLOW",
+    "WF-MODEL",
+    "WF-ROLE",
+    "WF-RULE",
+    "WF-STATUS"
+   ],
+   "glob": "game/Campus.Tests.csproj"
+  },
+  {
+   "docs": [
+    "ENG-ARCH",
+    "ENG-BUDGET",
+    "ENG-BUDGET-RULES",
+    "ENG-RELEASE",
+    "ENG-ROADMAP",
+    "STD-CODE",
+    "STD-CONVENTIONS",
+    "WF-BUILD",
+    "WF-COMMS",
+    "WF-ENTRY",
+    "WF-FLOW",
+    "WF-MODEL",
+    "WF-ROLE",
+    "WF-RULE",
+    "WF-STATUS"
+   ],
+   "glob": "game/Campus.csproj"
+  },
+  {
+   "docs": [
+    "ENG-ARCH",
+    "ENG-BUDGET",
+    "ENG-BUDGET-RULES",
+    "ENG-RELEASE",
+    "ENG-ROADMAP",
+    "STD-CODE",
+    "STD-CONVENTIONS",
+    "WF-BUILD",
+    "WF-COMMS",
+    "WF-ENTRY",
+    "WF-FLOW",
+    "WF-MODEL",
+    "WF-ROLE",
+    "WF-RULE",
+    "WF-STATUS"
+   ],
+   "glob": "game/addons/**"
+  },
+  {
+   "docs": [
+    "SYS-AUDIO"
+   ],
+   "glob": "game/assets/audio/**"
+  },
+  {
+   "docs": [
+    "UI-VISUAL-COMPONENTS"
+   ],
+   "glob": "game/assets/hud/**"
+  },
+  {
+   "docs": [
+    "ART-STYLE",
+    "ART-STYLE-SHADING"
+   ],
+   "glob": "game/assets/scene-text/**"
+  },
+  {
+   "docs": [
+    "SYS-AUDIO"
+   ],
+   "glob": "game/audio/core/**"
+  },
+  {
+   "docs": [
+    "SYS-BORDER",
+    "SYS-VIEW",
+    "WLD-OUTSKIRTS"
+   ],
+   "glob": "game/camera/**"
+  },
+  {
+   "docs": [
+    "SYS-BORDER",
+    "SYS-WALK"
+   ],
+   "glob": "game/camera/walk/**"
+  },
+  {
+   "docs": [
+    "ENG-ARCH",
+    "ENG-BUDGET",
+    "ENG-BUDGET-RULES",
+    "ENG-RELEASE",
+    "ENG-ROADMAP",
+    "STD-CODE",
+    "STD-CONVENTIONS",
+    "WF-BUILD",
+    "WF-COMMS",
+    "WF-ENTRY",
+    "WF-FLOW",
+    "WF-MODEL",
+    "WF-ROLE",
+    "WF-RULE",
+    "WF-STATUS"
+   ],
+   "glob": "game/contracts/**"
+  },
+  {
+   "docs": [
+    "ENG-ARCH",
+    "ENG-BUDGET",
+    "ENG-BUDGET-RULES",
+    "ENG-RELEASE",
+    "ENG-ROADMAP",
+    "STD-CODE",
+    "STD-CONVENTIONS",
+    "WF-BUILD",
+    "WF-COMMS",
+    "WF-ENTRY",
+    "WF-FLOW",
+    "WF-MODEL",
+    "WF-ROLE",
+    "WF-RULE",
+    "WF-STATUS"
+   ],
+   "glob": "game/contracts/*.csproj"
+  },
+  {
+   "docs": [
+    "ENG-ARCH",
+    "ENG-BUDGET",
+    "ENG-BUDGET-RULES",
+    "ENG-RELEASE",
+    "ENG-ROADMAP",
+    "STD-CODE",
+    "STD-CONVENTIONS",
+    "WF-BUILD",
+    "WF-COMMS",
+    "WF-ENTRY",
+    "WF-FLOW",
+    "WF-MODEL",
+    "WF-ROLE",
+    "WF-RULE",
+    "WF-STATUS"
+   ],
+   "glob": "game/contracts/.gdignore"
+  },
+  {
+   "docs": [
+    "ENG-ARCH",
+    "ENG-BUDGET",
+    "ENG-BUDGET-RULES",
+    "ENG-RELEASE",
+    "ENG-ROADMAP",
+    "STD-CODE",
+    "STD-CONVENTIONS",
+    "WF-BUILD",
+    "WF-COMMS",
+    "WF-ENTRY",
+    "WF-FLOW",
+    "WF-MODEL",
+    "WF-ROLE",
+    "WF-RULE",
+    "WF-STATUS"
+   ],
+   "glob": "game/contracts/Campus.Contracts.csproj"
+  },
+  {
+   "docs": [
+    "ENG-ARCH",
+    "ENG-BUDGET",
+    "ENG-BUDGET-RULES",
+    "ENG-RELEASE",
+    "ENG-ROADMAP",
+    "STD-CODE",
+    "STD-CONVENTIONS",
+    "WF-BUILD",
+    "WF-COMMS",
+    "WF-ENTRY",
+    "WF-FLOW",
+    "WF-MODEL",
+    "WF-ROLE",
+    "WF-RULE",
+    "WF-STATUS"
+   ],
+   "glob": "game/contracts/Runtime/Campus.Contracts.Runtime.csproj"
+  },
+  {
+   "docs": [
+    "SYS-AUDIO"
+   ],
+   "glob": "game/data/audio/licenses.json"
+  },
+  {
+   "docs": [
+    "SYS-AUDIO"
+   ],
+   "glob": "game/data/audio/music.json"
+  },
+  {
+   "docs": [
+    "SYS-AUDIO"
+   ],
+   "glob": "game/data/audio/ui_cues.json"
+  },
+  {
+   "docs": [
+    "ENG-ARCH",
+    "ENG-BUDGET",
+    "ENG-BUDGET-RULES",
+    "ENG-RELEASE",
+    "ENG-ROADMAP",
+    "STD-CODE",
+    "STD-CONVENTIONS",
+    "WF-BUILD",
+    "WF-COMMS",
+    "WF-ENTRY",
+    "WF-FLOW",
+    "WF-MODEL",
+    "WF-ROLE",
+    "WF-RULE",
+    "WF-STATUS"
+   ],
+   "glob": "game/data/build-code-fingerprints.json"
+  },
+  {
+   "docs": [
     "SYS-MAPS"
    ],
    "glob": "game/data/maps/**"
   },
   {
    "docs": [
-    "ENG-BUDGET-RULES"
+    "SYS-ATLAS-UI"
+   ],
+   "glob": "game/data/maps/*/atlas/labels.json"
+  },
+  {
+   "docs": [
+    "SYS-ATLAS-TRAVEL"
+   ],
+   "glob": "game/data/maps/*/atlas/markers.json"
+  },
+  {
+   "docs": [
+    "WLD-OUTSKIRTS-DIORAMA"
+   ],
+   "glob": "game/data/maps/*/backdrop.json"
+  },
+  {
+   "docs": [
+    "ENG-ARCH",
+    "ENG-BUDGET",
+    "ENG-BUDGET-RULES",
+    "ENG-RELEASE",
+    "ENG-ROADMAP",
+    "STD-CODE",
+    "STD-CONVENTIONS",
+    "WF-BUILD",
+    "WF-COMMS",
+    "WF-ENTRY",
+    "WF-FLOW",
+    "WF-MODEL",
+    "WF-ROLE",
+    "WF-RULE",
+    "WF-STATUS"
+   ],
+   "glob": "game/data/maps/*/interiors.json"
+  },
+  {
+   "docs": [
+    "ART-COLORSCRIPT",
+    "MAP-QSH-ATMOSPHERE"
+   ],
+   "glob": "game/data/maps/*/lighting-schedule.json"
+  },
+  {
+   "docs": [
+    "SYS-MAPS"
+   ],
+   "glob": "game/data/maps/*/map.json"
+  },
+  {
+   "docs": [
+    "ART-STYLE",
+    "ART-STYLE-SHADING"
+   ],
+   "glob": "game/data/maps/*/materials.json"
+  },
+  {
+   "docs": [
+    "ART-FIDELITY",
+    "ART-FIDELITY-DETAIL",
+    "ENG-GATES",
+    "ENG-GATES-SHOTS",
+    "ENG-GATES-VETO"
+   ],
+   "glob": "game/data/maps/*/review.json"
+  },
+  {
+   "docs": [
+    "ART-SKYLIGHT-ATMOSPHERE"
+   ],
+   "glob": "game/data/maps/*/sky.json"
+  },
+  {
+   "docs": [
+    "SYS-TITLE"
+   ],
+   "glob": "game/data/maps/*/title-clouds.json"
+  },
+  {
+   "docs": [
+    "MAP-QSH-VEGETATION",
+    "WLD-VEGETATION"
+   ],
+   "glob": "game/data/maps/*/vegetation/**"
+  },
+  {
+   "docs": [
+    "MAP-QSH-TERRAIN-CHECKS",
+    "UI-NAV-WAYPOINTS"
+   ],
+   "glob": "game/data/maps/*/waypoints.json"
+  },
+  {
+   "docs": [
+    "MAP-QSH-ADDITIONS",
+    "MAP-QSH-ADDITIONS-VOCAB",
+    "MAP-QSH-RENOVATION",
+    "WLD-RENOVATION"
+   ],
+   "glob": "game/data/maps/*/window-numbering.json"
+  },
+  {
+   "docs": [
+    "SYS-ATLAS-TRAVEL"
+   ],
+   "glob": "game/data/maps/*/world/atlas.json"
+  },
+  {
+   "docs": [
+    "SYS-MAPS"
+   ],
+   "glob": "game/data/maps/index.json"
+  },
+  {
+   "docs": [
+    "SYS-MAPS"
+   ],
+   "glob": "game/data/maps/qingshuihe/map.json"
+  },
+  {
+   "docs": [
+    "MAP-QSH-ADDITIONS-VOCAB",
+    "SYS-BORDER",
+    "WLD-OUTSKIRTS"
+   ],
+   "glob": "game/data/maps/qingshuihe/world/boundary.json"
+  },
+  {
+   "docs": [
+    "MAP-QSH-CENTER-EAST",
+    "MAP-QSH-CENTER-EAST-SEASONS",
+    "MAP-QSH-CENTER-EAST-WALK",
+    "MAP-QSH-TERRAIN",
+    "MAP-QSH-TERRAIN-CHECKS",
+    "MAP-QSH-TERRAIN-DISTRICTS"
+   ],
+   "glob": "game/data/maps/qingshuihe/world/center-east.json"
+  },
+  {
+   "docs": [
+    "MAP-QSH-CENTER-EAST",
+    "MAP-QSH-CENTER-EAST-SEASONS",
+    "MAP-QSH-CENTER-EAST-WALK",
+    "MAP-QSH-TERRAIN",
+    "MAP-QSH-TERRAIN-CHECKS",
+    "MAP-QSH-TERRAIN-DISTRICTS"
+   ],
+   "glob": "game/data/maps/qingshuihe/world/center-east.terrain.json"
+  },
+  {
+   "docs": [
+    "MAP-QSH-CORE",
+    "MAP-QSH-CORE-SEASONS",
+    "MAP-QSH-CORE-WALK",
+    "MAP-QSH-TERRAIN",
+    "MAP-QSH-TERRAIN-CHECKS",
+    "MAP-QSH-TERRAIN-DISTRICTS"
+   ],
+   "glob": "game/data/maps/qingshuihe/world/core.json"
+  },
+  {
+   "docs": [
+    "MAP-QSH-CORE",
+    "MAP-QSH-CORE-SEASONS",
+    "MAP-QSH-CORE-WALK",
+    "MAP-QSH-TERRAIN",
+    "MAP-QSH-TERRAIN-CHECKS",
+    "MAP-QSH-TERRAIN-DISTRICTS"
+   ],
+   "glob": "game/data/maps/qingshuihe/world/core.terrain.json"
+  },
+  {
+   "docs": [
+    "ENG-PREVIEW",
+    "WLD-TERRAIN",
+    "WLD-TERRAIN-APPLY"
+   ],
+   "glob": "game/data/maps/qingshuihe/world/geo.json"
+  },
+  {
+   "docs": [
+    "MAP-QSH-NORTH",
+    "MAP-QSH-NORTH-SEASONS",
+    "MAP-QSH-NORTH-WALK",
+    "MAP-QSH-TERRAIN",
+    "MAP-QSH-TERRAIN-CHECKS",
+    "MAP-QSH-TERRAIN-DISTRICTS"
+   ],
+   "glob": "game/data/maps/qingshuihe/world/north.json"
+  },
+  {
+   "docs": [
+    "MAP-QSH-NORTH",
+    "MAP-QSH-NORTH-SEASONS",
+    "MAP-QSH-NORTH-WALK",
+    "MAP-QSH-TERRAIN",
+    "MAP-QSH-TERRAIN-CHECKS",
+    "MAP-QSH-TERRAIN-DISTRICTS"
+   ],
+   "glob": "game/data/maps/qingshuihe/world/north.terrain.json"
+  },
+  {
+   "docs": [
+    "ENG-PREVIEW",
+    "WLD-TERRAIN",
+    "WLD-TERRAIN-APPLY"
+   ],
+   "glob": "game/data/maps/qingshuihe/world/offcampus.json"
+  },
+  {
+   "docs": [
+    "MAP-QSH-ADDITIONS"
+   ],
+   "glob": "game/data/maps/qingshuihe/world/public.json"
+  },
+  {
+   "docs": [
+    "MAP-QSH-SOUTH",
+    "MAP-QSH-SOUTH-SEASONS",
+    "MAP-QSH-SOUTH-WALK",
+    "MAP-QSH-TERRAIN",
+    "MAP-QSH-TERRAIN-CHECKS",
+    "MAP-QSH-TERRAIN-DISTRICTS"
+   ],
+   "glob": "game/data/maps/qingshuihe/world/south.json"
+  },
+  {
+   "docs": [
+    "MAP-QSH-SOUTH",
+    "MAP-QSH-SOUTH-SEASONS",
+    "MAP-QSH-SOUTH-WALK",
+    "MAP-QSH-TERRAIN",
+    "MAP-QSH-TERRAIN-CHECKS",
+    "MAP-QSH-TERRAIN-DISTRICTS"
+   ],
+   "glob": "game/data/maps/qingshuihe/world/south.terrain.json"
+  },
+  {
+   "docs": [
+    "MAP-QSH-ADDITIONS-VOCAB"
+   ],
+   "glob": "game/data/maps/qingshuihe/world/waterfront.json"
+  },
+  {
+   "docs": [
+    "MAP-QSH-TERRAIN",
+    "MAP-QSH-TERRAIN-CHECKS",
+    "MAP-QSH-TERRAIN-DISTRICTS",
+    "MAP-QSH-WEST",
+    "MAP-QSH-WEST-SEASONS",
+    "MAP-QSH-WEST-WALK"
+   ],
+   "glob": "game/data/maps/qingshuihe/world/west.json"
+  },
+  {
+   "docs": [
+    "MAP-QSH-TERRAIN",
+    "MAP-QSH-TERRAIN-CHECKS",
+    "MAP-QSH-TERRAIN-DISTRICTS",
+    "MAP-QSH-WEST",
+    "MAP-QSH-WEST-SEASONS",
+    "MAP-QSH-WEST-WALK"
+   ],
+   "glob": "game/data/maps/qingshuihe/world/west.terrain.json"
+  },
+  {
+   "docs": [
+    "ENG-PERF",
+    "ENG-PREVIEW",
+    "SYS-VIEW"
+   ],
+   "glob": "game/data/pipeline-combinations.json"
+  },
+  {
+   "docs": [
+    "SYS-GRAPHICS"
+   ],
+   "glob": "game/data/quality-presets.json"
+  },
+  {
+   "docs": [
+    "ENG-ARCH",
+    "ENG-BUDGET",
+    "ENG-BUDGET-RULES",
+    "ENG-RELEASE",
+    "ENG-ROADMAP",
+    "STD-CODE",
+    "STD-CONVENTIONS",
+    "WF-BUILD",
+    "WF-COMMS",
+    "WF-ENTRY",
+    "WF-FLOW",
+    "WF-MODEL",
+    "WF-ROLE",
+    "WF-RULE",
+    "WF-STATUS"
+   ],
+   "glob": "game/data/rulesets/**"
+  },
+  {
+   "docs": [
+    "ART-STYLE",
+    "ART-STYLE-SHADING"
+   ],
+   "glob": "game/data/scene-text/**"
+  },
+  {
+   "docs": [
+    "MAP-QSH-VEGETATION",
+    "WLD-VEGETATION"
+   ],
+   "glob": "game/data/vegetation/**"
+  },
+  {
+   "docs": [
+    "SYS-WEATHER-PROCESS"
+   ],
+   "glob": "game/data/weather/**"
+  },
+  {
+   "docs": [
+    "ENG-ARCH",
+    "ENG-BUDGET",
+    "ENG-BUDGET-RULES",
+    "ENG-RELEASE",
+    "ENG-ROADMAP",
+    "STD-CODE",
+    "STD-CONVENTIONS",
+    "WF-BUILD",
+    "WF-COMMS",
+    "WF-ENTRY",
+    "WF-FLOW",
+    "WF-MODEL",
+    "WF-ROLE",
+    "WF-RULE",
+    "WF-STATUS"
    ],
    "glob": "game/export_presets.cfg"
+  },
+  {
+   "docs": [
+    "SYS-TITLE"
+   ],
+   "glob": "game/flow/**"
+  },
+  {
+   "docs": [
+    "ART-FIDELITY",
+    "ART-FIDELITY-DETAIL",
+    "ENG-GATES",
+    "ENG-GATES-SHOTS",
+    "ENG-GATES-VETO"
+   ],
+   "glob": "game/gates/**"
+  },
+  {
+   "docs": [
+    "ENG-ARCH",
+    "ENG-BUDGET",
+    "ENG-BUDGET-RULES",
+    "ENG-RELEASE",
+    "ENG-ROADMAP",
+    "STD-CODE",
+    "STD-CONVENTIONS",
+    "WF-BUILD",
+    "WF-COMMS",
+    "WF-ENTRY",
+    "WF-FLOW",
+    "WF-MODEL",
+    "WF-ROLE",
+    "WF-RULE",
+    "WF-STATUS"
+   ],
+   "glob": "game/gen/.gdignore"
+  },
+  {
+   "docs": [
+    "ENG-ARCH",
+    "ENG-BUDGET",
+    "ENG-BUDGET-RULES",
+    "ENG-RELEASE",
+    "ENG-ROADMAP",
+    "STD-CODE",
+    "STD-CONVENTIONS",
+    "WF-BUILD",
+    "WF-COMMS",
+    "WF-ENTRY",
+    "WF-FLOW",
+    "WF-MODEL",
+    "WF-ROLE",
+    "WF-RULE",
+    "WF-STATUS"
+   ],
+   "glob": "game/gen/Campus.Gen.csproj"
+  },
+  {
+   "docs": [
+    "SYS-ATLAS-UI"
+   ],
+   "glob": "game/gen/bakeinput/**"
+  },
+  {
+   "docs": [
+    "ENG-ARCH",
+    "ENG-BUDGET",
+    "ENG-BUDGET-RULES",
+    "ENG-RELEASE",
+    "ENG-ROADMAP",
+    "STD-CODE",
+    "STD-CONVENTIONS",
+    "WF-BUILD",
+    "WF-COMMS",
+    "WF-ENTRY",
+    "WF-FLOW",
+    "WF-MODEL",
+    "WF-ROLE",
+    "WF-RULE",
+    "WF-STATUS"
+   ],
+   "glob": "game/gen/bakeinput/assembly/**"
+  },
+  {
+   "docs": [
+    "MAP-QSH-ADDITIONS",
+    "MAP-QSH-ADDITIONS-VOCAB",
+    "MAP-QSH-RENOVATION",
+    "WLD-RENOVATION"
+   ],
+   "glob": "game/gen/buildings/**"
+  },
+  {
+   "docs": [
+    "SYS-WALK-BOUNDS"
+   ],
+   "glob": "game/gen/collision/**"
+  },
+  {
+   "docs": [
+    "WLD-OUTSKIRTS-DIORAMA"
+   ],
+   "glob": "game/gen/diorama/**"
+  },
+  {
+   "docs": [
+    "WLD-LIFE",
+    "WLD-LIFE-FAUNA"
+   ],
+   "glob": "game/gen/fauna/**"
+  },
+  {
+   "docs": [
+    "MAP-QSH-ADDITIONS",
+    "MAP-QSH-ADDITIONS-VOCAB",
+    "WLD-AMBIENCE",
+    "WLD-LIFE",
+    "WLD-LIFE-STREET"
+   ],
+   "glob": "game/gen/furniture/**"
+  },
+  {
+   "docs": [
+    "ENG-ARCH",
+    "ENG-BUDGET",
+    "ENG-BUDGET-RULES",
+    "ENG-RELEASE",
+    "ENG-ROADMAP",
+    "STD-CODE",
+    "STD-CONVENTIONS",
+    "WF-BUILD",
+    "WF-COMMS",
+    "WF-ENTRY",
+    "WF-FLOW",
+    "WF-MODEL",
+    "WF-ROLE",
+    "WF-RULE",
+    "WF-STATUS"
+   ],
+   "glob": "game/gen/geometry/**"
+  },
+  {
+   "docs": [
+    "WLD-TERRAIN",
+    "WLD-TERRAIN-APPLY",
+    "WLD-TERRAIN-SHAPE"
+   ],
+   "glob": "game/gen/ground/**"
+  },
+  {
+   "docs": [
+    "WLD-INTERIORS"
+   ],
+   "glob": "game/gen/interior/core/**"
+  },
+  {
+   "docs": [
+    "WLD-INTERIORS"
+   ],
+   "glob": "game/gen/interior/shell/**"
+  },
+  {
+   "docs": [
+    "ENG-ARCH",
+    "ENG-BUDGET",
+    "ENG-BUDGET-RULES",
+    "ENG-RELEASE",
+    "ENG-ROADMAP",
+    "STD-CODE",
+    "STD-CONVENTIONS",
+    "WF-BUILD",
+    "WF-COMMS",
+    "WF-ENTRY",
+    "WF-FLOW",
+    "WF-MODEL",
+    "WF-ROLE",
+    "WF-RULE",
+    "WF-STATUS"
+   ],
+   "glob": "game/gen/maps/qingshuihe/Campus.Gen.Maps.Qingshuihe.csproj"
+  },
+  {
+   "docs": [
+    "MAP-QSH-ADDITIONS-VOCAB",
+    "SYS-BORDER",
+    "WLD-OUTSKIRTS"
+   ],
+   "glob": "game/gen/maps/qingshuihe/boundary/**"
+  },
+  {
+   "docs": [
+    "MAP-QSH-CENTER-EAST",
+    "MAP-QSH-CENTER-EAST-SEASONS",
+    "MAP-QSH-CENTER-EAST-WALK",
+    "MAP-QSH-TERRAIN",
+    "MAP-QSH-TERRAIN-CHECKS",
+    "MAP-QSH-TERRAIN-DISTRICTS"
+   ],
+   "glob": "game/gen/maps/qingshuihe/center-east/**"
+  },
+  {
+   "docs": [
+    "MAP-QSH-CORE",
+    "MAP-QSH-CORE-SEASONS",
+    "MAP-QSH-CORE-WALK",
+    "MAP-QSH-TERRAIN",
+    "MAP-QSH-TERRAIN-CHECKS",
+    "MAP-QSH-TERRAIN-DISTRICTS"
+   ],
+   "glob": "game/gen/maps/qingshuihe/core/**"
+  },
+  {
+   "docs": [
+    "MAP-QSH-INTERIORS-LIBRARY",
+    "WLD-INTERIORS",
+    "WLD-INTERIORS-ACCESS"
+   ],
+   "glob": "game/gen/maps/qingshuihe/core/LibraryInterior/**"
+  },
+  {
+   "docs": [
+    "MAP-QSH-INTERIORS-LIBRARY",
+    "WLD-INTERIORS",
+    "WLD-INTERIORS-ACCESS"
+   ],
+   "glob": "game/gen/maps/qingshuihe/core/tests/LibraryInteriorTests.cs"
+  },
+  {
+   "docs": [
+    "MAP-QSH-NORTH",
+    "MAP-QSH-NORTH-SEASONS",
+    "MAP-QSH-NORTH-WALK",
+    "MAP-QSH-TERRAIN",
+    "MAP-QSH-TERRAIN-CHECKS",
+    "MAP-QSH-TERRAIN-DISTRICTS"
+   ],
+   "glob": "game/gen/maps/qingshuihe/north/**"
+  },
+  {
+   "docs": [
+    "MAP-QSH-ADDITIONS"
+   ],
+   "glob": "game/gen/maps/qingshuihe/public/**"
+  },
+  {
+   "docs": [
+    "MAP-QSH-SOUTH",
+    "MAP-QSH-SOUTH-SEASONS",
+    "MAP-QSH-SOUTH-WALK",
+    "MAP-QSH-TERRAIN",
+    "MAP-QSH-TERRAIN-CHECKS",
+    "MAP-QSH-TERRAIN-DISTRICTS"
+   ],
+   "glob": "game/gen/maps/qingshuihe/south/**"
+  },
+  {
+   "docs": [
+    "MAP-QSH-ADDITIONS-VOCAB"
+   ],
+   "glob": "game/gen/maps/qingshuihe/waterfront/**"
+  },
+  {
+   "docs": [
+    "MAP-QSH-TERRAIN",
+    "MAP-QSH-TERRAIN-CHECKS",
+    "MAP-QSH-TERRAIN-DISTRICTS",
+    "MAP-QSH-WEST",
+    "MAP-QSH-WEST-SEASONS",
+    "MAP-QSH-WEST-WALK"
+   ],
+   "glob": "game/gen/maps/qingshuihe/west/**"
+  },
+  {
+   "docs": [
+    "MAP-QSH-INTERIORS",
+    "WLD-INTERIORS",
+    "WLD-INTERIORS-ACCESS"
+   ],
+   "glob": "game/gen/maps/qingshuihe/west/SixInterior/**"
+  },
+  {
+   "docs": [
+    "ART-MODELING",
+    "WLD-INTERIORS"
+   ],
+   "glob": "game/gen/parts/circulation/**"
+  },
+  {
+   "docs": [
+    "ART-MODELING",
+    "ART-MODELING-PROPORTION"
+   ],
+   "glob": "game/gen/parts/core/**"
+  },
+  {
+   "docs": [
+    "ART-FIDELITY",
+    "WLD-INTERIORS"
+   ],
+   "glob": "game/gen/parts/openings/**"
+  },
+  {
+   "docs": [
+    "ART-FIDELITY",
+    "WLD-INTERIORS"
+   ],
+   "glob": "game/gen/parts/roof/**"
+  },
+  {
+   "docs": [
+    "MAP-QSH-CENTER-EAST",
+    "MAP-QSH-CENTER-EAST-SEASONS",
+    "MAP-QSH-CENTER-EAST-WALK",
+    "MAP-QSH-TERRAIN",
+    "MAP-QSH-TERRAIN-CHECKS",
+    "MAP-QSH-TERRAIN-DISTRICTS"
+   ],
+   "glob": "game/gen/parts/sport/**"
+  },
+  {
+   "docs": [
+    "MAP-QSH-ADDITIONS",
+    "MAP-QSH-ADDITIONS-VOCAB",
+    "WLD-AMBIENCE",
+    "WLD-LIFE",
+    "WLD-LIFE-STREET"
+   ],
+   "glob": "game/gen/parts/street/**"
+  },
+  {
+   "docs": [
+    "ENG-ARCH",
+    "ENG-BUDGET",
+    "ENG-BUDGET-RULES",
+    "ENG-RELEASE",
+    "ENG-ROADMAP",
+    "STD-CODE",
+    "STD-CONVENTIONS",
+    "WF-BUILD",
+    "WF-COMMS",
+    "WF-ENTRY",
+    "WF-FLOW",
+    "WF-MODEL",
+    "WF-ROLE",
+    "WF-RULE",
+    "WF-STATUS"
+   ],
+   "glob": "game/gen/sites/**"
+  },
+  {
+   "docs": [
+    "MAP-QSH-VEGETATION",
+    "WLD-VEGETATION"
+   ],
+   "glob": "game/gen/vegetation/**"
+  },
+  {
+   "docs": [
+    "MAP-QSH-WATER",
+    "WLD-WATER"
+   ],
+   "glob": "game/gen/water/**"
+  },
+  {
+   "docs": [
+    "ENG-PREVIEW",
+    "WLD-TERRAIN",
+    "WLD-TERRAIN-APPLY"
+   ],
+   "glob": "game/gen/world/**"
+  },
+  {
+   "docs": [
+    "UI-NAV",
+    "UI-VISUAL",
+    "UI-VISUAL-COMPONENTS",
+    "UI-VISUAL-MOTION"
+   ],
+   "glob": "game/hud/**"
+  },
+  {
+   "docs": [
+    "UI-NAV"
+   ],
+   "glob": "game/hud/i18n/**"
+  },
+  {
+   "docs": [
+    "SYS-ATLAS-UI"
+   ],
+   "glob": "game/hud/map/**"
+  },
+  {
+   "docs": [
+    "UI-VISUAL-MOTION"
+   ],
+   "glob": "game/hud/motion/**"
+  },
+  {
+   "docs": [
+    "UI-VISUAL"
+   ],
+   "glob": "game/hud/style/**"
+  },
+  {
+   "docs": [
+    "UI-VISUAL"
+   ],
+   "glob": "game/hud/widgets/**"
   },
   {
    "docs": [
@@ -294,9 +1647,351 @@
   },
   {
    "docs": [
-    "ENG-BUDGET-RULES"
+    "ENG-ARCH"
+   ],
+   "glob": "game/kernel/bake/**"
+  },
+  {
+   "docs": [
+    "ENG-PERF",
+    "ENG-PREVIEW",
+    "SYS-VIEW"
+   ],
+   "glob": "game/kernel/boot/**"
+  },
+  {
+   "docs": [
+    "SYS-TITLE"
+   ],
+   "glob": "game/kernel/boot/TitleCloudNode.cs"
+  },
+  {
+   "docs": [
+    "SYS-TITLE"
+   ],
+   "glob": "game/kernel/boot/TitleCloudNode.cs.uid"
+  },
+  {
+   "docs": [
+    "SYS-WALK-BOUNDS"
+   ],
+   "glob": "game/kernel/collision/**"
+  },
+  {
+   "docs": [
+    "ENG-PERF",
+    "ENG-PREVIEW",
+    "SYS-VIEW"
+   ],
+   "glob": "game/kernel/diagnostics/**"
+  },
+  {
+   "docs": [
+    "ENG-PERF",
+    "ENG-PREVIEW",
+    "SYS-VIEW"
+   ],
+   "glob": "game/kernel/frame/**"
+  },
+  {
+   "docs": [
+    "ENG-PERF",
+    "ENG-PREVIEW",
+    "SYS-VIEW"
+   ],
+   "glob": "game/kernel/inspect/**"
+  },
+  {
+   "docs": [
+    "ENG-ARCH",
+    "ENG-BUDGET",
+    "ENG-BUDGET-RULES",
+    "ENG-RELEASE",
+    "ENG-ROADMAP",
+    "STD-CODE",
+    "STD-CONVENTIONS",
+    "WF-BUILD",
+    "WF-COMMS",
+    "WF-ENTRY",
+    "WF-FLOW",
+    "WF-MODEL",
+    "WF-ROLE",
+    "WF-RULE",
+    "WF-STATUS"
+   ],
+   "glob": "game/kernel/instances/**"
+  },
+  {
+   "docs": [
+    "ART-SKYLIGHT",
+    "ENG-PERF-LIGHT"
+   ],
+   "glob": "game/kernel/lighting/**"
+  },
+  {
+   "docs": [
+    "ART-SKYLIGHT",
+    "ENG-PERF-LIGHT"
+   ],
+   "glob": "game/kernel/lighting/KeyLightModel.cs"
+  },
+  {
+   "docs": [
+    "ART-SKYLIGHT",
+    "ENG-PERF-LIGHT"
+   ],
+   "glob": "game/kernel/lighting/KeyLightState.cs"
+  },
+  {
+   "docs": [
+    "ENG-PERF-STREAM"
+   ],
+   "glob": "game/kernel/lod/**"
+  },
+  {
+   "docs": [
+    "SYS-MAPS"
+   ],
+   "glob": "game/kernel/map/**"
+  },
+  {
+   "docs": [
+    "ENG-ARCH",
+    "ENG-BUDGET",
+    "ENG-BUDGET-RULES",
+    "ENG-RELEASE",
+    "ENG-ROADMAP",
+    "STD-CODE",
+    "STD-CONVENTIONS",
+    "WF-BUILD",
+    "WF-COMMS",
+    "WF-ENTRY",
+    "WF-FLOW",
+    "WF-MODEL",
+    "WF-ROLE",
+    "WF-RULE",
+    "WF-STATUS"
+   ],
+   "glob": "game/kernel/map/data/**"
+  },
+  {
+   "docs": [
+    "WLD-TERRAIN",
+    "WLD-TERRAIN-APPLY",
+    "WLD-TERRAIN-SHAPE"
+   ],
+   "glob": "game/kernel/map/data/GroundCoverTextures.cs"
+  },
+  {
+   "docs": [
+    "WLD-TERRAIN",
+    "WLD-TERRAIN-APPLY",
+    "WLD-TERRAIN-SHAPE"
+   ],
+   "glob": "game/kernel/map/data/GroundCoverTextures.cs.uid"
+  },
+  {
+   "docs": [
+    "ART-STYLE-LINES"
+   ],
+   "glob": "game/kernel/post/**"
+  },
+  {
+   "docs": [
+    "ENG-PERF-ADAPT",
+    "SYS-GRAPHICS"
+   ],
+   "glob": "game/kernel/quality/**"
+  },
+  {
+   "docs": [
+    "SYS-GRAPHICS"
+   ],
+   "glob": "game/kernel/quality/settings/**"
+  },
+  {
+   "docs": [
+    "ENG-ARCH",
+    "ENG-BUDGET",
+    "ENG-BUDGET-RULES",
+    "ENG-RELEASE",
+    "ENG-ROADMAP",
+    "STD-CODE",
+    "STD-CONVENTIONS",
+    "WF-BUILD",
+    "WF-COMMS",
+    "WF-ENTRY",
+    "WF-FLOW",
+    "WF-MODEL",
+    "WF-ROLE",
+    "WF-RULE",
+    "WF-STATUS"
+   ],
+   "glob": "game/kernel/registry/**"
+  },
+  {
+   "docs": [
+    "ENG-PERF",
+    "ENG-PREVIEW",
+    "SYS-VIEW"
+   ],
+   "glob": "game/kernel/renderer/**"
+  },
+  {
+   "docs": [
+    "ENG-ARCH",
+    "ENG-BUDGET",
+    "ENG-BUDGET-RULES",
+    "ENG-RELEASE",
+    "ENG-ROADMAP",
+    "STD-CODE",
+    "STD-CONVENTIONS",
+    "WF-BUILD",
+    "WF-COMMS",
+    "WF-ENTRY",
+    "WF-FLOW",
+    "WF-MODEL",
+    "WF-ROLE",
+    "WF-RULE",
+    "WF-STATUS"
+   ],
+   "glob": "game/kernel/renderer/geometry/**"
+  },
+  {
+   "docs": [
+    "ENG-ARCH",
+    "ENG-BUDGET",
+    "ENG-BUDGET-RULES",
+    "ENG-RELEASE",
+    "ENG-ROADMAP",
+    "STD-CODE",
+    "STD-CONVENTIONS",
+    "WF-BUILD",
+    "WF-COMMS",
+    "WF-ENTRY",
+    "WF-FLOW",
+    "WF-MODEL",
+    "WF-ROLE",
+    "WF-RULE",
+    "WF-STATUS"
+   ],
+   "glob": "game/kernel/renderer/render-state/**"
+  },
+  {
+   "docs": [
+    "SYS-SAVE",
+    "SYS-SAVE-FLOW",
+    "SYS-SAVE-FORMAT"
+   ],
+   "glob": "game/kernel/save/**"
+  },
+  {
+   "docs": [
+    "ENG-PERF-ADAPT",
+    "SYS-GRAPHICS"
+   ],
+   "glob": "game/kernel/settings/**"
+  },
+  {
+   "docs": [
+    "ENG-PERF-STREAM"
+   ],
+   "glob": "game/kernel/stream/**"
+  },
+  {
+   "docs": [
+    "SYS-WALK-BOUNDS"
+   ],
+   "glob": "game/kernel/stream/CollisionMountWork.cs"
+  },
+  {
+   "docs": [
+    "SYS-WALK-BOUNDS"
+   ],
+   "glob": "game/kernel/stream/CollisionMountWork.cs.uid"
+  },
+  {
+   "docs": [
+    "SYS-WALK-BOUNDS"
+   ],
+   "glob": "game/kernel/stream/CollisionTileParticipant.cs"
+  },
+  {
+   "docs": [
+    "SYS-WALK-BOUNDS"
+   ],
+   "glob": "game/kernel/stream/CollisionTileParticipant.cs.uid"
+  },
+  {
+   "docs": [
+    "ENG-PREVIEW",
+    "WLD-TERRAIN",
+    "WLD-TERRAIN-APPLY"
+   ],
+   "glob": "game/kernel/stream/StreamMountWork.cs"
+  },
+  {
+   "docs": [
+    "ENG-PREVIEW",
+    "WLD-TERRAIN",
+    "WLD-TERRAIN-APPLY"
+   ],
+   "glob": "game/kernel/stream/StreamMountWork.cs.uid"
+  },
+  {
+   "docs": [
+    "ENG-ARCH",
+    "ENG-BUDGET",
+    "ENG-BUDGET-RULES",
+    "ENG-RELEASE",
+    "ENG-ROADMAP",
+    "STD-CODE",
+    "STD-CONVENTIONS",
+    "WF-BUILD",
+    "WF-COMMS",
+    "WF-ENTRY",
+    "WF-FLOW",
+    "WF-MODEL",
+    "WF-ROLE",
+    "WF-RULE",
+    "WF-STATUS"
+   ],
+   "glob": "game/kernel/stubs/**"
+  },
+  {
+   "docs": [
+    "ART-SKYLIGHT",
+    "SYS-TIME"
+   ],
+   "glob": "game/kernel/world/**"
+  },
+  {
+   "docs": [
+    "ENG-ARCH",
+    "ENG-BUDGET",
+    "ENG-BUDGET-RULES",
+    "ENG-RELEASE",
+    "ENG-ROADMAP",
+    "STD-CODE",
+    "STD-CONVENTIONS",
+    "WF-BUILD",
+    "WF-COMMS",
+    "WF-ENTRY",
+    "WF-FLOW",
+    "WF-MODEL",
+    "WF-ROLE",
+    "WF-RULE",
+    "WF-STATUS"
    ],
    "glob": "game/project.godot"
+  },
+  {
+   "docs": [
+    "ENG-PERF",
+    "ENG-PREVIEW",
+    "SYS-VIEW"
+   ],
+   "glob": "game/stage/**"
   },
   {
    "docs": [
@@ -306,9 +2001,602 @@
   },
   {
    "docs": [
+    "ART-STYLE-LINES"
+   ],
+   "glob": "game/style/outline/**"
+  },
+  {
+   "docs": [
+    "ART-STYLE-LINES"
+   ],
+   "glob": "game/style/outline/fog.glslinc"
+  },
+  {
+   "docs": [
+    "ART-STYLE-LINES"
+   ],
+   "glob": "game/style/outline/post_outline.glsl"
+  },
+  {
+   "docs": [
+    "ART-STYLE",
+    "ART-STYLE-SHADING"
+   ],
+   "glob": "game/style/palette/**"
+  },
+  {
+   "docs": [
+    "WLD-LIFE",
+    "WLD-LIFE-FAUNA"
+   ],
+   "glob": "game/style/palette/ext/fauna.json"
+  },
+  {
+   "docs": [
+    "WLD-TERRAIN",
+    "WLD-TERRAIN-APPLY",
+    "WLD-TERRAIN-SHAPE"
+   ],
+   "glob": "game/style/palette/ext/ground.json"
+  },
+  {
+   "docs": [
+    "ART-STYLE",
+    "ART-STYLE-SHADING"
+   ],
+   "glob": "game/style/palette/ext/landmark_materials.json"
+  },
+  {
+   "docs": [
+    "ART-FIDELITY",
+    "WLD-INTERIORS"
+   ],
+   "glob": "game/style/palette/ext/openings.json"
+  },
+  {
+   "docs": [
+    "ART-FIDELITY",
+    "WLD-INTERIORS"
+   ],
+   "glob": "game/style/palette/ext/roof_equipment.json"
+  },
+  {
+   "docs": [
+    "ART-STYLE",
+    "ART-STYLE-SHADING"
+   ],
+   "glob": "game/style/palette/ext/street_furniture.json"
+  },
+  {
+   "docs": [
+    "MAP-QSH-VEGETATION",
+    "WLD-VEGETATION"
+   ],
+   "glob": "game/style/palette/ext/tree_bark.json"
+  },
+  {
+   "docs": [
+    "UI-NAV",
+    "UI-VISUAL",
+    "UI-VISUAL-COMPONENTS",
+    "UI-VISUAL-MOTION"
+   ],
+   "glob": "game/style/palette/ext/ui.json"
+  },
+  {
+   "docs": [
+    "MAP-QSH-WATER",
+    "WLD-WATER"
+   ],
+   "glob": "game/style/palette/ext/water.json"
+  },
+  {
+   "docs": [
+    "ART-COLORSCRIPT"
+   ],
+   "glob": "game/style/palette/keys/**"
+  },
+  {
+   "docs": [
+    "ART-STYLE",
+    "ART-STYLE-SHADING"
+   ],
+   "glob": "game/style/shaders/**"
+  },
+  {
+   "docs": [
+    "SYS-TITLE"
+   ],
+   "glob": "game/style/shaders/cine_cloud.gdshader"
+  },
+  {
+   "docs": [
+    "SYS-TITLE"
+   ],
+   "glob": "game/style/shaders/cine_cloud.gdshader.uid"
+  },
+  {
+   "docs": [
+    "WLD-OUTSKIRTS-DIORAMA"
+   ],
+   "glob": "game/style/shaders/diorama_far.gdshader"
+  },
+  {
+   "docs": [
+    "WLD-OUTSKIRTS-DIORAMA"
+   ],
+   "glob": "game/style/shaders/diorama_far.gdshader.uid"
+  },
+  {
+   "docs": [
+    "ART-STYLE",
+    "ART-STYLE-SHADING"
+   ],
+   "glob": "game/style/shaders/fog.gdshaderinc"
+  },
+  {
+   "docs": [
+    "ART-STYLE",
+    "ART-STYLE-SHADING"
+   ],
+   "glob": "game/style/shaders/fog.gdshaderinc.uid"
+  },
+  {
+   "docs": [
+    "ART-COLORSCRIPT",
+    "MAP-QSH-ATMOSPHERE"
+   ],
+   "glob": "game/style/shaders/fx_glow.gdshader"
+  },
+  {
+   "docs": [
+    "ART-COLORSCRIPT",
+    "MAP-QSH-ATMOSPHERE"
+   ],
+   "glob": "game/style/shaders/fx_glow.gdshader.uid"
+  },
+  {
+   "docs": [
+    "ENG-PERF",
+    "ENG-PREVIEW",
+    "SYS-VIEW"
+   ],
+   "glob": "game/style/shaders/globals.gdshaderinc"
+  },
+  {
+   "docs": [
+    "ENG-PERF",
+    "ENG-PREVIEW",
+    "SYS-VIEW"
+   ],
+   "glob": "game/style/shaders/globals.gdshaderinc.uid"
+  },
+  {
+   "docs": [
+    "ART-COLORSCRIPT",
+    "MAP-QSH-ATMOSPHERE"
+   ],
+   "glob": "game/style/shaders/lamp.gdshaderinc"
+  },
+  {
+   "docs": [
+    "ART-COLORSCRIPT",
+    "MAP-QSH-ATMOSPHERE"
+   ],
+   "glob": "game/style/shaders/lamp.gdshaderinc.uid"
+  },
+  {
+   "docs": [
+    "SYS-ATLAS-UI"
+   ],
+   "glob": "game/style/shaders/map_base.gdshader"
+  },
+  {
+   "docs": [
+    "SYS-ATLAS-UI"
+   ],
+   "glob": "game/style/shaders/map_base.gdshader.uid"
+  },
+  {
+   "docs": [
+    "SYS-WEATHER"
+   ],
+   "glob": "game/style/shaders/precip.gdshader"
+  },
+  {
+   "docs": [
+    "SYS-WEATHER"
+   ],
+   "glob": "game/style/shaders/precip.gdshader.uid"
+  },
+  {
+   "docs": [
+    "SYS-WEATHER"
+   ],
+   "glob": "game/style/shaders/precip_wet.gdshaderinc"
+  },
+  {
+   "docs": [
+    "SYS-WEATHER"
+   ],
+   "glob": "game/style/shaders/precip_wet.gdshaderinc.uid"
+  },
+  {
+   "docs": [
+    "MAP-QSH-WATER",
+    "WLD-WATER"
+   ],
+   "glob": "game/style/shaders/reflect_flat.gdshader"
+  },
+  {
+   "docs": [
+    "MAP-QSH-WATER",
+    "WLD-WATER"
+   ],
+   "glob": "game/style/shaders/reflect_flat.gdshader.uid"
+  },
+  {
+   "docs": [
+    "ART-COLORSCRIPT",
+    "MAP-QSH-ATMOSPHERE"
+   ],
+   "glob": "game/style/shaders/reflection_lamps.gdshaderinc"
+  },
+  {
+   "docs": [
+    "ART-COLORSCRIPT",
+    "MAP-QSH-ATMOSPHERE"
+   ],
+   "glob": "game/style/shaders/reflection_lamps.gdshaderinc.uid"
+  },
+  {
+   "docs": [
+    "ART-SKYLIGHT-ATMOSPHERE"
+   ],
+   "glob": "game/style/shaders/sky.gdshader"
+  },
+  {
+   "docs": [
+    "ART-SKYLIGHT-ATMOSPHERE"
+   ],
+   "glob": "game/style/shaders/sky.gdshader.uid"
+  },
+  {
+   "docs": [
+    "ART-SKYLIGHT-ATMOSPHERE"
+   ],
+   "glob": "game/style/shaders/sky_bodies.gdshaderinc"
+  },
+  {
+   "docs": [
+    "ART-SKYLIGHT-ATMOSPHERE"
+   ],
+   "glob": "game/style/shaders/sky_bodies.gdshaderinc.uid"
+  },
+  {
+   "docs": [
+    "ART-SKYLIGHT-ATMOSPHERE"
+   ],
+   "glob": "game/style/shaders/sky_clouds.gdshaderinc"
+  },
+  {
+   "docs": [
+    "ART-SKYLIGHT-ATMOSPHERE"
+   ],
+   "glob": "game/style/shaders/sky_clouds.gdshaderinc.uid"
+  },
+  {
+   "docs": [
+    "ART-SKYLIGHT-ATMOSPHERE"
+   ],
+   "glob": "game/style/shaders/sky_params.gdshaderinc"
+  },
+  {
+   "docs": [
+    "ART-SKYLIGHT-ATMOSPHERE"
+   ],
+   "glob": "game/style/shaders/sky_params.gdshaderinc.uid"
+  },
+  {
+   "docs": [
+    "ART-STYLE",
+    "ART-STYLE-SHADING"
+   ],
+   "glob": "game/style/shaders/toon.gdshaderinc"
+  },
+  {
+   "docs": [
+    "ART-STYLE",
+    "ART-STYLE-SHADING"
+   ],
+   "glob": "game/style/shaders/toon.gdshaderinc.uid"
+  },
+  {
+   "docs": [
+    "ART-STYLE",
+    "ART-STYLE-SHADING"
+   ],
+   "glob": "game/style/shaders/toon_glass.gdshader"
+  },
+  {
+   "docs": [
+    "ART-STYLE",
+    "ART-STYLE-SHADING"
+   ],
+   "glob": "game/style/shaders/toon_glass.gdshader.uid"
+  },
+  {
+   "docs": [
+    "ART-STYLE",
+    "ART-STYLE-SHADING"
+   ],
+   "glob": "game/style/shaders/toon_scene_text.gdshader"
+  },
+  {
+   "docs": [
+    "ART-STYLE",
+    "ART-STYLE-SHADING"
+   ],
+   "glob": "game/style/shaders/toon_scene_text.gdshader.uid"
+  },
+  {
+   "docs": [
+    "ART-STYLE",
+    "ART-STYLE-SHADING"
+   ],
+   "glob": "game/style/shaders/toon_static.gdshader"
+  },
+  {
+   "docs": [
+    "ART-STYLE",
+    "ART-STYLE-SHADING"
+   ],
+   "glob": "game/style/shaders/toon_static.gdshader.uid"
+  },
+  {
+   "docs": [
+    "UI-VISUAL"
+   ],
+   "glob": "game/style/shaders/ui_panel.gdshader"
+  },
+  {
+   "docs": [
+    "UI-VISUAL"
+   ],
+   "glob": "game/style/shaders/ui_panel.gdshader.uid"
+  },
+  {
+   "docs": [
+    "UI-VISUAL"
+   ],
+   "glob": "game/style/shaders/ui_screen.gdshader"
+  },
+  {
+   "docs": [
+    "UI-VISUAL"
+   ],
+   "glob": "game/style/shaders/ui_screen.gdshader.uid"
+  },
+  {
+   "docs": [
+    "MAP-QSH-VEGETATION",
+    "WLD-VEGETATION"
+   ],
+   "glob": "game/style/shaders/veg_card.gdshader"
+  },
+  {
+   "docs": [
+    "MAP-QSH-VEGETATION",
+    "WLD-VEGETATION"
+   ],
+   "glob": "game/style/shaders/veg_card.gdshader.uid"
+  },
+  {
+   "docs": [
+    "MAP-QSH-VEGETATION",
+    "WLD-VEGETATION"
+   ],
+   "glob": "game/style/shaders/veg_common.gdshaderinc"
+  },
+  {
+   "docs": [
+    "MAP-QSH-VEGETATION",
+    "WLD-VEGETATION"
+   ],
+   "glob": "game/style/shaders/veg_common.gdshaderinc.uid"
+  },
+  {
+   "docs": [
+    "MAP-QSH-VEGETATION",
+    "WLD-VEGETATION"
+   ],
+   "glob": "game/style/shaders/veg_grass.gdshader"
+  },
+  {
+   "docs": [
+    "MAP-QSH-VEGETATION",
+    "WLD-VEGETATION"
+   ],
+   "glob": "game/style/shaders/veg_grass.gdshader.uid"
+  },
+  {
+   "docs": [
+    "MAP-QSH-VEGETATION",
+    "WLD-VEGETATION"
+   ],
+   "glob": "game/style/shaders/veg_trunk.gdshader"
+  },
+  {
+   "docs": [
+    "MAP-QSH-VEGETATION",
+    "WLD-VEGETATION"
+   ],
+   "glob": "game/style/shaders/veg_trunk.gdshader.uid"
+  },
+  {
+   "docs": [
+    "MAP-QSH-VEGETATION",
+    "WLD-VEGETATION"
+   ],
+   "glob": "game/style/shaders/veg_twig_mass.gdshader"
+  },
+  {
+   "docs": [
+    "MAP-QSH-VEGETATION",
+    "WLD-VEGETATION"
+   ],
+   "glob": "game/style/shaders/veg_twig_mass.gdshader.uid"
+  },
+  {
+   "docs": [
+    "MAP-QSH-WATER",
+    "WLD-WATER"
+   ],
+   "glob": "game/style/shaders/water.gdshader"
+  },
+  {
+   "docs": [
+    "MAP-QSH-WATER",
+    "WLD-WATER"
+   ],
+   "glob": "game/style/shaders/water.gdshader.uid"
+  },
+  {
+   "docs": [
+    "WLD-INTERIORS"
+   ],
+   "glob": "game/style/shaders/window_card.gdshaderinc"
+  },
+  {
+   "docs": [
+    "WLD-INTERIORS"
+   ],
+   "glob": "game/style/shaders/window_card.gdshaderinc.uid"
+  },
+  {
+   "docs": [
+    "ART-STYLE",
+    "ART-STYLE-SHADING"
+   ],
+   "glob": "game/style/text/**"
+  },
+  {
+   "docs": [
+    "SYS-ATLAS-TRAVEL"
+   ],
+   "glob": "game/systems/atlas/**"
+  },
+  {
+   "docs": [
+    "WLD-LIFE",
+    "WLD-LIFE-FAUNA"
+   ],
+   "glob": "game/systems/fauna/**"
+  },
+  {
+   "docs": [
+    "ART-COLORSCRIPT",
+    "MAP-QSH-ATMOSPHERE"
+   ],
+   "glob": "game/systems/nightlight/**"
+  },
+  {
+   "docs": [
+    "ART-SKYLIGHT-ATMOSPHERE"
+   ],
+   "glob": "game/systems/sky/**"
+  },
+  {
+   "docs": [
+    "MAP-QSH-VEGETATION",
+    "WLD-VEGETATION"
+   ],
+   "glob": "game/systems/vegetation/**"
+  },
+  {
+   "docs": [
+    "ART-COLORSCRIPT"
+   ],
+   "glob": "game/systems/vegetation/seasons/**"
+  },
+  {
+   "docs": [
+    "MAP-QSH-WATER",
+    "WLD-WATER"
+   ],
+   "glob": "game/systems/water/**"
+  },
+  {
+   "docs": [
+    "SYS-WEATHER-PROCESS"
+   ],
+   "glob": "game/systems/weather/**"
+  },
+  {
+   "docs": [
+    "SYS-WEATHER"
+   ],
+   "glob": "game/systems/weather/precip/**"
+  },
+  {
+   "docs": [
+    "ENG-ARCH",
+    "ENG-BUDGET",
+    "ENG-BUDGET-RULES",
+    "ENG-RELEASE",
+    "ENG-ROADMAP",
+    "STD-CODE",
+    "STD-CONVENTIONS",
+    "WF-BUILD",
+    "WF-COMMS",
+    "WF-ENTRY",
+    "WF-FLOW",
+    "WF-MODEL",
+    "WF-ROLE",
+    "WF-RULE",
+    "WF-STATUS"
+   ],
+   "glob": "game/testing/**"
+  },
+  {
+   "docs": [
+    "ENG-ARCH",
+    "ENG-BUDGET",
+    "ENG-BUDGET-RULES",
+    "ENG-RELEASE",
+    "ENG-ROADMAP",
+    "STD-CODE",
+    "STD-CONVENTIONS",
+    "WF-BUILD",
+    "WF-COMMS",
+    "WF-ENTRY",
+    "WF-FLOW",
+    "WF-MODEL",
+    "WF-ROLE",
+    "WF-RULE",
+    "WF-STATUS"
+   ],
+   "glob": "global.json"
+  },
+  {
+   "docs": [
+    "ENG-PREVIEW",
+    "WLD-TERRAIN",
+    "WLD-TERRAIN-APPLY"
+   ],
+   "glob": "pipeline/**"
+  },
+  {
+   "docs": [
     "STD-CODE"
    ],
    "glob": "pipeline/**/*.py"
+  },
+  {
+   "docs": [
+    "SYS-AUDIO"
+   ],
+   "glob": "pipeline/audio/**"
   },
   {
    "docs": [
@@ -321,291 +2609,363 @@
     "STD-CODE"
    ],
    "glob": "scripts/**/*.py"
+  },
+  {
+   "docs": [
+    "ENG-ARCH",
+    "ENG-BUDGET",
+    "ENG-BUDGET-RULES",
+    "ENG-RELEASE",
+    "ENG-ROADMAP",
+    "STD-CODE",
+    "STD-CONVENTIONS",
+    "WF-BUILD",
+    "WF-COMMS",
+    "WF-ENTRY",
+    "WF-FLOW",
+    "WF-MODEL",
+    "WF-ROLE",
+    "WF-RULE",
+    "WF-STATUS"
+   ],
+   "glob": "scripts/build/**"
+  },
+  {
+   "docs": [
+    "ENG-PERF-ADAPT"
+   ],
+   "glob": "scripts/devices/**"
+  },
+  {
+   "docs": [
+    "ENG-ARCH",
+    "ENG-BUDGET",
+    "ENG-BUDGET-RULES",
+    "ENG-RELEASE",
+    "ENG-ROADMAP",
+    "STD-CODE",
+    "STD-CONVENTIONS",
+    "WF-BUILD",
+    "WF-COMMS",
+    "WF-ENTRY",
+    "WF-FLOW",
+    "WF-MODEL",
+    "WF-ROLE",
+    "WF-RULE",
+    "WF-STATUS"
+   ],
+   "glob": "scripts/docs/**"
+  },
+  {
+   "docs": [
+    "ENG-ARCH",
+    "ENG-BUDGET",
+    "ENG-BUDGET-RULES",
+    "ENG-RELEASE",
+    "ENG-ROADMAP",
+    "STD-CODE",
+    "STD-CONVENTIONS",
+    "WF-BUILD",
+    "WF-COMMS",
+    "WF-ENTRY",
+    "WF-FLOW",
+    "WF-MODEL",
+    "WF-ROLE",
+    "WF-RULE",
+    "WF-STATUS"
+   ],
+   "glob": "scripts/gate.ps1"
+  },
+  {
+   "docs": [
+    "ART-FIDELITY",
+    "ART-FIDELITY-DETAIL",
+    "ENG-GATES",
+    "ENG-GATES-SHOTS",
+    "ENG-GATES-VETO"
+   ],
+   "glob": "scripts/gates/**"
+  },
+  {
+   "docs": [
+    "ENG-ARCH",
+    "ENG-BUDGET",
+    "ENG-BUDGET-RULES",
+    "ENG-RELEASE",
+    "ENG-ROADMAP",
+    "STD-CODE",
+    "STD-CONVENTIONS",
+    "WF-BUILD",
+    "WF-COMMS",
+    "WF-ENTRY",
+    "WF-FLOW",
+    "WF-MODEL",
+    "WF-ROLE",
+    "WF-RULE",
+    "WF-STATUS"
+   ],
+   "glob": "scripts/gates/arch/**"
+  },
+  {
+   "docs": [
+    "ENG-ARCH",
+    "ENG-BUDGET",
+    "ENG-BUDGET-RULES",
+    "ENG-RELEASE",
+    "ENG-ROADMAP",
+    "STD-CODE",
+    "STD-CONVENTIONS",
+    "WF-BUILD",
+    "WF-COMMS",
+    "WF-ENTRY",
+    "WF-FLOW",
+    "WF-MODEL",
+    "WF-ROLE",
+    "WF-RULE",
+    "WF-STATUS"
+   ],
+   "glob": "scripts/gates/arch/Campus.Arch.Tests.csproj"
+  },
+  {
+   "docs": [
+    "ART-FIDELITY",
+    "ART-FIDELITY-DETAIL",
+    "ENG-GATES",
+    "ENG-GATES-SHOTS",
+    "ENG-GATES-VETO"
+   ],
+   "glob": "scripts/gates/check-naming.ps1"
+  },
+  {
+   "docs": [
+    "ART-FIDELITY",
+    "ART-FIDELITY-DETAIL",
+    "ENG-GATES",
+    "ENG-GATES-SHOTS",
+    "ENG-GATES-VETO"
+   ],
+   "glob": "scripts/gates/check-source.ps1"
+  },
+  {
+   "docs": [
+    "ART-FIDELITY",
+    "ART-FIDELITY-DETAIL",
+    "ENG-GATES",
+    "ENG-GATES-SHOTS",
+    "ENG-GATES-VETO"
+   ],
+   "glob": "scripts/gates/native-render.ps1"
+  },
+  {
+   "docs": [
+    "ENG-ARCH",
+    "ENG-BUDGET",
+    "ENG-BUDGET-RULES",
+    "ENG-RELEASE",
+    "ENG-ROADMAP",
+    "STD-CODE",
+    "STD-CONVENTIONS",
+    "WF-BUILD",
+    "WF-COMMS",
+    "WF-ENTRY",
+    "WF-FLOW",
+    "WF-MODEL",
+    "WF-ROLE",
+    "WF-RULE",
+    "WF-STATUS"
+   ],
+   "glob": "scripts/git-hooks/**"
+  },
+  {
+   "docs": [
+    "ENG-ARCH",
+    "ENG-BUDGET",
+    "ENG-BUDGET-RULES",
+    "ENG-RELEASE",
+    "ENG-ROADMAP",
+    "STD-CODE",
+    "STD-CONVENTIONS",
+    "WF-BUILD",
+    "WF-COMMS",
+    "WF-ENTRY",
+    "WF-FLOW",
+    "WF-MODEL",
+    "WF-ROLE",
+    "WF-RULE",
+    "WF-STATUS"
+   ],
+   "glob": "scripts/godot-api/**"
+  },
+  {
+   "docs": [
+    "ENG-ARCH",
+    "ENG-BUDGET",
+    "ENG-BUDGET-RULES",
+    "ENG-RELEASE",
+    "ENG-ROADMAP",
+    "STD-CODE",
+    "STD-CONVENTIONS",
+    "WF-BUILD",
+    "WF-COMMS",
+    "WF-ENTRY",
+    "WF-FLOW",
+    "WF-MODEL",
+    "WF-ROLE",
+    "WF-RULE",
+    "WF-STATUS"
+   ],
+   "glob": "scripts/godot-api/ApiDump/ApiDump.csproj"
+  },
+  {
+   "docs": [
+    "ENG-ARCH",
+    "ENG-BUDGET",
+    "ENG-BUDGET-RULES",
+    "ENG-RELEASE",
+    "ENG-ROADMAP",
+    "STD-CODE",
+    "STD-CONVENTIONS",
+    "WF-BUILD",
+    "WF-COMMS",
+    "WF-ENTRY",
+    "WF-FLOW",
+    "WF-MODEL",
+    "WF-ROLE",
+    "WF-RULE",
+    "WF-STATUS"
+   ],
+   "glob": "scripts/lib/**"
+  },
+  {
+   "docs": [
+    "ENG-ARCH",
+    "ENG-BUDGET",
+    "ENG-BUDGET-RULES",
+    "ENG-RELEASE",
+    "ENG-ROADMAP",
+    "STD-CODE",
+    "STD-CONVENTIONS",
+    "WF-BUILD",
+    "WF-COMMS",
+    "WF-ENTRY",
+    "WF-FLOW",
+    "WF-MODEL",
+    "WF-ROLE",
+    "WF-RULE",
+    "WF-STATUS"
+   ],
+   "glob": "scripts/requirements.*"
+  },
+  {
+   "docs": [
+    "ENG-ARCH",
+    "ENG-BUDGET",
+    "ENG-BUDGET-RULES",
+    "ENG-RELEASE",
+    "ENG-ROADMAP",
+    "STD-CODE",
+    "STD-CONVENTIONS",
+    "WF-BUILD",
+    "WF-COMMS",
+    "WF-ENTRY",
+    "WF-FLOW",
+    "WF-MODEL",
+    "WF-ROLE",
+    "WF-RULE",
+    "WF-STATUS"
+   ],
+   "glob": "scripts/setup/**"
+  },
+  {
+   "docs": [
+    "ART-FIDELITY",
+    "ART-FIDELITY-DETAIL",
+    "ENG-GATES",
+    "ENG-GATES-SHOTS",
+    "ENG-GATES-VETO"
+   ],
+   "glob": "scripts/shots/**"
+  },
+  {
+   "docs": [
+    "ENG-ARCH",
+    "ENG-BUDGET",
+    "ENG-BUDGET-RULES",
+    "ENG-RELEASE",
+    "ENG-ROADMAP",
+    "STD-CODE",
+    "STD-CONVENTIONS",
+    "WF-BUILD",
+    "WF-COMMS",
+    "WF-ENTRY",
+    "WF-FLOW",
+    "WF-MODEL",
+    "WF-ROLE",
+    "WF-RULE",
+    "WF-STATUS"
+   ],
+   "glob": "third_party.json"
+  },
+  {
+   "docs": [
+    "ENG-ARCH",
+    "ENG-BUDGET",
+    "ENG-BUDGET-RULES",
+    "ENG-RELEASE",
+    "ENG-ROADMAP",
+    "STD-CODE",
+    "STD-CONVENTIONS",
+    "WF-BUILD",
+    "WF-COMMS",
+    "WF-ENTRY",
+    "WF-FLOW",
+    "WF-MODEL",
+    "WF-ROLE",
+    "WF-RULE",
+    "WF-STATUS"
+   ],
+   "glob": "tools/**"
+  },
+  {
+   "docs": [
+    "ENG-ARCH",
+    "ENG-BUDGET",
+    "ENG-BUDGET-RULES",
+    "ENG-RELEASE",
+    "ENG-ROADMAP",
+    "STD-CODE",
+    "STD-CONVENTIONS",
+    "WF-BUILD",
+    "WF-COMMS",
+    "WF-ENTRY",
+    "WF-FLOW",
+    "WF-MODEL",
+    "WF-ROLE",
+    "WF-RULE",
+    "WF-STATUS"
+   ],
+   "glob": "version.txt"
+  },
+  {
+   "docs": [
+    "ENG-ARCH",
+    "ENG-BUDGET",
+    "ENG-BUDGET-RULES",
+    "ENG-RELEASE",
+    "ENG-ROADMAP",
+    "STD-CODE",
+    "STD-CONVENTIONS",
+    "WF-BUILD",
+    "WF-COMMS",
+    "WF-ENTRY",
+    "WF-FLOW",
+    "WF-MODEL",
+    "WF-ROLE",
+    "WF-RULE",
+    "WF-STATUS"
+   ],
+   "glob": "启动游戏.cmd"
   }
  ],
- "version": 1,
- "wp": {
-  "WP-00": [
-   "ENG-ARCH",
-   "ENG-BUDGET",
-   "ENG-BUDGET-RULES",
-   "ENG-RELEASE",
-   "ENG-ROADMAP",
-   "PLAN-WP",
-   "PLAN-WP-LIST",
-   "STD-CODE",
-   "STD-CONVENTIONS"
-  ],
-  "WP-01": [
-   "ENG-PERF",
-   "ENG-PREVIEW",
-   "SYS-VIEW"
-  ],
-  "WP-02": [
-   "ENG-BUDGET-LOD",
-   "ENG-PERF-STREAM"
-  ],
-  "WP-03": [
-   "ART-SKYLIGHT",
-   "ENG-PERF-LIGHT"
-  ],
-  "WP-04": [
-   "ART-STYLE",
-   "ART-STYLE-SHADING"
-  ],
-  "WP-05": [
-   "ART-STYLE-LINES"
-  ],
-  "WP-06": [
-   "SYS-BORDER",
-   "SYS-VIEW",
-   "WLD-OUTSKIRTS"
-  ],
-  "WP-07": [
-   "SYS-VIEW-MEDIUM"
-  ],
-  "WP-08": [
-   "ENG-PREVIEW",
-   "WLD-TERRAIN",
-   "WLD-TERRAIN-APPLY"
-  ],
-  "WP-09": [
-   "ART-MODELING",
-   "ART-MODELING-PROPORTION"
-  ],
-  "WP-10": [
-   "ART-FIDELITY",
-   "WLD-INTERIORS"
-  ],
-  "WP-11": [
-   "ART-MODELING",
-   "WLD-INTERIORS"
-  ],
-  "WP-12": [
-   "ART-FIDELITY",
-   "WLD-INTERIORS"
-  ],
-  "WP-13": [
-   "MAP-QSH-ADDITIONS",
-   "MAP-QSH-ADDITIONS-VOCAB",
-   "WLD-AMBIENCE",
-   "WLD-LIFE",
-   "WLD-LIFE-STREET"
-  ],
-  "WP-14": [
-   "MAP-QSH-ADDITIONS",
-   "MAP-QSH-ADDITIONS-VOCAB",
-   "MAP-QSH-RENOVATION",
-   "WLD-RENOVATION"
-  ],
-  "WP-15": [
-   "WLD-TERRAIN",
-   "WLD-TERRAIN-APPLY",
-   "WLD-TERRAIN-SHAPE"
-  ],
-  "WP-16": [
-   "MAP-QSH-CORE",
-   "MAP-QSH-CORE-SEASONS",
-   "MAP-QSH-CORE-WALK",
-   "MAP-QSH-TERRAIN",
-   "MAP-QSH-TERRAIN-CHECKS",
-   "MAP-QSH-TERRAIN-DISTRICTS"
-  ],
-  "WP-17": [
-   "MAP-QSH-INTERIORS-LIBRARY",
-   "WLD-INTERIORS",
-   "WLD-INTERIORS-ACCESS"
-  ],
-  "WP-18": [
-   "MAP-QSH-SOUTH",
-   "MAP-QSH-SOUTH-SEASONS",
-   "MAP-QSH-SOUTH-WALK",
-   "MAP-QSH-TERRAIN",
-   "MAP-QSH-TERRAIN-CHECKS",
-   "MAP-QSH-TERRAIN-DISTRICTS"
-  ],
-  "WP-19": [
-   "MAP-QSH-TERRAIN",
-   "MAP-QSH-TERRAIN-CHECKS",
-   "MAP-QSH-TERRAIN-DISTRICTS",
-   "MAP-QSH-WEST",
-   "MAP-QSH-WEST-SEASONS",
-   "MAP-QSH-WEST-WALK"
-  ],
-  "WP-20": [
-   "MAP-QSH-NORTH",
-   "MAP-QSH-NORTH-SEASONS",
-   "MAP-QSH-NORTH-WALK",
-   "MAP-QSH-TERRAIN",
-   "MAP-QSH-TERRAIN-CHECKS",
-   "MAP-QSH-TERRAIN-DISTRICTS"
-  ],
-  "WP-21": [
-   "MAP-QSH-CENTER-EAST",
-   "MAP-QSH-CENTER-EAST-SEASONS",
-   "MAP-QSH-CENTER-EAST-WALK",
-   "MAP-QSH-TERRAIN",
-   "MAP-QSH-TERRAIN-CHECKS",
-   "MAP-QSH-TERRAIN-DISTRICTS"
-  ],
-  "WP-22": [
-   "WLD-OUTSKIRTS-DIORAMA"
-  ],
-  "WP-23": [
-   "MAP-QSH-VEGETATION",
-   "WLD-VEGETATION"
-  ],
-  "WP-24": [
-   "MAP-QSH-WATER",
-   "WLD-WATER"
-  ],
-  "WP-25": [
-   "WLD-LIFE",
-   "WLD-LIFE-FAUNA"
-  ],
-  "WP-26": [
-   "SYS-MOTION",
-   "SYS-MOTION-ENV",
-   "SYS-MOTION-LIFE"
-  ],
-  "WP-27": [
-   "ART-FIDELITY",
-   "ART-FIDELITY-DETAIL",
-   "ENG-GATES",
-   "ENG-GATES-SHOTS",
-   "ENG-GATES-VETO"
-  ],
-  "WP-28": [
-   "MAP-QSH-ADDITIONS-VOCAB"
-  ],
-  "WP-29": [
-   "MAP-QSH-ADDITIONS"
-  ],
-  "WP-30": [
-   "MAP-QSH-ADDITIONS-VOCAB",
-   "SYS-BORDER",
-   "WLD-OUTSKIRTS"
-  ],
-  "WP-31a": [
-   "MAP-QSH-INTERIORS",
-   "WLD-INTERIORS",
-   "WLD-INTERIORS-ACCESS"
-  ],
-  "WP-31b": [
-   "MAP-QSH-INTERIORS",
-   "WLD-INTERIORS",
-   "WLD-INTERIORS-ACCESS"
-  ],
-  "WP-31c": [
-   "MAP-QSH-INTERIORS",
-   "WLD-INTERIORS",
-   "WLD-INTERIORS-ACCESS"
-  ],
-  "WP-32": [
-   "ENG-PERF-ADAPT",
-   "SYS-GRAPHICS"
-  ],
-  "WP-34": [
-   "ART-SKYLIGHT",
-   "SYS-TIME"
-  ],
-  "WP-35": [
-   "UI-NAV",
-   "UI-VISUAL",
-   "UI-VISUAL-COMPONENTS",
-   "UI-VISUAL-MOTION"
-  ],
-  "WP-35d": [
-   "SYS-TITLE"
-  ],
-  "WP-36": [
-   "MAP-QSH-TERRAIN-CHECKS",
-   "UI-NAV-WAYPOINTS"
-  ],
-  "WP-37": [
-   "ART-COLORSCRIPT"
-  ],
-  "WP-38": [
-   "ART-COLORSCRIPT"
-  ],
-  "WP-39": [
-   "ART-COLORSCRIPT",
-   "MAP-QSH-ATMOSPHERE"
-  ],
-  "WP-40": [
-   "ART-SKYLIGHT-ATMOSPHERE"
-  ],
-  "WP-41": [
-   "SYS-TIME"
-  ],
-  "WP-42": [
-   "SYS-BORDER",
-   "SYS-WALK"
-  ],
-  "WP-43": [
-   "SYS-WALK-BOUNDS"
-  ],
-  "WP-44": [
-   "MAP-QSH-TERRAIN-CHECKS",
-   "SYS-BORDER",
-   "SYS-WALK-BOUNDS"
-  ],
-  "WP-45": [
-   "SYS-WEATHER"
-  ],
-  "WP-45a": [
-   "SYS-WEATHER-PROCESS"
-  ],
-  "WP-46": [
-   "SYS-MAPS"
-  ],
-  "WP-47": [
-   "MAP-QSH-OUTSKIRTS",
-   "WLD-OUTSKIRTS",
-   "WLD-OUTSKIRTS-BAND"
-  ],
-  "WP-48": [
-   "SYS-ATLAS"
-  ],
-  "WP-48a": [
-   "SYS-ATLAS-UI"
-  ],
-  "WP-48b": [
-   "SYS-ATLAS-UI"
-  ],
-  "WP-48c": [
-   "SYS-ATLAS-TRAVEL"
-  ],
-  "WP-49": [
-   "SYS-TITLE"
-  ],
-  "WP-50": [
-   "SYS-SAVE",
-   "SYS-SAVE-FLOW",
-   "SYS-SAVE-FORMAT"
-  ],
-  "WP-51": [
-   "WLD-INTERIORS",
-   "WLD-INTERIORS-BUILD"
-  ],
-  "WP-52": [
-   "WLD-INTERIORS",
-   "WLD-INTERIORS-BUILD"
-  ],
-  "WP-53": [
-   "SYS-AUDIO"
-  ],
-  "WP-53b": [
-   "SYS-AUDIO-AMBIENCE"
-  ],
-  "WP-53c": [
-   "SYS-AUDIO-FOLEY"
-  ],
-  "WP-53d": [
-   "SYS-AUDIO-FOLEY"
-  ],
-  "WP-55": [
-   "SYS-WALK-BIKE"
-  ]
- }
+ "version": 1
 }

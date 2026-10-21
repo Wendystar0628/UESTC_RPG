@@ -5,8 +5,6 @@ category: systems
 parent: SYS-INDEX
 summary: 平面地图总则：允许与禁止什么、多图数据归属、设置里存什么；界面与传送见子文档
 keywords: [平面地图, 地图只活在界面层, 3D 里不标注, IAtlasService, MarkerId, 前往方式, 图层筛选, AtlasSave, TransitPreference, 小地图, 大地图, 传送, 锚点, 全开放, 自定义标记, 追踪]
-owners: [WP-48]
-contributors: [WP-01, WP-35, WP-36, WP-51, WP-53a]
 depends: [CORE-INDEX, ENG-ARCH, UI-NAV, SYS-WALK, UI-VISUAL, SYS-MAPS, WLD-OUTSKIRTS, WLD-INTERIORS]
 related: [SYS-VIEW, ENG-GATES, MAP-QSH-ADDITIONS, ENG-BUDGET, ENG-PERF, SYS-SAVE, SYS-AUDIO, ENG-ROADMAP]
 contracts: [IAtlasService, MarkerId, AtlasSave, TransitPreference]

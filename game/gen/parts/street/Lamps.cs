@@ -191,7 +191,7 @@ public sealed class StreetLampPart : IPartDef<LampParams>
 /// Entrance lamp fixture (门口灯, WLD-INTERIORS): a wall lantern with a light back plate, a dark housing and frosted lenses on
 /// the front (−Z) and the underside. Origin is the bottom centre; the back face lies on +Z (the wall). Visual only: it hangs
 /// above head height on the wall, whose collider stands in for it. Door lamps are lamp fixtures in the lamp table on the
-/// first-lamp group (on at dusk, on all night, never half off); no window or interior channel (WP-39, max-104).
+/// first-lamp group (on at dusk, on all night, never half off); no window or interior channel (MAP-QSH-ATMOSPHERE, max-104).
 /// </summary>
 [Part(PartCatalog.EntranceLamp)]
 public sealed class EntranceLampPart : IPartDef<LampParams>

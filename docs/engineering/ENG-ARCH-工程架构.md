@@ -5,19 +5,17 @@ category: engineering
 parent: ENG-INDEX
 summary: 当前分层、依赖方向与唯一生产链，边界、确定性、契约、烘焙与桩的架构准则与后续导向；实现细节以代码为准
 keywords: [工程架构, 分层, 依赖方向, 命名空间边界, 程序集, 唯一生产链, KernelStage, 组合根, 数据流, 自动发现, 特性注册, Autoload, 原生资源创建方, 确定性, 同机同输入同输出, StableHash, Rng, BannedApiAnalyzers, 生命周期, 契约, 契约申请, 契约分批冻结, 枚举穷举, 本机烘焙, .tbin, 英雄资产, 桩, 架构导向, net10.0, 技术栈]
-owners: [WP-00]
-contributors: [WP-01, WP-02, WP-04, WP-08, WP-27]
 depends: [CORE-INDEX, STD-CODE]
-related: [ENG-GATES, PLAN-WP, ENG-PERF, ENG-BUDGET, ENG-ROADMAP, STD-CONVENTIONS, SYS-MAPS, SYS-SAVE, SYS-MOTION, SYS-AUDIO, ENG-RELEASE]
+related: [ENG-GATES, ENG-PERF, ENG-BUDGET, ENG-ROADMAP, STD-CONVENTIONS, SYS-MAPS, SYS-SAVE, SYS-MOTION, SYS-AUDIO, ENG-RELEASE]
 contracts: []
-data: ["ownership.json", "third_party.json", "tools/godot-version.txt", "version.txt"]
+data: ["scripts/gates/shader-whitelist.json", "third_party.json", "tools/godot-version.txt", "version.txt"]
 gates: [G1, G2, G3, G4, G5, G6]
-paths: ["game/**/*.cs"]
+paths: ["game/**/*.cs", "scripts/requirements.*", "game/testing/**", "game/data/build-code-fingerprints.json", "game/gen/maps/qingshuihe/Campus.Gen.Maps.Qingshuihe.csproj", "game/gen/sites/**", ".collab/tools/**", "dashboard/**", "game/gen/Campus.Gen.csproj", "game/kernel/map/data/**", "game/kernel/renderer/geometry/**", "game/kernel/renderer/render-state/**", "game/kernel/instances/**", "game/gen/geometry/**", "scripts/gates/arch/Campus.Arch.Tests.csproj", "scripts/godot-api/ApiDump/ApiDump.csproj", "game/contracts/Runtime/Campus.Contracts.Runtime.csproj", "game/contracts/Campus.Contracts.csproj", "game/data/maps/*/interiors.json", "game/Campus.Gen.Tests.csproj", "game/Campus.Tests.csproj", "game/contracts/.gdignore", "game/export_presets.cfg", "game/contracts/*.csproj", "game/kernel/registry/**", "game/data/rulesets/**", "scripts/gates/arch/**", "**/Directory.*.targets", "game/Campus.csproj", "game/gen/.gdignore", "game/project.godot", "Directory.*.targets", "game/kernel/stubs/**", "scripts/godot-api/**", "**/Directory.*.props", "scripts/gate.ps1", "third_party.json", "Directory.*.props", "docs/godot-api/**", "game/contracts/**", ".gitattributes", "scripts/build/**", "scripts/setup/**", "game/gen/bakeinput/assembly/**", "scripts/docs/**", "budgets.json", "game/addons/**", "global.json", "version.txt", "scripts/lib/**", ".gitignore", ".ignore", "AGENTS.md", "CLAUDE.md", "README.md", "启动游戏.cmd", "**/*.csproj", "LICENSE", "tools/**", "**/*.sln", "game/.editorconfig", "scripts/git-hooks/**", "game/kernel/bake/**"]
 ---
 # ENG-ARCH · 工程架构
 
 > **范围**：本文说明当前的工程架构（技术栈、分层、生产链与数据流），架构层面的准则（边界、确定性、契约、烘焙、桩），以及后续设计的导向。只写结构、规则和方向。
-> **不在本文**：类型签名、目录明细、文件格式、参数与清单以代码和数据为准；写代码的结构规矩见 STD-CODE；命名与目录约定见 STD-CONVENTIONS §3、§5；性能与预算见 ENG-PERF、ENG-BUDGET；门禁见 ENG-GATES；工作包分工见 PLAN-WP；RPG 路线见 ENG-ROADMAP。
+> **不在本文**：类型签名、目录明细、文件格式、参数与清单以代码和数据为准；写代码的结构规矩见 STD-CODE；命名与目录约定见 STD-CONVENTIONS §3、§5；性能与预算见 ENG-PERF、ENG-BUDGET；门禁见 ENG-GATES；RPG 路线见 ENG-ROADMAP。
 > **查阅**：先读 §0；当前架构看 §1；边界与确定性看 §2；契约看 §3；资源与烘焙看 §4；桩看 §5；架构导向看 §6；RPG 扩展方式看 §7；待验证看 §8
 
 ## 0 结论
@@ -33,7 +31,7 @@ paths: ["game/**/*.cs"]
 
 ### 0.1 接入要点
 
-- **新建或修改文件**：只改 `ownership.json` 划给本包的路径；`project.godot`、csproj、`Directory.*.props`、契约、`ownership.json`、`docs/`，以及新的着色器全局参数、着色器文件、项目引用、NuGet 包，向 Codex 主线申请（WF-BUILD §1、§3）。
+- **新建或修改文件**：只改派工简报允许的路径；`project.godot`、csproj、`Directory.*.props`、契约、`scripts/gates/shader-whitelist.json`、`docs/`，以及新的着色器全局参数、着色器文件、项目引用、NuGet 包，向 Codex 主线申请（WF-BUILD §1、§3）。
 - **写 `Campus.Contracts`、生成层或烘焙子任务**：不引用 GodotSharp，不读文件路径和运行时状态，不引用其他内容包的命名空间（§2）。
 - **要显示、用材质或出声**：显示经 `IRenderHost`，材质经 `ToonSpec`，声音经音频服务；不自己创建网格实例、`ShaderMaterial` 和音频播放器（§2）。
 - **接入新模块、节点、服务或存档段**：打对应的特性，不加 Autoload，不改 `main.tscn`（§2）。
@@ -58,7 +56,7 @@ paths: ["game/**/*.cs"]
 | 内容生成 | 通用内容包在 `Campus.Gen`（建筑、地面、植被、水、碰撞、可行走、外围、声学等，及跨图共用的公共站点 `Campus.Gen.Sites`）；每张图一个 `Campus.Gen.Maps.<图>`，在 `game/gen/maps/<图>/`，各区是它下面的子目录与命名空间 `Campus.Gen.Maps.<图>.<区>` | 按格生成几何、碰撞与声明数据；纯函数，命名空间互不引用 |
 | 运行时 | 主程序集 `Campus`（kernel、stage、flow、camera、medium、systems、style、audio、hud、gates） | 装配、烘焙与流式、世界状态、表现与界面 |
 
-- 程序集与目录的对应、归属以仓库本身和 `ownership.json` 为准。程序集只按"契约 / 通用生成 / 每图一个 / 运行时"划分，包与包、层与层之间的边界靠命名空间规则（§2）；加一张图只新增 `game/gen/maps/<图>/`，不改共享清单（SYS-MAPS §6）。
+- 程序集与目录的对应以仓库本身为准，路径归属以各文档文件头的 `paths` 为准。程序集只按"契约 / 通用生成 / 每图一个 / 运行时"划分，模块与模块、层与层之间的边界靠命名空间规则（§2）；加一张图只新增 `game/gen/maps/<图>/`，不改共享清单（SYS-MAPS §6）。
 
 ### 生产链
 
@@ -101,7 +99,7 @@ paths: ["game/**/*.cs"]
 ### 自动发现与模块接入
 
 - 内核按构建时生成的程序集清单逐个加载，清单由 MSBuild 实际构建的项目引用推出、不手改，反射扫描特性，按 ID 排序注册，ID 重复报错。注册种类用 `RegistrationKind`；特性参数与默认寿命以契约源码的 `Registration` 为准，发现、桩替换、按图筛选和构造走同一实现。注册记录与反射发现能力统一放在纯契约的 `Campus.Contracts.RegistrationDiscovery`，它通过纯 .NET 元数据识别运行时声明，不引用生成层或运行时程序集。
-- **注册 ID 是运行身份**：`Owner` 只用于诊断归因，由构建期复用生产项目的源类型索引、按特性声明的文件路径查 `ownership.json` 得到，写入同一份构建代码指纹资产，发布版只读该资产；不手写。工作包号不参与运行顺序、缓存身份、实例池键或 claim 裁决，claim 指向内容模块的注册 ID。
+- **注册 ID 是运行身份**：`Owner` 只用于诊断归因，由构建期复用生产项目的源类型索引、按特性声明的文件路径匹配文档文件头的 `paths`，得到归属文档编码，仅作诊断，写入同一份构建代码指纹资产，发布版只读该资产；不手写。诊断归属不参与运行顺序、缓存身份、实例池键或 claim 裁决，claim 指向内容模块的注册 ID。
 - 加载一张图时只选择"通用 + 当前图"的声明；对象寿命由特性的 `Lifetime` 决定，`Map` 与 `MapScope` 只决定适用地图。内容模块、室内提供者、发声器来源与烘焙生产者默认按图，部件、服务、节点、介质呈现器和存档段默认全局（SYS-MAPS §6）。
 - Autoload 只有 `Boot`；`Kernel` 是纯静态访问入口，新的全局对象一律注册成 Kernel 服务。
 - 生成与挂载分开：`Build()` 在工作线程上跑；挂载和会动的物体只在主线程，由内核节点负责（SYS-MOTION）。
@@ -138,7 +136,7 @@ paths: ["game/**/*.cs"]
 - **烘焙与随包**（D-165）：格包、碰撞、室内包、平面底图与远景、遮挡体、灯表、导航图、声学等派生数据，都由烘焙服务调用同一个 `Build()` 生成。发布时用开发预烘的同一入口烘好全图随包发，首次启动不现烘；玩家缓存缺失或损坏时才本机补烘，开始页起在后台把全图补齐，碰到的格优先。开发期照常本机烘焙，每批收口全图预烘；不做几何启动集（D-232）。
 - **开放高处的许可源**：与可见布局、碰撞共用真实几何，只在冷烘捕获并随常驻元数据冻结；运行时只读冻结区域，不调用生成来源。
 - **查找顺序**：本机缓存 → 随包缓存 → 本机补烘。玩家的缓存在 `user://cache/bake/`；开发与 CI 用 `UESTC_BAKE_CACHE` 指向的共享缓存，默认位置以 `BakeOptions` 源码为准。缓存上限、淘汰与启动耗时目标以 `budgets.json` 的 `cache` 为准，补烘时机见 ENG-PERF-STREAM §1.1。
-- **格式**：缓存用自定义的 `.tbin`，不用 Godot 资源格式；顶点、索引、实例变换、高度栅格这类大块数值一律走二进制通道，JSON 只放键、ID、包围盒这类小元数据；格包只存产物运行数据，不存工作包归属；格式变化升级格式版本和缓存 ABI，不留旧格式兼容；逻辑格（一个烘焙键的完整产物）超过单个物理分片上限时，由烘焙层统一拆成物理分片并写逻辑索引，索引最后发布、分片齐全才算就绪，对外只交付拼好的完整格包，消费方不感知分片；读坏了删掉重烘一次，仍不行报失败。
+- **格式**：缓存用自定义的 `.tbin`，不用 Godot 资源格式；顶点、索引、实例变换、高度栅格这类大块数值一律走二进制通道，JSON 只放键、ID、包围盒这类小元数据；格包只存产物运行数据，不存诊断归属；格式变化升级格式版本和缓存 ABI，不留旧格式兼容；逻辑格（一个烘焙键的完整产物）超过单个物理分片上限时，由烘焙层统一拆成物理分片并写逻辑索引，索引最后发布、分片齐全才算就绪，对外只交付拼好的完整格包，消费方不感知分片；读坏了删掉重烘一次，仍不行报失败。
 - **判鲜**（D-229）：每个生产方（内容模块、室内提供者、烘焙生产方）声明实际用到的数据类别与地图文件或全局文件键。每格只看这些数据输入与该产物实际用到的生成代码改没改，改了只重烘这一格，没改的直接用；代码那一半由构建期生成代码指纹清单（`scripts/build/fingerprints`），在生产源码、构建输入或归属表有变时更新，运行时只读这份清单；指纹的输入范围、分组与例外以 `scripts/build/fingerprints` 为准，`Shared` 只纳实际烘焙源码和冻结输入装配，注册器、规则集与纹理上传不因同目录关系进入指纹，室内按楼判鲜，改一栋只重烘这一栋。玩家侧游戏版本一变就清缓存重烘。
 - **窗号**：窗号地址由本图 `window-numbering.json` 持久登记，新网格与扩容追加地址，退役不复用；显式预烘成功后写回登记表，正常启动只读。
 - **构建期做完，运行时只读**（D-256）：能在构建期或收口预烘里算好的不放到运行时。启动路径只读不建：双击启动不编译、不导入，现成构建对不上时才编，收口预烘时一并编好；启动到能走只起引擎与服务、核对缓存、读首视角与出生点要的格；核对只比输入标识，生成只在缓存缺失时发生；全图级的系统随格挂载，不在启动时整图挂。
@@ -174,5 +172,5 @@ paths: ["game/**/*.cs"]
 
 | 待验证 | 验证方法与负责 | 验证前用的初值 |
 | --- | --- | --- |
-| 导出版里的反射与程序集加载，注册结果是否与开发态一致（§2） | 跑通 `dotnet build` → 导入（`--build-import`）→ `--export-release` → 导出版启动，比对两边的注册结果；WP-00（契约、桩与拆除） | 注册器按构建时生成的程序集清单逐个显式加载 |
-| 导出包里能否读到 `data/` 下的 JSON（§4） | 导出验证；WP-00、WP-02（格子分级、烘焙与流式加载） | 导出过滤器显式包含按图与全局的 JSON 数据 |
+| 导出版里的反射与程序集加载，注册结果是否与开发态一致（§2） | 跑通 `dotnet build` → 导入（`--build-import`）→ `--export-release` → 导出版启动，比对两边的注册结果；契约、桩与拆除（ENG-ARCH） | 注册器按构建时生成的程序集清单逐个显式加载 |
+| 导出包里能否读到 `data/` 下的 JSON（§4） | 导出验证；ENG-ARCH、格子分级、烘焙与流式加载（ENG-PERF-STREAM） | 导出过滤器显式包含按图与全局的 JSON 数据 |

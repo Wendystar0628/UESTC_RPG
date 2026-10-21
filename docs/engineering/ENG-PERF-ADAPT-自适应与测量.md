@@ -5,13 +5,12 @@ category: engineering
 parent: ENG-PERF
 summary: 运行时自适应的降级阶梯与控制律、帧节奏、测量与基准的做法
 keywords: [自适应, 自动调节画质, 降级阶梯, 控制律, 剔除样本, 帧节奏, 吞吐基准, 体验基准, 体验脚本, 掉帧, 卡顿, GPU 计时]
-owners: [WP-32]
-contributors: [WP-27]
 depends: [CORE-INDEX, ENG-PERF, ENG-BUDGET, ENG-GATES, SYS-GRAPHICS]
 related: [SYS-MAPS, SYS-SAVE]
 contracts: []
 data: ["output/perf/"]
 gates: [G10]
+paths: ["game/kernel/quality/**", "game/kernel/settings/**", "scripts/devices/**"]
 ---
 # ENG-PERF-ADAPT · 自适应与测量
 
@@ -49,6 +48,6 @@ gates: [G10]
 ## 2 测量、剖析与门禁
 
 - **机器**：吞吐、回归和份额核算在开发机（RTX 4080）上进行，`--gpu-index` 选卡。
-- **运行时测量**：GPU/CPU 计时读 `ViewportGetMeasuredRenderTime*`，调用与三角形读 `GetRenderInfo`；显存、对象、管线编译计数读 `Performance` 监视器。按包看 GPU 时间用 `-- --without=WP-xx` 增量对比，仅作诊断。只看 p95 与超过 100 ms 的卡顿；掉帧指间隔超过目标 1.5 倍。
+- **运行时测量**：GPU/CPU 计时读 `ViewportGetMeasuredRenderTime*`，调用与三角形读 `GetRenderInfo`；显存、对象、管线编译计数读 `Performance` 监视器。只看 p95 与超过 100 ms 的卡顿；掉帧指间隔超过目标 1.5 倍。
 - **自动化基准**测导出的 release 版，窗口模式；命令行与截图默认串以 ENG-GATES-SHOTS §1 为准，门禁判据以 ENG-GATES §1 为准。吞吐模式关垂直同步、固定步长；体验模式开垂直同步、按真实时间。预设只由命令行决定，基准时自动调节关闭；不读 `user://` 的规则见 ENG-GATES-SHOTS §1.1。世界状态基准另加夏夜雷雨固定组合（ENG-BUDGET §2）；编译计数连续 10 帧不增才开始采样；A/B 前后各测几次取中位数。
 - **体验脚本**在体验模式下跑，判掉帧与卡顿，并要求跑完 DRAW 编译计数为 0；脚本清单见 ENG-GATES-SHOTS §1.4（主线之后）。

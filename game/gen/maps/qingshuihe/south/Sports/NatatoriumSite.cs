@@ -16,7 +16,7 @@ namespace Campus.Gen.Maps.Qingshuihe.South.Sports;
 /// Natatorium (MAP-QSH-SOUTH; WLD-INTERIORS): a low white elliptical dome, which the facade rules cannot make, so this
 /// site claims it. A short white skirt, the dome, its dark glass band near the top as a clerestory drum under a white cap
 /// (at night the band carries the pool's glow on the venue curve), a light concrete apron round the foot, and the
-/// platform-storey entrance hall on the platform side, closed until WP-31a registers the pool's entrance.
+/// platform-storey entrance hall on the platform side, closed until game/gen/maps/qingshuihe/south/ registers the pool's entrance.
 /// The ellipse is fitted to the footprint's area and second moments. The glass band is one grid (contract-29), a column per facet.
 /// </summary>
 public sealed class NatatoriumSite : ZoneSite
@@ -218,7 +218,7 @@ public sealed class NatatoriumSite : ZoneSite
 
     /// <summary>
     /// The platform-storey entrance hall (WLD-INTERIORS): a white box pushed out of the dome on the platform side, glazed
-    /// front with closed doors, a flat canopy slab. It reads as the pool's door; it opens once WP-31a registers the entrance.
+    /// front with closed doors, a flat canopy slab. It reads as the pool's door; it opens once game/gen/maps/qingshuihe/south/ registers the entrance.
     /// </summary>
     private static void Entry(SiteBuilder b, Plan p, float y)
     {

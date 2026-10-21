@@ -12,7 +12,7 @@ using Campus.Gen.Parts.Roof;
 namespace Campus.Gen.Buildings.Build;
 
 /// <summary>
-/// The WP-12 roof parts of one building at one level, placed by PartCatalog ID (MAP-QSH-ADDITIONS): coping and
+/// The game/gen/parts/roof/ roof parts of one building at one level, placed by PartCatalog ID (MAP-QSH-ADDITIONS): coping and
 /// lightning strip swept along the parapet centreline, and the plant enclosure, a closed equipment-fence ring around a
 /// row of heat pumps and a water tank, plus a mast on some tall roofs. Density follows the roof's precision zone
 /// (RoofRules): full roofs (K1, K2) at the building's level, the rest with fewer units one part level coarser near.
@@ -122,7 +122,7 @@ public sealed class RoofParts(BuildingPlan plan, LodLevel lod, GeometrySink sink
     private static readonly Face LeafFace = new(MaterialKind.Trim, RoofRules.DoorLeaf);
 
     /// <summary>
-    /// The access door on the longest run of the fence ring, on the bay the WP-12 fence part would give an open run (middle
+    /// The access door on the longest run of the fence ring, on the bay the game/gen/parts/roof/ fence part would give an open run (middle
     /// one): frame, leaf and handle stand proud of the boards between that bay's posts, so nothing crosses the fence itself.
     /// The posts and bays are the part's (round(length / PostSpacing) bays from the run's first corner); a bay too narrow
     /// for a door after its posts gets none.
@@ -151,7 +151,7 @@ public sealed class RoofParts(BuildingPlan plan, LodLevel lod, GeometrySink sink
         f.Box(sink, FrameFace, h0, h0 + RoofRules.HandleLength, sLeaf - 0.004f, sLeaf + RoofRules.HandleProud, y0, y0 + RoofRules.HandleHeight);
     }
 
-    /// <summary>A communication mast (WP-12 antenna, mast variant) standing at <paramref name="spot"/>.</summary>
+    /// <summary>A communication mast (game/gen/parts/roof/ antenna, mast variant) standing at <paramref name="spot"/>.</summary>
     public void Mast(Vector2 spot, float baseY)
     {
         if (lod == LodLevel.L4) return;

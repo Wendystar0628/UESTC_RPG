@@ -10,12 +10,12 @@ using H = Campus.Gen.Maps.Qingshuihe.West.WestTune.Shelter;
 namespace Campus.Gen.Maps.Qingshuihe.West.Bridgehead;
 
 /// <summary>
-/// 西门桥头候车亭 (MAP-QSH-WEST): built on the OSM shelter footprint qsh:way:604832425, which this site claims so WP-14
+/// 西门桥头候车亭 (MAP-QSH-WEST): built on the OSM shelter footprint qsh:way:604832425, which this site claims so game/gen/buildings/
 /// does not raise a 3.6 m box there. A light, clean shelter: a raised granite platform with a pale kerb, five slim aluminium
 /// posts along the back, a thin grey-white flat roof cantilevered toward the road with a front and a back eave (the rain
 /// curtains of §11 天气要点 hang from both, clear of the platform), a tech-blue lip under the front fascia, a glass back
 /// screen and two short end screens, a timber bench, and a frosted downlight strip whose street-grade markers light the
-/// platform at night (候车亭顶灯, §11). Snow lies on the roof by normal. The stop sign and its light box are WP-13's.
+/// platform at night (候车亭顶灯, §11). Snow lies on the roof by normal. The stop sign and its light box are game/gen/furniture/'s.
 /// Frame: origin at the footprint's south-west corner, local X north along the back line, local +Z toward the road.
 /// </summary>
 public sealed class ShelterSite : ZoneSite, ILightMetadataSource

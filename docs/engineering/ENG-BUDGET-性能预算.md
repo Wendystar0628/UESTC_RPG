@@ -5,18 +5,17 @@ category: engineering
 parent: ENG-INDEX
 summary: 性能预算的口径：设备档与预设、GPU 帧时分配、份额怎么分与超了怎么办、怎么测；细节级别、速度律与硬规则在子文档
 keywords: [性能预算, 份额, 份额分配, budgets.json, KernelBudgets, 主会话余量, 预算核账, 预设资源上限, 设备档目标, 帧率目标, 最低配置, 独显中, 独显高, 楼内视角份额, GPU 帧时分配, 阴影图档位, 纹理上限]
-owners: [WP-00]
-contributors: [WP-02, WP-27, WP-32, WP-36, WP-47]
 depends: [CORE-INDEX, ENG-ARCH, ENG-PERF, SYS-TIME, UI-NAV, SYS-WALK, SYS-WEATHER, SYS-GRAPHICS, UI-VISUAL, SYS-ATLAS, SYS-TITLE, SYS-SAVE, SYS-MAPS, WLD-OUTSKIRTS, WLD-INTERIORS, SYS-AUDIO]
-related: [ART-STYLE, SYS-VIEW, ENG-GATES, PLAN-WP, ENG-ROADMAP, WLD-TERRAIN]
+related: [ART-STYLE, SYS-VIEW, ENG-GATES, ENG-ROADMAP, WLD-TERRAIN]
 contracts: []
 data: ["budgets.json"]
 gates: [G10, G14, G15]
+paths: ["scripts/requirements.*", "game/testing/**", "game/data/build-code-fingerprints.json", "game/gen/maps/qingshuihe/Campus.Gen.Maps.Qingshuihe.csproj", "game/gen/sites/**", ".collab/tools/**", "dashboard/**", "game/gen/Campus.Gen.csproj", "game/kernel/map/data/**", "game/kernel/renderer/geometry/**", "game/kernel/renderer/render-state/**", "game/kernel/instances/**", "game/gen/geometry/**", "scripts/gates/arch/Campus.Arch.Tests.csproj", "scripts/godot-api/ApiDump/ApiDump.csproj", "game/contracts/Runtime/Campus.Contracts.Runtime.csproj", "game/contracts/Campus.Contracts.csproj", "game/data/maps/*/interiors.json", "game/Campus.Gen.Tests.csproj", "game/Campus.Tests.csproj", "game/contracts/.gdignore", "game/export_presets.cfg", "game/contracts/*.csproj", "game/kernel/registry/**", "game/data/rulesets/**", "scripts/gates/arch/**", "**/Directory.*.targets", "game/Campus.csproj", "game/gen/.gdignore", "game/project.godot", "Directory.*.targets", "game/kernel/stubs/**", "scripts/godot-api/**", "**/Directory.*.props", "scripts/gate.ps1", "third_party.json", "Directory.*.props", "docs/godot-api/**", "game/contracts/**", ".gitattributes", "scripts/build/**", "scripts/setup/**", "game/gen/bakeinput/assembly/**", "scripts/docs/**", "budgets.json", "game/addons/**", "global.json", "version.txt", "scripts/lib/**", ".gitignore", ".ignore", "AGENTS.md", "CLAUDE.md", "README.md", "启动游戏.cmd", "**/*.csproj", "LICENSE", "tools/**", "**/*.sln", "game/.editorconfig", "scripts/git-hooks/**"]
 ---
 # ENG-BUDGET · 性能预算
 
 > **范围**：性能预算的口径：界面、外围、室内与音频的份额（§1）、设备档与预设和 GPU 帧时分配（§2）、份额怎么分、余量核账与超了怎么办（§3）、怎么测（§4）。所有包交付前必须满足 §3 与 ENG-BUDGET-RULES 的硬规则。
-> **不在本文**：细节级别、分块、速度律、深度与阴影参数（ENG-BUDGET-LOD）；硬规则与工程设置（ENG-BUDGET-RULES）；性能策略与原则（ENG-PERF）；具体数值不在本文：运行时预算在 `game/kernel/frame/KernelBudgets.cs`，离线门禁用的缓存与帧时目标在 `budgets.json`，引擎设置在 `game/project.godot`，各以该文件为准；命令行与截图默认串（ENG-GATES-SHOTS §1）；各包分工（PLAN-WP）。
+> **不在本文**：细节级别、分块、速度律、深度与阴影参数（ENG-BUDGET-LOD）；硬规则与工程设置（ENG-BUDGET-RULES）；性能策略与原则（ENG-PERF）；具体数值不在本文：运行时预算在 `game/kernel/frame/KernelBudgets.cs`，离线门禁用的缓存与帧时目标在 `budgets.json`，引擎设置在 `game/project.godot`，各以该文件为准；命令行与截图默认串（ENG-GATES-SHOTS §1）。
 > **查阅**：先读 §0；界面、外围、室内与音频的份额看 §1；设备档与预设看 §2；份额怎么分与余量核账看 §3；怎么测看 §4
 
 ## 0 结论
@@ -41,7 +40,7 @@ gates: [G10, G14, G15]
 
 ## 1 界面、外围、室内与音频的份额
 
-界面加音频主线程合计不到 1 ms，界面态 GPU 不占明显帧时，都计入余量（§3）；外围各层合计不超过 WP-47（外围环境带）的份额；室内只开放精选的 15 处，楼内视角另算（§2）；音频不画东西，主线程从余量里划出。
+界面加音频主线程合计不到 1 ms，界面态 GPU 不占明显帧时，都计入余量（§3）；外围各层合计不超过 外围环境带（WLD-OUTSKIRTS-BAND）的份额；室内只开放精选的 15 处，楼内视角另算（§2）；音频不画东西，主线程从余量里划出。
 
 ## 2 预设与设备档的预算
 
@@ -84,7 +83,7 @@ gates: [G10, G14, G15]
 
 ## 4 怎么测
 
-测量思路与自动化基准见 ENG-PERF-ADAPT §2，命令行与截图默认串见 ENG-GATES-SHOTS §1，门禁判据见 ENG-GATES §1。本文只定：吞吐与回归在开发机（RTX 4080）上测，不设中档参考机；G10 的采样点含行走贴地位姿、开放室内门厅等位姿和 T0 与新游戏落地位姿；增量测试用 `-- --without=WP-xx`，仅作诊断。
+测量思路与自动化基准见 ENG-PERF-ADAPT §2，命令行与截图默认串见 ENG-GATES-SHOTS §1，门禁判据见 ENG-GATES §1。本文只定：吞吐与回归在开发机（RTX 4080）上测，不设中档参考机；G10 的采样点含行走贴地位姿、开放室内门厅等位姿和 T0 与新游戏落地位姿。
 
 ## 5 待验证（P0）
 

@@ -4,14 +4,12 @@ title: 世界总纲
 category: world
 summary: 不分图的世界内容规则的入口：地形、水体、植被、室内、外围、动物与街道家具、日式街景、老楼翻新
 keywords: [世界, 世界总纲, 文档树, WLD]
-owners: []
-paths: ["docs/world/**"]
-contributors: []
 depends: [CORE-INDEX]
 related: []
 contracts: []
 data: []
 gates: []
+paths: ["docs/world/**"]
 ---
 
 # WLD-INDEX · 世界总纲

@@ -17,7 +17,7 @@ namespace Campus.Gen.Maps.Qingshuihe.CenterEast.Pinxue;
 /// A and B and the two bridges to C; OSM records all three as 16 m buildings standing on the ground, which would block
 /// the passage and the paths under the bridges, so this site claims the entity and builds them itself: four square
 /// columns carrying a two-storey beam bridge with the inscription plaque on its forecourt face (storeys 1–2 open as the
-/// passage), and the A–C, B–C bridges over storeys 2–3. The wings themselves stay with WP-14 on the +1.5 m platform.
+/// passage), and the A–C, B–C bridges over storeys 2–3. The wings themselves stay with game/gen/buildings/ on the +1.5 m platform.
 /// </summary>
 public sealed class PinxueFrameSite : ZoneSite
 {
@@ -80,7 +80,7 @@ public sealed class PinxueFrameSite : ZoneSite
     /// The 品学楼 entity's own windows are the ribbon windows of its three bridges: the beam's back face toward the inner
     /// plaza (its forecourt face carries the plaque) and both faces of the A–C and B–C bridges, one named grid per bridge,
     /// a column per mullion cell and face, a row per storey. The wings' classroom windows belong to A, B and C (qsh:relation:
-    /// 11043352–11043354), which WP-14 builds and numbers.
+    /// 11043352–11043354), which game/gen/buildings/ builds and numbers.
     /// </summary>
     public override IEnumerable<(FeatureId Feature, WindowGridSpec Grid)> WindowGrids(IWorldModel world)
     {

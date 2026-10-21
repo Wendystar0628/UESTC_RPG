@@ -52,7 +52,7 @@ public static class AnnexStyle
     /// <summary>Granite colonnade (花岗岩柱廊) along the library's north wall: inset, column size and pitch, height, lintel.</summary>
     public const float ColonnadeInset = 1.8f, ColonnadeColumn = 0.42f, ColonnadePitch = 2.7f, ColonnadeHeight = 3.3f;
     public const float ColonnadeLintel = 0.45f, ColonnadePlinth = 0.18f, ColonnadeMargin = 1.4f;
-    /// <summary>Timber-edged planters (木边花池) with clipped shrubs; the two palms (棕榈) stand in them, planted by WP-23.</summary>
+    /// <summary>Timber-edged planters (木边花池) with clipped shrubs; the two palms (棕榈) stand in them, planted by game/gen/vegetation/.</summary>
     public const float PlanterLength = 3.6f, PlanterWidth = 2.0f, PlanterHeight = 0.42f, PlanterEdge = 0.14f;
     public const float PlanterGap = 1.6f;
     public const float ShrubHeight = 0.5f, ShrubWidth = 0.6f;
@@ -62,7 +62,7 @@ public static class AnnexStyle
     // ---- Colours: the library's plus the garden timbers (palette names only, ART-STYLE). ----
     /// <summary>Red timber of the pergola: the campus' warm terracotta red (red wood, not the signal red), review.</summary>
     public const string PergolaRed = "band.terracotta";
-    /// <summary>Pavilion posts, beams and planter edges: warm natural timber (WP-10's door wood).</summary>
+    /// <summary>Pavilion posts, beams and planter edges: warm natural timber (game/gen/parts/openings/'s door wood).</summary>
     public const string Timber = "door.wood";
     /// <summary>Pavilion roof: the library's dark grey roof.</summary>
     public const string PavilionRoof = "roof.grey";

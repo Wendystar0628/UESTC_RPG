@@ -5,14 +5,12 @@ category: engineering
 parent: ENG-BUDGET
 summary: 违反即不能推送的 23 条硬规则，及 project.godot、导出、渲染器等工程设置
 keywords: [硬规则, 性能规则, 白名单着色器, 不得新增光源, 线程边界, 全局着色器参数登记, 风格底线不可关, 存档只走一条路, 本机烘焙同机确定, 工程设置, 渲染器, Shader Baker, 版本锁定]
-owners: [WP-00]
-contributors: []
 depends: [CORE-INDEX, ENG-BUDGET, ENG-ARCH, ENG-PERF, SYS-GRAPHICS, SYS-SAVE, SYS-AUDIO, WLD-INTERIORS, ART-STYLE]
 related: [ENG-GATES, WF-BUILD]
 contracts: []
 data: []
 gates: [G4, G5, G7, G20, G21]
-paths: ["game/project.godot", "game/export_presets.cfg", "Directory.Build.props", "game/**/*.gdshader*", "game/kernel/**/*.cs", "game/style/**"]
+paths: ["game/project.godot", "game/export_presets.cfg", "Directory.Build.props", "game/**/*.gdshader*", "game/kernel/**/*.cs", "game/style/**", "scripts/requirements.*", "game/testing/**", "game/data/build-code-fingerprints.json", "game/gen/maps/qingshuihe/Campus.Gen.Maps.Qingshuihe.csproj", "game/gen/sites/**", ".collab/tools/**", "dashboard/**", "game/gen/Campus.Gen.csproj", "game/kernel/map/data/**", "game/kernel/renderer/geometry/**", "game/kernel/renderer/render-state/**", "game/kernel/instances/**", "game/gen/geometry/**", "scripts/gates/arch/Campus.Arch.Tests.csproj", "scripts/godot-api/ApiDump/ApiDump.csproj", "game/contracts/Runtime/Campus.Contracts.Runtime.csproj", "game/contracts/Campus.Contracts.csproj", "game/data/maps/*/interiors.json", "game/Campus.Gen.Tests.csproj", "game/Campus.Tests.csproj", "game/contracts/.gdignore", "game/contracts/*.csproj", "game/kernel/registry/**", "game/data/rulesets/**", "scripts/gates/arch/**", "**/Directory.*.targets", "game/Campus.csproj", "game/gen/.gdignore", "Directory.*.targets", "game/kernel/stubs/**", "scripts/godot-api/**", "**/Directory.*.props", "scripts/gate.ps1", "third_party.json", "Directory.*.props", "docs/godot-api/**", "game/contracts/**", ".gitattributes", "scripts/build/**", "scripts/setup/**", "game/gen/bakeinput/assembly/**", "scripts/docs/**", "budgets.json", "game/addons/**", "global.json", "version.txt", "scripts/lib/**", ".gitignore", ".ignore", "AGENTS.md", "CLAUDE.md", "README.md", "启动游戏.cmd", "**/*.csproj", "LICENSE", "tools/**", "**/*.sln", "game/.editorconfig", "scripts/git-hooks/**"]
 ---
 # ENG-BUDGET-RULES · 硬规则与工程设置
 
@@ -41,10 +39,10 @@ paths: ["game/project.godot", "game/export_presets.cfg", "Directory.Build.props"
 
 ### 1.1 渲染、材质与时间（第 1–10 条）
 
-1. **材质只用白名单着色器**：只经 `ToonSpec` 和调色板色名获得；白名单以 `ownership.json` 的 `shaderWhitelist` 为准，新增文件要主会话批准；禁止逐物体建材质，逐物体变化放顶点属性、`INSTANCE_CUSTOM` 或 instance uniform（ENG-ARCH §2）。
-2. **不得新增**光源、SubViewport、CompositorEffect、全屏通道、WorldEnvironment、Environment；只有 WP-01（渲染内核与舞台）、03、05 可以，先申请；WP-24（水体系统）倒影视口已登记。
+1. **材质只用白名单着色器**：只经 `ToonSpec` 和调色板色名获得；白名单以 `scripts/gates/shader-whitelist.json` 的根数组为准，新增文件要主会话批准；禁止逐物体建材质，逐物体变化放顶点属性、`INSTANCE_CUSTOM` 或 instance uniform（ENG-ARCH §2）。
+2. **不得新增**光源、SubViewport、CompositorEffect、全屏通道、WorldEnvironment、Environment；只有渲染内核与舞台（ENG-ARCH）、主光与阴影（`game/kernel/lighting/`）、描线与后期（ART-STYLE-LINES）可以，先申请；水体系统（WLD-WATER）倒影视口已登记。
 3. **几何经登记处按格交付**，烘焙器按级别给一个典型误差，不逐件上报；全部级别烘焙成 TileBundle，`Build()` 在工作线程上跑，主线程不生成几何；只有内核创建渲染实例（`MeshInstance3D`、`MultiMeshInstance3D`、`OccluderInstance3D`，ENG-ARCH §2），静态几何经 RenderingServer 挂载。
-4. **计时与逐帧路径**：计时只由 WP-26（动态与偶发事件）的通道驱动（世界时间例外）；钟点、季节、天气只在 WorldState 那一步推进；风、水、一拍二、雨丝只读 `anim_time`；`Engine.TimeScale` 固定 1，着色器不用 `TIME`；禁用写法见 ENG-ARCH §2（G4）；逐帧零托管分配，不在 `_Process` 里 `GetNode`；界面每秒刷新 ≤ 10 次，动效只改 `Modulate`、非容器的 `Position` / `Rotation`、instance uniform 和 `ui_night`，小地图与大地图是登记例外。
+4. **计时与逐帧路径**：计时只由 动态与偶发事件（SYS-MOTION）的通道驱动（世界时间例外）；钟点、季节、天气只在 WorldState 那一步推进；风、水、一拍二、雨丝只读 `anim_time`；`Engine.TimeScale` 固定 1，着色器不用 `TIME`；禁用写法见 ENG-ARCH §2（G4）；逐帧零托管分配，不在 `_Process` 里 `GetNode`；界面每秒刷新 ≤ 10 次，动效只改 `Modulate`、非容器的 `Position` / `Rotation`、instance uniform 和 `ui_night`，小地图与大地图是登记例外。
 5. **纹理**：导入为 VRAM Compressed，数据纹理运行时创建；区域包不得自带大于 512² 的贴图。
 6. **容器**按 ENG-PERF §1.1 选；MultiMesh 不用实例色、成批整块写；GPUParticles3D 只作备选，用要批准。
 7. **顶点格式**：内核或烘焙器打包成压缩 20 B/顶点，每个表面 ≤ 65 536 个顶点，只用 ENG-PERF §2 登记的格式。

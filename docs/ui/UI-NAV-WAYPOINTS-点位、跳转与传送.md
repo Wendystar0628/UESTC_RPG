@@ -5,13 +5,12 @@ category: ui
 parent: UI-NAV
 summary: 观景点位的设计意图与合法性，飞过去的方式与到达打断，预取与传送的界面侧约定
 keywords: [点位, 观景点, 点位目录编号, waypoints.json, 锚点不是点位, 推荐状态, 进场路径, 飞过去, 滑移, 弧线飞行, 到达与打断, 传送, 跳转压力]
-owners: [WP-36]
-contributors: [WP-06, WP-27, WP-48, WP-35]
 depends: [UI-NAV, SYS-TIME, SYS-ATLAS, ENG-GATES]
 related: [WLD-OUTSKIRTS, SYS-MAPS, SYS-WEATHER, UI-VISUAL]
 contracts: [Waypoint, WaypointGroup, WaypointStand, WaypointRecommend]
 data: ["game/data/maps/qingshuihe/waypoints.json"]
 gates: [G2, G7]
+paths: ["game/data/maps/*/waypoints.json"]
 ---
 # UI-NAV-WAYPOINTS · 点位、跳转与传送
 
@@ -69,4 +68,4 @@ gates: [G2, G7]
 
 ## 3 待验证
 
-- **P12 位姿**：街口是哪一头、朝向是否取 180°；WP-36（点位与跳转） 按世界文件与截图核定后拍英雄帧 6。初值：商业街北端街口外侧，偏航 / 俯仰 180 / +4。
+- **P12 位姿**：街口是哪一头、朝向是否取 180°；点位与跳转（UI-NAV-WAYPOINTS） 按世界文件与截图核定后拍英雄帧 6。初值：商业街北端街口外侧，偏航 / 俯仰 180 / +4。

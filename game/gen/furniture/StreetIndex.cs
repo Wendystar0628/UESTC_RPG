@@ -24,7 +24,7 @@ internal sealed class StreetIndex
 
     public StreetIndex(IWorldModel world)
     {
-        // The effective network (WP-08) publishes a design walk as a network line under its feature's ID and keeps the feature: the
+        // The effective network (SYS-MAPS) publishes a design walk as a network line under its feature's ID and keeps the feature: the
         // line is the walk, so the feature's polyline stays out of the paving below and the walk is filed once, as the line it is.
         var published = world.Network.Roads.Select(r => r.Id.Value).ToHashSet(StringComparer.Ordinal);
         foreach (var feature in world.Features.Values.OrderBy(f => f.Id.Value, StringComparer.Ordinal))
@@ -73,7 +73,7 @@ internal sealed class StreetIndex
     internal static float Edge(PolygonRings rings, Vector2 p) =>
         rings.Holes.Aggregate(PlanRings.DistanceToRing(p, rings.Outer), (d, h) => MathF.Min(d, PlanRings.DistanceToRing(p, h)));
 
-    /// <summary>Road areas of a feature, part by part (a part's own kind and props win over its feature's, as WP-15 reads them).</summary>
+    /// <summary>Road areas of a feature, part by part (a part's own kind and props win over its feature's, as game/gen/ground/ reads them).</summary>
     private static IEnumerable<(JsonElement? Props, WorldGeometry Geometry)> RoadSources(WorldFeature feature)
     {
         if (feature.Parts.Count == 0)

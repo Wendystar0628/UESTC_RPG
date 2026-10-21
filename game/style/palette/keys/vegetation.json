@@ -7,9 +7,9 @@
     "影一栏（WLD-VEGETATION 斜杠后的值）只作对照，不进本文件。",
     "seasonal：叶、草、作物，四季锚点 spring / summer / autumn / winter，进调色板第 4–63 行的季相行（受光、影各一行）。",
     "季节值写成 { \"albedo\": \"#…\" } 时直接给固有色，受光按一般材质推导（主光偏色全量），不按英雄帧定色；目前没有条目这样写。",
-    "variants：跟着另一个季相色名走的变体（WP-15 的草坪大块明暗）。每帧先推出基准色名的受光、影、室内两行，再在 OKLCH 里统一加 dL、转 dh（亮块偏黄、暗块偏绿）；影和受光同步偏，色相不会跨过黄绿分界去走另一套转角。基准色名改了，变体自动跟着变。色号由 ext/ground.json 登记，不占季相行，第 0 行写当前季节的值。",
+    "variants：跟着另一个季相色名走的变体（game/gen/ground/ 的草坪大块明暗）。每帧先推出基准色名的受光、影、室内两行，再在 OKLCH 里统一加 dL、转 dh（亮块偏黄、暗块偏绿）；影和受光同步偏，色相不会跨过黄绿分界去走另一套转角。基准色名改了，变体自动跟着变。色号由 ext/ground.json 登记，不占季相行，第 0 行写当前季节的值。",
     "constant：开花色与穗，固有色四季不变，按 heroSeason 那一季的英雄帧反解；bloom.capsule 放第 0 行，不占季相行。",
-    "crop.* 由 WP-04 登记、WP-37 定值（SYS-TIME、WLD-OUTSKIRTS）：春新苗、夏稻田浓绿、秋金色稻茬、冬霜灰；油菜花复用 bloom.yellow。"
+    "crop.* 由 game/style/ 登记、game/style/palette/keys/ 定值（SYS-TIME、WLD-OUTSKIRTS）：春新苗、夏稻田浓绿、秋金色稻茬、冬霜灰；油菜花复用 bloom.yellow。"
   ],
   "heroFrames": { "spring": "earlyMorning", "summer": "afternoon", "autumn": "golden", "winter": "noon" },
   "seasonal": [
@@ -36,8 +36,8 @@
     { "token": "crop",       "name": "外围作物",         "class": "vegetation", "lit": { "spring": "#A8C860", "summer": "#5E9A48", "autumn": "#D8B460", "winter": "#B4B0A0" } }
   ],
   "variants": [
-    { "token": "ground.grassLight", "name": "草坪大块明暗：亮块（WP-15）", "base": "grass", "dL": 0.03, "dh": -5.0 },
-    { "token": "ground.grassDark",  "name": "草坪大块明暗：暗块（WP-15）", "base": "grass", "dL": -0.03, "dh": 5.0 }
+    { "token": "ground.grassLight", "name": "草坪大块明暗：亮块（WLD-TERRAIN-APPLY）", "base": "grass", "dL": 0.03, "dh": -5.0 },
+    { "token": "ground.grassDark",  "name": "草坪大块明暗：暗块（WLD-TERRAIN-APPLY）", "base": "grass", "dL": -0.03, "dh": 5.0 }
   ],
   "constant": [
     { "token": "bloom.pink",    "name": "樱花、木芙蓉",     "class": "flower", "lit": "#F6C6D4", "heroSeason": "spring", "seasons": ["spring", "autumn"] },

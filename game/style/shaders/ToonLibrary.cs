@@ -7,8 +7,8 @@ namespace Campus.Style.Materials;
 
 /// <summary>
 /// 卡通材质库（ENG-ARCH、ENG-PERF），实现跨包的 <see cref="IToonMaterialProvider"/>：
-/// 按 <see cref="ToonSpec"/> 取白名单着色器的材质，分配 7 位材质 ID（1–111；0 未分配，112–127 留给 WP-05 的特殊线类），
-/// 生产全局数据纹理 mat_table 与静态 window_cards（经 <see cref="IGlobalDataTextureRegistry"/> 登记，交出释放权）。调色板纹理归 WP-37。
+/// 按 <see cref="ToonSpec"/> 取白名单着色器的材质，分配 7 位材质 ID（1–111；0 未分配，112–127 留给 game/kernel/post/ 的特殊线类），
+/// 生产全局数据纹理 mat_table 与静态 window_cards（经 <see cref="IGlobalDataTextureRegistry"/> 登记，交出释放权）。调色板纹理归 game/style/palette/keys/。
 /// </summary>
 [KernelService(typeof(IToonMaterialProvider))]
 public sealed class ToonLibrary : IToonMaterialProvider, IDisposable
@@ -37,7 +37,7 @@ public sealed class ToonLibrary : IToonMaterialProvider, IDisposable
     private int _nextId = FirstId;
     private bool _disposed;
 
-    /// <param name="palettes">完整色表来源（WP-04 的正式实现，无 GPU）：ToonSpec 按它校验，含 256–511 的扩展色。</param>
+    /// <param name="palettes">完整色表来源（game/style/ 的正式实现，无 GPU）：ToonSpec 按它校验，含 256–511 的扩展色。</param>
     /// <param name="source">白名单着色器的材质来源。</param>
     /// <param name="textures">全局数据纹理的登记处；mat_table 与 window_cards 登记后释放权归它。</param>
     public ToonLibrary(IPaletteCatalogSource palettes, IShaderMaterialSource source, IGlobalDataTextureRegistry textures)

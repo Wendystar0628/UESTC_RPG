@@ -6,7 +6,7 @@ using Campus.Gen.World;
 namespace Campus.Gen.Ground;
 
 /// <summary>
-/// Sports grounds read from their source geometry (WP-15). A running track is mapped as the closed line along its inner
+/// Sports grounds read from their source geometry (WLD-TERRAIN-APPLY). A running track is mapped as the closed line along its inner
 /// edge, so it is laid as a ring of <see cref="TrackWidth"/> outside that line: the pitch and the lawn of the infield stay
 /// inside it. A football pitch is a quadrilateral whose rectangle <see cref="FitPitch"/> recovers for the markings.
 /// Everything here works on tags and geometry only, never on entity IDs.

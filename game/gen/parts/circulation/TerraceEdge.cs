@@ -10,10 +10,10 @@ namespace Campus.Gen.Parts.Circulation;
 /// <summary>
 /// Terrace edge band, the v1 retaining edge of WLD-TERRAIN, generated along the height field's transition line.
 /// The band is 2 m wide and centred on the line. For a line running (dx, dz) the upper ground lies toward (dz, −dx), the
-/// WP-09 sweep's positive lateral; a line running +x therefore has the high side toward −z. Its front is a
+/// game/gen/parts/core/ sweep's positive lateral; a line running +x therefore has the high side toward −z. Its front is a
 /// vertical stone wall reaching 0.4 m below the low ground, its top is level with the upper ground, and a trim coping
 /// with its own material ID overhangs the wall by 0.06 m. Drops are 0.35–1.0 m (higher drops terrace, §5.5).
-/// It has no PartCatalog ID yet, so WP-15 calls it directly; coordinates are world or tile-local metres.
+/// It has no PartCatalog ID yet, so game/gen/ground/ calls it directly; coordinates are world or tile-local metres.
 /// </summary>
 public static class TerraceEdge
 {
@@ -27,7 +27,7 @@ public static class TerraceEdge
     /// <summary>
     /// Geometry of one band. <paramref name="line"/> is an X/Z polyline without repeated points. A planted band
     /// (退台花池, MAP-QSH-TERRAIN) keeps the coping at the top and fills the rest of its top with soil 5 cm down for
-    /// WP-23 to plant; a paved band is stone to the top.
+    /// game/gen/vegetation/ to plant; a paved band is stone to the top.
     /// </summary>
     public static PartGeometry Build(IReadOnlyList<Vector2> line, float lowY, float topY, LodLevel lod, bool planted = false)
     {

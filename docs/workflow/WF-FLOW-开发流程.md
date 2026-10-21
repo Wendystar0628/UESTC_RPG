@@ -3,27 +3,25 @@ id: WF-FLOW
 title: 开发流程
 category: workflow
 parent: WF-INDEX
-summary: 一个包从派工、施工（只写不编译）、统一编译推送、回报到评审的流程，防打架，按工作量拆单，可调参数集中放
+summary: 一项任务从派工、施工（只写不编译）、统一编译推送、回报到评审的流程，防打架，按工作量拆单，可调参数集中放
 keywords: [开发流程, 派工, 施工单, 按工作量拆单, 子单 1 小时, 回报, 评审, 防打架, 邻居, 可调参数, D-184, D-211, 评审通用结论]
-owners: [WP-00]
-paths: [".collab/tasks/**"]
-contributors: []
-depends: [WF-ROLE, PLAN-WP, ENG-ARCH]
+depends: [WF-ROLE, ENG-ARCH]
 related: [WF-MODEL, WF-COMMS, WF-STATUS, WF-BUILD, WF-RULE]
 contracts: []
 data: []
 gates: []
+paths: [".collab/tasks/**", "scripts/requirements.*", "game/testing/**", "game/data/build-code-fingerprints.json", "game/gen/maps/qingshuihe/Campus.Gen.Maps.Qingshuihe.csproj", "game/gen/sites/**", ".collab/tools/**", "dashboard/**", "game/gen/Campus.Gen.csproj", "game/kernel/map/data/**", "game/kernel/renderer/geometry/**", "game/kernel/renderer/render-state/**", "game/kernel/instances/**", "game/gen/geometry/**", "scripts/gates/arch/Campus.Arch.Tests.csproj", "scripts/godot-api/ApiDump/ApiDump.csproj", "game/contracts/Runtime/Campus.Contracts.Runtime.csproj", "game/contracts/Campus.Contracts.csproj", "game/data/maps/*/interiors.json", "game/Campus.Gen.Tests.csproj", "game/Campus.Tests.csproj", "game/contracts/.gdignore", "game/export_presets.cfg", "game/contracts/*.csproj", "game/kernel/registry/**", "game/data/rulesets/**", "scripts/gates/arch/**", "**/Directory.*.targets", "game/Campus.csproj", "game/gen/.gdignore", "game/project.godot", "Directory.*.targets", "game/kernel/stubs/**", "scripts/godot-api/**", "**/Directory.*.props", "scripts/gate.ps1", "third_party.json", "Directory.*.props", "docs/godot-api/**", "game/contracts/**", ".gitattributes", "scripts/build/**", "scripts/setup/**", "game/gen/bakeinput/assembly/**", "scripts/docs/**", "budgets.json", "game/addons/**", "global.json", "version.txt", "scripts/lib/**", ".gitignore", ".ignore", "AGENTS.md", "CLAUDE.md", "README.md", "启动游戏.cmd", "**/*.csproj", "LICENSE", "tools/**", "**/*.sln", "game/.editorconfig", "scripts/git-hooks/**"]
 ---
 
 # WF-FLOW · 开发流程
 
-> **范围**：本文规定一个包从派工到评审的流程：派工与拆单、防打架、施工与回报、评审与可调参数。
-> **不在本文**：包的归属与阶段：PLAN-WP、PLAN-WP-LIST §1；git 与推送：WF-RULE §7；构建与测试排队：WF-BUILD §4；模型选择与简报：WF-MODEL；文件格式与回报格式：WF-COMMS；队列、状态与调研入队：WF-STATUS；额度与并发：WF-MODEL §9；契约申请与共享工程文件：WF-BUILD。
+> **范围**：本文规定一项任务从派工到评审的流程：派工与拆单、防打架、施工与回报、评审与可调参数。
+> **不在本文**：路径归属：各文档文件头的 paths；阶段：WF-STATUS §1；git 与推送：WF-RULE §7；构建与测试排队：WF-BUILD §4；模型选择与简报：WF-MODEL；文件格式与回报格式：WF-COMMS；队列、状态与调研入队：WF-STATUS；额度与并发：WF-MODEL §9；契约申请与共享工程文件：WF-BUILD。
 > **查阅**：先读 §0；全流程一览看 §1；派工、拆单与防打架看 §2；施工与回报看 §3；评审与可调参数看 §4。
 
 ## 0 结论
 
-1. **一个包按固定顺序走**（§1，D-211、D-219）：派工 → 施工（只写不编译）→ 回报 → 指挥统一编译、修错、快检 → 提交推送 → 评审（不合格就派返工单向前修）→ 施工状态；写在哪以简报给的路径为准（§3.1）。
+1. **一项任务按固定顺序走**（§1，D-211、D-219）：派工 → 施工（只写不编译）→ 回报 → 指挥统一编译、修错、快检 → 提交推送 → 评审（不合格就派返工单向前修）→ 施工状态；写在哪以简报给的路径为准（§3.1）。
 2. **同一批文件同一时间只有一个写者**（§2.1）：按独占目录分工，简报写明邻居。
 3. **一张子单 1 小时内做完**（§2，D-184、D-232）：超了先交已做好的部分，拆后续子单。
 4. **审美评审由主会话做，推送后评审；可调参数集中放一处**（§4）。
@@ -39,7 +37,7 @@ gates: []
 | 步 | 谁做 | 产出 |
 | --- | --- | --- |
 | 1 派工 | 主会话（Claude 侧的包）；Codex 主线（Codex 侧的包） | 任务单（命名见 STD-CONVENTIONS §3.8，内容格式见 WF-COMMS §3.1），或 Codex 主线给子代理的简报；简报写邻居（§2.1） |
-| 2 施工 | 施工子代理，在简报给的路径上写 | 本包独占目录里的改动；默认不编译、不跑测试、不提交（§3.1） |
+| 2 施工 | 施工子代理，在简报给的路径上写 | 简报允许路径里的改动；默认不编译、不跑测试、不提交（§3.1） |
 | 3 回报 | 子代理向派它的一方回报 | 改动路径与要点（WF-COMMS §3.4）；指挥把施工队列对应行改待集成；代码类旁路单同样交 Codex 主线 |
 | 4 统一编译、提交推送 | 指挥：Codex 主线管 Codex 侧的包，主会话管 Claude 侧的包 | 核对改动；一批交回后编译一次、修错、跑快检，按子代理分路径提交并推送，提交后删队列行（§3.1、WF-RULE §7） |
 | 5 评审 | 主会话管审美与取值；Codex 主线管契约与架构 | 任务单末尾的"主会话评审"小节；Codex 侧有可见或可听的结果，另写评审请求 `requests/review-<队列行号>-<主题>.md`，结论写在其末尾；不合格就派返工单，在最新版本上改 |
@@ -56,15 +54,15 @@ gates: []
 **旁路单**：旁路和量大的机械活，主会话写旁路单放进 `side/cards/`，交 Codex 主线开子代理做（WF-STATUS §4.1、WF-COMMS §5）；调研由主会话派 Sonnet 子代理做（WF-STATUS §4）。
 
 **按工作量拆单（D-184）**：派工前估工作量，任务单写"预计工作量：约 N 小时"。一张单交给一个子代理，上限 1 小时，大致是一栋地标楼、1–2 栋普通楼、一类部件族的一部分或一个系统子功能的一块。
-- 超过上限就拆子单，文件名在编号后加 a、b，各自推送、各自评审。同包的子单共用独占目录、按顺序做，上一张评审通过后新开子代理做下一张（WF-MODEL §7）；不同包照常并行。
+- 超过上限就拆子单，文件名在编号后加 a、b，各自推送、各自评审。改同一批文件的子单按顺序做，上一张评审通过后新开子代理做下一张（WF-MODEL §7）；互不干扰的子单照常并行。
 - **超过 1 小时先交一半**：施工子代理开工后 30 分钟内重估，预计超过 1 小时就只做第一块，回报里写拆法；做到 1 小时还没完，先交已做好的部分。中途发现超出预估同样停下报派单方，不靠压缩细节赶完。
 
-**评审里定下的通用结论（D-199）**：对不止一个包有效的（例如"栏杆立杆不投影"），当天写回对应的规范文档，不只留在任务单里。多包共用的热点文件按包分片（写法见 WF-RULE §10）。
+**评审里定下的通用结论（D-199）**：对不止一项任务有效的（例如"栏杆立杆不投影"），当天写回对应的规范文档，不只留在任务单里。多个模块共用的热点文件按模块分片（写法见 WF-RULE §10）。
 
 ### 2.1 防打架（D-211）
 
 所有人在同一个主检出上写：
-- **按独占目录分工**：派前按 `ownership.json` 分，尽量同时派互不冲突的活。
+- **按独占目录分工**：派前按施工队列的目录和派工简报划定写入边界，尽量同时派互不冲突的活。
 - **简报写邻居**：写"同时在干活的邻居：名字、在做什么、改哪些路径"，来源是施工队列的目录与谁两列和巡逻的"正被改着的目录"（模板见 WF-MODEL §8.1）。Claude 子代理派时给 `name`，碰到共用边界先 SendMessage 问邻居；Codex 子代理会互相通信。
 - **不动别人的文件**：要改邻居的文件，先停下报派单方。
 - **同一批写完再编译**：施工子代理只写不编译，指挥等这一批都交回后统一编译，不会编到别人改了一半的文件（§3.1）。
@@ -72,7 +70,7 @@ gates: []
 
 ## 3 施工与回报
 
-施工的硬规则在 WF-RULE、WF-BUILD：只改本包独占目录，主线闸口之前只交主线版（WF-RULE §8），推送前由指挥统一编译并跑快检（§3.1）。回报格式见 WF-COMMS §3.4，交给派你的一方，指挥接着做 §1 的第 4–5 步。
+施工的硬规则在 WF-RULE、WF-BUILD：只改简报允许的路径，主线闸口之前只交主线版（WF-RULE §8），推送前由指挥统一编译并跑快检（§3.1）。回报格式见 WF-COMMS §3.4，交给派你的一方，指挥接着做 §1 的第 4–5 步。
 
 **规则变了马上转向**（D-236）：施工中规则或设计改了（作者新定、评审改值），指挥当轮通知在做的子代理照新规则改：Codex 走引导信箱（WF-COMMS §4.4），Claude 子代理用 SendMessage；已交回的同批返工，不等这批做完再统一改。
 
@@ -81,11 +79,11 @@ gates: []
 - **子代理只写**：默认不编译、不跑测试、不提交。写完对照 `docs/godot-api/signatures.txt` 和用到的契约源码自查一遍，回报改动路径与要点。
 - **主会话派的施工写在临时工作树里**：主检出由 Codex 主线编译，Claude 侧写到一半的文件会挂掉它的门禁；主会话派施工前先开 `E:\Project\UESTC_RPG.wt\<队列行号>`（WF-RULE §13），子代理只在那里写，交回后主会话在同一棵工作树编译、快检，就在工作树里提交，`git rebase origin/main` 后推到 `origin main`，不把文件拷回主检出、不手工合并；主检出那一侧推送前照常 `git pull --rebase`，两边改到同一文件由 git 三方合并，冲突当场看见当场解。Codex 主线集成正等着用的数据文件（地形、世界文件的 json）例外：在主检出原地一次写完、校验能解析，不挂编译，也不用等推送。
 - **例外**：调试类任务（要复现问题、看运行结果、调手感）和简报写明要编译的，子代理自己编译运行，排构建锁（WF-BUILD §4）。
-- **指挥统一编译**：一批子代理交回后，指挥（Codex 主线或主会话）编译一次，跑本批涉及的包的快检，碰启动、行走、存档加核心专项（WF-RULE §9）。
+- **指挥统一编译**：一批子代理交回后，指挥（Codex 主线或主会话）编译一次，按本批改动路径选域跑快检，碰启动、行走、存档加核心专项（WF-RULE §9）。
 - **错误谁修**：编译错误、小的断言修正和改引用，指挥自己改；错误多（超过 5 个文件）或要改设计才派修复子代理，简报给出错误清单和涉及的文件。同一问题试了两轮没修好就停（WF-RULE §14）。
 - **快检过就推**（D-232）：专项失败怎么分级、阻断的才先修，见 WF-RULE §14。
 - **提交**：通过后一行一提交，共享契约先单独提交，再推送（WF-RULE §7）。
-- **收口结构审计**（D-271）：一批推送完，由另一方派只读子代理审这一批，不自己审自己：Codex 推的由主会话派 Sonnet，主会话推的由 Codex 主线派 astra。先看这批的改动里有没有机器查不出的补丁（STD-CODE §4 末条），再看改到的目录与文档：重复、放错层、孤儿文件、超长文件，以及搬走或删掉目录后 `ownership.json` 与文档 `paths` 里已匹配不到文件的规则。查实的补丁当场开 TOOL 行插队，归原施工方，修完之前同一模块不开新功能行；破坏架构或数据权威的同样开行，排在队列最前，在最新版本上改，不回滚。结果只进施工队列，不出报告（WF-RULE §16）。
+- **收口结构审计**（D-271）：一批推送完，由另一方派只读子代理审这一批，不自己审自己：Codex 推的由主会话派 Sonnet，主会话推的由 Codex 主线派 astra。先看这批的改动里有没有机器查不出的补丁（STD-CODE §4 末条），再看改到的目录与文档：重复、放错层、孤儿文件、超长文件，以及搬走或删掉目录后文档文件头的 `paths` 里已匹配不到文件的规则。查实的补丁当场开 TOOL 行插队，归原施工方，修完之前同一模块不开新功能行；破坏架构或数据权威的同样开行，排在队列最前，在最新版本上改，不回滚。结果只进施工队列，不出报告（WF-RULE §16）。
 - **收口预烘**：一批推送完、主检出 `game/` 下没有在途改动时，主会话按巡逻提醒在主检出后台跑 `scripts/build/prebake-game.ps1`（说明见 ENG-ARCH §4）。
 
 ## 4 评审：审美与契约的交叉评审

@@ -102,7 +102,7 @@ public sealed class CenterEastModuleTests
             }
             AssertThat(meshes > 0).OverrideFailureMessage($"{lod} emits meshes").IsTrue();
             AssertThat(items.Count(i => i.Part is not null) == parts).OverrideFailureMessage($"{lod}: every placed part is emitted exactly once").IsTrue();
-            // The entrance kit (mat, open sign, door lamp) is placed by WP-13 at every open entrance, never by the zone.
+            // The entrance kit (mat, open sign, door lamp) is placed by game/gen/furniture/ at every open entrance, never by the zone.
             string[] kit = [Contracts.Parts.PartCatalog.EntranceMat, Contracts.Parts.PartCatalog.OpenSign, Contracts.Parts.PartCatalog.EntranceLamp];
             AssertThat(!items.Any(i => i.Part is { } p && kit.Contains(p.Part.Value))).OverrideFailureMessage($"{lod}: no entrance kit placed by the zone").IsTrue();
         }

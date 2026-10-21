@@ -5,8 +5,6 @@ category: product
 parent: PRD-INDEX
 summary: 观光规则集的 12 条硬约束 INV-1–INV-12；每条只写长期不变的约束，具体设计与数值在"详见"的文档
 keywords: [全局不变量, INV, 硬约束, 观光规则集, sightseeing, 不变量, 世界规则]
-owners: []
-contributors: []
 depends: [CORE-INDEX]
 related: [REG-DECISIONS, REG-GLOSSARY, ENG-ROADMAP, ENG-GATES]
 contracts: []
@@ -16,13 +14,13 @@ gates: []
 
 # PRD-INVARIANTS · 全局不变量
 
-> **范围**：本文列出观光规则集 `sightseeing` 的全局不变量 INV-1–INV-12，每条是对所有工作包长期生效的硬约束。
+> **范围**：本文列出观光规则集 `sightseeing` 的全局不变量 INV-1–INV-12，每条是对所有内容与系统长期生效的硬约束。
 > **不在本文**：具体设计、数值与清单（以每条"详见"的文档为准）；顶层规则（CORE-INDEX §0 的硬约束一条指向本文）；门禁 G（ENG-GATES §1.2）；RPG 规则集放宽哪些（ENG-ROADMAP）。
 > **查阅**：先读 §0；按编号 grep `INV-n` 直接找到 §1 表里那一行，细则看它的"详见"。
 
 ## 0 结论
 
-1. **硬约束**：INV 对所有工作包生效，主线版也要满足；只有 INV-11 的细节密度和 INV-12 的性能数值留到主线闸口之后验收（WF-RULE §8）。RPG 规则集放宽哪些由 ENG-ROADMAP 登记，登记前一条不放松。
+1. **硬约束**：INV 对所有内容与系统生效，主线版也要满足；只有 INV-11 的细节密度和 INV-12 的性能数值留到主线闸口之后验收（WF-RULE §8）。RPG 规则集放宽哪些由 ENG-ROADMAP 登记，登记前一条不放松。
 2. **只写长期不变的约束**：会随开发改的设计、数值、键位、颜色和清单不进本文，写在"详见"的文档里；改那些不用动本文。
 3. **编号**：不变量写 INV-n，门禁写 G，是两套编号；编号不改、不复用（D-132、D-156）。
 

@@ -14,7 +14,7 @@ namespace Campus.Gen.Maps.Qingshuihe.West.Motto;
 /// 21:28 and 19b): a few big flat planes with a low, gently tilted top and one flat dressed face, not a crumpled box and not
 /// a smooth dome (MottoStone); it no longer stands straight on the paving: it lies in an oval bed of river pebbles held by a low granite kerb, with a crescent of low
 /// clipped planting round its back and ends. The front stays open, so the face still reads from P10 and from Q1's 3 m spot.
-/// The face uses the shared scene-text atlas. The low lawn lamp beside it is WP-39's
+/// The face uses the shared scene-text atlas. The low lawn lamp beside it is game/systems/nightlight/'s
 /// (lighting-schedule.json).
 /// </summary>
 public sealed class MottoStoneSite : ZoneSite

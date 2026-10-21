@@ -5,7 +5,7 @@ using T = Campus.Gen.Maps.Qingshuihe.Waterfront.WaterfrontTune;
 namespace Campus.Gen.Maps.Qingshuihe.Waterfront.Bridges;
 
 /// <summary>
-/// Collision of one bridge (MAP-QSH-ADDITIONS WP-28 行, SYS-WALK), from the same plan as the geometry:
+/// Collision of one bridge (MAP-QSH-ADDITIONS game/gen/maps/qingshuihe/waterfront/ 行, SYS-WALK), from the same plan as the geometry:
 /// every walking strip and the carriageway as sloped boxes cut every 2 m along the bridge (walkable, <see cref="SurfaceTag.Ground"/>),
 /// and each parapet as one barrier wall whose top is max(visual, 1.5 m) above the walk and that reaches no further than
 /// the base. Each collider is filed by its own centre.

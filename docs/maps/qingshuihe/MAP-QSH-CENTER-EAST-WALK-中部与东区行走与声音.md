@@ -5,13 +5,12 @@ parent: MAP-QSH-CENTER-EAST
 category: maps
 summary: 中部与东区的行走主网、能看不能进、开放入口的门口表现、点位与锚点、声音要点
 keywords: [东区行走, 行走主网, 能看不能进, 球场围网门, 游泳池组团围网, 东缘校界, 开放入口, 门口表现, 阶梯教室, 涉水区, P14, P23, R5, R14, A04, A13, 地标可见, 声音要点, 叠水喷泉声, Sounds]
-owners: [WP-21]
-contributors: [WP-30, WP-31b, WP-36, WP-43, WP-44, WP-47, WP-48c, WP-51, WP-53b]
 depends: [MAP-QSH-CENTER-EAST, ART-FIDELITY, SYS-WALK, SYS-ATLAS, WLD-OUTSKIRTS, WLD-INTERIORS, SYS-AUDIO]
 related: [MAP-QSH-CENTER-EAST-SEASONS, MAP-QSH-INTERIORS-LIBRARY, MAP-QSH-NORTH, MAP-QSH-TERRAIN, UI-NAV, ENG-GATES]
 contracts: []
 data: []
 gates: [G4, G15, G21]
+paths: ["game/gen/maps/qingshuihe/center-east/**", "game/data/maps/qingshuihe/world/center-east.terrain.json", "game/data/maps/qingshuihe/world/center-east.json", "game/gen/parts/sport/**"]
 ---
 
 # MAP-QSH-CENTER-EAST-WALK · 中部与东区行走与声音
@@ -29,10 +28,10 @@ gates: [G4, G15, G21]
 
 ### 0.1 接入要点
 
-- **WP-36（点位与跳转） 定 P14、P23 时**：P14 落点在文科楼前友谊树旁的草坪边，要看得到训练馆筒拱和满月；P23 是品学楼阶梯教室；坐标以 `waypoints.json` 为准（§3）
-- **WP-48c（标记、锚点）、WP-44（可行走范围、边界与安全点） 登记锚点 A04、A13 时**：坐标以 `world/atlas.json` 为准，位置要点见 §3
-- **WP-31b（西区与中东区精选室内） 做品学楼、训练馆室内时**：开放范围按 §2；入口、门洞、门口表现和筒拱外壳归本区，楼板、楼梯、家具和 `Acoustics()` 归 WP-31b（§4）
-- **WP-47（外围环境带）、WP-30（校界与门） 做磨底河外和东缘校界时**：河外的科新南路、高速与匝道归 WP-47；东缘栏杆和东南出入口闸机归 WP-30，碰撞记 `Boundary`；磨底河穿出校界的交点落在本区时接护岸栏杆（MAP-QSH-OUTSKIRTS §6.1）
+- **点位与跳转（UI-NAV-WAYPOINTS） 定 P14、P23 时**：P14 落点在文科楼前友谊树旁的草坪边，要看得到训练馆筒拱和满月；P23 是品学楼阶梯教室；坐标以 `waypoints.json` 为准（§3）
+- **标记、锚点（SYS-ATLAS-TRAVEL）、可行走范围、边界与安全点（SYS-WALK-BOUNDS） 登记锚点 A04、A13 时**：坐标以 `world/atlas.json` 为准，位置要点见 §3
+- **西区与中东区精选室内（MAP-QSH-INTERIORS） 做品学楼、训练馆室内时**：开放范围按 §2；入口、门洞、门口表现和筒拱外壳归本区，楼板、楼梯、家具和 `Acoustics()` 归 MAP-QSH-INTERIORS（§4）
+- **外围环境带（WLD-OUTSKIRTS-BAND）、校界与门（game/gen/maps/qingshuihe/boundary/） 做磨底河外和东缘校界时**：河外的科新南路、高速与匝道归 WLD-OUTSKIRTS-BAND；东缘栏杆和东南出入口闸机归 game/gen/maps/qingshuihe/boundary/，碰撞记 `Boundary`；磨底河穿出校界的交点落在本区时接护岸栏杆（MAP-QSH-OUTSKIRTS §6.1）
 
 ## 1 行走：主网、挡路物与开放入口（主线之后）
 
@@ -57,7 +56,7 @@ R5 东行望月全程在本区，一路往东走，背对晚霞，迎着月亮�
 
 ## 2 开放入口与门口表现（主线之后）
 
-开放范围见 MAP-QSH-INTERIORS §2；门口表现（门扇固定敞开、门口灯、地垫、开放牌）、门洞净宽和门外 2.5 m 的传送落点按 WLD-INTERIORS-ACCESS §2，房门自动推开与闭门器按 SYS-WALK-BOUNDS §3。室内由 WP-31b（西区与中东区精选室内） 实现，本区负责入口、门洞和门口表现。
+开放范围见 MAP-QSH-INTERIORS §2；门口表现（门扇固定敞开、门口灯、地垫、开放牌）、门洞净宽和门外 2.5 m 的传送落点按 WLD-INTERIORS-ACCESS §2，房门自动推开与闭门器按 SYS-WALK-BOUNDS §3。室内由 西区与中东区精选室内（MAP-QSH-INTERIORS） 实现，本区负责入口、门洞和门口表现。
 
 - **品学楼的入口**：A 区大厅门；门框架空通道下 A 区一侧的侧门；C 区大厅门。三处都做门口表现。
 - **阶梯教室**：取 A 区东条楼一层的一间；前门在 1F，后门在 2F 锁着；座位逐排升起，后排有栏杆，前墙绿板加投影幕，蓝窗帘、吊扇、灰色固定课桌可参考；沿途教室门关着，门上视窗看得进去。夜里它固定亮着，走到品学楼总能找到这一格亮灯（MAP-QSH-CENTER-EAST-SEASONS §2；P23，秋 20:00）。
@@ -78,7 +77,7 @@ R5 东行望月全程在本区，一路往东走，背对晚霞，迎着月亮�
 
 **锚点**：A04 品学楼（导览亭，在品学楼门框前广场、叠水喷泉西侧，牌面朝门框横梁，落在坡广场顶的平台上）、A13 东区（导览桩，在文科楼与综合训练馆之间，朝训练馆筒拱），位置以 `world/atlas.json` 为准；锚点侧前方约 2 m 的落点和它面向的广场上不放挡路物。
 
-**地标可见**：R5 往东走时背对图书馆穹顶，前方目标是训练馆筒拱和月亮；宣邦楼钟楼应当在南侧看得见（WP-44（可行走范围、边界与安全点） 的可见性检查）。
+**地标可见**：R5 往东走时背对图书馆穹顶，前方目标是训练馆筒拱和月亮；宣邦楼钟楼应当在南侧看得见（可行走范围、边界与安全点（SYS-WALK-BOUNDS） 的可见性检查）。
 
 ## 4 声音要点（主线之后）
 

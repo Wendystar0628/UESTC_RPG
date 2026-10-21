@@ -9,10 +9,10 @@ namespace Campus.Gen.Furniture;
 /// <summary>Classifies street lines and samples joined road runs without placement state.</summary>
 internal static class StreetNetwork
 {
-    /// <summary>Half width of a network line's surface (the width WP-15 paves; never below a footpath's).</summary>
+    /// <summary>Half width of a network line's surface (the width game/gen/ground/ paves; never below a footpath's).</summary>
     public static float HalfWidth(NetworkLine line) => MathF.Max(line.Width, 2f) * 0.5f;
 
-    /// <summary>Walks a bench may line and face (WP-15 paves them as walks or pedestrian plazas); steps and cycleways are not.</summary>
+    /// <summary>Walks a bench may line and face (game/gen/ground/ paves them as walks or pedestrian plazas); steps and cycleways are not.</summary>
     public static bool Strollable(NetworkLine line) => RoadType(line.Props) is "footway" or "path" or "pedestrian";
 
     /// <summary>True for a pedestrian network line (a walk or steps), the lines a plaza may carry.</summary>
@@ -21,14 +21,14 @@ internal static class StreetNetwork
     /// <summary>Pedestrian paving types: the strollable walks and steps.</summary>
     internal static bool Pedestrian(string? type) => type is "footway" or "path" or "pedestrian" or "steps";
 
-    /// <summary>Road type as WP-15 reads it (GroundClassifier): <c>highway</c>.</summary>
+    /// <summary>Road type as game/gen/ground/ reads it (GroundClassifier): <c>highway</c>.</summary>
     internal static string? RoadType(JsonElement? props) =>
         WorldProps.TryText(props, "highway");
 
     public static string? RoadName(NetworkLine line) =>
         WorldProps.TryText(line.Props, "name:zh") ?? WorldProps.TryText(line.Props, "name");
 
-    /// <summary>A network line's road class as WP-15 reads it: <c>highway</c> (the field <see cref="FurnitureStyle.TierOf"/> grades by).</summary>
+    /// <summary>A network line's road class as game/gen/ground/ reads it: <c>highway</c> (the field <see cref="FurnitureStyle.TierOf"/> grades by).</summary>
     public static string? RoadClass(NetworkLine line) => RoadType(line.Props);
 
     /// <summary>True for a line that runs under cover (a tunnel, a building passage, a covered way): nothing stands along it.</summary>
@@ -52,7 +52,7 @@ internal static class StreetNetwork
         return best;
     }
 
-    /// <summary>Vehicle roads WP-15 paves as carriageway (GroundClassifier); footpaths, steps and cycleways are not.</summary>
+    /// <summary>Vehicle roads game/gen/ground/ paves as carriageway (GroundClassifier); footpaths, steps and cycleways are not.</summary>
     public static bool Carriageway(NetworkLine line) => CarriagewayType(WorldProps.TryText(line.Props, "highway"));
 
     internal static bool CarriagewayType(string? type) =>

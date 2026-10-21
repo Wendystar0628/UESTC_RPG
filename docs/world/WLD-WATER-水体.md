@@ -5,19 +5,18 @@ category: world
 parent: WLD-INDEX
 summary: 水体规则：动画式水面画法、反光带与倒影、四季天气、涉水与开放泳区、水体系统
 keywords: [水体, 水面, 开放泳区, 波纹线, 主光反光带, 碎金带, 月光银带, 四芒星闪点, 泡沫线, 倒影, 平面反射, 伪深度色带, 雨点环, 灯的竖条倒影, refl_lamps]
-owners: [WP-24]
-contributors: [WP-07, WP-08, WP-16, WP-18, WP-21, WP-23, WP-26, WP-28, WP-30, WP-31a, WP-37, WP-42, WP-44, WP-45b, WP-47, WP-53]
 depends: [CORE-INDEX, ART-STYLE, ART-SKYLIGHT, WLD-OUTSKIRTS-DIORAMA, ENG-ARCH, ENG-PERF, SYS-TIME, SYS-WEATHER, SYS-GRAPHICS]
 related: [MAP-QSH-CORE, MAP-QSH-SOUTH, MAP-QSH-CENTER-EAST, WLD-VEGETATION, WLD-LIFE, SYS-MOTION, SYS-VIEW, SYS-WALK, SYS-MAPS, WLD-OUTSKIRTS, WLD-INTERIORS, SYS-AUDIO, WLD-TERRAIN, MAP-QSH-WATER]
 contracts: [refl_lamps, reflect_tex, reflect_vp, reflect_lake]
 data: ["game/data/maps/qingshuihe/map.json"]
 gates: [G4, G7, G10]
+paths: ["game/style/palette/ext/water.json", "game/style/shaders/reflect_flat.gdshader.uid", "game/style/shaders/reflect_flat.gdshader", "game/style/shaders/water.gdshader.uid", "game/style/shaders/water.gdshader", "game/systems/water/**", "game/gen/water/**"]
 ---
 
 # WLD-WATER · 水体
 
 > **范围**：本文规定全校水面的动画式画法（底色与色带、波纹线、反光带、泡沫线、倒影、四季与天气），涉水与开放泳区的规则入口，水体系统的规则。
-> **不在本文**：某张图各水体的具体水面和开放泳区名单（清水河见 MAP-QSH-WATER）；截面水柱的画法（WLD-OUTSKIRTS-DIORAMA §3）；驳岸、栈桥、拱桥、亭子（各区 MAP-QSH 文档）；游泳的控制器与进出阈值（SYS-WALK-BOUNDS §4）；岸型与水深剖面、常水位（WLD-TERRAIN、MAP-QSH-TERRAIN）；水边的动物（WLD-LIFE）；荷和水生植物（WLD-VEGETATION）；水的动态节奏（SYS-MOTION）；路面积水（SYS-WEATHER，WP-45b（降水与湿润））；水下的介质呈现（SYS-VIEW）；水声（SYS-AUDIO）；水面材质、倒影视口、数据通道的写法与份额（ENG-PERF 的水面部分，`game/systems/water/`）。
+> **不在本文**：某张图各水体的具体水面和开放泳区名单（清水河见 MAP-QSH-WATER）；截面水柱的画法（WLD-OUTSKIRTS-DIORAMA §3）；驳岸、栈桥、拱桥、亭子（各区 MAP-QSH 文档）；游泳的控制器与进出阈值（SYS-WALK-BOUNDS §4）；岸型与水深剖面、常水位（WLD-TERRAIN、MAP-QSH-TERRAIN）；水边的动物（WLD-LIFE）；荷和水生植物（WLD-VEGETATION）；水的动态节奏（SYS-MOTION）；路面积水（SYS-WEATHER，降水与湿润（game/systems/weather/precip/））；水下的介质呈现（SYS-VIEW）；水声（SYS-AUDIO）；水面材质、倒影视口、数据通道的写法与份额（ENG-PERF 的水面部分，`game/systems/water/`）。
 > **查阅**：先读 §0；水面通用画法与硬质驳岸的接水看 §1；反光带与倒影看 §2；四季与天气看 §3；涉水与开放泳区看 §4；系统规则看 §5；待定参数看 §6；各图水体的具体水面看各图水体文档（清水河是 MAP-QSH-WATER）
 
 ## 0 结论
@@ -33,23 +32,23 @@ gates: [G4, G7, G10]
 
 ### 0.1 接入要点
 
-- **湿地面或积水要画倒影（WP-45b（降水与湿润））**：读共用灯条表，复用本文的解析天空与灯条函数，不另建灯表，不做平面反射（§2.2、§5）
-- **改灯光通道或偶发事件的提亮（WP-39（夜景灯光与时刻表）、SYS-MOTION）**：水面和湿地面的灯条按灯光通道和开灯阈值自己算亮度，CPU 不写，亮灭自动与岸上一致（§2.2）
-- **行走踩进涉水区或游泳（WP-42（行走控制器与模式切换））**：涉水每步落脚发落脚事件，游泳入水、出水各发一次水声；不画水面反馈（§4）
-- **地标、岸树、荷要出现在倒影里（区域包、WP-23（植被系统））**：倒影世界里只放平涂的代理，复用已有资源，与本体同格加载；地标不超过 10 个（§2.3）
+- **湿地面或积水要画倒影（降水与湿润（game/systems/weather/precip/））**：读共用灯条表，复用本文的解析天空与灯条函数，不另建灯表，不做平面反射（§2.2、§5）
+- **改灯光通道或偶发事件的提亮（夜景灯光与时刻表（MAP-QSH-ATMOSPHERE）、SYS-MOTION）**：水面和湿地面的灯条按灯光通道和开灯阈值自己算亮度，CPU 不写，亮灭自动与岸上一致（§2.2）
+- **行走踩进涉水区或游泳（行走控制器与模式切换（game/camera/walk/））**：涉水每步落脚发落脚事件，游泳入水、出水各发一次水声；不画水面反馈（§4）
+- **地标、岸树、荷要出现在倒影里（区域包、植被系统（WLD-VEGETATION））**：倒影世界里只放平涂的代理，复用已有资源，与本体同格加载；地标不超过 10 个（§2.3）
 - **地图数据声明倒影候选湖（SYS-MAPS）**：写在本图 `map.json` 的 `env.reflectLakes`，列表顺序就是湖号（§2.3）
-- **画面设置（WP-32（设备分档、画面设置与自适应））**：倒影不能关，刷新间隔见 §2.3
-- **定水位、做岸或湖底（WP-08（世界模型与世界数据）、各区包、WP-28（滨水与桥））**：水面高一律读 `ITerrain.WaterY`，岸线与水体多边形重合；水体 ID 稳定，同一个 ID 供水面、水域查询和倒影共用（§5）
+- **画面设置（设备分档、画面设置与自适应（SYS-GRAPHICS））**：倒影不能关，刷新间隔见 §2.3
+- **定水位、做岸或湖底（世界模型与世界数据（SYS-MAPS）、各区包、滨水与桥（game/gen/maps/qingshuihe/waterfront/））**：水面高一律读 `ITerrain.WaterY`，岸线与水体多边形重合；水体 ID 稳定，同一个 ID 供水面、水域查询和倒影共用（§5）
 
 ## 1 水面的通用画法
 
-水面的底色、波纹线和倒影都读调色板，自动跟随关键帧；本文描述的是默认状态（秋 17:30）的样子，其他时段与季节由 WP-37（日相与季节调色板） 按天色推导。
+水面的底色、波纹线和倒影都读调色板，自动跟随关键帧；本文描述的是默认状态（秋 17:30）的样子，其他时段与季节由 日相与季节调色板（game/style/palette/keys/） 按天色推导。
 
 ### 1.1 底色与色带
 
 - **底色**取天空的倒影再压暗；视线越平越映出天空，视线越陡越透出下面的青绿（夏季占比加大，夜间不透）。夜间水面映着夜空，要比岸上的建筑亮，剪影才看得清，暗部不低于明度下限。
 - **三道硬边色带**：水的深浅不读真实深度，按到岸距离换算成"伪深度"：1.5 m、4 m、9 m 三条硬边分带——近岸带（透出色 L +0.10）、中带（透出色）、远带（天空倒影色），9 m 那条边再分出更深的湖心一档；菲涅耳的倒影照旧叠在上面。
-- **白天格**（上午到午后）的透出色提亮成清透的青，由浅到深分带，取值由 WP-37（日相与季节调色板） 按天色推导；默认格的主色不变，仍以天空倒影为主。
+- **白天格**（上午到午后）的透出色提亮成清透的青，由浅到深分带，取值由 日相与季节调色板（game/style/palette/keys/） 按天色推导；默认格的主色不变，仍以天空倒影为主。
 
 ### 1.2 波纹线与泡沫线
 
@@ -126,6 +125,6 @@ gates: [G4, G7, G10]
 
 ## 6 待验证
 
-- **透明变体、截面水柱分级色带**：P0 原型在荷区、桥墩、截面近景看图决定，初值都不启用（WP-24（水体系统））。
+- **透明变体、截面水柱分级色带**：P0 原型在荷区、桥墩、截面近景看图决定，初值都不启用（水体系统（WLD-WATER））。
 
 清水河的待验证项（反光带、湿路面灯条）见 MAP-QSH-WATER §7。

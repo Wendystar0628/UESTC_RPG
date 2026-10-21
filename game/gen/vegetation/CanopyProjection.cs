@@ -8,12 +8,12 @@ using Campus.Gen.World;
 namespace Campus.Gen.Vegetation;
 
 /// <summary>
-/// The fallen-leaf and canopy channels WP-23 owns in the two ground masks (WLD-VEGETATION), painted
+/// The fallen-leaf and canopy channels game/gen/vegetation/ owns in the two ground masks (WLD-VEGETATION), painted
 /// from one crown projection of the planting layout:
 /// ground_mask R (ginkgo leaves), G (other leaves and petals), A (the maple subset of G) and ground_mask2 B (canopy shelter). Both masks are RGBA8,
-/// row-major from the map rectangle's minimum corner with rows along +z, the layout WP-15's GroundMaskSet uploads.
-/// Potentials only ever grow (max), so the projection can be painted over WP-15's defaults. Ground shading and the
-/// thresholds stay WP-15's (coverage = step(noise, mask × season amount)).
+/// row-major from the map rectangle's minimum corner with rows along +z, the layout game/gen/ground/'s GroundMaskSet uploads.
+/// Potentials only ever grow (max), so the projection can be painted over game/gen/ground/'s defaults. Ground shading and the
+/// thresholds stay game/gen/ground/'s (coverage = step(noise, mask × season amount)).
 /// </summary>
 public static class CanopyProjection
 {

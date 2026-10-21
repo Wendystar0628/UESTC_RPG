@@ -20,7 +20,7 @@ using static GdUnit4.Assertions;
 public sealed class WindowPartTests
 {
     private static bool Sash(GeometryBundle b) => b.Material.Spec.Lit.Value == "frame.alu.lit" && b.Material.Spec.Fx == ToonFx.Rim;
-    // The WP-10 gasket class (dark equipment steel without outline), not the WP-12 roof fence of the same colour.
+    // The game/gen/parts/openings/ gasket class (dark equipment steel without outline), not the game/gen/parts/roof/ roof fence of the same colour.
     private static bool Gasket(GeometryBundle b) => HasColor(b, "equip.fence.lit") && b.Material.Spec.Line == LineClass.None;
 
     [TestCase, TestCategory(TestReason.Contract)]
@@ -74,13 +74,13 @@ public sealed class WindowPartTests
         var module = new BuildingsModule();
         var near = module.BuildOne(plan, set.Blocks[0], LodLevel.L0, Campus.Contracts.Tests.PaletteFixture.Catalog);
         var mid = module.BuildOne(plan, set.Blocks[0], LodLevel.L1, Campus.Contracts.Tests.PaletteFixture.Catalog);
-        AssertThat(near.Any(Sash)).OverrideFailureMessage("Expected: " + ("K2 windows carry the WP-10 two-level sashes at L0")).IsTrue();
-        AssertThat(near.Any(Fabric)).OverrideFailureMessage("Expected: " + ("K2 room windows hang WP-10 curtains at L0")).IsTrue();
+        AssertThat(near.Any(Sash)).OverrideFailureMessage("Expected: " + ("K2 windows carry the game/gen/parts/openings/ two-level sashes at L0")).IsTrue();
+        AssertThat(near.Any(Fabric)).OverrideFailureMessage("Expected: " + ("K2 room windows hang game/gen/parts/openings/ curtains at L0")).IsTrue();
         AssertThat(!mid.Any(Sash) && !mid.Any(Fabric)).OverrideFailureMessage("Expected: " + ("L1 keeps the simplified frame ring only")).IsTrue();
         // Without window gaskets the dark steel is only the astragal between the entrance leaves (two boxes).
         var dark = near.Where(Gasket).Sum(b => b.Index.Length / 3);
         AssertThat(Rules.OpeningRules.Gaskets || dark <= 24).OverrideFailureMessage("Expected: " + ("window gaskets follow OpeningRules.Gaskets")).IsTrue();
-        AssertThat(near.Concat(mid).All(b => b.Uv2 is null || b.Material.Spec.SurfacePattern is not null || b.Uv2.Where((_, i) => i % 2 == 0).All(x => x == set.Blocks[0].Base))).OverrideFailureMessage("Expected: " + ("no part glass keeps WP-10's placeholder numbering")).IsTrue();
+        AssertThat(near.Concat(mid).All(b => b.Uv2 is null || b.Material.Spec.SurfacePattern is not null || b.Uv2.Where((_, i) => i % 2 == 0).All(x => x == set.Blocks[0].Base))).OverrideFailureMessage("Expected: " + ("no part glass keeps game/gen/parts/openings/'s placeholder numbering")).IsTrue();
     }
 
     [TestCase, TestCategory(TestReason.Contract)]

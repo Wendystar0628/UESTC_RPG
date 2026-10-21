@@ -1,4 +1,4 @@
-﻿# 源码与归属检查函数库：列出改动文件，按 ownership.json 核对归属与 UID，并检查新增代码放置、命名及源码边界规则。
+﻿# 源码与归属检查函数库：列出改动文件，按文档 paths 核对归属与 UID，并检查新增代码放置、命名及源码边界规则。
 # 产出：无（只读检查源码与归属并返回内存结果）。
 # 用法：由 scripts\gate.ps1 点引用（. scripts\gates\check-source.ps1）后调用 Test-UESTCOwnership、Test-UESTCNewCodeFiles、Test-UESTCSourceBoundaries 等函数，不单独运行
 function Get-UESTCFiles {
@@ -77,12 +77,40 @@ function Test-UESTCScriptSyntax {
     [pscustomobject]@{ PythonFiles=$python.Count; JavaScriptFiles=$javascript.Count }
 }
 
+function Get-UESTCDocumentPathRules {
+    param([string]$Root, [string]$BaseRef)
+    $text = if ($BaseRef) {
+        (Invoke-UESTCGit $Root @('show', "${BaseRef}:docs/ROUTES.json")).StdOut
+    } else {
+        [IO.File]::ReadAllText((Join-Path $Root 'docs/ROUTES.json'), [Text.UTF8Encoding]::new($false, $true))
+    }
+    $routes = $text | ConvertFrom-Json -ErrorAction Stop
+    if ($null -eq $routes -or $routes.docs -isnot [pscustomobject] -or $routes.paths -isnot [array]) {
+        throw 'docs/ROUTES.json must contain document paths and a paths array'
+    }
+    foreach ($route in $routes.paths) {
+        if ($route.glob -isnot [string] -or [string]::IsNullOrWhiteSpace($route.glob) -or
+            $route.docs -isnot [array] -or -not $route.docs.Count) {
+            throw 'docs/ROUTES.json contains an invalid document path rule'
+        }
+        foreach ($code in $route.docs) {
+            if ($code -isnot [string] -or [string]::IsNullOrWhiteSpace($code) -or
+                -not $routes.docs.PSObject.Properties[$code] -or
+                $routes.docs.PSObject.Properties[$code].Value -isnot [string] -or
+                [string]::IsNullOrWhiteSpace($routes.docs.PSObject.Properties[$code].Value)) {
+                throw "docs/ROUTES.json contains an invalid document reference: $code"
+            }
+        }
+        [pscustomobject]@{ Pattern=$route.glob; Docs=@($route.docs) }
+    }
+}
+
 function Test-UESTCOwnershipRules {
     param([string]$Root)
-    $ownership = Get-Content -Raw -Encoding UTF8 -LiteralPath (Join-Path $Root 'ownership.json') | ConvertFrom-Json
+    $rules = @(Get-UESTCDocumentPathRules $Root)
     $files = @(Get-UESTCFiles $Root | Where-Object { Test-Path -LiteralPath (Join-Path $Root $_) -PathType Leaf })
     $unmatched = [Collections.Generic.List[string]]::new()
-    foreach ($rule in $ownership.rules) {
+    foreach ($rule in $rules) {
         $expression = Get-UESTCGlobExpression $rule.pattern
         if (@($files -match $expression).Count) { continue }
         # Ignored collaboration tools are real owned files, even though git omits them.
@@ -91,6 +119,12 @@ function Test-UESTCOwnershipRules {
             $matched = Test-Path -LiteralPath (Join-Path $Root $prefix) -PathType Leaf
         } else {
             $directory = if ($prefix.EndsWith('/')) { $prefix.TrimEnd('/') } else { Split-Path $prefix -Parent }
+            # An ignored directory covers the entire glob, including an absent local scope.
+            # Query the literal containing directory, never a sample matching ignored file.
+            if ($directory) {
+                $ignored = Invoke-UESTCGit $Root @('check-ignore', '--quiet', '--', ($directory.Replace('\','/').TrimEnd('/') + '/')) -SuccessExitCodes @(0, 1)
+                if ($ignored.ExitCode -eq 0) { continue }
+            }
             $absolute = if ($directory) { Join-Path $Root $directory } else { $Root }
             $matched = $false
             if (Test-Path -LiteralPath $absolute -PathType Container) {
@@ -101,8 +135,8 @@ function Test-UESTCOwnershipRules {
         }
         if (-not $matched) { $unmatched.Add($rule.pattern) }
     }
-    if ($unmatched.Count) { throw ("Ownership rules match no existing files:`n" + ($unmatched -join "`n")) }
-    [pscustomobject]@{ CheckedRules=@($ownership.rules).Count }
+    if ($unmatched.Count) { throw ("Document path rules match no existing files:`n" + ($unmatched -join "`n")) }
+    [pscustomobject]@{ CheckedRules=$rules.Count }
 }
 
 function Test-UESTCCommentOnlyChange {
@@ -139,28 +173,21 @@ function Get-UESTCGlobExpression {
 # Resolve deletions against exactly the same baseline used by selection and G3.
 function Get-UESTCPathOwnership {
     param([string]$Root, [string[]]$Paths, [string]$BaseRef)
-    $ownership = Get-Content -Raw -Encoding UTF8 -LiteralPath (Join-Path $Root 'ownership.json') | ConvertFrom-Json
-    $rules = @($ownership.rules | Sort-Object @{Expression={ ($_.pattern -replace '[*?]', '').Length };Descending=$true})
+    $rules = @(Get-UESTCDocumentPathRules $Root)
     $deleted = @($Paths | Where-Object { -not (Test-Path -LiteralPath (Join-Path $Root $_) -PathType Leaf) })
     $basePaths = @()
     $baseRules = @()
     if ($deleted.Count) {
         $basePaths = @(Get-UESTCGitPaths $Root @('ls-tree', '-z', '-r', '--name-only', $BaseRef))
         if (@($deleted | Where-Object { $_ -in $basePaths }).Count) {
-            $baseOwnership = (Invoke-UESTCGit $Root @('show', "${BaseRef}:ownership.json")).StdOut | ConvertFrom-Json
-            $baseRules = @($baseOwnership.rules | Sort-Object @{Expression={ ($_.pattern -replace '[*?]', '').Length };Descending=$true})
+            $baseRules = @(Get-UESTCDocumentPathRules $Root $BaseRef)
         }
     }
     foreach ($path in $Paths) {
-        $owner = ''
         $pathRules = if ($path -in $deleted -and $path -in $basePaths) { $baseRules } else { $rules }
-        foreach ($rule in $pathRules) {
-            if (Test-UESTCGlob $path $rule.pattern) {
-                $owner = [string]$rule.owner
-                break
-            }
-        }
-        [pscustomobject]@{ Path=$path; Owner=$owner }
+        $documents = @($pathRules | Where-Object { Test-UESTCGlob $path $_.Pattern } |
+            ForEach-Object { $_.Docs } | Sort-Object -Unique)
+        [pscustomobject]@{ Path=$path; Owner=$documents }
     }
 }
 
@@ -180,7 +207,7 @@ function Test-UESTCNewCodeFiles {
     $failures = New-Object 'Collections.Generic.List[string]'
     $patchNames = @('misc','util','utils','helper','helpers','temp','tmp','new','v2','old','backup','legacy','compat','patch','fix')
     foreach ($entry in (Get-UESTCPathOwnership $Root $added $BaseRef)) {
-        if (-not $entry.Owner) { $failures.Add("New code file has no registered ownership: $($entry.Path)") }
+        if (-not $entry.Owner) { $failures.Add("New code file has no document path ownership: $($entry.Path)") }
         # Match whole path tokens, so ordinary responsibilities such as news/oldTown remain valid.
         $tokens = @($entry.Path -split '[^a-zA-Z0-9]+' | Where-Object { $_ -in $patchNames } | Sort-Object -Unique)
         if ($tokens.Count) { $failures.Add("New code path uses patch-style name ($($tokens -join ', ')): $($entry.Path)") }
@@ -217,7 +244,7 @@ function Test-UESTCOwnership {
     param([string]$Root, [string[]]$Changes, [Parameter(Mandatory)][string]$BaseRef)
     $failures = New-Object 'Collections.Generic.List[string]'
     foreach ($entry in (Get-UESTCPathOwnership $Root $Changes $BaseRef)) {
-        if (-not $entry.Owner) { $failures.Add("Ownership: $($entry.Path) has no registered ownership rule") }
+        if (-not $entry.Owner) { $failures.Add("Ownership: $($entry.Path) has no document path ownership") }
     }
     $tracked = @(Get-UESTCGitPaths $Root @('ls-files', '-z', '--cached'))
     $files = @(Get-UESTCFiles $Root)
@@ -257,7 +284,12 @@ function Test-UESTCOwnership {
 
 function Test-UESTCSourceBoundaries {
     param([string]$Root)
-    $ownership = Get-Content -Raw -Encoding UTF8 -LiteralPath (Join-Path $Root 'ownership.json') | ConvertFrom-Json
+    $whitelistText = [IO.File]::ReadAllText((Join-Path $Root 'scripts/gates/shader-whitelist.json'), [Text.UTF8Encoding]::new($false, $true))
+    if (-not $whitelistText.TrimStart().StartsWith('[')) { throw 'Shader whitelist must be an array' }
+    $shaderWhitelist = $whitelistText | ConvertFrom-Json -ErrorAction Stop
+    if (@($shaderWhitelist | Where-Object { $_ -isnot [string] -or [string]::IsNullOrWhiteSpace($_) }).Count) {
+        throw 'Shader whitelist paths must be non-empty strings'
+    }
     $failures = New-Object 'Collections.Generic.List[string]'
     $mapIds = @()
     $indexPath = Join-Path $Root 'game/data/maps/index.json'
@@ -294,10 +326,8 @@ function Test-UESTCSourceBoundaries {
             'retired colour key' = '"(?:shadow\.contact|line\.building|line\.tree|shadow\.interior)"'
         }
         if ($path -match '\.(gdshader|gdshaderinc|glsl|glslinc)$') {
-            if ($path -match '\.(gdshader|gdshaderinc|glsl|glslinc)$') {
-                $allowed = @($ownership.shaderWhitelist | Where-Object { Test-UESTCGlob $path $_ })
-                if (-not $allowed.Count) { $failures.Add("Shader not in whitelist: $path") }
-            }
+            $allowed = @($shaderWhitelist | Where-Object { Test-UESTCGlob $path $_ })
+            if (-not $allowed.Count) { $failures.Add("Shader not in whitelist: $path") }
             $checks['shader built-in TIME'] = '\bTIME\b'
             $vertex = [regex]::Match($text, '\bvoid\s+vertex\s*\(\s*\)\s*\{')
             if ($vertex.Success) {

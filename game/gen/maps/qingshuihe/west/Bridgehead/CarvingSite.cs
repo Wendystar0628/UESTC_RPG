@@ -32,7 +32,7 @@ public sealed class CarvingSite : ZoneSite
         var f = PlanMath.Facing(at, C.Facing);
         var y = b.Ground(at);
         var around = b.Detail switch { SiteDetail.Full => 36, SiteDetail.Plain => 24, _ => 12 };
-        // The pebble oval rises a little over WP-15's grass (GroundSection.GrassY 0.10), the stone sinks into it.
+        // The pebble oval rises a little over game/gen/ground/'s grass (GroundSection.GrassY 0.10), the stone sinks into it.
         Vector2[] dome = [new(1f, 0f), new(0.95f, 0.08f), new(0.7f, 0.15f), new(0f, 0.18f)];
         b.Add(Solids.Lathe(dome, around, L.Pebble, C.Length * 0.5f + 0.6f, C.Depth * 0.5f + 0.5f), f.At(0, y + 0.02f, 0));
         b.Add(Scaled(MottoStone.Build(L.WhiteStone), C.Scale), f.At(0, y + 0.06f, 0));

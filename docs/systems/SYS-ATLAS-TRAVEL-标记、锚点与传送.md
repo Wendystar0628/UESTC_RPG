@@ -5,13 +5,12 @@ category: systems
 parent: SYS-ATLAS
 summary: 标记类型与可传送范围、锚点实体（导览亭与导览桩）、传送流程与落点；主线全开放，解锁策略在主线之后
 keywords: [地图标记, 标记类型, 锚点, 传送点, 导览亭, 导览桩, 传送, 加载界面, 飞过去, 传送落点, 落地检查, 解锁策略, all-unlocked, proximity, 开放室内标记, 停放点标记, IUnlockPolicy, TeleportSpec, TravelStyle, TravelRefusal, UnlockState, AnchorForm, MarkerKind, AtlasMarker]
-owners: [WP-48c]
-contributors: [WP-06, WP-13, WP-35, WP-36, WP-44, WP-51, WP-53a, WP-55]
 depends: [SYS-ATLAS, UI-NAV, SYS-WALK, SYS-MAPS, WLD-INTERIORS, SYS-TITLE]
 related: [SYS-ATLAS-UI, SYS-VIEW, SYS-SAVE, SYS-AUDIO, MAP-QSH-ADDITIONS, ENG-GATES, ENG-ROADMAP, WLD-LIFE]
 contracts: [IUnlockPolicy, MarkerKind, AnchorForm, UnlockState, TravelStyle, TravelRefusal, TeleportSpec, AtlasMarker]
 data: ["game/data/maps/qingshuihe/atlas/markers.json", "game/data/maps/qingshuihe/world/atlas.json"]
 gates: [G15]
+paths: ["game/data/maps/*/world/atlas.json", "game/data/maps/*/atlas/markers.json", "game/systems/atlas/**"]
 ---
 
 # SYS-ATLAS-TRAVEL · 标记、锚点与传送

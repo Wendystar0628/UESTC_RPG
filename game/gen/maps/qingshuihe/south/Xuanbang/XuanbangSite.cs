@@ -363,7 +363,7 @@ public sealed class XuanbangSite : ZoneSite
             b.Add(PartSolids.BeveledBox(X.DoorWidth, 0.12f, 0.12f, 0, L.DarkFrame), p.At(x, floor + X.DoorSpring - 0.06f, frame));
             foreach (var side in new[] { -1f, 1f })
                 b.Add(PartSolids.BeveledBox(0.06f, X.DoorSpring - 0.1f, 1.5f, 0.012f, L.DarkFrame), p.At(x + side * (X.DoorWidth * 0.5f - 0.05f), floor, 0.55f));
-            // The mat, open sign and door lamp are WP-13's, placed on the entrance anchor (WLD-INTERIORS).
+            // The mat, open sign and door lamp are game/gen/furniture/'s, placed on the entrance anchor (WLD-INTERIORS).
         }
     }
 
@@ -425,7 +425,7 @@ public sealed class XuanbangSite : ZoneSite
         c.Add(Steps.Collision(flight), p.AtReversed(0, y, d + 0.3f + flight.Depth * 0.5f));
         foreach (var x in X.PorticoColumns)
             c.Add(new PostCollider(p.P(x, d - 1f), X.ColumnRadius + 0.1f, floor, floor + X.ColumnHeight, SurfaceTag.Wall) { Foot = FootMat.StonePaving });
-        // Back wall: solid between the doors, the side doors closed, the middle doorway open into WP-31a's atrium.
+        // Back wall: solid between the doors, the side doors closed, the middle doorway open into game/gen/maps/qingshuihe/south/'s atrium.
         var edges = new List<float> { -hw };
         foreach (var x in X.Doors) { edges.Add(x - X.DoorWidth * 0.5f); edges.Add(x + X.DoorWidth * 0.5f); }
         edges.Add(hw);

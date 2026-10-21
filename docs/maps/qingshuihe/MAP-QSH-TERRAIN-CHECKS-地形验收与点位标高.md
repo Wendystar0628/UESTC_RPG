@@ -5,13 +5,12 @@ category: maps
 parent: MAP-QSH-TERRAIN
 summary: 地形验收的四个镜头、冲突检查结论与点位、锚点的标高处理
 keywords: [地形验收镜头, 冲突检查, 垫层与楼体高差, 点位标高, 锚点标高, 室内同位点, 地形求值, 仰望镜头, 水边镜头, 俯瞰镜头, 回望镜头, 跳跃链, 道路走廊, 栏杆碰撞顶]
-owners: [WP-16, WP-18, WP-19, WP-20, WP-21, WP-36, WP-44]
-contributors: [WP-17, WP-31b, WP-31c, WP-48]
 depends: [CORE-INDEX, MAP-QSH-TERRAIN, WLD-TERRAIN, SYS-WALK, ENG-GATES]
 related: [MAP-QSH-TERRAIN-DISTRICTS, MAP-QSH-INTERIORS-LIBRARY, MAP-QSH-INTERIORS, UI-NAV, SYS-ATLAS]
 contracts: []
 data: ["game/data/maps/qingshuihe/world/*.terrain.json"]
 gates: [G2, G7, G15]
+paths: ["game/gen/maps/qingshuihe/center-east/**", "game/gen/maps/qingshuihe/north/**", "game/gen/maps/qingshuihe/south/**", "game/gen/maps/qingshuihe/core/**", "game/gen/maps/qingshuihe/west/**", "game/data/maps/qingshuihe/world/core.terrain.json", "game/data/maps/qingshuihe/world/south.terrain.json", "game/data/maps/qingshuihe/world/west.terrain.json", "game/data/maps/qingshuihe/world/north.terrain.json", "game/data/maps/qingshuihe/world/center-east.terrain.json", "game/data/maps/qingshuihe/world/center-east.json", "game/data/maps/qingshuihe/world/north.json", "game/data/maps/qingshuihe/world/south.json", "game/data/maps/qingshuihe/world/core.json", "game/data/maps/qingshuihe/world/west.json", "game/data/maps/*/waypoints.json", "game/gen/parts/sport/**"]
 ---
 
 # MAP-QSH-TERRAIN-CHECKS · 地形验收与点位标高
@@ -28,10 +27,10 @@ gates: [G2, G7, G15]
 
 ### 0.1 接入要点
 
-- **定点位、锚点、传送落点的 y（WP-36（点位与跳转）、WP-48c（标记、锚点）、WP-44（可行走范围、边界与安全点））**：一律读地形求值，P02、P09、P13、P22、P23 和 A03、A04、A05、A11、A12 按 §3 重定
-- **室内同位点（WP-36）**：落脚 y 按室内索引的楼面加眼高求值（§3）
-- **开放室内（WP-17（图书馆与博物馆室内）、31b、31c）**：图书馆与博物馆垫层锁 0；品学楼楼面随台基升 1.5 m，学知苑 1 栋与朝阳餐厅随宿舍上台升 3.0 m（§2）
-- **行走范围（WP-44）**：丘、堤、台地边坡都算可走，不登记禁行，陡坡由控制器按坡度挡；栏杆与台缘带的碰撞顶按两侧地形取（§2）
+- **定点位、锚点、传送落点的 y（点位与跳转（UI-NAV-WAYPOINTS）、标记、锚点（SYS-ATLAS-TRAVEL）、可行走范围、边界与安全点（SYS-WALK-BOUNDS））**：一律读地形求值，P02、P09、P13、P22、P23 和 A03、A04、A05、A11、A12 按 §3 重定
+- **室内同位点（UI-NAV-WAYPOINTS）**：落脚 y 按室内索引的楼面加眼高求值（§3）
+- **开放室内（图书馆与博物馆室内（MAP-QSH-INTERIORS-LIBRARY）、MAP-QSH-INTERIORS（西区与中东区精选室内）、MAP-QSH-NORTH（北区精选室内））**：图书馆与博物馆垫层锁 0；品学楼楼面随台基升 1.5 m，学知苑 1 栋与朝阳餐厅随宿舍上台升 3.0 m（§2）
+- **行走范围（SYS-WALK-BOUNDS）**：丘、堤、台地边坡都算可走，不登记禁行，陡坡由控制器按坡度挡；栏杆与台缘带的碰撞顶按两侧地形取（§2）
 
 ## 1 验收镜头
 
@@ -47,7 +46,7 @@ gates: [G2, G7, G15]
 ## 2 冲突检查
 
 - **垫层与楼体高差**：图书馆、博物馆垫层 0；品学楼 +1.5；宿舍台原上的楼按台面求垫层，其余开放楼垫层都是 0，室内索引按垫层求楼面；主楼门廊、大台阶、大平台、宿舍首层架高、食堂台阶广场是楼体，不进高度场。
-- **道路走廊**：纵坡按 WLD-TERRAIN-SHAPE §2.3 的坡度类，做不到的由 WP-20（北部生活区）、WP-21（中部与东区） 加长坡段或改台阶。
+- **道路走廊**：纵坡按 WLD-TERRAIN-SHAPE §2.3 的坡度类，做不到的由 北部生活区（MAP-QSH-NORTH）、中部与东区（MAP-QSH-CENTER-EAST） 加长坡段或改台阶。
 - **栏杆与跳跃链**：看台、看月台、草阶草坪的边都是 0.3–0.4 m 的级，台缘 ≤ 1.0 m；渠岸栏杆与球场围网的碰撞顶按两侧最高地面取；丘、堤、台缘边 1 m 内不放可踩物。设计坡最陡 1:3，低于 WLD-TERRAIN-SHAPE §2.3 不记安全点的 20°。
 
 ## 3 点位与锚点标高
@@ -61,5 +60,5 @@ y 一律按"地面 + 垫层 + 眼高 1.62 m"由地形求值；楼面 = 垫层 + 
 | P13 学知苑 · 灯火 | +3.0 | 落点 y 按地形求值；位姿保留 |
 | P22 学知苑 · 学习外廊 | 随上台升 3.0 m | y 按地形求值；入口 `xz1.hall` 随上台 |
 | P23 品学楼 · 阶梯教室 | 随台基升 1.5 m | y 按地形求值；入口 `px.a.hall` 随台基 |
-| P04、P20 等室内同位点 | 垫层 0，楼面 0.15 | WP-36（点位与跳转） 按楼面加眼高 1.62 m 求值 |
+| P04、P20 等室内同位点 | 垫层 0，楼面 0.15 | 点位与跳转（UI-NAV-WAYPOINTS） 按楼面加眼高 1.62 m 求值 |
 | A03、A04、A05、A11、A12 | 0 / +1.5 / 0 / 0 / 0 | A03 放看台北端平地；A04 在坡顶平台（x ≥ 122，5 m 内坡度 ≤ 5%）；A05 在商业街一侧的渠东岸平地、离护岸栏杆一两步以外；A11 避开下台台缘；A12 避开上台南缘 |

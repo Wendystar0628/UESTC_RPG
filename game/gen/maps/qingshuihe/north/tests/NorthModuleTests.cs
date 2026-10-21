@@ -106,7 +106,7 @@ public sealed class NorthModuleTests
             AssertThat(meshes > 0).OverrideFailureMessage($"{lod} emits meshes").IsTrue();
             AssertThat(items.Count(i => i.Part is not null) == parts).OverrideFailureMessage($"{lod}: every placed part is emitted exactly once").IsTrue();
             string[] entranceSet = [Campus.Contracts.Parts.PartCatalog.EntranceMat, Campus.Contracts.Parts.PartCatalog.OpenSign, Campus.Contracts.Parts.PartCatalog.EntranceLamp];
-            AssertThat(!items.Any(i => i.Part is { } p && entranceSet.Contains(p.Part.Value))).OverrideFailureMessage($"{lod}: the open-entrance set is WP-13's, not placed by the zone").IsTrue();
+            AssertThat(!items.Any(i => i.Part is { } p && entranceSet.Contains(p.Part.Value))).OverrideFailureMessage($"{lod}: the open-entrance set is game/gen/furniture/'s, not placed by the zone").IsTrue();
         }
     }
 

@@ -98,7 +98,7 @@ public partial class KernelStage : Node3D, IAppExit, IStageGateHost
         _statistics = new(GetViewport());
         _statistics.Enable();
         DisplayServer.WindowSetTitle("电光年华");
-        GD.Print($"[WP-01][map=-][phase=compose] build={BuildInfo.Build}; global objects={registry.Created.Count}");
+        GD.Print($"[ENG-ARCH][map=-][phase=compose] build={BuildInfo.Build}; global objects={registry.Created.Count}");
     }
 
     private StageCamera CreateStagePresentation(ServiceRegistry registry)
@@ -331,7 +331,7 @@ public partial class KernelStage : Node3D, IAppExit, IStageGateHost
         CheckStartupActive();
         _ready = true;
         Phase = "realtime";
-        GD.Print($"[WP-01][map={maps.Current.Value}][phase=realtime] flow={_flow!.State}; startup complete");
+        GD.Print($"[ENG-ARCH][map={maps.Current.Value}][phase=realtime] flow={_flow!.State}; startup complete");
         await _gate.OnRealtime();
     }
 
@@ -526,7 +526,7 @@ public partial class KernelStage : Node3D, IAppExit, IStageGateHost
         {
             if (_failures.Any(existing => ReferenceEquals(existing, failure))) continue;
             _failures.Add(failure);
-            DiagnosticLog.Error($"[WP-01][phase={_failurePhase}]", failure);
+            DiagnosticLog.Error($"[ENG-ARCH][phase={_failurePhase}]", failure);
         }
         Failure = new AggregateException("Stage failed.", _failures).GetBaseException().Message;
     }

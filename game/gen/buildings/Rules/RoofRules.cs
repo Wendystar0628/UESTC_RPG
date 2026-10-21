@@ -3,7 +3,7 @@ using Campus.Contracts;
 namespace Campus.Gen.Buildings.Rules;
 
 /// <summary>
-/// How the generic roofs take the WP-12 parts (WF-FLOW: tunables in one place). Every parapet gets the coping and a
+/// How the generic roofs take the game/gen/parts/roof/ parts (WF-FLOW: tunables in one place). Every parapet gets the coping and a
 /// lightning strip; the roof plant stands inside a perforated equipment fence and only its top shows (MAP-QSH-ADDITIONS
 /// §2.9, ART-FIDELITY K4 (a)). Density follows the roof's precision zone (D-176): K1 and K2 roofs carry the full set
 /// at the building's level, K3 and beyond fewer units, one part level coarser near. Part sizes are the PartCatalog
@@ -13,7 +13,7 @@ public static class RoofRules
 {
     /// <summary>Roofs in this zone or a finer one (K1, K2) carry the full equipment set.</summary>
     public const FidelityZone FullEquipmentUpTo = FidelityZone.K2;
-    /// <summary>Lightning-strip supports every metre (WP-12 Variation 1) only on K1 roofs; elsewhere one continuous rod.</summary>
+    /// <summary>Lightning-strip supports every metre (Variation 1) only on K1 roofs; elsewhere one continuous rod.</summary>
     public const FidelityZone StripSupportsUpTo = FidelityZone.K1;
     /// <summary>
     /// Coarsest building level with the lightning strip: full roofs keep it to L1, simple roofs to L0 only (beyond 45 m
@@ -21,7 +21,7 @@ public static class RoofRules
     /// </summary>
     public const LodLevel StripUpToFull = LodLevel.L1;
     public const LodLevel StripUpToSimple = LodLevel.L0;
-    /// <summary>Coping overhang beyond each face of the parapet; the WP-12 drip hangs under the outer one.</summary>
+    /// <summary>Coping overhang beyond each face of the parapet; the game/gen/parts/roof/ drip hangs under the outer one.</summary>
     public const float CopingLip = 0.06f;
 
     // ---- Plant enclosure: a row of units along the building axis inside a closed equipment-fence ring ----
@@ -35,7 +35,7 @@ public static class RoofRules
     /// <summary>Only roofs at least this large (m²) carry a plant enclosure.</summary>
     public const float PlantFromArea = 400f;
     /// <summary>
-    /// Colour family of the fence boards in place of WP-12's dark blue-grey fence steel (equip.fence), which read as a hole
+    /// Colour family of the fence boards in place of game/gen/parts/roof/'s dark blue-grey fence steel (equip.fence), which read as a hole
     /// in the roof from mid distance: the light grey aluminium of the frames (core frame.alu), one value step above the roof
     /// slab (roof.grey) and one below the plant casings (equip.grey), so the louvred fence reads as light metal and the
     /// plant still shows above it (main-session review, 2026-10-16 12:35).
@@ -80,6 +80,6 @@ public static class RoofRules
     public const int MastFromStoreys = 9;
     /// <summary>Distance of the mast from its roof corner, along the inward bisector.</summary>
     public const float MastInset = 1.6f;
-    /// <summary>Mast height and base plate width (the WP-12 gallery mast).</summary>
+    /// <summary>Mast height and base plate width (the game/gen/parts/roof/ gallery mast).</summary>
     public const float MastHeight = 3.5f, MastBase = 0.8f;
 }

@@ -7,19 +7,19 @@ namespace Campus.Gen.Ground;
 /// <summary>Channels of the two ground masks (ENG-PERF 1.5, SYS-WEATHER 7, WLD-VEGETATION 9.5).</summary>
 public enum MaskChannel : byte
 {
-    /// <summary>ground_mask R: ginkgo leaf potential (painted from canopies, WP-23).</summary>
+    /// <summary>ground_mask R: ginkgo leaf potential (painted from canopies, WLD-VEGETATION).</summary>
     GinkgoLeaves = 0,
-    /// <summary>ground_mask G: other leaves and petals (WP-23).</summary>
+    /// <summary>ground_mask G: other leaves and petals (WLD-VEGETATION).</summary>
     OtherLeaves = 1,
-    /// <summary>ground_mask B: snow potential: lawn 1, paths 0.5, carriageway 0.2, under eaves 0 (WP-15).</summary>
+    /// <summary>ground_mask B: snow potential: lawn 1, paths 0.5, carriageway 0.2, under eaves 0 (WLD-TERRAIN-APPLY).</summary>
     Snow = 2,
-    /// <summary>ground_mask A: maple leaf potential, a subset of OtherLeaves (WP-23).</summary>
+    /// <summary>ground_mask A: maple leaf potential, a subset of OtherLeaves (WLD-VEGETATION).</summary>
     MapleLeaves = 3,
-    /// <summary>ground_mask2 R: puddle potential (WP-15 with WP-45b).</summary>
+    /// <summary>ground_mask2 R: puddle potential (game/gen/ground/ with game/systems/weather/precip/).</summary>
     Puddle = 4,
-    /// <summary>ground_mask2 G: building shelter, 0 under eaves, canopies and covered walks (WP-15 with WP-45b).</summary>
+    /// <summary>ground_mask2 G: building shelter, 0 under eaves, canopies and covered walks (game/gen/ground/ with game/systems/weather/precip/).</summary>
     Shelter = 5,
-    /// <summary>ground_mask2 B: canopy shelter, multiplied by leaf amount at run time (WP-23).</summary>
+    /// <summary>ground_mask2 B: canopy shelter, multiplied by leaf amount at run time (WLD-VEGETATION).</summary>
     Canopy = 6,
     /// <summary>ground_mask2 A: reserved, always 0.</summary>
     Reserved2 = 7

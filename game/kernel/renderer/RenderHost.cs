@@ -9,7 +9,7 @@ using N = System.Numerics;
 
 namespace Campus.Kernel.Renderer;
 
-/// <summary>Dynamic geometry host; static streamed TileBundles belong to WP-02.</summary>
+/// <summary>Dynamic geometry host; static streamed TileBundles belong to game/kernel/bake/.</summary>
 [KernelService(typeof(IRenderReadiness))]
 [KernelService(typeof(IRenderHost))]
 [KernelNode("render-host")]
@@ -55,14 +55,14 @@ public partial class RenderHost : Node3D, IRenderHost, IRenderReadiness, IMapAwa
         _reflection.Changed += RebuildReflectionProxies;
         ProcessPriority = FramePriority.StreamMount;
         RenderingServer.Singleton.FramePostDraw += ReportReleasedInstances;
-        GD.Print($"[WP-01][phase=render-instances] event=ready globalUniformSlots=" +
+        GD.Print($"[ENG-ARCH][phase=render-instances] event=ready globalUniformSlots=" +
             ProjectSettings.GetSetting("rendering/limits/global_shader_variables/buffer_size").AsInt64());
     }
     public RenderHandle Mount(ContentOutput content)
     {
         ArgumentNullException.ThrowIfNull(content);
         if (content.Instances.Count > 0)
-            throw new NotSupportedException("Dynamic RenderHost does not support ContentOutput.Instances; submit static instance batches through the WP-02 bake/stream path.");
+            throw new NotSupportedException("Dynamic RenderHost does not support ContentOutput.Instances; submit static instance batches through the game/kernel/bake/ bake/stream path.");
         if (_materials is null) throw new InvalidOperationException("RenderHost has not entered the stage.");
         var catalog = _catalog ?? throw new InvalidOperationException("RenderHost has no captured palette catalog.");
         var handle = ++_next;
@@ -86,7 +86,7 @@ public partial class RenderHost : Node3D, IRenderHost, IRenderReadiness, IMapAwa
         }
         catch (Exception error)
         {
-            DiagnosticLog.Error($"[WP-01][phase=render-part-resolve][handle={handle}]", error);
+            DiagnosticLog.Error($"[ENG-ARCH][phase=render-part-resolve][handle={handle}]", error);
             Unmount(new(handle));
             throw;
         }
@@ -130,7 +130,7 @@ public partial class RenderHost : Node3D, IRenderHost, IRenderReadiness, IMapAwa
         }
         catch (Exception error)
         {
-            DiagnosticLog.Error($"[WP-01][phase={phase}][handle={handle}]", error);
+            DiagnosticLog.Error($"[ENG-ARCH][phase={phase}][handle={handle}]", error);
             Failure = Failure is null ? error : new AggregateException(Failure, error);
             if (!_entries.ContainsKey(handle)) return;
             try { Unmount(new(handle)); }
@@ -203,7 +203,7 @@ public partial class RenderHost : Node3D, IRenderHost, IRenderReadiness, IMapAwa
         var retiring = _retiring.Sum(item => item.Draws);
         _peakDraws = Math.Max(_peakDraws, draws.Length + retiring);
         var materials = draws.Select(draw => draw.Instance.MaterialOverride).Distinct(ReferenceEqualityComparer.Instance).Count();
-        GD.Print($"[WP-01][phase=render-instances] event={action} handle={handle} handles={_entries.Count} " +
+        GD.Print($"[ENG-ARCH][phase=render-instances] event={action} handle={handle} handles={_entries.Count} " +
             $"draws={draws.Length} materials={materials} retiring={retiring} peak={_peakDraws} frame={Engine.GetProcessFrames()}");
     }
     public override void _ExitTree()

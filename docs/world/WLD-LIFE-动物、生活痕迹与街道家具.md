@@ -5,13 +5,12 @@ category: world
 parent: WLD-INDEX
 summary: 动物、生活痕迹、停着的车与街道家具的共同底线与显隐做法，动物痕迹与车家具分子文档
 keywords: [动物与生活痕迹总则, 艺术化处理, 世界里不画人, 显隐做法, 变体掩码, 锁存, 日夜两套, 季节专属物件]
-owners: [WP-25, WP-13]
-contributors: [WP-12, WP-16, WP-20, WP-26, WP-39, WP-42, WP-43, WP-44, WP-48a, WP-48c, WP-49b, WP-52, WP-53, WP-55]
 depends: [CORE-INDEX, ART-STYLE, ART-SKYLIGHT, ENG-ARCH, SYS-TIME, SYS-WALK, SYS-WEATHER]
-related: [MAP-QSH-CORE, MAP-QSH-INTERIORS-LIBRARY, MAP-QSH-SOUTH, MAP-QSH-NORTH, MAP-QSH-CENTER-EAST, WLD-VEGETATION, WLD-WATER, SYS-MOTION, ART-FIDELITY, MAP-QSH-ADDITIONS, ENG-BUDGET, PLAN-WP, ENG-PERF, SYS-ATLAS, SYS-TITLE, WLD-INTERIORS, SYS-AUDIO, WLD-LIFE-FAUNA, WLD-LIFE-STREET]
+related: [MAP-QSH-CORE, MAP-QSH-INTERIORS-LIBRARY, MAP-QSH-SOUTH, MAP-QSH-NORTH, MAP-QSH-CENTER-EAST, WLD-VEGETATION, WLD-WATER, SYS-MOTION, ART-FIDELITY, MAP-QSH-ADDITIONS, ENG-BUDGET, ENG-PERF, SYS-ATLAS, SYS-TITLE, WLD-INTERIORS, SYS-AUDIO, WLD-LIFE-FAUNA, WLD-LIFE-STREET]
 contracts: []
 data: []
 gates: []
+paths: ["game/style/palette/ext/fauna.json", "game/gen/parts/street/**", "game/gen/furniture/**", "game/systems/fauna/**", "game/gen/fauna/**"]
 ---
 
 # WLD-LIFE · 动物、生活痕迹与街道家具
@@ -35,7 +34,7 @@ gates: []
 
 ### 0.1 接入要点
 
-- **做随时段、季节、天气显隐的物件（含 WP-52（室内家具与生活痕迹） 的室内痕迹）**：沿用变体掩码与锁存，只在这组不在视野里或快进、拨时间环、换季起雾时切；不用全局参数切日夜和天气（§1）
+- **做随时段、季节、天气显隐的物件（含 室内家具与生活痕迹（WLD-INTERIORS-BUILD） 的室内痕迹）**：沿用变体掩码与锁存，只在这组不在视野里或快进、拨时间环、换季起雾时切；不用全局参数切日夜和天气（§1）
 - 其余对外要求在子文档的接入要点。
 
 ## 1 显隐：随时段、季节、天气的做法

@@ -10,9 +10,9 @@ using L = Campus.Gen.Maps.Qingshuihe.South.SouthTune.Look;
 namespace Campus.Gen.Maps.Qingshuihe.South.MainBuilding;
 
 /// <summary>
-/// The entrance axis from the south gate to the main building (§2.5): the lawns, paving and parterres are WP-15 ground and
-/// WP-23 planting; this site builds the national flagpole at the centre of the front lawn on a three-tier granite base.
-/// The flag itself waits for the wind field (WP-26) and its cloth material.
+/// The entrance axis from the south gate to the main building (§2.5): the lawns, paving and parterres are game/gen/ground/ ground and
+/// game/gen/vegetation/ planting; this site builds the national flagpole at the centre of the front lawn on a three-tier granite base.
+/// The flag itself waits for the wind field (SYS-MOTION) and its cloth material.
 /// </summary>
 public sealed class EntranceAxisSite : ZoneSite
 {

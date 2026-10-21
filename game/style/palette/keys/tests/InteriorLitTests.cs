@@ -8,7 +8,7 @@ using static GdUnit4.Assertions;
 namespace Campus.Tests.Style;
 
 /// <summary>
-/// ART-STYLE interior rows of the WP-37 colour script: the window-patch colour only raises L (L × gain, capped), keeps the
+/// ART-STYLE interior rows of the game/style/palette/keys/ colour script: the window-patch colour only raises L (L × gain, capped), keeps the
 /// lit colour's C and hue, and palette row 3 stores the colour that toon's shade + g × (lit − shade) composite turns into it.
 /// Pure .NET: reads the key data and the registry from the repository.
 /// </summary>
@@ -19,7 +19,7 @@ public sealed class InteriorLitTests
     private static double LitLMax => InteriorRule.GetProperty("litLMax").GetDouble();
     private static double LitGain => InteriorRule.GetProperty("litGain").GetDouble();
 
-    // Hand-registered references: equip.fireRed is WP-12's metal albedo (back-solved from the reviewed autumn 17:30 lit #C8473B).
+    // Hand-registered references: equip.fireRed is game/gen/parts/roof/'s metal albedo (back-solved from the reviewed autumn 17:30 lit #C8473B).
     private static readonly (string Token, string Class, double R, double G, double B) FireRed = ("equip.fireRed", "metal", 0.656184, 0.259853, 0.295443);
     private static readonly string[] HighChroma = ["brick.lit", "band.terracotta.lit", "uestc.blue.lit"];
     private static readonly string[] LowChroma = ["roof.grey.lit", "frame.alu.lit", "stone.beige.lit", "wall.lit", "glass.lit", "roof.silverMetal.lit"];

@@ -73,7 +73,7 @@ public sealed class VegetationInputBoundaryTests
             grid with { Rect = new MapRect(new(-64, -32), new(64, float.PositiveInfinity)) }
         }) AssertThrown(() => invalid.Validate(8192, 8192)).IsInstanceOf<ArgumentException>();
 
-        // Existing WP-15 and WP-23 round the extent/mpp; non-integral extents are not a new rejection rule.
+        // Existing game/gen/ground/ and game/gen/vegetation/ round the extent/mpp; non-integral extents are not a new rejection rule.
         var rounded = new GroundMaskGrid(new MapRect(new(-2, -3), new(.49f, -.51f)), 2, 2, 1);
         rounded.Validate(16, 16);
         // Without checked arithmetic, 32768*32768*4 wraps to zero and empty buffers could be accepted.

@@ -5,8 +5,6 @@ category: engineering
 parent: ENG-INDEX
 summary: 游戏本体开发的失败按根因类别登记：什么算一次、先登记再继续、判类与新增类别、提交窗口；类别清单以 failure-types.json 为准，健康页看次数与频率
 keywords: [游戏失败观测, 失败登记, 失败类别, fail.py, failure-types.json, 根因类别, 表现桶, 候选类别, 提交窗口, 逃逸的失败, 健康页, D-285]
-owners: []
-contributors: []
 depends: [CORE-INDEX, ENG-GATES, WF-RULE]
 related: [ENG-ARCH, ENG-BUDGET-RULES]
 contracts: []

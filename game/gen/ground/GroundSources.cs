@@ -79,7 +79,7 @@ internal static class GroundSources
     }
 
     /// <summary>
-    /// A registered bridge deck (WP-28's "bridge-deck" overlay point: its axis line, the footway lines it joins and the sidewalk it adds)
+    /// A registered bridge deck (game/gen/maps/qingshuihe/waterfront/'s "bridge-deck" overlay point: its axis line, the footway lines it joins and the sidewalk it adds)
     /// leaves no lawn inside its footprint (Opus review 28a): the land under it, where the deck meets the banks, is paved like a walk.
     /// Over water the water stays. The network lines themselves are paved as ordinary roads along their whole length, so the stretch of
     /// a bridge line that lies on land is road like any other.

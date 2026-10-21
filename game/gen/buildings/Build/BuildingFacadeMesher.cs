@@ -98,7 +98,7 @@ internal sealed class BuildingFacadeMesher(BuildingPlan plan, GeometrySink sink,
     }
 
     // ---------------------------------------------------------------------------------------------
-    // Openings (L0/L1): reveal (AO) and sill here; frame, door, curtain and glass from WP-10 parts.
+    // Openings (L0/L1): reveal (AO) and sill here; frame, door, curtain and glass from game/gen/parts/openings/ parts.
     // ---------------------------------------------------------------------------------------------
     private void Openings()
     {

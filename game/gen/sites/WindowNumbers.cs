@@ -7,7 +7,7 @@ namespace Campus.Gen.Sites;
 
 /// <summary>
 /// The zones' side of the map-wide window numbering (contract-29): sites declare named grids from their LOD-free layouts
-/// (each zone module's DescribeWindowLayouts), WP-14 allocates them, and every pane and declaration reads its base from the
+/// (each zone module's DescribeWindowLayouts), game/gen/buildings/ allocates them, and every pane and declaration reads its base from the
 /// kernel's snapshot in BuildContext.WindowNumbering. A zone never numbers a window by itself.
 /// </summary>
 public static class WindowNumbers
@@ -40,7 +40,7 @@ public static class WindowNumbers
             throw new InvalidOperationException($"{feature.Value} / {key}: {columns}×{rows} openings against the allocated {allocation.Columns}×{allocation.Rows}.");
     }
 
-    /// <summary>One numbered rectangular pane per opening (WP-10 OpeningGlass), optionally in the site's glass material.</summary>
+    /// <summary>One numbered rectangular pane per opening (OpeningGlass), optionally in the site's glass material.</summary>
     public static void Panes(SiteBuilder b, IEnumerable<GlazedOpening> openings, WindowAllocation allocation, ChannelId channel, byte card,
         ToonSpec? glass = null)
     {

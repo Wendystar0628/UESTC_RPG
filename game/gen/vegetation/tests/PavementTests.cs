@@ -99,7 +99,7 @@ public sealed class PavementTests
     [TestCase, TestCategory(TestReason.Contract)]
     public void ADesignWalkFiledAsFeatureAndAsNetworkLineIsPavedOnce()
     {
-        // WP-08's effective network files a design walk twice under one ID: as the authored feature and as a network line.
+        // game/gen/world/'s effective network files a design walk twice under one ID: as the authored feature and as a network line.
         // The walk is one walk: paved once, from the line, so the trees on it give way (they still count as planted, so the planting
         // order is that of the unmodified fixture) instead of vanishing as they would from a road; filed as the feature alone it takes
         // the same trees. A network line alone is an ordinary road and keeps the trunks off all the same.
@@ -168,8 +168,8 @@ public sealed class PavementTests
     [TestCase, TestCategory(TestReason.Contract)]
     public void APitNamingItsSpeciesGetsOneTreeOfIt()
     {
-        // WP-29 29a's pocket-garden pits (world/public.json): round beds at a point with radius, perPit 1, props.species,
-        // stone = site (WP-29 draws the frame). Exclusive fixture geometry keeps this rule independent of the authored 29a pits.
+        // game/gen/maps/qingshuihe/public/ 29a's pocket-garden pits (world/public.json): round beds at a point with radius, perPit 1, props.species,
+        // stone = site (game/gen/maps/qingshuihe/public/ draws the frame). Exclusive fixture geometry keeps this rule independent of the authored 29a pits.
         static string Pit(string id, float x, float z, string species, float radius) =>
             "{\"id\":\"" + id + "\",\"kind\":\"tree-pit\",\"geometry\":{\"type\":\"point\",\"position\":[" + F(x) + ",0," + F(z) +
             "]},\"height\":0.2,\"props\":{\"plant\":\"tree\",\"perPit\":1,\"species\":\"" + species + "\",\"radius\":" + F(radius) +
@@ -293,7 +293,7 @@ public sealed class PavementTests
     internal static string F(float value) => value.ToString("0.###", CultureInfo.InvariantCulture);
 
     /// <summary>
-    /// The hard pavement and tree pits of a world, read again from its features and network the way WP-15 paves them: the
+    /// The hard pavement and tree pits of a world, read again from its features and network the way game/gen/ground/ paves them: the
     /// pedestrian, footway, path, steps and cycleway areas and lines of its features (parts of kind road, and design roads) and of
     /// its network.
     /// </summary>

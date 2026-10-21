@@ -6,7 +6,7 @@ namespace Campus.Gen.Buildings.Rules;
 /// Where a generic building opens its doors and how they meet the ground (WF-FLOW: tunables in one place). A building
 /// with open entrances in the interior index (EntranceDecl) opens a door at each anchor it can take, so that the door and
 /// the entrance data agree (WLD-INTERIORS, G18 ≤ 0.5 m); one without keeps the generic door in the middle of its
-/// longest facade. A door at the building's own floor gets the WP-11 landing and the connection down to the outside
+/// longest facade. A door at the building's own floor gets the game/gen/parts/circulation/ landing and the connection down to the outside
 /// landing by WLD-TERRAIN and §5.1; a door whose outside landing is a deck or porch gets the door alone. Detail
 /// follows the door's precision zone (D-176). Initial values; the main session sets the final ones at review.
 /// </summary>
@@ -31,10 +31,10 @@ public static class EntranceRules
     public const float DoorFrame = 0.2f;
     /// <summary>The ground this far out in front of an anchor door must be open (not inside another building footprint).</summary>
     public const float ExteriorProbe = 1.0f;
-    /// <summary>An outside landing this far above the terrain is a deck or porch that another package builds (as WP-13's DeckAbove).</summary>
+    /// <summary>An outside landing this far above the terrain is a deck or porch that another package builds (as game/gen/furniture/'s DeckAbove).</summary>
     public const float DeckAbove = 0.5f;
 
-    // ---- Landing and connection: WP-11 platform, ramp and steps by PartCatalog (WLD-TERRAIN) ----
+    // ---- Landing and connection: game/gen/parts/circulation/ platform, ramp and steps by PartCatalog (WLD-TERRAIN) ----
     /// <summary>Doors in this zone or a finer one (K1, K2) take the full set: a deeper, wider landing and cheek walls on every flight.</summary>
     public const FidelityZone FullUpTo = FidelityZone.K2;
     /// <summary>Landing depth out from the wall plane and its reach beyond each door jamb: full set, simple set.</summary>
@@ -45,7 +45,7 @@ public static class EntranceRules
     /// <summary>The outside landing level is the terrain this far beyond the landing's front edge.</summary>
     public const float GroundProbe = 1.0f;
     /// <summary>
-    /// A landing standing more than this above the ground gets WP-11 guard railings (balusters) on its open sides (the railing
+    /// A landing standing more than this above the ground gets game/gen/parts/circulation/ guard railings (balusters) on its open sides (the railing
     /// part's own height), this far in from its edges (WLD-TERRAIN: 临空 > 1.0 m).
     /// </summary>
     public const float GuardFrom = 1.0f, GuardInset = 0.1f;

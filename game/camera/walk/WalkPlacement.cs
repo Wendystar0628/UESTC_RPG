@@ -192,7 +192,7 @@ internal sealed class WalkPlacement(CharacterBody3D body, Func<NavSpace?> space)
     public void WarnIfRepaired()
     {
         if (_placementRelocated && _entryFrom is null && float.IsFinite(_placementSearchRadius))
-            KernelServices.Get<IDiagnosticLog>().Warning("[WP-42]", "walk: invalid feet repaired to a nearby shore safety point.");
+            KernelServices.Get<IDiagnosticLog>().Warning("", "walk: invalid feet repaired to a nearby shore safety point.");
     }
 
     public void FinishResolution() => _entryFrom = null;

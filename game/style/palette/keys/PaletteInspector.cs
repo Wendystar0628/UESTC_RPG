@@ -89,7 +89,7 @@ public partial class PaletteInspector : CanvasLayer
         var hh = (int)Math.Floor(clock);
         var mm = (int)Math.Round((clock - hh) * 60.0);
         _title.Text = string.Create(CultureInfo.InvariantCulture,
-            $"WP-37 colour script   {SeasonName(season)} {hh:00}:{mm:00}   sun {w.SunAltDeg:+0.00;-0.00} deg   x {w.X:0.00}   catalog {_node.CatalogSource}");
+            $"colour script   {SeasonName(season)} {hh:00}:{mm:00}   sun {w.SunAltDeg:+0.00;-0.00} deg   x {w.X:0.00}   catalog {_node.CatalogSource}");
         _readout.Text = string.Create(CultureInfo.InvariantCulture,
             $"r {w.Frame.V[FrameLayout.R]:0.000}   wMin {w.Frame.V[FrameLayout.WMin]:0.00}   key intensity {w.Frame.V[FrameLayout.Intensity]:0.00}   satGain {w.Frame.V[FrameLayout.SatGain]:0.00}   litLift {w.Frame.V[FrameLayout.LitLift]:0.000}\n" +
             $"snapshot rev {s.Rev}: line {s.LineDarkness:0.00}  glow {s.Glow:0.000}/{s.GlowIntensity:0.00}  vignette {s.Vignette:0.00}  exposure {s.Exposure:+0.00;-0.00} EV  stars {s.Stars:0.00}  cloud {s.CloudCover:0.00}  lampPool {s.LampPoolGain:0.0}\n" +

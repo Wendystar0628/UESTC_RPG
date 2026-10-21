@@ -148,7 +148,7 @@ public sealed class NodeBenchTests
     [TestCategory("Slow")]
     public void ADesignWalkFiledAsFeatureAndAsNetworkLineHasItsNodeBenchesOnce()
     {
-        // WP-08's effective network files a design walk twice under one ID: as the authored feature and as a network line.
+        // game/gen/world/'s effective network files a design walk twice under one ID: as the authored feature and as a network line.
         // The walk is one walk: whichever way it is filed (line only, feature only, both) its node gets the same benches, standing
         // just off its edge and facing it, and a walk that is filed nowhere (hidden) gets none. Judged on a walk made up on open
         // ground, so it holds on a world with or without the effective network.

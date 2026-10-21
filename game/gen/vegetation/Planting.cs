@@ -10,7 +10,7 @@ namespace Campus.Gen.Vegetation;
 /// <summary>
 /// Where a planted tree came from (WLD-VEGETATION): road rows (the ginkgo avenue among them), the avenue band, OSM
 /// points, groves; then the empty tree pits of the overlays (perPit trees each) and the design trees the overlays hand to
-/// WP-23 (kind tree, props.planter WP-23), and explicit sport-group walls.
+/// game/gen/vegetation/ (kind tree, props.planter WP-23), and explicit sport-group walls.
 /// </summary>
 public enum PlantSource : byte { Road = 0, Band = 1, OsmTree = 2, Grove = 3, Pit = 4, Design = 5, SportWall = 6 }
 
@@ -82,7 +82,7 @@ public static class Planting
     /// <summary>Trunk clearance from building, water, court and parking outlines, and beyond a road's half width.</summary>
     public const float TrunkClearance = 0.8f;
 
-    /// <summary>Road types WP-15 paves as walks and plazas (GroundClassifier): hard pavement, no trunk on it or within <see cref="TrunkClearance"/> of it.</summary>
+    /// <summary>Road types game/gen/ground/ paves as walks and plazas (GroundClassifier): hard pavement, no trunk on it or within <see cref="TrunkClearance"/> of it.</summary>
     internal static readonly string[] Paved = ["pedestrian", "footway", "path", "steps", "cycleway"];
 
     /// <summary>The overlay kind of a tree pit (a design feature): a tree may stand in one although it lies on pavement.</summary>

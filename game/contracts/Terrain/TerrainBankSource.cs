@@ -4,7 +4,7 @@ namespace Campus.Contracts;
 
 /// <summary>Optional immutable capability of the same ITerrain instance; this is not a separately registered service.</summary>
 /// <remarks>
-/// WP-08 resolves and freezes spans with its terrain operations and road profiles. Consumers use that result,
+/// game/gen/world/ resolves and freezes spans with its terrain operations and road profiles. Consumers use that result,
 /// rather than deriving hard-bank extents again. Banks has unique ordinal IDs and stable ordinal ID order.
 /// An empty list means this compiled terrain has no exported spans; an absent capability makes no such claim.
 /// Publishing another terrain version must never change a retained source, span, or BankTopY result.

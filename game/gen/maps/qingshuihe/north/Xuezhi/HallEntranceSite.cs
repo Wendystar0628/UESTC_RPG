@@ -14,12 +14,12 @@ namespace Campus.Gen.Maps.Qingshuihe.North.Xuezhi;
 
 /// <summary>
 /// 学知苑 1 栋's open front door toward the 学知一 courtyard (MAP-QSH-NORTH; WLD-INTERIORS). The
-/// building's massing, storeys and windows stay with WP-14; the interior is WP-31c's. This site adds the entrance the
+/// building's massing, storeys and windows stay with game/gen/buildings/; the interior is game/gen/maps/qingshuihe/north/'s. This site adds the entrance the
 /// interior is entered through: a granite landing at the raised ground floor reaching past the teleport landing, 6–8 steps
 /// down to the courtyard with cheek walls and handrails, and a vestibule block (门斗) whose through doorway carries the
 /// double glass leaves fixed open against its reveals, and a canopy. The open-entrance set (mat, green open sign, door
-/// lamp) is placed by WP-13 for every open entrance, not here (main session 12:15). The door centre, facing and floor level come from the interior index (the `xz1.hall` EntranceDecl), so the porch and
-/// WP-31c's hall meet at the same doorway; WP-43 opens the facade wall there by EntranceDecl.Open.
+/// lamp) is placed by game/gen/furniture/ for every open entrance, not here (main session 12:15). The door centre, facing and floor level come from the interior index (the `xz1.hall` EntranceDecl), so the porch and
+/// game/gen/maps/qingshuihe/north/'s hall meet at the same doorway; game/kernel/collision/ opens the facade wall there by EntranceDecl.Open.
 /// </summary>
 public sealed class HallEntranceSite : ZoneSite
 {

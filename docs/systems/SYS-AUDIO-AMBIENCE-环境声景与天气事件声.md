@@ -5,8 +5,6 @@ category: systems
 parent: SYS-AUDIO
 summary: 环境声七层与数据驱动发声器、季节出没、天气声、远雷钟声广播与偶发事件的声音
 keywords: [环境声, 声景, 七层, 发声器, 声景场, 床, 鸟声, 生命感, 室内档案, 英雄声景, 天气声, 雨声分层, 远雷, 钟声, 校园广播, 偶发事件声, IAmbienceService, IAmbientEmitterSource, AmbientEmitter, SoundSocketDecl, AmbienceCue, ILightningFeed]
-owners: [WP-53b]
-contributors: [WP-53, WP-24, WP-25, WP-26, WP-27, WP-28, WP-30, WP-31, WP-38, WP-39, WP-40, WP-41, WP-45]
 depends: [SYS-AUDIO, SYS-MOTION, SYS-TIME, SYS-WEATHER, WLD-INTERIORS]
 related: [WLD-LIFE, WLD-AMBIENCE, WLD-OUTSKIRTS, SYS-VIEW, ENG-GATES]
 contracts: [SoundSetId, AmbienceProfileId, EmitterShape, DayBand, WeatherMask, TraceKind, AmbientEmitterDecl, AmbientEmitterAttribute, IAmbientEmitterSource, SoundSocketDecl, AmbienceCue, AmbienceSnapshot, IAmbienceService, LightningFlash, ILightningFeed, IChannelReader]
@@ -28,7 +26,7 @@ gates: [G21]
 
 ### 0.1 接入要点
 
-- **画面里有要配声的一次性变化**（抖落、雪团落地、动物小动作）：调 `IAmbienceService.Cue`，落地时刻已知的用 `DelaySec`，同批同一个 `Group`，被转场打断时 `CancelCues`；远雷由 WP-40（全日天空）经 `ILightningFeed` 发事件（§3）
+- **画面里有要配声的一次性变化**（抖落、雪团落地、动物小动作）：调 `IAmbienceService.Cue`，落地时刻已知的用 `DelaySec`，同批同一个 `Group`，被转场打断时 `CancelCues`；远雷由 全日天空（ART-SKYLIGHT-ATMOSPHERE）经 `ILightningFeed` 发事件（§3）
 - **会移动的发声物**（天鹅、猫、鸽群，主线之后）：调 `AddDynamic`、`MoveDynamic`，卸载与切图时 `RemoveDynamic`（§1.2）
 - **部件自带声音**（主线之后）：返回 `SoundSocketDecl`，区域包不另摆发声器；**批量生成发声器**：写带 `[AmbientEmitter]` 的来源，ID 以 `amb:` 开头（§1.2）
 

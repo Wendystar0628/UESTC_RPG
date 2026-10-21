@@ -5,13 +5,12 @@ category: art
 parent: ART-MODELING
 summary: 先定身份再放开，建筑、植被、道具的风格化比例与形体，固有色约束，金样、参考板与参数化部件库
 keywords: [风格化造型, 风格化比例, 身份特征, 比例表, 重复上限, 防摩尔纹, 人体尺度锚点, 树冠团块, 少粗圆干净, 固有色, 彩度上限, 金样, 参考板, 参数化部件库, IPartDef, 共同口号]
-owners: [WP-09]
-contributors: [WP-10, WP-11, WP-12, WP-13, WP-14, WP-15, WP-23, WP-31c, WP-37, WP-51, WP-52]
 depends: [CORE-INDEX, ART-MODELING, ART-STYLE, ART-FIDELITY, SYS-TIME, WLD-INTERIORS]
-related: [WLD-VEGETATION, WLD-WATER, ENG-GATES, MAP-QSH-ADDITIONS, ENG-ARCH, ENG-BUDGET, PLAN-WP, WLD-RENOVATION, WLD-AMBIENCE, WLD-TERRAIN]
+related: [WLD-VEGETATION, WLD-WATER, ENG-GATES, MAP-QSH-ADDITIONS, ENG-ARCH, ENG-BUDGET, WLD-RENOVATION, WLD-AMBIENCE, WLD-TERRAIN]
 contracts: [IPartDef]
 data: []
 gates: [G4, G5, G7]
+paths: ["game/gen/parts/core/**"]
 ---
 # ART-MODELING-PROPORTION · 风格化比例、颜色与金样
 
@@ -93,7 +92,7 @@ gates: [G4, G5, G7]
 1. **金样只留 3 个**（D-168）：与主线并行做，其余包不等它们，所有区同时按预设做细节：石材科研楼一栋（六号科研楼为原型）；宿舍一栋（学知苑六组团为原型）加旁边一栋翻新对照楼（本科 A 型，MAP-QSH-RENOVATION §1.5），同评；树组（一株插片型银杏、一株云团型樱花或桂花，加灌木球）。评审是作者看固定机位截图挑毛病，默认状态和冬夜各看一眼（截图方式见 ENG-GATES-SHOTS §1），区与区之间没有先后门。
 2. **每个金样附一页参考板**：实景照片、身份特征清单、金样截图；其余地标不做。
 3. **参数化部件库是唯一入口**：檐口分 S、M、L 三档（0.3、0.6、1.0 m）；倒角、栏杆、台阶、屋顶设备都从部件库取；区域代码不写几何常量（G4）。部件按语义级别（L0+–L4，ENG-BUDGET-LOD §1）给几何，L0 必须有实体厚度和倒角并具备最低合格构件；碰撞由同一组参数生成。写法以 `game/gen/parts/` 和契约 `IPartDef` 为准。
-4. **统一的全局常量**：倒角表、最小像素规则、重复上限、描线类别、修边条截面库、最低合格构件表，都放在部件库内核里（WP-09（部件库内核与金样））。
+4. **统一的全局常量**：倒角表、最小像素规则、重复上限、描线类别、修边条截面库、最低合格构件表，都放在部件库内核里（部件库内核与金样（game/gen/parts/core/））。
 5. **共同口号："走进剧场版动画的校园，清透、敦实、干净、有生活。"** 拿不准风格取舍时回到这句话。
 6. **审查**：
    - 自动查：颜色已登记、最小尺寸、开间重复、倒角、最低合格构件、面数；

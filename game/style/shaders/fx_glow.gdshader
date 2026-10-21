@@ -1,4 +1,4 @@
-// fx_glow.gdshader（WP-39）：加法、不受光的夜间光晕。规格：ART-STYLE；ENG-PERF。
+// fx_glow.gdshader（MAP-QSH-ATMOSPHERE）：加法、不受光的夜间光晕。规格：ART-STYLE；ENG-PERF。
 // 分支由材质 uniform fx_kind 选（材质库每种一份材质，不在运行时改 render_mode 或 #define）：
 //   0 窗灯光晕：贴立面的面片，边长 1.5 倍窗宽、离立面 2 cm，光晕半径不超过窗宽的一半；250 m 外淡出
 //   1 灯头光晕：朝镜头的面片；夜雾里半径 ×2
@@ -16,7 +16,7 @@ render_mode blend_add, unshaded, depth_draw_never, cull_disabled, fog_disabled, 
 
 uniform int fx_kind : hint_range(0, 1) = 0;
 
-// 灯光通道、窗阈值、灯表解码、单灯亮度与光斑的公共求值（WP-39；toon、降水、倒影共用同一份）
+// 灯光通道、窗阈值、灯表解码、单灯亮度与光斑的公共求值（MAP-QSH-ATMOSPHERE；toon、降水、倒影共用同一份）
 #include "res://style/shaders/lamp.gdshaderinc"
 
 // ---------------------------------------------------------------------------

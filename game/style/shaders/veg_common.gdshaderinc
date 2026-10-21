@@ -41,7 +41,7 @@ const float VEG_WARM_SHADE_CMIN = 0.44;    // 黄橙类影色彩度下限：受�
 const float VEG_HUE_JITTER = 0.10;         // 世界坐标色相噪声 ±0.10 rad ≈ ±6°（ART-MODELING）
 const float VEG_L_JITTER = 0.04;           // 世界坐标明度噪声 ±4%
 const float VEG_TINT_CELL = 26.0;          // 色相噪声的格子（m），相邻的树颜色接近
-const float VEG_WIND_SPEED = 6.0;          // 风的相位沿风向传播的速度（m/s，WP-26 风场进来前的桩）
+const float VEG_WIND_SPEED = 6.0;          // 风的相位沿风向传播的速度（m/s，风场进来前的桩）
 const float VEG_BLOB_SWAY = 0.045;         // 团块摆动（m，3–6 cm，0.6–1.2 Hz）
 const float VEG_CARD_FLUTTER = 0.015;      // 叶片颤动（m，1–2 cm，3–6 Hz）
 const float VEG_TRANS_FILL = 0.55;         // 透光最多把逆光影面补到 影 → 透光色 的这个比例（23d）
@@ -106,7 +106,7 @@ VegSpecies veg_species(int row) {
 	if (row < 0 || row > 31) {
 		return s;
 	}
-	// 树种表由 WP-38 启动时写入（WLD-VEGETATION）；没写时读不到标记，走上面的缺省。
+	// 树种表由 game/systems/vegetation/seasons/ 启动时写入（WLD-VEGETATION）；没写时读不到标记，走上面的缺省。
 	if (abs(texelFetch(tree_species, ivec2(7, row), 0).w - VEG_TABLE_TAG) > 0.5) {
 		return s;
 	}
@@ -261,7 +261,7 @@ ToonCol veg_colors(ToonCtx c, ToonMat m, vec3 lit, vec3 shade, vec3 lamp, float 
 	float day = smoothstep(-0.02, 0.05, sun_dir.y);
 	float bounce = TOON_BOUNCE * clamp(-c.n_w.y, 0.0, 1.0) * key_strength * day;
 	shade = mix(shade, shade * pal_cur(PAL_BOUNCE_GROUND) * 1.6, bounce);
-	// 路灯光斑（WP-39，与 toon 同一个函数）：树干与 4 m 以下的树冠接路灯的暖光，夜里不只剩调色板的月光色
+	// 路灯光斑（MAP-QSH-ATMOSPHERE，与 toon 同一个函数）：树干与 4 m 以下的树冠接路灯的暖光，夜里不只剩调色板的月光色
 	toon_lamp_pool(c, lamp, lit, shade);
 	float fd = fog_equiv_dist(c.wpos, c.cam);
 	lit = fog_desaturate(lit, fd);

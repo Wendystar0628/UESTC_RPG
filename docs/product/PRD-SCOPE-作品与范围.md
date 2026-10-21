@@ -5,10 +5,8 @@ category: product
 parent: PRD-INDEX
 summary: 作品是什么、画面与地图的总体取舍、当前范围做什么不做什么、主线的定义；每项一两句加指向
 keywords: [作品定位, 作品与范围, 当前范围, 不做什么, 主线, 主线版, 观光规则集, sightseeing, 落金初灯, 视觉优先, 不是地图复刻, 电光年华]
-owners: []
-contributors: []
 depends: [CORE-INDEX]
-related: [PRD-INVARIANTS, REG-DECISIONS, ENG-ROADMAP, PLAN-WP]
+related: [PRD-INVARIANTS, REG-DECISIONS, ENG-ROADMAP]
 contracts: []
 data: []
 gates: []
@@ -17,7 +15,7 @@ gates: []
 # PRD-SCOPE · 作品与范围
 
 > **范围**：本文规定作品是什么、画面与地图上的总体取舍、当前范围做什么不做什么，以及主线的定义。
-> **不在本文**：硬约束（PRD-INVARIANTS）；工作方法（CORE-INDEX §2–§5）；各部分怎么做（各项指向的文档）；主线闸口的验收（PLAN-WP §1）；RPG 扩展（ENG-ROADMAP）。
+> **不在本文**：硬约束（PRD-INVARIANTS）；工作方法（CORE-INDEX §2–§5）；各部分怎么做（各项指向的文档）；主线闸口的验收（WF-STATUS §1）；RPG 扩展（ENG-ROADMAP）。
 > **查阅**：先读 §0；作品与取舍看 §1，做什么不做什么看 §2，主线看 §3
 
 ## 0 结论
@@ -56,4 +54,4 @@ gates: []
 ## 3 主线（D-168）
 
 - **主线**：扉页与开始页 → 新游戏或继续 → 全校飞行与行走 → 切换时间、季节、天气 → 小地图与传送 → 存档、退出、再继续。
-- **主线版**：每个包先交能接进主线、跑得通、不崩的主线版，全部接通后再按完整规格做细节；主线版能做什么、不能做什么见 WF-RULE §8，闸口验收见 PLAN-WP §1。
+- **主线版**：每项活先交能接进主线、跑得通、不崩的主线版，全部接通后再按完整规格做细节；主线版能做什么、不能做什么见 WF-RULE §8，闸口验收见 WF-STATUS §1。

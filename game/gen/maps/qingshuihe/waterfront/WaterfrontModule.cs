@@ -11,7 +11,7 @@ using T = Campus.Gen.Maps.Qingshuihe.Waterfront.WaterfrontTune;
 
 namespace Campus.Gen.Maps.Qingshuihe.Waterfront;
 
-/// <summary>WP-28 registered bridges and hard-bank structures, resolved against the compiled terrain.</summary>
+/// <summary>game/gen/maps/qingshuihe/waterfront/ registered bridges and hard-bank structures, resolved against the compiled terrain.</summary>
 
 [ContentModule("zone.waterfront")]
 public sealed class WaterfrontModule : ZoneModuleBase

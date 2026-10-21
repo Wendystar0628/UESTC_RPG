@@ -5,13 +5,12 @@ category: systems
 parent: SYS-INDEX
 summary: 世界状态三个量与只向前的时间规则、默认状态落金初灯、美术太阳与月亮、过渡的定目标顺序与用时、质量底线
 keywords: [世界状态, 钟点, 季节, 世界时间, 世界实例, 流逝倍率, 落金初灯, 默认状态, 只向前, 美术太阳, 美术月亮, 满月, 定目标顺序, 质量底线]
-owners: [WP-34, WP-41]
-contributors: [WP-03, WP-26, WP-35, WP-45, WP-46]
 depends: [ART-STYLE, ART-SKYLIGHT, ENG-ARCH, SYS-WEATHER, SYS-MOTION]
 related: [ENG-GATES, UI-NAV, SYS-GRAPHICS, UI-VISUAL, SYS-TITLE, SYS-SAVE, SYS-MAPS, SYS-AUDIO]
 contracts: [IWorldState, IWorldControl, WorldPreset, Flow, Season, ViewMode, Body, WorldTransition, ClockSetMode]
 data: []
 gates: [G2, G7]
+paths: ["game/kernel/world/**"]
 ---
 
 # SYS-TIME · 时间与季节

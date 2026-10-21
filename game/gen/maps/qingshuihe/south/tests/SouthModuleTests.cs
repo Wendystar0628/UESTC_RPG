@@ -41,7 +41,7 @@ public sealed class SouthModuleTests
         foreach (var claim in module.Claims.OfType<FeatureClaim>())
         {
             AssertThat(world.Features.ContainsKey(claim.Feature)).OverrideFailureMessage($"claimed feature {claim.Feature.Value} exists").IsTrue();
-            AssertThat((claim.Aspects & Aspects.Massing) != 0).OverrideFailureMessage("claims cover massing so WP-14 skips the extrusion").IsTrue();
+            AssertThat((claim.Aspects & Aspects.Massing) != 0).OverrideFailureMessage("claims cover massing so game/gen/buildings/ skips the extrusion").IsTrue();
         }
     }
 
@@ -162,11 +162,11 @@ public sealed class SouthModuleTests
     [TestCategory("Slow")]
     public void EntranceKitsAreLeftToTheStreetFurniture()
     {
-        // WLD-INTERIORS: WP-13 places the mat, open sign and door lamp on every open entrance anchor; the zone builds the doorway only.
+        // WLD-INTERIORS: game/gen/furniture/ places the mat, open sign and door lamp on every open entrance anchor; the zone builds the doorway only.
         string[] kit = [PartCatalog.EntranceMat, PartCatalog.OpenSign, PartCatalog.EntranceLamp];
         var placed = ZoneTestCells.Items(new SouthModule(), Context(), LodLevel.L0).Where(i => i.Part is not null).Select(i => i.Part!.Part.Value).ToArray();
         AssertThat(!placed.Any(kit.Contains)).OverrideFailureMessage($"the zone places no entrance kit ({string.Join(", ", placed.Where(kit.Contains))})").IsTrue();
-        AssertThat(!new SouthModule().Claims.OfType<FeatureClaim>().Any(c => (c.Aspects & Aspects.Props) != 0)).OverrideFailureMessage("no Props claim keeps WP-13 off the zone's entrances").IsTrue();
+        AssertThat(!new SouthModule().Claims.OfType<FeatureClaim>().Any(c => (c.Aspects & Aspects.Props) != 0)).OverrideFailureMessage("no Props claim keeps game/gen/furniture/ off the zone's entrances").IsTrue();
     }
 
     [TestCase, TestCategory(TestReason.Contract)]

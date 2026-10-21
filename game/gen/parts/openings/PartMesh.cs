@@ -120,7 +120,7 @@ internal sealed class PartMesh
     }
 }
 
-/// <summary>Placed kernel solids (WP-09) in the opening frame: boxes, mitred rings, slabs with holes and X-extruded prisms.</summary>
+/// <summary>Placed kernel solids (game/gen/parts/core/) in the opening frame: boxes, mitred rings, slabs with holes and X-extruded prisms.</summary>
 internal static class Solid
 {
     // The kernel needs a material; the openings re-layer every solid, so this one is never emitted.
@@ -165,7 +165,7 @@ internal static class Solid
     /// <summary>
     /// Closed glass slab for leaves and panels that move or stand alone (toon_glass). Both large faces carry pane
     /// coordinates (UV in [0, 1)), UV2 = (window base, channel + 32 × columns) and the card type in the spare byte,
-    /// as WP-14 writes them (WLD-INTERIORS).
+    /// as game/gen/buildings/ writes them (WLD-INTERIORS).
     /// </summary>
     public static void Glass(PartMesh mesh, byte flags, Place turn, float x0, float y0, float z0, float x1, float y1, float z1,
         byte card, Vector2 uv2)

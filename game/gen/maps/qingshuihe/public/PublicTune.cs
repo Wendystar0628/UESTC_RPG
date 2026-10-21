@@ -4,7 +4,7 @@ using static Campus.Gen.Sites.ZoneLooks;
 namespace Campus.Gen.Maps.Qingshuihe.Public;
 
 /// <summary>
-/// Every tunable value of WP-29's public spaces in one place (WF-FLOW). Sizes follow MAP-QSH-ADDITIONS
+/// Every tunable value of game/gen/maps/qingshuihe/public/'s public spaces in one place (WF-FLOW). Sizes follow MAP-QSH-ADDITIONS
 /// (转角口袋绿地: about 6 × 6 m of paving, a 4 m curved bench, one tree) and §7 (walk: the pad walkable, the bench
 /// jumpable). Where the pocket greens are, how big their pads are and which way their benches face is data, in
 /// world/public.json; this class holds the section of the bench and the pit, and the material families.
@@ -14,7 +14,7 @@ public static class PublicTune
     /// <summary>Overlay kind of the curved bench: point geometry at the arc centre (the pad centre), props radius/from/to.</summary>
     public const string ArcBenchKind = "arc-bench";
 
-    /// <summary>Overlay kind of a tree pit (WP-23 plants it, WP-15 skips pits whose props say stone = site).</summary>
+    /// <summary>Overlay kind of a tree pit (game/gen/vegetation/ plants it, game/gen/ground/ skips pits whose props say stone = site).</summary>
     public const string TreePitKind = "tree-pit";
 
     public static class Bench
@@ -51,11 +51,11 @@ public static class PublicTune
     /// <summary>Material families (ART-STYLE): only registered pairs, no new colours, no 砖红 or 电子蓝.</summary>
     public static class Look
     {
-        /// <summary>Warm wood slats, the same family WP-13's bench uses (door.wood).</summary>
+        /// <summary>Warm wood slats, the same family game/gen/furniture/'s bench uses (door.wood).</summary>
         public static readonly ToonSpec Wood = S("door.wood", ToonFx.BevelLift, LineClass.Fine);
         /// <summary>Light granite: plinths and the pit kerb (the forecourt and tree-pit stone of the campus).</summary>
         public static readonly ToonSpec Granite = S("stone.beige", ToonFx.BevelLift, LineClass.Fine);
-        /// <summary>Dark grey steel: carriers, back posts (WP-13's DarkSteel).</summary>
+        /// <summary>Dark grey steel: carriers, back posts (game/gen/furniture/'s DarkSteel).</summary>
         public static readonly ToonSpec Steel = S("equip.fence", ToonFx.Rim | ToonFx.AnisoBand, LineClass.Fine, 0.4f);
         /// <summary>Pit soil: the horizontal face that catches leaves, petals and snow (MAP-QSH-ADDITIONS R3).</summary>
         public static readonly ToonSpec Soil = S("base.warmBrown", line: LineClass.None, wet: WetSurface.PorousResponse);

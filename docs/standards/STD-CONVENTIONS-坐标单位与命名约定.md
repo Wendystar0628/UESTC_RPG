@@ -5,19 +5,18 @@ category: standards
 parent: STD-INDEX
 summary: 跨文档共同约定：坐标与单位、方位角、时间写法，编号体系与命名（地图与实体 ID、色名、枚举纪律、持久化 ID、文件与编号格式）、确定性原则、数据路径
 keywords: [约定, 坐标系, 单位, 角度, 方位角, 时间写法, 编号体系, 命名, 地图 ID, 实体 ID, 色名, 枚举纪律, 持久化 ID, 文件命名, 提交说明格式, 确定性, 数据路径]
-owners: [WP-00]
-contributors: [WP-27]
 depends: [CORE-INDEX]
 related: [ENG-ARCH, ENG-GATES, SYS-TIME, SYS-SAVE, SYS-MAPS, REG-DECISIONS, REG-GLOSSARY]
 contracts: []
 data: []
 gates: [G1, G5]
+paths: ["scripts/requirements.*", "game/testing/**", "game/data/build-code-fingerprints.json", "game/gen/maps/qingshuihe/Campus.Gen.Maps.Qingshuihe.csproj", "game/gen/sites/**", ".collab/tools/**", "dashboard/**", "game/gen/Campus.Gen.csproj", "game/kernel/map/data/**", "game/kernel/renderer/geometry/**", "game/kernel/renderer/render-state/**", "game/kernel/instances/**", "game/gen/geometry/**", "scripts/gates/arch/Campus.Arch.Tests.csproj", "scripts/godot-api/ApiDump/ApiDump.csproj", "game/contracts/Runtime/Campus.Contracts.Runtime.csproj", "game/contracts/Campus.Contracts.csproj", "game/data/maps/*/interiors.json", "game/Campus.Gen.Tests.csproj", "game/Campus.Tests.csproj", "game/contracts/.gdignore", "game/export_presets.cfg", "game/contracts/*.csproj", "game/kernel/registry/**", "game/data/rulesets/**", "scripts/gates/arch/**", "**/Directory.*.targets", "game/Campus.csproj", "game/gen/.gdignore", "game/project.godot", "Directory.*.targets", "game/kernel/stubs/**", "scripts/godot-api/**", "**/Directory.*.props", "scripts/gate.ps1", "third_party.json", "Directory.*.props", "docs/godot-api/**", "game/contracts/**", ".gitattributes", "scripts/build/**", "scripts/setup/**", "game/gen/bakeinput/assembly/**", "scripts/docs/**", "budgets.json", "game/addons/**", "global.json", "version.txt", "scripts/lib/**", ".gitignore", ".ignore", "AGENTS.md", "CLAUDE.md", "README.md", "启动游戏.cmd", "**/*.csproj", "LICENSE", "tools/**", "**/*.sln", "game/.editorconfig", "scripts/git-hooks/**"]
 ---
 
 # STD-CONVENTIONS · 坐标单位与命名约定
 
 > **范围**：本文规定所有文档和代码共同遵守的写法：坐标与单位、方位角、时间的单位与写法，编号体系与命名（地图与实体 ID、同号不同义的读法、命名原则与代码里的名字、色名、枚举与扩展纪律、持久化 ID 的稳定、文件与编号的命名格式），确定性原则，数据路径。
-> **不在本文**：契约与帧顺序（`game/contracts/` 源码，说明见 ENG-ARCH §3）；命令行与门禁（ENG-GATES）；预算（ENG-BUDGET）；工作包与目录归属（PLAN-WP、`ownership.json`）；按图文件归属（SYS-MAPS、MAP-QSH-*）；决策（REG-DECISIONS）；术语（REG-GLOSSARY）；文档写法（STD-DOC）。
+> **不在本文**：契约与帧顺序（`game/contracts/` 源码，说明见 ENG-ARCH §3）；命令行与门禁（ENG-GATES）；预算（ENG-BUDGET）；目录归属（各文档文件头的 paths，STD-DOC §2）；按图文件归属（SYS-MAPS、MAP-QSH-*）；决策（REG-DECISIONS）；术语（REG-GLOSSARY）；文档写法（STD-DOC）。
 > **查阅**：先读 §0；坐标、角度、单位看 §1；时间写法看 §2；ID、编号体系、命名、色名、枚举纪律、持久化 ID、文件与编号格式看 §3；确定性看 §4；路径看 §5
 
 ## 0 结论
@@ -103,7 +102,6 @@ gates: [G1, G5]
 | F | 飞行路线脚本 | ENG-GATES-SHOTS §1 |
 | T | 开始页镜头 | SYS-TITLE §2.1 |
 | G | 门禁 | ENG-GATES §1 |
-| WP | 工作包；子包写 WP-31a；RPG 包另起编号，由 ENG-ROADMAP 登记 | PLAN-WP、ENG-ROADMAP |
 | D | 决策，D-001 起，三位数，全文连续，只增不复用 | REG-DECISIONS §0 |
 | GAME-、TOOL-、BATCH- | 施工队列的行：GAME 游戏本体，TOOL 协作与工具，BATCH 批量机械活；三位数，拆出的子行加小写字母（GAME-034a） | WF-STATUS §2 |
 | r | 调研单，r001 起 | WF-STATUS §4 |
@@ -131,9 +129,9 @@ gates: [G1, G5]
 ### 3.4 命名写法
 
 **命名原则**（全项目，D-251）：
-1. **编号-主题**：带编号的名字一律"编号-中文主题"，编号只做索引，意思靠主题读出；正文里提到工作包号也带名（STD-DOC §4.2）。
+1. **编号-主题**：带编号的名字一律"编号-中文主题"，编号只做索引，意思靠主题读出。
 2. **一物一名**：同一个角色或东西只有一种叫法——主会话、Codex 主线、Claude 侧、Codex 侧；Opus、Sonnet、Sol、Astra 只指模型；"指挥"只指主会话或 Codex 主线（WF-FLOW §3.1）。
-3. **名字写内容，不写来源**：不用工作包号、会话名、日期、版本号当名字。
+3. **名字写内容，不写来源**：不用会话名、日期、版本号当名字。
 4. **不造缩写**：字母前缀与缩写都在 §3.2 登记，不再新增单字母前缀。
 5. **同目录同写法**：语言与引擎有惯例的跟惯例（C# PascalCase，Godot 资源与着色器 snake_case，Python 下划线，PowerShell 与 cmd 连字符）。
 6. **编号只增、不复用、不改义**（§3.7）。
@@ -205,5 +203,5 @@ gates: [G1, G5]
 
 ## 5 路径
 
-- 按图的数据都在 `game/data/maps/<地图>/` 下，一律由 `IMapContext.DataRoot` 拼出，代码里不写数据路径（SYS-MAPS §1、§6，D-139）；各文件的归属见 SYS-MAPS 与 `ownership.json`。
+- 按图的数据都在 `game/data/maps/<地图>/` 下，一律由 `IMapContext.DataRoot` 拼出，代码里不写数据路径（SYS-MAPS §1、§6，D-139）；各文件的归属见 SYS-MAPS 与相关文档文件头的 `paths`。
 - `user://` 只有存档服务能读写（ENG-ARCH §2）。

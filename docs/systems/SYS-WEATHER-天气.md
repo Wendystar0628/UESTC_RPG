@@ -5,13 +5,12 @@ category: systems
 parent: SYS-INDEX
 summary: 八格天气与季节合法性、每种天气的画面规则、雨的可读性、闪电彩虹的条件与安全规则、湿润积水降水的规则、质量底线
 keywords: [天气, 天气格, 手动天气, 天气向量, 太阳雨, 雨的可读性, 闪电, 彩虹, 降水池, 湿润, 积水, 天光方向, 钉住天气, 保持晴, 天气巡回]
-owners: [WP-45]
-contributors: [WP-01, WP-02, WP-03, WP-04, WP-05, WP-15, WP-23, WP-24, WP-25, WP-26, WP-27, WP-34, WP-35, WP-36, WP-37, WP-38, WP-39, WP-40, WP-41, WP-46, WP-47, WP-50, WP-53b, WP-53d]
 depends: [ART-STYLE, ART-SKYLIGHT, ENG-ARCH, ENG-PERF, SYS-TIME]
 related: [CORE-INDEX, SYS-MOTION, SYS-VIEW, ENG-GATES, ENG-BUDGET, UI-NAV, SYS-GRAPHICS, UI-VISUAL, SYS-SAVE, SYS-MAPS, WLD-OUTSKIRTS, WLD-INTERIORS, SYS-AUDIO]
 contracts: [WeatherKind, WeatherMode, WeatherSel, WeatherVec, WorldPreset, LightningFlash, ILightningFeed]
 data: ["game/data/weather/chengdu/", "game/style/palette/keys/weather.json"]
 gates: [G2, G4, G10, G7, G14, G20, G21]
+paths: ["game/style/shaders/precip_wet.gdshaderinc", "game/style/shaders/precip_wet.gdshaderinc.uid", "game/style/shaders/precip.gdshader.uid", "game/style/shaders/precip.gdshader", "game/systems/weather/precip/**"]
 ---
 
 # SYS-WEATHER · 天气

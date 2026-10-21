@@ -24,7 +24,7 @@ public sealed class SouthModule : ZoneModuleBase, IWindowMetadataSource, IConten
 /// <summary>
 /// The south zone's sites in a fixed order. 18a: gate and entrance axis, main building, forest park; 18b: Xuanbang, Liren,
 /// east lake; 18c: the gym and natatorium, the sports platform, the stand, the west lawn by the innovation centre, the ordinary
-/// buildings' probes (their massing stays WP-14's) and the plaza inside the gate.
+/// buildings' probes (their massing stays game/gen/buildings/'s) and the plaza inside the gate.
 /// </summary>
 public static class SouthSites
 {

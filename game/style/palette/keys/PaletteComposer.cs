@@ -49,7 +49,7 @@ public sealed class ColorScript
 
     /// <summary>
     /// Evaluates the world frame. Keyframes are indexed by sun altitude (SYS-TIME): <paramref name="sunAltDeg"/> is
-    /// IWorldState.Sun.AltDeg (WP-34, single source); the side of the arc comes from the clock. Null uses the mirrored art sun.
+    /// IWorldState.Sun.AltDeg (game/kernel/world/, single source); the side of the arc comes from the clock. Null uses the mirrored art sun.
     /// </summary>
     public WorldFrame EvaluateWorld(double clock, double seasonPos, double? sunAltDeg, in WeatherVec weather)
     {
@@ -113,7 +113,7 @@ public sealed class PaletteComposer
         _script = script;
         var warnings = new List<string>();
         _shadowReference = script.Data.Derive.ShadowReference;
-        // Row 1 lamp light (mainline placeholder until the WP-39 rule): the warm streetlamp constant, else the warm window light.
+        // Row 1 lamp light (mainline placeholder until the game/systems/nightlight/ rule): the warm streetlamp constant, else the warm window light.
         _lampColor = catalog.TryGet(new PaletteToken("lamp.warm"), out var lamp) || catalog.TryGet(new PaletteToken("window.warm"), out lamp)
             ? FromSrgb(lamp.Albedo) : new Lab(0.92, 0.01, 0.07);
         foreach (var e in catalog.Entries)

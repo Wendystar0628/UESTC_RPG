@@ -5,13 +5,12 @@ category: ui
 parent: UI-VISUAL
 summary: 界面动效原则、八个母题、频率分级、曲线时长与辉光闪烁上限，减少动态效果下的替代与无障碍
 keywords: [动效语言, 动效母题, M1走线流光, M2扫描揭示, M3网格逐格点亮, M4数值滚动, M5衍射边, M6量化出入场, M7示波器, M8呼吸灯, 频率分级, 辉光上限, 闪烁上限, 减少动态效果, MotionPolicy, IMotionSettings, 降低透明度, 主题锁定]
-owners: [WP-35]
-contributors: [WP-01, WP-27, WP-49, WP-53]
 depends: [UI-VISUAL, UI-VISUAL-COMPONENTS, SYS-MOTION, UI-NAV]
 related: [SYS-AUDIO, SYS-TITLE]
 contracts: [IMotionSettings]
 data: ["game/hud/style/ui_metrics.json"]
 gates: [G14]
+paths: ["game/style/palette/ext/ui.json", "game/hud/**", "game/hud/motion/**"]
 ---
 # UI-VISUAL-MOTION · 界面动效与减少动态效果
 

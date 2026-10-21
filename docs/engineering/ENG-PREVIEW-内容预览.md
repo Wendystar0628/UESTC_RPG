@@ -5,13 +5,12 @@ category: engineering
 parent: ENG-INDEX
 summary: 开发时预览与回看自己做的内容：用 --pose 放机位、预览只读不写、改了以后重启回看；按实体定位与机位恢复在主线之后
 keywords: [内容预览, 预览, 回看, 开发构建, 机位, --pose, 预览只读不写, 同图重载, 按实体定位, 机位恢复, 开发工具]
-owners: [WP-01, WP-08]
-contributors: [WP-02, WP-46]
 depends: [ENG-GATES, ENG-ARCH]
-related: [ENG-GATES-SHOTS, SYS-MAPS, WLD-OUTSKIRTS, ART-FIDELITY, PLAN-WP, STD-CONVENTIONS]
+related: [ENG-GATES-SHOTS, SYS-MAPS, WLD-OUTSKIRTS, ART-FIDELITY, STD-CONVENTIONS]
 contracts: []
 data: []
 gates: []
+paths: ["game/data/pipeline-combinations.json", "game/style/shaders/globals.gdshaderinc.uid", "game/data/maps/qingshuihe/world/offcampus.json", "game/style/shaders/globals.gdshaderinc", "game/data/maps/qingshuihe/world/geo.json", "game/kernel/renderer/**", "game/kernel/diagnostics/**", "game/kernel/inspect/**", "game/kernel/stream/StreamMountWork.cs", "game/kernel/stream/StreamMountWork.cs.uid", "game/kernel/frame/**", "game/kernel/boot/**", "game/gen/world/**", "game/stage/**", "pipeline/**"]
 ---
 # ENG-PREVIEW · 内容预览
 
@@ -31,7 +30,7 @@ gates: []
 - **预览或回看自己的内容**：从开发构建启动，起点用 `--pose=<编号>`，世界参数的写法与截图默认串相同；没有 `--focus`、`--pose-file`，传入按未知参数以非零退出码结束（§1、§3）。
 - **说明截图从哪里拍**：在回报里贴出整串命令行（§1）。
 - **只看效果的截图**：`--pose` 配合截图参数，不算门禁（ENG-GATES-SHOTS §1.2）。
-- **新增点位或审查视角**：把机位交给负责的包登记（`waypoints.json` 归 WP-36（点位与跳转），`review.json` 归 WP-27（门禁、截图与巡检自动化）），预览不改这两份文件（§1）。
+- **新增点位或审查视角**：把机位交给负责的包登记（`waypoints.json` 归 点位与跳转（UI-NAV-WAYPOINTS），`review.json` 归 门禁、截图与巡检自动化（ENG-GATES）），预览不改这两份文件（§1）。
 - **改了世界文件、按图的 JSON、着色器、调色板或 C#**：重新编译（资源有变再导入）后重新启动回看（§2）。
 
 ## 1 启动

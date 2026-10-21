@@ -29,7 +29,7 @@ public sealed class FurniturePlantingRowTests
         // with nothing to warn about.
         var (roads, diagnostics) = PlantingRows.Resolve(Inputs());
         AssertThat(diagnostics.Count == 0).OverrideFailureMessage("warnings on the real planting file: " + string.Join(" | ", diagnostics.Select(d => d.Message))).IsTrue();
-        // Expected offsets are parsed from the same file here (WP-23 owns the values and may change them): every row, then the band.
+        // Expected offsets are parsed from the same file here (game/gen/vegetation/ owns the values and may change them): every row, then the band.
         var file = JsonNode.Parse(PlantingBytes.Value)!["roads"]!.AsArray();
         float[] Offsets(int i) => [.. file[i]!["rows"]!.AsArray().Select(r => r!["offset"]!.GetValue<float>()),
             .. file[i]!["band"] is JsonNode band ? [band["offset"]!.GetValue<float>()] : Array.Empty<float>()];

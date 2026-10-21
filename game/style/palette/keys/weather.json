@@ -2,7 +2,7 @@
   "format": "campus.palette.weather/1",
   "owner": "WP-37",
   "doc": "SYS-WEATHER 第 2 条、§2、§3、§7；ART-STYLE；ART-SKYLIGHT",
-  "status": "主线版只留接口：参数取文档的初值，细调在主线闸口之后（PLAN-WP WP-37 后置细节）。",
+  "status": "主线版只留接口：参数取文档的初值，细调在主线闸口之后（SYS-TIME 后置细节）。",
   "notes": [
     "顺序：关键帧 → 四季修正与季节专属覆盖 → 本文件的天气修正 → 转场雾幕 → 介质（SYS-TIME）。晴天（天气向量全 0）修正量为 0。",
     "输入只读天气向量 WeatherVec（SYS-WEATHER）：g = Overcast，p = Precip，k = PrecipKind（0 雨 → 1 雪），wet = Wet。",

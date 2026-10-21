@@ -5,7 +5,7 @@ using Campus.Contracts.Parts;
 namespace Campus.Gen.Parts.Street;
 
 /// <summary>
-/// Every tunable value of the WP-13 street parts in one place (WF-FLOW): colours, material classes, sizes, lamp
+/// Every tunable value of the game/gen/furniture/ street parts in one place (WF-FLOW): colours, material classes, sizes, lamp
 /// markers and seating. Initial values follow ART-MODELING, WLD-LIFE, SYS-ATLAS, MAP-QSH-ADDITIONS
 /// §2.13, §8 and WLD-INTERIORS; the Opus review sets the finals. Review colours are autumn 17:30 lit colours.
 /// </summary>
@@ -18,19 +18,19 @@ public static class StreetStyle
     public const string GreyMetal = "frame.alu";
     /// <summary>Stainless steel: bollards, etched plate on the atlas post.</summary>
     public const string Stainless = "roof.silverMetal";
-    /// <summary>Dark grey steel (WP-12 blue-grey, lit #6E737B): bin frame, atlas kiosk and post, lamp housings, accent bands.</summary>
+    /// <summary>Dark grey steel (game/gen/parts/roof/ blue-grey, lit #6E737B): bin frame, atlas kiosk and post, lamp housings, accent bands.</summary>
     public const string DarkSteel = "equip.fence";
     /// <summary>
     /// Registered warm near-black for the crash bollard's stripe.
     /// </summary>
     public const string HazardBlack = "hazard.black";
-    /// <summary>Light equipment grey (WP-12): bin rim band and the grey "other waste" door.</summary>
+    /// <summary>Light equipment grey (game/gen/parts/roof/): bin rim band and the grey "other waste" door.</summary>
     public const string LightSteel = "equip.grey";
-    /// <summary>Warm wood (WP-10, lit #A8744A): bench slats.</summary>
+    /// <summary>Warm wood (game/gen/parts/openings/, lit #A8744A): bench slats.</summary>
     public const string Wood = "door.wood";
     /// <summary>Lamp diffusers and lenses: warm cream, self-lit through ToonSpec.Emissive.</summary>
     public const string Diffuser = "curtain.cream";
-    /// <summary>Atlas kiosk face stand-in until WP-48a's baked map lands: the warm off-white of the map's building blocks.</summary>
+    /// <summary>Atlas kiosk face stand-in until game/gen/bakeinput/'s baked map lands: the warm off-white of the map's building blocks.</summary>
     public const string MapPaper = "wall";
     public const string StoneWhite = "wall.greyWhite";
     public const string StoneGrey = "ground.concrete";
@@ -149,7 +149,7 @@ public static class StreetStyle
     public const float BackRise = 0.08f;
     public const float BenchLegInset = 0.24f;
     public const float BenchLeg = 0.05f;
-    /// <summary>Seat pitch for the WP-54a seat places; edge margin keeps a sitter off the bench ends.</summary>
+    /// <summary>Seat pitch for the game/camera/walk/ seat places; edge margin keeps a sitter off the bench ends.</summary>
     public const float SeatPitch = 0.6f;
     public const float SeatEdgeMargin = 0.15f;
     public const FootMat BenchFoot = FootMat.WoodFloor;
@@ -314,7 +314,7 @@ public static class StreetStyle
     /// <summary>The window holds this many shelves of this many goods.</summary>
     public const int VendingShelves = 3;
     public const int VendingGoods = 5;
-    /// <summary>Compressor hum (WLD-LIFE, SYS-AUDIO): only within 4 m. The set waits for WP-53b's sound-set registry.</summary>
+    /// <summary>Compressor hum (WLD-LIFE, SYS-AUDIO): only within 4 m. The set waits for game/gen/ambience/'s sound-set registry.</summary>
     public const string VendingHumSet = "amb.vending.hum";
     public const float VendingHumDb = 42f;
     public const float VendingHumRadius = 4f;
@@ -352,7 +352,7 @@ public static class StreetStyle
 
     // ---- Street-set completion: road-name sign, notice board, convex mirror, utility pole, speaker, drain, fence, clock ----
     /// <summary>
-    /// Convex mirror pole and frame (MAP-QSH-ADDITIONS "凸面镜橙": a low-saturation orange, WP-04 sets the value). Until it is registered this
+    /// Convex mirror pole and frame (MAP-QSH-ADDITIONS "凸面镜橙": a low-saturation orange, game/style/ sets the value). Until it is registered this
     /// borrows the closest registered pair, the terracotta band; switch the name here when the orange lands.
     /// </summary>
     public const string MirrorOrange = "band.terracotta";

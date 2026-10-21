@@ -61,7 +61,7 @@ public partial class WaterSystem : Node, IMapAware, IQualityAware, IReflectionWo
     /// <summary>Lake number that currently has the planar reflection, or -1.</summary>
     public int ReflectedLake => _lake;
 
-    /// <summary>Reflection World3D for the REFLECT proxies (mounted by the kernel; see the WP-24 contract request).</summary>
+    /// <summary>Reflection World3D for the REFLECT proxies (mounted by the kernel; see the game/systems/water/ contract request).</summary>
     public World3D? ReflectionWorld => _viewport?.FindWorld3D();
 
     /// <summary>

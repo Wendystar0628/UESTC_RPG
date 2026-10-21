@@ -1,6 +1,6 @@
-// cine_cloud.gdshader：开始页与过场的云卡、镜头云幕（SYS-TITLE，ENG-PERF 白名单，WP-49b）
+// cine_cloud.gdshader：开始页与过场的云卡、镜头云幕（SYS-TITLE，ENG-PERF 白名单，SYS-TITLE）
 //
-// 用法（节点由 WP-49a 建，内核挂载）：
+// 用法（节点由 game/flow/ 建，内核挂载）：
 // - 云卡：每层一个 MultiMesh（QuadMesh 1×1，按实例变换缩放到云卡的宽高），mode = 0。
 //   INSTANCE_CUSTOM：x 形状种子（0–1）；y 平底高度（0–1，映射到卡高的 5%–16%）；z 塔状程度（0 扁平的积云带，
 //   1 偏心隆起的高积云）；w 细节密度（0 远层只有大团块，1 近层加满顶上的小团块）。卡面竖直，法线朝镜头一侧。
@@ -28,7 +28,7 @@ float toon_id_rough(int id) {
     return float(id) / 127.0;
 }
 
-// 材质 ID：WP-05 保留的通用"不描"ID（fx.noline）。云卡与镜头云幕都不出描线，剪影也不出（ART-STYLE）
+// 材质 ID：game/kernel/post/ 保留的通用"不描"ID（fx.noline）。云卡与镜头云幕都不出描线，剪影也不出（ART-STYLE）
 const int CINE_CLOUD_MAT_ID = 126;
 
 // ---- 可调参数（材质 uniform；初值按 T0 预览定，运行时不改 render_mode）

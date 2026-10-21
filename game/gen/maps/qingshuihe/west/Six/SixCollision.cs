@@ -50,7 +50,7 @@ internal static class SixCollision
                 c.Box(f.At(x, y + S.BaseHeight * 0.5f, S.PierDepth * 0.5f - 0.1f), new(S.ColumnSize * 0.5f + 0.06f, S.BaseHeight * 0.5f, S.ColumnSize * 0.5f + 0.06f), SurfaceTag.Wall, FootMat.StonePaving);
         }
         if (entity is not null && entity != S.EntityC) return;
-        // Vestibule cheeks; the doorway between them stays open for WP-31b's hall (EntranceDecl.Open).
+        // Vestibule cheeks; the doorway between them stays open for game/gen/maps/qingshuihe/west/SixInterior/'s hall (EntranceDecl.Open).
         var yc = BaseY(c.Context, S.EntityC);
         var east = EastFace(world, eastDoor);
         var vf = east.Face.Frame;

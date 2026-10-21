@@ -5,13 +5,12 @@ parent: SYS-SAVE
 category: systems
 summary: 保存时机、安全时刻与落定快照、退出保存、读档顺序、世界实例、状态一致、新游戏建档、校验修复
 keywords: [保存, 读档, 自动保存, 安全时刻, 落定快照, 续跑等价, 世界实例, 校验修复, 退出保存, 现实时间不计, SaveReason, LoadScope, CaptureContext, RestoreContext, NewGameContext, SaveStatus, SaveResult, LoadStatus, LoadResult, SaveState, IWorldState.Instance]
-owners: [WP-50]
-contributors: [WP-00, WP-01, WP-02, WP-03, WP-06, WP-23, WP-25, WP-26, WP-27, WP-32, WP-34, WP-35, WP-36, WP-39, WP-42, WP-43, WP-45a, WP-46, WP-48c, WP-49, WP-53a, WP-54a, WP-55]
 depends: [SYS-SAVE, ENG-ARCH, SYS-TIME, SYS-WEATHER, SYS-MAPS]
 related: [CORE-INDEX, SYS-MOTION, SYS-VIEW, ENG-GATES, ENG-BUDGET, UI-NAV, SYS-WALK, SYS-TITLE, WLD-OUTSKIRTS, WLD-INTERIORS]
 contracts: [SaveReason, LoadScope, CaptureContext, RestoreContext, NewGameContext, SaveStatus, SaveResult, LoadStatus, LoadResult, SaveState]
 data: []
 gates: [G2, G10, G20]
+paths: ["game/kernel/save/**"]
 ---
 
 # SYS-SAVE-FLOW · 保存时机与读档流程
@@ -137,4 +136,4 @@ gates: [G2, G10, G20]
 
 | 待验证 | 初值 | 负责 |
 | --- | --- | --- |
-| 读档的主线程恢复耗时 | 不卡帧 | WP-50（存档与持久化）实测 |
+| 读档的主线程恢复耗时 | 不卡帧 | 存档与持久化（game/kernel/save/）实测 |

@@ -1,4 +1,4 @@
-// veg_trunk.gdshader：树干与枝（tree.bark，下半截可刷白）；同一着色器也画 ShadowsOnly 投影代理（木质加 L1 团块）（WP-23）
+// veg_trunk.gdshader：树干与枝（tree.bark，下半截可刷白）；同一着色器也画 ShadowsOnly 投影代理（木质加 L1 团块）（WLD-VEGETATION）
 // 规格：WLD-VEGETATION；ENG-PERF；ART-STYLE（植被三阶）。
 // 看得见的树冠团块在 veg_card 里（max-011：团块与叶卡同一面）；这里的团块只出现在投影代理上，挖洞、随叶量收缩。
 // 树母型顶点数据：CUSTOM0.w < 0 是木质，其余是团块（CUSTOM2 = 所属团块或小球的球心）；

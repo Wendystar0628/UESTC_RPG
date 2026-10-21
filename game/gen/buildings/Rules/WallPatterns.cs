@@ -21,7 +21,7 @@ public enum WallPattern : byte
 
 public static class WallPatterns
 {
-    /// <summary>WP-04 layers (game/style/shaders/SurfacePatternLayers.cs). Stable; never reused.</summary>
+    /// <summary>game/style/ layers (game/style/shaders/SurfacePatternLayers.cs). Stable; never reused.</summary>
     public const ushort StackBondLayer = 1;
     public const ushort RunningBondLayer = 2;
 

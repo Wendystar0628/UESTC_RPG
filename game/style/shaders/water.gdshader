@@ -1,4 +1,4 @@
-// water.gdshader：全校默认不透明水面（WP-24；WLD-WATER，ENG-PERF）
+// water.gdshader：全校默认不透明水面（WLD-WATER；WLD-WATER，ENG-PERF）
 //
 // 留在不透明通道：不读深度、不读屏幕纹理；接收主光阴影，两阶合成与 toon 相同
 // （ALBEDO = 1，影写 EMISSION，"受光 − 影"在 light() 的方向光分支里按阈值化的阴影加进 DIFFUSE_LIGHT）；
@@ -7,8 +7,8 @@
 // 水面顶点数据：UV = 流速 (vx, vz) m/s，湖为 0；UV2 = (到岸距离 m, 倒影湖号，-1 = 不做平面倒影)。
 // 泳池 UV.x 为标线宽；CUSTOM0=(泳池标志,沿轴米数,横轴米数,池长)，
 // CUSTOM1=(浅深,深深,浅区比例,泳道数)，CUSTOM2=(首泳道中心,道距,T长,T距端)，均由共享规则上传。
-// 颜色全部来自调色板：水色四档与泡沫是 WP-24 登记的表面色对（palette/ext/WP-24.json，色号 214–223），
-// 天空倒影、主光色、雾色是随帧色（WP-37）。着色器里不写色值。
+// 颜色全部来自调色板：水色四档与泡沫是 game/systems/water/ 登记的表面色对（palette/ext/water.json，色号 214–223），
+// 天空倒影、主光色、雾色是随帧色（game/style/palette/keys/）。着色器里不写色值。
 //
 // 画法的机制移植自渲染气质参照"太阳雨中的小渔港"的水面（ART-STYLE）：
 //   水体色 = 按到岸距离分档的透出色（三道硬边色带）；
@@ -17,7 +17,7 @@
 //                再按波面法线投到相机右、前两个方向的偏移，以 0.012 一格量化成碎片，碎片之间 1 px 水色细缝；
 //   波纹线、主光反光带、四芒星闪点、泡沫线（外侧再一道断续的细线）叠在上面。
 //
-// 调色板取色、解析天空与雾都用 fog.gdshaderinc（WP-04）：倒影里的天与 WP-40 的天空同源（sky_gradient、sky_side_weight），
+// 调色板取色、解析天空与雾都用 fog.gdshaderinc（ART-STYLE）：倒影里的天与 game/systems/sky/ 的天空同源（sky_gradient、sky_side_weight），
 // 雾用 fog_eval，湖面雾（fog_low.z）由本着色器另加。
 // 远处、掠射角下水面静下来（"静水远景"）：波面、碎片、色带扰动和波纹都按像素足迹衰减，
 // 天空倒影收成两三条硬边横带，像镜面一样映出地平线的暖色和金带；碎片只留在近处。
@@ -103,7 +103,7 @@ const vec2 WTR_STAR_HDR = vec2(2.0, 2.8);   // HDR 增益
 const float WTR_STAR_PX = 8.0;        // 星芒臂长上限（px）
 
 // ---------------------------------------------------------------------------------------------------------------
-// 调色板色号（WP-24 的扩展段 214–223：受光偶数、影 = 受光 + 1；随帧色号用 fog.gdshaderinc 的 PAL_*）
+// 调色板色号（game/systems/water/ 的扩展段 214–223：受光偶数、影 = 受光 + 1；随帧色号用 fog.gdshaderinc 的 PAL_*）
 // ---------------------------------------------------------------------------------------------------------------
 const int WTR_PAL_NEAR = 214;
 const int WTR_PAL_MID = 216;
@@ -145,7 +145,7 @@ float wtr_aa_step(float edge, float x) {
 	return smoothstep(edge - w, edge + w, x);
 }
 
-// --- 解析天空：与 WP-40 天空同一规则（五段 OKLab 单调三次、太阳侧权重、地平线霾带）
+// --- 解析天空：与 天空同一规则（五段 OKLab 单调三次、太阳侧权重、地平线霾带）
 vec3 wtr_sky(vec3 d) {
 	return fog_sky(d);
 }
@@ -323,7 +323,7 @@ void fragment() {
 	vec3 deep_lit = wtr_pal(WTR_PAL_DEEP);
 	vec3 body_lit = mix(mix(mix(near_lit, mid_lit, s1b), far_lit, s2b), deep_lit, s3b);
 	vec3 body_sh = mix(mix(mix(wtr_pal(WTR_PAL_NEAR + 1), wtr_pal(WTR_PAL_MID + 1), s1b), wtr_pal(WTR_PAL_FAR + 1), s2b), wtr_pal(WTR_PAL_DEEP + 1), s3b);
-	// 影比：水面按 r_mat 1.10 推出的影（WP-37）与受光之比，暗线、影里的倒影都用它（ART-STYLE）
+	// 影比：水面按 r_mat 1.10 推出的影（game/style/palette/keys/）与受光之比，暗线、影里的倒影都用它（ART-STYLE）
 	if (pool) {
 		float depth = mix(v_pool_profile.x, v_pool_profile.y, step(v_pool.w * v_pool_profile.z, v_pool.y));
 		float depth_l = mix(1.0, WTR_POOL_DEEP_L, step(v_pool_profile.y, depth));

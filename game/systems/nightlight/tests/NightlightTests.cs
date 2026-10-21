@@ -207,7 +207,7 @@ public sealed class NightlightTests
         var s = Default();
         var first = s.SlotOf(new ChannelId("lamp.first"));
         var warm = new PaletteToken("lamp.warm");
-        // 门口灯组：照 WP-13 的 EntranceLampPart.Emitter 挂 lamp.first、二级 0.75、暖色、光斑 2.4 m；旧写法挂楼的室内通道（窗户类）
+        // 门口灯组：照 EntranceLampPart.Emitter 挂 lamp.first、二级 0.75、暖色、光斑 2.4 m；旧写法挂楼的室内通道（窗户类）
         var emitters = Enumerable.Range(0, 48).Select(i =>
             new LightEmitter(new ChannelId("lamp.first"), new Vector3(i * 9.7f, 2.45f, i * -5.3f), warm, 0.75f, 2.4f)).ToList();
         emitters.Add(new LightEmitter(new ChannelId("interior.public"), new Vector3(-50f, 2.45f, 0f), warm, 0.75f, 2.4f));

@@ -66,7 +66,7 @@ public sealed class SouthSiteTests
         var walk = world.Features.Values.Single(feature => feature.Kind.Value == "road"
             && feature.TryText("highway") == "footway" && feature.Geometry is PolylineGeometry path
             && PlanRings.Contains(((PolygonGeometry)court.Geometry).Rings, path.Line.Points[0]));
-        AssertThat(court.Kind.Value == "road" && court.TryText("highway") == "pedestrian" && walk.TryText("highway") == "footway").OverrideFailureMessage("plaza paving and a footway, drawn by WP-15").IsTrue();
+        AssertThat(court.Kind.Value == "road" && court.TryText("highway") == "pedestrian" && walk.TryText("highway") == "footway").OverrideFailureMessage("plaza paving and a footway, drawn by game/gen/ground/").IsTrue();
         var yaw = door.YawDeg * MathF.PI / 180f;
         var outward = new Vector2(MathF.Sin(yaw), -MathF.Cos(yaw));
         var across = new Vector2(-outward.Y, outward.X);
@@ -80,7 +80,7 @@ public sealed class SouthSiteTests
         var line = ((PolylineGeometry)walk.Geometry).Line.Points;
         var parking = (PolygonGeometry)world.Features[new(SouthIds.ClockParking.Entity)].Geometry;
         AssertThat(PlanRings.Contains(ring, line[0]) && PlanRings.Contains(parking.Rings, line[^1])).OverrideFailureMessage("the walk runs from the forecourt onto the parking by the road").IsTrue();
-        AssertThat(SouthTune.Xuanbang.Threshold == GroundLevels.Paving).OverrideFailureMessage("the threshold is level with WP-15's paving top").IsTrue();
+        AssertThat(SouthTune.Xuanbang.Threshold == GroundLevels.Paving).OverrideFailureMessage("the threshold is level with game/gen/ground/'s paving top").IsTrue();
     }
 
     [TestCase, TestCategory(TestReason.Contract)]
@@ -89,11 +89,11 @@ public sealed class SouthSiteTests
     {
         var world = RealMapFixture.Load().World;
         var plaza = world.Features[new(Gate.GatePlazaSite.Feature)];
-        AssertThat(plaza.Kind.Value == "road" && plaza.TryText("highway") == "pedestrian").OverrideFailureMessage("plaza paving, drawn by WP-15 with its kerbs and edging").IsTrue();
+        AssertThat(plaza.Kind.Value == "road" && plaza.TryText("highway") == "pedestrian").OverrideFailureMessage("plaza paving, drawn by game/gen/ground/ with its kerbs and edging").IsTrue();
         var (frame, across, along) = Gate.GatePlazaSite.FrameOf(world)!.Value;
         AssertThat(MathF.Abs(Angles.Bearing(frame.W) - 36.8f) < TestTolerance.AngleDegrees).OverrideFailureMessage($"the long side runs along the main axis ({Angles.Bearing(frame.W):0.0}°)").IsTrue();
         var ring = ((PolygonGeometry)plaza.Geometry).Rings;
-        // WP-13's kiosk (2 × 0.8 m) on the A01 anchor (WP-48c's world record): on the paving, at least 3 m from every carriageway edge.
+        // game/gen/furniture/'s kiosk (2 × 0.8 m) on the A01 anchor (game/systems/atlas/'s world record): on the paving, at least 3 m from every carriageway edge.
         var a01 = AtlasAnchor(world, "A01");
         var kioskSpot = PlanPolygons.Centroid(((PolygonGeometry)a01.Geometry).Rings.Outer);
         var yaw = a01.Number("yawDeg") * MathF.PI / 180f;
@@ -184,7 +184,7 @@ public sealed class SouthSiteTests
         AssertThat(p.Decks.Count == 1).OverrideFailureMessage("one deck: A06 moves onto it, no terrace is added").IsTrue();
         var a06 = AtlasAnchor(ctx.World, "A06");
         AssertThat(MathF.Abs(p.Top - p.Y - a06.Number("groundY")) < TestTolerance.Position).OverrideFailureMessage("the deck top is A06's y, the platform storey").IsTrue();
-        // A06's kiosk (2 × 0.8 m, WP-13's) on the deck between the gym and the natatorium, its panel toward the stadium: every corner
+        // A06's kiosk (2 × 0.8 m, game/gen/furniture/'s) on the deck between the gym and the natatorium, its panel toward the stadium: every corner
         // on the deck and at least 3 m from the deck's edges and the parapets' inner faces.
         var stadium = Sports.GrandstandSite.PlanOf(ctx.World).Centre;
         var anchor = PlanPolygons.Centroid(a06.Outer());

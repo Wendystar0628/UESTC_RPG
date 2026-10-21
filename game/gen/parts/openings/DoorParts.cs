@@ -12,7 +12,7 @@ internal readonly record struct LeafSlot(float X0, float X1, bool HingeLeft, boo
 /// <summary>
 /// Door frames and leaves (WLD-INTERIORS B). Local frame: origin at the bottom centre of the opening on the
 /// leaf mid-plane, exterior towards −Z. Leaves open outwards about their hinge by OpenAngleDeg; with three or more
-/// leaves the outer two stay shut as side lights. Door glass carries the corridor/lobby card like WP-14's door bays.
+/// leaves the outer two stay shut as side lights. Door glass carries the corridor/lobby card like game/gen/buildings/'s door bays.
 /// L0: frame, leaves and hardware; L1: frame and leaf slabs; L2 and further: nothing.
 /// </summary>
 internal static class DoorBuilder

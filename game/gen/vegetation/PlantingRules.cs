@@ -21,7 +21,7 @@ public sealed record GrovePlanting(IReadOnlyList<(string Species, float Weight)>
 /// <summary>Species of the trees planted in empty tree pits: square pits and strips, and round beds (WLD-VEGETATION 栾树: 方树池).</summary>
 public sealed record PitPlanting(string Square, string Round);
 
-/// <summary>Ground cover in the tree pits (max-011 18:52: WP-23 plants it): low clipped cushions round the trunk, Height m tall.</summary>
+/// <summary>Ground cover in the tree pits (max-011 18:52: game/gen/vegetation/ plants it): low clipped cushions round the trunk, Height m tall.</summary>
 public sealed record PitCover(string Species, float Height, float Spacing);
 
 /// <summary>

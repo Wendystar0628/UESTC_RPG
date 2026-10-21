@@ -29,7 +29,7 @@ public enum RoadTier
 public sealed record TierRule(float LampSpacing, bool BothSides, bool DiscLamp, int RestEvery);
 
 /// <summary>
-/// Every tunable value of the WP-13 placement in one place (WF-FLOW): which roads, spacings, offsets from the kerb, the
+/// Every tunable value of the game/gen/furniture/ placement in one place (WF-FLOW): which roads, spacings, offsets from the kerb, the
 /// rest-stop rhythm, the part sizes and the landing rules. Initial values follow WLD-LIFE, MAP-QSH-ADDITIONS, SYS-ATLAS,
 /// WLD-INTERIORS and WLD-TERRAIN; the Opus review sets the finals. Part looks stay in <see cref="StreetStyle"/>.
 /// </summary>
@@ -65,7 +65,7 @@ public static class FurnitureStyle
     };
 
     /// <summary>
-    /// The tree rows' offsets come from the map's <see cref="PlantingKey"/> build input (WP-23's planting rule, <see cref="PlantingRows"/>):
+    /// The tree rows' offsets come from the map's <see cref="PlantingKey"/> build input (game/gen/vegetation/'s planting rule, <see cref="PlantingRows"/>):
     /// the avenue's ginkgo row and its spring band each side, one row on each other tree-lined road. A road with this many offsets is the avenue;
     /// without the input nothing is a tree row and nothing is the avenue, with a warning diagnostic.
     /// </summary>
@@ -113,7 +113,7 @@ public static class FurnitureStyle
     public const float BarrierStep = 0.25f;
     public const float BarrierRowGap = 2f;
 
-    // ---- Signposts and drinking fountains (Opus review 13c2b 21:05). Interim rules, all of them here: when WP-44's walk: points ----
+    // ---- Signposts and drinking fountains (Opus review 13c2b 21:05). Interim rules, all of them here: when game/gen/walkable/'s walk: points ----
     // ---- land, the points replace them. Both keep to "no piling up": rather too few than too many.                              ----
     /// <summary>
     /// A signpost stands at a junction of the effective network's pedestrian lines where at least <see cref="SignpostBranches"/>
@@ -171,8 +171,8 @@ public static class FurnitureStyle
     public const float GateKeep = 4f;
     /// <summary>
     /// Delivery lockers: WLD-LIFE keeps them to two places. Their two places (the west gate's clinic wicket, inside West Gate 2) are
-    /// not in the map data yet (WP-30's gates), so on the mainline they stand at the first <see cref="LockerSites"/> gates that hold a
-    /// vending group, beside it: the dormitory gate is where deliveries are picked up. WP-30's gate points replace them.
+    /// not in the map data yet (game/gen/maps/qingshuihe/boundary/'s gates), so on the mainline they stand at the first <see cref="LockerSites"/> gates that hold a
+    /// vending group, beside it: the dormitory gate is where deliveries are picked up. game/gen/maps/qingshuihe/boundary/'s gate points replace them.
     /// </summary>
     public static EquipmentParams Locker { get; } = new(2.4f, 2f, 0.6f);
     public const int LockerSites = 2;
@@ -181,8 +181,8 @@ public static class FurnitureStyle
     /// first open entrance of the teaching buildings, libraries and canteens (<see cref="BayCategories"/>), then the map's bicycle parking points
     /// (<see cref="BaySubcategories"/>); at a door <see cref="BayNear"/>–
     /// <see cref="BayFar"/> out from the door and in front of it; none within <see cref="BaySpacing"/> of another. Each holds
-    /// <see cref="BayBikesMin"/>–<see cref="BayBikesMax"/> bikes on every other slot, front wheel to the back line: stand-ins for WP-55's
-    /// rentable stock, which the kernel mounts in their place once WP-55 lands (set both to zero then).
+    /// <see cref="BayBikesMin"/>–<see cref="BayBikesMax"/> bikes on every other slot, front wheel to the back line: stand-ins for game/camera/walk/'s
+    /// rentable stock, which the kernel mounts in their place once game/camera/walk/ lands (set both to zero then).
     /// </summary>
     public static RoofParams BikeBay { get; } = new(3.6f, 1.25f, 2f);
     public static VehicleParams Bike { get; } = new(0.6f, 1.1f, 1.75f);
@@ -211,7 +211,7 @@ public static class FurnitureStyle
     public static VehicleParams Saloon { get; } = new(1.8f, 1.47f, 4.5f);
     public static VehicleParams Hatch { get; } = new(1.72f, 1.52f, 4f) { Variation = 1 };
 
-    /// <summary>The map input (relative to the map's DataRoot) the tree-row offsets come from: WP-23's planting rules.</summary>
+    /// <summary>The map input (relative to the map's DataRoot) the tree-row offsets come from: game/gen/vegetation/'s planting rules.</summary>
     public const string PlantingKey = "vegetation/planting.json";
 
     /// <summary>Pole centre from the carriageway edge (the kerb face).</summary>
@@ -252,7 +252,7 @@ public static class FurnitureStyle
     /// <summary>
     /// A node bench may stand on a walk at least <see cref="NodeWalkMin"/> wide (Opus review 13c2b 21:05): at its edge, its back this far
     /// inside the paving edge and parallel to it, facing across the walk, and leaving at least <see cref="NodeWalkPass"/> clear in front of
-    /// its sitters' feet. Narrower walks take no bench on them (and WP-20 cuts no bays into them); tried after the plaza, before the
+    /// its sitters' feet. Narrower walks take no bench on them (and game/gen/maps/qingshuihe/north/ cuts no bays into them); tried after the plaza, before the
     /// bench beside the paving.
     /// </summary>
     public const float NodeWalkMin = 4f;
@@ -290,7 +290,7 @@ public static class FurnitureStyle
     /// <summary>
     /// A kiosk's apron or a post's footprint must touch pedestrian paving, never more than this off it (Opus review 12:15): one that
     /// does not touch moves the shortest way to the paving's edge, keeping its facing; by at most <see cref="AnchorPavingReach"/>,
-    /// beyond which the anchor stays and its data needs review (WP-48c).
+    /// beyond which the anchor stays and its data needs review (SYS-ATLAS-TRAVEL).
     /// </summary>
     public const float AnchorPavingGap = 0.5f;
     public const float AnchorPavingReach = 10f;
@@ -373,7 +373,7 @@ public static class FurnitureStyle
     /// </summary>
     public const float DoorLampY = 2.55f;
 
-    // ---- Module budget (ENG-BUDGET, WP-13 with WP-25: 8% of the main pass), heaviest 64 m cell ----
+    // ---- Module budget (ENG-BUDGET, game/gen/furniture/ with game/systems/fauna/: 8% of the main pass), heaviest 64 m cell ----
     public const int ServiceCellMaxTriangles = 9000;
 
     public const int ServiceCellMaxDraws = 24;

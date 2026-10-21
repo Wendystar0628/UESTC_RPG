@@ -37,7 +37,7 @@ public sealed class BuildingPlanKernelTests
     [TestCase, TestCategory(TestReason.Contract)]
     public void BuildingPartsCountUnderAnyParentKind()
     {
-        // WP-08 layout: the entity keeps its own kind (here poi), each part carries its source record with "kind".
+        // game/gen/world/ layout: the entity keeps its own kind (here poi), each part carries its source record with "kind".
         static JsonElement Raw(string kind, string category) =>
             JsonDocument.Parse("{\"kind\":\"" + kind + "\",\"category\":\"" + category + "\"}").RootElement.Clone();
         var parts = new[]
@@ -81,7 +81,7 @@ public sealed class BuildingPlanKernelTests
     }
 
     /// <summary>
-    /// Shared-boundary restoration (WP-08) gives a building part a detailed physical outline with extra collinear vertices and keeps
+    /// Shared-boundary restoration (SYS-MAPS) gives a building part a detailed physical outline with extra collinear vertices and keeps
     /// the physical outline as its facade outline. The generic building's footprint, bay grid and window block must follow the facade
     /// outline, vertex for vertex, so a part with a facade outline lays out exactly the windows the old data gave it.
     /// </summary>

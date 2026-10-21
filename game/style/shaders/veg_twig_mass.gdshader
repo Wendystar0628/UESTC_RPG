@@ -1,4 +1,4 @@
-// veg_twig_mass.gdshader：冬季中距的细枝体（WP-23，GAME-057）
+// veg_twig_mass.gdshader：冬季中距的细枝体（WLD-VEGETATION，GAME-057）
 // 规格：WLD-VEGETATION（冬季裸枝）；ART-STYLE（植被三阶）。
 // 落叶针叶树（水杉）裸冠的中远景替身：沿树冠轴的一个收窄锥形外壳（MotherModels.TwigMass），alpha 混合成一层暖红褐色的细枝体，
 // 主枝、树干和后面的湖面从里面透出来。借的是落叶树中远景的通行做法：树冠外壳上的半透明细枝层，与近处真实细枝交叉淡化。

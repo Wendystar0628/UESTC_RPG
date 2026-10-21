@@ -32,13 +32,13 @@ public readonly record struct StairLanding(float S0, float S1, float Y, bool Mid
 /// Section (WLD-TERRAIN): risers near 0.15 m, tread clamp(0.65 − 2R, 0.30, 0.40), flights of at most 1.5 m
 /// rise. The two runs (两跑) are split by one deep middle landing; inside each run a short rest landing. The terraces step
 /// with the stair: the lower tier at the middle landing's level, the upper tier at the top, each ringed by a clipped hedge
-/// (the lower tier's front band is the dark purple-red loropetalum, 红花檵木). Flights are WP-11's catalogue steps
+/// (the lower tier's front band is the dark purple-red loropetalum, 红花檵木). Flights are game/gen/parts/circulation/'s catalogue steps
 /// (cheek walls, copings, side and middle handrails); everything else is the stair building's own stone.
 /// </para>
 /// <para>
 /// Frame: s runs from the podium edge (0) outward, square to it, toward the plaza; w runs across, 0 on the door's axis.
 /// Heights: the top is the library's 2F floor (<see cref="LibraryPlan.SecondFloorY"/>), the foot the terrain at the stair
-/// foot plus the paving lift, so the flat stub and WP-08's terrain both work without code changes.
+/// foot plus the paving lift, so the flat stub and game/gen/world/'s terrain both work without code changes.
 /// </para>
 /// </summary>
 public sealed class GrandStair : ZoneSite
@@ -374,8 +374,8 @@ public sealed class GrandStair : ZoneSite
     // ------------------------------------------------------------------ door and its presentation
 
     /// <summary>
-    /// The front door (WLD-INTERIORS): WP-10's glass door over the slot's door bay, its two inner leaves fixed open at
-    /// 90°. The entrance kit in front of it (mat, open sign, door lamp) is WP-13's, placed from the interior index.
+    /// The front door (WLD-INTERIORS): game/gen/parts/openings/'s glass door over the slot's door bay, its two inner leaves fixed open at
+    /// 90°. The entrance kit in front of it (mat, open sign, door lamp) is game/gen/furniture/'s, placed from the interior index.
     /// </summary>
     private void Door(CoreBuild build)
     {

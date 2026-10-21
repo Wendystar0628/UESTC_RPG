@@ -5,13 +5,12 @@ category: engineering
 parent: ENG-GATES
 summary: 23 条一票否决（任一条即不通过，系统类条目指向各系统文档）与收尾阶段的全局清单
 keywords: [一票否决, 全局清单, 收尾清单, 死黑, 季节残留, 硬切, 切图残留, 丢档, 声音否决, 观光规则集判据]
-owners: [WP-27]
-contributors: []
 depends: [CORE-INDEX, PRD-INVARIANTS, ENG-GATES, ENG-BUDGET, ART-FIDELITY, ART-STYLE, SYS-GRAPHICS, SYS-WALK]
 related: [ENG-ROADMAP, SYS-VIEW]
 contracts: []
 data: []
 gates: []
+paths: ["scripts/gates/native-render.ps1", "game/data/maps/*/review.json", "scripts/shots/**", "scripts/gates/**", "game/gates/**", "scripts/gates/check-naming.ps1", "scripts/gates/check-source.ps1"]
 ---
 # ENG-GATES-VETO · 一票否决与收尾清单
 

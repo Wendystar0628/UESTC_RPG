@@ -6,10 +6,10 @@ using ZoneLooks = Campus.Gen.Sites.ZoneLooks;
 namespace Campus.Gen.Maps.Qingshuihe.Core.LibraryInterior;
 
 /// <summary>
-/// Tunable values of the library interior (WP-17, MAP-QSH-INTERIORS-LIBRARY). Metres; "review" marks mainline initial values awaiting
+/// Tunable values of the library interior (MAP-QSH-INTERIORS-LIBRARY, MAP-QSH-INTERIORS-LIBRARY). Metres; "review" marks mainline initial values awaiting
 /// the main session's call. Storey heights, the skylight, the 5F set-back and the window holes come from the shell
 /// (<see cref="Library.LibraryPlan"/>, <see cref="Library.LibraryShell"/>), never from here.
-/// Colours are palette names only. No interior colours are registered yet (WLD-INTERIORS-BUILD, WP-04), so each one
+/// Colours are palette names only. No interior colours are registered yet (WLD-INTERIORS-BUILD, ART-STYLE), so each one
 /// borrows the nearest registered entry (review).
 /// </summary>
 internal static class LibraryInteriorStyle

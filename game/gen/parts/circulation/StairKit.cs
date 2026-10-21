@@ -6,9 +6,9 @@ using S = Campus.Gen.Parts.Circulation.CirculationStyle;
 namespace Campus.Gen.Parts.Circulation;
 
 /// <summary>
-/// One indoor flight in the WP-51a convention: over a run of Risers × Tread the nosing line passes (0, 0) and
+/// One indoor flight in the game/gen/interior/core/ convention: over a run of Risers × Tread the nosing line passes (0, 0) and
 /// (run, rise); riser k stands at u = k·Tread, the strip u ∈ [0, Tread] is the lower level and the last riser is the edge
-/// of the upper slab or landing. The flight's RampCollider is therefore exactly WP-51a's (WLD-INTERIORS).
+/// of the upper slab or landing. The flight's RampCollider is therefore exactly game/gen/interior/core/'s (WLD-INTERIORS).
 /// </summary>
 internal readonly record struct Flight(int Risers, float Riser, float Tread)
 {
@@ -29,7 +29,7 @@ internal readonly record struct Flight(int Risers, float Riser, float Tread)
     /// </summary>
     internal (List<Vector2> Ring, List<bool> Chamfer, List<int> Triangles) Profile(float bevel, bool landingFoot, float topJoint)
     {
-        if (Risers < 3) throw new ArgumentOutOfRangeException(nameof(Risers), "An indoor flight has 3 to 18 risers (WP-51a).");
+        if (Risers < 3) throw new ArgumentOutOfRangeException(nameof(Risers), "An indoor flight has 3 to 18 risers (game/gen/interior/core/).");
         var ring = new List<Vector2>(); var chamfer = new List<bool>(); var triangles = new List<int>();
         int Add(float u, float y, bool bevelNext = false) { ring.Add(new(u, y)); chamfer.Add(bevelNext); return ring.Count - 1; }
         var n = Risers;

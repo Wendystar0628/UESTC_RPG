@@ -14,7 +14,7 @@ internal static class BuildingsTestSupport
 {
     internal static readonly LodLevel[] Levels = [LodLevel.L0, LodLevel.L1, LodLevel.L2, LodLevel.L3, LodLevel.L4];
 
-    // WP-10 curtain fabric; the WP-12 heat-pump shrouds share its shading but not its colours.
+    // game/gen/parts/openings/ curtain fabric; the game/gen/parts/roof/ heat-pump shrouds share its shading but not its colours.
     internal static bool Fabric(GeometryBundle b) => b.Material.Spec.Normal == ToonNormal.Smooth && b.Material.Spec.Steps == ShadeSteps.TwoHalf &&
         !b.Material.Spec.Lit.Value.StartsWith("equip.", StringComparison.Ordinal);
 
@@ -101,7 +101,7 @@ internal static class BuildingsTestSupport
         ClaimedBy = (feature, aspect) => aspect == Aspects.Facade && claims?.Contains(feature.Value) == true ? "zone.south" : null,
     };
 
-    /// <summary>The kernel's prepass stand-in until WP-02 runs it: the provider's snapshot, published in the context.</summary>
+    /// <summary>The kernel's prepass stand-in until game/kernel/bake/ runs it: the provider's snapshot, published in the context.</summary>
     internal static BuildContext Prepared(BuildContext ctx) => new()
     {
         CodeHash = ctx.CodeHash,

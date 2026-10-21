@@ -1,4 +1,4 @@
-// toon_static.gdshader：建筑、地面、道具的块几何、独立实例和重复部件的 MultiMesh；外围 O0–O2 也用它（WP-04）
+// toon_static.gdshader：建筑、地面、道具的块几何、独立实例和重复部件的 MultiMesh；外围 O0–O2 也用它（ART-STYLE）
 // 规格：ENG-PERF；ART-STYLE。材质只经材质库按 ToonSpec 取得，逐物体的颜色走顶点色号。
 shader_type spatial;
 render_mode blend_mix, depth_draw_opaque, cull_back, diffuse_lambert, specular_disabled, ambient_light_disabled;
@@ -110,7 +110,7 @@ ToonCol pat_colors(ToonCtx c, ToonMat m, float dl) {
 	return toon_colors_from(c, m, lit, shade, lamp);
 }
 
-// 地面覆盖只读同图的潜势与 WP-38 的季节量；不切材质、不随换季重建几何。
+// 地面覆盖只读同图的潜势与 game/systems/vegetation/seasons/ 的季节量；不切材质、不随换季重建几何。
 // 色号来自既有调色板；图样复用湿面的低频潜势，不另加一套噪声频率。
 const int GROUND_SNOW = 64;
 const int GROUND_GINKGO = 118;

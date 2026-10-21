@@ -5,13 +5,12 @@ category: systems
 parent: SYS-INDEX
 summary: 冷启动扉页与失败页、开始页 T0 与云卡、菜单和片名块、各应用状态下的约定、新游戏与继续与返回标题的加载界面、多地图登记
 keywords: [开始页, 标题页, 主菜单, 扉页, 启动失败页, T0, 云隙望穹, 云卡, 片名块, 应用状态, 加载界面, 进度条, 新游戏, 继续, 返回标题, 预取]
-owners: [WP-49, WP-35d]
-contributors: [WP-01, WP-02, WP-06, WP-25, WP-27, WP-32, WP-34, WP-39, WP-41, WP-46, WP-50, WP-53a]
 depends: [ENG-ARCH, ENG-PERF, UI-NAV, UI-VISUAL, SYS-SAVE, SYS-MAPS, SYS-AUDIO]
 related: [CORE-INDEX, ART-STYLE, ART-SKYLIGHT, WLD-OUTSKIRTS-DIORAMA, SYS-TIME, SYS-MOTION, SYS-VIEW, ENG-GATES, ENG-BUDGET, SYS-WALK, SYS-WEATHER, SYS-GRAPHICS, SYS-ATLAS, WLD-OUTSKIRTS, WLD-INTERIORS, ENG-ROADMAP, WLD-TERRAIN]
 contracts: [IAppFlow, AppState]
 data: ["game/assets/title/qingshuihe/"]
 gates: [G7, G10, G14]
+paths: ["game/style/shaders/cine_cloud.gdshader.uid", "game/style/shaders/cine_cloud.gdshader", "game/data/maps/*/title-clouds.json", "game/kernel/boot/TitleCloudNode.cs", "game/kernel/boot/TitleCloudNode.cs.uid", "game/flow/**"]
 ---
 
 # SYS-TITLE · 开始页与启动

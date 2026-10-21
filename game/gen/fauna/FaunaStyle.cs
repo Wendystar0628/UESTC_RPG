@@ -3,7 +3,7 @@ using Campus.Contracts;
 namespace Campus.Gen.Fauna;
 
 /// <summary>
-/// Every look and placement constant of the WP-25 animals in one place (WF-FLOW): colour names, shading specs, the
+/// Every look and placement constant of the game/systems/fauna/ animals in one place (WF-FLOW): colour names, shading specs, the
 /// overall scale and the site rules. Colours are palette names only (ART-STYLE); the three fauna pairs live in
 /// game/style/palette/ext/fauna.json, the rest are borrowed from the core table.
 /// </summary>
@@ -18,7 +18,7 @@ public static class FaunaStyle
     public static readonly PaletteToken Rosy = new("panel.pinkSand.lit");       // 猫鼻（借核心表）
     public static readonly PaletteToken Coral = new("brick.lit");               // 鸽脚（借核心表）
     public static readonly PaletteToken Amber = new("uestc.gold.lit");          // 黑猫的眼睛（借核心表）
-    public static readonly PaletteToken Wren = new("door.wood.lit");            // 麻雀背羽（借 WP-10）
+    public static readonly PaletteToken Wren = new("door.wood.lit");            // 麻雀背羽（借 game/gen/parts/openings/）
     public static readonly PaletteToken Crown = new("base.warmBrown.lit");      // 麻雀头顶（借核心表）
     public static readonly PaletteToken Cream = new("wall.lit");                // 麻雀的脸颊与腹（借核心表）
 
@@ -72,7 +72,7 @@ public static class FaunaStyle
     /// <summary>Dusk crows: 2-3 groups of 2-3 on dorm parapets, groups at least 150 m apart (WLD-LIFE).</summary>
     public const int CrowGroups = 3;
     public const float CrowGroupSpacing = 150f;
-    /// <summary>Coping top above pad + height on WP-14's generic buildings (parapet rise 0.8 m + coping 0.15 m, plus the coping lip the birds stand on; checked in the 25a review shots).</summary>
+    /// <summary>Coping top above pad + height on game/gen/buildings/'s generic buildings (parapet rise 0.8 m + coping 0.15 m, plus the coping lip the birds stand on; checked in the 25a review shots).</summary>
     public const float CrowCopingRise = 1.12f;
 
     /// <summary>Categories read from the entity's "category" property (world files), never feature IDs.</summary>

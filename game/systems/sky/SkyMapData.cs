@@ -3,7 +3,7 @@ using Campus.Contracts;
 
 namespace Campus.Systems.Sky;
 
-/// <summary>Map-dependent sky parameters read from <c>&lt;DataRoot&gt;sky.json</c> (PLAN-WP, WP-40).</summary>
+/// <summary>Map-dependent sky parameters read from <c>&lt;DataRoot&gt;sky.json</c> (ART-SKYLIGHT-ATMOSPHERE).</summary>
 /// <param name="CloudDrift">Prevailing cloud drift for f(world time) (SYS-WEATHER).</param>
 public sealed record SkyMapData(CloudDrift CloudDrift)
 {

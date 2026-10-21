@@ -5,13 +5,12 @@ category: engineering
 parent: ENG-GATES
 summary: 命令行规则与截图默认串、截图方式、固定机位表；V/E/T 视角表、飞行与行走路线、时季抽样与巡检点轮换（主线之后）
 keywords: [审查视角, 截图默认串, 命令行规则, 截图方式, 截图就绪, 流式屏障, 录像, 视角表, V1, E1, T0, 飞行路线, 压力路线, 点位 P00–P23, 行走路线 W1–W14, 时季抽样, 巡检点轮换, review.json]
-owners: [WP-27]
-contributors: []
 depends: [CORE-INDEX, ENG-GATES, ENG-ARCH, ENG-PERF, SYS-TIME, SYS-WEATHER, SYS-WALK, SYS-GRAPHICS, ART-FIDELITY, UI-NAV, SYS-TITLE, WLD-OUTSKIRTS]
 related: [ENG-BUDGET, ENG-PREVIEW]
 contracts: []
 data: ["game/data/maps/qingshuihe/review.json"]
 gates: [G7]
+paths: ["scripts/gates/native-render.ps1", "game/data/maps/*/review.json", "scripts/shots/**", "scripts/gates/**", "game/gates/**", "scripts/gates/check-naming.ps1", "scripts/gates/check-source.ps1"]
 ---
 # ENG-GATES-SHOTS · 审查视角与截图
 

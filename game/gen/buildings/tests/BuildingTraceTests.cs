@@ -37,7 +37,7 @@ public sealed class BuildingTraceTests
         var module = new BuildingsModule();
         var plans = BuildingSet.For(Ctx(world, 2u)).Plans;
         var mine = plans.Where(p => BuildingsModule.Unclaimed(ctx, p)).ToArray();
-        AssertThat(plans.Count == 6 && mine.Length == 5 && mine.All(p => p.Key != "t:claimed")).OverrideFailureMessage("Expected: " + ("the claimed building is a plan but not WP-14's")).IsTrue();
+        AssertThat(plans.Count == 6 && mine.Length == 5 && mine.All(p => p.Key != "t:claimed")).OverrideFailureMessage("Expected: " + ("the claimed building is a plan but not game/gen/buildings/'s")).IsTrue();
 
         // A cell with two buildings, and the coarser cells with more of them.
         var home = mine.Single(p => p.Key == "t:dorm").Tile(LodLevel.L0);

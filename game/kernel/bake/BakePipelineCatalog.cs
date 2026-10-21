@@ -152,8 +152,8 @@ internal sealed class BakePipelineCatalog
 
     internal static IReadOnlySet<string> ReadWhitelist(string projectRoot)
     {
-        using var source = JsonDocument.Parse(File.ReadAllBytes(Path.Combine(projectRoot, "..", "ownership.json")));
-        return source.RootElement.GetProperty("shaderWhitelist").EnumerateArray()
+        using var source = JsonDocument.Parse(File.ReadAllBytes(Path.Combine(projectRoot, "..", "scripts", "gates", "shader-whitelist.json")));
+        return source.RootElement.EnumerateArray()
             .Select(value => value.GetString() ?? throw new InvalidDataException("Empty shader whitelist path."))
             .ToHashSet(StringComparer.Ordinal);
     }

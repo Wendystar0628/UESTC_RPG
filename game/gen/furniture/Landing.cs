@@ -37,7 +37,7 @@ public sealed record Pad(Matrix4x4 Frame, float HalfWidth, float HalfDepth, floa
 
 /// <summary>
 /// Landing on the terrain (WLD-TERRAIN). Parts are generated flat with their origin on the ground; the placer reads
-/// <see cref="ITerrain"/> and picks the origin height. WP-15 lays its surfaces above the height field (lawn
+/// <see cref="ITerrain"/> and picks the origin height. game/gen/ground/ lays its surfaces above the height field (lawn
 /// <see cref="GroundLevels.Lawn"/>, paving and kerb tops <see cref="GroundLevels.Paving"/>), so heights are taken
 /// from those levels:
 /// <list type="bullet">

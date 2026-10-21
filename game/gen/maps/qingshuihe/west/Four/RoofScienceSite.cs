@@ -6,7 +6,7 @@ using Campus.Gen.Sites;
 
 namespace Campus.Gen.Maps.Qingshuihe.West.Four;
 
-/// <summary>Authored C-wing roof equipment, using WP-12's catalogue geometry.</summary>
+/// <summary>Authored C-wing roof equipment, using game/gen/parts/roof/'s catalogue geometry.</summary>
 public sealed class RoofScienceSite : ZoneSite
 {
     public override string Id => "19b.four-roof-science";

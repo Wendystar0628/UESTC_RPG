@@ -21,7 +21,7 @@ internal static class FurnitureKerbRamps
     /// <see cref="FurnitureStyle.RampKerbReach"/> of its kerb gets one on that kerb, a walk crossing it one on each kerb. The ramp lies on
     /// the carriageway against the kerb, rising to the kerb top and onto the paving behind it (sliding along the kerb by up to
     /// <see cref="FurnitureStyle.RampSlide"/> to find it, never onto a verge), <see cref="FurnitureStyle.RampGap"/> clear of the next; none inside a
-    /// junction (on another road's surface), which WP-15 marks and paves. The count and the refusals go to the layout diagnostics.
+    /// junction (on another road's surface), which game/gen/ground/ marks and paves. The count and the refusals go to the layout diagnostics.
     /// </summary>
     internal static void Plan(StreetSite site, List<FurnitureItem> items, List<BuildDiagnostic> diagnostics, RoadGroup road)
     {

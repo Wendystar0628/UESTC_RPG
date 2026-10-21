@@ -5,13 +5,12 @@ category: ui
 parent: UI-INDEX
 summary: 界面有什么、怎么操作：界面态与漫游态、组件的内容与交互、输入优先级与关键键位、无障碍与文本约定；点位与跳转见子文档
 keywords: [界面交互, 快捷键, 输入优先级, 界面态, 漫游态, 自动隐藏, 四角归属, 时间环操作, 天气签条, 速度档, 临时提示, 到达标题, 设置项, 无障碍, 读屏, 文本键, 地名来源]
-owners: [WP-35]
-contributors: [WP-01, WP-06, WP-27, WP-48, WP-49, WP-50, WP-53, WP-55]
 depends: [ENG-ARCH, SYS-TIME, SYS-WALK, SYS-WEATHER, SYS-GRAPHICS, UI-VISUAL, SYS-ATLAS, SYS-TITLE, SYS-SAVE, SYS-AUDIO]
 related: [CORE-INDEX, ART-STYLE, SYS-MOTION, SYS-VIEW, ENG-GATES, ENG-BUDGET, ENG-PERF, SYS-MAPS, WLD-OUTSKIRTS, WLD-INTERIORS, ENG-RELEASE]
 contracts: [LocalizedName]
 data: ["user://settings.json", "game/hud/i18n/"]
 gates: [G2, G4, G7, G14, G15]
+paths: ["game/style/palette/ext/ui.json", "game/hud/**", "game/hud/i18n/**"]
 ---
 # UI-NAV · 界面与操作说明
 
@@ -37,7 +36,7 @@ gates: [G2, G4, G7, G14, G15]
 ### 0.1 接入要点
 
 - **加界面元素或提示**：只能是本文和 UI-VISUAL 登记的件；临时提示只用 §3.6 清单里的条目，清单外的先登记；`--ui=0` 时只剩 3D 画面和署名（§1）
-- **读键盘、加动作**：动作表在 `game/project.godot`；Esc 固定为 `menu`；移动和视角由 WP-06（相机与输入） 按四层优先级过滤后交出（§4）
+- **读键盘、加动作**：动作表在 `game/project.godot`；Esc 固定为 `menu`；移动和视角由 相机与输入（SYS-VIEW） 按四层优先级过滤后交出（§4）
 - **占用观者输入**：经 `ICameraRig.LockInput` 按原因取得（ENG-ARCH §3）；确认框与浮层画在界面根节点内，不用独占的系统窗口，否则退出时的保存走不到
 - **写界面文字、显示地名**：稳定键，地名只从来源查（§5）
 - **加观者设置**：存 `user://settings.json` 的 `ui` 节（SYS-SAVE-FORMAT §3）；画面设置只经 `IQualityService`，声音设置只经 `IAudioService`（§3.5）
@@ -160,7 +159,7 @@ gates: [G2, G4, G7, G14, G15]
 | 3 普通界面 | 界面态，无大页和对话框 | 有控件持焦点时，方向键、Enter、空格给它 | 移动键与单键快捷键照常 |
 | 4 漫游 | 漫游态 | 全部 | — |
 
-- 第 1、2 层经 `LockInput` 占用观者输入，只挡输入，世界照常运行。相机和行走不直接轮询按键，由 WP-06（相机与输入） 按本表过滤。
+- 第 1、2 层经 `LockInput` 占用观者输入，只挡输入，世界照常运行。相机和行走不直接轮询按键，由 相机与输入（SYS-VIEW） 按本表过滤。
 - 单键快捷键在第 1、2 层不响应（打开当前大页的那个键除外），所以确认框背后不会换季，改键时按下的键不会触发动作。
 
 ## 5 无障碍与语言
@@ -178,4 +177,4 @@ gates: [G2, G4, G7, G14, G15]
 
 ## 6 待验证
 
-- **Ctrl + Shift 切换键盘布局**：多布局的 Windows 上疾跑时同时按下降或潜行可能切换布局，WP-06（相机与输入） 实测；初值：只在操作说明里提示。
+- **Ctrl + Shift 切换键盘布局**：多布局的 Windows 上疾跑时同时按下降或潜行可能切换布局，相机与输入（SYS-VIEW） 实测；初值：只在操作说明里提示。

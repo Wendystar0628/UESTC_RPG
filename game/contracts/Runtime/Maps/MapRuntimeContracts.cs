@@ -38,7 +38,7 @@ public interface IMapLifetime
 }
 
 /// <summary>
-/// WP-02b stream state read by the kernel map runtime. Startup and shutdown dispatch through IMapAware.
+/// game/kernel/stream/ stream state read by the kernel map runtime. Startup and shutdown dispatch through IMapAware.
 /// IsUnloaded is the shutdown drain condition: submitted preparation has returned and its runtime resources
 /// have been released. No new requests start during shutdown.
 /// </summary>

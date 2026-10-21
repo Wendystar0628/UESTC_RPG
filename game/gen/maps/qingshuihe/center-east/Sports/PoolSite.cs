@@ -14,7 +14,7 @@ using L = Campus.Gen.Maps.Qingshuihe.CenterEast.CenterEastTune.Look;
 
 namespace Campus.Gen.Maps.Qingshuihe.CenterEast.Sports;
 
-/// <summary>Pool coping, ladders and locked enclosure; water sheets and traversal stay with WP-24.</summary>
+/// <summary>Pool coping, ladders and locked enclosure; water sheets and traversal stay with game/systems/water/.</summary>
 public sealed class PoolSite : ZoneSite
 {
     public override string Id => "21d.pool-enclosure";

@@ -46,7 +46,7 @@ public static class CenterEastTune
         public static readonly ToonSpec Paving = S("ground.paver", ToonFx.None, LineClass.None);
         /// <summary>Tree-pit and planter soil: the horizontal face that catches leaves, petals and snow (MAP-QSH-ADDITIONS R3).</summary>
         public static readonly ToonSpec Soil = S("base.warmBrown", ToonFx.None, LineClass.None, WetSurface.PorousResponse);
-        /// <summary>Planter beds behind the ramp seat walls: a low planted surface until WP-23 fills them with shrubs.</summary>
+        /// <summary>Planter beds behind the ramp seat walls: a low planted surface until game/gen/vegetation/ fills them with shrubs.</summary>
         public static readonly ToonSpec Bed = S("ground.grassDark", ToonFx.None, LineClass.None, WetSurface.PorousResponse);
         public static readonly ToonSpec RoofSlab = S("roof.grey", ToonFx.Mottle, LineClass.Building, 0.85f);
         /// <summary>Grey aluminium window frames and mullions (窗框灰铝).</summary>
@@ -98,7 +98,7 @@ public static class CenterEastTune
     }
 
     /// <summary>
-    /// 品学楼 (MAP-QSH-CENTER-EAST). The A, B and C wings keep WP-14's facade rules on the +1.5 m platform
+    /// 品学楼 (MAP-QSH-CENTER-EAST). The A, B and C wings keep game/gen/buildings/'s facade rules on the +1.5 m platform
     /// (center-east.terrain.json); this zone builds the gate frame, the two link bridges, the forecourt, the fountain's
     /// stone tiers and the curved end bay.
     /// </summary>
@@ -117,14 +117,14 @@ public static class CenterEastTune
         public static readonly float[] ColumnX = [2.6f, 13.0f, 24.72f, 35.12f];
         /// <summary>Inscription plaque on the beam's forecourt face; the calligraphy waits for the scene text atlas (初值).</summary>
         public const float PlaqueWidth = 26f, PlaqueHeight = 3.0f, PlaqueProud = 0.08f;
-        /// <summary>Soffit downlights over the passage (lit by WP-39 with the frame's light channel).</summary>
+        /// <summary>Soffit downlights over the passage (lit by game/systems/nightlight/ with the frame's light channel).</summary>
         public const float DownlightPitch = 3.2f, DownlightRadius = 0.16f;
 
         /// <summary>Link bridges A–C and B–C (§2.2): storeys 2–3 over the paths between the wings (初值).</summary>
         public const float BridgeColumnRadius = 0.3f;
 
         /// <summary>
-        /// Low stepped cascade (§2.3; water by WP-24, WLD-WATER; 10:01 review): three nested rectangular pools of light
+        /// Low stepped cascade (§2.3; water by game/systems/water/, WLD-WATER; 10:01 review): three nested rectangular pools of light
         /// stone, centred in the forecourt's 14.2 × 7.2 m lawn panel 22 m in front of the frame (the point FountainId), long
         /// side along the bar. Each tier's thin water sheet spills over its coping into the pool below. Halves are (along the
         /// bar, toward the forecourt); heights are above the lawn and stay under 0.9 m so the cascade lies low on the grass (初值).
@@ -157,7 +157,7 @@ public static class CenterEastTune
         /// Curved end of the right wing (§2.4: 右翼端部是一个弧形体量), read from the forecourt as the far right: a curved
         /// curtain-wall bay over B's diagonal south-west lobby (ArcLobby), bulging toward the river (初值). Its chord is the
         /// registered ArcEndId outline's ends, its height and storeys the lobby's. The entrance kit at the A-wing hall door
-        /// px.a.hall (interiors.json) and at the side door under the passage is WP-13's (12:15 ruling).
+        /// px.a.hall (interiors.json) and at the side door under the passage is game/gen/furniture/'s (12:15 ruling).
         /// </summary>
         public static readonly Vector2 ArcBulge = new(-0.6f, 0.8f);
         public const float ArcSagitta = 3.5f;
@@ -265,7 +265,7 @@ public static class CenterEastTune
         /// Granite apron (stop point) round Maxwell and the stone, the ApronId rectangle (read in the research frame) at the
         /// lawn's east edge where footway 572670136 runs; a few centimetres proud of the lawn with a light kerb.
         /// </summary>
-        /// <summary>Apron top above the terrain (2 cm over WP-15's paving level, 7 cm over the lawn) and its kerb.</summary>
+        /// <summary>Apron top above the terrain (2 cm over game/gen/ground/'s paving level, 7 cm over the lawn) and its kerb.</summary>
         public const float ApronTop = 0.17f, ApronKerb = 0.2f;
 
         /// <summary>
@@ -291,7 +291,7 @@ public static class CenterEastTune
         public static readonly Vector2[] SteleOutline =
             [new(-1.55f, 0f), new(1.5f, 0f), new(1.62f, 0.42f), new(1.5f, 0.92f), new(1.12f, 1.3f), new(0.5f, 1.56f), new(-0.2f, 1.74f), new(-0.82f, 1.78f), new(-1.32f, 1.5f), new(-1.62f, 0.8f)];
 
-        /// <summary>WP-15's ground section above the terrain (GroundSection): lawns at 0.10 m, paving at 0.15 m.</summary>
+        /// <summary>game/gen/ground/'s ground section above the terrain (GroundSection): lawns at 0.10 m, paving at 0.15 m.</summary>
     }
 
     /// <summary>
@@ -355,7 +355,7 @@ public static class CenterEastTune
 
         /// <summary>
         /// The atrium entrance (中庭入口, closed: §3.3) on the hub's south-east face between the tower and the south wing, facing
-        /// the forecourt and the training hall: a two-storey glass porch framed in yellow-green, glass doors shut (门厅卡 by WP-51).
+        /// the forecourt and the training hall: a two-storey glass porch framed in yellow-green, glass doors shut (门厅卡 by game/gen/interior/).
         /// The door's spot and facing are CenterEastIds.Wenke.ForecourtId's props.door and props.doorFacing.
         /// </summary>
         public const float PorchHalfWidth = 4.6f, PorchJamb = 0.9f, PorchDepth = 1.8f, PorchHead = 1.1f;
@@ -374,13 +374,13 @@ public static class CenterEastTune
     }
 
     /// <summary>
-    /// 友谊树 (§3.4): a newly planted big camphor (WP-23 plants it at the registered point) held by three timber stakes, its
+    /// 友谊树 (§3.4): a newly planted big camphor (game/gen/vegetation/ plants it at the registered point) held by three timber stakes, its
     /// trunk wound in green cloth, and a granite landscape stone beside it with the gold original emblem on its dressed face.
     /// On the forecourt lawn south of the walk, where P14's stand looks out at 65° to the training hall (初值).
     /// </summary>
     public static class Friendship
     {
-        /// <summary>Trunk wrap (cloth over the WP-23 trunk): radius and its bottom and top above the ground.</summary>
+        /// <summary>Trunk wrap (cloth over the game/gen/vegetation/ trunk): radius and its bottom and top above the ground.</summary>
         public const float WrapRadius = 0.25f, WrapBottom = 0.25f, WrapTop = 2.3f;
         /// <summary>Three stakes leaning in to the trunk: foot radius, height where they meet the trunk, pole radius, first bearing.</summary>
         public const float StakeFoot = 1.7f, StakeTop = 2.6f, StakeRadius = 0.055f, StakeBearing = 30f;
@@ -392,7 +392,7 @@ public static class CenterEastTune
         public const float EmblemRadius = 0.21f, EmblemY = 0.02f, EmblemRelief = 0.02f;
 
         /// <summary>
-        /// P14's proposed stand (WP-36 decides): south-east of the tree on the lawn, the tree, the stone, the tower and the shut
+        /// P14's proposed stand (game/camera/ decides): south-east of the tree on the lawn, the tree, the stone, the tower and the shut
         /// atrium door to the north-west, the training hall and the moon clear at 65°.
         /// </summary>
         public static readonly Vector2 StandAt = new(429.0f, 141.5f);

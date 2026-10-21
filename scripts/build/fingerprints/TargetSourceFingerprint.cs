@@ -31,7 +31,7 @@ internal static class TargetSourceFingerprint
     {
         var repository = Directory.GetParent(Path.GetDirectoryName(production.FilePath!)!)!.FullName;
         var projects = await LoadGraph(production);
-        var ownership = ReadOwnership(repository);
+        var documentPaths = ReadDocumentPaths(repository);
         var owners = new SortedDictionary<string, string>(StringComparer.Ordinal);
         var toolGraph = await LoadGraph(tool);
         var salt = new SortedSet<string>(StringComparer.Ordinal) { "target-source-v2" };
@@ -124,7 +124,7 @@ internal static class TargetSourceFingerprint
                     var ownerDeclarations = type.GetAttributes().Where(attribute => IsRegistration(attribute.AttributeClass)).ToArray();
                     if (ownerDeclarations.Length != 0)
                     {
-                        var declaredOwners = ownerDeclarations.Select(attribute => OwnerOf(repository, ownership,
+                        var declaredOwners = ownerDeclarations.Select(attribute => OwnerOf(repository, documentPaths,
                             attribute.ApplicationSyntaxReference?.SyntaxTree.FilePath
                                 ?? throw new InvalidDataException($"Registration {TypeKey(type)} has no source declaration.")))
                             .Distinct(StringComparer.Ordinal).ToArray();
@@ -187,27 +187,37 @@ internal static class TargetSourceFingerprint
         return false;
     }
 
-    // Same most-specific-first policy and glob semantics as check-source.ps1.
-    private static (Regex Pattern, string Owner)[] ReadOwnership(string repository)
+    // The generated document paths use the same glob semantics as check-source.ps1.
+    private static (Regex Pattern, string[] Docs)[] ReadDocumentPaths(string repository)
     {
-        using var document = JsonDocument.Parse(File.ReadAllBytes(Path.Combine(repository, "ownership.json")));
-        return document.RootElement.GetProperty("rules").EnumerateArray()
-            .Select(rule => (Pattern: rule.GetProperty("pattern").GetString()!, Owner: rule.GetProperty("owner").GetString()!))
-            .OrderByDescending(rule => rule.Pattern.Count(c => c is not ('*' or '?')))
-            .Select(rule => (new Regex("^" + Regex.Escape(rule.Pattern.Replace('\\', '/'))
+        using var document = JsonDocument.Parse(File.ReadAllBytes(Path.Combine(repository, "docs", "ROUTES.json")));
+        var documents = document.RootElement.GetProperty("docs");
+        return document.RootElement.GetProperty("paths").EnumerateArray().Select(rule =>
+        {
+            var pattern = rule.GetProperty("glob").GetString();
+            if (string.IsNullOrWhiteSpace(pattern)) throw new InvalidDataException("Document path glob is empty.");
+            var codes = rule.GetProperty("docs").EnumerateArray().Select(value =>
+            {
+                var code = value.GetString();
+                if (string.IsNullOrWhiteSpace(code) || string.IsNullOrWhiteSpace(documents.GetProperty(code).GetString()))
+                    throw new InvalidDataException("Document path reference is empty.");
+                return code;
+            }).Distinct(StringComparer.Ordinal).Order(StringComparer.Ordinal).ToArray();
+            if (codes.Length == 0) throw new InvalidDataException($"Document path has no document: {pattern}.");
+            var expression = "^" + Regex.Escape(pattern.Replace('\\', '/'))
                 .Replace("\\*\\*", "__DOUBLE_STAR__").Replace("\\*", "[^/]*")
-                .Replace("__DOUBLE_STAR__", ".*").Replace("\\?", "[^/]") + "$", RegexOptions.CultureInvariant), rule.Owner))
-            .ToArray();
+                .Replace("__DOUBLE_STAR__", ".*").Replace("\\?", "[^/]") + "$";
+            return (new Regex(expression, RegexOptions.CultureInvariant | RegexOptions.IgnoreCase), codes);
+        }).ToArray();
     }
 
-    private static string OwnerOf(string repository, (Regex Pattern, string Owner)[] rules, string source)
+    private static string OwnerOf(string repository, (Regex Pattern, string[] Docs)[] rules, string source)
     {
         var path = Relative(repository, source);
-        foreach (var rule in rules)
-            if (rule.Pattern.IsMatch(path))
-                return !string.IsNullOrWhiteSpace(rule.Owner) ? rule.Owner
-                    : throw new InvalidDataException($"Source owner is empty: {path}.");
-        throw new InvalidDataException($"Registered source has no ownership rule: {path}.");
+        var documents = rules.Where(rule => rule.Pattern.IsMatch(path)).SelectMany(rule => rule.Docs)
+            .Distinct(StringComparer.Ordinal).Order(StringComparer.Ordinal).ToArray();
+        if (documents.Length == 0) throw new InvalidDataException($"Registered source has no document path ownership: {path}.");
+        return string.Join(", ", documents);
     }
 
     // The CPU fingerprint responsibility policy. Membership always intersects the actual production Compile graph.

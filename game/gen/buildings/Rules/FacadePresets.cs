@@ -33,12 +33,12 @@ public sealed record FacadeLook(string Key)
     /// frame colour (FacadeProfile.AccentApron). Window cells, bays and storeys do not move (contract-29).
     /// </summary>
     public bool? AccentApron { get; init; }
-    /// <summary>窗型: the WP-10 part filling the windows (PartCatalog; curtain walls hang no curtains).</summary>
+    /// <summary>窗型: the game/gen/parts/openings/ part filling the windows (PartCatalog; curtain walls hang no curtains).</summary>
     public string? Window { get; init; }
 }
 
 /// <summary>
-/// The facade presets WP-14 knows, by key (WF-FLOW: tunables in one place). Initial values; the main session sets the
+/// The facade presets game/gen/buildings/ knows, by key (WF-FLOW: tunables in one place). Initial values; the main session sets the
 /// final ones at review. A key no preset has leaves the family profile as it is (logged, BuildingsModule.UnknownPreset).
 /// </summary>
 public static class FacadePresets
@@ -60,7 +60,7 @@ public static class FacadePresets
         Window = PartCatalog.CurtainWall,
     };
 
-    // 北区宿舍预设 (WP-20, MAP-QSH-NORTH). Every one names its frame, trims and accent outright:
+    // 北区宿舍预设 (MAP-QSH-NORTH, MAP-QSH-NORTH). Every one names its frame, trims and accent outright:
     // the dormitory family is one of two by cluster hash (DormA, DormB) and a preset has to cover both. Window cells, bays and
     // storeys stay the family's, so every window keeps its number (contract-29).
 
@@ -141,7 +141,7 @@ public static class FacadePresets
     /// </summary>
     public static readonly FacadeLook DormMasterCreamCoffeeWhite = Master("dorm.master.creamCoffeeWhite", Families.WallCreamCoffee, Families.WallWarmWhite, Families.WallWarmWhite);
 
-    // 博翰一组团附属 and 6735 (WP-20, WLD-INTERIORS). Not dormitories: the family (service, utility) stays the
+    // 博翰一组团附属 and 6735 (MAP-QSH-NORTH, WLD-INTERIORS). Not dormitories: the family (service, utility) stays the
     // zone pack's and keeps its own curtains, string courses and window cards. The accent is written out to keep the table whole,
     // though neither family paints it (AccentSpandrels is off there).
 

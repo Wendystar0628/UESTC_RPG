@@ -11,7 +11,7 @@ using KernelServices = Campus.Kernel.Registry.Kernel;
 namespace Campus.Style.Palette.Keys;
 
 /// <summary>
-/// WP-37 colour-script evaluator (SYS-TIME, ENG-PERF). Runs at FramePriority.Palette: reads clock, season and
+/// game/style/palette/keys/ colour-script evaluator (SYS-TIME, ENG-PERF). Runs at FramePriority.Palette: reads clock, season and
 /// weather from IWorldState, writes the 256×68 palette texture (global sampler <c>palette</c>) and the globals
 /// <c>fog</c> and <c>fog_low</c>, and publishes IColorScriptFrame. Also implements IPaletteProbe for the time ring.
 /// <c>--inspect=palette</c> shows a debug overlay of the live texture.
@@ -62,7 +62,7 @@ public partial class PaletteNode : Node, IColorScriptFrame, IPaletteProbe, IMapA
         _composer.StepSeasonal(first, full: true);
         _image = Image.CreateFromData(PaletteComposer.Width, PaletteComposer.Height, false, Image.Format.Rgba8, _composer.Pixels);
         _texture = ImageTexture.CreateFromImage(_image);
-        // WP-37 produces the palette (ENG-PERF); once published the registry owns its lifetime: never Dispose it here.
+        // game/style/palette/keys/ produces the palette (ENG-PERF); once published the registry owns its lifetime: never Dispose it here.
         _registration = KernelServices.Get<IGlobalDataTextureRegistry>().RegisterOwned(_shaderGlobalPalette, _texture, _texture.GetRid());
         RenderingServer.GlobalShaderParameterSet(_shaderGlobalPalette, _texture);
         Current = _composer.Snapshot(first, ++_rev);

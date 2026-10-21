@@ -5,7 +5,7 @@ using Godot;
 
 namespace Campus.Kernel.Quality.Settings;
 
-// WP-32's local storage seam: the service can be exercised without initializing Godot.
+// game/kernel/quality/'s local storage seam: the service can be exercised without initializing Godot.
 public interface IGraphicsSettingsStore
 {
     QualityProfile? Read();
@@ -35,7 +35,7 @@ public sealed class GraphicsSettingsStore(ISettingsStore settings, QualityCatalo
             var name = QualityCatalog.Name(knob);
             if (!knobs.TryFloat(name, out var number)) continue;
             if (catalog.IsValid(knob, number)) overrides[knob] = number;
-            else DiagnosticLog.Warning("[WP-32]", $"Ignoring invalid setting {name}.");
+            else DiagnosticLog.Warning("[SYS-GRAPHICS]", $"Ignoring invalid setting {name}.");
         }
         return new(preset, overrides);
     }

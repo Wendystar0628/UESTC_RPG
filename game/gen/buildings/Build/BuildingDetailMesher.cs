@@ -21,7 +21,7 @@ internal sealed class BuildingDetailMesher(BuildingPlan plan, LodLevel lod, Geom
     }
 
     // ---------------------------------------------------------------------------------------------
-    // Entrances: surround, canopy, and the WP-11 landing with its steps or slope (EntranceKit) (L0/L1).
+    // Entrances: surround, canopy, and the game/gen/parts/circulation/ landing with its steps or slope (EntranceKit) (L0/L1).
     // ---------------------------------------------------------------------------------------------
     private void Entrances()
     {
@@ -52,7 +52,7 @@ internal sealed class BuildingDetailMesher(BuildingPlan plan, LodLevel lod, Geom
             ? Profile.Of([new(0f, cy, 0f, 0.35f), new(depth, cy), new(depth, cy + 0.28f), new(depth - 0.02f, cy + 0.3f), new(0f, cy + 0.3f)], 3)
             : Profile.Of([new(0f, cy, 0f, 0.35f), new(depth, cy), new(depth, cy + 0.3f), new(0f, cy + 0.3f)]);
         f.Bar(sink, surfaces.Trim with { Family = Families.WallWarmWhite }, cu0, cu1, canopy);
-        // Landing at the threshold and the steps or slope down to the outside ground: WP-11 parts.
+        // Landing at the threshold and the steps or slope down to the outside ground: game/gen/parts/circulation/ parts.
         EntranceKit.Build(sink, EntranceKit.Pieces(plan, e), lod);
     }
 
@@ -101,7 +101,7 @@ internal sealed class BuildingDetailMesher(BuildingPlan plan, LodLevel lod, Geom
                 new V(f.At(u1, d, y1), Vector3.UnitY, default), new V(f.At(u0, d, y1), Vector3.UnitY, default));
     }
 
-    /// <summary>Rain downpipes every ~20 m on the outer ring, and condensate drains beside the niche strips (WP-12 parts, FacadeFittings).</summary>
+    /// <summary>Rain downpipes every ~20 m on the outer ring, and condensate drains beside the niche strips (game/gen/parts/roof/ parts, FacadeFittings).</summary>
     private void Downpipes()
     {
         var top = plan.Profile.RoofEdge == Rules.RoofEdge.Cornice ? plan.WallTopY : plan.RoofY + 0.15f;
@@ -134,7 +134,7 @@ internal sealed class BuildingDetailMesher(BuildingPlan plan, LodLevel lod, Geom
         }
     }
 
-    /// <summary>The unit grilles: a WP-12 cage on a chamfered shelf beside each window, in vertical strips.</summary>
+    /// <summary>The unit grilles: a game/gen/parts/roof/ cage on a chamfered shelf beside each window, in vertical strips.</summary>
     private void Grilles()
     {
         foreach (var (fi, f, layout, skin) in shell.Facades())

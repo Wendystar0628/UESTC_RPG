@@ -5,8 +5,6 @@ category: systems
 parent: SYS-AUDIO
 summary: 脚步与交互音、材质与覆盖物、飞行风声，窄处脚步更明显的空间声学、遮挡与室内外传声
 keywords: [观者声, 脚步声, 步相, 落地, 材质, 覆盖物, 交互音, 飞行风声, 空间声学, 混响, 声学网格, 门户, 遮挡, 室内外传声, FootMat, IGroundCover, IAcousticEnv, IFoleyService, IWalkTelemetry, 洗牌袋]
-owners: [WP-53c, WP-53d]
-contributors: [WP-53, WP-02, WP-03, WP-13, WP-15, WP-17, WP-42, WP-43, WP-51]
 depends: [SYS-AUDIO, SYS-WALK, SYS-VIEW, WLD-INTERIORS]
 related: [SYS-WEATHER, ENG-GATES, ART-FIDELITY]
 contracts: [AcousticClass, AbsorbClass, PathKind, AcousticPortalKind, AcousticEnv, SendTap, ListenerRouting, OcclusionResult, AcousticPortal, IAcousticEnv, AcousticRoomDecl, AcousticPortalDecl, AcousticsDecl, FootMat, StairSpec, FootPatch, GroundCover, IGroundCover, FootSide, FootfallInfo, ContactInfo, IWalkTelemetry, FoleyKind, GroundSample, FoleyEvent, FoleyLoop, FoleyStats, IFoleyService]

@@ -91,7 +91,7 @@ internal static class FurnitureSlots
         // The footprint and the sitters' feet ahead of it.
         var feet = centre + inward * (S.FeetReach * 0.5f);
         if (!OnPaving(site, feet, inward, p.Width * 0.5f, (p.Depth + S.FeetReach) * 0.5f)) return (null, "not whole on the plaza's paving");
-        // On a plaza's own paving, never on a walk's strip outside it (walks belong to walkers; a strip's round end is lawn where WP-15
+        // On a plaza's own paving, never on a walk's strip outside it (walks belong to walkers; a strip's round end is lawn where game/gen/ground/
         // cuts it square). A walk line the plaza carries does not count against the bench (Opus review 13c2b rework), but the bench
         // never sits across the line itself.
         for (var u = -1; u <= 1; u++)

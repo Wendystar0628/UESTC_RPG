@@ -15,7 +15,7 @@ using W = Campus.Gen.Maps.Qingshuihe.South.SouthTune.Windows;
 namespace Campus.Gen.Maps.Qingshuihe.South.Sports;
 
 /// <summary>
-/// The sports platform (大平台, MAP-QSH-SOUTH, OSM "未命名 0526"), which WP-14 would extrude as a plain box, so this site
+/// The sports platform (大平台, MAP-QSH-SOUTH, OSM "未命名 0526"), which game/gen/buildings/ would extrude as a plain box, so this site
 /// claims it:
 /// - a 5.0 m deck (the gym's and natatorium's platform storey) with a white fascia, a light joint grid on its paving and 1.1 m
 ///   parapet panels along every free edge; edges that meet the gym, the natatorium or the stand stay open;

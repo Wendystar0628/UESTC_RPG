@@ -6,7 +6,7 @@ using static Campus.Gen.Sites.ZoneLooks;
 
 namespace Campus.Gen.Maps.Qingshuihe.West.Kindergarten;
 
-/// <summary>The three unlettered keyboard rows on the authored northeast face. The ordinary building remains WP-14's.</summary>
+/// <summary>The three unlettered keyboard rows on the authored northeast face. The ordinary building remains game/gen/buildings/'s.</summary>
 public sealed class KeyboardSite : ZoneSite
 {
     public override string Id => "19c.keyboard";

@@ -106,7 +106,7 @@ internal sealed class StreetPaving
 
     /// <summary>
     /// True when <paramref name="p"/> lies on plaza paving: a pedestrian polygon (a square, a paved road area), not a walk's strip, which
-    /// belongs to walkers (and whose round end the strip test allows is lawn where WP-15 cuts the walk square).
+    /// belongs to walkers (and whose round end the strip test allows is lawn where game/gen/ground/ cuts the walk square).
     /// </summary>
     public bool OnPlaza(Vector2 p)
     {
@@ -116,7 +116,7 @@ internal sealed class StreetPaving
     }
 
     /// <summary>
-    /// True when <paramref name="p"/> lies on pedestrian paving that WP-15 paves for certain: a plaza polygon, or a walk's strip short of
+    /// True when <paramref name="p"/> lies on pedestrian paving that game/gen/ground/ paves for certain: a plaza polygon, or a walk's strip short of
     /// the line's ends (a strip's round end is lawn where the walk is cut square; a walk going on past a junction paves it itself).
     /// </summary>
     public bool OnPavedGround(Vector2 p)

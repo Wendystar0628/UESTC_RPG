@@ -5,19 +5,18 @@ category: workflow
 parent: WF-INDEX
 summary: 角色表与汇报关系，会话的运行方式，各模型的长处，GPT 模型不做审美，决定权与事归谁，总指挥只做什么，Codex 主线当指挥
 keywords: [角色表, 汇报给, 决定权, 执行人, 会话, 运行方式, 单 Claude 账户, 模型能力, 长处, Opus, Sonnet, gpt-6-astra, gpt-6.1-sol, GPT 不做审美, 视觉风格归属, 事归谁, 交叉, 总指挥, 主会话, 风格负责人, 集中测试, Codex 主线, 工程指挥, D-179]
-owners: [WP-00]
-contributors: []
-depends: [PLAN-WP]
+depends: []
 related: [WF-ENTRY, WF-MODEL, WF-FLOW, ART-STYLE, REG-DECISIONS]
 contracts: []
 data: []
 gates: []
+paths: ["scripts/requirements.*", "game/testing/**", "game/data/build-code-fingerprints.json", "game/gen/maps/qingshuihe/Campus.Gen.Maps.Qingshuihe.csproj", "game/gen/sites/**", ".collab/tools/**", "dashboard/**", "game/gen/Campus.Gen.csproj", "game/kernel/map/data/**", "game/kernel/renderer/geometry/**", "game/kernel/renderer/render-state/**", "game/kernel/instances/**", "game/gen/geometry/**", "scripts/gates/arch/Campus.Arch.Tests.csproj", "scripts/godot-api/ApiDump/ApiDump.csproj", "game/contracts/Runtime/Campus.Contracts.Runtime.csproj", "game/contracts/Campus.Contracts.csproj", "game/data/maps/*/interiors.json", "game/Campus.Gen.Tests.csproj", "game/Campus.Tests.csproj", "game/contracts/.gdignore", "game/export_presets.cfg", "game/contracts/*.csproj", "game/kernel/registry/**", "game/data/rulesets/**", "scripts/gates/arch/**", "**/Directory.*.targets", "game/Campus.csproj", "game/gen/.gdignore", "game/project.godot", "Directory.*.targets", "game/kernel/stubs/**", "scripts/godot-api/**", "**/Directory.*.props", "scripts/gate.ps1", "third_party.json", "Directory.*.props", "docs/godot-api/**", "game/contracts/**", ".gitattributes", "scripts/build/**", "scripts/setup/**", "game/gen/bakeinput/assembly/**", "scripts/docs/**", "budgets.json", "game/addons/**", "global.json", "version.txt", "scripts/lib/**", ".gitignore", ".ignore", "AGENTS.md", "CLAUDE.md", "README.md", "启动游戏.cmd", "**/*.csproj", "LICENSE", "tools/**", "**/*.sln", "game/.editorconfig", "scripts/git-hooks/**"]
 ---
 
 # WF-ROLE · 参与者与分工
 
 > **范围**：本文规定协作有哪些角色、各向谁汇报，各模型擅长什么，谁决定谁执行，GPT 模型不做审美，总指挥只做什么，Codex 主线怎么当指挥。型号的现行取值以 §1 的表为准。
-> **不在本文**：各角色的入口与必守：WF-ENTRY；按难度选模型、开子代理：WF-MODEL；包的归属：PLAN-WP-LIST §1；额度与并发：WF-MODEL §9。
+> **不在本文**：各角色的入口与必守：WF-ENTRY；按难度选模型、开子代理：WF-MODEL；路径归属：各文档文件头的 paths；额度与并发：WF-MODEL §9。
 > **查阅**：先读 §0；角色与运行方式看 §1；模型长处看 §2；GPT 不做审美看 §3；决定权与事归谁看 §4；总指挥看 §5；Codex 主线看 §6。
 
 ## 0 结论
@@ -40,7 +39,7 @@ gates: []
 | 角色 | 模型与运行方式 | 汇报给 |
 | --- | --- | --- |
 | 主会话 | Claude Opus 5.5，Claude Code 交互会话 | 作者 |
-| 主会话的子代理 | Claude Opus 或 Sonnet，Agent 工具后台开，按包取名 | 主会话 |
+| 主会话的子代理 | Claude Opus 或 Sonnet，Agent 工具后台开，按施工队列行号取名 | 主会话 |
 | Codex 主线 | gpt-6.1-sol（日常 high，诊断 xhigh），Codex 应用里唯一的会话 | 主会话 |
 | Codex 主线的子代理 | 默认 gpt-6.1-sol，机械活 gpt-6-luna（medium），`spawn_agent` 开；gpt-6-astra 只做临时审计（§6） | Codex 主线 |
 
@@ -72,7 +71,7 @@ gates: []
 - **Codex 主线决定**：工程、契约、共享工程文件及高传播风险的方案（WF-BUILD §3）。
 - **对作者的要求提出反对**（D-277）：主会话认为作者的要求违背硬约束、损害架构或数据权威、或代价与收益明显失衡时，在动手之前当轮提出反对，写清三件事：哪里不合理、照做的代价、更好的做法；不先照做再补说，也不为了不打扰而默默改成别的做法。作者听过仍坚持，就按作者的决定执行，同批落实到队列和文档。审美取向同样可以提意见，最终以作者为准（D-252）。
 - **指挥统一编译后提交推送**（WF-FLOW §3.1）。设计文档的撰写可以派出去：需要 Opus 的交 Opus 子代理，GPT 只在任务单给出确切文字时按文打补丁。
-- **谁施工**按 WF-MODEL §1 的七问判断；可见构件交 Opus 还是 Sonnet 见 WF-MODEL §1–§2，GPT 只承担其非可见部分，如碰撞、数据、接线和单测；包归属（PLAN-WP-LIST §1）与目录写权限不因施工模型改变。
+- **谁施工**按 WF-MODEL §1 的七问判断；可见构件交 Opus 还是 Sonnet 见 WF-MODEL §1–§2，GPT 只承担其非可见部分，如碰撞、数据、接线和单测；路径归属（各文档文件头的 paths）与目录写权限不因施工模型改变。
 - **有可见结果的 Codex 主线包**（开始页与加载界面、镜头手感、跳转、行走手感、介质）：Codex 主线交机制和参数表，主会话定参数值；**有重工程的 Claude 侧包**（建筑生成器规则、描线的计算着色器、材质库）：请 Codex 主线评审；画面相关的契约见 WF-FLOW §4。
 
 ## 5 总指挥只做什么
@@ -96,6 +95,6 @@ gates: []
 - 做：控制子代理（拆单、派工、写简报、审交回的方案与代码、统一编译提交），契约与共享工程文件定案，跨包集成与集成修错，小单，和主会话通信。
 - 子代理在跑时不干等：主会话的消息和来信到了即时处理，手上的事接着做；不用 sleep，sleep 期间收不到消息。
 
-**施工默认用 gpt-6.1-sol 子代理**：Codex 主线名下所有包的施工，包括内核、确定性、契约与存档迁移相关的包，用 `spawn_agent` 开 gpt-6.1-sol，复杂的用 high 或 xhigh。包的归属与审查权不变。
+**施工默认用 gpt-6.1-sol 子代理**：Codex 主线名下所有任务的施工，包括内核、确定性、契约与存档迁移相关的任务，用 `spawn_agent` 开 gpt-6.1-sol，复杂的用 high 或 xhigh。任务的归属与审查权不变。
 
 **gpt-6-astra 只做临时审计**（D-249）：重大问题 gpt-6.1-sol 两次解决不了时（跨包根因查不出，确定性、并发、资源寿命或存档迁移的方案定不下），Codex 主线才临时开一个 gpt-6-astra 子代理（xhigh）审计：只读，交回根因与改法即结束，施工仍交 gpt-6.1-sol；主会话要审计就写信请 Codex 主线开。其余一律用 gpt-6.1-sol。

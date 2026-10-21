@@ -59,7 +59,7 @@ public static class PrecipTuning
     /// </summary>
     public static readonly Vector3 WindDir = new(1f, 0f, 0f);
 
-    /// <summary>主线版 precip_occ 的常量顶面高度（m）：遮蔽高度图的烘焙在后置细节里（PLAN-WP）。</summary>
+    /// <summary>主线版 precip_occ 的常量顶面高度（m）：遮蔽高度图的烘焙在后置细节里（SYS-WEATHER）。</summary>
     public const float OccConstantTop = 0f;
 
     /// <summary>主线版 precip_occ 常量纹理的边长（像素）。</summary>

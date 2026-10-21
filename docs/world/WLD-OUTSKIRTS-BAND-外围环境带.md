@@ -5,8 +5,6 @@ category: world
 parent: WLD-OUTSKIRTS
 summary: 外围环境带规则：截面线位置、O0–O3 的内容与精度、灯光季节车流、保留删除新增、画法、数据与许可
 keywords: [外围环境带, O0–O3, 距离环, 外围覆盖层, offcampus.json, 外围画法, 楼型, 程序化布局, ODbL]
-owners: [WP-47]
-contributors: [WP-02, WP-04, WP-05, WP-06, WP-08, WP-13, WP-14, WP-15, WP-18, WP-22, WP-23, WP-24, WP-27, WP-28, WP-30, WP-33, WP-35, WP-36, WP-37, WP-38, WP-39, WP-41, WP-42, WP-43, WP-44, WP-45, WP-46, WP-48, WP-49, WP-53]
 depends: [CORE-INDEX, WLD-OUTSKIRTS, ART-STYLE, WLD-OUTSKIRTS-DIORAMA, ART-FIDELITY, ENG-ARCH, ENG-BUDGET, ENG-PERF]
 related: [MAP-QSH-OUTSKIRTS, SYS-BORDER, ART-SKYLIGHT, ENG-GATES, WLD-AMBIENCE, SYS-TIME, SYS-WEATHER, SYS-AUDIO, ENG-RELEASE, WLD-TERRAIN]
 contracts: []
@@ -30,9 +28,9 @@ gates: [G2, G6, G7]
 ### 0.1 接入要点
 
 - **给外围的表面定精度**：按距离环套 ENG-BUDGET 的级别表；外围整体 K5，O0 按 K3，底线在任何距离都成立（§2.1）
-- **画截面或远景（WP-22（箱庭截面与远景））**：截面画法与精度见 WLD-OUTSKIRTS-DIORAMA §2；近层卡片只画 1.5–3 km 的楼群和高架剪影（§2.2）
-- **在外围加或改内容**：写进外围覆盖层（WP-47（外围环境带） 独占，ID 以 `design:` 开头并写明理由）；不画车流（ART-STYLE §3.2）、不加动态，不用霓虹和 LED 屏（§3.3、§4）
-- **外围的灯与地面覆盖**：灯接 WP-39（夜景灯光与时刻表） 的时刻表，不新增灯光通道；O0 读地面遮罩，O1、O2 和截面上缘读顶点潜势（§3.1、§3.2）
+- **画截面或远景（箱庭截面与远景（WLD-OUTSKIRTS-DIORAMA））**：截面画法与精度见 WLD-OUTSKIRTS-DIORAMA §2；近层卡片只画 1.5–3 km 的楼群和高架剪影（§2.2）
+- **在外围加或改内容**：写进外围覆盖层（外围环境带（WLD-OUTSKIRTS-BAND） 独占，ID 以 `design:` 开头并写明理由）；不画车流（ART-STYLE §3.2）、不加动态，不用霓虹和 LED 屏（§3.3、§4）
+- **外围的灯与地面覆盖**：灯接 夜景灯光与时刻表（MAP-QSH-ATMOSPHERE） 的时刻表，不新增灯光通道；O0 读地面遮罩，O1、O2 和截面上缘读顶点潜势（§3.1、§3.2）
 
 ## 1 截面线与截面精度
 
@@ -67,13 +65,13 @@ gates: [G2, G6, G7]
 - **六种楼型**（各楼型在清水河外围的位置见 MAP-QSH-OUTSKIRTS §2）：六到八层板楼（20–27 m）；18–33 层点式塔楼（55–100 m）；厂房（10–20 m）；园区办公（15–40 m）；商场（约 30 m）；学校（带红色跑道，从高处读得出）。
 - **布局**：用地多边形里按楼型排布，楼距 1.2–1.5 倍楼高，朝向随地块长边，留出小区路和绿地；外围数据已有的楼块保留位置和轮廓，缺层数的按楼型补；地标的体量和轮廓写进覆盖层。
 - **变体**：每种楼型由层数、开间、阳台式样、屋顶设备、裙房、色号组合出变体；变体由位置哈希选，相邻两栋不连续重复即可。
-- **立面与屋顶**：复用 WP-14 通用建筑生成器的立面规则；L1 屋顶放水箱、楼梯间、少量外机，设备最高点计入软地板。
+- **立面与屋顶**：复用 WLD-RENOVATION 通用建筑生成器的立面规则；L1 屋顶放水箱、楼梯间、少量外机，设备最高点计入软地板。
 
 ## 3 灯光、季节与车流
 
 ### 3.1 灯光（夜间）
 
-外围的灯接进 WP-39（夜景灯光与时刻表） 的时刻表，不新增灯光通道；亮灭按哈希，同一钟点同一哈希结果相同。清水河外围各对象怎么亮见 MAP-QSH-OUTSKIRTS §3.1。
+外围的灯接进 夜景灯光与时刻表（MAP-QSH-ATMOSPHERE） 的时刻表，不新增灯光通道；亮灭按哈希，同一钟点同一哈希结果相同。清水河外围各对象怎么亮见 MAP-QSH-OUTSKIRTS §3.1。
 
 - O0 的灯和校内一样地上有光斑；O1、O2 的路灯只画灯头光晕和路面"灯带"。
 - **禁止**：霓虹、轮廓灯带、彩色洗墙、LED 大屏（WLD-AMBIENCE §1.5）。
@@ -115,5 +113,5 @@ gates: [G2, G6, G7]
 ## 6 数据与许可
 
 - **外围数据**：校外道路与水系在 `game/data/maps/qingshuihe/world/offcampus.json`，随世界文件加载；外围楼块、前沿线与截面线的数据文件、生成器和外围覆盖层属主线之后；契约见 `game/contracts/Spatial/OutskirtsContracts.cs`，`map.json` 的 `env.outskirts` 在数据文件落地前为空。改动直接改记录（D-252、D-253），运行时由世界模型解析，作为单独一层，不并进校内实体。
-- **外围覆盖层**（WP-47（外围环境带） 独占，主线之后）：地标（天街商场、电子科大站、发展变电站、高架的特殊段）、风格化改动（把 `construction` 用地画成建成的小区、挪高压线、整理铁塔间距）和新增的氛围元素；每条写明理由。
+- **外围覆盖层**（外围环境带（WLD-OUTSKIRTS-BAND） 独占，主线之后）：地标（天街商场、电子科大站、发展变电站、高架的特殊段）、风格化改动（把 `construction` 用地画成建成的小区、挪高压线、整理铁塔间距）和新增的氛围元素；每条写明理由。
 - **许可**：署名同校内，为"© OpenStreetMap contributors"；外围数据和校内数据一样是 ODbL 派生数据库，随安装包分发，见 ENG-RELEASE。

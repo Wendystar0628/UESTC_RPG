@@ -15,7 +15,7 @@ public readonly record struct LatheBand(float R0, float Y0, float R1, float Y1, 
     }
 }
 
-/// <summary>Primitive shapes built on the WP-09 kernel. All are closed, clockwise and in metres.</summary>
+/// <summary>Primitive shapes built on the game/gen/parts/core/ kernel. All are closed, clockwise and in metres.</summary>
 public static class PartShapes
 {
     /// <summary>Box from its minimum and maximum corners; the chamfer is clamped to stay valid. <paramref name="at"/> places it.</summary>

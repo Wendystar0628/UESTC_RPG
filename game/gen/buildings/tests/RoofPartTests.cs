@@ -47,7 +47,7 @@ public sealed class RoofPartTests
             AssertThat(Tris(nearFull.Where(Strip), "roof.silverMetal.lit") > Tris(near.Where(Strip), "roof.silverMetal.lit")).OverrideFailureMessage("Expected: " + ($"{simple.Key}: K1 strip on supports, elsewhere one rod")).IsTrue();
             var mid = module.BuildOne(simple, plain.Blocks[i], LodLevel.L1, Campus.Contracts.Tests.PaletteFixture.Catalog);
             AssertThat(!mid.Any(b => Strip(b) && OnRoof(b, simple)) && module.BuildOne(full, hero.Blocks[i], LodLevel.L1, Campus.Contracts.Tests.PaletteFixture.Catalog).Any(b => Strip(b) && OnRoof(b, full))).OverrideFailureMessage("Expected: " + ($"{simple.Key}: the rod stops at L0 on simple roofs")).IsTrue();
-            // Coping: the WP-12 cap reaches the parapet top, its drip hangs 60 mm under the slab outside the wall.
+            // Coping: the game/gen/parts/roof/ cap reaches the parapet top, its drip hangs 60 mm under the slab outside the wall.
             var trim = near.Where(b => HasColor(b, Rules.Materials.Lit(simple.Profile.Trim).Value) && b.Material.Spec.Fx == ToonFx.BevelLift).ToArray();
             var ys = trim.SelectMany(b => ColorVertices(b, Rules.Materials.Lit(simple.Profile.Trim).Value).Select(v => b.Position[3 * v + 1])).ToArray();
             AssertThat(ys.Any(y => MathF.Abs(y - simple.EdgeTopY) < TestTolerance.Position) && ys.Any(y => MathF.Abs(y - (simple.EdgeTopY - 0.21f)) < TestTolerance.Position)).OverrideFailureMessage("Expected: " + ($"{simple.Key}: coping and drip")).IsTrue();

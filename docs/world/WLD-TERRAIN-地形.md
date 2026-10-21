@@ -5,13 +5,12 @@ category: world
 parent: WLD-INDEX
 summary: 不分图的地形规则目录：设计（原则、分层、竖直落差、水位岸型）与落地（合成、贴地、可走性、着色）
 keywords: [地形, 地形规则]
-owners: [WP-08, WP-15]
-contributors: [WP-00, WP-02, WP-04, WP-05, WP-11, WP-13, WP-14, WP-16, WP-18, WP-19, WP-20, WP-21, WP-22, WP-23, WP-24, WP-25, WP-28, WP-30, WP-36, WP-38, WP-42, WP-43, WP-44, WP-47, WP-49]
 depends: [CORE-INDEX, ENG-ARCH, SYS-WALK, ART-STYLE, ART-MODELING, ENG-PERF, ENG-BUDGET]
 related: [WLD-WATER, WLD-OUTSKIRTS, WLD-OUTSKIRTS-DIORAMA, WLD-VEGETATION, WLD-INTERIORS, MAP-QSH-TERRAIN, MAP-QSH-ADDITIONS, ART-FIDELITY, ART-SKYLIGHT, SYS-VIEW, SYS-MAPS, ENG-GATES, ENG-PREVIEW, WLD-TERRAIN-SHAPE, WLD-TERRAIN-APPLY]
 contracts: []
 data: []
 gates: []
+paths: ["game/style/palette/ext/ground.json", "game/kernel/map/data/GroundCoverTextures.cs", "game/kernel/map/data/GroundCoverTextures.cs.uid", "game/data/maps/qingshuihe/world/offcampus.json", "game/data/maps/qingshuihe/world/geo.json", "game/kernel/stream/StreamMountWork.cs", "game/kernel/stream/StreamMountWork.cs.uid", "game/gen/ground/**", "game/gen/world/**", "pipeline/**"]
 ---
 
 # WLD-TERRAIN · 地形

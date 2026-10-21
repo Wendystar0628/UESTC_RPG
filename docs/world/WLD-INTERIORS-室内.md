@@ -5,13 +5,12 @@ category: world
 parent: WLD-INDEX
 summary: 不分图的室内规则目录：开放（原则、门、关着的楼、新开一栋）与制作（加载、生成器、风格、痕迹、碰撞）
 keywords: [室内, 精选开放]
-owners: [WP-51, WP-52, WP-17, WP-31a, WP-31b, WP-31c, WP-10, WP-11, WP-12]
-contributors: [WP-00, WP-02, WP-03, WP-04, WP-07, WP-08, WP-10, WP-11, WP-12, WP-13, WP-14, WP-16, WP-18, WP-19, WP-20, WP-21, WP-26, WP-27, WP-33, WP-35, WP-36, WP-37, WP-39, WP-42, WP-43, WP-44, WP-48, WP-53]
 depends: [CORE-INDEX, ART-STYLE, MAP-QSH-INTERIORS-LIBRARY, SYS-VIEW, ART-FIDELITY, ART-MODELING, ENG-ARCH, ENG-BUDGET, ENG-PERF, SYS-TIME, SYS-WALK, SYS-ATLAS, SYS-MAPS, SYS-AUDIO]
-related: [WLD-LIFE, WLD-OUTSKIRTS-DIORAMA, WLD-OUTSKIRTS, SYS-MOTION, SYS-WEATHER, SYS-SAVE, ENG-GATES, PLAN-WP, UI-NAV, ENG-ROADMAP, MAP-QSH-ADDITIONS, ART-SKYLIGHT, WLD-INTERIORS-ACCESS, WLD-INTERIORS-BUILD]
+related: [WLD-LIFE, WLD-OUTSKIRTS-DIORAMA, WLD-OUTSKIRTS, SYS-MOTION, SYS-WEATHER, SYS-SAVE, ENG-GATES, UI-NAV, ENG-ROADMAP, MAP-QSH-ADDITIONS, ART-SKYLIGHT, WLD-INTERIORS-ACCESS, WLD-INTERIORS-BUILD]
 contracts: []
 data: []
 gates: []
+paths: ["game/gen/maps/qingshuihe/core/LibraryInterior/**", "game/gen/maps/qingshuihe/core/tests/LibraryInteriorTests.cs", "game/gen/maps/qingshuihe/west/SixInterior/**", "game/style/palette/ext/openings.json", "game/style/palette/ext/roof_equipment.json", "game/gen/parts/circulation/**", "game/gen/parts/openings/**", "game/gen/parts/roof/**", "game/style/shaders/window_card.gdshaderinc", "game/style/shaders/window_card.gdshaderinc.uid", "game/gen/interior/shell/**", "game/gen/interior/core/**"]
 ---
 
 # WLD-INTERIORS · 室内

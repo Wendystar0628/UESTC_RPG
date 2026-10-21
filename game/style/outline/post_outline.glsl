@@ -11,7 +11,7 @@ finish = "#define PASS_FINISH";
 
 VERSION_DEFINES
 
-// post_outline.glsl — WP-05. The one RDShaderFile of the project: every WP-05 compute kernel is a version here.
+// post_outline.glsl — game/kernel/post/. The one RDShaderFile of the project: every game/kernel/post/ compute kernel is a version here.
 // Godot 4.7.2 crashes now and then (0xC0000005) when `--import` imports two or more .glsl files on parallel
 // threads; with a single .glsl file no two shader-file imports ever overlap. Versions:
 //   mask, composite : the outline in CompositorEffect POST_SKY (below),

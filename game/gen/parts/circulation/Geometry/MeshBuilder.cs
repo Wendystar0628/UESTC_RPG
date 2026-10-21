@@ -6,7 +6,7 @@ using Campus.Gen.Parts.Core;
 namespace Campus.Gen.Parts.Circulation.Geometry;
 
 /// <summary>
-/// Collects closed solids from the WP-09 kernel and from profile extrusions into one surface per material and vertex
+/// Collects closed solids from the game/gen/parts/core/ kernel and from profile extrusions into one surface per material and vertex
 /// flag, in first-use order. Everything is local to the part; nothing here allocates engine objects.
 /// </summary>
 internal sealed class MeshBuilder
@@ -108,7 +108,7 @@ internal sealed class MeshBuilder
     }
 
     /// <summary>
-    /// Sweeps a closed (lateral, up) section along a polyline whose points carry their own height. Like the WP-09 sweep
+    /// Sweeps a closed (lateral, up) section along a polyline whose points carry their own height. Like the game/gen/parts/core/ sweep
     /// the joins are mitred in plan and positive lateral is (dz, −dx) of the travel direction; unlike it the section's up
     /// axis stays vertical on a sloping path (curbs and risers stay plumb), faces take their true normals, chamfer edges
     /// interpolate between neighbouring faces, smooth sections (tubes) take bisector-radial normals, and open ends are

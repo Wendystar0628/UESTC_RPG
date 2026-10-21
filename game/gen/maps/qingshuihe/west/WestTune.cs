@@ -50,7 +50,7 @@ public static class WestTune
         public static readonly ToonSpec CreamStone = S("wall", ToonFx.BevelLift);
         /// <summary>
         /// 深蓝玻璃 (19b): 四号's entrance boxes, the campus tech blue as glass (streaked, glaring), so the boxes read blue and
-        /// clear, not black. WP-04's glass.deep is an extension colour the byte palette path cannot carry yet; 初值, the main
+        /// clear, not black. game/style/'s glass.deep is an extension colour the byte palette path cannot carry yet; 初值, the main
         /// session may move both glasses to it once extension indices resolve end to end.
         /// </summary>
         public static readonly ToonSpec BlueGlass = new(new("uestc.techblue.lit"), new("uestc.techblue.shade"))
@@ -143,12 +143,12 @@ public static class WestTune
         public const float DoorWidth = 2.4f;
         public const float DoorHeight = 2.7f;
         /// <summary>
-        /// The granite threshold apron in front of the open door, 3 cm proud of the forecourt paving (WP-15 draws paving at
+        /// The granite threshold apron in front of the open door, 3 cm proud of the forecourt paving (game/gen/ground/ draws paving at
         /// <see cref="PavingTop"/>; the interior floor is ±0 in interiors.json, so no risers); the forecourt itself is
         /// world/west.json's design:west-six-forecourt.
         /// </summary>
         public const float ApronDepth = 4.0f;
-        /// <summary>Top of WP-15's paving (GroundSection.PavingY); the paving under the overhang sits 1 cm above it.</summary>
+        /// <summary>Top of game/gen/ground/'s paving (GroundSection.PavingY); the paving under the overhang sits 1 cm above it.</summary>
         public const float PavingTop = GroundLevels.Paving;
         public const float ApronWidth = 7.6f;
 
@@ -205,7 +205,7 @@ public static class WestTune
         /// <summary>Two scene-text lines "求实求真" / "大气大为" on the stone face.</summary>
         public const float CharacterSize = 0.56f;
         public const float LineGap = 0.78f;
-        /// <summary>Granite pad round the foot (石脚的分界线) and the low lawn-lamp spot on the P10 side, for WP-39.</summary>
+        /// <summary>Granite pad round the foot (石脚的分界线) and the low lawn-lamp spot on the P10 side, for game/systems/nightlight/.</summary>
         public const float PadMargin = 0.5f;
 
         /// <summary>
@@ -222,7 +222,7 @@ public static class WestTune
     }
 
     /// <summary>
-    /// 四号科研楼 (MAP-QSH-WEST): the three courtyard blocks are WP-14's (research family set in world/west.json); this
+    /// 四号科研楼 (MAP-QSH-WEST): the three courtyard blocks are game/gen/buildings/'s (research family set in world/west.json); this
     /// zone adds what the rules cannot: each block's entrance, a two-storey deep-blue glass box in a white door frame with a
     /// sign band (§6.3), shut (WLD-INTERIORS: glass doors, lobby card, DoorClosed); and the fan lawn's 0.45 m seat wall
     /// on its outer arc (MAP-QSH-TERRAIN; the lawn's dish is west.terrain.json's basin).
@@ -244,14 +244,14 @@ public static class WestTune
             (EntityC, "c", world.Feature(WestIds.FourDoorC).Point(), world.Feature(WestIds.FourDoorC).Number("facing")),
         ];
 
-        /// <summary>Glass box: width along the face, how far it stands out, and its height (two storeys of WP-14's 4.2 m research storey).</summary>
+        /// <summary>Glass box: width along the face, how far it stands out, and its height (two storeys of game/gen/buildings/'s 4.2 m research storey).</summary>
         public const float GlassWidth = 7.2f, GlassDepth = 3.6f, GlassHeight = 2 * FacadeRules.ResearchStorey;
         /// <summary>The white frame round it: member thickness, how far it stands proud of the glass, and the sign band on its head.</summary>
         public const float FrameMember = 0.65f, FrameProud = 0.55f, SignBand = 1.15f;
         /// <summary>Mullion pitch on the glass and the transom at the first-floor line.</summary>
         public const float MullionPitch = 1.2f, Transom = FacadeRules.ResearchStorey;
         public const float DoorWidth = 2.4f, DoorHeight = 2.7f;
-        /// <summary>Granite landing in front of the box, 3 cm proud of WP-15's paving.</summary>
+        /// <summary>Granite landing in front of the box, 3 cm proud of game/gen/ground/'s paving.</summary>
         public const float LandingDepth = 2.4f, PavingTop = GroundLevels.Paving;
 
         /// <summary>
@@ -266,7 +266,7 @@ public static class WestTune
     }
 
     /// <summary>
-    /// 创新中心 (MAP-QSH-WEST, MAP-QSH-RENOVATION W-01): the two six-storey bars and the two four-storey cross wings are WP-14's
+    /// 创新中心 (MAP-QSH-WEST, MAP-QSH-RENOVATION W-01): the two six-storey bars and the two four-storey cross wings are game/gen/buildings/'s
     /// (research, with its rooftop plant enclosure and stair penthouses under the main coping); this zone builds the dark glass
     /// stair shafts where the wings meet the bars (§3.3) and the main entrance frame on the east wing's face to the parking
     /// square, with the red-brown entrance sign.
@@ -285,12 +285,12 @@ public static class WestTune
 
         /// <summary>
         /// Main entrance on the east wing's south-east face to the parking square (795677486 e8, 2 m north of its mid-point so the
-        /// portal's glass screen covers WP-14's own door and canopy there).
+        /// portal's glass screen covers game/gen/buildings/'s own door and canopy there).
         /// </summary>
         public static Vector2 MainDoor(IWorldModel world) => world.Feature(WestIds.InnovationDoor).Point();
         public const float MainFacing = 126.8f;
         public const float PortalWidth = 9.0f, PortalHeight = 6.2f, PortalDepth = 3.4f, PortalMember = 0.7f;
-        /// <summary>The glass screen stands this far behind the portal's front, proud of anything WP-14 hangs on the wall.</summary>
+        /// <summary>The glass screen stands this far behind the portal's front, proud of anything game/gen/buildings/ hangs on the wall.</summary>
         public const float ScreenBack = 0.25f;
         /// <summary>The entrance sign panel for "创新中心".</summary>
         public const float SignHeight = 1.3f;
@@ -302,7 +302,7 @@ public static class WestTune
     /// stream, from the A10 plaza (south mouth; design:west-a10-plaza in world/west.json) to the footway at the 西门车行桥's east head (north mouth), on the main network.
     /// No OSM line: the route is authored in world/west.json (初值), kept 10 m and more inside the low ground's east edge, swinging west to the
     /// stream once (the turn, with the pebble wading beach), and passing P11's spot (−193, −300) so the 250° view opens over
-    /// the reeds. The bridges (湿地石桥 692240860, 西门车行桥) and the canal banks are WP-28's (r005); this route touches neither.
+    /// the reeds. The bridges (湿地石桥 692240860, 西门车行桥) and the canal banks are game/gen/maps/qingshuihe/waterfront/'s (r005); this route touches neither.
     /// </summary>
     public static class Wetland
     {
@@ -312,7 +312,7 @@ public static class WestTune
         public static Vector2[] Route(IWorldModel world) => world.Feature(WestIds.BoardwalkRoute).Line().ToArray();
         /// <summary>Deck width, plank thickness, and the deck top over the paving level at the two mouths (flush, a 3 cm lip).</summary>
         public const float Width = 2.4f, Plank = 0.09f, Lip = 0.03f, PavingTop = GroundLevels.Paving;
-        /// <summary>WP-15 draws grass this high over the terrain (GroundSection.GrassY): the beach and the pebbles sit on it.</summary>
+        /// <summary>game/gen/ground/ draws grass this high over the terrain (GroundSection.GrassY): the beach and the pebbles sit on it.</summary>
         public const float GrassTop = GroundLevels.Lawn;
         /// <summary>Granite sill across each mouth, along the route.</summary>
         public const float Sill = 0.6f;
@@ -381,10 +381,10 @@ public static class WestTune
 
     /// <summary>
     /// 西门桥头候车亭 (MAP-QSH-WEST 天气要点): the OSM shelter footprint qsh:way:604832425 (14 × 3.2 m, west of the
-    /// bridgehead service road; its west edge is the back line, read from the world model) built here instead of WP-14's
+    /// bridgehead service road; its west edge is the back line, read from the world model) built here instead of game/gen/buildings/'s
     /// box: a raised granite platform, slim aluminium posts along the
     /// back, a thin flat roof cantilevered over the platform with front and back eaves (rain curtains hang from both), a glass
-    /// back screen, a timber bench, a downlight strip under the roof. Open to the road (east). The stop sign is WP-13's.
+    /// back screen, a timber bench, a downlight strip under the roof. Open to the road (east). The stop sign is game/gen/furniture/'s.
     /// </summary>
     public static class Shelter
     {
@@ -406,7 +406,7 @@ public static class WestTune
     /// 国防科技园石刻 (MAP-QSH-WEST): one rough-hewn white lying stone in the green wedge north of the bridgehead junction,
     /// its inscribed face turned south-south-west toward the junction (bearing 200°), so the low evening sun rakes it and it reads from the
     /// west gate road. The inscription "国防科技园" uses the shared scene-text atlas. The
-    /// WP-28 bridge-head stone (design:waterfront-stone-ximen, −238.4, −411.9) stands 14 m away across the road.
+    /// game/gen/maps/qingshuihe/waterfront/ bridge-head stone (design:waterfront-stone-ximen, −238.4, −411.9) stands 14 m away across the road.
     /// </summary>
     public static class Carving
     {

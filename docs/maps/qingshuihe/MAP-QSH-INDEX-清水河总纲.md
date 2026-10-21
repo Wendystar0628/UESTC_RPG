@@ -4,14 +4,12 @@ title: 清水河总纲
 category: maps
 summary: 清水河校区总纲：本域通用原则与文档树
 keywords: [清水河, 清水河总纲, 文档树, MAP-QSH, 默认状态, 区文档三件套, 主线之后, 跨区主题, 世界文件, 数据位置]
-owners: []
-paths: ["docs/maps/qingshuihe/**"]
-contributors: []
 depends: [CORE-INDEX]
 related: []
 contracts: []
 data: []
 gates: []
+paths: ["docs/maps/qingshuihe/**"]
 ---
 
 # MAP-QSH-INDEX · 清水河总纲

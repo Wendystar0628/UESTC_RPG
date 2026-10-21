@@ -14,11 +14,11 @@ namespace Campus.Gen.Maps.Qingshuihe.CenterEast.Research;
 /// <summary>
 /// The statue lawn east of 科 B/C (MAP-QSH-CENTER-EAST), a functional open space (MAP-QSH-ADDITIONS R6): its
 /// middle stays open, the west edge is the buildings' doors and the east edge, along 银杏大道, is held by the two bronzes.
-/// 林为干像 stands at the east tip of the plaza's tree island on 科 B's door axis, the big tree (WP-23) behind it;
+/// 林为干像 stands at the east tip of the plaza's tree island on 科 B's door axis, the big tree (WLD-VEGETATION) behind it;
 /// 麦克斯韦像 stands on a granite apron at the lawn's east edge with the equation stone at his front right, both turned to
 /// the plaza corner where R5 comes up from the bridge. Figures are sculpture volumes (clothes, posture, hair and beard as
-/// masses; the face one smooth volume, no features or likeness, CORE-INDEX). Lawn, paving and trees are WP-15's and
-/// WP-23's; this site builds the stone and the bronze. Every value lives in <see cref="M"/>.
+/// masses; the face one smooth volume, no features or likeness, CORE-INDEX). Lawn, paving and trees are game/gen/ground/'s and
+/// game/gen/vegetation/'s; this site builds the stone and the bronze. Every value lives in <see cref="M"/>.
 /// </summary>
 public sealed class StatueLawnSite : ZoneSite
 {

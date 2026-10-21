@@ -6,7 +6,7 @@ namespace Campus.Gen.Parts.Core;
 /// Straight-stroke lettering for the few fixed labels the parts carry (exit sign, hydrant, scald warning, room numbers, shuttle
 /// stop, open sign, drinking-water plate). Glyphs are hand-drawn polylines in a unit em box (x right, y up), simplified Chinese
 /// forms only (INV-4). This layer owns the glyph table, the layout and the stroke ends; each surface (raised boxes, printed quads)
-/// supplies its own <see cref="StrokeSink"/>. Mainline stand-in for scene text: arbitrary names wait for WP-04's scene-text atlas.
+/// supplies its own <see cref="StrokeSink"/>. Mainline stand-in for scene text: arbitrary names wait for game/style/'s scene-text atlas.
 /// </summary>
 public static class StrokeText
 {

@@ -84,7 +84,7 @@ public sealed class BalconyPart() : CirculationPart<BalconyParams>(new(400, 120)
 
 /// <summary>
 /// Planter box: Width × Depth × Height to the rim, stone body on a recessed plinth, a trim rim, soil 5 cm down.
-/// Variation: 0 a clipped shrub cushion rising 0.28 m over the rim, 1 low groundcover, 2 soil only (planted by WP-23).
+/// Variation: 0 a clipped shrub cushion rising 0.28 m over the rim, 1 low groundcover, 2 soil only (planted by game/gen/vegetation/).
 /// Collision: one box to the rim; people can step up and sit (SYS-WALK "花池").
 /// </summary>
 [Part(PartCatalog.Planter)]

@@ -18,7 +18,7 @@ internal static class AutoDoor
 
 /// <summary>
 /// 自动门门框 (WLD-INTERIORS): the static half of a runtime door, frame, threshold and transom only.
-/// The runtime body and its collision belong to WP-07 and WP-43.
+/// The runtime body and its collision belong to game/camera/ and game/kernel/collision/.
 /// </summary>
 [Part(PartCatalog.AutomaticDoorFrame)]
 public sealed class AutomaticDoorFramePart() : OpeningPart<DoorParams>(new(260, 60))

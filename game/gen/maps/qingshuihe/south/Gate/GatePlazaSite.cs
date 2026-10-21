@@ -12,8 +12,8 @@ namespace Campus.Gen.Maps.Qingshuihe.South.Gate;
 /// <summary>
 /// The plaza inside the south gate (MAP-QSH-SOUTH, design:south-a01-plaza): the first stop after the gate and the foot of
 /// the A01 atlas kiosk, in the corner north of the crossroad on the north-west side of the main axis. The paving, its border band,
-/// kerbs and edging are WP-15 ground drawn from the overlay polygon; this site furnishes it with a planter at the far end and two
-/// benches in front of it, their backs to the shrubs, facing back across the plaza toward the gate. The kiosk is WP-13's on WP-48c's
+/// kerbs and edging are game/gen/ground/ ground drawn from the overlay polygon; this site furnishes it with a planter at the far end and two
+/// benches in front of it, their backs to the shrubs, facing back across the plaza toward the gate. The kiosk is game/gen/furniture/'s on game/systems/atlas/'s
 /// anchor A01, which sits on this paving.
 /// </summary>
 public sealed class GatePlazaSite : ZoneSite

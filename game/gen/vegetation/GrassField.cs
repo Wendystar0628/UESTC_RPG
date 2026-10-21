@@ -45,7 +45,7 @@ public static class GrassField
     /// <summary>No blade this close to a trunk (m): tree feet are collared by shrubs and ornamental grass, not by flat lawn.</summary>
     public const float TrunkGap = 0.45f;
 
-    /// <summary>Kerb width beside a carriageway, outside the road's own half width (m; WP-15's kerb).</summary>
+    /// <summary>Kerb width beside a carriageway, outside the road's own half width (m; game/gen/ground/'s kerb).</summary>
     public const float KerbWidth = 0.15f;
 
     /// <summary>Grid spacing of the clumps (m) per style.</summary>

@@ -171,7 +171,7 @@ public static class LibraryRoof
 
     /// <summary>
     /// Roof plant in two fenced enclosures (外环屋面设备进围挡, MAP-QSH-RENOVATION C-01) on the gaps either side of the
-    /// mechanical box, away from the plaza views: WP-12's fence boards and heat pumps, placed from the catalogue.
+    /// mechanical box, away from the plaza views: game/gen/parts/roof/'s fence boards and heat pumps, placed from the catalogue.
     /// </summary>
     public static void Plant(LibraryPlan plan, CoreBuild build)
     {

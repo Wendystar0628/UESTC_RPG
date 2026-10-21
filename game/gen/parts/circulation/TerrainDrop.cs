@@ -48,7 +48,7 @@ public sealed record DropPlan(DropMethod Method, float Rise, float Run, bool Fit
 /// <summary>
 /// WLD-TERRAIN as code: risers 0.12–0.16 m nearest 0.15, tread clamp(0.65 − 2R, 0.30, 0.40), a pad every
 /// ≤ 1.5 m of rise at least max(1.2 m, clear width) long, ramps ≤ 1:12 with a ≥ 1.5 m pad every 0.75 m of rise, clear
-/// widths ≥ 2.4 m on the main network and ≥ 1.5 m elsewhere. WP-15 calls it for the drops it derives (§5.8).
+/// widths ≥ 2.4 m on the main network and ≥ 1.5 m elsewhere. game/gen/ground/ calls it for the drops it derives (§5.8).
 /// </summary>
 public static class TerrainDrop
 {

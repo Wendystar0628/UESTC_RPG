@@ -58,7 +58,7 @@ public static class BuildingOverlapValidator
             }
             foreach (var part in feature.Parts.OrderBy(p => p.SourceId, StringComparer.Ordinal))
             {
-                // This is the same source-kind rule as WP-14 BuildingPlanner.Sources.
+                // This is the same source-kind rule as BuildingPlanner.Sources.
                 var kind = part.Props is { ValueKind: JsonValueKind.Object } props && props.TryGetProperty("kind", out var value) &&
                     value.ValueKind == JsonValueKind.String ? value.GetString() : feature.Kind.Value;
                 if (kind == "building") Add(feature, part.SourceId, part.Geometry);

@@ -298,7 +298,7 @@ public sealed class GymSite : ZoneSite
         GridFacade.Box(b, f, -w * 0.5f - 1.4f, w * 0.5f + 1.4f, floor + h + 0.6f, floor + h + 0.85f, 0.1f, 2.6f, L.StoneTrim, 0.02f);
         foreach (var side in new[] { -1f, 1f })
             GridFacade.Box(b, f, side * (w * 0.5f + 1.1f) - 0.08f, side * (w * 0.5f + 1.1f) + 0.08f, floor, floor + h + 0.6f, 2.3f, 2.46f, L.Metal, 0.01f);
-        // The mat, open sign and door lamp are WP-13's, placed on the gym.deck entrance anchor (WLD-INTERIORS).
+        // The mat, open sign and door lamp are game/gen/furniture/'s, placed on the gym.deck entrance anchor (WLD-INTERIORS).
     }
 
     private static float BearingAngle(float bearing)

@@ -4,7 +4,7 @@ using Campus.Contracts.Audio;
 
 namespace Campus.Contracts;
 
-// 相机（WP-06）与介质呈现（WP-07），详见 SYS-VIEW
+// 相机（SYS-VIEW）与介质呈现（SYS-VIEW-MEDIUM），详见 SYS-VIEW
 public readonly record struct Pose(Vector3 Position, float YawDeg, float PitchDeg, float? FovDeg = null);
 public enum EntryPath { Skylight, Door, WaterSurface }
 

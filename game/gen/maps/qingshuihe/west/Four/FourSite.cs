@@ -11,14 +11,14 @@ using L = Campus.Gen.Maps.Qingshuihe.West.WestTune.Look;
 namespace Campus.Gen.Maps.Qingshuihe.West.Four;
 
 /// <summary>
-/// 四号科研楼 (MAP-QSH-WEST). The three courtyard blocks are WP-14's (world/west.json gives them the research family);
+/// 四号科研楼 (MAP-QSH-WEST). The three courtyard blocks are game/gen/buildings/'s (world/west.json gives them the research family);
 /// this site adds the identity pieces the facade rules cannot express:
 /// <list type="bullet">
 /// <item>each block's entrance toward the fan lawn: a two-storey deep-blue glass box set in a white door frame whose head
 /// carries the sign band (§6.3). All three are shut (WLD-INTERIORS): glass doors, the lobby card behind, DoorClosed.</item>
 /// <item>the 0.45 m seat wall on the lawn's outer arc (MAP-QSH-TERRAIN); the lawn's dish is west.terrain.json's basin.</item>
 /// </list>
-/// It claims nothing: the blocks keep WP-14's massing and windows, the box stands in front of their stone line.
+/// It claims nothing: the blocks keep game/gen/buildings/'s massing and windows, the box stands in front of their stone line.
 /// </summary>
 public sealed class FourSite : ZoneSite
 {

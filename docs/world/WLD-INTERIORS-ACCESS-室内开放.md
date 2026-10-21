@@ -5,13 +5,12 @@ category: world
 parent: WLD-INTERIORS
 summary: 精选开放的原则与共用约定、门的开与关（含自动门的设计取向）、关着的楼、开放更多楼的做法
 keywords: [楼内, 开放室内, 开放清单, interiors.json, 开放入口, 自动门, 封口, 门厅卡, 窗卡, 看进去例外]
-owners: [WP-17, WP-31a, WP-31b, WP-31c]
-contributors: []
 depends: [WLD-INTERIORS, CORE-INDEX, MAP-QSH-INTERIORS-LIBRARY, SYS-VIEW, ART-FIDELITY, ENG-ARCH, SYS-TIME, SYS-WALK, SYS-ATLAS, SYS-MAPS, SYS-AUDIO]
 related: [WLD-INTERIORS-BUILD, SYS-WALK-BOUNDS, WLD-LIFE, WLD-OUTSKIRTS, SYS-SAVE, ENG-GATES, UI-NAV, ENG-ROADMAP, MAP-QSH-ADDITIONS]
 contracts: [EntranceDecl, DoorLeafKind, DoorLeafDecl, DoorPhase, DoorEvent, IInteriorDoors, InteriorIndexEntry, IInteriorIndex, SurfaceTag.DoorClosed]
 data: ["game/data/maps/qingshuihe/interiors.json"]
 gates: [G5]
+paths: ["game/gen/maps/qingshuihe/core/LibraryInterior/**", "game/gen/maps/qingshuihe/core/tests/LibraryInteriorTests.cs", "game/gen/maps/qingshuihe/west/SixInterior/**"]
 ---
 
 # WLD-INTERIORS-ACCESS · 室内开放

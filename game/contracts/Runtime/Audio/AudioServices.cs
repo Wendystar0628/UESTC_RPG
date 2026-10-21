@@ -124,14 +124,14 @@ public interface IAcousticEnv                              // Kernel 服务，�
 
 public readonly record struct GroundCover(float Wet, float Puddle, float Snow, float SnowFresh,
     float Leaves, float LeafWet, float Petals, float Shelter);
-public interface IGroundCover { GroundCover Sample(float x, float z); }    // WP-38；与着色器同一套阈值函数，G2 比对两边
+public interface IGroundCover { GroundCover Sample(float x, float z); }    // game/systems/vegetation/seasons/；与着色器同一套阈值函数，G2 比对两边
 
 public enum FootSide : byte { Left, Right, Both }
 public readonly record struct FootfallInfo(ulong Tick, FootSide Side, Vector3 Pos, float SpeedH, Vector3 Normal,
     ulong ColliderId, int ShapeIndex, bool OnStair, float Slope);
 public readonly record struct ContactInfo(ulong Tick, ulong ColliderId, int ShapeIndex, Vector3 Pos, Vector3 Normal,
     float NormalSpeed, float TangentSpeed, bool Pushing, SurfaceTag Tag);
-public interface IWalkTelemetry                            // WP-42；全部在 _PhysicsProcess 里发出
+public interface IWalkTelemetry                            // game/camera/walk/；全部在 _PhysicsProcess 里发出
 {
     event Action<FootfallInfo> Footfall;
     event Action<ulong, float> Jumped;                     // tick, 起跳速度

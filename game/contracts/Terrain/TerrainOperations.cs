@@ -24,7 +24,7 @@ public enum TerrainWeirKind : byte { Weir, Gate, Culvert }
 /// <summary>
 /// A real structure joining two distinct constant-level water entities. S is station along this channel's
 /// ordered centreline. Structure must exist with the matching kind and connect Upstream to Downstream;
-/// Drop must equal WaterY(Upstream) minus WaterY(Downstream). Reference/topology checks belong to WP-08.
+/// Drop must equal WaterY(Upstream) minus WaterY(Downstream). Reference/topology checks belong to game/gen/world/.
 /// This record never creates water entities or introduces multiple levels inside one FeatureId.
 /// Each Drop remains 0.3–0.6 m. Two Weir-kind records may form A→B→C on B's channel, with B a separate
 /// constant-level water entity: WaterY(B) = WaterY(A) - drop1 = WaterY(C) + drop2.
@@ -82,7 +82,7 @@ public sealed record TerrainTerraceOp(string Id, string Reason, Polyline Front, 
 /// wet channels keep their existing network bridge/culvert and Weirs rules. Crossings use the two forms below;
 /// the compiler must resolve the named real road and its actual centreline/width, never infer an unrelated road.
 /// Wade contains independent polygons with their own holes; omission and an empty list both mean no wading.
-/// Only surface wet channels accept Wade. Resolving surface water and polygon containment belongs to WP-08.
+/// Only surface wet channels accept Wade. Resolving surface water and polygon containment belongs to game/gen/world/.
 /// </summary>
 public sealed record TerrainChannelOp(string Id, string Reason,
     [property: JsonIgnore(Condition = JsonIgnoreCondition.Never)] FeatureId? Water,
@@ -150,7 +150,7 @@ public sealed record TerrainPadOp(string Id, string Reason, FeatureId Feature, d
     double Apron = 0.8, TerrainPadEdge? Edge = null, int Priority = 50) : TerrainOp(Id, Reason, Priority);
 
 /// <summary>Absolute metres along the resolved source road in its original point order; never rebased to a clipped fragment.</summary>
-/// <remarks>Requires finite 0 &lt;= S0 &lt; S1. Source-road length, real zone containment and overlap checks belong to WP-08.</remarks>
+/// <remarks>Requires finite 0 &lt;= S0 &lt; S1. Source-road length, real zone containment and overlap checks belong to game/gen/world/.</remarks>
 public sealed record TerrainStationRange(double S0, double S1);
 
 // S is cumulative metres along the resolved source road's original ordered centreline.

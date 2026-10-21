@@ -1,4 +1,4 @@
-// ui_screen.gdshader（WP-35，白名单；UI-VISUAL）
+// ui_screen.gdshader（界面，白名单；UI-VISUAL）
 // 界面层唯一读屏幕纹理的着色器，只在低频场合挂上：
 //   mode 0 整页揭示：挂在 CanvasGroup 上（只在揭示的那几百毫秒把页挂进组），
 //     reveal_kind 0 = M2 扫描揭示（前沿 1 物理像素亮线 + 12 px 指数淡出带，扫过之后不留痕）、

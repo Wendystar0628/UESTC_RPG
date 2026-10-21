@@ -1,4 +1,4 @@
-"""校验 docs（不含 godot-api）：小节引用、文件头的 depends/related、相对链接、工作包与门禁编号、导航树（没有孤儿文档）。
+"""校验 docs（不含 godot-api）：小节引用、文件头的 depends/related、相对链接、路径归属字段与门禁编号、导航树（没有孤儿文档）。
 
 产出：无（仅标准输出文档一致性问题）
 用法：python -I scripts/docs/check-docs.py
@@ -67,17 +67,22 @@ for code, d in docs.items():
         if not m.group(1).startswith('http') and not os.path.exists(tgt):
             bad.append((code, 'link', m.group(1)))
 
-# 工作包与门禁编号以 PLAN-WP、ENG-GATES 为准
-wp_text = ''.join(open(p, encoding='utf-8').read() for p in glob.glob(os.path.join(D, 'plan', 'PLAN-WP*.md')))
-wps = set(re.findall(r'^\|\s*(WP-\d+[a-z]?)\s*\|', wp_text, re.M))
+# 路径归属只取文件头 paths；门禁编号以 ENG-GATES 为准
 gates = set(re.findall(r'\b(G\d{1,2})\b', open(os.path.join(D, 'engineering', 'ENG-GATES-验收与门禁.md'), encoding='utf-8').read()))
 for code, d in docs.items():
     fm = d['fm']
-    for k in ('owners', 'contributors'):
-        for w in fm.get(k) or []:
-            base = re.match(r'(WP-\d+)', str(w))
-            if not base or (str(w) not in wps and base.group(1) not in wps):
-                bad.append((code, k, w))
+    for retired in ('owners', 'contributors'):
+        if retired in fm:
+            bad.append((code, 'fm-retired', retired))
+    pv = fm.get('paths', [])
+    if not isinstance(pv, list):
+        bad.append((code, 'fm-paths', 'paths 应为列表（无归属写 []）'))
+    else:
+        for pattern in pv:
+            if not isinstance(pattern, str) or not pattern.strip():
+                bad.append((code, 'fm-paths', repr(pattern)))
+            elif pattern.startswith(('/', '\\')) or re.match(r'^[A-Za-z]:', pattern) or '\\' in pattern or '..' in pattern.split('/'):
+                bad.append((code, 'fm-paths', '应为仓库相对路径并使用 /：' + pattern))
     for g in fm.get('gates') or []:
         if str(g) not in gates:
             bad.append((code, 'gate', g))

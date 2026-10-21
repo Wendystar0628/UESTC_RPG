@@ -157,7 +157,7 @@ public sealed class NorthTerrainTests
         foreach (var add in walks)
         {
             var props = add.Props;
-            AssertThat(add.Kind.Value == "road" && WorldProps.TryText(props, "highway") == "footway" && props!.Value.GetProperty("width").GetSingle() == 2.5f).OverrideFailureMessage($"{add.Id.Value}: a 2.5 m footway WP-15 paves").IsTrue();
+            AssertThat(add.Kind.Value == "road" && WorldProps.TryText(props, "highway") == "footway" && props!.Value.GetProperty("width").GetSingle() == 2.5f).OverrideFailureMessage($"{add.Id.Value}: a 2.5 m footway game/gen/ground/ paves").IsTrue();
             var line = ((PolylineGeometry)add.Geometry).Line.Points;
             AssertThat(roads.TryGetValue(add.Id, out var loaded) && loaded.Line.Points.SequenceEqual(line) && loaded.Width == WorldProps.TryNumber(props, "width")).OverrideFailureMessage($"{add.Id.Value}: network follows its record").IsTrue();
             foreach (var p in line)

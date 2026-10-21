@@ -36,7 +36,7 @@ public sealed class GlassBatch(ToonSpec spec, PaletteCatalog palette, bool numbe
 }
 
 /// <summary>
-/// One building's glass writer into its tile's <see cref="GlassBatch"/>. Every cell is encoded by WP-10's
+/// One building's glass writer into its tile's <see cref="GlassBatch"/>. Every cell is encoded by game/gen/parts/openings/'s
 /// <see cref="OpeningGlass"/>, the one VF-B writer (floor(UV) = (building-grid column, row), UV2 = (window base, channel
 /// slot + 32 × total columns), spare byte = window card), and placed with <see cref="OpeningPlacement.Frame"/>; the batch
 /// only merges the cells into bundles under the glass material. The base is the building's allocation from the map's

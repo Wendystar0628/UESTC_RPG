@@ -7,7 +7,7 @@ using Campus.Gen.Sites;
 
 namespace Campus.Gen.Maps.Qingshuihe.Public;
 
-/// <summary>WP-29 pocket greens from world/public.json; paving and trees remain with their respective producers.</summary>
+/// <summary>game/gen/maps/qingshuihe/public/ pocket greens from world/public.json; paving and trees remain with their respective producers.</summary>
 
 [ContentModule("zone.public")]
 public sealed class PublicModule : ZoneModuleBase

@@ -13,12 +13,12 @@ namespace Campus.Gen.Maps.Qingshuihe.Core.Axis;
 
 /// <summary>
 /// 时间广场 (MAP-QSH-CORE, MAP-QSH-TERRAIN): the big light-grey circle on the library axis. The paving itself is
-/// WP-15's; this piece adds what makes it the time plaza: three dark concentric bands with the twelve hour marks on
+/// game/gen/ground/'s; this piece adds what makes it the time plaza: three dark concentric bands with the twelve hour marks on
 /// the outer one and a gold emblem in the centre, the ring of steps and the two flank ramps down to the sunken floor,
 /// three flagpoles at the library-side step foot, the outer ring of thin lamps (初灯组) and the benches under them.
 /// <para>
 /// Heights come from the terrain (D-180): the floor is the terrain at the centre, the rim the terrain just outside
-/// the circle. On the flat stub both are 0, so the plaza is flat and the steps and ramps are not built; once WP-08's
+/// the circle. On the flat stub both are 0, so the plaza is flat and the steps and ramps are not built; once game/gen/world/'s
 /// evaluator applies <c>core.terrain.json</c> (floor −0.9) the six risers and the ramps appear without code changes.
 /// </para>
 /// </summary>

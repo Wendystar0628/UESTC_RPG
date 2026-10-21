@@ -5,13 +5,12 @@ category: art
 parent: ART-STYLE
 summary: 卡通着色的明暗阶数、法线、倒角提亮，影色的推导，玻璃金属边缘光透光湿面，贴图与笔触，材质速查
 keywords: [卡通材质, toon.gdshaderinc, 明暗分阶, 接触影, 影色推导, 室内暖影, 倒角提亮, 法线展平, 边缘光, 透光, 湿面, 斑驳, 构造图案线, 不用法线贴图, 材质速查]
-owners: [WP-04]
-contributors: [WP-23, WP-37, WP-39, WP-45]
 depends: [CORE-INDEX, ART-STYLE, ENG-ARCH, ENG-PERF, SYS-TIME]
 related: [ART-STYLE-LINES, ART-MODELING, ART-SKYLIGHT, WLD-VEGETATION, WLD-INTERIORS, WLD-WATER, WLD-TERRAIN, SYS-WEATHER]
 contracts: [ToonSpec, ToonRef, ToonFx, ToonNormal, ShadeSteps]
 data: []
 gates: [G6, G7]
+paths: ["game/assets/scene-text/**", "game/data/scene-text/**", "game/style/text/**", "game/style/shaders/toon_scene_text.gdshader", "game/style/shaders/toon_scene_text.gdshader.uid", "game/style/palette/ext/landmark_materials.json", "game/style/palette/ext/street_furniture.json", "game/style/shaders/toon_static.gdshader.uid", "game/style/shaders/toon_glass.gdshader.uid", "game/style/shaders/toon.gdshaderinc.uid", "game/style/shaders/toon_static.gdshader", "game/style/shaders/fog.gdshaderinc.uid", "game/style/shaders/toon_glass.gdshader", "game/style/shaders/toon.gdshaderinc", "game/style/shaders/fog.gdshaderinc", "game/style/palette/**", "game/style/shaders/**", "game/data/maps/*/materials.json"]
 ---
 # ART-STYLE-SHADING · 明暗、影色与材质表现
 
@@ -31,7 +30,7 @@ gates: [G6, G7]
 ### 0.1 接入要点
 
 - **涉及影子**：没有接触影，接地靠物体分界线加投影（§1.1）
-- **写材质或着色器**：只用 include 了 `toon.gdshaderinc` 的白名单着色器，新增经 WP-00（契约、桩与拆除） 批准；颜色只经调色板纹理（§1.5）；材质 ID 的约束见 ART-STYLE-LINES
+- **写材质或着色器**：只用 include 了 `toon.gdshaderinc` 的白名单着色器，新增经主会话批准（Codex 主线负责白名单与技术接入）；颜色只经调色板纹理（§1.5）；材质 ID 的约束见 ART-STYLE-LINES
 - **建模**：法线做法见 ART-MODELING §1.6，不用法线贴图（§4.3）
 - **做贴图**：不用照片来源（G6）；斑驳按 §4.2
 

@@ -66,7 +66,7 @@ public interface IInteriorProvider           // gen 里实现；加载期配置�
     NavFloorGraph Nav(BuildContext ctx, FeatureId id, int storey) => NavFloorGraph.Empty(id, storey);   // WLD-INTERIORS
     AcousticsDecl Acoustics(BuildContext ctx, FeatureId id) => AcousticsDecl.Empty;   // 房间与门户按层声明（SYS-AUDIO）；没写时退到声学网格
 }
-// ContentOutput 里室内层的实例一律带 IgnoreOcclusionCulling 的标记，室内遮挡体单独成表（WP-33 管理显隐，WLD-INTERIORS）
+// ContentOutput 里室内层的实例一律带 IgnoreOcclusionCulling 的标记，室内遮挡体单独成表（game/kernel/renderer/ 管理显隐，WLD-INTERIORS）
 
 // 室内索引：Storeys 保留整栋楼的空间层；OpenStoreys 只用于枚举；可达许可只查已冻结 OpenAreas 与实际位置。
 public sealed record InteriorIndexEntry(FeatureId Feature, IReadOnlyList<StoreyInfo> Storeys,

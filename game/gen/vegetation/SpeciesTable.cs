@@ -43,7 +43,7 @@ public sealed record SpeciesInfo(
 
 /// <summary>
 /// The species table: parsed from species.json (callers read the bytes; generators never perform IO) and packed into
-/// the tree_species global texture that WP-38 uploads (WLD-VEGETATION). Packed layout, one row per species,
+/// the tree_species global texture that game/systems/vegetation/seasons/ uploads (WLD-VEGETATION). Packed layout, one row per species,
 /// <see cref="Width"/> RGBA32F texels per row:
 /// x0 leaf amount A at s = 0..3; x1 bloom B at s = 0..3; x2 (sway°, leaf lit row, bloom lit row or −1, bloom lit colour ID or −1);
 /// x3 (leaf card, bloom card, twig card, flags: 1 deciduous, 2 bloom on blobs); x4 (crown, leaf lit colour ID, twig-stroke lit colour ID, whitewash lit colour ID);

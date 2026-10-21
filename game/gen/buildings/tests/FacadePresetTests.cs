@@ -76,7 +76,7 @@ public sealed class FacadePresetTests
             }
         }
         AssertThat(BuildingsModule.UnknownPreset(BuildingSet.For(Ctx(World(lab), 4u)).Plans.Single()).Single().Level == DiagnosticLevel.Warning &&
-            BuildingSet.For(Ctx(World(lab), 4u)).Plans.Single().Profile.Preset is null).OverrideFailureMessage("Expected: " + ("a key WP-14 does not know keeps the family, with a warning")).IsTrue();
+            BuildingSet.For(Ctx(World(lab), 4u)).Plans.Single().Profile.Preset is null).OverrideFailureMessage("Expected: " + ("a key game/gen/buildings/ does not know keeps the family, with a warning")).IsTrue();
 
         // The real campus with the innovation centre's five buildings on the preset (the authored world/south.json): no
         // window number of the map moves, the other buildings stay cell for cell, and every footprint of the five takes it.

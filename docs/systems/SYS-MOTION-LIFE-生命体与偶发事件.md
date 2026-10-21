@@ -5,8 +5,6 @@ category: systems
 parent: SYS-MOTION
 summary: 动物的小动作节奏与对行走身体作出反应的动物、室内与钟楼的微动、全片唯一的偶发事件
 keywords: [生命体, 反应动物, 动物小动作, 一拍二, 室内微动, 钟楼, 钟锤, 偶发事件, 晚归者, late-returner, 规则集 incidents, 天气版本]
-owners: [WP-26]
-contributors: [WP-25, WP-39, WP-53]
 depends: [SYS-MOTION, SYS-TIME, SYS-WEATHER, WLD-LIFE]
 related: [WLD-INTERIORS, WLD-WATER, SYS-WALK, SYS-TITLE, SYS-AUDIO, SYS-SAVE]
 contracts: []

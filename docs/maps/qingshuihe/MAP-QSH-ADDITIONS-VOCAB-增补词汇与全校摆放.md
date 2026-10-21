@@ -5,13 +5,12 @@ category: maps
 parent: MAP-QSH-ADDITIONS
 summary: 按场地分类的增补物词汇、后勤小楼清单，以及动物与街道家具的全校数量与位置
 keywords: [增补词汇, 休憩平台, 电动车充电棚, 外卖挂架, 徽记井盖, 亲水台阶, 节制闸, 草阶看台, 紫藤廊架, 桥头卧石, 读书石台, 汀步, 下凹雨水花园, 风雨连廊, 屋顶实验花园, 透空栏杆, 导览亭, 导览桩, 直饮水台, 休息点, 后勤小楼, 动物与街道家具摆放]
-owners: [WP-13, WP-14, WP-28, WP-30]
-contributors: [WP-04, WP-12, WP-16, WP-18, WP-19, WP-20, WP-21, WP-23, WP-24, WP-26, WP-29, WP-31a, WP-31b, WP-31c, WP-37, WP-38, WP-44, WP-47, WP-48, WP-51, WP-52]
 depends: [CORE-INDEX, MAP-QSH-ADDITIONS, ART-STYLE, ART-FIDELITY, ART-MODELING, SYS-WALK]
 related: [WLD-VEGETATION, WLD-LIFE, SYS-ATLAS, WLD-OUTSKIRTS, WLD-INTERIORS, WLD-RENOVATION, WLD-AMBIENCE, MAP-QSH-RENOVATION]
 contracts: []
 data: ["game/data/maps/qingshuihe/world/"]
 gates: [G5, G7, G15]
+paths: ["game/gen/maps/qingshuihe/waterfront/**", "game/gen/maps/qingshuihe/boundary/**", "game/data/maps/qingshuihe/world/waterfront.json", "game/data/maps/qingshuihe/world/boundary.json", "game/data/maps/*/window-numbering.json", "game/gen/parts/street/**", "game/gen/buildings/**", "game/gen/furniture/**"]
 ---
 
 # MAP-QSH-ADDITIONS-VOCAB · 增补词汇与全校摆放
@@ -31,7 +30,7 @@ gates: [G5, G7, G15]
 
 ### 0.1 接入要点
 
-- **做导览亭、导览桩（WP-13（街道家具）、WP-48（平面地图、标记与传送））**：只是场景物件，不发光、不做传送特效，按 `world/atlas.json` 摆放；牌面只用场景调色板里已有的颜色（§5，放置与挪位 SYS-ATLAS-TRAVEL §2）
+- **做导览亭、导览桩（街道家具（WLD-LIFE-STREET）、平面地图、标记与传送（SYS-ATLAS））**：只是场景物件，不发光、不做传送特效，按 `world/atlas.json` 摆放；牌面只用场景调色板里已有的颜色（§5，放置与挪位 SYS-ATLAS-TRAVEL §2）
 
 ## 1 宿舍组团、食堂与商业街前
 

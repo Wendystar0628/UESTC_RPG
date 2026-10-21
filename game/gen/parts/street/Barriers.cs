@@ -92,7 +92,7 @@ public sealed class BollardPart : IPartDef<ColumnParams>
 /// Stone sphere (石球, WLD-LIFE): a polished stone ball sunk a little into a low round plinth. The ball's diameter is the
 /// smallest of Width, Depth and Height (less the plinth); its top is Height. Variation 0: white stone (main crossings). 1: grey
 /// stone (南门广场). A caller's Material colours both. The ball sits on the plinth, so its top is that smallest size.
-/// Collision: a post as tall as the ball — the contracts have no sphere primitive yet (WLD-LIFE asks for one; requested by WP-13).
+/// Collision: a post as tall as the ball — the contracts have no sphere primitive yet (WLD-LIFE asks for one; requested by game/gen/furniture/).
 /// </summary>
 [Part(PartCatalog.StoneSphere)]
 public sealed class StoneSpherePart : IPartDef<FurnitureParams>

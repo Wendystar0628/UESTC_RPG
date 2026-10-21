@@ -5,15 +5,15 @@ using Campus.Contracts.Parts;
 namespace Campus.Gen.Parts.Openings;
 
 /// <summary>
-/// Glass for the wall block behind a WP-10 frame part, in the part frame (glass plane z = 0, exterior −Z), encoded as the
-/// VF-B glass contract (GeometryBundle) and WP-14 write it, so toon_glass keeps its window cards (WLD-INTERIORS):
+/// Glass for the wall block behind a game/gen/parts/openings/ frame part, in the part frame (glass plane z = 0, exterior −Z), encoded as the
+/// VF-B glass contract (GeometryBundle) and game/gen/buildings/ write it, so toon_glass keeps its window cards (WLD-INTERIORS):
 /// floor(UV) = building-grid (column, row), UV2 = (BaseId, channel slot + 32 × TotalColumns), spare byte = window type
-/// 1–15. Window ID = BaseId + row × TotalColumns + column. Columns run along the part's +X, which is WP-14's facade
+/// 1–15. Window ID = BaseId + row × TotalColumns + column. Columns run along the part's +X, which is game/gen/buildings/'s facade
 /// Along. One-sided and shadow-casting: it closes the building shell.
 /// </summary>
 public static class OpeningGlass
 {
-    /// <summary>One window ID for the whole opening, as WP-14 does for punched windows.</summary>
+    /// <summary>One window ID for the whole opening, as game/gen/buildings/ does for punched windows.</summary>
     public static GeometryBundle Opening(float width, float height, int windowBase, int column, int row, int columns, ChannelId channel, byte card) =>
         Grid(width, height, 1, 1, windowBase, column, row, columns, channel, card);
 
@@ -69,7 +69,7 @@ public static class OpeningGlass
     }
 }
 
-/// <summary>Helpers for WP-14 and the zone packs when they place WP-10 parts (PLAN-WP).</summary>
+/// <summary>Helpers for game/gen/buildings/ and the zone packs when they place game/gen/parts/openings/ parts (WLD-LIFE-STREET).</summary>
 public static class OpeningPlacement
 {
     /// <summary>

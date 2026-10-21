@@ -19,7 +19,7 @@ public interface IUnlockPolicy
     UnlockState OnVisit(AtlasMarker m, UnlockState now);          // 进入判定圈时调用
 }
 
-public interface IAtlasService                                    // Kernel 服务（WP-48c）；实现 IMapAware，切图时换底图和标记
+public interface IAtlasService                                    // Kernel 服务（SYS-ATLAS-TRAVEL）；实现 IMapAware，切图时换底图和标记
 {
     long Rev { get; }
     MapId Map { get; }

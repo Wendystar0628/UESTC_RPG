@@ -4,14 +4,12 @@ title: 画面总纲
 category: art
 summary: 画面域总纲：风格、明暗与描线、视觉精度、造型、天空与光照、色彩脚本的视觉语言；本域通用原则与文档树
 keywords: [画面, 画面总纲, 文档树, ART]
-owners: []
-paths: ["docs/art/**"]
-contributors: []
 depends: [CORE-INDEX]
 related: []
 contracts: []
 data: []
 gates: []
+paths: ["docs/art/**"]
 ---
 
 # ART-INDEX · 画面总纲

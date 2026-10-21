@@ -8,7 +8,7 @@ public readonly record struct ScheduleInput(
     double Clock, float SunAltDeg, float Overcast, float Precip, float PoolGain, double RealDt);
 
 /// <summary>
-/// 32 个灯光通道的每帧求值（ENG-PERF）。只算数：结果交给 WP-03 的通道写入接口。
+/// 32 个灯光通道的每帧求值（ENG-PERF）。只算数：结果交给 game/kernel/lighting/ 的通道写入接口。
 /// 目标值只由钟点、h_eff 与季节决定（可复现）；过渡宽度 Δ 随通道的变化速率自适应，
 /// 世界实例通知触发 Reset 后直接落到新值，不带历史。
 /// </summary>

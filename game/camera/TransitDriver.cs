@@ -102,7 +102,7 @@ public sealed class TransitDriver(ICameraRig camera, IAppLoadingPresentation loa
         }
         catch (Exception error)
         {
-            if (error is not OperationCanceledException) KernelServices.Get<IDiagnosticLog>().Error("[WP-36] teleport failed:", error);
+            if (error is not OperationCanceledException) KernelServices.Get<IDiagnosticLog>().Error("[UI-NAV-WAYPOINTS] teleport failed:", error);
             run.Finish(TransitResult.Cancelled);
         }
         finally

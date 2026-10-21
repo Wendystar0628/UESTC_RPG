@@ -25,7 +25,7 @@ public enum WalkReset : byte
 public readonly record struct WalkBodyShape(float Radius, float Height);
 public readonly record struct WalkSupport(Vector3 Point, Vector3 Normal, SurfaceTag Tag, NavSpace? Space);
 
-/// <summary>WP-42's committed physical truth, published on the main thread at the end of a fixed physics step.</summary>
+/// <summary>game/camera/walk/'s committed physical truth, published on the main thread at the end of a fixed physics step.</summary>
 /// <remarks>
 /// Feet is the active cylinder's bottom centre; PhysicalEye is not interpolated. Velocity is actual accepted motion,
 /// not input intent or a camera-arm velocity; a relocation never becomes a large velocity.

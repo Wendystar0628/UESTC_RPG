@@ -78,7 +78,7 @@ void main() {
 	}
 	// Texel -> input value, centre-aligned: texel i holds the grade of (i + 0.5) / n. The tonemap pass samples the
 	// LUT (bilinear, clamp to edge) directly at the colour value, so this is the encoding that reproduces an
-	// identity (measured in the WP-05 sandbox: <= 1/255 error between 4/255 and 251/255; the clamped ends
+	// identity (measured in the game/kernel/post/ sandbox: <= 1/255 error between 4/255 and 251/255; the clamped ends
 	// differ by up to +2/255 at black and -4/255 at white). Edge-aligned i / (n - 1) gave an S-shaped
 	// +-2.5/255 error over the whole range.
 	vec3 x = (vec3(t) + 0.5) / float(n);

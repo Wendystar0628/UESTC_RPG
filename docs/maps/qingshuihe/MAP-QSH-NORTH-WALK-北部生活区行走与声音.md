@@ -5,13 +5,12 @@ parent: MAP-QSH-NORTH
 category: maps
 summary: 北部生活区的行走主网、能看不能进、开放入口的门口表现、点位与锚点、声音要点
 keywords: [北部生活区行走, 行走主网, 能看不能进, 组团闸机, 北门校界, 开放入口, 门口表现, 涉水区, P12, P13, P21, P22, R4, R12, R13, A05, A11, A12, 地标可见, 声音要点, 夜床, Sounds]
-owners: [WP-20]
-contributors: [WP-30, WP-31c, WP-36, WP-43, WP-44, WP-47, WP-48c, WP-51, WP-52, WP-53b]
 depends: [MAP-QSH-NORTH, ART-FIDELITY, SYS-WALK, SYS-ATLAS, WLD-OUTSKIRTS, WLD-INTERIORS, SYS-AUDIO]
 related: [MAP-QSH-NORTH-SEASONS, MAP-QSH-INTERIORS-LIBRARY, MAP-QSH-CENTER-EAST, MAP-QSH-TERRAIN, UI-NAV, ENG-GATES]
 contracts: []
 data: []
 gates: [G4, G15, G21]
+paths: ["game/gen/maps/qingshuihe/north/**", "game/data/maps/qingshuihe/world/north.terrain.json", "game/data/maps/qingshuihe/world/north.json"]
 ---
 
 # MAP-QSH-NORTH-WALK · 北部生活区行走与声音
@@ -29,11 +28,11 @@ gates: [G4, G15, G21]
 
 ### 0.1 接入要点
 
-- **WP-36（点位与跳转） 定 P12、P13、P21、P22 时**：P12 在商业街北端街口外侧；P13 在学知一组团闸机外；P21、P22 是室内点，`Entry = Door`（§3）
-- **WP-48c（标记、锚点）、WP-44（可行走范围、边界与安全点） 登记锚点 A05、A11、A12 时**：坐标以 `world/atlas.json` 为准；A05 不落在红光右支渠水面上（MAP-QSH-TERRAIN-CHECKS §3）；锚点侧前方约 2 m 的落点不放挡路物（§3）
-- **WP-31c（北区精选室内） 做开放室内时**：门洞、门帘、门口表现、扶梯外观和学知一组团闸机的开放表现归本区，楼板、楼梯与家具归 WP-31c（§2、§1）
-- **WP-47、WP-30（校界与门） 做北门与门外时**：北门闸机、抬杆和门口隐形墙段记 `Boundary`；门外的天润路和蓉 2 号线归 WP-47（§1）
-- **WP-21（中部与东区） 做银杏大道北段时**：它从本区东侧穿过，属 MAP-QSH-CENTER-EAST 的主网（§1）
+- **点位与跳转（UI-NAV-WAYPOINTS） 定 P12、P13、P21、P22 时**：P12 在商业街北端街口外侧；P13 在学知一组团闸机外；P21、P22 是室内点，`Entry = Door`（§3）
+- **标记、锚点（SYS-ATLAS-TRAVEL）、可行走范围、边界与安全点（SYS-WALK-BOUNDS） 登记锚点 A05、A11、A12 时**：坐标以 `world/atlas.json` 为准；A05 不落在红光右支渠水面上（MAP-QSH-TERRAIN-CHECKS §3）；锚点侧前方约 2 m 的落点不放挡路物（§3）
+- **北区精选室内（MAP-QSH-NORTH） 做开放室内时**：门洞、门帘、门口表现、扶梯外观和学知一组团闸机的开放表现归本区，楼板、楼梯与家具归 MAP-QSH-NORTH（§2、§1）
+- **WLD-OUTSKIRTS-BAND、校界与门（game/gen/maps/qingshuihe/boundary/） 做北门与门外时**：北门闸机、抬杆和门口隐形墙段记 `Boundary`；门外的天润路和蓉 2 号线归 WLD-OUTSKIRTS-BAND（§1）
+- **中部与东区（MAP-QSH-CENTER-EAST） 做银杏大道北段时**：它从本区东侧穿过，属 MAP-QSH-CENTER-EAST 的主网（§1）
 
 ## 1 行走：主网、挡路物与开放入口（主线之后）
 
@@ -58,7 +57,7 @@ gates: [G4, G15, G21]
 
 ## 2 开放入口的门口表现（主线之后）
 
-门洞、门扇、门口灯、地垫、开放牌、门前台阶和门外传送落点的通用做法按 WLD-INTERIORS-ACCESS §2，房门自动推开与闭门器按 SYS-WALK-BOUNDS §3；开放范围见 MAP-QSH-INTERIORS §3。室内由 WP-31c（北区精选室内） 实现，本区逐处负责：
+门洞、门扇、门口灯、地垫、开放牌、门前台阶和门外传送落点的通用做法按 WLD-INTERIORS-ACCESS §2，房门自动推开与闭门器按 SYS-WALK-BOUNDS §3；开放范围见 MAP-QSH-INTERIORS §3。室内由 北区精选室内（MAP-QSH-NORTH） 实现，本区逐处负责：
 
 - **学生活动中心与成电会堂**：玻璃门廊的外观、门洞和门前台阶；玻璃门固定敞开。
 - **学知苑 1 栋**：楼门的门口表现，门前台阶 6–8 级、楼面约 1.0 m；学知一组团闸机的开放表现（MAP-QSH-NORTH §4.7）。2F 那间 4 人间净高 3.0 m，阳台进深 1.5–1.8 m，门洞 1.1 m，家具木色、窗帘颜色按画面处理。
@@ -85,7 +84,7 @@ gates: [G4, G15, G21]
 
 **锚点**：A05 北门 · 商业街（导览亭）、A11 银杏苑（导览桩，避开宿舍下台的台缘）、A12 思学苑（导览桩，避开宿舍上台南缘的退台），位置以 `world/atlas.json` 为准；锚点侧前方约 2 m 的落点和它面向的广场上不放挡路物。
 
-**地标可见**：本区离图书馆穹顶、宣邦楼钟楼、主楼都最远，楼又密。丹桂路南段朝南望，图书馆穹顶大致在路的尽头，这段路尽头不种挡视线的大树；可见性不达标的路段报给 WP-00（契约、桩与拆除）。
+**地标可见**：本区离图书馆穹顶、宣邦楼钟楼、主楼都最远，楼又密。丹桂路南段朝南望，图书馆穹顶大致在路的尽头，这段路尽头不种挡视线的大树；可见性不达标的路段报给 契约、桩与拆除（ENG-ARCH）。
 
 ## 4 声音要点（主线之后）
 

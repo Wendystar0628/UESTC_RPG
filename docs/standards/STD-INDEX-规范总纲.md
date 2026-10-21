@@ -4,14 +4,12 @@ title: 规范总纲
 category: standards
 summary: 规范域总纲：写文档、写代码，以及命名、坐标与单位等跨文档约定的规范，对所有角色、文档和代码生效
 keywords: [规范, 规范总纲, 文档树, STD, 文档写法, 代码结构, 坐标单位与命名约定]
-owners: []
-paths: ["docs/standards/**"]
-contributors: []
 depends: [CORE-INDEX]
 related: []
 contracts: []
 data: []
 gates: []
+paths: ["docs/standards/**"]
 ---
 
 # STD-INDEX · 规范总纲

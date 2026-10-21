@@ -128,7 +128,7 @@ public sealed record GridStyle(ToonSpec Wall, ToonSpec Trim, ToonSpec Plinth, To
 /// <summary>
 /// A gridded masonry block on a plan (an outer ring, optionally with courtyard holes): a glass core, a stone frame of
 /// full-height piers and storey-high spandrel bands in front of it (the window reveals are the frame's depth), plinth, a
-/// two-step cornice, a parapet with coping and a roof slab. Zones dress the buildings they claim from WP-14 with it; it
+/// two-step cornice, a parapet with coping and a roof slab. Zones dress the buildings they claim from game/gen/buildings/ with it; it
 /// keeps the ART-MODELING minimum set: corner piers, plinth, string courses, sills, recessed glass with frames, cornice and
 /// coping. Bands and copings wrap convex corners; reflex corners simply interpenetrate. One pure layout
 /// (<see cref="Layout(PolygonRings, GridStyle, Func{GridEdgeInfo, GridEdge})"/>) feeds the geometry, the collision and the
@@ -294,7 +294,7 @@ public static class GridFacade
         GridNumbering numbering, WindowAllocation allocation) =>
         Declare(facades, new PolygonRings(ring), y0, s, dress, numbering, allocation);
 
-    /// <summary>One numbered VF-B pane per window cell (WP-10 OpeningGlass), just proud of the core, at every level.</summary>
+    /// <summary>One numbered VF-B pane per window cell (OpeningGlass), just proud of the core, at every level.</summary>
     private static void Panes(SiteBuilder b, GridLayout layout, float y0, GridStyle s, GridNumbering numbering, WindowAllocation allocation)
     {
         WindowNumbers.Fit(layout, numbering, allocation);

@@ -1,6 +1,6 @@
-// toon_glass.gdshader：窗玻璃（WP-04）。映天、斜条高光、低太阳眩光、窗灯与简化的室内视差。
+// toon_glass.gdshader：窗玻璃（ART-STYLE）。映天、斜条高光、低太阳眩光、窗灯与简化的室内视差。
 // 规格：ART-STYLE；ENG-PERF；WLD-INTERIORS。
-// 顶点数据（VF-B，暂定，待与 WP-03、WP-14 对齐）：
+// 顶点数据（VF-B，暂定，待与 game/kernel/lighting/、game/gen/buildings/ 对齐）：
 //   UV  ：窗格坐标，floor(UV) = (列, 行)，fract(UV) = 格内位置；UV.x 沿立面向右，UV.y 向上
 //   UV2 ：x = 本块玻璃的窗号基址；y = 灯光通道号 + 32 × 列数
 //   窗号 = 基址 + 行 × 列数 + 列
@@ -9,7 +9,7 @@ shader_type spatial;
 render_mode blend_mix, depth_prepass_alpha, cull_disabled, diffuse_lambert, specular_disabled, ambient_light_disabled;
 
 #include "res://style/shaders/toon.gdshaderinc"
-// 窗卡与门厅卡的内容（WP-51b）：按窗位类型字节查 window_cards 表，程序化画出房间
+// 窗卡与门厅卡的内容（WLD-INTERIORS-BUILD）：按窗位类型字节查 window_cards 表，程序化画出房间
 #include "res://style/shaders/window_card.gdshaderinc"
 
 // GlassNear uses the same reflection values and pipeline, with real geometry visible from either side.
@@ -19,7 +19,7 @@ const vec2 GLASS_PANE_M = vec2(1.6, 1.9);   // 窗格的名义尺寸（m），�
 const float GLASS_STREAK = 0.55;            // 斜条强度（40%–70%）
 const float GLASS_STREAK_SLOPE = 0.75;      // 斜条方向：与竖直约成 37°
 // 大面积玻璃（连续的玻璃带、环厅、幕墙）的斜条只在稀疏的格子上出现，小窗每格都有：
-//   一格的面积（m²）由屏幕导数量出，达到 GLASS_SPARSE_AREA 算大面积；WP-14 普通窗一格至多约 5.1 m²（科研楼族），
+//   一格的面积（m²）由屏幕导数量出，达到 GLASS_SPARSE_AREA 算大面积；普通窗一格至多约 5.1 m²（科研楼族），
 //   带形窗、幕墙族、体育馆环厅、科研楼石框网格都在 6.3 m² 以上。
 //   没有窗格编码的玻璃（列数 0）UV 是米、格子是 1 m 的瓷砖，一律算大面积，斜条改按 GLASS_LOOSE_CELL 见方的格子画。
 const float GLASS_SPARSE_AREA = 5.8;
@@ -38,7 +38,7 @@ const float GLASS_ROOM_FURNITURE = 0.32;
 const float GLASS_COOL_ROOM = 0.8;           // 冷白窗室内的明度系数
 const float GLASS_SKY_LIFT = 0.35;          // 映天时把反射方向抬高一点，取更冷、更亮的天色
 const float GLASS_GLARE_GAIN = 1.25;        // 眩光的亮度（略超 1，让柔光抓住）
-const float GLASS_CARD_DAY_LUM = 0.34;      // 白天关灯的窗：窗卡房间的线性明度（WP-51b 窗卡）
+const float GLASS_CARD_DAY_LUM = 0.34;      // 白天关灯的窗：窗卡房间的线性明度（窗卡）
 const float GLASS_CARD_DAY_MIX = 0.75;      // 白天房间基调取天光给定值的比例（其余取玻璃底色）
 const float GLASS_CARD_SHOW = 1.0;          // 关灯时窗卡露出的比例（之后照旧叠映天）
 const float GLASS_CARD_CURTAIN = 1.9;       // 白天窗帘、百叶受天光的明度（相对房间基调）
@@ -142,7 +142,7 @@ void fragment() {
 	float nv = dot(-vdir, n);
 	nv = clamp(FRONT_FACING ? nv : abs(nv), 0.0, 1.0);
 
-	// 0. 窗卡（WLD-INTERIORS，内容归 WP-51b）：有窗格编码的玻璃，关灯时里面也是一间房；导数在统一控制流里取
+	// 0. 窗卡（WLD-INTERIORS，内容归 game/gen/interior/shell/）：有窗格编码的玻璃，关灯时里面也是一间房；导数在统一控制流里取
 	bool carded = FRONT_FACING && !clear_glass && cols > 0;
 	float aa_m = max(length(fwidth(UV)) * GLASS_PANE_M.x * 0.7, 1e-4);
 	vec3 rd = vec3(dot(vdir, right), dot(vdir, up), dot(vdir, -n));

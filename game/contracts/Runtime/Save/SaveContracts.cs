@@ -69,7 +69,7 @@ public sealed class RestoreContext
         ArgumentException.ThrowIfNullOrWhiteSpace(what);
         _repairs.Add(what);
     }
-    // 修复要用的只读查询（安全点、活动范围、点位与标记是否存在）由 WP-50 在 v1 里补全
+    // 修复要用的只读查询（安全点、活动范围、点位与标记是否存在）由 game/kernel/save/ 在 v1 里补全
 }
 public sealed record NewGameContext(uint Seed, MapId Map, WorldPreset Start, ViewMode Mode);
 // Start defaults to the authored map world state; application entry keeps that clock.
@@ -106,7 +106,7 @@ public sealed record SaveState(                                     // 保存状
     long? LastSavedAtUnix,          // 当前存档位最后一次成功保存的时间（最新可读一代 meta 的 savedAtUnix），只用于显示
     ReadOnlyReason ReadOnly);
 
-public interface ISaveService                         // Kernel 服务（WP-50）；不加 Autoload
+public interface ISaveService                         // Kernel 服务（game/kernel/save/）；不加 Autoload
 {
     bool Enabled { get; }                             // --save=off，或 .lock 被别的进程占着时为 false：不写、不挪任何文件
     IReadOnlyList<SlotInfo> Slots { get; }            // 扉页后读好；s1–s3 恒为三项

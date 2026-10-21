@@ -43,7 +43,7 @@ public sealed class SiteBuilder
     /// <summary>For a source filed wholly under one explicit anchor; spanning sources must use their range instead.</summary>
     public bool Includes(Vector2 anchor) => _requestedTile is not { } tile || Lod == LodLevel.L4 || TileGrid.At(anchor, Lod) == tile;
 
-    /// <summary>Ground height from the map terrain (flat stub until the WP-08 evaluator lands).</summary>
+    /// <summary>Ground height from the map terrain (flat stub until the game/gen/world/ evaluator lands).</summary>
     public float Ground(float x, float z) => Context.World.Terrain.HeightAt(x, z);
 
     public float Ground(Vector2 p) => Ground(p.X, p.Y);

@@ -48,7 +48,7 @@ public static class SouthTune
         public static readonly ToonSpec DialRim = S("roof.grey", ToonFx.BevelLift, LineClass.Fine, 0.7f);
         /// <summary>Clock dial faces; the night backlight channel comes with the lighting list.</summary>
         public static readonly ToonSpec Dial = S("wall.greyWhite", ToonFx.None, LineClass.Fine);
-        /// <summary>Liren: white throughout (§6.2), trims in WP-14's warm white so A, B and the gateway read as one building.</summary>
+        /// <summary>Liren: white throughout (§6.2), trims in game/gen/buildings/'s warm white so A, B and the gateway read as one building.</summary>
         public static readonly ToonSpec White = S("wall.greyWhite", ToonFx.BevelLift);
         public static readonly ToonSpec WhiteTrim = S("wall", ToonFx.BevelLift, LineClass.Fine);
         public static readonly ToonSpec GreyPlinth = S("roof.grey", ToonFx.BevelLift);
@@ -94,7 +94,7 @@ public static class SouthTune
         public static readonly ToonSpec TeaGlass = Glass with { Lit = new("glass.tea.lit"), Shade = new("glass.tea.shade") };
         /// <summary>Brown horizontal louvres in front of the tea glass (§7.1).</summary>
         public static readonly ToonSpec Louvre = S("panel.brown", ToonFx.None, LineClass.Fine) with { Normal = ToonNormal.Smooth };
-        /// <summary>Light blue-grey roof vent caps (§7.1): WP-12's equipment grey.</summary>
+        /// <summary>Light blue-grey roof vent caps (§7.1): game/gen/parts/roof/'s equipment grey.</summary>
         public static readonly ToonSpec Vent = S("equip.grey", ToonFx.None, LineClass.Fine) with { Normal = ToonNormal.Smooth };
         /// <summary>Natatorium (§7.2): the low white dome, read by its two light steps (ART-STYLE), smooth normals.</summary>
         public static readonly ToonSpec DomeWhite = S("wall.greyWhite") with { Normal = ToonNormal.Smooth };
@@ -177,17 +177,17 @@ public static class SouthTune
     }
 
     /// <summary>
-    /// The plaza inside the gate (design:south-a01-plaza, 初值): its 18 × 12 m paving is the overlay polygon, drawn by WP-15. Local
+    /// The plaza inside the gate (design:south-a01-plaza, 初值): its 18 × 12 m paving is the overlay polygon, drawn by game/gen/ground/. Local
     /// frame from <see cref="Gate.GatePlazaSite.FrameOf"/>: x across toward the north-west lawn (±6 m), z along the axis toward the
     /// campus (±9 m). A planter across the far end and two benches in front of it, facing back toward the kiosk and the gate.
     /// </summary>
     public static class Plaza
     {
-        /// <summary>Top of WP-15's paving above the ground (GroundSection.PavingY): furniture stands on it.</summary>
+        /// <summary>Top of game/gen/ground/'s paving above the ground (GroundSection.PavingY): furniture stands on it.</summary>
         public const float PavingTop = GroundLevels.Paving;
         public static readonly FurnitureParams PlanterSize = new(6.4f, 0.45f, 1.6f);
         public const float PlanterAlong = 7.0f;
-        /// <summary>WP-13's street bench (FurnitureStyle.Bench), its back 0.7 m in front of the planter.</summary>
+        /// <summary>game/gen/furniture/'s street bench (FurnitureStyle.Bench), its back 0.7 m in front of the planter.</summary>
         public static readonly FurnitureParams BenchSize = new(1.8f, 0.8f, 0.62f);
         public const float BenchAlong = 5.2f;
         public static readonly float[] BenchAcross = [-1.9f, 1.9f];
@@ -289,7 +289,7 @@ public static class SouthTune
             [new(1f, 0), new(1f, 0.14f), new(0.98f, 0.28f), new(0.92f, 0.44f), new(0.8f, 0.6f), new(0.63f, 0.75f), new(0.42f, 0.87f), new(0.21f, 0.955f), new(0.06f, 0.995f), new(0, 1f)];
         public const float PortalWidth = 3.2f, PortalSpring = 4.4f;
         /// <summary>
-        /// Floor and door threshold above the ground: the top of WP-15's paving (GroundSection.PavingY), so the side door's forecourt
+        /// Floor and door threshold above the ground: the top of game/gen/ground/'s paving (GroundSection.PavingY), so the side door's forecourt
         /// (design:south-clock-forecourt in world/south.json) runs level into the doorway.
         /// </summary>
         public const float Threshold = GroundLevels.Paving;
@@ -300,7 +300,7 @@ public static class SouthTune
 
     /// <summary>
     /// Liren corner gateway (§6.3, 初值): two pier blocks and a fourth-storey bridge over a three-storey void on square columns,
-    /// plus the east link. The pier and link storey counts come from the map data; the storeys follow WP-14's A and B at 15.6 m:
+    /// plus the east link. The pier and link storey counts come from the map data; the storeys follow game/gen/buildings/'s A and B at 15.6 m:
     /// wall top 15.1 m, coping 16.57 m (the data's height is the 15.6 m).
     /// </summary>
     public static class Liren
@@ -361,7 +361,7 @@ public static class SouthTune
         public const int PoolRibs = 32;
         /// <summary>The light concrete apron round the foot, as a fraction of the semi-axes.</summary>
         public const float PoolRing = 0.1f;
-        /// <summary>Platform-storey entrance hall on the side facing the platform (closed until WP-31a registers it).</summary>
+        /// <summary>Platform-storey entrance hall on the side facing the platform (closed until game/gen/maps/qingshuihe/south/ registers it).</summary>
         public const float PoolDoorBearing = 172f, PoolEntryWidth = 9f, PoolEntryHeight = 4.2f, PoolEntryDepth = 2.6f;
     }
 

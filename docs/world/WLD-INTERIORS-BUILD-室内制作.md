@@ -5,10 +5,8 @@ category: world
 parent: WLD-INTERIORS
 summary: 室内制作规则：加载与进楼衔接、平面生成器、风格与光、生活痕迹、楼梯门洞与碰撞
 keywords: [室内加载, 进楼衔接, 平面内核, 楼型, 室内风格, 窗光斑, 光柱, 室内色名, 生活痕迹, 楼梯碰撞, SlopedWallCollider, 门洞, 落点]
-owners: [WP-51, WP-52]
-contributors: []
 depends: [WLD-INTERIORS, CORE-INDEX, ART-STYLE, ART-FIDELITY, ART-MODELING, ENG-ARCH, ENG-BUDGET, ENG-PERF, SYS-VIEW, SYS-TIME, SYS-WALK, SYS-AUDIO]
-related: [WLD-INTERIORS-ACCESS, WLD-LIFE, SYS-WEATHER, ENG-GATES, PLAN-WP, MAP-QSH-ADDITIONS, ART-SKYLIGHT]
+related: [WLD-INTERIORS-ACCESS, WLD-LIFE, SYS-WEATHER, ENG-GATES, MAP-QSH-ADDITIONS, ART-SKYLIGHT]
 contracts: [IInteriorProvider, InteriorLayout, InteriorDetail, ZoneKind, PortalKind, StoreyInfo, ZoneVolume, PortalDecl, ElevatorDecl, SlopedWallCollider]
 data: ["game/data/maps/qingshuihe/overlay/interior/", "game/style/palette/ext/interior.json"]
 gates: [G5, G6, G15]
@@ -32,7 +30,7 @@ gates: [G5, G6, G15]
 - **随钟点、季节、天气变的东西**：门、卷帘、封口和烘焙碰撞都不变，营业状态只用灯光、店招和门帘透光表现（§5）
 - **点位跳转到室内**：`Entry = Door`，从最近的开放入口进门（§1.2）
 - **写室内碰撞**：斜面、齐平、埋深、登阶层、封口顶高按 §5；碰撞体都填 `Foot`
-- **加家具、痕迹或绘制量**：用 WP-52（室内家具与生活痕迹） 的部件与房间模板，痕迹不参与碰撞、不出现"人还在"；份额见 ENG-BUDGET 的楼内视角份额（§4）
+- **加家具、痕迹或绘制量**：用 室内家具与生活痕迹（WLD-INTERIORS-BUILD） 的部件与房间模板，痕迹不参与碰撞、不出现"人还在"；份额见 ENG-BUDGET 的楼内视角份额（§4）
 
 ## 1 加载与进楼衔接
 
@@ -120,5 +118,5 @@ gates: [G5, G6, G15]
 | 待验证 | 验证方法与负责 | 初值 |
 | --- | --- | --- |
 | 光柱的屏幕覆盖（§3.2） | P0 实测 17:30 近镜淡入与覆盖 | 同屏最多 3 组，覆盖 ≤ 0.6 屏 |
-| 室内色名取值（§3.3） | P0 看图定稿；WP-04（调色板、卡通材质与贴图） | 调研初值 |
-| 室内一层的本机烘焙耗时 | WP-02（格子分级、烘焙与流式加载）、WP-51（室内生成器与壳体），开发机实测 | 室内一层 1 s 内（进楼前来得及预取即可） |
+| 室内色名取值（§3.3） | P0 看图定稿；调色板、卡通材质与贴图（ART-STYLE） | 调研初值 |
+| 室内一层的本机烘焙耗时 | 格子分级、烘焙与流式加载（ENG-PERF-STREAM）、室内生成器与壳体（WLD-INTERIORS-BUILD），开发机实测 | 室内一层 1 s 内（进楼前来得及预取即可） |

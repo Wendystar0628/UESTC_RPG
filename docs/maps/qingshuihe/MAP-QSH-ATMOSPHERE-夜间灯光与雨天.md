@@ -5,13 +5,12 @@ category: maps
 parent: MAP-QSH-INDEX
 summary: 夜间灯光的分级与颜色、初灯组、雨夜雾夜，以及雨帘避雨处与积水点的放置约定
 keywords: [夜间灯光总图, 照度三级, 光斑层次, 冷白两类, 初灯组, 逐盏调度, lighting-schedule.json, 雨夜, 雾夜, 竖条倒影, 灯锥, 雨帘, 避雨处, 滴水点, 干湿一刀切, 积水点, 积水放置, 英雄帧]
-owners: [WP-39]
-contributors: [WP-04, WP-15, WP-16, WP-18, WP-19, WP-20, WP-21, WP-24, WP-26, WP-37, WP-45, WP-47, WP-48]
 depends: [CORE-INDEX, MAP-QSH-ADDITIONS, SYS-TIME, SYS-WEATHER, ART-SKYLIGHT]
 related: [SYS-MOTION, SYS-AUDIO, ENG-GATES, MAP-QSH-CENTER-EAST]
 contracts: []
 data: ["game/data/maps/qingshuihe/lighting-schedule.json"]
 gates: [G7, G15]
+paths: ["game/style/shaders/lamp.gdshaderinc", "game/style/shaders/lamp.gdshaderinc.uid", "game/style/shaders/reflection_lamps.gdshaderinc", "game/style/shaders/reflection_lamps.gdshaderinc.uid", "game/style/shaders/fx_glow.gdshader.uid", "game/data/maps/*/lighting-schedule.json", "game/style/shaders/fx_glow.gdshader", "game/systems/nightlight/**"]
 ---
 
 # MAP-QSH-ATMOSPHERE · 夜间灯光与雨天
@@ -29,7 +28,7 @@ gates: [G7, G15]
 
 ### 0.1 接入要点
 
-- **新增灯具**：只给灯具标记和材质键，不建灯光节点；级别、颜色、开关时刻按 §1、§2 交 WP-39（夜景灯光与时刻表）；室外只用暖色，冷白只给两类
+- **新增灯具**：只给灯具标记和材质键，不建灯光节点；级别、颜色、开关时刻按 §1、§2 交 夜景灯光与时刻表（MAP-QSH-ATMOSPHERE）；室外只用暖色，冷白只给两类
 - **区文件写"天气要点"**：只点名本区的避雨处和积水点，做法按 §4、§5；雨帘和积水不进碰撞，不改可行走遮罩、不登记涉水区
 
 ## 1 夜间灯光总图：级别与颜色（主线之后）
@@ -47,7 +46,7 @@ gates: [G7, G15]
 
 **颜色**：
 
-- 室外灯具一律暖色，在 `window.warm` 到琥珀之间取，色名由 WP-04（调色板、卡通材质与贴图） 登记。
+- 室外灯具一律暖色，在 `window.warm` 到琥珀之间取，色名由 调色板、卡通材质与贴图（ART-STYLE） 登记。
 - 冷白只给两样：监控补光（`window.cool`）和球场高杆灯（亮度有上限，MAP-QSH-CENTER-EAST §4.4）；外围变电站场灯和后巷防犯灯读监控补光那一条通道，算同一类。
 - 窗灯是室内光，不算室外灯具，按暖白与冷白 2:1 混合（ART-SKYLIGHT §3.5）；小信号点（充电桩琥珀灯、闸机和直饮水台绿灯、售货机屏幕、"安全出口"绿标）不计入照度。
 - 没有彩色灯：西湖喷泉夜间灯也只用暖白；电子蓝只用于旗面、校车和单车；禁止轮廓灯带、霓虹、彩色洗墙。
@@ -85,7 +84,7 @@ gates: [G7, G15]
 
 ## 5 积水点（主线之后）
 
-- **来源**：积水按积水潜势长出，雨停后慢慢干掉（SYS-WEATHER §6）；潜势由 WP-15（地表、道路、铺装） 画，各区"天气要点"点名的积水点照那里画，其余按地形低处和路缘自动生成。
+- **来源**：积水按积水潜势长出，雨停后慢慢干掉（SYS-WEATHER §6）；潜势由 地表、道路、铺装（WLD-TERRAIN-APPLY） 画，各区"天气要点"点名的积水点照那里画，其余按地形低处和路缘自动生成。
 - **放在哪**：落在本来就有故事的地方：路缘内侧的雨水箅旁、树池边、台阶最下一级前、广场排水沟两端、车棚地面、球场靠围网的低角。不放在草坪上、木栈道和木平台上、台阶踏面中间、身份特征上（如时间广场的徽饰）；透水砖地面只在边角积水。
 - **形状**：平涂、硬边的不规则椭圆，小水洼，长轴顺着路缘或坡向；一大配两三小，成组出现；边缘一圈湿暗环；潜势在每块积水的中心最高、向外渐低，积水从中心长大、从边上缩回去。
 - **密度**：总覆盖面按 SYS-WEATHER §6；积水之间要露出铺装。
@@ -96,4 +95,4 @@ gates: [G7, G15]
 
 | 待验证 | 验证方法或负责 | 验证前的初值 |
 | --- | --- | --- |
-| 雨夜竖条倒影的取灯法（§3） | WP-39（夜景灯光与时刻表）、WP-24（水体系统） 确认 | 按一级、二级的顺序取近处的灯，三级景观灯留柔光斑 |
+| 雨夜竖条倒影的取灯法（§3） | 夜景灯光与时刻表（MAP-QSH-ATMOSPHERE）、水体系统（WLD-WATER） 确认 | 按一级、二级的顺序取近处的灯，三级景观灯留柔光斑 |

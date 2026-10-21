@@ -8,7 +8,7 @@ using CommonShapes = Campus.Gen.Sites.Shapes;
 namespace Campus.Gen.Maps.Qingshuihe.Core.LibraryInterior;
 
 /// <summary>
-/// The library's furniture and small things, built in place into the storey sink (WP-52's room parts are not delivered yet).
+/// The library's furniture and small things, built in place into the storey sink (game/gen/interior-props/'s room parts are not delivered yet).
 /// Plan positions are world (x, z); "facing" is the way a seat's user looks. Chairs, lamps and traces have no collision
 /// (WLD-INTERIORS-BUILD); callers add the boxes for tables, sofas and seats.
 /// </summary>

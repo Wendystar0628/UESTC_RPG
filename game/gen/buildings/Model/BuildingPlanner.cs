@@ -73,7 +73,7 @@ public static class BuildingPlanner
         var profile = ProfileFor(src, outerClean, holesClean, style, worldSeed, presets);
         var seed = StableHash.Hash32(worldSeed, feature.Id.Value, src.Key, "wp14.building");
 
-        // Facade bay grid from the WP-51a plan kernel: canonical rings (mm, fixed start vertex), bays on the glass
+        // Facade bay grid from the game/gen/interior/core/ plan kernel: canonical rings (mm, fixed start vertex), bays on the glass
         // plane, indices contiguous over all rings. The same call gives the interiors their partition lines.
         var grid = Grid(outerClean, holesClean, GridOptions(profile));
         if (grid is null) return null;
@@ -86,7 +86,7 @@ public static class BuildingPlanner
         var (height, storeys, hs) = Heights(src, profile);
         var small = area < 40f || height < 3.2f;
 
-        // Wall skin: the footprint is the glass plane (WP-51a), the wall face sits one reveal outside it.
+        // Wall skin: the footprint is the glass plane (game/gen/interior/core/), the wall face sits one reveal outside it.
         var reveal = profile.Reveal;
         var (skinOuter, skinHoles) = Skins(outer, holes, reveal);
         var rings = new List<PlanRing> { outer };

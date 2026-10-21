@@ -5,13 +5,12 @@ category: systems
 parent: SYS-WEATHER
 summary: 自动天气是种子、世界时间、地图的纯函数：片段模板与硬规则、随机数与种子、时间与天气、固定点、存档只存手动与钉住
 keywords: [自动天气, 纯函数, 天气种子, 计数器子流, 不应期, 片段模板, 保持晴, 钉住, 固定点, 天气段, 天气存档, IWeatherProcess, WeatherBoot, WeatherTick]
-owners: [WP-45a]
-contributors: [WP-45, WP-34, WP-46, WP-49, WP-50]
 depends: [SYS-WEATHER, SYS-TIME, ENG-ARCH]
 related: [SYS-SAVE, SYS-MAPS, SYS-TITLE, SYS-AUDIO, ENG-GATES]
 contracts: [WeatherSpan, IWeatherProcess, WeatherBoot, WeatherTick, WeatherQueueItem, WeatherProcessState]
 data: ["game/data/weather/chengdu/profile.json"]
 gates: [G4, G20]
+paths: ["game/systems/weather/**", "game/data/weather/**"]
 ---
 
 # SYS-WEATHER-PROCESS · 自动天气与存档语义

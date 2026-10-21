@@ -1,4 +1,4 @@
-// window_card.gdshaderinc：窗卡与门厅卡的主线版程序化内容（WP-51b）。
+// window_card.gdshaderinc：窗卡与门厅卡的主线版程序化内容（WLD-INTERIORS-BUILD）。
 // 规格：WLD-INTERIORS；ART-FIDELITY（亮窗、门厅卡不是空盒子）；SYS-TIME（亮灭仍归 lamp_window_on）。
 // 窗卡号 = VF-B 玻璃的窗位类型字节（COLOR.a），也是 window_cards 表的行号；表由 Campus.Style.Shaders.Cards.WindowCardTable
 // 打包（RGBA32F，6 × 32），一行一种卡：进深权重、隔墙、侧墙距离、近层与背墙剪影、侧墙内容、窗帘或百叶、日间明度、夜间增益、吊顶、点缀。

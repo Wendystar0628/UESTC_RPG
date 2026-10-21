@@ -15,7 +15,7 @@ namespace Campus.Gen.Buildings.Build;
 public readonly record struct GrilleSlot(float U0, float U1, int Row, float Y0, FidelityZone Zone);
 
 /// <summary>
-/// The WP-12 facade fittings of one building at one level, placed by PartCatalog ID: the unit grille (cage, with the
+/// The game/gen/parts/roof/ facade fittings of one building at one level, placed by PartCatalog ID: the unit grille (cage, with the
 /// outdoor unit inside it where the window's zone is K1 or K2 at L0) and the rain downpipe or condensate drain.
 /// A part's +X runs along the facade and its −Z out of the building (OpeningPlacement.Frame), the wall at its back.
 /// Slots and drains are decided here once per facade, so the downpipes and the niches never meet (FittingRules).

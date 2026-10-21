@@ -12,14 +12,14 @@ using L = Campus.Gen.Maps.Qingshuihe.South.SouthTune.Look;
 namespace Campus.Gen.Maps.Qingshuihe.South.Sports;
 
 /// <summary>
-/// The stadium's stand (看台, MAP-QSH-SOUTH), which WP-14 would extrude as a 15 m C-shaped block, so this site claims it:
+/// The stadium's stand (看台, MAP-QSH-SOUTH), which game/gen/buildings/ would extrude as a 15 m C-shaped block, so this site claims it:
 /// - tiers round the west half of the track, sampled on rays from the track's centre: a front wall over the apron, a cross
 ///   walk, rows of seats (muted yellow in the middle, pale lilac grey to the sides), the back concourse and its parapet;
 /// - the silver-white pillow canopy (枕形罩棚) over the main stand, thick in the middle and rounded off at both ends, with a
 ///   pale gold middle section divided by vertical seams, carried by dark grey steel columns and struts on the concourse;
 /// - closed concourse portals in the back wall where the sports platform's deck meets it;
 /// - the low dark seats across the track (design:south-stadium-east-seats in world/south.json).
-/// The track, the pitch and their markings are WP-15's ground. The stand has no glass: its window declaration is empty.
+/// The track, the pitch and their markings are game/gen/ground/'s ground. The stand has no glass: its window declaration is empty.
 /// </summary>
 public sealed class GrandstandSite : ZoneSite
 {

@@ -135,7 +135,7 @@ public sealed class WindowNumberingTests
                 }
         var metadata = module.DescribeWindows(ctx).Windows;
         AssertThat(metadata.Count > 0 && metadata.All(d => d.BaseId == b.BaseId && d.Id >= b.BaseId && d.Id < b.BaseId + b.Count)).OverrideFailureMessage("Expected: " + ("metadata on the new block")).IsTrue();
-        AssertThat(module.Build(ctx, BuildingSet.For(Ctx(world, 1u)).Plans[0].Tile(LodLevel.L0), LodLevel.L0).Meshes.Count == 0).OverrideFailureMessage("Expected: " + ("WP-14 builds nothing of t:a")).IsTrue();
+        AssertThat(module.Build(ctx, BuildingSet.For(Ctx(world, 1u)).Plans[0].Tile(LodLevel.L0), LodLevel.L0).Meshes.Count == 0).OverrideFailureMessage("Expected: " + ("game/gen/buildings/ builds nothing of t:a")).IsTrue();
     }
 
     [TestCase, TestCategory(TestReason.Contract)]

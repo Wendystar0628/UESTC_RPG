@@ -25,7 +25,7 @@ public sealed record Opening(string Key, OpeningKind Kind, float Start, float Le
 
 /// <summary>
 /// The campus boundary as one closed plan (WLD-OUTSKIRTS, MAP-QSH-ADDITIONS): the ring from world/geo.json opened at
-/// every gate (the five of <see cref="BoundaryTune.Gates"/> and WP-18's south gate), at every water crossing (a grate) and at
+/// every gate (the five of <see cref="BoundaryTune.Gates"/> and game/gen/maps/qingshuihe/south/'s south gate), at every water crossing (a grate) and at
 /// every other road crossing (a closed side gate); the fence runs fill the rest, each with its hedge pieces where the strip
 /// inside is clear. Built once per world, from the world model only.
 /// </summary>
@@ -101,7 +101,7 @@ public sealed class BoundaryPlan
 
     // ---- Openings ----
 
-    /// <summary>WP-18's south gate: the ring stays open between the outer walls of its two source-identified guard houses.</summary>
+    /// <summary>game/gen/maps/qingshuihe/south/'s south gate: the ring stays open between the outer walls of its two source-identified guard houses.</summary>
     private static Opening? South(IWorldModel world, BoundaryRing ring)
     {
         if (!world.Features.TryGetValue(new(SouthIds.Gate.Entity), out var gate)) return null;

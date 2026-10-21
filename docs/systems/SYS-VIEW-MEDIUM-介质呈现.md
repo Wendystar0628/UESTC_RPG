@@ -5,8 +5,6 @@ category: systems
 parent: SYS-VIEW
 summary: 镜头处在空气、楼里、地下、水下、雾海时的画面与声音规则：介质判定与仲裁、楼体剖切变体、地层雾、水下与半入水、雾海兜底
 keywords: [介质呈现, 介质判定, 介质仲裁, 剖切变体, 剖切色, I0 兜底层, 简化室内, 完整室内, 地层雾, 水下, 半入水, 水下回差, 雾海, 共用雾函数, IMediumState, IMediumPresenter, CameraMedium, MediumKind]
-owners: [WP-07]
-contributors: [WP-06, WP-08, WP-24, WP-42, WP-51, WP-53]
 depends: [SYS-VIEW, ENG-ARCH, ENG-PERF, WLD-INTERIORS, WLD-OUTSKIRTS-DIORAMA, WLD-WATER, SYS-WEATHER, SYS-AUDIO]
 related: [SYS-WALK, SYS-GRAPHICS, ART-FIDELITY]
 contracts: [CameraMedium, MediumKind, IMediumPresenter, IMediumState]

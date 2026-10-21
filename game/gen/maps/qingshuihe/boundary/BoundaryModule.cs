@@ -8,7 +8,7 @@ using Campus.Gen.Sites;
 namespace Campus.Gen.Maps.Qingshuihe.Boundary;
 
 /// <summary>
-/// WP-30 campus boundary and gates (WLD-OUTSKIRTS, MAP-QSH-ADDITIONS): the sites listed in
+/// game/gen/maps/qingshuihe/boundary/ campus boundary and gates (WLD-OUTSKIRTS, MAP-QSH-ADDITIONS): the sites listed in
 /// <see cref="BoundarySites.All"/>, filed into 64 m cells. 30a built the north and west gates and the waterside plaza inside
 /// the north gate; 30b adds 西北门, 西二门 and 东南口, and the fence all the way round with its side gates and river grates. Every closure collider
 /// is tagged <see cref="SurfaceTag.Boundary"/>. Pure .NET: reads the world model and the terrain only.

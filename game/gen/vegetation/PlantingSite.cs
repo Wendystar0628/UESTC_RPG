@@ -47,7 +47,7 @@ internal sealed class PlantingSite
         World = world;
         Seed = seed;
         var green = new List<PlantingParcel>();
-        // The effective network (WP-08) publishes a design walk as a network line under its feature's ID and keeps the feature's
+        // The effective network (SYS-MAPS) publishes a design walk as a network line under its feature's ID and keeps the feature's
         // polyline: line and polyline are one walk. The network is the effective source, so the walk is filed once, as the line.
         var published = world.Network.Roads.Select(r => r.Id.Value).ToHashSet(StringComparer.Ordinal);
         foreach (var feature in world.Features.Values.OrderBy(f => f.Id.Value, StringComparer.Ordinal))
@@ -223,7 +223,7 @@ internal sealed class PlantingSite
         _pavement.AddBox(min, max, new PlantingPave(rings, null, 0f, min, max, edge));
     }
 
-    /// <summary>Width of a paved line as WP-15 paves it (GroundClassifier): its own width, else the type's default.</summary>
+    /// <summary>Width of a paved line as game/gen/ground/ paves it (GroundClassifier): its own width, else the type's default.</summary>
     private static float PavedWidth(JsonElement? props, string type) =>
         props?.OptionalNumber("width") is { } width and > 0f ? width : type switch
         {

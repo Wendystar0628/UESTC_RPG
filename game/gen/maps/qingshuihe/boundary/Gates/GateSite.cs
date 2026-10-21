@@ -146,7 +146,7 @@ public sealed class GateSite(BoundaryTune.GateSpec spec) : ZoneSite
             b.Place(PartCatalog.DeliveryLocker, LockerSize, g.Frame.AtReversed(g.S * locker.X, b.Ground(g.P(locker.X, locker.Y)), locker.Y));
     }
 
-    /// <summary>Delivery locker by the fence inside 西二门 (WLD-LIFE: 进门右侧的围墙边), WP-13's part; its door faces the campus.</summary>
+    /// <summary>Delivery locker by the fence inside 西二门 (WLD-LIFE: 进门右侧的围墙边), game/gen/furniture/'s part; its door faces the campus.</summary>
     public static readonly EquipmentParams LockerSize = new(2.4f, 2f, 0.6f);
 
     // ---- Piers ----
@@ -266,7 +266,7 @@ public sealed class GateSite(BoundaryTune.GateSpec spec) : ZoneSite
             b.Add(PartSolids.BeveledBox(0.06f, h, 0.08f, 0.01f, L.Stainless), At(u * (width + 0.06f), y0, 0.04f));
     }
 
-    /// <summary>Bollards along the forecourt's road edge (WP-13's part), standing on WP-15's paving.</summary>
+    /// <summary>Bollards along the forecourt's road edge (game/gen/furniture/'s part), standing on game/gen/ground/'s paving.</summary>
     private void Bollards(SiteBuilder b, GateLayout g)
     {
         if (b.Detail == SiteDetail.Mass || Spec.Bollards.Length == 0) return;

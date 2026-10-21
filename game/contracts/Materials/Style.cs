@@ -15,7 +15,7 @@ public enum ShadeSteps : byte { Two = 0, TwoHalf = 1, Soft = 2, Three = 3 }
 public enum ToonKind { Static = 0, Glass = 1, GlassNear = 2, VegTrunk = 4, VegCard = 5, VegGrass = 7, SceneText = 10, VegTwigMass = 11 }
 
 /// <summary>
-/// Stable WP-04 layer and physical grid dimensions. Period includes the joint; Joint is the full
+/// Stable game/style/ layer and physical grid dimensions. Period includes the joint; Joint is the full
 /// seam width centred on each axis boundary. Layer registration is checked by the resource consumer.
 /// Direction and phase belong to the producer's continuous metre UVs, never to material identity.
 /// </summary>

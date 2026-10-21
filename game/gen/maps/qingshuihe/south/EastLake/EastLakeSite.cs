@@ -14,9 +14,9 @@ using L = Campus.Gen.Maps.Qingshuihe.South.SouthTune.Look;
 namespace Campus.Gen.Maps.Qingshuihe.South.EastLake;
 
 /// <summary>
-/// East lake shore (MAP-QSH-SOUTH). The water is WP-24's, the trees, reeds and lotus WP-23's and WP-38's, the paving of the
-/// waterside platform WP-15's; this site builds:
-/// - the Liren-side white vase-baluster balustrade (collision 1.5 m, SYS-WALK); WP-28 builds the wall and coping.
+/// East lake shore (MAP-QSH-SOUTH). The water is game/systems/water/'s, the trees, reeds and lotus game/gen/vegetation/'s and game/systems/vegetation/seasons/'s, the paving of the
+/// waterside platform game/gen/ground/'s; this site builds:
+/// - the Liren-side white vase-baluster balustrade (collision 1.5 m, SYS-WALK); game/gen/maps/qingshuihe/waterfront/ builds the wall and coping.
 ///   The balustrade is opened in the bay for the wade step (§4.3,
 ///   design:south-eastlake-wade-step): two treads down from the platform, the second 0.15 m under the normal water level;
 /// - two wooden rowing boats moored off the wade step (§4.6) and two stone mooring posts;
@@ -100,7 +100,7 @@ public sealed class EastLakeSite : ZoneSite
                 if (!b.Includes(SiteRanges.Bounds([rail[i], rail[i + 1]], .31f))) continue;
                 Balustrade(b, rail[i], rail[i + 1], RailOpenings(shore, f, l, i, rail[i], rail[i + 1]), y + K.CopingTop, b.Detail);
             }
-            // A white newel at every bank vertex; the continuous coping belongs to WP-28.
+            // A white newel at every bank vertex; the continuous coping belongs to game/gen/maps/qingshuihe/waterfront/.
             foreach (var p in rail)
             {
                 if (!b.Includes(SiteRanges.Point(p, .31f))) continue;
@@ -114,7 +114,7 @@ public sealed class EastLakeSite : ZoneSite
     }
 
     /// <summary>
-    /// The lake's water area: outer ring and island holes (WP-24 draws the surface on the same polygon). Read from its own source
+    /// The lake's water area: outer ring and island holes (game/systems/water/ draws the surface on the same polygon). Read from its own source
     /// part; the entity's Geometry is only an aggregate envelope in some world models.
     /// </summary>
     internal static PolygonRings Water(IWorldModel world) =>

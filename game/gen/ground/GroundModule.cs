@@ -5,7 +5,7 @@ using Campus.Gen.World;
 namespace Campus.Gen.Ground;
 
 /// <summary>
-/// Ground, roads and paving for the whole map (WP-15): lawn, carriageways with kerbs, sidewalks, plazas, courts,
+/// Ground, roads and paving for the whole map (WLD-TERRAIN-APPLY): lawn, carriageways with kerbs, sidewalks, plazas, courts,
 /// parking, lawn edging, centre lines and zebra crossings, plus the walking height field. It owns no feature: it is
 /// the default ground everywhere; zone packages that claim the Ground aspect of an area replace it there later.
 /// </summary>

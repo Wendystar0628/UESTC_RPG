@@ -14,7 +14,7 @@ namespace Campus.Gen.Ground.Tests;
 using static GdUnit4.Assertions;
 
 /// <summary>
-/// The ground lays centre lines from the effective road network only (WP-08 batch 4): a footway that is in the
+/// The ground lays centre lines from the effective road network only (game/gen/world/ batch 4): a footway that is in the
 /// feature table and in <c>Network.Roads</c> is paved once, an area stays an area, and the markings
 /// and kerbs follow the same lines.
 /// </summary>
@@ -125,7 +125,7 @@ public sealed class GroundEffectiveRoadsTests
     {
         var world = RealMapFixture.Load().World;
         var (shapes, roads) = GroundSources.Read(world);
-        // Only the classes WP-08 projects into the network (footway, path, pedestrian); a design drive or service lane is laid from its own feature.
+        // Only the classes game/gen/world/ projects into the network (footway, path, pedestrian); a design drive or service lane is laid from its own feature.
         var authored = world.Features.Values.Where(f => f.Kind.Value == "road" && f.Geometry is PolylineGeometry &&
             WorldProps.TryText(f.Props, "area") != "yes" &&
             GroundClassifier.RoadType(f.Props) is "footway" or "path" or "pedestrian").ToArray();

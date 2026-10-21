@@ -11,7 +11,7 @@ using Campus.Gen.Parts.Openings;
 namespace Campus.Gen.Buildings.Build;
 
 /// <summary>
-/// Fills the openings of one building at one level with WP-10 parts, placed by PartCatalog ID: window or
+/// Fills the openings of one building at one level with game/gen/parts/openings/ parts, placed by PartCatalog ID: window or
 /// curtain-wall frames and entrance doors on OpeningPlacement frames, curtains from OpeningPlacement.Curtain, and
 /// glass from OpeningGlass with the building's window numbers. Reveals and sills stay with the wall (BuildingFacadeMesher).
 /// A part's +X runs along the facade (EdgeFrame.Along) and its −Z out of the building.
@@ -70,8 +70,8 @@ public sealed class FacadeOpenings
 
     /// <summary>
     /// L0/L1: the opening's frame and glass on the glass plane. In K1 and K2 (<paramref name="zone"/>, from the fidelity
-    /// data) the full WP-10 window part and its curtain; in K3 and beyond the simple window (OpeningRules). The entrance
-    /// door is the WP-10 door in every zone.
+    /// data) the full game/gen/parts/openings/ window part and its curtain; in K3 and beyond the simple window (OpeningRules). The entrance
+    /// door is the game/gen/parts/openings/ door in every zone.
     /// </summary>
     public void Fill(EdgeFrame f, FacadeLayout layout, Opening o, FidelityZone zone)
     {
@@ -116,7 +116,7 @@ public sealed class FacadeOpenings
     /// <summary>One window cell over the whole opening: it closes the hollow shell, so it casts shadow.</summary>
     private void Glass(EdgeFrame f, FacadeLayout layout, Opening o, float s, WindowCard card, bool physicalCurtain = false)
     {
-        // WP-10 takes the logical card type. This fresh bundle is locally owned; encode this LOD's
+        // game/gen/parts/openings/ takes the logical card type. This fresh bundle is locally owned; encode this LOD's
         // actual curtain presence only after creation, without changing the part's input contract.
         var mesh = OpeningGlass.Opening(o.U1 - o.U0, o.Y1 - o.Y0, _block.Base, layout.ColumnStart + o.Bay, o.Row, _p.TotalColumns,
             _channel, (byte)card);

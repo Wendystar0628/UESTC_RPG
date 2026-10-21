@@ -5,13 +5,12 @@ category: art
 parent: ART-SKYLIGHT
 summary: 天空渐变、霾带、云、星空、银河、城市天光、日月盘，月亮外观，雾与大气透视的共用雾函数、边缘雾、换季起雾与地标豁免
 keywords: [天空, sky shader, 天空渐变, 霾带, 云, 飞机云, 星空, 银河, 城市天光, 夜空明度下限, 阴天云盖, 雨幕, 闪电, 彩虹, 日月盘, 月亮外观, 月相, 雾, 大气透视, 共用雾函数, 边缘雾, 换季起雾, 雾海, 地标豁免]
-owners: [WP-40]
-contributors: [WP-03, WP-04, WP-05, WP-37, WP-45]
 depends: [CORE-INDEX, ART-SKYLIGHT, ART-STYLE, ENG-PERF, SYS-TIME, SYS-WEATHER]
 related: [WLD-OUTSKIRTS-DIORAMA, WLD-OUTSKIRTS, SYS-VIEW, WLD-AMBIENCE]
 contracts: []
 data: ["game/data/maps/qingshuihe/sky.json"]
 gates: [G7]
+paths: ["game/style/shaders/sky_params.gdshaderinc", "game/style/shaders/sky_params.gdshaderinc.uid", "game/style/shaders/sky_bodies.gdshaderinc", "game/style/shaders/sky_bodies.gdshaderinc.uid", "game/style/shaders/sky_clouds.gdshaderinc", "game/style/shaders/sky_clouds.gdshaderinc.uid", "game/style/shaders/sky.gdshader.uid", "game/style/shaders/sky.gdshader", "game/data/maps/*/sky.json", "game/systems/sky/**"]
 ---
 # ART-SKYLIGHT-ATMOSPHERE · 天空、月亮与雾
 

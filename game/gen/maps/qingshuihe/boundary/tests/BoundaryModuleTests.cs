@@ -154,7 +154,7 @@ public sealed class BoundaryModuleTests
         var misses = new List<string>();
         for (var s = 0f; s < ring.Perimeter; s += 0.25f)
         {
-            // Gates are walked by NothingWalksOutThroughAGate (the south gate by WP-18's own test).
+            // Gates are walked by NothingWalksOutThroughAGate (the south gate by game/gen/maps/qingshuihe/south/'s own test).
             if (gates.Any(o => ring.Forward(o.Start - 1.5f, s) <= o.Length + 3f)) continue;
             // Detours leave the corner behind the fence; their line is a run like any other.
             if (plan.Detours.Any(d => ring.Forward(d.Start - 1f, s) <= d.Length + 2f)) continue;

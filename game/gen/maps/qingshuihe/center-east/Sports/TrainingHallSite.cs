@@ -12,7 +12,7 @@ using L = Campus.Gen.Maps.Qingshuihe.CenterEast.CenterEastTune.Look;
 
 namespace Campus.Gen.Maps.Qingshuihe.CenterEast.Sports;
 
-/// <summary>Silver barrel hall plus the source annexes; the open interior remains WP-31b's.</summary>
+/// <summary>Silver barrel hall plus the source annexes; the open interior remains game/gen/maps/qingshuihe/west/SixInterior/'s.</summary>
 public sealed class TrainingHallSite : ZoneSite
 {
     public override string Id => "21d.training-hall";

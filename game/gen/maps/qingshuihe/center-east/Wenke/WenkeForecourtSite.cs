@@ -15,7 +15,7 @@ namespace Campus.Gen.Maps.Qingshuihe.CenterEast.Wenke;
 /// The lawn in front of 文科楼's atrium door (MAP-QSH-CENTER-EAST), a functional open space (MAP-QSH-ADDITIONS R6)
 /// that frames the view east to the training hall and the moonrise: a granite stop in front of the shut door and a walk
 /// from it to the road junction, the friendship tree's three timber stakes and green trunk cloth (the camphor itself is
-/// WP-23's, at the registered point), and the granite landscape stone beside it with the gold original emblem on its
+/// game/gen/vegetation/'s, at the registered point), and the granite landscape stone beside it with the gold original emblem on its
 /// dressed face (ART-STYLE). The lawn's middle and the 2.5 m outside the door stay clear. The paving, the tree and the
 /// stone stand where the overlay registered them, read back by ID (D-239); modelling sizes in <see cref="F"/>, <see cref="K"/>.
 /// </summary>
@@ -90,7 +90,7 @@ public sealed class WenkeForecourtSite : ZoneSite
         if (b.Includes(StoneRange(world))) Stone(b, stone, b.Ground(stone.Origin));
     }
 
-    // ---- Paving: granite stop and walk, a few centimetres over WP-15's lawn, kerbed in light stone ----
+    // ---- Paving: granite stop and walk, a few centimetres over game/gen/ground/'s lawn, kerbed in light stone ----
 
     private static void Paving(SiteBuilder b)
     {

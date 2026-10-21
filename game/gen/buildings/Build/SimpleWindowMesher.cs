@@ -17,9 +17,9 @@ internal sealed class SimpleWindowMesher(GeometrySink sink, EdgeFrame f, LodLeve
 
     /// <summary>
     /// Simple window of K3 and beyond: a frame ring pressed into the reveal, with continuous mullions and a transom
-    /// between them (the WP-10 casement light layout). Each member is a front face, a single 45° chamfer on its inner
+    /// between them (the game/gen/parts/openings/ casement light layout). Each member is a front face, a single 45° chamfer on its inner
     /// edges and returns back to the glass: at L0 24 triangles for the ring and 10 for each bar; at L1 the ring alone
-    /// without chamfer (16). Nothing behind the glass. Metal of the WP-10 frames, no shadow.
+    /// without chamfer (16). Nothing behind the glass. Metal of the game/gen/parts/openings/ frames, no shadow.
     /// </summary>
     public void Build(Opening o, int columns, int rows)
     {

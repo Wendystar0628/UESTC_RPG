@@ -80,7 +80,7 @@ public sealed class MuseumShellTests
                 AssertThat(Vector2.Dot(d, o) < 0 || across > clear * 0.5f + c.Size * 0.5f).OverrideFailureMessage("the way out of each door is clear of columns").IsTrue();
             }
         var parts = Build(museum, LodLevel.L0).Parts.Where(p => p.Part.Value == PartCatalog.DoorGlass).ToArray();
-        AssertThat(parts.Length == 2 && parts.All(p => p.Params is DoorParams { OpenAngleDeg: 90f })).OverrideFailureMessage("two WP-10 glass doors fixed open").IsTrue();
+        AssertThat(parts.Length == 2 && parts.All(p => p.Params is DoorParams { OpenAngleDeg: 90f })).OverrideFailureMessage("two game/gen/parts/openings/ glass doors fixed open").IsTrue();
         AssertThat(Build(museum, LodLevel.L2).Parts.Count == 0).OverrideFailureMessage("no door parts beyond L1").IsTrue();
     }
 
@@ -179,7 +179,7 @@ public sealed class MuseumShellTests
         return build.Finish(lod);
     }
 
-    /// <summary>A stand-in for WP-14's allocation: a generic block, the library and the museum in ordinal feature order.</summary>
+    /// <summary>A stand-in for game/gen/buildings/'s allocation: a generic block, the library and the museum in ordinal feature order.</summary>
     private static WindowNumberingSnapshot Numbering(int museumColumns, int libraryColumns)
     {
         var generic = new WindowAllocation(new FeatureId("fixture:generic-before"), "generic", 0, 101, 7);

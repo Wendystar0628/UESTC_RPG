@@ -10,10 +10,10 @@ import yaml
 sys.stdout.reconfigure(encoding='utf-8')
 ROOT = os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..'))
 D = os.path.join(ROOT, 'docs')
-CAT_ORDER = ['core', 'product', 'art', 'world', 'maps', 'systems', 'ui', 'engineering', 'plan', 'workflow',
+CAT_ORDER = ['core', 'product', 'art', 'world', 'maps', 'systems', 'ui', 'engineering', 'workflow',
              'standards', 'registry']
 CAT_NAME = {'core': '总纲', 'product': '作品', 'art': '画面', 'world': '世界', 'maps': '地图：清水河', 'systems': '系统',
-            'ui': '界面', 'engineering': '工程', 'plan': '计划', 'workflow': '协作', 'standards': '规范', 'registry': '登记'}
+            'ui': '界面', 'engineering': '工程', 'workflow': '协作', 'standards': '规范', 'registry': '登记'}
 NL = chr(10)
 
 
@@ -35,17 +35,6 @@ def load(docs_dir=D):
         docs[str(fm.get('id'))] = fm
     return docs
 
-
-def wps(v):
-    out = []
-    for x in v or []:
-        out += [p for p in re.split(r'[，,\s]+', str(x)) if p]
-    return out
-
-
-def wpkey(w):
-    m = re.match(r'WP-(\d+)([a-z]?)', w)
-    return (int(m.group(1)), m.group(2)) if m else (999, w)
 
 
 def folder_of(d):
@@ -139,7 +128,7 @@ ROUTES = os.path.join(D, 'ROUTES.json')
 
 
 def build_routes(docs, docs_dir=D):
-    """路线表（定案 r016 §3）：文档编码到路径、工作包到文档编码（按文件头 owners）、路径 glob 到文档编码；钩子按它在读改文件时注入。"""
+    """路线表（定案 r016 §3）：文档编码到路径、路径 glob 到文档编码；路径归属只取文件头 paths；钩子按它在读改文件时注入。"""
     allfm = dict(docs)
     t = open(os.path.join(docs_dir, 'README.md'), encoding='utf-8').read()
     m = re.match(r'^---\r?\n(.*?)\r?\n---\r?\n', t, re.S)
@@ -148,23 +137,14 @@ def build_routes(docs, docs_dir=D):
         fm['_path'] = 'README.md'
         allfm[str(fm.get('id'))] = fm
     paths = {c: 'docs/' + d['_path'] for c, d in allfm.items()}
-    pkgs = {w for d in allfm.values() for w in wps(d.get('owners'))}
-    wp = {}
-    for w in sorted(pkgs, key=wpkey):
-        codes = []
-        for c in sorted(allfm):
-            d = allfm[c]
-            if d.get('category') == 'workflow':
-                continue
-            if w in wps(d.get('owners')):
-                codes.append(c)
-        wp[w] = codes
     globs = {}
     for c, d in allfm.items():
-        pv = d.get('paths') or []
-        for g in [pv] if isinstance(pv, str) else pv:
-            globs.setdefault(str(g), []).append(c)
-    out = {'version': 1, 'docs': paths, 'wp': wp,
+        pv = d.get('paths', [])
+        if not isinstance(pv, list) or any(not isinstance(g, str) or not g.strip() for g in pv):
+            raise ValueError('%s: paths 应为非空字符串的列表（无归属写 []）' % c)
+        for g in pv:
+            globs.setdefault(g, []).append(c)
+    out = {'version': 1, 'docs': paths,
            'paths': [{'glob': g, 'docs': sorted(set(globs[g]))} for g in sorted(globs)]}
     return json.dumps(out, ensure_ascii=False, sort_keys=True, indent=1) + NL
 

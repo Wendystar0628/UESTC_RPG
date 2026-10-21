@@ -17,7 +17,7 @@ namespace Campus.Gen.Maps.Qingshuihe.Core.Library;
 /// 图书馆外壳 (16b, MAP-QSH-CORE): the beige-stone octagonal ring with its four corner towers, the front square tower
 /// with the full-height glass slot, the one-storey podium whose roof is the 2F terrace, the set-back 5F under a canted
 /// metal eave, and the roof with the octagonal skylight, curved metal roofs and the mechanical box. Interiors are
-/// WP-17's; the grand stair (8398) and the door presentation are 16c's.
+/// game/gen/maps/qingshuihe/core/LibraryInterior/'s; the grand stair (8398) and the door presentation are 16c's.
 /// <para>
 /// Faces: towers carry the vertical slits, every other face one long ribbon per storey (MAP-QSH-CORE initial value).
 /// Window glass is VF-B (toon_glass with cards); the skylight and the slot are clear glass with their steel in their
@@ -53,7 +53,7 @@ public sealed class LibraryShell : ZoneSite, IWindowedPiece
         return shell;
     }
 
-    /// <summary>Ground height under a plan point (the world's terrain; WP-08's evaluator or the flat stub).</summary>
+    /// <summary>Ground height under a plan point (the world's terrain; game/gen/world/'s evaluator or the flat stub).</summary>
     private Surface _ground = (_, _) => 0f;
 
     /// <summary>
@@ -92,7 +92,7 @@ public sealed class LibraryShell : ZoneSite, IWindowedPiece
     }
 
     /// <summary>
-    /// The cafe walk as WP-15 paves a footway: pavers at the paving level (terrain + 0.15, 5 cm over the lawn), a granite
+    /// The cafe walk as game/gen/ground/ paves a footway: pavers at the paving level (terrain + 0.15, 5 cm over the lawn), a granite
     /// edging band along each side and the 5 cm edge face down to the lawn.
     /// </summary>
     private void CafeWalkMesh(GeometrySink mesh)
@@ -417,7 +417,7 @@ public sealed class LibraryShell : ZoneSite, IWindowedPiece
 
     private static WallCollider Wall(Vector2 a, Vector2 b, float y0, float y1) => new(a, b, 0.15f, y0, y1, SurfaceTag.Wall) { Foot = FootMat.StonePaving };
 
-    /// <summary>The apron's top stands this little proud of the threshold, clear of WP-15's paving at the same level.</summary>
+    /// <summary>The apron's top stands this little proud of the threshold, clear of game/gen/ground/'s paving at the same level.</summary>
     private const float ApronLift = 0.01f;
 
     /// <summary>The granite apron in front of the cafe door bay: its span along the face and its depth out from it.</summary>

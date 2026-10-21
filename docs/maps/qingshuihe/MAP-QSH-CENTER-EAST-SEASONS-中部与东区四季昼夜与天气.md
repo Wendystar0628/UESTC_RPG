@@ -5,13 +5,12 @@ parent: MAP-QSH-CENTER-EAST
 category: maps
 summary: 中部与东区的月出与光、夜间角色与四季表、球场积雪、避雨处与雨帘、积水点、雷雨与雾里读形
 keywords: [东区月出, 傍晚满月, 清晨金边, 球场高杆灯, 筒拱采光带, 夜间角色, 东区四季, 球场积雪, 树墙四季, 避雨处, 架空通道雨帘, 积水点, 雷雨, 雾里读形, 雨天的生活痕迹]
-owners: [WP-21]
-contributors: [WP-15, WP-23, WP-25, WP-38, WP-39]
 depends: [MAP-QSH-CENTER-EAST, ART-SKYLIGHT, MAP-QSH-ADDITIONS, SYS-TIME, SYS-WEATHER]
 related: [MAP-QSH-CENTER-EAST-WALK, WLD-VEGETATION, WLD-LIFE, ART-FIDELITY, ENG-GATES]
 contracts: []
 data: ["game/data/maps/qingshuihe/lighting-schedule.json"]
 gates: [G7]
+paths: ["game/gen/maps/qingshuihe/center-east/**", "game/data/maps/qingshuihe/world/center-east.terrain.json", "game/data/maps/qingshuihe/world/center-east.json", "game/gen/parts/sport/**"]
 ---
 
 # MAP-QSH-CENTER-EAST-SEASONS · 中部与东区四季昼夜与天气
@@ -28,8 +27,8 @@ gates: [G7]
 
 ### 0.1 接入要点
 
-- **WP-39（夜景灯光与时刻表） 排灯时**：教学楼窗灯、球场高杆灯、训练馆采光带按 ART-COLORSCRIPT §3；品学楼那间阶梯教室夜里固定亮着（§2 表）
-- **WP-25（动物与生活痕迹） 放生活痕迹时**：白猫在科 C 楼台阶，校车在职工班车停车点，单车聚在品学楼一带的非机动车停放区（MAP-QSH-CENTER-EAST §1、MAP-QSH-CENTER-EAST-SEASONS §2）
+- **夜景灯光与时刻表（MAP-QSH-ATMOSPHERE） 排灯时**：教学楼窗灯、球场高杆灯、训练馆采光带按 ART-COLORSCRIPT §3；品学楼那间阶梯教室夜里固定亮着（§2 表）
+- **动物与生活痕迹（WLD-LIFE-FAUNA） 放生活痕迹时**：白猫在科 C 楼台阶，校车在职工班车停车点，单车聚在品学楼一带的非机动车停放区（MAP-QSH-CENTER-EAST §1、MAP-QSH-CENTER-EAST-SEASONS §2）
 
 ## 1 本区的光（主线之后）
 
@@ -83,7 +82,7 @@ gates: [G7]
 ## 3 天气要点（主线之后）
 
 - **避雨处与雨帘**（做法 MAP-QSH-ATMOSPHERE §4）：品学楼书法横梁下的架空通道是本区最大的避雨处，横梁两侧外沿各一排雨帘，通道顶的筒灯从里面照亮；场边小看台的轻钢雨棚前沿；训练馆筒拱两条长边的檐口，雨帘沿弧脚一路排下去。网球场树墙下雨稀，树冠挡掉一部分。
-- **积水点**（位置，潜势由 WP-15（地表、道路、铺装） 画）：篮球场和网球场靠围网的低角，雨夜积水映出高杆灯的冷白竖条；田径场砖红跑道弯道内侧几小块；品学楼门前广场的方树池边；银杏大道跨河小桥的两端桥头。场地中心不积水，绿底红禁区和蓝色场心照样读得出。
+- **积水点**（位置，潜势由 地表、道路、铺装（WLD-TERRAIN-APPLY） 画）：篮球场和网球场靠围网的低角，雨夜积水映出高杆灯的冷白竖条；田径场砖红跑道弯道内侧几小块；品学楼门前广场的方树池边；银杏大道跨河小桥的两端桥头。场地中心不积水，绿底红禁区和蓝色场心照样读得出。
 - **雨夜与雷雨**：球场高杆灯照常按 19:00–22:00 亮，冷白光锥里的斜雨丝是东区雨夜的主画面。春夏雷雨的深色雨幕从西湖方向推来，东区最后进雨：训练馆筒拱还在阳光里，西边已经压着雨幕，是在东区看雷雨最好的时候。
 - **雾里读形**：本区没有雾豁免的地标。训练馆筒拱在雾里是一道浅色的弧；南侧的宣邦楼钟楼靠雾豁免读出；雾夜高杆灯光锥看得见，光晕变大。
 - **雨天的生活痕迹**：置物横栏上的外套收走，只留水杯；篮球车推到器材室檐下；通用痕迹见 SYS-WEATHER §2、WLD-LIFE-FAUNA §2。

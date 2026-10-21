@@ -4,7 +4,7 @@ using Campus.Contracts.Quality;
 namespace Campus.Kernel.Lighting;
 
 /// <summary>
-/// Engine-side shadow configuration for the two shadow knobs WP-03 owns (SYS-GRAPHICS, ENG-PERF).
+/// Engine-side shadow configuration for the two shadow knobs game/kernel/lighting/ owns (SYS-GRAPHICS, ENG-PERF).
 /// None of these change specialization constants: atlas size, split count, distance, splits and the
 /// caster mask are all switched without pipeline compilation. Small casters always cast (style default).
 /// </summary>

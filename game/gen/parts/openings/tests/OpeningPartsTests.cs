@@ -86,8 +86,8 @@ public sealed class OpeningPartsTests
         AssertThat(pane.Index.Length == 6 && pane.Reserved!.All(b => b == 8)).OverrideFailureMessage("Opening glass is one card quad.").IsTrue();
         for (var i = 0; i < pane.Position.Length / 3; i++)
         {
-            AssertThat((int)Math.Floor(pane.Uv![2 * i]) == 7 && (int)Math.Floor(pane.Uv[2 * i + 1]) == 3).OverrideFailureMessage("Window cell differs from WP-14's.").IsTrue();
-            AssertThat(pane.Uv2![2 * i] == 1000 && pane.Uv2[2 * i + 1] == 2 + 32 * 24).OverrideFailureMessage("UV2 differs from WP-14's.").IsTrue();
+            AssertThat((int)Math.Floor(pane.Uv![2 * i]) == 7 && (int)Math.Floor(pane.Uv[2 * i + 1]) == 3).OverrideFailureMessage("Window cell differs from game/gen/buildings/'s.").IsTrue();
+            AssertThat(pane.Uv2![2 * i] == 1000 && pane.Uv2[2 * i + 1] == 2 + 32 * 24).OverrideFailureMessage("UV2 differs from game/gen/buildings/'s.").IsTrue();
             AssertThat(pane.Normal[3 * i + 2] == -1).OverrideFailureMessage("Glass must face the exterior (−Z).").IsTrue();
         }
         var grid = OpeningGlass.Grid(3.6f, 3.2f, 3, 2, 0, 4, 1, 24, LightChannelCatalog.Id(0), 3);

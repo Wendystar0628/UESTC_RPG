@@ -5,13 +5,12 @@ category: world
 parent: WLD-INDEX
 summary: 大箱庭的三条线（校界、前沿线、截面线）；外围环境带、箱庭截面与远景两份子文档的入口，校界的阻挡与提示在系统域 SYS-BORDER
 keywords: [外围, 校外, 校界, 边界, 前沿线, 截面线, 大箱庭]
-owners: [WP-47, WP-06, WP-30]
-contributors: [WP-02, WP-04, WP-05, WP-06, WP-08, WP-13, WP-14, WP-15, WP-18, WP-22, WP-23, WP-24, WP-27, WP-28, WP-30, WP-33, WP-35, WP-36, WP-37, WP-38, WP-39, WP-41, WP-42, WP-43, WP-44, WP-45, WP-46, WP-48, WP-49, WP-53]
 depends: [CORE-INDEX, ART-STYLE, WLD-OUTSKIRTS-DIORAMA, SYS-BORDER, SYS-VIEW, ART-FIDELITY, ENG-ARCH, ENG-BUDGET, ENG-PERF, SYS-WALK, SYS-MAPS]
 related: [ART-SKYLIGHT, ENG-GATES, MAP-QSH-ADDITIONS, SYS-TIME, UI-NAV, SYS-WEATHER, SYS-GRAPHICS, SYS-ATLAS, SYS-TITLE, SYS-SAVE, WLD-INTERIORS, SYS-AUDIO, ENG-RELEASE, WLD-TERRAIN, MAP-QSH-OUTSKIRTS]
 contracts: []
 data: []
 gates: []
+paths: ["game/gen/maps/qingshuihe/boundary/**", "game/data/maps/qingshuihe/world/boundary.json", "game/camera/**"]
 ---
 
 # WLD-OUTSKIRTS · 边界与外围
@@ -28,7 +27,7 @@ gates: []
 
 | 子文档 | 简题 | 什么时候读 |
 | --- | --- | --- |
-| WLD-OUTSKIRTS-BAND | 外围环境带 | 做或判外围街区、截面线位置、外围数据与精度（WP-47（外围环境带）、WP-22（箱庭截面与远景）） |
+| WLD-OUTSKIRTS-BAND | 外围环境带 | 做或判外围街区、截面线位置、外围数据与精度（外围环境带（WLD-OUTSKIRTS-BAND）、箱庭截面与远景（WLD-OUTSKIRTS-DIORAMA）） |
 | WLD-OUTSKIRTS-DIORAMA | 箱庭截面与远景 | 做截面、河渠水柱、雾海、远景卡片与雪山 |
 
 清水河外围的周边结构、截面线距离、身份地标、灯光、农田与氛围增补见 MAP-QSH-OUTSKIRTS。

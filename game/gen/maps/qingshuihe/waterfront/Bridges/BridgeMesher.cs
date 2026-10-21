@@ -11,7 +11,7 @@ namespace Campus.Gen.Maps.Qingshuihe.Waterfront.Bridges;
 /// <summary>
 /// Geometry of one bridge in world coordinates (ART-MODELING 收边与倒角, §7.4, §7.6):
 /// a concrete slab with a flat soffit; asphalt on the carriageway, paving on the walking strips, granite kerbs between them,
-/// all at the WP-15 ground levels so the approaches meet flush; a continuous white-stone parapet base (地栿) that overhangs
+/// all at the game/gen/ground/ ground levels so the approaches meet flush; a continuous white-stone parapet base (地栿) that overhangs
 /// the fascia as its drip line; square stone posts with plain caps every ~2 m between taller bridge-head posts; two
 /// stainless rails that cast no shadow; abutment walls at the banks. Levels: L0 everything; L1 without the rails;
 /// L2/L3 the deck, base and head posts; L4 nothing (the deck is below a pixel there).

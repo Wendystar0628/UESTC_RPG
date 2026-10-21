@@ -4,26 +4,24 @@ title: 施工边界
 category: workflow
 parent: WF-INDEX
 summary: 施工时能改哪里、共享文件、契约申请与冻结、构建与测试排队、新模块怎么接入
-keywords: [独占目录, 共享文件, 契约申请, 契约冻结, 构建锁, 构建与测试排队, .uid, 特性接入, ownership.json, G3]
-owners: [WP-00]
-contributors: []
+keywords: [独占目录, 共享文件, 契约申请, 契约冻结, 构建锁, 构建与测试排队, .uid, 特性接入, paths, G3]
 depends: [WF-RULE, CORE-INDEX, ENG-ARCH]
-related: [WF-ENTRY, WF-FLOW, WF-STATUS, PLAN-WP, STD-CONVENTIONS, ENG-GATES]
+related: [WF-ENTRY, WF-FLOW, WF-STATUS, STD-CONVENTIONS, ENG-GATES]
 contracts: []
-data: ["ownership.json"]
+data: []
 gates: [G3, G4]
-paths: ["game/**/*.cs", "game/**/*.gdshader*"]
+paths: ["game/**/*.cs", "game/**/*.gdshader*", "scripts/requirements.*", "game/testing/**", "game/data/build-code-fingerprints.json", "game/gen/maps/qingshuihe/Campus.Gen.Maps.Qingshuihe.csproj", "game/gen/sites/**", ".collab/tools/**", "dashboard/**", "game/gen/Campus.Gen.csproj", "game/kernel/map/data/**", "game/kernel/renderer/geometry/**", "game/kernel/renderer/render-state/**", "game/kernel/instances/**", "game/gen/geometry/**", "scripts/gates/arch/Campus.Arch.Tests.csproj", "scripts/godot-api/ApiDump/ApiDump.csproj", "game/contracts/Runtime/Campus.Contracts.Runtime.csproj", "game/contracts/Campus.Contracts.csproj", "game/data/maps/*/interiors.json", "game/Campus.Gen.Tests.csproj", "game/Campus.Tests.csproj", "game/contracts/.gdignore", "game/export_presets.cfg", "game/contracts/*.csproj", "game/kernel/registry/**", "game/data/rulesets/**", "scripts/gates/arch/**", "**/Directory.*.targets", "game/Campus.csproj", "game/gen/.gdignore", "game/project.godot", "Directory.*.targets", "game/kernel/stubs/**", "scripts/godot-api/**", "**/Directory.*.props", "scripts/gate.ps1", "third_party.json", "Directory.*.props", "docs/godot-api/**", "game/contracts/**", ".gitattributes", "scripts/build/**", "scripts/setup/**", "game/gen/bakeinput/assembly/**", "scripts/docs/**", "budgets.json", "game/addons/**", "global.json", "version.txt", "scripts/lib/**", ".gitignore", ".ignore", "AGENTS.md", "CLAUDE.md", "README.md", "启动游戏.cmd", "**/*.csproj", "LICENSE", "tools/**", "**/*.sln", "game/.editorconfig", "scripts/git-hooks/**"]
 ---
 
 # WF-BUILD · 施工边界
 
 > **范围**：本文规定施工子代理写代码和做内容时的硬边界：能改哪些文件，哪些要提申请，契约怎么申请与冻结，构建与测试怎么排队，新模块怎么接入。
-> **不在本文**：代码边界与禁用写法：原则见 ENG-ARCH §2，清单以各程序集的 `BannedSymbols.txt` 和 G4 为准；契约的内容：`game/contracts/` 源码与 ENG-ARCH §3；冻结状态：WF-STATUS §1；目录与归属明细：`ownership.json`；共享文件清单：本文 §1；Godot 代码的写法（查签名、GDScript、场景与路径）：STD-CODE §0.1；内容与画面的底线：CORE-INDEX §0；全员守则：WF-RULE。
+> **不在本文**：代码边界与禁用写法：原则见 ENG-ARCH §2，清单以各程序集的 `BannedSymbols.txt` 和 G4 为准；契约的内容：`game/contracts/` 源码与 ENG-ARCH §3；冻结状态：WF-STATUS §1；目录与归属明细：各文档文件头的 `paths`；共享文件清单：本文 §1；Godot 代码的写法（查签名、GDScript、场景与路径）：STD-CODE §0.1；内容与画面的底线：CORE-INDEX §0；全员守则：WF-RULE。
 > **查阅**：先读 §0；改哪里与申请看 §1；G4 拦不住的约定在哪看 §2；契约申请与冻结看 §3；构建与测试排队看 §4。
 
 ## 0 结论
 
-1. **只改本包的独占目录**（§1）：独占目录以 `ownership.json` 为准，越界由门禁 G3 拒绝。
+1. **只改派工简报允许的路径**（§1）：写入边界以简报为准，目录来自施工队列的"目录"列；门禁 G3 按文档文件头的 `paths` 核对改动文件的归属。
 2. **共享文件不自己改**（§1）：工程共享件由 Codex 主线改，设计文档由主会话改；要改契约、全局着色器参数、着色器文件、程序集引用或 NuGet 包，写契约申请。
 3. **新模块用特性接入**（§1）：不改注册表、不改主场景、不加 Autoload。
 4. **代码边界和禁用写法的权威是 ENG-ARCH §2**，由门禁 G4 拦截；G4 拦不住的约定各有权威，见 §2。
@@ -33,7 +31,7 @@ paths: ["game/**/*.cs", "game/**/*.gdshader*"]
 ### 0.1 接入要点
 
 - **新增契约、全局着色器参数、着色器文件、程序集引用、NuGet 包**：不自己加，写 `requests/contract-<队列行号>-<主题>.md` 交 Codex 主线（§3）；要早提。
-- **要改的路径不在本包独占目录里**：不改，写进回报或契约申请。
+- **要改的路径不在简报允许的范围里**：不改，写进回报或契约申请。
 - **写 gen 或烘焙子任务**：随机只用契约的 `Rng` 与 `StableHash`，同机同输入同输出即可（ENG-ARCH §2，D-232）。
 - **跑构建、导入、烘焙、门禁或截图**：经构建锁排队，不绕过；只走命令行，不在编辑器里重存场景（§4）。
 - **写 Godot 代码前**：先查 API 签名，写法见 STD-CODE §0.1。
@@ -41,8 +39,8 @@ paths: ["game/**/*.cs", "game/**/*.gdshader*"]
 
 ## 1 改哪里
 
-- **只改本包的独占目录**：以 `ownership.json` 为准；子包独占原包目录下的一个子目录（PLAN-WP-LIST §2）。这是"同一批文件同一时间只有一个写者"的分工依据（WF-FLOW §2.1）。
-- **共享文件不自己改**：工程共享件（契约、csproj、`Directory.*.props`、`project.godot`、`ownership.json`、`gate.ps1`、`scripts/` 下的工程脚本等）由 Codex 主线直接提交推送；`docs/` 由主会话改。
+- **只改派工简报给的路径**：以简报的"允许改"为准，目录来自施工队列行的"目录"列。这是"同一批文件同一时间只有一个写者"的分工依据（WF-FLOW §2.1）。
+- **共享文件不自己改**：工程共享件（契约、csproj、`Directory.*.props`、`project.godot`、`scripts/gates/shader-whitelist.json`、`gate.ps1`、`scripts/` 下的工程脚本等）由 Codex 主线直接提交推送；`docs/` 由主会话改。
 - **要提申请的事**：改契约、加全局着色器参数、加着色器文件、加程序集引用或 NuGet 包，都写成契约申请交 Codex 主线（§3）。
 - **新模块用特性接入**：接入特性的清单见 ENG-ARCH §2；不改注册表、不改主场景、不加 Autoload。
 - **场景、路径与 `.uid`**：Godot 代码的写法（场景由代码生成、`res://` 路径、不手写 `uid://`）见 STD-CODE §0.1；`.uid` 的处理见 §4。
@@ -65,4 +63,4 @@ Codex 侧的代理共用主检出 `E:\Project\UESTC_RPG`，`bin/`、`obj/`、`.g
 1. **一次只跑一个**：`dotnet build`、导入（`--build-import`）、烘焙、`gate.ps1`、截图和基准同一时刻只许一个在跑，用 `scripts\` 里那把锁（容量 1）排队。拿不到就等，不绕过：不另起进程抢跑，不删锁文件，不为赶时间并行。施工子代理默认不编译，构建由指挥在一批交回后统一跑（WF-FLOW §3.1）。
 2. **只走命令行**：不在编辑器里打开或重存场景，场景由代码生成；导入日志里不得有 `ERROR` 或 `SCRIPT ERROR`（G1）。截图类和性能类门禁要在交互式会话的窗口模式下跑。测量、验证一律后台跑：用命令行启动、读日志里的时间戳和结果，不用 computer use 去点击、截屏或操作作者的桌面。
 3. **先选检查，再决定烘不烘**：`gate.ps1` 先按改动选出要跑的检查（测试节奏以 ENG-GATES §1 为准），再按所选检查的需要补烘共享缓存；快检不烘焙。
-4. **归属与 `.uid`**：改动路径必须在 `ownership.json` 划给本包的范围内（G3）；`.uid` 跟着源文件走、一起提交，复制文件时删掉复制来的 `.uid`。仓库的换行、二进制与忽略规则以 `.gitattributes`、`.gitignore` 为准；`game/override.cfg` 让开发态用独立的用户目录，不进 git。
+4. **归属与 `.uid`**：改动文件必须在文档文件头的 `paths` 中有归属（G3），施工只改简报允许的路径；`.uid` 跟着源文件走、一起提交，复制文件时删掉复制来的 `.uid`。仓库的换行、二进制与忽略规则以 `.gitattributes`、`.gitignore` 为准；`game/override.cfg` 让开发态用独立的用户目录，不进 git。

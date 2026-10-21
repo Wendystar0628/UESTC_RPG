@@ -35,7 +35,7 @@ internal static class ObserverViewSave
         if (!rules.Current.ViewModes.Contains(mode))
             throw new InvalidDataException("The saved view mode is unavailable in the selected ruleset.");
         if (mode == ViewMode.Walk && walk is null)
-            throw new InvalidOperationException("Restoring walk view requires WP-42 and its walk save section.");
+            throw new InvalidOperationException("Restoring walk view requires game/camera/walk/ and its walk save section.");
         ObserverPresentation.ValidateFinite(data.Pose);
         // MapService awaited terrain preparation and projected this destination before restore.
         return mode;

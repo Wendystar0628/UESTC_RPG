@@ -104,6 +104,6 @@ public static class PlazaStyle
 
     public const string FlagBlue = "uestc.blue";
 
-    /// <summary>National flag red: borrowed from WP-12's fire-equipment red, the campus' one red (17:30 lit #C8473B).</summary>
+    /// <summary>National flag red: borrowed from game/gen/parts/roof/'s fire-equipment red, the campus' one red (17:30 lit #C8473B).</summary>
     public const string FlagRed = "equip.fireRed";
 }

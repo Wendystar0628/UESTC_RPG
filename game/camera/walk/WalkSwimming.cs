@@ -39,7 +39,7 @@ internal sealed class WalkSwimming(WalkBodyCollision collisionBody, Action notRe
                 _notReady();
                 return false;
             case WaterQueryStatus.Invalid:
-                KernelServices.Get<IDiagnosticLog>().Error("[WP-42]", $"invalid water query: {result.DiagnosticCode}");
+                KernelServices.Get<IDiagnosticLog>().Error("", $"invalid water query: {result.DiagnosticCode}");
                 _requestExit();
                 return false;
             default:

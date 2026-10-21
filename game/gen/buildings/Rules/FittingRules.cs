@@ -5,9 +5,9 @@ using Campus.Gen.Parts.Roof;
 namespace Campus.Gen.Buildings.Rules;
 
 /// <summary>
-/// How the facade fittings take the WP-12 parts (WF-FLOW: tunables in one place): the unit grille (机位格栅) with its
+/// How the facade fittings take the game/gen/parts/roof/ parts (WF-FLOW: tunables in one place): the unit grille (机位格栅) with its
 /// outdoor unit, and the rain downpipe and condensate drain (落水管). Part shapes and their section details are the
-/// PartCatalog defaults and RoofStyle; these values only decide how a WP-14 facade maps onto them (MAP-QSH-ADDITIONS-VOCAB
+/// PartCatalog defaults and RoofStyle; these values only decide how a game/gen/buildings/ facade maps onto them (MAP-QSH-ADDITIONS-VOCAB
 /// and WLD-RENOVATION). Initial values; the main session sets the final ones at review.
 /// </summary>
 public static class FittingRules
@@ -18,7 +18,7 @@ public static class FittingRules
     /// The wall is at the back (+Z of the part), the louvred front faces out.
     /// </summary>
     public static readonly PanelParams Grille = new(0.95f, 0.8f, 0.36f);
-    /// <summary>The outdoor unit inside the niche at its real size (the WP-12 gallery's dormitory unit).</summary>
+    /// <summary>The outdoor unit inside the niche at its real size (the game/gen/parts/roof/ gallery's dormitory unit).</summary>
     public static readonly EquipmentParams Unit = RoofEquipment.DormUnit;
     /// <summary>The unit stands this far from the wall at its back.</summary>
     public const float UnitBackGap = 0.02f;

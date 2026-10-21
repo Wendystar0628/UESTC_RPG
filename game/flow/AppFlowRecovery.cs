@@ -17,7 +17,7 @@ internal sealed class AppFlowRecovery(ISaveService saves, IMapService maps,
     internal void CaptureFailure(Exception error, AppState state)
     {
         LastError = error.Message;
-        diagnostic($"[WP-49a][map:{maps.Current.Value}][flow:{state}]", error);
+        diagnostic($"[game/flow/][map:{maps.Current.Value}][flow:{state}]", error);
     }
     internal void RetainRestoreError() => LastError = RestoreErrorKey;
     internal Task HoldRestoreFailure(bool keepBoot = false)

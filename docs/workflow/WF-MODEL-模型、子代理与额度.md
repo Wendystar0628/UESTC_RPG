@@ -5,14 +5,12 @@ category: workflow
 parent: WF-INDEX
 summary: 按七问与难度选施工模型和推理强度，怎么开子代理、写简报，额度、并发与冻结，两家模型的易犯行为
 keywords: [七问, 选模型, Opus 与 Sonnet 的分界, 机械活, gpt-6-luna 子代理, 推理强度, 升级先找原因, 简单少量的活直接做, 子代理, Agent 工具, spawn_agent, 子代理生命周期, 默认新开, 简报模板, 接续段, 额度, 5 小时窗口, 每周额度, 并发, 额度刹车, get_usage, 临近重置用足, Codex 额度, 额度见底, 冻结, 切换账号, 易犯行为, D-184, D-191, D-226]
-owners: [WP-00]
-paths: [".collab/tasks/**"]
-contributors: []
 depends: [WF-ROLE]
-related: [WF-ENTRY, WF-FLOW, WF-STATUS, WF-RULE, WF-COMMS, PLAN-WP]
+related: [WF-ENTRY, WF-FLOW, WF-STATUS, WF-RULE, WF-COMMS]
 contracts: []
 data: []
 gates: []
+paths: [".collab/tasks/**", "scripts/requirements.*", "game/testing/**", "game/data/build-code-fingerprints.json", "game/gen/maps/qingshuihe/Campus.Gen.Maps.Qingshuihe.csproj", "game/gen/sites/**", ".collab/tools/**", "dashboard/**", "game/gen/Campus.Gen.csproj", "game/kernel/map/data/**", "game/kernel/renderer/geometry/**", "game/kernel/renderer/render-state/**", "game/kernel/instances/**", "game/gen/geometry/**", "scripts/gates/arch/Campus.Arch.Tests.csproj", "scripts/godot-api/ApiDump/ApiDump.csproj", "game/contracts/Runtime/Campus.Contracts.Runtime.csproj", "game/contracts/Campus.Contracts.csproj", "game/data/maps/*/interiors.json", "game/Campus.Gen.Tests.csproj", "game/Campus.Tests.csproj", "game/contracts/.gdignore", "game/export_presets.cfg", "game/contracts/*.csproj", "game/kernel/registry/**", "game/data/rulesets/**", "scripts/gates/arch/**", "**/Directory.*.targets", "game/Campus.csproj", "game/gen/.gdignore", "game/project.godot", "Directory.*.targets", "game/kernel/stubs/**", "scripts/godot-api/**", "**/Directory.*.props", "scripts/gate.ps1", "third_party.json", "Directory.*.props", "docs/godot-api/**", "game/contracts/**", ".gitattributes", "scripts/build/**", "scripts/setup/**", "game/gen/bakeinput/assembly/**", "scripts/docs/**", "budgets.json", "game/addons/**", "global.json", "version.txt", "scripts/lib/**", ".gitignore", ".ignore", "AGENTS.md", "CLAUDE.md", "README.md", "启动游戏.cmd", "**/*.csproj", "LICENSE", "tools/**", "**/*.sln", "game/.editorconfig", "scripts/git-hooks/**"]
 ---
 
 # WF-MODEL · 模型、子代理与额度
@@ -36,7 +34,7 @@ gates: []
 
 ### 0.1 接入要点
 
-- **写派工简报**：用 §8 的模板，只填本包特有的信息；入口、守则、回报写在 WF-ENTRY、WF-RULE、WF-COMMS，不抄。
+- **写派工简报**：用 §8 的模板，只填本次任务特有的信息；入口、守则、回报写在 WF-ENTRY、WF-RULE、WF-COMMS，不抄。
 - **交回时**：在任务单末尾写"接续"段（§8.2）。
 - **开子代理**：按 §6；Codex 侧子代理共用工作目录，简报里必须写明邻居（§8.1）。
 - **派单、选 Opus 还是 Sonnet、决定开几个之前**：先看最近一次用量读数，读数超过 15 分钟就重读；开几个按任务量定，额度紧时少开（§9.1）。
@@ -62,7 +60,7 @@ Opus 贵，只用在观感还没定的地方。
 
 | 默认交 | 活 |
 | --- | --- |
-| Opus（high；地标与质感移植 xhigh） | 一个包或一类构件第一次造型，还没有已批的样子可照；地标与重点构件；质感移植与新的画面机制；评审里标明"要定""拿不准"的观感取舍 |
+| Opus（high；地标与质感移植 xhigh） | 一类内容或构件第一次造型，还没有已批的样子可照；地标与重点构件；质感移植与新的画面机制；评审里标明"要定""拿不准"的观感取舍 |
 | Sonnet high | 调研（同类主流游戏的做法加本项目建议，WF-STATUS §4）；评审已写明怎么改的跟进单；照已批的样子铺到同类；摆放规则、数据与世界文件登记、树种与预设键；截图采集与重拍；素材收集；文档撰写 |
 | Sonnet medium | 按条目填数据、按确切文字打文档补丁 |
 
@@ -86,7 +84,7 @@ Opus 贵，只用在观感还没定的地方。
 | --- | --- | --- | --- | --- |
 | 简单 | 规格已给全，能按条目验收：填数据、按已定预设接线、单文件小修、查资料与整理、打文档补丁 | 不派 | medium | medium |
 | 一般 | 要自己规划实现，能按条目验收：常规部件与建模、普通接线与单测、截图采集 | high（需审美判断的可见构件） | high | high |
-| 难 | 判断重，或错误会扩散：地标与重点构件的造型、质感移植、跨包根因，确定性、并发、资源寿命、存档方案，契约方案 | xhigh | 不派，改派 Opus | high；根因不明或跨包的诊断才 xhigh |
+| 难 | 判断重，或错误会扩散：地标与重点构件的造型、质感移植、跨模块根因，确定性、并发、资源寿命、存档方案，契约方案 | xhigh | 不派，改派 Opus | high；根因不明或跨模块的诊断才 xhigh |
 
 - 要 Sonnet 开 xhigh 才做得好的活，改派 Opus high。不用 max，施工不用 low。
 - **难也先用 high（D-232）**：日常整合和统一编译用 high，xhigh 只给诊断类（根因不明、跨包）；一两处小错指挥自己改，不单开子代理。单张子单 1 小时内做完（WF-FLOW §2）。
@@ -102,7 +100,7 @@ Opus 贵，只用在观感还没定的地方。
 
 ## 6 怎么开子代理
 
-**各方都适用**：一个包或子包一个子代理；同一时刻一个文件只有一个代理在写，简报写明邻居（WF-FLOW §2.1）；简报按 §8 模板写，入口由钩子注入（WF-ENTRY §2）；构建、import、烘焙、门禁和截图排队，一次一个（WF-BUILD §4）。
+**各方都适用**：一张施工任务单一个子代理；同一时刻一个文件只有一个代理在写，简报写明邻居（WF-FLOW §2.1）；简报按 §8 模板写，入口由钩子注入（WF-ENTRY §2）；构建、import、烘焙、门禁和截图排队，一次一个（WF-BUILD §4）。
 
 **Claude 侧**（主会话开）：用 Agent 工具在后台开，指定 `model: "opus"` 或 `"sonnet"`，`description` 的格式见 STD-CONVENTIONS §3.8，观察台按它把子代理对到在做的工作上；子代理的最终回复就是回报。开几个按任务量定，额度紧时少开（§9.1）。
 
@@ -112,29 +110,28 @@ Opus 贵，只用在观感还没定的地方。
 
 每次请求都要重读整段上下文，恢复一个已经很长的子代理去接新活，每一轮都在为旧历史付费，通常比新开一个只读这次需要的文档更贵。
 
-- **默认新开**：同包的下一张子单、新一阶段、无关的活一律新开；交接写在任务单"接续"段（§8.2）。子代理交回就结束，不待命，不占并发名额。
+- **默认新开**：同一组目录的下一张子单、新一阶段、无关的活一律新开；交接写在任务单"接续"段（§8.2）。子代理交回就结束，不待命，不占并发名额。
 - **返工也新开**：任务单写明改什么、改哪里。唯一例外是交回几分钟内、原子代理上下文在约 8 万 token 以内的几处小改。
 - **上下文封顶**：做到上下文约 40 万 token 或 150 次请求时，把已完成的部分提交推送，余下写进"接续"交回，由新子代理接着做；派单时按这个量拆单。
-- **恢复以后先对齐现状**：`git status`、`git log -5`，再核对任务涉及的契约、数据与相关包的新提交，不以记得的旧版本为准。
+- **恢复以后先对齐现状**：`git status`、`git log -5`，再核对任务涉及的契约、数据与相关模块的新提交，不以记得的旧版本为准。
 - **记录**：任务单"派出"行写子代理的名字和类型；回报最后一行的 token 数是交回时的上下文大小。
 
 ## 8 简报模板与"接续"段
 
 ### 8.1 简报模板
 
-只替换尖括号里的内容，只写本包特有的信息；入口与必守在 WF-ENTRY，守则在 WF-RULE，回报在 WF-COMMS §3.4。
+只替换尖括号里的内容，只写本次任务特有的信息；入口与必守在 WF-ENTRY，守则在 WF-RULE，回报在 WF-COMMS §3.4。
 
 ```
-你是《电光年华》的子代理，负责 <WP-xx 名称>。你向 <派你的一方> 回报。
+你是《电光年华》的子代理，负责 <施工队列行号与标题>。你向 <派你的一方> 回报。
 任务单：<绝对路径>；写在：<主检出或临时工作树的绝对路径>；允许改：<路径>。
 新文件：<进项目结构的新文件放哪、归哪个目录或文档、为什么；没有写"无">（只在这里列出的路径新建，WF-RULE §16）。
-读 PLAN-WP-LIST §1 包表里 <WP-xx> 的行（交付取"主线版"列），以及任务单。
 同时在干活的邻居：<名字：在做什么：改哪些路径>（没有写"无"；来源是施工队列的目录与谁两列和巡逻的"正被改着的目录"）。碰到共用边界先发消息问邻居，要改它的文件先停下报派单方。
 <本轮的特别说明，可空>
 完成后按 WF-ENTRY §2 收尾，回报交指挥。
 ```
 
-独占目录以 `ownership.json` 为准，子包只独占原包目录下的一个子目录（PLAN-WP-LIST §2）。
+允许改的路径以简报为准，目录来自施工队列行的"目录"列。
 
 ### 8.2 "接续"段
 
@@ -143,7 +140,7 @@ Opus 贵，只用在观感还没定的地方。
 - **接合**：部件装到宿主的哪个面、基点和安装方式；入口接哪一层；唯一的生产方和消费方；
 - **重建**：从哪个生成入口、哪份参数或数据重建；有没有本机生成或缓存；
 - **截图**：在哪个位姿拍的，是不是沙盒或替身；
-- **未完**：下一张子单要补的事，需要哪个包配合；
+- **未完**：下一张子单要补的事，需要哪一方配合；
 - **文字载体**：有牌面、题字、门牌的部件或楼，写明写什么字、批准留白的原因、在等什么。
 
 ## 9 额度与并发

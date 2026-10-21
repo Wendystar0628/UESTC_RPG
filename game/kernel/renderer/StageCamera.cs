@@ -3,7 +3,7 @@ using Godot;
 
 namespace Campus.Kernel.Renderer;
 
-/// <summary>Owns the engine camera. Pose/input and explicit listener policy remain with WP-06.</summary>
+/// <summary>Owns the engine camera. Pose/input and explicit listener policy remain with game/camera/.</summary>
 public partial class StageCamera : Node
 {
     public const float NearClip = .05f;

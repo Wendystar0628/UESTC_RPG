@@ -4,14 +4,12 @@ title: 工程总纲
 category: engineering
 summary: 工程域总纲：架构、性能、验收、发布、开发工具（内容预览）与扩展路线的通用原则和文档树
 keywords: [工程, 工程总纲, 文档树, ENG, 工程架构, 性能预算, 性能工程, 硬规则, 验收, 门禁, 发布, 内容预览, 扩展路线, 主线之后]
-owners: []
-paths: ["docs/engineering/**"]
-contributors: []
 depends: [CORE-INDEX]
 related: []
 contracts: []
 data: []
 gates: []
+paths: ["docs/engineering/**"]
 ---
 
 # ENG-INDEX · 工程总纲
@@ -30,7 +28,7 @@ gates: []
 
 ### 0.1 接入要点
 
-- **新增工程文档**：先判断是不是规范（归 STD-INDEX）或计划（归 PLAN-INDEX）。
+- **新增工程文档**：先判断是不是规范（归 STD-INDEX）。
 - **在本域新增文档**：主题文档写 `parent: ENG-INDEX`，列进本总纲 §1；子文档写 `parent: <主题文档编码>`，列进主题文档 §0，并列进本总纲 §1 那个主题下（STD-DOC §5.1、§7）。
 
 ## 1 文档树

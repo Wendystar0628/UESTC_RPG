@@ -15,9 +15,9 @@ using Campus.Gen.World;
 namespace Campus.Gen.Buildings;
 
 /// <summary>
-/// WP-14 generic building generator: every building that no zone module has claimed gets massing, storeys,
+/// game/gen/buildings/ generic building generator: every building that no zone module has claimed gets massing, storeys,
 /// bays and numbered windows from the facade rules (MAP-QSH-ADDITIONS, ART-MODELING).
-/// Pure .NET: reads only the world model, outputs contract geometry for the WP-02 baker.
+/// Pure .NET: reads only the world model, outputs contract geometry for the game/kernel/bake/ baker.
 /// </summary>
 
 [ContentModule("buildings")]
@@ -30,9 +30,9 @@ public sealed class BuildingsModule : IContentModule, IWindowNumberingProvider, 
     public IReadOnlyList<Claim> Claims { get; } = [];
 
     /// <summary>
-    /// Upper bounds per level cell, measured over the whole campus with the WP-10 openings and the WP-12 roof parts while
+    /// Upper bounds per level cell, measured over the whole campus with the game/gen/parts/openings/ openings and the game/gen/parts/roof/ roof parts while
     /// the exported fidelity data is still the all-K3 stub (heaviest cell: L0 ≈ 125.5k, L1 ≈ 123.3k triangles; campus
-    /// L0 ≈ 6.0M, L1 ≈ 3.6M, L2 ≈ 0.20M). Re-measure once WP-44 exports real zones: K1/K2 facades take the full parts.
+    /// L0 ≈ 6.0M, L1 ≈ 3.6M, L2 ≈ 0.20M). Re-measure once game/gen/walkable/ exports real zones: K1/K2 facades take the full parts.
     /// Draw calls: about fourteen material classes per merged block (the six of the shell, sash, curtain fabric, curtain
     /// rail and door astragal, and the roof plant's fence board, casing, curved shroud and pipe).
     /// </summary>
@@ -40,7 +40,7 @@ public sealed class BuildingsModule : IContentModule, IWindowNumberingProvider, 
     /// <summary>
     /// Which buildings this module generates: those whose massing and facade no zone module has claimed (the map's
     /// resolved claims ledger, BuildContext.ClaimedBy). A facade-claimed feature has no generic window block either, and
-    /// no WP-14 door, entrance parts or colliders at its interior-index anchors: the zone pack builds those doors.
+    /// no game/gen/buildings/ door, entrance parts or colliders at its interior-index anchors: the zone pack builds those doors.
     /// </summary>
     public static bool Unclaimed(BuildContext ctx, BuildingPlan plan) =>
         ctx.ClaimedBy(plan.Id, Aspects.Massing) is null && ctx.ClaimedBy(plan.Id, Aspects.Facade) is null;
@@ -75,13 +75,13 @@ public sealed class BuildingsModule : IContentModule, IWindowNumberingProvider, 
         return meshes.Count == 0 ? ContentOutput.Empty : new ContentOutput(meshes, []) { LooseWindows = windows, Diagnostics = notes };
     }
 
-    /// <summary>A facade preset key (WorldFeature.Facade) no WP-14 preset has: the family profile stays, logged as a warning.</summary>
+    /// <summary>A facade preset key (WorldFeature.Facade) no game/gen/buildings/ preset has: the family profile stays, logged as a warning.</summary>
     public static IEnumerable<BuildDiagnostic> UnknownPreset(BuildingPlan plan)
     {
         ArgumentNullException.ThrowIfNull(plan);
         if (plan.Feature.Facade is { Value: { Length: > 0 } key } && plan.Profile.Preset is null)
             yield return new BuildDiagnostic(DiagnosticLevel.Warning, "wp14.preset.unknown",
-                $"Facade preset '{key}' of {plan.Id.Value} ({plan.Key}) is not a WP-14 preset: the {plan.Style} family profile stays.", plan.Id);
+                $"Facade preset '{key}' of {plan.Id.Value} ({plan.Key}) is not a game/gen/buildings/ preset: the {plan.Style} family profile stays.", plan.Id);
     }
 
     /// <summary>
@@ -102,7 +102,7 @@ public sealed class BuildingsModule : IContentModule, IWindowNumberingProvider, 
             var above = decl.Outside.Y - world.Terrain.HeightAt(decl.Outside.X, decl.Outside.Z);
             var expected = BuildingPlanner.DeckUnder(world, plan.Id, new(decl.Outside.X, decl.Outside.Z), decl.Outside.Y) is { } deck
                 ? ctx.ClaimedBy(deck, Aspects.Massing) is { } builder ? $"{builder}, which builds the deck block {deck.Value}"
-                    : $"no one yet: the deck block {deck.Value} is a plain WP-14 building"
+                    : $"no one yet: the deck block {deck.Value} is a plain game/gen/buildings/ building"
                 : (ctx.ClaimedBy(plan.Id, Aspects.Ground) ?? ctx.ClaimedBy(plan.Id, Aspects.Props)) is { } around ? $"{around}, which claims the ground round it"
                 : plan.Feature.Zone is { } zone ? $"the {zone.Value} zone pack (zoning)"
                 : "no one yet (undecided)";
@@ -113,7 +113,7 @@ public sealed class BuildingsModule : IContentModule, IWindowNumberingProvider, 
     }
 
     /// <summary>
-    /// The map-wide window allocation (contract-29), called once per map by the kernel before any Build: WP-14's
+    /// The map-wide window allocation (contract-29), called once per map by the kernel before any Build: game/gen/buildings/'s
     /// generic grids with each claimed layout replacing its whole feature. Pure: no geometry, IO or cached state.
     /// </summary>
     public WindowNumberingSnapshot PrepareWindowNumbering(BuildContext prepass, IReadOnlyList<ClaimedWindowLayout> validatedLayouts) =>
@@ -121,7 +121,7 @@ public sealed class BuildingsModule : IContentModule, IWindowNumberingProvider, 
 
     /// <summary>
     /// Every generic window of the map from the published snapshot, without geometry: the same declarations as the
-    /// L0 cells' LooseWindows. WP-14 declares no claimed layouts (DescribeWindowLayouts stays empty).
+    /// L0 cells' LooseWindows. game/gen/buildings/ declares no claimed layouts (DescribeWindowLayouts stays empty).
     /// </summary>
     public WindowMetadata DescribeWindows(BuildContext context)
     {
@@ -143,7 +143,7 @@ public sealed class BuildingsModule : IContentModule, IWindowNumberingProvider, 
 
     /// <summary>
     /// Wall colliders along the skin (SYS-WALK); declared open entrances cut their authored doorway range,
-    /// while closed entrances stay DoorClosed. The WP-11 landings, slopes and steps bring their own colliders.
+    /// while closed entrances stay DoorClosed. The game/gen/parts/circulation/ landings, slopes and steps bring their own colliders.
     /// Collision cells are fixed 64 m cells.
     /// </summary>
     public IReadOnlyList<Collider> Collide(BuildContext ctx, TileKey tile)

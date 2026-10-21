@@ -36,7 +36,7 @@ def limits():
 
 
 LIMIT = limits()
-REGISTRY = {'REG-DECISIONS', 'REG-GLOSSARY', 'PLAN-WP'}  # 登记类（连同它们的子文档）：每条一行，不量全文与单节
+REGISTRY = {'REG-DECISIONS', 'REG-GLOSSARY'}  # 登记类（连同它们的子文档）：每条一行，不量全文与单节
 
 
 def registry(code):

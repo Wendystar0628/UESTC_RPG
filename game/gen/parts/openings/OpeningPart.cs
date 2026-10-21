@@ -6,7 +6,7 @@ using Campus.Contracts.Parts;
 namespace Campus.Gen.Parts.Openings;
 
 /// <summary>
-/// Plumbing shared by every WP-10 part: semantic LODs, bounds, sockets and parameter checks.
+/// Plumbing shared by every game/gen/parts/openings/ part: semantic LODs, bounds, sockets and parameter checks.
 /// A level that adds nothing returns an empty geometry: the level keeps no copy of the part (ART-MODELING).
 /// </summary>
 public abstract class OpeningPart<TParams> : IPartDef<TParams> where TParams : BoxPartParams

@@ -5,13 +5,12 @@ category: maps
 parent: MAP-QSH-CORE
 summary: 核心区行走主网、能看不能进的阻挡、可进入的室内、涉水区、点位、节奏与锚点、声音要点
 keywords: [核心区行走, 核心区主网, 能看不能进, 涉水区, 核心区点位, P01, P02, P03, P04, P05, P06, P16, R3 西湖跨湖, 导览亭 A02, 导览桩 A07, 手工发声器, 喷泉声, 堰, 天鹅屋声, 草阶看台]
-owners: [WP-16]
-contributors: [WP-13, WP-36, WP-43, WP-44, WP-48c, WP-53b]
 depends: [CORE-INDEX, MAP-QSH-CORE, SYS-WALK, WLD-INTERIORS, SYS-AUDIO]
 related: [MAP-QSH-INTERIORS-LIBRARY, MAP-QSH-SOUTH, MAP-QSH-WEST, UI-NAV, SYS-ATLAS]
 contracts: []
 data: []
 gates: [G15, G21]
+paths: ["game/gen/maps/qingshuihe/core/**", "game/data/maps/qingshuihe/world/core.terrain.json", "game/data/maps/qingshuihe/world/core.json"]
 ---
 
 # MAP-QSH-CORE-WALK · 核心区行走与声音
@@ -29,9 +28,9 @@ gates: [G15, G21]
 
 ### 0.1 接入要点
 
-- **WP-36（点位与跳转） 定点位时**：P01、P02、P05、P06、P08 的落点按 §2；P03 仅旁观
-- **平面地图锚点（WP-13（街道家具）、WP-48c（标记、锚点）、WP-44（可行走范围、边界与安全点））**：A02 导览亭、A07 导览桩按 §2 摆放；本区开放入口只画门口标记，不另设锚点
-- **声音（WP-53b（环境声））**：喷泉、两处堰、天鹅屋是手工发声器，清单待建（§3）
+- **点位与跳转（UI-NAV-WAYPOINTS） 定点位时**：P01、P02、P05、P06、P08 的落点按 §2；P03 仅旁观
+- **平面地图锚点（街道家具（WLD-LIFE-STREET）、标记、锚点（SYS-ATLAS-TRAVEL）、可行走范围、边界与安全点（SYS-WALK-BOUNDS））**：A02 导览亭、A07 导览桩按 §2 摆放；本区开放入口只画门口标记，不另设锚点
+- **声音（环境声（SYS-AUDIO-AMBIENCE））**：喷泉、两处堰、天鹅屋是手工发声器，清单待建（§3）
 
 ## 1 行走：主网、挡路物与开放入口（主线之后）
 

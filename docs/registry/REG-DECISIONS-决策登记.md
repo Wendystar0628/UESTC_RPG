@@ -5,10 +5,8 @@ category: registry
 parent: REG-INDEX
 summary: 全项目已定决策登记的入口：编号、状态、细则所在的写法与归卷规则；决策本体分世界与画面、系统与工程、协作与流程三卷
 keywords: [决策, D 编号, 决策登记, 生效, 待原型验证, 细则所在, 推翻决策, 归卷, 新增决策, 登记新决策]
-owners: []
-contributors: []
 depends: [CORE-INDEX]
-related: [STD-CONVENTIONS, REG-GLOSSARY, PLAN-WP, ENG-GATES, ENG-ARCH, ENG-BUDGET, ENG-PERF, ENG-ROADMAP]
+related: [STD-CONVENTIONS, REG-GLOSSARY, ENG-GATES, ENG-ARCH, ENG-BUDGET, ENG-PERF, ENG-ROADMAP]
 contracts: []
 data: []
 gates: []
@@ -34,7 +32,7 @@ gates: []
 | --- | --- | --- |
 | REG-DECISIONS-WORLD 世界与画面决策 | 作品 PRD、画面 ART、世界 WLD、地图 MAP | 作品定位与范围、世界与地图、美术风格 |
 | REG-DECISIONS-SYSTEMS 系统与工程决策 | 系统 SYS、界面 UI、工程 ENG | 界面、存档、音频、性能与画面设置、工程、地图与行走、时间季节天气 |
-| REG-DECISIONS-PROCESS 协作与流程决策 | 计划 PLAN、协作 WF、规范 STD、登记 REG | 流程 |
+| REG-DECISIONS-PROCESS 协作与流程决策 | 协作 WF、规范 STD、登记 REG | 流程 |
 
 ### 0.1 接入要点
 

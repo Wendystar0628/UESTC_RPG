@@ -5,13 +5,12 @@ category: systems
 parent: SYS-WALK
 summary: 可行走范围与禁行区、边界收口与隐形墙、楼内的门与电梯（含自动门运行时）、涉水游泳回位与安全点、行走走廊与路线、碰撞生成与就绪、导航图
 keywords: [可行走范围, 可行走数据, 禁行区, 高度场地面, 边界收口, 隐形墙, 校界缓停, 碰撞顶加高, 水平外扩, 安全点, 回位, 涉水, 开放泳区, 游泳, 碰撞就绪, 自动门, 电梯关门换位, 行走走廊, 推荐路线, 导航图, 路线预览, 所在空间, 碰撞级 C, SurfaceTag, FootMat, WalkClass, Collider, ICollisionWorld]
-owners: [WP-43, WP-44]
-contributors: [WP-00, WP-01, WP-07, WP-08, WP-10, WP-11, WP-13, WP-15, WP-16, WP-17, WP-18, WP-20, WP-23, WP-24, WP-28, WP-30, WP-31a, WP-31b, WP-31c, WP-35, WP-36, WP-42, WP-47, WP-48c, WP-50, WP-51, WP-53d, WP-54b]
 depends: [SYS-WALK, CORE-INDEX, ENG-ARCH, ENG-BUDGET, ENG-PERF, SYS-BORDER, WLD-INTERIORS, SYS-AUDIO]
 related: [SYS-VIEW, SYS-ATLAS, SYS-WALK-BIKE, ART-FIDELITY, WLD-TERRAIN, WLD-WATER, WLD-LIFE, MAP-QSH-ADDITIONS, ENG-GATES]
 contracts: [WalkClass, SurfaceTag, Collider, WallCollider, RampCollider, PostCollider, BoxCollider, SlabCollider, HeightFieldCollider, SlopedWallCollider, SweepHit, SupportHit, ICollisionWorld, NavNodeId, NavSpace, NavEdgeKind, NavFlags, DoorKind, DoorState, NavNode, NavEdge, NavPortal, NavFloorGraph, NavQuery, NavPath, INavGraph]
 data: []
 gates: [G4, G15]
+paths: ["game/kernel/collision/**", "game/gen/collision/**", "game/kernel/stream/CollisionMountWork.cs", "game/kernel/stream/CollisionMountWork.cs.uid", "game/kernel/stream/CollisionTileParticipant.cs", "game/kernel/stream/CollisionTileParticipant.cs.uid"]
 ---
 
 # SYS-WALK-BOUNDS · 可行走范围、边界与碰撞
@@ -91,7 +90,7 @@ gates: [G4, G15]
 
 - **触发**：观者进入门洞两侧触发区并正朝门走就推开；触发半径随速度放大，保证观者到达门洞前门已开过 75°（取值见契约）。旁观镜头以 ≤ 6 m/s 穿过时也推开，更快时不触发。
 - **动作**：推开约 0.55 s 到 90°，先快后慢、一拍二步进；门永远朝离开观者的方向开，不会扫向观者。观者离开扫掠区约 0.8 s 后闭门器回关，缓摆 2.5–3.5 s 再落锁（防火门更重）；回关途中观者走近则立即重开，观者在扫掠区里不回关，所以不会把人关在门扇里。
-- **碰撞**：门扇转动和停在开位时没有碰撞，关好才恢复与门洞同大的薄盒；运行时门体不进烘焙碰撞（WP-43（碰撞代理生成与流式加载））。
+- **碰撞**：门扇转动和停在开位时没有碰撞，关好才恢复与门洞同大的薄盒；运行时门体不进烘焙碰撞（碰撞代理生成与流式加载（SYS-WALK-BOUNDS））。
 - **声音**：推开时推杆锁"咔"加风压，关好落锁"啪嗒"（防火门更重），停在开位和回关途中无声，不出电子提示音（SYS-AUDIO-FOLEY §1.5）；声学门户的开度读 `IInteriorDoors`，门一关上门后的声音变闷（SYS-AUDIO-FOLEY §2）。
 - **状态**：静止状态（敞开、能推开、锁着）在 `build()` 时定死，不进存档，读档和切图后直接关好。
 - **上限**：当前楼每层自动门 ≤ 40 扇，同时在动 ≤ 4 扇。

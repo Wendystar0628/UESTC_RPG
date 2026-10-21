@@ -56,7 +56,7 @@ public sealed class EntranceTests
         var lab = set.Plans.Single(p => p.Key == "t:lab").Entrances.Single();
         var labDoor = set.Plans.Single(p => p.Key == "t:lab").DoorOf(lab);
         AssertThat(lab.Anchor == "lab.porch" && !lab.Landing && MathF.Abs(labDoor.Y0 - 1.2f) < TestTolerance.Position && labDoor.Y1 - labDoor.Y0 >= 2f).OverrideFailureMessage("Expected: " + ("a raised anchor opens a door at its floor, onto the porch, without a landing")).IsTrue();
-        AssertThat(EntranceKit.Pieces(set.Plans.Single(p => p.Key == "t:lab"), lab).Count == 0).OverrideFailureMessage("Expected: " + ("no WP-14 landing under a porch")).IsTrue();
+        AssertThat(EntranceKit.Pieces(set.Plans.Single(p => p.Key == "t:lab"), lab).Count == 0).OverrideFailureMessage("Expected: " + ("no game/gen/buildings/ landing under a porch")).IsTrue();
         foreach (var key in new[] { "t:low", "t:wing" })
         {
             var plan = set.Plans.Single(p => p.Key == key);
@@ -83,7 +83,7 @@ public sealed class EntranceTests
     [TestCategory("Slow")]
     public void ClaimedFacadesOpenNoDoors()
     {
-        // WP-14 opens doors only on the facades it generates: a zone pack's Facade or Massing claim takes the door, its
+        // game/gen/buildings/ opens doors only on the facades it generates: a zone pack's Facade or Massing claim takes the door, its
         // landing, canopy and doorway colliders with it (the zone pack builds that door).
         var features = new[] { WorldFeatureFixture.Create("t:dorm", "building", new PolygonGeometry(new PolygonRings(Rect(0, 0, 60, 18))), props: "{\"category\":\"residence\"}", height: 19.8f, storeys: 6), WorldFeatureFixture.Create("t:lab", "building", new PolygonGeometry(new PolygonRings(Rect(200, 0, 40, 16))), props: "{\"category\":\"research\"}", height: 15.6f, storeys: 4) };
         var world = World(Entrances(Anchor("t:dorm", "dorm.south", new(21.3f, 0f, 0f), 0f)), features);
@@ -91,15 +91,15 @@ public sealed class EntranceTests
         var dorm = BuildingSet.For(Ctx(world, 2u)).Plans.Single(p => p.Key == "t:dorm");
         var tile = dorm.Tile(LodLevel.L0);
         AssertThat(dorm.Entrances.Single().Anchor == "dorm.south" && module.Collide(Ctx(world, 2u), tile).OfType<WallCollider>().Any() &&
-            !module.Collide(Ctx(world, 2u), tile).OfType<WallCollider>().Any(w => w.Tag == SurfaceTag.DoorClosed)).OverrideFailureMessage("Expected: " + ("unclaimed, WP-14 opens the anchor door")).IsTrue();
+            !module.Collide(Ctx(world, 2u), tile).OfType<WallCollider>().Any(w => w.Tag == SurfaceTag.DoorClosed)).OverrideFailureMessage("Expected: " + ("unclaimed, game/gen/buildings/ opens the anchor door")).IsTrue();
         foreach (var aspect in new[] { Aspects.Facade, Aspects.Massing })
         {
             var ctx = Prepared(new BuildContext { CodeHash = "fixture", SourceInputs = RealMapFixture.WindowInputs(TestMap.Id), WindowNumbering = new((TestMap).Id, new string('0', 64), []), Catalog = Campus.Contracts.Tests.PaletteFixture.Catalog, World = world, Map = TestMap, WorldSeed = 2u, ClaimedBy = (f, a) => a == aspect && f.Value == "t:dorm" ? "zone.south" : null });
-            AssertThat(!module.Tiles(ctx).Contains(tile) && module.Build(ctx, tile, LodLevel.L0) == ContentOutput.Empty && module.Collide(ctx, tile).Count == 0).OverrideFailureMessage("Expected: " + ($"{aspect} claimed: no door, landing, canopy or collider of WP-14")).IsTrue();
+            AssertThat(!module.Tiles(ctx).Contains(tile) && module.Build(ctx, tile, LodLevel.L0) == ContentOutput.Empty && module.Collide(ctx, tile).Count == 0).OverrideFailureMessage("Expected: " + ($"{aspect} claimed: no door, landing, canopy or collider of game/gen/buildings/")).IsTrue();
             AssertThat(module.Build(ctx, BuildingSet.For(Ctx(world, 2u)).Plans.Single(p => p.Key == "t:lab").Tile(LodLevel.L0), LodLevel.L0).Meshes.Count > 0).OverrideFailureMessage("Expected: " + ("the neighbour stays")).IsTrue();
         }
 
-        // The real campus under every zone pack's claims (the kernel's ledger rebuilt from the content modules): WP-14's
+        // The real campus under every zone pack's claims (the kernel's ledger rebuilt from the content modules): game/gen/buildings/'s
         // authored openings at open anchors remain clear. The library (16b), Xuanbang's clock tower
         // (18b) and, since 18c2, the gym deck are claimed: their doors are the zone packs'.
         var real = RealMapFixture.Load().World;
@@ -172,7 +172,7 @@ public sealed class EntranceTests
         AssertThat(MathF.Abs(flight.Height - 1.05f) < TestTolerance.Position && flight.Steps == 7 && flight.Variation == 0).OverrideFailureMessage("Expected: " + ($"1.05 m in 7 risers with cheek walls ({flight.Steps})")).IsTrue();
         var sink = new GeometrySink(Campus.Contracts.Tests.PaletteFixture.Catalog);
         EntranceKit.Build(sink, steps, LodLevel.L0);
-        AssertThat(sink.Finish().Any(b => b.Material.Spec.Normal == ToonNormal.Smooth && b.Material.Spec.Lit.Value == "frame.alu.lit")).OverrideFailureMessage("Expected: " + ("handrails from 0.6 m (WP-11)")).IsTrue();
+        AssertThat(sink.Finish().Any(b => b.Material.Spec.Normal == ToonNormal.Smooth && b.Material.Spec.Lit.Value == "frame.alu.lit")).OverrideFailureMessage("Expected: " + ("handrails from 0.6 m (game/gen/parts/circulation/)")).IsTrue();
         foreach (var lod in Levels) foreach (var b in new BuildingsModule().BuildOne(dorm, set.Blocks[0], lod, Campus.Contracts.Tests.PaletteFixture.Catalog)) b.ValidateVertexData();
         var colliders = new BuildingsModule().Collide(Ctx(world, 2u), dorm.Tile(LodLevel.L0));
         AssertThat(colliders.OfType<RampCollider>().Any(r => r.Stair is { Count: 7 })).OverrideFailureMessage("Expected: " + ("the flight walks as one stair ramp")).IsTrue();

@@ -11,7 +11,7 @@ namespace Campus.Gen.Parts.Roof;
 /// </summary>
 public static class RoofStyle
 {
-    // ---- Colour families (ART-STYLE). WP-12 owns ids 248–251 in style/palette/ext/roof_equipment.json; the rest are core names. ----
+    // ---- Colour families (ART-STYLE). game/gen/parts/roof/ owns ids 248–251 in style/palette/ext/roof_equipment.json; the rest are core names. ----
     /// <summary>Off-white casings: air-conditioner body, dish and panel antennas.</summary>
     public const string CasingWhite = "wall.greyWhite";
     /// <summary>Galvanised and stainless steel: lightning strip, tank shell, grille frame, masts.</summary>
@@ -51,7 +51,7 @@ public static class RoofStyle
     public const float StripSupportWidth = 0.04f;
     public const float StripSupportInset = 0.15f;
 
-    // ---- Air-conditioner outdoor unit (real size; about 20% smaller and one value step lighter than WP-14's stand-in) ----
+    // ---- Air-conditioner outdoor unit (real size; about 20% smaller and one value step lighter than game/gen/buildings/'s stand-in) ----
     public const float AcFanRadiusRatio = 0.36f;
     public const float AcFanProud = 0.012f;
     public const float AcFanCentreRatio = 0.36f;

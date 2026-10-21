@@ -5,13 +5,12 @@ category: systems
 parent: SYS-INDEX
 summary: 两种观察模式总述、旁观漫游的操作与活动范围、初始位置、镜头规则、3D 与平面地图的分工
 keywords: [旁观模式, 观察模式, 飞行速度档, 视场角, 鼠标灵敏度, 活动范围, 初始位置, 镜头不会自己动, 自动运镜, 命令行参数, ICameraRig, Pose]
-owners: [WP-06, WP-01]
-contributors: [WP-00, WP-04, WP-08, WP-24, WP-35, WP-36, WP-49, WP-51, WP-53, WP-54a]
 depends: [ENG-ARCH, ENG-PERF, UI-NAV, SYS-WALK, SYS-TITLE, WLD-OUTSKIRTS]
 related: [WLD-OUTSKIRTS-DIORAMA, SYS-MOTION, ENG-GATES, ART-FIDELITY, ENG-BUDGET, SYS-TIME, SYS-WEATHER, SYS-GRAPHICS, UI-VISUAL, SYS-ATLAS, SYS-SAVE, SYS-MAPS, SYS-AUDIO, ENG-RELEASE]
 contracts: [ICameraRig, Pose]
 data: []
 gates: [G1, G2, G7]
+paths: ["game/data/pipeline-combinations.json", "game/style/shaders/globals.gdshaderinc.uid", "game/style/shaders/globals.gdshaderinc", "game/kernel/renderer/**", "game/kernel/diagnostics/**", "game/kernel/inspect/**", "game/kernel/frame/**", "game/kernel/boot/**", "game/camera/**", "game/stage/**"]
 ---
 
 # SYS-VIEW · 观察模式与旁观漫游

@@ -8,7 +8,7 @@ public static class PartMaterials
     public static PaletteToken Lit(string family) => new(family + ".lit");
     public static PaletteToken Shade(string family) => new(family + ".shade");
 
-    // ---- Material classes: the non-colour ToonSpec fields. Trim, Metal, Grille and Glass match WP-14's classes so they share material IDs. ----
+    // ---- Material classes: the non-colour ToonSpec fields. Trim, Metal, Grille and Glass match game/gen/buildings/'s classes so they share material IDs. ----
     // Each class takes a colour family, or a host ToonSpec whose Lit/Shade pair it keeps (parts coloured by their host).
     /// <summary>Bulky equipment bodies: chamfer highlight, building line.</summary>
     public static ToonSpec Casing(string family) => Casing(Pair(family));

@@ -5,13 +5,12 @@ category: workflow
 parent: WF-INDEX
 summary: 所有会话和子代理都要守的规则：不过度工程化、不干等、文件操作、git 与直接改主线、主线优先、测试最小、少打架、一次性产物、bug 分级、精度按 demo 阶段定
 keywords: [全员守则, 不过度工程化, 不向作者出选项, 不预判时间, 不短轮询, 不干等, 不重复复核, 文件操作, 删除规则, git, 直接改主线, 只提交自己的文件, 出了问题向前修不回滚, 不 stash, 主线优先, 测试最小, 少和别人打架, 一次迁完, 拿不准就问, 一次性产物, 用完就删, bug 分级, 阻断, 先提交后修, 修不收敛就停, 数量级判断, demo 阶段, 精度与画面相称]
-owners: [WP-00]
-contributors: []
 depends: [CORE-INDEX]
 related: [WF-ENTRY, WF-COMMS, WF-BUILD, STD-DOC, WF-FLOW, ENG-GATES, ENG-ARCH, STD-CODE]
 contracts: []
 data: []
 gates: []
+paths: ["scripts/requirements.*", "game/testing/**", "game/data/build-code-fingerprints.json", "game/gen/maps/qingshuihe/Campus.Gen.Maps.Qingshuihe.csproj", "game/gen/sites/**", ".collab/tools/**", "dashboard/**", "game/gen/Campus.Gen.csproj", "game/kernel/map/data/**", "game/kernel/renderer/geometry/**", "game/kernel/renderer/render-state/**", "game/kernel/instances/**", "game/gen/geometry/**", "scripts/gates/arch/Campus.Arch.Tests.csproj", "scripts/godot-api/ApiDump/ApiDump.csproj", "game/contracts/Runtime/Campus.Contracts.Runtime.csproj", "game/contracts/Campus.Contracts.csproj", "game/data/maps/*/interiors.json", "game/Campus.Gen.Tests.csproj", "game/Campus.Tests.csproj", "game/contracts/.gdignore", "game/export_presets.cfg", "game/contracts/*.csproj", "game/kernel/registry/**", "game/data/rulesets/**", "scripts/gates/arch/**", "**/Directory.*.targets", "game/Campus.csproj", "game/gen/.gdignore", "game/project.godot", "Directory.*.targets", "game/kernel/stubs/**", "scripts/godot-api/**", "**/Directory.*.props", "scripts/gate.ps1", "third_party.json", "Directory.*.props", "docs/godot-api/**", "game/contracts/**", ".gitattributes", "scripts/build/**", "scripts/setup/**", "game/gen/bakeinput/assembly/**", "scripts/docs/**", "budgets.json", "game/addons/**", "global.json", "version.txt", "scripts/lib/**", ".gitignore", ".ignore", "AGENTS.md", "CLAUDE.md", "README.md", "启动游戏.cmd", "**/*.csproj", "LICENSE", "tools/**", "**/*.sln", "game/.editorconfig", "scripts/git-hooks/**"]
 ---
 
 # WF-RULE · 全员守则
@@ -83,7 +82,7 @@ gates: []
 
 ## 8 主线优先（D-168）
 
-- 主线的定义见 PRD-SCOPE §3。主线闸口（PLAN-WP §1）通过之前，每个包只交主线版：能接进主线、跑得通、不崩、不挡路。
+- 主线的定义见 PRD-SCOPE §3。主线闸口（WF-STATUS §1）通过之前，每项活只交主线版：能接进主线、跑得通、不崩、不挡路。
 - **主线版可以**：用简化几何或体块、默认参数、占位贴图与占位声音；只做默认状态和最常见的组合；跳过边角情况。
 - **主线版不可以**：改动或绕开契约、数据格式和目录归属；留临时接口；违反 INV（PRD-INVARIANTS）；只有 INV-11 的细节密度和 INV-12 的性能数值留到主线闸口之后验收。
 - **不为细节阻塞推送**：细节问题写进回报，留到主线闸口之后统一处理；核心体验（主线流程、行走、存档、画面没有明显卡顿）的问题优先修。
@@ -92,7 +91,7 @@ gates: []
 
 - **只做认为最有必要的测试**：时间花在实现上，不按上架游戏的标准测。经常跑、几乎从不失败的检查不该每次跑；不为一批改动堆测试。
 - 推送前由指挥统一编译后跑几分钟的快检（WF-FLOW §3.1）；改动碰到启动、行走、存档时加跑对应的核心专项；其余测试全部留到大量开发之后集中测一次，由主会话发起。排队规则见 WF-BUILD §4，判据与命令见 ENG-GATES §1。
-- **不重跑**：同一个包上次门禁全过、之后没改相关文件，不再原样重跑。
+- **不重跑**：同一组改动上次门禁全过、之后没改相关文件，不再原样重跑。
 - **新增测试有门槛**：测试只为守契约、守核心体验、守回归三种理由而写，派单默认写"不新增测试"；预算与写法见 ENG-GATES §1.1、STD-CODE §6（D-246）。
 - 开发中用 `--pose` 截图看效果不算门禁；只改文档的不跑门禁，跑 `check-docs.py`。测试代码怎么写见 STD-CODE §6。
 
@@ -102,14 +101,14 @@ gates: []
 - **开工和被恢复时先看谁动了什么**：先 `git status`、`git log -5`，再读简报里的邻居栏；之后每开始下一步之前，别人动了你要碰的文件就先停下问。
 - **动可能撞车的事之前先看一眼对方**（D-275）：两位指挥与各自的子代理在同一个主检出与同一套协作文件上并行，下面这些动作先看对方最近的来信、在做的行、未提交与未推送的改动和构建锁（`python -I -X utf8 .collab/tools/watch/peek.py` 一次列出，钩子在动手时提醒），撞上了先写信约定先后：
   - **改施工队列**：在同一次读改写里现读"下一个编号"和对方在做的行，断言要用的号没被占用，替换编号失败就报错（WF-STATUS §2）。
-  - **改共享文件**（`ownership.json`、`third_party.json`、`docs/ROUTES.json` 与 `SECTIONS.md` 的生成、钩子与巡逻脚本、观察台数据契约、契约源码）：先看对方的未提交改动和最近来信里有没有它；有就约定谁先改，另一方等对方推送后再动。
+  - **改共享文件**（`scripts/gates/shader-whitelist.json`、`third_party.json`、`docs/ROUTES.json` 与 `SECTIONS.md` 的生成、钩子与巡逻脚本、观察台数据契约、契约源码）：先看对方的未提交改动和最近来信里有没有它；有就约定谁先改，另一方等对方推送后再动。
   - **在主检出提交、推送、变基、合并或检出**：先看 `git status` 里对方的暂存与未提交改动、`git log origin/main..main` 里对方未推送的提交；只带自己的路径，对方有在途改动时不变基、不检出、不用暂存（stash）（§7）。
   - **跑重活**（收口预烘、固定机位截图、门禁、编译）：先看构建锁和主检出 `game/` 下有没有对方的在途改动；对方在集成就等它推送（WF-BUILD §4）。
   - **起停后台进程**（常驻采集、本地服务、来信监视）：先看是谁起的、对方是否在依赖；只停自己起的，按进程号停，不按窗口标题或进程名成批结束。
   - **删文件、目录与工作树**（一次性产物、任务单、交接文件）：先看对方的任务单和来信有没有引用它（§6、§13）。
   - **改对方在用的接口或数据格式**：先写信，等回信或同批改，不先改后通知。
-- **只往自己的文件里加**：多包共用的数据只加本包条目，世界文件按区、按包分文件（STD-CONVENTIONS §3.1）；改动尽量落在本包独占目录。
-- **测试只锁本包自己的输出**，以及"原有条目的字节与顺序不变"；不锁别的包会合法增减的全局集合与指纹。
+- **只往自己的文件里加**：多个模块共用的数据只加本模块条目，世界文件按区、按内容分文件（STD-CONVENTIONS §3.1）；改动只落在简报允许的路径。
+- **测试只锁本模块自己的输出**，以及"原有条目的字节与顺序不变"；不锁别的模块会合法增减的全局集合与指纹。
 - **改架构或实现新设计时，一次迁完、不留旧的（D-209）**：改的一方在同一批改动里把所有使用方迁到新设计，删掉旧设计、旧代码、旧测试和旧文档，禁止新旧多套并存；推送前跑全仓 G2，回报里列出迁了哪些使用方。下游文件正被别人改着时也不写过渡兼容层：等对方交回后一次迁完，或把迁移并给同一个人；牵涉下游包归属的先找 Codex 主线定迁移方案。已冻结的契约组按 WF-BUILD §3 申请。
 - **小步交付**：小步提交，测完就推；一块能独立成立的先推，不攒大批。
 - **评审定下的通用规则以规范文档为准**：开工时按文档做；决策编号（D-nnn）由主会话统一分配，需要新决策在回报里提。
@@ -160,9 +159,9 @@ gates: []
 
 新建文件、往文件里加一块新内容、改动文件，都同时在维护整个代码与文档体系；只把单点需求写对、却随手落在某个位置，就是在给结构打补丁。
 - **管哪些文件**：只管进仓库、属于项目结构的文件：`game/`、`pipeline/`、`scripts/`、`docs/`、`dashboard/`、`tools/`、`.collab/tools/`。为改文件、查数据临时写的脚本和中间文件是一次性产物，放会话临时目录或 `output/`（§6、§13），不查结构、不登记；来信、任务单这类协作文件按 WF-COMMS §1 放。
-- **结构图**：文档是文档树（CORE-INDEX §1 → 域总纲 → 主题文档 → 子文档，STD-DOC §1、§7）；代码是模块分层（ENG-ARCH §1）加 `ownership.json` 的路径归属；脚本按 `scripts/` 现有的子目录。
+- **结构图**：文档是文档树（CORE-INDEX §1 → 域总纲 → 主题文档 → 子文档，STD-DOC §1、§7）；代码是模块分层（ENG-ARCH §1）加文档文件头的 `paths` 路径归属；脚本按 `scripts/` 现有的子目录。
 - **先定位再动笔**：动笔前先回答"它在结构图里归哪"。已有家就写进去，先复用再新写（STD-CODE §3），文档放哪见 STD-DOC §5.2；只是沾边的不算家。
-- **找不到家先改结构**：要新目录、新文档、新模块或新的公共层，先报主会话定，再在 `ownership.json` 或文档树里登记，最后写内容；不为一次需求开平行文件，不随手找路径生成。
+- **找不到家先改结构**：要新目录、新文档、新模块或新的公共层，先报主会话定，再在相关文档文件头的 `paths` 或文档树里登记，最后写内容；不为一次需求开平行文件，不随手找路径生成。
 - **不用补丁式命名**：文件和目录名不用 misc、util、utils、helper、helpers、temp、tmp、new、v2、old、backup、legacy、compat、patch、fix 这类词；文档不开"补充""增补""新版"；名字说职责（STD-CONVENTIONS §3）。
 - **改完同批维护**：新东西登记进索引或归属表；被它取代的、和它重复的同批删掉或合并，引用改到新位置。
 - **看到的死代码、旧设计和混乱**（D-273）：工作中看到的没有使用方的代码、测试、数据、脚本与文档段落，已被取代的旧设计、旧路径、旧说法，以及重复、放错层，量小当批删掉或理顺、同批改引用，量大登记成队列行。删前按名字 grep 全仓，再看路由表、归属表与钩子，确认真没有使用方；在别人正在改的目录里的，写信给负责方，不自己动。不视而不见，也不借机改本单以外的行为。

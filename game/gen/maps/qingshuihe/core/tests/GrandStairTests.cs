@@ -58,7 +58,7 @@ public sealed class GrandStairTests
         var p = (DoorParams)door.Params;
         AssertThat(p.OpenAngleDeg >= 89f && p.Leaves == 4 && p.Width / p.Leaves * 2 > 1.1f).OverrideFailureMessage("two inner leaves fixed open, clear width over 1.1 m").IsTrue();
         foreach (var part in new[] { PartCatalog.EntranceMat, PartCatalog.OpenSign, PartCatalog.EntranceLamp })
-            AssertThat(output.Parts.All(x => x.Part.Value != part)).OverrideFailureMessage($"no {part} of the zone's own (WP-13 places the entrance kit)").IsTrue();
+            AssertThat(output.Parts.All(x => x.Part.Value != part)).OverrideFailureMessage($"no {part} of the zone's own (game/gen/furniture/ places the entrance kit)").IsTrue();
         AssertThat(output.Parts.Count(x => x.Part.Value == PartCatalog.DoorFire) == 2).OverrideFailureMessage("two closed service doors").IsTrue();
         AssertThat(output.Emitters is null or { Count: 0 }).OverrideFailureMessage("no lamp marker of the zone's own").IsTrue();
         // No glass in the door bay below the door transom: the doorway is open.
@@ -122,7 +122,7 @@ public sealed class GrandStairTests
         var entrance = world.Interiors.Get(CoreIds.Library)!.Entrances.Single(e => e.Open && e.Id == "lib.main");
         var layout = Campus.Gen.Furniture.FurniturePlanner.Build(Campus.Gen.Furniture.Tests.FurnitureTestSupport.GlobalInputs,
             Campus.Contracts.Tests.PaletteFixture.Catalog, world, ClaimedBy);
-        AssertThat(layout.Items.Count(i => i.Key.StartsWith("door:" + entrance.Id + ":", StringComparison.Ordinal)) == 3).OverrideFailureMessage("WP-13 places mat, sign and lamp at the front door").IsTrue();
+        AssertThat(layout.Items.Count(i => i.Key.StartsWith("door:" + entrance.Id + ":", StringComparison.Ordinal)) == 3).OverrideFailureMessage("game/gen/furniture/ places mat, sign and lamp at the front door").IsTrue();
     }
 
     [TestCase, TestCategory(TestReason.Contract)]

@@ -13,8 +13,8 @@ using FacadeRules = Campus.Gen.Buildings.Rules.FacadeRules;
 namespace Campus.Gen.Maps.Qingshuihe.South.Liren;
 
 /// <summary>
-/// Liren building (MAP-QSH-SOUTH). Blocks A and B stay with WP-14 (4 storeys, white family set in world/south.json);
-/// this site claims the connector entity, whose OSM parts WP-14 would extrude solid and so close the corner gateway:
+/// Liren building (MAP-QSH-SOUTH). Blocks A and B stay with game/gen/buildings/ (4 storeys, white family set in world/south.json);
+/// this site claims the connector entity, whose OSM parts game/gen/buildings/ would extrude solid and so close the corner gateway:
 /// the two four-storey pier blocks either side of it, the fourth-storey bridge over the three-storey void, held on square
 /// columns at both open faces (§6.3), and the two-storey east link between A and B. The void stays open from the paved
 /// plaza into the courtyard; its floor is paved.
@@ -29,7 +29,7 @@ public sealed class LirenSite : ZoneSite
     public const string PierKey = "piers", BridgeKey = "bridge", LinkKey = "east-link";
 
     /// <summary>
-    /// Pier blocks: the cornice line as WP-14 builds A and B at 15.6 m (wall top 15.1, coping 16.57; the data's height is the
+    /// Pier blocks: the cornice line as game/gen/buildings/ builds A and B at 15.6 m (wall top 15.1, coping 16.57; the data's height is the
     /// 15.6 m, so the wall tops stay the proportions' own). The storey count comes from the map data (<see cref="Footprints.PierStyle"/>).
     /// </summary>
     private static readonly GridStyle PierBase = new(L.White, L.WhiteTrim, L.GreyPlinth, ZoneLooks.Glass, L.Metal, L.RoofSlab)
@@ -106,7 +106,7 @@ public sealed class LirenSite : ZoneSite
     {
         if (!world.Features.TryGetValue(new(Connector), out var connector))
             throw new InvalidOperationException($"Liren connector {Connector} is missing from the world model.");
-        // The facade outline (WP-08): wall hiding, columns, collision and window declarations all share this one layout.
+        // The facade outline (SYS-MAPS): wall hiding, columns, collision and window declarations all share this one layout.
         IReadOnlyList<IReadOnlyList<Vector2>> Polygons(string source) =>
             (connector with { Geometry = connector.ContourGeometry(source), Parts = [] }).Outers();
         int Storeys(string source) => connector.Part(source).Storeys ?? throw new InvalidOperationException($"Liren part {source} has no storeys.");

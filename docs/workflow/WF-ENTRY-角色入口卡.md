@@ -5,14 +5,12 @@ category: workflow
 parent: WF-INDEX
 summary: 每个角色的入口卡：身份与回报对象、开工动作、本角色独有的必守、做某事前读哪一节；由钩子按节标题注入
 keywords: [角色入口卡, 入口卡, 主会话, 子代理, Codex 主线, 重置后先读, 开工动作, 收尾, 做 X 前读 Y, 钩子注入, SessionStart, SubagentStart, 引擎路径, UESTC_GODOT]
-owners: [WP-00]
-paths: ["docs/workflow/WF-ENTRY-*.md"]
-contributors: []
 depends: [CORE-INDEX, WF-RULE]
 related: [WF-ROLE, WF-MODEL, WF-COMMS, WF-FLOW, WF-BUILD, WF-STATUS]
 contracts: []
 data: []
 gates: []
+paths: ["docs/workflow/WF-ENTRY-*.md", "scripts/requirements.*", "game/testing/**", "game/data/build-code-fingerprints.json", "game/gen/maps/qingshuihe/Campus.Gen.Maps.Qingshuihe.csproj", "game/gen/sites/**", ".collab/tools/**", "dashboard/**", "game/gen/Campus.Gen.csproj", "game/kernel/map/data/**", "game/kernel/renderer/geometry/**", "game/kernel/renderer/render-state/**", "game/kernel/instances/**", "game/gen/geometry/**", "scripts/gates/arch/Campus.Arch.Tests.csproj", "scripts/godot-api/ApiDump/ApiDump.csproj", "game/contracts/Runtime/Campus.Contracts.Runtime.csproj", "game/contracts/Campus.Contracts.csproj", "game/data/maps/*/interiors.json", "game/Campus.Gen.Tests.csproj", "game/Campus.Tests.csproj", "game/contracts/.gdignore", "game/export_presets.cfg", "game/contracts/*.csproj", "game/kernel/registry/**", "game/data/rulesets/**", "scripts/gates/arch/**", "**/Directory.*.targets", "game/Campus.csproj", "game/gen/.gdignore", "game/project.godot", "Directory.*.targets", "game/kernel/stubs/**", "scripts/godot-api/**", "**/Directory.*.props", "scripts/gate.ps1", "third_party.json", "Directory.*.props", "docs/godot-api/**", "game/contracts/**", ".gitattributes", "scripts/build/**", "scripts/setup/**", "game/gen/bakeinput/assembly/**", "scripts/docs/**", "budgets.json", "game/addons/**", "global.json", "version.txt", "scripts/lib/**", ".gitignore", ".ignore", "AGENTS.md", "CLAUDE.md", "README.md", "启动游戏.cmd", "**/*.csproj", "LICENSE", "tools/**", "**/*.sln", "game/.editorconfig", "scripts/git-hooks/**"]
 ---
 # WF-ENTRY · 角色入口卡
 
@@ -62,7 +60,7 @@ gates: []
 **身份**：施工与调研共用，Claude 与 Codex 共用。向派你的一方回报：主会话开的向主会话，Codex 主线开的向 Codex 主线。
 
 **开工**：
-1. 读派工简报和任务单；本包在 PLAN-WP-LIST 包表里的行用 `grep "^| WP-xx " docs/plan/PLAN-WP-LIST-*.md` 取。
+1. 读派工简报和任务单。
 2. 写在哪以简报给的路径为准：Claude 侧的施工在简报指定的临时工作树，Codex 侧在主检出 `E:\Project\UESTC_RPG` 的 `main`（WF-FLOW §3.1）；先 `git status`，读简报里同时在干活的邻居（WF-FLOW §2.1）。
 3. 只在简报给的路径读写，新文件只建在简报列出的位置。默认只写不编译、不跑测试、不提交，由指挥统一编译（WF-FLOW §3.1）；调试类任务或简报要求编译的才编译，排构建锁（WF-BUILD §4），引擎路径读环境变量 `UESTC_GODOT`；简报要求提交的，只带自己改的路径 `git commit -- <路径>`。
 

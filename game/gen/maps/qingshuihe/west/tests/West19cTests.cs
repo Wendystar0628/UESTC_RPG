@@ -39,7 +39,7 @@ public sealed class West19cTests
         // Inside the low ground (except the last few metres climbing out to the north footway).
         for (var s = 4f; s < path.Length - 8f; s += 2f)
             AssertThat(PlanRings.InsideByCrossings(((TerrainPlatformOp)world.TerrainOperations[WestIds.WetlandLow]).Rings.Outer, path.At(s).P)).OverrideFailureMessage($"boardwalk station {s:0} lies in the wetland low ground").IsTrue();
-        // Clear of WP-28's bridges (r005: all bridges are WP-28's) and of the stream except at the beach turn.
+        // Clear of game/gen/maps/qingshuihe/waterfront/'s bridges (r005: all bridges are game/gen/maps/qingshuihe/waterfront/'s) and of the stream except at the beach turn.
         foreach (var id in new[] { WestIds.Way692240860.Source, WestIds.Way552816781.Source })
         {
             var bridge = world.Network.Bridges.Single(b => b.Id.Value == id).Line.Points;
@@ -177,7 +177,7 @@ public sealed class West19cTests
             AssertThat(d > C.Length * 0.5f + 0.5f).OverrideFailureMessage($"the carving stays off {id}, {d:0.0} m from its edge").IsTrue();
         }
         AssertThat(world.Features.Values.Where(feature => feature.Kind.Value == Campus.Gen.Maps.Qingshuihe.Waterfront.WaterfrontTune.StoneKind)
-            .All(feature => Vector2.Distance(at, feature.Point()) > 10f)).OverrideFailureMessage("it keeps clear of WP-28's bridge-head stone").IsTrue();
+            .All(feature => Vector2.Distance(at, feature.Point()) > 10f)).OverrideFailureMessage("it keeps clear of game/gen/maps/qingshuihe/waterfront/'s bridge-head stone").IsTrue();
         var box = Colliders(Context(world), new CarvingSite()).OfType<BoxCollider>().Single();
         AssertThat(box.Half.Y * 2f >= C.Height - TestTolerance.Position && box.Foot == FootMat.StonePaving).OverrideFailureMessage("one box with a top").IsTrue();
     }

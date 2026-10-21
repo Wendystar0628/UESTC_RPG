@@ -31,7 +31,7 @@ public static class OpeningPartFactory
     private static readonly PvcCurtainPart Pvc = new();
     private static readonly InteriorCardPart Card = new();
 
-    /// <summary>Geometry of any WP-10 part by catalog ID; call on a bake worker.</summary>
+    /// <summary>Geometry of any game/gen/parts/openings/ part by catalog ID; call on a bake worker.</summary>
     public static PartGeometry Build(PartId part, object parameters, LodLevel lod) => (part.Value, parameters) switch
     {
         (PartCatalog.WindowCasement, WindowParams p) => Casement.Lods[lod](p),
@@ -57,6 +57,6 @@ public static class OpeningPartFactory
         (PartCatalog.Curtain, PanelParams p) => Curtain.Lods[lod](p),
         (PartCatalog.PvcCurtain, PanelParams p) => Pvc.Lods[lod](p),
         (PartCatalog.InteriorCard, PanelParams p) => Card.Lods[lod](p),
-        _ => throw new ArgumentException($"Not a WP-10 part, or the parameters do not match: {part.Value}.", nameof(part)),
+        _ => throw new ArgumentException($"Not a game/gen/parts/openings/ part, or the parameters do not match: {part.Value}.", nameof(part)),
     };
 }

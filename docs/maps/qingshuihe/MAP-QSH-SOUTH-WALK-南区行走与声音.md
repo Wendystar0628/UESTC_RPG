@@ -5,13 +5,12 @@ category: maps
 parent: MAP-QSH-SOUTH
 summary: 南区行走主网、能看不能进的阻挡、可进入的室内与开放入口、涉水区、点位、节奏与锚点、声音要点
 keywords: [南区行走, 南区主网, 能看不能进, 开放入口, 涉水区, 南区点位, P07, P09, P17, P18, P19, R1 南区段, R2 环湖, R7, R8, R9, R10, 导览亭 A01, A03, A06, 南区声音, 钟声, 草阶看台]
-owners: [WP-18]
-contributors: [WP-30, WP-31a, WP-36, WP-43, WP-44, WP-47, WP-48c, WP-53]
 depends: [CORE-INDEX, MAP-QSH-SOUTH, SYS-WALK, WLD-INTERIORS, WLD-OUTSKIRTS, SYS-AUDIO]
 related: [MAP-QSH-INTERIORS-LIBRARY, MAP-QSH-CORE, UI-NAV, SYS-ATLAS]
 contracts: []
 data: []
 gates: [G15, G21]
+paths: ["game/gen/maps/qingshuihe/south/**", "game/data/maps/qingshuihe/world/south.terrain.json", "game/data/maps/qingshuihe/world/south.json"]
 ---
 
 # MAP-QSH-SOUTH-WALK · 南区行走与声音
@@ -30,10 +29,10 @@ gates: [G15, G21]
 
 ### 0.1 接入要点
 
-- **WP-36（点位与跳转） 定 P07、P09、P17–P19 时**：P09 落在草阶看台平整的一级；坐标以 `waypoints.json` 为准（§2）
-- **WP-48c（标记、锚点）、WP-44（可行走范围、边界与安全点） 登记导览亭 A01、A03、A06 时**：坐标与朝向以 `world/atlas.json` 为准，A06 的 y 取平台顶面（§2）
-- **WP-31a（南区精选室内） 做主楼、宣邦楼、两馆、立人楼室内时**：门洞、门前台阶、门口表现和立面对位归本区，楼板、楼梯、碰撞和室内灯归 WP-31a；钟室铜钟的几何归 WP-31a（MAP-QSH-SOUTH §5.4、MAP-QSH-SOUTH-WALK §1）
-- **WP-47（外围环境带）、WP-30（校界与门） 做南门外和校界时**：南门外的 O0、O1 归 WP-47；看街长椅与河渠穿出处的格栅归 WP-30，护岸归 WP-28（滨水与桥）；本区的绿带和路灯不挡长椅视线（MAP-QSH-SOUTH §1.5、§10）
+- **点位与跳转（UI-NAV-WAYPOINTS） 定 P07、P09、P17–P19 时**：P09 落在草阶看台平整的一级；坐标以 `waypoints.json` 为准（§2）
+- **标记、锚点（SYS-ATLAS-TRAVEL）、可行走范围、边界与安全点（SYS-WALK-BOUNDS） 登记导览亭 A01、A03、A06 时**：坐标与朝向以 `world/atlas.json` 为准，A06 的 y 取平台顶面（§2）
+- **南区精选室内（MAP-QSH-SOUTH） 做主楼、宣邦楼、两馆、立人楼室内时**：门洞、门前台阶、门口表现和立面对位归本区，楼板、楼梯、碰撞和室内灯归 MAP-QSH-SOUTH；钟室铜钟的几何归 MAP-QSH-SOUTH（MAP-QSH-SOUTH §5.4、MAP-QSH-SOUTH-WALK §1）
+- **外围环境带（WLD-OUTSKIRTS-BAND）、校界与门（game/gen/maps/qingshuihe/boundary/） 做南门外和校界时**：南门外的 O0、O1 归 WLD-OUTSKIRTS-BAND；看街长椅与河渠穿出处的格栅归 game/gen/maps/qingshuihe/boundary/，护岸归 滨水与桥（game/gen/maps/qingshuihe/waterfront/）；本区的绿带和路灯不挡长椅视线（MAP-QSH-SOUTH §1.5、§10）
 
 ## 1 行走：主网、挡路物与开放入口（主线之后）
 
@@ -74,7 +73,7 @@ gates: [G15, G21]
 
 P17–P19 是 `Entry = Door`：跳转时从最近的开放入口走进去。
 
-**节奏**：R1 本区段（南门 → 主楼门廊 → B2 柱厅 → 背门 → 过街楼门洞 → 银杏大道南端，约 0.45 km）的大拍是南门、主楼门廊的方柱长影、柱厅主题墙、穿过 B3–C1 门洞后银杏大道迎面打开；小拍是石球与防撞柱、模纹花坛、国旗杆、门口地垫与开放牌、后广场长椅。R2 东湖环湖（1.3 km）的大拍是吴立人像、六角亭、草阶看台（正对宣邦楼倒影）、紫藤廊架、亲水平台；小拍是每 100 m 的里程标、休息点拉伸杆、救生圈立柱、驳岸置石、木划船、白鹭、蒲苇、荷角、春夏栏杆上的家燕。R7 主楼登顶的大拍是电梯门打开、空廊外的落日；R8 东湖登钟是中厅仰望、钟室指针剪影、灯笼环 360°；R9 大平台一圈、R10 立人楼上课路沿 WLD-INTERIORS-ACCESS §4，室内段锚点由 WP-31a（南区精选室内） 登记。东湖环湖任何一点都能望见钟楼。
+**节奏**：R1 本区段（南门 → 主楼门廊 → B2 柱厅 → 背门 → 过街楼门洞 → 银杏大道南端，约 0.45 km）的大拍是南门、主楼门廊的方柱长影、柱厅主题墙、穿过 B3–C1 门洞后银杏大道迎面打开；小拍是石球与防撞柱、模纹花坛、国旗杆、门口地垫与开放牌、后广场长椅。R2 东湖环湖（1.3 km）的大拍是吴立人像、六角亭、草阶看台（正对宣邦楼倒影）、紫藤廊架、亲水平台；小拍是每 100 m 的里程标、休息点拉伸杆、救生圈立柱、驳岸置石、木划船、白鹭、蒲苇、荷角、春夏栏杆上的家燕。R7 主楼登顶的大拍是电梯门打开、空廊外的落日；R8 东湖登钟是中厅仰望、钟室指针剪影、灯笼环 360°；R9 大平台一圈、R10 立人楼上课路沿 WLD-INTERIORS-ACCESS §4，室内段锚点由 南区精选室内（MAP-QSH-SOUTH） 登记。东湖环湖任何一点都能望见钟楼。
 
 **锚点与设施**：三座导览亭 A01 南门（朝 35°，南门内广场，牌面与校名墙同框）、A03 东湖（朝宣邦楼，落在看台北端平地，不落在水面和台阶上）、A06 体育中心（大平台顶面，朝体育场），位置以 `world/atlas.json` 为准；本区不用导览桩。东湖跑道上一处直饮水台，4 处跑道休息点计入休息点。
 

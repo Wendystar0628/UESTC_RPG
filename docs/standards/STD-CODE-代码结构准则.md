@@ -5,14 +5,12 @@ category: standards
 parent: STD-INDEX
 summary: 写代码时的结构规矩：依赖方向落地、规则值与数据各一份、先复用、不留死代码、控制规模、测试代码写法，以及 Godot API 先查签名
 keywords: [代码结构准则, 依赖方向, 内核引用系统, 生成层实现类, 点名模块, 单一来源, 规则值, 规则类, 数据与代码分离, Tune 只放规则值, 实体 ID 写数据, 复用, 公共层, 死代码, 死桩, 诊断残留, 单实现接口, 吞错, 兜底, 文件规模, 构造参数, 清单文件, 程序集过碎, 测试写法, 测试夹具, 假实现, 性质断言, signatures.txt, Godot API, GDScript]
-owners: [WP-00]
-contributors: []
 depends: [ENG-ARCH, STD-CONVENTIONS]
 related: [CORE-INDEX, WF-RULE, ENG-GATES, ENG-BUDGET, SYS-WALK]
 contracts: []
 data: []
 gates: []
-paths: ["game/**/*.cs", "pipeline/**/*.py", "scripts/**/*.py", "scripts/**/*.ps1"]
+paths: ["game/**/*.cs", "pipeline/**/*.py", "scripts/**/*.py", "scripts/**/*.ps1", "scripts/requirements.*", "game/testing/**", "game/data/build-code-fingerprints.json", "game/gen/maps/qingshuihe/Campus.Gen.Maps.Qingshuihe.csproj", "game/gen/sites/**", ".collab/tools/**", "dashboard/**", "game/gen/Campus.Gen.csproj", "game/kernel/map/data/**", "game/kernel/renderer/geometry/**", "game/kernel/renderer/render-state/**", "game/kernel/instances/**", "game/gen/geometry/**", "scripts/gates/arch/Campus.Arch.Tests.csproj", "scripts/godot-api/ApiDump/ApiDump.csproj", "game/contracts/Runtime/Campus.Contracts.Runtime.csproj", "game/contracts/Campus.Contracts.csproj", "game/data/maps/*/interiors.json", "game/Campus.Gen.Tests.csproj", "game/Campus.Tests.csproj", "game/contracts/.gdignore", "game/export_presets.cfg", "game/contracts/*.csproj", "game/kernel/registry/**", "game/data/rulesets/**", "scripts/gates/arch/**", "**/Directory.*.targets", "game/Campus.csproj", "game/gen/.gdignore", "game/project.godot", "Directory.*.targets", "game/kernel/stubs/**", "scripts/godot-api/**", "**/Directory.*.props", "scripts/gate.ps1", "third_party.json", "Directory.*.props", "docs/godot-api/**", "game/contracts/**", ".gitattributes", "scripts/build/**", "scripts/setup/**", "game/gen/bakeinput/assembly/**", "scripts/docs/**", "budgets.json", "game/addons/**", "global.json", "version.txt", "scripts/lib/**", ".gitignore", ".ignore", "AGENTS.md", "CLAUDE.md", "README.md", "启动游戏.cmd", "**/*.csproj", "LICENSE", "tools/**", "**/*.sln", "game/.editorconfig", "scripts/git-hooks/**"]
 ---
 # STD-CODE · 代码结构准则
 
@@ -69,7 +67,7 @@ paths: ["game/**/*.cs", "pipeline/**/*.py", "scripts/**/*.py", "scripts/**/*.ps1
 - **公共层分层**（D-244）：标量与向量数学、角度与方位换算放 Contracts 的数学底座（各层都够得着）；平面几何、部件几何底座、分区工具与按 ID 读数据在 `gen/` 下各有公共目录（平面几何能用 NetTopologySuite 的直接用）；测试夹具放共用测试夹具目录。新写类或工具函数前先查这几处。
 - **盒体、视锥与图层只有一个入口**：盒体与外向平面体相交、点到盒体距离只经 `Box3`；从正式或合成相机投影填六个视锥平面只经 `CameraFrustum`；3D 渲染层只用 `RenderLayers` 命名位掩码，`NonCasters` 由这些名称组合。
 - **公共函数清单由 G4 守**：清单上的函数（点到线段距离、点在多边形内、质心、平滑、插值、方位换算、角度包裹之类）只能在登记的公共类型里定义，别处定义同名函数即不过；清单以 `scripts/gates/arch` 的规则为准。
-- **新文件放哪**：按模块分层（ENG-ARCH §1）和 `ownership.json` 找家，找不到先改结构并报主会话，不用补丁式命名（WF-RULE §16）。
+- **新文件放哪**：按模块分层（ENG-ARCH §1）和文档文件头的 `paths` 找家，找不到先改结构并报主会话，不用补丁式命名（WF-RULE §16）。
 - **测试放哪**：各包的行为测试放自己目录的 `tests/`，编进 `Campus.Gen.Tests` 或 `Campus.Tests`；夹具统一放 `game/testing`（共用的在 `Support`，只给生成或运行时宿主的在 `Gen`、`Runtime`）。
 - **`.uid` 与 `.gdignore`**：纯 .NET 的 `game/contracts`、`game/gen`、`game/testing` 和运行时各 `tests` 目录用 `.gdignore` 排除 Godot 导入，不登记其中 C# 的 `.uid`；运行时资源的 `.uid` 由 Godot 生成维护。
 - 第二份相同或只差参数的代码出现时就收进公共层，原处改引用；不复制整个模块或框架类再改。

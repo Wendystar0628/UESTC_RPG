@@ -15,7 +15,7 @@ internal static class FurniturePavingFit
     /// inside the paving edge and parallel to it, its face towards the paving, where people stand: the data's yaw gives way. It slides
     /// along the edge, in steps up to <see cref="FurnitureStyle.ApronSlide"/>, until the whole apron is on paving; where none fits (or
     /// no paving lies within <see cref="FurnitureStyle.AnchorPavingReach"/>) it only moves to touch it, as <see cref="ToPaving"/> does, facing
-    /// its data yaw. The new centre and yaw are logged for the anchor data (WP-48c), which takes them over; an apron whole on paving
+    /// its data yaw. The new centre and yaw are logged for the anchor data (SYS-ATLAS-TRAVEL), which takes them over; an apron whole on paving
     /// already stays as the data has it.
     /// </summary>
     internal static (Vector2 Centre, Vector2 Facing) KioskOnPaving(StreetSite site, Vector2 centre, Vector2 facing, float halfWidth, float halfDepth, List<BuildDiagnostic> diagnostics, FeatureId id)
@@ -68,7 +68,7 @@ internal static class FurniturePavingFit
     /// <summary>
     /// The anchor's centre, moved the shortest way until its footprint (±<paramref name="halfWidth"/> across, ±<paramref name="halfDepth"/>
     /// along <paramref name="facing"/>) meets the nearest pedestrian paving, when it does not touch it yet; the facing stays. The footprint ends <see cref="FurnitureStyle.PadJoin"/> over the paving edge, so the two join. Paving
-    /// further than <see cref="FurnitureStyle.AnchorPavingReach"/> is a data question (WP-48c), not a move: the anchor stays, diagnosticsged.
+    /// further than <see cref="FurnitureStyle.AnchorPavingReach"/> is a data question (SYS-ATLAS-TRAVEL), not a move: the anchor stays, diagnosticsged.
     /// </summary>
     internal static Vector2 ToPaving(StreetSite site, Vector2 centre, Vector2 facing, float halfWidth, float halfDepth, List<BuildDiagnostic> diagnostics, FeatureId id, string form)
     {

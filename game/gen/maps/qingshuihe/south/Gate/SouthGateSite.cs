@@ -20,7 +20,7 @@ namespace Campus.Gen.Maps.Qingshuihe.South.Gate;
 /// bollards and yellow no-parking grid. In walk mode the gate is the campus boundary: every gap is under 0.5 m and the
 /// closure is a 2.2 m Boundary collider (§1.2, WLD-OUTSKIRTS). At night the guard-house windows are the gate's two small
 /// lights (§11): they declare one grid on the all-night channel.
-/// The OSM relation is a "building" in the source data, so this site claims it and WP-14 must not extrude it.
+/// The OSM relation is a "building" in the source data, so this site claims it and game/gen/buildings/ must not extrude it.
 /// </summary>
 public sealed class SouthGateSite : ZoneSite
 {
@@ -272,7 +272,7 @@ public sealed class SouthGateSite : ZoneSite
     }
 
     /// <summary>
-    /// Forecourt (§1.4): stone spheres before the guard houses, yellow-and-black crash bollards off the island noses (WP-13's
+    /// Forecourt (§1.4): stone spheres before the guard houses, yellow-and-black crash bollards off the island noses (game/gen/furniture/'s
     /// variation 1 in its own colours: a tint or material would paint the black stripe yellow too), yellow grid lines.
     /// </summary>
     private static void Forecourt(SiteBuilder b, Layout g, float y)

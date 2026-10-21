@@ -5,13 +5,12 @@ category: art
 parent: ART-INDEX
 summary: 默认状态的光与太阳、主光与阴影、天光、受光退场、人造光、光效清单与冷暖对照；天空与雾见子文档
 keywords: [主光, 日月交接, 无影蓝调, 阴影, 月影, 天光, 天光方向, 退光线, 受光退场, 人造光, 路灯光斑, 窗灯, 光效清单, 光柱, 镜头光斑, 冷暖对照]
-owners: [WP-34, WP-03]
-contributors: [WP-04, WP-05, WP-06, WP-07, WP-37, WP-39, WP-45]
 depends: [CORE-INDEX, ART-STYLE, ENG-ARCH, ENG-PERF, SYS-TIME, SYS-WEATHER, SYS-GRAPHICS]
 related: [WLD-OUTSKIRTS-DIORAMA, WLD-WATER, SYS-MOTION, SYS-VIEW, UI-NAV, UI-VISUAL, SYS-SAVE, SYS-MAPS, WLD-OUTSKIRTS, WLD-INTERIORS, WLD-AMBIENCE]
 contracts: []
 data: ["game/style/palette/keys/"]
 gates: [G2, G7, G10]
+paths: ["game/kernel/lighting/KeyLightState.cs", "game/kernel/lighting/KeyLightModel.cs", "game/kernel/lighting/**", "game/kernel/world/**"]
 ---
 # ART-SKYLIGHT · 天空、光照与大气
 

@@ -54,7 +54,7 @@ public sealed class SouthWindowTests
     [TestCategory("Slow")]
     public void WindowTablePublishesWithTheSouthDeclarations()
     {
-        // The end-to-end reach before WP-02's orchestration: WP-14's provider allocates the whole real map with the zone's
+        // The end-to-end reach before game/kernel/bake/'s orchestration: game/gen/buildings/'s provider allocates the whole real map with the zone's
         // real declarations, then the zone describes its windows from the published snapshot. The map loads as above.
         var world = RealMapFixture.Load().World;
         var module = new SouthModule();
@@ -112,7 +112,7 @@ public sealed class SouthWindowTests
     {
         var world = RealMapFixture.Load().World;
         var module = new SouthModule();
-        // A stand-in for WP-14's allocation: the declared grids in canonical order after a block that shifts every base.
+        // A stand-in for game/gen/buildings/'s allocation: the declared grids in canonical order after a block that shifts every base.
         var specs = module.DescribeWindowLayouts(world, 1).SelectMany(l => l.Grids.Select(g => (l.Feature, g)))
             .Prepend((new FeatureId("a-earlier"), new WindowGridSpec("block", 37, 3)))
             .OrderBy(p => p.Item1.Value, StringComparer.Ordinal).ThenBy(p => p.Item2.Key, StringComparer.Ordinal);

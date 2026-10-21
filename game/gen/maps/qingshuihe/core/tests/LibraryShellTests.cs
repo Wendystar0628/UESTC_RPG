@@ -301,7 +301,7 @@ public sealed class LibraryShellTests
     private static LibraryShell Shell(IWorldModel world) =>
         CoreSite.Pieces(world).OfType<LibraryShell>().SingleOrDefault() ?? throw new InvalidOperationException("Expected: library shell piece");
 
-    /// <summary>A stand-in for WP-14's allocation: a 101 × 7 generic block sorted before the library, the museum and one block after it.</summary>
+    /// <summary>A stand-in for game/gen/buildings/'s allocation: a 101 × 7 generic block sorted before the library, the museum and one block after it.</summary>
     private static WindowNumberingSnapshot Numbering(LibraryShell shell, int libraryColumns)
     {
         var generic = new WindowAllocation(new FeatureId("fixture:generic-before"), "generic", 0, 101, 7);

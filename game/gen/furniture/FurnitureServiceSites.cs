@@ -12,7 +12,7 @@ internal readonly record struct ServiceSite(string Label, Vector2 At, PolygonRin
 /// <summary>Selects stable gate and building-frontage service candidates.</summary>
 internal static class FurnitureServiceSites
 {
-    /// <summary>The dormitory cluster gates (WP-20's <c>clusterGate</c> features), the open ones first, then by ID; each with its cluster's outline.</summary>
+    /// <summary>The dormitory cluster gates (game/gen/maps/qingshuihe/north/'s <c>clusterGate</c> features), the open ones first, then by ID; each with its cluster's outline.</summary>
     internal static List<ServiceSite> Gates(IWorldModel world)
     {
         var gates = new List<(bool Open, ServiceSite Site)>();

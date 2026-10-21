@@ -5,13 +5,12 @@ category: systems
 parent: SYS-INDEX
 summary: 校界的行走阻挡与缓停、旁观飞行的可达空间与推回、edge_fog、提示文案、多地图衔接
 keywords: [行走阻挡, 飞行阻挡, 缓停, 推回, 缓冲带, 软地板, 可达空间, 活动范围, edge_fog, 边缘雾, 前方暂未开放, 合法化, 地图入口]
-owners: [WP-06, WP-30, WP-42, WP-44]
-contributors: [WP-02, WP-04, WP-05, WP-06, WP-08, WP-13, WP-14, WP-15, WP-18, WP-22, WP-23, WP-24, WP-27, WP-28, WP-30, WP-33, WP-35, WP-36, WP-37, WP-38, WP-39, WP-41, WP-42, WP-43, WP-44, WP-45, WP-46, WP-48, WP-49, WP-53]
 depends: [CORE-INDEX, WLD-OUTSKIRTS, SYS-VIEW, ENG-ARCH, SYS-WALK, SYS-WALK-BOUNDS, SYS-MAPS]
 related: [WLD-OUTSKIRTS-BAND, MAP-QSH-OUTSKIRTS, MAP-QSH-SOUTH, UI-NAV, ENG-GATES, SYS-ATLAS, SYS-TITLE, SYS-SAVE, SYS-AUDIO, WLD-TERRAIN]
 contracts: [SurfaceTag.Boundary, OutskirtsBand, OutskirtsKind, OutskirtsBlock, IOutskirtsModel, IWorldModel.Outskirts, RoamLimits.PushRate, RoamLimits.PushMax, RoamLimits.EdgeFogMax, MapEnvironment.Outskirts, ICameraRig.EdgeFog, ShaderGlobals.EdgeFog]
 data: []
 gates: [G2, G7, G15]
+paths: ["game/gen/maps/qingshuihe/boundary/**", "game/data/maps/qingshuihe/world/boundary.json", "game/camera/walk/**", "game/camera/**"]
 ---
 
 # SYS-BORDER · 边界阻挡与提示
@@ -29,22 +28,22 @@ gates: [G2, G7, G15]
 
 - **在校界上做栏杆、校门、闸机、车道抬杆或河渠格栅**：碰撞表面类型一律登记 `SurfaceTag.Boundary`，不用校内挡路物的 `Barrier`；碰撞顶栏杆 2.2 m，闸机、抬杆、格栅 1.5 m；河渠穿过处用格栅或节制闸（§1.1）
 - **行走控制器靠近校界**：离 `Boundary` 0.6 m 内衰减朝外的水平速度，其余不变；校内其他挡路物不做缓停；安全点不放在离校界 1 m 以内（§1.2）
-- **旁观活动范围、缓冲带、推回和 `edge_fog`**：可达空间按 §2.1，参数只写在 `map.json` 的 `roam` 一处；只在旁观模式、漫游态作用，不锁输入；`edge_fog` 只由 WP-06（相机与输入） 写，其他包只读（§2）
+- **旁观活动范围、缓冲带、推回和 `edge_fog`**：可达空间按 §2.1，参数只写在 `map.json` 的 `roam` 一处；只在旁观模式、漫游态作用，不锁输入；`edge_fog` 只由 相机与输入（SYS-VIEW） 写，其他包只读（§2）
 - **定审查视角、点位、锚点、跳转路径，读档、换图或 `--pose` 出生**：位姿必须在可达空间内且不在缓冲带里，否则就近投影或拒绝；跳转途中不推回，弧线越界时抬高弧顶（§2.4）
 
 ## 1 行走阻挡
 
-### 1.1 挡什么（WP-30、WP-44）
+### 1.1 挡什么（game/gen/maps/qingshuihe/boundary/、SYS-WALK-BOUNDS）
 
 | 地点 | 用什么挡 | 碰撞 |
 | --- | --- | --- |
 | 校界一圈 | 2.2 m 透空栏杆、石柱，内侧绿篱；栏杆外侧就是 O0 的人行道 | 碰撞顶 2.2 m，水平外扩不超过 0.3 m，缝隙小于 0.5 m |
-| 各校门（南门归 WP-18（南区），其余归 WP-30（校界与门）） | 车道抬杆放下，人行闸机关闭，值班室亮灯 | 闸机、抬杆碰撞顶 1.5 m；校门处允许一段到 2.2 m 的隐形墙 |
+| 各校门（南门归 南区（MAP-QSH-SOUTH），其余归 校界与门（game/gen/maps/qingshuihe/boundary/）） | 车道抬杆放下，人行闸机关闭，值班室亮灯 | 闸机、抬杆碰撞顶 1.5 m；校门处允许一段到 2.2 m 的隐形墙 |
 | 河渠穿过校界处 | 拦污格栅或节制闸，与两岸栏杆接上 | 格栅碰撞顶 1.5 m |
 
 这些碰撞体的表面类型都登记为 `SurfaceTag.Boundary`，与校内的挡路物 `Barrier` 区分开；缓停靠它认出校界。南门闸机、抬杆、岗亭的细节以 MAP-QSH-SOUTH §1 为准；河渠穿过校界处的格栅做法见 MAP-QSH-OUTSKIRTS §6.1。
 
-### 1.2 0.6 m 内的缓停（WP-42）
+### 1.2 0.6 m 内的缓停（game/camera/walk/）
 
 - 离 `Boundary` 0.6 m 内朝外的速度平滑衰减，规则见 SYS-WALK-BOUNDS §2 第 6 条；人走近栏杆时自己缓缓停下，再沿栏杆滑走，没有撞停和反弹。校内的其他挡路物只靠滑动。
 - **声音**：`Boundary` 不出撞击声；声学射线把 `Boundary` 当作透声。
@@ -64,7 +63,7 @@ gates: [G2, G7, G15]
 - 截面线以外的水平上限本身要求离地约 300 m 以上，正常飞行碰不到雾海顶面，雾海介质只作兜底。
 - 高度系数、起算高度、最大半径、上下限、净空和缓冲都写在 `map.json` 的 `roam`，以它为准。
 
-### 2.2 缓冲带与推回（WP-06）
+### 2.2 缓冲带与推回（SYS-VIEW）
 
 每条约束写成 g ≤ 0 的形式；缓冲带是边界内侧的一段距离（`roam.buffer`），进入的比例 s 从缓冲带内缘的 0 线性升到边界处的 1。约束共五条：水平锥面（法线是前沿线法线与"向下"的合成）、中心半径、软地板（向下）、高度上限（向上）、地下的水平边界（校界以外、h 低于地面时到校界的距离）。
 
@@ -75,7 +74,7 @@ gates: [G2, G7, G15]
 
 ### 2.3 边缘雾 `edge_fog`
 
-- **写入**：WP-06（相机与输入） 在相机那一步写，水平类约束的 s 取较大者，以 0.5 s 时间常数平滑，范围 0–1；软地板和高度上限不加雾。
+- **写入**：相机与输入（SYS-VIEW） 在相机那一步写，水平类约束的 s 取较大者，以 0.5 s 时间常数平滑，范围 0–1；软地板和高度上限不加雾。
 - **用法**：雾密度随 `edge_fog` 和视线朝外的程度加浓，最多 1.6 倍（`RoamLimits.EdgeFogMax`）；雾只在朝外一侧变浓，回头看校园不受影响，让观者读出"前面不再开放"。
 - **何时为 0**：行走模式、介质在室内/地下/水下、开始页、截图门禁时。边界推回和 `edge_fog` 只在漫游态（Playing）作用；Boot、Title、Entering、Leaving 里不加浓，也不出边界提示。
 - **声音同步**：同一个值经 `ICameraRig.EdgeFog` 暴露，音频据此把远处的声音压低、变闷，被推回时恢复。低空时雾几乎看不出来，街面上的提示靠 §3 的文案。

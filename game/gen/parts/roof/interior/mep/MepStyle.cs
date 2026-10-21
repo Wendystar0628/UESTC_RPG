@@ -33,19 +33,19 @@ public static class MepStyle
     public const string Grey = RoofStyle.EquipmentGrey;
     /// <summary>Hydrant door glass, read as an opaque dark pane (no window-light data, so not the glass shader).</summary>
     public const string Glass = RoofStyle.Glass;
-    /// <summary>Warm wood: door-plate variant (WP-10's door wood).</summary>
+    /// <summary>Warm wood: door-plate variant (game/gen/parts/openings/'s door wood).</summary>
     public const string Wood = "door.wood";
-    /// <summary>Bottled water: light aqua (WP-24's near-water colour) until an interior name exists.</summary>
+    /// <summary>Bottled water: light aqua (game/systems/water/'s near-water colour) until an interior name exists.</summary>
     public const string Water = "water.near";
     /// <summary>
     /// Fire red (消防红, ids 254/255 in ext/roof_equipment.json): lit #C8473B at autumn 17:30, intrinsic #A7424B solved back from it with
-    /// WP-37's deriver. Hydrant frame and door, extinguishers, the scald lettering; WP-13's outdoor hydrants reference the same
+    /// game/style/palette/keys/'s deriver. Hydrant frame and door, extinguishers, the scald lettering; game/gen/furniture/'s outdoor hydrants reference the same
     /// name. One of the three saturated interior colours (WLD-INTERIORS).
     /// </summary>
     public const string FireRed = "equip.fireRed";
     /// <summary>
     /// Exit-sign face green. BORROWED: `ground.turf` (#789E5E), the registered surface pair closest to the review's #3FA56B
-    /// (OKLab ΔE 0.052). The face's own name `sign.exitGreen` (#3FA56B, emissive segment 40–63) comes with max-015 (WP-04),
+    /// (OKLab ΔE 0.052). The face's own name `sign.exitGreen` (#3FA56B, emissive segment 40–63) comes with max-015 (ART-STYLE),
     /// together with the Emissive shading; switch to it then.
     /// </summary>
     public const string ExitGreen = "ground.turf";

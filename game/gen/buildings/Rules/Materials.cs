@@ -36,7 +36,7 @@ public static class Materials
 
     /// <summary>
     /// ToonSpec for a material class with the given colour family as Lit/Shade.
-    /// The non-colour fields define the material class (WP-04 ToonLibrary), so each kind maps to one material ID;
+    /// The non-colour fields define the material class (ToonLibrary), so each kind maps to one material ID;
     /// the wall's construction pattern (<see cref="WallPatterns"/>) is part of that class.
     /// </summary>
     public static ToonSpec Spec(MaterialKind kind, string family, WallPattern pattern = WallPattern.None) => kind switch

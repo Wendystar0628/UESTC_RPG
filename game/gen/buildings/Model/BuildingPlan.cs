@@ -12,14 +12,14 @@ public readonly record struct Opening(int Bay, int Row, float U0, float U1, floa
 
 /// <summary>
 /// One entrance door: the Door opening at (Bay, Row) of Openings[Facade]. Anchor is the interior index's EntranceDecl it
-/// was opened for (WLD-INTERIORS), null for the generic door. With Landing, WP-14 builds the WP-11 landing at the door
+/// was opened for (WLD-INTERIORS), null for the generic door. With Landing, game/gen/buildings/ builds the game/gen/parts/circulation/ landing at the door
 /// floor, the connection down to GroundY in front of it (WLD-TERRAIN) and the canopy at CanopyY; without, the
 /// outside landing is a deck or porch of another package and the door stands alone.
 /// </summary>
 public sealed record PlanEntrance(int Facade, int Bay, int Row, string? Anchor, bool Landing, float GroundY, float CanopyY);
 
 /// <summary>
-/// The bays of one footprint edge, read from the WP-51a facade grid (FacadeGridGenerator). Bay indices are contiguous
+/// The bays of one footprint edge, read from the game/gen/interior/core/ facade grid (FacadeGridGenerator). Bay indices are contiguous
 /// over all rings (ColumnStart + bay = FacadeBay.Index) and are the columns of the building-wide window grid.
 /// Bounds are the bay boundaries in footprint u (glass plane); Widths the kernel's opening widths (0 when blank).
 /// SkinShift converts footprint u to skin u (wall plane): uSkin = uFoot - SkinShift.
@@ -43,7 +43,7 @@ public sealed class BuildingPlan
     /// <summary>Stable key of this part inside the entity (the entity ID itself when it has a single footprint).</summary>
     public required string Key { get; init; }
     public required WorldFeature Feature { get; init; }
-    /// <summary>Footprint rings (canonical, mm): the glass plane, shared with the WP-51a plan kernel.</summary>
+    /// <summary>Footprint rings (canonical, mm): the glass plane, shared with the game/gen/interior/core/ plan kernel.</summary>
     public required PlanRing Outer { get; init; }
     public required IReadOnlyList<PlanRing> Holes { get; init; }
     /// <summary>Wall skin rings: footprint offset outward by Reveal (same vertex count and edge order).</summary>
@@ -52,7 +52,7 @@ public sealed class BuildingPlan
     /// <summary>Depth from the wall plane to the glass plane.</summary>
     public required float Reveal { get; init; }
     public required Vector2 Centroid { get; init; }
-    /// <summary>The WP-51a facade grid this plan's bays and window columns come from.</summary>
+    /// <summary>The game/gen/interior/core/ facade grid this plan's bays and window columns come from.</summary>
     public required Campus.Gen.Interior.FacadeGrid Grid { get; init; }
     public required float Area { get; init; }
     public required BuildingStyle Style { get; init; }

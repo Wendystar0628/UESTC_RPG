@@ -11,7 +11,7 @@ namespace Campus.Camera.Walk;
 /// <summary>Native walking shapes, body probes, stair traversal and contact sampling.</summary>
 internal sealed class WalkBodyCollision(CharacterBody3D body)
 {
-    // WP-43 assigns one layer per SurfaceTag. Water is semantic, never a blocking surface.
+    // game/kernel/collision/ assigns one layer per SurfaceTag. Water is semantic, never a blocking surface.
     private const uint BlockingLayers = (1u << (int)SurfaceTag.Ground) | (1u << (int)SurfaceTag.Stair)
         | (1u << (int)SurfaceTag.Barrier) | (1u << (int)SurfaceTag.Wall) | (1u << (int)SurfaceTag.Prop)
         | (1u << (int)SurfaceTag.Invisible) | (1u << (int)SurfaceTag.Boundary) | (1u << (int)SurfaceTag.DoorClosed);

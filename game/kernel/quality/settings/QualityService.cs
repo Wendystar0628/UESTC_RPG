@@ -7,7 +7,7 @@ using Godot;
 
 namespace Campus.Kernel.Quality.Settings;
 
-// Local engine boundary for the WP-32 application state machine, not a shared package contract.
+// Local engine boundary for the game/kernel/quality/ application state machine, not a shared package contract.
 public interface IQualityRuntime
 {
     Task<double> NextFrame(CancellationToken cancellationToken);
@@ -164,7 +164,7 @@ public sealed class QualityService : IQualityFrame, IBootParticipant, IAsyncDisp
             Publish(binding, _state.Commit(profile, ApplyOrigin.Startup, true));
             cancellationToken.ThrowIfCancellationRequested();
             _initialized = true;
-            runtime.ReportInfo($"[WP-32] preset={Requested.Preset}; overrides={Requested.Overrides.Count}");
+            runtime.ReportInfo($"[SYS-GRAPHICS] preset={Requested.Preset}; overrides={Requested.Overrides.Count}");
         }
         finally { if (ReferenceEquals(_binding, binding)) _initializing = false; }
     }
@@ -225,7 +225,7 @@ public sealed class QualityService : IQualityFrame, IBootParticipant, IAsyncDisp
         {
             request.Completion?.TrySetException(error);
             // This observer belongs to the binding, so unmounting cannot discard a late failure.
-            binding.Runtime.ReportError("[WP-32] Quality apply failed:", error);
+            binding.Runtime.ReportError("[SYS-GRAPHICS] Quality apply failed:", error);
         }
         finally { _applications.Remove(application); }
     }
@@ -362,7 +362,7 @@ public sealed class QualityService : IQualityFrame, IBootParticipant, IAsyncDisp
             try { observer(change); }
             catch (Exception error)
             {
-                binding.Runtime.ReportError("[WP-32] Quality observer failed:", error);
+                binding.Runtime.ReportError("[SYS-GRAPHICS] Quality observer failed:", error);
             }
         }
     }

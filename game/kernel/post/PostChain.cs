@@ -9,7 +9,7 @@ using KernelServices = Campus.Kernel.Registry.Kernel;
 namespace Campus.Kernel.Post;
 
 /// <summary>
-/// The post-processing chain (WP-05, ART-STYLE, ENG-PERF): owns the two CompositorEffects on the active
+/// The post-processing chain (ART-STYLE-LINES, ART-STYLE, ENG-PERF): owns the two CompositorEffects on the active
 /// camera (outline at PostSky, finish at PostTransparent), the engine's glow / tonemap / adjustment settings and
 /// the runtime LUT. Each frame it copies the colour-script keyframe scalars (IColorScriptFrame), the key light,
 /// weather, edge fog and map rect into one <see cref="PostFrame"/> for the render thread, so nothing reads

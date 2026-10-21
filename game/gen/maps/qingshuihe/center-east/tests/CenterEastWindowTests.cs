@@ -47,7 +47,7 @@ public sealed class CenterEastWindowTests
     {
         var world = World();
         var module = new CenterEastModule();
-        // A stand-in for WP-14's allocation: the declared grids in canonical order after a block that shifts every base.
+        // A stand-in for game/gen/buildings/'s allocation: the declared grids in canonical order after a block that shifts every base.
         var specs = module.DescribeWindowLayouts(world, 1).SelectMany(l => l.Grids.Select(g => (l.Feature, g)))
             .Prepend((new FeatureId("a-earlier"), new WindowGridSpec("block", 37, 3)))
             .OrderBy(p => p.Item1.Value, StringComparer.Ordinal).ThenBy(p => p.Item2.Key, StringComparer.Ordinal);
@@ -102,7 +102,7 @@ public sealed class CenterEastWindowTests
     [TestCategory("Slow")]
     public void WindowTablePublishesWithTheCenterEastDeclarations()
     {
-        // The end-to-end reach before WP-02's orchestration: WP-14's provider allocates the whole real map (all authored world records)
+        // The end-to-end reach before game/kernel/bake/'s orchestration: game/gen/buildings/'s provider allocates the whole real map (all authored world records)
         // with the zone's real declarations, then the zone describes its windows from the published snapshot.
         var world = RealMapFixture.Load().World;
         var module = new CenterEastModule();

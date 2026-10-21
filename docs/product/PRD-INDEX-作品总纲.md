@@ -4,14 +4,12 @@ title: 作品总纲
 category: product
 summary: 作品域总纲：作品是什么、做什么不做什么、观光规则集的硬约束；本域通用原则与文档树
 keywords: [作品, 作品总纲, 文档树, PRD]
-owners: []
-paths: ["docs/product/**"]
-contributors: []
 depends: [CORE-INDEX]
 related: []
 contracts: []
 data: []
 gates: []
+paths: ["docs/product/**"]
 ---
 
 # PRD-INDEX · 作品总纲
@@ -23,7 +21,7 @@ gates: []
 ## 0 结论
 
 1. **只写长期不变的取舍与约束**：作品是什么、取舍与范围在 PRD-SCOPE，硬约束在 PRD-INVARIANTS；会随开发改的设计与数值写在各域文档里，本域只给方向并指过去。
-2. **约束对主线版同样生效**：INV-1–INV-12 对所有工作包生效，主线版也要满足；放宽哪些由 ENG-ROADMAP 登记，登记前一条不放松（WF-RULE §8）。
+2. **约束对主线版同样生效**：INV-1–INV-12 对所有内容与系统生效，主线版也要满足；放宽哪些由 ENG-ROADMAP 登记，登记前一条不放松（WF-RULE §8）。
 3. **"当前范围"指本阶段的观光规则集**：PRD-SCOPE §2 列的"不做"现在不施工，别的文档也不为它写前瞻；RPG 规则集的扩展只在 ENG-ROADMAP 登记。
 4. **默认状态是"落金初灯"**（秋 17:30，晴）：作品的开场与各文档取值、验收样张的基准，取值见 PRD-SCOPE §1。
 

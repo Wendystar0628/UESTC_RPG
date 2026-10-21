@@ -9,7 +9,7 @@ internal sealed record RoadRows(string Name, IReadOnlyList<float> Offsets);
 
 /// <summary>
 /// The planted tree rows of the roads, read from the map's frozen build inputs (the map input <see cref="FurnitureStyle.PlantingKey"/>,
-/// <c>vegetation/planting.json</c> relative to the map's DataRoot), never from WP-23's code: for each road it lists, the offsets of its
+/// <c>vegetation/planting.json</c> relative to the map's DataRoot), never from game/gen/vegetation/'s code: for each road it lists, the offsets of its
 /// <c>rows</c> and its <c>band</c> from the centre line. Anything the input cannot say (no input, unreadable JSON, a road with unreadable
 /// offsets) leaves that road without rows and adds one warning diagnostic. Pure and deterministic: the result depends on the bytes only.
 /// </summary>

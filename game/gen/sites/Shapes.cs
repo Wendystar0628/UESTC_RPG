@@ -6,7 +6,7 @@ using Campus.Gen.Geometry;
 namespace Campus.Gen.Sites;
 
 /// <summary>
-/// Small closed solids the WP-09 kernel has no helper for: smooth round shafts, hipped pyramids, arch outlines, and the
+/// Small closed solids the game/gen/parts/core/ kernel has no helper for: smooth round shafts, hipped pyramids, arch outlines, and the
 /// circle and arc paths the kernel's sweep takes (basin rims, curved bays).
 /// Same conventions as the kernel: metres, origin at the base centre, Godot front faces clockwise from outside,
 /// AO visibility 1, UV in metres. Angles are in radians.

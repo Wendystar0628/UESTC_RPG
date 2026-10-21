@@ -1,4 +1,4 @@
-// fog.gdshaderinc：调色板取色与共用雾函数（WP-04）
+// fog.gdshaderinc：调色板取色与共用雾函数（ART-STYLE）
 // 规格：ART-STYLE；ART-SKYLIGHT；ENG-PERF；WLD-OUTSKIRTS；SYS-VIEW。
 // 卡通材质只 include toon.gdshaderinc（它会带进本文件）。天空、粒子这类不走卡通明暗的着色器
 // 先 include globals.gdshaderinc 再 include 本文件；本文件自己不 include globals。

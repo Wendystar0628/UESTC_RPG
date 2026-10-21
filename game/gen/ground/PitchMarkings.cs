@@ -4,7 +4,7 @@ using Campus.Contracts;
 namespace Campus.Gen.Ground;
 
 /// <summary>
-/// Football pitch lines (WP-15): the same flat decal quads as the road markings, laid on the turf. The Laws-of-the-Game
+/// Football pitch lines (WLD-TERRAIN-APPLY): the same flat decal quads as the road markings, laid on the turf. The Laws-of-the-Game
 /// layout of a 105 x 68 m pitch is scaled to the rectangle inside the outer line: boundary, halfway line, centre circle
 /// and spot, and at both ends the penalty area, goal area, penalty spot, penalty arc and corner arcs.
 /// </summary>

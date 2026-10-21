@@ -65,7 +65,7 @@ internal static class FurnitureBarriers
                     var pos = centre + normal * ((k - (count - 1) * 0.5f) * S.BarrierPitch);
                     if (Land.Point(site.World.Terrain, pos, radius) is not { } lawn || !site.OffRows(pos, radius)
                         || site.Blocker(pos, radius, walk, onBeside: true, walksPass: true) is not null) continue;
-                    // On paving the sphere stands on the paving; on the end of a strip WP-15 may leave lawn, so it lands as a post.
+                    // On paving the sphere stands on the paving; on the end of a strip game/gen/ground/ may leave lawn, so it lands as a post.
                     var y = site.Paving.OnPavedGround(pos) ? site.World.Terrain.HeightAt(pos.X, pos.Y) + GroundLevels.Paving : lawn;
                     row.Add(Item($"barrier:{walk.Id.Value}:{Num(m)}:{Num(k)}", FurnitureKind.Barrier, PartCatalog.StoneSphere, p, Frame(pos, normal, y), SphereDef.Collision(p), []));
                 }

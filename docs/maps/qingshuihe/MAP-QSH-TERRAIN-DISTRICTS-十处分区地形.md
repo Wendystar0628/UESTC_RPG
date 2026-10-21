@@ -5,13 +5,12 @@ category: maps
 parent: MAP-QSH-TERRAIN
 summary: 清水河十处分区地形的标高、坡度、连接与对点位的约束，以及地形文件归属
 keywords: [分区地形, 下沉时间广场, 落金沟, 湖岸丘链, 草阶看台台地, 东湖亭丘, 岛丘, 品学楼台基, 坡广场, 宿舍台原, 上台, 下台, 台口, 通学坡, 看月台, 堤上路, 球场堤路, 下沉草阶草坪, 河岸低步道, 渠堤, 湿地低地, 扇形草坪浅碟, 中庭草丘, 零带, terrain.json]
-owners: [WP-16, WP-18, WP-19, WP-20, WP-21]
-contributors: [WP-08, WP-13, WP-15, WP-23, WP-25]
 depends: [CORE-INDEX, MAP-QSH-TERRAIN, WLD-TERRAIN, MAP-QSH-CORE, MAP-QSH-SOUTH, MAP-QSH-WEST, MAP-QSH-NORTH, MAP-QSH-CENTER-EAST, SYS-WALK]
 related: [MAP-QSH-INTERIORS-LIBRARY, MAP-QSH-ADDITIONS, WLD-WATER, WLD-OUTSKIRTS, WLD-VEGETATION, UI-NAV]
 contracts: []
 data: ["game/data/maps/qingshuihe/world/*.terrain.json"]
 gates: [G2, G7, G15]
+paths: ["game/gen/maps/qingshuihe/center-east/**", "game/gen/maps/qingshuihe/north/**", "game/gen/maps/qingshuihe/south/**", "game/gen/maps/qingshuihe/core/**", "game/gen/maps/qingshuihe/west/**", "game/data/maps/qingshuihe/world/core.terrain.json", "game/data/maps/qingshuihe/world/south.terrain.json", "game/data/maps/qingshuihe/world/west.terrain.json", "game/data/maps/qingshuihe/world/north.terrain.json", "game/data/maps/qingshuihe/world/center-east.terrain.json", "game/data/maps/qingshuihe/world/center-east.json", "game/data/maps/qingshuihe/world/north.json", "game/data/maps/qingshuihe/world/south.json", "game/data/maps/qingshuihe/world/core.json", "game/data/maps/qingshuihe/world/west.json", "game/gen/parts/sport/**"]
 ---
 
 # MAP-QSH-TERRAIN-DISTRICTS · 十处分区地形
@@ -33,20 +32,20 @@ gates: [G2, G7, G15]
 
 ### 0.1 接入要点
 
-- **写本区地形文件（WP-16（核心区）、18、19、20、21）**：只写本文列给本区的操作（§1），ID 写成 `design:terrain:<区>-<名>`，`reason` 写本文小节号和理由；铺装面上不放起伏，走廊上的高差只用锚点
-- **宿舍台原的路（WP-20（北部生活区））**：台上的路取所在台面标高；后勤物资通道与丹桂路沿台脚保持 0；跨台缘的路段按纵坡上限成坡，主网与车行路 ≤ 5%，放不下的园路做台阶并列坡道（§7）
-- **铺地面与道路（WP-15（地表、道路、铺装）、WP-08（世界模型与世界数据））**：下沉广场、落金沟、坡广场、通学坡、堤上路、渠堤与道路相交处的锚点按各节的"连接"
-- **在丘、堤、台地上种树和摆放（WP-23（植被系统）、13、25）**：红枫种植见 MAP-QSH-VEGETATION §3.2；台缘边 1 m 内不放可踩物（§4、§7）
+- **写本区地形文件（核心区（MAP-QSH-CORE）、MAP-QSH-SOUTH（南区）、MAP-QSH-WEST（西区与西北区）、MAP-QSH-NORTH（北部生活区）、MAP-QSH-CENTER-EAST（中部与东区））**：只写本文列给本区的操作（§1），ID 写成 `design:terrain:<区>-<名>`，`reason` 写本文小节号和理由；铺装面上不放起伏，走廊上的高差只用锚点
+- **宿舍台原的路（北部生活区（MAP-QSH-NORTH））**：台上的路取所在台面标高；后勤物资通道与丹桂路沿台脚保持 0；跨台缘的路段按纵坡上限成坡，主网与车行路 ≤ 5%，放不下的园路做台阶并列坡道（§7）
+- **铺地面与道路（地表、道路、铺装（WLD-TERRAIN-APPLY）、世界模型与世界数据（SYS-MAPS））**：下沉广场、落金沟、坡广场、通学坡、堤上路、渠堤与道路相交处的锚点按各节的"连接"
+- **在丘、堤、台地上种树和摆放（植被系统（WLD-VEGETATION）、WLD-LIFE-STREET（街道家具）、WLD-LIFE-FAUNA（动物与生活痕迹））**：红枫种植见 MAP-QSH-VEGETATION §3.2；台缘边 1 m 内不放可踩物（§4、§7）
 
 ## 1 文件归属
 
 | 文件 | 内容 |
 | --- | --- |
-| `core.terrain.json`（WP-16（核心区）） | 时间广场下沉与圆内走廊锚点、图书馆与博物馆垫层锁定；落金沟；西湖、岛丘、东岸看台台地、鞍部；箱涵、走马河图书馆北段与湖口跌水 |
-| `south.terrain.json`（WP-18（南区）） | 红枫丘；东湖、岛丘、西岸看台台地、亭丘、冬季浅滩、东湖支汊；红光右支渠南段、走马河西段 |
-| `west.terrain.json`（WP-19（西区与西北区）） | 红光右支渠北段、渠堤、暗涵口、湿地低地、湿地溪；扇形草坪浅碟 |
-| `north.terrain.json`（WP-20（北部生活区）） | 宿舍台原的上台、下台、台缘与北坡草地；台上道路与台口锚点；中庭草丘、缓波、浅洼、台脚浅沟；银杏苑西侧缓波 |
-| `center-east.terrain.json`（WP-21（中部与东区）） | 品学楼台基、坡广场、垫层与走廊锚点、下沉草阶草坪、河岸低步道；看月台、球场堤路；走马河中段与东南段、磨底河、东侧小溪 |
+| `core.terrain.json`（核心区（MAP-QSH-CORE）） | 时间广场下沉与圆内走廊锚点、图书馆与博物馆垫层锁定；落金沟；西湖、岛丘、东岸看台台地、鞍部；箱涵、走马河图书馆北段与湖口跌水 |
+| `south.terrain.json`（南区（MAP-QSH-SOUTH）） | 红枫丘；东湖、岛丘、西岸看台台地、亭丘、冬季浅滩、东湖支汊；红光右支渠南段、走马河西段 |
+| `west.terrain.json`（西区与西北区（MAP-QSH-WEST）） | 红光右支渠北段、渠堤、暗涵口、湿地低地、湿地溪；扇形草坪浅碟 |
+| `north.terrain.json`（北部生活区（MAP-QSH-NORTH）） | 宿舍台原的上台、下台、台缘与北坡草地；台上道路与台口锚点；中庭草丘、缓波、浅洼、台脚浅沟；银杏苑西侧缓波 |
+| `center-east.terrain.json`（中部与东区（MAP-QSH-CENTER-EAST）） | 品学楼台基、坡广场、垫层与走廊锚点、下沉草阶草坪、河岸低步道；看月台、球场堤路；走马河中段与东南段、磨底河、东侧小溪 |
 
 跨区的地形两区各写本区一段，区界处取同一标高；道路走廊的锚点由锚点所在的区写。
 
@@ -89,7 +88,7 @@ gates: [G2, G7, G15]
 - **辅：水位阶梯**。水从湖向渠一级级跌下去，每一处跌水都是一道白色翻花和一处水声，把"平地上的水"读成有高低的水系。湿地溪（软岸 1:4）穿堤处是暗涵口，两级跌水入渠；湖口两级跌水入走马河图书馆北段；箱涵（湖内长约 290 m）不画水面，两端是堰口。
 - **各段常水位与渠底**见 MAP-QSH-TERRAIN §2：南门一带河谷最深；走马河与磨底河石砌直墙，主网一侧栏杆；品学楼东侧小溪全段涉水。
 - **桥**：银杏大道跨走马河小桥与西门车行桥桥面平，取两端路面 0 m，高出水面 1.2 m；湿地石桥是拱桥，拱顶比两头园路高约 1.2 m，两头各一段 ≤ 8.33% 的引坡并设台阶。
-- **亲水台阶**（WP-28（滨水与桥））：每级约 0.15 m，每隔几级一块平台，最下一级没入水中，登记为涉水区；颊墙高出 1.0 m 的段落装栏杆。
+- **亲水台阶**（滨水与桥（game/gen/maps/qingshuihe/waterfront/））：每级约 0.15 m，每隔几级一块平台，最下一级没入水中，登记为涉水区；颊墙高出 1.0 m 的段落装栏杆。
 - **湿地栈道**：面 0 m，略高于湿地低地和湿地溪水面；北接西门桥头，南接湿地石桥。P11 在栈道上，A10 落在栈道口的园路上，不落进湿地低地。
 
 ## 7 宿舍区

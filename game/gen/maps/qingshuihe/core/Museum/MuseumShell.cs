@@ -19,8 +19,8 @@ namespace Campus.Gen.Maps.Qingshuihe.Core.Museum;
 /// square columns (柱廊环, walkable and dry in rain); the white central hall (序厅, 约 28×26 m) rises from the middle with a
 /// clerestory ribbon and a low pyramid roof (白色体量，低坡锥形屋顶). The south colonnade carries the portico (方柱门廊):
 /// four larger columns, a raised head block with the name field, and the main door; the lake face (朝湖立面) is
-/// floor-to-head dark glass with the side door to the boardwalk. Interiors are WP-17's; the entrance kit (mat, sign,
-/// door lamp) WP-13's from the interior index.
+/// floor-to-head dark glass with the side door to the boardwalk. Interiors are game/gen/maps/qingshuihe/core/LibraryInterior/'s; the entrance kit (mat, sign,
+/// door lamp) game/gen/furniture/'s from the interior index.
 /// <para>
 /// Plan: every ring is the hall body octagon offset per edge (the colonnade outer line from 8402's parallel edge) and
 /// chamfered at its corners, so the walls, eave and platform keep 8401's shape and orientation and no fold sits near 45°.
@@ -494,7 +494,7 @@ public sealed class MuseumShell : ZoneSite, IWindowedPiece
 
     // ------------------------------------------------------------------ doors
 
-    /// <summary>WP-10 glass doors in the two bays: the main door's inner two leaves and both lake door leaves fixed open at 90°.</summary>
+    /// <summary>game/gen/parts/openings/ glass doors in the two bays: the main door's inner two leaves and both lake door leaves fixed open at 90°.</summary>
     private void Doors(CoreBuild build)
     {
         foreach (var (o, leaves) in new[] { (MainDoor, MuseumStyle.MuseumDoorLeaves), (LakeDoor, MuseumStyle.LakeDoorLeaves) })

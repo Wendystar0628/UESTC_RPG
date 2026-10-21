@@ -15,14 +15,14 @@ using W = Campus.Gen.Maps.Qingshuihe.CenterEast.CenterEastTune.Windows;
 namespace Campus.Gen.Maps.Qingshuihe.CenterEast.Wenke;
 
 /// <summary>
-/// 文科楼群 (MAP-QSH-CENTER-EAST), claimed whole from WP-14 and built by this zone: the 15-storey tower on its
+/// 文科楼群 (MAP-QSH-CENTER-EAST), claimed whole from game/gen/buildings/ and built by this zone: the 15-storey tower on its
 /// rounded-triangle plan in the east wing, three podium wings stepping back storey by storey toward their tips, and the
 /// central hub carrying the glass-vaulted atrium. Each block is a stack of rounded storeys, one pure layout per block:
 /// a white-grey floor band at every floor standing proud of a continuous dark glass ribbon cut into numbered cells by
 /// mullions; set-backs are planted terraces behind bar rails; podium roofs are planted, the tower roof carries a penthouse
 /// and fenced plant. Faces where another block stands at that storey are left out, so the group reads as one body.
 /// The yellow-green panels are a strip on the tower's south face over the atrium door and the door's two-storey porch.
-/// Closed (§3.3): the porch's glass doors are shut (DoorClosed), the lobby card is WP-51's; no hoarding or scaffold.
+/// Closed (§3.3): the porch's glass doors are shut (DoorClosed), the lobby card is game/gen/interior/'s; no hoarding or scaffold.
 /// </summary>
 public sealed class WenkeSite : ZoneSite
 {
@@ -254,7 +254,7 @@ public sealed class WenkeSite : ZoneSite
         }
     }
 
-    /// <summary>Bar rails (WP-11) along each terrace cell, on the band just inside its face.</summary>
+    /// <summary>Bar rails (game/gen/parts/circulation/) along each terrace cell, on the band just inside its face.</summary>
     private static void Rails(SiteBuilder b, Plan plan, Block block, int k, float y)
     {
         var level = y + Floor(k) + K.Upstand;

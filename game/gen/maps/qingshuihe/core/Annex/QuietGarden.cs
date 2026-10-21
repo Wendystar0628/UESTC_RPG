@@ -16,7 +16,7 @@ namespace Campus.Gen.Maps.Qingshuihe.Core.Annex;
 /// 8408, the court wing 8406 and the north-east connector 8404. Not open; it is a picture seen from the 1F north windows
 /// and from the 3F G terrace above, so it is composed from above: a cut-granite court with a lighter stepping path, a red
 /// timber pergola along the wing, a grey granite colonnade along the library wall, a hexagonal timber pavilion in the
-/// widest free spot and two timber-edged planters with clipped shrubs, each holding a palm (棕榈, planted by WP-23 from
+/// widest free spot and two timber-edged planters with clipped shrubs, each holding a palm (棕榈, planted by game/gen/vegetation/ from
 /// world/core.json). Everything is laid out from the court's own walls, so it follows the data, not coordinates.
 /// </summary>
 public sealed class QuietGarden : ZoneSite

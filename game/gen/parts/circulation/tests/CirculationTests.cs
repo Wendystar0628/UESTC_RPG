@@ -17,7 +17,7 @@ public sealed class CirculationTests
     public void EveryWp11PartIsInTheCatalogWithItsParameterType()
     {
         var parts = Registered();
-        AssertThat(parts.Count > 0).OverrideFailureMessage("Missing WP-11 part registrations.").IsTrue();
+        AssertThat(parts.Count > 0).OverrideFailureMessage("Missing game/gen/parts/circulation/ part registrations.").IsTrue();
         foreach (var (type, attribute) in parts)
         {
             var entry = PartCatalog.Find(new(attribute.Id)) ?? throw new InvalidOperationException($"{attribute.Id} is not in PartCatalog.");
@@ -106,7 +106,7 @@ public sealed class CirculationTests
     [TestCase, TestCategory(TestReason.Contract)]
     public void IndoorStairsMatchTheWp51aColliderRules()
     {
-        // WP-51a default plan: 1.45 m flights, 0.2 m well, 1.5 m landing, 0.28 m treads, 3.3 m storey in 2 × 11 risers.
+        // game/gen/interior/core/ default plan: 1.45 m flights, 0.2 m well, 1.5 m landing, 0.28 m treads, 3.3 m storey in 2 × 11 risers.
         var p = new StairParams(3.1f, 3.3f, 11 * 0.28f + 1.5f, 11);
         var colliders = new StairDoublePart().Collision(p);
         var ramps = colliders.OfType<RampCollider>().ToArray();
@@ -338,7 +338,7 @@ public sealed class CirculationTests
                 AssertThat(count == 1 && edges.TryGetValue((edge.Item2, edge.Item1), out var reverse) && reverse == 1).OverrideFailureMessage($"{what}: a solid has an open or non-manifold edge at {edge.Item1}–{edge.Item2}.").IsTrue();
             for (var i = 0; i < m.Position.Length / 3; i++)
             { AssertThat(bounds.Contains(P(m, i))).OverrideFailureMessage($"{what}: a vertex leaves the bounds.").IsTrue(); AssertThat(Math.Abs((double)(1) - N(m, i).Length()) <= TestTolerance.Position).OverrideFailureMessage($"Expected {1}; got {N(m, i).Length()}.").IsTrue(); }
-            // Ao is visibility (1 = unoccluded); WP-11 adds no occlusion of its own, so only kernel reveals (0.8) may dip below 1.
+            // Ao is visibility (1 = unoccluded); game/gen/parts/circulation/ adds no occlusion of its own, so only kernel reveals (0.8) may dip below 1.
             AssertThat(m.Ao is not null && m.Ao.All(v => v >= 0.45f && v <= 1f)).OverrideFailureMessage($"{what}: Ao must be visibility in 0.45–1 (a double flip would read 0).").IsTrue();
         }
     }

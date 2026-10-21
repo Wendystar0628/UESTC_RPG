@@ -1,4 +1,4 @@
-// toon.gdshaderinc：全校共用的卡通材质核心（WP-04）
+// toon.gdshaderinc：全校共用的卡通材质核心（ART-STYLE）
 // 规格：ART-STYLE（明暗分阶）、§3（影色）、§5（暖边、透光、湿面）；ENG-PERF；SYS-WEATHER。
 //
 // 合成方式：ALBEDO = 1，影色写 EMISSION，"受光 − 影"在 light() 的方向光分支里乘分阶遮罩加进 DIFFUSE_LIGHT。
@@ -30,7 +30,7 @@
 #include "res://style/shaders/fog.gdshaderinc"
 #include "res://style/shaders/precip_wet.gdshaderinc"
 
-// 灯光通道、窗灯、灯具亮灭与路灯光斑的公共求值（lamp_channel、lamp_window_*、lamp_fixture_level、lamp_pool_shade；WP-39），fx_glow、降水与倒影代理共用同一份
+// 灯光通道、窗灯、灯具亮灭与路灯光斑的公共求值（lamp_channel、lamp_window_*、lamp_fixture_level、lamp_pool_shade；MAP-QSH-ATMOSPHERE），fx_glow、降水与倒影代理共用同一份
 #include "res://style/shaders/lamp.gdshaderinc"
 
 #include "res://style/shaders/toon_look.gdshaderinc"
