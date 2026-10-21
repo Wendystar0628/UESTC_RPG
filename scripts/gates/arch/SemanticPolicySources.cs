@@ -21,7 +21,7 @@ internal static class SemanticPolicySources
 
     internal static SourceFile[] LoadFiles(string root)
     {
-        var handwritten = SourcePolicyGateTests.HandwrittenPaths(root).Where(path => path.EndsWith(".cs", StringComparison.OrdinalIgnoreCase) &&
+        var handwritten = HandwrittenSources.Paths(root).Where(path => path.EndsWith(".cs", StringComparison.OrdinalIgnoreCase) &&
             (path.StartsWith("game/", StringComparison.Ordinal) || path.StartsWith("scripts/", StringComparison.Ordinal))).ToHashSet(StringComparer.OrdinalIgnoreCase);
         var known = SourceModel.Production.Concat(SourceModel.Tests).ToArray();
         var compilation = known[0].Model.Compilation;
