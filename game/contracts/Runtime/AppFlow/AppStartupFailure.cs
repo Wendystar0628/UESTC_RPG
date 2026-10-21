@@ -1,9 +1,23 @@
 namespace Campus.Contracts.AppFlow;
 
-/// <summary>A single startup failure. Producers use safe summaries and virtual paths, never exception text or argv.</summary>
-public sealed record AppStartupFailure(string Reason, string Code, string Phase, string Build, string LogDirectory)
+/// <summary>Stable startup diagnostics. The UI owns all visible and copied wording.</summary>
+public sealed record AppStartupFailure(string Code, string Phase, string Build, string LogDirectory);
+
+public static class AppStartupFailureCodes
 {
-    public string CopyText => $"{Reason}\n错误码：{Code}\n阶段：{Phase}\n构建：{Build}\n日志目录：{LogDirectory}";
+    public const string Installation = "STARTUP_INSTALLATION";
+    public const string DataInvalid = "STARTUP_DATA_INVALID";
+    public const string Stalled = "STARTUP_STALLED";
+    public const string MapPreparation = "STARTUP_MAP_PREPARATION";
+    public const string BakeFailed = "STARTUP_BAKE_FAILED";
+    public const string Unexpected = "STARTUP_UNEXPECTED";
+}
+
+/// <summary>A terminal preparation source supplies its code and retains its original diagnostic cause.</summary>
+public sealed class AppStartupException(string code, string message, Exception? innerException = null)
+    : Exception(message, innerException)
+{
+    public string Code { get; } = code;
 }
 
 /// <summary>The production stage owns this one failure session. Commands run on its main thread and coalesce.</summary>

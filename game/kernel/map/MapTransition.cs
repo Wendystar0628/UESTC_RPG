@@ -22,9 +22,11 @@ public sealed class MapTransition(MapId from, MapTravelRequest request) : IMapTr
         _ => throw new ArgumentOutOfRangeException(nameof(Stage))
     };
     public Task<MapTravelResult> Done => _completion.Task;
+    public Exception? Failure { get; private set; }
     internal void MoveTo(MapStage stage) => Stage = stage;
-    internal void Complete(MapTravelResult result)
+    internal void Complete(MapTravelResult result, Exception? failure = null)
     {
+        Failure = failure;
         Stage = MapStage.Done;
         _completion.TrySetResult(result);
     }

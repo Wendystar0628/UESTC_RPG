@@ -38,6 +38,7 @@ internal sealed class TestMapTransition(MapId from, MapId to, MapTravelCause cau
     public MapStage Stage => done.IsCompleted ? MapStage.Done : MapStage.LoadData;
     public float Progress => 1;
     public Task<MapTravelResult> Done => done;
+    public Exception? Failure { get; init; }
 }
 
 /// <summary>Shared IMapContext fake; World throws unless a test supplies one.</summary>

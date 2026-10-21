@@ -268,6 +268,13 @@ startup.failure.copy,复制错误信息,Copy error info
 startup.failure.quit,退出,Quit
 startup.failure.copied,已复制,Copied
 startup.failure.busy,正在处理，请稍候,Working on it
+startup.failure.reason.installation,启动所需的安装文件缺失或与程序不配套。,The installation files needed to start are missing or do not match the program.
+startup.failure.reason.data_invalid,启动数据不完整或与程序不配套。,The startup data is incomplete or does not match the program.
+startup.failure.reason.stalled,启动准备已停止推进，请重试。,Startup preparation has stopped making progress. Please retry.
+startup.failure.reason.map_preparation,校园地图未能准备完成。,The campus map could not be prepared.
+startup.failure.reason.bake_failed,本机烘焙没有完成。,Local baking on this machine did not finish.
+startup.failure.reason.unexpected,启动时遇到错误，未能进入游戏。,An error occurred during startup and the game could not be entered.
+startup.failure.report,{reason}\n错误码：{code}\n阶段：{phase}\n构建：{build}\n日志目录：{logs},{reason}\nError code: {code}\nPhase: {phase}\nBuild: {build}\nLog folder: {logs}
 hud.first_guide,单击画面开始 · Esc 打开菜单 · H 操作说明,Click to begin · Esc for menu · H for controls
 saves.title,存档,Saves
 saves.latest,最近,Latest

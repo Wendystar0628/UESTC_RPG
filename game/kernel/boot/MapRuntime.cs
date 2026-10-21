@@ -1,4 +1,5 @@
 using Campus.Contracts;
+using Campus.Contracts.AppFlow;
 using Campus.Contracts.Maps;
 using Campus.Contracts.Bake;
 using Campus.Kernel.Maps;
@@ -196,9 +197,11 @@ public partial class MapRuntime : Node, IMapRuntime, IMapLifetime
         catch (OperationCanceledException) when (_exit.IsCancellationRequested) { }
         catch (Exception error)
         {
-            RecordFailure(error);
-            FailArrival(error);
-            throw;
+            var failure = error is AppStartupException ? error :
+                new AppStartupException(AppStartupFailureCodes.MapPreparation, "Map preparation failed.", error);
+            RecordFailure(failure);
+            FailArrival(failure);
+            throw failure;
         }
     }
 

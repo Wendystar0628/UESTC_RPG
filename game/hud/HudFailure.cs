@@ -44,6 +44,17 @@ internal sealed class HudFailure
 
     public void Enter() => _lifetime = new CancellationTokenSource();
 
+    /// <summary>--ui-gallery=failure：用一份示例失败走同一条展示路径；重试与退出只走统一退出（码 0），不重启。</summary>
+    internal Task<bool> ShowGallery() => Show(new GallerySession(_dependencies.Exit));
+
+    private sealed class GallerySession(IAppExit exit) : IAppStartupFailureSession
+    {
+        public AppStartupFailure Failure { get; } =
+            new(AppStartupFailureCodes.MapPreparation, "travel-boot", "gallery", "user://logs");
+        public Task Retry() => exit.FinishQuit(0);
+        public Task Quit() => exit.FinishQuit(0);
+    }
+
     public void Exit()
     {
         // 树退出不算丢卡：先撤销确认，再拆。
@@ -100,13 +111,15 @@ internal sealed class HudFailure
     {
         var kit = _view.Kit;
         var failure = session.Failure;
+        // 先取原因文字：未知错误码在建任何节点之前就抛出。
+        var reason = UiKit.T(ReasonKey(failure.Code));
         _scrim = kit.Box(_view.FailureHost, new UiFx(Fill: "scrim", Margin: 0));
         _scrim.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.FullRect);
         _scrim.MouseFilter = Control.MouseFilterEnum.Stop;
         _view.FailureHost.MoveChild(_scrim, 0);
         _card = kit.Layout.Dialog(_view.FailureCardHost, UiKit.T("startup.failure.title"));
         _card.Tabs.Visible = false;
-        kit.Text(_card.Body, failure.Reason);
+        kit.Text(_card.Body, reason);
         kit.Text(_card.Body, failure.Code, "data", "text.2", wrap: false);
         _retry = kit.Button(_card.Footer, ButtonStyle.Primary, UiKit.T("startup.failure.retry"), "button.primary",
             pressed: () => Run(session.Retry));
@@ -116,10 +129,26 @@ internal sealed class HudFailure
         SetBusy(_action is not null);
     }
 
+    // 错误码到原因文字的键；契约追加错误码时这里同批补一行，未知码直接报错。
+    private static string ReasonKey(string code) => code switch
+    {
+        AppStartupFailureCodes.Installation => "startup.failure.reason.installation",
+        AppStartupFailureCodes.DataInvalid => "startup.failure.reason.data_invalid",
+        AppStartupFailureCodes.Stalled => "startup.failure.reason.stalled",
+        AppStartupFailureCodes.MapPreparation => "startup.failure.reason.map_preparation",
+        AppStartupFailureCodes.BakeFailed => "startup.failure.reason.bake_failed",
+        AppStartupFailureCodes.Unexpected => "startup.failure.reason.unexpected",
+        _ => throw new ArgumentOutOfRangeException(nameof(code), code, "Unknown startup failure code.")
+    };
+
+    private static string CopyText(AppStartupFailure failure) => UiKit.T("startup.failure.report",
+        ("reason", UiKit.T(ReasonKey(failure.Code))), ("code", failure.Code), ("phase", failure.Phase),
+        ("build", failure.Build), ("logs", failure.LogDirectory));
+
     private void Copy(AppStartupFailure failure)
     {
         if (_action is not null) return;
-        DisplayServer.ClipboardSet(failure.CopyText);
+        DisplayServer.ClipboardSet(CopyText(failure));
         _toast!.Show(UiKit.T("startup.failure.copied"));
     }
 
@@ -162,8 +191,10 @@ internal sealed class HudFailure
         completed?.GetAwaiter().GetResult();
     }
 
-    private bool CardAlive() => _card is { } card && GodotObject.IsInstanceValid(card.Shell) && card.Shell.IsInsideTree() &&
-        _scrim is { } scrim && GodotObject.IsInstanceValid(scrim) && scrim.IsInsideTree() && _view.FailureHost.IsVisibleInTree();
+    // 卡（外壳与面板）、遮罩和宿主都要真正可见；任何一个被隐藏、移出树或释放都算丢卡。
+    private bool CardAlive() => _card is { } card && GodotObject.IsInstanceValid(card.Shell) && card.Shell.IsVisibleInTree() &&
+        GodotObject.IsInstanceValid(card.Panel) && card.Panel.IsVisibleInTree() &&
+        _scrim is { } scrim && GodotObject.IsInstanceValid(scrim) && scrim.IsVisibleInTree() && _view.FailureHost.IsVisibleInTree();
 
     // 卡已排好版、默认焦点已在“重试”上；之后由 FrameAwaiter 再等一帧真实绘制。
     private bool CardReady() => _card is { } card && _owner.IsInsideTree() && _view.FailureHost.IsVisibleInTree() &&

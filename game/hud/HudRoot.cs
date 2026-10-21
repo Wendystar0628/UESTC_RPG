@@ -209,8 +209,15 @@ public partial class HudRoot : CanvasLayer, IBootParticipant, IAppLoadingPresent
             case "atlas": break; // The map HUD opens its own gallery after entering Playing.
             case "layout": Widgets.UiLayoutGallery.Create(_view.Kit, _view.PageHost); break;
             case "census": Census(3); break;
+            case "failure": FailureGallery(); break;
             default: throw new ArgumentException($"Unknown --ui-gallery page: {page}");
         }
+    }
+
+    /// <summary>--ui-gallery=failure：示例失败走真实的启动失败页；没能展示就报错，不静默留空画面。</summary>
+    private async void FailureGallery()
+    {
+        if (!await _failure.ShowGallery()) throw new InvalidOperationException("The startup failure gallery could not be shown.");
     }
 
     /// <summary>

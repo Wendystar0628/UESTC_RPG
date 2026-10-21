@@ -1,4 +1,5 @@
 using Campus.Contracts;
+using Campus.Contracts.AppFlow;
 using Campus.Contracts.Maps;
 using Campus.Contracts.Startup;
 using Campus.Kernel.Boot;
@@ -280,7 +281,8 @@ public sealed class MapRuntimeRuntimeTests
             catch (AggregateException error)
             {
                 var failures = error.Flatten().InnerExceptions;
-                AssertThat(failures.Contains(original) && failures.Contains(stopping) && failures.Contains(draining) && failures.Contains(releasing)).IsTrue();
+                AssertThat(failures.OfType<AppStartupException>().Any(failure => failure.Code == AppStartupFailureCodes.MapPreparation &&
+                    ReferenceEquals(failure.InnerException, original)) && failures.Contains(stopping) && failures.Contains(draining) && failures.Contains(releasing)).IsTrue();
             }
             AssertThat(order.SequenceEqual(["stop-first", "stop-second", "stream", "data-first", "data-second"])).IsTrue();
             AssertThat(stream.IsUnloaded && !mounting.IsCompletedSuccessfully && ReferenceEquals(runtime.ShutdownAsync(map), shutdown)).IsTrue();

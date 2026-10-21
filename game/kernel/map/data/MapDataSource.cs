@@ -2,6 +2,8 @@ using Campus.Kernel.Diagnostics;
 using Campus.Gen.BakeInput;
 using Campus.Gen.World;
 using Campus.Contracts;
+using Campus.Contracts.AppFlow;
+using System.Text.Json;
 using Campus.Contracts.Maps;
 using Campus.Kernel.Registry;
 using Godot;
@@ -13,15 +15,20 @@ public class MapDataSource
 {
     private static readonly StringName _shaderGlobalMapRect = ShaderGlobals.MapRect;
 
-    public virtual Task<MapCatalog> ReadCatalog()
+    public virtual async Task<MapCatalog> ReadCatalog()
     {
-        var indexPath = ProjectSettings.GetSetting("campus/maps/index").AsString();
-        var index = MapCatalog.ReadIndex(ReadRequired(indexPath));
-        var bytes = index.Maps.Select(entry => (Entry: entry,
-            Map: ReadRequired(entry.Dir + "map.json"), Geo: ReadRequired(entry.Dir + "world/geo.json"),
-            Waypoints: ReadOptional(entry.Dir + "waypoints.json"))).ToArray();
-        return Task.Run(() => new MapCatalog(index, bytes.Select(b =>
-            MapCatalog.ReadEntry(b.Entry, b.Map, b.Geo, b.Waypoints)).ToArray()));
+        try
+        {
+            var indexPath = ProjectSettings.GetSetting("campus/maps/index").AsString();
+            var index = MapCatalog.ReadIndex(ReadRequired(indexPath));
+            var bytes = index.Maps.Select(entry => (Entry: entry,
+                Map: ReadRequired(entry.Dir + "map.json"), Geo: ReadRequired(entry.Dir + "world/geo.json"),
+                Waypoints: ReadOptional(entry.Dir + "waypoints.json"))).ToArray();
+            return await Task.Run(() => new MapCatalog(index, bytes.Select(b =>
+                MapCatalog.ReadEntry(b.Entry, b.Map, b.Geo, b.Waypoints)).ToArray()));
+        }
+        catch (Exception error) when (error is InvalidDataException or JsonException)
+        { throw new AppStartupException(AppStartupFailureCodes.DataInvalid, "Map catalogue data is invalid.", error); }
     }
 
     public virtual IReadOnlyDictionary<string, ReadOnlyMemory<byte>> ReadWorldFiles(MapCatalogEntry entry) =>
@@ -30,10 +37,15 @@ public class MapDataSource
     /// <summary>Capture authored map resources on the engine thread before worker loading.</summary>
     public virtual MapLoadInput ReadLoadInput(MapCatalogEntry entry)
     {
-        var files = WorldInputFiles.ReadLoadInput(entry.Descriptor, new ResourceInputs(entry.DataRoot), ReadWorldFiles(entry));
-        var input = new MapLoadInput(entry, BuildInputSnapshot.Freeze(files,
-            CaptureInputVersion(files.Keys.Select(key => entry.DataRoot + key))));
-        return input with { Entry = MapCatalog.ReadEntry(entry, input.Files) };
+        try
+        {
+            var files = WorldInputFiles.ReadLoadInput(entry.Descriptor, new ResourceInputs(entry.DataRoot), ReadWorldFiles(entry));
+            var input = new MapLoadInput(entry, BuildInputSnapshot.Freeze(files,
+                CaptureInputVersion(files.Keys.Select(key => entry.DataRoot + key))));
+            return input with { Entry = MapCatalog.ReadEntry(entry, input.Files) };
+        }
+        catch (Exception error) when (error is InvalidDataException or JsonException)
+        { throw new AppStartupException(AppStartupFailureCodes.DataInvalid, "Map input data is invalid.", error); }
     }
 
     // Capture file revisions once at the IO boundary, never on a tile worker.
@@ -73,9 +85,9 @@ public class MapDataSource
     private static byte[] ReadRequired(string path)
     {
         if (string.IsNullOrWhiteSpace(path) || !path.StartsWith("res://", StringComparison.Ordinal))
-            throw new InvalidDataException("Map resources must use res:// paths.");
+            throw new AppStartupException(AppStartupFailureCodes.DataInvalid, "Map resources must use res:// paths.");
         var bytes = Godot.FileAccess.GetFileAsBytes(path);
-        if (bytes.Length == 0) throw new IOException($"Missing or empty map resource: {path}.");
+        if (bytes.Length == 0) throw new AppStartupException(AppStartupFailureCodes.Installation, $"Missing or empty map resource: {path}.");
         return bytes;
     }
 }

@@ -35,6 +35,7 @@ public partial class KernelStage : Node3D, IAppExit, IStageGateHost
     private bool _cpuCommand;
     private bool _shutdownStarted;
     private Task? _shutdownTask;
+    private Task? _closeTask;
     private Task<int>? _bakeCommandTask;
     private SceneTree? _sceneTree;
     private bool _treeExited;
@@ -60,7 +61,6 @@ public partial class KernelStage : Node3D, IAppExit, IStageGateHost
             GD.Print(FormattableString.Invariant($"STARTUP_PHASE {value} {FrameClock.MonotonicMilliseconds:R} frame={Engine.GetProcessFrames()}"));
         }
     }
-    public string? Failure => _startupFailure.Failure;
 
     public KernelStage()
     {
@@ -75,7 +75,7 @@ public partial class KernelStage : Node3D, IAppExit, IStageGateHost
         try
         {
             var registry = KernelServices.Services;
-            registry.Discover(BuildInfo.ModuleAssemblies.Select(name => Assembly.Load(new AssemblyName(name))).SelectMany(assembly => assembly.GetTypes()));
+            registry.Discover(LoadModuleTypes());
             GD.Print($"Kernel registry: {registry.Entries.Count} declarations; build {BuildInfo.Build}");
             if (RegistryStageGate.TryRun()) { await FinishQuit(); return; }
             if (AppBoot.Options.CpuBakeMode) { await RunBakeCommand(); return; }
@@ -84,6 +84,18 @@ public partial class KernelStage : Node3D, IAppExit, IStageGateHost
         }
         catch (OperationCanceledException) when (_closing || _startupFailure.Failed) { }
         catch (Exception error) { await _startupFailure.Fail(error); }
+    }
+
+    private static IEnumerable<Type> LoadModuleTypes()
+    {
+        foreach (var name in BuildInfo.ModuleAssemblies)
+        {
+            Type[] types;
+            try { types = Assembly.Load(new AssemblyName(name)).GetTypes(); }
+            catch (Exception error)
+            { throw new AppStartupException(AppStartupFailureCodes.Installation, $"Cannot load module assembly: {name}.", error); }
+            foreach (var type in types) yield return type;
+        }
     }
 
     private void Compose()
@@ -278,7 +290,11 @@ public partial class KernelStage : Node3D, IAppExit, IStageGateHost
             null, ViewMode.Fly, MapTravelCause.Boot));
         var travelled = await travel.Done;
         CheckStartupActive();
-        if (travelled != MapTravelResult.Arrived) throw new InvalidOperationException("Boot map travel failed.");
+        if (travelled != MapTravelResult.Arrived)
+        {
+            if (travel.Failure is { } failure) System.Runtime.ExceptionServices.ExceptionDispatchInfo.Capture(failure).Throw();
+            throw new AppStartupException(AppStartupFailureCodes.MapPreparation, "Boot map travel was rejected.");
+        }
         await Initialize(BootPhase.AfterMapWarm);
         await BootWorldOverrides.ApplyQuality(options, registry.Get<IQualityService>());
         CheckStartupActive();
@@ -339,7 +355,8 @@ public partial class KernelStage : Node3D, IAppExit, IStageGateHost
 
     internal bool CanHandleFailure => !_treeExited && !_shutdownStarted;
     internal bool CanKeepFailurePresentation => !_closing && CanHandleFailure;
-    internal Task ShutdownCompletion => _shutdownTask ?? Task.CompletedTask;
+    internal Task ShutdownCompletion => _shutdownTask ?? _closeTask
+        ?? throw new InvalidOperationException("No close operation owns this invalidated startup session.");
 
     internal void MarkFailure()
     {
@@ -420,7 +437,28 @@ public partial class KernelStage : Node3D, IAppExit, IStageGateHost
             _ = CloseAsync();
         }
     }
-    private async Task CloseAsync()
+    private Task CloseAsync()
+    {
+        if (_shutdownTask is not null) return _shutdownTask;
+        if (_closeTask is not null) return _closeTask;
+        var completion = new TaskCompletionSource();
+        _closeTask = completion.Task;
+        _ = Close();
+        return completion.Task;
+
+        async Task Close()
+        {
+            try
+            {
+                await CloseCoreAsync();
+                if (!_closing) _closeTask = null;
+                completion.TrySetResult();
+            }
+            catch (Exception error) { completion.TrySetException(error); }
+        }
+    }
+
+    private async Task CloseCoreAsync()
     {
         try
         {

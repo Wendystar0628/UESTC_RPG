@@ -29,6 +29,8 @@ public interface IMapTransition
     MapTravelCause Cause { get; }
     MapStage Stage { get; }
     float Progress { get; }                  // 0–1，加载界面的真实加载进度（UI-VISUAL）
+    /// <summary>The original terminal failure, published before Done; null for success, rejection or cancellation.</summary>
+    Exception? Failure { get; }
     Task<MapTravelResult> Done { get; }      // 主线程完成；不可取消
 }
 public interface IMapService                 // Kernel 服务（SYS-MAPS）

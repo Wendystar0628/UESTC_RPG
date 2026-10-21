@@ -1,6 +1,7 @@
 using System.Collections.Concurrent;
 using System.Text.Json;
 using Campus.Contracts;
+using Campus.Contracts.AppFlow;
 using Campus.Contracts.Bake;
 using Campus.Contracts.Fauna;
 using Campus.Contracts.Vegetation;
@@ -19,12 +20,17 @@ internal sealed class BakePipelineCatalog
     internal static IReadOnlyList<PipelineCombination> Read()
     {
         var bytes = Godot.FileAccess.GetFileAsBytes(ResourcePath);
-        if (bytes.Length == 0) throw new InvalidDataException($"Missing build asset: {ResourcePath}.");
-        var combinations = JsonSerializer.Deserialize<PipelineCombination[]>(bytes, ContractJson.Options)
-            ?? throw new InvalidDataException("Missing pipeline combinations in the build asset.");
-        if (combinations.Length == 0) throw new InvalidDataException("The build pipeline catalogue is empty.");
-        foreach (var combination in combinations) Validate(combination);
-        return Array.AsReadOnly(combinations);
+        if (bytes.Length == 0) throw new AppStartupException(AppStartupFailureCodes.Installation, $"Missing build asset: {ResourcePath}.");
+        try
+        {
+            var combinations = JsonSerializer.Deserialize<PipelineCombination[]>(bytes, ContractJson.Options)
+                ?? throw new InvalidDataException("Missing pipeline combinations in the build asset.");
+            if (combinations.Length == 0) throw new InvalidDataException("The build pipeline catalogue is empty.");
+            foreach (var combination in combinations) Validate(combination);
+            return Array.AsReadOnly(combinations);
+        }
+        catch (Exception error) when (error is InvalidDataException or JsonException)
+        { throw new AppStartupException(AppStartupFailureCodes.DataInvalid, "Build pipeline catalogue is invalid.", error); }
     }
 
     /// <summary>Called only after the explicit all-map bake has completed successfully.</summary>

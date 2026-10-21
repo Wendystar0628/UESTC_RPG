@@ -6,6 +6,7 @@ using System.Numerics;
 using System.Text;
 using System.Text.Json;
 using Campus.Contracts;
+using Campus.Contracts.AppFlow;
 using Campus.Contracts.Maps;
 using Campus.Contracts.Save;
 using Campus.Kernel.Maps;
@@ -139,7 +140,7 @@ public sealed class MapServiceTests
         f.Until(() => travel.Stage == MapStage.Arrival);
         var arrival = f.Runtime.Arrival!;
         f.Service.Dispose();
-        AssertThat(arrival.Done.IsCanceled && travel.Done.Result == MapTravelResult.Failed && !f.Camera.InputLocked).IsTrue();
+        AssertThat(arrival.Done.IsCanceled && travel.Done.Result == MapTravelResult.Failed && travel.Failure is null && !f.Camera.InputLocked).IsTrue();
     }
 
     [TestCase]
@@ -279,7 +280,7 @@ public sealed class MapServiceTests
         {
             f.Until(() => f.Loader.DelayedLoadStarted);
             f.Service.Dispose(); f.Service.Dispose();
-            AssertThat(first.Done.IsCompleted && first.Done.Result == MapTravelResult.Failed && !f.Camera.InputLocked).OverrideFailureMessage("Map shutdown left an accepted request or its input lease pending.").IsTrue();
+            AssertThat(first.Done.IsCompleted && first.Done.Result == MapTravelResult.Failed && first.Failure is null && !f.Camera.InputLocked).OverrideFailureMessage("Map shutdown left an accepted request or its input lease pending.").IsTrue();
             f.Loader.ReleaseDelayed();
             f.Until(() => f.Loader.CompletedLoads == 1);
             AssertThat(f.Service.Context is null && f.Runtime.Mounted.Count == 0 && arrivals == 0 &&
@@ -296,6 +297,9 @@ public sealed class MapServiceTests
         var travel = f.Service.Travel(new(f.A, Cause: MapTravelCause.Boot));
         f.Until(() => travel.Done.IsCompleted);
         AssertThat(travel.Done.Result == MapTravelResult.Failed && f.Loader.Loads == 1).OverrideFailureMessage("Boot retried after a failed load.").IsTrue();
+        AssertThat(travel.Failure is AppStartupException
+            { Code: AppStartupFailureCodes.MapPreparation, InnerException: InvalidDataException })
+            .OverrideFailureMessage("Boot map failure lost its source code or original cause.").IsTrue();
     }
 
     [TestCase]
