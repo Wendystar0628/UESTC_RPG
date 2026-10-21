@@ -50,7 +50,6 @@ internal static class Program
             case "inputs":
                 foreach (var input in identity.Capture().Inputs) Console.WriteLine(input);
                 return 0;
-            case "identity": Console.WriteLine(identity.Capture().Identity); return 0;
             case "check": return identity.Check() ? 0 : 3;
             case "begin": Console.WriteLine(identity.Begin(rebuild: false)); return 0;
             case "begin-rebuild": Console.WriteLine(identity.Begin(rebuild: true)); return 0;

@@ -2,41 +2,4 @@
   <ItemGroup Condition="'$(IsTestProject)' != 'true'">
     <Compile Remove="**/tests/**/*.cs" />
   </ItemGroup>
-  <!-- The native engine owns invocation globals; the host owns what they mean for compiler/source identity. -->
-  <UsingTask TaskName="CampusBuildGlobalProperties" TaskFactory="RoslynCodeTaskFactory"
-             AssemblyFile="$(MSBuildToolsPath)/Microsoft.Build.Tasks.Core.dll">
-    <ParameterGroup>
-      <Defaults ParameterType="Microsoft.Build.Framework.ITaskItem[]" />
-      <Properties ParameterType="Microsoft.Build.Framework.ITaskItem[]" Output="true" />
-    </ParameterGroup>
-    <Task>
-      <Using Namespace="System" />
-      <Using Namespace="System.Collections.Generic" />
-      <Using Namespace="System.Linq" />
-      <Using Namespace="System.Text" />
-      <Using Namespace="Microsoft.Build.Framework" />
-      <Using Namespace="Microsoft.Build.Utilities" />
-      <Code Type="Fragment" Language="cs"><![CDATA[
-        var values = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-        foreach (var property in ((IBuildEngine6)BuildEngine).GetGlobalProperties()) values.Add(property.Key, property.Value);
-        foreach (var item in Defaults)
-        {
-            var equals = item.ItemSpec.IndexOf('=');
-            if (equals <= 0) throw new InvalidOperationException("A build configuration property has no name.");
-            var name = item.ItemSpec.Substring(0, equals);
-            if (!values.ContainsKey(name)) values.Add(name, item.ItemSpec.Substring(equals + 1));
-        }
-        Properties = values.OrderBy(pair => pair.Key, StringComparer.Ordinal)
-            .Select(pair => (ITaskItem)new TaskItem(Convert.ToBase64String(Encoding.UTF8.GetBytes(pair.Key + "=" + pair.Value)))).ToArray();
-      ]]></Code>
-    </Task>
-  </UsingTask>
-  <!-- The fingerprints host is the only owner of the evaluated source-input selection. -->
-  <Target Name="GetCampusCodeFingerprintInputs" Returns="@(_CampusCodeFingerprintInput)"
-          Condition="'@(_CampusCodeFingerprintToolTargetPath)' != ''">
-    <Exec Command="dotnet &quot;@(_CampusCodeFingerprintToolTargetPath)&quot; --mode inputs --project &quot;$(MSBuildProjectFullPath)&quot; --tool-project &quot;$(_CampusCodeFingerprintTool)&quot; --output &quot;$(_CampusCodeFingerprintManifest)&quot; @(_CampusCodeFingerprintProperty-&gt;'--encoded-property &quot;%(Identity)&quot;', ' ')"
-          ConsoleToMSBuild="true" StandardOutputImportance="Low">
-      <Output TaskParameter="ConsoleOutput" ItemName="_CampusCodeFingerprintInput" />
-    </Exec>
-  </Target>
 </Project>

@@ -72,16 +72,20 @@ function Test-UESTCScriptSyntax {
         $code = @'
 $ErrorActionPreference = 'Stop'
 [Console]::OutputEncoding = [Text.UTF8Encoding]::new($false)
+$failed = $false
 foreach ($path in @(
 __SCRIPT_PATHS__
 )) {
     $tokens = $null
     $parseErrors = $null
     $null = [Management.Automation.Language.Parser]::ParseFile($path, [ref]$tokens, [ref]$parseErrors)
-    if ($parseErrors.Count) {
-        throw (($parseErrors | ForEach-Object { '{0}:{1}: {2}' -f $_.Extent.File, $_.Extent.StartLineNumber, $_.Message }) -join [Environment]::NewLine)
+    foreach ($parseError in $parseErrors) {
+        [Console]::WriteLine(('{0}:{1}: {2}' -f $parseError.Extent.File, $parseError.Extent.StartLineNumber, $parseError.Message))
+        $failed = $true
     }
 }
+if ($failed) { exit 1 }
+exit 0
 '@
         $code = $code.Replace('__SCRIPT_PATHS__', $paths)
         $hostPath = Join-Path $env:SystemRoot 'System32/WindowsPowerShell/v1.0/powershell.exe'

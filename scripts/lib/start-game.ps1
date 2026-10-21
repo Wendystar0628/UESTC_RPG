@@ -1,14 +1,14 @@
 ﻿# 正式启动的内部共用步骤：只读 fingerprints host 的当前构建身份，在同一构建锁内更新并创建游戏进程。
 # 用法：点引用 common.ps1 与本文件，再 Invoke-UESTCStartGame -Root <仓库> -Godot <引擎> [-BuildLease <已持有的锁>]。
 # 产出：output/start_game/；output/.locks/build.lock（按需构建与导入后启动游戏）。
-function Get-UESTCLaunchFiles {
-    param([string]$Directory, [switch]$Import)
+function Get-UESTCLaunchImportFiles {
+    param([string]$Directory)
     foreach ($entry in [IO.Directory]::EnumerateFileSystemEntries($Directory)) {
         $name = [IO.Path]::GetFileName($entry)
         if ([IO.Directory]::Exists($entry)) {
             if ($name.StartsWith('.') -or $name -in @('obj', 'bin', 'tests', 'testing', 'bake')) { continue }
-            if ($Import -and [IO.File]::Exists((Join-Path $entry '.gdignore'))) { continue }
-            Get-UESTCLaunchFiles $entry -Import:$Import
+            if ([IO.File]::Exists((Join-Path $entry '.gdignore'))) { continue }
+            Get-UESTCLaunchImportFiles $entry
         } else { [IO.FileInfo]::new($entry) }
     }
 }
@@ -16,23 +16,16 @@ function Get-UESTCLaunchFiles {
 function Test-UESTCLaunchBuild {
     param([string]$Root)
     $Root = [IO.Path]::GetFullPath($Root).TrimEnd('\', '/')
-    $hostPath = Join-Path $Root 'scripts\build\fingerprints\bin\Campus.CodeFingerprints\Debug\net10.0\Campus.CodeFingerprints.dll'
-    $receiptPath = Join-Path $Root 'output\start_game\build.succeeded'
-    if (-not [IO.File]::Exists($hostPath) -or -not [IO.File]::Exists($receiptPath)) { return $false }
-    try {
-        $text = [IO.File]::ReadAllText($receiptPath)
-        if ([string]::IsNullOrWhiteSpace($text)) { return $false }
-        $receipt = $text | ConvertFrom-Json
-        # A host and a success record in the current protocol are both required before a read-only check.
-        if ($receipt.format -ne 2 -or $receipt.status -ne 'succeeded') { return $false }
-        $arguments = @($hostPath, '--mode', 'check', '--project', (Join-Path $Root 'game\Campus.csproj'),
-            '--tool-project', (Join-Path $Root 'scripts\build\fingerprints\Campus.CodeFingerprints.csproj'),
-            '--output', (Join-Path $Root 'game\data\build-code-fingerprints.json'), '--property', 'Configuration=Debug')
-        $result = Invoke-UESTCProcess 'dotnet' $arguments $Root -SuccessExitCodes @(0, 3)
-        if ($result.StdErr.Trim()) { Write-Warning $result.StdErr.Trim() }
-        return $result.ExitCode -eq 0
-    } catch [IO.FileNotFoundException] { return $false }
-    catch [IO.DirectoryNotFoundException] { return $false }
+    $toolProject = Join-Path $Root 'scripts\build\fingerprints\Campus.CodeFingerprints.csproj'
+    $target = Invoke-UESTCProcess 'dotnet' @('msbuild', $toolProject, '-nologo', '-getProperty:TargetPath', '-property:Configuration=Debug') $Root
+    $hostPath = $target.StdOut.Trim()
+    if (-not [IO.File]::Exists($hostPath)) { return $false }
+    $arguments = @($hostPath, '--mode', 'check', '--project', (Join-Path $Root 'game\Campus.csproj'),
+        '--tool-project', $toolProject,
+        '--output', (Join-Path $Root 'game\data\build-code-fingerprints.json'), '--property', 'Configuration=Debug')
+    $result = Invoke-UESTCProcess 'dotnet' $arguments $Root -SuccessExitCodes @(0, 3)
+    if ($result.StdErr.Trim()) { Write-Warning $result.StdErr.Trim() }
+    return $result.ExitCode -eq 0
 }
 function Test-UESTCLaunchImport {
     param([string]$Root, [string]$Godot)
@@ -55,7 +48,7 @@ function Test-UESTCLaunchImport {
     # Unix seconds. Read that Godot metadata instead of hashing every asset.
     $importedAt = [IO.File]::GetLastWriteTimeUtc($cache)
     $epoch = [DateTime]::SpecifyKind([DateTime]'1970-01-01', [DateTimeKind]::Utc)
-    foreach ($file in @(Get-UESTCLaunchFiles $game -Import)) {
+    foreach ($file in @(Get-UESTCLaunchImportFiles $game)) {
         if ($file.Extension -eq '.import') {
             if (-not [IO.File]::Exists($file.FullName.Substring(0, $file.FullName.Length - 7))) { return $false }
             continue

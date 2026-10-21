@@ -1,5 +1,5 @@
 // Collects the current evaluated build graph and owns the existing launch success receipt.
-// 用法：由 Program 的 inputs/identity/check/begin/begin-rebuild/complete 命令调用；只读分支不执行 MSBuild target。
+// 用法：由 Program 的 inputs/check/begin/begin-rebuild/complete 命令调用；只读分支不执行 MSBuild target。
 using System.Text.Json;
 using System.Reflection;
 using System.Text.RegularExpressions;
@@ -24,6 +24,7 @@ internal sealed class BuildInputIdentity
     private readonly Dictionary<string, string> _properties;
     private readonly string _receipt;
     private readonly string _targetPath;
+    private readonly string _formalTargetPath;
 
     internal BuildInputIdentity(string project, string toolProject, string manifest,
         IReadOnlyDictionary<string, string> properties, string? targetPath)
@@ -34,7 +35,10 @@ internal sealed class BuildInputIdentity
         _repository = Directory.GetParent(Path.GetDirectoryName(project)!)!.FullName;
         _properties = new(properties, StringComparer.OrdinalIgnoreCase);
         _receipt = Path.Combine(_repository, "output", "start_game", "build.succeeded");
-        _targetPath = targetPath ?? FormalTargetPath;
+        using var collection = new ProjectCollection();
+        var formal = collection.LoadProject(_project, new Dictionary<string, string> { ["Configuration"] = "Debug" }, toolsVersion: null);
+        _formalTargetPath = FullPath(formal, formal.GetPropertyValue("TargetPath"));
+        _targetPath = targetPath ?? _formalTargetPath;
     }
 
     internal sealed record Snapshot(string Identity, string[] Inputs, string[] Outputs);
@@ -142,7 +146,7 @@ internal sealed class BuildInputIdentity
         if (roslyn.Length != 0)
             foreach (var path in Directory.EnumerateFiles(Path.Combine(roslyn, "bincore"), "*", SearchOption.TopDirectoryOnly))
                 inputs.Add(path);
-        var sdkTasks = Path.Combine(project.GetPropertyValue("MSBuildSDKsPath"), "Microsoft.NET.Sdk", "tools", "net10.0");
+        var sdkTasks = project.GetPropertyValue("MicrosoftNETBuildTasksDirectory");
         foreach (var path in Directory.EnumerateFiles(sdkTasks, "*.dll", SearchOption.TopDirectoryOnly)) inputs.Add(path);
         foreach (var name in new[] { "Microsoft.Build.Tasks.Core.dll", "Microsoft.Build.Utilities.Core.dll" })
             inputs.Add(Path.Combine(project.GetPropertyValue("MSBuildToolsPath"), name));
@@ -280,15 +284,13 @@ internal sealed class BuildInputIdentity
 
     private string PropertyIdentity => TargetSourceFingerprint.Hash(_properties.Select(item => item.Key + "=" + item.Value));
 
-    private string FormalTargetPath => Path.Combine(_repository, "game", ".godot", "mono", "temp", "bin", "Debug", "Campus.dll");
-
     private bool IsFormal()
     {
         return _properties.GetValueOrDefault("Configuration") == "Debug" &&
             string.IsNullOrEmpty(_properties.GetValueOrDefault("RuntimeIdentifier")) &&
             !string.Equals(_properties.GetValueOrDefault("SelfContained"), "true", StringComparison.OrdinalIgnoreCase) &&
             !_properties.ContainsKey("TargetPath") &&
-            string.Equals(_targetPath.Replace(Path.AltDirectorySeparatorChar, Path.DirectorySeparatorChar), FormalTargetPath,
+            string.Equals(_targetPath.Replace(Path.AltDirectorySeparatorChar, Path.DirectorySeparatorChar), _formalTargetPath,
                 StringComparison.OrdinalIgnoreCase);
     }
 
@@ -375,14 +377,6 @@ internal sealed class BuildInputIdentity
                     if (!File.Exists(output)) throw new FileNotFoundException("Build file-list output is missing.", output);
                     outputs.Add(output);
                 }
-        }
-        var gameOutput = Path.Combine(_repository, "game", ".godot", "mono", "temp", "bin", "Debug");
-        foreach (var assembly in paths.Where(path => path.EndsWith(".dll", StringComparison.OrdinalIgnoreCase)))
-        {
-            if (assembly.StartsWith(Path.GetDirectoryName(_toolProject)!, StringComparison.OrdinalIgnoreCase)) continue;
-            var copy = Path.Combine(gameOutput, Path.GetFileName(assembly));
-            if (!File.Exists(copy)) throw new FileNotFoundException("Game project-reference output is missing.", copy);
-            outputs.Add(copy);
         }
         return outputs.ToArray();
     }
