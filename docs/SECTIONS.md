@@ -1782,25 +1782,25 @@
 
 ## WF-COMMS · 交接与通信
 
-`docs/workflow/WF-COMMS-交接与通信.md` · 7.0k 字 · .collab 交接目录与文件布局，命名与写法，任务单与请求文件的格式，契约申请短头部，完成回报格式，来信与消息，Codex 会话与引导信箱，作者观察台
+`docs/workflow/WF-COMMS-交接与通信.md` · 7.1k 字 · .collab 交接目录与文件布局，命名与写法，任务单与请求文件的格式，契约申请短头部，完成回报格式，来信与消息，Codex 会话与引导信箱，作者观察台
 关键词：.collab、交接目录、文件布局、结案即删、任务单、旁路单、调研目录、契约申请、评审请求、六行短头部、完成回报、回报格式、文件命名、来信、收件箱、一条一个文件、【需定】【待审】【知会】、Codex 会话、引导信箱、steer、HANDOVER.md、DECISION-207、DECISION-208、DECISION-228、作者观察台、dashboard、post.py、审计项、通知
 
 - WF-COMMS §0 结论 · L22 · 719
   - ★ WF-COMMS §0.1 接入要点 · L32 · 205
 - WF-COMMS §1 交接目录与文件 · L39 · 1.2k
 - WF-COMMS §2 命名与写法 · L61 · 398
-- WF-COMMS §3 任务单、请求文件、契约申请与完成回报 · L68 · 947
+- WF-COMMS §3 任务单、请求文件、契约申请与完成回报 · L68 · 990
   - WF-COMMS §3.1 施工单与旁路单 · L70 · 247
   - WF-COMMS §3.2 请求文件 · L75 · 50
   - WF-COMMS §3.3 契约申请的短头部（DECISION-201） · L79 · 178
-  - WF-COMMS §3.4 完成回报 · L89 · 447
-- WF-COMMS §4 来信与消息 · L107 · 1.5k
-  - WF-COMMS §4.1 什么时候发 · L109 · 260
-  - WF-COMMS §4.2 一条来信一个新文件（DECISION-207） · L118 · 272
-  - WF-COMMS §4.3 三级标记与写法 · L124 · 446
-  - WF-COMMS §4.4 来信与即时送达 · L132 · 530
-- WF-COMMS §5 Codex 会话与引导信箱 · L146 · 276
-- WF-COMMS §6 作者观察台 · L152 · 991
+  - WF-COMMS §3.4 完成回报 · L89 · 490
+- WF-COMMS §4 来信与消息 · L108 · 1.5k
+  - WF-COMMS §4.1 什么时候发 · L110 · 260
+  - WF-COMMS §4.2 一条来信一个新文件（DECISION-207） · L119 · 272
+  - WF-COMMS §4.3 三级标记与写法 · L125 · 446
+  - WF-COMMS §4.4 来信与即时送达 · L133 · 530
+- WF-COMMS §5 Codex 会话与引导信箱 · L147 · 276
+- WF-COMMS §6 作者观察台 · L153 · 991
 
 ## WF-ENTRY · 角色入口卡
 
@@ -1993,12 +1993,12 @@
 
 ## REG-DECISIONS-PROCESS · 协作与流程决策
 
-`docs/registry/REG-DECISIONS-PROCESS-协作与流程决策.md` · 15.8k 字 · 计划、协作、规范、登记四个域的已定决策：协作、流程、文档与代码规范、门禁流程
+`docs/registry/REG-DECISIONS-PROCESS-协作与流程决策.md` · 16.0k 字 · 计划、协作、规范、登记四个域的已定决策：协作、流程、文档与代码规范、门禁流程
 关键词：决策、流程、协作、文档规则、门禁流程、派工、主会话、子代理
 
 - REG-DECISIONS-PROCESS §0 结论 · L21 · 129
   - ★ REG-DECISIONS-PROCESS §0.1 接入要点 · L25 · 56
-- REG-DECISIONS-PROCESS §1 流程 · L29 · 15.2k
+- REG-DECISIONS-PROCESS §1 流程 · L29 · 15.4k
 
 ## REG-DECISIONS-SYSTEMS · 系统与工程决策
 
