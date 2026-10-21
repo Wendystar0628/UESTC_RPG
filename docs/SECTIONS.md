@@ -1550,7 +1550,7 @@
 
 ## ENG-ARCH · 工程架构
 
-`docs/engineering/ENG-ARCH-工程架构.md` · 13.5k 字 · 当前分层、依赖方向与唯一生产链，边界、确定性、契约、烘焙与桩的架构准则与后续导向；实现细节以代码为准
+`docs/engineering/ENG-ARCH-工程架构.md` · 13.6k 字 · 当前分层、依赖方向与唯一生产链，边界、确定性、契约、烘焙与桩的架构准则与后续导向；实现细节以代码为准
 关键词：工程架构、分层、依赖方向、命名空间边界、程序集、唯一生产链、KernelStage、组合根、数据流、自动发现、特性注册、Autoload、原生资源创建方、确定性、同机同输入同输出、StableHash、Rng、BannedApiAnalyzers、生命周期、取消与完成、就绪与等待、停滞判据、契约、契约申请、契约分批冻结、枚举穷举、本机烘焙、.tbin、英雄资产、桩、架构导向、net10.0、技术栈
 
 - ENG-ARCH §0 结论 · L21 · 1.7k
@@ -2002,7 +2002,7 @@
 
 ## REG-DECISIONS-SYSTEMS · 系统与工程决策
 
-`docs/registry/REG-DECISIONS-SYSTEMS-系统与工程决策.md` · 20.5k 字 · 界面、存档、音频、性能与画面设置、工程五个领域的已定决策
+`docs/registry/REG-DECISIONS-SYSTEMS-系统与工程决策.md` · 20.6k 字 · 界面、存档、音频、性能与画面设置、工程五个领域的已定决策
 关键词：决策、系统、工程、界面、存档、音频、性能、画面设置、预算、契约
 
 - REG-DECISIONS-SYSTEMS §0 结论 · L21 · 126
@@ -2011,7 +2011,7 @@
 - REG-DECISIONS-SYSTEMS §2 存档 · L62 · 1.6k
 - REG-DECISIONS-SYSTEMS §3 音频 · L81 · 2.2k
 - REG-DECISIONS-SYSTEMS §4 性能与画面设置 · L103 · 3.5k
-- REG-DECISIONS-SYSTEMS §5 工程 · L133 · 4.9k
+- REG-DECISIONS-SYSTEMS §5 工程 · L133 · 5.0k
 - REG-DECISIONS-SYSTEMS §6 地图与行走 · L167 · 1.0k
 - REG-DECISIONS-SYSTEMS §7 时间、季节、天气 · L178 · 2.4k
 

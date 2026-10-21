@@ -70,7 +70,7 @@ paths: ["scripts/gates/native-render.ps1", "game/data/maps/*/review.json", "scri
 
 | 门禁 | 验什么 | 档 |
 | --- | --- | --- |
-| G1 类型 | 编译警告当错误（含非穷举 `switch`）、命名与格式；导入日志无 ERROR | 快检（编译）；集中测试（导入日志） |
+| G1 类型 | 整个 `Campus.sln`（含测试工程）原生增量编译，警告当错误（含非穷举 `switch`）、命名与格式；原生增量导入，日志无 ERROR | 快检；集中测试 |
 | G2 单元测试 | 纯 .NET 与引擎内单测，测行为；类别标签与写法见 STD-CODE §6 | 快检（受影响模块）；集中测试（全部） |
 | G3 归属 | 改动文件在文档文件头的 `paths` 中有归属；当前 Git 源码（含未跟踪但非忽略的新源码）的 `.uid` 齐全且不重复；构建产物及其本地 UID 不纳入入库检查 | 集中测试 |
 | G4 边界 | 命名空间依赖方向、禁用 API、创建权与读写权、着色器白名单、自有生产手写代码的类型合计约 600 行与方法约 80 行规模（STD-CODE §5）、新文件放置与补丁式命名（WF-RULE §16）、补丁式代码（STD-CODE §4；规则在 `scripts/gates/arch/` 与各程序集的 `BannedSymbols.txt`，ENG-ARCH §2） | 快检 |
