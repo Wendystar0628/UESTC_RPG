@@ -403,5 +403,5 @@ internal sealed class BuildInputIdentity
         }
     }
 
-    internal static void Warn(string message) => Console.Error.WriteLine("warning : Build freshness: " + message);
+    internal static void Warn(string message) => Console.Error.WriteLine("Build freshness: " + message);
 }

@@ -1,0 +1,8 @@
+root = true
+
+[scripts/**.{ps1,psm1,psd1}]
+# Localized script headers require a BOM when read by Windows PowerShell 5.1.
+# G1 still checks the saved bytes; tools that ignore EditorConfig must preserve it.
+charset = utf-8-bom
+end_of_line = lf
+insert_final_newline = true

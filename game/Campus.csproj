@@ -17,8 +17,11 @@
   <ItemGroup Condition="'$(Configuration)' != 'Debug'">
     <Compile Remove="gdunit4_testadapter_v*/**/*.cs" />
   </ItemGroup>
+  <PropertyGroup>
+    <_CampusGdUnitApiPackage>@(PackageReference-&gt;WithMetadataValue('Identity', 'gdUnit4.api'))</_CampusGdUnitApiPackage>
+  </PropertyGroup>
   <Target Name="EnsureGdUnitTestRunner" BeforeTargets="CoreCompile"
-          Condition="'$(Configuration)' == 'Debug' And '$(DesignTimeBuild)' != 'true' And '@(PackageReference-&gt;WithMetadataValue('Identity', 'gdUnit4.api'))' != ''">
+          Condition="'$(Configuration)' == 'Debug' And '$(DesignTimeBuild)' != 'true' And '$(_CampusGdUnitApiPackage)' != ''">
     <Exec Command="powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File &quot;$(MSBuildProjectDirectory)/../scripts/setup/install-test-runner.ps1&quot; -Root &quot;$(MSBuildProjectDirectory)/..&quot;" />
     <PropertyGroup>
       <_CampusGdUnitRunnerSource>@(CampusGeneratedCompile-&gt;WithMetadataValue('Generator', 'TestRunner')-&gt;'%(FullPath)')</_CampusGdUnitRunnerSource>

@@ -65,6 +65,29 @@ function Test-UESTCChangedText {
 function Test-UESTCScriptSyntax {
     param([string]$Root)
     $files = @(Get-UESTCFiles $Root | Where-Object { Test-Path -LiteralPath (Join-Path $Root $_) -PathType Leaf })
+    $powershell = @($files | Where-Object { $_ -match '^scripts/.*\.(ps1|psm1|psd1)$' })
+    if ($powershell.Count) {
+        # Parse saved bytes with the same Windows PowerShell used by build Exec tasks.
+        $paths = @($powershell | ForEach-Object { "'" + (Join-Path $Root $_).Replace("'", "''") + "'" }) -join ",`n"
+        $code = @'
+$ErrorActionPreference = 'Stop'
+[Console]::OutputEncoding = [Text.UTF8Encoding]::new($false)
+foreach ($path in @(
+__SCRIPT_PATHS__
+)) {
+    $tokens = $null
+    $parseErrors = $null
+    $null = [Management.Automation.Language.Parser]::ParseFile($path, [ref]$tokens, [ref]$parseErrors)
+    if ($parseErrors.Count) {
+        throw (($parseErrors | ForEach-Object { '{0}:{1}: {2}' -f $_.Extent.File, $_.Extent.StartLineNumber, $_.Message }) -join [Environment]::NewLine)
+    }
+}
+'@
+        $code = $code.Replace('__SCRIPT_PATHS__', $paths)
+        $hostPath = Join-Path $env:SystemRoot 'System32/WindowsPowerShell/v1.0/powershell.exe'
+        $null = Invoke-UESTCProcess $hostPath @('-NoProfile', '-NonInteractive', '-EncodedCommand',
+            [Convert]::ToBase64String([Text.Encoding]::Unicode.GetBytes($code))) $Root -TextEncoding ([Text.Encoding]::UTF8)
+    }
     $python = @($files | Where-Object { $_ -match '^(dashboard/tools|pipeline|scripts)/.*\.py$' })
     if ($python.Count) {
         $code = 'import ast, pathlib, sys; [ast.parse(pathlib.Path(p).read_text(encoding="utf-8"), filename=p) for p in sys.argv[1:]]'
@@ -74,7 +97,7 @@ function Test-UESTCScriptSyntax {
     foreach ($path in $javascript) {
         $null = Invoke-UESTCProcess node @('--check', (Join-Path $Root $path)) $Root -TextEncoding ([Text.Encoding]::UTF8)
     }
-    [pscustomobject]@{ PythonFiles=$python.Count; JavaScriptFiles=$javascript.Count }
+    [pscustomobject]@{ PowerShellFiles=$powershell.Count; PythonFiles=$python.Count; JavaScriptFiles=$javascript.Count }
 }
 
 function Get-UESTCDocumentPathRules {
