@@ -1999,7 +1999,7 @@
 
 ## REG-DECISIONS-SYSTEMS · 系统与工程决策
 
-`docs/registry/REG-DECISIONS-SYSTEMS-系统与工程决策.md` · 18.1k 字 · 界面、存档、音频、性能与画面设置、工程五个领域的已定决策
+`docs/registry/REG-DECISIONS-SYSTEMS-系统与工程决策.md` · 18.2k 字 · 界面、存档、音频、性能与画面设置、工程五个领域的已定决策
 关键词：决策、系统、工程、界面、存档、音频、性能、画面设置、预算、契约
 
 - REG-DECISIONS-SYSTEMS §0 结论 · L21 · 126
@@ -2008,9 +2008,9 @@
 - REG-DECISIONS-SYSTEMS §2 存档 · L61 · 1.5k
 - REG-DECISIONS-SYSTEMS §3 音频 · L80 · 2.1k
 - REG-DECISIONS-SYSTEMS §4 性能与画面设置 · L102 · 3.1k
-- REG-DECISIONS-SYSTEMS §5 工程 · L131 · 3.7k
-- REG-DECISIONS-SYSTEMS §6 地图与行走 · L161 · 979
-- REG-DECISIONS-SYSTEMS §7 时间、季节、天气 · L172 · 2.3k
+- REG-DECISIONS-SYSTEMS §5 工程 · L131 · 3.8k
+- REG-DECISIONS-SYSTEMS §6 地图与行走 · L162 · 979
+- REG-DECISIONS-SYSTEMS §7 时间、季节、天气 · L173 · 2.3k
 
 ## REG-DECISIONS-WORLD · 世界与画面决策
 
