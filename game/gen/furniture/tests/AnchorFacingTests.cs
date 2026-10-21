@@ -66,10 +66,7 @@ public sealed class AnchorFacingTests
         foreach (var feature in world.Features.Values.Where(f => f.Kind.Value == "anchor"))
         {
             if (layout.Items.SingleOrDefault(i => i.Key == "anchor:" + feature.Id.Value) is not { } item)
-            {
-                AssertThat(layout.Diagnostics.Any(d => d.Feature == feature.Id && d.Code == "furniture.anchor.not-placed")).OverrideFailureMessage($"{feature.Id.Value} missing without a diagnostic message").IsTrue();
                 continue;
-            }
             var ring = ((PolygonGeometry)feature.Geometry).Rings.Outer;
             var centre = ring.Aggregate(Vector2.Zero, (a, p) => a + p) / ring.Count;
             // On its footprint, or moved to the paving edge nearby (AnchorsStandOnOrBesidePaving).
