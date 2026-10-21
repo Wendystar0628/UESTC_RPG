@@ -27,7 +27,7 @@ internal static class TargetSourceFingerprint
     };
 
     public static async Task<BakeCodeManifest> Create(Project production, Project tool,
-        IReadOnlyDictionary<string, string> properties)
+        IReadOnlyDictionary<string, string> properties, IReadOnlyDictionary<string, string> configuration)
     {
         var repository = Directory.GetParent(Path.GetDirectoryName(production.FilePath!)!)!.FullName;
         var projects = await LoadGraph(production);
@@ -35,7 +35,7 @@ internal static class TargetSourceFingerprint
         var owners = new SortedDictionary<string, string>(StringComparer.Ordinal);
         var toolGraph = await LoadGraph(tool);
         var salt = new SortedSet<string>(StringComparer.Ordinal) { "target-source-v2" };
-        foreach (var property in properties.OrderBy(pair => pair.Key, StringComparer.Ordinal))
+        foreach (var property in configuration.OrderBy(pair => pair.Key, StringComparer.Ordinal))
             salt.Add("property:" + property.Key + "=" + PortableValue(property.Value, repository));
         foreach (var assembly in new[] { typeof(Compilation).Assembly, typeof(CSharpCompilation).Assembly,
                      typeof(Workspace).Assembly, typeof(MSBuildWorkspace).Assembly, typeof(Microsoft.Build.Locator.MSBuildLocator).Assembly }.Distinct())
@@ -271,7 +271,7 @@ internal static class TargetSourceFingerprint
         throw new InvalidDataException($"Unassigned production Compile item: {project}: {path}. Assign a CPU source group or an explicit non-CPU responsibility.");
     }
 
-    private static HashSet<string> GeneratedSources(string repository, Microsoft.Build.Evaluation.Project project)
+    internal static HashSet<string> GeneratedSources(string repository, Microsoft.Build.Evaluation.Project project)
     {
         var result = new HashSet<string>(StringComparer.Ordinal);
         foreach (var property in new[] { "GeneratedAssemblyInfoFile", "TargetFrameworkMonikerAssemblyAttributesPath", "GeneratedGlobalUsingsFile" })
@@ -279,8 +279,13 @@ internal static class TargetSourceFingerprint
             var path = project.GetPropertyValue(property);
             if (path.Length != 0) result.Add(Relative(repository, Path.GetFullPath(path, project.DirectoryPath)));
         }
-        if (Relative(repository, project.FullPath) == "game/Campus.csproj")
-            result.Add(Relative(repository, Path.GetFullPath(Path.Combine(project.GetPropertyValue("IntermediateOutputPath"), "BuildInfo.g.cs"), project.DirectoryPath)));
+        foreach (var item in project.GetItems("CampusGeneratedCompile"))
+        {
+            var directory = item.GetMetadataValue("OutputDirectoryProperty");
+            var path = directory.Length == 0 ? item.GetMetadataValue("FullPath") :
+                Path.GetFullPath(Path.Combine(project.GetPropertyValue(directory), item.EvaluatedInclude), project.DirectoryPath);
+            result.Add(Relative(repository, path));
+        }
         return result;
     }
 
@@ -339,7 +344,7 @@ internal static class TargetSourceFingerprint
             string.Join(',', parse.Features.OrderBy(item => item.Key, StringComparer.Ordinal)));
     }
 
-    private static string Relative(string repository, string path)
+    internal static string Relative(string repository, string path)
     {
         var relative = Path.GetRelativePath(repository, path).Replace('\\', '/');
         if (Path.IsPathRooted(relative) || relative.StartsWith("../", StringComparison.Ordinal))
@@ -361,9 +366,9 @@ internal static class TargetSourceFingerprint
         throw new InvalidDataException($"Build reference/property has no portable version identity: {value}.");
     }
 
-    private static string Hash(string value) => Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes(value)));
-    private static string HashFile(string path) => Convert.ToHexStringLower(SHA256.HashData(File.ReadAllBytes(path)));
-    private static string Hash(IEnumerable<string> values) => Hash(string.Join('\0', values.Order(StringComparer.Ordinal)));
+    internal static string Hash(string value) => Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes(value)));
+    internal static string HashFile(string path) => Convert.ToHexStringLower(SHA256.HashData(File.ReadAllBytes(path)));
+    internal static string Hash(IEnumerable<string> values) => Hash(string.Join('\0', values.Order(StringComparer.Ordinal)));
 
 }
 

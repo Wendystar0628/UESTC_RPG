@@ -13,6 +13,14 @@
       <HintPath>$(MSBuildBinPath)/Microsoft.Build.dll</HintPath>
       <Private>false</Private>
     </Reference>
+    <Reference Include="Microsoft.Build.Framework">
+      <HintPath>$(MSBuildBinPath)/Microsoft.Build.Framework.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <!-- Read existing restore data with the selected SDK's own NuGet model. -->
+    <Reference Include="$(MSBuildBinPath)/NuGet.ProjectModel.dll;$(MSBuildBinPath)/NuGet.Frameworks.dll;$(MSBuildBinPath)/NuGet.LibraryModel.dll;$(MSBuildBinPath)/NuGet.Versioning.dll;$(MSBuildBinPath)/NuGet.Common.dll;$(MSBuildBinPath)/NuGet.Packaging.dll;$(MSBuildBinPath)/NuGet.Configuration.dll;$(MSBuildBinPath)/NuGet.DependencyResolver.Core.dll">
+      <Private>true</Private>
+    </Reference>
     <Reference Include="$(_FingerprintRoslynDir)/*.dll" Exclude="$(_FingerprintRoslynDir)/Microsoft.Build.dll;$(_FingerprintRoslynDir)/Microsoft.Build.Framework.dll;$(_FingerprintRoslynDir)/Microsoft.Build.Utilities.Core.dll;$(_FingerprintRoslynDir)/Microsoft.Build.Tasks.Core.dll;$(_FingerprintRoslynDir)/dotnet-format.dll">
       <Private>true</Private>
     </Reference>
