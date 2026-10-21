@@ -1,5 +1,5 @@
 // Supplies semantic declarations and production inputs through the existing G4 source boundary.
-// 用法：由语义规则与 SemanticPolicyGateTests 调用；仅 Load/Documents 显式加载生产输入。
+// 用法：本批声明识别由语义规则的 SemanticPolicyRegressionTests 用例调用；Load/Documents 的全仓入口待 TOOL-227 接入。
 using System.Text.RegularExpressions;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;

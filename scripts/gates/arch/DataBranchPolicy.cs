@@ -1,5 +1,5 @@
 // Recognizes identity and format branches from declaration attributes and their data flow.
-// 用法：由 SemanticPolicyGateTests 调用。
+// 用法：本批由 SemanticPolicyRegressionTests 调用；全仓入口待 TOOL-227 接入。
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
@@ -35,10 +35,13 @@ internal sealed class DataBranchPolicy(SourceFile file)
             if (operands.Any(operand => Facts(operand).HasFlag(Fact.Version)) && !RejectsOnly(call))
                 yield return file.At(call, "Version comparison must be a rejecting guard, not a reader selector (STD-CODE).");
         }
-        foreach (var match in file.Root.DescendantNodes().OfType<IsPatternExpressionSyntax>())
+        // Named constants can parse as binary IsExpression syntax, then bind as an is-pattern operation.
+        foreach (var match in file.Root.DescendantNodes().OfType<ExpressionSyntax>().Where(node =>
+            node is IsPatternExpressionSyntax || node.IsKind(SyntaxKind.IsExpression)))
         {
-            var facts = Facts(match.Expression);
-            if (facts.HasFlag(Fact.Id) && match.Pattern.DescendantNodesAndSelf().OfType<ConstantPatternSyntax>().Any(pattern => StringLiteral(pattern.Expression)))
+            if (file.Model.GetOperation(match) is not IIsPatternOperation operation) continue;
+            var facts = Facts((ExpressionSyntax)operation.Value.Syntax);
+            if (facts.HasFlag(Fact.Id) && match.DescendantNodes().OfType<ConstantPatternSyntax>().Any(pattern => StringLiteral(pattern.Expression)))
                 yield return file.At(match, "Identity patterns reference catalog declarations instead of string literals (STD-CODE).");
             if (facts.HasFlag(Fact.Version) && !RejectsOnly(match))
                 yield return file.At(match, "Version patterns may reject unsupported input, not select readers (STD-CODE).");
@@ -149,7 +152,7 @@ internal sealed class DataBranchPolicy(SourceFile file)
     private bool RejectsOnly(ExpressionSyntax expression)
     {
         var branch = expression.Ancestors().FirstOrDefault(node => node is IfStatementSyntax or ConditionalExpressionSyntax or CatchFilterClauseSyntax);
-        if (branch is CatchFilterClauseSyntax) return true; // Exception selection is handled by FailureFlow.
+        if (branch is CatchFilterClauseSyntax { Parent: CatchClauseSyntax clause }) return Rejecting(clause.Block);
         if (branch is IfStatementSyntax conditional && conditional.Condition.Span.Contains(expression.Span))
             return Rejecting(conditional.Statement) || conditional.Else is not null && Rejecting(conditional.Else.Statement);
         return branch is ConditionalExpressionSyntax choice && choice.Condition.Span.Contains(expression.Span) &&

@@ -1,5 +1,5 @@
 // Follows caught exception objects through structured paths to throws or documented receivers.
-// 用法：由 SemanticPolicyGateTests 调用。
+// 用法：本批由 SemanticPolicyRegressionTests 调用；全仓入口待 TOOL-227 接入。
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
@@ -148,7 +148,6 @@ internal sealed class FailureFlow(SourceFile file, CatchClauseSyntax? origin, Ha
             case ForStatementSyntax loop: return Loop(loop.Statement, state, true);
             case WhileStatementSyntax loop: return Loop(loop.Statement, state, true);
             case DoStatementSyntax loop: return Loop(loop.Statement, state, false);
-            case LocalFunctionStatementSyntax: return [state];
             default: return [state];
         }
     }

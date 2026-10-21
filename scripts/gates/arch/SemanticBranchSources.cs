@@ -20,7 +20,7 @@ internal static class SemanticBranchSources
             var symbols = branch.SelectMany(item => item.Expression.DescendantNodesAndSelf().OfType<IdentifierNameSyntax>())
                 .Select(name => name.Identifier.ValueText).Distinct(StringComparer.Ordinal).ToArray();
             var assignment = Solve(branch, symbols, 0, new Dictionary<string, bool>(StringComparer.Ordinal), options.PreprocessorSymbolNames.ToHashSet(StringComparer.Ordinal));
-            if (assignment is null) continue;
+            if (assignment is null) continue; // Every assignment contradicts a condition; unknown expressions throw in Solve.
             var enabled = options.PreprocessorSymbolNames.Where(symbol => !assignment.ContainsKey(symbol))
                 .Concat(assignment.Where(item => item.Value).Select(item => item.Key)).Order(StringComparer.Ordinal).ToArray();
             if (!variants.Add(string.Join(";", enabled))) continue;
@@ -65,7 +65,11 @@ internal static class SemanticBranchSources
         var evaluated = conditions.Select(item => (Actual: Evaluate(item.Expression, values), Expected: item.Value)).ToArray();
         if (evaluated.Any(item => item.Actual is { } actual && actual != item.Expected)) return null;
         if (evaluated.All(item => item.Actual is not null)) return new(values, StringComparer.Ordinal);
-        if (index == symbols.Length) return null;
+        if (index == symbols.Length)
+        {
+            var unresolved = conditions.First(item => Evaluate(item.Expression, values) is null).Expression;
+            throw new InvalidOperationException($"{unresolved.GetLocation().GetLineSpan()}: Cannot evaluate conditional source branch: {unresolved}");
+        }
         var symbol = symbols[index];
         foreach (var value in new[] { defaults.Contains(symbol), !defaults.Contains(symbol) })
         {
@@ -83,7 +87,8 @@ internal static class SemanticBranchSources
         if (expression.IsKind(SyntaxKind.TrueLiteralExpression)) return true;
         if (expression.IsKind(SyntaxKind.FalseLiteralExpression)) return false;
         if (expression is ParenthesizedExpressionSyntax group) return Evaluate(group.Expression, values);
-        if (expression is PrefixUnaryExpressionSyntax unary) return Evaluate(unary.Operand, values) is { } operand ? !operand : null;
+        if (expression is PrefixUnaryExpressionSyntax unary && unary.IsKind(SyntaxKind.LogicalNotExpression))
+            return Evaluate(unary.Operand, values) is { } operand ? !operand : null;
         if (expression is not BinaryExpressionSyntax binary) return null;
         var left = Evaluate(binary.Left, values);
         var right = Evaluate(binary.Right, values);
