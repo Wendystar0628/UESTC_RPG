@@ -1115,7 +1115,7 @@
   - SYS-BORDER §2.1 可达空间 · L57 · 377
   - SYS-BORDER §2.2 缓冲带与推回（SYS-VIEW） · L66 · 436
   - SYS-BORDER §2.3 边缘雾 `edge_fog` · L75 · 418
-  - SYS-BORDER §2.4 参数、合法化与不受约束的镜头 · L82 · 295
+  - SYS-BORDER §2.4 参数、合法化与不受约束的镜头 · L82 · 287
 - SYS-BORDER §3 提示文案与多地图衔接 · L88 · 664
   - SYS-BORDER §3.1 提示文案 · L90 · 316
   - SYS-BORDER §3.2 与多地图、平面地图、存档的衔接 · L101 · 331
@@ -1253,7 +1253,7 @@
   - ★ SYS-SAVE-FLOW §0.1 接入要点 · L29 · 278
 - SYS-SAVE-FLOW §1 保存时机与可靠性 · L35 · 1.2k
   - SYS-SAVE-FLOW §1.1 时机 · L37 · 386
-  - SYS-SAVE-FLOW §1.2 安全时刻与落定快照 · L50 · 345
+  - SYS-SAVE-FLOW §1.2 安全时刻与落定快照 · L50 · 347
   - SYS-SAVE-FLOW §1.3 写盘与失败 · L56 · 103
   - SYS-SAVE-FLOW §1.4 退出 · L60 · 306
   - SYS-SAVE-FLOW §1.5 保存状态与失败反馈 · L69 · 87
@@ -1321,18 +1321,18 @@
 
 ## SYS-VIEW · 观察模式与旁观漫游
 
-`docs/systems/SYS-VIEW-观察模式与旁观漫游.md` · 4.9k 字 · 两种观察模式总述、旁观漫游的操作与活动范围、初始位置、镜头规则、3D 与平面地图的分工
+`docs/systems/SYS-VIEW-观察模式与旁观漫游.md` · 4.8k 字 · 两种观察模式总述、旁观漫游的操作与活动范围、初始位置、镜头规则、3D 与平面地图的分工
 关键词：旁观模式、观察模式、飞行速度档、视场角、鼠标灵敏度、活动范围、初始位置、镜头不会自己动、自动运镜、命令行参数、ICameraRig、Pose
 
 - SYS-VIEW §0 结论 · L22 · 963
   - ★ SYS-VIEW §0.1 接入要点 · L37 · 297
 - SYS-VIEW §1 不做的事 · L44 · 70
-- SYS-VIEW §2 旁观者漫游 · L48 · 2.0k
+- SYS-VIEW §2 旁观者漫游 · L48 · 1.9k
   - SYS-VIEW §2.1 操作 · L52 · 447
   - SYS-VIEW §2.2 鼠标与碰撞 · L59 · 149
   - SYS-VIEW §2.3 活动范围 · L64 · 235
   - SYS-VIEW §2.4 初始位置 · L72 · 452
-  - SYS-VIEW §2.5 镜头不会自己动 · L81 · 291
+  - SYS-VIEW §2.5 镜头不会自己动 · L81 · 279
   - SYS-VIEW §2.6 操作说明与提示 · L89 · 209
 - SYS-VIEW §3 命令行参数 · L98 · 197
 - SYS-VIEW §4 环境痕迹与平面地图的分工 · L102 · 231
@@ -1354,19 +1354,19 @@
 
 ## SYS-WALK · 行走模式
 
-`docs/systems/SYS-WALK-行走模式.md` · 6.8k 字 · 行走模式的玩家身体与步相、手感目标、第一与第三人称镜头与舒适度、旁观与行走的切换、控制器的规则
+`docs/systems/SYS-WALK-行走模式.md` · 6.5k 字 · 行走模式的玩家身体与步相、手感目标、第一与第三人称镜头与舒适度、旁观与行走的切换、控制器的规则
 关键词：行走模式、手感、模式切换、玩家身体、步相、自动登阶、视角舒适度、视角晃动、第一人称、第三人称、吊杆、身体淡入淡出、控制器规则、运动快照、土狼时间、IViewControl、ModeSwitchVia、ModeSwitchResult、IWalkTelemetry
 
 - SYS-WALK §0 结论 · L22 · 605
   - ★ SYS-WALK §0.1 接入要点 · L34 · 200
-- SYS-WALK §1 身体、声音与步相 · L40 · 579
+- SYS-WALK §1 身体、声音与步相 · L40 · 562
 - SYS-WALK §2 手感目标 · L52 · 620
-- SYS-WALK §3 视角、镜头与舒适度 · L66 · 2.0k
-  - SYS-WALK §3.1 视场角、舒适度与键位 · L68 · 629
+- SYS-WALK §3 视角、镜头与舒适度 · L66 · 1.9k
+  - SYS-WALK §3.1 视场角、舒适度与键位 · L68 · 625
   - SYS-WALK §3.2 行走模式的镜头 · L78 · 1.3k
-- SYS-WALK §4 模式切换 · L110 · 791
-- SYS-WALK §5 控制器的规则 · L125 · 708
-- SYS-WALK §6 待验证 · L136 · 293
+- SYS-WALK §4 模式切换 · L110 · 626
+- SYS-WALK §5 控制器的规则 · L119 · 708
+- SYS-WALK §6 待验证 · L130 · 293
 
 ## SYS-WALK-BIKE · 骑行
 
@@ -1379,7 +1379,7 @@
   - SYS-WALK-BIKE §1.1 运动 · L38 · 268
   - SYS-WALK-BIKE §1.2 可骑范围 · L44 · 292
   - SYS-WALK-BIKE §1.3 边界与下车 · L50 · 177
-  - SYS-WALK-BIKE §1.4 取车、还车、临停与回收 · L55 · 299
+  - SYS-WALK-BIKE §1.4 取车、还车、临停与回收 · L55 · 291
 - SYS-WALK-BIKE §2 待验证 · L63 · 79
 
 ## SYS-WALK-BOUNDS · 可行走范围、边界与碰撞
@@ -1590,10 +1590,10 @@
 `docs/engineering/ENG-BUDGET-LOD-细节级别、速度律与渲染参数.md` · 4.3k 字 · 细节级别 L0+–L4 与 64 m 分块、旁观速度律与目的地预取、深度与近裁剪面、阴影后期倒影灯光的预算参数
 关键词：细节级别、L0+、L4、分块、四叉树、屏幕误差、速度律、目的地预取、到达保证、近裁剪面、远裁剪面、反向 Z、坐标精度、PSSM、光柱数量、倒影分辨率、灯盏数
 
-- ENG-BUDGET-LOD §0 结论 · L20 · 639
-  - ★ ENG-BUDGET-LOD §0.1 接入要点 · L27 · 301
+- ENG-BUDGET-LOD §0 结论 · L20 · 641
+  - ★ ENG-BUDGET-LOD §0.1 接入要点 · L27 · 303
 - ENG-BUDGET-LOD §1 细节级别与分块 · L33 · 1.4k
-- ENG-BUDGET-LOD §2 流式加载与速度 · L57 · 465
+- ENG-BUDGET-LOD §2 流式加载与速度 · L57 · 462
 - ENG-BUDGET-LOD §3 深度与近裁剪面 · L64 · 360
 - ENG-BUDGET-LOD §4 阴影、后期、倒影、灯光 · L72 · 572
 - ENG-BUDGET-LOD §5 待验证（P0） · L82 · 135
@@ -1711,7 +1711,7 @@
   - ENG-PERF-STREAM §1.1 本机烘焙、缓存与加载 · L36 · 574
   - ENG-PERF-STREAM §1.2 帧内请求、挂载与六条不变量 · L44 · 564
   - ENG-PERF-STREAM §1.3 碰撞级与室内包 · L57 · 364
-  - ENG-PERF-STREAM §1.4 外围与目的地预取 · L61 · 177
+  - ENG-PERF-STREAM §1.4 外围与目的地预取 · L61 · 174
 - ENG-PERF-STREAM §2 主线程与 C# · L65 · 315
 - ENG-PERF-STREAM §3 内存与显存 · L71 · 271
 - ENG-PERF-STREAM §4 安装包与磁盘布局 · L75 · 121
@@ -1999,7 +1999,7 @@
 
 ## REG-DECISIONS-SYSTEMS · 系统与工程决策
 
-`docs/registry/REG-DECISIONS-SYSTEMS-系统与工程决策.md` · 19.4k 字 · 界面、存档、音频、性能与画面设置、工程五个领域的已定决策
+`docs/registry/REG-DECISIONS-SYSTEMS-系统与工程决策.md` · 19.5k 字 · 界面、存档、音频、性能与画面设置、工程五个领域的已定决策
 关键词：决策、系统、工程、界面、存档、音频、性能、画面设置、预算、契约
 
 - REG-DECISIONS-SYSTEMS §0 结论 · L21 · 126
@@ -2007,10 +2007,10 @@
 - REG-DECISIONS-SYSTEMS §1 界面 · L29 · 3.9k
 - REG-DECISIONS-SYSTEMS §2 存档 · L61 · 1.6k
 - REG-DECISIONS-SYSTEMS §3 音频 · L80 · 2.2k
-- REG-DECISIONS-SYSTEMS §4 性能与画面设置 · L102 · 3.3k
-- REG-DECISIONS-SYSTEMS §5 工程 · L131 · 4.1k
-- REG-DECISIONS-SYSTEMS §6 地图与行走 · L162 · 1.0k
-- REG-DECISIONS-SYSTEMS §7 时间、季节、天气 · L173 · 2.4k
+- REG-DECISIONS-SYSTEMS §4 性能与画面设置 · L102 · 3.5k
+- REG-DECISIONS-SYSTEMS §5 工程 · L132 · 4.1k
+- REG-DECISIONS-SYSTEMS §6 地图与行走 · L163 · 1.0k
+- REG-DECISIONS-SYSTEMS §7 时间、季节、天气 · L174 · 2.4k
 
 ## REG-DECISIONS-WORLD · 世界与画面决策
 
