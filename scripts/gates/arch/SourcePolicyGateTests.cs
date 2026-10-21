@@ -32,7 +32,7 @@ public sealed class SourcePolicyGateTests
         SourceModel.RequireNoViolations(errors);
     }
 
-    private static IEnumerable<string> HandwrittenPaths(string root)
+    internal static IEnumerable<string> HandwrittenPaths(string root)
     {
         using var thirdParty = JsonDocument.Parse(File.ReadAllText(Path.Combine(root, "third_party.json")));
         var external = thirdParty.RootElement.GetProperty("entries").EnumerateArray()
