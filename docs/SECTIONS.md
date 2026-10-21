@@ -1279,7 +1279,7 @@
   - SYS-SAVE-FORMAT §1.2 缩略图 · L50 · 152
   - SYS-SAVE-FORMAT §1.3 序列化约定 · L54 · 194
   - SYS-SAVE-FORMAT §1.4 版本 · L60 · 288
-- SYS-SAVE-FORMAT §2 存档损坏 · L67 · 469
+- SYS-SAVE-FORMAT §2 存档损坏 · L67 · 472
 - SYS-SAVE-FORMAT §3 设置文件：唯一的 `settings.json` · L80 · 662
 - SYS-SAVE-FORMAT §4 安全：为什么禁止用 Resource 和 ConfigFile 存读档 · L90 · 533
 
@@ -1818,8 +1818,8 @@
   - ★ WF-COMMS §0.1 接入要点 · L34 · 205
 - WF-COMMS §1 交接目录与文件 · L41 · 1.1k
 - WF-COMMS §2 命名与写法 · L62 · 391
-- WF-COMMS §3 任务单、请求文件、契约申请与完成回报 · L69 · 925
-  - WF-COMMS §3.1 施工单与旁路单 · L71 · 236
+- WF-COMMS §3 任务单、请求文件、契约申请与完成回报 · L69 · 929
+  - WF-COMMS §3.1 施工单与旁路单 · L71 · 240
   - WF-COMMS §3.2 请求文件 · L76 · 50
   - WF-COMMS §3.3 契约申请的短头部（D-201） · L80 · 170
   - WF-COMMS §3.4 完成回报 · L90 · 444
@@ -1829,7 +1829,7 @@
   - WF-COMMS §4.3 三级标记与写法 · L125 · 432
   - WF-COMMS §4.4 来信与即时送达 · L133 · 523
 - WF-COMMS §5 Codex 会话与引导信箱 · L147 · 268
-- WF-COMMS §6 作者观察台 · L153 · 981
+- WF-COMMS §6 作者观察台 · L153 · 984
 
 ## WF-ENTRY · 角色入口卡
 
@@ -1868,7 +1868,7 @@
 - WF-MODEL §3 机械活交谁 · L72 · 535
 - WF-MODEL §4 推理强度按难度选 · L81 · 673
 - WF-MODEL §5 升级、派单与直接做 · L96 · 425
-- WF-MODEL §6 怎么开子代理 · L103 · 648
+- WF-MODEL §6 怎么开子代理 · L103 · 692
 - WF-MODEL §7 子代理的生命周期：默认新开，靠任务单交接 · L111 · 447
 - WF-MODEL §8 简报模板与"接续"段 · L121 · 777
   - WF-MODEL §8.1 简报模板 · L123 · 482
@@ -1926,10 +1926,10 @@
 - WF-STATUS §0 结论 · L24 · 614
   - ★ WF-STATUS §0.1 接入要点 · L33 · 231
 - WF-STATUS §1 施工状态文件怎么填 · L40 · 435
-- WF-STATUS §2 施工队列与队列平衡 · L48 · 1.8k
+- WF-STATUS §2 施工队列与队列平衡 · L48 · 1.9k
 - WF-STATUS §3 交接单 · L86 · 89
-- WF-STATUS §4 调研入队流水线 · L90 · 1.4k
-  - WF-STATUS §4.1 调研与旁路单 · L104 · 768
+- WF-STATUS §4 调研入队流水线 · L90 · 1.5k
+  - WF-STATUS §4.1 调研与旁路单 · L104 · 776
 
 ## STD-INDEX · 规范总纲
 
@@ -1956,7 +1956,7 @@
 
 ## STD-CONVENTIONS · 坐标单位与命名约定
 
-`docs/standards/STD-CONVENTIONS-坐标单位与命名约定.md` · 10.0k 字 · 跨文档共同约定：坐标与单位、方位角、时间写法，编号体系与命名（地图与实体 ID、色名、枚举纪律、持久化 ID、文件与编号格式）、确定性原则、数据路径
+`docs/standards/STD-CONVENTIONS-坐标单位与命名约定.md` · 10.1k 字 · 跨文档共同约定：坐标与单位、方位角、时间写法，编号体系与命名（地图与实体 ID、色名、枚举纪律、持久化 ID、文件与编号格式）、确定性原则、数据路径
 关键词：约定、坐标系、单位、角度、方位角、时间写法、编号体系、命名、地图 ID、实体 ID、色名、枚举纪律、持久化 ID、文件命名、提交说明格式、确定性、数据路径
 
 - STD-CONVENTIONS §0 结论 · L23 · 805
@@ -1968,8 +1968,8 @@
 - STD-CONVENTIONS §2 时间写法 · L69 · 495
 - STD-CONVENTIONS §3 标识与命名 · L78 · 6.3k
   - STD-CONVENTIONS §3.1 地图、实体与世界文件 · L80 · 825
-  - STD-CONVENTIONS §3.2 编号体系 · L94 · 936
-  - STD-CONVENTIONS §3.3 同号不同义的读法 · L118 · 684
+  - STD-CONVENTIONS §3.2 编号体系 · L94 · 961
+  - STD-CONVENTIONS §3.3 同号不同义的读法 · L118 · 705
   - STD-CONVENTIONS §3.4 命名写法 · L131 · 1.2k
   - STD-CONVENTIONS §3.5 色名 · L152 · 364
   - STD-CONVENTIONS §3.6 枚举与扩展纪律 · L159 · 562
@@ -2025,7 +2025,7 @@
 
 - REG-DECISIONS-PROCESS §0 结论 · L23 · 127
   - ★ REG-DECISIONS-PROCESS §0.1 接入要点 · L27 · 54
-- REG-DECISIONS-PROCESS §1 流程 · L31 · 12.9k
+- REG-DECISIONS-PROCESS §1 流程 · L31 · 13.0k
 
 ## REG-DECISIONS-SYSTEMS · 系统与工程决策
 

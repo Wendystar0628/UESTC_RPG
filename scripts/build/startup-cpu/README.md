@@ -1,6 +1,6 @@
-# C-215 启动 CPU 采样脚本
+# TOOL-215 启动 CPU 采样脚本
 
-两个入口都把样本、日志、JSON 与 `.nettrace` 写入 `output/start_game/C215-profile`。`run.ps1` 在固定机位截图和预烘完成后使用：要求全新输出目录，取得共享构建锁并做现有启动判鲜，只构建独立 `CpuParse`，再串行采集 `title`、`immediate`、`dwell`。`-TitleDwellSeconds` 默认 10 秒、范围 1–120 秒。解析器的 `bin/obj` 留在 output。
+两个入口都把样本、日志、JSON 与 `.nettrace` 写入 `output/start_game/TOOL-215-profile`。`run.ps1` 在固定机位截图和预烘完成后使用：要求全新输出目录，取得共享构建锁并做现有启动判鲜，只构建独立 `CpuParse`，再串行采集 `title`、`immediate`、`dwell`。`-TitleDwellSeconds` 默认 10 秒、范围 1–120 秒。解析器的 `bin/obj` 留在 output。
 
 `run-existing-immediate.ps1` 只用现有游戏与解析器二进制；缺少任一二进制就报错。它跳过启动初始化、编译、导入和预烘，结果记录 `compileImportPrebakeInvoked=false`。游戏、默认缓存、工具、解析器、输出及共享构建锁始终来自脚本所在仓库的当前主检出。用法：`powershell -File scripts/build/startup-cpu/run-existing-immediate.ps1 -Output <新目录> -BuiltRevision <构建提交>`。子进程早期错误写入样本目录的 `worker.stderr.txt`。
 

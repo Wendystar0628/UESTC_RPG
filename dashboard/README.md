@@ -22,6 +22,8 @@
 
 数据文件用 `Dash.put(名字, 数据)` 交付，附 `updated`、固定生产方 `source`、`errors`。时刻为 ISO，时长为分钟；`rate`、`ratio` 为 0–1 口径的小数，freshness.ratio 是经过时长/应有间隔，可大于 1。比例显示用 `Dash.pct(rate, 1)`；failures.rate 单独表示每 window.segment 次提交的登记次数。公开名字、顺序与间隔由 catalog.DATASETS 派生，未生成显示缺数据。index、stats、records 停产，通知仅作输入。
 
+施工种类唯一由 `monitor.util.ROW_KINDS` 定义，`flow.kinds` 给出有序的 key 与中文 label；`leadTime` 为 all 和该清单各类输出分组，页面据清单展示。现行行号仅为大写类别加三位数与可选小写子行后缀；Git、外部会话与原始诊断日志的施工引用只在读源边界规范化，实际事件原文与计数保持原样。
+
 内容改变才换版本，updated 是该版内容发布时间。真实读取、解析或依赖失败发布 errors；缺事实、覆盖不足、零分母或无法确认的判断保留 null，不写成零、空闲或正常。历史带 `coverage: {from}`，不补造记账起点以前的事实；后端给出各窗口与列表顺序，前端不再排序、切窗或重算业务。
 
 ```text
@@ -33,9 +35,10 @@ hookfeed:  {lanes: [{role: 主会话|Claude 子代理|Codex 主线|Codex 子代�
                     items: [{at, event: 中文事件, blocks: [中文块名], chars}]}]}
 progress:  {counts: {waiting, ready, active, integration, paused},
             dwell: [{side: all|claude|codex, stage, n, med}],
-            rows: [{id, title, kind: Q|C|S, who, stage, status, since, waiting, stageP80, long, jump,
+            rows: [{id, title, kind: GAME|TOOL|BATCH, who, stage, status, since, waiting, stageP80, long, jump,
                     deps: [id], waitOn: [还没结的前置 id], waitedBy: [id], history: [{stage, from, to|null, min}]}]}
-flow:      {coverage, leadTime: [{side: all|claude|codex, kind: all|Q|C, cur: 分布, prev: 分布|null}],
+flow:      {coverage, kinds: [{key: GAME|TOOL|BATCH, label}],
+            leadTime: [{side: all|claude|codex, kind: all|GAME|TOOL|BATCH, cur: 分布, prev: 分布|null}],
             wip: {days: [日], windows: {"14": 窗口, "30": 窗口}},
             stages: [{side, week: cur|prev, n, parts: {waiting, ready, active, integration, paused}|null,
                       top: {段: [{id, title, minutes}]}|null}],

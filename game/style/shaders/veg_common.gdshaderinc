@@ -314,7 +314,7 @@ float veg_edge_noise(vec3 wp, int row, int layer) {
 	return clamp((n - 0.5) * VEG_EDGE_CONTRAST + 0.5, 0.0, 1.0);
 }
 
-// 中距冬季细枝体（Q-057，veg_twig_mass）与近处枝梢笔触的交叉淡化：每株一个距离（主相机到树干脚点上方半个树高，与远近池交接同一个点），
+// 中距冬季细枝体（GAME-057，veg_twig_mass）与近处枝梢笔触的交叉淡化：每株一个距离（主相机到树干脚点上方半个树高，与远近池交接同一个点），
 // 按 L0+ 的切换距离（12 m 树 15 m，乘 树高/12 × 细节系数）的倍数从前者到后者，近处 0、中距以外 1。两个着色器用同一个函数，所以互补
 const vec2 VEG_WINTER_MASS_NEAR = vec2(0.8, 1.3);
 float veg_winter_far(vec3 cam, vec3 origin, VegInst inst) {

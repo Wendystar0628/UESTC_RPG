@@ -1,11 +1,11 @@
 ﻿# One diagnostic batch. Root invokes only after the screenshot AND prebake completion notices.
-# 产出：output/start_game/C215-profile/；output/start_game/；output/.locks/build.lock。
+# 产出：output/start_game/TOOL-215-profile/；output/start_game/；output/.locks/build.lock。
 param([Parameter(Mandatory)][string]$Output, [ValidateRange(1,120)][double]$TitleDwellSeconds = 10)
 $ErrorActionPreference = 'Stop'
 $root = (Resolve-Path (Join-Path $PSScriptRoot '..\..\..')).Path
 . "$root\scripts\lib\common.ps1"
 . "$root\scripts\lib\start-game.ps1"
-$Output = Assert-UESTCChildPath $Output (Join-Path $root 'output\start_game\C215-profile')
+$Output = Assert-UESTCChildPath $Output (Join-Path $root 'output\start_game\TOOL-215-profile')
 if (Test-Path -LiteralPath $Output) { throw 'Choose a fresh output directory.' }
 New-Item -ItemType Directory -Path $Output | Out-Null
 $lease = $null

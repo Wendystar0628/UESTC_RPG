@@ -16,7 +16,7 @@ internal sealed class GroundLayout
 
     public IReadOnlyList<GroundShape> Shapes { get; }
     public IReadOnlyList<RoadLine> Roads { get; }
-    /// <summary>Plaza and walk sources that carry a surface pattern and their metre frames (Q-015); empty when none qualifies.</summary>
+    /// <summary>Plaza and walk sources that carry a surface pattern and their metre frames (GAME-015); empty when none qualifies.</summary>
     public GroundPaving Paving { get; private init; } = GroundPaving.Empty;
     public Vector2 Min { get; }
     public Vector2 Max { get; }

@@ -272,7 +272,7 @@ public static class MotherModels
     private static Box3 Union(Box3 a, Box3 b) => new(Vector3.Min(a.Min, b.Min), Vector3.Max(a.Max, b.Max));
 
     // ---------------------------------------------------------------------------------------------------------
-    // Winter twig mass (Q-057): the usual middle-distance stand-in for a bare deciduous crown, a see-through shell on
+    // Winter twig mass (GAME-057): the usual middle-distance stand-in for a bare deciduous crown, a see-through shell on
     // the crown outline that veg_twig_mass alpha-blends in the twig colour and cross-fades against the near twig strokes.
     // Deciduous needle crowns (metasequoia) only: a narrowed cone around the crown axis, widest low and pointed at the
     // top, so neighbouring trees in a row keep a gap. Drawn at every level and by the far stand-in; it casts no shadow.

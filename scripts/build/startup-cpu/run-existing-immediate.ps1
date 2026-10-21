@@ -1,14 +1,14 @@
 ﻿# Root only, after screenshot AND prebake release. Uses existing game/parser binaries verbatim.
 # 用法：powershell -File scripts/build/startup-cpu/run-existing-immediate.ps1 -Output <新目录> -BuiltRevision <构建提交>
-# 产出：output/start_game/C215-profile/；output/.locks/build.lock。
+# 产出：output/start_game/TOOL-215-profile/；output/.locks/build.lock。
 param([Parameter(Mandatory)][string]$Output,
     [Parameter(Mandatory)][string]$BuiltRevision)
 $ErrorActionPreference = 'Stop'
 $toolRoot = (Resolve-Path (Join-Path $PSScriptRoot '..\..\..')).Path
 . "$toolRoot\scripts\lib\common.ps1"
-$Output = Assert-UESTCChildPath $Output (Join-Path $toolRoot 'output\start_game\C215-profile')
+$Output = Assert-UESTCChildPath $Output (Join-Path $toolRoot 'output\start_game\TOOL-215-profile')
 if (Test-Path -LiteralPath $Output) { throw 'Choose a fresh output directory.' }
-$parser = Join-Path $toolRoot 'output\start_game\C215-profile\bin\CpuParse\Debug\net10.0\CpuParse.dll'
+$parser = Join-Path $toolRoot 'output\start_game\TOOL-215-profile\bin\CpuParse\Debug\net10.0\CpuParse.dll'
 $assembly = Join-Path $toolRoot 'game\.godot\mono\temp\bin\Debug\Campus.dll'
 $lease = $null
 try {

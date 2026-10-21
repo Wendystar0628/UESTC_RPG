@@ -10,7 +10,7 @@
 锁被持有就本次一项不删，免得删到正在写的产物。只列出时不碰锁。
 保护：观察台里未结的审计项和通知引用的 output/ 文件不删，连同它们所在的目录里的其余项也不删（作者还要看）；
 还在的任务单（.collab/tasks，结案即删）引用的路径不删，引用的是目录就连里面的内容，只保被引用的这一项，
-它的祖先目录里没被引用且已过期的兄弟照常可删；施工队列里未结行对应的 output/行号目录及其后缀目录也保留（行号可去短横线）。
+它的祖先目录里没被引用且已过期的兄弟照常可删；施工队列里未结行对应的 output/行号目录及其后缀目录也保留（使用完整大写行号）。
 按提交轮次而不按时间算：不开发就没有提交，什么都不会过期。
 
 用法：
@@ -157,8 +157,8 @@ def references():
             if '号' not in columns or columns['号'] >= len(cells):
                 continue
             row_id = cells[columns['号']]
-            if re.fullmatch(r'[A-Z]-\d+[a-z]?', row_id):
-                ids.update((row_id, row_id.replace('-', '')))
+            if re.fullmatch(r'(?:GAME|TOOL|BATCH)-[0-9]{3}[a-z]?', row_id):
+                ids.add(row_id)
         if ids:
             pattern = re.compile(r'^(?:' + '|'.join(re.escape(i) for i in sorted(ids)) + r')(?=$|[^A-Za-z0-9])')
     tasks = []

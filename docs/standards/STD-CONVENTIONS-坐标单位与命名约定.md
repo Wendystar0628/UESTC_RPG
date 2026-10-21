@@ -105,7 +105,7 @@ gates: [G1, G5]
 | G | 门禁 | ENG-GATES §1 |
 | WP | 工作包；子包写 WP-31a；RPG 包另起编号，由 ENG-ROADMAP 登记 | PLAN-WP、ENG-ROADMAP |
 | D | 决策，D-001 起，三位数，全文连续，只增不复用 | REG-DECISIONS §0 |
-| Q-、C-、S- | 施工队列的行：Q 产品施工，C 协作与工具，S 旁路单；三位数，拆出的子行加小写字母（Q-034a） | WF-STATUS §2 |
+| GAME-、TOOL-、BATCH- | 施工队列的行：GAME 游戏本体，TOOL 协作与工具，BATCH 批量机械活；三位数，拆出的子行加小写字母（GAME-034a） | WF-STATUS §2 |
 | r | 调研单，r001 起 | WF-STATUS §4 |
 | O0–O3 | 外围分层 | WLD-OUTSKIRTS-BAND §2.2 |
 | L0+–L4 | 建筑与地块的细节级别；室内另有 I0、IS、IF 三级，碰撞级 C | ENG-BUDGET-LOD §1 |
@@ -126,7 +126,7 @@ gates: [G1, G5]
 | I0、I1… | 室内兜底层 I0，或室内推进批次 I1–I3 | 批次写"室内批次 I1" |
 | 第 N 条 | 各文档编号列表里的一条（流式不变量、一票否决、硬规则等） | 带文档与小节写，如"ENG-BUDGET-RULES §1 第 9 条"，不写"不变量 5" |
 | B1、B2… | 视觉精度底线 B1–B13，或主楼的分区 B1–B3 区 | 底线写"底线 B4"；分区写"主楼 B2 区" |
-| C、S、T | 队列行 C-170、S-007；碰撞级 C；存档位 s1；开始页镜头 T | 队列行带连字符写三位数；碰撞级写"碰撞级 C"；存档位小写；任务单里的步骤写"第 n 步"，不另起 T 之类的字母编号 |
+| GAME、TOOL、BATCH、C、T | 队列行 TOOL-170、BATCH-007；碰撞级 C；存档位 s1；开始页镜头 T | 队列行带连字符写三位数；碰撞级写"碰撞级 C"；存档位小写；任务单里的步骤写"第 n 步"，不另起 T 之类的字母编号 |
 
 ### 3.4 命名写法
 
@@ -183,18 +183,18 @@ gates: [G1, G5]
 | 类 | 格式 | 例子 |
 | --- | --- | --- |
 | 规范文档 | `编码-中文简题.md`，简题 ≤14 字；编码规则见 STD-DOC §3；`docs/godot-api/` 下生成的 API 参考不在此列 | `SYS-WEATHER-天气.md` |
-| 任务单 | `tasks/<claude 或 codex>/<队列行号>-<主题>.md`；一张单管几行时用主行的号 | `Q-036-广场图样稳定性采集.md` |
-| 旁路单 | `side/cards/S-<nnn>-<主题>.md` | `S-007-清点外围楼名.md` |
+| 任务单 | `tasks/<claude 或 codex>/<队列行号>-<主题>.md`；一张单管几行时用主行的号 | `GAME-036-广场图样稳定性采集.md` |
+| 旁路单 | `side/cards/BATCH-<nnn>-<主题>.md` | `BATCH-007-清点外围楼名.md` |
 | 调研 | `research/r<nnn>-<主题>/`，日期只记在 INDEX | `r025-命名规范/` |
 | 来信 | `notes/<claude 或 codex>/<年月日-时分秒>-<发件方>-<短词>.md`，发件方写 `claude`、`codex`，作者经观察台留言写 `author`（只进 `notes/claude/`） | `20261019-024457-claude-编号统一.md` |
-| 契约申请 | `requests/contract-<队列行号>-<主题>.md` | `contract-Q-003-地形求值.md` |
+| 契约申请 | `requests/contract-<队列行号>-<主题>.md` | `contract-GAME-003-地形求值.md` |
 | 世界文件 | 区文件 `world/<区>.json`；原点、投影与校界 `world/geo.json` | `world/core.json` |
 | 脚本 | `scripts/` 的 Python、PowerShell 与命令脚本文件名用小写连字符；C# 工具类型文件遵守 C# 命名。开头一句话作用加"用法："（STD-CODE） | `check-naming.ps1`、`clean-artifacts.py` |
 | 固定机位 | `<昼、夜或雨>-<点位>-<地点>` | `夜-P00-全景` |
 | 临时截图 | `output/render-review/<点位>-<模式>-<年月日>.png` | `P16-旁观-20261019.png` |
-| 临时工作树 | `E:\Project\UESTC_RPG.wt\<队列行号或用途>`（WF-RULE §13） | `Q-015b` |
-| 提交说明 | `<队列行号> <领域词>：一句话`；一个提交只写一个行号（WF-RULE §7）；没有队列行的写 `文档：`、`工具：`、`数据：` | `Q-034a 街道家具：主路口横排白色石球` |
-| 子代理名 | Claude 侧的 description 写队列行号加中文主题，不混英文，没有队列行的以"调研""核查"开头；Codex 侧的 task_name 只能是标识符，写小写行号加英文短词 | `Q-031 草地积水`、`q031_grass_puddles` |
+| 临时工作树 | `E:\Project\UESTC_RPG.wt\<队列行号或用途>`（WF-RULE §13） | `GAME-015b` |
+| 提交说明 | `<队列行号> <领域词>：一句话`；一个提交只写一个行号（WF-RULE §7）；没有队列行的写 `文档：`、`工具：`、`数据：` | `GAME-034a 街道家具：主路口横排白色石球` |
+| 子代理名 | Claude 侧的 description 写队列行号加中文主题，不混英文，没有队列行的以"调研""核查"开头；Codex 侧的 task_name 只能是标识符，写小写行号加英文短词 | `GAME-031 草地积水`、`GAME-031_031_grass_puddles` |
 
 ## 4 确定性
 

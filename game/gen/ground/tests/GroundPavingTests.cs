@@ -12,7 +12,7 @@ namespace Campus.Gen.Ground.Tests;
 using static GdUnit4.Assertions;
 
 /// <summary>
-/// Q-015 plaza paving: the forecourt of a library's open entrance carries the granite profile with metre UVs square to
+/// GAME-015 plaza paving: the forecourt of a library's open entrance carries the granite profile with metre UVs square to
 /// the entrance, one joint on its axis; curbs, borders and other plazas stay plain, a place laid inside it continues the grid.
 /// </summary>
 [TestSuite]

@@ -17,7 +17,7 @@ public sealed record GroundSection
     /// <summary>Lawn level below paving; the edge rises smoothly to the paving over LawnEdgeRise.</summary>
     public float GrassY { get; init; } = GroundLevels.Lawn;
 
-    /// <summary>Width of the lawn's rise to paving at its edge (Q-016, metres).</summary>
+    /// <summary>Width of the lawn's rise to paving at its edge (GAME-016, metres).</summary>
     public float LawnEdgeRise { get; init; } = 0.4f;
 
     /// <summary>Carriageway and parking level.</summary>

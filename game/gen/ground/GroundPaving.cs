@@ -19,7 +19,7 @@ internal sealed record PavingFrame(byte Profile, Vector2 Origin, Vector2 U, Vect
 }
 
 /// <summary>
-/// Surface patterns of the ground (Q-015, ART-STYLE). Plaza family: the forecourt of a library's open entrance is
+/// Surface patterns of the ground (GAME-015, ART-STYLE). Plaza family: the forecourt of a library's open entrance is
 /// laid in 600×600 mm granite, stack bond, square to that entrance's façade, one joint on the entrance axis.
 /// Walk family: every footway, path and bridge footprint is laid in 300×150 mm pavers, running bond, courses along
 /// the walk's centre line (<see cref="WalkFrameAt"/>).

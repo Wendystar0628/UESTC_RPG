@@ -42,7 +42,7 @@ if mode not in ("title", "immediate", "dwell"):
     raise ValueError("Expected title, immediate or dwell")
 dwell_seconds = float(sys.argv[3])
 out.mkdir(parents=True, exist_ok=False)
-desktop_name = "UESTC_C215_" + str(time.time_ns())
+desktop_name = "UESTC_STARTUP_CPU_" + str(time.time_ns())
 desktop = user.CreateDesktopW(desktop_name, None, None, 0, 0x01FF, None)
 if not desktop:
     raise c.WinError(c.get_last_error())
