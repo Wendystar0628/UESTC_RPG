@@ -45,7 +45,6 @@ public partial class KernelStage : Node3D, IAppExit, IStageGateHost
     private int _exitCode;
     private readonly List<Exception> _failures = [];
     private string? _failurePhase;
-    private bool _failurePresentationAttempted;
     private bool _handlingFailure;
     private IAppLoadingLease? _bootLoading;
     private Task? _bootLoadingDisposal;
@@ -53,8 +52,6 @@ public partial class KernelStage : Node3D, IAppExit, IStageGateHost
     private readonly CancellationTokenSource _captureLifetime = new();
     private ViewContentReadiness? _contentReadiness;
     private GameCaptureNode.CaptureDestination? _startupCapture;
-    private IAppLoadingLease? _failureLoading;
-    private IFlowLease? _failureFlow;
     private readonly StageGateDriver _gate;
     private string _phase = "compose";
     public string Phase
@@ -479,21 +476,11 @@ public partial class KernelStage : Node3D, IAppExit, IStageGateHost
             try
             {
                 var commandExit = await _bakeCommandTask;
-                if (commandExit != 0) _exitCode = commandExit;
+                if (commandExit != 0) _exitCode = Math.Max(_exitCode, commandExit);
             }
             catch (Exception error) { failures.Add(error); }
         try { ReleaseStartupFlow(); } catch (Exception error) { failures.Add(error); }
         try { await DisposeBootLoading(); } catch (Exception error) { failures.Add(error); }
-        if (_failureLoading is { } loading)
-        {
-            _failureLoading = null;
-            try { await loading.DisposeAsync(); } catch (Exception error) { failures.Add(error); }
-        }
-        if (_failureFlow is { } flow)
-        {
-            _failureFlow = null;
-            try { flow.Dispose(); } catch (Exception error) { failures.Add(error); }
-        }
         try { await KernelServices.Services.ShutdownAsync(this, _gate.TraceClose); }
         catch (Exception error) { failures.Add(error); }
         try { _gate.TraceClose("shutdown-complete"); } catch (Exception error) { failures.Add(error); }
@@ -509,29 +496,26 @@ public partial class KernelStage : Node3D, IAppExit, IStageGateHost
         _failurePhase ??= Phase;
         _failed = true;
         _ready = false;
+        _exitCode = Math.Max(_exitCode, 2);
         RecordFailure(error);
-        if (_treeExited || _handlingFailure) return Task.CompletedTask;
-        if (firstFailure && !_shutdownStarted)
+        // The published shutdown already owns cleanup. A failure raised by that cleanup
+        // must not wait on its own task; its caller continues draining the same shutdown.
+        if (_treeExited || _handlingFailure || _shutdownStarted) return Task.CompletedTask;
+        if (firstFailure)
         {
-            // Freeze before notifying waiters: completing WorldReady can resume entry or quit inline.
+            // Completing WorldReady can resume entry or quit inline; nested failures only record.
             _handlingFailure = true;
             try
             {
-                try { HoldFailure(); } catch (Exception holdError) { RecordFailure(holdError); }
-                try
-                {
-                    var bootFlow = _flow as IAppBootFlow ?? KernelServices.Services.Created.OfType<IAppBootFlow>().SingleOrDefault();
-                    bootFlow?.FailBoot(error);
-                }
+                try { if (_flow is IAppBootFlow bootFlow) bootFlow.FailBoot(error); }
                 catch (Exception flowError) { RecordFailure(flowError); }
                 try { _captureLifetime.Cancel(); } catch (Exception cancelError) { RecordFailure(cancelError); }
             }
             finally { _handlingFailure = false; }
         }
-        // Interactive failures retain their presentation until the observer requests departure.
-        // Command, capture and no-title failures still drain resources and exit unsuccessfully.
-        return _shutdownTask ?? (_cpuCommand || AppBoot.Options.CpuBakeMode || AppBoot.Options.CaptureMode || !AppBoot.Options.Flow.ShowTitle
-            ? BeginShutdownAndQuit(2) : Task.CompletedTask);
+        // No failure presentation owns this terminal state yet. Every launch mode exits
+        // through the same awaited cleanup until SYS-TITLE has an explicit handoff.
+        return BeginShutdownAndQuit(2);
     }
 
     private void RecordFailure(Exception error)
@@ -551,27 +535,7 @@ public partial class KernelStage : Node3D, IAppExit, IStageGateHost
     {
         if (_quitIssued) return;
         _quitIssued = true;
-        (_sceneTree ?? throw new InvalidOperationException("Stage has no live scene-tree owner.")).Quit(_failed ? 2 : _exitCode);
-    }
-
-    private void HoldFailure()
-    {
-        if (_failurePresentationAttempted) return;
-        _failurePresentationAttempted = true;
-        var failures = new List<Exception>();
-        try
-        {
-            var loading = KernelServices.Services.Created.OfType<IAppLoadingPresentation>().SingleOrDefault();
-            if (loading is not null) _failureLoading ??= loading.Show();
-        }
-        catch (Exception error) { failures.Add(error); }
-        try
-        {
-            var world = KernelServices.Services.Created.OfType<IWorldControl>().SingleOrDefault();
-            if (world is not null) _failureFlow ??= world.AcquireFlow(FlowPriority.AppFlow, 0);
-        }
-        catch (Exception error) { failures.Add(error); }
-        if (failures.Count > 0) throw new AggregateException("Stage failure presentation could not be held.", failures);
+        (_sceneTree ?? throw new InvalidOperationException("Stage has no live scene-tree owner.")).Quit(_exitCode);
     }
 
     Node IStageGateHost.Stage => this;
