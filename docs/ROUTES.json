@@ -376,6 +376,12 @@
   },
   {
    "docs": [
+    "STD-CODE"
+   ],
+   "glob": "game/.editorconfig"
+  },
+  {
+   "docs": [
     "ENG-ARCH",
     "WF-BUILD"
    ],
@@ -394,6 +400,12 @@
     "WF-BUILD"
    ],
    "glob": "game/Campus.csproj"
+  },
+  {
+   "docs": [
+    "ENG-ARCH"
+   ],
+   "glob": "game/Campus.sln"
   },
   {
    "docs": [

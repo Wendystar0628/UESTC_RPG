@@ -10,7 +10,7 @@ related: [CORE-INDEX, WF-RULE, ENG-GATES, ENG-BUDGET, SYS-WALK]
 contracts: []
 data: []
 gates: []
-paths: ["game/**/*.cs", "pipeline/**/*.py", "scripts/**/*.py", "scripts/**/*.ps1", "game/testing/**", ".collab/tools/**", "dashboard/**", "scripts/gates/arch/**", "scripts/godot-api/**", "docs/godot-api/**"]
+paths: ["game/**/*.cs", "pipeline/**/*.py", "scripts/**/*.py", "scripts/**/*.ps1", "game/testing/**", ".collab/tools/**", "dashboard/**", "scripts/gates/arch/**", "scripts/godot-api/**", "docs/godot-api/**", "game/.editorconfig"]
 ---
 # STD-CODE · 代码结构准则
 
