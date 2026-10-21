@@ -214,8 +214,6 @@ public sealed class PartGeometryTests
         var line = PartPlacement.Linear(source, 4, new(1, 0, 0));
         AssertThat(line[3].At.M41 == 5 && line[3].Tint == source.Tint && line[3].Params == source.Params && line[3].IgnoreOcclusionCulling).OverrideFailureMessage("Array lost placement metadata.").IsTrue();
         AssertThat(source.At.M41 == 2).OverrideFailureMessage("Array mutated its source.").IsTrue();
-        var radial = PartPlacement.Radial(source, 4, Vector3.Zero, (float)(Math.PI / 2));
-        AssertThat(Math.Abs((double)(-2) - radial[1].At.M43) <= TestTolerance.Position).OverrideFailureMessage($"Expected {-2}; got {radial[1].At.M43}.").IsTrue(); AssertThat(Math.Abs((double)(-2) - radial[2].At.M41) <= TestTolerance.Position).OverrideFailureMessage($"Expected {-2}; got {radial[2].At.M41}.").IsTrue();
         foreach (var socket in PartPlacement.BoxSockets(2, 3, 4).Values)
         {
             var x = new Vector3(socket.M11, socket.M12, socket.M13); var y = new Vector3(socket.M21, socket.M22, socket.M23); var z = new Vector3(socket.M31, socket.M32, socket.M33);

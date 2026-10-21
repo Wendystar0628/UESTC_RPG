@@ -21,24 +21,6 @@ public static class PartPlacement
         return Array.AsReadOnly(result);
     }
 
-    /// <summary>Rotates the source's entire local placement around a world-space centre using Y rotation.</summary>
-    public static IReadOnlyList<PlacedPart> Radial(PlacedPart source, int count, Vector3 centre, float stepRadians)
-    {
-        ArgumentNullException.ThrowIfNull(source); Count(count);
-        if (!VectorMath.Finite(centre)) throw new ArgumentException("Coordinates must be finite.", nameof(centre));
-        ValidateMatrix(source.At);
-        if (!float.IsFinite(stepRadians)) throw new ArgumentOutOfRangeException(nameof(stepRadians));
-        var result = new PlacedPart[count];
-        for (var i = 0; i < count; i++)
-        {
-            var rotation = Matrix4x4.CreateRotationY(stepRadians * i);
-            var at = source.At; at.M41 -= centre.X; at.M42 -= centre.Y; at.M43 -= centre.Z;
-            at = Multiply(at, rotation); at.M41 += centre.X; at.M42 += centre.Y; at.M43 += centre.Z;
-            ValidateMatrix(at); result[i] = source with { At = at };
-        }
-        return Array.AsReadOnly(result);
-    }
-
     /// <summary>Row-vector transform: +Z faces forward and +Y follows the supplied up direction.</summary>
     public static Matrix4x4 Socket(Vector3 position, Vector3 forward, Vector3 up)
     {
@@ -71,9 +53,4 @@ public static class PartPlacement
         if (values.Any(v => !float.IsFinite(v)) || m.M14 != 0 || m.M24 != 0 || m.M34 != 0 || m.M44 != 1)
             throw new ArgumentException("Placement must be a finite affine matrix.", nameof(m));
     }
-    private static Matrix4x4 Multiply(Matrix4x4 a, Matrix4x4 b) => new(
-        a.M11 * b.M11 + a.M12 * b.M21 + a.M13 * b.M31, a.M11 * b.M12 + a.M12 * b.M22 + a.M13 * b.M32, a.M11 * b.M13 + a.M12 * b.M23 + a.M13 * b.M33, 0,
-        a.M21 * b.M11 + a.M22 * b.M21 + a.M23 * b.M31, a.M21 * b.M12 + a.M22 * b.M22 + a.M23 * b.M32, a.M21 * b.M13 + a.M22 * b.M23 + a.M23 * b.M33, 0,
-        a.M31 * b.M11 + a.M32 * b.M21 + a.M33 * b.M31, a.M31 * b.M12 + a.M32 * b.M22 + a.M33 * b.M32, a.M31 * b.M13 + a.M32 * b.M23 + a.M33 * b.M33, 0,
-        a.M41 * b.M11 + a.M42 * b.M21 + a.M43 * b.M31 + b.M41, a.M41 * b.M12 + a.M42 * b.M22 + a.M43 * b.M32 + b.M42, a.M41 * b.M13 + a.M42 * b.M23 + a.M43 * b.M33 + b.M43, 1);
 }
