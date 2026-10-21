@@ -26,14 +26,12 @@ public sealed class MapHudContext(MapStyle style, UiKit ui)
     public string T(string key, params (string Name, string Value)[] args) => UiKit.T(key, args);
     public string Name(LocalizedName name) => TranslationServer.GetLocale().StartsWith("zh", StringComparison.OrdinalIgnoreCase) || name.En.Length == 0 ? name.Zh : name.En;
 
-    public TechButton IconButton(Control parent, Action<CanvasItem, Vector2, Color, float> glyph, string key, bool pin = false)
+    /// <summary>地图的图标钮：SVG 图标经 UiKit 的图标材质随昼夜与常驻设置换色（UI-VISUAL-COMPONENTS）。</summary>
+    public TechButton IconButton(Control parent, string icon, string key, bool pin = false)
     {
-        var button = Ui.Button(parent, ButtonStyle.Icon, "", pin: pin);
+        var button = Ui.Button(parent, ButtonStyle.Icon, "", icon: icon, pin: pin);
         button.AccessibilityName = T(key);
         button.TooltipText = T(key);
-        var drawing = new DrawHost(h => glyph(h, h.Size * 0.5f, ToneFor(button).Text1, Style.Metrics.IconStroke));
-        button.AddChild(drawing);
-        drawing.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.FullRect);
         return button;
     }
     /// <summary>大页的主题：0 晶白 … 1 深屏；与 ui_night 同一语义（扫描前沿的位置）。</summary>

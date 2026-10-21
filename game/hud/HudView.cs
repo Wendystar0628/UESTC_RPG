@@ -89,7 +89,7 @@ internal sealed class HudView
         Root.Resized += Layout;
         SafeFrame.Resized += Layout;
         _settings.Changed += OnSettingsChanged;
-        Kit.SetResidentFollows(_settings.Resident == ResidentTheme.Follow);
+        Kit.SetResidentFollows(_settings.Get(HudSettingDefinitions.Resident) == (int)ResidentTheme.Follow);
         Layout();
     }
 
@@ -117,7 +117,7 @@ internal sealed class HudView
 
     private void OnSettingsChanged()
     {
-        Kit.SetResidentFollows(_settings.Resident == ResidentTheme.Follow);
+        Kit.SetResidentFollows(_settings.Get(HudSettingDefinitions.Resident) == (int)ResidentTheme.Follow);
         _scaleDebounce = 0;
     }
 
@@ -135,6 +135,6 @@ internal sealed class HudView
         var s = Math.Min(window.X / 1920f, window.Y / 1080f);
         var lo = 0.85f / s;
         var hi = Math.Min(window.X / 1280f, window.Y / 720f) / s;
-        _owner.GetTree().Root.ContentScaleFactor = Math.Clamp(_scale ?? _settings.UiScale, lo, Math.Max(lo, hi));
+        _owner.GetTree().Root.ContentScaleFactor = Math.Clamp(_scale ?? _settings.Get(HudSettingDefinitions.UiScale), lo, Math.Max(lo, hi));
     }
 }

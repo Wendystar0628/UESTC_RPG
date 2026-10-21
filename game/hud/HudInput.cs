@@ -174,7 +174,7 @@ internal sealed class HudInput
             }
             return true;
         }
-        if (!_dependencies.Settings.SingleKeyShortcuts) return false;
+        if (!_dependencies.Settings.Get(HudSettingDefinitions.SingleKeyShortcuts)) return false;
         // 只有 . 可以按住连续前进；其余键的自动重复直接吞掉
         if (e.Echo && e.Action != "time_forward") return Array.IndexOf(Actions, e.Action) >= 0;
         return Shortcut(e.Action);

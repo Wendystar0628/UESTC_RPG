@@ -58,8 +58,9 @@ public partial class SettingsCard : Control
         _built = true;
         var k = _kit;
         _frame = k.Layout.Page(this, UiKit.T("settings.title"));
-        var frost = _settings.Frost && !_settings.ReduceTransparency;
-        var fill = _settings.ReduceTransparency ? "surface.solid" : frost ? "surface.frost" : "surface.panel";
+        var reduceTransparency = _settings.Get(HudSettingDefinitions.ReduceTransparency);
+        var frost = _settings.Get(HudSettingDefinitions.Frost) && !reduceTransparency;
+        var fill = reduceTransparency ? "surface.solid" : frost ? "surface.frost" : "surface.panel";
         k.Apply(_frame.Panel, new UiFx(Fill: fill, Line: "line.panel", Chamfer: k.Tokens.Chamfer("page"), Flags: UiFlags.Highlight | UiFlags.Via));
         _frame.Panel.MouseFilter = MouseFilterEnum.Stop;
         if (frost)

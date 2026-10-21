@@ -17,62 +17,89 @@ public static class HudSettingDefinitions
     public static readonly SettingDefinition<bool> SingleKeyShortcuts = new("single_key_shortcuts", true, "settings.single_keys");
     public static readonly SettingDefinition<bool> ShowPerf = new("show_perf", false, "settings.show_perf");
     public static readonly SettingDefinition<bool> FirstGuideSeen = new("first_guide_seen", false, "hud.first_guide");
+
+    /// <summary>HudSettings 持有的全部项，按此顺序读入与写回；加一项设置只在本类写定义并登记到这里。</summary>
+    public static readonly IReadOnlyList<object> All =
+        [Theme, Resident, ReduceMotion, ReduceTransparency, Frost, UiScale, SingleKeyShortcuts, ShowPerf, FirstGuideSeen];
+}
+
+/// <summary>
+/// 按定义的值类型分派到 ISettingsSection 的类型化读写；界面的设置项只有 bool、int、float 三类。
+/// 契约的 Get 扩展按类型重载，泛型表要在这里收成一处分派。
+/// </summary>
+internal static class SettingValues
+{
+    public static (string Key, object Value) Read(ISettingsSection section, object definition) => definition switch
+    {
+        SettingDefinition<bool> d => (d.Key, (object)section.Get(d)),
+        SettingDefinition<int> d => (d.Key, (object)section.Get(d)),
+        SettingDefinition<float> d => (d.Key, (object)section.Get(d)),
+        _ => throw new NotSupportedException($"Unsupported setting definition {definition.GetType()}."),
+    };
+
+    public static void Write(ISettingsSection section, string key, object value)
+    {
+        switch (value)
+        {
+            case bool b: section.Set(key, b); break;
+            case int i: section.Set(key, i); break;
+            case float f: section.Set(key, f); break;
+            default: throw new NotSupportedException($"Unsupported setting value {value.GetType()} for '{key}'.");
+        }
+    }
 }
 
 /// <summary>
 /// 界面的观者设置（UI-NAV），存 user://settings.json 的 ui 节（档案级，不进存档）。
-/// 读写经 ISettingsStore（越界或类型不对用默认值）；改动后 0.5 s 写一次（SYS-SAVE-FORMAT）。
+/// 按 HudSettingDefinitions.All 表读写，读经 ISettingsStore（越界或类型不对用默认值）；改动后 0.5 s 写一次（SYS-SAVE-FORMAT）。
 /// </summary>
 [KernelService(typeof(HudSettings))]
 public sealed class HudSettings
 {
     private readonly ISettingsStore _store;
     private readonly ISettingsSection _section;
+    private readonly Dictionary<string, object> _values = new(StringComparer.Ordinal);
+    private readonly List<string> _keys = [];
     private float _dirtyFor = -1;
 
     public HudSettings(ISettingsStore store)
     {
         _store = store;
         _section = store.Section("ui");
-        Load();
+        foreach (var definition in HudSettingDefinitions.All)
+        {
+            var (key, value) = SettingValues.Read(_section, definition);
+            _values.Add(key, value);
+            _keys.Add(key);
+        }
     }
 
-    public UiThemeMode Theme { get; private set; } = (UiThemeMode)HudSettingDefinitions.Theme.Default;
-    public ResidentTheme Resident { get; private set; } = (ResidentTheme)HudSettingDefinitions.Resident.Default;
-    public ReduceMotionMode ReduceMotion { get; private set; } = (ReduceMotionMode)HudSettingDefinitions.ReduceMotion.Default;
-    public bool ReduceTransparency { get; private set; } = HudSettingDefinitions.ReduceTransparency.Default;
-    public bool Frost { get; private set; } = HudSettingDefinitions.Frost.Default;
-    public float UiScale { get; private set; } = HudSettingDefinitions.UiScale.Default;
-    public bool SingleKeyShortcuts { get; private set; } = HudSettingDefinitions.SingleKeyShortcuts.Default;
-    public bool ShowPerf { get; private set; } = HudSettingDefinitions.ShowPerf.Default;
-    public bool FirstGuideSeen { get; private set; } = HudSettingDefinitions.FirstGuideSeen.Default;
     public long Rev { get; private set; }
     public event Action? Changed;
 
-    public void SetTheme(UiThemeMode v) => Set(() => Theme = v, Theme != v);
-    public void SetResident(ResidentTheme v) => Set(() => Resident = v, Resident != v);
-    public void SetReduceMotion(ReduceMotionMode v) => Set(() => ReduceMotion = v, ReduceMotion != v);
-    public void SetReduceTransparency(bool v) => Set(() => ReduceTransparency = v, ReduceTransparency != v);
-    public void SetFrost(bool v) => Set(() => Frost = v, Frost != v);
-    public void SetUiScale(float v) => Set(() => UiScale = Math.Clamp(v, (float)HudSettingDefinitions.UiScale.Range!.Min, (float)HudSettingDefinitions.UiScale.Range.Max), Math.Abs(UiScale - v) > 0.001f);
-    public void SetSingleKeyShortcuts(bool v) => Set(() => SingleKeyShortcuts = v, SingleKeyShortcuts != v);
-    public void SetShowPerf(bool v) => Set(() => ShowPerf = v, ShowPerf != v);
+    public T Get<T>(SettingDefinition<T> definition) => (T)_values[definition.Key];
 
-    public void MarkFirstGuideSeen()
+    /// <summary>设置页的改动：浮点按定义的范围钳制；值变了才计版本、通知并安排写盘。</summary>
+    public void Set<T>(SettingDefinition<T> definition, T value) where T : notnull
     {
-        if (FirstGuideSeen) return;
-        FirstGuideSeen = true;
-        _section.Set(HudSettingDefinitions.FirstGuideSeen.Key, true);
-        _store.TrySave();
-    }
-
-    private void Set(Action apply, bool changed)
-    {
-        if (!changed) return;
-        apply();
+        object next = value is float f && definition.Range is { } range ? (object)Math.Clamp(f, (float)range.Min, (float)range.Max) : value;
+        if (_values[definition.Key].Equals(next)) return;
+        _values[definition.Key] = next;
         Rev++;
         _dirtyFor = 0;
         Changed?.Invoke();
+    }
+
+    /// <summary>首次引导是一次性标记、不在设置页：不发 Changed，立刻写盘，免得 0.5 s 内退出又弹一次。</summary>
+    public bool FirstGuideSeen => Get(HudSettingDefinitions.FirstGuideSeen);
+
+    public void MarkFirstGuideSeen()
+    {
+        var key = HudSettingDefinitions.FirstGuideSeen.Key;
+        if (FirstGuideSeen) return;
+        _values[key] = true;
+        _section.Set(key, true);
+        _store.TrySave();
     }
 
     /// <summary>HudRoot 每帧调用：改动后 0.5 s 写盘。</summary>
@@ -83,32 +110,12 @@ public sealed class HudSettings
         if (_dirtyFor >= 0.5f) Flush();
     }
 
-    /// <summary>关窗口、退出前同步写一次。</summary>
+    /// <summary>关窗口、退出前同步写一次；按表的顺序写，文件里的键序固定。</summary>
     public void Flush()
     {
         if (_dirtyFor < 0) return;
         _dirtyFor = -1;
-        _section.Set(HudSettingDefinitions.Theme.Key, (int)Theme);
-        _section.Set(HudSettingDefinitions.Resident.Key, (int)Resident);
-        _section.Set(HudSettingDefinitions.ReduceMotion.Key, (int)ReduceMotion);
-        _section.Set(HudSettingDefinitions.ReduceTransparency.Key, ReduceTransparency);
-        _section.Set(HudSettingDefinitions.Frost.Key, Frost);
-        _section.Set(HudSettingDefinitions.UiScale.Key, UiScale);
-        _section.Set(HudSettingDefinitions.SingleKeyShortcuts.Key, SingleKeyShortcuts);
-        _section.Set(HudSettingDefinitions.ShowPerf.Key, ShowPerf);
+        foreach (var key in _keys) SettingValues.Write(_section, key, _values[key]);
         _store.TrySave();
-    }
-
-    private void Load()
-    {
-        Theme = (UiThemeMode)_section.Get(HudSettingDefinitions.Theme);
-        Resident = (ResidentTheme)_section.Get(HudSettingDefinitions.Resident);
-        ReduceMotion = (ReduceMotionMode)_section.Get(HudSettingDefinitions.ReduceMotion);
-        ReduceTransparency = _section.Get(HudSettingDefinitions.ReduceTransparency);
-        Frost = _section.Get(HudSettingDefinitions.Frost);
-        UiScale = _section.Get(HudSettingDefinitions.UiScale);
-        SingleKeyShortcuts = _section.Get(HudSettingDefinitions.SingleKeyShortcuts);
-        ShowPerf = _section.Get(HudSettingDefinitions.ShowPerf);
-        FirstGuideSeen = _section.Get(HudSettingDefinitions.FirstGuideSeen);
     }
 }

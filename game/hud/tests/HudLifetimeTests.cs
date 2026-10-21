@@ -31,8 +31,8 @@ public sealed class HudLifetimeTests
     public void ThemeClockStopsObservingSettingsUntilItReenters()
     {
         var settings = new HudSettings(new SettingsStore());
-        settings.SetTheme(UiThemeMode.Light);
-        settings.SetReduceMotion(ReduceMotionMode.On);
+        settings.Set(HudSettingDefinitions.Theme, (int)UiThemeMode.Light);
+        settings.Set(HudSettingDefinitions.ReduceMotion, (int)ReduceMotionMode.On);
         var world = new WorldStateService(new TestWeatherProcess());
         var motion = new MotionPolicy(settings);
         var baseline = Subscribers(settings, "Changed");
@@ -47,11 +47,11 @@ public sealed class HudLifetimeTests
                 parent.AddChild(clock);
                 AssertThat(!clock.Dark && Subscribers(settings, "Changed") == baseline + 1).OverrideFailureMessage("Clock did not bind exactly once on entry.").IsTrue();
                 AssertThat(Subscribers(world, "InstanceChanged") == worldBaseline + 1).OverrideFailureMessage("Clock did not bind world notification exactly once on entry.").IsTrue();
-                settings.SetTheme(UiThemeMode.Dark);
+                settings.Set(HudSettingDefinitions.Theme, (int)UiThemeMode.Dark);
                 AssertThat(clock.Dark).OverrideFailureMessage("Attached clock stopped responding to theme settings.").IsTrue();
                 parent.RemoveChild(clock);
                 var front = clock.Front;
-                settings.SetTheme(UiThemeMode.Light);
+                settings.Set(HudSettingDefinitions.Theme, (int)UiThemeMode.Light);
                 AssertThat(clock.Dark && clock.Front == front && Subscribers(settings, "Changed") == baseline).OverrideFailureMessage("Detached clock still observed settings or retained a service subscription.").IsTrue();
                 AssertThat(Subscribers(world, "InstanceChanged") == worldBaseline).OverrideFailureMessage("Detached clock retained a world observer.").IsTrue();
             }

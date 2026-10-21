@@ -55,10 +55,10 @@ public partial class AtlasPaper : Control
         var stack = ui.Layout.Stack(margin, groups: false);
         _readout = ui.Text(stack, "", "data", "text.1");
         var tools = ui.Layout.Flow(stack);
-        ZoomIn = ctx.IconButton(tools, (c, p, k, w) => MapDraw.PlusGlyph(c, p, k, w, true), "map.paper.zoom_in");
-        ZoomOut = ctx.IconButton(tools, (c, p, k, w) => MapDraw.PlusGlyph(c, p, k, w, false), "map.paper.zoom_out");
-        Locate = ctx.IconButton(tools, MapDraw.LocateGlyph, "map.paper.locate");
-        Fit = ctx.IconButton(tools, MapDraw.FitGlyph, "map.paper.fit");
+        ZoomIn = ctx.IconButton(tools, "map_zoom_in", "map.paper.zoom_in");
+        ZoomOut = ctx.IconButton(tools, "map_zoom_out", "map.paper.zoom_out");
+        Locate = ctx.IconButton(tools, "map_locate", "map.paper.locate");
+        Fit = ctx.IconButton(tools, "map_fit", "map.paper.fit");
         ui.Layout.Add(stack, new Control { SizeFlagsVertical = SizeFlags.ExpandFill });
         var footer = ui.Layout.Flow(stack);
         ui.Text(footer, ctx.T("map.paper.hints"), "small", "text.2");

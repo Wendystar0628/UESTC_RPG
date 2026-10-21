@@ -5,7 +5,7 @@ namespace Campus.Hud.Map;
 
 /// <summary>
 /// 地图画布的绘制原语（UI-VISUAL）：1 物理像素发丝线（宽度传 −1）、
-/// 走线、比例尺、地图标记与界面图标。
+/// 走线、比例尺与地图标记；按钮图标是 SVG（UI-VISUAL-COMPONENTS）。
 /// </summary>
 public static class MapDraw
 {
@@ -188,52 +188,4 @@ public static class MapDraw
             default: throw new ArgumentOutOfRangeException(nameof(shape));
         }
     }
-
-    /// <summary>大地图按钮的意象：版图——方框里的走线与过孔（UI-VISUAL）。</summary>
-    public static void AtlasGlyph(CanvasItem ci, Vector2 c, Color col, float w)
-    {
-        ci.DrawRect(new Rect2(c - new Vector2(8, 8), new Vector2(16, 16)), col, false, w, true);
-        ci.DrawPolyline([c + new Vector2(-4.5f, 4.5f), c + new Vector2(-0.5f, 0.5f), c + new Vector2(4.5f, 0.5f)], col, w, true);
-        ci.DrawArc(c + new Vector2(-4.5f, 4.5f), 1.6f, 0, Mathf.Tau, 12, col, w, true);
-        ci.DrawCircle(c + new Vector2(4.5f, -4f), 1.6f, col, true, -1, true);
-    }
-
-    /// <summary>目录：三行条目，每行前一枚过孔。</summary>
-    public static void IndexGlyph(CanvasItem ci, Vector2 c, Color col, float w)
-    {
-        for (var i = -1; i <= 1; i++)
-        {
-            var y = c.Y + i * 5.5f;
-            ci.DrawCircle(new(c.X - 6.5f, y), 1.5f, col, true, -1, true);
-            L(ci, new(c.X - 2.5f, y), new(c.X + 8f, y), col, w);
-        }
-    }
-
-    public static void PlusGlyph(CanvasItem ci, Vector2 c, Color col, float w, bool plus)
-    {
-        L(ci, c - new Vector2(6.5f, 0), c + new Vector2(6.5f, 0), col, w);
-        if (plus) L(ci, c - new Vector2(0, 6.5f), c + new Vector2(0, 6.5f), col, w);
-    }
-
-    /// <summary>回到玩家：准星环加四根刻线（与"小地图：方框加十字准线"同族）。</summary>
-    public static void LocateGlyph(CanvasItem ci, Vector2 c, Color col, float w)
-    {
-        ci.DrawArc(c, 5.5f, 0, Mathf.Tau, 24, col, w, true);
-        ci.DrawCircle(c, 1.5f, col, true, -1, true);
-        foreach (var d in (ReadOnlySpan<Vector2>)[Vector2.Up, Vector2.Right, Vector2.Down, Vector2.Left])
-            L(ci, c + d * 5.5f, c + d * 9f, col, w);
-    }
-
-    /// <summary>全图：四个向外的角。</summary>
-    public static void FitGlyph(CanvasItem ci, Vector2 c, Color col, float w)
-    {
-        foreach (var (sx, sy) in (ReadOnlySpan<(float, float)>)[(-1, -1), (1, -1), (1, 1), (-1, 1)])
-        {
-            var p = c + new Vector2(sx * 8, sy * 8);
-            L(ci, p, p - new Vector2(sx * 4.5f, 0), col, w);
-            L(ci, p, p - new Vector2(0, sy * 4.5f), col, w);
-        }
-        ci.DrawRect(new Rect2(c - new Vector2(3, 3), new Vector2(6, 6)), col, false, w, true);
-    }
-
 }

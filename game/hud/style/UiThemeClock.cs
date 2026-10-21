@@ -112,7 +112,7 @@ public partial class UiThemeClock : Node, IUiTheme
 
     private bool Decide(bool initial)
     {
-        var mode = _forced ?? _settings.Theme;
+        var mode = _forced ?? (UiThemeMode)_settings.Get(HudSettingDefinitions.Theme);
         switch (mode)
         {
             case UiThemeMode.Light: return false;

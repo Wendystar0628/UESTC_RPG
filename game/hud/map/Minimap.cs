@@ -38,8 +38,8 @@ public partial class Minimap : Control
         Viewport.AddChild(Overlay);
         Overlay.SetAnchorsAndOffsetsPreset(LayoutPreset.FullRect);
         var buttons = ui.Layout.Corner(Viewport, LayoutPreset.TopRight);
-        AtlasButton = ctx.IconButton(buttons, MapDraw.AtlasGlyph, "map.atlas.title", pin: true);
-        IndexButton = ctx.IconButton(buttons, MapDraw.IndexGlyph, "map.index.title", pin: true);
+        AtlasButton = ctx.IconButton(buttons, "map_atlas", "map.atlas.title", pin: true);
+        IndexButton = ctx.IconButton(buttons, "map_index", "map.index.title", pin: true);
         var bar = ui.Layout.Row(stack);
         bar.CustomMinimumSize = new Vector2(0, ui.Tokens.F("metrics", "map", "minimapBarHeight"));
         _regionLabel = ui.Text(bar, "", "small", pin: true, wrap: false);
@@ -99,8 +99,6 @@ public partial class Minimap : Control
         Markers.Invalidate();
         _scaleHost.QueueRedraw();
         Overlay.QueueRedraw();
-        foreach (var button in new[] { AtlasButton, IndexButton })
-            foreach (var child in button.GetChildren()) if (child is CanvasItem item) item.QueueRedraw();
     }
 
     public override void _GuiInput(InputEvent e)

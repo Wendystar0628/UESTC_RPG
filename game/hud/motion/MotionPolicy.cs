@@ -56,7 +56,7 @@ public sealed class MotionPolicy : IMotionSettings
     private MotionLevel Evaluate()
     {
         if (_forced is { } forced) return forced;
-        return _settings.ReduceMotion switch
+        return (ReduceMotionMode)_settings.Get(HudSettingDefinitions.ReduceMotion) switch
         {
             ReduceMotionMode.On => MotionLevel.Reduced,
             ReduceMotionMode.Off => MotionLevel.Full,

@@ -39,6 +39,78 @@
       "bytes": 412
     },
     {
+      "path": "icons/map_atlas.svg",
+      "kind": "icon",
+      "motif": "大地图：版图——方框里的走线与过孔",
+      "grid": 24,
+      "stroke": 1.5,
+      "license": "本作原创美术，保留所有权利（DECISION-170）",
+      "source": "手绘 SVG",
+      "script": null,
+      "sha256": "9ce8f1031c7a5f495e37ea2cec1d402267477b76e33ee6ec86155e4cacff7f0d",
+      "bytes": 418
+    },
+    {
+      "path": "icons/map_fit.svg",
+      "kind": "icon",
+      "motif": "全图：四个向外的角加中心方框",
+      "grid": 24,
+      "stroke": 1.5,
+      "license": "本作原创美术，保留所有权利（DECISION-170）",
+      "source": "手绘 SVG",
+      "script": null,
+      "sha256": "86b99b6503e4a5b4c8687ecddab92bec22c8b0b4225b7d87f5ed27b019939538",
+      "bytes": 378
+    },
+    {
+      "path": "icons/map_index.svg",
+      "kind": "icon",
+      "motif": "目录：三行条目，每行前一枚过孔",
+      "grid": 24,
+      "stroke": 1.5,
+      "license": "本作原创美术，保留所有权利（DECISION-170）",
+      "source": "手绘 SVG",
+      "script": null,
+      "sha256": "571755556e2841f92de86e05e68f5a2369e571defe5f8c960d3df401a12f7466",
+      "bytes": 439
+    },
+    {
+      "path": "icons/map_locate.svg",
+      "kind": "icon",
+      "motif": "回到玩家：准星环加四根刻线",
+      "grid": 24,
+      "stroke": 1.5,
+      "license": "本作原创美术，保留所有权利（DECISION-170）",
+      "source": "手绘 SVG",
+      "script": null,
+      "sha256": "f2e3b52ea0864e16e797d1464af4a7f92fa523f1947cbc89ff3b5c6bd7d042a2",
+      "bytes": 391
+    },
+    {
+      "path": "icons/map_zoom_in.svg",
+      "kind": "icon",
+      "motif": "放大：＋",
+      "grid": 24,
+      "stroke": 1.5,
+      "license": "本作原创美术，保留所有权利（DECISION-170）",
+      "source": "手绘 SVG",
+      "script": null,
+      "sha256": "a9562d02a42cf7e75bd29e1a72fc05118286f5e169311a7cc209cd17f5d69698",
+      "bytes": 256
+    },
+    {
+      "path": "icons/map_zoom_out.svg",
+      "kind": "icon",
+      "motif": "缩小：－",
+      "grid": 24,
+      "stroke": 1.5,
+      "license": "本作原创美术，保留所有权利（DECISION-170）",
+      "source": "手绘 SVG",
+      "script": null,
+      "sha256": "8864c9dbde1b0314b43a5bb17201dccd5c941e781cd5079048c1514a28138121",
+      "bytes": 236
+    },
+    {
       "path": "icons/pause.svg",
       "kind": "icon",
       "motif": "暂停：双竖线",

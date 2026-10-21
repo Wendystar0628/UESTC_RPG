@@ -26,46 +26,30 @@ internal sealed class SettingsCardContent
 
     public System.Collections.IEnumerable BuildGeneral(Control page)
     {
-        var ui = _kit.Layout.SettingGroup(page, UiKit.T("settings.group.interface"));
-        Choice(ui, HudSettingDefinitions.Theme, (int)_settings.Theme, value => _settings.SetTheme((UiThemeMode)value));
-        yield return null;
-        Choice(ui, HudSettingDefinitions.Resident, (int)_settings.Resident, value => _settings.SetResident((ResidentTheme)value));
-        yield return null;
-        Toggle(ui, HudSettingDefinitions.Frost, _settings.Frost, _settings.SetFrost);
-        yield return null;
-        Toggle(ui, HudSettingDefinitions.ReduceTransparency, _settings.ReduceTransparency, _settings.SetReduceTransparency);
-        yield return null;
-        Choice(ui, HudSettingDefinitions.ReduceMotion, (int)_settings.ReduceMotion, value => _settings.SetReduceMotion((ReduceMotionMode)value));
-        yield return null;
-        Slider(ui, HudSettingDefinitions.UiScale, _settings.UiScale, _settings.SetUiScale, value => $"{value * 100:0}%");
-        yield return null;
         var store = KernelRegistry.Get<ISettingsStore>();
-        var viewSettings = store.Section("ui");
-        foreach (var definition in new[] { UiSettingDefinitions.FlyFov, UiSettingDefinitions.WalkFov })
-        {
-            Slider(ui, definition, viewSettings.Get(definition), value =>
+        var view = store.Section("ui");
+        // 视场、视角晃动与自动跳这四项在 ui 节里，HUD 建立之前就被读取（UiSettingDefinitions），改了立刻写盘，不经 HudSettings 的延迟写
+        Action<Control> View<T>(SettingDefinition<T> definition, Func<float, string>? format = null) where T : notnull =>
+            Row(definition, () => (T)SettingValues.Read(view, definition).Value, value =>
             {
-                viewSettings.Set(definition.Key, value);
+                SettingValues.Write(view, definition.Key, value);
                 store.TrySave();
-            }, value => $"{value:0}°");
-            yield return null;
-        }
-        Choice(ui, UiSettingDefinitions.ViewBobbing, viewSettings.Get(UiSettingDefinitions.ViewBobbing), value =>
-        {
-            viewSettings.Set(UiSettingDefinitions.ViewBobbing.Key, value);
-            store.TrySave();
-        });
-        yield return null;
-        Toggle(ui, UiSettingDefinitions.AutoJump, viewSettings.Get(UiSettingDefinitions.AutoJump), value =>
-        {
-            viewSettings.Set(UiSettingDefinitions.AutoJump.Key, value);
-            store.TrySave();
-        });
-        yield return null;
-        Toggle(ui, HudSettingDefinitions.SingleKeyShortcuts, _settings.SingleKeyShortcuts, _settings.SetSingleKeyShortcuts);
-        yield return null;
-        Toggle(ui, HudSettingDefinitions.ShowPerf, _settings.ShowPerf, _settings.SetShowPerf);
-        yield return null;
+            }, format);
+        foreach (var step in Group(page, "settings.group.interface",
+        [
+            HudRow(HudSettingDefinitions.Theme),
+            HudRow(HudSettingDefinitions.Resident),
+            HudRow(HudSettingDefinitions.Frost),
+            HudRow(HudSettingDefinitions.ReduceTransparency),
+            HudRow(HudSettingDefinitions.ReduceMotion),
+            HudRow(HudSettingDefinitions.UiScale, Percent),
+            View(UiSettingDefinitions.FlyFov, Degrees),
+            View(UiSettingDefinitions.WalkFov, Degrees),
+            View(UiSettingDefinitions.ViewBobbing),
+            View(UiSettingDefinitions.AutoJump),
+            HudRow(HudSettingDefinitions.SingleKeyShortcuts),
+            HudRow(HudSettingDefinitions.ShowPerf),
+        ])) yield return step;
 
         foreach (var step in BuildStorage(page)) yield return step;
     }
@@ -108,34 +92,32 @@ internal sealed class SettingsCardContent
 
     public System.Collections.IEnumerable BuildSound(Control page)
     {
+        // 音频设置是一整条记录经 ApplySettings 生效，定义里没有应用委托，所以每行写明取值与 with
         var audio = KernelRegistry.Get<IAudioService>();
-        var volume = _kit.Layout.SettingGroup(page, UiKit.T("sound.group.volume"));
-        Slider(volume, AudioSettingDefinitions.Master, audio.Settings.Master, value => audio.ApplySettings(audio.Settings with { Master = value }), Percent);
-        yield return null;
-        Slider(volume, AudioSettingDefinitions.Ambience, audio.Settings.Ambience, value => audio.ApplySettings(audio.Settings with { Ambience = value }), Percent);
-        yield return null;
-        Slider(volume, AudioSettingDefinitions.Foley, audio.Settings.Foley, value => audio.ApplySettings(audio.Settings with { Foley = value }), Percent);
-        yield return null;
-        Slider(volume, AudioSettingDefinitions.Ui, audio.Settings.Ui, value => audio.ApplySettings(audio.Settings with { Ui = value }), Percent);
-        yield return null;
-        Slider(volume, AudioSettingDefinitions.Music, audio.Settings.Music, value => audio.ApplySettings(audio.Settings with { Music = value }), Percent);
-        yield return null;
-        var calm = _kit.Layout.SettingGroup(page, UiKit.T("sound.group.calm"));
-        Toggle(calm, AudioSettingDefinitions.UiSounds, audio.Settings.UiSounds, value => audio.ApplySettings(audio.Settings with { UiSounds = value }));
-        yield return null;
-        Toggle(calm, AudioSettingDefinitions.HoverSounds, audio.Settings.HoverSounds, value => audio.ApplySettings(audio.Settings with { HoverSounds = value }));
-        yield return null;
-        Toggle(calm, AudioSettingDefinitions.QuietMode, audio.Settings.QuietMode, value => audio.ApplySettings(audio.Settings with { QuietMode = value }));
-        yield return null;
-        Toggle(calm, AudioSettingDefinitions.Mono, audio.Settings.Mono, value => audio.ApplySettings(audio.Settings with { Mono = value }));
-        yield return null;
-        Choice(calm, AudioSettingDefinitions.Sudden, (int)audio.Settings.Sudden, value => audio.ApplySettings(audio.Settings with { Sudden = (SuddenSoundMode)value }));
-        yield return null;
-        Choice(calm, AudioSettingDefinitions.Background, (int)audio.Settings.Background, value => audio.ApplySettings(audio.Settings with { Background = (BackgroundBehavior)value }));
-        yield return null;
+        Action<Control> Sound<T>(SettingDefinition<T> definition, Func<AudioSettings, T> read, Func<AudioSettings, T, AudioSettings> apply,
+            Func<float, string>? format = null) where T : notnull =>
+            Row(definition, () => read(audio.Settings), value => audio.ApplySettings(apply(audio.Settings, value)), format);
+        foreach (var step in Group(page, "sound.group.volume",
+        [
+            Sound(AudioSettingDefinitions.Master, s => s.Master, (s, v) => s with { Master = v }, Percent),
+            Sound(AudioSettingDefinitions.Ambience, s => s.Ambience, (s, v) => s with { Ambience = v }, Percent),
+            Sound(AudioSettingDefinitions.Foley, s => s.Foley, (s, v) => s with { Foley = v }, Percent),
+            Sound(AudioSettingDefinitions.Ui, s => s.Ui, (s, v) => s with { Ui = v }, Percent),
+            Sound(AudioSettingDefinitions.Music, s => s.Music, (s, v) => s with { Music = v }, Percent),
+        ])) yield return step;
+        foreach (var step in Group(page, "sound.group.calm",
+        [
+            Sound(AudioSettingDefinitions.UiSounds, s => s.UiSounds, (s, v) => s with { UiSounds = v }),
+            Sound(AudioSettingDefinitions.HoverSounds, s => s.HoverSounds, (s, v) => s with { HoverSounds = v }),
+            Sound(AudioSettingDefinitions.QuietMode, s => s.QuietMode, (s, v) => s with { QuietMode = v }),
+            Sound(AudioSettingDefinitions.Mono, s => s.Mono, (s, v) => s with { Mono = v }),
+            Sound(AudioSettingDefinitions.Sudden, s => (int)s.Sudden, (s, v) => s with { Sudden = (SuddenSoundMode)v }),
+            Sound(AudioSettingDefinitions.Background, s => (int)s.Background, (s, v) => s with { Background = (BackgroundBehavior)v }),
+        ])) yield return step;
     }
 
     private static string Percent(float value) => $"{value * 100:0}%";
+    private static string Degrees(float value) => $"{value:0}°";
 
     public System.Collections.IEnumerable BuildKeys(Control page)
     {
@@ -170,16 +152,40 @@ internal sealed class SettingsCardContent
         }
     }
 
-    private DipSwitch Toggle(Control parent, SettingDefinition<bool> definition, bool value, Action<bool> changed)
+    /// <summary>一组设置：组标题加逐行，每建一行让出一帧（由 SettingsCard 分帧调度）。</summary>
+    private System.Collections.IEnumerable Group(Control page, string titleKey, IEnumerable<Action<Control>> rows)
+    {
+        var group = _kit.Layout.SettingGroup(page, UiKit.T(titleKey));
+        foreach (var row in rows)
+        {
+            row(group);
+            yield return null;
+        }
+    }
+
+    private Action<Control> HudRow<T>(SettingDefinition<T> definition, Func<float, string>? format = null) where T : notnull =>
+        Row(definition, () => _settings.Get(definition), value => _settings.Set(definition, value), format);
+
+    /// <summary>按定义生成一行：bool 是开关，带选项的 int 是下拉，带范围的 float 是推子；文案取定义的 LabelKey，值在建行时读。</summary>
+    private Action<Control> Row<T>(SettingDefinition<T> definition, Func<T> read, Action<T> write, Func<float, string>? format) where T : notnull =>
+        (object)definition switch
+        {
+            SettingDefinition<bool> d => parent => Toggle(parent, d, (bool)(object)read(), value => write((T)(object)value)),
+            SettingDefinition<int> d => parent => Choice(parent, d, (int)(object)read(), value => write((T)(object)value)),
+            SettingDefinition<float> d => parent => Slider(parent, d, (float)(object)read(), value => write((T)(object)value),
+                format ?? throw new InvalidOperationException($"Slider setting '{d.Key}' needs a value format.")),
+            _ => throw new NotSupportedException($"Unsupported setting definition {definition.GetType()}."),
+        };
+
+    private void Toggle(Control parent, SettingDefinition<bool> definition, bool value, Action<bool> changed)
     {
         var row = _kit.Layout.SettingRow(parent, UiKit.T(definition.LabelKey));
         var control = DipSwitch.Create(_kit, row, value);
         control.AccessibilityName = UiKit.T(definition.LabelKey);
         control.Toggled += changed;
-        return control;
     }
 
-    private Dropdown Choice(Control parent, SettingDefinition<int> definition, int value, Action<int> changed)
+    private void Choice(Control parent, SettingDefinition<int> definition, int value, Action<int> changed)
     {
         var options = definition.Options ?? throw new InvalidOperationException("Setting options are required.");
         var selected = options.ToList().FindIndex(option => option.Value == value);
@@ -188,17 +194,14 @@ internal sealed class SettingsCardContent
         var control = Dropdown.Create(_kit, row, options.Select(option => UiKit.T(option.LabelKey)).ToArray(), selected);
         control.AccessibilityName = UiKit.T(definition.LabelKey);
         control.Changed += index => changed(options[index].Value);
-        return control;
     }
 
-    private Fader Slider(Control parent, SettingDefinition<float> definition, float value, Action<float> changed, Func<float, string> format)
+    private void Slider(Control parent, SettingDefinition<float> definition, float value, Action<float> changed, Func<float, string> format)
     {
         var range = definition.Range ?? throw new InvalidOperationException("Setting range is required.");
         var row = _kit.Layout.SettingRow(parent, UiKit.T(definition.LabelKey));
         var control = Fader.Create(_kit, row, (float)range.Min, (float)range.Max, (float)range.Step, value, format: format);
         control.AccessibilityName = UiKit.T(definition.LabelKey);
         control.Changed += changed;
-        return control;
     }
-
 }

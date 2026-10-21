@@ -140,7 +140,7 @@ internal sealed class HudResidents
     // ---------------- 性能信息：在右上角单独显隐，不跟随普通 HUD 淡出 ----------------
     private void SyncPerf()
     {
-        var want = _dependencies.Settings.ShowPerf && _dependencies.Flow.IsPlaying && !Clean && _view.Root.Visible;
+        var want = _dependencies.Settings.Get(HudSettingDefinitions.ShowPerf) && _dependencies.Flow.IsPlaying && !Clean && _view.Root.Visible;
         if (want == (_perf is not null)) return;
         if (!want) { FreePerf(); return; }
         _perf = PerfReadout.Create(_view.Kit, _view.TopRight);
