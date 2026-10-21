@@ -100,7 +100,35 @@ public sealed class PartGeometryTests
         ClosedClockwise(PartSweeps.Sweep(profile, [new(0, 0), new(3, 0), new(3, 3), new(0, 3)], Material, closed: true));
         AssertThrown(() => PartSweeps.Sweep(profile, [new(0, 0), new(1, 0), new(0, 0)], Material)).IsInstanceOf<ArgumentException>();
         AssertThrown(() => PartSweeps.Sweep(profile, [new(0, 0), new(0, 0)], Material)).IsInstanceOf<ArgumentException>();
+        AssertThrown(() => PartSweeps.Sweep(profile, [new(-0.1f, 0), new(0, 0), new(-0.1f, 0.02f)], Material)).IsInstanceOf<ArgumentException>();
         AssertThrown(() => PartSolids.BeveledExtrude([new(-0.1f, -1), new(0.1f, -1), new(0.1f, 1), new(-0.1f, 1)], 2, 0.2f, Material)).IsInstanceOf<ArgumentException>();
+    }
+
+    [TestCase, TestCategory(TestReason.Regression)]
+    public void OverLimitSweepsCutOuterTipsAndKeepSlopingSectionsClosed()
+    {
+        SweepProfile[] profiles = [PartSweeps.BeveledRectangleProfile(0.4f, 0.3f, 0.04f),
+            new([new(-0.3f, 0), new(0.2f, 0.04f), new(0.25f, 0.3f), new(-0.15f, 0.4f)])];
+        var rotation = Matrix3x2.CreateRotation(0.37f); var inverse = Matrix3x2.CreateRotation(-0.37f);
+        Vector2[] open = [new(-20, 0), new(0, 0), new(-20, 4)];
+        Vector2[] loop = [new(0, 0), new(30, 0), new(2, 5)];
+        foreach (var profile in profiles)
+            foreach (var reverse in new[] { false, true })
+            {
+                var path = (reverse ? open.Reverse() : open.AsEnumerable()).Select(p => Vector2.Transform(p, rotation)).ToArray();
+                var geometry = PartSweeps.Sweep(profile, path, Material);
+                ClosedClockwise(geometry);
+                var reach = profile.Points.Max(p => Math.Abs(p.X));
+                var mesh = geometry.Meshes.Single();
+                for (var i = 0; i < mesh.Position.Length / 3; i++)
+                {
+                    var p = P(mesh, i); var local = Vector2.Transform(new(p.X, p.Z), inverse);
+                    // The outer tip must be cut back to the incident offsets, not a clamped miter spike.
+                    AssertThat(local.X <= reach + TestTolerance.Position).OverrideFailureMessage("An over-limit outer tip protrudes beyond the bevel.").IsTrue();
+                }
+                var ring = (reverse ? loop.Reverse() : loop.AsEnumerable()).Select(p => Vector2.Transform(p, rotation)).ToArray();
+                ClosedClockwise(PartSweeps.Sweep(profile, ring, Material, closed: true));
+            }
     }
 
     [TestCase, TestCategory(TestTag.Determinism)]
