@@ -33,11 +33,11 @@ public static class WindowNumbering
         ArgumentNullException.ThrowIfNull(plan);
         WindowAllocation a;
         try { a = snapshot.Get(plan.Id, plan.Key); }
-        catch (KeyNotFoundException)
+        catch (KeyNotFoundException error)
         {
             throw new InvalidOperationException(
                 $"The authoritative window numbering for map {snapshot.Map.Value} has no block for generic building {plan.Id.Value} / {plan.Key}. " +
-                "Prepare and publish the complete map allocation through IWindowNumberingProvider before building windows.");
+                "Prepare and publish the complete map allocation through IWindowNumberingProvider before building windows.", error);
         }
         if (a.Columns != plan.TotalColumns || a.Rows != plan.Storeys)
             throw new InvalidOperationException($"Window block {plan.Id.Value} / {plan.Key} is {a.Columns} × {a.Rows}, the plan {plan.TotalColumns} × {plan.Storeys}.");

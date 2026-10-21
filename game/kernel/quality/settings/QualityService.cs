@@ -1,3 +1,4 @@
+using System.Runtime.ExceptionServices;
 using Campus.Contracts;
 using Campus.Contracts.Quality;
 using Campus.Contracts.Settings;
@@ -34,13 +35,14 @@ public interface IQualityFrame : IQualityService
 
 [KernelService(typeof(IQualityFrame))]
 [KernelService(typeof(IQualityService))]
-public sealed class QualityService : IQualityFrame, IBootParticipant
+public sealed class QualityService : IQualityFrame, IBootParticipant, IAsyncDisposable
 {
     private sealed class Binding
     {
         public IQualityRuntime Runtime { get; }
         public CancellationTokenSource Lifetime { get; } = new();
         public CancellationToken Token { get; }
+        public Task? Active { get; set; }
 
         public Binding(IQualityRuntime runtime) { Runtime = runtime; Token = Lifetime.Token; }
     }
@@ -54,10 +56,11 @@ public sealed class QualityService : IQualityFrame, IBootParticipant
     private bool _initialized;
     private bool _initializing;
     private Request? _pending;
-    private Task? _active;
-    private Request? _activeRequest;
     private double _debounce;
     private Task _lastSave = Task.CompletedTask;
+    private readonly HashSet<Task> _applications = [];
+    private Task? _disposal;
+    private bool _disposed;
 
     public QualityService(ISettingsStore settings)
         : this(new QualityCatalog(Godot.FileAccess.GetFileAsString("res://data/quality-presets.json")), settings) { }
@@ -87,6 +90,7 @@ public sealed class QualityService : IQualityFrame, IBootParticipant
 
     public CancellationToken Bind(IQualityRuntime runtime)
     {
+        ObjectDisposedException.ThrowIf(_disposed, this);
         if (_binding is not null) throw new InvalidOperationException("Quality runtime is already mounted.");
         _binding = new(runtime);
         return _binding.Token;
@@ -96,18 +100,35 @@ public sealed class QualityService : IQualityFrame, IBootParticipant
     {
         if (_binding is not { } binding || !ReferenceEquals(binding.Runtime, runtime)) return;
         var pending = _pending;
-        var active = _activeRequest;
         _binding = null;
         _pending = null;
-        _active = null;
-        _activeRequest = null;
         _initialized = false;
         _initializing = false;
         _lastSave = Task.CompletedTask;
         binding.Lifetime.Cancel();
         binding.Lifetime.Dispose();
         pending?.Completion?.TrySetCanceled(binding.Token);
-        active?.Completion?.TrySetCanceled(binding.Token);
+    }
+
+    public ValueTask DisposeAsync()
+    {
+        _disposed = true;
+        return new(_disposal ??= DrainApplications());
+    }
+
+    private async Task DrainApplications()
+    {
+        // Snapshot before cancellation can synchronously finish and retire an application.
+        var applications = _applications.ToArray();
+        if (_binding is { } binding) Unbind(binding.Runtime);
+        var failures = new List<Exception>();
+        foreach (var application in applications)
+        {
+            try { await application; }
+            catch (OperationCanceledException) when (application.IsCanceled) { }
+            catch (Exception error) { failures.Add(error); }
+        }
+        if (failures.Count > 0) throw new AggregateException("Quality shutdown failed.", failures);
     }
 
     public Task Initialize(BootPhase phase, BootContext context) => phase switch
@@ -158,9 +179,9 @@ public sealed class QualityService : IQualityFrame, IBootParticipant
         // The boot caller already owns an opaque screen; no second screen or transition wait is needed.
         if (origin == ApplyOrigin.Startup || origin == ApplyOrigin.CommandLine && runtime.Booting)
             return ApplyDuringBoot(binding, plan.Next, origin);
-        var deferred = runtime.Transitioning || _active is not null;
+        var deferred = runtime.Transitioning || binding.Active is not null;
         _pending?.Completion?.TrySetResult(Result(ApplyStatus.Deferred));
-        var completion = deferred ? null : new TaskCompletionSource<ApplyResult>();
+        var completion = deferred ? null : new TaskCompletionSource<ApplyResult>(TaskCreationOptions.RunContinuationsAsynchronously);
         _pending = new(plan.Next, origin, completion);
         _debounce = origin == ApplyOrigin.User && plan.Heaviest is ApplyClass.Immediate or ApplyClass.Amortized ? 0.2 : 0;
         return completion?.Task ?? Task.FromResult(Result(ApplyStatus.Deferred));
@@ -169,19 +190,13 @@ public sealed class QualityService : IQualityFrame, IBootParticipant
     public void Tick(double delta)
     {
         if (_binding is not { } binding) return;
-        if (_active is { IsCompleted: true })
-        {
-            if (_active.IsFaulted) binding.Runtime.ReportError("[WP-32] Quality apply failed:", _active.Exception!);
-            _active = null;
-            _activeRequest = null;
-        }
-        if (_pending is null || _active is not null || _initializing || binding.Runtime.Transitioning) return;
+        if (binding.Active is { IsCompleted: true }) binding.Active = null;
+        if (_pending is null || binding.Active is not null || _initializing || binding.Runtime.Transitioning) return;
         _debounce -= Math.Max(0, delta);
         if (_debounce > 0) return;
         var request = _pending;
         _pending = null;
-        _activeRequest = request;
-        _active = Execute(binding, request);
+        binding.Active = Execute(binding, request);
     }
 
     private async Task<ApplyResult> ApplyDuringBoot(Binding binding, QualityProfile profile, ApplyOrigin origin)
@@ -195,6 +210,28 @@ public sealed class QualityService : IQualityFrame, IBootParticipant
 
     private async Task Execute(Binding binding, Request request)
     {
+        var application = ApplyRequest(binding, request);
+        if (!application.IsCompleted) _applications.Add(application);
+        try
+        {
+            await application;
+            request.Completion?.TrySetResult(Result(ApplyStatus.Applied));
+        }
+        catch (OperationCanceledException) when (binding.Token.IsCancellationRequested)
+        {
+            request.Completion?.TrySetCanceled(binding.Token);
+        }
+        catch (Exception error)
+        {
+            request.Completion?.TrySetException(error);
+            // This observer belongs to the binding, so unmounting cannot discard a late failure.
+            binding.Runtime.ReportError("[WP-32] Quality apply failed:", error);
+        }
+        finally { _applications.Remove(application); }
+    }
+
+    private async Task ApplyRequest(Binding binding, Request request)
+    {
         var runtime = binding.Runtime;
         var cancellationToken = binding.Token;
         var snapshot = _state.Capture();
@@ -202,6 +239,7 @@ public sealed class QualityService : IQualityFrame, IBootParticipant
         var applied = false;
         IAppLoadingLease? screen = null;
         var persistenceAttempted = false;
+        Exception? failure = null;
         try
         {
             var plan = Plan(request.Profile);
@@ -235,40 +273,57 @@ public sealed class QualityService : IQualityFrame, IBootParticipant
             cancellationToken.ThrowIfCancellationRequested();
             Notify(binding, change);
             cancellationToken.ThrowIfCancellationRequested();
-            request.Completion?.TrySetResult(Result(ApplyStatus.Applied));
         }
-        catch (Exception) when (cancellationToken.IsCancellationRequested)
+        catch (OperationCanceledException error) when (cancellationToken.IsCancellationRequested)
         {
-            request.Completion?.TrySetCanceled(cancellationToken);
+            failure = error;
         }
         catch (Exception error)
         {
-            var recoveryErrors = new List<Exception>();
-            _durableProfile = previousDurable;
-            if (applied) RestoreAppliedState(binding, request, snapshot, screen is not null, recoveryErrors);
-            if (cancellationToken.IsCancellationRequested) return;
+            failure = await RecoverApplication(binding, request, snapshot, previousDurable, applied, screen, persistenceAttempted, error);
+        }
+        finally
+        {
             if (screen is not null)
             {
-                try { await screen.Hide().WaitAsync(cancellationToken); }
-                catch (Exception recovery) { recoveryErrors.Add(recovery); }
+                try { await screen.DisposeAsync(); }
+                catch (Exception cleanup)
+                {
+                    failure = failure is null ? cleanup :
+                        new AggregateException("Quality application and loading release failed.", failure, cleanup);
+                }
             }
-            if (cancellationToken.IsCancellationRequested) return;
-            if (persistenceAttempted)
-            {
-                try { QueueSave(); await _lastSave.WaitAsync(cancellationToken); }
-                catch (Exception recovery) { recoveryErrors.Add(recovery); }
-            }
-            if (cancellationToken.IsCancellationRequested) return;
-            if (recoveryErrors.Count != 0)
-            {
-                var failure = new AggregateException("Quality application and recovery failed.", new[] { error }.Concat(recoveryErrors));
-                request.Completion?.TrySetException(failure);
-                throw failure;
-            }
-            request.Completion?.TrySetException(error);
-            throw;
         }
-        finally { if (screen is not null) await screen.DisposeAsync(); }
+        if (failure is not null) ExceptionDispatchInfo.Capture(failure).Throw();
+        cancellationToken.ThrowIfCancellationRequested();
+    }
+
+    private async Task<Exception> RecoverApplication(Binding binding, Request request, QualityState.Snapshot snapshot,
+        QualityProfile previousDurable, bool applied, IAppLoadingLease? screen, bool persistenceAttempted, Exception error)
+    {
+        var cancellationToken = binding.Token;
+        var recoveryErrors = new List<Exception>();
+        if (!cancellationToken.IsCancellationRequested)
+        {
+            _durableProfile = previousDurable;
+            if (applied)
+            {
+                try { RestoreAppliedState(binding, request, snapshot, screen is not null, recoveryErrors); }
+                catch (Exception recovery) { recoveryErrors.Add(recovery); }
+            }
+        }
+        if (!cancellationToken.IsCancellationRequested && screen is not null)
+        {
+            try { await screen.Hide().WaitAsync(cancellationToken); }
+            catch (Exception recovery) { recoveryErrors.Add(recovery); }
+        }
+        if (!cancellationToken.IsCancellationRequested && persistenceAttempted)
+        {
+            try { QueueSave(); await _lastSave.WaitAsync(cancellationToken); }
+            catch (Exception recovery) { recoveryErrors.Add(recovery); }
+        }
+        return recoveryErrors.Count == 0 ? error :
+            new AggregateException("Quality application and recovery failed.", new[] { error }.Concat(recoveryErrors));
     }
 
     private QualityChange CommitRequest(Binding binding, Request request, bool loading)
@@ -307,7 +362,6 @@ public sealed class QualityService : IQualityFrame, IBootParticipant
             try { observer(change); }
             catch (Exception error)
             {
-                if (binding.Token.IsCancellationRequested) return;
                 binding.Runtime.ReportError("[WP-32] Quality observer failed:", error);
             }
         }

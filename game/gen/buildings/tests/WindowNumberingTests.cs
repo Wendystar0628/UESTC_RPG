@@ -98,8 +98,8 @@ public sealed class WindowNumberingTests
             declared.AddRange(output.LooseWindows);
         }
         AssertThat(module.DescribeWindows(ctx).Windows.Select(d => d.Id).SequenceEqual(declared.Select(d => d.Id))).OverrideFailureMessage("Expected: " + ("metadata lists the L0 declarations")).IsTrue();
-        AssertThrown(() => module.Build(Ctx(world, 4u), set.Plans[0].Tile(LodLevel.L0), LodLevel.L0)).IsInstanceOf<InvalidOperationException>();
-        AssertThrown(() => module.DescribeWindows(Ctx(world, 4u))).IsInstanceOf<InvalidOperationException>();
+        AssertThrown(() => module.Build(Ctx(world, 4u), set.Plans[0].Tile(LodLevel.L0), LodLevel.L0)).IsInstanceOf<KeyNotFoundException>();
+        AssertThrown(() => module.DescribeWindows(Ctx(world, 4u))).IsInstanceOf<KeyNotFoundException>();
         var other = new WindowNumberingSnapshot(new MapId("elsewhere"), snapshot.Fingerprint, snapshot.Allocations);
         AssertThrown(() => module.DescribeWindows(Ctx(world, 4u, other))).IsInstanceOf<InvalidOperationException>();
     }

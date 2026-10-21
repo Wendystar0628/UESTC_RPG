@@ -85,6 +85,10 @@ internal static class QualityApplicationTestFixture
         public int HideCount { get; private set; }
         public QualityView? EngineView { get; private set; }
         public List<string> Errors { get; } = [];
+        public List<Exception> Failures { get; } = [];
+        public Action? Dispatching { get; set; }
+        public TaskCompletionSource? HeldRelease { get; set; }
+        public Exception? LoadingReleaseFailure { get; set; }
         public string? HoldAt { get; set; }
         public TaskCompletionSource<double> Held { get; } = new();
         public int HeldCalls { get; private set; }
@@ -119,7 +123,12 @@ internal static class QualityApplicationTestFixture
                 Release();
                 return runtime.Wait("hide");
             }
-            public ValueTask DisposeAsync() { Release(); return ValueTask.CompletedTask; }
+            public async ValueTask DisposeAsync()
+            {
+                Release();
+                if (runtime.HeldRelease is { } held) await held.Task;
+                if (runtime.LoadingReleaseFailure is { } failure) throw failure;
+            }
             private void Release()
             {
                 if (_released) return;
@@ -136,10 +145,15 @@ internal static class QualityApplicationTestFixture
         {
             DispatchCount++;
             EngineView = view; // Model a consumer that mutates before it fails.
+            Dispatching?.Invoke();
             if (FailDispatch) { FailDispatch = false; throw new InvalidOperationException("Fake apply consumer failed."); }
             if (FailRollback) throw new InvalidOperationException("Fake rollback consumer failed.");
         }
-        public void ReportError(string context, Exception error) => Errors.Add(context + " " + error.ToString());
+        public void ReportError(string context, Exception error)
+        {
+            Failures.Add(error);
+            Errors.Add(context + " " + error.ToString());
+        }
         public void ReportInfo(string message) { }
     }
 }

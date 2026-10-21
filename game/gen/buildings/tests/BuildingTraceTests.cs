@@ -73,7 +73,7 @@ public sealed class BuildingTraceTests
         }
 
         // Enumeration reads the map's one window allocation; an empty world needs none (as Build).
-        AssertThrown(() => module.TraceSources(Ctx(world, 2u), LodLevel.L0).ToArray()).IsInstanceOf<InvalidOperationException>();
+        AssertThrown(() => module.TraceSources(Ctx(world, 2u), LodLevel.L0).ToArray()).IsInstanceOf<KeyNotFoundException>();
         AssertThat(!module.TraceSources(Ctx(World(), 2u), LodLevel.L0).Any()).OverrideFailureMessage("Expected: " + ("nothing to number in an empty world")).IsTrue();
     }
 

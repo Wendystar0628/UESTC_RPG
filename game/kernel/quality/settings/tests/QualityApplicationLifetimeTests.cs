@@ -14,6 +14,75 @@ using static Campus.Tests.QualityApplicationTestFixture;
 public sealed class QualityApplicationLifetimeTests
 {
     [TestCase]
+    [TestCategory(TestReason.Regression)]
+    public async Task ConcurrentUnbindDoesNotTurnConsumerFailureIntoCancellation()
+    {
+        foreach (var deferred in new[] { false, true })
+        {
+            var (service, runtime, store) = await CliSession($"close-failure-{deferred}");
+            using var cleanup = store;
+            var original = new InvalidOperationException();
+            runtime.Dispatching = () => { service.Unbind(runtime); throw original; };
+            runtime.Transitioning = deferred;
+            var pending = service.Apply(new(service.Requested.Preset,
+                new Dictionary<QualityKnob, float> { [QualityKnob.ParticleDensity] = .5f }), ApplyOrigin.User);
+            if (deferred) AssertThat((await pending).Status == ApplyStatus.Deferred).IsTrue();
+            runtime.Transitioning = false;
+            service.Tick(.25);
+            if (!deferred)
+            {
+                Exception? observed = null;
+                try { await pending; }
+                catch (Exception error) { observed = error; }
+                AssertThat(ReferenceEquals(observed, original)).OverrideFailureMessage("The active request lost its non-cancellation failure.").IsTrue();
+            }
+            AssertThat(runtime.Failures.Count == 1 && ReferenceEquals(runtime.Failures[0], original))
+                .OverrideFailureMessage("The unmounted scheduler discarded its consumer failure.").IsTrue();
+            await service.DisposeAsync();
+        }
+    }
+
+    [TestCase]
+    [TestCategory(TestReason.Regression)]
+    public async Task LoadingReleaseFailureRetainsTheApplicationFailureAfterUnbind()
+    {
+        foreach (var canceled in new[] { false, true })
+        {
+            var (service, runtime, store) = await CliSession($"close-release-failure-{canceled}");
+            using var cleanup = store;
+            var releaseFailure = new InvalidOperationException();
+            runtime.HeldRelease = new();
+            runtime.LoadingReleaseFailure = releaseFailure;
+            runtime.FailReadiness = !canceled;
+            if (canceled) runtime.Dispatching = () => service.Unbind(runtime);
+            var pending = service.Apply(new(service.Requested.Preset,
+                new Dictionary<QualityKnob, float> { [QualityKnob.RenderScale] = 1 }), ApplyOrigin.User);
+            service.Tick(.25);
+            service.Unbind(runtime);
+            var shutdown = service.DisposeAsync().AsTask();
+            AssertThat(!pending.IsCompleted).OverrideFailureMessage("The active request completed before releasing its loading lease.").IsTrue();
+            AssertThat(!shutdown.IsCompleted).OverrideFailureMessage("Quality shutdown did not drain its unmounted application.").IsTrue();
+            runtime.HeldRelease.SetResult();
+            Exception? observed = null;
+            try { await pending; }
+            catch (Exception error) { observed = error; }
+            var failures = (observed as AggregateException)?.Flatten().InnerExceptions;
+            AssertThat(failures is not null && failures.Count == 2 && failures.Contains(releaseFailure) &&
+                failures.Any(error => canceled ? error is OperationCanceledException : error is TimeoutException))
+                .OverrideFailureMessage("Loading release replaced the original application failure.").IsTrue();
+            AssertThat(runtime.Failures.Count == 1 && ReferenceEquals(runtime.Failures[0], observed)).IsTrue();
+            Exception? shutdownFailure = null;
+            try { await shutdown; }
+            catch (Exception error) { shutdownFailure = error; }
+            var shutdownFailures = (shutdownFailure as AggregateException)?.Flatten().InnerExceptions;
+            AssertThat(shutdownFailures is not null && failures is not null &&
+                shutdownFailures.Count == failures.Count && failures.All(shutdownFailures.Contains))
+                .OverrideFailureMessage("Registry disposal did not receive the original application and cleanup failures.").IsTrue();
+            AssertThat(runtime.Failures.Count == 1).OverrideFailureMessage("Disposal reported the same application failure twice.").IsTrue();
+        }
+    }
+
+    [TestCase]
     [TestCategory(TestReason.Contract)]
     public async Task UnbindingCancelsApplicationWaitsAndDiscardsLateResults()
     {
