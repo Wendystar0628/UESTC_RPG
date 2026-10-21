@@ -93,6 +93,7 @@ public partial class ObserverCamera : Node, ICameraRig, IObserverState, IViewCon
             _flight.SetEdgeFog(0);
         }
         _controls.State.Advance(seconds);
+        SyncWalkPlacementPresentation();
         if (AdvanceWalkEntry()) { _flight.Reset(); _flight.SetEdgeFog(0); return; }
         if (!IsPlaying || _mode is null) { _flight.Reset(); _flight.SetEdgeFog(0); return; }
         if (Mode == ViewMode.Fly && ActiveTransit is null) _presentation.AdvanceFlyFov(seconds);
@@ -120,6 +121,19 @@ public partial class ObserverCamera : Node, ICameraRig, IObserverState, IViewCon
         }
     }
 
+    private void SyncWalkPlacementPresentation()
+    {
+        if (_flow?.State is not (AppState.Boot or AppState.Entering) || _flight.Map is null
+            || _walk is not { ExitRequested: false, PlacementArrival: { } arrival }
+            || (!_walk.Active && _walkEntry is null)
+            || arrival.Done.IsCanceled || arrival.Done.IsFaulted
+            || !ReferenceEquals(KernelServices.Get<IMapRuntime>().Arrival, arrival)
+            || arrival.Destination is not { Mode: ViewMode.Walk } destination) return;
+        // The body owns this eye/FOV plus feet endpoint; camera presentation follows it while covered.
+        // Title and Leaving retain their explicit application pose; Playing reads the live body eye.
+        if (_presentation.Value != destination.Pose) SetPose(destination.Pose);
+    }
+
     private void AdvanceWalkInput()
     {
         _flight.SetEdgeFog(0);
@@ -139,7 +153,7 @@ public partial class ObserverCamera : Node, ICameraRig, IObserverState, IViewCon
     public void OnMapLoaded(IMapContext context)
     {
         _flight.Mount(context);
-        // MapService owns destination selection and applies its resolved pose after these callbacks.
+        // Arrival owners select their destination after base map preparation.
         // Loading a map must not replace a preview/Title pose with its default spawn.
         ResetHistory();
         _flight.SetEdgeFog(0);

@@ -143,6 +143,7 @@ public sealed class MapRuntimeFailureTests
         using var stream = new StreamFixture();
         var participant = stream.CollisionParticipant;
         participant.Need = StreamTileNeed.Required;
+        stream.Director.Prefetch(stream.Camera.Pose, ViewMode.Fly);
         await stream.Until(() => participant.Mounted.Count > 0);
         participant.Need = StreamTileNeed.Retain;
         await stream.Until(() => participant.Retained);
@@ -246,7 +247,7 @@ internal static class MapRuntimeTestSupport
         public bool HasPendingDestination => !DestinationReady;
         public IReadOnlyList<MapStreamDestination> PinnedDestinations { get; private set; } = [];
         public void SetPinnedDestinations(IReadOnlyList<MapStreamDestination> destinations) => PinnedDestinations = destinations;
-        public void Prefetch(Pose destination, ViewMode mode, NavSpace? space = null) => Destination = new(destination, mode, space);
+        public void Prefetch(Pose destination, ViewMode mode, NavSpace? space = null, System.Numerics.Vector3? collisionFeet = null) => Destination = new(destination, mode, space, collisionFeet);
     }
 
     internal sealed class ArrivalCollision : ICollisionWorld

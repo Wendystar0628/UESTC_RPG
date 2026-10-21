@@ -9,7 +9,8 @@ public interface IMapRuntime
     Exception? Failure { get; }
     /// <summary>Receives a terminal map-lifetime failure into the same projection; retains original causes and startup codes.</summary>
     AppStartupException ReportFailure([FailureHandler("SYS-MAPS")] Exception error);
-    IMapArrival Arrive(Pose destination, ViewMode mode, NavSpace? space = null);
+    /// <summary>Destination is the presented eye pose including FOV; walking collision uses collisionFeet when supplied.</summary>
+    IMapArrival Arrive(Pose destination, ViewMode mode, NavSpace? space = null, System.Numerics.Vector3? collisionFeet = null);
     IMapArrival? Arrival { get; }
     event Action<IMapArrival?>? ArrivalChanged;
 }
@@ -46,7 +47,8 @@ public interface IMapLifetime
 /// IsUnloaded is the shutdown drain condition: submitted preparation has returned and its runtime resources
 /// have been released. No new requests start during shutdown.
 /// </summary>
-public sealed record MapStreamDestination(Pose Pose, ViewMode Mode, NavSpace? Space = null);
+public sealed record MapStreamDestination(Pose Pose, ViewMode Mode, NavSpace? Space = null,
+    System.Numerics.Vector3? CollisionFeet = null);
 
 public interface IMapStreamState
 {
@@ -65,7 +67,7 @@ public interface IMapStreamState
     IReadOnlyList<MapStreamDestination> PinnedDestinations { get; }
     /// <summary>Main-thread snapshot replacement; an empty collection releases the read-ahead hints. Unload clears them.</summary>
     void SetPinnedDestinations(IReadOnlyList<MapStreamDestination> destinations);
-    void Prefetch(Pose destination, ViewMode mode, NavSpace? space = null);
+    void Prefetch(Pose destination, ViewMode mode, NavSpace? space = null, System.Numerics.Vector3? collisionFeet = null);
 }
 
 // Stream readiness is consumed by the kernel arrival coordinator. Presentation callers use arrival handles.

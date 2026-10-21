@@ -57,7 +57,7 @@ internal sealed class FlowRuntimeTestStub(Func<bool> covered) : IMapRuntime, IMa
     public bool DestinationReady => Arrival?.Done.IsCompletedSuccessfully == true;
     public MapStreamDestination? Destination => Arrival?.Destination;
     public bool HasPendingDestination => Arrival is { Done.IsCompleted: false };
-    public void Prefetch(Pose destination, ViewMode mode, NavSpace? space = null) =>
+    public void Prefetch(Pose destination, ViewMode mode, NavSpace? space = null, System.Numerics.Vector3? collisionFeet = null) =>
         throw new InvalidOperationException("Flow preparation must retain real arrival ownership.");
     public int Arrivals { get; private set; }
     public bool CompleteArrivalImmediately { get; set; } = true;
@@ -76,10 +76,10 @@ internal sealed class FlowRuntimeTestStub(Func<bool> covered) : IMapRuntime, IMa
     }
     private ArrivalStub? _arrival;
     public IMapArrival? Arrival => _arrival;
-    public IMapArrival Arrive(Pose destination, ViewMode mode, NavSpace? space = null)
+    public IMapArrival Arrive(Pose destination, ViewMode mode, NavSpace? space = null, System.Numerics.Vector3? collisionFeet = null)
     {
         _arrival?.Cancel(); Arrivals++;
-        _arrival = new(this, new(destination, mode, space), CompleteArrivalImmediately);
+        _arrival = new(this, new(destination, mode, space, collisionFeet), CompleteArrivalImmediately);
         ArrivalChanged?.Invoke(_arrival); _arrival.TryComplete(); return _arrival;
     }
     private bool IsCovered() => covered();

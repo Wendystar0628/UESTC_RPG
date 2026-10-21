@@ -1,4 +1,5 @@
 using Campus.Contracts.Save;
+using Campus.Contracts.Maps;
 
 namespace Campus.Contracts.AppFlow;
 
@@ -15,8 +16,14 @@ public sealed record BootFlowRequest(
 /// <summary>Startup-only boundary implemented by the same instance as IAppFlow.</summary>
 public interface IAppBootFlow
 {
-    /// <summary>The already-running world preparation; entering from an early title joins this task.</summary>
+    /// <summary>The fully prepared current endpoint, including the first new-game save; entry reveals only after this task.</summary>
     Task WorldReady { get; }
+    /// <summary>Map foundation only; entry can prepare its endpoint before WorldReady.</summary>
+    Task MapReady { get; }
+    /// <summary>The accepted entry owns the boot endpoint, derived from the active entry operation.</summary>
+    bool BootEntryTaken { get; }
+    /// <summary>Selects the title or accepted entry endpoint and awaits its complete preparation.</summary>
+    Task<IMapArrival> PrepareDestination();
     /// <summary>Opens the title after UI, audio and save metadata are ready, independently of world loading.</summary>
     Task OpenTitle();
     /// <summary>Propagates background startup failure to any entry already waiting for the world.</summary>
@@ -28,10 +35,10 @@ public interface IAppBootFlow
     // An external LoadFile may initially use the default map; its Full load performs the authoritative travel.
     Task<MapId> PrepareBoot(BootFlowRequest request);
 
-    // Called after Travel(Boot) and AfterMapWarm participants. This is the sole boot loader:
+    // Called after map foundation preparation and AfterMapWarm participants. An accepted early entry owns restoration; otherwise this is the boot loader:
     // selected slots use Preview with a title, Full without it; external files retain LoadFile's Full semantics.
     // It sets preview T0/flow or the resumed endpoint. No-save preview does not create a new game or take entropy.
-    // For a fresh world the kernel sets initial time/season/weather before the first Travel, then restores
+    // For a fresh world the kernel sets initial time/season/weather before map preparation, then restores
     // its requested flow before this call. Only view overrides may follow it before BeforeReveal.
     Task PrepareWorld();
 

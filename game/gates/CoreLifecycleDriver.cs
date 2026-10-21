@@ -90,20 +90,22 @@ internal sealed class CoreLifecycleDriver(IStageGateHost host)
         input.SetInterfaceMode(false);
         if (Input.MouseMode != Input.MouseModeEnum.Captured)
             throw new InvalidOperationException("Playing did not capture input.");
-        var before = camera.Pose.Position;
+        var before = walk.BodyPose.Position;
+        var forward = Angles.Forward(walk.BodyPose.YawDeg, 0);
         using (var press = new InputEventKey { PhysicalKeycode = (Key)input.PhysicalKey("move_forward"), Pressed = true })
             Input.ParseInputEvent(press);
         try
         {
-            await CoreWait(() => System.Numerics.Vector3.Distance(before, camera.Pose.Position) > .01f,
-                "A real input event did not move the production camera.");
+            await CoreWait(() => System.Numerics.Vector3.Dot(walk.BodyPose.Position - before, forward) > .01f,
+                "A real forward input event did not move the production walk body forward.");
         }
         finally
         {
             using var release = new InputEventKey { PhysicalKeycode = (Key)input.PhysicalKey("move_forward"), Pressed = false };
             Input.ParseInputEvent(release);
         }
-        GD.Print("CORE_INPUT_READY");
+        var moved = walk.BodyPose.Position - before;
+        GD.Print(FormattableString.Invariant($"CORE_INPUT_READY distance={new System.Numerics.Vector2(moved.X, moved.Z).Length():R} forward={System.Numerics.Vector3.Dot(moved, forward):R}"));
         await CoreWait(() => camera.Speed < .0001f && walk.IsSettled,
             "The released movement input remained active.");
     }

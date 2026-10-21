@@ -48,7 +48,7 @@ public partial class MapRuntime : Node, IMapRuntime, IMapLifetime
         Failure is null && _arrival is { Prepared: true } arrival && (arrival.Destination.Mode switch
         {
             ViewMode.Fly => true,
-            ViewMode.Walk => _collision!.Ready(arrival.Destination.Pose.Position, WalkRules.ArrivalCollisionRadius),
+            ViewMode.Walk => _collision!.Ready(arrival.Destination.CollisionFeet ?? arrival.Destination.Pose.Position, WalkRules.ArrivalCollisionRadius),
             _ => throw new InvalidOperationException("Unknown arrival view mode.")
         });
     public IMapArrival? Arrival => _arrival;
@@ -218,12 +218,12 @@ public partial class MapRuntime : Node, IMapRuntime, IMapLifetime
         }
     }
 
-    public IMapArrival Arrive(Pose destination, ViewMode mode, NavSpace? space = null)
+    public IMapArrival Arrive(Pose destination, ViewMode mode, NavSpace? space = null, System.Numerics.Vector3? collisionFeet = null)
     {
         if (_stopping) throw new InvalidOperationException("The map runtime is shutting down.");
         if (!_mountPrepared) throw new InvalidOperationException("A map must be prepared before arrival.");
         _arrival?.Cancel();
-        var arrival = new ArrivalRun(new(destination, mode, space));
+        var arrival = new ArrivalRun(new(destination, mode, space, collisionFeet));
         _arrival = arrival;
         ArrivalChanged?.Invoke(arrival);
         _arrivalPreparations.Add(PrepareArrival(arrival, _context ?? throw new InvalidOperationException("Arrival requires the mounted map context."), _mapGeneration));
@@ -236,8 +236,10 @@ public partial class MapRuntime : Node, IMapRuntime, IMapLifetime
         try
         {
             var destination = arrival.Destination;
-            var point = new System.Numerics.Vector2(destination.Pose.Position.X, destination.Pose.Position.Z);
-            await _terrain!.PreparePoints(context, [point], cancellation);
+            var feet = destination.CollisionFeet ?? destination.Pose.Position;
+            var point = new System.Numerics.Vector2(feet.X, feet.Z);
+            var eyePoint = new System.Numerics.Vector2(destination.Pose.Position.X, destination.Pose.Position.Z);
+            await _terrain!.PreparePoints(context, point == eyePoint ? [point] : [point, eyePoint], cancellation);
             cancellation.ThrowIfCancellationRequested();
             if (generation != _mapGeneration || !ReferenceEquals(_arrival, arrival)) return;
             arrival.MarkCompleted(ArrivalStep.TerrainPoint);
@@ -251,7 +253,7 @@ public partial class MapRuntime : Node, IMapRuntime, IMapLifetime
             }
             if (_stopping || generation != _mapGeneration || !ReferenceEquals(_arrival, arrival) || arrival.Done.IsCompleted) return;
             // Prefetch may classify the destination medium; all destination readers start after preparation.
-            _stream!.Prefetch(destination.Pose, destination.Mode, destination.Space);
+            _stream!.Prefetch(destination.Pose, destination.Mode, destination.Space, destination.CollisionFeet);
             arrival.Prepared = true;
         }
         catch (OperationCanceledException) when (cancellation.IsCancellationRequested) { }
@@ -289,7 +291,7 @@ public partial class MapRuntime : Node, IMapRuntime, IMapLifetime
             if (ResidentReady) arrival.MarkCompleted(ArrivalStep.Resident);
             if (_stream!.DestinationReady) arrival.MarkCompleted(ArrivalStep.Destination);
             if (arrival.Destination.Mode == ViewMode.Walk &&
-                _collision!.Ready(arrival.Destination.Pose.Position, WalkRules.ArrivalCollisionRadius))
+                _collision!.Ready(arrival.Destination.CollisionFeet ?? arrival.Destination.Pose.Position, WalkRules.ArrivalCollisionRadius))
                 arrival.MarkCompleted(ArrivalStep.Collision);
             // Visible producers still certify the presented camera, including the current indoor floor.
             var contentReady = _contentReadiness?.IsReady(_camera!.Pose) == true;

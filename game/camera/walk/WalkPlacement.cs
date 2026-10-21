@@ -9,7 +9,7 @@ using KernelServices = Campus.Kernel.Registry.Kernel;
 namespace Campus.Camera.Walk;
 
 /// <summary>Placement admission, arrival ownership, alternatives and chronological safety history.</summary>
-internal sealed class WalkPlacement(CharacterBody3D body, Func<NavSpace?> space)
+internal sealed class WalkPlacement(CharacterBody3D body, Func<NavSpace?> space, Func<Pose> eye)
 {
     private IMapContext? _map;
     private ICollisionWorld? _collision;
@@ -211,9 +211,9 @@ internal sealed class WalkPlacement(CharacterBody3D body, Func<NavSpace?> space)
         }
         if (_placementArrival is null)
         {
-            // Startup, saves and transits already own an arrival at these feet or their eye position.
-            // Reuse that exact handle; a repair at another location requests its own destination.
-            _placementArrival = SamePlacement(current) ? current : _mapRuntime.Arrive(_placementTarget, ViewMode.Walk, space());
+            // Placement owns a single eye/FOV plus feet destination. Reuse only that exact endpoint;
+            // a genuine safety relocation selects another destination.
+            _placementArrival = SamePlacement(current) ? current : _mapRuntime.Arrive(eye(), ViewMode.Walk, space(), _placementTarget.Position);
         }
         var arrival = _placementArrival ?? throw new InvalidOperationException("Walking placement has no arrival.");
         if (arrival.Done.IsFaulted || arrival.Done.IsCanceled) { Fail(); return false; }
@@ -221,9 +221,7 @@ internal sealed class WalkPlacement(CharacterBody3D body, Func<NavSpace?> space)
     }
 
     private bool SamePlacement(IMapArrival? arrival) => arrival?.Destination is { Mode: ViewMode.Walk } at
-        && N.Vector2.DistanceSquared(new(at.Pose.Position.X, at.Pose.Position.Z),
-            new(_placementTarget.Position.X, _placementTarget.Position.Z)) <= WalkTuning.SaveSupportTolerance * WalkTuning.SaveSupportTolerance
-        && MathF.Abs(at.Pose.Position.Y - _placementTarget.Position.Y) <= WalkRules.StandingHeight + WalkRules.StepHeight;
+        && at.Pose == eye() && at.CollisionFeet == _placementTarget.Position;
 
     private bool SafeLanding(N.Vector3 feet, float height)
     {

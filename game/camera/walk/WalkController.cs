@@ -96,7 +96,7 @@ public partial class WalkController : CharacterBody3D, IWalkController, IWalkTel
         _telemetry = new(this, _bodyCollision);
         _comfort = new(this, _telemetry);
         _swimming = new(_bodyCollision, () => CollisionReady = false, RequestExit);
-        _placement = new(this, () => Space);
+        _placement = new(this, () => Space, PlacementEye);
         _persistence = new(_placement, _terrain);
         Name = "WalkController";
         ProcessPriority = FramePriority.Camera;
@@ -408,6 +408,8 @@ public partial class WalkController : CharacterBody3D, IWalkController, IWalkTel
         Velocity = Vector3.Zero;
         _comfort.Reset();
     }
+    private Pose PlacementEye() => _placement.EntryFrom ?? EyeAt(_feet);
+
     private Pose EyeAt(N.Vector3 feet) => new(feet + N.Vector3.UnitY * EyeHeight, _yaw, _pitch, _comfort.Fov);
     private Pose ResolveSettledFeet() => _placement.ResolveSettledFeet(Active, IsSettled, BodyPose);
 

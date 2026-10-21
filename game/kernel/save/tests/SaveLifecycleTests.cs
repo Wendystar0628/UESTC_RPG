@@ -21,11 +21,11 @@ public sealed class SaveLifecycleTests
     private static long _id;
     [TestCase]
     [TestCategory(TestReason.Smoke)]
-    public async Task NewGameDefersPoseDefaultsUntilTravelAndPreservesItsExplicitContext()
+    public async Task NewGameDefersPoseDefaultsUntilMapPreparationAndPreservesItsExplicitContext()
     {
         using var fixture = new Fixture();
         await fixture.Start();
-        fixture.Camera.BeforeDefault = () => AssertThat(fixture.Maps.HasTravelled).OverrideFailureMessage("A pose default was requested before its target map travelled.").IsTrue();
+        fixture.Camera.BeforeDefault = () => AssertThat(fixture.Maps.HasPrepared).OverrideFailureMessage("A pose default was requested before its target map was prepared.").IsTrue();
         var start = new WorldPreset(6.5, Season.Winter, WeatherKind.Snow, .4f);
         var result = await fixture.Pump(fixture.Save.NewGame(new("s1"), 733, start));
         AssertThat(result.Status == LoadStatus.Loaded && fixture.Camera.DefaultContext == new NewGameContext(733, fixture.Maps.Default, start, ViewMode.Fly)).OverrideFailureMessage("Deferred pose defaults lost the requested seed, map or starting preset.").IsTrue();
@@ -46,7 +46,7 @@ public sealed class SaveLifecycleTests
         var preview = await fixture.Pump(fixture.Save.Load(new("s1"), LoadScope.Preview));
         AssertThat(preview.Status == LoadStatus.Loaded && fixture.Save.HasPendingPose).OverrideFailureMessage("Preview did not hold pose.").IsTrue();
         AssertThat(fixture.Camera.Pose.Position == new Vector3(100, 200, 300)).OverrideFailureMessage("Preview moved the title camera.").IsTrue();
-        AssertThat(fixture.Log.SequenceEqual(new[] { "world", "instance", "travel" })).OverrideFailureMessage("World/instance/travel ordering changed.").IsTrue();
+        AssertThat(fixture.Log.SequenceEqual(new[] { "world", "instance", "prepare-map" })).OverrideFailureMessage("World/instance/travel ordering changed.").IsTrue();
         var instance = fixture.World.Instance;
         fixture.Ready = false;
         var resume = fixture.Save.CompleteResume();
@@ -160,10 +160,10 @@ public sealed class SaveLifecycleTests
         using var fixture = new Fixture();
         await fixture.Start(); await fixture.Pump(fixture.Save.NewGame(new("s1"), 1));
         fixture.Flow = AppState.Playing; await fixture.Pump(fixture.Save.SaveNow(SaveReason.NewGame));
-        fixture.Maps.FailTravel = true;
+        fixture.Maps.FailPreparation = true;
         var failed = await fixture.Pump(fixture.Save.Load(new("s1")));
         AssertThat(failed.Status == LoadStatus.Failed && fixture.World.RestoreFaulted && fixture.Camera.Locks == 1).OverrideFailureMessage("A post-commit map failure exposed a half-restored world.").IsTrue();
-        fixture.Maps.FailTravel = false;
+        fixture.Maps.FailPreparation = false;
         var recovered = await fixture.Pump(fixture.Save.Load(new("s1")));
         AssertThat(recovered.Status == LoadStatus.Loaded && !fixture.World.RestoreFaulted && fixture.Camera.Locks == 0).OverrideFailureMessage("Full load did not recover the faulted transaction.").IsTrue();
     }
@@ -310,15 +310,14 @@ public sealed class SaveLifecycleTests
                 new("test", "test", []), [])];
         }
         public TaskCompletionSource<MapTravelResult>? Pending { get; set; }
-        public bool FailTravel { get; set; }
-        public bool HasTravelled { get; private set; }
-        public override IMapTransition? Transition => Pending is { Task.IsCompleted: false } ? new TestMapTransition(Id, Id, MapTravelCause.Boot, Pending.Task) : null;
+        public bool FailPreparation { get; set; }
+        public bool HasPrepared { get; private set; }
+        public override IMapTransition? Transition => Pending is { Task.IsCompleted: false } ? new TestMapTransition(Id, Id, Pending.Task) : null;
         public override IReadOnlyList<MapVisit> Visits => [new(Id, default, ViewMode.Fly)];
-        public override IMapTransition Travel(MapTravelRequest request)
+        public override Task Prepare(MapId map)
         {
-            _log.Add("travel"); HasTravelled = true;
-            return new TestMapTransition(request.Target, request.Target, request.Cause,
-                Task.FromResult(FailTravel ? MapTravelResult.Failed : MapTravelResult.Arrived));
+            _log.Add("prepare-map"); HasPrepared = true;
+            return FailPreparation ? Task.FromException(new InvalidOperationException("Injected map preparation failure.")) : Task.CompletedTask;
         }
     }
     private sealed class FakeAtlas(IMapService maps) : IAtlasService

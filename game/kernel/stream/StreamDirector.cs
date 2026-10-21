@@ -115,7 +115,6 @@ public partial class StreamDirector : Node, IMapAware, IMapStreamState, IStreamV
         if (_owner is null) throw new InvalidOperationException("Stream dependencies must be bound before entering the tree.");
         _exiting = false;
         _world.InstanceChanged += OnWorldInstanceChanged;
-        _maps.Arrived += _selection.OnMapArrived;
         _reflections.Changed += _residency.OnReflectionChanged;
         OnWorldInstanceChanged(0);
     }
@@ -176,7 +175,7 @@ public partial class StreamDirector : Node, IMapAware, IMapStreamState, IStreamV
         try { stop(); }
         catch (Exception error) { RecordFailure(error); }
     }
-    public void Prefetch(Pose destination, ViewMode mode, NavSpace? space = null) => _selection.Prefetch(destination, mode, space);
+    public void Prefetch(Pose destination, ViewMode mode, NavSpace? space = null, System.Numerics.Vector3? collisionFeet = null) => _selection.Prefetch(destination, mode, space, collisionFeet);
     public void SetPinnedDestinations(IReadOnlyList<MapStreamDestination> destinations) => _pins.SetPinnedDestinations(destinations);
     public override void _Process(double delta)
     {
@@ -236,12 +235,12 @@ public partial class StreamDirector : Node, IMapAware, IMapStreamState, IStreamV
         RecordFailure(error);
     }
 
-    internal bool CanUseLiveCamera() => _maps.Transition?.Stage switch
+    internal bool CanUseLiveCamera() => _selection.Destination is not null && (_maps.Transition?.Stage switch
     {
         null or MapStage.Done => true,
-        MapStage.LoadData or MapStage.Mount or MapStage.Arrival or MapStage.Spawn => false,
+        MapStage.LoadData or MapStage.Mount => false,
         _ => throw new InvalidOperationException("Unknown map transition stage.")
-    };
+    });
 
     public override void _ExitTree()
     {
@@ -250,7 +249,6 @@ public partial class StreamDirector : Node, IMapAware, IMapStreamState, IStreamV
         _exiting = true;
         if (_world is not null) _world.InstanceChanged -= OnWorldInstanceChanged;
         if (_reflections is not null) _reflections.Changed -= _residency.OnReflectionChanged;
-        if (_maps is not null) _maps.Arrived -= _selection.OnMapArrived;
         _residency.DisposeMaterials();
     }
 }

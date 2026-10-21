@@ -297,7 +297,7 @@ public sealed class SaveService : ISaveService, IDisposable
                 _thumbnail = null; _unknown = new Dictionary<string, RawSaveSection>(); _restore.ClearPendingPose();
                 return result.Save;
             }).ConfigureAwait(false);
-            await Travel(prepared.Document.Meta.Map, null, null, _runtime.Maps.Context is null ? MapTravelCause.Boot : MapTravelCause.NewGame).ConfigureAwait(false);
+            await PrepareMap(prepared.Document.Meta.Map).ConfigureAwait(false);
             await OnFrame(() => _restore!.RestorePhaseOf(prepared, RestorePhase.Content, [], defaults)).ConfigureAwait(false);
             prepared = await PrepareViewPose(prepared, [], defaults).ConfigureAwait(false);
             var wait = await OnFrame(() =>
@@ -364,11 +364,10 @@ public sealed class SaveService : ISaveService, IDisposable
             _playSeconds = meta.PlaySeconds; _thumbnail = prepared.Document.Thumbnail; _unknown = prepared.Document.Sections;
             _restore.ClearPendingPose();
         }).ConfigureAwait(false);
-        await Travel(meta.Map, defaultMapSpawn is null && scope == LoadScope.Full ? meta.Pose : null,
-            scope == LoadScope.Full ? meta.Mode : null, MapTravelCause.LoadSave, defaultMapSpawn).ConfigureAwait(false);
+        await PrepareMap(meta.Map).ConfigureAwait(false);
         if (defaultMapSpawn is not null)
         {
-            meta = await OnFrame(() => meta with { Pose = _runtime.Camera.Pose }).ConfigureAwait(false);
+            meta = await OnFrame(() => meta with { Pose = _runtime.Maps.ResolveSpawn(meta.Map, defaultMapSpawn).ViewPose(meta.Mode) }).ConfigureAwait(false);
             prepared = prepared with { Document = prepared.Document with { Meta = meta } };
         }
         await OnFrame(() => _restore!.RestorePhaseOf(prepared, RestorePhase.Content, repairs)).ConfigureAwait(false);
@@ -486,10 +485,10 @@ public sealed class SaveService : ISaveService, IDisposable
         Publish(null);
     }
 
-    private async Task Travel(MapId map, Pose? pose, ViewMode? mode, MapTravelCause cause, string? spawn = null)
+    private async Task PrepareMap(MapId map)
     {
-        var transition = await OnFrame(() => _runtime.Maps.Travel(new(map, Spawn: spawn, Pose: pose, Mode: mode, Cause: cause))).ConfigureAwait(false);
-        if (await transition.Done.ConfigureAwait(false) != MapTravelResult.Arrived) throw new InvalidOperationException("Save map could not be restored.");
+        var preparation = await OnFrame(() => _runtime.Maps.Prepare(map)).ConfigureAwait(false);
+        await preparation.ConfigureAwait(false);
     }
 
     public async Task<SaveResult> FlushForQuit(SaveReason reason, TimeSpan timeout)

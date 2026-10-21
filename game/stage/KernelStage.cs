@@ -209,8 +209,12 @@ public partial class KernelStage : Node3D, IAppExit, IStageGateHost
     {
         _startupFailure.BindPresentation(registry);
         _flow = registry.Get<IAppFlow>();
-        _flow.PhaseReached += static phase =>
-            GD.Print(FormattableString.Invariant($"STARTUP_PHASE {phase} {FrameClock.MonotonicMilliseconds:R} frame={Engine.GetProcessFrames()}"));
+        _flow.PhaseReached += phase =>
+        {
+            var boot = registry.Get<IAppBootFlow>();
+            var suffix = phase == "new-game-enter" ? StartupReadiness(boot) : "";
+            GD.Print(FormattableString.Invariant($"STARTUP_PHASE {phase} {FrameClock.MonotonicMilliseconds:R} frame={Engine.GetProcessFrames()}{suffix}"));
+        };
         if (!ReferenceEquals(_flow, registry.Get<IAppBootFlow>()))
             throw new InvalidOperationException("IAppFlow and IAppBootFlow must resolve to the same instance.");
         _flow.Changed += OnFlowChanged;
@@ -282,7 +286,11 @@ public partial class KernelStage : Node3D, IAppExit, IStageGateHost
         var target = await appBoot.PrepareBoot(options.Flow);
         CheckStartupActive();
         // Interface, sound and save metadata are ready; no map work delays menu interaction.
-        if (showTitle) await appBoot.OpenTitle();
+        if (showTitle)
+        {
+            await appBoot.OpenTitle();
+            _ = TraceTitleInputReady(appBoot);
+        }
         var maps = registry.Get<IMapService>();
         if (!appBoot.WillRestoreWorld)
         {
@@ -291,16 +299,8 @@ public partial class KernelStage : Node3D, IAppExit, IStageGateHost
             BootWorldOverrides.InitializeFreshWorld(options, registry, initialMap);
         }
         Phase = "travel-boot";
-        // First classification measures the map's default overview (V1); PrepareWorld places T0 afterwards.
-        var travel = maps.Travel(new MapTravelRequest(target, options.Flow.Spawn,
-            null, ViewMode.Fly, MapTravelCause.Boot));
-        var travelled = await travel.Done;
+        await maps.Prepare(target);
         CheckStartupActive();
-        if (travelled != MapTravelResult.Arrived)
-        {
-            if (travel.Failure is { } failure) System.Runtime.ExceptionServices.ExceptionDispatchInfo.Capture(failure).Throw();
-            throw new InvalidOperationException("Boot map travel was rejected without a preparation failure.");
-        }
         await Initialize(BootPhase.AfterMapWarm);
         await BootWorldOverrides.ApplyQuality(options, registry.Get<IQualityService>());
         CheckStartupActive();
@@ -314,11 +314,16 @@ public partial class KernelStage : Node3D, IAppExit, IStageGateHost
         CheckStartupActive();
         _view!.Sync();
         var rig = registry.Get<ICameraRig>();
-        var arrival = _mapRuntime!.Arrive(rig.Pose, rig.Mode);
+        var arrival = await appBoot.PrepareDestination();
         _startupCapture = poseId is null ? null : new GameCaptureNode.CaptureDestination(
             poseId, rig.Mode, maps.Context!, registry.Get<IWorldState>().Instance, arrival, rig.Pose);
         await Initialize(BootPhase.BeforeReveal);
-        await WaitForStartupViewReadiness(arrival);
+        try { await WaitForStartupViewReadiness(arrival); }
+        catch (OperationCanceledException) when (appBoot.BootEntryTaken && _mapRuntime!.Failure is null && (arrival.Done.IsCanceled || !ReferenceEquals(_mapRuntime.Arrival, arrival)))
+        {
+            arrival = await appBoot.PrepareDestination();
+            await WaitForStartupViewReadiness(arrival);
+        }
         CheckStartupActive();
         await RevealBoot(frontispiece, bootLoading, appBoot, showTitle, maps);
 
@@ -332,6 +337,28 @@ public partial class KernelStage : Node3D, IAppExit, IStageGateHost
             }
             CheckStartupActive();
         }
+    }
+
+    private async Task TraceTitleInputReady(IAppBootFlow boot)
+    {
+        try
+        {
+            await Campus.Kernel.Frame.FrameAwaiter.ProcessAsync(this, _captureLifetime.Token);
+            CheckStartupActive();
+            GD.Print(FormattableString.Invariant($"STARTUP_PHASE title-input-ready {FrameClock.MonotonicMilliseconds:R} frame={Engine.GetProcessFrames()}{StartupReadiness(boot)}"));
+        }
+        catch (OperationCanceledException) when (_captureLifetime.IsCancellationRequested || _closing || _startupFailure.Failed) { }
+        catch (Exception error) { await _startupFailure.Fail(error); }
+    }
+
+    private static string StartupReadiness(IAppBootFlow boot)
+    {
+        var maps = KernelServices.Get<IMapService>();
+        var stream = KernelServices.Get<IMapStreamState>();
+        var spawn = maps.ResolveSpawn(maps.Default).ViewPose(ViewMode.Walk);
+        // Pins are CPU read-ahead only. Only an actual completed destination proves playable preload.
+        var preload = stream.Destination is { Mode: ViewMode.Walk } at && at.Pose.Position == spawn.Position && stream.DestinationReady;
+        return $" worldReady={boot.WorldReady.IsCompletedSuccessfully} mapReady={boot.MapReady.IsCompletedSuccessfully} preloadReady={preload}";
     }
 
     private async Task WaitForStartupViewReadiness(IMapArrival arrival)

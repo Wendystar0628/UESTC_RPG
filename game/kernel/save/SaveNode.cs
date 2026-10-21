@@ -85,15 +85,20 @@ public partial class SaveNode : Node, IBootParticipant
         Task<ModeSwitchResult>? flyModeSwitch = null;
         var arrival = await InSaveFrame(() =>
         {
-            if (body?.PlacementArrival is { } placement && ReferenceEquals(_mapRuntime.Arrival, placement)) return placement;
-            return _mapRuntime.Arrive(body?.BodyPose ?? pose, mode, body?.Space ?? space);
+            if (body is not null) return body.PlacementArrival;
+            return _mapRuntime.Arrive(pose, mode, space);
         }, cancellation).ConfigureAwait(false);
         while (!await InSaveFrame(() =>
         {
             if (RuntimeKernel.Get<IWorldState>().Instance != identity.Instance
                 || RuntimeKernel.Get<IMapService>().Current != identity.Current)
                 throw new OperationCanceledException("The restore world or map was replaced.");
-            if (!ReferenceEquals(_mapRuntime.Arrival, arrival))
+            if (arrival is null)
+            {
+                arrival = body?.PlacementArrival;
+                if (arrival is null && body?.ExitRequested != true) return false;
+            }
+            if (arrival is not null && !ReferenceEquals(_mapRuntime.Arrival, arrival))
             {
                 var repair = body?.PlacementArrival;
                 if (mode != ViewMode.Walk || repair is null || !ReferenceEquals(_mapRuntime.Arrival, repair))
@@ -111,6 +116,7 @@ public partial class SaveNode : Node, IBootParticipant
                 arrival = _mapRuntime.Arrive(RuntimeKernel.Get<ICameraRig>().Pose, mode);
                 DiagnosticLog.Warning("", "walk: no safe landing within range; restored in fly mode.");
             }
+            if (arrival is null) return false;
             if (arrival.Done.IsCompleted) arrival.Done.GetAwaiter().GetResult();
             if (_drawFrame <= poseFrame || !_drawCovered || !PresentedCover) return false;
             return arrival.Done.IsCompletedSuccessfully && (body is null || body.CollisionReady);

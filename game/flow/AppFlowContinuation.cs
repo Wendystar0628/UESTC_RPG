@@ -38,7 +38,12 @@ internal sealed class AppFlowContinuation(ICameraRig camera, ISaveService saves,
     }
     internal void RetainLivePreview() { _preview = saves.Active; _livePreview = true; }
     internal void InvalidateTitleDestination() => _titleArrival = null;
-    internal void PositionBootTitle() => camera.SetPose(TitlePose());
+    internal async Task PositionBootTitle(Func<bool> entryTaken)
+    {
+        var mode = await view.SetMode(ViewMode.Fly, ModeSwitchVia.Ui);
+        if (mode == ModeSwitchResult.Refused) throw new InvalidOperationException("Title view mode was refused.");
+        if (!entryTaken()) camera.SetPose(TitlePose());
+    }
     internal async Task LoadBootWorld(BootFlowRequest request, SlotId? bootSlot)
     {
         if (request.LoadFile is { } file)
@@ -88,7 +93,7 @@ internal sealed class AppFlowContinuation(ICameraRig camera, ISaveService saves,
         var savedFlow = world.BaseFlow;
         resources.HoldLoadingFlow();
         var frozenHours = world.WorldHours;
-        camera.SetPose(_destination);
+        camera.SetPose(_destination with { FovDeg = _destination.FovDeg ?? UserFov(_destinationMode, false) });
         IMapArrival arrival;
         if (saves.HasPendingPose)
         {

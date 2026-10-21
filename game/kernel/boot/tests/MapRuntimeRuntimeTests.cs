@@ -340,7 +340,7 @@ public sealed class MapRuntimeRuntimeTests
         public bool HasPendingDestination => false;
         public IReadOnlyList<MapStreamDestination> PinnedDestinations => [];
         public void SetPinnedDestinations(IReadOnlyList<MapStreamDestination> destinations) { }
-        public void Prefetch(Pose destination, ViewMode mode, NavSpace? space = null) => throw new NotSupportedException();
+        public void Prefetch(Pose destination, ViewMode mode, NavSpace? space = null, System.Numerics.Vector3? collisionFeet = null) => throw new NotSupportedException();
         public Task DrainAsync() { order.Add("stream"); Entered.SetResult(); return Completion.Task; }
     }
 

@@ -51,22 +51,7 @@ public sealed class TransitDriver(ICameraRig camera, IAppLoadingPresentation loa
             run.Progress = 0.25f;
             if (run.Cancelled) return;
 
-            var context = maps.Context ?? throw new InvalidOperationException("Transit has no mounted map.");
-            _ = await validator.LegalizePrepared(run.To, run.Token);
-            if (!validator.IsLegal(run.To, false)) throw new ArgumentOutOfRangeException(nameof(run), "Transit destination is outside the reachable volume.");
-            var target = new N.Vector2(run.To.Position.X, run.To.Position.Z);
-            await terrain.PrepareRegion(context, new(target, target));
-            if (run.LandOn is { } land)
-            {
-                var standing = new Pose(land + N.Vector3.UnitY * WalkRules.StandingEye, run.To.YawDeg, 0);
-                _ = await validator.LegalizePrepared(standing, run.Token);
-                if (!validator.IsLegal(standing, false)) throw new ArgumentOutOfRangeException(nameof(run), "Transit stand is outside the reachable volume.");
-                var feet = new N.Vector2(land.X, land.Z);
-                await terrain.PrepareRegion(context, new(feet, feet));
-            }
-            if (run.Cancelled) return;
-            if (!ReferenceEquals(maps.Context, context)) throw new OperationCanceledException("Transit map was replaced.");
-            run.TerrainReady = true;
+            if (!await PrepareDestinationTerrain(run)) return;
 
             Pose arrival;
             if (body is not null)
@@ -80,7 +65,17 @@ public sealed class TransitDriver(ICameraRig camera, IAppLoadingPresentation loa
                 camera.SetPose(arrival);
             }
             run.Progress = 0.5f;
-            var destination = runtime.Arrive(arrival, body is not null ? ViewMode.Walk : ViewMode.Fly);
+            IMapArrival destination;
+            if (body is not null)
+            {
+                while (body.PlacementArrival is null && !body.ExitRequested)
+                {
+                    await tree.ToSignal(tree, SceneTree.SignalName.ProcessFrame);
+                    run.Token.ThrowIfCancellationRequested();
+                }
+                destination = body.PlacementArrival ?? throw new InvalidOperationException("Transit could not place its walking destination.");
+            }
+            else destination = runtime.Arrive(arrival, ViewMode.Fly);
             run.Arrival = destination;
 
             await destination.Done.WaitAsync(run.Token);
@@ -108,6 +103,27 @@ public sealed class TransitDriver(ICameraRig camera, IAppLoadingPresentation loa
             var failure = failures is null ? null : failures.Count == 1 ? failures[0] : new AggregateException(failures);
             run.Finish(result, failure);
         }
+    }
+
+    private async Task<bool> PrepareDestinationTerrain(TransitRun run)
+    {
+        var context = maps.Context ?? throw new InvalidOperationException("Transit has no mounted map.");
+        _ = await validator.LegalizePrepared(run.To, run.Token);
+        if (!validator.IsLegal(run.To, false)) throw new ArgumentOutOfRangeException(nameof(run), "Transit destination is outside the reachable volume.");
+        var target = new N.Vector2(run.To.Position.X, run.To.Position.Z);
+        await terrain.PrepareRegion(context, new(target, target));
+        if (run.LandOn is { } land)
+        {
+            var standing = new Pose(land + N.Vector3.UnitY * WalkRules.StandingEye, run.To.YawDeg, 0);
+            _ = await validator.LegalizePrepared(standing, run.Token);
+            if (!validator.IsLegal(standing, false)) throw new ArgumentOutOfRangeException(nameof(run), "Transit stand is outside the reachable volume.");
+            var feet = new N.Vector2(land.X, land.Z);
+            await terrain.PrepareRegion(context, new(feet, feet));
+        }
+        if (run.Cancelled) return false;
+        if (!ReferenceEquals(maps.Context, context)) throw new OperationCanceledException("Transit map was replaced.");
+        run.TerrainReady = true;
+        return true;
     }
 
     private static async Task<bool> WaitForWalkSettle(SceneTree tree, IWalkController body, TransitRun run)

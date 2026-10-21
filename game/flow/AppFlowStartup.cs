@@ -13,14 +13,18 @@ internal sealed class AppFlowStartup(ISaveService saves, IMapService maps, AppFl
     private SlotId? _slot;
     private bool _worldPrepared;
     private readonly TaskCompletionSource _worldReady = new();
+    private readonly TaskCompletionSource _mapReady = new();
+    internal Task MapReady => _mapReady.Task;
     internal Task WorldReady => _worldReady.Task;
+    internal void MapAvailable() => _mapReady.TrySetResult();
+    internal void MarkPrepared() => _worldPrepared = true;
     internal bool CaptureMode { get; private set; }
     internal bool HasRequest => _request is not null;
     internal bool ShowTitle => _request is { ShowTitle: true };
     internal uint? Seed => _request?.Seed;
     internal bool WillRestoreWorld => _request is not null && (_request.LoadFile is not null || _slot.HasValue);
-    internal void Fail(Exception error) => _worldReady.TrySetException(error);
-    internal void Cancel() => _worldReady.TrySetCanceled();
+    internal void Fail(Exception error) { _mapReady.TrySetException(error); _worldReady.TrySetException(error); }
+    internal void Cancel() { _mapReady.TrySetCanceled(); _worldReady.TrySetCanceled(); }
     internal void Complete() => _worldReady.TrySetResult();
 
     internal Task Initialize(BootPhase phase, BootContext context)
@@ -45,14 +49,15 @@ internal sealed class AppFlowStartup(ISaveService saves, IMapService maps, AppFl
         return request.Map ?? (_slot is { } slot && AppFlowContinuation.Readable(continuation.Info(slot))
             ? continuation.Info(slot)!.Meta!.Map : maps.Default);
     }
-    internal async Task PrepareWorld()
+    internal async Task PrepareWorld(Func<bool> entryTaken)
     {
         var request = _request ?? throw new InvalidOperationException("PrepareBoot must run before PrepareWorld.");
         titlePresentation.SetVisible(request.ShowTitle);
         await continuation.LoadBootWorld(request, _slot);
         continuation.RequireHealthyWorld();
-        if (request.ShowTitle) { resources.HoldTitleFlow(); continuation.PositionBootTitle(); }
-        // The stage initialized no-load worlds before Travel and supplied their desired flow.
+        if (entryTaken()) { _worldPrepared = true; return; }
+        if (request.ShowTitle) { resources.HoldTitleFlow(); await continuation.PositionBootTitle(entryTaken); }
+        // The stage initialized no-load worlds before map preparation and supplied their desired flow.
         _worldPrepared = true;
     }
     internal void RecoverAsTitle()

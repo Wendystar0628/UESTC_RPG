@@ -1,72 +1,37 @@
-using Campus.Gen.World;
-using Campus.Gen.BakeInput;
-using System.Numerics;
-using System.Text.Json.Serialization.Metadata;
 using Campus.Contracts;
 using Campus.Contracts.Maps;
 using Campus.Contracts.Save;
+using Campus.Contracts.AppFlow;
 using Campus.Contracts.Startup;
+using Campus.Gen.World;
+using Campus.Gen.BakeInput;
+using System.Text.Json.Serialization.Metadata;
 
 namespace Campus.Kernel.Maps;
 
-/// <summary>
-/// Mainline scope: loads the current map once at startup (Boot) and re-places the pose on that same
-/// map for NewGame/LoadSave. Switching between maps is a later runtime and is rejected here.
-/// </summary>
-public interface IMapFrame : IDisposable
-{
-    void Step();
-}
+public interface IMapFrame : IDisposable { void Step(); }
 
 [KernelService(typeof(IMapFrame))]
 [KernelService(typeof(IMapService))]
 [SaveSection("maps", Version = 1, Phase = RestorePhase.World, Order = 0)]
-public sealed class MapService : IMapService, IMapFrame, ISaveSection<MapsSave>, IBootParticipant, IDisposable
+public sealed class MapService(ICameraRig camera, IMapLifetime lifetime, IWorldModelLoader loader,
+    MapDataSource data) : IMapService, IMapFrame, ISaveSection<MapsSave>, IBootParticipant, IDisposable
 {
-    private readonly ICameraRig _camera;
-    private readonly IViewControl _view;
-    private readonly IMapRuntime _runtime;
-    private readonly IMapLifetime _lifetime;
-    private Task? _mount;
-    private IMapArrival? _arrival;
-    private readonly IWorldModelLoader _loader;
-    private readonly ICameraPoseValidator _poses;
-    private readonly IWalkController? _walk;
-    private readonly ITerrainPreparation? _terrain;
-    private Task<Pose>? _legalize;
-    private readonly MapDataSource _data;
+    private readonly ICameraRig _camera = camera;
+    private readonly IMapLifetime _lifetime = lifetime;
+    private readonly IWorldModelLoader _loader = loader;
+    private readonly MapDataSource _data = data;
     private readonly Dictionary<MapId, MapVisit> _visits = [];
     private MapCatalog? _catalog;
     private Task<MapCatalog>? _catalogTask;
     private TaskCompletionSource? _initialization;
-    private PendingMapLoad? _load;
-    private Task<ModeSwitchResult>? _modeChange;
     private MapTransition? _active;
-    private MapTravelRequest? _request;
     private MapCatalogEntry? _target;
-    private IMapContext? _prepared;
+    private PendingMapLoad? _load;
+    private Task? _mount;
     private IDisposable? _input;
-    private Pose _destination;
-    private ViewMode _destinationMode;
-    private WaypointStand? _stand;
-    private bool _started;
-    private bool _sameMap;
-    private bool _spawnStarted;
-    private bool _modeStarted;
-    private bool _preservePresentationPose;
     private bool _stopped;
     private MapId _savedCurrent;
-
-    public MapService(ICameraRig camera, IViewControl view, IMapRuntime runtime, IMapLifetime lifetime,
-        IWorldModelLoader loader, ICameraPoseValidator poses, MapDataSource data, IWalkController? walk = null,
-        ITerrainPreparation? terrain = null)
-    {
-        _camera = camera; _view = view; _runtime = runtime; _lifetime = lifetime;
-        _loader = loader; _data = data;
-        _poses = poses ?? throw new ArgumentNullException(nameof(poses));
-        _walk = walk;
-        _terrain = terrain;
-    }
 
     public long Rev { get; private set; }
     public MapId Default => (_catalog ?? throw new InvalidOperationException("Map catalogue is not initialized.")).Default;
@@ -75,12 +40,10 @@ public sealed class MapService : IMapService, IMapFrame, ISaveSection<MapsSave>,
     public IMapContext? Context { get; private set; }
     public IMapTransition? Transition => _active;
     public IReadOnlyList<MapVisit> Visits => SnapshotVisits();
-    public event Action<MapId, MapTravelCause>? Arrived;
     public JsonTypeInfo<MapsSave> TypeInfo => MapsSaveJsonContext.Contract.MapsSave;
     public string Id => "map-catalog";
     public int Order => -100;
 
-    /// <summary>Resolves an authored spawn or waypoint without loading, mounting or changing a map.</summary>
     public MapSpawn ResolveSpawn(MapId map, string? spawn = null)
     {
         var catalog = _catalog ?? throw new InvalidOperationException("Map catalogue must be initialized before resolving a spawn.");
@@ -106,7 +69,37 @@ public sealed class MapService : IMapService, IMapFrame, ISaveSection<MapsSave>,
         return _initialization.Task;
     }
 
-    /// <summary>Only MapServiceNode calls this, at FramePriority.Map. No worker continuation mutates map state.</summary>
+    public async Task Prepare(MapId map)
+    {
+        ObjectDisposedException.ThrowIf(_stopped, this);
+        if (_active is { } pending)
+        {
+            if (pending.To != map) throw new InvalidOperationException("A different map is already being prepared.");
+            await AwaitPreparation(pending);
+            return;
+        }
+        if (Context is not null)
+        {
+            if (Current != map) throw new InvalidOperationException("A different map is already mounted.");
+            return;
+        }
+        if (_catalog is null || !_catalog.TryGet(map, out var target) ||
+            target.Descriptor.Kind != MapKind.Outdoor || target.Descriptor.World.Time != MapTimeRule.Shared)
+            throw new InvalidOperationException("Map preparation was rejected.");
+        _target = target;
+        var transition = _active = new MapTransition(Current, map);
+        _input = _camera.LockInput(InputLockReason.MapTravel);
+        _camera.ActiveTransit?.Cancel();
+        await AwaitPreparation(transition);
+    }
+
+    private static async Task AwaitPreparation(MapTransition transition)
+    {
+        if (await transition.Done != MapTravelResult.Arrived)
+            throw transition.Failure ?? new OperationCanceledException("Map preparation stopped.");
+    }
+
+    /// <summary>Only MapServiceNode advances map state, at FramePriority.Map.</summary>
     public void Step()
     {
         if (_stopped) return;
@@ -118,45 +111,11 @@ public sealed class MapService : IMapService, IMapFrame, ISaveSection<MapsSave>,
         }
         if (_active is null) return;
         try { Advance(); }
-        catch (Exception error) { Fail(error); }
-    }
-
-    public IMapTransition Travel(MapTravelRequest request)
-    {
-        ArgumentNullException.ThrowIfNull(request);
-        if (_stopped || !ValidateRequest(request)) return Completed(request, MapTravelResult.Rejected);
-        if (_active is { } active) return active.To == request.Target ? active : Completed(request, MapTravelResult.Rejected);
-        var transition = new MapTransition(Current, request);
-        Begin(transition);
-        return transition;
-    }
-
-    private bool ValidateRequest(MapTravelRequest request)
-    {
-        if (_catalog is null || !_catalog.TryGet(request.Target, out var target)) return false;
-        if (target.Descriptor.Kind != MapKind.Outdoor || target.Descriptor.World.Time != MapTimeRule.Shared) return false;
-        var valid = request.Cause switch
+        catch (Exception error)
         {
-            MapTravelCause.Boot => Context is null,
-            MapTravelCause.NewGame or MapTravelCause.LoadSave => Context is not null && request.Target == Current,
-            _ => false
-        };
-        if (!valid) return false;
-        if (request.Mode is { } mode) ValidateMode(mode);
-        if (request.Pose is { } pose) return MapCatalog.IsValidPose(pose);
-        return request.Spawn is not { } spawn || target.TryResolveSpawn(spawn, out _);
-    }
-
-    private void Begin(MapTransition transition)
-    {
-        _active = transition;
-        _request = transition.Request;
-        _catalog!.TryGet(transition.To, out _target!);
-        ClearPendingLoad();
-        _sameMap = transition.Cause != MapTravelCause.Boot;
-        _input ??= _camera.LockInput(InputLockReason.MapTravel);
-        _camera.ActiveTransit?.Cancel();
-        Move(_sameMap ? MapStage.Mount : MapStage.LoadData);
+            _data.ReportError($"Map preparation failed [stage={_active?.Stage}, target={_target?.Descriptor.Id.Value ?? "-"}]:", error);
+            Finish(MapTravelResult.Failed, error);
+        }
     }
 
     private void Advance()
@@ -164,246 +123,52 @@ public sealed class MapService : IMapService, IMapFrame, ISaveSection<MapsSave>,
         switch (_active!.Stage)
         {
             case MapStage.LoadData:
-                AdvanceLoadData();
+                if (_load is null)
+                {
+                    var input = _data.ReadLoadInput(_target!);
+                    var claims = _data.ReadClaims(_target!.Descriptor.Id);
+                    _load = new(input, Task.Run(() => MapWorldLoading.LoadPrepared(_loader, input, claims)));
+                }
+                if (!_load.Work.IsCompleted) return;
+                var loaded = _load.Work.GetAwaiter().GetResult();
+                Context = MapWorldLoading.CreateContext(_load.Input.Entry, loaded, _load.Input.SourceInputs);
+                _load = null;
+                _data.WriteMapRect(Context.Descriptor.DataRect);
+                _active.MoveTo(MapStage.Mount);
+                _mount = _lifetime.Mount(Context);
                 break;
             case MapStage.Mount:
-                AdvanceMount();
+                if (_mount is not { IsCompleted: true }) return;
+                _mount.GetAwaiter().GetResult();
+                Current = _target!.Descriptor.Id;
+                _savedCurrent = Current;
+                Rev++;
+                Finish(MapTravelResult.Arrived);
                 break;
-            case MapStage.Arrival:
-                AdvanceArrival();
-                break;
-            case MapStage.Spawn:
-                AdvanceSpawn();
-                break;
-            default:
-                throw new InvalidOperationException("Map transition is in an unsupported stage: " + _active.Stage);
+            default: throw new InvalidOperationException("Unsupported map preparation stage.");
         }
     }
 
-    private void AdvanceLoadData()
-    {
-        if (!_started)
-        {
-            var input = _data.ReadLoadInput(_target!);
-            var claims = _data.ReadClaims(_target!.Descriptor.Id);
-            _load = new(input, Task.Run(() => MapWorldLoading.LoadPrepared(_loader, input, claims)));
-            _started = true;
-        }
-        var operation = _load ?? throw new InvalidOperationException("Map load operation is missing.");
-        if (!operation.Work.IsCompleted) return;
-        var loaded = operation.Work.GetAwaiter().GetResult();
-        _prepared = MapWorldLoading.CreateContext(operation.Input.Entry, loaded, operation.Input.SourceInputs);
-        _load = null;
-        PrepareDestination();
-        Move(MapStage.Mount);
-    }
-
-    private void AdvanceMount()
-    {
-        if (!_started)
-        {
-            if (_sameMap) PrepareDestination(); // The mounted map stays; only the pose is re-placed.
-            else
-            {
-                Context = _prepared ?? throw new InvalidOperationException("Map world was not prepared.");
-                _prepared = null;
-                _data.WriteMapRect(Context.Descriptor.DataRect);
-                _mount = _lifetime.Mount(Context);
-            }
-            _started = true;
-        }
-        if (_mount is { } mounting)
-        {
-            if (!mounting.IsCompleted) return;
-            mounting.GetAwaiter().GetResult();
-            _mount = null;
-        }
-        _legalize ??= PrepareDestinationTerrain();
-        if (!_legalize.IsCompleted) return;
-        LegalizeDestination(_legalize.GetAwaiter().GetResult());
-        _camera.SetPose(_destination);
-        _arrival = _runtime.Arrive(_destination, _destinationMode);
-        Move(MapStage.Arrival);
-    }
-
-    private void AdvanceArrival()
-    {
-        var arrival = _arrival ?? throw new InvalidOperationException("Map arrival is missing.");
-        if (!arrival.Done.IsCompleted) return;
-        arrival.Done.GetAwaiter().GetResult();
-        if (!ReferenceEquals(_runtime.Arrival, arrival))
-            throw new InvalidOperationException("Map arrival was replaced before spawn.");
-        Move(MapStage.Spawn);
-    }
-
-    private void AdvanceSpawn()
-    {
-        if (!ReferenceEquals(_runtime.Arrival, _arrival))
-            throw new InvalidOperationException("Map arrival was replaced during spawn.");
-        if (!_spawnStarted) { _camera.SetPose(_destination); _spawnStarted = true; }
-        if (!_modeStarted)
-        {
-            _modeChange = _view.SetMode(_destinationMode, ModeSwitchVia.Ui);
-            _modeStarted = true;
-        }
-        if (!_modeChange!.IsCompleted) return;
-        switch (_modeChange.GetAwaiter().GetResult())
-        {
-            case ModeSwitchResult.Ok: break;
-            case ModeSwitchResult.Relocated: _stand = null; break;
-            case ModeSwitchResult.Refused: throw new InvalidOperationException("Destination observer mode was refused.");
-            default: throw new InvalidOperationException("Unknown mode-switch result.");
-        }
-        _modeChange = null;
-        if (_stand is { } stand)
-        {
-            if (_walk is null) throw new InvalidOperationException("Walking spawn requires the walk controller.");
-            _walk.Warp(new(stand.Feet, stand.YawDeg, 0));
-        }
-        Current = _target!.Descriptor.Id;
-        _savedCurrent = Current;
-        Rev++;
-        if (_request!.Cause != MapTravelCause.LoadSave || _request.Pose is not null) RememberCurrent();
-        Finish(MapTravelResult.Arrived);
-    }
-
-    private void PrepareDestination()
-    {
-        var request = _request!;
-        _destinationMode = request.Mode ?? _camera.Mode;
-        _stand = null;
-        _preservePresentationPose = false;
-        MapSpawn? spawn = null;
-        if (request.Pose is { } pose) _destination = pose;
-        else if (request.Spawn is { } spawnId) { spawn = _target!.ResolveSpawn(spawnId); _destination = spawn.Fly; }
-        else if (_sameMap)
-        {
-            _destination = _camera.Pose;
-            _preservePresentationPose = true; // Preview/Title T0 is intentionally allowed outside the roam volume.
-        }
-        else if (_visits.TryGetValue(request.Target, out var visit))
-        { _destination = visit.LastPose; _destinationMode = request.Mode ?? visit.Mode; }
-        else { spawn = _target!.ResolveSpawn(_target.Descriptor.DefaultSpawn); _destination = spawn.Fly; }
-        if (spawn is not null)
-        {
-            switch (_destinationMode)
-            {
-                case ViewMode.Fly: break;
-                case ViewMode.Walk:
-                    if (spawn.Stand is { } stand)
-                    { _stand = stand; _destination = new(stand.Feet + new Vector3(0, 1.62f, 0), stand.YawDeg, 0); }
-                    else _destinationMode = ViewMode.Fly;
-                    break;
-                default: throw new InvalidDataException("Invalid observer mode.");
-            }
-        }
-        ValidateMode(_destinationMode);
-        MapCatalog.ValidatePose(_destination);
-    }
-
-    private async Task<Pose> PrepareDestinationTerrain()
-    {
-        var pose = _preservePresentationPose ? _destination : await _poses.LegalizePrepared(_destination);
-        if (_terrain is not null && Context is { } context)
-        {
-            var point = new Vector2(pose.Position.X, pose.Position.Z);
-            var reach = _destinationMode == ViewMode.Walk ? WalkRules.ArrivalCollisionRadius : 0f;
-            await _terrain.PrepareRegion(context, new(point - new Vector2(reach), point + new Vector2(reach)));
-        }
-        return pose;
-    }
-
-    private void LegalizeDestination(Pose legalized)
-    {
-        if (_preservePresentationPose) return;
-        var original = _destination;
-        MapCatalog.ValidatePose(legalized);
-        if (!_poses.IsLegal(legalized, outsideBuffer: false))
-            throw new InvalidDataException("Map destination remains outside the reachable space after legalization.");
-        _destination = legalized;
-        // A projected eye position no longer names the authored feet location. Let the walk service
-        // choose a legal support there; never warp back through the boundary to the original Stand.
-        if (_stand is not null && legalized.Position != original.Position) _stand = null;
-    }
-
-    /// <summary>A failed startup load is terminal: the caller presents the failure and stops startup.</summary>
-    private void Fail([FailureHandler("SYS-MAPS")] Exception error)
-    {
-        _data.ReportError($"Map load failed [stage={_active?.Stage}, cause={_active?.Cause}, " +
-            $"target={_request?.Target.Value ?? "-"}]:", error);
-        if (error is OperationCanceledException) { Finish(MapTravelResult.Failed); return; }
-        Finish(MapTravelResult.Failed, error);
-    }
-
-    private void Finish(MapTravelResult result, Exception? failure = null)
+    private void Finish(MapTravelResult result, [FailureHandler("SYS-MAPS")] Exception? failure = null)
     {
         var finished = _active!;
-        _active = null;
-        _request = null;
-        _target = null;
-        ClearPendingLoad();
-        _modeChange = null;
-        _legalize = null;
-        _mount = null;
-        var arrival = _arrival;
-        _arrival = null;
-        var input = _input;
-        _input = null;
-        List<Exception>? failures = failure is null ? null : [failure];
-        void CollectFailure([FailureHandler("SYS-MAPS")] Exception error) => (failures ??= []).Add(error);
-        try { if (result != MapTravelResult.Arrived) arrival?.Cancel(); }
-        catch (Exception error) { CollectFailure(error); }
+        _active = null; _target = null; _load = null; _mount = null;
+        var input = _input; _input = null;
         try { input?.Dispose(); }
-        catch (Exception error) { CollectFailure(error); }
-        if (result == MapTravelResult.Arrived && Arrived is { } handlers)
-        {
-            var map = Current;
-            foreach (Action<MapId, MapTravelCause> handler in handlers.GetInvocationList())
-            {
-                try { handler(map, finished.Cause); }
-                catch (Exception error) { CollectFailure(error); }
-            }
-        }
-        failure = failures is null ? null : failures.Count == 1 ? failures[0] :
-            new AggregateException("Map transition completion failed.", failures);
+        catch (Exception error) { failure = Campus.Kernel.Diagnostics.RetainedFailure.Append(failure, error); }
         finished.Complete(failure is null ? result : MapTravelResult.Failed, failure);
-    }
-
-    private void Move(MapStage stage)
-    {
-        _active!.MoveTo(stage);
-        _started = false;
-        _spawnStarted = false;
-        _modeStarted = false;
     }
 
     public void Dispose()
     {
         if (_stopped) return;
         _stopped = true;
-        var active = _active;
-        _active = null; _request = null; _target = null;
-        _catalogTask = null; _modeChange = null; _mount = null;
-        _arrival?.Cancel(); _arrival = null;
-        ClearPendingLoad();
-        Context = null;
-        _input?.Dispose(); _input = null;
+        if (_active is not null) Finish(MapTravelResult.Failed);
+        _catalogTask = null; Context = null;
         _initialization?.TrySetCanceled();
-        active?.Complete(MapTravelResult.Failed);
-    }
-
-    private void ClearPendingLoad()
-    {
-        // A worker owns its immutable input through its closure. Dropping this operation prevents
-        // late completion from publishing anywhere; no worker continuation mutates service state.
-        _load = null;
-        _prepared = null;
     }
 
     private sealed record PendingMapLoad(MapLoadInput Input, Task<WorldModelLoadResult> Work);
-
-    private IMapTransition Completed(MapTravelRequest request, MapTravelResult result)
-    { var transition = new MapTransition(Current, request); transition.Complete(result); return transition; }
 
     private void RememberCurrent()
     {

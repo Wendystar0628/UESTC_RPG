@@ -29,8 +29,7 @@ internal sealed class StreamSelection(StreamDirector host)
     private MapStreamDestination? _destinationState;
     private float _replan;
     private bool _destinationPlanned, _destinationConsumed;
-    private long _destinationSequence, _mapRequestSequence, _arrivedSequence;
-    private IMapTransition? _destinationTransition;
+    private long _destinationSequence;
     private bool _haveCamera, _selectionApplied;
     private N.Vector3 _lastCamera, _velocity;
     internal StreamSettings Settings => _settings;
@@ -50,7 +49,7 @@ internal sealed class StreamSelection(StreamDirector host)
         SelectionReady(_destinationRequired, _destinationRefined) && _host.Participants.ParticipantsReady(destination: true) && (_host.Interiors?.DestinationReady ?? true) && (_destinationMode switch
         {
             ViewMode.Fly => true,
-            ViewMode.Walk => _host.Collision.Ready(destination.Position, WalkRules.ArrivalCollisionRadius),
+            ViewMode.Walk => _host.Collision.Ready(_destinationState?.CollisionFeet ?? destination.Position, WalkRules.ArrivalCollisionRadius),
             _ => throw new ArgumentOutOfRangeException(nameof(_destinationMode))
         });
 
@@ -73,7 +72,7 @@ internal sealed class StreamSelection(StreamDirector host)
             var space = _destinationState!.Space;
             if (space is null && _host.Context!.World.Spatial.MediumAt(accepted.Position) is { Kind: MediumKind.Interior, Feature: { } building } medium)
                 space = new(building, checked((short)medium.Storey));
-            _destinationState = new(accepted, _destinationMode, space);
+            _destinationState = _destinationState with { Space = space };
             _host.Interiors!.Prefetch(space, accepted.Position);
             _interiorDestinationSequence = _destinationSequence;
         }
@@ -182,15 +181,6 @@ internal sealed class StreamSelection(StreamDirector host)
         return true;
     }
 
-    internal void OnMapArrived(MapId map, MapTravelCause cause)
-    {
-        // MapService emits this only after a successful Spawn/mode completion. The captured operation and
-        // request sequence prevent an earlier arrival from consuming a later Prefetch request.
-        if (_destinationTransition is { Stage: MapStage.Spawn or MapStage.Done } transition &&
-            transition.To == map && transition.Cause == cause && _mapRequestSequence > 0)
-            _arrivedSequence = _mapRequestSequence;
-    }
-
     internal static N.Vector3? WalkingDestination(Pose pose, ViewMode mode) => mode switch
     {
         ViewMode.Walk => pose.Position,
@@ -219,7 +209,7 @@ internal sealed class StreamSelection(StreamDirector host)
             _host.Interiors!.Select(_host.Context!.World.Spatial.MediumAt(pose.Position), pose.Position);
             tree.Select(pose.Position, 0, height, pose.FovDeg ?? 60, LodLevel.L0, _required, _refined);
             _host.Participants.SelectParticipants(pose, _required, destination: false, live: false,
-                walkingDestination: WalkingDestination(mountingDestination, _destinationMode));
+                walkingDestination: _destinationState?.CollisionFeet ?? WalkingDestination(mountingDestination, _destinationMode));
         }
     }
     private void SelectPrediction(LodTree tree, Pose pose, bool live, bool exempt, float height)
@@ -249,7 +239,7 @@ internal sealed class StreamSelection(StreamDirector host)
         {
             tree.Select(destination.Position, 0, height, destination.FovDeg ?? 60, LodLevel.L0, _destinationRequired, _destinationRefined);
             _host.Participants.SelectParticipants(destination, _destinationRequired, destination: true, live: false,
-                walkingDestination: WalkingDestination(destination, _destinationMode));
+                walkingDestination: _destinationState?.CollisionFeet ?? WalkingDestination(destination, _destinationMode));
             _destinationPlanned = true;
         }
     }
@@ -258,9 +248,7 @@ internal sealed class StreamSelection(StreamDirector host)
     {
         if (!_destinationConsumed && _destination is { } target && DestinationReady &&
             _host.Camera.ActiveTransit is null && _host.Camera.Mode == _destinationMode &&
-            (_destinationTransition is not null ? _mapRequestSequence > 0 && _arrivedSequence == _mapRequestSequence &&
-                (_destinationSequence == _mapRequestSequence || N.Vector3.DistanceSquared(_host.Camera.Pose.Position, target.Position) <= 4) :
-                _host.CanUseLiveCamera() && N.Vector3.DistanceSquared(_host.Camera.Pose.Position, target.Position) <= 4))
+            _host.CanUseLiveCamera() && N.Vector3.DistanceSquared(_host.Camera.Pose.Position, target.Position) <= 4)
         {
             _destinationConsumed = true; _destinationRequired.Clear(); _destinationRefined.Clear();
             _host.Interiors?.Prefetch(null, target.Position); _replan = _settings.ReplanSeconds;
@@ -289,19 +277,13 @@ internal sealed class StreamSelection(StreamDirector host)
         }
     }
 
-    internal void Prefetch(Pose destination, ViewMode mode, NavSpace? space = null)
+    internal void Prefetch(Pose destination, ViewMode mode, NavSpace? space = null, System.Numerics.Vector3? collisionFeet = null)
     {
         if (_host.Context is null) throw new InvalidOperationException("A map must be mounted before destination prefetch.");
-        _destination = destination; _destinationMode = mode; _destinationState = new(destination, mode, space);
+        _destination = destination; _destinationMode = mode; _destinationState = new(destination, mode, space, collisionFeet);
         _selectionApplied = false; _planReady = false; CancelTerrainPlan();
         _destinationPlanned = false; _destinationConsumed = false; _destinationRequired.Clear(); _destinationRefined.Clear();
         _destinationSequence++; _host.Preparation.ClearRequests();
-        var targetTransition = _host.Maps.Transition is { Stage: MapStage.Mount or MapStage.Arrival or MapStage.Spawn } transition ? transition : null;
-        if (!ReferenceEquals(targetTransition, _destinationTransition))
-        {
-            _destinationTransition = targetTransition; _arrivedSequence = 0;
-            _mapRequestSequence = targetTransition is null ? 0 : _destinationSequence;
-        }
         _host.Interiors?.Prefetch(null, destination.Position);
         _replan = _settings.ReplanSeconds;
     }
@@ -319,7 +301,7 @@ internal sealed class StreamSelection(StreamDirector host)
         _destination = null; _destinationState = null; _tree = null;
         _plannedContext = null; _plannedWorld = null;
         _selectionApplied = false; _destinationPlanned = false; _destinationConsumed = false;
-        _destinationSequence++; _destinationTransition = null; _mapRequestSequence = _arrivedSequence = 0;
+        _destinationSequence++;
     }
     internal void ClearDemand()
     {

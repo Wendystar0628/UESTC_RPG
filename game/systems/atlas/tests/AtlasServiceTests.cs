@@ -345,38 +345,17 @@ public sealed class AtlasServiceTests
     }
     private sealed class SingleMapService : TestMapService
     {
-        private readonly TestMapContext _context;
         private readonly TestCameraRig _camera;
         public SingleMapService(TestMapContext context, TestCameraRig camera)
         {
-            _context = context; _camera = camera;
+            _camera = camera;
             Rev = 1; Default = Current = context.Descriptor.Id; Maps = [context.Descriptor]; Context = context;
         }
         // This fixture starts on its sole map at world hour zero, before any weather epoch change.
         public override IReadOnlyList<MapVisit> Visits => [new(Current, _camera.Pose, _camera.Mode)];
 
-        public override IMapTransition Travel(MapTravelRequest request)
-        {
-            if (request.Target != Current) return Finish(Current, request.Target, request.Cause, MapTravelResult.Rejected);
-            var spawn = request.Spawn is null ? null : _context.Descriptor.Spawns.SingleOrDefault(s => s.Id == request.Spawn);
-            if (request.Pose is null && request.Spawn is not null && spawn is null)
-                return Finish(Current, request.Target, request.Cause, MapTravelResult.Rejected);
-            var mode = request.Mode ?? _camera.Mode;
-            _ = mode switch
-            {
-                ViewMode.Fly or ViewMode.Walk => 0,
-                _ => throw new ArgumentOutOfRangeException(nameof(request)),
-            };
-            _camera.SetPose(request.Pose ?? spawn?.Fly ?? _camera.Pose);
-            _camera.Mode = mode;
-            Rev++;
-            var arrived = Finish(Current, Current, request.Cause, MapTravelResult.Arrived);
-            RaiseArrived(Current, request.Cause);
-            return arrived;
-        }
-
-        private IMapTransition Finish(MapId from, MapId to, MapTravelCause cause, MapTravelResult result) =>
-            LastTransition = TestMapTransition.Completed(from, to, cause, result);
+        public override Task Prepare(MapId map) => map == Current ? Task.CompletedTask
+            : Task.FromException(new InvalidOperationException("Atlas cannot prepare another map."));
     }
     private sealed class TestView(Observer observer) : IViewControl
     {

@@ -3,6 +3,7 @@ using Campus.Contracts;
 using Campus.Contracts.AppFlow;
 using Campus.Contracts.Maps;
 using Campus.Contracts.Save;
+using Campus.Contracts.Settings;
 using Campus.Flow;
 using Campus.Gen.World;
 using Campus.Gen.Tests.Support;
@@ -15,7 +16,7 @@ public sealed class AppLoadingFlowTests
 {
     [TestCase]
     [TestCategory(TestReason.Regression)]
-    public async Task EarlyTitleEntryJoinsBackgroundBootBeforeStartingTheTimeline()
+    public async Task EarlyTitleEntryStartsAfterMapReadyAndWaitsForTheRealEndpointBeforeReveal()
     {
         var rig = new FlowTestRig(); var maps = Maps(out _, out _);
         var saves = new SaveService(rig.Camera);
@@ -25,9 +26,32 @@ public sealed class AppLoadingFlowTests
         var entering = flow.Enter(new(EnterKind.NewGame, new("s1")));
         if (entering.IsCompleted || flow.State != AppState.Entering || !rig.Loading.Active || saves.NewGames != 0)
             throw new InvalidOperationException("Early entry did not join the covered background boot.");
-        await flow.PrepareWorld(); await flow.CompleteBoot();
-        if (await entering != EnterResult.Entered || saves.NewGames != 1 || rig.Loading.Active)
+        await flow.PrepareWorld();
+        await flow.PrepareDestination();
+        if (flow.WorldReady.IsCompleted || !flow.MapReady.IsCompletedSuccessfully || saves.NewGames != 1)
+            throw new InvalidOperationException("Map foundation and playable world readiness were conflated.");
+        await flow.CompleteBoot();
+        if (await entering != EnterResult.Entered || saves.NewGames != 1 || rig.Runtime.Arrivals != 1 || rig.Loading.Active)
             throw new InvalidOperationException("Joined startup duplicated or failed the selected new game.");
+    }
+
+    [TestCase, TestCategory(TestReason.Regression)]
+    public async Task AcceptedEntryReplacesOnlyItsPendingTitleArrival()
+    {
+        var rig = new FlowTestRig(); var maps = Maps(out _, out _);
+        var saves = new SaveService(rig.Camera);
+        var flow = rig.CreateFlow(saves, maps, new TestAppExit(allowQuit: false));
+        await flow.PrepareBoot(new()); await flow.OpenTitle(); await flow.PrepareWorld();
+        var preparing = flow.PrepareDestination();
+        var title = rig.Runtime.Arrival ?? throw new InvalidOperationException("Title never requested its destination.");
+        var entry = flow.Enter(new(EnterKind.NewGame, new("s1")));
+        var endpoint = await preparing;
+        if (!title.Done.IsCanceled || ReferenceEquals(title, endpoint) || !endpoint.Done.IsCompletedSuccessfully ||
+            flow.WorldReady.IsCompleted || rig.Runtime.Arrivals != 2)
+            throw new InvalidOperationException("Entry failed to replace the obsolete title destination.");
+        await flow.CompleteBoot();
+        if (await entry != EnterResult.Entered || rig.Diagnostics.Count != 0)
+            throw new InvalidOperationException("Normal title cancellation was reported as an entry failure.");
     }
 
     [TestCase]
@@ -109,7 +133,8 @@ public sealed class AppLoadingFlowTests
         var entering = flow.Enter(new(EnterKind.Continue));
         if (delayDestination)
         {
-            if (runtime.Arrivals != previousArrivals + 1 || runtime.Arrival?.Destination is not { } destination)
+            if (runtime.Arrivals != previousArrivals + 1 || runtime.Arrival?.Destination is not { } destination ||
+                destination != new MapStreamDestination(saves.RestoredPose, saves.Meta.Mode, saves.Meta.Space))
                 throw new InvalidOperationException("Resume never reached its destination barrier.");
             await Task.Yield();
             if (entering.IsCompleted || flow.State != AppState.Entering || !camera.InputLocked ||
@@ -140,7 +165,9 @@ public sealed class AppLoadingFlowTests
             saves.Completions != (pending ? 1 : 0) || saves.Loads != (pending ? 1 : 0))
             throw new InvalidOperationException("Resume duplicated or bypassed its preparation owner.");
         if (world.Instance != instance || world.WorldHours != hours || world.Flow.Rate != savedFlow ||
-            camera.Pose != saves.Meta.Pose || camera.InputLocked || saves.HasPendingPose || rig.Loading.Active || rig.Loading.Progress != 1 || rig.Title.Visible ||
+            camera.Pose != saves.RestoredPose || camera.Mode != saves.Meta.Mode ||
+            runtime.Arrival?.Destination != new MapStreamDestination(saves.RestoredPose, saves.Meta.Mode, saves.Meta.Space) ||
+            camera.InputLocked || saves.HasPendingPose || rig.Loading.Active || rig.Loading.Progress != 1 || rig.Title.Visible ||
             runtime.PinnedDestinations.Count != 0)
             throw new InvalidOperationException("Continue lost saved flow, world identity, endpoint or input handoff.");
         flow.Dispose();
@@ -194,6 +221,8 @@ public sealed class AppLoadingFlowTests
     {
         public SaveMeta Meta { get; private set; } = new(1, "test", new("s1"), SlotKind.Auto, 1, 1, 0, map,
             17.5, 17.5, Season.Autumn, WeatherKind.Clear, ViewMode.Fly, new(new(30, 45, -15), 25, -20), null, null, null, 0, SaveReason.Test);
+        // Saved poses omit presentation FOV; the restored Fly endpoint uses the active default lens.
+        public Pose RestoredPose => Meta.Pose with { FovDeg = Meta.Pose.FovDeg ?? UiSettingDefinitions.FlyFov.Default };
         public int Loads { get; private set; }
         public int Completions { get; private set; }
         public override IReadOnlyList<SlotInfo> Slots => [new(Meta.Slot, SlotKind.Auto, SlotHealth.Ok, Meta, 1)];
@@ -213,8 +242,8 @@ public sealed class AppLoadingFlowTests
         public override Task CompleteResume()
         {
             if (!_hasPendingPose || !covered() || world.Flow.Rate != 0) throw new InvalidOperationException("Resume was not prepared under frozen, presented cover.");
-            Completions++; runtime.Arrive(Meta.Pose, Meta.Mode, Meta.Space);
-            camera.SetPose(Meta.Pose); _hasPendingPose = false;
+            Completions++; camera.SetPose(RestoredPose);
+            runtime.Arrive(camera.Pose, Meta.Mode, Meta.Space); _hasPendingPose = false;
             return Task.CompletedTask;
         }
         public override Task<SaveResult> FlushForQuit(SaveReason reason, TimeSpan timeout) => Task.FromResult(new SaveResult(SaveStatus.Saved, Active, 1));

@@ -60,6 +60,12 @@ public static class BootWorldOverrides
         var control = services.Get<IWorldControl>();
         if (!showTitle || options.ExplicitFlow) control.SetFlow(options.FlowRate ?? 1);
         var poseId = options.Pose;
+        if (poseId is null)
+        {
+            var spawn = services.Get<IMapService>().ResolveSpawn(context.Descriptor.Id, args.Flow.Spawn);
+            var pose = await services.Get<ICameraPoseValidator>().LegalizePrepared(args.Flow.Pose ?? spawn.Fly);
+            services.Get<ICameraRig>().SetPose(pose);
+        }
         if (poseId is not null)
         {
             var titlePose = showTitle && poseId == "T0";
@@ -76,9 +82,11 @@ public static class BootWorldOverrides
             await services.Get<ITerrainPreparation>().PreparePoints(context, [terrainPoint]);
             services.Get<ICameraRig>().SetPose(pose);
         }
-        if (options.ViewMode is { } mode && (!showTitle || options.ExplicitViewMode))
+        if (!showTitle || options.ExplicitViewMode)
         {
-            await services.Get<IViewControl>().SetMode(mode, ModeSwitchVia.Key);
+            var mode = options.ViewMode ?? args.Flow.Mode ?? ViewMode.Fly;
+            var switched = await services.Get<IViewControl>().SetMode(mode, ModeSwitchVia.Key);
+            if (switched == ModeSwitchResult.Refused) throw new InvalidOperationException("Boot view mode was refused.");
         }
         return poseId;
     }
