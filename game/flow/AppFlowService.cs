@@ -90,6 +90,7 @@ public sealed class AppFlowService : IAppFlow, IAppBootFlow, IBootParticipant, I
     }
     private async Task<EnterResult> EnterCore()
     {
+        var prepared = _entryPrepared;
         try
         {
             var newGame = _request!.Kind switch
@@ -116,7 +117,7 @@ public sealed class AppFlowService : IAppFlow, IAppBootFlow, IBootParticipant, I
                 _resources.CompleteSavePreparation();
             }
             _continuation.RequireHealthyWorld();
-            _entryPrepared?.TrySetResult(_mapRuntime.Arrival ?? throw new InvalidOperationException("Entry has no prepared destination."));
+            prepared?.TrySetResult(_mapRuntime.Arrival ?? throw new InvalidOperationException("Entry has no prepared destination."));
             await WorldReady;
             if (_quitting) { _resources.CompleteLoadingProgress(); _resources.ReleaseFlow(); return EnterResult.Entered; }
             await _resources.FinishLoading();
@@ -124,13 +125,37 @@ public sealed class AppFlowService : IAppFlow, IAppBootFlow, IBootParticipant, I
             _resources.ReleaseFlow(); Change(AppState.Playing); _resources.ReleaseInput();
             return EnterResult.Entered;
         }
-        catch (OperationCanceledException) when (_quitting) { _entryPrepared?.TrySetCanceled(); return EnterResult.Rejected; }
+        catch (OperationCanceledException) when (_quitting) { prepared?.TrySetCanceled(); return EnterResult.Rejected; }
         catch (Exception error) when (error is not OutOfMemoryException)
         {
-            _entryPrepared?.TrySetException(error);
             _recovery.CaptureFailure(error, State);
-            if (restore.RestoreFaulted) { await _recovery.HoldRestoreFailure(); return EnterResult.Failed; }
-            await _recovery.RecoverTitle();
+            if (restore.RestoreFaulted) { prepared?.TrySetException(error); await _recovery.HoldRestoreFailure(); return EnterResult.Failed; }
+            if (prepared is not null && (error is AppStartupException || MapReady.IsFaulted || MapReady.IsCanceled ||
+                WorldReady.IsFaulted || WorldReady.IsCanceled || _mapRuntime.Failure is not null))
+            {
+                prepared.TrySetException(error);
+                return EnterResult.Failed;
+            }
+            try
+            {
+                var title = await _recovery.RecoverTitle();
+                // Boot may already be waiting on this exact task. Transfer its endpoint only after
+                // recovery prepared the real title; clearing the field alone would strand that wait.
+                if (prepared is not null)
+                {
+                    if (MapReady.IsFaulted) await MapReady;
+                    if (WorldReady.IsFaulted) await WorldReady;
+                    if (_mapRuntime.Failure is { } failure) { prepared.TrySetException(failure); return EnterResult.Failed; }
+                }
+                if (title is null || _quitting || MapReady.IsCanceled || WorldReady.IsCanceled) prepared?.TrySetCanceled();
+                else prepared?.TrySetResult(title);
+                if (ReferenceEquals(_entryPrepared, prepared)) _entryPrepared = null;
+            }
+            catch (Exception recoveryError) when (recoveryError is not OutOfMemoryException)
+            {
+                prepared?.TrySetException(recoveryError);
+                throw;
+            }
             return EnterResult.Failed;
         }
     }

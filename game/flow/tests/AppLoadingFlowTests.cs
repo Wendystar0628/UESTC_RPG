@@ -1,4 +1,3 @@
-using System.Numerics;
 using Campus.Contracts;
 using Campus.Contracts.AppFlow;
 using Campus.Contracts.Maps;
@@ -14,8 +13,58 @@ namespace Campus.Tests;
 [TestSuite]
 public sealed class AppLoadingFlowTests
 {
-    [TestCase]
-    [TestCategory(TestReason.Regression)]
+    [TestCase, TestCategory(TestReason.Regression)]
+    public async Task FailedEarlyTitleEntryCanFinishBootAtItsRecoveredTitle() =>
+        await EarlyTitleEntryFailureCase(new IOException("New game preparation failed."));
+
+    [TestCase, TestCategory(TestReason.Regression)]
+    public async Task CanceledEarlyTitleEntryCanFinishBootAtItsRecoveredTitle() =>
+        await EarlyTitleEntryFailureCase(new OperationCanceledException());
+
+    [TestCase, TestCategory(TestReason.Regression)]
+    public async Task BootAlreadyWaitingForFailedEarlyEntryReceivesItsRecoveredTitle() =>
+        await EarlyTitleEntryFailureCase(new IOException("New game preparation failed."), waiting: true);
+
+    [TestCase, TestCategory(TestReason.Regression)]
+    public async Task TerminalMapFailureDuringEarlyEntryStillFailsBoot() =>
+        await EarlyTitleEntryFailureCase(new IOException("Map preparation failed."), terminal: true);
+
+    private static async Task EarlyTitleEntryFailureCase(Exception failure, bool waiting = false, bool terminal = false)
+    {
+        var rig = new FlowTestRig(); var maps = Maps(out _, out _);
+        var saves = new SaveService(rig.Camera) { NewGameFailure = failure, NewGameGate = waiting ? new() : null };
+        var flow = rig.CreateFlow(saves, maps, new TestAppExit(allowQuit: false));
+        await flow.PrepareBoot(new()); await flow.OpenTitle();
+        var entering = flow.Enter(new(EnterKind.NewGame, new("s1")));
+        if (terminal) { failure = rig.Runtime.ReportFailure(failure); flow.FailBoot(failure); }
+        else await flow.PrepareWorld();
+        var destination = flow.PrepareDestination(); var completion = flow.CompleteBoot();
+        if (waiting)
+        {
+            if (destination.IsCompleted || completion.IsCompleted || entering.IsCompleted)
+                throw new InvalidOperationException("Boot did not wait for the pending entry preparation.");
+            saves.NewGameGate!.SetException(failure);
+        }
+        if (await entering != EnterResult.Failed || flow.Failure?.GetType() != failure.GetType() || rig.Diagnostics.Count != 1)
+            throw new InvalidOperationException("The entry failure lost its original diagnostic.");
+        var bootFailures = new List<Exception>();
+        try { await destination; } catch (Exception error) { bootFailures.Add(error); }
+        try { await completion; } catch (Exception error) { bootFailures.Add(error); }
+        if (terminal)
+        {
+            if (bootFailures.Count != 2 || bootFailures.Any(error => !ReferenceEquals(error, failure)) ||
+                flow.WorldReady.IsCompletedSuccessfully || !rig.Loading.Active || !rig.Camera.InputLocked || rig.Runtime.Arrivals != 0)
+                throw new InvalidOperationException("A terminal map failure became a recovered or ready title.");
+            return;
+        }
+        if (bootFailures.Count != 0)
+            throw new AggregateException("Recovered early entry still faulted boot destination selection or completion.", bootFailures);
+        if (!ReferenceEquals(await destination, rig.Runtime.Arrival) || flow.BootEntryTaken || !flow.WorldReady.IsCompletedSuccessfully ||
+            flow.State != AppState.Title || !rig.Title.Visible || rig.Loading.Active || !rig.Camera.InputLocked)
+            throw new InvalidOperationException("Recovered entry failed to leave a ready, input-locked title.");
+    }
+
+    [TestCase, TestCategory(TestReason.Regression)]
     public async Task EarlyTitleEntryStartsAfterMapReadyAndWaitsForTheRealEndpointBeforeReveal()
     {
         var rig = new FlowTestRig(); var maps = Maps(out _, out _);
@@ -54,8 +103,7 @@ public sealed class AppLoadingFlowTests
             throw new InvalidOperationException("Normal title cancellation was reported as an entry failure.");
     }
 
-    [TestCase]
-    [TestCategory(TestReason.Smoke)]
+    [TestCase, TestCategory(TestReason.Smoke)]
     public async Task TitleAndNewGameResolveDefaultWaypointWithNoInlineSpawns()
     {
         var rig = new FlowTestRig(); var maps = Maps(out var entry, out var requests);
@@ -81,20 +129,16 @@ public sealed class AppLoadingFlowTests
             throw new InvalidOperationException("The flow bypassed spawn resolution or failed to finish loading.");
     }
 
-    [TestCase]
-    [TestCategory(TestReason.Smoke)]
+    [TestCase, TestCategory(TestReason.Smoke)]
     public async Task PendingResumeArrivesOnceUnderLoadingAndRestoresSavedFlowAtHandoff() => await ResumeCase(pending: true);
 
-    [TestCase]
-    [TestCategory(TestReason.Smoke)]
+    [TestCase, TestCategory(TestReason.Smoke)]
     public async Task LiveResumeArrivesOnceWithoutReloadingOrChangingInstance() => await ResumeCase(pending: false);
 
-    [TestCase]
-    [TestCategory(TestReason.Contract)]
+    [TestCase, TestCategory(TestReason.Contract)]
     public async Task LiveResumeWaitsForItsRealDestination() => await ResumeCase(pending: false, delayDestination: true);
 
-    [TestCase]
-    [TestCategory(TestReason.Smoke)]
+    [TestCase, TestCategory(TestReason.Smoke)]
     public async Task QuitDuringDelayedLiveResumeWaitsForItsReadyEndpointBeforeExiting() =>
         await ResumeCase(pending: false, delayDestination: true, quitDuringWait: true);
 
@@ -206,11 +250,15 @@ public sealed class AppLoadingFlowTests
         private SlotId? _active;
         public int NewGames { get; private set; }
         public int Saves { get; private set; }
+        public Exception? NewGameFailure { get; init; }
+        public TaskCompletionSource<LoadResult>? NewGameGate { get; init; }
         public override IReadOnlyList<SlotInfo> Slots { get; } = [new(new("s1"), SlotKind.Auto, SlotHealth.Empty, null, 0)];
         public override SlotId? Active => _active;
         public override Task<SaveResult> SaveNow(SaveReason reason) { Saves++; return Task.FromResult(new SaveResult(SaveStatus.Saved, Active, 1)); }
         public override Task<LoadResult> NewGame(SlotId slot, uint? seed = null, WorldPreset? start = null)
         {
+            if (NewGameGate is { } gate) return gate.Task;
+            if (NewGameFailure is { } failure) return Task.FromException<LoadResult>(failure);
             NewGames++; _active = slot;
             camera.Mode = ViewMode.Walk; camera.SetPose(Landing);
             return Task.FromResult(new LoadResult(LoadStatus.Loaded, slot, 0, []));

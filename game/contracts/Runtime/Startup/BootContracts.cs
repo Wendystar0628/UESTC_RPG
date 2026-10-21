@@ -42,6 +42,6 @@ public interface IViewCapturePreparation
 }
 
 // BeforeMap: map catalog, save metadata/lock and silent audio resources, before destination selection.
-// AfterMapWarm: after Travel(Boot), resident data and viewport preparation; quality detection/application.
+// AfterMapWarm: after IMapService.Prepare mounts the map foundation; quality detection/application.
 // BeforeReveal: after IAppBootFlow.PrepareWorld and explicit command-line world overrides, final ready work.
 // The kernel completes world readiness, then releases its presentation; no participant grants input.

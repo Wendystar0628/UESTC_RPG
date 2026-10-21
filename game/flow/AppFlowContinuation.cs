@@ -144,10 +144,10 @@ internal sealed class AppFlowContinuation(ICameraRig camera, ISaveService saves,
         RequireArrival(arrival, pose, mode);
     }
 
-    internal async Task PrepareTitleDestination()
+    internal async Task<IMapArrival> PrepareTitleDestination()
     {
         titlePresentation.SetVisible(true);
-        if (TitlePrepared) { resources.ObserveArrival(_titleArrival); return; }
+        if (TitlePrepared) { resources.ObserveArrival(_titleArrival); return _titleArrival!; }
         var pose = TitlePose();
         camera.SetPose(pose);
         var arrival = mapRuntime.Arrive(pose, ViewMode.Fly);
@@ -155,6 +155,7 @@ internal sealed class AppFlowContinuation(ICameraRig camera, ISaveService saves,
         RequireHealthyWorld();
         RequireArrival(arrival, pose, ViewMode.Fly);
         _titleArrival = arrival;
+        return arrival;
     }
 
     internal void RequirePreparedResume(SlotId slot)

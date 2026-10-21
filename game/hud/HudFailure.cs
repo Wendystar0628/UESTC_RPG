@@ -50,7 +50,7 @@ internal sealed class HudFailure
     private sealed class GallerySession(IAppExit exit) : IAppStartupFailureSession
     {
         public AppStartupFailure Failure { get; } =
-            new(AppStartupFailureCodes.MapPreparation, "travel-boot", "gallery", "user://logs");
+            new(AppStartupFailureCodes.MapPreparation, "prepare-map", "gallery", "user://logs");
         public Task Retry() => exit.FinishQuit(0);
         public Task Quit() => exit.FinishQuit(0);
     }

@@ -53,13 +53,14 @@ internal sealed class AppFlowRecovery(ISaveService saves, IMapService maps,
         }
         catch (Exception error) { done.TrySetException(error); }
     }
-    internal async Task RecoverTitle()
+    internal async Task<IMapArrival?> RecoverTitle()
     {
         resources.HoldInput(); resources.HoldTitleFlow(); resources.HoldLoadingFlow();
-        if (isQuitting()) return;
+        if (isQuitting()) return null;
         await resources.BeginLoading(null, save: false);
         resources.CompleteWorldPreparation();
-        await continuation.PrepareTitleDestination();
+        var arrival = await continuation.PrepareTitleDestination();
         await resources.FinishLoading(); resources.ReleaseLoadingFlow(); changeState(AppState.Title);
+        return arrival;
     }
 }

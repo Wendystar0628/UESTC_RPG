@@ -1,4 +1,3 @@
-using System.Globalization;
 using System.Reflection;
 using Campus.Gates;
 using Campus.Contracts;
@@ -27,7 +26,6 @@ public partial class KernelStage : Node3D, IAppExit, IStageGateHost
 {
     private StageCamera? _view;
     private FrameStatistics? _statistics;
-    private readonly bool _startupProfiling = System.Environment.GetEnvironmentVariable("UESTC_STARTUP_PROFILE") == "1";
     private IAppFlow? _flow;
     private IMapRuntime? _mapRuntime;
     private bool _ready;
@@ -50,18 +48,7 @@ public partial class KernelStage : Node3D, IAppExit, IStageGateHost
     private GameCaptureNode.CaptureDestination? _startupCapture;
     private readonly StageGateDriver _gate;
     private readonly StageStartupFailure _startupFailure;
-    private string _phase = "compose";
-    public string Phase
-    {
-        get => _phase;
-        private set
-        {
-            _phase = value;
-            RegistryStageGate.TraceBootPhase(value);
-            GD.Print(FormattableString.Invariant($"STARTUP_PHASE {value} {FrameClock.MonotonicMilliseconds:R} frame={Engine.GetProcessFrames()}"));
-        }
-    }
-
+    private readonly StageStartupTrace _startupTrace = new();
     public KernelStage()
     {
         _startupFailure = new(this);
@@ -209,17 +196,36 @@ public partial class KernelStage : Node3D, IAppExit, IStageGateHost
     {
         _startupFailure.BindPresentation(registry);
         _flow = registry.Get<IAppFlow>();
-        _flow.PhaseReached += phase =>
-        {
-            var boot = registry.Get<IAppBootFlow>();
-            var suffix = phase == "new-game-enter" ? StartupReadiness(boot) : "";
-            GD.Print(FormattableString.Invariant($"STARTUP_PHASE {phase} {FrameClock.MonotonicMilliseconds:R} frame={Engine.GetProcessFrames()}{suffix}"));
-        };
+        _flow.PhaseReached += phase => StageStartupTrace.TraceFlowPhase(registry, phase);
         if (!ReferenceEquals(_flow, registry.Get<IAppBootFlow>()))
             throw new InvalidOperationException("IAppFlow and IAppBootFlow must resolve to the same instance.");
         _flow.Changed += OnFlowChanged;
         _mapRuntime = registry.Get<IMapRuntime>();
         view.Bind(registry.Get<ICameraRig>());
+    }
+
+    internal bool CanHandleFailure => !_treeExited && !_shutdownStarted;
+    internal bool CanKeepFailurePresentation => !_closing && CanHandleFailure;
+    internal Task ShutdownCompletion => _shutdownTask ?? _closeTask
+        ?? throw new InvalidOperationException("No close operation owns this invalidated startup session.");
+
+    internal void MarkFailure()
+    {
+        _ready = false;
+        _exitCode = Math.Max(_exitCode, 2);
+    }
+
+    internal void FailBoot(Exception error)
+    {
+        if (_flow is IAppBootFlow bootFlow) bootFlow.FailBoot(error);
+    }
+
+    internal void CancelStartupCapture() => _captureLifetime.Cancel();
+
+    internal Task ReleaseStartupPresentation()
+    {
+        ReleaseStartupFlow();
+        return DisposeBootLoading();
     }
 
     private async Task StartWorld()
@@ -298,7 +304,7 @@ public partial class KernelStage : Node3D, IAppExit, IStageGateHost
             var initialMap = maps.Maps.Single(map => map.Id == target);
             BootWorldOverrides.InitializeFreshWorld(options, registry, initialMap);
         }
-        Phase = "travel-boot";
+        Phase = "prepare-map";
         await maps.Prepare(target);
         CheckStartupActive();
         await Initialize(BootPhase.AfterMapWarm);
@@ -339,28 +345,6 @@ public partial class KernelStage : Node3D, IAppExit, IStageGateHost
         }
     }
 
-    private async Task TraceTitleInputReady(IAppBootFlow boot)
-    {
-        try
-        {
-            await Campus.Kernel.Frame.FrameAwaiter.ProcessAsync(this, _captureLifetime.Token);
-            CheckStartupActive();
-            GD.Print(FormattableString.Invariant($"STARTUP_PHASE title-input-ready {FrameClock.MonotonicMilliseconds:R} frame={Engine.GetProcessFrames()}{StartupReadiness(boot)}"));
-        }
-        catch (OperationCanceledException) when (_captureLifetime.IsCancellationRequested || _closing || _startupFailure.Failed) { }
-        catch (Exception error) { await _startupFailure.Fail(error); }
-    }
-
-    private static string StartupReadiness(IAppBootFlow boot)
-    {
-        var maps = KernelServices.Get<IMapService>();
-        var stream = KernelServices.Get<IMapStreamState>();
-        var spawn = maps.ResolveSpawn(maps.Default).ViewPose(ViewMode.Walk);
-        // Pins are CPU read-ahead only. Only an actual completed destination proves playable preload.
-        var preload = stream.Destination is { Mode: ViewMode.Walk } at && at.Pose.Position == spawn.Position && stream.DestinationReady;
-        return $" worldReady={boot.WorldReady.IsCompletedSuccessfully} mapReady={boot.MapReady.IsCompletedSuccessfully} preloadReady={preload}";
-    }
-
     private async Task WaitForStartupViewReadiness(IMapArrival arrival)
     {
         _contentReadiness = ViewContentReadiness.Capture(this);
@@ -398,34 +382,33 @@ public partial class KernelStage : Node3D, IAppExit, IStageGateHost
         await _gate.OnRealtime();
     }
 
-    internal bool CanHandleFailure => !_treeExited && !_shutdownStarted;
-    internal bool CanKeepFailurePresentation => !_closing && CanHandleFailure;
-    internal Task ShutdownCompletion => _shutdownTask ?? _closeTask
-        ?? throw new InvalidOperationException("No close operation owns this invalidated startup session.");
-
-    internal void MarkFailure()
-    {
-        _ready = false;
-        _exitCode = Math.Max(_exitCode, 2);
-    }
-
-    internal void FailBoot(Exception error)
-    {
-        if (_flow is IAppBootFlow bootFlow) bootFlow.FailBoot(error);
-    }
-
-    internal void CancelStartupCapture() => _captureLifetime.Cancel();
-
-    internal Task ReleaseStartupPresentation()
-    {
-        ReleaseStartupFlow();
-        return DisposeBootLoading();
-    }
-
     private void CheckStartupActive()
     {
         if (_startupFailure.Failed) throw new OperationCanceledException("Startup stopped by the terminal stage failure.");
         if (_closing || _shutdownStarted) throw new OperationCanceledException("Startup stopped by the exit request.");
+    }
+
+    private string _phase = "compose";
+    public string Phase
+    {
+        get => _phase;
+        private set
+        {
+            _phase = value;
+            StageStartupTrace.TracePhase(value);
+        }
+    }
+
+    private async Task TraceTitleInputReady(IAppBootFlow boot)
+    {
+        try
+        {
+            await Campus.Kernel.Frame.FrameAwaiter.ProcessAsync(this, _captureLifetime.Token);
+            CheckStartupActive();
+            StageStartupTrace.TraceTitleInputReady(boot);
+        }
+        catch (OperationCanceledException) when (_captureLifetime.IsCancellationRequested || _closing || _startupFailure.Failed) { }
+        catch (Exception error) { await _startupFailure.Fail(error); }
     }
 
     private void OnFlowChanged(AppState before, AppState after)
@@ -439,14 +422,14 @@ public partial class KernelStage : Node3D, IAppExit, IStageGateHost
     private void TraceInputReady()
     {
         if (_closing || _flow?.State != AppState.Playing) return;
-        GD.Print(FormattableString.Invariant($"STARTUP_PHASE input-ready {FrameClock.MonotonicMilliseconds:R} frame={Engine.GetProcessFrames()} mode={KernelServices.Get<ICameraRig>().Mode}"));
+        StageStartupTrace.TraceInputReady();
     }
 
     private async Task RunBakeCommand()
     {
         _cpuCommand = true;
         Phase = "bake-command";
-        // CPU batches deliberately bypass the visual composition root and map-travel warmup.
+        // CPU batches deliberately bypass the visual composition root and map preparation.
         // Only the requested command and its declared constructor dependencies are resolved.
         var command = KernelServices.Get<IBakeCommand>();
         if (command is Node node) AddChild(node);
@@ -466,11 +449,7 @@ public partial class KernelStage : Node3D, IAppExit, IStageGateHost
         if (!_closing && !_startupFailure.Failed && _mapRuntime?.Failure is { } failure && failure is not OperationCanceledException)
             _ = _startupFailure.Fail(failure);
         _statistics?.Sample();
-        if (_startupProfiling && _statistics is { } statistics)
-        {
-            var frame = statistics.Current;
-            GD.Print(FormattableString.Invariant($"STARTUP_FRAME {FrameClock.MonotonicMilliseconds:R} frame={Engine.GetProcessFrames()} rendererCpuMs={frame.CpuRenderMilliseconds:R} rendererGpuMs={frame.GpuRenderMilliseconds:R}"));
-        }
+        _startupTrace.TraceFrame(_statistics);
         _gate.OnProcess();
     }
 
