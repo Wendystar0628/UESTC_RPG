@@ -39,14 +39,15 @@ internal sealed class HudInput
     {
         _entry++;
         ConnectInput();
-        BindHostInput();
+        _arbitrating = true;
     }
 
     public void Exit()
     {
         _entry++;
         _photoCancellation?.Cancel();
-        UnbindHostInput();
+        // 先停止仲裁，再解除订阅，最后才由 _ExitTree 清理页面和居民件。
+        _arbitrating = false;
         _dependencies.InputRouter.InterfaceModeChanged -= OnInterfaceModeChanged;
         foreach (var layer in _layers) layer.Dispose();
         _layers.Clear();
@@ -80,8 +81,7 @@ internal sealed class HudInput
     public const int LayerDialog = 100, LayerPage = 200, LayerHud = 300;
     private static readonly string[] Actions = ["menu", "help", "time_panel", "time_forward", "toggle_flow", "next_season", "weather", "clean_view"];
     private readonly List<IDisposable> _layers = [];
-    private readonly HashSet<Control> _hostChildren = [];
-    private bool _hostInputBound;
+    private bool _arbitrating;
 
     private void ConnectInput()
     {
@@ -92,12 +92,13 @@ internal sealed class HudInput
         _dependencies.InputRouter.InterfaceModeChanged += OnInterfaceModeChanged;
     }
 
+    // 宿主仲裁只有这一个入口：每帧一次，页面开关、加载与失败的状态变化再显式调用一次（页面新增最多晚一帧生效）。
     // 引擎递归禁用保留每个控件自身的 FocusMode/MouseFilter，重新启用时无需恢复镜像。
     public void SyncHostInput()
     {
         if (_photoCancellation is { IsCancellationRequested: false } photo && (!_dependencies.Flow.IsPlaying || _loading()))
             photo.Cancel();
-        if (!_hostInputBound) return;
+        if (!_arbitrating) return;
         var failure = _failure();
         var dialog = HasVisibleContent(_view.DialogHost);
         var page = HasVisibleContent(_view.PageHost);
@@ -110,46 +111,6 @@ internal sealed class HudInput
         UiLayout.SetInteractive(_view.Corners, !dialog && !page && !failure && _dependencies.InputRouter.InterfaceMode && _view.Root.Visible && !_loading());
         // 开始菜单与设置/存档共用页面层，大页打开时菜单退出阅读顺序。
         UiLayout.SetInteractive(_pages.Title, !_pages.BigPage && !dialog && !failure && !_loading());
-    }
-
-    private void BindHostChild(Node child)
-    {
-        if (!_hostInputBound || child is not Control control || !_hostChildren.Add(control)) return;
-        control.VisibilityChanged += SyncHostInput;
-    }
-
-    private void UnbindHostChild(Node child)
-    {
-        if (child is Control control && _hostChildren.Remove(control))
-            control.VisibilityChanged -= SyncHostInput;
-    }
-
-    private void BindHostInput()
-    {
-        if (_hostInputBound) return;
-        _hostInputBound = true;
-        foreach (var host in new[] { _view.PageHost, _view.DialogHost })
-        {
-            host.ChildOrderChanged += SyncHostInput;
-            host.ChildEnteredTree += BindHostChild;
-            host.ChildExitingTree += UnbindHostChild;
-            foreach (var child in host.GetChildren()) BindHostChild(child);
-        }
-    }
-
-    private void UnbindHostInput()
-    {
-        if (!_hostInputBound) return;
-        // 先停止仲裁，再解除所有观察，最后才由 _ExitTree 清理页面和居民件。
-        _hostInputBound = false;
-        foreach (var host in new[] { _view.PageHost, _view.DialogHost })
-        {
-            host.ChildOrderChanged -= SyncHostInput;
-            host.ChildEnteredTree -= BindHostChild;
-            host.ChildExitingTree -= UnbindHostChild;
-        }
-        foreach (var child in _hostChildren) child.VisibilityChanged -= SyncHostInput;
-        _hostChildren.Clear();
     }
 
     private static bool HasVisibleContent(Control host) => host.GetChildren()

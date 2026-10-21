@@ -121,13 +121,16 @@ public sealed class HudLifetimeTests
                 AssertThat(Subscribers(world, "InstanceChanged") == worldBaseline + 2).OverrideFailureMessage("HUD root and theme clock did not bind world notifications exactly once.").IsTrue();
                 var dialog = new Control();
                 hud.DialogHost.AddChild(dialog);
+                // 宿主仲裁每帧跑一次：ProcessFrame 信号先于节点的 _Process，等两次才保证 HUD 至少处理过一帧。
+                await parent.ToSignal(parent.GetTree(), SceneTree.SignalName.ProcessFrame);
+                await parent.ToSignal(parent.GetTree(), SceneTree.SignalName.ProcessFrame);
                 AssertThat(hud.PageHost.FocusBehaviorRecursive == Control.FocusBehaviorRecursiveEnum.Disabled)
                     .OverrideFailureMessage("A visible dialog did not disable the page host.").IsTrue();
                 parent.RemoveChild(hud);
                 AssertThat(router.Layers == 0 && router.Observers == 0 && flow.Observers == 0).OverrideFailureMessage("Tree exit retained input layers or service observers.").IsTrue();
                 AssertThat(Subscribers(settings, "Changed") == settingsBaseline && Subscribers(world, "InstanceChanged") == worldBaseline).OverrideFailureMessage("Tree exit retained settings/world observers.").IsTrue();
                 AssertThat(Residents(corners) == 0).OverrideFailureMessage("Queued residents remained parented and could reenter before deletion.").IsTrue();
-                // 退树后释放上层内容，宿主观察必须已解除；重入时重新观察现存子件。
+                // 退树后释放上层内容，仲裁必须已停；重入时按现存子件重新仲裁。
                 hud.DialogHost.RemoveChild(dialog);
                 dialog.Free();
                 router.SetInterfaceMode(!router.InterfaceMode);

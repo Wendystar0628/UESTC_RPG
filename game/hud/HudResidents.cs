@@ -17,7 +17,8 @@ internal sealed class HudResidents
     private readonly HudPages _pages;
     private Resident? _resident;
     private PerfReadout? _perf;
-    private float _idle, _cornerAlpha = 1;
+    private float _idle, _cornerAlpha = 1, _cornerTarget = 1;
+    private Tween? _cornerTween;
     private double _refreshClock = RefreshInterval;
     private bool _primed;
     private ViewMode _lastMode;
@@ -77,9 +78,8 @@ internal sealed class HudResidents
             _idle += (float)delta;
         else _idle = 0;
         var target = _idle >= IdleFade ? 0f : 1f;
-        var step = (float)delta / _dependencies.Motion.Fade(target < _cornerAlpha ? 1.2f : 0.18f);
-        _cornerAlpha = Mathf.MoveToward(_cornerAlpha, target, _dependencies.Motion.Level == MotionLevel.Instant ? 1 : step);
-        FadeResidents(_cornerAlpha, target > 0);
+        if (target != _cornerTarget) FadeCorners(target);
+        SyncResidentInput(_cornerTarget > 0);
     }
 
     public void Touch() => _idle = 0;
@@ -175,14 +175,29 @@ internal sealed class HudResidents
         return topRight;
     }
 
-    private void FadeResidents(float alpha, bool interactive)
+    /// <summary>闲置淡出 1.2 s、有操作淡回 0.18 s（整段 0↔1 的时长；从中途出发按剩余比例缩短），线性。</summary>
+    private void FadeCorners(float target)
+    {
+        _cornerTarget = target;
+        _cornerTween?.Kill();
+        var seconds = Math.Abs(target - _cornerAlpha) * _dependencies.Motion.Fade(target < _cornerAlpha ? 1.2f : 0.18f);
+        if (seconds <= 0) { SetCornerAlpha(target); return; }
+        _cornerTween = _view.Root.CreateTween();
+        _cornerTween.TweenMethod(Callable.From<float>(SetCornerAlpha), _cornerAlpha, target, seconds);
+    }
+
+    private void SetCornerAlpha(float alpha)
+    {
+        _cornerAlpha = alpha;
+        if (_resident is not { } resident) return;
+        foreach (var child in resident.Controls) child.Modulate = new Color(1, 1, 1, alpha);
+    }
+
+    // 子件显隐每帧可能变，焦点与输入要跟着当前可见性走
+    private void SyncResidentInput(bool interactive)
     {
         if (_resident is not { } resident) return;
-        foreach (var child in resident.Controls)
-        {
-            child.Modulate = new Color(1, 1, 1, alpha);
-            UiLayout.SetInteractive(child, interactive && child.Visible);
-        }
+        foreach (var child in resident.Controls) UiLayout.SetInteractive(child, interactive && child.Visible);
     }
     public void Refresh()
     {
@@ -228,8 +243,10 @@ internal sealed class HudResidents
     public void ResetIdle()
     {
         _idle = 0;
-        _cornerAlpha = 1;
-        FadeResidents(1, interactive: true);
+        _cornerTween?.Kill();
+        _cornerTarget = 1;
+        SetCornerAlpha(1);
+        SyncResidentInput(true);
     }
 
 }

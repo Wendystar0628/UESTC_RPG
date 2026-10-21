@@ -41,8 +41,6 @@ public sealed class MapHudContext(MapStyle style, UiKit ui)
     public bool PageNight => ThemeFront >= 0.5f;
     /// <summary>常驻件"随主题"（设置项，UI-VISUAL）；默认 false，即常驻件固定深屏。</summary>
     public bool ResidentFollowsTheme { get; set; }
-    /// <summary>最近一次输入来自键盘时才画焦点环（gui/common/show_focus_state_on_pointer_event = 0 的同义）。</summary>
-    public bool KeyboardFocus { get; set; }
     public HashSet<Control> Resident { get; } = [];
 
     public bool ResidentNight => !ResidentFollowsTheme || PageNight;

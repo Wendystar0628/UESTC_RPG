@@ -25,7 +25,6 @@ internal sealed class AtlasController : IDisposable
     private IDisposable? _lease;
     private ITransitHandle? _pending;
     private bool _pendingFromRoam;
-    private float _pageFade = 1;
     private string _overlayKey = "";
     private int _statusKey = -1;
 
@@ -151,11 +150,28 @@ internal sealed class AtlasController : IDisposable
         Page.Visible = true;
         CoverOthers(true);
         Page.ShowTab(tab);
-        _pageFade = 0;
-        Page.Modulate = new Color(1, 1, 1, 0);
-        UiLayout.SetInteractive(Page, false);
         Page.RedrawAll();
+        FadeInPage();
         UpdatePage(0);
+    }
+
+    /// <summary>淡入期间页内不接输入也不取焦点，淡完再开并聚焦当前标签页；减少动态效果与 instant 档直接到位。</summary>
+    private void FadeInPage()
+    {
+        var page = Page;
+        var seconds = _host.Hud.Ui.Motion.Fade(_host.Style.Metrics.PageInMs / 1000f);
+        void Ready()
+        {
+            page.Modulate = Colors.White;
+            UiLayout.SetInteractive(page, true);
+            page.ShowTab(page.Tab);
+        }
+        if (seconds <= 0) { Ready(); return; }
+        page.Modulate = new Color(1, 1, 1, 0);
+        UiLayout.SetInteractive(page, false);
+        var tween = page.CreateTween();
+        tween.TweenProperty(page, "modulate:a", 1f, seconds);
+        tween.Finished += Ready;
     }
 
     private void Close(bool restoreRoam)
@@ -195,14 +211,6 @@ internal sealed class AtlasController : IDisposable
 
     private void UpdatePage(float dt)
     {
-        var fadeSeconds = _host.Hud.Ui.Motion.Fade(_host.Style.Metrics.PageInMs / 1000f);
-        if (_pageFade < 1)
-        {
-            _pageFade = _host.Instant || fadeSeconds <= 0 ? 1 : MathF.Min(1, _pageFade + dt / fadeSeconds);
-            Page.Modulate = new Color(1, 1, 1, _pageFade);
-            UiLayout.SetInteractive(Page, _pageFade >= 1);
-            if (_pageFade >= 1) Page.ShowTab(Page.Tab);
-        }
         var pan = Vector2.Zero;
         if (Input.IsActionPressed("move_left")) pan.X -= 1;
         if (Input.IsActionPressed("move_right")) pan.X += 1;
@@ -216,7 +224,7 @@ internal sealed class AtlasController : IDisposable
             if (Input.IsActionPressed("ui_down")) pan.Y += 1;
         }
         var paper = Page.Paper;
-        paper.Tick(dt, pan.LimitLength(1), _s.Motion.ReduceMotion || _host.Instant);
+        paper.Tick(dt, pan.LimitLength(1));
         var view = paper.View;
         var pose = _s.Rig.Pose;
         paper.Player.Follow(view.ToLocal(PlayerAt(), Page.Paper.CanvasSize), _s.Observer.YawDeg, pose.YawDeg, _host.HorizontalFov(pose));
@@ -269,7 +277,7 @@ internal sealed class AtlasController : IDisposable
             changed |= near ? Page.Index.Here.Add(e.Id) : Page.Index.Here.Remove(e.Id);
             if (near) Page.Paper.Markers.Here.Add(e.Id); else Page.Paper.Markers.Here.Remove(e.Id);
         }
-        if (changed) { Page.Index.QueueRedraw(); Page.Paper.Markers.Invalidate(); }
+        if (changed) { Page.Index.Refresh(); Page.Paper.Markers.Invalidate(); }
     }
 
     private void OpenCard(MapEntry e) => OpenCard(e, keepFocus: false);
@@ -355,7 +363,6 @@ internal sealed class AtlasController : IDisposable
     {
         if (e is not (InputEventKey or InputEventAction)) return;
         if (!e.IsPressed() || e.IsEcho()) { _host.Handled(); return; }
-        _host.Ctx.KeyboardFocus = true;
         var key = e is InputEventKey k ? k.PhysicalKeycode : Key.None;
         var card = Page.Paper.Card;
         if (e.IsActionPressed("map")) Close(restoreRoam: true);

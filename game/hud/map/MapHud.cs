@@ -45,7 +45,6 @@ public partial class MapHud : Node, IMapAware, IBootParticipant
     internal MapDescriptor? Map => _map;
     internal MapGeo? Geo => _geo;
     internal IReadOnlyList<MapEntry> Entries => _entries;
-    internal bool Instant { get; private set; }
     internal bool MinimapOff { get; set; }
 
     public override void _EnterTree()
@@ -175,7 +174,6 @@ public partial class MapHud : Node, IMapAware, IBootParticipant
         var args = context.Run.Ui;
         _uiEnabled = args.Visible != false;
         _galleryPending = args.Gallery == "atlas";
-        Instant = args.Motion == MotionLevel.Instant;   // 界面截图用 instant（ENG-GATES）
         return Task.CompletedTask;
     }
 

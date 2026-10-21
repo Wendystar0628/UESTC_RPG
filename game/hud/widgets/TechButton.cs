@@ -98,7 +98,7 @@ public partial class TechButton : Button
         };
         button.MouseEntered += () => button.AnimateHover(true);
         button.MouseExited += () => button.AnimateHover(false);
-        button.FocusEntered += () => button.AnimateFocus(!Input.IsMouseButtonPressed(MouseButton.Left));
+        button.FocusEntered += () => button.AnimateFocus(button.HasFocus(true));
         button.FocusExited += () => button.AnimateFocus(false);
         button.ButtonDown += () => { button._down = true; button.Refresh(); };
         button.ButtonUp += () => { button._down = false; button.Refresh(); };
@@ -119,10 +119,10 @@ public partial class TechButton : Button
             0f, 1f, seconds);
     }
 
-    private void AnimateFocus(bool keyboard)
+    private void AnimateFocus(bool visible)
     {
         _focusTween?.Kill();
-        if (!keyboard || !HasFocus()) { _focus = 0; Refresh(); return; }
+        if (!visible) { _focus = 0; Refresh(); return; }
         var seconds = _kit.Motion.Spatial ? _kit.Tokens.Ms("focus", "tighten") : 0f;
         if (seconds <= 0) { _focus = 1; Refresh(); return; }
         var c = _kit.Tokens.Curve("Enter");

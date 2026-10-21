@@ -1,6 +1,7 @@
 using Campus.Contracts;
 using Campus.Contracts.Atlas;
 using Campus.Contracts.Maps;
+using Campus.Hud.Motion;
 using Godot;
 
 namespace Campus.Hud.Map;

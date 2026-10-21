@@ -71,6 +71,11 @@
       "control": 8,
       "group": 16
     },
+    "speedLed": {
+      "_ref": "UI-VISUAL；旁观 16 格 7×14，当前档加高到 18，行走格宽 16，格距 2，下方 2 px 光条",
+      "count": 16, "size": [7, 14], "currentHeight": 18, "gap": 2, "walkWidth": 16,
+      "offsetY": 2, "stripHeight": 2, "stripY": 21, "height": 24
+    },
     "loading": {
       "_ref": "UI-VISUAL-COMPONENTS、SYS-TITLE",
       "titleOrigin": [120, 140],

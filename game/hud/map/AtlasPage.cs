@@ -89,7 +89,9 @@ public partial class AtlasPage : Control
     public void RedrawAll()
     {
         QueueRedraw();
-        foreach (var c in new CanvasItem[] { Layers, Index, Paper.Overlay, Paper.Card, Paper.Base, Paper.Player }) c.QueueRedraw();
+        foreach (var c in new CanvasItem[] { Paper.Overlay, Paper.Card, Paper.Base, Paper.Player }) c.QueueRedraw();
+        Layers.RedrawGlyphs();
+        Index.Refresh();
         Paper.Markers.Invalidate();
     }
 

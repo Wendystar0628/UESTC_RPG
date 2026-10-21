@@ -212,6 +212,9 @@ public partial class SpeedBar : PanelContainer
     private Segmented _mode = null!;
     private Panel _actual = null!;
     private Label _readout = null!;
+    private int _ledCount;
+    private float _ledGap, _ledWalkWidth, _ledOffsetY, _ledStripHeight, _ledCurrentHeight;
+    private Vector2 _ledSize;
 
     public event Action<ViewMode>? ModePicked;
 
@@ -222,7 +225,14 @@ public partial class SpeedBar : PanelContainer
             _kit = kit, _model = model,
             CustomMinimumSize = new Vector2(kit.Tokens.V2("metrics", "size", "speedBar").X, 0),
             ThemeTypeVariation = UiThemeBuilder.PanelContainerType, Material = kit.Materials.Panel,
-            SizeFlagsHorizontal = SizeFlags.ShrinkBegin, MouseFilter = MouseFilterEnum.Ignore
+            SizeFlagsHorizontal = SizeFlags.ShrinkBegin, MouseFilter = MouseFilterEnum.Ignore,
+            _ledCount = kit.Tokens.I("metrics", "speedLed", "count"),
+            _ledSize = kit.Tokens.V2("metrics", "speedLed", "size"),
+            _ledCurrentHeight = kit.Tokens.F("metrics", "speedLed", "currentHeight"),
+            _ledGap = kit.Tokens.F("metrics", "speedLed", "gap"),
+            _ledWalkWidth = kit.Tokens.F("metrics", "speedLed", "walkWidth"),
+            _ledOffsetY = kit.Tokens.F("metrics", "speedLed", "offsetY"),
+            _ledStripHeight = kit.Tokens.F("metrics", "speedLed", "stripHeight"),
         };
         parent.AddChild(bar);
         kit.Apply(bar, new UiFx(Fill: "surface.panel", Line: "line.panel", Chamfer: kit.Tokens.Chamfer("panel"),
@@ -234,10 +244,13 @@ public partial class SpeedBar : PanelContainer
         bar._mode.Items[1].TooltipText = UiKit.T("hud.mode.walk");
         bar._mode.Changed += i => bar.ModePicked?.Invoke(i == 0 ? ViewMode.Fly : ViewMode.Walk);
         var readout = kit.Layout.Stack(row, groups: false);
-        var leds = kit.Layout.Add(readout, new Control { CustomMinimumSize = new Vector2(16 * 9, 24) });
-        for (var i = 0; i < 16; i++) bar._leds.Add(kit.Box(leds, new UiFx(Pin: true)));
+        var leds = kit.Layout.Add(readout, new Control
+        {
+            CustomMinimumSize = new Vector2(bar._ledCount * (bar._ledSize.X + bar._ledGap), kit.Tokens.F("metrics", "speedLed", "height")),
+        });
+        for (var i = 0; i < bar._ledCount; i++) bar._leds.Add(kit.Box(leds, new UiFx(Pin: true)));
         bar._actual = kit.Box(leds, new UiFx(Fill: "graphic", Pin: true));
-        bar._actual.Position = new Vector2(0, 21);
+        bar._actual.Position = new Vector2(0, kit.Tokens.F("metrics", "speedLed", "stripY"));
         bar._readout = kit.Text(readout, "", "data", "text.1", true);
         bar.Sync();
         return bar;
@@ -252,17 +265,18 @@ public partial class SpeedBar : PanelContainer
         if (!walk)
         {
             var gear = Gear(_model.Speed);
-            for (var i = 0; i < 16; i++)
+            var pitch = _ledSize.X + _ledGap;
+            for (var i = 0; i < _ledCount; i++)
             {
                 var led = _leds[i];
                 led.Visible = true;
                 var current = i == gear - 1;
-                led.Position = new Vector2(i * 9, current ? 0 : 2);
-                led.Size = new Vector2(7, current ? 18 : 14);
+                led.Position = new Vector2(i * pitch, current ? 0 : _ledOffsetY);
+                led.Size = new Vector2(_ledSize.X, current ? _ledCurrentHeight : _ledSize.Y);
                 _kit.Apply(led, current ? new UiFx(Fill: "primary.fill", Line: "primary.line", Pin: true)
                     : i < gear - 1 ? new UiFx(Fill: "graphic", Pin: true) : new UiFx(Fill: "surface.sunk", Line: "line.hair", Pin: true), remember: false);
             }
-            _actual.Size = new Vector2(gear * 9 - 2, 2);
+            _actual.Size = new Vector2(gear * pitch - _ledGap, _ledStripHeight);
             var anchor = Array.FindLastIndex(Anchors, a => a <= gear);
             var name = anchor >= 0 ? " · " + UiKit.T("hud.speed." + AnchorKeys[anchor]) : "";
             _readout.Text = $"{gear:00}/16 · {_model.Speed:0.0} m/s{name}";
@@ -272,17 +286,18 @@ public partial class SpeedBar : PanelContainer
             var ratio = _model.Speed / WalkRules.WalkSpeed;
             var step = 0;
             for (var i = 0; i < WalkRules.SpeedStepCount; i++) if (MathF.Abs(WalkRules.SpeedMultiplier(i) - ratio) < MathF.Abs(WalkRules.SpeedMultiplier(step) - ratio)) step = i;
-            for (var i = 0; i < 16; i++)
+            var pitch = _ledWalkWidth + _ledGap;
+            for (var i = 0; i < _ledCount; i++)
             {
                 var led = _leds[i];
                 led.Visible = i < WalkRules.SpeedStepCount;
                 if (!led.Visible) continue;
-                led.Position = new Vector2(i * 18, i == step ? 0 : 2);
-                led.Size = new Vector2(16, i == step ? 18 : 14);
+                led.Position = new Vector2(i * pitch, i == step ? 0 : _ledOffsetY);
+                led.Size = new Vector2(_ledWalkWidth, i == step ? _ledCurrentHeight : _ledSize.Y);
                 _kit.Apply(led, i == step ? new UiFx(Fill: "primary.fill", Line: "primary.line", Pin: true)
                     : i < step ? new UiFx(Fill: "graphic", Pin: true) : new UiFx(Fill: "surface.sunk", Line: "line.hair", Pin: true), remember: false);
             }
-            _actual.Size = new Vector2((step + 1) * 18 - 2, 2);
+            _actual.Size = new Vector2((step + 1) * pitch - _ledGap, _ledStripHeight);
             _readout.Text = $"{WalkRules.SpeedMultiplier(step):0.0#}× · {_model.Speed:0.0} m/s";
         }
     }

@@ -114,7 +114,7 @@ public partial class HudRoot : CanvasLayer, IBootParticipant, IAppLoadingPresent
         _failure.Exit();
         _loading.Exit();
         _frontispiece.Exit();
-        // Stop observing host children before page/resident removal emits child signals.
+        // Stop host arbitration before page/resident removal.
         _input.Exit();
         _pages.StateChanged -= SyncCorners;
         _dependencies.Flow.Changed -= OnFlowChanged;

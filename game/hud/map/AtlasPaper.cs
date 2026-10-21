@@ -1,4 +1,5 @@
 using Campus.Contracts.Atlas;
+using Campus.Hud.Motion;
 using Campus.Hud.Widgets;
 using Godot;
 
@@ -21,7 +22,8 @@ public partial class AtlasPaper : Control
     private readonly MapHudContext _ctx;
     private MapView _view = new(Vector2.Zero, 0.8f, 0);
     private Rect2 _bounds;
-    private float _zoomFrom, _zoomTo, _zoomT = 1;
+    private float _zoomFrom, _zoomTo;
+    private Tween? _zoomTween;
     private Vector2 _zoomAnchorWorld, _zoomAnchorLocal;
     private bool _dragging;
     private Vector2 _dragLast;
@@ -105,7 +107,7 @@ public partial class AtlasPaper : Control
 
     public void SetView(Vector2 center, float ppm)
     {
-        _zoomT = 1;
+        StopZoom();
         _view = Clamp(new MapView(center, Math.Clamp(ppm, MinPpm, MaxPpm), 0));
     }
 
@@ -122,12 +124,31 @@ public partial class AtlasPaper : Control
 
     public void ZoomBy(float factor, Vector2 local)
     {
-        var target = Math.Clamp((_zoomT < 1 ? _zoomTo : _view.Ppm) * factor, MinPpm, MaxPpm);
+        var target = Math.Clamp((_zoomTween is { } running && running.IsRunning() ? _zoomTo : _view.Ppm) * factor, MinPpm, MaxPpm);
+        StopZoom();
         _zoomFrom = _view.Ppm;
         _zoomTo = target;
-        _zoomT = 0;
         _zoomAnchorLocal = local;
         _zoomAnchorWorld = _view.ToWorld(local, Size);
+        // 位移类动效只在完整档出现；其余档直接到位（UI-VISUAL）。曲线取 Enter：不回弹的缓出。
+        if (!_ctx.Ui.Motion.Spatial) { ApplyZoom(1); return; }
+        var c = _ctx.Ui.Tokens.Curve("Enter");
+        _zoomTween = CreateTween();
+        _zoomTween.TweenMethod(Callable.From<float>(t => ApplyZoom(UiEase.Bezier(t, c.X, c.Y, c.Z, c.W))), 0f, 1f, ZoomSeconds);
+    }
+
+    private void StopZoom()
+    {
+        _zoomTween?.Kill();
+        _zoomTween = null;
+    }
+
+    /// <summary>缩放缓动的一帧：以锚点为不动点，按缓动进度 e 在对数缩放比上插值。</summary>
+    private void ApplyZoom(float e)
+    {
+        var ppm = MathF.Exp(Mathf.Lerp(MathF.Log(_zoomFrom), MathF.Log(_zoomTo), e));
+        var center = _zoomAnchorWorld - (_zoomAnchorLocal - Size * 0.5f) / ppm;
+        _view = Clamp(new MapView(center, ppm, 0));
     }
 
     private MapView Clamp(MapView v)
@@ -140,35 +161,13 @@ public partial class AtlasPaper : Control
         return v with { Center = c };
     }
 
-    /// <summary>每帧：缩放缓动、键盘平移，然后把视图交给底图、标记层与玩家。</summary>
-    public void Tick(float dt, Vector2 keyPan, bool reduceMotion)
+    /// <summary>每帧：键盘平移，然后把视图交给底图、标记层与玩家。</summary>
+    public void Tick(float dt, Vector2 keyPan)
     {
-        if (_zoomT < 1)
-        {
-            _zoomT = reduceMotion ? 1 : MathF.Min(1, _zoomT + dt / ZoomSeconds);
-            var e = Ease(_zoomT);
-            var ppm = MathF.Exp(Mathf.Lerp(MathF.Log(_zoomFrom), MathF.Log(_zoomTo), e));
-            var center = _zoomAnchorWorld - (_zoomAnchorLocal - Size * 0.5f) / ppm;
-            _view = Clamp(new MapView(center, ppm, 0));
-        }
         if (keyPan != Vector2.Zero) _view = Clamp(_view with { Center = _view.Center + keyPan * PanSpeed * dt / _view.Ppm });
         Base.SetView(_view);
         Markers.Follow(_view, Size);
     }
-
-    /// <summary>贝塞尔 (.2, .7, .2, 1)：不回弹的缓出（UI-VISUAL）。</summary>
-    private static float Ease(float x)
-    {
-        float lo = 0, hi = 1;
-        for (var i = 0; i < 16; i++)
-        {
-            var mid = (lo + hi) * 0.5f;
-            if (Bezier(mid, 0.2f, 0.2f) < x) lo = mid; else hi = mid;
-        }
-        return Bezier((lo + hi) * 0.5f, 0.7f, 1f);
-    }
-
-    private static float Bezier(float t, float p1, float p2) => 3 * (1 - t) * (1 - t) * t * p1 + 3 * (1 - t) * t * t * p2 + t * t * t;
 
     public override void _GuiInput(InputEvent e)
     {
@@ -185,7 +184,6 @@ public partial class AtlasPaper : Control
                     _dragging = false;
                     if (_dragTravel < 4) Clicked?.Invoke(Markers.Pick(mb.Position, _view));
                 }
-                _ctx.KeyboardFocus = false;
                 AcceptEvent();
                 break;
             case InputEventMouseMotion mm:
@@ -195,7 +193,7 @@ public partial class AtlasPaper : Control
                     var d = mm.Position - _dragLast;
                     _dragLast = mm.Position;
                     _dragTravel += d.Length();
-                    _zoomT = 1;
+                    StopZoom();
                     _view = Clamp(_view with { Center = _view.Center - d / _view.Ppm });
                 }
                 else HoverChanged?.Invoke(Markers.Pick(mm.Position, _view));

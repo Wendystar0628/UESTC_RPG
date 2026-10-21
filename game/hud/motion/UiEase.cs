@@ -36,16 +36,38 @@ public static class UiEase
     private static float Slope(float u, float a, float b) => 3 * (1 - 3 * b + 3 * a) * u * u + 2 * (3 * b - 6 * a) * u + 3 * a;
 
     /// <summary>临界阻尼（ζ = 1）弹簧从 0 走向 1 的位置；response 为固有周期（秒）。</summary>
-    public static float Spring(float seconds, float response)
+    public static float Spring(float seconds, float response) =>
+        response <= 0 ? 1 : SpringStep(0, 0, 1, SpringOmega(response), seconds).Value;
+
+    /// <summary>临界阻尼弹簧的精确解：从 (value, velocity) 朝 target 走 dt 秒后的位置与速度；全部弹簧只用这一份。</summary>
+    internal static (float Value, float Velocity) SpringStep(float value, float velocity, float target, float omega, float dt)
     {
-        if (response <= 0) return 1;
-        var w = 2 * MathF.PI / response;
-        return 1 - (1 + w * seconds) * MathF.Exp(-w * seconds);
+        var x = value - target;
+        var e = MathF.Exp(-omega * dt);
+        return (target + (x + (velocity + omega * x) * dt) * e, (velocity - omega * (velocity + omega * x) * dt) * e);
     }
+
+    internal static float SpringOmega(float response) => 2 * MathF.PI / MathF.Max(response, 1e-3f);
 
     /// <summary>临界阻尼弹簧进入 1% 的时间（UI-VISUAL：0.15 s → 158 ms）。</summary>
     public static float SpringSettle(float response) => response * 1.0536f;
 
     /// <summary>一拍二步进：T = floor(t·rate)/rate。</summary>
     public static float Stepped(float t, float rate) => MathF.Floor(t * rate) / rate;
+}
+
+/// <summary>临界阻尼弹簧（阻尼比 1）：可被打断的跟随，不过冲（UI-VISUAL）；数学见 <see cref="UiEase.SpringStep"/>。</summary>
+public struct Spring(float value, float response)
+{
+    public float Value = value;
+    private float _velocity;
+    private readonly float _omega = UiEase.SpringOmega(response);
+
+    public float Step(float target, float dt)
+    {
+        (Value, _velocity) = UiEase.SpringStep(Value, _velocity, target, _omega, dt);
+        return Value;
+    }
+
+    public void Snap(float v) { Value = v; _velocity = 0; }
 }

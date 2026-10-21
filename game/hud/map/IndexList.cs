@@ -38,7 +38,6 @@ public partial class IndexList : Control
         if (_rows.Count == 0) return;
         var i = _selected >= 0 ? _selected : 0;
         _rows[i].Button.GrabFocus();
-        _scroll.EnsureControlVisible(_rows[i].Button);
     }
 
     public void SetEntries(IReadOnlyList<MapEntry> entries)
@@ -56,7 +55,13 @@ public partial class IndexList : Control
                 AddEntry(entry);
         }
         _selected = keep is { } id ? _rows.FindIndex(row => row.Entry.Id == id) : -1;
-        RefreshRows();
+        if (_rows.Count > 0)
+        {
+            // 方向键用原生焦点移动；首末行的上、下邻居指向自身，到头不外溢。
+            _rows[0].Button.FocusNeighborTop = new NodePath(".");
+            _rows[^1].Button.FocusNeighborBottom = new NodePath(".");
+        }
+        Refresh();
     }
 
     private void AddEntry(MapEntry entry)
@@ -69,18 +74,12 @@ public partial class IndexList : Control
         button.TooltipText = $"{_ctx.Name(entry.Name)} · {entry.Id.Value}";
         button.AccessibilityName = button.TooltipText;
         button.MouseEntered += () => Hovered?.Invoke(entry);
-        button.FocusEntered += () =>
-        {
-            _ctx.KeyboardFocus = true;
-            SetSelected(index, notify: true);
-        };
+        button.FocusEntered += () => SetSelected(index, notify: true);
         button.Pressed += () =>
         {
-            _ctx.KeyboardFocus = false;
             SetSelected(index, notify: true);
             Activated?.Invoke(entry);
         };
-        button.GuiInput += ev => OnRowInput(button, ev, index);
         _rows.Add((entry, button));
     }
 
@@ -91,24 +90,6 @@ public partial class IndexList : Control
         return string.IsNullOrEmpty(state)
             ? $"{_ctx.Name(entry.Name)}  ·  {entry.Id.Value}"
             : $"{_ctx.Name(entry.Name)}  ·  {entry.Id.Value}  ·  {state}";
-    }
-
-    private void OnRowInput(TechButton button, InputEvent ev, int index)
-    {
-        if (ev is not InputEventKey { Pressed: true }) return;
-        if (ev.IsActionPressed("ui_down", allowEcho: true)) Step(index, 1);
-        else if (ev.IsActionPressed("ui_up", allowEcho: true)) Step(index, -1);
-        else return;
-        button.AcceptEvent();
-    }
-
-    private void Step(int from, int direction)
-    {
-        var next = from + direction;
-        if (next < 0 || next >= _rows.Count) return;
-        _ctx.KeyboardFocus = true;
-        _rows[next].Button.GrabFocus();
-        _scroll.EnsureControlVisible(_rows[next].Button);
     }
 
     private static int KindOrder(MapEntry e) => e.Marker.Kind switch
@@ -136,12 +117,13 @@ public partial class IndexList : Control
     {
         if (index == _selected) return;
         _selected = index;
-        RefreshRows();
+        Refresh();
         _scroll.EnsureControlVisible(_rows[index].Button);
         if (notify) SelectionChanged?.Invoke(_rows[index].Entry);
     }
 
-    private void RefreshRows()
+    /// <summary>行文字与选中态按当前集合（含"此处"）重排；集合变了由调用方显式调用。</summary>
+    public void Refresh()
     {
         for (var i = 0; i < _rows.Count; i++)
         {
@@ -151,7 +133,4 @@ public partial class IndexList : Control
             button.Selected = i == _selected;
         }
     }
-
-    // AtlasController 现用 QueueRedraw 通知“此处”集合变化。
-    public override void _Draw() => RefreshRows();
 }

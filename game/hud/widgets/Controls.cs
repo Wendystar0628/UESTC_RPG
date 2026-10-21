@@ -132,7 +132,7 @@ public partial class DipSwitch : Control
 
     private void Refresh()
     {
-        var focus = _hit.HasFocus() && !Input.IsMouseButtonPressed(MouseButton.Left) ? 1f : 0f;
+        var focus = _hit.HasFocus(true) ? 1f : 0f;
         _kit.Apply(_track, new UiFx(Fill: _on ? "primary.fill" : "surface.sunk", Line: _on ? "primary.line" : "line.control", Pin: _pin, Focus: focus));
         var track = _kit.Tokens.V2("metrics", "size", "switch");
         var inset = (track.Y - _knob.Size.Y) / 2;
@@ -227,7 +227,7 @@ public partial class Fader : Control
             _ticks[i].Size = new Vector2(1, 5);
         }
         _value.Text = _format(_v);
-        var focus = HasFocus() && !Input.IsMouseButtonPressed(MouseButton.Left) ? 1f : 0f;
+        var focus = HasFocus(true) ? 1f : 0f;
         _kit.Apply(_cap, new UiFx(Fill: "surface.raised", Line: _dragging ? "primary.line" : "line.control", Pin: _pin, Focus: focus), remember: false);
     }
 

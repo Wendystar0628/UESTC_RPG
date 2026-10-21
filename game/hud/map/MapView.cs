@@ -64,23 +64,3 @@ public sealed class MapGeo(GeoFrame geo)
         return FormattableString.Invariant($"{Math.Abs(lat):0.0000}°{(lat >= 0 ? 'N' : 'S')} {Math.Abs(lon):0.0000}°{(lon >= 0 ? 'E' : 'W')}");
     }
 }
-
-/// <summary>临界阻尼弹簧（阻尼比 1）：可被打断的跟随，不过冲（UI-VISUAL）。</summary>
-public struct Spring(float value, float response)
-{
-    public float Value = value;
-    private float _velocity;
-    private readonly float _omega = 2 * MathF.PI / MathF.Max(response, 1e-3f);
-
-    public float Step(float target, float dt)
-    {
-        var x = Value - target;
-        var e = MathF.Exp(-_omega * dt);
-        var next = (x + (_velocity + _omega * x) * dt) * e;
-        _velocity = (_velocity - _omega * (_velocity + _omega * x) * dt) * e;
-        Value = target + next;
-        return Value;
-    }
-
-    public void Snap(float v) { Value = v; _velocity = 0; }
-}

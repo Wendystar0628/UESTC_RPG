@@ -43,7 +43,7 @@ public partial class Dropdown : OptionButton
         // 展开框的颜色要在展开前就位：鼠标进入、取得焦点、按下时都先对一次
         drop.MouseEntered += () => { drop._hover = true; drop.SyncPopupTheme(); drop.Refresh(); };
         drop.MouseExited += () => { drop._hover = false; drop.Refresh(); };
-        drop.FocusEntered += () => { drop._focus = !Input.IsMouseButtonPressed(MouseButton.Left); drop.SyncPopupTheme(); drop.Refresh(); };
+        drop.FocusEntered += () => { drop._focus = drop.HasFocus(true); drop.SyncPopupTheme(); drop.Refresh(); };
         drop.FocusExited += () => { drop._focus = false; drop.Refresh(); };
         drop.ButtonDown += drop.SyncPopupTheme;
         parent.AddChild(drop);

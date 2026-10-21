@@ -51,9 +51,11 @@ public partial class LayerList : Control
             button.SizeFlagsHorizontal = SizeFlags.ExpandFill;
             button.ClipText = true;
             button.TextOverrunBehavior = TextServer.OverrunBehavior.TrimEllipsis;
-            button.GuiInput += ev => OnRowInput(button, ev, row);
             _buttons[i] = button;
         }
+        // 方向键用原生焦点移动；首末行的上、下邻居指向自身，到头不外溢。
+        _buttons[0].FocusNeighborTop = new NodePath(".");
+        _buttons[^1].FocusNeighborBottom = new NodePath(".");
 
         ctx.Ui.Text(stack, ctx.T("map.legend.title"), "mono-caps", "text.2");
         for (var i = 0; i < LegendKeys.Length; i++)
@@ -78,7 +80,7 @@ public partial class LayerList : Control
 
     public void FocusFirst() => _buttons[0].GrabFocus();
 
-    public override void _Draw()
+    public void RedrawGlyphs()
     {
         foreach (var glyph in _glyphs) glyph.QueueRedraw();
     }
@@ -107,18 +109,6 @@ public partial class LayerList : Control
             _buttons[i].Selected = on;
             _buttons[i].AccessibilityName = _buttons[i].Text;
         }
-    }
-
-    private void OnRowInput(TechButton button, InputEvent ev, int row)
-    {
-        if (ev is not InputEventKey { Pressed: true }) return;
-        if (ev.IsActionPressed("ui_down", allowEcho: true) && row + 1 < _buttons.Length)
-            _buttons[row + 1].GrabFocus();
-        else if (ev.IsActionPressed("ui_up", allowEcho: true) && row > 0)
-            _buttons[row - 1].GrabFocus();
-        else return;
-        _ctx.KeyboardFocus = true;
-        button.AcceptEvent();
     }
 
     /// <summary>图例图形只在自身的小画布内使用坐标。</summary>
