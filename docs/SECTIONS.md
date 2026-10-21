@@ -1387,10 +1387,10 @@
 `docs/systems/SYS-WALK-BOUNDS-可行走范围、边界与碰撞.md` · 8.9k 字 · 可行走范围与禁行区、边界收口与隐形墙、楼内的门与电梯（含自动门运行时）、涉水游泳回位与安全点、行走走廊与路线、碰撞生成与就绪、导航图
 关键词：可行走范围、可行走数据、禁行区、高度场地面、边界收口、隐形墙、校界缓停、碰撞顶加高、水平外扩、安全点、回位、涉水、开放泳区、游泳、碰撞就绪、自动门、电梯关门换位、行走走廊、推荐路线、导航图、路线预览、所在空间、碰撞级 C、SurfaceTag、FootMat、WalkClass、Collider、ICollisionWorld
 
-- SYS-WALK-BOUNDS §0 结论 · L22 · 709
+- SYS-WALK-BOUNDS §0 结论 · L22 · 712
   - ★ SYS-WALK-BOUNDS §0.1 接入要点 · L31 · 400
 - SYS-WALK-BOUNDS §1 可行走范围 · L41 · 746
-- SYS-WALK-BOUNDS §2 边界收口 · L60 · 780
+- SYS-WALK-BOUNDS §2 边界收口 · L60 · 824
 - SYS-WALK-BOUNDS §3 楼内的门与电梯 · L81 · 1.3k
 - SYS-WALK-BOUNDS §4 水、游泳、回位与安全点 · L104 · 955
 - SYS-WALK-BOUNDS §5 行走走廊与节奏 · L129 · 188
