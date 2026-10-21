@@ -187,7 +187,6 @@ internal sealed class HudResidents
     public void Refresh()
     {
         _refreshClock = 0;
-        if (_pages.Title.Visible) _pages.Title.Sync();
         SyncNotices();
         if (_resident is not { } r) return;
         if (r.Speed.IsVisibleInTree()) r.Speed.Sync();

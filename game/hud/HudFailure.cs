@@ -17,7 +17,7 @@ internal sealed class HudFailure
     private readonly CanvasLayer _owner;
     private readonly HudRootDependencies _dependencies;
     private readonly HudView _view;
-    private readonly IAppFrontispiecePresentation _frontispiece;
+    private readonly HudFrontispiece _frontispiece;
     private readonly Action _syncInput;
     private CancellationTokenSource _lifetime = null!;
     private IAppStartupFailureSession? _session;
@@ -30,7 +30,7 @@ internal sealed class HudFailure
     private bool _acknowledged;
 
     public HudFailure(CanvasLayer owner, HudRootDependencies dependencies, HudView view,
-        IAppFrontispiecePresentation frontispiece, Action syncInput)
+        HudFrontispiece frontispiece, Action syncInput)
     {
         _owner = owner;
         _dependencies = dependencies;
@@ -90,8 +90,8 @@ internal sealed class HudFailure
             Active = true;
             _dependencies.InputRouter.SetInterfaceMode(true);
             _syncInput();
-            // 背景保持扉页雾色：扉页已在时只是等它画稳，不在时由它补上。
-            await _frontispiece.Show().WaitAsync(lifetime);
+            // 背景只留扉页层的雾色，不带静帧（SYS-TITLE）。
+            await _frontispiece.ShowFog().WaitAsync(lifetime);
             lifetime.ThrowIfCancellationRequested();
             if (_retry!.IsVisibleInTree()) _retry.GrabFocus();
             await FrameAwaiter.ReadyDrawAsync(_owner, CardReady, TimeSpan.FromSeconds(BootTuning.StalledSeconds), lifetime);

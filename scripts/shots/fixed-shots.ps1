@@ -45,13 +45,16 @@ try {
             $name = $columns[0].Trim()
             if ($name -notin $names) { continue }
             $pose = $columns[1].Trim()
+            # 开始页与失败页没有世界，不给位姿，拍摄标识用 ui。
+            $shot = if ($pose -eq '-') { 'ui' } else { $pose }
+            $poseArguments = @(if ($pose -ne '-') { "--pose=$pose" })
             $pageArguments = @('--path', "$repo\game", '--windowed', '--resolution', '1920x1080', '--rendering-driver', 'd3d12', '--fixed-fps', '60',
-                '--', "--shots=$pose", "--pose=$pose", "--out=$out", '--clock=17.5', '--season=autumn', '--weather=clear',
+                '--', "--shots=$shot") + $poseArguments + @("--out=$out", '--clock=17.5', '--season=autumn', '--weather=clear',
                 '--anim=240', '--flow=0', '--ui=1', '--seed=1', '--weather-seed=1', '--quality=fine', '--map=qingshuihe', '--save=off', '--audio=off')
             $pageArguments += @($columns[2].Trim() -split '\s+')
             $result = Invoke-UESTCProcess $godot $pageArguments $repo (Join-Path $out "$name.log") -Visible -IsolatedDesktop -TimeoutSeconds 900
             Assert-UESTCCleanGodotLog $result
-            $image = Join-Path $out "$pose.png"
+            $image = Join-Path $out "$shot.png"
             if (-not (Test-Path -LiteralPath $image)) { throw "界面没出图：$name" }
             Move-Item -LiteralPath $image -Destination (Join-Path $out "$name.png")
             "{0}：出图" -f $name

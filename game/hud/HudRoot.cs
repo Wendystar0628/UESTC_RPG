@@ -25,6 +25,7 @@ public partial class HudRoot : CanvasLayer, IBootParticipant, IAppLoadingPresent
     private HudResidents _residents = null!;
     private HudInput _input = null!;
     private HudLoading _loading = null!;
+    private HudFrontispiece _frontispiece = null!;
     private HudFailure _failure = null!;
     private bool _initialized, _galleryTitle;
 
@@ -40,10 +41,14 @@ public partial class HudRoot : CanvasLayer, IBootParticipant, IAppLoadingPresent
     public bool Active => _loading.Active;
     public bool IsCovered => _loading.IsCovered;
     public float Progress => _loading.Progress;
-    bool IAppScreenCoverage.IsCovered => ((IAppScreenCoverage)_loading).IsCovered;
+    bool IAppScreenCoverage.IsCovered => _loading.IsCovered || _frontispiece.IsCovered;
     public IAppLoadingLease Show(EnterRequest? request = null) => _loading.Show(request);
-    Task IAppFrontispiecePresentation.Show() => ((IAppFrontispiecePresentation)_loading).Show();
-    Task IAppFrontispiecePresentation.Hide(float seconds) => ((IAppFrontispiecePresentation)_loading).Hide(seconds);
+    async Task IAppFrontispiecePresentation.Show()
+    {
+        await ((IAppFrontispiecePresentation)_frontispiece).Show();
+        SyncTitleTheme();
+    }
+    Task IAppFrontispiecePresentation.Hide(float seconds) => ((IAppFrontispiecePresentation)_frontispiece).Hide(seconds);
     Task<bool> IAppStartupFailurePresentation.Show(IAppStartupFailureSession session)
     {
         ArgumentNullException.ThrowIfNull(session);
@@ -71,6 +76,7 @@ public partial class HudRoot : CanvasLayer, IBootParticipant, IAppLoadingPresent
         _view.Enter();
         _input.Enter();
         _residents.Enter();
+        _frontispiece.Enter();
         _loading.Enter();
         _failure.Enter();
         _pages.StateChanged += SyncCorners;
@@ -84,8 +90,9 @@ public partial class HudRoot : CanvasLayer, IBootParticipant, IAppLoadingPresent
         _view = new HudView(this, _dependencies);
         _pages = new HudPages(this, _dependencies, _view);
         _residents = new HudResidents(_dependencies, _view, _pages);
+        _frontispiece = new HudFrontispiece(this, _dependencies, _view);
         _loading = new HudLoading(this, _dependencies, _view, () => _input.SyncHostInput());
-        _failure = new HudFailure(this, _dependencies, _view, _loading, () => _input.SyncHostInput());
+        _failure = new HudFailure(this, _dependencies, _view, _frontispiece, () => _input.SyncHostInput());
         _input = new HudInput(this, _dependencies, _view, _pages, _residents, () => _loading.Active, () => _failure.Active);
         _initialized = true;
     }
@@ -106,6 +113,7 @@ public partial class HudRoot : CanvasLayer, IBootParticipant, IAppLoadingPresent
         if (!_initialized) return;
         _failure.Exit();
         _loading.Exit();
+        _frontispiece.Exit();
         // Stop observing host children before page/resident removal emits child signals.
         _input.Exit();
         _pages.StateChanged -= SyncCorners;
@@ -156,8 +164,12 @@ public partial class HudRoot : CanvasLayer, IBootParticipant, IAppLoadingPresent
                 break;
             default: throw new InvalidOperationException("Unknown application state.");
         }
+        SyncTitleTheme();
         SyncCorners();
     }
+
+    /// <summary>开始页期间没有世界，自动主题取浅色（SYS-TITLE §2.2）；其余状态按世界太阳高度。</summary>
+    private void SyncTitleTheme() => _dependencies.ThemeClock.SetTitle(_dependencies.Flow.State == AppState.Title);
 
     private void OnFlowChanged(AppState previous, AppState current)
     {

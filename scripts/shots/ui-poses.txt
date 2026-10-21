@@ -1,6 +1,6 @@
-# 界面轮：名字 | 已登记机位 | 真实启动页面与模式；1920×1080、ui=1、无声由 fixed-shots.ps1 统一指定。
+# 界面轮：名字 | 已登记机位（开始页与失败页没有世界，写 -） | 真实启动页面与模式；1920×1080、ui=1、无声由 fixed-shots.ps1 统一指定。
 # 用法：powershell -NoProfile -File scripts/shots/fixed-shots.ps1 -Ui [-Build] [-Only 名字,名字]
-01-开始页 | T0 | --mode=fly --title=1 --ui-gallery=title
+01-开始页 | - | --mode=fly --title=1 --ui-gallery=title
 02-行走HUD | P02 | --mode=walk --title=0 --ui-gallery=hud
 03-地图界面 | P02 | --mode=fly --title=0 --ui-gallery=atlas
-04-启动失败页 | T0 | --mode=fly --title=1 --ui-gallery=failure
+04-启动失败页 | - | --mode=fly --title=1 --ui-gallery=failure

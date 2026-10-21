@@ -79,6 +79,7 @@ public sealed class HudLifetimeTests
         var worldBaseline = Subscribers(world, "InstanceChanged");
         camera.Mode = ViewMode.Walk;
         world.Freeze(13, Season.Summer, 0);
+        world.CompleteRestore();
         AssertThat(model.Mode == camera.Mode && model.Clock == world.Clock && model.Season == world.SeasonTarget && model.Speed == camera.Speed)
             .OverrideFailureMessage("HUD readouts required a refresh before exposing the current source values.").IsTrue();
         camera.Mode = ViewMode.Fly;
@@ -187,7 +188,6 @@ public sealed class HudLifetimeTests
         public SlotId? Active => throw new NotSupportedException();
         public bool Busy => throw new NotSupportedException();
         public SaveState State => throw new NotSupportedException();
-        public bool HasPendingPose => throw new NotSupportedException();
         public event Action? SlotsChanged
         {
             add => throw new NotSupportedException();
@@ -195,11 +195,10 @@ public sealed class HudLifetimeTests
         }
         public void Request(SaveReason reason) => throw new NotSupportedException();
         public Task<SaveResult> SaveNow(SaveReason reason) => throw new NotSupportedException();
-        public Task<LoadResult> Load(SlotId slot, LoadScope scope = LoadScope.Full) => throw new NotSupportedException();
-        public Task CompleteResume() => throw new NotSupportedException();
+        public Task<LoadResult> Load(SlotId slot) => throw new NotSupportedException();
         public Task<LoadResult> LoadFile(string path) => throw new NotSupportedException();
-        public Task<LoadResult> NewGame(SlotId slot, uint? seed = null, WorldPreset? start = null) => throw new NotSupportedException();
-        public Task<LoadResult> RestoreTitlePreview() => throw new NotSupportedException();
+        public Task<LoadResult> NewGame(SlotId? slot, uint? seed = null, WorldPreset? start = null, NewGameBoot? boot = null) =>
+            throw new NotSupportedException();
         public Task<SaveResult> FlushForQuit(SaveReason reason, TimeSpan timeout) => throw new NotSupportedException();
         public byte[]? Thumbnail(SlotId slot) => throw new NotSupportedException();
     }

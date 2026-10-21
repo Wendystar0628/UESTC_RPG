@@ -10,8 +10,8 @@ using System.Threading;
 
 namespace Campus.Hud;
 
-/// <summary>Serializes loading leases and frontispiece transitions, and tracks actual viewport coverage.</summary>
-internal sealed class HudLoading : IAppLoadingPresentation, IAppScreenCoverage, IAppFrontispiecePresentation
+/// <summary>Serializes loading leases and tracks their actual viewport coverage.</summary>
+internal sealed class HudLoading : IAppLoadingPresentation
 {
     private readonly CanvasLayer _owner;
     private readonly HudRootDependencies _dependencies;
@@ -38,43 +38,34 @@ internal sealed class HudLoading : IAppLoadingPresentation, IAppScreenCoverage, 
         RenderingServer.Singleton.FramePostDraw -= OnCoverageDrawn;
         _lifetime.Cancel();
         _lifetime.Dispose();
-        _loadingCovered = _frontispieceCovered = false;
+        _loadingCovered = false;
         _loadingLeases.Clear();
-        _loadingTransition = _frontispieceTransition = Task.CompletedTask;
+        _loadingTransition = Task.CompletedTask;
         if (_loading is { } page)
         {
             page.GetParent().RemoveChild(page);
             page.QueueFree();
             _loading = null;
         }
-        _view.Frontispiece.Visible = false;
         _loadingRequest = null;
-        _loadingRetiresFrontispiece = false;
         Progress = 0;
     }
 
     private LoadingPage? _loading;
     private EnterRequest? _loadingRequest;
     private bool _loadingCovered;
-    private bool _loadingRetiresFrontispiece;
     private Vector2 _loadingDrawSize;
     private readonly List<LoadingLease> _loadingLeases = [];
     private Task _loadingTransition = Task.CompletedTask;
 
-    private bool _frontispieceCovered;
-    private Vector2 _frontispieceDrawSize;
-    private Task _frontispieceTransition = Task.CompletedTask;
-
     public bool Active => _loading is not null;
-    public bool IsCovered => _loadingCovered && _loading is { } page && CoversViewport(page, _loadingDrawSize);
-    bool IAppScreenCoverage.IsCovered => IsCovered || _frontispieceCovered && CoversViewport(_view.Frontispiece, _frontispieceDrawSize);
+    public bool IsCovered => _loadingCovered && _loading is { } page && CoversViewport(_owner, page, _loadingDrawSize);
     public float Progress { get; private set; }
 
     public IAppLoadingLease Show(EnterRequest? request = null)
     {
         var lease = new LoadingLease(this, request);
         _loadingLeases.Add(lease);
-        _loadingRetiresFrontispiece |= request is not null;
         var previous = _loadingTransition;
         _loadingTransition = ShowLoading(previous, lease, _lifetime.Token);
         lease.Covered = _loadingTransition;
@@ -99,7 +90,7 @@ internal sealed class HudLoading : IAppLoadingPresentation, IAppScreenCoverage, 
         Progress = 0;
         _loading.Report(0, 0, 1);
         await FrameAwaiter.ReadyDrawAsync(_owner, () => _loading is { } page &&
-            CoversViewport(page, _owner.GetViewport().GetVisibleRect().Size), TimeSpan.FromSeconds(BootTuning.StalledSeconds), lifetime);
+            CoversViewport(_owner, page, _owner.GetViewport().GetVisibleRect().Size), TimeSpan.FromSeconds(BootTuning.StalledSeconds), lifetime);
         lifetime.ThrowIfCancellationRequested();
         _loadingDrawSize = _owner.GetViewport().GetVisibleRect().Size;
         _loadingCovered = true;
@@ -135,10 +126,7 @@ internal sealed class HudLoading : IAppLoadingPresentation, IAppScreenCoverage, 
         if (_loading is null || _loadingLeases.Count != 0) return;
         // 全部准备完成的那一帧必须先呈现；不在这里替流程补满进度。
         await FrameAwaiter.ReadyDrawAsync(_owner, () => _loading is { } page &&
-            CoversViewport(page, _owner.GetViewport().GetVisibleRect().Size), TimeSpan.FromSeconds(BootTuning.StalledSeconds), lifetime);
-        lifetime.ThrowIfCancellationRequested();
-        if (_loadingLeases.Count != 0) return;
-        if (_loadingRetiresFrontispiece) await ((IAppFrontispiecePresentation)this).Hide(0);
+            CoversViewport(_owner, page, _owner.GetViewport().GetVisibleRect().Size), TimeSpan.FromSeconds(BootTuning.StalledSeconds), lifetime);
         lifetime.ThrowIfCancellationRequested();
         if (_loadingLeases.Count != 0) return;
         _loadingCovered = false;
@@ -150,71 +138,13 @@ internal sealed class HudLoading : IAppLoadingPresentation, IAppScreenCoverage, 
         _syncInput();
         if (_loadingRequest?.Kind == EnterKind.NewGame) ShowFirstGuide();
         _loadingRequest = null;
-        _loadingRetiresFrontispiece = false;
     }
 
-    Task IAppFrontispiecePresentation.Show()
+    /// <summary>The layer is fully opaque, spans the visible viewport, and was drawn at the current viewport size.</summary>
+    internal static bool CoversViewport(CanvasLayer owner, Control layer, Vector2 drawnSize)
     {
-        var previous = _frontispieceTransition;
-        return _frontispieceTransition = ShowFrontispiece(previous, _lifetime.Token);
-    }
-
-    private async Task ShowFrontispiece(Task previous, CancellationToken lifetime)
-    {
-        await previous.WaitAsync(lifetime);
-        lifetime.ThrowIfCancellationRequested();
-        _view.Frontispiece.Modulate = Colors.White;
-        _view.Frontispiece.Visible = true;
-        await FrameAwaiter.StartupReadyDrawAsync(_owner, () => CoversViewport(_view.Frontispiece, _owner.GetViewport().GetVisibleRect().Size),
-            TimeSpan.FromSeconds(BootTuning.StalledSeconds), lifetime);
-        lifetime.ThrowIfCancellationRequested();
-        _frontispieceDrawSize = _owner.GetViewport().GetVisibleRect().Size;
-        _frontispieceCovered = true;
-    }
-
-    Task IAppFrontispiecePresentation.Hide(float seconds)
-    {
-        var previous = _frontispieceTransition;
-        return _frontispieceTransition = HideFrontispiece(previous, seconds, _lifetime.Token);
-    }
-
-    private async Task HideFrontispiece(Task previous, float seconds, CancellationToken lifetime)
-    {
-        await previous.WaitAsync(lifetime);
-        lifetime.ThrowIfCancellationRequested();
-        if (!_view.Frontispiece.Visible) return;
-        _frontispieceCovered = false;
-        var duration = _dependencies.Motion.Fade(seconds);
-        if (duration > 0)
-        {
-            var tween = _view.Frontispiece.CreateTween();
-            tween.TweenProperty(_view.Frontispiece, "modulate:a", 0f, duration);
-            await AwaitTween(tween, lifetime);
-            lifetime.ThrowIfCancellationRequested();
-        }
-        _view.Frontispiece.Visible = false;
-    }
-
-    private static async Task AwaitTween(Tween tween, CancellationToken lifetime)
-    {
-        var completion = new TaskCompletionSource();
-        void Finished() => completion.TrySetResult();
-        tween.Finished += Finished;
-        try { await completion.Task.WaitAsync(lifetime); }
-        finally
-        {
-            if (GodotObject.IsInstanceValid(tween))
-            {
-                tween.Finished -= Finished;
-                if (lifetime.IsCancellationRequested) tween.Kill();
-            }
-        }
-    }
-
-    private bool CoversViewport(Control layer, Vector2 drawnSize)
-    {
-        if (!_owner.IsInsideTree() || !_owner.Visible || !layer.IsVisibleInTree() || layer.Modulate.A < 1f || layer.SelfModulate.A < 1f) return false;
-        var viewport = _owner.GetViewport().GetVisibleRect();
+        if (!owner.IsInsideTree() || !owner.Visible || !layer.IsVisibleInTree() || layer.Modulate.A < 1f || layer.SelfModulate.A < 1f) return false;
+        var viewport = owner.GetViewport().GetVisibleRect();
         var rect = layer.GetGlobalRect();
         return drawnSize == viewport.Size && viewport.Size.X > 0 && viewport.Size.Y > 0 &&
             rect.Position.X <= viewport.Position.X && rect.Position.Y <= viewport.Position.Y &&
@@ -225,8 +155,7 @@ internal sealed class HudLoading : IAppLoadingPresentation, IAppScreenCoverage, 
     {
         if (!RenderingServer.RenderLoopEnabled) return;
         var size = _owner.GetViewport().GetVisibleRect().Size;
-        if (_loadingCovered && _loading is { } page && CoversViewport(page, size)) _loadingDrawSize = size;
-        if (_frontispieceCovered && CoversViewport(_view.Frontispiece, size)) _frontispieceDrawSize = size;
+        if (_loadingCovered && _loading is { } page && CoversViewport(_owner, page, size)) _loadingDrawSize = size;
     }
 
     private sealed class LoadingLease(HudLoading owner, EnterRequest? request) : IAppLoadingLease

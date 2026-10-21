@@ -1,5 +1,6 @@
 using Campus.Contracts;
 using Campus.Contracts.AppFlow;
+using Campus.Contracts.Maps;
 using Campus.Contracts.Save;
 using Campus.Hud.Style;
 using Campus.Hud.Widgets;
@@ -137,18 +138,16 @@ public partial class TitleMenu : Control
         _items.Clear();
     }
 
-    public void Sync()
+    private void Sync()
     {
-        var world = Svc<IWorldState>();
-        _data.Text = $"{UiKit.T("hud.season." + TimeCard.SeasonCode(world.SeasonTarget).ToLowerInvariant())} · " +
+        // 开始页没有世界实例：片名块写最近存档的世界状态，没有存档写默认状态。
+        var world = TitleWorld.Resolve(Svc<ISaveService>(), Svc<IMapService>());
+        _data.Text = $"{UiKit.T("hud.season." + TimeCard.SeasonCode(world.Season).ToLowerInvariant())} · " +
                      $"{WorldTime.FormatClock(world.Clock)} · " +
-                     $"{UiKit.T("weather.cell." + WeatherStrip.CellKey(WeatherStrip.CellOf(world.Weather.Kind)))}";
-        SlotInfo? latest = null;
-        var saves = Svc<ISaveService>();
-        if (saves.Continue is { } id) latest = saves.Slots.FirstOrDefault(s => s.Slot == id);
-        _continue.Off = latest?.Meta is null;
-        _continueInfo.Visible = latest?.Meta is not null;
-        if (latest?.Meta is { } meta) _continueInfo.Text = SavePage.Summary(meta);
+                     $"{UiKit.T("weather.cell." + WeatherStrip.CellKey(WeatherStrip.CellOf(world.Weather)))}";
+        _continue.Off = world.Meta is null;
+        _continueInfo.Visible = world.Meta is not null;
+        if (world.Meta is { } meta) _continueInfo.Text = SavePage.Summary(meta);
     }
 
     private void Pick(int index)
