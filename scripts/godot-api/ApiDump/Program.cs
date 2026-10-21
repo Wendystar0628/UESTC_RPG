@@ -28,9 +28,9 @@ static class Program
         var types = new List<object>();
         foreach (var asm in asms)
         {
-            Type[] all;
-            try { all = asm.GetExportedTypes(); }
-            catch (ReflectionTypeLoadException e) { all = e.Types.Where(t => t != null).ToArray()!; }
+            // A load failure reaches the command boundary intact: stderr contains the full exception,
+            // the process exits unsuccessfully, and no partial type catalogue is written (ENG-ARCH).
+            var all = asm.GetExportedTypes();
             foreach (var t in all.OrderBy(t => t.FullName, StringComparer.Ordinal))
                 types.Add(DumpType(t, asm.GetName().Name!));
         }

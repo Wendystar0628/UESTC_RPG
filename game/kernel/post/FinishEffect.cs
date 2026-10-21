@@ -98,7 +98,7 @@ public partial class FinishEffect : CompositorEffect
         if (effectCallbackType != (int)EffectCallbackTypeEnum.PostTransparent) return;
         if (Inputs is null || !Inputs.TryTakeFinish(out var frame)) return;
         try { Render(frame, renderData); }
-        catch (Exception error) { Interlocked.CompareExchange(ref _error, error, null); }
+        catch (Exception error) { EffectFailure.Record(ref _error, error); }
     }
 
     private void Render(in PostFrame frame, RenderData renderData)

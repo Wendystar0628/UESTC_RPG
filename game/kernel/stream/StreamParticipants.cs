@@ -199,7 +199,7 @@ internal sealed class StreamParticipants(StreamDirector host, ServiceRegistry re
             if (participant.Failure is { } error) _host.RecordFailure(error);
     }
 
-    private void FailParticipant(TileGroup group, ParticipantTile item, Exception error)
+    private void FailParticipant(TileGroup group, ParticipantTile item, [FailureHandler("ENG-PERF-STREAM")] Exception error)
     {
         _host.Fail(group.Tile, error, item);
     }

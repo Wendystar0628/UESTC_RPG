@@ -25,7 +25,7 @@ public interface IStageGateHost
     void CheckActive();
     void SyncView();
     Task Close();
-    void Fail(Exception error);
+    void Fail([FailureHandler("SYS-TITLE")] Exception error);
 }
 
 /// <summary>

@@ -96,7 +96,7 @@ public partial class FaunaNode : Node, IMapAware, IViewContentReadiness, IViewCa
         _mount = KernelServices.Get<IStreamMountQueue>();
         _rig = KernelServices.Get<ICameraRig>();
         _reflection = KernelServices.Get<IReflectionWorld>();
-        _tileMounts.Initialize(_host, InitializeTile, VisibleNow, error => _error = error);
+        _tileMounts.Initialize(_host, InitializeTile, VisibleNow, RecordFailure);
         _world.InstanceChanged += OnWorldInstanceChanged;
     }
 
@@ -156,7 +156,23 @@ public partial class FaunaNode : Node, IMapAware, IViewContentReadiness, IViewCa
             }
             _force = false;
         }
-        catch (Exception error) { _error = error; }
+        catch (Exception error) { RecordFailure(error); }
+    }
+
+    // Both readiness consumers observe the original producer failure (ENG-PERF-STREAM).
+    private void RecordFailure([FailureHandler("ENG-PERF-STREAM")] Exception error)
+    {
+        if (_error is { } previous && Contains(previous, error)) return;
+        _error = _error is null ? error : new AggregateException(_error, error);
+
+        static bool Contains(Exception retained, Exception next)
+        {
+            if (ReferenceEquals(retained, next)) return true;
+            if (retained is AggregateException aggregate)
+                foreach (var inner in aggregate.InnerExceptions)
+                    if (Contains(inner, next)) return true;
+            return false;
+        }
     }
 
     private FaunaSet? Target(FaunaSiteContent site) =>

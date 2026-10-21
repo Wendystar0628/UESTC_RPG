@@ -131,10 +131,26 @@ public partial class RenderHost : Node3D, IRenderHost, IRenderReadiness, IMapAwa
         catch (Exception error)
         {
             DiagnosticLog.Error($"[ENG-ARCH][phase={phase}][handle={handle}]", error);
-            Failure = Failure is null ? error : new AggregateException(Failure, error);
+            RecordFailure(error);
             if (!_entries.ContainsKey(handle)) return;
             try { Unmount(new(handle)); }
-            catch (Exception cleanup) { Failure = new AggregateException(Failure, cleanup); }
+            catch (Exception cleanup) { RecordFailure(cleanup); }
+        }
+    }
+
+    // Readiness publishes this retained failure to the map loading failure flow (ENG-PERF-STREAM).
+    private void RecordFailure([FailureHandler("ENG-PERF-STREAM")] Exception error)
+    {
+        if (Failure is { } previous && Contains(previous, error)) return;
+        Failure = Failure is null ? error : new AggregateException(Failure, error);
+
+        static bool Contains(Exception retained, Exception next)
+        {
+            if (ReferenceEquals(retained, next)) return true;
+            if (retained is AggregateException aggregate)
+                foreach (var inner in aggregate.InnerExceptions)
+                    if (Contains(inner, next)) return true;
+            return false;
         }
     }
 

@@ -99,7 +99,7 @@ public partial class OutlineEffect : CompositorEffect
         }
         catch (Exception error)
         {
-            Interlocked.CompareExchange(ref _error, error, null);
+            EffectFailure.Record(ref _error, error);
         }
         finally
         {

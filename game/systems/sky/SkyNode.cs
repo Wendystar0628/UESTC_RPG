@@ -71,10 +71,23 @@ public partial class SkyNode : Node, IMapAware, IViewContentReadiness
     {
         if (Failure is not null) return;
         try { UpdateContent(); }
-        catch (Exception error)
+        catch (Exception error) { RecordFailure(error); }
+    }
+
+    // View readiness publishes the retained producer failure to map loading (ENG-PERF-STREAM).
+    private void RecordFailure([FailureHandler("ENG-PERF-STREAM")] Exception error)
+    {
+        if (Failure is { } previous && Contains(previous, error)) return;
+        Failure = Failure is null ? error : new AggregateException(Failure, error);
+        KernelServices.Get<IDiagnosticLog>().Error("ART-SKYLIGHT-ATMOSPHERE: sky content failed:", error);
+
+        static bool Contains(Exception retained, Exception next)
         {
-            Failure = error;
-            KernelServices.Get<IDiagnosticLog>().Error("ART-SKYLIGHT-ATMOSPHERE: sky content failed:", error);
+            if (ReferenceEquals(retained, next)) return true;
+            if (retained is AggregateException aggregate)
+                foreach (var inner in aggregate.InnerExceptions)
+                    if (Contains(inner, next)) return true;
+            return false;
         }
     }
 

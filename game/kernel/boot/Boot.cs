@@ -1,3 +1,4 @@
+using Campus.Contracts;
 using Campus.Kernel.Diagnostics;
 using Godot;
 using Campus.Kernel.Registry;
@@ -28,7 +29,8 @@ public partial class Boot : Node
         if (BuildInfo.Kind == "dev" && !profile.StartsWith("UESTC_", StringComparison.Ordinal))
             Reject("Development build must use an isolated user directory.");
     }
-    private void Reject(string message, Exception? error = null)
+    // Reject the command-line run with its original failure and a nonzero exit (ENG-GATES-SHOTS).
+    private void Reject(string message, [FailureHandler("ENG-GATES-SHOTS")] Exception? error = null)
     {
         Failed = true;
         if (error is null) DiagnosticLog.Error("Boot", message);

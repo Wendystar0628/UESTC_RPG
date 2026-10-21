@@ -137,7 +137,23 @@ public sealed partial class VegetationRuntime : Node, IMapAware, IViewContentRea
             _worldReset = false;
             _capture = null;
         }
-        catch (Exception error) { Failure = error; }
+        catch (Exception error) { RecordFailure(error); }
+    }
+
+    // StreamDirector and view readiness publish this same producer failure (ENG-PERF-STREAM).
+    private void RecordFailure([FailureHandler("ENG-PERF-STREAM")] Exception error)
+    {
+        if (Failure is { } previous && Contains(previous, error)) return;
+        Failure = Failure is null ? error : new AggregateException(Failure, error);
+
+        static bool Contains(Exception retained, Exception next)
+        {
+            if (ReferenceEquals(retained, next)) return true;
+            if (retained is AggregateException aggregate)
+                foreach (var inner in aggregate.InnerExceptions)
+                    if (Contains(inner, next)) return true;
+            return false;
+        }
     }
 
     private void FreeAll()
@@ -218,7 +234,7 @@ public sealed partial class VegetationRuntime : Node, IMapAware, IViewContentRea
             return true;
         }
         protected override void Release() => _tile.Free();
-        protected override void Failed(Exception error) => _owner.Failure = error;
+        protected override void Failed(Exception error) => _owner.RecordFailure(error);
     }
 
     /// <summary>One mother model's pools: its trees' records, their buckets and the kernel pools fed from them.</summary>
