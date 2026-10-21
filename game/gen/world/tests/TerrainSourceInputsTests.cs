@@ -51,4 +51,31 @@ public sealed class TerrainSourceInputsTests
         string Prepare(TerrainOp local, TerrainOp distant) => TerrainSourceInputs.Prepare(context, [Source([local, distant])])
             .Cells.Single(cell => cell.Cell == default).Stamp;
     }
+
+    [TestCase, TestCategory(TestReason.Regression)]
+    public void SourcePreparationPreservesFirstReferenceFailureAndOperationOrder()
+    {
+        var road = new NetworkLine(new("fixture:automatic-road"), new([new(-20, 0), new(20, 0)]), 2.5f)
+            { Props = JsonSerializer.SerializeToElement(new { highway = "footway" }) };
+        var pad = new TerrainPadOp("design:terrain:missing-pad", "missing reference", new("fixture:missing-pad"), 6) { Zone = Zone };
+        var first = new TerrainCorridorOp("design:terrain:z-first", "missing reference", new("fixture:missing-first"),
+            [new(0, 0), new(40, 0)], 0, Defaults.CorridorShoulder) { Zone = Zone };
+        var second = first with { Id = "design:terrain:a-second", Road = new("fixture:missing-second") };
+        var context = Context([]);
+        var automatic = context with { Network = new([road], [], [], [], []) };
+        var invalidAutomatic = context with { Network = new([road with { Width = 0 }], [], [], [], []) };
+        foreach (var (input, expectedFile, expectedEntry) in new[]
+        {
+            (context, "world", pad.Id),
+            (automatic, "world", first.Id),
+            (invalidAutomatic, "world", road.Id.Value)
+        })
+        {
+            WorldDataException? failure = null;
+            try { TerrainSourceInputs.Prepare(input, [Source([pad, first, second])]); }
+            catch (WorldDataException error) { failure = error; }
+            AssertThat(failure is not null && failure.File == expectedFile && failure.Entry == expectedEntry)
+                .OverrideFailureMessage("Source preparation changed the original first reference failure or its location.").IsTrue();
+        }
+    }
 }

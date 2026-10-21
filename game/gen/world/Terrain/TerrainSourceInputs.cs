@@ -11,12 +11,18 @@ internal static class TerrainSourceInputs
 {
     private sealed record Source(string Key, string Stamp, MapRect Support, bool ReadsTerrain,
         IReadOnlyList<string> References);
+    private sealed record CorridorExtent(double Shoulder, double Cross);
+    private sealed record CorridorInputs(IReadOnlyDictionary<TerrainCorridorOp, TerrainRoad> Roads,
+        IReadOnlyDictionary<FeatureId, CorridorExtent> Extents);
 
     internal static TerrainInputSummary Prepare(TerrainCompileContext context, IReadOnlyList<TerrainSource> files)
     {
         var sources = new List<Source>();
         var references = new TerrainReferences(context);
         var operations = files.OrderBy(file => file.File, StringComparer.Ordinal).SelectMany(file => file.Data.Ops).ToArray();
+        CorridorInputs? corridors = null;
+        // Keep the first road-reference validation at its original point in source preparation.
+        CorridorInputs Corridors() => corridors ??= PrepareCorridors(operations, references);
         var range = TerrainFieldGrading.SourceRangeBound(operations);
         var waterGrade = new[] { context.Defaults?.LakeBankGrade ?? 1, context.Defaults?.ChannelBankGrade ?? 1 }
             .Concat(operations.OfType<TerrainLakeOp>().Select(op => TerrainReferences.Grade(op.Bank.Slope!)))
@@ -26,8 +32,8 @@ internal static class TerrainSourceInputs
             .Concat(operations.OfType<TerrainChannelOp>().Where(op => !op.Dry).Select(op => op.Depth)).Max();
         var waterReach = (range + TerrainSampling.MaximumHeight + waterDepth) / waterGrade + 4;
         AddFeatureSources(context, operations, references, waterReach, sources);
-        AddNetworkSources(context, operations, references, range, sources);
-        foreach (var op in operations) sources.Add(OperationSource(op, operations, references, range, waterReach));
+        AddNetworkSources(context, references, Corridors, range, sources);
+        foreach (var op in operations) sources.Add(OperationSource(op, references, Corridors, range, waterReach));
 
         var closures = FreezeDependencies(sources);
         var cells = IndexCellSources(context, sources, closures);
@@ -56,8 +62,19 @@ internal static class TerrainSourceInputs
         }
     }
 
-    private static void AddNetworkSources(TerrainCompileContext context, IReadOnlyList<TerrainOp> operations,
-        TerrainReferences references, double range, List<Source> sources)
+    private static CorridorInputs PrepareCorridors(IReadOnlyList<TerrainOp> operations, TerrainReferences references)
+    {
+        var resolved = operations.OfType<TerrainCorridorOp>()
+            .Select(op => (Op: op, Road: references.Road(op.Road, "world", op.Id))).ToArray();
+        var roads = new Dictionary<TerrainCorridorOp, TerrainRoad>(ReferenceEqualityComparer.Instance);
+        foreach (var pair in resolved) roads[pair.Op] = pair.Road;
+        var extents = resolved.GroupBy(pair => pair.Road.Source).ToDictionary(group => group.Key,
+            group => new CorridorExtent(group.Max(pair => pair.Op.Shoulder), group.Max(pair => Math.Abs(pair.Op.CrossFall))));
+        return new(roads, extents);
+    }
+
+    private static void AddNetworkSources(TerrainCompileContext context, TerrainReferences references,
+        Func<CorridorInputs> corridors, double range, List<Source> sources)
     {
         AddLines("road", context.Network.Roads);
         AddLines("waterway", context.Network.Waterways);
@@ -65,9 +82,9 @@ internal static class TerrainSourceInputs
         AddLines("culvert", context.Network.Culverts);
         foreach (var road in references.AutomaticRoads())
         {
-            var authored = operations.OfType<TerrainCorridorOp>().Where(op => references.Road(op.Road, "world", op.Id).Source == road.Source).ToArray();
-            var shoulder = Math.Max(context.Defaults?.CorridorShoulder ?? 0, authored.Select(op => op.Shoulder).DefaultIfEmpty(0).Max());
-            var cross = Math.Max(TerrainCorridorCompiler.AutomaticRoadCrossFall, authored.Select(op => Math.Abs(op.CrossFall)).DefaultIfEmpty(0).Max());
+            var authored = corridors().Extents.GetValueOrDefault(road.Source);
+            var shoulder = Math.Max(context.Defaults?.CorridorShoulder ?? 0, authored?.Shoulder ?? 0);
+            var cross = Math.Max(TerrainCorridorCompiler.AutomaticRoadCrossFall, authored?.Cross ?? 0);
             sources.Add(new("auto-road/" + road.Source.Value, Stamp(new { road.Source, road.Path.Line, road.Width, road.Kind, footprint = road.Footprint?.Polygons }),
                 RoadBounds(road, shoulder, cross, range), true, ["road/" + road.Source.Value]));
         }
@@ -79,8 +96,8 @@ internal static class TerrainSourceInputs
         }
     }
 
-    private static Source OperationSource(TerrainOp op, IReadOnlyList<TerrainOp> operations,
-        TerrainReferences references, double range, double waterReach)
+    private static Source OperationSource(TerrainOp op, TerrainReferences references,
+        Func<CorridorInputs> corridors, double range, double waterReach)
     {
         var refs = new List<string>();
         MapRect support;
@@ -101,10 +118,11 @@ internal static class TerrainSourceInputs
                 if (pad.Edge is { } edge) refs.Add("feature/" + edge.StructureId);
                 break;
             case TerrainCorridorOp corridor:
-                var road = references.Road(corridor.Road, "world", corridor.Id);
+                var prepared = corridors();
+                var road = prepared.Roads[corridor];
                 // Ranged intervals share one full-road solve and its maximum shoulder/crossfall.
-                var siblings = operations.OfType<TerrainCorridorOp>().Where(other => references.Road(other.Road, "world", other.Id).Source == road.Source).ToArray();
-                support = RoadBounds(road, siblings.Max(other => other.Shoulder), siblings.Max(other => Math.Abs(other.CrossFall)), range);
+                var extent = prepared.Extents[road.Source];
+                support = RoadBounds(road, extent.Shoulder, extent.Cross, range);
                 refs.Add("feature/" + corridor.Road.Value); refs.Add("road/" + road.Source.Value);
                 refs.AddRange(corridor.Steps.Select(step => "feature/" + step.Structure.Value));
                 break;
