@@ -111,7 +111,7 @@ internal sealed class StageStartupFailure(KernelStage stage)
                 }
                 if (_failures.Any(existing => ReferenceEquals(existing, failure))) continue;
                 _failures.Add(failure);
-                DiagnosticLog.Error($"[ENG-ARCH][phase={_failurePhase}]", failure);
+                DiagnosticLog.Error($"[SYS-TITLE][phase={_failurePhase}]", failure);
             }
         }
     }

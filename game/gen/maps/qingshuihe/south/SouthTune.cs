@@ -233,7 +233,7 @@ public static class SouthTune
         public const float GalleryX0 = 10f, GalleryX1 = 62f, GalleryZ0 = -34f, GalleryZ1 = -10f;
         public const float GalleryWalk = 4.0f, GalleryPitch = 4.0f, GalleryColumn = 0.8f, GalleryFascia = 1.4f;
 
-        /// <summary>Rear door (b2.rear) on B2's north-east facade: the porch's sizes.</summary>
+        /// <summary>后入口（interiors.json position） on B2's north-east facade: the porch's sizes.</summary>
         public const float RearLandingWidth = 9f, RearLandingDepth = 3f, RearStepsWidth = 6f, RearTread = 0.33f;
         public const float RearCanopyY = 7.0f, RearColumnRadius = 0.26f;
     }

@@ -38,7 +38,7 @@ public sealed class MainBuildingSite : ZoneSite
 
     /// <summary>
     /// The building's plan, read from the map data (D-239). Front frame F: X along B2's south-west facade (the longest edge of its
-    /// facade outline), +Z outward toward the gate. Rear frame R at the b2.rear door: X reversed, so +Z is outward from the
+    /// facade outline), +Z outward toward the gate. Rear frame R at the 后入口（interiors.json position）: X reversed, so +Z is outward from the
     /// north-east facade. The steps zone is the front steps' footprint in F; RoofY is B2's height from the overlay.
     /// </summary>
     internal sealed record Layout(PlanFrame F, PlanFrame R, float StepsX0, float StepsX1, float StepsZ, float RoofY)
@@ -65,12 +65,7 @@ public sealed class MainBuildingSite : ZoneSite
         var left = Side(SouthIds.MainStepsLeft);
         var right = Side(SouthIds.MainStepsRight);
         var bottom = Side(SouthIds.MainStepsFront);
-        var rear = world.Interiors.Get(new(B2))?.Entrances.SingleOrDefault(e => e.Position switch
-        {
-            EntrancePosition.Unspecified or EntrancePosition.Front => false,
-            EntrancePosition.Rear => true,
-            _ => throw new ArgumentOutOfRangeException(nameof(e.Position), e.Position, "Unknown entrance position.")
-        })
+        var rear = world.Interiors.Get(new(B2))?.Entrances.SingleOrDefault(e => e.Position == EntrancePosition.Rear)
             ?? throw new InvalidOperationException($"{B2} has no authored rear entrance in the interior index.");
         var turned = new PlanFrame(Vector2.Zero, -front.U);
         var rearFrame = new PlanFrame(new Vector2(rear.Center.X, rear.Center.Z) - turned.W * RearBlockFront, turned.U);
@@ -282,7 +277,7 @@ public sealed class MainBuildingSite : ZoneSite
         b.Add(PartSolids.BeveledBox(M.DoorWidth + 0.2f, 0.12f, 0.15f, 0.015f, L.Metal), g.F.At(g.Xc, floor + M.DoorSpring, glassZ + 0.08f));
         foreach (var side in new[] { -1f, 1f })
             b.Add(PartSolids.BeveledBox(0.06f, M.DoorSpring - 0.1f, 1.5f, 0.012f, L.Wood), g.F.At(g.Xc + side * (M.DoorWidth * 0.5f - 0.05f), floor, glassZ + 0.85f));
-        // The mat, open sign and door lamp are game/gen/furniture/'s, placed on the b2.front entrance anchor (WLD-INTERIORS).
+        // The mat, open sign and door lamp are game/gen/furniture/'s, placed on the 前入口（interiors.json position） (WLD-INTERIORS).
     }
 
     // ---- Roof gallery (空廊, §2.3): a covered walkway ring of square columns, railing between the outer columns ----
@@ -376,7 +371,7 @@ public sealed class MainBuildingSite : ZoneSite
         }
     }
 
-    // ---- Rear porch at b2.rear: landing at the 2.6 m floor, an entrance block with a round-headed timber door ----
+    // ---- Rear porch at 后入口（interiors.json position） landing at the 2.6 m floor, an entrance block with a round-headed timber door ----
 
     private static void RearPorch(SiteBuilder b, Layout g, float y)
     {
@@ -428,7 +423,7 @@ public sealed class MainBuildingSite : ZoneSite
         WindowNumbers.Panes(b, openings, Allocation(b.Context, RearPorchKey, openings.Length), W.Hall, W.Corridor);
         foreach (var side in new[] { -1f, 1f })
             b.Add(PartSolids.BeveledBox(1.15f, 2.65f, 0.07f, 0.015f, L.Wood), g.R.At(side * 1.85f, floor, blockFront + 0.04f));
-        // The mat, open sign and door lamp are game/gen/furniture/'s, placed on the b2.rear entrance anchor (WLD-INTERIORS).
+        // The mat, open sign and door lamp are game/gen/furniture/'s, placed on the 后入口（interiors.json position） (WLD-INTERIORS).
     }
 
     public override void Collide(SiteColliders c)
