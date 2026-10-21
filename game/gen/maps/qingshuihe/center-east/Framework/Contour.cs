@@ -73,16 +73,9 @@ public static class Contour
     {
         var total = PlanLines.Length(ring, closed: true);
         var count = Math.Max(1, (int)Math.Round(total / pitch));
-        var stations = new double[ring.Count];
-        for (var i = 1; i < ring.Count; i++) stations[i] = stations[i - 1] + Vector2.Distance(ring[i - 1], ring[i]);
-        return Enumerable.Range(0, count).Select(c =>
-        {
-            var start = total * c / count;
-            var end = total * (c + 1) / count;
-            return new[] { PlanLines.Sample(ring, start, closed: true).Point }
-                .Concat(Enumerable.Range(1, ring.Count - 1).Where(i => stations[i] > start + 1e-3 && stations[i] < end - 1e-3).Select(i => ring[i]))
-                .Append(PlanLines.Sample(ring, end, closed: true).Point).ToArray();
-        }).ToArray();
+        var closed = ring.Append(ring[0]).ToArray();
+        return Enumerable.Range(0, count)
+            .Select(c => PlanLines.Subline(closed, total * c / count, total * (c + 1) / count, endpointTolerance: 0.001f)).ToArray();
     }
 
     /// <summary>Point and outward normal halfway along a glazing cell.</summary>

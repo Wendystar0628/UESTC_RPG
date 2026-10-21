@@ -7,8 +7,14 @@ using Campus.Gen.Maps.Qingshuihe.Boundary.Gates;
 using Campus.Gen.World;
 using Campus.Gen.Maps.Qingshuihe.South;
 using Campus.Gen.Sites;
+using NetTopologySuite.Geometries;
+using NetTopologySuite.Geometries.Utilities;
+using NetTopologySuite.LinearReferencing;
+using NetTopologySuite.Operation.Buffer;
+using NetTopologySuite.Operation.Union;
 using F = Campus.Gen.Maps.Qingshuihe.Boundary.BoundaryTune.Fence;
 using H = Campus.Gen.Maps.Qingshuihe.Boundary.BoundaryTune.HedgeClear;
+using NtsGeometry = NetTopologySuite.Geometries.Geometry;
 
 namespace Campus.Gen.Maps.Qingshuihe.Boundary.Ring;
 
@@ -250,19 +256,6 @@ public sealed class BoundaryPlan
     /// <summary>A road line offset to the side away from the ring corner it cuts (the side whose middle lies deeper inside).</summary>
     private static IReadOnlyList<Vector2> Shifted(IReadOnlyList<Vector2> points, float off, BoundaryRing ring)
     {
-        IReadOnlyList<Vector2> Side(float sign)
-        {
-            var result = new Vector2[points.Count];
-            for (var k = 0; k < points.Count; k++)
-            {
-                var before = VectorMath.Unit(points[Math.Max(k, 1)] - points[Math.Max(k, 1) - 1], minimumLength: 1e-6);
-                var after = VectorMath.Unit(points[Math.Min(k + 1, points.Count - 1)] - points[Math.Min(k + 1, points.Count - 1) - 1], minimumLength: 1e-6);
-                var n = VectorMath.Unit(new Vector2(-before.Y, before.X) + new Vector2(-after.Y, after.X), minimumLength: 1e-6);
-                var cos = MathF.Max(Vector2.Dot(n, new Vector2(-after.Y, after.X)), 0.5f);
-                result[k] = points[k] + n * (sign * off / cos);
-            }
-            return result;
-        }
         float Depth(IReadOnlyList<Vector2> line)
         {
             var best = 0f;
@@ -274,8 +267,8 @@ public sealed class BoundaryPlan
                 }
             return best;
         }
-        var left = Side(1f);
-        var right = Side(-1f);
+        var left = PlanOffsets.MitreOffset(points, -off, closed: false, limit: 2f);
+        var right = PlanOffsets.MitreOffset(points, off, closed: false, limit: 2f);
         return Depth(left) >= Depth(right) ? left : right;
     }
 
@@ -326,11 +319,12 @@ public sealed class BoundaryPlan
     /// </summary>
     private sealed class Obstacles
     {
-        private readonly List<(Vector2 A, Vector2 B, float Reach)> _segments = [];
-        private readonly List<(IReadOnlyList<Vector2> Ring, Vector2 Min, Vector2 Max)> _areas = [];
+        private static readonly GeometryFactory Factory = new();
+        private readonly NtsGeometry _blocked;
 
         public Obstacles(IWorldModel world, BoundaryRing ring, IReadOnlyList<GateLayout> gates)
         {
+            var blocked = new List<NtsGeometry>();
             var reachHedge = F.HedgeOffset + F.HedgeWidth * 0.5f + F.Inset + 2f;
             bool NearRing(Vector2 min, Vector2 max)
             {
@@ -342,15 +336,16 @@ public sealed class BoundaryPlan
                 }
                 return false;
             }
-            foreach (var road in world.Network.Roads)
+            foreach (var road in world.Network.Roads.OrderBy(r => r.Id.Value, StringComparer.Ordinal))
             {
                 var reach = (road.Width > 0 ? road.Width : 3f) * 0.5f + H.Road + F.HedgeWidth * 0.5f;
                 var pts = road.Line.Points;
                 for (var k = 0; k + 1 < pts.Count; k++)
                     if (NearRing(Vector2.Min(pts[k], pts[k + 1]) - new Vector2(reach), Vector2.Max(pts[k], pts[k + 1]) + new Vector2(reach)))
-                        _segments.Add((pts[k], pts[k + 1], reach));
+                        blocked.Add(BufferOp.Buffer(Line([pts[k], pts[k + 1]]), reach));
             }
             var kinds = new HashSet<string>(H.Kinds, StringComparer.Ordinal);
+            var pad = H.Area + F.HedgeWidth * 0.5f;
             foreach (var feature in world.Features.Values.Where(f => kinds.Contains(f.Kind.Value) && f.Geometry is PolygonGeometry or MultiPolygonGeometry).OrderBy(f => f.Id.Value, StringComparer.Ordinal))
                 foreach (var outer in feature.Polygons().Select(p => p.Outer))
                 {
@@ -358,62 +353,48 @@ public sealed class BoundaryPlan
                     var min = new Vector2(float.MaxValue);
                     var max = new Vector2(float.MinValue);
                     foreach (var p in outer) { min = Vector2.Min(min, p); max = Vector2.Max(max, p); }
-                    var pad = new Vector2(H.Area + F.HedgeWidth * 0.5f);
-                    if (NearRing(min - pad, max + pad)) _areas.Add((outer, min - pad, max + pad));
+                    // Area holes remain filled keep-outs, as before: they are not passages for the hedge.
+                    if (NearRing(min - new Vector2(pad), max + new Vector2(pad))) blocked.Add(BufferOp.Buffer(Area(outer), pad));
                 }
-            foreach (var g in gates)
+            foreach (var g in gates.OrderBy(g => g.Spec.Key, StringComparer.Ordinal))
                 if (g.Spec.Locker is { } locker)
                 {
                     var hw = GateSite.LockerSize.Width * 0.5f + 0.6f;
                     Vector2[] box = [g.P(locker.X - hw, 0f), g.P(locker.X + hw, 0f), g.P(locker.X + hw, -3f), g.P(locker.X - hw, -3f)];
-                    _areas.Add((box, Vector2.Min(Vector2.Min(box[0], box[1]), Vector2.Min(box[2], box[3])), Vector2.Max(Vector2.Max(box[0], box[1]), Vector2.Max(box[2], box[3]))));
+                    var area = Area(box);
+                    // The locker clearance was restricted to this box's world-aligned envelope.
+                    blocked.Add(BufferOp.Buffer(area, pad).Intersection(Factory.ToGeometry(area.EnvelopeInternal)));
                 }
+            _blocked = UnaryUnionOp.Union(blocked, Factory);
         }
 
-        private bool Blocked(Vector2 p)
-        {
-            foreach (var (a, b, reach) in _segments)
-                if (MathF.Sqrt(PlanLines.SegmentDistanceSquared(p, a, b)) < reach) return true;
-            var pad = H.Area + F.HedgeWidth * 0.5f;
-            foreach (var (outer, min, max) in _areas)
-            {
-                if (p.X < min.X || p.Y < min.Y || p.X > max.X || p.Y > max.Y) continue;
-                if (PlanRings.InsideByCrossings(outer, p) || PlanRings.DistanceToRing(p, outer) < pad) return true;
-            }
-            return false;
-        }
+        private static LineString Line(IReadOnlyList<Vector2> points) =>
+            Factory.CreateLineString(points.Select(p => new Coordinate(p.X, p.Y)).ToArray());
 
-        /// <summary>The clear pieces of a hedge line, sampled every <see cref="H.Sample"/>, each at least <see cref="H.MinLength"/> long.</summary>
+        private static Polygon Area(IReadOnlyList<Vector2> outer) =>
+            Factory.CreatePolygon(outer.Append(outer[0]).Select(p => new Coordinate(p.X, p.Y)).ToArray());
+
+        /// <summary>The clear pieces of a hedge line in source order, each at least <see cref="H.MinLength"/> long before end pullback.</summary>
         public IReadOnlyList<IReadOnlyList<Vector2>> Clip(IReadOnlyList<Vector2> line)
         {
-            var pieces = new List<IReadOnlyList<Vector2>>();
-            var current = new List<Vector2>();
-            Vector2? lastClear = null;
-            void Close()
+            var source = Line(line);
+            var index = new LengthIndexedLine(source);
+            var pieces = new List<(double Start, double End, IReadOnlyList<Vector2> Line)>();
+            foreach (var clear in LineStringExtracter.GetLines(source.Difference(_blocked)).Cast<LineString>())
             {
-                if (lastClear is { } end && current.Count > 0 && current[^1] != end) current.Add(end);
-                // Each piece's ends pull back a little from what stopped it.
-                if (current.Count >= 2 && PlanLines.Length(current) >= H.MinLength)
-                    pieces.Add(BoundaryFence.Offset(current, 0f, _ => true, H.Trim * 0.5f, H.Trim * 0.5f));
-                current = [];
-                lastClear = null;
-            }
-            for (var i = 0; i + 1 < line.Count; i++)
-            {
-                Vector2 p = line[i], q = line[i + 1];
-                var length = Vector2.Distance(p, q);
-                var steps = Math.Max(1, (int)MathF.Ceiling(length / H.Sample));
-                for (var k = i == 0 ? 0 : 1; k <= steps; k++)
+                if (clear.Length < H.MinLength) continue;
+                var coordinates = clear.Coordinates;
+                var start = index.Project(coordinates[0]);
+                var end = index.Project(coordinates[^1]);
+                if (end < start)
                 {
-                    var at = p + (q - p) * ((float)k / steps);
-                    if (Blocked(at)) { Close(); continue; }
-                    // Keep the line's vertices and the first sample after a gap; the last clear sample closes a piece.
-                    if (current.Count == 0 || k == steps) current.Add(at);
-                    lastClear = at;
+                    Array.Reverse(coordinates);
+                    (start, end) = (end, start);
                 }
+                var points = coordinates.Select(p => new Vector2((float)p.X, (float)p.Y)).ToArray();
+                pieces.Add((start, end, BoundaryFence.Offset(points, 0f, _ => true, H.Trim * 0.5f, H.Trim * 0.5f)));
             }
-            Close();
-            return pieces;
+            return pieces.OrderBy(p => p.Start).ThenBy(p => p.End).Select(p => p.Line).ToArray();
         }
 
     }

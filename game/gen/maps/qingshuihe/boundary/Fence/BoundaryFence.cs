@@ -168,17 +168,7 @@ public static class BoundaryFence
         var un = VectorMath.Unit(line[^1] - line[^2], minimumLength: 1e-6);
         var probe = (line[^1] + line[^2]) * 0.5f + new Vector2(-un.Y, un.X) * 0.5f;
         var sign = inside(probe) ? 1f : -1f;
-        var result = new Vector2[line.Count];
-        for (var k = 0; k < line.Count; k++)
-        {
-            var before = VectorMath.Unit(line[Math.Max(k, 1)] - line[Math.Max(k, 1) - 1], minimumLength: 1e-6);
-            var after = VectorMath.Unit(line[Math.Min(k + 1, line.Count - 1)] - line[Math.Min(k + 1, line.Count - 1) - 1], minimumLength: 1e-6);
-            var nb = new Vector2(-before.Y, before.X);
-            var na = new Vector2(-after.Y, after.X);
-            var n = VectorMath.Unit(nb + na, minimumLength: 1e-6);
-            var cos = MathF.Max(Vector2.Dot(n, na), 0.5f);
-            result[k] = line[k] + n * (sign * distance / cos);
-        }
+        var result = PlanOffsets.MitreOffset(line, -sign * distance, closed: false, limit: 2f);
         if (trimStart > 0 && result.Length > 1) result[0] += VectorMath.Unit(result[1] - result[0], minimumLength: 1e-6) * trimStart;
         if (trimEnd > 0 && result.Length > 1) result[^1] += VectorMath.Unit(result[^2] - result[^1], minimumLength: 1e-6) * trimEnd;
         return result;

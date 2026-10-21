@@ -162,7 +162,7 @@ public static class BoundaryTune
     /// <summary>Hedge clearances: off road edges, off water, buildings and paving, trimmed back from the run ends.</summary>
     public static class HedgeClear
     {
-        public const float Road = 0.4f, Area = 0.3f, Trim = 0.35f, MinLength = 3.0f, Sample = 0.5f;
+        public const float Road = 0.4f, Area = 0.3f, Trim = 0.35f, MinLength = 3.0f;
         /// <summary>Ring runs shorter than this keep no hedge.</summary>
         public const float MinRun = 6f;
         /// <summary>Area kinds a hedge never stands in.</summary>
