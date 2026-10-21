@@ -72,19 +72,26 @@ namespace Campus.Arch.Tests
         public async Task ShutdownStopsOwnedProducersAndAwaitsBothDrainsBeforeRelease()
         {
             var probe = new ShutdownProbe(); var registry = DiscoverMapOwners(probe);
-            registry.Get<IMapService>(); registry.Get<IMapLifetime>();
+            var maps = registry.Get<IMapService>(); registry.Get<IMapLifetime>();
+            var map = new MapId("fixture-map");
+            var owned = (MapLifetimeService)registry.Create(typeof(MapLifetimeService), map);
+            probe.ReleaseMap = async () => { await registry.ReleaseMapAsync(map); probe.Calls.Add("map-owned-release"); };
             var stopping = registry.StopMapPreparationAsync();
+            Assertions.AssertThrown(() => registry.Add(probe)).IsInstanceOf<InvalidOperationException>();
+            Assertions.AssertThrown(() => registry.Get<SharedDependency>()).IsInstanceOf<InvalidOperationException>();
+            if (!ReferenceEquals(maps, registry.Get<IMapService>()) || !ReferenceEquals(probe, registry.Get<ShutdownProbe>()))
+                throw new InvalidOperationException("Stopping preparation removed an existing owned or supplied binding.");
             var shutdown = registry.ShutdownAsync();
             if (!ReferenceEquals(stopping, registry.StopMapPreparationAsync()) || stopping.IsCompleted || shutdown.IsCompleted ||
                 !probe.Calls.SequenceEqual(["map-stop", "runtime-stop", "map-drain"]))
                 throw new InvalidOperationException("Owned producers were not stopped before awaiting their shared drain.");
             probe.MapDrain.SetResult(); await probe.RuntimeEntered.Task;
-            if (shutdown.IsCompleted || probe.Calls.Any(call => call.EndsWith("release", StringComparison.Ordinal)))
+            if (shutdown.IsCompleted || owned.Disposed || probe.Calls.Any(call => call.EndsWith("release", StringComparison.Ordinal)))
                 throw new InvalidOperationException("An owned object was released before runtime preparation drained.");
-            registry.Get<SharedDependency>(); // Preparation may still resolve dependencies until its drain completes.
+            Assertions.AssertThrown(() => registry.Get<SharedDependency>()).IsInstanceOf<InvalidOperationException>();
             probe.RuntimeDrain.SetResult(); await shutdown;
-            if (!probe.Calls.SequenceEqual(["map-stop", "runtime-stop", "map-drain", "runtime-drain", "runtime-release", "map-release"]) ||
-                !ReferenceEquals(shutdown, registry.ShutdownAsync()))
+            if (!probe.Calls.SequenceEqual(["map-stop", "runtime-stop", "map-drain", "runtime-drain", "map-owned-release", "runtime-release", "map-release"]) ||
+                !owned.Disposed || !ReferenceEquals(shutdown, registry.ShutdownAsync()))
                 throw new InvalidOperationException("Shutdown did not retain one task and reverse owned release order.");
         }
 
@@ -101,9 +108,13 @@ namespace Campus.Arch.Tests
         [TestCase, TestCategory("Contract")]
         public async Task ShutdownLeavesSuppliedMapAndRuntimeOwnersUntouched()
         {
-            var probe = new ShutdownProbe(); var registry = DiscoverMapOwners(probe);
+            var probe = new ShutdownProbe(); var registry = new ServiceRegistry();
             registry.Add<IMapService>(new ShutdownMapService(probe));
             registry.Add<IMapLifetime>(new ShutdownMapLifetime(probe));
+            var stopping = registry.StopMapPreparationAsync();
+            Assertions.AssertThrown(() => registry.Discover([typeof(SharedDependency)], _ => "fixture"))
+                .IsInstanceOf<InvalidOperationException>();
+            await stopping;
             await registry.ShutdownAsync();
             if (probe.Calls.Count != 0) throw new InvalidOperationException("Shutdown stopped or disposed a supplied map owner.");
         }
@@ -130,7 +141,7 @@ namespace Campus.Arch.Tests
         private static ServiceRegistry DiscoverMapOwners(ShutdownProbe probe)
         {
             var registry = new ServiceRegistry(); registry.Add(probe);
-            registry.Discover([typeof(ShutdownMapService), typeof(ShutdownMapLifetime), typeof(SharedDependency)], _ => "fixture");
+            registry.Discover([typeof(ShutdownMapService), typeof(ShutdownMapLifetime), typeof(SharedDependency), typeof(MapLifetimeService)], _ => "fixture");
             return registry;
         }
 
@@ -181,6 +192,7 @@ namespace Campus.Arch.Tests
         public TaskCompletionSource RuntimeDrain { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
         public TaskCompletionSource RuntimeEntered { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
         public int MapsConstructed { get; set; }
+        public Func<Task>? ReleaseMap { get; set; }
         public Exception? StopFailure { get; init; }
         public Exception? ReleaseFailure { get; init; }
     }
@@ -213,6 +225,7 @@ namespace Campus.Arch.Tests
         public async Task ShutdownAsync()
         {
             probe.Calls.Add("runtime-drain"); probe.RuntimeEntered.TrySetResult(); await probe.RuntimeDrain.Task;
+            if (probe.ReleaseMap is { } release) await release();
         }
         public void Dispose() { probe.Calls.Add("runtime-release"); if (probe.ReleaseFailure is { } error) throw error; }
     }

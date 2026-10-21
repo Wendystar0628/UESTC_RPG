@@ -14,6 +14,7 @@ public sealed class ServiceRegistry
     private readonly List<(object Instance, MapId? Map)> _created = [];
     private IReadOnlyList<Registration> _entries = [];
     private bool _closing;
+    private bool _releasingOwned;
     private bool _disposed;
     private Task? _mapPreparationStop;
     private Task? _shutdown;
@@ -137,13 +138,18 @@ public sealed class ServiceRegistry
     public async Task ReleaseMapAsync(MapId map)
     {
         ObjectDisposedException.ThrowIf(_disposed, this);
+        if (_releasingOwned) throw new InvalidOperationException("Registry owned-object release has started.");
         if (!_releasingMaps.Add(map)) throw new InvalidOperationException($"Map scope is already releasing: {map.Value}");
         try { await ReleaseAsync(item => item.Map == map); }
         finally { _releasingMaps.Remove(map); }
     }
 
-    /// <summary>Stop owned map producers synchronously, then observe their submitted data preparation before release.</summary>
-    public Task StopMapPreparationAsync() => _mapPreparationStop ??= StopMapPreparation();
+    /// <summary>Seal registration and construction, stop owned map producers, then observe their submitted data preparation.</summary>
+    public Task StopMapPreparationAsync()
+    {
+        _closing = true;
+        return _mapPreparationStop ??= StopMapPreparation();
+    }
 
     private async Task StopMapPreparation()
     {
@@ -163,6 +169,7 @@ public sealed class ServiceRegistry
 
     private async Task Shutdown(Node? scene, Action<string>? trace)
     {
+        _closing = true;
         var failures = new List<Exception>();
         trace?.Invoke("shutdown-map");
         try { await StopMapPreparationAsync(); } catch (Exception error) { failures.Add(error); }
@@ -172,7 +179,8 @@ public sealed class ServiceRegistry
             if (lifetime is not null) await lifetime.ShutdownAsync();
         }
         catch (Exception error) { failures.Add(error); }
-        _closing = true;
+        // Runtime drain owns map release; global teardown must not reenter that phase.
+        _releasingOwned = true;
         foreach (var participant in _created.AsEnumerable().Reverse().Select(item => item.Instance).OfType<IRegistryExitParticipant>())
             try { participant.PrepareForExit(); } catch (Exception error) { failures.Add(error); }
         trace?.Invoke("shutdown-nodes");
@@ -230,7 +238,7 @@ public sealed class ServiceRegistry
         node.Free();
     }
 
-    private static void ExitNodes(IEnumerable<Node> nodes, List<Exception> failures)
+    private static void ExitNodes(IEnumerable<Node> nodes, [FailureHandler("ENG-ARCH")] List<Exception> failures)
     {
         foreach (var node in nodes)
             try
