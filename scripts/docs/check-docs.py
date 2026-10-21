@@ -1,10 +1,11 @@
-"""校验 docs（不含 godot-api）：小节引用、文件头的 depends/related、相对链接、路径归属字段与门禁编号、导航树（没有孤儿文档）。
+"""校验 docs（不含 godot-api）：小节引用、文件头的 depends/related、相对链接、路径归属字段与门禁编号、导航树（没有孤儿文档）、
+paths 里匹配不到入库文件的 glob、game/ 与 pipeline/ 里带节号的文档引用、顶层节号区间；另列出（不计问题数）「标题」对不上的小节引用与反引号里不存在的路径。
 
 产出：无（仅标准输出文档一致性问题）
 用法：python -I scripts/docs/check-docs.py
-依赖：PyYAML。有问题时退出码为 1。
+依赖：PyYAML、git。有问题时退出码为 1。
 """
-import os, re, glob, sys, runpy
+import os, re, glob, sys, runpy, subprocess
 from collections import Counter
 import yaml
 
@@ -12,6 +13,21 @@ sys.stdout.reconfigure(encoding='utf-8')
 ROOT = os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..'))
 D = os.path.join(ROOT, 'docs')
 FM = re.compile(r'^---\r?\n(.*?)\r?\n---\r?\n', re.S)
+
+
+def git(*args, stdin=None):
+    """git 输出按行（-z 时按 NUL）切开；路径不转义中文。"""
+    out = subprocess.run(['git', '-C', ROOT, '-c', 'core.quotepath=false', *args], input=stdin, capture_output=True).stdout.decode('utf-8')
+    return [x for x in out.split('\0' if '-z' in args else '\n') if x]
+
+
+TRACKED = git('ls-files', '-z')
+
+
+def glob_re(g):
+    """与钩子的路由同一套写法：** 跨目录，* 与 ? 不跨 /。"""
+    s = re.escape(g).replace(r'\*\*', '\0').replace(r'\*', '[^/]*').replace(r'\?', '[^/]').replace('\0', '.*')
+    return re.compile('^' + s + '$')
 
 docs = {}
 for p in glob.glob(os.path.join(D, '**', '*.md'), recursive=True):
@@ -83,6 +99,11 @@ for code, d in docs.items():
                 bad.append((code, 'fm-paths', repr(pattern)))
             elif pattern.startswith(('/', '\\')) or re.match(r'^[A-Za-z]:', pattern) or '\\' in pattern or '..' in pattern.split('/'):
                 bad.append((code, 'fm-paths', '应为仓库相对路径并使用 /：' + pattern))
+            elif not pattern.startswith('.collab/'):
+                # paths 只写已入库的源路径（STD-DOC §2）：一个入库文件都匹配不上的是生成物、被忽略的文件或已删的路径
+                rx, head, folder = glob_re(pattern), re.split(r'[*?]', pattern, 1)[0], pattern.rstrip('/') + '/'
+                if not any(rx.match(f) or f.startswith(folder) for f in TRACKED if f.startswith(head)):
+                    bad.append((code, 'fm-paths-dead', pattern))
     for g in fm.get('gates') or []:
         if str(g) not in gates:
             bad.append((code, 'gate', g))
@@ -119,6 +140,73 @@ for code, d in docs.items():
     elif not re.search(r'^### 0\.\d+ 接入要点\s*$', s0.group(0), re.M):
         bad.append((code, 'hooks', 'missing'))
 
+# 代码与数据里提到文档只写编码、不写节号（STD-DOC §3）；修法：remap-refs.py strip
+CODE_REF = re.compile(r'(?<![A-Za-z0-9\-])(' + alt + r')(?![A-Za-z0-9\-])\s*(?:的\s*)?§\s*\d+(?:\.\d+)*')
+for hit in git('grep', '-n', '-I', '-E', '§ *[0-9]', '--', 'game', 'pipeline'):
+    where, _, text = hit.partition(':')
+    line, _, text = text.partition(':')
+    m = CODE_REF.search(text)
+    if m:
+        bad.append(('%s:%s' % (where, line), 'code-sec', m.group(0)))
+
+# 顶层的节会增长，一组节写组名、不写区间（STD-DOC §3，DECISION-299）：区间前最近的编码是 CORE-INDEX，或写在 CORE-INDEX 本文里的裸区间
+RANGE = re.compile(r'§\s*\d+\s*[–—~至-]\s*§?\s*\d+(?![.\d])')
+LAST_CODE = re.compile(r'(?<![A-Za-z0-9\-])(' + alt + r'|顶层)(?![A-Za-z0-9\-])')
+range_files = [(code, d['path']) for code, d in docs.items()] + [(name, os.path.join(ROOT, name)) for name in ('CLAUDE.md', 'AGENTS.md')]
+for code, p in range_files:
+    if not os.path.isfile(p):
+        continue
+    for n, l in enumerate(open(p, encoding='utf-8'), 1):
+        for m in RANGE.finditer(l):
+            near = LAST_CODE.findall(l[:m.start()])
+            if (near[-1] if near else code) in ('CORE-INDEX', '顶层'):
+                bad.append(('%s:%d' % (code, n), 'core-range', l[max(0, m.start() - 20):m.end()].strip()))
+
+# 只列出、不计问题数：「标题」在指向的那一节里找不到；正文反引号里的仓库路径或脚本名不存在且没被 git 忽略
+notes = []
+
+
+def section_text(text, sec):
+    """标题号为 sec 的那一节（含标题行与子节），找不到返回 None。"""
+    lines = text.split('\n')
+    at = next((i for i, l in enumerate(lines) if re.match(r'^(#{1,6})\s+' + re.escape(sec) + r'\s', l)), None)
+    if at is None:
+        return None
+    level = len(re.match(r'^#+', lines[at]).group(0))
+    end = next((j for j in range(at + 1, len(lines)) if re.match(r'^#{1,%d}\s' % level, lines[j])), len(lines))
+    return '\n'.join(lines[at:end])
+
+
+def plain(s):
+    return re.sub(r'[*`\s]', '', s)
+
+
+TITLED = re.compile(r'(?:(?<![A-Za-z0-9\-])(' + alt + r')(?![A-Za-z0-9\-])\s*(?:的\s*)?)?§\s*(\d+(?:\.\d+)*)\s*「([^」\n]+)」')
+for code, d in docs.items():
+    if d['fm'].get('category') in RECORDS:
+        continue
+    for m in TITLED.finditer(d['text']):
+        tgt = m.group(1) or code
+        body = section_text(docs[tgt]['text'], m.group(2))
+        if body is not None and plain(m.group(3)) not in plain(body):
+            notes.append((code, 'title', m.group(0)))
+
+PATH_TOKEN = re.compile(r'(?:game|docs|scripts|dashboard|pipeline|tools|\.collab|output|build)/[\w.\-/一-鿿]*')
+SCRIPT_TOKEN = re.compile(r'[\w\-]+\.(?:py|ps1|sh|cjs|cmd)')
+names = {os.path.basename(f) for f in TRACKED}
+for base, _dirs, files in os.walk(os.path.join(ROOT, '.collab', 'tools')):
+    names.update(files)
+missing = []
+for code, d in docs.items():
+    body = re.sub(r'^```.*?^```', '', d['text'], flags=re.S | re.M)
+    for tok in re.findall(r'`([^`\n]+)`', body):
+        if PATH_TOKEN.fullmatch(tok) and not os.path.exists(os.path.join(ROOT, tok)):
+            missing.append((code, tok))
+        elif SCRIPT_TOKEN.fullmatch(tok) and tok not in names:
+            notes.append((code, 'backtick', tok))
+ignored = set(git('check-ignore', '--stdin', '-z', stdin='\0'.join(sorted({t for _, t in missing})).encode('utf-8'))) if missing else set()
+notes += [(code, 'backtick', tok) for code, tok in dict.fromkeys(missing) if tok not in ignored and tok.rstrip('/') not in ignored]
+
 # 小节目录要与文档一致：文档改过以后重跑 gen-index.py
 gen_index = runpy.run_path(os.path.join(ROOT, 'scripts', 'docs', 'gen-index.py'))
 sec_path = os.path.join(D, 'SECTIONS.md')
@@ -138,4 +226,8 @@ if over:
     print('超体量上限', len(over), '处（STD-DOC §5）')
     for o in over:
         print('  %s\t%s\t%d 字' % o)
+if notes:
+    print('只列出、不计问题数', len(notes), '处', dict(Counter(n[1] for n in notes)))
+    for n in notes:
+        print('  %s\t%s\t%s' % n)
 sys.exit(1 if bad else 0)

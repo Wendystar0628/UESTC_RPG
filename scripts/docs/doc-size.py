@@ -2,11 +2,12 @@
 
 产出：无（仅标准输出文档体量）
 用法：
-  python -I -X utf8 scripts/docs/doc-size.py            每份文档一行，从大到小，超限的标 ✗
+  python -I -X utf8 scripts/docs/doc-size.py            每份文档一行，从大到小，超限的标 ✗，末尾给开工注入合计
   python -I -X utf8 scripts/docs/doc-size.py --over     只列超限项；有超限时退出码为 1
   python -I -X utf8 scripts/docs/doc-size.py --json --files docs/x.md ...   只量给定文件，输出超限项的 JSON（提交后钩子用）
 
 字数 = 去掉文件头后的字符数；一节 = 从一个标题到下一个标题（不认代码块里的 #）。
+开工注入合计 = CORE-INDEX 各节（§0 不含子节，与钩子整节注入的范围一致）加 WF-ENTRY 最长的角色一节，超了记在 CORE-INDEX 名下。
 """
 import glob
 import json
@@ -17,7 +18,7 @@ import sys
 ROOT = os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..'))
 D = os.path.join(ROOT, 'docs')
 # STD-DOC §5 表里"部分"一栏的开头 → 本脚本的键；放宽上限只改那张表
-ROWS = {'CORE-INDEX 除 §1 外的各节': 'core0', 'CORE-INDEX §1': 'core1', 'WF-ENTRY': 'entry', '每份文档的 §0': 's0',
+ROWS = {'CORE-INDEX 除 §1 外的各节': 'core0', 'CORE-INDEX §1': 'core1', 'Claude 子代理开工注入合计': 'start', 'WF-ENTRY': 'entry', '每份文档的 §0': 's0',
         '§0.1': 'hooks', '单节': 'section', '单份规格': 'doc', '单份地图': 'map'}
 
 
@@ -77,10 +78,36 @@ def measure(path):
     return code, len(body), secs
 
 
+def role_sections(secs, pattern, skip_sub=None):
+    """按一级节合计（含子节）：{一级节标题: 字数}；skip_sub 里的一级节不计子节。"""
+    out, top = {}, None
+    for title, n in secs:
+        if re.match(r'^\d+ ', title):
+            top = title if re.match(pattern, title) else None
+            if top:
+                out[top] = n
+        elif top and top.split(' ')[0] not in (skip_sub or ()):
+            out[top] += n
+    return out
+
+
+def start_total():
+    """开工注入合计：CORE-INDEX 各节加 WF-ENTRY 最长的角色一节。"""
+    core = os.path.join(D, 'README.md')
+    entry = glob.glob(os.path.join(D, 'workflow', 'WF-ENTRY-*.md'))[0]
+    top = role_sections(measure(core)[2], r'^\d+ ', skip_sub=('0',))
+    roles = role_sections(measure(entry)[2], r'^[1-9] ')
+    return sum(top.values()) + max(roles.values(), default=0)
+
+
 def check(path):
     """返回 (编码, 正文字数, [(哪一处, 字数, 上限)])"""
     code, total, secs = measure(path)
     over = []
+    if code == 'CORE-INDEX':
+        n = start_total()
+        if n > LIMIT['start']:
+            over.append(('开工注入合计', n, LIMIT['start']))
     if not registry(code):
         cap = LIMIT['map'] if code.startswith('MAP-') else LIMIT['doc']
         if total > cap:
@@ -113,7 +140,7 @@ def main(argv):
     if '--over' not in argv:
         for c, t, ov, p in sorted(results, key=lambda r: -r[1]):
             print('%s %-20s %7d 字  %s' % ('✗' if ov else ' ', c, t, p))
-        print('共 %d 份，%d 字；超限 %d 份' % (len(results), sum(r[1] for r in results), len(bad)))
+        print('共 %d 份，%d 字；超限 %d 份；开工注入合计 %d 字（上限 %d）' % (len(results), sum(r[1] for r in results), len(bad), start_total(), LIMIT['start']))
     for c, t, ov, p in bad:
         for where, n, cap in ov:
             print('超限  %-20s %s：%d 字（上限 %d）' % (c, where, n, cap))

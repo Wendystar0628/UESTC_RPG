@@ -1782,7 +1782,7 @@
 
 ## WF-COMMS · 交接与通信
 
-`docs/workflow/WF-COMMS-交接与通信.md` · 6.9k 字 · .collab 交接目录与文件布局，命名与写法，任务单与请求文件的格式，契约申请短头部，完成回报格式，来信与消息，Codex 会话与引导信箱，作者观察台
+`docs/workflow/WF-COMMS-交接与通信.md` · 7.0k 字 · .collab 交接目录与文件布局，命名与写法，任务单与请求文件的格式，契约申请短头部，完成回报格式，来信与消息，Codex 会话与引导信箱，作者观察台
 关键词：.collab、交接目录、文件布局、结案即删、任务单、旁路单、调研目录、契约申请、评审请求、六行短头部、完成回报、回报格式、文件命名、来信、收件箱、一条一个文件、【需定】【待审】【知会】、Codex 会话、引导信箱、steer、HANDOVER.md、DECISION-207、DECISION-208、DECISION-228、作者观察台、dashboard、post.py、审计项、通知
 
 - WF-COMMS §0 结论 · L22 · 719
@@ -1799,7 +1799,7 @@
   - WF-COMMS §4.2 一条来信一个新文件（DECISION-207） · L117 · 272
   - WF-COMMS §4.3 三级标记与写法 · L123 · 446
   - WF-COMMS §4.4 来信与即时送达 · L131 · 530
-- WF-COMMS §5 Codex 会话与引导信箱 · L145 · 268
+- WF-COMMS §5 Codex 会话与引导信箱 · L145 · 276
 - WF-COMMS §6 作者观察台 · L151 · 991
 
 ## WF-ENTRY · 角色入口卡

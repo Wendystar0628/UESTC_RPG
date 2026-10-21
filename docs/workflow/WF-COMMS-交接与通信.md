@@ -50,7 +50,7 @@ paths: [".collab/notes/**", ".collab/requests/**", ".collab/tasks/**", ".collab/
 | `research/INDEX.md`、`research/RESEARCH-<nnn>-<主题>/` | 主会话追加索引与审计；调研子代理写报告与总览 | 调研索引与各方向报告 |
 | `notes/<收件方>/` | 发件方 | 来信收件箱（§4）：`notes/claude/` 发给主会话，`notes/codex/` 发给 Codex 主线 |
 | `status/施工状态.md`、`HANDOVER.md` | 主会话 | 施工状态与施工队列的活表；主会话交接单（WF-STATUS） |
-| `tools/` | 主会话 | 脚本、会话号与状态，索引见 `tools/README.md` |
+| `tools/` | 主会话 | 脚本、会话号与状态，索引见 `.collab/tools/README.md` |
 
 **结案即删**（DECISION-228）：
 - 单子对应的施工队列行都删了、没有未了的事，派单的一方就删掉这张单：Claude 侧由主会话删，Codex 侧由 Codex 主线删；巡逻会列出对应行都已删的单和没进队列的单。结果在提交、代码、文档和决策登记里；还有后续的，先写进施工队列（WF-STATUS §2）再删。
@@ -144,7 +144,7 @@ paths: [".collab/notes/**", ".collab/requests/**", ".collab/tasks/**", ".collab/
 
 ## 5 Codex 会话与引导信箱
 
-**Codex 侧只有 Codex 主线一个会话**（WF-ROLE §1），不用 `codex exec` 另起后台线程。派活和通知都是来信加一句消息（§4.4），用 `tools/agents/codex_app_steer.py`：它在跑就进引导信箱，空闲就直接开新一轮。模型、推理档和速度跟着会话走，在应用里设；会话号见 `.collab/tools/README.md`。
+**Codex 侧只有 Codex 主线一个会话**（WF-ROLE §1），不用 `codex exec` 另起后台线程。派活和通知都是来信加一句消息（§4.4），用 `.collab/tools/agents/codex_app_steer.py`：它在跑就进引导信箱，空闲就直接开新一轮。模型、推理档和速度跟着会话走，在应用里设；会话号见 `.collab/tools/README.md`。
 
 **引导信箱**什么时候用见 §4.4，机制与用法见 `.collab/tools/README.md`。
 

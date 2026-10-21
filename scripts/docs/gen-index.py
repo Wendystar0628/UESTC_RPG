@@ -167,6 +167,12 @@ def main():
     r = build_routes(docs)
     changed = write_if_changed(ROUTES, r)
     print('ROUTES.json', len(r), 'chars', '已更新' if changed else '未变')
+    # 一个 glob 挂的文档越多，钩子越送不到最贴近的那份（STD-DOC §2）：只列出，不改输出
+    wide = [x for x in json.loads(r)['paths'] if len(x['docs']) > 3]
+    if wide:
+        print('挂了超过 3 份文档的 glob', len(wide), '条')
+        for x in wide:
+            print('  %s\t%d 份\t%s' % (x['glob'], len(x['docs']), '、'.join(x['docs'])))
 
 
 if __name__ == '__main__':
