@@ -38,9 +38,9 @@ public sealed class CpuBakeCommand : IBakeCommand
             var source = new MapDataSource(_resources);
             var catalog = await source.ReadCatalog();
             var requested = context.Run.Flow.Map ?? catalog.Default;
-            var maps = requested.Value == "*" ? catalog.Maps : catalog.Maps.Where(map => map.Id == requested).ToArray();
+            var maps = context.Run.AllMaps ? catalog.Maps : catalog.Maps.Where(map => map.Id == requested).ToArray();
             if (maps.Count == 0) throw new ArgumentException($"Unknown bake map: {requested.Value}.");
-            var pipelines = requested.Value == "*" && !options.MapOnly ? new BakePipelineCatalog() : null;
+            var pipelines = context.Run.AllMaps && !options.MapOnly ? new BakePipelineCatalog() : null;
             var loader = new WorldModelLoaderAdapter(terrain);
             foreach (var descriptor in maps)
             {

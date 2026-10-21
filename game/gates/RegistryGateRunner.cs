@@ -15,7 +15,7 @@ public sealed record RegistryGateReport(string Scope, int Maps, int Services, in
 /// <summary>Headless declaration checks that never construct services, nodes, or geometry.</summary>
 public static class RegistryGateRunner
 {
-    public static RegistryGateReport Run(ServiceRegistry registry, string indexPath, string requestedMap,
+    public static RegistryGateReport Run(ServiceRegistry registry, string indexPath, MapId? requestedMap, bool allMaps,
         Func<string, byte[]> read, IReadOnlyCollection<Type> compositionInputs, Func<string, IEnumerable<string>> files)
     {
         var index = JsonSerializer.Deserialize<MapIndex>(read(indexPath), ContractJson.Options)
@@ -25,14 +25,14 @@ public static class RegistryGateRunner
             !index.Maps.Any(entry => entry.Id == index.DefaultMap))
             throw new InvalidDataException("Map index version, unique IDs, or default map is invalid.");
         var mapIds = index.Maps.Select(entry => entry.Id.Value).ToHashSet(StringComparer.Ordinal);
-        var requested = string.IsNullOrEmpty(requestedMap) ? index.DefaultMap.Value : requestedMap;
-        if (requested != "*" && !mapIds.Contains(requested)) throw new InvalidDataException($"Unknown map: {requested}");
+        var requested = requestedMap ?? index.DefaultMap;
+        if (!allMaps && !mapIds.Contains(requested.Value)) throw new InvalidDataException($"Unknown map: {requested}");
         ValidateDeclarations(registry, mapIds);
         ValidateConstructorGraph(registry, compositionInputs);
 
         var entityCount = 0;
         var prefixes = new Dictionary<string, MapId>(StringComparer.Ordinal);
-        var selected = index.Maps.Where(entry => requested == "*" || entry.Id.Value == requested).ToArray();
+        var selected = index.Maps.Where(entry => allMaps || entry.Id == requested).ToArray();
         foreach (var entry in selected)
             entityCount += ValidateMap(registry, entry, read, files, prefixes);
         var priorities = typeof(FramePriority).GetFields(BindingFlags.Public | BindingFlags.Static)

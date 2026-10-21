@@ -300,6 +300,7 @@
       "entrances": [
         {
           "id": "b2.rear",
+          "position": "rear",
           "featureId": "qsh:way:687370085",
           "doorCenter": [
             -320.6779,
@@ -322,6 +323,7 @@
         },
         {
           "id": "b2.front",
+          "position": "front",
           "featureId": "qsh:way:687370085",
           "doorCenter": [
             -346.5434,

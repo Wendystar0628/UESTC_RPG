@@ -25,7 +25,7 @@ namespace Campus.Arch.Tests
                 sections.Single(entry => entry.Scope == SaveScope.PerMap.ToString()).Type != typeof(PerMapWeatherSection))
                 throw new InvalidOperationException("Stub replacement crossed a save scope.");
             // Exercise the runner's effective-map grouping and attribute selection too.
-            RegistryGateRunner.Run(registry, "fixture/index.json", "*", ReadFixture, [], FixtureFiles);
+            RegistryGateRunner.Run(registry, "fixture/index.json", null, true, ReadFixture, [], FixtureFiles);
         }
 
         [TestCase]

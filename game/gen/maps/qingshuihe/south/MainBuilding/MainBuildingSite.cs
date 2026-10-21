@@ -65,8 +65,13 @@ public sealed class MainBuildingSite : ZoneSite
         var left = Side(SouthIds.MainStepsLeft);
         var right = Side(SouthIds.MainStepsRight);
         var bottom = Side(SouthIds.MainStepsFront);
-        var rear = world.Interiors.Get(new(B2))?.Entrances.SingleOrDefault(e => e.Id == "b2.rear")
-            ?? throw new InvalidOperationException($"{B2} has no b2.rear entrance in the interior index.");
+        var rear = world.Interiors.Get(new(B2))?.Entrances.SingleOrDefault(e => e.Position switch
+        {
+            EntrancePosition.Unspecified or EntrancePosition.Front => false,
+            EntrancePosition.Rear => true,
+            _ => throw new ArgumentOutOfRangeException(nameof(e.Position), e.Position, "Unknown entrance position.")
+        })
+            ?? throw new InvalidOperationException($"{B2} has no authored rear entrance in the interior index.");
         var turned = new PlanFrame(Vector2.Zero, -front.U);
         var rearFrame = new PlanFrame(new Vector2(rear.Center.X, rear.Center.Z) - turned.W * RearBlockFront, turned.U);
         return new(front, rearFrame, left.X, right.X, bottom.Y, b2.Height ?? throw new InvalidOperationException($"{B2} has no height."));

@@ -67,6 +67,8 @@ public sealed class BootArguments
         if (result.Has("slot") && result.Has("load")) throw Invalid("--slot and --load are mutually exclusive.");
         if (result.HasLoad && WorldKeys.Any(result.Has)) throw Invalid("Saved state cannot be combined with world overrides.");
         result.Validate();
+        if (result.Value("map") == "*" && !result.CpuBakeMode && result.Value("gate") != "registry")
+            throw Invalid("--map=* requires CPU baking or --gate=registry.");
         if (result.Has("travel-sequence") && (result.CpuBakeMode || result.CaptureMode || result.Has("inspect")))
             throw Invalid("--travel-sequence cannot be combined with a bake, capture or inspect command.");
         if (result.CpuBakeMode && result._provided.Overlaps(["gate", "shots", "bench", "frames", "inspect"]))
@@ -93,8 +95,8 @@ public sealed class BootArguments
         OneOf("quality", "balanced", "fine", "ultra");
         OneOf("weather", "auto", "clear", "few-clouds", "cloudy", "overcast", "fog", "light-rain", "rain", "thunderstorm", "after-rain", "snow", "after-snow");
         OneOf("sunshower", "auto", "on", "off");
-        OneOf("save", "off", "1", "2", "3");
-        OneOf("slot", "1", "2", "3", "s1", "s2", "s3");
+        _ = ParseSlot("save", _values.GetValueOrDefault("save"));
+        _ = ParseSlot("slot", _values.GetValueOrDefault("slot"));
         OneOf("audio", "on", "off");
         OneOf("ui-theme", "auto", "light", "dark");
         OneOf("motion", "full", "reduced", "instant");
@@ -159,7 +161,7 @@ public sealed class BootArguments
         double? NumberValue(string key) => Text(key) is { } value ? double.Parse(value, CultureInfo.InvariantCulture) : null;
         uint? Seed(string key, bool explicitOnly = false) => (explicitOnly ? Explicit(key) : Text(key)) is { } value
             ? uint.Parse(value, CultureInfo.InvariantCulture) : null;
-        SlotId? Slot(string? value) => value is null or "off" ? null : new SlotId("s" + value.TrimStart('s'));
+        var allMaps = Text("map") == "*";
         var weather = Text("weather") is { } weatherText ? ParseWeather(weatherText) : null;
         return new BootRunOptions
         {
@@ -167,11 +169,12 @@ public sealed class BootArguments
             Automated = CaptureMode || Has("inspect"),
             FreezeAnimation = Has("shots") && !Has("bench") && !Has("movie-frames"),
             Title = Title,
+            AllMaps = allMaps,
             SaveDirectory = Text("save-dir"),
             TravelSequence = Text("travel-sequence")?.Split(',') ?? [],
             Flow = new BootFlowRequest(ShowTitle: Title,
-                Slot: Slot(Text("slot")), LoadFile: Text("load"),
-                Map: Text("map") is { } map ? new MapId(map) : null, Spawn: Text("spawn"),
+                Slot: ParseSlot("slot", Text("slot")), LoadFile: Text("load"),
+                Map: !allMaps && Text("map") is { } map ? new MapId(map) : null, Spawn: Text("spawn"),
                 Seed: Seed("weather-seed") ?? Seed("seed")),
             World = new WorldBootOptions
             {
@@ -192,7 +195,7 @@ public sealed class BootArguments
                 Explicit("ui-theme") switch { null => null, "auto" => UiThemeMode.Auto, "light" => UiThemeMode.Light, "dark" => UiThemeMode.Dark, _ => throw Invalid("ui-theme") }),
             Audio = new(Value("audio") == "on", CaptureMode || Value("audio-fixed", "0") == "1", Value("audio-limiter", "1") != "0"),
             Save = new(Value("save") != "off" && (!Has("load") || Has("save") && Value("save") != "off"),
-                Slot(Text("save")), NumberValue("save-at") is { } at ? (int)at : null, Seed("weather-seed")),
+                ParseSlot("save", Text("save")), NumberValue("save-at") is { } at ? (int)at : null, Seed("weather-seed")),
             Bake = new(Explicit("bake-cache"), Explicit("gen") == "live", Explicit("bake-strict") == "1",
                 Explicit("bake-bg") != "0", Explicit("bake") == "map", Seed("seed", explicitOnly: true)),
             Capture = new()
@@ -282,6 +285,18 @@ public sealed class BootArguments
 
     private static string Snake(string value) => string.Concat(value.Select((c, i) => i > 0 && char.IsUpper(c) &&
         (!char.IsUpper(value[i - 1]) || i + 1 < value.Length && char.IsLower(value[i + 1])) ? "_" + char.ToLowerInvariant(c) : char.ToLowerInvariant(c).ToString()));
+    private static SlotId? ParseSlot(string key, string? value)
+    {
+        if (value is null || key == "save" && value == "off") return null;
+        for (var index = 0; index < SaveSlots.Auto.Count; index++)
+        {
+            var slot = SaveSlots.Auto[index];
+            if (value == (index + 1).ToString(CultureInfo.InvariantCulture) || key == "slot" && value == slot.Value)
+                return slot;
+        }
+        throw Invalid(key + "=" + value);
+    }
+
     private void OneOf(string key, params string[] allowed)
     { if (Has(key) && !allowed.Contains(Value(key), StringComparer.Ordinal)) throw Invalid(key + "=" + Value(key)); }
     private void Number(string key, double min, double max, bool exclusiveMax = false)

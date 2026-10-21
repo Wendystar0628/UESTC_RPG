@@ -26,7 +26,6 @@ public sealed record SaveRuntimeBindings(IWorldState World, IMapService Maps, IC
 [KernelService(typeof(ISaveService))]
 public sealed class SaveService : ISaveService, IDisposable
 {
-    private static readonly SlotId[] AutoSlots = [new("s1"), new("s2"), new("s3")];
     private readonly ConcurrentQueue<Action> _frames = new();
     private readonly SemaphoreSlim _operation = new(1, 1);
     private readonly Dictionary<SlotId, SlotSnapshot> _slots = [];
@@ -45,7 +44,7 @@ public sealed class SaveService : ISaveService, IDisposable
     private int _frame;
     private byte[]? _thumbnail;
     private RulesetId _defaultRuleset;
-    private IReadOnlyList<SlotInfo> _slotInfos = AutoSlots.Select(s => new SlotInfo(s, SlotKind.Auto, SlotHealth.Empty, null, 0)).ToArray();
+    private IReadOnlyList<SlotInfo> _slotInfos = SaveSlots.Auto.Select(s => new SlotInfo(s, SlotKind.Auto, SlotHealth.Empty, null, 0)).ToArray();
 
     public bool Enabled => _initialized && _repository?.Enabled == true;
     public IReadOnlyList<SlotInfo> Slots => _slotInfos;
@@ -66,7 +65,7 @@ public sealed class SaveService : ISaveService, IDisposable
         var data = await Task.Run(() =>
         {
             var repository = new SaveRepository(options.Directory, options.Enabled, sections);
-            try { return (Repository: repository, Slots: AutoSlots.Select(repository.Scan).ToArray()); }
+            try { return (Repository: repository, Slots: SaveSlots.Auto.Select(repository.Scan).ToArray()); }
             catch { repository.Dispose(); throw; }
         }).ConfigureAwait(false);
         await OnFrame(() =>
@@ -270,7 +269,7 @@ public sealed class SaveService : ISaveService, IDisposable
 
     public Task<LoadResult> NewGame(SlotId slot, uint? seed = null, WorldPreset? start = null)
     {
-        if (!AutoSlots.Contains(slot)) throw new ArgumentOutOfRangeException(nameof(slot));
+        if (!SaveSlots.Auto.Contains(slot)) throw new ArgumentOutOfRangeException(nameof(slot));
         return RestoreDefaultWorld(slot, seed, start);
     }
 
@@ -285,7 +284,7 @@ public sealed class SaveService : ISaveService, IDisposable
             NewGameContext? defaults = null;
             var prepared = await OnFrame(() =>
             {
-                var result = _restore!.PrepareDefaultWorld(_options, _sections, _defaultRuleset, AutoSlots[0],
+                var result = _restore!.PrepareDefaultWorld(_options, _sections, _defaultRuleset, SaveSlots.Auto[0],
                     slot, seed, start, selected => checked(_slots[selected].MaxGeneration + 1));
                 defaults = result.Defaults;
                 Active = slot.HasValue ? _options.WriteSlot ?? slot : null; _newLine = slot.HasValue; _line = 0; _playSeconds = 0;
@@ -311,7 +310,7 @@ public sealed class SaveService : ISaveService, IDisposable
 
     public async Task<LoadResult> Load(SlotId slot, LoadScope scope = LoadScope.Full)
     {
-        if (!AutoSlots.Contains(slot) || !Enum.IsDefined(scope)) throw new ArgumentOutOfRangeException(nameof(slot));
+        if (!SaveSlots.Auto.Contains(slot) || !Enum.IsDefined(scope)) throw new ArgumentOutOfRangeException(nameof(slot));
         await _operation.WaitAsync().ConfigureAwait(false);
         try
         {
@@ -525,7 +524,7 @@ public sealed class SaveService : ISaveService, IDisposable
 
     private void Publish(SaveResult? result)
     {
-        _slotInfos = AutoSlots.Select(s => _slots.TryGetValue(s, out var info) ? info.Info : new(s, SlotKind.Auto, SlotHealth.Empty, null, 0)).ToArray();
+        _slotInfos = SaveSlots.Auto.Select(s => _slots.TryGetValue(s, out var info) ? info.Info : new(s, SlotKind.Auto, SlotHealth.Empty, null, 0)).ToArray();
         var savedAt = Active is { } active && _slots.TryGetValue(active, out var selected) ? selected.Info.Meta?.SavedAtUnix : null;
         State = new(Active, result?.Status ?? State.Last, result?.Status == SaveStatus.Failed ? result.Error : result?.Status == SaveStatus.Saved ? null : State.ErrorKey,
             savedAt, _repository?.ReadOnly ?? ReadOnlyReason.None);

@@ -156,7 +156,7 @@ public static class SaveContainer
             foreach (var item in element.EnumerateArray()) CheckDuplicates(item);
     }
 
-    private static void ValidateEnvelope(JsonElement element, out int version)
+    private static void ValidateEnvelope(JsonElement element, [DataVersion] out int version)
     {
         RequireMembers(element, ["v", "data"]);
         version = element.GetProperty("v").GetInt32();
@@ -209,7 +209,7 @@ public static class SaveContainer
             !Enum.IsDefined(meta.Reason)) throw new SaveFormatException("Invalid metadata fields.");
     }
 
-    public static bool ValidSlot(SlotId slot) => slot.Value is "s1" or "s2" or "s3";
+    public static bool ValidSlot(SlotId slot) => SaveSlots.Auto.Contains(slot);
 }
 
 [JsonSourceGenerationOptions(PropertyNamingPolicy = JsonKnownNamingPolicy.CamelCase, UseStringEnumConverter = true)]

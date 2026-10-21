@@ -95,8 +95,21 @@ public sealed class BootArgumentsTests
     [TestCategory(TestReason.Contract)]
     public void CpuBakeHasOneExecutionOwner()
     {
-        if (!BootArguments.Parse(["--bake=all", "--map=*"], true).CpuBakeMode)
-            throw new InvalidOperationException("CPU baking did not select its command path.");
+        var bake = BootArguments.Parse(["--bake=all", "--map=*"], true);
+        var registry = BootArguments.Parse(["--gate=registry", "--map=*"], true);
+        if (!bake.CpuBakeMode || !bake.AllMaps || bake.Flow.Map is not null ||
+            !registry.AllMaps || registry.Flow.Map is not null)
+            throw new InvalidOperationException("All-map commands leaked a selector into a map identity.");
+        var single = BootArguments.Parse(["--bake=map", "--map=fixture"], true);
+        if (single.AllMaps || single.Flow.Map != new MapId("fixture"))
+            throw new InvalidOperationException("A concrete map command lost its identity.");
+        foreach (var args in new[] { new[] { "--map=*" }, new[] { "--gate=save-close", "--map=*" } })
+        {
+            var invalidSelection = false;
+            try { BootArguments.Parse(args, true); }
+            catch (ArgumentException) { invalidSelection = true; }
+            if (!invalidSelection) throw new InvalidOperationException("World entry accepted an all-map command selector.");
+        }
         var rejected = false;
         try { BootArguments.Parse(["--bake=all", "--frames=30"], true); }
         catch (ArgumentException) { rejected = true; }

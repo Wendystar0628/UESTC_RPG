@@ -33,7 +33,7 @@ internal sealed class CoreLifecycleDriver(IStageGateHost host)
         var testFreeze = control.AcquireFlow(FlowPriority.Pause, 0);
         stage.TreeExiting += testFreeze.Dispose;
         if (gate == "save-close") await RoundTrip(flow, saves, camera, walk, observer, input);
-        else if (flow.State != AppState.Playing || saves.HasPendingPose || saves.Active != new SlotId("s1"))
+        else if (flow.State != AppState.Playing || saves.HasPendingPose || saves.Active != SaveSlots.Auto[0])
             throw new InvalidOperationException("The second process did not fully restore its saved world.");
         await CaptureAndCheck(gate, stage, world);
         return PrepareWindowClose(stage, saves, input);
@@ -55,7 +55,7 @@ internal sealed class CoreLifecycleDriver(IStageGateHost host)
     {
         if (flow.State != AppState.Title) throw new InvalidOperationException("Boot did not reach Title.");
         GD.Print("CORE_TITLE_READY");
-        if (await flow.Enter(new(EnterKind.NewGame, new SlotId("s1"))) != EnterResult.Entered)
+        if (await flow.Enter(new(EnterKind.NewGame, SaveSlots.Auto[0])) != EnterResult.Entered)
             throw new InvalidOperationException("The production flow could not enter a new game.");
         host.CheckActive();
         if (flow.State != AppState.Playing || observer.Mode != ViewMode.Walk || !walk.Active)
@@ -71,11 +71,11 @@ internal sealed class CoreLifecycleDriver(IStageGateHost host)
         if (flow.State != AppState.Title || Input.MouseMode == Input.MouseModeEnum.Captured)
             throw new InvalidOperationException("Return to title did not release playing input.");
         GD.Print($"CORE_RETURN_TITLE_READY {FrameClock.MonotonicMilliseconds:R}");
-        if (await flow.Enter(new(EnterKind.Continue, new SlotId("s1"))) != EnterResult.Entered)
+        if (await flow.Enter(new(EnterKind.Continue, SaveSlots.Auto[0])) != EnterResult.Entered)
             throw new InvalidOperationException("The production flow could not continue the saved game.");
         host.CheckActive();
         if (flow.State != AppState.Playing || observer.Mode != ViewMode.Walk || !walk.Active ||
-            saves.HasPendingPose || saves.Active != new SlotId("s1"))
+            saves.HasPendingPose || saves.Active != SaveSlots.Auto[0])
             throw new InvalidOperationException("Continue did not restore the saved Walk world.");
         await CoreWait(() => walk.Grounded && walk.CollisionReady && walk.IsSettled,
             "Continue did not prepare its standing collision and settle.");
@@ -135,7 +135,7 @@ internal sealed class CoreLifecycleDriver(IStageGateHost host)
 
     private static nint PrepareWindowClose(Node stage, ISaveService saves, IInputRouter input)
     {
-        var gen = saves.Slots.Single(info => info.Slot == new SlotId("s1")).Meta?.Gen
+        var gen = saves.Slots.Single(info => info.Slot == SaveSlots.Auto[0]).Meta?.Gen
             ?? throw new InvalidOperationException("Core lifecycle has no readable saved generation.");
         GD.Print("CORE_GENERATION " + gen);
         input.SetInterfaceMode(false);
