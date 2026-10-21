@@ -1005,14 +1005,14 @@
 `docs/systems/SYS-ATLAS-TRAVEL-标记、锚点与传送.md` · 5.6k 字 · 标记类型与可传送范围、锚点实体（导览亭与导览桩）、传送流程与落点；主线全开放，解锁策略在主线之后
 关键词：地图标记、标记类型、锚点、传送点、导览亭、导览桩、传送、加载界面、飞过去、传送落点、落地检查、解锁策略、all-unlocked、proximity、开放室内标记、停放点标记、IUnlockPolicy、TeleportSpec、TravelStyle、TravelRefusal、UnlockState、AnchorForm、MarkerKind、AtlasMarker
 
-- SYS-ATLAS-TRAVEL §0 结论 · L22 · 577
-  - ★ SYS-ATLAS-TRAVEL §0.1 接入要点 · L29 · 319
+- SYS-ATLAS-TRAVEL §0 结论 · L22 · 582
+  - ★ SYS-ATLAS-TRAVEL §0.1 接入要点 · L29 · 324
 - SYS-ATLAS-TRAVEL §1 标记类型 · L36 · 1.2k
 - SYS-ATLAS-TRAVEL §2 锚点实体：导览亭与导览桩 · L54 · 708
 - SYS-ATLAS-TRAVEL §3 传送流程 · L67 · 1.4k
   - SYS-ATLAS-TRAVEL §3.1 两种方式 · L69 · 299
   - SYS-ATLAS-TRAVEL §3.2 传送的时序 · L75 · 398
-  - SYS-ATLAS-TRAVEL §3.3 落点 · L86 · 438
+  - SYS-ATLAS-TRAVEL §3.3 落点 · L86 · 452
   - SYS-ATLAS-TRAVEL §3.4 预取、打断与边界情况 · L98 · 270
 - SYS-ATLAS-TRAVEL §4 解锁 · L103 · 339
 - SYS-ATLAS-TRAVEL §5 待验证 · L113 · 37
