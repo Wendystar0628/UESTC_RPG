@@ -14,6 +14,21 @@ namespace Campus.Gen.World.Tests;
 public sealed class TerrainSourceInputsTests
 {
     [TestCase, TestCategory(TestReason.Regression)]
+    public void TerrainParseFailureUsesTheOriginalJsonPathAndException()
+    {
+        const string file = "world/rejected.terrain.json";
+        foreach (var text in new[] { """{"zone":"fixture","ops":42}""", """{"zone":"fixture","ops":[""" })
+        {
+            WorldDataException? failure = null;
+            try { WorldTerrainInputs.ReadSources(new("fixture"), new(StringComparer.Ordinal) { [file] = text }); }
+            catch (WorldDataException error) { failure = error; }
+            AssertThat(failure?.InnerException is JsonException original && failure.File == file &&
+                failure.Entry == (original.Path ?? "root"))
+                .OverrideFailureMessage("Terrain parsing must retain the original JSON exception and use its path without reparsing.").IsTrue();
+        }
+    }
+
+    [TestCase, TestCategory(TestReason.Regression)]
     public void SourcePreparationKeepsWholePadUpstreamInputsAndIgnoresExplanations()
     {
         var building = new WorldFeature(new("fixture:long-building"), new("building"), new PolygonGeometry(Box(0, 0, 256, 40)))

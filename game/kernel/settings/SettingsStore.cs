@@ -46,8 +46,7 @@ public sealed class SettingsStore : ISettingsStore
             }
             catch (Exception error) when (error is IOException or UnauthorizedAccessException)
             {
-                DiagnosticLog.Warning("user://settings.json not written:", error);
-                return false;
+                return RejectWrite(error);
             }
         }
     }
@@ -93,19 +92,34 @@ public sealed class SettingsStore : ISettingsStore
         foreach (var candidate in new[] { path, path + ".bak" })
         {
             if (!File.Exists(candidate)) continue;
+            JsonObject? accepted;
             try
             {
                 if (new FileInfo(candidate).Length > MaxBytes) throw new InvalidDataException("Settings file is too large.");
                 var node = JsonNode.Parse(File.ReadAllText(candidate, Encoding.UTF8), null, new JsonDocumentOptions { MaxDepth = 8 });
-                if (node is JsonObject root) return root;
-                throw new InvalidDataException("Settings root is not an object.");
+                accepted = node as JsonObject ?? throw new InvalidDataException("Settings root is not an object.");
             }
             catch (Exception error) when (error is IOException or UnauthorizedAccessException or InvalidDataException or JsonException)
             {
-                DiagnosticLog.Warning($"user://{Path.GetFileName(candidate)} rejected; trying backup/defaults:", error);
+                accepted = RejectRead(candidate, error);
             }
+            if (accepted is not null) return accepted;
         }
         return [];
+    }
+
+    /// <summary>Abandons only this disk write; the in-memory settings remain in force (SYS-SAVE-FORMAT).</summary>
+    private static bool RejectWrite([FailureHandler("SYS-SAVE-FORMAT")] Exception error)
+    {
+        DiagnosticLog.Warning("user://settings.json not written:", error);
+        return false;
+    }
+
+    /// <summary>Rejects this file so Load proceeds to the backup or defaults (SYS-SAVE-FORMAT).</summary>
+    private static JsonObject? RejectRead(string candidate, [FailureHandler("SYS-SAVE-FORMAT")] Exception error)
+    {
+        DiagnosticLog.Warning($"user://{Path.GetFileName(candidate)} rejected; trying backup/defaults:", error);
+        return null;
     }
 
     internal T Read<T>(string[] path, Func<JsonObject?, T> read)

@@ -30,6 +30,10 @@ public sealed class RestoreFailureFlowTests
             throw new InvalidOperationException("Recovery was rejected before reaching the save transaction.");
         if (!f.Camera.InputLocked || !f.Loading.Active || f.Loading.Hides != 0)
             throw new InvalidOperationException("A failed recovery exposed or unlocked the partial world.");
+        if (f.Flow.Failure is not InvalidDataException failure ||
+            failure.StackTrace?.Contains("StartNewTimeline", StringComparison.Ordinal) != true ||
+            f.Flow.LastError != "save.error.restore_world")
+            throw new InvalidOperationException("The flow session must retain its original exception while keeping the existing restore-error display.");
         if (f.Diagnostics.Count != 1 || !f.Diagnostics[0].Contains("System.IO.InvalidDataException: save.error.restore_world", StringComparison.Ordinal) ||
             !f.Diagnostics[0].Contains("StartNewTimeline", StringComparison.Ordinal))
             throw new InvalidOperationException("The expected restore failure lost its original exception and stack: " + string.Join(Environment.NewLine, f.Diagnostics));

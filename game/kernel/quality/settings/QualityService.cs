@@ -299,7 +299,7 @@ public sealed class QualityService : IQualityFrame, IBootParticipant, IAsyncDisp
     }
 
     private async Task<Exception> RecoverApplication(Binding binding, Request request, QualityState.Snapshot snapshot,
-        QualityProfile previousDurable, bool applied, IAppLoadingLease? screen, bool persistenceAttempted, Exception error)
+        QualityProfile previousDurable, bool applied, IAppLoadingLease? screen, bool persistenceAttempted, [FailureHandler("SYS-GRAPHICS")] Exception error)
     {
         var cancellationToken = binding.Token;
         var recoveryErrors = new List<Exception>();

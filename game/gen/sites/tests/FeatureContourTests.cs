@@ -88,6 +88,18 @@ public sealed class FeatureContourTests
             .OverrideFailureMessage("A contour reference must not enter the rendered network.").IsTrue();
     }
 
+    [TestCase, TestCategory(TestReason.Regression)]
+    public void InvalidParentContourRetainsTheGeometryFailure()
+    {
+        var world = World(new(new("parent"), new("water"),
+            new PolygonGeometry(new(new[] { Vector2.Zero, Vector2.UnitX }))), Segment(Square[1], Square[0]));
+        WorldDataException? failure = null;
+        try { world.ContourSegment(Selection); }
+        catch (WorldDataException error) { failure = error; }
+        AssertThat(failure is { Entry: Selection, InnerException: ArgumentException })
+            .OverrideFailureMessage("The contour data error must keep its geometry exception, selection and stack.").IsTrue();
+    }
+
     private static WorldFeature Segment(Vector2 a, Vector2 b) => new(new(Selection), new("contourSegment"), new PolylineGeometry(new([a, b])))
         { Props = JsonSerializer.SerializeToElement(new { parent = "parent" }) };
 

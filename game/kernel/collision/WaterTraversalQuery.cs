@@ -1,5 +1,4 @@
 using System.Numerics;
-using System.Text.Json;
 using Campus.Contracts;
 using Campus.Contracts.Maps;
 
@@ -18,9 +17,7 @@ public sealed class WaterTraversalQuery(IMapService maps) : IWaterTraversalQuery
         if (!float.IsFinite(point.X) || !float.IsFinite(point.Y)) return Invalid("water.query.nonfinite");
         var status = EnsureCatalog();
         if (status != WaterQueryStatus.Ready) return new(status, diagnosticCode: "water.catalog.unavailable");
-        try { return SampleCore(point); }
-        catch (ArgumentException) { return Invalid("water.sample.invalid"); }
-        catch (InvalidOperationException) { return Invalid("water.sample.invalid"); }
+        return SampleCore(point);
     }
 
     private WaterQueryStatus EnsureCatalog()
@@ -32,16 +29,14 @@ public sealed class WaterTraversalQuery(IMapService maps) : IWaterTraversalQuery
             return _catalogStatus = WaterQueryStatus.NotReady;
         }
         if (ReferenceEquals(_context, context)) return _catalogStatus;
-        _context = context; _catalog = null;
-        if (context.World.Terrain is not ITerrainWaterSource source) return _catalogStatus = WaterQueryStatus.NotReady;
-        try
+        if (context.World.Terrain is not ITerrainWaterSource source)
         {
-            _catalog = new(context.World, source);
-            return _catalogStatus = WaterQueryStatus.Ready;
+            _context = context; _catalog = null;
+            return _catalogStatus = WaterQueryStatus.NotReady;
         }
-        catch (JsonException) { return _catalogStatus = WaterQueryStatus.Invalid; }
-        catch (ArgumentException) { return _catalogStatus = WaterQueryStatus.Invalid; }
-        catch (InvalidOperationException) { return _catalogStatus = WaterQueryStatus.Invalid; }
+        var catalog = new WaterTraversalCatalog(context.World, source);
+        _catalog = catalog; _context = context;
+        return _catalogStatus = WaterQueryStatus.Ready;
     }
 
     private WaterQueryResult SampleCore(Vector2 point)

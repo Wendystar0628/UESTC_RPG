@@ -45,7 +45,7 @@ public static class FeatureContours
         {
             IReadOnlyList<Vector2> ring;
             try { ring = PlanRings.OpenRing(input); }
-            catch (ArgumentException error) { throw ContourError(selectionId, $"Parent {parentId} has an invalid contour: {error.Message}"); }
+            catch (ArgumentException error) { throw ContourError(selectionId, $"Parent {parentId} has an invalid contour: {error.Message}", error); }
             var a = Match(ring, line.Line.Points[0], selectionId);
             var b = Match(ring, line.Line.Points[1], selectionId);
             if (a < 0 || b < 0) continue;
@@ -97,5 +97,6 @@ public static class FeatureContours
         return !string.IsNullOrWhiteSpace(value) ? value : throw ContourError(selectionId, $"props.{key} must be a nonempty string.");
     }
 
-    private static WorldDataException ContourError(string selectionId, string message) => new("world model", selectionId, message);
+    private static WorldDataException ContourError(string selectionId, string message, Exception? innerException = null) =>
+        new("world model", selectionId, message, innerException);
 }

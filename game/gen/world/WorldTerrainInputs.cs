@@ -15,37 +15,11 @@ internal static class WorldTerrainInputs
             TerrainOverlayFile overlay;
             try { overlay = TerrainOverlayJson.Parse(WorldModelLoader.Utf8.GetBytes(text)); }
             catch (JsonException error)
-            { throw new WorldDataException(file, TerrainErrorEntry(text, error), error.Message, error); }
+            { throw new WorldDataException(file, error.Path ?? "root", error.Message, error); }
             WorldModelLoader.CheckMap(map, overlay.Map, file);
             sources.Add(new(file, overlay));
         }
         return sources.AsReadOnly();
-    }
-
-    private static string TerrainErrorEntry(string text, JsonException error)
-    {
-        // Decode an identity only on a failed strict parse; the evaluator never consumes this projection.
-        try
-        {
-            using var document = JsonDocument.Parse(text);
-            if (document.RootElement.ValueKind == JsonValueKind.Object
-                && document.RootElement.TryGetProperty("ops", out var ops) && ops.ValueKind == JsonValueKind.Array)
-            {
-                var path = error.Path ?? "";
-                var start = path.IndexOf(".ops[", StringComparison.Ordinal);
-                var end = start < 0 ? -1 : path.IndexOf(']', start);
-                if (end > start && int.TryParse(path.AsSpan(start + 5, end - start - 5), out var index)
-                    && index >= 0 && index < ops.GetArrayLength() && ops[index].ValueKind == JsonValueKind.Object
-                    && ops[index].TryGetProperty("id", out var identity) && identity.ValueKind == JsonValueKind.String)
-                    return identity.GetString()!;
-                foreach (var op in ops.EnumerateArray())
-                    if (op.ValueKind == JsonValueKind.Object && op.TryGetProperty("id", out var id)
-                        && id.ValueKind == JsonValueKind.String && id.GetString() is { Length: > 0 } value
-                        && error.Message.Contains(value, StringComparison.Ordinal)) return value;
-            }
-        }
-        catch (JsonException) { }
-        return error.Path ?? "root";
     }
 
     internal static TerrainCompileContext? Prepare(WorldModelLoadInputs? inputs, IReadOnlyList<TerrainSource> sources,

@@ -226,6 +226,7 @@ public sealed class AppFlowService : IAppFlow, IAppBootFlow, IBootParticipant, I
         // close merely because Changed announced the start of Quitting.
         await appExit.FinishQuit();
     }
+    internal Exception? Failure => _recovery.Failure;
     public string? LastError => _recovery.LastError;
     private bool In(AppState expected) => State switch { AppState.Boot or AppState.Title or AppState.Entering or AppState.Playing or AppState.Leaving or AppState.Quitting => State == expected, _ => throw new InvalidOperationException("Unknown application state.") };
     private void Change(AppState state)

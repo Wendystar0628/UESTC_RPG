@@ -11,15 +11,17 @@ internal sealed class AppFlowRecovery(ISaveService saves, IMapService maps,
 {
     internal const string RestoreErrorKey = "save.error.restore_world";
     private Task? _faultHold;
-    internal string? LastError { get; private set; }
+    private string? _errorOverride;
+    internal Exception? Failure { get; private set; }
+    internal string? LastError => _errorOverride ?? Failure?.Message;
     internal void ResetHold() => _faultHold = null;
-    internal void BeginEntry() { LastError = null; ResetHold(); }
-    internal void CaptureFailure(Exception error, AppState state)
+    internal void BeginEntry() { Failure = null; _errorOverride = null; ResetHold(); }
+    internal void CaptureFailure([FailureHandler("SYS-TITLE")] Exception error, AppState state)
     {
-        LastError = error.Message;
+        Failure = error; _errorOverride = null;
         diagnostic($"[game/flow/][map:{maps.Current.Value}][flow:{state}]", error);
     }
-    internal void RetainRestoreError() => LastError = RestoreErrorKey;
+    internal void RetainRestoreError() => _errorOverride = RestoreErrorKey;
     internal Task HoldRestoreFailure(bool keepBoot = false)
     {
         if (_faultHold is not null) return _faultHold;
@@ -31,7 +33,7 @@ internal sealed class AppFlowRecovery(ISaveService saves, IMapService maps,
     {
         try
         {
-            LastError = RestoreErrorKey;
+            _errorOverride = RestoreErrorKey;
             continuation.ResetFaultedWorld();
             resources.HoldInput(); resources.HoldTitleFlow(); resources.HoldLoadingFlow();
             await resources.BeginLoading(null, save: false);
