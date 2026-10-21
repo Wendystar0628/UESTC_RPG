@@ -46,7 +46,6 @@ internal static class TerrainBlockCoverage
         foreach (var point in MapCatalog.ReviewPoses(map, context.SourceInputs.Entries).Values) Include(point.Position);
         foreach (var spawn in map.Spawns)
             if (spawn.Stand is { } stand) Include(stand.Feet);
-        if (map.Title is { } title) Include(title.T0.Position);
         if (context.SourceInputs.Entries.TryGetValue("waypoints.json", out var waypointBytes))
         {
             var waypoints = JsonSerializer.Deserialize<WaypointFile>(waypointBytes.Span, ContractJson.Options)

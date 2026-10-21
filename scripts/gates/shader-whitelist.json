@@ -12,7 +12,6 @@
   "game/style/outline/post_outline_composite.glslinc",
   "game/style/outline/fog.glslinc",
   "game/style/outline/post_outline.glsl",
-  "game/style/shaders/cine_cloud.gdshader",
   "game/style/shaders/diorama_far.gdshader",
   "game/style/shaders/fog.gdshaderinc",
   "game/style/shaders/fx_glow.gdshader",

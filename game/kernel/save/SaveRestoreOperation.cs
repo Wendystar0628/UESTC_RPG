@@ -19,7 +19,6 @@ internal sealed class SaveRestoreOperation(SaveRuntimeBindings runtime, Action f
     public bool IsActive { get; private set; }
     public bool MutationStarted { get; private set; }
     public bool Blocked { get; private set; }
-    public PreparedSave? PendingPose { get; private set; }
 
     public Task<MapTravelResult>? Begin()
     {
@@ -27,10 +26,6 @@ internal sealed class SaveRestoreOperation(SaveRuntimeBindings runtime, Action f
         _input ??= _runtime.Camera.LockInput(InputLockReason.MapTravel);
         return _runtime.Maps.Transition?.Done;
     }
-
-    public void BeginMutation() => MutationStarted = true;
-    public void DeferPose(PreparedSave prepared) => PendingPose = prepared;
-    public void ClearPendingPose() => PendingPose = null;
 
     public void RetainFailure([FailureHandler("SYS-SAVE-FLOW")] Exception error) => Error ??= error;
 
@@ -45,7 +40,7 @@ internal sealed class SaveRestoreOperation(SaveRuntimeBindings runtime, Action f
     {
         RetainFailure(error);
         if (_abortApplied) return;
-        Blocked = true; PendingPose = null; _abortApplied = true;
+        Blocked = true; _abortApplied = true;
         // Abort before the next World tick can observe the failed transaction's pending state.
         try { _runtime.WorldRestore.AbortRestore(); }
         finally { faulted(); }
@@ -94,22 +89,22 @@ internal sealed class SaveRestoreOperation(SaveRuntimeBindings runtime, Action f
     }
 
     public (PreparedSave Save, NewGameContext Defaults) PrepareDefaultWorld(SaveRuntimeOptions options,
-        SaveSections sections, RulesetId defaultRuleset, SlotId metadataSlot, SlotId? slot,
-        uint? seed, WorldPreset? start, Func<SlotId, ulong> nextGeneration)
+        SaveSections sections, RulesetId defaultRuleset, SlotId? slot,
+        uint? seed, WorldPreset? start, NewGameBoot? boot, Func<SlotId, ulong> nextGeneration)
     {
         MutationStarted = true;
         _runtime.SelectRuleset(defaultRuleset);
-        var map = _runtime.Maps.Maps.First(m => m.Id == _runtime.Maps.Default);
-        var context = new NewGameContext(seed ?? options.WeatherSeed ?? (slot.HasValue ? NewSeed() : map.Seed), map.Id,
-            start ?? map.World.Default, _runtime.Ruleset.Current.DefaultViewMode);
+        var map = _runtime.Maps.Maps.First(m => m.Id == (boot?.Map ?? _runtime.Maps.Default));
+        var context = new NewGameContext(boot?.Weather.Seed ?? seed ?? options.WeatherSeed ?? NewSeed(), map.Id,
+            start ?? map.World.Default, boot?.Destination?.Mode ?? _runtime.Ruleset.Current.DefaultViewMode) { Boot = boot };
         var entries = sections.Registered.Select(r => new PreparedSection(SaveSections.Key(r.Attribute, map.Id), r,
             map.Id, r.Attribute.Phase == RestorePhase.World ? r.Section.CreateDefault(context) : null,
             r.Attribute.Version, null)).ToArray();
         var generation = slot is { } selected ? nextGeneration(selected) : 0;
-        var meta = new SaveMeta(SaveContainer.CurrentFormat, options.Build, slot ?? metadataSlot, SlotKind.Auto, generation, generation, 0, map.Id,
+        var meta = new SaveMeta(SaveContainer.CurrentFormat, options.Build, slot ?? SaveSlots.Auto[0], SlotKind.Auto, generation, generation, 0, map.Id,
             context.Start.Clock, context.Start.Clock, context.Start.Season,
             context.Start.Weather ?? map.World.Default.Weather ?? throw new InvalidDataException("The map has no default weather."),
-            context.Mode, default, null, null, null, _runtime.UnixTime(), SaveReason.NewGame,
+            context.Mode, boot?.Destination?.Pose ?? default, boot?.Destination?.Space, null, null, _runtime.UnixTime(), SaveReason.NewGame,
             _runtime.Ruleset.Current.Id.Value);
         var save = new PreparedSave(new(meta, new Dictionary<string, RawSaveSection>(), null), entries);
         RestorePhaseOf(save, RestorePhase.World, []); _runtime.WorldRestore.CompleteRestore();

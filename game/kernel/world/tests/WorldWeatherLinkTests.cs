@@ -26,6 +26,7 @@ public sealed class WorldWeatherLinkTests
         var context = PresetContext(new WorldPreset(17.5, Season.Autumn), true);
         world.Freeze(context.Descriptor.World.Default.Clock, context.Descriptor.World.Default.Season, WorldTime.InitialAnimTime);
         world.OnMapLoaded(context);
+        world.CompleteRestore();
         world.Tick(.0625);
         AssertThat(weather.Steps.Count).IsEqual(1);
         AssertThat(weather.Enters).IsEqual(1);
@@ -50,7 +51,11 @@ public sealed class WorldWeatherLinkTests
         AssertThat(weather.Steps.Count).IsEqual(0);
         AssertThat(weather.Calls.Count).IsEqual(0);
 
-        // Boot owns Reset after Freeze; the first World tick supplies the initial season and offset.
+        AssertThat(!world.IsSettled && world.Instance == 0).OverrideFailureMessage("Prepared boot values signed an active world.").IsTrue();
+        AssertThrown(() => world.Tick(.0625)).IsInstanceOf<InvalidOperationException>();
+        world.CompleteRestore();
+        AssertThat(world.Instance).IsEqual(instance + 1);
+        // The first World tick supplies the initial season and offset after the explicit commit.
         weather.Reset(new WeatherBoot(1, WeatherKind.Snow));
         var context = PresetContext(new WorldPreset(6, Season.Winter, WeatherKind.Snow), false);
         world.OnMapLoaded(context);
@@ -120,6 +125,8 @@ public sealed class WorldWeatherLinkTests
         world.InstanceChanged += _ => notifications++;
         world.OnMapLoaded(context);
         world.Freeze(17 + 35 / 60d, Season.Autumn, 240);
+        world.CompleteRestore();
+        notifications = 0;
         var instance = world.Instance;
         world.ResetDefault();
         AssertThat(Math.Abs((world.TargetHours) - (17 + 35 / 60d)) <= TestTolerance.WorldHours).OverrideFailureMessage($"Expected {17 + 35 / 60d:R}, got {world.TargetHours:R}.").IsTrue();

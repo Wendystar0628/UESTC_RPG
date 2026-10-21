@@ -261,6 +261,33 @@ public partial class GameCaptureNode : Node, IGameCapture, IRegistryExitParticip
         finally { _exit.Dispose(); }
     }
 
+    /// <summary>Read the presented title UI without creating or preparing a world destination.</summary>
+    public async Task CaptureStaticUiAsync(Node host, CancellationToken cancellationToken = default)
+    {
+        RequireMainThread();
+        if (_busy) throw new InvalidOperationException("Another game capture is in progress.");
+        if (!Available()) throw new InvalidOperationException("The game capture service is not available.");
+        var destination = AppBoot.Options.Capture.Output ?? throw new ArgumentException("--out must be an absolute directory.");
+        if (!Path.IsPathFullyQualified(destination)) throw new ArgumentException("--out must be an absolute directory.");
+        _busy = true;
+        _path = null;
+        using var lifetime = CancellationTokenSource.CreateLinkedTokenSource(_exit.Token, cancellationToken);
+        try
+        {
+            Directory.CreateDirectory(destination);
+            _path = Path.Combine(destination, "ui.png");
+            await SaveFrameAsync(_path, hideUi: false, unique: false, lifetime.Token, Ready);
+            GD.Print($"[{_diagnosticId}][phase=capture] ui {_path}");
+        }
+        finally { EndCapture(); }
+
+        bool Ready()
+        {
+            if (!host.IsInsideTree()) throw new OperationCanceledException("Capture stage left the tree.");
+            return !_loading.Active;
+        }
+    }
+
     /// <summary>Every fixed destination uses the same service owner, presentation and image export as F12.</summary>
     public async Task RunSequenceAsync(Node host, ViewContentReadiness producers, BootRunOptions options,
         CaptureDestination? startupCapture, Action syncCamera, Func<bool> contentReady, CancellationToken cancellationToken = default,
@@ -313,15 +340,12 @@ public partial class GameCaptureNode : Node, IGameCapture, IRegistryExitParticip
         if (capture is null && (mode != ViewMode.Fly || rig.Mode != ViewMode.Fly))
             throw new NotSupportedException("Walk capture requires the matching prepared startup request; live walking relocation is not supported.");
         if (capture is not null) ValidateDestination();
-        var pose = ResolvePose(shot.Pose, shot.Options, context);
+        var pose = ReviewPoseResolver.Resolve(shot.Pose, context);
         await using var cover = _loading.Show();
         await cover.Covered;
         cancellationToken.ThrowIfCancellationRequested();
-        if (shot.Pose != "T0")
-        {
-            _ = await KernelServices.Get<ICameraPoseValidator>().LegalizePrepared(pose, cancellationToken);
-            validatePose?.Invoke(pose);
-        }
+        _ = await KernelServices.Get<ICameraPoseValidator>().LegalizePrepared(pose, cancellationToken);
+        validatePose?.Invoke(pose);
         var terrainPoint = new System.Numerics.Vector2(pose.Position.X, pose.Position.Z);
         await KernelServices.Get<ITerrainPreparation>().PreparePoints(context, [terrainPoint], cancellationToken);
         LogPhase("terrain-ready");
@@ -407,15 +431,6 @@ public partial class GameCaptureNode : Node, IGameCapture, IRegistryExitParticip
             await File.WriteAllBytesAsync(Path.Combine(destination, "movie-segment.json"), metadata, cancellationToken);
         }
         finally { RestoreUi(); }
-    }
-
-    private static Pose ResolvePose(string id, BootRunOptions options, IMapContext context)
-    {
-        if (id == "FRONTIS") throw new NotSupportedException("FRONTIS capture requires the unconnected frontispiece presentation.");
-        return id == "T0"
-            ? options.Title ? context.Descriptor.Title?.T0 ?? throw new InvalidDataException("This map has no title pose.")
-                : throw new ArgumentException("T0 requires --title=1.")
-            : ReviewPoseResolver.Resolve(id, context);
     }
 
     private static Pose ApplyPose(Pose pose, BootRunOptions options, IMapContext context,

@@ -4,4 +4,5 @@ namespace Campus.Flow;
 public static class FlowTuning
 {
     public const double SaveTimeoutSeconds = 5;
+    public const double TitleSaveTimeoutSeconds = 2;
 }

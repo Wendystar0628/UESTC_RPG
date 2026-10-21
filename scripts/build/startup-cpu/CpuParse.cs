@@ -1,4 +1,5 @@
 // EventPipe sampled-thread-time stacks plus real OS CPU counter differences.
+// 用法：dotnet CpuParse.dll <diagnostic-round-directory>。
 using System.Globalization;
 using System.Text.Json;
 using System.Text.RegularExpressions;
@@ -23,11 +24,14 @@ var origin = new DateTime(offsets.Min(), DateTimeKind.Utc);
 DateTime At(Anchor anchor) => origin.AddMilliseconds(anchor.Milliseconds);
 var boundaries = anchors.ToDictionary(x => x.Name, StringComparer.Ordinal);
 if (!boundaries.TryGetValue("title-ready", out var title)) throw new InvalidDataException("Missing title-ready.");
+if (!boundaries.TryGetValue("title-input-ready", out var menuInput)) throw new InvalidDataException("Missing static menu title-input-ready.");
 var flow = root.GetProperty("mode").GetString() != "title";
 if (flow && (!boundaries.TryGetValue("input-ready", out var input) || !input.Suffix.Contains("mode=Walk")))
     throw new InvalidDataException("Missing first Walk input-ready.");
-if (!boundaries.TryGetValue("realtime", out var realtime)) throw new InvalidDataException("Missing startup realtime.");
-boundaries.TryGetValue("world-ready", out var worldReady);
+boundaries.TryGetValue("realtime", out var realtime);
+if (flow && realtime is null) throw new InvalidDataException("Missing first Playing realtime after formal entry.");
+boundaries.TryGetValue("preload-ready", out var preloadReady);
+if (!flow && preloadReady is null) throw new InvalidDataException("Diagnostic title requires real new-game preload-ready.");
 long? FrameOf(Anchor a) => Regex.Match(a.Suffix, @"(?:^|\s)frame=(\d+)(?:\s|$)") is { Success: true } match
     ? long.Parse(match.Groups[1].Value, CultureInfo.InvariantCulture) : null;
 var rendererFrames = Regex.Matches(File.ReadAllText(Path.Combine(directory, "godot.log")),
@@ -74,14 +78,16 @@ try
         }
         samples.Add(new(data.TimeStamp.ToUniversalTime(), data.ThreadID, sample.Type.ToString(), stack is not null, frames));
     }
-    var windows = new List<Window> { new("process-to-menu-ready", "process-start", "title-ready", processStart, At(title)),
-        new("process-to-startup-realtime", "process-start", "realtime", processStart, At(realtime)),
-        new("menu-ready-to-startup-realtime", "title-ready", "realtime", At(title), At(realtime)) };
-    if (worldReady is not null)
+    var windows = new List<Window> {
+        new("process-to-static-menu-input-ready", "process-start", "title-input-ready", processStart, At(menuInput)) };
+    if (preloadReady is not null)
     {
-        windows.Add(new("process-to-world-ready", "process-start", "world-ready", processStart, At(worldReady)));
-        windows.Add(new("menu-ready-to-world-ready", "title-ready", "world-ready", At(title), At(worldReady)));
+        windows.Add(new("process-to-new-game-preload-ready", "process-start", "preload-ready", processStart, At(preloadReady)));
+        if (preloadReady.Milliseconds >= menuInput.Milliseconds)
+            windows.Add(new("static-menu-input-ready-to-new-game-preload-ready", "title-input-ready", "preload-ready", At(menuInput), At(preloadReady)));
     }
+    if (realtime is not null)
+        windows.Add(new("process-to-Playing-realtime", "process-start", "realtime", processStart, At(realtime)));
     var previous = processStart;
     var previousName = "process-start";
     foreach (var anchor in anchors.OrderBy(x => x.Milliseconds))
@@ -95,20 +101,19 @@ try
         var ready = boundaries["input-ready"];
         windows.Add(new("normal-new-game-enter-to-input-ready-Walk", "new-game-enter", "input-ready", At(enter), At(ready)));
         windows.Add(new("menu-ready-to-new-game-enter", "title-ready", "new-game-enter", At(title), At(enter)));
-        if (worldReady is not null && enter.Milliseconds < worldReady.Milliseconds)
-        {
-            windows.Add(new("new-game-enter-to-world-ready-join", "new-game-enter", "world-ready", At(enter), At(worldReady)));
-            windows.Add(new("world-ready-to-input-ready-Walk", "world-ready", "input-ready", At(worldReady), At(ready)));
-        }
+        if (preloadReady is not null && enter.Milliseconds < preloadReady.Milliseconds)
+            windows.Add(new("new-game-enter-to-new-game-preload-ready", "new-game-enter", "preload-ready", At(enter), At(preloadReady)));
     }
-    var finalBoundary = flow ? At(boundaries["input-ready"]) : At(realtime);
-    if (At(realtime) > finalBoundary) finalBoundary = At(realtime);
+    var finalBoundary = flow ? At(boundaries["input-ready"]) : At(preloadReady!);
+    if (At(menuInput) > finalBoundary) finalBoundary = At(menuInput);
+    if (realtime is not null && At(realtime) > finalBoundary) finalBoundary = At(realtime);
     var coverageStart = trace.SessionStartTime.ToUniversalTime();
     var coverageEnd = trace.SessionEndTime.ToUniversalTime();
     var report = new
     {
         pid, mode = root.GetProperty("mode").GetString(), mainOsThreadId = mainId,
         measurement = "diagnostic; not an experience-target pass",
+        captureEndpoint = root.GetProperty("captureEndpoint").GetString(),
         launcher = root.GetProperty("launcher").Clone(),
         cacheCondition = root.GetProperty("condition").Clone(),
         observedTiming = root.GetProperty("timing").Clone(),
@@ -126,13 +131,13 @@ try
         input = root.GetProperty("input").Clone(),
         condition = new {
             menuReadyMilliseconds = title.Milliseconds,
-            worldReadyMilliseconds = worldReady?.Milliseconds,
-            worldReadyStatus = worldReady is null ? "NOT_MEASURED; explicit world-ready marker absent; realtime remains separate" : "EXPLICIT_WORLD_READY_MARKER",
-            startupRealtimeMilliseconds = realtime.Milliseconds,
+            staticMenuInputReadyMilliseconds = menuInput.Milliseconds,
+            newGamePreloadReadyMilliseconds = preloadReady?.Milliseconds,
+            playingRealtimeMilliseconds = realtime?.Milliseconds,
             newGameEnterMilliseconds = flow ? boundaries["new-game-enter"].Milliseconds : (double?)null,
             actualMenuDwellMilliseconds = flow ? boundaries["new-game-enter"].Milliseconds - title.Milliseconds : (double?)null,
-            enteredBeforeWorldReady = flow && worldReady is not null ? boundaries["new-game-enter"].Milliseconds < worldReady.Milliseconds : (bool?)null,
-            titleIsWorldReady = false },
+            enteredBeforeNewGamePreloadReady = flow && preloadReady is not null ? boundaries["new-game-enter"].Milliseconds < preloadReady.Milliseconds : (bool?)null,
+            titleIsStaticPage = true },
         clock = new { originUtc = origin, nominalPollingMilliseconds = 20,
             method = "minimum observedUtc minus STARTUP_PHASE milliseconds; CPU counters retain their actual read timestamps, without calibration or interpolation",
             anchorOffsetSpreadMilliseconds = (offsets.Max() - offsets.Min()) / (double)TimeSpan.TicksPerMillisecond,

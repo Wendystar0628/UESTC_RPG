@@ -1,8 +1,8 @@
 ﻿# 私有桌面启动体验/诊断：本轮从脚本进入计，包含等锁和同一正式判鲜，诊断显式选择。
-# 用法：由 isolated-launch.py 传入 -Output、-Mode、-TitleDwellSeconds、-ConditionPath。
+# 用法：由 isolated-launch.py 传入 -Output、-Mode、-ConditionPath。
 # 产出：-Output 指定目录（采样日志、跟踪、JSON 记录与隔离存档；父目录由调用方传入）。
 param([Parameter(Mandatory)][string]$Output, [ValidateSet('title','immediate','dwell')][string]$Mode,
-    [ValidateRange(1,120)][double]$TitleDwellSeconds = 10, [Parameter(Mandatory)][string]$ConditionPath)
+    [Parameter(Mandatory)][string]$ConditionPath)
 $scriptEnteredTimestamp = [Diagnostics.Stopwatch]::GetTimestamp()
 $scriptEnteredUtc = [DateTime]::UtcNow
 $ErrorActionPreference = 'Stop'
@@ -185,6 +185,9 @@ try {
     $titleObservedAt = $null
     $titleReadyFrame = $null
     $titleInputReadyAt = $null
+    $preloadObservedAt = $null
+    $newGameEnterAnchor = $null
+    $preloadReady = $null
     $inputRequestedUtc = $null
     $inputRequestedClockSeconds = $null
     $inputRequestedTimestamp = $null
@@ -213,12 +216,18 @@ try {
                     $titleReadyFrame = [long][regex]::Match($m.Groups[3].Value, 'frame=(\d+)').Groups[1].Value
                 }
                 if ($m.Groups[1].Value -eq 'title-input-ready') { $titleInputReadyAt = $clock.Elapsed.TotalSeconds }
+                if ($m.Groups[1].Value -eq 'preload-ready') {
+                    if ($m.Groups[3].Value -notmatch '(?:^|\s)preloadReady=True(?:\s|$)') {
+                        throw 'preload-ready must report real new-game resource readiness.'
+                    }
+                    $preloadObservedAt = $clock.Elapsed.TotalSeconds
+                }
+                if ($m.Groups[1].Value -eq 'new-game-enter') { $newGameEnterAnchor = $anchors[$anchors.Count - 1] }
             }
         }
-        $delay = if ($Mode -eq 'dwell') { $TitleDwellSeconds } else { 0 }
         if ($Mode -ne 'title' -and $null -ne $titleInputReadyAt -and $null -eq $inputRequestedUtc -and
-            $clock.Elapsed.TotalSeconds -ge $titleObservedAt + $delay) {
-            # A sparse post-title process-frame marker proves the normal menu can accept input.
+            ($Mode -eq 'immediate' -or $null -ne $preloadObservedAt)) {
+            # Menu input is independent of background resource loading. Dwell waits for real preload.
             $inputRequestedUtc = [DateTime]::UtcNow.ToString('O')
             $inputRequestedTimestamp = [Diagnostics.Stopwatch]::GetTimestamp()
             $inputRequestedClockSeconds = $clock.Elapsed.TotalSeconds
@@ -237,9 +246,21 @@ try {
             $clock.Elapsed.TotalSeconds -gt $inputRequestedClockSeconds + 15) {
             throw "Directed Enter did not reach new-game-enter within 15s; hwnd=$inputWindowHandle titleFrame=$titleReadyFrame; no valid immediate/dwell result."
         }
-        $completed = $seen.Contains('realtime') -and
-            ($Mode -eq 'title' -or ($null -ne $inputReleasedTimestamp -and $seen.Contains('new-game-enter') -and
-                ($text -match '(?m)^STARTUP_PHASE input-ready [^\r\n]*mode=Walk')))
+        if ($null -ne $inputReleasedTimestamp -and $null -ne $newGameEnterAnchor) {
+            $preload = [regex]::Match($newGameEnterAnchor.suffix, '(?:^|\s)preloadReady=(true|false)(?:\s|$)', 'IgnoreCase')
+            if (-not $preload.Success) { throw 'new-game-enter is missing its real preloadReady state.' }
+            $preloadReady = [bool]::Parse($preload.Groups[1].Value)
+            if ($Mode -eq 'dwell' -and -not $preloadReady) {
+                throw 'Dwell entered without real new-game resources retained and ready; no valid preloaded result.'
+            }
+        }
+        $completed = if ($Mode -eq 'title') {
+            # The diagnostic endpoint additionally includes background resource preparation.
+            $null -ne $titleInputReadyAt -and (-not $diagnostic -or $null -ne $preloadObservedAt)
+        } else {
+            $seen.Contains('realtime') -and $null -ne $inputReleasedTimestamp -and
+                $null -ne $newGameEnterAnchor -and $seen.Contains('input-ready')
+        }
         if ($completed) { break }
         Start-Sleep -Milliseconds 20
     }
@@ -255,12 +276,11 @@ try {
         if (-not $phaseByName.ContainsKey($Name)) { return $null }
         return Elapsed-Seconds $From $phaseByName[$Name].observedTimestamp
     }
-    $preloadReady = $null
-    if ($phaseByName.ContainsKey('new-game-enter')) {
-        $preload = [regex]::Match($phaseByName['new-game-enter'].suffix, '(?:^|\s)preloadReady=(true|false)(?:\s|$)', 'IgnoreCase')
-        if ($preload.Success) { $preloadReady = [bool]::Parse($preload.Groups[1].Value) }
-    }
-    $titleSeconds = Observed-Seconds 'title-ready' $scriptEnteredTimestamp
+    $titleSeconds = Observed-Seconds 'title-input-ready' $scriptEnteredTimestamp
+    $captureEndpoint = if ($Mode -eq 'title') {
+        if ($diagnostic) { 'static-menu-input-ready-and-background-new-game-preload-ready' }
+        else { 'static-menu-input-ready' }
+    } else { 'playing-realtime-and-Walk-input-ready' }
     $realtimeSeconds = Observed-Seconds 'realtime' $scriptEnteredTimestamp
     $inputSeconds = if ($null -ne $inputRequestedTimestamp) { Observed-Seconds 'input-ready' $inputRequestedTimestamp } else { $null }
     $budgets = (Get-Content -LiteralPath (Join-Path $toolRoot 'budgets.json') -Raw | ConvertFrom-Json).cache
@@ -274,15 +294,15 @@ try {
         return [ordered]@{ key=$Key; targetSeconds=$limit; observedSeconds=$Actual; status=$status; endpoint=$Endpoint }
     }
     $checks = @(
-        (Budget-Observation 'warmLauncherToTitleSecondsMax' $titleSeconds ($validGeometry -and $warmPipelines -and $condition.systemFileCache -eq 'warm') 'script-entry to menu-operable observation'),
-        (Budget-Observation 'coldLauncherToTitleSecondsMax' $titleSeconds ($validGeometry -and $warmPipelines -and $condition.systemFileCache -eq 'reboot-first-run') 'script-entry to menu-operable observation'),
-        (Budget-Observation 'firstRunLauncherToRealtimeSecondsMax' $realtimeSeconds ($validGeometry -and $condition.pipelineCache -eq 'first-run') 'script-entry to first realtime observation'),
+        (Budget-Observation 'warmLauncherToTitleSecondsMax' $titleSeconds ($validGeometry -and $warmPipelines -and $condition.systemFileCache -eq 'warm') 'script-entry to static-menu-input-ready observation'),
+        (Budget-Observation 'coldLauncherToTitleSecondsMax' $titleSeconds ($validGeometry -and $warmPipelines -and $condition.systemFileCache -eq 'reboot-first-run') 'script-entry to static-menu-input-ready observation'),
+        (Budget-Observation 'firstRunLauncherToRealtimeSecondsMax' $realtimeSeconds ($validGeometry -and $condition.pipelineCache -eq 'first-run') 'script-entry to first Playing realtime observation after formal entry'),
         (Budget-Observation 'preloadedNewGameToWalkSecondsMax' $inputSeconds ($validGeometry -and $warmPipelines -and $preloadReady -eq $true) 'directed request to first Walk input-release observation; movement checked by core smoke'),
         (Budget-Observation 'immediateNewGameToWalkSecondsMax' $inputSeconds ($validGeometry -and $warmPipelines -and $Mode -eq 'immediate') 'directed request to first Walk input-release observation; movement checked by core smoke')
     )
     [ordered]@{ gamePid=$gameProcess.Id; mainOsThreadId=$mainThreadId; engineStartUtc=$processStart.ToString('O');
         mainThreadIdentification='CreateProcessW primary OS thread ID; compare only OS IDs, never CLR ManagedThreadID';
-        mode=$Mode; commandLine=$line; measurement=$condition.measurement; condition=$condition; launcher=$timing;
+        mode=$Mode; captureEndpoint=$captureEndpoint; commandLine=$line; measurement=$condition.measurement; condition=$condition; launcher=$timing;
         collector=if($diagnostic){'EventPipe dotnet-sampled-thread-time; NOT on-CPU'}else{'OFF'};
         attachRequestedUtc=$attachRequestedUtc; collectorPid=if($trace){$trace.Id}else{$null}; collectorStopRequestedUtc=$stopRequestedUtc;
         collectorStoppedWhileTargetAlive=if($diagnostic){$stopped}else{$null}; collectorFinishedUtc=if($diagnostic){[DateTime]::UtcNow.ToString('O')}else{$null};
@@ -293,7 +313,8 @@ try {
             scriptToEngineLaunchRequestSeconds=(Elapsed-Seconds $scriptEnteredTimestamp $timing.engineLaunchRequestedTimestamp);
             lockWaitSeconds=(Elapsed-Seconds $timing.lockRequestedTimestamp $timing.lockAcquiredTimestamp);
             freshnessSeconds=(Elapsed-Seconds $timing.freshnessStartedTimestamp $timing.freshnessCompletedTimestamp);
-            scriptToMenuObservedSeconds=$titleSeconds; scriptToRealtimeObservedSeconds=$realtimeSeconds;
+            scriptToMenuObservedSeconds=$titleSeconds; scriptToPlayingRealtimeObservedSeconds=$realtimeSeconds;
+            scriptToNewGamePreloadReadyObservedSeconds=(Observed-Seconds 'preload-ready' $scriptEnteredTimestamp);
             directedRequestToWalkInputReleaseObservedSeconds=$inputSeconds;
             movementResponseSeconds=$null; movementStatus='NOT_MEASURED_IN_TIMING_ROUND; core smoke checks real directional displacement';
             limit='Observed log boundaries include flush/poll/scheduling delay, nominal poll 20ms; no guessed overhead subtraction. Worker native-binding setup is included before lock/freshness, conservatively beyond the product launcher. Process StartTime UTC and engine phase milliseconds have separate origins.' };
@@ -305,9 +326,11 @@ try {
             observedRequestToReleaseMilliseconds=if($null -eq $inputReleasedTimestamp){$null}else{
                 (Elapsed-Seconds $inputRequestedTimestamp $inputReleasedTimestamp) * 1000};
             spawnPreloadedAtAcceptance=$preloadReady;
-            requestedDwellSeconds=if($Mode -eq 'title'){$null}else{$delay};
+            waitCondition=if($Mode -eq 'dwell'){'real-new-game-preload-ready-and-menu-input-ready'}elseif($Mode -eq 'immediate'){'menu-input-ready'}else{$null};
+            observedMenuInputReadyToPreloadReadyWaitSeconds=if($null -eq $preloadObservedAt -or $null -eq $titleInputReadyAt){$null}else{[Math]::Max(0, $preloadObservedAt-$titleInputReadyAt)};
+            observedMenuInputReadyToRequestSeconds=if($null -eq $inputRequestedClockSeconds){$null}else{$inputRequestedClockSeconds-$titleInputReadyAt};
             observedTitleToRequestSeconds=if($null -eq $inputRequestedClockSeconds){$null}else{$inputRequestedClockSeconds-$titleObservedAt}};
-        caveat='Normal --title=1 with isolated empty save/log, no CaptureMode. Sparse title-input-ready precedes directed Enter; elapsed wall time releases the short press, then new-game-enter proves acceptance. The full request-to-Walk interval includes the press; no game-frame crossing is inferred. Dwell duration does not prove spawn preload. Unknown cache states do not qualify budgets. Experience has no EventPipe/per-frame log/CPU snapshots; diagnostics never establish experience-target passes. First Walk input release is a proxy; real movement is checked separately by the existing core smoke.'
+        caveat='Normal --title=1 with isolated empty save/log, no CaptureMode. Sparse title-input-ready precedes directed Enter; elapsed wall time releases the short press, then new-game-enter proves acceptance. The full request-to-Walk interval includes the press; no game-frame crossing is inferred. Dwell waits for sparse preload-ready and requires preloadReady=true again at new-game-enter. Title experience ends at the static menu input marker; title diagnostic additionally waits for new-game resources, a different endpoint. Realtime is observed only after formal entry into Playing. Unknown cache states do not qualify budgets. Experience has no EventPipe/per-frame log/CPU snapshots; diagnostics never establish experience-target passes. First Walk input release is a proxy; real movement is checked separately by the existing core smoke.'
     } | ConvertTo-Json -Depth 12 | Set-Content -LiteralPath (Join-Path $Output 'result.json') -Encoding UTF8
 
 } catch {

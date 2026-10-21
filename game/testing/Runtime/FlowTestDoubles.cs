@@ -42,15 +42,19 @@ internal sealed class TestAppLoadingPresentation : IAppLoadingPresentation
         public ValueTask DisposeAsync() => new(Hide());
     }
 }
-internal sealed class TestAppTitlePresentation : IAppTitlePresentation
+internal sealed class TestAppFrontispiecePresentation : IAppFrontispiecePresentation
 {
     public bool Visible { get; private set; }
-    public void SetVisible(bool visible) => Visible = visible;
+    public Task Show() { Visible = true; return Task.CompletedTask; }
+    public Task Hide(float seconds) { Visible = false; return Task.CompletedTask; }
 }
 internal sealed class FlowRuntimeTestStub(Func<bool> covered) : IMapRuntime, IMapStreamState
 {
     public IReadOnlyList<MapStreamDestination> PinnedDestinations { get; private set; } = [];
     public void SetPinnedDestinations(IReadOnlyList<MapStreamDestination> destinations) => PinnedDestinations = destinations.ToArray();
+    public bool PinsReady { get; set; }
+    public bool PinnedDestinationReady(MapStreamDestination destination) => PinsReady && PinnedDestinations.Contains(destination);
+    public void ClearDestination() { _arrival?.Cancel(); _arrival = null; ArrivalChanged?.Invoke(null); }
     public bool IsUnloaded => false;
     public Task DrainAsync() => Task.CompletedTask;
     public bool ResidentReady => true;
@@ -108,7 +112,7 @@ internal sealed class FlowTestRig
     public TestWorldState World { get; }
     public TestCameraRig Camera { get; }
     public TestAppLoadingPresentation Loading { get; } = new();
-    public TestAppTitlePresentation Title { get; } = new();
+    public TestAppFrontispiecePresentation Title { get; } = new();
     public FlowRuntimeTestStub Runtime { get; }
     public List<string> Diagnostics { get; } = [];
     public FlowTestRig(bool completeArrivalImmediately = true)
@@ -117,7 +121,7 @@ internal sealed class FlowTestRig
         Runtime = new(() => Loading.Active) { CompleteArrivalImmediately = completeArrivalImmediately };
     }
     public AppFlowService CreateFlow(ISaveService saves, IMapService maps, IAppExit exit, IWorldRestore? restore = null) =>
-        new(Camera, Loading, Title, saves, maps, World, World, World, restore ?? World, exit, Runtime, Runtime,
+        new(Camera, Loading, Title, saves, maps, World, World, restore ?? World, exit, Runtime, Runtime,
             new FlowDiagnostics(Diagnostics));
 
     private sealed class FlowDiagnostics(List<string> messages) : IDiagnosticLog

@@ -41,21 +41,16 @@ internal sealed class StreamPreparation(StreamDirector host, IStreamGeometryPrep
         catch (Exception error) { _host.Fail(StreamTile.Root, error); }
     }
 
-    internal void PollHandles()
+    internal void PollHandles(bool background)
     {
         for (var i = 0; i < _pending.Count;)
         {
             var pending = _pending[i];
+            var priority = pending.Participant is { } demanded ? StreamParticipants.ParticipantPriority(demanded) :
+                pending.Group.Priority;
+            if ((priority == BakePriority.Background) != background) { i++; continue; }
             if (pending.Handle.State is BakeState.Pending or BakeState.Running) { i++; continue; }
             if (pending.Handle.Failure is { } failure and not OperationCanceledException) _host.RecordFailure(failure);
-            if (pending.Request.PreloadOnly)
-            {
-                if (pending.Pinned && _host.Context?.Descriptor.Id == pending.Request.Key.Map && pending.Revision == _host.Mount.Revision)
-                { i++; continue; }
-                if (_host.Context?.Descriptor.Id == pending.Request.Key.Map && pending.Revision == _host.Mount.Revision)
-                    _issued.Remove(pending.Request.Key);
-                _pending.RemoveAt(i); continue;
-            }
             if (!_host.Residency.IsCurrent(pending)) { _pending.RemoveAt(i); continue; }
             if (pending.Handle.State == BakeState.Failed)
             {
@@ -76,42 +71,13 @@ internal sealed class StreamPreparation(StreamDirector host, IStreamGeometryPrep
                 _pending.RemoveAt(i); continue;
             }
             var owner = new PreparedTile(bundle);
-            _preparing.Add(new(pending.Request.Tile, pending.Revision, owner, Initialize(owner, bundle), pending.Group!, pending.GeometryRevision));
+            _preparing.Add(new(pending.Request.Tile, pending.Revision, owner, Initialize(owner, bundle), pending.Group, pending.GeometryRevision));
             _pending.RemoveAt(i);
         }
     }
 
     // Capture synchronous provider faults on the same real initialization task while retaining its owner.
     private async Task Initialize(PreparedTile owner, TileBundle bundle) => await _geometry.PrepareAsync(owner, bundle);
-
-    internal void QueueCpuRead(BakeKey key, StreamTile tile, List<StreamRequest> requests)
-    {
-        if (_issued.Contains(key))
-        {
-            foreach (var pending in _pending)
-                if (pending.Request.PreloadOnly && pending.Request.Key == key && pending.Revision == _host.Mount.Revision)
-                    pending.Pinned = true;
-            _host.Bake.Ensure(key, BakePriority.KnownDestination); return;
-        }
-        for (var i = 0; i < requests.Count; i++)
-            if (requests[i].Key == key)
-            {
-                requests[i] = requests[i] with { Priority = BakePriority.KnownDestination };
-                return;
-            }
-        requests.Add(new(key, tile, BakePriority.KnownDestination, 0) { PreloadOnly = true });
-    }
-
-    internal void PromotePreload(StreamRequest request, TileGroup group, ParticipantTile? participant)
-    {
-        for (var i = 0; i < _pending.Count; i++)
-        {
-            var pending = _pending[i];
-            if (!pending.Request.PreloadOnly || pending.Request.Key != request.Key || pending.Revision != _host.Mount.Revision) continue;
-            _pending[i] = pending with { Request = request, Group = group, GeometryRevision = group.GeometryRevision, Participant = participant, Pinned = false };
-            return;
-        }
-    }
 
     private static async Task<ModuleTileCatalog> BuildCatalog(Task<PreparedBakeTiles> tiles)
     {
@@ -132,11 +98,6 @@ internal sealed class StreamPreparation(StreamDirector host, IStreamGeometryPrep
         {
             if (!_issued.Add(request.Key)) continue;
             var handle = _host.Bake.Ensure(request.Key, request.Priority);
-            if (request.PreloadOnly)
-            {
-                _pending.Add(new(request, handle, _host.Mount.Revision, null, 0, null) { Pinned = true });
-                continue;
-            }
             var group = _host.Residency.Groups[request.Tile];
             group.Participants.TryGetValue(request.Key, out var participant);
             _pending.Add(new(request, handle, _host.Mount.Revision, group, group.GeometryRevision, participant));
@@ -187,11 +148,6 @@ internal sealed class StreamPreparation(StreamDirector host, IStreamGeometryPrep
         _catalog = null; _requests.Clear(); _issued.Clear();
         // CPU and GPU tasks keep their input ownership until terminal and are harvested normally.
     }
-    internal void ClearPins()
-    {
-        foreach (var pending in _pending)
-            if (pending.Request.PreloadOnly) pending.Pinned = false;
-    }
     internal async Task DrainAsync()
     {
         if (_catalogTask is { } catalog)
@@ -218,9 +174,8 @@ internal sealed class StreamPreparation(StreamDirector host, IStreamGeometryPrep
             if (prepared.IsDisposed) _preparing.RemoveAt(i);
         }
     }
-    internal sealed record Pending(StreamRequest Request, IBakeHandle Handle, long Revision, TileGroup? Group,
-        long GeometryRevision, ParticipantTile? Participant)
-    { public bool Pinned { get; set; } }
+    internal sealed record Pending(StreamRequest Request, IBakeHandle Handle, long Revision, TileGroup Group,
+        long GeometryRevision, ParticipantTile? Participant);
     private sealed record Preparing(StreamTile Tile, long Revision, PreparedTile Owner, Task Task, TileGroup Group, long GeometryRevision)
     { public bool Failed { get; set; } }
 

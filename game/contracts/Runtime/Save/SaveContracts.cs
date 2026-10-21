@@ -48,9 +48,8 @@ public enum RestorePhase : byte
 {
     World,     // 换图之前：maps、world、weather、map:<id>/weather；这一阶段结束时 Instance + 1
     Content,   // 换图之后：map:<id>/atlas、progress 等
-    Pose,      // 落位：view、walk。Preview 读档时只解析、留作终点，CompleteResume 时恢复
+    Pose,      // 落位：view、walk；完整恢复终点后等待真实到达。
 }
-public enum LoadScope : byte { Full, Preview }      // 读档范围：Preview 给开始页用，不恢复 Pose 阶段（SYS-SAVE，SYS-TITLE 第 6 步）
 
 public readonly record struct CaptureContext(SaveReason Reason, MapId Map, bool Forced)
 {
@@ -73,7 +72,17 @@ public sealed class RestoreContext
     }
     // 修复要用的只读查询（安全点、活动范围、点位与标记是否存在）由 game/kernel/save/ 在 v1 里补全
 }
-public sealed record NewGameContext(uint Seed, MapId Map, WorldPreset Start, ViewMode Mode);
+/// <summary>Explicit fresh-world command-line initialization, committed by the normal new-game transaction.</summary>
+public sealed record NewGameBoot(double AnimationTime, int FlowRate, WeatherBoot Weather, bool UseMapWeather)
+{
+    public MapId? Map { get; init; }
+    public MapStreamDestination? Destination { get; init; }
+}
+
+public sealed record NewGameContext(uint Seed, MapId Map, WorldPreset Start, ViewMode Mode)
+{
+    public NewGameBoot? Boot { get; init; }
+}
 // Start defaults to the authored map world state; application entry keeps that clock.
 
 public interface ISaveSection                         // 注册器只认这个非泛型接口；各包实现下面的泛型版
@@ -119,13 +128,11 @@ public interface ISaveService                         // Kernel 服务（game/ke
     event Action? SlotsChanged;                       // 在主线程发出
     void Request(SaveReason r);                       // 合并、限频（两次之间至少 30 s）、等安全时刻（SYS-SAVE）；只在漫游态有效；Quit、ToTitle 不走这里
     Task<SaveResult> SaveNow(SaveReason r);           // 不等、不限频：新游戏交还控制、门禁
-    Task<LoadResult> Load(SlotId s, LoadScope scope = LoadScope.Full);
-    // 后台读取、校验，主线程按阶段恢复（SYS-SAVE）；Full 在恢复位姿处的格与碰撞就绪后才完成，Preview 在 Content 阶段恢复完就完成
-    bool HasPendingPose { get; }                      // Preview 读档后为 true，Pose 阶段的段已解析、还没恢复
-    Task CompleteResume();                            // 继续读档交还控制前调用，在 FramePriority.Save 恢复 view、walk；Instance 不变
-    Task<LoadResult> LoadFile(string path);           // --load：一律 Full；源文件只读；之后写到 --save 指定的存档位，没指定就不写
-    Task<LoadResult> NewGame(SlotId s, uint? seed = null, WorldPreset? start = null);
-    Task<LoadResult> RestoreTitlePreview(); // Rebuilds the default preview without entropy, slot writes or an active save.
+    // Both loads restore every phase and complete only after the real endpoint is ready.
+    Task<LoadResult> Load(SlotId s);
+    Task<LoadResult> LoadFile(string path);           // 源文件只读；之后写到 --save 指定的存档位，没指定就不写
+    // A null slot creates a complete temporary CLI world without activating or overwriting a save slot.
+    Task<LoadResult> NewGame(SlotId? s, uint? seed = null, WorldPreset? start = null, NewGameBoot? boot = null);
     // seed 为 null 时取一次熵（G4 唯一的熵源例外）；start 为 null 时取本图的 newGameStart（SYS-SAVE）
     Task<SaveResult> FlushForQuit(SaveReason r, TimeSpan timeout);
     // r 只能是 Quit 或 ToTitle；旧代不受影响。Saved、Disabled、Deferred（有意不写）可以直接退出；

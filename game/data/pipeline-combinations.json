@@ -27,15 +27,6 @@
     "canvas": "none"
   },
   {
-    "shader": "cineCloud",
-    "format": 34359742495,
-    "primitive": "triangles",
-    "instanced": true,
-    "reflect": false,
-    "shadows": "off",
-    "canvas": "none"
-  },
-  {
     "shader": "uiPanel",
     "format": 0,
     "primitive": "triangles",

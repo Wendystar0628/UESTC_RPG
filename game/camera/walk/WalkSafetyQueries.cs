@@ -9,7 +9,9 @@ namespace Campus.Camera.Walk;
 public static class WalkSafetyQueries
 {
     public static WalkSave CreateDefault(IMapService maps, NewGameContext context) =>
-        new(DefaultFeet(maps, context.Map), false, WalkRules.DefaultSpeedStep, []);
+        new(context.Boot?.Destination is { Mode: ViewMode.Walk } destination
+            ? destination.Pose with { Position = destination.CollisionFeet ?? destination.Pose.Position - Vector3.UnitY * WalkRules.StandingEye }
+            : DefaultFeet(maps, context.Map), false, WalkRules.DefaultSpeedStep, []);
 
     public static Pose DefaultFeet(IMapService maps, MapId targetMap)
     {

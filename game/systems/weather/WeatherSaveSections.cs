@@ -42,13 +42,21 @@ public sealed class WeatherSection(WeatherProcess weather, IMapService maps, IWe
     {
         var descriptor = maps.Maps.Single(m => m.Id == c.Map);
         var initial = new WeatherProcess(profiles);
-        initial.Reset(new(c.Seed));
+        var boot = c.Boot?.Weather ?? new WeatherBoot(c.Seed);
+        initial.ValidateBoot(boot, c.Start.Season);
+        initial.Reset(boot);
         initial.Enter(c.Map, descriptor.World.WeatherProfile, c.Start.Clock);
         initial.Step(new(c.Start.Clock, c.Start.Clock, 0, c.Start.Season, 0, 0, 0));
-        if (descriptor.World.QuietUntilDusk)
+        if (c.Boot?.UseMapWeather != false && descriptor.World.QuietUntilDusk)
             initial.Quiet(c.Start.Clock, WeatherRules.QuietEnd(c.Start.Clock, 0, c.Start.Season));
-        else if (c.Start.Weather is { } kind && kind != WeatherKind.Clear)
-            initial.Pin(c.Start.Clock, kind, c.Start.Intensity, c.Start.Clock, c.Start.Clock + 2);
+        else if (c.Boot is { UseMapWeather: true })
+        {
+            var defaultKind = initial.MapToSeason(descriptor.World.Default.Weather ?? WeatherKind.Clear, c.Start.Season);
+            initial.Pin(c.Start.Clock, defaultKind, descriptor.World.Default.Intensity,
+                c.Start.Clock - WorldTimeTuning.WeatherPinBeforeHours, c.Start.Clock + WorldTimeTuning.WeatherPinAfterHours);
+        }
+        else if (c.Boot is null && c.Start.Weather is { } kind && kind != WeatherKind.Clear)
+            initial.Pin(c.Start.Clock, kind, c.Start.Intensity, c.Start.Clock, c.Start.Clock + WorldTimeTuning.WeatherPinAfterHours);
         return new(c.Seed, initial.Capture());
     }
 }

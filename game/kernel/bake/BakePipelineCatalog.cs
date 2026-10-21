@@ -101,15 +101,11 @@ internal sealed class BakePipelineCatalog
 
     internal PipelineCombination[] Complete(IReadOnlySet<string> whitelist)
     {
-        // These three producers construct fixed meshes outside TileBundle/auxiliary content.
+        // These two producers construct fixed meshes outside TileBundle/auxiliary content.
         // InstancePoolHost raw pools upload only positions, UVs and indices, without compression.
         var raw = (ulong)(Format.FlagFormatVersion2 | Format.FormatVertex | Format.FormatTexUV | Format.FormatIndex);
         Add(new(null, ShaderId.FxGlow, raw, BakedPrimitive.Triangles, true, false, PipelineShadowMode.Off));
         Add(new(null, ShaderId.Precip, raw, BakedPrimitive.Triangles, true, false, PipelineShadowMode.Off));
-        // TitleCloudNode's immutable card prototype follows GeometrySurfaceUpload's ordinary format.
-        var cloud = (ulong)(Format.FlagFormatVersion2 | Format.FormatVertex | Format.FormatNormal |
-            Format.FormatTangent | Format.FormatColor | Format.FormatTexUV | Format.FormatIndex);
-        Add(new(null, ShaderId.CineCloud, cloud, BakedPrimitive.Triangles, true, false, PipelineShadowMode.Off));
         // CanvasItem shaders have no spatial vertex format. Their production controls provide the draw type.
         AddCanvas(ShaderId.UiPanel, PipelineCanvasDraw.Rect);
         AddCanvas(ShaderId.UiPanel, PipelineCanvasDraw.TexturedRect);

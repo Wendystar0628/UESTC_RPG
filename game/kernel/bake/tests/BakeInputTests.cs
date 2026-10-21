@@ -350,14 +350,22 @@ public sealed class BakeInputTests
     public void OfflineTerrainCoversRoamingFixedPosesAndArrivalCollisionReach()
     {
         var source = Context(new FakeWorld());
-        var title = new Pose(new(3000.2f, 495, -2928.1f), 13, -2.5f);
-        var descriptor = source.Map with { Title = new(title, "fixture") };
-        var context = new TestMapContext(descriptor, source.World, BuildInputSnapshot.Empty);
+        var fixedPose = new Pose(new(3000.2f, 495, -2928.1f), 13, -2.5f);
+        var descriptor = source.Map;
+        var inputs = BuildInputSnapshot.Freeze(new Dictionary<string, ReadOnlyMemory<byte>>
+        {
+            ["review.json"] = JsonSerializer.SerializeToUtf8Bytes(new
+            {
+                version = 1,
+                poses = new[] { new { id = "fixed", pose = fixedPose } }
+            }, ContractJson.Options)
+        }, "fixture");
+        var context = new TestMapContext(descriptor, source.World, inputs);
         var domain = TerrainBlockCoverage.OfflineDomain(context);
         var blocks = TerrainBlockCoverage.Region(domain).ToHashSet();
         var reach = descriptor.Roam.MaxRadius + WalkRules.ArrivalCollisionRadius;
         Vector2[] queries = [descriptor.Center - new Vector2(reach), descriptor.Center + new Vector2(reach),
-            new(title.Position.X, title.Position.Z), new(title.Position.X + WalkRules.ArrivalCollisionRadius, title.Position.Z)];
+            new(fixedPose.Position.X, fixedPose.Position.Z), new(fixedPose.Position.X + WalkRules.ArrivalCollisionRadius, fixedPose.Position.Z)];
         foreach (var point in queries)
             if (TerrainBlockCoverage.Points([point]).Any(block => !blocks.Contains(block)))
                 throw new InvalidOperationException("Offline terrain omitted a legal/fixed query or its interpolation edge.");

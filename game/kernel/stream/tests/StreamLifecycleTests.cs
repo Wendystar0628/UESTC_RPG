@@ -85,6 +85,54 @@ public sealed class StreamLifecycleTests
         }
         await fixture.Unload();
     }
+    [TestCase, TestCategory(TestReason.Regression), TestCategory("NativeRender"), RequireGodotRuntime]
+    public async Task StaticTitlePinsMountHiddenResourcesAndArrivalReusesThoseOwners()
+    {
+        using var fixture = new StreamFixture(geometry: true, elevated: true, staticTitle: true);
+        var target = new MapStreamDestination(fixture.Camera.Pose with { Position = new(100, 2, 100) }, ViewMode.Fly);
+        fixture.Director.SetPinnedDestinations([target]);
+        Check(!fixture.Director.PinnedDestinationReady(target) && fixture.Director.Destination is null);
+        await fixture.Until(() => fixture.Director.PinnedDestinationReady(target));
+        var eye = fixture.Camera.Pose;
+        var owners = fixture.Geometry.Prepared.ToArray();
+        Check(owners.Length > 1 && fixture.Director.Destination is null && fixture.Camera.Pose == eye);
+        Check(owners.Where(owner => BakeRequestKeys.Parse(owner.Key).Level != LodLevel.L4).All(owner => owner.VisibleInstanceCount == 0));
+        fixture.Director.SetPinnedDestinations([target]);
+        Check(fixture.Director.PinnedDestinationReady(target));
+        fixture.Camera.SetPose(target.Pose);
+        fixture.Director.Prefetch(target.Pose, target.Mode, target.Space, target.CollisionFeet);
+        await fixture.Until(() => fixture.Director.DestinationReady);
+        Check(fixture.Geometry.Prepared.Count == owners.Length && owners.All(owner => !owner.IsDisposed));
+        fixture.Director.ClearDestination(); fixture.Tick();
+        Check(fixture.Director.Destination is null && fixture.Director.PinnedDestinationReady(target) && !fixture.Director.ViewReady);
+        Check(owners.Where(owner => BakeRequestKeys.Parse(owner.Key).Level != LodLevel.L4).All(owner => owner.VisibleInstanceCount == 0));
+        fixture.Director.SetPinnedDestinations([]);
+        Check(!fixture.Director.PinnedDestinationReady(target));
+        await fixture.Unload();
+        Check(!fixture.Director.PinnedDestinationReady(target));
+    }
+
+    [TestCase, TestCategory(TestReason.Regression), RequireGodotRuntime]
+    public async Task PinReadinessRequiresParticipantUploadAndReleasedTargetsCannotKeepReady()
+    {
+        using var fixture = new StreamFixture(staticTitle: true);
+        fixture.CollisionParticipant.Need = StreamTileNeed.Required;
+        fixture.CollisionParticipant.ResourcesUploaded = false;
+        var feet = new N.Vector3(20, 0, 20);
+        var target = new MapStreamDestination(fixture.Camera.Pose, ViewMode.Walk, CollisionFeet: feet);
+        fixture.Director.SetPinnedDestinations([target]);
+        await fixture.Until(() => fixture.CollisionParticipant.Mounted.Count > 0);
+        Check(!fixture.Director.PinnedDestinationReady(target));
+        fixture.CollisionParticipant.ResourcesUploaded = true;
+        await fixture.Until(() => fixture.Director.PinnedDestinationReady(target));
+        Check(!fixture.Director.PinnedDestinationReady(target with { CollisionFeet = feet + N.Vector3.UnitY }));
+        fixture.Director.SetPinnedDestinations([]);
+        Check(!fixture.Director.PinnedDestinationReady(target));
+        fixture.Tick();
+        Check(fixture.CollisionParticipant.Mounted.Count == 0);
+        await fixture.Unload();
+    }
+
     [TestCase, TestCategory(TestReason.Contract), RequireGodotRuntime]
     public async Task ShutdownDrainsTheCatalogAndDeliversLateFailuresWithoutPublication()
     {
@@ -137,7 +185,7 @@ internal static class StreamLifecycleTestSupport
         public FixtureCollisionParticipant CollisionParticipant { get; } = new();
         public StreamMountQueue Mount { get; } = new(() => 0);
         public float Height => Director.GetViewport().GetVisibleRect().Size.Y * Director.GetViewport().Scaling3DScale;
-        public StreamFixture(bool geometry = false, bool elevated = false, Task<PreparedBakeTiles>? catalog = null)
+        public StreamFixture(bool geometry = false, bool elevated = false, Task<PreparedBakeTiles>? catalog = null, bool staticTitle = false)
         {
             var bounds = elevated ? new Box3(new(-512, 0, -512), new(512, 10, 512)) : new Box3(N.Vector3.Zero, new(128, 10, 128));
             var map = BackdropInputsTests.Descriptor() with { Id = new("stream-fixture"), Bounds = bounds, TileMin = new((int)bounds.Min.X / TileGrid.BaseEdge, (int)bounds.Min.Z / TileGrid.BaseEdge),
@@ -161,6 +209,7 @@ internal static class StreamLifecycleTestSupport
             _stage.AddChild(_view); _stage.AddChild(Director);
             ((SceneTree)Engine.GetMainLoop()).Root.AddChild(_stage);
             Director.SetProcess(false); Director.OnMapLoaded(Context);
+            if (!staticTitle) Director.Prefetch(Camera.Pose, ViewMode.Fly);
         }
         public void Tick(bool mount = true)
         {
@@ -267,7 +316,8 @@ internal static class StreamLifecycleTestSupport
         }
         public IStreamMountWork CreateMount(BakeKey key, object product, BakePriority priority, long revision) =>
             new MountWork(this, key, priority, revision);
-        public bool IsReady(BakeKey key) => Mounted.Contains(key);
+        public bool ResourcesUploaded { get; set; } = true;
+        public bool IsReady(BakeKey key) => ResourcesUploaded && Mounted.Contains(key);
         public void Unmount(BakeKey key) => Mounted.Remove(key);
         public Exception? Failure { get; set; }
 

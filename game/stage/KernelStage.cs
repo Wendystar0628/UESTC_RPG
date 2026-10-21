@@ -43,6 +43,9 @@ public partial class KernelStage : Node3D, IAppExit, IStageGateHost
     private IAppLoadingLease? _bootLoading;
     private Task? _bootLoadingDisposal;
     private IFlowLease? _startupFlow;
+    private Task? _backgroundPreparation;
+    private bool _startupFinished;
+    private bool _realtimeStarted;
     private readonly CancellationTokenSource _captureLifetime = new();
     private ViewContentReadiness? _contentReadiness;
     private GameCaptureNode.CaptureDestination? _startupCapture;
@@ -167,7 +170,7 @@ public partial class KernelStage : Node3D, IAppExit, IStageGateHost
             () => BakePipelineCatalog.Read(resources), TimeSpan.FromSeconds(BootTuning.StalledSeconds));
         ((MapRuntime)registry.Create(typeof(MapRuntime))).Bind(new(registry,
             registry.Get<IMapStreamState>(), registry.Get<IBakeService>(), registry.Get<ICollisionWorld>(),
-            registry.Get<IRenderReadiness>(), registry.Get<IPipelinePreparation>(), registry.Get<ICameraRig>(),
+            registry.Get<IRenderReadiness>(), registry.Get<ICameraRig>(),
             registry.Get<ITerrainPreparation>(), viewCamera));
         ((StreamDirector)registry.Create(typeof(StreamDirector))).Bind(new(registry,
             registry.Get<IBakeContextSource>(), registry.Get<IBakeService>(), registry.Get<IStreamMountQueue>(),
@@ -231,21 +234,64 @@ public partial class KernelStage : Node3D, IAppExit, IStageGateHost
     private async Task StartWorld()
     {
         var registry = KernelServices.Services;
+        var options = AppBoot.Options;
+        var staticUiCapture = options.CaptureMode && options.Title && options.World.Pose is null &&
+            options.Capture.Gate is null && options.Capture.Shots is ["ui"];
+        var showTitle = options.Flow.ShowTitle &&
+            (!options.CaptureMode && !options.Automated || staticUiCapture || options.Capture.Gate == "save-close");
         var frontispiece = registry.Get<IAppFrontispiecePresentation>();
+        var participants = registry.RuntimeInstances<IBootParticipant>().OrderBy(item => item.Order)
+            .ThenBy(item => item.Id, StringComparer.Ordinal).ToArray();
+        if (participants.GroupBy(item => item.Id, StringComparer.Ordinal).Any(group => group.Count() != 1))
+            throw new InvalidOperationException("Boot participant IDs must be unique.");
+        var context = CreateBootContext();
         var failures = new List<Exception>();
         try
         {
-            if (AppBoot.Options.Flow.ShowTitle) await frontispiece.Show();
-            else { _bootLoading = registry.Get<IAppLoadingPresentation>().Show(); await _bootLoading.Covered; }
-            CheckStartupActive();
             _startupFlow = registry.Get<IWorldControl>().AcquireFlow(FlowPriority.Pause, 0);
-            await StartWorld(frontispiece, _bootLoading, _startupFlow);
+            // The fixed image has no catalogue, save metadata or world dependency.
+            if (showTitle) await frontispiece.Show();
+            await InitializeBootPhase(BootPhase.BeforeMap, participants, context);
+            // Quality has no active-map or world dependency. Its effective settings must precede pipeline submission.
+            await InitializeBootPhase(BootPhase.AfterMapWarm, participants, context);
+            await BootWorldOverrides.ApplyQuality(options, registry.Get<IQualityService>());
+            registry.Get<PipelineWarmup>().SetCanvasFont(registry.Created.OfType<Campus.Hud.HudRoot>().Single().CanvasFont);
+            Phase = "prepare-flow";
+            var appBoot = registry.Get<IAppBootFlow>();
+            var target = await appBoot.PrepareBoot(options.Flow with { ShowTitle = showTitle });
+            var maps = registry.Get<IMapService>();
+            // Both tasks start on the engine thread. Neither requires an active world instance.
+            var mapPreparation = maps.Prepare(target);
+            var globalPreparation = PrepareGlobal(registry, participants, context);
+            _backgroundPreparation = appBoot.PrepareBackground(mapPreparation, globalPreparation);
+            _ = ObserveBackgroundFailure(appBoot);
+            if (showTitle)
+            {
+                CheckStartupActive();
+                await appBoot.OpenTitle();
+                var titleInputReady = TraceTitleInputReady(appBoot);
+                if (staticUiCapture)
+                {
+                    await registry.Created.OfType<GameCaptureNode>().Single().CaptureStaticUiAsync(this, _captureLifetime.Token);
+                    await CloseAsync();
+                    return;
+                }
+                await _backgroundPreparation;
+                await titleInputReady;
+                CheckStartupActive();
+                _contentReadiness = ViewContentReadiness.Capture(this);
+                Phase = "background-ready";
+            }
+            else await StartDirectWorld(registry, options, appBoot, maps, _backgroundPreparation);
+            CheckStartupActive();
+            _startupFinished = true;
+            _startupFailure.CompleteBoot();
+            if (_flow!.IsPlaying) await CompletePlayingStartup();
         }
         catch (OperationCanceledException error) when (_closing || _startupFailure.Failed) { failures.Add(error); }
         catch (Exception error)
         {
             failures.Add(error);
-            // Publish the original failure before any cleanup await can race a window-close exit.
             _ = _startupFailure.Fail(error);
         }
         finally
@@ -255,6 +301,67 @@ public partial class KernelStage : Node3D, IAppExit, IStageGateHost
         }
         if (failures.Count == 1) System.Runtime.ExceptionServices.ExceptionDispatchInfo.Capture(failures[0]).Throw();
         if (failures.Count > 0) throw new AggregateException("Stage startup and presentation cleanup failed.", failures);
+        if (_flow!.State == AppState.Title) await _gate.OnTitleReady();
+    }
+
+    private async Task InitializeBootPhase(BootPhase phase, IBootParticipant[] participants, BootContext context)
+    {
+        Phase = phase.ToString();
+        foreach (var participant in participants)
+        {
+            CheckStartupActive();
+            await participant.Initialize(phase, context);
+        }
+        CheckStartupActive();
+    }
+
+    private async Task PrepareGlobal(ServiceRegistry registry, IBootParticipant[] participants, BootContext context)
+    {
+        var pipelines = registry.Get<IPipelinePreparation>().PrepareAsync(_captureLifetime.Token);
+        var jit = InitializeBootPhase(BootPhase.BeforeReveal, participants, context);
+        await Task.WhenAll(pipelines, jit);
+    }
+
+    private async Task StartDirectWorld(ServiceRegistry registry, BootRunOptions options, IAppBootFlow appBoot,
+        IMapService maps, Task backgroundPreparation)
+    {
+        _bootLoading = registry.Get<IAppLoadingPresentation>().Show();
+        await _bootLoading.Covered;
+        await appBoot.MapReady;
+        CheckStartupActive();
+        WorldPreset? start = null; NewGameBoot? boot = null;
+        if (!options.HasLoad) (start, boot) = await BootWorldOverrides.PrepareFreshEntry(options, registry);
+        var entering = appBoot.EnterDirect(start, boot);
+        // The entry owns its own opaque lease before the temporary startup lease is released.
+        _bootLoading.Report(1, 1);
+        await DisposeBootLoading();
+        var arrival = await entering;
+        CheckStartupActive();
+        _view!.Sync();
+        var rig = registry.Get<ICameraRig>();
+        _contentReadiness = ViewContentReadiness.Capture(this);
+        _startupCapture = options.World.Pose is not { } poseId ? null : new GameCaptureNode.CaptureDestination(
+            poseId, rig.Mode, maps.Context!, registry.Get<IWorldState>().Instance, arrival, rig.Pose);
+        await backgroundPreparation;
+    }
+
+    private async Task ObserveBackgroundFailure(IAppBootFlow boot)
+    {
+        try { await boot.BackgroundReady; }
+        catch (OperationCanceledException) when (boot.BackgroundReady.IsCanceled || _closing || _startupFailure.Failed) { }
+        catch (Exception error) { await _startupFailure.Fail(error); }
+    }
+
+    private async Task CompletePlayingStartup()
+    {
+        if (_realtimeStarted || !_startupFinished || _flow?.IsPlaying != true) return;
+        _realtimeStarted = true;
+        _statistics!.MarkRealtime();
+        _ready = true;
+        Phase = "realtime";
+        GD.Print($"[ENG-ARCH][map={KernelServices.Get<IMapService>().Current.Value}][phase=realtime] flow={_flow.State}; startup complete");
+        try { await _gate.OnRealtime(); }
+        catch (Exception error) { await _startupFailure.Fail(error); }
     }
 
     private void ReleaseStartupFlow()
@@ -270,116 +377,6 @@ public partial class KernelStage : Node3D, IAppExit, IStageGateHost
         var loading = _bootLoading;
         _bootLoading = null;
         return _bootLoadingDisposal = loading?.DisposeAsync().AsTask() ?? Task.CompletedTask;
-    }
-
-    private async Task StartWorld(IAppFrontispiecePresentation frontispiece, IAppLoadingLease? bootLoading, IFlowLease startupFlow)
-    {
-        var options = AppBoot.Options;
-        var showTitle = options.Flow.ShowTitle;
-        var registry = KernelServices.Services;
-        var participants = registry.RuntimeInstances<IBootParticipant>().OrderBy(item => item.Order)
-            .ThenBy(item => item.Id, StringComparer.Ordinal).ToArray();
-        if (participants.GroupBy(item => item.Id, StringComparer.Ordinal).Any(group => group.Count() != 1))
-            throw new InvalidOperationException("Boot participant IDs must be unique.");
-        var context = CreateBootContext();
-        CheckStartupActive();
-        if (!registry.Get<IAppScreenCoverage>().IsCovered)
-            throw new InvalidOperationException("Startup has no fully opaque application presentation.");
-        await Initialize(BootPhase.BeforeMap);
-        registry.Get<PipelineWarmup>().SetCanvasFont(registry.Created.OfType<Campus.Hud.HudRoot>().Single().CanvasFont);
-        Phase = "prepare-flow";
-        var appBoot = registry.Get<IAppBootFlow>();
-        var target = await appBoot.PrepareBoot(options.Flow);
-        CheckStartupActive();
-        // Interface, sound and save metadata are ready; no map work delays menu interaction.
-        if (showTitle)
-        {
-            await appBoot.OpenTitle();
-            _ = TraceTitleInputReady(appBoot);
-        }
-        var maps = registry.Get<IMapService>();
-        if (!appBoot.WillRestoreWorld)
-        {
-            Phase = "initialize-world";
-            var initialMap = maps.Maps.Single(map => map.Id == target);
-            BootWorldOverrides.InitializeFreshWorld(options, registry, initialMap);
-        }
-        Phase = "prepare-map";
-        await maps.Prepare(target);
-        CheckStartupActive();
-        await Initialize(BootPhase.AfterMapWarm);
-        await BootWorldOverrides.ApplyQuality(options, registry.Get<IQualityService>());
-        CheckStartupActive();
-        Phase = "prepare-world";
-        // The user's base flow is already set; only the initial warmup pause ends here.
-        // Lifecycle checks also keep loaded world time fixed until their own test lease takes over.
-        if (options.Capture.Gate is not ("save-close" or "save-resume")) startupFlow.Dispose();
-        await appBoot.PrepareWorld();
-        CheckStartupActive();
-        var poseId = await BootWorldOverrides.ApplyView(options, registry, appBoot.WillRestoreWorld, showTitle);
-        CheckStartupActive();
-        _view!.Sync();
-        var rig = registry.Get<ICameraRig>();
-        var arrival = await appBoot.PrepareDestination();
-        _startupCapture = poseId is null ? null : new GameCaptureNode.CaptureDestination(
-            poseId, rig.Mode, maps.Context!, registry.Get<IWorldState>().Instance, arrival, rig.Pose);
-        await Initialize(BootPhase.BeforeReveal);
-        try { await WaitForStartupViewReadiness(arrival); }
-        catch (OperationCanceledException) when (appBoot.BootEntryTaken && _mapRuntime!.Failure is null && (arrival.Done.IsCanceled || !ReferenceEquals(_mapRuntime.Arrival, arrival)))
-        {
-            arrival = await appBoot.PrepareDestination();
-            await WaitForStartupViewReadiness(arrival);
-        }
-        CheckStartupActive();
-        await RevealBoot(frontispiece, bootLoading, appBoot, showTitle, maps);
-
-        async Task Initialize(BootPhase phase)
-        {
-            Phase = phase.ToString();
-            foreach (var participant in participants)
-            {
-                CheckStartupActive();
-                await participant.Initialize(phase, context);
-            }
-            CheckStartupActive();
-        }
-    }
-
-    private async Task WaitForStartupViewReadiness(IMapArrival arrival)
-    {
-        _contentReadiness = ViewContentReadiness.Capture(this);
-        Phase = "warm-final-view";
-        try
-        {
-            await _contentReadiness.WaitForReadyAsync(this, arrival, () =>
-            {
-                CheckStartupActive();
-                return true;
-            }, _captureLifetime.Token);
-        }
-        catch (TimeoutException error)
-        {
-            throw AppStartupException.Stalled("Startup view readiness stalled.", error);
-        }
-    }
-
-    private async Task RevealBoot(IAppFrontispiecePresentation frontispiece, IAppLoadingLease? bootLoading,
-        IAppBootFlow appBoot, bool showTitle, IMapService maps)
-    {
-        Phase = "reveal";
-        _statistics!.MarkRealtime();
-        // Retire the boot-only image independently of foreground loading ownership. A player
-        // who already entered remains covered by their loading lease while joining this work.
-        if (showTitle && _flow!.State != AppState.Title) await frontispiece.Hide(0);
-        if (bootLoading is not null) { bootLoading.Report(1, 1); await bootLoading.Hide(); }
-        await appBoot.CompleteBoot();
-        if (showTitle) await frontispiece.Hide(BootTuning.TitleRevealSeconds);
-        CheckStartupActive();
-        _ready = true;
-        _startupFailure.CompleteBoot();
-        Phase = "realtime";
-        GD.Print($"[ENG-ARCH][map={maps.Current.Value}][phase=realtime] flow={_flow!.State}; startup complete");
-        await _gate.OnRealtime();
     }
 
     private void CheckStartupActive()
@@ -416,7 +413,10 @@ public partial class KernelStage : Node3D, IAppExit, IStageGateHost
         // Playing is published immediately before ReleaseInput, with no await between them.
         // Observe after that stack unwinds, without waiting for the first save to finish.
         if (before == AppState.Entering && after == AppState.Playing)
+        {
             Callable.From(TraceInputReady).CallDeferred();
+            if (_startupFinished) _ = CompletePlayingStartup();
+        }
     }
 
     private void TraceInputReady()
@@ -450,6 +450,7 @@ public partial class KernelStage : Node3D, IAppExit, IStageGateHost
             _ = _startupFailure.Fail(failure);
         _statistics?.Sample();
         _startupTrace.TraceFrame(_statistics);
+        if (_flow is IAppBootFlow boot && _flow.State is AppState.Title) _startupTrace.TracePreloadReady(boot);
         _gate.OnProcess();
     }
 
@@ -566,6 +567,11 @@ public partial class KernelStage : Node3D, IAppExit, IStageGateHost
                 var commandExit = await _bakeCommandTask;
                 if (commandExit != 0) _exitCode = Math.Max(_exitCode, commandExit);
             }
+            catch (Exception error) { failures.Add(error); }
+        try { KernelServices.Services.Get<IMapLifetime>().StopNewWork(); } catch (Exception error) { failures.Add(error); }
+        if (_backgroundPreparation is not null)
+            try { await _backgroundPreparation; }
+            catch (OperationCanceledException) when (_captureLifetime.IsCancellationRequested && _backgroundPreparation.IsCanceled) { }
             catch (Exception error) { failures.Add(error); }
         try { ReleaseStartupFlow(); } catch (Exception error) { failures.Add(error); }
         try { await DisposeBootLoading(); } catch (Exception error) { failures.Add(error); }

@@ -25,8 +25,6 @@ public sealed class AppFlowService : IAppFlow, IAppBootFlow, IBootParticipant, I
     private readonly AppFlowStartup _startup;
     private readonly AppFlowRecovery _recovery;
     private Task<EnterResult>? _entry;
-    private TaskCompletionSource<IMapArrival>? _entryPrepared;
-    private IMapArrival? _bootDestination;
     private readonly IMapRuntime _mapRuntime;
     private Task? _quit;
     private Task? _leaving;
@@ -34,20 +32,23 @@ public sealed class AppFlowService : IAppFlow, IAppBootFlow, IBootParticipant, I
     private Pose _leavePose;
     private bool _quitting;
     private EnterRequest? _request;
+    private bool _directEntry;
+    private WorldPreset? _directStart;
+    private NewGameBoot? _directBoot;
 
-    public AppFlowService(ICameraRig camera, IAppLoadingPresentation loading, IAppTitlePresentation titlePresentation,
-        ISaveService saves, IMapService maps, IWorldState world, IWorldControl control, IViewControl view,
+    public AppFlowService(ICameraRig camera, IAppLoadingPresentation loading, IAppFrontispiecePresentation frontispiece,
+        ISaveService saves, IMapService maps, IWorldState world, IWorldControl control,
         IWorldRestore restore, IAppExit appExit, IMapRuntime mapRuntime, IMapStreamState stream,
         IDiagnosticLog diagnostics, ISettingsStore? profileSettings = null)
     {
         _mapRuntime = mapRuntime;
         this.camera = camera; this.loading = loading; this.saves = saves; this.maps = maps;
         this.world = world; this.restore = restore; this.appExit = appExit; this.stream = stream;
-        _resources = new(camera, restore, control, loading, titlePresentation, mapRuntime, MarkPhase);
-        _continuation = new(camera, saves, maps, world, restore, view, mapRuntime, stream,
-            titlePresentation, _resources, profileSettings);
-        _recovery = new(saves, maps, _continuation, _resources, () => _quitting, Change, diagnostics.Error);
-        _startup = new(saves, maps, _continuation, _resources, titlePresentation, _recovery);
+        _resources = new(camera, restore, control, loading, frontispiece, mapRuntime, MarkPhase);
+        _continuation = new(camera, saves, maps, restore, mapRuntime, stream,
+            _resources, profileSettings);
+        _recovery = new(maps, restore, mapRuntime, _resources, () => _quitting, Change, diagnostics.Error);
+        _startup = new(maps, _continuation, _resources);
     }
     public AppState State { get; private set; } = AppState.Boot;
     public bool IsPlaying => State switch
@@ -77,20 +78,32 @@ public sealed class AppFlowService : IAppFlow, IAppBootFlow, IBootParticipant, I
         };
         if (slot is null || !saves.Slots.Any(s => s.Slot == slot)) return Task.FromResult(EnterResult.Rejected);
         if (request.Kind is EnterKind.Continue or EnterKind.LoadSlot && !AppFlowContinuation.Readable(_continuation.Info(slot.Value))) return Task.FromResult(EnterResult.Rejected);
-        _request = request with { Slot = slot }; _quitting = false;
-        if (!WorldReady.IsCompleted)
-        {
-            _entryPrepared = new();
-            _bootDestination?.Cancel();
-        }
+        _request = request with { Slot = slot }; _quitting = false; _directEntry = false;
         _recovery.BeginEntry(); _continuation.BeginEntry();
-        _resources.HoldInput(); _resources.HoldLoadingFlow(); Change(AppState.Entering);
+        _resources.HoldInput();
+        if (!restore.RestoreFaulted) _resources.HoldLoadingFlow();
+        Change(AppState.Entering);
         if (request.Kind is EnterKind.NewGame) MarkPhase("new-game-enter");
         _entry = EnterCore(); return _entry;
     }
+    public async Task<IMapArrival> EnterDirect(WorldPreset? start = null, NewGameBoot? boot = null)
+    {
+        if (!In(AppState.Boot) || _startup.ShowTitle)
+            throw new InvalidOperationException("Direct entry requires an explicit boot entry intent.");
+        var request = _startup.Request;
+        _directEntry = true; _directStart = start; _directBoot = boot;
+        _request = new(request.LoadFile is not null || request.Slot is not null ? EnterKind.LoadSlot : EnterKind.NewGame, request.Slot ?? (request.LoadFile is null ? _startup.WriteSlot : null));
+        _recovery.BeginEntry(); _continuation.BeginEntry();
+        _resources.HoldInput();
+        if (!restore.RestoreFaulted) _resources.HoldLoadingFlow();
+        Change(AppState.Entering);
+        _entry = EnterCore();
+        if (await _entry != EnterResult.Entered)
+            throw Failure ?? new InvalidOperationException("Direct entry failed.");
+        return _mapRuntime.Arrival ?? throw new InvalidOperationException("Direct entry has no prepared destination.");
+    }
     private async Task<EnterResult> EnterCore()
     {
-        var prepared = _entryPrepared;
         try
         {
             var newGame = _request!.Kind switch
@@ -99,17 +112,21 @@ public sealed class AppFlowService : IAppFlow, IAppBootFlow, IBootParticipant, I
                 EnterKind.Continue or EnterKind.LoadSlot => false,
                 _ => throw new ArgumentOutOfRangeException(nameof(_request)),
             };
-            await _resources.BeginLoading(_request, newGame);
+            await _resources.BeginLoading(_request, newGame && _request.Slot is not null);
             // A faulted world's NewGame transaction owns its recovery preparation.
-            if (!newGame || !restore.RestoreFaulted) await MapReady;
-            if (newGame) await _continuation.StartNewTimeline(_request.Slot!.Value, _startup.Seed);
+            if (!newGame || !restore.RestoreFaulted) await BackgroundReady;
+            if (newGame) await _continuation.StartNewTimeline(_request.Slot, _startup.Seed, _directEntry ? _directStart : null, _directEntry ? _directBoot : null);
+            else if (_directEntry && _startup.Request.LoadFile is { } file)
+            {
+                AppFlowContinuation.RequireLoaded(await saves.LoadFile(file));
+                _resources.CompleteWorldPreparation();
+            }
             else await _continuation.RestoreRequested(_request.Slot!.Value);
             _continuation.RequireHealthyWorld();
-            if (!newGame) { await _continuation.PrepareResumeEndpoint(); _continuation.RequirePreparedResume(_request!.Slot!.Value); }
-            else await _continuation.PreparePlayableDestination(_startup.CaptureMode);
+            await _continuation.PreparePlayableDestination(_startup.CaptureMode);
             // The real destination now owns residency; keep the pins through its terrain preparation.
             stream.SetPinnedDestinations([]);
-            if (newGame)
+            if (newGame && _request.Slot is not null)
             {
                 // The first generation belongs to this prepared Walk endpoint.
                 var saved = await saves.SaveNow(SaveReason.NewGame);
@@ -117,45 +134,20 @@ public sealed class AppFlowService : IAppFlow, IAppBootFlow, IBootParticipant, I
                 _resources.CompleteSavePreparation();
             }
             _continuation.RequireHealthyWorld();
-            prepared?.TrySetResult(_mapRuntime.Arrival ?? throw new InvalidOperationException("Entry has no prepared destination."));
-            await WorldReady;
             if (_quitting) { _resources.CompleteLoadingProgress(); _resources.ReleaseFlow(); return EnterResult.Entered; }
             await _resources.FinishLoading();
             _continuation.RequireHealthyWorld();
             _resources.ReleaseFlow(); Change(AppState.Playing); _resources.ReleaseInput();
             return EnterResult.Entered;
         }
-        catch (OperationCanceledException) when (_quitting) { prepared?.TrySetCanceled(); return EnterResult.Rejected; }
+        catch (OperationCanceledException) when (_quitting) { return EnterResult.Rejected; }
         catch (Exception error) when (error is not OutOfMemoryException)
         {
             _recovery.CaptureFailure(error, State);
-            if (restore.RestoreFaulted) { prepared?.TrySetException(error); await _recovery.HoldRestoreFailure(); return EnterResult.Failed; }
-            if (prepared is not null && (error is AppStartupException || MapReady.IsFaulted || MapReady.IsCanceled ||
-                WorldReady.IsFaulted || WorldReady.IsCanceled || _mapRuntime.Failure is not null))
-            {
-                prepared.TrySetException(error);
-                return EnterResult.Failed;
-            }
-            try
-            {
-                var title = await _recovery.RecoverTitle();
-                // Boot may already be waiting on this exact task. Transfer its endpoint only after
-                // recovery prepared the real title; clearing the field alone would strand that wait.
-                if (prepared is not null)
-                {
-                    if (MapReady.IsFaulted) await MapReady;
-                    if (WorldReady.IsFaulted) await WorldReady;
-                    if (_mapRuntime.Failure is { } failure) { prepared.TrySetException(failure); return EnterResult.Failed; }
-                }
-                if (title is null || _quitting || MapReady.IsCanceled || WorldReady.IsCanceled) prepared?.TrySetCanceled();
-                else prepared?.TrySetResult(title);
-                if (ReferenceEquals(_entryPrepared, prepared)) _entryPrepared = null;
-            }
-            catch (Exception recoveryError) when (recoveryError is not OutOfMemoryException)
-            {
-                prepared?.TrySetException(recoveryError);
-                throw;
-            }
+            if (_directEntry) return EnterResult.Failed;
+            if (restore.RestoreFaulted) await _recovery.HoldRestoreFailure();
+            else if (error is not AppStartupException && !BackgroundReady.IsFaulted && !BackgroundReady.IsCanceled && _mapRuntime.Failure is null)
+                await _recovery.RecoverTitle();
             return EnterResult.Failed;
         }
     }
@@ -163,7 +155,7 @@ public sealed class AppFlowService : IAppFlow, IAppBootFlow, IBootParticipant, I
     {
         if (restore.RestoreFaulted) return _recovery.HoldRestoreFailure();
         if (!In(AppState.Playing)) return Task.CompletedTask;
-        _leaveSaved = false; _continuation.InvalidateTitleDestination(); _leavePose = camera.Pose;
+        _leaveSaved = false; _leavePose = camera.Pose;
         _resources.HoldInput(); _resources.HoldLoadingFlow(); Change(AppState.Leaving);
         _leaving = ReturnToTitleCore(); return _leaving;
     }
@@ -172,7 +164,7 @@ public sealed class AppFlowService : IAppFlow, IAppBootFlow, IBootParticipant, I
         try
         {
             await _resources.BeginLoading(null, save: true);
-            var saved = await saves.FlushForQuit(SaveReason.ToTitle, TimeSpan.FromSeconds(FlowTuning.SaveTimeoutSeconds));
+            var saved = await saves.FlushForQuit(SaveReason.ToTitle, TimeSpan.FromSeconds(FlowTuning.TitleSaveTimeoutSeconds));
             if (restore.RestoreFaulted) { await _recovery.HoldRestoreFailure(); return; }
             if (!AppFlowContinuation.CanLeave(saved.Status))
             {
@@ -181,11 +173,14 @@ public sealed class AppFlowService : IAppFlow, IAppBootFlow, IBootParticipant, I
                 _resources.ReleaseFlow(); Change(AppState.Playing); _resources.ReleaseInput(); return;
             }
             _leaveSaved = true; _resources.CompleteSavePreparation();
-            _continuation.RetainLivePreview();
-            // Keep this instance and its saved playable pose; only the presented destination changes.
-            _resources.HoldTitleFlow(); _resources.CompleteWorldPreparation();
-            await _continuation.PrepareTitleDestination();
-            if (!_quitting) { await _resources.FinishLoading(); _resources.ReleaseLoadingFlow(); Change(AppState.Title); }
+            _resources.HoldTitleFlow();
+            _mapRuntime.ClearDestination(); restore.EndInstance();
+            await _resources.ShowTitle();
+            if (!_quitting)
+            {
+                Change(AppState.Title);
+                await _resources.FinishLoading(); _resources.ReleaseLoadingFlow();
+            }
         }
         catch (Exception error) when (error is not OutOfMemoryException)
         {
@@ -278,26 +273,9 @@ public sealed class AppFlowService : IAppFlow, IAppBootFlow, IBootParticipant, I
     }
     private void MarkPhase(string phase) => PhaseReached?.Invoke(phase);
 
-    public Task WorldReady => _startup.WorldReady;
     public Task MapReady => _startup.MapReady;
-    public bool BootEntryTaken => _entryPrepared is not null;
-    public async Task<IMapArrival> PrepareDestination()
-    {
-        if (_entryPrepared is { } entry) return await entry.Task;
-        var pose = camera.Pose;
-        var current = _mapRuntime.Arrival;
-        var arrival = current is not null && current.Destination.Pose == pose && current.Destination.Mode == camera.Mode
-            ? current : _mapRuntime.Arrive(pose, camera.Mode);
-        _bootDestination = arrival;
-        try { await arrival.Done; }
-        catch (OperationCanceledException) when (_entryPrepared is not null && arrival.Done.IsCanceled)
-        {
-            return await _entryPrepared.Task;
-        }
-        // Entry can be accepted in the same frame as title completion. It owns the handoff from then on.
-        return _entryPrepared is { } accepted ? await accepted.Task : arrival;
-    }
-    public bool WillRestoreWorld => _startup.WillRestoreWorld;
+    public Task BackgroundReady => _startup.BackgroundReady;
+    public bool NewGamePreloadReady => _continuation.NewGamePreloadReady;
     public string Id => "app-flow";
     public int Order => 100;
     public void FailBoot(Exception error) => _startup.Fail(error);
@@ -307,27 +285,7 @@ public sealed class AppFlowService : IAppFlow, IAppBootFlow, IBootParticipant, I
         if (!In(AppState.Boot)) throw new InvalidOperationException("Boot preparation is only accepted during Boot.");
         return Task.FromResult(_startup.Select(request));
     }
-    public async Task PrepareWorld()
-    {
-        if (State is not (AppState.Boot or AppState.Title or AppState.Entering) || !_startup.HasRequest)
-            throw new InvalidOperationException("PrepareBoot must run before PrepareWorld.");
-        if (BootEntryTaken) { _startup.MarkPrepared(); _startup.MapAvailable(); return; }
-        try
-        {
-            // Finish an already-started preview transaction/mode placement before entry may mutate it.
-            // No title arrival is part of this work, and an entry accepted before it skips it entirely.
-            await _startup.PrepareWorld(() => BootEntryTaken);
-            _startup.MapAvailable();
-            if (BootEntryTaken) await _entryPrepared!.Task;
-        }
-        catch (Exception error) when (error is not OutOfMemoryException)
-        {
-            _recovery.CaptureFailure(error, State);
-            await _recovery.HoldRestoreFailure(keepBoot: true);
-            if (restore.RestoreFaulted || !_continuation.TitlePrepared) throw;
-            _startup.RecoverAsTitle();
-        }
-    }
+    public Task PrepareBackground(Task mapPreparation, Task globalPreparation) => _startup.PrepareBackground(mapPreparation, globalPreparation);
     public Task OpenTitle()
     {
         if (!In(AppState.Boot) || !_startup.ShowTitle)
@@ -336,19 +294,6 @@ public sealed class AppFlowService : IAppFlow, IAppBootFlow, IBootParticipant, I
         Change(AppState.Title);
         MarkPhase("title-ready");
         return Task.CompletedTask;
-    }
-    public async Task CompleteBoot()
-    {
-        if (_entryPrepared is { } entry) await entry.Task;
-        _continuation.RequireHealthyWorld(); _startup.RequirePrepared();
-        MarkPhase("world-ready"); _startup.Complete();
-        if (_startup.ShowTitle)
-        {
-            if (In(AppState.Boot)) Change(AppState.Title);
-            else if (In(AppState.Title)) _continuation.RefreshTitlePrefetch();
-        }
-        else { Change(AppState.Playing); _resources.ReleaseInput(); }
-
     }
     private async Task<bool> QuitFaultedWorld()
     {

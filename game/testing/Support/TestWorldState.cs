@@ -8,11 +8,12 @@ internal sealed class TestWorldState(IWeatherProcess weather, IRuleset ruleset) 
 {
     private double _clockOffset;
     private bool _restorePending;
+    private long _instanceSerial;
     private readonly List<TestFlowLease> _flows = [];
     private TestFlowLease? _activeFlow;
     public bool RestoreFaulted { get; private set; }
     public long Rev { get; private set; } = 1;
-    public long Instance { get; private set; } = 1;
+    public long Instance { get; private set; }
     public event Action<long>? InstanceChanged;
     public event Action? WalkEntryRefused { add { } remove { } }
     public double WorldHours { get; private set; } = 17.5;
@@ -196,6 +197,7 @@ internal sealed class TestWorldState(IWeatherProcess weather, IRuleset ruleset) 
     public void Freeze(double clock, Season season, double anim)
     {
         EnsureControlsAvailable();
+        if (Instance != 0) throw new InvalidOperationException("Freeze cannot rewind a committed world.");
         ValidateClock(clock);
         if (!Enum.IsDefined(season)) throw new ArgumentOutOfRangeException(nameof(season));
         if (!double.IsFinite(anim) || anim < 0) throw new ArgumentOutOfRangeException(nameof(anim));
@@ -205,7 +207,7 @@ internal sealed class TestWorldState(IWeatherProcess weather, IRuleset ruleset) 
         AnimTime = anim % 480;
         BaseFlow = new Campus.Contracts.Flow(0);
         LastFlowRate = 1;
-        // Boot initialization only: the startup owner resets/enters weather after these values exist.
+        _restorePending = true; // Initial values are not an active world until the normal commit.
         Rev++;
     }
 
@@ -221,6 +223,7 @@ internal sealed class TestWorldState(IWeatherProcess weather, IRuleset ruleset) 
     public WorldSaveMoment GetSaveMoment()
     {
         EnsureControlsAvailable();
+        if (Instance == 0) throw new InvalidOperationException("No world instance is active.");
         return new(WorldHours, _clockOffset, SeasonTarget, BaseFlow.Rate);
     }
 
@@ -255,7 +258,16 @@ internal sealed class TestWorldState(IWeatherProcess weather, IRuleset ruleset) 
         _restorePending = false;
         RestoreFaulted = false;
         // Test fixture celestial readouts are already settled; leave restored weather untouched.
-        Instance++;
+        Instance = checked(++_instanceSerial);
+        Rev++;
+        InstanceChanged?.Invoke(Instance);
+    }
+
+    public void EndInstance()
+    {
+        _restorePending = false;
+        if (Instance == 0) return;
+        Instance = 0;
         Rev++;
         InstanceChanged?.Invoke(Instance);
     }

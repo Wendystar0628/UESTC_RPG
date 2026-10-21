@@ -12,6 +12,7 @@ namespace Campus.Stage;
 /// <summary>Reads startup readiness and prints phase and optional renderer timing observations.</summary>
 internal sealed class StageStartupTrace
 {
+    private bool _preloadReadyTraced;
     private readonly bool _profiling = System.Environment.GetEnvironmentVariable("UESTC_STARTUP_PROFILE") == "1";
 
     internal static void TracePhase(string phase)
@@ -46,13 +47,12 @@ internal sealed class StageStartupTrace
         GD.Print(FormattableString.Invariant($"STARTUP_PHASE input-ready {FrameClock.MonotonicMilliseconds:R} frame={Engine.GetProcessFrames()} mode={KernelServices.Get<ICameraRig>().Mode}"));
     }
 
-    private static string StartupReadiness(IAppBootFlow boot)
+    internal void TracePreloadReady(IAppBootFlow boot)
     {
-        var maps = KernelServices.Get<IMapService>();
-        var stream = KernelServices.Get<IMapStreamState>();
-        var spawn = maps.ResolveSpawn(maps.Default).ViewPose(ViewMode.Walk);
-        // Pins are CPU read-ahead only. Only an actual completed destination proves playable preload.
-        var preload = stream.Destination is { Mode: ViewMode.Walk } at && at.Pose.Position == spawn.Position && stream.DestinationReady;
-        return $" worldReady={boot.WorldReady.IsCompletedSuccessfully} mapReady={boot.MapReady.IsCompletedSuccessfully} preloadReady={preload}";
+        if (_preloadReadyTraced || !boot.NewGamePreloadReady) return;
+        _preloadReadyTraced = true;
+        GD.Print(FormattableString.Invariant($"STARTUP_PHASE preload-ready {FrameClock.MonotonicMilliseconds:R} frame={Engine.GetProcessFrames()}{StartupReadiness(boot)}"));
     }
+    private static string StartupReadiness(IAppBootFlow boot) =>
+        $" mapReady={boot.MapReady.IsCompletedSuccessfully} preloadReady={boot.NewGamePreloadReady}";
 }

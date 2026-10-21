@@ -142,8 +142,10 @@ public partial class QualityRuntime : Node, IQualityAware, IQualityRuntime
         var notification = change;
         // Every consumer is attempted so a failed apply or its rollback leaves no consumer behind.
         var errors = new List<Exception>();
-        var currentMap = RuntimeKernel.Get<IMapService>().Current.Value;
-        var registrations = RuntimeKernel.Services.Query<IQualityAware>(RegistrationKind.Node, new MapId(currentMap))
+        // Global quality initializes before map foundation; only a mounted map owns scoped consumers.
+        var currentMap = RuntimeKernel.Get<IMapService>().Context?.Descriptor.Id;
+        var registrations = RuntimeKernel.Services.Query<IQualityAware>(RegistrationKind.Node, currentMap)
+            .Where(entry => currentMap.HasValue || entry.Map is null)
             .Select(entry => (Entry: entry, Quality: entry.Type.GetCustomAttribute<QualityResponsiveAttribute>()))
             .Where(item => item.Quality is not null)
             .OrderBy(item => notification.Loading ? item.Quality!.Order : 0)
@@ -152,7 +154,7 @@ public partial class QualityRuntime : Node, IQualityAware, IQualityRuntime
         {
             _lifetime.ThrowIfCancellationRequested();
             if (!item.Quality!.Owns.Concat(item.Quality.Reads).Any(notification.Has)) continue;
-            if (RuntimeKernel.Services.Create(item.Entry.Type, new MapId(currentMap)) is IQualityAware aware && aware is Node node && node.IsInsideTree())
+            if (RuntimeKernel.Services.Create(item.Entry.Type, currentMap) is IQualityAware aware && aware is Node node && node.IsInsideTree())
             {
                 try { aware.ApplyQuality(view, change); }
                 catch (Exception error) { errors.Add(error); }

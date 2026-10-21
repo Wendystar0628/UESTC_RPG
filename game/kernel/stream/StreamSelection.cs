@@ -79,10 +79,11 @@ internal sealed class StreamSelection(StreamDirector host)
         SelectEye(tree, ref pose, live, exempt, height);
         SelectPrediction(tree, pose, live, exempt, height);
         SelectArrival(tree, height);
+        _host.Pins.Select(height);
+        _host.Interiors!.RefreshPriorities();
         var requests = new List<StreamRequest>();
         _host.Residency.QueueGeometryRequests(requests, pose);
         _host.Participants.QueueParticipants(requests, pose);
-        _host.Pins.QueuePinned(requests, height);
         _host.Preparation.ReplaceRequests(requests);
         _host.RequestRetention();
         _plannedContext = _host.Context; _plannedWorld = _host.Context!.World; _plannedPose = pose;
@@ -155,9 +156,10 @@ internal sealed class StreamSelection(StreamDirector host)
 
     private void ResolveVisible()
     {
+        if (_destination is null) { _visible.Clear(); return; }
         _displayRefined.Clear(); _displayRefined.UnionWith(_refined);
         // An active arrival must be presentable even when its required detail differs from the current eye.
-        // Predictions and CPU pins schedule products but never refine the displayed frontier.
+        // Hidden pinned resources and predictions never refine the displayed frontier.
         if (!_destinationConsumed && _destinationPlanned) _displayRefined.UnionWith(_destinationRefined);
         _tree!.ResolveVisible(_displayRefined, _host.Residency.IsReady, _visible);
     }
@@ -286,6 +288,23 @@ internal sealed class StreamSelection(StreamDirector host)
         _destinationSequence++; _host.Preparation.ClearRequests();
         _host.Interiors?.Prefetch(null, destination.Position);
         _replan = _settings.ReplanSeconds;
+    }
+
+    internal void ClearDestination()
+    {
+        CancelTerrainPlan();
+        _destination = null; _destinationState = null;
+        _plannedContext = null; _plannedWorld = null;
+        _planReady = _selectionApplied = _destinationPlanned = _destinationConsumed = false;
+        _destinationSequence++; _interiorDestinationSequence = -1;
+        foreach (var tile in _visibility.Drawn)
+            if (_host.Residency.Groups.TryGetValue(tile, out var group))
+                foreach (var bundle in group.Bundles) bundle.SetVisible(false, 0);
+        ClearDemand();
+        _host.Interiors?.ClearDestination();
+        _host.Preparation.ClearRequests();
+        _haveCamera = false; _velocity = N.Vector3.Zero; _speed.Reset();
+        RequestReplan();
     }
 
     internal void Load(IMapContext context)

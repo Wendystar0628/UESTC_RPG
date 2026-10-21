@@ -270,7 +270,7 @@ public sealed class MapRuntimeRuntimeTests
         registry.Add(first); registry.Add(second);
         var renderer = new RuntimeRenderer();
         runtime.Bind(new(registry, stream, new RuntimeBake(), new ArrivalCollision(), renderer,
-            new RuntimePipelines(), new TestCameraRig(), new FlowTerrainPreparation(), viewCamera));
+            new TestCameraRig(), new FlowTerrainPreparation(), viewCamera));
         stage.AddChild(runtime);
         ((SceneTree)Engine.GetMainLoop()).Root.AddChild(stage);
         var mounting = runtime.Mount(context);
@@ -340,6 +340,8 @@ public sealed class MapRuntimeRuntimeTests
         public bool HasPendingDestination => false;
         public IReadOnlyList<MapStreamDestination> PinnedDestinations => [];
         public void SetPinnedDestinations(IReadOnlyList<MapStreamDestination> destinations) { }
+        public bool PinnedDestinationReady(MapStreamDestination destination) => false;
+        public void ClearDestination() { }
         public void Prefetch(Pose destination, ViewMode mode, NavSpace? space = null, System.Numerics.Vector3? collisionFeet = null) => throw new NotSupportedException();
         public Task DrainAsync() { order.Add("stream"); Entered.SetResult(); return Completion.Task; }
     }

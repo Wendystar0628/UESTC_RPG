@@ -14,7 +14,7 @@ internal sealed class InteriorStream(IBakeService bake, IStreamMountQueue mount,
 {
     private readonly Dictionary<BakeKey, Layer> _layers = [];
     private readonly List<Layer> _draining = [];
-    private readonly HashSet<BakeKey> _destination = [], _visible = [];
+    private readonly HashSet<BakeKey> _destination = [], _visible = [], _pinned = [];
     private IMapContext? _context;
     private readonly Dictionary<FeatureId, IReadOnlyList<int>> _atriumStoreys = [];
     public Exception? Failure { get; private set; }
@@ -42,11 +42,37 @@ internal sealed class InteriorStream(IBakeService bake, IStreamMountQueue mount,
         if (medium.Kind == MediumKind.Interior && medium.Feature is { } building)
             Request(new(building, checked((short)medium.Storey)), position, BakePriority.InteriorPrefetch, _visible, false);
     }
-    public void Preload(NavSpace? space, N.Vector3 position, Action<BakeKey> enqueue)
+    public void ClearDestination()
     {
-        if (space is { Building: not null } value) Request(value, position, BakePriority.KnownDestination, null, false, enqueue);
+        _destination.Clear(); _visible.Clear();
     }
-    private void Request(NavSpace space, N.Vector3 position, BakePriority priority, HashSet<BakeKey>? target, bool blocking, Action<BakeKey>? preload = null)
+    public void ResetPins() => _pinned.Clear();
+    public void Pin(NavSpace? space, N.Vector3 position, HashSet<BakeKey> keys)
+    {
+        if (space is { Building: not null } value)
+        {
+            Request(value, position, BakePriority.Background, keys, true);
+            _pinned.UnionWith(keys);
+        }
+    }
+    public bool ResourcesReady(IReadOnlySet<BakeKey> keys)
+    {
+        if (_context is null || Failure is not null) return false;
+        foreach (var key in keys)
+            if (!_pinned.Contains(key) || !_layers.TryGetValue(key, out var layer) || layer.Revision != mount.Revision || !Ready(layer)) return false;
+        return true;
+    }
+    public void RefreshPriorities()
+    {
+        foreach (var layer in _layers.Values)
+        {
+            layer.Priority = _destination.Contains(layer.Key) ? BakePriority.KnownDestination :
+                _visible.Contains(layer.Key) ? BakePriority.InteriorPrefetch : BakePriority.Background;
+            if (layer.Work is { } work) work.Priority = layer.Priority;
+            if (_destination.Contains(layer.Key) || _visible.Contains(layer.Key) || _pinned.Contains(layer.Key)) bake.Ensure(layer.Key, layer.Priority);
+        }
+    }
+    private void Request(NavSpace space, N.Vector3 position, BakePriority priority, HashSet<BakeKey> target, bool blocking)
     {
         if (_context is null || space.Building is not { } building) return;
         var entry = _context.World.Interiors.Get(building);
@@ -68,16 +94,16 @@ internal sealed class InteriorStream(IBakeService bake, IStreamMountQueue mount,
             var detail = storey == space.Floor ? "IF" : "IS";
             var key = new BakeKey(_context.Descriptor.Id, "interior." + entry.ProviderId,
                 FormattableString.Invariant($"{building.Value}/{storey}/{detail}"));
-            if (preload is not null) { preload(key); continue; }
-            target?.Add(key);
+            target.Add(key);
             if (!_layers.ContainsKey(key)) _layers.Add(key, new(key, bake.Ensure(key, priority), mount.Revision, priority, building));
             else if (priority == BakePriority.KnownDestination) bake.Ensure(key, priority);
         }
     }
-    public void Poll(int availablePreparations)
+    public void Poll(int availablePreparations, bool background = false)
     {
         foreach (var layer in _layers.Values.OrderBy(layer => layer.Priority).ThenBy(layer => layer.Key.Detail, StringComparer.Ordinal))
         {
+            if ((layer.Priority == BakePriority.Background) != background) continue;
             if (layer.Preparing is not null || layer.Owner is not null || layer.Failure is not null) continue;
             if (layer.Handle.State is BakeState.Pending or BakeState.Running) continue;
             if (_context is null || layer.Revision != mount.Revision) { layer.Finished = true; continue; }
@@ -162,7 +188,7 @@ internal sealed class InteriorStream(IBakeService bake, IStreamMountQueue mount,
         if (_context is null) return;
         foreach (var layer in _layers.Values.OrderBy(layer => layer.Key.Detail, StringComparer.Ordinal).ToArray())
         {
-            if (_visible.Contains(layer.Key) || _destination.Contains(layer.Key)) { layer.IdleSeconds = 0; continue; }
+            if (_visible.Contains(layer.Key) || _destination.Contains(layer.Key) || _pinned.Contains(layer.Key)) { layer.IdleSeconds = 0; continue; }
             layer.IdleSeconds += Math.Clamp(delta, 0, .1);
             var outside = false;
             if (_context.World.Features.TryGetValue(layer.Building, out var building))
@@ -197,7 +223,7 @@ internal sealed class InteriorStream(IBakeService bake, IStreamMountQueue mount,
     }
     public void Unload()
     {
-        _context = null; _destination.Clear(); _visible.Clear(); _atriumStoreys.Clear();
+        _context = null; _destination.Clear(); _visible.Clear(); _pinned.Clear(); _atriumStoreys.Clear();
         foreach (var layer in _layers.Values)
         {
             try { layer.Work?.Abandon(); }
@@ -238,7 +264,7 @@ internal sealed class InteriorStream(IBakeService bake, IStreamMountQueue mount,
         public BakeKey Key { get; } = key;
         public IBakeHandle Handle { get; } = handle;
         public long Revision { get; } = revision;
-        public BakePriority Priority { get; } = priority;
+        public BakePriority Priority { get; set; } = priority;
         public FeatureId Building { get; } = building;
         public double IdleSeconds;
         public VisualMountWork? Work;

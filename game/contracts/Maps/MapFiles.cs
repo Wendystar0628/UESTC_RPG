@@ -12,13 +12,12 @@ public sealed record MapFile(
     IReadOnlyList<MapSpawn> Spawns, MapWorldRules World, MapEnvironment Env,
     IReadOnlyList<MapPortal> Portals)
 {
-    public MapTitle? Title { get; init; }
     public TerrainDefaults? TerrainDefaults { get; init; }
     public MapDescriptor Complete(GeoFrame geo, Vector2 center, Box3 bounds, TileKey tileMin, TileKey tileMax)
     {
         if (TerrainDefaults is { } defaults) TerrainOverlayJson.ValidateTerrainDefaults(defaults);
         return new(Id, Name, Kind, Version, Seed, geo, center, bounds, DataRect, Roam,
             tileMin, tileMax, DefaultSpawn, Spawns, World, Env, Portals)
-        { Title = Title, TerrainDefaults = TerrainDefaults };
+        { TerrainDefaults = TerrainDefaults };
     }
 }

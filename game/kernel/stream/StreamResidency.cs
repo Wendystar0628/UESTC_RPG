@@ -55,7 +55,7 @@ internal sealed class StreamResidency(StreamDirector host)
 
     internal void QueueGeometryRequests(List<StreamRequest> requests, Pose pose)
     {
-        var wanted = _host.Selection.Required.Concat(_host.Selection.DestinationRequired).Distinct().Order().ToArray();
+        var wanted = _host.Selection.Required.Concat(_host.Selection.DestinationRequired).Concat(_host.Pins.Required).Distinct().Order().ToArray();
         foreach (var tile in wanted)
         {
             var group = GetGroup(tile);
@@ -64,8 +64,10 @@ internal sealed class StreamResidency(StreamDirector host)
                 group.GeometryRequested = true; group.Expected = _host.Preparation.Catalog!.Modules(tile).Count;
                 group.Mounted = group.Expected == 0; // Empty quadrants are valid geometry coverage.
             }
-            var priority = tile == StreamTile.Root || _host.Selection.DestinationRequired.Contains(tile) ? BakePriority.KnownDestination : BakePriority.Normal;
+            var priority = tile == StreamTile.Root || _host.Selection.DestinationRequired.Contains(tile) ? BakePriority.KnownDestination :
+                _host.Selection.Required.Contains(tile) ? BakePriority.Normal : BakePriority.Background;
             group.Priority = priority;
+            if (group.Work is { } work) work.Priority = priority;
             var distance = MathF.Sqrt(_host.Selection.Tree!.Bounds(tile).DistanceSquared(pose.Position));
             var toTile = _host.Selection.Tree!.Bounds(tile).Center - pose.Position;
             var approach = toTile.LengthSquared() > 0 ? N.Vector3.Dot(_host.Selection.Velocity, N.Vector3.Normalize(toTile)) : 0;
@@ -79,8 +81,7 @@ internal sealed class StreamResidency(StreamDirector host)
                 // Re-Ensure promotes an already issued background request without restarting it.
                 else
                 {
-                    _host.Preparation.PromotePreload(new(key, tile, priority, neededIn), group, null);
-                    if (priority == BakePriority.KnownDestination) _host.Bake.Ensure(key, priority);
+                    _host.Bake.Ensure(key, priority);
                 }
             }
         }
@@ -90,7 +91,7 @@ internal sealed class StreamResidency(StreamDirector host)
     {
         _host.Participants.RetireParticipants();
         foreach (var tile in _groups.Keys.Where(tile => tile != StreamTile.Root && !_host.Selection.Required.Contains(tile) &&
-                     !_host.Selection.DestinationRequired.Contains(tile) && !_host.Selection.Visibility.Drawn.Contains(tile)).Order().ToArray())
+                     !_host.Selection.DestinationRequired.Contains(tile) && !_host.Pins.Required.Contains(tile) && !_host.Selection.Visibility.Drawn.Contains(tile)).Order().ToArray())
         {
             var group = _groups[tile];
             if (!group.GeometryRequested && group.Participants.Count > 0) continue;
@@ -148,10 +149,10 @@ internal sealed class StreamResidency(StreamDirector host)
 
     internal bool IsCurrent(StreamTile tile, TileGroup group, long revision) => _host.Context is not null && revision == _host.Mount.Revision &&
         _groups.TryGetValue(tile, out var current) && ReferenceEquals(current, group);
-    internal bool IsCurrent(Pending pending) => pending.Group is { } group && IsCurrent(pending.Request.Tile, group, pending.Revision) &&
+    internal bool IsCurrent(Pending pending) => IsCurrent(pending.Request.Tile, pending.Group, pending.Revision) &&
         (pending.Participant is { } participant
-            ? group.Participants.TryGetValue(pending.Request.Key, out var current) && ReferenceEquals(current, participant)
-            : group.GeometryRequested && group.GeometryRevision == pending.GeometryRevision);
+            ? pending.Group.Participants.TryGetValue(pending.Request.Key, out var current) && ReferenceEquals(current, participant)
+            : pending.Group.GeometryRequested && pending.Group.GeometryRevision == pending.GeometryRevision);
 
     internal void InitializeMaterials(IToonMaterialProvider provider, IShaderMaterialSource shaders) => _materials = new(provider, shaders);
     internal void Load() => _reflectionDirty = true;

@@ -203,7 +203,7 @@ internal static class MapRuntimeTestSupport
             }
             _stage.AddChild(Producer);
             Runtime.Bind(new(registry, stream ?? Stream, new RuntimeBake(), Collision, Renderer,
-                new RuntimePipelines(), Camera, new FlowTerrainPreparation(), _view));
+                Camera, new FlowTerrainPreparation(), _view));
             _stage.AddChild(Runtime);
             ((SceneTree)Engine.GetMainLoop()).Root.AddChild(_stage);
             Runtime.SetProcess(false);
@@ -218,10 +218,6 @@ internal static class MapRuntimeTestSupport
         public bool Pending => false;
     }
 
-    internal sealed class RuntimePipelines : IPipelinePreparation
-    {
-        public Task PrepareAsync(CancellationToken cancellationToken = default) => Task.CompletedTask;
-    }
     internal sealed class RuntimeBake : IBakeService
     {
         public IBakeHandle Ensure(BakeKey key, BakePriority priority) => throw new NotSupportedException();
@@ -247,6 +243,8 @@ internal static class MapRuntimeTestSupport
         public bool HasPendingDestination => !DestinationReady;
         public IReadOnlyList<MapStreamDestination> PinnedDestinations { get; private set; } = [];
         public void SetPinnedDestinations(IReadOnlyList<MapStreamDestination> destinations) => PinnedDestinations = destinations;
+        public bool PinnedDestinationReady(MapStreamDestination destination) => PinnedDestinations.Contains(destination);
+        public void ClearDestination() => Destination = null;
         public void Prefetch(Pose destination, ViewMode mode, NavSpace? space = null, System.Numerics.Vector3? collisionFeet = null) => Destination = new(destination, mode, space, collisionFeet);
     }
 

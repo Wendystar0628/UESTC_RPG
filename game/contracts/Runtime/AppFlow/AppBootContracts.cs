@@ -13,36 +13,21 @@ public sealed record BootFlowRequest(
     ViewMode? Mode = null,
     uint? Seed = null);
 
-/// <summary>Startup-only boundary implemented by the same instance as IAppFlow.</summary>
+/// <summary>Startup orchestration owned by the same instance as IAppFlow; the static title is independent of preparation.</summary>
 public interface IAppBootFlow
 {
-    /// <summary>The fully prepared current endpoint, including the first new-game save; entry reveals only after this task.</summary>
-    Task WorldReady { get; }
-    /// <summary>Map foundation only; entry can prepare its endpoint before WorldReady.</summary>
+    /// <summary>Map foundation and resident content, before resource pins start.</summary>
     Task MapReady { get; }
-    /// <summary>The accepted entry owns the boot endpoint, derived from the active entry operation.</summary>
-    bool BootEntryTaken { get; }
-    /// <summary>Selects the title or accepted entry endpoint and awaits its complete preparation.</summary>
-    Task<IMapArrival> PrepareDestination();
-    /// <summary>Opens the title after UI, audio and save metadata are ready, independently of world loading.</summary>
+    /// <summary>Map foundation plus global pipeline/JIT preparation; does not certify a world or arrival.</summary>
+    Task BackgroundReady { get; }
+    /// <summary>Derived current-generation resource readiness for the canonical new-game spawn.</summary>
+    bool NewGamePreloadReady { get; }
     Task OpenTitle();
-    /// <summary>Propagates background startup failure to any entry already waiting for the world.</summary>
     void FailBoot(Exception error);
-    /// <summary>Accurate after PrepareBoot: a selected slot or external file will restore the world instead of initializing a new one.</summary>
-    bool WillRestoreWorld { get; }
-    // Called after BeforeMap participants. Retains the typed request, selects the slot and initial map,
-    // and holds boot input. Explicit Map wins; otherwise use selected slot metadata then default map.
-    // An external LoadFile may initially use the default map; its Full load performs the authoritative travel.
+    /// <summary>Retains the typed intent and selects the initial map, without creating/restoring a world.</summary>
     Task<MapId> PrepareBoot(BootFlowRequest request);
-
-    // Called after map foundation preparation and AfterMapWarm participants. An accepted early entry owns restoration; otherwise this is the boot loader:
-    // selected slots use Preview with a title, Full without it; external files retain LoadFile's Full semantics.
-    // It sets preview T0/flow or the resumed endpoint. No-save preview does not create a new game or take entropy.
-    // For a fresh world the kernel sets initial time/season/weather before map preparation, then restores
-    // its requested flow before this call. Only view overrides may follow it before BeforeReveal.
-    Task PrepareWorld();
-
-    // Completes WorldReady after final arrival readiness. Title/Entering may already be active;
-    // no-title startup enters Playing. Does not load, travel or acquire presentation ownership again.
-    Task CompleteBoot();
+    /// <summary>Owns the real preparation tasks. Map completion starts pins immediately; failures retain both causes.</summary>
+    Task PrepareBackground(Task mapPreparation, Task globalPreparation);
+    /// <summary>Explicit no-menu/capture entry through the normal complete entry transaction.</summary>
+    Task<IMapArrival> EnterDirect(WorldPreset? start = null, NewGameBoot? boot = null);
 }

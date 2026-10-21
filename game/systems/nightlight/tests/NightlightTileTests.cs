@@ -90,4 +90,97 @@ public sealed class NightlightTileTests
         AssertThat(selection.Data.SequenceEqual(expected)).OverrideFailureMessage("Mount arrival order may not change reflection candidates.").IsTrue();
     }
 
+    [TestCase, TestCategory(TestReason.Contract)]
+    [RequireGodotRuntime]
+    public void StaticGlowUploadDoesNotRequireDisplayActivation()
+    {
+        var pool = new ReadyPool();
+        var host = new ReadyPoolHost(pool);
+        using var material = new Godot.ShaderMaterial { Shader = new Godot.Shader() };
+        var lamp = new LampRecord(Vector3.Zero, 4f, 3f, 51, 0.75f, 12, 6f, 0.2f, 0, 0.6f);
+        var mount = new GlowMount(GlowKind.Lamp, "fixture.preload");
+        mount.Upload(host, () => material, GlowSets.Lamps([lamp], [0]));
+        AssertThat(mount.IsReady && !mount.VisibleReady && pool.VisibleCount == 0)
+            .OverrideFailureMessage("Static glow resources must be ready while the title keeps their draws hidden.").IsTrue();
+        mount.SetVisible(true);
+        AssertThat(mount.IsReady && mount.VisibleReady && pool.VisibleCount == 1).IsTrue();
+        mount.SetVisible(false);
+        AssertThat(mount.IsReady && !mount.VisibleReady && pool.VisibleCount == 0)
+            .OverrideFailureMessage("Ending the world must hide the pool without releasing uploaded resources.").IsTrue();
+        mount.Free();
+    }
+
+    [TestCase, TestCategory(TestReason.Contract)]
+    [RequireGodotRuntime]
+    public void ViewReadinessIgnoresUnselectedHiddenGlowResources()
+    {
+        var map = new MapId("fixture.preload");
+        var host = new ReadyPoolHost(new ReadyPool());
+        var materials = new ReadyMaterialSource();
+        var mounts = new GlowTileMounts(host, materials);
+        mounts.Bind(map);
+        NightlightTileContent Tile(int x)
+        {
+            var center = new Vector3(x * TileGrid.BaseEdge, 0f, 0f);
+            var glow = new GlowSet(GlowKind.Window, 1, new float[GlowSet.Stride], new(center, center + Vector3.One));
+            return new(new(map, BakeModuleIds.NightlightWindows, $"L0/{x}/0"), new(x, 0), [], glow, []);
+        }
+        var current = Tile(0);
+        var background = Tile(20);
+        try
+        {
+            foreach (var tile in new[] { current, background })
+            {
+                var work = mounts.CreateMount(tile.Key, tile, BakePriority.Background, 0);
+                AssertThat(work.Step(1d)).IsTrue();
+            }
+            var currentPool = host.Mounted[0];
+            var backgroundPool = host.Mounted[1];
+            var view = new StreamDemandView(new Pose(Vector3.Zero, 0f, 0f),
+                new Plane[] { new(Vector3.UnitX, -20f), new(-Vector3.UnitX, -20f) }, ReadOnlyMemory<Box3>.Empty);
+            StreamDemandView reflected = default;
+            AssertThat(!mounts.IsReady(in view))
+                .OverrideFailureMessage("Uploaded current-view resources still need real display application.").IsTrue();
+            mounts.ApplyView(in view, false, in reflected);
+            backgroundPool.Available = false;
+            AssertThat(mounts.IsReady(in view) && !mounts.IsReady(background.Key) &&
+                currentPool.VisibleCount == 1 && backgroundPool.VisibleCount == 0 &&
+                mounts.ReflectionTiles.Count == 1 && mounts.ReflectionTiles[0].Key == current.Key)
+                .OverrideFailureMessage("An unselected background tile must not block or change the applied view/reflection content.").IsTrue();
+            currentPool.Available = false;
+            AssertThat(!mounts.IsReady(in view)).OverrideFailureMessage("Selected resource readiness remains mandatory.").IsTrue();
+        }
+        finally { mounts.Dispose(); }
+    }
+
+    private sealed class ReadyMaterialSource : IShaderMaterialSource
+    {
+        public Godot.ShaderMaterial Create(ShaderId id) => new() { Shader = new Godot.Shader() };
+    }
+
+    private sealed class ReadyPool : IInstancePool
+    {
+        public int Capacity => 256;
+        public bool Available;
+        public bool IsReady => Available;
+        public int VisibleCount { get; set; }
+        public void WriteBuffer(ReadOnlySpan<float> data) => Available = true;
+        public void SetAabb(Godot.Aabb aabb) { }
+        public void SetParameter(Godot.StringName name, Godot.Vector4 value) { }
+        public void SetParameter(Godot.StringName name, float value) { }
+        public void Free() => Available = false;
+    }
+
+    private sealed class ReadyPoolHost(ReadyPool pool) : IInstancePoolHost
+    {
+        public readonly List<ReadyPool> Mounted = [];
+        public IInstancePool Mount(InstancePoolSpec spec)
+        {
+            var next = Mounted.Count == 0 ? pool : new ReadyPool();
+            Mounted.Add(next);
+            return next;
+        }
+        public IInstancePool Mount(GeometryInstancePoolSpec spec) => throw new NotSupportedException();
+    }
+
 }

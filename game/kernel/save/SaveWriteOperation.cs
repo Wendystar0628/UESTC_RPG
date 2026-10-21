@@ -10,7 +10,26 @@ namespace Campus.Kernel.Save;
 internal sealed class SaveWriteOperation
 {
     private readonly List<Exception> _cleanupFailures = [];
+    private int _snapshotDetached;
+    public bool SnapshotDetached => Volatile.Read(ref _snapshotDetached) != 0;
     public Exception? Failure { get; private set; }
+
+    // Call only after all live-world/map queries have produced the immutable document for Commit.
+    public void MarkSnapshotDetached() => Volatile.Write(ref _snapshotDetached, 1);
+
+    public async Task<SaveResult> WaitForFlush(Task<SaveResult> writing, SaveReason reason,
+        SlotId? slot, CancellationToken cancellation)
+    {
+        try { return await writing.WaitAsync(cancellation).ConfigureAwait(false); }
+        catch (OperationCanceledException)
+        {
+            // A completed failure is never hidden by the title's bounded wait.
+            if (writing.IsCompleted) return await writing.ConfigureAwait(false);
+            if (reason == SaveReason.ToTitle && SnapshotDetached)
+                return new(SaveStatus.Deferred, slot, 0);
+            throw;
+        }
+    }
 
     public async Task<byte[]?> CaptureThumbnail(Func<Task<byte[]?>> capture, byte[]? previous)
     {

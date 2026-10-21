@@ -65,11 +65,11 @@ internal sealed class StreamParticipants(StreamDirector host, ServiceRegistry re
     {
         foreach (var group in _host.Residency.Groups.Values)
             foreach (var item in group.Participants.Values)
-            { item.Need = StreamTileNeed.None; item.CurrentRequired = item.DestinationRequired = false; }
+            { item.Need = StreamTileNeed.None; item.CurrentRequired = item.DestinationRequired = item.PinnedRequired = false; }
     }
 
     internal void SelectParticipants(Pose pose, HashSet<StreamTile> required, bool destination, bool live,
-        List<StreamRequest>? preload = null, N.Vector3? walkingCenter = null, N.Vector3? walkingDestination = null)
+        HashSet<BakeKey>? pinned = null, N.Vector3? walkingCenter = null, N.Vector3? walkingDestination = null)
     {
         var camera = _viewCamera;
         var projection = camera.GetCameraProjection();
@@ -89,13 +89,17 @@ internal sealed class StreamParticipants(StreamDirector host, ServiceRegistry re
         foreach (var tile in required)
             if (tile.Level == LodLevel.L0) _demandNearBuffer[nearCount++] = _host.Selection.Tree!.Bounds(tile);
         var view = new StreamDemandView(pose, _demandFrustum, _demandNearBuffer.AsMemory(0, nearCount))
-        { WalkingCenter = walkingCenter, WalkingDestination = walkingDestination };
-        ApplyParticipantDemand(in view, destination, preload);
+        { WalkingCenter = walkingCenter, WalkingDestination = walkingDestination, ResourcePreload = pinned is not null };
+        ApplyParticipantDemand(in view, destination, pinned);
         // The real reflection bridge reuses its own scratch; consume it before querying the next source view.
-        if (_host.Reflections.TryGetDemand(in view, out var reflected)) ApplyParticipantDemand(in reflected, destination, preload);
+        if (_host.Reflections.TryGetDemand(in view, out var reflected))
+        {
+            reflected = reflected with { ResourcePreload = pinned is not null };
+            ApplyParticipantDemand(in reflected, destination, pinned);
+        }
     }
 
-    private void ApplyParticipantDemand(in StreamDemandView view, bool destination, List<StreamRequest>? preload)
+    private void ApplyParticipantDemand(in StreamDemandView view, bool destination, HashSet<BakeKey>? pinned)
     {
         foreach (var payload in _participantEntries)
         {
@@ -107,17 +111,6 @@ internal sealed class StreamParticipants(StreamDirector host, ServiceRegistry re
             // Collision keeps an in-flight tile inside its release envelope, just as a completed tile.
             var resident = participant.Kind == StreamMountKind.Collision ? item is not null : item is { Mounted: true };
             var need = participant.Demand(in entry, in view, resident);
-            if (preload is not null)
-            {
-                switch (need)
-                {
-                    case StreamTileNeed.None:
-                    case StreamTileNeed.Retain: break;
-                    case StreamTileNeed.Required: _host.Preparation.QueueCpuRead(entry.Key, tile, preload); break;
-                    default: throw new ArgumentOutOfRangeException(nameof(need));
-                }
-                continue;
-            }
             switch (need)
             {
                 case StreamTileNeed.None: continue;
@@ -130,8 +123,10 @@ internal sealed class StreamParticipants(StreamDirector host, ServiceRegistry re
                         item = new(entry, participant);
                         _host.Residency.GetGroup(tile).Participants.Add(entry.Key, item);
                     }
-                    if (destination) item.DestinationRequired = true;
+                    if (pinned is not null) { item.PinnedRequired = true; pinned.Add(entry.Key); }
+                    else if (destination) item.DestinationRequired = true;
                     else item.CurrentRequired = true;
+                    if (pinned is null) item.KeepForCoverage = true;
                     break;
                 default: throw new ArgumentOutOfRangeException(nameof(need));
             }
@@ -150,13 +145,13 @@ internal sealed class StreamParticipants(StreamDirector host, ServiceRegistry re
                     requests.Add(new(key, group.Tile, priority, MathF.Sqrt(item.Entry.Bounds.DistanceSquared(pose.Position)) / Math.Max(1, _host.Camera.Speed)));
                 else
                 {
-                    _host.Preparation.PromotePreload(new(key, group.Tile, priority, 0), group, item);
-                    if (priority is BakePriority.Collision or BakePriority.KnownDestination) _host.Bake.Ensure(key, priority);
+                    _host.Bake.Ensure(key, priority);
                 }
             }
     }
 
-    private static BakePriority ParticipantPriority(ParticipantTile item) => item.Participant.Kind switch
+    internal static BakePriority ParticipantPriority(ParticipantTile item) => !item.CurrentRequired && !item.DestinationRequired
+        ? BakePriority.Background : item.Participant.Kind switch
     {
         StreamMountKind.Collision => BakePriority.Collision,
         StreamMountKind.Auxiliary => item.DestinationRequired ? BakePriority.KnownDestination : BakePriority.Normal,
@@ -177,10 +172,10 @@ internal sealed class StreamParticipants(StreamDirector host, ServiceRegistry re
                 throw new InvalidDataException($"Participant mount identity mismatch: {pending.Request.Key}.");
             }
             item.Work = new(work, () => _host.Residency.IsCurrent(pending), () => item.Mounted = true,
-                error => FailParticipant(pending.Group!, item, error));
+                error => FailParticipant(pending.Group, item, error), () => ParticipantPriority(item));
             _host.Mount.Enqueue(item.Work);
         }
-        catch (Exception error) { FailParticipant(pending.Group!, item, error); }
+        catch (Exception error) { FailParticipant(pending.Group, item, error); }
     }
 
     internal bool ParticipantsReady(bool destination)
@@ -190,6 +185,19 @@ internal sealed class StreamParticipants(StreamDirector host, ServiceRegistry re
                 if ((destination ? item.DestinationRequired : item.CurrentRequired) &&
                     (item.Failure is not null || !item.Mounted || !item.Participant.IsReady(key))) return false;
         return true;
+    }
+
+    internal bool ResourcesReady(IReadOnlySet<BakeKey> keys)
+    {
+        var found = 0;
+        foreach (var group in _host.Residency.Groups.Values)
+            foreach (var (key, item) in group.Participants)
+            {
+                if (!keys.Contains(key)) continue;
+                if (!item.PinnedRequired || item.Failure is not null || !item.Mounted || !item.Participant.IsReady(key)) return false;
+                found++;
+            }
+        return found == keys.Count;
     }
 
     internal void PollParticipantErrors()
@@ -213,7 +221,7 @@ internal sealed class StreamParticipants(StreamDirector host, ServiceRegistry re
             {
                 if (item.Need != StreamTileNeed.None) continue;
                 // Keep mounted near content until geometry covering its owner is actually drawn.
-                if (item.Participant.Kind == StreamMountKind.Auxiliary && item.Mounted && !_host.Residency.HasGeometryCoverage(group.Tile)) continue;
+                if (_host.Selection.Destination is not null && item.Participant.Kind == StreamMountKind.Auxiliary && item.KeepForCoverage && item.Mounted && !_host.Residency.HasGeometryCoverage(group.Tile)) continue;
                 ReleaseParticipant(key, item); _host.Preparation.Forget(key); _retiredParticipants.Add(key);
             }
             foreach (var key in _retiredParticipants) group.Participants.Remove(key);
@@ -249,7 +257,7 @@ internal sealed class StreamParticipants(StreamDirector host, ServiceRegistry re
         public IStreamTileParticipant Participant { get; } = participant;
         public ParticipantMountWork? Work;
         public StreamTileNeed Need;
-        public bool CurrentRequired, DestinationRequired, Mounted;
+        public bool CurrentRequired, DestinationRequired, PinnedRequired, KeepForCoverage, Mounted;
         public Exception? Failure;
     }
 }

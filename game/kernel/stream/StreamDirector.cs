@@ -80,6 +80,7 @@ public partial class StreamDirector : Node, IMapAware, IMapStreamState, IStreamV
         _preparation.IsIdle && _residency.IsIdle && (_interiors?.IsUnloaded ?? true);
     public bool ResidentReady => Failure is null && _context is not null && _preparation.Catalog is not null && _residency.RootMounted;
     public bool DestinationReady => _selection.DestinationReady;
+    public bool PinnedDestinationReady(MapStreamDestination destination) => _pins.DestinationReady(destination);
     public Exception? Failure => _failure;
     private void PollFailures()
     {
@@ -177,6 +178,7 @@ public partial class StreamDirector : Node, IMapAware, IMapStreamState, IStreamV
     }
     public void Prefetch(Pose destination, ViewMode mode, NavSpace? space = null, System.Numerics.Vector3? collisionFeet = null) => _selection.Prefetch(destination, mode, space, collisionFeet);
     public void SetPinnedDestinations(IReadOnlyList<MapStreamDestination> destinations) => _pins.SetPinnedDestinations(destinations);
+    public void ClearDestination() => _selection.ClearDestination();
     public override void _Process(double delta)
     {
         if (_exiting || _context is null) return;
@@ -187,11 +189,14 @@ public partial class StreamDirector : Node, IMapAware, IMapStreamState, IStreamV
             _selection.PollRetired(); _pins.PollRetired();
             _preparation.HarvestCatalog();
             _pins.PollPinnedPreparation();
-            _interiors?.Poll(Math.Max(0, _selection.Settings.MaximumPreparations - _preparation.Preparations - _interiors.Preparations));
-            if (_interiors?.Failure is { } interiorError) RecordFailure(interiorError);
-            _preparation.PollHandles();
             if (Failure is not null || _preparation.Catalog is null || _selection.Tree is null) return;
             _selection.Update(delta);
+            // Current demand is applied before harvesting handles, so a selected pin upgrades in place.
+            _preparation.PollHandles(background: false);
+            _interiors?.Poll(Math.Max(0, _selection.Settings.MaximumPreparations - _preparation.Preparations - _interiors.Preparations));
+            _preparation.PollHandles(background: true);
+            _interiors?.Poll(Math.Max(0, _selection.Settings.MaximumPreparations - _preparation.Preparations - _interiors.Preparations), background: true);
+            if (_interiors?.Failure is { } interiorError) RecordFailure(interiorError);
             _preparation.IssueQueued();
             _interiors?.AdvanceRetention(delta, _camera.Pose.Position);
         }

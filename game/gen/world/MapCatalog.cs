@@ -134,7 +134,6 @@ public sealed class MapCatalog
         if (file.Spawns.Select(s => s.Id).Distinct(StringComparer.Ordinal).Count() != file.Spawns.Count)
             throw new InvalidDataException("Duplicate map spawn ID.");
         foreach (var spawn in file.Spawns) ValidatePose(spawn.Fly);
-        if (file.Title is { } title) ValidatePose(title.T0);
         ValidateRelative(file.Env.Sky);
         ValidateRelative(file.Env.Backdrop);
         if (file.Env.Outskirts is { } outskirts) ValidateRelative(outskirts);
@@ -189,7 +188,6 @@ public sealed class MapCatalog
             Destination("map.json", spawn.Id + ".fly", spawn.Fly);
             Stand("map.json", spawn.Id + ".stand", spawn.Stand);
         }
-        if (map.Title is { } title) Destination("map.json", "title.t0", title.T0);
         foreach (var pair in ReviewPoses(map, files)) Destination("review.json", pair.Key, pair.Value);
         if (files.TryGetValue("atlas/markers.json", out var atlasBytes))
         {

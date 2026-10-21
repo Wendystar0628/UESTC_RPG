@@ -25,6 +25,7 @@ internal static class WorldTestKit
         {
             var preset = context.Descriptor.World.Default;
             world.Freeze(preset.Clock, preset.Season, WorldTime.InitialAnimTime);
+            world.CompleteRestore();
             world.SetFlow(1);
         }
         world.OnMapLoaded(context);

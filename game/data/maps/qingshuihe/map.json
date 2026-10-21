@@ -61,18 +61,5 @@
       "qsh:relation:7849760"
     ]
   },
-  "title": {
-    "t0": {
-      "position": [
-        -1240.2,
-        495.0,
-        2928.1
-      ],
-      "yawDeg": 13,
-      "pitchDeg": -2.5,
-      "fovDeg": 38
-    },
-    "cloudLayout": "qingshuihe"
-  },
   "portals": []
 }

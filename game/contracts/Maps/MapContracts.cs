@@ -35,7 +35,6 @@ public sealed record MapEnvironment(string Sky, string Backdrop, IReadOnlyList<F
 {
     public string? Outskirts { get; init; }                      // WLD-OUTSKIRTS："outskirts.json"；null 表示没有外围
 }
-public sealed record MapTitle(Pose T0, string CloudLayout);      // SYS-TITLE：开始页的 T0 镜头与云卡布局名
 public sealed record MapPortal(string Id, Box3 Trigger, MapId Target, string TargetSpawn);              // 预留
 public sealed record MapDescriptor(
     MapId Id, LocalizedName Name, MapKind Kind, int Version, uint Seed,
@@ -46,6 +45,5 @@ public sealed record MapDescriptor(
     MapWorldRules World, MapEnvironment Env,
     IReadOnlyList<MapPortal> Portals)
 {
-    public MapTitle? Title { get; init; }                        // 没写时开始页用默认图的 T0
     public TerrainDefaults? TerrainDefaults { get; init; }
 }

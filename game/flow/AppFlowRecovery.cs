@@ -5,8 +5,8 @@ using Campus.Contracts.Save;
 
 namespace Campus.Flow;
 
-internal sealed class AppFlowRecovery(ISaveService saves, IMapService maps,
-    AppFlowContinuation continuation, AppFlowResources resources, Func<bool> isQuitting,
+internal sealed class AppFlowRecovery(IMapService maps, IWorldRestore restore, IMapRuntime mapRuntime,
+    AppFlowResources resources, Func<bool> isQuitting,
     Action<AppState> changeState, Action<string, Exception> diagnostic)
 {
     internal const string RestoreErrorKey = "save.error.restore_world";
@@ -34,33 +34,20 @@ internal sealed class AppFlowRecovery(ISaveService saves, IMapService maps,
         try
         {
             _errorOverride = RestoreErrorKey;
-            continuation.ResetFaultedWorld();
-            resources.HoldInput(); resources.HoldTitleFlow(); resources.HoldLoadingFlow();
-            await resources.BeginLoading(null, save: false);
-            var result = await saves.RestoreTitlePreview();
-            if (!AppFlowContinuation.Loaded(result.Status))
-            {
-                // Default data failed: retain cover for boot/close handling.
-                if (!isQuitting() && !keepBoot) changeState(AppState.Title);
-                done.TrySetResult(); return;
-            }
-            continuation.RequireHealthyWorld(); continuation.InvalidateTitleDestination();
-            resources.CompleteWorldPreparation();
-            await continuation.PrepareTitleDestination();
-            await resources.FinishLoading(); resources.ReleaseLoadingFlow();
-            if (!isQuitting() && !keepBoot) changeState(AppState.Title);
+            await RecoverTitle(keepBoot);
             done.TrySetResult();
         }
         catch (Exception error) { done.TrySetException(error); }
     }
-    internal async Task<IMapArrival?> RecoverTitle()
+    internal async Task RecoverTitle(bool keepBoot = false)
     {
-        resources.HoldInput(); resources.HoldTitleFlow(); resources.HoldLoadingFlow();
-        if (isQuitting()) return null;
+        resources.HoldInput();
+        if (!restore.RestoreFaulted) { resources.HoldTitleFlow(); resources.HoldLoadingFlow(); }
+        if (isQuitting()) return;
         await resources.BeginLoading(null, save: false);
-        resources.CompleteWorldPreparation();
-        var arrival = await continuation.PrepareTitleDestination();
-        await resources.FinishLoading(); resources.ReleaseLoadingFlow(); changeState(AppState.Title);
-        return arrival;
+        mapRuntime.ClearDestination(); restore.EndInstance();
+        await resources.ShowTitle();
+        if (!keepBoot) changeState(AppState.Title);
+        await resources.FinishLoading(); resources.ReleaseLoadingFlow();
     }
 }

@@ -28,7 +28,7 @@ public sealed class RestoreFailureFlowTests
         var result = await entering;
         if (result != EnterResult.Failed || f.Save.NewGames != 1 || f.Flow.State != AppState.Title)
             throw new InvalidOperationException("Recovery was rejected before reaching the save transaction.");
-        if (!f.Camera.InputLocked || !f.Loading.Active || f.Loading.Hides != 0)
+        if (!f.Camera.InputLocked || f.Loading.Active)
             throw new InvalidOperationException("A failed recovery exposed or unlocked the partial world.");
         if (f.Flow.Failure is not InvalidDataException || f.Flow.LastError != "save.error.restore_world")
             throw new InvalidOperationException("The flow session must retain its original exception type while keeping the existing restore-error display.");
@@ -43,7 +43,7 @@ public sealed class RestoreFailureFlowTests
         var f = new Fixture();
         await f.Flow.ReturnToTitle();
         await f.Flow.Quit();
-        if (f.Flow.State != AppState.Quitting || f.Save.Flushes != 1 || f.Save.Saves != 0 || !f.Camera.InputLocked || f.Loading.Hides != 0 || f.Exit.Calls != 1)
+        if (f.Flow.State != AppState.Quitting || f.Save.Flushes != 1 || f.Save.Saves != 0 || !f.Camera.InputLocked || f.Loading.Active || f.Exit.Calls != 1)
             throw new InvalidOperationException("Faulted quit wrote or resumed the partial world.");
     }
 
@@ -81,22 +81,6 @@ public sealed class RestoreFailureFlowTests
             throw new InvalidOperationException("A refused quit could not start a distinct retry.");
     }
 
-    [TestCase]
-    [TestCategory(TestReason.Smoke)]
-    public async Task FailedAutomaticPreviewCannotChooseAnotherMapAndRevealDuringBoot()
-    {
-        var f = new Fixture();
-        await f.Flow.PrepareBoot(new());
-        try { await f.Flow.PrepareWorld(); }
-        catch (InvalidOperationException)
-        {
-            if (f.Flow.State != AppState.Boot || !f.Loading.Active || f.Loading.Hides != 0 || !f.Camera.InputLocked)
-                throw new InvalidOperationException("Boot restore failure did not retain its recovery boundary.");
-            return;
-        }
-        throw new InvalidOperationException("Faulted automatic preview silently fell back to a usable world.");
-    }
-
     private sealed class Fixture
     {
         private readonly FlowTestRig _rig = new();
@@ -106,7 +90,11 @@ public sealed class RestoreFailureFlowTests
         public TestAppExit Exit { get; } = new();
         public List<string> Diagnostics => _rig.Diagnostics;
         public AppFlowService Flow { get; }
-        public Fixture() => Flow = _rig.CreateFlow(Save, new TestMapService(), Exit, new Fault());
+        public Fixture()
+        {
+            Flow = _rig.CreateFlow(Save, new TestMapService(), Exit, new Fault());
+            Flow.PrepareBoot(new()).GetAwaiter().GetResult();
+        }
     }
     private sealed class Fault : IWorldRestore
     {
@@ -114,6 +102,7 @@ public sealed class RestoreFailureFlowTests
         public bool RestoreFaulted { get; private set; } = true;
         public void AbortRestore() => RestoreFaulted = true;
         public void CompleteRestore() => RestoreFaulted = false;
+        public void EndInstance() { }
     }
     private sealed class FaultedSave : TestSaveService
     {
@@ -126,11 +115,9 @@ public sealed class RestoreFailureFlowTests
         public override SlotId? Continue => new("s1");
         public override SaveState State { get; } = new(null, SaveStatus.Failed, "save.error.restore_world", null, ReadOnlyReason.None);
         public override Task<SaveResult> SaveNow(SaveReason reason) { Saves++; return Task.FromResult(new SaveResult(SaveStatus.Failed, null, 0)); }
-        public override Task<LoadResult> Load(SlotId slot, LoadScope scope = LoadScope.Full) => Failed(slot);
-        public override Task CompleteResume() => throw new InvalidOperationException("Cannot resume a faulted world.");
+        public override Task<LoadResult> Load(SlotId slot) => Failed(slot);
         public override Task<LoadResult> LoadFile(string path) => Failed(null);
-        public override Task<LoadResult> RestoreTitlePreview() => Failed(null);
-        public override Task<LoadResult> NewGame(SlotId slot, uint? seed = null, WorldPreset? start = null) { NewGames++; return Failed(slot); }
+        public override Task<LoadResult> NewGame(SlotId? slot, uint? seed = null, WorldPreset? start = null, NewGameBoot? boot = null) { NewGames++; return Failed(slot); }
         public override Task<SaveResult> FlushForQuit(SaveReason reason, TimeSpan timeout) { Flushes++; return FlushGate?.Task ?? Task.FromResult(new SaveResult(FlushStatus, null, 0)); }
         private static Task<LoadResult> Failed(SlotId? slot) => Task.FromResult(new LoadResult(LoadStatus.Failed, slot, 0, [], "save.error.restore_world"));
     }

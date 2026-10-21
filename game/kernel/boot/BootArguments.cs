@@ -74,7 +74,6 @@ public sealed class BootArguments
         if (result.CpuBakeMode && result._provided.Overlaps(["gate", "shots", "bench", "frames", "inspect"]))
             throw Invalid("CPU baking cannot be combined with a rendering or gate command.");
         result.AddDefaults();
-        if (result.Value("pose") == "T0" && !result.Title) throw Invalid("T0 requires --title=1.");
         if (result.Has("shots") && !result.Has("out")) throw Invalid("--shots requires an absolute --out directory.");
         if (result.Has("movie-events") && !result.Has("movie-frames"))
             throw Invalid("--movie-events requires --movie-frames.");

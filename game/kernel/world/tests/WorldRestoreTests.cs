@@ -17,11 +17,51 @@ public sealed class WorldRestoreTests
 {
     [TestCase]
     [TestCategory(TestReason.Contract)]
+    public void MapPreparationAndEndedInstancesNeverAdvanceOrClaimASettledWorld()
+    {
+        var weather = new TestWeatherProcess();
+        var world = CreateWorld(weather, initialize: false);
+        var idle = LiveReadings(world, weather);
+        AssertThat(world.Instance == 0 && !world.IsSettled).OverrideFailureMessage("Map preparation created a world instance.").IsTrue();
+        world.Tick(.1);
+        AssertThat(LiveReadings(world, weather)).IsEqual(idle);
+        AssertThrown(() => world.GetSaveMoment()).IsInstanceOf<InvalidOperationException>();
+        var boot = new NewGameBoot(479.99, 60, new WeatherBoot(37), true);
+        var defaults = new NewGameContext(37, Restore().Map, new(6, Season.Winter), ViewMode.Walk) { Boot = boot };
+        var dto = world.CreateDefault(defaults);
+        AssertThat(dto.AnimTime == boot.AnimationTime && dto.FlowRate == boot.FlowRate).OverrideFailureMessage("New-game boot values were dropped.").IsTrue();
+        world.Restore(dto, Restore());
+        world.CompleteRestore();
+        AssertThat(world.Instance == 1 && world.IsSettled).OverrideFailureMessage("First formal commit did not create instance one.").IsTrue();
+        var notifications = new List<long>();
+        world.InstanceChanged += notifications.Add;
+        world.Advance(1);
+        world.SetSeason(Season.Spring);
+        world.EndInstance();
+        idle = LiveReadings(world, weather);
+        world.Tick(.1);
+        AssertThat(world.Instance == 0 && !world.IsSettled && world.Transition == WorldTransition.None).OverrideFailureMessage("Title retained an active or transitioning world.").IsTrue();
+        AssertThat(LiveReadings(world, weather)).IsEqual(idle);
+        AssertThrown(() => world.GetSaveMoment()).IsInstanceOf<InvalidOperationException>();
+        world.EndInstance();
+        AssertThat(notifications.SequenceEqual(new long[] { 0 })).OverrideFailureMessage("Ending an instance was not idempotent.").IsTrue();
+        world.AbortRestore();
+        world.EndInstance();
+        AssertThat(world.RestoreFaulted).OverrideFailureMessage("Ending a world silently cleared its restore failure.").IsTrue();
+        world.Restore(dto, Restore());
+        world.CompleteRestore();
+        AssertThat(world.Instance == 2 && world.IsSettled && !world.RestoreFaulted).OverrideFailureMessage("Fresh restore reused an old instance serial or failed to recover.").IsTrue();
+        AssertThat(notifications.SequenceEqual(new long[] { 0, 2 })).OverrideFailureMessage("World lifecycle notifications lost their instance identity.").IsTrue();
+    }
+
+    [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void RestoreCommitsOneInstanceAndDropsAllTransitionHistory()
     {
         var weather = new TestWeatherProcess();
         var world = CreateWorld(weather, initialize: false);
         world.Freeze(17.5, Season.Autumn, 240);
+        world.CompleteRestore();
         world.Advance(24);
         world.SetSeason(Season.Winter);
         world.Tick(.1);

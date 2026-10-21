@@ -41,6 +41,8 @@ public sealed class StreamMountQueue : IStreamMountQueue, IStreamMountFrame
     }
     private static int Compare(IStreamMountWork a, IStreamMountWork b)
     {
+        var background = (a.Priority == BakePriority.Background).CompareTo(b.Priority == BakePriority.Background);
+        if (background != 0) return background;
         var kind = Rank(a.Kind).CompareTo(Rank(b.Kind));
         if (kind != 0) return kind;
         var priority = a.Priority.CompareTo(b.Priority);
@@ -74,7 +76,9 @@ public sealed class StreamMountQueue : IStreamMountQueue, IStreamMountFrame
 
     public void Drain(bool covered, Action<double>? finish = null, Action<double>? release = null, Func<bool>? canActivateVisual = null)
     {
+        // Demand changes upgrade the existing work without cancelling or enqueuing another mount.
         var start = _clock();
+        _pending.Sort(Compare);
         var frameBudget = covered ? KernelBudgets.StreamCoveredMountMilliseconds : _settings.MountMilliseconds;
         var retiring = canActivateVisual is not null && !canActivateVisual();
         try

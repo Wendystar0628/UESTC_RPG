@@ -108,6 +108,7 @@ public sealed class WorldStateTests
         AssertThat(paused.AnimTime).IsEqual(WorldTime.InitialAnimTime);
         var wrapping = CreateWorld(new TestWeatherProcess(), initialize: false);
         wrapping.Freeze(0, Season.Spring, WorldTime.AnimLoopSeconds - .01);
+        wrapping.CompleteRestore();
         wrapping.SetStepRate(WorldTime.ThirtyFpsStepRate);
         wrapping.Tick(.1);
         AssertThat(Math.Abs((wrapping.AnimTime) - (.09)) <= TestTolerance.TimeSeconds).OverrideFailureMessage($"Expected {.09:R}, got {wrapping.AnimTime:R}.").IsTrue();
@@ -120,6 +121,7 @@ public sealed class WorldStateTests
     {
         var world = CreateWorld(new TestWeatherProcess(), initialize: false);
         world.Freeze(23.9, Season.Autumn, 240);
+        world.CompleteRestore();
         world.SetClock(.1, ClockSetMode.Drag);
         AssertThat(Math.Abs((world.TargetHours) - (24.1)) <= TestTolerance.WorldHours).OverrideFailureMessage($"Expected {24.1:R}, got {world.TargetHours:R}.").IsTrue();
         world.SetClock(23.9, ClockSetMode.Drag);
@@ -178,6 +180,7 @@ public sealed class WorldStateTests
                     {
                         var world = CreateWorld(new TestWeatherProcess(), reduced ? new TestMotionSettings(true) : null, initialize: false);
                         world.Freeze(17.5, start, 240);
+                        world.CompleteRestore();
                         var target = (Season)(((int)start + distance) % 4);
                         world.SetSeason(target);
                         if (reduced) AssertThat(Math.Abs(world.SeasonAtmosphere) <= TestTolerance.FloatRelative).OverrideFailureMessage("Reduced-motion transitions must leave atmosphere neutral.").IsTrue();

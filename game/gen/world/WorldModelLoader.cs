@@ -185,7 +185,7 @@ public static class WorldModelLoader
     private static bool KnownInput(string key, WorldModelLoadInputs? inputs)
     {
         if (key is "map.json" or "interiors.json" or "waypoints.json" or "review.json" or "materials.json"
-            or "sky.json" or "backdrop.json" or "title-clouds.json" or "lighting-schedule.json" or "window-numbering.json"
+            or "sky.json" or "backdrop.json" or "lighting-schedule.json" or "window-numbering.json"
             or "outskirts.json" or "atlas/labels.json" or "atlas/markers.json" or "vegetation/planting.json") return true;
         if (key.StartsWith("world/", StringComparison.Ordinal) && key.EndsWith(".json", StringComparison.Ordinal)
             && key.Split('/').Length == 2) return true;

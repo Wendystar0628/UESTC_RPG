@@ -48,8 +48,10 @@ public readonly record struct StreamDemandView(Pose Eye,
 {
     /// <summary>The live observer's feet while walking; independent of render and reflection eyes.</summary>
     public System.Numerics.Vector3? WalkingCenter { get; init; }
-    /// <summary>An outstanding walking arrival, or a CPU-only pinned walking destination.</summary>
+    /// <summary>An outstanding walking arrival or retained static-resource destination.</summary>
     public System.Numerics.Vector3? WalkingDestination { get; init; }
+    /// <summary>Static resources without a world instance; dynamic world-state producers wait for formal demand.</summary>
+    public bool ResourcePreload { get; init; }
 }
 
 public enum StreamTileNeed : byte { None, Retain, Required }
@@ -64,7 +66,7 @@ public interface IStreamTileParticipant
     StreamTileNeed Demand(in BakeTileEntry entry, in StreamDemandView view, bool resident);
     /// <summary>Creates bounded work without engine side effects; the shared queue alone advances it.</summary>
     IStreamMountWork CreateMount(BakeKey key, object product, BakePriority priority, long revision);
-    /// <summary>Mounted content is ready; this does not certify that a frame is capturable.</summary>
+    /// <summary>Mounted resources are ready. World/view display state belongs to IViewContentReadiness.</summary>
     bool IsReady(BakeKey key);
     void Unmount(BakeKey key);
     Exception? Failure { get; }

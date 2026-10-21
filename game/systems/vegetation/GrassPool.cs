@@ -101,6 +101,12 @@ internal sealed class GrassPool
         pool.VisibleCount = n;
     }
 
+    public void Hide()
+    {
+        if (_pool is not null) _pool.VisibleCount = 0;
+        _at = null;
+    }
+
     public void Free()
     {
         _pool?.Free();

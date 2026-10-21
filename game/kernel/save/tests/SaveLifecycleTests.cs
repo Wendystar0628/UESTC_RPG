@@ -33,7 +33,7 @@ public sealed class SaveLifecycleTests
 
     [TestCase]
     [TestCategory(TestReason.Smoke)]
-    public async Task PreviewThenResumeRestoresPoseOnceAndCommitsWorldOnlyOnce()
+    public async Task FullLoadRestoresPoseOnceAndWaitsForDestinationBeforeCompleting()
     {
         using var fixture = new Fixture();
         await fixture.Start();
@@ -42,26 +42,76 @@ public sealed class SaveLifecycleTests
         fixture.Flow = AppState.Playing;
         AssertThat((await fixture.Pump(fixture.Save.SaveNow(SaveReason.NewGame))).Status == SaveStatus.Saved).OverrideFailureMessage("Initial save failed.").IsTrue();
         fixture.Camera.SetPose(new(new Vector3(100, 200, 300), 0, 0));
-        fixture.Flow = AppState.Title; fixture.Log.Clear();
-        var preview = await fixture.Pump(fixture.Save.Load(new("s1"), LoadScope.Preview));
-        AssertThat(preview.Status == LoadStatus.Loaded && fixture.Save.HasPendingPose).OverrideFailureMessage("Preview did not hold pose.").IsTrue();
-        AssertThat(fixture.Camera.Pose.Position == new Vector3(100, 200, 300)).OverrideFailureMessage("Preview moved the title camera.").IsTrue();
-        AssertThat(fixture.Log.SequenceEqual(new[] { "world", "instance", "prepare-map" })).OverrideFailureMessage("World/instance/travel ordering changed.").IsTrue();
+        fixture.Flow = AppState.Entering; fixture.Log.Clear(); fixture.Ready = false;
         var instance = fixture.World.Instance;
-        fixture.Ready = false;
-        var resume = fixture.Save.CompleteResume();
-        await fixture.Frames(20);
-        AssertThat(!resume.IsCompleted && fixture.Save.HasPendingPose).OverrideFailureMessage("Resume ignored destination readiness.").IsTrue();
+        var loading = fixture.Save.Load(new("s1"));
+        for (var frame = 0; frame < TestSamples.FrameLoop && !fixture.Log.Contains("view"); frame++) await fixture.Frames(1);
+        AssertThat(!loading.IsCompleted).OverrideFailureMessage("Full load ignored destination readiness.").IsTrue();
+        AssertThat(fixture.Log.SequenceEqual(new[] { "world", "instance", "prepare-map", "view" })).OverrideFailureMessage("World/instance/map/pose ordering changed.").IsTrue();
+        AssertThat(fixture.Camera.Pose.Position == new Vector3(30, 40, 50)).OverrideFailureMessage("Full load did not restore the saved pose.").IsTrue();
         fixture.Ready = true;
-        await fixture.Pump(resume);
-        AssertThat(!fixture.Save.HasPendingPose && fixture.World.Instance == instance).OverrideFailureMessage("Resume changed world instance.").IsTrue();
-        AssertThat(fixture.Camera.Pose.Position == new Vector3(30, 40, 50)).OverrideFailureMessage("Resume did not restore saved pose.").IsTrue();
-        AssertThat(fixture.Log.Count(x => x == "view") == 1).OverrideFailureMessage("Pose restored more than once.").IsTrue();
+        var loaded = await fixture.Pump(loading);
+        AssertThat(loaded.Status == LoadStatus.Loaded && fixture.World.Instance == instance + 1).OverrideFailureMessage("Full load did not commit exactly one new instance.").IsTrue();
+        AssertThat(fixture.Log.Count(x => x == "view") == 1 && fixture.Camera.Locks == 0).OverrideFailureMessage("Pose restored more than once or retained its input lease.").IsTrue();
     }
 
     [TestCase]
     [TestCategory(TestReason.Smoke)]
-    public async Task QuitTimeoutKeepsWriteAliveAndLateSuccessUpdatesState()
+    public async Task TemporaryNewGameAndEndedWorldNeverSelectOrWriteASlot()
+    {
+        using var fixture = new Fixture();
+        await fixture.Start();
+        AssertThat(fixture.World.Instance == 0 && fixture.Save.Active is null && fixture.Log.Count == 0).OverrideFailureMessage("Reading slot summaries created a world.").IsTrue();
+        fixture.Ready = false;
+        var entry = fixture.Save.NewGame(null, 17);
+        for (var frame = 0; frame < TestSamples.FrameLoop && !fixture.Log.Contains("view"); frame++) await fixture.Frames(1);
+        AssertThat(!entry.IsCompleted && fixture.Save.Active is null).OverrideFailureMessage("Temporary new game skipped its destination or selected a slot.").IsTrue();
+        fixture.Ready = true;
+        AssertThat((await fixture.Pump(entry)).Status == LoadStatus.Loaded && fixture.World.Instance == 1).OverrideFailureMessage("Temporary new game did not fully restore a formal instance.").IsTrue();
+        AssertThat((await fixture.Pump(fixture.Save.SaveNow(SaveReason.Test))).Status == SaveStatus.Deferred).OverrideFailureMessage("Temporary new game wrote a save slot.").IsTrue();
+        await fixture.Pump(fixture.Save.NewGame(new("s1"), 19));
+        await fixture.Pump(fixture.Save.SaveNow(SaveReason.NewGame));
+        fixture.World.EndInstance();
+        fixture.Flow = AppState.Title;
+        AssertThat((await fixture.Pump(fixture.Save.SaveNow(SaveReason.Test))).Status == SaveStatus.Deferred).OverrideFailureMessage("An ended world was captured.").IsTrue();
+        AssertThat((await fixture.Pump(fixture.Save.FlushForQuit(SaveReason.Quit, TimeSpan.FromSeconds(1)))).Status == SaveStatus.Deferred).OverrideFailureMessage("Title exit started another world save.").IsTrue();
+        AssertThat(fixture.Save.Slots[0].Meta?.Gen == 1 && fixture.Save.Slots.Skip(1).All(slot => slot.Health == SlotHealth.Empty)).OverrideFailureMessage("Temporary entry or Title exit changed a save generation.").IsTrue();
+    }
+
+    [TestCase(false)]
+    [TestCase(true)]
+    [TestCategory(TestReason.Contract)]
+    public async Task TitleTimeoutRequiresADetachedSnapshotAndKeepsRealWriteFailures(bool detached)
+    {
+        var operation = new SaveWriteOperation();
+        if (detached) operation.MarkSnapshotDetached();
+        var pending = new TaskCompletionSource<SaveResult>(TaskCreationOptions.RunContinuationsAsynchronously);
+        using var deadline = new CancellationTokenSource();
+        deadline.Cancel();
+        var canceled = false;
+        SaveResult? title = null;
+        try { title = await operation.WaitForFlush(pending.Task, SaveReason.ToTitle, new("s1"), deadline.Token); }
+        catch (OperationCanceledException) { canceled = true; }
+        AssertThat(detached ? title?.Status == SaveStatus.Deferred && !canceled : title is null && canceled)
+            .OverrideFailureMessage("Title timeout ended a live snapshot or blocked a detached disk write.").IsTrue();
+        AssertThat(!pending.Task.IsCompleted).OverrideFailureMessage("Title timeout canceled the sole disk writer.").IsTrue();
+        var failure = new SaveResult(SaveStatus.Failed, new("s1"), 2, "save.error.io");
+        pending.SetResult(failure);
+        AssertThat(await operation.WaitForFlush(pending.Task, SaveReason.ToTitle, new("s1"), deadline.Token))
+            .IsEqual(failure);
+        operation.MarkSnapshotDetached();
+        var stillWriting = new TaskCompletionSource<SaveResult>(TaskCreationOptions.RunContinuationsAsynchronously);
+        canceled = false;
+        try { await operation.WaitForFlush(stillWriting.Task, SaveReason.Quit, new("s1"), deadline.Token); }
+        catch (OperationCanceledException) { canceled = true; }
+        AssertThat(canceled && !stillWriting.Task.IsCompleted).OverrideFailureMessage("Title policy changed quit timeout or canceled its writer.").IsTrue();
+        stillWriting.SetResult(new(SaveStatus.Saved, new("s1"), 3));
+    }
+
+    [TestCase(false)]
+    [TestCase(true)]
+    [TestCategory(TestReason.Smoke)]
+    public async Task QuitTimeoutRetainsQueuedWriteAndReportsItsRealOutcome(bool endedWorld)
     {
         using var fixture = new Fixture();
         await fixture.Start(); await fixture.Pump(fixture.Save.NewGame(new("s1"), 1));
@@ -71,11 +121,17 @@ public sealed class SaveLifecycleTests
         fixture.ThumbnailBarrier = new(TaskCreationOptions.RunContinuationsAsynchronously);
         var quit = await fixture.Pump(fixture.Save.FlushForQuit(SaveReason.Quit, TimeSpan.FromMilliseconds(30)));
         AssertThat(quit.Status == SaveStatus.Failed && fixture.Save.Busy && fixture.Save.State.ErrorKey == "save.error.timeout").OverrideFailureMessage("Timeout canceled or silently accepted a save.").IsTrue();
+        if (endedWorld)
+        {
+            fixture.World.EndInstance();
+            fixture.Flow = AppState.Title;
+            AssertThat((await fixture.Pump(fixture.Save.SaveNow(SaveReason.Test))).Status == SaveStatus.Deferred && fixture.Save.Busy).OverrideFailureMessage("Title save replaced an already queued write.").IsTrue();
+        }
         var retry = fixture.Save.FlushForQuit(SaveReason.Quit, TimeSpan.FromSeconds(2));
         fixture.ThumbnailBarrier.SetException(new IOException("Thumbnail capture failed."));
         var result = await fixture.Pump(retry);
-        AssertThat(result.Status == SaveStatus.Saved && fixture.Save.State.Last == SaveStatus.Saved).OverrideFailureMessage("Late write failed to finish.").IsTrue();
-        AssertThat(fixture.Save.Slots[0].Meta?.Gen == 2).OverrideFailureMessage("Retry launched a duplicate write.").IsTrue();
+        AssertThat(result.Status == (endedWorld ? SaveStatus.Failed : SaveStatus.Saved) && fixture.Save.State.Last == result.Status).OverrideFailureMessage("The existing write result was hidden by title exit.").IsTrue();
+        AssertThat(fixture.Save.Slots[0].Meta?.Gen == (endedWorld ? 1UL : 2UL)).OverrideFailureMessage("Retry launched a duplicate write or damaged the old generation.").IsTrue();
         var pose = fixture.Camera.Pose;
         fixture.Camera.SetPose(default);
         await fixture.Pump(fixture.Save.Load(new("s1")));
@@ -147,9 +203,9 @@ public sealed class SaveLifecycleTests
         AssertThat((await fixture.Pump(fixture.Save.FlushForQuit(SaveReason.Quit, TimeSpan.FromSeconds(1)))).Status == SaveStatus.Deferred).OverrideFailureMessage("Fault exit attempted to serialize the partial world.").IsTrue();
         AssertThat(fixture.Save.Slots[0].Meta?.Gen == 1).OverrideFailureMessage("Fault damaged the last good generation.").IsTrue();
         fixture.Weather.FailRestore = false;
-        var recovered = await fixture.Pump(fixture.Save.RestoreTitlePreview());
-        AssertThat(recovered.Status == LoadStatus.Loaded && !fixture.World.RestoreFaulted && fixture.Camera.Locks == 0).OverrideFailureMessage("A complete default preview did not release the fault lease.").IsTrue();
-        AssertThat(fixture.Save.Active is null && fixture.Save.Slots[0].Meta?.Gen == 1).OverrideFailureMessage("Title recovery selected a writable slot or changed the previous generation.").IsTrue();
+        var recovered = await fixture.Pump(fixture.Save.NewGame(null, 2));
+        AssertThat(recovered.Status == LoadStatus.Loaded && !fixture.World.RestoreFaulted && fixture.Camera.Locks == 0).OverrideFailureMessage("A complete temporary new game did not release the fault lease.").IsTrue();
+        AssertThat(fixture.Save.Active is null && fixture.Save.Slots[0].Meta?.Gen == 1).OverrideFailureMessage("Temporary-world recovery selected a writable slot or changed the previous generation.").IsTrue();
         AssertThat(fixture.Save.State.ErrorKey is null).OverrideFailureMessage("Recovery left the stale error visible.").IsTrue();
     }
 
@@ -234,7 +290,8 @@ public sealed class SaveLifecycleTests
         public double? TargetHours { get; set; }
         public bool RestoreFaulted { get; private set; }
         private bool _pending;
-        public long Instance { get; set; } = 1;
+        private long _serial;
+        public long Instance { get; private set; }
         public event Action<long>? InstanceChanged;
         public long Rev => 1; public double WorldHours => Hours; public double Clock => Hours % 24;
         public double SeasonPos => 2; public Season SeasonTarget => Season.Autumn; public float SeasonAtmosphere => 0; public Body Sun => default; public Body Moon => default;
@@ -251,9 +308,10 @@ public sealed class SaveLifecycleTests
         public void AbortRestore() { RestoreFaulted = true; _pending = false; log.Add("abort"); }
         public void CompleteRestore()
         {
-            AssertThat(_pending).OverrideFailureMessage("Commit without a fresh restore.").IsTrue(); _pending = false; RestoreFaulted = false; Instance++; log.Add("instance");
+            AssertThat(_pending).OverrideFailureMessage("Commit without a fresh restore.").IsTrue(); _pending = false; RestoreFaulted = false; Instance = ++_serial; log.Add("instance");
             InstanceChanged?.Invoke(Instance);
         }
+        public void EndInstance() { _pending = false; Instance = 0; InstanceChanged?.Invoke(Instance); }
         public void Tick() { if (!RestoreFaulted) AssertThat(!_pending).OverrideFailureMessage("An uncommitted World phase escaped into the next frame.").IsTrue(); }
         public WorldSaveV1 Capture(in CaptureContext context)
         {

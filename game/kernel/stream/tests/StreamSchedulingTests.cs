@@ -46,12 +46,13 @@ public sealed class StreamSchedulingTests
         var area = world.Interiors.Get(layout.Feature)!.OpenAreas.First(area => area.Index == atriumFloor);
         var center = Campus.Gen.Geometry.PlanPolygons.Centroid(area.Footprint);
         var destination = new System.Numerics.Vector3(center.X, area.FloorY + WalkRules.StandingEye, center.Y);
-        var preloads = new List<BakeKey>();
-        stream.Preload(new(layout.Feature, checked((short)atriumFloor)), destination, preloads.Add);
-        if (!preloads.SequenceEqual(expected) || bake.Keys.Count != 0 || stream.Prepared.Any() || !stream.DestinationReady)
-            throw new InvalidOperationException("Interior CPU preload changed native residency or the active destination barrier.");
+        var pins = new HashSet<BakeKey>();
+        stream.Pin(new(layout.Feature, checked((short)atriumFloor)), destination, pins);
+        if (!pins.SetEquals(expected) || !bake.Keys.SequenceEqual(expected) || stream.ResourcesReady(pins) || !stream.DestinationReady)
+            throw new InvalidOperationException("Pinned interior did not use real resource requests independently of the active destination barrier.");
         stream.Prefetch(new(layout.Feature, checked((short)atriumFloor)), destination);
-        if (!bake.Keys.SequenceEqual(expected)) throw new InvalidOperationException("Atrium-visible open storeys did not reach the baker.");
+        if (bake.Keys.Distinct().Count() != expected.Length || stream.DestinationReady)
+            throw new InvalidOperationException("Atrium-visible open storeys or the pending destination barrier changed.");
         stream.Unload(); bake.Clear(); stream.Load(context);
         stream.Prefetch(new(layout.Feature, checked((short)atriumFloor)), destination);
         if (bake.Keys.Count != layout.OpenStoreys.Count(floor => Math.Abs(floor - atriumFloor) <= 1))

@@ -30,6 +30,19 @@ public sealed class FaunaScheduleTests
             .OverrideFailureMessage("Actual main or reflected visibility requests and retains animals beyond the near ring.").IsTrue();
     }
 
+    [TestCase, TestCategory(TestReason.Contract)]
+    public void ResourcePreloadDoesNotRequestWorldDependentDisplayVariants()
+    {
+        var bounds = new Box3(new N.Vector3(-1f), new N.Vector3(1f));
+        var entry = new BakeTileEntry(default, bounds);
+        var formal = new StreamDemandView(default, ReadOnlyMemory<N.Plane>.Empty, new[] { bounds });
+        var preload = formal with { ResourcePreload = true };
+        AssertThat(FaunaDemand.Evaluate(in entry, in preload, false) == StreamTileNeed.None &&
+            FaunaDemand.Evaluate(in entry, in preload, true) == StreamTileNeed.None &&
+            FaunaDemand.Evaluate(in entry, in formal, false) == StreamTileNeed.Required)
+            .OverrideFailureMessage("Static resource demand must not create fauna display state; formal demand stays intact.").IsTrue();
+    }
+
     [TestCase]
     [TestCategory(TestReason.Contract)]
     public void ScheduleFollowsTheSpeciesTable()

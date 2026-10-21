@@ -24,8 +24,16 @@ public sealed class GlowMount(GlowKind kind, string poolId)
     private bool _uploaded;
     private int _count;
 
-    public bool IsReady => _uploaded && (_count == 0 || (_pool is not null && _pool.IsReady && _pool.VisibleCount == _count &&
+    public bool IsReady => _uploaded && (_count == 0 || (_pool is not null && _pool.IsReady &&
         _material is not null && GodotObject.IsInstanceValid(_material) && _material.Shader is not null));
+
+    public bool VisibleReady => _uploaded && (_count == 0 || _pool is not null && _pool.VisibleCount == _count);
+
+    public void SetVisible(bool visible)
+    {
+        var count = visible ? _count : 0;
+        if (_pool is not null && _pool.VisibleCount != count) _pool.VisibleCount = count;
+    }
 
     public GlowKind Kind { get; } = kind;
 
@@ -60,7 +68,6 @@ public sealed class GlowMount(GlowKind kind, string poolId)
         _pool.VisibleCount = 0;
         _pool.WriteBuffer(data);
         _pool.SetAabb(box);
-        _pool.VisibleCount = set.Count;
         _uploaded = true;
     }
 

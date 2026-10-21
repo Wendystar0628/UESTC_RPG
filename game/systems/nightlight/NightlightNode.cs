@@ -35,8 +35,9 @@ public partial class NightlightNode : Node, IMapAware, IViewContentReadiness, IV
     private GlowTileMounts? _glows;
     private readonly NightlightReflections _reflections = new();
     private ICameraRig? _camera;
+    private IReflectionWorld? _reflection;
+    private readonly N.Plane[] _planes = new N.Plane[CameraFrustum.PlaneCount];
     private Pose? _appliedPose;
-    private long _appliedGlowRevision = -1;
     private ReadOnlyMemory<float> _thresholds;
     private ImageTexture? _thresholdTexture;
     private IMapContext? _map;
@@ -50,9 +51,13 @@ public partial class NightlightNode : Node, IMapAware, IViewContentReadiness, IV
     public IReadOnlyList<LampRecord> Lamps { get; private set; } = [];
     public bool IsReady(Pose pose)
     {
-        if (Failure is not null || _windows.Dirty || _map is null || _inventory is null || _inventoryRev != _inventory.Rev || _appliedPose != pose ||
-            _tableTexture is null || _gridTexture is null || _overrideTexture is null || _thresholdTexture is null || !_reflections.Ready || _glows is null || !_glows.Ready || _appliedGlowRevision != _glows.Revision) return false;
-        return true;
+        if (_world is not { Instance: > 0 } || Failure is not null || _windows.Dirty || _map is null || _inventory is null || _inventoryRev != _inventory.Rev || _appliedPose != pose ||
+            _tableTexture is null || _gridTexture is null || _overrideTexture is null || _thresholdTexture is null || !_reflections.Ready || _glows is null ||
+            _camera?.Pose != pose || GetViewport()?.GetCamera3D() is not { } camera) return false;
+        CameraFrustum.Fill(camera, _planes);
+        var view = new StreamDemandView(pose, _planes, ReadOnlyMemory<Box3>.Empty);
+        if (!_glows.IsReady(in view)) return false;
+        return !_reflection!.TryGetDemand(in view, out var reflected) || _glows.IsReady(in reflected);
     }
     public StreamMountKind Kind => StreamMountKind.Auxiliary;
     public Exception? Failure => _glows?.Failure;
@@ -80,6 +85,7 @@ public partial class NightlightNode : Node, IMapAware, IViewContentReadiness, IV
         _inventory = KernelServices.Get<ILightInventory>();
         _glows = new(KernelServices.Get<IInstancePoolHost>(), KernelServices.Get<IShaderMaterialSource>());
         _camera = KernelServices.Get<ICameraRig>();
+        _reflection = KernelServices.Get<IReflectionWorld>();
     }
 
     public override void _ExitTree()
@@ -124,7 +130,7 @@ public partial class NightlightNode : Node, IMapAware, IViewContentReadiness, IV
 
     private void ApplyLighting(Pose pose, double delta)
     {
-        if (_schedule is null || _world is null || _sink is null || _map is null ||
+        if (_schedule is null || _world is not { Instance: > 0 } || _sink is null || _map is null ||
             _inventory is null || _inventoryRev != _inventory.Rev) return;
         var weather = _world.WeatherNow;
         var gain = _colors?.Current.LampPoolGain ?? 1f;
@@ -132,8 +138,12 @@ public partial class NightlightNode : Node, IMapAware, IViewContentReadiness, IV
         _sink.Submit(_channels);
         if (_glows is { } glows)
         {
+            if (GetViewport()?.GetCamera3D() is not { } camera) return;
+            CameraFrustum.Fill(camera, _planes);
+            var view = new StreamDemandView(pose, _planes, ReadOnlyMemory<Box3>.Empty);
+            var mirrored = _reflection!.TryGetDemand(in view, out var reflected);
+            glows.ApplyView(in view, mirrored, in reflected);
             _reflections.Update(Lamps, glows.ReflectionTiles, _channels, _windows.Data, _thresholds.Span, pose);
-            _appliedGlowRevision = glows.Revision;
         }
         if (_windows.TakeUpload(delta) && _overrideImage is not null && _overrideTexture is not null)
         {
@@ -146,6 +156,7 @@ public partial class NightlightNode : Node, IMapAware, IViewContentReadiness, IV
     private void OnWorldInstanceChanged(long _)
     {
         _schedule?.Reset();
+        _glows?.Hide();
         _windows.ClearAll();
         _appliedPose = null;
     }
@@ -216,5 +227,9 @@ public partial class NightlightNode : Node, IMapAware, IViewContentReadiness, IV
     public IStreamMountWork CreateMount(BakeKey key, object product, BakePriority priority, long revision) =>
         (_glows ?? throw new InvalidOperationException("Nightlight glow mounting is not ready.")).CreateMount(key, product, priority, revision);
     public bool IsReady(BakeKey key) => _glows?.IsReady(key) ?? false;
-    public void Unmount(BakeKey key) => _glows?.Unmount(key);
+    public void Unmount(BakeKey key)
+    {
+        // Only retiring content used by the applied views invalidates their lighting/reflection submission.
+        if (_glows?.Unmount(key) == true) _appliedPose = null;
+    }
 }

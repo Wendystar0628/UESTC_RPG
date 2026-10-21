@@ -61,14 +61,33 @@ public partial class FaunaNode : Node, IMapAware, IViewContentReadiness, IViewCa
 
     public bool IsReady(Pose pose)
     {
-        if (Failure is not null || _tileMounts.Map is null || _force) return false;
-        foreach (var tile in _tileMounts.Tiles) if (!TileReady(tile)) return false;
+        if (Failure is not null || _tileMounts.Map is null || _world is not { Instance: > 0 } || _force ||
+            _rig?.Pose != pose || GetViewport()?.GetCamera3D() is not { } camera) return false;
+        CameraFrustum.Fill(camera, _planes);
+        var view = new StreamDemandView(pose, _planes, ReadOnlyMemory<Box3>.Empty);
+        var mirrored = _reflection!.TryGetDemand(in view, out var reflection);
+        foreach (var tile in _tileMounts.Tiles)
+        {
+            if (!Required(tile, in view) && (!mirrored || !Required(tile, in reflection))) continue;
+            if (!TileReady(tile)) return false;
+        }
         return true;
+    }
+
+    private static bool Required(FaunaTile tile, in StreamDemandView view)
+    {
+        // Reuse the producer's demand; retained owner tiles outside the actual views do not block capture.
+        foreach (var site in tile.Content.Content.Sites)
+        {
+            var entry = new BakeTileEntry(tile.Content.Key, site.Bounds);
+            if (FaunaDemand.Evaluate(in entry, in view, resident: true) == StreamTileNeed.Required) return true;
+        }
+        return false;
     }
 
     private bool TileReady(FaunaTile tile)
     {
-        if (!tile.Mounted) return false;
+        if (_world is not { Instance: > 0 } || !tile.Mounted) return false;
         for (var i = 0; i < tile.Latches.Length; i++)
         {
             var latch = tile.Latches[i];
@@ -101,7 +120,11 @@ public partial class FaunaNode : Node, IMapAware, IViewContentReadiness, IViewCa
         _world.InstanceChanged += OnWorldInstanceChanged;
     }
 
-    private void OnWorldInstanceChanged(long _) { _captureEpoch++; _force = true; }
+    private void OnWorldInstanceChanged(long _)
+    {
+        _captureEpoch++;
+        _force = true;
+    }
 
     public override void _ExitTree()
     {
@@ -122,7 +145,7 @@ public partial class FaunaNode : Node, IMapAware, IViewContentReadiness, IViewCa
 
     public override void _Process(double delta)
     {
-        if (Failure is not null || _world is null || _tileMounts.Map is null) return;
+        if (Failure is not null || _world is not { Instance: > 0 } || _tileMounts.Map is null) return;
         _sinceCheck += Math.Min(delta, 0.1);
         if (!_force && _sinceCheck < CheckSeconds) return;
         _sinceCheck = 0;
@@ -203,6 +226,8 @@ public partial class FaunaNode : Node, IMapAware, IViewContentReadiness, IViewCa
 
     private void InitializeTile(FaunaTile tile)
     {
+        // Resource-only demand excludes fauna; an ended world cannot select display variants.
+        if (_world is not { Instance: > 0 }) return;
         for (var i = 0; i < tile.Latches.Length; i++)
             Request(tile.Latches[i], Target(tile.Content.Content.Sites[i]), anywhere: true, visible: false);
     }

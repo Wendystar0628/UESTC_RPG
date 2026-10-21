@@ -1,12 +1,14 @@
 using Campus.Contracts;
+using Campus.Contracts.Bake;
 
 namespace Campus.Kernel.Stream;
 
 /// <summary>Director-owned completion and stale-key handling around participant work.</summary>
 internal sealed class ParticipantMountWork(IStreamMountWork work, Func<bool> current,
-    Action mounted, Action<Exception> fail)
+    Action mounted, Action<Exception> fail, Func<BakePriority> priority)
     : StreamMountWork(work.Key, work.Priority, work.Revision, work.Kind)
 {
+    public override BakePriority Priority => priority();
     protected override bool IsCurrent => current();
 
     protected override bool MountStep(double budgetMilliseconds)

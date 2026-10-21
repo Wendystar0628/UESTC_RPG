@@ -55,6 +55,7 @@ public sealed class WorldStateService : IWorldFrame, IWorldControl,
     private double _seasonStartArcClock;
     private double _finalOffset;
     private int _stepRate = WorldTime.DefaultStepRate;
+    private long _instanceSerial;
     private bool _initializationApplied;
     private bool _restorePending;
     private bool _mapUnavailable = true;
@@ -63,7 +64,7 @@ public sealed class WorldStateService : IWorldFrame, IWorldControl,
 
     public event Action? ReducedTransitionRequested;
     public long Rev { get; private set; } = 1;
-    public long Instance { get; private set; } = 1;
+    public long Instance { get; private set; }
     public event Action<long>? InstanceChanged;
     public double WorldHours { get; private set; }
     public double Clock => ArtEphemeris.Wrap(WorldHours + _offset, 24);
@@ -78,7 +79,7 @@ public sealed class WorldStateService : IWorldFrame, IWorldControl,
     public WorldFlow BaseFlow => _flow.Base;
     public int LastFlowRate => _flow.LastRateBeforePause;
     public bool Scrubbing => _dragging && _dragIdle < WorldTimeTuning.DragIdleSeconds;
-    public WorldTransition Transition =>
+    public WorldTransition Transition => Instance == 0 ? WorldTransition.None :
         (TimeMoving ? WorldTransition.Time : WorldTransition.None) |
         (SeasonMoving ? WorldTransition.Season : WorldTransition.None) |
         (_weather.Transitioning ? WorldTransition.Weather : WorldTransition.None);
@@ -321,12 +322,12 @@ public sealed class WorldStateService : IWorldFrame, IWorldControl,
     {
         EnsureUsable();
         if (_initializationApplied || _restorePending)
-            throw new InvalidOperationException("Freeze is a one-time boot initialization, not a runtime rewind.");
+            throw new InvalidOperationException("Freeze only prepares one initial world; it cannot rewind a committed instance.");
         ValidateClock(clock);
         if (!Enum.IsDefined(season)) throw new ArgumentOutOfRangeException(nameof(season));
         if (!double.IsFinite(anim) || anim < 0) throw new ArgumentOutOfRangeException(nameof(anim));
         SetImmediate(new WorldSaveV1(clock, 0, (int)season, season, 0, 1, ArtEphemeris.Wrap(anim, WorldTime.AnimLoopSeconds)));
-        _initializationApplied = true;
+        _restorePending = true;
         Rev++;
     }
 
@@ -382,7 +383,12 @@ public sealed class WorldStateService : IWorldFrame, IWorldControl,
     public WorldSaveV1 CreateDefault(NewGameContext context)
     {
         ValidatePreset(context.Start);
-        return new(context.Start.Clock, 0, (int)context.Start.Season, context.Start.Season, 1, 1, WorldTime.InitialAnimTime);
+        var rate = context.Boot?.FlowRate ?? 1;
+        ValidateRate(rate);
+        var animation = context.Boot?.AnimationTime ?? WorldTime.InitialAnimTime;
+        if (!double.IsFinite(animation) || animation < 0) throw new ArgumentOutOfRangeException(nameof(context));
+        return new(context.Start.Clock, 0, (int)context.Start.Season, context.Start.Season,
+            rate, rate > 0 ? rate : 1, ArtEphemeris.Wrap(animation, WorldTime.AnimLoopSeconds));
     }
 
     public void Restore(WorldSaveV1 dto, RestoreContext context)
@@ -404,7 +410,24 @@ public sealed class WorldStateService : IWorldFrame, IWorldControl,
         _restorePending = false;
         RestoreFaulted = false;
         _initializationApplied = true;
-        Instance++;
+        Instance = checked(++_instanceSerial);
+        Rev++;
+        InstanceChanged?.Invoke(Instance);
+    }
+
+    public void EndInstance()
+    {
+        if (Instance == 0 && !_initializationApplied && !_restorePending) return;
+        _initializationApplied = false;
+        _restorePending = false;
+        _velocity = _jumpDuration = _jumpElapsed = _seasonDuration = _seasonElapsed = 0;
+        _seasonAtmosphereFrom = 0;
+        _dragging = false;
+        _dragIdle = WorldTimeTuning.DragIdleSeconds;
+        _targetHours = WorldHours;
+        _seasonFrom = _seasonTo = SeasonPos;
+        Omega = 0;
+        Instance = 0;
         Rev++;
         InstanceChanged?.Invoke(Instance);
     }

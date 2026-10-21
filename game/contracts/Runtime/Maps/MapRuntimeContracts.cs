@@ -11,6 +11,8 @@ public interface IMapRuntime
     AppStartupException ReportFailure([FailureHandler("SYS-MAPS")] Exception error);
     /// <summary>Destination is the presented eye pose including FOV; walking collision uses collisionFeet when supplied.</summary>
     IMapArrival Arrive(Pose destination, ViewMode mode, NavSpace? space = null, System.Numerics.Vector3? collisionFeet = null);
+    /// <summary>Cancels the formal arrival and clears its demand while retaining map resources and background pins.</summary>
+    void ClearDestination();
     IMapArrival? Arrival { get; }
     event Action<IMapArrival?>? ArrivalChanged;
 }
@@ -38,6 +40,8 @@ public interface IMapArrival
 public interface IMapLifetime
 {
     Task Mount(IMapContext context);
+    /// <summary>Synchronously rejects/cancels new map work before the owner awaits background preparation.</summary>
+    void StopNewWork();
     Task ShutdownAsync(MapId map);
     string DescribeReadiness();
 }
@@ -63,10 +67,14 @@ public interface IMapStreamState
     /// Destination and DestinationReady keep the latest result until the next request or unload. Consumers only pin an active destination.
     /// </summary>
     bool HasPendingDestination { get; }
-    /// <summary>CPU read-ahead destinations in the active map; they do not mount visuals or replace the current arrival.</summary>
+    /// <summary>Retained static-resource destinations in the active map; they never replace the formal arrival.</summary>
     IReadOnlyList<MapStreamDestination> PinnedDestinations { get; }
-    /// <summary>Main-thread snapshot replacement; an empty collection releases the read-ahead hints. Unload clears them.</summary>
+    /// <summary>Main-thread demand replacement; unchanged targets retain their work. An empty collection releases pins.</summary>
     void SetPinnedDestinations(IReadOnlyList<MapStreamDestination> destinations);
+    /// <summary>Queries current-generation mounted and retained resources, independently of world/view/physics arrival.</summary>
+    bool PinnedDestinationReady(MapStreamDestination destination);
+    /// <summary>Clears formal/current demand, preserving pins and reusable resident resources.</summary>
+    void ClearDestination();
     void Prefetch(Pose destination, ViewMode mode, NavSpace? space = null, System.Numerics.Vector3? collisionFeet = null);
 }
 

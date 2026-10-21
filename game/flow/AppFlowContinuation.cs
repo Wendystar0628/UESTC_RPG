@@ -7,125 +7,31 @@ using Campus.Contracts.Settings;
 namespace Campus.Flow;
 
 internal sealed class AppFlowContinuation(ICameraRig camera, ISaveService saves, IMapService maps,
-    IWorldState world, IWorldRestore restore, IViewControl view, IMapRuntime mapRuntime,
-    IMapStreamState stream, IAppTitlePresentation titlePresentation, AppFlowResources resources,
+    IWorldRestore restore, IMapRuntime mapRuntime,
+    IMapStreamState stream, AppFlowResources resources,
     ISettingsStore? profileSettings) : IDisposable
 {
-    private ResumeEndpoint? _resumeEndpoint;
-    private SlotId? _resumeSlot;
-    private SlotId? _preview;
-    private bool _livePreview;
     private bool _newTimeline;
-    private Pose _destination;
-    private ViewMode _destinationMode;
-    private IMapArrival? _titleArrival;
+    private MapStreamDestination? _newGameDestination;
     private bool _titleActive;
     private readonly ISettingsSection? _cameraSettings = profileSettings?.Section("ui");
-    internal bool TitlePrepared => _titleArrival is { } arrival &&
-        ReferenceEquals(mapRuntime.Arrival, arrival) && arrival.Done.IsCompletedSuccessfully;
-
-    internal void BeginEntry()
-    {
-        _newTimeline = false; _resumeEndpoint = null; _resumeSlot = null;
-    }
-    internal void ResetPreview()
-    {
-        _preview = null; _livePreview = false;
-    }
-    internal void ResetFaultedWorld()
-    {
-        ResetPreview(); _newTimeline = false; _resumeEndpoint = null;
-    }
-    internal void RetainLivePreview() { _preview = saves.Active; _livePreview = true; }
-    internal void InvalidateTitleDestination() => _titleArrival = null;
-    internal async Task PositionBootTitle(Func<bool> entryTaken)
-    {
-        var mode = await view.SetMode(ViewMode.Fly, ModeSwitchVia.Ui);
-        if (mode == ModeSwitchResult.Refused) throw new InvalidOperationException("Title view mode was refused.");
-        if (!entryTaken()) camera.SetPose(TitlePose());
-    }
-    internal async Task LoadBootWorld(BootFlowRequest request, SlotId? bootSlot)
-    {
-        if (request.LoadFile is { } file)
-        {
-            RequireLoaded(await saves.LoadFile(file));
-            _preview = null;
-        }
-        else if (bootSlot is { } slot)
-        {
-            var result = await saves.Load(slot, request.ShowTitle ? LoadScope.Preview : LoadScope.Full);
-            RequireHealthyWorld();
-            if (Loaded(result.Status)) _preview = request.ShowTitle ? slot : null;
-            else if (request.Slot is not null) RequireLoaded(result);
-            else _preview = null;
-        }
-    }
-    internal async Task StartNewTimeline(SlotId slot, uint? seed)
+    internal bool NewGamePreloadReady => _newGameDestination is { } destination &&
+        destination.Pose.FovDeg == UserFov(ViewMode.Walk, false) && stream.PinnedDestinationReady(destination);
+    internal void BeginEntry() { _newTimeline = false; RefreshTitlePrefetch(); }
+    internal async Task StartNewTimeline(SlotId? slot, uint? seed, WorldPreset? start = null, NewGameBoot? boot = null)
     {
         if (_newTimeline) return;
         // Save owns the restore transaction and keeps existing same-map geometry.
-        RequireLoaded(await saves.NewGame(slot, seed: seed));
-        _newTimeline = true; ResetPreview();
+        RequireLoaded(await saves.NewGame(slot, seed: seed, start: start, boot: boot));
+        _newTimeline = true;
         RequireHealthyWorld(); resources.HoldLoadingFlow();
-        _destination = camera.Pose; _destinationMode = camera.Mode;
         resources.CompleteWorldPreparation();
     }
     internal async Task RestoreRequested(SlotId slot)
     {
-        if (restore.RestoreFaulted || _preview != slot || (!saves.HasPendingPose && !_livePreview))
-        {
-            RequireLoaded(await saves.Load(slot, LoadScope.Preview));
-            _preview = slot; _livePreview = false;
-        }
+        RequireLoaded(await saves.Load(slot));
         RequireHealthyWorld(); resources.HoldLoadingFlow();
-        _destination = Info(slot)?.Meta?.Pose ?? camera.Pose;
-        _destinationMode = Info(slot)?.Meta?.Mode ?? camera.Mode;
-        _resumeSlot = slot;
         resources.CompleteWorldPreparation();
-    }
-
-    internal async Task PrepareResumeEndpoint()
-    {
-        if (_resumeSlot is null) throw new InvalidOperationException("Continue did not request its saved world.");
-        if (_resumeEndpoint is not null) { RequirePreparedResume(_resumeSlot.Value); return; }
-        var slot = _resumeSlot.Value;
-        var context = Context(); var instance = world.Instance;
-        var savedFlow = world.BaseFlow;
-        resources.HoldLoadingFlow();
-        var frozenHours = world.WorldHours;
-        camera.SetPose(_destination with { FovDeg = _destination.FovDeg ?? UserFov(_destinationMode, false) });
-        IMapArrival arrival;
-        if (saves.HasPendingPose)
-        {
-            // Save owns the pending pose's arrival and restore transaction.
-            await saves.CompleteResume();
-            arrival = mapRuntime.Arrival ?? throw new InvalidOperationException("Resume preparation has no arrival.");
-            resources.ObserveArrival(arrival);
-            await WaitForArrival(arrival);
-        }
-        else
-        {
-            var switched = await view.SetMode(_destinationMode, ModeSwitchVia.Ui);
-            switch (switched)
-            {
-                case ModeSwitchResult.Ok: case ModeSwitchResult.Relocated: break;
-                case ModeSwitchResult.Refused: throw new InvalidOperationException("Saved view mode was refused.");
-                default: throw new ArgumentOutOfRangeException(nameof(switched));
-            }
-            _destination = camera.Pose;
-            arrival = mapRuntime.Arrive(_destination, _destinationMode, Info(slot)?.Meta?.Space);
-            // Save resumption retains its covered world without the ordinary arrival limit.
-            await WaitForArrival(arrival);
-        }
-        RequireHealthyWorld();
-        if (!ReferenceEquals(maps.Context, context) || maps.Current != context.Descriptor.Id || world.Instance != instance)
-            throw new InvalidOperationException("World or map changed while preparing the resume destination.");
-        if (world.Flow.Rate != 0 || world.WorldHours != frozenHours || world.BaseFlow != savedFlow)
-            throw new InvalidOperationException("Continue preparation changed the frozen world time or saved flow.");
-        if (saves.HasPendingPose) throw new InvalidOperationException("Resume preparation left the saved pose pending.");
-        _destination = camera.Pose; _destinationMode = camera.Mode;
-        RequireArrival(arrival, _destination, _destinationMode);
-        _resumeEndpoint = new(slot, context, instance, _destination, _destinationMode, arrival);
     }
 
     internal async Task PreparePlayableDestination(bool captureMode)
@@ -142,30 +48,6 @@ internal sealed class AppFlowContinuation(ICameraRig camera, ISaveService saves,
         resources.ObserveArrival(arrival);
         RequireHealthyWorld();
         RequireArrival(arrival, pose, mode);
-    }
-
-    internal async Task<IMapArrival> PrepareTitleDestination()
-    {
-        titlePresentation.SetVisible(true);
-        if (TitlePrepared) { resources.ObserveArrival(_titleArrival); return _titleArrival!; }
-        var pose = TitlePose();
-        camera.SetPose(pose);
-        var arrival = mapRuntime.Arrive(pose, ViewMode.Fly);
-        await WaitForArrival(arrival);
-        RequireHealthyWorld();
-        RequireArrival(arrival, pose, ViewMode.Fly);
-        _titleArrival = arrival;
-        return arrival;
-    }
-
-    internal void RequirePreparedResume(SlotId slot)
-    {
-        var endpoint = _resumeEndpoint ?? throw new InvalidOperationException("Continue reached handoff without preparing its covered destination.");
-        if (slot != endpoint.Slot || !ReferenceEquals(maps.Context, endpoint.Context) ||
-            maps.Current != endpoint.Context.Descriptor.Id || world.Instance != endpoint.Instance ||
-            _destination != endpoint.Pose || _destinationMode != endpoint.Mode || saves.HasPendingPose)
-            throw new InvalidOperationException("Prepared resume destination was invalidated before handoff.");
-        RequireArrival(endpoint.Arrival, endpoint.Pose, endpoint.Mode);
     }
 
     private async Task WaitForArrival(IMapArrival arrival)
@@ -203,8 +85,6 @@ internal sealed class AppFlowContinuation(ICameraRig camera, ISaveService saves,
         };
         return captureMode ? definition.Default : _cameraSettings?.Get(definition) ?? definition.Default;
     }
-    private IMapContext Context() => maps.Context ?? throw new InvalidOperationException("No map is loaded.");
-    private Pose TitlePose() => Context().Descriptor.Title?.T0 ?? maps.Maps.FirstOrDefault(m => m.Id == maps.Default)?.Title?.T0 ?? maps.ResolveSpawn(Context().Descriptor.Id).Fly;
     internal SlotInfo? Info(SlotId slot) => saves.Slots.FirstOrDefault(s => s.Slot == slot);
     internal static bool Readable(SlotInfo? slot) => slot?.Health switch
     {
@@ -237,7 +117,7 @@ internal sealed class AppFlowContinuation(ICameraRig camera, ISaveService saves,
                 saves.SlotsChanged += RefreshTitlePrefetch;
                 RefreshTitlePrefetch();
                 break;
-            case AppState.Entering: break;
+            case AppState.Entering: _titleActive = true; break;
             case AppState.Boot: case AppState.Playing: case AppState.Leaving: case AppState.Quitting:
                 stream.SetPinnedDestinations([]);
                 break;
@@ -246,24 +126,30 @@ internal sealed class AppFlowContinuation(ICameraRig camera, ISaveService saves,
     }
     internal void RefreshTitlePrefetch()
     {
-        if (!_titleActive || restore.RestoreFaulted || maps.Context is null)
+        if (!_titleActive || maps.Context is null)
         { stream.SetPinnedDestinations([]); return; }
         var destinations = new List<MapStreamDestination>(2);
         if (maps.Default == maps.Current)
-            destinations.Add(new(maps.ResolveSpawn(maps.Default).ViewPose(ViewMode.Walk), ViewMode.Walk));
+            destinations.Add(_newGameDestination = NewGameDestination()!);
         if (saves.Continue is { } slot && Info(slot) is { Health: SlotHealth.Ok, Meta: { } meta } && meta.Map == maps.Current)
-            destinations.Add(new(meta.Pose, meta.Mode, meta.Space));
+            destinations.Add(new(meta.Pose with { FovDeg = meta.Pose.FovDeg ?? UserFov(meta.Mode, false) }, meta.Mode, meta.Space,
+                meta.Mode == ViewMode.Walk ? meta.Pose.Position - System.Numerics.Vector3.UnitY * WalkRules.StandingEye : null));
         stream.SetPinnedDestinations(destinations);
     }
+    internal void RetainTitlePrefetch() => _titleActive = true;
     internal void StopTitlePrefetch()
     {
-        _titleActive = false;
         saves.SlotsChanged -= RefreshTitlePrefetch;
     }
     public void Dispose()
     {
         StopTitlePrefetch(); stream.SetPinnedDestinations([]);
     }
-    private sealed record ResumeEndpoint(SlotId Slot, IMapContext Context, long Instance, Pose Pose,
-        ViewMode Mode, IMapArrival Arrival);
+    private MapStreamDestination? NewGameDestination()
+    {
+        if (maps.Context is null || maps.Current != maps.Default) return null;
+        var spawn = maps.ResolveSpawn(maps.Default);
+        var pose = spawn.ViewPose(ViewMode.Walk) with { FovDeg = UserFov(ViewMode.Walk, false) };
+        return new(pose, ViewMode.Walk, CollisionFeet: spawn.Stand!.Feet);
+    }
 }

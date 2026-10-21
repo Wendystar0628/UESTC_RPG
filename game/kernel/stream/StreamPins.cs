@@ -2,7 +2,6 @@ using Campus.Contracts;
 using Campus.Contracts.Maps;
 using Campus.Contracts.Bake;
 using Campus.Kernel.Lod;
-using Godot;
 using N = System.Numerics;
 
 namespace Campus.Kernel.Stream;
@@ -12,41 +11,69 @@ internal sealed class StreamPins(StreamDirector host)
     private readonly StreamDirector _host = host;
     private IReadOnlyList<MapStreamDestination> _pinnedDestinations = Array.Empty<MapStreamDestination>();
     private PinnedTarget[] _pinnedTargets = [];
-    private CancellationTokenSource? _pinnedCancellation;
-    private IWorldModel? _pinnedWorld;
-    private readonly List<(CancellationTokenSource Cancellation, PinnedTarget[] Targets)> _retired = [];
-    internal bool IsIdle => _pinnedCancellation is null && _retired.Count == 0;
+    private readonly List<PinnedTarget> _retired = [];
+    private readonly HashSet<StreamTile> _required = [];
+    internal bool IsIdle => _pinnedTargets.Length == 0 && _retired.Count == 0;
     internal IReadOnlyList<MapStreamDestination> PinnedDestinations => _pinnedDestinations;
-
-    private readonly HashSet<StreamTile> _predictionRequired = [], _predictionRefined = [];
+    internal IReadOnlySet<StreamTile> Required => _required;
 
     internal void SetPinnedDestinations(IReadOnlyList<MapStreamDestination> destinations)
     {
         ArgumentNullException.ThrowIfNull(destinations);
         if (_host.Context is null && destinations.Count > 0)
             throw new InvalidOperationException("Pinned destinations require the mounted map.");
-        CancelPinnedPreparation();
-        _host.Preparation.ClearPins();
-        _pinnedDestinations = Array.AsReadOnly(destinations.Distinct().ToArray());
+        var replacement = destinations.Distinct().ToArray();
+        var targets = new List<PinnedTarget>(replacement.Length);
+        foreach (var destination in replacement)
+        {
+            var existing = _pinnedTargets.FirstOrDefault(target => target.Destination == destination && Current(target));
+            if (existing is not null) targets.Add(existing);
+            else
+            {
+                var cancellation = new CancellationTokenSource();
+                targets.Add(new(destination, _host.MapGeneration, _host.Context!, cancellation,
+                    PreparePinnedTerrain(_host.Terrain, _host.Context!, destination, cancellation.Token)));
+            }
+        }
+        foreach (var target in _pinnedTargets)
+            if (!targets.Contains(target)) Retire(target);
+        _pinnedTargets = targets.ToArray();
+        _pinnedDestinations = Array.AsReadOnly(replacement);
+        _required.Clear();
         _host.Selection.RequestReplan();
+    }
+
+    private bool Current(PinnedTarget target) => target.Generation == _host.MapGeneration &&
+        ReferenceEquals(target.Context, _host.Context) && ReferenceEquals(target.World, _host.Context?.World);
+
+    internal bool DestinationReady(MapStreamDestination destination)
+    {
+        if (_host.Failure is not null || _host.Context is null) return false;
+        foreach (var target in _pinnedTargets)
+        {
+            if (target.Destination != destination || !Current(target)) continue;
+            if (!target.Completed || !target.Selected || target.Failure is not null) return false;
+            foreach (var tile in target.Required)
+                if (!_host.Residency.IsReady(tile)) return false;
+            if (!_host.Participants.ResourcesReady(target.Participants) || !_host.Interiors!.ResourcesReady(target.Interiors)) return false;
+            return destination.Mode switch
+            {
+                ViewMode.Fly => true,
+                ViewMode.Walk => _host.Collision.Ready(destination.CollisionFeet ?? destination.Pose.Position, WalkRules.ArrivalCollisionRadius),
+                _ => throw new ArgumentOutOfRangeException(nameof(destination))
+            };
+        }
+        return false;
     }
 
     internal void PollPinnedPreparation()
     {
-        if (_host.Context is null || _pinnedDestinations.Count == 0) return;
-        if (_pinnedCancellation is not null && !ReferenceEquals(_pinnedWorld, _host.Context.World)) CancelPinnedPreparation();
-        if (_pinnedCancellation is null)
-        {
-            _pinnedCancellation = new(); _pinnedWorld = _host.Context.World;
-            _pinnedTargets = _pinnedDestinations.Select(destination => new PinnedTarget(destination,
-                PreparePinnedTerrain(_host.Terrain, _host.Context, destination, _pinnedCancellation.Token))).ToArray();
-        }
         foreach (var target in _pinnedTargets)
         {
             if (target.Completed || !target.Preparation.IsCompleted) continue;
             target.Completed = true;
             try { target.Preparation.GetAwaiter().GetResult(); }
-            catch (OperationCanceledException) when (_pinnedCancellation!.IsCancellationRequested) { }
+            catch (OperationCanceledException) when (target.Cancellation.IsCancellationRequested) { }
             catch (Exception error) { target.Failure = error; _host.RecordFailure(error); }
             _host.Selection.RequestReplan();
         }
@@ -56,26 +83,29 @@ internal sealed class StreamPins(StreamDirector host)
         MapStreamDestination destination, CancellationToken cancellation)
     {
         var point = new N.Vector2(destination.Pose.Position.X, destination.Pose.Position.Z);
-        await terrain.PreparePoints(context, [point], cancellation);
+        var feet = destination.CollisionFeet ?? destination.Pose.Position;
+        var center = new N.Vector2(feet.X, feet.Z);
+        await terrain.PreparePoints(context, point == center ? [point] : [point, center], cancellation);
         cancellation.ThrowIfCancellationRequested();
         switch (destination.Mode)
         {
             case ViewMode.Fly: break;
             case ViewMode.Walk:
                 var reach = new N.Vector2(WalkRules.ArrivalCollisionRadius);
-                await terrain.PrepareRegion(context, new(point - reach, point + reach), cancellation);
+                await terrain.PrepareRegion(context, new(center - reach, center + reach), cancellation);
                 cancellation.ThrowIfCancellationRequested();
                 break;
             default: throw new ArgumentOutOfRangeException(nameof(destination));
         }
     }
 
-    internal void QueuePinned(List<StreamRequest> requests, float height)
+    internal void Select(float height)
     {
-        _host.Preparation.ClearPins();
+        _required.Clear();
+        _host.Interiors!.ResetPins();
         foreach (var target in _pinnedTargets)
         {
-            if (!target.Completed || target.Failure is not null) continue;
+            if (!Current(target) || !target.Completed || target.Failure is not null) continue;
             try
             {
                 var destination = target.Destination;
@@ -90,63 +120,65 @@ internal sealed class StreamPins(StreamDirector host)
                     target.Classified = true;
                 }
                 _host.Selection.Tree!.Select(destination.Pose.Position, 0, height, destination.Pose.FovDeg ?? 60, LodLevel.L0,
-                    _predictionRequired, _predictionRefined);
-                foreach (var tile in _predictionRequired)
-                    foreach (var module in _host.Preparation.Catalog!.Modules(tile))
-                        _host.Preparation.QueueCpuRead(BakeRequestKeys.Tile(_host.Context!.Descriptor.Id, module, tile.Tile, tile.Level), tile, requests);
-                _host.Participants.SelectParticipants(destination.Pose, _predictionRequired, destination: false, live: false, preload: requests,
-                    walkingDestination: StreamSelection.WalkingDestination(destination.Pose, destination.Mode));
-                _host.Interiors!.Preload(target.Space, destination.Pose.Position, key => _host.Preparation.QueueCpuRead(key, StreamTile.Root, requests));
+                    target.Required, target.Refined);
+                _required.UnionWith(target.Required);
+                target.Participants.Clear(); target.Interiors.Clear();
+                _host.Participants.SelectParticipants(destination.Pose, target.Required, destination: false, live: false,
+                    pinned: target.Participants, walkingDestination: destination.CollisionFeet ?? StreamSelection.WalkingDestination(destination.Pose, destination.Mode));
+                _host.Interiors.Pin(target.Space, destination.Pose.Position, target.Interiors);
+                target.Selected = true;
             }
             catch (Exception error) { target.Failure = error; _host.RecordFailure(error); }
         }
     }
 
-    private void CancelPinnedPreparation()
+    private void Retire(PinnedTarget target)
     {
-        if (_pinnedCancellation is { } cancellation)
-        {
-            _pinnedCancellation = null;
-            _retired.Add((cancellation, _pinnedTargets));
-            cancellation.Cancel();
-        }
-        _pinnedTargets = []; _pinnedWorld = null;
+        _retired.Add(target); target.Cancellation.Cancel();
     }
 
     internal void PollRetired()
     {
         for (var i = _retired.Count - 1; i >= 0; i--)
         {
-            var batch = _retired[i];
-            if (batch.Targets.Any(target => !target.Preparation.IsCompleted)) continue;
-            foreach (var target in batch.Targets)
-                try { target.Preparation.GetAwaiter().GetResult(); }
-                catch (OperationCanceledException) when (batch.Cancellation.IsCancellationRequested) { }
-                catch (Exception error) { _host.RecordFailure(error); }
-            batch.Cancellation.Dispose(); _retired.RemoveAt(i);
+            var target = _retired[i];
+            if (!target.Preparation.IsCompleted) continue;
+            try { target.Preparation.GetAwaiter().GetResult(); }
+            catch (OperationCanceledException) when (target.Cancellation.IsCancellationRequested) { }
+            catch (Exception error) { _host.RecordFailure(error); }
+            target.Cancellation.Dispose(); _retired.RemoveAt(i);
         }
     }
 
     internal async Task DrainAsync()
     {
-        CancelPinnedPreparation();
-        foreach (var batch in _retired)
+        foreach (var target in _pinnedTargets) Retire(target);
+        _pinnedTargets = []; _pinnedDestinations = Array.Empty<MapStreamDestination>(); _required.Clear();
+        foreach (var target in _retired)
         {
-            foreach (var target in batch.Targets)
-                try { await target.Preparation; }
-                catch (OperationCanceledException) when (batch.Cancellation.IsCancellationRequested) { }
-                catch (Exception error) { _host.RecordFailure(error); }
-            batch.Cancellation.Dispose();
+            try { await target.Preparation; }
+            catch (OperationCanceledException) when (target.Cancellation.IsCancellationRequested) { }
+            catch (Exception error) { _host.RecordFailure(error); }
+            target.Cancellation.Dispose();
         }
         _retired.Clear();
     }
 
-    private sealed class PinnedTarget(MapStreamDestination destination, Task preparation)
+    private sealed class PinnedTarget(MapStreamDestination destination, long generation, IMapContext context,
+        CancellationTokenSource cancellation, Task preparation)
     {
         public MapStreamDestination Destination { get; } = destination;
+        public long Generation { get; } = generation;
+        public IMapContext Context { get; } = context;
+        public IWorldModel World { get; } = context.World;
+        public CancellationTokenSource Cancellation { get; } = cancellation;
         public Task Preparation { get; } = preparation;
+        public HashSet<StreamTile> Required { get; } = [];
+        public HashSet<StreamTile> Refined { get; } = [];
+        public HashSet<BakeKey> Participants { get; } = [];
+        public HashSet<BakeKey> Interiors { get; } = [];
         public NavSpace? Space;
-        public bool Completed, Classified;
+        public bool Completed, Classified, Selected;
         public Exception? Failure;
     }
 }

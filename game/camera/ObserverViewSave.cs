@@ -53,7 +53,7 @@ internal static class ObserverViewSave
     {
         // The ruleset selects the mode; the map catalogue resolves the authored spawn before mount.
         var spawn = KernelServices.Get<IMapService>().ResolveSpawn(context.Map);
-        var pose = spawn.ViewPose(context.Mode);
+        var pose = context.Boot?.Destination?.Pose ?? spawn.ViewPose(context.Mode);
         if (context.Mode == ViewMode.Fly)
             return new(context.Mode, pose, null, tuning.DefaultSpeedStep, tuning.DefaultSpeedStep);
         ObserverPresentation.ValidateFinite(pose);

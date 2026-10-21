@@ -153,10 +153,31 @@ public sealed class StreamMountQueueTests
             throw new InvalidOperationException("One cancellation failure skipped the remaining map work.");
     }
 
-    private sealed class MountWork(StreamMountKind kind, long revision, Action<double> step, string module = "module", int slices = 1, Action? cancel = null) : IStreamMountWork
+    [TestCase, TestCategory(TestReason.Regression)]
+    public void CurrentVisualPrecedesBackgroundCollisionAndQueuedWorkUpgradesWithoutRestart()
+    {
+        var order = new List<string>();
+        var queue = new StreamMountQueue(() => 0);
+        var background = new MountWork(StreamMountKind.Collision, queue.Revision, _ => order.Add("background"), priority: BakePriority.Background);
+        var current = new MountWork(StreamMountKind.Visual, queue.Revision, _ => order.Add("current"));
+        queue.Enqueue(background); queue.Enqueue(current); queue.Drain(true);
+        if (!order.SequenceEqual(["current", "background"]))
+            throw new InvalidOperationException("Background collision displaced current geometry.");
+        order.Clear();
+        var promoted = new MountWork(StreamMountKind.Collision, queue.Revision, _ => order.Add("promoted"), priority: BakePriority.Background);
+        queue.Enqueue(promoted);
+        queue.Enqueue(new MountWork(StreamMountKind.Visual, queue.Revision, _ => order.Add("visual")));
+        promoted.EffectivePriority = BakePriority.Collision;
+        queue.Drain(true);
+        if (!order.SequenceEqual(["promoted", "visual"]) || promoted.Cancels != 0 || queue.Pending != 0)
+            throw new InvalidOperationException("An existing mount did not upgrade in place.");
+    }
+
+    private sealed class MountWork(StreamMountKind kind, long revision, Action<double> step, string module = "module", int slices = 1, Action? cancel = null, BakePriority? priority = null) : IStreamMountWork
     {
         public BakeKey Key => new(new("map"), module, "L0/0/0");
-        public BakePriority Priority => Kind == StreamMountKind.Collision ? BakePriority.Collision : BakePriority.Normal;
+        public BakePriority EffectivePriority { get; set; } = priority ?? (kind == StreamMountKind.Collision ? BakePriority.Collision : BakePriority.Normal);
+        public BakePriority Priority => EffectivePriority;
         public long Revision { get; } = revision;
         public StreamMountKind Kind { get; } = kind;
         public int Cancels;

@@ -14,7 +14,7 @@ internal sealed class VisualMountWork(IReadOnlyList<PreparedTile> bundles, long 
     private bool _cancelled;
     public bool IsCancelled => _cancelled;
     public BakeKey Key => bundles[0].Key;
-    public BakePriority Priority { get; } = priority;
+    public BakePriority Priority { get; set; } = priority;
     public long Revision { get; } = revision;
     public StreamMountKind Kind => StreamMountKind.Visual;
     public bool Step(double budgetMilliseconds)

@@ -105,6 +105,28 @@ public sealed class WeatherProcessTests
     }
 
     [TestCase]
+    [TestCategory(TestReason.Contract)]
+    public void NewGameBootWeatherIsRestoredWithoutReplacingTheActiveProcessBeforeCommit()
+    {
+        var source = new Source(Profile);
+        var process = new WeatherProcess(source);
+        var before = (process.Seed, process.Selection, process.Now);
+        var section = new WeatherSection(process, TestMaps(), source);
+        var boot = new NewGameBoot(12, 60, new WeatherBoot(73, WeatherKind.Rain, .8f, .27f, 15), false);
+        var context = new NewGameContext(73, Map, new(17.5, Season.Autumn, WeatherKind.Clear), ViewMode.Walk) { Boot = boot };
+        var dto = section.CreateDefault(context);
+        AssertThat((process.Seed, process.Selection, process.Now)).IsEqual(before);
+        section.Restore(dto, new RestoreContext { Map = Map, FromVersion = 2, Missing = false });
+        process.Enter(Map, "test", context.Start.Clock);
+        process.Step(new(context.Start.Clock, context.Start.Clock, 0, context.Start.Season, 0, 0, 0));
+        var restored = process.Capture();
+        AssertThat(process.Seed == 73 && process.Selection.Kind == WeatherKind.Rain && process.Selection.Intensity == .8f).OverrideFailureMessage("CLI weather was replaced by the map quiet policy.").IsTrue();
+        AssertThat(restored.WetOverride == .27f && restored.PinToHours == 17.75).OverrideFailureMessage("CLI wetness or remaining-weather duration was dropped.").IsTrue();
+        var invalid = context with { Start = new(6, Season.Winter) };
+        AssertThrown(() => section.CreateDefault(invalid)).IsInstanceOf<ArgumentException>();
+    }
+
+    [TestCase]
     [TestCategory(TestTag.Determinism)]
     [TestCategory(TestReason.Contract)]
     public void SaveRoundTripContinuesIdentically()

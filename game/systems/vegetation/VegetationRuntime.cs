@@ -53,7 +53,7 @@ public sealed partial class VegetationRuntime : Node, IMapAware, IViewContentRea
     private void OnWorldInstanceChanged(long _)
     {
         _worldReset = true;
-        foreach (var tile in _tiles.Values) tile.AppliedEye = null;
+        foreach (var tile in _tiles.Values) { tile.Hide(); tile.AppliedEye = null; }
     }
 
     public void OnMapLoaded(IMapContext context)
@@ -100,12 +100,11 @@ public sealed partial class VegetationRuntime : Node, IMapAware, IViewContentRea
         return new MountWork(this, content, priority, revision, _generation);
     }
 
-    public bool IsReady(BakeKey key) => Failure is null && _tiles.TryGetValue(key, out var tile) && tile.Ready &&
-        (_rig is null || !tile.NeededAt(_rig.Pose.Position) || tile.AppliedEye == _rig.Pose.Position);
+    public bool IsReady(BakeKey key) => Failure is null && _tiles.TryGetValue(key, out var tile) && tile.Ready;
 
     public bool IsReady(Pose pose)
     {
-        if (Failure is not null || _map is null) return false;
+        if (Failure is not null || _map is null || _world is not { Instance: > 0 }) return false;
         foreach (var tile in _tiles.Values)
             if (tile.NeededAt(pose.Position) && (!tile.Ready || tile.AppliedEye != pose.Position)) return false;
         return true;
@@ -121,6 +120,11 @@ public sealed partial class VegetationRuntime : Node, IMapAware, IViewContentRea
     public override void _Process(double delta)
     {
         if (_map is null || _rig is null || Failure is not null) return;
+        if (_world is not { Instance: > 0 })
+        {
+            foreach (var tile in _tiles.Values) tile.Hide();
+            return;
+        }
         try
         {
             var eye = (_capture ?? _rig.Pose).Position;
@@ -130,7 +134,7 @@ public sealed partial class VegetationRuntime : Node, IMapAware, IViewContentRea
             _since = 0;
             foreach (var tile in _tiles.Values)
             {
-                if (!tile.NeededAt(eye)) continue;
+                if (!tile.NeededAt(eye)) { tile.Hide(); continue; }
                 foreach (var mother in tile.Mothers) mother.Refresh(eye, reset || tile.AppliedEye is null);
                 foreach (var grass in tile.Grass) grass.Refresh(eye, reset || tile.AppliedEye is null);
                 tile.AppliedEye = eye;
@@ -187,6 +191,13 @@ public sealed partial class VegetationRuntime : Node, IMapAware, IViewContentRea
                 if (distance <= reach) return true;
             }
             return false;
+        }
+        public void Hide()
+        {
+            if (AppliedEye is null) return;
+            foreach (var mother in Mothers) mother.Hide();
+            foreach (var grass in Grass) grass.Hide();
+            AppliedEye = null;
         }
         public void Free()
         {
@@ -308,6 +319,11 @@ public sealed partial class VegetationRuntime : Node, IMapAware, IViewContentRea
                 pool.SetAabb(new Aabb(new Vector3(min.X, min.Y, min.Z), new Vector3(size.X, size.Y, size.Z)));
                 pool.VisibleCount = count;
             }
+        }
+
+        public void Hide()
+        {
+            foreach (var pool in _pools) if (pool is not null) pool.VisibleCount = 0;
         }
 
         public void Free()

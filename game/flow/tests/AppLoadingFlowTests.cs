@@ -14,287 +14,147 @@ namespace Campus.Tests;
 public sealed class AppLoadingFlowTests
 {
     [TestCase, TestCategory(TestReason.Regression)]
-    public async Task FailedEarlyTitleEntryCanFinishBootAtItsRecoveredTitle() =>
-        await EarlyTitleEntryFailureCase(new IOException("New game preparation failed."));
-
-    [TestCase, TestCategory(TestReason.Regression)]
-    public async Task CanceledEarlyTitleEntryCanFinishBootAtItsRecoveredTitle() =>
-        await EarlyTitleEntryFailureCase(new OperationCanceledException());
-
-    [TestCase, TestCategory(TestReason.Regression)]
-    public async Task BootAlreadyWaitingForFailedEarlyEntryReceivesItsRecoveredTitle() =>
-        await EarlyTitleEntryFailureCase(new IOException("New game preparation failed."), waiting: true);
-
-    [TestCase, TestCategory(TestReason.Regression)]
-    public async Task TerminalMapFailureDuringEarlyEntryStillFailsBoot() =>
-        await EarlyTitleEntryFailureCase(new IOException("Map preparation failed."), terminal: true);
-
-    private static async Task EarlyTitleEntryFailureCase(Exception failure, bool waiting = false, bool terminal = false)
+    public async Task StaticTitleIsInteractiveBeforeBackgroundAndNeverLoadsAWorld()
     {
-        var rig = new FlowTestRig(); var maps = Maps(out _, out _);
-        var saves = new SaveService(rig.Camera) { NewGameFailure = failure, NewGameGate = waiting ? new() : null };
-        var flow = rig.CreateFlow(saves, maps, new TestAppExit(allowQuit: false));
-        await flow.PrepareBoot(new()); await flow.OpenTitle();
-        var entering = flow.Enter(new(EnterKind.NewGame, new("s1")));
-        if (terminal) { failure = rig.Runtime.ReportFailure(failure); flow.FailBoot(failure); }
-        else await flow.PrepareWorld();
-        var destination = flow.PrepareDestination(); var completion = flow.CompleteBoot();
-        if (waiting)
-        {
-            if (destination.IsCompleted || completion.IsCompleted || entering.IsCompleted)
-                throw new InvalidOperationException("Boot did not wait for the pending entry preparation.");
-            saves.NewGameGate!.SetException(failure);
-        }
-        if (await entering != EnterResult.Failed || flow.Failure?.GetType() != failure.GetType() || rig.Diagnostics.Count != 1)
-            throw new InvalidOperationException("The entry failure lost its original diagnostic.");
-        var bootFailures = new List<Exception>();
-        try { await destination; } catch (Exception error) { bootFailures.Add(error); }
-        try { await completion; } catch (Exception error) { bootFailures.Add(error); }
-        if (terminal)
-        {
-            if (bootFailures.Count != 2 || bootFailures.Any(error => !ReferenceEquals(error, failure)) ||
-                flow.WorldReady.IsCompletedSuccessfully || !rig.Loading.Active || !rig.Camera.InputLocked || rig.Runtime.Arrivals != 0)
-                throw new InvalidOperationException("A terminal map failure became a recovered or ready title.");
-            return;
-        }
-        if (bootFailures.Count != 0)
-            throw new AggregateException("Recovered early entry still faulted boot destination selection or completion.", bootFailures);
-        if (!ReferenceEquals(await destination, rig.Runtime.Arrival) || flow.BootEntryTaken || !flow.WorldReady.IsCompletedSuccessfully ||
-            flow.State != AppState.Title || !rig.Title.Visible || rig.Loading.Active || !rig.Camera.InputLocked)
-            throw new InvalidOperationException("Recovered entry failed to leave a ready, input-locked title.");
-    }
-
-    [TestCase, TestCategory(TestReason.Regression)]
-    public async Task EarlyTitleEntryStartsAfterMapReadyAndWaitsForTheRealEndpointBeforeReveal()
-    {
-        var rig = new FlowTestRig(); var maps = Maps(out _, out _);
-        var saves = new SaveService(rig.Camera);
-        var flow = rig.CreateFlow(saves, maps, new TestAppExit(allowQuit: false));
+        var rig = new FlowTestRig(); var saves = new FullSave(rig); var maps = Maps();
+        using var flow = rig.CreateFlow(saves, maps, new TestAppExit(false));
+        var map = new TaskCompletionSource(); var global = new TaskCompletionSource();
         await flow.PrepareBoot(new());
-        await flow.OpenTitle();
-        var entering = flow.Enter(new(EnterKind.NewGame, new("s1")));
-        if (entering.IsCompleted || flow.State != AppState.Entering || !rig.Loading.Active || saves.NewGames != 0)
-            throw new InvalidOperationException("Early entry did not join the covered background boot.");
-        await flow.PrepareWorld();
-        await flow.PrepareDestination();
-        if (flow.WorldReady.IsCompleted || !flow.MapReady.IsCompletedSuccessfully || saves.NewGames != 1)
-            throw new InvalidOperationException("Map foundation and playable world readiness were conflated.");
-        await flow.CompleteBoot();
-        if (await entering != EnterResult.Entered || saves.NewGames != 1 || rig.Runtime.Arrivals != 1 || rig.Loading.Active)
-            throw new InvalidOperationException("Joined startup duplicated or failed the selected new game.");
+        var background = flow.PrepareBackground(map.Task, global.Task);
+        await rig.Title.Show(); await flow.OpenTitle();
+        if (flow.State != AppState.Title || flow.MapReady.IsCompleted || flow.BackgroundReady.IsCompleted ||
+            saves.Loads != 0 || saves.NewGames != 0 || rig.Runtime.Arrivals != 0 || !rig.Title.Visible)
+            throw new InvalidOperationException("Static title waited for or initialized its background world.");
+        map.SetResult(); await flow.MapReady;
+        if (rig.Runtime.PinnedDestinations.Count != 2 || flow.BackgroundReady.IsCompleted || flow.NewGamePreloadReady)
+            throw new InvalidOperationException("Map readiness did not immediately pin both title endpoints.");
+        rig.Runtime.PinsReady = true;
+        if (!flow.NewGamePreloadReady) throw new InvalidOperationException("Preload readiness did not query held stream resources.");
+        rig.Runtime.SetPinnedDestinations([]);
+        if (flow.NewGamePreloadReady) throw new InvalidOperationException("Released pins retained a copied ready flag.");
+        global.SetResult(); await background;
     }
 
     [TestCase, TestCategory(TestReason.Regression)]
-    public async Task AcceptedEntryReplacesOnlyItsPendingTitleArrival()
+    public async Task EarlyNewGameJoinsTheSameBackgroundThenKeepsItsPinUntilArrival()
     {
-        var rig = new FlowTestRig(); var maps = Maps(out _, out _);
-        var saves = new SaveService(rig.Camera);
-        var flow = rig.CreateFlow(saves, maps, new TestAppExit(allowQuit: false));
-        await flow.PrepareBoot(new()); await flow.OpenTitle(); await flow.PrepareWorld();
-        var preparing = flow.PrepareDestination();
-        var title = rig.Runtime.Arrival ?? throw new InvalidOperationException("Title never requested its destination.");
-        var entry = flow.Enter(new(EnterKind.NewGame, new("s1")));
-        var endpoint = await preparing;
-        if (!title.Done.IsCanceled || ReferenceEquals(title, endpoint) || !endpoint.Done.IsCompletedSuccessfully ||
-            flow.WorldReady.IsCompleted || rig.Runtime.Arrivals != 2)
-            throw new InvalidOperationException("Entry failed to replace the obsolete title destination.");
-        await flow.CompleteBoot();
-        if (await entry != EnterResult.Entered || rig.Diagnostics.Count != 0)
-            throw new InvalidOperationException("Normal title cancellation was reported as an entry failure.");
+        var rig = new FlowTestRig(false); var saves = new FullSave(rig); var maps = Maps();
+        using var flow = rig.CreateFlow(saves, maps, new TestAppExit(false));
+        var map = new TaskCompletionSource(); var global = new TaskCompletionSource();
+        await flow.PrepareBoot(new()); var background = flow.PrepareBackground(map.Task, global.Task);
+        await rig.Title.Show(); await flow.OpenTitle();
+        var entering = flow.Enter(new(EnterKind.NewGame, new("s1")));
+        if (entering.IsCompleted || saves.NewGames != 0 || !rig.Loading.Active || rig.Title.Visible)
+            throw new InvalidOperationException("Early entry did not cover and join background preparation.");
+        map.SetResult(); await flow.MapReady;
+        if (saves.NewGames != 0 || rig.Runtime.PinnedDestinations.Count != 2)
+            throw new InvalidOperationException("Entry bypassed global preparation or lost its pins.");
+        global.SetResult(); await background; await saves.ArrivalStarted.Task;
+        if (entering.IsCompleted || saves.Saves != 0 || rig.Runtime.PinnedDestinations.Count == 0)
+            throw new InvalidOperationException("Entry released residency or saved before its real arrival.");
+        rig.Runtime.CompleteArrival();
+        if (await entering != EnterResult.Entered || rig.Runtime.Arrivals != 1 || saves.NewGames != 1 || saves.Saves != 1 ||
+            flow.State != AppState.Playing || rig.Loading.Active || rig.Camera.InputLocked || rig.Runtime.PinnedDestinations.Count != 0)
+            throw new InvalidOperationException("Entry duplicated its arrival or skipped first-save/input handoff.");
     }
 
-    [TestCase, TestCategory(TestReason.Smoke)]
-    public async Task TitleAndNewGameResolveDefaultWaypointWithNoInlineSpawns()
+    [TestCase, TestCategory(TestReason.Regression)]
+    public async Task BackgroundFailureProjectsBeforeItsSiblingAndRetainsBothCauses()
     {
-        var rig = new FlowTestRig(); var maps = Maps(out var entry, out var requests);
-        var saves = new SaveService(rig.Camera);
-        var flow = rig.CreateFlow(saves, maps, new TestAppExit(allowQuit: false));
-        if (maps.Context!.Descriptor.Spawns.Count != 0) throw new InvalidOperationException("Fixture must use waypoint-only spawns.");
-        await flow.PrepareBoot(new()); await flow.PrepareWorld(); await flow.CompleteBoot();
-        if (flow.State != AppState.Title || flow.IsPlaying || !rig.Title.Visible || rig.Camera.Pose != entry.ResolveSpawn(entry.Descriptor.DefaultSpawn).Fly)
-            throw new InvalidOperationException("Title default view did not use the catalogue's default waypoint.");
-        var spawnPose = maps.ResolveSpawn(maps.Default).ViewPose(ViewMode.Walk);
-        if (rig.Runtime.PinnedDestinations is not [{ Mode: ViewMode.Walk } prefetched] || prefetched.Pose != spawnPose ||
-            rig.Runtime.Arrivals != 0 || saves.NewGames != 0 || saves.Active is not null)
-            throw new InvalidOperationException("Title spawn prefetch changed the world or requested a real arrival.");
-        var result = await flow.Enter(new(EnterKind.NewGame, new("s1")));
-        if (rig.Diagnostics.Count != 0) throw new InvalidOperationException(string.Join(Environment.NewLine, rig.Diagnostics));
-        if (result != EnterResult.Entered || !flow.IsPlaying || saves.NewGames != 1 || saves.Saves != 1)
-            throw new InvalidOperationException("New game failed or lost its first saved generation.");
-        if (rig.Camera.Mode != ViewMode.Walk || rig.Camera.Pose.Position != SaveService.Landing.Position ||
-            rig.Runtime.Arrival?.Destination is not { Mode: ViewMode.Walk } landing || landing.Pose.Position != SaveService.Landing.Position)
-            throw new InvalidOperationException("New game did not hand control back walking on the restored spawn stand.");
-        if (requests.Count(spawn => spawn is null) < 1 || rig.Camera.InputLocked || rig.Loading.Active || rig.Loading.Progress != 1 || rig.Title.Visible ||
-            rig.Runtime.PinnedDestinations.Count != 0)
-            throw new InvalidOperationException("The flow bypassed spawn resolution or failed to finish loading.");
-    }
-
-    [TestCase, TestCategory(TestReason.Smoke)]
-    public async Task PendingResumeArrivesOnceUnderLoadingAndRestoresSavedFlowAtHandoff() => await ResumeCase(pending: true);
-
-    [TestCase, TestCategory(TestReason.Smoke)]
-    public async Task LiveResumeArrivesOnceWithoutReloadingOrChangingInstance() => await ResumeCase(pending: false);
-
-    [TestCase, TestCategory(TestReason.Contract)]
-    public async Task LiveResumeWaitsForItsRealDestination() => await ResumeCase(pending: false, delayDestination: true);
-
-    [TestCase, TestCategory(TestReason.Smoke)]
-    public async Task QuitDuringDelayedLiveResumeWaitsForItsReadyEndpointBeforeExiting() =>
-        await ResumeCase(pending: false, delayDestination: true, quitDuringWait: true);
-
-    private static async Task ResumeCase(bool pending, bool delayDestination = false, bool quitDuringWait = false)
-    {
-        var rig = new FlowTestRig(); var world = rig.World; var camera = rig.Camera; var runtime = rig.Runtime;
-        const int savedFlow = 60;
-        world.SetFlow(savedFlow);
-        var maps = Maps(out _, out _);
-        var saves = new ResumeSaveService(camera, world, runtime, maps.Current, () => rig.Loading.Active);
-        var exit = new TestAppExit(quitDuringWait);
-        var flow = rig.CreateFlow(saves, maps, exit);
-        await flow.PrepareBoot(new(ShowTitle: pending)); await flow.PrepareWorld(); await flow.CompleteBoot();
-        if (world.BaseFlow.Rate != savedFlow || pending && world.Flow.Rate != 0 || rig.Title.Visible != pending)
-            throw new InvalidOperationException("Title preparation changed the saved base flow instead of holding it.");
-        if (!pending)
+        var rig = new FlowTestRig(); var saves = new FullSave(rig);
+        using var flow = rig.CreateFlow(saves, Maps(), new TestAppExit(false));
+        await flow.PrepareBoot(new());
+        var map = new TaskCompletionSource(); var global = new TaskCompletionSource();
+        var work = flow.PrepareBackground(map.Task, global.Task);
+        var first = new InvalidDataException("map failed"); var second = new IOException("warmup failed");
+        map.SetException(first);
+        try { await flow.BackgroundReady; throw new InvalidOperationException("Failure was not projected immediately."); }
+        catch (InvalidDataException actual) when (ReferenceEquals(actual, first)) { }
+        if (work.IsCompleted) throw new InvalidOperationException("Background lifetime abandoned its running sibling.");
+        global.SetException(second);
+        try { await work; throw new InvalidOperationException("Both failures were lost."); }
+        catch (AggregateException error)
         {
-            camera.SetPose(saves.Meta.Pose);
-            await flow.ReturnToTitle();
-            if (world.BaseFlow.Rate != savedFlow || world.Flow.Rate != 0 || !rig.Title.Visible)
-                throw new InvalidOperationException("Returning to title changed the saved base flow instead of holding it.");
+            var causes = error.Flatten().InnerExceptions;
+            if (!causes.Contains(first) || !causes.Contains(second)) throw;
         }
-        var titlePose = camera.Pose; var titleMode = camera.Mode; var titleArrival = runtime.Arrival;
-        var titleInstance = world.Instance; var titleHours = world.WorldHours; var active = saves.Active;
-        var pendingPose = saves.HasPendingPose;
-        saves.UpdateEndpoint(saves.Meta.Pose with { YawDeg = saves.Meta.Pose.YawDeg + 1 });
-        if (runtime.PinnedDestinations.Count != 2 ||
-            !runtime.PinnedDestinations.Contains(new(saves.Meta.Pose, saves.Meta.Mode, saves.Meta.Space)) ||
-            camera.Pose != titlePose || camera.Mode != titleMode || !ReferenceEquals(runtime.Arrival, titleArrival) ||
-            world.Instance != titleInstance || world.WorldHours != titleHours || saves.Active != active ||
-            saves.HasPendingPose != pendingPose || saves.Completions != 0 || saves.Loads != (pending ? 1 : 0))
-            throw new InvalidOperationException("Title endpoint refresh restored a pose, changed the world, or replaced readiness.");
-        runtime.CompleteArrivalImmediately = !delayDestination;
-        var previousArrivals = runtime.Arrivals;
-        var instance = world.Instance; var hours = world.WorldHours;
-        var entering = flow.Enter(new(EnterKind.Continue));
-        if (delayDestination)
-        {
-            if (runtime.Arrivals != previousArrivals + 1 || runtime.Arrival?.Destination is not { } destination ||
-                destination != new MapStreamDestination(saves.RestoredPose, saves.Meta.Mode, saves.Meta.Space))
-                throw new InvalidOperationException("Resume never reached its destination barrier.");
-            await Task.Yield();
-            if (entering.IsCompleted || flow.State != AppState.Entering || !camera.InputLocked ||
-                !rig.Loading.Active || rig.Loading.Progress >= 1 || world.Instance != instance ||
-                world.WorldHours != hours || world.Flow.Rate != 0 || world.BaseFlow.Rate != savedFlow ||
-                runtime.Arrival?.Destination != destination || runtime.Arrivals != previousArrivals + 1 || saves.Loads != 0)
-                throw new InvalidOperationException("Resume exposed or duplicated its pending destination.");
-            if (runtime.PinnedDestinations.Count == 0)
-                throw new InvalidOperationException("Title released prefetch residency before the real destination was ready.");
-            Task? quitting = null;
-            if (quitDuringWait)
-            {
-                quitting = flow.Quit();
-                if (quitting.IsCompleted || exit.Calls != 0 || entering.IsCompleted)
-                    throw new InvalidOperationException("Quit bypassed the pending resume endpoint.");
-            }
-            runtime.CompleteArrival();
-            if (quitting is not null)
-            {
-                await Task.WhenAll(entering, quitting);
-                if (await entering != EnterResult.Entered || flow.State != AppState.Quitting || exit.Calls != 1 ||
-                    !camera.InputLocked || !rig.Loading.Active || world.Flow.Rate != savedFlow)
-                    throw new InvalidOperationException("Quit failed to join the ready resume.");
-                return;
-            }
-        }
-        if (await entering != EnterResult.Entered || runtime.Arrivals != previousArrivals + 1 ||
-            saves.Completions != (pending ? 1 : 0) || saves.Loads != (pending ? 1 : 0))
-            throw new InvalidOperationException("Resume duplicated or bypassed its preparation owner.");
-        if (world.Instance != instance || world.WorldHours != hours || world.Flow.Rate != savedFlow ||
-            camera.Pose != saves.RestoredPose || camera.Mode != saves.Meta.Mode ||
-            runtime.Arrival?.Destination != new MapStreamDestination(saves.RestoredPose, saves.Meta.Mode, saves.Meta.Space) ||
-            camera.InputLocked || saves.HasPendingPose || rig.Loading.Active || rig.Loading.Progress != 1 || rig.Title.Visible ||
-            runtime.PinnedDestinations.Count != 0)
-            throw new InvalidOperationException("Continue lost saved flow, world identity, endpoint or input handoff.");
-        flow.Dispose();
-        saves.UpdateEndpoint(saves.Meta.Pose with { YawDeg = saves.Meta.Pose.YawDeg + 1 });
-        if (runtime.PinnedDestinations.Count != 0)
-            throw new InvalidOperationException("Disposed flow kept publishing title prefetch requests.");
     }
-    private static TestMapService Maps(out MapCatalogEntry entry, out List<string?> requests, Pose? inline = null)
+
+    [TestCase, TestCategory(TestReason.Smoke)]
+    public async Task ReturningToTitleClearsTheWorldWithoutLoadingAnotherEndpoint()
     {
-        var source = RealMapFixture.Entry();
-        const string dataRoot = "res://flow-test-no-files/";
-        var descriptor = source.Descriptor with
-        {
-            Title = null,
-            Spawns = inline is { } pose ? [new(source.Descriptor.DefaultSpawn, pose, null)] : [],
-        };
-        var catalogue = new MapCatalogEntry(descriptor, dataRoot, source.Waypoints);
-        var recorded = new List<string?>();
-        entry = catalogue; requests = recorded;
+        var rig = new FlowTestRig(); var saves = new FullSave(rig);
+        using var flow = rig.CreateFlow(saves, Maps(), new TestAppExit(false));
+        await Title(flow, rig);
+        if (await flow.Enter(new(EnterKind.NewGame, new("s1"))) != EnterResult.Entered) throw new InvalidOperationException("New game failed.");
+        var arrivals = rig.Runtime.Arrivals;
+        await flow.ReturnToTitle();
+        if (flow.State != AppState.Title || rig.Runtime.Arrival is not null || rig.Runtime.Arrivals != arrivals ||
+            saves.Loads != 0 || saves.Flushes != 1 || rig.World.Instance != 0 || !rig.Title.Visible || rig.Loading.Active)
+            throw new InvalidOperationException("Returning to title restored a world or waited for another arrival.");
+        if (await flow.Enter(new(EnterKind.Continue)) != EnterResult.Entered || saves.Loads != 1 || saves.NewGames != 1 || saves.Saves != 1)
+            throw new InvalidOperationException("Continue did not run a fresh complete load transaction.");
+    }
+
+    [TestCase, TestCategory(TestReason.Smoke)]
+    public async Task DirectFreshEntryWithoutASlotDoesNotAuthorizeAnySave()
+    {
+        var rig = new FlowTestRig(); var saves = new FullSave(rig);
+        using var flow = rig.CreateFlow(saves, Maps(), new TestAppExit(false));
+        await flow.PrepareBoot(new(ShowTitle: false));
+        await flow.PrepareBackground(Task.CompletedTask, Task.CompletedTask);
+        var arrival = await flow.EnterDirect();
+        if (flow.State != AppState.Playing || saves.NewGames != 1 || saves.Active is not null || saves.Saves != 0 ||
+            !ReferenceEquals(arrival, rig.Runtime.Arrival) || rig.Runtime.Arrivals != 1 || rig.Title.Visible)
+            throw new InvalidOperationException("Direct entry activated a save slot or constructed a title world.");
+    }
+
+    private static async Task Title(AppFlowService flow, FlowTestRig rig)
+    {
+        await flow.PrepareBoot(new());
+        await rig.Title.Show(); await flow.OpenTitle();
+        await flow.PrepareBackground(Task.CompletedTask, Task.CompletedTask);
+    }
+    private static TestMapService Maps()
+    {
+        var source = RealMapFixture.Entry(); var descriptor = source.Descriptor;
         return new()
         {
-            Rev = 1, Default = descriptor.Id, Current = descriptor.Id, Maps = [descriptor],
-            Context = new TestMapContext(descriptor, new FakeWorld { Boundary = new([]) }, DataRoot: dataRoot),
-            SpawnResolver = (map, spawn) =>
-            {
-                if (map != descriptor.Id) throw new ArgumentException("Unknown fixture map.", nameof(map));
-                recorded.Add(spawn);
-                return catalogue.ResolveSpawn(spawn ?? descriptor.DefaultSpawn);
-            },
+            Default = descriptor.Id, Current = descriptor.Id, Maps = [descriptor],
+            Context = new TestMapContext(descriptor, new FakeWorld { Boundary = new([]) }),
+            SpawnResolver = (_, spawn) => source.ResolveSpawn(spawn ?? descriptor.DefaultSpawn)
         };
     }
-    private sealed class SaveService(TestCameraRig camera) : TestSaveService
+    private sealed class FullSave(FlowTestRig rig) : TestSaveService
     {
-        // What the restored view default is on a map whose default spawn has a stand (DECISION-242).
-        public static readonly Pose Landing = new(new(120, 1.7f, -70), 20, 0);
         private SlotId? _active;
         public int NewGames { get; private set; }
-        public int Saves { get; private set; }
-        public Exception? NewGameFailure { get; init; }
-        public TaskCompletionSource<LoadResult>? NewGameGate { get; init; }
-        public override IReadOnlyList<SlotInfo> Slots { get; } = [new(new("s1"), SlotKind.Auto, SlotHealth.Empty, null, 0)];
-        public override SlotId? Active => _active;
-        public override Task<SaveResult> SaveNow(SaveReason reason) { Saves++; return Task.FromResult(new SaveResult(SaveStatus.Saved, Active, 1)); }
-        public override Task<LoadResult> NewGame(SlotId slot, uint? seed = null, WorldPreset? start = null)
-        {
-            if (NewGameGate is { } gate) return gate.Task;
-            if (NewGameFailure is { } failure) return Task.FromException<LoadResult>(failure);
-            NewGames++; _active = slot;
-            camera.Mode = ViewMode.Walk; camera.SetPose(Landing);
-            return Task.FromResult(new LoadResult(LoadStatus.Loaded, slot, 0, []));
-        }
-    }
-    private sealed class ResumeSaveService(ICameraRig camera, IWorldState world, FlowRuntimeTestStub runtime, MapId map,
-        Func<bool> covered) : TestSaveService, ISaveService
-    {
-        public SaveMeta Meta { get; private set; } = new(1, "test", new("s1"), SlotKind.Auto, 1, 1, 0, map,
-            17.5, 17.5, Season.Autumn, WeatherKind.Clear, ViewMode.Fly, new(new(30, 45, -15), 25, -20), null, null, null, 0, SaveReason.Test);
-        // Saved poses omit presentation FOV; the restored Fly endpoint uses the active default lens.
-        public Pose RestoredPose => Meta.Pose with { FovDeg = Meta.Pose.FovDeg ?? UiSettingDefinitions.FlyFov.Default };
         public int Loads { get; private set; }
-        public int Completions { get; private set; }
-        public override IReadOnlyList<SlotInfo> Slots => [new(Meta.Slot, SlotKind.Auto, SlotHealth.Ok, Meta, 1)];
-        public override SlotId? Continue => Meta.Slot;
-        public override SlotId? Active => Meta.Slot;
-        public override bool HasPendingPose => _hasPendingPose;
-        private bool _hasPendingPose;
-        private event Action? _slotsChanged;
-        event Action? ISaveService.SlotsChanged { add => _slotsChanged += value; remove => _slotsChanged -= value; }
-        public void UpdateEndpoint(Pose pose) { Meta = Meta with { Pose = pose }; _slotsChanged?.Invoke(); }
-        public override Task<SaveResult> SaveNow(SaveReason reason) => throw new InvalidOperationException("Continue must not write a new generation.");
-        public override Task<LoadResult> Load(SlotId slot, LoadScope scope = LoadScope.Full)
+        public int Saves { get; private set; }
+        public int Flushes { get; private set; }
+        public TaskCompletionSource ArrivalStarted { get; } = new();
+        private static readonly Pose Landing = new(new(120, 1.7f, -70), 20, 0, UiSettingDefinitions.WalkFov.Default);
+        private SaveMeta Meta => new(1, "test", new("s1"), SlotKind.Auto, 1, 1, 0, Maps().Default,
+            17.5, 17.5, Season.Autumn, WeatherKind.Clear, ViewMode.Walk, Landing, null, null, null, 0, SaveReason.Test);
+        public override IReadOnlyList<SlotInfo> Slots => [new(new("s1"), SlotKind.Auto, SlotHealth.Ok, Meta, 1)];
+        public override SlotId? Continue => new("s1");
+        public override SlotId? Active => _active;
+        public override Task<SaveResult> SaveNow(SaveReason reason)
         {
-            Loads++; _hasPendingPose = scope is LoadScope.Preview;
-            return Task.FromResult(new LoadResult(LoadStatus.Loaded, slot, 1, []));
+            if (rig.Runtime.Arrival?.Done.IsCompletedSuccessfully != true) throw new InvalidOperationException("Save preceded arrival.");
+            Saves++; return Task.FromResult(new SaveResult(SaveStatus.Saved, Active, 1));
         }
-        public override Task CompleteResume()
+        public override Task<LoadResult> NewGame(SlotId? slot, uint? seed = null, WorldPreset? start = null, NewGameBoot? boot = null)
+        { NewGames++; return Restore(slot); }
+        public override Task<LoadResult> Load(SlotId slot) { Loads++; return Restore(slot); }
+        private async Task<LoadResult> Restore(SlotId? slot)
         {
-            if (!_hasPendingPose || !covered() || world.Flow.Rate != 0) throw new InvalidOperationException("Resume was not prepared under frozen, presented cover.");
-            Completions++; camera.SetPose(RestoredPose);
-            runtime.Arrive(camera.Pose, Meta.Mode, Meta.Space); _hasPendingPose = false;
-            return Task.CompletedTask;
+            _active = slot; rig.Camera.Mode = ViewMode.Walk; rig.Camera.SetPose(Landing);
+            var arrival = rig.Runtime.Arrive(Landing, ViewMode.Walk);
+            ArrivalStarted.TrySetResult(); await arrival.Done;
+            return new(LoadStatus.Loaded, slot, 1, []);
         }
-        public override Task<SaveResult> FlushForQuit(SaveReason reason, TimeSpan timeout) => Task.FromResult(new SaveResult(SaveStatus.Saved, Active, 1));
+        public override Task<SaveResult> FlushForQuit(SaveReason reason, TimeSpan timeout)
+        { Flushes++; return Task.FromResult(new SaveResult(SaveStatus.Saved, Active, 1)); }
     }
 }
-

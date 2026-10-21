@@ -70,14 +70,11 @@ internal class TestSaveService : ISaveService
     public virtual bool Busy => false;
     public virtual SaveState State => new(Active, null, null, null, ReadOnlyReason.None);
     public event Action? SlotsChanged { add { } remove { } }
-    public virtual bool HasPendingPose => false;
     public virtual void Request(SaveReason reason) { }
     public virtual Task<SaveResult> SaveNow(SaveReason reason) => throw new InvalidOperationException("Unexpected SaveNow.");
-    public virtual Task<LoadResult> Load(SlotId slot, LoadScope scope = LoadScope.Full) => throw new InvalidOperationException("Unexpected Load.");
-    public virtual Task CompleteResume() => throw new InvalidOperationException("Unexpected CompleteResume.");
+    public virtual Task<LoadResult> Load(SlotId slot) => throw new InvalidOperationException("Unexpected Load.");
     public virtual Task<LoadResult> LoadFile(string path) => throw new InvalidOperationException("Unexpected LoadFile.");
-    public virtual Task<LoadResult> NewGame(SlotId slot, uint? seed = null, WorldPreset? start = null) => throw new InvalidOperationException("Unexpected NewGame.");
-    public virtual Task<LoadResult> RestoreTitlePreview() => throw new InvalidOperationException("Unexpected RestoreTitlePreview.");
+    public virtual Task<LoadResult> NewGame(SlotId? slot, uint? seed = null, WorldPreset? start = null, NewGameBoot? boot = null) => throw new InvalidOperationException("Unexpected NewGame.");
     public virtual Task<SaveResult> FlushForQuit(SaveReason reason, TimeSpan timeout) => throw new InvalidOperationException("Unexpected FlushForQuit.");
     public virtual byte[]? Thumbnail(SlotId slot) => null;
 }

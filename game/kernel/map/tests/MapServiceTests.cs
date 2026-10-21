@@ -283,6 +283,10 @@ public sealed class MapServiceTests
         private TaskCompletionSource? _mount;
         private bool _delayMount;
         private bool _arrivalReady = true;
+        public void ClearDestination()
+        {
+            Arrival?.Cancel(); Arrival = null; ArrivalChanged?.Invoke(null);
+        }
         public IMapArrival? Arrival { get; private set; }
         public event Action<IMapArrival?>? ArrivalChanged;
         public bool MountReady => _mount?.Task.IsCompletedSuccessfully == true;
@@ -304,9 +308,10 @@ public sealed class MapServiceTests
             _mount!.TrySetException(Failure);
         }
         public string DescribeReadiness() => $"mountReady={MountReady},arrival={Arrival?.Done.Status}";
+        public void StopNewWork() => Arrival?.Cancel();
         public Task ShutdownAsync(MapId map)
         {
-            Arrival?.Cancel();
+            StopNewWork();
             return Task.CompletedTask;
         }
         public Task Mount(IMapContext context)

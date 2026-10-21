@@ -1,94 +1,52 @@
 using Campus.Contracts;
 using Campus.Contracts.Maps;
 using Campus.Contracts.Quality;
+using Campus.Contracts.Save;
+using Campus.Contracts.Settings;
 using Campus.Contracts.Startup;
 using Campus.Kernel.Registry;
-using Campus.Kernel.World;
 
 namespace Campus.Kernel.Boot;
 
-/// <summary>Initial world values precede the first weather Enter; loaded worlds only use the save restore path.</summary>
+/// <summary>Resolves explicit fresh-entry inputs without creating or rewinding an active world.</summary>
 public static class BootWorldOverrides
 {
-    public static void InitializeFreshWorld(BootRunOptions args, ServiceRegistry services, MapDescriptor map)
+    public static async Task<(WorldPreset Start, NewGameBoot Boot)> PrepareFreshEntry(BootRunOptions args, ServiceRegistry services)
     {
-        if (args.HasLoad) throw new InvalidOperationException("A loaded world cannot use boot Freeze or weather Reset.");
-        var world = services.Get<IWorldState>();
-        var control = services.Get<IWorldControl>();
-        var weather = services.Get<IWeatherProcess>();
+        if (args.HasLoad) throw new InvalidOperationException("Loaded worlds use their complete saved endpoint.");
+        var maps = services.Get<IMapService>();
+        var context = maps.Context ?? throw new InvalidOperationException("Fresh entry requires its prepared map.");
+        var map = context.Descriptor;
         var options = args.World;
         var season = options.Season ?? map.World.Default.Season;
-        var clock = options.Clock ?? map.World.Default.Clock;
-        var anim = options.AnimationTime ?? WorldTime.InitialAnimTime;
-        var seed = options.Weather.Seed ?? options.Seed ?? map.Seed;
-        var boot = new WeatherBoot(seed, options.Weather.Kind, options.Weather.Intensity,
-            options.Weather.Wet, options.Weather.RemainingMinutes);
-        weather.ValidateBoot(boot, season);
-        // Effective capture defaults count as weather choices too. Seed/clock/season alone do not override policy.
-        var useMapWeather = !options.Weather.Requested;
-        if (useMapWeather && !string.Equals(map.World.SunProfile, "default", StringComparison.Ordinal))
-            throw new NotSupportedException($"Boot weather policy does not support sun profile {map.World.SunProfile}.");
-
-        // No await or weather call may split this initial state ordering. Freeze itself must be world-only.
-        control.Freeze(clock, season, anim);
-        control.SetFlow(options.FlowRate ?? 1);
-        weather.Reset(boot);
-        weather.Enter(map.Id, map.World.WeatherProfile, world.WorldHours);
-        if (useMapWeather)
+        var start = new WorldPreset(options.Clock ?? map.World.Default.Clock, season,
+            options.Weather.Kind ?? map.World.Default.Weather, options.Weather.Intensity ?? map.World.Default.Intensity);
+        var mode = options.ViewMode ?? args.Flow.Mode ?? ViewMode.Fly;
+        var spawn = maps.ResolveSpawn(map.Id, args.Flow.Spawn);
+        var pose = options.Pose is { } poseId ? ReviewPoseResolver.Resolve(poseId, context)
+            : args.Flow.Pose ?? spawn.ViewPose(mode);
+        var validator = services.Get<ICameraPoseValidator>();
+        if (options.Pose is { } requested)
         {
-            if (map.World.QuietUntilDusk)
-            {
-                var dusk = ArtEphemeris.DuskEnd(season);
-                weather.Quiet(world.WorldHours, world.WorldHours + ArtEphemeris.Wrap(dusk - world.Clock, 24));
-            }
-            else
-            {
-                var defaultKind = weather.MapToSeason(map.World.Default.Weather ?? WeatherKind.Clear, season);
-                weather.Pin(world.WorldHours, defaultKind, map.World.Default.Intensity,
-                    world.WorldHours - .5, world.WorldHours + 2);
-            }
+            _ = await validator.LegalizePrepared(pose);
+            if (!validator.IsLegal(pose, outsideBuffer: true))
+                throw new ArgumentException($"Pose is outside the reachable space or inside its buffer: {requested}.");
         }
-    }
-
-    /// <summary>Only view/flow overrides remain after PrepareWorld. Never Freeze, Reset or reseason a live process here.</summary>
-    public static async Task<string?> ApplyView(BootRunOptions args, ServiceRegistry services,
-        bool restoringWorld, bool showTitle)
-    {
-        if (restoringWorld || args.HasLoad || showTitle && !args.CaptureMode) return null;
-        var options = args.World;
-        var context = services.Get<IMapService>().Context ?? throw new InvalidOperationException("View overrides require a loaded map.");
-        var control = services.Get<IWorldControl>();
-        if (!showTitle || options.ExplicitFlow) control.SetFlow(options.FlowRate ?? 1);
-        var poseId = options.Pose;
-        if (poseId is null)
+        else pose = await validator.LegalizePrepared(pose);
+        var fov = mode switch
         {
-            var spawn = services.Get<IMapService>().ResolveSpawn(context.Descriptor.Id, args.Flow.Spawn);
-            var pose = await services.Get<ICameraPoseValidator>().LegalizePrepared(args.Flow.Pose ?? spawn.Fly);
-            services.Get<ICameraRig>().SetPose(pose);
-        }
-        if (poseId is not null)
-        {
-            var titlePose = showTitle && poseId == "T0";
-            var pose = titlePose ? context.Descriptor.Title?.T0 ?? throw new InvalidDataException("This map has no title pose.")
-                : ReviewPoseResolver.Resolve(poseId, context);
-            if (!titlePose)
-            {
-                var validator = services.Get<ICameraPoseValidator>();
-                _ = await validator.LegalizePrepared(pose);
-                if (!validator.IsLegal(pose, outsideBuffer: true))
-                    throw new ArgumentException($"Pose is outside the reachable space or inside its buffer: {poseId}.");
-            }
-            var terrainPoint = new System.Numerics.Vector2(pose.Position.X, pose.Position.Z);
-            await services.Get<ITerrainPreparation>().PreparePoints(context, [terrainPoint]);
-            services.Get<ICameraRig>().SetPose(pose);
-        }
-        if (!showTitle || options.ExplicitViewMode)
-        {
-            var mode = options.ViewMode ?? args.Flow.Mode ?? ViewMode.Fly;
-            var switched = await services.Get<IViewControl>().SetMode(mode, ModeSwitchVia.Key);
-            if (switched == ModeSwitchResult.Refused) throw new InvalidOperationException("Boot view mode was refused.");
-        }
-        return poseId;
+            ViewMode.Fly => UiSettingDefinitions.FlyFov,
+            ViewMode.Walk => UiSettingDefinitions.WalkFov,
+            _ => throw new ArgumentOutOfRangeException(nameof(mode))
+        };
+        pose = pose with { FovDeg = pose.FovDeg ?? (args.CaptureMode ? fov.Default : services.Get<ISettingsStore>().Section("ui").Get(fov)) };
+        var destination = new MapStreamDestination(pose, mode, CollisionFeet: mode == ViewMode.Walk
+            ? pose.Position - System.Numerics.Vector3.UnitY * WalkRules.StandingEye : null);
+        var weather = new WeatherBoot(options.Weather.Seed ?? options.Seed ?? map.Seed, options.Weather.Kind,
+            options.Weather.Intensity, options.Weather.Wet, options.Weather.RemainingMinutes);
+        var boot = new NewGameBoot(options.AnimationTime ?? WorldTime.InitialAnimTime, options.FlowRate ?? 1,
+            weather, !options.Weather.Requested) { Map = map.Id, Destination = destination };
+        return (start, boot);
     }
 
     public static async Task ApplyQuality(BootRunOptions args, IQualityService quality)

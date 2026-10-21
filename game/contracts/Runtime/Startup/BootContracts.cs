@@ -42,6 +42,6 @@ public interface IViewCapturePreparation
 }
 
 // BeforeMap: map catalog, save metadata/lock and silent audio resources, before destination selection.
-// AfterMapWarm: after IMapService.Prepare mounts the map foundation; quality detection/application.
-// BeforeReveal: after IAppBootFlow.PrepareWorld and explicit command-line world overrides, final ready work.
-// The kernel completes world readiness, then releases its presentation; no participant grants input.
+// AfterMapWarm: configures quality after metadata, before starting map and pipeline preparation.
+// BeforeReveal: global preparation before formal entry reveals; it does not create a world or own an arrival.
+// No phase creates a world or grants input; formal entry owns world/arrival/readiness and reveal.

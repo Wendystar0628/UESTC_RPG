@@ -10,7 +10,7 @@ using Godot;
 namespace Campus.Kernel.Boot;
 
 public sealed record MapRuntimeDependencies(ServiceRegistry Owner, IMapStreamState Stream, IBakeService Bake,
-    ICollisionWorld Collision, IRenderReadiness Renderer, IPipelinePreparation Pipelines,
+    ICollisionWorld Collision, IRenderReadiness Renderer,
     ICameraRig Camera, ITerrainPreparation Terrain, Camera3D ViewCamera);
 
 /// <summary>Scene-side map lifetime. The map service owns transition ordering; this host owns engine nodes.</summary>
@@ -23,7 +23,6 @@ public partial class MapRuntime : Node, IMapRuntime, IMapLifetime
     private IBakeService? _bake;
     private ICollisionWorld? _collision;
     private IRenderReadiness? _renderer;
-    private IPipelinePreparation? _pipelines;
     private ServiceRegistry? _owner;
     private Camera3D? _viewCamera;
     private readonly CancellationTokenSource _exit = new();
@@ -99,7 +98,7 @@ public partial class MapRuntime : Node, IMapRuntime, IMapLifetime
         if (IsInsideTree() || _owner is not null) throw new InvalidOperationException("Map runtime binds once before entering the tree.");
         _owner = dependencies.Owner;
         _stream = dependencies.Stream; _bake = dependencies.Bake; _collision = dependencies.Collision;
-        _renderer = dependencies.Renderer; _pipelines = dependencies.Pipelines; _camera = dependencies.Camera;
+        _renderer = dependencies.Renderer; _camera = dependencies.Camera;
         _terrain = dependencies.Terrain; _viewCamera = dependencies.ViewCamera;
     }
 
@@ -195,9 +194,7 @@ public partial class MapRuntime : Node, IMapRuntime, IMapLifetime
             // Keep the participant chain in registry order: map-data consumers may depend on earlier producers.
             var receivers = _receivers = _owner!.RuntimeInstances<object>(context.Descriptor.Id).ToArray();
             var participants = PrepareParticipants(context, generation, receivers);
-            // Pipelines read the global shipped combination catalogue, independently of this map's bake metadata.
-            // Start both on the engine thread and retain their combined lifetime through shutdown.
-            preparation = Task.WhenAll(participants, PreparePipelines());
+            preparation = participants;
             await preparation;
             if (generation != _mapGeneration) return;
             foreach (var aware in receivers.OfType<IMapAware>())
@@ -228,8 +225,13 @@ public partial class MapRuntime : Node, IMapRuntime, IMapLifetime
         }
     }
 
-    // Capture a synchronous implementation failure as a task so its sibling is still awaited.
-    private async Task PreparePipelines() => await _pipelines!.PrepareAsync(_exit.Token);
+
+    public void ClearDestination()
+    {
+        _arrival?.Cancel(); _arrival = null;
+        _stream!.ClearDestination();
+        ArrivalChanged?.Invoke(null);
+    }
 
     public IMapArrival Arrive(Pose destination, ViewMode mode, NavSpace? space = null, System.Numerics.Vector3? collisionFeet = null)
     {

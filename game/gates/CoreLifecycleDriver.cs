@@ -33,7 +33,7 @@ internal sealed class CoreLifecycleDriver(IStageGateHost host)
         var testFreeze = control.AcquireFlow(FlowPriority.Pause, 0);
         stage.TreeExiting += testFreeze.Dispose;
         if (gate == "save-close") await RoundTrip(flow, saves, camera, walk, observer, input);
-        else if (flow.State != AppState.Playing || saves.HasPendingPose || saves.Active != SaveSlots.Auto[0])
+        else if (flow.State != AppState.Playing || saves.Active != SaveSlots.Auto[0])
             throw new InvalidOperationException("The second process did not fully restore its saved world.");
         await CaptureAndCheck(gate, stage, world);
         return PrepareWindowClose(stage, saves, input);
@@ -76,7 +76,7 @@ internal sealed class CoreLifecycleDriver(IStageGateHost host)
             throw new InvalidOperationException("The production flow could not continue the saved game.");
         host.CheckActive();
         if (flow.State != AppState.Playing || observer.Mode != ViewMode.Walk || !walk.Active ||
-            saves.HasPendingPose || saves.Active != SaveSlots.Auto[0])
+            saves.Active != SaveSlots.Auto[0])
             throw new InvalidOperationException("Continue did not restore the saved Walk world.");
         await CoreWait(() => walk.Grounded && walk.CollisionReady && walk.IsSettled,
             "Continue did not prepare its standing collision and settle.");

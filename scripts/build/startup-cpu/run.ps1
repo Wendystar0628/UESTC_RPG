@@ -4,7 +4,6 @@
 param([Parameter(Mandatory)][string]$Output,
     [ValidateSet('title','immediate','dwell')][string[]]$Modes = @('title','immediate','dwell'),
     [ValidateSet('experience','diagnostic')][string]$Measurement = 'experience',
-    [ValidateRange(1,120)][double]$TitleDwellSeconds = 10,
     [ValidateSet('valid','missing','unknown')][string]$GeometryCache = 'unknown',
     [ValidateSet('warm','first-run','unknown')][string]$PipelineCache = 'unknown',
     [ValidateSet('warm','reboot-first-run','unknown')][string]$SystemFileCache = 'unknown',
@@ -45,7 +44,7 @@ foreach ($mode in $Modes) {
     }
     $conditionPath = Join-Path $Output ($mode + '-condition.json')
     $condition | ConvertTo-Json | Set-Content -LiteralPath $conditionPath -Encoding UTF8
-    & python -I "$PSScriptRoot\isolated-launch.py" $round $mode $TitleDwellSeconds $conditionPath
+    & python -I "$PSScriptRoot\isolated-launch.py" $round $mode $conditionPath
     if ($LASTEXITCODE -ne 0) { throw "$mode capture failed; do not reuse it as a successful measurement." }
     if ($Measurement -eq 'diagnostic') {
         & dotnet $parser $round

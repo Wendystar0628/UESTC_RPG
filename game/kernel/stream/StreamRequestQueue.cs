@@ -3,10 +3,7 @@ using Campus.Kernel.Lod;
 
 namespace Campus.Kernel.Stream;
 
-public readonly record struct StreamRequest(BakeKey Key, StreamTile Tile, BakePriority Priority, float NeededInSeconds)
-{
-    public bool PreloadOnly { get; init; }
-}
+public readonly record struct StreamRequest(BakeKey Key, StreamTile Tile, BakePriority Priority, float NeededInSeconds);
 
 /// <summary>Only unissued requests are replaceable; issued bake handles are never cancelled.</summary>
 public sealed class StreamRequestQueue

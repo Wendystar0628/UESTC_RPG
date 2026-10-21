@@ -13,7 +13,7 @@ public abstract class StreamMountWork(BakeKey key, BakePriority priority, long r
     : IStreamMountWork, IStreamMountCancellationState
 {
     public BakeKey Key { get; } = key;
-    public BakePriority Priority { get; } = priority;
+    public virtual BakePriority Priority { get; } = priority;
     public long Revision { get; } = revision;
     public StreamMountKind Kind { get; } = kind;
     public bool Complete { get; private set; }

@@ -16,9 +16,9 @@ public readonly record struct WeatherSpan(double FromHours, double ToHours, Weat
 public interface IWorldState                // Kernel 的服务（game/kernel/world/），不单独做 Autoload
 {
     long Rev { get; }
-    long Instance { get; }                  // 世界实例号。启动后第一次得到世界状态为 1，此后每次 Load、LoadFile、NewGame 加 1；
+    long Instance { get; }                  // 世界实例号；Boot/Title 无实例为 0。正式创建从 1 递增，结束不复用序号；
                                             // 切图不变（SYS-SAVE、SYS-MAPS）。做平滑、带回差或保留历史的系统，看到它变了就直接落到新值
-    // Main thread, once after a successful world commit. Only invalidate/reset local history here;
+    // Main thread after a successful commit, or with zero when the active instance ends. Only reset local history here;
     // read camera/map-dependent values in the consumer's normal phase. Aborted World phases, map travel and ResetDefault do not notify.
     event Action<long>? InstanceChanged;
     double WorldHours { get; }              // 世界时间（h）：同一世界实例内单调递增，只增不减；暂停时不动
@@ -83,11 +83,14 @@ public interface IWorldRestore
     bool RestoreFaulted { get; }
 
     // game/kernel/save/ 在 FramePriority.Save 内、maps/world/weather/各图天气段全部恢复成功后调用一次，
-    // 然后才执行地图 Travel 及 Content/Pose 阶段；新游戏同序，CompleteResume 不调用。
+    // 然后才执行地图准备及 Content/Pose 阶段；新游戏同序。
     // world.Restore 只恢复本段并清瞬态，不增加 Instance，也不调用天气 Reset/Quiet/Step。
     // 此处增加 Instance/Rev 并落定日月、季节读数；天气由自己的 Restore 立即求值，不再推进。
     // World 阶段失败不调用；此提交之后的阶段失败不回滚到旧实例。
     void CompleteRestore();
+    /// <summary>After the title-return save, ends the active world without releasing map/static resources.
+    /// Instance becomes zero, progression/capture stop, and the next restore receives a new serial.</summary>
+    void EndInstance();
 }
 
 // 天气过程：game/systems/weather/ 实现，注册为 Kernel 服务；只有 WorldState和 game/systems/weather/ 自己的存档段调用它

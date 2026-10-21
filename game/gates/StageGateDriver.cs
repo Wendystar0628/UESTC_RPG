@@ -59,9 +59,14 @@ public sealed class StageGateDriver(IStageGateHost host)
             GD.Print($"CORE_SHUTDOWN_MS {FrameClock.MonotonicMilliseconds - closeAt:R}");
     }
 
-    /// <summary>Called once startup reached realtime: starts the requested production command.</summary>
+    /// <summary>Starts the title-entry core command after the production title startup completes.</summary>
+    public Task OnTitleReady() => AppBoot.Options.Capture.Gate == "save-close"
+        ? RunCore("save-close") : Task.CompletedTask;
+
+    /// <summary>Called once Playing reached realtime: starts the requested production command.</summary>
     public async Task OnRealtime()
     {
+        if (_finishing) return;
         var options = AppBoot.Options;
         if (options.TravelSequence.Count > 0)
         {
@@ -72,12 +77,19 @@ public sealed class StageGateDriver(IStageGateHost host)
         }
         if (options.Capture.Gate is "save-close" or "save-resume")
         {
-            var window = await new CoreLifecycleDriver(host).Run(options.Capture.Gate);
-            _awaitingClose = true;
-            GD.Print("CORE_READY_CLOSE " + window);
+            await RunCore(options.Capture.Gate);
             return;
         }
         if (options.Capture.Gate is null && options.Capture.Shots.Count > 0 && options.Capture.FrameLimit is null) { _finishing = true; _ = StageCapture.FinishRun(host); }
+    }
+
+    private async Task RunCore(string gate)
+    {
+        if (_finishing) return;
+        _finishing = true;
+        var window = await new CoreLifecycleDriver(host).Run(gate);
+        _awaitingClose = true;
+        GD.Print("CORE_READY_CLOSE " + window);
     }
 
     private async Task RunTravelSequence(IReadOnlyList<string> sequence)

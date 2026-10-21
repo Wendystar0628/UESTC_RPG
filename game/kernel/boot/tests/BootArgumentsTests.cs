@@ -16,6 +16,10 @@ public sealed class BootArgumentsTests
             options.World.ViewMode != ViewMode.Fly || options.Ui.Visible is not null || options.Ui.Motion is not null ||
             options.Audio.Enabled || !options.Bake.Background)
             throw new InvalidOperationException("Implicit defaults became explicit inputs.");
+        var titleUi = BootArguments.Parse(["--title=1", "--shots=ui", "--out=C:\\shots"], true);
+        if (!titleUi.CaptureMode || !titleUi.Title || titleUi.World.Pose is not null ||
+            !titleUi.Capture.Shots.SequenceEqual(["ui"]))
+            throw new InvalidOperationException("A static title UI capture acquired a world destination.");
     }
 
     [TestCase]
@@ -34,7 +38,7 @@ public sealed class BootArgumentsTests
         string[][] invalid = [["--unknown=1"], ["--weather-queue=rain:3"], ["--flow=2"], ["--clock=NaN"], ["--clock=24"], ["--anim=480"],
             ["--slot=1", "--weather-seed=1"], ["--load=C:\\test.sav", "--map=map"], ["--load=C:\\test.sav", "--clock=6"],
             ["--slot=1", "--clock=6"],
-            ["--title=0", "--pose=T0"], ["--quality-set=not_a_knob=1"], ["--frames=0"], ["--shots=../escape", "--out=C:\\shots"],
+            ["--title=2"], ["--quality-set=not_a_knob=1"], ["--frames=0"], ["--shots=../escape", "--out=C:\\shots"],
             ["--clock=1", "--clock=2"], ["--quality"]];
         foreach (var args in invalid)
         {
