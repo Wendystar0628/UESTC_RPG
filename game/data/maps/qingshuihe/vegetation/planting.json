@@ -1,6 +1,5 @@
 {
   "format": "campus.vegetation.planting/1",
-  "owner": "WP-23",
   "doc": "WLD-VEGETATION；WLD-TERRAIN",
   "notes": [
     "本图的种植规则：线性种植按道路名取 network.json 的道路中心线（名字是数据，不写实体 ID）；片区按地名找锚点要素，在它的包络外扩 radius 内换用 mix 里的树种。",

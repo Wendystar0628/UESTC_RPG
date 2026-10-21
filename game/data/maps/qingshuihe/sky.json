@@ -1,6 +1,5 @@
 {
   "format": "campus.sky/1",
-  "owner": "WP-40",
   "doc": "ART-SKYLIGHT、SYS-WEATHER：与地理有关的天空参数。云的漂移 = f(世界时间) + g(anim_time)，f 的方向与速度在这里；城市天光的方位分布、霾带基线是主线闸口之后的项，届时追加。",
   "cloudDrift": {
     "towardDeg": 75,

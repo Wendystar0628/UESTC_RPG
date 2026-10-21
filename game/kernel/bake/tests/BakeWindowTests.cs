@@ -17,7 +17,7 @@ namespace Campus.Kernel.Bake.Tests;
 public sealed class BakeWindowTests
 {
     private static readonly FeatureId Feature = new("fixture:facade");
-    private const string Owner = "WP-16";
+    private const string Owner = "fixture.facade-owner";
 
     [TestCase]
     [TestCategory(TestReason.Contract)]
@@ -95,8 +95,8 @@ public sealed class BakeWindowTests
         var source = new Source { Layouts = [new(Feature, [])] };
         var modules = new Dictionary<string, ContentModuleInput>(StringComparer.Ordinal) { ["source"] = new(source, "source-code", Owner, false) };
         AssertThrown(() => BakeWindowPreparation.Prepare(Context(), modules)).IsInstanceOf<InvalidDataException>();
-        modules.Add("provider-a", new(new Provider(Snapshot([])), "a-code", "WP-14", true));
-        modules.Add("provider-b", new(new Provider(Snapshot([])), "b-code", "WP-14", true));
+        modules.Add("provider-a", new(new Provider(Snapshot([])), "a-code", "fixture.window-provider", true));
+        modules.Add("provider-b", new(new Provider(Snapshot([])), "b-code", "fixture.window-provider", true));
         AssertThrown(() => BakeWindowPreparation.Prepare(Context(), modules)).IsInstanceOf<InvalidDataException>();
         AssertThrown(() => BakeWindowPreparation.Prepare(Context(), Modules(source,
             new Provider(new(new("another-map"), new string('a', 64), []))))).IsInstanceOf<InvalidDataException>();
@@ -444,7 +444,7 @@ public sealed class BakeWindowTests
     private static Dictionary<string, ContentModuleInput> Modules(Source source, Provider provider) => new(StringComparer.Ordinal)
     {
         ["source"] = new(source, "source-code", Owner, false),
-        ["provider"] = new(provider, "provider-code", "WP-14", true)
+        ["provider"] = new(provider, "provider-code", "fixture.window-provider", true)
     };
     private static WindowNumberingSnapshot Snapshot(IReadOnlyList<WindowAllocation> allocations) => new(Map().Id, new string('a', 64), allocations);
     private static WindowDecl Window(int id) => new(id, 0, 2, new("window.general"), new(-100 + id, 5, 50), Vector3.UnitX, Vector3.UnitY, 1, 1);

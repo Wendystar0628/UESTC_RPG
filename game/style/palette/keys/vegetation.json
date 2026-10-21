@@ -1,6 +1,5 @@
 {
   "format": "campus.palette.vegetation/1",
-  "owner": "WP-37",
   "doc": "WLD-VEGETATION；SYS-TIME；ART-STYLE",
   "notes": [
     "各季的受光值取自 WLD-VEGETATION，按该季的英雄帧光照给出；脚本按 derive.json 的受光公式反解出季相固有色，其余关键帧的受光与影一律推导。",

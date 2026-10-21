@@ -1,6 +1,5 @@
 {
   "format": "campus.palette.seasons/1",
-  "owner": "WP-37",
   "doc": "SYS-TIME；ART-SKYLIGHT；ART-STYLE",
   "notes": [
     "在秋季基准关键帧上用 OKLCH 叠增量，再按 derive.json 推导材质色（SYS-TIME）。秋季增量为 0。",

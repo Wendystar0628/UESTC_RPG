@@ -10,7 +10,7 @@ namespace Campus.Gen.Vegetation;
 /// <summary>
 /// Where a planted tree came from (WLD-VEGETATION): road rows (the ginkgo avenue among them), the avenue band, OSM
 /// points, groves; then the empty tree pits of the overlays (perPit trees each) and the design trees the overlays hand to
-/// game/gen/vegetation/ (kind tree, props.planter WP-23), and explicit sport-group walls.
+/// game/gen/vegetation/ (kind tree, props.planter matching <see cref="VegetationModule.ModuleId"/>), and explicit sport-group walls.
 /// </summary>
 public enum PlantSource : byte { Road = 0, Band = 1, OsmTree = 2, Grove = 3, Pit = 4, Design = 5, SportWall = 6 }
 
@@ -72,9 +72,8 @@ public static class Planting
     /// <summary>Largest uniform scale chosen by the stable appearance hash.</summary>
     public const float MaximumTreeScale = TreePlacement.TreeScaleMinimum + TreePlacement.TreeScaleRange;
 
-    /// <summary>The overlay kind of a design tree, and the planter value that hands it to this package.</summary>
+    /// <summary>The overlay kind of a design tree.</summary>
     public const string DesignTreeKind = "tree";
-    public const string Planter = "WP-23";
 
     /// <summary>Steepest grade a tree may stand on (WLD-TERRAIN: no trees above 25%).</summary>
     public const float MaxGrade = 0.25f;

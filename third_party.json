@@ -681,7 +681,6 @@
       "version": "2.005R",
       "kind": "font",
       "managedBy": "manual",
-      "provider": "WP-35",
       "license": "OFL-1.1",
       "source": "https://github.com/adobe-fonts/source-han-sans/releases/download/2.005R/09_SourceHanSansSC.zip",
       "release": "https://github.com/adobe-fonts/source-han-sans/releases/tag/2.005R",
@@ -717,7 +716,6 @@
       "version": "4.1",
       "kind": "font",
       "managedBy": "manual",
-      "provider": "WP-35",
       "license": "OFL-1.1",
       "source": "https://github.com/rsms/inter/releases/download/v4.1/Inter-4.1.zip",
       "release": "https://github.com/rsms/inter/releases/tag/v4.1",
@@ -728,7 +726,7 @@
       "archiveName": "Inter-4.1.zip",
       "modifiedByProvider": false,
       "installedInThisWorktree": false,
-      "installationStatus": "PROVIDER_DOWNLOADED_NOT_INSTALLED_IN_WP00",
+      "installationStatus": "PROVIDER_DOWNLOADED_NOT_INSTALLED",
       "intendedPath": "game/assets/hud/fonts/",
       "gitStorage": "ordinary-git-binary-not-lfs",
       "selectedWeights": [
@@ -743,7 +741,6 @@
       "version": "2.304",
       "kind": "font",
       "managedBy": "manual",
-      "provider": "WP-35",
       "license": "OFL-1.1",
       "source": "https://github.com/JetBrains/JetBrainsMono/releases/download/v2.304/JetBrainsMono-2.304.zip",
       "release": "https://github.com/JetBrains/JetBrainsMono/releases/tag/v2.304",
@@ -754,7 +751,7 @@
       "archiveName": "JetBrainsMono-2.304.zip",
       "modifiedByProvider": false,
       "installedInThisWorktree": false,
-      "installationStatus": "PROVIDER_DOWNLOADED_NOT_INSTALLED_IN_WP00",
+      "installationStatus": "PROVIDER_DOWNLOADED_NOT_INSTALLED",
       "intendedPath": "game/assets/hud/fonts/",
       "gitStorage": "ordinary-git-binary-not-lfs",
       "selectedWeights": [
@@ -776,9 +773,9 @@
       "licenseFile": "game/gen/parts/core/Earcut.LICENSE",
       "sha256": "1916ed94472f1a8c2e2cda094cee3061e998d736cf1a03ac854dd7d192aa5137",
       "licenseSha256": "324139c19d87af03fda38afea1590e00ca354c4159bdb2ae9e9cec070cfa46a8",
-      "hashStatus": "VERIFIED_WP09_SOURCE_AND_NOTICE",
+      "hashStatus": "VERIFIED_LOCAL_SOURCE_AND_NOTICE",
       "modified": true,
-      "scope": "Pure .NET polygon triangulation; source and notice delivered by WP-09"
+      "scope": "Pure .NET polygon triangulation; source and notice delivered with this adaptation"
     },
     {
       "name": "numpy",
@@ -795,7 +792,6 @@
       "sha256": "8b4d2fd2d34e5f8c9235ee787de5631a37a28402b15cb80814df973d2be54129",
       "hashStatus": "VERIFIED_LOCAL_WHEEL_MATCHES_REQUIREMENTS_LOCK",
       "lockfile": "pipeline/audio/requirements.lock",
-      "lockfileOwner": "WP-08",
       "lockfileSha256": "35609c932379f172d5e8e2c217e9d86c2479464dcbad195c945f4bc83e446557",
       "licenseEvidence": {
         "metadata": "numpy-2.5.4.dist-info/METADATA",
@@ -892,7 +888,7 @@
       "developmentOnly": true,
       "exported": false,
       "vendored": false,
-      "scope": "WP-08 offline map/data preprocessing tools only; not part of the game export or vendored project source.",
+      "scope": "SYS-MAPS offline map/data preprocessing tools only; not part of the game export or vendored project source.",
       "licenseReview": {
         "status": "PENDING_POLICY_REVIEW",
         "scope": "Pinned wheel and bundled notices only; no blanket approval of other artifacts or versions.",
@@ -922,7 +918,6 @@
       "sha256": "1cca606cd25738df4ed873d5ad46bbdb3d83b5cbca291f6b4ff13a4df6b0bbe8",
       "hashStatus": "VERIFIED_LOCAL_WHEEL_MATCHES_REQUIREMENTS_LOCK",
       "lockfile": "scripts/requirements.lock",
-      "lockfileOwner": "WP-08",
       "lockfileSha256": "47367ea6344735ff4ec0cd9ebf62765aa214b5acdb3ca036f580e08df56341d8",
       "licenseEvidence": {
         "metadata": "pillow-12.3.0.dist-info/METADATA",
@@ -939,7 +934,7 @@
       "developmentOnly": true,
       "exported": false,
       "vendored": false,
-      "scope": "WP-08 offline map/data preprocessing tools only; not part of the game export or vendored project source.",
+      "scope": "SYS-MAPS offline map/data preprocessing tools only; not part of the game export or vendored project source.",
       "licenseReview": {
         "status": "PENDING_POLICY_REVIEW",
         "scope": "Pinned wheel and bundled notices only; no blanket approval of other artifacts or versions.",
@@ -1038,7 +1033,6 @@
       "sha256": "79005a0d97d5ddabfeeea4cf676af11e647e41d81c9a7722a193022accdb6b7c",
       "hashStatus": "VERIFIED_LOCAL_WHEEL_MATCHES_REQUIREMENTS_LOCK",
       "lockfile": "scripts/requirements.lock",
-      "lockfileOwner": "WP-08",
       "lockfileSha256": "47367ea6344735ff4ec0cd9ebf62765aa214b5acdb3ca036f580e08df56341d8",
       "licenseEvidence": {
         "metadata": "pyyaml-6.0.3.dist-info/METADATA",
@@ -1055,7 +1049,7 @@
       "developmentOnly": true,
       "exported": false,
       "vendored": false,
-      "scope": "WP-08 offline map/data preprocessing tools only; not part of the game export or vendored project source.",
+      "scope": "SYS-MAPS offline map/data preprocessing tools only; not part of the game export or vendored project source.",
       "licenseReview": {
         "status": "ALLOWLIST_DECLARATION_VERIFIED",
         "scope": "Pinned wheel and bundled notices only; no blanket approval of other artifacts or versions."
@@ -1115,7 +1109,6 @@
       "version": "0.25.2",
       "kind": "python-wheel",
       "managedBy": "manual",
-      "provider": "WP-00",
       "license": "MIT",
       "source": "https://github.com/tree-sitter/py-tree-sitter",
       "packageIndex": "https://pypi.org/project/tree-sitter/0.25.2/",
@@ -1125,7 +1118,6 @@
       "sha256": "463c032bd02052d934daa5f45d183e0521ceb783c2548501cf034b0beba92c9b",
       "hashStatus": "VERIFIED_PYPI_WHEEL_DOWNLOAD_MATCHES_REQUIREMENTS_LOCK_AND_PYPI",
       "lockfile": "scripts/requirements.lock",
-      "lockfileOwner": "WP-00",
       "lockfileSha256": "47367ea6344735ff4ec0cd9ebf62765aa214b5acdb3ca036f580e08df56341d8",
       "licenseEvidence": {
         "metadata": "tree_sitter-0.25.2.dist-info/METADATA",
@@ -1142,7 +1134,7 @@
       "developmentOnly": true,
       "exported": false,
       "vendored": false,
-      "scope": "WP-00 source-policy gate JavaScript AST parsing only; not part of the game export or vendored project source.",
+      "scope": "ENG-ARCH source-policy gate JavaScript AST parsing only; not part of the game export or vendored project source.",
       "licenseReview": {
         "status": "ALLOWLIST_DECLARATION_VERIFIED",
         "scope": "Pinned wheel and bundled notices only; no blanket approval of other artifacts or versions."
@@ -1153,7 +1145,6 @@
       "version": "0.25.0",
       "kind": "python-wheel",
       "managedBy": "manual",
-      "provider": "WP-00",
       "license": "MIT",
       "source": "https://github.com/tree-sitter/tree-sitter-javascript",
       "packageIndex": "https://pypi.org/project/tree-sitter-javascript/0.25.0/",
@@ -1163,7 +1154,6 @@
       "sha256": "e5ed840f5bd4a3f0272e441d19429b26eedc257abe5574c8546da6b556865e3c",
       "hashStatus": "VERIFIED_PYPI_WHEEL_DOWNLOAD_MATCHES_REQUIREMENTS_LOCK_AND_PYPI",
       "lockfile": "scripts/requirements.lock",
-      "lockfileOwner": "WP-00",
       "lockfileSha256": "47367ea6344735ff4ec0cd9ebf62765aa214b5acdb3ca036f580e08df56341d8",
       "licenseEvidence": {
         "metadata": "tree_sitter_javascript-0.25.0.dist-info/METADATA",
@@ -1180,7 +1170,7 @@
       "developmentOnly": true,
       "exported": false,
       "vendored": false,
-      "scope": "WP-00 source-policy gate JavaScript AST parsing only; not part of the game export or vendored project source.",
+      "scope": "ENG-ARCH source-policy gate JavaScript AST parsing only; not part of the game export or vendored project source.",
       "licenseReview": {
         "status": "ALLOWLIST_DECLARATION_VERIFIED",
         "scope": "Pinned wheel and bundled notices only; no blanket approval of other artifacts or versions."
@@ -1226,7 +1216,6 @@
       "version": "6.0.0",
       "kind": "python-wheel",
       "managedBy": "manual",
-      "provider": "TOOL-260",
       "license": "Apache-2.0",
       "source": "https://github.com/gorakhargosh/watchdog",
       "packageIndex": "https://pypi.org/project/watchdog/6.0.0/",
@@ -1236,7 +1225,6 @@
       "sha256": "cbafb470cf848d93b5d013e2ecb245d4aa1c8fd0504e863ccefa32445359d680",
       "hashStatus": "VERIFIED_PYPI_WHEEL_DOWNLOAD_MATCHES_REQUIREMENTS_LOCK_AND_PYPI",
       "lockfile": "scripts/requirements.lock",
-      "lockfileOwner": "TOOL-260",
       "lockfileSha256": "47367ea6344735ff4ec0cd9ebf62765aa214b5acdb3ca036f580e08df56341d8",
       "licenseEvidence": {
         "metadata": "watchdog-6.0.0.dist-info/METADATA",
@@ -1285,11 +1273,10 @@
   },
   "audio": {
     "manifest": "game/data/audio/licenses.json",
-    "owner": "WP-53e",
     "assetsDownloadedInD0": false
   },
   "validation": {
-    "scope": "D0 skeleton; complete production gates belong to the mainline work packages",
+    "scope": "D0 skeleton; complete production gates belong to the mainline",
     "targetFramework": "net10.0",
     "sdk": "10.0.402",
     "buildWarnings": 0,
@@ -1309,14 +1296,6 @@
       "G6": "Passed",
       "D0ExportRuntime": "Passed"
     },
-    "finalGate": {
-      "status": "PASSED",
-      "generatedAt": "2026-10-15T18:21:02.7828891Z",
-      "report": "output/build/gates/WP-00-result.json",
-      "sha256": "5235e00d71a9b82925ceed4f0f1262735665b6445ab2d17eb8cdf6426fb4d4f3"
-    },
-    "editorScreenshot": "output/render-review/WP-00-editor-smoke/V1.png",
-    "exportScreenshot": "output/render-review/WP-00-export-smoke/V1.png",
     "exportDirectoryBytes": 202062868,
     "fullProductionG6": "NOT_CLAIMED"
   }

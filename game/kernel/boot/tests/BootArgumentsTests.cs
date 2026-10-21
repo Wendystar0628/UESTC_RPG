@@ -47,20 +47,6 @@ public sealed class BootArgumentsTests
 
     [TestCase]
     [TestCategory(TestReason.Contract)]
-    public void WithoutExplicitlyRejectsUnsupportedModuleFiltering()
-    {
-        foreach (var development in new[] { true, false })
-        {
-            ArgumentException? failure = null;
-            try { BootArguments.Parse(["--without=WP-18,WP-19"], development); }
-            catch (ArgumentException error) { failure = error; }
-            if (failure is null)
-                throw new InvalidOperationException("--without accepted unsupported filtering before boot.");
-        }
-    }
-
-    [TestCase]
-    [TestCategory(TestReason.Contract)]
     public void MovieEventsKeepTheirFrameOrderAndAnimationRunning()
     {
         var options = BootArguments.Parse(["--shots=P00", "--out=C:\\shots", "--movie-frames=180",

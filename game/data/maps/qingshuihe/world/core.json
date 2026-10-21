@@ -171,7 +171,7 @@
       "height": 14,
       "props": {
         "species": "camphor",
-        "planter": "WP-23"
+        "planter": "vegetation"
       },
       "note": "实物登记（MAP-QSH-CORE）：大台阶两边各一株大冠香樟，这是东北侧一株，在侧梯石护墙外 4 m、台阶脚后 3 m，冠下留出侧梯脚与路。只给位置，树由 game/gen/vegetation/ 种（WLD-VEGETATION 图书馆入口台地）。夜间剪影；春老叶少量转红，夏浓荫，秋冬常绿。",
       "geometry": {
@@ -185,7 +185,7 @@
       "height": 14,
       "props": {
         "species": "camphor",
-        "planter": "WP-23"
+        "planter": "vegetation"
       },
       "note": "实物登记：大台阶西南侧的一株大冠香樟，与 design:core-library-camphor-1 对称，同上。",
       "geometry": {
@@ -651,7 +651,7 @@
       "height": 5.5,
       "props": {
         "species": "palm",
-        "planter": "WP-23"
+        "planter": "vegetation"
       },
       "note": "实物登记（MAP-QSH-CORE）：北内院宁静苑的两株棕榈之一，种在西侧木边花池正中（花池由 game/gen/maps/qingshuihe/core/ 的宁静苑块按内院墙线排出，单测核对树位落在花池里）。只给位置，树由 game/gen/vegetation/ 种。内院不开放，从一楼北面落地窗和三楼 G 区露台看得见树冠；常绿，四季不变，冬季叶面压薄雪。",
       "geometry": {
@@ -665,7 +665,7 @@
       "height": 5,
       "props": {
         "species": "palm",
-        "planter": "WP-23"
+        "planter": "vegetation"
       },
       "note": "实物登记：宁静苑的第二株棕榈，种在东侧木边花池正中，同 design:core-quiet-garden-palm-1。",
       "geometry": {

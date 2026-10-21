@@ -15,7 +15,7 @@ public sealed class BootArguments
     {
         "gate", "map", "spawn", "pose", "clock", "season", "anim", "flow", "mode", "ui", "seed",
         "weather", "weather-intensity", "wet", "weather-seed", "weather-remaining", "sunshower",
-        "quality", "quality-set", "bench", "without", "inspect", "shots", "frames", "out",
+        "quality", "quality-set", "bench", "inspect", "shots", "frames", "out",
         "gen", "bake", "bake-cache", "bake-bg", "bake-strict", "title", "save", "slot",
         "load", "save-dir", "save-at", "audio", "audio-fixed", "audio-seed", "audio-limiter", "audio-log",
         "ui-theme", "motion", "ui-scale", "ui-gallery", "ui-export-theme", "amb-solo", "amb-off", "amb-debug",
@@ -64,8 +64,6 @@ public sealed class BootArguments
                 !values.TryAdd(pair[0], pair.Length == 2 ? pair[1] : "1")) throw Invalid(arg);
         }
         var result = new BootArguments(values);
-        if (result.Has("without"))
-            throw Invalid("NotSupported: --without module filtering is not implemented; no modules have been excluded.");
         if (result.Has("slot") && result.Has("load")) throw Invalid("--slot and --load are mutually exclusive.");
         if (result.HasLoad && WorldKeys.Any(result.Has)) throw Invalid("Saved state cannot be combined with world overrides.");
         result.Validate();

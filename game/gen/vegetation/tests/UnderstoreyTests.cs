@@ -150,7 +150,7 @@ public sealed class UnderstoreyTests
 
     private static string DesignTree(string id, float x, float z) =>
         "{\"id\":\"" + id + "\",\"kind\":\"tree\",\"geometry\":{\"type\":\"point\",\"position\":[" + PavementTests.F(x) + ",0," + PavementTests.F(z) +
-        "]},\"height\":8,\"props\":{\"planter\":\"WP-23\",\"species\":\"camphor\"},\"note\":\"Fixture: an explicitly planted tree.\"}";
+        "]},\"height\":8,\"props\":{\"planter\":\"" + VegetationModule.ModuleId + "\",\"species\":\"camphor\"},\"note\":\"Fixture: an explicitly planted tree.\"}";
 
     private static string Pit(string id, float x, float z)
     {

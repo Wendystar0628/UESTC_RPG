@@ -1,6 +1,5 @@
 {
   "format": "campus.palette.weather/1",
-  "owner": "WP-37",
   "doc": "SYS-WEATHER 第 2 条、§2、§3、§7；ART-STYLE；ART-SKYLIGHT",
   "status": "主线版只留接口：参数取文档的初值，细调在主线闸口之后（SYS-TIME 后置细节）。",
   "notes": [

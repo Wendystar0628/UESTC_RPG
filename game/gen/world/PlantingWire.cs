@@ -8,7 +8,7 @@ namespace Campus.Gen.World;
 /// <summary>
 /// The strict wire reader of the per-map data files (planting.json, species.json): source-generated System.Text.Json over
 /// typed records, where unknown keys, missing required keys and null in non-nullable fields are errors. Parameters with a
-/// default are the optional keys. Owner, Doc and Notes are file commentary, never read.
+/// default are the optional keys. Doc and Notes are file commentary, never read.
 /// </summary>
 public static class WireJson
 {
@@ -41,7 +41,7 @@ public static class PlantingJson
 
 public sealed record PlantingFile(string Format, IReadOnlyList<RoadWire> Roads, OsmTreesWire OsmTrees, GrovesWire Groves,
     PitsWire? Pits = null, UnderstoreyWire? Understorey = null,
-    string? Owner = null, string? Doc = null, IReadOnlyList<string>? Notes = null);
+    string? Doc = null, IReadOnlyList<string>? Notes = null);
 
 public sealed record RoadWire(string Name, IReadOnlyList<string> Species, IReadOnlyList<RowWire> Rows, float Spacing, bool Wash,
     BandWire? Band = null);

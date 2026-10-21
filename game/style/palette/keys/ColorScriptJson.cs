@@ -35,7 +35,7 @@ public sealed record PerSeason<T>(T Spring, T Summer, T Autumn, T Winter)
 #region autumn.keys.json
 
 public sealed record AutumnKeysFile(string Format, double[] SkyStopsDeg, KeyJson[] Keys,
-    string? Owner = null, string? Doc = null, string? Season = null, string[]? Notes = null);
+    string? Doc = null, string? Season = null, string[]? Notes = null);
 
 public sealed record KeyJson(string Id, string Name, KeyClass Class, KeySide Side, double AltDeg, double ExampleClock,
     KeySkyJson Sky, KeyLightJson Key, KeyShadeJson Shade, KeyFogJson Fog, KeyLineJson Line, KeyColorsJson Colors,
@@ -84,7 +84,7 @@ public sealed record KeyLightsJson(double Windows, double Street, string? Note =
 
 public sealed record DeriveFile(string Format, DeriveLitJson Lit, DeriveShadeJson Shade, DeriveInteriorJson Interior,
     SwatchLJson SwatchL, Lab ShadowReference, Dictionary<string, MaterialClassJson> MaterialClasses, string[] FrameTokens,
-    string? Owner = null, string? Doc = null, string[]? Notes = null, DeepJson? Deep = null);
+    string? Doc = null, string[]? Notes = null, DeepJson? Deep = null);
 
 public sealed record DeriveLitJson(double AdaptRef, double VegetationTintK, WarmCapJson VegetationWarmCap,
     HeroGuardJson HeroGuard, ChromaCapJson ChromaCap);
@@ -114,7 +114,7 @@ public sealed record DeepJson(double LMul, double CMul);
 #region seasons.json
 
 public sealed record SeasonsFile(string Format, double[] SkyFalloff, Dictionary<string, ScopeJson> Scopes, SeasonLimitsJson Limits,
-    PerSeason<SeasonDeltaJson> Seasons, string? Owner = null, string? Doc = null, string[]? Notes = null)
+    PerSeason<SeasonDeltaJson> Seasons, string? Doc = null, string[]? Notes = null)
 {
     /// <summary>Weight of a named scope on one keyframe; unlisted keyframes weigh 0.</summary>
     public double ScopeWeight(string scope, string keyId) => Scopes[scope].Weight(keyId);
@@ -168,7 +168,7 @@ public sealed record SeasonOverrideSkyFxJson(double? CloudAmountAdd = null);
 #region vegetation.json
 
 public sealed record VegetationFile(string Format, PerSeason<string> HeroFrames, SeasonalJson[] Seasonal, ConstantJson[] Constant,
-    VariantJson[]? Variants = null, string? Owner = null, string? Doc = null, string[]? Notes = null);
+    VariantJson[]? Variants = null, string? Doc = null, string[]? Notes = null);
 
 public sealed record SeasonalJson(string Token, string Class, PerSeason<VegAnchor> Lit,
     string? Name = null, bool? WinterBare = null, string? Note = null, Dictionary<string, Dictionary<string, Lab>>? Check = null);
@@ -189,7 +189,7 @@ public readonly record struct VegAnchor(Lab Color, bool IsAlbedo);
 
 public sealed record WeatherFile(string Format, WeatherKeyEvJson KeyEv, WeatherShadeJson Shade, WeatherSkyJson Sky,
     double WashedSatAdd, double RainVegetationChromaMul, WeatherTokensJson Tokens,
-    string? Owner = null, string? Doc = null, string? Status = null, string[]? Notes = null, string? CloudAmount = null,
+    string? Doc = null, string? Status = null, string[]? Notes = null, string? CloudAmount = null,
     WeatherGlowJson? GlowBloomAdd = null);
 
 public sealed record WeatherKeyEvJson(double Overcast, double HeavyRainExtra);

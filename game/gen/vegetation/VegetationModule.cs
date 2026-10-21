@@ -15,13 +15,15 @@ namespace Campus.Gen.Vegetation;
 /// variant) at every static geometry level. Near trees and their shadows belong exclusively to the streamed runtime.
 /// </summary>
 
-[ContentModule("vegetation")]
+[ContentModule(VegetationModule.ModuleId)]
 public sealed class VegetationModule : IVegetationRuntimeSource, IGroundMaskContributor, IContentSourceTraceProvider
 {
+    public const string ModuleId = "vegetation";
+
     public BakeInputDependencies BakeInputs { get; } = new(BakeInputKinds.World | BakeInputKinds.Vegetation, [], [VegetationInputs.SpeciesKey]);
     public BakeInputDependencies CollisionInputs => BakeInputs;
 
-    public string Id => "vegetation";
+    public string Id => ModuleId;
 
     public GroundMaskChannels Channels => GroundMaskChannels.GinkgoLeaves | GroundMaskChannels.OtherLeaves | GroundMaskChannels.CanopyShelter | GroundMaskChannels.MapleLeaves;
 

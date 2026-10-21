@@ -15,7 +15,7 @@ internal static class VegetationJson
 }
 
 internal sealed record SpeciesFile(string Format, IReadOnlyList<SpeciesRowWire> Species,
-    string? Owner = null, string? Doc = null, IReadOnlyList<string>? Notes = null);
+    string? Doc = null, IReadOnlyList<string>? Notes = null);
 
 internal sealed record SpeciesRowWire(string Id, string Name, int Row, CrownType Crown, string Form, IReadOnlyList<float> Height,
     string Leaf, string? Bloom, CardShape Card, CardShape BloomCard, LitterShape Litter, bool Deciduous, bool BloomOnBlobs,

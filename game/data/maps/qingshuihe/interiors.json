@@ -181,8 +181,7 @@
           "open": true
         }
       ],
-      "seals": [],
-      "owner": "WP-17"
+      "seals": []
     },
     {
       "featureIds": [
@@ -264,8 +263,7 @@
           "open": true
         }
       ],
-      "seals": [],
-      "owner": "WP-17"
+      "seals": []
     },
     {
       "featureIds": [
@@ -345,8 +343,7 @@
           "open": true
         }
       ],
-      "seals": [],
-      "owner": "WP-31a"
+      "seals": []
     },
     {
       "featureIds": [
@@ -420,8 +417,7 @@
           "open": true
         }
       ],
-      "seals": [],
-      "owner": "WP-31a"
+      "seals": []
     },
     {
       "featureIds": [
@@ -485,8 +481,7 @@
           "open": true
         }
       ],
-      "seals": [],
-      "owner": "WP-31a"
+      "seals": []
     },
     {
       "featureIds": [
@@ -568,8 +563,7 @@
           "open": true
         }
       ],
-      "seals": [],
-      "owner": "WP-31b"
+      "seals": []
     },
     {
       "featureIds": [
@@ -598,8 +592,7 @@
         }
       ],
       "entrances": [],
-      "seals": [],
-      "owner": "WP-31b"
+      "seals": []
     },
     {
       "featureIds": [
@@ -708,8 +701,7 @@
         }
       ],
       "entrances": [],
-      "seals": [],
-      "owner": "WP-31b"
+      "seals": []
     },
     {
       "featureIds": [
@@ -764,7 +756,6 @@
         }
       ],
       "seals": [],
-      "owner": "WP-31c",
       "buildingType": {
         "profile": "double-loaded",
         "rooms": [
@@ -843,8 +834,7 @@
           "open": true
         }
       ],
-      "seals": [],
-      "owner": "WP-31c"
+      "seals": []
     },
     {
       "featureIds": [
@@ -902,8 +892,7 @@
         }
       ],
       "entrances": [],
-      "seals": [],
-      "owner": "WP-31c"
+      "seals": []
     },
     {
       "featureIds": [
@@ -940,8 +929,7 @@
         }
       ],
       "entrances": [],
-      "seals": [],
-      "owner": "WP-31c"
+      "seals": []
     },
     {
       "featureIds": [
@@ -1104,8 +1092,7 @@
           "open": true
         }
       ],
-      "seals": [],
-      "owner": "WP-31b"
+      "seals": []
     },
     {
       "featureIds": [
@@ -1161,8 +1148,7 @@
         }
       ],
       "entrances": [],
-      "seals": [],
-      "owner": "WP-31b"
+      "seals": []
     },
     {
       "featureIds": [
@@ -1199,8 +1185,7 @@
         }
       ],
       "entrances": [],
-      "seals": [],
-      "owner": "WP-31c"
+      "seals": []
     },
     {
       "featureIds": [
@@ -1229,8 +1214,7 @@
         }
       ],
       "entrances": [],
-      "seals": [],
-      "owner": "WP-31a"
+      "seals": []
     }
   ],
   "closedEntrances": [

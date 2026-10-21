@@ -1,6 +1,5 @@
 {
   "format": "campus.palette.derive/1",
-  "owner": "WP-37",
   "doc": "ART-STYLE；SYS-TIME",
   "notes": [
     "受光色：L_lit = m × (1 − (1 − L_a)^litLift)；(a, b)_lit = m × (satGain × (a, b)_a + tintK × (a, b)_key)；m = min(1, (key.intensity / adaptRef)^(1/3))。",

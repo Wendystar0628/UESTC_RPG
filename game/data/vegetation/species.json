@@ -1,6 +1,5 @@
 {
   "format": "campus.vegetation.species/1",
-  "owner": "WP-23",
   "doc": "WLD-VEGETATION",
   "notes": [
     "row 是树种号：tree_species 纹理的行号，也是 INSTANCE_CUSTOM.y = row × 16 + 外观变体号里的 row；只增不改。",
