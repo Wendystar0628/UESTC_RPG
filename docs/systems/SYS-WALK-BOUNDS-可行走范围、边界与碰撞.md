@@ -16,7 +16,7 @@ paths: ["game/kernel/collision/**", "game/gen/collision/**", "game/kernel/stream
 # SYS-WALK-BOUNDS · 可行走范围、边界与碰撞
 
 > **范围**：本文规定行走的"地"：可行走范围与禁行区、边界收口与隐形墙、楼内的门（含自动门的运行时规则）与电梯碰撞、涉水游泳回位与安全点、行走走廊与节奏、推荐路线的意图、碰撞的生成、图元选择、表面类型与就绪，以及导航图。
-> **不在本文**：玩家身体、手感、视角、模式切换与控制器（SYS-WALK）；骑行（SYS-WALK-BIKE）；开放清单、室内布局与门的外观和设计取向（WLD-INTERIORS）；开放泳区的水面画法（WLD-WATER）；校界阻挡与提示（SYS-BORDER）；外围环境带（WLD-OUTSKIRTS）；观者声（SYS-AUDIO）；界面提示（UI-NAV）；传送与锚点（SYS-ATLAS）；碰撞与可行走数据的实现（`game/gen/walkable/`、`game/gen/collision/`、`game/kernel/collision/`、`game/contracts/Spatial/`）；行走验收（ENG-GATES G15）。
+> **不在本文**：玩家身体、手感、视角、模式切换与控制器（SYS-WALK）；骑行（SYS-WALK-BIKE）；开放清单、室内布局与门的外观和设计取向（WLD-INTERIORS）；开放泳区的水面画法（WLD-WATER）；校界阻挡与提示（SYS-BORDER）；外围环境带（WLD-OUTSKIRTS）；观者声（SYS-AUDIO）；界面提示（UI-NAV）；传送与锚点（SYS-ATLAS）；碰撞与可行走数据的实现（`game/gen/collision/`、`game/kernel/collision/`、`game/contracts/Spatial/`）；行走验收（ENG-GATES G15）。
 > **查阅**：先读 §0；可行走范围看 §1；边界收口看 §2；门与电梯看 §3；涉水、游泳、回位与安全点看 §4；走廊与节奏看 §5；推荐路线看 §6；碰撞与就绪看 §7；导航图看 §8
 
 ## 0 结论

@@ -16,7 +16,7 @@ paths: ["game/flow/**"]
 # SYS-TITLE · 开始页与启动
 
 > **范围**：本文规定冷启动的扉页与失败页、开始页（扉页、菜单、片名块）、从双击起的并行加载与预载、应用状态下各系统的约定、新游戏与继续与返回标题怎么进出、多地图的开始页登记。
-> **不在本文**：存档格式、读档与保存时机（SYS-SAVE）；地图加载与切换（SYS-MAPS）；界面令牌与开始页的视觉细则（UI-VISUAL）；声音与开场音乐的内容（SYS-AUDIO）；世界时间（SYS-TIME）；`IAppFlow` 契约（`game/contracts/AppFlow/`）；性能预算与门禁（ENG-BUDGET、ENG-GATES）。
+> **不在本文**：存档格式、读档与保存时机（SYS-SAVE）；地图加载与切换（SYS-MAPS）；界面令牌与开始页的视觉细则（UI-VISUAL）；声音与开场音乐的内容（SYS-AUDIO）；世界时间（SYS-TIME）；`IAppFlow` 契约（`game/contracts/Runtime/AppFlow/`）；性能预算与门禁（ENG-BUDGET、ENG-GATES）。
 > **查阅**：先读 §0；扉页与启动看 §1；扉页、菜单与片名块看 §2；各应用状态的约定看 §3，进入游戏与返回标题看 §3.1；多地图看 §4
 
 ## 0 结论
