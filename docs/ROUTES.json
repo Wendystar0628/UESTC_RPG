@@ -131,80 +131,22 @@
   {
    "docs": [
     "ENG-ARCH",
-    "ENG-BUDGET",
-    "ENG-BUDGET-RULES",
-    "ENG-RELEASE",
-    "ENG-ROADMAP",
-    "STD-CODE",
-    "STD-CONVENTIONS",
-    "WF-BUILD",
-    "WF-COMMS",
-    "WF-ENTRY",
-    "WF-FLOW",
-    "WF-MODEL",
-    "WF-ROLE",
-    "WF-RULE",
-    "WF-STATUS"
+    "WF-BUILD"
    ],
    "glob": "**/*.csproj"
   },
   {
    "docs": [
     "ENG-ARCH",
-    "ENG-BUDGET",
     "ENG-BUDGET-RULES",
-    "ENG-RELEASE",
-    "ENG-ROADMAP",
-    "STD-CODE",
-    "STD-CONVENTIONS",
-    "WF-BUILD",
-    "WF-COMMS",
-    "WF-ENTRY",
-    "WF-FLOW",
-    "WF-MODEL",
-    "WF-ROLE",
-    "WF-RULE",
-    "WF-STATUS"
-   ],
-   "glob": "**/*.sln"
-  },
-  {
-   "docs": [
-    "ENG-ARCH",
-    "ENG-BUDGET",
-    "ENG-BUDGET-RULES",
-    "ENG-RELEASE",
-    "ENG-ROADMAP",
-    "STD-CODE",
-    "STD-CONVENTIONS",
-    "WF-BUILD",
-    "WF-COMMS",
-    "WF-ENTRY",
-    "WF-FLOW",
-    "WF-MODEL",
-    "WF-ROLE",
-    "WF-RULE",
-    "WF-STATUS"
+    "WF-BUILD"
    ],
    "glob": "**/Directory.*.props"
   },
   {
    "docs": [
     "ENG-ARCH",
-    "ENG-BUDGET",
-    "ENG-BUDGET-RULES",
-    "ENG-RELEASE",
-    "ENG-ROADMAP",
-    "STD-CODE",
-    "STD-CONVENTIONS",
-    "WF-BUILD",
-    "WF-COMMS",
-    "WF-ENTRY",
-    "WF-FLOW",
-    "WF-MODEL",
-    "WF-ROLE",
-    "WF-RULE",
-    "WF-STATUS"
+    "WF-BUILD"
    ],
    "glob": "**/Directory.*.targets"
   },
@@ -236,21 +178,9 @@
   },
   {
    "docs": [
-    "ENG-ARCH",
-    "ENG-BUDGET",
-    "ENG-BUDGET-RULES",
-    "ENG-RELEASE",
-    "ENG-ROADMAP",
     "STD-CODE",
-    "STD-CONVENTIONS",
-    "WF-BUILD",
     "WF-COMMS",
-    "WF-ENTRY",
-    "WF-FLOW",
-    "WF-MODEL",
-    "WF-ROLE",
-    "WF-RULE",
-    "WF-STATUS"
+    "WF-RULE"
    ],
    "glob": ".collab/tools/**"
   },
@@ -268,141 +198,48 @@
   },
   {
    "docs": [
-    "ENG-ARCH",
-    "ENG-BUDGET",
-    "ENG-BUDGET-RULES",
-    "ENG-RELEASE",
-    "ENG-ROADMAP",
-    "STD-CODE",
-    "STD-CONVENTIONS",
-    "WF-BUILD",
-    "WF-COMMS",
-    "WF-ENTRY",
-    "WF-FLOW",
-    "WF-MODEL",
-    "WF-ROLE",
-    "WF-RULE",
-    "WF-STATUS"
+    "WF-RULE"
    ],
    "glob": ".gitattributes"
   },
   {
    "docs": [
-    "ENG-ARCH",
-    "ENG-BUDGET",
-    "ENG-BUDGET-RULES",
-    "ENG-RELEASE",
-    "ENG-ROADMAP",
-    "STD-CODE",
-    "STD-CONVENTIONS",
-    "WF-BUILD",
-    "WF-COMMS",
-    "WF-ENTRY",
-    "WF-FLOW",
-    "WF-MODEL",
-    "WF-ROLE",
-    "WF-RULE",
-    "WF-STATUS"
+    "WF-RULE"
    ],
    "glob": ".gitignore"
   },
   {
    "docs": [
-    "ENG-ARCH",
-    "ENG-BUDGET",
-    "ENG-BUDGET-RULES",
-    "ENG-RELEASE",
-    "ENG-ROADMAP",
-    "STD-CODE",
-    "STD-CONVENTIONS",
-    "WF-BUILD",
-    "WF-COMMS",
-    "WF-ENTRY",
-    "WF-FLOW",
-    "WF-MODEL",
-    "WF-ROLE",
-    "WF-RULE",
-    "WF-STATUS"
+    "WF-RULE"
    ],
    "glob": ".ignore"
   },
   {
    "docs": [
-    "ENG-ARCH",
-    "ENG-BUDGET",
-    "ENG-BUDGET-RULES",
-    "ENG-RELEASE",
-    "ENG-ROADMAP",
-    "STD-CODE",
-    "STD-CONVENTIONS",
-    "WF-BUILD",
-    "WF-COMMS",
-    "WF-ENTRY",
-    "WF-FLOW",
-    "WF-MODEL",
     "WF-ROLE",
-    "WF-RULE",
-    "WF-STATUS"
+    "WF-RULE"
    ],
    "glob": "AGENTS.md"
   },
   {
    "docs": [
-    "ENG-ARCH",
-    "ENG-BUDGET",
-    "ENG-BUDGET-RULES",
-    "ENG-RELEASE",
-    "ENG-ROADMAP",
-    "STD-CODE",
-    "STD-CONVENTIONS",
-    "WF-BUILD",
-    "WF-COMMS",
-    "WF-ENTRY",
-    "WF-FLOW",
-    "WF-MODEL",
     "WF-ROLE",
-    "WF-RULE",
-    "WF-STATUS"
+    "WF-RULE"
    ],
    "glob": "CLAUDE.md"
   },
   {
    "docs": [
     "ENG-ARCH",
-    "ENG-BUDGET",
     "ENG-BUDGET-RULES",
-    "ENG-RELEASE",
-    "ENG-ROADMAP",
-    "STD-CODE",
-    "STD-CONVENTIONS",
-    "WF-BUILD",
-    "WF-COMMS",
-    "WF-ENTRY",
-    "WF-FLOW",
-    "WF-MODEL",
-    "WF-ROLE",
-    "WF-RULE",
-    "WF-STATUS"
+    "WF-BUILD"
    ],
    "glob": "Directory.*.props"
   },
   {
    "docs": [
     "ENG-ARCH",
-    "ENG-BUDGET",
-    "ENG-BUDGET-RULES",
-    "ENG-RELEASE",
-    "ENG-ROADMAP",
-    "STD-CODE",
-    "STD-CONVENTIONS",
-    "WF-BUILD",
-    "WF-COMMS",
-    "WF-ENTRY",
-    "WF-FLOW",
-    "WF-MODEL",
-    "WF-ROLE",
-    "WF-RULE",
-    "WF-STATUS"
+    "WF-BUILD"
    ],
    "glob": "Directory.*.targets"
   },
@@ -414,81 +251,29 @@
   },
   {
    "docs": [
-    "ENG-ARCH",
-    "ENG-BUDGET",
-    "ENG-BUDGET-RULES",
-    "ENG-RELEASE",
-    "ENG-ROADMAP",
-    "STD-CODE",
-    "STD-CONVENTIONS",
-    "WF-BUILD",
-    "WF-COMMS",
-    "WF-ENTRY",
-    "WF-FLOW",
-    "WF-MODEL",
-    "WF-ROLE",
-    "WF-RULE",
-    "WF-STATUS"
+    "ENG-RELEASE"
    ],
    "glob": "LICENSE"
   },
   {
    "docs": [
-    "ENG-ARCH",
-    "ENG-BUDGET",
-    "ENG-BUDGET-RULES",
     "ENG-RELEASE",
-    "ENG-ROADMAP",
-    "STD-CODE",
-    "STD-CONVENTIONS",
-    "WF-BUILD",
-    "WF-COMMS",
-    "WF-ENTRY",
-    "WF-FLOW",
-    "WF-MODEL",
-    "WF-ROLE",
-    "WF-RULE",
-    "WF-STATUS"
+    "WF-RULE"
    ],
    "glob": "README.md"
   },
   {
    "docs": [
-    "ENG-ARCH",
     "ENG-BUDGET",
-    "ENG-BUDGET-RULES",
-    "ENG-RELEASE",
-    "ENG-ROADMAP",
-    "STD-CODE",
-    "STD-CONVENTIONS",
-    "WF-BUILD",
-    "WF-COMMS",
-    "WF-ENTRY",
-    "WF-FLOW",
-    "WF-MODEL",
-    "WF-ROLE",
-    "WF-RULE",
-    "WF-STATUS"
+    "ENG-BUDGET-RULES"
    ],
    "glob": "budgets.json"
   },
   {
    "docs": [
-    "ENG-ARCH",
-    "ENG-BUDGET",
-    "ENG-BUDGET-RULES",
-    "ENG-RELEASE",
-    "ENG-ROADMAP",
     "STD-CODE",
-    "STD-CONVENTIONS",
-    "WF-BUILD",
     "WF-COMMS",
-    "WF-ENTRY",
-    "WF-FLOW",
-    "WF-MODEL",
-    "WF-ROLE",
-    "WF-RULE",
-    "WF-STATUS"
+    "WF-RULE"
    ],
    "glob": "dashboard/**"
   },
@@ -518,21 +303,7 @@
   },
   {
    "docs": [
-    "ENG-ARCH",
-    "ENG-BUDGET",
-    "ENG-BUDGET-RULES",
-    "ENG-RELEASE",
-    "ENG-ROADMAP",
-    "STD-CODE",
-    "STD-CONVENTIONS",
-    "WF-BUILD",
-    "WF-COMMS",
-    "WF-ENTRY",
-    "WF-FLOW",
-    "WF-MODEL",
-    "WF-ROLE",
-    "WF-RULE",
-    "WF-STATUS"
+    "STD-CODE"
    ],
    "glob": "docs/godot-api/**"
   },
@@ -593,115 +364,43 @@
   {
    "docs": [
     "ENG-ARCH",
-    "STD-CODE",
-    "WF-BUILD"
+    "STD-CODE"
    ],
    "glob": "game/**/*.cs"
   },
   {
    "docs": [
-    "ENG-BUDGET-RULES",
-    "WF-BUILD"
+    "ENG-BUDGET-RULES"
    ],
    "glob": "game/**/*.gdshader*"
   },
   {
    "docs": [
     "ENG-ARCH",
-    "ENG-BUDGET",
-    "ENG-BUDGET-RULES",
-    "ENG-RELEASE",
-    "ENG-ROADMAP",
-    "STD-CODE",
-    "STD-CONVENTIONS",
-    "WF-BUILD",
-    "WF-COMMS",
-    "WF-ENTRY",
-    "WF-FLOW",
-    "WF-MODEL",
-    "WF-ROLE",
-    "WF-RULE",
-    "WF-STATUS"
-   ],
-   "glob": "game/.editorconfig"
-  },
-  {
-   "docs": [
-    "ENG-ARCH",
-    "ENG-BUDGET",
-    "ENG-BUDGET-RULES",
-    "ENG-RELEASE",
-    "ENG-ROADMAP",
-    "STD-CODE",
-    "STD-CONVENTIONS",
-    "WF-BUILD",
-    "WF-COMMS",
-    "WF-ENTRY",
-    "WF-FLOW",
-    "WF-MODEL",
-    "WF-ROLE",
-    "WF-RULE",
-    "WF-STATUS"
+    "WF-BUILD"
    ],
    "glob": "game/Campus.Gen.Tests.csproj"
   },
   {
    "docs": [
     "ENG-ARCH",
-    "ENG-BUDGET",
-    "ENG-BUDGET-RULES",
-    "ENG-RELEASE",
-    "ENG-ROADMAP",
-    "STD-CODE",
-    "STD-CONVENTIONS",
-    "WF-BUILD",
-    "WF-COMMS",
-    "WF-ENTRY",
-    "WF-FLOW",
-    "WF-MODEL",
-    "WF-ROLE",
-    "WF-RULE",
-    "WF-STATUS"
+    "WF-BUILD"
    ],
    "glob": "game/Campus.Tests.csproj"
   },
   {
    "docs": [
     "ENG-ARCH",
-    "ENG-BUDGET",
-    "ENG-BUDGET-RULES",
-    "ENG-RELEASE",
-    "ENG-ROADMAP",
-    "STD-CODE",
-    "STD-CONVENTIONS",
-    "WF-BUILD",
-    "WF-COMMS",
-    "WF-ENTRY",
-    "WF-FLOW",
-    "WF-MODEL",
-    "WF-ROLE",
-    "WF-RULE",
-    "WF-STATUS"
+    "WF-BUILD"
    ],
    "glob": "game/Campus.csproj"
   },
   {
    "docs": [
     "ENG-ARCH",
-    "ENG-BUDGET",
     "ENG-BUDGET-RULES",
     "ENG-RELEASE",
-    "ENG-ROADMAP",
-    "STD-CODE",
-    "STD-CONVENTIONS",
-    "WF-BUILD",
-    "WF-COMMS",
-    "WF-ENTRY",
-    "WF-FLOW",
-    "WF-MODEL",
-    "WF-ROLE",
-    "WF-RULE",
-    "WF-STATUS"
+    "WF-BUILD"
    ],
    "glob": "game/addons/**"
   },
@@ -748,100 +447,37 @@
   {
    "docs": [
     "ENG-ARCH",
-    "ENG-BUDGET",
-    "ENG-BUDGET-RULES",
-    "ENG-RELEASE",
     "ENG-ROADMAP",
-    "STD-CODE",
     "STD-CONVENTIONS",
-    "WF-BUILD",
-    "WF-COMMS",
-    "WF-ENTRY",
-    "WF-FLOW",
-    "WF-MODEL",
-    "WF-ROLE",
-    "WF-RULE",
-    "WF-STATUS"
+    "WF-BUILD"
    ],
    "glob": "game/contracts/**"
   },
   {
    "docs": [
     "ENG-ARCH",
-    "ENG-BUDGET",
-    "ENG-BUDGET-RULES",
-    "ENG-RELEASE",
-    "ENG-ROADMAP",
-    "STD-CODE",
-    "STD-CONVENTIONS",
-    "WF-BUILD",
-    "WF-COMMS",
-    "WF-ENTRY",
-    "WF-FLOW",
-    "WF-MODEL",
-    "WF-ROLE",
-    "WF-RULE",
-    "WF-STATUS"
+    "WF-BUILD"
    ],
    "glob": "game/contracts/*.csproj"
   },
   {
    "docs": [
     "ENG-ARCH",
-    "ENG-BUDGET",
-    "ENG-BUDGET-RULES",
-    "ENG-RELEASE",
-    "ENG-ROADMAP",
-    "STD-CODE",
-    "STD-CONVENTIONS",
-    "WF-BUILD",
-    "WF-COMMS",
-    "WF-ENTRY",
-    "WF-FLOW",
-    "WF-MODEL",
-    "WF-ROLE",
-    "WF-RULE",
-    "WF-STATUS"
+    "WF-BUILD"
    ],
    "glob": "game/contracts/.gdignore"
   },
   {
    "docs": [
     "ENG-ARCH",
-    "ENG-BUDGET",
-    "ENG-BUDGET-RULES",
-    "ENG-RELEASE",
-    "ENG-ROADMAP",
-    "STD-CODE",
-    "STD-CONVENTIONS",
-    "WF-BUILD",
-    "WF-COMMS",
-    "WF-ENTRY",
-    "WF-FLOW",
-    "WF-MODEL",
-    "WF-ROLE",
-    "WF-RULE",
-    "WF-STATUS"
+    "WF-BUILD"
    ],
    "glob": "game/contracts/Campus.Contracts.csproj"
   },
   {
    "docs": [
     "ENG-ARCH",
-    "ENG-BUDGET",
-    "ENG-BUDGET-RULES",
-    "ENG-RELEASE",
-    "ENG-ROADMAP",
-    "STD-CODE",
-    "STD-CONVENTIONS",
-    "WF-BUILD",
-    "WF-COMMS",
-    "WF-ENTRY",
-    "WF-FLOW",
-    "WF-MODEL",
-    "WF-ROLE",
-    "WF-RULE",
-    "WF-STATUS"
+    "WF-BUILD"
    ],
    "glob": "game/contracts/Runtime/Campus.Contracts.Runtime.csproj"
   },
@@ -865,21 +501,7 @@
   },
   {
    "docs": [
-    "ENG-ARCH",
-    "ENG-BUDGET",
-    "ENG-BUDGET-RULES",
-    "ENG-RELEASE",
-    "ENG-ROADMAP",
-    "STD-CODE",
-    "STD-CONVENTIONS",
-    "WF-BUILD",
-    "WF-COMMS",
-    "WF-ENTRY",
-    "WF-FLOW",
-    "WF-MODEL",
-    "WF-ROLE",
-    "WF-RULE",
-    "WF-STATUS"
+    "ENG-ARCH"
    ],
    "glob": "game/data/build-code-fingerprints.json"
   },
@@ -909,21 +531,7 @@
   },
   {
    "docs": [
-    "ENG-ARCH",
-    "ENG-BUDGET",
-    "ENG-BUDGET-RULES",
-    "ENG-RELEASE",
-    "ENG-ROADMAP",
-    "STD-CODE",
-    "STD-CONVENTIONS",
-    "WF-BUILD",
-    "WF-COMMS",
-    "WF-ENTRY",
-    "WF-FLOW",
-    "WF-MODEL",
-    "WF-ROLE",
-    "WF-RULE",
-    "WF-STATUS"
+    "STD-CONVENTIONS"
    ],
    "glob": "game/data/maps/*/interiors.json"
   },
@@ -1166,21 +774,8 @@
   },
   {
    "docs": [
-    "ENG-ARCH",
-    "ENG-BUDGET",
-    "ENG-BUDGET-RULES",
-    "ENG-RELEASE",
     "ENG-ROADMAP",
-    "STD-CODE",
-    "STD-CONVENTIONS",
-    "WF-BUILD",
-    "WF-COMMS",
-    "WF-ENTRY",
-    "WF-FLOW",
-    "WF-MODEL",
-    "WF-ROLE",
-    "WF-RULE",
-    "WF-STATUS"
+    "STD-CONVENTIONS"
    ],
    "glob": "game/data/rulesets/**"
   },
@@ -1206,21 +801,9 @@
   },
   {
    "docs": [
-    "ENG-ARCH",
-    "ENG-BUDGET",
     "ENG-BUDGET-RULES",
     "ENG-RELEASE",
-    "ENG-ROADMAP",
-    "STD-CODE",
-    "STD-CONVENTIONS",
-    "WF-BUILD",
-    "WF-COMMS",
-    "WF-ENTRY",
-    "WF-FLOW",
-    "WF-MODEL",
-    "WF-ROLE",
-    "WF-RULE",
-    "WF-STATUS"
+    "WF-BUILD"
    ],
    "glob": "game/export_presets.cfg"
   },
@@ -1242,41 +825,14 @@
   },
   {
    "docs": [
-    "ENG-ARCH",
-    "ENG-BUDGET",
-    "ENG-BUDGET-RULES",
-    "ENG-RELEASE",
-    "ENG-ROADMAP",
-    "STD-CODE",
-    "STD-CONVENTIONS",
-    "WF-BUILD",
-    "WF-COMMS",
-    "WF-ENTRY",
-    "WF-FLOW",
-    "WF-MODEL",
-    "WF-ROLE",
-    "WF-RULE",
-    "WF-STATUS"
+    "ENG-ARCH"
    ],
    "glob": "game/gen/.gdignore"
   },
   {
    "docs": [
     "ENG-ARCH",
-    "ENG-BUDGET",
-    "ENG-BUDGET-RULES",
-    "ENG-RELEASE",
-    "ENG-ROADMAP",
-    "STD-CODE",
-    "STD-CONVENTIONS",
-    "WF-BUILD",
-    "WF-COMMS",
-    "WF-ENTRY",
-    "WF-FLOW",
-    "WF-MODEL",
-    "WF-ROLE",
-    "WF-RULE",
-    "WF-STATUS"
+    "WF-BUILD"
    ],
    "glob": "game/gen/Campus.Gen.csproj"
   },
@@ -1289,20 +845,7 @@
   {
    "docs": [
     "ENG-ARCH",
-    "ENG-BUDGET",
-    "ENG-BUDGET-RULES",
-    "ENG-RELEASE",
-    "ENG-ROADMAP",
-    "STD-CODE",
-    "STD-CONVENTIONS",
-    "WF-BUILD",
-    "WF-COMMS",
-    "WF-ENTRY",
-    "WF-FLOW",
-    "WF-MODEL",
-    "WF-ROLE",
-    "WF-RULE",
-    "WF-STATUS"
+    "ENG-BUDGET-RULES"
    ],
    "glob": "game/gen/bakeinput/assembly/**"
   },
@@ -1348,19 +891,7 @@
    "docs": [
     "ENG-ARCH",
     "ENG-BUDGET",
-    "ENG-BUDGET-RULES",
-    "ENG-RELEASE",
-    "ENG-ROADMAP",
-    "STD-CODE",
-    "STD-CONVENTIONS",
-    "WF-BUILD",
-    "WF-COMMS",
-    "WF-ENTRY",
-    "WF-FLOW",
-    "WF-MODEL",
-    "WF-ROLE",
-    "WF-RULE",
-    "WF-STATUS"
+    "ENG-BUDGET-RULES"
    ],
    "glob": "game/gen/geometry/**"
   },
@@ -1387,20 +918,7 @@
   {
    "docs": [
     "ENG-ARCH",
-    "ENG-BUDGET",
-    "ENG-BUDGET-RULES",
-    "ENG-RELEASE",
-    "ENG-ROADMAP",
-    "STD-CODE",
-    "STD-CONVENTIONS",
-    "WF-BUILD",
-    "WF-COMMS",
-    "WF-ENTRY",
-    "WF-FLOW",
-    "WF-MODEL",
-    "WF-ROLE",
-    "WF-RULE",
-    "WF-STATUS"
+    "WF-BUILD"
    ],
    "glob": "game/gen/maps/qingshuihe/Campus.Gen.Maps.Qingshuihe.csproj"
   },
@@ -1554,21 +1072,7 @@
   },
   {
    "docs": [
-    "ENG-ARCH",
-    "ENG-BUDGET",
-    "ENG-BUDGET-RULES",
-    "ENG-RELEASE",
-    "ENG-ROADMAP",
-    "STD-CODE",
-    "STD-CONVENTIONS",
-    "WF-BUILD",
-    "WF-COMMS",
-    "WF-ENTRY",
-    "WF-FLOW",
-    "WF-MODEL",
-    "WF-ROLE",
-    "WF-RULE",
-    "WF-STATUS"
+    "ENG-ARCH"
    ],
    "glob": "game/gen/sites/**"
   },
@@ -1687,19 +1191,7 @@
    "docs": [
     "ENG-ARCH",
     "ENG-BUDGET",
-    "ENG-BUDGET-RULES",
-    "ENG-RELEASE",
-    "ENG-ROADMAP",
-    "STD-CODE",
-    "STD-CONVENTIONS",
-    "WF-BUILD",
-    "WF-COMMS",
-    "WF-ENTRY",
-    "WF-FLOW",
-    "WF-MODEL",
-    "WF-ROLE",
-    "WF-RULE",
-    "WF-STATUS"
+    "ENG-BUDGET-RULES"
    ],
    "glob": "game/kernel/instances/**"
   },
@@ -1739,20 +1231,8 @@
   {
    "docs": [
     "ENG-ARCH",
-    "ENG-BUDGET",
     "ENG-BUDGET-RULES",
-    "ENG-RELEASE",
-    "ENG-ROADMAP",
-    "STD-CODE",
-    "STD-CONVENTIONS",
-    "WF-BUILD",
-    "WF-COMMS",
-    "WF-ENTRY",
-    "WF-FLOW",
-    "WF-MODEL",
-    "WF-ROLE",
-    "WF-RULE",
-    "WF-STATUS"
+    "STD-CONVENTIONS"
    ],
    "glob": "game/kernel/map/data/**"
   },
@@ -1794,20 +1274,7 @@
   {
    "docs": [
     "ENG-ARCH",
-    "ENG-BUDGET",
-    "ENG-BUDGET-RULES",
-    "ENG-RELEASE",
-    "ENG-ROADMAP",
-    "STD-CODE",
-    "STD-CONVENTIONS",
-    "WF-BUILD",
-    "WF-COMMS",
-    "WF-ENTRY",
-    "WF-FLOW",
-    "WF-MODEL",
-    "WF-ROLE",
-    "WF-RULE",
-    "WF-STATUS"
+    "ENG-BUDGET-RULES"
    ],
    "glob": "game/kernel/registry/**"
   },
@@ -1823,19 +1290,7 @@
    "docs": [
     "ENG-ARCH",
     "ENG-BUDGET",
-    "ENG-BUDGET-RULES",
-    "ENG-RELEASE",
-    "ENG-ROADMAP",
-    "STD-CODE",
-    "STD-CONVENTIONS",
-    "WF-BUILD",
-    "WF-COMMS",
-    "WF-ENTRY",
-    "WF-FLOW",
-    "WF-MODEL",
-    "WF-ROLE",
-    "WF-RULE",
-    "WF-STATUS"
+    "ENG-BUDGET-RULES"
    ],
    "glob": "game/kernel/renderer/geometry/**"
   },
@@ -1843,19 +1298,7 @@
    "docs": [
     "ENG-ARCH",
     "ENG-BUDGET",
-    "ENG-BUDGET-RULES",
-    "ENG-RELEASE",
-    "ENG-ROADMAP",
-    "STD-CODE",
-    "STD-CONVENTIONS",
-    "WF-BUILD",
-    "WF-COMMS",
-    "WF-ENTRY",
-    "WF-FLOW",
-    "WF-MODEL",
-    "WF-ROLE",
-    "WF-RULE",
-    "WF-STATUS"
+    "ENG-BUDGET-RULES"
    ],
    "glob": "game/kernel/renderer/render-state/**"
   },
@@ -1923,20 +1366,7 @@
   {
    "docs": [
     "ENG-ARCH",
-    "ENG-BUDGET",
-    "ENG-BUDGET-RULES",
-    "ENG-RELEASE",
-    "ENG-ROADMAP",
-    "STD-CODE",
-    "STD-CONVENTIONS",
-    "WF-BUILD",
-    "WF-COMMS",
-    "WF-ENTRY",
-    "WF-FLOW",
-    "WF-MODEL",
-    "WF-ROLE",
-    "WF-RULE",
-    "WF-STATUS"
+    "ENG-ROADMAP"
    ],
    "glob": "game/kernel/stubs/**"
   },
@@ -1950,20 +1380,9 @@
   {
    "docs": [
     "ENG-ARCH",
-    "ENG-BUDGET",
     "ENG-BUDGET-RULES",
     "ENG-RELEASE",
-    "ENG-ROADMAP",
-    "STD-CODE",
-    "STD-CONVENTIONS",
-    "WF-BUILD",
-    "WF-COMMS",
-    "WF-ENTRY",
-    "WF-FLOW",
-    "WF-MODEL",
-    "WF-ROLE",
-    "WF-RULE",
-    "WF-STATUS"
+    "WF-BUILD"
    ],
    "glob": "game/project.godot"
   },
@@ -2511,40 +1930,14 @@
   {
    "docs": [
     "ENG-ARCH",
-    "ENG-BUDGET",
-    "ENG-BUDGET-RULES",
-    "ENG-RELEASE",
-    "ENG-ROADMAP",
-    "STD-CODE",
-    "STD-CONVENTIONS",
-    "WF-BUILD",
-    "WF-COMMS",
-    "WF-ENTRY",
-    "WF-FLOW",
-    "WF-MODEL",
-    "WF-ROLE",
-    "WF-RULE",
-    "WF-STATUS"
+    "STD-CODE"
    ],
    "glob": "game/testing/**"
   },
   {
    "docs": [
     "ENG-ARCH",
-    "ENG-BUDGET",
-    "ENG-BUDGET-RULES",
-    "ENG-RELEASE",
-    "ENG-ROADMAP",
-    "STD-CODE",
-    "STD-CONVENTIONS",
-    "WF-BUILD",
-    "WF-COMMS",
-    "WF-ENTRY",
-    "WF-FLOW",
-    "WF-MODEL",
-    "WF-ROLE",
-    "WF-RULE",
-    "WF-STATUS"
+    "WF-BUILD"
    ],
    "glob": "global.json"
   },
@@ -2582,21 +1975,9 @@
   },
   {
    "docs": [
-    "ENG-ARCH",
-    "ENG-BUDGET",
-    "ENG-BUDGET-RULES",
     "ENG-RELEASE",
-    "ENG-ROADMAP",
-    "STD-CODE",
-    "STD-CONVENTIONS",
     "WF-BUILD",
-    "WF-COMMS",
-    "WF-ENTRY",
-    "WF-FLOW",
-    "WF-MODEL",
-    "WF-ROLE",
-    "WF-RULE",
-    "WF-STATUS"
+    "WF-RULE"
    ],
    "glob": "scripts/build/**"
   },
@@ -2608,41 +1989,15 @@
   },
   {
    "docs": [
-    "ENG-ARCH",
-    "ENG-BUDGET",
-    "ENG-BUDGET-RULES",
-    "ENG-RELEASE",
-    "ENG-ROADMAP",
-    "STD-CODE",
-    "STD-CONVENTIONS",
-    "WF-BUILD",
-    "WF-COMMS",
-    "WF-ENTRY",
-    "WF-FLOW",
-    "WF-MODEL",
-    "WF-ROLE",
-    "WF-RULE",
-    "WF-STATUS"
+    "WF-RULE"
    ],
    "glob": "scripts/docs/**"
   },
   {
    "docs": [
-    "ENG-ARCH",
-    "ENG-BUDGET",
-    "ENG-BUDGET-RULES",
-    "ENG-RELEASE",
-    "ENG-ROADMAP",
-    "STD-CODE",
-    "STD-CONVENTIONS",
     "WF-BUILD",
-    "WF-COMMS",
-    "WF-ENTRY",
     "WF-FLOW",
-    "WF-MODEL",
-    "WF-ROLE",
-    "WF-RULE",
-    "WF-STATUS"
+    "WF-RULE"
    ],
    "glob": "scripts/gate.ps1"
   },
@@ -2659,40 +2014,15 @@
   {
    "docs": [
     "ENG-ARCH",
-    "ENG-BUDGET",
     "ENG-BUDGET-RULES",
-    "ENG-RELEASE",
-    "ENG-ROADMAP",
-    "STD-CODE",
-    "STD-CONVENTIONS",
-    "WF-BUILD",
-    "WF-COMMS",
-    "WF-ENTRY",
-    "WF-FLOW",
-    "WF-MODEL",
-    "WF-ROLE",
-    "WF-RULE",
-    "WF-STATUS"
+    "STD-CODE"
    ],
    "glob": "scripts/gates/arch/**"
   },
   {
    "docs": [
     "ENG-ARCH",
-    "ENG-BUDGET",
-    "ENG-BUDGET-RULES",
-    "ENG-RELEASE",
-    "ENG-ROADMAP",
-    "STD-CODE",
-    "STD-CONVENTIONS",
-    "WF-BUILD",
-    "WF-COMMS",
-    "WF-ENTRY",
-    "WF-FLOW",
-    "WF-MODEL",
-    "WF-ROLE",
-    "WF-RULE",
-    "WF-STATUS"
+    "WF-BUILD"
    ],
    "glob": "scripts/gates/arch/Campus.Arch.Tests.csproj"
   },
@@ -2728,121 +2058,39 @@
   },
   {
    "docs": [
-    "ENG-ARCH",
-    "ENG-BUDGET",
-    "ENG-BUDGET-RULES",
-    "ENG-RELEASE",
-    "ENG-ROADMAP",
-    "STD-CODE",
-    "STD-CONVENTIONS",
-    "WF-BUILD",
-    "WF-COMMS",
-    "WF-ENTRY",
     "WF-FLOW",
-    "WF-MODEL",
-    "WF-ROLE",
-    "WF-RULE",
-    "WF-STATUS"
+    "WF-RULE"
    ],
    "glob": "scripts/git-hooks/**"
   },
   {
    "docs": [
-    "ENG-ARCH",
-    "ENG-BUDGET",
-    "ENG-BUDGET-RULES",
-    "ENG-RELEASE",
-    "ENG-ROADMAP",
-    "STD-CODE",
-    "STD-CONVENTIONS",
-    "WF-BUILD",
-    "WF-COMMS",
-    "WF-ENTRY",
-    "WF-FLOW",
-    "WF-MODEL",
-    "WF-ROLE",
-    "WF-RULE",
-    "WF-STATUS"
+    "STD-CODE"
    ],
    "glob": "scripts/godot-api/**"
   },
   {
    "docs": [
     "ENG-ARCH",
-    "ENG-BUDGET",
-    "ENG-BUDGET-RULES",
-    "ENG-RELEASE",
-    "ENG-ROADMAP",
-    "STD-CODE",
-    "STD-CONVENTIONS",
-    "WF-BUILD",
-    "WF-COMMS",
-    "WF-ENTRY",
-    "WF-FLOW",
-    "WF-MODEL",
-    "WF-ROLE",
-    "WF-RULE",
-    "WF-STATUS"
+    "WF-BUILD"
    ],
    "glob": "scripts/godot-api/ApiDump/ApiDump.csproj"
   },
   {
    "docs": [
-    "ENG-ARCH",
-    "ENG-BUDGET",
-    "ENG-BUDGET-RULES",
-    "ENG-RELEASE",
-    "ENG-ROADMAP",
-    "STD-CODE",
-    "STD-CONVENTIONS",
-    "WF-BUILD",
-    "WF-COMMS",
-    "WF-ENTRY",
-    "WF-FLOW",
-    "WF-MODEL",
-    "WF-ROLE",
-    "WF-RULE",
-    "WF-STATUS"
+    "WF-RULE"
    ],
    "glob": "scripts/lib/**"
   },
   {
    "docs": [
-    "ENG-ARCH",
-    "ENG-BUDGET",
-    "ENG-BUDGET-RULES",
-    "ENG-RELEASE",
-    "ENG-ROADMAP",
-    "STD-CODE",
-    "STD-CONVENTIONS",
-    "WF-BUILD",
-    "WF-COMMS",
-    "WF-ENTRY",
-    "WF-FLOW",
-    "WF-MODEL",
-    "WF-ROLE",
-    "WF-RULE",
-    "WF-STATUS"
+    "WF-RULE"
    ],
    "glob": "scripts/requirements.*"
   },
   {
    "docs": [
-    "ENG-ARCH",
-    "ENG-BUDGET",
-    "ENG-BUDGET-RULES",
-    "ENG-RELEASE",
-    "ENG-ROADMAP",
-    "STD-CODE",
-    "STD-CONVENTIONS",
-    "WF-BUILD",
-    "WF-COMMS",
-    "WF-ENTRY",
-    "WF-FLOW",
-    "WF-MODEL",
-    "WF-ROLE",
-    "WF-RULE",
-    "WF-STATUS"
+    "WF-RULE"
    ],
    "glob": "scripts/setup/**"
   },
@@ -2858,81 +2106,28 @@
   },
   {
    "docs": [
-    "ENG-ARCH",
-    "ENG-BUDGET",
-    "ENG-BUDGET-RULES",
     "ENG-RELEASE",
-    "ENG-ROADMAP",
-    "STD-CODE",
-    "STD-CONVENTIONS",
-    "WF-BUILD",
-    "WF-COMMS",
-    "WF-ENTRY",
-    "WF-FLOW",
-    "WF-MODEL",
-    "WF-ROLE",
-    "WF-RULE",
-    "WF-STATUS"
+    "WF-BUILD"
    ],
    "glob": "third_party.json"
   },
   {
    "docs": [
     "ENG-ARCH",
-    "ENG-BUDGET",
-    "ENG-BUDGET-RULES",
-    "ENG-RELEASE",
-    "ENG-ROADMAP",
-    "STD-CODE",
-    "STD-CONVENTIONS",
-    "WF-BUILD",
-    "WF-COMMS",
-    "WF-ENTRY",
-    "WF-FLOW",
-    "WF-MODEL",
-    "WF-ROLE",
-    "WF-RULE",
-    "WF-STATUS"
+    "WF-RULE"
    ],
    "glob": "tools/**"
   },
   {
    "docs": [
-    "ENG-ARCH",
-    "ENG-BUDGET",
-    "ENG-BUDGET-RULES",
-    "ENG-RELEASE",
-    "ENG-ROADMAP",
-    "STD-CODE",
-    "STD-CONVENTIONS",
-    "WF-BUILD",
-    "WF-COMMS",
-    "WF-ENTRY",
-    "WF-FLOW",
-    "WF-MODEL",
-    "WF-ROLE",
-    "WF-RULE",
-    "WF-STATUS"
+    "ENG-RELEASE"
    ],
    "glob": "version.txt"
   },
   {
    "docs": [
-    "ENG-ARCH",
-    "ENG-BUDGET",
-    "ENG-BUDGET-RULES",
     "ENG-RELEASE",
-    "ENG-ROADMAP",
-    "STD-CODE",
-    "STD-CONVENTIONS",
-    "WF-BUILD",
-    "WF-COMMS",
-    "WF-ENTRY",
-    "WF-FLOW",
-    "WF-MODEL",
-    "WF-ROLE",
-    "WF-RULE",
-    "WF-STATUS"
+    "WF-RULE"
    ],
    "glob": "启动游戏.cmd"
   }
