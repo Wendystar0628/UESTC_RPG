@@ -193,13 +193,14 @@ GET /api/doc/search?q=词  → {ok, items: [{code, title, sec: {n, title, anchor
 
 ```
 dashboard/
-  index.html            外壳：页眉（两位指挥在不在跑、"N 份旧了"）、导航、页面容器、右下角提示条；按序加载 vendor/echarts、vendor/marked、/api/data-names.js（后端数据名单）、manifest、core、ui、palette、charts、reader
+  index.html            外壳：页眉（两位指挥在不在跑、"N 份旧了"）、导航、页面容器、右下角提示条；按序加载 vendor/echarts、vendor/marked、/api/data-names.js（后端数据名单）、manifest、core、coverage、ui、palette、charts、reader
   vendor/
     echarts.min.js      Apache ECharts；许可在同目录 echarts-LICENSE.txt、echarts-NOTICE.txt
     marked.min.js       marked（Markdown 渲染）；许可在同目录 marked-LICENSE.txt
   app/
     manifest.js         页面与筛选的清单，以及每份数据的展示信息；有哪些数据只由后端名单（§1 catalog.DATASETS）定
     core.js             运行时：推送订阅与按需加载、路由与筛选、面板注册与渲染（各种状态）、页眉与角标、写回
+    coverage.js         卡底的记账起点：时间窗起点、哪块面板写（同一页每个起点一次）、卡底文字与刷新；依赖 core.js 的 Dash.internal，在其后加载
     ui.js               格式化与小组件、抽屉、悬停框
     palette.js          色表：语义（组, 键）→ CSS 变量与中文名；签条
     charts.js           统计图（ECharts；桑基、密度条自绘）
