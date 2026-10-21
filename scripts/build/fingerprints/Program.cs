@@ -22,9 +22,15 @@ internal static class Program
         }
         catch (Exception error)
         {
-            Console.Error.WriteLine($"Code fingerprints: {error}");
-            return 1;
+            return CommandFailure(error);
         }
+    }
+
+    // The build command reports the complete failure and terminates unsuccessfully (ENG-ARCH, STD-CODE).
+    private static int CommandFailure([FailureHandler("ENG-ARCH")] Exception error)
+    {
+        Console.Error.WriteLine($"Code fingerprints: {error}");
+        return 1;
     }
 
     private static async Task Generate(Options options)

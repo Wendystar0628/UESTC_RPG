@@ -39,14 +39,13 @@ public sealed class FurniturePlantingRowTests
         AssertThat(PlantingRows.Resolve(Inputs(edited)).Roads[1].Offsets.SequenceEqual([6.5f])).OverrideFailureMessage("an edited offset is not read").IsTrue();
         var (kept, gap) = PlantingRows.Resolve(Inputs(Edit(root => root["roads"]![2]!["rows"] = new JsonArray(new JsonObject { ["offset"] = -1f }))));
         AssertThat(kept.Count == roads.Count - 1 && gap.Count == 1 && gap[0].Level == DiagnosticLevel.Warning && gap[0].Code == PlantingRows.RoadCode).OverrideFailureMessage("a road with unreadable offsets is not warned about once").IsTrue();
-        // Nothing to read, or nothing readable: no rows, with exactly one warning, and the layout still builds
+        // The optional input is missing: no rows, with exactly one warning, and the layout still builds
         // (judged on the avenue's road alone: the rows only touch the roads they are on, and the real layout is planned once elsewhere).
-        (IReadOnlyDictionary<string, ReadOnlyMemory<byte>>? Inputs, string Code)[] unreadable =
+        (IReadOnlyDictionary<string, ReadOnlyMemory<byte>>? Inputs, string Code)[] missing =
         [
             (null, PlantingRows.MissingCode), (new Dictionary<string, ReadOnlyMemory<byte>>(), PlantingRows.MissingCode),
-            (Inputs([0x7B, 0x22]), PlantingRows.UnreadableCode), (Inputs("[]"u8.ToArray()), PlantingRows.UnreadableCode),
         ];
-        foreach (var (inputs, code) in unreadable)
+        foreach (var (inputs, code) in missing)
         {
             var (none, warnings) = PlantingRows.Resolve(inputs);
             AssertThat(none.Count == 0 && warnings.Count == 1 && warnings[0].Level == DiagnosticLevel.Warning && warnings[0].Code == code).OverrideFailureMessage($"{warnings.Count} diagnostics for {code}").IsTrue();
@@ -54,6 +53,28 @@ public sealed class FurniturePlantingRowTests
             AssertThat(layout.Diagnostics.Where(d => d.Code.StartsWith("furniture.planting.", StringComparison.Ordinal)).SequenceEqual(warnings) && layout.Items.Any(i => i.Kind == FurnitureKind.StreetLamp)).OverrideFailureMessage("the layout without rows does not build with the one warning").IsTrue();
         }
         AssertThat(!RealLayout.Value.Diagnostics.Any(d => d.Code.StartsWith("furniture.planting.", StringComparison.Ordinal))).OverrideFailureMessage("the real layout warns").IsTrue();
+    }
+
+    [TestCase, TestCategory(TestReason.Regression)]
+    [TestCategory("Slow")]
+    public void MalformedPlantingInputReachesTheBuildFailureFlow()
+    {
+        foreach (var bytes in new[] { new byte[] { 0x7B, 0x22 }, "[]"u8.ToArray() })
+        {
+            var inputs = Inputs(bytes);
+            Action[] readers =
+            [
+                () => { _ = PlantingRows.Resolve(inputs); },
+                () => { _ = FurniturePlanner.Build(FurnitureTestSupport.GlobalInputs, Campus.Contracts.Tests.PaletteFixture.Catalog, OpenWorld.Value, null, inputs); }
+            ];
+            foreach (var read in readers)
+            {
+                InvalidDataException? failure = null;
+                try { read(); }
+                catch (InvalidDataException error) { failure = error; }
+                AssertThat(failure?.InnerException is JsonException).OverrideFailureMessage("Malformed planting input lost its JSON failure before reaching the build caller.").IsTrue();
+            }
+        }
     }
 
     [TestCase, TestCategory(TestReason.Contract)]
