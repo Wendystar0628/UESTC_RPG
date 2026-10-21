@@ -62,7 +62,7 @@ public sealed class CollisionCoreTests
             entry.Waypoints.Single(point => point.Id == pointId)).ToArray();
         AssertThat(route.All(point => point.Stand is not null)).OverrideFailureMessage("The G15 short route requires both authored Stand points.").IsTrue();
         var claims = source.ReadClaims(id);
-        var input = source.ReadLoadInput(entry);
+        var input = await source.ReadLoadInputAsync(entry);
         var loaded = await Task.Run(() => MapWorldLoading.LoadPrepared(new WorldModelLoaderAdapter(terrain), input, claims));
         var context = MapWorldLoading.CreateContext(entry, loaded, input.SourceInputs);
         using var bake = new BakeService(options, terrain, new GlobalBuildInputs(resources).Snapshot);

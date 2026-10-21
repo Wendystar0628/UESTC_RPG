@@ -45,7 +45,7 @@ public sealed class CpuBakeCommand : IBakeCommand
             foreach (var descriptor in maps)
             {
                 if (!catalog.TryGet(descriptor.Id, out var entry)) throw new InvalidDataException("Map catalogue entry is missing.");
-                var input = source.ReadLoadInput(entry);
+                var input = await source.ReadLoadInputAsync(entry);
                 var claims = source.ReadClaims(descriptor.Id);
                 var loaded = await Task.Run(() => MapWorldLoading.LoadPrepared(loader, input, claims));
                 var map = MapWorldLoading.CreateContext(input.Entry, loaded, input.SourceInputs);

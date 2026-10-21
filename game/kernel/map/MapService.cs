@@ -27,7 +27,7 @@ public sealed class MapService(ICameraRig camera, IMapLifetime lifetime, IWorldM
     private TaskCompletionSource? _initialization;
     private MapTransition? _active;
     private MapCatalogEntry? _target;
-    private PendingMapLoad? _load;
+    private Task<PendingMapLoad>? _load;
     private Task? _mount;
     private IDisposable? _input;
     private bool _stopped;
@@ -125,13 +125,11 @@ public sealed class MapService(ICameraRig camera, IMapLifetime lifetime, IWorldM
             case MapStage.LoadData:
                 if (_load is null)
                 {
-                    var input = _data.ReadLoadInput(_target!);
-                    var claims = _data.ReadClaims(_target!.Descriptor.Id);
-                    _load = new(input, Task.Run(() => MapWorldLoading.LoadPrepared(_loader, input, claims)));
+                    _load = LoadMap(_target!);
                 }
-                if (!_load.Work.IsCompleted) return;
-                var loaded = _load.Work.GetAwaiter().GetResult();
-                Context = MapWorldLoading.CreateContext(_load.Input.Entry, loaded, _load.Input.SourceInputs);
+                if (!_load.IsCompleted) return;
+                var loaded = _load.GetAwaiter().GetResult();
+                Context = MapWorldLoading.CreateContext(loaded.Input.Entry, loaded.World, loaded.Input.SourceInputs);
                 _load = null;
                 _data.WriteMapRect(Context.Descriptor.DataRect);
                 _active.MoveTo(MapStage.Mount);
@@ -168,7 +166,16 @@ public sealed class MapService(ICameraRig camera, IMapLifetime lifetime, IWorldM
         _initialization?.TrySetCanceled();
     }
 
-    private sealed record PendingMapLoad(MapLoadInput Input, Task<WorldModelLoadResult> Work);
+    private async Task<PendingMapLoad> LoadMap(MapCatalogEntry entry)
+    {
+        // Registry claims and input-source selection are captured before the first await.
+        var claims = _data.ReadClaims(entry.Descriptor.Id);
+        var input = await _data.ReadLoadInputAsync(entry).ConfigureAwait(false);
+        var world = await Task.Run(() => MapWorldLoading.LoadPrepared(_loader, input, claims)).ConfigureAwait(false);
+        return new(input, world);
+    }
+
+    private sealed record PendingMapLoad(MapLoadInput Input, WorldModelLoadResult World);
 
     private void RememberCurrent()
     {

@@ -10,7 +10,7 @@ using Godot;
 
 namespace Campus.Kernel.Maps;
 
-/// <summary>All resource I/O stays on the engine side; workers receive detached byte arrays.</summary>
+/// <summary>Captures engine paths on the main thread; loose map inputs are read and frozen by a worker.</summary>
 [KernelService(typeof(MapDataSource))]
 public class MapDataSource(IRequiredResources resources)
 {
@@ -32,30 +32,62 @@ public class MapDataSource(IRequiredResources resources)
         { throw new AppStartupException(AppStartupFailureCodes.DataInvalid, "Map catalogue data is invalid.", error); }
     }
 
-    public virtual IReadOnlyDictionary<string, ReadOnlyMemory<byte>> ReadWorldFiles(MapCatalogEntry entry) =>
-        WorldInputFiles.ReadWorldFiles(entry.Descriptor, new ResourceInputs(entry.DataRoot, resources));
+    /// <summary>
+    /// Development reads use only .NET after capturing the absolute root. Packed resources retain
+    /// engine-side byte capture; their detached descriptor parsing and freezing run on a worker.
+    /// </summary>
+    public virtual Task<MapLoadInput> ReadLoadInputAsync(MapCatalogEntry entry)
+    {
+        if (string.Equals(BuildInfo.Kind, "dev", StringComparison.Ordinal))
+        {
+            var root = ProjectSettings.GlobalizePath(entry.DataRoot);
+            return Task.Run(() => ReadLooseLoadInput(entry, root));
+        }
+        try
+        {
+            // A res:// resource in a PCK is not an OS file. Do not globalize it into loose-file IO.
+            var files = WorldInputFiles.ReadLoadInput(entry.Descriptor, new ResourceInputs(entry.DataRoot, resources));
+            var version = "release/" + BuildInfo.Version;
+            return Task.Run(() => AssembleLoadInput(entry, files, version));
+        }
+        catch (Exception error) when (error is InvalidDataException or JsonException)
+        { throw new AppStartupException(AppStartupFailureCodes.DataInvalid, "Map input data is invalid.", error); }
+    }
 
-    /// <summary>Capture authored map resources on the engine thread before worker loading.</summary>
-    public virtual MapLoadInput ReadLoadInput(MapCatalogEntry entry)
+    private static MapLoadInput ReadLooseLoadInput(MapCatalogEntry entry, string root)
     {
         try
         {
-            var files = WorldInputFiles.ReadLoadInput(entry.Descriptor, new ResourceInputs(entry.DataRoot, resources), ReadWorldFiles(entry));
-            var input = new MapLoadInput(entry, BuildInputSnapshot.Freeze(files,
-                CaptureInputVersion(files.Keys.Select(key => entry.DataRoot + key))));
+            var source = new LooseInputs(entry.DataRoot, root);
+            var files = WorldInputFiles.ReadLoadInput(entry.Descriptor, source);
+            var version = CaptureInputVersion(files.Keys.Select(key => entry.DataRoot + key), source.Globalize);
+            return AssembleLoadInput(entry, files, version);
+        }
+        catch (Exception error) when (error is InvalidDataException or JsonException)
+        { throw new AppStartupException(AppStartupFailureCodes.DataInvalid, "Map input data is invalid.", error); }
+    }
+
+    private static MapLoadInput AssembleLoadInput(MapCatalogEntry entry,
+        IReadOnlyDictionary<string, ReadOnlyMemory<byte>> files, string version)
+    {
+        try
+        {
+            var input = new MapLoadInput(entry, BuildInputSnapshot.Freeze(files, version));
             return input with { Entry = MapCatalog.ReadEntry(entry, input.Files) };
         }
         catch (Exception error) when (error is InvalidDataException or JsonException)
         { throw new AppStartupException(AppStartupFailureCodes.DataInvalid, "Map input data is invalid.", error); }
     }
 
-    // Capture file revisions once at the IO boundary, never on a tile worker.
-    internal static string CaptureInputVersion(IEnumerable<string> paths)
+    // Capture revisions once at the IO boundary. Only global asset capture resolves Godot paths here.
+    internal static string CaptureInputVersion(IEnumerable<string> paths) => CaptureInputVersion(paths, ProjectSettings.GlobalizePath);
+
+    private static string CaptureInputVersion(IEnumerable<string> paths, Func<string, string> globalize)
     {
         if (!string.Equals(BuildInfo.Kind, "dev", StringComparison.Ordinal)) return "release/" + BuildInfo.Version;
         return "dev\n" + string.Join("\n", paths.Order(StringComparer.Ordinal).Select(path =>
         {
-            var file = new FileInfo(ProjectSettings.GlobalizePath(path));
+            var file = new FileInfo(globalize(path));
             return path + "|" + file.Length.ToString(System.Globalization.CultureInfo.InvariantCulture) + "|" +
                 file.LastWriteTimeUtc.Ticks.ToString(System.Globalization.CultureInfo.InvariantCulture);
         }));
@@ -68,6 +100,48 @@ public class MapDataSource(IRequiredResources resources)
         new Godot.Vector4(rect.Min.X, rect.Min.Y, 1f / (rect.Max.X - rect.Min.X), 1f / (rect.Max.Y - rect.Min.Y)));
 
     public virtual void ReportError(string context, Exception error) => DiagnosticLog.Error(context, error);
+
+    private sealed class LooseInputs(string resourceRoot, string root) : IWorldInputSource
+    {
+        // Match DirAccess's default directory selection; hidden authoring files are not map inputs.
+        private static readonly EnumerationOptions VisibleEntries = new()
+        { AttributesToSkip = FileAttributes.Hidden, IgnoreInaccessible = false };
+
+        public string Globalize(string resourcePath) => Path.Combine(root,
+            resourcePath[resourceRoot.Length..].Replace('/', Path.DirectorySeparatorChar));
+
+        public ReadOnlyMemory<byte>? Read(string relativePath)
+        {
+            var resourcePath = resourceRoot + relativePath;
+            var path = Globalize(resourcePath);
+            if (!File.Exists(path)) return null;
+            try
+            {
+                var bytes = File.ReadAllBytes(path);
+                if (bytes.Length == 0) throw new InvalidDataException($"Required resource is empty: {resourcePath}.");
+                return bytes;
+            }
+            catch (Exception error)
+            {
+                throw new AppStartupException(AppStartupFailureCodes.Installation,
+                    $"Required installation resource could not be read: {resourcePath}.", error);
+            }
+        }
+
+        public IEnumerable<string> Files(string relativeDirectory)
+        {
+            var path = Globalize(resourceRoot + relativeDirectory);
+            return Directory.Exists(path) ? Directory.EnumerateFiles(path, "*", VisibleEntries)
+                .Select(file => Path.GetFileName(file)!) : [];
+        }
+
+        public IEnumerable<string> Directories(string relativeDirectory)
+        {
+            var path = Globalize(resourceRoot + relativeDirectory);
+            return Directory.Exists(path) ? Directory.EnumerateDirectories(path, "*", VisibleEntries)
+                .Select(directory => Path.GetFileName(directory)!) : [];
+        }
+    }
 
     private sealed class ResourceInputs(string root, IRequiredResources resources) : IWorldInputSource
     {

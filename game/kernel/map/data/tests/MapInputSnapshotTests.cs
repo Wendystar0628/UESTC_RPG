@@ -15,11 +15,12 @@ public sealed class MapInputSnapshotTests
     [TestCase]
     [TestCategory(TestReason.Contract)]
     [RequireGodotRuntime]
-    public void ProductionAndDiskCaptureAgreeWhenOptionalMapResourcesAreAbsent()
+    public async Task ProductionAndDiskCaptureAgreeWhenOptionalMapResourcesAreAbsent()
     {
         var entry = RealMapFixture.Entry();
         var expected = RealMapFixture.ReadFiles();
-        var actual = new MapDataSource(new Campus.Kernel.Boot.RequiredResources()).ReadLoadInput(entry).Files;
+        var input = await new MapDataSource(new Campus.Kernel.Boot.RequiredResources()).ReadLoadInputAsync(entry);
+        var actual = input.Files;
         AssertThat(actual.Keys.Order(StringComparer.Ordinal).SequenceEqual(expected.Keys.Order(StringComparer.Ordinal))).IsTrue();
         foreach (var (name, bytes) in expected)
             AssertThat(actual[name].Span.SequenceEqual(bytes.Span)).IsTrue();

@@ -220,19 +220,17 @@ public sealed class MapServiceTests
         public void SetVersion(MapId map, int version) => _versions[map] = version;
         public int ReadCount(MapId map) => _reads.GetValueOrDefault(map);
         public override Task<MapCatalog> ReadCatalog() => Task.FromResult(catalog);
-        public override IReadOnlyDictionary<string, ReadOnlyMemory<byte>> ReadWorldFiles(MapCatalogEntry entry) =>
-            new Dictionary<string, ReadOnlyMemory<byte>>(StringComparer.Ordinal)
+        public override Task<MapLoadInput> ReadLoadInputAsync(MapCatalogEntry entry)
+        {
+            _reads[entry.Descriptor.Id] = ReadCount(entry.Descriptor.Id) + 1;
+            var files = new Dictionary<string, ReadOnlyMemory<byte>>(StringComparer.Ordinal)
             {
                 ["map.json"] = JsonSerializer.SerializeToUtf8Bytes(new { id = entry.Descriptor.Id.Value }),
                 ["world/geo.json"] = JsonSerializer.SerializeToUtf8Bytes(new { revision = _versions.GetValueOrDefault(entry.Descriptor.Id, 1) })
             };
-        public override MapLoadInput ReadLoadInput(MapCatalogEntry entry)
-        {
-            _reads[entry.Descriptor.Id] = ReadCount(entry.Descriptor.Id) + 1;
-            var files = ReadWorldFiles(entry);
             var input = new MapLoadInput(entry, BuildInputSnapshot.Freeze(files, "fixture/" + Inputs.Count));
             Inputs.Add(input);
-            return input;
+            return Task.FromResult(input);
         }
         public override MapClaimSnapshot? ReadClaims(MapId map) => null;
         public override void WriteMapRect(MapRect rect) => RectWrites++;

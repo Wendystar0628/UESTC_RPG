@@ -189,18 +189,16 @@ public partial class MapRuntime : Node, IMapRuntime, IMapLifetime
 
     private async Task PrepareMap(IMapContext context, long generation)
     {
+        Task? preparation = null;
         try
         {
-            // Snapshot by reference before callbacks; producers prepare first, then consumers see one complete map.
+            // Keep the participant chain in registry order: map-data consumers may depend on earlier producers.
             var receivers = _receivers = _owner!.RuntimeInstances<object>(context.Descriptor.Id).ToArray();
-            foreach (var participant in receivers.OfType<IMapDataParticipant>())
-            {
-                await participant.Prepare(context);
-                if (generation != _mapGeneration) return;
-            }
-            // Bake participants have prepared this map's build-time combination catalogue.
-            // Submit it once while the caller's frontispiece/loading screen owns coverage.
-            await _pipelines!.PrepareAsync(_exit.Token);
+            var participants = PrepareParticipants(context, generation, receivers);
+            // Pipelines read the global shipped combination catalogue, independently of this map's bake metadata.
+            // Start both on the engine thread and retain their combined lifetime through shutdown.
+            preparation = Task.WhenAll(participants, PreparePipelines());
+            await preparation;
             if (generation != _mapGeneration) return;
             foreach (var aware in receivers.OfType<IMapAware>())
             {
@@ -209,14 +207,29 @@ public partial class MapRuntime : Node, IMapRuntime, IMapLifetime
             _contentReadiness = ViewContentReadiness.Capture(GetParent());
             _mountPrepared = true;
         }
-        catch (OperationCanceledException) when (_exit.IsCancellationRequested) { }
+        catch (OperationCanceledException) when (_exit.IsCancellationRequested && preparation?.IsFaulted != true) { }
         catch (Exception error)
         {
-            FailArrival(ReportFailure(error));
-            // The private preparation task retains its original cause for the awaited cleanup drain.
+            // Await exposes only one cause; the combined task retains every independently failed branch.
+            var failure = Campus.Kernel.Diagnostics.RetainedFailure.Append(preparation?.Exception, error);
+            FailArrival(ReportFailure(failure));
+            if (!ReferenceEquals(failure, error))
+                System.Runtime.ExceptionServices.ExceptionDispatchInfo.Capture(failure).Throw();
             throw;
         }
     }
+
+    private async Task PrepareParticipants(IMapContext context, long generation, object[] receivers)
+    {
+        foreach (var participant in receivers.OfType<IMapDataParticipant>())
+        {
+            await participant.Prepare(context);
+            if (generation != _mapGeneration) return;
+        }
+    }
+
+    // Capture a synchronous implementation failure as a task so its sibling is still awaited.
+    private async Task PreparePipelines() => await _pipelines!.PrepareAsync(_exit.Token);
 
     public IMapArrival Arrive(Pose destination, ViewMode mode, NavSpace? space = null, System.Numerics.Vector3? collisionFeet = null)
     {
