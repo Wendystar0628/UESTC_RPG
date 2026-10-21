@@ -20,6 +20,8 @@ public sealed class BakeWindowTests
     private static readonly FeatureId Feature = new("fixture:facade");
     private const string Owner = "fixture.facade-owner";
 
+    private static GroundCoverData GroundCover() => new(new(new(Vector2.Zero, Vector2.One), 1, 1, 1f), new byte[4], new byte[4]);
+
     [TestCase]
     [TestCategory(TestReason.Contract)]
     public void MissingLayoutsRejectEveryInputOrder()
@@ -105,7 +107,7 @@ public sealed class BakeWindowTests
         if (!ReferenceEquals(BakeWindowPreparation.Prepare(empty, new Dictionary<string, ContentModuleInput>()).Snapshot, empty.WindowNumbering))
             throw new InvalidOperationException("A windowless map lost its explicit empty allocation.");
         var lighting = new LightInventoryDocument(empty.Map.Id, [], [], [], EmptyNightlight()) { WindowNumbering = empty.WindowNumbering };
-        var resident = new BakeResidentData(new(lighting, new(empty.Map.Id, [])), new([], []), [], [],
+        var resident = new BakeResidentData(new(lighting, new(empty.Map.Id, []), GroundCover()), new([], []), [], [],
             new(new Dictionary<string, IReadOnlyList<TileKey>>(), []), []);
         BakeMapMetadataBuilder.ValidateResident(resident, empty.Map.Id, new Dictionary<string, ContentModuleInput>(), []);
         AssertThrown(() => BakeMapMetadataBuilder.ValidateResident(resident with { Metadata = resident.Metadata with { Lighting = lighting with { WindowNumbering = null } } },
@@ -201,9 +203,10 @@ public sealed class BakeWindowTests
         var lighting = new LightInventoryDocument(context.Map.Id, [], [], [], EmptyNightlight()) { WindowNumbering = loaded.Windows.Snapshot };
         // Metadata still cannot enumerate cells; the explicit cold-resident directory phase can.
         source.PreparingDirectory = provider.PreparingDirectory = true;
-        map.Directory.Prepare(new(lighting, new(context.Map.Id, [])));
+        var groundCover = GroundCover();
+        map.Directory.Prepare(new(lighting, new(context.Map.Id, []), groundCover));
         source.PreparingDirectory = provider.PreparingDirectory = false;
-        map.Content.CompletePreparation(new(lighting, new(context.Map.Id, [])));
+        map.Content.CompletePreparation(new(lighting, new(context.Map.Id, []), groundCover));
         map.Directory.PublishDirectory();
         var a = map.Content.GetPreparedContext(mapContext, "source");
         var b = map.Content.GetPreparedContext(mapContext, "provider");
@@ -324,7 +327,7 @@ public sealed class BakeWindowTests
             context.GlobalInputs, context.GroundMaskContributors, new PartLodCatalog([]), context.Catalog, null, null);
         var lighting = new LightInventoryDocument(context.Map.Id, [], [], [], EmptyNightlight())
             { WindowNumbering = map.Data.Value.Windows.Snapshot };
-        var metadata = new BakeMapMetadata(lighting, new(context.Map.Id, []));
+        var metadata = new BakeMapMetadata(lighting, new(context.Map.Id, []), GroundCover());
         map.Directory.Prepare(metadata);
         map.Content.CompletePreparation(metadata);
         map.Directory.PublishDirectory();

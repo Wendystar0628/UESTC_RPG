@@ -112,10 +112,21 @@ internal sealed class BakeContentSource
 
     internal BuildContext GetPreparedContext(IMapContext context, string moduleId)
     {
+        RequirePrepared(context);
+        return _preparedContexts!.TryGetValue(moduleId, out var prepared) ? prepared :
+            throw new InvalidOperationException($"No prepared content module '{moduleId}' in map {context.Descriptor.Id.Value}.");
+    }
+
+    internal GroundCoverData GetPreparedGroundCover(IMapContext context)
+    {
+        RequirePrepared(context);
+        return Metadata!.GroundCover;
+    }
+
+    private void RequirePrepared(IMapContext context)
+    {
         if (!_active() || context.Descriptor.Id != _context.Descriptor.Id || !ReferenceEquals(context, _context) ||
             Metadata is null || _preparedContexts is null)
             throw new InvalidOperationException("Map context identity is stale or its bake preparation is not ready.");
-        return _preparedContexts.TryGetValue(moduleId, out var prepared) ? prepared :
-            throw new InvalidOperationException($"No prepared content module '{moduleId}' in map {context.Descriptor.Id.Value}.");
     }
 }

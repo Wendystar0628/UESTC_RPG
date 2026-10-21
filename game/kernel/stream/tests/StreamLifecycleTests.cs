@@ -180,6 +180,7 @@ internal static class StreamLifecycleTestSupport
     }
     private sealed class CatalogSource(Task<PreparedBakeTiles> catalog) : IBakeContextSource
     {
+        public GroundCoverData GetPreparedGroundCover(IMapContext context) => throw new NotSupportedException();
         public Task<PreparedBakeTiles> GetPreparedModuleTilesAsync(IMapContext context) => catalog;
         public BuildContext GetPreparedContext(IMapContext context, string moduleId) => throw new NotSupportedException();
     }

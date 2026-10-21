@@ -4,7 +4,7 @@ using Campus.Contracts.Bake;
 
 namespace Campus.Kernel.Bake;
 
-/// <summary>Resident metadata assembly and interior layout records, including open-area kind metadata.</summary>
+/// <summary>Resident metadata, static ground masks and interior layout records.</summary>
 internal static class TileResidentSection
 {
     internal static void Resident(BinaryWriter writer, BakeResidentData data, BakeKey key)
@@ -27,6 +27,9 @@ internal static class TileResidentSection
                 TileBinaryFields.Json(areaWriter, area with { Footprint = [] }); TileBinaryFields.Channel<Vector2>(areaWriter, area.Footprint.ToArray(), key);
             });
         });
+        TileBinaryFields.Json(writer, data.Metadata.GroundCover.Grid);
+        TileBinaryFields.Channel<byte>(writer, data.Metadata.GroundCover.Mask1, key);
+        TileBinaryFields.Channel<byte>(writer, data.Metadata.GroundCover.Mask2, key);
     }
 
     internal static BakeResidentData Resident(BinaryReader reader, BakeKey key)
@@ -42,7 +45,11 @@ internal static class TileResidentSection
         var terrainPoints = TileBinaryFields.Channel<TileKey>(reader, key);
         var outdoor = TileBinaryFields.Records(reader, key, sourceReader => new OutdoorAccessArea(TileBinaryFields.Text(sourceReader), new(TileBinaryFields.Text(sourceReader)),
             TileBinaryFields.Records(sourceReader, key, areaReader => TileBinaryFields.Json<StoreyInfo>(areaReader) with { Footprint = TileBinaryFields.Channel<Vector2>(areaReader, key) })));
-        return new(new(lighting, entrances), windows, coverage, layouts, directory, terrainPoints) { OutdoorAccess = outdoor };
+        var grid = TileBinaryFields.Json<GroundMaskGrid>(reader);
+        var mask1 = TileBinaryFields.Channel<byte>(reader, key);
+        var mask2 = TileBinaryFields.Channel<byte>(reader, key);
+        grid.Validate(mask1.Length, mask2.Length);
+        return new(new(lighting, entrances, new(grid, mask1, mask2)), windows, coverage, layouts, directory, terrainPoints) { OutdoorAccess = outdoor };
     }
 
     private static void Layout(BinaryWriter writer, InteriorLayout value, BakeKey key)

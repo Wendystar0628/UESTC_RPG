@@ -8,7 +8,7 @@ namespace Campus.Kernel.Bake;
 public sealed record BakedEntrance(string Module, EntranceDecl Entrance);
 public sealed record EntranceInventoryDocument(MapId Map,
     IReadOnlyList<BakedEntrance> Entrances);
-internal sealed record BakeMapMetadata(LightInventoryDocument Lighting, EntranceInventoryDocument Entrances);
+internal sealed record BakeMapMetadata(LightInventoryDocument Lighting, EntranceInventoryDocument Entrances, GroundCoverData GroundCover);
 internal sealed record BakeResidentData(BakeMapMetadata Metadata, WindowMetadata Windows,
     BakeService.InteriorCoverage[] Coverage, InteriorLayout[] Layouts, PreparedBakeTiles Directory, TileKey[] TerrainPoints)
 {
@@ -96,19 +96,27 @@ internal static class BakeMapMetadataBuilder
         var entranceData = new EntranceInventoryDocument(map.Context.Descriptor.Id, Array.AsReadOnly(entrances.Values.ToArray()));
         Validate(lightData, entranceData);
         BakeWindowPreparation.ValidateMetadata(new(lightData.Facades, lightData.Windows), data.Windows.Snapshot);
-        return new(lightData, entranceData);
+        var groundSources = map.Content.Modules.OrderBy(pair => pair.Key, StringComparer.Ordinal)
+            .Select(pair => pair.Value).Where(module => module.Value is IGroundCoverSource).ToArray();
+        if (groundSources.Length != 1) throw new InvalidDataException("Resident metadata requires exactly one ground cover source.");
+        var groundSource = groundSources[0];
+        var groundCover = ((IGroundCoverSource)groundSource.Value).PrepareGroundCover(map.Content.CreateAssetContext(groundSource.CodeHash));
+        groundCover.Grid.Validate(groundCover.Mask1.Length, groundCover.Mask2.Length);
+        return new(lightData, entranceData, groundCover);
     }
     private static string Canonical<T>(T value) => JsonSerializer.Serialize(value, ContractJson.Options);
     internal static void ValidateResident(BakeResidentData resident, MapId map,
         IReadOnlyDictionary<string, ContentModuleInput> modules, IReadOnlyList<BakeService.Producer> producers)
     {
         if (resident.Metadata is null || resident.Metadata.Lighting is null || resident.Metadata.Entrances is null ||
-            resident.Metadata.Lighting.Map != map || resident.Metadata.Entrances.Map != map ||
+            resident.Metadata.Lighting.Map != map || resident.Metadata.Entrances.Map != map || resident.Metadata.GroundCover is null ||
             resident.Windows?.Facades is null || resident.Windows.Windows is null || resident.Coverage is null || resident.Layouts is null || resident.OutdoorAccess is null || resident.TerrainPoints is null ||
             resident.Directory?.Modules is null || resident.Directory.Auxiliary is null ||
             resident.Directory.Modules.Count != modules.Count || modules.Keys.Any(id => !resident.Directory.Modules.ContainsKey(id)))
             throw new InvalidDataException("Incomplete resident metadata.");
         Validate(resident.Metadata.Lighting, resident.Metadata.Entrances);
+        var groundCover = resident.Metadata.GroundCover;
+        groundCover.Grid.Validate(groundCover.Mask1.Length, groundCover.Mask2.Length);
         var snapshot = resident.Metadata.Lighting.WindowNumbering
             ?? throw new InvalidDataException("Resident metadata has no window numbering snapshot.");
         BakeWindowPreparation.ValidateMetadata(resident.Windows, snapshot);

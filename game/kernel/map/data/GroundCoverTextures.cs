@@ -1,15 +1,13 @@
-using Campus.Gen.Ground;
 using Campus.Contracts;
 using Campus.Contracts.Bake;
-using Campus.Contracts.Content;
 using Campus.Contracts.Maps;
 using Godot;
 
 namespace Campus.Kernel.Maps;
 
-/// <summary>Prepares this map's two CPU ground masks before map readiness, then uploads them on the engine thread.</summary>
+/// <summary>Retains this map's baked CPU ground masks and uploads them on the engine thread.</summary>
 [KernelNode("maps.ground-cover")]
-public sealed partial class GroundCoverTextures(IMapContentSource content, IBakeContextSource builds)
+public sealed partial class GroundCoverTextures(IBakeContextSource builds)
     : Node, IMapDataParticipant, IMapAware
 {
     private static readonly StringName MaskGlobal = ShaderGlobals.GroundMask;
@@ -17,11 +15,10 @@ public sealed partial class GroundCoverTextures(IMapContentSource content, IBake
     private GroundCoverData? _data;
     private ImageTexture? _mask, _mask2;
 
-    public async Task Prepare(IMapContext context)
+    public Task Prepare(IMapContext context)
     {
-        var source = content.GetModule<IGroundCoverSource>(context, GroundModule.Module);
-        var build = builds.GetPreparedContext(context, GroundModule.Module);
-        _data = await Task.Run(() => source.PrepareGroundCover(build));
+        _data = builds.GetPreparedGroundCover(context);
+        return Task.CompletedTask;
     }
 
     public void OnMapLoaded(IMapContext context)

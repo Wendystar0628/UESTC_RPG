@@ -13,10 +13,9 @@ internal sealed class BakeMapPreparation
     private readonly BakeOptions _options;
     private readonly BakeCacheStore _cache;
     private readonly TerrainCacheService _terrain;
-    private readonly BakeTerrainPreparation _terrainPreparation;
 
     internal BakeMapPreparation(BakeOptions options, TerrainCacheService terrain)
-    { _options = options; _terrain = terrain; _cache = terrain.Store; _terrainPreparation = new(terrain); }
+    { _options = options; _terrain = terrain; _cache = terrain.Store; }
 
     internal BakeMapMetadata Prepare(MapBuild map)
     {
@@ -27,17 +26,16 @@ internal sealed class BakeMapPreparation
             map.Content.Coverage = cached.Coverage;
             map.Directory.Prepare(cached.Metadata, cached.Directory);
             return cached.Metadata;
-    }
-    map.Content.Coverage = InspectInteriorCoverage(map);
-    var generated = BakeMapMetadataBuilder.Build(map);
-    RequireEntranceCoverage(map, generated);
-    map.Directory.Prepare(generated);
-    _terrainPreparation.PrepareResident(map);
-    var terrainPoints = _terrain.SaveResidentPoints(map.Context.World, data.ResidentStamp);
-    _terrain.WriteProduct(new(map.Context.Descriptor.Id, "resident", "meta"), data.ResidentStamp,
-        new BakeResidentData(generated, data.Windows.Metadata, map.Content.Coverage.ToArray(), map.Content.Layouts.Values.ToArray(),
-            map.Directory.PreparedTiles, terrainPoints) { OutdoorAccess = data.OutdoorAccess });
-    return generated;
+        }
+        map.Content.Coverage = InspectInteriorCoverage(map);
+        var generated = BakeMapMetadataBuilder.Build(map);
+        RequireEntranceCoverage(map, generated);
+        map.Directory.Prepare(generated);
+        var terrainPoints = _terrain.SaveResidentPoints(map.Context.World, data.ResidentStamp);
+        _terrain.WriteProduct(new(map.Context.Descriptor.Id, "resident", "meta"), data.ResidentStamp,
+            new BakeResidentData(generated, data.Windows.Metadata, map.Content.Coverage.ToArray(), map.Content.Layouts.Values.ToArray(),
+                map.Directory.PreparedTiles, terrainPoints) { OutdoorAccess = data.OutdoorAccess });
+        return generated;
     }
 
     internal LoadedMap Load(IMapContext context, uint seed, PaletteCatalog catalog, IReadOnlyDictionary<string, Interior> interiors,

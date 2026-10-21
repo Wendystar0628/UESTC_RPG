@@ -81,6 +81,17 @@ public sealed class BakeService : IBakeService, IBakeContextSource, IMapContentS
         }
     }
 
+    public GroundCoverData GetPreparedGroundCover(IMapContext context)
+    {
+        ArgumentNullException.ThrowIfNull(context);
+        lock (_sync)
+        {
+            if (!_contexts.TryGetValue(context.Descriptor.Id, out var map))
+                throw new InvalidOperationException("The requested map has no prepared bake context.");
+            return map.Content.GetPreparedGroundCover(context);
+        }
+    }
+
     public IBakeHandle Ensure(BakeKey key, BakePriority priority)
     {
         MapBuild? map;

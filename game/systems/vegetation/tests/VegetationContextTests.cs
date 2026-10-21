@@ -115,6 +115,7 @@ public sealed class VegetationContextTests
 
     private sealed class FailingSource(Exception failure) : IBakeContextSource
     {
+        public GroundCoverData GetPreparedGroundCover(IMapContext context) => throw failure;
         public Task<PreparedBakeTiles> GetPreparedModuleTilesAsync(IMapContext context) => throw failure;
         public int Calls { get; private set; }
         public BuildContext GetPreparedContext(IMapContext context, string moduleId)
@@ -126,6 +127,8 @@ public sealed class VegetationContextTests
 
     private sealed class PreparedSource(BuildContext prepared) : IBakeContextSource
     {
+        public GroundCoverData GetPreparedGroundCover(IMapContext context) =>
+            throw new InvalidOperationException("Vegetation context resolution must not request ground cover.");
         public Task<PreparedBakeTiles> GetPreparedModuleTilesAsync(IMapContext context) =>
             throw new InvalidOperationException("Vegetation context resolution must not enumerate module tiles.");
         public IMapContext? Context { get; private set; }

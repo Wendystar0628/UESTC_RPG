@@ -155,11 +155,11 @@ public static class TileBundleCodec
     }
 
     private static void CacheHeader(BinaryWriter writer, BakeKey key)
-    { writer.Write(0x55504342); writer.Write(1); TileBinaryFields.Key(writer, key); }
+    { writer.Write(0x55504342); writer.Write(2); TileBinaryFields.Key(writer, key); }
 
     private static void CacheHeader(BinaryReader reader, BakeKey key)
     {
-        if (reader.ReadInt32() != 0x55504342 || reader.ReadInt32() != 1 || TileBinaryFields.Key(reader) != key)
+        if (reader.ReadInt32() != 0x55504342 || reader.ReadInt32() != 2 || TileBinaryFields.Key(reader) != key)
             throw new InvalidDataException("CPU cache header/key mismatch.");
     }
 

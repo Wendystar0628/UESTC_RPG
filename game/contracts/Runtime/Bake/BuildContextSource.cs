@@ -16,6 +16,13 @@ public interface IBakeContextSource
     BuildContext GetPreparedContext(IMapContext context, string moduleId);
 
     /// <summary>
+    /// Returns this exact prepared map's baked static ground potentials, shared with the texture upload owner.
+    /// Performs no IO or generation; callers retain these CPU bytes read-only until map unload.
+    /// Unprepared, stale and unloaded map contexts fail explicitly. Seasonal weights remain runtime state.
+    /// </summary>
+    GroundCoverData GetPreparedGroundCover(IMapContext context);
+
+    /// <summary>
     /// Returns the current prepared map's single immutable module and auxiliary tile directory.
     /// Construction runs once on a worker and is shared by streaming and collision dependencies.
     /// Invalid or stale map contexts fail at entry; callers reject late results with their map generation.
