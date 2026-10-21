@@ -6,48 +6,73 @@
     <PackageReference Include="gdUnit4.api" PrivateAssets="all" Condition="'$(Configuration)' == 'Debug'" />
     <Compile Remove="contracts/**/*.cs;gen/**/*.cs;testing/**/*.cs;**/tests/**/*.cs" />
     <ProjectReference Include="contracts/Campus.Contracts.csproj;contracts/Runtime/Campus.Contracts.Runtime.csproj;gen/Campus.Gen.csproj;gen/maps/*/*.csproj" />
+    <!-- Let the normal restore/build graph prepare the existing tool without referencing its assembly. -->
+    <ProjectReference Include="../scripts/build/fingerprints/Campus.CodeFingerprints.csproj"
+                      ReferenceOutputAssembly="false" Private="false" OutputItemType="_CampusCodeFingerprintToolTargetPath"
+                      GlobalPropertiesToRemove="TargetFramework;RuntimeIdentifier;SelfContained;TargetPath" />
     <AdditionalFiles Include="../scripts/gates/arch/BannedSymbols.Common.txt" />
-    <!-- The existing generators declare their source inputs and outputs here once. -->
     <CampusGeneratedCompile Include="BuildInfo.g.cs" Generator="BuildInformation" OutputDirectoryProperty="IntermediateOutputPath" />
     <CampusGeneratedCompile Include="gdunit4_testadapter_v5/GdUnit4TestRunnerScene.cs" Generator="TestRunner" Condition="'$(Configuration)' == 'Debug'" />
     <CampusGeneratedFile Include="style/shaders/style_consts.gdshaderinc;style/outline/fog.glslinc" />
-    <CampusBuildInput Include="../global.json;../version.txt;../docs/ROUTES.json;../scripts/gates/shader-whitelist.json;../scripts/lib/common.ps1;../scripts/lib/ProcessTree.cs;../scripts/build/build-info.ps1;../scripts/build/generate-style-shaders.py;../scripts/setup/install-test-runner.ps1;project.godot;style/palette/core.json;addons/build_import/plugin.cfg;addons/build_import/plugin.gd;style/**/*.glsl;style/**/*.glslinc;style/**/*.gdshaderinc"
-                      Exclude="@(CampusGeneratedFile)" />
+    <_CampusStyleShaderInput Include="../scripts/build/generate-style-shaders.py;style/palette/core.json;style/shaders/fog.gdshaderinc;
+      contracts/Materials/PaletteEncoding.cs;contracts/Geometry/GeometryBundle.cs;contracts/Materials/Style.cs;contracts/Materials/WetSurface.cs;
+      contracts/Determinism/IntegerNoise.cs;contracts/Lighting/LightingContracts.cs;contracts/Lighting/WindowCardEncoding.cs;
+      systems/nightlight/Schedule/ScheduleMath.cs;systems/nightlight/Lamps/LampTable.cs;systems/nightlight/Glow/GlowSets.cs;
+      style/palette/keys/ColorScriptDerive.cs;style/palette/keys/ColorScriptCurves.cs;style/shaders/MatTable.cs;style/shaders/cards/WindowCardKinds.cs;
+      systems/vegetation/VegFade.cs;gen/vegetation/Understorey.cs" />
   </ItemGroup>
   <ItemGroup Condition="'$(Configuration)' != 'Debug'">
     <Compile Remove="gdunit4_testadapter_v*/**/*.cs" />
   </ItemGroup>
   <PropertyGroup>
     <_CampusGdUnitApiPackage>@(PackageReference-&gt;WithMetadataValue('Identity', 'gdUnit4.api'))</_CampusGdUnitApiPackage>
+    <_CampusGdUnitRunnerSource>$([MSBuild]::NormalizePath('$(MSBuildProjectDirectory)', 'gdunit4_testadapter_v5/GdUnit4TestRunnerScene.cs'))</_CampusGdUnitRunnerSource>
+    <_CampusCodeFingerprintTool>$([MSBuild]::NormalizePath('$(MSBuildProjectDirectory)', '../scripts/build/fingerprints/Campus.CodeFingerprints.csproj'))</_CampusCodeFingerprintTool>
+    <_CampusPublishedCodeFingerprintManifest>$(MSBuildProjectDirectory)/data/build-code-fingerprints.json</_CampusPublishedCodeFingerprintManifest>
   </PropertyGroup>
-  <Target Name="EnsureGdUnitTestRunner" BeforeTargets="CoreCompile"
-          Condition="'$(Configuration)' == 'Debug' And '$(DesignTimeBuild)' != 'true' And '$(_CampusGdUnitApiPackage)' != ''">
+  <Target Name="EnsureGdUnitTestRunner"
+          Condition="'$(Configuration)' == 'Debug' And '$(DesignTimeBuild)' != 'true' And '$(_CampusGdUnitApiPackage)' != ''"
+          Inputs="$(MSBuildAllProjects);$(ProjectAssetsFile);$(MSBuildProjectDirectory)/../scripts/setup/install-test-runner.ps1"
+          Outputs="$(_CampusGdUnitRunnerSource)">
     <Exec Command="powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File &quot;$(MSBuildProjectDirectory)/../scripts/setup/install-test-runner.ps1&quot; -Root &quot;$(MSBuildProjectDirectory)/..&quot;" />
-    <PropertyGroup>
-      <_CampusGdUnitRunnerSource>@(CampusGeneratedCompile-&gt;WithMetadataValue('Generator', 'TestRunner')-&gt;'%(FullPath)')</_CampusGdUnitRunnerSource>
-    </PropertyGroup>
+    <Touch Files="$(_CampusGdUnitRunnerSource)" />
+  </Target>
+  <Target Name="IncludeGdUnitTestRunner" BeforeTargets="CoreCompile" DependsOnTargets="EnsureGdUnitTestRunner"
+          Condition="'$(Configuration)' == 'Debug' And '$(_CampusGdUnitApiPackage)' != ''">
     <ItemGroup>
       <Compile Remove="@(Compile)" Condition="'%(Compile.FullPath)' == '$(_CampusGdUnitRunnerSource)'" />
       <Compile Include="$(_CampusGdUnitRunnerSource)" Condition="Exists('$(_CampusGdUnitRunnerSource)')" />
     </ItemGroup>
   </Target>
-  <Target Name="GenerateStyleShaders" BeforeTargets="PrepareForBuild" Condition="'$(DesignTimeBuild)' != 'true'">
+  <Target Name="GenerateStyleShaders" BeforeTargets="PrepareForBuild" Condition="'$(DesignTimeBuild)' != 'true'"
+          Inputs="$(MSBuildAllProjects);@(_CampusStyleShaderInput)" Outputs="@(CampusGeneratedFile)">
     <Exec Command="python -X utf8 &quot;$(MSBuildProjectDirectory)/../scripts/build/generate-style-shaders.py&quot; --root &quot;$(MSBuildProjectDirectory)/..&quot;" />
+    <Touch Files="@(CampusGeneratedFile)" />
     <ItemGroup><FileWrites Include="@(CampusGeneratedFile-&gt;'%(FullPath)')" /></ItemGroup>
   </Target>
-  <Target Name="GenerateBuildInformation" BeforeTargets="CoreCompile">
+  <Target Name="PrepareCampusBuildInformation" DependsOnTargets="GetCampusCodeFingerprintSources">
     <PropertyGroup>
-      <_CampusBuildInformationSource>$(IntermediateOutputPath)@(CampusGeneratedCompile-&gt;WithMetadataValue('Generator', 'BuildInformation'))</_CampusBuildInformationSource>
+      <_CampusBuildInformationSource>$([MSBuild]::NormalizePath('$(MSBuildProjectDirectory)', '$(IntermediateOutputPath)', 'BuildInfo.g.cs'))</_CampusBuildInformationSource>
+      <_CampusBuildCommitFile>$(MSBuildProjectDirectory)/data/build-commit.txt</_CampusBuildCommitFile>
     </PropertyGroup>
-    <Exec Condition="'$(DesignTimeBuild)' != 'true'" Command="powershell -NoProfile -ExecutionPolicy Bypass -File &quot;$(MSBuildProjectDirectory)/../scripts/build/build-info.ps1&quot; -Root &quot;$(MSBuildProjectDirectory)/..&quot; -Output &quot;$(_CampusBuildInformationSource)&quot; -Configuration &quot;$(Configuration)&quot; -ModuleAssemblies &quot;$(TargetName);@(_ResolvedProjectReferencePaths-&gt;'%(Filename)', ';')&quot;" />
-    <ItemGroup><Compile Include="$(_CampusBuildInformationSource)" /></ItemGroup>
+    <ItemGroup>
+      <_CampusBuildInformationInput Include="@(_CampusNativeFingerprintInput);@(ProjectReference-&gt;'%(FullPath)');../version.txt;../scripts/build/build-info.ps1;../scripts/lib/common.ps1;../scripts/lib/ProcessTree.cs" />
+      <_CampusBuildInformationInput Include="../.git/HEAD;../.git/index;../.git/packed-refs;../.git/refs/**/*" Condition="Exists('../.git')" />
+      <_CampusBuildInformationExistingInput Include="@(_CampusBuildInformationInput)" Condition="Exists('%(_CampusBuildInformationInput.Identity)')" />
+      <_CampusBuildInformationExistingInput Remove="$(_CampusBuildInformationSource)" />
+      <Compile Include="$(_CampusBuildInformationSource)" />
+    </ItemGroup>
   </Target>
-  <PropertyGroup>
-    <_CampusCodeFingerprintTool>$([MSBuild]::NormalizePath('$(MSBuildProjectDirectory)', '../scripts/build/fingerprints/Campus.CodeFingerprints.csproj'))</_CampusCodeFingerprintTool>
-    <_CampusCodeFingerprintManifest>$(MSBuildProjectDirectory)/data/build-code-fingerprints.json</_CampusCodeFingerprintManifest>
-    <_CampusCodeFingerprintToolBuildTarget>Build</_CampusCodeFingerprintToolBuildTarget>
-  </PropertyGroup>
-  <!-- The native engine owns invocation globals; the host owns what they mean for compiler/source identity. -->
+  <Target Name="IncludeCampusBuildInformation" BeforeTargets="CoreCompile"
+          DependsOnTargets="PrepareCampusBuildInformation;GenerateBuildInformation" />
+  <Target Name="GenerateBuildInformation" DependsOnTargets="PrepareCampusBuildInformation"
+          Condition="'$(DesignTimeBuild)' != 'true'"
+          Inputs="@(_CampusBuildInformationExistingInput)" Outputs="$(_CampusBuildInformationSource);$(_CampusBuildCommitFile)">
+    <Exec Command="powershell -NoProfile -ExecutionPolicy Bypass -File &quot;$(MSBuildProjectDirectory)/../scripts/build/build-info.ps1&quot; -Root &quot;$(MSBuildProjectDirectory)/..&quot; -Output &quot;$(_CampusBuildInformationSource)&quot; -Configuration &quot;$(Configuration)&quot; -ModuleAssemblies &quot;$(TargetName);@(_ResolvedProjectReferencePaths-&gt;'%(Filename)', ';')&quot;" />
+    <Touch Files="$(_CampusBuildInformationSource);$(_CampusBuildCommitFile)" />
+    <ItemGroup><FileWrites Include="$(_CampusBuildInformationSource);$(_CampusBuildCommitFile)" /></ItemGroup>
+  </Target>
+  <!-- Preserve the real invocation configuration for Roslyn; run this only when the manifest is stale. -->
   <UsingTask TaskName="CampusBuildGlobalProperties" TaskFactory="RoslynCodeTaskFactory"
              AssemblyFile="$(MSBuildToolsPath)/Microsoft.Build.Tasks.Core.dll">
     <ParameterGroup>
@@ -76,88 +101,36 @@
       ]]></Code>
     </Task>
   </UsingTask>
-  <!-- The fingerprints host is the only owner of the evaluated source-input selection. -->
-  <Target Name="GetCampusCodeFingerprintInputs" Returns="@(_CampusCodeFingerprintInput)"
-          Condition="'@(_CampusCodeFingerprintToolTargetPath)' != ''">
-    <Exec Command="dotnet &quot;@(_CampusCodeFingerprintToolTargetPath)&quot; --mode inputs --project &quot;$(MSBuildProjectFullPath)&quot; --tool-project &quot;$(_CampusCodeFingerprintTool)&quot; --output &quot;$(_CampusCodeFingerprintManifest)&quot; @(_CampusCodeFingerprintProperty-&gt;'--encoded-property &quot;%(Identity)&quot;', ' ')"
-          ConsoleToMSBuild="true" StandardOutputImportance="Low">
-      <Output TaskParameter="ConsoleOutput" ItemName="_CampusCodeFingerprintInput" />
-    </Exec>
-  </Target>
-  <Target Name="RestoreCampusCodeFingerprintTool">
-    <MSBuild Projects="$(_CampusCodeFingerprintTool)" Targets="Restore"
-             Properties="Configuration=$(Configuration);Platform=$(Platform)"
-             RemoveProperties="TargetFramework;RuntimeIdentifier;SelfContained;TargetPath" BuildInParallel="false" />
-  </Target>
-  <Target Name="SelectCampusCodeFingerprintRebuild">
-    <PropertyGroup><_CampusCodeFingerprintToolBuildTarget>Rebuild</_CampusCodeFingerprintToolBuildTarget></PropertyGroup>
-  </Target>
-  <Target Name="PrepareCampusCodeFingerprintHost" DependsOnTargets="RestoreCampusCodeFingerprintTool">
+  <Target Name="PrepareCampusCodeFingerprints" DependsOnTargets="GetCampusCodeFingerprintSources">
+    <PropertyGroup>
+      <!-- Each native build configuration owns its real generated manifest, then publishes it for the engine. -->
+      <_CampusCodeFingerprintManifest>$(IntermediateOutputPath)build-code-fingerprints.json</_CampusCodeFingerprintManifest>
+    </PropertyGroup>
     <ItemGroup>
       <_CampusBuildDefaultProperty Include="Configuration=$(Configuration);Platform=$(Platform);TargetFramework=$(TargetFramework)" />
       <_CampusBuildDefaultProperty Include="RuntimeIdentifier=$(RuntimeIdentifier)" Condition="'$(RuntimeIdentifier)' != ''" />
       <_CampusBuildDefaultProperty Include="SelfContained=$(SelfContained)" Condition="'$(SelfContained)' != ''" />
+      <!-- The root's CoreCompile can add generated sources/configs after its precompile input collection. -->
+      <_CampusNativeFingerprintInput Include="@(Compile-&gt;'%(FullPath)');@(EditorConfigFiles-&gt;'%(FullPath)');@(Analyzer-&gt;'%(FullPath)');@(AdditionalFiles-&gt;'%(FullPath)')" />
+      <_CampusFingerprintExistingInput Include="@(_CampusNativeFingerprintInput)" Condition="Exists('%(_CampusNativeFingerprintInput.Identity)')" />
+      <_CampusFingerprintExistingInput Include="$(_CampusBuildInformationSource);../global.json;../Directory.Build.props;../Directory.Build.targets;../Directory.Packages.props;../docs/ROUTES.json" />
+      <_CampusFingerprintExistingInput Include="../NuGet.Config" Condition="Exists('../NuGet.Config')" />
     </ItemGroup>
+  </Target>
+  <Target Name="GenerateCampusCodeFingerprints" DependsOnTargets="PrepareCampusCodeFingerprints"
+          Inputs="@(_CampusFingerprintExistingInput)" Outputs="$(_CampusCodeFingerprintManifest)">
     <CampusBuildGlobalProperties Defaults="@(_CampusBuildDefaultProperty)">
       <Output TaskParameter="Properties" ItemName="_CampusCodeFingerprintProperty" />
     </CampusBuildGlobalProperties>
-    <!-- Prepare the current host before capturing inputs and before the game Clean/Build can overwrite outputs. -->
-    <MSBuild Projects="$(_CampusCodeFingerprintTool)" Targets="$(_CampusCodeFingerprintToolBuildTarget);GetTargetPath"
-             Properties="Configuration=$(Configuration);Platform=$(Platform)"
-             RemoveProperties="TargetFramework;RuntimeIdentifier;SelfContained;TargetPath" BuildInParallel="false">
-      <Output TaskParameter="TargetOutputs" ItemName="_CampusCodeFingerprintToolOutput" />
-    </MSBuild>
-    <RemoveDuplicates Inputs="@(_CampusCodeFingerprintToolOutput)">
-      <Output TaskParameter="Filtered" ItemName="_CampusCodeFingerprintToolTargetPath" />
-    </RemoveDuplicates>
+    <Exec Command="dotnet &quot;@(_CampusCodeFingerprintToolTargetPath)&quot; --project &quot;$(MSBuildProjectFullPath)&quot; --tool-project &quot;$(_CampusCodeFingerprintTool)&quot; --output &quot;$(_CampusCodeFingerprintManifest)&quot; @(_CampusCodeFingerprintProperty-&gt;'--encoded-property &quot;%(Identity)&quot;', ' ') @(_CampusBuildDefaultProperty-&gt;'--configuration-property &quot;%(Identity)&quot;', ' ')"
+          LogStandardErrorAsError="true" StdOutEncoding="utf-8" StdErrEncoding="utf-8" />
+    <!-- A comment-only input still advances its real output, without a separate success stamp. -->
+    <Touch Files="$(_CampusCodeFingerprintManifest)" />
+    <ItemGroup><FileWrites Include="$(_CampusCodeFingerprintManifest)" /></ItemGroup>
   </Target>
-  <!-- SDK Rebuild is BeforeRebuild -> Clean -> Build -> AfterRebuild.
-       Begin before Clean; a timestamp-incremental Build alone cannot verify new bytes. -->
-  <Target Name="BeginCampusLaunchRebuildReceipt" BeforeTargets="BeforeRebuild"
-          DependsOnTargets="SelectCampusCodeFingerprintRebuild;PrepareCampusCodeFingerprintHost"
-          Condition="'$(DesignTimeBuild)' != 'true' And '$(Configuration)' == 'Debug' And '$(RuntimeIdentifier)' == '' And '$(SelfContained)' != 'true'">
-    <Exec Command="dotnet &quot;@(_CampusCodeFingerprintToolTargetPath)&quot; --mode begin-rebuild --project &quot;$(MSBuildProjectFullPath)&quot; --tool-project &quot;$(_CampusCodeFingerprintTool)&quot; --output &quot;$(_CampusCodeFingerprintManifest)&quot; @(_CampusCodeFingerprintProperty-&gt;'--encoded-property &quot;%(Identity)&quot;', ' ') --target-path &quot;$(TargetPath)&quot;" ConsoleToMSBuild="true" StandardOutputImportance="Low">
-      <Output TaskParameter="ConsoleOutput" PropertyName="_CampusLaunchBuildReceiptOperation" />
-    </Exec>
-    <PropertyGroup Condition="'$(_CampusLaunchBuildReceiptOperation)' != ''">
-      <_CampusLaunchBuildReceiptStarted>true</_CampusLaunchBuildReceiptStarted>
-      <_CampusLaunchRebuild>true</_CampusLaunchRebuild>
-    </PropertyGroup>
-  </Target>
-  <Target Name="BeginCampusLaunchBuildReceipt" BeforeTargets="BeforeBuild"
-          DependsOnTargets="PrepareCampusCodeFingerprintHost"
-          Condition="'$(DesignTimeBuild)' != 'true' And '$(_CampusLaunchBuildReceiptStarted)' != 'true' And '$(Configuration)' == 'Debug' And '$(RuntimeIdentifier)' == '' And '$(SelfContained)' != 'true'">
-    <Exec Command="dotnet &quot;@(_CampusCodeFingerprintToolTargetPath)&quot; --mode begin --project &quot;$(MSBuildProjectFullPath)&quot; --tool-project &quot;$(_CampusCodeFingerprintTool)&quot; --output &quot;$(_CampusCodeFingerprintManifest)&quot; @(_CampusCodeFingerprintProperty-&gt;'--encoded-property &quot;%(Identity)&quot;', ' ') --target-path &quot;$(TargetPath)&quot;" ConsoleToMSBuild="true" StandardOutputImportance="Low">
-      <Output TaskParameter="ConsoleOutput" PropertyName="_CampusLaunchBuildReceiptOperation" />
-    </Exec>
-    <PropertyGroup Condition="'$(_CampusLaunchBuildReceiptOperation)' != ''"><_CampusLaunchBuildReceiptStarted>true</_CampusLaunchBuildReceiptStarted></PropertyGroup>
-  </Target>
-  <Target Name="PrepareCampusCodeFingerprints" DependsOnTargets="PrepareCampusCodeFingerprintHost;GetCampusCodeFingerprintInputs">
-    <PropertyGroup><_CampusCodeFingerprintStamp>$(IntermediateOutputPath)CodeFingerprints.succeeded</_CampusCodeFingerprintStamp></PropertyGroup>
-    <!-- The JSON may retain its timestamp when its contents are unchanged. -->
-    <Delete Files="$(_CampusCodeFingerprintStamp)" Condition="!Exists('$(_CampusCodeFingerprintManifest)')" />
-  </Target>
-  <Target Name="GenerateCampusCodeFingerprints" AfterTargets="Build"
-          DependsOnTargets="PrepareCampusCodeFingerprints"
-          Condition="'$(DesignTimeBuild)' != 'true' And '$(IsTestProject)' != 'true'"
-          Inputs="@(_CampusCodeFingerprintInput);$(_CampusCodeFingerprintManifest)"
-          Outputs="$(_CampusCodeFingerprintStamp)">
-    <Exec Command="dotnet &quot;@(_CampusCodeFingerprintToolTargetPath)&quot; --project &quot;$(MSBuildProjectFullPath)&quot; --tool-project &quot;$(_CampusCodeFingerprintTool)&quot; --output &quot;$(_CampusCodeFingerprintManifest)&quot; @(_CampusCodeFingerprintProperty-&gt;'--encoded-property &quot;%(Identity)&quot;', ' ') @(_CampusBuildDefaultProperty-&gt;'--configuration-property &quot;%(Identity)&quot;', ' ')" />
-    <Touch Files="$(_CampusCodeFingerprintStamp)" AlwaysCreate="true" />
-    <ItemGroup><FileWrites Include="$(_CampusCodeFingerprintStamp)" /></ItemGroup>
-  </Target>
-  <Target Name="RecordCampusCodeFingerprintCompletion" AfterTargets="GenerateCampusCodeFingerprints"
+  <Target Name="PublishCampusCodeFingerprints" AfterTargets="Build" DependsOnTargets="GenerateCampusCodeFingerprints"
           Condition="'$(DesignTimeBuild)' != 'true' And '$(IsTestProject)' != 'true'">
-    <PropertyGroup><_CampusLaunchFingerprintsCompleted>true</_CampusLaunchFingerprintsCompleted></PropertyGroup>
-  </Target>
-  <Target Name="CompleteCampusLaunchNormalBuildReceipt" AfterTargets="RecordCampusCodeFingerprintCompletion"
-          DependsOnTargets="CompleteCampusLaunchBuildReceipt"
-          Condition="'$(DesignTimeBuild)' != 'true' And '$(_CampusLaunchRebuild)' != 'true'" />
-  <Target Name="CompleteCampusLaunchRebuildReceipt" AfterTargets="AfterRebuild"
-          DependsOnTargets="CompleteCampusLaunchBuildReceipt"
-          Condition="'$(DesignTimeBuild)' != 'true' And '$(_CampusLaunchRebuild)' == 'true'" />
-  <Target Name="CompleteCampusLaunchBuildReceipt"
-          Condition="'$(DesignTimeBuild)' != 'true' And '$(_CampusLaunchBuildReceiptStarted)' == 'true' And '$(_CampusLaunchFingerprintsCompleted)' == 'true' And '$(Configuration)' == 'Debug' And '$(RuntimeIdentifier)' == '' And '$(SelfContained)' != 'true'">
-    <Exec Command="dotnet &quot;@(_CampusCodeFingerprintToolTargetPath)&quot; --mode complete --operation &quot;$(_CampusLaunchBuildReceiptOperation)&quot; --project &quot;$(MSBuildProjectFullPath)&quot; --tool-project &quot;$(_CampusCodeFingerprintTool)&quot; --output &quot;$(_CampusCodeFingerprintManifest)&quot; @(_CampusCodeFingerprintProperty-&gt;'--encoded-property &quot;%(Identity)&quot;', ' ') --target-path &quot;$(TargetPath)&quot;" />
+    <Copy SourceFiles="$(_CampusCodeFingerprintManifest)" DestinationFiles="$(_CampusPublishedCodeFingerprintManifest)" SkipUnchangedFiles="true" />
+    <ItemGroup><FileWrites Include="$(_CampusPublishedCodeFingerprintManifest)" /></ItemGroup>
   </Target>
 </Project>

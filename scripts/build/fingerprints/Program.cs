@@ -1,5 +1,5 @@
-// Generates CPU-code fingerprints and owns current build-input identity and launch receipts.
-// 用法：dotnet Campus.CodeFingerprints.dll --project game/Campus.csproj --tool-project scripts/build/fingerprints/Campus.CodeFingerprints.csproj --output game/data/build-code-fingerprints.json --property Configuration=Debug --configuration-property Configuration=Debug；其他 mode 的构建调用见 Campus.csproj，启动只调 check。
+// Generates the business CPU-code fingerprint manifest from the real production and tool projects.
+// 用法：由 Campus.csproj 在输入变化时调用；传入 --project、--tool-project、--output 和实际构建配置。
 using System.Text.Json;
 using System.Text;
 using Campus.Contracts;
@@ -14,49 +14,17 @@ internal static class Program
 {
     private static async Task<int> Main(string[] args)
     {
-        Options? options = null;
         try
         {
-            options = Options.Parse(args);
+            Console.OutputEncoding = new UTF8Encoding(encoderShouldEmitUTF8Identifier: false);
+            var options = Options.Parse(args);
             MSBuildLocator.RegisterDefaults();
-            return await Run(options);
-        }
-        catch (FileNotFoundException error) when (options?.Mode is "check" or "complete")
-        {
-            return MissingInput(options!.Mode, error);
-        }
-        catch (DirectoryNotFoundException error) when (options?.Mode is "check" or "complete")
-        {
-            return MissingInput(options!.Mode, error);
+            await Generate(options);
+            return 0;
         }
         catch (Exception error)
         {
             return CommandFailure(error);
-        }
-    }
-
-    private static int MissingInput(string mode, [FailureHandler("ENG-ARCH")] Exception error)
-    {
-        BuildInputIdentity.Warn($"An input, output or receipt disappeared: {error.Message}");
-        return mode == "check" ? 3 : 0;
-    }
-
-    private static async Task<int> Run(Options options)
-    {
-        var identity = new BuildInputIdentity(options.Project, options.ToolProject, options.Output, options.Properties, options.TargetPath);
-        switch (options.Mode)
-        {
-            case "generate": await Generate(options); return 0;
-            case "inputs":
-                foreach (var input in identity.Capture().Inputs) Console.WriteLine(input);
-                return 0;
-            case "check": return identity.Check() ? 0 : 3;
-            case "begin": Console.WriteLine(identity.Begin(rebuild: false)); return 0;
-            case "begin-rebuild": Console.WriteLine(identity.Begin(rebuild: true)); return 0;
-            case "complete":
-                identity.Complete(options.Operation ?? throw new ArgumentException("--operation is required for complete."));
-                return 0;
-            default: throw new ArgumentException($"Unknown mode {options.Mode}.");
         }
     }
 
@@ -79,7 +47,8 @@ internal static class Program
             if (args.Diagnostic.Kind == WorkspaceDiagnosticKind.Failure) failures.Enqueue(args.Diagnostic.Message);
         });
         var production = await workspace.OpenProjectAsync(options.Project);
-        var tool = await workspace.OpenProjectAsync(options.ToolProject);
+        var tool = workspace.CurrentSolution.Projects.Single(project =>
+            string.Equals(Path.GetFullPath(project.FilePath!), options.ToolProject, StringComparison.OrdinalIgnoreCase));
         if (!failures.IsEmpty) throw new InvalidDataException(string.Join(Environment.NewLine, failures));
         var manifest = await TargetSourceFingerprint.Create(production, tool, properties, options.Configuration);
         if (!failures.IsEmpty) throw new InvalidDataException(string.Join(Environment.NewLine, failures));
@@ -101,13 +70,12 @@ internal static class Program
         Console.WriteLine($"Code fingerprints: wrote {manifest.Roots.Count} roots and {manifest.Registrations.Count} registration owners to {output}.");
     }
 
-    private sealed record Options(string Mode, string Project, string ToolProject, string Output, Dictionary<string, string> Properties,
-        Dictionary<string, string> Configuration, string? Operation, string? TargetPath)
+    private sealed record Options(string Project, string ToolProject, string Output, Dictionary<string, string> Properties,
+        Dictionary<string, string> Configuration)
     {
         public static Options Parse(string[] args)
         {
-            string? project = null, toolProject = null, output = null, operation = null, targetPath = null;
-            var mode = "generate";
+            string? project = null, toolProject = null, output = null;
             var properties = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
             var configuration = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
             for (var i = 0; i < args.Length; i++)
@@ -116,9 +84,6 @@ internal static class Program
                 var value = args[++i];
                 switch (args[i - 1])
                 {
-                    case "--mode": mode = value; break;
-                    case "--operation": operation = value; break;
-                    case "--target-path": targetPath = value; break;
                     case "--project": project = Path.GetFullPath(value); break;
                     case "--tool-project": toolProject = Path.GetFullPath(value); break;
                     case "--output": output = Path.GetFullPath(value); break;
@@ -140,7 +105,7 @@ internal static class Program
                 throw new ArgumentException("--project, --tool-project and --output are required.");
             if (!properties.ContainsKey("Configuration"))
                 throw new ArgumentException("Pass the build's effective Configuration via --property.");
-            return new(mode, project, toolProject, output, properties, configuration, operation, targetPath);
+            return new(project, toolProject, output, properties, configuration);
         }
     }
 }

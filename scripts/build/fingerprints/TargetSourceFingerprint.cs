@@ -34,6 +34,26 @@ internal static class TargetSourceFingerprint
         var documentPaths = ReadDocumentPaths(repository);
         var owners = new SortedDictionary<string, string>(StringComparer.Ordinal);
         var toolGraph = await LoadGraph(tool);
+        var salt = await CreateSalt(repository, projects, toolGraph, tool, configuration);
+        var sources = new List<Source>();
+        var roots = new List<Root>();
+        using var evaluation = new Microsoft.Build.Evaluation.ProjectCollection(new Dictionary<string, string>(properties, StringComparer.OrdinalIgnoreCase));
+        foreach (var (project, compilation) in projects)
+        {
+            var projectPath = Relative(repository, project.FilePath!);
+            var generated = GeneratedSources(repository, evaluation.LoadProject(project.FilePath!));
+            var sourceGroups = await CollectProjectSources(repository, project, projectPath, generated, sources);
+            CollectRegistrations(repository, compilation, documentPaths, sourceGroups, owners, roots);
+        }
+        var hashes = CreateHashes(salt, sources, roots);
+        return new(BakeCodeManifest.CurrentSchema, hashes, owners);
+    }
+
+    private static async Task<SortedSet<string>> CreateSalt(string repository,
+        List<(Project Project, Compilation Compilation)> projects,
+        List<(Project Project, Compilation Compilation)> toolGraph, Project tool,
+        IReadOnlyDictionary<string, string> configuration)
+    {
         var salt = new SortedSet<string>(StringComparer.Ordinal) { "target-source-v2" };
         foreach (var property in configuration.OrderBy(pair => pair.Key, StringComparer.Ordinal))
             salt.Add("property:" + property.Key + "=" + PortableValue(property.Value, repository));
@@ -43,50 +63,7 @@ internal static class TargetSourceFingerprint
                 assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion);
         var sourceAssemblies = projects.Concat(toolGraph).Select(item => item.Compilation.Assembly.Identity).ToHashSet();
         foreach (var (project, compilation) in projects.Concat(toolGraph).DistinctBy(item => item.Project.Id))
-        {
-            var projectPath = Relative(repository, project.FilePath!);
-            salt.Add("project:" + projectPath + ":" + Hash(File.ReadAllText(project.FilePath!)));
-            salt.Add("options:" + projectPath + ":" + CompilationOptions(compilation, (CSharpParseOptions)project.ParseOptions!));
-            foreach (var reference in project.ProjectReferences)
-                salt.Add("project-reference:" + projectPath + ":" + Relative(repository,
-                    project.Solution.GetProject(reference.ProjectId)!.FilePath!));
-            foreach (var reference in compilation.References)
-            {
-                var symbol = compilation.GetAssemblyOrModuleSymbol(reference)
-                    ?? throw new InvalidDataException($"Unresolved build reference in {projectPath}.");
-                var identity = symbol.ToDisplayString();
-                // A workspace source project remains a source input even if Roslyn uses its reference assembly.
-                var isSource = symbol is IAssemblySymbol assembly && sourceAssemblies.Contains(assembly.Identity);
-                var input = reference is PortableExecutableReference binary && !isSource
-                    ? PortableValue(binary.FilePath!, repository) + ":" + HashFile(binary.FilePath!) : "source";
-                salt.Add("reference:" + projectPath + ":" + identity + ":" + input +
-                    ":" + reference.Properties.Kind + ":" + reference.Properties.EmbedInteropTypes + ":" +
-                    string.Join(',', reference.Properties.Aliases.Order(StringComparer.Ordinal)));
-            }
-            // Generator assemblies and their real project inputs are compiler inputs; generated C# is an output.
-            foreach (var reference in project.AnalyzerReferences)
-            {
-                var path = reference.FullPath
-                    ?? throw new InvalidDataException($"Analyzer reference has no input path in {projectPath}.");
-                salt.Add("analyzer:" + projectPath + ":" + PortableValue(path, repository) + ":" + HashFile(path));
-                foreach (var generator in reference.GetGenerators(project.Language))
-                {
-                    var type = generator.GetGeneratorType();
-                    salt.Add("generator:" + projectPath + ":" + type.Assembly.GetName().FullName + ":" + type.FullName);
-                }
-            }
-            foreach (var document in project.AdditionalDocuments.Concat<TextDocument>(project.AnalyzerConfigDocuments))
-                salt.Add("compiler-input:" + projectPath + ":" + PortableValue(document.FilePath!, repository) + ":" +
-                    Hash((await document.GetTextAsync()).ToString()));
-            // Compilation-wide directives come only from the evaluated Compile inputs.
-            foreach (var document in project.Documents)
-            {
-                var unit = (CompilationUnitSyntax)(await document.GetSyntaxRootAsync()
-                    ?? throw new InvalidDataException($"Compile document has no syntax root: {document.FilePath}."));
-                foreach (var directive in unit.Usings.Where(item => item.GlobalKeyword.RawKind != 0))
-                    salt.Add("global-using:" + projectPath + ":" + directive.WithoutTrivia().ToFullString());
-            }
-        }
+            await AddProjectSalt(repository, project, compilation, sourceAssemblies, salt);
         foreach (var name in new[] { "global.json", "Directory.Build.props", "Directory.Build.targets", "Directory.Packages.props", "NuGet.Config" })
         {
             var path = Path.Combine(repository, name);
@@ -96,60 +73,115 @@ internal static class TargetSourceFingerprint
         foreach (var (project, _) in toolGraph.Where(item => item.Project.Id == tool.Id))
             foreach (var document in project.Documents)
                 salt.Add("tool-source:" + Relative(repository, document.FilePath!) + ":" + Hash((await document.GetTextAsync()).ToString()));
+        return salt;
+    }
 
-        var sources = new List<Source>();
-        var roots = new List<Root>();
-        using var evaluation = new Microsoft.Build.Evaluation.ProjectCollection(new Dictionary<string, string>(properties, StringComparer.OrdinalIgnoreCase));
-        foreach (var (project, compilation) in projects)
+    private static async Task AddProjectSalt(string repository, Project project, Compilation compilation,
+        IReadOnlySet<AssemblyIdentity> sourceAssemblies, SortedSet<string> salt)
+    {
+        var projectPath = Relative(repository, project.FilePath!);
+        salt.Add("project:" + projectPath + ":" + Hash(File.ReadAllText(project.FilePath!)));
+        salt.Add("options:" + projectPath + ":" + CompilationOptions(compilation, (CSharpParseOptions)project.ParseOptions!));
+        foreach (var reference in project.ProjectReferences)
+            salt.Add("project-reference:" + projectPath + ":" + Relative(repository,
+                project.Solution.GetProject(reference.ProjectId)!.FilePath!));
+        foreach (var reference in compilation.References)
         {
-            var projectPath = Relative(repository, project.FilePath!);
-            var generated = GeneratedSources(repository, evaluation.LoadProject(project.FilePath!));
-            var sourceGroups = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-            foreach (var document in project.Documents)
+            var symbol = compilation.GetAssemblyOrModuleSymbol(reference)
+                ?? throw new InvalidDataException($"Unresolved build reference in {projectPath}.");
+            var identity = symbol.ToDisplayString();
+            // A workspace source project remains a source input even if Roslyn uses its reference assembly.
+            var isSource = symbol is IAssemblySymbol assembly && sourceAssemblies.Contains(assembly.Identity);
+            var input = reference is PortableExecutableReference binary && !isSource
+                ? PortableValue(binary.FilePath!, repository) + ":" + HashFile(binary.FilePath!) : "source";
+            salt.Add("reference:" + projectPath + ":" + identity + ":" + input +
+                ":" + reference.Properties.Kind + ":" + reference.Properties.EmbedInteropTypes + ":" +
+                string.Join(',', reference.Properties.Aliases.Order(StringComparer.Ordinal)));
+        }
+        // Generator assemblies and their real project inputs are compiler inputs; generated C# is an output.
+        foreach (var reference in project.AnalyzerReferences)
+        {
+            var path = reference.FullPath
+                ?? throw new InvalidDataException($"Analyzer reference has no input path in {projectPath}.");
+            salt.Add("analyzer:" + projectPath + ":" + PortableValue(path, repository) + ":" + HashFile(path));
+            foreach (var generator in reference.GetGenerators(project.Language))
             {
-                var path = Relative(repository, document.FilePath!);
-                if (path.Split('/').Contains("tests", StringComparer.OrdinalIgnoreCase))
-                    throw new InvalidDataException($"Production Compile contains a test source: {path}.");
-                var group = SourceGroup(path, projectPath, generated);
-                sourceGroups.Add(document.FilePath!, group);
-                if (group.Length != 0)
-                {
-                    sources.Add(new(path, Hash((await document.GetTextAsync()).ToString()), group));
-                }
-            }
-            foreach (var type in Types(compilation.Assembly.GlobalNamespace))
-            {
-                if (!type.IsAbstract && !type.IsGenericType)
-                {
-                    var ownerDeclarations = type.GetAttributes().Where(attribute => IsRegistration(attribute.AttributeClass)).ToArray();
-                    if (ownerDeclarations.Length != 0)
-                    {
-                        var declaredOwners = ownerDeclarations.Select(attribute => OwnerOf(repository, documentPaths,
-                            attribute.ApplicationSyntaxReference?.SyntaxTree.FilePath
-                                ?? throw new InvalidDataException($"Registration {TypeKey(type)} has no source declaration.")))
-                            .Distinct(StringComparer.Ordinal).ToArray();
-                        if (declaredOwners.Length != 1)
-                            throw new InvalidDataException($"Registration {TypeKey(type)} spans different source owners.");
-                        owners.Add(TypeKey(type), declaredOwners[0]);
-                    }
-                }
-                var registrations = type.GetAttributes().Where(attribute =>
-                    Registrations.ContainsKey(attribute.AttributeClass?.ToDisplayString() ?? "")).ToArray();
-                if (registrations.Length == 0) continue;
-                var key = TypeKey(type);
-                if (registrations.Length != 1 || type.IsAbstract || type.IsGenericType ||
-                    !type.AllInterfaces.Any(item => item.ToDisplayString() == Registrations[registrations[0].AttributeClass!.ToDisplayString()]))
-                    throw new InvalidDataException($"CPU root {key}: registration must describe one concrete, closed CPU contract implementation.");
-                var declarations = type.DeclaringSyntaxReferences
-                    .Where(declaration => sourceGroups.ContainsKey(declaration.SyntaxTree.FilePath)).ToArray();
-                var groups = declarations.Select(declaration => sourceGroups[declaration.SyntaxTree.FilePath])
-                    .Distinct(StringComparer.Ordinal).ToArray();
-                if (groups.Length != 1 || groups[0].Length == 0)
-                    throw new InvalidDataException($"CPU root {key}: source ownership is undefined or spans responsibility directories: " +
-                        string.Join(", ", declarations.Select(item => Relative(repository, item.SyntaxTree.FilePath))));
-                roots.Add(new(key, groups[0]));
+                var type = generator.GetGeneratorType();
+                salt.Add("generator:" + projectPath + ":" + type.Assembly.GetName().FullName + ":" + type.FullName);
             }
         }
+        foreach (var document in project.AdditionalDocuments.Concat<TextDocument>(project.AnalyzerConfigDocuments))
+            salt.Add("compiler-input:" + projectPath + ":" + PortableValue(document.FilePath!, repository) + ":" +
+                Hash((await document.GetTextAsync()).ToString()));
+        // Compilation-wide directives come only from the evaluated Compile inputs.
+        foreach (var document in project.Documents)
+        {
+            var unit = (CompilationUnitSyntax)(await document.GetSyntaxRootAsync()
+                ?? throw new InvalidDataException($"Compile document has no syntax root: {document.FilePath}."));
+            foreach (var directive in unit.Usings.Where(item => item.GlobalKeyword.RawKind != 0))
+                salt.Add("global-using:" + projectPath + ":" + directive.WithoutTrivia().ToFullString());
+        }
+    }
+
+    private static async Task<Dictionary<string, string>> CollectProjectSources(string repository, Project project,
+        string projectPath, IReadOnlySet<string> generated, List<Source> sources)
+    {
+        var sourceGroups = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var document in project.Documents)
+        {
+            var path = Relative(repository, document.FilePath!);
+            if (path.Split('/').Contains("tests", StringComparer.OrdinalIgnoreCase))
+                throw new InvalidDataException($"Production Compile contains a test source: {path}.");
+            var group = SourceGroup(path, projectPath, generated);
+            sourceGroups.Add(document.FilePath!, group);
+            if (group.Length != 0)
+            {
+                sources.Add(new(path, Hash((await document.GetTextAsync()).ToString()), group));
+            }
+        }
+        return sourceGroups;
+    }
+
+    private static void CollectRegistrations(string repository, Compilation compilation,
+        (Regex Pattern, string[] Docs)[] documentPaths, IReadOnlyDictionary<string, string> sourceGroups,
+        SortedDictionary<string, string> owners, List<Root> roots)
+    {
+        foreach (var type in Types(compilation.Assembly.GlobalNamespace))
+        {
+            if (!type.IsAbstract && !type.IsGenericType)
+            {
+                var ownerDeclarations = type.GetAttributes().Where(attribute => IsRegistration(attribute.AttributeClass)).ToArray();
+                if (ownerDeclarations.Length != 0)
+                {
+                    var declaredOwners = ownerDeclarations.Select(attribute => OwnerOf(repository, documentPaths,
+                        attribute.ApplicationSyntaxReference?.SyntaxTree.FilePath
+                            ?? throw new InvalidDataException($"Registration {TypeKey(type)} has no source declaration.")))
+                        .Distinct(StringComparer.Ordinal).ToArray();
+                    if (declaredOwners.Length != 1)
+                        throw new InvalidDataException($"Registration {TypeKey(type)} spans different source owners.");
+                    owners.Add(TypeKey(type), declaredOwners[0]);
+                }
+            }
+            var registrations = type.GetAttributes().Where(attribute =>
+                Registrations.ContainsKey(attribute.AttributeClass?.ToDisplayString() ?? "")).ToArray();
+            if (registrations.Length == 0) continue;
+            var key = TypeKey(type);
+            if (registrations.Length != 1 || type.IsAbstract || type.IsGenericType ||
+                !type.AllInterfaces.Any(item => item.ToDisplayString() == Registrations[registrations[0].AttributeClass!.ToDisplayString()]))
+                throw new InvalidDataException($"CPU root {key}: registration must describe one concrete, closed CPU contract implementation.");
+            var declarations = type.DeclaringSyntaxReferences
+                .Where(declaration => sourceGroups.ContainsKey(declaration.SyntaxTree.FilePath)).ToArray();
+            var groups = declarations.Select(declaration => sourceGroups[declaration.SyntaxTree.FilePath])
+                .Distinct(StringComparer.Ordinal).ToArray();
+            if (groups.Length != 1 || groups[0].Length == 0)
+                throw new InvalidDataException($"CPU root {key}: source ownership is undefined or spans responsibility directories: " +
+                    string.Join(", ", declarations.Select(item => Relative(repository, item.SyntaxTree.FilePath))));
+            roots.Add(new(key, groups[0]));
+        }
+    }
+
+    private static SortedDictionary<string, string> CreateHashes(IEnumerable<string> salt, List<Source> sources, List<Root> roots)
+    {
         if (roots.Count == 0) throw new InvalidDataException("The production graph contains no registered CPU roots.");
         var common = Hash(salt.Concat(sources.Where(item => item.Group == "shared")
             .Select(item => "source:" + item.Path + ":" + item.Hash)));
@@ -177,7 +209,7 @@ internal static class TargetSourceFingerprint
                 Hash(sources.Where(item => item.Group == responsibility)
                     .Select(item => "source:" + item.Path + ":" + item.Hash).Append("common:" + common)));
         }
-        return new(BakeCodeManifest.CurrentSchema, hashes, owners);
+        return hashes;
     }
 
     private static bool IsRegistration(INamedTypeSymbol? type)

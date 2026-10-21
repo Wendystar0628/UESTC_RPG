@@ -2,4 +2,22 @@
   <ItemGroup Condition="'$(IsTestProject)' != 'true'">
     <Compile Remove="**/tests/**/*.cs" />
   </ItemGroup>
+  <!-- Native evaluated items, including referenced projects, drive the business manifest target.
+       This target returns paths only; it never hashes inputs or writes an identity/cache file. -->
+  <Target Name="GetCampusCodeFingerprintSources" DependsOnTargets="ResolveReferences"
+          Returns="@(_CampusNativeFingerprintInput->'%(FullPath)')" Condition="'$(DesignTimeBuild)' != 'true'">
+    <MSBuild Projects="@(_MSBuildProjectReferenceExistent)" Targets="GetCampusCodeFingerprintSources"
+             Properties="%(_MSBuildProjectReferenceExistent.SetConfiguration);%(_MSBuildProjectReferenceExistent.SetPlatform);%(_MSBuildProjectReferenceExistent.SetTargetFramework)"
+             RemoveProperties="%(_MSBuildProjectReferenceExistent.GlobalPropertiesToRemove);$(_GlobalPropertiesToRemoveFromProjectReferences)"
+             Condition="'@(_MSBuildProjectReferenceExistent)' != '' And '%(_MSBuildProjectReferenceExistent.BuildReference)' == 'true'"
+             BuildInParallel="$(BuildInParallel)">
+      <Output TaskParameter="TargetOutputs" ItemName="_CampusNativeFingerprintInput" />
+    </MSBuild>
+    <ItemGroup>
+      <_CampusNativeFingerprintInput Include="$(MSBuildProjectFullPath);$(MSBuildAllProjects);$(ProjectAssetsFile);$(IntermediateOutputPath)$(MSBuildProjectFile).CoreCompileInputs.cache" />
+      <_CampusNativeFingerprintInput Include="@(Compile->'%(FullPath)');@(AdditionalFiles->'%(FullPath)');@(EditorConfigFiles->'%(FullPath)');@(Analyzer->'%(FullPath)');@(ReferencePath->'%(FullPath)');@(EmbeddedResource->'%(FullPath)');@(Resource->'%(FullPath)')" />
+      <_CampusNativeOptionalInput Include="$(CodeAnalysisRuleSet);$(CompilerResponseFile);$(ApplicationIcon);$(ApplicationManifest);$(Win32Resource);$(AssemblyOriginatorKeyFile);$(KeyOriginatorFile);$(SourceLink)" />
+      <_CampusNativeFingerprintInput Include="@(_CampusNativeOptionalInput)" Condition="Exists('%(_CampusNativeOptionalInput.Identity)')" />
+    </ItemGroup>
+  </Target>
 </Project>
