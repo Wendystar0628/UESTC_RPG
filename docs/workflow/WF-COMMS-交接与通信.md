@@ -48,6 +48,7 @@ paths: [".collab/notes/**", ".collab/requests/**", ".collab/tasks/**", ".collab/
 | `tasks/codex/`、`tasks/misc/` | Codex 主线；主会话 | Codex 主线的计划与子单；其他任务单与简报 |
 | `side/cards/BATCH-<nnn>-<主题>.md` | 主会话 | 旁路单（WF-STATUS §4.1）；Codex 主线开的子代理在末尾写"结果" |
 | `research/INDEX.md`、`research/RESEARCH-<nnn>-<主题>/` | 主会话追加索引与审计；调研子代理写报告与总览 | 调研索引与各方向报告 |
+| `prep/RESEARCH-<nnn>-<主题>/` | 主会话 | 调研预备：作者要斟酌的大设计调研，只出报告，不进施工队列，巡逻与清理不看（WF-STATUS §4） |
 | `notes/<收件方>/` | 发件方 | 来信收件箱（§4）：`notes/claude/` 发给主会话，`notes/codex/` 发给 Codex 主线 |
 | `status/施工状态.md`、`HANDOVER.md` | 主会话 | 施工状态与施工队列的活表；主会话交接单（WF-STATUS） |
 | `tools/` | 主会话 | 脚本、会话号与状态，索引见 `.collab/tools/README.md` |

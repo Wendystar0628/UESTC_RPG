@@ -1787,20 +1787,20 @@
 
 - WF-COMMS §0 结论 · L22 · 719
   - ★ WF-COMMS §0.1 接入要点 · L32 · 205
-- WF-COMMS §1 交接目录与文件 · L39 · 1.1k
-- WF-COMMS §2 命名与写法 · L60 · 398
-- WF-COMMS §3 任务单、请求文件、契约申请与完成回报 · L67 · 947
-  - WF-COMMS §3.1 施工单与旁路单 · L69 · 247
-  - WF-COMMS §3.2 请求文件 · L74 · 50
-  - WF-COMMS §3.3 契约申请的短头部（DECISION-201） · L78 · 178
-  - WF-COMMS §3.4 完成回报 · L88 · 447
-- WF-COMMS §4 来信与消息 · L106 · 1.5k
-  - WF-COMMS §4.1 什么时候发 · L108 · 260
-  - WF-COMMS §4.2 一条来信一个新文件（DECISION-207） · L117 · 272
-  - WF-COMMS §4.3 三级标记与写法 · L123 · 446
-  - WF-COMMS §4.4 来信与即时送达 · L131 · 530
-- WF-COMMS §5 Codex 会话与引导信箱 · L145 · 276
-- WF-COMMS §6 作者观察台 · L151 · 991
+- WF-COMMS §1 交接目录与文件 · L39 · 1.2k
+- WF-COMMS §2 命名与写法 · L61 · 398
+- WF-COMMS §3 任务单、请求文件、契约申请与完成回报 · L68 · 947
+  - WF-COMMS §3.1 施工单与旁路单 · L70 · 247
+  - WF-COMMS §3.2 请求文件 · L75 · 50
+  - WF-COMMS §3.3 契约申请的短头部（DECISION-201） · L79 · 178
+  - WF-COMMS §3.4 完成回报 · L89 · 447
+- WF-COMMS §4 来信与消息 · L107 · 1.5k
+  - WF-COMMS §4.1 什么时候发 · L109 · 260
+  - WF-COMMS §4.2 一条来信一个新文件（DECISION-207） · L118 · 272
+  - WF-COMMS §4.3 三级标记与写法 · L124 · 446
+  - WF-COMMS §4.4 来信与即时送达 · L132 · 530
+- WF-COMMS §5 Codex 会话与引导信箱 · L146 · 276
+- WF-COMMS §6 作者观察台 · L152 · 991
 
 ## WF-ENTRY · 角色入口卡
 
@@ -1891,7 +1891,7 @@
 
 ## WF-STATUS · 施工状态、队列与调研入队
 
-`docs/workflow/WF-STATUS-施工状态、队列与调研入队.md` · 5.7k 字 · 施工状态文件怎么填、阶段与主线闸口、施工队列的格式与即时维护、队列平衡、交接单、调研入队流水线与旁路单
+`docs/workflow/WF-STATUS-施工状态、队列与调研入队.md` · 5.8k 字 · 施工状态文件怎么填、阶段与主线闸口、施工队列的格式与即时维护、队列平衡、交接单、调研入队流水线与旁路单
 关键词：阶段、主线闸口、P0–P3、施工队列、一行一件、即时维护、拆分重活、等前置、就绪、进行中、待集成、暂停、行号、施工状态、状态文件、当前 main、最近可运行入口、已冻结的契约组、队列平衡、积压、交接单、HANDOVER.md、接手、已集成、调研入队流水线、审计、调研简报、旁路单、DECISION-224
 
 - WF-STATUS §0 结论 · L22 · 620
@@ -1900,7 +1900,7 @@
   - WF-STATUS §1.1 阶段与闸口 · L46 · 534
 - WF-STATUS §2 施工队列与队列平衡 · L56 · 1.9k
 - WF-STATUS §3 交接单 · L94 · 89
-- WF-STATUS §4 调研入队流水线 · L98 · 1.4k
+- WF-STATUS §4 调研入队流水线 · L98 · 1.5k
   - WF-STATUS §4.1 调研与旁路单 · L111 · 789
 
 ## STD-INDEX · 规范总纲
@@ -1993,12 +1993,12 @@
 
 ## REG-DECISIONS-PROCESS · 协作与流程决策
 
-`docs/registry/REG-DECISIONS-PROCESS-协作与流程决策.md` · 15.6k 字 · 计划、协作、规范、登记四个域的已定决策：协作、流程、文档与代码规范、门禁流程
+`docs/registry/REG-DECISIONS-PROCESS-协作与流程决策.md` · 15.8k 字 · 计划、协作、规范、登记四个域的已定决策：协作、流程、文档与代码规范、门禁流程
 关键词：决策、流程、协作、文档规则、门禁流程、派工、主会话、子代理
 
 - REG-DECISIONS-PROCESS §0 结论 · L21 · 129
   - ★ REG-DECISIONS-PROCESS §0.1 接入要点 · L25 · 56
-- REG-DECISIONS-PROCESS §1 流程 · L29 · 15.0k
+- REG-DECISIONS-PROCESS §1 流程 · L29 · 15.2k
 
 ## REG-DECISIONS-SYSTEMS · 系统与工程决策
 
