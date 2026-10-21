@@ -100,11 +100,16 @@ def start_total():
     return sum(top.values()) + max(roles.values(), default=0)
 
 
+START_INPUTS = ('CORE-INDEX', 'WF-ENTRY', 'STD-DOC')   # 开工注入合计的输入：顶层各节、入口卡与 STD-DOC §5 上限表
+_start_checked = []
+
+
 def check(path):
     """返回 (编码, 正文字数, [(哪一处, 字数, 上限)])"""
     code, total, secs = measure(path)
     over = []
-    if code == 'CORE-INDEX':
+    if code in START_INPUTS and not _start_checked:   # 顶层、入口卡或上限表任一变了都要重算合计，一次运行只报一次
+        _start_checked.append(code)
         n = start_total()
         if n > LIMIT['start']:
             over.append(('开工注入合计', n, LIMIT['start']))
