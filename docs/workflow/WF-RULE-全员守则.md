@@ -21,7 +21,7 @@ paths: ["scripts/requirements.*", "game/testing/**", "game/data/build-code-finge
 
 ## 0 结论
 
-守则共 16 节，每节一条，节标题就是条目名；顶层规则（CORE-INDEX §2–§5）的细则在这里。
+守则共 16 节，每节一条，节标题就是条目名；顶层规则 CORE-INDEX §2、§3 的细则在这里，§4–§6 的细则在各条括号所指的文档。
 
 ### 0.1 接入要点
 

@@ -4,16 +4,17 @@
 
 ## CORE-INDEX · 《电光年华》开发总纲
 
-`docs/README.md` · 6.7k 字 · 全项目唯一的顶层，只放每次开发都要掌握的全局：项目与约束、信息地图（信息在哪、仓库目录、只列标题的文档地图），以及全员共守的工作原则、协作与分工、文档规范与代码规范；具体内容一律在下层按需读
+`docs/README.md` · 8.3k 字 · 全项目唯一的顶层，只放每次开发都要掌握的全局：项目与约束、信息地图（信息在哪、仓库目录、只列标题的文档地图），以及全员共守的工作原则、协作与分工、文档规范与代码规范；具体内容一律在下层按需读
 关键词：总纲、顶层规则、项目与约束、硬约束、优先级、信息地图、文档地图、仓库目录、信息在哪、怎么查文档、按需读、钩子注入、电光年华、工作原则、协作与分工、文档规范、代码规范、实现优先、最小实现、最小测试、根因修复、同批清旧、维护体系、一行一提交、单一权威、写给大模型、文档精简、失败即报错
 
 - CORE-INDEX §0 项目与约束 · L20 · 636
   - ★ CORE-INDEX §0.1 接入要点 · L27 · 277
 - CORE-INDEX §1 信息地图 · L34 · 1.8k
-- CORE-INDEX §2 工作原则 · L84 · 1.7k
+- CORE-INDEX §2 工作原则 · L84 · 1.8k
 - CORE-INDEX §3 协作与分工 · L97 · 904
 - CORE-INDEX §4 文档规范 · L105 · 400
-- CORE-INDEX §5 代码规范 · L111 · 462
+- CORE-INDEX §5 代码规范 · L111 · 1.1k
+- CORE-INDEX §6 运行时与可靠性 · L122 · 943
 
 ## PRD-INDEX · 作品总纲
 
@@ -1011,7 +1012,7 @@
 - SYS-ATLAS-TRAVEL §2 锚点实体：导览亭与导览桩 · L54 · 708
 - SYS-ATLAS-TRAVEL §3 传送流程 · L67 · 1.4k
   - SYS-ATLAS-TRAVEL §3.1 两种方式 · L69 · 299
-  - SYS-ATLAS-TRAVEL §3.2 传送的时序 · L75 · 398
+  - SYS-ATLAS-TRAVEL §3.2 传送的时序 · L75 · 384
   - SYS-ATLAS-TRAVEL §3.3 落点 · L86 · 452
   - SYS-ATLAS-TRAVEL §3.4 预取、打断与边界情况 · L98 · 270
 - SYS-ATLAS-TRAVEL §4 解锁 · L103 · 339
@@ -1302,7 +1303,7 @@
 
 ## SYS-TITLE · 开始页与启动
 
-`docs/systems/SYS-TITLE-开始页与启动.md` · 7.2k 字 · 冷启动扉页与失败页、开始页（扉页、菜单、片名块）、从双击起的并行加载与预载、各应用状态下的约定、新游戏与继续与返回标题的加载界面、多地图
+`docs/systems/SYS-TITLE-开始页与启动.md` · 7.3k 字 · 冷启动扉页与失败页、开始页（扉页、菜单、片名块）、从双击起的并行加载与预载、各应用状态下的约定、新游戏与继续与返回标题的加载界面、多地图
 关键词：开始页、标题页、主菜单、扉页、启动失败页、片名块、应用状态、加载界面、进度条、新游戏、继续、返回标题、并行加载、预载
 
 - SYS-TITLE §0 结论 · L22 · 896
@@ -1317,7 +1318,7 @@
   - SYS-TITLE §3.1 进入游戏与返回标题 · L106 · 1.4k
 - SYS-TITLE §4 多地图 · L121 · 124
 - SYS-TITLE §5 不做的事 · L126 · 170
-- SYS-TITLE §6 待验证 · L132 · 108
+- SYS-TITLE §6 待验证 · L132 · 102
 
 ## SYS-VIEW · 观察模式与旁观漫游
 
@@ -1549,28 +1550,29 @@
 
 ## ENG-ARCH · 工程架构
 
-`docs/engineering/ENG-ARCH-工程架构.md` · 13.4k 字 · 当前分层、依赖方向与唯一生产链，边界、确定性、契约、烘焙与桩的架构准则与后续导向；实现细节以代码为准
-关键词：工程架构、分层、依赖方向、命名空间边界、程序集、唯一生产链、KernelStage、组合根、数据流、自动发现、特性注册、Autoload、原生资源创建方、确定性、同机同输入同输出、StableHash、Rng、BannedApiAnalyzers、生命周期、契约、契约申请、契约分批冻结、枚举穷举、本机烘焙、.tbin、英雄资产、桩、架构导向、net10.0、技术栈
+`docs/engineering/ENG-ARCH-工程架构.md` · 14.0k 字 · 当前分层、依赖方向与唯一生产链，边界、确定性、契约、烘焙与桩的架构准则与后续导向；实现细节以代码为准
+关键词：工程架构、分层、依赖方向、命名空间边界、程序集、唯一生产链、KernelStage、组合根、数据流、自动发现、特性注册、Autoload、原生资源创建方、确定性、同机同输入同输出、StableHash、Rng、BannedApiAnalyzers、生命周期、取消与完成、就绪与等待、停滞判据、契约、契约申请、契约分批冻结、枚举穷举、本机烘焙、.tbin、英雄资产、桩、架构导向、net10.0、技术栈
 
-- ENG-ARCH §0 结论 · L21 · 1.5k
-  - ★ ENG-ARCH §0.1 接入要点 · L32 · 826
-- ENG-ARCH §1 当前架构 · L44 · 1.6k
-  - ENG-ARCH 技术栈 · L46 · 181
-  - ENG-ARCH 分层 · L50 · 851
-  - ENG-ARCH 生产链 · L61 · 487
-  - ENG-ARCH 数据流 · L70 · 95
-- ENG-ARCH §2 边界与确定性 · L74 · 3.2k
-  - ENG-ARCH 依赖方向 · L76 · 1.4k
-  - ENG-ARCH 确定性与禁用写法 · L87 · 580
-  - ENG-ARCH 自动发现与模块接入 · L99 · 701
-  - ENG-ARCH 仓库脚本自成一体 · L107 · 101
-  - ENG-ARCH 生命周期与发布 · L111 · 496
-- ENG-ARCH §3 契约 · L120 · 1.2k
-- ENG-ARCH §4 资源与烘焙 · L133 · 2.0k
-- ENG-ARCH §5 未交付能力的占位边界 · L149 · 257
-- ENG-ARCH §6 架构导向 · L157 · 545
-- ENG-ARCH §7 扩展点（RPG） · L165 · 69
-- ENG-ARCH §8 待验证（P0） · L169 · 350
+- ENG-ARCH §0 结论 · L21 · 1.7k
+  - ★ ENG-ARCH §0.1 接入要点 · L33 · 919
+- ENG-ARCH §1 当前架构 · L46 · 1.6k
+  - ENG-ARCH 技术栈 · L48 · 181
+  - ENG-ARCH 分层 · L52 · 851
+  - ENG-ARCH 生产链 · L63 · 487
+  - ENG-ARCH 数据流 · L72 · 95
+- ENG-ARCH §2 边界与确定性 · L76 · 3.6k
+  - ENG-ARCH 依赖方向 · L78 · 1.4k
+  - ENG-ARCH 确定性与禁用写法 · L89 · 580
+  - ENG-ARCH 自动发现与模块接入 · L101 · 701
+  - ENG-ARCH 仓库脚本自成一体 · L109 · 101
+  - ENG-ARCH 生命周期与发布 · L113 · 576
+  - ENG-ARCH 就绪与等待 · L123 · 261
+- ENG-ARCH §3 契约 · L130 · 1.2k
+- ENG-ARCH §4 资源与烘焙 · L143 · 2.0k
+- ENG-ARCH §5 未交付能力的占位边界 · L159 · 257
+- ENG-ARCH §6 架构导向 · L167 · 545
+- ENG-ARCH §7 扩展点（RPG） · L175 · 69
+- ENG-ARCH §8 待验证（P0） · L179 · 350
 
 ## ENG-BUDGET · 性能预算
 
@@ -1708,7 +1710,7 @@
 - ENG-PERF-STREAM §0 结论 · L21 · 525
   - ★ ENG-PERF-STREAM §0.1 接入要点 · L28 · 222
 - ENG-PERF-STREAM §1 流式加载 · L34 · 1.7k
-  - ENG-PERF-STREAM §1.1 本机烘焙、缓存与加载 · L36 · 574
+  - ENG-PERF-STREAM §1.1 本机烘焙、缓存与加载 · L36 · 581
   - ENG-PERF-STREAM §1.2 帧内请求、挂载与六条不变量 · L44 · 564
   - ENG-PERF-STREAM §1.3 碰撞级与室内包 · L57 · 364
   - ENG-PERF-STREAM §1.4 外围与目的地预取 · L61 · 174
@@ -1813,7 +1815,7 @@
 
 ## WF-FLOW · 开发流程
 
-`docs/workflow/WF-FLOW-开发流程.md` · 7.0k 字 · 一项任务从派工、施工（只写不编译）、统一编译推送、回报到评审的流程，防打架，按工作量拆单，可调参数集中放
+`docs/workflow/WF-FLOW-开发流程.md` · 7.1k 字 · 一项任务从派工、施工（只写不编译）、统一编译推送、回报到评审的流程，防打架，按工作量拆单，可调参数集中放
 关键词：开发流程、派工、施工单、按工作量拆单、子单 1 小时、回报、评审、防打架、邻居、可调参数、DECISION-184、DECISION-211、评审通用结论
 
 - WF-FLOW §0 结论 · L22 · 464
@@ -1821,8 +1823,8 @@
 - WF-FLOW §1 全流程一览 · L35 · 616
 - WF-FLOW §2 派工与拆单 · L46 · 1.4k
   - WF-FLOW §2.1 防打架（DECISION-211） · L62 · 354
-- WF-FLOW §3 施工与回报 · L71 · 1.7k
-  - WF-FLOW §3.1 统一编译（DECISION-219） · L77 · 1.4k
+- WF-FLOW §3 施工与回报 · L71 · 1.8k
+  - WF-FLOW §3.1 统一编译（DECISION-219） · L77 · 1.5k
 - WF-FLOW §4 评审：审美与契约的交叉评审 · L90 · 702
 
 ## WF-MODEL · 模型、子代理与额度
@@ -1868,7 +1870,7 @@
 `docs/workflow/WF-RULE-全员守则.md` · 12.5k 字 · 所有会话和子代理都要守的规则：不过度工程化、不干等、文件操作、git 与直接改主线、主线优先、测试最小、少打架、一次性产物、bug 分级、精度按 demo 阶段定
 关键词：全员守则、不过度工程化、不向作者出选项、不预判时间、不短轮询、不干等、不重复复核、文件操作、删除规则、git、直接改主线、只提交自己的文件、出了问题向前修不回滚、不 stash、主线优先、测试最小、少和别人打架、一次迁完、拿不准就问、一次性产物、用完就删、bug 分级、阻断、先提交后修、修不收敛就停、数量级判断、demo 阶段、精度与画面相称
 
-- WF-RULE §0 结论 · L22 · 122
+- WF-RULE §0 结论 · L22 · 142
   - ★ WF-RULE §0.1 接入要点 · L26 · 59
 - WF-RULE §1 不过度工程化（DECISION-201） · L30 · 453
 - WF-RULE §2 不向作者出选项 · L38 · 380
@@ -1912,17 +1914,18 @@
 
 ## STD-CODE · 代码结构准则
 
-`docs/standards/STD-CODE-代码结构准则.md` · 8.0k 字 · 写代码时的结构规矩：依赖方向落地、规则值与数据各一份、先复用、不留死代码、控制规模、测试代码写法，以及 Godot API 先查签名
-关键词：代码结构准则、依赖方向、内核引用系统、生成层实现类、点名模块、单一来源、规则值、规则类、数据与代码分离、Tune 只放规则值、实体 ID 写数据、复用、公共层、死代码、死桩、诊断残留、单实现接口、吞错、兜底、文件规模、构造参数、清单文件、程序集过碎、测试写法、测试夹具、假实现、性质断言、signatures.txt、Godot API、GDScript
+`docs/standards/STD-CODE-代码结构准则.md` · 9.3k 字 · 写代码时的结构规矩：先用 Godot 原生、依赖方向落地、规则值与数据各一份、失败交到底、控制规模、测试写法、异步与线程，以及 Godot API 先查签名
+关键词：代码结构准则、先用原生、重复造轮子、判断次序、失败交付、结果载体、保留原异常、异步、任务有主、async void、线程边界、依赖方向、内核引用系统、生成层实现类、点名模块、单一来源、规则值、规则类、数据与代码分离、Tune 只放规则值、实体 ID 写数据、复用、公共层、死代码、死桩、诊断残留、单实现接口、吞错、兜底、文件规模、构造参数、清单文件、程序集过碎、测试写法、测试夹具、假实现、性质断言、signatures.txt、Godot API、GDScript
 
-- STD-CODE §0 结论 · L21 · 1.2k
-  - ★ STD-CODE §0.1 接入要点 · L30 · 916
-- STD-CODE §1 依赖方向 · L44 · 351
-- STD-CODE §2 规则值与数据各一份 · L53 · 590
-- STD-CODE §3 先用现成，再复用，不复制 · L63 · 1.3k
-- STD-CODE §4 不留死代码，不写补丁 · L77 · 1.1k
-- STD-CODE §5 规模 · L90 · 269
-- STD-CODE §6 测试代码怎么写 · L96 · 774
+- STD-CODE §0 结论 · L21 · 1.4k
+  - ★ STD-CODE §0.1 接入要点 · L31 · 989
+- STD-CODE §1 依赖方向 · L46 · 351
+- STD-CODE §2 规则值与数据各一份 · L55 · 590
+- STD-CODE §3 先用现成，再复用，不复制 · L65 · 1.6k
+- STD-CODE §4 不留死代码，不写补丁 · L79 · 1.3k
+- STD-CODE §5 规模 · L93 · 269
+- STD-CODE §6 测试代码怎么写 · L99 · 773
+- STD-CODE §7 异步与线程 · L112 · 437
 
 ## STD-CONVENTIONS · 坐标单位与命名约定
 
@@ -1943,7 +1946,7 @@
   - STD-CONVENTIONS §3.4 命名写法 · L128 · 1.2k
   - STD-CONVENTIONS §3.5 色名 · L149 · 364
   - STD-CONVENTIONS §3.6 枚举与扩展纪律 · L156 · 569
-  - STD-CONVENTIONS §3.7 持久化 ID 的稳定 · L167 · 408
+  - STD-CONVENTIONS §3.7 持久化 ID 的稳定 · L167 · 423
   - STD-CONVENTIONS §3.8 文件与编号的命名格式 · L176 · 1.3k
 - STD-CONVENTIONS §4 确定性 · L196 · 214
 - STD-CONVENTIONS §5 路径 · L203 · 186
@@ -1956,7 +1959,7 @@
 - STD-DOC §0 结论 · L21 · 875
   - ★ STD-DOC §0.1 接入要点 · L30 · 286
 - STD-DOC §1 分层与文档树 · L38 · 1.1k
-  - STD-DOC §1.1 上下文分层 · L40 · 842
+  - STD-DOC §1.1 上下文分层 · L40 · 850
   - STD-DOC §1.2 文档树 · L53 · 244
 - STD-DOC §2 文档形状 · L58 · 1.3k
 - STD-DOC §3 编码、小节编号与引用 · L86 · 1.2k
@@ -1999,18 +2002,18 @@
 
 ## REG-DECISIONS-SYSTEMS · 系统与工程决策
 
-`docs/registry/REG-DECISIONS-SYSTEMS-系统与工程决策.md` · 19.8k 字 · 界面、存档、音频、性能与画面设置、工程五个领域的已定决策
+`docs/registry/REG-DECISIONS-SYSTEMS-系统与工程决策.md` · 20.3k 字 · 界面、存档、音频、性能与画面设置、工程五个领域的已定决策
 关键词：决策、系统、工程、界面、存档、音频、性能、画面设置、预算、契约
 
 - REG-DECISIONS-SYSTEMS §0 结论 · L21 · 126
   - ★ REG-DECISIONS-SYSTEMS §0.1 接入要点 · L25 · 56
-- REG-DECISIONS-SYSTEMS §1 界面 · L29 · 4.2k
-- REG-DECISIONS-SYSTEMS §2 存档 · L62 · 1.6k
-- REG-DECISIONS-SYSTEMS §3 音频 · L81 · 2.2k
-- REG-DECISIONS-SYSTEMS §4 性能与画面设置 · L103 · 3.5k
-- REG-DECISIONS-SYSTEMS §5 工程 · L133 · 4.1k
-- REG-DECISIONS-SYSTEMS §6 地图与行走 · L164 · 1.0k
-- REG-DECISIONS-SYSTEMS §7 时间、季节、天气 · L175 · 2.4k
+- REG-DECISIONS-SYSTEMS §1 界面 · L29 · 4.7k
+- REG-DECISIONS-SYSTEMS §2 存档 · L64 · 1.6k
+- REG-DECISIONS-SYSTEMS §3 音频 · L83 · 2.2k
+- REG-DECISIONS-SYSTEMS §4 性能与画面设置 · L105 · 3.5k
+- REG-DECISIONS-SYSTEMS §5 工程 · L135 · 4.1k
+- REG-DECISIONS-SYSTEMS §6 地图与行走 · L166 · 1.0k
+- REG-DECISIONS-SYSTEMS §7 时间、季节、天气 · L177 · 2.4k
 
 ## REG-DECISIONS-WORLD · 世界与画面决策
 

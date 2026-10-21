@@ -45,7 +45,7 @@ gates: []
 | DECISION-164 | 开放清单 `interiors.json` 由主会话管：schema 与格式归 室内生成器与壳体（WLD-INTERIORS-BUILD），条目由负责包经回报提交，增删由主会话审批 | 开放室内 | SYS-MAPS §1.1；WLD-INTERIORS-ACCESS §4 | 生效 |
 | DECISION-166 | 远端只有 `main` 和标签，不开 PR、不强推 | 全员 | WF-RULE §7 | 生效 |
 | DECISION-177 | 目标框架用 net10.0（C# 14），SDK 由 `global.json` 锁定；升级经主会话评估，不自行退回 net8.0 | 全部 C# 工程 | ENG-RELEASE §1；ENG-ARCH §8 | 生效 |
-| DECISION-178 | 子代理按需查阅文档：入口由钩子注入（顶层规则 CORE-INDEX §0、§2–§5 与角色入口卡 WF-ENTRY），文档按 CORE-INDEX §1 的信息地图、各域总纲和小节目录 `SECTIONS.md` 按需查；每份规范文档带 `keywords`、范围块的"查阅"行、各文档的 §0 结论和 §0.1 接入要点 | 全部子代理与文档 | CORE-INDEX §0–§5；WF-ENTRY；STD-DOC | 生效 |
+| DECISION-178 | 子代理按需查阅文档：入口由钩子注入（顶层规则 CORE-INDEX §0、§2–§6 与角色入口卡 WF-ENTRY），文档按 CORE-INDEX §1 的信息地图、各域总纲和小节目录 `SECTIONS.md` 按需查；每份规范文档带 `keywords`、范围块的"查阅"行、各文档的 §0 结论和 §0.1 接入要点 | 全部子代理与文档 | CORE-INDEX §0–§5；WF-ENTRY；STD-DOC | 生效 |
 | DECISION-179 | 多模型协作：主会话是总指挥，Codex 主线管工程与契约，GPT 不做审美，各方经 `.collab` 任务单交接 | 全项目 | WF-ROLE §1–§3；WF-FLOW §1 | 生效 |
 | DECISION-183 | 建模完成度是主线：建模活先于游泳、生物、角色本体等系统新功能派工，不等格子分级、烘焙与流式加载（ENG-PERF-STREAM）、按桩开工 | 全项目 | WF-STATUS §2 | 生效 |
 | DECISION-184 | 按工作量拆单：一张子单 1 小时内做完，派工前写预计工作量，超出拆子单（a、b）并按顺序做，中途超出停下报派单方 | 全部施工包，建模包尤其 | WF-FLOW §2 | 生效 |
@@ -69,7 +69,7 @@ gates: []
 | DECISION-212 | 不设旁路会话、值班执行者、Grok、Gemini、luna 会话与值班唤醒脚本；旁路和量大的机械活写成旁路单，交 Codex 主线开 gpt-6-luna（medium）或 gpt-6.1-sol 子代理做（调研见 DECISION-224） | Claude 与 Codex 两侧 | WF-ROLE §1；WF-STATUS §4.1 | 生效 |
 | DECISION-213 | 代码结构准则：写代码守 STD-CODE，一句话摘要列入 CORE-INDEX §5；钩子在写代码与写测试时注入 | 全部写代码的会话与子代理 | STD-CODE；CORE-INDEX §5 | 生效 |
 | DECISION-215 | 设计文档写当前结构、规则、设计目标和导向，不写实现做法与实现细节（签名、目录明细、格式字段、参数表、清单、内部流程），这些以代码和数据为准；ENG-ARCH 按此重写为架构、准则与导向 | `docs/` 全部 | STD-DOC §4；WF-RULE §12；ENG-ARCH | 生效 |
-| DECISION-216 | 文档网分五层：L0 顶层规则（CORE-INDEX §0、§2–§5，全项目唯一的顶层）、L1 信息地图（CORE-INDEX §1）与角色入口卡（WF-ENTRY）、L2 各文档 §0 结论与接入要点、L3 正文小节、L4 登记与生成物 | docs 全部 | CORE-INDEX §0–§5；STD-DOC §1 | 生效 |
+| DECISION-216 | 文档网分五层：L0 顶层规则（CORE-INDEX §0、§2–§6，全项目唯一的顶层）、L1 信息地图（CORE-INDEX §1）与角色入口卡（WF-ENTRY）、L2 各文档 §0 结论与接入要点、L3 正文小节、L4 登记与生成物 | docs 全部 | CORE-INDEX §0–§5；STD-DOC §1 | 生效 |
 | DECISION-217 | 文档体量有上限，规格文档不写分工块、交付验收、横切副本与"关联"行，超限先删再拆 | docs 全部 | STD-DOC §4、§5 | 生效 |
 | DECISION-218 | 钩子按场景注入顶层规则、信息地图、入口卡和按路径的接入要点，写测试、写文档、提交后各有提醒；节奏以钩子脚本为准 | Claude 与 Codex 全部会话 | `.collab/tools/hooks/uestc-guard.cjs`；STD-DOC §1 | 生效 |
 | DECISION-219 | 统一编译：施工子代理默认只写不编译、不跑测试、不提交；一批交回后由指挥（Codex 主线或主会话）统一编译、修错、跑快检，按子代理分路径提交推送；调试类任务和简报写明要编译的除外 | 全部写代码的施工 | WF-FLOW §3.1；WF-RULE §7、§9 | 生效 |
@@ -105,7 +105,7 @@ gates: []
 | DECISION-273 | 顺手清理：工作中看到没有使用方的死代码、测试、数据、脚本与文档段落，已被取代的旧设计、旧路径、旧说法，以及重复和放错层，不限于本单改到的文件，量小当批删掉并同批改引用，量大开队列行；删前全仓确认没有使用方，别人正在改的目录写信给负责方 | 全项目 | CORE-INDEX §2；WF-RULE §16 | 生效 |
 | DECISION-274 | 作者只审审美取向：画面风格、配色、观感与氛围的取舍挂给作者过目；架构、实现方法、流程、排期与工程取舍由两位指挥定，不转问作者。挂给作者的事不挡推进：主会话先按自己的判断定下并照常施工，作者看过再按反馈调，没看也照常往下做 | 全项目 | CORE-INDEX §2；WF-RULE §2；WF-COMMS §6 | 生效 |
 | DECISION-275 | 动可能撞车的事先看对方：改施工队列、共享文件与契约，在主检出提交、推送、变基、合并，跑重活，起停后台进程，删文件与工作树，改对方在用的接口之前，先看对方最近的来信、在做的行、未提交与未推送的改动和构建锁，撞上了先写信约定先后；常见情景由钩子在动手时提醒 | 两位指挥与全部子代理 | CORE-INDEX §3；WF-RULE §10 | 生效 |
-| DECISION-276 | 子代理也经常读到顶层规则：Claude 子代理与 Codex 子代理距本会话上次整套注入超过 20 分钟、或此后已过 40 次工具调用，钩子就再整套注入 CORE-INDEX §0、§2–§5；取代原来按内容路径计数（每 20 次）的重注 | 两侧全部子代理 | CORE-INDEX §1；STD-DOC §1 分层表；`.collab/tools/hooks/uestc-guard.cjs` | 生效 |
+| DECISION-276 | 子代理也经常读到顶层规则：Claude 子代理与 Codex 子代理距本会话上次整套注入超过 20 分钟、或此后已过 40 次工具调用，钩子就再整套注入 CORE-INDEX §0、§2–§6；取代原来按内容路径计数（每 20 次）的重注 | 两侧全部子代理 | CORE-INDEX §1；STD-DOC §1 分层表；`.collab/tools/hooks/uestc-guard.cjs` | 生效 |
 | DECISION-277 | 作者的要求不合理就提出反对：主会话认为作者的要求违背硬约束、损害架构或数据权威、或代价与收益明显失衡时，动手前当轮写清哪里不合理、照做的代价与更好的做法，不先照做也不默默改做法；作者坚持就照办，审美最终以作者为准 | 主会话 | CORE-INDEX §2；WF-ROLE §4；WF-ENTRY 主会话卡 | 生效 |
 | DECISION-278 | 来信一律即时送达：发给 Codex 的消息在跑就进引导信箱、下一次工具调用时送进当前一轮，空闲就直接开新一轮，不等取走、不撤回改排队；主会话的来信监视每封都即时叫醒（同一阵连发的合成一次），不按标记攒到下次；标记只说明要不要回 | 两位指挥 | WF-COMMS §4.3、§4.4、§5；`.collab/tools/agents/codex_app_steer.py`、`watch/inbox_wait.sh` | 生效 |
 | DECISION-279 | 出了问题向前修，不回滚：主线上同时有两位指挥和多个子代理在改，回滚会打乱别人基于它的在途改动、各方难以对齐，加控制系统性价比不高；推送后评审不合格、收口审计查实（含破坏架构或数据权威的）都开行插队，在最新版本上改；不用 `git revert`、`reset --hard`、`checkout .`、`clean`、`git stash` | 两位指挥与全部子代理 | CORE-INDEX §3；WF-RULE §7；WF-FLOW §1、§3.1、§4；WF-ROLE §4、§5；WF-ENTRY 主会话卡 | 生效 |

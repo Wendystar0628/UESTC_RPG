@@ -15,7 +15,7 @@ paths: ["docs/workflow/WF-ENTRY-*.md", "scripts/requirements.*", "game/testing/*
 # WF-ENTRY · 角色入口卡
 
 > **范围**：本文是每个角色开工时的入口：我是谁、向谁回报、开工第一步做什么、本角色独有的必守、做某件事之前读哪一节。
-> **不在本文**：全员的顶层规则在 CORE-INDEX §0、§2–§5，细则在 WF-RULE；角色职责与模型分工在 WF-ROLE、WF-MODEL。
+> **不在本文**：全员的顶层规则在 CORE-INDEX §0、§2–§6，细则在 WF-RULE；角色职责与模型分工在 WF-ROLE、WF-MODEL。
 > **查阅**：先读 §0；然后只读自己那一节：主会话看 §1，子代理看 §2，Codex 主线看 §3
 
 ## 0 结论

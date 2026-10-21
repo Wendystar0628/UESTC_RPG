@@ -170,7 +170,7 @@ paths: ["scripts/requirements.*", "game/testing/**", "game/data/build-code-finge
 
 - **不复用**：ID 进了 `main` 以后，对象删掉了，ID 也不再分给别的对象；新对象取新号。
 - **改名不改身份**：改显示名、译名、所在文件或分区，ID 不变；轮廓、高度、位置的调整直接改记录，ID 也不变。
-- **确需换 ID 时给旧新映射**：例如对象被拆分或合并。负责数据的包随数据提交旧 ID → 新 ID 的映射；引用这些 ID 的存档段升版本，由存档迁移按映射改写（SYS-SAVE-FORMAT §1.4）。
+- **确需换 ID 时给旧新映射**：例如对象被拆分或合并。负责数据的包随数据提交旧 ID → 新 ID 的映射；引用这些 ID 的存档段升版本；demo 阶段不写迁移，旧版本的段读档时按坏段处理（SYS-SAVE-FORMAT §1.4）。
 - **真正删除不给映射**：读档时按 SYS-SAVE-FLOW §2.6 的校验修复处理。
 
 ### 3.8 文件与编号的命名格式
@@ -203,4 +203,4 @@ paths: ["scripts/requirements.*", "game/testing/**", "game/data/build-code-finge
 ## 5 路径
 
 - 按图的数据都在 `game/data/maps/<地图>/` 下，一律由 `IMapContext.DataRoot` 拼出，代码里不写数据路径（SYS-MAPS §1、§6，DECISION-139）；各文件的归属见 SYS-MAPS 与相关文档文件头的 `paths`。
-- `user://` 只有存档服务能读写（ENG-ARCH §2）。
+- `user://` 每个文件一个读写方（ENG-ARCH §2）。
