@@ -1,4 +1,3 @@
-using System.Reflection;
 using Campus.Gates;
 using Campus.Contracts;
 using Campus.Contracts.AppFlow;
@@ -69,7 +68,7 @@ public partial class KernelStage : Node3D, IAppExit, IStageGateHost
             registry.Add(resources);
             var codeFingerprints = new BuildCodeIndex(resources);
             registry.Add(codeFingerprints);
-            registry.Discover(LoadModuleTypes(), codeFingerprints.Owner);
+            registry.Discover(StageModules.LoadModuleTypes(), codeFingerprints.Owner);
             GD.Print($"Kernel registry: {registry.Entries.Count} declarations; build {BuildInfo.Build}");
             if (RegistryStageGate.TryRun()) { await FinishQuit(); return; }
             if (AppBoot.Options.CpuBakeMode) { await RunBakeCommand(); return; }
@@ -78,18 +77,6 @@ public partial class KernelStage : Node3D, IAppExit, IStageGateHost
         }
         catch (OperationCanceledException) when (_closing || _startupFailure.Failed) { }
         catch (Exception error) { await _startupFailure.Fail(error); }
-    }
-
-    private static IEnumerable<Type> LoadModuleTypes()
-    {
-        foreach (var name in BuildInfo.ModuleAssemblies)
-        {
-            Type[] types;
-            try { types = Assembly.Load(new AssemblyName(name)).GetTypes(); }
-            catch (Exception error)
-            { throw new AppStartupException(AppStartupFailureCodes.Installation, $"Cannot load module assembly: {name}.", error); }
-            foreach (var type in types) yield return type;
-        }
     }
 
     private void Compose()
