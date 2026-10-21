@@ -7,6 +7,7 @@ using Campus.Contracts;
 using Campus.Contracts.Maps;
 using Campus.Contracts.Parts;
 using Campus.Contracts.Bake;
+using Campus.Contracts.AppFlow;
 using Campus.Kernel.Registry;
 using GdUnit4;
 using static GdUnit4.Assertions;
@@ -367,8 +368,10 @@ public sealed class BakeWindowTests
                     catch (AggregateException aggregate) when (aggregate.Flatten().InnerExceptions.Any(error => ReferenceEquals(error, original))) { }
                     catch (InvalidDataException error) when (ReferenceEquals(error, original)) { }
                 }
+            var failureRetained = original is null ? queue.Failure is null :
+                queue.Failure is AppStartupException { Code: AppStartupFailureCodes.BakeFailed } failure && ReferenceEquals(failure.InnerException, original);
             if ((original is null ? stopped is not OperationCanceledException || !handle.Done.IsCanceled : !ReferenceEquals(stopped, original)) ||
-                handle.State != BakeState.Failed || handle.Product is not null || !ReferenceEquals(queue.Failure, original) || Directory.Exists(cache) ||
+                handle.State != BakeState.Failed || handle.Product is not null || !failureRetained || Directory.Exists(cache) ||
                 original is not null && !ReferenceEquals(handle.Failure, original))
                 throw new InvalidOperationException("An unloaded build entered encoding, published Ready, or wrote cache data.");
         }

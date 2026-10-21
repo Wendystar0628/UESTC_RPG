@@ -10,9 +10,9 @@ internal sealed class SceneTextTextures : IDisposable
     private readonly Texture2DArray _texture = new();
     private readonly float _pixelRange;
 
-    public SceneTextTextures()
+    public SceneTextTextures(IRequiredResources resources)
     {
-        using var document = JsonDocument.Parse(Godot.FileAccess.GetFileAsBytes("res://data/" + SceneTextInputs.AtlasKey));
+        using var document = JsonDocument.Parse(resources.ReadBytes("res://data/" + SceneTextInputs.AtlasKey));
         var root = document.RootElement;
         _pixelRange = root.GetProperty("pixelRange").GetSingle();
         var images = new Godot.Collections.Array<Image>();
@@ -21,7 +21,7 @@ internal sealed class SceneTextTextures : IDisposable
             foreach (var page in root.GetProperty("pages").EnumerateArray())
             {
                 var path = "res://assets/scene-text/" + page.GetProperty("file").GetString();
-                var source = ResourceLoader.Load<Texture2D>(path) ?? throw new FileNotFoundException(path);
+                var source = resources.Load<Texture2D>(path);
                 var image = source.GetImage();
                 image.Convert(Image.Format.Rgba8);
                 images.Add(image);

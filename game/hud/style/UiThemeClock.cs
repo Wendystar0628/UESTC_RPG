@@ -24,9 +24,9 @@ public partial class UiThemeClock : Node, IUiTheme
     private float _target;
     private bool _resetWorld;
 
-    public UiThemeClock(IWorldState world, HudSettings settings, MotionPolicy motion)
+    public UiThemeClock(IWorldState world, HudSettings settings, MotionPolicy motion, IRequiredResources resources)
     {
-        var tokens = UiTokens.Load();
+        var tokens = UiTokens.Load(resources);
         _world = world;
         _settings = settings;
         _motion = motion;

@@ -201,6 +201,7 @@ public partial class MapRuntime : Node, IMapRuntime, IMapLifetime
                 new AppStartupException(AppStartupFailureCodes.MapPreparation, "Map preparation failed.", error);
             RecordFailure(failure);
             FailArrival(failure);
+            if (ReferenceEquals(failure, error)) throw;
             throw failure;
         }
     }

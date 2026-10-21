@@ -1,3 +1,4 @@
+using Campus.Kernel.Boot;
 using Campus.Style.Materials;
 using Campus.Style.Palette;
 using Campus.Contracts;
@@ -22,9 +23,9 @@ public sealed class InstancePoolRuntimeTests
         using var textures = new GlobalDataTextureRegistry();
         try
         {
-            var source = new ShaderMaterialSource();
-            var palettes = new PaletteRegistrySource();
-            using var provider = new ToonLibrary(palettes, source, textures);
+            var source = new ShaderMaterialSource(new RequiredResources());
+            var palettes = new PaletteRegistrySource(new RequiredResources());
+            using var provider = new ToonLibrary(palettes, source, textures, new RequiredResources());
             using var material = source.Create(ShaderId.Precip);
             var parent = new Node3D();
             try

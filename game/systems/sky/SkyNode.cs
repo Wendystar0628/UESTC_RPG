@@ -63,8 +63,7 @@ public partial class SkyNode : Node, IMapAware, IViewContentReadiness
     {
         ArgumentNullException.ThrowIfNull(ctx);
         var path = ctx.DataRoot + SkyMapData.FileName;
-        var bytes = Godot.FileAccess.GetFileAsBytes(path);
-        if (bytes.Length == 0) throw new FileNotFoundException("Required sky data is missing or empty.", path);
+        var bytes = KernelServices.Get<IRequiredResources>().ReadBytes(path);
         _map = SkyMapData.Parse(bytes);
     }
 

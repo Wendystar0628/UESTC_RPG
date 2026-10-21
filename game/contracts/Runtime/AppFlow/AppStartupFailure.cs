@@ -18,6 +18,10 @@ public sealed class AppStartupException(string code, string message, Exception? 
     : Exception(message, innerException)
 {
     public string Code { get; } = code;
+
+    /// <summary>Shared source boundary for fixed presentation deadlines and renewable progress deadlines.</summary>
+    public static AppStartupException Stalled(string message, Exception cause) =>
+        new(AppStartupFailureCodes.Stalled, message, cause);
 }
 
 /// <summary>The production stage owns this one failure session. Commands run on its main thread and coalesce.</summary>

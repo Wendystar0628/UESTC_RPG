@@ -1,3 +1,5 @@
+using Campus.Contracts;
+using KernelServices = Campus.Kernel.Registry.Kernel;
 using Godot;
 using Godot.Collections;
 
@@ -48,8 +50,7 @@ public partial class FinishEffect : CompositorEffect
     {
         EffectCallbackType = EffectCallbackTypeEnum.PostTransparent;
         _setFinish = [_uColor];
-        var file = GD.Load<RDShaderFile>(OutlineEffect.ShaderPath)
-            ?? throw new FileNotFoundException($"Missing finish shader: {OutlineEffect.ShaderPath}", OutlineEffect.ShaderPath);
+        var file = KernelServices.Get<IRequiredResources>().Load<RDShaderFile>(OutlineEffect.ShaderPath);
         _spirvFinish = file.GetSpirV(FinishVersion);
         _spirvLut = file.GetSpirV(LutVersion);
         if (_spirvFinish.CompileErrorCompute.Length > 0 || _spirvLut.CompileErrorCompute.Length > 0)

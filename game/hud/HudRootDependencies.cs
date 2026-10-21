@@ -28,4 +28,5 @@ public sealed record HudRootDependencies(
     IWorldState WorldState,
     ISaveService Saves,
     IPaletteProbe PaletteProbe,
-    IDiagnosticLog Diagnostics);
+    IDiagnosticLog Diagnostics,
+    IRequiredResources Resources);

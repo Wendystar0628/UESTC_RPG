@@ -167,7 +167,7 @@ public sealed class MapRuntimeRuntimeTests
             try { await pending; throw new InvalidOperationException("Disabled rendering did not remain cancellable."); }
             catch (OperationCanceledException) { }
             try { await FrameAwaiter.ReadyDrawAsync(host, Ready, TimeSpan.FromMilliseconds(50)); throw new InvalidOperationException("Disabled rendering completed instead of timing out."); }
-            catch (TimeoutException) { }
+            catch (AppStartupException error) when (error.Code == AppStartupFailureCodes.Stalled) { }
         }
         finally
         {

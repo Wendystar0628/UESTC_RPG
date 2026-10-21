@@ -1,4 +1,5 @@
 using System.Text.Json;
+using Campus.Contracts;
 using Godot;
 
 namespace Campus.Hud.Style;
@@ -15,13 +16,15 @@ public sealed class UiThemeBuilder
 
     private readonly UiTokens _t;
     private readonly UiColors _c;
+    private readonly IRequiredResources _resources;
     private readonly Dictionary<string, FontFile> _files = new(StringComparer.Ordinal);
     private readonly HashSet<string> _types = new(StringComparer.Ordinal);
 
-    public UiThemeBuilder(UiTokens tokens, UiColors colors)
+    public UiThemeBuilder(UiTokens tokens, UiColors colors, IRequiredResources resources)
     {
         _t = tokens;
         _c = colors;
+        _resources = resources;
         Theme = new Theme();
         foreach (var role in _t.Get("metrics", "type", "roles").EnumerateObject())
         {
@@ -116,7 +119,7 @@ public sealed class UiThemeBuilder
         if (!files.TryGetProperty(weight, out var file)) file = files.GetProperty("Regular");
         var name = file.GetString()!;
         if (_files.TryGetValue(name, out var font)) return font;
-        font = GD.Load<FontFile>(FontDir + name) ?? throw new FileNotFoundException("Missing UI font.", FontDir + name);
+        font = _resources.Load<FontFile>(FontDir + name);
         font.AllowSystemFallback = false;
         font.Hinting = TextServer.Hinting.Light;
         font.SubpixelPositioning = TextServer.SubpixelPositioning.Auto;

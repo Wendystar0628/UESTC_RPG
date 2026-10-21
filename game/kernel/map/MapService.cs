@@ -3,7 +3,6 @@ using Campus.Gen.BakeInput;
 using System.Numerics;
 using System.Text.Json.Serialization.Metadata;
 using Campus.Contracts;
-using Campus.Contracts.AppFlow;
 using Campus.Contracts.Maps;
 using Campus.Contracts.Save;
 using Campus.Contracts.Startup;
@@ -338,10 +337,7 @@ public sealed class MapService : IMapService, IMapFrame, ISaveSection<MapsSave>,
         _data.ReportError($"Map load failed [stage={_active?.Stage}, cause={_active?.Cause}, " +
             $"target={_request?.Target.Value ?? "-"}]:", error);
         if (error is OperationCanceledException) { Finish(MapTravelResult.Failed); return; }
-        var failure = _active?.Cause == MapTravelCause.Boot && error is not AppStartupException
-            ? new AppStartupException(AppStartupFailureCodes.MapPreparation, "Startup map preparation failed.", error)
-            : error;
-        Finish(MapTravelResult.Failed, failure);
+        Finish(MapTravelResult.Failed, error);
     }
 
     private void Finish(MapTravelResult result, Exception? failure = null)

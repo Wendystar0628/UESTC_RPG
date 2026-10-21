@@ -8,7 +8,7 @@ namespace Campus.Kernel.Maps;
 [KernelService(typeof(GlobalBuildInputs))]
 public sealed class GlobalBuildInputs
 {
-    public GlobalBuildInputs()
+    public GlobalBuildInputs(IRequiredResources resources)
     {
         var keys = BuildInputAssembly.RequiredGlobalKeys;
         var paths = keys.Select(key => "res://data/" + key)
@@ -18,7 +18,7 @@ public sealed class GlobalBuildInputs
                 .Select(name => "res://style/palette/ext/" + name));
         var version = MapDataSource.CaptureInputVersion(paths);
         Snapshot = BuildInputAssembly.ReadRequiredGlobalInputs(keys,
-            key => Godot.FileAccess.GetFileAsBytes("res://data/" + key), version);
+            key => resources.ReadBytes("res://data/" + key), version);
     }
 
     public BuildInputSnapshot Snapshot { get; }

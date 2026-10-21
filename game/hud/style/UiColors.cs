@@ -20,10 +20,9 @@ public sealed class UiColors
         _palette = palette;
     }
 
-    public static UiColors Load(PaletteCatalog catalog)
+    public static UiColors Load(IRequiredResources resources, PaletteCatalog catalog)
     {
-        var bytes = Godot.FileAccess.GetFileAsBytes(Path);
-        if (bytes.Length == 0) throw new FileNotFoundException("Missing UI palette.", Path);
+        var bytes = resources.ReadBytes(Path);
         var document = JsonSerializer.Deserialize<UiPaletteDocument>(bytes, ContractJson.Options)
             ?? throw new InvalidDataException("ui.json is empty.");
         UiPalette.Validate(document, catalog);

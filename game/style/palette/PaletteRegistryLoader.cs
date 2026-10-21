@@ -9,8 +9,8 @@ public static class PaletteRegistryLoader
     public const string CorePath = "res://style/palette/core.json";
     public const string ExtDirectory = "res://style/palette/ext";
 
-    public static PaletteCatalog LoadCatalog() => PaletteCatalog.FromSources(
-        new[] { CorePath }.Concat(PackageFiles(ExtDirectory)).Select(path => (path, ReadRequired(path))));
+    public static PaletteCatalog LoadCatalog(IRequiredResources resources) => PaletteCatalog.FromSources(
+        new[] { CorePath }.Concat(PackageFiles(ExtDirectory)).Select(path => (path, resources.ReadBytes(path))));
 
     // ext/ui.json 是界面令牌，不属于场景色表。
     private static IEnumerable<string> PackageFiles(string directory)
@@ -23,10 +23,4 @@ public static class PaletteRegistryLoader
             .ToArray();
     }
 
-    private static byte[] ReadRequired(string path)
-    {
-        var bytes = Godot.FileAccess.GetFileAsBytes(path);
-        if (bytes.Length == 0) throw new FileNotFoundException($"Missing palette data: {path}");
-        return bytes;
-    }
 }

@@ -35,10 +35,10 @@ internal sealed class HudView
     {
         _owner = owner;
         _settings = dependencies.Settings;
-        var tokens = UiTokens.Load();
-        var colors = UiColors.Load(dependencies.PaletteCatalog.Catalog);
+        var tokens = UiTokens.Load(dependencies.Resources);
+        var colors = UiColors.Load(dependencies.Resources, dependencies.PaletteCatalog.Catalog);
         var materials = new UiMaterials(tokens, colors, dependencies.ShaderMaterials);
-        var theme = new UiThemeBuilder(tokens, colors);
+        var theme = new UiThemeBuilder(tokens, colors, dependencies.Resources);
         Kit = new UiKit(tokens, colors, materials, theme, dependencies.Motion, dependencies.ThemeClock);
         owner.AddChild(dependencies.ThemeClock);
         Root = CreateLayer("Root");

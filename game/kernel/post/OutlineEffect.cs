@@ -1,5 +1,6 @@
 using Campus.Contracts;
 using Campus.Kernel.Renderer;
+using KernelServices = Campus.Kernel.Registry.Kernel;
 using Godot;
 using Godot.Collections;
 
@@ -54,8 +55,7 @@ public partial class OutlineEffect : CompositorEffect
         _setMask = [_uUbo, _uDepth, _uNormal, _uMatTable, _uMask];
         _setComposite = [_uUbo, _uDepth, _uNormal, _uMatTable, _uMask, _uColor, _uPalette];
         // Shader files load on the main thread; GPU objects are created lazily on the render thread.
-        var file = GD.Load<RDShaderFile>(ShaderPath)
-            ?? throw new FileNotFoundException($"Missing outline shader: {ShaderPath}", ShaderPath);
+        var file = KernelServices.Get<IRequiredResources>().Load<RDShaderFile>(ShaderPath);
         _spirvMask = file.GetSpirV(MaskVersion);
         _spirvComposite = file.GetSpirV(CompositeVersion);
         if (_spirvMask.CompileErrorCompute.Length > 0 || _spirvComposite.CompileErrorCompute.Length > 0)

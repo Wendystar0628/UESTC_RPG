@@ -1,4 +1,5 @@
 using System.Text.Json;
+using Campus.Contracts;
 using Godot;
 
 namespace Campus.Hud.Style;
@@ -21,10 +22,9 @@ public sealed class UiTokens
         PanelRoles = roles.AsReadOnly();
     }
 
-    public static UiTokens Load()
+    public static UiTokens Load(IRequiredResources resources)
     {
-        var bytes = Godot.FileAccess.GetFileAsBytes(Path);
-        if (bytes.Length == 0) throw new FileNotFoundException("Missing UI metrics.", Path);
+        var bytes = resources.ReadBytes(Path);
         using var document = JsonDocument.Parse(bytes);
         return new UiTokens(document.RootElement.Clone());
     }

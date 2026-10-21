@@ -1,3 +1,4 @@
+using Campus.Kernel.Boot;
 using System.Reflection;
 using Campus.Kernel.Stream;
 using Campus.Tests;
@@ -31,8 +32,9 @@ public sealed class CollisionCoreTests
         var tree = (SceneTree)Engine.GetMainLoop();
         using var cache = new CacheDirectory();
         var options = new BakeOptions(cache.Path, Live: false, Strict: false, Background: false, MapOnly: false, LogicalProcessors: 3, SeedOverride: null);
-        using var terrain = new TerrainCacheService(options);
         var registry = Campus.Kernel.Registry.Kernel.Services;
+        registry.Add<IRequiredResources>(new RequiredResources());
+        using var terrain = new TerrainCacheService(options);
         try
         {
             // Match the production discovery boundary before ReadClaims captures content instances.
@@ -60,7 +62,7 @@ public sealed class CollisionCoreTests
         var input = source.ReadLoadInput(entry);
         var loaded = await Task.Run(() => MapWorldLoading.LoadPrepared(new WorldModelLoaderAdapter(terrain), input, claims));
         var context = MapWorldLoading.CreateContext(entry, loaded, input.SourceInputs);
-        using var bake = new BakeService(options, terrain, new GlobalBuildInputs().Snapshot);
+        using var bake = new BakeService(options, terrain, new GlobalBuildInputs(new RequiredResources()).Snapshot);
         using var productQueue = new BakeQueue(options.MaximumWorkers, static () => { });
         var products = new BakeProductBuilder(options, terrain, productQueue);
         var map = bake.Mount(context);

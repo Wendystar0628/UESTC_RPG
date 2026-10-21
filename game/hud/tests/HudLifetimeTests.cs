@@ -10,6 +10,7 @@ using Campus.Hud;
 using Campus.Hud.Motion;
 using Campus.Hud.Style;
 using Campus.Hud.Widgets;
+using Campus.Kernel.Boot;
 using Campus.Kernel.Diagnostics;
 using Campus.Kernel.Settings;
 using Campus.Kernel.World;
@@ -36,7 +37,8 @@ public sealed class HudLifetimeTests
         var motion = new MotionPolicy(settings);
         var baseline = Subscribers(settings, "Changed");
         var worldBaseline = Subscribers(world, "InstanceChanged");
-        var clock = new UiThemeClock(world, settings, motion);
+        var resources = new RequiredResources();
+        var clock = new UiThemeClock(world, settings, motion, resources);
         var parent = ((SceneTree)Engine.GetMainLoop()).Root;
         try
         {
@@ -72,6 +74,7 @@ public sealed class HudLifetimeTests
         var camera = new TestCameraRig(view);
         var model = new HudModel(world, camera, ruleset);
         var motion = new MotionPolicy(settings);
+        var resources = new RequiredResources();
         var settingsBaseline = Subscribers(settings, "Changed");
         var worldBaseline = Subscribers(world, "InstanceChanged");
         camera.Mode = ViewMode.Walk;
@@ -92,9 +95,9 @@ public sealed class HudLifetimeTests
                 Flow: flow,
                 Exit: new UnusedExit(),
                 Audio: audio,
-                PaletteCatalog: new PaletteRegistrySource(),
-                ShaderMaterials: new ShaderMaterialSource(),
-                ThemeClock: new UiThemeClock(world, settings, motion),
+                PaletteCatalog: new PaletteRegistrySource(resources),
+                ShaderMaterials: new ShaderMaterialSource(resources),
+                ThemeClock: new UiThemeClock(world, settings, motion, resources),
                 InputRouter: router,
                 ViewControl: view,
                 Capture: new UnusedCapture(),
@@ -102,7 +105,8 @@ public sealed class HudLifetimeTests
                 WorldState: world,
                 Saves: new UnusedSaveService(),
                 PaletteProbe: new Probe(),
-                Diagnostics: new DiagnosticLog());
+                Diagnostics: new DiagnosticLog(),
+                Resources: resources);
             hud = new HudRoot();
             hud.Bind(dependencies);
             parent.AddChild(hud);

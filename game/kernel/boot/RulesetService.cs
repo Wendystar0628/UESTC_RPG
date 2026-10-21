@@ -9,8 +9,11 @@ namespace Campus.Kernel.Boot;
 [KernelService(typeof(IRulesetActivation))]
 public sealed class RulesetService : IRuleset, IRulesetActivation
 {
-    public RulesetService()
+    private readonly IRequiredResources _resources;
+
+    public RulesetService(IRequiredResources resources)
     {
+        _resources = resources;
         Current = Read(ProjectSettings.GetSetting("campus/rulesets/default").AsString());
     }
 
@@ -24,16 +27,15 @@ public sealed class RulesetService : IRuleset, IRulesetActivation
             id.Value.Any(c => !(char.IsAsciiLetterOrDigit(c) || c is '-' or '_')))
             throw new ArgumentException("Invalid ruleset identifier.", nameof(id));
         var path = "res://data/rulesets/" + id.Value + ".json";
-        if (!Godot.FileAccess.FileExists(path)) throw new FileNotFoundException("Ruleset not found: " + id.Value);
         var next = Read(path);
         if (next.Id != id) throw new InvalidDataException("Ruleset identity is invalid.");
         Current = next;
         Rev++;
     }
 
-    private static RulesetDescriptor Read(string path)
+    private RulesetDescriptor Read(string path)
     {
-        var descriptor = JsonSerializer.Deserialize<RulesetDescriptor>(Godot.FileAccess.GetFileAsBytes(path), ContractJson.Options)
+        var descriptor = JsonSerializer.Deserialize<RulesetDescriptor>(_resources.ReadBytes(path), ContractJson.Options)
             ?? throw new InvalidDataException("Ruleset data is missing.");
         if (descriptor.Characters || descriptor.ClearVoices || descriptor.Interaction != InteractionRule.None)
             throw new InvalidDataException("Sightseeing content rules are violated.");

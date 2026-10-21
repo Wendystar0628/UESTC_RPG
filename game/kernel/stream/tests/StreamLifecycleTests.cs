@@ -1,3 +1,4 @@
+using Campus.Kernel.Boot;
 using Campus.Gen.Tests.Support;
 using Campus.Contracts;
 using Campus.Contracts.Bake;
@@ -126,7 +127,7 @@ internal static class StreamLifecycleTestSupport
     {
         private readonly Node3D _stage = new();
         private readonly Camera3D _view = new() { Current = true };
-        private readonly ShaderMaterial _material = new ShaderMaterialSource().Create(ShaderId.VegTrunk);
+        private readonly ShaderMaterial _material = new ShaderMaterialSource(new RequiredResources()).Create(ShaderId.VegTrunk);
         public StreamDirector Director { get; } = new();
         public TestCameraRig Camera { get; }
         public TestMapContext Context { get; }

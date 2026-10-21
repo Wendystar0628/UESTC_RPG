@@ -25,8 +25,6 @@ public sealed class BakeService : IBakeService, IBakeContextSource, IMapContentS
     private readonly IAppFlow? _flow;
     private readonly BakeOptions _options;
     private readonly BakeQueue _queue;
-    private Exception? _reportedFailure;
-    private AppStartupException? _codedFailure;
     private readonly BakeCacheStore _cache;
     private readonly TerrainCacheService _terrain;
     private readonly BuildInputSnapshot _globalInputs;
@@ -62,23 +60,7 @@ public sealed class BakeService : IBakeService, IBakeContextSource, IMapContentS
 
     public BakeProgress Progress => _queue.Progress;
     public long CacheBytes => _cache.CacheBytes;
-    public Exception? Failure
-    {
-        get
-        {
-            var failure = _queue.Failure;
-            if (failure is null || failure is AppStartupException) return failure;
-            lock (_sync)
-            {
-                if (!ReferenceEquals(failure, _reportedFailure))
-                {
-                    _reportedFailure = failure;
-                    _codedFailure = new(AppStartupFailureCodes.BakeFailed, "Local bake work failed.", failure);
-                }
-                return _codedFailure;
-            }
-        }
-    }
+    public Exception? Failure => _queue.Failure;
 
     internal bool TryTakeDiagnostic(out CollectedDiagnostic? diagnostic)
     {
@@ -240,15 +222,26 @@ public sealed class BakeService : IBakeService, IBakeContextSource, IMapContentS
 
     private async Task<BakeMapMetadata> PrepareMapData(MapBuild map)
     {
-        var metadata = await Task.Run(() => _preparation.Prepare(map)).ConfigureAwait(false);
-        lock (_sync)
+        try
         {
-            if (!map.Active || !_contexts.TryGetValue(map.Context.Descriptor.Id, out var current) || !ReferenceEquals(map, current))
-                throw new OperationCanceledException("Map unloaded while preparing resident metadata.");
-            map.Content.CompletePreparation(metadata);
-            map.Directory.PublishDirectory();
+            var metadata = await Task.Run(() => _preparation.Prepare(map)).ConfigureAwait(false);
+            lock (_sync)
+            {
+                if (!map.Active || !_contexts.TryGetValue(map.Context.Descriptor.Id, out var current) || !ReferenceEquals(map, current))
+                    throw new OperationCanceledException("Map unloaded while preparing resident metadata.");
+                map.Content.CompletePreparation(metadata);
+                map.Directory.PublishDirectory();
+            }
+            return metadata;
         }
-        return metadata;
+        catch (OperationCanceledException) { throw; }
+        catch (Exception error)
+        {
+            _queue.RecordFailure(error);
+            if (error is AppStartupException) throw;
+            _queue.ThrowIfFailed();
+            throw;
+        }
     }
 
     private IBakeHandle Schedule(MapBuild map, BakeKey key, BakePriority priority)

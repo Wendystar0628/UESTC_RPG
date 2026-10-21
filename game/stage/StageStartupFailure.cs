@@ -17,13 +17,15 @@ internal sealed class StageStartupFailure(KernelStage stage)
     private bool _handlingFailure;
     private bool _bootCompleted;
     private Task? _failureTask;
-    private IAppStartupFailurePresentation? _startupFailurePresentation;
+    private IAppStartupFailurePresentation _startupFailurePresentation = null!;
+    private bool _presentationBound;
     private StartupFailureSession? _startupFailureSession;
     internal bool Failed { get; private set; }
 
     internal void BindPresentation(ServiceRegistry registry)
     {
         _startupFailurePresentation = registry.Get<IAppStartupFailurePresentation>();
+        _presentationBound = true;
     }
 
     internal void CompleteBoot() => _bootCompleted = true;
@@ -60,7 +62,7 @@ internal sealed class StageStartupFailure(KernelStage stage)
         {
             try
             {
-                if (CanPresentStartupFailure() && _startupFailurePresentation is { } presentation)
+                if (_presentationBound && CanPresentStartupFailure())
                 {
                     // Join the existing cleanup; its fade must not run after failure-page acknowledgement.
                     await _stage.ReleaseStartupPresentation();
@@ -68,7 +70,7 @@ internal sealed class StageStartupFailure(KernelStage stage)
                     {
                         var session = new StartupFailureSession(this, DescribeStartupFailure(error));
                         _startupFailureSession = session;
-                        var acknowledged = await presentation.Show(session);
+                        var acknowledged = await _startupFailurePresentation.Show(session);
                         if (acknowledged && CanPresentStartupFailure())
                         {
                             session.Accept();
@@ -90,16 +92,10 @@ internal sealed class StageStartupFailure(KernelStage stage)
             Flow.ShowTitle: true, Ui.Visible: not false };
 
     private AppStartupFailure DescribeStartupFailure(Exception error) =>
-        new(SourceCode(error) ?? AppStartupFailureCodes.Unexpected, _failurePhase!, BuildInfo.Build, "user://logs");
+        new(SourceCode(error), _failurePhase!, BuildInfo.Build, "user://logs");
 
-    private static string? SourceCode(Exception error)
-    {
-        if (error is AggregateException aggregate)
-            foreach (var inner in aggregate.InnerExceptions)
-                if (SourceCode(inner) is { } code) return code;
-        if (error.InnerException is { } cause && SourceCode(cause) is { } nested) return nested;
-        return error is AppStartupException startup ? startup.Code : null;
-    }
+    private static string SourceCode(Exception error) =>
+        error is AppStartupException startup ? startup.Code : AppStartupFailureCodes.Unexpected;
 
     private void RecordFailure(Exception error)
     {

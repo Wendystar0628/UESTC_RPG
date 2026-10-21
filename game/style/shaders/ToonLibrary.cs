@@ -27,6 +27,7 @@ public sealed class ToonLibrary : IToonMaterialProvider, IDisposable
     private readonly object _gate = new();
     private readonly PaletteCatalog _catalog;
     private readonly IShaderMaterialSource _source;
+    private readonly IRequiredResources _resources;
     private readonly Dictionary<MaterialClass, ToonEntry> _byClass = [];
     private SceneTextTextures? _sceneTextTextures;
     private readonly byte[] _matBytes = new byte[MatTable.ByteCount];
@@ -40,15 +41,18 @@ public sealed class ToonLibrary : IToonMaterialProvider, IDisposable
     /// <param name="palettes">完整色表来源（game/style/ 的正式实现，无 GPU）：ToonSpec 按它校验，含 256–511 的扩展色。</param>
     /// <param name="source">白名单着色器的材质来源。</param>
     /// <param name="textures">全局数据纹理的登记处；mat_table 与 window_cards 登记后释放权归它。</param>
-    public ToonLibrary(IPaletteCatalogSource palettes, IShaderMaterialSource source, IGlobalDataTextureRegistry textures)
+    public ToonLibrary(IPaletteCatalogSource palettes, IShaderMaterialSource source, IGlobalDataTextureRegistry textures,
+        IRequiredResources resources)
     {
         ArgumentNullException.ThrowIfNull(palettes);
         ArgumentNullException.ThrowIfNull(source);
         ArgumentNullException.ThrowIfNull(textures);
+        ArgumentNullException.ThrowIfNull(resources);
         if (OS.GetThreadCallerId() != OS.GetMainThreadId())
             throw new InvalidOperationException("Toon data textures must be created on the main thread.");
         _catalog = palettes.Catalog;
         _source = source;
+        _resources = resources;
         Image? matImage = null;
         ImageTexture? matTexture = null;
         ImageTexture? cardTexture = null;
@@ -157,7 +161,7 @@ public sealed class ToonLibrary : IToonMaterialProvider, IDisposable
         if (kind == ToonKind.GlassNear) material.SetShaderParameter(ClearGlassParameter, true);
         if (kind == ToonKind.SceneText)
         {
-            _sceneTextTextures ??= new SceneTextTextures();
+            _sceneTextTextures ??= new SceneTextTextures(_resources);
             _sceneTextTextures.Bind(material);
         }
         return material;

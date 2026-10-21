@@ -17,6 +17,7 @@ public sealed class MapInputSnapshotTests
     [RequireGodotRuntime]
     public void ProductionAndDiskCaptureAgreeWhenOptionalMapResourcesAreAbsent()
     {
+        Campus.Kernel.Registry.Kernel.Services.Add<IRequiredResources>(new Campus.Kernel.Boot.RequiredResources());
         var entry = RealMapFixture.Entry();
         var expected = RealMapFixture.ReadFiles();
         var actual = new MapDataSource().ReadLoadInput(entry).Files;

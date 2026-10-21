@@ -1,3 +1,4 @@
+using Campus.Kernel.Boot;
 using System.Reflection;
 using Campus.Contracts;
 using Campus.Contracts.Bake;
@@ -86,7 +87,7 @@ public sealed class ToonLibraryRuntimeTests
         {
             using var prepared = new PreparedTile(restored);
             prepared.Initialize(restored);
-            using var materials = new StreamMaterials(fixture.Library, new ShaderMaterialSource());
+            using var materials = new StreamMaterials(fixture.Library, new ShaderMaterialSource(new RequiredResources()));
             var draw = prepared.Draws.Single();
             var material = materials.Resolve(draw);
             prepared.MountOne(0, scenario, material.GetRid());
@@ -216,7 +217,7 @@ public sealed class ToonLibraryRuntimeTests
         using var registry = new GlobalDataTextureRegistry();
         var rejecting = new RejectCards(registry);
         var rejected = false;
-        try { using var unexpected = new ToonLibrary(new Palettes(), new ShaderMaterialSource(), rejecting); }
+        try { using var unexpected = new ToonLibrary(new Palettes(), new ShaderMaterialSource(new RequiredResources()), rejecting, new RequiredResources()); }
         catch (InvalidOperationException) { rejected = true; }
         AssertThat(rejected).OverrideFailureMessage("Exercise failure after mat_table registration and card texture creation.").IsTrue();
         AssertThat(!registry.TryAcquire(ShaderGlobals.MatTable, out _)).OverrideFailureMessage("A partially constructed library must unregister mat_table.").IsTrue();
@@ -259,7 +260,7 @@ public sealed class ToonLibraryRuntimeTests
         public Fixture()
         {
             AssertThat(OS.GetThreadCallerId() == OS.GetMainThreadId()).OverrideFailureMessage("Native material lifetime tests must run on Godot's main thread.").IsTrue();
-            Library = new ToonLibrary(new Palettes(), new ShaderMaterialSource(), Textures);
+            Library = new ToonLibrary(new Palettes(), new ShaderMaterialSource(new RequiredResources()), Textures, new RequiredResources());
         }
 
         public ShaderMaterial Borrow(string mode)

@@ -1,6 +1,5 @@
 using Campus.Kernel.Diagnostics;
 using Campus.Contracts;
-using Campus.Contracts.AppFlow;
 using Campus.Contracts.Bake;
 using Campus.Contracts.Maps;
 using Godot;
@@ -22,16 +21,9 @@ public partial class BakeRuntime : Node, IMapAware, IMapDataParticipant
 
     public async Task Prepare(IMapContext context)
     {
-        try
-        {
-            _map = _service.Mount(context);
-            var metadata = await _service.PrepareMapData(context);
-            _inventory.Publish(metadata.Lighting);
-        }
-        catch (OperationCanceledException) { throw; }
-        catch (AppStartupException) { throw; }
-        catch (Exception error)
-        { throw new AppStartupException(AppStartupFailureCodes.BakeFailed, "Resident bake preparation failed.", error); }
+        _map = _service.Mount(context);
+        var metadata = await _service.PrepareMapData(context);
+        _inventory.Publish(metadata.Lighting);
     }
     public async Task UnloadAsync(MapId map)
     {

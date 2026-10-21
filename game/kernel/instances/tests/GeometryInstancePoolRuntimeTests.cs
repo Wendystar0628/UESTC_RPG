@@ -1,3 +1,4 @@
+using Campus.Kernel.Boot;
 using Campus.Contracts;
 using Campus.Contracts.Maps;
 using Campus.Kernel.Instances;
@@ -432,8 +433,8 @@ public sealed class GeometryInstancePoolRuntimeTests
             try
             {
                 var tree = Engine.GetMainLoop() as SceneTree ?? throw new InvalidOperationException("Godot scene tree required.");
-                fixture._first = new ShaderMaterialSource().Create(ShaderId.VegTrunk);
-                fixture._second = new ShaderMaterialSource().Create(ShaderId.VegTrunk);
+                fixture._first = new ShaderMaterialSource(new RequiredResources()).Create(ShaderId.VegTrunk);
+                fixture._second = new ShaderMaterialSource(new RequiredResources()).Create(ShaderId.VegTrunk);
                 fixture.Provider = new(fixture._first, fixture._second);
                 fixture._parent = new Node3D();
                 tree.Root.AddChild(fixture._parent);
@@ -461,7 +462,7 @@ public sealed class GeometryInstancePoolRuntimeTests
         public List<ShaderMaterial> Created { get; } = [];
         public ShaderMaterial Create(ShaderId shader)
         {
-            var material = new ShaderMaterialSource().Create(ShaderId.VegTrunk); // The real whitelist factory owns shader selection.
+            var material = new ShaderMaterialSource(new RequiredResources()).Create(ShaderId.VegTrunk); // The real whitelist factory owns shader selection.
             Created.Add(material);
             return material;
         }

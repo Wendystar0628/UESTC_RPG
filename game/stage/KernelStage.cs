@@ -75,6 +75,7 @@ public partial class KernelStage : Node3D, IAppExit, IStageGateHost
         try
         {
             var registry = KernelServices.Services;
+            registry.Add<IRequiredResources>(new RequiredResources());
             registry.Discover(LoadModuleTypes());
             GD.Print($"Kernel registry: {registry.Entries.Count} declarations; build {BuildInfo.Build}");
             if (RegistryStageGate.TryRun()) { await FinishQuit(); return; }
@@ -165,7 +166,8 @@ public partial class KernelStage : Node3D, IAppExit, IStageGateHost
             WorldState: registry.Get<IWorldState>(),
             Saves: registry.Get<ISaveService>(),
             PaletteProbe: registry.Get<IPaletteProbe>(),
-            Diagnostics: registry.Get<Campus.Contracts.Diagnostics.IDiagnosticLog>()));
+            Diagnostics: registry.Get<Campus.Contracts.Diagnostics.IDiagnosticLog>(),
+            Resources: registry.Get<IRequiredResources>()));
     }
 
     private static void BindMapDependencies(ServiceRegistry registry, Camera3D viewCamera)
@@ -293,7 +295,7 @@ public partial class KernelStage : Node3D, IAppExit, IStageGateHost
         if (travelled != MapTravelResult.Arrived)
         {
             if (travel.Failure is { } failure) System.Runtime.ExceptionServices.ExceptionDispatchInfo.Capture(failure).Throw();
-            throw new AppStartupException(AppStartupFailureCodes.MapPreparation, "Boot map travel was rejected.");
+            throw new InvalidOperationException("Boot map travel was rejected without a preparation failure.");
         }
         await Initialize(BootPhase.AfterMapWarm);
         await BootWorldOverrides.ApplyQuality(options, registry.Get<IQualityService>());

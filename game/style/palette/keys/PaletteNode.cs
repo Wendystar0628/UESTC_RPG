@@ -49,8 +49,10 @@ public partial class PaletteNode : Node, IColorScriptFrame, IPaletteProbe, IMapA
     public PaletteNode()
     {
         ProcessPriority = FramePriority.Palette;
-        _script = new ColorScript(ColorScriptData.Load(Read("autumn.keys.json"), Read("derive.json"), Read("seasons.json"),
-            Read("vegetation.json"), Read("weather.json")));
+        var resources = KernelServices.Get<IRequiredResources>();
+        _script = new ColorScript(ColorScriptData.Load(resources.ReadBytes(KeysDir + "autumn.keys.json"),
+            resources.ReadBytes(KeysDir + "derive.json"), resources.ReadBytes(KeysDir + "seasons.json"),
+            resources.ReadBytes(KeysDir + "vegetation.json"), resources.ReadBytes(KeysDir + "weather.json")));
         var source = KernelServices.Get<IPaletteCatalogSource>();
         _catalog = source.Catalog;
         CatalogSource = source.GetType().Name;
@@ -73,13 +75,6 @@ public partial class PaletteNode : Node, IColorScriptFrame, IPaletteProbe, IMapA
     public PaletteCatalog Catalog => _catalog;
     public byte[] Pixels => _composer.Pixels;
     public double[] SkyStops => _script.Data.SkyStopsDeg;
-
-    private static byte[] Read(string name)
-    {
-        var bytes = Godot.FileAccess.GetFileAsBytes(KeysDir + name);
-        if (bytes.Length == 0) throw new FileNotFoundException($"Missing colour-script data: {KeysDir + name}");
-        return bytes;
-    }
 
     public override void _EnterTree()
     {

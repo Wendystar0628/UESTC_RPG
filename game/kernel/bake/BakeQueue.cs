@@ -1,4 +1,5 @@
 using Campus.Contracts.Bake;
+using Campus.Contracts.AppFlow;
 using Campus.Contracts;
 using System.Runtime.ExceptionServices;
 
@@ -170,15 +171,11 @@ internal sealed class BakeQueue : IDisposable
                     if (job.Failure is { } error)
                     {
                         job.Handle.Fail(error);
-                        if (error is not OperationCanceledException) AddFailure(error);
+                        if (error is not OperationCanceledException) RecordFailure(error);
                     }
                     else if (job.Counted) job.Handle.Complete(product!);
                     _running--;
-                    if (job!.Counted)
-                    {
-                        _done++;
-                        if (job.Failure is not null && job.Failure is not OperationCanceledException) _failed++;
-                    }
+                    if (job!.Counted) _done++;
                     persist = BeginPersistence();
                     Monitor.PulseAll(_sync);
                 }
@@ -226,17 +223,24 @@ internal sealed class BakeQueue : IDisposable
         }
     }
 
-    // ENG-ARCH: the queue terminates this batch and delivers the original failure to its owner.
+    // Classify once at publication; handles and drain tasks keep their original worker errors.
     internal void RecordFailure([FailureHandler("ENG-ARCH")] Exception error)
     {
         if (error is OperationCanceledException) return;
-        lock (_sync) { _failed++; AddFailure(error); }
-    }
-
-    private void AddFailure(Exception error)
-    {
-        _failures.Add(error);
-        _failure = _failures.Count == 1 ? error : new AggregateException("Bake work failed.", _failures);
+        lock (_sync)
+        {
+            if (ReferenceEquals(error, _failure)) return;
+            _failed++;
+            _failures.Add(error);
+            if (_failures.Count == 1 && error is AppStartupException)
+            {
+                _failure = error;
+                return;
+            }
+            var code = _failure is AppStartupException startup ? startup.Code : AppStartupFailureCodes.BakeFailed;
+            var cause = _failures.Count == 1 ? error : new AggregateException("Bake work failed.", _failures);
+            _failure = new AppStartupException(code, "Local bake work failed.", cause);
+        }
     }
 
     internal void ThrowIfFailed()

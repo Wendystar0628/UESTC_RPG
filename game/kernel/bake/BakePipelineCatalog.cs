@@ -6,6 +6,7 @@ using Campus.Contracts.Bake;
 using Campus.Contracts.Fauna;
 using Campus.Contracts.Vegetation;
 using Campus.Kernel.Renderer;
+using KernelServices = Campus.Kernel.Registry.Kernel;
 using Format = Godot.RenderingServer.ArrayFormat;
 
 namespace Campus.Kernel.Bake;
@@ -19,8 +20,7 @@ internal sealed class BakePipelineCatalog
     /// <summary>Reads the global shipped asset; player CPU cache state never participates in pipeline preparation.</summary>
     internal static IReadOnlyList<PipelineCombination> Read()
     {
-        var bytes = Godot.FileAccess.GetFileAsBytes(ResourcePath);
-        if (bytes.Length == 0) throw new AppStartupException(AppStartupFailureCodes.Installation, $"Missing build asset: {ResourcePath}.");
+        var bytes = KernelServices.Get<IRequiredResources>().ReadBytes(ResourcePath);
         try
         {
             var combinations = JsonSerializer.Deserialize<PipelineCombination[]>(bytes, ContractJson.Options)

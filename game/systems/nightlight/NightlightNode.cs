@@ -108,8 +108,7 @@ public partial class NightlightNode : Node, IMapAware, IViewContentReadiness, IV
     public void OnMapLoaded(IMapContext ctx)
     {
         ArgumentNullException.ThrowIfNull(ctx);
-        var bytes = Godot.FileAccess.GetFileAsBytes(ctx.DataRoot + NightlightBakeProducer.ScheduleFile);
-        if (bytes.Length == 0) throw new InvalidDataException("Missing map lighting schedule.");
+        var bytes = KernelServices.Get<IRequiredResources>().ReadBytes(ctx.DataRoot + NightlightBakeProducer.ScheduleFile);
         _schedule = NightlightBakeProducer.ReadSchedule(bytes, ctx.Descriptor.Id);
         _glows!.Bind(ctx.Descriptor.Id);
         _map = ctx;

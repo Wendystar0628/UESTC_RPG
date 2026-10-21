@@ -62,8 +62,8 @@ public sealed class QualityService : IQualityFrame, IBootParticipant, IAsyncDisp
     private Task? _disposal;
     private bool _disposed;
 
-    public QualityService(ISettingsStore settings)
-        : this(new QualityCatalog(Godot.FileAccess.GetFileAsString("res://data/quality-presets.json")), settings) { }
+    public QualityService(ISettingsStore settings, IRequiredResources resources)
+        : this(new QualityCatalog(resources.ReadText("res://data/quality-presets.json")), settings) { }
 
     private QualityService(QualityCatalog catalog, ISettingsStore settings)
         : this(catalog, new GraphicsSettingsStore(settings, catalog)) { }

@@ -30,9 +30,7 @@ internal sealed class BuildCodeIndex
 
     internal static BuildCodeIndex Load()
     {
-        if (!Godot.FileAccess.FileExists(AssetPath))
-            throw new InvalidDataException($"Missing build code fingerprints: {AssetPath}.");
-        return Parse(Godot.FileAccess.GetFileAsBytes(AssetPath));
+        return Parse(Kernel.Get<IRequiredResources>().ReadBytes(AssetPath));
     }
 
     internal static BuildCodeIndex Parse(ReadOnlyMemory<byte> bytes)

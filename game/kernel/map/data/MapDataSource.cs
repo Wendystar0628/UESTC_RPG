@@ -6,6 +6,7 @@ using Campus.Contracts.AppFlow;
 using System.Text.Json;
 using Campus.Contracts.Maps;
 using Campus.Kernel.Registry;
+using KernelServices = Campus.Kernel.Registry.Kernel;
 using Godot;
 
 namespace Campus.Kernel.Maps;
@@ -86,8 +87,6 @@ public class MapDataSource
     {
         if (string.IsNullOrWhiteSpace(path) || !path.StartsWith("res://", StringComparison.Ordinal))
             throw new AppStartupException(AppStartupFailureCodes.DataInvalid, "Map resources must use res:// paths.");
-        var bytes = Godot.FileAccess.GetFileAsBytes(path);
-        if (bytes.Length == 0) throw new AppStartupException(AppStartupFailureCodes.Installation, $"Missing or empty map resource: {path}.");
-        return bytes;
+        return KernelServices.Get<IRequiredResources>().ReadBytes(path);
     }
 }

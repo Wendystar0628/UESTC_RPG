@@ -2,6 +2,7 @@ using Campus.Tests;
 using static GdUnit4.Assertions;
 using Campus.Contracts;
 using Campus.Contracts.Bake;
+using Campus.Contracts.AppFlow;
 using GdUnit4;
 
 namespace Campus.Kernel.Bake.Tests;
@@ -22,8 +23,15 @@ public sealed class BakeQueueTests
         try { handle.Done.GetAwaiter().GetResult(); }
         catch (Exception actual) { awaited = actual; }
         queue.Dispose();
-        if (!ReferenceEquals(awaited, error) || !ReferenceEquals(handle.Failure, error) || !ReferenceEquals(queue.Failure, error))
-            throw new InvalidOperationException("Bake failure lost its original exception object.");
+        if (!ReferenceEquals(awaited, error) || !ReferenceEquals(handle.Failure, error) ||
+            queue.Failure is not AppStartupException { Code: AppStartupFailureCodes.BakeFailed } coded || !ReferenceEquals(coded.InnerException, error))
+            throw new InvalidOperationException("Bake failure lost its code or original exception object.");
+        var cleanup = new IOException("Bake publication cleanup failed.");
+        queue.RecordFailure(cleanup);
+        if (queue.Failure is not AppStartupException { Code: AppStartupFailureCodes.BakeFailed,
+                InnerException: AggregateException causes } summary ||
+            !ReferenceEquals(queue.Failure, summary) || !causes.InnerExceptions.SequenceEqual(new Exception[] { error, cleanup }))
+            throw new InvalidOperationException("Bake failure publication lost a source or introduced nested code wrappers.");
     }
 
     [TestCase]
@@ -58,7 +66,8 @@ public sealed class BakeQueueTests
                 catch (AggregateException aggregate) when (aggregate.Flatten().InnerExceptions.Any(value => ReferenceEquals(value, error))) { }
                 catch (InvalidDataException actual) when (ReferenceEquals(actual, error)) { }
             }
-            if (!ReferenceEquals(handle.Failure, error) || !ReferenceEquals(queue.Failure, error))
+            if (!ReferenceEquals(handle.Failure, error) ||
+                queue.Failure is not AppStartupException { Code: AppStartupFailureCodes.BakeFailed } coded || !ReferenceEquals(coded.InnerException, error))
                 throw new InvalidOperationException("Unload changed the worker failure identity.");
         }
         finally { release.Set(); }
@@ -85,7 +94,7 @@ public sealed class BakeQueueTests
             if (queue.Progress.Done == queue.Progress.Total) throw new InvalidOperationException("Batch completed before source index publication.");
         }
         finally { release.Set(); queue.Dispose(); }
-        if (!ReferenceEquals(queue.Failure, error))
+        if (queue.Failure is not AppStartupException { Code: AppStartupFailureCodes.BakeFailed } coded || !ReferenceEquals(coded.InnerException, error))
             throw new InvalidOperationException("Source index publication lost its original failure.");
     }
 

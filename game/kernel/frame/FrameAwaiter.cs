@@ -1,3 +1,4 @@
+using Campus.Contracts.AppFlow;
 using Godot;
 
 namespace Campus.Kernel.Frame;
@@ -67,7 +68,7 @@ public static class FrameAwaiter
         }
         catch (OperationCanceledException error) when (deadline.IsCancellationRequested && !cancellationToken.IsCancellationRequested)
         {
-            throw new TimeoutException("Frame presentation stalled.", error);
+            throw AppStartupException.Stalled("Frame presentation stalled.", error);
         }
     }
 }

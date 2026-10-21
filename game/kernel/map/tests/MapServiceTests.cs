@@ -6,7 +6,6 @@ using System.Numerics;
 using System.Text;
 using System.Text.Json;
 using Campus.Contracts;
-using Campus.Contracts.AppFlow;
 using Campus.Contracts.Maps;
 using Campus.Contracts.Save;
 using Campus.Kernel.Maps;
@@ -297,9 +296,8 @@ public sealed class MapServiceTests
         var travel = f.Service.Travel(new(f.A, Cause: MapTravelCause.Boot));
         f.Until(() => travel.Done.IsCompleted);
         AssertThat(travel.Done.Result == MapTravelResult.Failed && f.Loader.Loads == 1).OverrideFailureMessage("Boot retried after a failed load.").IsTrue();
-        AssertThat(travel.Failure is AppStartupException
-            { Code: AppStartupFailureCodes.MapPreparation, InnerException: InvalidDataException })
-            .OverrideFailureMessage("Boot map failure lost its source code or original cause.").IsTrue();
+        AssertThat(travel.Failure is InvalidDataException)
+            .OverrideFailureMessage("Map service replaced the original load failure with an inferred startup code.").IsTrue();
     }
 
     [TestCase]

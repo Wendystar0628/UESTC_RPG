@@ -9,7 +9,7 @@ namespace Campus.Style.Materials;
 /// 着色器文件归各自的包，这里只建材质。
 /// </summary>
 [KernelService(typeof(IShaderMaterialSource))]
-public sealed class ShaderMaterialSource : IShaderMaterialSource
+public sealed class ShaderMaterialSource(IRequiredResources resources) : IShaderMaterialSource
 {
     private readonly Dictionary<ShaderId, Shader> _shaders = [];
 
@@ -19,10 +19,7 @@ public sealed class ShaderMaterialSource : IShaderMaterialSource
     {
         if (_shaders.TryGetValue(shader, out var cached)) return cached;
         var path = "res://" + MaterialShaders.FileOf(shader);
-        if (!ResourceLoader.Exists(path, "Shader"))
-            throw new FileNotFoundException($"Whitelisted shader '{shader}' is not available at '{path}'. The shader registry must reference a delivered resource.", path);
-        var loaded = ResourceLoader.Load<Shader>(path)
-            ?? throw new InvalidOperationException($"Failed to load whitelisted shader '{shader}' from '{path}'.");
+        var loaded = resources.Load<Shader>(path);
         _shaders.Add(shader, loaded);
         return loaded;
     }
