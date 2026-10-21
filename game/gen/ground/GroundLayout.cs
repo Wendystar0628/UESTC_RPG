@@ -1,18 +1,18 @@
 using System.Numerics;
 using Campus.Contracts;
 using Campus.Gen.Geometry;
+using NetTopologySuite.Geometries;
+using NetTopologySuite.Index.Strtree;
 
 namespace Campus.Gen.Ground;
 
 /// <summary>
-/// World-level preprocessing shared by every tile: source shapes per surface class, a 64 m bin index and the road
+/// World-level preprocessing shared by every tile: source shapes per surface class, a static bounds index and the road
 /// centre lines. Built once per world model (read only) and cached; thread safe after construction.
 /// </summary>
 internal sealed class GroundLayout
 {
-    private const float BinMargin = 32f;
-
-    private readonly Dictionary<long, int[]> _bins;
+    private readonly STRtree<int> _index = new();
 
     public IReadOnlyList<GroundShape> Shapes { get; }
     public IReadOnlyList<RoadLine> Roads { get; }
@@ -28,23 +28,14 @@ internal sealed class GroundLayout
         Roads = roads;
         var min = new Vector2(float.MaxValue);
         var max = new Vector2(float.MinValue);
-        var bins = new Dictionary<long, List<int>>();
         for (var s = 0; s < shapes.Count; s++)
         {
             var shape = shapes[s];
             min = Vector2.Min(min, shape.Min);
             max = Vector2.Max(max, shape.Max);
-            var b0 = Bin(shape.Min - new Vector2(BinMargin));
-            var b1 = Bin(shape.Max + new Vector2(BinMargin));
-            for (var bz = b0.Z; bz <= b1.Z; bz++)
-                for (var bx = b0.X; bx <= b1.X; bx++)
-                {
-                    var key = Key(bx, bz);
-                    if (!bins.TryGetValue(key, out var list)) bins.Add(key, list = []);
-                    list.Add(s);
-                }
+            _index.Insert(new Envelope(shape.Min.X, shape.Max.X, shape.Min.Y, shape.Max.Y), s);
         }
-        _bins = bins.ToDictionary(pair => pair.Key, pair => pair.Value.ToArray());
+        _index.Build();
         Min = shapes.Count > 0 ? min : Vector2.Zero;
         Max = shapes.Count > 0 ? max : Vector2.Zero;
     }
@@ -60,24 +51,9 @@ internal sealed class GroundLayout
     /// <summary>Shapes whose bounds overlap the box. Order is the stable shape order (sorted by feature ID).</summary>
     public List<GroundShape> Near(Vector2 min, Vector2 max)
     {
-        var result = new List<GroundShape>();
-        var b0 = Bin(min);
-        var b1 = Bin(max);
-        var seen = new HashSet<int>();
-        var indices = new List<int>();
-        for (var bz = b0.Z; bz <= b1.Z; bz++)
-            for (var bx = b0.X; bx <= b1.X; bx++)
-                if (_bins.TryGetValue(Key(bx, bz), out var list))
-                    foreach (var s in list)
-                        if (seen.Add(s)) indices.Add(s);
+        var indices = _index.Query(new Envelope(min.X, max.X, min.Y, max.Y)).ToList();
         indices.Sort();
-        foreach (var s in indices)
-        {
-            var shape = Shapes[s];
-            if (shape.Max.X < min.X || shape.Min.X > max.X || shape.Max.Y < min.Y || shape.Min.Y > max.Y) continue;
-            result.Add(shape);
-        }
-        return result;
+        return indices.Select(s => Shapes[s]).ToList();
     }
 
     /// <summary>Exact signed distance (negative inside) to the union of one surface class, clamped to ±limit.</summary>
@@ -97,13 +73,6 @@ internal sealed class GroundLayout
         var (shapes, roads) = GroundSources.Read(world);
         return new GroundLayout(shapes, roads) { Paving = GroundPaving.Build(world, shapes) };
     }
-
-    private static (int X, int Z) Bin(Vector2 p)
-    {
-        var cell = TileGrid.At(p);
-        return (cell.X, cell.Z);
-    }
-    private static long Key(int x, int z) => ((long)x << 32) ^ (uint)z;
 }
 
 /// <summary>Exact point queries against one shape; the lattice rasteriser in <see cref="TileField"/> must agree with these.</summary>

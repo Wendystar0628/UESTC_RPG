@@ -1,4 +1,7 @@
+using System.Numerics;
 using System.Text.Json;
+using System.Text.Json.Serialization;
+using Campus.Gen.World;
 
 namespace Campus.Gen.Diorama;
 
@@ -18,32 +21,29 @@ public sealed record BackdropData(
 {
     public const int Schema = 1;
 
+    private static readonly BackdropJsonContext Context = CreateContext();
+
     public static BackdropData Parse(ReadOnlySpan<byte> json)
     {
-        using var document = JsonDocument.Parse(json.ToArray());
-        var root = document.RootElement;
-        if (Int(root, "schema") != Schema) throw new InvalidDataException($"backdrop: schema must be {Schema}.");
-        var fog = Obj(root, "fogSea");
-        var bank = Obj(fog, "edgeBank");
-        var fogSea = new FogSeaData(Num(fog, "topY"), Num(fog, "outerRadius"), Num(fog, "riseTopY"), Int(fog, "segments"),
-            new EdgeBankData(Num(bank, "height"), Num(bank, "inside"), Num(bank, "outside"), Num(bank, "jitter"), Num(bank, "waveLength"), Num(bank, "wander")));
-        var rings = Arr(root, "cityRings").Select(r => new CityRingData(Str(r, "id"), Num(r, "radius"), Num(r, "parallax"),
-            Num(r, "haze"), Num(r, "rowHaze"), Num(r, "depth"), Int(r, "rows"), Num(r, "baseY"))).ToArray();
-        var sectors = Arr(root, "sectors").Select(s => new SectorData(Num(s, "from"), Num(s, "to"),
-            Fill(Obj(s, "near")), Fill(Obj(s, "mid")))).ToArray();
-        var far = Obj(root, "farRing");
-        var hills = Arr(far, "hills").Select(h => new HillKey(Num(h, "azimuth"), Num(h, "elevationDeg"))).ToArray();
-        var mountains = Arr(far, "mountains").Select(m => new MountainData(Str(m, "name"), Num(m, "azimuth"), Num(m, "distanceKm"),
-            Num(m, "trueElevationDeg"), Arr(m, "peaks").Select(p => new PeakData(Num(p, "offsetDeg"), Num(p, "height"), Num(p, "halfWidthDeg"))).ToArray())).ToArray();
-        var farRing = new FarRingData(Num(far, "radius"), Num(far, "parallax"), Num(far, "depth"), Int(far, "rows"), Num(far, "skirtY"),
-            Num(far, "stepDeg"), Num(far, "fineStepDeg"), Num(far, "visualScale"), hills, mountains);
-        var snow = Obj(root, "snow");
-        var data = new BackdropData(Num(root, "farClip"), fogSea, rings, sectors, farRing,
-            new SnowData(Four(snow, "visibility"), Four(snow, "snowline")));
+        var file = WireJson.Read(json, Context.BackdropWire, "backdrop");
+        if (file.Schema != Schema) throw new InvalidDataException($"backdrop: schema must be {Schema}.");
+        if (file.Snow.Visibility.Count != 4 || file.Snow.Snowline.Count != 4)
+            throw new InvalidDataException("backdrop: snow tables need four seasons (spring, summer, autumn, winter).");
+        if (file.CityRings.Any(r => r is null) || file.Sectors.Any(s => s is null) || file.FarRing.Hills.Any(h => h is null)
+            || file.FarRing.Mountains.Any(m => m is null || m.Peaks.Any(p => p is null)))
+            throw new InvalidDataException("backdrop: list members must not be null.");
+        var data = new BackdropData(file.FarClip, file.FogSea, file.CityRings,
+            file.Sectors.Select(s => new SectorData(s.From, s.To, s.Near.ToData(), s.Mid.ToData())).ToArray(),
+            file.FarRing, file.Snow);
         data.Validate();
         return data;
+    }
 
-        static SectorFill Fill(JsonElement e) => new(Num(e, "fill"), Num(e, "towerShare"), Pair(e, "low"), Pair(e, "high"));
+    private static BackdropJsonContext CreateContext()
+    {
+        var options = new JsonSerializerOptions(WireJson.Options);
+        options.Converters.Add(new BackdropFiniteSingleConverter());
+        return new(options);
     }
 
     /// <summary>Range checks that keep the products inside the camera's far clip and the encodings exact.</summary>
@@ -85,36 +85,10 @@ public sealed record BackdropData(
             Check(m.Peaks.Count > 0 && m.Peaks.All(p => p.Height > 0f && p.HalfWidthDeg > 0f) && m.TrueElevationDeg > 0f, $"mountain {m.Name}");
         Check(Snow.Visibility.All(v => v is >= 0f and <= 1f) && Snow.Snowline.All(v => v is >= 0f and <= 1f), "snow table values 0-1");
     }
-
-    private static JsonElement Obj(JsonElement e, string name) =>
-        e.TryGetProperty(name, out var v) && v.ValueKind == JsonValueKind.Object ? v : throw new InvalidDataException($"backdrop: missing object '{name}'.");
-    private static IEnumerable<JsonElement> Arr(JsonElement e, string name) =>
-        e.TryGetProperty(name, out var v) && v.ValueKind == JsonValueKind.Array ? v.EnumerateArray().ToArray() : throw new InvalidDataException($"backdrop: missing array '{name}'.");
-    private static float Num(JsonElement e, string name)
-    {
-        if (!e.TryGetProperty(name, out var v) || v.ValueKind != JsonValueKind.Number) throw new InvalidDataException($"backdrop: missing number '{name}'.");
-        var f = v.GetSingle();
-        return float.IsFinite(f) ? f : throw new InvalidDataException($"backdrop: '{name}' is not finite.");
-    }
-    private static int Int(JsonElement e, string name) =>
-        e.TryGetProperty(name, out var v) && v.ValueKind == JsonValueKind.Number && v.TryGetInt32(out var i) ? i : throw new InvalidDataException($"backdrop: missing integer '{name}'.");
-    private static string Str(JsonElement e, string name) =>
-        e.TryGetProperty(name, out var v) && v.ValueKind == JsonValueKind.String ? v.GetString()! : throw new InvalidDataException($"backdrop: missing string '{name}'.");
-    private static (float Min, float Max) Pair(JsonElement e, string name)
-    {
-        var a = Arr(e, name).ToArray();
-        if (a.Length != 2) throw new InvalidDataException($"backdrop: '{name}' needs two numbers.");
-        return (a[0].GetSingle(), a[1].GetSingle());
-    }
-    private static float[] Four(JsonElement e, string name)
-    {
-        var a = Arr(e, name).Select(x => x.GetSingle()).ToArray();
-        return a.Length == 4 ? a : throw new InvalidDataException($"backdrop: '{name}' needs four seasons (spring, summer, autumn, winter).");
-    }
 }
 
 /// <param name="TopY">Clear-weather top of the fog sea (m), below the campus ground (WLD-OUTSKIRTS-DIORAMA).</param>
-/// <param name="RiseTopY">Highest top in fog weather, about 1 m under the cut edge (§4.3).</param>
+/// <param name="RiseTopY">Highest top in fog weather, about 1 m under the cut edge (WLD-OUTSKIRTS-DIORAMA).</param>
 public sealed record FogSeaData(float TopY, float OuterRadius, float RiseTopY, int Segments, EdgeBankData EdgeBank);
 
 /// <summary>
@@ -144,3 +118,33 @@ public sealed record FarRingData(float Radius, float Parallax, float Depth, int 
 
 /// <summary>Seasonal snow table (WLD-OUTSKIRTS-DIORAMA), each array spring, summer, autumn, winter.</summary>
 public sealed record SnowData(IReadOnlyList<float> Visibility, IReadOnlyList<float> Snowline);
+
+// The wire alone carries schema/commentary and JSON's two-element height arrays.
+internal sealed record BackdropWire(int Schema, float FarClip, FogSeaData FogSea, IReadOnlyList<CityRingData> CityRings,
+    IReadOnlyList<BackdropSectorWire> Sectors, FarRingData FarRing, SnowData Snow,
+    string? Doc = null, IReadOnlyList<string>? Notes = null);
+
+internal sealed record BackdropSectorWire(float From, float To, BackdropFillWire Near, BackdropFillWire Mid);
+
+internal sealed record BackdropFillWire(float Fill, float TowerShare, Vector2 Low, Vector2 High)
+{
+    // WireJson inherits ContractJson's finite, exactly-two-number vector reader.
+    public SectorFill ToData() => new(Fill, TowerShare, (Low.X, Low.Y), (High.X, High.Y));
+}
+
+// Strict JSON numbers can still overflow Single. Keep all backdrop floats finite,
+// including array members and fields whose domain checks do not constrain their range.
+internal sealed class BackdropFiniteSingleConverter : JsonConverter<float>
+{
+    public override float Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+    {
+        if (reader.TokenType != JsonTokenType.Number || !reader.TryGetSingle(out var value) || !float.IsFinite(value))
+            throw new JsonException("backdrop numbers must be finite Single values.");
+        return value;
+    }
+
+    public override void Write(Utf8JsonWriter writer, float value, JsonSerializerOptions options) => writer.WriteNumberValue(value);
+}
+
+[JsonSerializable(typeof(BackdropWire))]
+internal partial class BackdropJsonContext : JsonSerializerContext { }

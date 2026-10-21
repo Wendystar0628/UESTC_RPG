@@ -2,21 +2,28 @@ using Campus.Gen.Geometry;
 using System.Numerics;
 using Campus.Contracts;
 using Campus.Contracts.Maps;
+using NetTopologySuite.Geometries;
+using NetTopologySuite.Operation.Valid;
 
 namespace Campus.Gen.World;
 
 internal sealed class TerrainRegion
 {
+    private static readonly GeometryFactory Factory = new();
+
     public PolygonRings[] Polygons { get; }
     public MapRect Bounds { get; }
     private readonly (TerrainRingIndex Outer, TerrainRingIndex[] Holes)[] _indices;
+    private readonly Polygon[] _polygons;
 
     public TerrainRegion(IEnumerable<PolygonRings> polygons)
     {
         Polygons = polygons.Select(p => new PolygonRings(PlanRings.OpenRing(p.Outer),
             p.Holes.Select(h => PlanRings.OpenRing(h, false)).ToArray())).ToArray();
         if (Polygons.Length == 0) throw new ArgumentException("Terrain region has no area.");
-        foreach (var polygon in Polygons) ValidatePolygon(polygon);
+        // Validate each member independently: source regions may contain overlapping polygons,
+        // which must not be passed to topology predicates as an invalid MultiPolygon.
+        _polygons = Polygons.Select(ValidatedPolygon).ToArray();
         _indices = Polygons.Select(p => (new TerrainRingIndex(p.Outer), p.Holes.Select(h => new TerrainRingIndex(h)).ToArray())).ToArray();
         var points = Polygons.SelectMany(p => p.Outer).ToArray();
         Bounds = new(new(points.Min(p => p.X), points.Min(p => p.Y)), new(points.Max(p => p.X), points.Max(p => p.Y)));
@@ -93,75 +100,37 @@ internal sealed class TerrainRegion
     {
         if (Bounds.Max.X <= other.Bounds.Min.X || other.Bounds.Max.X <= Bounds.Min.X
             || Bounds.Max.Y <= other.Bounds.Min.Y || other.Bounds.Max.Y <= Bounds.Min.Y) return false;
-        foreach (var polygon in Polygons)
-            foreach (var point in polygon.Outer)
-                if (other.Distance(point.X, point.Y).Height < 0) return true;
-        foreach (var polygon in other.Polygons)
-            foreach (var point in polygon.Outer)
-                if (Distance(point.X, point.Y).Height < 0) return true;
-        foreach (var a in Polygons)
-            foreach (var c in other.Polygons)
-                foreach (var ar in new[] { a.Outer }.Concat(a.Holes))
-                    foreach (var cr in new[] { c.Outer }.Concat(c.Holes))
-                        for (var i = 0; i < ar.Count; i++)
-                            for (var j = 0; j < cr.Count; j++)
-                            {
-                                var p = ar[i]; var q = ar[(i + 1) % ar.Count]; var r = cr[j]; var s = cr[(j + 1) % cr.Count];
-
-                                var a0 = VectorMath.Cross(p, q, r); var a1 = VectorMath.Cross(p, q, s); var b0 = VectorMath.Cross(r, s, p); var b1 = VectorMath.Cross(r, s, q);
-                                if (a0 * a1 < 0 && b0 * b1 < 0) return true;
-                            }
-        // Coincident boundaries contain no strict vertex or proper edge crossing. An actual interior
-        // point resolves that case without a raster scan that could miss a sub-metre overlap.
-        foreach (var polygon in Polygons)
-        {
-            var sample = TerrainGeometry.InteriorPoint(new TerrainRegion([polygon]));
-            if (other.Distance(sample.X, sample.Y).Height < 0) return true;
-        }
+        foreach (var polygon in _polygons)
+            foreach (var candidate in other._polygons)
+                if (polygon.Relate(candidate, "T********")) return true;
         return false;
     }
 
-    private static void ValidatePolygon(PolygonRings polygon)
+    private static Polygon ValidatedPolygon(PolygonRings source)
     {
-        CheckRing(polygon.Outer);
-        for (var i = 0; i < polygon.Holes.Count; i++)
+        var polygon = Factory.CreatePolygon(Ring(source.Outer), source.Holes.Select(Ring).ToArray());
+        var validity = new IsValidOp(polygon);
+        if (!validity.IsValid) throw new ArgumentException($"Invalid terrain polygon: {validity.ValidationError}.");
+        // OGC validity permits some point contacts between rings; terrain holes must be
+        // strictly separated from the shell and from every other hole.
+        for (var i = 0; i < polygon.NumInteriorRings; i++)
         {
-            var hole = polygon.Holes[i]; CheckRing(hole);
-            if (!TerrainMath.PointInRing(hole[0].X, hole[0].Y, polygon.Outer) || RingsTouch(hole, polygon.Outer))
-                throw new ArgumentException("Terrain polygon hole is outside or touches its outer boundary.");
+            var hole = polygon.GetInteriorRingN(i);
+            if (hole.Intersects(polygon.ExteriorRing))
+                throw new ArgumentException("Terrain polygon hole touches its outer boundary.");
             for (var j = 0; j < i; j++)
-                if (RingsTouch(hole, polygon.Holes[j]) || TerrainMath.PointInRing(hole[0].X, hole[0].Y, polygon.Holes[j])
-                    || TerrainMath.PointInRing(polygon.Holes[j][0].X, polygon.Holes[j][0].Y, hole))
-                    throw new ArgumentException("Terrain polygon holes overlap or contain one another.");
+                if (hole.Intersects(polygon.GetInteriorRingN(j)))
+                    throw new ArgumentException("Terrain polygon holes touch one another.");
         }
+        return polygon;
     }
 
-    private static void CheckRing(IReadOnlyList<Vector2> ring)
+    private static LinearRing Ring(IReadOnlyList<Vector2> points)
     {
-        for (var i = 0; i < ring.Count; i++)
-            for (var j = i + 1; j < ring.Count; j++)
-            {
-                if (j == i + 1 || i == 0 && j == ring.Count - 1) continue;
-                if (SegmentsTouch(ring[i], ring[(i + 1) % ring.Count], ring[j], ring[(j + 1) % ring.Count]))
-                    throw new ArgumentException("Terrain polygon has intersecting nonadjacent edges.");
-            }
-    }
-
-    private static bool RingsTouch(IReadOnlyList<Vector2> a, IReadOnlyList<Vector2> b)
-    {
-        for (var i = 0; i < a.Count; i++)
-            for (var j = 0; j < b.Count; j++)
-                if (SegmentsTouch(a[i], a[(i + 1) % a.Count], b[j], b[(j + 1) % b.Count])) return true;
-        return false;
-    }
-
-    private static bool SegmentsTouch(Vector2 a, Vector2 b, Vector2 c, Vector2 d)
-    {
-        static bool On(Vector2 p, Vector2 q, Vector2 r) => r.X >= Math.Min(p.X, q.X) && r.X <= Math.Max(p.X, q.X)
-            && r.Y >= Math.Min(p.Y, q.Y) && r.Y <= Math.Max(p.Y, q.Y);
-        var a0 = VectorMath.Cross(a, b, c); var a1 = VectorMath.Cross(a, b, d); var b0 = VectorMath.Cross(c, d, a); var b1 = VectorMath.Cross(c, d, b);
-        if (a0 == 0 && On(a, b, c) || a1 == 0 && On(a, b, d) || b0 == 0 && On(c, d, a) || b1 == 0 && On(c, d, b)) return true;
-        return (a0 > 0) != (a1 > 0) && (b0 > 0) != (b1 > 0);
+        var coordinates = new Coordinate[points.Count + 1];
+        for (var i = 0; i < points.Count; i++) coordinates[i] = new(points[i].X, points[i].Y);
+        coordinates[^1] = coordinates[0].Copy();
+        return Factory.CreateLinearRing(coordinates);
     }
 }
 
