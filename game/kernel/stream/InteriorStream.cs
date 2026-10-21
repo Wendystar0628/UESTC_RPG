@@ -179,14 +179,14 @@ internal sealed class InteriorStream(IBakeService bake, IStreamMountQueue mount,
         }
     }
     private bool Ready(Layer layer) => layer.Failure is null && layer.Mounted && layer.Prepared is not null;
-    private void Fail(Layer layer, Exception error)
+    private void Fail(Layer layer, [FailureHandler("ENG-PERF-STREAM")] Exception error)
     {
         layer.Failure = error;
         RecordFailure(error);
     }
-    private void RecordFailure(Exception error)
+    private void RecordFailure([FailureHandler("ENG-PERF-STREAM")] Exception error)
     {
-        if (error is AggregateException aggregate)
+        if (error is AggregateException { InnerExceptions.Count: > 0 } aggregate)
         {
             foreach (var inner in aggregate.InnerExceptions) RecordFailure(inner);
             return;

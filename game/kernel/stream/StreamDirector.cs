@@ -217,9 +217,9 @@ public partial class StreamDirector : Node, IMapAware, IMapStreamState, IStreamV
     }
     private void OnWorldInstanceChanged(long _) => _selection.ResetWorld();
     internal void RequestRetention() => _checkRetention = true;
-    internal void RecordFailure(Exception error)
+    internal void RecordFailure([FailureHandler("ENG-PERF-STREAM")] Exception error)
     {
-        if (error is AggregateException aggregate)
+        if (error is AggregateException { InnerExceptions.Count: > 0 } aggregate)
         {
             foreach (var inner in aggregate.InnerExceptions) RecordFailure(inner);
             return;
@@ -229,7 +229,7 @@ public partial class StreamDirector : Node, IMapAware, IMapStreamState, IStreamV
         _failure = _failures.Count == 1 ? error : new AggregateException("Stream failed.", _failures);
     }
 
-    internal void Fail(StreamTile tile, Exception error, ParticipantTile? participant = null)
+    internal void Fail(StreamTile tile, [FailureHandler("ENG-PERF-STREAM")] Exception error, ParticipantTile? participant = null)
     {
         if (participant is not null) participant.Failure = error;
         else if (_residency.Groups.TryGetValue(tile, out var group)) group.Failure = error;

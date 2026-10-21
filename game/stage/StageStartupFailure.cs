@@ -29,7 +29,7 @@ internal sealed class StageStartupFailure(KernelStage stage)
     internal void CompleteBoot() => _bootCompleted = true;
     internal void InvalidateSession() => _startupFailureSession?.Invalidate();
 
-    internal Task Fail([FailureHandler("ENG-ARCH")] Exception error)
+    internal Task Fail([FailureHandler("SYS-TITLE")] Exception error)
     {
         // Preserve the original error before any deferred main-thread work or cleanup.
         RecordFailure(error);
@@ -95,14 +95,20 @@ internal sealed class StageStartupFailure(KernelStage stage)
     private static string SourceCode(Exception error) =>
         error is AppStartupException startup ? startup.Code : AppStartupFailureCodes.Unexpected;
 
-    private void RecordFailure(Exception error)
+    private void RecordFailure([FailureHandler("SYS-TITLE")] Exception error)
     {
         lock (_failures)
         {
             _failurePhase ??= _stage.Phase;
-            IEnumerable<Exception> failures = error is AggregateException aggregate ? aggregate.Flatten().InnerExceptions : [error];
-            foreach (var failure in failures)
+            var failures = new Queue<Exception>();
+            failures.Enqueue(error);
+            while (failures.TryDequeue(out var failure))
             {
+                if (failure is AggregateException { InnerExceptions.Count: > 0 } aggregate)
+                {
+                    foreach (var inner in aggregate.InnerExceptions) failures.Enqueue(inner);
+                    continue;
+                }
                 if (_failures.Any(existing => ReferenceEquals(existing, failure))) continue;
                 _failures.Add(failure);
                 DiagnosticLog.Error($"[ENG-ARCH][phase={_failurePhase}]", failure);

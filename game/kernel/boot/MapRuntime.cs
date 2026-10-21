@@ -66,7 +66,7 @@ public partial class MapRuntime : Node, IMapRuntime, IMapLifetime
                 if (producer.Failure is { } failure) RecordFailure(failure);
     }
 
-    private AppStartupException RecordFailure(Exception error)
+    private AppStartupException RecordFailure([FailureHandler("SYS-MAPS")] Exception error)
     {
         // Classify only at publication; keep each original producer and cleanup cause intact.
         if (_failure is { } published && ReferenceEquals(error, published)) return published;

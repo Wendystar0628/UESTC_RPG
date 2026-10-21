@@ -69,6 +69,32 @@ public sealed class StreamPreparationLifecycleTests
     }
 
     [TestCase, TestCategory(TestReason.Regression), RequireGodotRuntime]
+    public async Task EmptyAggregateFailuresRemainPublishedAndReachDrainWithoutLosingNestedCauses()
+    {
+        using var fixture = new StreamFixture();
+        await fixture.Until(() => fixture.Director.ViewReady);
+        var original = new AggregateException();
+        fixture.Mount.Drain(false, _ => throw original);
+        fixture.Director._Process(0);
+        Check(ReferenceEquals(fixture.Director.Failure, original));
+        fixture.Director._Process(0);
+        Check(ReferenceEquals(fixture.Director.Failure, original));
+        var later = new InvalidDataException("later mount failure");
+        var nested = new AggregateException();
+        fixture.Mount.Drain(false, _ => throw new AggregateException(original, later, nested));
+        fixture.Director._Process(0);
+        var published = fixture.Director.Failure as AggregateException
+            ?? throw new InvalidOperationException("Stream failure lost its collected causes.");
+        Check(published.InnerExceptions.Count == 3 && ReferenceEquals(published.InnerExceptions[0], original) &&
+            ReferenceEquals(published.InnerExceptions[1], later) && ReferenceEquals(published.InnerExceptions[2], nested));
+        fixture.Director._Process(0);
+        Check(ReferenceEquals(fixture.Director.Failure, published));
+        try { await fixture.Unload(); throw new InvalidOperationException("Drain lost empty aggregate failures."); }
+        catch (Exception error) when (ReferenceEquals(error, published)) { }
+        Check(fixture.Director.IsUnloaded);
+    }
+
+    [TestCase, TestCategory(TestReason.Regression), RequireGodotRuntime]
     public async Task MountFailureIsCollectedByPollWithoutAdvancingReaders()
     {
         using var fixture = new StreamFixture();
