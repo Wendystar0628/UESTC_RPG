@@ -225,7 +225,7 @@ dashboard/
 
 ```
 Dash.panel({ id, page, title, note, caliber?, span: 12|8|7|6|5|4, order, needs: [数据名], partial?,
-             window?: '24h'|'7d'|'14d'|'30d'|'range', uses?: ['side'|'range'|'type'|'params'], fixed?(el), render(el, data, ctx) })
+             window?: '24h'|'7d'|'14d'|'30d'|'range'|'commits', uses?: ['side'|'range'|'type'|'params'], fixed?(el), render(el, data, ctx) })
 ctx = { filters: {side, range, type: [键]}, params: {路由参数}, stale: bool, coverage: 时刻|null }
 ```
 
@@ -242,7 +242,7 @@ ctx = { filters: {side, range, type: [键]}, params: {路由参数}, stale: bool
 | 读过但没有这份 | "还没有数据" + 缺哪份（中文名） |
 | 读取失败 | "没读到" + 一句原因（下载失败、文件有误，或来源发布了 `errors`），不显示旧值 |
 | 旧了 | 卡头"更新 HH:MM · 旧了"橙字，正文 60% 不透明，照样能交互 |
-| 记账不够一个时间窗 | 卡底一行"记账从 M 月 D 日 HH:MM 起，之前的不全"，同一页记账起点相同的面板只在 order 最小的那块写一次；窗口取面板的 `window`（不写按 `'range'`：筛选条的 range，地址里拖选了 `from` 就从那天起）；"前 7 天"对比由面板按 `ctx.coverage` 自己隐藏 |
+| 记账不够一个时间窗 | 卡底一行"记账从 M 月 D 日 HH:MM 起，之前的不全"；由页面统一算：这一页上数据齐了、记账起点晚于自己时间窗的面板里，同一个起点只由 order 最小的那块写一次，任一数据加载、刷新或失败后整页重算卡底（只改卡底，不重绘正文），结果与加载先后无关，读取失败的来源不贡献起点。时间窗取面板的 `window`（不写按 `'range'`：筛选条的 range，地址里拖选了 `from` 就从那天起）；`'commits'` 是按提交次数算的窗口，不参与这套按天的判断，起点与"窗口未满"由面板按后端给的 `coverage.from` 与 `window` 自己写（`Dash.coverageText(from)` 给统一的句子）；"前 7 天"对比由面板按 `ctx.coverage` 自己隐藏 |
 | 口径 | 有 `caliber` 的卡头带 ⓘ，悬停显示；图的悬停框末行也带这句（图的 `opts.caliber`） |
 
 ### 3.3 路由、筛选与写回

@@ -132,7 +132,7 @@
   /* ---- 指标卡 ---- */
   Dash.panel({
     id: 'health-fail', page: 'health', title: '游戏失败', note: '游戏本体最近失败得多不多', caliber: CAL.fail,
-    span: 12, order: 11, needs: ['failures'],
+    window: 'commits', span: 12, order: 11, needs: ['failures'],
     render: function (el, d) {
       var fd = d.failures, w = fd.window;
       var blank = failBlank(fd);
@@ -149,9 +149,10 @@
         Dash.kpi({ label: '新增类别', value: w.fresh, unit: '个', note: '记账起点之后新增、窗口内的子类' })));
       var zero = failZero(fd);
       if (zero) el.appendChild(zero);
+      var short = w.commits != null && w.commits < w.size;
       el.appendChild(h('div.note-line',
-        '窗口是最近 ' + Dash.num(w.size) + ' 次提交' + (w.commits != null ? '（现有 ' + Dash.num(w.commits) + ' 次）' : '') +
-        '，每 ' + seg + ' 次一段'));
+        Dash.coverageText(fd.coverage.from) + '。窗口是最近 ' + Dash.num(w.size) + ' 次提交，每 ' + seg + ' 次一段' +
+        (short ? '；窗口未满，记账至今只有 ' + Dash.num(w.commits) + ' 次提交，次数和频率只按这 ' + Dash.num(w.commits) + ' 次算' : '')));
     }
   });
 
@@ -170,7 +171,7 @@
 
   Dash.panel({
     id: FAIL_BLOCK, page: 'health', title: '失败类别', note: '哪一类失败得最多', caliber: CAL.failTypes,
-    span: 5, order: 12, needs: ['failures'], uses: ['params'],
+    window: 'commits', span: 5, order: 12, needs: ['failures'], uses: ['params'],
     render: function (el, d, ctx) {
       var fd = d.failures, w = fd.window;
       var blank = failBlank(fd);
@@ -225,7 +226,7 @@
 
   Dash.panel({
     id: 'health-fail-trend', page: 'health', title: '失败走势', note: '失败是越来越多还是越来越少', caliber: CAL.failTrend,
-    span: 7, order: 13, needs: ['failures'],
+    window: 'commits', span: 7, order: 13, needs: ['failures'],
     render: function (el, d) {
       var fd = d.failures;
       var blank = failBlank(fd);
@@ -264,7 +265,7 @@
   /* ---- 最近登记 ---- */
   Dash.panel({
     id: 'health-fail-recent', page: 'health', title: '最近登记', note: '最近都是些什么失败', caliber: CAL.failRecent,
-    span: 12, order: 14, needs: ['failures'], uses: ['params'],
+    window: 'commits', span: 12, order: 14, needs: ['failures'], uses: ['params'],
     render: function (el, d, ctx) {
       var fd = d.failures;
       var blank = failBlank(fd);
