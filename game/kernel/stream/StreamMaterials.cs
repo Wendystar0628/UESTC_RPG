@@ -1,4 +1,5 @@
 using Campus.Contracts;
+using Campus.Kernel.Diagnostics;
 using Campus.Kernel.Renderer;
 using Godot;
 
@@ -23,7 +24,11 @@ internal sealed class StreamMaterials(IToonMaterialProvider toon, IShaderMateria
             catch (Exception failure)
             {
                 try { created.Dispose(); }
-                catch (Exception cleanup) { throw new AggregateException(failure, cleanup); }
+                catch (Exception cleanup)
+                {
+                    System.Runtime.ExceptionServices.ExceptionDispatchInfo.Capture(RetainedFailure.Append(failure, cleanup)).Throw();
+                    throw;
+                }
                 throw;
             }
         }

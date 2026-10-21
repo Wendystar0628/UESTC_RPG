@@ -1,5 +1,6 @@
 using Campus.Contracts;
 using Campus.Contracts.Bake;
+using Campus.Kernel.Diagnostics;
 
 namespace Campus.Kernel.Stream;
 
@@ -40,9 +41,9 @@ public abstract class StreamMountWork(BakeKey key, BakePriority priority, long r
         {
             Exception failure = error;
             try { Cancel(); }
-            catch (Exception cleanup) { failure = new AggregateException(error, cleanup); }
+            catch (Exception cleanup) { failure = RetainedFailure.Append(failure, cleanup); }
             try { Failed(failure); }
-            catch (Exception reporting) { failure = new AggregateException(failure, reporting); }
+            catch (Exception reporting) { failure = RetainedFailure.Append(failure, reporting); }
             Failure = failure;
             System.Runtime.ExceptionServices.ExceptionDispatchInfo.Capture(failure).Throw();
             throw;

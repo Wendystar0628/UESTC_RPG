@@ -1,6 +1,7 @@
 using Campus.Contracts.Bake;
 using Campus.Contracts.AppFlow;
 using Campus.Contracts;
+using Campus.Kernel.Diagnostics;
 using System.Runtime.ExceptionServices;
 
 namespace Campus.Kernel.Bake;
@@ -183,7 +184,7 @@ internal sealed class BakeQueue : IDisposable
                 var persistenceFailure = persist ? PersistIdle() : null;
                 if (persistenceFailure is not null)
                 {
-                    job!.Failure = job.Failure is null ? persistenceFailure : new AggregateException(job.Failure, persistenceFailure);
+                    job!.Failure = RetainedFailure.Append(job.Failure, persistenceFailure);
                     job.Handle.Fail(job.Failure);
                 }
                 job!.Handle.Finish(job.Failure);
@@ -214,7 +215,7 @@ internal sealed class BakeQueue : IDisposable
             int completed;
             lock (_sync) completed = _done;
             try { _idle(); }
-            catch (Exception error) { RecordFailure(error); failure = failure is null ? error : new AggregateException(failure, error); }
+            catch (Exception error) { RecordFailure(error); failure = RetainedFailure.Append(failure, error); }
             lock (_sync)
             {
                 _persisting = false;

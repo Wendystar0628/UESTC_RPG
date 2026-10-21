@@ -559,7 +559,7 @@ public partial class KernelStage : Node3D, IAppExit, IStageGateHost
                 if (commandExit != 0) _exitCode = Math.Max(_exitCode, commandExit);
             }
             catch (Exception error) { failures.Add(error); }
-        try { await KernelServices.Services.StopMapPreparationAsync(); } catch (Exception error) { failures.Add(error); }
+        try { await KernelServices.Services.SealMapPreparationAsync(); } catch (Exception error) { failures.Add(error); }
         if (_backgroundPreparation is not null)
             try { await _backgroundPreparation; }
             catch (OperationCanceledException) when (_captureLifetime.IsCancellationRequested && _backgroundPreparation.IsCanceled) { }

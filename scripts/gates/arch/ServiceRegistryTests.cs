@@ -76,13 +76,13 @@ namespace Campus.Arch.Tests
             var map = new MapId("fixture-map");
             var owned = (MapLifetimeService)registry.Create(typeof(MapLifetimeService), map);
             probe.ReleaseMap = async () => { await registry.ReleaseMapAsync(map); probe.Calls.Add("map-owned-release"); };
-            var stopping = registry.StopMapPreparationAsync();
+            var stopping = registry.SealMapPreparationAsync();
             Assertions.AssertThrown(() => registry.Add(probe)).IsInstanceOf<InvalidOperationException>();
             Assertions.AssertThrown(() => registry.Get<SharedDependency>()).IsInstanceOf<InvalidOperationException>();
             if (!ReferenceEquals(maps, registry.Get<IMapService>()) || !ReferenceEquals(probe, registry.Get<ShutdownProbe>()))
                 throw new InvalidOperationException("Stopping preparation removed an existing owned or supplied binding.");
             var shutdown = registry.ShutdownAsync();
-            if (!ReferenceEquals(stopping, registry.StopMapPreparationAsync()) || stopping.IsCompleted || shutdown.IsCompleted ||
+            if (!ReferenceEquals(stopping, registry.SealMapPreparationAsync()) || stopping.IsCompleted || shutdown.IsCompleted ||
                 !probe.Calls.SequenceEqual(["map-stop", "runtime-stop", "map-drain"]))
                 throw new InvalidOperationException("Owned producers were not stopped before awaiting their shared drain.");
             probe.MapDrain.SetResult(); await probe.RuntimeEntered.Task;
@@ -111,7 +111,7 @@ namespace Campus.Arch.Tests
             var probe = new ShutdownProbe(); var registry = new ServiceRegistry();
             registry.Add<IMapService>(new ShutdownMapService(probe));
             registry.Add<IMapLifetime>(new ShutdownMapLifetime(probe));
-            var stopping = registry.StopMapPreparationAsync();
+            var stopping = registry.SealMapPreparationAsync();
             Assertions.AssertThrown(() => registry.Discover([typeof(SharedDependency)], _ => "fixture"))
                 .IsInstanceOf<InvalidOperationException>();
             await stopping;

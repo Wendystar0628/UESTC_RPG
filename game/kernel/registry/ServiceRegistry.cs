@@ -16,7 +16,7 @@ public sealed class ServiceRegistry
     private bool _closing;
     private bool _releasingOwned;
     private bool _disposed;
-    private Task? _mapPreparationStop;
+    private Task? _mapPreparationSeal;
     private Task? _shutdown;
     private readonly HashSet<MapId> _releasingMaps = [];
     public IReadOnlyList<Registration> Entries => _entries;
@@ -145,13 +145,13 @@ public sealed class ServiceRegistry
     }
 
     /// <summary>Seal registration and construction, stop owned map producers, then observe their submitted data preparation.</summary>
-    public Task StopMapPreparationAsync()
+    public Task SealMapPreparationAsync()
     {
         _closing = true;
-        return _mapPreparationStop ??= StopMapPreparation();
+        return _mapPreparationSeal ??= SealMapPreparation();
     }
 
-    private async Task StopMapPreparation()
+    private async Task SealMapPreparation()
     {
         // Supplied bindings belong to their caller; teardown never resolves or constructs an absent service.
         var maps = CreatedInstances<IMapService>().SingleOrDefault();
@@ -172,7 +172,7 @@ public sealed class ServiceRegistry
         _closing = true;
         var failures = new List<Exception>();
         trace?.Invoke("shutdown-map");
-        try { await StopMapPreparationAsync(); } catch (Exception error) { failures.Add(error); }
+        try { await SealMapPreparationAsync(); } catch (Exception error) { failures.Add(error); }
         try
         {
             var lifetime = CreatedInstances<IMapLifetime>().SingleOrDefault();

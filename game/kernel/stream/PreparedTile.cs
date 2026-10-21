@@ -1,6 +1,7 @@
 using System.Runtime.InteropServices;
 using Campus.Contracts;
 using Campus.Contracts.Bake;
+using Campus.Kernel.Diagnostics;
 using Campus.Kernel.Renderer;
 using Godot;
 
@@ -98,7 +99,11 @@ public sealed class PreparedTile : IDisposable
         catch (Exception failure)
         {
             try { Dispose(); }
-            catch (Exception cleanup) { throw new AggregateException(failure, cleanup); }
+            catch (Exception cleanup)
+            {
+                System.Runtime.ExceptionServices.ExceptionDispatchInfo.Capture(RetainedFailure.Append(failure, cleanup)).Throw();
+                throw;
+            }
             throw;
         }
     }

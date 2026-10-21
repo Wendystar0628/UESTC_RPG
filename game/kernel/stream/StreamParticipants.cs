@@ -2,6 +2,7 @@ using Campus.Contracts;
 using Campus.Contracts.Bake;
 using Campus.Kernel.Bake;
 using Campus.Kernel.Collision;
+using Campus.Kernel.Diagnostics;
 using Campus.Kernel.Lod;
 using Campus.Kernel.Renderer;
 using Campus.Kernel.Registry;
@@ -234,7 +235,7 @@ internal sealed class StreamParticipants(StreamDirector host, ServiceRegistry re
         Exception? failure = null;
         try { item.Work?.Cancel(); } catch (Exception error) { failure = error; }
         try { item.Participant.Unmount(key); }
-        catch (Exception error) { failure = failure is null ? error : new AggregateException(failure, error); }
+        catch (Exception error) { failure = RetainedFailure.Append(failure, error); }
         item.Mounted = false;
         if (failure is not null) System.Runtime.ExceptionServices.ExceptionDispatchInfo.Capture(failure).Throw();
     }
