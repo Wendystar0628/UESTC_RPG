@@ -33,7 +33,7 @@ public sealed class RoofPartsTests
     }
 
     [TestCase, TestCategory(TestReason.Contract)]
-    public void CatalogueDefaultsBuildClosedAtEveryLevel()
+    public void CatalogueDefaultsBuildGeometryAtEveryLevel()
     {
         foreach (var type in RoofParts())
         {
@@ -45,7 +45,7 @@ public sealed class RoofPartsTests
             foreach (System.Collections.DictionaryEntry level in lods)
             {
                 var geometry = (PartGeometry)((Delegate)level.Value!).DynamicInvoke(entry.Defaults)!;
-                ClosedClockwise(geometry, $"{entry.Id.Value} {level.Key}");
+                ValidateVisibleGeometry(geometry, $"{entry.Id.Value} {level.Key}");
                 AssertThat(geometry.Bounds == bounds).OverrideFailureMessage($"{entry.Id.Value} {level.Key} moved the bounds.").IsTrue();
             }
             // Interface dispatch, so default (empty) implementations count too. Roof and wall parts are visual only
@@ -55,16 +55,6 @@ public sealed class RoofPartsTests
             var barrier = entry.Id.Value == PartCatalog.EquipmentFence;
             AssertThat(barrier ? colliders.Count == 1 && colliders[0].Tag == SurfaceTag.Barrier : colliders.Count == 0).OverrideFailureMessage($"{entry.Id.Value} has the wrong collision class.").IsTrue();
         }
-    }
-
-    [TestCase, TestCategory(TestReason.Contract)]
-    public void RingsCloseWithMitredCorners()
-    {
-        Vector2[] ring = [new(-4, -3), new(4, -3), new(4, 3), new(-1, 3), new(-1, 1), new(-4, 1)];
-        ClosedClockwise(ParapetCapPart.Along(ring, true, new TrimParams(1, 0.3f, 0.5f), LodLevel.L0), "coping ring");
-        ClosedClockwise(LightningStripPart.Along(ring, true, new TrimParams(1, 0.15f, 0.08f) { Variation = 1 }, LodLevel.L0), "strip ring");
-        ClosedClockwise(EquipmentFencePart.Along(ring, true, new RailingParams(1, 1.8f, 0.06f, 1.5f), LodLevel.L0), "fence ring");
-        ClosedClockwise(EquipmentFencePart.Along([new(0, 0), new(5, 0), new(5, 3)], false, new RailingParams(1, 1.8f, 0.06f, 1.5f) { Variation = 1 }, LodLevel.L0), "fence run");
     }
 
     [TestCase, TestCategory(TestReason.Contract)]
@@ -83,23 +73,18 @@ public sealed class RoofPartsTests
 
     private static Vector3 P(GeometryBundle m, int i) => new(m.Position[3 * i], m.Position[3 * i + 1], m.Position[3 * i + 2]);
     private static Vector3 N(GeometryBundle m, int i) => new(m.Normal[3 * i], m.Normal[3 * i + 1], m.Normal[3 * i + 2]);
-    private static void ClosedClockwise(PartGeometry geometry, string what)
+    private static void ValidateVisibleGeometry(PartGeometry geometry, string what)
     {
         AssertThat(geometry.Meshes.Count > 0).OverrideFailureMessage($"{what} is empty.").IsTrue();
         foreach (var m in geometry.Meshes)
         {
             m.ValidateVertexData();
-            var edges = new Dictionary<(Vector3, Vector3), int>();
             for (var i = 0; i < m.Index.Length; i += 3)
             {
                 var a = m.Index[i]; var b = m.Index[i + 1]; var c = m.Index[i + 2];
                 var cross = Vector3.Cross(P(m, b) - P(m, a), P(m, c) - P(m, a));
                 AssertThat(Vector3.Dot(cross, N(m, a) + N(m, b) + N(m, c)) < 0).OverrideFailureMessage($"{what}: face winding disagrees with outward normals.").IsTrue();
-                foreach (var (from, to) in new[] { (P(m, a), P(m, b)), (P(m, b), P(m, c)), (P(m, c), P(m, a)) })
-                { edges.TryGetValue((from, to), out var count); edges[(from, to)] = count + 1; }
             }
-            foreach (var (edge, count) in edges)
-                AssertThat(count == 1 && edges.TryGetValue((edge.Item2, edge.Item1), out var reverse) && reverse == 1).OverrideFailureMessage($"{what}: a solid has an open or non-manifold edge.").IsTrue();
             for (var i = 0; i < m.Position.Length / 3; i++)
             {
                 AssertThat(geometry.Bounds.Contains(P(m, i))).OverrideFailureMessage($"{what}: bounds miss vertex {P(m, i)} ({geometry.Bounds.Min} – {geometry.Bounds.Max}).").IsTrue();

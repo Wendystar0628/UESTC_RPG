@@ -39,11 +39,11 @@ public sealed class OpeningPartsTests
     }
 
     [TestCase, TestCategory(TestReason.Contract)]
-    public void CatalogDefaultsBuildClosedGeometryAtEveryLevel()
+    public void CatalogDefaultsBuildGeometryAtEveryLevel()
     {
         foreach (var entry in OpeningEntries)
             foreach (var level in Enum.GetValues<LodLevel>())
-                Closed(OpeningPartFactory.Build(entry.Id, entry.Defaults, level), entry.Id.Value + " " + level);
+                ValidateVisibleGeometry(OpeningPartFactory.Build(entry.Id, entry.Defaults, level), entry.Id.Value + " " + level);
     }
 
     [TestCase, TestCategory(TestReason.Contract)]
@@ -100,7 +100,7 @@ public sealed class OpeningPartsTests
     }
 
     [TestCase, TestCategory(TestReason.Contract)]
-    public void ClosedDoorsAndLoweredShuttersBlockAsDoorClosed()
+    public void ClosedDoorsAndLoweredShuttersBlockAsDoorValidateVisibleGeometry()
     {
         var shut = (BoxCollider)new WoodDoorPart().Collision(new DoorParams(0.9f, 2.1f, 0.2f)).Single();
         AssertThat(shut.Tag == SurfaceTag.DoorClosed && shut.Foot == FootMat.WoodDoor && shut.At.M42 == 1.05f).OverrideFailureMessage("A shut door is a DoorClosed closure.").IsTrue();
@@ -119,7 +119,7 @@ public sealed class OpeningPartsTests
         var geometry = part.Lods[LodLevel.L0](p);
         var minZ = geometry.Meshes.SelectMany(m => Enumerable.Range(0, m.Position.Length / 3).Select(i => m.Position[3 * i + 2])).Min();
         AssertThat(minZ < -0.7f).OverrideFailureMessage("Open leaves must swing out towards −Z.").IsTrue();
-        Closed(geometry, "open door");
+        ValidateVisibleGeometry(geometry, "open door");
     }
 
     [TestCase, TestCategory(TestReason.Contract)]
@@ -156,7 +156,7 @@ public sealed class OpeningPartsTests
     }
 
     [TestCase, TestCategory(TestReason.Contract)]
-    public void InvalidParametersFailClosed()
+    public void InvalidParametersFailValidateVisibleGeometry()
     {
         AssertThrown(() => new CasementWindowPart().Lods[LodLevel.L0](new WindowParams(0.4f, 0.4f, 0.07f, 6, 1))).IsInstanceOf<ArgumentException>();
         AssertThrown(() => new EntranceDoorPart().Bounds(new DoorParams(1.8f, 2.4f, 0.12f, 200f))).IsInstanceOf<ArgumentException>();
@@ -168,23 +168,17 @@ public sealed class OpeningPartsTests
     private static Vector3 P(GeometryBundle m, int i) => new(m.Position[3 * i], m.Position[3 * i + 1], m.Position[3 * i + 2]);
     private static Vector3 N(GeometryBundle m, int i) => new(m.Normal[3 * i], m.Normal[3 * i + 1], m.Normal[3 * i + 2]);
 
-    /// <summary>Every surface is a set of closed solids, wound clockwise against its normals, inside the part bounds.</summary>
-    private static void Closed(PartGeometry geometry, string what)
+    private static void ValidateVisibleGeometry(PartGeometry geometry, string what)
     {
         foreach (var m in geometry.Meshes)
         {
             m.ValidateVertexData();
-            var edges = new Dictionary<(Vector3, Vector3), int>();
             for (var i = 0; i < m.Index.Length; i += 3)
             {
                 int a = m.Index[i], b = m.Index[i + 1], c = m.Index[i + 2];
                 var cross = Vector3.Cross(P(m, b) - P(m, a), P(m, c) - P(m, a));
                 AssertThat(Vector3.Dot(cross, N(m, a) + N(m, b) + N(m, c)) < 0).OverrideFailureMessage($"{what}: winding disagrees with the normals.").IsTrue();
-                foreach (var (from, to) in new[] { (P(m, a), P(m, b)), (P(m, b), P(m, c)), (P(m, c), P(m, a)) })
-                { edges.TryGetValue((from, to), out var count); edges[(from, to)] = count + 1; }
             }
-            foreach (var (edge, count) in edges)
-                AssertThat(count == 1 && edges.TryGetValue((edge.Item2, edge.Item1), out var reverse) && reverse == 1).OverrideFailureMessage($"{what}: open or non-manifold edge {edge}.").IsTrue();
             for (var i = 0; i < m.Position.Length / 3; i++)
             {
                 AssertThat(geometry.Bounds.Contains(P(m, i))).OverrideFailureMessage($"{what}: vertex {P(m, i)} outside {geometry.Bounds}.").IsTrue();

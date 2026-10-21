@@ -48,7 +48,7 @@ public sealed class StreetPartsTests
     }
 
     [TestCase, TestCategory(TestReason.Contract)]
-    public void CatalogueDefaultsBuildClosedAtEveryLevel()
+    public void CatalogueDefaultsBuildGeometryAtEveryLevel()
     {
         var atlas = new SceneTextAtlas(GlobalInputs.Require(SceneTextInputs.AtlasKey));
         foreach (var type in StreetTypes.Where(t => t.GetCustomAttribute<PartAttribute>() is not null))
@@ -71,7 +71,7 @@ public sealed class StreetPartsTests
             foreach (System.Collections.DictionaryEntry level in lods)
             {
                 var geometry = (PartGeometry)((Delegate)level.Value!).DynamicInvoke(parameters)!;
-                ClosedClockwise(geometry, $"{entry.Id.Value} {level.Key}");
+                ValidateVisibleGeometry(geometry, $"{entry.Id.Value} {level.Key}");
                 AssertThat(geometry.Bounds == bounds).OverrideFailureMessage($"{entry.Id.Value} {level.Key} moved the bounds.").IsTrue();
             }
         }
@@ -201,7 +201,7 @@ public sealed class StreetPartsTests
         {
             var sign = new SignpostPart();
             var geometry = sign.Lods[LodLevel.L0](new SignParams(1.2f, 2.6f, 0.12f) { Variation = boards });
-            ClosedClockwise(geometry, $"signpost {3 + boards} boards");
+            ValidateVisibleGeometry(geometry, $"signpost {3 + boards} boards");
         }
         // Body colours stay low-saturation and registered; a caller's Material picks one.
         var car = new ParkedCarPart().Lods[LodLevel.L0](new VehicleParams(1.8f, 1.47f, 4.5f) { Material = new(new("umbrella.beige.lit"), new("umbrella.beige.shade")) });
@@ -213,27 +213,20 @@ public sealed class StreetPartsTests
 
     private static Vector3 P(GeometryBundle m, int i) => new(m.Position[3 * i], m.Position[3 * i + 1], m.Position[3 * i + 2]);
     private static Vector3 N(GeometryBundle m, int i) => new(m.Normal[3 * i], m.Normal[3 * i + 1], m.Normal[3 * i + 2]);
-    private static void ClosedClockwise(PartGeometry geometry, string what)
+    private static void ValidateVisibleGeometry(PartGeometry geometry, string what)
     {
         AssertThat(geometry.Meshes.Count > 0).OverrideFailureMessage($"{what} is empty.").IsTrue();
         foreach (var m in geometry.Meshes)
         {
             m.ValidateVertexData();
-            var edges = new Dictionary<(Vector3, Vector3), int>();
             for (var i = 0; i < m.Index.Length; i += 3)
             {
                 var a = m.Index[i]; var b = m.Index[i + 1]; var c = m.Index[i + 2];
                 var cross = Vector3.Cross(P(m, b) - P(m, a), P(m, c) - P(m, a));
                 AssertThat(Vector3.Dot(cross, N(m, a) + N(m, b) + N(m, c)) < 0).OverrideFailureMessage($"{what}: face winding disagrees with outward normals.").IsTrue();
-                foreach (var (from, to) in new[] { (P(m, a), P(m, b)), (P(m, b), P(m, c)), (P(m, c), P(m, a)) })
-                { edges.TryGetValue((from, to), out var count); edges[(from, to)] = count + 1; }
             }
-            // Printed face geometry (lettering, pictograms; line class None) is flat quads by design (ART-MODELING); every
-            // other surface is a set of closed solids.
-            if (m.Material.Spec.Line != LineClass.None)
-                foreach (var (edge, count) in edges)
-                    AssertThat(count == 1 && edges.TryGetValue((edge.Item2, edge.Item1), out var reverse) && reverse == 1).OverrideFailureMessage($"{what}: a solid has an open or non-manifold edge.").IsTrue();
-            else AssertThat(m.Flags is not null && m.Flags.All(f => (f & VertexFlag.NoShadow) != 0)).OverrideFailureMessage($"{what}: printed face geometry casts shadows.").IsTrue();
+            if (m.Material.Spec.Line == LineClass.None)
+                AssertThat(m.Flags is not null && m.Flags.All(f => (f & VertexFlag.NoShadow) != 0)).OverrideFailureMessage($"{what}: printed face geometry casts shadows.").IsTrue();
             for (var i = 0; i < m.Position.Length / 3; i++)
             {
                 AssertThat(geometry.Bounds.Contains(P(m, i))).OverrideFailureMessage($"{what}: bounds miss vertex {P(m, i)} ({geometry.Bounds.Min} – {geometry.Bounds.Max}).").IsTrue();

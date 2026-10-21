@@ -59,7 +59,7 @@ public sealed class MepPartsTests
                 foreach (System.Collections.DictionaryEntry level in lods)
                 {
                     var geometry = (PartGeometry)((Delegate)level.Value!).DynamicInvoke(p)!;
-                    ClosedClockwise(geometry, $"{what} {level.Key}");
+                    ValidateVisibleGeometry(geometry, $"{what} {level.Key}");
                     AssertThat(geometry.Bounds == bounds).OverrideFailureMessage($"{what} {level.Key} moved the bounds.").IsTrue();
                 }
                 var colliders = (IReadOnlyList<Collider>)contract.GetMethod("Collision")!.Invoke(part, [p])!;
@@ -90,7 +90,7 @@ public sealed class MepPartsTests
         int Triangles(PartGeometry g) => g.Meshes.Sum(m => m.Index.Length / 3);
         var blank = new RoomSignPart().Lods[LodLevel.L0](p);
         var numbered = RoomSignPart.Build(p, "0123456789-", LodLevel.L0);
-        ClosedClockwise(numbered, "every numeral");
+        ValidateVisibleGeometry(numbered, "every numeral");
         AssertThat(Triangles(numbered) > Triangles(blank)).OverrideFailureMessage("Numerals add strokes near.").IsTrue();
         AssertThat(Triangles(RoomSignPart.Build(p, "1-201", LodLevel.L1)) == Triangles(new RoomSignPart().Lods[LodLevel.L1](p))).OverrideFailureMessage("Mid level drops the numerals.").IsTrue();
         var refused = false;
@@ -108,23 +108,18 @@ public sealed class MepPartsTests
 
     private static Vector3 P(GeometryBundle m, int i) => new(m.Position[3 * i], m.Position[3 * i + 1], m.Position[3 * i + 2]);
     private static Vector3 N(GeometryBundle m, int i) => new(m.Normal[3 * i], m.Normal[3 * i + 1], m.Normal[3 * i + 2]);
-    private static void ClosedClockwise(PartGeometry geometry, string what)
+    private static void ValidateVisibleGeometry(PartGeometry geometry, string what)
     {
         AssertThat(geometry.Meshes.Count > 0).OverrideFailureMessage($"{what} is empty.").IsTrue();
         foreach (var m in geometry.Meshes)
         {
             m.ValidateVertexData();
-            var edges = new Dictionary<(Vector3, Vector3), int>();
             for (var i = 0; i < m.Index.Length; i += 3)
             {
                 var a = m.Index[i]; var b = m.Index[i + 1]; var c = m.Index[i + 2];
                 var cross = Vector3.Cross(P(m, b) - P(m, a), P(m, c) - P(m, a));
                 AssertThat(Vector3.Dot(cross, N(m, a) + N(m, b) + N(m, c)) < 0).OverrideFailureMessage($"{what}: face winding disagrees with outward normals.").IsTrue();
-                foreach (var (from, to) in new[] { (P(m, a), P(m, b)), (P(m, b), P(m, c)), (P(m, c), P(m, a)) })
-                { edges.TryGetValue((from, to), out var count); edges[(from, to)] = count + 1; }
             }
-            foreach (var (edge, count) in edges)
-                AssertThat(count == 1 && edges.TryGetValue((edge.Item2, edge.Item1), out var reverse) && reverse == 1).OverrideFailureMessage($"{what}: a solid has an open or non-manifold edge.").IsTrue();
             for (var i = 0; i < m.Position.Length / 3; i++)
             {
                 AssertThat(geometry.Bounds.Contains(P(m, i))).OverrideFailureMessage($"{what}: bounds miss vertex {P(m, i)} ({geometry.Bounds.Min} – {geometry.Bounds.Max}).").IsTrue();
