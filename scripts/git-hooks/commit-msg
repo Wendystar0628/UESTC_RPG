@@ -13,12 +13,16 @@ import sys
 
 try:
     with open(sys.argv[2], encoding="utf-8") as stream:
-        kinds = json.load(stream)
-    keys = [item["key"] for item in kinds]
+        config = json.load(stream)
+    keys = [item["key"] for item in config["kinds"]]
     if not keys or any(not isinstance(key, str) or not key for key in keys):
         raise ValueError("种类 key 必须是非空字符串，种类表不能为空")
-    row = "(?:" + "|".join(re.escape(key) for key in keys) + r")-[0-9]{3}[a-z]?"
-except (OSError, ValueError, TypeError, KeyError) as error:
+    template = config["rowPattern"]
+    if not isinstance(template, str) or template.count("{kind}") != 1:
+        raise ValueError("rowPattern 必须包含一个 {kind} 占位符")
+    row = template.replace("{kind}", "|".join(re.escape(key) for key in keys))
+    re.compile(row)
+except (OSError, ValueError, TypeError, KeyError, re.error) as error:
     print(f"row-kinds.json 读取失败：{error}", file=sys.stderr)
     sys.exit(2)
 pattern = r"^(?:" + row + r"(?:/" + row + r")* |(?:文档|工具|数据)[：:]|Merge |Revert |fixup! |squash! )"

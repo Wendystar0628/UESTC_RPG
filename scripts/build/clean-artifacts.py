@@ -142,8 +142,14 @@ def references():
                 audit.append(link)
     pattern = None
     with open(os.path.join(ROOT, 'scripts', 'git-hooks', 'row-kinds.json'), encoding='utf-8') as stream:
-        kinds = json.load(stream)
-    row_id_pattern = re.compile('(?:' + '|'.join(re.escape(item['key']) for item in kinds) + r')-[0-9]{3}[a-z]?')
+        config = json.load(stream)
+    keys = [item['key'] for item in config['kinds']]
+    template = config['rowPattern']
+    if not keys or any(not isinstance(key, str) or not key for key in keys):
+        raise ValueError('row-kinds.json：种类 key 必须是非空字符串，种类表不能为空')
+    if not isinstance(template, str) or template.count('{kind}') != 1:
+        raise ValueError('row-kinds.json：rowPattern 必须包含一个 {kind} 占位符')
+    row_id_pattern = re.compile(template.replace('{kind}', '|'.join(re.escape(key) for key in keys)))
     queue = os.path.join(ROOT, '.collab', 'status', '施工状态.md')
     text = open(queue, encoding='utf-8').read()
     if '## 施工队列' in text:
