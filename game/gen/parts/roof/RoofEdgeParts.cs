@@ -47,16 +47,8 @@ public sealed class ParapetCapPart : IPartDef<TrimParams>
             var d = RoofStyle.CopingDripDepth; var w = Math.Min(RoofStyle.CopingDripWidth, half * 0.4f);
             builder.Add(PartSweeps.Sweep(PartShapes.Rect(half - w, half - 0.002f, -d, RoofStyle.CopingBevel + 0.01f), path, material, closed));
         }
-        return builder.Finish(bounds ?? PathBounds(path, half, -RoofStyle.CopingDripDepth, p.Height));
-    }
-
-    internal static Box3 PathBounds(IReadOnlyList<Vector2> path, float halfWidth, float y0, float y1)
-    {
-        // A mitre can reach halfWidth × the miter limit (4) beyond a vertex.
-        var reach = halfWidth * 4f;
-        float x0 = float.MaxValue, z0 = float.MaxValue, x1 = float.MinValue, z1 = float.MinValue;
-        foreach (var q in path) { x0 = Math.Min(x0, q.X); z0 = Math.Min(z0, q.Y); x1 = Math.Max(x1, q.X); z1 = Math.Max(z1, q.Y); }
-        return Levels.Padded(new(x0 - reach, y0, z0 - reach), new(x1 + reach, y1, z1 + reach));
+        var measured = builder.Measure();
+        return builder.Finish(bounds ?? Levels.Padded(measured.Min, measured.Max));
     }
 
     private static void Validate(TrimParams p)
@@ -104,7 +96,8 @@ public sealed class LightningStripPart : IPartDef<TrimParams>
             foreach (var at in Supports(path, closed, p.Variation >= 1))
                 builder.AddBox(new(at.X - w, -0.003f, at.Y - w), new(at.X + w, top, at.Y + w), 0, metal, VertexFlag.NoShadow);
         }
-        return builder.Finish(bounds ?? ParapetCapPart.PathBounds(path, rod * 0.5f, -0.003f, height));
+        var measured = builder.Measure();
+        return builder.Finish(bounds ?? Levels.Padded(measured.Min, measured.Max));
     }
 
     private static IEnumerable<Vector2> Supports(IReadOnlyList<Vector2> path, bool closed, bool everyMetre)

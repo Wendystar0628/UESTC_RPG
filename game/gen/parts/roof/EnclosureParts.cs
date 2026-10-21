@@ -73,7 +73,8 @@ public sealed class EquipmentFencePart : IPartDef<RailingParams>
                 builder.AddCentredBox(new(0.12f, 0.035f, p.Depth + 0.03f), Xf.Move(centre + bay * 0.3f, Math.Min(1.05f, p.Height * 0.55f), 0).Then(frame), PartMaterials.Metal(RoofStyle.Steel), 0, VertexFlag.NoShadow);
             }
         }
-        return builder.Finish(bounds ?? ParapetCapPart.PathBounds(path, half + CapOverhang + 0.01f, 0, p.Height));
+        var measured = builder.Measure();
+        return builder.Finish(bounds ?? Levels.Padded(measured.Min, measured.Max));
     }
 
     private static IEnumerable<(Vector3 At, Vector3 Along)> Posts(IReadOnlyList<Vector2> path, bool closed, float spacing)

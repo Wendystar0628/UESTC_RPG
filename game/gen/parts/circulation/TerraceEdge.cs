@@ -48,7 +48,7 @@ public static class TerraceEdge
                 mesh.Add(PartSweeps.Sweep(soil, line, S.Soil, baseY: topY), Frame.Identity);
             }
         }
-        return mesh.Finish(Bounds(line, lowY, topY));
+        return mesh.Finish();
     }
 
     /// <summary>
@@ -84,12 +84,4 @@ public static class TerraceEdge
             throw new ArgumentOutOfRangeException(nameof(topY), "A terrace edge drops 0.35–1.0 m (WLD-TERRAIN); higher drops terrace.");
     }
 
-    private static Box3 Bounds(IReadOnlyList<Vector2> line, float lowY, float topY)
-    {
-        // Mitred joins reach at most miterLimit (4) × the half width beyond the line.
-        var reach = Width * 0.5f * 4 + CopingOverhang;
-        float minX = float.MaxValue, minZ = float.MaxValue, maxX = float.MinValue, maxZ = float.MinValue;
-        foreach (var p in line) { minX = Math.Min(minX, p.X); maxX = Math.Max(maxX, p.X); minZ = Math.Min(minZ, p.Y); maxZ = Math.Max(maxZ, p.Y); }
-        return new(new(minX - reach, lowY - Below, minZ - reach), new(maxX + reach, topY + S.Joint, maxZ + reach));
-    }
 }

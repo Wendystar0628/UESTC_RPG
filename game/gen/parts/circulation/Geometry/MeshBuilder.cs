@@ -108,14 +108,14 @@ internal sealed class MeshBuilder
     }
 
     /// <summary>
-    /// Sweeps a closed (lateral, up) section along a polyline whose points carry their own height. Like the game/gen/parts/core/ sweep
-    /// the joins are mitred in plan and positive lateral is (dz, −dx) of the travel direction; unlike it the section's up
+    /// Sweeps a closed (lateral, up) section along a polyline whose points carry their own height. The kernel's shared
+    /// bounded plan joins keep positive lateral at (dz, −dx) of the travel direction; the section's up
     /// axis stays vertical on a sloping path (curbs and risers stay plumb), faces take their true normals, chamfer edges
-    /// interpolate between neighbouring faces, smooth sections (tubes) take bisector-radial normals, and open ends are
-    /// capped with caller-supplied triangles (section index triples) or the kernel's Earcut.
+    /// interpolate between neighbouring faces, and smooth sections (tubes) take normals from the actual section and run.
+    /// Open ends are capped with caller-supplied triangles (section index triples) or the kernel's Earcut.
     /// </summary>
     internal void SweepPath(ToonSpec material, IReadOnlyList<Vector2> section, IReadOnlyList<bool>? chamfer, IReadOnlyList<int>? capTriangles,
-        IReadOnlyList<Vector3> path, bool closed, Frame frame, byte flags = 0, bool smooth = false, float miterLimit = 4)
+        IReadOnlyList<Vector3> path, bool closed, Frame frame, byte flags = 0, bool smooth = false, float miterLimit = PartSweeps.DefaultMiterLimit)
     {
         ArgumentNullException.ThrowIfNull(section); ArgumentNullException.ThrowIfNull(path);
         int n = section.Count, m = path.Count;
@@ -125,64 +125,122 @@ internal sealed class MeshBuilder
         if (!(Math.Abs(area) > 1e-12)) throw new ArgumentException("A section must enclose area.");
         var sign = area > 0 ? 1f : -1f;
         var edge = SectionEdgeNormals(section, sign);
-        var segments = closed ? m : m - 1;
-        var (tangent, right, miter) = PathJoins(path, closed, miterLimit);
-        Vector3 Pos(int i, Vector2 p) => new(path[i].X + miter[i].X * p.X, path[i].Y + p.Y, path[i].Z + miter[i].Z * p.X);
-        Vector3 Lift(Vector3 lateral, Vector2 n2) => new(lateral.X * n2.X, n2.Y, lateral.Z * n2.X);
+        var joins = new PathJoins(path, closed, section.Min(p => p.X), section.Max(p => p.X), miterLimit);
+        var tangent = joins.Tangents; var right = joins.Rights; var miter = joins.Miters;
+        var strips = PathJoins.SectionEdges(new(section), joins.SplitCentre, out var sectionSplits);
+        Vector3 Pos(int i, Vector2 p, bool outgoing) => joins.Position(i, p, outgoing);
         var layer = For(material, flags);
-
         float along = 0;
-        for (var s = 0; s < segments; s++)
+        for (var s = 0; s < tangent.Length; s++)
         {
-            int i = s, j = (s + 1) % m;
+            var j = (s + 1) % m;
+            // Preserve the true grade normals and section chamfer interpolation of this writer.
+            var faces = new Vector3[n];
             for (var k = 0; k < n; k++)
-                if (VectorMath.Dot(Vector3.Subtract(Pos(j, section[k]), Pos(i, section[k])), tangent[s]) <= 0)
-                    throw new ArgumentException("A sweep segment is too short for the section and adjacent miters.");
-            // True face normals of this segment, oriented by the section's outward normal.
-            var face = new Vector3[n];
-            for (var k = 0; k < n; k++)
+                faces[k] = Face(Pos(s, section[k], true), Pos(s, section[(k + 1) % n], true), Pos(j, section[k], false), Lift(right[s], edge[k]));
+            var delta = new Vector2(path[j].X - path[s].X, path[j].Z - path[s].Z);
+            var length = VectorMath.Length(delta);
+            Vector3 Run(Vector2 p) => Pos(j, p, false) - Pos(s, p, true);
+            var startNormals = smooth ? SmoothNormals(section, edge, joins, sign, s, true, Run) : null;
+            var endNormals = smooth ? SmoothNormals(section, edge, joins, sign, j, false, Run) : null;
+            foreach (var strip in strips)
             {
-                var a = Pos(i, section[k]); var b = Pos(i, section[(k + 1) % n]); var d = Pos(j, section[k]);
-                var guess = Lift(right[s], edge[k]);
-                var cross = VectorMath.Cross(Vector3.Subtract(b, a), Vector3.Subtract(d, a));
-                face[k] = VectorMath.Dot(cross, cross) > 1e-20 ? VectorMath.Unit(cross) : guess;
-                if (VectorMath.Dot(face[k], guess) < 0) face[k] = Vector3.Multiply(face[k], -1);
-            }
-            Vector3 Smooth(int vertex, int k)
-            {
-                var axis = VectorMath.Unit(miter[vertex]);
-                return VectorMath.Unit(Lift(axis, edge[(k + n - 1) % n] + edge[k]));
-            }
-            var delta = new Vector2(path[j].X - path[i].X, path[j].Z - path[i].Z);
-            var length = (float)Math.Sqrt(VectorMath.Dot(delta, delta));
-            for (var k = 0; k < n; k++)
-            {
-                var l = (k + 1) % n;
-                var bevel = chamfer is not null && chamfer[k];
-                Vector3 n0, n1, n2, n3;
-                if (smooth) { n0 = Smooth(i, k); n1 = Smooth(i, l); n2 = Smooth(j, l); n3 = Smooth(j, k); }
-                else
-                {
-                    n0 = n3 = bevel ? face[(k + n - 1) % n] : face[k];
-                    n1 = n2 = bevel ? face[l] : face[k];
-                }
-                var v = (float)Math.Sqrt(VectorMath.Dot(section[l] - section[k], section[l] - section[k]));
-                var a = Vertex(layer, frame, Pos(i, section[k]), n0, new(along, 0));
-                var b = Vertex(layer, frame, Pos(i, section[l]), n1, new(along, v));
-                var c = Vertex(layer, frame, Pos(j, section[l]), n2, new(along + length, v));
-                var d = Vertex(layer, frame, Pos(j, section[k]), n3, new(along + length, 0));
-                Quad(layer, a, b, c, d, frame.Direction(face[k]));
+                var k = strip.Source;
+                var (n0, n1) = StripNormals(section, strip, EndNormals(k, faces, startNormals, chamfer));
+                var (n3, n2) = StripNormals(section, strip, EndNormals(k, faces, endNormals, chamfer));
+                var outward = Face(Pos(s, strip.A, true), Pos(s, strip.B, true), Pos(j, strip.A, false), Lift(right[s], edge[k]));
+                if (!smooth && (chamfer is null || !chamfer[k])) n0 = n1 = n2 = n3 = outward;
+                var a = Vertex(layer, frame, Pos(s, strip.A, true), n0, new(along, strip.V0));
+                var b = Vertex(layer, frame, Pos(s, strip.B, true), n1, new(along, strip.V1));
+                var c = Vertex(layer, frame, Pos(j, strip.B, false), n2, new(along + length, strip.V1));
+                var d = Vertex(layer, frame, Pos(j, strip.A, false), n3, new(along + length, strip.V0));
+                StripQuad(layer, frame, a, b, c, d, outward);
             }
             along += length;
+            if (joins.BevelTurns[j] == 0) continue;
+            var advance = VectorMath.Length(new Vector2(right[j % right.Length].X - right[s].X, right[j % right.Length].Z - right[s].Z)) * section.Max(p => Math.Abs(p.X));
+            var joinFaces = edge.Select(normal => VectorMath.Unit(Lift(miter[j], normal))).ToArray();
+            Vector3 JoinRun(Vector2 p) => Pos(j, p, true) - Pos(j, p, false);
+            var incomingNormals = smooth ? SmoothNormals(section, edge, joins, sign, j, false, JoinRun) : null;
+            var outgoingNormals = smooth ? SmoothNormals(section, edge, joins, sign, j, true, JoinRun) : null;
+            foreach (var strip in strips)
+            {
+                if (joins.BevelTurns[j] * strip.A.X <= 0 && joins.BevelTurns[j] * strip.B.X <= 0) continue;
+                var (n0, n1) = StripNormals(section, strip, EndNormals(strip.Source, joinFaces, incomingNormals, chamfer));
+                var (n3, n2) = StripNormals(section, strip, EndNormals(strip.Source, joinFaces, outgoingNormals, chamfer));
+                var ai = Pos(j, strip.A, false); var bi = Pos(j, strip.B, false);
+                var ao = Pos(j, strip.A, true); var bo = Pos(j, strip.B, true);
+                var outward = Face(ai, bi, strip.B.X == 0 ? ao : bo, joinFaces[strip.Source]);
+                if (!smooth && (chamfer is null || !chamfer[strip.Source])) n0 = n1 = n2 = n3 = outward;
+                int V(Vector3 p, Vector3 normal, bool outgoing, float v) => Vertex(layer, frame, p, normal, new(along + (outgoing ? advance : 0), v));
+                var a = V(ai, n0, false, strip.V0); var b = V(bi, n1, false, strip.V1);
+                if (strip.A.X == 0) Triangle(layer, a, b, V(bo, n2, true, strip.V1), frame.Direction(outward));
+                else if (strip.B.X == 0) Triangle(layer, a, b, V(ao, n3, true, strip.V0), frame.Direction(outward));
+                else StripQuad(layer, frame, a, b, V(bo, n2, true, strip.V1), V(ao, n3, true, strip.V0), outward);
+            }
+            along += advance;
         }
-        if (closed) return;
-        CapPath(layer, section, capTriangles, Math.Abs(area) * 0.5, tangent, m, frame, Pos);
+        if (!closed) CapPath(layer, section, capTriangles, sectionSplits, Math.Abs(area) * 0.5, tangent, m, frame, (i, p) => Pos(i, p, true));
+    }
+
+    private static Vector3 Lift(Vector3 lateral, Vector2 normal) => new(lateral.X * normal.X, normal.Y, lateral.Z * normal.X);
+
+    private static Vector3 Face(Vector3 a, Vector3 b, Vector3 d, Vector3 guess)
+    {
+        var cross = VectorMath.Cross(Vector3.Subtract(b, a), Vector3.Subtract(d, a));
+        var normal = VectorMath.Dot(cross, cross) > 1e-20 ? VectorMath.Unit(cross) : guess;
+        return VectorMath.Dot(normal, guess) < 0 ? Vector3.Multiply(normal, -1) : normal;
+    }
+
+    private static Vector3[] SmoothNormals(IReadOnlyList<Vector2> section, Vector2[] edge, PathJoins joins, float sign,
+        int ring, bool outgoing, Func<Vector2, Vector3> run)
+    {
+        var n = section.Count;
+        var normals = new Vector3[n];
+        for (var k = 0; k < n; k++)
+        {
+            var previous = (k + n - 1) % n; var next = (k + 1) % n;
+            var across = joins.Position(ring, section[next], outgoing) - joins.Position(ring, section[previous], outgoing);
+            var guess = VectorMath.Unit(Lift(VectorMath.Unit(joins.Miters[ring]), edge[previous] + edge[k]));
+            // The bounded ring changes the actual run independently at each lateral coordinate.
+            // Its grade, including at a trimmed open end, must enter the radial normal as well.
+            // Section order fixes orientation: the old planar radial guess can oppose the real
+            // normal after a long inner cutback, so it must not independently flip ring normals.
+            var cross = VectorMath.Cross(across, run(section[k]));
+            normals[k] = VectorMath.Dot(cross, cross) > 1e-20
+                ? Vector3.Multiply(VectorMath.Unit(cross), sign) : guess;
+        }
+        return normals;
+    }
+
+    private static (Vector3, Vector3) EndNormals(int k, Vector3[] faces, Vector3[]? smoothNormals, IReadOnlyList<bool>? chamfer)
+    {
+        var n = faces.Length;
+        if (smoothNormals is not null) return (smoothNormals[k], smoothNormals[(k + 1) % n]);
+        return chamfer is not null && chamfer[k] ? (faces[(k + n - 1) % n], faces[(k + 1) % n]) : (faces[k], faces[k]);
+    }
+
+    private static (Vector3, Vector3) StripNormals(IReadOnlyList<Vector2> section, PathJoins.SectionEdge strip, (Vector3 A, Vector3 B) normals)
+    {
+        var n = section.Count;
+        var full = VectorMath.Length(section[(strip.Source + 1) % n] - section[strip.Source]);
+        return (VectorMath.Unit(Vector3.Lerp(normals.A, normals.B, strip.V0 / full)),
+            VectorMath.Unit(Vector3.Lerp(normals.A, normals.B, strip.V1 / full)));
+    }
+
+    private static void StripQuad(Layer layer, Frame frame, int a, int b, int c, int d, Vector3 outward)
+    {
+        var normal = frame.Direction(outward);
+        if (PathJoins.OtherDiagonal(P(layer, a), P(layer, b), P(layer, c), P(layer, d), normal))
+        { Triangle(layer, a, b, d, normal); Triangle(layer, b, c, d, normal); }
+        else Quad(layer, a, b, c, d, normal);
     }
 
     private static void CapPath(Layer layer, IReadOnlyList<Vector2> section, IReadOnlyList<int>? capTriangles,
-        double area, Vector3[] tangent, int m, Frame frame, Func<int, Vector2, Vector3> Pos)
+        IReadOnlyDictionary<(Vector2, Vector2), Vector2> splits, double area, Vector3[] tangent, int m, Frame frame, Func<int, Vector2, Vector3> Pos)
     {
-        var (capPoints, capIndices) = capTriangles is null ? Earcut(section) : Explicit(section, capTriangles, area);
+        var (points, indices) = capTriangles is null ? Earcut(section) : Explicit(section, capTriangles, area);
+        var (capPoints, capIndices) = PathJoins.SplitCap(points, indices, splits);
         for (var end = 0; end < 2; end++)
         {
             var i = end == 0 ? 0 : m - 1;
@@ -207,32 +265,6 @@ internal sealed class MeshBuilder
             edge[k] = new(sign * d.Y / length, -sign * d.X / length);
         }
         return edge;
-    }
-
-    private static (Vector3[] Tangent, Vector3[] Right, Vector3[] Miter) PathJoins(IReadOnlyList<Vector3> path,
-        bool closed, float miterLimit)
-    {
-        var m = path.Count;
-        var segments = closed ? m : m - 1;
-        var tangent = new Vector3[segments]; var right = new Vector3[segments];
-        for (var s = 0; s < segments; s++)
-        {
-            var a = path[s]; var b = path[(s + 1) % m];
-            tangent[s] = VectorMath.Unit(new Vector3(b.X - a.X, 0, b.Z - a.Z));
-            right[s] = new(tangent[s].Z, 0, -tangent[s].X);
-        }
-        var miter = new Vector3[m];
-        for (var i = 0; i < m; i++)
-        {
-            if (!closed && i == 0) { miter[i] = right[0]; continue; }
-            if (!closed && i == m - 1) { miter[i] = right[^1]; continue; }
-            var ra = right[(i + segments - 1) % segments]; var rb = right[i % segments];
-            var denominator = 1 + VectorMath.Dot(ra, rb);
-            if (denominator < 1e-8) throw new ArgumentException("A sweep cannot reverse direction at a join.");
-            miter[i] = Vector3.Multiply(Vector3.Add(ra, rb), (float)(1 / denominator));
-            if (VectorMath.Dot(miter[i], miter[i]) > (double)miterLimit * miterLimit + 1e-6) throw new ArgumentException("A sweep join exceeds the miter limit.");
-        }
-        return (tangent, right, miter);
     }
 
     /// <summary>Kernel sweep laid into the vertical plane through x (see <see cref="Frame.VerticalPlane"/>).</summary>
@@ -351,9 +383,20 @@ internal sealed class MeshBuilder
 
     internal bool IsEmpty => _layers.Count == 0;
 
+    /// <summary>Path-built geometry takes its bounds from the actual final vertices, including cut joins.</summary>
+    internal PartGeometry Finish()
+    {
+        if (_layers.Count == 0) throw new InvalidOperationException("A part must contain geometry.");
+        var min = new Vector3(float.MaxValue); var max = new Vector3(float.MinValue);
+        foreach (var layer in _layers)
+            for (var i = 0; i < layer.Count; i++)
+            { var p = P(layer, i); min = Vector3.Min(min, p); max = Vector3.Max(max, p); }
+        return Finish(new(min, max));
+    }
+
     /// <summary>
-    /// One bundle per layer. <paramref name="bounds"/> is the part's declared Bounds; vertices outside it by more than float
-    /// noise are a construction error, and noise-level excursions are clamped in place (shared positions stay shared).
+    /// One bundle per layer. Vertices outside the declared bounds by more than float noise are a construction error;
+    /// noise-level excursions are clamped in place (shared positions stay shared).
     /// </summary>
     internal PartGeometry Finish(Box3 bounds)
     {

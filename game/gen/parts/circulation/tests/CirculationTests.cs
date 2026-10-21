@@ -27,7 +27,7 @@ public sealed class CirculationTests
     }
 
     [TestCase, TestCategory(TestReason.Contract)]
-    public void CatalogDefaultsBuildClosedGeometryAtEveryLevel()
+    public void CatalogDefaultsBuildGeometryAtEveryLevel()
     {
         foreach (var (type, attribute) in Registered())
         {
@@ -35,7 +35,7 @@ public sealed class CirculationTests
             var (bounds, levels, colliders, _) = Invoke(type, defaults);
             for (var level = 0; level < levels.Length; level++)
             {
-                ClosedClockwise(levels[level], bounds, attribute.Id);
+                ValidateVisibleGeometry(levels[level], bounds, attribute.Id);
             }
             AssertThat(levels[0].Meshes.Sum(m => m.Index.Length) >= levels[^1].Meshes.Sum(m => m.Index.Length)).OverrideFailureMessage($"{attribute.Id} gets heavier when far.").IsTrue();
             AssertThat(colliders.All(c => c.Foot != FootMat.Auto)).OverrideFailureMessage($"{attribute.Id} leaves a collider's Foot at Auto.").IsTrue();
@@ -43,7 +43,7 @@ public sealed class CirculationTests
     }
 
     [TestCase, TestCategory(TestReason.Contract)]
-    public void EveryExplicitPartVariationIsClosed()
+    public void EveryExplicitPartVariationKeepsVisibleGeometryInBounds()
     {
         var parts = new (object Part, object[] Params)[]
         {
@@ -60,7 +60,7 @@ public sealed class CirculationTests
             foreach (var p in all)
             {
                 var (bounds, levels, _, _) = Invoke(part.GetType(), p);
-                foreach (var geometry in levels) ClosedClockwise(geometry, bounds, part.GetType().Name);
+                foreach (var geometry in levels) ValidateVisibleGeometry(geometry, bounds, part.GetType().Name);
             }
     }
 
@@ -146,7 +146,7 @@ public sealed class CirculationTests
         var minimumSteps = TerrainDrop.PlanSteps(S.StepsMinRise, true);
         AssertThat(minimumSteps.Risers == 2 && minimumSteps.Riser == S.RiserMinAllowed && minimumSteps.Rise == S.StepsMinRise).OverrideFailureMessage("Explicit steps must accept the minimum two-riser rise unchanged.").IsTrue();
         var minimumParams = (StairParams)minimumSteps.Parts.Single().Params;
-        ClosedClockwise(new StepsPart().Lods[LodLevel.L0](minimumParams), new StepsPart().Bounds(minimumParams), "minimum planned steps");
+        ValidateVisibleGeometry(new StepsPart().Lods[LodLevel.L0](minimumParams), new StepsPart().Bounds(minimumParams), "minimum planned steps");
         AssertThat(TerrainDrop.Plan(5f, 100, true).Method == DropMethod.Terraces).OverrideFailureMessage("> 4 m goes to terraces.").IsTrue();
         AssertThat(TerrainDrop.Plan(0.3f, 4, true).Method == DropMethod.Ramp && TerrainDrop.Plan(0.3f, 2, true).Method == DropMethod.Steps).OverrideFailureMessage("12 × ΔH decides ramp or steps.").IsTrue();
         for (var rise = MathF.BitIncrement(S.StepsMinRise); rise <= 4f; rise += 0.07f)
@@ -168,7 +168,7 @@ public sealed class CirculationTests
                     AssertThat(p.Height <= WalkRules.OutdoorFlightMaxRise + TestTolerance.Position).OverrideFailureMessage("A flight rises more than 1.5 m.").IsTrue();
                     AssertThat(Math.Abs((double)(y) - part.At.M42) <= TestTolerance.Position).OverrideFailureMessage($"Expected {y}; got {part.At.M42}.").IsTrue(); y += p.Height;
                     var geometry = new StepsPart().Lods[LodLevel.L0](p);
-                    ClosedClockwise(geometry, new StepsPart().Bounds(p), "planned steps");
+                    ValidateVisibleGeometry(geometry, new StepsPart().Bounds(p), "planned steps");
                 }
                 AssertThat(Math.Abs((double)(rise) - y) <= TestTolerance.Position).OverrideFailureMessage($"Expected {rise}; got {y}.").IsTrue();
                 foreach (var landing in plan.Landings)
@@ -184,7 +184,7 @@ public sealed class CirculationTests
             foreach (var part in plan.Parts)
             {
                 var p = (RampParams)part.Params;
-                ClosedClockwise(new RampPart().Lods[LodLevel.L0](p), new RampPart().Bounds(p), "planned ramp");
+                ValidateVisibleGeometry(new RampPart().Lods[LodLevel.L0](p), new RampPart().Bounds(p), "planned ramp");
                 AssertThat(new RampPart().Collision(p).Count == 0).OverrideFailureMessage("Terrain ramps leave walking to the height field.").IsTrue();
             }
         }
@@ -224,13 +224,13 @@ public sealed class CirculationTests
     }
 
     [TestCase, TestCategory(TestReason.Contract)]
-    public void TerraceEdgeBandsAreClosedWalkableAndWalledOnTheLowSide()
+    public void TerraceEdgeBandsAreWalkableAndWalledOnTheLowSide()
     {
         Vector2[] line = [new(0, 0), new(8, 0), new(12, 4)];
         foreach (var lod in Enum.GetValues<LodLevel>())
         {
             var geometry = TerraceEdge.Build(line, 0, 0.7f, lod);
-            ClosedClockwise(geometry, geometry.Bounds, "terrace edge");
+            ValidateVisibleGeometry(geometry, geometry.Bounds, "terrace edge");
         }
         var colliders = TerraceEdge.Collide(line, 0, 0.7f);
         var walls = colliders.OfType<WallCollider>().ToArray();
@@ -242,14 +242,14 @@ public sealed class CirculationTests
     }
 
     [TestCase, TestCategory(TestReason.Contract)]
-    public void PathStepsSeatsAndRampEdgesAreClosedAndClimbTheRightWay()
+    public void PathStepsSeatsAndRampEdgesClimbTheRightWay()
     {
         // Time-plaza ring (MAP-QSH-TERRAIN): 6 × 0.15 / 0.35 from the −0.9 floor, a closed loop climbing outward.
         var ring = Loop(24.9f, 24.9f, 64);
         foreach (var lod in Enum.GetValues<LodLevel>())
         {
             var g = StepsAlong.Build(ring, true, -0.9f, 6, 0.15f, 0.35f, StepsFinish.Stone, lod);
-            ClosedClockwise(g, g.Bounds, "plaza ring");
+            ValidateVisibleGeometry(g, g.Bounds, "plaza ring");
         }
         var ramps = StepsAlong.Collide(ring, true, -0.9f, 6, 0.15f, 0.35f, StepsFinish.Stone).OfType<RampCollider>().ToArray();
         AssertThat(ramps.Length == ring.Length && ramps.All(r => r.Foot == FootMat.StonePaving && r.Stair is { Count: 6 })).OverrideFailureMessage("Ring needs a stair ramp per segment.").IsTrue();
@@ -261,11 +261,11 @@ public sealed class CirculationTests
         foreach (var lod in Enum.GetValues<LodLevel>())
         {
             var a = StepsAlong.Build(arc, false, 0, 4, 0.15f, 0.35f, StepsFinish.Stone, lod);
-            ClosedClockwise(a, a.Bounds, "arc steps");
+            ValidateVisibleGeometry(a, a.Bounds, "arc steps");
             var s = StepsAlong.Build(seatsLine, false, 0, 4, 0.4f, 1.5f, StepsFinish.GrassSeats, lod);
-            ClosedClockwise(s, s.Bounds, "seat tiers");
+            ValidateVisibleGeometry(s, s.Bounds, "seat tiers");
             var e = StepsAlong.Build(Loop(20f, 30f, 72), true, -0.9f, 3, 0.3f, 1.3f, StepsFinish.GrassSeats, lod);
-            ClosedClockwise(e, e.Bounds, "sunken lawn");
+            ValidateVisibleGeometry(e, e.Bounds, "sunken lawn");
         }
         var seats = StepsAlong.Collide(seatsLine, false, 0, 4, 0.4f, 1.5f, StepsFinish.GrassSeats);
         AssertThat(seats.Count == 8 && seats.OfType<BoxCollider>().Max(b => b.At.M42 + b.Half.Y) is var top && Math.Abs(top - 1.6f) < TestTolerance.Position).OverrideFailureMessage("Seat tiers top out at +1.6.").IsTrue();
@@ -281,10 +281,36 @@ public sealed class CirculationTests
         foreach (var lod in Enum.GetValues<LodLevel>())
         {
             var g = RampEdges.Build(deck, 2.3f, lod);
-            ClosedClockwise(g, g.Bounds, "ramp edges");
+            ValidateVisibleGeometry(g, g.Bounds, "ramp edges");
         }
+        // D-290: complex corners may overlap; retain finite geometry and bounded outer tips rather than closure.
+        Vector2[] sharp = [new(-4, 0), new(0, 0), new(-4, 0.8f)];
+        const int sharpRisers = 2;
+        const float sharpTread = 0.35f, sharpRampWidth = 2.3f;
+        var sharpSteps = StepsAlong.Build(sharp, false, 0, sharpRisers, 0.15f, sharpTread, StepsFinish.Stone, LodLevel.L0);
+        foreach (var mesh in sharpSteps.Meshes)
+        {
+            mesh.ValidateVertexData();
+            AssertThat(Enumerable.Range(0, mesh.Position.Length / 3).All(i => sharpSteps.Bounds.Contains(P(mesh, i)) &&
+                P(mesh, i).X <= sharpRisers * sharpTread + TestTolerance.Position)).OverrideFailureMessage("A cut step tip leaves its local envelope.").IsTrue();
+        }
+        AssertThat(sharpSteps.Bounds.Max.X == sharpSteps.Meshes.Max(mesh => Enumerable.Range(0, mesh.Position.Length / 3).Max(i => P(mesh, i).X)))
+            .OverrideFailureMessage("Path step bounds still include an unused miter-limit expansion.").IsTrue();
+        Vector3[] graded = [new(-4, 0, 0), new(0, 0.4f, 0), new(-4, 0.8f, 0.8f)];
+        var sharpRamp = RampEdges.Build(graded, sharpRampWidth, LodLevel.L0);
+        var railExtent = sharpRampWidth * 0.5f + S.HandrailKnob;
+        foreach (var mesh in sharpRamp.Meshes)
+        {
+            mesh.ValidateVertexData();
+            AssertThat(Enumerable.Range(0, mesh.Position.Length / 3).All(i => sharpRamp.Bounds.Contains(P(mesh, i)) &&
+                P(mesh, i).X <= railExtent + TestTolerance.Position && P(mesh, i).X >= graded.Min(p => p.X) - railExtent - TestTolerance.Position &&
+                P(mesh, i).Z >= graded.Min(p => p.Z) - railExtent - TestTolerance.Position && P(mesh, i).Z <= graded.Max(p => p.Z) + railExtent + TestTolerance.Position))
+                .OverrideFailureMessage("A cut ramp edge leaves its local envelope.").IsTrue();
+        }
+        AssertThat(sharpRamp.Bounds.Min.Y < graded[0].Y && sharpRamp.Bounds.Max.Y > graded[^1].Y + S.HandrailHeight)
+            .OverrideFailureMessage("A cut join lost the ramp's height variation.").IsTrue();
         var planted = TerraceEdge.Build([new(0, 0), new(10, 0), new(14, 3)], 0, 1.0f, LodLevel.L0, planted: true);
-        ClosedClockwise(planted, planted.Bounds, "planted terrace");
+        ValidateVisibleGeometry(planted, planted.Bounds, "planted terrace");
         AssertThat(planted.Meshes.Any(m => m.Material.Spec == S.Soil)).OverrideFailureMessage("A planted band needs a soil bed.").IsTrue();
         var steps = TerrainDrop.PlanSteps(1.5f, mainNetwork: true);
         var ramp = TerrainDrop.PlanRamp(1.5f, 40, mainNetwork: true);
@@ -319,23 +345,18 @@ public sealed class CirculationTests
     private static Vector3 P(GeometryBundle m, int i) => new(m.Position[3 * i], m.Position[3 * i + 1], m.Position[3 * i + 2]);
     private static Vector3 N(GeometryBundle m, int i) => new(m.Normal[3 * i], m.Normal[3 * i + 1], m.Normal[3 * i + 2]);
 
-    private static void ClosedClockwise(PartGeometry geometry, Box3 bounds, string what)
+    private static void ValidateVisibleGeometry(PartGeometry geometry, Box3 bounds, string what)
     {
         AssertThat(geometry.Bounds == bounds && geometry.Meshes.Count > 0).OverrideFailureMessage($"{what}: geometry bounds differ from the declared bounds.").IsTrue();
         foreach (var m in geometry.Meshes)
         {
             m.ValidateVertexData();
-            var edges = new Dictionary<(Vector3, Vector3), int>();
             for (var i = 0; i < m.Index.Length; i += 3)
             {
                 var a = m.Index[i]; var b = m.Index[i + 1]; var c = m.Index[i + 2];
                 var cross = Vector3.Cross(P(m, b) - P(m, a), P(m, c) - P(m, a));
                 AssertThat(Vector3.Dot(cross, N(m, a) + N(m, b) + N(m, c)) < 0).OverrideFailureMessage($"{what}: face winding disagrees with outward normals.").IsTrue();
-                foreach (var (from, to) in new[] { (P(m, a), P(m, b)), (P(m, b), P(m, c)), (P(m, c), P(m, a)) })
-                { edges.TryGetValue((from, to), out var count); edges[(from, to)] = count + 1; }
             }
-            foreach (var (edge, count) in edges)
-                AssertThat(count == 1 && edges.TryGetValue((edge.Item2, edge.Item1), out var reverse) && reverse == 1).OverrideFailureMessage($"{what}: a solid has an open or non-manifold edge at {edge.Item1}–{edge.Item2}.").IsTrue();
             for (var i = 0; i < m.Position.Length / 3; i++)
             { AssertThat(bounds.Contains(P(m, i))).OverrideFailureMessage($"{what}: a vertex leaves the bounds.").IsTrue(); AssertThat(Math.Abs((double)(1) - N(m, i).Length()) <= TestTolerance.Position).OverrideFailureMessage($"Expected {1}; got {N(m, i).Length()}.").IsTrue(); }
             // Ao is visibility (1 = unoccluded); game/gen/parts/circulation/ adds no occlusion of its own, so only kernel reveals (0.8) may dip below 1.

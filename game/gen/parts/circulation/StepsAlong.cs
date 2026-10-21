@@ -48,7 +48,7 @@ public static class StepsAlong
                 };
                 mesh.SweepPath(S.Grass, mat, null, null, path, closed, Frame.Identity);
             }
-        return mesh.Finish(Bounds(footLine, baseY, rise, run, seats));
+        return mesh.Finish();
     }
 
     /// <summary>
@@ -126,12 +126,4 @@ public static class StepsAlong
         if (!(tread >= tMin && tread <= tMax)) throw new ArgumentOutOfRangeException(nameof(tread), $"Tread {tread} m is outside {tMin}–{tMax} m.");
     }
 
-    private static Box3 Bounds(IReadOnlyList<Vector2> line, float baseY, float rise, float run, bool seats)
-    {
-        // Mitred joins reach at most miterLimit (4) × the section's lateral extent beyond the line.
-        var reach = run * 4 + 0.01f;
-        float minX = float.MaxValue, minZ = float.MaxValue, maxX = float.MinValue, maxZ = float.MinValue;
-        foreach (var p in line) { minX = Math.Min(minX, p.X); maxX = Math.Max(maxX, p.X); minZ = Math.Min(minZ, p.Y); maxZ = Math.Max(maxZ, p.Y); }
-        return new(new(minX - reach, baseY - S.Sink, minZ - reach), new(maxX + reach, baseY + rise + (seats ? S.SeatGrass : 0), maxZ + reach));
-    }
 }

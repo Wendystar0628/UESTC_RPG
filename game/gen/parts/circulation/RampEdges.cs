@@ -61,14 +61,7 @@ public static class RampEdges
                 }
             }
         }
-        float minX = float.MaxValue, minY = float.MaxValue, minZ = float.MaxValue, maxX = float.MinValue, maxY = float.MinValue, maxZ = float.MinValue;
-        foreach (var p in deckLine)
-        {
-            minX = Math.Min(minX, p.X); maxX = Math.Max(maxX, p.X); minY = Math.Min(minY, p.Y);
-            maxY = Math.Max(maxY, p.Y); minZ = Math.Min(minZ, p.Z); maxZ = Math.Max(maxZ, p.Z);
-        }
-        var reach = half * 4 + 0.05f;
-        return mesh.Finish(new(new(minX - reach, minY - 0.25f, minZ - reach), new(maxX + reach, maxY + S.HandrailHeight + S.HandrailKnob + 0.01f, maxZ + reach)));
+        return mesh.Finish();
     }
 
     /// <summary>Rectangle lat0..lat1 × up0..up1 with single chamfers on every corner, as points and chamfer flags.</summary>
