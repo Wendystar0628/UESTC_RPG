@@ -65,8 +65,7 @@ public sealed class AnchorFacingTests
         var layout = RealLayout.Value;
         foreach (var feature in world.Features.Values.Where(f => f.Kind.Value == "anchor"))
         {
-            if (layout.Items.SingleOrDefault(i => i.Key == "anchor:" + feature.Id.Value) is not { } item)
-                continue;
+            var item = layout.Items.Single(i => i.Key == "anchor:" + feature.Id.Value);
             var ring = ((PolygonGeometry)feature.Geometry).Rings.Outer;
             var centre = ring.Aggregate(Vector2.Zero, (a, p) => a + p) / ring.Count;
             // On its footprint, or moved to the paving edge nearby (AnchorsStandOnOrBesidePaving).

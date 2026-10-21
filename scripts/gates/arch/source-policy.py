@@ -117,8 +117,11 @@ def inspect_powershell(root, files, terms, errors):
     if executable is None:
         raise FileNotFoundError("PowerShell host not found on PATH: powershell")
     command = [executable, "-NoProfile", "-NonInteractive", "-Command", PS_SOURCE]
-    result = subprocess.run(command, input=json.dumps({"root": str(root), "files": files, "terms": terms}),
-                            text=True, encoding="utf-8", stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True)
+    try:
+        result = subprocess.run(command, input=json.dumps({"root": str(root), "files": files, "terms": terms}),
+                                text=True, encoding="utf-8", stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True)
+    except subprocess.CalledProcessError as error:
+        raise RuntimeError(f"{error}\nPowerShell stderr:\n{error.stderr}") from error
     errors.extend(json.loads(result.stdout))
 
 
