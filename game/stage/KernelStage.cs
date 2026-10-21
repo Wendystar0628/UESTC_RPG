@@ -1,4 +1,3 @@
-using Campus.Kernel.Diagnostics;
 using System.Globalization;
 using System.Reflection;
 using Campus.Gates;
@@ -35,7 +34,6 @@ public partial class KernelStage : Node3D, IAppExit, IStageGateHost
     private bool _closing;
     private bool _cpuCommand;
     private bool _shutdownStarted;
-    private bool _failed;
     private Task? _shutdownTask;
     private Task<int>? _bakeCommandTask;
     private SceneTree? _sceneTree;
@@ -43,9 +41,6 @@ public partial class KernelStage : Node3D, IAppExit, IStageGateHost
     private bool _shutdownComplete;
     private bool _quitIssued;
     private int _exitCode;
-    private readonly List<Exception> _failures = [];
-    private string? _failurePhase;
-    private bool _handlingFailure;
     private IAppLoadingLease? _bootLoading;
     private Task? _bootLoadingDisposal;
     private IFlowLease? _startupFlow;
@@ -53,6 +48,7 @@ public partial class KernelStage : Node3D, IAppExit, IStageGateHost
     private ViewContentReadiness? _contentReadiness;
     private GameCaptureNode.CaptureDestination? _startupCapture;
     private readonly StageGateDriver _gate;
+    private readonly StageStartupFailure _startupFailure;
     private string _phase = "compose";
     public string Phase
     {
@@ -64,9 +60,13 @@ public partial class KernelStage : Node3D, IAppExit, IStageGateHost
             GD.Print(FormattableString.Invariant($"STARTUP_PHASE {value} {FrameClock.MonotonicMilliseconds:R} frame={Engine.GetProcessFrames()}"));
         }
     }
-    public string? Failure { get; private set; }
+    public string? Failure => _startupFailure.Failure;
 
-    public KernelStage() => _gate = new(this);
+    public KernelStage()
+    {
+        _startupFailure = new(this);
+        _gate = new(this);
+    }
 
     public override async void _Ready()
     {
@@ -82,8 +82,8 @@ public partial class KernelStage : Node3D, IAppExit, IStageGateHost
             Compose();
             await StartWorld();
         }
-        catch (OperationCanceledException) when (_closing || _failed) { }
-        catch (Exception error) { await Fail(error); }
+        catch (OperationCanceledException) when (_closing || _startupFailure.Failed) { }
+        catch (Exception error) { await _startupFailure.Fail(error); }
     }
 
     private void Compose()
@@ -189,6 +189,7 @@ public partial class KernelStage : Node3D, IAppExit, IStageGateHost
 
     private void BindRuntimeServices(ServiceRegistry registry, StageCamera view)
     {
+        _startupFailure.BindPresentation(registry);
         _flow = registry.Get<IAppFlow>();
         _flow.PhaseReached += static phase =>
             GD.Print(FormattableString.Invariant($"STARTUP_PHASE {phase} {FrameClock.MonotonicMilliseconds:R} frame={Engine.GetProcessFrames()}"));
@@ -212,17 +213,17 @@ public partial class KernelStage : Node3D, IAppExit, IStageGateHost
             _startupFlow = registry.Get<IWorldControl>().AcquireFlow(FlowPriority.Pause, 0);
             await StartWorld(frontispiece, _bootLoading, _startupFlow);
         }
-        catch (OperationCanceledException error) when (_closing || _failed) { failures.Add(error); }
+        catch (OperationCanceledException error) when (_closing || _startupFailure.Failed) { failures.Add(error); }
         catch (Exception error)
         {
             failures.Add(error);
             // Publish the original failure before any cleanup await can race a window-close exit.
-            _ = Fail(error);
+            _ = _startupFailure.Fail(error);
         }
         finally
         {
-            try { ReleaseStartupFlow(); } catch (Exception error) { failures.Add(error); _ = Fail(error); }
-            try { await DisposeBootLoading(); } catch (Exception error) { failures.Add(error); _ = Fail(error); }
+            try { ReleaseStartupFlow(); } catch (Exception error) { failures.Add(error); _ = _startupFailure.Fail(error); }
+            try { await DisposeBootLoading(); } catch (Exception error) { failures.Add(error); _ = _startupFailure.Fail(error); }
         }
         if (failures.Count == 1) System.Runtime.ExceptionServices.ExceptionDispatchInfo.Capture(failures[0]).Throw();
         if (failures.Count > 0) throw new AggregateException("Stage startup and presentation cleanup failed.", failures);
@@ -330,14 +331,38 @@ public partial class KernelStage : Node3D, IAppExit, IStageGateHost
         if (showTitle) await frontispiece.Hide(BootTuning.TitleRevealSeconds);
         CheckStartupActive();
         _ready = true;
+        _startupFailure.CompleteBoot();
         Phase = "realtime";
         GD.Print($"[ENG-ARCH][map={maps.Current.Value}][phase=realtime] flow={_flow!.State}; startup complete");
         await _gate.OnRealtime();
     }
 
+    internal bool CanHandleFailure => !_treeExited && !_shutdownStarted;
+    internal bool CanKeepFailurePresentation => !_closing && CanHandleFailure;
+    internal Task ShutdownCompletion => _shutdownTask ?? Task.CompletedTask;
+
+    internal void MarkFailure()
+    {
+        _ready = false;
+        _exitCode = Math.Max(_exitCode, 2);
+    }
+
+    internal void FailBoot(Exception error)
+    {
+        if (_flow is IAppBootFlow bootFlow) bootFlow.FailBoot(error);
+    }
+
+    internal void CancelStartupCapture() => _captureLifetime.Cancel();
+
+    internal Task ReleaseStartupPresentation()
+    {
+        ReleaseStartupFlow();
+        return DisposeBootLoading();
+    }
+
     private void CheckStartupActive()
     {
-        if (_failed) throw new OperationCanceledException("Startup stopped by the terminal stage failure.");
+        if (_startupFailure.Failed) throw new OperationCanceledException("Startup stopped by the terminal stage failure.");
         if (_closing || _shutdownStarted) throw new OperationCanceledException("Startup stopped by the exit request.");
     }
 
@@ -376,8 +401,8 @@ public partial class KernelStage : Node3D, IAppExit, IStageGateHost
 
     public override void _Process(double delta)
     {
-        if (!_closing && !_failed && _mapRuntime?.Failure is { } failure && failure is not OperationCanceledException)
-            _ = Fail(failure);
+        if (!_closing && !_startupFailure.Failed && _mapRuntime?.Failure is { } failure && failure is not OperationCanceledException)
+            _ = _startupFailure.Fail(failure);
         _statistics?.Sample();
         if (_startupProfiling && _statistics is { } statistics)
         {
@@ -402,7 +427,7 @@ public partial class KernelStage : Node3D, IAppExit, IStageGateHost
             if (_shutdownTask is not null) { await _shutdownTask; return; }
             _closing = true;
             _captureLifetime.Cancel();
-            if (_failed) { await FinishQuit(2); return; }
+            if (_startupFailure.Failed) { await FinishQuit(2); return; }
             if (_cpuCommand) { await FinishQuit(130); return; }
             if (_flow is null) { await FinishQuit(); return; }
             // All requests, including repeats, use the flow's shared quit task. It calls IAppExit
@@ -420,7 +445,7 @@ public partial class KernelStage : Node3D, IAppExit, IStageGateHost
                 default: throw new InvalidOperationException("Quit completed without a final quit or resume decision.");
             }
         }
-        catch (Exception error) { await Fail(error); }
+        catch (Exception error) { await _startupFailure.Fail(error); }
     }
 
     public override void _ExitTree()
@@ -430,7 +455,7 @@ public partial class KernelStage : Node3D, IAppExit, IStageGateHost
         // Leaving the tree first destroys the lifetime required by async cleanup. Reject that
         // ownership violation synchronously; never start a replacement shutdown on a dead stage.
         var error = new InvalidOperationException("KernelStage left the tree before its awaited shutdown completed.");
-        _ = Fail(error);
+        _ = _startupFailure.Fail(error);
         QuitEngine();
         throw error;
     }
@@ -447,6 +472,7 @@ public partial class KernelStage : Node3D, IAppExit, IStageGateHost
         _shutdownTask = completion.Task;
         _shutdownStarted = true;
         _closing = true;
+        _startupFailure.InvalidateSession();
         _ = Finish();
         return _shutdownTask;
 
@@ -455,7 +481,7 @@ public partial class KernelStage : Node3D, IAppExit, IStageGateHost
             try { await ShutdownAndQuit(); }
             catch (Exception error)
             {
-                _ = Fail(error);
+                _ = _startupFailure.Fail(error);
                 QuitEngine();
             }
             finally { completion.TrySetResult(); }
@@ -485,50 +511,9 @@ public partial class KernelStage : Node3D, IAppExit, IStageGateHost
         catch (Exception error) { failures.Add(error); }
         try { _gate.TraceClose("shutdown-complete"); } catch (Exception error) { failures.Add(error); }
         try { _gate.ReportShutdown(); } catch (Exception error) { failures.Add(error); }
-        if (failures.Count > 0) _ = Fail(new AggregateException("Stage cleanup failed.", failures));
+        if (failures.Count > 0) _ = _startupFailure.Fail(new AggregateException("Stage cleanup failed.", failures));
         _shutdownComplete = true;
         QuitEngine();
-    }
-
-    private Task Fail([FailureHandler("ENG-ARCH")] Exception error)
-    {
-        var firstFailure = !_failed;
-        _failurePhase ??= Phase;
-        _failed = true;
-        _ready = false;
-        _exitCode = Math.Max(_exitCode, 2);
-        RecordFailure(error);
-        // The published shutdown already owns cleanup. A failure raised by that cleanup
-        // must not wait on its own task; its caller continues draining the same shutdown.
-        if (_treeExited || _handlingFailure || _shutdownStarted) return Task.CompletedTask;
-        if (firstFailure)
-        {
-            // Completing WorldReady can resume entry or quit inline; nested failures only record.
-            _handlingFailure = true;
-            try
-            {
-                try { if (_flow is IAppBootFlow bootFlow) bootFlow.FailBoot(error); }
-                catch (Exception flowError) { RecordFailure(flowError); }
-                try { _captureLifetime.Cancel(); } catch (Exception cancelError) { RecordFailure(cancelError); }
-            }
-            finally { _handlingFailure = false; }
-        }
-        // No failure presentation owns this terminal state yet. Every launch mode exits
-        // through the same awaited cleanup until SYS-TITLE has an explicit handoff.
-        return BeginShutdownAndQuit(2);
-    }
-
-    private void RecordFailure(Exception error)
-    {
-        // Repeated wrappers share their original leaves; log each actual exception once, including cleanup failures.
-        IEnumerable<Exception> failures = error is AggregateException aggregate ? aggregate.Flatten().InnerExceptions : [error];
-        foreach (var failure in failures)
-        {
-            if (_failures.Any(existing => ReferenceEquals(existing, failure))) continue;
-            _failures.Add(failure);
-            DiagnosticLog.Error($"[ENG-ARCH][phase={_failurePhase}]", failure);
-        }
-        Failure = new AggregateException("Stage failed.", _failures).GetBaseException().Message;
     }
 
     private void QuitEngine()
@@ -549,5 +534,5 @@ public partial class KernelStage : Node3D, IAppExit, IStageGateHost
     void IStageGateHost.CheckActive() => CheckStartupActive();
     void IStageGateHost.SyncView() => _view!.Sync();
     Task IStageGateHost.Close() => CloseAsync();
-    void IStageGateHost.Fail(Exception error) => _ = Fail(error);
+    void IStageGateHost.Fail(Exception error) => _ = _startupFailure.Fail(error);
 }

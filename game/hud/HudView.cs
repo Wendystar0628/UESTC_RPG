@@ -15,6 +15,9 @@ internal sealed class HudView
     public UiKit Kit { get; }
     public Control Root { get; }
     public Control LoadingHost { get; }
+    public Control FailureHost { get; }
+    public Control FailureCardHost { get; }
+    public Control FailureHintHost { get; }
     public Control Frontispiece { get; }
     public Control BackgroundHost { get; }
     public Control SafeFrame { get; }
@@ -62,6 +65,13 @@ internal sealed class HudView
         HintHost = Kit.Layout.Host(SafeFrame, "HintHost");
         UiLayout.SetInteractive(BackgroundHost, false);
         UiLayout.SetInteractive(HintHost, false);
+        // 启动失败页自成一层，盖在加载遮罩之上；卡和提示各占安全框里的一个宿主，只在失败时才往里放件。
+        FailureHost = CreateLayer("FailureHost");
+        FailureHost.Visible = false;
+        var failureSafe = Kit.Layout.SafeFrame(FailureHost);
+        FailureCardHost = Kit.Layout.Host(failureSafe, "FailureCardHost");
+        FailureHintHost = Kit.Layout.Host(failureSafe, "FailureHintHost");
+        UiLayout.SetInteractive(FailureHintHost, false);
     }
 
     private Control CreateLayer(string name)

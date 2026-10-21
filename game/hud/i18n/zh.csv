@@ -262,6 +262,12 @@ save.error.restore_world,没能恢复存档，已回到开始页，请重试或�
 loading.title,返回标题,Return to title
 loading.destination,{action} · {place} · {season} · {clock},{action} · {place} · {season} · {clock}
 loading.progress,已准备 {completed} / {total} 项,{completed} of {total} preparation items ready
+startup.failure.title,游戏没能启动,The game could not start
+startup.failure.retry,重试,Retry
+startup.failure.copy,复制错误信息,Copy error info
+startup.failure.quit,退出,Quit
+startup.failure.copied,已复制,Copied
+startup.failure.busy,正在处理，请稍候,Working on it
 hud.first_guide,单击画面开始 · Esc 打开菜单 · H 操作说明,Click to begin · Esc for menu · H for controls
 saves.title,存档,Saves
 saves.latest,最近,Latest

@@ -17,12 +17,13 @@ internal sealed class HudInput
     private readonly HudPages _pages;
     private readonly HudResidents _residents;
     private readonly Func<bool> _loading;
+    private readonly Func<bool> _failure;
     private bool _weatherHeld;
     private float _weatherHold;
     private int _entry;
 
     public HudInput(CanvasLayer owner, HudRootDependencies dependencies, HudView view, HudPages pages,
-        HudResidents residents, Func<bool> loading)
+        HudResidents residents, Func<bool> loading, Func<bool> failure)
     {
         _diagnostics = dependencies.Diagnostics;
         _owner = owner;
@@ -31,6 +32,7 @@ internal sealed class HudInput
         _pages = pages;
         _residents = residents;
         _loading = loading;
+        _failure = failure;
     }
 
     public void Enter()
@@ -96,14 +98,18 @@ internal sealed class HudInput
         if (_photoCancellation is { IsCancellationRequested: false } photo && (!_dependencies.Flow.IsPlaying || _loading()))
             photo.Cancel();
         if (!_hostInputBound) return;
+        var failure = _failure();
         var dialog = HasVisibleContent(_view.DialogHost);
         var page = HasVisibleContent(_view.PageHost);
-        _view.Corners.Visible = _dependencies.Flow.IsPlaying && !_loading() && !_residents.Clean && !dialog && !page;
-        UiLayout.SetInteractive(_view.DialogHost, dialog && _view.Root.Visible && !_loading());
-        UiLayout.SetInteractive(_view.PageHost, !dialog && _view.Root.Visible && !_loading());
-        UiLayout.SetInteractive(_view.Corners, !dialog && !page && _dependencies.InputRouter.InterfaceMode && _view.Root.Visible && !_loading());
+        _view.Corners.Visible = _dependencies.Flow.IsPlaying && !_loading() && !_residents.Clean && !dialog && !page && !failure;
+        // 启动失败页独占输入：其余宿主（含加载遮罩）一律退出鼠标与焦点，只有失败页那一层可交互。
+        UiLayout.SetInteractive(_view.FailureHost, failure);
+        UiLayout.SetInteractive(_view.LoadingHost, !failure);
+        UiLayout.SetInteractive(_view.DialogHost, dialog && !failure && _view.Root.Visible && !_loading());
+        UiLayout.SetInteractive(_view.PageHost, !dialog && !failure && _view.Root.Visible && !_loading());
+        UiLayout.SetInteractive(_view.Corners, !dialog && !page && !failure && _dependencies.InputRouter.InterfaceMode && _view.Root.Visible && !_loading());
         // 开始菜单与设置/存档共用页面层，大页打开时菜单退出阅读顺序。
-        UiLayout.SetInteractive(_pages.Title, !_pages.BigPage && !dialog && !_loading());
+        UiLayout.SetInteractive(_pages.Title, !_pages.BigPage && !dialog && !failure && !_loading());
     }
 
     private void BindHostChild(Node child)
@@ -152,8 +158,8 @@ internal sealed class HudInput
     /// <summary>漫游态 ⇄ 界面态：经 IInputRouter.SetInterfaceMode，由相机（game/camera）统一改鼠标捕获。</summary>
     private void SetInterface(bool on) => _dependencies.InputRouter.SetInterfaceMode(on);
 
-    // 第 1 层：改键捕获期间吞掉所有动作；具体按下的物理键由 _Input 交给设置卡
-    private bool DialogLayer(InputActionEvent e) => _loading() || _pages.Settings.Visible && _pages.Settings.Capturing;
+    // 第 1 层：启动失败页、加载遮罩与改键捕获期间吞掉所有动作；具体按下的物理键由 _Input 交给设置卡
+    private bool DialogLayer(InputActionEvent e) => _failure() || _loading() || _pages.Settings.Visible && _pages.Settings.Capturing;
 
     // 第 2 层：大页（设置卡、存档页，含从开始页打开的）：Esc 关页，打开这一页的 H 再按一次关页，其余动作一律吞掉
     private bool PageLayer(InputActionEvent e)
@@ -258,6 +264,8 @@ internal sealed class HudInput
 
     public void Input(InputEvent e)
     {
+        // 失败页要自己收鼠标和键盘，这里放行给界面树。
+        if (_failure()) return;
         if (_loading()) { Handled(); return; }
         if (e is InputEventMouseMotion or InputEventMouseButton or InputEventKey { Pressed: true }) _residents.Touch();
         // 改键捕获：下一个物理键交给设置卡（输入优先级第 1 层）

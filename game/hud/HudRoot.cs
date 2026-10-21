@@ -14,7 +14,9 @@ namespace Campus.Hud;
 [KernelService(typeof(IAppLoadingPresentation))]
 [KernelService(typeof(IAppScreenCoverage))]
 [KernelService(typeof(IAppFrontispiecePresentation))]
-public partial class HudRoot : CanvasLayer, IBootParticipant, IAppLoadingPresentation, IAppScreenCoverage, IAppFrontispiecePresentation
+[KernelService(typeof(IAppStartupFailurePresentation))]
+public partial class HudRoot : CanvasLayer, IBootParticipant, IAppLoadingPresentation, IAppScreenCoverage, IAppFrontispiecePresentation,
+    IAppStartupFailurePresentation
 {
     private HudRootDependencies _dependencies = null!;
     private UiBootOptions _args = new();
@@ -23,6 +25,7 @@ public partial class HudRoot : CanvasLayer, IBootParticipant, IAppLoadingPresent
     private HudResidents _residents = null!;
     private HudInput _input = null!;
     private HudLoading _loading = null!;
+    private HudFailure _failure = null!;
     private bool _initialized, _galleryTitle;
 
     public Control MinimapSlot => _view.MinimapSlot;
@@ -41,6 +44,12 @@ public partial class HudRoot : CanvasLayer, IBootParticipant, IAppLoadingPresent
     public IAppLoadingLease Show(EnterRequest? request = null) => _loading.Show(request);
     Task IAppFrontispiecePresentation.Show() => ((IAppFrontispiecePresentation)_loading).Show();
     Task IAppFrontispiecePresentation.Hide(float seconds) => ((IAppFrontispiecePresentation)_loading).Hide(seconds);
+    Task<bool> IAppStartupFailurePresentation.Show(IAppStartupFailureSession session)
+    {
+        ArgumentNullException.ThrowIfNull(session);
+        // 尚未搭好界面（首次进树前）就没有可以画失败页的地方。
+        return _initialized ? _failure.Show(session) : Task.FromResult(false);
+    }
 
     public HudRoot()
     {
@@ -63,6 +72,7 @@ public partial class HudRoot : CanvasLayer, IBootParticipant, IAppLoadingPresent
         _input.Enter();
         _residents.Enter();
         _loading.Enter();
+        _failure.Enter();
         _pages.StateChanged += SyncCorners;
         _dependencies.Flow.Changed += OnFlowChanged;
         _dependencies.ThemeClock.Switched += OnThemeSwitched;
@@ -75,7 +85,8 @@ public partial class HudRoot : CanvasLayer, IBootParticipant, IAppLoadingPresent
         _pages = new HudPages(this, _dependencies, _view);
         _residents = new HudResidents(_dependencies, _view, _pages);
         _loading = new HudLoading(this, _dependencies, _view, () => _input.SyncHostInput());
-        _input = new HudInput(this, _dependencies, _view, _pages, _residents, () => _loading.Active);
+        _failure = new HudFailure(this, _dependencies, _view, _loading, () => _input.SyncHostInput());
+        _input = new HudInput(this, _dependencies, _view, _pages, _residents, () => _loading.Active, () => _failure.Active);
         _initialized = true;
     }
 
@@ -84,6 +95,7 @@ public partial class HudRoot : CanvasLayer, IBootParticipant, IAppLoadingPresent
         _view.Tick(delta);
         _residents.Tick(delta, Active, _args.Gallery == "hud");
         _input.Tick(delta);
+        _failure.Tick();
     }
 
     public override void _Input(InputEvent e) => _input.Input(e);
@@ -92,6 +104,7 @@ public partial class HudRoot : CanvasLayer, IBootParticipant, IAppLoadingPresent
     public override void _ExitTree()
     {
         if (!_initialized) return;
+        _failure.Exit();
         _loading.Exit();
         // Stop observing host children before page/resident removal emits child signals.
         _input.Exit();
