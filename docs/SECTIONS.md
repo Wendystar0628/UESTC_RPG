@@ -1568,7 +1568,7 @@
   - ENG-ARCH 生命周期与发布 · L113 · 640
   - ENG-ARCH 就绪与等待 · L123 · 261
 - ENG-ARCH §3 契约 · L130 · 1.2k
-- ENG-ARCH §4 资源与烘焙 · L143 · 2.0k
+- ENG-ARCH §4 资源与烘焙 · L143 · 2.1k
 - ENG-ARCH §5 未交付能力的占位边界 · L159 · 257
 - ENG-ARCH §6 架构导向 · L167 · 545
 - ENG-ARCH §7 扩展点（RPG） · L175 · 69
@@ -2002,18 +2002,18 @@
 
 ## REG-DECISIONS-SYSTEMS · 系统与工程决策
 
-`docs/registry/REG-DECISIONS-SYSTEMS-系统与工程决策.md` · 20.3k 字 · 界面、存档、音频、性能与画面设置、工程五个领域的已定决策
+`docs/registry/REG-DECISIONS-SYSTEMS-系统与工程决策.md` · 20.5k 字 · 界面、存档、音频、性能与画面设置、工程五个领域的已定决策
 关键词：决策、系统、工程、界面、存档、音频、性能、画面设置、预算、契约
 
 - REG-DECISIONS-SYSTEMS §0 结论 · L21 · 126
   - ★ REG-DECISIONS-SYSTEMS §0.1 接入要点 · L25 · 56
-- REG-DECISIONS-SYSTEMS §1 界面 · L29 · 4.7k
-- REG-DECISIONS-SYSTEMS §2 存档 · L64 · 1.6k
-- REG-DECISIONS-SYSTEMS §3 音频 · L83 · 2.2k
-- REG-DECISIONS-SYSTEMS §4 性能与画面设置 · L105 · 3.5k
-- REG-DECISIONS-SYSTEMS §5 工程 · L135 · 4.1k
-- REG-DECISIONS-SYSTEMS §6 地图与行走 · L166 · 1.0k
-- REG-DECISIONS-SYSTEMS §7 时间、季节、天气 · L177 · 2.4k
+- REG-DECISIONS-SYSTEMS §1 界面 · L29 · 4.9k
+- REG-DECISIONS-SYSTEMS §2 存档 · L65 · 1.6k
+- REG-DECISIONS-SYSTEMS §3 音频 · L84 · 2.2k
+- REG-DECISIONS-SYSTEMS §4 性能与画面设置 · L106 · 3.5k
+- REG-DECISIONS-SYSTEMS §5 工程 · L136 · 4.1k
+- REG-DECISIONS-SYSTEMS §6 地图与行走 · L167 · 1.0k
+- REG-DECISIONS-SYSTEMS §7 时间、季节、天气 · L178 · 2.4k
 
 ## REG-DECISIONS-WORLD · 世界与画面决策
 
