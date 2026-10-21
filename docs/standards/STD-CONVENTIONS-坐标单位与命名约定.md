@@ -100,7 +100,7 @@ paths: ["scripts/requirements.*", "game/testing/**", "game/data/build-code-finge
 | R | 推荐行走路线 | SYS-WALK-BOUNDS §6 |
 | V、E | 审查视角：V 全景与中景，E 人眼高度与低空 | ENG-GATES-SHOTS §1 |
 | F | 飞行路线脚本 | ENG-GATES-SHOTS §1 |
-| T | 开始页镜头 | SYS-TITLE §2.1 |
+| T | 出扉页静帧的机位 | SYS-TITLE §2.1 |
 | G | 门禁 | ENG-GATES §1 |
 | DECISION- | 决策，DECISION-001 起，三位数，全文连续，只增不复用 | REG-DECISIONS §0 |
 | GAME-、TOOL-、BATCH- | 施工队列的行：GAME 游戏本体，TOOL 协作与工具，BATCH 批量机械活；三位数，拆出的子行加小写字母（GAME-034a） | WF-STATUS §2 |
@@ -124,7 +124,7 @@ paths: ["scripts/requirements.*", "game/testing/**", "game/data/build-code-finge
 | I0、I1… | 室内兜底层 I0，或室内推进批次 I1–I3 | 批次写"室内批次 I1" |
 | 第 N 条 | 各文档编号列表里的一条（流式不变量、一票否决、硬规则等） | 带文档与小节写，如"ENG-BUDGET-RULES §1 第 9 条"，不写"不变量 5" |
 | B1、B2… | 视觉精度底线 B1–B13，或主楼的分区 B1–B3 区 | 底线写"底线 B4"；分区写"主楼 B2 区" |
-| GAME、TOOL、BATCH、C、T | 队列行 TOOL-170、BATCH-007；碰撞级 C；存档位 s1；开始页镜头 T | 队列行带连字符写三位数；碰撞级写"碰撞级 C"；存档位小写；任务单里的步骤写"第 n 步"，不另起 T 之类的字母编号 |
+| GAME、TOOL、BATCH、C、T | 队列行 TOOL-170、BATCH-007；碰撞级 C；存档位 s1；出扉页静帧的机位 T | 队列行带连字符写三位数；碰撞级写"碰撞级 C"；存档位小写；任务单里的步骤写"第 n 步"，不另起 T 之类的字母编号 |
 
 ### 3.4 命名写法
 

@@ -1049,7 +1049,7 @@
   - ★ SYS-AUDIO §0.1 接入要点 · L38 · 394
 - SYS-AUDIO §1 总体与生命周期 · L44 · 770
 - SYS-AUDIO §2 混音与响度 · L56 · 497
-- SYS-AUDIO §3 加速流逝的节制与转场 · L75 · 468
+- SYS-AUDIO §3 加速流逝的节制与转场 · L75 · 497
 - SYS-AUDIO §4 人迹声：确保不出现清晰人声 · L87 · 511
 - SYS-AUDIO §5 界面音效 · L98 · 415
 - SYS-AUDIO §6 开场音乐 · L106 · 290
@@ -1111,11 +1111,11 @@
   - SYS-BORDER §1.1 挡什么（game/gen/maps/qingshuihe/boundary/、SYS-WALK-BOUNDS） · L36 · 499
   - SYS-BORDER §1.2 0.6 m 内的缓停（game/camera/walk/） · L46 · 192
   - SYS-BORDER §1.3 兜底 · L51 · 65
-- SYS-BORDER §2 飞行阻挡（旁观模式） · L55 · 1.5k
+- SYS-BORDER §2 飞行阻挡（旁观模式） · L55 · 1.6k
   - SYS-BORDER §2.1 可达空间 · L57 · 377
   - SYS-BORDER §2.2 缓冲带与推回（SYS-VIEW） · L66 · 436
-  - SYS-BORDER §2.3 边缘雾 `edge_fog` · L75 · 418
-  - SYS-BORDER §2.4 参数、合法化与不受约束的镜头 · L82 · 287
+  - SYS-BORDER §2.3 边缘雾 `edge_fog` · L75 · 426
+  - SYS-BORDER §2.4 参数、合法化与不受约束的镜头 · L82 · 299
 - SYS-BORDER §3 提示文案与多地图衔接 · L88 · 664
   - SYS-BORDER §3.1 提示文案 · L90 · 316
   - SYS-BORDER §3.2 与多地图、平面地图、存档的衔接 · L101 · 331
@@ -1133,7 +1133,7 @@
 - SYS-GRAPHICS §4 应用方式 · L99 · 465
 - SYS-GRAPHICS §5 自动推荐与自动调节（主线之后） · L109 · 398
 - SYS-GRAPHICS §6 持久化与恢复 · L118 · 305
-- SYS-GRAPHICS §7 画面页 · L124 · 135
+- SYS-GRAPHICS §7 画面页 · L124 · 139
 - SYS-GRAPHICS §8 待验证（P0） · L128 · 304
 
 ## SYS-MAPS · 多地图
@@ -1146,12 +1146,12 @@
 - SYS-MAPS §1 数据归属 · L43 · 957
   - SYS-MAPS §1.1 按图与全局 · L45 · 788
   - SYS-MAPS §1.2 烘焙缓存 · L63 · 158
-- SYS-MAPS §2 地图描述 `map.json` · L68 · 677
-- SYS-MAPS §3 切换 · L80 · 2.6k
+- SYS-MAPS §2 地图描述 `map.json` · L68 · 698
+- SYS-MAPS §3 切换 · L80 · 2.7k
   - SYS-MAPS §3.1 一个 World3D，先卸后装 · L84 · 151
   - SYS-MAPS §3.2 切图的步骤（切图部分主线之后） · L88 · 1.2k
   - SYS-MAPS §3.3 规则（主线之后） · L102 · 582
-  - SYS-MAPS §3.4 入口 · L111 · 330
+  - SYS-MAPS §3.4 入口 · L111 · 334
   - SYS-MAPS §3.5 同图重载不泄漏（主线之后） · L120 · 234
 - SYS-MAPS §4 世界状态：时间与季节全局，天气按图求值 · L126 · 612
 - SYS-MAPS §5 相机、行走与安全点（主线之后） · L144 · 430
@@ -1241,12 +1241,12 @@
 
 - SYS-SAVE §0 结论 · L22 · 730
   - ★ SYS-SAVE §0.1 接入要点 · L30 · 317
-- SYS-SAVE §1 存档模型 · L36 · 634
+- SYS-SAVE §1 存档模型 · L36 · 644
 - SYS-SAVE §2 存什么、不存什么 · L46 · 1.3k
 
 ## SYS-SAVE-FLOW · 保存时机与读档流程
 
-`docs/systems/SYS-SAVE-FLOW-保存时机与读档流程.md` · 5.8k 字 · 保存时机、安全时刻与落定快照、退出保存、读档顺序、世界实例、状态一致、新游戏建档、校验修复
+`docs/systems/SYS-SAVE-FLOW-保存时机与读档流程.md` · 5.6k 字 · 保存时机、安全时刻与落定快照、退出保存、读档顺序、世界实例、状态一致、新游戏建档、校验修复
 关键词：保存、读档、自动保存、安全时刻、落定快照、续跑等价、世界实例、校验修复、退出保存、现实时间不计、SaveReason、LoadScope、CaptureContext、RestoreContext、NewGameContext、SaveStatus、SaveResult、LoadStatus、LoadResult、SaveState、IWorldState.Instance
 
 - SYS-SAVE-FLOW §0 结论 · L22 · 529
@@ -1257,14 +1257,14 @@
   - SYS-SAVE-FLOW §1.3 写盘与失败 · L56 · 103
   - SYS-SAVE-FLOW §1.4 退出 · L60 · 306
   - SYS-SAVE-FLOW §1.5 保存状态与失败反馈 · L69 · 87
-- SYS-SAVE-FLOW §2 加载与一致性 · L73 · 2.5k
-  - SYS-SAVE-FLOW §2.1 加载流程 · L75 · 909
-  - SYS-SAVE-FLOW §2.2 世界实例：`IWorldState.Instance` · L89 · 384
+- SYS-SAVE-FLOW §2 加载与一致性 · L73 · 2.4k
+  - SYS-SAVE-FLOW §2.1 加载流程 · L75 · 779
+  - SYS-SAVE-FLOW §2.2 世界实例：`IWorldState.Instance` · L89 · 358
   - SYS-SAVE-FLOW §2.3 "状态一致"的定义 · L95 · 391
   - SYS-SAVE-FLOW §2.4 天气 · L103 · 103
   - SYS-SAVE-FLOW §2.5 新游戏 · L107 · 302
   - SYS-SAVE-FLOW §2.6 校验修复 · L113 · 442
-- SYS-SAVE-FLOW §3 关着游戏的那段现实时间不计 · L128 · 248
+- SYS-SAVE-FLOW §3 关着游戏的那段现实时间不计 · L128 · 243
 - SYS-SAVE-FLOW §4 待验证（P0） · L135 · 104
 
 ## SYS-SAVE-FORMAT · 格式、损坏处理与安全
@@ -1302,22 +1302,22 @@
 
 ## SYS-TITLE · 开始页与启动
 
-`docs/systems/SYS-TITLE-开始页与启动.md` · 8.1k 字 · 冷启动扉页与失败页、开始页 T0 与云卡、菜单和片名块、各应用状态下的约定、新游戏与继续与返回标题的加载界面、多地图登记
-关键词：开始页、标题页、主菜单、扉页、启动失败页、T0、云隙望穹、云卡、片名块、应用状态、加载界面、进度条、新游戏、继续、返回标题、预取
+`docs/systems/SYS-TITLE-开始页与启动.md` · 8.6k 字 · 冷启动扉页与失败页、开始页（扉页静帧、菜单、片名块）与出静帧的 T0 机位和云卡、从双击起的并行加载与预载、各应用状态下的约定、新游戏与继续与返回标题的加载界面、多地图登记
+关键词：开始页、标题页、主菜单、扉页、静帧、启动失败页、T0、云隙望穹、云卡、片名块、应用状态、加载界面、进度条、新游戏、继续、返回标题、并行加载、预载
 
-- SYS-TITLE §0 结论 · L22 · 899
-  - ★ SYS-TITLE §0.1 接入要点 · L29 · 475
-- SYS-TITLE §1 启动序列与扉页 · L40 · 1.5k
-- SYS-TITLE §2 开始页 · L69 · 1.9k
-  - SYS-TITLE §2.1 T0 镜头"云隙望穹" · L71 · 739
-  - SYS-TITLE §2.2 菜单 · L82 · 478
-  - SYS-TITLE §2.3 片名块 · L90 · 367
-  - SYS-TITLE §2.4 首次启动与再次启动 · L98 · 322
-- SYS-TITLE §3 应用状态下的约定 · L105 · 2.0k
-  - SYS-TITLE §3.1 进入游戏与返回标题 · L120 · 1.2k
-- SYS-TITLE §4 多地图 · L135 · 234
-- SYS-TITLE §5 不做的事 · L141 · 165
-- SYS-TITLE §6 待验证 · L147 · 157
+- SYS-TITLE §0 结论 · L22 · 1.1k
+  - ★ SYS-TITLE §0.1 接入要点 · L30 · 528
+- SYS-TITLE §1 启动序列与扉页 · L41 · 1.5k
+- SYS-TITLE §2 开始页 · L69 · 2.0k
+  - SYS-TITLE §2.1 出扉页静帧的 T0 机位"云隙望穹" · L71 · 783
+  - SYS-TITLE §2.2 菜单 · L83 · 482
+  - SYS-TITLE §2.3 片名块 · L91 · 374
+  - SYS-TITLE §2.4 首次启动与再次启动 · L99 · 337
+- SYS-TITLE §3 应用状态下的约定 · L106 · 2.2k
+  - SYS-TITLE §3.1 进入游戏与返回标题 · L121 · 1.4k
+- SYS-TITLE §4 多地图 · L136 · 240
+- SYS-TITLE §5 不做的事 · L142 · 170
+- SYS-TITLE §6 待验证 · L148 · 161
 
 ## SYS-VIEW · 观察模式与旁观漫游
 
@@ -1332,7 +1332,7 @@
   - SYS-VIEW §2.2 鼠标与碰撞 · L59 · 149
   - SYS-VIEW §2.3 活动范围 · L64 · 235
   - SYS-VIEW §2.4 初始位置 · L72 · 452
-  - SYS-VIEW §2.5 镜头不会自己动 · L81 · 279
+  - SYS-VIEW §2.5 镜头不会自己动 · L81 · 284
   - SYS-VIEW §2.6 操作说明与提示 · L89 · 209
 - SYS-VIEW §3 命令行参数 · L98 · 197
 - SYS-VIEW §4 环境痕迹与平面地图的分工 · L102 · 231
@@ -1519,7 +1519,7 @@
   - UI-VISUAL-COMPONENTS §4.3 时间环 · L80 · 351
   - UI-VISUAL-COMPONENTS §4.4 天气签条、速度条与到达标题 · L89 · 306
   - UI-VISUAL-COMPONENTS §4.5 存档卡"存储模组"、等待灯与加载界面 · L95 · 691
-- UI-VISUAL-COMPONENTS §5 画面布局 · L103 · 824
+- UI-VISUAL-COMPONENTS §5 画面布局 · L103 · 842
 - UI-VISUAL-COMPONENTS §6 待验证 · L120 · 162
 
 ## UI-VISUAL-MOTION · 界面动效与减少动态效果
@@ -1580,9 +1580,9 @@
 - ENG-BUDGET §0 结论 · L21 · 801
   - ★ ENG-BUDGET §0.1 接入要点 · L35 · 184
 - ENG-BUDGET §1 界面、外围、室内与音频的份额 · L41 · 147
-- ENG-BUDGET §2 预设与设备档的预算 · L45 · 1.6k
+- ENG-BUDGET §2 预设与设备档的预算 · L45 · 1.5k
 - ENG-BUDGET §3 份额怎么分 · L76 · 469
-- ENG-BUDGET §4 怎么测 · L84 · 165
+- ENG-BUDGET §4 怎么测 · L84 · 160
 - ENG-BUDGET §5 待验证（P0） · L88 · 186
 
 ## ENG-BUDGET-LOD · 细节级别、速度律与渲染参数
@@ -1643,7 +1643,7 @@
   - ENG-GATES-SHOTS §1.2 截图方式 · L54 · 990
   - ENG-GATES-SHOTS §1.3 固定机位表与审查视角表 · L66 · 1.8k
   - ENG-GATES-SHOTS §1.4 路线与点位（主线之后） · L98 · 744
-  - ENG-GATES-SHOTS §1.5 时季抽样（主线之后） · L108 · 371
+  - ENG-GATES-SHOTS §1.5 时季抽样（主线之后） · L108 · 382
 
 ## ENG-GATES-VETO · 一票否决与收尾清单
 
@@ -1938,8 +1938,8 @@
 - STD-CONVENTIONS §2 时间写法 · L68 · 495
 - STD-CONVENTIONS §3 标识与命名 · L77 · 6.3k
   - STD-CONVENTIONS §3.1 地图、实体与世界文件 · L79 · 846
-  - STD-CONVENTIONS §3.2 编号体系 · L93 · 923
-  - STD-CONVENTIONS §3.3 同号不同义的读法 · L116 · 712
+  - STD-CONVENTIONS §3.2 编号体系 · L93 · 926
+  - STD-CONVENTIONS §3.3 同号不同义的读法 · L116 · 715
   - STD-CONVENTIONS §3.4 命名写法 · L129 · 1.2k
   - STD-CONVENTIONS §3.5 色名 · L150 · 364
   - STD-CONVENTIONS §3.6 枚举与扩展纪律 · L157 · 569
@@ -1999,18 +1999,18 @@
 
 ## REG-DECISIONS-SYSTEMS · 系统与工程决策
 
-`docs/registry/REG-DECISIONS-SYSTEMS-系统与工程决策.md` · 19.5k 字 · 界面、存档、音频、性能与画面设置、工程五个领域的已定决策
+`docs/registry/REG-DECISIONS-SYSTEMS-系统与工程决策.md` · 19.8k 字 · 界面、存档、音频、性能与画面设置、工程五个领域的已定决策
 关键词：决策、系统、工程、界面、存档、音频、性能、画面设置、预算、契约
 
 - REG-DECISIONS-SYSTEMS §0 结论 · L21 · 126
   - ★ REG-DECISIONS-SYSTEMS §0.1 接入要点 · L25 · 56
-- REG-DECISIONS-SYSTEMS §1 界面 · L29 · 3.9k
-- REG-DECISIONS-SYSTEMS §2 存档 · L61 · 1.6k
-- REG-DECISIONS-SYSTEMS §3 音频 · L80 · 2.2k
-- REG-DECISIONS-SYSTEMS §4 性能与画面设置 · L102 · 3.5k
-- REG-DECISIONS-SYSTEMS §5 工程 · L132 · 4.1k
-- REG-DECISIONS-SYSTEMS §6 地图与行走 · L163 · 1.0k
-- REG-DECISIONS-SYSTEMS §7 时间、季节、天气 · L174 · 2.4k
+- REG-DECISIONS-SYSTEMS §1 界面 · L29 · 4.1k
+- REG-DECISIONS-SYSTEMS §2 存档 · L62 · 1.6k
+- REG-DECISIONS-SYSTEMS §3 音频 · L81 · 2.2k
+- REG-DECISIONS-SYSTEMS §4 性能与画面设置 · L103 · 3.5k
+- REG-DECISIONS-SYSTEMS §5 工程 · L133 · 4.1k
+- REG-DECISIONS-SYSTEMS §6 地图与行走 · L164 · 1.0k
+- REG-DECISIONS-SYSTEMS §7 时间、季节、天气 · L175 · 2.4k
 
 ## REG-DECISIONS-WORLD · 世界与画面决策
 
@@ -2025,7 +2025,7 @@
 
 ## REG-GLOSSARY · 术语表
 
-`docs/registry/REG-GLOSSARY-术语表.md` · 20.2k 字 · 文档里专有说法的统一解释，按领域分组，每条一两句并给出细则所在的小节
+`docs/registry/REG-GLOSSARY-术语表.md` · 20.3k 字 · 文档里专有说法的统一解释，按领域分组，每条一两句并给出细则所在的小节
 关键词：术语、术语表、名词解释、同名异义、缩写、别名
 
 - REG-GLOSSARY §0 用法 · L21 · 261
@@ -2038,7 +2038,7 @@
 - REG-GLOSSARY §6 室内与门 · L138 · 981
 - REG-GLOSSARY §7 观察模式、行走与跳转 · L154 · 1.4k
 - REG-GLOSSARY §8 平面地图与传送 · L178 · 944
-- REG-GLOSSARY §9 开始页与存档 · L195 · 1.1k
+- REG-GLOSSARY §9 开始页与存档 · L195 · 1.2k
 - REG-GLOSSARY §10 多地图 · L215 · 620
 - REG-GLOSSARY §11 界面 · L227 · 1.4k
 - REG-GLOSSARY §12 音频 · L254 · 1.1k

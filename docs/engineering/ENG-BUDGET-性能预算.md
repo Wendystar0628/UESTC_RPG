@@ -53,7 +53,7 @@ paths: ["scripts/requirements.*", "game/testing/**", "game/data/build-code-finge
 | 独显高（显存预算 ≥ 8 GB） | RTX 4070 及以上；开发机 RTX 4080 | 极致 | ≥ 60，跟随刷新率 |
 
 - 更旧的核显（UHD 6xx、Vega 8、Iris Xe、680M 等）不适配（DECISION-169）。兜底预设流畅不对应设备档（主线之后，SYS-GRAPHICS §1）。
-- 最坏视角取固定机位里最重的几个（含外围的全景），T0 不超过同状态下的 V1；各乘下面两种世界状态取最大（其余组合落在两者之间），其他组合只进 SYS-TIME §4、SYS-WEATHER §7 的验收。
+- 最坏视角取固定机位里最重的几个（含外围的全景）；各乘下面两种世界状态取最大（其余组合落在两者之间），其他组合只进 SYS-TIME §4、SYS-WEATHER §7 的验收。
 
 两种组合：秋黄昏（默认，秋 17:30 晴，长影与落叶最压）、夏夜雷雨（夏 21:30，透明与特效最满、降水池满 8192；夜雨无月影，阴影空跑）。参数串见 ENG-GATES-SHOTS §1。
 
@@ -83,7 +83,7 @@ paths: ["scripts/requirements.*", "game/testing/**", "game/data/build-code-finge
 
 ## 4 怎么测
 
-测量思路与自动化基准见 ENG-PERF-ADAPT §2，命令行与截图默认串见 ENG-GATES-SHOTS §1，门禁判据见 ENG-GATES §1。本文只定：吞吐与回归在开发机（RTX 4080）上测，不设中档参考机；G10 的采样点含行走贴地位姿、开放室内门厅等位姿和 T0 与新游戏落地位姿。
+测量思路与自动化基准见 ENG-PERF-ADAPT §2，命令行与截图默认串见 ENG-GATES-SHOTS §1，门禁判据见 ENG-GATES §1。本文只定：吞吐与回归在开发机（RTX 4080）上测，不设中档参考机；G10 的采样点含行走贴地位姿、开放室内门厅等位姿和新游戏落地位姿。
 
 ## 5 待验证（P0）
 
