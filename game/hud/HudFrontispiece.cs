@@ -72,7 +72,9 @@ internal sealed class HudFrontispiece : IAppFrontispiecePresentation
 
     private async Task ShowAsync(Task previous, bool fogOnly, CancellationToken lifetime)
     {
-        await previous.WaitAsync(lifetime);
+        // 失败页的雾色独立接管：前一次扉页显示的故障已由它的调用方交给启动失败处理（SYS-TITLE §1），这里只等它结束、不再重抛。
+        if (fogOnly) await previous.WaitAsync(lifetime).ConfigureAwait(ConfigureAwaitOptions.SuppressThrowing | ConfigureAwaitOptions.ContinueOnCapturedContext);
+        else await previous.WaitAsync(lifetime);
         lifetime.ThrowIfCancellationRequested();
         _view.Frontispiece.Modulate = Colors.White;
         _view.Frontispiece.Visible = true;
