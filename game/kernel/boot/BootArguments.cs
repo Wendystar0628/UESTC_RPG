@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.Text.Json;
 using Campus.Contracts;
 using Campus.Contracts.AppFlow;
 using Campus.Contracts.Quality;
@@ -146,7 +147,7 @@ public sealed class BootArguments
         foreach (var item in Value("quality-set").Split(','))
         {
             var pair = item.Split('=', 2);
-            var names = Enum.GetValues<QualityKnob>().Where(k => Snake(k.ToString()) == pair[0]).ToArray();
+            var names = Enum.GetValues<QualityKnob>().Where(k => JsonNamingPolicy.SnakeCaseLower.ConvertName(k.ToString()) == pair[0]).ToArray();
             if (pair.Length != 2 || names.Length != 1 || !float.TryParse(pair[1], NumberStyles.Float, CultureInfo.InvariantCulture, out var value) ||
                 !float.IsFinite(value) || !result.TryAdd(names[0], value)) throw Invalid("quality-set=" + item);
         }
@@ -282,8 +283,6 @@ public sealed class BootArguments
         "after-snow" => WeatherKind.AfterSnow, _ => throw Invalid("weather=" + value)
     };
 
-    private static string Snake(string value) => string.Concat(value.Select((c, i) => i > 0 && char.IsUpper(c) &&
-        (!char.IsUpper(value[i - 1]) || i + 1 < value.Length && char.IsLower(value[i + 1])) ? "_" + char.ToLowerInvariant(c) : char.ToLowerInvariant(c).ToString()));
     private static SlotId? ParseSlot(string key, string? value)
     {
         if (value is null || key == "save" && value == "off") return null;

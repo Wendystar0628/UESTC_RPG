@@ -18,6 +18,7 @@ namespace Campus.Kernel.Settings;
 public sealed class SettingsStore : ISettingsStore, IAsyncDisposable
 {
     private const int MaxBytes = 256 * 1024;
+    private static readonly JsonSerializerOptions EncodeOptions = new() { WriteIndented = true };
 
     private readonly string _path;
     private readonly object _gate = new();      // guards _root
@@ -100,11 +101,7 @@ public sealed class SettingsStore : ISettingsStore, IAsyncDisposable
     {
         // Encoded inside the file lock from the current document, so a later write never restores older values.
         lock (_gate)
-        {
-            using var stream = new MemoryStream();
-            using (var writer = new Utf8JsonWriter(stream, new JsonWriterOptions { Indented = true })) _root.WriteTo(writer);
-            return Encoding.UTF8.GetString(stream.ToArray());
-        }
+            return _root.ToJsonString(EncodeOptions);
     }
 
     private void WriteFile(string text)

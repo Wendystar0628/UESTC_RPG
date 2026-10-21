@@ -111,7 +111,7 @@ public static class BuildingOverlapValidator
                 conflict = "non-area geometry differs";
             if (conflict is null)
                 for (var i = 0; i < polygons.Length; i++)
-                    if (!SamePolygon(source.Polygons[i], polygons[i]))
+                    if (!source.Polygons[i].Geometry.EqualsExact(polygons[i].Geometry))
                     { conflict = $"geometry differs at polygon={i.ToString(CultureInfo.InvariantCulture)}"; break; }
             if (conflict is not null) source.Conflicts.Add(conflict);
         }
@@ -139,27 +139,22 @@ public static class BuildingOverlapValidator
     private static string Number(double value) => value.ToString("R", CultureInfo.InvariantCulture);
     private static string Quote(string value) => "\"" + value.Replace("\\", "\\\\").Replace("\"", "\\\"").Replace("\r", "\\r").Replace("\n", "\\n") + "\"";
 
-    // Normalise ring starts, orientation, redundant straight vertices and hole order before comparing
-    // aliases. Polygon positions in a MultiPolygon remain the supplied source indices.
+    // Keep strict cleanup and topology checks before normalising this private polygon for alias comparison.
+    // Polygon positions in a MultiPolygon remain the supplied source indices.
     private static PolygonShape Prepare(PolygonRings rings)
     {
         var initial = PolygonTriangulator.Triangulate(rings);
-        var canonical = new Vector2[initial.RingStarts.Length][];
-        for (var r = 0; r < canonical.Length; r++)
+        var cleaned = new Vector2[initial.RingStarts.Length][];
+        for (var r = 0; r < cleaned.Length; r++)
         {
             var start = initial.RingStarts[r];
-            var end = r + 1 == canonical.Length ? initial.Vertices.Length : initial.RingStarts[r + 1];
-            var first = start;
-            for (var i = start + 1; i < end; i++)
-                if (Compare(initial.Vertices[i], initial.Vertices[first]) < 0) first = i;
-            var ring = new Vector2[end - start];
-            for (var i = 0; i < ring.Length; i++) ring[i] = initial.Vertices[start + (first - start + i) % ring.Length];
-            canonical[r] = ring;
+            var end = r + 1 == cleaned.Length ? initial.Vertices.Length : initial.RingStarts[r + 1];
+            cleaned[r] = initial.Vertices[start..end];
         }
-        Array.Sort(canonical, 1, canonical.Length - 1, Comparer<Vector2[]>.Create(CompareRings));
-        var polygon = Factory.CreatePolygon(ToRing(canonical[0]), canonical.Skip(1).Select(ToRing).ToArray());
+        var polygon = Factory.CreatePolygon(ToRing(cleaned[0]), cleaned.Skip(1).Select(ToRing).ToArray());
         if (!double.IsFinite(polygon.Area) || polygon.Area <= 0) throw new ArgumentException("Polygon area must be finite and positive.");
-        return new(canonical, polygon);
+        polygon.Normalize();
+        return new(polygon);
     }
 
     // Promote the supplied float X/Z metres once; area/IoU stay in double and never round back to float.
@@ -171,25 +166,6 @@ public static class BuildingOverlapValidator
         coordinates[^1] = coordinates[0].Copy();
         return Factory.CreateLinearRing(coordinates);
     }
-
-    private static int Compare(Vector2 a, Vector2 b)
-    {
-        var x = a.X.CompareTo(b.X);
-        return x != 0 ? x : a.Y.CompareTo(b.Y);
-    }
-
-    private static int CompareRings(Vector2[] a, Vector2[] b)
-    {
-        for (var i = 0; i < Math.Min(a.Length, b.Length); i++)
-        {
-            var comparison = Compare(a[i], b[i]);
-            if (comparison != 0) return comparison;
-        }
-        return a.Length.CompareTo(b.Length);
-    }
-
-    private static bool SamePolygon(PolygonShape a, PolygonShape b) =>
-        a.Rings.Length == b.Rings.Length && a.Rings.Zip(b.Rings).All(pair => pair.First.AsSpan().SequenceEqual(pair.Second));
 
     // Internal for focused pure .NET regression tests; not a second public validation/numbering API.
     internal static AreaMeasurement Measure(PolygonRings a, PolygonRings b) => Measure(Prepare(a), Prepare(b));
@@ -204,7 +180,7 @@ public static class BuildingOverlapValidator
     }
 
     internal readonly record struct AreaMeasurement(double AreaA, double AreaB, double Intersection, double Union, double IoU);
-    private sealed record PolygonShape(Vector2[][] Rings, Polygon Geometry)
+    private sealed record PolygonShape(Polygon Geometry)
     {
         public double Area { get; } = Geometry.Area;
         public Envelope Bounds { get; } = Geometry.EnvelopeInternal;
