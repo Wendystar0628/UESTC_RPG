@@ -149,15 +149,24 @@ def build_routes(docs, docs_dir=D):
     return json.dumps(out, ensure_ascii=False, sort_keys=True, indent=1) + NL
 
 
+def write_if_changed(path, text):
+    """内容没变就不写：ROUTES.json 参与构建判鲜，空写会让现成构建失鲜。"""
+    data = text.encode('utf-8')
+    if os.path.isfile(path) and open(path, 'rb').read() == data:
+        return False
+    open(path, 'wb').write(data)
+    return True
+
+
 def main():
     docs = load()
     print('docs', len(docs))
     s = build_sections()
-    open(SECTIONS, 'wb').write(s.encode('utf-8'))
-    print('SECTIONS.md', s.count(NL + '- ') + s.count(NL + '  - '), 'sections,', len(s), 'chars')
+    changed = write_if_changed(SECTIONS, s)
+    print('SECTIONS.md', s.count(NL + '- ') + s.count(NL + '  - '), 'sections,', len(s), 'chars', '已更新' if changed else '未变')
     r = build_routes(docs)
-    open(ROUTES, 'wb').write(r.encode('utf-8'))
-    print('ROUTES.json', len(r), 'chars')
+    changed = write_if_changed(ROUTES, r)
+    print('ROUTES.json', len(r), 'chars', '已更新' if changed else '未变')
 
 
 if __name__ == '__main__':
