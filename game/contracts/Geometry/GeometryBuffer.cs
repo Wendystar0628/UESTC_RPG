@@ -76,6 +76,7 @@ public sealed class GeometryPrototype
             throw new ArgumentException("Prototype bounds must be finite and ordered.", nameof(bounds));
         Id = id; Surfaces = Array.AsReadOnly(surfaces.ToArray()); Bounds = bounds;
     }
+    [DataId]
     public string Id { get; }
     public IReadOnlyList<GeometryBuffer> Surfaces { get; }
     public Box3 Bounds { get; }
@@ -102,6 +103,7 @@ public sealed class GeometryInstanceStream
             throw new ArgumentException("Instance bounds must be finite and ordered.", nameof(bounds));
         Id = id; Prototype = prototype; Data = data.ToArray(); Bounds = bounds;
     }
+    [DataId]
     public string Id { get; }
     public GeometryPrototype Prototype { get; }
     public ReadOnlyMemory<float> Data { get; }

@@ -1,6 +1,7 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Campus.Gen.World;
+using Campus.Contracts;
 
 namespace Campus.Gen.Vegetation;
 
@@ -17,7 +18,7 @@ internal static class VegetationJson
 internal sealed record SpeciesFile(string Format, IReadOnlyList<SpeciesRowWire> Species,
     string? Doc = null, IReadOnlyList<string>? Notes = null);
 
-internal sealed record SpeciesRowWire(string Id, string Name, int Row, CrownType Crown, string Form, IReadOnlyList<float> Height,
+internal sealed record SpeciesRowWire([property: DataId] string Id, string Name, int Row, CrownType Crown, string Form, IReadOnlyList<float> Height,
     string Leaf, string? Bloom, CardShape Card, CardShape BloomCard, LitterShape Litter, bool Deciduous, bool BloomOnBlobs,
     IReadOnlyList<float> LeafAmount, IReadOnlyList<float> BloomAmount, float SwayDeg, string Sound);
 

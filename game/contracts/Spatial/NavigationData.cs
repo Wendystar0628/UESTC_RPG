@@ -5,6 +5,7 @@ using Campus.Contracts.Audio;
 namespace Campus.Contracts;
 
 // 导航图（照 WLD-INTERIORS，game/gen/walkable/ 烘焙，随启动集发；室内部分由开放提供者的 Nav() 给出；命名空间 Campus.Contracts）
+[DataId]
 public readonly record struct NavNodeId(uint Value);
 public readonly record struct NavSpace(FeatureId? Building, short Floor);   // 室外 Building 为 null；存档记观者所在的空间（SYS-SAVE）
 public enum NavEdgeKind : byte
@@ -23,7 +24,7 @@ public enum DoorState : byte { Open, AutoOpen, Locked }      // AutoOpen：会�
 public sealed record NavNode(NavNodeId Id, Vector3 P, NavSpace Space, string? Tag = null);
 public sealed record NavEdge(NavNodeId A, NavNodeId B, NavEdgeKind Kind, float Length, float Width,
                              float Rise, NavFlags Flags, string Source);
-public sealed record NavPortal(string Id, FeatureId Building, NavNodeId Outside, NavNodeId Inside,
+public sealed record NavPortal([property: DataId] string Id, FeatureId Building, NavNodeId Outside, NavNodeId Inside,
                                Vector3 DoorCenter, float YawDeg, float ClearWidth, DoorKind Kind, DoorState State);
 public sealed record NavFloorGraph(FeatureId Building, short Floor, IReadOnlyList<NavNode> Nodes, IReadOnlyList<NavEdge> Edges)
 { public static NavFloorGraph Empty(FeatureId b, int f) => new(b, (short)f, [], []); }

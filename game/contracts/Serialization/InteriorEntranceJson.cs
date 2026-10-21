@@ -87,6 +87,15 @@ public static class InteriorEntranceJson
     {
         var data = JsonSerializer.Deserialize(entrance, Context.InteriorEntranceRecord)
             ?? throw new JsonException("An entrance must be an object.");
+        switch (data.Position)
+        {
+            case EntrancePosition.Unspecified:
+            case EntrancePosition.Front:
+            case EntrancePosition.Rear:
+                break;
+            default:
+                throw new JsonException($"Unknown entrance position '{data.Position}'.");
+        }
         var id = Text(data.Id, "id");
         var featureId = Text(data.FeatureId, "featureId");
         if (!StringComparer.Ordinal.Equals(featureId, feature.Value))
@@ -127,7 +136,7 @@ public static class InteriorEntranceJson
             default:
                 throw new JsonException($"Unknown heightRef '{heightRef}' for entrance '{id}'; expected 'absolute' or 'pad'.");
         }
-        return new(id, outside, inside, width, data.Open) { Center = center, YawDeg = yaw, HeadY = headY };
+        return new(id, outside, inside, width, data.Open) { Center = center, YawDeg = yaw, HeadY = headY, Position = data.Position };
     }
 
     /// <summary>Read the only open-range format. The world owner validates each SourceId before provider publication.</summary>
@@ -180,7 +189,7 @@ public static class InteriorEntranceJson
 
 internal sealed record InteriorEntranceRecord(string Id, string FeatureId, Vector3 DoorCenter,
     float FacingDeg, Vector3 OutsideLanding, Vector3 InsideLanding, float ClearWidth, bool Open,
-    string HeightRef = "absolute", float HeadY = 0);
+    string HeightRef = "absolute", float HeadY = 0, EntrancePosition Position = EntrancePosition.Unspecified);
 
 // These register projections read ownership/identity only; provider metadata and open-door geometry
 // are validated by their owning parser. Closed-door geometry uses the strict record above.

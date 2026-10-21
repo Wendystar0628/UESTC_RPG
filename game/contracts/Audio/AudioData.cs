@@ -5,7 +5,9 @@ using System.Collections.Generic;
 namespace Campus.Contracts.Audio;
 
 // ===== 环境声（53b） =====
+[DataId]
 public readonly record struct SoundSetId(string Value);          // 如 "amb.bird.dusk.roost"，登记在 game/data/audio/sets/*.json
+[DataId]
 public readonly record struct AmbienceProfileId(string Value);   // 室内档案，如 "interior.library.atrium"
 public enum EmitterShape : byte { Point, Line, Area, Scatter }
 [Flags]
@@ -23,7 +25,7 @@ public enum WeatherMask : ushort
 public enum TraceKind : byte { None, HumanTrace, VisibleAnimal }  // 要过画外规则或动物同步规则（SYS-AUDIO）
 
 public sealed record AmbientEmitterDecl(
-    string Id,                            // 以 "amb:" 开头，本图内唯一；G5 查重
+    [property: DataId] string Id,                            // 以 "amb:" 开头，本图内唯一；G5 查重
     EmitterShape Shape, SoundSetId Set,
     IReadOnlyList<Vector3> Points,        // Point：1 个；Line：折线；Area：外环；Scatter：候选位点
     float RefDb, float AudibleRadius,
@@ -39,7 +41,7 @@ public sealed class AmbientEmitterAttribute(string id) : RegistrationAttribute(R
 public interface IAmbientEmitterSource { IEnumerable<AmbientEmitterDecl> Emit(BuildContext ctx); }   // gen 里，纯函数，在烘焙器里跑
 
 // 部件自带的声音插座：IPartDef.Sounds() 默认方法在 §3 部件块
-public sealed record SoundSocketDecl(string Id, SoundSetId Set, Matrix4x4 Local, float RefDb, float AudibleRadius,
+public sealed record SoundSocketDecl([property: DataId] string Id, SoundSetId Set, Matrix4x4 Local, float RefDb, float AudibleRadius,
     SeasonMask Seasons = SeasonMask.All, NightRule Night = NightRule.Any, WeatherMask Weather = WeatherMask.All, byte Priority = 2);
 
 // ===== 空间声学（53c）：声学网格 + 房间与门户 + 射线细化 + 混响区，不上 Steam Audio =====
@@ -51,11 +53,11 @@ public enum AcousticClass : byte
 }
 public enum AbsorbClass : byte { Hard, Mixed, Soft, Foliage, Water, Snow }
 public enum AcousticPortalKind : byte { OpenDoor, SlidingGlass, Curtain, Window, Archway, ElevatorDoor, SwingDoor }
-public sealed record AcousticRoomDecl(string LocalId, AcousticClass Class, IReadOnlyList<Box3> Volumes,
+public sealed record AcousticRoomDecl([property: DataId] string LocalId, AcousticClass Class, IReadOnlyList<Box3> Volumes,
     AbsorbClass Surfaces, AmbienceProfileId? Profile = null, float? Rt60 = null, float? SendDb = null);
-public sealed record AcousticPortalDecl(string RoomA, string? RoomB /* null = 室外 */, Vector3 Center, Vector3 Normal,
+public sealed record AcousticPortalDecl([property: DataId] string RoomA, [property: DataId] string? RoomB /* null = 室外 */, Vector3 Center, Vector3 Normal,
     float Width, float Height, float Depth, AcousticPortalKind Kind, ChannelId? Openness = null /* 电梯门的开度通道 */,
-    string? Door = null /* 自动门的门 ID（DoorLeafDecl.Id），开度读 IInteriorDoors.OpenOf，关好时门户馈送降到 −80 dB（SYS-AUDIO） */);
+    [property: DataId] string? Door = null /* 自动门的门 ID（DoorLeafDecl.Id），开度读 IInteriorDoors.OpenOf，关好时门户馈送降到 −80 dB（SYS-AUDIO） */);
 public sealed record AcousticsDecl(IReadOnlyList<AcousticRoomDecl> Rooms, IReadOnlyList<AcousticPortalDecl> Portals)
 { public static readonly AcousticsDecl Empty = new([], []); }
 // IInteriorProvider.Acoustics(ctx, id) 默认方法在 §3 室内块；按层提供的室内照样实现：房间按层声明，Box3 带 y 区间

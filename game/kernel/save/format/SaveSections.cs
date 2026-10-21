@@ -10,14 +10,14 @@ namespace Campus.Kernel.Save.Format;
 
 public sealed record SaveSectionRegistration(SaveSectionAttribute Attribute, ISaveSection Section);
 public sealed record PreparedSection(string Key, SaveSectionRegistration Registration, MapId Map,
-    object? Dto, int FromVersion, string? Repair)
+    object? Dto, [property: DataVersion] int FromVersion, string? Repair)
 {
     public Exception? Error { get; init; }
 }
 public sealed record PreparedSave(SaveDocument Document, IReadOnlyList<PreparedSection> Sections);
 public sealed record CapturedSection(string Key, SaveSectionRegistration Registration, object Dto);
 
-/// <summary>Pure decoding/migration is separate from main-thread Capture, CreateDefault and Restore.</summary>
+/// <summary>Strict current-version decoding is separate from main-thread Capture, CreateDefault and Restore.</summary>
 public sealed class SaveSections
 {
     public IReadOnlyList<SaveSectionRegistration> Registered { get; }

@@ -17,7 +17,7 @@ public enum LitterShape : byte { None, Fan, Broadleaf, Lobed }
 
 /// <summary>One row of game/data/vegetation/species.json (WLD-VEGETATION).</summary>
 public sealed record SpeciesInfo(
-    string Id,
+    [property: DataId] string Id,
     string Name,
     int Row,
     CrownType Crown,

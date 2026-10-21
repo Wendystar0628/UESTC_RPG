@@ -13,6 +13,8 @@ public sealed record BootRunOptions
     public bool Automated { get; init; }
     public bool FreezeAnimation { get; init; }
     public bool Title { get; init; } = true;
+    /// <summary>Command-wide map selection for CPU bake or registry checks; Flow.Map holds only a concrete map ID.</summary>
+    public bool AllMaps { get; init; }
     public string? SaveDirectory { get; init; }
     public IReadOnlyList<string> TravelSequence { get; init; } = [];
     public BootFlowRequest Flow { get; init; } = new();

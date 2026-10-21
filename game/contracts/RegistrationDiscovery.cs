@@ -3,7 +3,7 @@ using System.Runtime.ExceptionServices;
 
 namespace Campus.Contracts;
 
-public sealed record Registration(RegistrationKind Kind, string Id, string Owner, string? Map,
+public sealed record Registration(RegistrationKind Kind, [property: DataId] string Id, string Owner, [property: DataId] string? Map,
     Type Type, bool IsStub, RegistrationLifetime Lifetime, Type? Contract, string? Scope);
 
 /// <summary>Shared declaration discovery, real-over-stub selection, ordering and constructor path for all hosts.</summary>

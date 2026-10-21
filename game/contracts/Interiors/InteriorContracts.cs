@@ -12,18 +12,21 @@ public enum PortalKind : byte { Door, StairOpening, AtriumOpening, Window, Seale
 public sealed record StoreyInfo(int Index, float FloorY, float Height, IReadOnlyList<Vector2> Footprint);
 /// <summary>Frozen point permission; spatial storeys themselves do not imply indoor generation or access.</summary>
 public sealed record InteriorOpenArea([property: JsonRequired] InteriorOpenPartKind Kind, int Index, float FloorY, float Height, IReadOnlyList<Vector2> Footprint);
-public sealed record ZoneVolume(int Storey, int Id, ZoneKind Kind, IReadOnlyList<Vector2> Ring,
+public sealed record ZoneVolume(int Storey, [property: DataId] int Id, ZoneKind Kind, IReadOnlyList<Vector2> Ring,
     ChannelId LightChannel, uint LightHash, bool Open);                     // Open：属于开放范围
-public sealed record PortalDecl(int Storey, int ZoneA, int ZoneB, Vector3 A, Vector3 B, float Height, PortalKind Kind);
-public sealed record EntranceDecl(string Id, Vector3 Outside, Vector3 Inside, float ClearWidth, bool Open)
+public sealed record PortalDecl(int Storey, [property: DataId] int ZoneA, [property: DataId] int ZoneB, Vector3 A, Vector3 B, float Height, PortalKind Kind);
+/// <summary>Authored entrance position relative to its building; independent of the entrance identity.</summary>
+public enum EntrancePosition : byte { Unspecified, Front, Rear }
+public sealed record EntranceDecl([property: DataId] string Id, Vector3 Outside, Vector3 Inside, float ClearWidth, bool Open)
 {   // 开放楼的入口门固定敞开，作为"能进"的信号，不随观者开合（WLD-INTERIORS）；
     // Outside：门外落点（门外 2.5 m），供地图传送（SYS-ATLAS）；Inside：门内 3 m 的点
     public Vector3 Center { get; init; }       // 门中心（SYS-ATLAS 的室内门口标记、G18 的 ≤ 0.5 m 比对，WLD-INTERIORS）
     public float YawDeg { get; init; }         // 门外法线的方位角，0 = 北、90 = 东，与点位偏航同一约定（WLD-INTERIORS）
     /// <summary>Absolute world Y of the doorway top in metres; zero means unknown, never a relative height.</summary>
     public float HeadY { get; init; }
+    public EntrancePosition Position { get; init; }
 }
-public sealed record ElevatorDecl(string Id, int StoreyA, int StoreyB, Box3 CabA, Box3 CabB);   // 关门换位两站（WLD-INTERIORS）
+public sealed record ElevatorDecl([property: DataId] string Id, int StoreyA, int StoreyB, Box3 CabA, Box3 CabB);   // 关门换位两站（WLD-INTERIORS）
 
 // 会动的门（参数以 WLD-INTERIORS 为准）：开放室内里能进的房门、开放路线上的楼梯间防火门和走廊玻璃门，
 // 观者走近自动推开，走过去后由闭门器缓缓关上，带开门和关门声；不加交互键（UI-NAV 的"没有可以点选的东西"不变）。
@@ -31,7 +34,7 @@ public sealed record ElevatorDecl(string Id, int StoreyA, int StoreyB, Box3 CabA
 // 观者离开扫掠区 1.5 m 以外再过 0.8 s 回关：前 80° 用 2.5–3.5 s（防火门 3.5 s），最后 10° 快速落锁；回关途中观者再走近就立即重新推开。
 // 门扇转动和停在开位时都没有碰撞，关好（开度 < 2°）之后才有碰撞。开放楼的入口外门不在此列（固定敞开），锁着的门（DoorClosed）也不在此列
 public enum DoorLeafKind : byte { RoomDoor, FireDoor, GlassSwing }      // 木质房门、楼梯间防火门、玻璃平开门：决定门体的 Foot 和开关门声
-public sealed record DoorLeafDecl(string Id, int Storey, int ZoneA, int ZoneB,
+public sealed record DoorLeafDecl([property: DataId] string Id, int Storey, [property: DataId] int ZoneA, [property: DataId] int ZoneB,
     Vector3 Hinge, float ClosedYawDeg, float OpenDeg, float Width, float Height, DoorLeafKind Kind,
     float TriggerM = 1.5f);                  // 静止时的触发半径；运动时放大为 max(TriggerM, v × 0.75 s)，保证观者到门洞前门已开过 75°（WLD-INTERIORS）；
                                              // OpenDeg 只给开到的角度，不给方向
@@ -70,7 +73,7 @@ public interface IInteriorProvider           // gen 里实现；加载期配置�
 
 // 室内索引：Storeys 保留整栋楼的空间层；OpenStoreys 只用于枚举；可达许可只查已冻结 OpenAreas 与实际位置。
 public sealed record InteriorIndexEntry(FeatureId Feature, IReadOnlyList<StoreyInfo> Storeys,
-    IReadOnlyList<EntranceDecl> Entrances, bool Open, string? ProviderId,
+    IReadOnlyList<EntranceDecl> Entrances, bool Open, [property: DataId] string? ProviderId,
     [property: JsonRequired] IReadOnlyList<int> OpenStoreys,
     [property: JsonRequired] IReadOnlyList<InteriorOpenArea> OpenAreas);
 public interface IInteriorIndex

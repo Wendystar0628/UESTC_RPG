@@ -17,7 +17,7 @@ public enum SaveReason : byte
 public enum SlotHealth : byte { Empty, Ok, Corrupt }
 
 public sealed record SaveMeta(
-    int Format,                     // 正文结构版本，现为 1（SYS-SAVE）
+    [property: DataVersion] int Format,                     // 正文结构版本，现为 1（SYS-SAVE）
     string Build,                   // 构建号，只用于显示和日志；兼容性只看版本号
     SlotId Slot, SlotKind Kind,
     ulong Gen,                      // 代号：存档位内严格递增；与头和文件名 g<gen>.sav 一致
@@ -26,11 +26,11 @@ public sealed record SaveMeta(
     MapId Map, double WorldHours, double Clock, Season Season, WeatherKind Weather, ViewMode Mode,
     Pose Pose,                      // 镜头位姿，与 view 段相同；继续读档按它定终点（SYS-SAVE，SYS-TITLE）
     NavSpace? Space,                // 所在空间（楼与楼层，WLD-INTERIORS）；室外为 null
-    string? Region,                 // 区域 ID（SYS-ATLAS区域栅格）
+    [property: DataId] string? Region,                 // 区域 ID（SYS-ATLAS区域栅格）
     string? PlaceKey,               // 地点名的翻译键，存档卡摘要用；查不到时退回图名（SYS-SAVE）
     long SavedAtUnix,               // 系统时钟，只用于显示（SYS-SAVE，G4 例外）
     SaveReason Reason,
-    string Ruleset = "sightseeing", // RulesetId.Value（规则集块）；预留 "rpg"
+    [property: DataId] string Ruleset = "sightseeing", // RulesetId.Value（规则集块）；预留 "rpg"
     bool HasThumb = false);
 public sealed record SlotInfo(SlotId Slot, SlotKind Kind, SlotHealth Health, SaveMeta? Meta, int Generations);
 
@@ -38,6 +38,7 @@ public sealed record SlotInfo(SlotId Slot, SlotKind Kind, SlotHealth Health, Sav
 public sealed class SaveSectionAttribute(string id) : RegistrationAttribute(RegistrationKind.Save, id, RegistrationLifetime.Global)
 {   // 标在实现 ISaveSection<T> 的 [KernelService] 或 [KernelNode] 类上；注册器从 Kernel 取这个实例
     public override string IdentityScope => Scope.ToString();
+    [DataVersion]
     public int Version { get; set; } = 1;         // 本段当前的 v；字段有任何增减都要加 1（SYS-SAVE）
     public SaveScope Scope { get; set; } = SaveScope.Global;
     public RestorePhase Phase { get; set; } = RestorePhase.Content;   // 恢复阶段（SYS-SAVE）；G5 查 Phase 与 SYS-SAVE 的表一致
@@ -60,6 +61,7 @@ public readonly record struct CaptureContext(SaveReason Reason, MapId Map, bool 
 public sealed class RestoreContext
 {
     public required MapId Map { get; init; }
+    [DataVersion]
     public required int FromVersion { get; init; }   // 存档中本段的版本，只用于日志
     public required bool Missing { get; init; }      // 文件里没有这一段，传进来的是 CreateDefault 的值
     private readonly List<string> _repairs = [];

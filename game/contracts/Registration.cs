@@ -7,7 +7,9 @@ public enum RegistrationLifetime { Global, Map, Transient }
 public abstract class RegistrationAttribute(RegistrationKind kind, string id, RegistrationLifetime lifetime) : Attribute
 {
     public RegistrationKind Kind { get; } = kind;
+    [DataId]
     public string Id { get; } = id;
+    [DataId]
     public string Map { get; set; } = "";
     public bool IsStub { get; set; }
     public RegistrationLifetime Lifetime { get; set; } = lifetime;
