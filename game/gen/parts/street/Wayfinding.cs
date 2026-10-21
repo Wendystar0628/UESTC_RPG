@@ -104,7 +104,7 @@ public sealed class SignpostPart : IPartDef<SignParams>
 }
 
 /// <summary>
-/// Shared-bicycle bay (共享单车停放点, WLD-LIFE, D-186): a white painted frame on the ground, Width × Depth, with a short slot
+/// Shared-bicycle bay (共享单车停放点, WLD-LIFE, DECISION-186): a white painted frame on the ground, Width × Depth, with a short slot
 /// tick every <see cref="StreetStyle.BaySlot"/> along its back line, and at its back left corner a low standing sign: a dark post and
 /// a white panel with the electronic-blue band (for the bay's number) and a blue bicycle icon, both faces. Height is the sign's
 /// height. The number waits for game/camera/walk/'s bay data and the scene-text atlas. Collision: the sign only, a thin box, Metal; the painted

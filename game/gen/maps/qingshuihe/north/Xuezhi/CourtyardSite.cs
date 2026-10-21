@@ -11,7 +11,7 @@ using L = Campus.Gen.Maps.Qingshuihe.North.NorthTune.Look;
 namespace Campus.Gen.Maps.Qingshuihe.North.Xuezhi;
 
 /// <summary>
-/// The 学知一 courtyard's stay point (20a-2, moved in 20a-3; D-185, MAP-QSH-ADDITIONS R6, registered as
+/// The 学知一 courtyard's stay point (20a-2, moved in 20a-3; DECISION-185, MAP-QSH-ADDITIONS R6, registered as
 /// design:north-xz1-seatwall): a gently bowed granite seat wall with a wood seat beside the courtyard walk, facing the hill
 /// across it, with a paved pad joining it to the walk. The courtyard hill and the rain garden are terrain operations in
 /// north.terrain.json; this site adds the wall and its pad. Both sit on level ground, so their base is the lowest ground under
@@ -24,7 +24,7 @@ public sealed class CourtyardSite : ZoneSite
     public override IReadOnlyList<Campus.Contracts.Maps.MapRect> Ranges(IWorldModel world) =>
         Locate(world) is { } wall ? [SiteRanges.Bounds(Path(wall, C.SeatSegments).Concat(PadOutline(wall)), C.SeatWidth)] : [];
 
-    /// <summary>The wall's start, mid and end points: the overlay polyline (D-239).</summary>
+    /// <summary>The wall's start, mid and end points: the overlay polyline (DECISION-239).</summary>
     internal readonly record struct Wall(Vector2 Start, Vector2 Mid, Vector2 End);
 
     /// <summary>The seat wall, or null when the world has no such overlay feature or it is not a three-point line.</summary>

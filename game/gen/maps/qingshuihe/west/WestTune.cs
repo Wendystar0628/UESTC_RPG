@@ -8,7 +8,7 @@ namespace Campus.Gen.Maps.Qingshuihe.West;
 
 /// <summary>
 /// Every tunable value of the west zone in one place, for review (WF-FLOW): materials as colour names, and the
-/// dimensions of each site. Footprints, storeys and entity positions are read from the world model by ID (D-239); the
+/// dimensions of each site. Footprints, storeys and entity positions are read from the world model by ID (DECISION-239); the
 /// authored positions and routes are read from world/west.json. Values marked
 /// "初值" are starting values awaiting the main session's call. 19b and 19c add their own nested classes after these.
 /// </summary>
@@ -111,7 +111,7 @@ public static class WestTune
         public const float Recess = 2.2f;
         /// <summary>
         /// Storeys of the glass base. A and B take their upper floors from the world model (storeys minus this: A 9 → 7, B 7 → 5;
-        /// D-239).
+        /// DECISION-239).
         /// </summary>
         public const int BaseStoreys = 2;
         /// <summary>
@@ -302,7 +302,7 @@ public static class WestTune
     /// stream, from the A10 plaza (south mouth; design:west-a10-plaza in world/west.json) to the footway at the 西门车行桥's east head (north mouth), on the main network.
     /// No OSM line: the route is authored in world/west.json (初值), kept 10 m and more inside the low ground's east edge, swinging west to the
     /// stream once (the turn, with the pebble wading beach), and passing P11's spot (−193, −300) so the 250° view opens over
-    /// the reeds. The bridges (湿地石桥 692240860, 西门车行桥) and the canal banks are game/gen/maps/qingshuihe/waterfront/'s (r005); this route touches neither.
+    /// the reeds. The bridges (湿地石桥 692240860, 西门车行桥) and the canal banks are game/gen/maps/qingshuihe/waterfront/'s (RESEARCH-005); this route touches neither.
     /// </summary>
     public static class Wetland
     {

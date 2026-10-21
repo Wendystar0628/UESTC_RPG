@@ -22,7 +22,7 @@ internal sealed class GroundMarkings
 
     /// <summary>
     /// Emits every quad whose 64 m base cell lies inside the tile (tiles are multiples of 64 m).
-    /// Lines are draped in pieces of at most 1 m so they follow the terrain grid (D-180).
+    /// Lines are draped in pieces of at most 1 m so they follow the terrain grid (DECISION-180).
     /// </summary>
     public void Emit(GroundTile tile, GroundSurfaceSink sink, GroundSection section, TerrainGrid terrain)
     {

@@ -39,7 +39,7 @@ public sealed class West19cTests
         // Inside the low ground (except the last few metres climbing out to the north footway).
         for (var s = 4f; s < path.Length - 8f; s += 2f)
             AssertThat(PlanRings.InsideByCrossings(((TerrainPlatformOp)world.TerrainOperations[WestIds.WetlandLow]).Rings.Outer, path.At(s).P)).OverrideFailureMessage($"boardwalk station {s:0} lies in the wetland low ground").IsTrue();
-        // Clear of game/gen/maps/qingshuihe/waterfront/'s bridges (r005: all bridges are game/gen/maps/qingshuihe/waterfront/'s) and of the stream except at the beach turn.
+        // Clear of game/gen/maps/qingshuihe/waterfront/'s bridges (RESEARCH-005: all bridges are game/gen/maps/qingshuihe/waterfront/'s) and of the stream except at the beach turn.
         foreach (var id in new[] { WestIds.Way692240860.Source, WestIds.Way552816781.Source })
         {
             var bridge = world.Network.Bridges.Single(b => b.Id.Value == id).Line.Points;

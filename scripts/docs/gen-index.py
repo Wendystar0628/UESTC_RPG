@@ -128,7 +128,7 @@ ROUTES = os.path.join(D, 'ROUTES.json')
 
 
 def build_routes(docs, docs_dir=D):
-    """路线表（定案 r016 §3）：文档编码到路径、路径 glob 到文档编码；路径归属只取文件头 paths；钩子按它在读改文件时注入。"""
+    """路线表（定案 RESEARCH-016 §3）：文档编码到路径、路径 glob 到文档编码；路径归属只取文件头 paths；钩子按它在读改文件时注入。"""
     allfm = dict(docs)
     t = open(os.path.join(docs_dir, 'README.md'), encoding='utf-8').read()
     m = re.match(r'^---\r?\n(.*?)\r?\n---\r?\n', t, re.S)

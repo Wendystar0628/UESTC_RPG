@@ -9,7 +9,7 @@ namespace Campus.Gen.Maps.Qingshuihe.South;
 /// <summary>
 /// Every tunable value of the south zone in one place, for review (WF-FLOW): materials as colour names, and the shaping
 /// dimensions of each site. Positions, outlines, storey counts, heights and sizes the map data already carries are read from the
-/// world model by feature ID (D-239), not copied here; what stays is the zone's own shaping, with a note where a value is near
+/// world model by feature ID (DECISION-239), not copied here; what stays is the zone's own shaping, with a note where a value is near
 /// the data but kept for a reason. Local frames are described per block. Values marked "初值" are starting values awaiting the
 /// main session's call.
 /// </summary>

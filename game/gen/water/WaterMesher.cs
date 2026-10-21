@@ -19,7 +19,7 @@ public sealed record WaterMesh(
 /// <summary>
 /// Meshes a water polygon on a grid of WaterParams.MeshStep: cells fully inside water are plain quads, cells the shore
 /// passes through are cut into trapezoids along the shore. The shore distance is stored per vertex, so the three hard
-/// colour bands and the foam line (WLD-WATER) need no mask texture. Pure and deterministic (D-165).
+/// colour bands and the foam line (WLD-WATER) need no mask texture. Pure and deterministic (DECISION-165).
 /// </summary>
 public static class WaterMesher
 {

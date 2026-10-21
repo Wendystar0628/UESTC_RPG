@@ -3,7 +3,7 @@ using Campus.Contracts;
 namespace Campus.Style.Materials;
 
 /// <summary>
-/// 表面图样的层号登记（ART-STYLE，D-195）：层号定义图样的行组织（直缝、错缝……），不按材质 ID 或加载顺序分配；
+/// 表面图样的层号登记（ART-STYLE，DECISION-195）：层号定义图样的行组织（直缝、错缝……），不按材质 ID 或加载顺序分配；
 /// 登记后不改号、不复用。模数、缝宽、铺向与相位由做这块表面的包给（SurfacePatternSpec 与米 UV），这里只认层。
 /// toon_static.gdshader 的 pattern_layer 按同一编号分支。
 /// </summary>

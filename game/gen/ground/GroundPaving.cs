@@ -24,7 +24,7 @@ internal sealed record PavingFrame(byte Profile, Vector2 Origin, Vector2 U, Vect
 /// Walk family: every footway, path and bridge footprint is laid in 300×150 mm pavers, running bond, courses along
 /// the walk's centre line (<see cref="WalkFrameAt"/>).
 /// <para>
-/// Selection reads data characteristics only (D-168 mainline, no entity or map IDs in code): buildings whose category is
+/// Selection reads data characteristics only (DECISION-168 mainline, no entity or map IDs in code): buildings whose category is
 /// a library; their open entrances from the interiors index; the first plaza source met by each entrance's outward axis
 /// within <see cref="Reach"/>. Several entrances reaching the same plaza: the axis with the longest run across it is the
 /// plaza's main axis. The binding belongs to the source feature, so every shape read from it (its area and its network

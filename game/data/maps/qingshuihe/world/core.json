@@ -215,7 +215,7 @@
       "props": {
         "category": "short"
       },
-      "note": "草叶样板（D-205，WLD-VEGETATION）：图书馆大台阶两侧、时间广场到台阶一线的两片大草坪是功能开敞面，近处上卡片草丛、远处退成草坪本身的草色场；范围只圈草坪，铺装、侧梯小路、树池、树干由放置规则让开。",
+      "note": "草叶样板（DECISION-205，WLD-VEGETATION）：图书馆大台阶两侧、时间广场到台阶一线的两片大草坪是功能开敞面，近处上卡片草丛、远处退成草坪本身的草色场；范围只圈草坪，铺装、侧梯小路、树池、树干由放置规则让开。",
       "geometry": {
         "type": "multiPolygon",
         "polygons": [
@@ -269,7 +269,7 @@
       "props": {
         "category": "exclude"
       },
-      "note": "草叶样板（D-205，WLD-VEGETATION）：图书馆大台阶基座是开放入口，四周草停在 1 m 外，台阶脚与侧梯脚留出干净的退让。",
+      "note": "草叶样板（DECISION-205，WLD-VEGETATION）：图书馆大台阶基座是开放入口，四周草停在 1 m 外，台阶脚与侧梯脚留出干净的退让。",
       "geometry": {
         "type": "polygon",
         "rings": {
@@ -689,7 +689,7 @@
     {
       "id": "design:core-westlake-swim-area",
       "kind": "swim-area",
-      "note": "游泳首版泳区（D-250，MAP-QSH-WATER）：西湖主水面，从水体多边形向内收 8 m，避开折线栈桥两段各 6 m、箱涵本体 7 m 与两端堰口 12 m、湖口接湿地溪 14 m、西南岸湾入水口荷区；箱涵西侧一条与主湖隔开的水带不开放。",
+      "note": "游泳首版泳区（DECISION-250，MAP-QSH-WATER）：西湖主水面，从水体多边形向内收 8 m，避开折线栈桥两段各 6 m、箱涵本体 7 m 与两端堰口 12 m、湖口接湿地溪 14 m、西南岸湾入水口荷区；箱涵西侧一条与主湖隔开的水带不开放。",
       "geometry": {
         "type": "multiPolygon",
         "polygons": [

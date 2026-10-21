@@ -23,7 +23,7 @@ public sealed class ForestParkSite : ZoneSite
 
     private static PlanFrame CageOf(IWorldModel world) => new(world.Feature(SouthIds.PeacockHouse).Point(), Vector2.UnitX);
 
-    /// <summary>The pavilion's placement from its overlay feature (D-239): the hill top, the pavilion's side, the seat wall's radius, height and bearing range.</summary>
+    /// <summary>The pavilion's placement from its overlay feature (DECISION-239): the hill top, the pavilion's side, the seat wall's radius, height and bearing range.</summary>
     private readonly record struct Hilltop(Vector2 At, float Size, float SeatRadius, float SeatHeight, float SeatFrom, float SeatTo)
     {
         public PlanFrame Frame => new(At, Vector2.UnitX);

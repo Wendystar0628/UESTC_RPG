@@ -122,7 +122,7 @@ public sealed class ArchitectureTests
         foreach (var origin in packages)
         {
             var forbidden = packages.Where(target => !AssertReference(origin, target)).Select(NamespacePattern).ToArray();
-            // D-244: a zone reads another zone's identity catalog, never its implementation.
+            // DECISION-244: a zone reads another zone's identity catalog, never its implementation.
             var allowedCatalogs = MapNamespace(origin) is { } map
                 ? "^" + Regex.Escape(map) + @"\.[^.]+\.[^.+]+(?:Feature)?Ids(?:\+[^.]+)?$" : "(?!)";
             if (forbidden.Length > 0)

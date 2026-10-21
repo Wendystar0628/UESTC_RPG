@@ -43,7 +43,7 @@ paths: ["game/kernel/stream/**", "game/kernel/lod/**"]
 
 ### 1.2 帧内请求、挂载与六条不变量
 
-帧内顺序以 `game/contracts/Runtime/World/WorldContracts.cs` 的 `FramePriority` 为准；画面可见时每帧最多激活 1 格、主线程 ≤ 1.0 ms；被扉页或加载界面整屏盖住时不受这两条限制，多格连续挂载，只给盖住的界面留出刷新余量，限额只为可见时不卡帧而设（D-260）；新挂上的块淡入（时长以 `FrameClock` 为准）。L0、L1 按 360° 环带加载（旁观可 0.3 s 转身）。
+帧内顺序以 `game/contracts/Runtime/World/WorldContracts.cs` 的 `FramePriority` 为准；画面可见时每帧最多激活 1 格、主线程 ≤ 1.0 ms；被扉页或加载界面整屏盖住时不受这两条限制，多格连续挂载，只给盖住的界面留出刷新余量，限额只为可见时不卡帧而设（DECISION-260）；新挂上的块淡入（时长以 `FrameClock` 为准）。L0、L1 按 360° 环带加载（旁观可 0.3 s 转身）。
 
 **绝不卡帧、不穿地的六条不变量**：
 
@@ -74,7 +74,7 @@ paths: ["game/kernel/stream/**", "game/kernel/lod/**"]
 
 ## 4 安装包与磁盘布局
 
-安装包由主 PCK、.NET 运行时和全图烘焙缓存组成，不设体积上限，导出时按数量级判断与内容相称（D-125）；没有各图启动集（ENG-ARCH §4）。启动顺序见 SYS-TITLE §1。
+安装包由主 PCK、.NET 运行时和全图烘焙缓存组成，不设体积上限，导出时按数量级判断与内容相称（DECISION-125）；没有各图启动集（ENG-ARCH §4）。启动顺序见 SYS-TITLE §1。
 
 ## 5 待验证（P0）
 

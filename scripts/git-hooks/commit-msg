@@ -1,5 +1,5 @@
 #!/bin/sh
-# 提交首行格式检查（STD-CONVENTIONS §3.8，D-251）：不合格式就拒绝提交，改好再提交。
+# 提交首行格式检查（STD-CONVENTIONS §3.8，DECISION-251）：不合格式就拒绝提交，改好再提交。
 # 用法：git config core.hooksPath scripts/git-hooks；仓库只维护本目录这一份 Git 钩子，提交时自动运行。
 first=$(head -n 1 "$1")
 if ! command -v python >/dev/null 2>&1; then

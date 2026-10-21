@@ -75,7 +75,7 @@ public sealed class PlatformSite : ZoneSite
     internal sealed record Plan(float Y, float Rise, IReadOnlyList<Vector2[]> Decks, IReadOnlyList<Edge> Edges, Vector2[] Core, IReadOnlyList<Bay> Bays,
         IReadOnlyList<Vector2> Columns, IReadOnlyList<Stair> Stairs)
     {
-        /// <summary>The deck top above the ground, the feature's height set in world/south.json (D-239).</summary>
+        /// <summary>The deck top above the ground, the feature's height set in world/south.json (DECISION-239).</summary>
         public float Top => Y + Rise;
         public float Soffit => Top - P.Slab;
     }

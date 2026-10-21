@@ -97,7 +97,7 @@ public static class BuildingPlanner
         var wallTopRel = profile.RoofEdge == RoofEdge.Cornice ? height - (small ? 0.3f : 0.5f) : height + (small ? 0.45f : 0.8f);
         var (sill, head) = PlanFacades.StoreyRows(profile, baseY, wallTopRel, storeys, hs);
 
-        // Entrance threshold = ground-floor level (D-180); the plinth is cut at the door, a landing sits in front.
+        // Entrance threshold = ground-floor level (DECISION-180); the plinth is cut at the door, a landing sits in front.
         var threshold = baseY + FacadeRules.FloorAbovePad;
         var doorHead = threshold + Math.Clamp(hs - 1.0f, 2.1f, 2.4f);
         var canopy = doorHead + 0.25f;
@@ -251,7 +251,7 @@ public static class BuildingPlanner
     }
 
     /// <summary>
-    /// The one place the building's base height comes from (D-180): the terrain pad under the footprint,
+    /// The one place the building's base height comes from (DECISION-180): the terrain pad under the footprint,
     /// ITerrain.PadY(feature) (WLD-TERRAIN); level ground at 0 while the map's evaluator is the flat stub.
     /// </summary>
     public static float PadY(IWorldModel world, WorldFeature feature) => world.Terrain.PadY(feature.Id);

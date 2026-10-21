@@ -45,7 +45,7 @@ public sealed class GymSite : ZoneSite
     /// <summary>
     /// The drum's LOD-free plan: centre and radius fitted to the footprint, the glass facets (column i spans angles
     /// Phase + 2πi/Bays … Phase + 2π(i+1)/Bays, angle from +x toward +z), column 0 centred on the platform-storey door.
-    /// DeckTop is the platform storey's height (the platform feature's, D-239), Top the drum's own height from the map data.
+    /// DeckTop is the platform storey's height (the platform feature's, DECISION-239), Top the drum's own height from the map data.
     /// </summary>
     internal sealed record Plan(Vector2 Centre, float Radius, float Phase, int Bays, float DeckTop, float Top)
     {

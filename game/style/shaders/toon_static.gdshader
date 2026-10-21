@@ -7,9 +7,9 @@ render_mode blend_mix, depth_draw_opaque, cull_back, diffuse_lambert, specular_d
 #include "res://style/shaders/reflection_lamps.gdshaderinc"
 
 // ---------------------------------------------------------------------------
-// 室外构造图案线（ART-STYLE，D-195；ToonSpec.SurfacePattern，材质库按材质类写下面三个 uniform）
+// 室外构造图案线（ART-STYLE，DECISION-195；ToonSpec.SurfacePattern，材质库按材质类写下面三个 uniform）
 // 几何给连续的米 UV（铺向与相位在 UV 里）和 UV2 = (gate, K)：gate 0 的三角形不画（K4、K5 或非目标面）。
-// 只改明度、不改色相：受光色、影色、灯照色同加 ΔL（OKLab L），影仍以明度为主；不画污渍、裂缝、做旧（D-174）。
+// 只改明度、不改色相：受光色、影色、灯照色同加 ΔL（OKLab L），影仍以明度为主；不画污渍、裂缝、做旧（DECISION-174）。
 // 远处按屏幕上的格子大小淡出：缝线先按像素足迹做盒式滤波（滤波本身就收敛到面积平均），格子小于 PAT_FADE_PX
 // 时再整体过渡到"砖面与缝按面积加权"的平均明度，不出摩尔纹、不闪。层号登记在 SurfacePatternLayers.cs。
 // ---------------------------------------------------------------------------

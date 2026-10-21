@@ -17,7 +17,7 @@ namespace Campus.Gen.Maps.Qingshuihe.Core.Axis;
 /// the outer one and a gold emblem in the centre, the ring of steps and the two flank ramps down to the sunken floor,
 /// three flagpoles at the library-side step foot, the outer ring of thin lamps (初灯组) and the benches under them.
 /// <para>
-/// Heights come from the terrain (D-180): the floor is the terrain at the centre, the rim the terrain just outside
+/// Heights come from the terrain (DECISION-180): the floor is the terrain at the centre, the rim the terrain just outside
 /// the circle. On the flat stub both are 0, so the plaza is flat and the steps and ramps are not built; once game/gen/world/'s
 /// evaluator applies <c>core.terrain.json</c> (floor −0.9) the six risers and the ramps appear without code changes.
 /// </para>

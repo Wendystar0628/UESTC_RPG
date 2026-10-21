@@ -173,7 +173,7 @@ public static class BoundaryTune
     /// North waterside plaza (design:boundary-north-a05-plaza, 初值): 14 × 8.6 m of paving on the channel's east bank between the
     /// water and the east service road, over the end of cycleway 950008623. Local frame: t along the bank (toward 21.8°), n off
     /// the water edge toward the road; its origin and direction come from the water feature's bank edge (NorthPlazaSite.FrameOf,
-    /// D-239). The paving is game/gen/ground/ ground from the overlay polygon; this site adds the light railing on
+    /// DECISION-239). The paving is game/gen/ground/ ground from the overlay polygon; this site adds the light railing on
     /// the water side and two benches facing the water. The A05 kiosk is owned by game/gen/furniture/ and reads game/systems/atlas/'s registered anchor.
     /// </summary>
     public static class Plaza

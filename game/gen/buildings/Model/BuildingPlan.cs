@@ -59,7 +59,7 @@ public sealed class BuildingPlan
     public required FacadeProfile Profile { get; init; }
     public required uint Seed { get; init; }
     public required bool Small { get; init; }
-    /// <summary>The pad height everything is measured from (D-180): walls start 0.3 m below it.</summary>
+    /// <summary>The pad height everything is measured from (DECISION-180): walls start 0.3 m below it.</summary>
     public required float BaseY { get; init; }
     public required float Height { get; init; }
     public required int Storeys { get; init; }

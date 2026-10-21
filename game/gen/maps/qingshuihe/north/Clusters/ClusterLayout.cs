@@ -72,7 +72,7 @@ public sealed class ClusterLayout
     private static ClusterLayout? Compute(IWorldModel world, NorthTune.Cluster cluster)
     {
         if (!world.Features.TryGetValue(new(cluster.Id), out var feature)) return null;
-        // The main gate point and whether it is open are the overlay's gate feature (D-239).
+        // The main gate point and whether it is open are the overlay's gate feature (DECISION-239).
         if (!world.Features.TryGetValue(new(NorthFeatureIds.GatePrefix + cluster.Key), out var gateFeature) || gateFeature.Geometry is not PointGeometry gatePoint) return null;
         var mainGate = new Vector2(gatePoint.Position.X, gatePoint.Position.Z);
         var clusterOpen = gateFeature.Props?.GetProperty("open").GetBoolean() == true;

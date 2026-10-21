@@ -50,7 +50,7 @@ gates: [G2]
 ## 2 多地图下的数据
 
 - 地图标识一律用 `MapId("qingshuihe")`；`MarkerId` 只在一张图内唯一，跨图引用写成"地图 + 标记"。服务名是 `IAtlasService`，与地图加载切换的 `IMapService` 不得混名。
-- 平面地图的数据在本图 `atlas/`（`markers.json`、`labels.json`）和世界文件 `world/atlas.json`，传送卡的缩略图主线之后随缩略图一起建目录；底图与标注布局是烘焙产物，不进 git，随全图烘焙缓存发（D-165，SYS-MAPS §1.2）。点位表归 UI-NAV-WAYPOINTS §1，开放清单归 WLD-INTERIORS。
+- 平面地图的数据在本图 `atlas/`（`markers.json`、`labels.json`）和世界文件 `world/atlas.json`，传送卡的缩略图主线之后随缩略图一起建目录；底图与标注布局是烘焙产物，不进 git，随全图烘焙缓存发（DECISION-165，SYS-MAPS §1.2）。点位表归 UI-NAV-WAYPOINTS §1，开放清单归 WLD-INTERIORS。
 - 按图与全局的划分以 SYS-MAPS §1.1 为准：筛选偏好和小地图设置是全局的，底图、标记、标注、区域表、锚点实体、缩略图、自定义标记、解锁状态都按图。
 - **换图**（主线之后）：卸载时释放本图的地图纹理和缩略图，加载时读新图数据并重建标记；换图经加载界面（SYS-TITLE §3.1），小地图随之隐藏。多图时"MAP 01/01"变成切换标签；楼层图以后作为同一张图的"地图层"，现在不用。
 

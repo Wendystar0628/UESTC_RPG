@@ -87,7 +87,7 @@ paths: ["game/gen/maps/qingshuihe/public/**", "game/data/maps/qingshuihe/world/p
 本作以中国校园的物件为底，掺入日式日常街景物件（ART-STYLE §3.1）；日式物件的目录、形制、放置见 WLD-AMBIENCE，售货机组见 WLD-LIFE-STREET §2，外围增补见 MAP-QSH-OUTSKIRTS §5（规则 WLD-OUTSKIRTS-BAND §4），钟与广播见 SYS-AUDIO-AMBIENCE §3。
 
 - **氛围靠物件，不靠地标**：中国感来自外卖袋、桶装水、竹椅、PVC 门帘、电动车挡风被；日式氛围来自成组售货机、背街的电线杆、砌块矮墙、暖帘。
-- **其余按全局规则**：场景里的字一律简体中文（INV-4）；四季视觉效果优先（§8.2）；老楼全部翻新，新旧并存只表现为新设备与老楼语言的并置（D-173、WLD-RENOVATION §2.1）；物件真实，守 D-174（ART-FIDELITY-DETAIL §1.5），生命迹象只有车、猫、灯和晾晒物（INV-6）。
+- **其余按全局规则**：场景里的字一律简体中文（INV-4）；四季视觉效果优先（§8.2）；老楼全部翻新，新旧并存只表现为新设备与老楼语言的并置（DECISION-173、WLD-RENOVATION §2.1）；物件真实，守 DECISION-174（ART-FIDELITY-DETAIL §1.5），生命迹象只有车、猫、灯和晾晒物（INV-6）。
 
 ## 5 禁做清单的本图补充
 

@@ -16,7 +16,7 @@ Set-StrictMode -Version Latest
 . (Join-Path $PSScriptRoot 'lib/start-game.ps1')
 . (Join-Path $PSScriptRoot 'gates/check-source.ps1')
 . (Join-Path $PSScriptRoot 'gates/check-naming.ps1')
-# Test budget (D-246): quick-check tests over this many seconds are listed; the record keeps the recent runs only.
+# Test budget (DECISION-246): quick-check tests over this many seconds are listed; the record keeps the recent runs only.
 $slowTestSeconds = 2
 $testRecordMaxRuns = 30
 $testRecordMaxDays = 14
@@ -395,7 +395,7 @@ foreach ($id in $selected) {
                     $notes += "${test}: " + ($selection.Reasons -join '; ')
                     if (-not $selection.HasCompileFiles) { $status = 'Incomplete'; $notes += "${test}: no evaluated Compile items"; continue }
                     # Native rendering/resource-lifetime tests are run explicitly under the build lock.
-                    # Ordinary quick checks remain headless checks (D-167).
+                    # Ordinary quick checks remain headless checks (DECISION-167).
                     $testRun = Invoke-GateProcess "G2-$test" dotnet @('test',$project,'-c',$Configuration,'--settings',$settings,'--filter',$selection.Filter,'--logger','trx','--results-directory',(Join-Path $work 'test-results'))
                     $runCount++
                     $testCount += $testRun.Tests

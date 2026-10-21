@@ -231,7 +231,7 @@ public static class StreetStyle
     /// <summary>Unlit lamps of a parked car (WLD-LIFE: car lights never on): clear head lamps and red tail lamps.</summary>
     public const string HeadLamp = "wall.greyWhite";
     public const string TailLamp = "equip.fireRed";
-    /// <summary>Shared bicycle (WLD-LIFE, D-066): milk-white frame, electronic blue on the down tube and the number plate only, dark grey basket and lock box.</summary>
+    /// <summary>Shared bicycle (WLD-LIFE, DECISION-066): milk-white frame, electronic blue on the down tube and the number plate only, dark grey basket and lock box.</summary>
     public const string BikeWhite = "wall";
     public const string BikeBlue = "uestc.blue";
     public const string BikeDark = DarkSteel;

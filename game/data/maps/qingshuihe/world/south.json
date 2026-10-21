@@ -26,7 +26,7 @@
         "contour": "facade",
         "sourceId": "osm:way:1157144625"
       },
-      "note": "MAP-QSH-SOUTH：登记构件所依附的轮廓边，按端点读取（D-243）",
+      "note": "MAP-QSH-SOUTH：登记构件所依附的轮廓边，按端点读取（DECISION-243）",
       "geometry": {
         "type": "polyline",
         "line": {
@@ -73,7 +73,7 @@
         "parent": "qsh:relation:7849760",
         "sourceId": "osm:relation:7849760"
       },
-      "note": "立人楼侧东湖硬岸登记为自西向东的轮廓选段，供挡墙、栏杆与涉水台阶共用（MAP-QSH-SOUTH，D-243）",
+      "note": "立人楼侧东湖硬岸登记为自西向东的轮廓选段，供挡墙、栏杆与涉水台阶共用（MAP-QSH-SOUTH，DECISION-243）",
       "geometry": {
         "type": "polyline",
         "line": {
@@ -84,7 +84,7 @@
     {
       "id": "design:south-eastlake-swim-area",
       "kind": "swim-area",
-      "note": "游泳首版泳区（D-250，MAP-QSH-WATER）：东湖主水面，从水体多边形向内收 8 m，避开北部支汊口一带（暗涵口 12 m 与冬季浅滩一角，x<112、z<335）、西岸草阶看台前的荷区、东端桥与硬岸、湖心岛四周。",
+      "note": "游泳首版泳区（DECISION-250，MAP-QSH-WATER）：东湖主水面，从水体多边形向内收 8 m，避开北部支汊口一带（暗涵口 12 m 与冬季浅滩一角，x<112、z<335）、西岸草阶看台前的荷区、东端桥与硬岸、湖心岛四周。",
       "geometry": {
         "type": "polygon",
         "rings": {
@@ -100,7 +100,7 @@
         "parent": "qsh:relation:7849760",
         "sourceId": "osm:relation:7849760"
       },
-      "note": "MAP-QSH-SOUTH：涉水台阶对应的硬岸边按端点登记（D-243）",
+      "note": "MAP-QSH-SOUTH：涉水台阶对应的硬岸边按端点登记（DECISION-243）",
       "geometry": {
         "type": "polyline",
         "line": {
@@ -128,7 +128,7 @@
       "kind": "siteAnchor",
       "props": {
       },
-      "note": "MAP-QSH-SOUTH：登记南区既有设计构件的平面位置，维持原构件布置（D-239）",
+      "note": "MAP-QSH-SOUTH：登记南区既有设计构件的平面位置，维持原构件布置（DECISION-239）",
       "geometry": {
         "type": "point",
         "position": [-394.17,0,557.41]
@@ -157,7 +157,7 @@
       "kind": "siteAnchor",
       "props": {
       },
-      "note": "MAP-QSH-SOUTH：登记南区既有设计构件的平面位置，维持原构件布置（D-239）",
+      "note": "MAP-QSH-SOUTH：登记南区既有设计构件的平面位置，维持原构件布置（DECISION-239）",
       "geometry": {
         "type": "point",
         "position": [30,0,592]
@@ -171,7 +171,7 @@
         "contour": "facade",
         "sourceId": "osm:way:687370085"
       },
-      "note": "MAP-QSH-SOUTH：登记构件所依附的轮廓边，按端点读取（D-243）",
+      "note": "MAP-QSH-SOUTH：登记构件所依附的轮廓边，按端点读取（DECISION-243）",
       "geometry": {
         "type": "polyline",
         "line": {
@@ -187,7 +187,7 @@
         "contour": "facade",
         "sourceId": "osm:way:618752446"
       },
-      "note": "MAP-QSH-SOUTH：登记构件所依附的轮廓边，按端点读取（D-243）",
+      "note": "MAP-QSH-SOUTH：登记构件所依附的轮廓边，按端点读取（DECISION-243）",
       "geometry": {
         "type": "polyline",
         "line": {
@@ -203,7 +203,7 @@
         "contour": "facade",
         "sourceId": "osm:way:618752446"
       },
-      "note": "MAP-QSH-SOUTH：登记构件所依附的轮廓边，按端点读取（D-243）",
+      "note": "MAP-QSH-SOUTH：登记构件所依附的轮廓边，按端点读取（DECISION-243）",
       "geometry": {
         "type": "polyline",
         "line": {
@@ -219,7 +219,7 @@
         "contour": "facade",
         "sourceId": "osm:way:618752446"
       },
-      "note": "MAP-QSH-SOUTH：登记构件所依附的轮廓边，按端点读取（D-243）",
+      "note": "MAP-QSH-SOUTH：登记构件所依附的轮廓边，按端点读取（DECISION-243）",
       "geometry": {
         "type": "polyline",
         "line": {
@@ -232,7 +232,7 @@
       "kind": "siteAnchor",
       "props": {
       },
-      "note": "MAP-QSH-SOUTH：登记南区既有设计构件的平面位置，维持原构件布置（D-239）",
+      "note": "MAP-QSH-SOUTH：登记南区既有设计构件的平面位置，维持原构件布置（DECISION-239）",
       "geometry": {
         "type": "point",
         "position": [-302,0,305]
@@ -259,7 +259,7 @@
       "kind": "sitePlan",
       "props": {
       },
-      "note": "MAP-QSH-SOUTH：登记南区既有设计构件的平面位置，维持原构件布置（D-239）",
+      "note": "MAP-QSH-SOUTH：登记南区既有设计构件的平面位置，维持原构件布置（DECISION-239）",
       "geometry": {
         "type": "polygon",
         "rings": {
@@ -276,7 +276,7 @@
         "contour": "facade",
         "sourceId": "osm:way:601600526"
       },
-      "note": "MAP-QSH-SOUTH：登记构件所依附的轮廓边，按端点读取（D-243）",
+      "note": "MAP-QSH-SOUTH：登记构件所依附的轮廓边，按端点读取（DECISION-243）",
       "geometry": {
         "type": "polyline",
         "line": {
@@ -289,7 +289,7 @@
       "kind": "siteAnchor",
       "props": {
       },
-      "note": "MAP-QSH-SOUTH：登记南区既有设计构件的平面位置，维持原构件布置（D-239）",
+      "note": "MAP-QSH-SOUTH：登记南区既有设计构件的平面位置，维持原构件布置（DECISION-239）",
       "geometry": {
         "type": "point",
         "position": [-54.35,0,822]
@@ -303,7 +303,7 @@
         "contour": "facade",
         "sourceId": "osm:way:988857939"
       },
-      "note": "MAP-QSH-SOUTH：登记构件所依附的轮廓边，按端点读取（D-243）",
+      "note": "MAP-QSH-SOUTH：登记构件所依附的轮廓边，按端点读取（DECISION-243）",
       "geometry": {
         "type": "polyline",
         "line": {
@@ -319,7 +319,7 @@
         "contour": "facade",
         "sourceId": "osm:way:988857939"
       },
-      "note": "MAP-QSH-SOUTH：登记构件所依附的轮廓边，按端点读取（D-243）",
+      "note": "MAP-QSH-SOUTH：登记构件所依附的轮廓边，按端点读取（DECISION-243）",
       "geometry": {
         "type": "polyline",
         "line": {
@@ -334,7 +334,7 @@
         "parent": "design:south-a01-plaza",
         "contour": "facade"
       },
-      "note": "MAP-QSH-SOUTH：登记构件所依附的轮廓边，按端点读取（D-243）",
+      "note": "MAP-QSH-SOUTH：登记构件所依附的轮廓边，按端点读取（DECISION-243）",
       "geometry": {
         "type": "polyline",
         "line": {
@@ -381,7 +381,7 @@
         "sourceId": "osm:way:844548980",
         "contour": "facade"
       },
-      "note": "MAP-QSH-SOUTH：登记宣邦楼朝湖立面的构件边（D-243）",
+      "note": "MAP-QSH-SOUTH：登记宣邦楼朝湖立面的构件边（DECISION-243）",
       "geometry": {
         "type": "polyline",
         "line": {
@@ -397,7 +397,7 @@
         "sourceId": "osm:way:844548980",
         "contour": "facade"
       },
-      "note": "MAP-QSH-SOUTH：登记宣邦楼朝湖立面的构件边（D-243）",
+      "note": "MAP-QSH-SOUTH：登记宣邦楼朝湖立面的构件边（DECISION-243）",
       "geometry": {
         "type": "polyline",
         "line": {
@@ -413,7 +413,7 @@
         "sourceId": "osm:way:844548980",
         "contour": "facade"
       },
-      "note": "MAP-QSH-SOUTH：登记宣邦楼朝湖立面的构件边（D-243）",
+      "note": "MAP-QSH-SOUTH：登记宣邦楼朝湖立面的构件边（DECISION-243）",
       "geometry": {
         "type": "polyline",
         "line": {
@@ -429,7 +429,7 @@
         "sourceId": "osm:way:844548980",
         "contour": "facade"
       },
-      "note": "MAP-QSH-SOUTH：登记宣邦楼朝湖立面的构件边（D-243）",
+      "note": "MAP-QSH-SOUTH：登记宣邦楼朝湖立面的构件边（DECISION-243）",
       "geometry": {
         "type": "polyline",
         "line": {
@@ -445,7 +445,7 @@
         "sourceId": "osm:way:844548980",
         "contour": "facade"
       },
-      "note": "MAP-QSH-SOUTH：登记宣邦楼朝湖立面的构件边（D-243）",
+      "note": "MAP-QSH-SOUTH：登记宣邦楼朝湖立面的构件边（DECISION-243）",
       "geometry": {
         "type": "polyline",
         "line": {
@@ -461,7 +461,7 @@
         "contour": "facade",
         "sourceId": "osm:way:844548980"
       },
-      "note": "MAP-QSH-SOUTH：登记构件所依附的轮廓边，按端点读取（D-243）",
+      "note": "MAP-QSH-SOUTH：登记构件所依附的轮廓边，按端点读取（DECISION-243）",
       "geometry": {
         "type": "polyline",
         "line": {
@@ -477,7 +477,7 @@
         "contour": "facade",
         "sourceId": "osm:way:844548980"
       },
-      "note": "MAP-QSH-SOUTH：登记构件所依附的轮廓边，按端点读取（D-243）",
+      "note": "MAP-QSH-SOUTH：登记构件所依附的轮廓边，按端点读取（DECISION-243）",
       "geometry": {
         "type": "polyline",
         "line": {
@@ -493,7 +493,7 @@
         "contour": "facade",
         "sourceId": "osm:way:844548980"
       },
-      "note": "MAP-QSH-SOUTH：登记构件所依附的轮廓边，按端点读取（D-243）",
+      "note": "MAP-QSH-SOUTH：登记构件所依附的轮廓边，按端点读取（DECISION-243）",
       "geometry": {
         "type": "polyline",
         "line": {

@@ -22,7 +22,7 @@ namespace Campus.Gen.Maps.Qingshuihe.CenterEast.Pinxue;
 public sealed class PinxueFrameSite : ZoneSite
 {
     /// <summary>
-    /// The gate read from the world model (D-239): the frame of the bar (X south along its west edge from A's wall, +Z west out
+    /// The gate read from the world model (DECISION-239): the frame of the bar (X south along its west edge from A's wall, +Z west out
     /// to the forecourt), its length and depth from the bar part, and the storey height and top from A's main body.
     /// </summary>
     internal sealed record Gate(PlanFrame F, float Length, float Depth, float StoreyHeight, float BeamTop)

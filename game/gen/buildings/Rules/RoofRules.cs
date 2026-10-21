@@ -5,7 +5,7 @@ namespace Campus.Gen.Buildings.Rules;
 /// <summary>
 /// How the generic roofs take the game/gen/parts/roof/ parts (WF-FLOW: tunables in one place). Every parapet gets the coping and a
 /// lightning strip; the roof plant stands inside a perforated equipment fence and only its top shows (MAP-QSH-ADDITIONS
-/// §2.9, ART-FIDELITY K4 (a)). Density follows the roof's precision zone (D-176): K1 and K2 roofs carry the full set
+/// §2.9, ART-FIDELITY K4 (a)). Density follows the roof's precision zone (DECISION-176): K1 and K2 roofs carry the full set
 /// at the building's level, K3 and beyond fewer units, one part level coarser near. Part sizes are the PartCatalog
 /// defaults. Initial values; the main session sets the final ones at review.
 /// </summary>

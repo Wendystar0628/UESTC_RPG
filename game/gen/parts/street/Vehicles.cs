@@ -52,7 +52,7 @@ public sealed class ParkedCarPart : IPartDef<VehicleParams>
 }
 
 /// <summary>
-/// Anonymous shared bicycle (匿名共享单车, WLD-LIFE, D-066): a low-step milk-white frame with the electronic blue on the down
+/// Anonymous shared bicycle (匿名共享单车, WLD-LIFE, DECISION-066): a low-step milk-white frame with the electronic blue on the down
 /// tube and the number plate only, a front basket and a rear lock box in dark grey, solid mudguard, dark tyres on light solid
 /// wheels. No brand, no colours of a real scheme. Width × Height × Depth is the bike (handlebar width, bar height, wheel to wheel),
 /// its front at −Z. The ride's contact points are part sockets shared with game/camera/walk/'s riding clips: seat, left and right grips,

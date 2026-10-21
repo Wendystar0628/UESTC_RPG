@@ -57,7 +57,7 @@ public sealed class NorthSiteTests
     }
 
     /// <summary>
-    /// 20b1 (D-185 R6): the 硕丰苑十组团 rest deck is the registered polygon, lies inside its cluster, and keeps 8 m off every
+    /// 20b1 (DECISION-185 R6): the 硕丰苑十组团 rest deck is the registered polygon, lies inside its cluster, and keeps 8 m off every
     /// wall and 3 m off every road edge, the cluster's design drive included.
     /// </summary>
     [TestCase, TestCategory(TestReason.Contract)]

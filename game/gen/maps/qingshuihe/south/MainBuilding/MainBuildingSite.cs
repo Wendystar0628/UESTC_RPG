@@ -37,7 +37,7 @@ public sealed class MainBuildingSite : ZoneSite
     private static float LowerRise => Riser * M.RisersLower;
 
     /// <summary>
-    /// The building's plan, read from the map data (D-239). Front frame F: X along B2's south-west facade (the longest edge of its
+    /// The building's plan, read from the map data (DECISION-239). Front frame F: X along B2's south-west facade (the longest edge of its
     /// facade outline), +Z outward toward the gate. Rear frame R at the 后入口（interiors.json position）: X reversed, so +Z is outward from the
     /// north-east facade. The steps zone is the front steps' footprint in F; RoofY is B2's height from the overlay.
     /// </summary>

@@ -4,7 +4,7 @@ namespace Campus.Style.Shaders.Cards;
 /// Content of one window card (WLD-INTERIORS): the room the shader paints behind a pane. Everything is chosen per
 /// window by hash from these ranges, so a facade reads "rooms of the same kind, not copies". Lengths in metres,
 /// luminances are multipliers on the shader's room tone (1 = the card's reference tone), chances in [0, 1].
-/// The card never corresponds to a real room (D-028).
+/// The card never corresponds to a real room (DECISION-028).
 /// </summary>
 public sealed record WindowCardSpec(WindowCardKind Kind)
 {

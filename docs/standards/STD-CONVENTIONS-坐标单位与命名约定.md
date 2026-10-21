@@ -43,7 +43,7 @@ paths: ["scripts/requirements.*", "game/testing/**", "game/data/build-code-finge
 
 ### 1.1 坐标系
 
-- 单位米；x 向东、y 向上、z 向南。与 Godot 一样是右手系、y 向上，数据坐标直接当 Godot 世界坐标用，不做换算；正北就是 Godot 的前方（−z），偏航 0° 的相机朝北（D-144）。
+- 单位米；x 向东、y 向上、z 向南。与 Godot 一样是右手系、y 向上，数据坐标直接当 Godot 世界坐标用，不做换算；正北就是 Godot 的前方（−z），偏航 0° 的相机朝北（DECISION-144）。
 - **每张图一个原点和投影**，写在该图 `world/geo.json` 里，`map.json` 不重复；校界、箱庭包围盒、`map_rect` 这类按图的范围数也不在本文，见 SYS-MAPS §2、§7。
 - 地图之间的坐标互不相通；跨图引用一律写成"地图 + ID"。单图半径（离中心最远的可达点）不超过 8 km（SYS-MAPS §8）。
 - **高度**：地面不是平的，全图约 −5…+10 m，地形写在地形覆盖层；地面高度、垫层、水位一律读 `IWorldModel.Terrain`，不写死 y = 0（WLD-TERRAIN）。
@@ -80,7 +80,7 @@ paths: ["scripts/requirements.*", "game/testing/**", "game/data/build-code-finge
 
 | 标识 | 格式 | 规则 |
 | --- | --- | --- |
-| 地图 ID（`MapId`） | 小写字母、数字、连字符，≤ 32 字符；与目录名相同，如 `qingshuihe` | 代码里不写地图 ID 字面量（地图内核和门禁夹具除外）；不用 "qsh" 指地图（D-137） |
+| 地图 ID（`MapId`） | 小写字母、数字、连字符，≤ 32 字符；与目录名相同，如 `qingshuihe` | 代码里不写地图 ID 字面量（地图内核和门禁夹具除外）；不用 "qsh" 指地图（DECISION-137） |
 | 实体 ID（`FeatureId`） | `world/<区>.json` 里记录的 `id`；清水河前缀 `qsh:`，形如 `qsh:<类型>:<编号>`；记录内部件另有部件 ID | 只在本图内唯一；`qsh:` 是数据的既有写法，不是地图 ID；按 ID 定位对象，不按名字；通用代码里不写字面量；以后的图用自己的前缀；部件 ID 进楼宇随机种子，路线 ID 的顺序决定行道树编号，都不改 |
 | 设计增补 | `design:` 开头；锚点写 `design:anchor:Axx` | 直接加在本区世界文件里，记录写 `note`（MAP-QSH-ADDITIONS） |
 | 可行走区域 | `walk:` 开头 | 只在可行走覆盖层（SYS-WALK-BOUNDS §1） |
@@ -88,7 +88,7 @@ paths: ["scripts/requirements.*", "game/testing/**", "game/data/build-code-finge
 | 环境发声器 | `amb:` 开头，本图内唯一 | 见 ENG-ARCH §3 |
 | RPG 预留前缀 | `npc:`、`item:`、`quest:` | 观光数据不得使用（ENG-ROADMAP §3.1） |
 
-- **世界文件**：地图数据归项目所有，每区一份 `world/<区>.json`，格式与增删改规则见 SYS-MAPS §1.1（D-252、D-253）；`design:` 记录写 `note` 说明设计意图（INV-9）。
+- **世界文件**：地图数据归项目所有，每区一份 `world/<区>.json`，格式与增删改规则见 SYS-MAPS §1.1（DECISION-252、DECISION-253）；`design:` 记录写 `note` 说明设计意图（INV-9）。
 
 ### 3.2 编号体系
 
@@ -102,9 +102,9 @@ paths: ["scripts/requirements.*", "game/testing/**", "game/data/build-code-finge
 | F | 飞行路线脚本 | ENG-GATES-SHOTS §1 |
 | T | 开始页镜头 | SYS-TITLE §2.1 |
 | G | 门禁 | ENG-GATES §1 |
-| D | 决策，D-001 起，三位数，全文连续，只增不复用 | REG-DECISIONS §0 |
+| DECISION- | 决策，DECISION-001 起，三位数，全文连续，只增不复用 | REG-DECISIONS §0 |
 | GAME-、TOOL-、BATCH- | 施工队列的行：GAME 游戏本体，TOOL 协作与工具，BATCH 批量机械活；三位数，拆出的子行加小写字母（GAME-034a） | WF-STATUS §2 |
-| r | 调研单，r001 起 | WF-STATUS §4 |
+| RESEARCH- | 调研单，RESEARCH-001 起，三位数 | WF-STATUS §4 |
 | O0–O3 | 外围分层 | WLD-OUTSKIRTS-BAND §2.2 |
 | L0+–L4 | 建筑与地块的细节级别；室内另有 I0、IS、IF 三级，碰撞级 C | ENG-BUDGET-LOD §1 |
 | K1–K5 | 视觉精度区 | ART-FIDELITY §0 |
@@ -118,7 +118,7 @@ paths: ["scripts/requirements.*", "game/testing/**", "game/data/build-code-finge
 | 写法 | 可能指 | 读法与写法 |
 | --- | --- | --- |
 | G | 只指 ENG-GATES 的门禁 | 顶层规则的条目写它的标题，不写 G 与条号 |
-| E、O | E1–E7 是审查视角；O0–O3 是外围分层 | E 只指审查视角，写"视角 E1"或 `--pose=E1`；外围写"外围 O1"（D-157） |
+| E、O | E1–E7 是审查视角；O0–O3 是外围分层 | E 只指审查视角，写"视角 E1"或 `--pose=E1`；外围写"外围 O1"（DECISION-157） |
 | P0、P1… | 点位 P00–P23（两位数）、图书馆的三条"看进去"路径 P1–P3、开发阶段 P0–P3 | 点位一律两位数；路径写"MAP-QSH-INTERIORS-LIBRARY 的路径 P1"；阶段写"P0 阶段" |
 | L0、L2… | 细节级别 L0+–L4，或声景七层 L0–L6 | 声景层写"声景 L2" |
 | I0、I1… | 室内兜底层 I0，或室内推进批次 I1–I3 | 批次写"室内批次 I1" |
@@ -128,14 +128,14 @@ paths: ["scripts/requirements.*", "game/testing/**", "game/data/build-code-finge
 
 ### 3.4 命名写法
 
-**命名原则**（全项目，D-251）：
+**命名原则**（全项目，DECISION-251）：
 1. **编号-主题**：带编号的名字一律"编号-中文主题"，编号只做索引，意思靠主题读出。
 2. **一物一名**：同一个角色或东西只有一种叫法——主会话、Codex 主线、Claude 侧、Codex 侧；Opus、Sonnet、Sol、Astra 只指模型；"指挥"只指主会话或 Codex 主线（WF-FLOW §3.1）。
 3. **名字写内容，不写来源**：不用会话名、日期、版本号当名字。
 4. **不造缩写**：字母前缀与缩写都在 §3.2 登记，不再新增单字母前缀。
 5. **同目录同写法**：语言与引擎有惯例的跟惯例（C# PascalCase，Godot 资源与着色器 snake_case，Python 下划线，PowerShell 与 cmd 连字符）。
 6. **编号只增、不复用、不改义**（§3.7）。
-7. **规则与实物同源**：文档写的格式、钩子提示与巡逻检查一起改，不留旧写法（D-200）。
+7. **规则与实物同源**：文档写的格式、钩子提示与巡逻检查一起改，不留旧写法（DECISION-200）。
 8. **可读优先于简短**。
 
 文件与编号的具体格式见 §3.8；以下是代码与数据里的名字。
@@ -158,7 +158,7 @@ paths: ["scripts/requirements.*", "game/testing/**", "game/data/build-code-finge
 
 以下写法现在就照做，以后加观察模式、规则集、RPG 子系统时才不用改既有语义（预留见 ENG-ROADMAP §3）：
 
-- **枚举只追加、不重排、不删值**：所在的契约组冻结后，枚举只能在末尾追加；JSON 与存档里按字符串存（D-134）。读到不认识的枚举字符串，按"这一段不合法"处理，不猜（SYS-SAVE-FORMAT §1.3）。
+- **枚举只追加、不重排、不删值**：所在的契约组冻结后，枚举只能在末尾追加；JSON 与存档里按字符串存（DECISION-134）。读到不认识的枚举字符串，按"这一段不合法"处理，不猜（SYS-SAVE-FORMAT §1.3）。
 - **穷举 `switch`，`default` 报告未知值**：会追加值的枚举，消费方一律写穷举的 `switch`，`default` 拒绝或报错，不把未知值静默当成某个已知值。
 - **不做二值判断**：不写 `mode == ViewMode.Fly ? … : …`；它会把以后追加的值静默归进某一边，编译器查不出，靠评审。
 - **不写观光专属的常量**：解锁策略名、事件 ID、允许的观察模式这类观光规则，一律读规则集（ENG-ROADMAP §2）。
@@ -176,14 +176,14 @@ paths: ["scripts/requirements.*", "game/testing/**", "game/data/build-code-finge
 
 ### 3.8 文件与编号的命名格式
 
-各文档讲到这些名字时只指向本节，不另写格式（D-251）。
+各文档讲到这些名字时只指向本节，不另写格式（DECISION-251）。
 
 | 类 | 格式 | 例子 |
 | --- | --- | --- |
 | 规范文档 | `编码-中文简题.md`，简题 ≤14 字；编码规则见 STD-DOC §3；`docs/godot-api/` 下生成的 API 参考不在此列 | `SYS-WEATHER-天气.md` |
 | 任务单 | `tasks/<claude 或 codex>/<队列行号>-<主题>.md`；一张单管几行时用主行的号 | `GAME-036-广场图样稳定性采集.md` |
 | 旁路单 | `side/cards/BATCH-<nnn>-<主题>.md` | `BATCH-007-清点外围楼名.md` |
-| 调研 | `research/r<nnn>-<主题>/`，日期只记在 INDEX | `r025-命名规范/` |
+| 调研 | `research/RESEARCH-<nnn>-<主题>/`，日期只记在 INDEX | `RESEARCH-025-命名规范/` |
 | 来信 | `notes/<claude 或 codex>/<年月日-时分秒>-<发件方>-<短词>.md`，发件方写 `claude`、`codex`，作者经观察台留言写 `author`（只进 `notes/claude/`） | `20261019-024457-claude-编号统一.md` |
 | 契约申请 | `requests/contract-<队列行号>-<主题>.md` | `contract-GAME-003-地形求值.md` |
 | 世界文件 | 区文件 `world/<区>.json`；原点、投影与校界 `world/geo.json` | `world/core.json` |
@@ -203,5 +203,5 @@ paths: ["scripts/requirements.*", "game/testing/**", "game/data/build-code-finge
 
 ## 5 路径
 
-- 按图的数据都在 `game/data/maps/<地图>/` 下，一律由 `IMapContext.DataRoot` 拼出，代码里不写数据路径（SYS-MAPS §1、§6，D-139）；各文件的归属见 SYS-MAPS 与相关文档文件头的 `paths`。
+- 按图的数据都在 `game/data/maps/<地图>/` 下，一律由 `IMapContext.DataRoot` 拼出，代码里不写数据路径（SYS-MAPS §1、§6，DECISION-139）；各文件的归属见 SYS-MAPS 与相关文档文件头的 `paths`。
 - `user://` 只有存档服务能读写（ENG-ARCH §2）。

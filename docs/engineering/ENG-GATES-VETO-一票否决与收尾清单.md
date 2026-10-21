@@ -62,7 +62,7 @@ paths: ["scripts/gates/native-render.ps1", "game/data/maps/*/review.json", "scri
 
 - [ ] PRD-INVARIANTS 的 INV-1 至 INV-12 全部成立，§1 无一命中。
 - [ ] 风格符合 ART-STYLE、ART-MODELING，固定机位总览加每季一张英雄帧；视觉精度满足底线 B1–B13，各区评分按精度区达标（ART-FIDELITY）。
-- [ ] 设计增补与翻新清单全部落实，夜间灯光与天空冷暖对照成立，立面与地面无做旧痕迹（D-174）。
+- [ ] 设计增补与翻新清单全部落实，夜间灯光与天空冷暖对照成立，立面与地面无做旧痕迹（DECISION-174）。
 - [ ] 大箱庭完整（外围 O0–O3、截面、雾海、360° 远景）；各区、植被、水、动物与家具、动态的验收项通过。
 - [ ] 三档设备在各自推荐预设下满足 ENG-BUDGET §2 的帧率目标，F1 无超标卡顿。
 - [ ] 导出版：G6 通过，在没装 .NET SDK 的 Windows 机器上解压即可运行，窗口标题、图标、许可页符合 ENG-RELEASE §7.1。

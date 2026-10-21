@@ -108,7 +108,7 @@ public sealed class XuanbangSite : ZoneSite
     public override IReadOnlyList<Claim> Claims { get; } = [new FeatureClaim(new(Feature), Aspects.Massing | Aspects.Facade | Aspects.Roof)];
 
     /// <summary>
-    /// The three footprints with what the map data gives for them (D-239): the main wing's and tower's storey counts, the clock
+    /// The three footprints with what the map data gives for them (DECISION-239): the main wing's and tower's storey counts, the clock
     /// tower's height, and the atrium skylight's centre (the entity anchor).
     /// </summary>
     internal sealed record Footprints(IReadOnlyList<Vector2> Main, IReadOnlyList<Vector2> Tower, IReadOnlyList<Vector2> Clock,

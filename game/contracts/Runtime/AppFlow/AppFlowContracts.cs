@@ -13,7 +13,7 @@ public sealed record EnterRequest(EnterKind Kind, SlotId? Slot = null);   // Slo
 public interface IAppFlow                     // Kernel 服务（game/flow/），主线程；本身不逐帧运行，不直接读写任何 user:// 文件
 {
     AppState State { get; }                   // Boot → Title → Entering → Playing → Leaving → Title；任何状态都能走到 Quitting；
-                                              // 退出时保存明确失败、观者选"返回游戏"，Quitting 回到 Playing（SYS-SAVE，D-171）
+                                              // 退出时保存明确失败、观者选"返回游戏"，Quitting 回到 Playing（SYS-SAVE，DECISION-171）
     long Rev { get; }
     bool IsPlaying { get; }
     string? LastError { get; }

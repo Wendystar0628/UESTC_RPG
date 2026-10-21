@@ -27,7 +27,7 @@ public sealed class WestLawnSite : ZoneSite
         return [SiteRanges.Bounds(SeatArc(wall).SelectMany(s => new[] { s.A, s.B }), wall.Thickness * .5f + .05f)];
     }
 
-    /// <summary>The seat wall from its overlay feature (D-239): the crest, the arc's radius and bearing range, its height and thickness.</summary>
+    /// <summary>The seat wall from its overlay feature (DECISION-239): the crest, the arc's radius and bearing range, its height and thickness.</summary>
     internal readonly record struct SeatWall(Vector2 Crest, float Radius, float From, float To, float Height, float Thickness);
 
     internal static SeatWall WallOf(IWorldModel world)

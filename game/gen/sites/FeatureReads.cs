@@ -5,7 +5,7 @@ using Campus.Contracts;
 namespace Campus.Gen.Sites;
 
 /// <summary>
-/// Reads of the map data by feature ID (D-239): the sites keep IDs and their own shaping values, never a copy of a coordinate,
+/// Reads of the map data by feature ID (DECISION-239): the sites keep IDs and their own shaping values, never a copy of a coordinate,
 /// outline, storey count, height or name the map data already carries. Every read throws when the data is missing.
 /// </summary>
 public static class FeatureReads

@@ -7,7 +7,7 @@ namespace Campus.Gen.Parts.Openings;
 
 /// <summary>
 /// Proper rigid placement inside one part: the images of the unit axes plus an origin.
-/// the output is reproducible for the same input on the same machine (D-232).
+/// the output is reproducible for the same input on the same machine (DECISION-232).
 /// </summary>
 internal readonly record struct Place(Vector3 X, Vector3 Y, Vector3 Z, Vector3 Origin)
 {

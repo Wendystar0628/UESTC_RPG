@@ -67,7 +67,7 @@ internal sealed class TerrainGrid
 }
 
 /// <summary>
-/// Shading normal class of a ground triangle (D-180): paving, roads, plazas and gentle lawn slopes shade as level
+/// Shading normal class of a ground triangle (DECISION-180): paving, roads, plazas and gentle lawn slopes shade as level
 /// ground (normal up); designed earth slopes from 1:6 use flat faceted normals with their own vertices.
 /// </summary>
 public enum GroundShading : byte { Up, Faceted }

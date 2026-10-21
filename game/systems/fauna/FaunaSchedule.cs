@@ -21,7 +21,7 @@ public static class FaunaSchedule
     public const float AfterRainWet = 0.4f;
     /// <summary>Swans stay on the water in light and moderate rain; from this much precipitation on they use the night set (WLD-LIFE).</summary>
     public const float HeavyPrecip = 0.6f;
-    /// <summary>Dusk crows: afternoon, sun from +8° down to −6° (D-175, WLD-LIFE).</summary>
+    /// <summary>Dusk crows: afternoon, sun from +8° down to −6° (DECISION-175, WLD-LIFE).</summary>
     public const float DuskHighDeg = 8f;
     public const double DuskAfterClock = 12.0;
 

@@ -29,7 +29,7 @@ paths: ["game/data/maps/*/waypoints.json"]
 ### 0.1 接入要点
 
 - **新增点位**：写进本图 `waypoints.json`，位姿须在可达空间内（§1）
-- **让镜头去某处**：飞过去调 `ICameraRig.Transit()`，传送一律经 `IAtlasService.Travel`；到达不触发保存（D-241）；3D 过渡读 `IMotionSettings`（§2）
+- **让镜头去某处**：飞过去调 `ICameraRig.Transit()`，传送一律经 `IAtlasService.Travel`；到达不触发保存（DECISION-241）；3D 过渡读 `IMotionSettings`（§2）
 
 ## 1 点位
 
@@ -52,7 +52,7 @@ paths: ["game/data/maps/*/waypoints.json"]
 
 ### 2.2 到达与打断
 
-- **到达**：保持原观察模式。行走模式下目的地是落点，最后 0.4 秒垂直落定，碰撞就绪前不交还控制；室内或水下按 `Entry` 进场；到达不触发保存（D-241）。
+- **到达**：保持原观察模式。行走模式下目的地是落点，最后 0.4 秒垂直落定，碰撞就绪前不交还控制；室内或水下按 `Entry` 进场；到达不触发保存（DECISION-241）。
 - **打断**：任何移动键或鼠标累计移动 30 px 取消飞行，镜头保留速度并 0.2 秒减速；途中选了另一个点位则平滑改道；再按一次同一点位改走传送（经加载界面）直接到终点。传送的取消与打断见 SYS-ATLAS-TRAVEL §3.4。
 
 ### 2.3 预取与速度律豁免

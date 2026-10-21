@@ -53,7 +53,7 @@ public static class NorthTune
 
     /// <summary>
     /// One dormitory cluster (MAP-QSH-NORTH 数据定位 · 宿舍组团; MAP-QSH-RENOVATION N-22). Its OSM polygon is the fence line.
-    /// The main gate point, whether that gate is open, and the wall presets come from world/north.json (D-239): the gate is
+    /// The main gate point, whether that gate is open, and the wall presets come from world/north.json (DECISION-239): the gate is
     /// <c>design:north-gate-{Key}</c> (props.open), the presets are the buildings' family and facade fields in world/north.json.
     /// </summary>
     /// <param name="Id">Cluster entity.</param>
@@ -126,13 +126,13 @@ public static class NorthTune
     }
 
     /// <summary>
-    /// 学知一 courtyard stay point (20a-2, moved in 20a-3; D-185, MAP-QSH-ADDITIONS R6): one gently bowed seat wall at the
+    /// 学知一 courtyard stay point (20a-2, moved in 20a-3; DECISION-185, MAP-QSH-ADDITIONS R6): one gently bowed seat wall at the
     /// courtyard walk (the cluster road's north-east leg toward 银杏大道), on its south-east side. It faces north-west across
     /// the walk to the hill (design:terrain:north-xz1-court-hill) and the lawn behind it; at its back is the lawn in front of
     /// the south dormitory, whose windows stay 10 m off. A paved pad fills the space between the wall and the walk's edge, so
     /// the seat is reached from the walk without crossing grass. Granite body sunk into the ground, a warm wood seat with a
     /// small overhang (ART-FIDELITY: chamfered, capped). The wall's plan points are the registered overlay polyline
-    /// (D-239: start, mid, end); the bow is a quadratic curve through the mid point, bulging away from the walk so the wall
+    /// (DECISION-239: start, mid, end); the bow is a quadratic curve through the mid point, bulging away from the walk so the wall
     /// gathers the view. 初值。
     /// </summary>
     public static class Court
@@ -174,10 +174,10 @@ public static class NorthTune
     }
 
     /// <summary>
-    /// 硕丰苑十组团 rest deck (20b1; D-185 R6, MAP-QSH-ADDITIONS 休憩平台, registered as design:north-sf10-deck): the
+    /// 硕丰苑十组团 rest deck (20b1; DECISION-185 R6, MAP-QSH-ADDITIONS 休憩平台, registered as design:north-sf10-deck): the
     /// courtyard's one stay point, 12 × 8 m and 0.45 m high so its edge is the seat; deep grey steel frame, wood top in four
     /// boards around a square pit holding a clipped shrub. Long side along 33、32 栋, 20 m and more off every wall. The plan
-    /// (centre, long axis, length, width) and the height are the registered overlay polygon (D-239). 初值。
+    /// (centre, long axis, length, width) and the height are the registered overlay polygon (DECISION-239). 初值。
     /// </summary>
     public static class Deck
     {

@@ -174,7 +174,7 @@ public sealed class AppLoadingFlowTests
     }
     private sealed class SaveService(TestCameraRig camera) : TestSaveService
     {
-        // What the restored view default is on a map whose default spawn has a stand (D-242).
+        // What the restored view default is on a map whose default spawn has a stand (DECISION-242).
         public static readonly Pose Landing = new(new(120, 1.7f, -70), 20, 0);
         private SlotId? _active;
         public int NewGames { get; private set; }

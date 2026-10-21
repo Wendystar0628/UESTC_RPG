@@ -283,7 +283,7 @@ public sealed class CirculationTests
             var g = RampEdges.Build(deck, 2.3f, lod);
             ValidateVisibleGeometry(g, g.Bounds, "ramp edges");
         }
-        // D-290: complex corners may overlap; retain finite geometry and bounded outer tips rather than closure.
+        // DECISION-290: complex corners may overlap; retain finite geometry and bounded outer tips rather than closure.
         Vector2[] sharp = [new(-4, 0), new(0, 0), new(-4, 0.8f)];
         const int sharpRisers = 2;
         const float sharpTread = 0.35f, sharpRampWidth = 2.3f;

@@ -41,7 +41,7 @@ public sealed class NatatoriumSite : ZoneSite
 
     public override IReadOnlyList<Claim> Claims { get; } = [new FeatureClaim(new(Feature), Aspects.Massing | Aspects.Facade | Aspects.Roof)];
 
-    /// <summary>The dome's LOD-free plan: the fitted ellipse (local X along the major axis), the glass band's facet count and the platform storey's height (the platform feature's, D-239).</summary>
+    /// <summary>The dome's LOD-free plan: the fitted ellipse (local X along the major axis), the glass band's facet count and the platform storey's height (the platform feature's, DECISION-239).</summary>
     internal sealed record Plan(PlanFrame Frame, float A, float B, int Bays, float DeckTop)
     {
         /// <summary>Plan point at parameter t (radians) on the ellipse scaled by rho.</summary>

@@ -120,7 +120,7 @@ public sealed class PartGeometryTests
             {
                 var line = reverse ? path.Reverse().ToArray() : path;
                 var geometry = PartSweeps.Sweep(profile, line, Material);
-                // D-290: short/near-reversing joins may overlap; guard their visible extent, not manifold closure.
+                // DECISION-290: short/near-reversing joins may overlap; guard their visible extent, not manifold closure.
                 foreach (var mesh in geometry.Meshes) mesh.ValidateVertexData();
                 var points = geometry.Meshes.SelectMany(mesh => Enumerable.Range(0, mesh.Position.Length / 3).Select(i => P(mesh, i))).ToArray();
                 AssertThat(points.Length > 0 && points.All(p => geometry.Bounds.Contains(p)))
@@ -163,7 +163,7 @@ public sealed class PartGeometryTests
             {
                 var path = (reverse ? open.Reverse() : open.AsEnumerable()).Select(p => Vector2.Transform(p, rotation)).ToArray();
                 var geometry = PartSweeps.Sweep(profile, path, Material);
-                // D-290: complex joins may overlap; visible shape, bounds and normals remain checked.
+                // DECISION-290: complex joins may overlap; visible shape, bounds and normals remain checked.
                 foreach (var partMesh in geometry.Meshes) partMesh.ValidateVertexData();
                 var reach = profile.Points.Max(p => Math.Abs(p.X));
                 var mesh = geometry.Meshes.Single();

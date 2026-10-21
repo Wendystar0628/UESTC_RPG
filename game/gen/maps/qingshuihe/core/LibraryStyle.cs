@@ -11,7 +11,7 @@ public static class LibraryStyle
 {
     // ---- Storeys and heights. The 1F floor is the pad + FloorAbovePad, and 1F is 4.95 m so the 2F floor lands on
     //      pad + 5.1 like the stair top and interiors.json's lib.main door (MAP-QSH-INTERIORS-LIBRARY: 5F 18.6, roof 23.1).
-    //      Not read from the data (D-239): its ring height is 22.5 m and podium 4.5 m, 0.6 m under this section. ----
+    //      Not read from the data (DECISION-239): its ring height is 22.5 m and podium 4.5 m, 0.6 m under this section. ----
     public static readonly float[] LibraryStoreys = [4.95f, 4.5f, 4.5f, 4.5f, 4.5f];
     /// <summary>
     /// The front square tower (SE, 正面方塔) has one storey more than the ring (约 6 层, MAP-QSH-CORE); the data's 6 and 27 m

@@ -8,7 +8,7 @@
 // 积水倒影：天空按视线分成硬边色带（地平线亮、高天暗）；precip_occ 有内容时沿它步进，把楼和树切成剪影色块映进去
 // （主线版的 precip_occ 是常量小图，不步进）；夜间灯条与湿路面竖向拉长的倒影带在后置细节里接。
 // 做法照参考场景"太阳雨中的小渔港"的积水（wet rim + damp halo、水边内侧略暗、俯视两档菲涅尔，ART-STYLE）。
-// 湿痕只随天气：湿润与积水量回到 0 时完全干净，不留水渍（D-174）。
+// 湿痕只随天气：湿润与积水量回到 0 时完全干净，不留水渍（DECISION-174）。
 
 #ifndef PRECIP_WET_GDSHADERINC
 #define PRECIP_WET_GDSHADERINC

@@ -4,7 +4,7 @@ title: 游戏失败观测
 category: engineering
 parent: ENG-INDEX
 summary: 游戏本体开发的失败按根因类别登记：什么算一次、先登记再继续、判类与新增类别、提交窗口；类别清单以 failure-types.json 为准，健康页看次数与频率
-keywords: [游戏失败观测, 失败登记, 失败类别, fail.py, failure-types.json, 根因类别, 表现桶, 候选类别, 提交窗口, 逃逸的失败, 健康页, D-285]
+keywords: [游戏失败观测, 失败登记, 失败类别, fail.py, failure-types.json, 根因类别, 表现桶, 候选类别, 提交窗口, 逃逸的失败, 健康页, DECISION-285]
 depends: [CORE-INDEX, ENG-GATES, WF-RULE]
 related: [ENG-ARCH, ENG-BUDGET-RULES]
 contracts: []
@@ -14,7 +14,7 @@ paths: [".collab/tools/fail.py", ".collab/tools/monitor/failure-types.json"]
 ---
 # ENG-FAILS · 游戏失败观测
 
-> **范围**：游戏本体开发的失败怎么登记：什么算一次、先登记再继续、判类、没有合适类别时怎么新增、只看最近多少次提交（D-285）。
+> **范围**：游戏本体开发的失败怎么登记：什么算一次、先登记再继续、判类、没有合适类别时怎么新增、只看最近多少次提交（DECISION-285）。
 > **不在本文**：类别清单、窗口大小与段长以 `.collab/tools/monitor/failure-types.json` 为准；命令参数以 `.collab/tools/fail.py` 开头的用法为准；健康页的数据契约在 `dashboard/README.md`；缺陷分级与修不收敛就停在 WF-RULE §14。
 > **查阅**：先读 §0；动手登记前读 §0.1。
 

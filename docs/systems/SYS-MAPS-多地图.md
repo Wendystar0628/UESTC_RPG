@@ -31,7 +31,7 @@ paths: ["game/data/maps/**", "game/data/maps/index.json", "game/data/maps/*/map.
 
 ### 0.1 接入要点
 
-- **改地图数据**：只改项目的世界文件 `game/data/maps/<图>/world/`，增删改写明理由；不从 OSM 或其他在线地图取数据，也不照着改；OSM 只剩署名与随版本发的地图数据包（D-252、ENG-RELEASE §5）
+- **改地图数据**：只改项目的世界文件 `game/data/maps/<图>/world/`，增删改写明理由；不从 OSM 或其他在线地图取数据，也不照着改；OSM 只剩署名与随版本发的地图数据包（DECISION-252、ENG-RELEASE §5）
 - **读本图的数据文件**：路径由 `IMapContext.DataRoot` 拼出，烘焙产物用 `BakeRoot`；内核、系统、界面和通用程序集里不写地图 ID、`res://data/maps/…` 路径和完整实体 ID 的字面量（G4，§6）
 - **加数据或资源**：放 `game/data/maps/<地图>/` 下本地图自己的文件，资源放各资源目录的 `<地图>/` 子目录；`map.json` 归本文，字段增改须经主会话批准（§1、§2）
 - **写区内容**：区代码靠程序集的 `MapScope`；通用模块只读 `BuildContext.Map` 和本图数据，不认领具体实体，出现 `FeatureClaim` 由 G5 报错（§6）
@@ -62,7 +62,7 @@ paths: ["game/data/maps/**", "game/data/maps/index.json", "game/data/maps/*/map.
 
 ### 1.2 烘焙缓存
 
-- 烘焙什么、随包、查找顺序与判鲜归 ENG-ARCH §4（D-165）。
+- 烘焙什么、随包、查找顺序与判鲜归 ENG-ARCH §4（DECISION-165）。
 - 缓存按图分开；本机缓存与画面设置、世界状态、存档无关，跨存档、跨画质共用，它不是存档（STD-CONVENTIONS §4）。不另做几何启动集；主 PCK 只留全局资源和各图的 JSON。
 
 ## 2 地图描述 `map.json`
@@ -92,7 +92,7 @@ paths: ["game/data/maps/**", "game/data/maps/index.json", "game/data/maps/*/map.
 1. **遮挡**：加载界面盖满；占用观者输入；取消进行中的跳转与预取；小地图淡出；存档暂停拍快照；World 声音组压低。
 2. **记录与卸载**：记下旧图的 `MapVisit`（位姿、模式）；流式停发请求；按账释放本图的实例、碰撞 body、L4、遮挡体；各 `IMapAware` 收到 `OnMapUnloading`；地图内容、室内提供者与生产者由注册器的地图作用域持有，消费者卸载和数据参与者 Unload 后统一释放该作用域，失败路径也清理；`Context` 置空；`GC.Collect()` 一次。
 3. **装载**（`MapStage` 的 LoadData、Mount）：建世界模型，按"通用 + 本图"筛选模块；同步加载 L4 与遮挡体，写 `map_rect`，重建全图数据纹理，实例化本图节点，各 `IMapAware` 收到 `OnMapLoaded`，预取出生点周围。
-4. **预热与出生**（Warm、Spawn）：只预热本图新出现的"着色器 × 顶点格式 × 渲染状态"组合，一批交给引擎预编译（同图重载为 0，ENG-PERF §2，D-261）；设位姿并合法化，行走模式等碰撞就绪，清相机插值缓冲，重判介质，`Current` 换成新图。
+4. **预热与出生**（Warm、Spawn）：只预热本图新出现的"着色器 × 顶点格式 × 渲染状态"组合，一批交给引擎预编译（同图重载为 0，ENG-PERF §2，DECISION-261）；设位姿并合法化，行走模式等碰撞就绪，清相机插值缓冲，重判介质，`Current` 换成新图。
 5. **撤遮挡**：加载界面淡出，环境声淡入；跨图到达显示一次到达标题；释放输入占用，返回 `Arrived`。
 
 - **热切图目标**：整体几秒内（按出生点周围已在缓存里计）；冷启动目标见 SYS-TITLE §1。缓存里没有出生点周围的格时现场本机烘焙，遮挡保持到就绪，不限时；预取清单有键进入 `BakeState.Failed` 或连续 60 s 没有进展，按 Failed 处理（§3.3）。
@@ -178,7 +178,7 @@ paths: ["game/data/maps/**", "game/data/maps/index.json", "game/data/maps/*/map.
 
 ## 9 以后的方向
 
-**加第二张图**不改契约、不改流式架构：建 `game/data/maps/<id>/`，`index.json` 加一行；写这张图的世界文件（D-252）；新建 `game/gen/maps/<id>/` 程序集（csproj 标 `MapScope`，主程序集与测试程序集的 `gen/maps/*/*.csproj` 通配自动带上，程序集与模块名单不手改）；补齐本图的远景、天空、室内、事件、点位、审查视角、导航、音频、预算、平面地图底图；G5、G7 对新图各跑一遍。
+**加第二张图**不改契约、不改流式架构：建 `game/data/maps/<id>/`，`index.json` 加一行；写这张图的世界文件（DECISION-252）；新建 `game/gen/maps/<id>/` 程序集（csproj 标 `MapScope`，主程序集与测试程序集的 `gen/maps/*/*.csproj` 通配自动带上，程序集与模块名单不手改）；补齐本图的远景、天空、室内、事件、点位、审查视角、导航、音频、预算、平面地图底图；G5、G7 对新图各跑一遍。
 
 ## 10 待验证（P0）
 

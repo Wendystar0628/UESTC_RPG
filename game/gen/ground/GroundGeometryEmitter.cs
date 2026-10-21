@@ -91,7 +91,7 @@ internal sealed class GroundGeometryEmitter
     private const float SkirtDepth = 0.3f;
 
     /// <summary>
-    /// Emits one top-surface triangle with the D-180 shading rule: level-ground normals except on designed earth
+    /// Emits one top-surface triangle with the DECISION-180 shading rule: level-ground normals except on designed earth
     /// slopes (1:6 and steeper), which get the triangle's own flat normal on their own vertices.
     /// </summary>
     private void Top(GroundSurface surface, Vector3 a, Vector3 b, Vector3 c, Vector3 na, Vector3 nb, Vector3 nc)

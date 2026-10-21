@@ -173,7 +173,7 @@ public sealed record PitchSpec
 public static class GroundLod
 {
     /// <summary>
-    /// Fixed vertical range of every ground tile's position quantisation, metres (D-180): the packer uses
+    /// Fixed vertical range of every ground tile's position quantisation, metres (DECISION-180): the packer uses
     /// [MinY, MaxY] for y in all ground tiles so that neighbouring tiles quantise heights with the same step.
     /// </summary>
     public const float MinY = -5f, MaxY = 10f;

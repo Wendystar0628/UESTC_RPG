@@ -8,7 +8,7 @@ namespace Campus.Gen.Buildings.Rules;
 /// the entrance data agree (WLD-INTERIORS, G18 ≤ 0.5 m); one without keeps the generic door in the middle of its
 /// longest facade. A door at the building's own floor gets the game/gen/parts/circulation/ landing and the connection down to the outside
 /// landing by WLD-TERRAIN and §5.1; a door whose outside landing is a deck or porch gets the door alone. Detail
-/// follows the door's precision zone (D-176). Initial values; the main session sets the final ones at review.
+/// follows the door's precision zone (DECISION-176). Initial values; the main session sets the final ones at review.
 /// </summary>
 public static class EntranceRules
 {

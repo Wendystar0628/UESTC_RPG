@@ -97,7 +97,7 @@ public sealed record FacadeProfile(
 
 public static class FacadeRules
 {
-    // ---- Building datum (WLD-TERRAIN, D-180): every building, generic or zone-built, stands on its pad the same way ----
+    // ---- Building datum (WLD-TERRAIN, DECISION-180): every building, generic or zone-built, stands on its pad the same way ----
     /// <summary>Ground-floor level (and entrance threshold) above the pad.</summary>
     public const float FloorAbovePad = 0.15f;
     /// <summary>Walls start this far below the pad, so the apron's small fall never opens a gap.</summary>

@@ -10,7 +10,7 @@ using L = Campus.Gen.Maps.Qingshuihe.North.NorthTune.Look;
 namespace Campus.Gen.Maps.Qingshuihe.North.Shuofeng;
 
 /// <summary>
-/// 硕丰苑十组团's courtyard stay point (20b1; D-185, MAP-QSH-ADDITIONS R6, §2.1 休憩平台; registered as
+/// 硕丰苑十组团's courtyard stay point (20b1; DECISION-185, MAP-QSH-ADDITIONS R6, §2.1 休憩平台; registered as
 /// design:north-sf10-deck): a 0.45 m deck whose edge is the seat, deep grey steel frame under a wood top laid as four boards
 /// round a square pit, a clipped shrub in the pit. The cluster is closed, so it is seen through the fence. It stands on level
 /// ground: the base is the lowest ground under its corners and the frame is sunk below it (WLD-TERRAIN).
@@ -23,7 +23,7 @@ public sealed class RestDeckSite : ZoneSite
         Locate(world) is { } plan ? [SiteRanges.Bounds(plan.Frame.Rect(-plan.Length * .5f - D.Overhang,
             -plan.Width * .5f - D.Overhang, plan.Length * .5f + D.Overhang, plan.Width * .5f + D.Overhang))] : [];
 
-    /// <summary>The deck's plan from the overlay polygon (D-239): centre, long axis, length and width, and the height above the ground.</summary>
+    /// <summary>The deck's plan from the overlay polygon (DECISION-239): centre, long axis, length and width, and the height above the ground.</summary>
     internal sealed record Layout(PlanFrame Frame, float Length, float Width, float Height)
     {
         /// <summary>The deck's plan outline (the overlay polygon), counter-clockwise in the frame.</summary>

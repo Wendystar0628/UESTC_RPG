@@ -17,7 +17,7 @@ namespace Campus.Gen.Maps.Qingshuihe.CenterEast.Wenke;
 /// from it to the road junction, the friendship tree's three timber stakes and green trunk cloth (the camphor itself is
 /// game/gen/vegetation/'s, at the registered point), and the granite landscape stone beside it with the gold original emblem on its
 /// dressed face (ART-STYLE). The lawn's middle and the 2.5 m outside the door stay clear. The paving, the tree and the
-/// stone stand where the overlay registered them, read back by ID (D-239); modelling sizes in <see cref="F"/>, <see cref="K"/>.
+/// stone stand where the overlay registered them, read back by ID (DECISION-239); modelling sizes in <see cref="F"/>, <see cref="K"/>.
 /// </summary>
 public sealed class WenkeForecourtSite : ZoneSite
 {

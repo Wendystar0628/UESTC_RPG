@@ -73,7 +73,7 @@
         "highway": "pedestrian",
         "walkNetwork": "main"
       },
-      "note": "设计增补（MAP-QSH-ADDITIONS 转角口袋绿地、§7 game/gen/maps/qingshuihe/public/）：丹桂路南端与湿地北缘东西向干道 qsh:source:way:544161582 的丁字路口（约 (−116, −386)）以南，沿路北侧人行道 qsh:source:way:568042667 南沿的草地上，北部生活区与湿地公园、西门桥头之间。从西门桥头进校、从北区食堂往湿地和科研区走的人都经过这个路口；路口一带不属于任何区包已认领的楼、组团或广场（丹桂路的行道树与设计步道归 game/gen/maps/qingshuihe/north/，湿地归 game/gen/maps/qingshuihe/west/，本处都不碰），归 game/gen/maps/qingshuihe/public/（D-185）。一块直径 7.2 m 的圆形铺装（game/gen/ground/ 按广场铺，花岗岩收边），贴着路口但不压车道和人行道，人从路口一步就进来，是一处能停下来的地方。远处参照：越过路口往东北看丹桂路的桂花列和西北餐厅；背后往西南是湿地的水杉林；沿人行道走过时，先看见红枫在铺装上的长影，再看见树下的弧凳。默认状态：弧凳背面朝西南受光，树影长长地落在铺装上；夜间月光（孤树成剪影），无新增灯具；四季接季。walk：可走。",
+      "note": "设计增补（MAP-QSH-ADDITIONS 转角口袋绿地、§7 game/gen/maps/qingshuihe/public/）：丹桂路南端与湿地北缘东西向干道 qsh:source:way:544161582 的丁字路口（约 (−116, −386)）以南，沿路北侧人行道 qsh:source:way:568042667 南沿的草地上，北部生活区与湿地公园、西门桥头之间。从西门桥头进校、从北区食堂往湿地和科研区走的人都经过这个路口；路口一带不属于任何区包已认领的楼、组团或广场（丹桂路的行道树与设计步道归 game/gen/maps/qingshuihe/north/，湿地归 game/gen/maps/qingshuihe/west/，本处都不碰），归 game/gen/maps/qingshuihe/public/（DECISION-185）。一块直径 7.2 m 的圆形铺装（game/gen/ground/ 按广场铺，花岗岩收边），贴着路口但不压车道和人行道，人从路口一步就进来，是一处能停下来的地方。远处参照：越过路口往东北看丹桂路的桂花列和西北餐厅；背后往西南是湿地的水杉林；沿人行道走过时，先看见红枫在铺装上的长影，再看见树下的弧凳。默认状态：弧凳背面朝西南受光，树影长长地落在铺装上；夜间月光（孤树成剪影），无新增灯具；四季接季。walk：可走。",
       "geometry": {
         "type": "polygon",
         "rings": {

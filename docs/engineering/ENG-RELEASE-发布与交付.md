@@ -42,7 +42,7 @@ paths: ["scripts/requirements.*", "game/testing/**", "game/data/build-code-finge
 ## 1 版本号与构建信息
 
 - **版本号**：`version.txt` 一行 `主.次.修订`，只由主会话在发版时改。
-- **引擎与框架版本**：Godot 4.7.2 与 net10.0（C# 14）以 `tools/godot-version.txt`、`global.json`、csproj 为准，三处一致，门禁比对引擎 `--version`；升级单独评估，经主会话（D-177，ENG-BUDGET-RULES §1 第 10 条），升级后按 `docs/godot-api/README.md` 重新生成 API 参考并通知各施工方。导出链的验证见 ENG-ARCH §8，导出模板的下载见 WF-RULE §6。
+- **引擎与框架版本**：Godot 4.7.2 与 net10.0（C# 14）以 `tools/godot-version.txt`、`global.json`、csproj 为准，三处一致，门禁比对引擎 `--version`；升级单独评估，经主会话（DECISION-177，ENG-BUDGET-RULES §1 第 10 条），升级后按 `docs/godot-api/README.md` 重新生成 API 参考并通知各施工方。导出链的验证见 ENG-ARCH §8，导出模板的下载见 WF-RULE §6。
 - **构建信息**写作 `<版本>+<提交>`；工作区有未提交改动时提交号带 `-dirty`，带 `-dirty` 的构建不对外发布。
 - **谁读它**：开始页版本行、存档 meta 的 `build`、日志第一行与诊断摘要、两个压缩包的文件名（只取版本号）。
 - **兼容性**只看存档自己的各层版本号（SYS-SAVE-FORMAT §1.4）。拿到诊断包或存档，按里面的提交号检出代码即可复现。
@@ -56,7 +56,7 @@ paths: ["scripts/requirements.*", "game/testing/**", "game/data/build-code-finge
 ## 3 导出与发布
 
 1. **准备**：主会话在主检出的 `main` 上改 `version.txt`，提交并推送；工作区必须干净。
-2. **导出**（主线之后）：运行 `scripts/release/` 的导出入口，一条命令从编译做到压缩包，中间用收口预烘的同一入口烘好全图缓存放进安装包（D-165）：构建信息与 `LICENSES.txt`、7-Zip 打包 `UESTC-<版本>-win64.7z`、附上地图数据包（§5）；产物放仓库里不进 git 的 `build/`。
+2. **导出**（主线之后）：运行 `scripts/release/` 的导出入口，一条命令从编译做到压缩包，中间用收口预烘的同一入口烘好全图缓存放进安装包（DECISION-165）：构建信息与 `LICENSES.txt`、7-Zip 打包 `UESTC-<版本>-win64.7z`、附上地图数据包（§5）；产物放仓库里不进 git 的 `build/`。
 3. **检查**：G6 通过（体积与许可，ENG-GATES §1），两个包的文件名版本号与 `version.txt` 一致。
 4. **发布**：在这个提交上打标签 `v<版本>` 并推送，在 GitHub 发布页上传两个包，说明里写版本号、构建信息和 §4 的更新方法。
 - **导出设置**：导出预设开 Shader Baker（Direct3D 12，ENG-PERF §2、ENG-BUDGET-RULES §2）。
@@ -90,7 +90,7 @@ paths: ["scripts/requirements.*", "game/testing/**", "game/data/build-code-finge
 
 ## 7 许可
 
-各部分许可如下（D-170）；对外的权威文本是仓库根的 `LICENSE` 和 `README.md` 的"许可"一段，由主会话维护。
+各部分许可如下（DECISION-170）；对外的权威文本是仓库根的 `LICENSE` 和 `README.md` 的"许可"一段，由主会话维护。
 
 | 内容 | 许可 | 写在哪 |
 | --- | --- | --- |
@@ -101,7 +101,7 @@ paths: ["scripts/requirements.*", "game/testing/**", "game/data/build-code-finge
 
 - **插件清单**：`game/addons/` 与 `third_party.json`（名称、版本、提交、许可证、哈希）；插件须声明支持当前小版本；NuGet 包在 `Directory.Packages.props` 集中锁版本。
 - **第三方许可白名单**：插件与第三方代码只收 MIT、Apache、BSD、ISC、OFL。例外：只在开发机上运行的工具链依赖（如 pyproj 带进来的 certifi，MPL-2.0）可以用 MPL-2.0，条件是不进游戏导出、不把源码或库文件放进仓库，并在 `third_party.json` 里标为仅开发用；音频素材按 SYS-AUDIO §8 登记。
-- **不是校方作品**：`README.md` 开头和每个版本的发布说明都写明这是个人创作，与电子科技大学没有关联；场景里的校徽、红十字换成原创图形（D-065、ART-STYLE §4）。
+- **不是校方作品**：`README.md` 开头和每个版本的发布说明都写明这是个人创作，与电子科技大学没有关联；场景里的校徽、红十字换成原创图形（DECISION-065、ART-STYLE §4）。
 - **说法一致**：`README.md`、许可页、`LICENSES.txt`、地图数据包的 `README.txt` 对同一类内容写同一种许可；改许可时先改 `LICENSE` 与 `README.md`，再同步其余几处。
 
 ### 7.1 署名、许可页、窗口标题与图标

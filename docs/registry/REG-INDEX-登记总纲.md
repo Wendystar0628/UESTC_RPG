@@ -3,7 +3,7 @@ id: REG-INDEX
 title: 登记总纲
 category: registry
 summary: 登记域总纲：按编号或按词查的登记：决策与术语
-keywords: [登记, 登记总纲, 文档树, REG, 决策, 术语表, D 编号]
+keywords: [登记, 登记总纲, 文档树, REG, 决策, 术语表, 决策号]
 depends: [CORE-INDEX]
 related: []
 contracts: []
@@ -20,7 +20,7 @@ paths: ["docs/registry/**"]
 
 ## 0 结论
 
-1. **决策按 D 编号查**（REG-DECISIONS），术语按词查（REG-GLOSSARY）；规则本身以各条指向的文档为准。
+1. **决策按决策号 DECISION-nnn 查**（REG-DECISIONS），术语按词查（REG-GLOSSARY）；规则本身以各条指向的文档为准。
 2. **每条只写一行**，不受单份体量上限约束。
 3. **登记只记现行结果**：决策有变时改写原行，不写来由与过程；术语写统一的解释，规则细节在它指向的文档。
 

@@ -14,7 +14,7 @@ internal static class SixLayout
     /// <summary>One stone block: its entity, its source part, its window grid key and, for C only, its own floors above the base.</summary>
     internal sealed record Block(string Entity, string Part, string Key, int? Fixed = null)
     {
-        /// <summary>Floors above the glass base: the entity's storeys in the world model less the base (D-239), or C's own count.</summary>
+        /// <summary>Floors above the glass base: the entity's storeys in the world model less the base (DECISION-239), or C's own count.</summary>
         public int Upper(IWorldModel world)
         {
             if (Fixed is { } floors) return floors;

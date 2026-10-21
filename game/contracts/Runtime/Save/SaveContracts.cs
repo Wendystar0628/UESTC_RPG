@@ -129,6 +129,6 @@ public interface ISaveService                         // Kernel 服务（game/ke
     // seed 为 null 时取一次熵（G4 唯一的熵源例外）；start 为 null 时取本图的 newGameStart（SYS-SAVE）
     Task<SaveResult> FlushForQuit(SaveReason r, TimeSpan timeout);
     // r 只能是 Quit 或 ToTitle；旧代不受影响。Saved、Disabled、Deferred（有意不写）可以直接退出；
-    // Failed（写盘出错、读回校验不符、超时）不退出，由 IAppFlow 让观者选重试、返回游戏或仍然退出（SYS-SAVE、SYS-SAVE，D-171）
+    // Failed（写盘出错、读回校验不符、超时）不退出，由 IAppFlow 让观者选重试、返回游戏或仍然退出（SYS-SAVE、SYS-SAVE，DECISION-171）
     byte[]? Thumbnail(SlotId s);                      // 最新可读一代的 WebP 字节，界面自己解码（SYS-SAVE）
 }

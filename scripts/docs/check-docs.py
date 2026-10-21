@@ -103,7 +103,7 @@ for code, d in docs.items():
     elif not re.search(r'(?<![A-Z0-9-])%s(?![A-Z0-9-])' % re.escape(code), index1):
         bad.append((code, 'tree', 'CORE-INDEX §1 没有列出它'))
 
-# 便于按需查阅（D-178）：规范文档要有 keywords、查阅行、§0 和 §0 末尾的接入要点
+# 便于按需查阅（DECISION-178）：规范文档要有 keywords、查阅行、§0 和 §0 末尾的接入要点
 for code, d in docs.items():
     rel = os.path.relpath(d['path'], D).replace(chr(92), '/')
     if d['fm'].get('category') in RECORDS or (os.path.basename(rel) == 'README.md' and rel != 'README.md'):
