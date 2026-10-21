@@ -1111,11 +1111,11 @@
   - SYS-BORDER §1.1 挡什么（game/gen/maps/qingshuihe/boundary/、SYS-WALK-BOUNDS） · L36 · 499
   - SYS-BORDER §1.2 0.6 m 内的缓停（game/camera/walk/） · L46 · 192
   - SYS-BORDER §1.3 兜底 · L51 · 65
-- SYS-BORDER §2 飞行阻挡（旁观模式） · L55 · 1.6k
+- SYS-BORDER §2 飞行阻挡（旁观模式） · L55 · 1.5k
   - SYS-BORDER §2.1 可达空间 · L57 · 377
   - SYS-BORDER §2.2 缓冲带与推回（SYS-VIEW） · L66 · 436
   - SYS-BORDER §2.3 边缘雾 `edge_fog` · L75 · 426
-  - SYS-BORDER §2.4 参数、合法化与不受约束的镜头 · L82 · 299
+  - SYS-BORDER §2.4 参数、合法化与不受约束的镜头 · L82 · 265
 - SYS-BORDER §3 提示文案与多地图衔接 · L88 · 664
   - SYS-BORDER §3.1 提示文案 · L90 · 316
   - SYS-BORDER §3.2 与多地图、平面地图、存档的衔接 · L101 · 331
@@ -1133,7 +1133,7 @@
 - SYS-GRAPHICS §4 应用方式 · L99 · 465
 - SYS-GRAPHICS §5 自动推荐与自动调节（主线之后） · L109 · 398
 - SYS-GRAPHICS §6 持久化与恢复 · L118 · 305
-- SYS-GRAPHICS §7 画面页 · L124 · 139
+- SYS-GRAPHICS §7 画面页 · L124 · 137
 - SYS-GRAPHICS §8 待验证（P0） · L128 · 304
 
 ## SYS-MAPS · 多地图
@@ -1146,20 +1146,20 @@
 - SYS-MAPS §1 数据归属 · L43 · 957
   - SYS-MAPS §1.1 按图与全局 · L45 · 788
   - SYS-MAPS §1.2 烘焙缓存 · L63 · 158
-- SYS-MAPS §2 地图描述 `map.json` · L68 · 698
-- SYS-MAPS §3 切换 · L80 · 2.7k
-  - SYS-MAPS §3.1 一个 World3D，先卸后装 · L84 · 151
-  - SYS-MAPS §3.2 切图的步骤（切图部分主线之后） · L88 · 1.2k
-  - SYS-MAPS §3.3 规则（主线之后） · L102 · 582
-  - SYS-MAPS §3.4 入口 · L111 · 334
-  - SYS-MAPS §3.5 同图重载不泄漏（主线之后） · L120 · 234
-- SYS-MAPS §4 世界状态：时间与季节全局，天气按图求值 · L126 · 612
-- SYS-MAPS §5 相机、行走与安全点（主线之后） · L144 · 430
-- SYS-MAPS §6 归属与 `MapScope` · L155 · 868
-- SYS-MAPS §7 全局参数 `map_rect` · L163 · 686
-- SYS-MAPS §8 内存、包体与单图半径 · L173 · 296
-- SYS-MAPS §9 以后的方向 · L179 · 259
-- SYS-MAPS §10 待验证（P0） · L183 · 261
+- SYS-MAPS §2 地图描述 `map.json` · L68 · 651
+- SYS-MAPS §3 切换 · L79 · 2.7k
+  - SYS-MAPS §3.1 一个 World3D，先卸后装 · L83 · 151
+  - SYS-MAPS §3.2 切图的步骤（切图部分主线之后） · L87 · 1.2k
+  - SYS-MAPS §3.3 规则（主线之后） · L101 · 582
+  - SYS-MAPS §3.4 入口 · L110 · 334
+  - SYS-MAPS §3.5 同图重载不泄漏（主线之后） · L119 · 234
+- SYS-MAPS §4 世界状态：时间与季节全局，天气按图求值 · L125 · 612
+- SYS-MAPS §5 相机、行走与安全点（主线之后） · L143 · 430
+- SYS-MAPS §6 归属与 `MapScope` · L154 · 868
+- SYS-MAPS §7 全局参数 `map_rect` · L162 · 686
+- SYS-MAPS §8 内存、包体与单图半径 · L172 · 296
+- SYS-MAPS §9 以后的方向 · L178 · 259
+- SYS-MAPS §10 待验证（P0） · L182 · 261
 
 ## SYS-MOTION · 动态与事件
 
@@ -1302,22 +1302,22 @@
 
 ## SYS-TITLE · 开始页与启动
 
-`docs/systems/SYS-TITLE-开始页与启动.md` · 8.7k 字 · 冷启动扉页与失败页、开始页（扉页静帧、菜单、片名块）与出静帧的 T0 机位和云卡、从双击起的并行加载与预载、各应用状态下的约定、新游戏与继续与返回标题的加载界面、多地图登记
-关键词：开始页、标题页、主菜单、扉页、静帧、启动失败页、T0、云隙望穹、云卡、片名块、应用状态、加载界面、进度条、新游戏、继续、返回标题、并行加载、预载
+`docs/systems/SYS-TITLE-开始页与启动.md` · 7.2k 字 · 冷启动扉页与失败页、开始页（扉页、菜单、片名块）、从双击起的并行加载与预载、各应用状态下的约定、新游戏与继续与返回标题的加载界面、多地图
+关键词：开始页、标题页、主菜单、扉页、启动失败页、片名块、应用状态、加载界面、进度条、新游戏、继续、返回标题、并行加载、预载
 
-- SYS-TITLE §0 结论 · L22 · 1.1k
-  - ★ SYS-TITLE §0.1 接入要点 · L30 · 528
-- SYS-TITLE §1 启动序列与扉页 · L41 · 1.6k
-- SYS-TITLE §2 开始页 · L69 · 2.0k
-  - SYS-TITLE §2.1 出扉页静帧的 T0 机位"云隙望穹" · L71 · 803
-  - SYS-TITLE §2.2 菜单 · L83 · 482
-  - SYS-TITLE §2.3 片名块 · L91 · 374
-  - SYS-TITLE §2.4 首次启动与再次启动 · L99 · 337
-- SYS-TITLE §3 应用状态下的约定 · L106 · 2.2k
-  - SYS-TITLE §3.1 进入游戏与返回标题 · L121 · 1.4k
-- SYS-TITLE §4 多地图 · L136 · 240
-- SYS-TITLE §5 不做的事 · L142 · 170
-- SYS-TITLE §6 待验证 · L148 · 161
+- SYS-TITLE §0 结论 · L22 · 896
+  - ★ SYS-TITLE §0.1 接入要点 · L29 · 420
+- SYS-TITLE §1 启动序列与扉页 · L38 · 1.3k
+- SYS-TITLE §2 开始页 · L60 · 1.4k
+  - SYS-TITLE §2.1 扉页 · L62 · 203
+  - SYS-TITLE §2.2 菜单 · L68 · 495
+  - SYS-TITLE §2.3 片名块 · L76 · 374
+  - SYS-TITLE §2.4 首次启动与再次启动 · L84 · 302
+- SYS-TITLE §3 应用状态下的约定 · L91 · 2.2k
+  - SYS-TITLE §3.1 进入游戏与返回标题 · L106 · 1.4k
+- SYS-TITLE §4 多地图 · L121 · 124
+- SYS-TITLE §5 不做的事 · L126 · 170
+- SYS-TITLE §6 待验证 · L132 · 108
 
 ## SYS-VIEW · 观察模式与旁观漫游
 
@@ -1332,7 +1332,7 @@
   - SYS-VIEW §2.2 鼠标与碰撞 · L59 · 149
   - SYS-VIEW §2.3 活动范围 · L64 · 235
   - SYS-VIEW §2.4 初始位置 · L72 · 452
-  - SYS-VIEW §2.5 镜头不会自己动 · L81 · 284
+  - SYS-VIEW §2.5 镜头不会自己动 · L81 · 282
   - SYS-VIEW §2.6 操作说明与提示 · L89 · 209
 - SYS-VIEW §3 命令行参数 · L98 · 197
 - SYS-VIEW §4 环境痕迹与平面地图的分工 · L102 · 231
@@ -1519,7 +1519,7 @@
   - UI-VISUAL-COMPONENTS §4.3 时间环 · L80 · 351
   - UI-VISUAL-COMPONENTS §4.4 天气签条、速度条与到达标题 · L89 · 306
   - UI-VISUAL-COMPONENTS §4.5 存档卡"存储模组"、等待灯与加载界面 · L95 · 691
-- UI-VISUAL-COMPONENTS §5 画面布局 · L103 · 842
+- UI-VISUAL-COMPONENTS §5 画面布局 · L103 · 836
 - UI-VISUAL-COMPONENTS §6 待验证 · L120 · 162
 
 ## UI-VISUAL-MOTION · 界面动效与减少动态效果
@@ -1633,17 +1633,17 @@
 
 ## ENG-GATES-SHOTS · 审查视角与截图
 
-`docs/engineering/ENG-GATES-SHOTS-审查视角与截图.md` · 6.4k 字 · 命令行规则与截图默认串、截图方式、固定机位表；V/E/T 视角表、飞行与行走路线、时季抽样与巡检点轮换（主线之后）
-关键词：审查视角、截图默认串、命令行规则、截图方式、截图就绪、流式屏障、录像、视角表、V1、E1、T0、飞行路线、压力路线、点位 P00–P23、行走路线 W1–W14、时季抽样、巡检点轮换、review.json
+`docs/engineering/ENG-GATES-SHOTS-审查视角与截图.md` · 6.2k 字 · 命令行规则与截图默认串、截图方式、固定机位表；V/E/T 视角表、飞行与行走路线、时季抽样与巡检点轮换（主线之后）
+关键词：审查视角、截图默认串、命令行规则、截图方式、截图就绪、流式屏障、录像、视角表、V1、E1、飞行路线、压力路线、点位 P00–P23、行走路线 W1–W14、时季抽样、巡检点轮换、review.json
 
 - ENG-GATES-SHOTS §0 结论 · L21 · 625
   - ★ ENG-GATES-SHOTS §0.1 接入要点 · L29 · 306
-- ENG-GATES-SHOTS §1 审查视角 · L35 · 4.7k
+- ENG-GATES-SHOTS §1 审查视角 · L35 · 4.5k
   - ENG-GATES-SHOTS §1.1 命令行规则与截图默认串 · L39 · 721
   - ENG-GATES-SHOTS §1.2 截图方式 · L54 · 990
-  - ENG-GATES-SHOTS §1.3 固定机位表与审查视角表 · L66 · 1.8k
-  - ENG-GATES-SHOTS §1.4 路线与点位（主线之后） · L98 · 744
-  - ENG-GATES-SHOTS §1.5 时季抽样（主线之后） · L108 · 382
+  - ENG-GATES-SHOTS §1.3 固定机位表与审查视角表 · L66 · 1.7k
+  - ENG-GATES-SHOTS §1.4 路线与点位（主线之后） · L97 · 744
+  - ENG-GATES-SHOTS §1.5 时季抽样（主线之后） · L107 · 350
 
 ## ENG-GATES-VETO · 一票否决与收尾清单
 
@@ -1926,7 +1926,7 @@
 
 ## STD-CONVENTIONS · 坐标单位与命名约定
 
-`docs/standards/STD-CONVENTIONS-坐标单位与命名约定.md` · 11.6k 字 · 跨文档共同约定：坐标与单位、方位角、时间写法，编号体系与命名（地图与实体 ID、色名、枚举纪律、持久化 ID、文件与编号格式）、确定性原则、数据路径
+`docs/standards/STD-CONVENTIONS-坐标单位与命名约定.md` · 11.5k 字 · 跨文档共同约定：坐标与单位、方位角、时间写法，编号体系与命名（地图与实体 ID、色名、枚举纪律、持久化 ID、文件与编号格式）、确定性原则、数据路径
 关键词：约定、坐标系、单位、角度、方位角、时间写法、编号体系、命名、地图 ID、实体 ID、色名、枚举纪律、持久化 ID、文件命名、提交说明格式、确定性、数据路径
 
 - STD-CONVENTIONS §0 结论 · L22 · 805
@@ -1938,15 +1938,15 @@
 - STD-CONVENTIONS §2 时间写法 · L68 · 495
 - STD-CONVENTIONS §3 标识与命名 · L77 · 6.3k
   - STD-CONVENTIONS §3.1 地图、实体与世界文件 · L79 · 846
-  - STD-CONVENTIONS §3.2 编号体系 · L93 · 926
-  - STD-CONVENTIONS §3.3 同号不同义的读法 · L116 · 715
-  - STD-CONVENTIONS §3.4 命名写法 · L129 · 1.2k
-  - STD-CONVENTIONS §3.5 色名 · L150 · 364
-  - STD-CONVENTIONS §3.6 枚举与扩展纪律 · L157 · 569
-  - STD-CONVENTIONS §3.7 持久化 ID 的稳定 · L168 · 408
-  - STD-CONVENTIONS §3.8 文件与编号的命名格式 · L177 · 1.3k
-- STD-CONVENTIONS §4 确定性 · L197 · 214
-- STD-CONVENTIONS §5 路径 · L204 · 186
+  - STD-CONVENTIONS §3.2 编号体系 · L93 · 892
+  - STD-CONVENTIONS §3.3 同号不同义的读法 · L115 · 696
+  - STD-CONVENTIONS §3.4 命名写法 · L128 · 1.2k
+  - STD-CONVENTIONS §3.5 色名 · L149 · 364
+  - STD-CONVENTIONS §3.6 枚举与扩展纪律 · L156 · 569
+  - STD-CONVENTIONS §3.7 持久化 ID 的稳定 · L167 · 408
+  - STD-CONVENTIONS §3.8 文件与编号的命名格式 · L176 · 1.3k
+- STD-CONVENTIONS §4 确定性 · L196 · 214
+- STD-CONVENTIONS §5 路径 · L203 · 186
 
 ## STD-DOC · 文档写法
 
@@ -2004,7 +2004,7 @@
 
 - REG-DECISIONS-SYSTEMS §0 结论 · L21 · 126
   - ★ REG-DECISIONS-SYSTEMS §0.1 接入要点 · L25 · 56
-- REG-DECISIONS-SYSTEMS §1 界面 · L29 · 4.1k
+- REG-DECISIONS-SYSTEMS §1 界面 · L29 · 4.2k
 - REG-DECISIONS-SYSTEMS §2 存档 · L62 · 1.6k
 - REG-DECISIONS-SYSTEMS §3 音频 · L81 · 2.2k
 - REG-DECISIONS-SYSTEMS §4 性能与画面设置 · L103 · 3.5k
@@ -2025,7 +2025,7 @@
 
 ## REG-GLOSSARY · 术语表
 
-`docs/registry/REG-GLOSSARY-术语表.md` · 20.3k 字 · 文档里专有说法的统一解释，按领域分组，每条一两句并给出细则所在的小节
+`docs/registry/REG-GLOSSARY-术语表.md` · 20.1k 字 · 文档里专有说法的统一解释，按领域分组，每条一两句并给出细则所在的小节
 关键词：术语、术语表、名词解释、同名异义、缩写、别名
 
 - REG-GLOSSARY §0 用法 · L21 · 261
@@ -2038,10 +2038,10 @@
 - REG-GLOSSARY §6 室内与门 · L138 · 981
 - REG-GLOSSARY §7 观察模式、行走与跳转 · L154 · 1.4k
 - REG-GLOSSARY §8 平面地图与传送 · L178 · 944
-- REG-GLOSSARY §9 开始页与存档 · L195 · 1.2k
-- REG-GLOSSARY §10 多地图 · L215 · 620
-- REG-GLOSSARY §11 界面 · L227 · 1.4k
-- REG-GLOSSARY §12 音频 · L254 · 1.1k
-- REG-GLOSSARY §13 画面设置与性能 · L275 · 1.7k
-- REG-GLOSSARY §14 工程与流程 · L302 · 2.4k
-- REG-GLOSSARY §15 同名异义 · L339 · 1.5k
+- REG-GLOSSARY §9 开始页与存档 · L195 · 1.0k
+- REG-GLOSSARY §10 多地图 · L213 · 620
+- REG-GLOSSARY §11 界面 · L225 · 1.4k
+- REG-GLOSSARY §12 音频 · L252 · 1.1k
+- REG-GLOSSARY §13 画面设置与性能 · L273 · 1.7k
+- REG-GLOSSARY §14 工程与流程 · L300 · 2.4k
+- REG-GLOSSARY §15 同名异义 · L337 · 1.5k

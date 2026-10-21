@@ -75,7 +75,6 @@ paths: ["game/data/maps/**", "game/data/maps/index.json", "game/data/maps/*/map.
 - **世界规则**：时间规则只有 `Shared` 一种；本图默认状态是新游戏建实例时的状态，也是"回到本图默认状态"的目标。默认状态的数值只在 SYS-TIME §1.1；清水河上按钮名是"回到落金初灯"，新游戏直接建在这个状态（SYS-TITLE §3.1）。
 - **倒影湖**写实体 ID，列表顺序即湖号；清水河有西湖和东湖两个。
 - `map.json` 不写预算（预算不记在图里，ENG-BUDGET §3），也不写允许的季节（季节全局共享、任选，SYS-MOTION §3）；以后要钉住季节的图用 `fixed`。
-- `title`（出扉页静帧的 T0 位姿与云卡布局）的字段以 SYS-TITLE 为准。
 
 ## 3 切换
 

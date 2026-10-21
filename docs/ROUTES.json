@@ -965,12 +965,6 @@
   },
   {
    "docs": [
-    "SYS-TITLE"
-   ],
-   "glob": "game/data/maps/*/title-clouds.json"
-  },
-  {
-   "docs": [
     "MAP-QSH-VEGETATION",
     "WLD-VEGETATION"
    ],
@@ -1661,18 +1655,6 @@
   },
   {
    "docs": [
-    "SYS-TITLE"
-   ],
-   "glob": "game/kernel/boot/TitleCloudNode.cs"
-  },
-  {
-   "docs": [
-    "SYS-TITLE"
-   ],
-   "glob": "game/kernel/boot/TitleCloudNode.cs.uid"
-  },
-  {
-   "docs": [
     "SYS-WALK-BOUNDS"
    ],
    "glob": "game/kernel/collision/**"
@@ -2102,18 +2084,6 @@
     "ART-STYLE-SHADING"
    ],
    "glob": "game/style/shaders/**"
-  },
-  {
-   "docs": [
-    "SYS-TITLE"
-   ],
-   "glob": "game/style/shaders/cine_cloud.gdshader"
-  },
-  {
-   "docs": [
-    "SYS-TITLE"
-   ],
-   "glob": "game/style/shaders/cine_cloud.gdshader.uid"
   },
   {
    "docs": [
