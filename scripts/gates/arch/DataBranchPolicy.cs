@@ -1,5 +1,5 @@
 // Recognizes identity and format branches from declaration attributes and their data flow.
-// 用法：本批由 SemanticPolicyRegressionTests 调用；全仓入口待 TOOL-227 接入。
+// 用法：由 SemanticPolicyGateTests 经 scripts/gate.ps1 的 G4 入口调用。
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
@@ -137,18 +137,38 @@ internal sealed class DataBranchPolicy(SourceFile file)
 
     private bool StringLiteral(ExpressionSyntax expression, HashSet<ISymbol> visiting)
     {
+        var model = expression.SyntaxTree == file.Tree ? file.Model : file.Model.Compilation.GetSemanticModel(expression.SyntaxTree);
         if (expression is LiteralExpressionSyntax literal && literal.IsKind(SyntaxKind.StringLiteralExpression)) return true;
         if (expression is ParenthesizedExpressionSyntax group) return StringLiteral(group.Expression, visiting);
         if (expression is CastExpressionSyntax cast) return StringLiteral(cast.Expression, visiting);
-        if (expression is ObjectCreationExpressionSyntax or ImplicitObjectCreationExpressionSyntax && Facts(expression).HasFlag(Fact.Id) &&
-            file.Model.GetOperation(expression) is IObjectCreationOperation created)
-            return created.Arguments.Any(argument => argument.Value.Syntax is ExpressionSyntax value && StringLiteral(value, visiting));
+        if (expression is ObjectCreationExpressionSyntax or ImplicitObjectCreationExpressionSyntax &&
+            Facts(model, expression, new HashSet<ISymbol>(SymbolEqualityComparer.Default)).HasFlag(Fact.Id) &&
+            model.GetOperation(expression) is IObjectCreationOperation created)
+            return created.Arguments.Any(argument => StringLiteral(argument, visiting));
         // Catalog fields/properties remain legal; hiding a literal in a local does not change its meaning.
-        if (file.Model.GetSymbolInfo(expression).Symbol is ILocalSymbol local && visiting.Add(local))
+        if (model.GetSymbolInfo(expression).Symbol is ILocalSymbol local && visiting.Add(local))
             return local.DeclaringSyntaxReferences.Any(reference => reference.GetSyntax() is VariableDeclaratorSyntax { Initializer: { } initializer } &&
                 StringLiteral(initializer.Value, visiting));
         return false;
     }
+
+    private bool StringLiteral(IOperation operation, HashSet<ISymbol> visiting) => operation switch
+    {
+        // Omitted arguments keep the default declaration's meaning, including named catalog constants.
+        IArgumentOperation { ArgumentKind: ArgumentKind.DefaultValue, Parameter: { } parameter } =>
+            parameter.DeclaringSyntaxReferences.Length == 0 ? parameter.HasExplicitDefaultValue && parameter.ExplicitDefaultValue is string :
+                parameter.DeclaringSyntaxReferences.Select(reference => reference.GetSyntax()).OfType<ParameterSyntax>()
+                    .Any(declaration => declaration.Default is { } value && StringLiteral(value.Value, visiting)),
+        IArgumentOperation argument => StringLiteral(argument.Value, visiting),
+        IConversionOperation conversion => StringLiteral(conversion.Operand, visiting),
+        IArrayCreationOperation array => array.Initializer is { } initializer && StringLiteral(initializer, visiting),
+        IArrayInitializerOperation initializer => initializer.ElementValues.Any(value => StringLiteral(value, visiting)),
+        ICollectionExpressionOperation collection => collection.Elements.Any(value => StringLiteral(value, visiting)),
+        ISpreadOperation spread => StringLiteral(spread.Operand, visiting),
+        ILiteralOperation literal => literal.ConstantValue.HasValue && literal.ConstantValue.Value is string,
+        IDefaultValueOperation => false,
+        _ => !operation.IsImplicit && operation.Syntax is ExpressionSyntax expression && StringLiteral(expression, visiting)
+    };
 
     private bool RejectsOnly(ExpressionSyntax expression)
     {

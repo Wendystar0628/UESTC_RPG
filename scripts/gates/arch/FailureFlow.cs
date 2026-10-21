@@ -1,5 +1,5 @@
 // Follows caught exception objects through structured paths to throws or documented receivers.
-// 用法：本批由 SemanticPolicyRegressionTests 调用；全仓入口待 TOOL-227 接入。
+// 用法：由 SemanticPolicyGateTests 经 scripts/gate.ps1 的 G4 入口调用。
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
@@ -201,25 +201,20 @@ internal sealed class FailureFlow(SourceFile file, CatchClauseSyntax? origin, Ha
         }
         if (expression is AssignmentExpressionSyntax assignment)
         {
-            var retains = Retains(assignment.Right, state);
+            var retains = Retains(assignment.Right, state) ||
+                assignment.IsKind(SyntaxKind.CoalesceAssignmentExpression) && Retains(assignment.Left, state);
             var paths = Expression(assignment.Right, state);
             foreach (var path in paths) Set(assignment.Left, retains, path);
             return paths;
         }
         if (expression is InvocationExpressionSyntax call && file.Model.GetOperation(call) is IInvocationOperation operation)
         {
-            foreach (var argument in operation.Arguments)
-                if (argument.Parameter is { } parameter && IsHandler(parameter, documents) &&
-                    argument.Value.Syntax is ExpressionSyntax value && Retains(value, state)) state.Handled = true;
-            if (operation.Instance?.Syntax is ExpressionSyntax receiver && operation.TargetMethod.Name is "Add" or "AddRange" or "Enqueue" or "Push" &&
-                operation.TargetMethod.ContainingNamespace.ToDisplayString().StartsWith("System.Collections", StringComparison.Ordinal) &&
-                operation.Arguments.Any(argument => argument.Value.Syntax is ExpressionSyntax value && Retains(value, state)))
-                Set(receiver, true, state);
-            if (operation.Instance?.Syntax is ExpressionSyntax cleared && operation.TargetMethod.Name == "Clear" &&
-                operation.TargetMethod.ContainingNamespace.ToDisplayString().StartsWith("System.Collections", StringComparison.Ordinal))
-                Set(cleared, false, state);
-            foreach (var argument in operation.Arguments.Where(argument => argument.Parameter?.RefKind is RefKind.Ref or RefKind.Out))
-                if (argument.Value.Syntax is ExpressionSyntax changed) Set(changed, false, state);
+            // Receiver/argument effects happen before delivery or collection mutation.
+            List<PathState> paths = call.Expression is MemberAccessExpressionSyntax member ? Expression(member.Expression, state) : [state];
+            foreach (var argument in call.ArgumentList.Arguments)
+                paths = paths.SelectMany(path => Expression(argument.Expression, path)).ToList();
+            foreach (var path in paths.Where(path => path.Exit == End.Running && !path.Handled)) ApplyCall(operation, path);
+            return paths;
         }
         // Descend only into expressions executed here; lambda/local-function bodies execute elsewhere.
         var current = new List<PathState> { state };
@@ -229,6 +224,33 @@ internal sealed class FailureFlow(SourceFile file, CatchClauseSyntax? origin, Ha
             current = current.SelectMany(path => Expression(child, path)).ToList();
         return current;
     }
+
+    private void ApplyCall(IInvocationOperation operation, PathState state)
+    {
+        var method = operation.TargetMethod;
+        var retainsArgument = operation.Arguments.Any(argument => ExceptionCarrier(argument.Parameter?.Type) && Retains(argument.Value, state));
+        foreach (var argument in operation.Arguments)
+            if (argument.Parameter is { } parameter && IsHandler(parameter, documents) && Retains(argument.Value, state)) state.Handled = true;
+        if (method.Name is "SetException" or "TrySetException" &&
+            (BclMethod(method, "System.Threading.Tasks.TaskCompletionSource") || BclMethod(method, "System.Threading.Tasks.TaskCompletionSource`1")) &&
+            retainsArgument) state.Handled = true;
+        if (method.Name == "Throw" && BclMethod(method, "System.Runtime.ExceptionServices.ExceptionDispatchInfo"))
+        {
+            state.Handled = method.IsStatic ? retainsArgument : operation.Instance is { } dispatched && Retains(dispatched, state);
+            state.Exit = End.Throw;
+        }
+        if (operation.Instance?.Syntax is ExpressionSyntax receiver && method.Name is "Add" or "AddRange" or "Enqueue" or "Push" &&
+            method.ContainingNamespace.ToDisplayString().StartsWith("System.Collections", StringComparison.Ordinal) &&
+            operation.Arguments.Any(argument => Retains(argument.Value, state))) Set(receiver, true, state);
+        if (operation.Instance?.Syntax is ExpressionSyntax cleared && method.Name == "Clear" &&
+            method.ContainingNamespace.ToDisplayString().StartsWith("System.Collections", StringComparison.Ordinal)) Set(cleared, false, state);
+        foreach (var argument in operation.Arguments.Where(argument => argument.Parameter?.RefKind is RefKind.Ref or RefKind.Out))
+            if (argument.Value.Syntax is ExpressionSyntax changed) Set(changed, false, state);
+    }
+
+    private bool BclMethod(IMethodSymbol method, string metadataName) =>
+        !method.ContainingType.Locations.Any(location => location.IsInSource) &&
+        SymbolEqualityComparer.Default.Equals(method.ContainingType.OriginalDefinition, file.Model.Compilation.GetTypeByMetadataName(metadataName));
 
     private bool Retains(ExpressionSyntax expression, PathState state)
     {
@@ -256,15 +278,30 @@ internal sealed class FailureFlow(SourceFile file, CatchClauseSyntax? origin, Ha
                 return file.Model.GetOperation(expression) is IObjectCreationOperation created &&
                     IsException(created.Type) && created.Arguments.Any(argument =>
                         ExceptionCarrier(argument.Parameter?.Type) &&
-                        argument.Value.Syntax is ExpressionSyntax value && Retains(value, state));
+                        Retains(argument.Value, state));
             case InvocationExpressionSyntax call when file.Model.GetOperation(call) is IInvocationOperation invocation:
+                if (invocation.TargetMethod.Name == "Capture" && BclMethod(invocation.TargetMethod, "System.Runtime.ExceptionServices.ExceptionDispatchInfo"))
+                    return invocation.Arguments.Any(argument => Retains(argument.Value, state));
                 if (invocation.TargetMethod.ContainingNamespace.ToDisplayString() == "System.Linq" && ExceptionCarrier(invocation.Type))
-                    return invocation.Arguments.Any(argument => argument.Value.Syntax is ExpressionSyntax value && Retains(value, state)) ||
-                        invocation.Instance?.Syntax is ExpressionSyntax receiver && Retains(receiver, state);
+                    return invocation.Arguments.Any(argument => Retains(argument.Value, state)) ||
+                        invocation.Instance is { } receiver && Retains(receiver, state);
                 return FactoryRetains(invocation, state);
             default: return false;
         }
     }
+
+    private bool Retains(IOperation operation, PathState state) => operation switch
+    {
+        // Expanded params containers and omitted defaults may carry the entire call as Syntax.
+        // Follow their semantic values before returning to source expressions.
+        IConversionOperation conversion => Retains(conversion.Operand, state),
+        IArrayCreationOperation array => array.Initializer is { } initializer && Retains(initializer, state),
+        IArrayInitializerOperation initializer => initializer.ElementValues.Any(value => Retains(value, state)),
+        ICollectionExpressionOperation collection => collection.Elements.Any(value => Retains(value, state)),
+        ISpreadOperation spread => Retains(spread.Operand, state),
+        IDefaultValueOperation => false,
+        _ => !operation.IsImplicit && operation.Syntax is ExpressionSyntax expression && Retains(expression, state)
+    };
 
     private bool FactoryRetains(IInvocationOperation invocation, PathState state)
     {
@@ -272,9 +309,9 @@ internal sealed class FailureFlow(SourceFile file, CatchClauseSyntax? origin, Ha
         if (!IsException(method.ReturnType) || method.IsAbstract ||
             ((method.IsVirtual || method.IsOverride) && !method.IsSealed && !method.ContainingType.IsSealed)) return false;
         var retained = invocation.Arguments.Where(argument => argument.Parameter is { } parameter &&
-            IsException(parameter.Type) && argument.Value.Syntax is ExpressionSyntax value && Retains(value, state))
+            IsException(parameter.Type) && Retains(argument.Value, state))
             .Select(argument => argument.Parameter!.Ordinal + (invocation.TargetMethod.ReducedFrom is null ? 0 : 1)).ToHashSet();
-        if (invocation.TargetMethod.ReducedFrom is not null && invocation.Instance?.Syntax is ExpressionSyntax receiver &&
+        if (invocation.TargetMethod.ReducedFrom is not null && invocation.Instance is { } receiver &&
             IsException(method.Parameters[0].Type) && Retains(receiver, state)) retained.Add(0);
         if (retained.Count == 0 || !factories.Add(method)) return false;
         try
@@ -306,6 +343,9 @@ internal sealed class FailureFlow(SourceFile file, CatchClauseSyntax? origin, Ha
 
     private ObjectReference? Reference(SyntaxNode target)
     {
+        if (target is ParenthesizedExpressionSyntax group) return Reference(group.Expression);
+        if (target is AssignmentExpressionSyntax assignment && assignment.IsKind(SyntaxKind.CoalesceAssignmentExpression))
+            return file.Model.GetSymbolInfo(assignment.Left).Symbol is ILocalSymbol ? Reference(assignment.Left) : null;
         var symbol = target is VariableDeclaratorSyntax variable ? file.Model.GetDeclaredSymbol(variable) : file.Model.GetSymbolInfo(target).Symbol;
         if (symbol is null) return null;
         var receiver = "";
@@ -336,6 +376,7 @@ internal sealed class FailureFlow(SourceFile file, CatchClauseSyntax? origin, Ha
 
     private bool? KnownCondition(ExpressionSyntax condition, PathState state)
     {
+        if (condition is ParenthesizedExpressionSyntax group) return KnownCondition(group.Expression, state);
         if (SourceModel.Constant(file.Model, condition) is bool constant) return constant;
         if (condition is PrefixUnaryExpressionSyntax unary && unary.IsKind(SyntaxKind.LogicalNotExpression))
             return KnownCondition(unary.Operand, state) is { } operand ? !operand : null;
@@ -345,6 +386,15 @@ internal sealed class FailureFlow(SourceFile file, CatchClauseSyntax? origin, Ha
         if (condition is BinaryExpressionSyntax nullCheck && SourceModel.Constant(file.Model, nullCheck.Right) is null &&
             nullCheck.Right.IsKind(SyntaxKind.NullLiteralExpression) && Retains(nullCheck.Left, state))
             return nullCheck.Kind() switch { SyntaxKind.NotEqualsExpression => true, SyntaxKind.EqualsExpression => false, _ => null };
+        if (condition is IsPatternExpressionSyntax match && Retains(match.Expression, state)) return NonNullPattern(match.Pattern);
         return null;
     }
+
+    private static bool? NonNullPattern(PatternSyntax pattern) => pattern switch
+    {
+        ConstantPatternSyntax constant when constant.Expression.IsKind(SyntaxKind.NullLiteralExpression) => false,
+        UnaryPatternSyntax negated when negated.IsKind(SyntaxKind.NotPattern) && NonNullPattern(negated.Pattern) is { } known => !known,
+        ParenthesizedPatternSyntax group => NonNullPattern(group.Pattern),
+        _ => null
+    };
 }

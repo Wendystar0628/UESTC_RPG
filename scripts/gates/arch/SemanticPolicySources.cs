@@ -1,5 +1,5 @@
 // Supplies semantic declarations and production inputs through the existing G4 source boundary.
-// 用法：本批声明识别由语义规则的 SemanticPolicyRegressionTests 用例调用；Load/Documents 的全仓入口待 TOOL-227 接入。
+// 用法：由 SemanticPolicyGateTests 经 scripts/gate.ps1 的 G4 入口调用。
 using System.Text.RegularExpressions;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
@@ -8,8 +8,8 @@ namespace Campus.Arch.Tests;
 
 internal static class SemanticPolicySources
 {
-    private static readonly Lazy<SourceFile[]> Files = new(LoadFiles);
-    private static readonly Lazy<HashSet<string>> DocumentCodes = new(LoadDocuments);
+    private static readonly Lazy<SourceFile[]> Files = new(() => LoadFiles(RepositoryRoot()));
+    private static readonly Lazy<HashSet<string>> DocumentCodes = new(() => LoadDocuments(RepositoryRoot()));
     public static bool Is(AttributeData attribute, string name) => SourceModel.Name(attribute.AttributeClass) == "Campus.Contracts." + name + "Attribute";
     public static bool Has(ISymbol? symbol, string name) => symbol?.GetAttributes().Any(attribute => Is(attribute, name)) == true ||
         symbol is IMethodSymbol method && method.GetReturnTypeAttributes().Any(attribute => Is(attribute, name));
@@ -17,9 +17,10 @@ internal static class SemanticPolicySources
     public static SourceFile[] Load() => Files.Value;
     public static HashSet<string> Documents() => DocumentCodes.Value;
 
-    private static SourceFile[] LoadFiles()
+    private static string RepositoryRoot() => Environment.GetEnvironmentVariable("UESTC_REPOSITORY") ?? ArchitectureTests.FindRepository();
+
+    internal static SourceFile[] LoadFiles(string root)
     {
-        var root = Environment.GetEnvironmentVariable("UESTC_REPOSITORY") ?? ArchitectureTests.FindRepository();
         var handwritten = SourcePolicyGateTests.HandwrittenPaths(root).Where(path => path.EndsWith(".cs", StringComparison.OrdinalIgnoreCase) &&
             (path.StartsWith("game/", StringComparison.Ordinal) || path.StartsWith("scripts/", StringComparison.Ordinal))).ToHashSet(StringComparer.OrdinalIgnoreCase);
         var known = SourceModel.Production.Concat(SourceModel.Tests).ToArray();
@@ -34,9 +35,8 @@ internal static class SemanticPolicySources
             .SelectMany(SemanticBranchSources.Expand).ToArray();
     }
 
-    private static HashSet<string> LoadDocuments()
+    internal static HashSet<string> LoadDocuments(string root)
     {
-        var root = Environment.GetEnvironmentVariable("UESTC_REPOSITORY") ?? ArchitectureTests.FindRepository();
         return Directory.EnumerateFiles(Path.Combine(root, "docs"), "*.md", SearchOption.AllDirectories)
             .Select(path => Regex.Match(File.ReadAllText(path), @"\A\uFEFF?---\r?\n(?:(?!---)[^\n]*\n)*?id:[ \t]*([^\r\n]+)", RegexOptions.CultureInvariant))
             .Where(match => match.Success).Select(match => match.Groups[1].Value.Trim().Trim('"', '\''))
