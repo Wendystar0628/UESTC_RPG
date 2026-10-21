@@ -186,11 +186,7 @@ public sealed class SaveService : ISaveService, IDisposable
             }
             catch (Exception error) when (error is IOException or UnauthorizedAccessException or SaveFormatException or JsonException or ArgumentException or InvalidOperationException)
             {
-                return await OnFrame(() =>
-                {
-                    var result = operation.Fail(error, active, snapshot.Meta.Gen);
-                    Publish(result); return result;
-                }).ConfigureAwait(false);
+                return await WriteFailed(operation, error, active, snapshot.Meta.Gen).ConfigureAwait(false);
             }
             return await OnFrame(() =>
             {
@@ -203,10 +199,19 @@ public sealed class SaveService : ISaveService, IDisposable
         }
         catch (Exception error)
         {
-            return await OnFrame(() => { var result = operation.Fail(error, Active, 0); Publish(result); return result; }).ConfigureAwait(false);
+            return await WriteFailed(operation, error, null, 0).ConfigureAwait(false);
         }
         finally { _operation.Release(); }
     }
+
+    private Task<SaveResult> WriteFailed(SaveWriteOperation operation,
+        [FailureHandler("SYS-SAVE-FLOW")] Exception error, SlotId? slot, ulong generation) => OnFrame(() =>
+    {
+        // Failures before a snapshot resolve Active at the same frame boundary as the published result.
+        var result = operation.Fail(error, slot ?? Active, generation);
+        Publish(result);
+        return result;
+    });
 
     private sealed record Snapshot(SaveMeta Meta, WorldSaveMoment Moment, IReadOnlyList<CapturedSection> Sections,
         IReadOnlyDictionary<string, RawSaveSection> Unknown, byte[]? Thumbnail);
@@ -340,7 +345,7 @@ public sealed class SaveService : ISaveService, IDisposable
             return await Restore(prepared, _options.WriteSlot, LoadScope.Full).ConfigureAwait(false);
         }
         catch (SaveFormatException error) when (_restore?.MutationStarted != true)
-        { return await OnFrame(() => RejectExternalFile(error)).ConfigureAwait(false); }
+        { return await RejectExternalFile(error).ConfigureAwait(false); }
         catch (Exception error) { return await RestoreFailed(null, error).ConfigureAwait(false); }
         finally { await OnFrame(() => _restore?.End()).ConfigureAwait(false); _operation.Release(); }
     }
@@ -447,13 +452,13 @@ public sealed class SaveService : ISaveService, IDisposable
         if (previousMap is { IsCompleted: false }) await Task.WhenAny(previousMap).ConfigureAwait(false);
     }
 
-    private LoadResult RejectExternalFile([FailureHandler("SYS-SAVE-FORMAT")] SaveFormatException error)
+    private Task<LoadResult> RejectExternalFile([FailureHandler("SYS-SAVE-FORMAT")] SaveFormatException error) => OnFrame(() =>
     {
         _restore!.RetainFailure(error);
         var result = new LoadResult(LoadStatus.Corrupt, null, 0, [], _restore.Error!.Message);
         DiagnosticLog.Warning("External save rejected before world mutation.", _restore.Error);
         return result;
-    }
+    });
 
     private Task<LoadResult> RestoreFailed(SlotId? slot, [FailureHandler("SYS-SAVE-FLOW")] Exception error) => OnFrame(() =>
     {

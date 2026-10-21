@@ -59,6 +59,7 @@ public sealed class QualityService : IQualityFrame, IBootParticipant, IAsyncDisp
     private double _debounce;
     private Task _lastSave = Task.CompletedTask;
     private readonly HashSet<Task> _applications = [];
+    private readonly HashSet<Task> _deferredApplications = [];
     private Task? _disposal;
     private bool _disposed;
 
@@ -108,6 +109,8 @@ public sealed class QualityService : IQualityFrame, IBootParticipant, IAsyncDisp
         binding.Lifetime.Cancel();
         binding.Lifetime.Dispose();
         pending?.Completion?.TrySetCanceled(binding.Token);
+        if (binding.Active is { } active && (active.IsCompletedSuccessfully || active.IsCanceled))
+            _deferredApplications.Remove(active);
     }
 
     public ValueTask DisposeAsync()
@@ -119,7 +122,7 @@ public sealed class QualityService : IQualityFrame, IBootParticipant, IAsyncDisp
     private async Task DrainApplications()
     {
         // Snapshot before cancellation can synchronously finish and retire an application.
-        var applications = _applications.ToArray();
+        var applications = _applications.Concat(_deferredApplications).ToArray();
         if (_binding is { } binding) Unbind(binding.Runtime);
         var failures = new List<Exception>();
         foreach (var application in applications)
@@ -127,6 +130,7 @@ public sealed class QualityService : IQualityFrame, IBootParticipant, IAsyncDisp
             try { await application; }
             catch (OperationCanceledException) when (application.IsCanceled) { }
             catch (Exception error) { failures.Add(error); }
+            finally { _deferredApplications.Remove(application); }
         }
         if (failures.Count > 0) throw new AggregateException("Quality shutdown failed.", failures);
     }
@@ -190,13 +194,21 @@ public sealed class QualityService : IQualityFrame, IBootParticipant, IAsyncDisp
     public void Tick(double delta)
     {
         if (_binding is not { } binding) return;
-        if (binding.Active is { IsCompleted: true }) binding.Active = null;
+        if (binding.Active is { IsCompleted: true } completed)
+        {
+            binding.Active = null;
+            _deferredApplications.Remove(completed);
+            if (!completed.IsCanceled) completed.GetAwaiter().GetResult();
+        }
         if (_pending is null || binding.Active is not null || _initializing || binding.Runtime.Transitioning) return;
         _debounce -= Math.Max(0, delta);
         if (_debounce > 0) return;
         var request = _pending;
         _pending = null;
-        binding.Active = Execute(binding, request);
+        var active = Execute(binding, request);
+        binding.Active = active;
+        if (request.Completion is null && !active.IsCompletedSuccessfully && !active.IsCanceled)
+            _deferredApplications.Add(active);
     }
 
     private async Task<ApplyResult> ApplyDuringBoot(Binding binding, QualityProfile profile, ApplyOrigin origin)
@@ -211,7 +223,8 @@ public sealed class QualityService : IQualityFrame, IBootParticipant, IAsyncDisp
     private async Task Execute(Binding binding, Request request)
     {
         var application = ApplyRequest(binding, request);
-        if (!application.IsCompleted) _applications.Add(application);
+        if (request.Completion is not null && !application.IsCompleted) _applications.Add(application);
+        var deferredFailed = false;
         try
         {
             await application;
@@ -223,11 +236,25 @@ public sealed class QualityService : IQualityFrame, IBootParticipant, IAsyncDisp
         }
         catch (Exception error)
         {
-            request.Completion?.TrySetException(error);
             // This observer belongs to the binding, so unmounting cannot discard a late failure.
-            binding.Runtime.ReportError("[SYS-GRAPHICS] Quality apply failed:", error);
+            if (request.Completion is { } completion)
+            {
+                completion.TrySetException(error);
+                binding.Runtime.ReportError("[SYS-GRAPHICS] Quality apply failed:", error);
+            }
+            else
+            {
+                deferredFailed = true;
+                binding.Runtime.ReportError("[SYS-GRAPHICS] Quality apply failed:", error);
+                throw;
+            }
         }
-        finally { _applications.Remove(application); }
+        finally
+        {
+            _applications.Remove(application);
+            if (!deferredFailed && !ReferenceEquals(_binding, binding) && binding.Active is { } active)
+                _deferredApplications.Remove(active);
+        }
     }
 
     private async Task ApplyRequest(Binding binding, Request request)
@@ -356,15 +383,15 @@ public sealed class QualityService : IQualityFrame, IBootParticipant, IAsyncDisp
     {
         if (binding.Token.IsCancellationRequested) return;
         if (change.Knobs == 0 || Changed is null) return;
+        var failures = new List<Exception>();
         foreach (Action<QualityChange> observer in Changed.GetInvocationList())
         {
-            if (binding.Token.IsCancellationRequested) return;
+            if (binding.Token.IsCancellationRequested) break;
             try { observer(change); }
-            catch (Exception error)
-            {
-                binding.Runtime.ReportError("[SYS-GRAPHICS] Quality observer failed:", error);
-            }
+            catch (OperationCanceledException) when (binding.Token.IsCancellationRequested) { break; }
+            catch (Exception error) { failures.Add(error); }
         }
+        if (failures.Count > 0) throw new AggregateException("Quality observers failed.", failures);
     }
 
     /// <summary>Folds only the user's own edit into the saved profile, so a command-line overlay never reaches the file.</summary>

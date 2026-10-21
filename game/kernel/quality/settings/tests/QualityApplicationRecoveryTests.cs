@@ -33,6 +33,83 @@ public sealed class QualityApplicationRecoveryTests
     public async Task RollbackConsumerFailureStillReleasesOwnLoadingAndReportsBothErrors() =>
         await VerifyFailedApplication("rollback", failDispatch: true, takeover: false, failRollback: true);
 
+    [TestCase]
+    [TestCategory(TestReason.Regression)]
+    public async Task DeferredApplicationFailureReachesTickOnce()
+    {
+        var (service, runtime, store) = await CliSession("deferred-failure");
+        using var cleanup = store;
+        var original = new InvalidOperationException();
+        runtime.Dispatching = () => { runtime.Dispatching = null; throw original; };
+        runtime.Transitioning = true;
+        var result = await service.Apply(new(service.Requested.Preset,
+            new Dictionary<QualityKnob, float> { [QualityKnob.ParticleDensity] = .5f }), ApplyOrigin.User);
+        AssertThat(result.Status == ApplyStatus.Deferred).IsTrue();
+        runtime.Transitioning = false;
+        service.Tick(.25);
+        Exception? observed = null;
+        try { service.Tick(0); }
+        catch (Exception error) { observed = error; }
+        AssertThat(ReferenceEquals(observed, original)).OverrideFailureMessage("Deferred failure did not reach the frame owner.").IsTrue();
+        service.Tick(0);
+        AssertThat(runtime.Failures.Count == 1 && ReferenceEquals(runtime.Failures[0], original)).IsTrue();
+        await service.DisposeAsync();
+    }
+
+    [TestCase]
+    [TestCategory(TestReason.Regression)]
+    public async Task ObserverFailuresRunAllObserversAndRestoreAppliedAndDurableState()
+    {
+        var (service, runtime, store) = await CliSession("observer-failures");
+        using var cleanup = store;
+        var before = service.Effective;
+        var beforeHash = store.Hash;
+        var first = new InvalidOperationException();
+        var second = new IOException();
+        var calls = new int[3];
+        service.Changed += _ => { if (++calls[0] == 1) throw first; };
+        service.Changed += _ => { if (++calls[1] == 1) throw second; };
+        service.Changed += _ => calls[2]++;
+        var pending = service.Apply(new(service.Requested.Preset,
+            new Dictionary<QualityKnob, float> { [QualityKnob.ParticleDensity] = .5f }), ApplyOrigin.User);
+        service.Tick(.25);
+        Exception? observed = null;
+        try { await pending; }
+        catch (Exception error) { observed = error; }
+        var failures = (observed as AggregateException)?.Flatten().InnerExceptions;
+        AssertThat(failures is not null && failures.Count == 2 && failures.Contains(first) && failures.Contains(second))
+            .OverrideFailureMessage("Observer errors lost their original objects.").IsTrue();
+        AssertThat(calls.All(count => count == 2)).OverrideFailureMessage("Apply or rollback skipped an observer.").IsTrue();
+        AssertThat(QualityCatalog.All.All(knob => service.Effective[knob] == before[knob]) && store.Hash == beforeHash)
+            .OverrideFailureMessage("Observer failure escaped quality recovery.").IsTrue();
+        service.Tick(0);
+        await service.DisposeAsync();
+    }
+
+    [TestCase]
+    [TestCategory(TestReason.Regression)]
+    public async Task ObserverCancellationRetainsEarlierNonCancellationFailure()
+    {
+        var (service, runtime, store) = await CliSession("observer-cancellation");
+        using var cleanup = store;
+        var original = new InvalidOperationException();
+        var lateCalls = 0;
+        service.Changed += _ => throw original;
+        service.Changed += _ => { service.Unbind(runtime); throw new OperationCanceledException(); };
+        service.Changed += _ => lateCalls++;
+        var pending = service.Apply(new(service.Requested.Preset,
+            new Dictionary<QualityKnob, float> { [QualityKnob.ParticleDensity] = .5f }), ApplyOrigin.User);
+        service.Tick(.25);
+        Exception? observed = null;
+        try { await pending; }
+        catch (Exception error) { observed = error; }
+        var failures = (observed as AggregateException)?.Flatten().InnerExceptions;
+        AssertThat(pending.IsFaulted && failures is not null && failures.Count == 1 && ReferenceEquals(failures[0], original))
+            .OverrideFailureMessage("Cancellation discarded an earlier observer failure.").IsTrue();
+        AssertThat(lateCalls == 0).IsTrue();
+        await service.DisposeAsync();
+    }
+
     private static async Task VerifyFailedApplication(string name, bool failDispatch, bool takeover, bool failRollback)
     {
         var runtime = new FakeRuntime();

@@ -38,8 +38,36 @@ public sealed class QualityApplicationLifetimeTests
             }
             AssertThat(runtime.Failures.Count == 1 && ReferenceEquals(runtime.Failures[0], original))
                 .OverrideFailureMessage("The unmounted scheduler discarded its consumer failure.").IsTrue();
-            await service.DisposeAsync();
+            Exception? shutdownFailure = null;
+            try { await service.DisposeAsync(); }
+            catch (Exception error) { shutdownFailure = error; }
+            if (deferred)
+            {
+                var failures = (shutdownFailure as AggregateException)?.Flatten().InnerExceptions;
+                AssertThat(failures is not null && failures.Count == 1 && ReferenceEquals(failures[0], original))
+                    .OverrideFailureMessage("Shutdown lost the detached deferred failure.").IsTrue();
+            }
+            else AssertThat(shutdownFailure is null).IsTrue();
+            AssertThat(runtime.Failures.Count == 1).OverrideFailureMessage("Shutdown reported the same failure twice.").IsTrue();
         }
+    }
+
+    [TestCase]
+    [TestCategory(TestReason.Regression)]
+    public async Task DetachedDeferredCancellationDrainsWithoutFailure()
+    {
+        var (service, runtime, store) = await CliSession("deferred-cancellation");
+        using var cleanup = store;
+        runtime.Transitioning = true;
+        var result = await service.Apply(new(service.Requested.Preset,
+            new Dictionary<QualityKnob, float> { [QualityKnob.ParticleDensity] = .5f }), ApplyOrigin.User);
+        AssertThat(result.Status == ApplyStatus.Deferred).IsTrue();
+        runtime.Transitioning = false;
+        runtime.HoldAt = "frame";
+        service.Tick(.25);
+        service.Unbind(runtime);
+        await service.DisposeAsync();
+        AssertThat(runtime.Failures.Count == 0).OverrideFailureMessage("Deferred cancellation became an application failure.").IsTrue();
     }
 
     [TestCase]
