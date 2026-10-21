@@ -1,5 +1,6 @@
 using Campus.Contracts;
 using Campus.Contracts.Bake;
+using Campus.Kernel.Diagnostics;
 using Campus.Kernel.Frame;
 using Godot;
 
@@ -72,7 +73,7 @@ public sealed class StreamMountQueue : IStreamMountQueue, IStreamMountFrame
         catch (Exception error) { RecordFailure(error); }
     }
     private void RecordFailure([FailureHandler("ENG-PERF-STREAM")] Exception error) =>
-        Failure = Failure is null ? error : new AggregateException(Failure, error);
+        Failure = RetainedFailure.Append(Failure, error);
 
     public void Drain(bool covered, Action<double>? finish = null, Action<double>? release = null, Func<bool>? canActivateVisual = null)
     {

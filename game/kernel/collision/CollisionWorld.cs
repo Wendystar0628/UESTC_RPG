@@ -1,6 +1,7 @@
 using Campus.Contracts;
 using Campus.Contracts.Maps;
 using Campus.Gen.Collision;
+using Campus.Kernel.Diagnostics;
 using Campus.Kernel.Renderer;
 using Godot;
 using N = System.Numerics;
@@ -167,7 +168,7 @@ public sealed class CollisionWorld : ICollisionMountRuntime
     public void FailTile(TileKey tile, Exception error)
     {
         MainThread();
-        Failure = Failure is null ? error : new AggregateException(Failure, error);
+        Failure = RetainedFailure.Append(Failure, error);
         RemoveTile(tile);
     }
 
