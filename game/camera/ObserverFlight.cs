@@ -55,8 +55,9 @@ internal sealed class ObserverFlight
 
     public Task Prepare(IMapContext context, Pose pose)
     {
-        var point = new N.Vector2(pose.Position.X, pose.Position.Z);
-        return Terrain.PreparePoints(context, "camera.presentation", new[] { point });
+        var position = (_bounds ?? new(context, context.World.Boundary)).ProjectHorizontal(pose.Position);
+        var point = new N.Vector2(position.X, position.Z);
+        return Terrain.PreparePoints(context, new[] { point });
     }
 
     public async Task<Pose> LegalizePrepared(Pose pose, CancellationToken cancellation = default)
@@ -102,7 +103,7 @@ internal sealed class ObserverFlight
             SpeedStep, Map.World.Spatial.GroundY(pose.Position.X, pose.Position.Z), seconds);
         var filtered = _bounds.FilterVelocity(pose.Position, displacement, out float fog);
         _motion.ConstrainVelocity(_bounds.FilterVelocity(pose.Position, _motion.Velocity, out _));
-        var target = pose.Position + filtered;
+        var target = _bounds.ProjectHorizontal(pose.Position + filtered);
         if (!TerrainReady(target, pose.Position))
         {
             _projectedVelocity = _motion.Velocity;

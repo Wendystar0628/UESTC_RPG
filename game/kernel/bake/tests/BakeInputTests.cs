@@ -325,6 +325,44 @@ public sealed class BakeInputTests
         finally { if (Directory.Exists(directory)) Directory.Delete(directory, recursive: true); }
     }
 
+    [TestCase, TestCategory(TestReason.Regression)]
+    public void TerrainPointRequestsShareCanonicalBlocksAcrossOrderAndFractionalEdges()
+    {
+        Vector2[] points = [new(-.25f, -.25f), new(255.75f, 255.75f), new(3000.2f, -2000.8f)];
+        var blocks = TerrainBlockCoverage.Points(points);
+        var reordered = TerrainBlockCoverage.Points(points.Reverse().Concat(points).ToArray());
+        if (!blocks.SequenceEqual(reordered)) throw new InvalidOperationException("Terrain block identity depends on point order or duplicates.");
+        foreach (var point in points)
+        {
+            var grid = TerrainSampling.QueryGrid(point);
+            for (var z = 0; z < grid.Height; z++)
+                for (var x = 0; x < grid.Width; x++)
+                    if (!blocks.Contains(TileGrid.At(grid.Origin + new Vector2(x, z), LodLevel.L2)))
+                        throw new InvalidOperationException("A fractional query lost an authoritative interpolation node.");
+        }
+        if (blocks.Contains(new TileKey(5, 0))) throw new InvalidOperationException("Sparse terrain requests loaded unrelated intermediate blocks.");
+        var region = TerrainBlockCoverage.Region(new(new(255.75f), new(255.75f))).ToHashSet();
+        if (!region.SetEquals(TerrainBlockCoverage.Points([new(255.75f)])))
+            throw new InvalidOperationException("Point and zero-area region queries disagree at a block edge.");
+    }
+
+    [TestCase, TestCategory(TestReason.Regression)]
+    public void OfflineTerrainCoversRoamingFixedPosesAndExistingSightReach()
+    {
+        var source = Context(new FakeWorld());
+        var title = new Pose(new(3000.2f, 495, -2928.1f), 13, -2.5f);
+        var descriptor = source.Map with { Title = new(title, "fixture") };
+        var context = new TestMapContext(descriptor, source.World, BuildInputSnapshot.Empty);
+        var domain = TerrainBlockCoverage.OfflineDomain(context);
+        var blocks = TerrainBlockCoverage.Region(domain).ToHashSet();
+        var reach = descriptor.Roam.MaxRadius + WalkRules.LandingSightDistance;
+        Vector2[] queries = [descriptor.Center - new Vector2(reach), descriptor.Center + new Vector2(reach),
+            new(title.Position.X, title.Position.Z), new(title.Position.X + WalkRules.LandingSightDistance, title.Position.Z)];
+        foreach (var point in queries)
+            if (TerrainBlockCoverage.Points([point]).Any(block => !blocks.Contains(block)))
+                throw new InvalidOperationException("Offline terrain omitted a legal/fixed query or its interpolation edge.");
+    }
+
     private static string Hash(BuildContext context, string module) => BakeInputFingerprint.Compute(context,
         BakeRequestKeys.Tile(context.Map.Id, module, new(0, 0), LodLevel.L0), "runtime-code", new(context), Inputs(module));
     private static BakeInputDependencies Inputs(string module) => module switch

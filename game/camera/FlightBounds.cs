@@ -13,6 +13,19 @@ public sealed class FlightBounds(IMapContext context, PolygonRings boundary)
     private const float Epsilon = .002f;
     public RoamLimits Limits => context.Descriptor.Roam;
 
+    /// <summary>Apply the existing radial cap before any terrain-dependent constraint is read.</summary>
+    public Vector3 ProjectHorizontal(Vector3 p)
+    {
+        if (!VectorMath.Finite(p)) throw new ArgumentOutOfRangeException(nameof(p));
+        double x = (double)p.X - context.Descriptor.Center.X;
+        double z = (double)p.Z - context.Descriptor.Center.Y;
+        double radius = Math.Sqrt(x * x + z * z);
+        if (radius <= Limits.MaxRadius + Epsilon) return p;
+        double scale = (Limits.MaxRadius - Epsilon) / radius;
+        return new((float)(context.Descriptor.Center.X + x * scale), p.Y,
+            (float)(context.Descriptor.Center.Y + z * scale));
+    }
+
     public int Evaluate(Vector3 p, Span<FlightBoundary> result)
     {
         if (result.Length < 5) throw new ArgumentException("Five constraints are required.", nameof(result));
@@ -55,7 +68,7 @@ public sealed class FlightBounds(IMapContext context, PolygonRings boundary)
 
     public bool IsLegal(Vector3 p, bool outsideBuffer = false)
     {
-        if (!VectorMath.Finite(p)) return false;
+        if (!VectorMath.Finite(p) || ProjectHorizontal(p) != p) return false;
         Span<FlightBoundary> constraints = stackalloc FlightBoundary[5];
         Evaluate(p, constraints);
         foreach (var c in constraints)
@@ -68,6 +81,7 @@ public sealed class FlightBounds(IMapContext context, PolygonRings boundary)
         if (!VectorMath.Finite(p)) throw new ArgumentOutOfRangeException(nameof(p));
         for (int iteration = 0; iteration < 64; iteration++)
         {
+            p = ProjectHorizontal(p);
             if (ProjectStep(ref p)) return p;
         }
         if (!IsLegal(p)) throw new InvalidDataException("Map reachable volume has no stable nearby projection.");
@@ -80,12 +94,14 @@ public sealed class FlightBounds(IMapContext context, PolygonRings boundary)
         if (!VectorMath.Finite(p)) throw new ArgumentOutOfRangeException(nameof(p));
         for (int iteration = 0; iteration < 64; iteration++)
         {
+            p = ProjectHorizontal(p);
             var point = new Vector2(p.X, p.Z);
-            if (!terrain.IsPrepared(context.World, point)) await terrain.PrepareRegion(context, new(point, point), cancellation);
+            if (!terrain.IsPrepared(context.World, point)) await terrain.PreparePoints(context, [point], cancellation);
             if (ProjectStep(ref p)) return p;
         }
+        p = ProjectHorizontal(p);
         var final = new Vector2(p.X, p.Z);
-        await terrain.PrepareRegion(context, new(final, final), cancellation);
+        await terrain.PreparePoints(context, [final], cancellation);
         if (!IsLegal(p)) throw new InvalidDataException("Map reachable volume has no stable nearby projection.");
         return p;
     }

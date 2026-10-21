@@ -189,7 +189,7 @@ internal static class StreamLifecycleTestSupport
         public List<TaskCompletionSource> Work { get; } = [];
         public List<CancellationToken> Tokens { get; } = [];
         public bool IsPrepared(IWorldModel world, N.Vector2 point) => Prepared;
-        public Task PreparePoints(IMapContext context, string product, IReadOnlyList<N.Vector2> points, CancellationToken cancellation = default)
+        public Task PreparePoints(IMapContext context, IReadOnlyList<N.Vector2> points, CancellationToken cancellation = default)
         { if (Prepared) return Task.CompletedTask; var work = new TaskCompletionSource(); Work.Add(work); Tokens.Add(cancellation); return work.Task; }
         public Task PrepareRegion(IMapContext context, MapRect region, CancellationToken cancellation = default) => Task.CompletedTask;
     }

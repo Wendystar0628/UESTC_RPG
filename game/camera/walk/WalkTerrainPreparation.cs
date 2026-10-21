@@ -27,13 +27,13 @@ internal sealed class WalkTerrainPreparation
         Failure = null;
         var points = map.Descriptor.Spawns.Where(s => s.Stand is not null)
             .Select(s => new N.Vector2(s.Stand!.Feet.X, s.Stand.Feet.Z)).ToArray();
-        _landingPointsPreparation = _terrain!.PreparePoints(map, "walk.authored-landings", points);
+        _landingPointsPreparation = _terrain!.PreparePoints(map, points);
     }
 
     public void PrepareSavedHistory(WalkSafePoints history)
     {
         var points = history.Points.Select(p => new N.Vector2(p.Position.X, p.Position.Z)).ToArray();
-        var preparation = _terrain!.PreparePoints(_map!, "walk.saved-safe-points", points);
+        var preparation = _terrain!.PreparePoints(_map!, points);
         _landingPointsPreparation = _landingPointsPreparation is { } authored ? Task.WhenAll(authored, preparation) : preparation;
     }
 
@@ -54,7 +54,7 @@ internal sealed class WalkTerrainPreparation
 
     public void PrepareEntry(Pose from)
     {
-        var end = from.Position + Angles.Forward(from.YawDeg, from.PitchDeg) * WalkTuning.LandingSightDistance;
+        var end = from.Position + Angles.Forward(from.YawDeg, from.PitchDeg) * WalkRules.LandingSightDistance;
         var begin = new N.Vector2(from.Position.X, from.Position.Z);
         var finish = new N.Vector2(end.X, end.Z);
         _entryTerrainPreparation = _terrain!.PrepareRegion(_map!, new(N.Vector2.Min(begin, finish), N.Vector2.Max(begin, finish)));

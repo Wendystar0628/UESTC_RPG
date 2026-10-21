@@ -31,7 +31,6 @@ public sealed class TerrainCacheService : ITerrainPreparation, IDisposable, IAsy
         // Retain the evaluator until this world unloads; an idle bake queue is not its lifetime.
         public ITerrainAssetBuilder? Assets;
         public IWorldModel? AssetWorld;
-        public List<Task> Points { get; } = [];
     }
     private readonly ConcurrentDictionary<ITerrain, Session> _sessions = new(ReferenceEqualityComparer.Instance);
     private readonly ConcurrentDictionary<(ITerrain Terrain, TileKey Block), Lazy<Task>> _preparing = new();
@@ -83,86 +82,54 @@ public sealed class TerrainCacheService : ITerrainPreparation, IDisposable, IAsy
     }
 
     public bool IsPrepared(IWorldModel world, Vector2 point) => world.Terrain is not IPreparedTerrain prepared || prepared.IsPrepared(point);
-    public Task PrepareRegion(IMapContext context, MapRect region, CancellationToken cancellation = default)
+    public Task PrepareRegion(IMapContext context, MapRect region, CancellationToken cancellation = default) =>
+        PrepareBlocks(context, TerrainBlockCoverage.Region(region), cancellation);
+
+    public Task PreparePoints(IMapContext context, IReadOnlyList<Vector2> points, CancellationToken cancellation = default) =>
+        PrepareBlocks(context, TerrainBlockCoverage.Points(points), cancellation);
+
+    private Task PrepareBlocks(IMapContext context, IEnumerable<TileKey> blocks, CancellationToken cancellation)
     {
         cancellation.ThrowIfCancellationRequested();
         if (context.World.Terrain is not IPreparedTerrain prepared) return Task.CompletedTask;
         var session = RequireSession(prepared);
         var tasks = new List<Task>();
-        var minX = Block(region.Min.X); var minZ = Block(region.Min.Y);
-        var maxX = Block(region.Max.X); var maxZ = Block(region.Max.Y);
         lock (session.WorkSync)
         {
             if (session.Stopping) throw new OperationCanceledException("Terrain preparation is draining.");
-            for (var z = minZ; z <= maxZ; z++)
-                for (var x = minX; x <= maxX; x++)
+            foreach (var block in blocks)
+            {
+                if (prepared.HasBlock(block)) continue;
+                tasks.Add(_preparing.GetOrAdd((prepared, block), _ => new(() => Task.Run(() =>
                 {
-                    var block = new TileKey(x, z);
-                    if (prepared.HasBlock(block)) continue;
-                    tasks.Add(_preparing.GetOrAdd((prepared, block), _ => new(() => Task.Run(() =>
+                    var key = new BakeKey(session.Map, "terrain", $"block/{block.X}/{block.Z}");
+                    var origin = TileGrid.Origin(block, LodLevel.L2);
+                    var stamp = TerrainStamp(session.Data.SourceInputs, new(origin, origin + new Vector2(TerrainRasterBlock.Edge)));
+                    TerrainRasterBlock value;
+                    var cached = Read(key, stamp, TerrainCacheCodec.DecodeBlock, BakePayloadClass.Tile);
+                    if (cached is not null) value = cached;
+                    else
                     {
-                        var key = new BakeKey(session.Map, "terrain", $"block/{block.X}/{block.Z}");
-                        var stamp = TerrainStamp(session.Data.SourceInputs, new(new(block.X * TerrainRasterBlock.Edge, block.Z * TerrainRasterBlock.Edge),
-                            new((block.X + 1) * TerrainRasterBlock.Edge, (block.Z + 1) * TerrainRasterBlock.Edge)));
-                        TerrainRasterBlock value;
-                        var cached = Read(key, stamp, TerrainCacheCodec.DecodeBlock, BakePayloadClass.Tile);
-                        if (cached is not null) value = cached;
-                        else
-                        {
-                            RequireMiss(key);
-                            lock (session.Sync) value = Assets(session).BuildBlock(block, prepared);
-                            Write(key, stamp, TerrainCacheCodec.EncodeBlock(value), BakePayloadClass.Tile);
-                        }
-                        lock (session.Sync)
-                        {
-                            prepared.Publish(value);
-                            session.Assets?.Attach(prepared);
-                        }
-                    }), LazyThreadSafetyMode.ExecutionAndPublication)).Value);
-                }
+                        RequireMiss(key);
+                        lock (session.Sync) value = Assets(session).BuildBlock(block, prepared);
+                        Write(key, stamp, TerrainCacheCodec.EncodeBlock(value), BakePayloadClass.Tile);
+                    }
+                    lock (session.Sync)
+                    {
+                        prepared.Publish(value);
+                        session.Assets?.Attach(prepared);
+                    }
+                }), LazyThreadSafetyMode.ExecutionAndPublication)).Value);
             }
-        return CompleteRegion(tasks, cancellation);
+        }
+        return CompleteBlocks(tasks, cancellation);
     }
 
-    private static async Task CompleteRegion(IReadOnlyList<Task> tasks, CancellationToken cancellation)
+    private static async Task CompleteBlocks(IReadOnlyList<Task> tasks, CancellationToken cancellation)
     {
-        // Cancellation stops the request after its submitted work has drained; it never detaches a faulted worker.
+        // A cancelled request still drains its submitted shared blocks before reporting cancellation.
         await Task.WhenAll(tasks).ConfigureAwait(false);
         cancellation.ThrowIfCancellationRequested();
-    }
-
-    public Task PreparePoints(IMapContext context, string product, IReadOnlyList<Vector2> points, CancellationToken cancellation = default)
-    {
-        if (context.World.Terrain is not IPreparedTerrain prepared || points.All(prepared.IsPrepared)) return Task.CompletedTask;
-        var session = RequireSession(prepared);
-        var snapshot = points.ToArray();
-        lock (session.WorkSync)
-        {
-            if (session.Stopping) throw new OperationCanceledException("Terrain preparation is draining.");
-            var preparing = Task.Run(() =>
-            {
-                cancellation.ThrowIfCancellationRequested();
-                var key = new BakeKey(session.Map, "terrain", "points/" + product);
-                var stamp = Stamp(new { terrain = TerrainStamp(session.Data.SourceInputs), points = snapshot });
-                TerrainRasterPoint[] values;
-                var cached = Read(key, stamp, TerrainCacheCodec.DecodePoints, BakePayloadClass.Tile);
-                if (cached is not null) values = cached;
-                else
-                {
-                    RequireMiss(key);
-                    lock (session.Sync) values = Assets(session).BuildPoints(snapshot);
-                    Write(key, stamp, TerrainCacheCodec.EncodePoints(values), BakePayloadClass.Tile);
-                }
-                cancellation.ThrowIfCancellationRequested();
-                lock (session.Sync)
-                {
-                    prepared.Publish(values);
-                    session.Assets?.Attach(prepared);
-                }
-            }, cancellation);
-            session.Points.Add(preparing);
-            return preparing;
-            }
     }
 
     internal IWorldModel AssetWorld(IWorldModel world)
@@ -182,7 +149,7 @@ public sealed class TerrainCacheService : ITerrainPreparation, IDisposable, IAsy
         var session = RequireSession(prepared);
         TerrainRasterPoint[] points;
         lock (session.Sync) points = Assets(session).SnapshotPoints();
-        var groups = points.GroupBy(point => new TileKey(Block(point.X), Block(point.Z))).OrderBy(group => group.Key.X).ThenBy(group => group.Key.Z).ToArray();
+        var groups = points.GroupBy(point => TerrainBlockCoverage.Block(new(point.X, point.Z))).OrderBy(group => group.Key.X).ThenBy(group => group.Key.Z).ToArray();
         foreach (var group in groups)
             Write(new(session.Map, "terrain", $"points/resident/{group.Key.X}/{group.Key.Z}"), stamp, TerrainCacheCodec.EncodePoints(group.ToArray()), BakePayloadClass.Tile);
         lock (session.Sync)
@@ -231,7 +198,7 @@ public sealed class TerrainCacheService : ITerrainPreparation, IDisposable, IAsy
             session.Stopping = true;
             var blocks = _preparing.Where(pair => ReferenceEquals(pair.Key.Terrain, session.Terrain) && pair.Value.IsValueCreated)
                 .Select(pair => pair.Value.Value).ToArray();
-            return session.Drain = DrainPreparation(blocks.Concat(session.Points));
+            return session.Drain = DrainPreparation(blocks);
         }
     }
 
@@ -255,7 +222,6 @@ public sealed class TerrainCacheService : ITerrainPreparation, IDisposable, IAsy
         assets.Attach(session.Terrain);
         return session.Assets = assets;
     }
-    private static int Block(float coordinate) => checked((int)MathF.Floor(coordinate / TerrainRasterBlock.Edge));
     internal static string Stamp<T>(T value) => Convert.ToHexStringLower(XxHash128.Hash(JsonSerializer.SerializeToUtf8Bytes(value, ContractJson.Options)));
     private string TerrainStamp(TerrainInputSummary inputs, MapRect? area = null) => Stamp(new
     {

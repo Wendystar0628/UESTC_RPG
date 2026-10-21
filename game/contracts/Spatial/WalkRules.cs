@@ -5,6 +5,7 @@ public static class WalkRules
 {
     public const float Radius = .3f;
     public const float ArrivalCollisionRadius = 96f;
+    public const float LandingSightDistance = 600f;
     public const float StandingHeight = 1.8f;
     public const float StandingEye = 1.62f;
     public const float CrouchingEye = 1.27f;

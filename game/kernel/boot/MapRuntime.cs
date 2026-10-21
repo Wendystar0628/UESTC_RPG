@@ -237,8 +237,7 @@ public partial class MapRuntime : Node, IMapRuntime, IMapLifetime
         {
             var destination = arrival.Destination;
             var point = new System.Numerics.Vector2(destination.Pose.Position.X, destination.Pose.Position.Z);
-            var product = FormattableString.Invariant($"arrival/{point.X:R}/{point.Y:R}");
-            await _terrain!.PreparePoints(context, product, [point], cancellation);
+            await _terrain!.PreparePoints(context, [point], cancellation);
             cancellation.ThrowIfCancellationRequested();
             if (generation != _mapGeneration || !ReferenceEquals(_arrival, arrival)) return;
             arrival.MarkCompleted(ArrivalStep.TerrainPoint);

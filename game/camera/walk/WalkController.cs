@@ -512,7 +512,7 @@ public partial class WalkController : CharacterBody3D, IWalkController, IWalkTel
         ApplyHeight();
         _locomotion.RestoreSpeedStep(dto.SpeedStep);
         if (SpeedStep != dto.SpeedStep) context.Repair("walk: speed step clamped");
-        Place(_persistence.RestoreFeet(dto, context), 0, WalkTuning.SaveRepairRadius);
+        Place(_persistence.RestoreFeet(dto, context, _map!), 0, WalkTuning.SaveRepairRadius);
     }
 
     public WalkSave CreateDefault(NewGameContext context) => _persistence.CreateDefault(context);

@@ -52,16 +52,20 @@ public sealed class TransitDriver(ICameraRig camera, IAppLoadingPresentation loa
             if (run.Cancelled) return;
 
             var context = maps.Context ?? throw new InvalidOperationException("Transit has no mounted map.");
+            _ = await validator.LegalizePrepared(run.To, run.Token);
+            if (!validator.IsLegal(run.To, false)) throw new ArgumentOutOfRangeException(nameof(run), "Transit destination is outside the reachable volume.");
             var target = new N.Vector2(run.To.Position.X, run.To.Position.Z);
             await terrain.PrepareRegion(context, new(target, target));
             if (run.LandOn is { } land)
             {
+                var standing = new Pose(land + N.Vector3.UnitY * WalkRules.StandingEye, run.To.YawDeg, 0);
+                _ = await validator.LegalizePrepared(standing, run.Token);
+                if (!validator.IsLegal(standing, false)) throw new ArgumentOutOfRangeException(nameof(run), "Transit stand is outside the reachable volume.");
                 var feet = new N.Vector2(land.X, land.Z);
                 await terrain.PrepareRegion(context, new(feet, feet));
             }
             if (run.Cancelled) return;
             if (!ReferenceEquals(maps.Context, context)) throw new OperationCanceledException("Transit map was replaced.");
-            if (!validator.IsLegal(run.To, false)) throw new ArgumentOutOfRangeException(nameof(run), "Transit destination is outside the reachable volume.");
             run.TerrainReady = true;
 
             Pose arrival;

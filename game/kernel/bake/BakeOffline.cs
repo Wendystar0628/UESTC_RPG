@@ -12,15 +12,17 @@ internal sealed class BakeOffline
     private readonly BakePipelineCatalog? _pipelines;
     private readonly BakeCatalog _catalog;
     private readonly BakeQueue _queue;
+    private readonly BakeTerrainPreparation _terrain;
 
-    internal BakeOffline(MapBuild map, BakePipelineCatalog? pipelines, BakeCatalog catalog, BakeQueue queue)
-    { _map = map; _pipelines = pipelines; _catalog = catalog; _queue = queue; }
+    internal BakeOffline(MapBuild map, BakePipelineCatalog? pipelines, BakeCatalog catalog, BakeQueue queue, TerrainCacheService terrain)
+    { _map = map; _pipelines = pipelines; _catalog = catalog; _queue = queue; _terrain = new(terrain); }
 
     internal async Task Run()
     {
         _map.PipelineStatistics = _pipelines;
         try
         {
+            await _terrain.PrepareOffline(_map).ConfigureAwait(false);
             _queue.BeginCatalog();
             try { await Task.Run(() => _catalog.Queue(_map)).ConfigureAwait(false); }
             finally { _queue.EndCatalog(); }

@@ -10,6 +10,16 @@ namespace Campus.Kernel.Bake;
 
 internal sealed class BakeTerrainPreparation(TerrainCacheService terrain)
 {
+    internal async Task PrepareOffline(MapBuild map)
+    {
+        foreach (var block in TerrainBlockCoverage.Region(TerrainBlockCoverage.OfflineDomain(map.Context)))
+        {
+            map.Lifetime.Token.ThrowIfCancellationRequested();
+            var origin = TileGrid.Origin(block, LodLevel.L2);
+            await terrain.PrepareRegion(map.Context, new(origin, origin), map.Lifetime.Token).ConfigureAwait(false);
+        }
+    }
+
     internal void PrepareResident(MapBuild map)
     {
         foreach (var module in map.Content.Modules.OrderBy(pair => pair.Key, StringComparer.Ordinal).Select(pair => pair.Value))

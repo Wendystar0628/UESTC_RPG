@@ -317,9 +317,13 @@ public partial class GameCaptureNode : Node, IGameCapture, IRegistryExitParticip
         await using var cover = _loading.Show();
         await cover.Covered;
         cancellationToken.ThrowIfCancellationRequested();
+        if (shot.Pose != "T0")
+        {
+            _ = await KernelServices.Get<ICameraPoseValidator>().LegalizePrepared(pose, cancellationToken);
+            validatePose?.Invoke(pose);
+        }
         var terrainPoint = new System.Numerics.Vector2(pose.Position.X, pose.Position.Z);
-        await KernelServices.Get<ITerrainPreparation>().PrepareRegion(context, new(terrainPoint, terrainPoint), cancellationToken);
-        if (shot.Pose != "T0") validatePose?.Invoke(pose);
+        await KernelServices.Get<ITerrainPreparation>().PreparePoints(context, [terrainPoint], cancellationToken);
         LogPhase("terrain-ready");
         if (!host.IsInsideTree() || !ReferenceEquals(maps.Context, context) || world.Instance != worldInstance || rig.Mode != mode)
             throw new OperationCanceledException("Capture stage or view was replaced during preparation.");

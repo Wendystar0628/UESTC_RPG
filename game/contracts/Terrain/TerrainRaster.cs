@@ -1,5 +1,6 @@
-using Campus.Contracts.Maps;
 using System.Numerics;
+
+using Campus.Contracts.Maps;
 
 namespace Campus.Contracts;
 
@@ -28,7 +29,6 @@ public interface ITerrainAssetBuilder : ITerrain
     void Attach(IPreparedTerrain terrain);
     TerrainFrozenData Freeze();
     TerrainRasterBlock BuildBlock(TileKey block, IPreparedTerrain terrain);
-    TerrainRasterPoint[] BuildPoints(IReadOnlyList<Vector2> points);
     TerrainRasterPoint[] SnapshotPoints();
 }
 

@@ -45,6 +45,47 @@ public sealed class FlightBoundsTests
             throw new InvalidOperationException("Flight buffer changed the tangential/inward movement or failed to slow outward movement.");
     }
 
+    [TestCase, TestCategory(TestReason.Regression)]
+    public async Task PreparedProjectionCapsRawCoordinatesBeforePreparingOrReadingTerrain()
+    {
+        var prepared = new HashSet<Vector2>();
+        var descriptor = Descriptor();
+        var terrain = new ProjectionTerrain(prepared, descriptor);
+        var world = new FakeWorld
+        {
+            Boundary = new(Square(100)), Outskirts = new Outskirts(),
+            Spatial = new FlatSpatial((x, z) => prepared.Contains(new(x, z)) ? 0
+                : throw new InvalidOperationException("Projection read terrain before preparing the bounded point."))
+        };
+        var context = new TestMapContext(descriptor, world, BuildInputSnapshot.Empty);
+        var bounds = new FlightBounds(context, world.Boundary);
+        foreach (var point in new[] { new Vector3(float.MaxValue, 3000, float.MaxValue), new Vector3(3000.1f, 1200, 0), new Vector3(110, -10, 0) })
+        {
+            var actual = await bounds.ProjectPrepared(point, terrain);
+            var expected = Create().Project(point);
+            if (!bounds.IsLegal(actual) || Vector3.Distance(actual, expected) > TestTolerance.Position)
+                throw new InvalidOperationException("Prepared and synchronous flight projection disagree.");
+        }
+    }
+
+    private sealed class ProjectionTerrain(HashSet<Vector2> prepared, MapDescriptor descriptor) : ITerrainPreparation
+    {
+        public bool IsPrepared(IWorldModel world, Vector2 point) => prepared.Contains(point);
+        public Task PrepareRegion(IMapContext context, MapRect region, CancellationToken cancellation = default) =>
+            PreparePoints(context, [region.Min, region.Max], cancellation);
+        public Task PreparePoints(IMapContext context, IReadOnlyList<Vector2> points, CancellationToken cancellation = default)
+        {
+            cancellation.ThrowIfCancellationRequested();
+            foreach (var point in points)
+            {
+                if (!VectorMath.Finite(point) || Vector2.Distance(point, descriptor.Center) > descriptor.Roam.MaxRadius + TestTolerance.Position)
+                    throw new InvalidOperationException("Projection submitted a raw out-of-radius terrain coordinate.");
+                prepared.Add(point);
+            }
+            return Task.CompletedTask;
+        }
+    }
+
     private static FlightBounds Create()
     {
         var context = CreateContext();

@@ -32,14 +32,15 @@ internal sealed class WalkPersistence(WalkPlacement placement, WalkTerrainPrepar
         terrain.PrepareSavedHistory(history);
     }
 
-    public Pose RestoreFeet(WalkSave dto, RestoreContext context)
+    public Pose RestoreFeet(WalkSave dto, RestoreContext context, IMapContext map)
     {
         var pose = dto.Feet;
         bool validAngles = float.IsFinite(pose.YawDeg) && float.IsFinite(pose.PitchDeg);
         float yaw = validAngles ? pose.YawDeg : 0;
         float pitch = validAngles ? Math.Clamp(pose.PitchDeg, -89f, 89f) : 0;
         if (!validAngles || pitch != pose.PitchDeg) context.Repair("walk: look angles repaired");
-        if (!VectorMath.Finite(pose.Position))
+        if (!VectorMath.Finite(pose.Position)
+            || new FlightBounds(map, map.World.Boundary).ProjectHorizontal(pose.Position) != pose.Position)
         {
             var history = placement.History;
             pose = (history.Count > 0 ? history.Points.Last() : WalkSafetyQueries.DefaultFeet(KernelServices.Get<IMapService>(), context.Map))

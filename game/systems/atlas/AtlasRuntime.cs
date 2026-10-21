@@ -37,7 +37,7 @@ public partial class AtlasRuntime : Godot.Node, IMapAware, IMapDataParticipant
             return destination.Stand is { } stand
                 ? new[] { fly, new System.Numerics.Vector2(stand.Feet.X, stand.Feet.Z) } : new[] { fly };
         }).Distinct().ToArray();
-        return _terrain.PreparePoints(context, "atlas.travel-poses", points);
+        return _terrain.PreparePoints(context, points);
     }
     public Task UnloadAsync(MapId from) => Task.CompletedTask;
 

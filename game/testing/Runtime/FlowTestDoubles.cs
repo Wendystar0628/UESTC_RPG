@@ -134,6 +134,6 @@ internal sealed class FlowTerrainPreparation : ITerrainPreparation, ICameraPoseV
     public Task<Pose> LegalizePrepared(Pose pose, CancellationToken cancellation = default) => Task.FromResult(pose);
     public bool IsPrepared(IWorldModel world, System.Numerics.Vector2 point) => true;
     public Task PrepareRegion(IMapContext context, MapRect region, CancellationToken cancellation = default) => Task.CompletedTask;
-    public Task PreparePoints(IMapContext context, string product, IReadOnlyList<System.Numerics.Vector2> points,
+    public Task PreparePoints(IMapContext context, IReadOnlyList<System.Numerics.Vector2> points,
         CancellationToken cancellation = default) => Task.CompletedTask;
 }

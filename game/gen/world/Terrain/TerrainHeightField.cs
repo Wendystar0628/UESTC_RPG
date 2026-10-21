@@ -130,17 +130,6 @@ public sealed class TerrainHeightField : ITerrain, ITerrainLatticeNodes
         return result;
     }
 
-    internal TerrainRasterPoint[] BuildPoints(IReadOnlyList<System.Numerics.Vector2> points)
-    {
-        var nodes = new SortedSet<(int X, int Z)>();
-        foreach (var point in points)
-        {
-            var grid = TerrainSampling.QueryGrid(point);
-            for (var dz = 0; dz < grid.Height; dz++)
-                for (var dx = 0; dx < grid.Width; dx++) nodes.Add((checked((int)grid.Origin.X + dx), checked((int)grid.Origin.Y + dz)));
-        }
-        return nodes.Select(point => { var value = Node(point.X, point.Z); return new TerrainRasterPoint(point.X, point.Z, value.Height, value.Facts); }).ToArray();
-    }
     internal TerrainRasterPoint[] SnapshotPoints() => _nodes.OrderBy(pair => pair.Key.X).ThenBy(pair => pair.Key.Z)
         .Select(pair => new TerrainRasterPoint(pair.Key.X, pair.Key.Z, pair.Value.Height, pair.Value.Facts)).ToArray();
 

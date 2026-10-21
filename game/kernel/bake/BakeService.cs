@@ -364,7 +364,7 @@ public sealed class BakeService : IBakeService, IBakeContextSource, IMapContentS
         {
             var map = Mount(context);
             if (!map.Active) throw new OperationCanceledException("Map is draining.");
-            return map.Offline ??= new BakeOffline(map, pipelines, _catalog, _queue).Run();
+            return map.Offline ??= new BakeOffline(map, pipelines, _catalog, _queue, _terrain).Run();
         }
     }
 

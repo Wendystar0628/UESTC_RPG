@@ -108,9 +108,8 @@ internal sealed class StreamSelection(StreamDirector host)
         if (_terrainPlan is null)
         {
             var cancellation = new CancellationTokenSource();
-            var product = "stream/" + string.Join("/", points.Select(point => FormattableString.Invariant($"{point.X:R}/{point.Y:R}")));
             _terrainPlan = new(context, context.World, _host.MapGeneration, _destinationSequence, pose, live,
-                _host.Terrain.PreparePoints(context, product, points, cancellation.Token), cancellation);
+                _host.Terrain.PreparePoints(context, points, cancellation.Token), cancellation);
             _host.Preparation.ClearRequests();
         }
         if (!_terrainPlan.Preparation.IsCompleted) return false;

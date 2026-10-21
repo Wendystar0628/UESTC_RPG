@@ -173,7 +173,6 @@ internal sealed class CompiledTerrain : ITerrainAssetBuilder, ITerrainBankSource
     public TerrainFacts FactsAt(float x, float z) => _field.FactsAt(x, z);
     public void Attach(IPreparedTerrain terrain) => _field.Attach(terrain);
     public TerrainRasterBlock BuildBlock(TileKey block, IPreparedTerrain terrain) => _field.BuildBlock(block, terrain);
-    public TerrainRasterPoint[] BuildPoints(IReadOnlyList<System.Numerics.Vector2> points) => _field.BuildPoints(points);
     public TerrainRasterPoint[] SnapshotPoints() => _field.SnapshotPoints();
     public TerrainFrozenData Freeze()
     {

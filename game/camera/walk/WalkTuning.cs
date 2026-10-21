@@ -47,7 +47,6 @@ public static class WalkTuning
     public const float NearLandingDistance = 3f;
     public const float NearLandingSeconds = .5f;
     public const float DirectLandingHeight = 30f;
-    public const float LandingSightDistance = 600f;
     public const int LandingSightHintIterations = 4;
     public const float BoundaryClearance = 1f;
     public const float BelowSupportLimit = 3f;

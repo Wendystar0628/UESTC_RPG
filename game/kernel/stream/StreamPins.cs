@@ -56,7 +56,7 @@ internal sealed class StreamPins(StreamDirector host)
         MapStreamDestination destination, CancellationToken cancellation)
     {
         var point = new N.Vector2(destination.Pose.Position.X, destination.Pose.Position.Z);
-        await terrain.PreparePoints(context, FormattableString.Invariant($"stream-pin/{point.X:R}/{point.Y:R}"), [point], cancellation);
+        await terrain.PreparePoints(context, [point], cancellation);
         cancellation.ThrowIfCancellationRequested();
         switch (destination.Mode)
         {

@@ -8,5 +8,5 @@ public interface ITerrainPreparation
 {
     bool IsPrepared(IWorldModel world, Vector2 point);
     Task PrepareRegion(IMapContext context, MapRect region, CancellationToken cancellation = default);
-    Task PreparePoints(IMapContext context, string product, IReadOnlyList<Vector2> points, CancellationToken cancellation = default);
+    Task PreparePoints(IMapContext context, IReadOnlyList<Vector2> points, CancellationToken cancellation = default);
 }

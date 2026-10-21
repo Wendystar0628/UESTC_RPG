@@ -133,7 +133,7 @@ internal sealed class WalkPlacement(CharacterBody3D body, Func<NavSpace?> space)
             ?? _map!.World.Spatial.GroundY(origin.Position.X, origin.Position.Z);
         if (origin.Position.Y - ground <= WalkTuning.DirectLandingHeight) return origin;
         var direction = Angles.Forward(origin.YawDeg, origin.PitchDeg);
-        var end = origin.Position + direction * WalkTuning.LandingSightDistance;
+        var end = origin.Position + direction * WalkRules.LandingSightDistance;
         var hit = _collision!.SupportRay(origin.Position, end);
         if (SightAllows(hit)) return origin with { Position = hit!.Value.Point };
         if (direction.Y >= 0) return origin;
@@ -142,12 +142,12 @@ internal sealed class WalkPlacement(CharacterBody3D body, Func<NavSpace?> space)
         float distance = (ground - origin.Position.Y) / direction.Y;
         for (int i = 0; i < WalkTuning.LandingSightHintIterations; i++)
         {
-            if (!(distance > 0) || distance > WalkTuning.LandingSightDistance) return origin;
+            if (!(distance > 0) || distance > WalkRules.LandingSightDistance) return origin;
             var hint = origin.Position + direction * distance;
             ground = _map!.World.Spatial.GroundY(hint.X, hint.Z);
             distance = (ground - origin.Position.Y) / direction.Y;
         }
-        if (!(distance > 0) || distance > WalkTuning.LandingSightDistance) return origin;
+        if (!(distance > 0) || distance > WalkRules.LandingSightDistance) return origin;
         _entrySightPending = true;
         return origin with { Position = origin.Position + direction * distance };
     }
@@ -163,7 +163,7 @@ internal sealed class WalkPlacement(CharacterBody3D body, Func<NavSpace?> space)
         {
             _entrySightPending = false;
             var hit = _collision.SupportRay(eye.Position,
-                eye.Position + Angles.Forward(eye.YawDeg, eye.PitchDeg) * WalkTuning.LandingSightDistance);
+                eye.Position + Angles.Forward(eye.YawDeg, eye.PitchDeg) * WalkRules.LandingSightDistance);
             return new(WalkPlacementStatus.Refocused, SightAllows(hit) ? eye with { Position = hit!.Value.Point } : eye);
         }
         var candidate = _placementTarget.Position;
