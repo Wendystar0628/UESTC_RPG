@@ -17,14 +17,11 @@ public sealed class SourceSizeGateTests
     public void HandwrittenTypeDeclarationsStayWithinCombinedLineLimit()
     {
         var root = Environment.GetEnvironmentVariable("UESTC_REPOSITORY") ?? ArchitectureTests.FindRepository();
-        var files = HandwrittenSources(SourceModel.Production).ToArray();
         var errors = new List<string>();
-        // The source model shares one Roslyn compilation; Compile ownership keeps assemblies distinct.
-        foreach (var project in SourceModel.ProjectItems())
+        foreach (var project in SourceModel.Projects)
         {
-            var sources = project.Sources.ToHashSet(StringComparer.OrdinalIgnoreCase);
             var declarations = new Dictionary<ISymbol, List<(SourceFile File, BaseTypeDeclarationSyntax Node)>>(SymbolEqualityComparer.Default);
-            foreach (var file in files.Where(file => sources.Contains(Path.GetFullPath(Path.Combine(root, file.Path)))))
+            foreach (var file in HandwrittenSources(SourceModel.FilesFor(project).Where(file => !file.IsTest)))
             foreach (var node in file.Root.DescendantNodes().OfType<BaseTypeDeclarationSyntax>())
             {
                 if (IsGenerated(file, node)) continue;
@@ -39,7 +36,7 @@ public sealed class SourceSizeGateTests
                 if (lines <= TypeLineLimit) continue;
                 var first = parts[0];
                 errors.Add(first.File.At(first.Node,
-                    $"{Path.GetRelativePath(root, project.Path)}: {SourceModel.Name(symbol as ITypeSymbol)} has {lines} handwritten type lines across {parts.Count} declarations; limit {TypeLineLimit}. Split by responsibility."));
+                    $"{Path.GetRelativePath(root, project.FilePath!)}: {SourceModel.Name(symbol as ITypeSymbol)} has {lines} handwritten type lines across {parts.Count} declarations; limit {TypeLineLimit}. Split by responsibility."));
             }
         }
         SourceModel.RequireNoViolations(errors);
@@ -70,21 +67,24 @@ public sealed class SourceSizeGateTests
     public void HandwrittenPartialTypesRequireOneGeneratorOwnedDeclaration()
     {
         var errors = new List<string>();
-        var files = HandwrittenSources(SourceModel.Production.Concat(SourceModel.Tests)).ToDictionary(file => file.Tree);
-        foreach (var file in files.Values)
-        foreach (var node in file.Root.DescendantNodes().OfType<TypeDeclarationSyntax>())
+        foreach (var project in SourceModel.Projects)
         {
-            if (!node.Modifiers.Any(SyntaxKind.PartialKeyword) || IsGenerated(file, node)) continue;
-            var symbol = file.Model.GetDeclaredSymbol(node)
-                ?? throw new InvalidOperationException(file.At(node, "G4 could not resolve the partial type identity."));
-            var declarations = symbol.DeclaringSyntaxReferences.Where(reference => files.ContainsKey(reference.SyntaxTree))
-                .Select(reference => (File: files[reference.SyntaxTree], Node: reference.GetSyntax()))
-                .Where(part => part.Node is TypeDeclarationSyntax && !IsGenerated(part.File, part.Node)).ToArray();
-            if (declarations.Length == 1 && (SourceModel.Inherits(symbol, "Godot.GodotObject") ||
-                RequiresCompilerPartial(file, node, symbol))) continue;
-            errors.Add(file.At(node,
-                $"{SourceModel.Name(symbol)} uses partial for handwritten responsibilities; split them into independent types. " +
-                "Only one Godot host or compiler-generator input declaration may remain partial."));
+            var files = HandwrittenSources(SourceModel.FilesFor(project)).ToDictionary(file => file.Tree);
+            foreach (var file in files.Values)
+            foreach (var node in file.Root.DescendantNodes().OfType<TypeDeclarationSyntax>())
+            {
+                if (!node.Modifiers.Any(SyntaxKind.PartialKeyword) || IsGenerated(file, node)) continue;
+                var symbol = file.Model.GetDeclaredSymbol(node)
+                    ?? throw new InvalidOperationException(file.At(node, "G4 could not resolve the partial type identity."));
+                var declarations = symbol.DeclaringSyntaxReferences.Where(reference => files.ContainsKey(reference.SyntaxTree))
+                    .Select(reference => (File: files[reference.SyntaxTree], Node: reference.GetSyntax()))
+                    .Where(part => part.Node is TypeDeclarationSyntax && !IsGenerated(part.File, part.Node)).ToArray();
+                if (declarations.Length == 1 && (SourceModel.Inherits(symbol, "Godot.GodotObject") ||
+                    RequiresCompilerPartial(file, node, symbol))) continue;
+                errors.Add(file.At(node,
+                    $"{SourceModel.Name(symbol)} uses partial for handwritten responsibilities; split them into independent types. " +
+                    "Only one Godot host or compiler-generator input declaration may remain partial."));
+            }
         }
         SourceModel.RequireNoViolations(errors);
     }

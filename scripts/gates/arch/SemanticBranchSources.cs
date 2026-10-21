@@ -24,7 +24,7 @@ internal static class SemanticBranchSources
             var enabled = options.PreprocessorSymbolNames.Where(symbol => !assignment.ContainsKey(symbol))
                 .Concat(assignment.Where(item => item.Value).Select(item => item.Key)).Order(StringComparer.Ordinal).ToArray();
             if (!variants.Add(string.Join(";", enabled))) continue;
-            var tree = CSharpSyntaxTree.ParseText(file.Tree.GetText(), options.WithPreprocessorSymbols(enabled), file.Path);
+            var tree = CSharpSyntaxTree.ParseText(file.Tree.GetText(), options.WithPreprocessorSymbols(enabled), file.Tree.FilePath);
             var errors = tree.GetDiagnostics().Where(diagnostic => diagnostic.Severity == DiagnosticSeverity.Error).ToArray();
             if (errors.Length != 0) throw new InvalidOperationException(string.Join(Environment.NewLine, errors.Select(error => error.ToString())));
             var compilation = file.Model.Compilation.ReplaceSyntaxTree(file.Tree, tree);

@@ -58,6 +58,19 @@ public sealed class SemanticPolicyRegressionTests
                 static Exception RecursiveFailure(Exception cause) => RecursiveFailure(cause);
                 static Exception MutualFailure(Exception cause) => OtherFailure(cause);
                 static Exception OtherFailure(Exception cause) => MutualFailure(cause);
+                static Exception Accumulate(Exception? kept, Exception next) {
+                    if(ReferenceEquals(kept, next)) return next;
+                    if(next is AggregateException { InnerExceptions.Count: > 0 } many) {
+                        foreach(var item in many.InnerExceptions) kept = Accumulate(kept, item);
+                        return kept!;
+                    }
+                    if(kept is null) return next;
+                    return new AggregateException(kept, next);
+                }
+                static Exception LosingAccumulator(Exception kept, Exception next, bool repeat) {
+                    if(repeat) return LosingAccumulator(next, kept, false);
+                    return kept;
+                }
                 sealed class ManyFailure(params Exception[] causes) : AggregateException(causes) { }
                 sealed class CollectedFailure(params IEnumerable<Exception> causes) : AggregateException(causes) { }
                 static Exception UnrelatedFailure(Exception cause) => new Exception("x", new Exception());
@@ -70,6 +83,7 @@ public sealed class SemanticPolicyRegressionTests
                 void GoodFactory(bool flag) { try { Run(); } catch(Exception e) { throw ChooseFailure(flag: flag, renamed: e, message: "x"); } }
                 void GoodNullableFactory() { try { Run(); } catch(Exception e) { throw NullableFailure(e)!; } }
                 void GoodOptionalFactory() { try { Run(); } catch(Exception e) { throw OptionalFailure(e); } }
+                void GoodRecursiveAggregate() { try { Run(); } catch(Exception e) { throw Accumulate(e, new AggregateException(new Exception())); } }
                 void GoodAggregateParams() { try { Run(); } catch(Exception e) { throw new AggregateException("x", new Exception(), e); } }
                 void GoodNestedAggregateParams() { try { Run(); } catch(Exception e) { throw new AggregateException(new AggregateException(e)); } }
                 void GoodTargetTypedParams() { try { Run(); } catch(Exception e) { AggregateException failure = new("x", e, new Exception()); throw failure; } }
@@ -105,6 +119,7 @@ public sealed class SemanticPolicyRegressionTests
                 void BadOptionalFactory() { try { Run(); } catch(Exception e) { throw OptionalFailure(); } }
                 void BadRecursiveFactory() { try { Run(); } catch(Exception e) { throw RecursiveFailure(e); } }
                 void BadMutualFactory() { try { Run(); } catch(Exception e) { throw MutualFailure(e); } }
+                void BadRecursiveParameterSwap(bool flag) { try { Run(); } catch(Exception e) { throw LosingAccumulator(e, new Exception(), flag); } }
                 void BadAggregateParams() { try { Run(); } catch(Exception e) { throw new AggregateException("x", new Exception(), new Exception()); } }
                 void BadNestedAggregateParams() { try { Run(); } catch(Exception e) { throw new AggregateException(new AggregateException(new Exception())); } }
                 void BadTargetTypedParams() { try { Run(); } catch(Exception e) { AggregateException failure = new("x", new Exception(), new Exception()); throw failure; } }

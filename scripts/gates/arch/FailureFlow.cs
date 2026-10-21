@@ -11,6 +11,9 @@ internal sealed class FailureFlow(SourceFile file, CatchClauseSyntax? origin, Ha
     HashSet<IMethodSymbol>? activeFactories = null)
 {
     private readonly HashSet<IMethodSymbol> factories = activeFactories ?? new(SymbolEqualityComparer.Default);
+    private IMethodSymbol? currentFactory;
+    private HashSet<int>? retainedParameters;
+    private bool allowRecursiveFactory = true;
     private enum End { Running, Return, Break, Continue, Throw }
     private sealed record ObjectReference(ISymbol Symbol, string Receiver);
     private sealed class ReferenceComparer : IEqualityComparer<ObjectReference>
@@ -25,10 +28,11 @@ internal sealed class FailureFlow(SourceFile file, CatchClauseSyntax? origin, Ha
         public bool Handled;
         public bool ReturnRetains;
         public bool ThrowRetains;
+        public bool UsedRecursion;
         public End Exit;
         public PathState Copy()
         {
-            var copy = new PathState { Handled = Handled, ReturnRetains = ReturnRetains, ThrowRetains = ThrowRetains, Exit = Exit };
+            var copy = new PathState { Handled = Handled, ReturnRetains = ReturnRetains, ThrowRetains = ThrowRetains, UsedRecursion = UsedRecursion, Exit = Exit };
             copy.Objects.UnionWith(Objects);
             return copy;
         }
@@ -166,10 +170,24 @@ internal sealed class FailureFlow(SourceFile file, CatchClauseSyntax? origin, Ha
     private List<PathState> Branch(IfStatementSyntax branch, PathState state)
     {
         var known = KnownCondition(branch.Condition, state);
-        if (known == true) return Statement(branch.Statement, [state]);
         if (known == false) return branch.Else is null ? [state] : Statement(branch.Else.Statement, [state]);
-        return Statement(branch.Statement, [state.Copy()]).Concat(branch.Else is null ? new List<PathState> { state.Copy() } :
+        var matched = state.Copy();
+        AssumeSameObject(branch.Condition, matched);
+        if (known == true) return Statement(branch.Statement, [matched]);
+        return Statement(branch.Statement, [matched]).Concat(branch.Else is null ? new List<PathState> { state.Copy() } :
             Statement(branch.Else.Statement, [state.Copy()])).ToList();
+    }
+
+    private void AssumeSameObject(ExpressionSyntax condition, PathState state)
+    {
+        if (condition is ParenthesizedExpressionSyntax group) { AssumeSameObject(group.Expression, state); return; }
+        if (file.Model.GetOperation(condition) is not IInvocationOperation operation ||
+            operation.TargetMethod.Name != "ReferenceEquals" || !BclMethod(operation.TargetMethod, "System.Object") ||
+            operation.Arguments.Length != 2) return;
+        var left = operation.Arguments[0].Value;
+        var right = operation.Arguments[1].Value;
+        if (Retains(left, state)) Set(right.Syntax, true, state);
+        if (Retains(right, state)) Set(left.Syntax, true, state);
     }
 
     private List<PathState> Finally(BlockSyntax cleanup, List<PathState> paths)
@@ -248,6 +266,7 @@ internal sealed class FailureFlow(SourceFile file, CatchClauseSyntax? origin, Ha
     private void ApplyCall(IInvocationOperation operation, PathState state)
     {
         var method = operation.TargetMethod;
+        if (SymbolEqualityComparer.Default.Equals(currentFactory, (method.ReducedFrom ?? method).OriginalDefinition)) state.UsedRecursion = true;
         var retainsArgument = operation.Arguments.Any(argument => ExceptionCarrier(argument.Parameter?.Type) && Retains(argument.Value, state));
         foreach (var argument in operation.Arguments)
             if (argument.Parameter is { } parameter && IsHandler(parameter, documents) && Retains(argument.Value, state)) state.Handled = true;
@@ -335,26 +354,46 @@ internal sealed class FailureFlow(SourceFile file, CatchClauseSyntax? origin, Ha
             .Select(argument => argument.Parameter!.Ordinal + (invocation.TargetMethod.ReducedFrom is null ? 0 : 1)).ToHashSet();
         if (invocation.TargetMethod.ReducedFrom is not null && invocation.Instance is { } receiver &&
             IsException(method.Parameters[0].Type) && Retains(receiver, state)) retained.Add(0);
-        if (retained.Count == 0 || !factories.Add(method)) return false;
+        if (retained.Count == 0) return false;
+        var definitions = method.DeclaringSyntaxReferences.Select(reference => reference.GetSyntax()).ToArray();
+        if (definitions.Length != 1) return false;
+        var definition = definitions[0];
+        var source = new SourceFile(SourceModel.RelativePath(definition.SyntaxTree.FilePath), definition.SyntaxTree,
+            SourceModel.DeclarationModel(file.Model, method, definition));
+        var declared = source.Model.GetDeclaredSymbol(definition) as IMethodSymbol
+            ?? throw new InvalidOperationException(source.At(definition, "G4 could not resolve the factory declaration."));
+        if (!factories.Add(declared))
+        {
+            state.UsedRecursion = true;
+            return allowRecursiveFactory && SymbolEqualityComparer.Default.Equals(currentFactory, declared) &&
+                retainedParameters?.SetEquals(retained) == true;
+        }
         try
         {
-            var definitions = method.DeclaringSyntaxReferences.Select(reference => reference.GetSyntax()).ToArray();
-            if (definitions.Length != 1) return false;
-            var definition = definitions[0];
             var body = definition switch { MethodDeclarationSyntax item => item.Body, LocalFunctionStatementSyntax item => item.Body, _ => null };
             var expression = definition switch { MethodDeclarationSyntax item => item.ExpressionBody?.Expression,
                 LocalFunctionStatementSyntax item => item.ExpressionBody?.Expression, _ => null };
-            var source = new SourceFile(definition.SyntaxTree.FilePath, definition.SyntaxTree,
-                file.Model.Compilation.GetSemanticModel(definition.SyntaxTree));
-            var flow = new FailureFlow(source, null, documents, factories);
-            var start = new PathState();
-            foreach (var parameter in method.Parameters.Where(parameter => retained.Contains(parameter.Ordinal))) start.Objects.Add(new(parameter, ""));
-            if (expression is not null) return flow.Retains(expression, start);
-            if (body is null) return false;
-            var paths = flow.Statement(body, [start]);
-            return paths.Count != 0 && paths.All(path => path.Exit == End.Return && path.ReturnRetains);
+            List<PathState> Returns(bool recursive)
+            {
+                var flow = new FailureFlow(source, null, documents, factories)
+                { currentFactory = declared, retainedParameters = retained, allowRecursiveFactory = recursive };
+                var start = new PathState();
+                foreach (var parameter in declared.Parameters.Where(parameter => retained.Contains(parameter.Ordinal))) start.Objects.Add(new(parameter, ""));
+                if (expression is not null)
+                {
+                    start.ReturnRetains = flow.Retains(expression, start);
+                    start.Exit = End.Return;
+                    return [start];
+                }
+                return body is null ? [] : flow.Statement(body, [start]);
+            }
+            var paths = Returns(allowRecursiveFactory);
+            if (paths.Count == 0 || !paths.All(path => path.Exit == End.Return && path.ReturnRetains)) return false;
+            // Direct recursion must preserve the same parameter positions and have a retaining exit without recursion.
+            return !allowRecursiveFactory || !paths.Any(path => path.UsedRecursion) ||
+                Returns(false).Any(path => !path.UsedRecursion && path.Exit == End.Return && path.ReturnRetains);
         }
-        finally { factories.Remove(method); }
+        finally { factories.Remove(declared); }
     }
 
     private bool Has(ObjectReference reference, PathState state) => state.Objects.Contains(reference);

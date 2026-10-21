@@ -118,8 +118,9 @@ public sealed class AuthorityGateTests
         foreach (var reference in symbol.DeclaringSyntaxReferences)
         {
             if (reference.GetSyntax() is VariableDeclaratorSyntax { Initializer: { } initializer })
-                return ResolveKeys(model.Compilation.GetSemanticModel(initializer.SyntaxTree), initializer.Value, seen);
-            if (reference.GetSyntax() is ForEachStatementSyntax loop && ArrayEntries(model, loop.Expression, seen) is { } entries)
+                return ResolveKeys(SourceModel.DeclarationModel(model, symbol, initializer), initializer.Value, seen);
+            if (reference.GetSyntax() is ForEachStatementSyntax loop &&
+                ArrayEntries(SourceModel.DeclarationModel(model, symbol, loop), loop.Expression, seen) is { } entries)
                 return ResolveEntries(entries.Model, entries.Values, seen);
         }
         return null;
@@ -153,7 +154,7 @@ public sealed class AuthorityGateTests
         if (symbol is null || !seen.Add(symbol) || !StableAlias(model, symbol)) return null;
         foreach (var reference in symbol.DeclaringSyntaxReferences)
             if (reference.GetSyntax() is VariableDeclaratorSyntax { Initializer: { } initializer })
-                return ArrayEntries(model.Compilation.GetSemanticModel(initializer.SyntaxTree), initializer.Value, seen);
+                return ArrayEntries(SourceModel.DeclarationModel(model, symbol, initializer), initializer.Value, seen);
         return null;
     }
 
@@ -165,7 +166,7 @@ public sealed class AuthorityGateTests
         if (declaration is null) return false;
         var scope = declaration.Ancestors().FirstOrDefault(node => node is BaseMethodDeclarationSyntax or LocalFunctionStatementSyntax or AccessorDeclarationSyntax)
             ?? declaration.SyntaxTree.GetRoot();
-        var source = model.Compilation.GetSemanticModel(scope.SyntaxTree);
+        var source = SourceModel.DeclarationModel(model, symbol, scope);
         return !scope.DescendantNodes().Any(node => node switch
         {
             AssignmentExpressionSyntax assignment => SameTarget(assignment.Left),

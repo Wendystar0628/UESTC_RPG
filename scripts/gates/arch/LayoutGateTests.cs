@@ -59,7 +59,7 @@ public sealed class LayoutGateTests
             seen ??= new HashSet<ISymbol>(SymbolEqualityComparer.Default);
             if (symbol is ILocalSymbol or IFieldSymbol && seen.Add(symbol) && symbol.DeclaringSyntaxReferences.FirstOrDefault()?.GetSyntax() is
                 VariableDeclaratorSyntax { Initializer: { } initializer })
-                return HasPixelLiteral(model.Compilation.GetSemanticModel(initializer.SyntaxTree), initializer.Value, seen);
+                return HasPixelLiteral(SourceModel.DeclarationModel(model, symbol, initializer), initializer.Value, seen);
             return false;
         }
         if (value.Value is not (int or long or float or double or decimal)) return false;

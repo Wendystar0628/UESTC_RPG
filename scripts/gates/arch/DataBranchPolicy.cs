@@ -78,7 +78,7 @@ internal sealed class DataBranchPolicy(SourceFile file)
             foreach (var reference in symbol.DeclaringSyntaxReferences)
             {
                 var syntax = reference.GetSyntax();
-                var sourceModel = model.Compilation.GetSemanticModel(syntax.SyntaxTree);
+                var sourceModel = SourceModel.DeclarationModel(model, symbol, syntax);
                 foreach (var value in DefinitionValues(syntax)) result |= Facts(sourceModel, value, visiting);
             }
             // A local can receive a fact after declaration. This is provenance, not a runtime value analysis.
@@ -133,41 +133,41 @@ internal sealed class DataBranchPolicy(SourceFile file)
         }
     }
 
-    private bool StringLiteral(ExpressionSyntax expression) => StringLiteral(expression, new HashSet<ISymbol>(SymbolEqualityComparer.Default));
+    private bool StringLiteral(ExpressionSyntax expression) => StringLiteral(file.Model, expression, new HashSet<ISymbol>(SymbolEqualityComparer.Default));
 
-    private bool StringLiteral(ExpressionSyntax expression, HashSet<ISymbol> visiting)
+    private bool StringLiteral(SemanticModel model, ExpressionSyntax expression, HashSet<ISymbol> visiting)
     {
-        var model = expression.SyntaxTree == file.Tree ? file.Model : file.Model.Compilation.GetSemanticModel(expression.SyntaxTree);
         if (expression is LiteralExpressionSyntax literal && literal.IsKind(SyntaxKind.StringLiteralExpression)) return true;
-        if (expression is ParenthesizedExpressionSyntax group) return StringLiteral(group.Expression, visiting);
-        if (expression is CastExpressionSyntax cast) return StringLiteral(cast.Expression, visiting);
+        if (expression is ParenthesizedExpressionSyntax group) return StringLiteral(model, group.Expression, visiting);
+        if (expression is CastExpressionSyntax cast) return StringLiteral(model, cast.Expression, visiting);
         if (expression is ObjectCreationExpressionSyntax or ImplicitObjectCreationExpressionSyntax &&
             Facts(model, expression, new HashSet<ISymbol>(SymbolEqualityComparer.Default)).HasFlag(Fact.Id) &&
             model.GetOperation(expression) is IObjectCreationOperation created)
-            return created.Arguments.Any(argument => StringLiteral(argument, visiting));
+            return created.Arguments.Any(argument => StringLiteral(model, argument, visiting));
         // Catalog fields/properties remain legal; hiding a literal in a local does not change its meaning.
         if (model.GetSymbolInfo(expression).Symbol is ILocalSymbol local && visiting.Add(local))
             return local.DeclaringSyntaxReferences.Any(reference => reference.GetSyntax() is VariableDeclaratorSyntax { Initializer: { } initializer } &&
-                StringLiteral(initializer.Value, visiting));
+                StringLiteral(SourceModel.DeclarationModel(model, local, initializer), initializer.Value, visiting));
         return false;
     }
 
-    private bool StringLiteral(IOperation operation, HashSet<ISymbol> visiting) => operation switch
+    private bool StringLiteral(SemanticModel model, IOperation operation, HashSet<ISymbol> visiting) => operation switch
     {
         // Omitted arguments keep the default declaration's meaning, including named catalog constants.
         IArgumentOperation { ArgumentKind: ArgumentKind.DefaultValue, Parameter: { } parameter } =>
             parameter.DeclaringSyntaxReferences.Length == 0 ? parameter.HasExplicitDefaultValue && parameter.ExplicitDefaultValue is string :
                 parameter.DeclaringSyntaxReferences.Select(reference => reference.GetSyntax()).OfType<ParameterSyntax>()
-                    .Any(declaration => declaration.Default is { } value && StringLiteral(value.Value, visiting)),
-        IArgumentOperation argument => StringLiteral(argument.Value, visiting),
-        IConversionOperation conversion => StringLiteral(conversion.Operand, visiting),
-        IArrayCreationOperation array => array.Initializer is { } initializer && StringLiteral(initializer, visiting),
-        IArrayInitializerOperation initializer => initializer.ElementValues.Any(value => StringLiteral(value, visiting)),
-        ICollectionExpressionOperation collection => collection.Elements.Any(value => StringLiteral(value, visiting)),
-        ISpreadOperation spread => StringLiteral(spread.Operand, visiting),
+                    .Any(declaration => declaration.Default is { } value &&
+                        StringLiteral(SourceModel.DeclarationModel(model, parameter, declaration), value.Value, visiting)),
+        IArgumentOperation argument => StringLiteral(model, argument.Value, visiting),
+        IConversionOperation conversion => StringLiteral(model, conversion.Operand, visiting),
+        IArrayCreationOperation array => array.Initializer is { } initializer && StringLiteral(model, initializer, visiting),
+        IArrayInitializerOperation initializer => initializer.ElementValues.Any(value => StringLiteral(model, value, visiting)),
+        ICollectionExpressionOperation collection => collection.Elements.Any(value => StringLiteral(model, value, visiting)),
+        ISpreadOperation spread => StringLiteral(model, spread.Operand, visiting),
         ILiteralOperation literal => literal.ConstantValue.HasValue && literal.ConstantValue.Value is string,
         IDefaultValueOperation => false,
-        _ => !operation.IsImplicit && operation.Syntax is ExpressionSyntax expression && StringLiteral(expression, visiting)
+        _ => !operation.IsImplicit && operation.Syntax is ExpressionSyntax expression && StringLiteral(model, expression, visiting)
     };
 
     private bool RejectsOnly(ExpressionSyntax expression)

@@ -131,10 +131,14 @@ public sealed class ArchitectureTests
                         .And().DoNotHaveFullNameMatching(allowedCatalogs))
                     .WithoutRequiringPositiveResults());
         }
-        // Evaluate wildcard references as MSBuild does, including references a compiler may elide.
-        foreach (var project in SourceModel.ProjectItems())
-            foreach (var reference in project.References)
-                AssertAssemblyReference(Path.GetFileNameWithoutExtension(project.Path), Path.GetFileNameWithoutExtension(reference));
+        // The native graph retains project dependencies even when the compiler elides their IL use.
+        foreach (var project in SourceModel.Projects)
+            foreach (var reference in project.ProjectReferences)
+            {
+                var target = project.Solution.GetProject(reference.ProjectId)
+                    ?? throw new InvalidOperationException($"G4 could not resolve a project reference from {project.FilePath}.");
+                AssertAssemblyReference(project.AssemblyName!, target.AssemblyName!);
+            }
 
     }
 

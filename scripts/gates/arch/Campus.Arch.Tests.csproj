@@ -3,16 +3,30 @@
     <RootNamespace>Campus.Arch.Tests</RootNamespace>
     <IsTestProject>true</IsTestProject>
     <IsPackable>false</IsPackable>
+    <_ArchRoslynDir>$(MSBuildSDKsPath)/../DotnetTools/dotnet-format</_ArchRoslynDir>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="Microsoft.CodeAnalysis">
-      <HintPath>$(MSBuildSDKsPath)/../Roslyn/bincore/Microsoft.CodeAnalysis.dll</HintPath>
+    <!-- Resolved by MSBuildLocator from the selected SDK, never copied into the test host. -->
+    <Reference Include="Microsoft.Build">
+      <HintPath>$(MSBuildBinPath)/Microsoft.Build.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="$(_ArchRoslynDir)/*.dll" Exclude="$(_ArchRoslynDir)/Microsoft.Build.dll;$(_ArchRoslynDir)/Microsoft.Build.Framework.dll;$(_ArchRoslynDir)/Microsoft.Build.Utilities.Core.dll;$(_ArchRoslynDir)/Microsoft.Build.Tasks.Core.dll;$(_ArchRoslynDir)/dotnet-format.dll">
       <Private>true</Private>
     </Reference>
-    <Reference Include="Microsoft.CodeAnalysis.CSharp">
-      <HintPath>$(MSBuildSDKsPath)/../Roslyn/bincore/Microsoft.CodeAnalysis.CSharp.dll</HintPath>
+    <Reference Include="Microsoft.Build.Locator">
+      <HintPath>$(_ArchRoslynDir)/BuildHost-netcore/Microsoft.Build.Locator.dll</HintPath>
       <Private>true</Private>
     </Reference>
+    <None Include="$(_ArchRoslynDir)/*.dll"
+          Exclude="$(_ArchRoslynDir)/Microsoft.Build.dll;$(_ArchRoslynDir)/Microsoft.Build.Framework.dll;$(_ArchRoslynDir)/Microsoft.Build.Utilities.Core.dll;$(_ArchRoslynDir)/Microsoft.Build.Tasks.Core.dll">
+      <Link>%(Filename)%(Extension)</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="$(_ArchRoslynDir)/BuildHost-netcore/**/*">
+      <Link>BuildHost-netcore/%(RecursiveDir)%(Filename)%(Extension)</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
     <PackageReference Include="Microsoft.NET.Test.Sdk" />
     <PackageReference Include="gdUnit4.api" />
     <PackageReference Include="gdUnit4.test.adapter" />
@@ -21,4 +35,10 @@
     <ProjectReference Include="../../../game/Campus.csproj" />
     <ProjectReference Include="../../../game/contracts/Runtime/Campus.Contracts.Runtime.csproj" />
   </ItemGroup>
+  <Target Name="RequireSdkArchWorkspace" BeforeTargets="ResolveAssemblyReferences">
+    <Error Condition="!Exists('$(_ArchRoslynDir)/Microsoft.CodeAnalysis.Workspaces.MSBuild.dll')"
+           Text="The selected SDK does not include MSBuildWorkspace. Install the locked SDK; G4 has no reduced source-model fallback." />
+    <Error Condition="!Exists('$(_ArchRoslynDir)/BuildHost-netcore/Microsoft.CodeAnalysis.Workspaces.MSBuild.BuildHost.dll') Or !Exists('$(_ArchRoslynDir)/BuildHost-netcore/Microsoft.Build.Locator.dll')"
+           Text="The selected SDK does not include the MSBuildWorkspace build host and locator." />
+  </Target>
 </Project>

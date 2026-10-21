@@ -66,7 +66,7 @@ internal static class AssertionCriteria
         }
         var symbol = model.GetSymbolInfo(expression).Symbol;
         return symbol is ILocalSymbol && seen.Add(symbol) && Initializer(symbol) is { } value &&
-            IsError(model.Compilation.GetSemanticModel(value.SyntaxTree), value, seen);
+            IsError(SourceModel.DeclarationModel(model, symbol, value), value, seen);
     }
 
     private static bool IsDifference(SemanticModel model, ExpressionSyntax expression, HashSet<ISymbol> seen)
@@ -77,7 +77,7 @@ internal static class AssertionCriteria
             SourceModel.Name(method.ContainingType) == "Campus.Contracts.Angles") return true;
         var symbol = model.GetSymbolInfo(expression).Symbol;
         return symbol is ILocalSymbol && seen.Add(symbol) && Initializer(symbol) is { } value &&
-            IsDifference(model.Compilation.GetSemanticModel(value.SyntaxTree), value, seen);
+            IsDifference(SourceModel.DeclarationModel(model, symbol, value), value, seen);
     }
 
     public static bool HasLiteralCriterion(SourceFile file, ExpressionSyntax expression) => HasLiteral(file.Model, expression, NewSeen());
@@ -102,7 +102,7 @@ internal static class AssertionCriteria
         var symbol = model.GetSymbolInfo(expression).Symbol;
         if (symbol is ILocalSymbol or IFieldSymbol or IParameterSymbol && seen.Add(symbol) && Initializer(symbol) is { } value)
         {
-            var origin = model.Compilation.GetSemanticModel(value.SyntaxTree);
+            var origin = SourceModel.DeclarationModel(model, symbol, value);
             // Do not chase a fixture's computed size/distance back into its input coordinates.
             if (SourceModel.Constant(origin, value) is null && !HasRule(origin, value, NewSeen()) && !IsCriterionCalculation(value)) return false;
             return HasLiteral(origin, value, seen);
@@ -118,7 +118,7 @@ internal static class AssertionCriteria
         if (IsRuleField(model, expression)) return true;
         var symbol = model.GetSymbolInfo(expression).Symbol;
         if (symbol is ILocalSymbol or IFieldSymbol or IParameterSymbol && seen.Add(symbol) && Initializer(symbol) is { } value)
-            return HasRule(model.Compilation.GetSemanticModel(value.SyntaxTree), value, seen);
+            return HasRule(SourceModel.DeclarationModel(model, symbol, value), value, seen);
         return expression.DescendantNodes().OfType<ExpressionSyntax>().Any(child => IsRuleField(model, child));
     }
 
