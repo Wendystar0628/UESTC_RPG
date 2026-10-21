@@ -44,6 +44,7 @@ paths: ["docs/workflow/WF-ENTRY-*.md", "scripts/requirements.*", "game/testing/*
 - 队列里能派 Claude 子代理做完、与 Codex 主线不冲突的行自己接，不等 GPT 侧（WF-ROLE §5，DECISION-234）。
 - 评审定下的通用结论当天写回规范文档；决策编号由你分配（STD-DOC §8）。
 - 写代码的子代理交回后你统一编译、快检、提交推送；碰了画面的推送你跑 `scripts/shots/fixed-shots.ps1` 看一眼，不合格就派返工单在最新版本上改，不回滚（WF-FLOW §3.1、§4，WF-RULE §7）。
+- 每批收口看失败登记，同一子类反复出现就开整类排查行，不再逐条修（ENG-FAILS §0）。
 - 开局起巡逻并逐条处理"建议"，与实际不符就修检查脚本，不照误判办；周期、命令与重启后的做法见 `.collab\tools\README.md`；后台起观察台采集（WF-COMMS §6）。
 
 | 做这件事之前 | 读 |
