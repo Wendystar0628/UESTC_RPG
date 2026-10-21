@@ -68,6 +68,12 @@ internal sealed class FlowRuntimeTestStub(Func<bool> covered) : IMapRuntime, IMa
         get => _failure;
         set { _failure = value; _arrival?.TryComplete(); }
     }
+    public AppStartupException ReportFailure([FailureHandler("SYS-MAPS")] Exception error)
+    {
+        var failure = error as AppStartupException ?? new(AppStartupFailureCodes.MapPreparation, "Map preparation failed.", error);
+        Failure = failure;
+        return failure;
+    }
     private ArrivalStub? _arrival;
     public IMapArrival? Arrival => _arrival;
     public IMapArrival Arrive(Pose destination, ViewMode mode, NavSpace? space = null)

@@ -1,4 +1,3 @@
-using Campus.Kernel.Diagnostics;
 using Campus.Contracts;
 using Campus.Contracts.Maps;
 using Campus.Contracts.Quality;
@@ -52,7 +51,7 @@ public partial class WorldStateNode : Node, IMapAware, IQualityAware
     {
         try { await _transition!.Crossfade(.5f); }
         catch (OperationCanceledException) when (!IsInsideTree()) { }
-        catch (Exception error) { DiagnosticLog.Error("reduced-motion crossfade failed:", error); }
+        catch (Exception error) { KernelServices.Get<IMapRuntime>().ReportFailure(error); }
     }
 
     public override void _Process(double delta)

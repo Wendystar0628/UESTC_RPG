@@ -24,7 +24,7 @@ public sealed class MapTransition(MapId from, MapTravelRequest request) : IMapTr
     public Task<MapTravelResult> Done => _completion.Task;
     public Exception? Failure { get; private set; }
     internal void MoveTo(MapStage stage) => Stage = stage;
-    internal void Complete(MapTravelResult result, Exception? failure = null)
+    internal void Complete(MapTravelResult result, [FailureHandler("SYS-MAPS")] Exception? failure = null)
     {
         Failure = failure;
         Stage = MapStage.Done;

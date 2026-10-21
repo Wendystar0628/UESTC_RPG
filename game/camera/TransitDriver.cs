@@ -1,5 +1,3 @@
-using KernelServices = Campus.Kernel.Registry.Kernel;
-using Campus.Contracts.Diagnostics;
 using Campus.Contracts;
 using Campus.Contracts.Maps;
 using Godot;
@@ -39,6 +37,9 @@ public sealed class TransitDriver(ICameraRig camera, IAppLoadingPresentation loa
     private async Task Execute(TransitRun run)
     {
         IAppLoadingLease? screen = null;
+        var result = TransitResult.Cancelled;
+        List<Exception>? failures = null;
+        void CollectFailure([FailureHandler("UI-NAV-WAYPOINTS")] Exception error) => (failures ??= []).Add(error);
         try
         {
             var tree = Engine.GetMainLoop() as SceneTree ?? throw new InvalidOperationException("Transit requires a running scene tree.");
@@ -80,17 +81,7 @@ public sealed class TransitDriver(ICameraRig camera, IAppLoadingPresentation loa
 
             await destination.Done.WaitAsync(run.Token);
             RequireCurrentArrival(destination);
-            if (body is not null)
-            {
-                var elapsed = 0d;
-                while (body.Active && !body.ExitRequested && !(body.CollisionReady && body.Grounded) &&
-                    elapsed < TransitTuning.WalkSettleSeconds)
-                {
-                    await tree.ToSignal(tree, SceneTree.SignalName.ProcessFrame);
-                    if (run.Cancelled) return;
-                    elapsed += tree.Root.GetProcessDeltaTime();
-                }
-            }
+            if (body is not null && !await WaitForWalkSettle(tree, body, run)) return;
 
             RequireCurrentArrival(destination);
             run.Progress = 0.75f;
@@ -98,20 +89,34 @@ public sealed class TransitDriver(ICameraRig camera, IAppLoadingPresentation loa
             await screen.Hide().WaitAsync(run.Token);
             if (run.Cancelled) return;
             run.Progress = 1;
-            run.Finish(TransitResult.Arrived);
+            result = TransitResult.Arrived;
         }
-        catch (Exception error)
-        {
-            if (error is not OperationCanceledException) KernelServices.Get<IDiagnosticLog>().Error("[UI-NAV-WAYPOINTS] teleport failed:", error);
-            run.Finish(TransitResult.Cancelled);
-        }
+        catch (OperationCanceledException) { }
+        catch (Exception error) { CollectFailure(error); }
         finally
         {
-            if (run.Arrival is { } pending && !pending.Done.IsCompleted) pending.Cancel();
-            run.Finish(TransitResult.Cancelled);
-            if (screen is not null) await screen.DisposeAsync();
+            try { if (run.Arrival is { } pending && !pending.Done.IsCompleted) pending.Cancel(); }
+            catch (Exception error) { CollectFailure(error); }
+            try { if (screen is not null) await screen.DisposeAsync(); }
+            catch (OperationCanceledException) { result = TransitResult.Cancelled; }
+            catch (Exception error) { CollectFailure(error); }
             if (ReferenceEquals(_active, run)) _active = null;
+            var failure = failures is null ? null : failures.Count == 1 ? failures[0] : new AggregateException(failures);
+            run.Finish(result, failure);
         }
+    }
+
+    private static async Task<bool> WaitForWalkSettle(SceneTree tree, IWalkController body, TransitRun run)
+    {
+        var elapsed = 0d;
+        while (body.Active && !body.ExitRequested && !(body.CollisionReady && body.Grounded) &&
+            elapsed < TransitTuning.WalkSettleSeconds)
+        {
+            await tree.ToSignal(tree, SceneTree.SignalName.ProcessFrame);
+            if (run.Cancelled) return false;
+            elapsed += tree.Root.GetProcessDeltaTime();
+        }
+        return true;
     }
 
     private void RequireCurrentArrival(IMapArrival arrival)
@@ -143,6 +148,10 @@ public sealed class TransitDriver(ICameraRig camera, IAppLoadingPresentation loa
             _done.TrySetResult(TransitResult.Cancelled);
         }
 
-        public void Finish(TransitResult result) => _done.TrySetResult(result);
+        public void Finish(TransitResult result, [FailureHandler("UI-NAV-WAYPOINTS")] Exception? failure = null)
+        {
+            if (failure is not null) _done.TrySetException(failure);
+            else _done.TrySetResult(result);
+        }
     }
 }

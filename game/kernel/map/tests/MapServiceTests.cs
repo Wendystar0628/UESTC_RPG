@@ -7,6 +7,7 @@ using System.Text;
 using System.Text.Json;
 using Campus.Contracts;
 using Campus.Contracts.Maps;
+using Campus.Contracts.AppFlow;
 using Campus.Contracts.Save;
 using Campus.Kernel.Maps;
 using Campus.Kernel.Registry;
@@ -288,6 +289,52 @@ public sealed class MapServiceTests
         finally { f.Loader.ReleaseDelayed(); }
     }
 
+    [TestCase, TestCategory(TestReason.Regression)]
+    public void ArrivalObserverFailuresNotifyEveryoneAndCompleteTheOriginalTransition()
+    {
+        foreach (var multipleFailures in new[] { false, true })
+        {
+            var fixture = new Fixture();
+            using var service = fixture.Service;
+            var original = new InvalidDataException("arrival observer failed");
+            var later = new InvalidOperationException("another arrival observer failed");
+            var observed = new List<MapId>();
+            service.Arrived += (map, _) => { observed.Add(map); throw original; };
+            service.Arrived += (map, _) => { observed.Add(map); if (multipleFailures) throw later; };
+            service.Arrived += (map, _) => observed.Add(map);
+            var travel = service.Travel(new(service.Default, Cause: MapTravelCause.Boot));
+            fixture.Until(() => travel.Done.IsCompleted);
+            AssertThat(travel.Done.Result == MapTravelResult.Failed && travel.Stage == MapStage.Done &&
+                service.Transition is null && !fixture.Camera.InputLocked && observed.Count == 3 &&
+                observed.All(map => map == service.Current)).IsTrue();
+            if (multipleFailures)
+            {
+                var causes = travel.Failure as AggregateException ?? throw new InvalidOperationException("Observer failures were not aggregated.");
+                AssertThat(causes.InnerExceptions.Count == 2 && causes.InnerExceptions.Contains(original) &&
+                    causes.InnerExceptions.Contains(later)).IsTrue();
+            }
+            else AssertThat(ReferenceEquals(travel.Failure, original)).IsTrue();
+        }
+    }
+
+    [TestCase, TestCategory(TestReason.Regression)]
+    public void InvalidRequestedPoseOrUnknownSpawnIsRejectedWithoutStartingTravel()
+    {
+        var fixture = new Fixture();
+        using var service = fixture.Service;
+        var invalid = fixture.Camera.Pose with { YawDeg = float.NaN };
+        foreach (var request in new MapTravelRequest[]
+        {
+            new(service.Default, Pose: invalid, Cause: MapTravelCause.Boot),
+            new(service.Default, Spawn: "missing-spawn", Cause: MapTravelCause.Boot)
+        })
+        {
+            var travel = service.Travel(request);
+            AssertThat(travel.Done.Result == MapTravelResult.Rejected && travel.Failure is null &&
+                service.Transition is null && fixture.Loader.Loads == 0 && !fixture.Camera.InputLocked).IsTrue();
+        }
+    }
+
     [TestCase]
     [TestCategory(TestReason.Contract)]
     public void FailedBootFinishesWithoutRetry()
@@ -483,6 +530,12 @@ public sealed class MapServiceTests
     private sealed class TestRuntime : IMapRuntime, IMapLifetime
     {
         public Exception? Failure { get; private set; }
+        public AppStartupException ReportFailure([FailureHandler("SYS-MAPS")] Exception error)
+        {
+            var failure = error as AppStartupException ?? new(AppStartupFailureCodes.MapPreparation, "Map preparation failed.", error);
+            Failure = failure;
+            return failure;
+        }
         private TaskCompletionSource? _mount;
         private bool _delayMount;
         private bool _arrivalReady = true;

@@ -57,16 +57,16 @@ public partial class MapRuntime : Node, IMapRuntime, IMapLifetime
 
     private void PollFailures()
     {
-        if (_stream?.Failure is { } stream) RecordFailure(stream);
-        if (_bake?.Failure is { } bake) RecordFailure(bake);
-        if (_renderer?.Failure is { } rendering) RecordFailure(rendering);
-        if (_collision?.Failure is { } collision) RecordFailure(collision);
+        if (_stream?.Failure is { } stream) ReportFailure(stream);
+        if (_bake?.Failure is { } bake) ReportFailure(bake);
+        if (_renderer?.Failure is { } rendering) ReportFailure(rendering);
+        if (_collision?.Failure is { } collision) ReportFailure(collision);
         if (_contentReadiness is { } content)
             foreach (var producer in content.Producers)
-                if (producer.Failure is { } failure) RecordFailure(failure);
+                if (producer.Failure is { } failure) ReportFailure(failure);
     }
 
-    private AppStartupException RecordFailure([FailureHandler("SYS-MAPS")] Exception error)
+    public AppStartupException ReportFailure([FailureHandler("SYS-MAPS")] Exception error)
     {
         // Classify only at publication; keep each original producer and cleanup cause intact.
         if (_failure is { } published && ReferenceEquals(error, published)) return published;
@@ -118,7 +118,7 @@ public partial class MapRuntime : Node, IMapRuntime, IMapLifetime
 
     private async Task ShutdownMap(MapId from)
     {
-        try { StopNewWork(); } catch (Exception error) { RecordFailure(error); }
+        try { StopNewWork(); } catch (Exception error) { ReportFailure(error); }
         _mountPrepared = false;
         _contentReadiness = null;
         _mapGeneration++;
@@ -133,26 +133,26 @@ public partial class MapRuntime : Node, IMapRuntime, IMapLifetime
         if (preparation is not null)
             try { await preparation; }
             catch (OperationCanceledException) when (_exit.IsCancellationRequested && preparation.IsCanceled) { }
-            catch (Exception error) { RecordFailure(error); }
+            catch (Exception error) { ReportFailure(error); }
         foreach (var arrival in _arrivalPreparations)
             try { await arrival; }
             catch (OperationCanceledException) when (_exit.IsCancellationRequested && arrival.IsCanceled) { }
-            catch (Exception error) { RecordFailure(error); }
+            catch (Exception error) { ReportFailure(error); }
         _arrivalPreparations.Clear();
         // Keep identities captured at preparation: never resolve new transient receivers during teardown.
         foreach (var aware in _receivers.OfType<IMapAware>())
             try { aware.OnMapUnloading(from); }
-            catch (Exception error) { RecordFailure(error); }
+            catch (Exception error) { ReportFailure(error); }
         if (_stream is not null)
             try { await _stream.DrainAsync(); }
-            catch (Exception error) { RecordFailure(error); }
+            catch (Exception error) { ReportFailure(error); }
         // A failed native release still owns map inputs and bindings; a later explicit shutdown resumes the drain.
         if (_stream?.IsUnloaded == false) return;
         foreach (var participant in _receivers.OfType<IMapDataParticipant>())
             try { await participant.UnloadAsync(from); }
-            catch (Exception error) { RecordFailure(error); }
+            catch (Exception error) { ReportFailure(error); }
         try { await _owner!.ReleaseMapAsync(from); }
-        catch (Exception error) { RecordFailure(error); }
+        catch (Exception error) { ReportFailure(error); }
         finally
         {
             _loaded = null; _context = null; _preparing = null; _receivers = [];
@@ -180,7 +180,7 @@ public partial class MapRuntime : Node, IMapRuntime, IMapLifetime
         }
         catch (Exception error)
         {
-            var failure = RecordFailure(error);
+            var failure = ReportFailure(error);
             _mountCompletion.TrySetException(failure);
             System.Runtime.ExceptionServices.ExceptionDispatchInfo.Capture(failure).Throw();
         }
@@ -212,7 +212,7 @@ public partial class MapRuntime : Node, IMapRuntime, IMapLifetime
         catch (OperationCanceledException) when (_exit.IsCancellationRequested) { }
         catch (Exception error)
         {
-            FailArrival(RecordFailure(error));
+            FailArrival(ReportFailure(error));
             // The private preparation task retains its original cause for the awaited cleanup drain.
             throw;
         }
@@ -259,7 +259,7 @@ public partial class MapRuntime : Node, IMapRuntime, IMapLifetime
         catch (Exception error)
         {
             // Replaced/cancelled arrivals cannot publish readiness, but their genuine failures still belong to this map lifetime.
-            var failure = RecordFailure(error);
+            var failure = ReportFailure(error);
             if (!_stopping && generation == _mapGeneration && ReferenceEquals(_arrival, arrival) && !arrival.Done.IsCompleted)
                 FailArrival(failure);
         }
@@ -299,7 +299,7 @@ public partial class MapRuntime : Node, IMapRuntime, IMapLifetime
         }
         catch (Exception error)
         {
-            FailArrival(RecordFailure(error));
+            FailArrival(ReportFailure(error));
         }
     }
 
@@ -314,14 +314,14 @@ public partial class MapRuntime : Node, IMapRuntime, IMapLifetime
         _stopping = true;
         PollFailures();
         if (Failure is { } failure)
-            try { FailArrival(failure); } catch (Exception error) { RecordFailure(error); }
-        try { _exit.Cancel(); } catch (Exception error) { RecordFailure(error); }
+            try { FailArrival(failure); } catch (Exception error) { ReportFailure(error); }
+        try { _exit.Cancel(); } catch (Exception error) { ReportFailure(error); }
         _mountCompletion?.TrySetCanceled();
         if (_arrival is { } arrival)
         {
-            try { arrival.Cancel(); } catch (Exception error) { RecordFailure(error); }
+            try { arrival.Cancel(); } catch (Exception error) { ReportFailure(error); }
             _arrival = null;
-            try { ArrivalChanged?.Invoke(null); } catch (Exception error) { RecordFailure(error); }
+            try { ArrivalChanged?.Invoke(null); } catch (Exception error) { ReportFailure(error); }
         }
     }
     public override void _ExitTree()

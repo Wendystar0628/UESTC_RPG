@@ -23,9 +23,15 @@ public sealed class MapSpawnResolutionTests
         var authored = new MapSpawn("P00", new(new Vector3(12, 50, 18), 35, -20),
             new(new Vector3(11, 0, 17), 32));
         var entry = Entry([authored]);
-        AssertThat(entry.ResolveSpawn("P00") == authored).OverrideFailureMessage("Explicit spawn lost priority over a same-named waypoint.").IsTrue();
+        AssertThat(entry.ResolveSpawn("P00") == authored && entry.TryResolveSpawn("P00", out var resolved) && resolved == authored)
+            .OverrideFailureMessage("Explicit spawn lost priority over a same-named waypoint.").IsTrue();
+        AssertThat(entry.TryResolveSpawn("P01", out var point) && point == entry.ResolveSpawn("P01") &&
+            point.Fly == entry.Waypoints[1].Fly && point.Stand == entry.Waypoints[1].Stand).IsTrue();
         foreach (var unknown in new[] { "missing", "", "p00" })
+        {
+            AssertThat(entry.TryResolveSpawn(unknown, out _)).IsFalse();
             AssertThrown(() => entry.ResolveSpawn(unknown)).IsInstanceOf<ArgumentException>();
+        }
     }
 
     [TestCase]

@@ -50,6 +50,25 @@ public sealed class MapRuntimeFailureTests
     }
 
     [TestCase, TestCategory(TestReason.Regression), RequireGodotRuntime]
+    public void ReportedWorldFailureUsesTheExistingMapLifetimeProjection()
+    {
+        using var fixture = new MapRuntimeFixture();
+        IMapRuntime source = fixture.Runtime;
+        var original = new InvalidOperationException("world crossfade failed");
+        var published = source.ReportFailure(original);
+        AssertThat(ReferenceEquals(source.Failure, published) && ReferenceEquals(published.InnerException, original) &&
+            published.Code == AppStartupFailureCodes.MapPreparation && source.Arrival is null).IsTrue();
+        AssertThat(ReferenceEquals(source.ReportFailure(original), published)).IsTrue();
+        var later = new AppStartupException(AppStartupFailureCodes.Installation, "map resource is missing");
+        var collected = source.ReportFailure(later);
+        var causes = collected.InnerException as AggregateException ?? throw new InvalidOperationException("Reported map failures were not aggregated.");
+        AssertThat(ReferenceEquals(source.Failure, collected) && collected.Code == later.Code &&
+            causes.InnerExceptions.Count == 2 && causes.InnerExceptions.Contains(original) && causes.InnerExceptions.Contains(later)).IsTrue();
+        fixture.Runtime._Process(0);
+        AssertThat(ReferenceEquals(fixture.Mount.Exception!.InnerException, collected)).IsTrue();
+    }
+
+    [TestCase, TestCategory(TestReason.Regression), RequireGodotRuntime]
     public void ExplicitStartupCodeSurvivesProducerAggregation()
     {
         using var fixture = new MapRuntimeFixture();

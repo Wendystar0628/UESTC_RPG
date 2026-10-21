@@ -236,12 +236,13 @@ public sealed class MapCatalog
         return points.Waypoints;
     }
 
+    public static bool IsValidPose(Pose pose) =>
+        VectorMath.Finite(pose.Position) && float.IsFinite(pose.YawDeg) && float.IsFinite(pose.PitchDeg) &&
+        (pose.FovDeg is not { } fov || float.IsFinite(fov) && fov > 0 && fov < 180);
+
     public static void ValidatePose(Pose pose)
     {
-        if (!VectorMath.Finite(pose.Position) ||
-            !float.IsFinite(pose.YawDeg) || !float.IsFinite(pose.PitchDeg) ||
-            pose.FovDeg is { } fov && (!float.IsFinite(fov) || fov <= 0 || fov >= 180))
-            throw new InvalidDataException("Map pose contains invalid numbers.");
+        if (!IsValidPose(pose)) throw new InvalidDataException("Map pose contains invalid numbers.");
     }
 
     public static void ValidateRoot(string root)
@@ -285,12 +286,16 @@ public sealed class MapCatalog
 public sealed record MapCatalogEntry(MapDescriptor Descriptor, string DataRoot,
     IReadOnlyList<Waypoint> Waypoints)
 {
-    public MapSpawn ResolveSpawn(string id)
+    public MapSpawn ResolveSpawn(string id) => TryResolveSpawn(id, out var spawn) ? spawn :
+        throw new ArgumentException($"Unknown spawn or waypoint: {id}.", nameof(id));
+
+    public bool TryResolveSpawn(string id, out MapSpawn spawn)
     {
-        var spawn = Descriptor.Spawns.FirstOrDefault(s => s.Id == id);
-        if (spawn is not null) return spawn;
+        var authored = Descriptor.Spawns.FirstOrDefault(s => s.Id == id);
+        if (authored is not null) { spawn = authored; return true; }
         var waypoint = Waypoints.FirstOrDefault(w => w.Id == id);
-        return waypoint is null ? throw new ArgumentException($"Unknown spawn or waypoint: {id}.", nameof(id)) :
-            new(id, waypoint.Fly, waypoint.Stand);
+        if (waypoint is not null) { spawn = new(id, waypoint.Fly, waypoint.Stand); return true; }
+        spawn = null!;
+        return false;
     }
 }

@@ -143,13 +143,8 @@ public sealed class MapService : IMapService, IMapFrame, ISaveSection<MapsSave>,
         };
         if (!valid) return false;
         if (request.Mode is { } mode) ValidateMode(mode);
-        try
-        {
-            if (request.Pose is { } pose) MapCatalog.ValidatePose(pose);
-            else if (request.Spawn is { } spawn) _ = target.ResolveSpawn(spawn);
-        }
-        catch (Exception error) when (error is ArgumentException or InvalidDataException) { return false; }
-        return true;
+        if (request.Pose is { } pose) return MapCatalog.IsValidPose(pose);
+        return request.Spawn is not { } spawn || target.TryResolveSpawn(spawn, out _);
     }
 
     private void Begin(MapTransition transition)
@@ -332,7 +327,7 @@ public sealed class MapService : IMapService, IMapFrame, ISaveSection<MapsSave>,
     }
 
     /// <summary>A failed startup load is terminal: the caller presents the failure and stops startup.</summary>
-    private void Fail(Exception error)
+    private void Fail([FailureHandler("SYS-MAPS")] Exception error)
     {
         _data.ReportError($"Map load failed [stage={_active?.Stage}, cause={_active?.Cause}, " +
             $"target={_request?.Target.Value ?? "-"}]:", error);
@@ -350,22 +345,28 @@ public sealed class MapService : IMapService, IMapFrame, ISaveSection<MapsSave>,
         _modeChange = null;
         _legalize = null;
         _mount = null;
-        if (result != MapTravelResult.Arrived) _arrival?.Cancel();
+        var arrival = _arrival;
         _arrival = null;
-        _input?.Dispose();
+        var input = _input;
         _input = null;
-        if (result == MapTravelResult.Arrived) PublishArrival(finished.Cause);
-        finished.Complete(result, failure);
-    }
-
-    private void PublishArrival(MapTravelCause cause)
-    {
-        if (Arrived is not { } handlers) return;
-        foreach (Action<MapId, MapTravelCause> handler in handlers.GetInvocationList())
+        List<Exception>? failures = failure is null ? null : [failure];
+        void CollectFailure([FailureHandler("SYS-MAPS")] Exception error) => (failures ??= []).Add(error);
+        try { if (result != MapTravelResult.Arrived) arrival?.Cancel(); }
+        catch (Exception error) { CollectFailure(error); }
+        try { input?.Dispose(); }
+        catch (Exception error) { CollectFailure(error); }
+        if (result == MapTravelResult.Arrived && Arrived is { } handlers)
         {
-            try { handler(Current, cause); }
-            catch (Exception error) { _data.ReportError("Map arrival subscriber failed:", error); }
+            var map = Current;
+            foreach (Action<MapId, MapTravelCause> handler in handlers.GetInvocationList())
+            {
+                try { handler(map, finished.Cause); }
+                catch (Exception error) { CollectFailure(error); }
+            }
         }
+        failure = failures is null ? null : failures.Count == 1 ? failures[0] :
+            new AggregateException("Map transition completion failed.", failures);
+        finished.Complete(failure is null ? result : MapTravelResult.Failed, failure);
     }
 
     private void Move(MapStage stage)

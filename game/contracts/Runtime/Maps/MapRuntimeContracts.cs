@@ -1,3 +1,5 @@
+using Campus.Contracts.AppFlow;
+
 namespace Campus.Contracts.Maps;
 
 /// <summary>Main-thread destination preparation. The latest arrival is the only current request.</summary>
@@ -5,6 +7,8 @@ public interface IMapRuntime
 {
     /// <summary>Original preparation and runtime failures for this map lifetime; cancellation is separate.</summary>
     Exception? Failure { get; }
+    /// <summary>Receives a terminal map-lifetime failure into the same projection; retains original causes and startup codes.</summary>
+    AppStartupException ReportFailure([FailureHandler("SYS-MAPS")] Exception error);
     IMapArrival Arrive(Pose destination, ViewMode mode, NavSpace? space = null);
     IMapArrival? Arrival { get; }
     event Action<IMapArrival?>? ArrivalChanged;
