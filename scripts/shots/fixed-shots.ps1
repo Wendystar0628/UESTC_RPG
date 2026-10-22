@@ -1,7 +1,7 @@
 ﻿# 启动游戏内统一拍摄服务；录像每机位独立进程，保留 Godot 原生文件，以服务元数据说明有效区间。
 # 产出：output/shots/、output/shots/ui/、output/movies/
 # 用法：powershell -NoProfile -File scripts/shots/fixed-shots.ps1 [-Ui] [-Only 名字,名字] [-Poses 机位文件] [-MovieFrames 600] [-MovieEvents '60:season=winter;90:season=spring']
-# 每轮先显式准备正式游戏构建与按需导入。
+# 每轮先显式准备正式游戏构建与 Godot 原生增量导入。
 #   -Poses：换一份机位表（格式同 poses.txt），临时加拍的机位放仓库外，不改 poses.txt
 #   -Ui：在隔离桌面采集 ui-poses.txt 的开始页、行走 HUD 与地图页，1920×1080；不能与 -Poses 或录像组合。
 # 事件也可写在机位表第三列 --movie-events=...；帧号零起始，60 fps，第 60 帧即第 1 秒。

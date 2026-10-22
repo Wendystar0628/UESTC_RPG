@@ -1,5 +1,5 @@
 """从登记表、C# 规则值及共用雾源生成构建期着色器 include。
-用法：python scripts/build/generate-style-shaders.py [--root 仓库根目录] [--list-inputs（只列原生增量构建输入）]
+用法：python scripts/build/generate-style-shaders.py [--root 仓库根目录]
 产出：game/style/shaders/style_consts.gdshaderinc；game/style/outline/fog.glslinc。
 """
 from pathlib import Path
@@ -176,12 +176,6 @@ VECTOR_BINDINGS = [
 ]
 
 
-def source_inputs(root):
-    paths = {binding[0] for binding in BINDINGS + VECTOR_BINDINGS}
-    paths.update((PALETTE_SOURCE, FOG_SOURCE))
-    return sorted({str((root / path).resolve()) for path in paths} | {str(Path(__file__).resolve())})
-
-
 def literal_rule(root, path, member, kind=None, enum=None):
     source = (root / path).read_text(encoding="utf-8-sig")
     if enum:
@@ -236,11 +230,7 @@ def fog_glsl(root):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--root", type=Path, default=Path(__file__).resolve().parents[2])
-    parser.add_argument("--list-inputs", action="store_true")
     args = parser.parse_args()
-    if args.list_inputs:
-        print("\n".join(source_inputs(args.root)))
-        return
     outputs = {"game/style/shaders/style_consts.gdshaderinc": style_constants(args.root),
                "game/style/outline/fog.glslinc": fog_glsl(args.root)}
     for path, content in outputs.items():

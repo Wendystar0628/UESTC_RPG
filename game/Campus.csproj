@@ -23,13 +23,41 @@
     <_CampusGdUnitRunnerSource>$([MSBuild]::NormalizePath('$(MSBuildProjectDirectory)', 'gdunit4_testadapter_v5/GdUnit4TestRunnerScene.cs'))</_CampusGdUnitRunnerSource>
     <_CampusCodeFingerprintTool>$([MSBuild]::NormalizePath('$(MSBuildProjectDirectory)', '../scripts/build/fingerprints/Campus.CodeFingerprints.csproj'))</_CampusCodeFingerprintTool>
     <_CampusPublishedCodeFingerprintManifest>$(MSBuildProjectDirectory)/data/build-code-fingerprints.json</_CampusPublishedCodeFingerprintManifest>
+    <_CampusBuildCommitFile>$(MSBuildProjectDirectory)/data/build-commit.txt</_CampusBuildCommitFile>
   </PropertyGroup>
+  <Target Name="PrepareCampusGeneratedFiles" BeforeTargets="PrepareForBuild;CoreClean">
+    <PropertyGroup>
+      <_CampusGdUnitRunnerStamp>$(IntermediateOutputPath)gdunit-test-runner.stamp</_CampusGdUnitRunnerStamp>
+      <_CampusStyleShaderStamp>$(IntermediateOutputPath)style-shaders.stamp</_CampusStyleShaderStamp>
+      <_CampusBuildInformationSource>$([MSBuild]::NormalizePath('$(MSBuildProjectDirectory)', '$(IntermediateOutputPath)', 'BuildInfo.g.cs'))</_CampusBuildInformationSource>
+      <_CampusBuildInformationStamp>$(IntermediateOutputPath)build-information.stamp</_CampusBuildInformationStamp>
+      <_CampusCodeFingerprintManifest>$(IntermediateOutputPath)build-code-fingerprints.json</_CampusCodeFingerprintManifest>
+      <_CampusCodeFingerprintStamp>$(IntermediateOutputPath)code-fingerprints.stamp</_CampusCodeFingerprintStamp>
+    </PropertyGroup>
+    <ItemGroup>
+      <!-- Conservative native globs track source changes; Python alone owns the shader bindings. -->
+      <_CampusStyleShaderInput Include="**/*.cs;style/**/*.json;style/**/*.gdshaderinc;../scripts/build/generate-style-shaders.py"
+                               Exclude="$(DefaultItemExcludes);@(CampusGeneratedCompile);@(CampusGeneratedFile)" />
+      <FileWrites Include="$(_CampusGdUnitRunnerStamp);$(_CampusGdUnitRunnerSource);$(_CampusStyleShaderStamp);@(CampusGeneratedFile-&gt;'%(FullPath)');$(_CampusBuildInformationStamp);$(_CampusBuildInformationSource);$(_CampusCodeFingerprintStamp);$(_CampusCodeFingerprintManifest);$(_CampusBuildCommitFile);$(_CampusPublishedCodeFingerprintManifest)" />
+      <!-- CoreClean's native Clean items include generated products outside obj/bin. -->
+      <Clean Include="$(_CampusGdUnitRunnerStamp);$(_CampusGdUnitRunnerSource);$(_CampusStyleShaderStamp);@(CampusGeneratedFile-&gt;'%(FullPath)');$(_CampusBuildInformationStamp);$(_CampusBuildInformationSource);$(_CampusCodeFingerprintStamp);$(_CampusCodeFingerprintManifest);$(_CampusBuildCommitFile);$(_CampusPublishedCodeFingerprintManifest)" />
+    </ItemGroup>
+    <!-- A missing real product invalidates its completion stamp before native incremental checks. -->
+    <Delete Files="$(_CampusGdUnitRunnerStamp)" Condition="!Exists('$(_CampusGdUnitRunnerSource)')" />
+    <Delete Files="$(_CampusStyleShaderStamp)" Condition="!Exists('%(CampusGeneratedFile.Identity)')" />
+    <Delete Files="$(_CampusBuildInformationStamp)" Condition="!Exists('$(_CampusBuildInformationSource)')" />
+    <Delete Files="$(_CampusCodeFingerprintStamp)" Condition="!Exists('$(_CampusCodeFingerprintManifest)')" />
+  </Target>
   <Target Name="EnsureGdUnitTestRunner"
+          DependsOnTargets="PrepareCampusGeneratedFiles"
           Condition="'$(Configuration)' == 'Debug' And '$(DesignTimeBuild)' != 'true' And '$(_CampusGdUnitApiPackage)' != ''"
           Inputs="$(MSBuildAllProjects);$(ProjectAssetsFile);$(MSBuildProjectDirectory)/../scripts/setup/install-test-runner.ps1"
-          Outputs="$(_CampusGdUnitRunnerSource)">
+          Outputs="$(_CampusGdUnitRunnerStamp)">
+    <Delete Files="$(_CampusGdUnitRunnerStamp)" />
+    <MakeDir Directories="$(IntermediateOutputPath)" />
     <Exec Command="powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File &quot;$(MSBuildProjectDirectory)/../scripts/setup/install-test-runner.ps1&quot; -Root &quot;$(MSBuildProjectDirectory)/..&quot;" />
-    <Touch Files="$(_CampusGdUnitRunnerSource)" />
+    <Error Condition="!Exists('$(_CampusGdUnitRunnerSource)')" Text="The test runner generator did not produce $(_CampusGdUnitRunnerSource)." />
+    <Touch Files="$(_CampusGdUnitRunnerStamp)" AlwaysCreate="true" />
   </Target>
   <Target Name="IncludeGdUnitTestRunner" BeforeTargets="CoreCompile" DependsOnTargets="EnsureGdUnitTestRunner"
           Condition="'$(Configuration)' == 'Debug' And '$(_CampusGdUnitApiPackage)' != ''">
@@ -38,25 +66,18 @@
       <Compile Include="$(_CampusGdUnitRunnerSource)" Condition="Exists('$(_CampusGdUnitRunnerSource)')" />
     </ItemGroup>
   </Target>
-  <Target Name="GetCampusStyleShaderInputs" Condition="'$(DesignTimeBuild)' != 'true'">
-    <Exec Command="python -X utf8 &quot;$(MSBuildProjectDirectory)/../scripts/build/generate-style-shaders.py&quot; --root &quot;$(MSBuildProjectDirectory)/..&quot; --list-inputs"
-          ConsoleToMSBuild="true" StandardOutputImportance="Low">
-      <Output TaskParameter="ConsoleOutput" ItemName="_CampusStyleShaderInput" />
-    </Exec>
-  </Target>
-  <Target Name="GenerateStyleShaders" BeforeTargets="PrepareForBuild" DependsOnTargets="GetCampusStyleShaderInputs"
+  <Target Name="GenerateStyleShaders" BeforeTargets="PrepareForBuild" DependsOnTargets="PrepareCampusGeneratedFiles"
           Condition="'$(DesignTimeBuild)' != 'true'"
-          Inputs="$(MSBuildAllProjects);@(_CampusStyleShaderInput)" Outputs="@(CampusGeneratedFile)">
+          Inputs="$(MSBuildAllProjects);@(_CampusStyleShaderInput)" Outputs="$(_CampusStyleShaderStamp)">
+    <Delete Files="$(_CampusStyleShaderStamp)" />
+    <MakeDir Directories="$(IntermediateOutputPath)" />
     <Exec Command="python -X utf8 &quot;$(MSBuildProjectDirectory)/../scripts/build/generate-style-shaders.py&quot; --root &quot;$(MSBuildProjectDirectory)/..&quot;" />
-    <ItemGroup><FileWrites Include="@(CampusGeneratedFile-&gt;'%(FullPath)')" /></ItemGroup>
+    <Error Condition="!Exists('%(CampusGeneratedFile.Identity)')" Text="The shader generator did not produce %(CampusGeneratedFile.Identity)." />
+    <Touch Files="$(_CampusStyleShaderStamp)" AlwaysCreate="true" />
   </Target>
-  <Target Name="PrepareCampusBuildInformation" DependsOnTargets="ResolveReferences">
-    <PropertyGroup>
-      <_CampusBuildInformationSource>$([MSBuild]::NormalizePath('$(MSBuildProjectDirectory)', '$(IntermediateOutputPath)', 'BuildInfo.g.cs'))</_CampusBuildInformationSource>
-      <_CampusBuildCommitFile>$(MSBuildProjectDirectory)/data/build-commit.txt</_CampusBuildCommitFile>
-    </PropertyGroup>
+  <Target Name="PrepareCampusBuildInformation" DependsOnTargets="PrepareCampusGeneratedFiles;ResolveReferences">
     <ItemGroup>
-      <_CampusBuildInformationInput Include="$(MSBuildAllProjects);$(ProjectAssetsFile);@(ProjectReference-&gt;'%(FullPath)');@(_ResolvedProjectReferencePaths-&gt;'%(FullPath)');../version.txt;../scripts/build/build-info.ps1" />
+      <_CampusBuildInformationInput Include="$(MSBuildAllProjects);$(ProjectAssetsFile);@(ProjectReference-&gt;'%(FullPath)');@(_ResolvedProjectReferencePaths-&gt;'%(FullPath)');../version.txt" />
       <_CampusBuildInformationExistingInput Include="@(_CampusBuildInformationInput)" Condition="Exists('%(_CampusBuildInformationInput.Identity)')" />
       <_CampusBuildInformationExistingInput Remove="$(_CampusBuildInformationSource)" />
       <Compile Include="$(_CampusBuildInformationSource)" />
@@ -66,14 +87,40 @@
           DependsOnTargets="PrepareCampusBuildInformation;GenerateBuildInformation;UpdateCampusBuildCommit" />
   <Target Name="GenerateBuildInformation" DependsOnTargets="PrepareCampusBuildInformation"
           Condition="'$(DesignTimeBuild)' != 'true'"
-          Inputs="@(_CampusBuildInformationExistingInput)" Outputs="$(_CampusBuildInformationSource)">
-    <Exec Command="powershell -NoProfile -ExecutionPolicy Bypass -File &quot;$(MSBuildProjectDirectory)/../scripts/build/build-info.ps1&quot; -Root &quot;$(MSBuildProjectDirectory)/..&quot; -Output &quot;$(_CampusBuildInformationSource)&quot; -Configuration &quot;$(Configuration)&quot; -ModuleAssemblies &quot;$(TargetName);@(_ResolvedProjectReferencePaths-&gt;'%(Filename)', ';')&quot;" />
-    <ItemGroup><FileWrites Include="$(_CampusBuildInformationSource)" /></ItemGroup>
+          Inputs="@(_CampusBuildInformationExistingInput)" Outputs="$(_CampusBuildInformationStamp)">
+    <Delete Files="$(_CampusBuildInformationStamp)" />
+    <MakeDir Directories="$(IntermediateOutputPath)" />
+    <ReadLinesFromFile File="../version.txt">
+      <Output TaskParameter="Lines" ItemName="_CampusBuildVersionLine" />
+    </ReadLinesFromFile>
+    <ItemGroup>
+      <_CampusBuildModule Include="$(TargetName);@(_ResolvedProjectReferencePaths-&gt;'%(Filename)')" />
+    </ItemGroup>
+    <RemoveDuplicates Inputs="@(_CampusBuildModule)">
+      <Output TaskParameter="Filtered" ItemName="_CampusBuildModuleDistinct" />
+    </RemoveDuplicates>
+    <PropertyGroup>
+      <_CampusBuildVersion>@(_CampusBuildVersionLine)</_CampusBuildVersion>
+      <_CampusBuildKind>export</_CampusBuildKind>
+      <_CampusBuildKind Condition="'$(Configuration)' == 'Debug'">dev</_CampusBuildKind>
+      <_CampusBuildInformationContent>// &lt;auto-generated /&gt;
+namespace Campus.Kernel.Registry%3B
+internal static class BuildInfo {
+ public const string Version = "$(_CampusBuildVersion.Trim())"%3B
+ public static string Commit =&gt; Godot.FileAccess.GetFileAsString("res://data/build-commit.txt").Trim()%3B
+ public static string Build =&gt; Version + "+" + Commit%3B
+ public const string Kind = "$(_CampusBuildKind)"%3B
+ public static readonly string[] ModuleAssemblies = [@(_CampusBuildModuleDistinct-&gt;'&quot;%(Identity)&quot;', ',')]%3B
+}
+</_CampusBuildInformationContent>
+    </PropertyGroup>
+    <WriteLinesToFile File="$(_CampusBuildInformationSource)" Lines="$(_CampusBuildInformationContent)"
+                      Overwrite="true" WriteOnlyWhenDifferent="true" />
+    <Touch Files="$(_CampusBuildInformationStamp)" AlwaysCreate="true" />
   </Target>
   <Target Name="UpdateCampusBuildCommit" DependsOnTargets="PrepareCampusBuildInformation"
           Condition="'$(DesignTimeBuild)' != 'true'">
-    <Exec Command="powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File &quot;$(MSBuildProjectDirectory)/../scripts/build/build-info.ps1&quot; -Root &quot;$(MSBuildProjectDirectory)/..&quot; -CommitOnly" />
-    <ItemGroup><FileWrites Include="$(_CampusBuildCommitFile)" /></ItemGroup>
+    <Exec Command="powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File &quot;$(MSBuildProjectDirectory)/../scripts/build/build-info.ps1&quot; -Root &quot;$(MSBuildProjectDirectory)/..&quot;" />
   </Target>
   <!-- Preserve the real invocation configuration for Roslyn; run this only when the manifest is stale. -->
   <UsingTask TaskName="CampusBuildGlobalProperties" TaskFactory="RoslynCodeTaskFactory"
@@ -104,11 +151,7 @@
       ]]></Code>
     </Task>
   </UsingTask>
-  <Target Name="PrepareCampusCodeFingerprints" DependsOnTargets="GetCampusCodeFingerprintSources">
-    <PropertyGroup>
-      <!-- Each native build configuration owns its real generated manifest, then publishes it for the engine. -->
-      <_CampusCodeFingerprintManifest>$(IntermediateOutputPath)build-code-fingerprints.json</_CampusCodeFingerprintManifest>
-    </PropertyGroup>
+  <Target Name="PrepareCampusCodeFingerprints" DependsOnTargets="PrepareCampusGeneratedFiles;GetCampusCodeFingerprintSources">
     <ItemGroup>
       <_CampusBuildDefaultProperty Include="Configuration=$(Configuration);Platform=$(Platform);TargetFramework=$(TargetFramework)" />
       <_CampusBuildDefaultProperty Include="RuntimeIdentifier=$(RuntimeIdentifier)" Condition="'$(RuntimeIdentifier)' != ''" />
@@ -123,19 +166,20 @@
     </ItemGroup>
   </Target>
   <Target Name="GenerateCampusCodeFingerprints" DependsOnTargets="PrepareCampusCodeFingerprints"
-          Inputs="@(_CampusFingerprintExistingInput)" Outputs="$(_CampusCodeFingerprintManifest)">
+          Condition="'$(DesignTimeBuild)' != 'true'"
+          Inputs="@(_CampusFingerprintExistingInput)" Outputs="$(_CampusCodeFingerprintStamp)">
+    <Delete Files="$(_CampusCodeFingerprintStamp)" />
+    <MakeDir Directories="$(IntermediateOutputPath)" />
     <CampusBuildGlobalProperties Defaults="@(_CampusBuildDefaultProperty)">
       <Output TaskParameter="Properties" ItemName="_CampusCodeFingerprintProperty" />
     </CampusBuildGlobalProperties>
     <Exec Command="dotnet &quot;@(_CampusCodeFingerprintToolTargetPath)&quot; --project &quot;$(MSBuildProjectFullPath)&quot; --tool-project &quot;$(_CampusCodeFingerprintTool)&quot; --output &quot;$(_CampusCodeFingerprintManifest)&quot; @(_CampusCodeFingerprintProperty-&gt;'--encoded-property &quot;%(Identity)&quot;', ' ') @(_CampusBuildDefaultProperty-&gt;'--configuration-property &quot;%(Identity)&quot;', ' ')"
           LogStandardErrorAsError="true" StdOutEncoding="utf-8" StdErrEncoding="utf-8" />
-    <!-- A comment-only input still advances its real output, without a separate success stamp. -->
-    <Touch Files="$(_CampusCodeFingerprintManifest)" />
-    <ItemGroup><FileWrites Include="$(_CampusCodeFingerprintManifest)" /></ItemGroup>
+    <Error Condition="!Exists('$(_CampusCodeFingerprintManifest)')" Text="The code fingerprint generator did not produce $(_CampusCodeFingerprintManifest)." />
+    <Touch Files="$(_CampusCodeFingerprintStamp)" AlwaysCreate="true" />
   </Target>
   <Target Name="PublishCampusCodeFingerprints" AfterTargets="Build" DependsOnTargets="GenerateCampusCodeFingerprints"
           Condition="'$(DesignTimeBuild)' != 'true' And '$(IsTestProject)' != 'true'">
     <Copy SourceFiles="$(_CampusCodeFingerprintManifest)" DestinationFiles="$(_CampusPublishedCodeFingerprintManifest)" SkipUnchangedFiles="true" />
-    <ItemGroup><FileWrites Include="$(_CampusPublishedCodeFingerprintManifest)" /></ItemGroup>
   </Target>
 </Project>

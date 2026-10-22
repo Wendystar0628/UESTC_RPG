@@ -1,4 +1,4 @@
-﻿# 收口预烘：显式准备正式游戏构建与按需导入，再后台全图烘进同一份本机 CPU 缓存，全程持构建锁。
+﻿# 收口预烘：每次显式准备正式游戏构建与 Godot 原生增量导入，再后台全图烘进同一份本机 CPU 缓存，全程持构建锁。
 # 产出：output/prebake_game/、本机CPU烘焙缓存
 # 用法：powershell -NoProfile -ExecutionPolicy Bypass -File scripts\build\prebake-game.ps1
 $ErrorActionPreference = 'Stop'

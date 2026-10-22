@@ -23,7 +23,7 @@ try {
         $lease = Enter-UESTCBuildLock $layout.Locks
         Update-UESTCGameBuild -Root $rootPath -Godot $engine -BuildLease $lease
     }
-    # G1 prepares only the game; this entry owns the NativeRender test host.
+    # G1 builds Campus.sln including tests; this standalone entry also prepares its NativeRender test host.
     & (Join-Path $rootPath 'scripts/setup/install-test-runner.ps1') -Root $rootPath
     $null = Invoke-UESTCProcess dotnet @('build',(Join-Path $rootPath 'game/Campus.Tests.csproj'),'-c','Debug','-warnaserror') `
         $rootPath (Join-Path $work 'native-render-build.log')

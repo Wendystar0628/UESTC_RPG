@@ -49,8 +49,19 @@ function Update-UESTCGameBuild {
     Invoke-UESTCProcess 'dotnet' @('build', (Join-Path $Root $target), '-c', 'Debug', '-warnaserror', '-v', 'q') $Root (Join-Path $out 'build.log') | Out-Null
     Write-Host '准备资源，原生增量导入中……'
     if ($Timing) { $Timing['importInvoked'] = $true }
-    $import = Invoke-UESTCProcess $Godot @('--headless', '--editor', '--path', (Join-Path $Root 'game'), '--', '--build-import') $Root (Join-Path $out 'import.log') -TimeoutSeconds 600
-    Assert-UESTCCleanGodotLog $import
+    try {
+        $import = Invoke-UESTCProcess $Godot @('--headless', '--editor', '--path', (Join-Path $Root 'game'), '--', '--build-import') $Root (Join-Path $out 'import.log') -TimeoutSeconds 600
+        Assert-UESTCCleanGodotLog $import
+    } catch {
+        $importError = $_
+        try {
+            # 失效默认启动会检查的原生缓存，让下次启动重走已有准备链。
+            [IO.File]::Delete((Join-Path $Root 'game\.godot\editor\filesystem_cache10'))
+        } catch {
+            throw [AggregateException]::new('资源导入与缓存失效均失败。', [Exception[]]@($importError.Exception, $_.Exception))
+        }
+        throw
+    }
     if ($Timing) { $Timing['preparationCompletedTimestamp'] = [Diagnostics.Stopwatch]::GetTimestamp() }
 }
 
