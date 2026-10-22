@@ -162,7 +162,7 @@ public sealed class SaveService : ISaveService, IDisposable, IAsyncDisposable
             byte[]? thumbnail = _thumbnail;
             if (reason is SaveReason.Quit or SaveReason.ToTitle or SaveReason.NewGame)
             {
-                thumbnail = await operation.CaptureThumbnail(async () =>
+                thumbnail = await operation.CaptureThumbnail(_runtime.Diagnostics, async () =>
                 {
                     var capture = await OnFrame(_runtime.CaptureThumbnail).ConfigureAwait(false);
                     return await capture.ConfigureAwait(false);
@@ -213,7 +213,7 @@ public sealed class SaveService : ISaveService, IDisposable, IAsyncDisposable
 
     private Task<SaveResult> WriteFailed(SaveWriteOperation operation,
         [FailureHandler("SYS-SAVE-FLOW")] Exception error, SlotId? slot, ulong generation) =>
-        PublishWriteResult(operation.Fail(error, slot ?? Active, generation));
+        PublishWriteResult(operation.Fail(_runtime.Diagnostics, error, slot ?? Active, generation));
 
     private async Task<SaveResult> PublishWriteResult(SaveResult result, Action? apply = null)
     {
@@ -431,21 +431,22 @@ public sealed class SaveService : ISaveService, IDisposable, IAsyncDisposable
     {
         _restore!.RetainFailure(error);
         var result = new LoadResult(LoadStatus.Corrupt, null, 0, [], _restore.Error!.Message);
-        DiagnosticLog.Warning("External save rejected before world mutation.", _restore.Error);
+        _runtime.Diagnostics.Warning("External save rejected before world mutation.", _restore.Error);
         return result;
     });
 
-    private Task<LoadResult> RestoreFailed(SlotId? slot, [FailureHandler("SYS-SAVE-FLOW")] Exception error) => OnFrame(() =>
+    private Task<LoadResult> RestoreFailed(SlotId? slot, [FailureHandler("SYS-SAVE-FLOW")] Exception error) =>
+        _runtime is null ? Task.FromException<LoadResult>(error) : OnFrame(() =>
     {
         if (_restore?.MutationStarted != true)
         {
             _restore?.RetainFailure(error);
-            DiagnosticLog.Error("Save restoration failed before world mutation.", error);
+            _runtime.Diagnostics.Error("Save restoration failed before world mutation.", error);
             return new LoadResult(LoadStatus.Failed, slot, 0, [], error.Message);
         }
         try { _restore.MarkFault(error); }
         catch (Exception abortError) { _restore.RetainAbortFailure(error, abortError); }
-        DiagnosticLog.Error("Save restoration failed; the world is blocked until Load or NewGame.", _restore.Error!);
+        _runtime.Diagnostics.Error("Save restoration failed; the world is blocked until Load or NewGame.", _restore.Error!);
         return new LoadResult(LoadStatus.Failed, slot, 0, [], "save.error.restore_world: " + _restore.Error!.Message);
     });
 

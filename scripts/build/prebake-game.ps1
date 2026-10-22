@@ -8,14 +8,16 @@ $repo = (Resolve-Path (Join-Path $PSScriptRoot '..\..')).Path
 $layout = Get-UESTCLayout $repo
 $godot = Get-UESTCGodot
 $out = Join-Path $repo 'output\prebake_game'
+$testEnvironment = New-UESTCTestEnvironment -Work $out
 $timer = [Diagnostics.Stopwatch]::StartNew()
 $lease = $null
 $code = 1
 try {
     $lease = Enter-UESTCBuildLock $layout.Locks
-    Update-UESTCGameBuild -Root $repo -Godot $godot -BuildLease $lease
-    $result = Invoke-UESTCProcess $godot @('--headless', '--path', "$repo\game", '--', '--bake=all', '--map=*') $repo (Join-Path $out 'bake.log') -TimeoutSeconds 14400 -AllowFailure
+    Update-UESTCGameBuild -Root $repo -Godot $godot -BuildLease $lease -Environment $testEnvironment
+    $result = Invoke-UESTCProcess $godot @('--headless', '--path', "$repo\game", '--', '--bake=all', '--map=*') $repo (Join-Path $out 'bake.log') -TimeoutSeconds 14400 -AllowFailure -Environment $testEnvironment
     $code = $result.ExitCode
+    Assert-UESTCCleanGodotLog $result
     foreach ($line in ($result.StdOut -split '\r?\n')) {
         if ($line -match '^(BAKE_MAP_COMPLETE|PREBAKE_COMPLETE) ') { Write-Host $line }
     }

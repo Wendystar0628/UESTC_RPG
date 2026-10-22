@@ -14,9 +14,6 @@ __pycache__/
 # 本地产物：截图、门禁输出
 output/
 
-# 本地构建产物
-/build/
-
 # 构建时生成的代码指纹
 /game/data/build-code-fingerprints.json
 

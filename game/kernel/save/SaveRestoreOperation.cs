@@ -4,7 +4,6 @@ using Campus.Contracts.Maps;
 using Campus.Contracts.Save;
 using Campus.Kernel.Save.Format;
 using Campus.Kernel.Maps;
-using Campus.Kernel.Diagnostics;
 
 namespace Campus.Kernel.Save;
 
@@ -33,7 +32,7 @@ internal sealed class SaveRestoreOperation(SaveRuntimeBindings runtime, Action f
     {
         RetainFailure(failure);
         Error!.Data["SaveRestoreAbort"] = abortError;
-        DiagnosticLog.Error("Save restoration abort failed; input remains blocked.", abortError);
+        _runtime.Diagnostics.Error("Save restoration abort failed; input remains blocked.", abortError);
     }
 
     public void MarkFault([FailureHandler("SYS-SAVE-FLOW")] Exception error)
@@ -155,20 +154,20 @@ internal sealed class SaveRestoreOperation(SaveRuntimeBindings runtime, Action f
         return new(_runtime.World.WeatherSeed, item.Map, map.World.Default, _runtime.Ruleset.Current.DefaultViewMode);
     }
 
-    private static object ReplaceInvalidSection(PreparedSection item,
+    private object ReplaceInvalidSection(PreparedSection item,
         [FailureHandler("SYS-SAVE-FORMAT")] Exception error, RestoreContext context, NewGameContext defaults)
     {
         context.Repair(item.Repair ?? "Replaced invalid section: " + item.Key);
         var dto = item.Registration.Section.CreateDefault(defaults);
-        DiagnosticLog.Warning("Invalid save section replaced with its default: " + item.Key, error);
+        _runtime.Diagnostics.Warning("Invalid save section replaced with its default: " + item.Key, error);
         return dto;
     }
 
-    private static void RemoveInvalidMapSection(PreparedSection item,
+    private void RemoveInvalidMapSection(PreparedSection item,
         [FailureHandler("SYS-SAVE-FORMAT")] Exception error, List<string> repairs)
     {
         repairs.Add("Removed section for missing map: " + item.Key);
-        DiagnosticLog.Warning("Invalid save section removed with its missing map: " + item.Key, error);
+        _runtime.Diagnostics.Warning("Invalid save section removed with its missing map: " + item.Key, error);
     }
 
     private static uint NewSeed() => System.Buffers.Binary.BinaryPrimitives.ReadUInt32LittleEndian(RandomNumberGenerator.GetBytes(4));

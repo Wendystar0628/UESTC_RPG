@@ -1,8 +1,8 @@
 using System.Globalization;
 using Campus.Contracts;
+using Campus.Contracts.Diagnostics;
 using Campus.Contracts.Save;
 using Campus.Kernel.Save.Format;
-using Campus.Kernel.Diagnostics;
 
 namespace Campus.Kernel.Save;
 
@@ -31,17 +31,17 @@ internal sealed class SaveWriteOperation
         }
     }
 
-    public async Task<byte[]?> CaptureThumbnail(Func<Task<byte[]?>> capture, byte[]? previous)
+    public async Task<byte[]?> CaptureThumbnail(IDiagnosticLog diagnostics, Func<Task<byte[]?>> capture, byte[]? previous)
     {
         try { return await capture().ConfigureAwait(false) ?? previous; }
         catch (OperationCanceledException) { return previous; }
-        catch (Exception error) { return DiscardThumbnail(error, previous); }
+        catch (Exception error) { return DiscardThumbnail(diagnostics, error, previous); }
     }
 
-    private byte[]? DiscardThumbnail([FailureHandler("SYS-SAVE-FORMAT")] Exception error, byte[]? previous)
+    private byte[]? DiscardThumbnail(IDiagnosticLog diagnostics, [FailureHandler("SYS-SAVE-FORMAT")] Exception error, byte[]? previous)
     {
         // SYS-SAVE-FORMAT permits an absent thumbnail; keep the existing image and continue this state save.
-        DiagnosticLog.Warning("Save thumbnail unavailable; saving state with the previous optional image.", error);
+        diagnostics.Warning("Save thumbnail unavailable; saving state with the previous optional image.", error);
         return previous;
     }
 
@@ -114,7 +114,7 @@ internal sealed class SaveWriteOperation
     private void RetainCleanupFailure([FailureHandler("SYS-SAVE-FLOW")] Exception cleanupError) =>
         _cleanupFailures.Add(cleanupError);
 
-    public SaveResult Fail([FailureHandler("SYS-SAVE-FLOW")] Exception error, SlotId? slot, ulong generation)
+    public SaveResult Fail(IDiagnosticLog diagnostics, [FailureHandler("SYS-SAVE-FLOW")] Exception error, SlotId? slot, ulong generation)
     {
         var primary = _cleanupFailures.Count != 0 && error is AggregateException aggregate ? aggregate.InnerExceptions[0] : error;
         Failure = error;
@@ -127,7 +127,7 @@ internal sealed class SaveWriteOperation
             _ => "save.error.snapshot"
         };
         var result = new SaveResult(SaveStatus.Failed, slot, generation, key);
-        DiagnosticLog.Error("Save operation failed.", Failure);
+        diagnostics.Error("Save operation failed.", Failure);
         return result;
     }
 }

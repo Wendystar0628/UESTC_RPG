@@ -18,6 +18,7 @@ if ($MovieEvents -and -not $MovieFrames) { throw '-MovieEvents 需要 -MovieFram
 if ($Ui -and ($Poses -or $MovieFrames -or $MovieEvents)) { throw '-Ui 不能与 -Poses 或录像参数组合。' }
 $out = Join-Path $repo $(if ($Ui) { 'output\shots\ui' } elseif ($MovieFrames) { 'output\movies' } else { 'output\shots' })
 $null = [IO.Directory]::CreateDirectory($out)
+$testEnvironment = New-UESTCTestEnvironment -Work $out
 $poses = if ($Ui) { Join-Path $PSScriptRoot 'ui-poses.txt' } elseif ($Poses) { (Resolve-Path $Poses).Path } else { Join-Path $PSScriptRoot 'poses.txt' }
 $rows = @(Get-Content -Encoding UTF8 $poses | Where-Object { $_.Trim() -and -not $_.TrimStart().StartsWith('#') })
 $names = @($rows | ForEach-Object { ($_ -split '\s*\|\s*')[0].Trim() })
@@ -34,7 +35,7 @@ $lease = Enter-UESTCBuildLock $layout.Locks
 try {
     # 拿到锁后清掉上一轮截图、日志和总览，整轮出图与拼图共用这把锁。
     Get-ChildItem -LiteralPath $out -File | Where-Object { $_.Extension -in '.png', '.log', '.jpg' } | ForEach-Object { Remove-Item -LiteralPath $_.FullName -Force }
-    Update-UESTCGameBuild -Root $repo -Godot $godot -BuildLease $lease
+    Update-UESTCGameBuild -Root $repo -Godot $godot -BuildLease $lease -Environment $testEnvironment
     if ($Ui) {
         # 每页独立启动，真实标题/行走模式不经过只接受旁观世界的批量机位计划。
         foreach ($row in $rows) {
@@ -49,7 +50,7 @@ try {
                 '--', "--shots=$shot") + $poseArguments + @("--out=$out", '--clock=17.5', '--season=autumn', '--weather=clear',
                 '--anim=240', '--flow=0', '--ui=1', '--seed=1', '--weather-seed=1', '--quality=fine', '--map=qingshuihe', '--save=off', '--audio=off')
             $pageArguments += @($columns[2].Trim() -split '\s+')
-            $result = Invoke-UESTCProcess $godot $pageArguments $repo (Join-Path $out "$name.log") -Visible -IsolatedDesktop -TimeoutSeconds 900
+            $result = Invoke-UESTCProcess $godot $pageArguments $repo (Join-Path $out "$name.log") -Visible -IsolatedDesktop -TimeoutSeconds 900 -Environment $testEnvironment
             Assert-UESTCCleanGodotLog $result
             $image = Join-Path $out "$shot.png"
             if (-not (Test-Path -LiteralPath $image)) { throw "界面没出图：$name" }
@@ -73,14 +74,15 @@ try {
                 '--quality=fine', '--map=qingshuihe', '--title=0', '--save=off', '--audio=off')
             if ($MovieEvents) { $movieArguments += "--movie-events=$MovieEvents" }
             $log = Join-Path $movieOut 'capture.log'
-            Invoke-UESTCProcess $godot $movieArguments $repo $log -Visible -TimeoutSeconds 900 | Out-Null
+            $result = Invoke-UESTCProcess $godot $movieArguments $repo $log -Visible -IsolatedDesktop -TimeoutSeconds 900 -Environment $testEnvironment
+            Assert-UESTCCleanGodotLog $result
             "{0}：Godot 原生录像；有效区间见 movie-segment.json，事件帧从区间起点零起算" -f $name
         }
         return
     }
     else {
         # 首次加载和逐机位截图均复用正式的目的地就绪与呈帧屏障。
-        $result = Invoke-UESTCProcess $godot $arguments $repo (Join-Path $out 'capture.log') -Visible -TimeoutSeconds 900
+        $result = Invoke-UESTCProcess $godot $arguments $repo (Join-Path $out 'capture.log') -Visible -IsolatedDesktop -TimeoutSeconds 900 -Environment $testEnvironment
         Assert-UESTCCleanGodotLog $result
         foreach ($name in $names) {
             if (-not (Test-Path -LiteralPath (Join-Path $out "$name.png"))) { throw "固定机位没出图：$name" }

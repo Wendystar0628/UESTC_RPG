@@ -3,7 +3,6 @@ using System.Collections;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.IO;
-using System.Runtime.ExceptionServices;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
@@ -218,8 +217,7 @@ namespace Uestc.Tools
             lock (lifetime)
             {
                 if (finished || job == IntPtr.Zero) { throw new ObjectDisposedException("ProcessTree"); }
-                ExceptionDispatchInfo failure = null;
-                long postedAt = 0;
+                var result = new TaskCompletionSource<long>();
                 Thread sender = new Thread(delegate()
                 {
                     IntPtr windowProcess = IntPtr.Zero;
@@ -235,17 +233,17 @@ namespace Uestc.Tools
                         Check(IsProcessInJob(windowProcess, job, out owned), "IsProcessInJob(window PID)");
                         if (!owned)
                             throw new InvalidOperationException("The ready window PID " + windowProcessId + " does not belong to this process tree.");
-                        postedAt = System.Diagnostics.Stopwatch.GetTimestamp();
+                        long postedAt = System.Diagnostics.Stopwatch.GetTimestamp();
                         Check(PostMessage(window, 0x0010, UIntPtr.Zero, IntPtr.Zero), "PostMessage(WM_CLOSE)");
+                        result.SetResult(postedAt);
                     }
-                    catch (Exception caught) { failure = ExceptionDispatchInfo.Capture(caught); }
+                    catch (Exception caught) { result.SetException(caught); }
                     finally { Close(ref windowProcess); }
                 });
                 sender.IsBackground = true;
                 sender.Start();
                 sender.Join(); // Own the short sender through completion before desktop/job release.
-                if (failure != null) { failure.Throw(); }
-                return postedAt;
+                return result.Task.GetAwaiter().GetResult();
             }
         }
 

@@ -113,7 +113,7 @@ public sealed class SaveLifecycleTests
     [TestCategory(TestReason.Smoke)]
     public async Task QuitTimeoutRetainsQueuedWriteAndReportsItsRealOutcome(bool endedWorld)
     {
-        using var fixture = new Fixture();
+        using var fixture = new Fixture { ExpectedErrors = endedWorld ? 1 : 0 };
         await fixture.Start(); await fixture.Pump(fixture.Save.NewGame(new("s1"), 1));
         fixture.Flow = AppState.Playing;
         await fixture.Pump(fixture.Save.SaveNow(SaveReason.NewGame));
@@ -131,6 +131,9 @@ public sealed class SaveLifecycleTests
         fixture.ThumbnailBarrier.SetException(new IOException("Thumbnail capture failed."));
         var result = await fixture.Pump(retry);
         AssertThat(result.Status == (endedWorld ? SaveStatus.Failed : SaveStatus.Saved) && fixture.Save.State.Last == result.Status).OverrideFailureMessage("The existing write result was hidden by title exit.").IsTrue();
+        AssertThat(result.Error == (endedWorld ? "save.error.snapshot" : null)).IsTrue();
+        AssertThat(fixture.Diagnostics.Errors.Count).IsEqual(fixture.ExpectedErrors);
+        if (endedWorld) AssertThat(fixture.Diagnostics.Errors.Single()!).IsInstanceOf<InvalidOperationException>();
         AssertThat(fixture.Save.Slots[0].Meta?.Gen == (endedWorld ? 1UL : 2UL)).OverrideFailureMessage("Retry launched a duplicate write or damaged the old generation.").IsTrue();
         var pose = fixture.Camera.Pose;
         fixture.Camera.SetPose(default);
@@ -190,19 +193,22 @@ public sealed class SaveLifecycleTests
     [TestCategory(TestReason.Smoke)]
     public async Task WorldPhaseFailureAbortsInSameFrameAndBlocksWritesUntilFullRecovery()
     {
-        using var fixture = new Fixture();
+        using var fixture = new Fixture { ExpectedErrors = 1 };
         await fixture.Start(); await fixture.Pump(fixture.Save.NewGame(new("s1"), 1));
         fixture.Flow = AppState.Playing;
         await fixture.Pump(fixture.Save.SaveNow(SaveReason.NewGame));
-        fixture.Weather.FailRestore = true;
+        fixture.Weather.RestoreFailure = new InvalidDataException("Injected core semantic restore failure.");
         var failed = await fixture.Pump(fixture.Save.Load(new("s1")));
+        AssertThat(fixture.Diagnostics.Errors.Count).IsEqual(fixture.ExpectedErrors);
+        AssertThat(fixture.Diagnostics.Errors.Single()!).IsInstanceOf<InvalidDataException>();
+        AssertThat(ReferenceEquals(fixture.Diagnostics.Errors.Single(), fixture.Weather.RestoreFailure)).IsTrue();
         AssertThat(failed.Status == LoadStatus.Failed && fixture.World.RestoreFaulted && fixture.Camera.Locks == 1).OverrideFailureMessage("A partially restored world remained interactive.").IsTrue();
         AssertThat(fixture.Save.State is { Last: SaveStatus.Failed, ErrorKey: "save.error.restore_world" }).OverrideFailureMessage("Restore failure is not visible through the save state.").IsTrue();
         await fixture.Frames(10); // FakeWorld.Tick throws if a pending restore escaped the failing Save frame.
         AssertThat((await fixture.Pump(fixture.Save.SaveNow(SaveReason.Test))).Status == SaveStatus.Failed).OverrideFailureMessage("Faulted state was saved.").IsTrue();
         AssertThat((await fixture.Pump(fixture.Save.FlushForQuit(SaveReason.Quit, TimeSpan.FromSeconds(1)))).Status == SaveStatus.Deferred).OverrideFailureMessage("Fault exit attempted to serialize the partial world.").IsTrue();
         AssertThat(fixture.Save.Slots[0].Meta?.Gen == 1).OverrideFailureMessage("Fault damaged the last good generation.").IsTrue();
-        fixture.Weather.FailRestore = false;
+        fixture.Weather.RestoreFailure = null;
         var recovered = await fixture.Pump(fixture.Save.NewGame(null, 2));
         AssertThat(recovered.Status == LoadStatus.Loaded && !fixture.World.RestoreFaulted && fixture.Camera.Locks == 0).OverrideFailureMessage("A complete temporary new game did not release the fault lease.").IsTrue();
         AssertThat(fixture.Save.Active is null && fixture.Save.Slots[0].Meta?.Gen == 1).OverrideFailureMessage("Temporary-world recovery selected a writable slot or changed the previous generation.").IsTrue();
@@ -213,7 +219,7 @@ public sealed class SaveLifecycleTests
     [TestCategory(TestReason.Regression)]
     public async Task FailureAfterWorldCommitAlsoFreezesAndCanRecoverByLoading()
     {
-        using var fixture = new Fixture();
+        using var fixture = new Fixture { ExpectedErrors = 1 };
         await fixture.Start(); await fixture.Pump(fixture.Save.NewGame(new("s1"), 1));
         fixture.Flow = AppState.Playing;
         fixture.World.Hours = 91.25;
@@ -223,9 +229,12 @@ public sealed class SaveLifecycleTests
             .OverrideFailureMessage("The recovery slot was not saved.").IsTrue();
         fixture.World.Hours = 120;
         fixture.Camera.SetPose(default);
-        fixture.Camera.FailRestore = true;
+        fixture.Camera.RestoreFailure = new InvalidDataException("Injected pose restore failure.");
         var instance = fixture.World.Instance;
         var failed = await fixture.Pump(fixture.Save.Load(new("s1")));
+        AssertThat(fixture.Diagnostics.Errors.Count).IsEqual(fixture.ExpectedErrors);
+        AssertThat(fixture.Diagnostics.Errors.Single()!).IsInstanceOf<InvalidDataException>();
+        AssertThat(ReferenceEquals(fixture.Diagnostics.Errors.Single(), fixture.Camera.RestoreFailure)).IsTrue();
         AssertThat(fixture.World.Instance == instance + 1 && fixture.World.Hours == 91.25)
             .OverrideFailureMessage("The injected pose failure did not occur after the World phase committed.").IsTrue();
         AssertThat(failed.Status == LoadStatus.Failed && fixture.World.RestoreFaulted && fixture.Camera.Locks == 1)
@@ -236,7 +245,7 @@ public sealed class SaveLifecycleTests
         AssertThat(fixture.World.RestoreFaulted && fixture.Camera.Locks == 1 && fixture.Save.Slots[0].Meta?.Gen == 1)
             .OverrideFailureMessage("The fault or its input lock cleared without a full restore, or damaged the recovery slot.").IsTrue();
 
-        fixture.Camera.FailRestore = false;
+        fixture.Camera.RestoreFailure = null;
         fixture.Ready = false; fixture.Log.Clear();
         var recovering = fixture.Save.Load(new("s1"));
         for (var frame = 0; frame < TestSamples.FrameLoop && !fixture.Log.Contains("view"); frame++) await fixture.Frames(1);
@@ -258,6 +267,8 @@ public sealed class SaveLifecycleTests
         public FakeCamera Camera { get; }
         public FakeMaps Maps { get; }
         public FakeWeather Weather { get; } = new();
+        public TestDiagnosticLog Diagnostics { get; } = new();
+        public int ExpectedErrors { get; init; }
         private readonly TestAppFlow _flow = new();
         public AppState Flow { get => _flow.State; set => _flow.SetState(value); }
         public List<string> Log { get; } = [];
@@ -278,7 +289,7 @@ public sealed class SaveLifecycleTests
             var directory = Path.Combine(Path.GetTempPath(), "uestc-rpg-save-lifecycle-" + Environment.ProcessId + "-" + Interlocked.Increment(ref _id));
             _directory = directory;
             var rules = new TestRuleset("test-policy", id: "test-rules");
-            var bindings = new SaveRuntimeBindings(World, Maps, Camera, Camera, rules, new FakeAtlas(Maps), new TestAppLoadingPresentation(), _flow,
+            var bindings = new SaveRuntimeBindings(World, Maps, Camera, Camera, rules, new FakeAtlas(Maps), new TestAppLoadingPresentation(), _flow, Diagnostics,
                 _ => { }, World, WaitDestination,
                 () => ThumbnailBarrier?.Task ?? Task.FromResult<byte[]?>(null), () => 1792082400, pose => Task.FromResult(pose));
             var sections = new SaveSections([
@@ -308,6 +319,7 @@ public sealed class SaveLifecycleTests
         {
             Save.Dispose();
             if (_directory is { } directory && Directory.Exists(directory)) Directory.Delete(directory, recursive: true);
+            AssertThat(Diagnostics.Errors.Count).OverrideFailureMessage("Save lifecycle emitted unexpected Error diagnostics.").IsEqual(ExpectedErrors);
         }
     }
 
@@ -354,7 +366,7 @@ public sealed class SaveLifecycleTests
         : TestCameraRig(null, new Pose(new Vector3(1, 2, 3), 0, 0)), IObserverState, ISaveSection<ViewSaveData>
     {
         public Action? BeforeDefault { get; set; }
-        public bool FailRestore { get; set; }
+        public Exception? RestoreFailure { get; set; }
         public NewGameContext? DefaultContext { get; private set; }
         public Vector3 Feet => Pose.Position; public Vector3 Eye => Pose.Position; public float YawDeg => Pose.YawDeg; public NavSpace? Space => null;
         public JsonTypeInfo<ViewSaveData> TypeInfo => LifecycleJsonContext.Strict.ViewSaveData;
@@ -362,7 +374,7 @@ public sealed class SaveLifecycleTests
         public void Restore(ViewSaveData dto, RestoreContext context)
         {
             AssertThat(inFrame()).OverrideFailureMessage("Pose restore outside Save frame.").IsTrue();
-            if (FailRestore) throw new InvalidDataException("Injected pose restore failure.");
+            if (RestoreFailure is { } failure) throw failure;
             SetPose(dto.Pose); log.Add("view");
         }
         public ViewSaveData CreateDefault(NewGameContext context)
@@ -375,7 +387,7 @@ public sealed class SaveLifecycleTests
     {
         public double LastTickHours { get; set; } = 17.5;
         public WorldSaveMoment? CapturedMoment { get; private set; }
-        public bool FailRestore { get; set; }
+        public Exception? RestoreFailure { get; set; }
         public JsonTypeInfo<LifecycleWeather> TypeInfo => LifecycleJsonContext.Strict.LifecycleWeather;
         public LifecycleWeather Capture(in CaptureContext context)
         {
@@ -383,7 +395,7 @@ public sealed class SaveLifecycleTests
             return new(new(WeatherMode.Auto, WeatherKind.Clear, 0), CapturedMoment.Value.WorldHours);
         }
         public void Restore(LifecycleWeather dto, RestoreContext context)
-        { if (FailRestore) throw new InvalidDataException("Injected core semantic restore failure."); LastTickHours = dto.AtHours; }
+        { if (RestoreFailure is { } failure) throw failure; LastTickHours = dto.AtHours; }
         public LifecycleWeather CreateDefault(NewGameContext context) => new(new(WeatherMode.Auto, WeatherKind.Clear, 0), context.Start.Clock);
     }
     private sealed class FakeMaps : TestMapService

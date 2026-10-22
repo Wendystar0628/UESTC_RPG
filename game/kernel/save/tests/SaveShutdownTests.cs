@@ -65,7 +65,7 @@ public sealed class SaveShutdownTests
     [TestCategory(TestReason.Regression)]
     public async Task ClosingAfterSnapshotDetachmentWaitsForRealReadbackAndKeepsItsOutcome(bool failReadback)
     {
-        await using var f = new Fixture();
+        await using var f = new Fixture { ExpectedErrors = failReadback ? 1 : 0 };
         await f.Pump(f.Initialize());
         await f.Pump(f.Save.NewGame(SaveSlots.Auto[0], 1));
         f.Section.Armed = true;
@@ -80,6 +80,13 @@ public sealed class SaveShutdownTests
         f.Section.Release(); await closing;
         var result = await writing;
         AssertThat(result.Status == (failReadback ? SaveStatus.Failed : SaveStatus.Saved)).IsTrue();
+        AssertThat(result.Error == (failReadback ? "save.error.io" : null)).IsTrue();
+        AssertThat(f.Diagnostics.Errors.Count).IsEqual(f.ExpectedErrors);
+        if (failReadback)
+        {
+            AssertThat(f.Diagnostics.Errors.Single()!).IsInstanceOf<IOException>();
+            AssertThat(ReferenceEquals(f.Diagnostics.Errors.Single(), f.Section.Failure)).IsTrue();
+        }
         AssertThat(f.HasGeneration == !failReadback && !f.Save.Busy).IsTrue();
         using var unlocked = File.Open(Path.Combine(f.Directory, ".lock"), FileMode.Open, FileAccess.ReadWrite, FileShare.None);
     }
@@ -91,6 +98,8 @@ public sealed class SaveShutdownTests
         internal SaveService Save { get; } = new();
         internal TestWorldState World { get; }
         internal BlockingSection Section { get; }
+        internal TestDiagnosticLog Diagnostics { get; } = new();
+        internal int ExpectedErrors { get; init; }
         private readonly TestRuleset _rules = new();
         private readonly TestMapService _maps;
         private readonly SaveSections _sections;
@@ -108,7 +117,7 @@ public sealed class SaveShutdownTests
         }
         internal Task Initialize() => Save.Initialize(new(Directory, true, null, null, 1),
             new(World, _maps, _camera, _camera, _rules, new Atlas(), new TestAppLoadingPresentation(),
-                new TestAppFlow(), _ => { }, World, (_, _, _) => Task.CompletedTask,
+                new TestAppFlow(), Diagnostics, _ => { }, World, (_, _, _) => Task.CompletedTask,
                 () => Task.FromResult<byte[]?>(null), () => 1792082400), _sections);
 
         internal void Seed()
@@ -138,6 +147,7 @@ public sealed class SaveShutdownTests
                 Section.Dispose();
                 if (System.IO.Directory.Exists(Directory)) System.IO.Directory.Delete(Directory, recursive: true);
             }
+            AssertThat(Diagnostics.Errors.Count).OverrideFailureMessage("Save shutdown emitted unexpected Error diagnostics.").IsEqual(ExpectedErrors);
         }
     }
 

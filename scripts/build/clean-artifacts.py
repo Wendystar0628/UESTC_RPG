@@ -1,11 +1,10 @@
-"""清理仓库这边的一次性产物（WF-RULE §13），默认只列出，加 --delete 才删。覆盖五类：
+"""清理仓库这边的一次性产物（WF-RULE §13），默认只列出，加 --delete 才删。覆盖四类：
   1. output/ 里之后主线上已有 N 次提交（默认 20）的项：整项过期整项删，没过期的目录逐层往里查（最多 3 层），
      所以常被写的 output/build/ 里旧的日志、测试结果、核心专项目录也能清掉；
   2. output/cache/ 里烘焙缓存之外的目录（一次性的缓存副本，同样按提交轮次），以及烘焙缓存的旧格式目录
      （同一张图下 *-tbin-N 只留 N 最大的）；
   3. 还登记着的工作树（如截图工作树）里的 output/：与主检出的 output/ 同一套规则（1、2 和下面的保护），工作树本身只列出，不删；
-  4. build/ 下的一次性产物：之后主线上已有 N 次提交的，和 output/ 一样；
-  5. 已删工程留下的 bin/、obj/：所在目录里已经没有 .csproj；git 已失效的工作树登记（git worktree prune）。
+  4. 已删工程留下的 bin/、obj/：所在目录里已经没有 .csproj；git 已失效的工作树登记（git worktree prune）。
 删除时持有构建锁（与构建、导入、门禁、预烘、截图同一把 output/.locks/build.lock），持锁后重算再删；
 锁被持有就本次一项不删，免得删到正在写的产物。只列出时不碰锁。
 保护：观察台里未结的审计项和通知引用的 output/ 文件不删，连同它们所在的目录里的其余项也不删（作者还要看）；
@@ -215,7 +214,7 @@ def build_lock():
 
 
 def stale(commits, trees):
-    """返回可删的绝对路径：主检出与登记着的工作树里的 output/，加 build/ 与已删工程的 bin/obj，去掉在用的引用。"""
+    """返回可删的绝对路径：主检出与登记着的工作树里的 output/，加已删工程的 bin/obj，去掉在用的引用。"""
     refs = references()
     before = cutoff(commits)
     out = orphan_builds()
@@ -229,9 +228,6 @@ def stale(commits, trees):
         cache = os.path.join(root, 'cache')
         if os.path.isdir(cache):
             out += aged(cache, before, 1, skip=CACHE_KEEP, keep=keep)
-    build = os.path.join(ROOT, 'build')
-    if before is not None and os.path.isdir(build):
-        out += aged(build, before, DEPTH)
     return sorted(set(out))
 
 
@@ -281,7 +277,7 @@ def main(argv):
     for p in items:
         inside = os.path.normcase(p).startswith(os.path.normcase(ROOT) + os.sep)
         print((os.path.relpath(p, ROOT) if inside else p).replace(chr(92), '/'))
-    print('可删 %d 项，共 %.1f MB（output 与 build 按之后主线上已有 %d 次提交算）' % (len(items), mb, commits))
+    print('可删 %d 项，共 %.1f MB（output 按之后主线上已有 %d 次提交算）' % (len(items), mb, commits))
     for t in trees:
         print(('失效的工作树登记（--delete 时 prune）：' if t['prunable'] else '还登记着的工作树（确认不用了再 git worktree remove）：') + t['path'])
     if '--delete' not in argv:

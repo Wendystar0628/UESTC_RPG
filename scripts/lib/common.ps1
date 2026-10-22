@@ -5,7 +5,7 @@ Set-StrictMode -Version Latest
 
 function Assert-UESTCCleanGodotLog {
     param($ProcessResult)
-    $pattern = '(?im)(?:SCRIPT )?ERROR:|Object was deleted while awaiting a callback|shader[^\r\n]*(?:compilation failed|compile error)|\bleaked\b|\bRIDs?\b[^\r\n]*\bleak\w*|\bleak\w*[^\r\n]*\bRIDs?\b|\bDetected\s+<?[1-9][0-9]*>?\s+orphan\s+nodes?\b|\b[1-9][0-9]*\s+orphan(?:ed)?\s+(?:nodes?|objects?)\b|\bOrphan StringName:[^\r\n]*\btotal:\s*[1-9][0-9]*\b'
+    $pattern = '(?im)(?:SCRIPT )?ERROR:|\[Error\][ \t]|Object was deleted while awaiting a callback|shader[^\r\n]*(?:compilation failed|compile error)|\bleaked\b|\bRIDs?\b[^\r\n]*\bleak\w*|\bleak\w*[^\r\n]*\bRIDs?\b|\bDetected\s+<?[1-9][0-9]*>?\s+orphan\s+nodes?\b'
     if ($ProcessResult.Output -match $pattern) { throw "Godot reported errors, orphan objects or resource leaks. See $($ProcessResult.Log)" }
 }
 
@@ -74,9 +74,38 @@ function Assert-UESTCTestResult {
             throw "TRX run diagnostic reports failure: $($info.InnerText). See $TrxPath"
         }
     }
-    Assert-UESTCCleanGodotLog $ProcessResult
-    $messages = $trx.SelectNodes('//*[local-name()="Output" or local-name()="RunInfo" or local-name()="Message"]')
-    Assert-UESTCCleanGodotLog ([pscustomobject]@{ Output=(@($messages | ForEach-Object { $_.InnerText }) -join "`n"); Log=$TrxPath })
+    $messages = $trx.SelectNodes('//*[local-name()="ResultSummary"]/*[local-name()="Output"]')
+    $runOutput = @($messages | ForEach-Object { $_.InnerText }) -join "`n"
+    if ($runOutput -match '(?m)^\[GdUnit4\]') {
+        # The adapter also logs editor rebuild/discovery. Only its fixed runner
+        # events delimit execution; StringName counters are not node leak reports.
+        $execution = New-Object 'Collections.Generic.List[string]'
+        $running = $false
+        $runners = 0
+        foreach ($line in ($runOutput -split '\r?\n')) {
+            if ($line -match '^\[GdUnit4\] \[[^\]\r\n]+\] Starting (GodotRuntimeTestRunner|DefaultTestRunner)\s*$') {
+                $running = $true
+                $runners++
+            }
+            if ($running) { $execution.Add($line) }
+            if ($line -match '^\[GdUnit4\] \[[^\]\r\n]+\] (?:GodotRuntimeTestRunner ends with exit code:|Completed tests for assembly:)') {
+                $running = $false
+            }
+        }
+        if ($runners -eq 0 -or $running) {
+            $failure = [InvalidOperationException]::new("Test execution log is incomplete: missing gdUnit runner boundary. See $TrxPath")
+            $failure.Data['Incomplete'] = $true
+            throw $failure
+        }
+        $runOutput = $execution -join "`n"
+    } else {
+        Assert-UESTCCleanGodotLog $ProcessResult
+    }
+    Assert-UESTCCleanGodotLog ([pscustomobject]@{ Output=$runOutput; Log=$TrxPath })
+    # Per-case output contains gdUnit's Detected N orphan nodes diagnostics,
+    # including warnings whose adapter outcome is still Passed.
+    $caseMessages = $trx.SelectNodes('//*[local-name()="UnitTestResult"]/*[local-name()="Output"]')
+    Assert-UESTCCleanGodotLog ([pscustomobject]@{ Output=(@($caseMessages | ForEach-Object { $_.InnerText }) -join "`n"); Log=$TrxPath })
     return $executed
 }
 

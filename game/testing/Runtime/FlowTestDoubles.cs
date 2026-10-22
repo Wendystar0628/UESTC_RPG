@@ -1,4 +1,5 @@
 using Campus.Contracts.Diagnostics;
+using System.Collections.Concurrent;
 using Campus.Contracts;
 using Campus.Contracts.AppFlow;
 using Campus.Contracts.Maps;
@@ -6,6 +7,18 @@ using Campus.Contracts.Save;
 using Campus.Flow;
 
 namespace Campus.Tests;
+
+/// <summary>Records the actual diagnostic calls and keeps exception objects for fault-injection assertions.</summary>
+internal sealed class TestDiagnosticLog : IDiagnosticLog
+{
+    private readonly ConcurrentQueue<(bool IsError, string Context, Exception? Error, string? Message)> _entries = new();
+    public IReadOnlyList<Exception?> Errors => _entries.Where(entry => entry.IsError).Select(entry => entry.Error).ToArray();
+    public IReadOnlyList<(bool IsError, string Context, Exception? Error, string? Message)> Entries => _entries.ToArray();
+    public void Error(string context, Exception error) => _entries.Enqueue((true, context, error, null));
+    public void Error(string context, string message) => _entries.Enqueue((true, context, null, message));
+    public void Warning(string context, Exception error) => _entries.Enqueue((false, context, error, null));
+    public void Warning(string context, string message) => _entries.Enqueue((false, context, null, message));
+}
 
 internal sealed class TestAppLoadingPresentation : IAppLoadingPresentation
 {

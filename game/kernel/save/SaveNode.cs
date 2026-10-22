@@ -1,8 +1,8 @@
-using Campus.Kernel.Diagnostics;
 using System.Reflection;
 using Campus.Contracts;
 using Campus.Contracts.AppFlow;
 using Campus.Contracts.Atlas;
+using Campus.Contracts.Diagnostics;
 using Campus.Contracts.Maps;
 using Campus.Contracts.Save;
 using Campus.Contracts.Startup;
@@ -48,7 +48,7 @@ public partial class SaveNode : Node, IBootParticipant
                             (ISaveSection)RuntimeKernel.Services.Create(e.Type))).ToArray();
                     var bindings = new SaveRuntimeBindings(RuntimeKernel.Get<IWorldState>(), RuntimeKernel.Get<IMapService>(), RuntimeKernel.Get<ICameraRig>(),
                         RuntimeKernel.Get<IObserverState>(), RuntimeKernel.Get<IRuleset>(), RuntimeKernel.Get<IAtlasService>(), RuntimeKernel.Get<IAppLoadingPresentation>(),
-                        RuntimeKernel.Get<IAppFlow>(), id => RuntimeKernel.Get<IRulesetActivation>().Select(id),
+                        RuntimeKernel.Get<IAppFlow>(), RuntimeKernel.Get<IDiagnosticLog>(), id => RuntimeKernel.Get<IRulesetActivation>().Select(id),
                         RuntimeKernel.Get<IWorldRestore>(), WaitDestination, CaptureThumbnail,
                         () => (long)Time.GetUnixTimeFromSystem(), pose => RuntimeKernel.Get<ICameraPoseValidator>().LegalizePrepared(pose));
                     await _save.Initialize(new(context.SaveDirectory, save.Enabled, save.WriteSlot, save.AtFrame, save.WeatherSeed), bindings, new(sections));
@@ -114,7 +114,7 @@ public partial class SaveNode : Node, IBootParticipant
                 body = null;
                 mode = ViewMode.Fly;
                 arrival = _mapRuntime.Arrive(RuntimeKernel.Get<ICameraRig>().Pose, mode);
-                DiagnosticLog.Warning("", "walk: no safe landing within range; restored in fly mode.");
+                RuntimeKernel.Get<IDiagnosticLog>().Warning("", "walk: no safe landing within range; restored in fly mode.");
             }
             if (arrival is null) return false;
             if (arrival.Done.IsCompleted) arrival.Done.GetAwaiter().GetResult();

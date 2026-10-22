@@ -11,6 +11,7 @@ $toolRoot = (Resolve-Path (Join-Path $PSScriptRoot '..\..\..')).Path
 . "$toolRoot\scripts\lib\start-game.ps1"
 $condition = Get-Content -LiteralPath $ConditionPath -Raw -Encoding UTF8 | ConvertFrom-Json
 if ($condition.measurement -notin @('experience','diagnostic')) { throw 'Unknown measurement condition.' }
+if ($condition.pipelineCache -eq 'warm') { throw 'This capture has fresh native user directories and cannot establish warm pipeline-cache budgets.' }
 $diagnostic = $condition.measurement -eq 'diagnostic'
 $playingSample = $condition.playingSample -eq $true
 if ($playingSample -and (-not $diagnostic -or $Mode -ne 'immediate')) { throw 'Playing sample requires diagnostic immediate.' }
@@ -291,7 +292,9 @@ try {
         ($phaseByName['input-ready'].milliseconds - $inputRequest.milliseconds) / 1000
     } else { $null }
     $budgets = (Get-Content -LiteralPath (Join-Path $toolRoot 'budgets.json') -Raw | ConvertFrom-Json).cache
-    $validGeometry = $condition.geometryCache -eq 'valid'
+    $cacheEvidenceKnown = -not [string]::IsNullOrWhiteSpace($condition.cacheEvidence) -and
+        $condition.cacheEvidence.Trim() -notin @('NOT_MEASURED','unknown')
+    $validGeometry = $condition.geometryCache -eq 'valid' -and $cacheEvidenceKnown
     $warmPipelines = $condition.pipelineCache -eq 'warm'
     function Budget-Observation([string]$Key, $Actual, [bool]$Applicable, [string]$Endpoint) {
         $limit = $budgets.$Key

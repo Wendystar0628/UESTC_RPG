@@ -332,10 +332,15 @@ function Test-UESTCSourceBoundaries {
         if (-not (Test-Path -LiteralPath $file -PathType Leaf)) { continue }
         if ($path -match '\.gd$') { $failures.Add("GDScript outside addons: $path"); continue }
         if ($path -match '\.(tscn|tres)$' -and $path -notin @('game/stage/main.tscn','game/hud/ui_theme.tres')) { $failures.Add("Shared resource outside allowlist: $path") }
-        if ($path -notmatch '\.(cs|gdshader|gdshaderinc|glsl|glslinc)$' -or $path -match '/tests/|^game/testing/') { continue }
+        if ($path -notmatch '\.(cs|gdshader|gdshaderinc|glsl|glslinc)$') { continue }
         $text = Get-Content -Raw -Encoding UTF8 -LiteralPath $file
         # Preserve strings while dropping comments, so URLs and quoted IDs remain inspectable.
         $text = [regex]::Replace($text, '(@"(?:[^"]|"")*"|"(?:\\.|[^"\\])*"|''(?:\\.|[^''\\])*'')|/\*[\s\S]*?\*/|//[^\r\n]*', { param($m) if ($m.Groups[1].Success) { $m.Value } else { '' } })
+        # Cache location has one owner, including in tests and shader sources.
+        if ($path -notmatch '^game/kernel/bake/' -and $text -match 'UESTC_BAKE_CACHE|cache[\\/]+bake') {
+            $failures.Add("${path}: bake cache outside bake kernel")
+        }
+        if ($path -match '/tests/|^game/testing/') { continue }
         $checks = @{
             'inline hexadecimal colour' = '#[0-9a-fA-F]{6}(?:[0-9a-fA-F]{2})?\b|Color\s*\.\s*FromHtml\s*\(|new\s+Color\s*\(\s*"';
             'handwritten UID' = 'uid://';
@@ -362,7 +367,6 @@ function Test-UESTCSourceBoundaries {
             $checks['runtime shader mutation'] = '"[^"\r\n]*(?:render_mode|#define)'
             $checks['Resource user storage'] = '(?:ResourceLoader\s*\.\s*Load|ResourceSaver\s*\.\s*Save)\s*\([^;]*"user://'
             if ($path -notmatch '^game/kernel/save/') { $checks['save path outside save kernel'] = 'user://saves' }
-            if ($path -notmatch '^game/kernel/bake/') { $checks['bake cache outside bake kernel'] = 'user://cache/bake' }
             if ($path -notmatch '^game/kernel/quality/') { $checks['quality settings outside quality kernel'] = 'user://graphics\.cfg' }
             if ($path -notmatch '^game/kernel/map/|^game/gates/|^game/gen/maps/') {
                 $checks['map data path in generic code'] = 'res://data/maps/'
