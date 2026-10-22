@@ -148,6 +148,7 @@ public partial class KernelStage : Node3D, IAppExit, IAppFailure, IStageGateHost
             WorldControl: registry.Get<IWorldControl>(),
             Flow: registry.Get<IAppFlow>(),
             Exit: registry.Get<IAppExit>(),
+            Failure: registry.Get<IAppFailure>(),
             Audio: registry.Get<Campus.Contracts.Audio.IAudioService>(),
             PaletteCatalog: registry.Get<IPaletteCatalogSource>(),
             ShaderMaterials: registry.Get<IShaderMaterialSource>(),

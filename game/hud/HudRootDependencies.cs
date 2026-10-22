@@ -17,6 +17,7 @@ public sealed record HudRootDependencies(
     IWorldControl WorldControl,
     IAppFlow Flow,
     IAppExit Exit,
+    IAppFailure Failure,
     IAudioService Audio,
     IPaletteCatalogSource PaletteCatalog,
     IShaderMaterialSource ShaderMaterials,

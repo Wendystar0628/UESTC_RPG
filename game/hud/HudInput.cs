@@ -19,7 +19,6 @@ internal sealed class HudInput
     private readonly Func<bool> _loading;
     private bool _weatherHeld;
     private float _weatherHold;
-    private int _entry;
 
     public HudInput(CanvasLayer owner, HudRootDependencies dependencies, HudView view, HudPages pages,
         HudResidents residents, Func<bool> loading)
@@ -31,19 +30,18 @@ internal sealed class HudInput
         _pages = pages;
         _residents = residents;
         _loading = loading;
+        _photo = new HudTask(dependencies.Failure);
     }
 
     public void Enter()
     {
-        _entry++;
         ConnectInput();
         _arbitrating = true;
     }
 
     public void Exit()
     {
-        _entry++;
-        _photoCancellation?.Cancel();
+        _photo.Cancel();
         // 先停止仲裁，再解除订阅，最后才由 _ExitTree 清理页面和居民件。
         _arbitrating = false;
         _dependencies.InputRouter.CursorVisibilityChanged -= OnCursorVisibilityChanged;
@@ -52,14 +50,12 @@ internal sealed class HudInput
         _cursor?.Dispose();
         _cursor = null;
         CancelWeatherHold();
-        ObservePhotoExport();
     }
 
     public void CancelWeatherHold() => _weatherHeld = false;
 
     public void Tick(double delta)
     {
-        ObservePhotoExport();
         SyncHostInput();
         if (!_weatherHeld) return;
         _weatherHold += (float)delta;
@@ -97,8 +93,7 @@ internal sealed class HudInput
     // 引擎递归禁用保留每个控件自身的 FocusMode/MouseFilter，重新启用时无需恢复镜像。
     public void SyncHostInput()
     {
-        if (_photoCancellation is { IsCancellationRequested: false } photo && (!_dependencies.Flow.IsPlaying || _loading()))
-            photo.Cancel();
+        if (_photo.Running && (!_dependencies.Flow.IsPlaying || _loading())) _photo.Cancel();
         if (!_arbitrating) return;
         var dialog = HasVisibleContent(_view.DialogHost);
         var page = HasVisibleContent(_view.PageHost);
@@ -177,11 +172,7 @@ internal sealed class HudInput
         // F12 不是单字符键，不受单键快捷键总开关约束（UI-NAV）；纯净模式下同样可用
         if (e.Action == "photo_export")
         {
-            if (!e.Echo && !_photoPending)
-            {
-                ObservePhotoExport();
-                _photoExport = ExportPhoto();
-            }
+            if (!e.Echo && _dependencies.Flow.IsPlaying && !_loading()) _photo.Start(ExportPhoto);
             return true;
         }
         if (!_dependencies.Settings.Get(HudSettingDefinitions.SingleKeyShortcuts)) return false;
@@ -254,41 +245,27 @@ internal sealed class HudInput
         }
     }
 
-    private bool _photoPending;
-    private Task? _photoExport;
-    private CancellationTokenSource? _photoCancellation;
-
-    private void ObservePhotoExport()
-    {
-        if (_photoExport is not { IsCompleted: true } completed) return;
-        _photoExport = null;
-        completed.GetAwaiter().GetResult();
-    }
+    // 一次只导一张；离开漫游、进加载或 HUD 离树即取消（取消不算失败），其余意外失败由持有者交 IAppFailure。
+    private readonly HudTask _photo;
 
     // 照片导出（UI-NAV）：后端忙、不可用时不提示；成功或失败各出一条临时提示
-    private async Task ExportPhoto()
+    private async Task ExportPhoto(CancellationToken token)
     {
-        if (_photoPending || !_dependencies.Flow.IsPlaying || _loading()) return;
-        _photoPending = true;
-        var entry = _entry;
-        using var cancellation = new CancellationTokenSource();
-        _photoCancellation = cancellation;
         void OnFlowChanged(AppState previous, AppState next)
         {
-            if (next != AppState.Playing) cancellation.Cancel();
+            if (next != AppState.Playing) _photo.Cancel();
         }
         _dependencies.Flow.Changed += OnFlowChanged;
         try
         {
             CaptureResult result;
-            try { result = await _dependencies.Capture.CaptureAsync(new(HideUi: true), cancellation.Token); }
-            catch (OperationCanceledException) { return; }
-            catch (Exception error)
+            try { result = await _dependencies.Capture.CaptureAsync(new(HideUi: true), token); }
+            catch (Exception error) when (!token.IsCancellationRequested)
             {
-                PhotoFailed(error, entry);
+                PhotoFailed(error);
                 return;
             }
-            if (entry != _entry || !GodotObject.IsInstanceValid(_owner) || !_owner.IsInsideTree()) return;
+            if (token.IsCancellationRequested) return;
             switch (result.Status)
             {
                 case CaptureStatus.Saved:
@@ -307,15 +284,12 @@ internal sealed class HudInput
         finally
         {
             _dependencies.Flow.Changed -= OnFlowChanged;
-            _photoCancellation = null;
-            _photoPending = false;
         }
     }
 
-    private void PhotoFailed([FailureHandler("UI-NAV")] Exception error, int entry)
+    private void PhotoFailed([FailureHandler("UI-NAV")] Exception error)
     {
         _diagnostics.Warning("[HUD] Photo export failed.", error);
-        if (entry != _entry || !GodotObject.IsInstanceValid(_owner) || !_owner.IsInsideTree()) return;
         _pages.Toast.Show(UiKit.T("toast.photo.failed"), bar: "warning.fill");
     }
 

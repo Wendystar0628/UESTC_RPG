@@ -20,7 +20,6 @@ public partial class AttributionLayer : CanvasLayer
         Text = "© OpenStreetMap contributors",
         Underline = LinkButton.UnderlineMode.Never
     };
-    public bool UseLightOnLetterbox { get; set; }
 
     public override void _Ready()
     {
@@ -46,7 +45,7 @@ public partial class AttributionLayer : CanvasLayer
         var clock = (_world.Clock % 24 + 24) % 24;
         var from = (int)clock;
         var horizon = NVector3.Lerp(_horizon[from], _horizon[(from + 1) % 24], (float)(clock - from));
-        var color = UseLightOnLetterbox ? Colors.White : new Color(1f - horizon.X, 1f - horizon.Y, 1f - horizon.Z);
+        var color = new Color(1f - horizon.X, 1f - horizon.Y, 1f - horizon.Z);
         color.A = .35f;
         Credit.Modulate = color;
     }

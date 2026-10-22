@@ -20,7 +20,7 @@ internal sealed class HudResidents
     private bool _primed;
     private ViewMode _lastMode;
     private Season _lastSeason;
-    private int _entry;
+    private readonly HudTask _modeSwitch;
     public bool Clean { get; set; }
     public bool TimeOpen { get; private set; }
     /// <summary>时间卡此刻真的展开在画面上（四角件可见且卡已展开），Esc 与光标按它判断。</summary>
@@ -31,11 +31,11 @@ internal sealed class HudResidents
         _dependencies = dependencies;
         _view = view;
         _pages = pages;
+        _modeSwitch = new HudTask(dependencies.Failure);
     }
 
     public void Enter()
     {
-        _entry++;
         _primed = false;
         _lastMode = _dependencies.Model.Mode;
         _lastSeason = _dependencies.Model.Season;
@@ -45,7 +45,7 @@ internal sealed class HudResidents
 
     public void Exit()
     {
-        _entry++;
+        _modeSwitch.Cancel();
         _dependencies.Model.World.InstanceChanged -= OnWorldChanged;
         _dependencies.ViewControl.WalkEntryRefused -= OnWalkEntryRefused;
         Release();
@@ -78,11 +78,11 @@ internal sealed class HudResidents
     }
 
     private string ResetName() => _dependencies.Maps.Context?.Descriptor.World.DefaultName.Zh ?? "";
-    private async Task SetMode(ViewMode mode)
+    // 公开 SetMode 的任务归调用方（相机只接自己发起的切换的失败）：等到切换真正结束，失败交 IAppFailure；HUD 已离树就不再刷新。
+    private async Task SetMode(ViewMode mode, CancellationToken token)
     {
-        var entry = _entry;
         await _dependencies.ViewControl.SetMode(mode, ModeSwitchVia.Ui);
-        if (entry == _entry) Refresh();
+        if (!token.IsCancellationRequested) Refresh();
     }
 
     private void OnWalkEntryRefused()
@@ -102,7 +102,7 @@ internal sealed class HudResidents
         if (_resident is not null) return;
         TimeOpen = false;
         var speed = SpeedBar.Create(_view.Kit, _view.BottomLeft, _dependencies.Model);
-        speed.ModePicked += mode => _ = SetMode(mode);
+        speed.ModePicked += mode => _modeSwitch.Start(token => SetMode(mode, token));
         var weather = WeatherStrip.Create(_view.Kit, _view.BottomRight, _dependencies.Model, _dependencies.WorldControl);
         weather.Toast += text => _pages.Toast.Show(text, "weather_auto");
         var time = TimeCard.Create(_view.Kit, _view.BottomRight, _dependencies.Model, _dependencies.WorldControl, _dependencies.PaletteProbe, ResetName);

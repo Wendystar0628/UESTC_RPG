@@ -26,9 +26,8 @@ public partial class HudRoot : CanvasLayer, IBootParticipant, IAppLoadingPresent
     private HudFrontispiece _frontispiece = null!;
     private bool _initialized, _galleryTitle;
     private SettingsPage? _gallerySettings;
-    // 节点寿命：_Ready 建、_ExitTree 取消；画廊任务挂在它上面，由 _Process 读结果。
-    private CancellationTokenSource _lifetime = null!;
-    private Task? _gallery;
+    // 画廊任务的持有者：节点离树取消（不算失败），其余失败交 IAppFailure。
+    private HudTask _gallery = null!;
 
     public Control MinimapSlot => _view.MinimapSlot;
     public Control BackgroundHost => _view.BackgroundHost;
@@ -68,7 +67,6 @@ public partial class HudRoot : CanvasLayer, IBootParticipant, IAppLoadingPresent
     public override void _Ready()
     {
         if (!_initialized) CreatePresentation();
-        _lifetime = new CancellationTokenSource();
         _view.Enter();
         _input.Enter();
         _residents.Enter();
@@ -88,6 +86,7 @@ public partial class HudRoot : CanvasLayer, IBootParticipant, IAppLoadingPresent
         _frontispiece = new HudFrontispiece(this, _dependencies, _view);
         _loading = new HudLoading(this, _dependencies, _view, () => _input.SyncHostInput());
         _input = new HudInput(this, _dependencies, _view, _pages, _residents, () => _loading.Active);
+        _gallery = new HudTask(_dependencies.Failure);
         _initialized = true;
     }
 
@@ -96,7 +95,6 @@ public partial class HudRoot : CanvasLayer, IBootParticipant, IAppLoadingPresent
         _view.Tick(delta);
         _residents.Tick(delta);
         _input.Tick(delta);
-        ObserveGallery();
     }
 
     public override void _Input(InputEvent e) => _input.Input(e);
@@ -105,8 +103,7 @@ public partial class HudRoot : CanvasLayer, IBootParticipant, IAppLoadingPresent
     public override void _ExitTree()
     {
         if (!_initialized) return;
-        _lifetime.Cancel();
-        _lifetime.Dispose();
+        _gallery.Cancel();
         _loading.Exit();
         _frontispiece.Exit();
         // Stop host arbitration before page/resident removal.
@@ -229,22 +226,7 @@ public partial class HudRoot : CanvasLayer, IBootParticipant, IAppLoadingPresent
 
     private void StartGallery(Func<CancellationToken, Task> run)
     {
-        if (_gallery is not null) throw new InvalidOperationException("A UI gallery is already running.");
-        _gallery = RunGallery(run, _lifetime.Token);
-    }
-
-    // 节点离树取消画廊不算失败，按寿命令牌认取消；其余故障留在任务里，由 _Process 在主线程重抛。
-    private static async Task RunGallery(Func<CancellationToken, Task> run, CancellationToken lifetime)
-    {
-        try { await run(lifetime); }
-        catch (OperationCanceledException) when (lifetime.IsCancellationRequested) { }
-    }
-
-    private void ObserveGallery()
-    {
-        if (_gallery is not { IsCompleted: true } completed) return;
-        _gallery = null;
-        completed.GetAwaiter().GetResult();
+        if (!_gallery.Start(run)) throw new InvalidOperationException("A UI gallery is already running.");
     }
 
     /// <summary>

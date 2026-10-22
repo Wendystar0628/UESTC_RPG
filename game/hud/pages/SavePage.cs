@@ -27,13 +27,14 @@ public partial class SavePage : Control
     private bool _fromTitle;
     private bool _reported;
     private SaveIntent _intent;
+    private HudTask _enter = null!;
 
     public event Action? CloseRequested;
     private static T Svc<T>() where T : class => Campus.Kernel.Registry.Kernel.Get<T>();
 
-    public static SavePage Create(UiKit kit, Control parent, Control dialogParent)
+    internal static SavePage Create(UiKit kit, Control parent, Control dialogParent, HudTask enter)
     {
-        var page = new SavePage { _kit = kit, _dialogParent = dialogParent, MouseFilter = MouseFilterEnum.Stop, Visible = false };
+        var page = new SavePage { _kit = kit, _dialogParent = dialogParent, _enter = enter, MouseFilter = MouseFilterEnum.Stop, Visible = false };
         parent.AddChild(page);
         page.SetAnchorsAndOffsetsPreset(LayoutPreset.FullRect);
         return page;
@@ -115,7 +116,7 @@ public partial class SavePage : Control
         }
         _detail = _kit.Text(frame.Body, "", "small", "text.2");
         _kit.Button(frame.Footer, ButtonStyle.Secondary, UiKit.T("ui.common.back"), pressed: () => CloseRequested?.Invoke());
-        _primary = _kit.Button(frame.Footer, ButtonStyle.Primary, "", "button.primary", pressed: () => _ = Act());
+        _primary = _kit.Button(frame.Footer, ButtonStyle.Primary, "", "button.primary", pressed: Act);
         if (_intent == SaveIntent.NewGame)
             _overwrite = _kit.Button(frame.Footer, ButtonStyle.Danger, UiKit.T("saves.overwrite"), "button.primary", pressed: ShowConfirm);
         _selected = Math.Clamp(slots.ToList().FindIndex(s => s.Slot == saves.Continue), 0, Math.Max(0, slots.Count - 1));
@@ -251,7 +252,7 @@ public partial class SavePage : Control
         dialog.Tabs.Visible = false;
         _kit.Text(dialog.Body, UiKit.T("saves.overwrite.body", ("slot", slot.Slot.Value.TrimStart('s').PadLeft(2, '0'))), "small", "text.2");
         var cancel = _kit.Button(dialog.Footer, ButtonStyle.Secondary, UiKit.T("saves.overwrite.cancel"), pressed: HideConfirm);
-        _kit.Button(dialog.Footer, ButtonStyle.Danger, UiKit.T("saves.overwrite"), "button.primary", pressed: () => _ = Act());
+        _kit.Button(dialog.Footer, ButtonStyle.Danger, UiKit.T("saves.overwrite"), "button.primary", pressed: Act);
         FocusWhenInteractive(cancel);
     }
 
@@ -284,15 +285,16 @@ public partial class SavePage : Control
         return true;
     }
 
-    private async Task Act()
+    // 进入由 IAppFlow 持有并处置失败（SYS-TITLE）；界面一侧的等待归界面根的流程持有者，进行中不再开第二次。
+    private void Act()
     {
-        if (!_fromTitle) return;
+        if (!_fromTitle || _enter.Running) return;
         var slot = Svc<ISaveService>().Slots[_selected];
         var request = _intent == SaveIntent.NewGame || slot.Meta is null
             ? new EnterRequest(EnterKind.NewGame, slot.Slot)
             : new EnterRequest(EnterKind.LoadSlot, slot.Slot);
         CloseRequested?.Invoke();
-        await Svc<IAppFlow>().Enter(request);
+        _enter.Start(token => Svc<IAppFlow>().Enter(request).WaitAsync(token));
     }
 
     private static string Place(SaveMeta meta) =>

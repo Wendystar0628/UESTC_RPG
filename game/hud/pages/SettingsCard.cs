@@ -37,7 +37,7 @@ public partial class SettingsCard : Control
     public SettingsPage Page => _page;
     public bool Capturing => _bindings.Capturing;
 
-    public static SettingsCard Create(UiKit kit, Control parent, HudSettings settings, IInputRouter router)
+    internal static SettingsCard Create(UiKit kit, Control parent, HudSettings settings, IInputRouter router, HudTask qualityApply)
     {
         var card = new SettingsCard
         {
@@ -46,7 +46,7 @@ public partial class SettingsCard : Control
         };
         card._bindings = new SettingsCardBindings(kit, router);
         card._content = new SettingsCardContent(kit, settings, card._bindings);
-        card._graphics = new SettingsCardGraphics(kit);
+        card._graphics = new SettingsCardGraphics(kit, qualityApply);
         card._bindings.BindingsChanged += card.InvalidateKeys;
         parent.AddChild(card);
         card.SetAnchorsAndOffsetsPreset(LayoutPreset.FullRect);

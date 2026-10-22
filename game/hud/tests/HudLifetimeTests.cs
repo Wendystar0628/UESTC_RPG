@@ -96,6 +96,7 @@ public sealed class HudLifetimeTests
                 WorldControl: world,
                 Flow: flow,
                 Exit: new UnusedExit(),
+                Failure: new RecordingFailure(),
                 Audio: audio,
                 PaletteCatalog: new PaletteRegistrySource(resources),
                 ShaderMaterials: new ShaderMaterialSource(resources),
@@ -123,8 +124,8 @@ public sealed class HudLifetimeTests
                 var dialog = new Control();
                 hud.DialogHost.AddChild(dialog);
                 // 宿主仲裁每帧跑一次：ProcessFrame 信号先于节点的 _Process，等两次才保证 HUD 至少处理过一帧。
-                await parent.ToSignal(parent.GetTree(), SceneTree.SignalName.ProcessFrame);
-                await parent.ToSignal(parent.GetTree(), SceneTree.SignalName.ProcessFrame);
+                await FrameAwaiter.ProcessAsync(parent);
+                await FrameAwaiter.ProcessAsync(parent);
                 AssertThat(hud.PageHost.FocusBehaviorRecursive == Control.FocusBehaviorRecursiveEnum.Disabled)
                     .OverrideFailureMessage("A visible dialog did not disable the page host.").IsTrue();
                 AssertThat(router.Cursors == 1).OverrideFailureMessage("A visible dialog did not hold exactly one cursor lease.").IsTrue();
@@ -145,17 +146,17 @@ public sealed class HudLifetimeTests
                     .OverrideFailureMessage("Reentry retained the detached dialog's focus block.").IsTrue();
             }
             // 进游戏不展开面板；T 展开的时间卡持光标租约，Esc 先收起它而不是打开设置卡，收起后归还租约（UI-NAV）。
-            await parent.ToSignal(parent.GetTree(), SceneTree.SignalName.ProcessFrame);
-            await parent.ToSignal(parent.GetTree(), SceneTree.SignalName.ProcessFrame);
+            await FrameAwaiter.ProcessAsync(parent);
+            await FrameAwaiter.ProcessAsync(parent);
             AssertThat(!TimeCardShown(corners) && router.Cursors == 0).OverrideFailureMessage("Entering play expanded a panel or held the cursor.").IsTrue();
             AssertThat(router.Press("time_panel")).OverrideFailureMessage("The HUD did not consume the time card shortcut.").IsTrue();
-            await parent.ToSignal(parent.GetTree(), SceneTree.SignalName.ProcessFrame);
-            await parent.ToSignal(parent.GetTree(), SceneTree.SignalName.ProcessFrame);
+            await FrameAwaiter.ProcessAsync(parent);
+            await FrameAwaiter.ProcessAsync(parent);
             AssertThat(TimeCardShown(corners) && router.Cursors == 1).OverrideFailureMessage("The expanded time card did not hold the cursor.").IsTrue();
             AssertThat(router.Press("menu") && !TimeCardShown(corners) && hud.PageHost.GetChildren().OfType<Control>().All(page => !page.Visible))
                 .OverrideFailureMessage("Esc did not close the top panel before opening any page.").IsTrue();
-            await parent.ToSignal(parent.GetTree(), SceneTree.SignalName.ProcessFrame);
-            await parent.ToSignal(parent.GetTree(), SceneTree.SignalName.ProcessFrame);
+            await FrameAwaiter.ProcessAsync(parent);
+            await FrameAwaiter.ProcessAsync(parent);
             AssertThat(router.Cursors == 0).OverrideFailureMessage("Closing the last panel did not return the cursor lease.").IsTrue();
             // 直接带可见弹层释放根，覆盖退出时子节点信号与宿主销毁的顺序。
             hud.DialogHost.AddChild(new Control());
@@ -171,10 +172,34 @@ public sealed class HudLifetimeTests
             {
                 audio.Free();
                 // 保留同帧重入的检查；失败时也让退树 QueueFree 的四角走完实际释放。
-                await parent.ToSignal(parent.GetTree(), SceneTree.SignalName.ProcessFrame);
-                await parent.ToSignal(parent.GetTree(), SceneTree.SignalName.ProcessFrame);
+                await FrameAwaiter.ProcessAsync(parent);
+                await FrameAwaiter.ProcessAsync(parent);
             }
         }
+    }
+
+    [TestCase]
+    [TestCategory(TestReason.Regression)]
+    [RequireGodotRuntime]
+    public async Task HudTaskReportsOriginalFailureAndEndsQuietlyOnScopeCancel()
+    {
+        var root = ((SceneTree)Engine.GetMainLoop()).Root;
+        var failure = new RecordingFailure();
+        var operation = new HudTask(failure);
+        var pending = new TaskCompletionSource();
+        AssertThat(operation.Start(token => pending.Task.WaitAsync(token))).IsTrue();
+        AssertThat(operation.Start(_ => Task.CompletedTask)).OverrideFailureMessage("A running UI operation accepted a second start.").IsFalse();
+        // 作用域取消只结束界面一侧的等待，不算失败。
+        operation.Cancel();
+        await FrameAwaiter.ProcessAsync(root);
+        await FrameAwaiter.ProcessAsync(root);
+        AssertThat(!operation.Running && failure.Errors.Count == 0).OverrideFailureMessage("Scope cancellation was reported as a failure or kept the operation running.").IsTrue();
+        // 以前被丢弃的故障任务吞掉失败：现在原异常交给失败接收方。
+        var error = new InvalidOperationException();
+        AssertThat(operation.Start(_ => Task.FromException(error))).IsTrue();
+        await FrameAwaiter.ProcessAsync(root);
+        AssertThat(failure.Errors.Count == 1 && ReferenceEquals(failure.Errors[0], error) && !operation.Running)
+            .OverrideFailureMessage("A failed UI operation did not hand its original exception to the failure receiver.").IsTrue();
     }
 
     private static int Subscribers(object source, string name) =>
@@ -190,6 +215,12 @@ public sealed class HudLifetimeTests
     {
         public void SampleHorizon(Season season, WeatherVec weather, Span<System.Numerics.Vector3> srgb24) =>
             srgb24.Fill(System.Numerics.Vector3.Zero);
+    }
+
+    private sealed class RecordingFailure : IAppFailure
+    {
+        public List<Exception> Errors { get; } = [];
+        public void Report(Exception error) => Errors.Add(error);
     }
 
     private sealed class UnusedExit : IAppExit

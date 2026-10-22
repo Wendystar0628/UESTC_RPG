@@ -21,6 +21,7 @@ public partial class TitleMenu : Control
     private TechButton _continue = null!;
     private Control _backgroundParent = null!;
     private Control? _shade;
+    private HudTask _enter = null!;
 
     public event Action? SavesRequested;
     /// <summary>三个存档位都占着时的"新游戏"：由界面根以新游戏方式打开存档页，选位并确认覆盖（SYS-TITLE）。</summary>
@@ -32,9 +33,9 @@ public partial class TitleMenu : Control
 
     private static T Svc<T>() where T : class => Campus.Kernel.Registry.Kernel.Get<T>();
 
-    public static TitleMenu Create(UiKit kit, Control parent, Control backgroundParent)
+    internal static TitleMenu Create(UiKit kit, Control parent, Control backgroundParent, HudTask enter)
     {
-        var menu = new TitleMenu { _kit = kit, _backgroundParent = backgroundParent, MouseFilter = MouseFilterEnum.Ignore, Visible = false };
+        var menu = new TitleMenu { _kit = kit, _backgroundParent = backgroundParent, _enter = enter, MouseFilter = MouseFilterEnum.Ignore, Visible = false };
         parent.AddChild(menu);
         menu.SetAnchorsAndOffsetsPreset(LayoutPreset.FullRect);
         return menu;
@@ -156,7 +157,7 @@ public partial class TitleMenu : Control
         {
             case 0:
                 if (_continue.Off) { Notice?.Invoke(UiKit.T("title.continue.none")); return; }
-                _ = Enter(new EnterRequest(EnterKind.Continue));
+                Enter(new EnterRequest(EnterKind.Continue));
                 break;
             case 1: NewGame(); break;
             case 2: SavesRequested?.Invoke(); break;
@@ -172,12 +173,15 @@ public partial class TitleMenu : Control
         var slots = Svc<ISaveService>().Slots;
         var empty = slots.FirstOrDefault(s => s.Health == SlotHealth.Empty);
         if (empty is null && slots.Count > 0) OverwriteRequested?.Invoke();
-        else _ = Enter(new EnterRequest(EnterKind.NewGame, empty?.Slot));
+        else Enter(new EnterRequest(EnterKind.NewGame, empty?.Slot));
     }
 
-    private async Task Enter(EnterRequest request)
+    // 进入由 IAppFlow 持有并处置失败（SYS-TITLE）；界面一侧的等待与失败提示归界面根的流程持有者，进行中不再开第二次。
+    private void Enter(EnterRequest request) => _enter.Start(token => EnterAndNotify(request, token));
+
+    private async Task EnterAndNotify(EnterRequest request, CancellationToken token)
     {
-        var result = await Svc<IAppFlow>().Enter(request);
+        var result = await Svc<IAppFlow>().Enter(request).WaitAsync(token);
         switch (result)
         {
             case EnterResult.Entered: break;
