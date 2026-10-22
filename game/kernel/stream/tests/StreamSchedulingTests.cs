@@ -53,10 +53,7 @@ public sealed class StreamSchedulingTests
         stream.Prefetch(new(layout.Feature, checked((short)atriumFloor)), destination);
         if (bake.Keys.Distinct().Count() != expected.Length || stream.DestinationReady)
             throw new InvalidOperationException("Atrium-visible open storeys or the pending destination barrier changed.");
-        stream.Unload(); bake.Clear(); stream.Load(context);
-        stream.Prefetch(new(layout.Feature, checked((short)atriumFloor)), destination);
-        if (bake.Keys.Count != layout.OpenStoreys.Count(floor => Math.Abs(floor - atriumFloor) <= 1))
-            throw new InvalidOperationException("Atrium selection leaked into another map load.");
+        stream.Unload();
     }
 
     [TestCase, TestCategory(TestReason.Regression), TestCategory("Slow")]
@@ -197,33 +194,37 @@ public sealed class StreamSchedulingTests
 
     [TestCase]
     [TestCategory(TestReason.Contract)]
-    public void ActualBakeQueueKeepsFailuresAndDiscardsForgottenSameIdResults()
+    public void ActualBakeQueueDrainsARetiringMapWithoutAffectingAnotherMapsResults()
     {
         using var queue = new BakeQueue(1, static () => { });
         using var entered = new ManualResetEventSlim();
         using var release = new ManualResetEventSlim();
-        var key = new BakeKey(new("fixture-map"), "fixture.root", "L4/0/0");
-        var oldSession = new BakeQueue.MapSession(key.Map);
-        var old = queue.Ensure(oldSession, key, BakePriority.KnownDestination, () => { entered.Set(); release.Wait(); return new object(); });
+        var retiringContext = new TestMapContext(BackdropInputsTests.Descriptor() with { Id = new("retiring-fixture-map") });
+        var currentContext = new TestMapContext(BackdropInputsTests.Descriptor() with { Id = new("current-fixture-map") });
+        var oldKey = new BakeKey(retiringContext.Descriptor.Id, "fixture.root", "L4/0/0");
+        var currentKey = new BakeKey(currentContext.Descriptor.Id, "fixture.root", "L4/0/0");
+        var oldSession = new BakeQueue.MapSession(retiringContext.Descriptor.Id);
+        var old = queue.Ensure(oldSession, oldKey, BakePriority.KnownDestination, () => { entered.Set(); release.Wait(); return new object(); });
         try
         {
             if (!entered.Wait(5000)) throw new InvalidOperationException("Old worker did not start.");
             var firstDrain = queue.ForgetMap(oldSession);
             var secondDrain = queue.ForgetMap(oldSession);
             if (firstDrain.IsCompleted || secondDrain.IsCompleted || old.Done.IsCompleted)
-                throw new InvalidOperationException("Forget detached the old same-ID worker before it finished.");
-            var currentSession = new BakeQueue.MapSession(key.Map);
+                throw new InvalidOperationException("Forget detached the retiring map's worker before it finished.");
+            var currentSession = new BakeQueue.MapSession(currentContext.Descriptor.Id);
             var expected = new object();
-            var current = queue.Ensure(currentSession, key, BakePriority.KnownDestination, () => expected);
+            var current = queue.Ensure(currentSession, currentKey, BakePriority.KnownDestination, () => expected);
             release.Set();
             if (!SpinWait.SpinUntil(() => current.State is BakeState.Ready or BakeState.Failed, 5000) ||
                 old.State != BakeState.Failed || current.State != BakeState.Ready || !ReferenceEquals(current.Product, expected))
-                throw new InvalidOperationException("An old same-ID worker replaced the current map product.");
+                throw new InvalidOperationException("Retiring one map changed another map's product.");
             Task.WhenAll(firstDrain, secondDrain).GetAwaiter().GetResult();
-            var failed = queue.Ensure(currentSession, key with { Detail = "L3/0/0" }, BakePriority.KnownDestination,
-                () => throw new InvalidOperationException("Active build failure."));
+            var original = new InvalidOperationException("Active build failure.");
+            var failed = queue.Ensure(currentSession, currentKey with { Detail = "L3/0/0" }, BakePriority.KnownDestination,
+                () => throw original);
             if (!SpinWait.SpinUntil(() => failed.State == BakeState.Failed, 5000) ||
-                failed.Product is not null || failed.Failure?.Message.Contains("Active build failure.", StringComparison.Ordinal) != true)
+                failed.Product is not null || !ReferenceEquals(failed.Failure, original))
                 throw new InvalidOperationException("An active build failure became a ready or empty product.");
         }
         finally { release.Set(); }

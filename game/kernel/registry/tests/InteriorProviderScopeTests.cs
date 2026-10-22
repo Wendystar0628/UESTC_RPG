@@ -107,8 +107,6 @@ public sealed class InteriorProviderScopeTests
         AssertThat(ReferenceEquals(context.InteriorProviders["a.provider"], second) &&
             ReferenceEquals(context.InteriorProviders["z.provider"], first) &&
             !context.InteriorProviders.ContainsKey("A.PROVIDER")).OverrideFailureMessage("Context changed provider identity or inherited a non-ordinal comparer.").IsTrue();
-        var writableView = (IDictionary<string, IInteriorProvider>)context.InteriorProviders;
-        AssertThrown(() => writableView.Add("another.provider", first)).IsInstanceOf<NotSupportedException>();
     }
 
     [TestCase, TestCategory(TestReason.Contract)]

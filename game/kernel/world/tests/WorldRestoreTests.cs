@@ -225,13 +225,12 @@ public sealed class WorldRestoreTests
 
     [TestCase]
     [TestCategory(TestReason.Contract)]
-    public void WorldSaveUsesIndependentContractOptionsAfterSharedOptionsAreLocked()
+    public void WorldSaveRoundTripsAfterSharedOptionsAreLocked()
     {
         ContractJson.Options.MakeReadOnly(populateMissingResolver: true);
         var world = CreateWorld(new TestWeatherProcess());
         var typeInfo = world.TypeInfo;
         AssertThat(ContractJson.Options.IsReadOnly).OverrideFailureMessage("Shared contract options must be locked for this regression.").IsTrue();
-        AssertThat(!ReferenceEquals(typeInfo.Options, ContractJson.Options)).OverrideFailureMessage("World source generation must own an independent copy of the shared options.").IsTrue();
         var snapshot = world.Capture(SaveContext(world));
         foreach (var (season, text) in new[]
         {

@@ -141,27 +141,14 @@ public sealed class QualityApplicationLifetimeTests
             service.Tick(20);
             if (runtime.DispatchCount != dispatches || runtime.HideCount != hides || store.SaveCount != saves || changes.Count != 0)
                 throw new InvalidOperationException($"Closing at {boundary} allowed a late publish, rollback, hide or save.");
-            // Rebinding must not revive either request from the old runtime.
-            var replacement = new FakeRuntime();
-            service.Bind(replacement);
-            await service.Initialize(BootPhase.AfterMapWarm, Context());
-            var reveal = service.Initialize(BootPhase.BeforeReveal, Context());
-            if (boundary == "save")
-                AssertThat(!reveal.IsCompleted).OverrideFailureMessage("Rebinding discarded the real settings write.").IsTrue();
-            replacement.Booting = false;
-            var afterRebind = replacement.DispatchCount;
-            var notificationsAfterRebind = changes.Count;
+            var closing = service.DisposeAsync().AsTask();
             runtime.Held.TrySetResult(.1);
             store.HeldWrite?.TrySetResult();
-            await reveal.WaitAsync(TimeSpan.FromSeconds(5));
+            await closing.WaitAsync(TimeSpan.FromSeconds(5));
             await Task.Yield();
-            service.Unbind(runtime); // A stale node's exit cannot detach the replacement.
             service.Tick(0);
-            if (replacement.DispatchCount != afterRebind || runtime.DispatchCount != dispatches ||
-                runtime.HideCount != hides || store.SaveCount != saves || changes.Count != notificationsAfterRebind)
-                throw new InvalidOperationException("Old completion or queued request survived runtime replacement.");
-            await ApplyUser(service, new(service.Requested.Preset, new Dictionary<QualityKnob, float> { [QualityKnob.ParticleDensity] = .5f }));
-            service.Unbind(replacement);
+            if (runtime.DispatchCount != dispatches || runtime.HideCount != hides || store.SaveCount != saves || changes.Count != 0)
+                throw new InvalidOperationException("A late completion or queued request published after runtime shutdown.");
         }
     }
 

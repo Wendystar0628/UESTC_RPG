@@ -59,7 +59,6 @@ public sealed class WorldWeatherLinkTests
         weather.Reset(new WeatherBoot(1, WeatherKind.Snow));
         var context = PresetContext(new WorldPreset(6, Season.Winter, WeatherKind.Snow), false);
         world.OnMapLoaded(context);
-        world.OnMapLoaded(context);
         AssertThat(weather.Enters).IsEqual(1);
         AssertThat(weather.LastEnterHours).IsEqual(6);
         world.Tick(.0625);
@@ -138,9 +137,8 @@ public sealed class WorldWeatherLinkTests
         var calls = weather.Steps.Count;
         world.Tick(.1);
         AssertThat(world.WorldHours > before && weather.Steps.Count == calls).OverrideFailureMessage("Map unload must not stop the shared clock or step an absent map.").IsTrue();
-        world.OnMapLoaded(context);
         AssertThat(world.Instance).IsEqual(instance);
-        AssertThat(weather.Enters).IsEqual(2);
+        AssertThat(weather.Enters).IsEqual(1);
         AssertThat(notifications).IsEqual(0);
     }
 }

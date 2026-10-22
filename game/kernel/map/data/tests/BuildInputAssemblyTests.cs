@@ -14,19 +14,16 @@ public sealed class BuildInputAssemblyTests
 {
     [TestCase]
     [TestCategory(TestReason.Contract)]
-    public void AssetBoundaryReadsAndFreezesOnceAcrossMapConsumers()
+    public void RequiredGlobalInputsFreezeCallerBytes()
     {
         var raw = Encoding.UTF8.GetBytes("species-version-one");
         var reads = 0;
-        var assets = new Lazy<BuildInputSnapshot>(() => BuildInputAssembly.ReadRequiredGlobalInputs(
-            ["vegetation/species.json"], key => { reads++; return raw; }, "fixture"));
-        var firstMap = assets.Value;
+        var snapshot = BuildInputAssembly.ReadRequiredGlobalInputs(
+            ["vegetation/species.json"], key => { reads++; return raw; }, "fixture");
         raw[0] = 0;
-        var secondMap = assets.Value;
-        AssertThat(reads == 1 && ReferenceEquals(firstMap, secondMap)).OverrideFailureMessage("Asset bytes were read or frozen again per map.").IsTrue();
-        AssertThat(firstMap.Require("vegetation/species.json").Span[0] == (byte)'s').OverrideFailureMessage("Published bytes alias a caller-owned mutable array.").IsTrue();
+        AssertThat(reads == 1 && snapshot.Require("vegetation/species.json").Span[0] == (byte)'s').OverrideFailureMessage("The required asset was not read once into an independent byte snapshot.").IsTrue();
         var empty = BuildInputAssembly.ReadRequiredGlobalInputs([], _ => throw new InvalidOperationException("Unexpected fixture IO."), "fixture");
-        AssertThat(ReferenceEquals(empty, BuildInputSnapshot.Empty)).OverrideFailureMessage("A fixture with no requested global assets lost its empty default.").IsTrue();
+        AssertThat(empty.Entries.Count == 0).OverrideFailureMessage("An empty asset request published unexpected inputs.").IsTrue();
     }
 
     [TestCase]

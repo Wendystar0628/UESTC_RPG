@@ -62,7 +62,7 @@ public sealed class StreamMountQueueTests
     }
     [TestCase]
     [TestCategory(TestReason.Contract)]
-    public void SameMapReloadRejectsAnOldRevisionAndCancelsItOnce()
+    public void MapRemovalRejectsLateWorkAndCancelsItOnce()
     {
         var queue = new StreamMountQueue(() => 0);
         var old = new MountWork(StreamMountKind.Visual, queue.Revision, _ => throw new InvalidOperationException("A stale result mounted."));
@@ -222,36 +222,30 @@ public sealed class StreamMountQueueTests
     }
 
     [TestCase, TestCategory(TestReason.Regression), RequireGodotRuntime]
-    public async Task FailedMapRetainsItsCausesThroughDrainAndTheNextMapCanMount()
+    public async Task FailedMapRetainsItsCausesAndReleasesQueuedWorkThroughDrain()
     {
         using var fixture = new StreamLifecycleTestSupport.StreamFixture();
         await fixture.Until(() => fixture.Director.ViewReady);
-        foreach (var generation in new[] { 0, 1 })
+        var original = new InvalidDataException("mount failure");
+        var cleanup = new InvalidOperationException("cancel failure");
+        var failed = new MountWork(StreamMountKind.Visual, fixture.Mount.Revision, _ => throw original,
+            map: fixture.Context.Descriptor.Id);
+        fixture.Mount.Enqueue(failed);
+        fixture.Mount.Drain(CoveredScreen); fixture.Director._Process(.1);
+        if (!ReferenceEquals(fixture.Director.Failure, original))
+            throw new InvalidOperationException("The map lost the original mount failure.");
+        var queued = new MountWork(StreamMountKind.Visual, fixture.Mount.Revision,
+            _ => throw new InvalidOperationException("The failed map mounted queued work during shutdown."),
+            cancel: () => throw cleanup, map: fixture.Context.Descriptor.Id);
+        fixture.Mount.Enqueue(queued);
+        try { await fixture.Unload(); throw new InvalidOperationException("Failed map drained without delivering its failure."); }
+        catch (AggregateException error)
         {
-            var original = new InvalidDataException("mount failure");
-            var cleanup = new InvalidOperationException("cancel failure");
-            fixture.Mount.Enqueue(new MountWork(StreamMountKind.Visual, fixture.Mount.Revision, _ => throw original,
-                map: fixture.Context.Descriptor.Id));
-            fixture.Mount.Drain(CoveredScreen); fixture.Director._Process(.1);
-            if (!ReferenceEquals(fixture.Director.Failure, original))
-                throw new InvalidOperationException("The map lost the original mount failure.");
-            fixture.Mount.Enqueue(new MountWork(StreamMountKind.Visual, fixture.Mount.Revision, _ => { },
-                cancel: () => throw cleanup, map: fixture.Context.Descriptor.Id));
-            try { await fixture.Unload(); throw new InvalidOperationException("Failed map drained without delivering its failure."); }
-            catch (AggregateException error)
-            {
-                if (!error.Flatten().InnerExceptions.Contains(original) || !error.Flatten().InnerExceptions.Contains(cleanup)) throw;
-            }
-            if (!fixture.Director.IsUnloaded || fixture.Mount.Failure is null)
-                throw new InvalidOperationException("The failed map was not drained or its failure was cleared before the next load.");
-            if (generation != 0) break;
-            // MapRuntime sends the existing map callbacks to the queue service and director.
-            fixture.Mount.OnMapLoaded(fixture.Context); fixture.Director.OnMapLoaded(fixture.Context);
-            fixture.Director.Prefetch(fixture.Camera.Pose, ViewMode.Fly);
-            await fixture.Until(() => fixture.Director.ViewReady);
-            if (fixture.Mount.Failure is not null || fixture.Director.Failure is not null)
-                throw new InvalidOperationException("A prior map failure poisoned the next map.");
+            if (!error.Flatten().InnerExceptions.Contains(original) || !error.Flatten().InnerExceptions.Contains(cleanup)) throw;
         }
+        if (!fixture.Director.IsUnloaded || fixture.Director.Failure is null || fixture.Mount.Failure is null ||
+            fixture.Mount.Pending != 0 || failed.Cancels != 1 || queued.Cancels != 1)
+            throw new InvalidOperationException("The failed map did not drain each queued owner once while retaining its failure.");
     }
 
     private sealed class MountWork(StreamMountKind kind, long revision, Action<double> step, string module = "module", int slices = 1, Action? cancel = null, BakePriority? priority = null, MapId? map = null) : IStreamMountWork

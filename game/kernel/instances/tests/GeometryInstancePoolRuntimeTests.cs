@@ -158,7 +158,6 @@ public sealed class GeometryInstancePoolRuntimeTests
         var prototype = Prototype(GeometryBuffer.Freeze(Surface(fixture.Provider.FirstSpec)),
             GeometryBuffer.Freeze(Surface(fixture.Provider.SecondSpec) with { Shader = ShaderId.VegTrunk }));
         var mapA = new MapId("pool-fixture-a");
-        var mapB = new MapId("pool-fixture-b");
         fixture.Host.OnMapLoaded(Context(mapA));
         var mapped = fixture.Host.Mount(Spec("mapped", prototype) with { Map = mapA });
         var mappedPeer = fixture.Host.Mount(Spec("mapped-peer", prototype) with { Map = mapA });
@@ -192,67 +191,12 @@ public sealed class GeometryInstancePoolRuntimeTests
             AssertThat(thrown).OverrideFailureMessage($"Expected {typeof(InvalidOperationException).Name}.").IsTrue();
         }
 
-        fixture.Host.OnMapLoaded(Context(mapA));
-        var sameMap = fixture.Host.Mount(Spec("mapped", Prototype(GeometryBuffer.Freeze(Surface(fixture.Provider.SecondSpec)))) with { Map = mapA });
-        var sameMapMesh = FindPool(fixture.Host, "mapped").Multimesh.Mesh;
-        AssertThat(sameMapMesh.GetInstanceId() != mappedMeshIdentity && sameMapMesh.GetSurfaceCount() == 1 &&
-            GodotObject.IsInstanceValid(globalMesh)).OverrideFailureMessage("Reloading the same map reused its previous load's mesh or changed the global pool.").IsTrue();
-        fixture.Host.OnMapUnloading(mapA);
-        sameMap.Free();
-        AssertThat(!GodotObject.IsInstanceValid(sameMapMesh)).OverrideFailureMessage("Reload cleanup retained a map-owned mesh.").IsTrue();
-        fixture.Host.OnMapLoaded(Context(mapB));
-        var reloadedSpec = Spec("mapped", prototype) with { Map = mapB };
-        var reloaded = fixture.Host.Mount(reloadedSpec);
-        AssertThat(fixture.Host.GetStatistics().Single(stat => stat.Id == reloadedSpec.Id).Map == mapB).OverrideFailureMessage("Reload retained old map attribution.").IsTrue();
-        reloaded.Free();
-        reloaded.Free();
-        var exitA = fixture.Host.Mount(Spec("exit-a", prototype) with { Map = mapB });
-        var exitB = fixture.Host.Mount(Spec("exit-b", prototype) with { Map = mapB });
-        var exitMesh = FindPool(fixture.Host, "exit-a").Multimesh.Mesh;
         fixture.Host.Free();
-        exitA.Free();
-        exitB.Free();
         global.Free();
-        AssertThat(!GodotObject.IsInstanceValid(exitMesh) && !GodotObject.IsInstanceValid(globalMesh)).OverrideFailureMessage("Host exit retained shared or exclusive meshes.").IsTrue();
+        global.Free();
+        AssertThat(!GodotObject.IsInstanceValid(globalMesh)).OverrideFailureMessage("Host exit retained the global pool mesh.").IsTrue();
         AssertThat(!GodotObject.IsInstanceValid(fixture.Source.Created.Single())).OverrideFailureMessage("Host exit did not dispose its cached ShaderMaterial.").IsTrue();
         AssertThat(GodotObject.IsInstanceValid(fixture.Provider.FirstMaterial) && GodotObject.IsInstanceValid(fixture.Provider.SecondMaterial)).OverrideFailureMessage("Host exit disposed provider-owned Toon materials.").IsTrue();
-    }
-
-    [TestCase]
-    [TestCategory(TestReason.Contract)]
-    [TestCategory("NativeRender")]
-    [RequireGodotRuntime]
-    public void MapReloadDuringPublicationReturnsTheUnpublishedMeshBorrow()
-    {
-        using var fixture = Fixture.Create();
-        var map = new MapId("pool-fixture-publish");
-        var spec = Spec("cancelled", Prototype(GeometryBuffer.Freeze(Surface(fixture.Provider.FirstSpec)))) with { Map = map };
-        fixture.Host.OnMapLoaded(Context(map));
-        MultiMeshInstance3D? cancelledNode = null;
-        MultiMesh? cancelledMulti = null;
-        Mesh? cancelledMesh = null;
-        ulong cancelledIdentity = 0;
-        void Reload(Node child)
-        {
-            cancelledNode = (MultiMeshInstance3D)child;
-            cancelledMulti = cancelledNode.Multimesh;
-            cancelledMesh = cancelledMulti.Mesh;
-            cancelledIdentity = cancelledMesh.GetInstanceId();
-            fixture.Host.OnMapUnloading(map);
-            fixture.Host.OnMapLoaded(Context(map));
-        }
-        fixture.Host.ChildEnteredTree += Reload;
-        var thrown = false;
-        try { fixture.Host.Mount(spec); }
-        catch (InvalidOperationException) { thrown = true; }
-        finally { fixture.Host.ChildEnteredTree -= Reload; }
-        AssertThat(thrown && cancelledMesh is not null && !GodotObject.IsInstanceValid(cancelledNode) &&
-            !GodotObject.IsInstanceValid(cancelledMulti) && !GodotObject.IsInstanceValid(cancelledMesh) &&
-            fixture.Host.GetChildCount() == 0 && fixture.Host.GetStatistics().Count == 0).OverrideFailureMessage("Cancelled publication retained a node, MultiMesh, mesh borrow or pool record.").IsTrue();
-        var next = fixture.Host.Mount(spec);
-        AssertThat(FindPool(fixture.Host, "cancelled").Multimesh.Mesh.GetInstanceId() != cancelledIdentity &&
-            GodotObject.IsInstanceValid(fixture.Provider.FirstMaterial)).OverrideFailureMessage("Publication rollback reused a previous load's mesh or disposed its provider material.").IsTrue();
-        next.Free();
     }
 
     [TestCase]

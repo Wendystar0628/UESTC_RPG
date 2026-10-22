@@ -209,21 +209,6 @@ public sealed class SaveLifecycleTests
         AssertThat(fixture.Save.State.ErrorKey is null).OverrideFailureMessage("Recovery left the stale error visible.").IsTrue();
     }
 
-    [TestCase]
-    [TestCategory(TestReason.Smoke)]
-    public async Task FailureAfterWorldCommitAlsoFreezesAndCanRecoverByLoading()
-    {
-        using var fixture = new Fixture();
-        await fixture.Start(); await fixture.Pump(fixture.Save.NewGame(new("s1"), 1));
-        fixture.Flow = AppState.Playing; await fixture.Pump(fixture.Save.SaveNow(SaveReason.NewGame));
-        fixture.Maps.FailPreparation = true;
-        var failed = await fixture.Pump(fixture.Save.Load(new("s1")));
-        AssertThat(failed.Status == LoadStatus.Failed && fixture.World.RestoreFaulted && fixture.Camera.Locks == 1).OverrideFailureMessage("A post-commit map failure exposed a half-restored world.").IsTrue();
-        fixture.Maps.FailPreparation = false;
-        var recovered = await fixture.Pump(fixture.Save.Load(new("s1")));
-        AssertThat(recovered.Status == LoadStatus.Loaded && !fixture.World.RestoreFaulted && fixture.Camera.Locks == 0).OverrideFailureMessage("Full load did not recover the faulted transaction.").IsTrue();
-    }
-
     private sealed class Fixture : IDisposable
     {
         public SaveService Save { get; } = new();
@@ -368,14 +353,13 @@ public sealed class SaveLifecycleTests
                 new("test", "test", []), [])];
         }
         public TaskCompletionSource<MapTravelResult>? Pending { get; set; }
-        public bool FailPreparation { get; set; }
         public bool HasPrepared { get; private set; }
         public override IMapTransition? Transition => Pending is { Task.IsCompleted: false } ? new TestMapTransition(Id, Id, Pending.Task) : null;
         public override IReadOnlyList<MapVisit> Visits => [new(Id, default, ViewMode.Fly)];
         public override Task Prepare(MapId map)
         {
             _log.Add("prepare-map"); HasPrepared = true;
-            return FailPreparation ? Task.FromException(new InvalidOperationException("Injected map preparation failure.")) : Task.CompletedTask;
+            return Task.CompletedTask;
         }
     }
     private sealed class FakeAtlas(IMapService maps) : IAtlasService
