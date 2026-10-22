@@ -1,4 +1,4 @@
-﻿# 核心冒烟：正式场景从标题经新游戏、行走、地图传送、返回标题与继续，再关闭存档和重启恢复，拒绝引擎错误/泄漏，报告实例参数需求与容量，供 G5 与 G20 核心共用。
+﻿# 核心冒烟：在隔离桌面后台跑正式场景从标题经新游戏、行走、地图传送、返回标题与继续，再关闭存档和重启恢复，拒绝引擎错误/泄漏，报告实例参数需求与容量，供 G5 与 G20 核心共用。
 # 产出：output/build/gates/；output/render-review/（核心专项日志、测试结果、隔离存档与截图）。
 # 用法：由 scripts\gate.ps1 点引用（. scripts\gates\core-smoke.ps1）后调用 Invoke-UESTCMainlineSmoke 与 Invoke-UESTCSaveCore，不单独运行
 . (Join-Path $PSScriptRoot '../lib/start-game.ps1')
@@ -8,30 +8,13 @@ if (-not (Get-Variable UESTCCoreSmokeResults -Scope Script -ErrorAction Silently
 
 function New-UESTCCoreCloseObserver {
     param([Parameter(Mandatory)][hashtable]$Observation)
-    if (-not ('Uestc.Gates.CoreWindow' -as [type])) {
-        Add-Type -TypeDefinition @'
-using System;
-using System.Runtime.InteropServices;
-namespace Uestc.Gates {
-    public static class CoreWindow {
-        [DllImport("user32.dll", EntryPoint = "PostMessageW", SetLastError = true)]
-        [return: MarshalAs(UnmanagedType.Bool)]
-        private static extern bool PostMessage(IntPtr window, uint message, UIntPtr wParam, IntPtr lParam);
-        public static bool PostClose(IntPtr window) { return PostMessage(window, 0x0010, UIntPtr.Zero, IntPtr.Zero); }
-    }
-}
-'@
-    }
     $callback = {
-        param([string]$OutputText)
+        param([string]$OutputText, $Process)
         if ($Observation.Sent) { return }
         $ready = [regex]::Match($OutputText,'(?m)^CORE_READY_CLOSE (\d+)\r?$')
         if (-not $ready.Success) { return }
         $Observation.Sent = $true
-        $Observation.At = [Diagnostics.Stopwatch]::GetTimestamp()
-        if (-not [Uestc.Gates.CoreWindow]::PostClose([IntPtr]([long]$ready.Groups[1].Value))) {
-            throw 'Could not send WM_CLOSE to the ready production window.'
-        }
+        $Observation.At = $Process.PostClose([IntPtr]([long]$ready.Groups[1].Value))
     }
     return $callback.GetNewClosure()
 }
@@ -49,25 +32,23 @@ function Invoke-UESTCMainlineSmoke {
     $saves = Join-Path $work 'saves'
     $null = [IO.Directory]::CreateDirectory($work)
     $null = [IO.Directory]::CreateDirectory($shots)
+    $testEnvironment = New-UESTCTestEnvironment -Work $work
     $lease = $null
     try {
-        $godotFailurePattern = '(?im)(?:SCRIPT )?ERROR:|Object was deleted while awaiting a callback|shader[^\r\n]*(?:compilation failed|compile error)|\bleaked\b|\bRIDs?\b[^\r\n]*\bleak\w*|\bleak\w*[^\r\n]*\bRIDs?\b'
         if (-not $BuildLease) {
             $lease = Enter-UESTCBuildLock $Locks
-            Update-UESTCGameBuild -Root $rootPath -Godot $Godot -BuildLease $lease
+            Update-UESTCGameBuild -Root $rootPath -Godot $Godot -BuildLease $lease -Environment $testEnvironment
         }
         $engineArgs = @('--path',(Join-Path $rootPath 'game'),'--rendering-method','forward_plus',
             '--rendering-driver','d3d12','--resolution','1280x720','--fixed-fps','60','--')
-        $captureArgs = @("--save-dir=$saves","--out=$shots",'--shots=V1','--ui=0','--audio=off','--quality=fine')
+        $captureArgs = @("--save-dir=$saves","--out=$shots",'--shots=V1','--ui=1','--audio=off','--quality=fine')
         $closeObservation = @{ At=$null; Sent=$false }
         $closeObserver = New-UESTCCoreCloseObserver $closeObservation
         $close = Invoke-UESTCProcess $Godot ($engineArgs + $captureArgs + @('--gate=save-close','--title=1',
-            '--save=1',"--map=$Map",'--flow=0','--seed=1','--weather-seed=1')) $rootPath (Join-Path $work 'save-close.log') -Visible -TimeoutSeconds 600 -ObserveOutput $closeObserver
+            '--save=1',"--map=$Map",'--flow=0','--seed=1','--weather-seed=1')) $rootPath (Join-Path $work 'save-close.log') -Visible -IsolatedDesktop -TimeoutSeconds 600 -ObserveOutput $closeObserver -Environment $testEnvironment
         $closeEnded = [Diagnostics.Stopwatch]::GetTimestamp()
-        if ($close.Output -match $godotFailurePattern) {
-            throw 'The production close process reported an engine/shader error, deleted signal callback or resource leak.'
-        }
-        foreach ($marker in @('CORE_TITLE_READY','CORE_INPUT_READY','CORE_TRANSIT_READY','CORE_RETURN_TITLE_READY','CORE_CONTINUE_READY','CORE_ROUNDTRIP_READY')) {
+        Assert-UESTCCleanGodotLog $close
+        foreach ($marker in @('CORE_TITLE_READY','CORE_INPUT_READY','CORE_SETTINGS_READY','CORE_TRANSIT_READY','CORE_RETURN_TITLE_READY','CORE_CONTINUE_READY','CORE_ROUNDTRIP_READY')) {
             if (-not $close.StdOut.Contains($marker)) { throw "The production close process missed $marker." }
         }
         # GAME-128 / RESEARCH-034: normal input release alone does not prove directional motion.
@@ -98,10 +79,8 @@ function Invoke-UESTCMainlineSmoke {
         $resumeObservation = @{ At=$null; Sent=$false }
         $resumeObserver = New-UESTCCoreCloseObserver $resumeObservation
         $resume = Invoke-UESTCProcess $Godot ($engineArgs + $captureArgs + @('--gate=save-resume','--title=0',
-            '--slot=1','--save=off')) $rootPath (Join-Path $work 'save-resume.log') -Visible -TimeoutSeconds 600 -ObserveOutput $resumeObserver
-        if ($resume.Output -match $godotFailurePattern) {
-            throw 'The production resume process reported an engine/shader error, deleted signal callback or resource leak.'
-        }
+            '--slot=1','--save=off')) $rootPath (Join-Path $work 'save-resume.log') -Visible -IsolatedDesktop -TimeoutSeconds 600 -ObserveOutput $resumeObserver -Environment $testEnvironment
+        Assert-UESTCCleanGodotLog $resume
         $loaded = [regex]::Match($resume.StdOut,'(?m)^CORE_GENERATION (\d+)\r?$')
         if (-not $loaded.Success -or [UInt64]$loaded.Groups[1].Value -ne [UInt64]$latest) {
             throw 'The second process did not validate and restore the newly written generation.'
@@ -133,7 +112,7 @@ function Invoke-UESTCMainlineSmoke {
         }
         $parameterUsage['Warnings'] = $parameterWarnings
         $result = [pscustomobject]@{ Status='Passed';
-            Scope='G5 Title/NewGame/Walk/ReturnToTitle/Continue/window-close save and restart restore'; CloseMilliseconds=$closeMs;
+            Scope='G5 Title/NewGame/Walk/SettingsOpenClose/ReturnToTitle/Continue/window-close save and restart restore'; CloseMilliseconds=$closeMs;
             DirectionalMovement=[pscustomobject]@{ DistanceMeters=$distance; ForwardProjectionMeters=$forward };
             Generation=[UInt64]$latest; PersistedFields='RuntimeMatched (CoreSnapshotsMatch spatial position tolerance; other fields exact)';
             Screenshot='Both captured for Opus visual review; no G7 pixel comparison or tolerance claim';
@@ -151,38 +130,24 @@ function Invoke-UESTCSaveCore {
         [Parameter(Mandatory)][string]$Locks,
         [Parameter(Mandatory)][string]$Map, [switch]$SaveTestsAlreadyPassed, [IO.FileStream]$BuildLease = $null)
     $rootPath = [IO.Path]::GetFullPath($Root)
+    $work = Join-Path $rootPath 'output/build/gates/save-core'
+    $testEnvironment = New-UESTCTestEnvironment -Work $work
     $lease = $null
     try {
         if (-not $BuildLease) {
             $lease = Enter-UESTCBuildLock $Locks
             $BuildLease = $lease
-            Update-UESTCGameBuild -Root $rootPath -Godot $Godot -BuildLease $BuildLease
+            Update-UESTCGameBuild -Root $rootPath -Godot $Godot -BuildLease $BuildLease -Environment $testEnvironment
         }
         if (-not $SaveTestsAlreadyPassed) {
-            $work = Join-Path $rootPath 'output/build/gates/save-core'
-            $null = [IO.Directory]::CreateDirectory($work)
             $settings = Join-Path $work 'save.runsettings'
-            $engine = [Security.SecurityElement]::Escape($Godot)
-            $escapedRoot = [Security.SecurityElement]::Escape($rootPath)
-            $xml = '<RunSettings><RunConfiguration><MaxCpuCount>1</MaxCpuCount><TreatNoTestsAsError>true</TreatNoTestsAsError><EnvironmentVariables><GODOT_BIN>' + $engine + '</GODOT_BIN><UESTC_REPOSITORY>' + $escapedRoot + '</UESTC_REPOSITORY></EnvironmentVariables></RunConfiguration><GdUnit4><Parameters>--headless</Parameters><DisplayName>FullyQualifiedName</DisplayName><TolerateExitCodeAfterCompletion>false</TolerateExitCodeAfterCompletion></GdUnit4></RunSettings>'
-            [IO.File]::WriteAllText($settings,$xml,(New-Object Text.UTF8Encoding $false))
+            $null = Write-UESTCTestSettings -Path $settings -Root $rootPath -Godot $Godot -Environment $testEnvironment
             $trxName = 'save-core-' + [Guid]::NewGuid().ToString('N') + '.trx'
             $trxPath = Join-Path $work $trxName
             $saveTests = Invoke-UESTCProcess dotnet @('test',(Join-Path $rootPath 'game/Campus.Tests.csproj'),'-c','Debug',
                 '--settings',$settings,'--filter','FullyQualifiedName~Campus.Kernel.Save',
-                '--logger',"trx;LogFileName=$trxName",'--results-directory',$work) $rootPath (Join-Path $work 'save-core.log') -TimeoutSeconds 600 -AllowFailure
-            $executed = 0
-            if (Test-Path -LiteralPath $trxPath -PathType Leaf) {
-                [xml]$trx = Get-Content -Raw -LiteralPath $trxPath
-                $counters = $trx.SelectSingleNode('//*[local-name()="ResultSummary"]/*[local-name()="Counters"]')
-                if ($counters) { $executed = [int]$counters.GetAttribute('executed') }
-            }
-            if ($executed -eq 0) {
-                $failure = New-Object InvalidOperationException('G20Core is incomplete: zero executed save tests or missing TRX.')
-                $failure.Data['Incomplete'] = $true
-                throw $failure
-            }
-            if ($saveTests.ExitCode -ne 0) { throw "Save core exited $($saveTests.ExitCode). See $($saveTests.Log)" }
+                '--logger',"trx;LogFileName=$trxName",'--results-directory',$work) $rootPath (Join-Path $work 'save-core.log') -TimeoutSeconds 600 -AllowFailure -Environment $testEnvironment
+            $null = Assert-UESTCTestResult $saveTests $trxPath
         }
         $window = Invoke-UESTCMainlineSmoke -Root $rootPath -Godot $Godot -Locks $Locks -Map $Map -BuildLease $BuildLease
         return [pscustomobject]@{ Status=$window.Status; Scope='G20 roundtrip, migration, corruption and exit-save core';

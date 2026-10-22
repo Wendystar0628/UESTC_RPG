@@ -21,6 +21,7 @@ if ($PlayingSample -and ($Measurement -ne 'diagnostic' -or $Modes.Count -ne 1 -o
     throw '-PlayingSample requires exactly -Modes immediate -Measurement diagnostic.'
 }
 New-Item -ItemType Directory -Path $Output | Out-Null
+$testEnvironment = New-UESTCTestEnvironment -Work $Output
 $preparation = [ordered]@{ status='PREPARING'; startedUtc=[DateTime]::UtcNow.ToString('O');
     completedUtc=$null; elapsedSeconds=$null; buildAndImportSeconds=$null;
     scope='Batch setup outside every capture script-entry interval';
@@ -32,7 +33,7 @@ try {
     $lease = Enter-UESTCBuildLock (Get-UESTCLayout $root).Locks
     $preparation.launcher['lockAcquiredTimestamp'] = [Diagnostics.Stopwatch]::GetTimestamp()
     $preparation.launcher['lockWaitStatus'] = 'MEASURED_IN_PREPARATION'
-    Update-UESTCGameBuild -Root $root -Godot (Get-UESTCGodot) -BuildLease $lease -Timing $preparation.launcher
+    Update-UESTCGameBuild -Root $root -Godot (Get-UESTCGodot) -BuildLease $lease -Timing $preparation.launcher -Environment $testEnvironment
     $preparation.buildAndImportSeconds = ($preparation.launcher.preparationCompletedTimestamp -
         $preparation.launcher.preparationStartedTimestamp) / [double][Diagnostics.Stopwatch]::Frequency
     $preparation.status = 'PREPARED'

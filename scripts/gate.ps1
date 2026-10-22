@@ -1,8 +1,8 @@
 ﻿# 门禁总入口：按改动选出要跑的门禁，依次执行并汇报通过、失败或未完成。
-# 产出：output/build/gates/、output/build/test-record.tsv、build/windows/（G7）
+# 产出：output/build/gates/、output/build/test-record.tsv
 # 用法：powershell scripts\gate.ps1 [-Only G1,G2,... [-Full] | -Smoke | -Full] [-Plan] [-Paths <路径...>] [-BaseRef <基线>] [-Map qingshuihe] [-Frames 300]
 #   默认：G1、受影响模块的 G2 和 G4，再加受影响的启动、行走、存档核心专项（核心专项驱动正式生产舞台）
-#   -Plan 只读，只列出会跑什么；-Full 请求保留的 12 道门，没做完的门返回 NotImplemented
+#   -Plan 只读，只列出会跑什么；-Full 请求保留的 11 道门，没做完的门返回 NotImplemented
 #   -Full 可与 -Only 组合限定门禁；选中 G2 时跑全量（含 Slow）及 NativeRender
 #   退出码：0 请求范围内已实现的都通过；1 有失败；2 范围未完成
 [CmdletBinding()]
@@ -155,7 +155,13 @@ function Get-UESTCG2ProjectSelection {
 function Get-UESTCTrxTests {
     param([string[]]$TrxPaths)
     foreach ($trxPath in $TrxPaths) {
-        [xml]$trx = Get-Content -Raw -LiteralPath $trxPath
+        try { [xml]$trx = Get-Content -Raw -LiteralPath $trxPath }
+        catch {
+            # Result validation reports Incomplete; the optional timing record
+            # must not replace that exception with another XML parse failure.
+            Write-Warning "Cannot record test durations from invalid TRX: $trxPath"
+            continue
+        }
         foreach ($item in $trx.SelectNodes('//*[local-name()="UnitTestResult"]')) {
             $duration = $item.GetAttribute('duration')
             $seconds = if ($duration) { [TimeSpan]::Parse($duration, [Globalization.CultureInfo]::InvariantCulture).TotalSeconds } else { 0 }
@@ -241,7 +247,7 @@ if (-not ($Full -or $Smoke -or $Only.Count)) {
 }
 $textOnlyQuick = -not ($Full -or $Smoke -or $Only.Count) -and $changes.Count -gt 0 -and $runtimeChanges.Count -eq 0
 $selected = New-Object 'Collections.Generic.List[string]'
-$gateIds = @('G1','G2','G3','G4','G5','G6','G7','G10','G14','G15','G20','G21')
+$gateIds = @('G1','G2','G3','G4','G5','G7','G10','G14','G15','G20','G21')
 if ($Only.Count) { foreach ($id in ($Only -join ',' -split ',')) { if ($id -cnotin $gateIds -and $id -cnotin @('G5Smoke','G15Core','G20Core')) { throw "Unknown gate: $id" }; if (-not $selected.Contains($id)) { $selected.Add($id) } } }
 elseif ($Smoke) { $selected.Add('G5Smoke') }
 elseif ($Full) { foreach ($id in $gateIds) { $selected.Add($id) }; foreach ($id in @('G5Smoke','G15Core','G20Core')) { $selected.Add($id) } }
@@ -284,6 +290,7 @@ if ($Plan) { $planObject | ConvertTo-Json -Depth 8; return }
 $gateLease = Enter-UESTCBuildLock $layout.Locks
 try {
 $null = [IO.Directory]::CreateDirectory($work)
+$testEnvironment = New-UESTCTestEnvironment -Work $work
 $results = New-Object 'Collections.Generic.List[object]'
 $utf8 = New-Object Text.UTF8Encoding $false
 $g2TrxPaths = New-Object 'Collections.Generic.List[string]'
@@ -296,7 +303,7 @@ if ($runtimeChanges.Count -and $selected.Count -eq 0) {
 
 function Invoke-GateProcess {
     param([string]$Name, [string]$Executable, [string[]]$Arguments, [switch]$Visible,
-        [int]$TimeoutSeconds = 1800)
+        [int]$TimeoutSeconds = 1800, [Collections.IDictionary]$Environment = $testEnvironment)
     $isTest = $Executable -eq 'dotnet' -and $Arguments.Count -gt 0 -and $Arguments[0] -eq 'test'
     if ($isTest) {
         $trxName = "$Name-$([Guid]::NewGuid().ToString('N')).trx"
@@ -309,41 +316,24 @@ function Invoke-GateProcess {
             }
         }
     }
-    $result = Invoke-UESTCProcess $Executable $Arguments $root (Join-Path $work "$Name.log") -Visible:$Visible -AllowFailure:$isTest -TimeoutSeconds $TimeoutSeconds
+    $result = Invoke-UESTCProcess $Executable $Arguments $root (Join-Path $work "$Name.log") -Visible:$Visible -AllowFailure:$isTest -TimeoutSeconds $TimeoutSeconds -Environment $Environment
     if ($isTest) {
         # Failed runs still leave a TRX; the test record needs them.
         if ($Name -like 'G2-*' -and (Test-Path -LiteralPath $trxPath -PathType Leaf)) { $g2TrxPaths.Add($trxPath) }
-        if ($result.ExitCode -ne 0) { throw "${Name}: test process exited $($result.ExitCode). See $($result.Log)" }
-        $executed = 0
-        if (Test-Path -LiteralPath $trxPath -PathType Leaf) {
-            [xml]$trx = Get-Content -Raw -LiteralPath $trxPath
-            $counters = $trx.SelectSingleNode('//*[local-name()="ResultSummary"]/*[local-name()="Counters"]')
-            if ($counters) { $executed = [int]$counters.GetAttribute('executed') }
-        }
-        if ($executed -eq 0) {
-            $failure = New-Object InvalidOperationException("${Name}: zero executed tests or missing TRX. See $($result.Log)")
-            $failure.Data['Incomplete'] = $true
-            throw $failure
-        }
+        $executed = Assert-UESTCTestResult $result $trxPath
         $result | Add-Member -NotePropertyName Tests -NotePropertyValue $executed
     }
     return $result
 }
 function Assert-GodotVersion {
     if (-not (Test-Path -LiteralPath $godot -PathType Leaf)) { throw "Godot missing: $godot" }
-    $version = Invoke-UESTCProcess $godot @('--version') $root (Join-Path $work 'godot-version.log')
+    $version = Invoke-UESTCProcess $godot @('--version') $root (Join-Path $work 'godot-version.log') -Environment $testEnvironment
     $expected = (Get-Content -Raw -Encoding UTF8 -LiteralPath (Join-Path $root 'tools/godot-version.txt')).Trim()
     if ($version.Output.Trim() -ne $expected) { throw "Godot version mismatch: expected $expected; got $($version.Output.Trim())" }
 }
 function Write-TestSettings {
     $settings = Join-Path $work 'tests.runsettings'
-    $escapedGodot = [Security.SecurityElement]::Escape($godot)
-    $escapedRoot = [Security.SecurityElement]::Escape($root)
-    $xml = @"
-<RunSettings><RunConfiguration><MaxCpuCount>1</MaxCpuCount><TreatNoTestsAsError>true</TreatNoTestsAsError><EnvironmentVariables><GODOT_BIN>$escapedGodot</GODOT_BIN><UESTC_REPOSITORY>$escapedRoot</UESTC_REPOSITORY></EnvironmentVariables></RunConfiguration><GdUnit4><Parameters>--headless</Parameters><DisplayName>FullyQualifiedName</DisplayName><TolerateExitCodeAfterCompletion>false</TolerateExitCodeAfterCompletion></GdUnit4></RunSettings>
-"@
-    [IO.File]::WriteAllText($settings, $xml, $utf8)
-    return $settings
+    return Write-UESTCTestSettings -Path $settings -Root $root -Godot $godot -Environment $testEnvironment
 }
 
 foreach ($id in $selected) {
@@ -357,9 +347,9 @@ foreach ($id in $selected) {
             $null = Test-UESTCOwnershipRules $root
             $sourcePreflight = $true
         }
-        if (-not $gamePrepared -and $id -in @('G1','G2','G5','G5Smoke','G6','G15Core','G20Core')) {
+        if (-not $gamePrepared -and $id -in @('G1','G2','G5','G5Smoke','G15Core','G20Core')) {
             Assert-GodotVersion
-            Update-UESTCGameBuild -Root $root -Godot $godot -BuildLease $gateLease -Timing $gamePreparation -Solution:($selected.Contains('G1'))
+            Update-UESTCGameBuild -Root $root -Godot $godot -BuildLease $gateLease -Timing $gamePreparation -Solution:($selected.Contains('G1')) -Environment $testEnvironment
             $gamePrepared = $true
         }
         switch ($id) {
@@ -436,17 +426,6 @@ foreach ($id in $selected) {
                     $status = $detail.Status
                 }
             }
-            'G6' {
-                Assert-GodotVersion
-                $release = Join-Path $root 'build/windows'
-                $null = [IO.Directory]::CreateDirectory($release)
-                $r = Invoke-GateProcess 'G6-export' $godot @('--path',$game,'--export-release','Windows Desktop',(Join-Path $release 'UESTC.exe')) -Visible
-                Assert-UESTCCleanGodotLog $r
-                if (-not (Test-Path -LiteralPath (Join-Path $release 'UESTC.exe'))) { throw 'Export command did not produce UESTC.exe.' }
-                $bytes = (Get-ChildItem -LiteralPath $release -File -Recurse | Measure-Object Length -Sum).Sum
-                $detail = "Windows Desktop release export; directory bytes=$bytes. Archive/PCK/license/production-budget checks: NotImplemented."
-                $status = 'NotImplemented'
-            }
             'G7' {
                 $status = 'NotImplemented'
                 $detail = 'Fixed-pose overview, seasonal shots and three quality-preset overviews are centralized; no gate implementation yet.'
@@ -460,15 +439,15 @@ foreach ($id in $selected) {
                 $null = $coreSettings.RunSettings.RunConfiguration.AppendChild($sessionTimeout)
                 $settings = Join-Path $work 'G15Core.runsettings'
                 $coreSettings.Save($settings)
-                $previousMap = [Environment]::GetEnvironmentVariable('UESTC_G15_MAP', 'Process')
+                $walkEnvironment = $testEnvironment.Clone()
+                $walkEnvironment['UESTC_G15_MAP'] = $Map
                 try {
-                    [Environment]::SetEnvironmentVariable('UESTC_G15_MAP', $Map, 'Process')
                     $coreArguments = @('test',(Join-Path $game 'Campus.Tests.csproj'),'-c',$Configuration,'--settings',$settings,'--filter','TestCategory=G15Core','--logger','console;verbosity=detailed','--logger','trx','--results-directory',(Join-Path $work 'test-results'))
-                    $null = Invoke-GateProcess 'G15Core' dotnet $coreArguments -TimeoutSeconds 630
+                    $null = Invoke-GateProcess 'G15Core' dotnet $coreArguments -TimeoutSeconds 630 -Environment $walkEnvironment
                 } catch {
                     if ($_.Exception.Data['Incomplete']) { throw }
                     throw ("G15Core nearby walking failed. " + $_.Exception.Message)
-                } finally { [Environment]::SetEnvironmentVariable('UESTC_G15_MAP', $previousMap, 'Process') }
+                }
                 $detail = 'P01/P08 authored landing and nearby walking passed; at most 3x3 collision tiles. Full routes and whole-map checks were not run.'
             }
             'G20Core' {

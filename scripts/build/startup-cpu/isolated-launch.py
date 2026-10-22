@@ -6,6 +6,7 @@
 import base64
 import ctypes as c
 from ctypes import wintypes as w
+import os
 from pathlib import Path
 import subprocess
 import sys
@@ -37,11 +38,23 @@ kernel.GetExitCodeProcess.argtypes = [w.HANDLE, c.POINTER(w.DWORD)]
 kernel.CloseHandle.argtypes = [w.HANDLE]
 
 out = Path(sys.argv[1]).resolve()
+profile_parent = Path(__file__).resolve().parents[3] / 'output' / 'start_game' / 'TOOL-215-profile'
+if not out.is_relative_to(profile_parent.resolve()) or out == profile_parent.resolve():
+    raise ValueError('Capture output escapes the startup profile directory')
 mode = sys.argv[2]
 if mode not in ("title", "immediate", "dwell"):
     raise ValueError("Expected title, immediate or dwell")
 condition_path = Path(sys.argv[3]).resolve()
 out.mkdir(parents=True, exist_ok=False)
+# The worker, Godot and diagnostic collector inherit this round's native user dirs.
+# Copy all other entries so tool locations and package caches keep their identity.
+environment = dict(os.environ)
+for key, leaf in (('APPDATA', 'roaming'), ('LOCALAPPDATA', 'local')):
+    directory = out / 'profile' / leaf
+    directory.mkdir(parents=True, exist_ok=False)
+    environment[key] = str(directory)
+environment_block = c.create_unicode_buffer('\0'.join(
+    key + '=' + value for key, value in sorted(environment.items(), key=lambda entry: entry[0].upper())) + '\0\0')
 desktop_name = "UESTC_STARTUP_CPU_" + str(time.time_ns())
 desktop = user.CreateDesktopW(desktop_name, None, None, 0, 0x01FF, None)
 if not desktop:
@@ -70,7 +83,7 @@ try:
         "-EncodedCommand", base64.b64encode(script.encode("utf-16-le")).decode("ascii")]
     command = subprocess.list2cmdline(arguments)
     if not kernel.CreateProcessW(None, c.create_unicode_buffer(command), None, None, False,
-            0x00000010, None, str(Path(__file__).resolve().parents[3]), c.byref(startup), c.byref(process)):
+            0x00000010 | 0x00000400, environment_block, str(Path(__file__).resolve().parents[3]), c.byref(startup), c.byref(process)):
         raise c.WinError(c.get_last_error())
     kernel.CloseHandle(process.hThread)
     while kernel.WaitForSingleObject(process.hProcess, 1000) == 258:

@@ -5,7 +5,79 @@ Set-StrictMode -Version Latest
 
 function Assert-UESTCCleanGodotLog {
     param($ProcessResult)
-    if ($ProcessResult.Output -match '(?im)(?:SCRIPT )?ERROR:|shader[^\r\n]*(?:compilation failed|compile error)') { throw "Godot reported errors: $($ProcessResult.Log)" }
+    $pattern = '(?im)(?:SCRIPT )?ERROR:|Object was deleted while awaiting a callback|shader[^\r\n]*(?:compilation failed|compile error)|\bleaked\b|\bRIDs?\b[^\r\n]*\bleak\w*|\bleak\w*[^\r\n]*\bRIDs?\b|\bDetected\s+<?[1-9][0-9]*>?\s+orphan\s+nodes?\b|\b[1-9][0-9]*\s+orphan(?:ed)?\s+(?:nodes?|objects?)\b|\bOrphan StringName:[^\r\n]*\btotal:\s*[1-9][0-9]*\b'
+    if ($ProcessResult.Output -match $pattern) { throw "Godot reported errors, orphan objects or resource leaks. See $($ProcessResult.Log)" }
+}
+
+# Each test/import/capture owns a fresh native user directory under its existing output directory.
+function New-UESTCTestEnvironment {
+    param([Parameter(Mandatory)][string]$Work)
+    $profile = Assert-UESTCChildPath (Join-Path $Work ('profile-' + [Guid]::NewGuid().ToString('N'))) $Work
+    $environment = @{ APPDATA=(Join-Path $profile 'roaming'); LOCALAPPDATA=(Join-Path $profile 'local') }
+    foreach ($path in $environment.Values) { $null = [IO.Directory]::CreateDirectory($path) }
+    return $environment
+}
+
+function Write-UESTCTestSettings {
+    param([Parameter(Mandatory)][string]$Path, [Parameter(Mandatory)][string]$Root,
+        [Parameter(Mandatory)][string]$Godot, [string]$Parameters='--headless',
+        [Collections.IDictionary]$Environment=@{})
+    $variables = @{ GODOT_BIN=$Godot; UESTC_REPOSITORY=$Root }
+    foreach ($key in $Environment.Keys) { $variables[$key] = [string]$Environment[$key] }
+    $nodes = foreach ($key in @($variables.Keys | Sort-Object)) {
+        $name = [Xml.XmlConvert]::VerifyName([string]$key)
+        '<' + $name + '>' + [Security.SecurityElement]::Escape($variables[$key]) + '</' + $name + '>'
+    }
+    $arguments = [Security.SecurityElement]::Escape($Parameters)
+    $xml = '<RunSettings><RunConfiguration><MaxCpuCount>1</MaxCpuCount><TreatNoTestsAsError>true</TreatNoTestsAsError><EnvironmentVariables>' +
+        ($nodes -join '') + '</EnvironmentVariables></RunConfiguration><GdUnit4><Parameters>' + $arguments +
+        '</Parameters><DisplayName>FullyQualifiedName</DisplayName><CaptureStdOut>true</CaptureStdOut></GdUnit4></RunSettings>'
+    [IO.File]::WriteAllText($Path, $xml, (New-Object Text.UTF8Encoding $false))
+    return $Path
+}
+
+# A successful adapter process is insufficient: warnings may be Passed in TRX.
+function Assert-UESTCTestResult {
+    param([Parameter(Mandatory)]$ProcessResult, [Parameter(Mandatory)][string]$TrxPath)
+    $trx = $null
+    $executed = 0
+    try {
+        if ([IO.File]::Exists($TrxPath)) {
+            [xml]$trx = [IO.File]::ReadAllText($TrxPath)
+            $counters = $trx.SelectSingleNode('//*[local-name()="ResultSummary"]/*[local-name()="Counters"]')
+            if ($counters) { $executed = [int]$counters.GetAttribute('executed') }
+        }
+    } catch {
+        $failure = [InvalidOperationException]::new("Test result is incomplete: invalid TRX $TrxPath", $_.Exception)
+        $failure.Data['Incomplete'] = $true
+        throw $failure
+    }
+    if ($executed -le 0) {
+        $failure = [InvalidOperationException]::new("Test result is incomplete: zero executed tests or missing TRX. See $TrxPath")
+        $failure.Data['Incomplete'] = $true
+        throw $failure
+    }
+    if ($ProcessResult.ExitCode -ne 0) { throw "Test process exited $($ProcessResult.ExitCode). See $($ProcessResult.Log)" }
+    $summary = $trx.SelectSingleNode('//*[local-name()="ResultSummary"]')
+    if ($summary.GetAttribute('outcome') -notin @('Passed','Completed')) { throw "TRX summary did not pass. See $TrxPath" }
+    foreach ($name in @('failed','error','timeout','aborted','inconclusive','notRunnable','disconnected','passedButRunAborted')) {
+        $value = $counters.GetAttribute($name)
+        if ($value -and [int]$value -gt 0) { throw "TRX reports $name=$value. See $TrxPath" }
+    }
+    foreach ($item in $trx.SelectNodes('//*[local-name()="UnitTestResult"]')) {
+        if ($item.GetAttribute('outcome') -notin @('Passed','NotExecuted')) {
+            throw "TRX test '$($item.GetAttribute('testName'))' did not pass. See $TrxPath"
+        }
+    }
+    foreach ($info in $trx.SelectNodes('//*[local-name()="RunInfo"]')) {
+        if ($info.GetAttribute('outcome') -in @('Failed','Error','Aborted','Timeout')) {
+            throw "TRX run diagnostic reports failure: $($info.InnerText). See $TrxPath"
+        }
+    }
+    Assert-UESTCCleanGodotLog $ProcessResult
+    $messages = $trx.SelectNodes('//*[local-name()="Output" or local-name()="RunInfo" or local-name()="Message"]')
+    Assert-UESTCCleanGodotLog ([pscustomobject]@{ Output=(@($messages | ForEach-Object { $_.InnerText }) -join "`n"); Log=$TrxPath })
+    return $executed
 }
 
 function Get-UESTCLayout {
@@ -110,7 +182,8 @@ function Invoke-UESTCProcess {
         [Parameter(Mandatory)][string]$WorkingDirectory, [string]$Log = '',
         [int]$TimeoutSeconds = 1800, [switch]$AllowFailure, [switch]$Visible,
         [int[]]$SuccessExitCodes = @(0), [Text.Encoding]$TextEncoding = $null,
-        [scriptblock]$ObserveOutput = $null, [switch]$IsolatedDesktop)
+        [scriptblock]$ObserveOutput = $null, [switch]$IsolatedDesktop,
+        [Collections.IDictionary]$Environment = $null)
     if ($Log) { $null = [IO.Directory]::CreateDirectory((Split-Path $Log -Parent)) }
     if (-not ('Uestc.Tools.ProcessTree' -as [type])) { Add-Type -Path (Join-Path $PSScriptRoot 'ProcessTree.cs') }
     $path = @(Get-Command $Executable -CommandType Application -ErrorAction Stop)[0].Source
@@ -118,11 +191,11 @@ function Invoke-UESTCProcess {
     if (-not $TextEncoding) { $TextEncoding = [Console]::OutputEncoding }
     $process = $null
     try {
-        $process = New-Object Uestc.Tools.ProcessTree($path, $commandLine, $WorkingDirectory, [bool]$Visible, $TextEncoding, [bool]$IsolatedDesktop)
+        $process = New-Object Uestc.Tools.ProcessTree($path, $commandLine, $WorkingDirectory, [bool]$Visible, $TextEncoding, [bool]$IsolatedDesktop, $Environment)
         $deadline = [DateTime]::UtcNow.AddSeconds($TimeoutSeconds)
         while (-not $process.HasExited) {
             if ([DateTime]::UtcNow -ge $deadline) { throw "Process timeout: $Executable" }
-            if ($ObserveOutput) { $null = & $ObserveOutput $process.StdOut }
+            if ($ObserveOutput) { $null = & $ObserveOutput $process.StdOut $process }
             Start-Sleep -Milliseconds 100
         }
         $process.Finish()

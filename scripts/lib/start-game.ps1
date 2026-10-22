@@ -34,7 +34,7 @@ function Test-UESTCLaunchOutputs {
 function Update-UESTCGameBuild {
     param([Parameter(Mandatory)][string]$Root, [Parameter(Mandatory)][string]$Godot,
         [Parameter(Mandatory)][IO.FileStream]$BuildLease, [Collections.IDictionary]$Timing = $null,
-        [switch]$Solution)
+        [switch]$Solution, [Collections.IDictionary]$Environment = $null)
     if ($Timing) {
         $Timing['preparationStartedTimestamp'] = [Diagnostics.Stopwatch]::GetTimestamp()
         $Timing['preparationCompletedTimestamp'] = $null
@@ -46,17 +46,18 @@ function Update-UESTCGameBuild {
     Write-Host '准备游戏，增量编译中……'
     if ($Timing) { $Timing['buildInvoked'] = $true }
     $target = if ($Solution) { 'game\Campus.sln' } else { 'game\Campus.csproj' }
-    Invoke-UESTCProcess 'dotnet' @('build', (Join-Path $Root $target), '-c', 'Debug', '-warnaserror', '-v', 'q') $Root (Join-Path $out 'build.log') | Out-Null
+    Invoke-UESTCProcess 'dotnet' @('build', (Join-Path $Root $target), '-c', 'Debug', '-warnaserror', '-v', 'q') $Root (Join-Path $out 'build.log') -Environment $Environment | Out-Null
     Write-Host '准备资源，原生增量导入中……'
     if ($Timing) { $Timing['importInvoked'] = $true }
     try {
-        $import = Invoke-UESTCProcess $Godot @('--headless', '--editor', '--path', (Join-Path $Root 'game'), '--', '--build-import') $Root (Join-Path $out 'import.log') -TimeoutSeconds 600
+        $import = Invoke-UESTCProcess $Godot @('--headless', '--editor', '--path', (Join-Path $Root 'game'), '--', '--build-import') $Root (Join-Path $out 'import.log') -TimeoutSeconds 600 -Environment $Environment
         Assert-UESTCCleanGodotLog $import
     } catch {
         $importError = $_
         try {
             # 失效默认启动会检查的原生缓存，让下次启动重走已有准备链。
-            [IO.File]::Delete((Join-Path $Root 'game\.godot\editor\filesystem_cache10'))
+            $cache = Join-Path $Root 'game\.godot\editor\filesystem_cache10'
+            if ([IO.File]::Exists($cache)) { [IO.File]::Delete($cache) }
         } catch {
             throw [AggregateException]::new('资源导入与缓存失效均失败。', [Exception[]]@($importError.Exception, $_.Exception))
         }
