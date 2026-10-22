@@ -1560,8 +1560,8 @@
   - ENG-ARCH 分层 · L53 · 851
   - ENG-ARCH 生产链 · L64 · 487
   - ENG-ARCH 数据流 · L73 · 95
-- ENG-ARCH §2 边界与确定性 · L77 · 3.9k
-  - ENG-ARCH 依赖方向 · L79 · 1.4k
+- ENG-ARCH §2 边界与确定性 · L77 · 4.0k
+  - ENG-ARCH 依赖方向 · L79 · 1.5k
   - ENG-ARCH 确定性与禁用写法 · L90 · 612
   - ENG-ARCH 自动发现与模块接入 · L102 · 701
   - ENG-ARCH 仓库脚本自成一体 · L110 · 101

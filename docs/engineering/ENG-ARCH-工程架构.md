@@ -80,7 +80,7 @@ paths: ["game/**/*.cs", "game/kernel/bake/**", "game/testing/**", "game/gen/maps
 
 - 上层可以引用下层，反过来不行；同层的内容模块、归属不同地图的程序集互不引用；通用生成不引用任何 `Campus.Gen.Maps.*`，每图程序集只引用契约和 `Campus.Gen`（SYS-MAPS §6）。程序集并少之后，这些边界由 `scripts/gates/arch/` 的命名空间架构规则（G4）挡，不靠多建程序集；增删规则要 Codex 主线批准。
 - **kernel 内部**：自底向上为 Diagnostics/Frame/Registry、Renderer/Materials/Lod/Instances、地图与烘焙流式及状态驱动、Boot/Save/Inspect（Diagnostics 是唯一的诊断输出入口，在最底层：正式运行由 Boot 启用后写引擎错误输出，由引擎落到 `user://logs/godot.log`（ENG-LICENSE §1），没有引擎宿主的纯 .NET 测试仍写标准错误；上层经契约 `IDiagnosticLog` 取用；Inspect 是最高层的拍摄与检视）；完整顺序以 G4 的 `KernelLevel` 声明为准，低层不依赖高层，不留双向依赖或豁免。
-- **生成层看不到运行时**：`BuildContext` 里没有世界状态、画面设置和规则集。`BuildContext` 的 `Memo` 跟随实例的世界范围：同一世界复用，换世界新建作用域。随时间、季节和天气变化的东西，只能通过调色板、灯光通道、变体掩码和全局着色器参数表达（ENG-BUDGET-RULES §1）。
+- **生成层看不到运行时**：`BuildContext` 里没有世界状态、画面设置和规则集。派生值只经 `DerivedMemo` 缓存：只读冻结世界的按世界复用（`ForWorld`），依赖种子或输入的随上下文（`BuildContext.Memo`），不另写私有缓存。随时间、季节和天气变化的东西，只能通过调色板、灯光通道、变体掩码和全局着色器参数表达（ENG-BUDGET-RULES §1）。
 - **门禁与专项驱动在 `game/gates`**：`kernel/registry` 只提供服务注册与查找；`RulesetService`、`GlobalBuildInputs` 是注入的服务，不放在 registry。
 - **几何只经 `gen/geometry/GeometrySink`**：普通表面按完整顶点共享，保留材质及可选通道的边界；Indexed 保持已给定的顶点、索引、法线和自定义通道顺序，Positions 装配尚未分格的点集；`VertexFlag`、`GeometryVertexLimits` 只在契约里定义，生成器不自带位置法线数组。
 - **运行时内部**：各命名空间之间只经契约和 Kernel 服务交互；界面除 GodotSharp 外只依赖契约和 `Kernel.Get<T>()`，不用其他模块的内部类型。
@@ -133,7 +133,7 @@ paths: ["game/**/*.cs", "game/kernel/bake/**", "game/testing/**", "game/gen/maps
 
 - 契约在 `game/contracts/`（`Campus.Contracts`，运行时边界契约 `Campus.Contracts.Runtime`）；签名、注释和 JSON 格式以源码为准，文档不抄签名。契约按领域归目录，不设杂物目录；`Runtime/Maps` 是地图运行时契约的唯一目录。
 - **帧顺序以契约 `FramePriority` 为准**：每个登记步的优先级值唯一，同值登记节点按节点 ID 序执行；步内不声明前后关系，需要先后的节点使用不同登记值，使用方直接引用登记项（DECISION-135）。
-- **`BuildContext`**：`CodeHash` 与 `WindowNumbering` 必须显式提供，无窗口地图和编号前置上下文提供空编号快照；`WithWorld` 只切换冻结世界并保留其余输入，派生值 `Memo` 按世界上下文隔离；`BuildingSet` 只接受 `BuildContext`。`CaptureContext` 必须携带同次保存唯一的 `WorldSaveMoment`，存档段不另取时刻。
+- **`BuildContext`**：`CodeHash` 与 `WindowNumbering` 必须显式提供，无窗口地图和编号前置上下文提供空编号快照；`WithWorld` 只切换冻结世界并保留其余输入；`BuildingSet` 只接受 `BuildContext`。`CaptureContext` 必须携带同次保存唯一的 `WorldSaveMoment`，存档段不另取时刻。
 - 改契约，或加着色器全局参数、着色器文件、程序集引用、NuGet 包，向 Codex 主线申请（WF-BUILD §1、WF-BUILD §3）；改动与全部使用方、数据和文档同批迁移，不保留旧接口（WF-RULE §10，DECISION-209、DECISION-214）。
 - **分批冻结**（DECISION-134）：某组契约的真实生产方与使用方在主线上接通、核心专项通过后，由主会话宣布冻结，之后只增不改；冻结的组记进施工状态。
 - **演进约束**（为 RPG 扩展留口，ENG-ROADMAP）：record 只加 init 属性，不动位置参数；接口加成员带默认实现，或另开新接口；不改已有签名或枚举序号；不让 `Build()` 读运行时状态；不为剧情改烘焙产物或烘焙碰撞，剧情带来的世界变化放在运行时层：显隐掩码、物体差分、运行时门体、导航覆盖。
