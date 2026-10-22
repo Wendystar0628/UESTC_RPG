@@ -240,11 +240,11 @@ public sealed class BakeInputTests
     [TestCategory(TestReason.Regression)]
     [RequireGodotRuntime]
     [TestCategory("NativeRender")]
-    public void PartialLocalSourceIndexKeepsPackagedStampsWithoutRecomputingSources()
+    public void LocalSourceIndexReusesMatchingInputsAndRecomputesChangedSources()
     {
         var context = Context(new FakeWorld { Boundary = new([]) });
         var directory = Path.Combine(Path.GetTempPath(), "uestc-rpg-source-index-" + Guid.NewGuid().ToString("N"));
-        var options = new BakeOptions(Path.Combine(directory, "packaged"), false, false, false, false, 1, null);
+        var options = new BakeOptions(directory, false, false, false, false, 1, null);
         var key = new BakeKey(context.Map.Id, "resident", "source-index");
         const string codeIdentity = "current-code";
         var identity = BakeSourceIndexCache.Identity(codeIdentity);
@@ -257,22 +257,27 @@ public sealed class BakeInputTests
         { Cells = Enumerable.Range(0, 16384).Select(i => new BakeSourceCell(new(i, -i), stamp)).ToArray() };
         try
         {
-            using var packaged = CreateTerrainCache(options);
-            packaged.WriteProduct(key, identity, saved);
-            using var local = CreateTerrainCache(options with { CacheRoot = Path.Combine(directory, "local"), PackagedCacheRoot = options.CacheRoot });
-            var own = saved.Products[0] with { Stamp = new string('d', 32) };
-            local.WriteProduct(key, identity, saved with { SourceVersion = "older", Products = [own] });
+            using var local = CreateTerrainCache(options);
+            local.WriteProduct(key, identity, saved);
             var cache = new BakeSourceIndexCache(local, context.Map.Id, "current", codeIdentity);
             if (cache.ResolveResidentStamp(() => throw new InvalidOperationException("Warm source inputs were expanded.")) != stamp)
-                throw new InvalidOperationException("The matching packaged source version was ignored.");
+                throw new InvalidOperationException("The matching local source version was ignored.");
             var restored = new BakeSourceIndex(context, cache);
-            if (!restored.TryProduct(own.Key, out var value) || value != own.Stamp ||
-                saved.Products.Any(item => !restored.TryProduct(item.Key, out _)))
-                throw new InvalidOperationException("A partial local index hid packaged keys or lost local precedence.");
+            if (saved.Products.Any(item => !restored.TryProduct(item.Key, out var value) || value != item.Stamp))
+                throw new InvalidOperationException("A local source index lost persisted product stamps.");
+            var refreshed = new BakeSourceIndexCache(local, context.Map.Id, "touched", codeIdentity);
+            var recomputed = false;
+            if (refreshed.ResolveResidentStamp(() => { recomputed = true; return stamp; }) != stamp || !recomputed)
+                throw new InvalidOperationException("Changed source inputs did not recompute their resident stamp.");
+            restored = new BakeSourceIndex(context, refreshed);
             restored.Persist();
             var persisted = local.ReadProduct<BakeSourceIndexData>(key, identity)!;
-            if (persisted.SourceVersion != saved.SourceVersion || persisted.Products.Length != saved.Products.Length || !persisted.Cells.SequenceEqual(saved.Cells))
-                throw new InvalidOperationException("Merged product stamps were not persisted for the next startup.");
+            if (persisted.SourceVersion != "touched" || persisted.Products.Length != saved.Products.Length || !persisted.Cells.SequenceEqual(saved.Cells))
+                throw new InvalidOperationException("Unchanged resident sources lost their stamps when the input version changed.");
+            var changed = new BakeSourceIndexCache(local, context.Map.Id, "changed", codeIdentity);
+            var changedStamp = new string('e', 32);
+            if (changed.ResolveResidentStamp(() => changedStamp) != changedStamp || changed.Read() is not null)
+                throw new InvalidOperationException("Changed resident sources restored stale product stamps.");
         }
         finally { if (Directory.Exists(directory)) Directory.Delete(directory, recursive: true); }
     }

@@ -129,77 +129,69 @@ public sealed class BakeCodecTests
     [TestCategory(TestReason.Contract)]
     [RequireGodotRuntime]
     [TestCategory("NativeRender")]
-    public void LayeredCacheDecodesCandidatesAndOnlyChangesLocalProducts()
+    public void LocalCacheRejectsDamageAndInvalidatesOnlyForAbiChanges()
     {
         var directory = Path.Combine(Path.GetTempPath(), "uestc-rpg-bake-cache-" + Guid.NewGuid().ToString("N"));
         var localRoot = Path.Combine(directory, "local");
-        var packagedRoot = Path.Combine(directory, "packaged");
         var key = BakeRequestKeys.Tile(new("fixture"), "fixture.module", new(0, 0), LodLevel.L0);
-        var writer = new BakeCacheStore(localRoot, "version-one", packagedRoot);
-        var package = new BakeCacheStore(packagedRoot, "version-one");
-        var original = new TileBundle(key, default, LodLevel.L0, new(Vector3.Zero, new(64, 64, 64)), []);
+        var writer = new BakeCacheStore(localRoot);
         var local = new TileBundle(key, default, LodLevel.L0, new(Vector3.Zero, new(64, 80, 64)), []);
         TileBundle Decode(byte[] bytes) => (TileBundle)TileBundleCodec.Decode(BakePayloadClass.Tile, "fixture/identity", key, bytes);
         try
         {
-            package.Write(key, BakePayloadClass.Tile, TileBundleCodec.Encode(BakePayloadClass.Tile, "fixture/identity", original));
-            var packagedPath = CacheIndexes(packagedRoot).Single();
-            var packagedBytes = File.ReadAllBytes(packagedPath);
             writer.Write(key, BakePayloadClass.Tile, TileBundleCodec.Encode(BakePayloadClass.Tile, "fixture/identity", local));
             if (writer.TryRead(key, BakePayloadClass.Tile, Decode)?.Bounds != local.Bounds)
-                throw new InvalidOperationException("A packaged product hid a valid local override.");
+                throw new InvalidOperationException("A valid local product did not round trip.");
             var localPath = CacheIndexes(localRoot).Single();
             File.WriteAllBytes(localPath, [1, 2, 3]);
-            RequirePackaged();
+            RequireMissing();
             foreach (var invalid in new[] { TileBundleCodec.Encode(BakePayloadClass.Tile, "stale/identity", local), new byte[] { 1, 2, 3 } })
             {
                 writer.Write(key, BakePayloadClass.Tile, invalid);
-                RequirePackaged();
+                RequireMissing();
             }
             writer.Write(key, BakePayloadClass.Tile, TileBundleCodec.Encode(BakePayloadClass.Tile, "fixture/identity", local));
-            writer.Clear();
-            RequirePackaged();
-            writer.Write(key, BakePayloadClass.Tile, TileBundleCodec.Encode(BakePayloadClass.Tile, "fixture/identity", local));
-            var updated = new BakeCacheStore(localRoot, "version-two", packagedRoot);
+            if (writer.RebuildFailures(key).Count != 0 || writer.TryRead(key, BakePayloadClass.Tile, Decode)?.Bounds != local.Bounds)
+                throw new InvalidOperationException("A valid replacement retained a rejected product's failure.");
+            var reopened = new BakeCacheStore(localRoot);
+            if (reopened.TryRead(key, BakePayloadClass.Tile, Decode)?.Bounds != local.Bounds)
+                throw new InvalidOperationException("Reopening the current ABI discarded a valid product.");
+            File.WriteAllText(Path.Combine(localRoot, "cache.version"), "obsolete-abi");
+            var updated = new BakeCacheStore(localRoot);
             updated.Initialize();
             if (updated.CacheBytes != 0 || updated.TryRead(key, BakePayloadClass.Tile, Decode) is not null ||
-                !File.ReadAllBytes(packagedPath).SequenceEqual(packagedBytes))
-                throw new InvalidOperationException("Version migration reused products with a different format or changed the installation.");
-            File.WriteAllBytes(packagedPath, [1, 2, 3]);
-            var corrupt = new BakeCacheStore(localRoot, "version-one", packagedRoot);
-            AssertThrown(() => corrupt.TryRead(key, BakePayloadClass.Tile, Decode)).IsInstanceOf<InvalidOperationException>();
-            AssertThrown(() => corrupt.TryRead(key, BakePayloadClass.Tile, Decode)).IsInstanceOf<InvalidOperationException>();
-            if (!File.ReadAllBytes(packagedPath).SequenceEqual(new byte[] { 1, 2, 3 }))
-                throw new InvalidOperationException("A corrupt packaged product was accepted or removed.");
-            corrupt.Write(key, BakePayloadClass.Tile, TileBundleCodec.Encode(BakePayloadClass.Tile, "fixture/identity", local));
-            if (corrupt.TryRead(key, BakePayloadClass.Tile, Decode)?.Bounds != local.Bounds)
-                throw new InvalidOperationException("A missing packaged product could not be replaced locally.");
+                File.ReadAllText(Path.Combine(localRoot, "cache.version")) != BakeOptions.Abi)
+                throw new InvalidOperationException("An ABI change retained cached products or the old marker.");
+            writer = updated;
             var cpuKey = key with { Module = BakeModuleIds.VegetationTrees };
             var cpuBytes = new byte[BakeCacheStore.MaximumPayloadBytes + 64];
             var rng = new Rng(76);
             for (var offset = 0; offset < cpuBytes.Length; offset += sizeof(int))
                 BinaryPrimitives.WriteInt32LittleEndian(cpuBytes.AsSpan(offset), rng.NextInt(int.MaxValue));
-            package.Write(cpuKey, BakePayloadClass.Product, cpuBytes);
-            var cpuIndex = CacheIndexes(packagedRoot).Single(path => path != packagedPath);
+            writer.Write(cpuKey, BakePayloadClass.Product, cpuBytes);
+            var cpuIndex = CacheIndexes(localRoot).Single();
             var cpuPath = BakeCacheIndex.Files(cpuIndex).Single();
             var cpuFile = File.ReadAllBytes(cpuPath);
             if (cpuFile.Length <= BakeCacheStore.MaximumCompressedTileBytes ||
                 writer.TryRead(cpuKey, BakePayloadClass.Product, value => value) is not { } restoredCpu || !restoredCpu.SequenceEqual(cpuBytes))
                 throw new InvalidOperationException("A CPU cache product retained the compressed or decoded render-tile limit.");
             writer.Write(cpuKey, BakePayloadClass.Product, [1, 2, 3]);
-            var packagedCpu = writer.TryRead(cpuKey, BakePayloadClass.Product, value => value.Length == cpuBytes.Length ? value :
+            var malformedCpu = writer.TryRead(cpuKey, BakePayloadClass.Product, value => value.Length == cpuBytes.Length ? value :
                 throw new InvalidDataException("Malformed local CPU fixture."));
-            if (packagedCpu is null || !packagedCpu.SequenceEqual(cpuBytes) || !File.ReadAllBytes(cpuPath).SequenceEqual(cpuFile))
-                throw new InvalidOperationException("CPU candidate validation hid or modified the packaged product.");
+            if (malformedCpu is not null || File.Exists(cpuIndex) || File.Exists(cpuPath) || writer.RebuildFailures(cpuKey).Count != 1)
+                throw new InvalidOperationException("A malformed CPU product survived local cache rejection.");
             AssertThrown(() => writer.Write(key, BakePayloadClass.Tile, cpuBytes)).IsInstanceOf<InvalidDataException>();
+            writer.Clear();
+            if (writer.CacheBytes != 0 || CacheIndexes(localRoot).Any())
+                throw new InvalidOperationException("Clearing retained local cache products.");
             writer.Stop();
             AssertThrown(() => writer.Write(key, BakePayloadClass.Tile, [1])).IsInstanceOf<OperationCanceledException>();
             AssertThrown(() => writer.TryRead(key, BakePayloadClass.Tile, Decode)).IsInstanceOf<OperationCanceledException>();
-            void RequirePackaged()
+            void RequireMissing()
             {
-                if (writer.TryRead(key, BakePayloadClass.Tile, Decode)?.Bounds != original.Bounds || File.Exists(localPath) ||
-                    !File.ReadAllBytes(packagedPath).SequenceEqual(packagedBytes))
-                    throw new InvalidOperationException("A bad local candidate hid the package or caused a packaged write.");
+                if (writer.TryRead(key, BakePayloadClass.Tile, Decode) is not null || File.Exists(localPath) ||
+                    writer.RebuildFailures(key).Count != 1)
+                    throw new InvalidOperationException("A damaged local product survived rejection or lost its cause.");
             }
         }
         finally

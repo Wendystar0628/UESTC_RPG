@@ -10,7 +10,7 @@ using Campus.Kernel.Registry;
 
 namespace Campus.Kernel.Bake;
 
-/// <summary>Owns layered product reads and local writes, preparing terrain before pure readers receive it.</summary>
+/// <summary>Owns local product reads and writes, preparing terrain before pure readers receive it.</summary>
 [KernelService(typeof(TerrainCacheService))]
 [KernelService(typeof(ITerrainPreparation))]
 
@@ -40,7 +40,7 @@ public sealed class TerrainCacheService : ITerrainPreparation, IDisposable, IAsy
     internal BuildCodeIndex CodeFingerprints { get; }
     public TerrainCacheService(BuildCodeIndex codeFingerprints) : this(BakeOptions.FromApplication(), codeFingerprints) { }
     internal TerrainCacheService(BakeOptions options, BuildCodeIndex codeFingerprints)
-    { _options = options; CodeFingerprints = codeFingerprints; Store = new(options.CacheRoot, packagedRoot: options.PackagedCacheRoot); }
+    { _options = options; CodeFingerprints = codeFingerprints; Store = new(options.CacheRoot); }
 
     internal WorldModelLoadResult Load(MapId map, WorldModelPreparation preparation)
     {
@@ -238,12 +238,6 @@ public sealed class TerrainCacheService : ITerrainPreparation, IDisposable, IAsy
     }
     internal T? ReadProduct<T>(BakeKey key, string identity, Action<T>? validate = null) where T : class =>
         Read(key, identity, bytes => DecodeProduct(bytes, key, validate), BakePayloadClass.Product);
-    internal IEnumerable<T> ReadProductCandidates<T>(BakeKey key, string identity, Action<T> validate) where T : class
-    {
-        if (_options.Live) yield break;
-        foreach (var value in Store.ReadCandidates(key, BakePayloadClass.Product, bytes => Decode(bytes, identity, payload => DecodeProduct(payload, key, validate))))
-            yield return value;
-    }
     internal void WriteProduct<T>(BakeKey key, string identity, T value) where T : class => Write(key, identity, TileBundleCodec.EncodeCache(BakePayloadClass.Product, key, value), BakePayloadClass.Product);
     private T? Read<T>(BakeKey key, string identity, Func<byte[], T> decode, BakePayloadClass payload) where T : class
     {

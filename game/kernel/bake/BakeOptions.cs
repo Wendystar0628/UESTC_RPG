@@ -1,5 +1,4 @@
 using Godot;
-using Campus.Kernel.Registry;
 using KernelServices = Campus.Kernel.Registry.Kernel;
 using Campus.Contracts.Startup;
 
@@ -10,7 +9,6 @@ public sealed record BakeOptions(string CacheRoot, bool Live, bool Strict, bool 
     bool MapOnly, int LogicalProcessors, uint? SeedOverride)
 {
     public const string Abi = "godot-4.7.2-tbin-17";
-    public string? PackagedCacheRoot { get; init; }
     public int MaximumWorkers => Math.Max(1, LogicalProcessors - 2);
     public int PlayingWorkers => Math.Max(1, LogicalProcessors / 4);
 
@@ -18,18 +16,10 @@ public sealed record BakeOptions(string CacheRoot, bool Live, bool Strict, bool 
 
     public static BakeOptions From(BakeBootOptions options)
     {
-        var development = string.Equals(BuildInfo.Kind, "dev", StringComparison.Ordinal);
-        var root = options.CacheDirectory;
-        if (string.IsNullOrEmpty(root))
-            root = development
-                ? System.Environment.GetEnvironmentVariable("UESTC_BAKE_CACHE") ??
-                    Path.Combine(ProjectSettings.GlobalizePath("res://"), "..", "output", "cache", "bake")
-                : ProjectSettings.GlobalizePath("user://cache/bake/");
-        if (!Path.IsPathFullyQualified(root)) throw new ArgumentException("--bake-cache must be an absolute path.");
+        var root = System.Environment.GetEnvironmentVariable("UESTC_BAKE_CACHE") ??
+            Path.Combine(ProjectSettings.GlobalizePath("res://"), "..", "output", "cache", "bake");
+        if (!Path.IsPathFullyQualified(root)) throw new ArgumentException("UESTC_BAKE_CACHE must be an absolute path.");
         return new(Path.GetFullPath(root), options.Live, options.Strict, options.Background,
-            options.MapOnly, System.Environment.ProcessorCount, options.Seed)
-        {
-            PackagedCacheRoot = development ? null : Path.Combine(Path.GetDirectoryName(OS.GetExecutablePath())!, "cache", "bake")
-        };
+            options.MapOnly, System.Environment.ProcessorCount, options.Seed);
     }
 }

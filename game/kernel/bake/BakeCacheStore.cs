@@ -1,7 +1,6 @@
 using System.Buffers.Binary;
 using System.Text.Json;
 using System.Collections.Concurrent;
-using System.Runtime.ExceptionServices;
 using Campus.Contracts;
 using Campus.Contracts.Bake;
 using Campus.Kernel.Registry;
@@ -10,7 +9,7 @@ using FileAccess = System.IO.FileAccess;
 
 namespace Campus.Kernel.Bake;
 
-/// <summary>Local writable logical indexes and bounded parts over a read-only packaged tree. Every part must decode before acceptance.</summary>
+/// <summary>Local writable logical indexes and bounded parts. Every part must decode before acceptance.</summary>
 public sealed class BakeCacheStore
 {
     public const int MaximumTileUploadBytes = 8 * 1024 * 1024;
@@ -32,37 +31,24 @@ public sealed class BakeCacheStore
 
     private const uint CompressionMagic = 0x315A4254; // TBZ1
     private readonly string _root;
-    private readonly string? _packagedRoot;
-    private readonly string _version;
     // Readers keep a whole logical group stable; mutation and native shutdown wait for them.
     private readonly ReaderWriterLockSlim _sync = new();
     private long _bytes;
     private bool _bytesKnown;
     private volatile bool _initialized;
-    private bool _packagedAvailable;
     private volatile bool _stopped;
     private static long _stagingSequence;
-    private readonly ConcurrentDictionary<(string Root, BakeKey Key), Exception> _rejected = new();
-    private Exception? _packagedFailure;
+    private readonly ConcurrentDictionary<BakeKey, Exception> _rejected = new();
     private readonly Dictionary<BakeKey, long> _publications = [];
     private long _publicationSequence;
     // ENG-ARCH: retain the cause until the owner has published a valid local replacement.
-    internal IReadOnlyList<Exception> RebuildFailures(BakeKey key) => _rejected
-        .Where(pair => pair.Key.Key == key).OrderBy(pair => pair.Key.Root, StringComparer.Ordinal)
-        .Select(pair => pair.Value).Concat(_packagedFailure is { } error ? [error] : Array.Empty<Exception>()).ToArray();
+    internal IReadOnlyList<Exception> RebuildFailures(BakeKey key) =>
+        _rejected.TryGetValue(key, out var error) ? [error] : [];
 
-    public BakeCacheStore(string root, string? version = null, string? packagedRoot = null)
+    public BakeCacheStore(string root)
     {
         if (!Path.IsPathFullyQualified(root)) throw new ArgumentException("Cache root must be absolute.", nameof(root));
         _root = Path.TrimEndingDirectorySeparator(Path.GetFullPath(root));
-        if (packagedRoot is not null)
-        {
-            if (!Path.IsPathFullyQualified(packagedRoot)) throw new ArgumentException("Packaged cache root must be absolute.", nameof(packagedRoot));
-            _packagedRoot = Path.TrimEndingDirectorySeparator(Path.GetFullPath(packagedRoot));
-            if (ContainsPath(_root, _packagedRoot) || ContainsPath(_packagedRoot, _root))
-                throw new ArgumentException("Writable and packaged cache roots must not overlap.", nameof(packagedRoot));
-        }
-        _version = (version ?? BuildInfo.Version) + "/" + BakeOptions.Abi;
     }
 
     public long CacheBytes
@@ -87,7 +73,7 @@ public sealed class BakeCacheStore
         }
     }
 
-    /// <summary>Version changes discard player products before a worker can read one.</summary>
+    /// <summary>ABI changes discard cached products before a worker can read one.</summary>
     public void Initialize()
     {
         ThrowIfStopped();
@@ -100,22 +86,11 @@ public sealed class BakeCacheStore
             if (Directory.Exists(_root) && IsLink(_root)) throw new IOException("Cache root must not be a reparse point.");
             Directory.CreateDirectory(_root);
             var marker = Path.Combine(_root, "cache.version");
-            if (!File.Exists(marker) || File.ReadAllText(marker) != _version)
+            if (!File.Exists(marker) || File.ReadAllText(marker) != BakeOptions.Abi)
             {
                 DeleteProducts();
-                AtomicWrite(marker, System.Text.Encoding.UTF8.GetBytes(_version));
+                AtomicWrite(marker, System.Text.Encoding.UTF8.GetBytes(BakeOptions.Abi));
                 _bytesKnown = true;
-            }
-            if (_packagedRoot is not null && Directory.Exists(_packagedRoot))
-            {
-                var packagedMarker = Path.Combine(_packagedRoot, "cache.version");
-                try
-                {
-                    ValidateEntry(_packagedRoot);
-                    ValidateEntry(packagedMarker);
-                    _packagedAvailable = File.Exists(packagedMarker) && File.ReadAllText(packagedMarker) == _version;
-                }
-                catch (Exception error) when (error is IOException or UnauthorizedAccessException) { RejectPackage(error); }
             }
             _initialized = true;
         }
@@ -125,43 +100,16 @@ public sealed class BakeCacheStore
     public T? TryRead<T>(BakeKey key, BakePayloadClass payload, Func<byte[], T> decode,
         CancellationToken cancellationToken = default) where T : class
     {
-        foreach (var value in ReadCandidates(key, payload, decode, cancellationToken)) return value;
-        return null;
-    }
-
-    internal IEnumerable<T> ReadCandidates<T>(BakeKey key, BakePayloadClass payload, Func<byte[], T> decode,
-        CancellationToken cancellationToken = default) where T : class
-    {
-        return ReadPartCandidates(key, payload, parts => parts.Count == 1 ? decode(parts[0]) :
+        return TryReadParts(key, payload, parts => parts.Count == 1 ? decode(parts[0]) :
             throw new InvalidDataException("A single-payload product has multiple delivery parts."), cancellationToken);
     }
 
     internal T? TryReadParts<T>(BakeKey key, BakePayloadClass payload, Func<IReadOnlyList<byte[]>, T> decode,
         CancellationToken cancellationToken = default) where T : class
     {
-        foreach (var value in ReadPartCandidates(key, payload, decode, cancellationToken)) return value;
-        return null;
-    }
-
-    private IEnumerable<T> ReadPartCandidates<T>(BakeKey key, BakePayloadClass payload, Func<IReadOnlyList<byte[]>, T> decode,
-        CancellationToken cancellationToken) where T : class
-    {
         cancellationToken.ThrowIfCancellationRequested();
         Initialize();
-        if (ReadCandidate(_root, key, payload, decode, cancellationToken) is { } local) yield return local;
-        if (_packagedFailure is { } packageFailure) ExceptionDispatchInfo.Capture(packageFailure).Throw();
-        if (_packagedRoot is not null && _rejected.TryGetValue((_packagedRoot, key), out var rejected))
-            ExceptionDispatchInfo.Capture(rejected).Throw();
-        if (_packagedAvailable &&
-            ReadCandidate(_packagedRoot!, key, payload, decode, cancellationToken) is { } packaged)
-            yield return packaged;
-    }
-
-    private T? ReadCandidate<T>(string root, BakeKey key, BakePayloadClass payload, Func<IReadOnlyList<byte[]>, T> decode,
-        CancellationToken cancellationToken) where T : class
-    {
-        cancellationToken.ThrowIfCancellationRequested();
-        var path = FilePath(root, key);
+        var path = FilePath(_root, key);
         long publication = 0;
         try
         {
@@ -172,7 +120,7 @@ public sealed class BakeCacheStore
                 ThrowIfStopped();
                 publication = _publications.GetValueOrDefault(key);
                 if (!File.Exists(path)) return null;
-                ValidatePath(root, path);
+                ValidatePath(_root, path);
                 var count = BakeCacheIndex.Read(path, payload);
                 ValidateEntry(BakeCacheIndex.DirectoryPath(path));
                 for (var index = 0; index < count; index++)
@@ -192,29 +140,15 @@ public sealed class BakeCacheStore
         catch (Exception error) when (error is IOException or InvalidDataException or ArgumentException or OverflowException or JsonException or UnauthorizedAccessException)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            RejectCandidate(root, key, publication, error, cancellationToken);
+            RejectProduct(key, publication, error, cancellationToken);
             return null;
         }
     }
 
-    private void RejectPackage([FailureHandler("ENG-ARCH")] Exception error)
-    {
-        _packagedFailure = new InvalidOperationException("Packaged bake cache initialization failed.", error);
-        _packagedAvailable = false;
-        ExceptionDispatchInfo.Capture(_packagedFailure).Throw();
-    }
-
-    private void RejectCandidate(string root, BakeKey key, long publication, [FailureHandler("ENG-ARCH")] Exception error,
+    private void RejectProduct(BakeKey key, long publication, [FailureHandler("ENG-ARCH")] Exception error,
         CancellationToken cancellationToken)
     {
-        if (root != _root)
-        {
-            // A nested packaged read must also escape an enclosing local-candidate decoder.
-            var failure = new InvalidOperationException("Packaged bake cache product is damaged.", error);
-            _rejected[(root, key)] = failure;
-            throw failure;
-        }
-        _rejected[(root, key)] = error;
+        _rejected[key] = error;
         try { Remove(key, publication, cancellationToken); }
         catch (OperationCanceledException) { throw; }
         catch (Exception removalError)
@@ -268,7 +202,7 @@ public sealed class BakeCacheStore
             // Publishing the small logical index is the commit point; it never contains geometry buffers.
             Publish(path, BakeCacheIndex.Encode(payload, parts.Count), cancellationToken);
             foreach (var obsolete in BakeCacheIndex.Files(path).Skip(parts.Count)) DeleteProductFile(obsolete);
-            foreach (var rejected in _rejected.Keys.Where(value => value.Key == key)) _rejected.TryRemove(rejected, out _);
+            _rejected.TryRemove(key, out _);
         }
         finally { _sync.ExitWriteLock(); }
     }
@@ -447,11 +381,6 @@ public sealed class BakeCacheStore
     }
 
     private static bool IsLink(string path) => (File.GetAttributes(path) & FileAttributes.ReparsePoint) != 0;
-    private static bool ContainsPath(string parent, string child)
-    {
-        var relative = Path.GetRelativePath(parent, child);
-        return !Path.IsPathRooted(relative) && relative != ".." && !relative.StartsWith(".." + Path.DirectorySeparatorChar, StringComparison.Ordinal);
-    }
     private static IEnumerable<string> SafeFiles(string root)
     {
         if (IsLink(root)) yield break;

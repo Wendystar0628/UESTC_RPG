@@ -17,8 +17,7 @@ public enum SaveReason : byte
 public enum SlotHealth : byte { Empty, Ok, Corrupt }
 
 public sealed record SaveMeta(
-    [property: DataVersion] int Format,                     // 正文结构版本，现为 1（SYS-SAVE）
-    string Build,                   // 构建号，只用于显示和日志；兼容性只看版本号
+    [property: DataVersion] int Format,                     // 容器格式号（SYS-SAVE-FORMAT）
     SlotId Slot, SlotKind Kind,
     ulong Gen,                      // 代号：存档位内严格递增；与头和文件名 g<gen>.sav 一致
     ulong Line,                     // 世界线号 = 这条世界线第一代的代号；回退只在同一条线内（SYS-SAVE）

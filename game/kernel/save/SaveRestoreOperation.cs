@@ -101,7 +101,7 @@ internal sealed class SaveRestoreOperation(SaveRuntimeBindings runtime, Action f
             map.Id, r.Attribute.Phase == RestorePhase.World ? r.Section.CreateDefault(context) : null,
             r.Attribute.Version, null)).ToArray();
         var generation = slot is { } selected ? nextGeneration(selected) : 0;
-        var meta = new SaveMeta(SaveContainer.CurrentFormat, options.Build, slot ?? SaveSlots.Auto[0], SlotKind.Auto, generation, generation, 0, map.Id,
+        var meta = new SaveMeta(SaveContainer.CurrentFormat, slot ?? SaveSlots.Auto[0], SlotKind.Auto, generation, generation, 0, map.Id,
             context.Start.Clock, context.Start.Clock, context.Start.Season,
             context.Start.Weather ?? map.World.Default.Weather ?? throw new InvalidDataException("The map has no default weather."),
             context.Mode, boot?.Destination?.Pose ?? default, boot?.Destination?.Space, null, null, _runtime.UnixTime(), SaveReason.NewGame,

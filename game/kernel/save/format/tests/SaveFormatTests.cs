@@ -16,7 +16,7 @@ namespace Campus.Kernel.Save.Format.Tests;
 public sealed class SaveFormatTests
 {
     private static long _testId;
-    private static SaveMeta Meta(ulong gen = 1, ulong line = 1) => new(1, "test", new("s1"), SlotKind.Auto,
+    private static SaveMeta Meta(ulong gen = 1, ulong line = 1) => new(SaveContainer.CurrentFormat, new("s1"), SlotKind.Auto,
         gen, line, 20, new("test-map"), 17.5, 17.5, Season.Autumn, WeatherKind.Clear, ViewMode.Fly,
         new(new Vector3(1, 2, 3), 4, 5), null, null, null, 1792082400, SaveReason.Test);
     private static SaveDocument Document(ulong gen = 1, ulong line = 1) => new(Meta(gen, line),
@@ -49,6 +49,27 @@ public sealed class SaveFormatTests
         source.AsSpan(0, 64 + metaLength).CopyTo(bytes);
         BinaryPrimitives.WriteUInt32LittleEndian(bytes.AsSpan(16), (uint)compressed.Length);
         compressed.CopyTo(bytes, 64 + metaLength); Rehash(bytes); return bytes;
+    }
+
+    [TestCase]
+    [TestCategory(TestReason.Regression)]
+    public void FormatTwoMetadataShapeRequiresANewFormatForSchemaChanges()
+    {
+        AssertThat(SaveContainer.CurrentFormat).IsEqual(2);
+        var encoded = SaveContainer.Encode(Document());
+        var metaLength = (int)BinaryPrimitives.ReadUInt32LittleEndian(encoded.AsSpan(12));
+        using var json = JsonDocument.Parse(encoded.AsMemory(SaveContainer.HeaderSize, metaLength));
+        var meta = json.RootElement;
+        AssertThat(meta.GetProperty("format").GetInt32()).IsEqual(SaveContainer.CurrentFormat);
+        string[] formatTwoFields = ["format", "slot", "kind", "gen", "line", "playSeconds", "map", "worldHours",
+            "clock", "season", "weather", "mode", "pose", "space", "region", "placeKey", "savedAtUnix", "reason", "ruleset", "hasThumb"];
+        AssertThat(meta.EnumerateObject().Select(property => property.Name).Order(StringComparer.Ordinal)
+            .SequenceEqual(formatTwoFields.Order(StringComparer.Ordinal)))
+            .OverrideFailureMessage("Metadata fields changed without updating the format 2 schema snapshot.").IsTrue();
+        var slot = meta.GetProperty("slot");
+        AssertThat(slot.ValueKind == JsonValueKind.Object && slot.EnumerateObject().Count() == 1 &&
+            slot.GetProperty("value").GetString() == Document().Meta.Slot.Value)
+            .OverrideFailureMessage("Format 2 metadata must use the current single-value slot object.").IsTrue();
     }
 
     [TestCase]
@@ -94,7 +115,7 @@ public sealed class SaveFormatTests
 
     [TestCase]
     [TestCategory(TestReason.Contract)]
-    public void LengthGenerationFlagsAndNewerVersionsAreRejected()
+    public void LengthGenerationFlagsAndOtherVersionsAreRejected()
     {
         var original = SaveContainer.Encode(Document());
         {
@@ -110,9 +131,10 @@ public sealed class SaveFormatTests
             AssertThat(thrown).OverrideFailureMessage("Invalid save was accepted.").IsTrue();
         }
         var flags = original.ToArray(); flags[10] = 5; Rehash(flags);
-        var newer = original.ToArray(); newer[8] = 2; Rehash(newer);
+        var older = original.ToArray(); BinaryPrimitives.WriteUInt16LittleEndian(older.AsSpan(8), 1); Rehash(older);
+        var newer = original.ToArray(); BinaryPrimitives.WriteUInt16LittleEndian(newer.AsSpan(8), (ushort)(SaveContainer.CurrentFormat + 1)); Rehash(newer);
         var length = original.ToArray(); BinaryPrimitives.WriteUInt32LittleEndian(length.AsSpan(12), 17000); Rehash(length);
-        foreach (var invalid in new[] { flags, newer, length })
+        foreach (var invalid in new[] { flags, older, newer, length })
         {
             var thrown = false;
             try { SaveContainer.Decode(invalid); }
@@ -330,7 +352,7 @@ public sealed class SaveFormatTests
         var root = temp.Path;
         using var repository = new SaveRepository(root, true, Sections());
         repository.Write(Document());
-        var newer = SaveContainer.Encode(Document(2)); newer[8] = 2; Rehash(newer);
+        var newer = SaveContainer.Encode(Document(2)); BinaryPrimitives.WriteUInt16LittleEndian(newer.AsSpan(8), (ushort)(SaveContainer.CurrentFormat + 1)); Rehash(newer);
         var path = Path.Combine(root, "s1", "g000002.sav"); File.WriteAllBytes(path, newer);
         AssertThat(repository.Scan(new("s1")).Info.Meta?.Gen == 1).OverrideFailureMessage("A newer-format generation did not select the older one.").IsTrue();
         File.WriteAllBytes(path, [0]);

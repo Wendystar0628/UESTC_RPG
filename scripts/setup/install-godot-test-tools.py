@@ -1,8 +1,8 @@
-"""下载并安装固定版本的官方 D0 工具（gdUnit4 插件与 Godot 导出模板），校验通过才装，不编译也不导入工程。
+"""下载并安装固定版本的官方 gdUnit4 插件，校验通过才装，不编译也不导入工程。
 
 用法：python scripts/setup/install-godot-test-tools.py
 压缩包与校验记录留在被忽略的 output/downloads 目录。
-产出：output/downloads/；game/addons/gdUnit4/；E:/Tools/Godot/Godot_v4.7.2-stable_mono_win64/editor_data/export_templates/4.7.2.stable.mono/。
+产出：output/downloads/；game/addons/gdUnit4/。
 """
 
 import hashlib
@@ -13,25 +13,20 @@ import zipfile
 
 ROOT = Path(__file__).resolve().parents[2]
 DOWNLOADS = ROOT / "output" / "downloads"
-GODOT_HOME = Path(r"E:\Tools\Godot\Godot_v4.7.2-stable_mono_win64")
-TEMPLATE_VERSION = "4.7.2.stable.mono"
-GODOT_RELEASE = "https://api.github.com/repos/godotengine/godot-builds/releases/tags/4.7.2-stable"
 PLUGIN_TAG = "v6.2.2"
 PLUGIN_COMMIT = "0127a55f4543dfc24746f6e5c7ba6f94105d51f2"
 PLUGIN_ARCHIVE_SHA256 = "ddb44730ffb9cd77fd70d283753450759b00c5016143d7572bf63625f64d5433"
 PLUGIN_REPO = "https://github.com/godot-gdunit-labs/gdUnit4"
 
 
-def fetch(url, path, expected_size=None):
-    if path.exists() and (expected_size is None or path.stat().st_size == expected_size):
+def fetch(url, path):
+    if path.exists():
         return
     partial = path.with_suffix(path.suffix + ".partial")
     request = urllib.request.Request(url, headers={"User-Agent": "UESTC-RPG-D0-setup"})
     with urllib.request.urlopen(request, timeout=120) as source, partial.open("wb") as target:
         while chunk := source.read(4 * 1024 * 1024):
             target.write(chunk)
-    if expected_size is not None and partial.stat().st_size != expected_size:
-        raise ValueError(f"Unexpected download size: {partial}")
     partial.replace(path)
 
 
@@ -59,47 +54,6 @@ def install_file(archive, info, destination):
         destination.parent.mkdir(parents=True, exist_ok=True)
         destination.write_bytes(payload)
     return {"path": str(destination), "bytes": len(payload), "sha256": hashlib.sha256(payload).hexdigest()}
-
-
-def install_templates():
-    release_file = DOWNLOADS / "godot-4.7.2-release.json"
-    fetch(GODOT_RELEASE, release_file)
-    release = json.loads(release_file.read_text(encoding="utf-8"))
-    assets = {a["name"]: a for a in release["assets"]}
-    name = "Godot_v4.7.2-stable_mono_export_templates.tpz"
-    archive_path = DOWNLOADS / name
-    sums_path = DOWNLOADS / "Godot-4.7.2-SHA512-SUMS.txt"
-    fetch(assets["SHA512-SUMS.txt"]["browser_download_url"], sums_path, assets["SHA512-SUMS.txt"]["size"])
-    expected = next(line.split()[0] for line in sums_path.read_text(encoding="utf-8").splitlines() if line.split()[-1].lstrip("*").split("/")[-1] == name)
-    print(f"Downloading {name} ({assets[name]['size']} bytes)", flush=True)
-    fetch(assets[name]["browser_download_url"], archive_path, assets[name]["size"])
-    actual = digest(archive_path, "sha512")
-    if actual != expected:
-        raise ValueError("Official SHA-512 verification failed")
-    actual_sha256 = digest(archive_path)
-    if assets[name].get("digest") not in (None, "sha256:" + actual_sha256):
-        raise ValueError("GitHub release SHA-256 verification failed")
-    target = GODOT_HOME / "editor_data" / "export_templates" / TEMPLATE_VERSION
-    files = []
-    with zipfile.ZipFile(archive_path) as archive:
-        names = archive.namelist()
-        for name_in_zip in names:
-            safe_member(name_in_zip)
-        version_name = next(n for n in names if n.endswith("/version.txt"))
-        version = archive.read(version_name).decode("utf-8").strip()
-        if version != TEMPLATE_VERSION:
-            raise ValueError(f"Unexpected template version: {version}")
-        prefix = version_name.rsplit("/", 1)[0] + "/"
-        for info in archive.infolist():
-            relative = info.filename.removeprefix(prefix)
-            if info.is_dir() or not info.filename.startswith(prefix):
-                continue
-            # Install the exact Windows x64 debug/release payload and its dependencies.
-            if relative == "version.txt" or "windows" in relative.lower() and ("x86_64" in relative.lower() or "x64" in relative.lower()):
-                files.append(install_file(archive, info, target / relative))
-        if not any("windows_release_x86_64.exe" in f["path"] for f in files):
-            raise ValueError("Windows x64 release template missing from archive selection")
-    return {"name": archive_path.name, "version": TEMPLATE_VERSION, "source": assets[name]["browser_download_url"], "release": release["html_url"], "archive": str(archive_path), "bytes": archive_path.stat().st_size, "sha512": actual, "officialSha512Verified": True, "sha256": actual_sha256, "installation": str(target), "installedFiles": files, "scope": "Windows x64 only; full official archive retained"}
 
 
 def install_plugin():
@@ -134,9 +88,7 @@ def main():
     plugin = install_plugin()
     (DOWNLOADS / "gdunit4-installation.json").write_text(json.dumps(plugin, indent=2) + "\n", encoding="utf-8", newline="\n")
     print(f"Installed gdUnit4 {plugin['version']}: {plugin['installedFileCount']} files", flush=True)
-    templates = install_templates()
-    (DOWNLOADS / "godot-template-installation.json").write_text(json.dumps(templates, indent=2) + "\n", encoding="utf-8", newline="\n")
-    print(json.dumps({"plugin": {k: v for k, v in plugin.items() if k != "installedFiles"}, "templates": {k: v for k, v in templates.items() if k != "installedFiles"}}, indent=2), flush=True)
+    print(json.dumps({k: v for k, v in plugin.items() if k != "installedFiles"}, indent=2), flush=True)
 
 
 if __name__ == "__main__":

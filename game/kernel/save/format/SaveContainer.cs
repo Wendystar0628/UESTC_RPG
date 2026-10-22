@@ -26,7 +26,7 @@ public static class SaveContainer
     public const int MaxCompressed = 16 * 1024 * 1024;
     public const int MaxThumbnail = 256 * 1024;
     [DataVersion]
-    public const int CurrentFormat = 1;
+    public const int CurrentFormat = 2;
     private static ReadOnlySpan<byte> Magic => "UESTCSAV"u8;
 
     public static byte[] Encode(SaveDocument document)
@@ -200,7 +200,7 @@ public static class SaveContainer
     private static void ValidateMeta(SaveMeta meta)
     {
         if (meta.Format != CurrentFormat || meta.Gen == 0 || meta.Line == 0 || meta.Line > meta.Gen ||
-            !ValidSlot(meta.Slot) || !IsId(meta.Map.Value) || !IsId(meta.Ruleset) || string.IsNullOrWhiteSpace(meta.Build) ||
+            !ValidSlot(meta.Slot) || !IsId(meta.Map.Value) || !IsId(meta.Ruleset) ||
             !double.IsFinite(meta.PlaySeconds) || meta.PlaySeconds < 0 || !double.IsFinite(meta.WorldHours) ||
             !double.IsFinite(meta.Clock) || meta.Clock < 0 || meta.Clock >= 24 ||
             !float.IsFinite(meta.Pose.Position.X) || !float.IsFinite(meta.Pose.Position.Y) || !float.IsFinite(meta.Pose.Position.Z) ||

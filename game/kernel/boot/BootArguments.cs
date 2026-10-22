@@ -17,7 +17,7 @@ public sealed class BootArguments
         "gate", "map", "spawn", "pose", "clock", "season", "anim", "flow", "mode", "ui", "seed",
         "weather", "weather-intensity", "wet", "weather-seed", "weather-remaining", "sunshower",
         "quality", "quality-set", "bench", "inspect", "shots", "frames", "out",
-        "gen", "bake", "bake-cache", "bake-bg", "bake-strict", "title", "save", "slot",
+        "gen", "bake", "bake-bg", "bake-strict", "title", "save", "slot",
         "load", "save-dir", "save-at", "audio", "audio-fixed", "audio-seed", "audio-limiter", "audio-log",
         "ui-theme", "motion", "ui-scale", "ui-gallery", "ui-export-theme", "amb-solo", "amb-off", "amb-debug",
         "audio-probe", "audio-out", "preset", "travel-sequence", "movie-frames", "movie-events", "startup-scenario"
@@ -42,18 +42,18 @@ public sealed class BootArguments
     private bool Has(string key) => _provided.Contains(key);
     private string Value(string key, string absentValue = "") => _values.GetValueOrDefault(key, absentValue);
 
-    public static BootRunOptions Parse(IEnumerable<string> args, bool development) => Parse(args, development, out _);
+    public static BootRunOptions Parse(IEnumerable<string> args) => Parse(args, out _);
 
-    internal static BootRunOptions Parse(IEnumerable<string> args, bool development, out IReadOnlyList<FixedShot> fixedShots)
+    internal static BootRunOptions Parse(IEnumerable<string> args, out IReadOnlyList<FixedShot> fixedShots)
     {
         var arguments = args.ToArray();
-        fixedShots = FixedShotPlan.Read(arguments, development);
-        if (fixedShots.Count == 0) return ParseSingle(arguments, development);
+        fixedShots = FixedShotPlan.Read(arguments);
+        if (fixedShots.Count == 0) return ParseSingle(arguments);
         var first = fixedShots[0].Options;
         return first with { Capture = first.Capture with { Shots = fixedShots.Select(shot => shot.Name).ToArray() } };
     }
 
-    internal static BootRunOptions ParseSingle(IEnumerable<string> args, bool development)
+    internal static BootRunOptions ParseSingle(IEnumerable<string> args)
     {
         var values = new Dictionary<string, string>(StringComparer.Ordinal);
         foreach (var arg in args)
@@ -75,17 +75,17 @@ public sealed class BootArguments
         if (result.CpuBakeMode && result._provided.Overlaps(["gate", "shots", "bench", "frames", "inspect"]))
             throw Invalid("CPU baking cannot be combined with a rendering or gate command.");
         result.AddDefaults();
-        if (result.Has("startup-scenario") && (!development || !result.Title || result.HasLoad ||
+        if (result.Has("startup-scenario") && (!result.Title || result.HasLoad ||
             result.CpuBakeMode || result.CaptureMode || result.Has("inspect") || result.Has("travel-sequence") ||
             result.Value("ui") != "1"))
-            throw Invalid("Startup scenarios require a development interactive title with UI and no other run command or saved-state load.");
+            throw Invalid("Startup scenarios require an interactive title with UI and no other run command or saved-state load.");
         if (result.Has("shots") && !result.Has("out")) throw Invalid("--shots requires an absolute --out directory.");
         if (result.Has("movie-events") && !result.Has("movie-frames"))
             throw Invalid("--movie-events requires --movie-frames.");
-        if (result.Has("movie-frames") && (!development || !result.Has("shots") || result.HasLoad || result.Title ||
+        if (result.Has("movie-frames") && (!result.Has("shots") || result.HasLoad || result.Title ||
             result._provided.Overlaps(["frames", "gate", "bench", "inspect", "travel-sequence", "bake"]) ||
             result.Value("flow") != "0" || result.Value("mode") != "fly"))
-            throw Invalid("Movie capture requires development fixed shots in paused fly mode and no other run command.");
+            throw Invalid("Movie capture requires fixed shots in paused fly mode and no other run command.");
         return result.Resolve();
     }
 
@@ -116,7 +116,7 @@ public sealed class BootArguments
             if (Has(key) && !uint.TryParse(Value(key), NumberStyles.None, CultureInfo.InvariantCulture, out _)) throw Invalid(key);
         foreach (var key in new[] { "frames", "save-at", "movie-frames" })
             if (Has(key) && (!int.TryParse(Value(key), NumberStyles.None, CultureInfo.InvariantCulture, out var value) || value <= 0)) throw Invalid(key);
-        foreach (var key in new[] { "out", "load", "save-dir", "bake-cache", "audio-out", "ui-export-theme" })
+        foreach (var key in new[] { "out", "load", "save-dir", "audio-out", "ui-export-theme" })
             if (Has(key) && !Path.IsPathFullyQualified(Value(key))) throw Invalid($"--{key} must be absolute.");
         _qualityOverrides = QualityOverrides();
         if (Has("shots") && Value("shots").Split(',').Any(id => id.Length == 0 || id.Any(c => !char.IsLetterOrDigit(c) && c is not '_' and not '-')))
@@ -188,7 +188,6 @@ public sealed class BootArguments
                 Season = Text("season") is { } season ? Enum.Parse<Season>(season, true) : null,
                 AnimationTime = NumberValue("anim"), Seed = Seed("seed"),
                 FlowRate = NumberValue("flow") is { } flow ? (int)flow : null,
-                ExplicitFlow = Has("flow"), ExplicitViewMode = Has("mode"),
                 ViewMode = Text("mode") switch { null => null, "fly" => ViewMode.Fly, "walk" => ViewMode.Walk, _ => throw Invalid("mode") },
                 Pose = Text("pose"),
                 Weather = new(Seed("weather-seed"), weather, (float?)NumberValue("weather-intensity"),
@@ -202,7 +201,7 @@ public sealed class BootArguments
             Audio = new(Value("audio") == "on", CaptureMode || Value("audio-fixed", "0") == "1", Value("audio-limiter", "1") != "0"),
             Save = new(Value("save") != "off" && (!Has("load") || Has("save") && Value("save") != "off"),
                 ParseSlot("save", Text("save")), NumberValue("save-at") is { } at ? (int)at : null, Seed("weather-seed")),
-            Bake = new(Explicit("bake-cache"), Explicit("gen") == "live", Explicit("bake-strict") == "1",
+            Bake = new(Explicit("gen") == "live", Explicit("bake-strict") == "1",
                 Explicit("bake-bg") != "0", Explicit("bake") == "map", Seed("seed", explicitOnly: true)),
             Capture = new()
             {

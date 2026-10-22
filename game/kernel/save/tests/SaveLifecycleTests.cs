@@ -285,7 +285,7 @@ public sealed class SaveLifecycleTests
                 new(new("world") { Phase = RestorePhase.World, Order = 10 }, World),
                 new(new("weather") { Phase = RestorePhase.World, Order = 21 }, Weather),
                 new(new("view") { Phase = RestorePhase.Pose, Order = 60 }, Camera)]);
-            await Pump(Save.Initialize(new(directory, "test", true, null, null, 1), bindings, sections));
+            await Pump(Save.Initialize(new(directory, true, null, null, 1), bindings, sections));
         }
         private async Task WaitDestination(Pose pose, NavSpace? space, ViewMode mode)
         { while (!await Save.OnFrame(() => Ready)) { } }

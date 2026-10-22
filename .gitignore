@@ -1,6 +1,5 @@
 # Godot
 .godot/
-override.cfg
 
 # .NET
 bin/
@@ -15,11 +14,10 @@ __pycache__/
 # 本地产物：截图、门禁输出
 output/
 
-# 本地发布产物
+# 本地构建产物
 /build/
 
-# 构建时生成的提交信息
-/game/data/build-commit.txt
+# 构建时生成的代码指纹
 /game/data/build-code-fingerprints.json
 
 # 构建时生成的着色器 include 与本地资源 UID

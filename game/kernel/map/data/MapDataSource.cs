@@ -33,25 +33,12 @@ public class MapDataSource(IRequiredResources resources)
     }
 
     /// <summary>
-    /// Development reads use only .NET after capturing the absolute root. Packed resources retain
-    /// engine-side byte capture; their detached descriptor parsing and freezing run on a worker.
+    /// Capture the project root on the main thread; read, parse and freeze inputs using only .NET on a worker.
     /// </summary>
     public virtual Task<MapLoadInput> ReadLoadInputAsync(MapCatalogEntry entry)
     {
-        if (string.Equals(BuildInfo.Kind, "dev", StringComparison.Ordinal))
-        {
-            var root = ProjectSettings.GlobalizePath(entry.DataRoot);
-            return Task.Run(() => ReadLooseLoadInput(entry, root));
-        }
-        try
-        {
-            // A res:// resource in a PCK is not an OS file. Do not globalize it into loose-file IO.
-            var files = WorldInputFiles.ReadLoadInput(entry.Descriptor, new ResourceInputs(entry.DataRoot, resources));
-            var version = "release/" + BuildInfo.Version;
-            return Task.Run(() => AssembleLoadInput(entry, files, version));
-        }
-        catch (Exception error) when (error is InvalidDataException or JsonException)
-        { throw new AppStartupException("Map input data is invalid.", error); }
+        var root = ProjectSettings.GlobalizePath(entry.DataRoot);
+        return Task.Run(() => ReadLooseLoadInput(entry, root));
     }
 
     private static MapLoadInput ReadLooseLoadInput(MapCatalogEntry entry, string root)
@@ -84,8 +71,7 @@ public class MapDataSource(IRequiredResources resources)
 
     private static string CaptureInputVersion(IEnumerable<string> paths, Func<string, string> globalize)
     {
-        if (!string.Equals(BuildInfo.Kind, "dev", StringComparison.Ordinal)) return "release/" + BuildInfo.Version;
-        return "dev\n" + string.Join("\n", paths.Order(StringComparer.Ordinal).Select(path =>
+        return string.Join("\n", paths.Order(StringComparer.Ordinal).Select(path =>
         {
             var file = new FileInfo(globalize(path));
             return path + "|" + file.Length.ToString(System.Globalization.CultureInfo.InvariantCulture) + "|" +
@@ -140,19 +126,6 @@ public class MapDataSource(IRequiredResources resources)
             return Directory.Exists(path) ? Directory.EnumerateDirectories(path, "*", VisibleEntries)
                 .Select(directory => Path.GetFileName(directory)!) : [];
         }
-    }
-
-    private sealed class ResourceInputs(string root, IRequiredResources resources) : IWorldInputSource
-    {
-        public ReadOnlyMemory<byte>? Read(string relativePath)
-        {
-            if (!Godot.FileAccess.FileExists(root + relativePath)) return null;
-            return ReadRequired(resources, root + relativePath);
-        }
-        public IEnumerable<string> Files(string relativeDirectory) =>
-            DirAccess.DirExistsAbsolute(root + relativeDirectory) ? DirAccess.GetFilesAt(root + relativeDirectory) : [];
-        public IEnumerable<string> Directories(string relativeDirectory) =>
-            DirAccess.DirExistsAbsolute(root + relativeDirectory) ? DirAccess.GetDirectoriesAt(root + relativeDirectory) : [];
     }
 
     private static byte[] ReadOptional(IRequiredResources resources, string path) => Godot.FileAccess.FileExists(path) ? ReadRequired(resources, path) : [];

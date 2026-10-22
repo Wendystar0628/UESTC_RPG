@@ -36,7 +36,7 @@ internal static class QualityApplicationTestFixture
         return result;
     }
 
-    internal static BootContext Context() => new(new BootRunOptions(), Path.GetTempPath(), "quality-tests");
+    internal static BootContext Context() => new(new BootRunOptions(), Path.GetTempPath());
 
     internal sealed class FileStoreSpy : IGraphicsSettingsStore, IDisposable
     {

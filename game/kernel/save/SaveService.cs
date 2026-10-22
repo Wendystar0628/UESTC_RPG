@@ -245,7 +245,7 @@ public sealed class SaveService : ISaveService, IDisposable, IAsyncDisposable
         var world = _runtime.World;
         var observer = _runtime.Observer;
         var region = _runtime.Atlas.RegionAt(observer.Feet.X, observer.Feet.Z);
-        var meta = new SaveMeta(SaveContainer.CurrentFormat, _options.Build, Active!.Value, SlotKind.Auto, generation, _newLine ? generation : _line,
+        var meta = new SaveMeta(SaveContainer.CurrentFormat, Active!.Value, SlotKind.Auto, generation, _newLine ? generation : _line,
             _playSeconds, map, world.WorldHours, world.Clock, world.SeasonTarget, world.Weather.Kind,
             observer.Mode, _runtime.Camera.Pose, observer.Space, region, region is null ? null : "place." + region,
             _runtime.UnixTime(), reason, _runtime.Ruleset.Current.Id.Value, HasThumb: thumbnail is not null);

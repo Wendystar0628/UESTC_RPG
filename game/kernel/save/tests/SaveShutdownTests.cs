@@ -50,7 +50,7 @@ public sealed class SaveShutdownTests
     public async Task CancelingAQueuedRepositoryHandoffLeavesTheProcessLockWithItsProducer()
     {
         await using var f = new Fixture();
-        using (var prepared = await SaveInitialization.Prepare(new(f.Directory, "test", true, null, null, 1),
+        using (var prepared = await SaveInitialization.Prepare(new(f.Directory, true, null, null, 1),
             new([]), CancellationToken.None))
         {
             var handoff = f.Save.OnFrame(prepared.TakeRepository);
@@ -106,7 +106,7 @@ public sealed class SaveShutdownTests
             Section = new(World, () => HasGeneration);
             _sections = new([new(new("world") { Phase = RestorePhase.World }, Section)]);
         }
-        internal Task Initialize() => Save.Initialize(new(Directory, "test", true, null, null, 1),
+        internal Task Initialize() => Save.Initialize(new(Directory, true, null, null, 1),
             new(World, _maps, _camera, _camera, _rules, new Atlas(), new TestAppLoadingPresentation(),
                 new TestAppFlow(), _ => { }, World, (_, _, _) => Task.CompletedTask,
                 () => Task.FromResult<byte[]?>(null), () => 1792082400), _sections);
@@ -114,7 +114,7 @@ public sealed class SaveShutdownTests
         internal void Seed()
         {
             using var repository = new SaveRepository(Directory, true, _sections);
-            var meta = new SaveMeta(SaveContainer.CurrentFormat, "test", SaveSlots.Auto[0], SlotKind.Auto,
+            var meta = new SaveMeta(SaveContainer.CurrentFormat, SaveSlots.Auto[0], SlotKind.Auto,
                 1, 1, 0, _maps.Default, World.WorldHours, World.Clock, World.SeasonTarget, World.Weather.Kind,
                 _camera.Mode, _camera.Pose, null, null, null, 1792082400, SaveReason.Test, _rules.Current.Id.Value);
             var raw = _sections.Serialize([new("world", _sections.Registered[0],

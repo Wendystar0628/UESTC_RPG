@@ -77,7 +77,7 @@ public partial class KernelStage : Node3D, IAppExit, IAppFailure, IStageGateHost
             var codeFingerprints = new BuildCodeIndex(resources);
             registry.Add(codeFingerprints);
             registry.Discover(StageModules.LoadModuleTypes(), codeFingerprints.Owner);
-            GD.Print($"Kernel registry: {registry.Entries.Count} declarations; build {BuildInfo.Build}");
+            GD.Print($"Kernel registry: {registry.Entries.Count} declarations");
             if (RegistryStageGate.TryRun()) { RequestShutdown(0); return; }
             if (AppBoot.Options.CpuBakeMode) { await RunBakeCommand(); return; }
             Compose();
@@ -104,7 +104,7 @@ public partial class KernelStage : Node3D, IAppExit, IAppFailure, IStageGateHost
         _statistics = new(GetViewport());
         _statistics.Enable();
         DisplayServer.WindowSetTitle("电光年华");
-        GD.Print($"[ENG-ARCH][map=-][phase=compose] build={BuildInfo.Build}; global objects={registry.Created.Count}");
+        GD.Print($"[ENG-ARCH][map=-][phase=compose] global objects={registry.Created.Count}");
     }
 
     private StageCamera CreateStagePresentation(ServiceRegistry registry)
@@ -463,7 +463,7 @@ public partial class KernelStage : Node3D, IAppExit, IAppFailure, IStageGateHost
     private static BootContext CreateBootContext()
     {
         var options = AppBoot.Options;
-        return new(options, options.SaveDirectory ?? Path.Combine(OS.GetUserDataDir(), "saves"), BuildInfo.Build);
+        return new(options, options.SaveDirectory ?? Path.Combine(OS.GetUserDataDir(), "saves"));
     }
 
     public override void _Process(double delta)

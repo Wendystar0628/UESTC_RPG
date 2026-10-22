@@ -73,18 +73,15 @@ public sealed class BakeDeliveryTests
     {
         var root = Path.Combine(Path.GetTempPath(), "uestc-rpg-bake-delivery-" + Guid.NewGuid().ToString("N"));
         var localRoot = Path.Combine(root, "local");
-        var packageRoot = Path.Combine(root, "package");
-        var package = new BakeCacheStore(packageRoot, "delivery-fixture");
-        var local = new BakeCacheStore(localRoot, "delivery-fixture", packageRoot);
+        var local = new BakeCacheStore(localRoot);
         var tile = Tile(false);
         var empty = new TileBundle(tile.Key, tile.Tile, tile.Level, tile.Bounds, []);
         try
         {
             var parts = BakeProductCodec.EncodeParts(BakePayloadClass.Tile, "fixture/delivery", tile,
-                bytes => package.Fits(BakePayloadClass.Tile, bytes, default));
-            package.WriteParts(tile.Key, BakePayloadClass.Tile, parts);
+                bytes => local.Fits(BakePayloadClass.Tile, bytes, default));
             local.WriteParts(tile.Key, BakePayloadClass.Tile, parts);
-            local = new BakeCacheStore(localRoot, "delivery-fixture", packageRoot);
+            local = new BakeCacheStore(localRoot);
             local.Initialize();
             var index = Directory.GetFiles(localRoot, "*.tbin", SearchOption.AllDirectories)
                 .Single(path => !Path.GetDirectoryName(path)!.EndsWith(".parts", StringComparison.Ordinal));
@@ -96,10 +93,10 @@ public sealed class BakeDeliveryTests
             }
             if (Read()?.Stats != tile.Stats) throw new InvalidOperationException("A complete logical tile did not become ready.");
             File.Delete(BakeCacheIndex.Files(index).Last());
-            RequirePackage();
+            RequireMissing();
             local.WriteParts(tile.Key, BakePayloadClass.Tile, parts);
             File.WriteAllBytes(BakeCacheIndex.Files(index).First(), [1, 2, 3]);
-            RequirePackage();
+            RequireMissing();
             local.WriteParts(tile.Key, BakePayloadClass.Tile, parts);
             local.WriteParts(tile.Key, BakePayloadClass.Tile, Encode(empty));
             if (BakeCacheIndex.Files(index).Count() != 1 || Read()?.Stats != empty.Stats)
@@ -109,16 +106,16 @@ public sealed class BakeDeliveryTests
             RequireBytes();
             local.Clear();
             if (local.CacheBytes != 0) throw new InvalidOperationException("Clearing retained counted cache bytes.");
-            if (Directory.GetFiles(localRoot, "*.tbin", SearchOption.AllDirectories).Length != 0 || Read()?.Stats != tile.Stats)
-                throw new InvalidOperationException("Clearing missed physical parts or damaged the packaged candidate.");
+            if (Directory.GetFiles(localRoot, "*.tbin", SearchOption.AllDirectories).Length != 0 || Read() is not null)
+                throw new InvalidOperationException("Clearing retained physical parts or a readable product.");
             local.Stop();
             AssertThrown(() => local.Fits(BakePayloadClass.Tile, parts[0], default)).IsInstanceOf<OperationCanceledException>();
 
             TileBundle? Read() => local.TryReadParts(tile.Key, BakePayloadClass.Tile, bytes => Decode(tile.Key, bytes));
-            void RequirePackage()
+            void RequireMissing()
             {
-                if (Read()?.Stats != tile.Stats || File.Exists(index) || BakeCacheIndex.Files(index).Any())
-                    throw new InvalidOperationException("An incomplete local group became ready or survived candidate rejection.");
+                if (Read() is not null || File.Exists(index) || BakeCacheIndex.Files(index).Any())
+                    throw new InvalidOperationException("An incomplete local group became ready or survived rejection.");
             }
             void RequireBytes()
             {

@@ -40,9 +40,7 @@ public sealed record WorldBootOptions
     public double? AnimationTime { get; init; }
     public uint? Seed { get; init; }
     public int? FlowRate { get; init; }
-    public bool ExplicitFlow { get; init; }
     public ViewMode? ViewMode { get; init; }
-    public bool ExplicitViewMode { get; init; }
     public string? Pose { get; init; }
     public WeatherBootOverrides Weather { get; init; } = new();
 }
@@ -57,7 +55,7 @@ public sealed record AudioBootOptions(bool Enabled = true, bool Fixed = false, b
 public sealed record SaveBootOptions(bool Enabled = true, SlotId? WriteSlot = null,
     int? AtFrame = null, uint? WeatherSeed = null);
 // Bake workers use explicit inputs; capture defaults do not change these choices.
-public sealed record BakeBootOptions(string? CacheDirectory = null, bool Live = false, bool Strict = false,
+public sealed record BakeBootOptions(bool Live = false, bool Strict = false,
     bool Background = true, bool MapOnly = false, uint? Seed = null);
 public sealed record CaptureBootOptions
 {

@@ -11,12 +11,12 @@ public sealed class BootArgumentsTests
     [TestCategory(TestReason.Contract)]
     public void CaptureDefaultsRemainSeparateFromExplicitArguments()
     {
-        var options = BootArguments.Parse(["--frames=30"], true);
-        if (options.World.Clock != 17.5 || options.World.ExplicitFlow || options.World.ExplicitViewMode ||
+        var options = BootArguments.Parse(["--frames=30"]);
+        if (options.World.Clock != 17.5 ||
             options.World.ViewMode != ViewMode.Fly || options.Ui.Visible is not null || options.Ui.Motion is not null ||
             options.Audio.Enabled || !options.Bake.Background)
             throw new InvalidOperationException("Implicit defaults became explicit inputs.");
-        var titleUi = BootArguments.Parse(["--title=1", "--shots=ui", "--out=C:\\shots"], true);
+        var titleUi = BootArguments.Parse(["--title=1", "--shots=ui", "--out=C:\\shots"]);
         if (!titleUi.CaptureMode || !titleUi.Title || titleUi.World.Pose is not null ||
             !titleUi.Capture.Shots.SequenceEqual(["ui"]))
             throw new InvalidOperationException("A static title UI capture acquired a world destination.");
@@ -26,7 +26,7 @@ public sealed class BootArgumentsTests
     [TestCategory(TestReason.Contract)]
     public void CaptureDefaultsNeverOverrideLoadedWorld()
     {
-        var options = BootArguments.Parse(["--slot=1", "--frames=120"], true);
+        var options = BootArguments.Parse(["--slot=1", "--frames=120"]);
         if (options.World.Clock is not null || options.World.Pose is not null || options.Save.Enabled || options.Title)
             throw new InvalidOperationException("Capture defaults replaced a saved world.");
     }
@@ -43,7 +43,7 @@ public sealed class BootArgumentsTests
         foreach (var args in invalid)
         {
             var rejected = false;
-            try { BootArguments.Parse(args, true); }
+            try { BootArguments.Parse(args); }
             catch (ArgumentException) { rejected = true; }
             if (!rejected) throw new InvalidOperationException("Invalid arguments were accepted: " + string.Join(' ', args));
         }
@@ -54,7 +54,7 @@ public sealed class BootArgumentsTests
     public void MovieEventsKeepTheirFrameOrderAndAnimationRunning()
     {
         var options = BootArguments.Parse(["--shots=P00", "--out=C:\\shots", "--movie-frames=180",
-            "--movie-events=60:season=winter;90:season=spring,clock=8,weather=clear,intensity=0.5"], true);
+            "--movie-events=60:season=winter;90:season=spring,clock=8,weather=clear,intensity=0.5"]);
         if (!options.CaptureMode || options.FreezeAnimation || options.Capture.MovieFrames != 180 ||
             options.Capture.MovieEvents.Count != 2)
             throw new InvalidOperationException("Movie capture did not retain its frame count and live animation.");
@@ -76,7 +76,7 @@ public sealed class BootArgumentsTests
             try
             {
                 BootArguments.Parse(["--shots=P00", "--out=C:\\shots", "--movie-frames=180",
-                    "--movie-events=" + events], true);
+                    "--movie-events=" + events]);
             }
             catch (ArgumentException) { rejected = true; }
             if (!rejected) throw new InvalidOperationException("Invalid movie event frames were accepted: " + events);
@@ -87,10 +87,10 @@ public sealed class BootArgumentsTests
     [TestCategory(TestReason.Smoke)]
     public void NormalBootKeepsTitle()
     {
-        var normal = BootArguments.Parse([], true);
+        var normal = BootArguments.Parse([]);
         if (!normal.Title || !normal.Audio.Enabled)
             throw new InvalidOperationException("Normal startup defaults are incorrect.");
-        var inspect = BootArguments.Parse(["--inspect=palette"], true);
+        var inspect = BootArguments.Parse(["--inspect=palette"]);
         if (!inspect.Automated || inspect.CaptureMode)
             throw new InvalidOperationException("Inspect must automate camera input without enabling capture defaults.");
     }
@@ -99,23 +99,23 @@ public sealed class BootArgumentsTests
     [TestCategory(TestReason.Contract)]
     public void CpuBakeHasOneExecutionOwner()
     {
-        var bake = BootArguments.Parse(["--bake=all", "--map=*"], true);
-        var registry = BootArguments.Parse(["--gate=registry", "--map=*"], true);
+        var bake = BootArguments.Parse(["--bake=all", "--map=*"]);
+        var registry = BootArguments.Parse(["--gate=registry", "--map=*"]);
         if (!bake.CpuBakeMode || !bake.AllMaps || bake.Flow.Map is not null ||
             !registry.AllMaps || registry.Flow.Map is not null)
             throw new InvalidOperationException("All-map commands leaked a selector into a map identity.");
-        var single = BootArguments.Parse(["--bake=map", "--map=fixture"], true);
+        var single = BootArguments.Parse(["--bake=map", "--map=fixture"]);
         if (single.AllMaps || single.Flow.Map != new MapId("fixture"))
             throw new InvalidOperationException("A concrete map command lost its identity.");
         foreach (var args in new[] { new[] { "--map=*" }, new[] { "--gate=save-close", "--map=*" } })
         {
             var invalidSelection = false;
-            try { BootArguments.Parse(args, true); }
+            try { BootArguments.Parse(args); }
             catch (ArgumentException) { invalidSelection = true; }
             if (!invalidSelection) throw new InvalidOperationException("World entry accepted an all-map command selector.");
         }
         var rejected = false;
-        try { BootArguments.Parse(["--bake=all", "--frames=30"], true); }
+        try { BootArguments.Parse(["--bake=all", "--frames=30"]); }
         catch (ArgumentException) { rejected = true; }
         if (!rejected) throw new InvalidOperationException("A bake command silently combined with a render command.");
     }

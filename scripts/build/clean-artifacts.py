@@ -4,7 +4,7 @@
   2. output/cache/ 里烘焙缓存之外的目录（一次性的缓存副本，同样按提交轮次），以及烘焙缓存的旧格式目录
      （同一张图下 *-tbin-N 只留 N 最大的）；
   3. 还登记着的工作树（如截图工作树）里的 output/：与主检出的 output/ 同一套规则（1、2 和下面的保护），工作树本身只列出，不删；
-  4. build/ 下的导出产物（如 build/windows）：之后主线上已有 N 次提交的，和 output/ 一样；
+  4. build/ 下的一次性产物：之后主线上已有 N 次提交的，和 output/ 一样；
   5. 已删工程留下的 bin/、obj/：所在目录里已经没有 .csproj；git 已失效的工作树登记（git worktree prune）。
 删除时持有构建锁（与构建、导入、门禁、预烘、截图同一把 output/.locks/build.lock），持锁后重算再删；
 锁被持有就本次一项不删，免得删到正在写的产物。只列出时不碰锁。
@@ -32,7 +32,6 @@ from ctypes import wintypes
 
 ROOT = os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..'))
 OUT = os.path.join(ROOT, 'output')
-EXPORTS = os.path.join(ROOT, 'build')  # 导出产物（build/windows 等）
 BUILD_LOCK = os.path.join(OUT, '.locks', 'build.lock')
 KEEP = {'.locks', 'cache', 'shots', 'pipeline-wheels', 'posters', 'tools', 'prebake_game'}  # 构建锁、缓存（下面单独查）、固定机位截图、管线安装包、交给作者的海报、本机诊断工具（dotnet-trace 等）、收口预烘日志（巡逻据它判上次预烘）
 CACHE_KEEP = {'bake'}  # output/cache 下长期保留的只有烘焙缓存
@@ -215,18 +214,11 @@ def build_lock():
         kernel.CloseHandle(handle)
 
 
-def exports(before):
-    """build/ 下之后主线上已有 N 次提交的导出产物。"""
-    if before is None or not os.path.isdir(EXPORTS):
-        return []
-    return aged(EXPORTS, before, 1)
-
-
 def stale(commits, trees):
-    """返回可删的绝对路径：主检出与登记着的工作树里的 output/，加 build/ 旧导出与已删工程的 bin/obj，去掉在用的引用。"""
+    """返回可删的绝对路径：主检出与登记着的工作树里的 output/，加 build/ 与已删工程的 bin/obj，去掉在用的引用。"""
     refs = references()
     before = cutoff(commits)
-    out = orphan_builds() + exports(before)
+    out = orphan_builds()
     roots = [OUT] + [os.path.join(t['path'], 'output') for t in trees if not t['prunable']]
     for root in (r for r in roots if os.path.isdir(r)):
         keep = keep_set(root, refs)
@@ -237,6 +229,9 @@ def stale(commits, trees):
         cache = os.path.join(root, 'cache')
         if os.path.isdir(cache):
             out += aged(cache, before, 1, skip=CACHE_KEEP, keep=keep)
+    build = os.path.join(ROOT, 'build')
+    if before is not None and os.path.isdir(build):
+        out += aged(build, before, DEPTH)
     return sorted(set(out))
 
 

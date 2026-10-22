@@ -23,7 +23,6 @@
     <_CampusGdUnitRunnerSource>$([MSBuild]::NormalizePath('$(MSBuildProjectDirectory)', 'gdunit4_testadapter_v5/GdUnit4TestRunnerScene.cs'))</_CampusGdUnitRunnerSource>
     <_CampusCodeFingerprintTool>$([MSBuild]::NormalizePath('$(MSBuildProjectDirectory)', '../scripts/build/fingerprints/Campus.CodeFingerprints.csproj'))</_CampusCodeFingerprintTool>
     <_CampusPublishedCodeFingerprintManifest>$(MSBuildProjectDirectory)/data/build-code-fingerprints.json</_CampusPublishedCodeFingerprintManifest>
-    <_CampusBuildCommitFile>$(MSBuildProjectDirectory)/data/build-commit.txt</_CampusBuildCommitFile>
   </PropertyGroup>
   <Target Name="PrepareCampusGeneratedFiles" BeforeTargets="PrepareForBuild;CoreClean">
     <PropertyGroup>
@@ -38,9 +37,9 @@
       <!-- Conservative native globs track source changes; Python alone owns the shader bindings. -->
       <_CampusStyleShaderInput Include="**/*.cs;style/**/*.json;style/**/*.gdshaderinc;../scripts/build/generate-style-shaders.py"
                                Exclude="$(DefaultItemExcludes);@(CampusGeneratedCompile);@(CampusGeneratedFile)" />
-      <FileWrites Include="$(_CampusGdUnitRunnerStamp);$(_CampusGdUnitRunnerSource);$(_CampusStyleShaderStamp);@(CampusGeneratedFile-&gt;'%(FullPath)');$(_CampusBuildInformationStamp);$(_CampusBuildInformationSource);$(_CampusCodeFingerprintStamp);$(_CampusCodeFingerprintManifest);$(_CampusBuildCommitFile);$(_CampusPublishedCodeFingerprintManifest)" />
+      <FileWrites Include="$(_CampusGdUnitRunnerStamp);$(_CampusGdUnitRunnerSource);$(_CampusStyleShaderStamp);@(CampusGeneratedFile-&gt;'%(FullPath)');$(_CampusBuildInformationStamp);$(_CampusBuildInformationSource);$(_CampusCodeFingerprintStamp);$(_CampusCodeFingerprintManifest);$(_CampusPublishedCodeFingerprintManifest)" />
       <!-- CoreClean's native Clean items include generated products outside obj/bin. -->
-      <Clean Include="$(_CampusGdUnitRunnerStamp);$(_CampusGdUnitRunnerSource);$(_CampusStyleShaderStamp);@(CampusGeneratedFile-&gt;'%(FullPath)');$(_CampusBuildInformationStamp);$(_CampusBuildInformationSource);$(_CampusCodeFingerprintStamp);$(_CampusCodeFingerprintManifest);$(_CampusBuildCommitFile);$(_CampusPublishedCodeFingerprintManifest)" />
+      <Clean Include="$(_CampusGdUnitRunnerStamp);$(_CampusGdUnitRunnerSource);$(_CampusStyleShaderStamp);@(CampusGeneratedFile-&gt;'%(FullPath)');$(_CampusBuildInformationStamp);$(_CampusBuildInformationSource);$(_CampusCodeFingerprintStamp);$(_CampusCodeFingerprintManifest);$(_CampusPublishedCodeFingerprintManifest)" />
     </ItemGroup>
     <!-- A missing real product invalidates its completion stamp before native incremental checks. -->
     <Delete Files="$(_CampusGdUnitRunnerStamp)" Condition="!Exists('$(_CampusGdUnitRunnerSource)')" />
@@ -77,22 +76,19 @@
   </Target>
   <Target Name="PrepareCampusBuildInformation" DependsOnTargets="PrepareCampusGeneratedFiles;ResolveReferences">
     <ItemGroup>
-      <_CampusBuildInformationInput Include="$(MSBuildAllProjects);$(ProjectAssetsFile);@(ProjectReference-&gt;'%(FullPath)');@(_ResolvedProjectReferencePaths-&gt;'%(FullPath)');../version.txt" />
+      <_CampusBuildInformationInput Include="$(MSBuildAllProjects);$(ProjectAssetsFile);@(ProjectReference-&gt;'%(FullPath)');@(_ResolvedProjectReferencePaths-&gt;'%(FullPath)')" />
       <_CampusBuildInformationExistingInput Include="@(_CampusBuildInformationInput)" Condition="Exists('%(_CampusBuildInformationInput.Identity)')" />
       <_CampusBuildInformationExistingInput Remove="$(_CampusBuildInformationSource)" />
       <Compile Include="$(_CampusBuildInformationSource)" />
     </ItemGroup>
   </Target>
   <Target Name="IncludeCampusBuildInformation" BeforeTargets="CoreCompile"
-          DependsOnTargets="PrepareCampusBuildInformation;GenerateBuildInformation;UpdateCampusBuildCommit" />
+          DependsOnTargets="PrepareCampusBuildInformation;GenerateBuildInformation" />
   <Target Name="GenerateBuildInformation" DependsOnTargets="PrepareCampusBuildInformation"
           Condition="'$(DesignTimeBuild)' != 'true'"
           Inputs="@(_CampusBuildInformationExistingInput)" Outputs="$(_CampusBuildInformationStamp)">
     <Delete Files="$(_CampusBuildInformationStamp)" />
     <MakeDir Directories="$(IntermediateOutputPath)" />
-    <ReadLinesFromFile File="../version.txt">
-      <Output TaskParameter="Lines" ItemName="_CampusBuildVersionLine" />
-    </ReadLinesFromFile>
     <ItemGroup>
       <_CampusBuildModule Include="$(TargetName);@(_ResolvedProjectReferencePaths-&gt;'%(Filename)')" />
     </ItemGroup>
@@ -100,16 +96,9 @@
       <Output TaskParameter="Filtered" ItemName="_CampusBuildModuleDistinct" />
     </RemoveDuplicates>
     <PropertyGroup>
-      <_CampusBuildVersion>@(_CampusBuildVersionLine)</_CampusBuildVersion>
-      <_CampusBuildKind>export</_CampusBuildKind>
-      <_CampusBuildKind Condition="'$(Configuration)' == 'Debug'">dev</_CampusBuildKind>
       <_CampusBuildInformationContent>// &lt;auto-generated /&gt;
 namespace Campus.Kernel.Registry%3B
 internal static class BuildInfo {
- public const string Version = "$(_CampusBuildVersion.Trim())"%3B
- public static string Commit =&gt; Godot.FileAccess.GetFileAsString("res://data/build-commit.txt").Trim()%3B
- public static string Build =&gt; Version + "+" + Commit%3B
- public const string Kind = "$(_CampusBuildKind)"%3B
  public static readonly string[] ModuleAssemblies = [@(_CampusBuildModuleDistinct-&gt;'&quot;%(Identity)&quot;', ',')]%3B
 }
 </_CampusBuildInformationContent>
@@ -117,10 +106,6 @@ internal static class BuildInfo {
     <WriteLinesToFile File="$(_CampusBuildInformationSource)" Lines="$(_CampusBuildInformationContent)"
                       Overwrite="true" WriteOnlyWhenDifferent="true" />
     <Touch Files="$(_CampusBuildInformationStamp)" AlwaysCreate="true" />
-  </Target>
-  <Target Name="UpdateCampusBuildCommit" DependsOnTargets="PrepareCampusBuildInformation"
-          Condition="'$(DesignTimeBuild)' != 'true'">
-    <Exec Command="powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File &quot;$(MSBuildProjectDirectory)/../scripts/build/build-info.ps1&quot; -Root &quot;$(MSBuildProjectDirectory)/..&quot;" />
   </Target>
   <!-- Preserve the real invocation configuration for Roslyn; run this only when the manifest is stale. -->
   <UsingTask TaskName="CampusBuildGlobalProperties" TaskFactory="RoslynCodeTaskFactory"

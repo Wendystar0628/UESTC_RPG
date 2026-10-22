@@ -207,7 +207,7 @@ public sealed class AppLoadingFlowTests
         public int Flushes { get; private set; }
         public TaskCompletionSource ArrivalStarted { get; } = new();
         private static readonly Pose Landing = new(new(120, 1.7f, -70), 20, 0, UiSettingDefinitions.WalkFov.Default);
-        private SaveMeta Meta => new(1, "test", new("s1"), SlotKind.Auto, 1, 1, 0, Maps().Default,
+        private SaveMeta Meta => new(Campus.Kernel.Save.Format.SaveContainer.CurrentFormat, new("s1"), SlotKind.Auto, 1, 1, 0, Maps().Default,
             17.5, 17.5, Season.Autumn, WeatherKind.Clear, ViewMode.Walk, Landing, null, null, null, 0, SaveReason.Test);
         public override IReadOnlyList<SlotInfo> Slots => [new(new("s1"), SlotKind.Auto, SlotHealth.Ok, Meta, 1)];
         public override SlotId? Continue => new("s1");

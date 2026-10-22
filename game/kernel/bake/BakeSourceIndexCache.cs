@@ -19,28 +19,19 @@ internal sealed class BakeSourceIndexCache(TerrainCacheService terrain, MapId ma
 
     internal string ResolveResidentStamp(Func<string> compute)
     {
-        var candidates = terrain.ReadProductCandidates<BakeSourceIndexData>(_key, _identity, saved =>
+        var saved = terrain.ReadProduct<BakeSourceIndexData>(_key, _identity, value =>
         {
-            if (!Complete(saved)) throw new InvalidDataException("Incomplete cached source index.");
-        }).ToArray();
+            if (!Complete(value)) throw new InvalidDataException("Incomplete cached source index.");
+        });
         _saved = null;
-        _residentStamp = candidates.FirstOrDefault(saved => saved.SourceVersion == sourceVersion)?.ResidentStamp ?? compute();
-        var matching = candidates.Where(saved => saved.ResidentStamp == _residentStamp).ToArray();
-        if (matching.Length > 0)
+        _residentStamp = saved is not null && saved.SourceVersion == sourceVersion ? saved.ResidentStamp : compute();
+        if (saved is not null && saved.ResidentStamp == _residentStamp)
         {
-            var preferred = matching[0];
-            _writtenVersion = preferred.SourceVersion;
-            _vegetationCount = preferred.Vegetation.Length;
-            _furnitureCount = preferred.Furniture.Length;
-            _productCount = preferred.Products.Length;
-            // Local entries win; a partial local snapshot must not hide packaged product stamps.
-            _saved = preferred with
-            {
-                SourceVersion = sourceVersion,
-                Vegetation = matching.SelectMany(saved => saved.Vegetation).DistinctBy(cell => cell.Cell).ToArray(),
-                Furniture = matching.SelectMany(saved => saved.Furniture).DistinctBy(cell => cell.Cell).ToArray(),
-                Products = matching.SelectMany(saved => saved.Products).DistinctBy(product => product.Key).ToArray()
-            };
+            _writtenVersion = saved.SourceVersion;
+            _vegetationCount = saved.Vegetation.Length;
+            _furnitureCount = saved.Furniture.Length;
+            _productCount = saved.Products.Length;
+            _saved = saved with { SourceVersion = sourceVersion };
         }
         return _residentStamp;
     }

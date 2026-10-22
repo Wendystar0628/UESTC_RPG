@@ -6,7 +6,7 @@ using Campus.Contracts.Save;
 
 namespace Campus.Kernel.Save;
 
-public sealed record SaveRuntimeOptions(string Directory, string Build, bool Enabled, SlotId? WriteSlot,
+public sealed record SaveRuntimeOptions(string Directory, bool Enabled, SlotId? WriteSlot,
     int? SaveAtFrame, uint? WeatherSeed);
 
 /// <summary>Engine adapters are supplied once at boot. None are called on the disk worker.</summary>
