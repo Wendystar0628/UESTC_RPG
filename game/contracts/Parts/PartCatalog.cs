@@ -1,6 +1,9 @@
 namespace Campus.Contracts.Parts;
 
-public sealed record PartCatalogEntry(PartId Id, Type ParameterType, object Defaults);
+public sealed record PartCatalogEntry(PartId Id,
+    [property: System.Diagnostics.CodeAnalysis.DynamicallyAccessedMembers(System.Diagnostics.CodeAnalysis.DynamicallyAccessedMemberTypes.PublicProperties)]
+    [param: System.Diagnostics.CodeAnalysis.DynamicallyAccessedMembers(System.Diagnostics.CodeAnalysis.DynamicallyAccessedMemberTypes.PublicProperties)]
+    Type ParameterType, object Defaults);
 
 /// <summary>Shared part vocabulary, parameter types and default dimensions.</summary>
 public static class PartCatalog
