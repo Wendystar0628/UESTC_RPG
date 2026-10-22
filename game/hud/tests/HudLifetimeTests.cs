@@ -4,7 +4,6 @@ using Campus.Audio.Core;
 using Campus.Contracts.AppFlow;
 using Campus.Contracts.Maps;
 using Campus.Contracts.Audio;
-using Campus.Contracts.Save;
 using Campus.Contracts.Settings;
 using Campus.Hud;
 using Campus.Hud.Motion;
@@ -59,6 +58,10 @@ public sealed class HudLifetimeTests
         finally { clock.Free(); }
     }
 
+    // 界面建的主题、字体等原生资源要等包装终结才归还；整组跑完在这里收齐，单跑本组时才不漏到引擎退出（DroppedNatives）。
+    [After]
+    public void ReleaseDroppedNatives() => DroppedNatives.Release();
+
     [TestCase]
     [TestCategory(TestReason.Regression)]
     [RequireGodotRuntime]
@@ -66,14 +69,13 @@ public sealed class HudLifetimeTests
     {
         var ruleset = TestRuleset.ForFlow();
         var flow = new TestAppFlow();
-        var router = new Router();
+        var router = new TestInputRouter();
         var settings = new HudSettings(new SettingsStore());
         var world = new WorldStateService(new TestWeatherProcess());
         var view = new TestWorldState(new TestWeatherProcess(), ruleset);
         var camera = new TestCameraRig(view);
         var model = new HudModel(world, camera, ruleset);
         var motion = new MotionPolicy(settings);
-        var resources = new RequiredResources();
         var settingsBaseline = Subscribers(settings, "Changed");
         var worldBaseline = Subscribers(world, "InstanceChanged");
         camera.Mode = ViewMode.Walk;
@@ -88,30 +90,8 @@ public sealed class HudLifetimeTests
         HudRoot? hud = null;
         try
         {
-            // The fixture supplies only explicit dependencies; it never constructs the production boot graph.
-            var dependencies = new HudRootDependencies(
-                Settings: settings,
-                Model: model,
-                Motion: motion,
-                WorldControl: world,
-                Flow: flow,
-                Exit: new UnusedExit(),
-                Failure: new RecordingFailure(),
-                Audio: audio,
-                PaletteCatalog: new PaletteRegistrySource(resources),
-                ShaderMaterials: new ShaderMaterialSource(resources),
-                ThemeClock: new UiThemeClock(world, settings, motion, resources),
-                InputRouter: router,
-                ViewControl: view,
-                Capture: new UnusedCapture(),
-                Maps: new TestMapService(),
-                WorldState: world,
-                Saves: new UnusedSaveService(),
-                PaletteProbe: new Probe(),
-                Diagnostics: new DiagnosticLog(),
-                Resources: resources);
             hud = new HudRoot();
-            hud.Bind(dependencies);
+            hud.Bind(Dependencies(settings, model, motion, world, view, flow, router, audio));
             parent.AddChild(hud);
             var pages = hud.PageHost;
             var corners = hud.CornerHost;
@@ -178,6 +158,80 @@ public sealed class HudLifetimeTests
         }
     }
 
+    // 大页（设置卡、存档页）与对话框同样经宿主仲裁持光标租约：页宿主里有可见内容持 1 份，隐藏后归还（UI-NAV、DECISION-308）。
+    [TestCase]
+    [TestCategory(TestReason.Regression)]
+    [RequireGodotRuntime]
+    public async Task PageHostContentHoldsTheCursorLeaseUntilHidden()
+    {
+        var ruleset = TestRuleset.ForFlow();
+        var flow = new TestAppFlow();
+        var router = new TestInputRouter();
+        var settings = new HudSettings(new SettingsStore());
+        var world = new WorldStateService(new TestWeatherProcess());
+        var view = new TestWorldState(new TestWeatherProcess(), ruleset);
+        var model = new HudModel(world, new TestCameraRig(view), ruleset);
+        world.Freeze(13, Season.Summer, 0);
+        world.CompleteRestore();
+        var parent = ((SceneTree)Engine.GetMainLoop()).Root;
+        var audio = new AudioRuntime();
+        var hud = new HudRoot();
+        try
+        {
+            hud.Bind(Dependencies(settings, model, new MotionPolicy(settings), world, view, flow, router, audio));
+            parent.AddChild(hud);
+            // 宿主仲裁每帧跑一次：ProcessFrame 信号先于节点的 _Process，等两次才保证 HUD 至少处理过一帧。
+            await FrameAwaiter.ProcessAsync(parent);
+            await FrameAwaiter.ProcessAsync(parent);
+            AssertThat(router.Cursors == 0).OverrideFailureMessage("Playing without an open page held the cursor.").IsTrue();
+            var page = new Control();
+            hud.PageHost.AddChild(page);
+            await FrameAwaiter.ProcessAsync(parent);
+            await FrameAwaiter.ProcessAsync(parent);
+            AssertThat(router.Cursors == 1).OverrideFailureMessage("A visible page did not hold exactly one cursor lease.").IsTrue();
+            page.Visible = false;
+            await FrameAwaiter.ProcessAsync(parent);
+            await FrameAwaiter.ProcessAsync(parent);
+            AssertThat(router.Cursors == 0).OverrideFailureMessage("Hiding the page did not return the cursor lease.").IsTrue();
+        }
+        finally
+        {
+            // 页面随界面根一起释放；退树 QueueFree 的四角等两帧走完实际释放。
+            hud.Free();
+            audio.Free();
+            await FrameAwaiter.ProcessAsync(parent);
+            await FrameAwaiter.ProcessAsync(parent);
+        }
+    }
+
+    // The fixture supplies only explicit dependencies; it never constructs the production boot graph.
+    private static HudRootDependencies Dependencies(HudSettings settings, HudModel model, MotionPolicy motion, WorldStateService world,
+        TestWorldState view, TestAppFlow flow, TestInputRouter router, AudioRuntime audio)
+    {
+        var resources = new RequiredResources();
+        return new HudRootDependencies(
+            Settings: settings,
+            Model: model,
+            Motion: motion,
+            WorldControl: world,
+            Flow: flow,
+            Exit: new TestAppExit(allowQuit: false),
+            Failure: new RecordingFailure(),
+            Audio: audio,
+            PaletteCatalog: new PaletteRegistrySource(resources),
+            ShaderMaterials: new ShaderMaterialSource(resources),
+            ThemeClock: new UiThemeClock(world, settings, motion, resources),
+            InputRouter: router,
+            ViewControl: view,
+            Capture: new UnusedCapture(),
+            Maps: new TestMapService(),
+            WorldState: world,
+            Saves: new TestSaveService(),
+            PaletteProbe: new Probe(),
+            Diagnostics: new DiagnosticLog(),
+            Resources: resources);
+    }
+
     [TestCase]
     [TestCategory(TestReason.Regression)]
     [RequireGodotRuntime]
@@ -223,78 +277,9 @@ public sealed class HudLifetimeTests
         public void Report(Exception error) => Errors.Add(error);
     }
 
-    private sealed class UnusedExit : IAppExit
-    {
-        public Task FinishQuit(int exitCode = 0) => throw new NotSupportedException();
-        public void RequestQuit(int exitCode = 0) => throw new NotSupportedException();
-    }
-
     private sealed class UnusedCapture : IGameCapture
     {
         public Task<CaptureResult> CaptureAsync(CaptureRequest request, CancellationToken cancellationToken = default) => throw new NotSupportedException();
         public Task<byte[]?> CaptureThumbnailAsync(CancellationToken cancellationToken = default) => throw new NotSupportedException();
-    }
-
-    private sealed class UnusedSaveService : ISaveService
-    {
-        public bool Enabled => throw new NotSupportedException();
-        public IReadOnlyList<SlotInfo> Slots => throw new NotSupportedException();
-        public SlotId? Continue => throw new NotSupportedException();
-        public SlotId? Active => throw new NotSupportedException();
-        public bool Busy => throw new NotSupportedException();
-        public SaveState State => throw new NotSupportedException();
-        public event Action? SlotsChanged
-        {
-            add => throw new NotSupportedException();
-            remove => throw new NotSupportedException();
-        }
-        public void Request(SaveReason reason) => throw new NotSupportedException();
-        public Task<SaveResult> SaveNow(SaveReason reason) => throw new NotSupportedException();
-        public Task<LoadResult> Load(SlotId slot) => throw new NotSupportedException();
-        public Task<LoadResult> LoadFile(string path) => throw new NotSupportedException();
-        public Task<LoadResult> NewGame(SlotId? slot, uint? seed = null, WorldPreset? start = null, NewGameBoot? boot = null) =>
-            throw new NotSupportedException();
-        public Task<SaveResult> FlushForQuit(SaveReason reason, TimeSpan timeout) => throw new NotSupportedException();
-        public byte[]? Thumbnail(SlotId slot) => throw new NotSupportedException();
-    }
-
-    /// <summary>Dispatches pressed actions through registered layers in priority order and counts live cursor leases.</summary>
-    private sealed class Router : IInputRouter
-    {
-        private readonly List<(long Id, int Priority, Func<InputActionEvent, bool> Handler)> _layers = [];
-        private long _next;
-        public int Layers => _layers.Count;
-        public int Cursors { get; private set; }
-        public event Action<bool>? CursorVisibilityChanged;
-        public int Observers => CursorVisibilityChanged?.GetInvocationList().Length ?? 0;
-        public IDisposable RegisterLayer(string owner, int priority, Func<InputActionEvent, bool> handler)
-        {
-            var id = ++_next;
-            _layers.Add((id, priority, handler));
-            return new Lease(() => _layers.RemoveAll(layer => layer.Id == id));
-        }
-        public bool Press(string action) => _layers.OrderBy(layer => layer.Priority).ThenByDescending(layer => layer.Id).ToArray()
-            .Any(layer => layer.Handler(new InputActionEvent(action, true, false)));
-        public void PublishCursor(bool visible) => CursorVisibilityChanged?.Invoke(visible);
-        public IDisposable RequestCursor(InputLockReason reason)
-        {
-            Cursors++;
-            return new Lease(() => Cursors--);
-        }
-        public bool CursorVisible => Cursors > 0;
-        public bool CursorHeld => false;
-        public bool TryRebind(string action, int physicalKey, int physicalLocation, out string? conflict) { conflict = null; return true; }
-        public int PhysicalKey(string action) => 0;
-
-        private sealed class Lease(Action release) : IDisposable
-        {
-            private bool _disposed;
-            public void Dispose()
-            {
-                if (_disposed) return;
-                _disposed = true;
-                release();
-            }
-        }
     }
 }

@@ -46,6 +46,46 @@ internal sealed class TestAppFlow : IAppFlow
     public Task Quit() => Task.CompletedTask;
 }
 
+/// <summary>Shared IInputRouter fake. Dispatches pressed actions through registered layers in priority order and counts live cursor leases.</summary>
+internal sealed class TestInputRouter : IInputRouter
+{
+    private readonly List<(long Id, int Priority, Func<InputActionEvent, bool> Handler)> _layers = [];
+    private long _next;
+    public int Layers => _layers.Count;
+    public int Cursors { get; private set; }
+    public event Action<bool>? CursorVisibilityChanged;
+    public int Observers => CursorVisibilityChanged?.GetInvocationList().Length ?? 0;
+    public IDisposable RegisterLayer(string owner, int priority, Func<InputActionEvent, bool> handler)
+    {
+        var id = ++_next;
+        _layers.Add((id, priority, handler));
+        return new Lease(() => _layers.RemoveAll(layer => layer.Id == id));
+    }
+    public bool Press(string action) => _layers.OrderBy(layer => layer.Priority).ThenByDescending(layer => layer.Id).ToArray()
+        .Any(layer => layer.Handler(new InputActionEvent(action, true, false)));
+    public void PublishCursor(bool visible) => CursorVisibilityChanged?.Invoke(visible);
+    public IDisposable RequestCursor(InputLockReason reason)
+    {
+        Cursors++;
+        return new Lease(() => Cursors--);
+    }
+    public bool CursorVisible => Cursors > 0;
+    public bool CursorHeld => false;
+    public bool TryRebind(string action, int physicalKey, int physicalLocation, out string? conflict) { conflict = null; return true; }
+    public int PhysicalKey(string action) => 0;
+
+    private sealed class Lease(Action release) : IDisposable
+    {
+        private bool _disposed;
+        public void Dispose()
+        {
+            if (_disposed) return;
+            _disposed = true;
+            release();
+        }
+    }
+}
+
 /// <summary>Shared IAppExit fake. With allowQuit false any quit is a test failure.</summary>
 internal sealed class TestAppExit(bool allowQuit = true) : IAppExit
 {

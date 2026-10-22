@@ -180,7 +180,7 @@ internal sealed class CoreLifecycleDriver(IStageGateHost host)
         await CoreWait(() => (surface.Open & UiSurface.SettingsCard) == 0 && surface.SettingsPage is null,
             "Escape did not withdraw the settings page.");
         // Private desktops do not supply window focus: visibility would be true
-        // without a UI lease. Lease behavior is covered by the existing UI tests.
+        // without a UI lease. Lease behavior is covered by HudLifetimeTests.PageHostContentHoldsTheCursorLeaseUntilHidden.
         GD.Print("CORE_SETTINGS_CURSOR NOT_MEASURED reason=private-desktop-focus-unavailable");
         GD.Print("CORE_SETTINGS_READY");
     }
