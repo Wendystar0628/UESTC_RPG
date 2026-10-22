@@ -6,9 +6,11 @@
 
 Playing 短诊断沿同一个入口：`powershell -File scripts/build/startup-cpu/run.ps1 -Output output/start_game/TOOL-215-profile/GAME-151-<唯一目录> -Modes immediate -Measurement diagnostic -PlayingSample`。Root 先确认邻居源码稳定、没有构建/预烘/截图等重活，并关闭录屏和叠加层。开关只允许 diagnostic immediate；用既有 `--quality=fine --quality-set=display_mode=0` 选择 Fine 窗口，Fine 的 v_sync=1，不传 fixed-fps；其余体验条件和缓存资格只按实证填写，未知保留 unknown。正常 experience 的输入与计时端点不变。
 
-`StageStartupTrace.TraceFrame` 在 `KernelStage._Process` 中持续执行；既有 `UESTC_STARTUP_PROFILE=1` 才逐帧输出引擎单调时钟、process-frame、渲染 CPU/GPU。诊断追加 flow、管线计数、GC pause、Walk 脚部位姿/yaw、action pressed 与界面模式，首次 Playing 只记一次正式 move_forward 物理绑定。没有遥测就不造分布。采集器沿原有 20 ms 循环增量读完整日志行，首次 Walk 后等连续 10 帧管线计数不变，记录 10 s 静止，再向本 PID 私窗口按住实际绑定 20 s，随后放开并等后续真实帧观测到 action released；不切桌面、不用全局输入、不写坐标或代入速度。当前 Windows 绑定转换仅支持正式绑定中的 ASCII 字母/数字；特殊键、键盘布局不匹配或未收到 action 的情况不猜替代键。按键请求和释放单独保留宿主 UTC/Stopwatch，finally 对本轮按键再负责释放。
+`StageStartupTrace.TraceFrame` 在 `KernelStage._Process` 中持续执行；既有 `UESTC_STARTUP_PROFILE=1` 才逐帧输出引擎单调时钟、process-frame、渲染 CPU/GPU。诊断追加 flow、管线计数、GC pause、Walk 脚部位姿/yaw、action pressed 与界面模式，首次 Playing 只记一次正式 move_forward 物理绑定。没有遥测就不造分布。采集器沿原有 20 ms 循环增量读完整日志行；正式 input-ready 与 Playing/Walk 后若仍是界面态，按“单击画面开始”的正常路径，只向本轮 PID/HWND 的实际客户端中央发送一次 WM_MOUSEMOVE + 左键 down/up。客户端大小经 GetClientRect 实读，记录尺寸、点击坐标、请求、释放与后续首个真实漫游态帧；不移动作者真实鼠标、不强设模式、不伪造焦点、不循环重试。界面态本身不代表移动输入被锁住；这里进入漫游态是本轮采样条件。漫游态下等连续 10 帧管线计数不变，记录 10 s 静止，再向本 PID 私窗口按住实际前进绑定 20 s，随后放开并等后续真实帧观测到 action released；不切桌面、不用全局输入、不写世界坐标或代入速度。当前 Windows 前进绑定转换仅支持正式绑定中的 ASCII 字母/数字；特殊键、键盘布局不匹配或未收到 action 的情况不猜替代键。鼠标/按键请求和释放单独保留宿主 UTC/Stopwatch，finally 对本轮左键与前进键分别负责释放；复用原启动截止时间，未进入漫游态或未开始采样时明确失败。
 
-`result.json.playingSample` 与失败时仍保留的 `playing-observations.json` 记录实际状态、请求、边沿和名义每秒进程 CPU 累计读数。边沿使用当时最后一个完整 STARTUP_FRAME 原始时间/帧号，并保留观察与命令时刻，绝不插值成游戏输入生效时间。`cpu-hotspots.json` 按静止、前进、释放分窗给连续真实帧间隔与渲染 CPU/GPU 的 nearest-rank p50/p95/p99/max、>33/>100 ms 数量；帧号跳跃、非正间隔单列，不平摊或补齐。位姿与 action 共同报告是否观察到正向位移、静止的按键帧，撞挡的零位移照录；没有按键接收/位移就不能称实际前进完成。
+`result.json.playingSample` 与失败时仍保留的 `playing-observations.json` 记录实际状态、请求、边沿和名义每秒进程 CPU 累计读数；`roamInput` 保留场景点击请求/释放与后续真实模式变化，未请求或未观测到的值保持 null。边沿使用当时最后一个完整 STARTUP_FRAME 原始时间/帧号，并保留观察与命令时刻，绝不插值成游戏输入生效时间。`cpu-hotspots.json` 按静止、前进、释放分窗给连续真实帧间隔与渲染 CPU/GPU 的 nearest-rank p50/p95/p99/max、>33/>100 ms 数量；帧号跳跃、非正间隔单列，不平摊或补齐。位姿与 action 共同报告是否观察到正向位移、静止的按键帧，撞挡的零位移照录；没有按键接收/位移就不能称实际前进完成。
+
+场景点击复用标题 Enter 的同一 15 s 输入受理时长：没有后续真实 Playing/Walk、interfaceMode=False 帧就明确失败并保留记录，不重试、不等到通用 300 s 截止；10 s 静止与20 s前进端点不变。
 
 每个 >33 ms 间隔带 RenderHost 的本帧/前帧事件、异常/缓存日志的原始行号与帧号夹界、附近主线程 sampled-thread-time 栈候选及原始诊断字段。日志没记录 hit/miss 时补烘仍是未知；RenderHost 动态句柄也不是静态 TileBundle 驻留计数。CPU 累计差是约 1 s 整进程 CPU，阶段线程差也保留；都不等于逐帧 CPU。EventPipe 含等待，栈与事件同现只提示候选，不能推出函数 CPU 份额或因果。原始 godot.log、threads.nettrace 与读数均保留，呈现帧间隔没有测量。
 

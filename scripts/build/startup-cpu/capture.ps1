@@ -29,6 +29,10 @@ $forwardWindow = $null
 $forwardScanCode = $null
 $forwardKeyHeld = $false
 $forwardPhysicalKey = $null
+$sceneButtonHeld = $false
+$roamRequest = $null
+$roamRelease = $null
+$roamObserved = $null
 $playingState = 'waiting'
 $playingIdleSeconds = 10
 $playingForwardSeconds = 20
@@ -66,6 +70,30 @@ public static class C215Launch {
     [DllImport("user32.dll", CharSet=CharSet.Unicode)] static extern int GetClassNameW(IntPtr hwnd, StringBuilder name, int count);
     [DllImport("user32.dll", SetLastError=true)] static extern bool PostMessageW(IntPtr hwnd, uint msg, IntPtr w, IntPtr l);
     [DllImport("user32.dll")] static extern uint MapVirtualKeyW(uint code, uint mapType);
+    [StructLayout(LayoutKind.Sequential)] struct Rect { public int left,top,right,bottom; }
+    [DllImport("user32.dll", SetLastError=true)] static extern bool GetClientRect(IntPtr hwnd, out Rect rect);
+    static void RequireOwner(int pid, long hwnd) {
+        uint owner; GetWindowThreadProcessId((IntPtr)hwnd, out owner);
+        if (owner != (uint)pid) throw new InvalidOperationException("Input target no longer belongs to this run's PID.");
+    }
+    public static int[] SceneCenter(int pid, long hwnd) {
+        RequireOwner(pid, hwnd);
+        Rect rect;
+        if (!GetClientRect((IntPtr)hwnd, out rect)) throw new Win32Exception(Marshal.GetLastWin32Error());
+        int width=rect.right-rect.left, height=rect.bottom-rect.top;
+        if (width <= 0 || height <= 0 || width > 65535 || height > 65535)
+            throw new InvalidOperationException("No usable client rectangle for this run's scene click.");
+        return new[] { width, height, width/2, height/2 };
+    }
+    public static void SceneButton(int pid, long hwnd, int x, int y, bool pressed) {
+        RequireOwner(pid, hwnd);
+        var point = (IntPtr)((y << 16) | x);
+        // Directed client messages leave the real pointer and desktop alone.
+        if (pressed && !PostMessageW((IntPtr)hwnd, 0x200u, IntPtr.Zero, point))
+            throw new Win32Exception(Marshal.GetLastWin32Error());
+        if (!PostMessageW((IntPtr)hwnd, pressed ? 0x201u : 0x202u, pressed ? (IntPtr)1 : IntPtr.Zero, point))
+            throw new Win32Exception(Marshal.GetLastWin32Error());
+    }
     public static int ForwardScanCode(int physicalKey) {
         // Godot's printable physical key values use ASCII. Unsupported special keys stay unknown.
         if (!((physicalKey >= 65 && physicalKey <= 90) || (physicalKey >= 48 && physicalKey <= 57)))
@@ -74,9 +102,8 @@ public static class C215Launch {
         if (scan == 0 || scan > 255) throw new InvalidOperationException("No unambiguous Windows scan code for the recorded binding.");
         return (int)scan;
     }
-    public static void Forward(int pid, long hwnd, int physicalKey, int scan, bool pressed) {
-        uint owner; GetWindowThreadProcessId((IntPtr)hwnd, out owner);
-        if (owner != (uint)pid) throw new InvalidOperationException("Forward input target no longer belongs to this run's PID.");
+    public static void Key(int pid, long hwnd, int physicalKey, int scan, bool pressed) {
+        RequireOwner(pid, hwnd);
         var flags = 1 | (scan << 16);
         if (!pressed) flags = unchecked(flags | (int)0xc0000000);
         if (!PostMessageW((IntPtr)hwnd, pressed ? 0x100u : 0x101u, (IntPtr)physicalKey, (IntPtr)flags))
@@ -256,6 +283,7 @@ try {
     $inputRequestedTimestamp = $null
     $inputReleasedTimestamp = $null
     $shortPressMilliseconds = 100
+    $directedInputAcceptanceSeconds = 15
     while ($clock.Elapsed.TotalSeconds -lt 300) {
         if ($gameProcess.HasExited) { throw "Target exited before sampling boundary: $($gameProcess.ExitCode)" }
         if ($trace -and $trace.HasExited) { throw "Collector exited before boundary: $($trace.ExitCode)" }
@@ -282,9 +310,15 @@ try {
                 $number = [long]$frameMatch.Groups[2].Value
                 $signature = "$($fields.pipelineSurface)|$($fields.pipelineDraw)|$($fields.pipelineCanvas)"
                 $contiguous = $lastFrame -and $number -eq $lastFrame.Frame + 1
-                $pipelineStableFrames = if ($contiguous -and $signature -eq $pipelineSignature -and $fields.flow -eq 'Playing' -and $fields.mode -eq 'Walk') { $pipelineStableFrames + 1 } else { 0 }
+                $pipelineStableFrames = if ($contiguous -and $signature -eq $pipelineSignature -and $fields.flow -eq 'Playing' -and $fields.mode -eq 'Walk' -and $fields.interfaceMode -eq 'False') { $pipelineStableFrames + 1 } else { 0 }
                 $pipelineSignature = $signature
                 $lastFrame = [pscustomobject]@{ Milliseconds=[double]::Parse($frameMatch.Groups[1].Value,[Globalization.CultureInfo]::InvariantCulture); Frame=$number; Fields=$fields }
+                if ($null -ne $roamRequest -and $null -eq $roamObserved -and $number -gt $roamRequest.beforeEngineFrame -and
+                    $fields.flow -eq 'Playing' -and $fields.mode -eq 'Walk' -and $fields.interfaceMode -eq 'False') {
+                    $roamObserved = [ordered]@{ observedUtc=[DateTime]::UtcNow.ToString('O'); observedTimestamp=[Diagnostics.Stopwatch]::GetTimestamp();
+                        engineFrame=$number; engineMilliseconds=$lastFrame.Milliseconds; interfaceMode=$false;
+                        source='first complete later STARTUP_FRAME reporting real roam mode after directed scene click request' }
+                }
             }
         }
         $observed = [DateTime]::UtcNow.ToString('O')
@@ -327,8 +361,8 @@ try {
             $inputReleasedUtc = [DateTime]::UtcNow.ToString('O')
         }
         if ($null -ne $inputRequestedClockSeconds -and -not $seen.Contains('new-game-enter') -and
-            $clock.Elapsed.TotalSeconds -gt $inputRequestedClockSeconds + 15) {
-            throw "Directed Enter did not reach new-game-enter within 15s; hwnd=$inputWindowHandle titleFrame=$titleReadyFrame; no valid immediate/dwell result."
+            $clock.Elapsed.TotalSeconds -gt $inputRequestedClockSeconds + $directedInputAcceptanceSeconds) {
+            throw "Directed Enter did not reach new-game-enter within $($directedInputAcceptanceSeconds)s; hwnd=$inputWindowHandle titleFrame=$titleReadyFrame; no valid immediate/dwell result."
         }
         if ($null -ne $inputReleasedTimestamp -and $null -ne $newGameEnterAnchor) {
             $preload = [regex]::Match($newGameEnterAnchor.suffix, '(?:^|\s)preloadReady=(true|false)(?:\s|$)', 'IgnoreCase')
@@ -348,8 +382,32 @@ try {
         if ($completed -and $playingSample) {
             if ($playingState -ne 'waiting' -and $lastFrame.Fields.flow -ne 'Playing') { throw 'Playing diagnostic left Playing before its endpoint; raw log retained.' }
             if ($playingState -ne 'waiting' -and $lastFrame.Fields.mode -ne 'Walk') { throw 'Playing diagnostic is no longer Walk; raw log retained.' }
+            # Normal entry leaves the mouse visible. Click the actual client center once; never
+            # infer an input lock from InterfaceMode, force focus, or write the mode itself.
+            if ($playingState -eq 'waiting' -and $lastFrame -and $lastFrame.Fields.flow -eq 'Playing' -and $lastFrame.Fields.mode -eq 'Walk' -and
+                $lastFrame.Fields.interfaceMode -eq 'True' -and $null -eq $roamRequest) {
+                $point = [C215Launch]::SceneCenter($gameProcess.Id, $inputWindowHandle)
+                $roamRequest = [ordered]@{ utc=[DateTime]::UtcNow.ToString('O'); timestamp=[Diagnostics.Stopwatch]::GetTimestamp();
+                    beforeEngineFrame=$lastFrame.Frame; beforeEngineMilliseconds=$lastFrame.Milliseconds; interfaceMode=$true;
+                    targetWindowHandle=$inputWindowHandle; clientWidth=$point[0]; clientHeight=$point[1]; clientX=$point[2]; clientY=$point[3];
+                    method='PID-directed WM_MOUSEMOVE then WM_LBUTTONDOWN/UP at actual client center' }
+                $sceneButtonHeld = $true
+                [C215Launch]::SceneButton($gameProcess.Id, $inputWindowHandle, $roamRequest.clientX, $roamRequest.clientY, $true)
+            }
+            if ($sceneButtonHeld -and ([Diagnostics.Stopwatch]::GetTimestamp()-$roamRequest.timestamp) * 1000.0 /
+                [Diagnostics.Stopwatch]::Frequency -ge $shortPressMilliseconds) {
+                [C215Launch]::SceneButton($gameProcess.Id, $inputWindowHandle, $roamRequest.clientX, $roamRequest.clientY, $false)
+                $sceneButtonHeld = $false
+                $roamRelease = [ordered]@{ utc=[DateTime]::UtcNow.ToString('O'); timestamp=[Diagnostics.Stopwatch]::GetTimestamp();
+                    beforeEngineFrame=$lastFrame.Frame; beforeEngineMilliseconds=$lastFrame.Milliseconds; cleanup=$false }
+            }
+            if ($null -ne $roamRequest -and $null -eq $roamObserved -and
+                ([Diagnostics.Stopwatch]::GetTimestamp()-$roamRequest.timestamp)/[double][Diagnostics.Stopwatch]::Frequency -gt $directedInputAcceptanceSeconds) {
+                throw "Playing sample did not start: directed scene click did not reach a later real Playing/Walk roam-mode frame within $($directedInputAcceptanceSeconds)s; request/release and raw telemetry retained."
+            }
             if ($playingState -eq 'waiting' -and $lastFrame -and $lastFrame.Fields.flow -eq 'Playing' -and $lastFrame.Fields.mode -eq 'Walk' -and $pipelineStableFrames -ge 10 -and
-                $null -ne $forwardPhysicalKey -and $lastFrame.Fields.forwardPressed -eq 'False' -and $lastFrame.Fields.interfaceMode -eq 'False') {
+                $null -ne $forwardPhysicalKey -and $lastFrame.Fields.forwardPressed -eq 'False' -and $lastFrame.Fields.interfaceMode -eq 'False' -and
+                -not $sceneButtonHeld -and ($null -eq $roamRequest -or $null -ne $roamObserved)) {
                 if ($null -eq $lastFrame.Fields.pipelineSurface -or $null -eq $lastFrame.Fields.feetX) { throw 'Missing continuous Playing telemetry; no synthetic sample.' }
                 $forwardScanCode = [C215Launch]::ForwardScanCode($forwardPhysicalKey)
                 $forwardWindow = $inputWindowHandle
@@ -364,13 +422,13 @@ try {
                 $moveRequested = [ordered]@{ utc=[DateTime]::UtcNow.ToString('O'); timestamp=[Diagnostics.Stopwatch]::GetTimestamp(); beforeEngineFrame=$lastFrame.Frame; beforeEngineMilliseconds=$lastFrame.Milliseconds }
                 # Set ownership first: even an uncertain PostMessage result must get a key-up in finally.
                 $forwardKeyHeld = $true
-                [C215Launch]::Forward($gameProcess.Id, $forwardWindow, $forwardPhysicalKey, $forwardScanCode, $true)
+                [C215Launch]::Key($gameProcess.Id, $forwardWindow, $forwardPhysicalKey, $forwardScanCode, $true)
                 $playingState = 'forward'
             }
             if ($playingState -eq 'forward' -and
                 ([Diagnostics.Stopwatch]::GetTimestamp()-$moveRequested.timestamp)/[double][Diagnostics.Stopwatch]::Frequency -ge $playingForwardSeconds) {
                 $releaseRequested = [ordered]@{ utc=[DateTime]::UtcNow.ToString('O'); timestamp=[Diagnostics.Stopwatch]::GetTimestamp(); beforeEngineFrame=$lastFrame.Frame; beforeEngineMilliseconds=$lastFrame.Milliseconds }
-                [C215Launch]::Forward($gameProcess.Id, $forwardWindow, $forwardPhysicalKey, $forwardScanCode, $false)
+                [C215Launch]::Key($gameProcess.Id, $forwardWindow, $forwardPhysicalKey, $forwardScanCode, $false)
                 $forwardKeyHeld = $false
                 Add-PlayingEdge 'playing-forward-end'
                 $playingState = 'released'
@@ -389,7 +447,15 @@ try {
         if ($completed) { break }
         Start-Sleep -Milliseconds 20
     }
-    if (-not $completed) { throw 'Startup phase deadline exceeded.' }
+    if (-not $completed) {
+        if ($playingSample -and $playingState -eq 'waiting') {
+            if ($null -ne $roamRequest -and $null -eq $roamObserved) {
+                throw 'Playing sample did not start: no later real Playing/Walk frame entered roam mode after the single directed scene click; raw telemetry retained.'
+            }
+            throw "Playing sample did not start before the existing startup deadline: flow=$($lastFrame.Fields.flow) mode=$($lastFrame.Fields.mode) interfaceMode=$($lastFrame.Fields.interfaceMode) stableRoamFrames=$pipelineStableFrames physicalKey=$forwardPhysicalKey; raw telemetry retained."
+        }
+        throw 'Startup phase deadline exceeded.'
+    }
     if ($diagnostic) { Stop-OwnTrace }
     if ($gameProcess.HasExited) { throw 'Target exited before collector Stop/rundown completed.' }
     $phaseByName = @{}
@@ -435,6 +501,7 @@ try {
         collectorStoppedWhileTargetAlive=if($diagnostic){$stopped}else{$null}; collectorFinishedUtc=if($diagnostic){[DateTime]::UtcNow.ToString('O')}else{$null};
         phaseObservations=$anchors.ToArray(); cpuSnapshots=$snapshots.ToArray(); phasePollingMilliseconds=20;
         playingSample=[ordered]@{ enabled=$playingSample; state=$playingState; edges=$playingEdges.ToArray();
+            roamInput=[ordered]@{ request=$roamRequest; release=$roamRelease; observed=$roamObserved };
             targetIdleSeconds=if($playingSample){$playingIdleSeconds}else{$null}; targetForwardHoldSeconds=if($playingSample){$playingForwardSeconds}else{$null};
             physicalKey=$forwardPhysicalKey; windowsScanCode=$forwardScanCode; targetWindowHandle=$forwardWindow;
             request=$moveRequested; release=$releaseRequested; processCpuReads=$playingCpu.ToArray();
@@ -471,10 +538,22 @@ try {
     $_ | Out-String | Set-Content -LiteralPath (Join-Path $Output 'failure.txt') -Encoding UTF8
     throw
 } finally {
+    $sceneReleaseFailure = $null
+    if ($sceneButtonHeld -and $gameProcess -and -not $gameProcess.HasExited) {
+        try {
+            [C215Launch]::SceneButton($gameProcess.Id, $inputWindowHandle, $roamRequest.clientX, $roamRequest.clientY, $false)
+            $sceneButtonHeld = $false
+            $roamRelease = [ordered]@{ utc=[DateTime]::UtcNow.ToString('O'); timestamp=[Diagnostics.Stopwatch]::GetTimestamp();
+                beforeEngineFrame=if($lastFrame){$lastFrame.Frame}else{$null}; beforeEngineMilliseconds=if($lastFrame){$lastFrame.Milliseconds}else{$null}; cleanup=$true }
+        } catch {
+            $sceneReleaseFailure = $_
+            $_ | Out-String | Set-Content -LiteralPath (Join-Path $Output 'scene-button-release-failure.txt') -Encoding UTF8
+        }
+    }
     $forwardReleaseFailure = $null
     if ($forwardKeyHeld -and $gameProcess -and -not $gameProcess.HasExited) {
         try {
-            [C215Launch]::Forward($gameProcess.Id, $forwardWindow, $forwardPhysicalKey, $forwardScanCode, $false)
+            [C215Launch]::Key($gameProcess.Id, $forwardWindow, $forwardPhysicalKey, $forwardScanCode, $false)
             $forwardKeyHeld = $false
         } catch {
             $forwardReleaseFailure = $_
@@ -492,6 +571,7 @@ try {
     if ($diagnostic) { $snapshots.ToArray() | ConvertTo-Json -Depth 7 | Set-Content -LiteralPath (Join-Path $Output 'cpu-snapshots.json') -Encoding UTF8 }
     if ($playingSample) {
         [ordered]@{ state=$playingState; edges=$playingEdges.ToArray(); request=$moveRequested; release=$releaseRequested;
+            roamInput=[ordered]@{ request=$roamRequest; release=$roamRelease; observed=$roamObserved };
             processCpuReads=$playingCpu.ToArray(); movementStatus='Raw telemetry required; partial failure is not a completed movement sample' } |
             ConvertTo-Json -Depth 9 | Set-Content -LiteralPath (Join-Path $Output 'playing-observations.json') -Encoding UTF8
     }
@@ -503,6 +583,7 @@ try {
     }
     if ($trace -and $trace.HasExited) { $trace.Dispose() }
     Exit-UESTCBuildLock $lease
+    if ($sceneReleaseFailure) { throw $sceneReleaseFailure }
     if ($forwardReleaseFailure) { throw $forwardReleaseFailure }
 }
 
