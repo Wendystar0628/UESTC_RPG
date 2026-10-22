@@ -16,7 +16,6 @@ public enum GeometryChannels { None = 0, Ao = 1, Uv = 2, Uv2 = 4, Colors = 8, Fl
 public sealed class GeometrySink(PaletteCatalog? palette = null, bool withUv2 = false)
 {
     private readonly Dictionary<StreamKey, MaterialStream> _streams = [];
-    private readonly SortedDictionary<string, MaterialStream> _classes = new(StringComparer.Ordinal);
     private readonly List<(string Key, GeometryBundle Mesh)> _done = [];
 
     public ushort ColorIndex(PaletteToken lit) =>
@@ -82,9 +81,8 @@ public sealed class GeometrySink(PaletteCatalog? palette = null, bool withUv2 = 
 
     public IReadOnlyList<GeometryBundle> Finish()
     {
-        foreach (var stream in _classes.Values) Flush(stream);
+        foreach (var stream in _streams.Values.OrderBy(stream => stream.SortKey, StringComparer.Ordinal)) Flush(stream);
         _streams.Clear();
-        _classes.Clear();
         return _done.OrderBy(x => x.Key, StringComparer.Ordinal).Select(x => x.Mesh).ToArray();
     }
 
@@ -156,9 +154,7 @@ public sealed class GeometrySink(PaletteCatalog? palette = null, bool withUv2 = 
         if (!_streams.TryGetValue(key, out var material))
         {
             var sortKey = ClassKey(spec, (channels & GeometryChannels.Colors) != 0) + "|" + ((int)channels).ToString("D3", CultureInfo.InvariantCulture);
-            // Retain the original string's equivalence even for tokens containing its separators.
-            if (!_classes.TryGetValue(sortKey, out material))
-                _classes.Add(sortKey, material = new(sortKey, new(spec, channels)));
+            material = new(sortKey, new(spec, channels));
             _streams.Add(key, material);
         }
         var stream = material.Current;
@@ -233,7 +229,8 @@ public sealed class GeometrySink(PaletteCatalog? palette = null, bool withUv2 = 
 
     private readonly record struct MaterialStyle(ToonKind Kind, ToonFx Fx, LineClass Line, ShadeSteps Steps,
         ToonNormal Normal, int Band, int Translucency, int Wet);
-    private readonly record struct MaterialColors(string? Lit, string? Shade, string Deep, string Backface, string Emissive);
+    private readonly record struct MaterialColors(PaletteToken? Lit, PaletteToken? Shade, PaletteToken? Deep,
+        PaletteToken? Backface, ChannelId? Emissive);
     private readonly record struct PatternKey(ushort Layer, int PeriodX, int PeriodY, int JointX, int JointY);
     private readonly record struct StreamKey(MaterialStyle Style, MaterialColors Colors, PatternKey? Pattern, GeometryChannels Channels)
     {
@@ -242,8 +239,7 @@ public sealed class GeometrySink(PaletteCatalog? palette = null, bool withUv2 = 
             var color = (channels & GeometryChannels.Colors) != 0;
             return new(new(spec.Kind, spec.Fx, spec.Line, spec.Steps, spec.Normal, FloatKey(spec.Band),
                     FloatKey(spec.Translucency), FloatKey(spec.Wet)),
-                new(color ? null : spec.Lit.Value ?? "", color ? null : spec.Shade.Value ?? "",
-                    spec.Deep?.Value ?? "-", spec.Backface?.Value ?? "-", spec.Emissive?.Value ?? "-"),
+                new(color ? null : spec.Lit, color ? null : spec.Shade, spec.Deep, spec.Backface, spec.Emissive),
                 spec.SurfacePattern is { } p ? new PatternKey(p.Layer, FloatKey(p.PeriodMeters.X), FloatKey(p.PeriodMeters.Y),
                     FloatKey(p.JointMeters.X), FloatKey(p.JointMeters.Y)) : null, channels);
         }

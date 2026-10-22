@@ -123,7 +123,9 @@ public sealed class GeometryTests
             spec with { Line = LineClass.None }, spec with { Steps = ShadeSteps.Three },
             spec with { Normal = ToonNormal.Smooth }, spec with { Band = .5f },
             spec with { Translucency = .5f }, spec with { Wet = 1f }, spec with { Deep = new("deep") },
-            spec with { Backface = new("backface") }, spec with { Emissive = new("emissive") },
+            spec with { Deep = new("") }, spec with { Deep = new("-") },
+            spec with { Backface = new("backface") }, spec with { Backface = new("") }, spec with { Backface = new("-") },
+            spec with { Emissive = new("emissive") }, spec with { Emissive = new("") }, spec with { Emissive = new("-") },
             spec with { SurfacePattern = new(1, Vector2.One, Vector2.Zero) },
             spec with { Lit = new("other.lit") }, spec with { Shade = new("other.shade") }];
         var a = new GeometryVertex(Vector3.Zero, Vector3.UnitZ);
@@ -155,15 +157,20 @@ public sealed class GeometryTests
         AssertThat(colored.Finish().Single().Index.Length == 2 * Surface().Index.Length)
             .OverrideFailureMessage("Vertex colors replace only the lit/shade material pair when grouping.").IsTrue();
 
-        var aliases = new GeometrySink();
-        aliases.Tri(spec with { Lit = new("a|b"), Shade = new("c") }, a, b, c);
-        aliases.Tri(spec with { Lit = new("a"), Shade = new("b|c") }, a with { ColorIndex = null },
+        var distinct = new GeometrySink();
+        var first = spec with { Lit = new("a|b"), Shade = new("c") };
+        var second = spec with { Lit = new("a"), Shade = new("b|c") };
+        distinct.Tri(first, a, b, c);
+        distinct.Tri(second, a with { ColorIndex = null },
             b with { ColorIndex = null }, c with { ColorIndex = null });
-        aliases.Tri(spec with { Lit = new("a|b"), Shade = new("c") }, a with { ColorIndex = null },
+        distinct.Tri(first, a with { ColorIndex = null },
             b with { ColorIndex = null }, c with { ColorIndex = null });
-        var aliasOutput = aliases.Finish();
-        AssertThat(aliasOutput.Count == 2 && aliasOutput.Single(mesh => mesh.ColorIndices is null).Index.Length == 2 * Surface().Index.Length)
-            .OverrideFailureMessage("Original material-key equivalence and explicit color-channel separation must both survive grouping.").IsTrue();
+        var distinctOutput = distinct.Finish();
+        AssertThat(distinctOutput.Count == 3 && distinctOutput.All(mesh => mesh.Index.Length == Surface().Index.Length) &&
+            distinctOutput.Single(mesh => mesh.ColorIndices is not null).Material.Spec == first &&
+            distinctOutput.Where(mesh => mesh.ColorIndices is null).Select(mesh => mesh.Material.Spec)
+                .ToHashSet().SetEquals(new[] { first, second }))
+            .OverrideFailureMessage("Distinct material identities must keep their own colours even when their sort strings collide.").IsTrue();
     }
 
     [TestCase, TestCategory(TestReason.Regression)]
