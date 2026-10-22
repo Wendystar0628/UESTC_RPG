@@ -1616,7 +1616,7 @@
 `docs/engineering/ENG-FAILS-游戏失败观测.md` · 2.1k 字 · 游戏本体开发的失败按根因类别登记：什么算一次、先登记再继续、判类与新增类别、提交窗口、同类反复时的整类排查；类别清单以 failure-types.json 为准，健康页看次数与频率
 关键词：游戏失败观测、失败登记、失败类别、fail.py、failure-types.json、根因类别、表现桶、候选类别、提交窗口、逃逸的失败、健康页、整类排查、DECISION-285、DECISION-296
 
-- ENG-FAILS §0 结论 · L21 · 1.2k
+- ENG-FAILS §0 结论 · L21 · 1.3k
   - ★ ENG-FAILS §0.1 接入要点 · L31 · 224
 
 ## ENG-GATES · 验收与门禁
