@@ -8,6 +8,9 @@
   <ItemGroup>
     <PackageReference Remove="Microsoft.CodeAnalysis.BannedApiAnalyzers" />
     <Compile Include="CpuParse.cs" />
+    <Compile Include="CpuTraceAnalysis.cs" />
+    <Compile Include="CpuPhaseReport.cs" />
+    <Compile Include="PlayingObservations.cs" />
     <!-- These tool-store assemblies are runtime dependencies of this standalone executable. -->
     <Reference Include="Microsoft.Diagnostics.Tracing.TraceEvent"><HintPath>$(TraceToolDir)\Microsoft.Diagnostics.Tracing.TraceEvent.dll</HintPath><Private>true</Private></Reference>
     <Reference Include="Microsoft.Diagnostics.FastSerialization"><HintPath>$(TraceToolDir)\Microsoft.Diagnostics.FastSerialization.dll</HintPath><Private>true</Private></Reference>

@@ -26,6 +26,8 @@ Playing 在上述 immediate 正式入场后，等待真实 Playing、宿主 real
 
 诊断同时采集 CLR AllocationTick，`gcAllocationSampling` 按阶段、OS 线程与类型汇总分配量子及缺失；这不是逐对象账目，也不能把分配栈归为某次 GC 暂停的原因。`topAllocationStacks.stackId` 在根级 `gcAllocationSampling.allocationCallStacks` 查完整栈，ID 只在该份报告内有效。没有事件、类型或栈时保留 `NOT_MEASURED`。已有 trace 可用 `dotnet CpuParse.dll <轮目录> <新报告名>.json` 重解析，无需重新采集。
 
+解析器职责：`CpuParse.cs` 管参数、资源寿命与编排；`CpuPhaseReport.cs` 读取轮次证据、构造时窗并生成实际 OS CPU、阶段与总报告；`CpuTraceAnalysis.cs` 读取 TraceLog、在线聚合 AllocationTick 并共享原生栈索引、CodeAddress 描述缓存与完整分配栈表；`PlayingObservations.cs` 解析日志、帧间隔、尖峰候选和实际位移。入口持有 `JsonDocument` 与 `TraceLog` 直至流式 JSON 序列化完成，随后关闭索引并清理 `threads.etlx`；不保存原始分配 tick，不逐事件展开分配栈。
+
 批次先持共享构建锁，通过 `Update-UESTCGameBuild` 普通构建与 Godot 增量导入，预烘由 Root 按条件安排。`preparation.json` 留真实准备时间和调用，单独于每轮 capture 脚本计时。每轮再取锁，用产品同一 `Test-UESTCLaunchOutputs` 检查正式程序集、已发布业务清单、原生导入缓存三类产物存在，不判断新旧；缺失直接失败，正式计时内不补构建。每轮保留 `launch.json`、`launcher-timing.json`、`result.json` 和隔离 save/log；原生启动绑定、等锁与输出检查开销计入脚本进入时长。
 
 缓存分别用 `-GeometryCache valid|missing|unknown`、`-PipelineCache first-run|unknown`、`-SystemFileCache warm|reboot-first-run|unknown` 声明，附 `-CacheEvidence`、`-JustPrebaked yes|no|unknown` 与 `-Device`。声明针对显式准备后的状态，脚本不清缓存，预烘后不能宣称 OS 冷。每轮使用新的 APPDATA/LOCALAPPDATA，管线条件只能是 first-run 或 unknown，当前入口不提供热管线测量；系统文件缓存的 warm 独立声明。同批只有首轮可沿用 reboot-first-run 系统文件条件，后续自动记 unknown。
