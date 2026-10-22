@@ -35,13 +35,7 @@ public sealed class RestoreFailureFlowTests
             throw new InvalidOperationException("The flow session must retain its original exception type while keeping the existing restore-error display.");
         if (f.Diagnostics.Count != 1)
             throw new InvalidOperationException("The expected restore failure was not logged exactly once: " + string.Join(Environment.NewLine, f.Diagnostics));
-        if (!bootFailed) f.Flow.Dispose();
-        else
-        {
-            try { f.Flow.Dispose(); throw new InvalidOperationException("Disposal lost the failed boot readiness."); }
-            catch (AggregateException error) when (error.Flatten().InnerExceptions.Contains(bootFailure) &&
-                error.Flatten().InnerExceptions.All(cause => ReferenceEquals(cause, bootFailure))) { }
-        }
+        f.Flow.Dispose();
     }
 
     [TestCase]

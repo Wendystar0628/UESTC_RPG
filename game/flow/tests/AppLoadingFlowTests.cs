@@ -79,27 +79,26 @@ public sealed class AppLoadingFlowTests
             var causes = error.Flatten().InnerExceptions;
             if (!causes.Contains(first) || !causes.Contains(second)) throw;
         }
-        // The title joined only BackgroundReady. Disposal owns both projections.
-        try { flow.Dispose(); throw new InvalidOperationException("Disposal lost the unjoined map readiness failure."); }
-        catch (AggregateException error) when (error.Flatten().InnerExceptions.Contains(first) &&
-            error.Flatten().InnerExceptions.All(cause => ReferenceEquals(cause, first))) { }
+        // StageAppFailure receives preparation failures; disposal only observes both projections.
+        flow.Dispose();
         if (rig.Camera.InputLocked || !flow.MapReady.IsFaulted || !flow.BackgroundReady.IsFaulted)
-            throw new InvalidOperationException("Terminal readiness collection skipped cleanup or changed failure to cancellation.");
+            throw new InvalidOperationException("Terminal readiness observation skipped cleanup or changed failure to cancellation.");
     }
 
     [TestCase, TestCategory(TestReason.Regression)]
-    public void DisposalReceivesBootFailureBeforeAnyBackgroundPreparationExists()
+    public void DisposalObservesBootFailureBeforeAnyBackgroundPreparationExists()
     {
         var rig = new FlowTestRig(); var saves = new FullSave(rig);
         foreach (var failure in new Exception[] { new InvalidDataException("BeforeMap failed"), new OperationCanceledException() })
         {
             var flow = rig.CreateFlow(saves, Maps(), new TestAppExit(false));
             flow.FailBoot(failure);
-            try { flow.Dispose(); throw new InvalidOperationException("Disposal lost early boot readiness failures."); }
-            catch (AggregateException error) when (error.Flatten().InnerExceptions.Contains(failure) &&
-                error.Flatten().InnerExceptions.All(cause => ReferenceEquals(cause, failure))) { }
-            if (!flow.MapReady.IsFaulted || !flow.BackgroundReady.IsFaulted)
-                throw new InvalidOperationException("Closing replaced the original failure with cancellation.");
+            // StageAppFailure has already received this failure before publishing FailBoot.
+            flow.Dispose();
+            if (!flow.MapReady.IsFaulted || !flow.BackgroundReady.IsFaulted ||
+                !ReferenceEquals(flow.MapReady.Exception?.InnerException, failure) ||
+                !ReferenceEquals(flow.BackgroundReady.Exception?.InnerException, failure))
+                throw new InvalidOperationException("Closing replaced the original readiness failure.");
         }
         var canceled = rig.CreateFlow(saves, Maps(), new TestAppExit(false));
         canceled.Dispose();
