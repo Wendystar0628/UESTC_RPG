@@ -238,9 +238,8 @@ internal sealed class BakeQueue : IDisposable
                 _failure = error;
                 return error;
             }
-            var code = _failure is AppStartupException startup ? startup.Code : AppStartupFailureCodes.BakeFailed;
             var cause = _failures.Count == 1 ? error : new AggregateException("Bake work failed.", _failures);
-            return _failure = new AppStartupException(code, "Local bake work failed.", cause);
+            return _failure = new AppStartupException("Local bake work failed.", cause);
         }
     }
 

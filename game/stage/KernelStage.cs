@@ -195,9 +195,6 @@ public partial class KernelStage : Node3D, IAppExit, IStageGateHost
     }
 
     internal bool CanHandleFailure => !_treeExited && !_shutdownStarted;
-    internal bool CanKeepFailurePresentation => !_closing && CanHandleFailure;
-    internal Task ShutdownCompletion => _shutdownTask ?? _closeTask
-        ?? throw new InvalidOperationException("No close operation owns this invalidated startup session.");
 
     internal void MarkFailure()
     {
@@ -211,12 +208,6 @@ public partial class KernelStage : Node3D, IAppExit, IStageGateHost
     }
 
     internal void CancelStartupCapture() => _captureLifetime.Cancel();
-
-    internal Task ReleaseStartupPresentation()
-    {
-        ReleaseStartupFlow();
-        return DisposeBootLoading();
-    }
 
     private async Task StartWorld()
     {
@@ -272,7 +263,6 @@ public partial class KernelStage : Node3D, IAppExit, IStageGateHost
             else await StartDirectWorld(registry, options, appBoot, maps, _backgroundPreparation);
             CheckStartupActive();
             _startupFinished = true;
-            _startupFailure.CompleteBoot();
             if (_flow!.IsPlaying) await CompletePlayingStartup();
         }
         catch (OperationCanceledException error) when (_captureLifetime.IsCancellationRequested &&
@@ -525,7 +515,6 @@ public partial class KernelStage : Node3D, IAppExit, IStageGateHost
         _shutdownTask = completion.Task;
         _shutdownStarted = true;
         _closing = true;
-        _startupFailure.InvalidateSession();
         _ = Finish();
         return _shutdownTask;
 

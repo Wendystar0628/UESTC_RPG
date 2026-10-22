@@ -14,6 +14,7 @@ public partial class Boot : Node
     public static bool Failed { get; private set; }
     public override void _EnterTree()
     {
+        DiagnosticLog.EnableGodotOutput();
         GetTree().AutoAcceptQuit = false;
         Failed = false;
         FixedShots = [];

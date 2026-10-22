@@ -182,7 +182,7 @@ public sealed class InteriorProviderScopeTests
     public void ConstructorBoundaryPreservesOriginalFailuresAndReflectionErrors()
     {
         foreach (var error in new Exception[] { new IOException("Constructor resource failed."),
-            new AppStartupException(AppStartupFailureCodes.Installation, "Required constructor resource failed.") })
+            new AppStartupException("Required constructor resource failed.") })
         {
             var registry = new ServiceRegistry();
             registry.Discover([typeof(ThrowingService)], _ => "fixture");

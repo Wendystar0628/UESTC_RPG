@@ -147,7 +147,7 @@ internal static class MapServiceTestSupport
         public Exception? Failure { get; private set; }
         public AppStartupException ReportFailure([FailureHandler("SYS-MAPS")] Exception error)
         {
-            var failure = error as AppStartupException ?? new(AppStartupFailureCodes.MapPreparation, "Map preparation failed.", error);
+            var failure = error as AppStartupException ?? new("Map preparation failed.", error);
             Failure = failure;
             return failure;
         }

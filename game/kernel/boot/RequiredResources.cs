@@ -35,8 +35,7 @@ public sealed class RequiredResources : IRequiredResources
         try { return read(); }
         catch (Exception error)
         {
-            throw new AppStartupException(AppStartupFailureCodes.Installation,
-                $"Required installation resource could not be read: {path}.", error);
+            throw new AppStartupException($"Required installation resource could not be read: {path}.", error);
         }
     }
 }

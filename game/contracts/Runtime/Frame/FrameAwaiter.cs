@@ -64,7 +64,7 @@ public static class FrameAwaiter
         try { await ReadyDrawAsync(host, ready, timeout, cancellationToken); }
         catch (TimeoutException error)
         {
-            throw AppStartupException.Stalled("Startup frame presentation stalled.", error);
+            throw new AppStartupException("Startup frame presentation stalled.", error);
         }
     }
 

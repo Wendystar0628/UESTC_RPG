@@ -24,18 +24,17 @@ public sealed class BakeQueueTests
         catch (Exception actual) { awaited = actual; }
         queue.Dispose();
         if (!ReferenceEquals(awaited, error) || !ReferenceEquals(handle.Failure, error) ||
-            queue.Failure is not AppStartupException { Code: AppStartupFailureCodes.BakeFailed } coded || !ReferenceEquals(coded.InnerException, error))
-            throw new InvalidOperationException("Bake failure lost its code or original exception object.");
+            queue.Failure is not AppStartupException terminal || !ReferenceEquals(terminal.InnerException, error))
+            throw new InvalidOperationException("Bake failure lost its terminal type or original exception object.");
         if (queue.Progress.Stage != "生成失败 1 项") throw new InvalidOperationException("A counted worker failure was omitted from progress.");
         queue.ClearFailures();
         if (queue.Progress.Total != 0 || queue.Progress.Done != 0 || queue.Progress.Stage != "已完成")
             throw new InvalidOperationException("Clearing failed work left a stale progress failure.");
         var cleanup = new IOException("Bake publication cleanup failed.");
         queue.RecordFailure(cleanup);
-        if (queue.Failure is not AppStartupException { Code: AppStartupFailureCodes.BakeFailed,
-                InnerException: AggregateException causes } summary ||
+        if (queue.Failure is not AppStartupException { InnerException: AggregateException causes } summary ||
             !ReferenceEquals(queue.Failure, summary) || !causes.InnerExceptions.SequenceEqual(new Exception[] { error, cleanup }))
-            throw new InvalidOperationException("Bake failure publication lost a source or introduced nested code wrappers.");
+            throw new InvalidOperationException("Bake failure publication lost a source or introduced nested terminal wrappers.");
     }
 
     [TestCase]
@@ -71,7 +70,7 @@ public sealed class BakeQueueTests
                 catch (InvalidDataException actual) when (ReferenceEquals(actual, error)) { }
             }
             if (!ReferenceEquals(handle.Failure, error) ||
-                queue.Failure is not AppStartupException { Code: AppStartupFailureCodes.BakeFailed } coded || !ReferenceEquals(coded.InnerException, error))
+                queue.Failure is not AppStartupException terminal || !ReferenceEquals(terminal.InnerException, error))
                 throw new InvalidOperationException("Unload changed the worker failure identity.");
             queue.ClearFailures();
             if (queue.Progress.Total != 0 || queue.Progress.Done != 0 || queue.Progress.Stage != "已完成")
@@ -107,7 +106,7 @@ public sealed class BakeQueueTests
             if (queue.Progress.Done == queue.Progress.Total) throw new InvalidOperationException("Batch completed before source index publication.");
         }
         finally { release.Set(); queue.Dispose(); }
-        if (queue.Failure is not AppStartupException { Code: AppStartupFailureCodes.BakeFailed } coded || !ReferenceEquals(coded.InnerException, error))
+        if (queue.Failure is not AppStartupException terminal || !ReferenceEquals(terminal.InnerException, error))
             throw new InvalidOperationException("Source index publication lost its original failure.");
     }
 

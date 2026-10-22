@@ -66,8 +66,8 @@ public sealed class MapRuntimeFailureTests
             IMapRuntime globalSource = fixture.Runtime;
             AssertThat(globalSource.Failure is null && fixture.Renderer.Failure is null).IsTrue();
             fixture.Runtime._Process(0);
-            var published = globalSource.Failure as AppStartupException ?? throw new InvalidOperationException("Map failure has no startup code.");
-            AssertThat(published.Code == AppStartupFailureCodes.MapPreparation && ReferenceEquals(published.InnerException, original)).IsTrue();
+            var published = globalSource.Failure as AppStartupException ?? throw new InvalidOperationException("Map failure is not terminal.");
+            AssertThat(ReferenceEquals(published.InnerException, original)).IsTrue();
             AssertThat(arrival is null || arrival.Done.IsCompletedSuccessfully).IsTrue();
             // The same cause reaching another route still occupies one slot in the global projection.
             fixture.Renderer.Failure = original;
@@ -84,22 +84,22 @@ public sealed class MapRuntimeFailureTests
         var original = new InvalidOperationException("world crossfade failed");
         var published = source.ReportFailure(original);
         AssertThat(ReferenceEquals(source.Failure, published) && ReferenceEquals(published.InnerException, original) &&
-            published.Code == AppStartupFailureCodes.MapPreparation && source.Arrival is null).IsTrue();
+            source.Arrival is null).IsTrue();
         AssertThat(ReferenceEquals(source.ReportFailure(original), published)).IsTrue();
-        var later = new AppStartupException(AppStartupFailureCodes.Installation, "map resource is missing");
+        var later = new AppStartupException("map resource is missing");
         var collected = source.ReportFailure(later);
         var causes = collected.InnerException as AggregateException ?? throw new InvalidOperationException("Reported map failures were not aggregated.");
-        AssertThat(ReferenceEquals(source.Failure, collected) && collected.Code == later.Code &&
-            causes.InnerExceptions.Count == 2 && causes.InnerExceptions.Contains(original) && causes.InnerExceptions.Contains(later)).IsTrue();
+        AssertThat(ReferenceEquals(source.Failure, collected) && causes.InnerExceptions.Count == 2 &&
+            causes.InnerExceptions.Contains(original) && causes.InnerExceptions.Contains(later)).IsTrue();
         fixture.Runtime._Process(0);
         AssertThat(ReferenceEquals(fixture.Mount.Exception!.InnerException, collected)).IsTrue();
     }
 
     [TestCase, TestCategory(TestReason.Regression), RequireGodotRuntime]
-    public void ExplicitStartupCodeSurvivesProducerAggregation()
+    public void TerminalStartupFailureRetainsItsIdentityAcrossProducerAggregation()
     {
         using var fixture = new MapRuntimeFixture();
-        var original = new AppStartupException(AppStartupFailureCodes.Installation, "map resource is missing");
+        var original = new AppStartupException("map resource is missing");
         fixture.Stream.Failure = original;
         fixture.Runtime._Process(0);
         AssertThat(ReferenceEquals(fixture.Runtime.Failure, original) &&
@@ -107,9 +107,9 @@ public sealed class MapRuntimeFailureTests
         var later = new InvalidDataException("visible producer cleanup failed");
         fixture.Producer.Failure = later;
         fixture.Runtime._Process(0);
-        var published = fixture.Runtime.Failure as AppStartupException ?? throw new InvalidOperationException("Map failure has no startup code.");
+        var published = fixture.Runtime.Failure as AppStartupException ?? throw new InvalidOperationException("Map failure is not terminal.");
         var causes = published.InnerException as AggregateException ?? throw new InvalidOperationException("Map failure lost its diagnostic causes.");
-        AssertThat(published.Code == AppStartupFailureCodes.Installation && causes.InnerExceptions.Count == 2 &&
+        AssertThat(causes.InnerExceptions.Count == 2 &&
             causes.InnerExceptions.Contains(original) && causes.InnerExceptions.Contains(later)).IsTrue();
     }
 
@@ -121,17 +121,17 @@ public sealed class MapRuntimeFailureTests
         fixture.Stream.Failure = original;
         fixture.Runtime._Process(0);
         var published = fixture.Runtime.Failure as AppStartupException ?? throw new InvalidOperationException("Empty aggregate was not published.");
-        AssertThat(published.Code == AppStartupFailureCodes.MapPreparation && ReferenceEquals(published.InnerException, original) &&
+        AssertThat(ReferenceEquals(published.InnerException, original) &&
             ReferenceEquals(fixture.Mount.Exception!.InnerException, published)).IsTrue();
         fixture.Runtime._Process(0);
         AssertThat(ReferenceEquals(fixture.Runtime.Failure, published)).IsTrue();
-        var later = new AppStartupException(AppStartupFailureCodes.Installation, "map resource is missing");
+        var later = new AppStartupException("map resource is missing");
         var nested = new AggregateException();
         fixture.Producer.Failure = new AggregateException(original, later, nested);
         fixture.Runtime._Process(0);
         var collected = fixture.Runtime.Failure as AppStartupException ?? throw new InvalidOperationException("Aggregate failure was not published.");
         var causes = collected.InnerException as AggregateException ?? throw new InvalidOperationException("Aggregate failure lost its diagnostic causes.");
-        AssertThat(collected.Code == AppStartupFailureCodes.Installation && causes.InnerExceptions.Count == 3 &&
+        AssertThat(causes.InnerExceptions.Count == 3 &&
             causes.InnerExceptions.Contains(original) && causes.InnerExceptions.Contains(later) && causes.InnerExceptions.Contains(nested)).IsTrue();
         fixture.Runtime._Process(0);
         AssertThat(ReferenceEquals(fixture.Runtime.Failure, collected)).IsTrue();
@@ -157,17 +157,17 @@ public sealed class MapRuntimeFailureTests
         stream.Director._Process(0);
         AssertThat(stream.Director.Failure is InvalidDataException && ReferenceEquals(stream.Director.Failure, original) && globalSource.Failure is null).IsTrue();
         fixture.Runtime._Process(0);
-        var published = globalSource.Failure as AppStartupException ?? throw new InvalidOperationException("Map failure has no startup code.");
-        AssertThat(published.Code == AppStartupFailureCodes.MapPreparation && ReferenceEquals(published.InnerException, original)).IsTrue();
+        var published = globalSource.Failure as AppStartupException ?? throw new InvalidOperationException("Map failure is not terminal.");
+        AssertThat(ReferenceEquals(published.InnerException, original)).IsTrue();
         AssertThat(!stream.Director.ResidentReady && !stream.Director.DestinationReady && !stream.Director.ViewReady).IsTrue();
         var later = new InvalidOperationException("another participant failure");
         participant.Failure = new AggregateException(original, later);
         stream.Director._Process(0);
         fixture.Runtime._Process(0);
-        var collected = globalSource.Failure as AppStartupException ?? throw new InvalidOperationException("Participant faults have no startup code.");
+        var collected = globalSource.Failure as AppStartupException ?? throw new InvalidOperationException("Participant faults are not terminal.");
         var causes = collected.InnerException as AggregateException ?? throw new InvalidOperationException("Participant faults were not projected.");
         var failures = causes.Flatten().InnerExceptions;
-        AssertThat(collected.Code == AppStartupFailureCodes.MapPreparation && failures.Count == 2 && failures.Contains(original) && failures.Contains(later)).IsTrue();
+        AssertThat(failures.Count == 2 && failures.Contains(original) && failures.Contains(later)).IsTrue();
         stream.Director._Process(0);
         fixture.Runtime._Process(0);
         AssertThat(ReferenceEquals(globalSource.Failure, collected)).IsTrue();

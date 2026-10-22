@@ -58,7 +58,7 @@ public sealed class MapRuntimeShutdownTests
             {
                 var causes = error.InnerException as AggregateException ?? throw new InvalidOperationException("Shutdown lost its diagnostic causes.");
                 var failures = causes.Flatten().InnerExceptions;
-                AssertThat(error.Code == AppStartupFailureCodes.MapPreparation && failures.Count == 4 && failures.Contains(original) &&
+                AssertThat(failures.Count == 4 && failures.Contains(original) &&
                     failures.Contains(stopping) && failures.Contains(draining) && failures.Contains(releasing)).IsTrue();
                 AssertThat(ReferenceEquals(runtime.Failure, error) && original.StackTrace is not null).IsTrue();
             }

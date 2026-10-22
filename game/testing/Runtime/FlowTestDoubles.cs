@@ -74,7 +74,7 @@ internal sealed class FlowRuntimeTestStub(Func<bool> covered) : IMapRuntime, IMa
     }
     public AppStartupException ReportFailure([FailureHandler("SYS-MAPS")] Exception error)
     {
-        var failure = error as AppStartupException ?? new(AppStartupFailureCodes.MapPreparation, "Map preparation failed.", error);
+        var failure = error as AppStartupException ?? new("Map preparation failed.", error);
         Failure = failure;
         return failure;
     }

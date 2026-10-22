@@ -372,7 +372,7 @@ public sealed class BakeWindowTests
                     catch (InvalidDataException error) when (ReferenceEquals(error, original)) { }
                 }
             var failureRetained = original is null ? queue.Failure is null :
-                queue.Failure is AppStartupException { Code: AppStartupFailureCodes.BakeFailed } failure && ReferenceEquals(failure.InnerException, original);
+                queue.Failure is AppStartupException failure && ReferenceEquals(failure.InnerException, original);
             if ((original is null ? stopped is not OperationCanceledException || !handle.Done.IsCanceled : !ReferenceEquals(stopped, original)) ||
                 handle.State != BakeState.Failed || handle.Product is not null || !failureRetained || Directory.Exists(cache) ||
                 original is not null && !ReferenceEquals(handle.Failure, original))

@@ -7,7 +7,7 @@ public interface IMapRuntime
 {
     /// <summary>Original preparation and runtime failures for this map lifetime; cancellation is separate.</summary>
     Exception? Failure { get; }
-    /// <summary>Receives a terminal map-lifetime failure into the same projection; retains original causes and startup codes.</summary>
+    /// <summary>Receives a terminal map-lifetime failure into the same projection; retains original causes.</summary>
     AppStartupException ReportFailure([FailureHandler("SYS-MAPS")] Exception error);
     /// <summary>Destination is the presented eye pose including FOV; walking collision uses collisionFeet when supplied.</summary>
     IMapArrival Arrive(Pose destination, ViewMode mode, NavSpace? space = null, System.Numerics.Vector3? collisionFeet = null);

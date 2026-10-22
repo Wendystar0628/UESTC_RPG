@@ -14,7 +14,7 @@ internal static class StageModules
             Type[] types;
             try { types = Assembly.Load(new AssemblyName(name)).GetTypes(); }
             catch (Exception error)
-            { throw new AppStartupException(AppStartupFailureCodes.Installation, $"Cannot load module assembly: {name}.", error); }
+            { throw new AppStartupException($"Cannot load module assembly: {name}.", error); }
             foreach (var type in types) yield return type;
         }
     }

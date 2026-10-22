@@ -29,7 +29,7 @@ public class MapDataSource(IRequiredResources resources)
                 MapCatalog.ReadEntry(b.Entry, b.Map, b.Geo, b.Waypoints)).ToArray()));
         }
         catch (Exception error) when (error is InvalidDataException or JsonException)
-        { throw new AppStartupException(AppStartupFailureCodes.DataInvalid, "Map catalogue data is invalid.", error); }
+        { throw new AppStartupException("Map catalogue data is invalid.", error); }
     }
 
     /// <summary>
@@ -51,7 +51,7 @@ public class MapDataSource(IRequiredResources resources)
             return Task.Run(() => AssembleLoadInput(entry, files, version));
         }
         catch (Exception error) when (error is InvalidDataException or JsonException)
-        { throw new AppStartupException(AppStartupFailureCodes.DataInvalid, "Map input data is invalid.", error); }
+        { throw new AppStartupException("Map input data is invalid.", error); }
     }
 
     private static MapLoadInput ReadLooseLoadInput(MapCatalogEntry entry, string root)
@@ -64,7 +64,7 @@ public class MapDataSource(IRequiredResources resources)
             return AssembleLoadInput(entry, files, version);
         }
         catch (Exception error) when (error is InvalidDataException or JsonException)
-        { throw new AppStartupException(AppStartupFailureCodes.DataInvalid, "Map input data is invalid.", error); }
+        { throw new AppStartupException("Map input data is invalid.", error); }
     }
 
     private static MapLoadInput AssembleLoadInput(MapCatalogEntry entry,
@@ -76,7 +76,7 @@ public class MapDataSource(IRequiredResources resources)
             return input with { Entry = MapCatalog.ReadEntry(entry, input.Files) };
         }
         catch (Exception error) when (error is InvalidDataException or JsonException)
-        { throw new AppStartupException(AppStartupFailureCodes.DataInvalid, "Map input data is invalid.", error); }
+        { throw new AppStartupException("Map input data is invalid.", error); }
     }
 
     // Capture revisions once at the IO boundary. Only global asset capture resolves Godot paths here.
@@ -123,8 +123,7 @@ public class MapDataSource(IRequiredResources resources)
             }
             catch (Exception error)
             {
-                throw new AppStartupException(AppStartupFailureCodes.Installation,
-                    $"Required installation resource could not be read: {resourcePath}.", error);
+                throw new AppStartupException($"Required installation resource could not be read: {resourcePath}.", error);
             }
         }
 
@@ -160,7 +159,7 @@ public class MapDataSource(IRequiredResources resources)
     private static byte[] ReadRequired(IRequiredResources resources, string path)
     {
         if (string.IsNullOrWhiteSpace(path) || !path.StartsWith("res://", StringComparison.Ordinal))
-            throw new AppStartupException(AppStartupFailureCodes.DataInvalid, "Map resources must use res:// paths.");
+            throw new AppStartupException("Map resources must use res:// paths.");
         return resources.ReadBytes(path);
     }
 }

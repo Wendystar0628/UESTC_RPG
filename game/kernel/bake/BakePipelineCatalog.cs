@@ -29,7 +29,7 @@ internal sealed class BakePipelineCatalog
             return Array.AsReadOnly(combinations);
         }
         catch (Exception error) when (error is InvalidDataException or JsonException)
-        { throw new AppStartupException(AppStartupFailureCodes.DataInvalid, "Build pipeline catalogue is invalid.", error); }
+        { throw new AppStartupException("Build pipeline catalogue is invalid.", error); }
     }
 
     /// <summary>Called only after the explicit all-map bake has completed successfully.</summary>

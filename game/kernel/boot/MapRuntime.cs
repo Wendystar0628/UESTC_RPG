@@ -87,9 +87,8 @@ public partial class MapRuntime : Node, IMapRuntime, IMapLifetime
         if (!added && _failure is { } existing) return existing;
         if (_failures.Count == 1 && _failures[0] is AppStartupException startup)
             return _failure = startup;
-        var code = _failures.OfType<AppStartupException>().FirstOrDefault()?.Code ?? AppStartupFailureCodes.MapPreparation;
         var diagnostic = _failures.Count == 1 ? _failures[0] : new AggregateException("Map runtime failed.", _failures);
-        return _failure = new AppStartupException(code, "Map preparation failed.", diagnostic);
+        return _failure = new AppStartupException("Map preparation failed.", diagnostic);
     }
 
     public void Bind(MapRuntimeDependencies dependencies)
