@@ -46,11 +46,7 @@ internal sealed class StageStartupTrace
             if (state == AppState.Playing)
             {
                 _profileObserver ??= KernelServices.Get<IObserverState>();
-                if (_profileInput is null)
-                {
-                    _profileInput = KernelServices.Get<IInputRouter>();
-                    GD.Print($"STARTUP_INPUT action=move_forward physicalKey={_profileInput.PhysicalKey("move_forward")}");
-                }
+                _profileInput ??= KernelServices.Get<IInputRouter>();
                 _profileWalk ??= KernelServices.Get<IWalkController>();
                 var cursorVisible = _profileInput.CursorVisible;
                 var cursorHeld = _profileInput.CursorHeld;

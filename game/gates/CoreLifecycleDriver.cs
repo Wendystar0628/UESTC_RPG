@@ -14,7 +14,7 @@ using KernelServices = Campus.Kernel.Registry.Kernel;
 
 namespace Campus.Gates;
 
-// G5/G20 core lifecycle: Title -> NewGame -> Walk/Fly/Walk -> Teleport -> Title -> Continue -> window close/save; a second process restores it.
+// G5/G20 core lifecycle: Title -> NewGame -> Walk/Fly/Walk -> Settings -> Teleport -> Title -> Continue -> window close/save; a second process restores it.
 internal sealed class CoreLifecycleDriver(IStageGateHost host)
 {
     public async Task<nint> Run(string gate)
@@ -44,7 +44,8 @@ internal sealed class CoreLifecycleDriver(IStageGateHost host)
     private static void RequireFormalServices()
     {
         foreach (var service in new[] { typeof(ICameraRig), typeof(IViewControl), typeof(ITransitDriver), typeof(IObserverState), typeof(IWalkController),
-            typeof(ICollisionWorld), typeof(IMapService), typeof(IMapRuntime), typeof(IAtlasService), typeof(ISaveService), typeof(IAppFlow) })
+            typeof(ICollisionWorld), typeof(IMapService), typeof(IMapRuntime), typeof(IAtlasService), typeof(ISaveService), typeof(IAppFlow),
+            typeof(IInputRouter), typeof(IUiSurfaceState) })
         {
             var registration = KernelServices.Services.Entries.SingleOrDefault(entry => entry.Kind == RegistrationKind.Service && entry.Id == service.FullName);
             if (registration is null || registration.IsStub)
@@ -66,6 +67,7 @@ internal sealed class CoreLifecycleDriver(IStageGateHost host)
             "New game did not prepare its standing collision and settle.");
         await ExerciseModes(camera, walk, observer);
         await ExerciseInput(camera, walk, input);
+        await ExerciseSettings(input);
         await ExerciseTransit(camera, walk, observer);
         var saved = await saves.SaveNow(SaveReason.Test);
         if (saved.Status != SaveStatus.Saved) throw new InvalidOperationException("Core save failed: " + saved.Error);
@@ -164,6 +166,48 @@ internal sealed class CoreLifecycleDriver(IStageGateHost host)
         GD.Print(FormattableString.Invariant($"CORE_INPUT_READY distance={new System.Numerics.Vector2(moved.X, moved.Z).Length():R} forward={System.Numerics.Vector3.Dot(moved, forward):R}"));
         await CoreWait(() => camera.Speed < .0001f && walk.IsSettled,
             "The released movement input remained active.");
+    }
+
+    private async Task ExerciseSettings(IInputRouter input)
+    {
+        var surface = KernelServices.Get<IUiSurfaceState>();
+        if ((surface.Open & UiSurface.SettingsCard) != 0 || surface.SettingsPage is not null)
+            throw new InvalidOperationException("The core settings check did not start with a closed settings card.");
+        var cursorVisibleBefore = input.CursorVisible;
+        await TapEscape();
+        await CoreWait(() => (surface.Open & UiSurface.SettingsCard) != 0 && surface.SettingsPage is not null && input.CursorVisible,
+            "Escape did not open an interactive settings page with its rows built and cursor visible.");
+        if (input.CursorHeld)
+            throw new InvalidOperationException("The open settings card did not request a visible cursor independently of the cursor key.");
+        await TapEscape();
+        await CoreWait(() => (surface.Open & UiSurface.SettingsCard) == 0 && surface.SettingsPage is null &&
+            input.CursorVisible == cursorVisibleBefore,
+            "Escape did not withdraw the settings page and restore the input owner's cursor state.");
+        GD.Print("CORE_SETTINGS_READY");
+    }
+
+    private async Task TapEscape()
+    {
+        host.CheckActive();
+        Exception? failure = null;
+        try
+        {
+            using var press = new InputEventKey { Keycode = Key.Escape, PhysicalKeycode = Key.Escape, Pressed = true };
+            Input.ParseInputEvent(press);
+            await FrameAwaiter.ProcessAsync(host.Stage, host.Lifetime);
+            host.CheckActive();
+        }
+        catch (Exception error) { failure = error; throw; }
+        finally
+        {
+            try
+            {
+                using var release = new InputEventKey { Keycode = Key.Escape, PhysicalKeycode = Key.Escape, Pressed = false };
+                Input.ParseInputEvent(release);
+            }
+            catch (Exception release) when (failure is not null)
+            { throw new AggregateException("Core settings input and its release both failed.", failure, release); }
+        }
     }
 
     private async Task ExerciseTransit(ICameraRig camera, IWalkController walk, IObserverState observer)

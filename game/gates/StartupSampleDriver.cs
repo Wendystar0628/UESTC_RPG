@@ -12,6 +12,8 @@ namespace Campus.Gates;
 internal sealed class StartupSampleDriver(IStageGateHost host)
 {
     private static readonly StringName ForwardAction = "move_forward";
+    private const double IdleMilliseconds = 10_000;
+    private const double ForwardHoldMilliseconds = 20_000;
 
     public async Task Run(StartupScenario scenario)
     {
@@ -77,11 +79,11 @@ internal sealed class StartupSampleDriver(IStageGateHost host)
         GD.Print($"STARTUP_INPUT action=move_forward physicalKey={(int)physicalKey}");
         if (Input.IsActionPressed(ForwardAction))
             throw new InvalidOperationException("The startup sample inherited a held forward action.");
-        Trace("playing-idle-start");
-        await HoldFor(10_000, observer, walk);
+        Trace("playing-idle-start", IdleMilliseconds);
+        await HoldFor(IdleMilliseconds, observer, walk);
         Trace("playing-idle-end");
         await Press(physicalKey, true, "playing-forward-start", "playing-forward-end",
-            () => HoldFor(20_000, observer, walk));
+            () => HoldFor(ForwardHoldMilliseconds, observer, walk), ForwardHoldMilliseconds);
         // Wait a real later frame so the controller consumes its release, rather than trusting raw action state alone.
         await NextFrame();
         var releaseProgress = (walk.BodyPose.Position, walk.Velocity);
@@ -128,13 +130,14 @@ internal sealed class StartupSampleDriver(IStageGateHost host)
         host.CheckActive();
     }
 
-    private static async Task Press(Key key, bool physical, string start, string end, Func<Task> whilePressed)
+    private static async Task Press(Key key, bool physical, string start, string end, Func<Task> whilePressed,
+        double? targetMilliseconds = null)
     {
         Exception? failure = null;
         var pressed = false;
         try
         {
-            Trace(start);
+            Trace(start, targetMilliseconds);
             pressed = true;
             SendKey(key, true, physical);
             await whilePressed();
@@ -157,6 +160,10 @@ internal sealed class StartupSampleDriver(IStageGateHost host)
         Input.ParseInputEvent(input);
     }
 
-    private static void Trace(string phase) =>
-        GD.Print(FormattableString.Invariant($"STARTUP_PHASE {phase} {FrameClock.MonotonicMilliseconds:R} frame={Engine.GetProcessFrames()}"));
+    private static void Trace(string phase, double? targetMilliseconds = null)
+    {
+        var target = targetMilliseconds is { } milliseconds
+            ? FormattableString.Invariant($" targetMilliseconds={milliseconds:R}") : "";
+        GD.Print(FormattableString.Invariant($"STARTUP_PHASE {phase} {FrameClock.MonotonicMilliseconds:R} frame={Engine.GetProcessFrames()}{target}"));
+    }
 }

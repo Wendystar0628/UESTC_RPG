@@ -25,8 +25,7 @@ $playingCpu = [Collections.Generic.List[object]]::new()
 $playingEdges = [Collections.Generic.List[object]]::new()
 $forwardPhysicalKey = $null
 $playingState = 'waiting'
-$playingIdleSeconds = 10
-$playingForwardSeconds = 20
+$playingTargetSeconds = @{}
 $moveRequested = $null
 $releaseRequested = $null
 $logReader = $null
@@ -228,6 +227,11 @@ try {
                 }
                 if ($m.Groups[1].Value -eq 'new-game-enter') { $newGameEnterAnchor = $anchors[$anchors.Count - 1] }
                 $edge = $anchors[$anchors.Count - 1]
+                if ($edge.name -in @('playing-idle-start','playing-forward-start')) {
+                    $target = [regex]::Match($edge.suffix, '(?:^|\s)targetMilliseconds=([0-9.]+)(?:\s|$)')
+                    if (-not $target.Success) { throw "$($edge.name) did not publish its target duration." }
+                    $playingTargetSeconds[$edge.name] = [double]::Parse($target.Groups[1].Value, [Globalization.CultureInfo]::InvariantCulture) / 1000
+                }
                 switch ($edge.name) {
                     'title-enter-press' { $inputRequest = $edge }
                     'title-enter-release' { $inputRelease = $edge }
@@ -280,7 +284,7 @@ try {
     $captureEndpoint = if ($Mode -eq 'title') {
         if ($diagnostic) { 'static-menu-input-ready-and-background-new-game-preload-ready' }
         else { 'static-menu-input-ready' }
-    } elseif ($playingSample) { 'first-Walk-plus-diagnostic-10s-idle-20s-forward-and-observed-action-release' }
+    } elseif ($playingSample) { 'first-Walk-plus-driver-timed-diagnostic-idle-forward-and-observed-action-release' }
     else { 'playing-realtime-and-Walk-input-ready' }
     $realtimeSeconds = Observed-Seconds 'realtime' $scriptEnteredTimestamp
     $inputSeconds = if ($inputRequest -and $phaseByName.ContainsKey('input-ready')) {
@@ -312,7 +316,7 @@ try {
         collectorStoppedWhileTargetAlive=if($diagnostic){$stopped}else{$null}; collectorFinishedUtc=if($diagnostic){[DateTime]::UtcNow.ToString('O')}else{$null};
         phaseObservations=$anchors.ToArray(); cpuSnapshots=$snapshots.ToArray(); phasePollingMilliseconds=20;
         playingSample=[ordered]@{ enabled=$playingSample; state=$playingState; edges=$playingEdges.ToArray();
-            targetIdleSeconds=if($playingSample){$playingIdleSeconds}else{$null}; targetForwardHoldSeconds=if($playingSample){$playingForwardSeconds}else{$null};
+            targetIdleSeconds=if($playingSample){$playingTargetSeconds['playing-idle-start']}else{$null}; targetForwardHoldSeconds=if($playingSample){$playingTargetSeconds['playing-forward-start']}else{$null};
             physicalKey=$forwardPhysicalKey; request=$moveRequested; release=$releaseRequested; processCpuReads=$playingCpu.ToArray();
             method='Game-owned Input.ParseInputEvent; normal controller routing, real pose/velocity observations';
             diagnosticOverhead='EventPipe, every-frame engine logging, incremental 20ms log polling, phase thread snapshots and nominal 1s process counters are enabled. Read durations are retained. No causal overhead subtraction or experience qualification.' };
