@@ -18,7 +18,7 @@ namespace Campus.Camera;
 [KernelNode("observer-camera")]
 [SaveSection("view", Version = 1, Phase = RestorePhase.Pose, Order = 60)]
 public partial class ObserverCamera : Node, ICameraRig, IObserverState, IViewControl, IInputRouter,
-    ICameraPoseValidator, IMapAware, IMapDataParticipant, ISaveSection<ViewSaveData>
+    ICameraPoseValidator, IMapAware, IMapDataParticipant, ISaveSection<ViewSaveData>, IRegistryExitParticipant
 {
     private readonly ObserverPresentation _presentation;
     private readonly ObserverFlight _flight;
@@ -34,6 +34,9 @@ public partial class ObserverCamera : Node, ICameraRig, IObserverState, IViewCon
     private TaskCompletionSource<ModeSwitchResult>? _walkEntry;
     private bool _modeSwitchRunning;
     private ObserverListener? _listener;
+    private IAppFailure? _failure;
+    private Task? _internalModeTask;
+    private bool _modeRequestsStopped;
 
     public event Action? WalkEntryRefused;
     public FlightTuning Tuning { get; } = new();
@@ -49,6 +52,7 @@ public partial class ObserverCamera : Node, ICameraRig, IObserverState, IViewCon
 
     public override void _Ready()
     {
+        _failure = KernelServices.Get<IAppFailure>();
         _flow = KernelServices.Get<IAppFlow>();
         _rules = KernelServices.Get<IRuleset>();
         _world = KernelServices.Get<IWorldState>();
@@ -78,6 +82,7 @@ public partial class ObserverCamera : Node, ICameraRig, IObserverState, IViewCon
 
     public override void _ExitTree()
     {
+        _modeRequestsStopped = true;
         CancelWalkEntry();
         if (_flow is not null) _flow.Changed -= OnFlowChanged;
         if (_world is not null) _world.InstanceChanged -= OnWorldInstanceChanged;
@@ -102,7 +107,7 @@ public partial class ObserverCamera : Node, ICameraRig, IObserverState, IViewCon
         if (Mode == ViewMode.Fly && ActiveTransit is null) _presentation.RefreshFlyFov();
         if (Mode == ViewMode.Walk && _walk is { ExitRequested: true })
         {
-            _ = SetMode(ViewMode.Fly, ModeSwitchVia.Key);
+            RequestMode(ViewMode.Fly, ModeSwitchVia.Key);
             return;
         }
         if (ActiveTransit is not null)
@@ -149,7 +154,7 @@ public partial class ObserverCamera : Node, ICameraRig, IObserverState, IViewCon
         if (!_controls.Locked && input.RecoverHeld >= Tuning.ReturnHoldSeconds && !_recoverTriggered)
         {
             _recoverTriggered = true;
-            if (!_walk.ReturnToSafety()) _ = SetMode(ViewMode.Fly, ModeSwitchVia.Key);
+            if (!_walk.ReturnToSafety()) RequestMode(ViewMode.Fly, ModeSwitchVia.Key);
         }
         if (input.RecoverHeld == 0) _recoverTriggered = false;
     }
@@ -166,8 +171,22 @@ public partial class ObserverCamera : Node, ICameraRig, IObserverState, IViewCon
     public Task Prepare(IMapContext context) => _flight.Prepare(context, _presentation.Value);
     public async Task UnloadAsync(MapId from)
     {
+        PrepareForExit();
+        await DrainForExitAsync();
+    }
+
+    public void PrepareForExit()
+    {
+        _modeRequestsStopped = true;
+        CancelWalkEntry();
+        ActiveTransit?.Cancel();
+        _flight.ClearProjection();
+    }
+
+    public async Task DrainForExitAsync()
+    {
         var transit = _transit?.CancelAsync() ?? Task.CompletedTask;
-        var draining = Task.WhenAll(transit, _flight.DrainAsync());
+        var draining = Task.WhenAll(transit, _flight.DrainAsync(), _internalModeTask ?? Task.CompletedTask);
         try { await draining; }
         catch { throw draining.Exception!; }
     }
@@ -306,6 +325,21 @@ public partial class ObserverCamera : Node, ICameraRig, IObserverState, IViewCon
         if (mode == _mode) return Task.FromResult(ModeSwitchResult.Ok);
         ActiveTransit?.Cancel(); ActiveTransit = null;
         return IsPlaying && _mode is not null ? SwitchModeCovered(mode) : ApplyMode(mode);
+    }
+
+    // Key input and automatic walk recovery are camera-owned operations. Public SetMode tasks
+    // remain owned by their external callers; only these internal requests enter this receiver.
+    internal void RequestMode(ViewMode mode, ModeSwitchVia via)
+    {
+        if (_modeRequestsStopped || _internalModeTask is { IsCompleted: false }) return;
+        var failure = _failure ?? throw new InvalidOperationException("Camera mode requests require the application failure receiver.");
+        _internalModeTask = Run();
+
+        async Task Run()
+        {
+            try { await SetMode(mode, via); }
+            catch (Exception error) { failure.Report(error); }
+        }
     }
 
     private async Task<ModeSwitchResult> SwitchModeCovered(ViewMode mode)

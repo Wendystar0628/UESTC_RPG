@@ -181,8 +181,11 @@ public sealed class ServiceRegistry
         catch (Exception error) { failures.Add(error); }
         // Runtime drain owns map release; global teardown must not reenter that phase.
         _releasingOwned = true;
-        foreach (var participant in _created.AsEnumerable().Reverse().Select(item => item.Instance).OfType<IRegistryExitParticipant>())
+        var participants = _created.AsEnumerable().Reverse().Select(item => item.Instance).OfType<IRegistryExitParticipant>().ToArray();
+        foreach (var participant in participants)
             try { participant.PrepareForExit(); } catch (Exception error) { failures.Add(error); }
+        foreach (var participant in participants)
+            try { await participant.DrainForExitAsync(); } catch (Exception error) { failures.Add(error); }
         trace?.Invoke("shutdown-nodes");
         Node[] roots = [];
         if (scene is not null)

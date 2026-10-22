@@ -279,7 +279,8 @@ public sealed class BakeService : IBakeService, IBakeContextSource, IMapContentS
         foreach (var map in maps) StartBackgroundCatalog(map);
     }
     /// <summary>Exit retains every owned map and terrain input until the real workers have terminated.</summary>
-    public void PrepareForExit() => Dispose();
+    public void PrepareForExit() => Stop();
+    public Task DrainForExitAsync() => DisposeAsync().AsTask();
 
     private void Stop()
     {

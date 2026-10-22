@@ -48,8 +48,7 @@ public partial class GameCaptureNode : Node, IGameCapture, IRegistryExitParticip
     private const int AlreadyExists = unchecked((int)0x800700B7);
     private IAppLoadingPresentation _loading = null!;
     private readonly CancellationTokenSource _exit = new();
-    private TaskCompletionSource<CaptureResult>? _photo;
-    private Task? _encoding;
+    private Task? _captureTask;
     private IDisposable? _hiddenHud;
     private string? _path;
     private string _diagnosticId = null!;
@@ -62,22 +61,20 @@ public partial class GameCaptureNode : Node, IGameCapture, IRegistryExitParticip
             entry.Kind == RegistrationKind.Node && entry.Type == GetType()).Id;
     }
 
-    public async Task<CaptureResult> CaptureAsync(CaptureRequest request, CancellationToken cancellationToken = default)
+    public Task<CaptureResult> CaptureAsync(CaptureRequest request, CancellationToken cancellationToken = default)
     {
         RequireMainThread();
         if (!Available() || cancellationToken.IsCancellationRequested)
-            return new(CaptureStatus.Unavailable, null);
-        if (_busy) return new(CaptureStatus.Busy, _path);
+            return Task.FromResult(new CaptureResult(CaptureStatus.Unavailable, null));
+        if (_busy) return Task.FromResult(new CaptureResult(CaptureStatus.Busy, _path));
         _busy = true;
         _path = null;
-        var completion = new TaskCompletionSource<CaptureResult>(TaskCreationOptions.RunContinuationsAsynchronously);
-        _photo = completion;
-        await CapturePhotoAsync(request, completion, cancellationToken);
-        return await completion.Task;
+        var capture = CapturePhotoAsync(request, cancellationToken);
+        _captureTask = capture;
+        return capture;
     }
 
-    private async Task CapturePhotoAsync(CaptureRequest request, TaskCompletionSource<CaptureResult> completion,
-        CancellationToken cancellationToken)
+    private async Task<CaptureResult> CapturePhotoAsync(CaptureRequest request, CancellationToken cancellationToken)
     {
         using var lifetime = CancellationTokenSource.CreateLinkedTokenSource(_exit.Token, cancellationToken);
         try
@@ -85,19 +82,25 @@ public partial class GameCaptureNode : Node, IGameCapture, IRegistryExitParticip
             _path = request.OutputPath ?? Path.Combine(OS.GetUserDataDir(), "photos", $"photo-{Time.GetTicksUsec()}.png");
             if (!Path.IsPathFullyQualified(_path)) throw new ArgumentException("Capture output must be an absolute filename.");
             var path = await SaveFrameAsync(_path, request.HideUi, request.OutputPath is null, lifetime.Token);
-            completion.TrySetResult(new(CaptureStatus.Saved, path));
+            return new(CaptureStatus.Saved, path);
         }
-        catch (OperationCanceledException) { completion.TrySetResult(new(CaptureStatus.Unavailable, _path)); }
-        catch (Exception error) { completion.TrySetException(error); }
+        catch (OperationCanceledException) { return new(CaptureStatus.Unavailable, _path); }
         finally { EndCapture(); }
     }
 
-    public async Task<byte[]?> CaptureThumbnailAsync(CancellationToken cancellationToken = default)
+    public Task<byte[]?> CaptureThumbnailAsync(CancellationToken cancellationToken = default)
     {
         RequireMainThread();
-        if (_busy || !Available() || _loading.Active || cancellationToken.IsCancellationRequested) return null;
+        if (_busy || !Available() || _loading.Active || cancellationToken.IsCancellationRequested) return Task.FromResult<byte[]?>(null);
         _busy = true;
         _path = null;
+        var capture = CaptureThumbnailCore(cancellationToken);
+        _captureTask = capture;
+        return capture;
+    }
+
+    private async Task<byte[]?> CaptureThumbnailCore(CancellationToken cancellationToken)
+    {
         using var lifetime = CancellationTokenSource.CreateLinkedTokenSource(_exit.Token, cancellationToken);
         try
         {
@@ -123,7 +126,6 @@ public partial class GameCaptureNode : Node, IGameCapture, IRegistryExitParticip
                     return bytes;
                 }
             });
-            _encoding = encoding;
             return await encoding;
         }
         catch (OperationCanceledException) { return null; }
@@ -175,7 +177,6 @@ public partial class GameCaptureNode : Node, IGameCapture, IRegistryExitParticip
                 return WritePhoto(bytes, path, unique, cancellationToken);
             }
         });
-        _encoding = encoding;
         return await encoding;
     }
 
@@ -229,7 +230,6 @@ public partial class GameCaptureNode : Node, IGameCapture, IRegistryExitParticip
         RestoreUi();
         _busy = false;
         _path = null;
-        _encoding = null;
     }
 
     private static void RequireMainThread()
@@ -245,14 +245,13 @@ public partial class GameCaptureNode : Node, IGameCapture, IRegistryExitParticip
         _exiting = true;
         _exit.Cancel();
         RestoreUi();
-        // Drain only the worker that owns a detached native Image; it never waits for the scene thread.
-        try { _encoding?.GetAwaiter().GetResult(); }
-        catch (OperationCanceledException) { }
-        catch (Exception error)
-        {
-            _photo?.TrySetException(error);
-            throw;
-        }
+    }
+
+    public async Task DrainForExitAsync()
+    {
+        if (_captureTask is not { } capture) return;
+        try { await capture; }
+        catch (OperationCanceledException) when (_exit.IsCancellationRequested && capture.IsCanceled) { }
     }
 
     public override void _ExitTree()
@@ -262,7 +261,7 @@ public partial class GameCaptureNode : Node, IGameCapture, IRegistryExitParticip
     }
 
     /// <summary>Read the presented title UI without creating or preparing a world destination.</summary>
-    public async Task CaptureStaticUiAsync(Node host, CancellationToken cancellationToken = default)
+    public Task CaptureStaticUiAsync(Node host, CancellationToken cancellationToken = default)
     {
         RequireMainThread();
         if (_busy) throw new InvalidOperationException("Another game capture is in progress.");
@@ -271,6 +270,11 @@ public partial class GameCaptureNode : Node, IGameCapture, IRegistryExitParticip
         if (!Path.IsPathFullyQualified(destination)) throw new ArgumentException("--out must be an absolute directory.");
         _busy = true;
         _path = null;
+        return _captureTask = CaptureStaticUiCore(host, destination, cancellationToken);
+    }
+
+    private async Task CaptureStaticUiCore(Node host, string destination, CancellationToken cancellationToken)
+    {
         using var lifetime = CancellationTokenSource.CreateLinkedTokenSource(_exit.Token, cancellationToken);
         try
         {
@@ -289,7 +293,7 @@ public partial class GameCaptureNode : Node, IGameCapture, IRegistryExitParticip
     }
 
     /// <summary>Every fixed destination uses the same service owner, presentation and image export as F12.</summary>
-    public async Task RunSequenceAsync(Node host, ViewContentReadiness producers, BootRunOptions options,
+    public Task RunSequenceAsync(Node host, ViewContentReadiness producers, BootRunOptions options,
         CaptureDestination? startupCapture, Action syncCamera, Func<bool> contentReady, CancellationToken cancellationToken = default,
         Action<Pose>? validatePose = null)
     {
@@ -300,6 +304,14 @@ public partial class GameCaptureNode : Node, IGameCapture, IRegistryExitParticip
         if (!Path.IsPathFullyQualified(destination)) throw new ArgumentException("--out must be an absolute directory.");
         _busy = true;
         _path = null;
+        return _captureTask = RunSequenceCore(host, producers, options, startupCapture, syncCamera, contentReady,
+            destination, cancellationToken, validatePose);
+    }
+
+    private async Task RunSequenceCore(Node host, ViewContentReadiness producers, BootRunOptions options,
+        CaptureDestination? startupCapture, Action syncCamera, Func<bool> contentReady, string destination,
+        CancellationToken cancellationToken, Action<Pose>? validatePose)
+    {
         using var lifetime = CancellationTokenSource.CreateLinkedTokenSource(_exit.Token, cancellationToken);
         try
         {

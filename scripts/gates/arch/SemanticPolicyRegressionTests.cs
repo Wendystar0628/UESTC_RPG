@@ -296,7 +296,7 @@ public sealed class SemanticPolicyRegressionTests
         if (mismatches.Count != 0) throw new InvalidOperationException("Data declaration regression: " + string.Join(", ", mismatches));
     }
 
-    private static SourceFile Fixture(string body)
+    internal static SourceFile Fixture(string body, params MetadataReference[] additionalReferences)
     {
         var source = """
             #nullable enable
@@ -311,7 +311,7 @@ public sealed class SemanticPolicyRegressionTests
             """ + body;
         var tree = CSharpSyntaxTree.ParseText(source, CSharpParseOptions.Default.WithLanguageVersion(LanguageVersion.Preview), "game/semantic-case.cs");
         var references = ((string?)AppContext.GetData("TRUSTED_PLATFORM_ASSEMBLIES") ?? "").Split(Path.PathSeparator)
-            .Where(path => path.Length != 0).Select(path => MetadataReference.CreateFromFile(path));
+            .Where(path => path.Length != 0).Select(path => MetadataReference.CreateFromFile(path)).Concat(additionalReferences);
         var compilation = CSharpCompilation.Create("G4.SemanticCase", [tree], references,
             new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary));
         var errors = compilation.GetDiagnostics().Where(diagnostic => diagnostic.Severity == DiagnosticSeverity.Error).ToArray();

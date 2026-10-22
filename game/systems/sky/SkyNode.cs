@@ -1,6 +1,6 @@
 using Campus.Kernel.Diagnostics;
-using Campus.Contracts.Diagnostics;
 using Campus.Contracts;
+using Campus.Contracts.AppFlow;
 using Campus.Contracts.Maps;
 using Campus.Contracts.Startup;
 using Campus.Kernel.Renderer;
@@ -16,7 +16,7 @@ namespace Campus.Systems.Sky;
 /// colours come from the palette texture inside the shader. Nothing is read back from shader globals.
 /// </summary>
 [KernelNode("systems.sky")]
-public partial class SkyNode : Node, IMapAware, IViewContentReadiness
+public partial class SkyNode : Node, IMapAware, IViewContentReadiness, IRegistryExitParticipant
 {
     private static readonly StringName _shaderGlobalCloud = ShaderGlobals.Cloud;
     private static readonly StringName _shaderGlobalCloudNoise = ShaderGlobals.CloudNoise;
@@ -36,6 +36,8 @@ public partial class SkyNode : Node, IMapAware, IViewContentReadiness
     private SkyMapData? _map;
     private float _sentCover = -1f;
     private float _sentThr = -1f;
+    private IAppFailure? _failure;
+    private bool _exiting;
     public Exception? Failure { get; private set; }
     public bool IsReady(Pose pose) => Failure is null && _map is not null && _material is not null &&
         _environment is not null && _noiseTexture is not null && _thresholds is not null;
@@ -43,6 +45,13 @@ public partial class SkyNode : Node, IMapAware, IViewContentReadiness
     public override void _Ready()
     {
         ProcessPriority = FramePriority.Systems;
+        _failure = KernelServices.Get<IAppFailure>();
+        try { Initialize(); }
+        catch (Exception error) { RecordFailure(error); }
+    }
+
+    private void Initialize()
+    {
         _world = KernelServices.Get<IWorldState>();
         _script = KernelServices.Get<IColorScriptFrame>();
         _material = CreateMaterial();
@@ -70,18 +79,18 @@ public partial class SkyNode : Node, IMapAware, IViewContentReadiness
 
     public override void _Process(double delta)
     {
-        if (Failure is not null) return;
+        if (_exiting || Failure is not null) return;
         try { UpdateContent(); }
         catch (Exception error) { RecordFailure(error); }
     }
 
-    // View readiness publishes the retained producer failure to map loading (ENG-PERF-STREAM).
-    private void RecordFailure([FailureHandler("ENG-PERF-STREAM")] Exception error)
+    // Sky textures belong to the application; readiness retains the same failure for consumers.
+    private void RecordFailure([FailureHandler("ENG-ARCH")] Exception error)
     {
         var combined = RetainedFailure.Append(Failure, error);
         if (ReferenceEquals(combined, Failure)) return;
         Failure = combined;
-        KernelServices.Get<IDiagnosticLog>().Error("ART-SKYLIGHT-ATMOSPHERE: sky content failed:", error);
+        _failure!.Report(error);
     }
 
     private void UpdateContent()
@@ -142,15 +151,7 @@ public partial class SkyNode : Node, IMapAware, IViewContentReadiness
         return w < 0 ? w + SkyTuning.DriftWrapMeters : w;
     }
 
-    private ShaderMaterial CreateMaterial()
-    {
-        try { return KernelServices.Get<IShaderMaterialSource>().Create(ShaderId.Sky); }
-        catch (Exception error)
-        {
-            Failure = error;
-            throw;
-        }
-    }
+    private ShaderMaterial CreateMaterial() => KernelServices.Get<IShaderMaterialSource>().Create(ShaderId.Sky);
 
     private void TryAttach()
     {
@@ -175,6 +176,19 @@ public partial class SkyNode : Node, IMapAware, IViewContentReadiness
         _noiseTexture = ImageTexture.CreateFromImage(image);
         RenderingServer.GlobalShaderParameterSet(_shaderGlobalCloudNoise, _noiseTexture);
         _thresholds = result.CoverageThreshold;
+    }
+
+    public void PrepareForExit() => _exiting = true;
+
+    public async Task DrainForExitAsync()
+    {
+        var job = _noiseJob;
+        _noiseJob = null;
+        if (job is null) return;
+        // Generation owns only CPU data. Observe its terminal result without uploading resources
+        // after the application has stopped accepting content publication.
+        try { await job; }
+        catch (Exception error) { RecordFailure(error); }
     }
 
     private static float Clamp01(float v) => float.IsFinite(v) ? Math.Clamp(v, 0f, 1f) : 0f;

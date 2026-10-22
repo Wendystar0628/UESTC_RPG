@@ -8,10 +8,14 @@ public sealed class KernelServiceAttribute(Type service)
     public override Type Contract => Service;
 }
 
-/// <summary>After saving and map shutdown, stop background native access before owned objects are released.</summary>
+/// <summary>
+/// After saving and map shutdown, stop every participant first, then await every participant's
+/// owned work before any node leaves the tree or any registered object is released.
+/// </summary>
 public interface IRegistryExitParticipant
 {
     void PrepareForExit();
+    Task DrainForExitAsync();
 }
 
 [AttributeUsage(AttributeTargets.Class, Inherited = false)]

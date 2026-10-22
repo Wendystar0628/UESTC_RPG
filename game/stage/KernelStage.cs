@@ -21,7 +21,7 @@ using KernelServices = Campus.Kernel.Registry.Kernel;
 namespace Campus.Stage;
 
 /// <summary>The production composition root. Map data, world state and flow are supplied exclusively through services.</summary>
-public partial class KernelStage : Node3D, IAppExit, IStageGateHost
+public partial class KernelStage : Node3D, IAppExit, IAppFailure, IStageGateHost
 {
     private StageCamera? _view;
     private FrameStatistics? _statistics;
@@ -30,15 +30,15 @@ public partial class KernelStage : Node3D, IAppExit, IStageGateHost
     private bool _ready;
     private bool _closing;
     private bool _cpuCommand;
-    private bool _shutdownStarted;
-    private Task? _shutdownTask;
-    private Task? _closeTask;
+    private Task? _startupTask;
+    private Task? _backgroundObservation;
+    private Task? _titleInputReady;
+    private Task? _titleReadyTask;
+    private Task? _realtimeTask;
     private Task<int>? _bakeCommandTask;
     private SceneTree? _sceneTree;
     private bool _treeExited;
-    private bool _shutdownComplete;
     private bool _quitIssued;
-    private int _exitCode;
     private IAppLoadingLease? _bootLoading;
     private Task? _bootLoadingDisposal;
     private IFlowLease? _startupFlow;
@@ -50,34 +50,46 @@ public partial class KernelStage : Node3D, IAppExit, IStageGateHost
     private GameCaptureNode.CaptureDestination? _startupCapture;
     private readonly StageGateDriver _gate;
     private readonly StageStartupFailure _startupFailure;
+    private readonly StageShutdown _shutdown;
     private readonly StageStartupTrace _startupTrace = new();
     public KernelStage()
     {
         _startupFailure = new(this);
+        _shutdown = new(this);
         _gate = new(this);
     }
 
-    public override async void _Ready()
+    public override void _Ready()
     {
         if (AppBoot.Failed) return;
         _sceneTree = GetTree();
-        Task? startup = null;
+        _startupTask = StartStage();
+    }
+
+    private async Task StartStage()
+    {
         try
         {
             var registry = KernelServices.Services;
+            registry.Add<IAppFailure>(this);
             IRequiredResources resources = new RequiredResources();
             registry.Add(resources);
             var codeFingerprints = new BuildCodeIndex(resources);
             registry.Add(codeFingerprints);
             registry.Discover(StageModules.LoadModuleTypes(), codeFingerprints.Owner);
             GD.Print($"Kernel registry: {registry.Entries.Count} declarations; build {BuildInfo.Build}");
-            if (RegistryStageGate.TryRun()) { await FinishQuit(); return; }
+            if (RegistryStageGate.TryRun()) { RequestShutdown(0); return; }
             if (AppBoot.Options.CpuBakeMode) { await RunBakeCommand(); return; }
             Compose();
-            await (startup = StartWorld());
+            await StartWorld();
+            CheckStartupActive();
+            // Gate commands can request and await shutdown, so they run outside the startup
+            // work that shutdown must drain before releasing registry dependencies.
+            Callable.From(StartReadyCommands).CallDeferred();
         }
-        catch (OperationCanceledException) when (_captureLifetime.IsCancellationRequested && startup?.IsCanceled == true) { }
-        catch (Exception error) { await _startupFailure.Fail(error); }
+        catch (OperationCanceledException error) when (_captureLifetime.IsCancellationRequested &&
+            error.CancellationToken == _captureLifetime.Token) { }
+        catch (Exception error) { Report(error); }
     }
 
     private void Compose()
@@ -194,12 +206,16 @@ public partial class KernelStage : Node3D, IAppExit, IStageGateHost
         view.Bind(registry.Get<ICameraRig>());
     }
 
-    internal bool CanHandleFailure => !_treeExited && !_shutdownStarted;
+    internal bool CanHandleFailure => !_treeExited && !_shutdown.Started;
+    internal bool HasFailed => _startupFailure.Failed;
+    internal bool Closing => _closing;
+    internal bool HasTreeExited => _treeExited;
+    internal void BeginClosing() => _closing = true;
 
     internal void MarkFailure()
     {
         _ready = false;
-        _exitCode = Math.Max(_exitCode, 2);
+        _shutdown.MarkFailure();
     }
 
     internal void FailBoot(Exception error)
@@ -208,6 +224,8 @@ public partial class KernelStage : Node3D, IAppExit, IStageGateHost
     }
 
     internal void CancelStartupCapture() => _captureLifetime.Cancel();
+    internal void RequestFailureShutdown() => RequestShutdown(2);
+    public void Report([FailureHandler("ENG-ARCH")] Exception error) => _startupFailure.Report(error);
 
     private async Task StartWorld()
     {
@@ -233,29 +251,32 @@ public partial class KernelStage : Node3D, IAppExit, IStageGateHost
             // Quality has no active-map or world dependency. Its effective settings must precede pipeline submission.
             await InitializeBootPhase(BootPhase.AfterMapWarm, participants, context);
             await BootWorldOverrides.ApplyQuality(options, registry.Get<IQualityService>());
+            CheckStartupActive();
             registry.Get<PipelineWarmup>().SetCanvasFont(registry.Created.OfType<Campus.Hud.HudRoot>().Single().CanvasFont);
             Phase = "prepare-flow";
             var appBoot = registry.Get<IAppBootFlow>();
             var target = await appBoot.PrepareBoot(options.Flow with { ShowTitle = showTitle });
+            CheckStartupActive();
             var maps = registry.Get<IMapService>();
             // Both tasks start on the engine thread. Neither requires an active world instance.
             var mapPreparation = maps.Prepare(target);
             var globalPreparation = PrepareGlobal(registry, participants, context);
             _backgroundPreparation = appBoot.PrepareBackground(mapPreparation, globalPreparation);
-            _ = ObserveBackgroundFailure(appBoot);
+            _backgroundObservation = ObserveBackgroundFailure(appBoot);
             if (showTitle)
             {
                 CheckStartupActive();
                 await appBoot.OpenTitle();
-                var titleInputReady = TraceTitleInputReady(appBoot);
+                CheckStartupActive();
+                _titleInputReady = TraceTitleInputReady(appBoot);
                 if (staticUiCapture)
                 {
                     await registry.Created.OfType<GameCaptureNode>().Single().CaptureStaticUiAsync(this, _captureLifetime.Token);
-                    await CloseAsync();
+                    RequestClose();
                     return;
                 }
                 await _backgroundPreparation.WaitAsync(_captureLifetime.Token);
-                await titleInputReady;
+                await _titleInputReady;
                 CheckStartupActive();
                 _contentReadiness = ViewContentReadiness.Capture(this);
                 Phase = "background-ready";
@@ -263,23 +284,21 @@ public partial class KernelStage : Node3D, IAppExit, IStageGateHost
             else await StartDirectWorld(registry, options, appBoot, maps, _backgroundPreparation);
             CheckStartupActive();
             _startupFinished = true;
-            if (_flow!.IsPlaying) await CompletePlayingStartup();
         }
         catch (OperationCanceledException error) when (_captureLifetime.IsCancellationRequested &&
-            (error.CancellationToken == _captureLifetime.Token || _backgroundPreparation?.IsCanceled == true)) { failures.Add(error); }
+            error.CancellationToken == _captureLifetime.Token) { failures.Add(error); }
         catch (Exception error)
         {
             failures.Add(error);
-            _ = _startupFailure.Fail(error);
+            Report(error);
         }
         finally
         {
-            try { ReleaseStartupFlow(); } catch (Exception error) { failures.Add(error); _ = _startupFailure.Fail(error); }
-            try { await DisposeBootLoading(); } catch (Exception error) { failures.Add(error); _ = _startupFailure.Fail(error); }
+            try { ReleaseStartupFlow(); } catch (Exception error) { failures.Add(error); Report(error); }
+            try { await DisposeBootLoading(); } catch (Exception error) { failures.Add(error); Report(error); }
         }
         if (failures.Count == 1) System.Runtime.ExceptionServices.ExceptionDispatchInfo.Capture(failures[0]).Throw();
         if (failures.Count > 0) throw new AggregateException("Stage startup and presentation cleanup failed.", failures);
-        if (_flow!.State == AppState.Title) await _gate.OnTitleReady();
     }
 
     private async Task InitializeBootPhase(BootPhase phase, IBootParticipant[] participants, BootContext context)
@@ -307,11 +326,12 @@ public partial class KernelStage : Node3D, IAppExit, IStageGateHost
         IMapService maps, Task backgroundPreparation)
     {
         _bootLoading = registry.Get<IAppLoadingPresentation>().Show();
-        await _bootLoading.Covered;
+        await _bootLoading.Covered.WaitAsync(_captureLifetime.Token);
         await appBoot.MapReady.WaitAsync(_captureLifetime.Token);
         CheckStartupActive();
         WorldPreset? start = null; NewGameBoot? boot = null;
         if (!options.HasLoad) (start, boot) = await BootWorldOverrides.PrepareFreshEntry(options, registry);
+        CheckStartupActive();
         var entering = appBoot.EnterDirect(start, boot);
         // The entry owns its own opaque lease before the temporary startup lease is released.
         _bootLoading.Report(1, 1);
@@ -329,20 +349,40 @@ public partial class KernelStage : Node3D, IAppExit, IStageGateHost
     private async Task ObserveBackgroundFailure(IAppBootFlow boot)
     {
         try { await boot.BackgroundReady; }
-        catch (OperationCanceledException) when (boot.BackgroundReady.IsCanceled) { }
-        catch (Exception error) { await _startupFailure.Fail(error); }
+        catch (OperationCanceledException) when (_captureLifetime.IsCancellationRequested && boot.BackgroundReady.IsCanceled) { }
+        catch (Exception error) { Report(error); }
+    }
+
+    private void StartReadyCommands()
+    {
+        if (_closing || _startupFailure.Failed || !_startupFinished) return;
+        if (_flow!.State == AppState.Title) _titleReadyTask ??= RunTitleReady();
+        else if (_flow.IsPlaying) _realtimeTask ??= CompletePlayingStartup();
+    }
+
+    private async Task RunTitleReady()
+    {
+        try { await _gate.OnTitleReady(); }
+        catch (OperationCanceledException error) when (_captureLifetime.IsCancellationRequested &&
+            error.CancellationToken == _captureLifetime.Token) { }
+        catch (Exception error) { Report(error); }
     }
 
     private async Task CompletePlayingStartup()
     {
-        if (_realtimeStarted || !_startupFinished || _flow?.IsPlaying != true) return;
-        _realtimeStarted = true;
-        _statistics!.MarkRealtime();
-        _ready = true;
-        Phase = "realtime";
-        GD.Print($"[ENG-ARCH][map={KernelServices.Get<IMapService>().Current.Value}][phase=realtime] flow={_flow.State}; startup complete");
-        try { await _gate.OnRealtime(); }
-        catch (Exception error) { await _startupFailure.Fail(error); }
+        try
+        {
+            if (_realtimeStarted || !_startupFinished || _flow?.IsPlaying != true) return;
+            _realtimeStarted = true;
+            _statistics!.MarkRealtime();
+            _ready = true;
+            Phase = "realtime";
+            GD.Print($"[ENG-ARCH][map={KernelServices.Get<IMapService>().Current.Value}][phase=realtime] flow={_flow.State}; startup complete");
+            await _gate.OnRealtime();
+        }
+        catch (OperationCanceledException error) when (_captureLifetime.IsCancellationRequested &&
+            error.CancellationToken == _captureLifetime.Token) { }
+        catch (Exception error) { Report(error); }
     }
 
     private void ReleaseStartupFlow()
@@ -386,7 +426,7 @@ public partial class KernelStage : Node3D, IAppExit, IStageGateHost
             _gate.OnTitleInputReady();
         }
         catch (OperationCanceledException error) when (_captureLifetime.IsCancellationRequested && error.CancellationToken == _captureLifetime.Token) { }
-        catch (Exception error) { await _startupFailure.Fail(error); }
+        catch (Exception error) { Report(error); }
     }
 
     private void OnFlowChanged(AppState before, AppState after)
@@ -396,7 +436,7 @@ public partial class KernelStage : Node3D, IAppExit, IStageGateHost
         if (before == AppState.Entering && after == AppState.Playing)
         {
             Callable.From(TraceInputReady).CallDeferred();
-            if (_startupFinished) _ = CompletePlayingStartup();
+            if (_startupFinished) Callable.From(StartReadyCommands).CallDeferred();
         }
     }
 
@@ -416,7 +456,7 @@ public partial class KernelStage : Node3D, IAppExit, IStageGateHost
         if (command is Node node) AddChild(node);
         _bakeCommandTask = command.Run(CreateBootContext());
         var exitCode = await _bakeCommandTask;
-        await FinishQuit(exitCode);
+        RequestShutdown(exitCode);
     }
 
     private static BootContext CreateBootContext()
@@ -428,7 +468,7 @@ public partial class KernelStage : Node3D, IAppExit, IStageGateHost
     public override void _Process(double delta)
     {
         if (!_closing && !_startupFailure.Failed && _mapRuntime?.Failure is { } failure && failure is not OperationCanceledException)
-            _ = _startupFailure.Fail(failure);
+            Report(failure);
         _statistics?.Sample();
         _startupTrace.TraceFrame(_statistics);
         if (_flow is IAppBootFlow boot && _flow.State is AppState.Title) _startupTrace.TracePreloadReady(boot);
@@ -440,35 +480,16 @@ public partial class KernelStage : Node3D, IAppExit, IStageGateHost
         if (what == NotificationWMCloseRequest)
         {
             _gate.OnCloseRequest();
-            _ = CloseAsync();
+            RequestClose();
         }
     }
-    private Task CloseAsync()
-    {
-        if (_shutdownTask is not null) return _shutdownTask;
-        if (_closeTask is not null) return _closeTask;
-        var completion = new TaskCompletionSource();
-        _closeTask = completion.Task;
-        _ = Close();
-        return completion.Task;
+    private void RequestClose() => _shutdown.RequestClose();
 
-        async Task Close()
-        {
-            try
-            {
-                await CloseCoreAsync();
-                if (!_closing) _closeTask = null;
-                completion.TrySetResult();
-            }
-            catch (Exception error) { completion.TrySetException(error); }
-        }
-    }
-
-    private async Task CloseCoreAsync()
+    internal async Task CloseCoreAsync()
     {
         try
         {
-            if (_shutdownTask is not null) { await _shutdownTask; return; }
+            if (_shutdown.Pending is { } pending) { await pending; return; }
             _closing = true;
             _captureLifetime.Cancel();
             if (_startupFailure.Failed) { await FinishQuit(2); return; }
@@ -477,7 +498,7 @@ public partial class KernelStage : Node3D, IAppExit, IStageGateHost
             // All requests, including repeats, use the flow's shared quit task. It calls IAppExit
             // only after saving and the user's final decision; observing Quitting is not permission to exit.
             await _flow.Quit();
-            if (_shutdownStarted) { await _shutdownTask!; return; }
+            if (_shutdown.Started) { await _shutdown.Pending!; return; }
             switch (_flow.State)
             {
                 case AppState.Quitting: throw new InvalidOperationException("Quit completed without the IAppExit shutdown bridge.");
@@ -489,49 +510,25 @@ public partial class KernelStage : Node3D, IAppExit, IStageGateHost
                 default: throw new InvalidOperationException("Quit completed without a final quit or resume decision.");
             }
         }
-        catch (Exception error) { await _startupFailure.Fail(error); }
+        catch (Exception error) { Report(error); }
     }
 
     public override void _ExitTree()
     {
         _treeExited = true;
-        if (AppBoot.Failed || _shutdownComplete) return;
+        if (AppBoot.Failed || _shutdown.Complete) return;
         // Leaving the tree first destroys the lifetime required by async cleanup. Reject that
         // ownership violation synchronously; never start a replacement shutdown on a dead stage.
         var error = new InvalidOperationException("KernelStage left the tree before its awaited shutdown completed.");
-        _ = _startupFailure.Fail(error);
+        Report(error);
         QuitEngine();
         throw error;
     }
 
-    public Task FinishQuit(int exitCode = 0) => BeginShutdownAndQuit(exitCode);
+    public Task FinishQuit(int exitCode = 0) => _shutdown.FinishQuit(exitCode);
+    private void RequestShutdown(int exitCode) => _shutdown.Request(exitCode);
 
-    private Task BeginShutdownAndQuit(int exitCode)
-    {
-        _exitCode = Math.Max(_exitCode, exitCode);
-        if (_shutdownTask is not null) return _shutdownTask;
-        if (_treeExited) throw new InvalidOperationException("Stage shutdown must begin before leaving the tree.");
-        var completion = new TaskCompletionSource();
-        // Publish before cancellation or shutdown can reenter this boundary.
-        _shutdownTask = completion.Task;
-        _shutdownStarted = true;
-        _closing = true;
-        _ = Finish();
-        return _shutdownTask;
-
-        async Task Finish()
-        {
-            try { await ShutdownAndQuit(); }
-            catch (Exception error)
-            {
-                _ = _startupFailure.Fail(error);
-                QuitEngine();
-            }
-            finally { completion.TrySetResult(); }
-        }
-    }
-
-    private async Task ShutdownAndQuit()
+    internal async Task ShutdownAndQuit()
     {
         _ready = false;
         _statistics = null;
@@ -546,30 +543,38 @@ public partial class KernelStage : Node3D, IAppExit, IStageGateHost
             try
             {
                 var commandExit = await _bakeCommandTask;
-                if (commandExit != 0) _exitCode = Math.Max(_exitCode, commandExit);
+                if (commandExit != 0) _shutdown.IncludeExitCode(commandExit);
             }
             catch (Exception error) { failures.Add(error); }
         try { await KernelServices.Services.SealMapPreparationAsync(); } catch (Exception error) { failures.Add(error); }
+        // Reporting never waits for shutdown. Cancelled startup continuations and their finally
+        // blocks must return while the registry still has its live service bindings.
+        if (_startupTask is not null)
+            try { await _startupTask; } catch (Exception error) { failures.Add(error); }
         if (_backgroundPreparation is not null)
             try { await _backgroundPreparation; }
             catch (OperationCanceledException) when (_captureLifetime.IsCancellationRequested && _backgroundPreparation.IsCanceled) { }
             catch (Exception error) { failures.Add(error); }
+        if (_backgroundObservation is not null)
+            try { await _backgroundObservation; } catch (Exception error) { failures.Add(error); }
+        if (_titleInputReady is not null)
+            try { await _titleInputReady; } catch (Exception error) { failures.Add(error); }
         try { ReleaseStartupFlow(); } catch (Exception error) { failures.Add(error); }
         try { await DisposeBootLoading(); } catch (Exception error) { failures.Add(error); }
         try { await KernelServices.Services.ShutdownAsync(this, _gate.TraceClose); }
         catch (Exception error) { failures.Add(error); }
         try { _gate.TraceClose("shutdown-complete"); } catch (Exception error) { failures.Add(error); }
         try { _gate.ReportShutdown(); } catch (Exception error) { failures.Add(error); }
-        if (failures.Count > 0) _ = _startupFailure.Fail(new AggregateException("Stage cleanup failed.", failures));
-        _shutdownComplete = true;
+        if (failures.Count > 0) Report(new AggregateException("Stage cleanup failed.", failures));
+        _shutdown.MarkComplete();
         QuitEngine();
     }
 
-    private void QuitEngine()
+    internal void QuitEngine()
     {
         if (_quitIssued) return;
         _quitIssued = true;
-        (_sceneTree ?? throw new InvalidOperationException("Stage has no live scene-tree owner.")).Quit(_exitCode);
+        (_sceneTree ?? throw new InvalidOperationException("Stage has no live scene-tree owner.")).Quit(_shutdown.ExitCode);
     }
 
     Node IStageGateHost.Stage => this;
@@ -582,6 +587,6 @@ public partial class KernelStage : Node3D, IAppExit, IStageGateHost
     bool IStageGateHost.Closing => _closing;
     void IStageGateHost.CheckActive() => CheckStartupActive();
     void IStageGateHost.SyncView() => _view!.Sync();
-    Task IStageGateHost.Close() => CloseAsync();
-    void IStageGateHost.Fail(Exception error) => _ = _startupFailure.Fail(error);
+    Task IStageGateHost.Close() => _shutdown.Close();
+    void IStageGateHost.Fail(Exception error) => Report(error);
 }

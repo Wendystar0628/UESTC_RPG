@@ -163,33 +163,53 @@ public sealed class ArchitectureTests
         }
     }
 
-    private static IEnumerable<string> KernelSourceViolations(IEnumerable<SourceFile> sources)
+    private static IEnumerable<string> KernelSourceViolations(IEnumerable<SourceFile> sources) =>
+        SourceDependencyViolations(sources, (origin, target) =>
+            KernelOwner(origin) is { } owner && KernelOwner(SymbolNamespace(target)) is { } dependency &&
+            KernelLevel(dependency) > KernelLevel(owner), "kernel responsibilities only depend on the same or lower responsibilities");
+
+    internal static IEnumerable<string> HudKernelSourceViolations(IEnumerable<SourceFile> sources) =>
+        SourceDependencyViolations(sources, (origin, target) =>
+            SourceModel.InNamespace(origin, "Campus.Hud") && SourceModel.InNamespace(SymbolNamespace(target), "Campus.Kernel") &&
+            (target is INamespaceSymbol space ? space.ToDisplayString() != "Campus.Kernel.Registry" :
+                SourceModel.Name(target as ITypeSymbol ?? target.ContainingType) != "Campus.Kernel.Registry.Kernel"),
+            "HUD only uses the published Kernel registry entry and contracts");
+
+    private static string SymbolNamespace(ISymbol symbol) => symbol is INamespaceSymbol space
+        ? space.ToDisplayString() : symbol.ContainingNamespace?.ToDisplayString() ?? "";
+
+    private static IEnumerable<string> SourceDependencyViolations(IEnumerable<SourceFile> sources,
+        Func<string, ISymbol, bool> forbidden, string reason)
     {
         var files = sources.ToArray();
-        var allOwners = files.SelectMany(file => KernelSourceOwners(file, file.Root)).Distinct(StringComparer.Ordinal).ToArray();
+        var allOwners = files.SelectMany(file => SourceNamespaces(file, file.Root)).Distinct(StringComparer.Ordinal).ToArray();
         foreach (var file in files)
         foreach (var name in file.Root.DescendantNodes().OfType<NameSyntax>())
         {
             // A namespace declaration establishes ownership; it is not a dependency on its parent.
             if (name.Ancestors().OfType<BaseNamespaceDeclarationSyntax>().Any(space => space.Name.Span.Contains(name.Span))) continue;
+            var import = name.Ancestors().OfType<UsingDirectiveSyntax>().FirstOrDefault();
+            if (import is not null && name != import.Name) continue;
             var symbol = file.Model.GetSymbolInfo(name).Symbol;
             if (symbol is IAliasSymbol alias) symbol = alias.Target;
-            var spaceName = symbol is INamespaceSymbol spaceSymbol ? spaceSymbol.ToDisplayString() : symbol?.ContainingNamespace?.ToDisplayString();
-            if (KernelOwner(spaceName ?? "") is not { } target) continue;
-            var import = name.Ancestors().OfType<UsingDirectiveSyntax>().FirstOrDefault();
+            if (symbol is null) continue;
+            // Qualified prefixes do not create an extra dependency beyond their final bound name.
+            if (import is null && symbol is INamespaceSymbol && (name.Parent is NameSyntax ||
+                name.Parent is MemberAccessExpressionSyntax access && (access.Expression == name ||
+                    access.Parent is MemberAccessExpressionSyntax outer && outer.Expression == access))) continue;
             var origins = import is null
-                ? new[] { KernelOwner(file.Model.GetEnclosingSymbol(name.SpanStart)?.ContainingNamespace?.ToDisplayString() ?? "") }.OfType<string>()
+                ? new[] { file.Model.GetEnclosingSymbol(name.SpanStart)?.ContainingNamespace?.ToDisplayString() ?? "" }
                 : import.GlobalKeyword.IsKind(SyntaxKind.GlobalKeyword) ? allOwners
-                : KernelSourceOwners(file, (SyntaxNode?)import.Ancestors().OfType<BaseNamespaceDeclarationSyntax>().FirstOrDefault() ?? file.Root);
+                : SourceNamespaces(file, (SyntaxNode?)import.Ancestors().OfType<BaseNamespaceDeclarationSyntax>().FirstOrDefault() ?? file.Root);
             foreach (var origin in origins)
-                if (KernelLevel(target) > KernelLevel(origin))
-                    yield return file.At(name, $"Kernel source boundary: {origin} -> {target}; kernel responsibilities only depend on the same or lower responsibilities (ENG-ARCH).");
+                if (forbidden(origin, symbol))
+                    yield return file.At(name, $"Source boundary: {origin} -> {symbol.ToDisplayString()}; {reason} (ENG-ARCH).");
         }
     }
 
-    private static IEnumerable<string> KernelSourceOwners(SourceFile file, SyntaxNode scope) =>
+    private static IEnumerable<string> SourceNamespaces(SourceFile file, SyntaxNode scope) =>
         scope.DescendantNodesAndSelf().OfType<BaseNamespaceDeclarationSyntax>()
-            .Select(space => KernelOwner(file.Model.GetDeclaredSymbol(space)?.ToDisplayString() ?? ""))
+            .Select(space => file.Model.GetDeclaredSymbol(space)?.ToDisplayString())
             .OfType<string>().Distinct(StringComparer.Ordinal);
 
     [TestCase]
@@ -299,6 +319,32 @@ public sealed class ArchitectureTests
         SourceModel.RequireNoViolations(errors);
     }
 
+    [TestCase]
+    [TestCategory("Contract")]
+    public void ProductionWaitsCannotUseNativeSignalAwaiters() =>
+        SourceModel.RequireNoViolations(SourceModel.Production.SelectMany(NativeSignalWaitViolations));
+
+    internal static IEnumerable<string> NativeSignalWaitViolations(SourceFile file)
+    {
+        var nativeObject = file.Model.Compilation.GetTypeByMetadataName("Godot.GodotObject");
+        var signalAwaiter = file.Model.Compilation.GetTypeByMetadataName("Godot.SignalAwaiter");
+        var toSignal = nativeObject?.GetMembers("ToSignal").OfType<IMethodSymbol>().ToArray() ?? [];
+        foreach (var node in file.Root.DescendantNodes())
+        {
+            var method = node switch
+            {
+                InvocationExpressionSyntax call => SourceModel.Method(file, call),
+                BaseObjectCreationExpressionSyntax creation => file.Model.GetSymbolInfo(creation).Symbol as IMethodSymbol,
+                _ => null
+            };
+            if (method is null) continue;
+            if (toSignal.Any(candidate => SymbolEqualityComparer.Default.Equals(candidate, method.OriginalDefinition)) ||
+                method.MethodKind == MethodKind.Constructor && signalAwaiter is not null &&
+                SymbolEqualityComparer.Default.Equals(signalAwaiter, method.ContainingType))
+                yield return file.At(node, "Waits require owned cancellation and drain; native signal awaiters are forbidden (ENG-ARCH).");
+        }
+    }
+
     private static string? MapScope(ReflectionAssembly assembly) => assembly.GetCustomAttributesData()
         .SingleOrDefault(attribute => attribute.AttributeType.FullName == "Campus.Contracts.MapScopeAttribute")
         ?.ConstructorArguments[0].Value as string;
@@ -385,6 +431,7 @@ public sealed class ArchitectureTests
     [TestCategory("Contract")]
     public void HudAndSystemsOnlyUsePublishedInterfaces()
     {
+        SourceModel.RequireNoViolations(HudKernelSourceViolations(SourceModel.Production));
         Check(Types().That().ResideInNamespaceMatching(@"^Campus\.Kernel(?:\.|$)").Should()
             .NotDependOnAny(Types().That().ResideInNamespaceMatching(@"^Campus\.Systems(?:\.|$)"))
             .WithoutRequiringPositiveResults());

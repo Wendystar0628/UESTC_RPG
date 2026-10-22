@@ -193,7 +193,7 @@ internal sealed class ObserverControls(ObserverCamera camera, FlightTuning tunin
             bool doubleSpace = State.Press(action);
             if (action == "toggle_mode" || doubleSpace && camera.CanDoubleSpace())
             {
-                _ = camera.SetMode(camera.Mode switch
+                camera.RequestMode(camera.Mode switch
                 {
                     ViewMode.Fly => ViewMode.Walk,
                     ViewMode.Walk => ViewMode.Fly,
