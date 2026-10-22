@@ -49,12 +49,12 @@ public partial class KernelStage : Node3D, IAppExit, IAppFailure, IStageGateHost
     private ViewContentReadiness? _contentReadiness;
     private GameCaptureNode.CaptureDestination? _startupCapture;
     private readonly StageGateDriver _gate;
-    private readonly StageStartupFailure _startupFailure;
+    private readonly StageAppFailure _appFailure;
     private readonly StageShutdown _shutdown;
     private readonly StageStartupTrace _startupTrace = new();
     public KernelStage()
     {
-        _startupFailure = new(this);
+        _appFailure = new(this);
         _shutdown = new(this);
         _gate = new(this);
     }
@@ -78,7 +78,7 @@ public partial class KernelStage : Node3D, IAppExit, IAppFailure, IStageGateHost
             registry.Add(codeFingerprints);
             registry.Discover(StageModules.LoadModuleTypes(), codeFingerprints.Owner);
             GD.Print($"Kernel registry: {registry.Entries.Count} declarations");
-            if (RegistryStageGate.TryRun()) { RequestShutdown(0); return; }
+            if (RegistryStageGate.TryRun()) { RequestQuit(0); return; }
             if (AppBoot.Options.CpuBakeMode) { await RunBakeCommand(); return; }
             Compose();
             await StartWorld();
@@ -208,7 +208,7 @@ public partial class KernelStage : Node3D, IAppExit, IAppFailure, IStageGateHost
     }
 
     internal bool CanHandleFailure => !_treeExited && !_shutdown.Started;
-    internal bool HasFailed => _startupFailure.Failed;
+    internal bool HasFailed => _appFailure.Failed;
     internal bool Closing => _closing;
     internal bool HasTreeExited => _treeExited;
     internal void BeginClosing() => _closing = true;
@@ -225,8 +225,8 @@ public partial class KernelStage : Node3D, IAppExit, IAppFailure, IStageGateHost
     }
 
     internal void CancelStartupCapture() => _captureLifetime.Cancel();
-    internal void RequestFailureShutdown() => RequestShutdown(2);
-    public void Report([FailureHandler("ENG-ARCH")] Exception error) => _startupFailure.Report(error);
+    internal void RequestFailureShutdown() => RequestQuit(2);
+    public void Report([FailureHandler("ENG-ARCH")] Exception error) => _appFailure.Report(error);
 
     private async Task StartWorld()
     {
@@ -356,7 +356,7 @@ public partial class KernelStage : Node3D, IAppExit, IAppFailure, IStageGateHost
 
     private void StartReadyCommands()
     {
-        if (_closing || _startupFailure.Failed || !_startupFinished) return;
+        if (_closing || _appFailure.Failed || !_startupFinished) return;
         if (_flow!.State == AppState.Title) _titleReadyTask ??= RunTitleReady();
         else if (_flow.IsPlaying) _realtimeTask ??= CompletePlayingStartup();
     }
@@ -457,7 +457,7 @@ public partial class KernelStage : Node3D, IAppExit, IAppFailure, IStageGateHost
         if (command is Node node) AddChild(node);
         _bakeCommandTask = command.Run(CreateBootContext());
         var exitCode = await _bakeCommandTask;
-        RequestShutdown(exitCode);
+        RequestQuit(exitCode);
     }
 
     private static BootContext CreateBootContext()
@@ -468,7 +468,7 @@ public partial class KernelStage : Node3D, IAppExit, IAppFailure, IStageGateHost
 
     public override void _Process(double delta)
     {
-        if (!_closing && !_startupFailure.Failed && _mapRuntime?.Failure is { } failure && failure is not OperationCanceledException)
+        if (!_closing && !_appFailure.Failed && _mapRuntime?.Failure is { } failure && failure is not OperationCanceledException)
             Report(failure);
         _statistics?.Sample();
         _startupTrace.TraceFrame(_statistics);
@@ -493,7 +493,7 @@ public partial class KernelStage : Node3D, IAppExit, IAppFailure, IStageGateHost
             if (_shutdown.Pending is { } pending) { await pending; return; }
             _closing = true;
             _captureLifetime.Cancel();
-            if (_startupFailure.Failed) { await FinishQuit(2); return; }
+            if (_appFailure.Failed) { await FinishQuit(2); return; }
             if (_cpuCommand) { await FinishQuit(130); return; }
             if (_flow is null) { await FinishQuit(); return; }
             // All requests, including repeats, use the flow's shared quit task. It calls IAppExit
@@ -527,7 +527,7 @@ public partial class KernelStage : Node3D, IAppExit, IAppFailure, IStageGateHost
     }
 
     public Task FinishQuit(int exitCode = 0) => _shutdown.FinishQuit(exitCode);
-    private void RequestShutdown(int exitCode) => _shutdown.Request(exitCode);
+    public void RequestQuit(int exitCode = 0) => _shutdown.Request(exitCode);
 
     internal async Task ShutdownAndQuit()
     {

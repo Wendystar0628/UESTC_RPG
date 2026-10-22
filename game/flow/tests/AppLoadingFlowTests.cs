@@ -62,10 +62,11 @@ public sealed class AppLoadingFlowTests
     public async Task BackgroundFailureProjectsBeforeItsSiblingAndRetainsBothCauses()
     {
         var rig = new FlowTestRig(); var saves = new FullSave(rig);
-        using var flow = rig.CreateFlow(saves, Maps(), new TestAppExit(false));
+        var flow = rig.CreateFlow(saves, Maps(), new TestAppExit(false));
         await flow.PrepareBoot(new());
         var map = new TaskCompletionSource(); var global = new TaskCompletionSource();
         var work = flow.PrepareBackground(map.Task, global.Task);
+        await rig.Title.Show(); await flow.OpenTitle();
         var first = new InvalidDataException("map failed"); var second = new IOException("warmup failed");
         map.SetException(first);
         try { await flow.BackgroundReady; throw new InvalidOperationException("Failure was not projected immediately."); }
@@ -78,6 +79,32 @@ public sealed class AppLoadingFlowTests
             var causes = error.Flatten().InnerExceptions;
             if (!causes.Contains(first) || !causes.Contains(second)) throw;
         }
+        // The title joined only BackgroundReady. Disposal owns both projections.
+        try { flow.Dispose(); throw new InvalidOperationException("Disposal lost the unjoined map readiness failure."); }
+        catch (AggregateException error) when (error.Flatten().InnerExceptions.Contains(first) &&
+            error.Flatten().InnerExceptions.All(cause => ReferenceEquals(cause, first))) { }
+        if (rig.Camera.InputLocked || !flow.MapReady.IsFaulted || !flow.BackgroundReady.IsFaulted)
+            throw new InvalidOperationException("Terminal readiness collection skipped cleanup or changed failure to cancellation.");
+    }
+
+    [TestCase, TestCategory(TestReason.Regression)]
+    public void DisposalReceivesBootFailureBeforeAnyBackgroundPreparationExists()
+    {
+        var rig = new FlowTestRig(); var saves = new FullSave(rig);
+        foreach (var failure in new Exception[] { new InvalidDataException("BeforeMap failed"), new OperationCanceledException() })
+        {
+            var flow = rig.CreateFlow(saves, Maps(), new TestAppExit(false));
+            flow.FailBoot(failure);
+            try { flow.Dispose(); throw new InvalidOperationException("Disposal lost early boot readiness failures."); }
+            catch (AggregateException error) when (error.Flatten().InnerExceptions.Contains(failure) &&
+                error.Flatten().InnerExceptions.All(cause => ReferenceEquals(cause, failure))) { }
+            if (!flow.MapReady.IsFaulted || !flow.BackgroundReady.IsFaulted)
+                throw new InvalidOperationException("Closing replaced the original failure with cancellation.");
+        }
+        var canceled = rig.CreateFlow(saves, Maps(), new TestAppExit(false));
+        canceled.Dispose();
+        if (!canceled.MapReady.IsCanceled || !canceled.BackgroundReady.IsCanceled)
+            throw new InvalidOperationException("Disposal left readiness pending without a background owner.");
     }
 
     [TestCase, TestCategory(TestReason.Regression)]

@@ -19,6 +19,28 @@ namespace Campus.Tests;
 [TestSuite]
 public sealed class MapRuntimeFailureTests
 {
+    [TestCase, TestCategory(TestReason.Regression), RequireGodotRuntime]
+    public async Task SynchronousMountInputFailureReturnsTheOwnedTaskAndSurvivesShutdown()
+    {
+        var descriptor = BackdropInputsTests.Descriptor();
+        var context = new TestMapContext(descriptor,
+            Inputs: BackdropInputsTests.Snapshot(descriptor.Env.Backdrop, "{"));
+        using var fixture = new MapRuntimeFixture(context: context);
+        AssertThat(fixture.Mount.IsFaulted).IsTrue();
+        AppStartupException? published = null;
+        try { await fixture.Mount; throw new InvalidOperationException("Mount lost its input failure."); }
+        catch (AppStartupException error)
+        {
+            AssertThat(ReferenceEquals(error, fixture.Runtime.Failure) && error.InnerException is InvalidDataException).IsTrue();
+            published = error;
+        }
+        try { await fixture.Runtime.ShutdownAsync(); throw new InvalidOperationException("Shutdown lost the mount failure."); }
+        catch (AppStartupException error)
+        {
+            AssertThat(ReferenceEquals(error, published) && ReferenceEquals(error.InnerException, published!.InnerException)).IsTrue();
+        }
+    }
+
     [TestCase, TestCategory(TestReason.Regression)]
     public void SharedRetentionPreservesNestedAndEmptyCausesAndConcurrentEffectFailures()
     {

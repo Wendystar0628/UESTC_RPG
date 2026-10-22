@@ -54,9 +54,14 @@ internal sealed class TestAppExit(bool allowQuit = true) : IAppExit
     public TaskCompletionSource Started { get; } = new();
     public Task FinishQuit(int exitCode = 0)
     {
+        RecordQuit();
+        return Gate?.Task ?? Task.CompletedTask;
+    }
+    public void RequestQuit(int exitCode = 0) => RecordQuit();
+    private void RecordQuit()
+    {
         if (!allowQuit) throw new InvalidOperationException("This regression must never quit.");
         Calls++; Started.TrySetResult();
-        return Gate?.Task ?? Task.CompletedTask;
     }
 }
 

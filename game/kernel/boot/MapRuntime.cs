@@ -182,7 +182,6 @@ public partial class MapRuntime : Node, IMapRuntime, IMapLifetime
         {
             var failure = ReportFailure(error);
             _mountCompletion.TrySetException(failure);
-            System.Runtime.ExceptionServices.ExceptionDispatchInfo.Capture(failure).Throw();
         }
         return _mountCompletion.Task;
     }

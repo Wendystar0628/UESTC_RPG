@@ -226,6 +226,7 @@ public sealed class HudLifetimeTests
     private sealed class UnusedExit : IAppExit
     {
         public Task FinishQuit(int exitCode = 0) => throw new NotSupportedException();
+        public void RequestQuit(int exitCode = 0) => throw new NotSupportedException();
     }
 
     private sealed class UnusedCapture : IGameCapture

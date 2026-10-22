@@ -22,7 +22,8 @@ public sealed class RestoreFailureFlowTests
     private static async Task FaultedRecoveryCase(bool bootFailed)
     {
         var f = new Fixture();
-        if (bootFailed) f.Flow.FailBoot(new InvalidOperationException("boot.failed"));
+        var bootFailure = new InvalidOperationException("boot.failed");
+        if (bootFailed) f.Flow.FailBoot(bootFailure);
         await f.Flow.ReturnToTitle();
         var entering = f.Flow.Enter(new(EnterKind.NewGame, new("s1")));
         var result = await entering;
@@ -34,6 +35,13 @@ public sealed class RestoreFailureFlowTests
             throw new InvalidOperationException("The flow session must retain its original exception type while keeping the existing restore-error display.");
         if (f.Diagnostics.Count != 1)
             throw new InvalidOperationException("The expected restore failure was not logged exactly once: " + string.Join(Environment.NewLine, f.Diagnostics));
+        if (!bootFailed) f.Flow.Dispose();
+        else
+        {
+            try { f.Flow.Dispose(); throw new InvalidOperationException("Disposal lost the failed boot readiness."); }
+            catch (AggregateException error) when (error.Flatten().InnerExceptions.Contains(bootFailure) &&
+                error.Flatten().InnerExceptions.All(cause => ReferenceEquals(cause, bootFailure))) { }
+        }
     }
 
     [TestCase]

@@ -48,6 +48,7 @@ public partial class GameCaptureNode : Node, IGameCapture, IRegistryExitParticip
     private const int AlreadyExists = unchecked((int)0x800700B7);
     private IAppLoadingPresentation _loading = null!;
     private readonly CancellationTokenSource _exit = new();
+    // Retain only work in flight; completed results and failures belong to the capture caller.
     private Task? _captureTask;
     private IDisposable? _hiddenHud;
     private string? _path;
@@ -70,7 +71,7 @@ public partial class GameCaptureNode : Node, IGameCapture, IRegistryExitParticip
         _busy = true;
         _path = null;
         var capture = CapturePhotoAsync(request, cancellationToken);
-        _captureTask = capture;
+        _captureTask = capture.IsCompleted ? null : capture;
         return capture;
     }
 
@@ -95,7 +96,7 @@ public partial class GameCaptureNode : Node, IGameCapture, IRegistryExitParticip
         _busy = true;
         _path = null;
         var capture = CaptureThumbnailCore(cancellationToken);
-        _captureTask = capture;
+        _captureTask = capture.IsCompleted ? null : capture;
         return capture;
     }
 
@@ -227,9 +228,13 @@ public partial class GameCaptureNode : Node, IGameCapture, IRegistryExitParticip
 
     private void EndCapture()
     {
-        RestoreUi();
-        _busy = false;
-        _path = null;
+        try { RestoreUi(); }
+        finally
+        {
+            _busy = false;
+            _path = null;
+            _captureTask = null;
+        }
     }
 
     private static void RequireMainThread()
@@ -270,7 +275,9 @@ public partial class GameCaptureNode : Node, IGameCapture, IRegistryExitParticip
         if (!Path.IsPathFullyQualified(destination)) throw new ArgumentException("--out must be an absolute directory.");
         _busy = true;
         _path = null;
-        return _captureTask = CaptureStaticUiCore(host, destination, cancellationToken);
+        var capture = CaptureStaticUiCore(host, destination, cancellationToken);
+        _captureTask = capture.IsCompleted ? null : capture;
+        return capture;
     }
 
     private async Task CaptureStaticUiCore(Node host, string destination, CancellationToken cancellationToken)
@@ -304,8 +311,10 @@ public partial class GameCaptureNode : Node, IGameCapture, IRegistryExitParticip
         if (!Path.IsPathFullyQualified(destination)) throw new ArgumentException("--out must be an absolute directory.");
         _busy = true;
         _path = null;
-        return _captureTask = RunSequenceCore(host, producers, options, startupCapture, syncCamera, contentReady,
+        var capture = RunSequenceCore(host, producers, options, startupCapture, syncCamera, contentReady,
             destination, cancellationToken, validatePose);
+        _captureTask = capture.IsCompleted ? null : capture;
+        return capture;
     }
 
     private async Task RunSequenceCore(Node host, ViewContentReadiness producers, BootRunOptions options,

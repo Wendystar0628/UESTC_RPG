@@ -21,6 +21,16 @@ internal sealed class AppFlowStartup(IMapService maps, AppFlowContinuation conti
     internal uint? Seed => Request.Seed;
     internal void Fail(Exception error) { _mapReady.TrySetException(error); _backgroundReady.TrySetException(error); }
     internal void Cancel() { _mapReady.TrySetCanceled(); _backgroundReady.TrySetCanceled(); }
+    internal void CollectReadinessFailures([FailureHandler("ENG-ARCH")] List<Exception> failures)
+    {
+        // The stage drains the original preparation. This owner receives both optional
+        // readiness projections, including failures published before preparation began.
+        Cancel();
+        foreach (var readiness in new[] { MapReady, BackgroundReady })
+            try { readiness.GetAwaiter().GetResult(); }
+            catch (OperationCanceledException) when (readiness.IsCanceled) { }
+            catch (Exception error) { failures.Add(error); }
+    }
     internal Task Initialize(BootPhase phase, BootContext context)
     {
         switch (phase)

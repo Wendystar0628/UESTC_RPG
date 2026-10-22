@@ -8,5 +8,12 @@ namespace Campus.Contracts.AppFlow;
 /// </summary>
 public interface IAppExit
 {
+    /// <summary>Returns the shared shutdown task. Interactive departure awaits it after the flow's decision and save.</summary>
     Task FinishQuit(int exitCode = 0);
+
+    /// <summary>
+    /// Synchronously requests the same stage-owned shutdown without waiting for completion.
+    /// Startup participants use this boundary so shutdown can drain their initialization tasks.
+    /// </summary>
+    void RequestQuit(int exitCode = 0);
 }

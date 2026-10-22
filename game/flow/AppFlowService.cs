@@ -331,7 +331,10 @@ public sealed class AppFlowService : IAppFlow, IAppBootFlow, IBootParticipant, I
     }
     public void Dispose()
     {
-        try { _continuation.Dispose(); }
-        finally { _resources.Dispose(); }
+        var failures = new List<Exception>();
+        _startup.CollectReadinessFailures(failures);
+        try { _continuation.Dispose(); } catch (Exception error) { failures.Add(error); }
+        try { _resources.Dispose(); } catch (Exception error) { failures.Add(error); }
+        if (failures.Count > 0) throw new AggregateException("Application flow cleanup failed.", failures);
     }
 }

@@ -4,8 +4,8 @@ using Godot;
 
 namespace Campus.Stage;
 
-/// <summary>Retains terminal failures and requests unified shutdown after the reporting stack returns.</summary>
-internal sealed class StageStartupFailure(KernelStage stage)
+/// <summary>Retains terminal application failures and requests unified shutdown after the reporting stack returns.</summary>
+internal sealed class StageAppFailure(KernelStage stage)
 {
     private readonly KernelStage _stage = stage;
     private readonly List<Exception> _failures = [];
@@ -37,7 +37,7 @@ internal sealed class StageStartupFailure(KernelStage stage)
         _stage.RequestFailureShutdown();
     }
 
-    private void RecordFailure([FailureHandler("SYS-TITLE")] Exception error)
+    private void RecordFailure([FailureHandler("ENG-ARCH")] Exception error)
     {
         lock (_failures)
         {
@@ -53,7 +53,7 @@ internal sealed class StageStartupFailure(KernelStage stage)
                 }
                 if (_failures.Any(existing => ReferenceEquals(existing, failure))) continue;
                 _failures.Add(failure);
-                DiagnosticLog.Error($"[SYS-TITLE][phase={_failurePhase}]", failure);
+                DiagnosticLog.Error($"[ENG-ARCH][phase={_failurePhase}]", failure);
             }
         }
     }

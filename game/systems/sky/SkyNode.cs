@@ -1,6 +1,5 @@
 using Campus.Kernel.Diagnostics;
 using Campus.Contracts;
-using Campus.Contracts.AppFlow;
 using Campus.Contracts.Maps;
 using Campus.Contracts.Startup;
 using Campus.Kernel.Renderer;
@@ -36,7 +35,6 @@ public partial class SkyNode : Node, IMapAware, IViewContentReadiness, IRegistry
     private SkyMapData? _map;
     private float _sentCover = -1f;
     private float _sentThr = -1f;
-    private IAppFailure? _failure;
     private bool _exiting;
     public Exception? Failure { get; private set; }
     public bool IsReady(Pose pose) => Failure is null && _map is not null && _material is not null &&
@@ -45,7 +43,6 @@ public partial class SkyNode : Node, IMapAware, IViewContentReadiness, IRegistry
     public override void _Ready()
     {
         ProcessPriority = FramePriority.Systems;
-        _failure = KernelServices.Get<IAppFailure>();
         try { Initialize(); }
         catch (Exception error) { RecordFailure(error); }
     }
@@ -84,13 +81,10 @@ public partial class SkyNode : Node, IMapAware, IViewContentReadiness, IRegistry
         catch (Exception error) { RecordFailure(error); }
     }
 
-    // Sky textures belong to the application; readiness retains the same failure for consumers.
+    // The map runtime owns readiness failures; do not also send the same cause to application shutdown.
     private void RecordFailure([FailureHandler("ENG-ARCH")] Exception error)
     {
-        var combined = RetainedFailure.Append(Failure, error);
-        if (ReferenceEquals(combined, Failure)) return;
-        Failure = combined;
-        _failure!.Report(error);
+        Failure = RetainedFailure.Append(Failure, error);
     }
 
     private void UpdateContent()
@@ -187,8 +181,7 @@ public partial class SkyNode : Node, IMapAware, IViewContentReadiness, IRegistry
         if (job is null) return;
         // Generation owns only CPU data. Observe its terminal result without uploading resources
         // after the application has stopped accepting content publication.
-        try { await job; }
-        catch (Exception error) { RecordFailure(error); }
+        await job;
     }
 
     private static float Clamp01(float v) => float.IsFinite(v) ? Math.Clamp(v, 0f, 1f) : 0f;
