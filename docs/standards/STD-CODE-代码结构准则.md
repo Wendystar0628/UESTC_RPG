@@ -66,7 +66,7 @@ paths: ["game/**/*.cs", "pipeline/**/*.py", "scripts/**/*.py", "scripts/**/*.ps1
 
 - **先用原生，不重复造轮子**（DECISION-237、DECISION-297）：写功能前按次序判断，前一级做得到就停：① Godot 原生——节点、服务器与资源，以及 Jolt、导航、本地化、Image、Geometry2D/3D、SurfaceTool、MultiMesh、可见范围与网格 LOD、线程加载、WorkerThreadPool、Tween、AnimationPlayer、Control 容器与 Theme、InputMap 这类内建能力，签名以 `docs/godot-api/signatures.txt` 为准；② .NET 自带；③ 已引用的成熟库（NetTopologySuite 等）；④ 仍在维护、许可允许的新库（引入按下条）；⑤ 公共层已有的；⑥ 都不行才自写。"原生更简单"按要写和要维护的代码量、接入面与效果判断，效果不能比原生差。只在原生做不到，或违反硬约束（生成层是纯 .NET、同机同输入同输出、画风底线与材质白名单、许可）时自写，在类注释里一句话写明原生为什么不行。改到已有的自写实现时同样先判能否换成原生：量小当批换，量大开队列行（CORE-INDEX §2「顺手清掉死代码与旧设计」）。
 - **引入库**：许可与登记见 ENG-RELEASE §7；NuGet 包和程序集引用按 WF-BUILD §3 申请；生成层只用纯 .NET 的库。
-- **公共层分层**（DECISION-244）：标量与向量数学、角度与方位换算放 Contracts 的数学底座（各层都够得着）；平面几何、部件几何底座、分区工具与按 ID 读数据在 `gen/` 下各有公共目录（平面几何能用 NetTopologySuite 的直接用）；测试夹具放共用测试夹具目录。新写类或工具函数前先查这几处。
+- **公共层分层**（DECISION-244）：标量与向量数学、角度与方位换算放 Contracts 的数学底座（各层都够得着）；平面几何、部件几何底座、分区工具与按 ID 读数据在 `gen/` 下各有公共目录（平面几何能用 NetTopologySuite 的直接用）；运行时各模块共用的引擎侧工具（如跨帧等待）放 `Campus.Contracts.Runtime`，不放内核再给门禁开例外（DECISION-304）；测试夹具放共用测试夹具目录。新写类或工具函数前先查这几处。
 - **盒体、视锥与图层只有一个入口**：盒体与外向平面体相交、点到盒体距离只经 `Box3`；从正式或合成相机投影填六个视锥平面只经 `CameraFrustum`；3D 渲染层只用 `RenderLayers` 命名位掩码，`NonCasters` 由这些名称组合。
 - **公共函数清单由 G4 守**：清单上的函数（点到线段距离、点在多边形内、质心、平滑、插值、方位换算、角度包裹之类）只能在登记的公共类型里定义，别处定义同名函数即不过；清单以 `scripts/gates/arch` 的规则为准。
 - **新文件放哪**：按模块分层（ENG-ARCH §1）和文档文件头的 `paths` 找家，找不到先改结构并报主会话，不用补丁式命名（WF-RULE §16）。

@@ -1921,7 +1921,7 @@
   - ★ STD-CODE §0.1 接入要点 · L31 · 989
 - STD-CODE §1 依赖方向 · L46 · 351
 - STD-CODE §2 规则值与数据各一份 · L55 · 590
-- STD-CODE §3 先用现成，再复用，不复制 · L65 · 1.6k
+- STD-CODE §3 先用现成，再复用，不复制 · L65 · 1.7k
 - STD-CODE §4 不留死代码，不写补丁 · L79 · 1.3k
 - STD-CODE §5 规模 · L93 · 269
 - STD-CODE §6 测试代码怎么写 · L99 · 773
@@ -2002,18 +2002,18 @@
 
 ## REG-DECISIONS-SYSTEMS · 系统与工程决策
 
-`docs/registry/REG-DECISIONS-SYSTEMS-系统与工程决策.md` · 20.6k 字 · 界面、存档、音频、性能与画面设置、工程五个领域的已定决策
+`docs/registry/REG-DECISIONS-SYSTEMS-系统与工程决策.md` · 20.9k 字 · 界面、存档、音频、性能与画面设置、工程五个领域的已定决策
 关键词：决策、系统、工程、界面、存档、音频、性能、画面设置、预算、契约
 
 - REG-DECISIONS-SYSTEMS §0 结论 · L21 · 126
   - ★ REG-DECISIONS-SYSTEMS §0.1 接入要点 · L25 · 56
-- REG-DECISIONS-SYSTEMS §1 界面 · L29 · 4.2k
-- REG-DECISIONS-SYSTEMS §2 存档 · L62 · 1.6k
-- REG-DECISIONS-SYSTEMS §3 音频 · L81 · 2.2k
-- REG-DECISIONS-SYSTEMS §4 性能与画面设置 · L103 · 3.5k
-- REG-DECISIONS-SYSTEMS §5 工程 · L133 · 5.0k
-- REG-DECISIONS-SYSTEMS §6 地图与行走 · L167 · 1.0k
-- REG-DECISIONS-SYSTEMS §7 时间、季节、天气 · L178 · 2.4k
+- REG-DECISIONS-SYSTEMS §1 界面 · L29 · 4.4k
+- REG-DECISIONS-SYSTEMS §2 存档 · L63 · 1.6k
+- REG-DECISIONS-SYSTEMS §3 音频 · L82 · 2.2k
+- REG-DECISIONS-SYSTEMS §4 性能与画面设置 · L104 · 3.5k
+- REG-DECISIONS-SYSTEMS §5 工程 · L134 · 5.1k
+- REG-DECISIONS-SYSTEMS §6 地图与行走 · L169 · 1.0k
+- REG-DECISIONS-SYSTEMS §7 时间、季节、天气 · L180 · 2.4k
 
 ## REG-DECISIONS-WORLD · 世界与画面决策
 
