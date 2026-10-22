@@ -225,7 +225,6 @@ internal static class MapRuntimeTestSupport
         public Exception? Failure => null;
         public long CacheBytes => 0;
         public void Clear() { }
-        public void ClearFailures() { }
     }
 
     [KernelService(typeof(ArrivalStream), Map = "fixture-map")]

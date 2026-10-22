@@ -227,9 +227,6 @@ public sealed partial class InstancePoolHost : Node3D, IInstancePoolHost, IMapAw
             AddChild(instance);
             if (instance.GetParent() != this) throw new InvalidOperationException("Godot rejected the pool node.");
             RequireMounted();
-            if (sharedMesh is not null && (_activeMap != map ||
-                !_prototypeMeshes.TryGetValue(sharedMesh.Id, out var current) || !ReferenceEquals(current, sharedMesh)))
-                throw new InvalidOperationException("The pool map was unloaded during publication.");
             _pools.Add(id, pool);
             _orderedPools.Add(pool);
             _orderedPools.Sort(static (a, b) => StringComparer.Ordinal.Compare(a.Id, b.Id));

@@ -264,7 +264,6 @@ public sealed class StreamSchedulingTests
         public BakeProgress Progress => default;
         public long CacheBytes => 0;
         public void Clear() => Keys.Clear();
-        public void ClearFailures() => throw new NotSupportedException();
         public BakeState State => BakeState.Pending;
         public object? Product => null;
         public Exception? Failure => null;

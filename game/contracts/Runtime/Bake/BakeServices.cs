@@ -19,5 +19,4 @@ public interface IBakeService
     Exception? Failure { get; }
     long CacheBytes { get; }
     void Clear();
-    void ClearFailures();
 }

@@ -27,7 +27,7 @@ public interface IStreamMountQueue
 {
     /// <summary>Original mount and cancellation failures consumed by the map lifetime owner.</summary>
     Exception? Failure { get; }
-    /// <summary>Monotonically increases on map unload, including unloading and reloading the same map.</summary>
+    /// <summary>Monotonically increases when the map lifetime is unloaded.</summary>
     long Revision { get; }
     /// <summary>Main-thread enqueue. Rejects stale revisions or maps and cancels their unfinished work.</summary>
     void Enqueue(IStreamMountWork work);

@@ -114,7 +114,6 @@ public sealed class BakeService : IBakeService, IBakeContextSource, IMapContentS
             _products.Clear();
         }
     }
-    public void ClearFailures() => _queue.ClearFailures();
 
     internal MapBuild Mount(IMapContext context)
     {

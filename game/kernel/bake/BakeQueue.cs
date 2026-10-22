@@ -92,13 +92,6 @@ internal sealed class BakeQueue : IDisposable
         }
     }
 
-    public void ClearFailures()
-    {
-        lock (_sync)
-            foreach (var key in _jobs.Where(p => p.Value.Handle.State == BakeState.Failed && p.Value.Handle.Done.IsCompleted).Select(p => p.Key).ToArray())
-            { var job = _jobs[key]; _jobs.Remove(key); if (job.Counted) { _total--; _done--; } }
-    }
-
     public Task ForgetMap(MapSession session)
     {
         Job[] jobs;
@@ -274,7 +267,7 @@ internal sealed class BakeQueue : IDisposable
             if (worker != Thread.CurrentThread) worker.Join();
     }
 
-    // One captured map lifetime owns its requests and drain, even while another same-ID map is mounted.
+    // One captured map lifetime owns its requests and drain.
     internal sealed class MapSession(MapId map)
     {
         internal MapId Map { get; } = map;
