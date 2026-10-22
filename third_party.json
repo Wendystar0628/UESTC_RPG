@@ -618,65 +618,6 @@
       ]
     },
     {
-      "name": "Godot .NET Windows x64 export templates",
-      "version": "4.7.2-stable",
-      "kind": "external-build-tool",
-      "commit": "ed1daf0bf001b61586d9930840f2f1394092c079",
-      "license": "MIT",
-      "licenseUrl": "https://github.com/godotengine/godot/blob/4.7.2-stable/LICENSE.txt",
-      "thirdPartyNoticesUrl": "https://github.com/godotengine/godot/blob/4.7.2-stable/COPYRIGHT.txt",
-      "source": "https://github.com/godotengine/godot-builds/releases/download/4.7.2-stable/Godot_v4.7.2-stable_mono_export_templates.tpz",
-      "release": "https://github.com/godotengine/godot-builds/releases/tag/4.7.2-stable",
-      "bytes": 1202598411,
-      "sha256": "92f8681e349ef1f90891b792da95e3b2b0bd1ed610b78018c58feb2d87e15a9d",
-      "sha512": "bb5c41d72370ed743660361f6228006f808ab04ca33abdc545d740b044f3fe057f32ae8cb7873a1bc86ddcd82ae683b9f6dfdfe4179852f2c0f1acde2ff6bd5a",
-      "hashStatus": "VERIFIED_OFFICIAL_SHA512_AND_RELEASE_SHA256",
-      "archive": "output/downloads/Godot_v4.7.2-stable_mono_export_templates.tpz",
-      "installation": "E:\\Tools\\Godot\\Godot_v4.7.2-stable_mono_win64\\editor_data\\export_templates\\4.7.2.stable.mono",
-      "scope": "Windows x64 only; full official archive retained",
-      "installedFiles": [
-        {
-          "path": "E:\\Tools\\Godot\\Godot_v4.7.2-stable_mono_win64\\editor_data\\export_templates\\4.7.2.stable.mono\\version.txt",
-          "bytes": 18,
-          "sha256": "66796c18ef62c6e4a56a5c7412735b1a1bf805b010585d54b5569642e24373e2"
-        },
-        {
-          "path": "E:\\Tools\\Godot\\Godot_v4.7.2-stable_mono_win64\\editor_data\\export_templates\\4.7.2.stable.mono\\windows_debug_x86_64_console.exe",
-          "bytes": 188928,
-          "sha256": "f78703ba3a05dd51a3464f8c90d4c72f54f95d5a8669993e7a5c3ce522b30c52"
-        },
-        {
-          "path": "E:\\Tools\\Godot\\Godot_v4.7.2-stable_mono_win64\\editor_data\\export_templates\\4.7.2.stable.mono\\windows_debug_x86_64.exe",
-          "bytes": 103418880,
-          "sha256": "4526aac3ac47c65de66f99f715f56b35a2e2e4446fcb23e6d280a830cd97fdea"
-        },
-        {
-          "path": "E:\\Tools\\Godot\\Godot_v4.7.2-stable_mono_win64\\editor_data\\export_templates\\4.7.2.stable.mono\\windows_release_x86_64_console.exe",
-          "bytes": 188928,
-          "sha256": "7895a7873947deaff6c8c859c1f77be051023413035048e2db74ceba07a65017"
-        },
-        {
-          "path": "E:\\Tools\\Godot\\Godot_v4.7.2-stable_mono_win64\\editor_data\\export_templates\\4.7.2.stable.mono\\windows_release_x86_64.exe",
-          "bytes": 109513728,
-          "sha256": "16e0ec3cfd398b938f514de95ff2474b532b5061ada78f92226dba3f7584d55d"
-        }
-      ],
-      "runtimeValidation": "D0_EXPORT_AND_EXPORTED_STARTUP_PASS",
-      "validation": {
-        "scope": "Windows x64 D0 skeleton only",
-        "export": "PASS",
-        "exportedHeadlessRegistry": "PASS",
-        "exportedD3d12WindowAndScreenshot": "PASS",
-        "fullProductionG6": "NOT_CLAIMED"
-      },
-      "validationEvidence": [
-        "output/logs/export-2.log",
-        "output/logs/exported-registry-1.log",
-        "output/logs/exported-window-1.log",
-        "output/render-review/D0-export-first/V1.png"
-      ]
-    },
-    {
       "name": "Source Han Sans SC",
       "version": "2.005R",
       "kind": "font",
@@ -1274,29 +1215,5 @@
   "audio": {
     "manifest": "game/data/audio/licenses.json",
     "assetsDownloadedInD0": false
-  },
-  "validation": {
-    "scope": "D0 skeleton; complete production gates belong to the mainline",
-    "targetFramework": "net10.0",
-    "sdk": "10.0.402",
-    "buildWarnings": 0,
-    "buildErrors": 0,
-    "tests": {
-      "pureDotnet": 22,
-      "runtimeIntegration": 3,
-      "architectureAndRegistry": 7
-    },
-    "gates": {
-      "G1": "Passed",
-      "G2": "Passed",
-      "G3": "Passed",
-      "G4": "Passed",
-      "G5": "Passed",
-      "G5Smoke": "Passed",
-      "G6": "Passed",
-      "D0ExportRuntime": "Passed"
-    },
-    "exportDirectoryBytes": 202062868,
-    "fullProductionG6": "NOT_CLAIMED"
   }
 }
