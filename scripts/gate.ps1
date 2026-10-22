@@ -267,7 +267,7 @@ if (-not ($Full -or $Smoke -or $Only.Count)) {
     if ($saveChanges.Count) { $selected.Add('G20Core') }
 }
 $scope = if ($Full) { 'Full' } elseif ($Only.Count) { 'Selected' } elseif ($Smoke) { 'Core' } else { 'Quick' }
-$planObject = [ordered]@{ Scope = $scope; BaseRef = $BaseRef; Branch = $branch; Gates = $selected.ToArray(); Preparation = 'Ordinary Campus.csproj Debug build and metadata-selected import before game consumers; test hosts build in their test entries'; ChangedPaths = $changes; Godot = $godot; Locks = $layout.Locks; BuildCapacity = 1; FormatPaths = $formatPaths; Bake = 'No pre-bake in quick/core; centralized bake gates not implemented' }
+$planObject = [ordered]@{ Scope = $scope; BaseRef = $BaseRef; Branch = $branch; Gates = $selected.ToArray(); Preparation = 'Ordinary Debug build and native incremental import before game consumers; selecting G1 builds Campus.sln including test projects once, otherwise Campus.csproj'; ChangedPaths = $changes; Godot = $godot; Locks = $layout.Locks; BuildCapacity = 1; FormatPaths = $formatPaths; Bake = 'No pre-bake in quick/core; centralized bake gates not implemented' }
 $g2Selection = if ($selected.Contains('G2')) { @(Get-UESTCG2ProjectSelection $root $runtimeChanges ([bool]$Full) $Configuration) } else { @() }
 $planObject['G2Selection'] = $g2Selection
 $selectionIncomplete = @(
@@ -359,19 +359,19 @@ foreach ($id in $selected) {
         }
         if (-not $gamePrepared -and $id -in @('G1','G2','G5','G5Smoke','G6','G15Core','G20Core')) {
             Assert-GodotVersion
-            Update-UESTCGameBuild -Root $root -Godot $godot -BuildLease $gateLease -Timing $gamePreparation
+            Update-UESTCGameBuild -Root $root -Godot $godot -BuildLease $gateLease -Timing $gamePreparation -Solution:($selected.Contains('G1'))
             $gamePrepared = $true
         }
         switch ($id) {
             'G1' {
                 $naming = Test-UESTCSourceNaming $root
                 if ($formatPaths.Count) {
-                    # Formatting includes test sources; game preparation no longer restores every solution project.
-                    $formatArgs = @('format',(Join-Path $game 'Campus.sln'),'--verify-no-changes','--include') + @($formatPaths | ForEach-Object { Join-Path $root $_ })
+                    # G1 preparation has restored and compiled the whole solution, including test sources.
+                    $formatArgs = @('format',(Join-Path $game 'Campus.sln'),'--verify-no-changes','--no-restore','--include') + @($formatPaths | ForEach-Object { Join-Path $root $_ })
                     $null = Invoke-GateProcess 'G1-format' dotnet $formatArgs
                 }
                 $formatDetail = "changed-source format verified ($($formatPaths.Count) files)"
-                $detail = "Naming files=$($naming.CheckedFiles); Campus.csproj build verified; $formatDetail; import=$($gamePreparation.importInvoked)"
+                $detail = "Naming files=$($naming.CheckedFiles); Campus.sln build verified (including test projects); $formatDetail; import=$($gamePreparation.importInvoked)"
             }
             'G2' {
                 $settings = Write-TestSettings

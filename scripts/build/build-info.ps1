@@ -1,17 +1,27 @@
-﻿# 生成构建信息源码 BuildInfo.g.cs（版本号、提交、构建种类 dev 或 export、模块程序集名单），并更新 game/data/build-commit.txt。
-# 用法：powershell scripts\build\build-info.ps1 -Root <仓库根> -Output <BuildInfo.g.cs 路径> [-Configuration Debug|Release] -ModuleAssemblies <MSBuild resolved assembly names separated by semicolons>；平时由 game\Campus.csproj 在编译时调用
-# 产出：game/data/build-commit.txt；-Output 指定的源码文件（父目录由调用方传入）。
-param([Parameter(Mandatory)][string]$Root,[Parameter(Mandatory)][string]$Output,[string]$Configuration='Debug',[Parameter(Mandatory)][string]$ModuleAssemblies)
+﻿# 分别生成构建信息源码 BuildInfo.g.cs（版本号、构建种类、模块程序集名单）或更新 Git 提交旁文件。
+# 用法：powershell scripts/build/build-info.ps1 -Root <仓库根> -Output <BuildInfo.g.cs 路径> [-Configuration Debug|Release] -ModuleAssemblies <程序集名，以分号分隔>；更新提交用 -Root <仓库根> -CommitOnly；由 game/Campus.csproj 调用。
+# 产出：-Output 指定的源码文件，或 game/data/build-commit.txt；内容相等不改写。
+[CmdletBinding(DefaultParameterSetName='Source')]
+param(
+ [Parameter(Mandatory)][string]$Root,
+ [Parameter(Mandatory,ParameterSetName='Source')][string]$Output,
+ [Parameter(ParameterSetName='Source')][string]$Configuration='Debug',
+ [Parameter(Mandatory,ParameterSetName='Source')][string]$ModuleAssemblies,
+ [Parameter(Mandatory,ParameterSetName='Commit')][switch]$CommitOnly
+)
 $ErrorActionPreference='Stop'
-. (Join-Path $Root 'scripts/lib/common.ps1')
 $rootPath=[IO.Path]::GetFullPath($Root)
+if($CommitOnly){
+ . (Join-Path $rootPath 'scripts/lib/common.ps1')
+ $commit=(Invoke-UESTCGit $rootPath @('rev-parse','--short=12','HEAD')).StdOut.Trim()
+ if(@(Get-UESTCGitLines $rootPath @('status','--porcelain')).Count -gt 0){$commit+="-dirty"}
+ $commitFile=Join-Path $rootPath 'game/data/build-commit.txt'
+ $commitSource="$commit`n"
+ [IO.Directory]::CreateDirectory([IO.Path]::GetDirectoryName($commitFile)) | Out-Null
+ if(-not(Test-Path -LiteralPath $commitFile) -or [IO.File]::ReadAllText($commitFile) -ne $commitSource){[IO.File]::WriteAllText($commitFile,$commitSource,[Text.UTF8Encoding]::new($false))}
+ return
+}
 $version=(Get-Content -LiteralPath (Join-Path $rootPath 'version.txt') -Raw -Encoding UTF8).Trim()
-$commit=(Invoke-UESTCGit $rootPath @('rev-parse','--short=12','HEAD')).StdOut.Trim()
-if(@(Get-UESTCGitLines $rootPath @('status','--porcelain')).Count -gt 0){$commit+="-dirty"}
-$commitFile=Join-Path $rootPath 'game/data/build-commit.txt'
-$commitSource="$commit`n"
-[IO.Directory]::CreateDirectory([IO.Path]::GetDirectoryName($commitFile)) | Out-Null
-if(-not(Test-Path -LiteralPath $commitFile) -or [IO.File]::ReadAllText($commitFile) -ne $commitSource){[IO.File]::WriteAllText($commitFile,$commitSource,[Text.UTF8Encoding]::new($false))}
 $kind=if($Configuration -eq 'Debug'){'dev'}else{'export'}
 $moduleNames=[string[]]@($ModuleAssemblies.Split(';', [StringSplitOptions]::RemoveEmptyEntries) | Select-Object -Unique)
 [Array]::Sort($moduleNames,[StringComparer]::Ordinal)

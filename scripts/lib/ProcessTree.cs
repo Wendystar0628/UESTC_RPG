@@ -36,6 +36,58 @@ namespace Uestc.Tools
             }
         }
 
+        public sealed class FileUser
+        {
+            public int ProcessId;
+            public long StartTimeFileTime;
+        }
+
+        // Ask Windows about the existing lock handle; no owner file or task registry.
+        public static FileUser[] GetFileUsers(string path)
+        {
+            uint session;
+            int code = RmStartSession(out session, 0, new StringBuilder(33));
+            if (code != 0) { throw new Win32Exception(code); }
+            Exception failure = null;
+            try
+            {
+                code = RmRegisterResources(session, 1, new string[] { Path.GetFullPath(path) }, 0, IntPtr.Zero, 0, IntPtr.Zero);
+                if (code != 0) { throw new Win32Exception(code); }
+                uint needed, count = 0, reasons;
+                code = RmGetList(session, out needed, ref count, null, out reasons);
+                for (int attempt = 0; code == 234 && attempt < 3; attempt++)
+                {
+                    RestartProcessInfo[] users = new RestartProcessInfo[needed];
+                    count = needed;
+                    code = RmGetList(session, out needed, ref count, users, out reasons);
+                    if (code == 0)
+                    {
+                        FileUser[] result = new FileUser[count];
+                        for (int index = 0; index < result.Length; index++)
+                        {
+                            var process = users[index].Process;
+                            result[index] = new FileUser { ProcessId = process.ProcessId,
+                                StartTimeFileTime = ((long)(uint)process.StartTime.dwHighDateTime << 32) | (uint)process.StartTime.dwLowDateTime };
+                        }
+                        return result;
+                    }
+                }
+                if (code != 0) { throw new Win32Exception(code); }
+                return new FileUser[0];
+            }
+            catch (Exception caught) { failure = caught; throw; }
+            finally
+            {
+                code = RmEndSession(session);
+                if (code != 0)
+                {
+                    var cleanup = new Win32Exception(code);
+                    if (failure != null) { failure.Data["ProcessTree.RmEndSession"] = cleanup; }
+                    else { throw cleanup; }
+                }
+            }
+        }
+
         public ProcessTree(string executable, string arguments, string directory, bool visible, Encoding encoding, bool isolatedDesktop)
         {
             IntPtr outputRead = IntPtr.Zero, outputWrite = IntPtr.Zero;
@@ -184,6 +236,23 @@ namespace Uestc.Tools
             public short ShowWindow, ReservedSize; public IntPtr ReservedData, Input, Output, Error;
         }
         [StructLayout(LayoutKind.Sequential)] private struct ProcessInformation { public IntPtr Process, Thread; public uint ProcessId, ThreadId; }
+        [StructLayout(LayoutKind.Sequential)] private struct RestartUniqueProcess
+        {
+            public int ProcessId;
+            public System.Runtime.InteropServices.ComTypes.FILETIME StartTime;
+        }
+        [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)] private struct RestartProcessInfo
+        {
+            public RestartUniqueProcess Process;
+            [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 256)] public string ApplicationName;
+            [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 64)] public string ServiceName;
+            public uint ApplicationType, Status, SessionId;
+            [MarshalAs(UnmanagedType.Bool)] public bool Restartable;
+        }
+        [DllImport("rstrtmgr.dll", CharSet = CharSet.Unicode)] private static extern int RmStartSession(out uint session, uint flags, StringBuilder key);
+        [DllImport("rstrtmgr.dll", CharSet = CharSet.Unicode)] private static extern int RmRegisterResources(uint session, uint fileCount, string[] files, uint applicationCount, IntPtr applications, uint serviceCount, IntPtr services);
+        [DllImport("rstrtmgr.dll")] private static extern int RmGetList(uint session, out uint needed, ref uint count, [In, Out] RestartProcessInfo[] processes, out uint reasons);
+        [DllImport("rstrtmgr.dll")] private static extern int RmEndSession(uint session);
         [StructLayout(LayoutKind.Sequential)] private struct BasicLimits
         {
             public long ProcessTime, JobTime; public uint LimitFlags;

@@ -1,6 +1,6 @@
 # 启动体验与 CPU 诊断
 
-沿用 `title`、`immediate`、`dwell` 三个入口与成熟私有 Windows desktop 启动器，不切作者桌面、不用全局输入。输出在 `output/start_game/TOOL-215-profile/<新目录>`。批次先持共享构建锁，调用 `Update-UESTCGameBuild` 普通构建 `Campus.csproj` 并按需导入；预烘仍由 Root 按采样条件安排。每轮再取锁，复用默认启动的 `Initialize-UESTCLaunch` 产物存在分支；正式输出缺失直接报错。
+沿用 `title`、`immediate`、`dwell` 三个入口与成熟私有 Windows desktop 启动器，不切作者桌面、不用全局输入。输出在 `output/start_game/TOOL-215-profile/<新目录>`。批次先持共享构建锁，调用 `Update-UESTCGameBuild` 普通构建 `Campus.csproj` 并执行 Godot 原生增量导入；预烘仍由 Root 按采样条件安排。每轮再取锁，与默认启动共用 `Test-UESTCLaunchOutputs`，只检查正式程序集、已发布业务清单、原生导入缓存三类产物是否都存在，不判新旧；任一缺失直接报错，计时内不补构建或导入。
 
 普通体验：`powershell -File scripts/build/startup-cpu/run.ps1 -Output <新目录>`。默认三轮；单轮可用 `-Modes immediate`。默认 `experience` 显式设 `UESTC_STARTUP_PROFILE=0`，不开 EventPipe、不枚举 CPU 线程、不构建解析器。有归因需求时加 `-Measurement diagnostic`，才构建现有 CpuParse、启用逐帧日志和 EventPipe；诊断不能证明体验目标通过。`run-existing-immediate.ps1 -Output <新目录> -BuiltRevision <构建提交>` 复用相同体验路径。
 

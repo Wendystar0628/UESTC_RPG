@@ -138,12 +138,16 @@ try {
     $timing['lockAcquiredTimestamp'] = [Diagnostics.Stopwatch]::GetTimestamp()
     $timing['lockWaitStatus'] = 'MEASURED_IN_TOTAL'
     $godot = Get-UESTCGodot
-    # Batch preparation is outside this script-entry clock. Require its output so
-    # the measured default-launch path can only take the existing-output branch.
-    if (-not [IO.File]::Exists((Get-UESTCGameAssemblyPath -Root $toolRoot))) {
-        throw 'Prepared game output is missing; no build is allowed inside the measured launch interval.'
+    # Batch preparation is outside this script-entry clock. Check the same three
+    # outputs as the product launcher; never prepare inside the measured interval.
+    $timing['buildInvoked'] = $false
+    $timing['importInvoked'] = $false
+    $timing['outputCheckStartedTimestamp'] = [Diagnostics.Stopwatch]::GetTimestamp()
+    $outputsPresent = Test-UESTCLaunchOutputs -Root $toolRoot
+    $timing['outputCheckCompletedTimestamp'] = [Diagnostics.Stopwatch]::GetTimestamp()
+    if (-not $outputsPresent) {
+        throw 'Prepared launch outputs are incomplete: the formal assembly, published business manifest and native import cache must all exist; no build is allowed inside the measured launch interval.'
     }
-    Initialize-UESTCLaunch -Root $toolRoot -Godot $godot -BuildLease $lease -Timing $timing
     $window = $godot -replace '_console\.exe$', '.exe'
     if (-not [IO.File]::Exists($window)) { $window = $godot }
     $log = Join-Path $Output 'godot.log'

@@ -115,6 +115,4 @@ Global
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
 	EndGlobalSection
-EndProject("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Campus.Arch.Tests", "..\scripts\gates\arch\Campus.Arch.Tests.csproj", "{EF864ADF-69AA-4EF4-BA96-739467A24F03}"
-EndProject
-Global
+EndGlobal

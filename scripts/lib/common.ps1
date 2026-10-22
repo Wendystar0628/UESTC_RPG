@@ -42,18 +42,50 @@ function Assert-UESTCChildPath {
     return $full
 }
 
+# Only real contention pays for the native handle-owner query and process table.
+function Write-UESTCBuildLockWait {
+    param([Parameter(Mandatory)][string]$LockPath)
+    Write-Host -NoNewline '正在等待构建锁；占锁任务：'
+    try {
+        if (-not ('Uestc.Tools.ProcessTree' -as [type])) { Add-Type -Path (Join-Path $PSScriptRoot 'ProcessTree.cs') }
+        $users = @([Uestc.Tools.ProcessTree]::GetFileUsers($LockPath))
+        if ($users.Count -eq 0) { Write-Host '未知（系统未返回持锁进程）'; return }
+        $tasks = foreach ($user in $users) {
+            $rows = @(Get-CimInstance Win32_Process -Filter "ProcessId = $($user.ProcessId)" -OperationTimeoutSec 2 -ErrorAction Stop)
+            if ($rows.Count -eq 1 -and $rows[0].CreationDate -and $rows[0].CommandLine) {
+                # CIM timestamps have microsecond precision; RM FILETIME has 100 ns precision.
+                $difference = [Math]::Abs($rows[0].CreationDate.ToUniversalTime().ToFileTimeUtc() - $user.StartTimeFileTime)
+                if ($difference -lt 10) {
+                    "PID $($user.ProcessId) $($rows[0].Name)：$($rows[0].CommandLine -replace '[\r\n]+', ' ')"
+                    continue
+                }
+            }
+            "PID $($user.ProcessId)：未知（进程已退出、身份变化或命令不可读）"
+        }
+        Write-Host ($tasks -join '；')
+    } catch {
+        Write-Host ("未知（查询失败：$($_.Exception.Message -replace '[\r\n]+', ' ')）")
+    }
+}
+
 # One OS handle serializes builds, imports, gates, baking and screenshots.
 function Enter-UESTCBuildLock {
     param([Parameter(Mandatory)][string]$LockRoot, [int]$TimeoutSeconds = 1800)
     $null = [IO.Directory]::CreateDirectory($LockRoot)
+    $lockPath = Join-Path $LockRoot 'build.lock'
+    $waitShown = $false
     $timer = [Diagnostics.Stopwatch]::StartNew()
     try {
         do {
             try {
-                return [IO.File]::Open((Join-Path $LockRoot 'build.lock'), [IO.FileMode]::OpenOrCreate,
+                return [IO.File]::Open($lockPath, [IO.FileMode]::OpenOrCreate,
                     [IO.FileAccess]::ReadWrite, [IO.FileShare]::None)
             } catch [IO.IOException] {
                 if (($_.Exception.HResult -band 0xffff) -notin @(32,33)) { throw }
+                if (-not $waitShown) {
+                    $waitShown = $true
+                    Write-UESTCBuildLockWait -LockPath $lockPath
+                }
             }
             Start-Sleep -Milliseconds 100
         } while ($timer.Elapsed.TotalSeconds -lt $TimeoutSeconds)

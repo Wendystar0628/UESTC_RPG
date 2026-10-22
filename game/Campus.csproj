@@ -14,12 +14,6 @@
     <CampusGeneratedCompile Include="BuildInfo.g.cs" Generator="BuildInformation" OutputDirectoryProperty="IntermediateOutputPath" />
     <CampusGeneratedCompile Include="gdunit4_testadapter_v5/GdUnit4TestRunnerScene.cs" Generator="TestRunner" Condition="'$(Configuration)' == 'Debug'" />
     <CampusGeneratedFile Include="style/shaders/style_consts.gdshaderinc;style/outline/fog.glslinc" />
-    <_CampusStyleShaderInput Include="../scripts/build/generate-style-shaders.py;style/palette/core.json;style/shaders/fog.gdshaderinc;
-      contracts/Materials/PaletteEncoding.cs;contracts/Geometry/GeometryBundle.cs;contracts/Materials/Style.cs;contracts/Materials/WetSurface.cs;
-      contracts/Determinism/IntegerNoise.cs;contracts/Lighting/LightingContracts.cs;contracts/Lighting/WindowCardEncoding.cs;
-      systems/nightlight/Schedule/ScheduleMath.cs;systems/nightlight/Lamps/LampTable.cs;systems/nightlight/Glow/GlowSets.cs;
-      style/palette/keys/ColorScriptDerive.cs;style/palette/keys/ColorScriptCurves.cs;style/shaders/MatTable.cs;style/shaders/cards/WindowCardKinds.cs;
-      systems/vegetation/VegFade.cs;gen/vegetation/Understorey.cs" />
   </ItemGroup>
   <ItemGroup Condition="'$(Configuration)' != 'Debug'">
     <Compile Remove="gdunit4_testadapter_v*/**/*.cs" />
@@ -44,33 +38,42 @@
       <Compile Include="$(_CampusGdUnitRunnerSource)" Condition="Exists('$(_CampusGdUnitRunnerSource)')" />
     </ItemGroup>
   </Target>
-  <Target Name="GenerateStyleShaders" BeforeTargets="PrepareForBuild" Condition="'$(DesignTimeBuild)' != 'true'"
+  <Target Name="GetCampusStyleShaderInputs" Condition="'$(DesignTimeBuild)' != 'true'">
+    <Exec Command="python -X utf8 &quot;$(MSBuildProjectDirectory)/../scripts/build/generate-style-shaders.py&quot; --root &quot;$(MSBuildProjectDirectory)/..&quot; --list-inputs"
+          ConsoleToMSBuild="true" StandardOutputImportance="Low">
+      <Output TaskParameter="ConsoleOutput" ItemName="_CampusStyleShaderInput" />
+    </Exec>
+  </Target>
+  <Target Name="GenerateStyleShaders" BeforeTargets="PrepareForBuild" DependsOnTargets="GetCampusStyleShaderInputs"
+          Condition="'$(DesignTimeBuild)' != 'true'"
           Inputs="$(MSBuildAllProjects);@(_CampusStyleShaderInput)" Outputs="@(CampusGeneratedFile)">
     <Exec Command="python -X utf8 &quot;$(MSBuildProjectDirectory)/../scripts/build/generate-style-shaders.py&quot; --root &quot;$(MSBuildProjectDirectory)/..&quot;" />
-    <Touch Files="@(CampusGeneratedFile)" />
     <ItemGroup><FileWrites Include="@(CampusGeneratedFile-&gt;'%(FullPath)')" /></ItemGroup>
   </Target>
-  <Target Name="PrepareCampusBuildInformation" DependsOnTargets="GetCampusCodeFingerprintSources">
+  <Target Name="PrepareCampusBuildInformation" DependsOnTargets="ResolveReferences">
     <PropertyGroup>
       <_CampusBuildInformationSource>$([MSBuild]::NormalizePath('$(MSBuildProjectDirectory)', '$(IntermediateOutputPath)', 'BuildInfo.g.cs'))</_CampusBuildInformationSource>
       <_CampusBuildCommitFile>$(MSBuildProjectDirectory)/data/build-commit.txt</_CampusBuildCommitFile>
     </PropertyGroup>
     <ItemGroup>
-      <_CampusBuildInformationInput Include="@(_CampusNativeFingerprintInput);@(ProjectReference-&gt;'%(FullPath)');../version.txt;../scripts/build/build-info.ps1;../scripts/lib/common.ps1;../scripts/lib/ProcessTree.cs" />
-      <_CampusBuildInformationInput Include="../.git/HEAD;../.git/index;../.git/packed-refs;../.git/refs/**/*" Condition="Exists('../.git')" />
+      <_CampusBuildInformationInput Include="$(MSBuildAllProjects);$(ProjectAssetsFile);@(ProjectReference-&gt;'%(FullPath)');@(_ResolvedProjectReferencePaths-&gt;'%(FullPath)');../version.txt;../scripts/build/build-info.ps1" />
       <_CampusBuildInformationExistingInput Include="@(_CampusBuildInformationInput)" Condition="Exists('%(_CampusBuildInformationInput.Identity)')" />
       <_CampusBuildInformationExistingInput Remove="$(_CampusBuildInformationSource)" />
       <Compile Include="$(_CampusBuildInformationSource)" />
     </ItemGroup>
   </Target>
   <Target Name="IncludeCampusBuildInformation" BeforeTargets="CoreCompile"
-          DependsOnTargets="PrepareCampusBuildInformation;GenerateBuildInformation" />
+          DependsOnTargets="PrepareCampusBuildInformation;GenerateBuildInformation;UpdateCampusBuildCommit" />
   <Target Name="GenerateBuildInformation" DependsOnTargets="PrepareCampusBuildInformation"
           Condition="'$(DesignTimeBuild)' != 'true'"
-          Inputs="@(_CampusBuildInformationExistingInput)" Outputs="$(_CampusBuildInformationSource);$(_CampusBuildCommitFile)">
+          Inputs="@(_CampusBuildInformationExistingInput)" Outputs="$(_CampusBuildInformationSource)">
     <Exec Command="powershell -NoProfile -ExecutionPolicy Bypass -File &quot;$(MSBuildProjectDirectory)/../scripts/build/build-info.ps1&quot; -Root &quot;$(MSBuildProjectDirectory)/..&quot; -Output &quot;$(_CampusBuildInformationSource)&quot; -Configuration &quot;$(Configuration)&quot; -ModuleAssemblies &quot;$(TargetName);@(_ResolvedProjectReferencePaths-&gt;'%(Filename)', ';')&quot;" />
-    <Touch Files="$(_CampusBuildInformationSource);$(_CampusBuildCommitFile)" />
-    <ItemGroup><FileWrites Include="$(_CampusBuildInformationSource);$(_CampusBuildCommitFile)" /></ItemGroup>
+    <ItemGroup><FileWrites Include="$(_CampusBuildInformationSource)" /></ItemGroup>
+  </Target>
+  <Target Name="UpdateCampusBuildCommit" DependsOnTargets="PrepareCampusBuildInformation"
+          Condition="'$(DesignTimeBuild)' != 'true'">
+    <Exec Command="powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File &quot;$(MSBuildProjectDirectory)/../scripts/build/build-info.ps1&quot; -Root &quot;$(MSBuildProjectDirectory)/..&quot; -CommitOnly" />
+    <ItemGroup><FileWrites Include="$(_CampusBuildCommitFile)" /></ItemGroup>
   </Target>
   <!-- Preserve the real invocation configuration for Roslyn; run this only when the manifest is stale. -->
   <UsingTask TaskName="CampusBuildGlobalProperties" TaskFactory="RoslynCodeTaskFactory"
@@ -112,8 +115,10 @@
       <_CampusBuildDefaultProperty Include="SelfContained=$(SelfContained)" Condition="'$(SelfContained)' != ''" />
       <!-- The root's CoreCompile can add generated sources/configs after its precompile input collection. -->
       <_CampusNativeFingerprintInput Include="@(Compile-&gt;'%(FullPath)');@(EditorConfigFiles-&gt;'%(FullPath)');@(Analyzer-&gt;'%(FullPath)');@(AdditionalFiles-&gt;'%(FullPath)')" />
+      <!-- Build information is excluded from CPU hashes; remove it after recursive and late Compile collection. -->
+      <_CampusNativeFingerprintInput Remove="$(_CampusBuildInformationSource)" />
       <_CampusFingerprintExistingInput Include="@(_CampusNativeFingerprintInput)" Condition="Exists('%(_CampusNativeFingerprintInput.Identity)')" />
-      <_CampusFingerprintExistingInput Include="$(_CampusBuildInformationSource);../global.json;../Directory.Build.props;../Directory.Build.targets;../Directory.Packages.props;../docs/ROUTES.json" />
+      <_CampusFingerprintExistingInput Include="../global.json;../Directory.Build.props;../Directory.Build.targets;../Directory.Packages.props;../docs/ROUTES.json" />
       <_CampusFingerprintExistingInput Include="../NuGet.Config" Condition="Exists('../NuGet.Config')" />
     </ItemGroup>
   </Target>

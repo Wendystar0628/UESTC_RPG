@@ -1,11 +1,14 @@
 """从登记表、C# 规则值及共用雾源生成构建期着色器 include。
-用法：python scripts/build/generate-style-shaders.py [--root 仓库根目录]
+用法：python scripts/build/generate-style-shaders.py [--root 仓库根目录] [--list-inputs（只列原生增量构建输入）]
 产出：game/style/shaders/style_consts.gdshaderinc；game/style/outline/fog.glslinc。
 """
 from pathlib import Path
 import argparse
 import json
 import re
+
+PALETTE_SOURCE = "game/style/palette/core.json"
+FOG_SOURCE = "game/style/shaders/fog.gdshaderinc"
 
 # Explicit current consumers: path, C# literal member, shader name, shader type, enum (if any).
 BINDINGS = [('game/contracts/Materials/PaletteEncoding.cs', 'FirstSeasonalRow', 'PAL_ROW_SEASON0', None, None),
@@ -173,6 +176,12 @@ VECTOR_BINDINGS = [
 ]
 
 
+def source_inputs(root):
+    paths = {binding[0] for binding in BINDINGS + VECTOR_BINDINGS}
+    paths.update((PALETTE_SOURCE, FOG_SOURCE))
+    return sorted({str((root / path).resolve()) for path in paths} | {str(Path(__file__).resolve())})
+
+
 def literal_rule(root, path, member, kind=None, enum=None):
     source = (root / path).read_text(encoding="utf-8-sig")
     if enum:
@@ -204,7 +213,7 @@ def style_constants(root):
     for path, member, name, kind, enum in BINDINGS:
         kind, value = literal_rule(root, path, member, kind, enum)
         lines.append(f"const {kind} {name} = {value};")
-    palette = json.loads((root / "game/style/palette/core.json").read_text(encoding="utf-8-sig"))
+    palette = json.loads((root / PALETTE_SOURCE).read_text(encoding="utf-8-sig"))
     indices = {entry["token"]: entry["index"] for entry in palette["entries"]}
     for token, name in PALETTE_BINDINGS:
         lines.append(f"const int {name} = {indices[token]};")
@@ -215,7 +224,7 @@ def style_constants(root):
     return "\n".join(lines + ["", "#endif", ""])
 
 def fog_glsl(root):
-    source = (root / "game/style/shaders/fog.gdshaderinc").read_text(encoding="utf-8-sig")
+    source = (root / FOG_SOURCE).read_text(encoding="utf-8-sig")
     # RDShaderFile expands only main-file includes; post_outline.glsl imports
     # these constants before fog.glslinc instead of leaving a nested directive.
     source = source.replace('#include "res://style/shaders/style_consts.gdshaderinc"\n', '')
@@ -227,7 +236,11 @@ def fog_glsl(root):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--root", type=Path, default=Path(__file__).resolve().parents[2])
+    parser.add_argument("--list-inputs", action="store_true")
     args = parser.parse_args()
+    if args.list_inputs:
+        print("\n".join(source_inputs(args.root)))
+        return
     outputs = {"game/style/shaders/style_consts.gdshaderinc": style_constants(args.root),
                "game/style/outline/fog.glslinc": fog_glsl(args.root)}
     for path, content in outputs.items():
