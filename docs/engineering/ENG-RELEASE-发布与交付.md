@@ -15,7 +15,7 @@ paths: ["game/export_presets.cfg", "game/project.godot", "third_party.json", "sc
 # ENG-RELEASE · 发布与交付
 
 > **范围**：本文规定对外交付：版本号、引擎与框架版本和构建信息从哪里来、正式版的用户目录、一次导出与发布怎么做、玩家怎样安装更新卸载、每个公开版本附带的地图数据包、试玩出问题时怎样交回诊断材料，以及各部分按什么许可公开、插件清单、画面右下角的署名、许可页、窗口标题与图标。
-> **不在本文**：导出入口脚本的步骤（`scripts/release/`，主线之后建）；构建信息的生成（`scripts/build/build-info.ps1`）；安装包的组成与体积（ENG-PERF-STREAM §4，G6 见 ENG-GATES §1.2）；日志的写法（STD-CODE §0.1）；存档的格式与失败处理（SYS-SAVE）；许可页的界面（UI-NAV §3.5）；图标的画法（UI-VISUAL-COMPONENTS §3.3）。
+> **不在本文**：导出入口脚本的步骤（`scripts/release/`，主线之后建）；构建信息的生成（`game/Campus.csproj` 原生生成，`scripts/build/build-info.ps1` 只刷新提交号旁文件）；安装包的组成与体积（ENG-PERF-STREAM §4，G6 见 ENG-GATES §1.2）；日志的写法（STD-CODE §0.1）；存档的格式与失败处理（SYS-SAVE）；许可页的界面（UI-NAV §3.5）；图标的画法（UI-VISUAL-COMPONENTS §3.3）。
 > **查阅**：先读 §0；版本号、引擎与框架版本和构建信息看 §1；用户数据目录看 §2；导出与发布看 §3；安装、更新与卸载看 §4；地图数据包看 §5；故障与诊断看 §6；许可与插件清单看 §7；署名、许可页、窗口标题与图标看 §7.1
 
 ## 0 结论
