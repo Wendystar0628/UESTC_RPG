@@ -14,9 +14,7 @@ namespace Campus.Hud;
 [KernelService(typeof(IAppLoadingPresentation))]
 [KernelService(typeof(IAppScreenCoverage))]
 [KernelService(typeof(IAppFrontispiecePresentation))]
-[KernelService(typeof(IAppStartupFailurePresentation))]
-public partial class HudRoot : CanvasLayer, IBootParticipant, IAppLoadingPresentation, IAppScreenCoverage, IAppFrontispiecePresentation,
-    IAppStartupFailurePresentation
+public partial class HudRoot : CanvasLayer, IBootParticipant, IAppLoadingPresentation, IAppScreenCoverage, IAppFrontispiecePresentation
 {
     private HudRootDependencies _dependencies = null!;
     private UiBootOptions _args = new();
@@ -26,7 +24,6 @@ public partial class HudRoot : CanvasLayer, IBootParticipant, IAppLoadingPresent
     private HudInput _input = null!;
     private HudLoading _loading = null!;
     private HudFrontispiece _frontispiece = null!;
-    private HudFailure _failure = null!;
     private bool _initialized, _galleryTitle;
     private SettingsPage? _gallerySettings;
     // 节点寿命：_Ready 建、_ExitTree 取消；画廊任务挂在它上面，由 _Process 读结果。
@@ -53,12 +50,6 @@ public partial class HudRoot : CanvasLayer, IBootParticipant, IAppLoadingPresent
         SyncTitleTheme();
     }
     Task IAppFrontispiecePresentation.Hide(float seconds) => ((IAppFrontispiecePresentation)_frontispiece).Hide(seconds);
-    Task<bool> IAppStartupFailurePresentation.Show(IAppStartupFailureSession session)
-    {
-        ArgumentNullException.ThrowIfNull(session);
-        // 尚未搭好界面（首次进树前）就没有可以画失败页的地方。
-        return _initialized ? _failure.Show(session) : Task.FromResult(false);
-    }
 
     public HudRoot()
     {
@@ -83,7 +74,6 @@ public partial class HudRoot : CanvasLayer, IBootParticipant, IAppLoadingPresent
         _residents.Enter();
         _frontispiece.Enter();
         _loading.Enter();
-        _failure.Enter();
         _pages.StateChanged += SyncCorners;
         _dependencies.Flow.Changed += OnFlowChanged;
         _dependencies.ThemeClock.Switched += OnThemeSwitched;
@@ -97,8 +87,7 @@ public partial class HudRoot : CanvasLayer, IBootParticipant, IAppLoadingPresent
         _residents = new HudResidents(_dependencies, _view, _pages);
         _frontispiece = new HudFrontispiece(this, _dependencies, _view);
         _loading = new HudLoading(this, _dependencies, _view, () => _input.SyncHostInput());
-        _failure = new HudFailure(this, _dependencies, _view, _frontispiece, () => _input.SyncHostInput());
-        _input = new HudInput(this, _dependencies, _view, _pages, _residents, () => _loading.Active, () => _failure.Active);
+        _input = new HudInput(this, _dependencies, _view, _pages, _residents, () => _loading.Active);
         _initialized = true;
     }
 
@@ -107,7 +96,6 @@ public partial class HudRoot : CanvasLayer, IBootParticipant, IAppLoadingPresent
         _view.Tick(delta);
         _residents.Tick(delta, Active, _args.Gallery == "hud");
         _input.Tick(delta);
-        _failure.Tick();
         ObserveGallery();
     }
 
@@ -119,7 +107,6 @@ public partial class HudRoot : CanvasLayer, IBootParticipant, IAppLoadingPresent
         if (!_initialized) return;
         _lifetime.Cancel();
         _lifetime.Dispose();
-        _failure.Exit();
         _loading.Exit();
         _frontispiece.Exit();
         // Stop host arbitration before page/resident removal.
@@ -230,7 +217,6 @@ public partial class HudRoot : CanvasLayer, IBootParticipant, IAppLoadingPresent
             case "atlas": break; // The map HUD opens its own gallery after entering Playing.
             case "layout": Widgets.UiLayoutGallery.Create(_view.Kit, _view.PageHost); break;
             case "census": StartGallery(lifetime => Census(3, lifetime)); break;
-            case "failure": StartGallery(_ => FailureGallery()); break;
             default: throw new ArgumentException($"Unknown --ui-gallery page: {page}");
         }
     }
@@ -262,12 +248,6 @@ public partial class HudRoot : CanvasLayer, IBootParticipant, IAppLoadingPresent
         if (_gallery is not { IsCompleted: true } completed) return;
         _gallery = null;
         completed.GetAwaiter().GetResult();
-    }
-
-    /// <summary>--ui-gallery=failure：示例失败走真实的启动失败页；没能展示就报错，不静默留空画面。失败页的寿命随本节点 _ExitTree 一起取消。</summary>
-    private async Task FailureGallery()
-    {
-        if (!await _failure.ShowGallery()) throw new InvalidOperationException("The startup failure gallery could not be shown.");
     }
 
     /// <summary>

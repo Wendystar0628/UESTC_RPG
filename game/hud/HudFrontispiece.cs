@@ -58,27 +58,19 @@ internal sealed class HudFrontispiece : IAppFrontispiecePresentation
         _image.Texture = null;
     }
 
-    Task IAppFrontispiecePresentation.Show() => Show(fogOnly: false);
-
-    /// <summary>启动失败页的背景：只留雾色，不带静帧。</summary>
-    public Task ShowFog() => Show(fogOnly: true);
-
-    private Task Show(bool fogOnly)
+    Task IAppFrontispiecePresentation.Show()
     {
         var previous = _transition;
-        return _transition = ShowAsync(previous, fogOnly, _lifetime.Token);
+        return _transition = ShowAsync(previous, _lifetime.Token);
     }
 
-    private async Task ShowAsync(Task previous, bool fogOnly, CancellationToken lifetime)
+    private async Task ShowAsync(Task previous, CancellationToken lifetime)
     {
-        // 失败页的雾色独立接管：前一次扉页显示的故障已由它的调用方交给启动失败处理（SYS-TITLE），这里只等它结束、不再重抛。
-        if (fogOnly) await previous.WaitAsync(lifetime).ConfigureAwait(ConfigureAwaitOptions.SuppressThrowing | ConfigureAwaitOptions.ContinueOnCapturedContext);
-        else await previous.WaitAsync(lifetime);
+        await previous.WaitAsync(lifetime);
         lifetime.ThrowIfCancellationRequested();
         _view.Frontispiece.Modulate = Colors.White;
         _view.Frontispiece.Visible = true;
-        if (fogOnly) _image.Texture = null;
-        else _image.Texture ??= _dependencies.Resources.Load<Texture2D>(ImagePath);
+        _image.Texture ??= _dependencies.Resources.Load<Texture2D>(ImagePath);
         await FrameAwaiter.StartupReadyDrawAsync(_owner, () => HudLoading.CoversViewport(_owner, _view.Frontispiece, _owner.GetViewport().GetVisibleRect().Size),
             TimeSpan.FromSeconds(BootTuning.StalledSeconds), lifetime);
         lifetime.ThrowIfCancellationRequested();

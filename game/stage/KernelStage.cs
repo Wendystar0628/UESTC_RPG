@@ -185,7 +185,6 @@ public partial class KernelStage : Node3D, IAppExit, IStageGateHost
 
     private void BindRuntimeServices(ServiceRegistry registry, StageCamera view)
     {
-        _startupFailure.BindPresentation(registry);
         _flow = registry.Get<IAppFlow>();
         _flow.PhaseReached += phase => StageStartupTrace.TraceFlowPhase(registry, phase);
         if (!ReferenceEquals(_flow, registry.Get<IAppBootFlow>()))
