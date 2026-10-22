@@ -42,7 +42,7 @@ try {
             $name = $columns[0].Trim()
             if ($name -notin $names) { continue }
             $pose = $columns[1].Trim()
-            # 开始页与失败页没有世界，不给位姿，拍摄标识用 ui。
+            # 开始页没有世界，不给位姿，拍摄标识用 ui。
             $shot = if ($pose -eq '-') { 'ui' } else { $pose }
             $poseArguments = @(if ($pose -ne '-') { "--pose=$pose" })
             $pageArguments = @('--path', "$repo\game", '--windowed', '--resolution', '1920x1080', '--rendering-driver', 'd3d12', '--fixed-fps', '60',

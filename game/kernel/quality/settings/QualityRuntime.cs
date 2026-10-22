@@ -109,7 +109,7 @@ public partial class QualityRuntime : Node, IQualityAware, IQualityRuntime
         AppState.Title or AppState.Entering or AppState.Playing or AppState.Leaving or AppState.Quitting => false,
         _ => throw new InvalidOperationException("Unknown application state."),
     };
-    public float RefreshRate => DisplayServer.ScreenGetRefreshRate(DisplayServer.WindowGetCurrentScreen());
+    private static float RefreshRate => DisplayServer.ScreenGetRefreshRate(DisplayServer.WindowGetCurrentScreen());
     public Vector2I OutputSize => DisplayServer.WindowGetSize();
     public Vector2I ScreenSize => DisplayServer.ScreenGetSize(DisplayServer.WindowGetCurrentScreen());
 

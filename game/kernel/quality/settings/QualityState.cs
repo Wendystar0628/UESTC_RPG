@@ -12,7 +12,6 @@ public sealed class QualityState
     private long _version;
     private QualityPreset _basePreset;
     public bool CaptureMode { get; set; }
-    public float RefreshRate { get; set; } = 60;
     public QualityProfile Requested { get; private set; }
     public QualityView Effective { get; private set; }
     public float GrassRadius => _catalog.GrassRadius(_basePreset);

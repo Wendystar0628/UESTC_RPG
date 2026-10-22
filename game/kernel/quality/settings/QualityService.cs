@@ -13,7 +13,6 @@ public interface IQualityRuntime
     Task<double> NextFrame(CancellationToken cancellationToken);
     bool Transitioning { get; }
     bool Booting { get; }
-    float RefreshRate { get; }
     Vector2I OutputSize { get; }
     Vector2I ScreenSize { get; }
     IAppLoadingLease ShowLoading(CancellationToken cancellationToken);
@@ -158,7 +157,6 @@ public sealed class QualityService : IQualityFrame, IBootParticipant, IAsyncDisp
             var size = CaptureMode ? runtime.OutputSize : runtime.ScreenSize;
             _catalog.OutputWidth = Math.Max(1, size.X);
             _catalog.OutputHeight = Math.Max(1, size.Y);
-            _state.RefreshRate = runtime.RefreshRate;
             // settings.json > catalog default; captures never read user://. The command line is applied after this.
             var profile = (CaptureMode ? null : _store.Read()) ?? _catalog.DefaultProfile;
             _durableProfile = QualityCatalog.Freeze(profile);
