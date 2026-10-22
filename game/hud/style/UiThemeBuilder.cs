@@ -18,6 +18,7 @@ public sealed class UiThemeBuilder
     private readonly UiColors _c;
     private readonly IRequiredResources _resources;
     private readonly Dictionary<string, FontFile> _files = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, (FontVariation Font, int Size, float LineHeight)> _roles = new(StringComparer.Ordinal);
     private readonly HashSet<string> _types = new(StringComparer.Ordinal);
 
     public UiThemeBuilder(UiTokens tokens, UiColors colors, IRequiredResources resources)
@@ -128,11 +129,20 @@ public sealed class UiThemeBuilder
         return font;
     }
 
+    // 每个角色只建一份，主题与排版共用；调用方只读不改。
     public FontVariation Font(string role, out int size, out float lineHeight)
     {
+        if (!_roles.TryGetValue(role, out var entry)) _roles[role] = entry = BuildFont(role);
+        size = entry.Size;
+        lineHeight = entry.LineHeight;
+        return entry.Font;
+    }
+
+    private (FontVariation Font, int Size, float LineHeight) BuildFont(string role)
+    {
         var r = _t.Get("metrics", "type", "roles", role);
-        size = r.GetProperty("size").GetInt32();
-        lineHeight = r.GetProperty("lineHeight").GetSingle();
+        var size = r.GetProperty("size").GetInt32();
+        var lineHeight = r.GetProperty("lineHeight").GetSingle();
         var weight = r.GetProperty("weight").GetString()!;
         var chain = _t.Get("metrics", "type", "chains", r.GetProperty("chain").GetString()!);
         var families = chain.EnumerateArray().Select(e => e.GetString()!).ToArray();
@@ -146,7 +156,7 @@ public sealed class UiThemeBuilder
             var tag = TextServerManager.GetPrimaryInterface().NameToTag(_t.S("metrics", "type", "tabularFigures"));
             fv.OpentypeFeatures = new Godot.Collections.Dictionary { { tag, 1 } };
         }
-        return fv;
+        return (fv, size, lineHeight);
     }
 
     public bool Upper(string role) =>
