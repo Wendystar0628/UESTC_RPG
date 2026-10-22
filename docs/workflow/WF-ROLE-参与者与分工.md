@@ -41,7 +41,7 @@ paths: ["AGENTS.md", "CLAUDE.md"]
 | 主会话 | Claude Opus 5.5，Claude Code 交互会话 | 作者 |
 | 主会话的子代理 | Claude Opus 或 Sonnet，Agent 工具后台开，按施工队列行号取名 | 主会话 |
 | Codex 主线 | gpt-6.1-sol（日常 high，诊断 xhigh），Codex 应用里唯一的会话 | 主会话 |
-| Codex 主线的子代理 | 默认 gpt-6.1-sol，机械活 gpt-6-luna（medium），`spawn_agent` 开；gpt-6-astra 只做临时审计（§6） | Codex 主线 |
+| Codex 主线的子代理 | 默认 gpt-6.1-sol，机械活 gpt-6-luna（medium），`spawn_agent` 开；gpt-6-astra 只做重难审计（§6） | Codex 主线 |
 
 - **Claude 侧只有一个账号**，不另设中间会话；额度见底见 WF-MODEL §9.4。
 - **Codex 侧只有 Codex 主线一个会话**，开在 Codex 应用里，作者能看到全过程；要用 GPT 就在它里面开子代理，不另开会话（DECISION-249）；派活与通信见 WF-COMMS §5。GPT 侧一律普通速度（DECISION-197）。
@@ -97,4 +97,4 @@ paths: ["AGENTS.md", "CLAUDE.md"]
 
 **施工默认用 gpt-6.1-sol 子代理**：Codex 主线名下所有任务的施工，包括内核、确定性、契约与存档迁移相关的任务，用 `spawn_agent` 开 gpt-6.1-sol，复杂的用 high 或 xhigh。任务的归属与审查权不变。
 
-**gpt-6-astra 只做临时审计**（DECISION-249）：重大问题 gpt-6.1-sol 两次解决不了时（跨模块根因查不出，确定性、并发、资源寿命或存档迁移的方案定不下），Codex 主线才临时开一个 gpt-6-astra 子代理（xhigh）审计：只读，交回根因与改法即结束，施工仍交 gpt-6.1-sol；主会话要审计就写信请 Codex 主线开。其余一律用 gpt-6.1-sol。
+**gpt-6-astra 只做重难审计**（DECISION-249、DECISION-306）：Codex 侧的审查默认交 gpt-6.1-sol，收口结构审计也一样；只有重难的审查——跨模块根因、确定性、并发、资源寿命或存档迁移这类，或重大问题 gpt-6.1-sol 两次解决不了——Codex 主线才临时开一个 gpt-6-astra 子代理（xhigh）审计：只读，交回根因与改法即结束，施工仍交 gpt-6.1-sol。主会话要审计就写信请 Codex 主线开，信里写明是不是重难审查。其余一律用 gpt-6.1-sol。

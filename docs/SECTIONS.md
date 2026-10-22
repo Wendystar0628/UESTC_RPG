@@ -11,7 +11,7 @@
   - ★ CORE-INDEX §0.1 接入要点 · L27 · 277
 - CORE-INDEX §1 信息地图 · L34 · 1.7k
 - CORE-INDEX §2 工作原则 · L84 · 1.8k
-- CORE-INDEX §3 协作与分工 · L97 · 904
+- CORE-INDEX §3 协作与分工 · L97 · 907
 - CORE-INDEX §4 文档规范 · L105 · 930
 - CORE-INDEX §5 代码规范 · L115 · 1.1k
 - CORE-INDEX §6 运行时与可靠性 · L126 · 950
@@ -1863,7 +1863,7 @@
 - WF-ROLE §3 GPT 模型不做审美工作 · L60 · 704
 - WF-ROLE §4 决定权与事归谁 · L68 · 752
 - WF-ROLE §5 总指挥只做什么 · L77 · 656
-- WF-ROLE §6 Codex 主线当指挥，施工默认交 gpt-6.1-sol 子代理 · L90 · 753
+- WF-ROLE §6 Codex 主线当指挥，施工默认交 gpt-6.1-sol 子代理 · L90 · 816
 
 ## WF-RULE · 全员守则
 
@@ -1993,12 +1993,12 @@
 
 ## REG-DECISIONS-PROCESS · 协作与流程决策
 
-`docs/registry/REG-DECISIONS-PROCESS-协作与流程决策.md` · 16.3k 字 · 计划、协作、规范、登记四个域的已定决策：协作、流程、文档与代码规范、门禁流程
+`docs/registry/REG-DECISIONS-PROCESS-协作与流程决策.md` · 16.4k 字 · 计划、协作、规范、登记四个域的已定决策：协作、流程、文档与代码规范、门禁流程
 关键词：决策、流程、协作、文档规则、门禁流程、派工、主会话、子代理
 
 - REG-DECISIONS-PROCESS §0 结论 · L21 · 129
   - ★ REG-DECISIONS-PROCESS §0.1 接入要点 · L25 · 56
-- REG-DECISIONS-PROCESS §1 流程 · L29 · 15.6k
+- REG-DECISIONS-PROCESS §1 流程 · L29 · 15.8k
 
 ## REG-DECISIONS-SYSTEMS · 系统与工程决策
 
