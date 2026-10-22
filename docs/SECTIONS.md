@@ -1809,7 +1809,7 @@
 
 ## WF-FLOW · 开发流程
 
-`docs/workflow/WF-FLOW-开发流程.md` · 5.9k 字 · 一项任务从派工、施工（只写不编译）、统一编译推送、回报到评审的流程，防打架，按工作量拆单，可调参数集中放
+`docs/workflow/WF-FLOW-开发流程.md` · 6.0k 字 · 一项任务从派工、施工（只写不编译）、统一编译推送、回报到评审的流程，防打架，按工作量拆单，可调参数集中放
 关键词：开发流程、派工、施工单、按工作量拆单、子单 1 小时、回报、评审、防打架、邻居、可调参数、DECISION-184、DECISION-211、评审通用结论
 
 - WF-FLOW §0 结论 · L22 · 464
@@ -1817,8 +1817,8 @@
 - WF-FLOW §1 全流程一览 · L35 · 616
 - WF-FLOW §2 派工与拆单 · L46 · 1.4k
   - WF-FLOW §2.1 防打架（DECISION-211） · L62 · 354
-- WF-FLOW §3 施工与回报 · L71 · 2.0k
-  - WF-FLOW §3.1 统一编译（DECISION-219） · L77 · 1.7k
+- WF-FLOW §3 施工与回报 · L71 · 2.1k
+  - WF-FLOW §3.1 统一编译（DECISION-219） · L77 · 1.8k
 - WF-FLOW §4 评审：审美与契约的交叉评审 · L90 · 702
 
 ## WF-MODEL · 模型、子代理与额度
@@ -1987,12 +1987,12 @@
 
 ## REG-DECISIONS-PROCESS · 协作与流程决策
 
-`docs/registry/REG-DECISIONS-PROCESS-协作与流程决策.md` · 16.7k 字 · 计划、协作、规范、登记四个域的已定决策：协作、流程、文档与代码规范、门禁流程
+`docs/registry/REG-DECISIONS-PROCESS-协作与流程决策.md` · 16.9k 字 · 计划、协作、规范、登记四个域的已定决策：协作、流程、文档与代码规范、门禁流程
 关键词：决策、流程、协作、文档规则、门禁流程、派工、主会话、子代理
 
 - REG-DECISIONS-PROCESS §0 结论 · L21 · 129
   - ★ REG-DECISIONS-PROCESS §0.1 接入要点 · L25 · 56
-- REG-DECISIONS-PROCESS §1 流程 · L29 · 16.1k
+- REG-DECISIONS-PROCESS §1 流程 · L29 · 16.2k
 
 ## REG-DECISIONS-SYSTEMS · 系统与工程决策
 
