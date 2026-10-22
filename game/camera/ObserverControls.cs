@@ -12,20 +12,25 @@ internal sealed class ObserverControls(ObserverCamera camera, FlightTuning tunin
     private sealed record Layer(long Id, string Owner, int Priority, Func<InputActionEvent, bool> Handler);
     private readonly List<Layer> _layers = [];
     private readonly InputLocks _locks = new();
+    private readonly InputLocks _cursorRequests = new();
     private readonly InputBindings _bindings = new();
     private long _nextLayer;
     private float _wheel;
     private bool _automated;
+    private bool _focused = true;
+    private IDisposable? _legacyCursor;
 
     public ObserverInputState State { get; } = new(tuning);
     public bool Locked => _locks.Locked;
-    public bool InterfaceMode { get; private set; } = true;
-    public event Action<bool>? InterfaceModeChanged;
+    public bool CursorVisible { get; private set; }
+    public bool CursorHeld { get; private set; }
+    public event Action<bool>? CursorVisibilityChanged;
 
     public void Initialize(ISettingsStore? settings, bool automated)
     {
         _automated = automated;
         _bindings.Initialize(settings);
+        RefreshCapture();
     }
 
     public IDisposable RegisterLayer(string owner, int priority, Func<InputActionEvent, bool> handler)
@@ -41,27 +46,56 @@ internal sealed class ObserverControls(ObserverCamera camera, FlightTuning tunin
     public IDisposable LockInput(InputLockReason reason)
     {
         camera.ClearInputMotion();
-        var lease = _locks.Acquire(reason);
-        SetInterfaceMode(true);
-        return lease;
+        return _locks.Acquire(reason);
     }
 
+    public IDisposable RequestCursor(InputLockReason reason)
+    {
+        var lease = _cursorRequests.Acquire(reason);
+        RefreshCapture();
+        return new CursorLease(this, lease);
+    }
+
+    // Temporary adapter for consumers migrating in GAME-161; capture still has one owner.
     public void SetInterfaceMode(bool enabled)
     {
-        if (!enabled && (!camera.IsPlaying || Locked)) enabled = true;
-        bool changed = InterfaceMode != enabled;
-        InterfaceMode = enabled;
-        Input.MouseMode = enabled ? Input.MouseModeEnum.Visible : Input.MouseModeEnum.Captured;
-        if (changed) InterfaceModeChanged?.Invoke(enabled);
+        if (enabled) _legacyCursor ??= RequestCursor(InputLockReason.Menu);
+        else { _legacyCursor?.Dispose(); _legacyCursor = null; }
+    }
+
+    public void SetFocused(bool focused)
+    {
+        _focused = focused;
+        if (!focused) CursorHeld = false;
+        RefreshCapture();
+    }
+
+    public void ResetCursorHeld()
+    {
+        CursorHeld = false;
+        RefreshCapture();
+    }
+
+    private void RefreshCapture()
+    {
+        bool visible = !_focused || CursorHeld || _cursorRequests.Locked;
+        bool changed = CursorVisible != visible;
+        CursorVisible = visible;
+        Input.MouseMode = visible ? Input.MouseModeEnum.Visible : Input.MouseModeEnum.Captured;
+        if (changed) CursorVisibilityChanged?.Invoke(visible);
     }
 
     public bool TryRebind(string action, int physicalKey, out string? conflict)
+        => TryRebind(action, physicalKey, (int)KeyLocation.Unspecified, out conflict);
+
+    public bool TryRebind(string action, int physicalKey, int physicalLocation, out string? conflict)
     {
-        bool changed = _bindings.Rebind(action, physicalKey, out conflict);
+        bool changed = _bindings.Rebind(action, physicalKey, physicalLocation, out conflict);
         if (changed)
         {
             State.Clear();
             camera.ResetFlightMotion();
+            ResetCursorHeld();
             SaveBindings();
         }
         return changed;
@@ -75,8 +109,14 @@ internal sealed class ObserverControls(ObserverCamera camera, FlightTuning tunin
 
     public void ResetWheel() => _wheel = 0;
 
-    public void ObserveReleases(InputEvent input)
+    public void ObserveInput(InputEvent input)
     {
+        // _Input runs before GUI routing, so a control cannot swallow the cursor release.
+        if (input.IsAction(InputBindings.CursorAction) && !input.IsEcho())
+        {
+            CursorHeld = input.IsActionPressed(InputBindings.CursorAction);
+            RefreshCapture();
+        }
         // Releases always clear held state, including when a newly opened GUI consumes the release.
         foreach (string action in InputBindings.Actions)
             if (input.IsActionReleased(action)) State.Release(action);
@@ -97,7 +137,7 @@ internal sealed class ObserverControls(ObserverCamera camera, FlightTuning tunin
 
     private bool HandleLook(InputEventMouseMotion motion)
     {
-        if (!camera.IsPlaying || InterfaceMode || Locked) return false;
+        if (!camera.IsPlaying || CursorVisible || Locked) return false;
         camera.CancelTransitForInput();
         var relative = motion.ScreenRelative;
         var pose = camera.Pose with
@@ -112,11 +152,7 @@ internal sealed class ObserverControls(ObserverCamera camera, FlightTuning tunin
 
     private bool HandleMouseButton(InputEventMouseButton mouse)
     {
-        if (mouse.ButtonIndex == MouseButton.Left)
-        {
-            if (!Dispatch(new("scene_click", true, false))) SetInterfaceMode(false);
-            return true;
-        }
+        if (CursorVisible) return false;
         if (mouse.ButtonIndex is not (MouseButton.WheelUp or MouseButton.WheelDown)) return false;
         _wheel += mouse.Factor * (mouse.ButtonIndex == MouseButton.WheelUp ? 1 : -1);
         int steps = (int)_wheel;
@@ -131,10 +167,7 @@ internal sealed class ObserverControls(ObserverCamera camera, FlightTuning tunin
     private bool HandleMenu(InputEvent input)
     {
         bool pressed = input.IsActionPressed("menu");
-        if (Dispatch(new("menu", pressed, input.IsEcho()))) return true;
-        if (!pressed || !camera.IsPlaying || Locked) return false;
-        SetInterfaceMode(!InterfaceMode);
-        return true;
+        return Dispatch(new("menu", pressed, input.IsEcho()));
     }
 
     private bool HandlePresentation(InputEvent input, AppState state)
@@ -152,6 +185,7 @@ internal sealed class ObserverControls(ObserverCamera camera, FlightTuning tunin
         foreach (string action in InputBindings.Actions)
         {
             if (!input.IsAction(action)) continue;
+            if (action == InputBindings.CursorAction) return true;
             bool pressed = input.IsActionPressed(action, true);
             bool echo = input.IsEcho();
             if (Dispatch(new(action, pressed, echo))) return true;
@@ -183,6 +217,17 @@ internal sealed class ObserverControls(ObserverCamera camera, FlightTuning tunin
     }
 
     private static float WrapYaw(float yaw) => (yaw % 360 + 360) % 360;
+
+    private sealed class CursorLease(ObserverControls owner, IDisposable lease) : IDisposable
+    {
+        private IDisposable? _lease = lease;
+        public void Dispose()
+        {
+            if (Interlocked.Exchange(ref _lease, null) is not { } held) return;
+            held.Dispose();
+            owner.RefreshCapture();
+        }
+    }
 
     private sealed class LayerLease(ObserverControls owner, long id) : IDisposable
     {

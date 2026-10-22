@@ -8,11 +8,21 @@ public interface IInputRouter
     /// <summary>Lower priority values run first; equal priority layers run newest first.</summary>
     /// <remarks>A handler returning true consumes the event. Disposing a registration removes only that layer.</remarks>
     IDisposable RegisterLayer(string owner, int priority, Func<InputActionEvent, bool> handler);
+    /// <summary>Shows the cursor while this reason's lease is held; does not lock movement or keyboard actions.</summary>
+    IDisposable RequestCursor(InputLockReason reason);
+    /// <summary>Derived from cursor leases, the held cursor action and window focus by the input owner.</summary>
+    bool CursorVisible { get; }
+    /// <summary>True while the rebound show_cursor action is held, independently of cursor leases.</summary>
+    bool CursorHeld { get; }
+    event Action<bool>? CursorVisibilityChanged;
+    // Temporary consumer migration adapter; remove with the remaining GAME-161 consumers.
     bool InterfaceMode { get; }
     event Action<bool>? InterfaceModeChanged;
     void SetInterfaceMode(bool enabled);
     /// <summary>Tries one physical keyboard binding; false reports the conflicting action or rejection reason.</summary>
     bool TryRebind(string action, int physicalKey, out string? conflict);
+    /// <param name="physicalLocation">Native key location: unspecified, left or right, passed as its numeric value.</param>
+    bool TryRebind(string action, int physicalKey, int physicalLocation, out string? conflict);
     int PhysicalKey(string action);
     void SaveBindings();
 }

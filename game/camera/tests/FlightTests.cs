@@ -3,6 +3,7 @@ using System.Text.Json;
 using Campus.Camera;
 using Campus.Contracts;
 using Campus.Contracts.Save;
+using Campus.Kernel.Settings;
 using GdUnit4;
 using static GdUnit4.Assertions;
 
@@ -11,6 +12,59 @@ namespace Campus.Tests;
 [TestSuite]
 public sealed class FlightTests
 {
+    [TestCase, TestCategory(TestReason.Regression), RequireGodotRuntime]
+    public async Task ReboundPhysicalKeysAndTheirLocationsSurviveSettingsReload()
+    {
+        var originals = InputBindings.Actions.ToDictionary(action => action,
+            action => Godot.InputMap.ActionGetEvents(action).ToArray(), StringComparer.Ordinal);
+        string path = Path.GetTempFileName();
+        File.WriteAllText(path, "{}");
+        try
+        {
+            var defaults = originals[InputBindings.CursorAction].OfType<Godot.InputEventKey>().Single();
+            var choices = new[]
+            {
+                (defaults.PhysicalKeycode, Godot.KeyLocation.Right),
+                (Godot.Key.K, Godot.KeyLocation.Unspecified)
+            };
+            foreach (var (code, location) in choices)
+            {
+                RestoreActions();
+                var bindings = new InputBindings();
+                bindings.Initialize(null);
+                if (!bindings.Rebind(InputBindings.CursorAction, (int)code, (int)location, out _))
+                    throw new InvalidOperationException("The requested physical cursor key could not be rebound.");
+                await using (var settings = new SettingsStore(path))
+                    if (!bindings.Save(settings)) throw new InvalidOperationException("Input bindings were not saved.");
+                RestoreActions();
+                var reloaded = new InputBindings();
+                await using (var settings = new SettingsStore(path)) reloaded.Initialize(settings);
+                var actual = Godot.InputMap.ActionGetEvents(InputBindings.CursorAction).OfType<Godot.InputEventKey>().Single();
+                if (actual.PhysicalKeycode != code || actual.Location != location)
+                    throw new InvalidOperationException("Settings reload lost a rebound key code or its location.");
+                var forward = originals["move_forward"].OfType<Godot.InputEventKey>().Single();
+                if (reloaded.Rebind(InputBindings.CursorAction, (int)forward.PhysicalKeycode, (int)forward.Location, out _))
+                    throw new InvalidOperationException("A conflicting physical movement binding was accepted.");
+            }
+        }
+        finally
+        {
+            RestoreActions();
+            File.Delete(path);
+            File.Delete(path + ".bak");
+            File.Delete(path + ".tmp");
+        }
+
+        void RestoreActions()
+        {
+            foreach (var (action, events) in originals)
+            {
+                Godot.InputMap.ActionEraseEvents(action);
+                foreach (var input in events) Godot.InputMap.ActionAddEvent(action, input);
+            }
+        }
+    }
+
     [TestCase]
     [TestCategory(TestReason.Contract)]
     public void FlyForwardIsHorizontalAtEveryPitch()

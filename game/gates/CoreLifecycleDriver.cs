@@ -38,7 +38,7 @@ internal sealed class CoreLifecycleDriver(IStageGateHost host)
         else if (flow.State != AppState.Playing || saves.Active != SaveSlots.Auto[0])
             throw new InvalidOperationException("The second process did not fully restore its saved world.");
         await CaptureAndCheck(gate, stage, world);
-        return PrepareWindowClose(stage, saves, input);
+        return PrepareWindowClose(stage, saves);
     }
 
     private static void RequireFormalServices()
@@ -72,8 +72,8 @@ internal sealed class CoreLifecycleDriver(IStageGateHost host)
         var beforeLoad = CoreRuntimeSnapshot.Capture();
         await flow.ReturnToTitle();
         host.CheckActive();
-        if (flow.State != AppState.Title || Input.MouseMode == Input.MouseModeEnum.Captured)
-            throw new InvalidOperationException("Return to title did not release playing input.");
+        if (flow.State != AppState.Title)
+            throw new InvalidOperationException("Return to title did not reach Title.");
         GD.Print($"CORE_RETURN_TITLE_READY {FrameClock.MonotonicMilliseconds:R}");
         if (await flow.Enter(new(EnterKind.Continue, SaveSlots.Auto[0])) != EnterResult.Entered)
             throw new InvalidOperationException("The production flow could not continue the saved game.");
@@ -145,9 +145,7 @@ internal sealed class CoreLifecycleDriver(IStageGateHost host)
 
     private async Task ExerciseInput(ICameraRig camera, IWalkController walk, IInputRouter input)
     {
-        input.SetInterfaceMode(false);
-        if (Input.MouseMode != Input.MouseModeEnum.Captured)
-            throw new InvalidOperationException("Playing did not capture input.");
+        // DECISION-308: cursor visibility is independent of movement input.
         var before = walk.BodyPose.Position;
         var forward = Angles.Forward(walk.BodyPose.YawDeg, 0);
         using (var press = new InputEventKey { PhysicalKeycode = (Key)input.PhysicalKey("move_forward"), Pressed = true })
@@ -243,14 +241,11 @@ internal sealed class CoreLifecycleDriver(IStageGateHost host)
         }
     }
 
-    private static nint PrepareWindowClose(Node stage, ISaveService saves, IInputRouter input)
+    private static nint PrepareWindowClose(Node stage, ISaveService saves)
     {
         var gen = saves.Slots.Single(info => info.Slot == SaveSlots.Auto[0]).Meta?.Gen
             ?? throw new InvalidOperationException("Core lifecycle has no readable saved generation.");
         GD.Print("CORE_GENERATION " + gen);
-        input.SetInterfaceMode(false);
-        if (Input.MouseMode != Input.MouseModeEnum.Captured)
-            throw new InvalidOperationException("The closing window must have captured mouse input.");
         var window = (nint)DisplayServer.WindowGetNativeHandle(DisplayServer.HandleType.WindowHandle);
         if (window == 0) throw new InvalidOperationException("Core lifecycle requires a native window handle.");
         GD.Print("CORE_INSTANCE_PARAMETERS " + JsonSerializer.Serialize(CaptureInstanceParameters(stage)));

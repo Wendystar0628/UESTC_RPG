@@ -64,12 +64,13 @@ public partial class ObserverCamera : Node, ICameraRig, IObserverState, IViewCon
         _flow.Changed += OnFlowChanged;
         _listener = new ObserverListener { Observer = this };
         AddChild(_listener);
-        SetInterfaceMode(true);
+        _controls.SetFocused(DisplayServer.WindowIsFocused());
     }
 
     public override void _EnterTree()
     {
         if (_world is null) return;
+        _controls.SetFocused(DisplayServer.WindowIsFocused());
         _world.InstanceChanged += OnWorldInstanceChanged;
         if (_flow is not null) _flow.Changed += OnFlowChanged;
         _worldResetPending = true;
@@ -80,7 +81,8 @@ public partial class ObserverCamera : Node, ICameraRig, IObserverState, IViewCon
         CancelWalkEntry();
         if (_flow is not null) _flow.Changed -= OnFlowChanged;
         if (_world is not null) _world.InstanceChanged -= OnWorldInstanceChanged;
-        Input.MouseMode = Input.MouseModeEnum.Visible;
+        ClearInputMotion();
+        _controls.SetFocused(false);
     }
 
     public override void _Process(double delta)
@@ -187,7 +189,7 @@ public partial class ObserverCamera : Node, ICameraRig, IObserverState, IViewCon
     private void OnFlowChanged(AppState previous, AppState next)
     {
         ClearInputMotion();
-        SetInterfaceMode(true);
+        _controls.ResetCursorHeld();
         _flight.SetEdgeFog(0);
         if (IsPlaying && Mode == ViewMode.Fly) _flight.BeginFlowProjection(Pose);
     }
@@ -397,7 +399,7 @@ public partial class ObserverCamera : Node, ICameraRig, IObserverState, IViewCon
 
     private bool PlacementReadFailed() => _walk?.PlacementArrival?.Done is { IsFaulted: true } or { IsCanceled: true };
 
-    public override void _Input(InputEvent input) => _controls.ObserveReleases(input);
+    public override void _Input(InputEvent input) => _controls.ObserveInput(input);
     public override void _UnhandledInput(InputEvent input)
     {
         if (_controls.HandleUnhandled(input, _flow)) GetViewport().SetInputAsHandled();
@@ -405,23 +407,37 @@ public partial class ObserverCamera : Node, ICameraRig, IObserverState, IViewCon
 
     public override void _Notification(int what)
     {
-        if (what != NotificationApplicationFocusOut) return;
-        ClearInputMotion();
-        SetInterfaceMode(true);
+        if (what == NotificationApplicationFocusOut)
+        {
+            ClearInputMotion();
+            _controls.SetFocused(false);
+        }
+        else if (what == NotificationApplicationFocusIn) _controls.SetFocused(true);
     }
 
     public IDisposable RegisterLayer(string owner, int priority, Func<InputActionEvent, bool> handler) =>
         _controls.RegisterLayer(owner, priority, handler);
     public IDisposable LockInput(InputLockReason reason) => _controls.LockInput(reason);
-    public bool InterfaceMode => _controls.InterfaceMode;
+    public IDisposable RequestCursor(InputLockReason reason) => _controls.RequestCursor(reason);
+    public bool CursorVisible => _controls.CursorVisible;
+    public bool CursorHeld => _controls.CursorHeld;
+    public event Action<bool>? CursorVisibilityChanged
+    {
+        add => _controls.CursorVisibilityChanged += value;
+        remove => _controls.CursorVisibilityChanged -= value;
+    }
+    // Temporary migration aliases; remove when GAME-161 has migrated every consumer.
+    public bool InterfaceMode => CursorVisible;
     public event Action<bool>? InterfaceModeChanged
     {
-        add => _controls.InterfaceModeChanged += value;
-        remove => _controls.InterfaceModeChanged -= value;
+        add => _controls.CursorVisibilityChanged += value;
+        remove => _controls.CursorVisibilityChanged -= value;
     }
     public void SetInterfaceMode(bool enabled) => _controls.SetInterfaceMode(enabled);
     public bool TryRebind(string action, int physicalKey, out string? conflict) =>
         _controls.TryRebind(action, physicalKey, out conflict);
+    public bool TryRebind(string action, int physicalKey, int physicalLocation, out string? conflict) =>
+        _controls.TryRebind(action, physicalKey, physicalLocation, out conflict);
     public int PhysicalKey(string action) => _controls.PhysicalKey(action);
     public void SaveBindings() => _controls.SaveBindings();
 

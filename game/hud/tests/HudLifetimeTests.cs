@@ -222,18 +222,23 @@ public sealed class HudLifetimeTests
             InterfaceMode = enabled;
             InterfaceModeChanged?.Invoke(enabled);
         }
+        public IDisposable RequestCursor(InputLockReason reason) => new Layer(this, counted: false);
+        public bool CursorVisible => false;
+        public bool CursorHeld => false;
+        public event Action<bool>? CursorVisibilityChanged { add { } remove { } }
         public bool TryRebind(string action, int physicalKey, out string? conflict) { conflict = null; return true; }
+        public bool TryRebind(string action, int physicalKey, int physicalLocation, out string? conflict) { conflict = null; return true; }
         public int PhysicalKey(string action) => 0;
         public void SaveBindings() { }
 
-        private sealed class Layer(Router router) : IDisposable
+        private sealed class Layer(Router router, bool counted = true) : IDisposable
         {
             private bool _disposed;
             public void Dispose()
             {
                 if (_disposed) return;
                 _disposed = true;
-                router.Layers--;
+                if (counted) router.Layers--;
             }
         }
     }
