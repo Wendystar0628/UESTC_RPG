@@ -1,6 +1,7 @@
 using Campus.Contracts;
 using Campus.Contracts.Maps;
 using Campus.Kernel.Diagnostics;
+using Campus.Kernel.Frame;
 using Godot;
 using N = System.Numerics;
 
@@ -174,7 +175,7 @@ public sealed class TransitDriver(ICameraRig camera, IAppLoadingPresentation loa
         body.Warp(new Pose(run.LandOn ?? run.To.Position, run.To.YawDeg, 0));
         while (!body.CollisionReady && !body.ExitRequested)
         {
-            await tree.ToSignal(tree, SceneTree.SignalName.ProcessFrame);
+            await FrameAwaiter.ProcessAsync(tree.Root, run.Token);
             run.Token.ThrowIfCancellationRequested();
         }
         return body.PlacementArrival ?? throw new InvalidOperationException("Transit could not place its walking destination.");
@@ -214,7 +215,7 @@ public sealed class TransitDriver(ICameraRig camera, IAppLoadingPresentation loa
         while (body.Active && !body.ExitRequested && !(body.CollisionReady && body.Grounded) &&
             elapsed < TransitTuning.WalkSettleSeconds)
         {
-            await tree.ToSignal(tree, SceneTree.SignalName.ProcessFrame);
+            await FrameAwaiter.ProcessAsync(tree.Root, run.Token);
             if (run.Cancelled) return false;
             elapsed += tree.Root.GetProcessDeltaTime();
         }
