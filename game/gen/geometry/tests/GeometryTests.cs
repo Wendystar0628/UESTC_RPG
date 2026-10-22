@@ -104,7 +104,7 @@ public sealed class GeometryTests
         sink.Quad(source.Material.Spec, a, b, d, c);
         sink.Append(source, Matrix4x4.Identity);
         var mesh = sink.Finish().Single();
-        AssertThat(mesh.Position.Length / 3 == 4 && mesh.Index.Length == 12 && sink.Triangles == 4)
+        AssertThat(mesh.Position.Length / 3 == 4 && mesh.Index.Length == 12)
             .OverrideFailureMessage("Repeated triangle corners must reuse their full vertex record across writer entry points.").IsTrue();
 
         var seams = new GeometrySink();
@@ -113,6 +113,103 @@ public sealed class GeometryTests
         seams.Tri(source.Material.Spec, a with { Uv = Vector2.One }, b, c);
         AssertThat(seams.Finish().Single().Position.Length / 3 == 5)
             .OverrideFailureMessage("Coincident vertices with different authored attributes must retain their seams.").IsTrue();
+    }
+
+    [TestCase, TestCategory(TestReason.Regression)]
+    public void WriterKeepsMaterialClassesAndOriginalOrdinalOrder()
+    {
+        var spec = Surface().Material.Spec;
+        ToonSpec[] classes = [spec, spec with { Kind = ToonKind.Glass }, spec with { Fx = ToonFx.Rim },
+            spec with { Line = LineClass.None }, spec with { Steps = ShadeSteps.Three },
+            spec with { Normal = ToonNormal.Smooth }, spec with { Band = .5f },
+            spec with { Translucency = .5f }, spec with { Wet = 1f }, spec with { Deep = new("deep") },
+            spec with { Backface = new("backface") }, spec with { Emissive = new("emissive") },
+            spec with { SurfacePattern = new(1, Vector2.One, Vector2.Zero) },
+            spec with { Lit = new("other.lit") }, spec with { Shade = new("other.shade") }];
+        var a = new GeometryVertex(Vector3.Zero, Vector3.UnitZ);
+        var b = new GeometryVertex(Vector3.UnitX, Vector3.UnitZ);
+        var c = new GeometryVertex(Vector3.UnitY, Vector3.UnitZ);
+        var sink = new GeometrySink();
+        foreach (var material in classes)
+        {
+            sink.Tri(material, a, b, c);
+            sink.Tri(material with { }, a, b, c);
+        }
+        var output = sink.Finish();
+        AssertThat(output.Count == classes.Length && classes.All(material =>
+            output.Single(mesh => mesh.Material.Spec == material).Index.Length == 2 * Surface().Index.Length))
+            .OverrideFailureMessage("Material attributes must keep separate classes, including equal specs from different instances.").IsTrue();
+
+        var ordinal = new GeometrySink();
+        var two = spec with { Band = 2f };
+        var ten = spec with { Band = 10f };
+        ordinal.Tri(two, a, b, c);
+        ordinal.Tri(ten, a, b, c);
+        AssertThat(ordinal.Finish().Select(mesh => mesh.Material.Spec).SequenceEqual(new[] { ten, two }))
+            .OverrideFailureMessage("Material output must retain ordinal round-trip-string order rather than numeric order.").IsTrue();
+
+        var colored = new GeometrySink();
+        a = a with { ColorIndex = 2 }; b = b with { ColorIndex = 2 }; c = c with { ColorIndex = 2 };
+        colored.Tri(spec, a, b, c);
+        colored.Tri(spec with { Lit = new("other.lit"), Shade = new("other.shade") }, a, b, c);
+        AssertThat(colored.Finish().Single().Index.Length == 2 * Surface().Index.Length)
+            .OverrideFailureMessage("Vertex colors replace only the lit/shade material pair when grouping.").IsTrue();
+
+        var aliases = new GeometrySink();
+        aliases.Tri(spec with { Lit = new("a|b"), Shade = new("c") }, a, b, c);
+        aliases.Tri(spec with { Lit = new("a"), Shade = new("b|c") }, a with { ColorIndex = null },
+            b with { ColorIndex = null }, c with { ColorIndex = null });
+        aliases.Tri(spec with { Lit = new("a|b"), Shade = new("c") }, a with { ColorIndex = null },
+            b with { ColorIndex = null }, c with { ColorIndex = null });
+        var aliasOutput = aliases.Finish();
+        AssertThat(aliasOutput.Count == 2 && aliasOutput.Single(mesh => mesh.ColorIndices is null).Index.Length == 2 * Surface().Index.Length)
+            .OverrideFailureMessage("Original material-key equivalence and explicit color-channel separation must both survive grouping.").IsTrue();
+    }
+
+    [TestCase, TestCategory(TestReason.Regression)]
+    public void WriterPreservesAuthoredChannelsAndNormalizesOnlyStreamNormals()
+    {
+        var source = Surface() with
+        {
+            Normal = Surface().Normal.Select(value => 2 * value).ToArray(),
+            Uv2 = [65537, 32, 65537, 32, 65537, 32],
+            ColorIndices = [1, 2, 3], Flags = [0, 1, 2], Reserved = [3, 4, 5]
+        };
+        var sink = new GeometrySink();
+        sink.Append(source, Matrix4x4.Identity);
+        var output = sink.Finish().Single();
+        AssertThat(output.Position.SequenceEqual(source.Position) && output.Normal.SequenceEqual(Surface().Normal) &&
+            output.Index.SequenceEqual(new[] { source.Index[0], source.Index[2], source.Index[1] }) &&
+            output.Ao!.SequenceEqual(source.Ao!) && output.Uv!.SequenceEqual(source.Uv!) && output.Uv2!.SequenceEqual(source.Uv2!))
+            .OverrideFailureMessage("Stream packing must retain geometry, AO and both UV channels while normalizing normals and keeping clockwise winding.").IsTrue();
+        AssertThat(output.ColorIndices!.SequenceEqual(source.ColorIndices!) && output.Flags!.SequenceEqual(source.Flags!) &&
+            output.Reserved!.SequenceEqual(source.Reserved!))
+            .OverrideFailureMessage("Stream packing must retain color, flag and reserved channels.").IsTrue();
+        var decal = source with { Reserved = null, Flags = Enumerable.Repeat(VertexFlag.Decal, source.Index.Length).ToArray(),
+            DecalBaseColorIndices = [7, 8, 9] };
+        var decals = new GeometrySink();
+        decals.Append(decal, Matrix4x4.Identity);
+        var packedDecal = decals.Finish().Single();
+        AssertThat(packedDecal.DecalBaseColorIndices!.SequenceEqual(decal.DecalBaseColorIndices!) && packedDecal.Reserved is null)
+            .OverrideFailureMessage("Decal background colors must retain their separate channel without a reserved payload.").IsTrue();
+
+        GeometryVertex[] authored = [new(Vector3.Zero, 2 * Vector3.UnitZ), new(Vector3.UnitX, 2 * Vector3.UnitZ),
+            new(Vector3.UnitY, 2 * Vector3.UnitZ), new(Vector3.One, 2 * Vector3.UnitZ)];
+        var custom = authored.Select(vertex => new Vector4(vertex.Position, 1f)).ToArray();
+        var indexed = GeometrySink.Indexed(source.Material.Spec, authored, source.Index,
+            GeometryChannels.Ao | GeometryChannels.Uv | GeometryChannels.Uv2 | GeometryChannels.Flags | GeometryChannels.Reserved,
+            custom, custom, custom);
+        AssertThat(indexed.Position.Length == authored.Length * 3 && indexed.Index.SequenceEqual(source.Index) &&
+            indexed.Normal.Where((_, i) => i % 3 == 2).All(value => value == authored[0].Normal.Z) &&
+            indexed.Ao!.All(value => value == 1f) && indexed.Uv!.All(value => value == 0f) &&
+            indexed.Uv2!.All(value => value == 0f) && indexed.Flags!.All(value => value == 0) && indexed.Reserved!.All(value => value == 0))
+            .OverrideFailureMessage("Authored indexed surfaces must retain unused vertices, normals, winding and explicit default channels.").IsTrue();
+        AssertThat(indexed.Custom0!.SequenceEqual(indexed.Custom1!) && indexed.Custom0.SequenceEqual(indexed.Custom2!) &&
+            custom.SelectMany(value => new[] { value.X, value.Y, value.Z, value.W }).SequenceEqual(indexed.Custom0!))
+            .OverrideFailureMessage("Indexed custom channels must retain all four components in authored order.").IsTrue();
+        var empty = GeometrySink.Indexed(source.Material.Spec, [], [], GeometryChannels.Ao | GeometryChannels.Uv, []);
+        AssertThat(empty.Ao is { Length: 0 } && empty.Uv is { Length: 0 } && empty.Custom0 is { Length: 0 } && empty.Uv2 is null)
+            .OverrideFailureMessage("Empty indexed surfaces must preserve explicitly present channels.").IsTrue();
     }
 
     [TestCase, TestCategory(TestReason.Contract)]
