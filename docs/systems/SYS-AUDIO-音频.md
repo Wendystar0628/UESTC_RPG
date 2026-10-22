@@ -9,7 +9,7 @@ depends: [SYS-MOTION, SYS-VIEW, ENG-ARCH, ENG-PERF, SYS-TIME]
 related: [CORE-INDEX, ART-STYLE, WLD-LIFE, ENG-GATES, ENG-BUDGET, UI-NAV, SYS-GRAPHICS, UI-VISUAL, SYS-ATLAS, SYS-TITLE, SYS-SAVE, SYS-MAPS, WLD-OUTSKIRTS, ENG-ROADMAP, SYS-WALK, SYS-WEATHER, WLD-INTERIORS]
 contracts: [AudioBuses, AudioGroup, BackgroundBehavior, SuddenSoundMode, AudioSettings, UiCue, MusicCue, DuckReason, AudioSnapshot, IAudioService, SoundSetId]
 data: ["game/data/audio/", "user://settings.json"]
-gates: [G4, G5, G6, G14, G21]
+gates: [G4, G5, G14, G21]
 paths: ["game/data/audio/licenses.json", "game/assets/audio/**", "pipeline/audio/**", "game/data/audio/ui_cues.json", "game/data/audio/music.json", "game/audio/core/**"]
 ---
 # SYS-AUDIO · 音频
@@ -120,13 +120,13 @@ paths: ["game/data/audio/licenses.json", "game/assets/audio/**", "pipeline/audio
 - **可用**：Freesound CC0；Kenney 与 OpenGameArt 的 CC0；Sonniss #GameAudioGDC 免费包（**不得再分发原始文件，不进公开仓库**）；CC BY（必须署名）；程序合成；委托或自制的音乐（签授权）。**不用**：NC；ND（声音与动态影像同步就构成改编）；BBC Sound Effects；BY-SA、GPL；订阅制素材库；来源不清的素材站。
 - **入库**（`pipeline/audio/`）：每个源文件先在 `game/data/audio/licenses.json` 登记，没有记录不许入库；再体检、创作性处理（统一 EQ、变调、分层、剪掉一切人声）、统一到差不多的电平（3D 一律单声道）、循环听一遍接缝。主床每段 150–300 s，段间 A/B 交叉，床里不放可辨认的单个事件。
 - **版本库**：Git LFS 条目以 `.gitattributes` 为准；只许随游戏发布、不许公开分发的素材放私有素材库。
-- **署名页**从 `licenses.json` 自动生成，放进数据手册页、设置卡的"许可"页和安装包的 `LICENSES.txt`。
+- **署名页**从 `licenses.json` 自动生成，放进数据手册页与设置卡的"许可"页。
 
 ## 9 预算（设计目标）
 
 份额归 ENG-BUDGET，帧顺序以契约 `FramePriority` 为准。
 
-- 主线程不到 1 ms；混音线程只占一个核的一小部分；GPU 为 0；常驻内存和导出包里的音频都在百兆级。
+- 主线程不到 1 ms；混音线程只占一个核的一小部分；GPU 为 0；常驻内存和音频资源都在百兆级。
 - **超支时的降级顺序**：先减在播 3D 声源数、床退成 2 个锚点；再降散布密度；再关声源侧混响区；最后降到最少声部。
 
 ## 10 验收

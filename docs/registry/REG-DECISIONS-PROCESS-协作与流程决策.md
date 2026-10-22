@@ -44,7 +44,7 @@ gates: []
 | DECISION-161 | 主会话是开发期的编排者：审批契约变更、开放室内清单的增删和预算余量 | 全项目 | WF-ROLE §5；WLD-INTERIORS-ACCESS §1；SYS-MAPS §0.1 | 生效 |
 | DECISION-164 | 开放清单 `interiors.json` 由主会话管：schema 与格式归 室内生成器与壳体（WLD-INTERIORS-BUILD），条目由负责包经回报提交，增删由主会话审批 | 开放室内 | SYS-MAPS §1.1；WLD-INTERIORS-ACCESS §4 | 生效 |
 | DECISION-166 | 远端只有 `main` 和标签，不开 PR、不强推 | 全员 | WF-RULE §7 | 生效 |
-| DECISION-177 | 目标框架用 net10.0（C# 14），SDK 由 `global.json` 锁定；升级经主会话评估，不自行退回 net8.0 | 全部 C# 工程 | ENG-RELEASE §1；ENG-ARCH §8 | 生效 |
+| DECISION-177 | 目标框架用 net10.0（C# 14），SDK 由 `global.json` 锁定；升级经主会话评估，不自行退回 net8.0 | 全部 C# 工程 | ENG-ARCH §1 | 生效 |
 | DECISION-178 | 子代理按需查阅文档：入口由钩子注入（顶层规则 CORE-INDEX 除 §1 外各节 与角色入口卡 WF-ENTRY），文档按 CORE-INDEX §1 的信息地图、各域总纲和小节目录 `SECTIONS.md` 按需查；每份规范文档带 `keywords`、范围块的"查阅"行、各文档的 §0 结论和 §0.1 接入要点 | 全部子代理与文档 | CORE-INDEX；WF-ENTRY；STD-DOC | 生效 |
 | DECISION-179 | 多模型协作：主会话是总指挥，Codex 主线管工程与契约，GPT 不做审美，各方经 `.collab` 任务单交接 | 全项目 | WF-ROLE §1–§3；WF-FLOW §1 | 生效 |
 | DECISION-183 | 建模完成度是主线：建模活先于游泳、生物、角色本体等系统新功能派工，不等格子分级、烘焙与流式加载（ENG-PERF-STREAM）、按桩开工 | 全项目 | WF-STATUS §2 | 生效 |

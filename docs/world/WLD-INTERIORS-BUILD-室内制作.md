@@ -9,7 +9,7 @@ depends: [WLD-INTERIORS, CORE-INDEX, ART-STYLE, ART-FIDELITY, ART-MODELING, ENG-
 related: [WLD-INTERIORS-ACCESS, WLD-LIFE, SYS-WEATHER, ENG-GATES, MAP-QSH-ADDITIONS, ART-SKYLIGHT]
 contracts: [IInteriorProvider, InteriorLayout, InteriorDetail, ZoneKind, PortalKind, StoreyInfo, ZoneVolume, PortalDecl, ElevatorDecl, SlopedWallCollider]
 data: ["game/data/maps/qingshuihe/overlay/interior/", "game/style/palette/ext/interior.json"]
-gates: [G5, G6, G15]
+gates: [G5, G15]
 ---
 
 # WLD-INTERIORS-BUILD · 室内制作
@@ -38,7 +38,7 @@ gates: [G5, G6, G15]
 
 开放部分一般 1–4 层，所以整体加载、按层显示：镜头所在层全精度（IF：壳、家具、痕迹、灯）；相邻层只留简化的一档（IS，内容见 SYS-VIEW-MEDIUM §2）；镜头在楼梯间或中庭里时相邻两层都用 IF；中庭和场馆按提供者声明的"中庭可见层"用 IS；其余开放层隐藏，切换只改可见性；不开放的层按 SYS-VIEW-MEDIUM §2 用简化室内或 I0。
 
-室内包和碰撞包是本机烘焙产物，进本机缓存，不随安装包发（DECISION-165）。出门后保留约 20 s 或离楼 40 m 再淘汰，同时最多驻留 2 栋。
+室内包和碰撞包是本机烘焙产物，进本机缓存（DECISION-165）。出门后保留约 20 s 或离楼 40 m 再淘汰，同时最多驻留 2 栋。
 
 ### 1.2 触发
 

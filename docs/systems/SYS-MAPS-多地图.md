@@ -9,7 +9,7 @@ depends: [SYS-VIEW, ENG-ARCH, ENG-PERF, SYS-TIME, SYS-WEATHER, SYS-SAVE, WLD-OUT
 related: [CORE-INDEX, WLD-OUTSKIRTS-DIORAMA, ENG-GATES, ENG-BUDGET, UI-NAV, SYS-WALK, SYS-GRAPHICS, SYS-ATLAS, SYS-TITLE, WLD-INTERIORS, SYS-AUDIO, ENG-ROADMAP]
 contracts: [MapId, WaypointRef, MapKind, MapTimeRule, GeoFrame, MapRect, RoamLimits, MapTitle, MapSpawn, MapWorldRules, MapEnvironment, MapPortal, MapDescriptor, MapScopeAttribute, IMapContext, MapStage, MapTravelResult, IMapTransition, IMapService, IMapAware, MapVisit]
 data: ["game/data/maps/index.json", "game/data/maps/qingshuihe/map.json", "game/data/maps/qingshuihe/"]
-gates: [G2, G4, G5, G6, G7]
+gates: [G2, G4, G5, G7]
 paths: ["game/data/maps/**", "game/data/maps/index.json", "game/data/maps/*/map.json", "game/data/maps/qingshuihe/map.json", "game/kernel/map/**"]
 ---
 # SYS-MAPS · 多地图
@@ -31,7 +31,7 @@ paths: ["game/data/maps/**", "game/data/maps/index.json", "game/data/maps/*/map.
 
 ### 0.1 接入要点
 
-- **改地图数据**：只改项目的世界文件 `game/data/maps/<图>/world/`，增删改写明理由；不从 OSM 或其他在线地图取数据，也不照着改；OSM 只剩署名与随版本发的地图数据包（DECISION-252、ENG-RELEASE §5）
+- **改地图数据**：只改项目的世界文件 `game/data/maps/<图>/world/`，增删改写明理由；不从 OSM 或其他在线地图取数据，也不照着改；OSM 只剩署名（DECISION-252、ENG-LICENSE §3）
 - **读本图的数据文件**：路径由 `IMapContext.DataRoot` 拼出，烘焙产物用 `BakeRoot`；内核、系统、界面和通用程序集里不写地图 ID、`res://data/maps/…` 路径和完整实体 ID 的字面量（G4，§6）
 - **加数据或资源**：放 `game/data/maps/<地图>/` 下本地图自己的文件，资源放各资源目录的 `<地图>/` 子目录；`map.json` 归本文，字段增改须经主会话批准（§1、§2）
 - **写区内容**：区代码靠程序集的 `MapScope`；通用模块只读 `BuildContext.Map` 和本图数据，不认领具体实体，出现 `FeatureClaim` 由 G5 报错（§6）
@@ -62,7 +62,7 @@ paths: ["game/data/maps/**", "game/data/maps/index.json", "game/data/maps/*/map.
 
 ### 1.2 烘焙缓存
 
-- 烘焙什么、随包、查找顺序与判鲜归 ENG-ARCH §4（DECISION-165）。
+- 烘焙什么、查找顺序与判鲜归 ENG-ARCH §4（DECISION-165）。
 - 缓存按图分开；本机缓存与画面设置、世界状态、存档无关，跨存档、跨画质共用，它不是存档（STD-CONVENTIONS §4）。不另做几何启动集；主 PCK 只留全局资源和各图的 JSON。
 
 ## 2 地图描述 `map.json`
@@ -172,7 +172,7 @@ paths: ["game/data/maps/**", "game/data/maps/index.json", "game/data/maps/*/map.
 ## 8 内存、包体与单图半径
 
 - **进程上限与图的数量无关**：峰值是最大的一张图加全局常驻，不是两张图之和；上限按预设（ENG-BUDGET §2、ENG-PERF-STREAM §3）。
-- **每张图单独核算**：性能按图实测核算（ENG-BUDGET §4）。安装包体按全部图的原始数据加全局资源计，本机缓存不计在内（ENG-PERF-STREAM §1、ENG-BUDGET §3）。
+- **每张图单独核算**：性能按图实测核算（ENG-BUDGET §4）。
 - **单图半径不超过 8 km**（离中心最远的可达点）：单精度在 8 km 内够用；远裁剪面、雾海外半径、远景环半径按图从 `backdrop.json` 读。更大的区域拆成几张图。
 
 ## 9 以后的方向

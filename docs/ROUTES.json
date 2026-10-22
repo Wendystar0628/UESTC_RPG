@@ -21,12 +21,12 @@
   "ENG-GATES-SHOTS": "docs/engineering/ENG-GATES-SHOTS-审查视角与截图.md",
   "ENG-GATES-VETO": "docs/engineering/ENG-GATES-VETO-一票否决与收尾清单.md",
   "ENG-INDEX": "docs/engineering/ENG-INDEX-工程总纲.md",
+  "ENG-LICENSE": "docs/engineering/ENG-LICENSE-许可、署名与本机目录.md",
   "ENG-PERF": "docs/engineering/ENG-PERF-性能工程.md",
   "ENG-PERF-ADAPT": "docs/engineering/ENG-PERF-ADAPT-自适应与测量.md",
   "ENG-PERF-LIGHT": "docs/engineering/ENG-PERF-LIGHT-植被、阴影、后期与灯光.md",
   "ENG-PERF-STREAM": "docs/engineering/ENG-PERF-STREAM-流式加载、本机烘焙与内存.md",
   "ENG-PREVIEW": "docs/engineering/ENG-PREVIEW-内容预览.md",
-  "ENG-RELEASE": "docs/engineering/ENG-RELEASE-发布与交付.md",
   "ENG-ROADMAP": "docs/engineering/ENG-ROADMAP-扩展路线.md",
   "MAP-QSH-ADDITIONS": "docs/maps/qingshuihe/MAP-QSH-ADDITIONS-设计增补.md",
   "MAP-QSH-ADDITIONS-VOCAB": "docs/maps/qingshuihe/MAP-QSH-ADDITIONS-VOCAB-增补词汇与全校摆放.md",
@@ -257,13 +257,13 @@
   },
   {
    "docs": [
-    "ENG-RELEASE"
+    "ENG-LICENSE"
    ],
    "glob": "LICENSE"
   },
   {
    "docs": [
-    "ENG-RELEASE",
+    "ENG-LICENSE",
     "WF-RULE"
    ],
    "glob": "README.md"
@@ -417,7 +417,7 @@
    "docs": [
     "ENG-ARCH",
     "ENG-BUDGET-RULES",
-    "ENG-RELEASE",
+    "ENG-LICENSE",
     "WF-BUILD"
    ],
    "glob": "game/addons/**"
@@ -813,8 +813,6 @@
   },
   {
    "docs": [
-    "ENG-BUDGET-RULES",
-    "ENG-RELEASE",
     "WF-BUILD"
    ],
    "glob": "game/export_presets.cfg"
@@ -1393,7 +1391,7 @@
    "docs": [
     "ENG-ARCH",
     "ENG-BUDGET-RULES",
-    "ENG-RELEASE",
+    "ENG-LICENSE",
     "WF-BUILD"
    ],
    "glob": "game/project.godot"
@@ -1981,7 +1979,6 @@
   },
   {
    "docs": [
-    "ENG-RELEASE",
     "WF-BUILD",
     "WF-RULE"
    ],
@@ -2112,7 +2109,7 @@
   },
   {
    "docs": [
-    "ENG-RELEASE",
+    "ENG-LICENSE",
     "WF-BUILD"
    ],
    "glob": "third_party.json"
@@ -2126,13 +2123,6 @@
   },
   {
    "docs": [
-    "ENG-RELEASE"
-   ],
-   "glob": "version.txt"
-  },
-  {
-   "docs": [
-    "ENG-RELEASE",
     "WF-RULE"
    ],
    "glob": "启动游戏.cmd"

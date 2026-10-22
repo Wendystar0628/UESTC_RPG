@@ -9,7 +9,7 @@ depends: [CORE-INDEX, ART-STYLE, ENG-ARCH, ENG-PERF, SYS-TIME]
 related: [ART-STYLE-LINES, ART-MODELING, ART-SKYLIGHT, WLD-VEGETATION, WLD-INTERIORS, WLD-WATER, WLD-TERRAIN, SYS-WEATHER]
 contracts: [ToonSpec, ToonRef, ToonFx, ToonNormal, ShadeSteps]
 data: []
-gates: [G6, G7]
+gates: [G7]
 paths: ["game/assets/scene-text/**", "game/data/scene-text/**", "game/style/text/**", "game/style/shaders/toon_scene_text.gdshader", "game/style/shaders/toon_scene_text.gdshader.uid", "game/style/palette/ext/landmark_materials.json", "game/style/palette/ext/street_furniture.json", "game/style/shaders/toon_static.gdshader.uid", "game/style/shaders/toon_glass.gdshader.uid", "game/style/shaders/toon.gdshaderinc.uid", "game/style/shaders/toon_static.gdshader", "game/style/shaders/fog.gdshaderinc.uid", "game/style/shaders/toon_glass.gdshader", "game/style/shaders/toon.gdshaderinc", "game/style/shaders/fog.gdshaderinc", "game/style/palette/**", "game/style/shaders/**", "game/data/maps/*/materials.json"]
 ---
 # ART-STYLE-SHADING · 明暗、影色与材质表现
@@ -32,7 +32,7 @@ paths: ["game/assets/scene-text/**", "game/data/scene-text/**", "game/style/text
 - **涉及影子**：没有接触影，接地靠物体分界线加投影（§1.1）
 - **写材质或着色器**：只用 include 了 `toon.gdshaderinc` 的白名单着色器，新增经主会话批准（Codex 主线负责白名单与技术接入）；颜色只经调色板纹理（§1.5）；材质 ID 的约束见 ART-STYLE-LINES
 - **建模**：法线做法见 ART-MODELING §1.6，不用法线贴图（§4.3）
-- **做贴图**：不用照片来源（G6）；斑驳按 §4.2
+- **做贴图**：不用照片来源（§4.1）；斑驳按 §4.2
 
 ## 1 明暗分阶
 
@@ -153,7 +153,7 @@ paths: ["game/assets/scene-text/**", "game/data/scene-text/**", "game/style/text
 
 ### 4.1 禁止照片纹理
 
-照片来源的纹理与旧网页栈的程序纹理一律不进工程（G6）。
+照片来源的纹理与旧网页栈的程序纹理一律不进工程。
 
 ### 4.2 斑驳、笔触与构造图案线
 

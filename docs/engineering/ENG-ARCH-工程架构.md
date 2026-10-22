@@ -6,17 +6,17 @@ parent: ENG-INDEX
 summary: 当前分层、依赖方向与唯一生产链，边界、确定性、契约、烘焙与桩的架构准则与后续导向；实现细节以代码为准
 keywords: [工程架构, 分层, 依赖方向, 命名空间边界, 程序集, 唯一生产链, KernelStage, 组合根, 数据流, 自动发现, 特性注册, Autoload, 原生资源创建方, 确定性, 同机同输入同输出, StableHash, Rng, BannedApiAnalyzers, 生命周期, 取消与完成, 就绪与等待, 停滞判据, 契约, 契约申请, 契约分批冻结, 枚举穷举, 本机烘焙, .tbin, 英雄资产, 桩, 架构导向, net10.0, 技术栈]
 depends: [CORE-INDEX, STD-CODE]
-related: [ENG-GATES, ENG-PERF, ENG-BUDGET, ENG-ROADMAP, STD-CONVENTIONS, SYS-MAPS, SYS-SAVE, SYS-MOTION, SYS-AUDIO, ENG-RELEASE]
+related: [ENG-GATES, ENG-PERF, ENG-BUDGET, ENG-ROADMAP, STD-CONVENTIONS, SYS-MAPS, SYS-SAVE, SYS-MOTION, SYS-AUDIO, ENG-LICENSE]
 contracts: []
-data: ["scripts/gates/shader-whitelist.json", "third_party.json", "tools/godot-version.txt", "version.txt"]
-gates: [G1, G2, G3, G4, G5, G6]
+data: ["scripts/gates/shader-whitelist.json", "third_party.json", "tools/godot-version.txt"]
+gates: [G1, G2, G3, G4, G5]
 paths: ["game/**/*.cs", "game/kernel/bake/**", "game/testing/**", "game/gen/maps/qingshuihe/Campus.Gen.Maps.Qingshuihe.csproj", "game/gen/sites/**", "game/gen/Campus.Gen.csproj", "game/kernel/map/data/**", "game/kernel/renderer/geometry/**", "game/kernel/renderer/render-state/**", "game/kernel/instances/**", "game/gen/geometry/**", "scripts/gates/arch/Campus.Arch.Tests.csproj", "scripts/godot-api/ApiDump/ApiDump.csproj", "game/contracts/Runtime/Campus.Contracts.Runtime.csproj", "game/contracts/Campus.Contracts.csproj", "game/Campus.Gen.Tests.csproj", "game/Campus.Tests.csproj", "game/contracts/.gdignore", "game/contracts/*.csproj", "game/kernel/registry/**", "scripts/gates/arch/**", "**/Directory.*.targets", "game/Campus.csproj", "game/gen/.gdignore", "game/project.godot", "Directory.*.targets", "game/kernel/stubs/**", "**/Directory.*.props", "Directory.*.props", "game/contracts/**", "game/gen/bakeinput/assembly/**", "game/addons/**", "global.json", "**/*.csproj", "tools/**", "game/Campus.sln"]
 ---
 # ENG-ARCH · 工程架构
 
 > **范围**：本文说明当前的工程架构（技术栈、分层、生产链与数据流），架构层面的准则（边界、确定性、契约、烘焙、桩），以及后续设计的导向。只写结构、规则和方向。
 > **不在本文**：类型签名、目录明细、文件格式、参数与清单以代码和数据为准；写代码的结构规矩见 STD-CODE；命名与目录约定见 STD-CONVENTIONS §3、§5；性能与预算见 ENG-PERF、ENG-BUDGET；门禁见 ENG-GATES；RPG 路线见 ENG-ROADMAP。
-> **查阅**：先读 §0；当前架构看 §1；边界与确定性看 §2；契约看 §3；资源与烘焙看 §4；桩看 §5；架构导向看 §6；RPG 扩展方式看 §7；待验证看 §8
+> **查阅**：先读 §0；当前架构看 §1；边界与确定性看 §2；契约看 §3；资源与烘焙看 §4；桩看 §5；架构导向看 §6；RPG 扩展方式看 §7
 
 ## 0 结论
 
@@ -26,7 +26,7 @@ paths: ["game/**/*.cs", "game/kernel/bake/**", "game/testing/**", "game/gen/maps
 4. **打特性即接入**：模块、部件、服务、节点、存档段靠特性自动发现，不改共享文件；Autoload 只有 `Boot`，`Kernel` 是静态入口（§2）。
 5. **确定性**：随机和哈希只用契约的 `Rng`、`StableHash`；同一台机器上同一输入烘出同样的字节，不要求本机与别的机器逐字节一致（§2，DECISION-232）。
 6. **契约以源码为准**：签名只在 `game/contracts/`；改动先申请，与全部使用方同批迁移（§3）。
-7. **几何构建期烘焙、随包发**：几何由代码生成，发布时全图烘好随包发；缓存查找、判鲜与补烘只在 §4。
+7. **几何构建期烘焙**：几何由代码生成，每批收口全图预烘，启动只读现成缓存；缓存查找、判鲜与补烘只在 §4。
 8. **往哪走**：运行时状态只有一个写入方，按职责拆；其余落地写法在 STD-CODE（§6）。
 9. **寿命与等待**：作用域拥有并排空自己的工作，取消是请求、清理完才算完成；就绪由持有者按实际结果发布，等待按连续无进展判停滞（§2「生命周期与发布」「就绪与等待」）。
 
@@ -48,7 +48,7 @@ paths: ["game/**/*.cs", "game/kernel/bake/**", "game/testing/**", "game/gen/maps
 
 ### 技术栈
 
-引擎锁定 Godot 4.7.2-stable .NET 版，目标框架 net10.0（DECISION-177）；只做 PC（Windows），渲染器 Forward+，默认 D3D12。代码全部用 C#，着色器用 Godot 着色语言，计算着色器用 GLSL；Godot API 以本地签名库 `docs/godot-api/` 为准。
+引擎锁定 Godot 4.7.2-stable .NET 版，目标框架 net10.0（C# 14，DECISION-177），以 `tools/godot-version.txt`、`global.json`、csproj 为准，三处一致，门禁比对引擎 `--version`；升级按 ENG-BUDGET-RULES §1「版本锁定」，升级后按 `docs/godot-api/README.md` 重新生成 API 参考；只做 PC（Windows），渲染器 Forward+，默认 D3D12。代码全部用 C#，着色器用 Godot 着色语言，计算着色器用 GLSL；Godot API 以本地签名库 `docs/godot-api/` 为准。
 
 ### 分层
 
@@ -144,18 +144,18 @@ paths: ["game/**/*.cs", "game/kernel/bake/**", "game/testing/**", "game/gen/maps
 ## 4 资源与烘焙
 
 - **几何由代码生成**：全部几何由生成层的 `Build()` 产出。确需外部模型（如雕像）时先经主会话批准，作为英雄资产放 `game/assets/hero/`。
-- **烘焙与随包**（DECISION-165）：格包、碰撞、室内包、平面底图与远景、遮挡体、灯表、导航图、声学等派生数据，都由烘焙服务调用同一个 `Build()` 生成。发布时用开发预烘的同一入口烘好全图随包发，首次启动不现烘；玩家缓存缺失或损坏时才本机补烘，开始页起在后台把全图补齐，碰到的格优先。开发期照常本机烘焙，每批收口全图预烘；不做几何启动集（DECISION-232）。
+- **构建期烘焙**（DECISION-165）：格包、碰撞、室内包、平面底图与远景、遮挡体、灯表、导航图、声学等派生数据，都由烘焙服务调用同一个 `Build()` 生成。每批收口用同一入口全图预烘，启动不现烘；缓存缺失或损坏时才本机补烘，开始页起在后台把全图补齐，碰到的格优先；不做几何启动集（DECISION-232）。
 - **开放高处的许可源**：与可见布局、碰撞共用真实几何，只在冷烘捕获并随常驻元数据冻结；运行时只读冻结区域，不调用生成来源。
-- **查找顺序**：本机缓存 → 随包缓存 → 本机补烘。玩家的缓存在 `user://cache/bake/`；开发与 CI 用 `UESTC_BAKE_CACHE` 指向的共享缓存，默认位置以 `BakeOptions` 源码为准。缓存上限、淘汰与启动耗时目标以 `budgets.json` 的 `cache` 为准，补烘时机见 ENG-PERF-STREAM §1.1。
+- **查找顺序**：本机缓存 → 本机补烘。缓存只有一份：`UESTC_BAKE_CACHE` 指向的目录，未设时在仓库的 `output/cache/bake/`（以 `BakeOptions` 源码为准），收口预烘、门禁与平时启动共用。缓存上限、淘汰与启动耗时目标以 `budgets.json` 的 `cache` 为准，补烘时机见 ENG-PERF-STREAM §1.1。
 - **格式**：缓存用自定义的 `.tbin`，不用 Godot 资源格式；顶点、索引、实例变换、高度栅格这类大块数值一律走二进制通道，JSON 只放键、ID、包围盒这类小元数据；格包只存产物运行数据，不存诊断归属；格式变化升级格式版本和缓存 ABI，不留旧格式兼容；逻辑格（一个烘焙键的完整产物）超过单个物理分片上限时，由烘焙层统一拆成物理分片并写逻辑索引，索引最后发布、分片齐全才算就绪，对外只交付拼好的完整格包，消费方不感知分片；读坏了删掉重烘一次，仍不行报失败。
-- **判鲜**（DECISION-229）：每个生产方（内容模块、室内提供者、烘焙生产方）声明实际用到的数据类别与地图文件或全局文件键。每格只看这些数据输入与该产物实际用到的生成代码改没改，改了只重烘这一格，没改的直接用；代码那一半由构建期生成代码指纹清单（`scripts/build/fingerprints`），在生产源码、构建输入或文档文件头的 paths 有变时更新，运行时只读这份清单；指纹的输入范围、分组与例外以 `scripts/build/fingerprints` 为准，`Shared` 只纳实际烘焙源码和冻结输入装配，注册器、规则集与纹理上传不因同目录关系进入指纹，室内按楼判鲜，改一栋只重烘这一栋。玩家侧游戏版本一变就清缓存重烘。
+- **判鲜**（DECISION-229）：每个生产方（内容模块、室内提供者、烘焙生产方）声明实际用到的数据类别与地图文件或全局文件键。每格只看这些数据输入与该产物实际用到的生成代码改没改，改了只重烘这一格，没改的直接用；代码那一半由构建期生成代码指纹清单（`scripts/build/fingerprints`），在生产源码、构建输入或文档文件头的 paths 有变时更新，运行时只读这份清单；指纹的输入范围、分组与例外以 `scripts/build/fingerprints` 为准，`Shared` 只纳实际烘焙源码和冻结输入装配，注册器、规则集与纹理上传不因同目录关系进入指纹，室内按楼判鲜，改一栋只重烘这一栋。
 - **窗号**：窗号地址由本图 `window-numbering.json` 持久登记，新网格与扩容追加地址，退役不复用；显式预烘成功后写回登记表，正常启动只读。
 - **构建期做完，运行时只读**（DECISION-256）：能在构建期或收口预烘里算好的不放到运行时。启动路径只读不建：双击启动不编译、不导入，正式产物（程序集、指纹清单、导入缓存）都在就直接起引擎、缺了才编与导入，产物新鲜由集成与收口预烘的原生增量构建与导入保证，不另设判鲜（DECISION-302）；启动到能走只起引擎与服务、核对缓存、读首视角与出生点要的格；核对只比输入标识，生成只在缓存缺失时发生；全图级的系统随格挂载，不在启动时整图挂。
 - **管线输入**：`pipeline/` 离线生成按图数据。同一台机器上用同一份已提交输入重建，输出逐字节相同；世界文件不由管线生成（DECISION-252）；Python 依赖按 `scripts/requirements.lock`（工程脚本）与 `pipeline/audio/requirements.lock`（离线音频）锁定。
 - **着色器单一来源**：共用雾函数以 `fog.gdshaderinc` 为唯一源；`scripts/build/generate-style-shaders.py` 读取调色板登记表与 C# 字面规则，生成 `fog.glslinc` 与 `style_consts.gdshaderinc`。两份 include 及其 UID 是本地构建产物，不入库；构建时生成，启动复用现成结果。
 - **导入入口**：导入只走 `game/addons/build_import` 的 EditorPlugin，命令行一律传 `--build-import`；`project.godot` 只登记该插件。
 - **贴图与字体**：PNG 源图加 Godot 导入，贴图规则见 ENG-BUDGET-RULES §1 第 5 条；数据纹理在运行时创建；字体见 UI-VISUAL-COMPONENTS §1，音频素材见 SYS-AUDIO §8。
-- **登记与版本**：资源的许可与来源登记、版本号与构建信息、导出内容见 ENG-RELEASE；版本号只有 `version.txt` 一个来源。
+- **许可登记**：资源的许可与来源登记见 ENG-LICENSE §2。
 
 ## 5 未交付能力的占位边界
 
@@ -177,11 +177,3 @@ paths: ["game/**/*.cs", "game/kernel/bake/**", "game/testing/**", "game/gen/maps
 
 现在只做观光模式；扩展方式、规则集与挂点见 ENG-ROADMAP §1、§3，契约的演进约束见 §3。
 
-## 8 待验证（P0）
-
-性能、体积与烘焙耗时的待验证项见 ENG-PERF 与 ENG-BUDGET；本节只留架构层面的。
-
-| 待验证 | 验证方法与负责 | 验证前用的初值 |
-| --- | --- | --- |
-| 导出包里的反射与程序集加载，注册结果是否与从项目运行一致（§2） | 跑通 `dotnet build` → 导入（`--build-import`）→ `--export-release` → 导出包启动，比对两边的注册结果 | 注册器按构建时生成的程序集清单逐个显式加载 |
-| 导出包里能否读到 `data/` 下的 JSON（§4） | 导出验证；格子分级、烘焙与流式加载（ENG-PERF-STREAM） | 导出过滤器显式包含按图与全局的 JSON 数据 |

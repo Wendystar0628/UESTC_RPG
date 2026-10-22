@@ -6,10 +6,10 @@ parent: WLD-OUTSKIRTS
 summary: 外围环境带规则：截面线位置、O0–O3 的内容与精度、灯光季节车流、保留删除新增、画法、数据与许可
 keywords: [外围环境带, O0–O3, 距离环, 外围覆盖层, offcampus.json, 外围画法, 楼型, 程序化布局, ODbL]
 depends: [CORE-INDEX, WLD-OUTSKIRTS, ART-STYLE, WLD-OUTSKIRTS-DIORAMA, ART-FIDELITY, ENG-ARCH, ENG-BUDGET, ENG-PERF]
-related: [MAP-QSH-OUTSKIRTS, SYS-BORDER, ART-SKYLIGHT, ENG-GATES, WLD-AMBIENCE, SYS-TIME, SYS-WEATHER, SYS-AUDIO, ENG-RELEASE, WLD-TERRAIN]
+related: [MAP-QSH-OUTSKIRTS, SYS-BORDER, ART-SKYLIGHT, ENG-GATES, WLD-AMBIENCE, SYS-TIME, SYS-WEATHER, SYS-AUDIO, ENG-LICENSE, WLD-TERRAIN]
 contracts: []
 data: ["game/data/maps/qingshuihe/world/offcampus.json"]
-gates: [G2, G6, G7]
+gates: [G2, G7]
 ---
 
 # WLD-OUTSKIRTS-BAND · 外围环境带
@@ -114,4 +114,4 @@ gates: [G2, G6, G7]
 
 - **外围数据**：校外道路与水系在 `game/data/maps/qingshuihe/world/offcampus.json`，随世界文件加载；外围楼块、前沿线与截面线的数据文件、生成器和外围覆盖层属主线之后；契约见 `game/contracts/Spatial/OutskirtsContracts.cs`，`map.json` 的 `env.outskirts` 在数据文件落地前为空。改动直接改记录（DECISION-252、DECISION-253），运行时由世界模型解析，作为单独一层，不并进校内实体。
 - **外围覆盖层**（本文独占，主线之后）：地标（天街商场、电子科大站、发展变电站、高架的特殊段）、风格化改动（把 `construction` 用地画成建成的小区、挪高压线、整理铁塔间距）和新增的氛围元素；每条写明理由。
-- **许可**：署名同校内，为"© OpenStreetMap contributors"；外围数据和校内数据一样是 ODbL 派生数据库，随安装包分发，见 ENG-RELEASE。
+- **许可**：署名同校内，为"© OpenStreetMap contributors"；外围数据和校内数据一样是 ODbL 派生数据库，见 ENG-LICENSE §2。

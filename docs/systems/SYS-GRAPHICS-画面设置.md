@@ -6,7 +6,7 @@ parent: SYS-INDEX
 summary: 主线三个画面预设与约 10 个单项、风格底线、应用方式、持久化；自动调节与首次分档在主线之后
 keywords: [画面设置, 画质, 画面预设, 设备档, 均衡, 精致, 极致, 单项, 风格底线, 风格默认, 渲染比例, 加载类设置, 画面页, IQualityService, IQualityAware, QualityResponsive, QualityKnob, quality-presets.json, settings.json]
 depends: [ART-STYLE, ENG-ARCH, ENG-BUDGET, ENG-PERF]
-related: [CORE-INDEX, ENG-GATES, ART-FIDELITY, SYS-TIME, UI-NAV, UI-VISUAL, SYS-TITLE, SYS-SAVE, SYS-MAPS, WLD-OUTSKIRTS, WLD-INTERIORS, SYS-AUDIO, ENG-RELEASE]
+related: [CORE-INDEX, ENG-GATES, ART-FIDELITY, SYS-TIME, UI-NAV, UI-VISUAL, SYS-TITLE, SYS-SAVE, SYS-MAPS, WLD-OUTSKIRTS, WLD-INTERIORS, SYS-AUDIO, ENG-LICENSE]
 contracts: [QualityPreset, DeviceTier, ApplyClass, KnobKind, QualityKnob, KnobSpec, QualityProfile, QualityView, ApplyOrigin, QualityChange, KnobDelta, ApplyPlan, ApplyStatus, ApplyResult, IQualityService, IQualityAware, QualityResponsiveAttribute]
 data: ["game/data/quality-presets.json", "user://settings.json"]
 gates: [G2, G5, G7, G10, G14]
@@ -119,7 +119,7 @@ paths: ["game/kernel/quality/**", "game/kernel/settings/**", "game/data/quality-
 
 - **画面设置存在 `user://settings.json` 的 `graphics` 节**，文件的权威规则在 SYS-SAVE-FORMAT §3。本节存：当前预设、手动覆盖项（只存与预设不同的项）；主线之后再加显卡与驱动、设备档缓存、自动调节开关。
 - **优先级**：命令行 > `settings.json` > 默认值（精致）；主线之后在默认值前加自动推荐。门禁和基准只由命令行决定，不读 `user://`。
-- **恢复画面设置**：改坏了游戏起不来时，发版说明里写"删除 user 目录下的 `settings.json`"，下次启动按默认值走；存档不碰。
+- **恢复画面设置**：改坏了游戏起不来时，删除 user 目录下的 `settings.json`，下次启动按默认值走；存档不碰。
 
 ## 7 画面页
 

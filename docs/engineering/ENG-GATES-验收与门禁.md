@@ -3,24 +3,24 @@ id: ENG-GATES
 title: 验收与门禁
 category: engineering
 parent: ENG-INDEX
-summary: 测试三档与何时跑、12 项门禁各验什么、入口与交付分工；审查视角与截图、一票否决与收尾清单在子文档
+summary: 测试三档与何时跑、11 项门禁各验什么、入口与交付分工；审查视角与截图、一票否决与收尾清单在子文档
 keywords: [门禁, 验收, 测试三档, 快检, 核心专项, 集中测试, gate.ps1, 门禁表, 门禁编号, DECISION-238, 入口与交付分工, 测试只锁本模块输出, 构建锁]
 depends: [CORE-INDEX, ART-FIDELITY, ENG-ARCH, ENG-BUDGET, ENG-PERF, SYS-TIME, SYS-WEATHER, SYS-WALK, SYS-SAVE, SYS-AUDIO]
 related: [ART-STYLE, SYS-GRAPHICS, SYS-MAPS, SYS-TITLE, SYS-ATLAS, UI-NAV, UI-VISUAL, WLD-INTERIORS, WLD-OUTSKIRTS, ENG-ROADMAP, ENG-PREVIEW]
 contracts: []
 data: []
-gates: [G1, G2, G3, G4, G5, G6, G7, G10, G14, G15, G20, G21]
+gates: [G1, G2, G3, G4, G5, G7, G10, G14, G15, G20, G21]
 paths: ["scripts/gates/native-render.ps1", "game/data/maps/*/review.json", "scripts/shots/**", "scripts/gates/**", "game/gates/**", "scripts/gates/check-naming.ps1", "scripts/gates/check-source.ps1"]
 ---
 # ENG-GATES · 验收与门禁
 
-> **范围**：测试三档与何时跑、12 项门禁各验什么（各文档文件头 `gates` 字段以这里的编号为准）、入口与交付分工。
+> **范围**：测试三档与何时跑、11 项门禁各验什么（各文档文件头 `gates` 字段以这里的编号为准）、入口与交付分工。
 > **不在本文**：审查视角、命令行规则与截图方式（ENG-GATES-SHOTS）；一票否决与收尾清单（ENG-GATES-VETO）；门禁命令、选域、缓存和阈值实现，以 `scripts/gate.ps1` 和 `scripts/gates/` 为准；各门禁的判据细则在对应系统文档的验收节；预算数值见 ENG-BUDGET。
 > **查阅**：先读 §0；测试三档看 §1.1；门禁表看 §1.2；入口看 §1.3
 
 ## 0 结论
 
-1. **门禁 12 项**（DECISION-238、DECISION-254），编号见 §1.2，删掉的不复用；文件头 `gates` 字段只用这些编号，全局不变量 INV-1 至 INV-12 不是门禁（§1）。
+1. **门禁 11 项**（DECISION-238、DECISION-254、DECISION-181），编号见 §1.2，删掉的不复用；文件头 `gates` 字段只用这些编号，全局不变量 INV-1 至 INV-12 不是门禁（§1）。
 2. **测试分三档**（DECISION-167、DECISION-232）：快检（每次推送前，只有编译与导入、受影响的测试、G4）、核心专项（碰到启动、行走、存档时）、集中测试（其余全部 G 项，阶段收尾由主会话发起，全量跑完统一修复）（§1.1）。
 3. **统一入口 `scripts\gate.ps1 [-Paths <路径...>] [-BaseRef <基线>]`**：默认快检，按改动加核心专项（§1.3）。
 4. **检查按 demo 阶段**：判据按数量级，日常每项几分钟内跑完，整图大样本只在阶段收尾跑（WF-RULE §15）。
@@ -49,7 +49,7 @@ paths: ["scripts/gates/native-render.ps1", "game/data/maps/*/review.json", "scri
 | --- | --- | --- |
 | 快检 | 每次推送前，由指挥统一编译后跑（WF-FLOW §3.1） | 只有三项：G1 编译（含分析器）与原生增量导入、按改动选出的受影响测试（G2）、G4 架构检查 |
 | 核心专项 | 改动碰到核心体验时，一段工作做完、准备推送时跑一次 | 只有三类：启动与进出（G5 核心范围）；行走不穿地、不掉出世界（G15 路线加改到区域撒点与入树检查，改游泳或身体时加对应项）；存档不丢不坏（G20 往返、损坏、退出时保存） |
-| 集中测试 | 阶段收尾由主会话发起，全量跑完、统一修复；主线闸口通过后和收尾前各至少一次 | 其余各项（G3、G5 注册检查、G6、G7 的季节与预设出图、G10、G14、G21），同时做风格评审 |
+| 集中测试 | 阶段收尾由主会话发起，全量跑完、统一修复；主线闸口通过后和收尾前各至少一次 | 其余各项（G3、G5 注册检查、G7 的季节与预设出图、G10、G14、G21），同时做风格评审 |
 
 - **阈值按数量级看**：门禁里预算、数量、精度这类阈值超了，实测仍在同一量级又不挡核心体验的，记为已知问题照常推送，阈值按实测调（WF-RULE §15）。
 - **按改动选**：gate.ps1 比对 `origin/main`，只取自己的路径；G2 按改动所在的模块挑测试（命名空间过滤），契约改动才全跑。
@@ -66,7 +66,7 @@ paths: ["scripts/gates/native-render.ps1", "game/data/maps/*/review.json", "scri
 
 ### 1.2 门禁表
 
-只有下面 12 项（DECISION-238、DECISION-254）；G8、G9、G11–G13、G16–G19 的编号不再使用，也不复用。
+只有下面 11 项（DECISION-238、DECISION-254、DECISION-181）；G6、G8、G9、G11–G13、G16–G19 的编号不再使用，也不复用。
 
 | 门禁 | 验什么 | 档 |
 | --- | --- | --- |
@@ -75,9 +75,8 @@ paths: ["scripts/gates/native-render.ps1", "game/data/maps/*/review.json", "scri
 | G3 归属 | 改动文件在文档文件头的 `paths` 中有归属；当前 Git 源码（含未跟踪但非忽略的新源码）的 `.uid` 齐全且不重复；构建产物及其本地 UID 不纳入入库检查 | 集中测试 |
 | G4 边界 | 命名空间依赖方向、禁用 API、创建权与读写权、着色器白名单、自有生产手写代码的类型合计约 600 行与方法约 80 行规模（STD-CODE §5）、新文件放置与补丁式命名（WF-RULE §16）、补丁式代码（STD-CODE §4；规则在 `scripts/gates/arch/` 与各程序集的 `BannedSymbols.txt`，ENG-ARCH §2） | 快检 |
 | G5 注册与启动进出 | 无界面注册检查（模块与 ID、认领、调色板、世界文件、存档段）；启动核心 = Boot → Title → 新游戏 → 关窗口退出不报错 | 核心专项（启动核心）；集中测试（注册检查） |
-| G6 构建 | 导出 release 能跑；报安装目录与压缩包体积，按数量级判断与内容相称（DECISION-125）；素材与代码许可已登记 | 集中测试 |
 | G7 固定机位 | `scripts/shots/poses.txt` 出图拼总览，看一眼：比例、收边、不死黑、`--ui=0` 只剩 3D 画面；集中测试时再加每季一张、三个预设各拍一次总览 | 碰画面的推送后由主会话跑；集中测试 |
-| G10 性能 | 导出 release，在几个固定机位测帧时与存档、关闭耗时，前后对比明显变慢再查；帧时目标见 `budgets.json` 的 `deviceTargets`、`frameStutter` | 集中测试 |
+| G10 性能 | 从项目运行，在几个固定机位测帧时与存档、关闭耗时，前后对比明显变慢再查；帧时目标见 `budgets.json` 的 `deviceTargets`、`frameStutter` | 集中测试 |
 | G14 界面 | 键盘能走完全程、减少动态效果生效、3D 里没有标签与地图元素 | 集中测试，看一眼 |
 | G15 行走与碰撞 | SYS-WALK-BOUNDS §7：固定路线走一遍，加改到区域附近撒点走跑跳，不穿透、不掉出、卡住不超过 3 s；传送落点；自动门 | 核心专项；整图撒点在集中测试 |
 | G20 存档 | SYS-SAVE-FORMAT §1.4、§2：往返（判据只在 SYS-SAVE-FORMAT §1.4）、损坏退回上一代、三代全坏只能新游戏、退出时保存 | 核心专项 |

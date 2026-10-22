@@ -35,7 +35,7 @@ gates: []
 | --- | --- | --- |
 | INV-1 | PC（Windows）上实时渲染的观光作品；不做地图应用那类功能（搜索、地点卡片、路径规划、在 3D 里拾取），允许界面里的平面地图 | ENG-ARCH、SYS-ATLAS |
 | INV-2 | 只有两种观察模式：**旁观**（穿透一切）和**行走**（重力与碰撞）；不做环绕、俯视、导览、自动运镜；观者主动触发的跳转、传送、模式切换，以及开始页不算 | SYS-VIEW、SYS-WALK、SYS-ATLAS、SYS-TITLE |
-| INV-3 | 允许的界面以 UI-NAV 和 UI-VISUAL 登记的为准；3D 画面里不叠加地点标签、选中描边、世界空间标记或光柱；OSM 署名常驻（数据许可的要求） | UI-NAV、UI-VISUAL、ENG-RELEASE |
+| INV-3 | 允许的界面以 UI-NAV 和 UI-VISUAL 登记的为准；3D 画面里不叠加地点标签、选中描边、世界空间标记或光柱；OSM 署名常驻（数据许可的要求） | UI-NAV、UI-VISUAL、ENG-LICENSE |
 | INV-4 | 场景里本来就有的字要保留（楼名题字、店招、路牌），一律用简体中文；受专门规定保护的标志（校徽、红十字等）不原样使用，换成风格相近的原创图形（DECISION-065） | ART-STYLE |
 | INV-5 | 三渲二日式动画背景，清透干净：分阶明暗，影子以明度为主、浅而透、不加接触暗影；随底色染色的细描线；平涂贴图。画面设置的风格底线不可关，阴影与水面倒影只能降质量 | ART-STYLE、ART-STYLE-LINES、SYS-GRAPHICS |
 | INV-6 | 不出现 NPC 和他人，也不加人物剪影，人只以生活痕迹出现；玩家自己的角色是唯一例外（DECISION-182）。展陈里不出现人物肖像；声音里没有听得清的人声 | WLD-LIFE、SYS-WALK、WLD-INTERIORS、SYS-AUDIO |
@@ -44,4 +44,4 @@ gates: []
 | INV-9 | 不是地图复刻：保留大体的平面格局（楼、路、水体的位置与形状），竖向地形主动设计（DECISION-180），其余按氛围风格化；地图只改项目的世界文件并写明理由，不从 OSM 等外部地图取数据（DECISION-252、DECISION-253） | PRD-SCOPE §1、WLD-TERRAIN、SYS-MAPS、MAP-QSH-ADDITIONS |
 | INV-10 | 所有动态和声音都轻、慢、持续；偶发事件极少，数量与例外以 SYS-MOTION-LIFE §3 为准 | SYS-MOTION、SYS-AUDIO |
 | INV-11 | 看得见的东西在任何位置、任何距离都满足视觉精度的底线：比例对，有倒角和收边，没有光秃的拉伸体块，不穿帮、不跳变，外观全新不做旧，包括只有旁观飞行才到的地方；细节密度按精度区分级，越常被近看越密 | ART-FIDELITY、WLD-RENOVATION、WLD-OUTSKIRTS、WLD-INTERIORS |
-| INV-12 | 满足性能预算与硬规则；安装包不设体积上限，按数量级看与内容是否相称（DECISION-125） | ENG-BUDGET、ENG-BUDGET-RULES、ENG-PERF |
+| INV-12 | 满足性能预算与硬规则；不预设体积与内容规模上限，按数量级看是否相称 | ENG-BUDGET、ENG-BUDGET-RULES、ENG-PERF |

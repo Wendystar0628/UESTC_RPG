@@ -3,14 +3,14 @@ id: ENG-BUDGET-RULES
 title: 硬规则与工程设置
 category: engineering
 parent: ENG-BUDGET
-summary: 违反即不能推送的 23 条硬规则，及 project.godot、导出、渲染器等工程设置
-keywords: [硬规则, 性能规则, 白名单着色器, 不得新增光源, 线程边界, 全局着色器参数登记, 风格底线不可关, 存档只走一条路, 本机烘焙同机确定, 工程设置, 渲染器, Shader Baker, 版本锁定]
+summary: 违反即不能推送的 23 条硬规则，及 project.godot、渲染器等工程设置
+keywords: [硬规则, 性能规则, 白名单着色器, 不得新增光源, 线程边界, 全局着色器参数登记, 风格底线不可关, 存档只走一条路, 本机烘焙同机确定, 工程设置, 渲染器, 版本锁定]
 depends: [CORE-INDEX, ENG-BUDGET, ENG-ARCH, ENG-PERF, SYS-GRAPHICS, SYS-SAVE, SYS-AUDIO, WLD-INTERIORS, ART-STYLE]
 related: [ENG-GATES, WF-BUILD]
 contracts: []
 data: []
 gates: [G4, G5, G7, G20, G21]
-paths: ["Directory.Build.props", "game/**/*.gdshader*", "game/kernel/**/*.cs", "game/style/**", "game/project.godot", "game/export_presets.cfg", "game/kernel/map/data/**", "game/kernel/renderer/geometry/**", "game/kernel/renderer/render-state/**", "game/kernel/instances/**", "game/gen/geometry/**", "game/kernel/registry/**", "scripts/gates/arch/**", "**/Directory.*.props", "Directory.*.props", "game/gen/bakeinput/assembly/**", "budgets.json", "game/addons/**"]
+paths: ["Directory.Build.props", "game/**/*.gdshader*", "game/kernel/**/*.cs", "game/style/**", "game/project.godot", "game/kernel/map/data/**", "game/kernel/renderer/geometry/**", "game/kernel/renderer/render-state/**", "game/kernel/instances/**", "game/gen/geometry/**", "game/kernel/registry/**", "scripts/gates/arch/**", "**/Directory.*.props", "Directory.*.props", "game/gen/bakeinput/assembly/**", "budgets.json", "game/addons/**"]
 ---
 # ENG-BUDGET-RULES · 硬规则与工程设置
 
@@ -22,7 +22,7 @@ paths: ["Directory.Build.props", "game/**/*.gdshader*", "game/kernel/**/*.cs", "
 
 1. **硬规则 23 条，违反任何一条都不能推送**：第 1–10 条管渲染、材质与时间，第 11–23 条管烘焙、线程、画面设置、存档、室内清单、音频与确定性（§1）。
 2. **门禁按这些条查**：一票否决含全部硬规则（ENG-GATES-VETO §1 第 10 条）；G4、G5、G7、G20、G21 各验其中几条。
-3. **工程设置由主会话维护**：`game/project.godot`、`game/export_presets.cfg`、`Directory.Build.props` 的改动要申请，固定项四预设相同、运行时不动（§2）。
+3. **工程设置由主会话维护**：`game/project.godot`、`Directory.Build.props` 的改动要申请，固定项四预设相同、运行时不动（§2）。
 
 ### 0.1 接入要点
 
@@ -33,7 +33,7 @@ paths: ["Directory.Build.props", "game/**/*.gdshader*", "game/kernel/**/*.cs", "
 - **写逐帧代码**：零托管分配，不用 `System.Random`、`DateTime.Now`、`Stopwatch`（§1 第 4 条）。
 - **要全局着色器参数**：先登记，运行时不增不读回（§1 第 13 条）。
 - **读写 `user://`**：存档只经 `ISaveService`，不用 `ResourceLoader`、`ResourceSaver`（§1 第 19、23 条）。
-- **要改 `project.godot`、`export_presets.cfg`、`Directory.Build.props`**：由主会话维护，申请（§2）。
+- **要改 `project.godot`、`Directory.Build.props`**：由主会话维护，申请（§2）。
 
 ## 1 硬规则（违反任何一条都不能推送）
 
@@ -48,7 +48,7 @@ paths: ["Directory.Build.props", "game/**/*.gdshader*", "game/kernel/**/*.cs", "
 7. **顶点格式**：内核或烘焙器打包成压缩 20 B/顶点，每个表面 ≤ 65 536 个顶点，只用 ENG-PERF §2 登记的格式。
 8. **discard**：不透明着色器里的 `discard` 与 `ALPHA_SCISSOR_THRESHOLD` 只用于白名单里的镂空类和抖动淡化。
 9. **运行时不得改动会触发管线重编译的设置**：阴影开关、`LightAngularDistance` 与 `ShadowBlur` 的有无、软影滤波档位、阴影深度 16 位、MSAA、TAA、FSR2、CompositorEffect 的 `Needs*`、深度预通道、Environment 的各项 `*Enabled` 启动时定，四预设相同；画面设置按即时、加载、重启三类生效（SYS-GRAPHICS §3），会清空管线的设置不做成选项；启动时在扉页下按组合预热一批（ENG-PERF §2）；时间、季节、天气、介质只经全局参数与全局纹理；每次加载界面淡出之后 SURFACE、DRAW、Canvas 编译计数不增，新 MSDF 字形为 0。
-10. **版本锁定**：Godot 4.7.2-stable .NET；升级经主会话评审，升级后跑一次快检和固定机位截图。
+10. **版本锁定**：Godot 4.7.2-stable .NET；升级经主会话评审，升级后跑一次快检和固定机位截图，重新生成 API 参考并通知各施工方。
 
 ### 1.2 烘焙、线程、存档、音频与确定性（第 11–23 条）
 
@@ -68,10 +68,10 @@ paths: ["Directory.Build.props", "game/**/*.gdshader*", "game/kernel/**/*.cs", "
 
 ## 2 工程设置
 
-`game/project.godot`、`game/export_presets.cfg`、`Directory.Build.props` 由主会话维护（WF-BUILD §1），改动要申请；已在 `game/project.godot` 里的值以该文件为准。
+`game/project.godot`、`Directory.Build.props` 由主会话维护（WF-BUILD §1），改动要申请；已在 `game/project.godot` 里的值以该文件为准。
 
 - **固定项**四预设相同，运行时一律不动（§1 第 9 条）；随画面设置改的项按 SYS-GRAPHICS §3 的类别改。
-- **渲染器**：Forward+，默认 D3D12，不考虑兼容渲染器（跑不了 Compositor）和 Mobile 渲染器；渲染线程模式 Safe；导出开 Shader Baker（只烘 D3D12，要窗口模式导出）。Vulkan 只用于着色器源码级调试、交叉验证驱动问题和 D3D12 不可用时回落；截图与基准一律 D3D12，两个驱动的结果不混用。改默认为 Vulkan 须经主会话批准，前提是出现 D3D12 特有、短期绕不开的驱动问题，且 Vulkan 下 G10 不明显比 D3D12 差。
+- **渲染器**：Forward+，默认 D3D12，不考虑兼容渲染器（跑不了 Compositor）和 Mobile 渲染器；渲染线程模式 Safe。Vulkan 只用于着色器源码级调试、交叉验证驱动问题和 D3D12 不可用时回落；截图与基准一律 D3D12，两个驱动的结果不混用。改默认为 Vulkan 须经主会话批准，前提是出现 D3D12 特有、短期绕不开的驱动问题，且 Vulkan 下 G10 不明显比 D3D12 差。
 - **不用的引擎特性**（全项目唯一的清单）：SSAO、SSIL、SSR、SDFGI、体积雾、Environment 雾、反射探针、引擎 Decal、带阴影的点光与聚光；这些效果由自写的着色器与代理实现（ENG-PERF-LIGHT）。
 - **Environment**：背景用 Sky，环境光与反射源关，Tonemap Linear，Glow 常开，运行时不切。
 - **固定的渲染项**：深度预通道开且不改（描线读 normal_roughness），`screen_space_roughness_limiter`、MSAA、TAA、`hdr_2d` 关；`force_vertex_shading` 关，否则 `light()` 不执行。

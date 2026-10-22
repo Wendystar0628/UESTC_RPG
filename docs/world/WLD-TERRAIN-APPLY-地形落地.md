@@ -9,7 +9,7 @@ depends: [WLD-TERRAIN, CORE-INDEX, ENG-ARCH, SYS-WALK, ART-STYLE, ART-MODELING, 
 related: [WLD-TERRAIN-SHAPE, WLD-WATER, WLD-VEGETATION, WLD-INTERIORS, MAP-QSH-TERRAIN, MAP-QSH-ADDITIONS, ART-FIDELITY, ART-SKYLIGHT, SYS-VIEW, ENG-GATES, ENG-PREVIEW]
 contracts: [ITerrain, TerrainFacts, TerrainClass, TerrainOverlayFile, TerrainOp]
 data: ["game/data/maps/qingshuihe/world/*.terrain.json"]
-gates: [G2, G5, G6, G15]
+gates: [G2, G5, G15]
 paths: ["game/style/palette/ext/ground.json", "game/kernel/map/data/GroundCoverTextures.cs", "game/kernel/map/data/GroundCoverTextures.cs.uid", "game/data/maps/qingshuihe/world/offcampus.json", "game/data/maps/qingshuihe/world/geo.json", "game/kernel/stream/StreamMountWork.cs", "game/kernel/stream/StreamMountWork.cs.uid", "game/gen/ground/**", "game/gen/world/**", "pipeline/**"]
 ---
 
