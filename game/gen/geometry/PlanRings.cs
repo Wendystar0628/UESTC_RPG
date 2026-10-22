@@ -63,8 +63,13 @@ public static class PlanRings
     }
 
 
-    public static bool Contains(PolygonRings polygon, Vector2 p) =>
-        PointInRing(p, polygon.Outer) && !polygon.Holes.Any(h => PointInRing(p, h));
+    public static bool Contains(PolygonRings polygon, Vector2 p)
+    {
+        if (!PointInRing(p, polygon.Outer)) return false;
+        for (var i = 0; i < polygon.Holes.Count; i++)
+            if (PointInRing(p, polygon.Holes[i])) return false;
+        return true;
+    }
 
 
     /// <summary>

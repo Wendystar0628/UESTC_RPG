@@ -391,7 +391,12 @@ internal sealed class TerrainRoadProfile
         return TerrainDifferential.Divide(weighted, sum);
 
     }
-    public bool Excluded(double station) => _exclusions.Any(e => station >= e.From - 0.0000001 && station <= e.To + 0.0000001);
+    public bool Excluded(double station)
+    {
+        foreach (var exclusion in _exclusions)
+            if (station >= exclusion.From - 0.0000001 && station <= exclusion.To + 0.0000001) return true;
+        return false;
+    }
     private bool TouchesExclusion(double a, double b) => _exclusions.Any(e => e.From < b && e.To > a);
     private static double Joint(double a, double b) => a * b <= 0 ? 0 : (a + b) / 2;
 }
