@@ -338,7 +338,7 @@ public sealed class BakeWindowTests
         var options = new BakeOptions(cache, true, false, false, false, 1, null);
         using var terrain = BakeInputFixture.CreateTerrainCache(options);
         var queue = new BakeQueue(1, static () => { });
-        var products = new BakeProductBuilder(options, terrain, queue);
+        var products = new BakeProductBuilder(options, terrain);
         Exception? stopped = null;
         try
         {

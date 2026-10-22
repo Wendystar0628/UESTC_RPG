@@ -52,7 +52,7 @@ public sealed class BakeService : IBakeService, IBakeContextSource, IMapContentS
         _queue = new(_options.MaximumWorkers, FlushInputIdentities);
         _terrain = terrain;
         _cache = terrain.Store;
-        _products = new(options, terrain, _queue);
+        _products = new(options, terrain);
         _preparation = new(options, terrain);
         _catalog = new(options, _queue, (map, key, priority) => Schedule(map, key, priority));
         ApplyPhase(AppState.Boot);
@@ -299,7 +299,7 @@ public sealed class BakeService : IBakeService, IBakeContextSource, IMapContentS
         lock (_sync) maps = _contexts.Values.ToArray();
         var failures = new List<Exception>();
         var draining = Task.WhenAll(maps.Select(map => map.Drain!).Append(Task.Run(_catalog.Drain))
-            .Append(Task.Run(_queue.Dispose)).Append(Task.Run(_products.Drain)));
+            .Append(Task.Run(_queue.Dispose)));
         try { await draining.ConfigureAwait(false); }
         catch (OperationCanceledException) when (draining.IsCanceled) { }
         catch { failures.AddRange(draining.Exception!.InnerExceptions); }

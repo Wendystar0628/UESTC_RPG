@@ -66,8 +66,7 @@ public sealed class CollisionCoreTests
         var loaded = await Task.Run(() => MapWorldLoading.LoadPrepared(new WorldModelLoaderAdapter(terrain), input, claims));
         var context = MapWorldLoading.CreateContext(entry, loaded, input.SourceInputs);
         using var bake = new BakeService(options, terrain, new GlobalBuildInputs(resources).Snapshot);
-        using var productQueue = new BakeQueue(options.MaximumWorkers, static () => { });
-        var products = new BakeProductBuilder(options, terrain, productQueue);
+        var products = new BakeProductBuilder(options, terrain);
         var map = bake.Mount(context);
         await bake.PrepareMapData(context);
         using var native = new World3D();

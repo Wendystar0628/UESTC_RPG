@@ -13,46 +13,13 @@ internal sealed class BakeProductBuilder
     private readonly BakeCacheStore _cache;
     private readonly TerrainCacheService _terrain;
     private readonly BakeTerrainPreparation _terrainPreparation;
-    private readonly object _clearSync = new();
-    private long _cacheGeneration;
-    private Task? _clearing;
-    private readonly BakeQueue _queue;
 
-    internal BakeProductBuilder(BakeOptions options, TerrainCacheService terrain, BakeQueue queue)
-    { _options = options; _terrain = terrain; _cache = terrain.Store; _terrainPreparation = new(terrain); _queue = queue; }
-
-    internal void Clear()
-    {
-        lock (_clearSync)
-        {
-            if (_clearing is { IsCompleted: false }) return;
-            _clearing?.GetAwaiter().GetResult();
-            Interlocked.Increment(ref _cacheGeneration);
-            _clearing = ObserveClear(Task.Run(_cache.Clear));
-        }
-    }
-
-    private async Task ObserveClear(Task clearing)
-    {
-        try { await clearing.ConfigureAwait(false); }
-        catch (Exception error) { _queue.RecordFailure(error); throw; }
-    }
-
-    internal void Drain()
-    {
-        Task? clearing;
-        lock (_clearSync) clearing = _clearing;
-        clearing?.GetAwaiter().GetResult();
-    }
+    internal BakeProductBuilder(BakeOptions options, TerrainCacheService terrain)
+    { _options = options; _terrain = terrain; _cache = terrain.Store; _terrainPreparation = new(terrain); }
 
     internal object Build(MapBuild map, BakeKey key)
     {
         var cancellation = map.Lifetime.Token;
-        cancellation.ThrowIfCancellationRequested();
-        var generation = Interlocked.Read(ref _cacheGeneration);
-        Task? clearing;
-        lock (_clearSync) clearing = _clearing;
-        clearing?.GetAwaiter().GetResult();
         cancellation.ThrowIfCancellationRequested();
         _ = map.Data.Value;
         cancellation.ThrowIfCancellationRequested();
@@ -99,7 +66,7 @@ internal sealed class BakeProductBuilder
         RequireInteriorProduct(map, key, validated);
         BakeAuxiliaryInputs.RequireProduct(map, key, validated);
         map.PipelineStatistics?.Add(validated, map.Content.Geometry);
-        if (!_options.Live && generation == Interlocked.Read(ref _cacheGeneration))
+        if (!_options.Live)
         {
             _cache.WriteParts(key, payloadClass, bytes, cancellation);
         }
