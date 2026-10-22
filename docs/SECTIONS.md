@@ -1783,11 +1783,11 @@
   - ★ WF-COMMS §0.1 接入要点 · L32 · 205
 - WF-COMMS §1 交接目录与文件 · L39 · 1.2k
 - WF-COMMS §2 命名与写法 · L61 · 398
-- WF-COMMS §3 任务单、请求文件、契约申请与完成回报 · L68 · 990
+- WF-COMMS §3 任务单、请求文件、契约申请与完成回报 · L68 · 1.0k
   - WF-COMMS §3.1 施工单与旁路单 · L70 · 247
   - WF-COMMS §3.2 请求文件 · L75 · 50
   - WF-COMMS §3.3 契约申请的短头部（DECISION-201） · L79 · 178
-  - WF-COMMS §3.4 完成回报 · L89 · 490
+  - WF-COMMS §3.4 完成回报 · L89 · 513
 - WF-COMMS §4 来信与消息 · L108 · 1.5k
   - WF-COMMS §4.1 什么时候发 · L110 · 260
   - WF-COMMS §4.2 一条来信一个新文件（DECISION-207） · L119 · 272
@@ -1798,18 +1798,18 @@
 
 ## WF-ENTRY · 角色入口卡
 
-`docs/workflow/WF-ENTRY-角色入口卡.md` · 4.5k 字 · 每个角色的入口卡：身份与回报对象、开工动作、本角色独有的必守、做某事前读哪一节；由钩子按节标题注入
+`docs/workflow/WF-ENTRY-角色入口卡.md` · 4.6k 字 · 每个角色的入口卡：身份与回报对象、开工动作、本角色独有的必守、做某事前读哪一节；由钩子按节标题注入
 关键词：角色入口卡、入口卡、主会话、子代理、Codex 主线、重置后先读、开工动作、收尾、做 X 前读 Y、钩子注入、SessionStart、SubagentStart、引擎路径、UESTC_GODOT
 
 - WF-ENTRY §0 结论 · L21 · 384
   - ★ WF-ENTRY §0.1 接入要点 · L27 · 127
 - WF-ENTRY §1 主会话 · L33 · 1.1k
-- WF-ENTRY §2 子代理 · L59 · 1.1k
+- WF-ENTRY §2 子代理 · L59 · 1.2k
 - WF-ENTRY §3 Codex 主线 · L88 · 1.2k
 
 ## WF-FLOW · 开发流程
 
-`docs/workflow/WF-FLOW-开发流程.md` · 5.7k 字 · 一项任务从派工、施工（只写不编译）、统一编译推送、回报到评审的流程，防打架，按工作量拆单，可调参数集中放
+`docs/workflow/WF-FLOW-开发流程.md` · 5.9k 字 · 一项任务从派工、施工（只写不编译）、统一编译推送、回报到评审的流程，防打架，按工作量拆单，可调参数集中放
 关键词：开发流程、派工、施工单、按工作量拆单、子单 1 小时、回报、评审、防打架、邻居、可调参数、DECISION-184、DECISION-211、评审通用结论
 
 - WF-FLOW §0 结论 · L22 · 464
@@ -1817,8 +1817,8 @@
 - WF-FLOW §1 全流程一览 · L35 · 616
 - WF-FLOW §2 派工与拆单 · L46 · 1.4k
   - WF-FLOW §2.1 防打架（DECISION-211） · L62 · 354
-- WF-FLOW §3 施工与回报 · L71 · 1.8k
-  - WF-FLOW §3.1 统一编译（DECISION-219） · L77 · 1.5k
+- WF-FLOW §3 施工与回报 · L71 · 2.0k
+  - WF-FLOW §3.1 统一编译（DECISION-219） · L77 · 1.7k
 - WF-FLOW §4 评审：审美与契约的交叉评审 · L90 · 702
 
 ## WF-MODEL · 模型、子代理与额度
@@ -1987,12 +1987,12 @@
 
 ## REG-DECISIONS-PROCESS · 协作与流程决策
 
-`docs/registry/REG-DECISIONS-PROCESS-协作与流程决策.md` · 16.4k 字 · 计划、协作、规范、登记四个域的已定决策：协作、流程、文档与代码规范、门禁流程
+`docs/registry/REG-DECISIONS-PROCESS-协作与流程决策.md` · 16.7k 字 · 计划、协作、规范、登记四个域的已定决策：协作、流程、文档与代码规范、门禁流程
 关键词：决策、流程、协作、文档规则、门禁流程、派工、主会话、子代理
 
 - REG-DECISIONS-PROCESS §0 结论 · L21 · 129
   - ★ REG-DECISIONS-PROCESS §0.1 接入要点 · L25 · 56
-- REG-DECISIONS-PROCESS §1 流程 · L29 · 15.8k
+- REG-DECISIONS-PROCESS §1 流程 · L29 · 16.1k
 
 ## REG-DECISIONS-SYSTEMS · 系统与工程决策
 
