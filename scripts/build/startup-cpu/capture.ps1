@@ -11,7 +11,7 @@ $toolRoot = (Resolve-Path (Join-Path $PSScriptRoot '..\..\..')).Path
 . "$toolRoot\scripts\lib\start-game.ps1"
 $condition = Get-Content -LiteralPath $ConditionPath -Raw -Encoding UTF8 | ConvertFrom-Json
 if ($condition.measurement -notin @('experience','diagnostic')) { throw 'Unknown measurement condition.' }
-if ($condition.pipelineCache -eq 'warm') { throw 'This capture has fresh native user directories and cannot establish warm pipeline-cache budgets.' }
+if ($condition.pipelineCache -notin @('first-run','unknown')) { throw 'Unknown pipeline-cache condition; fresh native user directories support only first-run or unknown.' }
 $diagnostic = $condition.measurement -eq 'diagnostic'
 $playingSample = $condition.playingSample -eq $true
 if ($playingSample -and (-not $diagnostic -or $Mode -ne 'immediate')) { throw 'Playing sample requires diagnostic immediate.' }
@@ -295,20 +295,15 @@ try {
     $cacheEvidenceKnown = -not [string]::IsNullOrWhiteSpace($condition.cacheEvidence) -and
         $condition.cacheEvidence.Trim() -notin @('NOT_MEASURED','unknown')
     $validGeometry = $condition.geometryCache -eq 'valid' -and $cacheEvidenceKnown
-    $warmPipelines = $condition.pipelineCache -eq 'warm'
     function Budget-Observation([string]$Key, $Actual, [bool]$Applicable, [string]$Endpoint) {
         $limit = $budgets.$Key
-        $status = if ($diagnostic) { 'DIAGNOSTIC_ONLY' }
-            elseif (-not $Applicable -or $null -eq $Actual) { 'NOT_MEASURED' }
+        $status = if (-not $Applicable -or $null -eq $Actual) { 'NOT_MEASURED' }
+            elseif ($diagnostic) { 'DIAGNOSTIC_ONLY' }
             elseif ($Actual -le $limit) { 'MEETS_OBSERVED_PROXY_TARGET' } else { 'EXCEEDS_OBSERVED_PROXY_TARGET' }
         return [ordered]@{ key=$Key; targetSeconds=$limit; observedSeconds=$Actual; status=$status; endpoint=$Endpoint }
     }
     $checks = @(
-        (Budget-Observation 'warmLauncherToTitleSecondsMax' $titleSeconds ($validGeometry -and $warmPipelines -and $condition.systemFileCache -eq 'warm') 'script-entry to static-menu-input-ready observation'),
-        (Budget-Observation 'coldLauncherToTitleSecondsMax' $titleSeconds ($validGeometry -and $warmPipelines -and $condition.systemFileCache -eq 'reboot-first-run') 'script-entry to static-menu-input-ready observation'),
-        (Budget-Observation 'firstRunLauncherToRealtimeSecondsMax' $realtimeSeconds ($validGeometry -and $condition.pipelineCache -eq 'first-run') 'script-entry to first Playing realtime observation after formal entry'),
-        (Budget-Observation 'preloadedNewGameToWalkSecondsMax' $inputSeconds ($validGeometry -and $warmPipelines -and $preloadReady -eq $true) 'in-process Enter request to first Walk input-ready engine boundary; movement checked by core smoke'),
-        (Budget-Observation 'immediateNewGameToWalkSecondsMax' $inputSeconds ($validGeometry -and $warmPipelines -and $Mode -eq 'immediate') 'in-process Enter request to first Walk input-ready engine boundary; movement checked by core smoke')
+        (Budget-Observation 'firstRunLauncherToRealtimeSecondsMax' $realtimeSeconds ($validGeometry -and $condition.pipelineCache -eq 'first-run') 'script-entry to first Playing realtime observation after formal entry')
     )
     [ordered]@{ gamePid=$gameProcess.Id; mainOsThreadId=$mainThreadId; engineStartUtc=$processStart.ToString('O');
         mainThreadIdentification='CreateProcessW primary OS thread ID; compare only OS IDs, never CLR ManagedThreadID';

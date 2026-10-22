@@ -2,7 +2,7 @@
 
 沿用 `title`、`immediate`、`dwell` 与现有私有 Windows desktop 启动器。私桌面只隔离显示；测量无需切换桌面、获取 OS 焦点或操作作者键鼠。输出在 `output/start_game/TOOL-215-profile/<新目录>`。
 
-普通体验：`powershell -File scripts/build/startup-cpu/run.ps1 -Output <新目录>`，默认三轮；单轮用 `-Modes immediate`。默认 `experience` 显式设 `UESTC_STARTUP_PROFILE=0`，不开 EventPipe、不枚举线程、不构建解析器。`-Measurement diagnostic` 才构建现有 CpuParse、启用逐帧日志和 EventPipe；诊断结果不证明体验目标通过。`run-existing-immediate.ps1 -Output <新目录> -BuiltRevision <构建提交>` 复用同一体验路径。
+普通体验：`powershell -File scripts/build/startup-cpu/run.ps1 -Output <新目录>`，默认三轮；单轮用 `-Modes immediate`。默认 `experience` 显式设 `UESTC_STARTUP_PROFILE=0`，不开 EventPipe、不枚举线程、不构建解析器。`-Measurement diagnostic` 才构建现有 CpuParse、启用逐帧日志和 EventPipe；诊断结果不证明体验目标通过。
 
 Playing 诊断：`powershell -File scripts/build/startup-cpu/run.ps1 -Output output/start_game/TOOL-215-profile/GAME-151-<唯一目录> -Modes immediate -Measurement diagnostic -PlayingSample`。仅允许 diagnostic immediate；沿用 `--quality=fine --quality-set=display_mode=0` 的 Fine 窗口与预设 v_sync，不加 fixed-fps。Root 在采样前协调构建、预烘、截图等重活及录屏/叠加层。未知缓存条件保留 unknown。
 
@@ -26,6 +26,6 @@ Playing 在上述 immediate 正式入场后，等待真实 Playing、宿主 real
 
 批次先持共享构建锁，通过 `Update-UESTCGameBuild` 普通构建与 Godot 增量导入，预烘由 Root 按条件安排。`preparation.json` 留真实准备时间和调用，单独于每轮 capture 脚本计时。每轮再取锁，用产品同一 `Test-UESTCLaunchOutputs` 检查正式程序集、已发布业务清单、原生导入缓存三类产物存在，不判断新旧；缺失直接失败，正式计时内不补构建。每轮保留 `launch.json`、`launcher-timing.json`、`result.json` 和隔离 save/log；原生启动绑定、等锁与输出检查开销计入脚本进入时长。
 
-缓存分别用 `-GeometryCache valid|missing|unknown`、`-PipelineCache warm|first-run|unknown`、`-SystemFileCache warm|reboot-first-run|unknown` 声明，附 `-CacheEvidence`、`-JustPrebaked yes|no|unknown` 与 `-Device`。声明针对显式准备后的状态，脚本不清缓存，预烘后不能宣称 OS 冷。同批只有首轮可沿用 reboot 或首次管线条件，后续自动记 unknown。
+缓存分别用 `-GeometryCache valid|missing|unknown`、`-PipelineCache first-run|unknown`、`-SystemFileCache warm|reboot-first-run|unknown` 声明，附 `-CacheEvidence`、`-JustPrebaked yes|no|unknown` 与 `-Device`。声明针对显式准备后的状态，脚本不清缓存，预烘后不能宣称 OS 冷。每轮使用新的 APPDATA/LOCALAPPDATA，管线条件只能是 first-run 或 unknown，当前入口不提供热管线测量；系统文件缓存的 warm 独立声明。同批只有首轮可沿用 reboot-first-run 系统文件条件，后续自动记 unknown。
 
-`budgetObservations` 只消费 `budgets.json.cache` 的现有端点与适用条件：菜单热/冷、首次管线到正式 Playing、预载/立即请求到 Walk。未知条件为 `NOT_MEASURED`，诊断为 `DIAGNOSTIC_ONLY`。保留超目标原值交 Root 判断，不增加门禁。此入口不是 G5/G10，也不替代既有核心生命周期真实方向位移检查。
+`budgetObservations` 只消费 `budgets.json.cache` 的首次管线到正式 Playing 端点与适用条件；依赖热管线的菜单热/冷、预载/立即请求到 Walk 预算不由当前入口测量。缓存证据缺失、条件未知或端点缺失为 `NOT_MEASURED`，条件齐备的诊断为 `DIAGNOSTIC_ONLY`。保留超目标原值交 Root 判断，不增加门禁。此入口不是 G5/G10，也不替代既有核心生命周期真实方向位移检查。

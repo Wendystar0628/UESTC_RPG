@@ -5,7 +5,7 @@ param([Parameter(Mandatory)][string]$Output,
     [ValidateSet('title','immediate','dwell')][string[]]$Modes = @('title','immediate','dwell'),
     [ValidateSet('experience','diagnostic')][string]$Measurement = 'experience',
     [ValidateSet('valid','missing','unknown')][string]$GeometryCache = 'unknown',
-    [ValidateSet('warm','first-run','unknown')][string]$PipelineCache = 'unknown',
+    [ValidateSet('first-run','unknown')][string]$PipelineCache = 'unknown',
     [ValidateSet('warm','reboot-first-run','unknown')][string]$SystemFileCache = 'unknown',
     [ValidateSet('yes','no','unknown')][string]$JustPrebaked = 'unknown',
     [string]$CacheEvidence = 'NOT_MEASURED', [string]$Device = 'unknown',
@@ -16,7 +16,6 @@ $root = (Resolve-Path (Join-Path $PSScriptRoot '..\..\..')).Path
 . "$root\scripts\lib\start-game.ps1"
 $Output = Assert-UESTCChildPath $Output (Join-Path $root 'output\start_game\TOOL-215-profile')
 if (Test-Path -LiteralPath $Output) { throw 'Choose a fresh output directory.' }
-if ($PipelineCache -eq 'warm') { throw 'Each capture uses fresh native user directories; warm pipeline-cache measurements are not available.' }
 if ($SystemFileCache -eq 'reboot-first-run' -and $JustPrebaked -eq 'yes') { throw 'A just-prebaked run cannot be declared OS-cold.' }
 if ($PlayingSample -and ($Measurement -ne 'diagnostic' -or $Modes.Count -ne 1 -or $Modes[0] -ne 'immediate')) {
     throw '-PlayingSample requires exactly -Modes immediate -Measurement diagnostic.'
