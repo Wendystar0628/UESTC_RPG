@@ -186,7 +186,9 @@ public partial class HudRoot : CanvasLayer, IBootParticipant, IAppLoadingPresent
         {
             var error = _view.Kit.Theme.Export(exportPath);
             GD.Print($"UI theme exported: {exportPath} ({error})");
-            return _dependencies.Exit.FinishQuit(error == Error.Ok ? 0 : 2);
+            // 启动工作只请求关闭、不等应用关闭，否则关闭排空启动任务时两边互等（ENG-ARCH）。
+            _dependencies.Exit.RequestQuit(error == Error.Ok ? 0 : 2);
+            return Task.CompletedTask;
         }
         _dependencies.ThemeClock.Apply(_args);
         _view.Configure(_args);
