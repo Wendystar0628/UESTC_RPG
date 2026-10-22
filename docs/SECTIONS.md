@@ -1617,7 +1617,7 @@
 关键词：游戏失败观测、失败登记、失败类别、fail.py、failure-types.json、根因类别、表现桶、候选类别、提交窗口、逃逸的失败、健康页、整类排查、DECISION-285、DECISION-296
 
 - ENG-FAILS §0 结论 · L21 · 1.2k
-  - ★ ENG-FAILS §0.1 接入要点 · L31 · 200
+  - ★ ENG-FAILS §0.1 接入要点 · L31 · 224
 
 ## ENG-GATES · 验收与门禁
 
