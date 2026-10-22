@@ -29,6 +29,7 @@ public sealed class SaveLifecycleTests
         var start = new WorldPreset(6.5, Season.Winter, WeatherKind.Snow, .4f);
         var result = await fixture.Pump(fixture.Save.NewGame(new("s1"), 733, start));
         AssertThat(result.Status == LoadStatus.Loaded && fixture.Camera.DefaultContext == new NewGameContext(733, fixture.Maps.Default, start, ViewMode.Fly)).OverrideFailureMessage("Deferred pose defaults lost the requested seed, map or starting preset.").IsTrue();
+        AssertThat(fixture.Diagnostics.Errors.Count).IsEqual(0);
     }
 
     [TestCase]
@@ -53,6 +54,7 @@ public sealed class SaveLifecycleTests
         var loaded = await fixture.Pump(loading);
         AssertThat(loaded.Status == LoadStatus.Loaded && fixture.World.Instance == instance + 1).OverrideFailureMessage("Full load did not commit exactly one new instance.").IsTrue();
         AssertThat(fixture.Log.Count(x => x == "view") == 1 && fixture.Camera.Locks == 0).OverrideFailureMessage("Pose restored more than once or retained its input lease.").IsTrue();
+        AssertThat(fixture.Diagnostics.Errors.Count).IsEqual(0);
     }
 
     [TestCase]
@@ -76,6 +78,7 @@ public sealed class SaveLifecycleTests
         AssertThat((await fixture.Pump(fixture.Save.SaveNow(SaveReason.Test))).Status == SaveStatus.Deferred).OverrideFailureMessage("An ended world was captured.").IsTrue();
         AssertThat((await fixture.Pump(fixture.Save.FlushForQuit(SaveReason.Quit, TimeSpan.FromSeconds(1)))).Status == SaveStatus.Deferred).OverrideFailureMessage("Title exit started another world save.").IsTrue();
         AssertThat(fixture.Save.Slots[0].Meta?.Gen == 1 && fixture.Save.Slots.Skip(1).All(slot => slot.Health == SlotHealth.Empty)).OverrideFailureMessage("Temporary entry or Title exit changed a save generation.").IsTrue();
+        AssertThat(fixture.Diagnostics.Errors.Count).IsEqual(0);
     }
 
     [TestCase(false)]
@@ -132,13 +135,13 @@ public sealed class SaveLifecycleTests
         var result = await fixture.Pump(retry);
         AssertThat(result.Status == (endedWorld ? SaveStatus.Failed : SaveStatus.Saved) && fixture.Save.State.Last == result.Status).OverrideFailureMessage("The existing write result was hidden by title exit.").IsTrue();
         AssertThat(result.Error == (endedWorld ? "save.error.snapshot" : null)).IsTrue();
-        AssertThat(fixture.Diagnostics.Errors.Count).IsEqual(fixture.ExpectedErrors);
-        if (endedWorld) AssertThat(fixture.Diagnostics.Errors.Single()!).IsInstanceOf<InvalidOperationException>();
         AssertThat(fixture.Save.Slots[0].Meta?.Gen == (endedWorld ? 1UL : 2UL)).OverrideFailureMessage("Retry launched a duplicate write or damaged the old generation.").IsTrue();
         var pose = fixture.Camera.Pose;
         fixture.Camera.SetPose(default);
         await fixture.Pump(fixture.Save.Load(new("s1")));
         AssertThat(fixture.Camera.Pose == pose).OverrideFailureMessage("Quit save did not recover the departure pose.").IsTrue();
+        AssertThat(fixture.Diagnostics.Errors.Count).IsEqual(fixture.ExpectedErrors);
+        if (endedWorld) AssertThat(fixture.Diagnostics.Errors.Single()!).IsInstanceOf<InvalidOperationException>();
     }
 
     [TestCase]
@@ -158,6 +161,7 @@ public sealed class SaveLifecycleTests
         fixture.Save.Request(SaveReason.Interval);
         await fixture.Frames(400);
         AssertThat(fixture.Save.Slots[0].Meta?.Gen == 2).OverrideFailureMessage("Title saved its camera state.").IsTrue();
+        AssertThat(fixture.Diagnostics.Errors.Count).IsEqual(0);
     }
 
     [TestCase]
@@ -173,6 +177,7 @@ public sealed class SaveLifecycleTests
         AssertThat(result.Status == SaveStatus.Saved).OverrideFailureMessage("Coherent forced capture failed.").IsTrue();
         AssertThat(fixture.Weather.CapturedMoment?.WorldHours == 91.25 && fixture.Save.Slots[0].Meta?.WorldHours == 91.25).OverrideFailureMessage("Weather used its previous tick instead of the shared save moment.").IsTrue();
         AssertThat(fixture.World.Hours == 17.5 && fixture.Weather.LastTickHours == 17.5).OverrideFailureMessage("Capturing advanced live world or weather.").IsTrue();
+        AssertThat(fixture.Diagnostics.Errors.Count).IsEqual(0);
     }
 
     [TestCase]
@@ -187,6 +192,7 @@ public sealed class SaveLifecycleTests
         var result = await fixture.Pump(fixture.Save.SaveNow(SaveReason.Test));
         AssertThat(result.Status == SaveStatus.Deferred && fixture.Save.Slots[0].Meta?.Gen == 1).OverrideFailureMessage("Captured across map generations.").IsTrue();
         fixture.Maps.Pending.SetResult(MapTravelResult.Arrived);
+        AssertThat(fixture.Diagnostics.Errors.Count).IsEqual(0);
     }
 
     [TestCase]
@@ -197,11 +203,9 @@ public sealed class SaveLifecycleTests
         await fixture.Start(); await fixture.Pump(fixture.Save.NewGame(new("s1"), 1));
         fixture.Flow = AppState.Playing;
         await fixture.Pump(fixture.Save.SaveNow(SaveReason.NewGame));
-        fixture.Weather.RestoreFailure = new InvalidDataException("Injected core semantic restore failure.");
+        var failure = new InvalidDataException("Injected core semantic restore failure.");
+        fixture.Weather.RestoreFailure = failure;
         var failed = await fixture.Pump(fixture.Save.Load(new("s1")));
-        AssertThat(fixture.Diagnostics.Errors.Count).IsEqual(fixture.ExpectedErrors);
-        AssertThat(fixture.Diagnostics.Errors.Single()!).IsInstanceOf<InvalidDataException>();
-        AssertThat(ReferenceEquals(fixture.Diagnostics.Errors.Single(), fixture.Weather.RestoreFailure)).IsTrue();
         AssertThat(failed.Status == LoadStatus.Failed && fixture.World.RestoreFaulted && fixture.Camera.Locks == 1).OverrideFailureMessage("A partially restored world remained interactive.").IsTrue();
         AssertThat(fixture.Save.State is { Last: SaveStatus.Failed, ErrorKey: "save.error.restore_world" }).OverrideFailureMessage("Restore failure is not visible through the save state.").IsTrue();
         await fixture.Frames(10); // FakeWorld.Tick throws if a pending restore escaped the failing Save frame.
@@ -213,6 +217,9 @@ public sealed class SaveLifecycleTests
         AssertThat(recovered.Status == LoadStatus.Loaded && !fixture.World.RestoreFaulted && fixture.Camera.Locks == 0).OverrideFailureMessage("A complete temporary new game did not release the fault lease.").IsTrue();
         AssertThat(fixture.Save.Active is null && fixture.Save.Slots[0].Meta?.Gen == 1).OverrideFailureMessage("Temporary-world recovery selected a writable slot or changed the previous generation.").IsTrue();
         AssertThat(fixture.Save.State.ErrorKey is null).OverrideFailureMessage("Recovery left the stale error visible.").IsTrue();
+        AssertThat(fixture.Diagnostics.Errors.Count).IsEqual(fixture.ExpectedErrors);
+        AssertThat(fixture.Diagnostics.Errors.Single()!).IsInstanceOf<InvalidDataException>();
+        AssertThat(ReferenceEquals(fixture.Diagnostics.Errors.Single(), failure)).IsTrue();
     }
 
     [TestCase]
@@ -229,12 +236,10 @@ public sealed class SaveLifecycleTests
             .OverrideFailureMessage("The recovery slot was not saved.").IsTrue();
         fixture.World.Hours = 120;
         fixture.Camera.SetPose(default);
-        fixture.Camera.RestoreFailure = new InvalidDataException("Injected pose restore failure.");
+        var failure = new InvalidDataException("Injected pose restore failure.");
+        fixture.Camera.RestoreFailure = failure;
         var instance = fixture.World.Instance;
         var failed = await fixture.Pump(fixture.Save.Load(new("s1")));
-        AssertThat(fixture.Diagnostics.Errors.Count).IsEqual(fixture.ExpectedErrors);
-        AssertThat(fixture.Diagnostics.Errors.Single()!).IsInstanceOf<InvalidDataException>();
-        AssertThat(ReferenceEquals(fixture.Diagnostics.Errors.Single(), fixture.Camera.RestoreFailure)).IsTrue();
         AssertThat(fixture.World.Instance == instance + 1 && fixture.World.Hours == 91.25)
             .OverrideFailureMessage("The injected pose failure did not occur after the World phase committed.").IsTrue();
         AssertThat(failed.Status == LoadStatus.Failed && fixture.World.RestoreFaulted && fixture.Camera.Locks == 1)
@@ -258,6 +263,9 @@ public sealed class SaveLifecycleTests
             .OverrideFailureMessage("Loading the valid slot did not fully recover the world and release input.").IsTrue();
         AssertThat(fixture.Save.Active == new SlotId("s1") && fixture.Save.Slots[0].Meta?.Gen == 1 && fixture.Save.State.ErrorKey is null)
             .OverrideFailureMessage("Recovery changed the saved generation or left the stale restore error visible.").IsTrue();
+        AssertThat(fixture.Diagnostics.Errors.Count).IsEqual(fixture.ExpectedErrors);
+        AssertThat(fixture.Diagnostics.Errors.Single()!).IsInstanceOf<InvalidDataException>();
+        AssertThat(ReferenceEquals(fixture.Diagnostics.Errors.Single(), failure)).IsTrue();
     }
 
     private sealed class Fixture : IDisposable
@@ -319,7 +327,6 @@ public sealed class SaveLifecycleTests
         {
             Save.Dispose();
             if (_directory is { } directory && Directory.Exists(directory)) Directory.Delete(directory, recursive: true);
-            AssertThat(Diagnostics.Errors.Count).OverrideFailureMessage("Save lifecycle emitted unexpected Error diagnostics.").IsEqual(ExpectedErrors);
         }
     }
 

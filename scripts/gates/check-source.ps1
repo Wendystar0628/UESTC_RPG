@@ -337,7 +337,7 @@ function Test-UESTCSourceBoundaries {
         # Preserve strings while dropping comments, so URLs and quoted IDs remain inspectable.
         $text = [regex]::Replace($text, '(@"(?:[^"]|"")*"|"(?:\\.|[^"\\])*"|''(?:\\.|[^''\\])*'')|/\*[\s\S]*?\*/|//[^\r\n]*', { param($m) if ($m.Groups[1].Success) { $m.Value } else { '' } })
         # Cache location has one owner, including in tests and shader sources.
-        if ($path -notmatch '^game/kernel/bake/' -and $text -match 'UESTC_BAKE_CACHE|cache[\\/]+bake') {
+        if ($path -notmatch '^game/kernel/bake/' -and $text -match 'UESTC_BAKE_CACHE|cache[\\/]+bake|"cache"\s*,\s*"bake"') {
             $failures.Add("${path}: bake cache outside bake kernel")
         }
         if ($path -match '/tests/|^game/testing/') { continue }

@@ -31,6 +31,7 @@ public sealed class SaveShutdownTests
         f.Section.Release(); await closing;
         AssertThat(initializing.IsCanceled && published == 0 && !f.Save.Enabled).IsTrue();
         using var unlocked = File.Open(Path.Combine(f.Directory, ".lock"), FileMode.Open, FileAccess.ReadWrite, FileShare.None);
+        AssertThat(f.Diagnostics.Errors.Count).IsEqual(0);
     }
 
     [TestCase]
@@ -58,6 +59,7 @@ public sealed class SaveShutdownTests
             AssertThat(handoff.IsCanceled).IsTrue();
         }
         using var unlocked = File.Open(Path.Combine(f.Directory, ".lock"), FileMode.Open, FileAccess.ReadWrite, FileShare.None);
+        AssertThat(f.Diagnostics.Errors.Count).IsEqual(0);
     }
 
     [TestCase(false)]
@@ -81,14 +83,14 @@ public sealed class SaveShutdownTests
         var result = await writing;
         AssertThat(result.Status == (failReadback ? SaveStatus.Failed : SaveStatus.Saved)).IsTrue();
         AssertThat(result.Error == (failReadback ? "save.error.io" : null)).IsTrue();
+        AssertThat(f.HasGeneration == !failReadback && !f.Save.Busy).IsTrue();
+        using var unlocked = File.Open(Path.Combine(f.Directory, ".lock"), FileMode.Open, FileAccess.ReadWrite, FileShare.None);
         AssertThat(f.Diagnostics.Errors.Count).IsEqual(f.ExpectedErrors);
         if (failReadback)
         {
             AssertThat(f.Diagnostics.Errors.Single()!).IsInstanceOf<IOException>();
             AssertThat(ReferenceEquals(f.Diagnostics.Errors.Single(), f.Section.Failure)).IsTrue();
         }
-        AssertThat(f.HasGeneration == !failReadback && !f.Save.Busy).IsTrue();
-        using var unlocked = File.Open(Path.Combine(f.Directory, ".lock"), FileMode.Open, FileAccess.ReadWrite, FileShare.None);
     }
 
     private sealed class Fixture : IAsyncDisposable
@@ -147,7 +149,6 @@ public sealed class SaveShutdownTests
                 Section.Dispose();
                 if (System.IO.Directory.Exists(Directory)) System.IO.Directory.Delete(Directory, recursive: true);
             }
-            AssertThat(Diagnostics.Errors.Count).OverrideFailureMessage("Save shutdown emitted unexpected Error diagnostics.").IsEqual(ExpectedErrors);
         }
     }
 
