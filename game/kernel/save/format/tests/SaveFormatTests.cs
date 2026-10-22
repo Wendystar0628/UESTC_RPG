@@ -59,17 +59,32 @@ public sealed class SaveFormatTests
         var encoded = SaveContainer.Encode(Document());
         var metaLength = (int)BinaryPrimitives.ReadUInt32LittleEndian(encoded.AsSpan(12));
         using var json = JsonDocument.Parse(encoded.AsMemory(SaveContainer.HeaderSize, metaLength));
-        var meta = json.RootElement;
-        AssertThat(meta.GetProperty("format").GetInt32()).IsEqual(SaveContainer.CurrentFormat);
-        string[] formatTwoFields = ["format", "slot", "kind", "gen", "line", "playSeconds", "map", "worldHours",
-            "clock", "season", "weather", "mode", "pose", "space", "region", "placeKey", "savedAtUnix", "reason", "ruleset", "hasThumb"];
-        AssertThat(meta.EnumerateObject().Select(property => property.Name).Order(StringComparer.Ordinal)
-            .SequenceEqual(formatTwoFields.Order(StringComparer.Ordinal)))
-            .OverrideFailureMessage("Metadata fields changed without updating the format 2 schema snapshot.").IsTrue();
-        var slot = meta.GetProperty("slot");
-        AssertThat(slot.ValueKind == JsonValueKind.Object && slot.EnumerateObject().Count() == 1 &&
-            slot.GetProperty("value").GetString() == Document().Meta.Slot.Value)
-            .OverrideFailureMessage("Format 2 metadata must use the current single-value slot object.").IsTrue();
+        using var formatTwo = JsonDocument.Parse("""
+            {
+                "format": 2,
+                "slot": "s1",
+                "kind": "auto",
+                "gen": 1,
+                "line": 1,
+                "playSeconds": 20,
+                "map": "test-map",
+                "worldHours": 17.5,
+                "clock": 17.5,
+                "season": "autumn",
+                "weather": "clear",
+                "mode": "fly",
+                "pose": { "position": [1, 2, 3], "yawDeg": 4, "pitchDeg": 5, "fovDeg": null },
+                "space": null,
+                "region": null,
+                "placeKey": null,
+                "savedAtUnix": 1792082400,
+                "reason": "test",
+                "ruleset": "sightseeing",
+                "hasThumb": false
+            }
+            """);
+        AssertThat(JsonElement.DeepEquals(json.RootElement, formatTwo.RootElement))
+            .OverrideFailureMessage("Metadata changed without updating the complete format 2 schema snapshot.").IsTrue();
     }
 
     [TestCase]

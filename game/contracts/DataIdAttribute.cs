@@ -1,7 +1,7 @@
 namespace Campus.Contracts;
 
-/// <summary>Identifies a data identity declaration for compile-time semantic analysis.</summary>
-/// <remarks>只供门禁识别，不是许可名单。</remarks>
+/// <summary>Marks a data identity for semantic checks and string-value serialization.</summary>
+/// <remarks>标记身份语义，不是许可名单；字符串值类型由 ContractJson 序列化。</remarks>
 [AttributeUsage(AttributeTargets.Class | AttributeTargets.Struct | AttributeTargets.Field |
     AttributeTargets.Property | AttributeTargets.Parameter | AttributeTargets.ReturnValue,
     Inherited = false, AllowMultiple = false)]

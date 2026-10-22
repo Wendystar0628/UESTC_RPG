@@ -25,8 +25,11 @@ public sealed record MultiPolygonGeometry(IReadOnlyList<PolygonRings> Polygons) 
 public sealed record PointGeometry(Vector3 Position) : WorldGeometry;
 
 // Open-ended vocabulary keys. New building/appearance families are data additions, not enum renumbering.
+[JsonConverter(typeof(ContractJson.StringValueConverterFactory))]
 public readonly record struct BuildingFamily(string Value);
+[JsonConverter(typeof(ContractJson.StringValueConverterFactory))]
 public readonly record struct FacadePreset(string Value);
+[JsonConverter(typeof(ContractJson.StringValueConverterFactory))]
 public readonly record struct DesignKind(string Value);
 
 /// <summary>One source geometry of an entity, retaining its own height and storey count. SourceId is provenance, not a FeatureId.</summary>

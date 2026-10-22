@@ -21,7 +21,7 @@ public static class ContractJson
             WriteIndented = false
         };
         options.Converters.Add(new JsonStringEnumConverter(JsonNamingPolicy.CamelCase, allowIntegerValues: false));
-        options.Converters.Add(new StringIdConverterFactory());
+        options.Converters.Add(new StringValueConverterFactory());
         options.Converters.Add(new Vector2Converter());
         options.Converters.Add(new Vector3Converter());
         options.Converters.Add(new Vector4Converter());
@@ -30,33 +30,35 @@ public static class ContractJson
         return options;
     }
 
-    private sealed class StringIdConverterFactory : JsonConverterFactory
+    public sealed class StringValueConverterFactory : JsonConverterFactory
     {
         public override bool CanConvert(Type typeToConvert) =>
-            typeToConvert.Assembly == typeof(ContractJson).Assembly && typeToConvert.IsValueType &&
+            (typeToConvert.IsDefined(typeof(DataIdAttribute), inherit: false) ||
+                typeToConvert.GetCustomAttribute<JsonConverterAttribute>(inherit: false)?.ConverterType == typeof(StringValueConverterFactory)) &&
+            typeToConvert.IsValueType &&
             typeToConvert.GetProperty("Value")?.PropertyType == typeof(string) &&
             typeToConvert.GetConstructor([typeof(string)]) is not null;
 
         public override JsonConverter CreateConverter(Type typeToConvert, JsonSerializerOptions options) =>
-            (JsonConverter)Activator.CreateInstance(typeof(StringIdConverter<>).MakeGenericType(typeToConvert))!;
+            (JsonConverter)Activator.CreateInstance(typeof(StringValueConverter<>).MakeGenericType(typeToConvert))!;
     }
 
-    private sealed class StringIdConverter<T> : JsonConverter<T> where T : struct
+    private sealed class StringValueConverter<T> : JsonConverter<T> where T : struct
     {
         private static readonly ConstructorInfo Constructor = typeof(T).GetConstructor([typeof(string)])!;
         private static readonly PropertyInfo ValueProperty = typeof(T).GetProperty("Value")!;
         public override T Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
         {
-            if (reader.TokenType != JsonTokenType.String) throw new JsonException("Expected a string identifier.");
-            var value = reader.GetString() ?? throw new JsonException("Identifier cannot be null.");
+            if (reader.TokenType != JsonTokenType.String) throw new JsonException("Expected a string value.");
+            var value = reader.GetString() ?? throw new JsonException("String value cannot be null.");
             return (T)Constructor.Invoke([value]);
         }
         public override void Write(Utf8JsonWriter writer, T value, JsonSerializerOptions options) =>
             writer.WriteStringValue((string?)ValueProperty.GetValue(value));
         public override T ReadAsPropertyName(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options) =>
-            (T)Constructor.Invoke([reader.GetString() ?? throw new JsonException("Null identifier.")]);
+            (T)Constructor.Invoke([reader.GetString() ?? throw new JsonException("Null string value.")]);
         public override void WriteAsPropertyName(Utf8JsonWriter writer, T value, JsonSerializerOptions options) =>
-            writer.WritePropertyName((string?)ValueProperty.GetValue(value) ?? throw new JsonException("Null identifier."));
+            writer.WritePropertyName((string?)ValueProperty.GetValue(value) ?? throw new JsonException("Null string value."));
     }
 
     private static float[] ReadArray(ref Utf8JsonReader reader, int length)

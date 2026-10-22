@@ -1,4 +1,5 @@
 using System.Numerics;
+using System.Text.Json.Serialization;
 
 namespace Campus.Contracts;
 
@@ -12,6 +13,7 @@ public readonly record struct ModuleId(string Value);
 public readonly record struct ZoneId(string Value);
 [DataId]
 public readonly record struct ChannelId(string Value);
+[JsonConverter(typeof(ContractJson.StringValueConverterFactory))]
 public readonly record struct PaletteToken(string Value);
 [DataId]
 public readonly record struct MapId(string Value);
