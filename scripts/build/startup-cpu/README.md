@@ -4,6 +4,16 @@
 
 普通体验：`powershell -File scripts/build/startup-cpu/run.ps1 -Output <新目录>`。默认三轮；单轮可用 `-Modes immediate`。默认 `experience` 显式设 `UESTC_STARTUP_PROFILE=0`，不开 EventPipe、不枚举 CPU 线程、不构建解析器。有归因需求时加 `-Measurement diagnostic`，才构建现有 CpuParse、启用逐帧日志和 EventPipe；诊断不能证明体验目标通过。`run-existing-immediate.ps1 -Output <新目录> -BuiltRevision <构建提交>` 复用相同体验路径。
 
+Playing 短诊断沿同一个入口：`powershell -File scripts/build/startup-cpu/run.ps1 -Output output/start_game/TOOL-215-profile/GAME-151-<唯一目录> -Modes immediate -Measurement diagnostic -PlayingSample`。Root 先确认邻居源码稳定、没有构建/预烘/截图等重活，并关闭录屏和叠加层。开关只允许 diagnostic immediate；用既有 `--quality=fine --quality-set=display_mode=0` 选择 Fine 窗口，Fine 的 v_sync=1，不传 fixed-fps；其余体验条件和缓存资格只按实证填写，未知保留 unknown。正常 experience 的输入与计时端点不变。
+
+`StageStartupTrace.TraceFrame` 在 `KernelStage._Process` 中持续执行；既有 `UESTC_STARTUP_PROFILE=1` 才逐帧输出引擎单调时钟、process-frame、渲染 CPU/GPU。诊断追加 flow、管线计数、GC pause、Walk 脚部位姿/yaw、action pressed 与界面模式，首次 Playing 只记一次正式 move_forward 物理绑定。没有遥测就不造分布。采集器沿原有 20 ms 循环增量读完整日志行，首次 Walk 后等连续 10 帧管线计数不变，记录 10 s 静止，再向本 PID 私窗口按住实际绑定 20 s，随后放开并等后续真实帧观测到 action released；不切桌面、不用全局输入、不写坐标或代入速度。当前 Windows 绑定转换仅支持正式绑定中的 ASCII 字母/数字；特殊键、键盘布局不匹配或未收到 action 的情况不猜替代键。按键请求和释放单独保留宿主 UTC/Stopwatch，finally 对本轮按键再负责释放。
+
+`result.json.playingSample` 与失败时仍保留的 `playing-observations.json` 记录实际状态、请求、边沿和名义每秒进程 CPU 累计读数。边沿使用当时最后一个完整 STARTUP_FRAME 原始时间/帧号，并保留观察与命令时刻，绝不插值成游戏输入生效时间。`cpu-hotspots.json` 按静止、前进、释放分窗给连续真实帧间隔与渲染 CPU/GPU 的 nearest-rank p50/p95/p99/max、>33/>100 ms 数量；帧号跳跃、非正间隔单列，不平摊或补齐。位姿与 action 共同报告是否观察到正向位移、静止的按键帧，撞挡的零位移照录；没有按键接收/位移就不能称实际前进完成。
+
+每个 >33 ms 间隔带 RenderHost 的本帧/前帧事件、异常/缓存日志的原始行号与帧号夹界、附近主线程 sampled-thread-time 栈候选及原始诊断字段。日志没记录 hit/miss 时补烘仍是未知；RenderHost 动态句柄也不是静态 TileBundle 驻留计数。CPU 累计差是约 1 s 整进程 CPU，阶段线程差也保留；都不等于逐帧 CPU。EventPipe 含等待，栈与事件同现只提示候选，不能推出函数 CPU 份额或因果。原始 godot.log、threads.nettrace 与读数均保留，呈现帧间隔没有测量。
+
+诊断开销在 playingSample 单列：逐帧日志、EventPipe、增量日志轮询、阶段线程枚举和约 1 s 进程 CPU 读数；后两者保留实际读时间/耗时。不扣估算开销，没有无遥测对照就不宣称体验或冷/热缓存目标通过。此入口不是 G5/G10 或新门禁。
+
 批次 `preparation.json` 记录准备发生时间、完整墙钟耗时（含等锁）与真实 build/import 调用；同一记录进入每轮 condition/result 和诊断报告。准备结束后才进入每轮 capture 脚本，准备耗时独立于正式热启动计时。每轮有 `launch.json`、`launcher-timing.json`、`result.json` 与隔离 save/log。正式计时包含脚本进入、原生绑定初始化、等锁、正式输出存在检查、起引擎与稀疏阶段日志观测；`outputCheckSeconds` 直接读取真实检查时间戳，原生绑定的额外工具开销保守计入。script-entry Stopwatch、进程 StartTime UTC、引擎 `STARTUP_PHASE` 毫秒保留各自原点。产品双击入口也保存 `output/start_game/launch.json`；使用外部已持有锁时明确外部等锁未测。
 
 `title` 体验在稀疏 `title-input-ready` 结束，端点是静态菜单可输入，不等后台资源；Title 没有实时世界。`title` 诊断继续捕获，直到静态菜单可输入、出生点资源 `preload-ready` 两者均观测到；`captureEndpoint` 明确标为 `static-menu-input-ready-and-background-new-game-preload-ready`，这是包含后台准备的另一端点。两类标题轮均不等待或制造 `realtime`。

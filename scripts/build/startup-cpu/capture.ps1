@@ -12,6 +12,8 @@ $toolRoot = (Resolve-Path (Join-Path $PSScriptRoot '..\..\..')).Path
 $condition = Get-Content -LiteralPath $ConditionPath -Raw -Encoding UTF8 | ConvertFrom-Json
 if ($condition.measurement -notin @('experience','diagnostic')) { throw 'Unknown measurement condition.' }
 $diagnostic = $condition.measurement -eq 'diagnostic'
+$playingSample = $condition.playingSample -eq $true
+if ($playingSample -and (-not $diagnostic -or $Mode -ne 'immediate')) { throw 'Playing sample requires diagnostic immediate.' }
 $timing = New-UESTCLaunchTiming -ScriptEnteredUtc $scriptEnteredUtc -ScriptEnteredTimestamp $scriptEnteredTimestamp
 $lease = $null
 $trace = $null
@@ -21,6 +23,24 @@ $stopAttempted = $false
 $inputWindowHandle = $null
 $inputReleasedUtc = $null
 $snapshots = [Collections.Generic.List[object]]::new()
+$playingCpu = [Collections.Generic.List[object]]::new()
+$playingEdges = [Collections.Generic.List[object]]::new()
+$forwardWindow = $null
+$forwardScanCode = $null
+$forwardKeyHeld = $false
+$forwardPhysicalKey = $null
+$playingState = 'waiting'
+$playingIdleSeconds = 10
+$playingForwardSeconds = 20
+$lastFrame = $null
+$pipelineStableFrames = 0
+$pipelineSignature = $null
+$sampleStarted = $null
+$moveRequested = $null
+$releaseRequested = $null
+$logReader = $null
+$pendingLog = ''
+$nextCpuRead = $null
 # Native launch returns the PRIMARY OS thread ID. It inherits this worker's private desktop.
 # This small launch binding runs before the game; it is not a CPU sampler.
 Add-Type -TypeDefinition @"
@@ -45,6 +65,23 @@ public static class C215Launch {
     [DllImport("user32.dll")] static extern bool IsWindowVisible(IntPtr hwnd);
     [DllImport("user32.dll", CharSet=CharSet.Unicode)] static extern int GetClassNameW(IntPtr hwnd, StringBuilder name, int count);
     [DllImport("user32.dll", SetLastError=true)] static extern bool PostMessageW(IntPtr hwnd, uint msg, IntPtr w, IntPtr l);
+    [DllImport("user32.dll")] static extern uint MapVirtualKeyW(uint code, uint mapType);
+    public static int ForwardScanCode(int physicalKey) {
+        // Godot's printable physical key values use ASCII. Unsupported special keys stay unknown.
+        if (!((physicalKey >= 65 && physicalKey <= 90) || (physicalKey >= 48 && physicalKey <= 57)))
+            throw new InvalidOperationException("The recorded physical binding is not a supported printable Windows key; no key was guessed.");
+        var scan = MapVirtualKeyW((uint)physicalKey, 0);
+        if (scan == 0 || scan > 255) throw new InvalidOperationException("No unambiguous Windows scan code for the recorded binding.");
+        return (int)scan;
+    }
+    public static void Forward(int pid, long hwnd, int physicalKey, int scan, bool pressed) {
+        uint owner; GetWindowThreadProcessId((IntPtr)hwnd, out owner);
+        if (owner != (uint)pid) throw new InvalidOperationException("Forward input target no longer belongs to this run's PID.");
+        var flags = 1 | (scan << 16);
+        if (!pressed) flags = unchecked(flags | (int)0xc0000000);
+        if (!PostMessageW((IntPtr)hwnd, pressed ? 0x100u : 0x101u, (IntPtr)physicalKey, (IntPtr)flags))
+            throw new Win32Exception(Marshal.GetLastWin32Error());
+    }
     public static long NewGameEnter(int pid) {
         IntPtr target = IntPtr.Zero;
         EnumWindows((hwnd, _) => {
@@ -118,6 +155,23 @@ function Read-CpuSnapshot([string]$Name) {
         processCpuSeconds=$cpu; threads=$threads.ToArray(); unreadableThreads=$unreadable.ToArray();
         finishedUtc=[DateTime]::UtcNow.ToString('O') })
 }
+function Read-PlayingCpu {
+    $started = [DateTime]::UtcNow
+    $readStarted = [Diagnostics.Stopwatch]::GetTimestamp()
+    $gameProcess.Refresh()
+    $seconds = $gameProcess.TotalProcessorTime.TotalSeconds
+    $playingCpu.Add([ordered]@{ readUtc=[DateTime]::UtcNow.ToString('O'); processCpuSeconds=$seconds;
+        startedUtc=$started.ToString('O'); observerMilliseconds=([Diagnostics.Stopwatch]::GetTimestamp()-$readStarted)*1000.0/[Diagnostics.Stopwatch]::Frequency })
+}
+function Add-PlayingEdge([string]$Name) {
+    # Engine timestamp/frame are a real last-observed frame, never an interpolated input instant.
+    $edge = [ordered]@{ name=$Name; milliseconds=$lastFrame.Milliseconds;
+        observedUtc=[DateTime]::UtcNow.ToString('O'); observedTimestamp=[Diagnostics.Stopwatch]::GetTimestamp();
+        suffix=" frame=$($lastFrame.Frame)"; source='last complete STARTUP_FRAME before this observer edge; see directed input request timestamps' }
+    $anchors.Add($edge)
+    $playingEdges.Add($edge)
+    Read-CpuSnapshot $Name
+}
 function Stop-OwnTrace {
     $script:stopAttempted = $true
     if ($trace.HasExited) { throw "Collector exited before requested Stop: $($trace.ExitCode)" }
@@ -153,6 +207,7 @@ try {
     $log = Join-Path $Output 'godot.log'
     $save = Join-Path $Output 'save'
     $gameArgs = @("--save-dir=$save", '--title=1')
+    if ($playingSample) { $gameArgs += @('--quality=fine', '--quality-set=display_mode=0') }
     # All three conditions use normal production defaults; no gate/shots/frames CaptureMode.
     $arguments = @('--path', "$toolRoot\game", '--log-file', $log, '--') + $gameArgs
     $line = ($arguments | ForEach-Object { ConvertTo-UESTCProcessArgument $_ }) -join ' '
@@ -205,11 +260,32 @@ try {
         if ($gameProcess.HasExited) { throw "Target exited before sampling boundary: $($gameProcess.ExitCode)" }
         if ($trace -and $trace.HasExited) { throw "Collector exited before boundary: $($trace.ExitCode)" }
         $text = ''
-        if ([IO.File]::Exists($log)) {
+        if ($null -eq $logReader -and [IO.File]::Exists($log)) {
             $stream = [IO.FileStream]::new($log, [IO.FileMode]::Open, [IO.FileAccess]::Read,
                 ([IO.FileShare]::ReadWrite -bor [IO.FileShare]::Delete))
-            $reader = [IO.StreamReader]::new($stream)
-            try { $text = $reader.ReadToEnd() } finally { $reader.Dispose() }
+            $logReader = [IO.StreamReader]::new($stream)
+        }
+        if ($logReader) {
+            $pendingLog += $logReader.ReadToEnd()
+            $newline = $pendingLog.LastIndexOf("`n")
+            if ($newline -ge 0) {
+                $text = $pendingLog.Substring(0, $newline + 1)
+                $pendingLog = $pendingLog.Substring($newline + 1)
+            }
+        }
+        if ($playingSample) {
+            $binding = [regex]::Match($text, '(?m)^STARTUP_INPUT action=move_forward physicalKey=(\d+)')
+            if ($binding.Success) { $forwardPhysicalKey = [int]$binding.Groups[1].Value }
+            foreach ($frameMatch in [regex]::Matches($text, '(?m)^STARTUP_FRAME ([0-9.]+) frame=(\d+) ([^\r\n]+)')) {
+                $fields = @{}
+                foreach ($field in [regex]::Matches($frameMatch.Groups[3].Value, '(\w+)=([^ ]+)')) { $fields[$field.Groups[1].Value] = $field.Groups[2].Value }
+                $number = [long]$frameMatch.Groups[2].Value
+                $signature = "$($fields.pipelineSurface)|$($fields.pipelineDraw)|$($fields.pipelineCanvas)"
+                $contiguous = $lastFrame -and $number -eq $lastFrame.Frame + 1
+                $pipelineStableFrames = if ($contiguous -and $signature -eq $pipelineSignature -and $fields.flow -eq 'Playing' -and $fields.mode -eq 'Walk') { $pipelineStableFrames + 1 } else { 0 }
+                $pipelineSignature = $signature
+                $lastFrame = [pscustomobject]@{ Milliseconds=[double]::Parse($frameMatch.Groups[1].Value,[Globalization.CultureInfo]::InvariantCulture); Frame=$number; Fields=$fields }
+            }
         }
         $observed = [DateTime]::UtcNow.ToString('O')
         foreach ($m in [regex]::Matches($text, '(?m)^STARTUP_PHASE ([^ ]+) ([0-9.]+)([^\r\n]*)')) {
@@ -269,6 +345,47 @@ try {
             $seen.Contains('realtime') -and $null -ne $inputReleasedTimestamp -and
                 $null -ne $newGameEnterAnchor -and $seen.Contains('input-ready')
         }
+        if ($completed -and $playingSample) {
+            if ($playingState -ne 'waiting' -and $lastFrame.Fields.flow -ne 'Playing') { throw 'Playing diagnostic left Playing before its endpoint; raw log retained.' }
+            if ($playingState -ne 'waiting' -and $lastFrame.Fields.mode -ne 'Walk') { throw 'Playing diagnostic is no longer Walk; raw log retained.' }
+            if ($playingState -eq 'waiting' -and $lastFrame -and $lastFrame.Fields.flow -eq 'Playing' -and $lastFrame.Fields.mode -eq 'Walk' -and $pipelineStableFrames -ge 10 -and
+                $null -ne $forwardPhysicalKey -and $lastFrame.Fields.forwardPressed -eq 'False' -and $lastFrame.Fields.interfaceMode -eq 'False') {
+                if ($null -eq $lastFrame.Fields.pipelineSurface -or $null -eq $lastFrame.Fields.feetX) { throw 'Missing continuous Playing telemetry; no synthetic sample.' }
+                $forwardScanCode = [C215Launch]::ForwardScanCode($forwardPhysicalKey)
+                $forwardWindow = $inputWindowHandle
+                Add-PlayingEdge 'playing-idle-start'
+                $sampleStarted = $lastFrame.Milliseconds
+                $nextCpuRead = $clock.Elapsed.TotalSeconds
+                $playingState = 'idle'
+            }
+            if ($playingState -eq 'idle' -and $lastFrame.Milliseconds - $sampleStarted -ge $playingIdleSeconds * 1000) {
+                Add-PlayingEdge 'playing-idle-end'
+                Add-PlayingEdge 'playing-forward-start'
+                $moveRequested = [ordered]@{ utc=[DateTime]::UtcNow.ToString('O'); timestamp=[Diagnostics.Stopwatch]::GetTimestamp(); beforeEngineFrame=$lastFrame.Frame; beforeEngineMilliseconds=$lastFrame.Milliseconds }
+                # Set ownership first: even an uncertain PostMessage result must get a key-up in finally.
+                $forwardKeyHeld = $true
+                [C215Launch]::Forward($gameProcess.Id, $forwardWindow, $forwardPhysicalKey, $forwardScanCode, $true)
+                $playingState = 'forward'
+            }
+            if ($playingState -eq 'forward' -and
+                ([Diagnostics.Stopwatch]::GetTimestamp()-$moveRequested.timestamp)/[double][Diagnostics.Stopwatch]::Frequency -ge $playingForwardSeconds) {
+                $releaseRequested = [ordered]@{ utc=[DateTime]::UtcNow.ToString('O'); timestamp=[Diagnostics.Stopwatch]::GetTimestamp(); beforeEngineFrame=$lastFrame.Frame; beforeEngineMilliseconds=$lastFrame.Milliseconds }
+                [C215Launch]::Forward($gameProcess.Id, $forwardWindow, $forwardPhysicalKey, $forwardScanCode, $false)
+                $forwardKeyHeld = $false
+                Add-PlayingEdge 'playing-forward-end'
+                $playingState = 'released'
+            }
+            if ($null -ne $nextCpuRead -and $clock.Elapsed.TotalSeconds -ge $nextCpuRead) {
+                Read-PlayingCpu
+                $nextCpuRead = $clock.Elapsed.TotalSeconds + 1
+            }
+            # Observe the actual action release in a later engine frame; no additional wait/poll loop.
+            if ($playingState -eq 'released' -and $lastFrame.Frame -gt $releaseRequested.beforeEngineFrame -and $lastFrame.Fields.forwardPressed -eq 'False') {
+                Add-PlayingEdge 'playing-release-observed'
+                $playingState = 'complete'
+            }
+            $completed = $playingState -eq 'complete'
+        }
         if ($completed) { break }
         Start-Sleep -Milliseconds 20
     }
@@ -288,7 +405,8 @@ try {
     $captureEndpoint = if ($Mode -eq 'title') {
         if ($diagnostic) { 'static-menu-input-ready-and-background-new-game-preload-ready' }
         else { 'static-menu-input-ready' }
-    } else { 'playing-realtime-and-Walk-input-ready' }
+    } elseif ($playingSample) { 'first-Walk-plus-diagnostic-10s-idle-20s-forward-and-observed-action-release' }
+    else { 'playing-realtime-and-Walk-input-ready' }
     $realtimeSeconds = Observed-Seconds 'realtime' $scriptEnteredTimestamp
     $inputSeconds = if ($null -ne $inputRequestedTimestamp) { Observed-Seconds 'input-ready' $inputRequestedTimestamp } else { $null }
     $budgets = (Get-Content -LiteralPath (Join-Path $toolRoot 'budgets.json') -Raw | ConvertFrom-Json).cache
@@ -316,6 +434,12 @@ try {
         attachRequestedUtc=$attachRequestedUtc; collectorPid=if($trace){$trace.Id}else{$null}; collectorStopRequestedUtc=$stopRequestedUtc;
         collectorStoppedWhileTargetAlive=if($diagnostic){$stopped}else{$null}; collectorFinishedUtc=if($diagnostic){[DateTime]::UtcNow.ToString('O')}else{$null};
         phaseObservations=$anchors.ToArray(); cpuSnapshots=$snapshots.ToArray(); phasePollingMilliseconds=20;
+        playingSample=[ordered]@{ enabled=$playingSample; state=$playingState; edges=$playingEdges.ToArray();
+            targetIdleSeconds=if($playingSample){$playingIdleSeconds}else{$null}; targetForwardHoldSeconds=if($playingSample){$playingForwardSeconds}else{$null};
+            physicalKey=$forwardPhysicalKey; windowsScanCode=$forwardScanCode; targetWindowHandle=$forwardWindow;
+            request=$moveRequested; release=$releaseRequested; processCpuReads=$playingCpu.ToArray();
+            movementStatus=if($playingSample){'SEE_RAW_PLAYING_POSES_AND_ACTION; WM delivery alone is not movement proof'}else{'NOT_REQUESTED'};
+            diagnosticOverhead='EventPipe, every-frame engine logging, incremental 20ms log polling, phase thread snapshots and nominal 1s process counters are enabled. Read durations are retained. No no-telemetry control, causal overhead subtraction or experience qualification.' };
         baseline=(git -C $toolRoot rev-parse HEAD); captureMode=$false; cpuFunctionShare='NOT_MEASURED';
         frameTelemetryEnvironment=if($diagnostic){'UESTC_STARTUP_PROFILE=1'}else{'UESTC_STARTUP_PROFILE=0'};
         timing=[ordered]@{ origin='script-entry Stopwatch timestamp; phase milliseconds retain the separate engine origin';
@@ -347,6 +471,17 @@ try {
     $_ | Out-String | Set-Content -LiteralPath (Join-Path $Output 'failure.txt') -Encoding UTF8
     throw
 } finally {
+    $forwardReleaseFailure = $null
+    if ($forwardKeyHeld -and $gameProcess -and -not $gameProcess.HasExited) {
+        try {
+            [C215Launch]::Forward($gameProcess.Id, $forwardWindow, $forwardPhysicalKey, $forwardScanCode, $false)
+            $forwardKeyHeld = $false
+        } catch {
+            $forwardReleaseFailure = $_
+            $_ | Out-String | Set-Content -LiteralPath (Join-Path $Output 'forward-release-failure.txt') -Encoding UTF8
+        }
+    }
+    if ($logReader) { $logReader.Dispose() }
     # A failure after keydown still releases only this run's target window before cleanup.
     if ($null -ne $inputWindowHandle -and $null -eq $inputReleasedUtc -and
         $gameProcess -and -not $gameProcess.HasExited) {
@@ -355,6 +490,11 @@ try {
     }
     $timing | ConvertTo-Json -Depth 5 | Set-Content -LiteralPath (Join-Path $Output 'launcher-timing.json') -Encoding UTF8
     if ($diagnostic) { $snapshots.ToArray() | ConvertTo-Json -Depth 7 | Set-Content -LiteralPath (Join-Path $Output 'cpu-snapshots.json') -Encoding UTF8 }
+    if ($playingSample) {
+        [ordered]@{ state=$playingState; edges=$playingEdges.ToArray(); request=$moveRequested; release=$releaseRequested;
+            processCpuReads=$playingCpu.ToArray(); movementStatus='Raw telemetry required; partial failure is not a completed movement sample' } |
+            ConvertTo-Json -Depth 9 | Set-Content -LiteralPath (Join-Path $Output 'playing-observations.json') -Encoding UTF8
+    }
     if ($trace -and -not $stopped -and -not $stopAttempted) { Stop-OwnTrace }
     # A failed collector Stop leaves this exact collector/target alive, identified in launch.json.
     if ($gameProcess -and ($stopped -or -not $trace) -and -not $gameProcess.HasExited) {
@@ -363,6 +503,7 @@ try {
     }
     if ($trace -and $trace.HasExited) { $trace.Dispose() }
     Exit-UESTCBuildLock $lease
+    if ($forwardReleaseFailure) { throw $forwardReleaseFailure }
 }
 
 

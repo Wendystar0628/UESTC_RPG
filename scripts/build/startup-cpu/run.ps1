@@ -1,5 +1,5 @@
 ﻿# 启动测量批次：复用私有桌面，默认无逐帧日志与 EventPipe；诊断需显式选择。
-# 用法：powershell -File scripts/build/startup-cpu/run.ps1 -Output <新目录> [-Modes immediate] [-Measurement experience|diagnostic]。
+# 用法：powershell -File scripts/build/startup-cpu/run.ps1 -Output <新目录> [-Modes immediate] [-Measurement experience|diagnostic] [-PlayingSample]。
 # 产出：output/start_game/TOOL-215-profile/；诊断解析器的 bin/obj 也留在该目录。
 param([Parameter(Mandatory)][string]$Output,
     [ValidateSet('title','immediate','dwell')][string[]]$Modes = @('title','immediate','dwell'),
@@ -9,7 +9,7 @@ param([Parameter(Mandatory)][string]$Output,
     [ValidateSet('warm','reboot-first-run','unknown')][string]$SystemFileCache = 'unknown',
     [ValidateSet('yes','no','unknown')][string]$JustPrebaked = 'unknown',
     [string]$CacheEvidence = 'NOT_MEASURED', [string]$Device = 'unknown',
-    [string]$BuiltRevision = 'unknown')
+    [string]$BuiltRevision = 'unknown', [switch]$PlayingSample)
 $ErrorActionPreference = 'Stop'
 $root = (Resolve-Path (Join-Path $PSScriptRoot '..\..\..')).Path
 . "$root\scripts\lib\common.ps1"
@@ -17,6 +17,9 @@ $root = (Resolve-Path (Join-Path $PSScriptRoot '..\..\..')).Path
 $Output = Assert-UESTCChildPath $Output (Join-Path $root 'output\start_game\TOOL-215-profile')
 if (Test-Path -LiteralPath $Output) { throw 'Choose a fresh output directory.' }
 if ($SystemFileCache -eq 'reboot-first-run' -and $JustPrebaked -eq 'yes') { throw 'A just-prebaked run cannot be declared OS-cold.' }
+if ($PlayingSample -and ($Measurement -ne 'diagnostic' -or $Modes.Count -ne 1 -or $Modes[0] -ne 'immediate')) {
+    throw '-PlayingSample requires exactly -Modes immediate -Measurement diagnostic.'
+}
 New-Item -ItemType Directory -Path $Output | Out-Null
 $preparation = [ordered]@{ status='PREPARING'; startedUtc=[DateTime]::UtcNow.ToString('O');
     completedUtc=$null; elapsedSeconds=$null; buildAndImportSeconds=$null;
@@ -62,7 +65,9 @@ foreach ($mode in $Modes) {
         pipelineCache=$PipelineCache; systemFileCache=$SystemFileCache; justPrebaked=$JustPrebaked;
         cacheEvidence=$CacheEvidence; cacheStates='Operator-declared after explicit batch preparation; no caches cleared or inferred from process restart';
         preparation=$preparation;
-        device=$Device; preset='production-default'; builtRevisionDeclaredByRoot=$BuiltRevision }
+        device=$Device; preset=if($PlayingSample){'fine'}else{'production-default'}; builtRevisionDeclaredByRoot=$BuiltRevision;
+        playingSample=[bool]$PlayingSample;
+        playingDisplay=if($PlayingSample){'--quality=fine --quality-set=display_mode=0; preset v_sync=1; no fixed-fps'}else{$null} }
     # Only a separately controlled first process can claim reboot/first-pipeline conditions.
     if ($index -gt 0) {
         if ($PipelineCache -eq 'first-run') { $condition.pipelineCache = 'unknown' }
