@@ -1,9 +1,9 @@
 using Campus.Contracts;
 using Campus.Contracts.AppFlow;
 using Campus.Contracts.Maps;
+using Campus.Contracts.Startup;
 using Campus.Hud.Pages;
 using Campus.Hud.Widgets;
-using Campus.Kernel.Boot;
 using Godot;
 using System.Threading;
 

@@ -1,8 +1,8 @@
 using Campus.Contracts;
 using Campus.Contracts.AppFlow;
+using Campus.Contracts.Startup;
 using Campus.Hud.Style;
 using Campus.Hud.Widgets;
-using Campus.Kernel.Boot;
 using Godot;
 
 namespace Campus.Hud;
