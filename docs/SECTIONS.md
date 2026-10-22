@@ -1148,7 +1148,7 @@
   - SYS-MAPS §1.1 按图与全局 · L45 · 788
   - SYS-MAPS §1.2 烘焙缓存 · L63 · 155
 - SYS-MAPS §2 地图描述 `map.json` · L68 · 651
-- SYS-MAPS §3 切换 · L79 · 2.7k
+- SYS-MAPS §3 切换 · L79 · 2.6k
   - SYS-MAPS §3.1 一个 World3D，先卸后装 · L83 · 151
   - SYS-MAPS §3.2 切图的步骤（切图部分主线之后） · L87 · 1.2k
   - SYS-MAPS §3.3 规则（主线之后） · L101 · 582
