@@ -4,7 +4,7 @@ title: 内容预览
 category: engineering
 parent: ENG-INDEX
 summary: 开发时预览与回看自己做的内容：用 --pose 放机位、预览只读不写、改了以后重启回看；按实体定位与机位恢复在主线之后
-keywords: [内容预览, 预览, 回看, 开发构建, 机位, --pose, 预览只读不写, 同图重载, 按实体定位, 机位恢复, 开发工具]
+keywords: [内容预览, 预览, 回看, 机位, --pose, 预览只读不写, 同图重载, 按实体定位, 机位恢复, 开发工具]
 depends: [ENG-GATES, ENG-ARCH]
 related: [ENG-GATES-SHOTS, SYS-MAPS, WLD-OUTSKIRTS, ART-FIDELITY, STD-CONVENTIONS]
 contracts: []
@@ -14,7 +14,7 @@ paths: ["game/data/pipeline-combinations.json", "game/style/shaders/globals.gdsh
 ---
 # ENG-PREVIEW · 内容预览
 
-> **范围**：本文规定开发时怎样预览和回看自己做的内容：从开发入口启动，用 `--pose` 放到机位，改了世界文件或参数以后在同一机位、同一时季天气下重新启动回看。按实体定位、机位恢复与热重载在主线之后（§3）。
+> **范围**：本文规定开发时怎样预览和回看自己做的内容：从项目启动，用 `--pose` 放到机位，改了世界文件或参数以后在同一机位、同一时季天气下重新启动回看。按实体定位、机位恢复与热重载在主线之后（§3）。
 > **不在本文**：命令行参数表（`game/kernel/boot/BootArguments.cs`；截图默认串见 ENG-GATES-SHOTS §1）；世界文件的格式（STD-CONVENTIONS §3.1）；`--gen=live` 与烘焙（ENG-ARCH §4）；同图重载（SYS-MAPS §3.5）；近景巡检点（ART-FIDELITY §4）。
 > **查阅**：先读 §0；起点参数看 §1；改了以后怎么回看看 §2；主线之后的预览能力看 §3
 
@@ -27,7 +27,7 @@ paths: ["game/data/pipeline-combinations.json", "game/style/shaders/globals.gdsh
 
 ### 0.1 接入要点
 
-- **预览或回看自己的内容**：从开发构建启动，起点用 `--pose=<编号>`，世界参数的写法与截图默认串相同；没有 `--focus`、`--pose-file`，传入按未知参数以非零退出码结束（§1、§3）。
+- **预览或回看自己的内容**：从项目启动，起点用 `--pose=<编号>`，世界参数的写法与截图默认串相同；没有 `--focus`、`--pose-file`，传入按未知参数以非零退出码结束（§1、§3）。
 - **说明截图从哪里拍**：在回报里贴出整串命令行（§1）。
 - **只看效果的截图**：`--pose` 配合截图参数，不算门禁（ENG-GATES-SHOTS §1.2）。
 - **新增点位或审查视角**：把机位交给负责的模块登记（`waypoints.json` 归 UI-NAV-WAYPOINTS，`review.json` 归 ENG-GATES），预览不改这两份文件（§1）。
@@ -55,5 +55,5 @@ paths: ["game/data/pipeline-combinations.json", "game/style/shaders/globals.gdsh
 下面是预览的设计目标，建成前不要在命令里使用：
 
 - **按实体 ID 定位**：按世界文件里的 ID（含 `design:` 开头的设计增补）查世界模型，机位取实体包围盒中心、方位 200°、仰角 30°，距离刚好装下包围盒；查不到 ID 以非零退出码结束。
-- **记下与恢复机位**：把当前机位和世界参数复制成一段 JSON、开发态下记到 `user://`，下次启动回到同一机位与时季天气；开发构建里的按键只在开发构建有，release 版按未知参数处理。
+- **记下与恢复机位**：把当前机位和世界参数复制成一段 JSON、记到 `user://`，下次启动回到同一机位与时季天气。
 - **同图重载**：改了世界文件或按图的 JSON 后，不重启而是后台重读校验、通过后同图重载并落回原机位；校验不过则保持上一次有效的画面，错误显示在屏幕上方、完整信息写日志。

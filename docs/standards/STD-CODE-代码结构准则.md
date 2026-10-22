@@ -30,7 +30,7 @@ paths: ["game/**/*.cs", "pipeline/**/*.py", "scripts/**/*.py", "scripts/**/*.ps1
 
 ### 0.1 接入要点
 
-- **写 Godot 代码前**：用到的类、方法、属性先在 `docs/godot-api/signatures.txt` 查到签名再写，着色语言查 `docs/godot-api/shaders/README.md`（DECISION-145）；只用 C#，不写 GDScript；路径只用 `res://`，不手写 `uid://`；场景由代码生成，不在编辑器里重存。
+- **写 Godot 代码前**：用到的类、方法、属性先在 `docs/godot-api/signatures.txt` 查到签名再写，着色语言查 `docs/godot-api/shaders/README.md`（DECISION-145）；游戏代码只用 C#（编辑器与构建期工具外壳除外，DECISION-005）；路径只用 `res://`，不手写 `uid://`；场景由代码生成，不在编辑器里重存。
 - **加 `using` 或项目引用时**：照 ENG-ARCH §2 的依赖方向；运行时代码不用生成层的实现类，内核不用系统层（§1）。原生资源的创建权与 `user://` 的读写权见 ENG-ARCH §0.1。
 - **碰渲染、材质、着色器、逐帧代码、烘焙或存档时**：先读 ENG-BUDGET-RULES §0.1。
 - **要用碰撞顶、台阶、门高、预算这类规则数时**：找到它的定义处引用；没有就加进对应的规则类，不写字面量（§2）。

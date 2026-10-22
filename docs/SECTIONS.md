@@ -11,7 +11,7 @@
   - ★ CORE-INDEX §0.1 接入要点 · L27 · 277
 - CORE-INDEX §1 信息地图 · L34 · 1.7k
 - CORE-INDEX §2 工作原则 · L84 · 1.8k
-- CORE-INDEX §3 协作与分工 · L97 · 907
+- CORE-INDEX §3 协作与分工 · L97 · 904
 - CORE-INDEX §4 文档规范 · L105 · 930
 - CORE-INDEX §5 代码规范 · L115 · 1.1k
 - CORE-INDEX §6 运行时与可靠性 · L126 · 950
@@ -1164,7 +1164,7 @@
 
 ## SYS-MOTION · 动态与事件
 
-`docs/systems/SYS-MOTION-动态与事件.md` · 6.1k 字 · 两个时钟与一拍二、动作幅度上限、转场的唯一详述；风与环境动态、生命体与偶发事件见子文档
+`docs/systems/SYS-MOTION-动态与事件.md` · 6.0k 字 · 两个时钟与一拍二、动作幅度上限、转场的唯一详述；风与环境动态、生命体与偶发事件见子文档
 关键词：动态、两个时钟、动画时钟、AnimTime、一拍二、step_rate、480 s 回绕、转场、换季转场、改时间、同时转场、减少动态效果
 
 - SYS-MOTION §0 结论 · L21 · 998
@@ -1174,9 +1174,9 @@
   - SYS-MOTION §1.2 计时规则 · L52 · 433
   - SYS-MOTION §1.3 各档流逝的表现 · L59 · 157
   - SYS-MOTION §1.4 镜头 · L63 · 92
-- SYS-MOTION §2 节奏规则 · L67 · 692
+- SYS-MOTION §2 节奏规则 · L67 · 678
   - SYS-MOTION §2.1 幅度 · L69 · 47
-  - SYS-MOTION §2.2 一拍二 · L73 · 399
+  - SYS-MOTION §2.2 一拍二 · L73 · 385
   - SYS-MOTION §2.3 偶发事件 · L82 · 122
   - SYS-MOTION §2.4 声音的节奏 · L86 · 113
 - SYS-MOTION §3 转场 · L90 · 2.4k
@@ -1303,22 +1303,22 @@
 
 ## SYS-TITLE · 开始页与启动
 
-`docs/systems/SYS-TITLE-开始页与启动.md` · 7.3k 字 · 冷启动扉页与失败页、开始页（扉页、菜单、片名块）、从双击起的并行加载与预载、各应用状态下的约定、新游戏与继续与返回标题的加载界面、多地图
-关键词：开始页、标题页、主菜单、扉页、启动失败页、片名块、应用状态、加载界面、进度条、新游戏、继续、返回标题、并行加载、预载
+`docs/systems/SYS-TITLE-开始页与启动.md` · 7.1k 字 · 冷启动扉页与终态失败的出口、开始页（扉页、菜单、片名块）、从双击起的并行加载与预载、各应用状态下的约定、新游戏与继续与返回标题的加载界面、多地图
+关键词：开始页、标题页、主菜单、扉页、终态失败、片名块、应用状态、加载界面、进度条、新游戏、继续、返回标题、并行加载、预载
 
 - SYS-TITLE §0 结论 · L22 · 896
   - ★ SYS-TITLE §0.1 接入要点 · L29 · 420
-- SYS-TITLE §1 启动序列与扉页 · L38 · 1.3k
-- SYS-TITLE §2 开始页 · L60 · 1.4k
-  - SYS-TITLE §2.1 扉页 · L62 · 203
-  - SYS-TITLE §2.2 菜单 · L68 · 495
-  - SYS-TITLE §2.3 片名块 · L76 · 374
-  - SYS-TITLE §2.4 首次启动与再次启动 · L84 · 302
-- SYS-TITLE §3 应用状态下的约定 · L91 · 2.2k
-  - SYS-TITLE §3.1 进入游戏与返回标题 · L106 · 1.4k
-- SYS-TITLE §4 多地图 · L121 · 124
-- SYS-TITLE §5 不做的事 · L126 · 170
-- SYS-TITLE §6 待验证 · L132 · 102
+- SYS-TITLE §1 启动序列与扉页 · L38 · 1.1k
+- SYS-TITLE §2 开始页 · L59 · 1.4k
+  - SYS-TITLE §2.1 扉页 · L61 · 203
+  - SYS-TITLE §2.2 菜单 · L67 · 495
+  - SYS-TITLE §2.3 片名块 · L75 · 374
+  - SYS-TITLE §2.4 首次启动与再次启动 · L83 · 302
+- SYS-TITLE §3 应用状态下的约定 · L90 · 2.2k
+  - SYS-TITLE §3.1 进入游戏与返回标题 · L105 · 1.4k
+- SYS-TITLE §4 多地图 · L120 · 124
+- SYS-TITLE §5 不做的事 · L125 · 170
+- SYS-TITLE §6 待验证 · L131 · 102
 
 ## SYS-VIEW · 观察模式与旁观漫游
 
@@ -1355,19 +1355,19 @@
 
 ## SYS-WALK · 行走模式
 
-`docs/systems/SYS-WALK-行走模式.md` · 6.6k 字 · 行走模式的玩家身体与步相、手感目标、第一与第三人称镜头与舒适度、旁观与行走的切换、控制器的规则
+`docs/systems/SYS-WALK-行走模式.md` · 6.5k 字 · 行走模式的玩家身体与步相、手感目标、第一与第三人称镜头与舒适度、旁观与行走的切换、控制器的规则
 关键词：行走模式、手感、模式切换、玩家身体、步相、自动登阶、视角舒适度、视角晃动、第一人称、第三人称、吊杆、身体淡入淡出、控制器规则、运动快照、土狼时间、IViewControl、ModeSwitchVia、ModeSwitchResult、IWalkTelemetry
 
-- SYS-WALK §0 结论 · L22 · 605
+- SYS-WALK §0 结论 · L22 · 592
   - ★ SYS-WALK §0.1 接入要点 · L34 · 200
 - SYS-WALK §1 身体、声音与步相 · L40 · 562
 - SYS-WALK §2 手感目标 · L52 · 620
-- SYS-WALK §3 视角、镜头与舒适度 · L66 · 1.9k
+- SYS-WALK §3 视角、镜头与舒适度 · L66 · 1.8k
   - SYS-WALK §3.1 视场角、舒适度与键位 · L68 · 641
-  - SYS-WALK §3.2 行走模式的镜头 · L78 · 1.3k
-- SYS-WALK §4 模式切换 · L110 · 626
-- SYS-WALK §5 控制器的规则 · L119 · 708
-- SYS-WALK §6 待验证 · L130 · 293
+  - SYS-WALK §3.2 行走模式的镜头 · L78 · 1.2k
+- SYS-WALK §4 模式切换 · L109 · 626
+- SYS-WALK §5 控制器的规则 · L118 · 708
+- SYS-WALK §6 待验证 · L129 · 293
 
 ## SYS-WALK-BIKE · 骑行
 
@@ -1460,7 +1460,7 @@
   - UI-NAV §3.7 天气签条 · L113 · 506
 - UI-NAV §4 输入 · L123 · 1.5k
   - UI-NAV §4.1 Esc 与单键快捷键 · L125 · 320
-  - UI-NAV §4.2 关键键位 · L131 · 656
+  - UI-NAV §4.2 关键键位 · L131 · 639
   - UI-NAV §4.3 输入优先级 · L151 · 547
 - UI-NAV §5 无障碍与语言 · L165 · 832
 - UI-NAV §6 待验证 · L178 · 102
@@ -1550,29 +1550,29 @@
 
 ## ENG-ARCH · 工程架构
 
-`docs/engineering/ENG-ARCH-工程架构.md` · 13.6k 字 · 当前分层、依赖方向与唯一生产链，边界、确定性、契约、烘焙与桩的架构准则与后续导向；实现细节以代码为准
+`docs/engineering/ENG-ARCH-工程架构.md` · 13.7k 字 · 当前分层、依赖方向与唯一生产链，边界、确定性、契约、烘焙与桩的架构准则与后续导向；实现细节以代码为准
 关键词：工程架构、分层、依赖方向、命名空间边界、程序集、唯一生产链、KernelStage、组合根、数据流、自动发现、特性注册、Autoload、原生资源创建方、确定性、同机同输入同输出、StableHash、Rng、BannedApiAnalyzers、生命周期、取消与完成、就绪与等待、停滞判据、契约、契约申请、契约分批冻结、枚举穷举、本机烘焙、.tbin、英雄资产、桩、架构导向、net10.0、技术栈
 
-- ENG-ARCH §0 结论 · L21 · 1.7k
-  - ★ ENG-ARCH §0.1 接入要点 · L33 · 919
-- ENG-ARCH §1 当前架构 · L46 · 1.6k
-  - ENG-ARCH 技术栈 · L48 · 181
-  - ENG-ARCH 分层 · L52 · 851
-  - ENG-ARCH 生产链 · L63 · 487
-  - ENG-ARCH 数据流 · L72 · 95
-- ENG-ARCH §2 边界与确定性 · L76 · 3.7k
-  - ENG-ARCH 依赖方向 · L78 · 1.4k
-  - ENG-ARCH 确定性与禁用写法 · L89 · 580
-  - ENG-ARCH 自动发现与模块接入 · L101 · 701
-  - ENG-ARCH 仓库脚本自成一体 · L109 · 101
-  - ENG-ARCH 生命周期与发布 · L113 · 640
-  - ENG-ARCH 就绪与等待 · L123 · 261
-- ENG-ARCH §3 契约 · L130 · 1.2k
-- ENG-ARCH §4 资源与烘焙 · L143 · 2.1k
-- ENG-ARCH §5 未交付能力的占位边界 · L159 · 257
-- ENG-ARCH §6 架构导向 · L167 · 545
-- ENG-ARCH §7 扩展点（RPG） · L175 · 69
-- ENG-ARCH §8 待验证（P0） · L179 · 350
+- ENG-ARCH §0 结论 · L21 · 1.8k
+  - ★ ENG-ARCH §0.1 接入要点 · L33 · 1.0k
+- ENG-ARCH §1 当前架构 · L47 · 1.6k
+  - ENG-ARCH 技术栈 · L49 · 181
+  - ENG-ARCH 分层 · L53 · 851
+  - ENG-ARCH 生产链 · L64 · 487
+  - ENG-ARCH 数据流 · L73 · 95
+- ENG-ARCH §2 边界与确定性 · L77 · 3.7k
+  - ENG-ARCH 依赖方向 · L79 · 1.4k
+  - ENG-ARCH 确定性与禁用写法 · L90 · 612
+  - ENG-ARCH 自动发现与模块接入 · L102 · 701
+  - ENG-ARCH 仓库脚本自成一体 · L110 · 101
+  - ENG-ARCH 生命周期与发布 · L114 · 640
+  - ENG-ARCH 就绪与等待 · L124 · 261
+- ENG-ARCH §3 契约 · L131 · 1.2k
+- ENG-ARCH §4 资源与烘焙 · L144 · 2.1k
+- ENG-ARCH §5 未交付能力的占位边界 · L160 · 257
+- ENG-ARCH §6 架构导向 · L168 · 545
+- ENG-ARCH §7 扩展点（RPG） · L176 · 69
+- ENG-ARCH §8 待验证（P0） · L180 · 352
 
 ## ENG-BUDGET · 性能预算
 
@@ -1710,7 +1710,7 @@
 - ENG-PERF-STREAM §0 结论 · L21 · 525
   - ★ ENG-PERF-STREAM §0.1 接入要点 · L28 · 222
 - ENG-PERF-STREAM §1 流式加载 · L34 · 1.7k
-  - ENG-PERF-STREAM §1.1 本机烘焙、缓存与加载 · L36 · 581
+  - ENG-PERF-STREAM §1.1 本机烘焙、缓存与加载 · L36 · 593
   - ENG-PERF-STREAM §1.2 帧内请求、挂载与六条不变量 · L44 · 564
   - ENG-PERF-STREAM §1.3 碰撞级与室内包 · L57 · 364
   - ENG-PERF-STREAM §1.4 外围与目的地预取 · L61 · 174
@@ -1721,30 +1721,30 @@
 
 ## ENG-PREVIEW · 内容预览
 
-`docs/engineering/ENG-PREVIEW-内容预览.md` · 2.7k 字 · 开发时预览与回看自己做的内容：用 --pose 放机位、预览只读不写、改了以后重启回看；按实体定位与机位恢复在主线之后
-关键词：内容预览、预览、回看、开发构建、机位、--pose、预览只读不写、同图重载、按实体定位、机位恢复、开发工具
+`docs/engineering/ENG-PREVIEW-内容预览.md` · 2.6k 字 · 开发时预览与回看自己做的内容：用 --pose 放机位、预览只读不写、改了以后重启回看；按实体定位与机位恢复在主线之后
+关键词：内容预览、预览、回看、机位、--pose、预览只读不写、同图重载、按实体定位、机位恢复、开发工具
 
-- ENG-PREVIEW §0 结论 · L21 · 670
-  - ★ ENG-PREVIEW §0.1 接入要点 · L28 · 382
+- ENG-PREVIEW §0 结论 · L21 · 668
+  - ★ ENG-PREVIEW §0.1 接入要点 · L28 · 380
 - ENG-PREVIEW §1 启动 · L36 · 168
 - ENG-PREVIEW §2 改了以后怎么回看 · L43 · 256
-- ENG-PREVIEW §3 主线之后 · L53 · 335
+- ENG-PREVIEW §3 主线之后 · L53 · 298
 
 ## ENG-RELEASE · 发布与交付
 
-`docs/engineering/ENG-RELEASE-发布与交付.md` · 6.9k 字 · 版本号与构建信息、正式用户目录、导出与发布、安装更新卸载、地图数据包、故障诊断、许可、署名与图标
+`docs/engineering/ENG-RELEASE-发布与交付.md` · 6.8k 字 · 版本号与构建信息、正式用户目录、导出与发布、安装更新卸载、地图数据包、故障诊断、许可、署名与图标
 关键词：发布、交付、版本号、version.txt、构建信息、导出、导出入口、scripts/release、引擎版本、插件清单、UESTC-<版本>-win64.7z、地图数据包、map-data-<版本>.zip、ODbL、正式用户目录、%APPDATA%\UESTC、安装、更新、卸载、诊断包、导出诊断、许可、MIT、third_party.json、干净环境验证、OSM 署名、许可页、窗口标题、窗口图标、八角晶片
 
 - ENG-RELEASE §0 结论 · L21 · 1.0k
-  - ★ ENG-RELEASE §0.1 接入要点 · L31 · 536
+  - ★ ENG-RELEASE §0.1 接入要点 · L31 · 515
 - ENG-RELEASE §1 版本号与构建信息 · L42 · 531
-- ENG-RELEASE §2 用户数据目录 · L50 · 275
-- ENG-RELEASE §3 导出与发布 · L56 · 836
-- ENG-RELEASE §4 安装、更新与卸载 · L66 · 507
-- ENG-RELEASE §5 地图数据包（ODbL） · L78 · 365
-- ENG-RELEASE §6 故障处理与诊断 · L85 · 363
-- ENG-RELEASE §7 许可 · L91 · 1.7k
-  - ENG-RELEASE §7.1 署名、许可页、窗口标题与图标 · L107 · 711
+- ENG-RELEASE §2 用户数据目录 · L50 · 180
+- ENG-RELEASE §3 导出与发布 · L55 · 836
+- ENG-RELEASE §4 安装、更新与卸载 · L65 · 507
+- ENG-RELEASE §5 地图数据包（ODbL） · L77 · 365
+- ENG-RELEASE §6 故障处理与诊断 · L84 · 363
+- ENG-RELEASE §7 许可 · L90 · 1.7k
+  - ENG-RELEASE §7.1 署名、许可页、窗口标题与图标 · L106 · 711
 
 ## ENG-ROADMAP · 扩展路线
 
@@ -1778,7 +1778,7 @@
 - WF-BUILD §1 改哪里 · L40 · 493
 - WF-BUILD §2 G4 拦不住的约定在哪 · L48 · 144
 - WF-BUILD §3 契约申请与冻结 · L52 · 338
-- WF-BUILD §4 构建与测试排队 · L59 · 864
+- WF-BUILD §4 构建与测试排队 · L59 · 824
 
 ## WF-COMMS · 交接与通信
 
@@ -1867,7 +1867,7 @@
 
 ## WF-RULE · 全员守则
 
-`docs/workflow/WF-RULE-全员守则.md` · 11.3k 字 · 所有会话和子代理都要守的规则：不过度工程化、不干等、文件操作、git 与直接改主线、主线优先、测试最小、少打架、一次性产物、bug 分级、精度按 demo 阶段定
+`docs/workflow/WF-RULE-全员守则.md` · 11.4k 字 · 所有会话和子代理都要守的规则：不过度工程化、不干等、文件操作、git 与直接改主线、主线优先、测试最小、少打架、一次性产物、bug 分级、精度按 demo 阶段定
 关键词：全员守则、不过度工程化、不向作者出选项、不预判时间、不短轮询、不干等、不重复复核、文件操作、删除规则、git、直接改主线、只提交自己的文件、出了问题向前修不回滚、不 stash、主线优先、测试最小、少和别人打架、一次迁完、拿不准就问、一次性产物、用完就删、bug 分级、阻断、先提交后修、修不收敛就停、数量级判断、demo 阶段、精度与画面相称
 
 - WF-RULE §0 结论 · L22 · 140
@@ -1884,7 +1884,7 @@
 - WF-RULE §10 少和别人打架（DECISION-199） · L100 · 1.4k
 - WF-RULE §11 拿不准就问 · L118 · 137
 - WF-RULE §12 写文档与记忆 · L123 · 71
-- WF-RULE §13 一次性产物（DECISION-221） · L127 · 656
+- WF-RULE §13 一次性产物（DECISION-221） · L127 · 742
 - WF-RULE §14 按严重程度修 bug（DECISION-223） · L136 · 1.3k
 - WF-RULE §15 精度按 demo 阶段定（DECISION-225、DECISION-231、DECISION-290） · L151 · 1.1k
 - WF-RULE §16 改文件即维护体系（DECISION-264） · L161 · 1.2k
@@ -1914,11 +1914,11 @@
 
 ## STD-CODE · 代码结构准则
 
-`docs/standards/STD-CODE-代码结构准则.md` · 8.0k 字 · 写代码时的结构规矩：先用 Godot 原生、依赖方向落地、规则值与数据各一份、失败交到底、控制规模、测试写法、异步与线程，以及 Godot API 先查签名
+`docs/standards/STD-CODE-代码结构准则.md` · 8.1k 字 · 写代码时的结构规矩：先用 Godot 原生、依赖方向落地、规则值与数据各一份、失败交到底、控制规模、测试写法、异步与线程，以及 Godot API 先查签名
 关键词：代码结构准则、先用原生、重复造轮子、判断次序、失败交付、结果载体、保留原异常、异步、任务有主、async void、线程边界、依赖方向、内核引用系统、生成层实现类、点名模块、单一来源、规则值、规则类、数据与代码分离、Tune 只放规则值、实体 ID 写数据、复用、公共层、死代码、死桩、诊断残留、单实现接口、吞错、兜底、文件规模、构造参数、清单文件、程序集过碎、测试写法、测试夹具、假实现、性质断言、signatures.txt、Godot API、GDScript
 
-- STD-CODE §0 结论 · L21 · 1.4k
-  - ★ STD-CODE §0.1 接入要点 · L31 · 989
+- STD-CODE §0 结论 · L21 · 1.5k
+  - ★ STD-CODE §0.1 接入要点 · L31 · 1.0k
 - STD-CODE §1 依赖方向 · L46 · 351
 - STD-CODE §2 规则值与数据各一份 · L55 · 590
 - STD-CODE §3 先用现成，再复用，不复制 · L65 · 1.7k
@@ -2002,7 +2002,7 @@
 
 ## REG-DECISIONS-SYSTEMS · 系统与工程决策
 
-`docs/registry/REG-DECISIONS-SYSTEMS-系统与工程决策.md` · 21.3k 字 · 界面、存档、音频、性能与画面设置、工程五个领域的已定决策
+`docs/registry/REG-DECISIONS-SYSTEMS-系统与工程决策.md` · 21.5k 字 · 界面、存档、音频、性能与画面设置、工程五个领域的已定决策
 关键词：决策、系统、工程、界面、存档、音频、性能、画面设置、预算、契约
 
 - REG-DECISIONS-SYSTEMS §0 结论 · L21 · 126
@@ -2011,9 +2011,9 @@
 - REG-DECISIONS-SYSTEMS §2 存档 · L65 · 1.6k
 - REG-DECISIONS-SYSTEMS §3 音频 · L84 · 2.2k
 - REG-DECISIONS-SYSTEMS §4 性能与画面设置 · L106 · 3.6k
-- REG-DECISIONS-SYSTEMS §5 工程 · L137 · 5.1k
-- REG-DECISIONS-SYSTEMS §6 地图与行走 · L172 · 1.0k
-- REG-DECISIONS-SYSTEMS §7 时间、季节、天气 · L183 · 2.4k
+- REG-DECISIONS-SYSTEMS §5 工程 · L137 · 5.3k
+- REG-DECISIONS-SYSTEMS §6 地图与行走 · L173 · 1.0k
+- REG-DECISIONS-SYSTEMS §7 时间、季节、天气 · L184 · 2.4k
 
 ## REG-DECISIONS-WORLD · 世界与画面决策
 

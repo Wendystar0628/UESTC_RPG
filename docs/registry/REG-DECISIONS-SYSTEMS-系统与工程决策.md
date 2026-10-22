@@ -138,7 +138,7 @@ gates: []
 
 | 编号 | 决定 | 适用范围 | 细则所在 | 状态 |
 | --- | --- | --- | --- | --- |
-| DECISION-005 | 引擎用 Godot 4.7.2-stable .NET，代码全部用 C#、不写 GDScript，渲染器 Forward+，默认 D3D12 | 全项目 | ENG-ARCH §1；PRD-SCOPE §1；ENG-BUDGET-RULES §2 | 生效 |
+| DECISION-005 | 引擎用 Godot 4.7.2-stable .NET，游戏代码只用 C#；只在编辑器或构建期运行的工具外壳（如导入插件）可用 GDScript，C# 不调用 GDScript（RESEARCH-040）；渲染器 Forward+，默认 D3D12 | 全项目 | ENG-ARCH §1；PRD-SCOPE §1；ENG-BUDGET-RULES §2 | 生效 |
 | DECISION-010 | RPG（入学到毕业）方向暂缓，只留架构接口（存档段与迁移、地图服务、解锁策略 `proximity`、多地图、门的锁状态），重新提出之前不展开设计 | 全项目 | ENG-ROADMAP；ENG-ARCH §7 | 生效 |
 | DECISION-132 | 门禁编号以 ENG-GATES §1.2 的门禁表为准；全局不变量改名为 INV-1 至 INV-12，与门禁区分（引用写法见 DECISION-156） | 全项目 | ENG-GATES §1；PRD-INVARIANTS §1；STD-CONVENTIONS §3.3 | 生效 |
 | DECISION-133 | 权威文档分工：契约与帧顺序以 `game/contracts/` 源码为准（说明见 ENG-ARCH §3），全局参数以 ENG-PERF §1.5 为准，预算与硬规则以 ENG-BUDGET 为准，门禁以 ENG-GATES 为准，某系统的细则以该系统自己的文档为准 | 全项目 | ENG-ARCH §3；ENG-PERF §1.5；ENG-BUDGET §1；ENG-BUDGET-RULES §1；ENG-GATES §1 | 生效 |
@@ -167,6 +167,7 @@ gates: []
 | DECISION-297 | 先用 Godot 原生，不重复造轮子：写功能前按次序判断 Godot 原生、.NET 自带、已引用的成熟库、新引入的库、公共层能不能做，原生做得到且更简单就用原生，都不行才自写并在代码处写明理由；改到已有的自写实现时同样先判能否换成原生，量小当批换、量大开行；收口审计查这一项 | 全项目代码 | CORE-INDEX §5；STD-CODE §3；WF-FLOW §3.1 | 生效 |
 | DECISION-298 | 顶层代码规范补运行时可靠性（RESEARCH-035）：CORE-INDEX §5 重写为八条写法规范，新增 §6 运行时与可靠性七条（唯一编排链、谁开谁关先停再排空后释放、失败带原异常交到底、异步有主、就绪看真实状态、构建期做完、存档只存落定状态）；细则落 STD-CODE §4、§7 与 ENG-ARCH §2「生命周期与发布」「就绪与等待」，停滞判据只在后者写一次；全仓顶层节号引用同批更新 | 全项目代码与钩子注入 | CORE-INDEX §5、§6；STD-CODE §4、§7；ENG-ARCH §2 | 生效 |
 | DECISION-302 | 启动构建不另设判鲜：双击启动只看正式产物（程序集、已发布的指纹清单、导入缓存）在不在，都在就直接起引擎，缺了才跑一次原生构建与导入（首次运行）；产物新鲜由统一集成与收口预烘的原生增量构建与导入保证，门禁、测量、截图、预烘入口开跑前自己跑原生增量构建与导入（G1 编 `Campus.sln`，其余编 `Campus.csproj`）；删开发回执与全输入身份层，烘焙指纹清单是唯一构建身份，生成步骤挂原生 Inputs/Outputs、真变才跑。起因是自写判鲜每次启动 5.2 s、失鲜后 Rebuild 加导入 54 s，且 374–382 反复逃逸（TOOL-383） | 构建、启动 | ENG-ARCH §4 | 生效 |
+| DECISION-310 | 不分开发版与发行版（作者定，个人作品不是商业发行）：只有一种构建，代码不按构建类型分支行为；用户数据只有一个目录 `%APPDATA%\UESTC\`，删本地覆盖 `game/override.cfg` 与"开发构建须用独立目录"的启动检查；第三人称与预览快捷键照常开放 | 全项目 | ENG-RELEASE §2 | 生效 |
 | DECISION-304 | 运行时各模块共用的引擎侧工具（跨帧等待：等帧、等绘制、等补间）放 `Campus.Contracts.Runtime`，各运行时模块与界面都够得着；不放在内核里再给门禁的依赖规则开例外；同一机制只留这一份 | 运行时 | STD-CODE §3 | 生效 |
 
 ## 6 地图与行走
@@ -200,5 +201,5 @@ gates: []
 | DECISION-047 | 彩虹只在雨后初晴出现，主虹半径随太阳升高在 30–42° 之间放大（不按真实的固定 42°），太阳在 34–40° 之间时淡出 | 天气 | SYS-WEATHER §5；ART-SKYLIGHT-ATMOSPHERE §1 | 生效 |
 | DECISION-049 | 下雪由天气过程决定（冬季夜雪多在 19–23 时开始），不按固定时段 | 冬季 | SYS-WEATHER-PROCESS §1.3；ART-COLORSCRIPT §2 | 生效 |
 | DECISION-050 | 阴雨天两阶不丢：投影强度乘 (1 − 0.8 × 阴度)，白天不低于 0.2 | 天气 | SYS-WEATHER §6；ENG-PERF-LIGHT §2.1 | 生效 |
-| DECISION-158 | 一拍二的 CPU 侧节拍（`IWorldState.Step12`、飘落池的发射时刻）与着色器同读 `step_rate`（SYS-GRAPHICS 写：一般 12 Hz，帧率上限 30 时 15 Hz），两侧在同一帧换姿态 | 全项目 | SYS-MOTION §2.2；ENG-ARCH §3；ENG-PERF §1.5 | 生效 |
+| DECISION-158 | 一拍二的 CPU 侧节拍（`IWorldState.Step12`、飘落池的发射时刻）与着色器同读 `step_rate`（固定 12 Hz，DECISION-309 后不随帧率变），两侧在同一帧换姿态 | 全项目 | SYS-MOTION §2.2；ENG-ARCH §3；ENG-PERF §1.5 | 生效 |
 | DECISION-162 | 秋季黄昏带（太阳 +8° 到 −7°）约 17:16–19:36；初灯组开始亮灯的时刻、SYS-AUDIO声景的"黄昏"段和默认状态"保持晴"的终点都与它一致 | 清水河 | SYS-WEATHER-PROCESS §1.2；ART-COLORSCRIPT §3；SYS-AUDIO-AMBIENCE §1.1 | 生效 |

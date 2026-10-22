@@ -38,7 +38,8 @@ paths: ["game/**/*.cs", "game/kernel/bake/**", "game/testing/**", "game/gen/maps
 - **接入新模块、节点、服务或存档段**：打对应的特性，不加 Autoload，不改 `main.tscn`（§2）。
 - **写随机、计时或哈希**：用契约的 `Rng`、`StableHash`，遍历字典先排序；禁用写法以各程序集的 `BannedSymbols.txt` 和 G4 为准（§2）。
 - **读写 `user://`**：每个文件只有一个读写方；不用 `ResourceLoader`、`ResourceSaver`（§2）。
-- **用到或改契约**：签名看 `game/contracts/` 源码；会追加值的枚举写穷举 `switch`，JSON 用 `ContractJson.Options`；改动与全部使用方同批迁移（§3）。
+- **用到或改契约**：签名看 `game/contracts/` 源码；命名空间只用 `check-naming.ps1` 登记的；会追加值的枚举写穷举 `switch`，JSON 用 `ContractJson.Options`；改动与全部使用方同批迁移（§3）。
+- **写全局着色器参数**：只由 `ShaderGlobals` 登记的写入方写，换写入方同批改登记（G4）。
 - **碰启动路径、缓存或全图级系统**：启动只读不建，不编译、不导入、不生成；核对缓存只比输入标识；全图级系统随格挂载（§4，DECISION-256）。
 - **开后台任务、订阅或原生资源，或写等待与就绪**：挂到所属作用域，退出走停接新工作、取消、排空、逆序释放；等待写明在等谁、有失败出口，停滞判据只引用 §2「就绪与等待」（§2）。
 - **依赖的能力还没交付**：照显式桩开发，真实实现接入时同批删桩（§5）。
@@ -94,7 +95,7 @@ paths: ["game/**/*.cs", "game/kernel/bake/**", "game/testing/**", "game/gen/maps
 - 不读系统时钟，不用进程间不稳定的哈希。
 - 只保证同一台机器上同一输入同一输出；不要求本机与别的机器逐字节一致，不设专门的数学库，数学照常用标准库（DECISION-232）。
 - 遍历字典、集合前先排序；一个 `Build()` 内部不做并行浮点归约，并行只在格与格之间，由内核调度。
-- 颜色只用色名，着色器用全局的 `anim_time` 而不用 `TIME`（ENG-BUDGET-RULES §1 第 1、4 条）；不写 GDScript，不手写 `uid://`，`main.tscn` 以外不放共享的 `.tscn`、`.tres`。
+- 颜色只用色名，着色器用全局的 `anim_time` 而不用 `TIME`（ENG-BUDGET-RULES §1 第 1、4 条）；游戏代码不写 GDScript（编辑器与构建期工具外壳除外，DECISION-005），不手写 `uid://`，`main.tscn` 以外不放共享的 `.tscn`、`.tres`。
 
 由此保证：同一台机器上同一输入烘出同样的字节，缓存判鲜才可靠；运行时同一钟点、同一种子、同一串输入得到同样的画面；读档是换一个世界实例，续跑等价（SYS-SAVE-FLOW §2.3）。例外只有登记过的几处（新游戏取一次熵作天气种子、存档读一次系统时钟用于显示），以 G4 的登记为准。
 
@@ -182,5 +183,5 @@ paths: ["game/**/*.cs", "game/kernel/bake/**", "game/testing/**", "game/gen/maps
 
 | 待验证 | 验证方法与负责 | 验证前用的初值 |
 | --- | --- | --- |
-| 导出版里的反射与程序集加载，注册结果是否与开发态一致（§2） | 跑通 `dotnet build` → 导入（`--build-import`）→ `--export-release` → 导出版启动，比对两边的注册结果 | 注册器按构建时生成的程序集清单逐个显式加载 |
+| 导出包里的反射与程序集加载，注册结果是否与从项目运行一致（§2） | 跑通 `dotnet build` → 导入（`--build-import`）→ `--export-release` → 导出包启动，比对两边的注册结果 | 注册器按构建时生成的程序集清单逐个显式加载 |
 | 导出包里能否读到 `data/` 下的 JSON（§4） | 导出验证；格子分级、烘焙与流式加载（ENG-PERF-STREAM） | 导出过滤器显式包含按图与全局的 JSON 数据 |
