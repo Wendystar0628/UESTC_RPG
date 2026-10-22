@@ -4,7 +4,6 @@ using Campus.Contracts.Maps;
 using Campus.Hud.Pages;
 using Campus.Hud.Widgets;
 using Campus.Kernel.Boot;
-using Campus.Kernel.Frame;
 using Godot;
 using System.Threading;
 
@@ -83,7 +82,7 @@ internal sealed class HudLoading : IAppLoadingPresentation
             _loading = LoadingPage.Create(_view.Kit, _view.LoadingHost, destination);
             _loading.Modulate = Colors.White with { A = 0 };
             _syncInput();
-            await _loading.Fade(visible: true).WaitAsync(lifetime);
+            await _loading.Fade(visible: true, lifetime);
             lifetime.ThrowIfCancellationRequested();
         }
         else _loading.SetDestination(destination);
@@ -130,7 +129,7 @@ internal sealed class HudLoading : IAppLoadingPresentation
         lifetime.ThrowIfCancellationRequested();
         if (_loadingLeases.Count != 0) return;
         _loadingCovered = false;
-        await _loading.Fade(visible: false).WaitAsync(lifetime);
+        await _loading.Fade(visible: false, lifetime);
         lifetime.ThrowIfCancellationRequested();
         _loading.GetParent().RemoveChild(_loading);
         _loading.QueueFree();

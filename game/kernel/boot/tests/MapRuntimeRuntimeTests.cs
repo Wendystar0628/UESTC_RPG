@@ -3,7 +3,6 @@ using Campus.Contracts.AppFlow;
 using Campus.Contracts.Maps;
 using Campus.Contracts.Startup;
 using Campus.Kernel.Boot;
-using Campus.Kernel.Frame;
 using Campus.Kernel.Inspect;
 using Campus.Kernel.World;
 using GdUnit4;

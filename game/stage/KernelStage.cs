@@ -391,7 +391,7 @@ public partial class KernelStage : Node3D, IAppExit, IStageGateHost
     {
         try
         {
-            await Campus.Kernel.Frame.FrameAwaiter.ProcessAsync(this, _captureLifetime.Token);
+            await FrameAwaiter.ProcessAsync(this, _captureLifetime.Token);
             CheckStartupActive();
             StageStartupTrace.TraceTitleInputReady(boot);
         }

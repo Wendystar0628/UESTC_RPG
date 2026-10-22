@@ -28,6 +28,10 @@ public partial class HudRoot : CanvasLayer, IBootParticipant, IAppLoadingPresent
     private HudFrontispiece _frontispiece = null!;
     private HudFailure _failure = null!;
     private bool _initialized, _galleryTitle;
+    private SettingsPage? _gallerySettings;
+    // 节点寿命：_Ready 建、_ExitTree 取消；画廊任务挂在它上面，由 _Process 读结果。
+    private CancellationTokenSource _lifetime = null!;
+    private Task? _gallery;
 
     public Control MinimapSlot => _view.MinimapSlot;
     public Control BackgroundHost => _view.BackgroundHost;
@@ -73,6 +77,7 @@ public partial class HudRoot : CanvasLayer, IBootParticipant, IAppLoadingPresent
     public override void _Ready()
     {
         if (!_initialized) CreatePresentation();
+        _lifetime = new CancellationTokenSource();
         _view.Enter();
         _input.Enter();
         _residents.Enter();
@@ -103,6 +108,7 @@ public partial class HudRoot : CanvasLayer, IBootParticipant, IAppLoadingPresent
         _residents.Tick(delta, Active, _args.Gallery == "hud");
         _input.Tick(delta);
         _failure.Tick();
+        ObserveGallery();
     }
 
     public override void _Input(InputEvent e) => _input.Input(e);
@@ -111,6 +117,8 @@ public partial class HudRoot : CanvasLayer, IBootParticipant, IAppLoadingPresent
     public override void _ExitTree()
     {
         if (!_initialized) return;
+        _lifetime.Cancel();
+        _lifetime.Dispose();
         _failure.Exit();
         _loading.Exit();
         _frontispiece.Exit();
@@ -151,6 +159,7 @@ public partial class HudRoot : CanvasLayer, IBootParticipant, IAppLoadingPresent
                 _residents.Build();
                 if (!_galleryTitle) _pages.Title.Close();
                 if (_args.Gallery == "hud") _dependencies.InputRouter.SetInterfaceMode(true);
+                OpenGallerySettings();
                 break;
             case AppState.Entering:
             case AppState.Leaving:
@@ -209,25 +218,54 @@ public partial class HudRoot : CanvasLayer, IBootParticipant, IAppLoadingPresent
     {
         switch (page)
         {
-            case "settings": _pages.OpenSettings(SettingsPage.General, fromTitle: false); break;
-            case "graphics": _pages.OpenSettings(SettingsPage.Graphics, fromTitle: false); break;
-            case "sound": _pages.OpenSettings(SettingsPage.Sound, fromTitle: false); break;
-            case "keys": _pages.OpenSettings(SettingsPage.Keys, fromTitle: false); break;
-            case "rebind": _pages.OpenSettings(SettingsPage.Rebind, fromTitle: false); break;
-            case "licenses": _pages.OpenSettings(SettingsPage.Licenses, fromTitle: false); break;
+            case "settings": OpenGallerySettings(SettingsPage.General); break;
+            case "graphics": OpenGallerySettings(SettingsPage.Graphics); break;
+            case "sound": OpenGallerySettings(SettingsPage.Sound); break;
+            case "keys": OpenGallerySettings(SettingsPage.Keys); break;
+            case "rebind": OpenGallerySettings(SettingsPage.Rebind); break;
+            case "licenses": OpenGallerySettings(SettingsPage.Licenses); break;
             case "saves": _pages.OpenSaves(fromTitle: true); break;
             case "title": _residents.Clean = _galleryTitle = true; _pages.Title.Open(); break;
             case "hud": _dependencies.InputRouter.SetInterfaceMode(true); _residents.ResetIdle(); break;
             case "atlas": break; // The map HUD opens its own gallery after entering Playing.
             case "layout": Widgets.UiLayoutGallery.Create(_view.Kit, _view.PageHost); break;
-            case "census": Census(3); break;
-            case "failure": FailureGallery(); break;
+            case "census": StartGallery(lifetime => Census(3, lifetime)); break;
+            case "failure": StartGallery(_ => FailureGallery()); break;
             default: throw new ArgumentException($"Unknown --ui-gallery page: {page}");
         }
     }
 
-    /// <summary>--ui-gallery=failure：示例失败走真实的启动失败页；没能展示就报错，不静默留空画面。</summary>
-    private async void FailureGallery()
+    // 设置页画廊拍的是游戏内设置：进地图途中 Entering 会关掉设置页，所以记下要开的页，到 Playing 再开（同 atlas）。
+    private void OpenGallerySettings(SettingsPage? page = null)
+    {
+        _gallerySettings = page ?? _gallerySettings;
+        if (_gallerySettings is not { } open || _dependencies.Flow.State != AppState.Playing) return;
+        _gallerySettings = null;
+        _pages.OpenSettings(open, fromTitle: false);
+    }
+
+    private void StartGallery(Func<CancellationToken, Task> run)
+    {
+        if (_gallery is not null) throw new InvalidOperationException("A UI gallery is already running.");
+        _gallery = RunGallery(run, _lifetime.Token);
+    }
+
+    // 节点离树取消画廊不算失败，按寿命令牌认取消；其余故障留在任务里，由 _Process 在主线程重抛。
+    private static async Task RunGallery(Func<CancellationToken, Task> run, CancellationToken lifetime)
+    {
+        try { await run(lifetime); }
+        catch (OperationCanceledException) when (lifetime.IsCancellationRequested) { }
+    }
+
+    private void ObserveGallery()
+    {
+        if (_gallery is not { IsCompleted: true } completed) return;
+        _gallery = null;
+        completed.GetAwaiter().GetResult();
+    }
+
+    /// <summary>--ui-gallery=failure：示例失败走真实的启动失败页；没能展示就报错，不静默留空画面。失败页的寿命随本节点 _ExitTree 一起取消。</summary>
+    private async Task FailureGallery()
     {
         if (!await _failure.ShowGallery()) throw new InvalidOperationException("The startup failure gallery could not be shown.");
     }
@@ -236,34 +274,35 @@ public partial class HudRoot : CanvasLayer, IBootParticipant, IAppLoadingPresent
     /// --ui-gallery=census：数界面占着实例参数槽的件数（<see cref="UiKit.Holders"/>）。先在漫游中数一次，再经 IAppFlow 回到开始页，然后把设置卡、存档页各开关 <paramref name="cycles"/> 次，
     /// 每步记一行日志，最后走正常退出。
     /// </summary>
-    private async void Census(int cycles)
+    private async Task Census(int cycles, CancellationToken lifetime)
     {
         try
         {
-            for (var i = 0; i < 600 && !_dependencies.Flow.IsPlaying; i++) await NextFrame();
-            for (var i = 0; i < 10; i++) await NextFrame();
+            for (var i = 0; i < 600 && !_dependencies.Flow.IsPlaying; i++) await NextFrame(lifetime);
+            for (var i = 0; i < 10; i++) await NextFrame(lifetime);
             CensusLine("playing");
             await _dependencies.Flow.ReturnToTitle();
-            for (var i = 0; i < 10; i++) await NextFrame();
+            for (var i = 0; i < 10; i++) await NextFrame(lifetime);
             CensusLine($"title ({_dependencies.Flow.State})");
             for (var i = 1; i <= cycles; i++)
             {
                 _pages.OpenSettings(SettingsPage.Graphics, fromTitle: true);
-                await NextFrame();
+                await NextFrame(lifetime);
                 CensusLine($"settings open #{i}");
                 _pages.CloseSettings();
                 _pages.OpenSaves(fromTitle: true);
-                await NextFrame();
+                await NextFrame(lifetime);
                 CensusLine($"saves open #{i}");
                 _pages.CloseSaves();
-                await NextFrame();
+                await NextFrame(lifetime);
                 CensusLine($"closed #{i}");
             }
         }
-        finally { _pages.RequestQuit(); }
+        // 走完或出错都正常退出；节点已离树（被取消）时页面已拆，不再请求。
+        finally { if (!lifetime.IsCancellationRequested) _pages.RequestQuit(); }
     }
 
-    private SignalAwaiter NextFrame() => ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
+    private Task NextFrame(CancellationToken lifetime) => FrameAwaiter.ProcessAsync(this, lifetime);
 
     private void CensusLine(string step) => GD.Print($"UI census - {step}: {_view.Kit.Holders(_view.Root)} items hold shader instance slots");
 }

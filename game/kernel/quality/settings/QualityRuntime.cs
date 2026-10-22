@@ -4,7 +4,6 @@ using Campus.Contracts;
 using Campus.Contracts.AppFlow;
 using Campus.Contracts.Maps;
 using Campus.Contracts.Quality;
-using Campus.Kernel.Frame;
 using RuntimeKernel = Campus.Kernel.Registry.Kernel;
 using Godot;
 

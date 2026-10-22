@@ -1,5 +1,4 @@
 using Campus.Contracts;
-using Campus.Kernel.Frame;
 using Godot;
 
 namespace Campus.Kernel.Post;

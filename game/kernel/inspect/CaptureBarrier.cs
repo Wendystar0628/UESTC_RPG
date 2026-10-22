@@ -1,6 +1,5 @@
 using Campus.Contracts;
 using Campus.Kernel.Boot;
-using Campus.Kernel.Frame;
 using Godot;
 using KernelServices = Campus.Kernel.Registry.Kernel;
 

@@ -1,6 +1,5 @@
 using Campus.Contracts;
 using Campus.Contracts.Bake;
-using Campus.Kernel.Frame;
 using Godot;
 
 namespace Campus.Kernel.Renderer;

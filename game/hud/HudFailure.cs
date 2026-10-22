@@ -3,7 +3,6 @@ using Campus.Contracts.AppFlow;
 using Campus.Hud.Style;
 using Campus.Hud.Widgets;
 using Campus.Kernel.Boot;
-using Campus.Kernel.Frame;
 using Godot;
 
 namespace Campus.Hud;

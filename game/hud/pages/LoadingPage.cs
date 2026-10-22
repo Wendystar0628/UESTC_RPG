@@ -1,3 +1,4 @@
+using Campus.Contracts;
 using Campus.Hud.Style;
 using Campus.Hud.Widgets;
 using Godot;
@@ -58,13 +59,14 @@ public partial class LoadingPage : Control
 
     public void SetDestination(string destination) => _destination.Text = destination;
 
-    public async Task Fade(bool visible)
+    /// <summary>淡入淡出挂在调用方的一次加载操作上：操作取消或本页离树时以取消结束，并停掉补间。</summary>
+    public Task Fade(bool visible, CancellationToken lifetime)
     {
         var duration = _kit.Motion.Fade(_kit.Tokens.Ms("loading", visible ? "in" : "out"));
-        if (duration <= 0) { Modulate = Colors.White with { A = visible ? 1 : 0 }; return; }
+        if (duration <= 0) { Modulate = Colors.White with { A = visible ? 1 : 0 }; return Task.CompletedTask; }
         var tween = CreateTween();
         tween.TweenProperty(this, "modulate:a", visible ? 1f : 0f, duration);
-        await ToSignal(tween, Tween.SignalName.Finished);
+        return FrameAwaiter.TweenAsync(tween, this, lifetime);
     }
 }
 

@@ -1,6 +1,5 @@
 using Campus.Contracts;
 using Campus.Kernel.Boot;
-using Campus.Kernel.Frame;
 using Godot;
 using System.Threading;
 
@@ -104,28 +103,12 @@ internal sealed class HudFrontispiece : IAppFrontispiecePresentation
         {
             var tween = _view.Frontispiece.CreateTween();
             tween.TweenProperty(_view.Frontispiece, "modulate:a", 0f, duration);
-            await AwaitTween(tween, lifetime);
+            await FrameAwaiter.TweenAsync(tween, _view.Frontispiece, lifetime);
             lifetime.ThrowIfCancellationRequested();
         }
         _view.Frontispiece.Visible = false;
         // 进入游戏后释放扉页，回到开始页时 Show 重新载入同一张（SYS-TITLE）。
         _image.Texture = null;
-    }
-
-    private static async Task AwaitTween(Tween tween, CancellationToken lifetime)
-    {
-        var completion = new TaskCompletionSource();
-        void Finished() => completion.TrySetResult();
-        tween.Finished += Finished;
-        try { await completion.Task.WaitAsync(lifetime); }
-        finally
-        {
-            if (GodotObject.IsInstanceValid(tween))
-            {
-                tween.Finished -= Finished;
-                if (lifetime.IsCancellationRequested) tween.Kill();
-            }
-        }
     }
 
     private void OnDrawn()

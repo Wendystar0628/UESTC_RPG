@@ -2,7 +2,6 @@ using Campus.Contracts;
 using Campus.Contracts.Bake;
 using Campus.Contracts.Maps;
 using Campus.Contracts.Startup;
-using Campus.Kernel.Frame;
 using Godot;
 using KernelServices = Campus.Kernel.Registry.Kernel;
 

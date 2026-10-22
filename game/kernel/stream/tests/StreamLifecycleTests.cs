@@ -5,7 +5,6 @@ using Campus.Contracts.Bake;
 using Campus.Contracts.Maps;
 using Campus.Kernel.Bake;
 using Campus.Style.Materials;
-using Campus.Kernel.Frame;
 using Campus.Kernel.Lod;
 using Campus.Kernel.Registry;
 using Campus.Kernel.Stream;
