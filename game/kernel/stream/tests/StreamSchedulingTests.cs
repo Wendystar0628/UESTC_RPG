@@ -16,7 +16,7 @@ public sealed class StreamSchedulingTests
 {
     [TestCase, TestCategory(TestReason.Regression)]
     [TestCategory("Slow")]
-    public void LibraryAtriumRequestsAllDeclaredOpenStoreysAndClearsThemOnReload()
+    public void LibraryAtriumRequestsDeclaredVisibleStoreysAndTracksDestinationReadiness()
     {
         var world = RealMapFixture.Load().World;
         var providerId = typeof(LibraryInteriorProvider).GetCustomAttributes(typeof(InteriorProviderAttribute), false)

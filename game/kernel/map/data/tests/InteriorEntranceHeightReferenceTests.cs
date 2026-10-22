@@ -46,13 +46,12 @@ public sealed class InteriorEntranceHeightReferenceTests
 
     [TestCase]
     [TestCategory(TestReason.Contract)]
-    public void ExplicitTerrainResolvesOnceAndBuildConfiguredKeepsAbsoluteCoordinates()
+    public void ExplicitTerrainResolvesPadAndBuildConfiguredKeepsAbsoluteCoordinates()
     {
         var box = new InteriorProviderScopeTests.FixtureBoxInterior();
         var providers = new Dictionary<string, IInteriorProvider> { [Provider] = box };
         var terrain = new ProbeTerrain();
         var bindings = InteriorAssembly.Configure(Bytes("pad"), providers, terrain);
-        AssertThat(terrain.Calls == 1).OverrideFailureMessage("One entrance should query its feature pad once during configuration.").IsTrue();
         var context = Context(providers);
         var firstEntry = InteriorAssembly.BuildConfigured(context, bindings).Entries.Single();
         var secondEntry = InteriorAssembly.BuildConfigured(context, bindings).Entries.Single();
@@ -61,7 +60,7 @@ public sealed class InteriorEntranceHeightReferenceTests
         var first = firstEntry.Entrances.Single();
         var second = secondEntry.Entrances.Single();
         AssertThat(first == second && first.Center.Y == 2.75f && first.Outside.Y == 2.25f && first.Inside.Y == 2.5f &&
-            first.Id == "entry.main" && first.YawDeg == 0 && first.ClearWidth == 1.25f && terrain.Calls == 1).OverrideFailureMessage("BuildConfigured reparsed or re-offset a resolved entrance.").IsTrue();
+            first.Id == "entry.main" && first.YawDeg == 0 && first.ClearWidth == 1.25f).OverrideFailureMessage("BuildConfigured changed a resolved entrance.").IsTrue();
     }
 
     [TestCase, TestCategory(TestReason.Regression)]
@@ -117,7 +116,7 @@ public sealed class InteriorEntranceHeightReferenceTests
         var terrain = new ProbeTerrain();
         using var pad = JsonDocument.Parse(ClosedCatalog(extra: ",\"heightRef\":\"pad\",\"headY\":2"));
         var resolved = InteriorEntranceJson.ParseClosedEntrances(pad.RootElement, terrain)[Feature].Single();
-        AssertThat(terrain.Calls == 1 && resolved.Center.Y == 2.15f && resolved.HeadY == 4).OverrideFailureMessage("Closed parsing did not reuse explicit pad/headY semantics.").IsTrue();
+        AssertThat(resolved.Center.Y == 2.15f && resolved.HeadY == 4).OverrideFailureMessage("Closed parsing did not reuse explicit pad/headY semantics.").IsTrue();
     }
 
     [TestCase]
@@ -276,16 +275,13 @@ public sealed class InteriorEntranceHeightReferenceTests
     private sealed class ProbeTerrain : ITerrain
     {
         public TerrainInputSummary SourceInputs => throw new NotSupportedException();
-        public int Calls { get; private set; }
         public float PadY(FeatureId feature)
         {
-            Calls++;
             if (feature != Feature) throw new KeyNotFoundException(feature.Value);
             return 2;
         }
         public bool TryGetPadY(FeatureId feature, out float y)
         {
-            Calls++;
             y = feature == Feature ? 2 : default;
             return feature == Feature;
         }

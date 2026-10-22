@@ -209,6 +209,48 @@ public sealed class SaveLifecycleTests
         AssertThat(fixture.Save.State.ErrorKey is null).OverrideFailureMessage("Recovery left the stale error visible.").IsTrue();
     }
 
+    [TestCase]
+    [TestCategory(TestReason.Regression)]
+    public async Task FailureAfterWorldCommitAlsoFreezesAndCanRecoverByLoading()
+    {
+        using var fixture = new Fixture();
+        await fixture.Start(); await fixture.Pump(fixture.Save.NewGame(new("s1"), 1));
+        fixture.Flow = AppState.Playing;
+        fixture.World.Hours = 91.25;
+        var savedPose = new Pose(new Vector3(30, 40, 50), 70, -20);
+        fixture.Camera.SetPose(savedPose);
+        AssertThat((await fixture.Pump(fixture.Save.SaveNow(SaveReason.NewGame))).Status == SaveStatus.Saved)
+            .OverrideFailureMessage("The recovery slot was not saved.").IsTrue();
+        fixture.World.Hours = 120;
+        fixture.Camera.SetPose(default);
+        fixture.Camera.FailRestore = true;
+        var instance = fixture.World.Instance;
+        var failed = await fixture.Pump(fixture.Save.Load(new("s1")));
+        AssertThat(fixture.World.Instance == instance + 1 && fixture.World.Hours == 91.25)
+            .OverrideFailureMessage("The injected pose failure did not occur after the World phase committed.").IsTrue();
+        AssertThat(failed.Status == LoadStatus.Failed && fixture.World.RestoreFaulted && fixture.Camera.Locks == 1)
+            .OverrideFailureMessage("A failure after the World commit released input or left the world usable.").IsTrue();
+        AssertThat(fixture.Save.State is { Last: SaveStatus.Failed, ErrorKey: "save.error.restore_world" })
+            .OverrideFailureMessage("The post-commit failure was not reported by the save state.").IsTrue();
+        await fixture.Frames(10);
+        AssertThat(fixture.World.RestoreFaulted && fixture.Camera.Locks == 1 && fixture.Save.Slots[0].Meta?.Gen == 1)
+            .OverrideFailureMessage("The fault or its input lock cleared without a full restore, or damaged the recovery slot.").IsTrue();
+
+        fixture.Camera.FailRestore = false;
+        fixture.Ready = false; fixture.Log.Clear();
+        var recovering = fixture.Save.Load(new("s1"));
+        for (var frame = 0; frame < TestSamples.FrameLoop && !fixture.Log.Contains("view"); frame++) await fixture.Frames(1);
+        AssertThat(!recovering.IsCompleted && fixture.Camera.Locks == 1 && fixture.Camera.Pose == savedPose)
+            .OverrideFailureMessage("Recovery skipped pose restoration or released input before destination readiness.").IsTrue();
+        fixture.Ready = true;
+        var recovered = await fixture.Pump(recovering);
+        AssertThat(recovered.Status == LoadStatus.Loaded && fixture.World.Instance == instance + 2 &&
+            fixture.World.Hours == 91.25 && fixture.Camera.Pose == savedPose && !fixture.World.RestoreFaulted && fixture.Camera.Locks == 0)
+            .OverrideFailureMessage("Loading the valid slot did not fully recover the world and release input.").IsTrue();
+        AssertThat(fixture.Save.Active == new SlotId("s1") && fixture.Save.Slots[0].Meta?.Gen == 1 && fixture.Save.State.ErrorKey is null)
+            .OverrideFailureMessage("Recovery changed the saved generation or left the stale restore error visible.").IsTrue();
+    }
+
     private sealed class Fixture : IDisposable
     {
         public SaveService Save { get; } = new();
@@ -312,11 +354,17 @@ public sealed class SaveLifecycleTests
         : TestCameraRig(null, new Pose(new Vector3(1, 2, 3), 0, 0)), IObserverState, ISaveSection<ViewSaveData>
     {
         public Action? BeforeDefault { get; set; }
+        public bool FailRestore { get; set; }
         public NewGameContext? DefaultContext { get; private set; }
         public Vector3 Feet => Pose.Position; public Vector3 Eye => Pose.Position; public float YawDeg => Pose.YawDeg; public NavSpace? Space => null;
         public JsonTypeInfo<ViewSaveData> TypeInfo => LifecycleJsonContext.Strict.ViewSaveData;
         public ViewSaveData Capture(in CaptureContext context) { AssertThat(inFrame()).OverrideFailureMessage("View capture outside Save frame.").IsTrue(); return new(Mode, Pose, Space, 1, 1); }
-        public void Restore(ViewSaveData dto, RestoreContext context) { AssertThat(inFrame()).OverrideFailureMessage("Pose restore outside Save frame.").IsTrue(); SetPose(dto.Pose); log.Add("view"); }
+        public void Restore(ViewSaveData dto, RestoreContext context)
+        {
+            AssertThat(inFrame()).OverrideFailureMessage("Pose restore outside Save frame.").IsTrue();
+            if (FailRestore) throw new InvalidDataException("Injected pose restore failure.");
+            SetPose(dto.Pose); log.Add("view");
+        }
         public ViewSaveData CreateDefault(NewGameContext context)
         {
             BeforeDefault?.Invoke(); DefaultContext = context;
