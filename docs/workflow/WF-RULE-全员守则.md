@@ -79,7 +79,7 @@ paths: ["scripts/requirements.*", ".collab/tools/**", "dashboard/**", "scripts/g
 - **不动别人的文件**：要改邻居的文件，先停下报派单方（WF-FLOW §2.1）。
 - **出了问题向前修，不回滚**（DECISION-279）：主线上同时有两位指挥和多个子代理在改，回滚一个提交会打乱别人基于它的在途改动、各方难以对齐；推送后发现问题，就开行插队、在最新版本上改。也不用 `reset --hard`、`checkout .`、`clean`、`git stash`，它们会毁掉或卷走别人还没提交的改动。
 - **推送被拒就停下**，报派单方；不强推，不改写历史。
-- **远端**：`origin` 是 GitHub 上的 `Wendystar0628/UESTC_RPG`，只有 `main` 和里程碑标签；不开 PR，不推别的分支。`override.cfg` 不提交。
+- **远端**：`origin` 是 GitHub 上的 `Wendystar0628/UESTC_RPG`，只有 `main` 和里程碑标签；不开 PR，不推别的分支。
 
 ## 8 主线优先（DECISION-168）
 
@@ -130,7 +130,7 @@ paths: ["scripts/requirements.*", ".collab/tools/**", "dashboard/**", "scripts/g
 - **放对地方**：临时脚本和中间结果放系统临时目录（Claude 用会话的 scratchpad），测试写的临时文件也放系统临时目录并在结束时删；必须落在仓库里的生成物只进 `output/`。
 - **长期保留的目录**以 `scripts/build/clean-artifacts.py` 为准；给作者看的页面做成观察台的面板，不另出报告页。
 - **会一直增长的由产出方封顶**：日志、状态与存档类文件由写它的工具自己限大小或按时间删，不靠人清。
-- **临时工作树**：主会话派的施工、统一编译、快检和要边改边看画面的视觉样板用（WF-FLOW §3.1），一律由主会话开在 `E:\Project\UESTC_RPG.wt\<行号或用途>`，把路径写进简报，不用 Agent 工具自带的独立工作树（它开在别处）；开好后从主检出拷入不进 git 的 `game/override.cfg`（开发用户目录，缺了引擎启动即被拒），导入缓存 `game/.godot` 也可拷入省掉完整导入；用完就 `git worktree remove`。巡逻和观察台列出全部登记着的工作树，不在这个目录的、失效的、久没动的都会提醒。
+- **临时工作树**：主会话派的施工、统一编译、快检和要边改边看画面的视觉样板用（WF-FLOW §3.1），一律由主会话开在 `E:\Project\UESTC_RPG.wt\<行号或用途>`，把路径写进简报，不用 Agent 工具自带的独立工作树（它开在别处）；开好后可从主检出拷入导入缓存 `game/.godot`，省掉完整导入；用完就 `git worktree remove`。巡逻和观察台列出全部登记着的工作树，不在这个目录的、失效的、久没动的都会提醒。
 - **统一清理**：`python -I -X utf8 scripts/build/clean-artifacts.py` 列出可删项（范围与过期口径见脚本开头），加 `--delete` 删除；主会话和 Codex 主线每个任务结束时跑一次，巡逻发现可删项会提醒。
 
 ## 14 按严重程度修 bug（DECISION-223）

@@ -813,12 +813,6 @@
   },
   {
    "docs": [
-    "WF-BUILD"
-   ],
-   "glob": "game/export_presets.cfg"
-  },
-  {
-   "docs": [
     "SYS-TITLE"
    ],
    "glob": "game/flow/**"

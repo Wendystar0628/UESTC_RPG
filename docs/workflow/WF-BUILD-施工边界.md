@@ -10,7 +10,7 @@ related: [WF-ENTRY, WF-FLOW, WF-STATUS, STD-CONVENTIONS, ENG-GATES]
 contracts: []
 data: []
 gates: [G3, G4]
-paths: ["game/gen/maps/qingshuihe/Campus.Gen.Maps.Qingshuihe.csproj", "game/gen/Campus.Gen.csproj", "scripts/gates/arch/Campus.Arch.Tests.csproj", "scripts/godot-api/ApiDump/ApiDump.csproj", "game/contracts/Runtime/Campus.Contracts.Runtime.csproj", "game/contracts/Campus.Contracts.csproj", "game/Campus.Gen.Tests.csproj", "game/Campus.Tests.csproj", "game/contracts/.gdignore", "game/export_presets.cfg", "game/contracts/*.csproj", "**/Directory.*.targets", "game/Campus.csproj", "game/project.godot", "Directory.*.targets", "**/Directory.*.props", "scripts/gate.ps1", "third_party.json", "Directory.*.props", "game/contracts/**", "scripts/build/**", "game/addons/**", "global.json", "**/*.csproj"]
+paths: ["game/gen/maps/qingshuihe/Campus.Gen.Maps.Qingshuihe.csproj", "game/gen/Campus.Gen.csproj", "scripts/gates/arch/Campus.Arch.Tests.csproj", "scripts/godot-api/ApiDump/ApiDump.csproj", "game/contracts/Runtime/Campus.Contracts.Runtime.csproj", "game/contracts/Campus.Contracts.csproj", "game/Campus.Gen.Tests.csproj", "game/Campus.Tests.csproj", "game/contracts/.gdignore", "game/contracts/*.csproj", "**/Directory.*.targets", "game/Campus.csproj", "game/project.godot", "Directory.*.targets", "**/Directory.*.props", "scripts/gate.ps1", "third_party.json", "Directory.*.props", "game/contracts/**", "scripts/build/**", "game/addons/**", "global.json", "**/*.csproj"]
 ---
 
 # WF-BUILD · 施工边界
