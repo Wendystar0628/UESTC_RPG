@@ -45,25 +45,8 @@ public interface IContentModule
 
 public sealed class BuildContext
 {
-    private readonly Dictionary<(Type Type, object Key), Lazy<object?>> _memo = [];
-
     /// <summary>Remembers a pure derived value for this frozen context; factories execute once, including null results.</summary>
-    public T Memo<T>(object key, Func<T> create)
-    {
-        ArgumentNullException.ThrowIfNull(key);
-        ArgumentNullException.ThrowIfNull(create);
-        Lazy<object?> value;
-        lock (_memo)
-        {
-            var entry = (typeof(T), key);
-            if (!_memo.TryGetValue(entry, out value!))
-            {
-                value = new Lazy<object?>(() => create(), LazyThreadSafetyMode.ExecutionAndPublication);
-                _memo.Add(entry, value);
-            }
-        }
-        return (T)value.Value!;
-    }
+    public T Memo<T>(object key, Func<T> create) => DerivedMemo.ForOwner(this, key, create);
 
     public required IWorldModel World { get; init; }
     public required MapDescriptor Map { get; init; }
