@@ -1,5 +1,6 @@
 using Campus.Contracts;
 using Campus.Contracts.Bake;
+using Campus.Contracts.Maps;
 using Campus.Kernel.Diagnostics;
 using Campus.Kernel.Frame;
 using Godot;
@@ -8,13 +9,13 @@ namespace Campus.Kernel.Stream;
 
 public interface IStreamMountFrame
 {
-    void Drain(bool covered, Action<double>? finish = null, Action<double>? release = null, Func<bool>? canActivateVisual = null);
+    void Drain(IAppScreenCoverage coverage, Action<double>? finish = null, Action<double>? release = null, Func<bool>? canActivateVisual = null);
 }
 
 /// <summary>The sole owner of the shared collision/visual mount budget and covered-screen refresh slices.</summary>
 [KernelService(typeof(IStreamMountFrame))]
 [KernelService(typeof(IStreamMountQueue))]
-public sealed class StreamMountQueue : IStreamMountQueue, IStreamMountFrame
+public sealed class StreamMountQueue : IStreamMountQueue, IStreamMountFrame, IMapAware
 {
     private readonly List<IStreamMountWork> _pending = [];
     private readonly Campus.Kernel.Lod.StreamSettings _settings = new();
@@ -32,6 +33,8 @@ public sealed class StreamMountQueue : IStreamMountQueue, IStreamMountFrame
     public long BlockedByRetirementFrames { get; private set; }
     public double LastMilliseconds { get; private set; }
     public int WatchdogTrips => _watchdog.Trips;
+    public void OnMapLoaded(IMapContext context) => Failure = null;
+    public void OnMapUnloading(MapId from) { } // The director drains queued work after every producer has stopped.
     public void Enqueue(IStreamMountWork work)
     {
         try
@@ -87,9 +90,9 @@ public sealed class StreamMountQueue : IStreamMountQueue, IStreamMountFrame
     private void RecordFailure([FailureHandler("ENG-PERF-STREAM")] Exception error) =>
         Failure = RetainedFailure.Append(Failure, error);
 
-    public void Drain(bool covered, Action<double>? finish = null, Action<double>? release = null, Func<bool>? canActivateVisual = null)
+    public void Drain(IAppScreenCoverage coverage, Action<double>? finish = null, Action<double>? release = null, Func<bool>? canActivateVisual = null)
     {
-        try { DrainFrame(covered, finish, release, canActivateVisual); }
+        try { DrainFrame(coverage.IsCovered, finish, release, canActivateVisual); }
         catch (Exception error)
         {
             RecordFailure(error);

@@ -32,7 +32,7 @@ public sealed class StreamPreparationLifecycleTests
         queue.Enqueue(new VisualMountWork(key, [prepared], queue.Revision, default, BakePriority.Normal, null!, null!,
             () => mounted++, () => cancelled++, _ => { }));
         Check(retired.Key == key && empty.Key == key && mounted == 0 && !prepared.IsDisposed);
-        queue.Drain(true);
+        queue.Drain(CoveredScreen);
         empty.Step(1); empty.Cancel(); retired.Cancel();
         Check(queue.Failure is null && queue.Pending == 0 && mounted == 2 && cancelled == 1 && !prepared.IsDisposed);
         var owned = new VisualMountWork(key, source, queue.Revision, default, BakePriority.Normal, null!, null!,
@@ -61,7 +61,7 @@ public sealed class StreamPreparationLifecycleTests
         var work = new VisualMountWork(key, [prepared], queue.Revision, default,
             BakePriority.Normal, null!, null!, () => throw original, () => throw cleanup,
             error => { received = error; throw reporting; });
-        queue.Enqueue(work); queue.Drain(true);
+        queue.Enqueue(work); queue.Drain(CoveredScreen);
         var causes = (queue.Failure as AggregateException ?? throw new InvalidOperationException("Visual callbacks lost their causes.")).Flatten().InnerExceptions;
         Check(ReferenceEquals(received, original) && causes.Contains(original) && causes.Contains(reporting) &&
             causes.Contains(cleanup) && work.IsCancelled && prepared.IsDisposed && queue.Pending == 0);
@@ -129,14 +129,14 @@ public sealed class StreamPreparationLifecycleTests
         using var fixture = new StreamFixture();
         await fixture.Until(() => fixture.Director.ViewReady);
         var original = new AggregateException();
-        fixture.Mount.Drain(false, _ => throw original);
+        fixture.Mount.Drain(VisibleWorld, _ => throw original);
         fixture.Director._Process(0);
         Check(ReferenceEquals(fixture.Director.Failure, original));
         fixture.Director._Process(0);
         Check(ReferenceEquals(fixture.Director.Failure, original));
         var later = new InvalidDataException("later mount failure");
         var nested = new AggregateException();
-        fixture.Mount.Drain(false, _ => throw new AggregateException(original, later, nested));
+        fixture.Mount.Drain(VisibleWorld, _ => throw new AggregateException(original, later, nested));
         fixture.Director._Process(0);
         var published = fixture.Director.Failure as AggregateException
             ?? throw new InvalidOperationException("Stream failure lost its collected causes.");
@@ -155,7 +155,7 @@ public sealed class StreamPreparationLifecycleTests
         using var fixture = new StreamFixture();
         await fixture.Until(() => fixture.Director.ViewReady);
         var original = new InvalidDataException("mount queue failed");
-        fixture.Mount.Drain(false, _ => throw original);
+        fixture.Mount.Drain(VisibleWorld, _ => throw original);
         Check(fixture.Director.Failure is null);
         _ = fixture.Director.ResidentReady;
         _ = fixture.Director.DestinationReady;

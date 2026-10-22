@@ -3,6 +3,7 @@ using Campus.Contracts.Bake;
 using Campus.Kernel.Frame;
 using Campus.Kernel.Stream;
 using GdUnit4;
+using static Campus.Tests.StreamLifecycleTestSupport;
 
 namespace Campus.Tests;
 
@@ -19,14 +20,14 @@ public sealed class StreamMountQueueTests
             var queue = new StreamMountQueue(() => 0);
             queue.Enqueue(new MountWork(StreamMountKind.Visual, queue.Revision, _ => visualSteps++));
             queue.Enqueue(new MountWork(StreamMountKind.Collision, queue.Revision, _ => collisionSteps++));
-            queue.Drain(covered, release: budget =>
+            queue.Drain(covered ? CoveredScreen : VisibleWorld, release: budget =>
             {
                 if (!covered && budget > KernelBudgets.StreamMountMilliseconds - KernelBudgets.CollisionMountMilliseconds)
                     throw new InvalidOperationException("Retirement took the reserved collision budget.");
             }, canActivateVisual: () => !retiring);
             if (collisionSteps != 1 || visualSteps != 0 || queue.Pending != 1 || queue.BlockedByRetirementFrames != 1)
                 throw new InvalidOperationException("Retirement did not apply visual-only backpressure.");
-            retiring = false; queue.Drain(covered, canActivateVisual: () => !retiring);
+            retiring = false; queue.Drain(covered ? CoveredScreen : VisibleWorld, canActivateVisual: () => !retiring);
             if (visualSteps != 1 || queue.Pending != 0) throw new InvalidOperationException("Visual activation did not resume after retirement.");
         }
     }
@@ -37,7 +38,7 @@ public sealed class StreamMountQueueTests
         var original = new InvalidOperationException("fixture failure");
         var queue = new StreamMountQueue(() => 0);
         var failed = new MountWork(StreamMountKind.Visual, queue.Revision, _ => throw original);
-        queue.Enqueue(failed); queue.Drain(false);
+        queue.Enqueue(failed); queue.Drain(VisibleWorld);
         if (failed.Cancels != 1 || queue.Pending != 0 || !ReferenceEquals(queue.Failure, original))
             throw new InvalidOperationException("Failed mount was not cancelled and removed.");
     }
@@ -55,7 +56,7 @@ public sealed class StreamMountQueueTests
         });
         queue.Enqueue(visual); queue.Enqueue(collision);
         queue.Enqueue(new MountWork(StreamMountKind.Collision, queue.Revision, _ => throw new InvalidOperationException("Mounted two collision bodies."), "z-last"));
-        queue.Drain(false);
+        queue.Drain(VisibleWorld);
         if (!order.SequenceEqual([StreamMountKind.Collision, StreamMountKind.Visual]) || queue.Pending != 1)
             throw new InvalidOperationException("Shared frame ordering or limits failed.");
     }
@@ -65,7 +66,7 @@ public sealed class StreamMountQueueTests
     {
         var queue = new StreamMountQueue(() => 0);
         var old = new MountWork(StreamMountKind.Visual, queue.Revision, _ => throw new InvalidOperationException("A stale result mounted."));
-        queue.RemoveMap(new("map")); queue.Enqueue(old); queue.Drain(false);
+        queue.RemoveMap(new("map")); queue.Enqueue(old); queue.Drain(VisibleWorld);
         if (old.Cancels != 1 || queue.Pending != 0) throw new InvalidOperationException("Old revision was retained.");
     }
     [TestCase]
@@ -91,7 +92,7 @@ public sealed class StreamMountQueueTests
                         throw new InvalidOperationException("Covered work retained the visible-frame budget.");
                     steps++; clock += KernelBudgets.StreamCoveredMountMilliseconds / 36;
                 }, tile.ToString(), slices: 3));
-        queue.Drain(true);
+        queue.Drain(CoveredScreen);
         if (queue.Pending != 0 || steps != 18 || queue.LastMilliseconds <= KernelBudgets.StreamMountMilliseconds)
             throw new InvalidOperationException("Covered collision, visual or auxiliary work remained frame-throttled.");
     }
@@ -103,10 +104,10 @@ public sealed class StreamMountQueueTests
         var queue = new StreamMountQueue(() => clock);
         queue.Enqueue(new MountWork(StreamMountKind.Collision, queue.Revision,
             _ => { steps++; clock += KernelBudgets.StreamCoveredMountMilliseconds / 2; }, slices: 3));
-        queue.Drain(true, remaining => finishBudget = remaining);
+        queue.Drain(CoveredScreen, remaining => finishBudget = remaining);
         if (queue.Pending != 1 || steps != 2 || finishBudget != 0)
             throw new InvalidOperationException("Covered mounting failed to yield for the loading UI.");
-        queue.Drain(true);
+        queue.Drain(CoveredScreen);
         if (queue.Pending != 0 || steps != 3)
             throw new InvalidOperationException("Covered work failed to resume after the UI refresh.");
     }
@@ -120,17 +121,17 @@ public sealed class StreamMountQueueTests
         {
             queue.Enqueue(new MountWork(StreamMountKind.Visual, queue.Revision,
                 _ => clock += KernelBudgets.StreamMountMilliseconds * 3));
-            queue.Drain(false);
+            queue.Drain(VisibleWorld);
         }
         if (queue.WatchdogTrips != 1) throw new InvalidOperationException("Visible mount overruns failed to trip the watchdog.");
         for (var frame = 0; frame < 3; frame++)
         {
             queue.Enqueue(new MountWork(StreamMountKind.Visual, queue.Revision,
                 _ => { mounted++; clock += KernelBudgets.StreamCoveredMountMilliseconds; }));
-            queue.Drain(true);
+            queue.Drain(CoveredScreen);
         }
         queue.Enqueue(new MountWork(StreamMountKind.Visual, queue.Revision, _ => mounted++));
-        queue.Drain(false);
+        queue.Drain(VisibleWorld);
         if (mounted != 3 || queue.Pending != 1 || queue.WatchdogTrips != 1)
             throw new InvalidOperationException("Covered mounts were paused by or changed the visible-frame watchdog.");
     }
@@ -142,7 +143,7 @@ public sealed class StreamMountQueueTests
         var cleanup = new InvalidOperationException("cancel failure");
         var failed = new MountWork(StreamMountKind.Visual, queue.Revision, _ => throw original,
             cancel: () => throw cleanup);
-        queue.Enqueue(failed); queue.Drain(false);
+        queue.Enqueue(failed); queue.Drain(VisibleWorld);
         var failure = queue.Failure as AggregateException ?? throw new InvalidOperationException("Cleanup replaced the mount failure.");
         if (!failure.Flatten().InnerExceptions.Contains(original) || !failure.Flatten().InnerExceptions.Contains(cleanup) || queue.Pending != 0)
             throw new InvalidOperationException("The queue lost the mount or release failure.");
@@ -160,7 +161,7 @@ public sealed class StreamMountQueueTests
         var queue = new StreamMountQueue(() => 0);
         var background = new MountWork(StreamMountKind.Collision, queue.Revision, _ => order.Add("background"), priority: BakePriority.Background);
         var current = new MountWork(StreamMountKind.Visual, queue.Revision, _ => order.Add("current"));
-        queue.Enqueue(background); queue.Enqueue(current); queue.Drain(true);
+        queue.Enqueue(background); queue.Enqueue(current); queue.Drain(CoveredScreen);
         if (!order.SequenceEqual(["current", "background"]))
             throw new InvalidOperationException("Background collision displaced current geometry.");
         order.Clear();
@@ -168,7 +169,7 @@ public sealed class StreamMountQueueTests
         queue.Enqueue(promoted);
         queue.Enqueue(new MountWork(StreamMountKind.Visual, queue.Revision, _ => order.Add("visual")));
         promoted.EffectivePriority = BakePriority.Collision;
-        queue.Drain(true);
+        queue.Drain(CoveredScreen);
         if (!order.SequenceEqual(["promoted", "visual"]) || promoted.Cancels != 0 || queue.Pending != 0)
             throw new InvalidOperationException("An existing mount did not upgrade in place.");
     }
@@ -179,13 +180,14 @@ public sealed class StreamMountQueueTests
         var queue = new StreamMountQueue(() => 0);
         var original = new InvalidDataException("sort metadata failed");
         var cleanup = new InvalidOperationException("release failed");
-        var failed = new MountWork(StreamMountKind.Visual, queue.Revision, _ => throw new InvalidOperationException("Faulted work mounted."),
+        var steps = 0;
+        var failed = new MountWork(StreamMountKind.Visual, queue.Revision, _ => steps++,
             cancel: () => throw cleanup) { KeyFailure = original };
-        var other = new MountWork(StreamMountKind.Visual, queue.Revision, _ => throw new InvalidOperationException("Faulted frame mounted."));
-        queue.Enqueue(failed); queue.Enqueue(other); queue.Drain(false);
+        var other = new MountWork(StreamMountKind.Visual, queue.Revision, _ => steps++);
+        queue.Enqueue(failed); queue.Enqueue(other); queue.Drain(VisibleWorld);
         var causes = (queue.Failure as AggregateException ?? throw new InvalidOperationException("Sort cleanup lost a cause.")).Flatten().InnerExceptions;
-        if (!causes.Any(error => ReferenceEquals(error.InnerException, original)) || !causes.Contains(cleanup) ||
-            failed.Cancels != 1 || other.Cancels != 1 || queue.Pending != 0)
+        if (!causes.Any(error => ReferenceEquals(error.GetBaseException(), original)) || !causes.Contains(cleanup) ||
+            steps != 0 || failed.Cancels != 1 || other.Cancels != 1 || queue.Pending != 0)
             throw new InvalidOperationException("Sort failure did not reach the owner and stop its frame.");
         var enqueue = new InvalidDataException("request revision failed");
         var rejected = new MountWork(StreamMountKind.Visual, queue.Revision, _ => { }) { RevisionFailure = enqueue };
@@ -193,36 +195,69 @@ public sealed class StreamMountQueueTests
         if (rejected.Cancels != 1 || queue.Pending != 0 || queue.Failure is not AggregateException retained ||
             !retained.Flatten().InnerExceptions.Contains(enqueue))
             throw new InvalidOperationException("Enqueue failure was not retained with its rejected work released.");
-        queue.Drain(false);
+        queue.Drain(VisibleWorld);
         if (failed.Cancels != 1 || other.Cancels != 1)
             throw new InvalidOperationException("The faulted frame was retried.");
     }
 
     [TestCase, TestCategory(TestReason.Regression)]
-    public void FrameAdmissionReleaseFinishAndClockFaultsReachTheQueueOwner()
+    public void FrameCoverageAdmissionReleaseFinishAndClockFaultsReachTheQueueOwner()
     {
         for (var point = 0; point < 5; point++)
         {
             var original = new InvalidDataException("frame boundary failed");
-            var queue = new StreamMountQueue(point == 4 ? () => throw original : () => 0);
-            var steps = 0; var admissionCalls = 0;
+            var queue = new StreamMountQueue(point == 3 ? () => throw original : () => 0);
+            var steps = 0;
             var work = new MountWork(StreamMountKind.Visual, queue.Revision, _ => steps++);
             queue.Enqueue(work);
-            queue.Drain(false,
-                finish: _ => { if (point == 3) throw original; },
-                release: _ => { if (point == 2) throw original; },
-                canActivateVisual: () => { if (point == admissionCalls++) throw original; return true; });
+            queue.Drain(new Coverage(() => point == 4 ? throw original : false),
+                finish: _ => { if (point == 2) throw original; },
+                release: _ => { if (point == 1) throw original; },
+                canActivateVisual: () => point == 0 ? throw original : true);
             if (!ReferenceEquals(queue.Failure, original))
                 throw new InvalidOperationException("A frame callback or clock fault escaped the failure projection.");
-            if ((point <= 1 || point == 4) && (steps != 0 || work.Cancels != 1 || queue.Pending != 0))
+            if ((point == 0 || point >= 3) && (steps != 0 || work.Cancels != 1 || queue.Pending != 0))
                 throw new InvalidOperationException("A failed admission or clock still advanced mount readiness.");
         }
     }
 
-    private sealed class MountWork(StreamMountKind kind, long revision, Action<double> step, string module = "module", int slices = 1, Action? cancel = null, BakePriority? priority = null) : IStreamMountWork
+    [TestCase, TestCategory(TestReason.Regression), RequireGodotRuntime]
+    public async Task FailedMapRetainsItsCausesThroughDrainAndTheNextMapCanMount()
+    {
+        using var fixture = new StreamLifecycleTestSupport.StreamFixture();
+        await fixture.Until(() => fixture.Director.ViewReady);
+        foreach (var generation in new[] { 0, 1 })
+        {
+            var original = new InvalidDataException("mount failure");
+            var cleanup = new InvalidOperationException("cancel failure");
+            fixture.Mount.Enqueue(new MountWork(StreamMountKind.Visual, fixture.Mount.Revision, _ => throw original,
+                map: fixture.Context.Descriptor.Id));
+            fixture.Mount.Drain(CoveredScreen); fixture.Director._Process(.1);
+            if (!ReferenceEquals(fixture.Director.Failure, original))
+                throw new InvalidOperationException("The map lost the original mount failure.");
+            fixture.Mount.Enqueue(new MountWork(StreamMountKind.Visual, fixture.Mount.Revision, _ => { },
+                cancel: () => throw cleanup, map: fixture.Context.Descriptor.Id));
+            try { await fixture.Unload(); throw new InvalidOperationException("Failed map drained without delivering its failure."); }
+            catch (AggregateException error)
+            {
+                if (!error.Flatten().InnerExceptions.Contains(original) || !error.Flatten().InnerExceptions.Contains(cleanup)) throw;
+            }
+            if (!fixture.Director.IsUnloaded || fixture.Mount.Failure is null)
+                throw new InvalidOperationException("The failed map was not drained or its failure was cleared before the next load.");
+            if (generation != 0) break;
+            // MapRuntime sends the existing map callbacks to the queue service and director.
+            fixture.Mount.OnMapLoaded(fixture.Context); fixture.Director.OnMapLoaded(fixture.Context);
+            fixture.Director.Prefetch(fixture.Camera.Pose, ViewMode.Fly);
+            await fixture.Until(() => fixture.Director.ViewReady);
+            if (fixture.Mount.Failure is not null || fixture.Director.Failure is not null)
+                throw new InvalidOperationException("A prior map failure poisoned the next map.");
+        }
+    }
+
+    private sealed class MountWork(StreamMountKind kind, long revision, Action<double> step, string module = "module", int slices = 1, Action? cancel = null, BakePriority? priority = null, MapId? map = null) : IStreamMountWork
     {
         public Exception? KeyFailure, RevisionFailure;
-        public BakeKey Key => KeyFailure is { } error ? throw error : new(new("map"), module, "L0/0/0");
+        public BakeKey Key => KeyFailure is { } error ? throw error : new(map ?? new("map"), module, "L0/0/0");
         public BakePriority EffectivePriority { get; set; } = priority ?? (kind == StreamMountKind.Collision ? BakePriority.Collision : BakePriority.Normal);
         public BakePriority Priority => EffectivePriority;
         public long Revision => RevisionFailure is { } error ? throw error : revision;

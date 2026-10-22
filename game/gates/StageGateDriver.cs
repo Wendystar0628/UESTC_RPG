@@ -137,7 +137,7 @@ public sealed class StageGateDriver(IStageGateHost host)
         async Task NextFrame()
         {
             host.CheckActive();
-            await host.Stage.ToSignal(host.Stage.GetTree(), SceneTree.SignalName.ProcessFrame);
+            await FrameAwaiter.ProcessAsync(host.Stage, host.Lifetime);
             RequireWalk();
         }
     }

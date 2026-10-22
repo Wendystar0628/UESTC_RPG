@@ -169,6 +169,12 @@ public sealed class StreamLifecycleTests
 
 internal static class StreamLifecycleTestSupport
 {
+    internal static readonly IAppScreenCoverage CoveredScreen = new Coverage(() => true);
+    internal static readonly IAppScreenCoverage VisibleWorld = new Coverage(() => false);
+    internal sealed class Coverage(Func<bool> covered) : IAppScreenCoverage
+    {
+        public bool IsCovered => covered();
+    }
     internal static void Check(bool condition) { if (!condition) throw new InvalidOperationException("Stream lifecycle contract failed."); }
     internal sealed class StreamFixture : IDisposable
     {
@@ -213,7 +219,7 @@ internal static class StreamLifecycleTestSupport
         public void Tick(bool mount = true)
         {
             Director._Process(.1);
-            if (mount) Mount.Drain(true, Director.FinishMountFrame, Director.ReleaseRetired, () => Director.CanActivateVisual);
+            if (mount) Mount.Drain(CoveredScreen, Director.FinishMountFrame, Director.ReleaseRetired, () => Director.CanActivateVisual);
             else Director.FinishMountFrame(100);
             if (Director.Failure is { } failure) throw failure;
         }
