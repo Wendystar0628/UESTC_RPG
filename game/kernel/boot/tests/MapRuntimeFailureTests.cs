@@ -224,7 +224,6 @@ internal static class MapRuntimeTestSupport
         public BakeProgress Progress => default;
         public Exception? Failure => null;
         public long CacheBytes => 0;
-        public void Clear() { }
     }
 
     [KernelService(typeof(ArrivalStream), Map = "fixture-map")]

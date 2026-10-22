@@ -18,5 +18,4 @@ public interface IBakeService
     BakeProgress Progress { get; }
     Exception? Failure { get; }
     long CacheBytes { get; }
-    void Clear();
 }

@@ -4,7 +4,7 @@ title: 许可、署名与本机目录
 category: engineering
 parent: ENG-INDEX
 summary: 只从项目运行、不打包不设版本号，用户目录与日志，各部分许可与插件清单，OSM 署名、许可页、窗口标题与图标
-keywords: [许可, 署名, 本机目录, 不打包, 不发布, 不设版本号, 用户目录, '%APPDATA%\UESTC', 日志, 清除缓存, MIT, ODbL, third_party.json, 插件清单, 第三方许可白名单, OSM 署名, 许可页, 窗口标题, 窗口图标, 八角晶片]
+keywords: [许可, 署名, 本机目录, 不打包, 不发布, 不设版本号, 用户目录, '%APPDATA%\UESTC', 日志, MIT, ODbL, third_party.json, 插件清单, 第三方许可白名单, OSM 署名, 许可页, 窗口标题, 窗口图标, 八角晶片]
 depends: [ENG-ARCH]
 related: [STD-CONVENTIONS, SYS-SAVE, SYS-TITLE, SYS-GRAPHICS, UI-NAV, UI-VISUAL, SYS-AUDIO, WLD-OUTSKIRTS]
 contracts: []
@@ -37,7 +37,7 @@ paths: ["game/project.godot", "third_party.json", "game/addons/**", "README.md",
 
 - **位置**：`user://` 是 `%APPDATA%\UESTC\`，由 `project.godot` 的自定义用户目录名决定，不带版本号，也不再改名；里面有存档、设置和日志（SYS-SAVE-FORMAT §3）。
 - **日志**：`user://logs/godot.log`，引擎原生文件日志，每次启动轮换、保留最近 5 次；诊断只经 `DiagnosticLog` 写入（ENG-ARCH §2）。设置卡"键位"页底的 [打开日志目录] 直接打开这里（UI-NAV §3.5）。
-- **清理**：删掉 `%APPDATA%\UESTC\` 会删掉存档、设置和日志，不可恢复；只想腾空间用设置卡"存储"行的"清除缓存"，只清烘焙缓存（ENG-ARCH §4），不动存档和设置。
+- **清理**：删掉 `%APPDATA%\UESTC\` 会删掉存档、设置和日志，不可恢复；烘焙缓存不在这里，在仓库的缓存目录（ENG-ARCH §4），由收口预烘维护。
 
 ## 2 许可
 

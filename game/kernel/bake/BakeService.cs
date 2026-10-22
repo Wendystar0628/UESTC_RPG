@@ -106,15 +106,6 @@ public sealed class BakeService : IBakeService, IBakeContextSource, IMapContentS
         return Schedule(map, key, priority);
     }
 
-    public void Clear()
-    {
-        lock (_sync)
-        {
-            ObjectDisposedException.ThrowIf(_stopped, this);
-            _products.Clear();
-        }
-    }
-
     internal MapBuild Mount(IMapContext context)
     {
         lock (_sync)

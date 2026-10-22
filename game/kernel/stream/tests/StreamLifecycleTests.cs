@@ -260,7 +260,6 @@ internal static class StreamLifecycleTestSupport
         public BakeProgress Progress => default;
         public Exception? Failure => null;
         public long CacheBytes => 0;
-        public void Clear() => _handles.Clear();
     }
     internal sealed class Handle(TileBundle tile) : IBakeHandle
     {

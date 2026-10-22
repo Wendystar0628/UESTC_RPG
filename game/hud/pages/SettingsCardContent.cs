@@ -59,7 +59,6 @@ internal sealed class SettingsCardContent
         var storageGroup = _kit.Layout.SettingGroup(page, UiKit.T("settings.group.storage"));
         var storageRow = _kit.Layout.SettingRow(storageGroup, UiKit.T("settings.storage"));
         var storage = _kit.Text(storageRow, "", "data", "text.2");
-        var clear = _kit.Button(storageRow, ButtonStyle.Secondary, UiKit.T("settings.storage.clear"));
         void SyncStorage()
         {
             var bake = KernelRegistry.Get<IBakeService>();
@@ -68,7 +67,6 @@ internal sealed class SettingsCardContent
                 : UiKit.T("settings.storage.running", ("pct", $"{progress.Done * 100 / Math.Max(1, progress.Total)}"));
             storage.Text = $"{bake.CacheBytes / 1048576.0:0.0} MB · {state}";
         }
-        clear.Pressed += () => { KernelRegistry.Get<IBakeService>().Clear(); SyncStorage(); };
         SyncStorage();
         page.VisibilityChanged += SyncStorage;
         yield return null;

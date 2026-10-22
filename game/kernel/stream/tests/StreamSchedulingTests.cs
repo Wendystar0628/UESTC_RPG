@@ -263,7 +263,6 @@ public sealed class StreamSchedulingTests
         public IBakeHandle Ensure(BakeKey key, BakePriority priority) { Keys.Add(key); return this; }
         public BakeProgress Progress => default;
         public long CacheBytes => 0;
-        public void Clear() => Keys.Clear();
         public BakeState State => BakeState.Pending;
         public object? Product => null;
         public Exception? Failure => null;

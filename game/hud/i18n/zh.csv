@@ -120,7 +120,6 @@ settings.auto_jump,自动跳跃,Auto jump
 settings.single_keys,单键快捷键,Single-key shortcuts
 settings.show_perf,显示性能信息,Show performance
 settings.storage,本机缓存,Local cache
-settings.storage.clear,清除缓存,Clear cache
 settings.storage.done,已完成,Complete
 settings.storage.running,进行中 {pct}%,In progress {pct}%
 settings.save,存档,Saves
