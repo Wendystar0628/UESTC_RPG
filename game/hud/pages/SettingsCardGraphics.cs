@@ -104,16 +104,17 @@ internal sealed class SettingsCardGraphics
     private static string StepLabel(KnobSpec spec, int steps, float value)
     {
         var key = $"{spec.LabelKey}.{value:0}";
-        if (spec.Knob == QualityKnob.FrameCap && FrameCapHz((int)value) is { } hz) return UiKit.T(key + ".hz", ("hz", $"{hz}"));
+        if (spec.Knob == QualityKnob.FrameRateLimit && RefreshHz((int)value) is { } hz) return UiKit.T(key + ".hz", ("hz", $"{hz}"));
         return Campus.Hud.I18n.Tr.Has(key) ? UiKit.T(key) : steps == 2 ? UiKit.T(value > 0 ? "ui.common.on" : "ui.common.off") : $"{value:0}";
     }
 
-    private static int? FrameCapHz(int code)
+    // 只有跟随刷新率这一档要在标签里带出实际赫兹数；读不到刷新率时只显示档名。
+    private static int? RefreshHz(int code)
     {
-        if (code is not (2 or 3)) return null;
+        if (code != 2) return null;
         var rate = DisplayServer.ScreenGetRefreshRate(DisplayServer.WindowGetCurrentScreen());
         if (!float.IsFinite(rate) || rate < 24) return null;
-        return (int)MathF.Floor(code == 2 ? rate / 2 : rate);
+        return (int)MathF.Floor(rate);
     }
 
     private static string FormatKnob(KnobSpec spec, float value) => spec.Unit switch

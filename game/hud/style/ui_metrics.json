@@ -210,7 +210,7 @@
       "effect": { "zeta": 1.0, "response": [0.12, 0.2], "in": 0.15, "out": 0.2 },
       "zetaMin": 0.9
     },
-    "step": { "global": "step_rate", "default": 12, "cap30": 15 },
+    "step": { "global": "step_rate", "default": 12 },
     "bannedTransitions": ["Back", "Elastic", "Bounce", "Spring"],
     "durations": {
       "press": { "in": 0, "out": 120, "curve": "Standard", "shift": 1 },

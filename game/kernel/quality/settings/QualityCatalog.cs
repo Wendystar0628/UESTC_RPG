@@ -33,7 +33,7 @@ public sealed class QualityCatalog
             Spec(QualityKnob.DisplayMode, ApplyClass.UnderLoading, KnobKind.Performance, "display", KnobUnit.Number, 0, 2, 1, 0),
             Spec(QualityKnob.WindowSize, ApplyClass.UnderLoading, KnobKind.Performance, "display", KnobUnit.Number, 0, WindowSizes.Length - 1, 1, 0),
             Spec(QualityKnob.VSync, ApplyClass.Immediate, KnobKind.Performance, "display", KnobUnit.Number, 0, 1, 1, 0),
-            Spec(QualityKnob.FrameCap, ApplyClass.Immediate, KnobKind.Performance, "display", KnobUnit.Number, 0, 4, 1, 0),
+            Spec(QualityKnob.FrameRateLimit, ApplyClass.Immediate, KnobKind.Performance, "display", KnobUnit.Number, 0, 2, 1, 0),
             Spec(QualityKnob.RenderScale, ApplyClass.UnderLoading, KnobKind.Performance, "clarity", KnobUnit.Scale,
                 RenderScales[0], RenderScales[^1], 0, RenderScales[0], values: RenderScales),
             Spec(QualityKnob.AntiAliasing, ApplyClass.UnderLoading, KnobKind.Performance, "clarity", KnobUnit.Number, 0, 1, 1, 1, false),
@@ -153,19 +153,14 @@ public sealed class QualityCatalog
         return profile with { Overrides = new ReadOnlyDictionary<QualityKnob, float>(overrides) };
     }
 
-    public static int FrameLimit(float encoded, float refresh)
+    /// <summary>帧率上限只有三档（DECISION-309）：0 = 60、1 = 120、2 = 跟随显示器刷新率；读不到刷新率时按 60（SYS-GRAPHICS）。</summary>
+    public static int FrameLimit(float encoded, float refresh) => encoded switch
     {
-        var hz = float.IsFinite(refresh) && refresh >= 24 ? refresh : 60;
-        return encoded switch
-        {
-            0 => 30,
-            1 => 60,
-            2 => (int)Math.Floor(hz / 2),
-            3 => (int)Math.Floor(hz),
-            4 => 0,
-            _ => throw new ArgumentOutOfRangeException(nameof(encoded)),
-        };
-    }
+        0 => 60,
+        1 => 120,
+        2 => float.IsFinite(refresh) && refresh >= 24 ? (int)Math.Floor(refresh) : 60,
+        _ => throw new ArgumentOutOfRangeException(nameof(encoded)),
+    };
 
     private static KnobSpec Spec(QualityKnob knob, ApplyClass apply, KnobKind kind,
         string group, KnobUnit unit, float min, float max, float step, float worst, bool higher = true, IReadOnlyList<float>? values = null) =>

@@ -98,10 +98,9 @@ public sealed class PrecipModel
     /// 每帧调用一次。位移只在一拍二跨步时按跨过的时长累加（ENG-PERF），所以改风、换强度时雨丝不跳，
     /// anim_time 回绕时也不跳；世界实例变了（读档、新游戏）就从当前拍重新起算。
     /// </summary>
-    public PrecipFrame Step(in WeatherVec w, double step12, float gust, float density, int stepRate)
+    public PrecipFrame Step(in WeatherVec w, double step12, float gust, float density)
     {
         if (!double.IsFinite(step12)) throw new ArgumentOutOfRangeException(nameof(step12));
-        if (!WorldTime.IsStepRate(stepRate)) throw new ArgumentOutOfRangeException(nameof(stepRate));
         var h = HalfSize(w);
         var v = Velocity(w, gust);
         if (!_started)
@@ -116,7 +115,7 @@ public sealed class PrecipModel
         if (dt > 0) _d = Wrap(_d + v * (float)dt, PrecipTuning.WrapPerHalf * h);
         var speed = v.Length();
         var dir = speed > 1e-4f ? v / speed : -Vector3.UnitY;
-        var len = IsSnow(w) ? 0f : speed / stepRate;   // 丝长取一拍的步长
+        var len = IsSnow(w) ? 0f : speed / WorldTime.StepRate;   // 丝长取一拍的步长
         return new PrecipFrame(VisibleCount(w, density),
             new Vector4(_d, h),
             new Vector4(dir, len),

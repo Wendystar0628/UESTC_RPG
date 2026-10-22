@@ -11,7 +11,7 @@ public static class ShaderGlobals
     public const string AnimLoopSeconds = "anim_loop_seconds";
     /// <summary>Sole writer: Campus.Kernel.Frame.FrameClockNode.</summary>
     public const string FadeClock = "fade_clock";
-    /// <summary>Sole writer: Campus.Kernel.Quality.Settings.QualityRuntime.</summary>
+    /// <summary>Sole writer: Campus.Kernel.World.WorldStateNode; value from WorldTime.StepRate, written once at startup.</summary>
     public const string StepRate = "step_rate";
     /// <summary>Sole writer: Campus.Kernel.World.WorldStateNode.</summary>
     public const string Season = "season";

@@ -44,8 +44,7 @@ public interface IWorldState                // Kernel 的服务（game/kernel/wo
     uint WeatherSeed { get; }               // 本存档的天气基础种子（SYS-WEATHER；每个存档一个，SYS-SAVE）
     bool IsNative(WeatherKind k);           // 该天气在目标季节里有没有；界面据此把该格画成禁用态（SYS-WEATHER、UI-VISUAL）
     double AnimTime { get; }                // 实时秒，周期见 WorldTime.AnimLoopSeconds；用 delta 累加，与 Clock 无关
-    double Step12 { get; }                  // floor(AnimTime·StepRate)/StepRate，"一拍二"；StepRate 与全局参数 step_rate 同源
-                                            // （QualityView.StepRate：规则见 WorldTime.StepRate）
+    double Step12 { get; }                  // floor(AnimTime·StepRate)/StepRate，"一拍二"；StepRate 即 WorldTime.StepRate，与全局参数 step_rate 同值
 }
 
 public enum ClockSetMode { Drag, Jump }

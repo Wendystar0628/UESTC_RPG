@@ -13,7 +13,6 @@ public interface IWorldFrame : IWorldState, IMapAware
     double SeasonFrom { get; }
     double SeasonTo { get; }
     double SeasonProgress { get; }
-    void SetStepRate(int stepRate);
     void Tick(double delta, bool freezeAnimation = false);
 }
 
@@ -54,7 +53,6 @@ public sealed class WorldStateService : IWorldFrame, IWorldControl,
     private double _seasonArc;
     private double _seasonStartArcClock;
     private double _finalOffset;
-    private int _stepRate = WorldTime.DefaultStepRate;
     private long _instanceSerial;
     private bool _initializationApplied;
     private bool _restorePending;
@@ -89,7 +87,7 @@ public sealed class WorldStateService : IWorldFrame, IWorldControl,
     public uint WeatherSeed => _weather.Seed;
     public double AnimTime { get; private set; }
     public bool RestoreFaulted { get; private set; }
-    public double Step12 => Math.Floor(AnimTime * _stepRate) / _stepRate;
+    public double Step12 => Math.Floor(AnimTime * WorldTime.StepRate) / WorldTime.StepRate;
     public bool IsSettled => _initializationApplied && !RestoreFaulted && !_restorePending && !TimeMoving && !SeasonMoving && !Scrubbing;
     public double SeasonFrom => _seasonFrom;
     public double SeasonTo => _seasonTo;
@@ -356,12 +354,6 @@ public sealed class WorldStateService : IWorldFrame, IWorldControl,
             _map = context.Descriptor.Id;
             _weather.Enter(context.Descriptor.Id, rules.WeatherProfile, WorldHours);
         }
-    }
-
-    public void SetStepRate(int stepRate)
-    {
-        if (!WorldTime.IsStepRate(stepRate)) throw new ArgumentOutOfRangeException(nameof(stepRate));
-        _stepRate = stepRate;
     }
 
     public WorldSaveMoment GetSaveMoment()

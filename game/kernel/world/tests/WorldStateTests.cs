@@ -109,10 +109,9 @@ public sealed class WorldStateTests
         var wrapping = CreateWorld(new TestWeatherProcess(), initialize: false);
         wrapping.Freeze(0, Season.Spring, WorldTime.AnimLoopSeconds - .01);
         wrapping.CompleteRestore();
-        wrapping.SetStepRate(WorldTime.ThirtyFpsStepRate);
         wrapping.Tick(.1);
         AssertThat(Math.Abs((wrapping.AnimTime) - (.09)) <= TestTolerance.TimeSeconds).OverrideFailureMessage($"Expected {.09:R}, got {wrapping.AnimTime:R}.").IsTrue();
-        AssertThat(Math.Abs((wrapping.Step12) - (1d / WorldTime.ThirtyFpsStepRate)) <= TestTolerance.TimeSeconds).OverrideFailureMessage($"Expected {1d / WorldTime.ThirtyFpsStepRate:R}, got {wrapping.Step12:R}.").IsTrue();
+        AssertThat(Math.Abs((wrapping.Step12) - (1d / WorldTime.StepRate)) <= TestTolerance.TimeSeconds).OverrideFailureMessage($"Expected {1d / WorldTime.StepRate:R}, got {wrapping.Step12:R}.").IsTrue();
     }
 
     [TestCase]

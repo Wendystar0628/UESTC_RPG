@@ -39,7 +39,6 @@ public partial class PrecipNode : Node, IQualityAware, IMapAware, IWeatherRender
     private ShaderMaterial? _material;
     private IInstancePool? _pool;
     private float _density = 1f;
-    private int _stepRate = WorldTime.DefaultStepRate;
     private Image? _occImage;
     private ImageTexture? _occ;
 
@@ -89,7 +88,7 @@ public partial class PrecipNode : Node, IQualityAware, IMapAware, IWeatherRender
         RenderingServer.GlobalShaderParameterSet(_shaderGlobalWeatherFog, ToGodot(WeatherFog));
         var eye = _camera.Pose.Position;
         var gust = _wind.Sample(eye.X, eye.Z, _world.AnimTime).Gust;
-        Frame = _model.Step(w, _world.Step12, gust, _density, _stepRate);
+        Frame = _model.Step(w, _world.Step12, gust, _density);
         _pool.VisibleCount = Frame.VisibleCount;
         _pool.SetParameter(_shaderInstancePrecipD, ToGodot(Frame.D));
         _pool.SetParameter(_shaderInstancePrecipV, ToGodot(Frame.V));
@@ -102,7 +101,6 @@ public partial class PrecipNode : Node, IQualityAware, IMapAware, IWeatherRender
     {
         ArgumentNullException.ThrowIfNull(view);
         if (change.Has(QualityKnob.ParticleDensity)) _density = view[QualityKnob.ParticleDensity];
-        _stepRate = view.StepRate;
     }
 
     public void OnMapUnloading(MapId from)

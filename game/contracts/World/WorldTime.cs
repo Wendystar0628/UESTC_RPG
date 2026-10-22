@@ -7,13 +7,8 @@ public static class WorldTime
 {
     public const float AnimLoopSeconds = 480f;
     public const double InitialAnimTime = AnimLoopSeconds / 2d;
-    public const int DefaultStepRate = 12;
-    public const int ThirtyFpsStepRate = 15;
-
-    public static bool IsStepRate(int rate) => rate is DefaultStepRate or ThirtyFpsStepRate;
-
-    public static int StepRate(int frameCap, bool captureMode) =>
-        !captureMode && frameCap == 30 ? ThirtyFpsStepRate : DefaultStepRate;
+    /// <summary>一拍二的步进频率，固定 12 Hz（SYS-MOTION）；着色器全局参数 step_rate 启动时写一次同一个值。</summary>
+    public const int StepRate = 12;
 
     /// <summary>HH:MM on a 24-hour clock; map recommendations round to the nearest minute.</summary>
     public static string FormatClock(double hours, bool roundToMinute = false)

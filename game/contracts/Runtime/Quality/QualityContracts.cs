@@ -8,7 +8,7 @@ public enum KnobUnit : byte { Number, Scale, Metres, Percent }
 
 public enum QualityKnob : byte                      // 共 11 项，连续序号（QualityChange.Knobs 按序号置位）；--quality-set 用它的 snake_case
 {
-    DisplayMode, WindowSize, VSync, FrameCap,
+    DisplayMode, WindowSize, VSync, FrameRateLimit,
     RenderScale, AntiAliasing,
     ShadowQuality, ShadowDistance, FoliageDensity,
     ReflectionInterval, ParticleDensity,
@@ -33,12 +33,10 @@ public sealed class QualityView
     private readonly float[] _requested;
 
     public QualityView(long version, QualityPreset preset,
-        IReadOnlyList<float> effective, IReadOnlyList<float>? requested = null,
-        int stepRate = WorldTime.DefaultStepRate)
+        IReadOnlyList<float> effective, IReadOnlyList<float>? requested = null)
     {
         ArgumentOutOfRangeException.ThrowIfNegative(version);
         if (!Enum.IsDefined(preset)) throw new ArgumentOutOfRangeException(nameof(preset));
-        if (!WorldTime.IsStepRate(stepRate)) throw new ArgumentOutOfRangeException(nameof(stepRate));
         ArgumentNullException.ThrowIfNull(effective);
         _effective = Copy(effective, nameof(effective));
         _requested = Copy(requested ?? effective, nameof(requested));
@@ -46,12 +44,10 @@ public sealed class QualityView
             throw new ArgumentException("Quality values must be finite.");
         Version = version;
         Preset = preset;
-        StepRate = stepRate;
     }
 
     public long Version { get; }
     public QualityPreset Preset { get; }
-    public int StepRate { get; }
     public float this[QualityKnob k] => _effective[Index(k)];
     public float Requested(QualityKnob k) => _requested[Index(k)];
 

@@ -11,7 +11,7 @@ namespace Campus.Kernel.Quality.Settings;
 
 [KernelNode("quality")]
 [QualityResponsive(Order = 0, Owns = [QualityKnob.DisplayMode, QualityKnob.WindowSize, QualityKnob.VSync,
-    QualityKnob.FrameCap, QualityKnob.RenderScale, QualityKnob.FoliageDensity])]
+    QualityKnob.FrameRateLimit, QualityKnob.RenderScale, QualityKnob.FoliageDensity])]
 public partial class QualityRuntime : Node, IQualityAware, IQualityRuntime
 {
     // Fixed detail distance factor; grass range and transition duration come from the preset catalog.
@@ -39,7 +39,6 @@ public partial class QualityRuntime : Node, IQualityAware, IQualityRuntime
         _closed = false;
         _qualityInitialized = false;
         _lifetime = _service.Bind(this);
-        ApplyStepRate(_service.Effective);
     }
 
     public override void _ExitTree()
@@ -171,14 +170,10 @@ public partial class QualityRuntime : Node, IQualityAware, IQualityRuntime
         try
         {
             SetVegetationQuality(view, change);
-            ApplyStepRate(view);
         }
         catch (Exception error) { errors.Add(error); }
         if (errors.Count > 0) throw new AggregateException("Quality consumers failed.", errors);
     }
-
-    private static void ApplyStepRate(QualityView view) =>
-        RenderingServer.GlobalShaderParameterSet(ShaderGlobals.StepRate, (float)view.StepRate);
 
     private void SetVegetationQuality(QualityView view, in QualityChange change)
     {
@@ -226,8 +221,8 @@ public partial class QualityRuntime : Node, IQualityAware, IQualityRuntime
             viewport.Scaling3DScale = view[QualityKnob.RenderScale];
         }
         if (change.Has(QualityKnob.VSync)) DisplayServer.WindowSetVsyncMode(view[QualityKnob.VSync] != 0 ? DisplayServer.VSyncMode.Enabled : DisplayServer.VSyncMode.Disabled);
-        if (change.Has(QualityKnob.FrameCap))
-            Engine.MaxFps = QualityCatalog.FrameLimit(view[QualityKnob.FrameCap], RefreshRate);
+        if (change.Has(QualityKnob.FrameRateLimit))
+            Engine.MaxFps = QualityCatalog.FrameLimit(view[QualityKnob.FrameRateLimit], RefreshRate);
     }
 
 }

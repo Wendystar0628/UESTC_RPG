@@ -86,8 +86,6 @@ public sealed class QualityState
 
     private QualityView MakeView()
     {
-        var cap = QualityCatalog.FrameLimit(_values[(int)QualityKnob.FrameCap], RefreshRate);
-        return new(_version, Requested.Overrides.Count == 0 ? _basePreset : QualityPreset.Custom, _values,
-            stepRate: WorldTime.StepRate(cap, CaptureMode));
+        return new(_version, Requested.Overrides.Count == 0 ? _basePreset : QualityPreset.Custom, _values);
     }
 }

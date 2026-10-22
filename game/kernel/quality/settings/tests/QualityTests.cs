@@ -89,16 +89,11 @@ public sealed class QualityTests
 
     [TestCase]
     [TestCategory(TestReason.Contract)]
-    public void ThirtyFpsCapChangesStepRate()
+    public void FrameRateLimitOffersSixtyHundredTwentyAndRefresh()
     {
-        if (QualityCatalog.FrameLimit(2, 60) != 30) throw new InvalidOperationException("Frame pacing is inconsistent.");
-        var state = new QualityState(Catalog());
-        var profile = new QualityProfile(QualityPreset.Fine, new Dictionary<QualityKnob, float> { [QualityKnob.FrameCap] = 0 });
-        state.Commit(profile, ApplyOrigin.User, false);
-        if (state.Effective.StepRate != 15) throw new InvalidOperationException("30 fps requires a 15 Hz pose cadence.");
-        state.CaptureMode = true;
-        state.Commit(profile, ApplyOrigin.Gate, false);
-        if (state.Effective.StepRate != 12) throw new InvalidOperationException("Capture must stay at 12 Hz.");
+        if (QualityCatalog.FrameLimit(0, 144) != 60 || QualityCatalog.FrameLimit(1, 144) != 120 || QualityCatalog.FrameLimit(2, 144) != 144)
+            throw new InvalidOperationException("Frame rate limit must be 60, 120 or the display refresh rate (DECISION-309).");
+        if (QualityCatalog.FrameLimit(2, float.NaN) != 60) throw new InvalidOperationException("An unreadable refresh rate falls back to 60.");
     }
 
     private static QualityCatalog Catalog() => new(File.ReadAllText(RepositoryFixture.FilePath("game", "data", "quality-presets.json")));

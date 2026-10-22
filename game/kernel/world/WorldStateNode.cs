@@ -1,6 +1,5 @@
 using Campus.Contracts;
 using Campus.Contracts.Maps;
-using Campus.Contracts.Quality;
 using Godot;
 using Campus.Contracts.Startup;
 using KernelServices = Campus.Kernel.Registry.Kernel;
@@ -9,14 +8,12 @@ namespace Campus.Kernel.World;
 
 /// <summary>The sole frame driver of world time. Weather Step stays inside this ordered step.</summary>
 [KernelNode("world-state")]
-[QualityResponsive(Reads = new[] { QualityKnob.FrameCap })]
-public partial class WorldStateNode : Node, IMapAware, IQualityAware
+public partial class WorldStateNode : Node, IMapAware
 {
     private IWorldFrame? _world;
     private IWorldTransitionPresentation? _transition;
     private IMotionSettings? _motion;
     private ulong _transitionFrame = ulong.MaxValue;
-    private int _stepRate = WorldTime.DefaultStepRate;
     private bool _freezeAnimation;
 
     public override void _Ready()
@@ -27,9 +24,9 @@ public partial class WorldStateNode : Node, IMapAware, IQualityAware
         _transition = KernelServices.Get<IWorldTransitionPresentation>();
         _motion = KernelServices.Get<IMotionSettings>();
         _world.ReducedTransitionRequested += OnReducedTransition;
-        _stepRate = KernelServices.Get<IQualityService>().Effective.StepRate;
         // Ready completes before the first rendered frame, including shader warm-up.
         RenderingServer.GlobalShaderParameterSet(ShaderGlobals.AnimLoopSeconds, WorldTime.AnimLoopSeconds);
+        RenderingServer.GlobalShaderParameterSet(ShaderGlobals.StepRate, (float)WorldTime.StepRate);
         WriteGlobals();
     }
 
@@ -57,13 +54,11 @@ public partial class WorldStateNode : Node, IMapAware, IQualityAware
     public override void _Process(double delta)
     {
         if (_world is null) return;
-        _world.SetStepRate(_stepRate);
         _world.Tick(delta, _freezeAnimation);
         WriteGlobals();
     }
 
     public void OnMapUnloading(MapId from) => World.OnMapUnloading(from);
-    public void ApplyQuality(QualityView view, in QualityChange change) => _stepRate = view.StepRate;
     public void OnMapLoaded(IMapContext context)
     {
         World.OnMapLoaded(context);
