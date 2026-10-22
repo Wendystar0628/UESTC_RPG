@@ -22,6 +22,10 @@ namespace Campus.Kernel.Collision.Tests;
 [TestSuite]
 public sealed class CollisionCoreTests
 {
+    // 本组建的碰撞形状要等包装终结才归还原生引用；整组跑完在这里收齐，单跑本组时才不漏到引擎退出（DroppedNatives）。
+    [After]
+    public void ReleaseDroppedNatives() => DroppedNatives.Release();
+
     [TestCase(Timeout = 180000)]
     [TestCategory(TestReason.Smoke)]
     [TestCategory("G15Core")]

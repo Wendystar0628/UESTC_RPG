@@ -140,21 +140,17 @@ public sealed class HudLifetimeTests
             AssertThat(router.Cursors == 0).OverrideFailureMessage("Closing the last panel did not return the cursor lease.").IsTrue();
             // 直接带可见弹层释放根，覆盖退出时子节点信号与宿主销毁的顺序。
             hud.DialogHost.AddChild(new Control());
+            hud.Free();
+            hud = null;
+            AssertThat(router.Layers == 0 && router.Observers == 0 && flow.Observers == 0 && router.Cursors == 0).OverrideFailureMessage("Free retained HUD registrations.").IsTrue();
         }
         finally
         {
-            try
-            {
-                hud?.Free();
-                AssertThat(router.Layers == 0 && router.Observers == 0 && flow.Observers == 0 && router.Cursors == 0).OverrideFailureMessage("Free retained HUD registrations.").IsTrue();
-            }
-            finally
-            {
-                audio.Free();
-                // 保留同帧重入的检查；失败时也让退树 QueueFree 的四角走完实际释放。
-                await FrameAwaiter.ProcessAsync(parent);
-                await FrameAwaiter.ProcessAsync(parent);
-            }
+            hud?.Free();
+            audio.Free();
+            // 保留同帧重入的检查；失败时也让退树 QueueFree 的四角走完实际释放。
+            await FrameAwaiter.ProcessAsync(parent);
+            await FrameAwaiter.ProcessAsync(parent);
         }
     }
 

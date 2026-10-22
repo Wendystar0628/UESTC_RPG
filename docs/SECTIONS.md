@@ -1918,7 +1918,7 @@
 - STD-CODE §3 先用现成，再复用，不复制 · L65 · 1.7k
 - STD-CODE §4 不留死代码，不写补丁 · L79 · 1.3k
 - STD-CODE §5 规模 · L93 · 269
-- STD-CODE §6 测试代码怎么写 · L99 · 961
+- STD-CODE §6 测试代码怎么写 · L99 · 989
 - STD-CODE §7 异步与线程 · L113 · 437
 
 ## STD-CONVENTIONS · 坐标单位与命名约定

@@ -15,9 +15,14 @@ namespace Campus.Tests;
 [TestSuite]
 public sealed class ToonLibraryRuntimeTests
 {
+    // 本组建的着色器与材质要等包装终结才归还原生引用；整组跑完在这里收齐，单跑本组时才不漏到引擎退出（DroppedNatives）。
+    [After]
+    public void ReleaseDroppedNatives() => DroppedNatives.Release();
+
 
     [TestCase]
     [TestCategory(TestReason.Contract)]
+    [RequireGodotRuntime]
     public void SurfacePatternMaterialKeyRetainsEveryProfileField()
     {
         var spec = new ToonSpec(new("test.lit"), new("test.shade"))
