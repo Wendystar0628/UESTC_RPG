@@ -58,11 +58,15 @@ public sealed class BoundaryRing
     public IReadOnlyList<float> Crossings(Vector2 p, Vector2 q)
     {
         var hits = new List<(float Along, float S)>();
+        var segmentLength = Vector2.Distance(p, q);
         for (var i = 0; i < _p.Length; i++)
             if (PlanLines.SegmentHit(p, q, _p[i], _p[Wrap(i + 1)], endpointTolerance: 1e-5f) is { } hit)
             {
                 var s = Arc(i, hit.U);
-                if (hits.Any(h => MathF.Abs(h.Along - hit.T) * Vector2.Distance(p, q) < 0.05f)) continue;
+                var duplicate = false;
+                foreach (var previous in hits)
+                    if (MathF.Abs(previous.Along - hit.T) * segmentLength < 0.05f) { duplicate = true; break; }
+                if (duplicate) continue;
                 hits.Add((hit.T, s));
             }
         hits.Sort((a, b) => a.Along.CompareTo(b.Along));

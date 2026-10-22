@@ -1,5 +1,6 @@
 using Campus.Gen.Geometry;
 using System.Numerics;
+using System.Runtime.CompilerServices;
 using Campus.Contracts;
 using Campus.Gen.Maps.Qingshuihe.Boundary.Fence;
 using Campus.Gen.Maps.Qingshuihe.Boundary.Framework;
@@ -37,16 +38,27 @@ public sealed record Opening(string Key, OpeningKind Kind, float Start, float Le
 /// </summary>
 public sealed class BoundaryPlan
 {
+    private static readonly ConditionalWeakTable<IWorldModel, Lazy<BoundaryPlan?>> Plans = new();
 
     private BoundaryPlan(BoundaryRing ring, IReadOnlyList<Opening> openings, IReadOnlyList<FenceRun> runs, IReadOnlyList<GateLayout> gates,
         IReadOnlyList<(float Start, float Length, IReadOnlyList<Vector2> Line)> detours)
     {
         Ring = ring;
-        Detours = detours;
-        Openings = openings;
-        Runs = runs;
-        Gates = gates;
+        Detours = Array.AsReadOnly(detours.Select(d => (d.Start, d.Length,
+            Line: (IReadOnlyList<Vector2>)Array.AsReadOnly(d.Line.ToArray()))).ToArray());
+        Openings = Array.AsReadOnly(openings.ToArray());
+        Runs = Array.AsReadOnly(runs.Select(FreezeRun).ToArray());
+        Gates = Array.AsReadOnly(gates.Select(g => g with
+        {
+            Closures = Array.AsReadOnly(g.Closures.Select(FreezeRun).ToArray()),
+        }).ToArray());
     }
+
+    private static FenceRun FreezeRun(FenceRun run) => run with
+    {
+        Line = Array.AsReadOnly(run.Line.ToArray()),
+        Hedges = Array.AsReadOnly(run.Hedges.Select(line => (IReadOnlyList<Vector2>)Array.AsReadOnly(line.ToArray())).ToArray()),
+    };
 
     public BoundaryRing Ring { get; }
 
@@ -64,10 +76,12 @@ public sealed class BoundaryPlan
     /// <summary>Inset plan points of an opening's two ends (on the fence line).</summary>
     public (Vector2 A, Vector2 B) Ends(Opening o) => (Ring.Slice(o.Start, 0f, F.Inset)[0], Ring.Slice(o.Start + o.Length, 0f, F.Inset)[0]);
 
-    public static BoundaryPlan? Of(IWorldModel world) => world.Boundary.Outer.Count < 3 ? null : Build(world);
+    /// <summary>Share one immutable result, including null, for the lifetime of the caller's frozen world.</summary>
+    public static BoundaryPlan? Of(IWorldModel world) => Plans.GetValue(world, static source =>
+        new Lazy<BoundaryPlan?>(() => source.Boundary.Outer.Count < 3 ? null : Build(source),
+            LazyThreadSafetyMode.ExecutionAndPublication)).Value;
 
-    public static BoundaryPlan? Of(BuildContext context) =>
-        context.Memo(typeof(BoundaryPlan), () => Of(context.World));
+    public static BoundaryPlan? Of(BuildContext context) => Of(context.World);
 
     private static BoundaryPlan Build(IWorldModel world)
     {

@@ -3,6 +3,7 @@ using Campus.Contracts;
 using Campus.Contracts.Audio;
 using Campus.Gen.Geometry;
 using Campus.Gen.World;
+using Campus.Gen.Tests.Support;
 using Campus.Gen.Sites;
 using Campus.Gen.Sites.Tests;
 using Campus.Gen.Maps.Qingshuihe.South;
@@ -49,12 +50,15 @@ public sealed class BoundaryModuleTests
         }
     }
 
-    [TestCase, TestCategory(TestReason.Contract)]
+    [TestCase, TestCategory(TestReason.Regression)]
     [TestCategory("Slow")]
     public void TheFenceRunsAllTheWayRound()
     {
-        var world = RealMapFixture.Load().World;
-        var plan = BoundaryPlan.Of(world)!;
+        var world = new FakeWorld(RealMapFixture.Load().World);
+        var shared = new BoundaryPlan?[2];
+        Parallel.For(0, shared.Length, i => shared[i] = i == 0 ? BoundaryPlan.Of(world) : BoundaryPlan.Of(Context().WithWorld(world)));
+        var plan = shared[0]!;
+        AssertThat(ReferenceEquals(plan, shared[1]) && !ReferenceEquals(plan, BoundaryPlan.Of(new FakeWorld(world)))).OverrideFailureMessage("world and context entries share one plan, while another world owns its own").IsTrue();
         var ring = plan.Ring;
         // Openings tile the ring with runs between them: nothing overlaps, every gap is a run.
         var covered = 0f;
