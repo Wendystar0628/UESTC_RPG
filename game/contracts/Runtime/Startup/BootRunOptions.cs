@@ -5,6 +5,7 @@ using Campus.Contracts.Save;
 namespace Campus.Contracts.Startup;
 
 public enum BootRunMode : byte { Interactive, Capture, CpuBake }
+public enum StartupScenario : byte { Title, Immediate, Dwell, Playing }
 
 /// <summary>Parsed startup choices. Map-dependent defaults are resolved after catalogue loading.</summary>
 public sealed record BootRunOptions
@@ -17,6 +18,8 @@ public sealed record BootRunOptions
     public bool AllMaps { get; init; }
     public string? SaveDirectory { get; init; }
     public IReadOnlyList<string> TravelSequence { get; init; } = [];
+    /// <summary>In-process player input sampling; retains normal interactive startup defaults.</summary>
+    public StartupScenario? StartupScenario { get; init; }
     public BootFlowRequest Flow { get; init; } = new();
     public WorldBootOptions World { get; init; } = new();
     public UiBootOptions Ui { get; init; } = new();

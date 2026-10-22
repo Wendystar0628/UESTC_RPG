@@ -17,6 +17,9 @@ internal sealed class StageStartupTrace
     private IAppFlow? _profileFlow;
     private IObserverState? _profileObserver;
     private IInputRouter? _profileInput;
+    private IWalkController? _profileWalk;
+    private bool? _profileCursorVisible;
+    private bool? _profileCursorHeld;
     private static readonly StringName ForwardAction = "move_forward";
 
     internal static void TracePhase(string phase)
@@ -48,11 +51,34 @@ internal sealed class StageStartupTrace
                     _profileInput = KernelServices.Get<IInputRouter>();
                     GD.Print($"STARTUP_INPUT action=move_forward physicalKey={_profileInput.PhysicalKey("move_forward")}");
                 }
+                _profileWalk ??= KernelServices.Get<IWalkController>();
+                var cursorVisible = _profileInput.CursorVisible;
+                var cursorHeld = _profileInput.CursorHeld;
+                if (_profileCursorVisible != cursorVisible || _profileCursorHeld != cursorHeld)
+                {
+                    TraceEnvironment(cursorVisible, cursorHeld);
+                    _profileCursorVisible = cursorVisible;
+                    _profileCursorHeld = cursorHeld;
+                }
                 var feet = _profileObserver.Feet;
-                movement = FormattableString.Invariant($" mode={_profileObserver.Mode} feetX={feet.X:R} feetY={feet.Y:R} feetZ={feet.Z:R} yawDeg={_profileObserver.YawDeg:R} forwardPressed={Input.IsActionPressed(ForwardAction)} interfaceMode={_profileInput.InterfaceMode}");
+                var walk = _profileWalk!;
+                var velocity = walk.Velocity;
+                movement = FormattableString.Invariant($" mode={_profileObserver.Mode} feetX={feet.X:R} feetY={feet.Y:R} feetZ={feet.Z:R} yawDeg={_profileObserver.YawDeg:R} forwardPressed={Input.IsActionPressed(ForwardAction)} cursorVisible={cursorVisible} cursorHeld={cursorHeld} walkActive={walk.Active} walkCollisionReady={walk.CollisionReady} walkVelocityX={velocity.X:R} walkVelocityY={velocity.Y:R} walkVelocityZ={velocity.Z:R}");
             }
-            GD.Print(FormattableString.Invariant($"STARTUP_FRAME {FrameClock.MonotonicMilliseconds:R} frame={Engine.GetProcessFrames()} rendererCpuMs={frame.CpuRenderMilliseconds:R} rendererGpuMs={frame.GpuRenderMilliseconds:R} flow={state} pipelineSurface={frame.Pipelines.Surface:R} pipelineDraw={frame.Pipelines.Draw:R} pipelineCanvas={frame.Pipelines.Canvas:R} gcPauseMs={frame.GcPauseMilliseconds:R}{movement}"));
+            else
+            {
+                _profileCursorVisible = null;
+                _profileCursorHeld = null;
+            }
+            GD.Print(FormattableString.Invariant($"STARTUP_FRAME {FrameClock.MonotonicMilliseconds:R} frame={Engine.GetProcessFrames()} rendererCpuMs={frame.CpuRenderMilliseconds:R} rendererGpuMs={frame.GpuRenderMilliseconds:R} flow={state} pipelineSurface={frame.Pipelines.Surface:R} pipelineDraw={frame.Pipelines.Draw:R} pipelineCanvas={frame.Pipelines.Canvas:R} gcPauseMs={frame.GcPauseMilliseconds:R} maxFps={Engine.MaxFps} windowFocus={DisplayServer.WindowIsFocused()}{movement}"));
         }
+    }
+
+    private static void TraceEnvironment(bool cursorVisible, bool cursorHeld)
+    {
+        var screen = DisplayServer.WindowGetCurrentScreen();
+        var size = DisplayServer.WindowGetSize();
+        GD.Print(FormattableString.Invariant($"STARTUP_ENVIRONMENT {FrameClock.MonotonicMilliseconds:R} frame={Engine.GetProcessFrames()} cursorVisible={cursorVisible} cursorHeld={cursorHeld} maxFps={Engine.MaxFps} vSync={DisplayServer.WindowGetVsyncMode()} screen={screen} screenReportedRefreshHz={DisplayServer.ScreenGetRefreshRate(screen):R} windowFocus={DisplayServer.WindowIsFocused()} windowWidth={size.X} windowHeight={size.Y} windowMode={DisplayServer.WindowGetMode()} physicsTicksPerSecond={Engine.PhysicsTicksPerSecond}"));
     }
 
     internal static void TraceTitleInputReady(IAppBootFlow boot)

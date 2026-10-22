@@ -383,6 +383,7 @@ public partial class KernelStage : Node3D, IAppExit, IStageGateHost
             await FrameAwaiter.ProcessAsync(this, _captureLifetime.Token);
             CheckStartupActive();
             StageStartupTrace.TraceTitleInputReady(boot);
+            _gate.OnTitleInputReady();
         }
         catch (OperationCanceledException error) when (_captureLifetime.IsCancellationRequested && error.CancellationToken == _captureLifetime.Token) { }
         catch (Exception error) { await _startupFailure.Fail(error); }
@@ -537,6 +538,7 @@ public partial class KernelStage : Node3D, IAppExit, IStageGateHost
         var failures = new List<Exception>();
         try { Phase = "shutdown"; } catch (Exception error) { failures.Add(error); }
         try { _captureLifetime.Cancel(); } catch (Exception error) { failures.Add(error); }
+        try { await _gate.DrainStartupSample(); } catch (Exception error) { failures.Add(error); }
         try { if (_flow is not null) _flow.Changed -= OnFlowChanged; } catch (Exception error) { failures.Add(error); }
         // The command owns its own baking resources; a close request must let its finally blocks
         // finish before the registry can release its dependencies and the engine can quit.

@@ -38,6 +38,24 @@ public sealed class StageGateDriver(IStageGateHost host)
     private bool _awaitingClose;
     private bool _finishing;
     private int _frames;
+    private Task? _startupSampleTask;
+    private bool _startupSampleFailureReported;
+
+    /// <summary>Starts a held task at the real menu-input boundary without blocking background preparation.</summary>
+    public void OnTitleInputReady()
+    {
+        if (_startupSampleTask is not null || AppBoot.Options.StartupScenario is not { } scenario) return;
+        _startupSampleTask = new StartupSampleDriver(host).Run(scenario);
+    }
+
+    /// <summary>The host cancels Lifetime first, then drains before releasing any production input services.</summary>
+    public async Task DrainStartupSample()
+    {
+        if (_startupSampleTask is null) return;
+        try { await _startupSampleTask; }
+        catch (OperationCanceledException error) when (host.Lifetime.IsCancellationRequested &&
+            error.CancellationToken == host.Lifetime && _startupSampleTask.IsCanceled) { }
+    }
 
     /// <summary>The window-close request that the core lifecycle waits for starts the shutdown timer.</summary>
     public void OnCloseRequest()
@@ -145,6 +163,11 @@ public sealed class StageGateDriver(IStageGateHost host)
     /// <summary>--frames: ends the run after a fixed number of realtime frames.</summary>
     public void OnProcess()
     {
+        if (!_startupSampleFailureReported && _startupSampleTask is { IsFaulted: true })
+        {
+            _startupSampleFailureReported = true;
+            host.Fail(_startupSampleTask.Exception!);
+        }
         if (!host.Ready || host.Closing || _finishing) return;
         _frames++;
         if (AppBoot.Options.Capture.Gate is null && AppBoot.Options.Capture.FrameLimit is { } limit && _frames >= limit)

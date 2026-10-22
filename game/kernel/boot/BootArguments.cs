@@ -20,7 +20,7 @@ public sealed class BootArguments
         "gen", "bake", "bake-cache", "bake-bg", "bake-strict", "title", "save", "slot",
         "load", "save-dir", "save-at", "audio", "audio-fixed", "audio-seed", "audio-limiter", "audio-log",
         "ui-theme", "motion", "ui-scale", "ui-gallery", "ui-export-theme", "amb-solo", "amb-off", "amb-debug",
-        "audio-probe", "audio-out", "preset", "travel-sequence", "movie-frames", "movie-events"
+        "audio-probe", "audio-out", "preset", "travel-sequence", "movie-frames", "movie-events", "startup-scenario"
     };
     private static readonly HashSet<string> Flags = new(StringComparer.Ordinal) { "audio-probe" };
     private static readonly string[] WorldKeys = ["clock", "season", "anim", "flow", "seed", "weather", "weather-intensity",
@@ -75,6 +75,10 @@ public sealed class BootArguments
         if (result.CpuBakeMode && result._provided.Overlaps(["gate", "shots", "bench", "frames", "inspect"]))
             throw Invalid("CPU baking cannot be combined with a rendering or gate command.");
         result.AddDefaults();
+        if (result.Has("startup-scenario") && (!development || !result.Title || result.HasLoad ||
+            result.CpuBakeMode || result.CaptureMode || result.Has("inspect") || result.Has("travel-sequence") ||
+            result.Value("ui") != "1"))
+            throw Invalid("Startup scenarios require a development interactive title with UI and no other run command or saved-state load.");
         if (result.Has("shots") && !result.Has("out")) throw Invalid("--shots requires an absolute --out directory.");
         if (result.Has("movie-events") && !result.Has("movie-frames"))
             throw Invalid("--movie-events requires --movie-frames.");
@@ -87,6 +91,7 @@ public sealed class BootArguments
 
     private void Validate()
     {
+        OneOf("startup-scenario", "title", "immediate", "dwell", "playing");
         foreach (var key in new[] { "ui", "title", "bench", "bake-bg", "bake-strict", "audio-fixed", "audio-limiter", "audio-log", "amb-debug" })
             OneOf(key, "0", "1");
         OneOf("season", "spring", "summer", "autumn", "winter");
@@ -172,6 +177,7 @@ public sealed class BootArguments
             AllMaps = allMaps,
             SaveDirectory = Text("save-dir"),
             TravelSequence = Text("travel-sequence")?.Split(',') ?? [],
+            StartupScenario = Text("startup-scenario") is { } scenario ? Enum.Parse<StartupScenario>(scenario, true) : null,
             Flow = new BootFlowRequest(ShowTitle: Title,
                 Slot: ParseSlot("slot", Text("slot")), LoadFile: Text("load"),
                 Map: !allMaps && Text("map") is { } map ? new MapId(map) : null, Spawn: Text("spawn"),

@@ -67,6 +67,8 @@ foreach ($mode in $Modes) {
         preparation=$preparation;
         device=$Device; preset=if($PlayingSample){'fine'}else{'production-default'}; builtRevisionDeclaredByRoot=$BuiltRevision;
         playingSample=[bool]$PlayingSample;
+        startupScenario=if($PlayingSample){'playing'}else{$mode};
+        presentation='private desktop; CPU/GPU work diagnostic only, presented FPS not measured';
         playingDisplay=if($PlayingSample){'--quality=fine --quality-set=display_mode=0; preset v_sync=1; no fixed-fps'}else{$null} }
     # Only a separately controlled first process can claim reboot/first-pipeline conditions.
     if ($index -gt 0) {

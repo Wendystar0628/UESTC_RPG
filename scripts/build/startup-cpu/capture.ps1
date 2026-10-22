@@ -20,33 +20,21 @@ $trace = $null
 $gameProcess = $null
 $stopped = $false
 $stopAttempted = $false
-$inputWindowHandle = $null
-$inputReleasedUtc = $null
 $snapshots = [Collections.Generic.List[object]]::new()
 $playingCpu = [Collections.Generic.List[object]]::new()
 $playingEdges = [Collections.Generic.List[object]]::new()
-$forwardWindow = $null
-$forwardScanCode = $null
-$forwardKeyHeld = $false
 $forwardPhysicalKey = $null
-$sceneButtonHeld = $false
-$roamRequest = $null
-$roamRelease = $null
-$roamObserved = $null
 $playingState = 'waiting'
 $playingIdleSeconds = 10
 $playingForwardSeconds = 20
-$lastFrame = $null
-$pipelineStableFrames = 0
-$pipelineSignature = $null
-$sampleStarted = $null
 $moveRequested = $null
 $releaseRequested = $null
 $logReader = $null
 $pendingLog = ''
 $nextCpuRead = $null
 # Native launch returns the PRIMARY OS thread ID. It inherits this worker's private desktop.
-# This small launch binding runs before the game; it is not a CPU sampler.
+# Process.Start does not expose the primary OS TID; keep only this thin launch binding for that measured identity.
+# The private-console Stop below controls dotnet-trace, never player input.
 Add-Type -TypeDefinition @"
 using System;
 using System.ComponentModel;
@@ -63,74 +51,6 @@ public static class C215Launch {
     static extern bool CreateProcessW(string app, StringBuilder command, IntPtr pa, IntPtr ta,
         bool inherit, uint flags, IntPtr environment, string cwd, ref SI si, out PI pi);
     [DllImport("kernel32.dll")] static extern bool CloseHandle(IntPtr handle);
-    delegate bool WindowCallback(IntPtr hwnd, IntPtr data);
-    [DllImport("user32.dll")] static extern bool EnumWindows(WindowCallback callback, IntPtr data);
-    [DllImport("user32.dll")] static extern uint GetWindowThreadProcessId(IntPtr hwnd, out uint pid);
-    [DllImport("user32.dll")] static extern bool IsWindowVisible(IntPtr hwnd);
-    [DllImport("user32.dll", CharSet=CharSet.Unicode)] static extern int GetClassNameW(IntPtr hwnd, StringBuilder name, int count);
-    [DllImport("user32.dll", SetLastError=true)] static extern bool PostMessageW(IntPtr hwnd, uint msg, IntPtr w, IntPtr l);
-    [DllImport("user32.dll")] static extern uint MapVirtualKeyW(uint code, uint mapType);
-    [StructLayout(LayoutKind.Sequential)] struct Rect { public int left,top,right,bottom; }
-    [DllImport("user32.dll", SetLastError=true)] static extern bool GetClientRect(IntPtr hwnd, out Rect rect);
-    static void RequireOwner(int pid, long hwnd) {
-        uint owner; GetWindowThreadProcessId((IntPtr)hwnd, out owner);
-        if (owner != (uint)pid) throw new InvalidOperationException("Input target no longer belongs to this run's PID.");
-    }
-    public static int[] SceneCenter(int pid, long hwnd) {
-        RequireOwner(pid, hwnd);
-        Rect rect;
-        if (!GetClientRect((IntPtr)hwnd, out rect)) throw new Win32Exception(Marshal.GetLastWin32Error());
-        int width=rect.right-rect.left, height=rect.bottom-rect.top;
-        if (width <= 0 || height <= 0 || width > 65535 || height > 65535)
-            throw new InvalidOperationException("No usable client rectangle for this run's scene click.");
-        return new[] { width, height, width/2, height/2 };
-    }
-    public static void SceneButton(int pid, long hwnd, int x, int y, bool pressed) {
-        RequireOwner(pid, hwnd);
-        var point = (IntPtr)((y << 16) | x);
-        // Directed client messages leave the real pointer and desktop alone.
-        if (pressed && !PostMessageW((IntPtr)hwnd, 0x200u, IntPtr.Zero, point))
-            throw new Win32Exception(Marshal.GetLastWin32Error());
-        if (!PostMessageW((IntPtr)hwnd, pressed ? 0x201u : 0x202u, pressed ? (IntPtr)1 : IntPtr.Zero, point))
-            throw new Win32Exception(Marshal.GetLastWin32Error());
-    }
-    public static int ForwardScanCode(int physicalKey) {
-        // Godot's printable physical key values use ASCII. Unsupported special keys stay unknown.
-        if (!((physicalKey >= 65 && physicalKey <= 90) || (physicalKey >= 48 && physicalKey <= 57)))
-            throw new InvalidOperationException("The recorded physical binding is not a supported printable Windows key; no key was guessed.");
-        var scan = MapVirtualKeyW((uint)physicalKey, 0);
-        if (scan == 0 || scan > 255) throw new InvalidOperationException("No unambiguous Windows scan code for the recorded binding.");
-        return (int)scan;
-    }
-    public static void Key(int pid, long hwnd, int physicalKey, int scan, bool pressed) {
-        RequireOwner(pid, hwnd);
-        var flags = 1 | (scan << 16);
-        if (!pressed) flags = unchecked(flags | (int)0xc0000000);
-        if (!PostMessageW((IntPtr)hwnd, pressed ? 0x100u : 0x101u, (IntPtr)physicalKey, (IntPtr)flags))
-            throw new Win32Exception(Marshal.GetLastWin32Error());
-    }
-    public static long NewGameEnter(int pid) {
-        IntPtr target = IntPtr.Zero;
-        EnumWindows((hwnd, _) => {
-            uint owner; GetWindowThreadProcessId(hwnd, out owner);
-            var name = new StringBuilder(128);
-            if (owner == (uint)pid && IsWindowVisible(hwnd) &&
-                GetClassNameW(hwnd, name, name.Capacity) != 0 && name.ToString() == "Engine") {
-                target=hwnd; return false;
-            }
-            return true;
-        }, IntPtr.Zero);
-        if (target == IntPtr.Zero) throw new InvalidOperationException("No visible Godot Engine window for this private target PID.");
-        // The empty isolated save makes TitleMenu focus NewGame. Directed window messages
-        // stay on this worker's private desktop; never use global SendInput or SwitchDesktop.
-        if (!PostMessageW(target, 0x100, (IntPtr)13, (IntPtr)0x001c0001))
-            throw new Win32Exception(Marshal.GetLastWin32Error());
-        return target.ToInt64();
-    }
-    public static void ReleaseEnter(long hwnd) {
-        if (!PostMessageW((IntPtr)hwnd, 0x101, (IntPtr)13, (IntPtr)unchecked((int)0xc01c0001)))
-            throw new Win32Exception(Marshal.GetLastWin32Error());
-    }
     [StructLayout(LayoutKind.Explicit, Size=20, CharSet=CharSet.Unicode)] struct Input {
         [FieldOffset(0)] public ushort type;
         [FieldOffset(4)] public int down;
@@ -190,15 +110,6 @@ function Read-PlayingCpu {
     $playingCpu.Add([ordered]@{ readUtc=[DateTime]::UtcNow.ToString('O'); processCpuSeconds=$seconds;
         startedUtc=$started.ToString('O'); observerMilliseconds=([Diagnostics.Stopwatch]::GetTimestamp()-$readStarted)*1000.0/[Diagnostics.Stopwatch]::Frequency })
 }
-function Add-PlayingEdge([string]$Name) {
-    # Engine timestamp/frame are a real last-observed frame, never an interpolated input instant.
-    $edge = [ordered]@{ name=$Name; milliseconds=$lastFrame.Milliseconds;
-        observedUtc=[DateTime]::UtcNow.ToString('O'); observedTimestamp=[Diagnostics.Stopwatch]::GetTimestamp();
-        suffix=" frame=$($lastFrame.Frame)"; source='last complete STARTUP_FRAME before this observer edge; see directed input request timestamps' }
-    $anchors.Add($edge)
-    $playingEdges.Add($edge)
-    Read-CpuSnapshot $Name
-}
 function Stop-OwnTrace {
     $script:stopAttempted = $true
     if ($trace.HasExited) { throw "Collector exited before requested Stop: $($trace.ExitCode)" }
@@ -233,7 +144,8 @@ try {
     if (-not [IO.File]::Exists($window)) { $window = $godot }
     $log = Join-Path $Output 'godot.log'
     $save = Join-Path $Output 'save'
-    $gameArgs = @("--save-dir=$save", '--title=1')
+    $scenario = if ($playingSample) { 'playing' } else { $Mode }
+    $gameArgs = @("--save-dir=$save", '--title=1', "--startup-scenario=$scenario")
     if ($playingSample) { $gameArgs += @('--quality=fine', '--quality-set=display_mode=0') }
     # All three conditions use normal production defaults; no gate/shots/frames CaptureMode.
     $arguments = @('--path', "$toolRoot\game", '--log-file', $log, '--') + $gameArgs
@@ -272,18 +184,12 @@ try {
     $seen = [Collections.Generic.HashSet[string]]::new()
     $clock = [Diagnostics.Stopwatch]::StartNew()
     $completed = $false
-    $titleObservedAt = $null
-    $titleReadyFrame = $null
     $titleInputReadyAt = $null
     $preloadObservedAt = $null
     $newGameEnterAnchor = $null
     $preloadReady = $null
-    $inputRequestedUtc = $null
-    $inputRequestedClockSeconds = $null
-    $inputRequestedTimestamp = $null
-    $inputReleasedTimestamp = $null
-    $shortPressMilliseconds = 100
-    $directedInputAcceptanceSeconds = 15
+    $inputRequest = $null
+    $inputRelease = $null
     while ($clock.Elapsed.TotalSeconds -lt 300) {
         if ($gameProcess.HasExited) { throw "Target exited before sampling boundary: $($gameProcess.ExitCode)" }
         if ($trace -and $trace.HasExited) { throw "Collector exited before boundary: $($trace.ExitCode)" }
@@ -304,22 +210,6 @@ try {
         if ($playingSample) {
             $binding = [regex]::Match($text, '(?m)^STARTUP_INPUT action=move_forward physicalKey=(\d+)')
             if ($binding.Success) { $forwardPhysicalKey = [int]$binding.Groups[1].Value }
-            foreach ($frameMatch in [regex]::Matches($text, '(?m)^STARTUP_FRAME ([0-9.]+) frame=(\d+) ([^\r\n]+)')) {
-                $fields = @{}
-                foreach ($field in [regex]::Matches($frameMatch.Groups[3].Value, '(\w+)=([^ ]+)')) { $fields[$field.Groups[1].Value] = $field.Groups[2].Value }
-                $number = [long]$frameMatch.Groups[2].Value
-                $signature = "$($fields.pipelineSurface)|$($fields.pipelineDraw)|$($fields.pipelineCanvas)"
-                $contiguous = $lastFrame -and $number -eq $lastFrame.Frame + 1
-                $pipelineStableFrames = if ($contiguous -and $signature -eq $pipelineSignature -and $fields.flow -eq 'Playing' -and $fields.mode -eq 'Walk' -and $fields.interfaceMode -eq 'False') { $pipelineStableFrames + 1 } else { 0 }
-                $pipelineSignature = $signature
-                $lastFrame = [pscustomobject]@{ Milliseconds=[double]::Parse($frameMatch.Groups[1].Value,[Globalization.CultureInfo]::InvariantCulture); Frame=$number; Fields=$fields }
-                if ($null -ne $roamRequest -and $null -eq $roamObserved -and $number -gt $roamRequest.beforeEngineFrame -and
-                    $fields.flow -eq 'Playing' -and $fields.mode -eq 'Walk' -and $fields.interfaceMode -eq 'False') {
-                    $roamObserved = [ordered]@{ observedUtc=[DateTime]::UtcNow.ToString('O'); observedTimestamp=[Diagnostics.Stopwatch]::GetTimestamp();
-                        engineFrame=$number; engineMilliseconds=$lastFrame.Milliseconds; interfaceMode=$false;
-                        source='first complete later STARTUP_FRAME reporting real roam mode after directed scene click request' }
-                }
-            }
         }
         $observed = [DateTime]::UtcNow.ToString('O')
         foreach ($m in [regex]::Matches($text, '(?m)^STARTUP_PHASE ([^ ]+) ([0-9.]+)([^\r\n]*)')) {
@@ -329,10 +219,6 @@ try {
                     milliseconds=[double]::Parse($m.Groups[2].Value, [Globalization.CultureInfo]::InvariantCulture);
                     observedUtc=$observed; observedTimestamp=[Diagnostics.Stopwatch]::GetTimestamp(); suffix=$m.Groups[3].Value})
                 if ($diagnostic) { Read-CpuSnapshot $m.Groups[1].Value }
-                if ($m.Groups[1].Value -eq 'title-ready') {
-                    $titleObservedAt = $clock.Elapsed.TotalSeconds
-                    $titleReadyFrame = [long][regex]::Match($m.Groups[3].Value, 'frame=(\d+)').Groups[1].Value
-                }
                 if ($m.Groups[1].Value -eq 'title-input-ready') { $titleInputReadyAt = $clock.Elapsed.TotalSeconds }
                 if ($m.Groups[1].Value -eq 'preload-ready') {
                     if ($m.Groups[3].Value -notmatch '(?:^|\s)preloadReady=True(?:\s|$)') {
@@ -341,121 +227,44 @@ try {
                     $preloadObservedAt = $clock.Elapsed.TotalSeconds
                 }
                 if ($m.Groups[1].Value -eq 'new-game-enter') { $newGameEnterAnchor = $anchors[$anchors.Count - 1] }
+                $edge = $anchors[$anchors.Count - 1]
+                switch ($edge.name) {
+                    'title-enter-press' { $inputRequest = $edge }
+                    'title-enter-release' { $inputRelease = $edge }
+                    'playing-idle-start' { $playingEdges.Add($edge); $playingState = 'idle'; $nextCpuRead = $clock.Elapsed.TotalSeconds }
+                    'playing-idle-end' { $playingEdges.Add($edge) }
+                    'playing-forward-start' { $playingEdges.Add($edge); $moveRequested = $edge; $playingState = 'forward' }
+                    'playing-forward-end' { $playingEdges.Add($edge); $releaseRequested = $edge; $playingState = 'released' }
+                    'playing-release-observed' { $playingEdges.Add($edge); $playingState = 'complete' }
+                }
             }
         }
-        if ($Mode -ne 'title' -and $null -ne $titleInputReadyAt -and $null -eq $inputRequestedUtc -and
-            ($Mode -eq 'immediate' -or $null -ne $preloadObservedAt)) {
-            # Menu input is independent of background resource loading. Dwell waits for real preload.
-            $inputRequestedUtc = [DateTime]::UtcNow.ToString('O')
-            $inputRequestedTimestamp = [Diagnostics.Stopwatch]::GetTimestamp()
-            $inputRequestedClockSeconds = $clock.Elapsed.TotalSeconds
-            $inputWindowHandle = [C215Launch]::NewGameEnter($gameProcess.Id)
-        }
-        if ($null -ne $inputWindowHandle -and $null -eq $inputReleasedUtc -and
-            ([Diagnostics.Stopwatch]::GetTimestamp() - $inputRequestedTimestamp) * 1000.0 /
-                [Diagnostics.Stopwatch]::Frequency -ge $shortPressMilliseconds) {
-            # Normal short press: release on elapsed request time, then observe acceptance.
-            # Wall time does not prove that the game processed any particular frame.
-            [C215Launch]::ReleaseEnter($inputWindowHandle)
-            $inputReleasedTimestamp = [Diagnostics.Stopwatch]::GetTimestamp()
-            $inputReleasedUtc = [DateTime]::UtcNow.ToString('O')
-        }
-        if ($null -ne $inputRequestedClockSeconds -and -not $seen.Contains('new-game-enter') -and
-            $clock.Elapsed.TotalSeconds -gt $inputRequestedClockSeconds + $directedInputAcceptanceSeconds) {
-            throw "Directed Enter did not reach new-game-enter within $($directedInputAcceptanceSeconds)s; hwnd=$inputWindowHandle titleFrame=$titleReadyFrame; no valid immediate/dwell result."
-        }
-        if ($null -ne $inputReleasedTimestamp -and $null -ne $newGameEnterAnchor) {
+        if ($null -ne $inputRelease -and $null -ne $newGameEnterAnchor) {
             $preload = [regex]::Match($newGameEnterAnchor.suffix, '(?:^|\s)preloadReady=(true|false)(?:\s|$)', 'IgnoreCase')
             if (-not $preload.Success) { throw 'new-game-enter is missing its real preloadReady state.' }
             $preloadReady = [bool]::Parse($preload.Groups[1].Value)
             if ($Mode -eq 'dwell' -and -not $preloadReady) {
-                throw 'Dwell entered without real new-game resources retained and ready; no valid preloaded result.'
+                throw 'Dwell entered without real new-game resources retained and ready.'
             }
         }
         $completed = if ($Mode -eq 'title') {
             # The diagnostic endpoint additionally includes background resource preparation.
             $null -ne $titleInputReadyAt -and (-not $diagnostic -or $null -ne $preloadObservedAt)
         } else {
-            $seen.Contains('realtime') -and $null -ne $inputReleasedTimestamp -and
+            $seen.Contains('realtime') -and $null -ne $inputRelease -and
                 $null -ne $newGameEnterAnchor -and $seen.Contains('input-ready')
         }
-        if ($completed -and $playingSample) {
-            if ($playingState -ne 'waiting' -and $lastFrame.Fields.flow -ne 'Playing') { throw 'Playing diagnostic left Playing before its endpoint; raw log retained.' }
-            if ($playingState -ne 'waiting' -and $lastFrame.Fields.mode -ne 'Walk') { throw 'Playing diagnostic is no longer Walk; raw log retained.' }
-            # Normal entry leaves the mouse visible. Click the actual client center once; never
-            # infer an input lock from InterfaceMode, force focus, or write the mode itself.
-            if ($playingState -eq 'waiting' -and $lastFrame -and $lastFrame.Fields.flow -eq 'Playing' -and $lastFrame.Fields.mode -eq 'Walk' -and
-                $lastFrame.Fields.interfaceMode -eq 'True' -and $null -eq $roamRequest) {
-                $point = [C215Launch]::SceneCenter($gameProcess.Id, $inputWindowHandle)
-                $roamRequest = [ordered]@{ utc=[DateTime]::UtcNow.ToString('O'); timestamp=[Diagnostics.Stopwatch]::GetTimestamp();
-                    beforeEngineFrame=$lastFrame.Frame; beforeEngineMilliseconds=$lastFrame.Milliseconds; interfaceMode=$true;
-                    targetWindowHandle=$inputWindowHandle; clientWidth=$point[0]; clientHeight=$point[1]; clientX=$point[2]; clientY=$point[3];
-                    method='PID-directed WM_MOUSEMOVE then WM_LBUTTONDOWN/UP at actual client center' }
-                $sceneButtonHeld = $true
-                [C215Launch]::SceneButton($gameProcess.Id, $inputWindowHandle, $roamRequest.clientX, $roamRequest.clientY, $true)
-            }
-            if ($sceneButtonHeld -and ([Diagnostics.Stopwatch]::GetTimestamp()-$roamRequest.timestamp) * 1000.0 /
-                [Diagnostics.Stopwatch]::Frequency -ge $shortPressMilliseconds) {
-                [C215Launch]::SceneButton($gameProcess.Id, $inputWindowHandle, $roamRequest.clientX, $roamRequest.clientY, $false)
-                $sceneButtonHeld = $false
-                $roamRelease = [ordered]@{ utc=[DateTime]::UtcNow.ToString('O'); timestamp=[Diagnostics.Stopwatch]::GetTimestamp();
-                    beforeEngineFrame=$lastFrame.Frame; beforeEngineMilliseconds=$lastFrame.Milliseconds; cleanup=$false }
-            }
-            if ($null -ne $roamRequest -and $null -eq $roamObserved -and
-                ([Diagnostics.Stopwatch]::GetTimestamp()-$roamRequest.timestamp)/[double][Diagnostics.Stopwatch]::Frequency -gt $directedInputAcceptanceSeconds) {
-                throw "Playing sample did not start: directed scene click did not reach a later real Playing/Walk roam-mode frame within $($directedInputAcceptanceSeconds)s; request/release and raw telemetry retained."
-            }
-            if ($playingState -eq 'waiting' -and $lastFrame -and $lastFrame.Fields.flow -eq 'Playing' -and $lastFrame.Fields.mode -eq 'Walk' -and $pipelineStableFrames -ge 10 -and
-                $null -ne $forwardPhysicalKey -and $lastFrame.Fields.forwardPressed -eq 'False' -and $lastFrame.Fields.interfaceMode -eq 'False' -and
-                -not $sceneButtonHeld -and ($null -eq $roamRequest -or $null -ne $roamObserved)) {
-                if ($null -eq $lastFrame.Fields.pipelineSurface -or $null -eq $lastFrame.Fields.feetX) { throw 'Missing continuous Playing telemetry; no synthetic sample.' }
-                $forwardScanCode = [C215Launch]::ForwardScanCode($forwardPhysicalKey)
-                $forwardWindow = $inputWindowHandle
-                Add-PlayingEdge 'playing-idle-start'
-                $sampleStarted = $lastFrame.Milliseconds
-                $nextCpuRead = $clock.Elapsed.TotalSeconds
-                $playingState = 'idle'
-            }
-            if ($playingState -eq 'idle' -and $lastFrame.Milliseconds - $sampleStarted -ge $playingIdleSeconds * 1000) {
-                Add-PlayingEdge 'playing-idle-end'
-                Add-PlayingEdge 'playing-forward-start'
-                $moveRequested = [ordered]@{ utc=[DateTime]::UtcNow.ToString('O'); timestamp=[Diagnostics.Stopwatch]::GetTimestamp(); beforeEngineFrame=$lastFrame.Frame; beforeEngineMilliseconds=$lastFrame.Milliseconds }
-                # Set ownership first: even an uncertain PostMessage result must get a key-up in finally.
-                $forwardKeyHeld = $true
-                [C215Launch]::Key($gameProcess.Id, $forwardWindow, $forwardPhysicalKey, $forwardScanCode, $true)
-                $playingState = 'forward'
-            }
-            if ($playingState -eq 'forward' -and
-                ([Diagnostics.Stopwatch]::GetTimestamp()-$moveRequested.timestamp)/[double][Diagnostics.Stopwatch]::Frequency -ge $playingForwardSeconds) {
-                $releaseRequested = [ordered]@{ utc=[DateTime]::UtcNow.ToString('O'); timestamp=[Diagnostics.Stopwatch]::GetTimestamp(); beforeEngineFrame=$lastFrame.Frame; beforeEngineMilliseconds=$lastFrame.Milliseconds }
-                [C215Launch]::Key($gameProcess.Id, $forwardWindow, $forwardPhysicalKey, $forwardScanCode, $false)
-                $forwardKeyHeld = $false
-                Add-PlayingEdge 'playing-forward-end'
-                $playingState = 'released'
-            }
+        if ($playingSample) {
             if ($null -ne $nextCpuRead -and $clock.Elapsed.TotalSeconds -ge $nextCpuRead) {
                 Read-PlayingCpu
                 $nextCpuRead = $clock.Elapsed.TotalSeconds + 1
             }
-            # Observe the actual action release in a later engine frame; no additional wait/poll loop.
-            if ($playingState -eq 'released' -and $lastFrame.Frame -gt $releaseRequested.beforeEngineFrame -and $lastFrame.Fields.forwardPressed -eq 'False') {
-                Add-PlayingEdge 'playing-release-observed'
-                $playingState = 'complete'
-            }
-            $completed = $playingState -eq 'complete'
+            $completed = $completed -and $playingState -eq 'complete'
         }
         if ($completed) { break }
         Start-Sleep -Milliseconds 20
     }
-    if (-not $completed) {
-        if ($playingSample -and $playingState -eq 'waiting') {
-            if ($null -ne $roamRequest -and $null -eq $roamObserved) {
-                throw 'Playing sample did not start: no later real Playing/Walk frame entered roam mode after the single directed scene click; raw telemetry retained.'
-            }
-            throw "Playing sample did not start before the existing startup deadline: flow=$($lastFrame.Fields.flow) mode=$($lastFrame.Fields.mode) interfaceMode=$($lastFrame.Fields.interfaceMode) stableRoamFrames=$pipelineStableFrames physicalKey=$forwardPhysicalKey; raw telemetry retained."
-        }
-        throw 'Startup phase deadline exceeded.'
-    }
+    if (-not $completed) { throw "Startup sampling boundary was not observed; playingState=$playingState. Raw telemetry retained." }
     if ($diagnostic) { Stop-OwnTrace }
     if ($gameProcess.HasExited) { throw 'Target exited before collector Stop/rundown completed.' }
     $phaseByName = @{}
@@ -474,7 +283,9 @@ try {
     } elseif ($playingSample) { 'first-Walk-plus-diagnostic-10s-idle-20s-forward-and-observed-action-release' }
     else { 'playing-realtime-and-Walk-input-ready' }
     $realtimeSeconds = Observed-Seconds 'realtime' $scriptEnteredTimestamp
-    $inputSeconds = if ($null -ne $inputRequestedTimestamp) { Observed-Seconds 'input-ready' $inputRequestedTimestamp } else { $null }
+    $inputSeconds = if ($inputRequest -and $phaseByName.ContainsKey('input-ready')) {
+        ($phaseByName['input-ready'].milliseconds - $inputRequest.milliseconds) / 1000
+    } else { $null }
     $budgets = (Get-Content -LiteralPath (Join-Path $toolRoot 'budgets.json') -Raw | ConvertFrom-Json).cache
     $validGeometry = $condition.geometryCache -eq 'valid'
     $warmPipelines = $condition.pipelineCache -eq 'warm'
@@ -489,8 +300,8 @@ try {
         (Budget-Observation 'warmLauncherToTitleSecondsMax' $titleSeconds ($validGeometry -and $warmPipelines -and $condition.systemFileCache -eq 'warm') 'script-entry to static-menu-input-ready observation'),
         (Budget-Observation 'coldLauncherToTitleSecondsMax' $titleSeconds ($validGeometry -and $warmPipelines -and $condition.systemFileCache -eq 'reboot-first-run') 'script-entry to static-menu-input-ready observation'),
         (Budget-Observation 'firstRunLauncherToRealtimeSecondsMax' $realtimeSeconds ($validGeometry -and $condition.pipelineCache -eq 'first-run') 'script-entry to first Playing realtime observation after formal entry'),
-        (Budget-Observation 'preloadedNewGameToWalkSecondsMax' $inputSeconds ($validGeometry -and $warmPipelines -and $preloadReady -eq $true) 'directed request to first Walk input-release observation; movement checked by core smoke'),
-        (Budget-Observation 'immediateNewGameToWalkSecondsMax' $inputSeconds ($validGeometry -and $warmPipelines -and $Mode -eq 'immediate') 'directed request to first Walk input-release observation; movement checked by core smoke')
+        (Budget-Observation 'preloadedNewGameToWalkSecondsMax' $inputSeconds ($validGeometry -and $warmPipelines -and $preloadReady -eq $true) 'in-process Enter request to first Walk input-ready engine boundary; movement checked by core smoke'),
+        (Budget-Observation 'immediateNewGameToWalkSecondsMax' $inputSeconds ($validGeometry -and $warmPipelines -and $Mode -eq 'immediate') 'in-process Enter request to first Walk input-ready engine boundary; movement checked by core smoke')
     )
     [ordered]@{ gamePid=$gameProcess.Id; mainOsThreadId=$mainThreadId; engineStartUtc=$processStart.ToString('O');
         mainThreadIdentification='CreateProcessW primary OS thread ID; compare only OS IDs, never CLR ManagedThreadID';
@@ -501,12 +312,10 @@ try {
         collectorStoppedWhileTargetAlive=if($diagnostic){$stopped}else{$null}; collectorFinishedUtc=if($diagnostic){[DateTime]::UtcNow.ToString('O')}else{$null};
         phaseObservations=$anchors.ToArray(); cpuSnapshots=$snapshots.ToArray(); phasePollingMilliseconds=20;
         playingSample=[ordered]@{ enabled=$playingSample; state=$playingState; edges=$playingEdges.ToArray();
-            roamInput=[ordered]@{ request=$roamRequest; release=$roamRelease; observed=$roamObserved };
             targetIdleSeconds=if($playingSample){$playingIdleSeconds}else{$null}; targetForwardHoldSeconds=if($playingSample){$playingForwardSeconds}else{$null};
-            physicalKey=$forwardPhysicalKey; windowsScanCode=$forwardScanCode; targetWindowHandle=$forwardWindow;
-            request=$moveRequested; release=$releaseRequested; processCpuReads=$playingCpu.ToArray();
-            movementStatus=if($playingSample){'SEE_RAW_PLAYING_POSES_AND_ACTION; WM delivery alone is not movement proof'}else{'NOT_REQUESTED'};
-            diagnosticOverhead='EventPipe, every-frame engine logging, incremental 20ms log polling, phase thread snapshots and nominal 1s process counters are enabled. Read durations are retained. No no-telemetry control, causal overhead subtraction or experience qualification.' };
+            physicalKey=$forwardPhysicalKey; request=$moveRequested; release=$releaseRequested; processCpuReads=$playingCpu.ToArray();
+            method='Game-owned Input.ParseInputEvent; normal controller routing, real pose/velocity observations';
+            diagnosticOverhead='EventPipe, every-frame engine logging, incremental 20ms log polling, phase thread snapshots and nominal 1s process counters are enabled. Read durations are retained. No causal overhead subtraction or experience qualification.' };
         baseline=(git -C $toolRoot rev-parse HEAD); captureMode=$false; cpuFunctionShare='NOT_MEASURED';
         frameTelemetryEnvironment=if($diagnostic){'UESTC_STARTUP_PROFILE=1'}else{'UESTC_STARTUP_PROFILE=0'};
         timing=[ordered]@{ origin='script-entry Stopwatch timestamp; phase milliseconds retain the separate engine origin';
@@ -515,22 +324,18 @@ try {
             outputCheckSeconds=(Elapsed-Seconds $timing.outputCheckStartedTimestamp $timing.outputCheckCompletedTimestamp);
             scriptToMenuObservedSeconds=$titleSeconds; scriptToPlayingRealtimeObservedSeconds=$realtimeSeconds;
             scriptToNewGamePreloadReadyObservedSeconds=(Observed-Seconds 'preload-ready' $scriptEnteredTimestamp);
-            directedRequestToWalkInputReleaseObservedSeconds=$inputSeconds;
+            inProcessRequestToWalkInputReadyEngineSeconds=$inputSeconds;
             movementResponseSeconds=$null; movementStatus='NOT_MEASURED_IN_TIMING_ROUND; core smoke checks real directional displacement';
             limit='Observed log boundaries include flush/poll/scheduling delay, nominal poll 20ms; no guessed overhead subtraction. Worker native-binding setup is included before lock/output check, conservatively beyond the product launcher. Explicit preparation is recorded separately outside script-entry time. Process StartTime UTC and engine phase milliseconds have separate origins.' };
         budgetObservations=$checks;
-        input=[ordered]@{ method='PID-directed private-desktop WM_KEYDOWN/UP Enter; normal TitleMenu NewGame focus';
-            requestedUtc=$inputRequestedUtc; requestedTimestamp=$inputRequestedTimestamp; targetWindowHandle=$inputWindowHandle;
-            titleReadyFrame=$titleReadyFrame; releasedUtc=$inputReleasedUtc; releasedTimestamp=$inputReleasedTimestamp;
-            shortPressTargetMilliseconds=if($Mode -eq 'title'){$null}else{$shortPressMilliseconds};
-            observedRequestToReleaseMilliseconds=if($null -eq $inputReleasedTimestamp){$null}else{
-                (Elapsed-Seconds $inputRequestedTimestamp $inputReleasedTimestamp) * 1000};
+        input=[ordered]@{ method='Game-owned Input.ParseInputEvent Enter press/release through the normal TitleMenu';
+            request=$inputRequest; release=$inputRelease;
+            engineRequestToReleaseMilliseconds=if($inputRequest -and $inputRelease){$inputRelease.milliseconds-$inputRequest.milliseconds}else{$null};
             spawnPreloadedAtAcceptance=$preloadReady;
             waitCondition=if($Mode -eq 'dwell'){'real-new-game-preload-ready-and-menu-input-ready'}elseif($Mode -eq 'immediate'){'menu-input-ready'}else{$null};
             observedMenuInputReadyToPreloadReadyWaitSeconds=if($null -eq $preloadObservedAt -or $null -eq $titleInputReadyAt){$null}else{[Math]::Max(0, $preloadObservedAt-$titleInputReadyAt)};
-            observedMenuInputReadyToRequestSeconds=if($null -eq $inputRequestedClockSeconds){$null}else{$inputRequestedClockSeconds-$titleInputReadyAt};
-            observedTitleToRequestSeconds=if($null -eq $inputRequestedClockSeconds){$null}else{$inputRequestedClockSeconds-$titleObservedAt}};
-        caveat='Normal --title=1 with isolated empty save/log, no CaptureMode. Sparse title-input-ready precedes directed Enter; elapsed wall time releases the short press, then new-game-enter proves acceptance. The full request-to-Walk interval includes the press; no game-frame crossing is inferred. Dwell waits for sparse preload-ready and requires preloadReady=true again at new-game-enter. Title experience ends at the static menu input marker; title diagnostic additionally waits for new-game resources, a different endpoint. Realtime is observed only after formal entry into Playing. Unknown cache states do not qualify budgets. Experience has no EventPipe/per-frame log/CPU snapshots; diagnostics never establish experience-target passes. First Walk input release is a proxy; real movement is checked separately by the existing core smoke.'
+            engineMenuInputReadyToRequestSeconds=if($inputRequest){($inputRequest.milliseconds-$phaseByName['title-input-ready'].milliseconds)/1000}else{$null} };
+        caveat='Normal interactive --title=1 with isolated empty save/log. Input scenarios retain production defaults and use Input.ParseInputEvent through the normal menu/controller. Game-owned phase markers retain actual engine time/frame; observer UTC includes log flush/poll/scheduling delay. Dwell requires actual preloadReady=true at acceptance. Title experience ends at static menu input readiness; title diagnostic additionally includes resource preload. Hidden-desktop render pacing is not presented FPS or evidence of experience stutter; renderer CPU/GPU work is measured separately. Experience has no EventPipe/per-frame logging/CPU snapshots; diagnostic rounds do not establish experience-target passes. Actual movement comes from real poses/velocity, never the injected action alone.'
     } | ConvertTo-Json -Depth 12 | Set-Content -LiteralPath (Join-Path $Output 'result.json') -Encoding UTF8
 
 } catch {
@@ -538,40 +343,11 @@ try {
     $_ | Out-String | Set-Content -LiteralPath (Join-Path $Output 'failure.txt') -Encoding UTF8
     throw
 } finally {
-    $sceneReleaseFailure = $null
-    if ($sceneButtonHeld -and $gameProcess -and -not $gameProcess.HasExited) {
-        try {
-            [C215Launch]::SceneButton($gameProcess.Id, $inputWindowHandle, $roamRequest.clientX, $roamRequest.clientY, $false)
-            $sceneButtonHeld = $false
-            $roamRelease = [ordered]@{ utc=[DateTime]::UtcNow.ToString('O'); timestamp=[Diagnostics.Stopwatch]::GetTimestamp();
-                beforeEngineFrame=if($lastFrame){$lastFrame.Frame}else{$null}; beforeEngineMilliseconds=if($lastFrame){$lastFrame.Milliseconds}else{$null}; cleanup=$true }
-        } catch {
-            $sceneReleaseFailure = $_
-            $_ | Out-String | Set-Content -LiteralPath (Join-Path $Output 'scene-button-release-failure.txt') -Encoding UTF8
-        }
-    }
-    $forwardReleaseFailure = $null
-    if ($forwardKeyHeld -and $gameProcess -and -not $gameProcess.HasExited) {
-        try {
-            [C215Launch]::Key($gameProcess.Id, $forwardWindow, $forwardPhysicalKey, $forwardScanCode, $false)
-            $forwardKeyHeld = $false
-        } catch {
-            $forwardReleaseFailure = $_
-            $_ | Out-String | Set-Content -LiteralPath (Join-Path $Output 'forward-release-failure.txt') -Encoding UTF8
-        }
-    }
     if ($logReader) { $logReader.Dispose() }
-    # A failure after keydown still releases only this run's target window before cleanup.
-    if ($null -ne $inputWindowHandle -and $null -eq $inputReleasedUtc -and
-        $gameProcess -and -not $gameProcess.HasExited) {
-        [C215Launch]::ReleaseEnter($inputWindowHandle)
-        $inputReleasedUtc = [DateTime]::UtcNow.ToString('O')
-    }
     $timing | ConvertTo-Json -Depth 5 | Set-Content -LiteralPath (Join-Path $Output 'launcher-timing.json') -Encoding UTF8
     if ($diagnostic) { $snapshots.ToArray() | ConvertTo-Json -Depth 7 | Set-Content -LiteralPath (Join-Path $Output 'cpu-snapshots.json') -Encoding UTF8 }
     if ($playingSample) {
         [ordered]@{ state=$playingState; edges=$playingEdges.ToArray(); request=$moveRequested; release=$releaseRequested;
-            roamInput=[ordered]@{ request=$roamRequest; release=$roamRelease; observed=$roamObserved };
             processCpuReads=$playingCpu.ToArray(); movementStatus='Raw telemetry required; partial failure is not a completed movement sample' } |
             ConvertTo-Json -Depth 9 | Set-Content -LiteralPath (Join-Path $Output 'playing-observations.json') -Encoding UTF8
     }
@@ -583,8 +359,6 @@ try {
     }
     if ($trace -and $trace.HasExited) { $trace.Dispose() }
     Exit-UESTCBuildLock $lease
-    if ($sceneReleaseFailure) { throw $sceneReleaseFailure }
-    if ($forwardReleaseFailure) { throw $forwardReleaseFailure }
 }
 
 

@@ -245,7 +245,8 @@ try
         return new {
             status = count is null ? "FRAME_COUNT_NOT_MEASURED; marker frame field absent" : "ENGINE_PROCESS_FRAME_COUNTER_DIFFERENCE",
             startFrame, endFrame, processFrameCount=count,
-            markerWallMillisecondsPerFrame=count is > 0 ? (window.End-window.Start).TotalMilliseconds/count : (double?)null,
+            meanEngineObservationIntervalMilliseconds=count is > 0 ? (window.End-window.Start).TotalMilliseconds/count : (double?)null,
+            experiencePacingStatus="NOT_MEASURED; private-desktop cadence does not establish presented FPS or experience stutter; inspect measured renderer CPU/GPU work",
             rendererStatus=frames.Length==0 ? "NOT_MEASURED; STARTUP_FRAME telemetry absent in window" : "FRAME_STATISTICS_VIEWPORT_RENDER_MEASUREMENTS",
             rendererSamples=frames.Length,
             rendererCpu=Distribution(frames.Select(x=>x.Cpu).ToArray()), rendererGpu=Distribution(frames.Select(x=>x.Gpu).ToArray()),
@@ -341,7 +342,8 @@ static object Movement(RenderFrame[] frames)
             Number("feetX") is not { } x || Number("feetY") is not { } y || Number("feetZ") is not { } z ||
             Number("yawDeg") is not { } yaw || !bool.TryParse(fields.GetValueOrDefault("forwardPressed"), out var pressed)) return null;
         return new MovementFrame(frame.Frame, frame.Milliseconds, x, y, z, yaw, pressed,
-            fields.GetValueOrDefault("interfaceMode") == "True");
+            bool.TryParse(fields.GetValueOrDefault("cursorVisible"), out var visible) ? visible : null,
+            bool.TryParse(fields.GetValueOrDefault("cursorHeld"), out var held) ? held : null);
     }).Where(x => x is not null).Select(x => x!).ToArray();
     if (observations.Length < 2) return new { status = "NOT_MEASURED; fewer than two complete Playing Walk pose/action observations", completeObservations = observations.Length };
     var first = observations[0]; var last = observations[^1];
@@ -357,7 +359,10 @@ static object Movement(RenderFrame[] frames)
             positiveForward > 0 ? "PRESSED_ACTION_AND_POSITIVE_FORWARD_DISPLACEMENT_OBSERVED; route completion or unobstructed movement not established" :
             "PRESSED_ACTION_WITHOUT_POSITIVE_FORWARD_DISPLACEMENT; blocked, consumed input or another cause remains unknown",
         completeObservations = observations.Length, rejectedOrNonPlayingObservations = frames.Length - observations.Length,
-        first, last, pressedObservations = observations.Count(x => x.Pressed), interfaceModeObservations = observations.Count(x => x.InterfaceMode),
+        first, last, pressedObservations = observations.Count(x => x.Pressed),
+        cursorVisibleObservations = observations.Count(x => x.CursorVisible == true),
+        cursorHeldObservations = observations.Count(x => x.CursorHeld == true),
+        cursorStateMissingObservations = observations.Count(x => x.CursorVisible is null || x.CursorHeld is null),
         consecutivePressedPairs = pressed.Length, positiveForwardPressedPairs = positiveForward,
         exactlyStationaryPressedPairs = pressed.Count(p => p.dx == 0 && p.dz == 0),
         horizontalDisplacementMeters = Math.Sqrt(displacementX * displacementX + displacementZ * displacementZ),
@@ -433,6 +438,6 @@ record ThreadSample(DateTime Utc, int ThreadId, string Type, bool HasStack, Fram
 record ThreadCpu(int Id, DateTime StartUtc, double Seconds, DateTime ReadUtc);
 record Snapshot(string Name, DateTime ReadUtc, DateTime StartedUtc, DateTime FinishedUtc, double ProcessCpuSeconds, ThreadCpu[] Threads, int Unreadable);
 record RenderFrame(double Milliseconds, long Frame, double Cpu, double Gpu, string Details);
-record MovementFrame(long Frame, double Milliseconds, double X, double Y, double Z, double Yaw, bool Pressed, bool InterfaceMode);
+record MovementFrame(long Frame, double Milliseconds, double X, double Y, double Z, double Yaw, bool Pressed, bool? CursorVisible, bool? CursorHeld);
 record LogEvidence(string Kind, int Line, string Text, long? Frame, long? PreviousFrame, long? NextFrame);
 
