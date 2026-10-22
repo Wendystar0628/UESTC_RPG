@@ -164,8 +164,9 @@ try {
     if ($diagnostic) {
         $traceInfo = [Diagnostics.ProcessStartInfo]::new()
         $traceInfo.FileName = "$toolRoot\output\tools\dotnet-diagnostics\dotnet-trace.exe"
+        # CLR GC | Type | GCHeapAndTypeNames | Stack, verbose: native AllocationTick payloads/stacks.
         $traceInfo.Arguments = 'collect --process-id ' + $gameProcess.Id +
-            ' --profile dotnet-sampled-thread-time --output ' +
+            ' --profile dotnet-sampled-thread-time --providers Microsoft-Windows-DotNETRuntime:0x41080001:5 --output ' +
             (ConvertTo-UESTCProcessArgument (Join-Path $Output 'threads.nettrace'))
         $traceInfo.UseShellExecute = $false; $traceInfo.CreateNoWindow = $false
         $traceInfo.RedirectStandardInput = $false # inherit private real console for Stop
@@ -309,7 +310,7 @@ try {
         mainThreadIdentification='CreateProcessW primary OS thread ID; compare only OS IDs, never CLR ManagedThreadID';
         mode=$Mode; captureEndpoint=$captureEndpoint; commandLine=$line; measurement=$condition.measurement; condition=$condition; launcher=$timing;
         preparation=$condition.preparation;
-        collector=if($diagnostic){'EventPipe dotnet-sampled-thread-time; NOT on-CPU'}else{'OFF'};
+        collector=if($diagnostic){'EventPipe dotnet-sampled-thread-time + CLR GC allocation/type/stack (0x41080001:5); NOT on-CPU'}else{'OFF'};
         attachRequestedUtc=$attachRequestedUtc; collectorPid=if($trace){$trace.Id}else{$null}; collectorStopRequestedUtc=$stopRequestedUtc;
         collectorStoppedWhileTargetAlive=if($diagnostic){$stopped}else{$null}; collectorFinishedUtc=if($diagnostic){[DateTime]::UtcNow.ToString('O')}else{$null};
         phaseObservations=$anchors.ToArray(); cpuSnapshots=$snapshots.ToArray(); phasePollingMilliseconds=20;

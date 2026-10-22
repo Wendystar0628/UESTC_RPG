@@ -82,8 +82,12 @@ foreach ($mode in $Modes) {
     & python -I "$PSScriptRoot\isolated-launch.py" $round $mode $conditionPath
     if ($LASTEXITCODE -ne 0) { throw "$mode capture failed; do not reuse it as a successful measurement." }
     if ($Measurement -eq 'diagnostic') {
-        & dotnet $parser $round
-        if ($LASTEXITCODE -ne 0) { throw "$mode CPU parse failed." }
+        $lease = $null
+        try {
+            $lease = Enter-UESTCBuildLock (Get-UESTCLayout $root).Locks
+            & dotnet $parser $round
+            if ($LASTEXITCODE -ne 0) { throw "$mode CPU parse failed." }
+        } finally { Exit-UESTCBuildLock $lease }
     }
     $index++
 }
