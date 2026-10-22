@@ -11,7 +11,7 @@ internal sealed class SettingsCardGraphics
     private readonly UiKit _kit;
     // 界面一侧的应用等待只有一份，归界面根持有、随 HUD 离树取消；关页不取消，未应用的计划要保留。
     private readonly HudTask _applying;
-    private bool _applyAgain;
+    private QualityProfile? _queued;   // 已明确请求应用的那份计划；之后才改、还没点"应用"的加载项不借它提交
 
     public SettingsCardGraphics(UiKit kit, HudTask applying)
     {
@@ -60,7 +60,7 @@ internal sealed class SettingsCardGraphics
         _applyStatus = _kit.Text(_graphicsActions, "", "small", "text.2");
         _applyStatus.Visible = false;
         var actions = _kit.Layout.Flow(_graphicsActions);
-        _apply = _kit.Button(actions, ButtonStyle.Primary, UiKit.T("quality.apply"), "button.primary", pressed: ApplyPending);
+        _apply = _kit.Button(actions, ButtonStyle.Primary, UiKit.T("quality.apply"), "button.primary", pressed: () => { if (_planned is { } plan) Request(plan); });
         _apply.OffReason = UiKit.T("quality.apply.nothing");
         _apply.Off = true;
         if (_planned is { } planned) ShowPlan(quality.Plan(planned));
@@ -152,7 +152,7 @@ internal sealed class SettingsCardGraphics
         var plan = KernelRegistry.Get<IQualityService>().Plan(next);
         _planned = next;
         ShowPlan(plan);
-        if (plan.Heaviest is not (ApplyClass.UnderLoading or ApplyClass.Restart) && plan.Rejected.Count == 0) ApplyPending();
+        if (plan.Heaviest is not (ApplyClass.UnderLoading or ApplyClass.Restart) && plan.Rejected.Count == 0) Request(next);
     }
 
     private void ShowPlan(ApplyPlan plan)
@@ -166,25 +166,33 @@ internal sealed class SettingsCardGraphics
         _apply.Off = plan.Rejected.Count > 0 || plan.Deltas.Count == 0;
     }
 
-    // 应用由 IQualityService 持有（SYS-GRAPHICS）；等待期间再次请求就记下，这次结束后按最新计划再应用，不并行开第二次。
-    private void ApplyPending()
+    // 应用由 IQualityService 持有（SYS-GRAPHICS）；等待期间再次请求只记下这次请求的计划，这次结束后再应用它，不并行开第二次。
+    private void Request(QualityProfile profile)
     {
-        if (!_applying.Start(ApplyPlanned)) _applyAgain = true;
+        _queued = profile;
+        _applying.Start(ApplyQueued);
     }
 
-    private async Task ApplyPlanned(CancellationToken token)
+    private async Task ApplyQueued(CancellationToken token)
     {
         ApplyResult result;
+        QualityProfile applied;
         do
         {
-            _applyAgain = false;
-            if (_planned is not { } next) return;
-            var apply = KernelRegistry.Get<IQualityService>().Apply(next, ApplyOrigin.User);
+            applied = _queued ?? throw new InvalidOperationException("Apply started without a requested plan.");
+            _queued = null;
+            var apply = KernelRegistry.Get<IQualityService>().Apply(applied, ApplyOrigin.User);
             try { result = await apply.WaitAsync(token); }
             // 画质服务卸下时取消排队中的请求：按任务自身的取消状态认，不算失败。
             catch (OperationCanceledException) when (apply.IsCanceled) { return; }
         }
-        while (_applyAgain);
+        while (_queued is not null);
+        // 应用期间又改出、还没提交的计划留着等"应用"，只刷新待应用提示。
+        if (!ReferenceEquals(_planned, applied))
+        {
+            if (_planned is { } newer) ShowPlan(KernelRegistry.Get<IQualityService>().Plan(newer));
+            return;
+        }
         _pending.Clear();
         _planned = null;
         if (_applyStatus is null || _apply is null) return;
