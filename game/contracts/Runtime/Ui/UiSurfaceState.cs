@@ -5,22 +5,25 @@ namespace Campus.Contracts;
 [Flags]
 public enum UiSurface : ushort
 {
-    None = 0, Minimap = 1, Atlas = 2, AtlasIndex = 4, SettingsCard = 8, SavePage = 16, TitleMenu = 32,
-    Dialog = 64, TimeCard = 128, WeatherStrip = 256
+    None = 0, Minimap = 1, Atlas = 2, AtlasIndex = 4, SettingsCard = 8, SavePage = 16
 }
 
-/// <summary>Visible, interactive surfaces; changes are published on the main thread only when values change.</summary>
+/// <summary>Surfaces that are really open and interactive; changes are published on the main thread only when values change.</summary>
 public interface IUiSurfaceState
 {
     UiSurface Open { get; }
-    bool InterfaceMode { get; }
+    /// <summary>The settings card's selected page once its rows are built and the card is interactive; null otherwise.</summary>
     string? SettingsPage { get; }
     long Rev { get; }
     event Action? Changed;
 }
 
+/// <summary>Owners report only surfaces that are really open and interactive, and withdraw them when they stop being so.</summary>
 public interface IUiSurfaceSink
 {
-    /// <summary>Reports exactly one of Minimap, Atlas or AtlasIndex.</summary>
+    /// <summary>Reports exactly one of Minimap, Atlas, AtlasIndex or SavePage.</summary>
     void Report(UiSurface surface, bool open);
+
+    /// <summary>Non-null: the settings card's selected page (its existing page identity) is built and interactive; null: card closed or page not ready.</summary>
+    void ReportSettings(string? page);
 }

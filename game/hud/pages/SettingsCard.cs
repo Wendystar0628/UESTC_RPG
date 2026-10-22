@@ -29,6 +29,7 @@ public partial class SettingsCard : Control
     private SettingsCardBindings _bindings = null!;
     private Tween? _opening;
     private bool _built;
+    private string? _reported;
 
     public event Action? CloseRequested;
     public event Action? QuitRequested;
@@ -125,6 +126,7 @@ public partial class SettingsCard : Control
             _opening.TweenProperty(this, "modulate:a", 1f, _kit.Motion.Fade(0.26f));
         }
         _graphics.Refresh();
+        PublishReady();
     }
 
     public void Close()
@@ -133,6 +135,7 @@ public partial class SettingsCard : Control
         _opening?.Kill();
         _opening = null;
         Visible = false;
+        PublishReady();
         _lock?.Dispose();
         _lock = null;
         Release();
@@ -196,6 +199,7 @@ public partial class SettingsCard : Control
             _filled.Add(_page);
             _graphics.Refresh();
             SetProcess(false);
+            PublishReady();
             return;
         }
     }
@@ -215,6 +219,16 @@ public partial class SettingsCard : Control
             content.RemoveChild(child);
             child.QueueFree();
         }
+        PublishReady();
+    }
+
+    /// <summary>选中页的行建完且卡片开着才报这一页（IUiSurfaceSink）；切到未建完的页、关闭或清空当前页即撤下，建好再报。</summary>
+    private void PublishReady()
+    {
+        var ready = Visible && _filled.Contains(_page) ? Key(_page) : null;
+        if (ready == _reported) return;
+        _reported = ready;
+        Campus.Kernel.Registry.Kernel.Get<IUiSurfaceSink>().ReportSettings(ready);
     }
 
     private void Show(SettingsPage page)
@@ -227,6 +241,7 @@ public partial class SettingsCard : Control
         _graphics.ShowActions(page == SettingsPage.Graphics);
         _pageActions.Visible = page == SettingsPage.Graphics;
         _frame.Scroll.ScrollVertical = 0;
+        PublishReady();
     }
 
     private static string Key(SettingsPage page) => page switch
