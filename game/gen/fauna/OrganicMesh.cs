@@ -10,17 +10,7 @@ public delegate PaletteToken Paint(Vector3 position, Vector3 normal);
 public readonly record struct Ring(Vector3 Centre, float HalfWidth, float HalfHeight);
 
 /// <summary>An animal model in its own frame (metres; +Z forward, +Y up, feet on y = 0), each triangle one colour.</summary>
-public sealed record AnimalMesh(Vector3[] Positions, Vector3[] Normals, PaletteToken[] Colors, int[] Index)
-{
-    public int Triangles => Index.Length / 3;
-    public Box3 Bounds()
-    {
-        var min = new Vector3(float.MaxValue);
-        var max = new Vector3(float.MinValue);
-        foreach (var p in Positions) { min = Vector3.Min(min, p); max = Vector3.Max(max, p); }
-        return new(min, max);
-    }
-}
+public sealed record AnimalMesh(Vector3[] Positions, Vector3[] Normals, PaletteToken[] Colors, int[] Index);
 
 /// <summary>
 /// Smooth organic shapes for the animals: every part is a closed loft (a path of elliptical rings with rounded pole caps),

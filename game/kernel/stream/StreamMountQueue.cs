@@ -28,7 +28,6 @@ public sealed class StreamMountQueue : IStreamMountQueue, IStreamMountFrame
     public Exception? Failure { get; private set; }
     public long Revision { get; private set; } = 1;
     public int Pending => _pending.Count;
-    public long BlockedByRetirementFrames { get; private set; }
     public double LastMilliseconds { get; private set; }
     public int WatchdogTrips => _watchdog.Trips;
     public void Enqueue(IStreamMountWork work)
@@ -110,7 +109,6 @@ public sealed class StreamMountQueue : IStreamMountQueue, IStreamMountFrame
         }
         catch (Exception error) { RecordFailure(error); }
         var collisionUsed = false; var visualUsed = false;
-        var blockedByRetirement = false;
         for (var i = 0; i < _pending.Count;)
         {
             var work = _pending[i];
@@ -127,7 +125,7 @@ public sealed class StreamMountQueue : IStreamMountQueue, IStreamMountFrame
                     collisionUsed = true;
                     budget = covered ? remaining : Math.Min(KernelBudgets.CollisionMountMilliseconds, remaining); break;
                 case StreamMountKind.Visual:
-                    if (canActivateVisual is not null && !canActivateVisual()) { blockedByRetirement = true; i++; continue; }
+                    if (canActivateVisual is not null && !canActivateVisual()) { i++; continue; }
                     if (!covered && (visualUsed || !_watchdog.CanActivate(start))) { i++; continue; }
                     visualUsed = true;
                     budget = covered ? remaining : Math.Min(_watchdog.VisualBudgetMilliseconds, remaining); break;
@@ -147,8 +145,6 @@ public sealed class StreamMountQueue : IStreamMountQueue, IStreamMountFrame
                 _pending.RemoveAt(i);
             }
         }
-        if (blockedByRetirement || retiring && !visualUsed && HasPendingVisual())
-            BlockedByRetirementFrames++;
         try
         {
             finish?.Invoke(covered || _watchdog.CanActivate(start)
@@ -159,10 +155,4 @@ public sealed class StreamMountQueue : IStreamMountQueue, IStreamMountFrame
         if (!covered) _watchdog.Observe(LastMilliseconds, _clock());
     }
 
-    private bool HasPendingVisual()
-    {
-        foreach (var work in _pending)
-            if (work.Kind == StreamMountKind.Visual && work is not IStreamMountCancellationState { IsCancelled: true }) return true;
-        return false;
-    }
 }

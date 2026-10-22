@@ -35,8 +35,6 @@ public sealed class FaunaScene(PaletteCatalog catalog)
         return new ContentOutput(meshes, []);
     }
 
-    public int Triangles(IReadOnlyList<FaunaInstance> animals) => animals.Sum(a => Model(a.Model).Triangles);
-
     private IReadOnlyList<GeometryBundle> Bundles(ToonSpec spec, IReadOnlyList<FaunaInstance> animals)
     {
         var sink = new GeometrySink(_catalog);

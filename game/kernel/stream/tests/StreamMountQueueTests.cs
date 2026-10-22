@@ -25,7 +25,7 @@ public sealed class StreamMountQueueTests
                 if (!covered && budget > KernelBudgets.StreamMountMilliseconds - KernelBudgets.CollisionMountMilliseconds)
                     throw new InvalidOperationException("Retirement took the reserved collision budget.");
             }, canActivateVisual: () => !retiring);
-            if (collisionSteps != 1 || visualSteps != 0 || queue.Pending != 1 || queue.BlockedByRetirementFrames != 1)
+            if (collisionSteps != 1 || visualSteps != 0 || queue.Pending != 1)
                 throw new InvalidOperationException("Retirement did not apply visual-only backpressure.");
             retiring = false; queue.Drain(covered ? CoveredScreen : VisibleWorld, canActivateVisual: () => !retiring);
             if (visualSteps != 1 || queue.Pending != 0) throw new InvalidOperationException("Visual activation did not resume after retirement.");

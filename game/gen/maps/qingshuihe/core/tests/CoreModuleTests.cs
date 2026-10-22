@@ -133,7 +133,7 @@ public sealed class CoreModuleTests
         var build = new CoreBuild(Campus.Contracts.Tests.PaletteFixture.Catalog);
         plaza.Build(build, LodLevel.L0);
         var bundles = build.Mesh.Finish();
-        AssertThat(build.Mesh.Triangles > 0).OverrideFailureMessage($"steps and ramps add geometry ({build.Mesh.Triangles} triangles)").IsTrue();
+        AssertThat(bundles.Any(bundle => bundle.Index.Length > 0)).OverrideFailureMessage("steps and ramps add indexed geometry").IsTrue();
         CheckBundles(bundles);
     }
 

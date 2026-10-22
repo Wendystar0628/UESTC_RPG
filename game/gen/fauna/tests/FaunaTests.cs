@@ -110,12 +110,12 @@ public sealed class FaunaTests
         foreach (var key in keys)
         {
             var mesh = scene.Model(key);
-            var box = mesh.Bounds();
-            if (key.Kind == FaunaKind.Swan) AssertThat(box.Min.Y < -0.05f && box.Min.Y > -0.15f).OverrideFailureMessage($"{key}: the hull sits in the water (min y {box.Min.Y:F3}).").IsTrue();
-            else AssertThat(MathF.Abs(box.Min.Y) < TestTolerance.Layout).OverrideFailureMessage($"{key}: feet on the ground (min y {box.Min.Y:F3}).").IsTrue();
+            var bottom = mesh.Positions.Min(position => position.Y);
+            if (key.Kind == FaunaKind.Swan) AssertThat(bottom < -0.05f && bottom > -0.15f).OverrideFailureMessage($"{key}: the hull sits in the water (min y {bottom:F3}).").IsTrue();
+            else AssertThat(MathF.Abs(bottom) < TestTolerance.Layout).OverrideFailureMessage($"{key}: feet on the ground (min y {bottom:F3}).").IsTrue();
             AssertThat(mesh.Normals.All(n => MathF.Abs(n.Length() - 1) < TestTolerance.FloatRelative)).OverrideFailureMessage($"{key}: unit normals.").IsTrue();
             AssertThat(SignedVolume(mesh) < 0).OverrideFailureMessage($"{key}: clockwise front faces seen from outside (Godot), so the closed mesh has negative signed volume.").IsTrue();
-            var height = box.Max.Y - MathF.Max(0f, box.Min.Y);
+            var height = mesh.Positions.Max(position => position.Y) - MathF.Max(0f, bottom);
             var (lo, hi) = key.Kind switch
             {
                 FaunaKind.Cat => (0.09f, 0.4f),

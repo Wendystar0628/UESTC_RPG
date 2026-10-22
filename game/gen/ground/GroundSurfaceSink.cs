@@ -8,7 +8,6 @@ namespace Campus.Gen.Ground;
 internal sealed class GroundSurfaceSink(SurfaceMaterialCatalog? materials = null)
 {
     private readonly SortedDictionary<int, GeometrySink> _sinks = [];
-    public int Triangles => _sinks.Values.Sum(sink => sink.Triangles);
 
     public void Triangle(GroundColor color, byte flags, Vector3 a, Vector3 b, Vector3 c,
         Vector3 na, Vector3 nb, Vector3 nc, Vector3 facing, GroundFaceInput? input = null)
