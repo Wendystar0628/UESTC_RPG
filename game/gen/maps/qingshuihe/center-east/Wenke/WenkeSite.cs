@@ -85,10 +85,10 @@ public sealed class WenkeSite : ZoneSite
         return PlanMath.Facing(props.Pair("door"), props.Number("doorFacing"));
     }
 
-    internal static Plan Footprints(IWorldModel world) => Compute(world);
+    internal static Plan Footprints(IWorldModel world) => DerivedMemo.ForWorld(world, typeof(Plan), () => Compute(world));
 
     internal static Plan Footprints(BuildContext context) =>
-        context.Memo(typeof(Plan), () => Footprints(context.World));
+        Footprints(context.World);
 
     private static Plan Compute(IWorldModel world)
     {

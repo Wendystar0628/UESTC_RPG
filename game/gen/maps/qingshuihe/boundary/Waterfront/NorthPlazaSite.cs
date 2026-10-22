@@ -36,7 +36,10 @@ public sealed class NorthPlazaSite : ZoneSite
     /// The registered bank frame: origin at the selected edge's north end, X toward that end, +Z off the water.
     /// Null when the plaza or bank selection is not in the map.
     /// </summary>
-    public static PlanFrame? FrameOf(IWorldModel world)
+    public static PlanFrame? FrameOf(IWorldModel world) =>
+        DerivedMemo.ForWorld<PlanFrame?>(world, typeof(NorthPlazaSite), () => CreateFrameOf(world));
+
+    private static PlanFrame? CreateFrameOf(IWorldModel world)
     {
         if (!world.Features.ContainsKey(new(BoundaryFeatureIds.NorthPlaza)) || !world.Features.ContainsKey(new(BoundaryFeatureIds.NorthBankContour))) return null;
         return world.ContourFrame(BoundaryFeatureIds.NorthBankContour, originAtEnd: false, forward: false);

@@ -55,10 +55,20 @@ public sealed class BoundaryModuleTests
     public void TheFenceRunsAllTheWayRound()
     {
         var world = new FakeWorld(RealMapFixture.Load().World);
-        var shared = new BoundaryPlan?[2];
-        Parallel.For(0, shared.Length, i => shared[i] = i == 0 ? BoundaryPlan.Of(world) : BoundaryPlan.Of(Context().WithWorld(world)));
-        var plan = shared[0]!;
-        AssertThat(ReferenceEquals(plan, shared[1]) && !ReferenceEquals(plan, BoundaryPlan.Of(new FakeWorld(world)))).OverrideFailureMessage("world and context entries share one plan, while another world owns its own").IsTrue();
+        var key = new object();
+        var calls = 0;
+        var values = new int[2];
+        Parallel.For(0, values.Length, i => values[i] = DerivedMemo.ForWorld(world, key, () => Interlocked.Increment(ref calls)));
+        AssertThat(calls == 1 && values.All(value => value == calls)).OverrideFailureMessage("one world evaluates a derived factory once").IsTrue();
+        var other = DerivedMemo.ForWorld(new FakeWorld(world), key, () => Interlocked.Increment(ref calls));
+        AssertThat(calls == 2 && other == calls).OverrideFailureMessage("another world evaluates its own derived value").IsTrue();
+        var firstContext = Context().WithWorld(world);
+        var secondContext = Context().WithWorld(world);
+        Parallel.For(0, values.Length, i => values[i] = firstContext.Memo(key, () => Interlocked.Increment(ref calls)));
+        AssertThat(calls == 3 && values.All(value => value == calls)).OverrideFailureMessage("one context evaluates its derived factory once").IsTrue();
+        var separate = secondContext.Memo(key, () => Interlocked.Increment(ref calls));
+        AssertThat(calls == 4 && separate == calls).OverrideFailureMessage("contexts using the same world retain separate derived inputs").IsTrue();
+        var plan = BoundaryPlan.Of(world)!;
         var ring = plan.Ring;
         // Openings tile the ring with runs between them: nothing overlaps, every gap is a run.
         var covered = 0f;

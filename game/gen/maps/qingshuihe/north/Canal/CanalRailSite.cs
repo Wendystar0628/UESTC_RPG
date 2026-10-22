@@ -28,7 +28,10 @@ public sealed class CanalRailSite : ZoneSite
     /// The registered bank frame: origin at the selected edge's north end, X toward that end, +Z off the water.
     /// Null when the bank selection is not in the map.
     /// </summary>
-    public static PlanFrame? FrameOf(IWorldModel world)
+    public static PlanFrame? FrameOf(IWorldModel world) =>
+        DerivedMemo.ForWorld<PlanFrame?>(world, typeof(CanalRailSite), () => CreateFrameOf(world));
+
+    private static PlanFrame? CreateFrameOf(IWorldModel world)
     {
         if (!world.Features.ContainsKey(new(Campus.Gen.Maps.Qingshuihe.Boundary.BoundaryFeatureIds.NorthBankContour))) return null;
         return world.ContourFrame(Campus.Gen.Maps.Qingshuihe.Boundary.BoundaryFeatureIds.NorthBankContour, originAtEnd: false, forward: false);

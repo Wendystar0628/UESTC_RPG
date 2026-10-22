@@ -119,7 +119,10 @@ public sealed class XuanbangSite : ZoneSite
         public GridStyle TowerStyle => TowerBase with { Storeys = TowerStoreys };
     }
 
-    internal static Footprints Rings(IWorldModel world)
+    internal static Footprints Rings(IWorldModel world) =>
+        DerivedMemo.ForWorld<Footprints>(world, typeof(Footprints), () => CreateRings(world));
+
+    private static Footprints CreateRings(IWorldModel world)
     {
         if (!world.Features.TryGetValue(new(Feature), out var feature))
             throw new InvalidOperationException($"Xuanbang {Feature} is missing from the world model.");

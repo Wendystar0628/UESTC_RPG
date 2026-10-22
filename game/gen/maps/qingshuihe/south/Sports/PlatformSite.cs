@@ -80,14 +80,20 @@ public sealed class PlatformSite : ZoneSite
         public float Soffit => Top - P.Slab;
     }
 
-    internal static Plan PlanOf(IWorldModel world)
+    internal static Plan PlanOf(IWorldModel world) =>
+        DerivedMemo.ForWorld<Plan>(world, (typeof(PlatformSite), nameof(PlanOf)), () => CreatePlanOf(world));
+
+    private static Plan CreatePlanOf(IWorldModel world)
     {
         var p = LayoutOf(world);
         var centre = PlanPolygons.Centroid(p.Decks[0]);
         return p with { Y = world.Terrain.HeightAt(centre.X, centre.Y) };
     }
 
-    private static Plan LayoutOf(IWorldModel world)
+    private static Plan LayoutOf(IWorldModel world) =>
+        DerivedMemo.ForWorld<Plan>(world, (typeof(PlatformSite), nameof(LayoutOf)), () => CreateLayoutOf(world));
+
+    private static Plan CreateLayoutOf(IWorldModel world)
     {
         if (!world.Features.TryGetValue(new(Feature), out var feature))
             throw new InvalidOperationException($"Platform {Feature} is missing from the world model.");

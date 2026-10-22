@@ -27,9 +27,10 @@ public sealed class BoardwalkSite : ZoneSite, ILightMetadataSource
 {
     private static readonly StepsPart Steps = new();
 
-    internal static Route Path(IWorldModel world) => new(Route.Smooth(W.Route(world), 2));
+    internal static Route Path(IWorldModel world) =>
+        DerivedMemo.ForWorld(world, typeof(BoardwalkSite), () => new Route(Route.Smooth(W.Route(world), 2)));
 
-    internal static Route Path(BuildContext context) => context.Memo(typeof(Route), () => Path(context.World));
+    internal static Route Path(BuildContext context) => Path(context.World);
 
     public override string Id => "19c.boardwalk";
 

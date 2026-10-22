@@ -71,9 +71,9 @@ public sealed class EastLakeSite : ZoneSite
             index == WadeSegment ? [(length * 0.5f - WadeWidth * 0.5f, length * 0.5f + WadeWidth * 0.5f)] : [];
     }
 
-    internal static Shore ShoreOf(IWorldModel world) => ReadShore(world);
+    internal static Shore ShoreOf(IWorldModel world) => DerivedMemo.ForWorld(world, typeof(Shore), () => ReadShore(world));
 
-    internal static Shore ShoreOf(BuildContext context) => context.Memo(typeof(Shore), () => ShoreOf(context.World));
+    internal static Shore ShoreOf(BuildContext context) => ShoreOf(context.World);
 
     private static Shore ReadShore(IWorldModel world)
     {

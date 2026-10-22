@@ -49,9 +49,9 @@ public sealed class MainBuildingSite : ZoneSite
         public float PlatformZ => StepsZ - (M.RisersLower + M.RisersUpper) * M.Tread - M.MidLanding;
     }
 
-    internal static Layout LayoutOf(IWorldModel world) => Read(world);
+    internal static Layout LayoutOf(IWorldModel world) => DerivedMemo.ForWorld(world, typeof(Layout), () => Read(world));
 
-    internal static Layout LayoutOf(BuildContext context) => context.Memo(typeof(Layout), () => LayoutOf(context.World));
+    internal static Layout LayoutOf(BuildContext context) => LayoutOf(context.World);
 
     private static Layout Read(IWorldModel world)
     {

@@ -35,7 +35,10 @@ public sealed class GatePlazaSite : ZoneSite
     /// The plaza's frame from its overlay rectangle, whatever the ring's start and winding: origin at the centre, Z along the long
     /// sides toward the campus (the gate's inward direction), X across toward the north-west lawn. Null when the map has no plaza.
     /// </summary>
-    internal static (PlanFrame Frame, float HalfAcross, float HalfAlong)? FrameOf(IWorldModel world)
+    internal static (PlanFrame Frame, float HalfAcross, float HalfAlong)? FrameOf(IWorldModel world) =>
+        DerivedMemo.ForWorld<(PlanFrame Frame, float HalfAcross, float HalfAlong)?>(world, typeof(GatePlazaSite), () => CreateFrameOf(world));
+
+    private static (PlanFrame Frame, float HalfAcross, float HalfAlong)? CreateFrameOf(IWorldModel world)
     {
         if (!world.Features.TryGetValue(new(Feature), out var plaza)) return null;
         var axis = world.ContourSegment(SouthIds.PlazaAxis);

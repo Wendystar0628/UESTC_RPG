@@ -70,7 +70,10 @@ public sealed class GymSite : ZoneSite
         }
     }
 
-    internal static Plan PlanOf(IWorldModel world)
+    internal static Plan PlanOf(IWorldModel world) =>
+        DerivedMemo.ForWorld<Plan>(world, typeof(Plan), () => CreatePlanOf(world));
+
+    private static Plan CreatePlanOf(IWorldModel world)
     {
         if (!world.Features.TryGetValue(new(Feature), out var feature))
             throw new InvalidOperationException($"Gym {Feature} is missing from the world model.");

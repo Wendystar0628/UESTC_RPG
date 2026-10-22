@@ -43,10 +43,10 @@ internal sealed class GroundLayout
     public static GroundLayout Of(IWorldModel world)
     {
         ArgumentNullException.ThrowIfNull(world);
-        return Create(world);
+        return DerivedMemo.ForWorld(world, typeof(GroundLayout), () => Create(world));
     }
 
-    public static GroundLayout Of(BuildContext context) => context.Memo(typeof(GroundLayout), () => Create(context.World));
+    public static GroundLayout Of(BuildContext context) => Of(context.World);
 
     /// <summary>Shapes whose bounds overlap the box. Order is the stable shape order (sorted by feature ID).</summary>
     public List<GroundShape> Near(Vector2 min, Vector2 max)

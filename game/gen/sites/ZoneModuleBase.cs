@@ -11,8 +11,11 @@ public abstract class ZoneModuleBase : IContentModule, IOutdoorAccessSource
 
     protected ZoneModuleBase(IReadOnlyList<ZoneSite> sites)
     {
-        _sites = (world, includes) => includes is null ? sites : sites.Where(site => site.Ranges(world).Any(includes)).ToArray();
-        _ranges = world => sites.SelectMany(site => site.Ranges(world)).ToArray();
+        IReadOnlyList<Campus.Contracts.Maps.MapRect> SiteRanges(IWorldModel world, ZoneSite site) =>
+            DerivedMemo.ForWorld(world, (typeof(ZoneModuleBase), site), () => site.Ranges(world));
+        _sites = (world, includes) => includes is null ? sites : sites.Where(site => SiteRanges(world, site).Any(includes)).ToArray();
+        _ranges = world => DerivedMemo.ForWorld<IReadOnlyList<Campus.Contracts.Maps.MapRect>>(world, this,
+            () => sites.SelectMany(site => SiteRanges(world, site)).ToArray());
         Claims = sites.SelectMany(site => site.Claims).ToArray();
     }
 
@@ -22,7 +25,7 @@ public abstract class ZoneModuleBase : IContentModule, IOutdoorAccessSource
         IReadOnlyList<Claim> claims)
     {
         _sites = sites;
-        _ranges = ranges;
+        _ranges = world => DerivedMemo.ForWorld(world, this, () => ranges(world));
         Claims = claims;
     }
 

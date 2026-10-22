@@ -16,7 +16,8 @@ namespace Campus.Gen.Maps.Qingshuihe.South.MainBuilding;
 /// </summary>
 public sealed class EntranceAxisSite : ZoneSite
 {
-    private static PlanFrame FrameOf(IWorldModel world) => new(world.Feature(SouthIds.Flagpole).Point(), A.FlagpoleFacing);
+    private static PlanFrame FrameOf(IWorldModel world) => DerivedMemo.ForWorld(world, typeof(EntranceAxisSite),
+        () => new PlanFrame(world.Feature(SouthIds.Flagpole).Point(), A.FlagpoleFacing));
 
     public override string Id => "18a.entrance-axis";
 

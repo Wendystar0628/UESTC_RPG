@@ -1,6 +1,5 @@
 using Campus.Gen.Geometry;
 using System.Numerics;
-using System.Runtime.CompilerServices;
 using Campus.Contracts;
 using Campus.Gen.Maps.Qingshuihe.Boundary.Fence;
 using Campus.Gen.Maps.Qingshuihe.Boundary.Framework;
@@ -38,8 +37,6 @@ public sealed record Opening(string Key, OpeningKind Kind, float Start, float Le
 /// </summary>
 public sealed class BoundaryPlan
 {
-    private static readonly ConditionalWeakTable<IWorldModel, Lazy<BoundaryPlan?>> Plans = new();
-
     private BoundaryPlan(BoundaryRing ring, IReadOnlyList<Opening> openings, IReadOnlyList<FenceRun> runs, IReadOnlyList<GateLayout> gates,
         IReadOnlyList<(float Start, float Length, IReadOnlyList<Vector2> Line)> detours)
     {
@@ -77,9 +74,8 @@ public sealed class BoundaryPlan
     public (Vector2 A, Vector2 B) Ends(Opening o) => (Ring.Slice(o.Start, 0f, F.Inset)[0], Ring.Slice(o.Start + o.Length, 0f, F.Inset)[0]);
 
     /// <summary>Share one immutable result, including null, for the lifetime of the caller's frozen world.</summary>
-    public static BoundaryPlan? Of(IWorldModel world) => Plans.GetValue(world, static source =>
-        new Lazy<BoundaryPlan?>(() => source.Boundary.Outer.Count < 3 ? null : Build(source),
-            LazyThreadSafetyMode.ExecutionAndPublication)).Value;
+    public static BoundaryPlan? Of(IWorldModel world) => DerivedMemo.ForWorld<BoundaryPlan?>(world, typeof(BoundaryPlan),
+        () => world.Boundary.Outer.Count < 3 ? null : Build(world));
 
     public static BoundaryPlan? Of(BuildContext context) => Of(context.World);
 

@@ -36,14 +36,17 @@ internal sealed class LibraryFrame
     }
 
     /// <summary>The frame of the world's library shell; the library interior cannot exist without it.</summary>
-    public static LibraryFrame Of(IWorldModel world)
+    public static LibraryFrame Of(IWorldModel world) =>
+        DerivedMemo.ForWorld<LibraryFrame>(world, typeof(LibraryFrame), () => CreateOf(world));
+
+    private static LibraryFrame CreateOf(IWorldModel world)
     {
         ArgumentNullException.ThrowIfNull(world);
         return new LibraryFrame(LibraryShell.From(world)
             ?? throw new InvalidOperationException("The library interior needs the library shell (MAP-QSH-CORE) in this world."));
     }
 
-    public static LibraryFrame Of(BuildContext context) => context.Memo(typeof(LibraryFrame), () => Of(context.World));
+    public static LibraryFrame Of(BuildContext context) => Of(context.World);
 
     public LibraryShell Shell { get; }
     public LibraryPlan Plan { get; }

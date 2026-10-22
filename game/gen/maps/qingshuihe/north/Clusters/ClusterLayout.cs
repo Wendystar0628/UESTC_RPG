@@ -57,10 +57,11 @@ public sealed class ClusterLayout
     public GateSpot? MainGate => Gates.FirstOrDefault(g => g.Main);
 
     /// <summary>The layout of a cluster, or null when the world has no such polygon (a test world, another map).</summary>
-    public static ClusterLayout? Of(IWorldModel world, NorthTune.Cluster cluster) => Compute(world, cluster);
+    public static ClusterLayout? Of(IWorldModel world, NorthTune.Cluster cluster) =>
+        DerivedMemo.ForWorld(world, (typeof(ClusterLayout), cluster), () => Compute(world, cluster));
 
     public static ClusterLayout? Of(BuildContext context, NorthTune.Cluster cluster) =>
-        context.Memo((typeof(ClusterLayout), cluster.Key), () => Of(context.World, cluster));
+        Of(context.World, cluster);
 
     private readonly record struct Road(Vector2 A, Vector2 B, Vector2 Dir, float Half);
     /// <summary>Width is the stretch of fence line the road covers (wider than the road when it crosses skewed).</summary>

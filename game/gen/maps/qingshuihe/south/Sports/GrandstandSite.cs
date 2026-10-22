@@ -52,13 +52,19 @@ public sealed class GrandstandSite : ZoneSite
 
     internal sealed record Plan(float Y, Vector2 Centre, IReadOnlyList<Station> Stations, IReadOnlyList<Station> Low);
 
-    internal static Plan PlanOf(IWorldModel world)
+    internal static Plan PlanOf(IWorldModel world) =>
+        DerivedMemo.ForWorld<Plan>(world, (typeof(GrandstandSite), nameof(PlanOf)), () => CreatePlanOf(world));
+
+    private static Plan CreatePlanOf(IWorldModel world)
     {
         var p = LayoutOf(world);
         return p with { Y = world.Terrain.HeightAt(p.Centre.X, p.Centre.Y) };
     }
 
-    private static Plan LayoutOf(IWorldModel world)
+    private static Plan LayoutOf(IWorldModel world) =>
+        DerivedMemo.ForWorld<Plan>(world, (typeof(GrandstandSite), nameof(LayoutOf)), () => CreateLayoutOf(world));
+
+    private static Plan CreateLayoutOf(IWorldModel world)
     {
         if (!world.Features.TryGetValue(new(Feature), out var feature))
             throw new InvalidOperationException($"Stand {Feature} is missing from the world model.");

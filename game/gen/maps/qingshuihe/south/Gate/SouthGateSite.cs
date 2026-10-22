@@ -49,9 +49,9 @@ public sealed class SouthGateSite : ZoneSite
             : (IslandEastX + IslandWidth * 0.5f, HouseX - HouseSize * 0.5f);
     }
 
-    internal static Layout LayoutOf(IWorldModel world) => Read(world);
+    internal static Layout LayoutOf(IWorldModel world) => DerivedMemo.ForWorld(world, typeof(Layout), () => Read(world));
 
-    internal static Layout LayoutOf(BuildContext context) => context.Memo(typeof(Layout), () => LayoutOf(context.World));
+    internal static Layout LayoutOf(BuildContext context) => LayoutOf(context.World);
 
     private static Layout Read(IWorldModel world)
     {
