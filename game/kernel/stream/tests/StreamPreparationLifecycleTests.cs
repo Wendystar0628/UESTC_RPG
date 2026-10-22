@@ -12,6 +12,61 @@ namespace Campus.Tests;
 [TestSuite]
 public sealed class StreamPreparationLifecycleTests
 {
+    [TestCase, TestCategory(TestReason.Regression), RequireGodotRuntime]
+    public void RetiredVisualKeepsItsRequestIdentityAndEmptyGeometryCompletesOnlyWhenDrained()
+    {
+        var queue = new StreamMountQueue(() => 0);
+        var key = new BakeKey(new("fixture"), "fixture.empty", "L4/0/0");
+        var bundle = new TileBundle(key, StreamTile.Root.Tile, LodLevel.L4, new(N.Vector3.Zero, N.Vector3.One), []);
+        using var prepared = new PreparedTile(bundle);
+        prepared.Initialize(bundle);
+        var source = new List<PreparedTile> { prepared };
+        var mounted = 0; var cancelled = 0;
+        var retired = new VisualMountWork(key, source, queue.Revision, default, BakePriority.Normal, null!, null!,
+            () => throw new InvalidOperationException("Retired geometry became mounted."), () => cancelled++, _ => { });
+        queue.Enqueue(retired);
+        retired.Abandon(); source.Clear();
+        var empty = new VisualMountWork(key, [], queue.Revision, default, BakePriority.Normal, null!, null!,
+            () => mounted++, () => cancelled++, _ => { });
+        queue.Enqueue(empty);
+        queue.Enqueue(new VisualMountWork(key, [prepared], queue.Revision, default, BakePriority.Normal, null!, null!,
+            () => mounted++, () => cancelled++, _ => { }));
+        Check(retired.Key == key && empty.Key == key && mounted == 0 && !prepared.IsDisposed);
+        queue.Drain(true);
+        empty.Step(1); empty.Cancel(); retired.Cancel();
+        Check(queue.Failure is null && queue.Pending == 0 && mounted == 2 && cancelled == 1 && !prepared.IsDisposed);
+        var owned = new VisualMountWork(key, source, queue.Revision, default, BakePriority.Normal, null!, null!,
+            () => { }, () => { }, _ => { });
+        // Reuse of the caller's list must not add a different payload to this request.
+        source.Add(prepared); owned.Cancel();
+        Check(!prepared.IsDisposed);
+        var snapshot = new VisualMountWork(key, source, queue.Revision, default, BakePriority.Normal, null!, null!,
+            () => { }, () => { }, _ => { });
+        source.Clear(); snapshot.Cancel();
+        Check(prepared.IsDisposed);
+    }
+
+    [TestCase, TestCategory(TestReason.Regression), RequireGodotRuntime]
+    public void VisualCompletionReportingAndCancellationFaultsRetainEveryOriginalCause()
+    {
+        var queue = new StreamMountQueue(() => 0);
+        var original = new InvalidDataException("completion failed");
+        var reporting = new InvalidOperationException("producer reporting failed");
+        var cleanup = new IOException("cancellation callback failed");
+        var key = new BakeKey(new("fixture"), "fixture.empty", "L4/0/0");
+        var bundle = new TileBundle(key, StreamTile.Root.Tile, LodLevel.L4, new(N.Vector3.Zero, N.Vector3.One), []);
+        using var prepared = new PreparedTile(bundle);
+        prepared.Initialize(bundle);
+        Exception? received = null;
+        var work = new VisualMountWork(key, [prepared], queue.Revision, default,
+            BakePriority.Normal, null!, null!, () => throw original, () => throw cleanup,
+            error => { received = error; throw reporting; });
+        queue.Enqueue(work); queue.Drain(true);
+        var causes = (queue.Failure as AggregateException ?? throw new InvalidOperationException("Visual callbacks lost their causes.")).Flatten().InnerExceptions;
+        Check(ReferenceEquals(received, original) && causes.Contains(original) && causes.Contains(reporting) &&
+            causes.Contains(cleanup) && work.IsCancelled && prepared.IsDisposed && queue.Pending == 0);
+    }
+
     [TestCase, TestCategory(TestReason.Regression), TestCategory("NativeRender"), RequireGodotRuntime]
     public async Task InitializationFaultKeepsItsActualTaskAndReleasesPartialNativeStorage()
     {

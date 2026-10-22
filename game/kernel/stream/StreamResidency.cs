@@ -76,6 +76,8 @@ internal sealed class StreamResidency(StreamDirector host)
             foreach (var module in _host.Preparation.Catalog!.Modules(tile))
             {
                 var key = BakeRequestKeys.Tile(_host.Context!.Descriptor.Id, module, tile.Tile, tile.Level);
+                // Catalog modules are ordinally ordered; use the first requested identity, never returned geometry.
+                group.MountKey ??= key;
                 group.Keys.Add(key);
                 if (!_host.Preparation.IsIssued(key)) requests.Add(new(key, tile, priority, neededIn));
                 // Re-Ensure promotes an already issued background request without restarting it.
@@ -98,7 +100,7 @@ internal sealed class StreamResidency(StreamDirector host)
             group.Work?.Abandon(); group.Work = null;
             foreach (var bundle in group.Bundles) QueueRetirement(bundle);
             foreach (var key in group.Keys) _host.Preparation.Forget(key);
-            group.Bundles.Clear(); group.Keys.Clear(); group.Expected = 0;
+            group.Bundles.Clear(); group.Keys.Clear(); group.MountKey = null; group.Expected = 0;
             group.Queued = group.Mounted = group.GeometryRequested = false; group.GeometryRevision++;
             group.Failure = null;
             if (group.Participants.Count == 0) _groups.Remove(tile);
@@ -200,6 +202,7 @@ internal sealed class StreamResidency(StreamDirector host)
         public Dictionary<BakeKey, ParticipantTile> Participants { get; } = [];
         public List<PreparedTile> Bundles { get; } = [];
         public HashSet<BakeKey> Keys { get; } = [];
+        public BakeKey? MountKey;
         public VisualMountWork? Work;
         public bool Queued, Mounted;
         public BakePriority Priority;

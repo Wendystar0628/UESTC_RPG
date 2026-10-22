@@ -29,10 +29,10 @@ public abstract class StreamMountWork(BakeKey key, BakePriority priority, long r
     public bool Step(double budgetMilliseconds)
     {
         if (Complete || IsCancelled) return true;
-        if (!IsCurrent) { Cancel(); return true; }
-        if (budgetMilliseconds <= 0) return false;
         try
         {
+            if (!IsCurrent) { Cancel(); return true; }
+            if (budgetMilliseconds <= 0) return false;
             if (!MountStep(budgetMilliseconds)) return false;
             if (!IsCancelled) Complete = true;
             return true;

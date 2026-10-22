@@ -130,7 +130,8 @@ internal sealed class StreamPreparation(StreamDirector host, IStreamGeometryPrep
             if (group.Bundles.Count == group.Expected && !group.Queued)
             {
                 group.Queued = true;
-                group.Work = new VisualMountWork(group.Bundles, _host.Mount.Revision, _host.GetViewport().GetWorld3D().Scenario,
+                var key = group.MountKey ?? throw new InvalidOperationException("Geometry mount has no source request identity.");
+                group.Work = new VisualMountWork(key, group.Bundles, _host.Mount.Revision, _host.GetViewport().GetWorld3D().Scenario,
                     group.Priority, _host.Residency.Materials, _host.Reflections, () => group.Mounted = true, () => group.Mounted = false,
                     reason => _host.Fail(group.Tile, reason));
                 _host.Mount.Enqueue(group.Work);

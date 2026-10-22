@@ -1,6 +1,8 @@
 using System.Text.Json;
 using Campus.Contracts;
 using Campus.Contracts.AppFlow;
+using Campus.Contracts.Atlas;
+using Campus.Contracts.Bake;
 using Campus.Contracts.Maps;
 using Campus.Contracts.Save;
 using Campus.Kernel.Frame;
@@ -12,7 +14,7 @@ using KernelServices = Campus.Kernel.Registry.Kernel;
 
 namespace Campus.Gates;
 
-// G5/G20 core lifecycle: Title -> NewGame -> Walk/Fly/Walk -> Title -> Continue -> window close/save; a second process restores it.
+// G5/G20 core lifecycle: Title -> NewGame -> Walk/Fly/Walk -> Teleport -> Title -> Continue -> window close/save; a second process restores it.
 internal sealed class CoreLifecycleDriver(IStageGateHost host)
 {
     public async Task<nint> Run(string gate)
@@ -42,7 +44,7 @@ internal sealed class CoreLifecycleDriver(IStageGateHost host)
     private static void RequireFormalServices()
     {
         foreach (var service in new[] { typeof(ICameraRig), typeof(IViewControl), typeof(ITransitDriver), typeof(IObserverState), typeof(IWalkController),
-            typeof(ICollisionWorld), typeof(IMapService), typeof(IMapRuntime), typeof(ISaveService), typeof(IAppFlow) })
+            typeof(ICollisionWorld), typeof(IMapService), typeof(IMapRuntime), typeof(IAtlasService), typeof(ISaveService), typeof(IAppFlow) })
         {
             var registration = KernelServices.Services.Entries.SingleOrDefault(entry => entry.Kind == RegistrationKind.Service && entry.Id == service.FullName);
             if (registration is null || registration.IsStub)
@@ -64,6 +66,7 @@ internal sealed class CoreLifecycleDriver(IStageGateHost host)
             "New game did not prepare its standing collision and settle.");
         await ExerciseModes(camera, walk, observer);
         await ExerciseInput(camera, walk, input);
+        await ExerciseTransit(camera, walk, observer);
         var saved = await saves.SaveNow(SaveReason.Test);
         if (saved.Status != SaveStatus.Saved) throw new InvalidOperationException("Core save failed: " + saved.Error);
         var beforeLoad = CoreRuntimeSnapshot.Capture();
@@ -93,13 +96,13 @@ internal sealed class CoreLifecycleDriver(IStageGateHost host)
         var eye = walk.EyePose.Position;
         await SwitchMode(ViewMode.Fly, camera, observer, eye);
         if (walk.Active) throw new InvalidOperationException("Fly retained an active walking body.");
-        RequireModeArrival(ViewMode.Fly, observer);
+        RequireArrival(ViewMode.Fly, observer);
         await SwitchMode(ViewMode.Walk, camera, observer);
         await CoreWait(() => walk.Grounded && walk.CollisionReady && walk.IsSettled,
             "Mode return did not prepare standing collision and settle.");
         if (!walk.Active || walk.ExitRequested)
             throw new InvalidOperationException("Mode return did not restore the production walk controller.");
-        var arrival = RequireModeArrival(ViewMode.Walk, observer);
+        var arrival = RequireArrival(ViewMode.Walk, observer);
         if (!ReferenceEquals(arrival, walk.PlacementArrival) || arrival.Destination.CollisionFeet is not { } feet
             || !SameCorePosition(feet, walk.BodyPose.Position))
             throw new InvalidOperationException("Mode return did not retain its final walking placement arrival.");
@@ -126,12 +129,12 @@ internal sealed class CoreLifecycleDriver(IStageGateHost host)
             throw new InvalidOperationException("Mode switch did not finish in the requested Playing mode.");
     }
 
-    private IMapArrival RequireModeArrival(ViewMode mode, IObserverState observer)
+    private IMapArrival RequireArrival(ViewMode mode, IObserverState observer)
     {
         var arrival = host.MapRuntime.Arrival;
         if (arrival is null || !arrival.Done.IsCompletedSuccessfully || arrival.Destination.Mode != mode
             || !SameCorePosition(arrival.Destination.Pose.Position, observer.Eye))
-            throw new InvalidOperationException("Mode switch did not leave a ready arrival at its actual endpoint.");
+            throw new InvalidOperationException("The production transition did not leave a ready arrival at its actual endpoint.");
         return arrival;
     }
 
@@ -163,6 +166,56 @@ internal sealed class CoreLifecycleDriver(IStageGateHost host)
         GD.Print(FormattableString.Invariant($"CORE_INPUT_READY distance={new System.Numerics.Vector2(moved.X, moved.Z).Length():R} forward={System.Numerics.Vector3.Dot(moved, forward):R}"));
         await CoreWait(() => camera.Speed < .0001f && walk.IsSettled,
             "The released movement input remained active.");
+    }
+
+    private async Task ExerciseTransit(ICameraRig camera, IWalkController walk, IObserverState observer)
+    {
+        var atlas = KernelServices.Get<IAtlasService>();
+        var loading = KernelServices.Get<IAppLoadingPresentation>();
+        var visuals = KernelServices.Get<IStreamVisualFrame>();
+        // Select from the current map's authored destinations, excluding the current location and refusals.
+        var destination = atlas.Markers.OrderBy(marker => marker.Id.Value, StringComparer.Ordinal)
+            .FirstOrDefault(marker => marker.Teleport?.Stand is not null &&
+                atlas.CanTravel(marker.Id, TravelStyle.Teleport, out _))
+            ?? throw new InvalidOperationException("Core lifecycle has no available standing travel destination away from its current location.");
+        var previousArrival = host.MapRuntime.Arrival;
+        var transit = atlas.Travel(destination.Id, TravelStyle.Teleport)
+            ?? throw new InvalidOperationException("The production atlas refused core travel.");
+        var bake = KernelServices.Get<IBakeService>();
+        var progress = (transit.Progress, bake.Progress, host.MapRuntime.Arrival, host.MapRuntime.Arrival?.Completed);
+        await CoreWait(() => transit.Done.IsCompleted, "The production atlas transit did not finish.", () =>
+        {
+            var next = (transit.Progress, bake.Progress, host.MapRuntime.Arrival, host.MapRuntime.Arrival?.Completed);
+            var changed = next != progress;
+            progress = next;
+            return changed;
+        });
+        if (await transit.Done != TransitResult.Arrived)
+            throw new InvalidOperationException("The production atlas transit did not arrive.");
+        var arrival = host.MapRuntime.Arrival
+            ?? throw new InvalidOperationException("The production atlas transit left no map arrival.");
+        if (ReferenceEquals(previousArrival, arrival))
+            throw new InvalidOperationException("The production atlas transit reused the previous destination arrival.");
+        await host.Readiness.WaitForReadyAsync(host.Stage, arrival, TransitReady, host.Lifetime);
+        if (!ReferenceEquals(arrival, RequireArrival(ViewMode.Walk, observer)) ||
+            !ReferenceEquals(arrival, walk.PlacementArrival) || arrival.Destination.CollisionFeet is not { } feet ||
+            !SameCorePosition(feet, walk.BodyPose.Position))
+            throw new InvalidOperationException("The production atlas transit did not retain its final walking placement arrival.");
+        GD.Print($"CORE_TRANSIT_READY marker={destination.Id.Value} {FrameClock.MonotonicMilliseconds:R}");
+
+        bool TransitReady()
+        {
+            host.CheckActive();
+            if (host.Flow.State != AppState.Playing || camera.Mode != ViewMode.Walk ||
+                observer.Mode != ViewMode.Walk || !walk.Active || walk.ExitRequested)
+                throw new InvalidOperationException("The production atlas transit did not preserve the active Playing walk controller.");
+            // Here is published only after Atlas.Tick releases the completed transit's input lease.
+            atlas.CanTravel(destination.Id, TravelStyle.Teleport, out var refusal);
+            if (refusal is not (TravelRefusal.Here or TravelRefusal.Busy or TravelRefusal.Unavailable))
+                throw new InvalidOperationException($"The production atlas transit did not reach its selected marker: {refusal}.");
+            return refusal == TravelRefusal.Here && camera.ActiveTransit is null && !loading.Active &&
+                walk.Grounded && walk.CollisionReady && walk.IsSettled && visuals.ViewReady;
+        }
     }
 
     private async Task CaptureAndCheck(string gate, Node stage, IWorldState world)
@@ -266,7 +319,7 @@ internal sealed class CoreLifecycleDriver(IStageGateHost host)
         }
     }
 
-    private async Task CoreWait(Func<bool> ready, string failure)
+    private async Task CoreWait(Func<bool> ready, string failure, Func<bool>? madeProgress = null)
     {
         // Detect a stuck lifecycle while allowing the workstation to be busy.
         const double timeoutMilliseconds = 30_000;
@@ -274,8 +327,9 @@ internal sealed class CoreLifecycleDriver(IStageGateHost host)
         while (!ready())
         {
             host.CheckActive();
+            if (madeProgress?.Invoke() == true) start = FrameClock.MonotonicMilliseconds;
             if (FrameClock.MonotonicMilliseconds - start > timeoutMilliseconds) throw new TimeoutException(failure);
-            await host.Stage.ToSignal(host.Stage.GetTree(), SceneTree.SignalName.ProcessFrame);
+            await FrameAwaiter.ProcessAsync(host.Stage, host.Lifetime);
         }
     }
 }

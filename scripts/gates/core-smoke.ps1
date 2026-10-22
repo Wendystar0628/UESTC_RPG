@@ -1,4 +1,4 @@
-﻿# 核心冒烟：正式场景从标题经新游戏、行走、返回标题与继续，再关闭存档和重启恢复，拒绝引擎错误/泄漏，报告实例参数需求与容量，供 G5 与 G20 核心共用。
+﻿# 核心冒烟：正式场景从标题经新游戏、行走、地图传送、返回标题与继续，再关闭存档和重启恢复，拒绝引擎错误/泄漏，报告实例参数需求与容量，供 G5 与 G20 核心共用。
 # 产出：output/build/gates/；output/render-review/（核心专项日志、测试结果、隔离存档与截图）。
 # 用法：由 scripts\gate.ps1 点引用（. scripts\gates\core-smoke.ps1）后调用 Invoke-UESTCMainlineSmoke 与 Invoke-UESTCSaveCore，不单独运行
 . (Join-Path $PSScriptRoot '../lib/start-game.ps1')
@@ -51,7 +51,7 @@ function Invoke-UESTCMainlineSmoke {
     $null = [IO.Directory]::CreateDirectory($shots)
     $lease = $null
     try {
-        $godotFailurePattern = '(?im)(?:SCRIPT )?ERROR:|shader[^\r\n]*(?:compilation failed|compile error)|\bleaked\b|\bRIDs?\b[^\r\n]*\bleak\w*|\bleak\w*[^\r\n]*\bRIDs?\b'
+        $godotFailurePattern = '(?im)(?:SCRIPT )?ERROR:|Object was deleted while awaiting a callback|shader[^\r\n]*(?:compilation failed|compile error)|\bleaked\b|\bRIDs?\b[^\r\n]*\bleak\w*|\bleak\w*[^\r\n]*\bRIDs?\b'
         if (-not $BuildLease) {
             $lease = Enter-UESTCBuildLock $Locks
             Update-UESTCGameBuild -Root $rootPath -Godot $Godot -BuildLease $lease
@@ -65,9 +65,9 @@ function Invoke-UESTCMainlineSmoke {
             '--save=1',"--map=$Map",'--flow=0','--seed=1','--weather-seed=1')) $rootPath (Join-Path $work 'save-close.log') -Visible -TimeoutSeconds 600 -ObserveOutput $closeObserver
         $closeEnded = [Diagnostics.Stopwatch]::GetTimestamp()
         if ($close.Output -match $godotFailurePattern) {
-            throw 'The production close process reported an engine/shader error or resource leak.'
+            throw 'The production close process reported an engine/shader error, deleted signal callback or resource leak.'
         }
-        foreach ($marker in @('CORE_TITLE_READY','CORE_INPUT_READY','CORE_RETURN_TITLE_READY','CORE_CONTINUE_READY','CORE_ROUNDTRIP_READY')) {
+        foreach ($marker in @('CORE_TITLE_READY','CORE_INPUT_READY','CORE_TRANSIT_READY','CORE_RETURN_TITLE_READY','CORE_CONTINUE_READY','CORE_ROUNDTRIP_READY')) {
             if (-not $close.StdOut.Contains($marker)) { throw "The production close process missed $marker." }
         }
         # GAME-128 / RESEARCH-034: normal input release alone does not prove directional motion.
@@ -79,7 +79,7 @@ function Invoke-UESTCMainlineSmoke {
             [double]::IsNaN($forward) -or [double]::IsInfinity($forward) -or $forward -le 0) {
             throw 'Normal forward input did not produce finite positive displacement in its expected direction.'
         }
-        $loadingSequence = '(?s)STARTUP_PHASE title-ready [^\r\n]+.*STARTUP_PHASE new-game-enter [^\r\n]+.*STARTUP_PHASE loading-complete [^\r\n]+.*STARTUP_PHASE input-ready [^\r\n]*mode=Walk.*CORE_INPUT_READY.*STARTUP_PHASE loading-complete [^\r\n]+.*CORE_RETURN_TITLE_READY.*STARTUP_PHASE loading-complete [^\r\n]+.*CORE_CONTINUE_READY'
+        $loadingSequence = '(?s)STARTUP_PHASE title-ready [^\r\n]+.*STARTUP_PHASE new-game-enter [^\r\n]+.*STARTUP_PHASE loading-complete [^\r\n]+.*STARTUP_PHASE input-ready [^\r\n]*mode=Walk.*CORE_INPUT_READY.*CORE_TRANSIT_READY.*STARTUP_PHASE loading-complete [^\r\n]+.*CORE_RETURN_TITLE_READY.*STARTUP_PHASE loading-complete [^\r\n]+.*CORE_CONTINUE_READY'
         if ($close.StdOut -notmatch $loadingSequence) {
             throw 'The title/new-game/return/continue sequence did not complete each real loading progress bar.'
         }
@@ -100,7 +100,7 @@ function Invoke-UESTCMainlineSmoke {
         $resume = Invoke-UESTCProcess $Godot ($engineArgs + $captureArgs + @('--gate=save-resume','--title=0',
             '--slot=1','--save=off')) $rootPath (Join-Path $work 'save-resume.log') -Visible -TimeoutSeconds 600 -ObserveOutput $resumeObserver
         if ($resume.Output -match $godotFailurePattern) {
-            throw 'The production resume process reported an engine/shader error or resource leak.'
+            throw 'The production resume process reported an engine/shader error, deleted signal callback or resource leak.'
         }
         $loaded = [regex]::Match($resume.StdOut,'(?m)^CORE_GENERATION (\d+)\r?$')
         if (-not $loaded.Success -or [UInt64]$loaded.Groups[1].Value -ne [UInt64]$latest) {

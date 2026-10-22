@@ -139,7 +139,7 @@ internal sealed class InteriorStream(IBakeService bake, IStreamMountQueue mount,
                     { retire(layer.Owner!); layer.Owner = layer.Prepared = null; layer.Finished = true; }
                     else
                     {
-                        layer.Work = new VisualMountWork([layer.Prepared!], layer.Revision, scenario, layer.Priority, materials, reflections,
+                        layer.Work = new VisualMountWork(layer.Key, [layer.Prepared!], layer.Revision, scenario, layer.Priority, materials, reflections,
                             () => layer.Mounted = true, () => layer.Mounted = false, error => Fail(layer, error));
                         mount.Enqueue(layer.Work);
                     }

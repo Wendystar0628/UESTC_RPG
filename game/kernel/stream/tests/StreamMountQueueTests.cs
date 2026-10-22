@@ -173,12 +173,59 @@ public sealed class StreamMountQueueTests
             throw new InvalidOperationException("An existing mount did not upgrade in place.");
     }
 
+    [TestCase, TestCategory(TestReason.Regression)]
+    public void SortingAndEnqueueMetadataFaultsReachFailureAndRetainCancellationCauses()
+    {
+        var queue = new StreamMountQueue(() => 0);
+        var original = new InvalidDataException("sort metadata failed");
+        var cleanup = new InvalidOperationException("release failed");
+        var failed = new MountWork(StreamMountKind.Visual, queue.Revision, _ => throw new InvalidOperationException("Faulted work mounted."),
+            cancel: () => throw cleanup) { KeyFailure = original };
+        var other = new MountWork(StreamMountKind.Visual, queue.Revision, _ => throw new InvalidOperationException("Faulted frame mounted."));
+        queue.Enqueue(failed); queue.Enqueue(other); queue.Drain(false);
+        var causes = (queue.Failure as AggregateException ?? throw new InvalidOperationException("Sort cleanup lost a cause.")).Flatten().InnerExceptions;
+        if (!causes.Any(error => ReferenceEquals(error.InnerException, original)) || !causes.Contains(cleanup) ||
+            failed.Cancels != 1 || other.Cancels != 1 || queue.Pending != 0)
+            throw new InvalidOperationException("Sort failure did not reach the owner and stop its frame.");
+        var enqueue = new InvalidDataException("request revision failed");
+        var rejected = new MountWork(StreamMountKind.Visual, queue.Revision, _ => { }) { RevisionFailure = enqueue };
+        queue.Enqueue(rejected);
+        if (rejected.Cancels != 1 || queue.Pending != 0 || queue.Failure is not AggregateException retained ||
+            !retained.Flatten().InnerExceptions.Contains(enqueue))
+            throw new InvalidOperationException("Enqueue failure was not retained with its rejected work released.");
+        queue.Drain(false);
+        if (failed.Cancels != 1 || other.Cancels != 1)
+            throw new InvalidOperationException("The faulted frame was retried.");
+    }
+
+    [TestCase, TestCategory(TestReason.Regression)]
+    public void FrameAdmissionReleaseFinishAndClockFaultsReachTheQueueOwner()
+    {
+        for (var point = 0; point < 5; point++)
+        {
+            var original = new InvalidDataException("frame boundary failed");
+            var queue = new StreamMountQueue(point == 4 ? () => throw original : () => 0);
+            var steps = 0; var admissionCalls = 0;
+            var work = new MountWork(StreamMountKind.Visual, queue.Revision, _ => steps++);
+            queue.Enqueue(work);
+            queue.Drain(false,
+                finish: _ => { if (point == 3) throw original; },
+                release: _ => { if (point == 2) throw original; },
+                canActivateVisual: () => { if (point == admissionCalls++) throw original; return true; });
+            if (!ReferenceEquals(queue.Failure, original))
+                throw new InvalidOperationException("A frame callback or clock fault escaped the failure projection.");
+            if ((point <= 1 || point == 4) && (steps != 0 || work.Cancels != 1 || queue.Pending != 0))
+                throw new InvalidOperationException("A failed admission or clock still advanced mount readiness.");
+        }
+    }
+
     private sealed class MountWork(StreamMountKind kind, long revision, Action<double> step, string module = "module", int slices = 1, Action? cancel = null, BakePriority? priority = null) : IStreamMountWork
     {
-        public BakeKey Key => new(new("map"), module, "L0/0/0");
+        public Exception? KeyFailure, RevisionFailure;
+        public BakeKey Key => KeyFailure is { } error ? throw error : new(new("map"), module, "L0/0/0");
         public BakePriority EffectivePriority { get; set; } = priority ?? (kind == StreamMountKind.Collision ? BakePriority.Collision : BakePriority.Normal);
         public BakePriority Priority => EffectivePriority;
-        public long Revision { get; } = revision;
+        public long Revision => RevisionFailure is { } error ? throw error : revision;
         public StreamMountKind Kind { get; } = kind;
         public int Cancels;
         private int _steps;

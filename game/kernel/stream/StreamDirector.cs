@@ -182,10 +182,10 @@ public partial class StreamDirector : Node, IMapAware, IMapStreamState, IStreamV
     public override void _Process(double delta)
     {
         if (_exiting || _context is null) return;
-        PollFailures();
-        if (Failure is not null) return;
         try
         {
+            PollFailures();
+            if (Failure is not null) return;
             _selection.PollRetired(); _pins.PollRetired();
             _preparation.HarvestCatalog();
             _pins.PollPinnedPreparation();

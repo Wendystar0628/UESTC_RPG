@@ -34,11 +34,18 @@ public sealed class StreamMountQueue : IStreamMountQueue, IStreamMountFrame
     public int WatchdogTrips => _watchdog.Trips;
     public void Enqueue(IStreamMountWork work)
     {
-        ArgumentNullException.ThrowIfNull(work);
-        if (work.Revision != Revision) { Cancel(work); return; }
-        _pending.Add(work);
-        PeakPending = Math.Max(PeakPending, _pending.Count);
-        _pending.Sort(Compare);
+        try
+        {
+            ArgumentNullException.ThrowIfNull(work);
+            if (work.Revision != Revision) { Cancel(work); return; }
+            _pending.Add(work);
+            PeakPending = Math.Max(PeakPending, _pending.Count);
+        }
+        catch (Exception error)
+        {
+            RecordFailure(error);
+            if (work is not null) { Cancel(work); _pending.Remove(work); }
+        }
     }
     private static int Compare(IStreamMountWork a, IStreamMountWork b)
     {
@@ -62,10 +69,15 @@ public sealed class StreamMountQueue : IStreamMountQueue, IStreamMountFrame
     {
         Revision++;
         for (var i = _pending.Count - 1; i >= 0; i--)
-            if (_pending[i].Key.Map == map)
+        {
+            var work = _pending[i];
+            try
             {
-                Cancel(_pending[i]); _pending.RemoveAt(i);
+                if (work.Key.Map != map) continue;
             }
+            catch (Exception error) { RecordFailure(error); }
+            Cancel(work); _pending.RemoveAt(i);
+        }
     }
     private void Cancel(IStreamMountWork work)
     {
@@ -76,6 +88,17 @@ public sealed class StreamMountQueue : IStreamMountQueue, IStreamMountFrame
         Failure = RetainedFailure.Append(Failure, error);
 
     public void Drain(bool covered, Action<double>? finish = null, Action<double>? release = null, Func<bool>? canActivateVisual = null)
+    {
+        try { DrainFrame(covered, finish, release, canActivateVisual); }
+        catch (Exception error)
+        {
+            RecordFailure(error);
+            foreach (var work in _pending) Cancel(work);
+            _pending.Clear();
+        }
+    }
+
+    private void DrainFrame(bool covered, Action<double>? finish, Action<double>? release, Func<bool>? canActivateVisual)
     {
         // Demand changes upgrade the existing work without cancelling or enqueuing another mount.
         var start = _clock();
@@ -126,8 +149,7 @@ public sealed class StreamMountQueue : IStreamMountQueue, IStreamMountFrame
                 _pending.RemoveAt(i);
             }
         }
-        if (blockedByRetirement || retiring && !visualUsed &&
-            _pending.Any(work => work.Kind == StreamMountKind.Visual && work is not IStreamMountCancellationState { IsCancelled: true }))
+        if (blockedByRetirement || retiring && !visualUsed && HasPendingVisual())
             BlockedByRetirementFrames++;
         try
         {
@@ -137,5 +159,12 @@ public sealed class StreamMountQueue : IStreamMountQueue, IStreamMountFrame
         catch (Exception error) { RecordFailure(error); }
         LastMilliseconds = _clock() - start;
         if (!covered) _watchdog.Observe(LastMilliseconds, _clock());
+    }
+
+    private bool HasPendingVisual()
+    {
+        foreach (var work in _pending)
+            if (work.Kind == StreamMountKind.Visual && work is not IStreamMountCancellationState { IsCancelled: true }) return true;
+        return false;
     }
 }
