@@ -54,7 +54,7 @@ def _replace(target, text):
     try:
         with open(replacement, 'x', encoding='utf-8', newline='\n') as stream:
             stream.write(text)
-        os.replace(replacement, target)
+        U.replace_file(replacement, target)
     finally:
         if os.path.exists(replacement):
             os.remove(replacement)
