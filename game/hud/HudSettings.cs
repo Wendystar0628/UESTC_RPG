@@ -16,11 +16,10 @@ public static class HudSettingDefinitions
     public static SettingDefinition<float> UiScale => UiSettingDefinitions.Scale;
     public static readonly SettingDefinition<bool> SingleKeyShortcuts = new("single_key_shortcuts", true, "settings.single_keys");
     public static readonly SettingDefinition<bool> ShowPerf = new("show_perf", false, "settings.show_perf");
-    public static readonly SettingDefinition<bool> FirstGuideSeen = new("first_guide_seen", false, "hud.first_guide");
 
     /// <summary>HudSettings 持有的全部项，按此顺序读入与写回；加一项设置只在本类写定义并登记到这里。</summary>
     public static readonly IReadOnlyList<object> All =
-        [Theme, Resident, ReduceMotion, ReduceTransparency, Frost, UiScale, SingleKeyShortcuts, ShowPerf, FirstGuideSeen];
+        [Theme, Resident, ReduceMotion, ReduceTransparency, Frost, UiScale, SingleKeyShortcuts, ShowPerf];
 }
 
 /// <summary>
@@ -88,18 +87,6 @@ public sealed class HudSettings
         Rev++;
         _dirtyFor = 0;
         Changed?.Invoke();
-    }
-
-    /// <summary>首次引导是一次性标记、不在设置页：不发 Changed，立刻写盘，免得 0.5 s 内退出又弹一次。</summary>
-    public bool FirstGuideSeen => Get(HudSettingDefinitions.FirstGuideSeen);
-
-    public void MarkFirstGuideSeen()
-    {
-        var key = HudSettingDefinitions.FirstGuideSeen.Key;
-        if (FirstGuideSeen) return;
-        _values[key] = true;
-        _section.Set(key, true);
-        _store.TrySave();
     }
 
     /// <summary>HudRoot 每帧调用：改动后 0.5 s 写盘。</summary>

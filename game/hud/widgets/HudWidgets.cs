@@ -303,7 +303,7 @@ public partial class SpeedBar : PanelContainer
     }
 }
 
-/// <summary>收起态的时间读数条（UI-VISUAL）：钟点（Inter Light 26，tnum）+ 时辰 + 季 · 天气 + 过孔（自动空心、手动实心）。界面态显示，漫游态不显示。</summary>
+/// <summary>收起态的时间读数条（UI-VISUAL）：钟点（Inter Light 26，tnum）+ 时辰 + 季 · 天气 + 过孔（自动空心、手动实心）。时间卡收起时常驻显示。</summary>
 public partial class TimeStrip : PanelContainer
 {
     private UiKit _kit = null!;

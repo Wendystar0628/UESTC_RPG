@@ -135,7 +135,6 @@ internal sealed class HudLoading : IAppLoadingPresentation
         _loading.QueueFree();
         _loading = null;
         _syncInput();
-        if (_loadingRequest?.Kind == EnterKind.NewGame) ShowFirstGuide();
         _loadingRequest = null;
     }
 
@@ -206,22 +205,4 @@ internal sealed class HudLoading : IAppLoadingPresentation
 
     private static string Localized(LocalizedName name) =>
         TranslationServer.GetLocale().StartsWith("zh", StringComparison.OrdinalIgnoreCase) || name.En.Length == 0 ? name.Zh : name.En;
-
-    private void ShowFirstGuide()
-    {
-        if (_dependencies.Settings.FirstGuideSeen || !_view.Root.Visible) return;
-        _dependencies.Settings.MarkFirstGuideSeen();
-        var label = _view.Kit.Text(_view.HintHost, UiKit.T("hud.first_guide"), "body", "over.title.text", align: HorizontalAlignment.Center);
-        label.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.CenterBottom);
-        label.GrowHorizontal = Control.GrowDirection.Both;
-        label.GrowVertical = Control.GrowDirection.Begin;
-        label.OffsetTop = label.OffsetBottom = -_view.Kit.Tokens.Size("toastBottom");
-        label.ResetSize();
-        label.Modulate = Colors.White with { A = 0 };
-        var tween = label.CreateTween();
-        tween.TweenProperty(label, "modulate:a", 1f, _dependencies.Motion.Fade(_view.Kit.Tokens.Ms("loading", "in")));
-        tween.TweenInterval(_view.Kit.Tokens.Ms("firstGuide", "hold"));
-        tween.TweenProperty(label, "modulate:a", 0f, _dependencies.Motion.Fade(_view.Kit.Tokens.Ms("loading", "out")));
-        tween.TweenCallback(Callable.From(label.QueueFree));
-    }
 }

@@ -460,20 +460,9 @@ public partial class ObserverCamera : Node, ICameraRig, IObserverState, IViewCon
         add => _controls.CursorVisibilityChanged += value;
         remove => _controls.CursorVisibilityChanged -= value;
     }
-    // Temporary migration aliases; remove when GAME-161 has migrated every consumer.
-    public bool InterfaceMode => CursorVisible;
-    public event Action<bool>? InterfaceModeChanged
-    {
-        add => _controls.CursorVisibilityChanged += value;
-        remove => _controls.CursorVisibilityChanged -= value;
-    }
-    public void SetInterfaceMode(bool enabled) => _controls.SetInterfaceMode(enabled);
-    public bool TryRebind(string action, int physicalKey, out string? conflict) =>
-        _controls.TryRebind(action, physicalKey, out conflict);
     public bool TryRebind(string action, int physicalKey, int physicalLocation, out string? conflict) =>
         _controls.TryRebind(action, physicalKey, physicalLocation, out conflict);
     public int PhysicalKey(string action) => _controls.PhysicalKey(action);
-    public void SaveBindings() => _controls.SaveBindings();
 
     internal void ClearInputMotion()
     {

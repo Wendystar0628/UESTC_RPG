@@ -7,25 +7,24 @@ using Godot;
 
 namespace Campus.Hud;
 
-/// <summary>Owns live corner controls, refresh cadence, notices, and their idle fade.</summary>
+/// <summary>Owns live corner controls, refresh cadence and notices; the corners stay resident (UI-NAV).</summary>
 internal sealed class HudResidents
 {
-    private const float IdleFade = 4f;
     private const double RefreshInterval = 0.1;
     private readonly HudRootDependencies _dependencies;
     private readonly HudView _view;
     private readonly HudPages _pages;
     private Resident? _resident;
     private PerfReadout? _perf;
-    private float _idle, _cornerAlpha = 1, _cornerTarget = 1;
-    private Tween? _cornerTween;
     private double _refreshClock = RefreshInterval;
     private bool _primed;
     private ViewMode _lastMode;
     private Season _lastSeason;
     private int _entry;
     public bool Clean { get; set; }
-    public bool TimeOpen { get; private set; } = true;
+    public bool TimeOpen { get; private set; }
+    /// <summary>时间卡此刻真的展开在画面上（四角件可见且卡已展开），Esc 与光标按它判断。</summary>
+    public bool TimeShown => _resident is { } r && r.Time.IsVisibleInTree();
 
     public HudResidents(HudRootDependencies dependencies, HudView view, HudPages pages)
     {
@@ -53,36 +52,23 @@ internal sealed class HudResidents
         FreePerf();
     }
 
+    // 四角件常驻，整体显隐只由宿主仲裁的角区决定（HudInput）；这里只切时间卡的展开与收起。
     public void Sync()
     {
         SyncPerf();
-        if (!_dependencies.Flow.IsPlaying || _resident is not { } r) { _view.MinimapSlot.Visible = false; return; }
-        var ui = _dependencies.InputRouter.InterfaceMode && !Clean;
-        _view.MinimapSlot.Visible = !Clean && !_pages.BigPage;
-        var show = ui && !_pages.Saves.Visible;
-        r.TopRight.Visible = show;
-        r.Speed.Visible = show && !_pages.Settings.Visible;
-        r.Time.Visible = show && TimeOpen;
-        r.Weather.Visible = show && TimeOpen && _dependencies.Model.Allows(WorldControlMask.Weather);
-        r.Strip.Visible = show && !TimeOpen;
+        if (_resident is not { } r) return;
+        r.Time.Visible = TimeOpen;
+        r.Weather.Visible = TimeOpen && _dependencies.Model.Allows(WorldControlMask.Weather);
+        r.Strip.Visible = !TimeOpen;
     }
 
-    public void Tick(double delta, bool loading, bool galleryHud)
+    public void Tick(double delta)
     {
         Sync();
         _refreshClock += delta;
         if (_refreshClock >= RefreshInterval) Refresh();
-        if (_dependencies.Flow.IsPlaying && _dependencies.InputRouter.InterfaceMode && _view.Corners.IsVisibleInTree() && !loading
-            && _dependencies.Flow.Activity == AppActivity.None && !galleryHud && !_pages.BigPage
-            && _view.Root.GetViewport().GuiGetFocusOwner() is null && DisplayServer.AccessibilityScreenReaderActive() == 0)
-            _idle += (float)delta;
-        else _idle = 0;
-        var target = _idle >= IdleFade ? 0f : 1f;
-        if (target != _cornerTarget) FadeCorners(target);
-        SyncResidentInput(_cornerTarget > 0);
     }
 
-    public void Touch() => _idle = 0;
     public void NextWeather() => _resident?.Weather.Next();
     public void ToggleTime(bool open)
     {
@@ -110,9 +96,11 @@ internal sealed class HudResidents
         public Control[] Controls { get; } = [Speed, Weather, Time, Strip, TopRight];
     }
 
+    /// <summary>每次进入游玩新建；进游戏时时间卡收成一条，不展开任何面板（UI-NAV）。</summary>
     public void Build()
     {
         if (_resident is not null) return;
+        TimeOpen = false;
         var speed = SpeedBar.Create(_view.Kit, _view.BottomLeft, _dependencies.Model);
         speed.ModePicked += mode => _ = SetMode(mode);
         var weather = WeatherStrip.Create(_view.Kit, _view.BottomRight, _dependencies.Model, _dependencies.WorldControl);
@@ -122,7 +110,7 @@ internal sealed class HudResidents
         var strip = TimeStrip.Create(_view.Kit, _view.BottomRight, _dependencies.Model);
         strip.GuiInput += e => { if (e is InputEventMouseButton { Pressed: true, ButtonIndex: MouseButton.Left }) ToggleTime(true); };
         _resident = new Resident(speed, weather, time, strip, BuildTopRight());
-        ResetIdle();
+        Sync();
         _view.Layout();
     }
 
@@ -137,7 +125,7 @@ internal sealed class HudResidents
         _resident = null;
     }
 
-    // ---------------- 性能信息：在右上角单独显隐，不跟随普通 HUD 淡出 ----------------
+    // ---------------- 性能信息：在右上角单独显隐 ----------------
     private void SyncPerf()
     {
         var want = _dependencies.Settings.Get(HudSettingDefinitions.ShowPerf) && _dependencies.Flow.IsPlaying && !Clean && _view.Root.Visible;
@@ -158,47 +146,30 @@ internal sealed class HudResidents
     {
         var topRight = _view.Kit.Layout.Row(_view.TopRight);
         topRight.SizeFlagsHorizontal = Control.SizeFlags.ShrinkEnd;
-        (string Icon, string Tip, Action Act)[] buttons =
+        // 存档钮没有快捷键；说明与设置钮标出当前绑定（Esc 打开设置卡，UI-NAV）。
+        (string Icon, string Tip, string? Action, Action Act)[] buttons =
         [
-            ("save", "hud.button.saves", () => _pages.OpenSaves(fromTitle: false)),
-            ("help", "hud.button.help", () => _pages.ToggleSettings(SettingsPage.Keys)),
-            ("settings", "hud.button.settings", () => _pages.ToggleSettings(SettingsPage.Graphics)),
+            ("save", "hud.button.saves", null, () => _pages.OpenSaves(fromTitle: false)),
+            ("help", "hud.button.help", "help", () => _pages.ToggleSettings(SettingsPage.Keys)),
+            ("settings", "hud.button.settings", "menu", () => _pages.ToggleSettings(SettingsPage.Graphics)),
         ];
         for (var i = 0; i < buttons.Length; i++)
         {
-            var (icon, tip, act) = buttons[i];
+            var (icon, tip, action, act) = buttons[i];
             var b = _view.Kit.Button(topRight, ButtonStyle.Icon, "", icon: icon, pin: true, pressed: act);
-            b.TooltipText = UiKit.T(tip);
             b.BaseFill = "surface.panel";
+            if (action is { } bound)
+                Parts.KeyHint(_view.Kit, b, UiKit.T(tip), () => Parts.KeyLabel(_dependencies.InputRouter, bound), pin: true);
+            else
+            {
+                b.TooltipText = UiKit.T(tip);
+                b.AccessibilityName = UiKit.T(tip);
+            }
             b.Refresh();
         }
         return topRight;
     }
 
-    /// <summary>闲置淡出 1.2 s、有操作淡回 0.18 s（整段 0↔1 的时长；从中途出发按剩余比例缩短），线性。</summary>
-    private void FadeCorners(float target)
-    {
-        _cornerTarget = target;
-        _cornerTween?.Kill();
-        var seconds = Math.Abs(target - _cornerAlpha) * _dependencies.Motion.Fade(target < _cornerAlpha ? 1.2f : 0.18f);
-        if (seconds <= 0) { SetCornerAlpha(target); return; }
-        _cornerTween = _view.Root.CreateTween();
-        _cornerTween.TweenMethod(Callable.From<float>(SetCornerAlpha), _cornerAlpha, target, seconds);
-    }
-
-    private void SetCornerAlpha(float alpha)
-    {
-        _cornerAlpha = alpha;
-        if (_resident is not { } resident) return;
-        foreach (var child in resident.Controls) child.Modulate = new Color(1, 1, 1, alpha);
-    }
-
-    // 子件显隐每帧可能变，焦点与输入要跟着当前可见性走
-    private void SyncResidentInput(bool interactive)
-    {
-        if (_resident is not { } resident) return;
-        foreach (var child in resident.Controls) UiLayout.SetInteractive(child, interactive && child.Visible);
-    }
     public void Refresh()
     {
         _refreshClock = 0;
@@ -239,14 +210,4 @@ internal sealed class HudResidents
             _pages.Toast.Show(UiKit.T("hud.season." + TimeCard.SeasonCode(_dependencies.Model.Season).ToLowerInvariant()), "season_" + TimeCard.SeasonCode(_dependencies.Model.Season).ToLowerInvariant());
         }
     }
-
-    public void ResetIdle()
-    {
-        _idle = 0;
-        _cornerTween?.Kill();
-        _cornerTarget = 1;
-        SetCornerAlpha(1);
-        SyncResidentInput(true);
-    }
-
 }

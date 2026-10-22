@@ -21,10 +21,8 @@ internal sealed class AtlasController : IDisposable
     private Rect2 _bounds;
     private int? _layerMask;
     private bool _open;
-    private bool _fromRoam;
     private IDisposable? _lease;
     private ITransitHandle? _pending;
-    private bool _pendingFromRoam;
     private string _overlayKey = "";
     private int _statusKey = -1;
 
@@ -39,7 +37,7 @@ internal sealed class AtlasController : IDisposable
         _host.BindPage(page);
         page.SetTitle(_title, _titleEn);
         page.Paper.SetBounds(_bounds, _s.Atlas.ZoomMin, _s.Atlas.ZoomMax);
-        page.Close.Pressed += () => Close(restoreRoam: true);
+        page.Close.Pressed += Close;
         page.Layers.MaskChanged += mask =>
         {
             _layerMask = mask;
@@ -73,7 +71,7 @@ internal sealed class AtlasController : IDisposable
 
     public void Dispose()
     {
-        if (_open) Close(restoreRoam: false);
+        if (_open) Close();
         CoverOthers(false);
         _lease?.Dispose();
         _lease = null;
@@ -96,13 +94,13 @@ internal sealed class AtlasController : IDisposable
     /// <summary>换图卸载：收起大页，不带出旧图的状态。</summary>
     public void Unload()
     {
-        if (_open) Close(restoreRoam: false);
+        if (_open) Close();
     }
 
     /// <summary>每帧。离开 Playing 就收起；传送交接完成时还输入占用；打开期间推进地图纸。</summary>
     public void Frame(float dt, bool playing)
     {
-        if (!playing && _open) Close(restoreRoam: false);
+        if (!playing && _open) Close();
         if (_pending is { } pending && pending.Done.IsCompleted) FinishTravel();
         if (_open) UpdatePage(dt);
     }
@@ -130,13 +128,13 @@ internal sealed class AtlasController : IDisposable
 
     // ------------------------------------------------------------------ 大地图
 
+    /// <summary>光标由界面根按页宿主里真实可见的大页持租约（HudInput），这里只占观者输入。</summary>
     public void Open(AtlasTab tab)
     {
         if (_open || _host.Map is null || _pending is not null) return;
-        if (!_s.Flow.IsPlaying) return;
+        // 页宿主看不见（--ui=0）时不开：看不见的大页不能占输入、上报界面面（UI-NAV）。
+        if (!_s.Flow.IsPlaying || !_host.Hud.PageHost.IsVisibleInTree()) return;
         _open = true;
-        _fromRoam = Input.MouseMode == Input.MouseModeEnum.Captured;
-        Input.MouseMode = Input.MouseModeEnum.Visible;
         _lease ??= _s.Rig.LockInput(InputLockReason.Atlas);
         CreatePage();
         CloseCard();
@@ -174,7 +172,7 @@ internal sealed class AtlasController : IDisposable
         tween.Finished += Ready;
     }
 
-    private void Close(bool restoreRoam)
+    private void Close()
     {
         if (!_open) return;
         _open = false;
@@ -186,13 +184,13 @@ internal sealed class AtlasController : IDisposable
         Page.QueueFree();
         _page = null;
         if (_pending is null) { _lease?.Dispose(); _lease = null; }
-        if (restoreRoam && _fromRoam && _pending is null) Input.MouseMode = Input.MouseModeEnum.Captured;
     }
 
     private void ReportPage(AtlasTab tab)
     {
-        _s.Surfaces.Report(UiSurface.Atlas, _open);
-        _s.Surfaces.Report(UiSurface.AtlasIndex, _open && (tab switch
+        var open = _page is { } page && page.IsVisibleInTree();
+        _s.Surfaces.Report(UiSurface.Atlas, open);
+        _s.Surfaces.Report(UiSurface.AtlasIndex, open && (tab switch
         {
             AtlasTab.Layers => false,
             AtlasTab.Index => true,
@@ -339,8 +337,7 @@ internal sealed class AtlasController : IDisposable
         if (handle is null) return;
         // 输入占用不随大地图收拢释放，保持到还给控制（SYS-ATLAS 第 1、6 步）
         _pending = handle;
-        _pendingFromRoam = _fromRoam;
-        Close(restoreRoam: false);
+        Close();
         if (handle.Done.IsCompleted) FinishTravel();
     }
 
@@ -349,7 +346,6 @@ internal sealed class AtlasController : IDisposable
         _pending = null;
         _lease?.Dispose();
         _lease = null;
-        if (_pendingFromRoam && !_open) Input.MouseMode = Input.MouseModeEnum.Captured;
     }
 
     private void TrackSelected()
@@ -365,13 +361,13 @@ internal sealed class AtlasController : IDisposable
         if (!e.IsPressed() || e.IsEcho()) { _host.Handled(); return; }
         var key = e is InputEventKey k ? k.PhysicalKeycode : Key.None;
         var card = Page.Paper.Card;
-        if (e.IsActionPressed("map")) Close(restoreRoam: true);
+        if (e.IsActionPressed("map")) Close();
         else if (e.IsActionPressed("atlas_index")) Page.ShowTab(Page.Tab == AtlasTab.Layers ? AtlasTab.Index : AtlasTab.Layers);
         else if (e.IsActionPressed("minimap")) _host.MinimapOff = !_host.MinimapOff;
         else if (e.IsActionPressed("menu"))
         {
             if (card.Visible) CloseCard();
-            else Close(restoreRoam: false);
+            else Close();
         }
         else if (key is Key.Home) Page.Paper.PanTo(PlayerAt());
         else if (e.IsActionPressed("waypoint_0")) FitAll();

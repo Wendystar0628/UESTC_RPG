@@ -2,6 +2,7 @@ using Campus.Contracts;
 using Campus.Contracts.Atlas;
 using Campus.Contracts.Maps;
 using Campus.Hud.Motion;
+using Campus.Hud.Widgets;
 using Godot;
 
 namespace Campus.Hud.Map;
@@ -12,6 +13,9 @@ internal sealed class MinimapController
     private const float RegionHz = 10;
     private const float RegionHold = 1f;
     private const float WalkHalfWidth = 120;
+    // 按住呼出光标时滚轮乘的手动倍率范围与每格倍率（SYS-ATLAS-UI）；四格翻一倍。
+    private const float ZoomMin = 0.5f, ZoomMax = 2f;
+    private static readonly float ZoomStep = MathF.Pow(2, 0.25f);
 
     private readonly MapHud _host;
     private readonly MapHudServices _s;
@@ -21,6 +25,7 @@ internal sealed class MinimapController
     private Vector2 _lastFeet;
     private float _speed;
     private bool _resetView = true;
+    private float _zoom = 1;
     private float _regionClock;
     private string? _regionShown;
     private string? _regionCandidate;
@@ -32,8 +37,20 @@ internal sealed class MinimapController
         _s = host.Services;
         _minimap = minimap;
         minimap.Clicked += openLayers;
+        minimap.Wheel += OnWheel;
         minimap.AtlasButton.Pressed += openLayers;
         minimap.IndexButton.Pressed += openIndex;
+        // 两个图标钮常驻并标出当前绑定的键（UI-NAV）。
+        var ctx = host.Ctx;
+        Parts.KeyHint(ctx.Ui, minimap.AtlasButton, ctx.T("map.atlas.title"), () => Parts.KeyLabel(_s.Input, "map"), pin: true);
+        Parts.KeyHint(ctx.Ui, minimap.IndexButton, ctx.T("map.index.title"), () => Parts.KeyLabel(_s.Input, "atlas_index"), pin: true);
+    }
+
+    /// <summary>只在按住呼出光标时缩放；倍率只在本次游玩有效，重新进入 Playing 时随视图重置。</summary>
+    private void OnWheel(float steps)
+    {
+        if (!_s.Input.CursorHeld) return;
+        _zoom = Math.Clamp(_zoom * MathF.Pow(ZoomStep, steps), ZoomMin, ZoomMax);
     }
 
     /// <summary>
@@ -60,14 +77,17 @@ internal sealed class MinimapController
         _regionShown = _regionCandidate = null;
     }
 
-    /// <summary>每帧。离开 Playing 期间（标题页、进出过场）机位会动而 Instance 不变，回到 Playing 的第一帧要重置一次。</summary>
-    public void Frame(float dt, bool playing, bool hidden)
+    /// <summary>
+    /// 每帧。离开 Playing 期间（标题页、进出过场）机位会动而 Instance 不变，回到 Playing 的第一帧要重置一次。
+    /// 纯净模式、--ui=0、大页与加载界面由所在槽位的祖先隐藏，这里按真实可见上报并只在可见时更新。
+    /// </summary>
+    public void Frame(float dt, bool playing, bool off)
     {
         if (!playing) _resetView = true;
-        var visible = playing && !hidden;
-        _minimap.Visible = visible;
-        _s.Surfaces.Report(UiSurface.Minimap, _minimap.IsVisibleInTree());
-        if (visible) Update(dt);
+        _minimap.Visible = playing && !off;
+        var shown = _minimap.IsVisibleInTree();
+        _s.Surfaces.Report(UiSurface.Minimap, shown);
+        if (shown) Update(dt);
     }
 
     private void Update(float dt)
@@ -80,6 +100,7 @@ internal sealed class MinimapController
             // 平滑量与标记参考直接落到新值，与冷启动恢复同一起点（ENG-ARCH）
             _lastFeet = at;
             _speed = 0;
+            _zoom = 1;
             _halfWidth.Snap(TargetHalfWidth(0));
             _resetView = false;
             _minimap.Markers.Invalidate();
@@ -87,7 +108,7 @@ internal sealed class MinimapController
         var v = dt > 0 ? (at - _lastFeet).Length() / dt : 0;
         _lastFeet = at;
         _speed += (MathF.Min(v, 400) - _speed) * MathF.Min(1, dt * 4);
-        var w = _halfWidth.Step(TargetHalfWidth(_speed), dt);
+        var w = _halfWidth.Step(TargetHalfWidth(_speed) / _zoom, dt);
         var ppm = _minimap.ViewportHalf / w;
         var view = new MapView(at, ppm, 0);
         var size = _minimap.Viewport.Size;
@@ -96,7 +117,6 @@ internal sealed class MinimapController
         var pose = _s.Rig.Pose;
         _minimap.Player.Follow(size * 0.5f, _s.Observer.YawDeg, pose.YawDeg, _host.HorizontalFov(pose));
         _minimap.SetScale(ppm);
-        _minimap.SetInterfaceState(Input.MouseMode == Input.MouseModeEnum.Visible);
         // 镜头在室内、地下、水下时整体不透明度 0.6（SYS-ATLAS）。
         var dim = _s.Medium.Current.Kind switch
         {

@@ -15,16 +15,10 @@ public interface IInputRouter
     /// <summary>True while the rebound show_cursor action is held, independently of cursor leases.</summary>
     bool CursorHeld { get; }
     event Action<bool>? CursorVisibilityChanged;
-    // Temporary consumer migration adapter; remove with the remaining GAME-161 consumers.
-    bool InterfaceMode { get; }
-    event Action<bool>? InterfaceModeChanged;
-    void SetInterfaceMode(bool enabled);
-    /// <summary>Tries one physical keyboard binding; false reports the conflicting action or rejection reason.</summary>
-    bool TryRebind(string action, int physicalKey, out string? conflict);
+    /// <summary>Tries one physical keyboard binding; after a successful rebind the input owner saves it. False reports the conflicting action or rejection reason.</summary>
     /// <param name="physicalLocation">Native key location: unspecified, left or right, passed as its numeric value.</param>
     bool TryRebind(string action, int physicalKey, int physicalLocation, out string? conflict);
     int PhysicalKey(string action);
-    void SaveBindings();
 }
 
 /// <summary>game/camera/ transit execution. The camera resolves the driver after registration to avoid a constructor cycle.</summary>

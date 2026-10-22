@@ -19,4 +19,5 @@ internal sealed class MapHudServices
     public IMotionSettings Motion { get; } = KernelRegistry.Get<IMotionSettings>();
     public IMediumState Medium { get; } = KernelRegistry.Get<IMediumState>();
     public IUiSurfaceSink Surfaces { get; } = KernelRegistry.Get<IUiSurfaceSink>();
+    public IInputRouter Input { get; } = KernelRegistry.Get<IInputRouter>();
 }

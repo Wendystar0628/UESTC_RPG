@@ -63,11 +63,11 @@ internal sealed class SettingsCardBindings
     {
         if (_rebindAction is not { } action) return null;
         if (key.PhysicalKeycode == Godot.Key.Escape) { EndCapture(); return null; }
-        if (!_router.TryRebind(action, (int)key.PhysicalKeycode, out var conflict))
+        // 键码与左右侧一起交给输入路由；成功即由路由保存（IInputRouter.TryRebind）。
+        if (!_router.TryRebind(action, (int)key.PhysicalKeycode, (int)key.Location, out var conflict))
             return conflict is not null && Campus.Hud.I18n.Tr.Has("rebind.action." + conflict)
                 ? UiKit.T("rebind.conflict", ("action", UiKit.T("rebind.action." + conflict)))
                 : UiKit.T("rebind.rejected", ("reason", conflict ?? ""));
-        _router.SaveBindings();
         EndCapture();
         BindingsChanged?.Invoke();
         return null;
@@ -80,18 +80,5 @@ internal sealed class SettingsCardBindings
         .Select(action => action.ToString())
         .Where(action => Campus.Hud.I18n.Tr.Has("rebind.action." + action) && InputMap.ActionGetEvents(action).Any(input => input is InputEventKey));
 
-    public string KeyLabel(string action)
-    {
-        var physical = _router.PhysicalKey(action);
-        if (physical == 0)
-            physical = InputMap.ActionGetEvents(action).OfType<InputEventKey>().Select(key => (int)key.PhysicalKeycode).FirstOrDefault();
-        return physical == 0 ? "—" : KeyName((Key)physical);
-    }
-
-    private static string KeyName(Key code)
-    {
-        var label = DisplayServer.KeyboardGetLabelFromPhysical(code);
-        var text = OS.GetKeycodeString(label != Godot.Key.None ? label : code);
-        return text switch { "Escape" => "Esc", "Period" => ".", "Space" => "Space", _ => text };
-    }
+    public string KeyLabel(string action) => Parts.KeyLabel(_router, action);
 }

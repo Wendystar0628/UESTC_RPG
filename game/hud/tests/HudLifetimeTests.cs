@@ -65,7 +65,6 @@ public sealed class HudLifetimeTests
     public async Task HudRootReentryRebuildsResidentsAndOwnsOnlyItsInputLayers()
     {
         var ruleset = TestRuleset.ForFlow();
-        using var audio = new AudioRuntime();
         var flow = new TestAppFlow();
         var router = new Router();
         var settings = new HudSettings(new SettingsStore());
@@ -84,6 +83,8 @@ public sealed class HudLifetimeTests
             .OverrideFailureMessage("HUD readouts required a refresh before exposing the current source values.").IsTrue();
         camera.Mode = ViewMode.Fly;
         var parent = ((SceneTree)Engine.GetMainLoop()).Root;
+        // AudioRuntime is a Node outside the tree: disposing the wrapper does not free it, so the fixture frees it explicitly.
+        var audio = new AudioRuntime();
         HudRoot? hud = null;
         try
         {
@@ -126,14 +127,16 @@ public sealed class HudLifetimeTests
                 await parent.ToSignal(parent.GetTree(), SceneTree.SignalName.ProcessFrame);
                 AssertThat(hud.PageHost.FocusBehaviorRecursive == Control.FocusBehaviorRecursiveEnum.Disabled)
                     .OverrideFailureMessage("A visible dialog did not disable the page host.").IsTrue();
+                AssertThat(router.Cursors == 1).OverrideFailureMessage("A visible dialog did not hold exactly one cursor lease.").IsTrue();
                 parent.RemoveChild(hud);
                 AssertThat(router.Layers == 0 && router.Observers == 0 && flow.Observers == 0).OverrideFailureMessage("Tree exit retained input layers or service observers.").IsTrue();
+                AssertThat(router.Cursors == 0).OverrideFailureMessage("Tree exit retained the HUD cursor lease.").IsTrue();
                 AssertThat(Subscribers(settings, "Changed") == settingsBaseline && Subscribers(world, "InstanceChanged") == worldBaseline).OverrideFailureMessage("Tree exit retained settings/world observers.").IsTrue();
                 AssertThat(Residents(corners) == 0).OverrideFailureMessage("Queued residents remained parented and could reenter before deletion.").IsTrue();
                 // 退树后释放上层内容，仲裁必须已停；重入时按现存子件重新仲裁。
                 hud.DialogHost.RemoveChild(dialog);
                 dialog.Free();
-                router.SetInterfaceMode(!router.InterfaceMode);
+                router.PublishCursor(true);
                 flow.SetState(AppState.Boot);
                 flow.SetState(AppState.Playing);
                 parent.AddChild(hud);
@@ -141,6 +144,19 @@ public sealed class HudLifetimeTests
                 AssertThat(hud.PageHost.FocusBehaviorRecursive == Control.FocusBehaviorRecursiveEnum.Inherited)
                     .OverrideFailureMessage("Reentry retained the detached dialog's focus block.").IsTrue();
             }
+            // 进游戏不展开面板；T 展开的时间卡持光标租约，Esc 先收起它而不是打开设置卡，收起后归还租约（UI-NAV）。
+            await parent.ToSignal(parent.GetTree(), SceneTree.SignalName.ProcessFrame);
+            await parent.ToSignal(parent.GetTree(), SceneTree.SignalName.ProcessFrame);
+            AssertThat(!TimeCardShown(corners) && router.Cursors == 0).OverrideFailureMessage("Entering play expanded a panel or held the cursor.").IsTrue();
+            AssertThat(router.Press("time_panel")).OverrideFailureMessage("The HUD did not consume the time card shortcut.").IsTrue();
+            await parent.ToSignal(parent.GetTree(), SceneTree.SignalName.ProcessFrame);
+            await parent.ToSignal(parent.GetTree(), SceneTree.SignalName.ProcessFrame);
+            AssertThat(TimeCardShown(corners) && router.Cursors == 1).OverrideFailureMessage("The expanded time card did not hold the cursor.").IsTrue();
+            AssertThat(router.Press("menu") && !TimeCardShown(corners) && hud.PageHost.GetChildren().OfType<Control>().All(page => !page.Visible))
+                .OverrideFailureMessage("Esc did not close the top panel before opening any page.").IsTrue();
+            await parent.ToSignal(parent.GetTree(), SceneTree.SignalName.ProcessFrame);
+            await parent.ToSignal(parent.GetTree(), SceneTree.SignalName.ProcessFrame);
+            AssertThat(router.Cursors == 0).OverrideFailureMessage("Closing the last panel did not return the cursor lease.").IsTrue();
             // 直接带可见弹层释放根，覆盖退出时子节点信号与宿主销毁的顺序。
             hud.DialogHost.AddChild(new Control());
         }
@@ -149,10 +165,11 @@ public sealed class HudLifetimeTests
             try
             {
                 hud?.Free();
-                AssertThat(router.Layers == 0 && router.Observers == 0 && flow.Observers == 0).OverrideFailureMessage("Free retained HUD registrations.").IsTrue();
+                AssertThat(router.Layers == 0 && router.Observers == 0 && flow.Observers == 0 && router.Cursors == 0).OverrideFailureMessage("Free retained HUD registrations.").IsTrue();
             }
             finally
             {
+                audio.Free();
                 // 保留同帧重入的检查；失败时也让退树 QueueFree 的四角走完实际释放。
                 await parent.ToSignal(parent.GetTree(), SceneTree.SignalName.ProcessFrame);
                 await parent.ToSignal(parent.GetTree(), SceneTree.SignalName.ProcessFrame);
@@ -165,6 +182,9 @@ public sealed class HudLifetimeTests
 
     private static int Residents(Node root) => root.GetChildren().Sum(child =>
         (child is SpeedBar or TimeCard or TimeStrip or WeatherStrip ? 1 : 0) + Residents(child));
+
+    private static bool TimeCardShown(Node root) => root.GetChildren().Any(child =>
+        child is TimeCard card ? card.IsVisibleInTree() : TimeCardShown(child));
 
     private sealed class Probe : IPaletteProbe
     {
@@ -206,39 +226,42 @@ public sealed class HudLifetimeTests
         public byte[]? Thumbnail(SlotId slot) => throw new NotSupportedException();
     }
 
+    /// <summary>Dispatches pressed actions through registered layers in priority order and counts live cursor leases.</summary>
     private sealed class Router : IInputRouter
     {
-        public int Layers { get; private set; }
-        public bool InterfaceMode { get; private set; }
-        public event Action<bool>? InterfaceModeChanged;
-        public int Observers => InterfaceModeChanged?.GetInvocationList().Length ?? 0;
+        private readonly List<(long Id, int Priority, Func<InputActionEvent, bool> Handler)> _layers = [];
+        private long _next;
+        public int Layers => _layers.Count;
+        public int Cursors { get; private set; }
+        public event Action<bool>? CursorVisibilityChanged;
+        public int Observers => CursorVisibilityChanged?.GetInvocationList().Length ?? 0;
         public IDisposable RegisterLayer(string owner, int priority, Func<InputActionEvent, bool> handler)
         {
-            Layers++;
-            return new Layer(this);
+            var id = ++_next;
+            _layers.Add((id, priority, handler));
+            return new Lease(() => _layers.RemoveAll(layer => layer.Id == id));
         }
-        public void SetInterfaceMode(bool enabled)
+        public bool Press(string action) => _layers.OrderBy(layer => layer.Priority).ThenByDescending(layer => layer.Id).ToArray()
+            .Any(layer => layer.Handler(new InputActionEvent(action, true, false)));
+        public void PublishCursor(bool visible) => CursorVisibilityChanged?.Invoke(visible);
+        public IDisposable RequestCursor(InputLockReason reason)
         {
-            InterfaceMode = enabled;
-            InterfaceModeChanged?.Invoke(enabled);
+            Cursors++;
+            return new Lease(() => Cursors--);
         }
-        public IDisposable RequestCursor(InputLockReason reason) => new Layer(this, counted: false);
-        public bool CursorVisible => false;
+        public bool CursorVisible => Cursors > 0;
         public bool CursorHeld => false;
-        public event Action<bool>? CursorVisibilityChanged { add { } remove { } }
-        public bool TryRebind(string action, int physicalKey, out string? conflict) { conflict = null; return true; }
         public bool TryRebind(string action, int physicalKey, int physicalLocation, out string? conflict) { conflict = null; return true; }
         public int PhysicalKey(string action) => 0;
-        public void SaveBindings() { }
 
-        private sealed class Layer(Router router, bool counted = true) : IDisposable
+        private sealed class Lease(Action release) : IDisposable
         {
             private bool _disposed;
             public void Dispose()
             {
                 if (_disposed) return;
                 _disposed = true;
-                if (counted) router.Layers--;
+                release();
             }
         }
     }

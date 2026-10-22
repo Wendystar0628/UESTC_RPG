@@ -65,12 +65,8 @@ public partial class Minimap : Control
     public TechButton IndexButton { get; }
     public float ViewportHalf => Viewport.Size.X * 0.5f;
     public event Action? Clicked;
-
-    public void SetInterfaceState(bool on)
-    {
-        AtlasButton.Visible = on;
-        IndexButton.Visible = on;
-    }
+    /// <summary>小地图上的滚轮格数（向上为正，按 Factor 计）；是否缩放由控制按按住呼出光标判断。</summary>
+    public event Action<float>? Wheel;
 
     public void SetRegion(string text)
     {
@@ -103,8 +99,14 @@ public partial class Minimap : Control
 
     public override void _GuiInput(InputEvent e)
     {
-        if (e is not InputEventMouseButton { ButtonIndex: MouseButton.Left, Pressed: true }) return;
-        Clicked?.Invoke();
+        if (e is not InputEventMouseButton { Pressed: true } button) return;
+        switch (button.ButtonIndex)
+        {
+            case MouseButton.Left: Clicked?.Invoke(); break;
+            case MouseButton.WheelUp: Wheel?.Invoke(button.Factor); break;
+            case MouseButton.WheelDown: Wheel?.Invoke(-button.Factor); break;
+            default: return;
+        }
         AcceptEvent();
     }
 

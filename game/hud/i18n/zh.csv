@@ -25,7 +25,7 @@ hud.speed.cruise,巡航,Cruise
 hud.speed.bird,飞鸟,Bird
 hud.speed.cloud,云端,Cloud
 hud.button.saves,存档,Saves
-hud.button.help,说明 · H,Help · H
+hud.button.help,说明,Help
 hud.button.settings,设置,Settings
 hud.perf.fps,帧率,FPS
 hud.perf.frame,帧时,Frame time
@@ -129,7 +129,7 @@ settings.save.failed,最近一次保存失败,Last save failed
 settings.save.none,还没有存档,No saves yet
 settings.save.off,不保存 · 已关闭存档,Not saving · Saving disabled
 settings.save.other_window,不保存 · 另一个窗口正在运行,Not saving · Another window is running
-keys.menu,界面态 / 漫游态,Interface / Roam
+keys.menu,关闭最上层 / 打开设置,Close top layer / Open settings
 keys.move,移动,Move
 keys.updown,上升 / 下降,Ascend / Descend
 keys.sprint,疾跑（按住）,Sprint (hold)
@@ -237,6 +237,9 @@ rebind.action.minimap,小地图,Minimap
 rebind.action.help,操作说明,Help
 rebind.action.clean_view,纯净模式,Clean view
 rebind.action.photo_export,保存照片,Save photo
+rebind.action.show_cursor,呼出光标（按住）,Show cursor (hold)
+key.side.left,左 {key},Left {key}
+key.side.right,右 {key},Right {key}
 licenses.name.self,电光年华,ELECTRIC YEARS
 licenses.name.osm,地图数据 · MAP DATA,Map data
 licenses.name.fonts,字体 · FONTS,Fonts
@@ -259,7 +262,6 @@ save.error.restore_world,没能恢复存档，已回到开始页，请重试或�
 loading.title,返回标题,Return to title
 loading.destination,{action} · {place} · {season} · {clock},{action} · {place} · {season} · {clock}
 loading.progress,已准备 {completed} / {total} 项,{completed} of {total} preparation items ready
-hud.first_guide,单击画面开始 · Esc 打开菜单 · H 操作说明,Click to begin · Esc for menu · H for controls
 saves.title,存档,Saves
 saves.latest,最近,Latest
 saves.empty,空 · 新游戏,Empty · New game

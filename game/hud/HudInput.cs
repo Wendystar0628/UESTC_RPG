@@ -7,7 +7,7 @@ using Godot;
 
 namespace Campus.Hud;
 
-/// <summary>Owns router registrations, host arbitration, weather hold, and pending photo export.</summary>
+/// <summary>Owns router registrations, host arbitration, the HUD cursor lease, weather hold, and pending photo export.</summary>
 internal sealed class HudInput
 {
     private readonly IDiagnosticLog _diagnostics;
@@ -46,9 +46,11 @@ internal sealed class HudInput
         _photoCancellation?.Cancel();
         // 先停止仲裁，再解除订阅，最后才由 _ExitTree 清理页面和居民件。
         _arbitrating = false;
-        _dependencies.InputRouter.InterfaceModeChanged -= OnInterfaceModeChanged;
+        _dependencies.InputRouter.CursorVisibilityChanged -= OnCursorVisibilityChanged;
         foreach (var layer in _layers) layer.Dispose();
         _layers.Clear();
+        _cursor?.Dispose();
+        _cursor = null;
         CancelWeatherHold();
         ObservePhotoExport();
     }
@@ -68,17 +70,18 @@ internal sealed class HudInput
         _pages.Toast.Show(UiKit.T("weather.auto_toast"), "weather_auto");
     }
 
-    private void OnInterfaceModeChanged(bool enabled)
+    // 光标收起即回到游玩层（UI-NAV）：四角件不留键盘焦点，空格、方向键与回车回到移动和快捷键。
+    private void OnCursorVisibilityChanged(bool visible)
     {
-        if (enabled) _residents.ResetIdle();
-        _residents.Sync();
-        SyncHostInput();
+        if (visible || _owner.GetViewport().GuiGetFocusOwner() is not { } focus || !_view.Corners.IsAncestorOf(focus)) return;
+        focus.ReleaseFocus();
     }
     // ---------------- 输入（UI-NAV）：三层，经 IInputRouter 分发 ----------------
     // 层的先后：数值小的先跑（IInputRouter.RegisterLayer）。第 4 层"漫游"归相机（game/camera）。
     public const int LayerDialog = 100, LayerPage = 200, LayerHud = 300;
     private static readonly string[] Actions = ["menu", "help", "time_panel", "time_forward", "toggle_flow", "next_season", "weather", "clean_view"];
     private readonly List<IDisposable> _layers = [];
+    private IDisposable? _cursor;
     private bool _arbitrating;
 
     private void ConnectInput()
@@ -87,7 +90,7 @@ internal sealed class HudInput
         _layers.Add(_dependencies.InputRouter.RegisterLayer("hud.dialog", LayerDialog, DialogLayer));
         _layers.Add(_dependencies.InputRouter.RegisterLayer("hud.page", LayerPage, PageLayer));
         _layers.Add(_dependencies.InputRouter.RegisterLayer("hud.hud", LayerHud, HudLayer));
-        _dependencies.InputRouter.InterfaceModeChanged += OnInterfaceModeChanged;
+        _dependencies.InputRouter.CursorVisibilityChanged += OnCursorVisibilityChanged;
     }
 
     // 宿主仲裁只有这一个入口：每帧一次，页面开关与加载的状态变化再显式调用一次（页面新增最多晚一帧生效）。
@@ -99,19 +102,32 @@ internal sealed class HudInput
         if (!_arbitrating) return;
         var dialog = HasVisibleContent(_view.DialogHost);
         var page = HasVisibleContent(_view.PageHost);
+        var loading = HasVisibleContent(_view.LoadingHost);
+        // 四角件常驻（UI-NAV）：只有大页、对话框、加载、纯净模式与非游玩期间让位。
         _view.Corners.Visible = _dependencies.Flow.IsPlaying && !_loading() && !_residents.Clean && !dialog && !page;
         UiLayout.SetInteractive(_view.DialogHost, dialog && _view.Root.Visible && !_loading());
         UiLayout.SetInteractive(_view.PageHost, !dialog && _view.Root.Visible && !_loading());
-        UiLayout.SetInteractive(_view.Corners, !dialog && !page && _dependencies.InputRouter.InterfaceMode && _view.Root.Visible && !_loading());
+        UiLayout.SetInteractive(_view.Corners, !dialog && !page && _view.Root.Visible && !_loading());
         // 开始菜单与设置/存档共用页面层，大页打开时菜单退出阅读顺序。
         UiLayout.SetInteractive(_pages.Title, !_pages.BigPage && !dialog && !_loading());
+        // 开始页、大页、对话框、加载界面与展开的面板真实可见时持光标租约，最后一个关掉即归还（UI-NAV、DECISION-308）。
+        SyncCursor(dialog || page || loading || _residents.TimeShown);
+    }
+
+    /// <summary>界面侧唯一的光标租约：光标显隐由输入路由按租约、按住呼出光标与窗口焦点合成，界面不写鼠标模式。</summary>
+    private void SyncCursor(bool wanted)
+    {
+        if (wanted == (_cursor is not null)) return;
+        if (wanted) _cursor = _dependencies.InputRouter.RequestCursor(InputLockReason.Menu);
+        else
+        {
+            _cursor!.Dispose();
+            _cursor = null;
+        }
     }
 
     private static bool HasVisibleContent(Control host) => host.GetChildren()
         .OfType<Control>().Any(child => !child.IsQueuedForDeletion() && child.IsVisibleInTree());
-
-    /// <summary>漫游态 ⇄ 界面态：经 IInputRouter.SetInterfaceMode，由相机（game/camera）统一改鼠标捕获。</summary>
-    private void SetInterface(bool on) => _dependencies.InputRouter.SetInterfaceMode(on);
 
     // 第 1 层：加载遮罩与改键捕获期间吞掉所有动作；具体按下的物理键由 _Input 交给设置卡
     private bool DialogLayer(InputActionEvent e) => _loading() || _pages.Settings.Visible && _pages.Settings.Capturing;
@@ -136,7 +152,7 @@ internal sealed class HudInput
         return true;
     }
 
-    // 第 3 层：普通 HUD：Esc 在漫游态与界面态之间切换（有面板展开时先收面板），单键快捷键受总开关约束
+    // 第 3 层：普通 HUD：Esc 先收起展开的面板，什么都没开时打开设置卡；单键快捷键受总开关约束
     private bool HudLayer(InputActionEvent e)
     {
         if (_dependencies.Flow.State == AppState.Title) return e.Action == "menu";   // 开始页主菜单上按 Esc 什么也不做
@@ -154,8 +170,8 @@ internal sealed class HudInput
         if (e.Action == "menu")
         {
             if (e.Echo) return true;
-            if (_residents.TimeOpen && _dependencies.InputRouter.InterfaceMode) _residents.ToggleTime(false);
-            else SetInterface(!_dependencies.InputRouter.InterfaceMode);
+            if (_residents.TimeShown) _residents.ToggleTime(false);
+            else _pages.OpenSettings(SettingsPage.Graphics, fromTitle: false);   // 与标着 Esc 的设置钮同一页
             return true;
         }
         // F12 不是单字符键，不受单键快捷键总开关约束（UI-NAV）；纯净模式下同样可用
@@ -179,9 +195,7 @@ internal sealed class HudInput
         switch (action)
         {
             case "time_panel":
-                var wasInterface = _dependencies.InputRouter.InterfaceMode;
-                if (!wasInterface) SetInterface(true);
-                _residents.ToggleTime(!_residents.TimeOpen || !wasInterface);
+                _residents.ToggleTime(!_residents.TimeOpen);
                 return true;
             case "help":
                 _pages.OpenSettings(SettingsPage.Keys, fromTitle: false);
@@ -220,7 +234,6 @@ internal sealed class HudInput
     public void Input(InputEvent e)
     {
         if (_loading()) { Handled(); return; }
-        if (e is InputEventMouseMotion or InputEventMouseButton or InputEventKey { Pressed: true }) _residents.Touch();
         // 改键捕获：下一个物理键交给设置卡（输入优先级第 1 层）
         if (_pages.Settings.Visible && _pages.Settings.Capturing && e is InputEventKey { Pressed: true, Echo: false } key)
         {
@@ -232,7 +245,7 @@ internal sealed class HudInput
     public void UnhandledInput(InputEvent e)
     {
         // 有面板展开时，第一次单击画面只收起面板（UI-NAV）；单击是鼠标事件，不走动作路由
-        if (_dependencies.Flow.IsPlaying && e is InputEventMouseButton { Pressed: true, ButtonIndex: MouseButton.Left } && _residents.TimeOpen && _dependencies.InputRouter.InterfaceMode
+        if (_dependencies.Flow.IsPlaying && e is InputEventMouseButton { Pressed: true, ButtonIndex: MouseButton.Left } && _residents.TimeShown
             && !HasVisibleContent(_view.PageHost) && !HasVisibleContent(_view.DialogHost))
         {
             _residents.ToggleTime(false);

@@ -94,7 +94,7 @@ public partial class HudRoot : CanvasLayer, IBootParticipant, IAppLoadingPresent
     public override void _Process(double delta)
     {
         _view.Tick(delta);
-        _residents.Tick(delta, Active, _args.Gallery == "hud");
+        _residents.Tick(delta);
         _input.Tick(delta);
         ObserveGallery();
     }
@@ -140,12 +140,10 @@ public partial class HudRoot : CanvasLayer, IBootParticipant, IAppLoadingPresent
                 _residents.Release();
                 _input.CancelWeatherHold();
                 if (!_pages.Title.Visible) _pages.Title.Open();
-                _view.MinimapSlot.Visible = false;
                 break;
             case AppState.Playing:
                 _residents.Build();
                 if (!_galleryTitle) _pages.Title.Close();
-                if (_args.Gallery == "hud") _dependencies.InputRouter.SetInterfaceMode(true);
                 OpenGallerySettings();
                 break;
             case AppState.Entering:
@@ -169,7 +167,6 @@ public partial class HudRoot : CanvasLayer, IBootParticipant, IAppLoadingPresent
 
     private void OnFlowChanged(AppState previous, AppState current)
     {
-        if (current == AppState.Playing) _residents.ResetIdle();
         SyncState();
         if (previous == AppState.Boot && current == AppState.Title && _dependencies.Flow.LastError is { } errorKey)
             _pages.Toast.Show(UiKit.T(errorKey), bar: "warning.fill");
@@ -213,7 +210,7 @@ public partial class HudRoot : CanvasLayer, IBootParticipant, IAppLoadingPresent
             case "licenses": OpenGallerySettings(SettingsPage.Licenses); break;
             case "saves": _pages.OpenSaves(fromTitle: true); break;
             case "title": _residents.Clean = _galleryTitle = true; _pages.Title.Open(); break;
-            case "hud": _dependencies.InputRouter.SetInterfaceMode(true); _residents.ResetIdle(); break;
+            case "hud": break; // The resident corners are always shown in Playing.
             case "atlas": break; // The map HUD opens its own gallery after entering Playing.
             case "layout": Widgets.UiLayoutGallery.Create(_view.Kit, _view.PageHost); break;
             case "census": StartGallery(lifetime => Census(3, lifetime)); break;

@@ -25,6 +25,7 @@ public partial class SavePage : Control
     private Tween? _fade;
     private int _selected;
     private bool _fromTitle;
+    private bool _reported;
     private SaveIntent _intent;
 
     public event Action? CloseRequested;
@@ -50,6 +51,7 @@ public partial class SavePage : Control
         _fade = CreateTween();
         _fade.TweenProperty(this, "modulate:a", 1f, _kit.Motion.Fade(0.36f));
         if (_cards.Count > 0) FocusWhenInteractive(_cards[_selected].Hit);
+        PublishOpen();
     }
 
     /// <summary>大页关上立即移出树并排队释放，不留下隐藏的 UiKit.Holders。</summary>
@@ -59,6 +61,22 @@ public partial class SavePage : Control
         _lock?.Dispose();
         _lock = null;
         ReleaseContent();
+        PublishOpen();
+    }
+
+    // 上层（界面根、--ui=0）显隐变化也会改变存档页是否真的看得见，随之重报。
+    public override void _Notification(int what)
+    {
+        if (what == NotificationVisibilityChanged) PublishOpen();
+    }
+
+    /// <summary>存档页真实可见才报开着（IUiSurfaceSink），不可见或已离树即撤下；值不变不报。</summary>
+    private void PublishOpen()
+    {
+        var open = IsInsideTree() && IsVisibleInTree();
+        if (open == _reported) return;
+        _reported = open;
+        Svc<IUiSurfaceSink>().Report(UiSurface.SavePage, open);
     }
 
     private void ReleaseContent()

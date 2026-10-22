@@ -1,3 +1,4 @@
+using Campus.Contracts;
 using Campus.Hud.Style;
 using Godot;
 
@@ -272,6 +273,54 @@ public static class Parts
         var margin = kit.Layout.Add(panel, new MarginContainer(), UiThemeBuilder.SmallMargin);
         kit.Text(margin, key, "keycap", down ? "primary.ink" : "text.1", pin, wrap: false, align: HorizontalAlignment.Center);
         return panel;
+    }
+
+    /// <summary>
+    /// 动作当前绑定的键名：键码取输入路由（改键后即变），左右侧取 InputMap 里同键事件的 Location，
+    /// 只有绑定指明左或右时才写出侧别。
+    /// </summary>
+    public static string KeyLabel(IInputRouter router, string action)
+    {
+        var physical = router.PhysicalKey(action);
+        var keys = InputMap.ActionGetEvents(action).OfType<InputEventKey>();
+        var bound = physical == 0 ? keys.FirstOrDefault() : keys.FirstOrDefault(key => (int)key.PhysicalKeycode == physical);
+        if (physical == 0) physical = (int)(bound?.PhysicalKeycode ?? Key.None);
+        if (physical == 0) return "—";
+        var name = KeyName((Key)physical);
+        return bound?.Location switch
+        {
+            KeyLocation.Left => UiKit.T("key.side.left", ("key", name)),
+            KeyLocation.Right => UiKit.T("key.side.right", ("key", name)),
+            _ => name,
+        };
+    }
+
+    private static string KeyName(Key code)
+    {
+        var text = OS.GetKeycodeString(code);
+        return text switch { "Escape" => "Esc", "Period" => ".", "Space" => "Space", _ => text };
+    }
+
+    /// <summary>
+    /// 常驻图标钮右下角的快捷键标，悬浮说明写"名称 · 键"（UI-NAV、UI-VISUAL-COMPONENTS）。
+    /// 改键只在设置卡里做，设置卡开着时四角件隐藏；键标随所在界面重新显示时取当前绑定。
+    /// </summary>
+    public static Label KeyHint(UiKit kit, TechButton button, string name, Func<string> key, bool pin = false)
+    {
+        var hint = kit.Text(button, "", "tick", "text.2", pin, wrap: false, align: HorizontalAlignment.Right);
+        hint.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.BottomRight);
+        hint.GrowHorizontal = Control.GrowDirection.Begin;
+        hint.GrowVertical = Control.GrowDirection.Begin;
+        button.AccessibilityName = name;
+        void Sync()
+        {
+            var text = key();
+            hint.Text = text;
+            button.TooltipText = name + " · " + text;
+        }
+        hint.VisibilityChanged += () => { if (hint.IsVisibleInTree()) Sync(); };
+        Sync();
+        return hint;
     }
 
     public static HBoxContainer GroupHeader(UiKit kit, Control parent, string text, bool pin = false)

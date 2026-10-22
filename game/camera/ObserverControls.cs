@@ -18,7 +18,6 @@ internal sealed class ObserverControls(ObserverCamera camera, FlightTuning tunin
     private float _wheel;
     private bool _automated;
     private bool _focused = true;
-    private IDisposable? _legacyCursor;
 
     public ObserverInputState State { get; } = new(tuning);
     public bool Locked => _locks.Locked;
@@ -56,13 +55,6 @@ internal sealed class ObserverControls(ObserverCamera camera, FlightTuning tunin
         return new CursorLease(this, lease);
     }
 
-    // Temporary adapter for consumers migrating in GAME-161; capture still has one owner.
-    public void SetInterfaceMode(bool enabled)
-    {
-        if (enabled) _legacyCursor ??= RequestCursor(InputLockReason.Menu);
-        else { _legacyCursor?.Dispose(); _legacyCursor = null; }
-    }
-
     public void SetFocused(bool focused)
     {
         _focused = focused;
@@ -85,9 +77,6 @@ internal sealed class ObserverControls(ObserverCamera camera, FlightTuning tunin
         if (changed) CursorVisibilityChanged?.Invoke(visible);
     }
 
-    public bool TryRebind(string action, int physicalKey, out string? conflict)
-        => TryRebind(action, physicalKey, (int)KeyLocation.Unspecified, out conflict);
-
     public bool TryRebind(string action, int physicalKey, int physicalLocation, out string? conflict)
     {
         bool changed = _bindings.Rebind(action, physicalKey, physicalLocation, out conflict);
@@ -102,7 +91,7 @@ internal sealed class ObserverControls(ObserverCamera camera, FlightTuning tunin
     }
 
     public int PhysicalKey(string action) => action == "menu" ? (int)Key.Escape : _bindings.PhysicalKey(action);
-    public void SaveBindings()
+    private void SaveBindings()
     {
         if (!_automated) _ = _bindings.Save(KernelServices.Get<ISettingsStore>());
     }

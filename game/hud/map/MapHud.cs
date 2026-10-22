@@ -32,9 +32,7 @@ public partial class MapHud : Node, IMapAware, IBootParticipant
     private IReadOnlyList<MapEntry> _entries = [];
     private long _atlasRev = -1;
 
-    private bool _uiEnabled = true;
     private bool _night;
-    private bool _pure;
     private bool _galleryPending;
 
     // 两个控制共用的状态与依赖
@@ -151,7 +149,7 @@ public partial class MapHud : Node, IMapAware, IBootParticipant
             _atlasCtl.Open(AtlasTab.Layers);
         }
         _atlasCtl.Frame(dt, playing);
-        _minimapCtl.Frame(dt, playing, hidden: !_uiEnabled || _pure || MinimapOff || _atlasCtl.IsOpen || _map is null);
+        _minimapCtl.Frame(dt, playing, off: MinimapOff || _map is null);
     }
 
     internal float HorizontalFov(Pose pose)
@@ -167,13 +165,11 @@ public partial class MapHud : Node, IMapAware, IBootParticipant
     public string Id => "hud-map";
     public int Order => 0;
 
-    /// <summary>启动参数在 BeforeMap 才到：_Ready 时先按默认搭好，这里补上 --ui、--motion。昼夜主题读 UiThemeClock.Dark（含 --ui-theme）。</summary>
+    /// <summary>启动参数在 BeforeMap 才到：这里只取 --ui-gallery=atlas；--ui=0 由界面根隐藏小地图所在的槽位。昼夜主题读 UiThemeClock.Dark（含 --ui-theme）。</summary>
     public Task Initialize(BootPhase phase, BootContext context)
     {
         if (phase != BootPhase.BeforeMap) return Task.CompletedTask;
-        var args = context.Run.Ui;
-        _uiEnabled = args.Visible != false;
-        _galleryPending = args.Gallery == "atlas";
+        _galleryPending = context.Run.Ui.Gallery == "atlas";
         return Task.CompletedTask;
     }
 
@@ -196,7 +192,6 @@ public partial class MapHud : Node, IMapAware, IBootParticipant
         if (e.IsActionPressed("map")) { _atlasCtl.Open(AtlasTab.Layers); Handled(); }
         else if (e.IsActionPressed("atlas_index")) { _atlasCtl.Open(AtlasTab.Index); Handled(); }
         else if (e.IsActionPressed("minimap")) { MinimapOff = !MinimapOff; Handled(); }
-        else if (e.IsActionPressed("clean_view")) _pure = !_pure;
     }
 
     internal void Handled() => GetViewport().SetInputAsHandled();

@@ -222,10 +222,16 @@ public partial class SettingsCard : Control
         PublishReady();
     }
 
-    /// <summary>选中页的行建完且卡片开着才报这一页（IUiSurfaceSink）；切到未建完的页、关闭或清空当前页即撤下，建好再报。</summary>
+    // 上层（界面根、--ui=0）显隐变化也会改变卡片是否真的看得见，随之重报。
+    public override void _Notification(int what)
+    {
+        if (what == NotificationVisibilityChanged) PublishReady();
+    }
+
+    /// <summary>选中页的行建完且卡片真实可见才报这一页（IUiSurfaceSink）；切到未建完的页、关闭、上层隐藏或清空当前页即撤下，建好再报。</summary>
     private void PublishReady()
     {
-        var ready = Visible && _filled.Contains(_page) ? Key(_page) : null;
+        var ready = IsInsideTree() && IsVisibleInTree() && _filled.Contains(_page) ? Key(_page) : null;
         if (ready == _reported) return;
         _reported = ready;
         Campus.Kernel.Registry.Kernel.Get<IUiSurfaceSink>().ReportSettings(ready);
