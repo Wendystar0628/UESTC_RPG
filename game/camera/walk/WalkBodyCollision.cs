@@ -90,9 +90,11 @@ internal sealed class WalkBodyCollision(CharacterBody3D body)
         if (requested.LengthSquared() < .0000001f) return false;
         for (int i = 0; i < body.GetSlideCollisionCount(); i++)
         {
-            var hit = body.GetSlideCollision(i);
-            if (hit.GetNormal().Y < MathF.Cos(body.FloorMaxAngle) && hit.GetCollider() is CollisionObject3D blocker
-                && (blocker.CollisionLayer & NoStepLayers) != 0) return false;
+            using var hit = body.GetSlideCollision(i);
+            for (int contact = 0; contact < hit.GetCollisionCount(); contact++)
+                if (hit.GetNormal(contact).Y < MathF.Cos(body.FloorMaxAngle)
+                    && (PhysicsServer3D.BodyGetCollisionLayer(hit.GetColliderRid(contact)) & NoStepLayers) != 0)
+                    return false;
         }
         var current = body.GlobalPosition;
         var actual = current - before;
@@ -104,15 +106,41 @@ internal sealed class WalkBodyCollision(CharacterBody3D body)
         var raised = current + lift;
         if (Probe(raised, remaining)) return false;
         var advanced = raised + remaining;
-        if (!Probe(advanced, Vector3.Down * (lift.Y + WalkTuning.SnapLength))) return false;
-        if (_probeResult.GetCollisionNormal().Y < MathF.Cos(body.FloorMaxAngle)) return false;
-        if (_probeResult.GetCollider() is CollisionObject3D floor && (floor.CollisionLayer & NoStepLayers) != 0) return false;
+        var down = Vector3.Down * (lift.Y + WalkTuning.SnapLength);
+        if (!Probe(advanced, down)) return false;
         var destination = advanced + _probeResult.GetTravel();
-        if (destination.Y - before.Y > WalkRules.StepHeight + WalkTuning.SafeMargin) return false;
+        if (destination.Y - before.Y > WalkRules.StepHeight + WalkTuning.SafeMargin
+            || !HasStepLandingSupport(raised, remaining, down)) return false;
         body.GlobalPosition = destination;
         body.FloorSnapLength = 0;
         body.Velocity = new(body.Velocity.X, 0, body.Velocity.Z);
         return true;
+    }
+
+    private bool HasStepLandingSupport(Vector3 raised, Vector3 remaining, Vector3 down)
+    {
+        if (ProbeHasNoStepSurface()) return false;
+        float minimumNormalY = MathF.Cos(body.FloorMaxAngle);
+        int contacts = _probeResult.GetCollisionCount();
+        for (int i = 0; i < contacts; i++)
+            if (_probeResult.GetCollisionNormal(i).Y >= minimumNormalY) return true;
+        if (remaining.Length() >= WalkTuning.StepSupportForwardDistance) return false;
+        Span<(ulong Body, int Shape)> edgeSurfaces = stackalloc (ulong Body, int Shape)[contacts];
+        for (int i = 0; i < contacts; i++)
+            edgeSurfaces[i] = (_probeResult.GetColliderRid(i).Id, _probeResult.GetColliderShape(i));
+        // SYS-WALK: Godot's first sweep can land on a rounded edge at short physics steps.
+        // Jolt CharacterVirtual.WalkStairs verifies the floor farther ahead while retaining the
+        // original sweep's destination. This native probe never becomes extra player movement.
+        var supportMotion = remaining.Normalized() * WalkTuning.StepSupportForwardDistance;
+        if (Probe(raised, supportMotion) || !Probe(raised + supportMotion, down) || ProbeHasNoStepSurface()) return false;
+        for (int i = 0; i < _probeResult.GetCollisionCount(); i++)
+        {
+            if (_probeResult.GetCollisionNormal(i).Y < minimumNormalY) continue;
+            var surface = (_probeResult.GetColliderRid(i).Id, _probeResult.GetColliderShape(i));
+            foreach (var edge in edgeSurfaces)
+                if (surface == edge) return true;
+        }
+        return false;
     }
 
     public void LimitSteepSlide()

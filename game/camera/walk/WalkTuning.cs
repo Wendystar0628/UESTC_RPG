@@ -17,6 +17,8 @@ public static class WalkTuning
     public const float SlowSlideAngleDegrees = 60f;
     public const float SlowSlideSpeed = 1.3f;
     public const float SafeMargin = .01f;
+    // Verify a rounded stair edge over the existing body radius, independently of one physics step.
+    public const float StepSupportForwardDistance = Campus.Contracts.WalkRules.Radius;
     public const float CoyoteSeconds = .1f;
     public const float JumpBufferSeconds = .12f;
     public const float HeldJumpInterval = .5f;

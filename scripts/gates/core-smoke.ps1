@@ -51,14 +51,16 @@ function Invoke-UESTCMainlineSmoke {
         foreach ($marker in @('CORE_TITLE_READY','CORE_INPUT_READY','CORE_SETTINGS_READY','CORE_TRANSIT_READY','CORE_RETURN_TITLE_READY','CORE_CONTINUE_READY','CORE_ROUNDTRIP_READY')) {
             if (-not $close.StdOut.Contains($marker)) { throw "The production close process missed $marker." }
         }
-        # GAME-128 / RESEARCH-034: normal input release alone does not prove directional motion.
-        $movement = [regex]::Match($close.StdOut, '(?m)^CORE_INPUT_READY distance=([0-9.Ee+-]+) forward=([0-9.Ee+-]+)\r?$')
+        # GAME-168: the formal-start route must sustain forward input through its first low obstacle.
+        $movement = [regex]::Match($close.StdOut, '(?m)^CORE_INPUT_READY distance=([0-9.Ee+-]+) forward=([0-9.Ee+-]+) required=([0-9.Ee+-]+)\r?$')
         if (-not $movement.Success) { throw 'The core walk check did not report directional displacement.' }
         $distance = [double]::Parse($movement.Groups[1].Value, [Globalization.CultureInfo]::InvariantCulture)
         $forward = [double]::Parse($movement.Groups[2].Value, [Globalization.CultureInfo]::InvariantCulture)
+        $required = [double]::Parse($movement.Groups[3].Value, [Globalization.CultureInfo]::InvariantCulture)
         if ([double]::IsNaN($distance) -or [double]::IsInfinity($distance) -or $distance -le 0 -or
-            [double]::IsNaN($forward) -or [double]::IsInfinity($forward) -or $forward -le 0) {
-            throw 'Normal forward input did not produce finite positive displacement in its expected direction.'
+            [double]::IsNaN($forward) -or [double]::IsInfinity($forward) -or
+            [double]::IsNaN($required) -or [double]::IsInfinity($required) -or $required -le 0 -or $forward -lt $required) {
+            throw 'Sustained forward input did not complete its rule-derived formal-start walking distance.'
         }
         $loadingSequence = '(?s)STARTUP_PHASE title-ready [^\r\n]+.*STARTUP_PHASE new-game-enter [^\r\n]+.*STARTUP_PHASE loading-complete [^\r\n]+.*STARTUP_PHASE input-ready [^\r\n]*mode=Walk.*CORE_INPUT_READY.*CORE_TRANSIT_READY.*STARTUP_PHASE loading-complete [^\r\n]+.*CORE_RETURN_TITLE_READY.*STARTUP_PHASE loading-complete [^\r\n]+.*CORE_CONTINUE_READY'
         if ($close.StdOut -notmatch $loadingSequence) {
@@ -113,7 +115,7 @@ function Invoke-UESTCMainlineSmoke {
         $parameterUsage['Warnings'] = $parameterWarnings
         $result = [pscustomobject]@{ Status='Passed';
             Scope='G5 Title/NewGame/Walk/SettingsOpenClose/ReturnToTitle/Continue/window-close save and restart restore'; CloseMilliseconds=$closeMs;
-            DirectionalMovement=[pscustomobject]@{ DistanceMeters=$distance; ForwardProjectionMeters=$forward };
+            DirectionalMovement=[pscustomobject]@{ DistanceMeters=$distance; ForwardProjectionMeters=$forward; RequiredForwardMeters=$required; Coverage='Formal-start forward segment and released settled state only' };
             Generation=[UInt64]$latest; PersistedFields='RuntimeMatched (CoreSnapshotsMatch spatial position tolerance; other fields exact)';
             Screenshot='Both captured for Opus visual review; no G7 pixel comparison or tolerance claim';
             InstanceShaderParameters=[pscustomobject]$parameterUsage;

@@ -307,7 +307,8 @@ public partial class WalkController : CharacterBody3D, IWalkController, IWalkTel
         FloorSnapLength = _swimming.Active || plan.Jumped ? 0 : WalkTuning.SnapLength;
         MoveAndSlide();
         bool stepped = false;
-        if (!_swimming.Active && wasGrounded && !plan.Jumped && IsOnWall()) stepped = _bodyCollision.TryStep(requested, _previousFeet.ToGodot());
+        if (!_swimming.Active && wasGrounded && !plan.Jumped && IsOnWall())
+            stepped = _bodyCollision.TryStep(requested, _previousFeet.ToGodot());
         if (stepped) Velocity = new(velocity.X, 0, velocity.Z);
         if (IsOnCeiling()) Velocity = new(Velocity.X, MathF.Min(0, Velocity.Y), Velocity.Z);
         if (!_swimming.Active) _bodyCollision.LimitSteepSlide();
