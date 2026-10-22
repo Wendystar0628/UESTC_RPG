@@ -1,5 +1,9 @@
 root = true
 
+[*.cs]
+dotnet_diagnostic.IDE0051.severity = error
+dotnet_diagnostic.IDE0052.severity = error
+
 [scripts/**.{ps1,psm1,psd1}]
 # Localized script headers require a BOM when read by Windows PowerShell 5.1.
 # G1 still checks the saved bytes; tools that ignore EditorConfig must preserve it.

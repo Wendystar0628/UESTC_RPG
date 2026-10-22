@@ -15,12 +15,6 @@ public interface IKeyLightState
     /// <summary>World-space unit direction towards the key body, after the light's quantization and elevation clamp.</summary>
     Vector3 KeyDir { get; }
     float KeyStrength { get; }
-    float ShadowStrength { get; }
-    /// <summary>Retreat-line height in metres.</summary>
-    float RetreatY { get; }
-    /// <summary>World-space skylight direction, using the key light's quantized azimuth.</summary>
-    Vector3 OvercastDir { get; }
-    KeyBody Body { get; }
 }
 
 /// <summary>

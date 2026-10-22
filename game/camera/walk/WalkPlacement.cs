@@ -36,7 +36,6 @@ internal sealed class WalkPlacement(CharacterBody3D body, Func<NavSpace?> space,
     public bool EntryPending => _entryPending;
     public IMapArrival? Arrival => _placementArrival;
     public WalkSafePoints History => _safePoints;
-    public int SafetyReturnCount { get; private set; }
 
     public void Bind(IMapContext? map, ICollisionWorld collision)
     {
@@ -256,7 +255,6 @@ internal sealed class WalkPlacement(CharacterBody3D body, Func<NavSpace?> space,
     {
         _placementRelocated = true;
         _sinceReturn = 0;
-        SafetyReturnCount++;
     }
 
     public Pose ResolveSettledFeet(bool active, bool settled, Pose bodyPose)

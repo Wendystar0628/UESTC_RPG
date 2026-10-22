@@ -30,8 +30,6 @@ public interface IWalkController
     NavSpace? Space { get; }
     /// <summary>Zero-based speed setting, 0 through 4; 2 is the default 1x speed.</summary>
     int SpeedStep { get; }
-    /// <summary>Counts explicit or exceptional safety returns, not ordinary entry or warps.</summary>
-    int SafetyReturnCount { get; }
     /// <summary>Grounded, outside water, and not in a safety return or other unsettled move.</summary>
     bool IsSettled { get; }
     /// <summary>Pure settled snapshot, resolved from the same feet destination as the walk save section.</summary>

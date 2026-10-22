@@ -22,8 +22,6 @@ public sealed class LightChannelService : IChannelReader, ILightChannelSink
     private Image? _image;
     private ImageTexture? _texture;
 
-    public long Submissions { get; private set; }
-
     public float Value(ChannelId id)
     {
         var slot = LightChannelCatalog.Slot(id);
@@ -50,6 +48,5 @@ public sealed class LightChannelService : IChannelReader, ILightChannelSink
             _image.SetData(LightChannelCatalog.Count, 1, false, Image.Format.Rgf, bytes);
             _texture.Update(_image);
         }
-        Submissions++;
     }
 }

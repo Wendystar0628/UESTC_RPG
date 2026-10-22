@@ -49,7 +49,6 @@ public partial class WalkController : CharacterBody3D, IWalkController, IWalkTel
     public bool CollisionReady { get; private set; }
     public IMapArrival? PlacementArrival => _placement.Arrival;
     public int SpeedStep => _locomotion.SpeedStep;
-    public int SafetyReturnCount => _placement.SafetyReturnCount;
     public bool IsSettled => !_terrain.LandingPointsPending && (!Active || (!_swimming.Active && Grounded && CollisionReady
         && !ExitRequested && _map is not null && !WalkSafetyQueries.InWater(_map.World.Spatial, _feet)));
     public bool IsReady(Pose pose) => !_terrain.LandingPointsPending && !_persistence.HistoryPending;
