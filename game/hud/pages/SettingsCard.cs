@@ -29,7 +29,6 @@ public partial class SettingsCard : Control
     private SettingsCardBindings _bindings = null!;
     private Tween? _opening;
     private bool _built;
-    private int _fillRevision;
 
     public event Action? CloseRequested;
     public event Action? QuitRequested;
@@ -65,15 +64,15 @@ public partial class SettingsCard : Control
         _frame.Panel.MouseFilter = MouseFilterEnum.Stop;
         if (frost)
         {
-            var copy = new BackBufferCopy { CopyMode = BackBufferCopy.CopyModeEnum.Rect };
-            _frame.Shell.AddChild(copy);
-            _frame.Shell.MoveChild(copy, 0);
-            var blur = new ColorRect { Color = Colors.White, MouseFilter = MouseFilterEnum.Ignore, Material = k.Materials.Frost };
-            _frame.Shell.AddChild(blur);
-            _frame.Shell.MoveChild(blur, 1);
-            blur.SetAnchorsAndOffsetsPreset(LayoutPreset.FullRect);
+            // 磨砂底与面板同一尺寸来源：都是面板的子件，模糊层由 PanelContainer 排成面板的矩形，画在面板底色之下（ShowBehindParent）。
+            var copy = new BackBufferCopy { CopyMode = BackBufferCopy.CopyModeEnum.Rect, ShowBehindParent = true };
+            _frame.Panel.AddChild(copy);
+            _frame.Panel.MoveChild(copy, 0);
+            var blur = new ColorRect { Color = Colors.White, MouseFilter = MouseFilterEnum.Ignore, Material = k.Materials.Frost, ShowBehindParent = true };
+            _frame.Panel.AddChild(blur);
+            _frame.Panel.MoveChild(blur, 1);
             blur.SetInstanceShaderParameter("chamfer", k.Tokens.Chamfer("page"));
-            void ResizeCopy() => copy.Rect = _frame.Panel.GetRect();
+            void ResizeCopy() => copy.Rect = new Rect2(Vector2.Zero, _frame.Panel.Size);
             _frame.Panel.Resized += ResizeCopy;
             ResizeCopy();
         }
@@ -141,7 +140,7 @@ public partial class SettingsCard : Control
 
     private void Release()
     {
-        _fillRevision++;
+        SetProcess(false);
         foreach (var builder in _builders.Values) (builder as IDisposable)?.Dispose();
         _builders.Clear();
         // 当帧再次打开也不能让待释放的旧页参与排版、焦点和绘制。
@@ -158,12 +157,13 @@ public partial class SettingsCard : Control
         _built = false;
     }
 
-    private async Task Fill(SettingsPage page, int revision)
+    /// <summary>选中页还没建完就登记它的分帧构建；构建在本节点的 _Process 里推进，关闭或退树即停，不留跨帧等待。</summary>
+    private void Fill(SettingsPage page)
     {
         if (_filled.Contains(page)) return;
-        var content = _pages[page];
-        if (!_builders.TryGetValue(page, out var builder))
+        if (!_builders.ContainsKey(page))
         {
+            var content = _pages[page];
             IEnumerable steps = page switch
             {
                 SettingsPage.Keys => _content.BuildKeys(content),
@@ -174,24 +174,29 @@ public partial class SettingsCard : Control
                 SettingsPage.Licenses => _content.BuildLicenses(content),
                 _ => throw new InvalidOperationException("Unknown settings page."),
             };
-            _builders[page] = builder = steps.GetEnumerator();
+            _builders[page] = steps.GetEnumerator();
         }
-        // 先呈现卡片外框，每帧再建少量设置行；切页保留进度，关闭沿原生命周期释放。
-        while (true)
+        SetProcess(true);
+    }
+
+    // 先呈现卡片外框，每帧只给当前页建少量设置行，行建好即显示；切页保留各页进度，关闭时连同进度一起释放。
+    public override void _Process(double delta)
+    {
+        if (!_builders.TryGetValue(_page, out var builder))
         {
-            await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
-            if (revision != _fillRevision || !IsInsideTree() || !Visible) return;
-            for (var row = 0; row < RowsPerFrame; row++)
-            {
-                if (builder.MoveNext()) continue;
-                (builder as IDisposable)?.Dispose();
-                _builders.Remove(page);
-                _filled.Add(page);
-                content.Visible = true;
-                _pageActions.Visible = page == SettingsPage.Graphics;
-                _graphics.Refresh();
-                return;
-            }
+            SetProcess(false);
+            return;
+        }
+        // 建行抛出的异常原样交给引擎；迭代器随之结束，下一帧按建完收尾，不会每帧重复抛同一个故障。
+        for (var row = 0; row < RowsPerFrame; row++)
+        {
+            if (builder.MoveNext()) continue;
+            (builder as IDisposable)?.Dispose();
+            _builders.Remove(_page);
+            _filled.Add(_page);
+            _graphics.Refresh();
+            SetProcess(false);
+            return;
         }
     }
 
@@ -212,17 +217,15 @@ public partial class SettingsCard : Control
         }
     }
 
-    public override void _ExitTree() => _fillRevision++;
-
     private void Show(SettingsPage page)
     {
         if (_page != page) _bindings.EndCapture();
         _page = page;
-        _ = Fill(page, ++_fillRevision);
-        foreach (var (p, content) in _pages) content.Visible = p == page && _filled.Contains(p);
+        Fill(page);
+        foreach (var (p, content) in _pages) content.Visible = p == page;
         for (var i = 0; i < _tabs.Count; i++) _tabs[i].Selected = Order[i] == page;
         _graphics.ShowActions(page == SettingsPage.Graphics);
-        _pageActions.Visible = page == SettingsPage.Graphics && _filled.Contains(page);
+        _pageActions.Visible = page == SettingsPage.Graphics;
         _frame.Scroll.ScrollVertical = 0;
     }
 
