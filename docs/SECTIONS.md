@@ -1031,7 +1031,7 @@
   - SYS-ATLAS-UI §1.3 外围、校界与箱庭外缘 · L50 · 426
   - SYS-ATLAS-UI §1.4 季节与昼夜：只做轻微变化 · L57 · 193
   - SYS-ATLAS-UI §1.5 文字与标注 · L62 · 388
-- SYS-ATLAS-UI §2 小地图 · L69 · 884
+- SYS-ATLAS-UI §2 小地图 · L69 · 878
 - SYS-ATLAS-UI §3 大地图 · L81 · 1.7k
   - SYS-ATLAS-UI §3.1 布局与开合 · L83 · 466
   - SYS-ATLAS-UI §3.2 缩放与平移 · L90 · 288
@@ -1130,7 +1130,7 @@
   - ★ SYS-GRAPHICS §0.1 接入要点 · L33 · 853
 - SYS-GRAPHICS §1 预设 · L45 · 710
 - SYS-GRAPHICS §2 风格底线与风格默认 · L62 · 694
-- SYS-GRAPHICS §3 单项与生效方式 · L75 · 1.1k
+- SYS-GRAPHICS §3 单项与生效方式 · L75 · 1.2k
 - SYS-GRAPHICS §4 应用方式 · L99 · 465
 - SYS-GRAPHICS §5 自动推荐与自动调节（主线之后） · L109 · 398
 - SYS-GRAPHICS §6 持久化与恢复 · L118 · 305
@@ -1247,14 +1247,14 @@
 
 ## SYS-SAVE-FLOW · 保存时机与读档流程
 
-`docs/systems/SYS-SAVE-FLOW-保存时机与读档流程.md` · 5.6k 字 · 保存时机、安全时刻与落定快照、退出保存、读档顺序、世界实例、状态一致、新游戏建档、校验修复
+`docs/systems/SYS-SAVE-FLOW-保存时机与读档流程.md` · 5.7k 字 · 保存时机、安全时刻与落定快照、退出保存、读档顺序、世界实例、状态一致、新游戏建档、校验修复
 关键词：保存、读档、自动保存、安全时刻、落定快照、续跑等价、世界实例、校验修复、退出保存、现实时间不计、SaveReason、LoadScope、CaptureContext、RestoreContext、NewGameContext、SaveStatus、SaveResult、LoadStatus、LoadResult、SaveState、IWorldState.Instance
 
-- SYS-SAVE-FLOW §0 结论 · L22 · 529
+- SYS-SAVE-FLOW §0 结论 · L22 · 538
   - ★ SYS-SAVE-FLOW §0.1 接入要点 · L29 · 278
-- SYS-SAVE-FLOW §1 保存时机与可靠性 · L35 · 1.2k
+- SYS-SAVE-FLOW §1 保存时机与可靠性 · L35 · 1.3k
   - SYS-SAVE-FLOW §1.1 时机 · L37 · 386
-  - SYS-SAVE-FLOW §1.2 安全时刻与落定快照 · L50 · 347
+  - SYS-SAVE-FLOW §1.2 安全时刻与落定快照 · L50 · 356
   - SYS-SAVE-FLOW §1.3 写盘与失败 · L56 · 103
   - SYS-SAVE-FLOW §1.4 退出 · L60 · 306
   - SYS-SAVE-FLOW §1.5 保存状态与失败反馈 · L69 · 87
@@ -1322,22 +1322,22 @@
 
 ## SYS-VIEW · 观察模式与旁观漫游
 
-`docs/systems/SYS-VIEW-观察模式与旁观漫游.md` · 4.9k 字 · 两种观察模式总述、旁观漫游的操作与活动范围、初始位置、镜头规则、3D 与平面地图的分工
+`docs/systems/SYS-VIEW-观察模式与旁观漫游.md` · 4.8k 字 · 两种观察模式总述、旁观漫游的操作与活动范围、初始位置、镜头规则、3D 与平面地图的分工
 关键词：旁观模式、观察模式、飞行速度档、视场角、鼠标灵敏度、活动范围、初始位置、镜头不会自己动、自动运镜、命令行参数、ICameraRig、Pose
 
 - SYS-VIEW §0 结论 · L22 · 963
   - ★ SYS-VIEW §0.1 接入要点 · L37 · 297
 - SYS-VIEW §1 不做的事 · L44 · 70
-- SYS-VIEW §2 旁观者漫游 · L48 · 2.0k
-  - SYS-VIEW §2.1 操作 · L52 · 459
+- SYS-VIEW §2 旁观者漫游 · L48 · 1.9k
+  - SYS-VIEW §2.1 操作 · L52 · 460
   - SYS-VIEW §2.2 鼠标与碰撞 · L59 · 149
   - SYS-VIEW §2.3 活动范围 · L64 · 235
   - SYS-VIEW §2.4 初始位置 · L72 · 452
   - SYS-VIEW §2.5 镜头不会自己动 · L81 · 282
-  - SYS-VIEW §2.6 操作说明与提示 · L89 · 209
-- SYS-VIEW §3 命令行参数 · L98 · 197
-- SYS-VIEW §4 环境痕迹与平面地图的分工 · L102 · 231
-- SYS-VIEW §5 待验证 · L108 · 68
+  - SYS-VIEW §2.6 操作说明与提示 · L89 · 123
+- SYS-VIEW §3 命令行参数 · L97 · 197
+- SYS-VIEW §4 环境痕迹与平面地图的分工 · L101 · 231
+- SYS-VIEW §5 待验证 · L107 · 68
 
 ## SYS-VIEW-MEDIUM · 介质呈现
 
@@ -1434,34 +1434,34 @@
 
 ## UI-INDEX · 界面总纲
 
-`docs/ui/UI-INDEX-界面总纲.md` · 1.1k 字 · 界面域总纲：界面有什么、怎么操作、长什么样；本域通用原则与文档树
+`docs/ui/UI-INDEX-界面总纲.md` · 1.2k 字 · 界面域总纲：界面有什么、怎么操作、长什么样；本域通用原则与文档树
 关键词：界面、界面总纲、文档树、UI
 
-- UI-INDEX §0 结论 · L21 · 561
+- UI-INDEX §0 结论 · L21 · 587
   - ★ UI-INDEX §0.1 接入要点 · L30 · 177
 - UI-INDEX §1 文档树 · L35 · 177
 
 ## UI-NAV · 界面与操作说明
 
-`docs/ui/UI-NAV-界面与操作说明.md` · 8.9k 字 · 界面有什么、怎么操作：界面态与漫游态、组件的内容与交互、输入优先级与关键键位、无障碍与文本约定；点位与跳转见子文档
-关键词：界面交互、快捷键、输入优先级、界面态、漫游态、自动隐藏、四角归属、时间环操作、天气签条、速度档、临时提示、到达标题、设置项、无障碍、读屏、文本键、地名来源
+`docs/ui/UI-NAV-界面与操作说明.md` · 8.9k 字 · 界面有什么、怎么操作：常驻界面与呼出光标、组件的内容与交互、输入优先级与关键键位、无障碍与文本约定；点位与跳转见子文档
+关键词：界面交互、快捷键、输入优先级、常驻界面、呼出光标、四角归属、时间环操作、天气签条、速度档、临时提示、到达标题、设置项、无障碍、读屏、文本键、地名来源
 
-- UI-NAV §0 结论 · L21 · 992
+- UI-NAV §0 结论 · L21 · 1.0k
   - ★ UI-NAV §0.1 接入要点 · L36 · 446
 - UI-NAV §1 允许什么、禁止什么 · L44 · 406
-- UI-NAV §2 界面态、漫游态与隐藏 · L53 · 901
-- UI-NAV §3 组件的内容与交互 · L72 · 3.2k
+- UI-NAV §2 常驻界面、光标与隐藏 · L53 · 848
+- UI-NAV §3 组件的内容与交互 · L72 · 3.1k
   - UI-NAV §3.1 时间环 · L74 · 534
   - UI-NAV §3.2 季节、速度与观察模式 · L83 · 369
   - UI-NAV §3.3 点位目录 · L89 · 218
-  - UI-NAV §3.4 首次进入与到达标题 · L93 · 379
-  - UI-NAV §3.5 操作说明与设置 · L98 · 815
-  - UI-NAV §3.6 临时提示 · L106 · 398
-  - UI-NAV §3.7 天气签条 · L114 · 506
-- UI-NAV §4 输入 · L124 · 1.4k
-  - UI-NAV §4.1 Esc 与单键快捷键 · L126 · 283
-  - UI-NAV §4.2 关键键位 · L132 · 619
-  - UI-NAV §4.3 输入优先级 · L151 · 514
+  - UI-NAV §3.4 到达标题 · L93 · 267
+  - UI-NAV §3.5 操作说明与设置 · L97 · 815
+  - UI-NAV §3.6 临时提示 · L105 · 397
+  - UI-NAV §3.7 天气签条 · L113 · 506
+- UI-NAV §4 输入 · L123 · 1.5k
+  - UI-NAV §4.1 Esc 与单键快捷键 · L125 · 320
+  - UI-NAV §4.2 关键键位 · L131 · 656
+  - UI-NAV §4.3 输入优先级 · L151 · 547
 - UI-NAV §5 无障碍与语言 · L165 · 832
 - UI-NAV §6 待验证 · L178 · 102
 
@@ -1517,11 +1517,11 @@
 - UI-VISUAL-COMPONENTS §4 组件外观 · L67 · 1.9k
   - UI-VISUAL-COMPONENTS §4.1 六种状态（"通电"隐喻） · L69 · 216
   - UI-VISUAL-COMPONENTS §4.2 控件与容器 · L74 · 320
-  - UI-VISUAL-COMPONENTS §4.3 时间环 · L80 · 351
+  - UI-VISUAL-COMPONENTS §4.3 时间环 · L80 · 352
   - UI-VISUAL-COMPONENTS §4.4 天气签条、速度条与到达标题 · L89 · 306
   - UI-VISUAL-COMPONENTS §4.5 存档卡"存储模组"、等待灯与加载界面 · L95 · 691
-- UI-VISUAL-COMPONENTS §5 画面布局 · L103 · 836
-- UI-VISUAL-COMPONENTS §6 待验证 · L120 · 162
+- UI-VISUAL-COMPONENTS §5 画面布局 · L103 · 832
+- UI-VISUAL-COMPONENTS §6 待验证 · L120 · 163
 
 ## UI-VISUAL-MOTION · 界面动效与减少动态效果
 
@@ -1581,7 +1581,7 @@
 
 - ENG-BUDGET §0 结论 · L21 · 801
   - ★ ENG-BUDGET §0.1 接入要点 · L35 · 184
-- ENG-BUDGET §1 界面、外围、室内与音频的份额 · L41 · 147
+- ENG-BUDGET §1 界面、外围、室内与音频的份额 · L41 · 148
 - ENG-BUDGET §2 预设与设备档的预算 · L45 · 1.5k
 - ENG-BUDGET §3 份额怎么分 · L76 · 469
 - ENG-BUDGET §4 怎么测 · L84 · 160
@@ -1744,7 +1744,7 @@
 - ENG-RELEASE §5 地图数据包（ODbL） · L78 · 365
 - ENG-RELEASE §6 故障处理与诊断 · L85 · 363
 - ENG-RELEASE §7 许可 · L91 · 1.7k
-  - ENG-RELEASE §7.1 署名、许可页、窗口标题与图标 · L107 · 708
+  - ENG-RELEASE §7.1 署名、许可页、窗口标题与图标 · L107 · 711
 
 ## ENG-ROADMAP · 扩展路线
 
@@ -2002,18 +2002,18 @@
 
 ## REG-DECISIONS-SYSTEMS · 系统与工程决策
 
-`docs/registry/REG-DECISIONS-SYSTEMS-系统与工程决策.md` · 21.1k 字 · 界面、存档、音频、性能与画面设置、工程五个领域的已定决策
+`docs/registry/REG-DECISIONS-SYSTEMS-系统与工程决策.md` · 21.3k 字 · 界面、存档、音频、性能与画面设置、工程五个领域的已定决策
 关键词：决策、系统、工程、界面、存档、音频、性能、画面设置、预算、契约
 
 - REG-DECISIONS-SYSTEMS §0 结论 · L21 · 126
   - ★ REG-DECISIONS-SYSTEMS §0.1 接入要点 · L25 · 56
-- REG-DECISIONS-SYSTEMS §1 界面 · L29 · 4.5k
-- REG-DECISIONS-SYSTEMS §2 存档 · L64 · 1.6k
-- REG-DECISIONS-SYSTEMS §3 音频 · L83 · 2.2k
-- REG-DECISIONS-SYSTEMS §4 性能与画面设置 · L105 · 3.5k
-- REG-DECISIONS-SYSTEMS §5 工程 · L135 · 5.1k
-- REG-DECISIONS-SYSTEMS §6 地图与行走 · L170 · 1.0k
-- REG-DECISIONS-SYSTEMS §7 时间、季节、天气 · L181 · 2.4k
+- REG-DECISIONS-SYSTEMS §1 界面 · L29 · 4.6k
+- REG-DECISIONS-SYSTEMS §2 存档 · L65 · 1.6k
+- REG-DECISIONS-SYSTEMS §3 音频 · L84 · 2.2k
+- REG-DECISIONS-SYSTEMS §4 性能与画面设置 · L106 · 3.6k
+- REG-DECISIONS-SYSTEMS §5 工程 · L137 · 5.1k
+- REG-DECISIONS-SYSTEMS §6 地图与行走 · L172 · 1.0k
+- REG-DECISIONS-SYSTEMS §7 时间、季节、天气 · L183 · 2.4k
 
 ## REG-DECISIONS-WORLD · 世界与画面决策
 
@@ -2040,7 +2040,7 @@
 - REG-GLOSSARY §5 箱庭、地形、边界与外围 · L113 · 1.5k
 - REG-GLOSSARY §6 室内与门 · L138 · 981
 - REG-GLOSSARY §7 观察模式、行走与跳转 · L154 · 1.4k
-- REG-GLOSSARY §8 平面地图与传送 · L178 · 944
+- REG-GLOSSARY §8 平面地图与传送 · L178 · 932
 - REG-GLOSSARY §9 开始页与存档 · L195 · 1.0k
 - REG-GLOSSARY §10 多地图 · L213 · 620
 - REG-GLOSSARY §11 界面 · L225 · 1.4k

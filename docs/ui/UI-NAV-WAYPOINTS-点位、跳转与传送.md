@@ -15,7 +15,7 @@ paths: ["game/data/maps/*/waypoints.json"]
 # UI-NAV-WAYPOINTS · 点位、跳转与传送
 
 > **范围**：本文规定观景点位的设计意图与合法性、"飞过去"的方式与打断规则、预取与速度律豁免的界面侧约定，以及传送在界面上的取舍。
-> **不在本文**：界面态、组件、输入与无障碍（UI-NAV）；传送规格、锚点与大地图（SYS-ATLAS）；速度律与预取的数值（ENG-BUDGET-LOD §2、ENG-PERF-STREAM §1.4）；英雄帧与推荐状态的来源（ART-COLORSCRIPT §1.5）；跨图切换（SYS-MAPS §3）。
+> **不在本文**：常驻界面、组件、输入与无障碍（UI-NAV）；传送规格、锚点与大地图（SYS-ATLAS）；速度律与预取的数值（ENG-BUDGET-LOD §2、ENG-PERF-STREAM §1.4）；英雄帧与推荐状态的来源（ART-COLORSCRIPT §1.5）；跨图切换（SYS-MAPS §3）。
 > **查阅**：先读 §0；点位看 §1；跳转与传送看 §2
 
 ## 0 结论
