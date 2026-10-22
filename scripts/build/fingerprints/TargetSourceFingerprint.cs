@@ -11,6 +11,7 @@ using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.MSBuild;
+using Microsoft.CodeAnalysis.Text;
 
 namespace Campus.Build.Fingerprints;
 
@@ -34,10 +35,10 @@ internal static class TargetSourceFingerprint
         var documentPaths = ReadDocumentPaths(repository);
         var owners = new SortedDictionary<string, string>(StringComparer.Ordinal);
         var toolGraph = await LoadGraph(tool);
-        var salt = await CreateSalt(repository, projects, toolGraph, tool, configuration);
+        using var evaluation = new Microsoft.Build.Evaluation.ProjectCollection(new Dictionary<string, string>(properties, StringComparer.OrdinalIgnoreCase));
+        var salt = await CreateSalt(repository, projects, toolGraph, tool, configuration, evaluation);
         var sources = new List<Source>();
         var roots = new List<Root>();
-        using var evaluation = new Microsoft.Build.Evaluation.ProjectCollection(new Dictionary<string, string>(properties, StringComparer.OrdinalIgnoreCase));
         foreach (var (project, compilation) in projects)
         {
             var projectPath = Relative(repository, project.FilePath!);
@@ -52,7 +53,7 @@ internal static class TargetSourceFingerprint
     private static async Task<SortedSet<string>> CreateSalt(string repository,
         List<(Project Project, Compilation Compilation)> projects,
         List<(Project Project, Compilation Compilation)> toolGraph, Project tool,
-        IReadOnlyDictionary<string, string> configuration)
+        IReadOnlyDictionary<string, string> configuration, Microsoft.Build.Evaluation.ProjectCollection evaluation)
     {
         var salt = new SortedSet<string>(StringComparer.Ordinal) { "target-source-v2" };
         foreach (var property in configuration.OrderBy(pair => pair.Key, StringComparer.Ordinal))
@@ -63,7 +64,7 @@ internal static class TargetSourceFingerprint
                 assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion);
         var sourceAssemblies = projects.Concat(toolGraph).Select(item => item.Compilation.Assembly.Identity).ToHashSet();
         foreach (var (project, compilation) in projects.Concat(toolGraph).DistinctBy(item => item.Project.Id))
-            await AddProjectSalt(repository, project, compilation, sourceAssemblies, salt);
+            await AddProjectSalt(repository, project, compilation, sourceAssemblies, salt, evaluation.LoadProject(project.FilePath!));
         foreach (var name in new[] { "global.json", "Directory.Build.props", "Directory.Build.targets", "Directory.Packages.props", "NuGet.Config" })
         {
             var path = Path.Combine(repository, name);
@@ -77,7 +78,7 @@ internal static class TargetSourceFingerprint
     }
 
     private static async Task AddProjectSalt(string repository, Project project, Compilation compilation,
-        IReadOnlySet<AssemblyIdentity> sourceAssemblies, SortedSet<string> salt)
+        IReadOnlySet<AssemblyIdentity> sourceAssemblies, SortedSet<string> salt, Microsoft.Build.Evaluation.Project evaluated)
     {
         var projectPath = Relative(repository, project.FilePath!);
         salt.Add("project:" + projectPath + ":" + Hash(File.ReadAllText(project.FilePath!)));
@@ -110,9 +111,15 @@ internal static class TargetSourceFingerprint
                 salt.Add("generator:" + projectPath + ":" + type.Assembly.GetName().FullName + ":" + type.FullName);
             }
         }
+        var generatedConfig = GeneratedAnalyzerConfigPath(evaluated);
         foreach (var document in project.AdditionalDocuments.Concat<TextDocument>(project.AnalyzerConfigDocuments))
-            salt.Add("compiler-input:" + projectPath + ":" + PortableValue(document.FilePath!, repository) + ":" +
-                Hash((await document.GetTextAsync()).ToString()));
+        {
+            var text = await document.GetTextAsync();
+            var contents = document is AnalyzerConfigDocument &&
+                string.Equals(Path.GetFullPath(document.FilePath!), generatedConfig, StringComparison.OrdinalIgnoreCase)
+                ? PortableGeneratedConfig(text, repository) : text.ToString();
+            salt.Add("compiler-input:" + projectPath + ":" + PortableValue(document.FilePath!, repository) + ":" + Hash(contents));
+        }
         // Compilation-wide directives come only from the evaluated Compile inputs.
         foreach (var document in project.Documents)
         {
@@ -121,6 +128,46 @@ internal static class TargetSourceFingerprint
             foreach (var directive in unit.Usings.Where(item => item.GlobalKeyword.RawKind != 0))
                 salt.Add("global-using:" + projectPath + ":" + directive.WithoutTrivia().ToFullString());
         }
+    }
+
+    private static string GeneratedAnalyzerConfigPath(Microsoft.Build.Evaluation.Project project)
+    {
+        var path = project.GetPropertyValue("GeneratedMSBuildEditorConfigFile");
+        // The locked SDK sets this default inside GenerateMSBuildEditorConfigFileShouldRun, after evaluation.
+        if (path.Length == 0)
+            path = Path.Combine(project.GetPropertyValue("IntermediateOutputPath"),
+                project.GetPropertyValue("MSBuildProjectName") + ".GeneratedMSBuildEditorConfig.editorconfig");
+        return Path.GetFullPath(path, project.DirectoryPath);
+    }
+
+    // Roslyn's config parser discards original text; edit only known SDK/Godot path values and retain all other input text.
+    private static string PortableGeneratedConfig(SourceText text, string repository)
+    {
+        var changes = new List<TextChange>();
+        foreach (var line in text.Lines)
+        {
+            var content = line.ToString();
+            if (content.TrimStart().StartsWith('[')) break; // build properties belong to the global section only.
+            var separator = content.IndexOf('=');
+            if (separator < 0) continue;
+            var property = content[..separator].Trim();
+            if (property is not ("build_property.ProjectDir" or "build_property.GodotProjectDir" or
+                "build_property.GodotProjectDirBase64")) continue;
+            var start = separator + 1;
+            while (start < content.Length && char.IsWhiteSpace(content[start])) start++;
+            var end = content.Length;
+            while (end > start && char.IsWhiteSpace(content[end - 1])) end--;
+            var value = content[start..end];
+            var encoded = property == "build_property.GodotProjectDirBase64";
+            var path = encoded ? new UTF8Encoding(false, true).GetString(Convert.FromBase64String(value)) : value;
+            if (!Path.IsPathFullyQualified(path)) continue;
+            var relative = Path.GetRelativePath(repository, path).Replace('\\', '/');
+            if (Path.IsPathRooted(relative) || relative == ".." || relative.StartsWith("../", StringComparison.Ordinal)) continue;
+            if (Path.EndsInDirectorySeparator(path) && !relative.EndsWith('/')) relative += "/";
+            var portable = encoded ? Convert.ToBase64String(Encoding.UTF8.GetBytes(relative)) : relative;
+            changes.Add(new TextChange(new TextSpan(line.Start + start, value.Length), portable));
+        }
+        return text.WithChanges(changes).ToString();
     }
 
     private static async Task<Dictionary<string, string>> CollectProjectSources(string repository, Project project,
