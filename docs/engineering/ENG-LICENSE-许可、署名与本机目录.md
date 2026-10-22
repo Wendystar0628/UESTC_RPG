@@ -36,7 +36,7 @@ paths: ["game/project.godot", "third_party.json", "game/addons/**", "README.md",
 ## 1 用户目录与日志
 
 - **位置**：`user://` 是 `%APPDATA%\UESTC\`，由 `project.godot` 的自定义用户目录名决定，不带版本号，也不再改名；里面有存档、设置和日志（SYS-SAVE-FORMAT §3）。
-- **日志**：`user://logs/godot.log`，每次启动轮换、保留最近 5 次；每行带归属文档编码（按文档文件头 paths 得到，仅作诊断）、当前图和流程阶段；本机路径写成 `user://…`，不写出 Windows 用户名。设置卡"键位"页底的 [打开日志目录] 直接打开这里（UI-NAV §3.5）。
+- **日志**：`user://logs/godot.log`，引擎原生文件日志，每次启动轮换、保留最近 5 次；诊断只经 `DiagnosticLog` 写入（ENG-ARCH §2）。设置卡"键位"页底的 [打开日志目录] 直接打开这里（UI-NAV §3.5）。
 - **清理**：删掉 `%APPDATA%\UESTC\` 会删掉存档、设置和日志，不可恢复；只想腾空间用设置卡"存储"行的"清除缓存"，只清烘焙缓存（ENG-ARCH §4），不动存档和设置。
 
 ## 2 许可
