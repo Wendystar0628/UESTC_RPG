@@ -67,7 +67,7 @@ internal sealed class CoreLifecycleDriver(IStageGateHost host)
             "New game did not prepare its standing collision and settle.");
         await ExerciseModes(camera, walk, observer);
         await ExerciseInput(camera, walk, input);
-        await ExerciseSettings();
+        await ExerciseSettings(input);
         await ExerciseTransit(camera, walk, observer);
         var saved = await saves.SaveNow(SaveReason.Test);
         if (saved.Status != SaveStatus.Saved) throw new InvalidOperationException("Core save failed: " + saved.Error);
@@ -176,7 +176,7 @@ internal sealed class CoreLifecycleDriver(IStageGateHost host)
         GD.Print(FormattableString.Invariant($"CORE_INPUT_READY distance={distance:R} forward={projected:R}"));
     }
 
-    private async Task ExerciseSettings()
+    private async Task ExerciseSettings(IInputRouter input)
     {
         var surface = KernelServices.Get<IUiSurfaceState>();
         if ((surface.Open & UiSurface.SettingsCard) != 0 || surface.SettingsPage is not null)
@@ -184,12 +184,12 @@ internal sealed class CoreLifecycleDriver(IStageGateHost host)
         await TapEscape();
         await CoreWait(() => (surface.Open & UiSurface.SettingsCard) != 0 && surface.SettingsPage is not null,
             "Escape did not open an interactive settings page with its rows built.");
+        // DECISION-308: an open page leases a visible cursor; closing the last page restores capture.
+        await CoreWait(() => input.CursorVisible, "The open settings card did not show the cursor.");
         await TapEscape();
         await CoreWait(() => (surface.Open & UiSurface.SettingsCard) == 0 && surface.SettingsPage is null,
             "Escape did not withdraw the settings page.");
-        // Private desktops do not supply window focus: visibility would be true
-        // without a UI lease. Lease behavior is covered by HudLifetimeTests.PageHostContentHoldsTheCursorLeaseUntilHidden.
-        GD.Print("CORE_SETTINGS_CURSOR NOT_MEASURED reason=private-desktop-focus-unavailable");
+        await CoreWait(() => !input.CursorVisible, "Closing the settings card did not return the cursor to capture.");
         GD.Print("CORE_SETTINGS_READY");
     }
 

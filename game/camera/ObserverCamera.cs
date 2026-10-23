@@ -68,13 +68,13 @@ public partial class ObserverCamera : Node, ICameraRig, IObserverState, IViewCon
         _flow.Changed += OnFlowChanged;
         _listener = new ObserverListener { Observer = this };
         AddChild(_listener);
-        _controls.SetFocused(DisplayServer.WindowIsFocused());
+        ApplyWindowFocus(DisplayServer.WindowIsFocused());
     }
 
     public override void _EnterTree()
     {
         if (_world is null) return;
-        _controls.SetFocused(DisplayServer.WindowIsFocused());
+        ApplyWindowFocus(DisplayServer.WindowIsFocused());
         _world.InstanceChanged += OnWorldInstanceChanged;
         if (_flow is not null) _flow.Changed += OnFlowChanged;
         _worldResetPending = true;
@@ -441,12 +441,17 @@ public partial class ObserverCamera : Node, ICameraRig, IObserverState, IViewCon
 
     public override void _Notification(int what)
     {
-        if (what == NotificationApplicationFocusOut)
-        {
-            ClearInputMotion();
-            _controls.SetFocused(false);
-        }
-        else if (what == NotificationApplicationFocusIn) _controls.SetFocused(true);
+        // UI-NAV: window focus is emitted where DisplayServer sets WindowIsFocused, including the
+        // deferred first activation; the application focus-in sent before the main loop exists is dropped.
+        if (what == NotificationWMWindowFocusOut) ApplyWindowFocus(false);
+        else if (what == NotificationWMWindowFocusIn) ApplyWindowFocus(true);
+    }
+
+    /// <summary>Applies one window-focus state, from the entry snapshot or a window notification.</summary>
+    internal void ApplyWindowFocus(bool focused)
+    {
+        if (!focused) ClearInputMotion();
+        _controls.SetFocused(focused);
     }
 
     public IDisposable RegisterLayer(string owner, int priority, Func<InputActionEvent, bool> handler) =>
