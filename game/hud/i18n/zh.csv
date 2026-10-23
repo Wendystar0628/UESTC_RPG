@@ -34,6 +34,9 @@ hud.perf.gpu_render,GPU 渲染,GPU render
 hud.perf.cpu_usage,CPU 占用,CPU use
 hud.perf.mem,内存,RAM
 hud.perf.vram,显存,VRAM
+hud.perf.worst,最慢,Worst
+hud.perf.internal,内部,Internal
+hud.perf.cap,上限,Cap
 time.shichen.zi,子时,Zi hour
 time.shichen.chou,丑时,Chou hour
 time.shichen.yin,寅时,Yin hour
