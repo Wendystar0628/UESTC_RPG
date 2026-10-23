@@ -5,6 +5,7 @@ using Campus.Kernel.Settings;
 using GdUnit4;
 
 namespace Campus.Tests;
+using static Campus.Tests.QualityApplicationTestFixture;
 
 [TestSuite]
 public sealed class QualityTests
@@ -28,7 +29,7 @@ public sealed class QualityTests
         foreach (var pair in new[] { (QualityKnob.RenderScale, .6f), (QualityKnob.ShadowDistance, 700f),
             (QualityKnob.ShadowQuality, -1f), (QualityKnob.FoliageDensity, float.NaN) })
         {
-            var plan = state.Plan(new(QualityPreset.Fine, new Dictionary<QualityKnob, float> { [pair.Item1] = pair.Item2 }));
+            var plan = state.Plan(Edit(new(QualityPreset.Fine, new Dictionary<QualityKnob, float> { [pair.Item1] = pair.Item2 }), pair.Item1));
             if (plan.Rejected.Count != 1 || state.Effective.Version != 0) throw new InvalidOperationException("Invalid plan mutated state.");
         }
     }
@@ -89,13 +90,13 @@ public sealed class QualityTests
         var before = state.Effective;
         foreach (var preset in new[] { QualityPreset.Balanced, QualityPreset.Ultra })
         {
-            state.Commit(QualityCatalog.Profile(preset), ApplyOrigin.User, true);
+            state.Commit(state.Plan(SelectPreset(preset)).Next, ApplyOrigin.User, true);
             foreach (var spec in catalog.Knobs.Where(spec => spec.Scope != KnobScope.Effect))
                 if (state.Effective.Requested(spec.Knob) != before.Requested(spec.Knob))
                     throw new InvalidOperationException($"Preset changed an independent request: {spec.Knob}.");
             if (state.Effective.Preset != preset) throw new InvalidOperationException("Preset selection kept effect overrides.");
         }
-        state.Commit(catalog.DefaultProfile, ApplyOrigin.User, true);
+        state.Commit(state.Plan(new(catalog.DefaultProfile, QualityEditIntent.RestoreDefaults, [])).Next, ApplyOrigin.User, true);
         foreach (var knob in QualityCatalog.All)
             if (state.Effective.Requested(knob) != defaults[(int)knob]) throw new InvalidOperationException($"Default did not restore {knob}.");
     }
@@ -109,7 +110,7 @@ public sealed class QualityTests
             var state = new QualityState(Catalog());
             var input = new Dictionary<QualityKnob, float> { [QualityKnob.RenderScale] = .77f, [QualityKnob.AntiAliasing] = 0 };
             var profile = new QualityProfile(QualityPreset.Fine, input);
-            if (state.Plan(profile).Next.Overrides[QualityKnob.AntiAliasing] != 0 || input[QualityKnob.AntiAliasing] != 0)
+            if (state.Plan(Edit(profile, QualityKnob.RenderScale, QualityKnob.AntiAliasing)).Next.Overrides[QualityKnob.AntiAliasing] != 0 || input[QualityKnob.AntiAliasing] != 0)
                 throw new InvalidOperationException("FSR1 planning rewrote the requested AA.");
             state.Commit(profile, origin, true);
             if (state.Effective[QualityKnob.AntiAliasing] != 0)
@@ -183,7 +184,7 @@ public sealed class QualityTests
         var catalog = Catalog();
         var state = new QualityState(catalog);
         var sharpness = QualityKnob.FsrSharpness;
-        var native = state.Plan(state.Requested);
+        var native = state.Plan(Edit(state.Requested));
         if (state.Effective[sharpness] != 0 || state.Effective.Requested(sharpness) != catalog.PresetValue(catalog.DefaultPreset, sharpness) ||
             native.Notes.Count != 1 || native.Notes[0].Knob != sharpness || native.Notes[0].Effective != 0)
             throw new InvalidOperationException("Native precision must preserve sharpening intent and expose the inactive dependency.");
@@ -193,10 +194,12 @@ public sealed class QualityTests
             throw new InvalidOperationException("A request-only change was lost.");
         var restored = new QualityState(catalog);
         restored.Commit(state.Requested, ApplyOrigin.Startup, true);
-        restored.Commit(new(QualityPreset.Custom, new Dictionary<QualityKnob, float> { [QualityKnob.RenderScale] = QualityCatalog.RenderScales[0] }), ApplyOrigin.User, true);
-        if (restored.Effective[sharpness] != desired || restored.Plan(restored.Requested).Notes.Count != 0)
+        restored.Commit(restored.Plan(Edit(new(QualityPreset.Custom, new Dictionary<QualityKnob, float>
+            { [QualityKnob.RenderScale] = QualityCatalog.RenderScales[0] }), QualityKnob.RenderScale)).Next, ApplyOrigin.User, true);
+        if (restored.Effective[sharpness] != desired || restored.Plan(Edit(restored.Requested)).Notes.Count != 0)
             throw new InvalidOperationException("Re-enabling spatial upscaling did not restore the saved sharpening request.");
-        restored.Commit(new(QualityPreset.Custom, new Dictionary<QualityKnob, float> { [QualityKnob.RenderScale] = 1 }), ApplyOrigin.User, true);
+        restored.Commit(restored.Plan(Edit(new(QualityPreset.Custom, new Dictionary<QualityKnob, float>
+            { [QualityKnob.RenderScale] = 1 }), QualityKnob.RenderScale)).Next, ApplyOrigin.User, true);
         if (restored.Effective[sharpness] != 0 || restored.Effective.Requested(sharpness) != desired || restored.Effective.Preset == QualityPreset.Custom)
             throw new InvalidOperationException("Clarity changes affected the effect preset or discarded the independent request.");
     }

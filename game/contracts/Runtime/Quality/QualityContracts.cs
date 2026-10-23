@@ -90,6 +90,25 @@ public enum ApplyOrigin : byte
     Gate,           // 门禁、基准、画面测试与"预设轮换"脚本：不写盘
 }
 
+public enum QualityEditIntent : byte
+{
+    EditKnobs,       // 只改 EditedKnobs；会话中的命令行预设与其他覆盖不成为玩家选择
+    SelectPreset,    // 明确选择 Profile.Preset，只重置效果项，保留独立偏好
+    RestoreDefaults, // 全范围恢复 Default，不保留独立偏好
+}
+
+/// <summary>
+/// Intent is explicit and survives planning/queuing. EditedKnobs contains only deliberately edited items,
+/// including edits made after selecting a preset or restoring defaults in the same pending plan.
+/// Their requested values come from Profile; omitted overrides mean that profile's preset/default value.
+/// SelectPreset and RestoreDefaults first establish their baseline, then apply EditedKnobs.
+/// ApplyOrigin controls persistence; CommandLine and Gate requests stay in memory.
+/// </summary>
+public sealed record QualityRequest(
+    QualityProfile Profile,
+    QualityEditIntent Intent,
+    IReadOnlyList<QualityKnob> EditedKnobs);
+
 public readonly record struct QualityChange(long Version, ulong Knobs, ApplyOrigin Origin, bool Loading)
 {
     public bool Has(QualityKnob k) => (Knobs & (1UL << (int)k)) != 0;   // 按 QualityKnob 的序号置位，不分配
@@ -123,8 +142,8 @@ public interface IQualityService                    // Kernel 服务（SYS-GRAPH
     IReadOnlyList<KnobSpec> Knobs { get; }          // 单项目录（QualityCatalog）：画面页按它生成控件
     float PresetValue(QualityPreset p, QualityKnob k);   // 预设表 game/data/quality-presets.json 的取值
     event Action<QualityChange>? Changed;           // 主线程，值变才发
-    ApplyPlan Plan(QualityProfile next);            // 界面据此显示"加载界面""重启"生效标签与依赖说明（UI-VISUAL）
-    Task<ApplyResult> Apply(QualityProfile next, ApplyOrigin origin);
+    ApplyPlan Plan(QualityRequest next);            // 界面据此显示"加载界面""重启"生效标签与依赖说明（UI-VISUAL）
+    Task<ApplyResult> Apply(QualityRequest next, ApplyOrigin origin);
 }
 
 public interface IQualityAware                      // 标了 [QualityResponsive] 的 [KernelNode] 实现

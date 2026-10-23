@@ -43,7 +43,7 @@ public sealed class QualityService : IQualityFrame, IBootParticipant, IAsyncDisp
         public Binding(IQualityRuntime runtime) { Runtime = runtime; Token = Lifetime.Token; }
     }
 
-    private sealed record Request(QualityProfile Profile, ApplyOrigin Origin, TaskCompletionSource<ApplyResult>? Completion);
+    private sealed record Request(QualityRequest Edit, ApplyOrigin Origin, TaskCompletionSource<ApplyResult>? Completion);
     private readonly QualityCatalog _catalog;
     private readonly QualityState _state;
     private readonly IGraphicsSettingsStore _store;
@@ -84,7 +84,7 @@ public sealed class QualityService : IQualityFrame, IBootParticipant, IAsyncDisp
     public string Id => "quality";
     public int Order => 100;
     public float PresetValue(QualityPreset preset, QualityKnob knob) => _catalog.PresetValue(preset, knob);
-    public ApplyPlan Plan(QualityProfile next) => _state.Plan(next);
+    public ApplyPlan Plan(QualityRequest next) => _state.Plan(next);
 
     public CancellationToken Bind(IQualityRuntime runtime)
     {
@@ -164,11 +164,17 @@ public sealed class QualityService : IQualityFrame, IBootParticipant, IAsyncDisp
         finally { if (ReferenceEquals(_binding, binding)) _initializing = false; }
     }
 
-    public Task<ApplyResult> Apply(QualityProfile next, ApplyOrigin origin)
+    public Task<ApplyResult> Apply(QualityRequest next, ApplyOrigin origin)
     {
         if (!Enum.IsDefined(origin)) throw new ArgumentOutOfRangeException(nameof(origin));
         var plan = Plan(next);
         if (plan.Rejected.Count != 0) return Task.FromResult(Result(ApplyStatus.Rejected, plan.Rejected));
+        next = next with
+        {
+            Profile = QualityCatalog.Freeze(next.Profile.Preset == QualityPreset.Custom
+                ? next.Profile with { Preset = Requested.Preset } : next.Profile),
+            EditedKnobs = Array.AsReadOnly(next.EditedKnobs.Distinct().Order().ToArray()),
+        };
         var binding = _binding ?? throw new InvalidOperationException("Quality runtime is not mounted.");
         var runtime = binding.Runtime;
         // The boot caller already owns an opaque screen; no second screen or transition wait is needed.
@@ -177,7 +183,7 @@ public sealed class QualityService : IQualityFrame, IBootParticipant, IAsyncDisp
         var deferred = runtime.Transitioning || binding.Active is not null;
         _pending?.Completion?.TrySetResult(Result(ApplyStatus.Deferred));
         var completion = deferred ? null : new TaskCompletionSource<ApplyResult>(TaskCreationOptions.RunContinuationsAsynchronously);
-        _pending = new(plan.Next, origin, completion);
+        _pending = new(next, origin, completion);
         _debounce = origin == ApplyOrigin.User && plan.Heaviest is ApplyClass.Immediate or ApplyClass.Amortized ? 0.2 : 0;
         return completion?.Task ?? Task.FromResult(Result(ApplyStatus.Deferred));
     }
@@ -260,7 +266,7 @@ public sealed class QualityService : IQualityFrame, IBootParticipant, IAsyncDisp
         Exception? failure = null;
         try
         {
-            var plan = Plan(request.Profile);
+            var plan = Plan(request.Edit);
             var loading = plan.Deltas.Any(delta => delta.Apply == ApplyClass.UnderLoading);
             if (loading)
             {
@@ -271,7 +277,7 @@ public sealed class QualityService : IQualityFrame, IBootParticipant, IAsyncDisp
             await runtime.NextFrame(cancellationToken).WaitAsync(cancellationToken);
             cancellationToken.ThrowIfCancellationRequested();
             applied = true;
-            var change = CommitRequest(binding, request, loading);
+            var change = CommitRequest(binding, request, plan.Next, loading);
             cancellationToken.ThrowIfCancellationRequested();
             if (loading)
             {
@@ -282,7 +288,7 @@ public sealed class QualityService : IQualityFrame, IBootParticipant, IAsyncDisp
                 cancellationToken.ThrowIfCancellationRequested();
             }
             // No failed dispatch/readiness/loading operation is ever written to settings.json.
-            if (request.Origin == ApplyOrigin.User && MergeUserIntoDurable(snapshot.Profile, request.Profile))
+            if (request.Origin == ApplyOrigin.User && MergeUserIntoDurable(request.Edit))
             {
                 persistenceAttempted = !CaptureMode;
                 QueueSave();
@@ -344,9 +350,9 @@ public sealed class QualityService : IQualityFrame, IBootParticipant, IAsyncDisp
             new AggregateException("Quality application and recovery failed.", new[] { error }.Concat(recoveryErrors));
     }
 
-    private QualityChange CommitRequest(Binding binding, Request request, bool loading)
+    private QualityChange CommitRequest(Binding binding, Request request, QualityProfile profile, bool loading)
     {
-        var change = _state.Commit(request.Profile, request.Origin, loading);
+        var change = _state.Commit(profile, request.Origin, loading);
         if (change.Knobs != 0) binding.Runtime.Dispatch(Effective, change);
         return change;
     }
@@ -386,30 +392,14 @@ public sealed class QualityService : IQualityFrame, IBootParticipant, IAsyncDisp
     }
 
     /// <summary>Folds only the user's own edit into the saved profile, so a command-line overlay never reaches the file.</summary>
-    private bool MergeUserIntoDurable(QualityProfile beforeLive, QualityProfile input)
+    private bool MergeUserIntoDurable(QualityRequest request)
     {
-        var before = _catalog.ResolveRequested(beforeLive, beforeLive.Preset);
-        var after = _catalog.ResolveRequested(Requested, Requested.Preset);
         var prior = _durableProfile;
-        var presetChosen = input.Preset != QualityPreset.Custom && (input.Preset != beforeLive.Preset || !input.Overrides.Keys.Any(knob => _catalog[knob].Scope == KnobScope.Effect));
-        var baseline = presetChosen ? new QualityProfile(Requested.Preset,
-            prior.Overrides.Where(pair => _catalog[pair.Key].Scope != KnobScope.Effect)
-                .ToDictionary(pair => pair.Key, pair => pair.Value)) : prior;
-        var deltas = new Dictionary<QualityKnob, float>();
-        foreach (var knob in QualityCatalog.All)
-            if (presetChosen && _catalog[knob].Scope == KnobScope.Effect || before[(int)knob] != after[(int)knob]) deltas[knob] = after[(int)knob];
-        _durableProfile = MergeDurable(baseline, deltas);
-        return !SameProfile(prior, _durableProfile);
-    }
-
-    private QualityProfile MergeDurable(QualityProfile baseline, IReadOnlyDictionary<QualityKnob, float> deltas)
-    {
-        var overrides = baseline.Overrides.ToDictionary(pair => pair.Key, pair => pair.Value);
-        foreach (var pair in deltas.OrderBy(pair => pair.Key)) overrides[pair.Key] = pair.Value;
         // Reuse the existing canonicalization (including scope defaults) without touching live state.
         var canonical = new QualityState(_catalog);
-        canonical.Commit(new(baseline.Preset, overrides), ApplyOrigin.Startup, false);
-        return canonical.Requested;
+        canonical.Commit(_state.Compose(prior, request), ApplyOrigin.Startup, false);
+        _durableProfile = canonical.Requested;
+        return !SameProfile(prior, _durableProfile);
     }
 
     private static bool SameProfile(QualityProfile left, QualityProfile right) => left.Preset == right.Preset &&

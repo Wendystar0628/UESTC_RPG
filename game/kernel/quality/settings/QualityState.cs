@@ -25,20 +25,44 @@ public sealed class QualityState
         Effective = MakeView();
     }
 
-    public ApplyPlan Plan(QualityProfile next) => Plan(next, preserveIndependent: true);
-
-    private ApplyPlan Plan(QualityProfile next, bool preserveIndependent)
+    public ApplyPlan Plan(QualityRequest request)
     {
+        ArgumentNullException.ThrowIfNull(request);
+        var next = request.Profile;
         ArgumentNullException.ThrowIfNull(next);
         ArgumentNullException.ThrowIfNull(next.Overrides);
+        ArgumentNullException.ThrowIfNull(request.EditedKnobs);
+        if (!Enum.IsDefined(request.Intent)) throw new ArgumentOutOfRangeException(nameof(request));
         if (!Enum.IsDefined(next.Preset) || next.Schema != 1) throw new ArgumentException("Unsupported quality profile.", nameof(next));
-        var rejected = next.Overrides.Where(pair => !_catalog.IsValid(pair.Key, pair.Value)).Select(pair => pair.Key).Order().ToArray();
+        if (request.Intent == QualityEditIntent.SelectPreset && next.Preset == QualityPreset.Custom)
+            throw new ArgumentException("Preset selection requires a concrete preset.", nameof(request));
+        var rejected = next.Overrides.Where(pair => !_catalog.IsValid(pair.Key, pair.Value)).Select(pair => pair.Key)
+            .Concat(request.EditedKnobs.Where(knob => !Enum.IsDefined(knob))).Distinct().Order().ToArray();
         if (rejected.Length != 0) return new(QualityCatalog.Freeze(next), [], ApplyClass.Immediate, rejected);
-        // A preset selects effects. Other scopes keep their requests unless this request explicitly changes them.
-        var overrides = Requested.Overrides.Where(pair => preserveIndependent && _catalog[pair.Key].Scope != KnobScope.Effect)
-            .ToDictionary(pair => pair.Key, pair => pair.Value);
-        foreach (var pair in next.Overrides) overrides[pair.Key] = pair.Value;
-        var frozen = QualityCatalog.Freeze(next with { Overrides = overrides });
+        return PlanProfile(Compose(Requested, request));
+    }
+
+    // The same explicit operation is evaluated against live and durable baselines independently.
+    internal QualityProfile Compose(QualityProfile baseline, QualityRequest request)
+    {
+        var basis = request.Intent switch
+        {
+            QualityEditIntent.EditKnobs => baseline,
+            QualityEditIntent.SelectPreset => new QualityProfile(request.Profile.Preset,
+                baseline.Overrides.Where(pair => _catalog[pair.Key].Scope != KnobScope.Effect)
+                    .ToDictionary(pair => pair.Key, pair => pair.Value)),
+            QualityEditIntent.RestoreDefaults => _catalog.DefaultProfile,
+            _ => throw new ArgumentOutOfRangeException(nameof(request)),
+        };
+        var overrides = basis.Overrides.ToDictionary(pair => pair.Key, pair => pair.Value);
+        var requested = _catalog.ResolveRequested(request.Profile, _basePreset);
+        foreach (var knob in request.EditedKnobs) overrides[knob] = requested[(int)knob];
+        return QualityCatalog.Freeze(basis with { Overrides = overrides });
+    }
+
+    private ApplyPlan PlanProfile(QualityProfile next)
+    {
+        var frozen = QualityCatalog.Freeze(next);
         var values = _catalog.Resolve(frozen, _basePreset);
         var preset = frozen.Preset == QualityPreset.Custom ? _basePreset : frozen.Preset;
         var grassRangeChanged = _catalog.GrassRadius(preset) != GrassRadius;
@@ -51,8 +75,9 @@ public sealed class QualityState
 
     public QualityChange Commit(QualityProfile next, ApplyOrigin origin, bool loading)
     {
-        var plan = Plan(next, preserveIndependent: origin != ApplyOrigin.Startup);
-        if (plan.Rejected.Count != 0) throw new ArgumentException("Cannot commit invalid quality values.", nameof(next));
+        if (!Enum.IsDefined(next.Preset) || next.Schema != 1 || next.Overrides.Any(pair => !_catalog.IsValid(pair.Key, pair.Value)))
+            throw new ArgumentException("Cannot commit invalid quality values.", nameof(next));
+        var plan = PlanProfile(next);
         next = plan.Next;
         var values = _catalog.Resolve(next, _basePreset);
         var previousRequests = _catalog.ResolveRequested(Requested, _basePreset);

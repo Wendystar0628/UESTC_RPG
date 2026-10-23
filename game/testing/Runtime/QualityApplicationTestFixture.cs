@@ -3,6 +3,7 @@ using System.Text.Json;
 using Campus.Contracts;
 using Campus.Contracts.Quality;
 using Campus.Contracts.Startup;
+using Campus.Kernel.Boot;
 using Campus.Kernel.Quality.Settings;
 using GdUnit4;
 using static GdUnit4.Assertions;
@@ -15,24 +16,38 @@ internal static class QualityApplicationTestFixture
     internal const float CliShadowDistance = 1000;
 
     internal static async Task<(QualityService, FakeRuntime, FileStoreSpy)> CliSession(string name)
+        => await Session(name, QualityCatalog.Profile(QualityPreset.Balanced), new QualityBootOptions
+        {
+            Preset = QualityPreset.Ultra,
+            Overrides = new Dictionary<QualityKnob, float>
+            { [QualityKnob.ShadowDistance] = CliShadowDistance, [QualityKnob.RenderScale] = .67f },
+        });
+
+    internal static async Task<(QualityService, FakeRuntime, FileStoreSpy)> Session(string name,
+        QualityProfile baseline, QualityBootOptions options)
     {
         var runtime = new FakeRuntime();
-        var store = new FileStoreSpy(name, QualityCatalog.Profile(QualityPreset.Balanced));
+        var store = new FileStoreSpy(name, baseline);
         var service = new QualityService(Catalog(), store);
         service.Bind(runtime);
         var originalHash = store.Hash;
         await service.Initialize(BootPhase.AfterMapWarm, Context());
-        await service.Apply(new(QualityPreset.Ultra, new Dictionary<QualityKnob, float>
-        { [QualityKnob.ShadowDistance] = CliShadowDistance, [QualityKnob.RenderScale] = .67f }), ApplyOrigin.CommandLine);
+        await BootWorldOverrides.ApplyQuality(new BootRunOptions { Quality = options }, service);
         if (store.Hash != originalHash || store.SaveCount != 0) throw new InvalidOperationException("CLI application touched the file.");
         runtime.Booting = false;
         return (service, runtime, store);
     }
 
-    internal static async Task<ApplyResult> ApplyUser(QualityService service, QualityProfile profile)
+    internal static QualityRequest Edit(QualityProfile profile, params QualityKnob[] editedKnobs) =>
+        new(profile, QualityEditIntent.EditKnobs, editedKnobs);
+
+    internal static QualityRequest SelectPreset(QualityPreset preset) =>
+        new(QualityCatalog.Profile(preset), QualityEditIntent.SelectPreset, []);
+
+    internal static async Task<ApplyResult> ApplyUser(QualityService service, QualityRequest request)
     {
         service.Tick(0);
-        var pending = service.Apply(profile, ApplyOrigin.User);
+        var pending = service.Apply(request, ApplyOrigin.User);
         service.Tick(.25);
         var result = await pending;
         service.Tick(0);

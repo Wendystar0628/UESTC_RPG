@@ -42,8 +42,8 @@ public sealed class QualityApplicationRecoveryTests
         var original = new InvalidOperationException();
         runtime.Dispatching = () => { runtime.Dispatching = null; throw original; };
         runtime.Transitioning = true;
-        var result = await service.Apply(new(service.Requested.Preset,
-            new Dictionary<QualityKnob, float> { [QualityKnob.ParticleDensity] = .5f }), ApplyOrigin.User);
+        var result = await service.Apply(Edit(new(service.Requested.Preset,
+            new Dictionary<QualityKnob, float> { [QualityKnob.ParticleDensity] = .5f }), QualityKnob.ParticleDensity), ApplyOrigin.User);
         AssertThat(result.Status == ApplyStatus.Deferred).IsTrue();
         runtime.Transitioning = false;
         service.Tick(.25);
@@ -70,8 +70,8 @@ public sealed class QualityApplicationRecoveryTests
         service.Changed += _ => { if (++calls[0] == 1) throw first; };
         service.Changed += _ => { if (++calls[1] == 1) throw second; };
         service.Changed += _ => calls[2]++;
-        var pending = service.Apply(new(service.Requested.Preset,
-            new Dictionary<QualityKnob, float> { [QualityKnob.ParticleDensity] = .5f }), ApplyOrigin.User);
+        var pending = service.Apply(Edit(new(service.Requested.Preset,
+            new Dictionary<QualityKnob, float> { [QualityKnob.ParticleDensity] = .5f }), QualityKnob.ParticleDensity), ApplyOrigin.User);
         service.Tick(.25);
         Exception? observed = null;
         try { await pending; }
@@ -97,8 +97,8 @@ public sealed class QualityApplicationRecoveryTests
         service.Changed += _ => throw original;
         service.Changed += _ => { service.Unbind(runtime); throw new OperationCanceledException(); };
         service.Changed += _ => lateCalls++;
-        var pending = service.Apply(new(service.Requested.Preset,
-            new Dictionary<QualityKnob, float> { [QualityKnob.ParticleDensity] = .5f }), ApplyOrigin.User);
+        var pending = service.Apply(Edit(new(service.Requested.Preset,
+            new Dictionary<QualityKnob, float> { [QualityKnob.ParticleDensity] = .5f }), QualityKnob.ParticleDensity), ApplyOrigin.User);
         service.Tick(.25);
         Exception? observed = null;
         try { await pending; }
@@ -132,7 +132,7 @@ public sealed class QualityApplicationRecoveryTests
         var overrides = beforeProfile.Overrides.ToDictionary(pair => pair.Key, pair => pair.Value);
         overrides[QualityKnob.AntiAliasing] = 1; // UnderLoading
         overrides[QualityKnob.ParticleDensity] = .5f;
-        var pending = service.Apply(new(beforeProfile.Preset, overrides), ApplyOrigin.User);
+        var pending = service.Apply(Edit(new(beforeProfile.Preset, overrides), QualityKnob.AntiAliasing, QualityKnob.ParticleDensity), ApplyOrigin.User);
         service.Tick(.25);
         var failed = false;
         try { await pending; }

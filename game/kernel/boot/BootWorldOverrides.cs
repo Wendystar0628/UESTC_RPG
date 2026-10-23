@@ -53,14 +53,11 @@ public static class BootWorldOverrides
     {
         var options = args.Quality;
         if (!options.Requested) return;
-        var requested = quality.Requested;
-        var preset = options.Preset ?? requested.Preset;
-        var effects = quality.Knobs.Where(spec => spec.Scope == KnobScope.Effect).Select(spec => spec.Knob).ToHashSet();
-        var overrides = requested.Overrides.Where(pair => options.Preset is null || !effects.Contains(pair.Key))
-            .ToDictionary(pair => pair.Key, pair => pair.Value);
-        foreach (var (knob, value) in options.Overrides) overrides[knob] = value;
-        var profile = new QualityProfile(preset, overrides);
-        var result = await quality.Apply(profile, ApplyOrigin.CommandLine);
+        var profile = new QualityProfile(options.Preset ?? quality.Requested.Preset, options.Overrides);
+        var request = new QualityRequest(profile,
+            options.Preset is null ? QualityEditIntent.EditKnobs : QualityEditIntent.SelectPreset,
+            options.Overrides.Keys.Order().ToArray());
+        var result = await quality.Apply(request, ApplyOrigin.CommandLine);
         if (result.Status != ApplyStatus.Applied)
             throw new InvalidOperationException($"Command-line quality was not applied: {result.Status}; rejected={string.Join(',', result.Rejected)}.");
     }

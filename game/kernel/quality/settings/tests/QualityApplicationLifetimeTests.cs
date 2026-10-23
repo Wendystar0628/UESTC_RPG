@@ -24,8 +24,8 @@ public sealed class QualityApplicationLifetimeTests
             var original = new InvalidOperationException();
             runtime.Dispatching = () => { service.Unbind(runtime); throw original; };
             runtime.Transitioning = deferred;
-            var pending = service.Apply(new(service.Requested.Preset,
-                new Dictionary<QualityKnob, float> { [QualityKnob.ParticleDensity] = .5f }), ApplyOrigin.User);
+            var pending = service.Apply(Edit(new(service.Requested.Preset,
+                new Dictionary<QualityKnob, float> { [QualityKnob.ParticleDensity] = .5f }), QualityKnob.ParticleDensity), ApplyOrigin.User);
             if (deferred) AssertThat((await pending).Status == ApplyStatus.Deferred).IsTrue();
             runtime.Transitioning = false;
             service.Tick(.25);
@@ -59,8 +59,8 @@ public sealed class QualityApplicationLifetimeTests
         var (service, runtime, store) = await CliSession("deferred-cancellation");
         using var cleanup = store;
         runtime.Transitioning = true;
-        var result = await service.Apply(new(service.Requested.Preset,
-            new Dictionary<QualityKnob, float> { [QualityKnob.ParticleDensity] = .5f }), ApplyOrigin.User);
+        var result = await service.Apply(Edit(new(service.Requested.Preset,
+            new Dictionary<QualityKnob, float> { [QualityKnob.ParticleDensity] = .5f }), QualityKnob.ParticleDensity), ApplyOrigin.User);
         AssertThat(result.Status == ApplyStatus.Deferred).IsTrue();
         runtime.Transitioning = false;
         runtime.HoldAt = "frame";
@@ -83,8 +83,8 @@ public sealed class QualityApplicationLifetimeTests
             runtime.LoadingReleaseFailure = releaseFailure;
             runtime.FailReadiness = !canceled;
             if (canceled) runtime.Dispatching = () => service.Unbind(runtime);
-            var pending = service.Apply(new(service.Requested.Preset,
-                new Dictionary<QualityKnob, float> { [QualityKnob.RenderScale] = 1 }), ApplyOrigin.User);
+            var pending = service.Apply(Edit(new(service.Requested.Preset,
+                new Dictionary<QualityKnob, float> { [QualityKnob.RenderScale] = 1 }), QualityKnob.RenderScale), ApplyOrigin.User);
             service.Tick(.25);
             service.Unbind(runtime);
             var shutdown = service.DisposeAsync().AsTask();
@@ -126,12 +126,12 @@ public sealed class QualityApplicationLifetimeTests
             // Changing render precision requires the screen regardless of the selected AA.
             next[QualityKnob.RenderScale] = 1;
             next[QualityKnob.ParticleDensity] = .5f;
-            var pending = service.Apply(new(service.Requested.Preset, next), ApplyOrigin.User);
+            var pending = service.Apply(Edit(new(service.Requested.Preset, next), QualityKnob.RenderScale, QualityKnob.ParticleDensity), ApplyOrigin.User);
             service.Tick(.25);
             if (pending.IsCompleted || (boundary == "save" ? store.SaveCount != 1 : runtime.HeldCalls != 1))
                 throw new InvalidOperationException($"Application did not wait at {boundary}.");
             // An active application also owns the latest deferred request.
-            var queued = await service.Apply(QualityCatalog.Profile(QualityPreset.Balanced), ApplyOrigin.User);
+            var queued = await service.Apply(SelectPreset(QualityPreset.Balanced), ApplyOrigin.User);
             if (queued.Status != ApplyStatus.Deferred) throw new InvalidOperationException("Active application did not defer the next request.");
             var dispatches = runtime.DispatchCount;
             var hides = runtime.HideCount;
@@ -162,8 +162,8 @@ public sealed class QualityApplicationLifetimeTests
             using var cleanup = store;
             runtime.Transitioning = transitioning;
             var dispatches = runtime.DispatchCount;
-            var pending = service.Apply(new(service.Requested.Preset,
-                new Dictionary<QualityKnob, float> { [QualityKnob.ParticleDensity] = .5f }), ApplyOrigin.User);
+            var pending = service.Apply(Edit(new(service.Requested.Preset,
+                new Dictionary<QualityKnob, float> { [QualityKnob.ParticleDensity] = .5f }), QualityKnob.ParticleDensity), ApplyOrigin.User);
             service.Unbind(runtime);
             if (transitioning)
             {
@@ -192,7 +192,7 @@ public sealed class QualityApplicationLifetimeTests
             var changes = 0;
             service.Changed += _ => changes++;
             var pending = initializing ? service.Initialize(BootPhase.AfterMapWarm, Context()) :
-                service.Apply(QualityCatalog.Profile(QualityPreset.Ultra), ApplyOrigin.CommandLine);
+                service.Apply(SelectPreset(QualityPreset.Ultra), ApplyOrigin.CommandLine);
             service.Unbind(runtime);
             await AssertThrown(pending.WaitAsync(TimeSpan.FromSeconds(5))).ContinueWith(result => { AssertThat(result.Result).OverrideFailureMessage("Runtime shutdown did not cancel its request.").IsNotNull(); result.Result!.IsInstanceOf<OperationCanceledException>(); });
             if (!token.IsCancellationRequested) throw new InvalidOperationException("Unbinding left the runtime lifetime open.");
