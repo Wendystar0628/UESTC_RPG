@@ -69,6 +69,7 @@ public sealed class AppFlowService : IAppFlow, IAppBootFlow, IBootParticipant, I
     public Task<EnterResult> Enter(EnterRequest request)
     {
         if (!In(AppState.Title)) return Task.FromResult(EnterResult.Rejected);
+        if (request.Gen is not null && request.Kind is not EnterKind.LoadSlot) return Task.FromResult(EnterResult.Rejected);
         var slot = request.Kind switch
         {
             EnterKind.NewGame => request.Slot,
@@ -76,10 +77,10 @@ public sealed class AppFlowService : IAppFlow, IAppBootFlow, IBootParticipant, I
             EnterKind.LoadSlot => request.Slot,
             _ => throw new ArgumentOutOfRangeException(nameof(request)),
         };
-        if (slot is null || !saves.Slots.Any(s => s.Slot == slot)) return Task.FromResult(EnterResult.Rejected);
-        if (request.Kind is EnterKind.Continue or EnterKind.LoadSlot && !AppFlowContinuation.Readable(_continuation.Info(slot.Value))) return Task.FromResult(EnterResult.Rejected);
+        if (slot is null || _continuation.Info(slot.Value) is not { } info) return Task.FromResult(EnterResult.Rejected);
+        if (request.Kind is EnterKind.Continue or EnterKind.LoadSlot && !AppFlowContinuation.Readable(info, request.Gen)) return Task.FromResult(EnterResult.Rejected);
         _request = request with { Slot = slot }; _quitting = false; _directEntry = false;
-        _recovery.BeginEntry(); _continuation.BeginEntry();
+        _recovery.BeginEntry(); _continuation.BeginEntry(_request);
         _resources.HoldInput();
         if (!restore.RestoreFaulted) _resources.HoldLoadingFlow();
         Change(AppState.Entering);
@@ -93,7 +94,7 @@ public sealed class AppFlowService : IAppFlow, IAppBootFlow, IBootParticipant, I
         var request = _startup.Request;
         _directEntry = true; _directStart = start; _directBoot = boot;
         _request = new(request.LoadFile is not null || request.Slot is not null ? EnterKind.LoadSlot : EnterKind.NewGame, request.Slot ?? (request.LoadFile is null ? _startup.WriteSlot : null));
-        _recovery.BeginEntry(); _continuation.BeginEntry();
+        _recovery.BeginEntry(); _continuation.BeginEntry(_request);
         _resources.HoldInput();
         if (!restore.RestoreFaulted) _resources.HoldLoadingFlow();
         Change(AppState.Entering);
@@ -127,7 +128,7 @@ public sealed class AppFlowService : IAppFlow, IAppBootFlow, IBootParticipant, I
                 AppFlowContinuation.RequireLoaded(await saves.LoadFile(file));
                 _resources.CompleteWorldPreparation();
             }
-            else await _continuation.RestoreRequested(_request.Slot!.Value);
+            else await _continuation.RestoreRequested(_request.Slot!.Value, _request.Gen);
             _continuation.RequireHealthyWorld();
             await _continuation.PreparePlayableDestination(_startup.CaptureMode);
             // The real destination now owns residency; keep the pins through its terrain preparation.
@@ -161,6 +162,7 @@ public sealed class AppFlowService : IAppFlow, IAppBootFlow, IBootParticipant, I
     {
         if (restore.RestoreFaulted) return _recovery.HoldRestoreFailure();
         if (!In(AppState.Playing)) return Task.CompletedTask;
+        _recovery.BeginEntry();
         _leaveSaveCompleted = false; _leavePose = camera.Pose;
         _resources.HoldInput(); _resources.HoldLoadingFlow(); Change(AppState.Leaving);
         _leaving = ReturnToTitleCore(); return _leaving;

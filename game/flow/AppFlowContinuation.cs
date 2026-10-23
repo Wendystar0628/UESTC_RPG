@@ -14,10 +14,11 @@ internal sealed class AppFlowContinuation(ICameraRig camera, ISaveService saves,
     private bool _newTimeline;
     private MapStreamDestination? _newGameDestination;
     private bool _titleActive;
+    private EnterRequest? _entryRequest;
     private readonly ISettingsSection? _cameraSettings = profileSettings?.Section("ui");
     internal bool NewGamePreloadReady => _newGameDestination is { } destination &&
         destination.Pose.FovDeg == UserFov(ViewMode.Walk, false) && stream.PinnedDestinationReady(destination);
-    internal void BeginEntry() { _newTimeline = false; RefreshTitlePrefetch(); }
+    internal void BeginEntry(EnterRequest request) { _newTimeline = false; _entryRequest = request; RefreshTitlePrefetch(); }
     internal async Task StartNewTimeline(SlotId? slot, uint? seed, WorldPreset? start = null, NewGameBoot? boot = null)
     {
         if (_newTimeline) return;
@@ -27,9 +28,9 @@ internal sealed class AppFlowContinuation(ICameraRig camera, ISaveService saves,
         RequireHealthyWorld(); resources.HoldLoadingFlow();
         resources.CompleteWorldPreparation();
     }
-    internal async Task RestoreRequested(SlotId slot)
+    internal async Task RestoreRequested(SlotId slot, ulong? gen)
     {
-        RequireLoaded(await saves.Load(slot));
+        RequireLoaded(await (gen is { } selected ? saves.Load(slot, selected) : saves.Load(slot)));
         RequireHealthyWorld(); resources.HoldLoadingFlow();
         resources.CompleteWorldPreparation();
     }
@@ -86,12 +87,25 @@ internal sealed class AppFlowContinuation(ICameraRig camera, ISaveService saves,
         return captureMode ? definition.Default : _cameraSettings?.Get(definition) ?? definition.Default;
     }
     internal SlotInfo? Info(SlotId slot) => saves.Slots.FirstOrDefault(s => s.Slot == slot);
-    internal static bool Readable(SlotInfo? slot) => slot?.Health switch
+    internal static bool Readable(SlotInfo? slot, ulong? gen = null) => ReadableMeta(slot, gen) is not null;
+    private static SaveMeta? ReadableMeta(SlotInfo? slot, ulong? gen = null)
     {
-        SlotHealth.Ok => slot.Meta is not null,
-        SlotHealth.Empty or SlotHealth.Corrupt or SlotHealth.Newer or null => false,
-        _ => throw new InvalidOperationException("Unknown slot health."),
-    };
+        if (slot is null) return null;
+        switch (slot.Health)
+        {
+            case SlotHealth.Newer: return null;
+            case SlotHealth.Ok: case SlotHealth.Empty: case SlotHealth.Corrupt: break;
+            default: throw new InvalidOperationException("Unknown slot health.");
+        }
+        if (gen is null) return slot.Health is SlotHealth.Ok ? slot.Meta : null;
+        var entry = slot.Entries.FirstOrDefault(entry => entry.Gen == gen.Value);
+        return entry?.Health switch
+        {
+            SlotHealth.Ok => entry.Meta,
+            SlotHealth.Empty or SlotHealth.Corrupt or SlotHealth.Newer or null => null,
+            _ => throw new InvalidOperationException("Unknown entry health."),
+        };
+    }
     internal static bool Loaded(LoadStatus status) => status switch
     {
         LoadStatus.Loaded => true,
@@ -115,6 +129,7 @@ internal sealed class AppFlowContinuation(ICameraRig camera, ISaveService saves,
         switch (state)
         {
             case AppState.Title:
+                _entryRequest = null;
                 saves.SlotsChanged += RefreshTitlePrefetch;
                 RefreshTitlePrefetch();
                 break;
@@ -132,7 +147,10 @@ internal sealed class AppFlowContinuation(ICameraRig camera, ISaveService saves,
         var destinations = new List<MapStreamDestination>(2);
         if (maps.Default == maps.Current)
             destinations.Add(_newGameDestination = NewGameDestination()!);
-        if (saves.Continue is { } slot && Info(slot) is { Health: SlotHealth.Ok, Meta: { } meta } && meta.Map == maps.Current)
+        var meta = _entryRequest is { Kind: EnterKind.Continue or EnterKind.LoadSlot, Slot: { } requested }
+            ? ReadableMeta(Info(requested), _entryRequest.Gen)
+            : saves.Continue is { } slot ? ReadableMeta(Info(slot)) : null;
+        if (meta is not null && meta.Map == maps.Current)
             destinations.Add(new(meta.Pose with { FovDeg = meta.Pose.FovDeg ?? UserFov(meta.Mode, false) }, meta.Mode, meta.Space,
                 meta.Mode == ViewMode.Walk ? meta.Pose.Position - System.Numerics.Vector3.UnitY * WalkRules.StandingEye : null));
         stream.SetPinnedDestinations(destinations);
