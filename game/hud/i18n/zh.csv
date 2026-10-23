@@ -264,8 +264,6 @@ saves.corrupt,无法读取,Unreadable
 saves.load,读取,Load
 saves.new_here,在这里开始,Start here
 saves.only_from_title,从开始页读取或开始,Load or start from the title screen
-saves.saved_at.today,今天 {time},Today {time}
-saves.saved_at.yesterday,昨天 {time},Yesterday {time}
 saves.detail.empty,这个存档位是空的。在这里开始新游戏，之后会一直自动保存到这里。,This slot is empty. Start a new game here; your progress will then be saved here automatically.
 saves.detail.ok,自动保存 · 保留最近 {gens} 代,Autosave · Keeps the latest {gens} generations
 saves.detail.corrupt,存档文件损坏，无法读取,The save file is damaged and cannot be read

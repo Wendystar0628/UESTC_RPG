@@ -30,17 +30,9 @@ internal static class SaveMetaText
         return $"{(int)t.TotalHours:00}:{t.Minutes:00}";
     }
 
-    /// <summary>保存时刻按本地时间写：今天、昨天写相对日，更早写日期。系统时钟只用于显示（SaveMeta.SavedAtUnix 同例外）。</summary>
-    public static string SavedAt(long unix)
-    {
-        if (unix <= 0) return "—";
-        var saved = DateTimeOffset.FromUnixTimeSeconds(unix).ToLocalTime();
-        var today = DateTimeOffset.FromUnixTimeSeconds((long)Time.GetUnixTimeFromSystem()).ToLocalTime().Date;
-        var time = saved.ToString("HH:mm");
-        if (saved.Date == today) return UiKit.T("saves.saved_at.today", ("time", time));
-        if (saved.Date == today.AddDays(-1)) return UiKit.T("saves.saved_at.yesterday", ("time", time));
-        return saved.ToString("yyyy-MM-dd HH:mm");
-    }
+    /// <summary>保存时刻按本地时间写成"年-月-日 时:分"；界面不读系统时钟，所以不写今天、昨天这类相对日。</summary>
+    public static string SavedAt(long unix) =>
+        unix <= 0 ? "—" : DateTimeOffset.FromUnixTimeSeconds(unix).ToLocalTime().ToString("yyyy-MM-dd HH:mm");
 
     /// <summary>开始页继续行：季 · 钟点 · 天气 · 地点 · 时长（SYS-TITLE）。</summary>
     public static string Summary(SaveMeta meta, IMapService maps) =>
