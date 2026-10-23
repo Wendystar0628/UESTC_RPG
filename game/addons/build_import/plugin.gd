@@ -1,7 +1,7 @@
 @tool
 extends EditorPlugin
 ## Build import: keep Godot's initial scan, then refresh stale RD includes.
-## Usage: --headless --editor --path <game> -- --build-import.
+## Usage: --headless --editor --path <game> -- --build-import | --build-cloud-noise.
 
 var _failed := false
 var _imported: Dictionary = {}
@@ -9,6 +9,9 @@ var _includes := RegEx.new()
 
 
 func _enter_tree() -> void:
+	if OS.get_cmdline_user_args().has("--build-cloud-noise"):
+		_build_cloud_noise.call_deferred()
+		return
 	if not OS.get_cmdline_user_args().has("--build-import"):
 		return
 	var filesystem := EditorInterface.get_resource_filesystem()
@@ -20,6 +23,27 @@ func _enter_tree() -> void:
 		_fail("Cannot parse shader include directives.")
 		return
 	_finish_import.call_deferred(filesystem)
+
+
+func _build_cloud_noise() -> void:
+	var filesystem := EditorInterface.get_resource_filesystem()
+	if filesystem == null:
+		_fail("EditorFileSystem is unavailable.")
+		return
+	await get_tree().process_frame
+	while filesystem.is_scanning() or filesystem.is_importing():
+		await get_tree().process_frame
+	var script := load("res://addons/build_import/CloudNoiseBuild.cs") as CSharpScript
+	if script == null or not script.can_instantiate():
+		_fail("Cannot instantiate the cloud noise build tool; compile Campus first.")
+		return
+	var builder = script.new()
+	var error = builder.Build()
+	if error != OK:
+		_fail("Cannot build cloud noise: %s" % error_string(error))
+		return
+	print("Built cloud noise: res://data/cloud-noise.res")
+	get_tree().quit(0)
 
 
 func _record_imported(paths: PackedStringArray) -> void:

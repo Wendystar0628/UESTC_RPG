@@ -6,10 +6,6 @@ namespace Campus.Systems.Sky;
 /// </summary>
 public static class SkyTuning
 {
-    // cloud_noise 的团块频率（每个平铺多少格）。着色器里一个平铺 = 24 km。
-    public const int NoiseBodyFreq = 14;      // 云体：格约 1.7 km
-    public const int NoiseDetailFreq = 24;    // 圆团块：着色器按 ×1.5（格约 0.67 km）与 ×4（格约 0.25 km）两个尺度取
-
     /// <summary>Drift is wrapped at this period (m); every noise tile in the shader divides it, so the wrap is seamless.</summary>
     public const double DriftWrapMeters = 96000.0;
 

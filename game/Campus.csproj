@@ -27,6 +27,8 @@
   <Target Name="PrepareCampusGeneratedFiles" BeforeTargets="PrepareForBuild;CoreClean">
     <PropertyGroup>
       <_CampusGdUnitRunnerStamp>$(IntermediateOutputPath)gdunit-test-runner.stamp</_CampusGdUnitRunnerStamp>
+      <_CampusCloudNoiseStamp>$(IntermediateOutputPath)cloud-noise.stamp</_CampusCloudNoiseStamp>
+      <_CampusCloudNoiseResource>$(MSBuildProjectDirectory)/data/cloud-noise.res</_CampusCloudNoiseResource>
       <_CampusStyleShaderStamp>$(IntermediateOutputPath)style-shaders.stamp</_CampusStyleShaderStamp>
       <_CampusBuildInformationSource>$([MSBuild]::NormalizePath('$(MSBuildProjectDirectory)', '$(IntermediateOutputPath)', 'BuildInfo.g.cs'))</_CampusBuildInformationSource>
       <_CampusBuildInformationStamp>$(IntermediateOutputPath)build-information.stamp</_CampusBuildInformationStamp>
@@ -37,12 +39,16 @@
       <!-- Conservative native globs track source changes; Python alone owns the shader bindings. -->
       <_CampusStyleShaderInput Include="**/*.cs;style/**/*.json;style/**/*.gdshaderinc;../scripts/build/generate-style-shaders.py"
                                Exclude="$(DefaultItemExcludes);@(CampusGeneratedCompile);@(CampusGeneratedFile)" />
+      <_CampusCloudNoiseInput Include="$(MSBuildAllProjects);$(ProjectAssetsFile);addons/build_import/CloudNoiseBuild.cs;addons/build_import/plugin.gd;addons/build_import/plugin.cfg;systems/sky/CloudNoise.cs;contracts/Determinism/StableHash.cs;contracts/Determinism/IntegerNoise.cs;contracts/Math/ScalarMath.cs;project.godot;../tools/godot-version.txt;../scripts/lib/start-game.ps1;../scripts/lib/common.ps1;../scripts/lib/ProcessTree.cs" />
+      <FileWrites Include="$(_CampusCloudNoiseStamp);$(_CampusCloudNoiseResource);$(_CampusCloudNoiseResource).uid" />
+      <Clean Include="$(_CampusCloudNoiseStamp);$(_CampusCloudNoiseResource);$(_CampusCloudNoiseResource).uid" />
       <FileWrites Include="$(_CampusGdUnitRunnerStamp);$(_CampusGdUnitRunnerSource);$(_CampusStyleShaderStamp);@(CampusGeneratedFile-&gt;'%(FullPath)');$(_CampusBuildInformationStamp);$(_CampusBuildInformationSource);$(_CampusCodeFingerprintStamp);$(_CampusCodeFingerprintManifest);$(_CampusPublishedCodeFingerprintManifest)" />
       <!-- CoreClean's native Clean items include generated products outside obj/bin. -->
       <Clean Include="$(_CampusGdUnitRunnerStamp);$(_CampusGdUnitRunnerSource);$(_CampusStyleShaderStamp);@(CampusGeneratedFile-&gt;'%(FullPath)');$(_CampusBuildInformationStamp);$(_CampusBuildInformationSource);$(_CampusCodeFingerprintStamp);$(_CampusCodeFingerprintManifest);$(_CampusPublishedCodeFingerprintManifest)" />
     </ItemGroup>
     <!-- A missing real product invalidates its completion stamp before native incremental checks. -->
     <Delete Files="$(_CampusGdUnitRunnerStamp)" Condition="!Exists('$(_CampusGdUnitRunnerSource)')" />
+    <Delete Files="$(_CampusCloudNoiseStamp)" Condition="!Exists('$(_CampusCloudNoiseResource)')" />
     <Delete Files="$(_CampusStyleShaderStamp)" Condition="!Exists('%(CampusGeneratedFile.Identity)')" />
     <Delete Files="$(_CampusBuildInformationStamp)" Condition="!Exists('$(_CampusBuildInformationSource)')" />
     <Delete Files="$(_CampusCodeFingerprintStamp)" Condition="!Exists('$(_CampusCodeFingerprintManifest)')" />
@@ -73,6 +79,16 @@
     <Exec Command="python -X utf8 &quot;$(MSBuildProjectDirectory)/../scripts/build/generate-style-shaders.py&quot; --root &quot;$(MSBuildProjectDirectory)/..&quot;" />
     <Error Condition="!Exists('%(CampusGeneratedFile.Identity)')" Text="The shader generator did not produce %(CampusGeneratedFile.Identity)." />
     <Touch Files="$(_CampusStyleShaderStamp)" AlwaysCreate="true" />
+  </Target>
+  <!-- Compile the tool first: no generated cloud resource is required by compilation or the initial editor scan. -->
+  <Target Name="GenerateCloudNoise" AfterTargets="Build" DependsOnTargets="PrepareCampusGeneratedFiles"
+          Condition="'$(DesignTimeBuild)' != 'true' And '$(IsTestProject)' != 'true'"
+          Inputs="@(_CampusCloudNoiseInput)" Outputs="$(_CampusCloudNoiseStamp)">
+    <Delete Files="$(_CampusCloudNoiseStamp)" />
+    <MakeDir Directories="$(IntermediateOutputPath)" />
+    <Exec Command="powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -Command &quot;&amp; { . '$(MSBuildProjectDirectory)/../scripts/lib/common.ps1'; . '$(MSBuildProjectDirectory)/../scripts/lib/start-game.ps1'; Invoke-UESTCCloudNoiseBuild -Root '$(MSBuildProjectDirectory)/..' }&quot;" />
+    <Error Condition="!Exists('$(_CampusCloudNoiseResource)')" Text="The cloud noise generator did not produce $(_CampusCloudNoiseResource)." />
+    <Touch Files="$(_CampusCloudNoiseStamp)" AlwaysCreate="true" />
   </Target>
   <Target Name="PrepareCampusBuildInformation" DependsOnTargets="PrepareCampusGeneratedFiles;ResolveReferences">
     <ItemGroup>

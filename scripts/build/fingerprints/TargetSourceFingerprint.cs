@@ -345,7 +345,8 @@ internal static class TargetSourceFingerprint
             "game/systems/water/", "game/systems/weather/"
         })
             if (path.StartsWith(directory, StringComparison.Ordinal)) return "";
-        if (path is "game/addons/gdUnit4/src/dotnet/GdUnit4CSharpApi.cs" or
+        if (path is "game/addons/build_import/CloudNoiseBuild.cs" or
+            "game/addons/gdUnit4/src/dotnet/GdUnit4CSharpApi.cs" or
             "game/gdunit4_testadapter_v5/GdUnit4TestRunnerScene.cs") return "";
         throw new InvalidDataException($"Unassigned production Compile item: {project}: {path}. Assign a CPU source group or an explicit non-CPU responsibility.");
     }

@@ -29,7 +29,7 @@ public partial class SkyNode : Node, IMapAware, IViewContentReadiness, IRegistry
     private ShaderMaterial? _material;
     private Godot.Sky? _sky;
     private Godot.Environment? _environment;
-    private Task<CloudNoise.Result>? _noiseJob;
+    private IDisposable? _noiseRegistration;
     private ImageTexture? _noiseTexture;
     private float[]? _thresholds;
     private SkyMapData? _map;
@@ -58,9 +58,7 @@ public partial class SkyNode : Node, IMapAware, IViewContentReadiness, IRegistry
             RadianceSize = Godot.Sky.RadianceSizeEnum.Size32,
             ProcessMode = Godot.Sky.ProcessModeEnum.Incremental,
         };
-        // cloud_noise 只算一次，放在工作线程里；做完以后在主线程上传（ENG-PERF：静态全局纹理）
-        var seed = StableHash.Hash32(0u, "sky", "cloud_noise");
-        _noiseJob = Task.Run(() => CloudNoise.Generate(seed));
+        UploadNoise();
         TryAttach();
     }
 
@@ -91,7 +89,6 @@ public partial class SkyNode : Node, IMapAware, IViewContentReadiness, IRegistry
     {
         if (_world is null || _script is null || _map is null) return;
         if (_environment is null) TryAttach();
-        UploadNoiseWhenReady();
 
         var weather = _world.WeatherNow;
         var frame = _script.Current;
@@ -159,30 +156,50 @@ public partial class SkyNode : Node, IMapAware, IViewContentReadiness, IRegistry
         _environment = environment;
     }
 
-    private void UploadNoiseWhenReady()
+    private void UploadNoise()
     {
-        if (_noiseJob is null || !_noiseJob.IsCompleted) return;
-        var job = _noiseJob;
-        _noiseJob = null;
-        var result = job.GetAwaiter().GetResult();
-        var image = Image.CreateFromData(CloudNoise.Size, CloudNoise.Size, false, Image.Format.Rgba8, result.Rgba);
-        image.GenerateMipmaps();
-        _noiseTexture = ImageTexture.CreateFromImage(image);
-        RenderingServer.GlobalShaderParameterSet(_shaderGlobalCloudNoise, _noiseTexture);
-        _thresholds = result.CoverageThreshold;
+        // The resource loader owns the cached Image; only the new texture transfers to the registry.
+        var image = KernelServices.Get<IRequiredResources>().Load<Image>(CloudNoise.ResourcePath);
+        if (image.GetWidth() != CloudNoise.Size || image.GetHeight() != CloudNoise.Size ||
+            image.GetFormat() != Image.Format.Rgba8 ||
+            image.GetMipmapCount() != System.Numerics.BitOperations.Log2((uint)CloudNoise.Size) ||
+            !image.HasMeta(CloudNoise.ThresholdMetadata))
+            throw new InvalidDataException("The required cloud noise resource has an invalid image layout or no coverage table.");
+        using var metadata = image.GetMeta(CloudNoise.ThresholdMetadata);
+        if (metadata.VariantType != Variant.Type.PackedFloat32Array)
+            throw new InvalidDataException("The required cloud noise coverage table is not PackedFloat32Array.");
+        var thresholds = metadata.AsFloat32Array();
+        if (thresholds.Length != CloudNoise.CoverageSteps ||
+            Array.Exists(thresholds, value => !float.IsFinite(value) || value < 0f || value > 1f))
+            throw new InvalidDataException("The required cloud noise coverage table is invalid.");
+        var texture = ImageTexture.CreateFromImage(image);
+        try
+        {
+            _noiseRegistration = KernelServices.Get<IGlobalDataTextureRegistry>()
+                .RegisterOwned(ShaderGlobals.CloudNoise, texture, texture.GetRid());
+        }
+        catch
+        {
+            texture.Dispose();
+            throw;
+        }
+        _noiseTexture = texture;
+        _thresholds = thresholds;
+        RenderingServer.GlobalShaderParameterSet(_shaderGlobalCloudNoise, texture);
     }
 
-    public void PrepareForExit() => _exiting = true;
-
-    public async Task DrainForExitAsync()
+    public void PrepareForExit()
     {
-        var job = _noiseJob;
-        _noiseJob = null;
-        if (job is null) return;
-        // Generation owns only CPU data. Observe its terminal result without uploading resources
-        // after the application has stopped accepting content publication.
-        await job;
+        _exiting = true;
+        RenderingServer.GlobalShaderParameterSet(_shaderGlobalCloudNoise, default(Variant));
+        _noiseRegistration?.Dispose();
+        _noiseRegistration = null;
+        _noiseTexture = null;
     }
+
+    public Task DrainForExitAsync() => Task.CompletedTask;
+
+    public override void _ExitTree() => PrepareForExit();
 
     private static float Clamp01(float v) => float.IsFinite(v) ? Math.Clamp(v, 0f, 1f) : 0f;
 }

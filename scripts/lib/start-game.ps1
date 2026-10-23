@@ -20,6 +20,17 @@ function Get-UESTCGameAssemblyPath {
     return Join-Path $Root 'game\.godot\mono\temp\bin\Debug\Campus.dll'
 }
 
+# 普通构建的原生增量目标调用；完成编译后复用编辑器插件生成静态云噪声。
+function Invoke-UESTCCloudNoiseBuild {
+    param([Parameter(Mandatory)][string]$Root)
+    $Root = [IO.Path]::GetFullPath($Root)
+    $godot = Get-UESTCGodot
+    $log = Join-Path $Root 'output\start_game\cloud-noise.log'
+    $result = Invoke-UESTCProcess $godot @('--headless', '--editor', '--path',
+        (Join-Path $Root 'game'), '--', '--build-cloud-noise') $Root $log -TimeoutSeconds 600 -TextEncoding ([Text.UTF8Encoding]::new($false))
+    Assert-UESTCCleanGodotLog $result
+}
+
 # 默认启动只判三类正式产物存在；不读取内容、时间戳或工作区输入。
 function Test-UESTCLaunchOutputs {
     param([Parameter(Mandatory)][string]$Root)
