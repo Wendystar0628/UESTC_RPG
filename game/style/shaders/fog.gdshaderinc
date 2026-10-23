@@ -177,31 +177,26 @@ vec3 sky_hermite(vec3 y0, vec3 y1, vec3 m0, vec3 m1, float h, float t) {
 
 // 一列天空色带（base = PAL_SKY_SUN0 或 PAL_SKY_ANTI0）在仰角 e（度）处的 OKLab 值
 vec3 sky_column_lab(int base, float e) {
-	vec3 y0 = ok_from_linear(pal_cur(base));
-	vec3 y1 = ok_from_linear(pal_cur(base + 1));
-	vec3 y2 = ok_from_linear(pal_cur(base + 2));
-	vec3 y3 = ok_from_linear(pal_cur(base + 3));
-	vec3 y4 = ok_from_linear(pal_cur(base + 4));
-	float h0 = SKY_STOP_DEG[1] - SKY_STOP_DEG[0];
-	float h1 = SKY_STOP_DEG[2] - SKY_STOP_DEG[1];
-	float h2 = SKY_STOP_DEG[3] - SKY_STOP_DEG[2];
-	float h3 = SKY_STOP_DEG[4] - SKY_STOP_DEG[3];
-	vec3 d0 = (y1 - y0) / h0;
-	vec3 d1 = (y2 - y1) / h1;
-	vec3 d2 = (y3 - y2) / h2;
-	vec3 d3 = (y4 - y3) / h3;
-	vec3 m1 = sky_fb_tangent(d0, d1, h0, h1);
-	vec3 m2 = sky_fb_tangent(d1, d2, h1, h2);
-	vec3 m3 = sky_fb_tangent(d2, d3, h2, h3);
 	e = clamp(e, 0.0, 90.0);
-	if (e < SKY_STOP_DEG[1]) {
-		return sky_hermite(y0, y1, d0, m1, h0, e / h0);
-	} else if (e < SKY_STOP_DEG[2]) {
-		return sky_hermite(y1, y2, m1, m2, h1, (e - SKY_STOP_DEG[1]) / h1);
-	} else if (e < SKY_STOP_DEG[3]) {
-		return sky_hermite(y2, y3, m2, m3, h2, (e - SKY_STOP_DEG[2]) / h2);
+	int seg = e < SKY_STOP_DEG[1] ? 0 : (e < SKY_STOP_DEG[2] ? 1 : (e < SKY_STOP_DEG[3] ? 2 : 3));
+	// Hermite 只需当前区间及端点切线用到的相邻割线。
+	vec3 y0 = ok_from_linear(pal_cur(base + seg));
+	vec3 y1 = ok_from_linear(pal_cur(base + seg + 1));
+	float h = SKY_STOP_DEG[seg + 1] - SKY_STOP_DEG[seg];
+	vec3 d = (y1 - y0) / h;
+	vec3 m0 = d;
+	vec3 m1 = d;
+	if (seg > 0) {
+		vec3 yp = ok_from_linear(pal_cur(base + seg - 1));
+		float hp = SKY_STOP_DEG[seg] - SKY_STOP_DEG[seg - 1];
+		m0 = sky_fb_tangent((y0 - yp) / hp, d, hp, h);
 	}
-	return sky_hermite(y3, y4, m3, d3, h3, (e - SKY_STOP_DEG[3]) / h3);
+	if (seg < 3) {
+		vec3 yn = ok_from_linear(pal_cur(base + seg + 2));
+		float hn = SKY_STOP_DEG[seg + 2] - SKY_STOP_DEG[seg + 1];
+		m1 = sky_fb_tangent(d, (yn - y1) / hn, h, hn);
+	}
+	return sky_hermite(y0, y1, m0, m1, h, (e - SKY_STOP_DEG[seg]) / h);
 }
 
 // 霾带高度（度），来自关键帧 fog.y
