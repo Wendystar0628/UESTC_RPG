@@ -1,4 +1,4 @@
-﻿# 启动游戏：正式 Debug 程序集、已发布业务清单和原生导入缓存都存在即启动，不判新旧；缺失才构建并执行原生增量导入。
+﻿# 启动游戏：正式 Debug 程序集、已发布业务清单、构建期静态资源和原生导入缓存都存在即启动，不判新旧；缺失才构建并执行原生增量导入。
 # 用法：双击根目录 启动游戏.cmd，或 启动游戏.cmd [游戏参数…]；游戏参数原样传递。
 # 产出：output/start_game/；output/.locks/build.lock（工作区半成品不触发编译）。
 param([Parameter(ValueFromRemainingArguments = $true)][string[]]$GameArgs = @())

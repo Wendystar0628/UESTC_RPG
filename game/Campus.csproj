@@ -39,7 +39,7 @@
       <!-- Conservative native globs track source changes; Python alone owns the shader bindings. -->
       <_CampusStyleShaderInput Include="**/*.cs;style/**/*.json;style/**/*.gdshaderinc;../scripts/build/generate-style-shaders.py"
                                Exclude="$(DefaultItemExcludes);@(CampusGeneratedCompile);@(CampusGeneratedFile)" />
-      <_CampusCloudNoiseInput Include="$(MSBuildAllProjects);$(ProjectAssetsFile);addons/build_import/CloudNoiseBuild.cs;addons/build_import/plugin.gd;addons/build_import/plugin.cfg;systems/sky/CloudNoise.cs;contracts/Determinism/StableHash.cs;contracts/Determinism/IntegerNoise.cs;contracts/Math/ScalarMath.cs;project.godot;../tools/godot-version.txt;../scripts/lib/start-game.ps1;../scripts/lib/common.ps1;../scripts/lib/ProcessTree.cs" />
+      <_CampusCloudNoiseInput Include="$(MSBuildAllProjects);$(ProjectAssetsFile);addons/build_import/CloudNoiseBuild.cs;addons/build_import/plugin.gd;addons/build_import/plugin.cfg;systems/sky/CloudNoise.cs;contracts/Determinism/StableHash.cs;contracts/Determinism/IntegerNoise.cs;contracts/Math/ScalarMath.cs;project.godot;../tools/godot-version.txt" />
       <FileWrites Include="$(_CampusCloudNoiseStamp);$(_CampusCloudNoiseResource);$(_CampusCloudNoiseResource).uid" />
       <Clean Include="$(_CampusCloudNoiseStamp);$(_CampusCloudNoiseResource);$(_CampusCloudNoiseResource).uid" />
       <FileWrites Include="$(_CampusGdUnitRunnerStamp);$(_CampusGdUnitRunnerSource);$(_CampusStyleShaderStamp);@(CampusGeneratedFile-&gt;'%(FullPath)');$(_CampusBuildInformationStamp);$(_CampusBuildInformationSource);$(_CampusCodeFingerprintStamp);$(_CampusCodeFingerprintManifest);$(_CampusPublishedCodeFingerprintManifest)" />

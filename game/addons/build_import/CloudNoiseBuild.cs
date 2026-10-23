@@ -14,8 +14,9 @@ public partial class CloudNoiseBuild : RefCounted
 {
     private const int Size = CloudNoise.Size;
     private const int CoverageSteps = CloudNoise.CoverageSteps;
-    private const int NoiseBodyFreq = 14;
-    private const int NoiseDetailFreq = 24;
+    // cloud_noise 的团块频率（每个平铺多少格）。着色器里一个平铺 = 24 km。
+    private const int NoiseBodyFreq = 14;      // 云体：格约 1.7 km
+    private const int NoiseDetailFreq = 24;    // 圆团块：着色器按 ×1.5（格约 0.67 km）与 ×4（格约 0.25 km）两个尺度取
 
     private sealed record Result(byte[] Rgba, float[] CoverageThreshold);
 

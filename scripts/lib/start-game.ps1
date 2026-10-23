@@ -31,11 +31,12 @@ function Invoke-UESTCCloudNoiseBuild {
     Assert-UESTCCleanGodotLog $result
 }
 
-# 默认启动只判三类正式产物存在；不读取内容、时间戳或工作区输入。
+# 默认启动只判正式产物存在；不读取内容、时间戳或工作区输入。
 function Test-UESTCLaunchOutputs {
     param([Parameter(Mandatory)][string]$Root)
     return ([IO.File]::Exists((Get-UESTCGameAssemblyPath -Root $Root)) -and
         [IO.File]::Exists((Join-Path $Root 'game\data\build-code-fingerprints.json')) -and
+        [IO.File]::Exists((Join-Path $Root 'game\data\cloud-noise.res')) -and
         [IO.Directory]::Exists((Join-Path $Root 'game\.godot\imported')) -and
         [IO.File]::Exists((Join-Path $Root 'game\.godot\editor\filesystem_cache10')) -and
         [IO.File]::Exists((Join-Path $Root 'game\.godot\uid_cache.bin')))
