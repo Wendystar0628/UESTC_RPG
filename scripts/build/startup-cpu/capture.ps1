@@ -19,6 +19,13 @@ $timing = New-UESTCLaunchTiming -ScriptEnteredUtc $scriptEnteredUtc -ScriptEnter
 $lease = $null
 $trace = $null
 $gameProcess = $null
+$gameTree = $null
+$failure = $null
+$cleanupFailures = [Collections.Generic.List[object]]::new()
+$result = $null
+$collectorFinishedUtc = $null
+$shutdown = [ordered]@{ status='NOT_REQUESTED'; windowHandle=$null; closeRequestedUtc=$null;
+    closePostedTimestamp=$null; exitObservedUtc=$null; exitCode=$null }
 $stopped = $false
 $stopAttempted = $false
 $snapshots = [Collections.Generic.List[object]]::new()
@@ -32,25 +39,14 @@ $releaseRequested = $null
 $logReader = $null
 $pendingLog = ''
 $nextCpuRead = $null
-# Native launch returns the PRIMARY OS thread ID. It inherits this worker's private desktop.
-# Process.Start does not expose the primary OS TID; keep only this thin launch binding for that measured identity.
-# The private-console Stop below controls dotnet-trace, never player input.
+# ProcessTree owns the native primary process/thread identity and each job.
+# The private-console Stop binding below controls dotnet-trace, never player input.
+if (-not ('Uestc.Tools.ProcessTree' -as [type])) { Add-Type -Path "$toolRoot\scripts\lib\ProcessTree.cs" }
 Add-Type -TypeDefinition @"
 using System;
 using System.ComponentModel;
 using System.Runtime.InteropServices;
-using System.Text;
 public static class C215Launch {
-    [StructLayout(LayoutKind.Sequential, CharSet=CharSet.Unicode)] struct SI {
-        public int cb; public string reserved, desktop, title;
-        public uint x,y,width,height,xChars,yChars,fill,flags;
-        public ushort show,reservedBytes; public IntPtr reservedPtr,input,output,error;
-    }
-    [StructLayout(LayoutKind.Sequential)] struct PI { public IntPtr process,thread; public uint pid,tid; }
-    [DllImport("kernel32.dll", CharSet=CharSet.Unicode, SetLastError=true)]
-    static extern bool CreateProcessW(string app, StringBuilder command, IntPtr pa, IntPtr ta,
-        bool inherit, uint flags, IntPtr environment, string cwd, ref SI si, out PI pi);
-    [DllImport("kernel32.dll")] static extern bool CloseHandle(IntPtr handle);
     [StructLayout(LayoutKind.Explicit, Size=20, CharSet=CharSet.Unicode)] struct Input {
         [FieldOffset(0)] public ushort type;
         [FieldOffset(4)] public int down;
@@ -67,14 +63,6 @@ public static class C215Launch {
         var up = down; up.down=0; uint written;
         if (!WriteConsoleInputW(GetStdHandle(-10), new[] {down,up}, 2, out written) || written!=2)
             throw new Win32Exception(Marshal.GetLastWin32Error());
-    }
-    public static int[] Start(string exe, string arguments, string cwd) {
-        var si = new SI(); si.cb = Marshal.SizeOf(typeof(SI)); PI pi;
-        if (!CreateProcessW(exe, new StringBuilder("\""+exe+"\" "+arguments), IntPtr.Zero,
-            IntPtr.Zero, false, 0, IntPtr.Zero, cwd, ref si, out pi))
-            throw new Win32Exception(Marshal.GetLastWin32Error());
-        CloseHandle(pi.thread); CloseHandle(pi.process);
-        return new[] { (int)pi.pid, (int)pi.tid };
     }
 }
 "@
@@ -116,12 +104,18 @@ function Stop-OwnTrace {
     $script:stopRequestedUtc = [DateTime]::UtcNow.ToString('O')
     [C215Launch]::RequestStop()
     # Complete EventPipe Stop and CLR rundown while the target remains alive.
-    if (-not $trace.WaitForExit(120000)) { throw 'Collector did not finish Stop/rundown; target left alive for root cleanup.' }
-    [IO.File]::WriteAllText((Join-Path $Output 'trace.stdout.txt'), $traceStdout.Result)
-    [IO.File]::WriteAllText((Join-Path $Output 'trace.stderr.txt'), $traceStderr.Result)
+    $stopClock = [Diagnostics.Stopwatch]::StartNew()
+    while (-not $trace.HasExited) {
+        if ($stopClock.Elapsed.TotalSeconds -ge 120) { throw 'Collector did not finish Stop/rundown; its owned job will be reclaimed as a failed capture.' }
+        Start-Sleep -Milliseconds 100
+    }
+    $trace.Finish()
+    [IO.File]::WriteAllText((Join-Path $Output 'trace.stdout.txt'), $trace.StdOut)
+    [IO.File]::WriteAllText((Join-Path $Output 'trace.stderr.txt'), $trace.StdErr)
     [IO.File]::WriteAllText((Join-Path $Output 'trace.exit.txt'), [string]$trace.ExitCode)
     if ($trace.ExitCode -ne 0) { throw "Collector failed: $($trace.ExitCode)" }
     if (-not [IO.File]::Exists((Join-Path $Output 'threads.nettrace'))) { throw 'Missing nettrace output.' }
+    $script:collectorFinishedUtc = [DateTime]::UtcNow.ToString('O')
     $script:stopped = $true
 }
 try {
@@ -153,33 +147,28 @@ try {
     # Explicitly override inherited telemetry: experience must never enable per-frame logging.
     $env:UESTC_STARTUP_PROFILE = if ($diagnostic) { '1' } else { '0' }
     $timing['engineLaunchRequestedTimestamp'] = [Diagnostics.Stopwatch]::GetTimestamp()
-    $launched = [C215Launch]::Start($window, $line, $toolRoot)
-    $gameProcess = [Diagnostics.Process]::GetProcessById($launched[0])
-    $mainThreadId = $launched[1]
+    $gameTree = New-Object Uestc.Tools.ProcessTree($window, $line, $toolRoot, $true, [Text.Encoding]::UTF8, $false, $null)
+    $gameProcess = [Diagnostics.Process]::GetProcessById($gameTree.ProcessId)
+    $mainThreadId = $gameTree.MainThreadId
     $processStart = $gameProcess.StartTime.ToUniversalTime()
     $timing['engineStartUtc'] = $processStart.ToString('O')
     $timing['status'] = 'ENGINE_STARTED'
     $attachRequestedUtc = $null
     $stopRequestedUtc = $null
     if ($diagnostic) {
-        $traceInfo = [Diagnostics.ProcessStartInfo]::new()
-        $traceInfo.FileName = "$toolRoot\output\tools\dotnet-diagnostics\dotnet-trace.exe"
         # CLR GC | Type | GCHeapAndTypeNames | Stack, verbose: native AllocationTick payloads/stacks.
-        $traceInfo.Arguments = 'collect --process-id ' + $gameProcess.Id +
+        $traceArguments = 'collect --process-id ' + $gameProcess.Id +
             ' --profile dotnet-sampled-thread-time --providers Microsoft-Windows-DotNETRuntime:0x41080001:5 --output ' +
             (ConvertTo-UESTCProcessArgument (Join-Path $Output 'threads.nettrace'))
-        $traceInfo.UseShellExecute = $false; $traceInfo.CreateNoWindow = $false
-        $traceInfo.RedirectStandardInput = $false # inherit private real console for Stop
-        $traceInfo.RedirectStandardOutput = $true; $traceInfo.RedirectStandardError = $true
         $attachRequestedUtc = [DateTime]::UtcNow.ToString('O')
-        $trace = [Diagnostics.Process]::Start($traceInfo)
-        $traceStdout = $trace.StandardOutput.ReadToEndAsync()
-        $traceStderr = $trace.StandardError.ReadToEndAsync()
+        # visible=true shares this worker's private console; CONIN$ keeps Enter-to-stop
+        # while ProcessTree owns stdout/stderr pipes and the suspended launch/job.
+        $trace = New-Object Uestc.Tools.ProcessTree("$toolRoot\output\tools\dotnet-diagnostics\dotnet-trace.exe", $traceArguments, $toolRoot, $true, [Text.Encoding]::UTF8, $false, $null, $true)
         Read-CpuSnapshot 'attach-request'
     }
     [ordered]@{ gamePid=$gameProcess.Id; mainOsThreadId=$mainThreadId;
         engineStartUtc=$processStart.ToString('O'); launcher=$timing;
-        collectorPid=if($trace){$trace.Id}else{$null}; attachRequestedUtc=$attachRequestedUtc } |
+        collectorPid=if($trace){$trace.ProcessId}else{$null}; attachRequestedUtc=$attachRequestedUtc } |
         ConvertTo-Json -Depth 5 | Set-Content -LiteralPath (Join-Path $Output 'launch.json') -Encoding UTF8
     $anchors = [Collections.Generic.List[object]]::new()
     $seen = [Collections.Generic.HashSet[string]]::new()
@@ -192,7 +181,7 @@ try {
     $inputRequest = $null
     $inputRelease = $null
     while ($clock.Elapsed.TotalSeconds -lt 300) {
-        if ($gameProcess.HasExited) { throw "Target exited before sampling boundary: $($gameProcess.ExitCode)" }
+        if ($gameTree.HasExited) { throw "Target exited before sampling boundary: $($gameTree.ExitCode)" }
         if ($trace -and $trace.HasExited) { throw "Collector exited before boundary: $($trace.ExitCode)" }
         $text = ''
         if ($null -eq $logReader -and [IO.File]::Exists($log)) {
@@ -211,6 +200,11 @@ try {
         if ($playingSample) {
             $binding = [regex]::Match($text, '(?m)^STARTUP_INPUT action=move_forward physicalKey=(\d+)')
             if ($binding.Success) { $forwardPhysicalKey = [int]$binding.Groups[1].Value }
+        }
+        foreach ($environment in [regex]::Matches($text, '(?m)^STARTUP_ENVIRONMENT [^\r\n]*\bwindowHandle=(\d+)(?:\s|$)')) {
+            $handle = [long]::Parse($environment.Groups[1].Value, [Globalization.CultureInfo]::InvariantCulture)
+            if ($handle -le 0) { throw 'STARTUP_ENVIRONMENT did not publish a real game window handle.' }
+            $shutdown.windowHandle = $handle
         }
         $observed = [DateTime]::UtcNow.ToString('O')
         foreach ($m in [regex]::Matches($text, '(?m)^STARTUP_PHASE ([^ ]+) ([0-9.]+)([^\r\n]*)')) {
@@ -272,7 +266,29 @@ try {
     }
     if (-not $completed) { throw "Startup sampling boundary was not observed; playingState=$playingState. Raw telemetry retained." }
     if ($diagnostic) { Stop-OwnTrace }
-    if ($gameProcess.HasExited) { throw 'Target exited before collector Stop/rundown completed.' }
+    if ($gameTree.HasExited) { throw 'Target exited before collector Stop/rundown completed.' }
+    if ($null -eq $shutdown.windowHandle) { throw 'Sampling completed without the game-owned STARTUP_ENVIRONMENT windowHandle; raw telemetry retained.' }
+    $shutdown.status = 'CLOSE_REQUESTED'
+    $shutdown.closeRequestedUtc = [DateTime]::UtcNow.ToString('O')
+    $shutdown.closePostedTimestamp = $gameTree.PostClose([IntPtr]([long]$shutdown.windowHandle))
+    # WM_CLOSE enters the production async shutdown chain. Job cleanup is never a successful exit.
+    if (-not $gameProcess.WaitForExit(30000)) {
+        $shutdown.status = 'TIMED_OUT'
+        throw 'Game did not finish its formal window-close shutdown within 30 seconds; raw telemetry retained.'
+    }
+    $shutdown.exitObservedUtc = [DateTime]::UtcNow.ToString('O')
+    # GetProcessById is a counter observer; the native owner retains the handle after exit.
+    $shutdown.exitCode = $gameTree.ExitCode
+    if ($shutdown.exitCode -ne 0) {
+        $shutdown.status = 'EXIT_FAILED'
+        $exitFailure = [InvalidOperationException]::new("Game failed during formal shutdown: exit $($shutdown.exitCode). See $log")
+        $exitFailure.Data['ExitCode'] = $shutdown.exitCode
+        throw $exitFailure
+    }
+    $shutdown.status = 'EXITED'
+    $gameTree.Finish()
+    Assert-UESTCCleanGodotLog ([pscustomobject]@{ Output=([IO.File]::ReadAllText($log) + $gameTree.StdOut + $gameTree.StdErr); Log=$log })
+    $shutdown.status = 'COMPLETED'
     $phaseByName = @{}
     foreach ($anchor in $anchors) { $phaseByName[$anchor.name] = $anchor }
     function Elapsed-Seconds([long]$From, [long]$To) {
@@ -306,13 +322,14 @@ try {
     $checks = @(
         (Budget-Observation 'firstRunLauncherToRealtimeSecondsMax' $realtimeSeconds ($validGeometry -and $condition.pipelineCache -eq 'first-run') 'script-entry to first Playing realtime observation after formal entry')
     )
-    [ordered]@{ gamePid=$gameProcess.Id; mainOsThreadId=$mainThreadId; engineStartUtc=$processStart.ToString('O');
+    $result = [ordered]@{ gamePid=$gameProcess.Id; mainOsThreadId=$mainThreadId; engineStartUtc=$processStart.ToString('O');
         mainThreadIdentification='CreateProcessW primary OS thread ID; compare only OS IDs, never CLR ManagedThreadID';
         mode=$Mode; captureEndpoint=$captureEndpoint; commandLine=$line; measurement=$condition.measurement; condition=$condition; launcher=$timing;
         preparation=$condition.preparation;
         collector=if($diagnostic){'EventPipe dotnet-sampled-thread-time + CLR GC allocation/type/stack (0x41080001:5); NOT on-CPU'}else{'OFF'};
-        attachRequestedUtc=$attachRequestedUtc; collectorPid=if($trace){$trace.Id}else{$null}; collectorStopRequestedUtc=$stopRequestedUtc;
-        collectorStoppedWhileTargetAlive=if($diagnostic){$stopped}else{$null}; collectorFinishedUtc=if($diagnostic){[DateTime]::UtcNow.ToString('O')}else{$null};
+        attachRequestedUtc=$attachRequestedUtc; collectorPid=if($trace){$trace.ProcessId}else{$null}; collectorStopRequestedUtc=$stopRequestedUtc;
+        collectorStoppedWhileTargetAlive=if($diagnostic){$stopped}else{$null}; collectorFinishedUtc=$collectorFinishedUtc;
+        shutdown=$shutdown;
         phaseObservations=$anchors.ToArray(); cpuSnapshots=$snapshots.ToArray(); phasePollingMilliseconds=20;
         playingSample=[ordered]@{ enabled=$playingSample; state=$playingState; edges=$playingEdges.ToArray();
             targetIdleSeconds=if($playingSample){$playingTargetSeconds['playing-idle-start']}else{$null}; targetForwardHoldSeconds=if($playingSample){$playingTargetSeconds['playing-forward-start']}else{$null};
@@ -339,29 +356,68 @@ try {
             observedMenuInputReadyToPreloadReadyWaitSeconds=if($null -eq $preloadObservedAt -or $null -eq $titleInputReadyAt){$null}else{[Math]::Max(0, $preloadObservedAt-$titleInputReadyAt)};
             engineMenuInputReadyToRequestSeconds=if($inputRequest){($inputRequest.milliseconds-$phaseByName['title-input-ready'].milliseconds)/1000}else{$null} };
         caveat='Normal interactive --title=1 with isolated empty save/log. Input scenarios retain production defaults and use Input.ParseInputEvent through the normal menu/controller. Game-owned phase markers retain actual engine time/frame; observer UTC includes log flush/poll/scheduling delay. Dwell requires actual preloadReady=true at acceptance. Title experience ends at static menu input readiness; title diagnostic additionally includes resource preload. Hidden-desktop render pacing is not presented FPS or evidence of experience stutter; renderer CPU/GPU work is measured separately. Experience has no EventPipe/per-frame logging/CPU snapshots; diagnostic rounds do not establish experience-target passes. Actual movement comes from real poses/velocity, never the injected action alone.'
-    } | ConvertTo-Json -Depth 12 | Set-Content -LiteralPath (Join-Path $Output 'result.json') -Encoding UTF8
+    }
 
 } catch {
+    $failure = $_
     $timing['status'] = 'FAILED'
-    $_ | Out-String | Set-Content -LiteralPath (Join-Path $Output 'failure.txt') -Encoding UTF8
-    throw
 } finally {
-    if ($logReader) { $logReader.Dispose() }
-    $timing | ConvertTo-Json -Depth 5 | Set-Content -LiteralPath (Join-Path $Output 'launcher-timing.json') -Encoding UTF8
-    if ($diagnostic) { $snapshots.ToArray() | ConvertTo-Json -Depth 7 | Set-Content -LiteralPath (Join-Path $Output 'cpu-snapshots.json') -Encoding UTF8 }
-    if ($playingSample) {
-        [ordered]@{ state=$playingState; edges=$playingEdges.ToArray(); request=$moveRequested; release=$releaseRequested;
-            processCpuReads=$playingCpu.ToArray(); movementStatus='Raw telemetry required; partial failure is not a completed movement sample' } |
-            ConvertTo-Json -Depth 9 | Set-Content -LiteralPath (Join-Path $Output 'playing-observations.json') -Encoding UTF8
+    # Try every owned cleanup and evidence write; retain the primary error object when cleanup also fails.
+    $cleanup = [ordered]@{
+        CollectorStop = { if ($trace -and -not $stopped -and -not $stopAttempted) { Stop-OwnTrace } }
+        CollectorExit = {
+            if ($trace -and $trace.HasExited) { [IO.File]::WriteAllText((Join-Path $Output 'trace.exit.txt'), [string]$trace.ExitCode) }
+        }
+        CollectorJob = { if ($trace) { $trace.Dispose() } }
+        OwnedJob = { if ($gameTree) { $gameTree.Dispose() } }
+        GameOutput = {
+            if ($gameTree) {
+                [IO.File]::WriteAllText((Join-Path $Output 'game.stdout.txt'), $gameTree.StdOut)
+                [IO.File]::WriteAllText((Join-Path $Output 'game.stderr.txt'), $gameTree.StdErr)
+            }
+        }
+        CollectorOutput = {
+            if ($trace) {
+                [IO.File]::WriteAllText((Join-Path $Output 'trace.stdout.txt'), $trace.StdOut)
+                [IO.File]::WriteAllText((Join-Path $Output 'trace.stderr.txt'), $trace.StdErr)
+            }
+        }
+        LogReader = { if ($logReader) { $logReader.Dispose() } }
+        GameProcess = { if ($gameProcess) { $gameProcess.Dispose() } }
+        CpuSnapshots = {
+            if ($diagnostic) { $snapshots.ToArray() | ConvertTo-Json -Depth 7 | Set-Content -LiteralPath (Join-Path $Output 'cpu-snapshots.json') -Encoding UTF8 }
+        }
+        PlayingObservations = {
+            if ($playingSample) {
+                [ordered]@{ state=$playingState; edges=$playingEdges.ToArray(); request=$moveRequested; release=$releaseRequested;
+                    processCpuReads=$playingCpu.ToArray(); movementStatus='Raw telemetry required; partial failure is not a completed movement sample' } |
+                    ConvertTo-Json -Depth 9 | Set-Content -LiteralPath (Join-Path $Output 'playing-observations.json') -Encoding UTF8
+            }
+        }
+        ShutdownRecord = { $shutdown | ConvertTo-Json -Depth 5 | Set-Content -LiteralPath (Join-Path $Output 'shutdown.json') -Encoding UTF8 }
+        BuildLock = { Exit-UESTCBuildLock $lease }
     }
-    if ($trace -and -not $stopped -and -not $stopAttempted) { Stop-OwnTrace }
-    # A failed collector Stop leaves this exact collector/target alive, identified in launch.json.
-    if ($gameProcess -and ($stopped -or -not $trace) -and -not $gameProcess.HasExited) {
-        $null = $gameProcess.CloseMainWindow()
-        if (-not $gameProcess.WaitForExit(15000)) { $gameProcess.Kill(); $gameProcess.WaitForExit() }
+    foreach ($step in $cleanup.GetEnumerator()) {
+        try { & $step.Value }
+        catch {
+            $cleanupFailures.Add([ordered]@{ step=$step.Key; error=$_.Exception.ToString() })
+            if ($failure) { $failure.Exception.Data["StartupCapture.$($step.Key)"] = $_.Exception }
+            else { $failure = $_ }
+        }
     }
-    if ($trace -and $trace.HasExited) { $trace.Dispose() }
-    Exit-UESTCBuildLock $lease
 }
-
+if ($failure) { $timing['status'] = 'FAILED' }
+try { $timing | ConvertTo-Json -Depth 5 | Set-Content -LiteralPath (Join-Path $Output 'launcher-timing.json') -Encoding UTF8 }
+catch {
+    if ($failure) { $failure.Exception.Data['StartupCapture.LauncherTiming'] = $_.Exception }
+    else { $failure = $_ }
+}
+if ($failure) {
+    try {
+        ($failure | Out-String) + ($cleanupFailures.ToArray() | ConvertTo-Json -Depth 5) |
+            Set-Content -LiteralPath (Join-Path $Output 'failure.txt') -Encoding UTF8
+    } catch { $failure.Exception.Data['StartupCapture.FailureRecord'] = $_.Exception }
+    throw $failure
+}
+$result | ConvertTo-Json -Depth 12 | Set-Content -LiteralPath (Join-Path $Output 'result.json') -Encoding UTF8
 

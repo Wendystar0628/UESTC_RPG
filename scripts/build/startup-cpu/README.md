@@ -22,7 +22,9 @@ Playing 在上述 immediate 正式入场后，等待真实 Playing、宿主 real
 
 位姿与 action 共同报告实际前向位移以及静止的按键帧。没有真实位移就不能称实际前进完成；撞挡零位移照录。每个较长过程间隔保留原始诊断字段、附近事件/异常/缓存行及 sampled-thread-time 栈候选；同现只说明候选，不证明函数 CPU 份额或因果。未知缓存命中、动态句柄与静态驻留分别保留原口径。
 
-进程/线程 CPU 计数用 BCL 读取，约 1 s 累计差和阶段计数并非逐帧 CPU。只保留 `CreateProcessW` 薄启动绑定取得可靠 primary OS TID；`Process.Start` 不提供该身份，不能用线程枚举顺序或 CLR ManagedThreadID 猜测。私有控制台的 Enter 仅停止现有 dotnet-trace 收集器并完成 rundown，不是玩家操作。先停收集器、目标保持存活，然后关闭目标。EventPipe 是含等待的 sampled-thread-time，不能当 on-CPU 栈。所有诊断工具开销留在观测值内。
+进程/线程 CPU 计数用 BCL 读取，约 1 s 累计差和阶段计数并非逐帧 CPU。启动复用 `ProcessTree` 持有本轮 job，primary OS TID 取其 `CreateProcessW` 返回值，不能用线程枚举顺序或 CLR ManagedThreadID 猜测。私有控制台的 Enter 仅停止现有 dotnet-trace 收集器并完成 rundown，不是玩家操作。EventPipe 是含等待的 sampled-thread-time，不能当 on-CPU 栈。所有诊断工具开销留在观测值内。
+
+采样边界到达后，诊断先停收集器并完成 rundown，目标保持存活；随后读取游戏既有 `STARTUP_ENVIRONMENT` 发布的十进制 `windowHandle`，经本轮 `ProcessTree.PostClose(HWND)` 发送 WM_CLOSE，等待正式异步关闭完成。采样端点和启动计时保持原口径，关闭时间另记在 `shutdown.json` 与成功 `result.json.shutdown`。缺失句柄、发送失败、30 s 内未退出、非零退出或现有日志检查发现错误/泄漏，整轮均失败；超时后只回收本轮 owned job，不能算作正常关闭。不使用 `--quit-after`、`CloseMainWindow` 或 Kill 代替正式退出。失败保留原始日志、trace、CPU 与动作观察，并将 cleanup 失败挂到原异常后传出；成功结果只在清理完成后写出。
 
 诊断同时采集 CLR AllocationTick，`gcAllocationSampling` 按阶段、OS 线程与类型汇总分配量子及缺失；这不是逐对象账目，也不能把分配栈归为某次 GC 暂停的原因。`topAllocationStacks.stackId` 在根级 `gcAllocationSampling.allocationCallStacks` 查完整栈，ID 只在该份报告内有效。没有事件、类型或栈时保留 `NOT_MEASURED`。已有 trace 可用 `dotnet CpuParse.dll <轮目录> <新报告名>.json` 重解析，无需重新采集。
 

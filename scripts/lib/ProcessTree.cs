@@ -24,6 +24,8 @@ namespace Uestc.Tools
         private Task stdoutTask;
         private Task stderrTask;
         private bool finished;
+        public int ProcessId { get; private set; }
+        public int MainThreadId { get; private set; }
         public string StdOut { get { lock (stdout) { return stdout.ToString(); } } }
         public string StdErr { get { lock (stderr) { return stderr.ToString(); } } }
         public int ExitCode
@@ -93,6 +95,11 @@ namespace Uestc.Tools
         }
 
         public ProcessTree(string executable, string arguments, string directory, bool visible, Encoding encoding, bool isolatedDesktop, IDictionary environment)
+            : this(executable, arguments, directory, visible, encoding, isolatedDesktop, environment, false)
+        {
+        }
+
+        public ProcessTree(string executable, string arguments, string directory, bool visible, Encoding encoding, bool isolatedDesktop, IDictionary environment, bool consoleInput)
         {
             IntPtr outputRead = IntPtr.Zero, outputWrite = IntPtr.Zero;
             IntPtr errorRead = IntPtr.Zero, errorWrite = IntPtr.Zero, input = IntPtr.Zero;
@@ -119,7 +126,9 @@ namespace Uestc.Tools
                 Check(SetHandleInformation(outputRead, 1, 0));
                 Check(CreatePipe(out errorRead, out errorWrite, ref security, 0));
                 Check(SetHandleInformation(errorRead, 1, 0));
-                input = CreateFile("NUL", 0x80000000, 3, ref security, 3, 0, IntPtr.Zero);
+                // A collector sharing its parent's private console needs a real input
+                // handle for its existing Enter-to-stop path; ordinary callers keep NUL.
+                input = CreateFile(consoleInput ? "CONIN$" : "NUL", 0x80000000, 3, ref security, 3, 0, IntPtr.Zero);
                 Check(input != new IntPtr(-1));
                 StartupInfo startup = new StartupInfo();
                 startup.Size = Marshal.SizeOf(typeof(StartupInfo));
@@ -137,6 +146,8 @@ namespace Uestc.Tools
                 Check(CreateProcess(executable, command, IntPtr.Zero, IntPtr.Zero, true, flags,
                     environmentBlock, directory, ref startup, out started));
                 process = started.Process;
+                ProcessId = checked((int)started.ProcessId);
+                MainThreadId = checked((int)started.ThreadId);
                 Check(AssignProcessToJobObject(job, process));
                 stdoutTask = Capture(outputRead, stdout, encoding); outputRead = IntPtr.Zero;
                 stderrTask = Capture(errorRead, stderr, encoding); errorRead = IntPtr.Zero;
