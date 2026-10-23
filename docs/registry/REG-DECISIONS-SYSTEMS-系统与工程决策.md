@@ -67,7 +67,7 @@ gates: []
 | 编号 | 决定 | 适用范围 | 细则所在 | 状态 |
 | --- | --- | --- | --- | --- |
 | DECISION-091 | 3 个存档位 s1–s3，各自持续自动保存，"继续"取最近保存的那个；观光期不设手动槽 | 存档 | SYS-SAVE §1 | 生效 |
-| DECISION-092 | 每次保存写一个新文件，保留最近几代，不覆盖、不改名；文件含头、元数据、分段正文和缩略图，用校验和发现损坏 | 存档 | SYS-SAVE-FORMAT §1.1 | 生效 |
+| DECISION-092 | 每次保存先写成暂存文件、校验通过后改名发布为新的一代，保留最近几代，不覆盖已有的代；文件含头、元数据、分段正文和缩略图，用校验和发现损坏 | 存档 | SYS-SAVE-FORMAT §1.1 | 生效 |
 | DECISION-093 | 序列化用 System.Text.Json 源生成；禁止用 Godot Resource、ConfigFile、`StrToVar`、`BytesToVar*`、`GetVar` 存读档 | 存档 | SYS-SAVE-FORMAT §1.3；SYS-SAVE-FORMAT §4 | 生效 |
 | DECISION-094 | 保存时机：退出、返回标题、新游戏交还控制时立即保存（退出写完再退），游玩中每 5 分钟定时保存；只在安全时刻拍快照 | 存档 | SYS-SAVE-FLOW §1.1；SYS-SAVE-FLOW §1.2 | 生效 |
 | DECISION-095 | 读档后的状态等于存档那一刻的落定状态；进行中的过渡、偶发事件和打开的面板不续播；断电、强杀或关机最多丢 5 分钟 | 存档 | SYS-SAVE §0；SYS-SAVE-FLOW §2.3 | 生效 |

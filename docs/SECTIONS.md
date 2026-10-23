@@ -1270,13 +1270,13 @@
 
 ## SYS-SAVE-FORMAT · 格式、损坏处理与安全
 
-`docs/systems/SYS-SAVE-FORMAT-格式、损坏处理与安全.md` · 4.1k 字 · 存档容器与序列化、格式号与段版本、坏档退回上一代、唯一的设置文件 settings.json、读档输入的安全
+`docs/systems/SYS-SAVE-FORMAT-格式、损坏处理与安全.md` · 4.2k 字 · 存档容器与序列化、格式号与段版本、坏档退回上一代、唯一的设置文件 settings.json、读档输入的安全
 关键词：存档容器、序列化、格式号、段版本、存档损坏、设置文件、settings.json、存档安全、缩略图、ReadOnlyReason
 
 - SYS-SAVE-FORMAT §0 结论 · L22 · 633
   - ★ SYS-SAVE-FORMAT §0.1 接入要点 · L30 · 264
-- SYS-SAVE-FORMAT §1 格式与版本 · L37 · 1.0k
-  - SYS-SAVE-FORMAT §1.1 容器 · L39 · 378
+- SYS-SAVE-FORMAT §1 格式与版本 · L37 · 1.1k
+  - SYS-SAVE-FORMAT §1.1 容器 · L39 · 432
   - SYS-SAVE-FORMAT §1.2 缩略图 · L49 · 152
   - SYS-SAVE-FORMAT §1.3 序列化约定 · L53 · 195
   - SYS-SAVE-FORMAT §1.4 版本 · L59 · 295
