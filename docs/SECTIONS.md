@@ -1591,12 +1591,12 @@
 `docs/engineering/ENG-BUDGET-LOD-细节级别、速度律与渲染参数.md` · 4.4k 字 · 细节级别 L0+–L4 与 64 m 分块、旁观速度律与目的地预取、深度与近裁剪面、阴影后期倒影灯光的预算参数
 关键词：细节级别、L0+、L4、分块、四叉树、屏幕误差、速度律、目的地预取、到达保证、近裁剪面、远裁剪面、反向 Z、坐标精度、PSSM、光柱数量、倒影分辨率、灯盏数
 
-- ENG-BUDGET-LOD §0 结论 · L20 · 641
-  - ★ ENG-BUDGET-LOD §0.1 接入要点 · L27 · 303
+- ENG-BUDGET-LOD §0 结论 · L20 · 668
+  - ★ ENG-BUDGET-LOD §0.1 接入要点 · L27 · 330
 - ENG-BUDGET-LOD §1 细节级别与分块 · L33 · 1.4k
 - ENG-BUDGET-LOD §2 流式加载与速度 · L57 · 485
 - ENG-BUDGET-LOD §3 深度与近裁剪面 · L64 · 360
-- ENG-BUDGET-LOD §4 阴影、后期、倒影、灯光 · L72 · 582
+- ENG-BUDGET-LOD §4 阴影、后期、倒影、灯光 · L72 · 594
 - ENG-BUDGET-LOD §5 待验证（P0） · L82 · 135
 
 ## ENG-BUDGET-RULES · 硬规则与工程设置

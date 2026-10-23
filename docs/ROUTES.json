@@ -501,6 +501,12 @@
   },
   {
    "docs": [
+    "ENG-PERF-LIGHT"
+   ],
+   "glob": "game/contracts/Runtime/Rendering/ShadowSettings.cs"
+  },
+  {
+   "docs": [
     "SYS-AUDIO"
    ],
    "glob": "game/data/audio/licenses.json"

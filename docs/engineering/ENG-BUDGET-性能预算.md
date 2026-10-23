@@ -59,7 +59,7 @@ paths: ["game/kernel/renderer/geometry/**", "game/kernel/renderer/render-state/*
 
 **预设资源上限**：三角形、绘制调用、显存与进程内存不逐项设静态上限，由 G10 实测帧时与显存判断，越高的预设上限越宽。
 
-- **阴影图**（16 位，各预设固定）：图尺寸、级联数与距离以 `game/kernel/lighting/ShadowSettings.cs` 和 `game/data/quality-presets.json` 为准。
+- **阴影图**（16 位，各预设固定）：图尺寸、级联数与距离以 `game/contracts/Runtime/Rendering/ShadowSettings.cs` 和 `game/data/quality-presets.json` 为准。
 - **纹理各预设相同**：没有纹理质量选项，全套纹理常驻，上限 384 MB；要更多时须同时放宽均衡预设的显存合计，由主会话定。
 
 **楼内视角份额**：镜头在开放室内、室外被遮挡体剔除，不设逐项静态上限，由 G10 的开放室内门厅位姿实测判断，不并入室外最坏视角，也不挤占 §3 室外份额。最坏视角是站在开放楼门厅里朝门外看，总量仍须在预设上限之内。一栋开放楼驻留 ≤ 30 MB、最多 2 栋（WLD-INTERIORS-BUILD §1.1），这是防呆，不是内容上限，超了按 WF-RULE §15 的数量级判断。

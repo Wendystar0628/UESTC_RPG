@@ -10,7 +10,7 @@ related: [WLD-WATER]
 contracts: []
 data: []
 gates: [G2, G4]
-paths: ["game/kernel/lighting/KeyLightState.cs", "game/kernel/lighting/KeyLightModel.cs", "game/kernel/lighting/**"]
+paths: ["game/kernel/lighting/KeyLightState.cs", "game/kernel/lighting/KeyLightModel.cs", "game/kernel/lighting/**", "game/contracts/Runtime/Rendering/ShadowSettings.cs"]
 ---
 # ENG-PERF-LIGHT · 植被、阴影、后期与灯光
 
