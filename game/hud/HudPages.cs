@@ -17,6 +17,7 @@ internal sealed class HudPages
     private readonly Control _host;
     // 界面发起的流程操作（进入、回标题）与画质应用各一个持有者，随 HUD 离树取消（Exit）。
     private readonly HudTask _flow, _quality;
+    private bool _watchingLeaveSave;
     public TitleMenu Title { get; }
     public SettingsCard Settings { get; }
     public SavePage Saves { get; }
@@ -32,7 +33,7 @@ internal sealed class HudPages
         _flow = new HudTask(dependencies.Failure);
         _quality = new HudTask(dependencies.Failure);
         Toast = Widgets.Toast.Create(view.Kit, view.HintHost);
-        Title = TitleMenu.Create(view.Kit, view.PageHost, view.BackgroundHost);
+        Title = TitleMenu.Create(view.Kit, view.PageHost, view.BackgroundHost, dependencies.Saves, dependencies.Maps);
         Title.EnterRequested += request => StartEnter(request);
         Title.SavesRequested += () => OpenSaves(fromTitle: true);
         Title.OverwriteRequested += () => OpenSaves(fromTitle: true, SaveIntent.NewGame);
@@ -50,6 +51,7 @@ internal sealed class HudPages
 
     public void Exit()
     {
+        StopLeaveSaveWatch();
         _flow.Cancel();
         _quality.Cancel();
         Settings.Close();
@@ -129,18 +131,53 @@ internal sealed class HudPages
     /// <summary>
     /// 回到开始页时的一次提示（进入失败由 <see cref="EnterCore"/> 按结果提示，这里不重复）：
     /// 流程留下文案键就提示它（冷启动读档失败等）；回标题时保存失败照常离开，提示继续会回到哪一代。
+    /// 保存转后台写盘（Deferred）、开始页出现时还没落定的，由 <see cref="WatchLeaveSave"/> 等它的结果。
     /// </summary>
     public void ReportTitleReturn(AppState previous)
     {
+        StopLeaveSaveWatch();
         if (previous == AppState.Entering) return;
         if (FlowErrorText() is { } error) { Warn(error); return; }
         if (previous != AppState.Leaving) return;
-        var state = _dependencies.Saves.State;
-        if (state.Last != SaveStatus.Failed) return;
-        Warn(state.LastSavedAtUnix is { } unix
-            ? UiKit.T("title.leave_unsaved", ("saved", SaveMetaText.SavedAt(unix)))
-            : UiKit.T("title.leave_unsaved.no_time"));
+        var saves = _dependencies.Saves;
+        if (saves.State.Last == SaveStatus.Failed) WarnLeaveUnsaved(saves.State);
+        else if (saves.Busy) WatchLeaveSave();
     }
+
+    // 本次离开的那一次后台写盘：开始页作用域内只订阅到它落定，失败提示一次；
+    // 离开开始页（新游戏、继续、退出）或界面离树时随作用域退订（ENG-ARCH）。
+    private void WatchLeaveSave()
+    {
+        _watchingLeaveSave = true;
+        _dependencies.Saves.SlotsChanged += OnLeaveSavePublished;
+        _dependencies.Flow.Changed += OnLeaveScopeChanged;
+    }
+
+    // 开始页上没有世界，存档服务此时只会发布这次写盘的结果（SYS-SAVE-FLOW）：第一次 Saved 或 Failed 即落定。
+    private void OnLeaveSavePublished()
+    {
+        var state = _dependencies.Saves.State;
+        if (state.Last is not (SaveStatus.Saved or SaveStatus.Failed)) return;
+        StopLeaveSaveWatch();
+        if (state.Last == SaveStatus.Failed) WarnLeaveUnsaved(state);
+    }
+
+    private void OnLeaveScopeChanged(AppState previous, AppState current)
+    {
+        if (current != AppState.Title) StopLeaveSaveWatch();
+    }
+
+    private void StopLeaveSaveWatch()
+    {
+        if (!_watchingLeaveSave) return;
+        _watchingLeaveSave = false;
+        _dependencies.Saves.SlotsChanged -= OnLeaveSavePublished;
+        _dependencies.Flow.Changed -= OnLeaveScopeChanged;
+    }
+
+    private void WarnLeaveUnsaved(SaveState state) => Warn(state.LastSavedAtUnix is { } unix
+        ? UiKit.T("title.leave_unsaved", ("saved", SaveMetaText.SavedAt(unix)))
+        : UiKit.T("title.leave_unsaved.no_time"));
 
     // IAppFlow.LastError 有文案键时用键，否则是原异常的消息，不直接给观者看。
     private string? FlowErrorText() => _dependencies.Flow.LastError is { } key && Tr.Has(key) ? UiKit.T(key) : null;

@@ -21,6 +21,8 @@ public partial class TitleMenu : Control
     private TechButton _continue = null!;
     private Control _backgroundParent = null!;
     private Control? _shade;
+    private ISaveService _saves = null!;
+    private IMapService _maps = null!;
 
     /// <summary>继续与新游戏只发请求，进入与失败提示归界面根（HudPages）。</summary>
     public event Action<EnterRequest>? EnterRequested;
@@ -31,11 +33,9 @@ public partial class TitleMenu : Control
     public event Action? QuitRequested;
     public event Action<string>? Notice;
 
-    private static T Svc<T>() where T : class => Campus.Kernel.Registry.Kernel.Get<T>();
-
-    internal static TitleMenu Create(UiKit kit, Control parent, Control backgroundParent)
+    internal static TitleMenu Create(UiKit kit, Control parent, Control backgroundParent, ISaveService saves, IMapService maps)
     {
-        var menu = new TitleMenu { _kit = kit, _backgroundParent = backgroundParent, MouseFilter = MouseFilterEnum.Ignore, Visible = false };
+        var menu = new TitleMenu { _kit = kit, _backgroundParent = backgroundParent, _saves = saves, _maps = maps, MouseFilter = MouseFilterEnum.Ignore, Visible = false };
         parent.AddChild(menu);
         menu.SetAnchorsAndOffsetsPreset(LayoutPreset.FullRect);
         return menu;
@@ -142,12 +142,11 @@ public partial class TitleMenu : Control
     private void Sync()
     {
         // 开始页没有世界实例：片名块写最近存档的世界状态，没有存档写默认状态。
-        var maps = Svc<IMapService>();
-        var world = TitleWorld.Resolve(Svc<ISaveService>(), maps);
+        var world = TitleWorld.Resolve(_saves, _maps);
         _data.Text = SaveMetaText.Moment(world.Season, world.Clock, world.Weather);
         _continue.Off = world.Meta is null;
         _continueInfo.Visible = world.Meta is not null;
-        if (world.Meta is { } meta) _continueInfo.Text = SaveMetaText.Summary(meta, maps);
+        if (world.Meta is { } meta) _continueInfo.Text = SaveMetaText.Summary(meta, _maps);
     }
 
     private void Pick(int index)
@@ -168,7 +167,7 @@ public partial class TitleMenu : Control
 
     private void NewGame()
     {
-        var slots = Svc<ISaveService>().Slots;
+        var slots = _saves.Slots;
         var empty = slots.FirstOrDefault(s => s.Health == SlotHealth.Empty);
         if (empty is null && slots.Count > 0) OverwriteRequested?.Invoke();
         else EnterRequested?.Invoke(new EnterRequest(EnterKind.NewGame, empty?.Slot));
