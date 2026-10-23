@@ -79,6 +79,20 @@ const float VEG_UNDER_KEEP_L0 = 0.5;       // L0 留下的冠底叶簇比例（M
 const float VEG_UNDER_PULL = 1.3;          // 拉近的距离，按插片半径（簇心压进团块至多约 0.75 个半径，加团块面的下陷）
 const float VEG_UNDER_DL = 0.035;          // 冠底叶簇的明度起伏（OKLab L，±，一簇一个值）：仰看时一簇簇分得开，又不花
 const float VEG_UNDER_FIT = 1.3;           // 冠底叶卡正对镜头：卡片放大这么多（MotherModels.UnderCardScale），叶形按叶柄端缩回原大，不让卡片的直边切出叶形
+// 换级前先收插片、再限时交叉淡化（GAME-194，ENG-PERF）。距离按整株取（树干脚点上方半个树高，与 VegetationBuckets 分桶同一点），
+// 一株树前后两侧同步收。每个换级点的升级点 P = 换级距离 × 树高/12 × 细节系数 × (1 − 触发带) ÷ 滞回：走近时 VegetationBuckets 在 P 才换回细一级，
+// 走远时更晚才换粗一级。细一级多出来的插片在 [P·(1 − VEG_SHRINK_BAND), P] 里按重要度先后收到 0，过了 P 两档插片完全一致，
+// 交叉淡化只换团块细分与枝干，来回走都不在换模那一刻冒出或掉下插片
+const float VEG_SHRINK_BAND = 0.3;
+// 一簇插片收完所占的带内进度：每簇平滑收小，同时有几十簇在收，整冠读成渐渐变稀，不一簇一簇闪掉
+const float VEG_SHRINK_SOFT = 0.3;
+// 留下的插片随同一进度放大（L0+→L0、L0→L1 两段，累乘），补回叶簇覆盖；放大时卡心朝团心内移同样的量，外缘不越过 CardReach
+const vec2 VEG_KEPT_GROW = vec2(1.12, 1.25);
+// L1 插片在远近交接前收完（RESEARCH-042 R7）：近/远 owner cell 按格包围盒距离在 VEG_NEAR_FADE_START × 细节系数处开始交接，格内每株都不比它近；
+// L1 插片在它的这两个比例之间收到 0，团块同时向所属小球球心外扩 VEG_FAR_MASS_GROW 补回插片的轮廓。远替身走同一个式子，交接只剩团块对团块。
+// 棕榈扇叶就是树冠本身，不收
+const vec2 VEG_FAR_CARD_BAND = vec2(0.7, 0.95);
+const float VEG_FAR_MASS_GROW = 0.04;
 
 // toon.gdshaderinc 已占 25 个 varying 分量，本着色器只剩 7 个（已用满，交接编码并进 v_row）：层号与标志合进一个整数，t0 直接读 v_spare（同是 COLOR.a）。
 varying flat int v_bits;      // 位 0–3 叶卡层号，位 4 开花，位 5 枝条笔触，位 6 团块（不裁切），位 7 冠底叶卡，位 8–15 插片自己的叶形种子
@@ -92,24 +106,52 @@ vec3 veg_tangent(vec3 n) {
 	return dot(t, t) > 1e-6 ? normalize(t) : vec3(1.0, 0.0, 0.0);
 }
 
-// 近池换级不跳变（§11.4）：高一级比低一级多出来的插片在过渡带里按重要度缩到 0
-float veg_card_keep(float imp, float dist, float height) {
-	float k = max(height, 1.0) / VEG_TREE_REFERENCE_HEIGHT * max(quality.x, 0.5);
-	float l0 = VEG_LOD_L0 * k * (1.0 - VEG_LEVEL_BAND_FRACTION);
-	float l1 = VEG_LOD_L1 * k * (1.0 - VEG_LEVEL_BAND_FRACTION);
-	float keep = mix(1.0, VEG_KEEP_L0, smoothstep(l0 * 0.9, l0, dist));
-	keep = mix(keep, VEG_KEEP_L1, smoothstep(l1 * 0.9, l1, dist));
-	return 1.0 - smoothstep(keep - 0.02, keep, imp);
+// 整株到主相机的距离，与 VegetationBuckets 的分桶点相同
+float veg_tree_dist(vec3 cam, vec3 origin, float height) {
+	return length(cam - origin - vec3(0.0, 0.5 * max(height, 1.0), 0.0));
 }
 
-// 冠底叶卡的去留（23c3）：只在近处出。L0 只留前一半叶簇，换到 L1 之前全部缩到 0；只在 L0+ 画的（云团型）换到 L0 之前缩到 0
+// 换级点的收插片进度：0 还没开始收，1 已收完（到了升级点 P）
+float veg_shrink_u(float boundary, float dist, float height) {
+	float p = boundary * max(height, 1.0) / VEG_TREE_REFERENCE_HEIGHT * max(quality.x, 0.5)
+			* (1.0 - VEG_LEVEL_BAND_FRACTION) / VEG_LEVEL_HYSTERESIS;
+	return clamp((dist / p - (1.0 - VEG_SHRINK_BAND)) / VEG_SHRINK_BAND, 0.0, 1.0);
+}
+
+// 远近交接前收 L1 插片的进度（按格的交接距离，不随树高）
+float veg_far_u(float dist) {
+	float n = VEG_NEAR_FADE_START * max(quality.x, 0.5);
+	return clamp((dist / n - VEG_FAR_CARD_BAND.x) / (VEG_FAR_CARD_BAND.y - VEG_FAR_CARD_BAND.x), 0.0, 1.0);
+}
+
+// 排位在 [lo, hi) 的插片随进度 u 收到 0：越靠后越先收，每簇占 VEG_SHRINK_SOFT 的进度，u = 1 时全部为 0；lo 以前的不动
+float veg_shrink(float imp, float lo, float hi, float u) {
+	if (imp < lo) {
+		return 1.0;
+	}
+	float a = (1.0 - clamp((imp - lo) / max(hi - lo, 1e-4), 0.0, 1.0)) * (1.0 - VEG_SHRINK_SOFT);
+	return 1.0 - smoothstep(a, a + VEG_SHRINK_SOFT, u);
+}
+
+// 近池换级不跳变（§11.4）：x = 插片的去留缩放（三段：L0+→L0、L0→L1、远近交接前），y = 留下的插片的补偿放大
+vec2 veg_card_keep(float imp, float dist, float height, bool frond) {
+	float ua = veg_shrink_u(VEG_LOD_L0, dist, height);
+	float ub = veg_shrink_u(VEG_LOD_L1, dist, height);
+	float keep = veg_shrink(imp, VEG_KEEP_L0, 1.0, ua) * veg_shrink(imp, VEG_KEEP_L1, VEG_KEEP_L0, ub);
+	if (!frond) {
+		keep *= veg_shrink(imp, 0.0, VEG_KEEP_L1, veg_far_u(dist));
+	}
+	float grow = mix(1.0, VEG_KEPT_GROW.x, imp < VEG_KEEP_L0 ? smoothstep(0.0, 1.0, ua) : 0.0)
+			* mix(1.0, VEG_KEPT_GROW.y, imp < VEG_KEEP_L1 ? smoothstep(0.0, 1.0, ub) : 0.0);
+	return vec2(keep, frond ? 1.0 : grow);
+}
+
+// 冠底叶卡的去留（23c3）：只在近处出。L0 只留前一半叶簇，到 L1 的升级点前全部收到 0；只在 L0+ 画的（云团型）到 L0 的升级点前收到 0
 float veg_under_keep(float w, float dist, float height) {
-	float k = max(height, 1.0) / VEG_TREE_REFERENCE_HEIGHT * max(quality.x, 0.5);
-	float l0 = VEG_LOD_L0 * k * (1.0 - VEG_LEVEL_BAND_FRACTION);
-	float l1 = VEG_LOD_L1 * k * (1.0 - VEG_LEVEL_BAND_FRACTION);
-	float keep = mix(1.0, w >= 2.0 ? 0.0 : VEG_UNDER_KEEP_L0, smoothstep(l0 * 0.9, l0, dist));
-	keep = mix(keep, 0.0, smoothstep(l1 * 0.9, l1, dist));
-	return 1.0 - smoothstep(keep - 0.02, keep, fract(w));
+	float r = fract(w);
+	float lo = w >= 2.0 ? 0.0 : VEG_UNDER_KEEP_L0;
+	return veg_shrink(r, lo, 1.0, veg_shrink_u(VEG_LOD_L0, dist, height))
+			* veg_shrink(r, 0.0, lo, veg_shrink_u(VEG_LOD_L1, dist, height));
 }
 
 void vertex() {
@@ -130,6 +172,9 @@ void vertex() {
 		float a = veg_anchor(sp.a, s);
 		float b = veg_anchor(sp.b, s);
 		VERTEX = mix(CUSTOM2.xyz, VERTEX, smoothstep(0.15, 0.6, a + 0.1 * (hb - 0.5)));
+		// 远近交接前团块外扩，补回收掉的 L1 插片的轮廓（近池 L1 与远替身同一个式子）
+		float far_u = veg_far_u(veg_tree_dist(MAIN_CAM_INV_VIEW_MATRIX[3].xyz, origin, inst.height));
+		VERTEX = CUSTOM2.xyz + (VERTEX - CUSTOM2.xyz) * (1.0 + VEG_FAR_MASS_GROW * smoothstep(0.0, 1.0, far_u));
 		bool bloom = (sp.flags & VEG_FLAG_BLOOM_BLOBS) != 0 && sp.bloom_cid >= 0 && CUSTOM1.w < b;
 		v_bits = 64 | (bloom ? 16 : 0);
 		v_seed = hb;
@@ -180,7 +225,10 @@ void vertex() {
 		vec3 t1 = veg_tangent(n2);
 		vec3 b1 = cross(n2, t1);
 		size *= smoothstep(0.08, 0.25, abs(dot(n2, view_m)));
-		size *= under ? veg_under_keep(CUSTOM2.w, dist, inst.height) : veg_card_keep(CUSTOM2.w, dist, inst.height);
+		float tree_dist = veg_tree_dist(cam_w, origin, inst.height);
+		vec2 keep = under ? vec2(veg_under_keep(CUSTOM2.w, tree_dist, inst.height), 1.0)
+				: veg_card_keep(CUSTOM2.w, tree_dist, inst.height, sp.leaf_card == VEG_CARD_FROND);
+		size *= keep.x * keep.y;
 		size *= smoothstep(VEG_NEAR_COLLAPSE * 0.6, VEG_NEAR_COLLAPSE, dist);
 		// 叶卡集中在外轮廓一圈，打碎轮廓边；朝向镜头的内部插片只留少数、缩小（max-011）。
 		// 冬季的枝条笔触不受此限（按叶量过渡），棕榈的扇叶本身就是树冠，也不受此限；冠底叶卡要在仰看时正对镜头，也不受此限。
@@ -189,6 +237,8 @@ void vertex() {
 			float inner = veg_hash(h2, 31u) < VEG_INNER_KEEP ? VEG_INNER_SIZE : 0.0;
 			size *= mix(1.0, mix(inner, 1.0, smoothstep(VEG_RIM_IN, VEG_RIM_OUT, rim)), leafy);
 		}
+		// 补偿放大朝团心内移：卡心退进团块，外缘停在放大前的位置
+		center += normalize(CUSTOM2.xyz - c + vec3(0.0, 1e-4, 0.0)) * (length(off) * size * (1.0 - 1.0 / keep.y));
 		VERTEX = center + (uw.x * t1 + uw.y * b1) * size;
 		// 插片用外壳法线（max-011 的统一树冠法线；棕榈扇叶用自己的法线）
 		NORMAL = nb;

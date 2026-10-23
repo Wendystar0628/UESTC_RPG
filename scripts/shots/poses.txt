@@ -8,3 +8,4 @@
 昼-P20-公式台阶 | P20 | --clock=8 --season=spring --weather=clear
 昼-P14-东区 | P14 | --clock=17.5 --season=autumn --weather=clear
 夜-P00-全景 | P00 | --clock=22 --season=autumn --weather=clear
+昼-P08-银杏大道 | P08 | --clock=17.5 --season=autumn --weather=clear

@@ -137,6 +137,8 @@ BINDINGS = [('game/contracts/Materials/PaletteEncoding.cs', 'FirstSeasonalRow', 
  ('game/contracts/Runtime/Rendering/GlobalDataTextures.cs', 'TextureWidth', 'VEG_TRANSITION_WIDTH', 'int', None),
  ('game/contracts/World/WorldTime.cs', 'AnimLoopSeconds', 'VEG_NEAR_START_BIAS_SECONDS', None, None),
  ('game/systems/vegetation/VegFade.cs', 'LevelBandFraction', 'VEG_LEVEL_BAND_FRACTION', None, None),
+ ('game/systems/vegetation/VegetationBuckets.cs', 'Hysteresis', 'VEG_LEVEL_HYSTERESIS', None, None),
+ ('game/systems/vegetation/VegFade.cs', 'NearFadeStart', 'VEG_NEAR_FADE_START', None, None),
  ('game/gen/vegetation/Understorey.cs', 'UnderVariantBit', 'VEG_VARIANT_UNDER', None, None)]
 
 # Only existing shader consumers are named here; their indices live in core.json.
