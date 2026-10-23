@@ -1519,7 +1519,7 @@
   - UI-VISUAL-COMPONENTS §4.2 控件与容器 · L74 · 320
   - UI-VISUAL-COMPONENTS §4.3 时间环 · L80 · 352
   - UI-VISUAL-COMPONENTS §4.4 天气签条、速度条与到达标题 · L89 · 306
-  - UI-VISUAL-COMPONENTS §4.5 存档卡"存储模组"、等待灯与加载界面 · L95 · 691
+  - UI-VISUAL-COMPONENTS §4.5 存档卡"存储模组"、等待灯与加载界面 · L95 · 647
 - UI-VISUAL-COMPONENTS §5 画面布局 · L103 · 858
 - UI-VISUAL-COMPONENTS §6 待验证 · L120 · 163
 
@@ -1665,7 +1665,7 @@
   - ★ ENG-LICENSE §0.1 接入要点 · L28 · 325
 - ENG-LICENSE §1 用户目录与日志 · L36 · 354
 - ENG-LICENSE §2 许可 · L42 · 1.1k
-- ENG-LICENSE §3 署名、窗口标题与图标 · L59 · 405
+- ENG-LICENSE §3 署名、窗口标题与图标 · L59 · 395
 
 ## ENG-PERF · 性能工程
 
@@ -1692,9 +1692,9 @@
 
 - ENG-PERF-ADAPT §0 结论 · L21 · 402
   - ★ ENG-PERF-ADAPT §0.1 接入要点 · L27 · 160
-- ENG-PERF-ADAPT §1 自适应与帧节奏 · L32 · 807
+- ENG-PERF-ADAPT §1 自适应与帧节奏 · L32 · 838
   - ENG-PERF-ADAPT §1.1 运行时自适应（主线之后） · L34 · 519
-  - ENG-PERF-ADAPT §1.2 帧节奏与画面设置约束 · L43 · 274
+  - ENG-PERF-ADAPT §1.2 帧节奏与画面设置约束 · L43 · 305
 - ENG-PERF-ADAPT §2 测量、剖析与门禁 · L48 · 535
 
 ## ENG-PERF-LIGHT · 植被、阴影、后期与灯光
@@ -1809,11 +1809,11 @@
 
 ## WF-FLOW · 开发流程
 
-`docs/workflow/WF-FLOW-开发流程.md` · 6.1k 字 · 一项任务从派工、施工（主检出只写不编译，工作树里交回前自编一次）、统一编译推送、回报到评审的流程，防打架，按工作量拆单，可调参数集中放
-关键词：开发流程、派工、施工单、按工作量拆单、子单 1 小时、回报、评审、防打架、邻居、可调参数、DECISION-184、DECISION-211、评审通用结论
+`docs/workflow/WF-FLOW-开发流程.md` · 6.1k 字 · 一项任务从派工、施工（主检出只写不编译，工作树里交回前自编一次）、统一编译推送、回报到评审的流程，防打架，按范围拆单，可调参数集中放
+关键词：开发流程、派工、施工单、按范围拆单、回报、评审、防打架、邻居、可调参数、DECISION-184、DECISION-211、评审通用结论
 
-- WF-FLOW §0 结论 · L22 · 473
-  - ★ WF-FLOW §0.1 接入要点 · L29 · 170
+- WF-FLOW §0 结论 · L22 · 516
+  - ★ WF-FLOW §0.1 接入要点 · L29 · 187
 - WF-FLOW §1 全流程一览 · L35 · 616
 - WF-FLOW §2 派工与拆单 · L46 · 1.4k
   - WF-FLOW §2.1 防打架（DECISION-211） · L62 · 375
@@ -1831,8 +1831,8 @@
 - WF-MODEL §1 按七问选施工模型 · L43 · 855
 - WF-MODEL §2 Opus 与 Sonnet 的分界（DECISION-193） · L57 · 440
 - WF-MODEL §3 机械活交谁 · L70 · 556
-- WF-MODEL §4 推理强度按难度选 · L79 · 683
-- WF-MODEL §5 升级、派单与直接做 · L94 · 430
+- WF-MODEL §4 推理强度按难度选 · L79 · 679
+- WF-MODEL §5 升级、派单与直接做 · L94 · 424
 - WF-MODEL §6 怎么开子代理 · L101 · 693
 - WF-MODEL §7 子代理的生命周期：默认新开，靠任务单交接 · L109 · 451
 - WF-MODEL §8 简报模板与"接续"段 · L119 · 697
@@ -1868,7 +1868,7 @@
   - ★ WF-RULE §0.1 接入要点 · L26 · 59
 - WF-RULE §1 不过度工程化（DECISION-201） · L30 · 453
 - WF-RULE §2 不向作者出选项 · L38 · 380
-- WF-RULE §3 不预判时间 · L45 · 280
+- WF-RULE §3 不预判时间 · L45 · 303
 - WF-RULE §4 不短轮询、不干等、不重复复核 · L52 · 290
 - WF-RULE §5 来信 · L58 · 40
 - WF-RULE §6 文件操作 · L62 · 564
@@ -1895,7 +1895,7 @@
 - WF-STATUS §2 施工队列与队列平衡 · L56 · 2.0k
 - WF-STATUS §3 交接单 · L94 · 89
 - WF-STATUS §4 调研入队流水线 · L98 · 1.5k
-  - WF-STATUS §4.1 调研与旁路单 · L111 · 751
+  - WF-STATUS §4.1 调研与旁路单 · L111 · 747
 
 ## STD-INDEX · 规范总纲
 
