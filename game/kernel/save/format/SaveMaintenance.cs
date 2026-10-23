@@ -4,33 +4,52 @@ using Campus.Kernel.Diagnostics;
 
 namespace Campus.Kernel.Save.Format;
 
-/// <summary>Owns post-commit deletion work. A failed sweep remains queued until the next successful commit.</summary>
+/// <summary>Owns abandoned staging and post-commit deletion work. Failed sweeps remain queued until the next commit.</summary>
 internal sealed class SaveMaintenance(SaveRepository repository)
 {
     internal const int Retained = 3;
-    private sealed class Sweep(SaveMeta meta)
+    private sealed class Sweep
     {
-        public SaveMeta Meta { get; set; } = meta;
+        public SaveMeta? Meta { get; set; }
         public Exception? Error { get; set; }
     }
     private readonly Dictionary<SlotId, Sweep> _pending = [];
     public IReadOnlyList<Exception> Errors => _pending.Values.Where(s => s.Error is not null).Select(s => s.Error!).ToArray();
 
+    public void Initialize() => SweepPending();
+
     public void AfterCommit(SaveMeta committed)
     {
         if (_pending.TryGetValue(committed.Slot, out var existing)) existing.Meta = committed;
-        else _pending.Add(committed.Slot, new(committed));
+        else _pending.Add(committed.Slot, new() { Meta = committed });
+        SweepPending();
+    }
+
+    private void SweepPending()
+    {
+        foreach (var slot in SaveSlots.Auto) _pending.TryAdd(slot, new());
         foreach (var slot in _pending.Keys.OrderBy(s => s.Value, StringComparer.Ordinal).ToArray())
         {
             var sweep = _pending[slot];
-            try { DeleteOldGenerations(sweep); _pending.Remove(slot); }
+            try
+            {
+                DeleteStaging(slot);
+                if (sweep.Meta is { } committed) DeleteOldGenerations(committed);
+                _pending.Remove(slot);
+            }
             catch (Exception error) { RetainSweep(sweep, error); }
         }
     }
 
-    private void DeleteOldGenerations(Sweep sweep)
+    private void DeleteStaging(SlotId slot)
     {
-        var meta = sweep.Meta;
+        var directory = repository.SlotDirectory(slot);
+        if (!Directory.Exists(directory)) return;
+        foreach (var path in Directory.EnumerateFiles(directory, SaveRepository.StagingPattern)) File.Delete(path);
+    }
+
+    private void DeleteOldGenerations(SaveMeta meta)
+    {
         var generations = repository.Generations(meta.Slot).OrderByDescending(g => g.Generation).ToArray();
         var preserved = new HashSet<string>(StringComparer.Ordinal);
         var retained = 0;
@@ -63,6 +82,6 @@ internal sealed class SaveMaintenance(SaveRepository repository)
     private static void RetainSweep(Sweep sweep, [FailureHandler("SYS-SAVE-FORMAT")] Exception error)
     {
         sweep.Error = error;
-        DiagnosticLog.Warning("Save committed; old-generation maintenance remains pending for the next commit.", error);
+        DiagnosticLog.Warning("Save repository maintenance remains pending for the next commit.", error);
     }
 }

@@ -217,12 +217,14 @@ public sealed class SaveFormatTests
     }
 
     [TestCase]
-    [TestCategory(TestReason.Contract)]
-    public void IncompleteWritePreservesOldGenerationAndReadbackMustPass()
+    [TestCategory(TestReason.Regression)]
+    public void InterruptedStagingPreservesOldGenerationAndVerificationPrecedesPublication()
     {
         using var temp = new TempSaveDirectory();
         using var repository = new SaveRepository(temp.Path, true, Sections());
         repository.Write(Document());
+        var previous = Path.Combine(temp.Path, "s1", "g000001.sav");
+        var previousBytes = File.ReadAllBytes(previous);
         var originalFailure = new IOException("disk full");
         Exception? received = null;
         string? incomplete = null;
@@ -231,7 +233,8 @@ public sealed class SaveFormatTests
             repository.Write(Document(2), (stream, bytes) =>
             {
                 incomplete = stream.Name;
-                stream.Write(bytes.AsSpan(0, 40));
+                stream.Write(bytes.AsSpan(0, SaveContainer.HeaderSize / 2));
+                stream.Flush(flushToDisk: true);
                 File.SetAttributes(stream.Name, FileAttributes.ReadOnly);
                 throw originalFailure;
             });
@@ -240,11 +243,80 @@ public sealed class SaveFormatTests
         finally { if (incomplete is not null && File.Exists(incomplete)) File.SetAttributes(incomplete, FileAttributes.Normal); }
         AssertThat(received is AggregateException aggregate && aggregate.InnerExceptions.Count > 1 && aggregate.InnerExceptions.Any(error => ReferenceEquals(error, originalFailure)))
             .OverrideFailureMessage("The aggregate must contain the original write failure and the actual incomplete-file cleanup failure.").IsTrue();
-        if (incomplete is not null) File.Delete(incomplete);
-        AssertThat(repository.Scan(new("s1")).Info.Meta?.Gen == 1).OverrideFailureMessage("Failed write destroyed the previous save.").IsTrue();
-        try { repository.Write(Document(2), (stream, bytes) => stream.Write(bytes.AsSpan(0, 40))); }
-        catch (SaveFormatException) { }
-        AssertThat(repository.Scan(new("s1")).Info.Meta?.Gen == 1).OverrideFailureMessage("A truncated file was committed.").IsTrue();
+        AssertThat(incomplete is not null && File.Exists(incomplete) && new FileInfo(incomplete).Length < SaveContainer.HeaderSize)
+            .OverrideFailureMessage("The interrupted write must leave an incomplete file behind before recovery is checked.").IsTrue();
+        var interrupted = repository.Scan(new("s1"));
+        AssertThat(interrupted.Info.Health == SlotHealth.Ok && interrupted.Info.Meta?.Gen == 1 && interrupted.MaxGeneration == 1)
+            .OverrideFailureMessage("An interrupted unpublished write blocked the old generation or consumed its successor's number.").IsTrue();
+        AssertThat(File.ReadAllBytes(previous).SequenceEqual(previousBytes)).OverrideFailureMessage("Failed write changed the previous save.").IsTrue();
+        var rejected = false;
+        try { repository.Write(Document(2), (stream, bytes) => stream.Write(bytes.AsSpan(0, SaveContainer.HeaderSize / 2))); }
+        catch (SaveFormatException) { rejected = true; }
+        AssertThat(rejected && repository.Scan(new("s1")).Info.Meta?.Gen == 1).OverrideFailureMessage("A truncated file was published.").IsTrue();
+        var invalidCore = Document(2) with
+        { Sections = new Dictionary<string, RawSaveSection> { ["world"] = new(1, "{\"v\":1,\"data\":{\"hours\":\"bad\"}}"u8.ToArray()) } };
+        rejected = false;
+        try { repository.Write(invalidCore); }
+        catch (SaveFormatException) { rejected = true; }
+        AssertThat(rejected && repository.Scan(new("s1")).Info.Meta?.Gen == 1).OverrideFailureMessage("A generation failing Prepare was published.").IsTrue();
+        var committed = repository.Write(Document(2));
+        AssertThat(committed.Info.Meta?.Gen == 2 && repository.Scan(new("s1")).Info.Meta?.Gen == 2 && !File.Exists(incomplete))
+            .OverrideFailureMessage("A retry did not publish the same available generation and clean abandoned staging.").IsTrue();
+    }
+
+    [TestCase]
+    [TestCategory(TestReason.Contract)]
+    public void OnlyTheRepositoryLockOwnerCleansAbandonedStagingOnInitialization()
+    {
+        using var temp = new TempSaveDirectory();
+        string abandoned;
+        byte[] previousBytes;
+        var previous = Path.Combine(temp.Path, "s1", "g000001.sav");
+        using (var owner = new SaveRepository(temp.Path, true, Sections()))
+        {
+            owner.Write(Document());
+            previousBytes = File.ReadAllBytes(previous);
+            // Keep a real truncated staging file as if the process stopped before publishing it.
+            using (var staging = new FileStream(owner.StagingPath(new("s1")), FileMode.CreateNew, FileAccess.Write, FileShare.None))
+            {
+                abandoned = staging.Name;
+                staging.Write(SaveContainer.Encode(Document(2)).AsSpan(0, SaveContainer.HeaderSize / 2));
+                staging.Flush(flushToDisk: true);
+            }
+            AssertThat(new FileInfo(abandoned).Length < SaveContainer.HeaderSize).IsTrue();
+            using var otherWindow = new SaveRepository(temp.Path, true, Sections());
+            using var saveOff = new SaveRepository(temp.Path, false, Sections());
+            AssertThat(!otherWindow.Enabled && File.Exists(abandoned) && otherWindow.Scan(new("s1")).Info.Meta?.Gen == 1 &&
+                saveOff.Scan(new("s1")).Info.Meta?.Gen == 1).OverrideFailureMessage("A read-only repository cleaned staging or exposed it as a generation.").IsTrue();
+        }
+        using var nextOwner = new SaveRepository(temp.Path, true, Sections());
+        AssertThat(nextOwner.Enabled && !File.Exists(abandoned) && nextOwner.Scan(new("s1")).Info.Meta?.Gen == 1 &&
+            File.ReadAllBytes(previous).SequenceEqual(previousBytes)).OverrideFailureMessage("The next lock owner did not clean staging while preserving the committed save.").IsTrue();
+    }
+
+    [TestCase]
+    [TestCategory(TestReason.Contract)]
+    public void PublicationNeverOverwritesAnExistingGeneration()
+    {
+        using var temp = new TempSaveDirectory();
+        using var repository = new SaveRepository(temp.Path, true, Sections());
+        repository.Write(Document());
+        var previous = Path.Combine(temp.Path, "s1", "g000001.sav");
+        var previousBytes = File.ReadAllBytes(previous);
+        var occupied = Path.Combine(temp.Path, "s1", "g000002.sav");
+        var occupiedBytes = SaveContainer.Encode(Document(2, 2));
+        var rejected = false;
+        try
+        {
+            repository.Write(Document(2), (stream, bytes) =>
+            {
+                stream.Write(bytes);
+                File.WriteAllBytes(occupied, occupiedBytes);
+            });
+        }
+        catch (IOException) { rejected = true; }
+        AssertThat(rejected && File.ReadAllBytes(occupied).SequenceEqual(occupiedBytes) &&
+            File.ReadAllBytes(previous).SequenceEqual(previousBytes)).OverrideFailureMessage("A failed publication overwrote or deleted a committed generation.").IsTrue();
     }
 
     [TestCase]

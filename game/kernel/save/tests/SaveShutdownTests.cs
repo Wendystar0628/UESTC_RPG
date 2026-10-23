@@ -76,6 +76,10 @@ public sealed class SaveShutdownTests
         await f.Pump(Task.WhenAny(f.Section.Entered.Task, writing));
         AssertThat(f.Section.Entered.Task.IsCompletedSuccessfully)
             .OverrideFailureMessage("Save finished before its generation reached readback.").IsTrue();
+        var staging = f.StagingFile;
+        AssertThat(staging is not null && !f.HasGeneration)
+            .OverrideFailureMessage("The blocked readback must belong to an unpublished staging file.").IsTrue();
+        AssertThat(SaveContainer.Decode(File.ReadAllBytes(staging!)).Meta.Slot).IsEqual(SaveSlots.Auto[0]);
         f.World.EndInstance();
         var closing = f.Save.DisposeAsync().AsTask();
         AssertThat(!closing.IsCompleted && !writing.IsCompleted).IsTrue();
@@ -84,6 +88,7 @@ public sealed class SaveShutdownTests
         AssertThat(result.Status == (failReadback ? SaveStatus.Failed : SaveStatus.Saved)).IsTrue();
         AssertThat(result.Error == (failReadback ? "save.error.io" : null)).IsTrue();
         AssertThat(f.HasGeneration == !failReadback && !f.Save.Busy).IsTrue();
+        AssertThat(f.StagingFile is null).IsTrue();
         using var unlocked = File.Open(Path.Combine(f.Directory, ".lock"), FileMode.Open, FileAccess.ReadWrite, FileShare.None);
         AssertThat(f.Diagnostics.Errors.Count).IsEqual(f.ExpectedErrors);
         if (failReadback)
@@ -108,13 +113,16 @@ public sealed class SaveShutdownTests
         private readonly Observer _camera = new();
         internal bool HasGeneration => System.IO.Directory.Exists(Path.Combine(Directory, SaveSlots.Auto[0].Value)) &&
             System.IO.Directory.EnumerateFiles(Path.Combine(Directory, SaveSlots.Auto[0].Value), "g*.sav").Any();
+        internal string? StagingFile => System.IO.Directory.Exists(Path.Combine(Directory, SaveSlots.Auto[0].Value))
+            ? System.IO.Directory.EnumerateFiles(Path.Combine(Directory, SaveSlots.Auto[0].Value), SaveRepository.StagingPattern).SingleOrDefault()
+            : null;
 
         internal Fixture()
         {
             World = new(new TestWeatherProcess(), _rules);
             var descriptor = RealMapFixture.Entry().Descriptor;
             _maps = new() { Maps = [descriptor], Default = descriptor.Id, Current = descriptor.Id };
-            Section = new(World, () => HasGeneration);
+            Section = new(World, () => HasGeneration || StagingFile is not null);
             _sections = new([new(new("world") { Phase = RestorePhase.World }, Section)]);
         }
         internal Task Initialize() => Save.Initialize(new(Directory, true, null, null, 1),
@@ -152,7 +160,7 @@ public sealed class SaveShutdownTests
         }
     }
 
-    private sealed class BlockingSection(TestWorldState world, Func<bool> hasGeneration)
+    private sealed class BlockingSection(TestWorldState world, Func<bool> hasReadbackFile)
         : ISaveSection<WorldSaveV1>, IDisposable
     {
         private readonly ManualResetEventSlim _release = new();
@@ -163,7 +171,8 @@ public sealed class SaveShutdownTests
         {
             get
             {
-                if (Armed && hasGeneration())
+                // Serialization has no file yet; initial scanning and staged readback both do.
+                if (Armed && hasReadbackFile())
                 {
                     Entered.TrySetResult(); _release.Wait();
                     if (Failure is { } failure) throw failure;

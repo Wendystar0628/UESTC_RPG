@@ -7,9 +7,10 @@ namespace Campus.Kernel.Save.Format;
 
 public sealed record SlotSnapshot(SlotInfo Info, PreparedSave? Save, ulong MaxGeneration);
 
-/// <summary>One exclusive lock and immutable generation files, three per slot. No rename is used to commit a save.</summary>
+/// <summary>One exclusive lock; verified same-directory staging files are renamed into immutable generations, three per slot.</summary>
 public sealed class SaveRepository : IDisposable
 {
+    internal const string StagingPattern = ".save-*.tmp";
     private readonly SaveMaintenance _maintenance;
     private readonly string _root;
     private readonly SaveSections _sections;
@@ -30,6 +31,7 @@ public sealed class SaveRepository : IDisposable
         try { _lock = new FileStream(Path.Combine(_root, ".lock"), FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None); }
         catch (IOException error) when ((error.HResult & 0xffff) is 32 or 33)
         { EnterReadOnly(error); }
+        if (Enabled) _maintenance.Initialize();
     }
 
     public SlotSnapshot Scan(SlotId slot)
@@ -89,6 +91,7 @@ public sealed class SaveRepository : IDisposable
 
     internal PreparedSave Prepare(SaveDocument document) => _sections.Prepare(document);
     internal void Maintain(SaveDocument committed) => _maintenance.AfterCommit(committed.Meta);
+    internal string StagingPath(SlotId slot) => Path.Combine(SlotDirectory(slot), ".save-" + Path.GetRandomFileName() + ".tmp");
 
     private void EnterReadOnly([FailureHandler("SYS-SAVE")] IOException error)
     {

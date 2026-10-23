@@ -6,7 +6,7 @@ using Campus.Kernel.Save.Format;
 
 namespace Campus.Kernel.Save;
 
-/// <summary>Owns one save's optional thumbnail, new-file lifetime and failure result.</summary>
+/// <summary>Owns one save's optional thumbnail, staging lifetime and failure result.</summary>
 internal sealed class SaveWriteOperation
 {
     private readonly List<Exception> _cleanupFailures = [];
@@ -58,13 +58,14 @@ internal sealed class SaveWriteOperation
         var directory = repository.SlotDirectory(slot);
         Directory.CreateDirectory(directory);
         var path = Path.Combine(directory, "g" + document.Meta.Gen.ToString("D6", CultureInfo.InvariantCulture) + ".sav");
+        var staging = repository.StagingPath(slot);
         var created = false;
         SaveDocument checkedDocument;
         PreparedSave prepared;
         try
         {
             var bytes = SaveContainer.Encode(document);
-            var stream = new FileStream(path, FileMode.CreateNew, FileAccess.Write, FileShare.None);
+            var stream = new FileStream(staging, FileMode.CreateNew, FileAccess.Write, FileShare.None);
             created = true;
             try
             {
@@ -77,16 +78,18 @@ internal sealed class SaveWriteOperation
                 throw;
             }
             stream.Dispose();
-            checkedDocument = repository.Read(path, document.Meta.Gen, slot);
+            checkedDocument = repository.Read(staging, document.Meta.Gen, slot);
             prepared = repository.Prepare(checkedDocument);
+            // SYS-SAVE-FORMAT: only a fully verified file may become a visible generation; never replace a published name.
+            File.Move(staging, path);
         }
         catch (Exception error)
         {
-            AbortIncomplete(error, created ? path : null);
+            AbortIncomplete(error, created ? staging : null);
             if (!ReferenceEquals(Failure, error)) throw Failure!;
             throw;
         }
-        // Readback is the commit boundary. Maintenance owns every later deletion/enumeration failure.
+        // Rename is the commit boundary. Maintenance owns every later deletion/enumeration failure.
         repository.Maintain(checkedDocument);
         var generations = document.Meta.Line == current.Info.Meta?.Line ? current.Info.Generations + 1 : 1;
         return new(new(slot, SlotKind.Auto, SlotHealth.Ok, checkedDocument.Meta, Math.Min(generations, SaveMaintenance.Retained)),
