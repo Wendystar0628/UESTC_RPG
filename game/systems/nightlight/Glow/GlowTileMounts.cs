@@ -11,7 +11,10 @@ namespace Campus.Systems.Nightlight.Glow;
 internal sealed class GlowTileMounts(IInstancePoolHost pools, IShaderMaterialSource materials)
 {
     private readonly IInstancePoolHost _pools = pools;
-    private sealed record MountedTile(NightlightTileContent Content, GlowMount Mount);
+    private sealed record MountedTile(NightlightTileContent Content, GlowMount Mount)
+    {
+        public BakeTileEntry Entry { get; } = new(Content.Key, Content.Glow.Bounds);
+    }
     private readonly Dictionary<BakeKey, MountedTile> _mounted = [];
     private readonly List<NightlightTileContent> _reflectionTiles = [];
     private long _generation;
@@ -25,7 +28,7 @@ internal sealed class GlowTileMounts(IInstancePoolHost pools, IShaderMaterialSou
         if (Failure is not null) return false;
         foreach (var tile in _mounted.Values)
         {
-            var entry = new BakeTileEntry(tile.Content.Key, tile.Content.Glow.Bounds);
+            var entry = tile.Entry;
             if (Demand(in entry, in view, resident: true) == StreamTileNeed.Required &&
                 (!tile.Mount.IsReady || !tile.Mount.VisibleReady)) return false;
         }
@@ -37,7 +40,7 @@ internal sealed class GlowTileMounts(IInstancePoolHost pools, IShaderMaterialSou
         _reflectionTiles.Clear();
         foreach (var tile in _mounted.Values)
         {
-            var entry = new BakeTileEntry(tile.Content.Key, tile.Content.Glow.Bounds);
+            var entry = tile.Entry;
             var required = Demand(in entry, in view, resident: true) == StreamTileNeed.Required ||
                 mirrored && Demand(in entry, in reflection, resident: true) == StreamTileNeed.Required;
             tile.Mount.SetVisible(required);
