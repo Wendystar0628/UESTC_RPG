@@ -97,16 +97,18 @@ function Invoke-UESTCMainlineSmoke {
         $parameterWarnings = @()
         foreach ($sample in @(@{ Name='Close'; Process=$close }, @{ Name='Resume'; Process=$resume })) {
             $parameterMarker = [regex]::Match($sample.Process.StdOut, '(?m)^CORE_INSTANCE_PARAMETERS[ \t]+(.+)\r?$')
-            if ($parameterMarker.Success) {
-                $usage = ConvertFrom-Json -InputObject $parameterMarker.Groups[1].Value
-                $parameterUsage[$sample.Name] = $usage
-                if ($null -ne $usage.TrackedDeclaredDemandRatio -and $usage.TrackedDeclaredDemandRatio -gt $warningRatio) {
-                    $message = "$($sample.Name): tracked instance-parameter demand $($usage.TrackedDeclaredParameterSlots)/$($usage.CapacitySlots) slots exceeds warning ratio $warningRatio; native actual remains unavailable."
-                    $parameterWarnings += $message
-                    Write-Warning $message -WarningAction Continue
-                }
-            } else {
-                $parameterUsage[$sample.Name] = [pscustomobject]@{ NativeActualSlots=$null; Status='Unavailable'; Coverage='CORE_INSTANCE_PARAMETERS snapshot missing' }
+            if (-not $parameterMarker.Success) { throw "$($sample.Name): CORE_INSTANCE_PARAMETERS snapshot is missing." }
+            $usage = ConvertFrom-Json -InputObject $parameterMarker.Groups[1].Value
+            if ($null -eq $usage.TrackedDeclaredDemandRatio) { throw "$($sample.Name): tracked instance-parameter demand ratio is unavailable." }
+            $ratio = [double]$usage.TrackedDeclaredDemandRatio
+            if ([double]::IsNaN($ratio) -or [double]::IsInfinity($ratio) -or $ratio -lt 0) {
+                throw "$($sample.Name): tracked instance-parameter demand ratio is invalid."
+            }
+            $parameterUsage[$sample.Name] = $usage
+            if ($ratio -gt $warningRatio) {
+                $message = "$($sample.Name): tracked instance-parameter demand $($usage.TrackedDeclaredParameterSlots)/$($usage.CapacitySlots) slots exceeds warning ratio $warningRatio; native actual remains unavailable."
+                $parameterWarnings += $message
+                Write-Warning $message -WarningAction Continue
             }
         }
         $parameterUsage['Warnings'] = $parameterWarnings

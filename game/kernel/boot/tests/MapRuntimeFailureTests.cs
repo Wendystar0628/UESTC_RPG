@@ -78,12 +78,22 @@ public sealed class MapRuntimeFailureTests
             using var fixture = new MapRuntimeFixture();
             fixture.Stream.ResidentReady = fixture.Stream.DestinationReady = true;
             fixture.Producer.ContentReady = true;
+            fixture.Renderer.Pending = true;
+            fixture.Runtime._Process(0);
+            AssertThat(!fixture.Mount.IsCompleted && fixture.Runtime.Failure is null)
+                .OverrideFailureMessage("Pending render uploads did not hold the otherwise ready map mount.").IsTrue();
+            fixture.Renderer.Pending = false;
             fixture.Runtime._Process(0);
             AssertThat(fixture.Mount.IsCompletedSuccessfully).IsTrue();
             IMapArrival? arrival = null;
             if (completeArrival)
             {
+                fixture.Renderer.Pending = true;
                 arrival = fixture.Runtime.Arrive(fixture.Camera.Pose, ViewMode.Fly);
+                fixture.Runtime._Process(0);
+                AssertThat(!arrival.Done.IsCompleted && fixture.Runtime.Failure is null)
+                    .OverrideFailureMessage("Pending render uploads did not hold the otherwise ready arrival.").IsTrue();
+                fixture.Renderer.Pending = false;
                 fixture.Runtime._Process(0);
                 AssertThat(arrival.Done.IsCompletedSuccessfully).IsTrue();
             }
@@ -241,7 +251,7 @@ internal static class MapRuntimeTestSupport
     internal sealed class RuntimeRenderer : IRenderReadiness
     {
         public Exception? Failure { get; set; }
-        public bool Pending => false;
+        public bool Pending { get; set; }
     }
 
     internal sealed class RuntimeBake : IBakeService

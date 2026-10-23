@@ -129,6 +129,15 @@ public sealed class StreamLifecycleTests
         fixture.CollisionParticipant.ResourcesUploaded = true;
         await fixture.Until(() => fixture.Director.PinnedDestinationReady(target));
         Check(!fixture.Director.PinnedDestinationReady(target with { CollisionFeet = feet + N.Vector3.UnitY }));
+        fixture.Director.Prefetch(target.Pose, target.Mode, target.Space, target.CollisionFeet);
+        await fixture.Until(() => fixture.Director.ViewReady && fixture.Director.DestinationReady && fixture.Director.PinnedDestinationReady(target));
+        fixture.Collision.CollisionReady = false;
+        fixture.Tick();
+        Check(fixture.Director.ViewReady && !fixture.Director.DestinationReady && !fixture.Director.PinnedDestinationReady(target));
+        fixture.Collision.CollisionReady = true;
+        await fixture.Until(() => fixture.Director.DestinationReady && fixture.Director.PinnedDestinationReady(target));
+        Check(fixture.Director.ViewReady && fixture.Director.DestinationReady && fixture.Director.PinnedDestinationReady(target));
+        fixture.Director.ClearDestination();
         fixture.Director.SetPinnedDestinations([]);
         Check(!fixture.Director.PinnedDestinationReady(target));
         fixture.Tick();
@@ -192,6 +201,7 @@ internal static class StreamLifecycleTestSupport
         public StreamBake Bake { get; }
         public ControlledGeometry Geometry { get; } = new();
         public FixtureCollisionParticipant CollisionParticipant { get; } = new();
+        public Collision Collision { get; } = new();
         public StreamMountQueue Mount { get; } = new(() => 0);
         public StreamFixture(bool geometry = false, bool elevated = false, Task<PreparedBakeTiles>? catalog = null, bool staticTitle = false)
         {
@@ -212,7 +222,7 @@ internal static class StreamLifecycleTestSupport
             registry.Add(CollisionParticipant);
             var flow = new FlowTestRig();
             Director.Bind(new(registry, new CatalogSource(catalog ?? Task.FromResult(new PreparedBakeTiles(modules, []))), Bake, Mount,
-                Camera, new Observer(Camera), flow.World, new Collision(), new TestMapService(), Terrain, new Reflection(),
+                Camera, new Observer(Camera), flow.World, Collision, new TestMapService(), Terrain, new Reflection(),
                 new Materials(_material), new Materials(_material), _view, true, Geometry));
             _stage.AddChild(_view); _stage.AddChild(Director);
             ((SceneTree)Engine.GetMainLoop()).Root.AddChild(_stage);
@@ -337,10 +347,11 @@ internal static class StreamLifecycleTestSupport
         }
     }
     private sealed class Observer(TestCameraRig camera) : IObserverState { public N.Vector3 Feet => camera.Pose.Position; public N.Vector3 Eye => Feet; public float YawDeg => camera.Pose.YawDeg; public NavSpace? Space => null; public ViewMode Mode => ViewMode.Fly; }
-    private sealed class Collision : ICollisionWorld
+    internal sealed class Collision : ICollisionWorld
     {
+        public bool CollisionReady { get; set; } = true;
         public Exception? Failure => null;
-        public bool Ready(N.Vector3 point, float radius) => true;
+        public bool Ready(N.Vector3 point, float radius) => CollisionReady;
         public SweepHit? Sweep(N.Vector3 from, N.Vector3 to, float radius, float height) => null;
         public SupportHit? SupportY(float x, float z, float yHint) => null;
         public SweepHit? SupportRay(N.Vector3 from, N.Vector3 to) => null;

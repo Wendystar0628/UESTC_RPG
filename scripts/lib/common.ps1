@@ -60,12 +60,18 @@ function Assert-UESTCTestResult {
     if ($ProcessResult.ExitCode -ne 0) { throw "Test process exited $($ProcessResult.ExitCode). See $($ProcessResult.Log)" }
     $summary = $trx.SelectSingleNode('//*[local-name()="ResultSummary"]')
     if ($summary.GetAttribute('outcome') -notin @('Passed','Completed')) { throw "TRX summary did not pass. See $TrxPath" }
-    foreach ($name in @('failed','error','timeout','aborted','inconclusive','notRunnable','disconnected','passedButRunAborted')) {
+    foreach ($name in @('failed','error','timeout','aborted','inconclusive','notRunnable','notExecuted','disconnected','passedButRunAborted')) {
         $value = $counters.GetAttribute($name)
         if ($value -and [int]$value -gt 0) { throw "TRX reports $name=$value. See $TrxPath" }
     }
-    foreach ($item in $trx.SelectNodes('//*[local-name()="UnitTestResult"]')) {
-        if ($item.GetAttribute('outcome') -notin @('Passed','NotExecuted')) {
+    $testResults = $trx.SelectNodes('//*[local-name()="UnitTestResult"]')
+    if ($testResults.Count -eq 0) {
+        $failure = [InvalidOperationException]::new("Test result is incomplete: no per-test results. See $TrxPath")
+        $failure.Data['Incomplete'] = $true
+        throw $failure
+    }
+    foreach ($item in $testResults) {
+        if ($item.GetAttribute('outcome') -ne 'Passed') {
             throw "TRX test '$($item.GetAttribute('testName'))' did not pass. See $TrxPath"
         }
     }

@@ -153,7 +153,6 @@ internal static class MapServiceTestSupport
         }
         private TaskCompletionSource? _mount;
         private bool _delayMount;
-        private bool _arrivalReady = true;
         public void ClearDestination()
         {
             Arrival?.Cancel(); Arrival = null; ArrivalChanged?.Invoke(null);
@@ -161,11 +160,6 @@ internal static class MapServiceTestSupport
         public IMapArrival? Arrival { get; private set; }
         public event Action<IMapArrival?>? ArrivalChanged;
         public bool MountReady => _mount?.Task.IsCompletedSuccessfully == true;
-        public bool ArrivalReady
-        {
-            get => _arrivalReady;
-            set { _arrivalReady = value; if (value) (Arrival as TestArrival)?.Complete(); }
-        }
         public bool MountPending => _mount is { Task.IsCompleted: false };
         public int Arrivals { get; private set; }
         public Pose? LastArrival { get; private set; }
@@ -202,7 +196,7 @@ internal static class MapServiceTestSupport
             var arrival = new TestArrival(new(pose, mode, space, collisionFeet));
             Arrival = arrival;
             ArrivalChanged?.Invoke(arrival);
-            if (ArrivalReady) arrival.Complete();
+            arrival.Complete();
             return arrival;
         }
     }

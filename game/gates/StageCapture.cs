@@ -11,10 +11,12 @@ internal static class StageCapture
 {
     public static async Task FinishRun(IStageGateHost host)
     {
+        Task? capture = null;
         try
         {
             if (AppBoot.Options.Capture.Shots.Count > 0)
-                await KernelServices.Get<GameCaptureNode>().RunSequenceAsync(host.Stage, host.Readiness, AppBoot.Options, host.StartupCapture, host.SyncView, () =>
+            {
+                capture = KernelServices.Get<GameCaptureNode>().RunSequenceAsync(host.Stage, host.Readiness, AppBoot.Options, host.StartupCapture, host.SyncView, () =>
                 {
                     host.CheckActive();
                     return host.Ready;
@@ -23,9 +25,13 @@ internal static class StageCapture
                     if (!KernelServices.Get<ICameraPoseValidator>().IsLegal(pose, outsideBuffer: true))
                         throw new ArgumentException("Capture pose is outside the reachable space or inside its buffer.");
                 });
+                await capture;
+            }
             await host.Close();
         }
-        catch (OperationCanceledException) when (host.Closing) { }
+        // The capture service links its token; the cancelled child task still belongs to this cancelled stage.
+        catch (OperationCanceledException error) when (host.Closing && host.Lifetime.IsCancellationRequested &&
+            (error.CancellationToken == host.Lifetime || capture?.IsCanceled == true)) { }
         catch (Exception error) { host.Fail(error); }
     }
 }
