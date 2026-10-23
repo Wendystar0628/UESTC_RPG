@@ -116,7 +116,11 @@ public static class BakeSurfacePacker
             vertices, attributes, Indices(mesh.Index.Span), bounds,
             lods: mesh.Lods.Select(l => new BakedMeshLod(l.Error, l.Index.Length, Indices(l.Index.Span))).ToArray(),
             uvScale: uvScale, variant: mesh.Variant, ignoreOcclusionCulling: mesh.IgnoreOcclusionCulling)
-        { Shader = mesh.Shader, Reflect = mesh.Reflect };
+        {
+            Shader = mesh.Shader, Reflect = mesh.Reflect,
+            NoShadow = MaterialShaders.HasNoShadow(mesh.Material.Spec.Kind, mesh.Shader,
+                mesh.Flags is { } flags ? flags.Span : ReadOnlySpan<byte>.Empty)
+        };
 
         PaletteIndex Registered(ushort value)
         {

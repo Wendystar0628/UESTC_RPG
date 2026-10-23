@@ -8,7 +8,7 @@ namespace Campus.Kernel.Bake;
 /// <summary>Adapts immutable local prototypes and world-space instance streams to the existing single-surface cache ABI.</summary>
 /// <remarks>
 /// Every input stream remains independent, including 64 m sub-blocks inside one L2 tile.
-/// There is no tile-origin translation, shadow-casting setting, or shadow-proxy parameter in this adapter/codec.
+/// There is no tile-origin translation or shadow-proxy parameter in this adapter/codec.
 /// Prototype buffers are read directly and packed once per prototype reference in this adapter's map lifetime.
 /// </remarks>
 public sealed class BakeInstanceAdapter(PaletteCatalog catalog)

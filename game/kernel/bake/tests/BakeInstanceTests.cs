@@ -16,7 +16,10 @@ public sealed class BakeInstanceTests
     [TestCategory(TestReason.Contract)]
     public void MultipleSurfacesAndSubBlocksKeepWorldRecordsAndCacheBytes()
     {
-        var firstSource = Surface("fixture.first", "fixture.first.shade");
+        var firstSource = Surface("fixture.first", "fixture.first.shade") with
+        {
+            Flags = [VertexFlag.NoShadow, VertexFlag.NoShadow, VertexFlag.NoShadow]
+        };
         var secondSource = Surface("fixture.second", "fixture.second.shade") with
         {
             Shader = ShaderId.Water,
@@ -60,7 +63,7 @@ public sealed class BakeInstanceTests
         CheckStream(bundle.MultiMeshes[3], stream1, at2);
         if (bundle.MultiMeshes[0].Surface.Material != frozenFirst.Material || bundle.MultiMeshes[1].Surface.Material != frozenSecond.Material ||
             bundle.MultiMeshes[1].Surface.Shader != ShaderId.Water || !bundle.MultiMeshes[1].Surface.IgnoreOcclusionCulling ||
-            bundle.MultiMeshes[0].Surface.IgnoreOcclusionCulling)
+            bundle.MultiMeshes[0].Surface.IgnoreOcclusionCulling || !bundle.MultiMeshes[0].Surface.NoShadow || bundle.MultiMeshes[1].Surface.NoShadow)
             throw new InvalidOperationException("Surface material slots, shader or occlusion policy were lost.");
         CompareSurface(bundle.MultiMeshes[0].Surface, BakeSurfacePacker.Pack(frozenFirst, PrototypeBounds(), Palette()));
         CompareSurface(bundle.MultiMeshes[1].Surface, BakeSurfacePacker.Pack(frozenSecond, PrototypeBounds(), Palette()));
@@ -141,7 +144,7 @@ public sealed class BakeInstanceTests
         if (actual.Material != expected.Material || actual.Shader != expected.Shader || actual.Format != expected.Format ||
             actual.VertexCount != expected.VertexCount || actual.IndexCount != expected.IndexCount || actual.Bounds != expected.Bounds ||
             actual.At != expected.At || actual.UvScale != expected.UvScale || actual.IgnoreOcclusionCulling != expected.IgnoreOcclusionCulling ||
-            actual.Variant != expected.Variant || actual.Reflect != expected.Reflect ||
+            actual.Variant != expected.Variant || actual.Reflect != expected.Reflect || actual.NoShadow != expected.NoShadow ||
             !actual.VertexData.Span.SequenceEqual(expected.VertexData.Span) || !actual.AttributeData.Span.SequenceEqual(expected.AttributeData.Span) ||
             !actual.IndexData.Span.SequenceEqual(expected.IndexData.Span) || !actual.SkinData.Span.SequenceEqual(expected.SkinData.Span) || actual.Lods.Count != expected.Lods.Count)
             throw new InvalidOperationException("A packed prototype surface lost a material, vertex stream, bound or flag.");

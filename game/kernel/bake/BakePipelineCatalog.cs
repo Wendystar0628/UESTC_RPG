@@ -50,7 +50,7 @@ internal sealed class BakePipelineCatalog
 
         void AddSurface(BakedSurface surface, bool instanced)
         {
-            var shadows = surface.Shader is ShaderId.Water ||
+            var shadows = surface.NoShadow || surface.Shader is ShaderId.Water ||
                 bundle.Level == LodLevel.L4 && surface.Shader == ShaderId.DioramaFar
                 ? PipelineShadowMode.Off : PipelineShadowMode.On;
             result.Add(new(surface.Shader is null ? surface.Material.Spec.Kind : null, surface.Shader,
@@ -86,7 +86,7 @@ internal sealed class BakePipelineCatalog
                         {
                             if (surface.Position.Length == 0 || surface.Index.Length == 0) continue;
                             var format = GeometrySurfaceUpload.FormatOf(surface);
-                            var shadows = surface.Flags is { Length: > 0 } flags && flags.All(value => (value & 8) != 0)
+                            var shadows = MaterialShaders.HasNoShadow(surface.Material.Spec.Kind, surface.Shader, surface.Flags)
                                 ? PipelineShadowMode.Off : PipelineShadowMode.On;
                             Add(new(surface.Shader is null ? surface.Material.Spec.Kind : null, surface.Shader,
                                 format, BakedPrimitive.Triangles, false, false, shadows));

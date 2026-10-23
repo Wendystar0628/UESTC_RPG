@@ -12,6 +12,52 @@ namespace Campus.Kernel.Bake.Tests;
 public sealed class PackedSurfaceBatchTests
 {
     [TestCase]
+    [TestCategory(TestReason.Regression)]
+    public void OnlyWholeToonSurfacesWithoutShadowContributionDisableNativeCasting()
+    {
+        var cases = new (byte[]? Flags, bool NoShadow)[]
+        {
+            (null, false),
+            ([0, 0, 0], false),
+            ([VertexFlag.NoShadow, VertexFlag.NoShadow, 0], false),
+            ([VertexFlag.Decal, 0, VertexFlag.NoShadow], false),
+            ([VertexFlag.NoShadow, VertexFlag.NoShadow, VertexFlag.NoShadow], true),
+            ([VertexFlag.Decal, VertexFlag.Decal, VertexFlag.Decal], true),
+            ([VertexFlag.NoShadow, VertexFlag.Decal, VertexFlag.NoShadow | VertexFlag.Outskirts], true)
+        };
+        foreach (var kind in new[] { ToonKind.Static, ToonKind.VegTrunk, ToonKind.VegCard, ToonKind.VegTwigMass })
+            foreach (var (flags, noShadow) in cases)
+                foreach (var explicitShader in new[] { false, true })
+                {
+                    var source = ShadowGeometry() with
+                    {
+                        Material = new(ShadowGeometry().Material.Spec with { Kind = kind }),
+                        Shader = explicitShader ? MaterialShaders.ShaderFor(kind) : null,
+                        Flags = flags
+                    };
+                    var packed = BakeSurfacePacker.Pack(source, Bounds(), Palette());
+                    var frozen = BakeSurfacePacker.Pack(GeometryBuffer.Freeze(source), Bounds(), Palette());
+                    if (MaterialShaders.HasNoShadow(kind, source.Shader, flags) != noShadow ||
+                        packed.NoShadow != noShadow || frozen.NoShadow != noShadow)
+                        throw new InvalidOperationException("Whole-surface shadow semantics changed for flags, frozen input or an explicit toon shader.");
+                    var key = BakeRequestKeys.Tile(new("fixture"), "fixture.shadow", default, LodLevel.L2);
+                    var tile = new TileBundle(key, default, LodLevel.L2, Bounds(), [packed]);
+                    var restored = (TileBundle)TileBundleCodec.Decode(BakePayloadClass.Tile, "fixture/shadow", key,
+                        TileBundleCodec.Encode(BakePayloadClass.Tile, "fixture/shadow", tile));
+                    if (restored.Surfaces.Single().NoShadow != noShadow || BakePipelineCatalog.Combinations(restored)
+                        .Any(pipeline => pipeline.Shadows != (noShadow ? PipelineShadowMode.Off : PipelineShadowMode.On)))
+                        throw new InvalidOperationException("Cache or pipeline preparation lost the baked native shadow mode.");
+                }
+        var overrideSource = ShadowGeometry() with
+        {
+            Shader = ShaderId.DioramaFar,
+            Flags = [VertexFlag.NoShadow, VertexFlag.NoShadow, VertexFlag.NoShadow]
+        };
+        if (BakeSurfacePacker.Pack(overrideSource, Bounds(), Palette()).NoShadow)
+            throw new InvalidOperationException("A non-toon override inherited toon vertex shadow semantics.");
+    }
+
+    [TestCase]
     [TestCategory(TestReason.Contract)]
     public void KnownLayoutsRetainEverySourceVertexAttributeAndTriangleByte()
     {
@@ -85,6 +131,25 @@ public sealed class PackedSurfaceBatchTests
     }
 
     [TestCase]
+    [TestCategory(TestReason.Regression)]
+    public void BatchingKeepsWholeSurfaceShadowExclusionThroughCacheDecode()
+    {
+        var source = BakeSurfacePacker.Pack(ShadowGeometry() with { Flags = [VertexFlag.NoShadow, VertexFlag.NoShadow, VertexFlag.NoShadow] }, Bounds(), Palette());
+        var merged = PackedSurfaceBatcher.Merge([source, source]).Single();
+        if (!source.NoShadow || !merged.NoShadow)
+            throw new InvalidOperationException("Batching lost an all-surface shadow exclusion.");
+        var key = BakeRequestKeys.Tile(new("fixture"), "fixture.shadow.batch", default, LodLevel.L1);
+        var tile = new TileBundle(key, default, LodLevel.L1, Bounds(), [merged]);
+        var restored = (TileBundle)TileBundleCodec.Decode(BakePayloadClass.Tile, "fixture/shadow/batch", key,
+            TileBundleCodec.Encode(BakePayloadClass.Tile, "fixture/shadow/batch", tile));
+        if (!restored.Surfaces.Single().NoShadow)
+            throw new InvalidOperationException("The batched cache round trip lost native shadow exclusion.");
+        var mixed = PackedSurfaceBatcher.Merge([source, BakeSurfacePacker.Pack(ShadowGeometry(), Bounds(), Palette())]);
+        if (mixed.Count != 1 || mixed.Single().NoShadow)
+            throw new InvalidOperationException("Shadow exclusion split a visible batch or disabled casting for its mixed source surfaces.");
+    }
+
+    [TestCase]
     [TestCategory(TestReason.Contract)]
     public void The65536VertexBoundarySplitsStablyWithoutDroppingOrWeldingVertices()
     {
@@ -128,6 +193,8 @@ public sealed class PackedSurfaceBatchTests
             throw new InvalidOperationException("A source vertex or index was lost or duplicated.");
     }
 
+    private static GeometryBundle ShadowGeometry() => new(new(new(new("fixture.lit"), new("fixture.shade"))),
+        [0, 0, 0, 1, 0, 0, 0, 0, 1], [0, 1, 0, 0, 1, 0, 0, 1, 0], [0, 2, 1]);
     private static BakedSurface Surface(int id, bool uv2, int customMask)
     {
         float[] Custom(int channel) => Enumerable.Range(0, 12).Select(index => index == 0 ?
@@ -164,7 +231,7 @@ public sealed class PackedSurfaceBatchTests
         new(material ?? source.Material, format ?? source.Format, primitive ?? source.Primitive, source.VertexCount, source.IndexCount,
             source.VertexData, attributes ?? source.AttributeData, source.IndexData, bounds ?? source.Bounds,
             at: at ?? source.At, lods: lods, skinData: skin, uvScale: uvScale ?? source.UvScale, variant: variant, ignoreOcclusionCulling: ignore)
-        { Shader = shader, Reflect = reflect };
+        { Shader = shader, Reflect = reflect, NoShadow = source.NoShadow };
     private static Box3 Bounds() => new(new(-64, -16, -64), new(64, 64, 64));
     private static PaletteCatalog Palette() => new(new PaletteRegistry([
         new(new("fixture.lit"), new(64), Vector3.One, "fixture", false, PaletteRole.Lit),

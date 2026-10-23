@@ -60,7 +60,7 @@ public sealed class BakedSurface
         int vertexCount, int indexCount, byte[] vertexData, byte[] attributeData, byte[] indexData,
         Box3 bounds, Matrix4x4? at = null, IReadOnlyList<BakedMeshLod>? lods = null,
         byte[]? skinData = null, Vector4? uvScale = null, VariantTag? variant = null,
-        bool ignoreOcclusionCulling = false, ShaderId? shader = null, bool reflect = false)
+        bool ignoreOcclusionCulling = false, ShaderId? shader = null, bool reflect = false, bool noShadow = false)
     {
         ArgumentNullException.ThrowIfNull(vertexData);
         ArgumentNullException.ThrowIfNull(attributeData);
@@ -74,7 +74,7 @@ public sealed class BakedSurface
             SkinData = skinData ?? Array.Empty<byte>(), Bounds = bounds,
             At = at ?? Matrix4x4.Identity, UvScale = uvScale ?? Vector4.One,
             Lods = Array.AsReadOnly(lodArray), Variant = variant,
-            IgnoreOcclusionCulling = ignoreOcclusionCulling, Shader = shader, Reflect = reflect
+            IgnoreOcclusionCulling = ignoreOcclusionCulling, Shader = shader, Reflect = reflect, NoShadow = noShadow
         };
     }
 
@@ -113,6 +113,8 @@ public sealed class BakedSurface
     public ShaderId? Shader { get; init; }
     /// <summary>Mount a synchronized proxy in the current reflection world; use the same mesh lifetime as the main surface.</summary>
     public bool Reflect { get; init; }
+    /// <summary>Bake-proven absence of any shadow contribution; mixed surfaces conservatively keep casting.</summary>
+    public bool NoShadow { get; init; }
     public ulong Format { get; private init; }
     public BakedPrimitive Primitive { get; private init; }
     public int VertexCount { get; private init; }

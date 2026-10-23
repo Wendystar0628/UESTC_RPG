@@ -46,7 +46,8 @@ internal static class TileRenderSection
     internal static void WriteSurface(BinaryWriter writer, BakedSurface surface)
     {
         TileBinaryFields.Json(writer, new SurfaceMetadata(surface.Material, surface.Format, surface.Primitive, surface.VertexCount,
-            surface.IndexCount, surface.Bounds, surface.At, surface.UvScale, surface.Variant, surface.IgnoreOcclusionCulling, surface.Shader, surface.Reflect));
+            surface.IndexCount, surface.Bounds, surface.At, surface.UvScale, surface.Variant, surface.IgnoreOcclusionCulling,
+            surface.Shader, surface.Reflect, surface.NoShadow));
         TileBinaryFields.Bytes(writer, surface.VertexData); TileBinaryFields.Bytes(writer, surface.AttributeData); TileBinaryFields.Bytes(writer, surface.IndexData); TileBinaryFields.Bytes(writer, surface.SkinData);
         writer.Write(surface.Lods.Count);
         foreach (var lod in surface.Lods) { writer.Write(lod.Error); writer.Write(lod.IndexCount); TileBinaryFields.Bytes(writer, lod.IndexData); }
@@ -60,11 +61,12 @@ internal static class TileRenderSection
         for (var i = 0; i < lods.Length; i++) lods[i] = BakedMeshLod.TakeOwnership(reader.ReadSingle(), reader.ReadInt32(), TileBinaryFields.Bytes(reader));
         if (meta.Shader is { } shader && !Enum.IsDefined(shader)) throw new InvalidDataException("Unknown surface shader ID.");
         return BakedSurface.TakeOwnership(meta.Material, meta.Format, meta.Primitive, meta.VertexCount, meta.IndexCount,
-            vertices, attributes, indices, meta.Bounds, meta.At, lods, skin, meta.UvScale, meta.Variant, meta.IgnoreOcclusionCulling, meta.Shader, meta.Reflect);
+            vertices, attributes, indices, meta.Bounds, meta.At, lods, skin, meta.UvScale, meta.Variant,
+            meta.IgnoreOcclusionCulling, meta.Shader, meta.Reflect, meta.NoShadow);
     }
 
     private sealed record SurfaceMetadata(ToonRef Material, ulong Format, BakedPrimitive Primitive, int VertexCount,
         int IndexCount, Box3 Bounds, Matrix4x4 At, Vector4 UvScale, VariantTag? Variant, bool IgnoreOcclusionCulling,
-        ShaderId? Shader, bool Reflect);
+        ShaderId? Shader, bool Reflect, bool NoShadow);
 
 }

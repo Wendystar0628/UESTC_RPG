@@ -112,6 +112,6 @@ internal static class PackedSurfaceBatcher
         var first = sources[0];
         return new(first.Material, first.Format, first.Primitive, vertexCount, indexCount, vertices, attributes, indices,
             first.Bounds, at: first.At, uvScale: first.UvScale, variant: first.Variant, ignoreOcclusionCulling: first.IgnoreOcclusionCulling)
-        { Shader = first.Shader, Reflect = first.Reflect };
+        { Shader = first.Shader, Reflect = first.Reflect, NoShadow = sources.All(source => source.NoShadow) };
     }
 }

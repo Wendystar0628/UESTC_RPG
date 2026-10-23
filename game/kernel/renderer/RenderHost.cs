@@ -116,7 +116,7 @@ public partial class RenderHost : Node3D, IRenderHost, IRenderReadiness, IMapAwa
                     MaterialOverride = material,
                     Transform = surface.Transform.ToGodot(),
                     IgnoreOcclusionCulling = surface.IgnoreOcclusion,
-                    CastShadow = surface.Geometry.Flags is { Length: > 0 } flags && flags.All(value => (value & 8) != 0)
+                    CastShadow = MaterialShaders.HasNoShadow(surface.Geometry.Material.Spec.Kind, surface.Geometry.Shader, surface.Geometry.Flags)
                         ? GeometryInstance3D.ShadowCastingSetting.Off : GeometryInstance3D.ShadowCastingSetting.On,
                     Visible = true
                 };

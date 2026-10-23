@@ -16,7 +16,7 @@ public sealed class PreparedTile : IDisposable
     private static readonly HashSet<PreparedTile> _live = [];
 
     public sealed record Draw(Rid Base, Rid Mesh, Transform3D At, ToonRef Material,
-        bool IgnoreOcclusionCulling, ShaderId? Shader, bool Reflect, bool Resident = false)
+        bool IgnoreOcclusionCulling, ShaderId? Shader, bool Reflect, bool Resident = false, bool NoShadow = false)
     {
         public bool IsWater => Shader is ShaderId.Water;
         public bool Reflects => Reflect && !IsWater;
@@ -76,7 +76,8 @@ public sealed class PreparedTile : IDisposable
                 if (surface.VertexCount == 0) continue;
                 var mesh = CreateMesh(surface);
                 _draws.Add(new(mesh, mesh, surface.At.ToGodot(), surface.Material,
-                    surface.IgnoreOcclusionCulling, surface.Shader, surface.Reflect, bundle.Level == LodLevel.L4 && surface.Shader == ShaderId.DioramaFar));
+                    surface.IgnoreOcclusionCulling, surface.Shader, surface.Reflect,
+                    bundle.Level == LodLevel.L4 && surface.Shader == ShaderId.DioramaFar, surface.NoShadow));
             }
             foreach (var item in bundle.MultiMeshes)
             {
@@ -92,7 +93,8 @@ public sealed class PreparedTile : IDisposable
                 RenderingServer.MultimeshSetBuffer(multi, MemoryMarshal.Cast<byte, float>(item.InstanceData.Span));
                 RenderingServer.MultimeshSetCustomAabb(multi, Bounds(item.Bounds));
                 _draws.Add(new(multi, mesh, Transform3D.Identity, item.Surface.Material,
-                    item.Surface.IgnoreOcclusionCulling, item.Surface.Shader, item.Surface.Reflect, bundle.Level == LodLevel.L4 && item.Surface.Shader == ShaderId.DioramaFar));
+                    item.Surface.IgnoreOcclusionCulling, item.Surface.Shader, item.Surface.Reflect,
+                    bundle.Level == LodLevel.L4 && item.Surface.Shader == ShaderId.DioramaFar, item.Surface.NoShadow));
             }
             lock (_liveGate) _live.Add(this);
         }
@@ -172,7 +174,7 @@ public sealed class PreparedTile : IDisposable
         RenderingServer.InstanceSetTransform(instance, draw.At);
         var water = draw.IsWater;
         RenderingServer.InstanceSetLayerMask(instance, water ? RenderLayers.Water : RenderLayers.BuildingsAndProps);
-        RenderingServer.InstanceGeometrySetCastShadowsSetting(instance, water || draw.Resident
+        RenderingServer.InstanceGeometrySetCastShadowsSetting(instance, water || draw.Resident || draw.NoShadow
             ? RenderingServer.ShadowCastingSetting.Off : RenderingServer.ShadowCastingSetting.On);
         RenderingServer.InstanceGeometrySetVisibilityRange(instance, 0, 0, 0, 0, RenderingServer.VisibilityRangeFadeMode.Disabled);
         RenderingServer.InstanceGeometrySetFlag(instance, RenderingServer.InstanceFlags.IgnoreOcclusionCulling, draw.IgnoreOcclusionCulling);

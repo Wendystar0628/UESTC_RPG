@@ -24,6 +24,15 @@ public enum ShaderId : byte
 /// <summary>Single shader file registry shared by build preparation and runtime material creation.</summary>
 public static class MaterialShaders
 {
+    /// <summary>TOON_VERTEX collapses every vertex of this surface in the shadow pass; mixed or unrelated shaders keep casting.</summary>
+    public static bool HasNoShadow(ToonKind kind, ShaderId? shader, ReadOnlySpan<byte> flags)
+    {
+        if (flags.IsEmpty || shader is { } explicitShader && explicitShader != ShaderFor(kind)) return false;
+        foreach (var value in flags)
+            if ((value & (VertexFlag.NoShadow | VertexFlag.Decal)) == 0) return false;
+        return true;
+    }
+
     /// <summary>Project-relative resource path; the caller adds res:// or the repository's game/ prefix.</summary>
     public static string FileOf(ShaderId shader) => "style/shaders/" + (shader switch
     {
