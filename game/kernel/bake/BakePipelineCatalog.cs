@@ -36,7 +36,7 @@ internal sealed class BakePipelineCatalog
     internal void Write(string projectRoot)
     {
         var combinations = Complete(ReadWhitelist(projectRoot));
-        var options = new JsonSerializerOptions(ContractJson.Options) { WriteIndented = true };
+        var options = new JsonSerializerOptions(ContractJson.Options) { WriteIndented = true, NewLine = "\n" };
         File.WriteAllBytes(Path.Combine(projectRoot, "data", "pipeline-combinations.json"),
             JsonSerializer.SerializeToUtf8Bytes(combinations, options));
     }
