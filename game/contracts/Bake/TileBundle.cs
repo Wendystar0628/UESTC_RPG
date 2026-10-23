@@ -10,13 +10,20 @@ public enum BakedPrimitive : byte { Points, Lines, LineStrip, Triangles, Triangl
 public sealed class BakedMeshLod
 {
     public BakedMeshLod(float error, int indexCount, ReadOnlyMemory<byte> indexData)
+        : this(error, indexCount, indexData.ToArray()) { }
+
+    private BakedMeshLod(float error, int indexCount, byte[] indexData)
     {
+        ArgumentNullException.ThrowIfNull(indexData);
         if (!float.IsFinite(error) || error < 0f) throw new ArgumentOutOfRangeException(nameof(error));
         BakeData.ValidateIndexLength(indexCount, indexData.Length);
         Error = error;
         IndexCount = indexCount;
-        IndexData = indexData.ToArray();
+        IndexData = indexData;
     }
+    /// <summary>Takes exclusive ownership of a newly allocated array; the caller relinquishes all writable aliases.</summary>
+    public static BakedMeshLod TakeOwnership(float error, int indexCount, byte[] indexData) => new(error, indexCount, indexData);
+
     public float Error { get; }
     public int IndexCount { get; }
     /// <summary>Little-endian unsigned 16-bit triangle indices. The constructor copies its input.</summary>
@@ -36,6 +43,44 @@ public sealed class BakedSurface
         Matrix4x4? at = null, IReadOnlyList<BakedMeshLod>? lods = null,
         ReadOnlyMemory<byte> skinData = default, Vector4? uvScale = null,
         VariantTag? variant = null, bool ignoreOcclusionCulling = false)
+    {
+        var lodArray = Validate(material, primitive, vertexCount, indexCount, vertexData, indexData, bounds, at, lods, uvScale);
+        Material = material; Format = format; Primitive = primitive;
+        VertexCount = vertexCount; IndexCount = indexCount;
+        VertexData = vertexData.ToArray(); AttributeData = attributeData.ToArray();
+        IndexData = indexData.ToArray(); SkinData = skinData.ToArray();
+        Bounds = bounds; At = at ?? Matrix4x4.Identity; UvScale = uvScale ?? Vector4.One;
+        Lods = Array.AsReadOnly(lodArray); Variant = variant;
+        IgnoreOcclusionCulling = ignoreOcclusionCulling;
+    }
+    private BakedSurface() { }
+
+    /// <summary>Takes exclusive ownership of all supplied byte arrays; the caller relinquishes every writable alias.</summary>
+    public static BakedSurface TakeOwnership(ToonRef material, ulong format, BakedPrimitive primitive,
+        int vertexCount, int indexCount, byte[] vertexData, byte[] attributeData, byte[] indexData,
+        Box3 bounds, Matrix4x4? at = null, IReadOnlyList<BakedMeshLod>? lods = null,
+        byte[]? skinData = null, Vector4? uvScale = null, VariantTag? variant = null,
+        bool ignoreOcclusionCulling = false, ShaderId? shader = null, bool reflect = false)
+    {
+        ArgumentNullException.ThrowIfNull(vertexData);
+        ArgumentNullException.ThrowIfNull(attributeData);
+        ArgumentNullException.ThrowIfNull(indexData);
+        var lodArray = Validate(material, primitive, vertexCount, indexCount, vertexData, indexData, bounds, at, lods, uvScale);
+        return new BakedSurface
+        {
+            Material = material, Format = format, Primitive = primitive,
+            VertexCount = vertexCount, IndexCount = indexCount,
+            VertexData = vertexData, AttributeData = attributeData, IndexData = indexData,
+            SkinData = skinData ?? Array.Empty<byte>(), Bounds = bounds,
+            At = at ?? Matrix4x4.Identity, UvScale = uvScale ?? Vector4.One,
+            Lods = Array.AsReadOnly(lodArray), Variant = variant,
+            IgnoreOcclusionCulling = ignoreOcclusionCulling, Shader = shader, Reflect = reflect
+        };
+    }
+
+    private static BakedMeshLod[] Validate(ToonRef material, BakedPrimitive primitive,
+        int vertexCount, int indexCount, ReadOnlyMemory<byte> vertexData, ReadOnlyMemory<byte> indexData,
+        Box3 bounds, Matrix4x4? at, IReadOnlyList<BakedMeshLod>? lods, Vector4? uvScale)
     {
         ArgumentNullException.ThrowIfNull(material.Spec);
         material.Spec.ValidateSurfacePattern();
@@ -60,34 +105,29 @@ public sealed class BakedSurface
                 throw new ArgumentException("Mesh LOD indices require complete triangle triples.", nameof(lods));
             BakeData.ValidateIndices(lod.IndexData.Span, vertexCount);
         }
-        Material = material; Format = format; Primitive = primitive;
-        VertexCount = vertexCount; IndexCount = indexCount;
-        VertexData = vertexData.ToArray(); AttributeData = attributeData.ToArray();
-        IndexData = indexData.ToArray(); SkinData = skinData.ToArray();
-        Bounds = bounds; At = transform; UvScale = scale;
-        Lods = Array.AsReadOnly(lodArray); Variant = variant;
-        IgnoreOcclusionCulling = ignoreOcclusionCulling;
+        return lodArray;
     }
-    public ToonRef Material { get; }
+
+    public ToonRef Material { get; private init; }
     /// <summary>Optional whitelisted non-toon shader, preserved from GeometryBundle through the bake codec.</summary>
     public ShaderId? Shader { get; init; }
     /// <summary>Mount a synchronized proxy in the current reflection world; use the same mesh lifetime as the main surface.</summary>
     public bool Reflect { get; init; }
-    public ulong Format { get; }
-    public BakedPrimitive Primitive { get; }
-    public int VertexCount { get; }
-    public int IndexCount { get; }
-    public ReadOnlyMemory<byte> VertexData { get; }
-    public ReadOnlyMemory<byte> AttributeData { get; }
-    public ReadOnlyMemory<byte> SkinData { get; }
-    public ReadOnlyMemory<byte> IndexData { get; }
-    public Box3 Bounds { get; }
-    public Matrix4x4 At { get; }
+    public ulong Format { get; private init; }
+    public BakedPrimitive Primitive { get; private init; }
+    public int VertexCount { get; private init; }
+    public int IndexCount { get; private init; }
+    public ReadOnlyMemory<byte> VertexData { get; private init; }
+    public ReadOnlyMemory<byte> AttributeData { get; private init; }
+    public ReadOnlyMemory<byte> SkinData { get; private init; }
+    public ReadOnlyMemory<byte> IndexData { get; private init; }
+    public Box3 Bounds { get; private init; }
+    public Matrix4x4 At { get; private init; }
     /// <summary>Producer-supplied packed UV scale; defaults to identity for formats without scaled UVs.</summary>
-    public Vector4 UvScale { get; }
-    public IReadOnlyList<BakedMeshLod> Lods { get; }
-    public VariantTag? Variant { get; }
-    public bool IgnoreOcclusionCulling { get; }
+    public Vector4 UvScale { get; private init; }
+    public IReadOnlyList<BakedMeshLod> Lods { get; private init; } = Array.Empty<BakedMeshLod>();
+    public VariantTag? Variant { get; private init; }
+    public bool IgnoreOcclusionCulling { get; private init; }
     public long ByteCount => (long)VertexData.Length + AttributeData.Length + SkinData.Length + IndexData.Length + Lods.Sum(lod => (long)lod.IndexData.Length);
 }
 
@@ -100,18 +140,26 @@ public sealed class BakedMultiMesh
 {
     public const int InstanceStrideBytes = 64;
     public BakedMultiMesh(BakedSurface surface, int instanceCount, ReadOnlyMemory<byte> instanceData, Box3 bounds)
+        : this(surface, instanceCount, instanceData.ToArray(), bounds) { }
+
+    private BakedMultiMesh(BakedSurface surface, int instanceCount, byte[] instanceData, Box3 bounds)
     {
+        ArgumentNullException.ThrowIfNull(instanceData);
         ArgumentNullException.ThrowIfNull(surface);
         if (surface.At != Matrix4x4.Identity) throw new ArgumentException("MultiMesh prototype At must be identity.", nameof(surface));
         if (instanceCount < 0 || (long)instanceCount * InstanceStrideBytes != instanceData.Length)
             throw new ArgumentException("Instance data must contain exactly 64 bytes per instance.", nameof(instanceData));
         for (var offset = 0; offset < instanceData.Length; offset += sizeof(float))
-            if (!float.IsFinite(BinaryPrimitives.ReadSingleLittleEndian(instanceData.Span.Slice(offset, sizeof(float)))))
+            if (!float.IsFinite(BinaryPrimitives.ReadSingleLittleEndian(instanceData.AsSpan().Slice(offset, sizeof(float)))))
                 throw new ArgumentException("Instance data contains a non-finite float.", nameof(instanceData));
         BakeData.ValidateBounds(bounds);
         Surface = surface; InstanceCount = instanceCount;
-        InstanceData = instanceData.ToArray(); Bounds = bounds;
+        InstanceData = instanceData; Bounds = bounds;
     }
+    /// <summary>Takes exclusive ownership of the instance array; the caller relinquishes every writable alias.</summary>
+    public static BakedMultiMesh TakeOwnership(BakedSurface surface, int instanceCount, byte[] instanceData, Box3 bounds) =>
+        new(surface, instanceCount, instanceData, bounds);
+
     public BakedSurface Surface { get; }
     public int InstanceCount { get; }
     public ReadOnlyMemory<byte> InstanceData { get; }
@@ -183,13 +231,21 @@ public sealed class CollisionTile
 {
     private readonly Collider[] _colliders;
     public CollisionTile(BakeKey key, TileKey tile, Box3 bounds, IReadOnlyList<Collider> colliders, string statisticsJson = "{}")
+        : this(key, tile, bounds, colliders.Select(BakeData.CopyCollider).ToArray(), statisticsJson) { }
+
+    private CollisionTile(BakeKey key, TileKey tile, Box3 bounds, Collider[] colliders, string statisticsJson)
     {
         ArgumentNullException.ThrowIfNull(colliders);
+        foreach (var collider in colliders) BakeData.ValidateColliderType(collider);
         BakeData.ValidateKey(key); BakeData.ValidateBounds(bounds); BakeData.ValidateStatistics(statisticsJson);
         Key = key; Tile = tile; Bounds = bounds;
-        _colliders = colliders.Select(BakeData.CopyCollider).ToArray();
+        _colliders = colliders;
         StatisticsJson = statisticsJson;
     }
+    /// <summary>Takes exclusive ownership of the collider array and nested channels; relinquish every writable alias.</summary>
+    public static CollisionTile TakeOwnership(BakeKey key, TileKey tile, Box3 bounds, Collider[] colliders, string statisticsJson = "{}") =>
+        new(key, tile, bounds, colliders, statisticsJson);
+
     public BakeKey Key { get; }
     public TileKey Tile { get; }
     public Box3 Bounds { get; }
@@ -237,9 +293,18 @@ internal static class BakeData
         if (document.RootElement.ValueKind != JsonValueKind.Object)
             throw new ArgumentException("StatisticsJson must be a JSON object.", nameof(statisticsJson));
     }
-    internal static Collider CopyCollider(Collider collider)
+    internal static void ValidateColliderType(Collider collider)
     {
         ArgumentNullException.ThrowIfNull(collider);
+        if (collider is SlabCollider slab) ArgumentNullException.ThrowIfNull(slab.Ring);
+        if (collider is HeightFieldCollider height) ArgumentNullException.ThrowIfNull(height.HeightsCm);
+        if (collider is not (WallCollider or RampCollider or PostCollider or BoxCollider or SlabCollider or HeightFieldCollider or SlopedWallCollider))
+            throw new ArgumentException($"Unsupported collider type '{collider.GetType().Name}'.", nameof(collider));
+    }
+
+    internal static Collider CopyCollider(Collider collider)
+    {
+        ValidateColliderType(collider);
         return collider switch
         {
             WallCollider wall => wall with { },

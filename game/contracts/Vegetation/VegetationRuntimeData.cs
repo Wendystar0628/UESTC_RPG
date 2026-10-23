@@ -10,11 +10,23 @@ public sealed class VegetationMotherData
 {
     public VegetationMotherData(string key, ReadOnlyMemory<float> records,
         IReadOnlyList<GeometryPrototype> prototypes, IReadOnlyList<Box3> bounds)
+        : this(key, records.ToArray(), prototypes, bounds) { }
+
+    private VegetationMotherData(string key, float[] records,
+        IReadOnlyList<GeometryPrototype> prototypes, IReadOnlyList<Box3> bounds)
     {
         Key = key;
-        Records = records.ToArray();
+        Records = records;
         Prototypes = Array.AsReadOnly(prototypes.ToArray());
         Bounds = Array.AsReadOnly(bounds.ToArray());
+    }
+
+    /// <summary>Takes exclusive ownership of the record array; prototype and bounds lists still take snapshots.</summary>
+    public static VegetationMotherData TakeOwnership(string key, float[] records,
+        IReadOnlyList<GeometryPrototype> prototypes, IReadOnlyList<Box3> bounds)
+    {
+        ArgumentNullException.ThrowIfNull(records);
+        return new(key, records, prototypes, bounds);
     }
 
     public string Key { get; }

@@ -3,6 +3,9 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Numerics;
+using System.Runtime.InteropServices;
+using Campus.Contracts.Bake;
+using Campus.Contracts.Vegetation;
 using GdUnit4;
 using static GdUnit4.Assertions;
 
@@ -11,6 +14,85 @@ namespace Campus.Contracts.Tests;
 [TestSuite]
 public sealed class VegetationGeometryBoundaryTests
 {
+    [TestCase]
+    [TestCategory(TestReason.Regression)]
+    public void OwnedGeometryRetainsChannelsAndStillValidatesTheOwningVertexRange()
+    {
+        var indices = new[] { 2, 1, 0 };
+        var lods = new List<MeshLod> { new(.5f, indices) };
+        var source = Surface(lods);
+        var owned = GeometryBuffer.TakeOwnership(source);
+        RequireOwned(owned.Position, source.Position);
+        RequireOwned(owned.Normal, source.Normal);
+        RequireOwned(owned.Index, source.Index);
+        RequireOwned(owned.Ao!.Value, source.Ao!);
+        RequireOwned(owned.Uv!.Value, source.Uv!);
+        RequireOwned(owned.Uv2!.Value, source.Uv2!);
+        RequireOwned(owned.ColorIndices!.Value, source.ColorIndices!);
+        RequireOwned(owned.Flags!.Value, source.Flags!);
+        RequireOwned(owned.Reserved!.Value, source.Reserved!);
+        RequireOwned(owned.Custom0!.Value, source.Custom0!);
+        RequireOwned(owned.Custom1!.Value, source.Custom1!);
+        RequireOwned(owned.Custom2!.Value, source.Custom2!);
+        RequireOwned(owned.Lods.Single().Index, indices);
+        lods.Clear();
+        AssertThat(owned.Lods.Count == 1 && owned.DecalBaseColorIndices is null).IsTrue();
+        var emptySource = Surface();
+        var absent = GeometryBuffer.TakeOwnership(new(emptySource.Material, emptySource.Position, emptySource.Normal, emptySource.Index));
+        AssertThat(absent.Ao is null && absent.Uv is null && absent.Uv2 is null &&
+            absent.ColorIndices is null && absent.DecalBaseColorIndices is null && absent.Flags is null &&
+            absent.Reserved is null && absent.Custom0 is null && absent.Custom1 is null && absent.Custom2 is null).IsTrue();
+        AssertThrown(() => GeometryBuffer.TakeOwnership(Surface([new(.5f, [0, 1, 3])])))
+            .IsInstanceOf<ArgumentException>();
+        AssertThrown(() => GeometryBuffer.TakeOwnership(Surface([new(float.NaN, [0, 1, 2])])))
+            .IsInstanceOf<ArgumentException>();
+    }
+
+    [TestCase]
+    [TestCategory(TestReason.Regression)]
+    public void OwnedPackedSurfacesAndStreamsRetainArraysWhileCopyingConstructorsIsolateScratch()
+    {
+        var material = Surface().Material;
+        byte[] vertices = [1, 2, 3];
+        byte[] attributes = [4];
+        byte[] indices = [0, 0, 1, 0, 2, 0];
+        byte[] skin = [5];
+        var lodIndices = indices.ToArray();
+        var lod = BakedMeshLod.TakeOwnership(.5f, 3, lodIndices);
+        RequireOwned(lod.IndexData, lodIndices);
+        var surface = BakedSurface.TakeOwnership(material, 0, BakedPrimitive.Triangles, 3, 3,
+            vertices, attributes, indices, LocalBounds, lods: [lod], skinData: skin, reflect: true);
+        RequireOwned(surface.VertexData, vertices);
+        RequireOwned(surface.AttributeData, attributes);
+        RequireOwned(surface.IndexData, indices);
+        RequireOwned(surface.SkinData, skin);
+        AssertThat(surface.Reflect).IsTrue();
+        byte[] instances = new byte[BakedMultiMesh.InstanceStrideBytes];
+        RequireOwned(BakedMultiMesh.TakeOwnership(surface, 1, instances, LocalBounds).InstanceData, instances);
+        var scratch = new byte[] { 7, 8, 9 };
+        var copied = new BakedSurface(material, 0, BakedPrimitive.Triangles, 3, 0,
+            scratch, Array.Empty<byte>(), Array.Empty<byte>(), LocalBounds);
+        scratch[0] = 99;
+        AssertThat(copied.VertexData.Span[0] == 7).IsTrue();
+        var records = new float[InstanceStreamLayout.FloatsPerInstance];
+        var prototype = Prototype();
+        RequireOwned(GeometryInstanceStream.TakeOwnership("owned", prototype, records, LocalBounds).Data, records);
+        var motherRecords = new float[InstanceStreamLayout.FloatsPerInstance];
+        RequireOwned(VegetationMotherData.TakeOwnership("owned", motherRecords, [prototype], [LocalBounds]).Records, motherRecords);
+        AssertThrown(() => BakedSurface.TakeOwnership(material, 0, BakedPrimitive.Triangles, 3, 3,
+            vertices, attributes, new byte[] { 0, 0, 1, 0, 3, 0 }, LocalBounds)).IsInstanceOf<ArgumentException>();
+        AssertThrown(() => BakedMultiMesh.TakeOwnership(surface, 2, instances, LocalBounds)).IsInstanceOf<ArgumentException>();
+        AssertThrown(() => GeometryInstanceStream.TakeOwnership("invalid", prototype, [float.NaN], LocalBounds))
+            .IsInstanceOf<ArgumentException>();
+    }
+
+    private static void RequireOwned<T>(ReadOnlyMemory<T> memory, T[] array)
+    {
+        AssertThat(MemoryMarshal.TryGetArray(memory, out var segment) && ReferenceEquals(segment.Array, array) &&
+            segment.Offset == 0 && segment.Count == array.Length)
+            .OverrideFailureMessage("Ownership transfer cloned a numeric channel.").IsTrue();
+    }
+
     [TestCase]
     [TestCategory(TestReason.Contract)]
     public void AbsentVertexChannelsRemainAbsentAfterFreezing()
