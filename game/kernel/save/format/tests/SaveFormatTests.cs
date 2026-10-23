@@ -1,43 +1,20 @@
 using Campus.Tests;
 using System.Buffers.Binary;
 using System.IO.Compression;
-using System.Numerics;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
-using System.Text.Json.Serialization;
 using Campus.Contracts;
 using Campus.Contracts.Save;
 using GdUnit4;
 using static GdUnit4.Assertions;
+using static Campus.Kernel.Save.Format.Tests.SaveFormatFixture;
 
 namespace Campus.Kernel.Save.Format.Tests;
 
 [TestSuite]
 public sealed class SaveFormatTests
 {
-    private static long _testId;
-    private static SaveMeta Meta(ulong gen = 1, ulong line = 1) => new(SaveContainer.CurrentFormat, new("s1"), SlotKind.Auto,
-        gen, line, 20, new("test-map"), 17.5, 17.5, Season.Autumn, WeatherKind.Clear, ViewMode.Fly,
-        new(new Vector3(1, 2, 3), 4, 5), null, null, null, 1792082400, SaveReason.Test);
-    internal static SaveDocument Document(ulong gen = 1, ulong line = 1) => new(Meta(gen, line),
-        new SortedDictionary<string, RawSaveSection>(StringComparer.Ordinal)
-        { ["world"] = new(1, "{\"v\":1,\"data\":{\"hours\":17.5}}"u8.ToArray()) }, null);
-    internal static SaveSections Sections(TestSection? section = null, int version = 1, RestorePhase phase = RestorePhase.World) =>
-        new([new(new("world") { Version = version, Phase = phase, Order = 10 }, section ?? new())]);
-    internal sealed class TempSaveDirectory : IDisposable
-    {
-        public string Path { get; } = System.IO.Path.Combine(System.IO.Path.GetTempPath(),
-            "uestc-rpg-save-case-" + Environment.ProcessId + "-" + Interlocked.Increment(ref _testId));
-        public string Entry(ulong gen) => System.IO.Path.Combine(Path, "s1",
-            "g" + gen.ToString("D6", System.Globalization.CultureInfo.InvariantCulture) + ".sav");
-
-        public void Dispose()
-        {
-            if (Directory.Exists(Path)) Directory.Delete(Path, recursive: true);
-        }
-    }
-
     private static void Rehash(byte[] bytes)
     {
         using var hash = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
@@ -573,21 +550,4 @@ public sealed class SaveFormatTests
         try { repository.Write(Document(3, 2)); } catch (InvalidOperationException) { rejected = true; }
         AssertThat(rejected && File.Exists(path)).OverrideFailureMessage("Automatic write replaced an unreadable slot.").IsTrue();
     }
-}
-public sealed record TestState(double Hours);
-public sealed class TestSection : ISaveSection<TestState>
-{
-    public TestState Current { get; set; } = new(17.5);
-    public System.Text.Json.Serialization.Metadata.JsonTypeInfo<TestState> TypeInfo => TestSaveJsonContext.Strict.TestState;
-    public TestState Capture(in CaptureContext context) => Current;
-    public void Restore(TestState state, RestoreContext context) => Current = state;
-    public TestState CreateDefault(NewGameContext context) => new(context.Start.Clock);
-}
-
-[JsonSourceGenerationOptions(PropertyNamingPolicy = JsonKnownNamingPolicy.CamelCase)]
-[JsonSerializable(typeof(TestState))]
-internal partial class TestSaveJsonContext : JsonSerializerContext
-{
-    internal static TestSaveJsonContext Strict { get; } = new(new JsonSerializerOptions(ContractJson.Options)
-    { UnmappedMemberHandling = JsonUnmappedMemberHandling.Disallow, RespectRequiredConstructorParameters = true });
 }

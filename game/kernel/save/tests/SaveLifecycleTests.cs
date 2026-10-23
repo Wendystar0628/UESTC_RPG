@@ -140,13 +140,13 @@ public sealed class SaveLifecycleTests
 
     [TestCase]
     [TestCategory(TestReason.Smoke)]
-    [TestCategory("Slow")]
     public async Task OnlyIntervalRequestsSaveAndTitleNeverWrites()
     {
         using var fixture = new SaveLifecycleFixture();
         await fixture.Start(); await fixture.Pump(fixture.Save.NewGame(new("s1"), 1));
         fixture.Flow = AppState.Playing; await fixture.Pump(fixture.Save.SaveNow(SaveReason.NewGame));
         await fixture.Frames(200);
+        await fixture.PumpUntilIdle();
         AssertThat(fixture.Save.Slots[0].Meta?.Gen == 1).OverrideFailureMessage("An autosave was written without a request.").IsTrue();
         fixture.Save.Request(SaveReason.Interval);
         for (var i = 0; i < 500 && fixture.Save.Slots[0].Meta?.Gen != 2; i++) await fixture.Frames(1);
@@ -154,6 +154,7 @@ public sealed class SaveLifecycleTests
         fixture.Flow = AppState.Title;
         fixture.Save.Request(SaveReason.Interval);
         await fixture.Frames(400);
+        await fixture.PumpUntilIdle();
         AssertThat(fixture.Save.Slots[0].Meta?.Gen == 2).OverrideFailureMessage("Title saved its camera state.").IsTrue();
         AssertThat(fixture.Diagnostics.Errors.Count).IsEqual(0);
     }
@@ -360,7 +361,7 @@ public sealed class SaveLifecycleTests
         AssertThat(slot.Entries.Count(entry => entry.Meta?.Reason == SaveReason.Manual) == SaveSlots.ManualLimit &&
             slot.Entries.Any(entry => entry.Gen == 1) && !slot.Entries.Any(entry => entry.Gen == 2)).IsTrue();
         var cached = fixture.Save.Thumbnail(slot.Slot)!;
-        File.Delete(fixture.EntryFile(slot.Meta!.Gen));
+        File.Delete(fixture.Storage.Folder.Entry(slot.Meta!.Gen));
         cached[0] = 0;
         AssertThat(fixture.Save.Thumbnail(slot.Slot)!.SequenceEqual(fixture.NextThumbnail) &&
             fixture.Save.Thumbnail(slot.Slot, 1)!.SequenceEqual(previous)).IsTrue();
@@ -379,11 +380,11 @@ public sealed class SaveLifecycleTests
         var loaded = await fixture.Pump(fixture.Save.Load(SaveSlots.Auto[0], 1));
         AssertThat(loaded.Status == LoadStatus.Loaded && loaded.Gen == 1 && fixture.World.Hours == 23 &&
             fixture.Save.Slots[0].Meta?.Gen == 2).IsTrue();
-        var document = SaveContainer.Decode(File.ReadAllBytes(fixture.EntryFile(2)));
+        var document = SaveContainer.Decode(File.ReadAllBytes(fixture.Storage.Folder.Entry(2)));
         var broken = document.Sections.ToDictionary(pair => pair.Key, pair => pair.Value);
         var version = document.Sections["world"].Version;
         broken["world"] = new(version, System.Text.Encoding.UTF8.GetBytes("{\"v\":" + version + ",\"data\":{\"worldHours\":\"bad\"}}"));
-        File.WriteAllBytes(fixture.EntryFile(2), SaveContainer.Encode(document with { Sections = broken }));
+        File.WriteAllBytes(fixture.Storage.Folder.Entry(2), SaveContainer.Encode(document with { Sections = broken }));
         var instance = fixture.World.Instance;
         var rejected = await fixture.Pump(fixture.Save.Load(SaveSlots.Auto[0], 2));
         AssertThat(rejected.Status == LoadStatus.Corrupt && fixture.World.Instance == instance && fixture.World.Hours == 23).IsTrue();

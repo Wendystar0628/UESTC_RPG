@@ -26,7 +26,7 @@ public sealed class SettledObserverSaveTests
         fixture.Camera.SetPose(new(new(100, 200, 300), 0, 0));
         var result = await fixture.Pump(fixture.Save.SaveNow(SaveReason.Test));
         AssertThat(result.Status == SaveStatus.Saved && fixture.Save.Slots[0].Meta?.Pose == target).IsTrue();
-        var document = SaveContainer.Decode(File.ReadAllBytes(fixture.EntryFile(result.Gen)));
+        var document = SaveContainer.Decode(File.ReadAllBytes(fixture.Storage.Folder.Entry(result.Gen)));
         var view = (ViewSaveData)fixture.Save.Sections.Prepare(document).Sections.Single(section => section.Dto is ViewSaveData).Dto!;
         var walk = (WalkSaveData)fixture.Save.Sections.Prepare(document).Sections.Single(section => section.Dto is WalkSaveData).Dto!;
         AssertThat(view == snapshot.View && walk.Feet == settledWalk.Feet

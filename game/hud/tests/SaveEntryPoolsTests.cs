@@ -43,7 +43,7 @@ public sealed class SaveEntryPoolsTests
             if (i < manual) reasons.Add(SaveReason.Manual);
         }
         var entries = reasons.Select((reason, index) => new SaveEntry((ulong)(index + 1), reason is null ? SlotHealth.Corrupt : SlotHealth.Ok,
-            reason is { } r ? SaveFormatTests.Document((ulong)(index + 1)).Meta with { Reason = r } : null)).Reverse().ToArray();
+            reason is { } r ? SaveFormatFixture.Document((ulong)(index + 1)).Meta with { Reason = r } : null)).Reverse().ToArray();
         return new SlotInfo(new("s1"), SlotKind.Auto, health, entries[0].Meta, entries.Length) { Entries = entries };
     }
 }

@@ -24,7 +24,7 @@ public sealed class SaveShutdownTests
         AssertThat(!closing.IsCompleted && !initializing.IsCompleted).IsTrue();
         f.Storage.ReleaseReads(); await closing;
         AssertThat(initializing.IsCanceled && published == 0 && !f.Save.Enabled).IsTrue();
-        using var unlocked = File.Open(Path.Combine(f.Storage.Directory, ".lock"), FileMode.Open, FileAccess.ReadWrite, FileShare.None);
+        using var unlocked = File.Open(Path.Combine(f.Storage.Folder.Path, ".lock"), FileMode.Open, FileAccess.ReadWrite, FileShare.None);
         AssertThat(f.Diagnostics.Errors.Count).IsEqual(0);
     }
 
@@ -45,14 +45,14 @@ public sealed class SaveShutdownTests
     public async Task CancelingAQueuedRepositoryHandoffLeavesTheProcessLockWithItsProducer()
     {
         await using var f = new SaveLifecycleFixture();
-        using (var prepared = await SaveInitialization.Prepare(new(f.Storage.Directory, true, null, null, 1),
+        using (var prepared = await SaveInitialization.Prepare(new(f.Storage.Folder.Path, true, null, null, 1),
             new([]), CancellationToken.None))
         {
             var handoff = f.Save.OnFrame(prepared.TakeRepository);
             f.Save.StopNewWork();
             AssertThat(handoff.IsCanceled).IsTrue();
         }
-        using var unlocked = File.Open(Path.Combine(f.Storage.Directory, ".lock"), FileMode.Open, FileAccess.ReadWrite, FileShare.None);
+        using var unlocked = File.Open(Path.Combine(f.Storage.Folder.Path, ".lock"), FileMode.Open, FileAccess.ReadWrite, FileShare.None);
         AssertThat(f.Diagnostics.Errors.Count).IsEqual(0);
     }
 
@@ -65,7 +65,7 @@ public sealed class SaveShutdownTests
         await f.Pump(f.Initialize());
         await f.Pump(f.Save.NewGame(SaveSlots.Auto[0], 1));
         AssertThat((await f.Pump(f.Save.SaveNow(SaveReason.Test))).Status).IsEqual(SaveStatus.Saved);
-        var previous = File.ReadAllBytes(f.EntryFile(1));
+        var previous = File.ReadAllBytes(f.Storage.Folder.Entry(1));
         f.Storage.BlockReadback();
         if (failReadback) f.Storage.ReadFailure = new IOException("Injected readback failure.");
         var writing = f.Save.SaveNow(SaveReason.Test);
@@ -73,7 +73,7 @@ public sealed class SaveShutdownTests
         AssertThat(f.Storage.ReadEntered.Task.IsCompletedSuccessfully)
             .OverrideFailureMessage("Save finished before its generation reached readback.").IsTrue();
         var staging = f.Storage.StagingFile;
-        AssertThat(staging is not null && !File.Exists(f.EntryFile(2)) && File.ReadAllBytes(f.EntryFile(1)).SequenceEqual(previous))
+        AssertThat(staging is not null && !File.Exists(f.Storage.Folder.Entry(2)) && File.ReadAllBytes(f.Storage.Folder.Entry(1)).SequenceEqual(previous))
             .OverrideFailureMessage("The blocked readback must belong to an unpublished staging file and preserve the previous generation.").IsTrue();
         var staged = SaveContainer.Decode(File.ReadAllBytes(staging!));
         AssertThat(staged.Meta.Slot == SaveSlots.Auto[0] && staged.Meta.Gen == 2).IsTrue();
@@ -84,10 +84,10 @@ public sealed class SaveShutdownTests
         var result = await writing;
         AssertThat(result.Status == (failReadback ? SaveStatus.Failed : SaveStatus.Saved)).IsTrue();
         AssertThat(result.Error == (failReadback ? SaveErrorKeys.Io : null)).IsTrue();
-        AssertThat(File.Exists(f.EntryFile(2)) == !failReadback && !f.Save.Busy &&
-            File.ReadAllBytes(f.EntryFile(1)).SequenceEqual(previous)).IsTrue();
+        AssertThat(File.Exists(f.Storage.Folder.Entry(2)) == !failReadback && !f.Save.Busy &&
+            File.ReadAllBytes(f.Storage.Folder.Entry(1)).SequenceEqual(previous)).IsTrue();
         AssertThat(f.Storage.StagingFile is null).IsTrue();
-        using var unlocked = File.Open(Path.Combine(f.Storage.Directory, ".lock"), FileMode.Open, FileAccess.ReadWrite, FileShare.None);
+        using var unlocked = File.Open(Path.Combine(f.Storage.Folder.Path, ".lock"), FileMode.Open, FileAccess.ReadWrite, FileShare.None);
         AssertThat(f.Diagnostics.Errors.Count).IsEqual(f.ExpectedErrors);
         if (failReadback)
         {
@@ -117,7 +117,7 @@ public sealed class SaveShutdownTests
         AssertThat(rejected).IsEqual(3);
         f.Storage.ReleaseReads(); await closing;
         AssertThat(loading.IsCanceled && queued.IsCanceled && f.Camera.Locks == 0 && !f.Save.Enabled).IsTrue();
-        using var unlocked = File.Open(Path.Combine(f.Storage.Directory, ".lock"), FileMode.Open, FileAccess.ReadWrite, FileShare.None);
+        using var unlocked = File.Open(Path.Combine(f.Storage.Folder.Path, ".lock"), FileMode.Open, FileAccess.ReadWrite, FileShare.None);
         AssertThat(f.Diagnostics.Errors.Count).IsEqual(0);
     }
 
@@ -136,7 +136,7 @@ public sealed class SaveShutdownTests
         AssertThat(!closing.IsCompleted && !entry.IsCompleted && f.Camera.Locks == 1).IsTrue();
         preparation.SetResult(); await closing;
         AssertThat(entry.IsCanceled && f.Camera.Locks == 0 && !f.Save.Enabled).IsTrue();
-        using var unlocked = File.Open(Path.Combine(f.Storage.Directory, ".lock"), FileMode.Open, FileAccess.ReadWrite, FileShare.None);
+        using var unlocked = File.Open(Path.Combine(f.Storage.Folder.Path, ".lock"), FileMode.Open, FileAccess.ReadWrite, FileShare.None);
         AssertThat(f.Diagnostics.Errors.Count).IsEqual(0);
     }
 
@@ -163,7 +163,7 @@ public sealed class SaveShutdownTests
         AssertThat((await automatic).Status == DeleteStatus.Rejected && f.Storage.HasGeneration).IsTrue();
         var whole = f.Save.DeleteSlot(SaveSlots.Auto[0]); await f.Pump(whole);
         AssertThat((await whole).Status == DeleteStatus.Deleted && !f.Storage.HasGeneration && f.Save.Active is null).IsTrue();
-        using var second = new SaveRepository(f.Storage.Directory, true, new([]));
+        using var second = new SaveRepository(f.Storage.Folder.Path, true, new([]));
         AssertThat(!second.Enabled && f.Save.Enabled && f.Diagnostics.Errors.Count == 0).IsTrue();
     }
 
@@ -182,7 +182,7 @@ public sealed class SaveShutdownTests
         AssertThat(!closing.IsCompleted && !deleting.IsCompleted).IsTrue();
         f.Storage.ReleaseReads(); await closing;
         AssertThat(deleting.IsCanceled && queued.IsCanceled && f.Storage.HasGeneration && !f.Save.Busy).IsTrue();
-        using var unlocked = File.Open(Path.Combine(f.Storage.Directory, ".lock"), FileMode.Open, FileAccess.ReadWrite, FileShare.None);
+        using var unlocked = File.Open(Path.Combine(f.Storage.Folder.Path, ".lock"), FileMode.Open, FileAccess.ReadWrite, FileShare.None);
         AssertThat(f.Diagnostics.Errors.Count).IsEqual(0);
     }
 

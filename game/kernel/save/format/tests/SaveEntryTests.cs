@@ -3,34 +3,26 @@ using Campus.Contracts.Save;
 using Campus.Tests;
 using GdUnit4;
 using static GdUnit4.Assertions;
-using TempEntries = Campus.Kernel.Save.Format.Tests.SaveFormatTests.TempSaveDirectory;
+using static Campus.Kernel.Save.Format.Tests.SaveFormatFixture;
 
 namespace Campus.Kernel.Save.Format.Tests;
 
 [TestSuite]
 public sealed class SaveEntryTests
 {
-    private static SaveSections Sections() => SaveFormatTests.Sections();
-
-    private static SaveDocument Document(ulong gen, SaveReason reason = SaveReason.Test, ulong line = 1)
-    {
-        var document = SaveFormatTests.Document(gen, line);
-        return document with { Meta = document.Meta with { Reason = reason } };
-    }
-
     [TestCase]
     [TestCategory(TestReason.Regression)]
     public void ManualAndAutomaticPoolsRotateIndependentlyAndCommitReportsDiskEntries()
     {
-        using var temp = new TempEntries();
+        using var temp = new TempSaveDirectory();
         using var repository = new SaveRepository(temp.Path, true, Sections());
         ulong generation = 1;
-        repository.Write(Document(generation, SaveReason.NewGame));
+        repository.Write(Document(generation, reason: SaveReason.NewGame));
         SlotSnapshot? committed = null;
         for (var index = 0; index <= SaveSlots.ManualLimit; index++)
         {
-            repository.Write(Document(++generation, SaveReason.Manual));
-            committed = repository.Write(Document(++generation, SaveReason.Quit));
+            repository.Write(Document(++generation, reason: SaveReason.Manual));
+            committed = repository.Write(Document(++generation, reason: SaveReason.Quit));
         }
         var entries = committed!.Info.Entries;
         AssertThat(entries.Count(e => e.Meta?.Reason == SaveReason.Manual) == SaveSlots.ManualLimit &&
@@ -47,10 +39,10 @@ public sealed class SaveEntryTests
     [TestCategory(TestReason.Contract)]
     public void ExactEntryFailureNeverFallsBackOrCrossesAnUnknownWorldLine()
     {
-        using var temp = new TempEntries();
+        using var temp = new TempSaveDirectory();
         using var repository = new SaveRepository(temp.Path, true, Sections());
         repository.Write(Document(1));
-        var broken = Document(2, SaveReason.Manual) with { Sections = new Dictionary<string, RawSaveSection>
+        var broken = Document(2, reason: SaveReason.Manual) with { Sections = new Dictionary<string, RawSaveSection>
             { ["world"] = new(1, "{\"v\":1,\"data\":{\"hours\":\"bad\"}}"u8.ToArray()) } };
         File.WriteAllBytes(temp.Entry(2), SaveContainer.Encode(broken));
         var scan = repository.Scan(new("s1"));
@@ -66,7 +58,7 @@ public sealed class SaveEntryTests
         try { repository.ReadEntry(new("s1"), 1); }
         catch (SaveFormatException) { rejected = true; }
         AssertThat(rejected).OverrideFailureMessage("Exact selection crossed an unknown world-line identity.").IsTrue();
-        File.WriteAllBytes(temp.Entry(2), SaveContainer.Encode(Document(2, SaveReason.NewGame, 2)));
+        File.WriteAllBytes(temp.Entry(2), SaveContainer.Encode(Document(2, line: 2, reason: SaveReason.NewGame)));
         rejected = false;
         try { repository.ReadEntry(new("s1"), 1); }
         catch (SaveFormatException) { rejected = true; }
@@ -78,11 +70,11 @@ public sealed class SaveEntryTests
     [TestCategory(TestReason.Contract)]
     public void ExactThumbnailCacheDoesNotChangeTheLatestSummary()
     {
-        using var temp = new TempEntries();
+        using var temp = new TempSaveDirectory();
         using var repository = new SaveRepository(temp.Path, true, Sections());
         var first = "RIFF\u0004\0\0\0WEBP"u8.ToArray();
         var second = "RIFF\u0005\0\0\0WEBPa"u8.ToArray();
-        repository.Write(Document(1, SaveReason.Manual) with { Thumbnail = first });
+        repository.Write(Document(1, reason: SaveReason.Manual) with { Thumbnail = first });
         var scan = repository.Write(Document(2) with { Thumbnail = second });
         AssertThat(scan.Thumbnails.Count == 2 && scan.Thumbnails[1].SequenceEqual(first) &&
             scan.Thumbnails[2].SequenceEqual(second)).IsTrue();
@@ -97,9 +89,9 @@ public sealed class SaveEntryTests
     [TestCategory(TestReason.Contract)]
     public void IndividualDeletionOnlyAcceptsManualEntriesAndWholeDeletionKeepsTheProcessLock()
     {
-        using var temp = new TempEntries();
+        using var temp = new TempSaveDirectory();
         using var repository = new SaveRepository(temp.Path, true, Sections());
-        repository.Write(Document(1, SaveReason.Manual));
+        repository.Write(Document(1, reason: SaveReason.Manual));
         repository.Write(Document(2));
         var rejected = false;
         try { repository.DeleteEntry(new("s1"), 2); }
@@ -122,10 +114,10 @@ public sealed class SaveEntryTests
     [TestCategory(TestReason.Regression)]
     public void ANewerOlderEntryProtectsTheWholeSlotAndCannotBeLoadedAround()
     {
-        using var temp = new TempEntries();
+        using var temp = new TempSaveDirectory();
         using var repository = new SaveRepository(temp.Path, true, Sections());
-        repository.Write(Document(1, SaveReason.Manual));
-        var future = Document(1, SaveReason.Manual) with { Sections = new Dictionary<string, RawSaveSection>
+        repository.Write(Document(1, reason: SaveReason.Manual));
+        var future = Document(1, reason: SaveReason.Manual) with { Sections = new Dictionary<string, RawSaveSection>
             { ["world"] = new(2, "{\"v\":2,\"data\":{\"hours\":17.5}}"u8.ToArray()) } };
         var futureBytes = SaveContainer.Encode(future);
         File.WriteAllBytes(temp.Entry(1), futureBytes);

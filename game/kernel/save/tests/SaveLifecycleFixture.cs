@@ -33,7 +33,6 @@ internal sealed class SaveLifecycleFixture : IDisposable, IAsyncDisposable
     public TaskCompletionSource<byte[]?>? ThumbnailBarrier { get; set; }
     internal byte[]? NextThumbnail { get; set; }
     internal int ThumbnailCaptures { get; private set; }
-    internal string EntryFile(ulong generation) => Storage.EntryFile(generation);
     private bool _inFrame;
     public SaveLifecycleFixture() : this(new SaveTestStorage(), true) { }
     private SaveLifecycleFixture(SaveTestStorage storage, bool ownsStorage)
@@ -63,7 +62,7 @@ internal sealed class SaveLifecycleFixture : IDisposable, IAsyncDisposable
         };
         if (Walk is not null) registrations.Add(new(new("walk") { Phase = RestorePhase.Pose, Order = 61 }, Walk));
         var sections = new SaveSections(registrations);
-        return Save.Initialize(new(Storage.Directory, true, null, null, 1), bindings, sections);
+        return Save.Initialize(new(Storage.Folder.Path, true, null, null, 1), bindings, sections);
     }
     private async Task WaitDestination(Pose pose, NavSpace? space, ViewMode mode)
     { while (!await Save.OnFrame(() => Ready)) { } }
