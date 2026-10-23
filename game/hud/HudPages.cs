@@ -34,7 +34,6 @@ internal sealed class HudPages
         Title.SavesRequested += () => OpenSaves(fromTitle: true);
         Title.OverwriteRequested += () => OpenSaves(fromTitle: true, SaveIntent.NewGame);
         Title.SettingsRequested += () => OpenSettings(SettingsPage.General, fromTitle: true);
-        Title.CreditsRequested += () => OpenSettings(SettingsPage.Licenses, fromTitle: true);
         Title.QuitRequested += RequestQuit;
         Title.Notice += text => Toast.Show(text);
         Settings = SettingsCard.Create(view.Kit, view.PageHost, dependencies.Settings, dependencies.InputRouter, _quality);

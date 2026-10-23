@@ -4,3 +4,4 @@
 02-行走HUD | P02 | --mode=walk --title=0 --ui-gallery=hud
 03-地图界面 | P02 | --mode=fly --title=0 --ui-gallery=atlas
 05-设置页 | P02 | --mode=walk --title=0 --ui-gallery=settings
+06-画面页 | P02 | --mode=walk --title=0 --ui-gallery=graphics

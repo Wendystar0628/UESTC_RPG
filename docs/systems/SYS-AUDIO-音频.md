@@ -120,7 +120,7 @@ paths: ["game/data/audio/licenses.json", "game/assets/audio/**", "pipeline/audio
 - **可用**：Freesound CC0；Kenney 与 OpenGameArt 的 CC0；Sonniss #GameAudioGDC 免费包（**不得再分发原始文件，不进公开仓库**）；CC BY（必须署名）；程序合成；委托或自制的音乐（签授权）。**不用**：NC；ND（声音与动态影像同步就构成改编）；BBC Sound Effects；BY-SA、GPL；订阅制素材库；来源不清的素材站。
 - **入库**（`pipeline/audio/`）：每个源文件先在 `game/data/audio/licenses.json` 登记，没有记录不许入库；再体检、创作性处理（统一 EQ、变调、分层、剪掉一切人声）、统一到差不多的电平（3D 一律单声道）、循环听一遍接缝。主床每段 150–300 s，段间 A/B 交叉，床里不放可辨认的单个事件。
 - **版本库**：Git LFS 条目以 `.gitattributes` 为准；只许随游戏发布、不许公开分发的素材放私有素材库。
-- **署名页**从 `licenses.json` 自动生成，放进数据手册页与设置卡的"许可"页。
+- **署名**记在 `licenses.json`，随仓库提供，游戏内不设署名页（DECISION-170）。
 
 ## 9 预算（设计目标）
 

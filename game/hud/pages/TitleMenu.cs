@@ -11,7 +11,7 @@ namespace Campus.Hud.Pages;
 /// <summary>
 /// 开始页的界面部分（UI-VISUAL、UI-NAV、SYS-TITLE）：按"压在画面上"处理，不随主题，不读 ui_night——
 /// 只用两套主题里相同的 over.title.* 令牌；左侧一条暗渐变，片名细体宽字距，下面一行真数据；
-/// 菜单：继续 / 新游戏 / 存档 / 设置 / 制作人员与许可 / 退出。只经 IAppFlow 写，只读 ISaveService。
+/// 菜单：继续 / 新游戏 / 存档 / 设置 / 退出。只经 IAppFlow 写，只读 ISaveService。
 /// </summary>
 public partial class TitleMenu : Control
 {
@@ -27,7 +27,6 @@ public partial class TitleMenu : Control
     /// <summary>三个存档位都占着时的"新游戏"：由界面根以新游戏方式打开存档页，选位并确认覆盖（SYS-TITLE）。</summary>
     public event Action? OverwriteRequested;
     public event Action? SettingsRequested;
-    public event Action? CreditsRequested;
     public event Action? QuitRequested;
     public event Action<string>? Notice;
 
@@ -73,7 +72,7 @@ public partial class TitleMenu : Control
         _kit.Text(heading, UiKit.T("title.english"), "mono-caps", "over.title.text");
 
         var menu = _kit.Layout.Stack(content, groups: false);
-        string[] keys = ["title.continue", "title.new", "title.saves", "title.settings", "title.credits", "title.quit"];
+        string[] keys = ["title.continue", "title.new", "title.saves", "title.settings", "title.quit"];
         for (var i = 0; i < keys.Length; i++)
         {
             var index = i;
@@ -162,8 +161,7 @@ public partial class TitleMenu : Control
             case 1: NewGame(); break;
             case 2: SavesRequested?.Invoke(); break;
             case 3: SettingsRequested?.Invoke(); break;
-            case 4: CreditsRequested?.Invoke(); break;
-            case 5: QuitRequested?.Invoke(); break;
+            case 4: QuitRequested?.Invoke(); break;
             default: throw new ArgumentOutOfRangeException(nameof(index));
         }
     }

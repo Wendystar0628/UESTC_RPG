@@ -49,7 +49,7 @@ gates: []
 | DECISION-083 | 锚点 13 个（6 个导览亭、7 个导览桩），做成校园里本来就有的导览设施；不用银杏、不用蓝色全息，在 3D 里不可点选 | 平面地图 | SYS-ATLAS-TRAVEL §2 | 生效 |
 | DECISION-084 | 解锁：观光规则集的解锁策略是 `all-unlocked`，全部可用；`proximity` 只留给 RPG | 平面地图 | SYS-ATLAS-TRAVEL §4；ENG-ROADMAP §3 | 生效 |
 | DECISION-085 | 冷启动依次是雾色、静态扉页；扉页就是开始页，背后不再交叉淡化成实时世界（DECISION-295）；菜单在扉页上就出、不等世界（DECISION-262），开始页上没有进度条 | 开始页 | SYS-TITLE §1；SYS-TITLE §2 | 生效 |
-| DECISION-086 | 开始页菜单是继续 / 新游戏 / 存档 / 设置 / 制作人员与许可 / 退出；片名用细体宽字距加一行数据，不用书法 | 开始页 | SYS-TITLE §2.2；SYS-TITLE §2.3 | 生效 |
+| DECISION-086 | 开始页菜单是继续 / 新游戏 / 存档 / 设置 / 退出；片名用细体宽字距加一行数据，不用书法 | 开始页 | SYS-TITLE §2.2；SYS-TITLE §2.3 | 生效 |
 | DECISION-087 | 本阶段不做过场动画：新游戏、继续、返回标题都进一个带进度条的加载界面，进度条走满后淡出；新游戏直接建在默认状态（秋 17:30、晴、1×），以行走模式落到出生点 | 开始页、存档 | SYS-TITLE §3.1；SYS-SAVE-FLOW §2.5 | 生效 |
 | DECISION-088 | 没有过场，也就不设跳过和"开场过场"设置项；加载界面的进度条只跟真实进展走，只增不减，不显示百分比和剩余时间 | 开始页 | SYS-TITLE §3.1；UI-VISUAL-COMPONENTS §4.5 | 生效 |
 | DECISION-089 | 应用流程由 `IAppFlow` 状态机管理：Boot → Title → Entering → Playing → Leaving → Title，另有 Quitting；Leaving 是返回标题，Quitting 是退出程序 | 开始页 | SYS-TITLE §3；SYS-SAVE-FLOW §1.4 | 生效 |
@@ -153,7 +153,7 @@ gates: []
 | DECISION-146 | 截图与门禁的默认参数串固定：默认状态、流逝暂停、界面隐藏、精致预设、自动调节关、清水河、不写存档、不开声音 | 门禁 | ENG-GATES-SHOTS §1 | 生效 |
 | DECISION-160 | 最小预留做 ENG-ROADMAP §3 的六条预留：规则集、观者状态、按原因计数的输入占用、枚举穷举纪律、偶发事件数据化、RPG 名字占位；观光规则本身不变，写进 `sightseeing` 规则集 | 全项目 | ENG-ROADMAP §3；ENG-ARCH §2；ENG-ARCH §3；STD-CONVENTIONS §3.6 | 生效 |
 | DECISION-167 | 测试按最小必要：推送前只跑快检，核心体验改动涉及时跑核心专项，其余集中做一次 | 全部包 | ENG-GATES §1；WF-RULE §9 | 生效 |
-| DECISION-170 | 许可：代码与脚本用 MIT；原创美术、音频、文案与设计文档保留所有权利；OSM 派生数据按 ODbL 1.0；第三方素材按各自许可；公开说明这是个人创作、不是校方作品 | 全项目 | ENG-LICENSE §2；根目录 LICENSE 与 README | 生效 |
+| DECISION-170 | 许可：代码与脚本用 MIT；原创美术、音频、文案与设计文档保留所有权利；OSM 派生数据按 ODbL 1.0；第三方素材按各自许可；公开说明这是个人创作、不是校方作品；许可文本只随仓库提供（README 与各资源目录的登记文件），游戏内不设许可页与制作人员页（作者定） | 全项目 | ENG-LICENSE §2；根目录 LICENSE 与 README | 生效 |
 | DECISION-172 | 网格的细节级别契约改为"误差加该级自己的索引数组"，不再只靠截取同一索引的前缀；前缀只用于整件移除独立小件 | 全部建模包 | ENG-ARCH §3；ENG-PERF §1.2 | 生效 |
 | DECISION-181 | 本项目是作者的个人实验作品：游戏只从项目运行，不导出、不打包、不发布，不设版本号；不上 Steam 或其他平台，不做商店页、宣传素材、成就、云存档和平台集成；调研与施工都不考虑发行与上架要求 | 全项目 | ENG-LICENSE §0 | 生效 |
 | DECISION-214 | 契约程序集不再用 PublicApiAnalyzers 与 `PublicAPI.*.txt` 清单；契约改动照旧先申请、与全部使用方同批改，签名只在源码里 | `game/contracts/` | ENG-ARCH §2、§3；WF-BUILD §1 | 生效 |

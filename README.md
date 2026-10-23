@@ -2,7 +2,7 @@
 
 校园题材的独立 RPG，第一张地图是电子科技大学清水河校区。引擎为 Godot 4.7.2 .NET（C#），只做 PC，三渲二画风。
 
-- 启动游戏：双击根目录的 `启动游戏.cmd`（先编译再打开开始页，参数见 `scripts/build/start-game.ps1` 开头）
+- 启动游戏：双击根目录的 `启动游戏.cmd`（正式产物齐全就直接打开开始页，缺失才先构建，参数见 `scripts/build/start-game.ps1` 开头）
 - 开发文档：[docs/README.md](docs/README.md)
 - Godot C# API 参考：[docs/godot-api/README.md](docs/godot-api/README.md)
 - 清理前的网页版地图：标签 `baseline-map`
@@ -15,3 +15,4 @@
 - **原创美术、音频、文案与设计文档**（含 `docs/`，`docs/godot-api/` 除外）：保留所有权利，未经许可不得复用。
 - **地图数据**：来自 OpenStreetMap，© OpenStreetMap contributors，按 ODbL 1.0 授权。`data/` 下的快照与补充数据，以及由它们生成的数据集，也按 ODbL 提供；每个公开版本另附对应的地图数据包。
 - **第三方素材**（字体、音频、插件等）：按各自的许可，清单见各资源目录的登记文件。
+- **Godot Engine**：MIT 许可，© Godot Engine contributors，见 https://godotengine.org/license 。

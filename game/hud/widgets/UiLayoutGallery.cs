@@ -18,7 +18,7 @@ public static class UiLayoutGallery
         scrim.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.FullRect);
         var safe = layout.SafeFrame(root);
         var frame = layout.Page(safe, UiKit.T("hud.button.settings"), "savesWidth", centered: true);
-        foreach (var key in new[] { "settings.theme", "settings.group.storage", "title.credits" })
+        foreach (var key in new[] { "settings.theme", "settings.group.storage", "settings.tab.sound" })
             kit.Button(frame.Tabs, ButtonStyle.Tab, UiKit.T(key));
 
         var group = layout.SettingGroup(frame.Body, UiKit.T("settings.group.interface"));

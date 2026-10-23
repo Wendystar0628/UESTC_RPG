@@ -1055,7 +1055,7 @@
 - SYS-AUDIO §5 界面音效 · L98 · 415
 - SYS-AUDIO §6 开场音乐 · L106 · 290
 - SYS-AUDIO §7 设置 · L111 · 377
-- SYS-AUDIO §8 素材策略与许可 · L117 · 551
+- SYS-AUDIO §8 素材策略与许可 · L117 · 557
 - SYS-AUDIO §9 预算（设计目标） · L125 · 174
 - SYS-AUDIO §10 验收 · L132 · 234
 - SYS-AUDIO §11 待验证（P0） · L138 · 110
@@ -1309,9 +1309,9 @@
 - SYS-TITLE §0 结论 · L22 · 896
   - ★ SYS-TITLE §0.1 接入要点 · L29 · 420
 - SYS-TITLE §1 启动序列与扉页 · L38 · 1.1k
-- SYS-TITLE §2 开始页 · L59 · 1.4k
+- SYS-TITLE §2 开始页 · L59 · 1.3k
   - SYS-TITLE §2.1 扉页 · L61 · 203
-  - SYS-TITLE §2.2 菜单 · L67 · 495
+  - SYS-TITLE §2.2 菜单 · L67 · 462
   - SYS-TITLE §2.3 片名块 · L75 · 359
   - SYS-TITLE §2.4 首次启动与再次启动 · L83 · 302
 - SYS-TITLE §3 应用状态下的约定 · L90 · 2.2k
@@ -1325,7 +1325,7 @@
 `docs/systems/SYS-VIEW-观察模式与旁观漫游.md` · 4.8k 字 · 两种观察模式总述、旁观漫游的操作与活动范围、初始位置、镜头规则、3D 与平面地图的分工
 关键词：旁观模式、观察模式、飞行速度档、视场角、鼠标灵敏度、活动范围、初始位置、镜头不会自己动、自动运镜、命令行参数、ICameraRig、Pose
 
-- SYS-VIEW §0 结论 · L22 · 961
+- SYS-VIEW §0 结论 · L22 · 957
   - ★ SYS-VIEW §0.1 接入要点 · L37 · 297
 - SYS-VIEW §1 不做的事 · L44 · 70
 - SYS-VIEW §2 旁观者漫游 · L48 · 1.9k
@@ -1455,13 +1455,13 @@
   - UI-NAV §3.2 季节、速度与观察模式 · L83 · 369
   - UI-NAV §3.3 点位目录 · L89 · 218
   - UI-NAV §3.4 到达标题 · L93 · 267
-  - UI-NAV §3.5 操作说明与设置 · L97 · 781
+  - UI-NAV §3.5 操作说明与设置 · L97 · 782
   - UI-NAV §3.6 临时提示 · L105 · 397
   - UI-NAV §3.7 天气签条 · L113 · 506
 - UI-NAV §4 输入 · L123 · 1.5k
   - UI-NAV §4.1 Esc 与单键快捷键 · L125 · 320
   - UI-NAV §4.2 关键键位 · L131 · 639
-  - UI-NAV §4.3 输入优先级 · L151 · 547
+  - UI-NAV §4.3 输入优先级 · L151 · 542
 - UI-NAV §5 无障碍与语言 · L165 · 832
 - UI-NAV §6 待验证 · L178 · 102
 
@@ -1503,8 +1503,8 @@
 
 ## UI-VISUAL-COMPONENTS · 字体、形状、图标、组件与布局
 
-`docs/ui/UI-VISUAL-COMPONENTS-字体、形状、图标、组件与布局.md` · 6.2k 字 · 界面字体与字号、形状与材质、图标体系，组件外观（含时间环、存档卡、加载界面）与画面布局（含大地图、设置卡、制作人员与许可）
-关键词：加载界面、制作人员与许可、界面字体、思源黑体、字号阶梯、切角、1号脚、发丝线、过孔灯、走线、衍射光边、面板材质、轻度磨砂、图标体系、窗口图标、八角晶片、气象填图符号、通电隐喻、时间环外观、天气签条、速度LED条、存档卡、存储模组、等待灯、画面布局、中央60%、ui_metrics.json、IPaletteProbe
+`docs/ui/UI-VISUAL-COMPONENTS-字体、形状、图标、组件与布局.md` · 6.2k 字 · 界面字体与字号、形状与材质、图标体系，组件外观（含时间环、存档卡、加载界面）与画面布局（含大地图、设置卡）
+关键词：加载界面、界面字体、思源黑体、字号阶梯、切角、1号脚、发丝线、过孔灯、走线、衍射光边、面板材质、轻度磨砂、图标体系、窗口图标、八角晶片、气象填图符号、通电隐喻、时间环外观、天气签条、速度LED条、存档卡、存储模组、等待灯、画面布局、中央60%、ui_metrics.json、IPaletteProbe
 
 - UI-VISUAL-COMPONENTS §0 结论 · L21 · 493
   - ★ UI-VISUAL-COMPONENTS §0.1 接入要点 · L29 · 177
@@ -1520,7 +1520,7 @@
   - UI-VISUAL-COMPONENTS §4.3 时间环 · L80 · 352
   - UI-VISUAL-COMPONENTS §4.4 天气签条、速度条与到达标题 · L89 · 306
   - UI-VISUAL-COMPONENTS §4.5 存档卡"存储模组"、等待灯与加载界面 · L95 · 691
-- UI-VISUAL-COMPONENTS §5 画面布局 · L103 · 832
+- UI-VISUAL-COMPONENTS §5 画面布局 · L103 · 858
 - UI-VISUAL-COMPONENTS §6 待验证 · L120 · 163
 
 ## UI-VISUAL-MOTION · 界面动效与减少动态效果
@@ -1654,18 +1654,18 @@
 - ENG-GATES-VETO §0 结论 · L21 · 346
   - ★ ENG-GATES-VETO §0.1 接入要点 · L27 · 85
 - ENG-GATES-VETO §1 一票否决 · L31 · 1.4k
-- ENG-GATES-VETO §2 全局清单 · L59 · 488
+- ENG-GATES-VETO §2 全局清单 · L59 · 484
 
 ## ENG-LICENSE · 许可、署名与本机目录
 
-`docs/engineering/ENG-LICENSE-许可、署名与本机目录.md` · 3.5k 字 · 只从项目运行、不打包不设版本号，用户目录与日志，各部分许可与插件清单，OSM 署名、许可页、窗口标题与图标
-关键词：许可、署名、本机目录、不打包、不发布、不设版本号、用户目录、%APPDATA%\UESTC、日志、MIT、ODbL、third_party.json、插件清单、第三方许可白名单、OSM 署名、许可页、窗口标题、窗口图标、八角晶片
+`docs/engineering/ENG-LICENSE-许可、署名与本机目录.md` · 3.3k 字 · 只从项目运行、不打包不设版本号，用户目录与日志，各部分许可与插件清单，OSM 署名、窗口标题与图标
+关键词：许可、署名、本机目录、不打包、不发布、不设版本号、用户目录、%APPDATA%\UESTC、日志、MIT、ODbL、third_party.json、插件清单、第三方许可白名单、OSM 署名、窗口标题、窗口图标、八角晶片
 
 - ENG-LICENSE §0 结论 · L21 · 605
   - ★ ENG-LICENSE §0.1 接入要点 · L28 · 325
 - ENG-LICENSE §1 用户目录与日志 · L36 · 354
-- ENG-LICENSE §2 许可 · L42 · 947
-- ENG-LICENSE §3 署名、许可页、窗口标题与图标 · L58 · 675
+- ENG-LICENSE §2 许可 · L42 · 1.1k
+- ENG-LICENSE §3 署名、窗口标题与图标 · L59 · 405
 
 ## ENG-PERF · 性能工程
 
@@ -2005,7 +2005,7 @@
 - REG-DECISIONS-SYSTEMS §2 存档 · L65 · 1.6k
 - REG-DECISIONS-SYSTEMS §3 音频 · L84 · 2.2k
 - REG-DECISIONS-SYSTEMS §4 性能与画面设置 · L106 · 3.5k
-- REG-DECISIONS-SYSTEMS §5 工程 · L137 · 5.3k
+- REG-DECISIONS-SYSTEMS §5 工程 · L137 · 5.4k
 - REG-DECISIONS-SYSTEMS §6 地图与行走 · L173 · 1.0k
 - REG-DECISIONS-SYSTEMS §7 时间、季节、天气 · L184 · 2.4k
 

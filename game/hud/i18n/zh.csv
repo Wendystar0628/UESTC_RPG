@@ -92,13 +92,13 @@ settings.tab.general,设置,General
 settings.tab.graphics,画面,Graphics
 settings.tab.sound,声音,Sound
 settings.tab.rebind,改键,Key bindings
-settings.tab.licenses,许可,Licenses
 settings.to_title,返回标题,Return to title
 settings.to_title.off,已经在开始页,Already at the title screen
 settings.quit,退出,Quit
 settings.group.keys,键位 · KEYS,CONTROLS
 settings.group.interface,界面 · INTERFACE,INTERFACE
 settings.group.storage,存储 · STORAGE,STORAGE
+settings.group.perf,性能信息 · PERFORMANCE,PERFORMANCE
 settings.theme,界面主题,Interface theme
 settings.theme.auto,自动,Automatic
 settings.theme.light,晶白,Crystal white
@@ -239,21 +239,12 @@ rebind.action.photo_export,保存照片,Save photo
 rebind.action.show_cursor,呼出光标（按住）,Show cursor (hold)
 key.side.left,左 {key},Left {key}
 key.side.right,右 {key},Right {key}
-licenses.name.self,电光年华,ELECTRIC YEARS
-licenses.name.osm,地图数据 · MAP DATA,Map data
-licenses.name.fonts,字体 · FONTS,Fonts
-licenses.name.godot,Godot Engine,Godot Engine
-licenses.self,《电光年华》：代码与脚本 MIT；原创美术、音频、文案与设计文档保留所有权利；OSM 派生数据 ODbL 1.0。,"ELECTRIC YEARS: Code and scripts are licensed under MIT. All rights reserved for original art, audio, text and design documents. OSM-derived data is licensed under ODbL 1.0."
-licenses.osm,地图数据 © OpenStreetMap contributors，按 Open Database License（ODbL）1.0 提供。,"Map data © OpenStreetMap contributors, provided under the Open Database License (ODbL) 1.0."
-licenses.fonts,思源黑体 SC（Adobe）、Inter（The Inter Project Authors）、JetBrains Mono（JetBrains）：SIL Open Font License 1.1。,"Source Han Sans SC (Adobe), Inter (The Inter Project Authors) and JetBrains Mono (JetBrains): SIL Open Font License 1.1."
-licenses.godot,Godot Engine：MIT 许可，© Juan Linietsky、Ariel Manzur 与 Godot 社区。,"Godot Engine: MIT license, © Juan Linietsky, Ariel Manzur and the Godot community."
 title.name,电光年华,ELECTRIC YEARS
 title.english,ELECTRIC YEARS · UESTC,ELECTRIC YEARS · UESTC
 title.continue,继续,Continue
 title.new,新游戏,New game
 title.saves,存档,Saves
 title.settings,设置,Settings
-title.credits,制作人员与许可,Credits and licenses
 title.quit,退出,Quit
 title.continue.none,还没有存档,No saves yet
 title.enter_failed,没能进入，请再试一次,Could not enter. Please try again.

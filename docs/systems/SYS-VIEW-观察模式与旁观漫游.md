@@ -32,7 +32,7 @@ paths: ["game/data/pipeline-combinations.json", "game/style/shaders/globals.gdsh
 **子文档**
 
 - SYS-VIEW-MEDIUM 介质呈现：碰到镜头在楼里、地下、水下、雾海，楼体剖切变体或半入水时读。
-- 署名、许可页、窗口标题与图标在 ENG-LICENSE §3。
+- 署名、窗口标题与图标在 ENG-LICENSE §3。
 
 ### 0.1 接入要点
 

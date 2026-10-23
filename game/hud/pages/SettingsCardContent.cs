@@ -3,7 +3,6 @@ using Campus.Contracts.Audio;
 using Campus.Contracts.Bake;
 using Campus.Contracts.Save;
 using Campus.Contracts.Settings;
-using Campus.Hud.Style;
 using Campus.Hud.Widgets;
 using KernelRegistry = Campus.Kernel.Registry.Kernel;
 using Godot;
@@ -48,7 +47,6 @@ internal sealed class SettingsCardContent
             View(UiSettingDefinitions.ViewBobbing),
             View(UiSettingDefinitions.AutoJump),
             HudRow(HudSettingDefinitions.SingleKeyShortcuts),
-            HudRow(HudSettingDefinitions.ShowPerf),
         ])) yield return step;
 
         foreach (var step in BuildStorage(page)) yield return step;
@@ -132,23 +130,9 @@ internal sealed class SettingsCardContent
         _kit.Text(page, UiKit.T("keys.note"), "small", "text.2");
     }
 
-    public System.Collections.IEnumerable BuildLicenses(Control page)
-    {
-        var table = _kit.Layout.Add(page, new GridContainer
-        {
-            Columns = 2,
-            SizeFlagsHorizontal = Godot.Control.SizeFlags.ExpandFill,
-        }, UiThemeBuilder.CardGrid);
-        foreach (var name in new[] { "self", "osm", "fonts", "godot" })
-        {
-            var title = _kit.Text(table, UiKit.T("licenses.name." + name), "small", "text.2");
-            title.SizeFlagsStretchRatio = 1;
-            title.SizeFlagsVertical = Godot.Control.SizeFlags.ShrinkBegin;
-            var detail = _kit.Text(table, UiKit.T("licenses." + name), "small", "text.1");
-            detail.SizeFlagsStretchRatio = 3;
-            yield return null;
-        }
-    }
+    /// <summary>画面页末尾的性能信息组：仍存 ui 节的 show_perf，经 HudSettings 即时生效。</summary>
+    public System.Collections.IEnumerable BuildPerformance(Control page) =>
+        Group(page, "settings.group.perf", [HudRow(HudSettingDefinitions.ShowPerf)]);
 
     /// <summary>一组设置：组标题加逐行，每建一行让出一帧（由 SettingsCard 分帧调度）。</summary>
     private System.Collections.IEnumerable Group(Control page, string titleKey, IEnumerable<Action<Control>> rows)
