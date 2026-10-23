@@ -63,7 +63,7 @@ internal static class TileCollisionSection
     {
         var tile = TileBinaryFields.Json<TileKey>(reader); var bounds = TileBinaryFields.Json<Box3>(reader);
         var colliders = TileBinaryFields.Records(reader, key, r => CollisionShape(r, key), MaximumCollisionShapes);
-        return new(key, tile, bounds, colliders, TileBinaryFields.Statistics(reader));
+        return CollisionTile.TakeOwnership(key, tile, bounds, colliders, TileBinaryFields.Statistics(reader));
     }
 
     private static void ValidateCollider(Collider collider)

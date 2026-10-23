@@ -55,7 +55,7 @@ internal static class TileContentSection
         var instances = TileBinaryFields.Records(reader, key, r =>
         {
             var id = TileBinaryFields.Text(r, 1024); var prototype = TileGeometrySection.Prototype(r, key);
-            var data = TileBinaryFields.Channel<float>(r, key); return new GeometryInstanceStream(id, prototype, data, TileBinaryFields.Box(r));
+            var data = TileBinaryFields.Channel<float>(r, key); return GeometryInstanceStream.TakeOwnership(id, prototype, data, TileBinaryFields.Box(r));
         }, TileBinaryFields.MaximumItems);
         var result = new ContentOutput(Array.AsReadOnly(meshes), Array.AsReadOnly(parts), emitters, occupancy)
         {

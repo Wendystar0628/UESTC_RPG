@@ -38,7 +38,7 @@ internal static class TileVegetationSection
             for (var j = 0; j < bounds.Length; j++) bounds[j] = TileBinaryFields.Box(reader);
             var prototypes = new GeometryPrototype[TileBinaryFields.Count(reader, 4)];
             for (var j = 0; j < prototypes.Length; j++) prototypes[j] = TileGeometrySection.Prototype(reader, key);
-            mothers[i] = new(id, records, prototypes, bounds);
+            mothers[i] = VegetationMotherData.TakeOwnership(id, records, prototypes, bounds);
             ValidateMother(key, mothers[i]);
         }
         if (mothers.Select(mother => mother.Key).Distinct(StringComparer.Ordinal).Count() != mothers.Length)

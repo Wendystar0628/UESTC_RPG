@@ -38,7 +38,7 @@ internal static class TileRenderSection
         for (var i = 0; i < multis.Length; i++)
         {
             var surface = Surface(reader); var count = reader.ReadInt32(); var data = TileBinaryFields.Bytes(reader); var box = TileBinaryFields.Json<Box3>(reader);
-            multis[i] = new(surface, count, data, box);
+            multis[i] = BakedMultiMesh.TakeOwnership(surface, count, data, box);
         }
         return new(new(key, tile, level, bounds, surfaces, multis, TileBinaryFields.Statistics(reader)), location);
     }
@@ -57,11 +57,10 @@ internal static class TileRenderSection
         var meta = TileBinaryFields.Json<SurfaceMetadata>(reader);
         var vertices = TileBinaryFields.Bytes(reader); var attributes = TileBinaryFields.Bytes(reader); var indices = TileBinaryFields.Bytes(reader); var skin = TileBinaryFields.Bytes(reader);
         var lods = new BakedMeshLod[TileBinaryFields.Count(reader, 32)];
-        for (var i = 0; i < lods.Length; i++) lods[i] = new(reader.ReadSingle(), reader.ReadInt32(), TileBinaryFields.Bytes(reader));
+        for (var i = 0; i < lods.Length; i++) lods[i] = BakedMeshLod.TakeOwnership(reader.ReadSingle(), reader.ReadInt32(), TileBinaryFields.Bytes(reader));
         if (meta.Shader is { } shader && !Enum.IsDefined(shader)) throw new InvalidDataException("Unknown surface shader ID.");
-        return new(meta.Material, meta.Format, meta.Primitive, meta.VertexCount, meta.IndexCount,
-            vertices, attributes, indices, meta.Bounds, meta.At, lods, skin, meta.UvScale, meta.Variant, meta.IgnoreOcclusionCulling)
-        { Shader = meta.Shader, Reflect = meta.Reflect };
+        return BakedSurface.TakeOwnership(meta.Material, meta.Format, meta.Primitive, meta.VertexCount, meta.IndexCount,
+            vertices, attributes, indices, meta.Bounds, meta.At, lods, skin, meta.UvScale, meta.Variant, meta.IgnoreOcclusionCulling, meta.Shader, meta.Reflect);
     }
 
     private sealed record SurfaceMetadata(ToonRef Material, ulong Format, BakedPrimitive Primitive, int VertexCount,

@@ -97,14 +97,14 @@ public sealed class BakeCacheStore
         finally { _sync.ExitWriteLock(); }
     }
 
-    public T? TryRead<T>(BakeKey key, BakePayloadClass payload, Func<byte[], T> decode,
+    public T? TryRead<T>(BakeKey key, BakePayloadClass payload, string identity, Func<byte[], T> decode,
         CancellationToken cancellationToken = default) where T : class
     {
-        return TryReadParts(key, payload, parts => parts.Count == 1 ? decode(parts[0]) :
+        return TryReadParts(key, payload, identity, parts => parts.Count == 1 ? decode(parts[0]) :
             throw new InvalidDataException("A single-payload product has multiple delivery parts."), cancellationToken);
     }
 
-    internal T? TryReadParts<T>(BakeKey key, BakePayloadClass payload, Func<IReadOnlyList<byte[]>, T> decode,
+    internal T? TryReadParts<T>(BakeKey key, BakePayloadClass payload, string identity, Func<IReadOnlyList<byte[]>, T> decode,
         CancellationToken cancellationToken = default) where T : class
     {
         cancellationToken.ThrowIfCancellationRequested();
@@ -121,7 +121,7 @@ public sealed class BakeCacheStore
                 publication = _publications.GetValueOrDefault(key);
                 if (!File.Exists(path)) return null;
                 ValidatePath(_root, path);
-                var count = BakeCacheIndex.Read(path, payload);
+                var count = BakeCacheIndex.Read(path, payload, identity);
                 ValidateEntry(BakeCacheIndex.DirectoryPath(path));
                 for (var index = 0; index < count; index++)
                 {
@@ -145,6 +145,37 @@ public sealed class BakeCacheStore
         }
     }
 
+    // A match proves only published input identity; mounting still validates every payload part.
+    internal bool MatchesInput(BakeKey key, BakePayloadClass payload, string identity,
+        CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        Initialize();
+        var path = FilePath(_root, key);
+        long publication = 0;
+        try
+        {
+            EnterCache(cancellationToken);
+            try
+            {
+                ThrowIfStopped();
+                publication = _publications.GetValueOrDefault(key);
+                if (!File.Exists(path)) return false;
+                ValidatePath(_root, path);
+                _ = BakeCacheIndex.Read(path, payload, identity);
+                cancellationToken.ThrowIfCancellationRequested();
+                return true;
+            }
+            finally { _sync.ExitReadLock(); }
+        }
+        catch (Exception error) when (error is IOException or InvalidDataException or ArgumentException or OverflowException or UnauthorizedAccessException)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            RejectProduct(key, publication, error, cancellationToken);
+            return false;
+        }
+    }
+
     private void RejectProduct(BakeKey key, long publication, [FailureHandler("ENG-ARCH")] Exception error,
         CancellationToken cancellationToken)
     {
@@ -155,8 +186,8 @@ public sealed class BakeCacheStore
         { throw new AggregateException("Damaged bake cache could not be removed.", error, removalError); }
     }
 
-    public void Write(BakeKey key, BakePayloadClass payload, byte[] bytes, CancellationToken cancellationToken = default)
-        => WriteParts(key, payload, [bytes], cancellationToken);
+    public void Write(BakeKey key, BakePayloadClass payload, string identity, byte[] bytes, CancellationToken cancellationToken = default)
+        => WriteParts(key, payload, identity, [bytes], cancellationToken);
 
     internal bool Fits(BakePayloadClass payload, byte[] bytes, CancellationToken cancellationToken)
     {
@@ -169,7 +200,7 @@ public sealed class BakeCacheStore
         finally { _sync.ExitReadLock(); }
     }
 
-    internal void WriteParts(BakeKey key, BakePayloadClass payload, IReadOnlyList<byte[]> parts, CancellationToken cancellationToken = default)
+    internal void WriteParts(BakeKey key, BakePayloadClass payload, string identity, IReadOnlyList<byte[]> parts, CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
         Initialize();
@@ -178,6 +209,7 @@ public sealed class BakeCacheStore
         {
             ThrowIfStopped();
             if (parts.Count == 0) throw new InvalidDataException("A cached product needs at least one delivery part.");
+            var indexBytes = BakeCacheIndex.Encode(payload, parts.Count, identity);
             var path = FilePath(_root, key);
             ValidatePath(_root, path);
             _publications[key] = ++_publicationSequence;
@@ -185,6 +217,8 @@ public sealed class BakeCacheStore
             var partDirectory = BakeCacheIndex.DirectoryPath(path);
             ValidateEntry(partDirectory);
             Directory.CreateDirectory(partDirectory);
+            // Remove the published identity before replacing any member of this group.
+            DeleteProductFile(path);
             for (var index = 0; index < parts.Count; index++)
             {
                 cancellationToken.ThrowIfCancellationRequested();
@@ -200,7 +234,7 @@ public sealed class BakeCacheStore
                 Publish(partPath, encoded, cancellationToken);
             }
             // Publishing the small logical index is the commit point; it never contains geometry buffers.
-            Publish(path, BakeCacheIndex.Encode(payload, parts.Count), cancellationToken);
+            Publish(path, indexBytes, cancellationToken);
             foreach (var obsolete in BakeCacheIndex.Files(path).Skip(parts.Count)) DeleteProductFile(obsolete);
             _rejected.TryRemove(key, out _);
         }

@@ -14,13 +14,15 @@ internal sealed class BakeCatalog
     private readonly BakeOptions _options;
     private readonly BakeQueue _queue;
     private readonly Action<MapBuild, BakeKey, BakePriority> _schedule;
+    private readonly Func<MapBuild, BakeKey, bool> _matchesInput;
     private readonly object _catalogSync = new();
     private readonly HashSet<MapBuild> _enumerating = [];
     private readonly List<(MapBuild Map, Thread Thread, Task Completion)> _threads = [];
     private AppState _phase;
 
-    internal BakeCatalog(BakeOptions options, BakeQueue queue, Action<MapBuild, BakeKey, BakePriority> schedule)
-    { _options = options; _queue = queue; _schedule = schedule; }
+    internal BakeCatalog(BakeOptions options, BakeQueue queue, Action<MapBuild, BakeKey, BakePriority> schedule,
+        Func<MapBuild, BakeKey, bool> matchesInput)
+    { _options = options; _queue = queue; _schedule = schedule; _matchesInput = matchesInput; }
 
     internal void SetPhase(AppState phase) { lock (_catalogSync) _phase = phase; }
     internal void Forget(MapBuild map)
@@ -103,7 +105,14 @@ internal sealed class BakeCatalog
         var thread = new Thread(() =>
         {
             Exception? failure = null;
-            try { Queue(map); }
+            try
+            {
+                foreach (var key in Keys(map, _options.MapOnly))
+                {
+                    map.Lifetime.Token.ThrowIfCancellationRequested();
+                    if (!_matchesInput(map, key)) _schedule(map, key, BakePriority.Background);
+                }
+            }
             catch (OperationCanceledException) when (map.Lifetime.IsCancellationRequested) { }
             catch (Exception error)
             {

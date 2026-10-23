@@ -54,7 +54,7 @@ public sealed class BakeService : IBakeService, IBakeContextSource, IMapContentS
         _cache = terrain.Store;
         _products = new(options, terrain);
         _preparation = new(options, terrain);
-        _catalog = new(options, _queue, (map, key, priority) => Schedule(map, key, priority));
+        _catalog = new(options, _queue, (map, key, priority) => Schedule(map, key, priority), _products.MatchesInput);
         ApplyPhase(AppState.Boot);
     }
 

@@ -4,12 +4,73 @@ using Campus.Contracts;
 using Campus.Contracts.Bake;
 using Campus.Contracts.AppFlow;
 using GdUnit4;
+using Campus.Gen.BakeInput;
+using Campus.Gen.Tests.Support;
+using System.Numerics;
 
 namespace Campus.Kernel.Bake.Tests;
 
 [TestSuite]
 public sealed class BakeQueueTests
 {
+    [TestCase]
+    [TestCategory(TestReason.Regression)]
+    public void InteractiveIdentityHitsDoNotQueuePlaceholdersAndExplicitBatchStillSchedules()
+    {
+        var map = CatalogMap();
+        using var lifetime = map.Lifetime;
+        using var queue = new BakeQueue(1, static () => { });
+        var options = new BakeOptions(Path.GetTempPath(), false, false, true, false, 3, null);
+        IBakeHandle? handle = null;
+        var product = new object();
+        var catalog = new BakeCatalog(options, queue, (current, key, priority) =>
+        {
+            handle = queue.Ensure(current.Work, key, priority, () => product);
+        }, static (_, _) => true);
+        catalog.SetPhase(AppState.Title);
+        var thread = catalog.Begin(map) ?? throw new InvalidOperationException("Interactive catalog did not start.");
+        thread.Start();
+        catalog.Drain();
+        if (handle is not null)
+            throw new InvalidOperationException("An identity hit created a job or published a Ready placeholder.");
+        catalog.Queue(map);
+        if (handle is null) throw new InvalidOperationException("Explicit batch omitted a matching product.");
+        handle.Done.GetAwaiter().GetResult();
+        if (handle.State != BakeState.Ready ||
+            !ReferenceEquals(handle.Product, product))
+            throw new InvalidOperationException("Explicit scheduling used the identity shortcut or lost the real product.");
+    }
+
+    private static BakeService.MapBuild CatalogMap()
+    {
+        var context = BakeInputFixture.Context(new FakeWorld { Boundary = new([]) });
+        var windows = new BakeWindowPreparation.Result(context.WindowNumbering, new([], []));
+        var data = new Lazy<BakeService.LoadedMap>(() => new(1, context.SourceInputs, [], context.InteriorProviders, windows, []));
+        _ = data.Value;
+        var map = new BakeService.MapBuild(new TestMapContext(context.Map, context.World),
+            new Dictionary<string, ContentModuleInput>(), new Dictionary<string, BakeService.Interior>(),
+            [new("fixture.map", new CatalogProducer(), "fixture-code")], null!, context.ClaimedBy, data,
+            context.GlobalInputs, context.GroundMaskContributors, context.PartLods!, context.Catalog, null, null);
+        var lighting = new LightInventoryDocument(context.Map.Id, [], [], [], new([], ReadOnlyMemory<float>.Empty, ReadOnlyMemory<float>.Empty, 0, 0))
+            { WindowNumbering = windows.Snapshot };
+        var metadata = new BakeMapMetadata(lighting, new(context.Map.Id, []),
+            new(new(new(Vector2.Zero, Vector2.One), 1, 1, 1f), new byte[4], new byte[4]));
+        map.Directory.Prepare(metadata);
+        map.Content.CompletePreparation(metadata);
+        return map;
+    }
+
+    private sealed class CatalogProducer : IBakeProducer
+    {
+        public BakePayloadClass PayloadClass => BakePayloadClass.Product;
+        public BakeProductKind ProductKind => BakeProductKind.Map;
+        public BakeInputDependencies Inputs(BakeKey key) => BakeInputDependencies.World;
+        public bool UsesModule(IContentModule module) => false;
+        public IReadOnlyList<BakeTileEntry> Tiles(BuildContext context) => [];
+        public bool CanBuild(BakeKey key) => key.Module == MapBaker.Module && key.Detail == MapBaker.Detail;
+        public object Build(BakeKey key, BuildContext context, string inputHash) => throw new NotSupportedException();
+    }
+
     [TestCase]
     [TestCategory(TestReason.Contract)]
     public void WorkerFailureDeliversTheOriginalExceptionToBothOwners()

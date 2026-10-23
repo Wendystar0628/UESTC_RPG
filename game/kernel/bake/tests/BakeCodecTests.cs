@@ -13,6 +13,49 @@ namespace Campus.Kernel.Bake.Tests;
 public sealed class BakeCodecTests
 {
     [TestCase]
+    [TestCategory(TestReason.Regression)]
+    public void PublishedIdentityProbeRequiresCurrentIndexAndDoesNotReadParts()
+    {
+        var root = Path.Combine(Path.GetTempPath(), "uestc-rpg-identity-" + Guid.NewGuid().ToString("N"));
+        var key = BakeRequestKeys.Tile(new("fixture"), "fixture.module", default, LodLevel.L0);
+        var store = new BakeCacheStore(root);
+        try
+        {
+            store.Initialize();
+            var index = Path.Combine(root, key.Map.Value, key.Module, key.Detail + ".tbin");
+            Directory.CreateDirectory(Path.GetDirectoryName(index)!);
+            var valid = BakeCacheIndex.Encode(BakePayloadClass.Tile, 1, "fixture/current");
+            File.WriteAllBytes(index, valid);
+            if (!store.MatchesInput(key, BakePayloadClass.Tile, "fixture/current"))
+                throw new InvalidOperationException("An index-only hit tried to require an absent payload.");
+            using var cancellation = new CancellationTokenSource();
+            cancellation.Cancel();
+            AssertThrown(() => store.MatchesInput(key, BakePayloadClass.Tile, "fixture/current", cancellation.Token))
+                .IsInstanceOf<OperationCanceledException>();
+            if (store.TryRead(key, BakePayloadClass.Tile, "fixture/current", bytes => bytes) is not null || File.Exists(index))
+                throw new InvalidOperationException("Formal reading accepted an index without payload parts.");
+            var wrongClass = valid.ToArray(); wrongClass[4] = (byte)BakePayloadClass.Product;
+            var wrongCount = valid.ToArray(); BinaryPrimitives.WriteInt32LittleEndian(wrongCount.AsSpan(5), 0);
+            var wrongLength = valid.ToArray(); BinaryPrimitives.WriteInt32LittleEndian(wrongLength.AsSpan(9), 0);
+            var invalidUtf8 = valid.ToArray(); invalidUtf8[^1] = 255;
+            foreach (var bytes in new[] { valid[..8], valid[..^1], valid.Concat(new byte[] { 0 }).ToArray(),
+                wrongClass, wrongCount, wrongLength, invalidUtf8,
+                BakeCacheIndex.Encode(BakePayloadClass.Tile, 1, "fixture/stale") })
+            {
+                File.WriteAllBytes(index, bytes);
+                if (store.MatchesInput(key, BakePayloadClass.Tile, "fixture/current") || File.Exists(index))
+                    throw new InvalidOperationException("A stale or invalid published identity survived rejection.");
+            }
+            AssertThrown(() => BakeCacheIndex.Encode(BakePayloadClass.Tile, 1, ""))
+                .IsInstanceOf<InvalidDataException>();
+            store.Stop();
+            AssertThrown(() => store.MatchesInput(key, BakePayloadClass.Tile, "fixture/current"))
+                .IsInstanceOf<OperationCanceledException>();
+        }
+        finally { if (Directory.Exists(root)) Directory.Delete(root, recursive: true); }
+    }
+
+    [TestCase]
     [TestCategory(TestReason.Contract)]
     public void CollisionRoundTripKeepsLocalCoordinatesAndFootMaterial()
     {
@@ -24,6 +67,12 @@ public sealed class BakeCodecTests
                 { FootMatHalfMeter = new byte[128 * 128], Patches = [new(new(1, 2), new(3, 4), .5f, FootMat.Metal, 321)] }]);
         var bytes = TileBundleCodec.Encode(BakePayloadClass.Tile, "fixture/identity", original);
         var decoded = (CollisionTile)TileBundleCodec.Decode(BakePayloadClass.Tile, "fixture/identity", key, bytes);
+        var exposed = (HeightFieldCollider)decoded.Colliders[1];
+        exposed.HeightsCm[0] = short.MaxValue;
+        exposed.FootMatHalfMeter![0] = byte.MaxValue;
+        if (((HeightFieldCollider)decoded.Colliders[1]).HeightsCm[0] == short.MaxValue ||
+            ((HeightFieldCollider)decoded.Colliders[1]).FootMatHalfMeter![0] == byte.MaxValue)
+            throw new InvalidOperationException("Owned collision decoding weakened defensive getter snapshots.");
         var wall = (WallCollider)decoded.Colliders[0];
         var expectedField = (HeightFieldCollider)original.Colliders[1]; var field = (HeightFieldCollider)decoded.Colliders[1];
         if (!field.HeightsCm.SequenceEqual(expectedField.HeightsCm) || !field.FootMatHalfMeter!.SequenceEqual(expectedField.FootMatHalfMeter!) ||
@@ -139,27 +188,27 @@ public sealed class BakeCodecTests
         TileBundle Decode(byte[] bytes) => (TileBundle)TileBundleCodec.Decode(BakePayloadClass.Tile, "fixture/identity", key, bytes);
         try
         {
-            writer.Write(key, BakePayloadClass.Tile, TileBundleCodec.Encode(BakePayloadClass.Tile, "fixture/identity", local));
-            if (writer.TryRead(key, BakePayloadClass.Tile, Decode)?.Bounds != local.Bounds)
+            writer.Write(key, BakePayloadClass.Tile, "fixture/identity", TileBundleCodec.Encode(BakePayloadClass.Tile, "fixture/identity", local));
+            if (writer.TryRead(key, BakePayloadClass.Tile, "fixture/identity", Decode)?.Bounds != local.Bounds)
                 throw new InvalidOperationException("A valid local product did not round trip.");
             var localPath = CacheIndexes(localRoot).Single();
             File.WriteAllBytes(localPath, [1, 2, 3]);
             RequireMissing();
             foreach (var invalid in new[] { TileBundleCodec.Encode(BakePayloadClass.Tile, "stale/identity", local), new byte[] { 1, 2, 3 } })
             {
-                writer.Write(key, BakePayloadClass.Tile, invalid);
+                writer.Write(key, BakePayloadClass.Tile, "fixture/identity", invalid);
                 RequireMissing();
             }
-            writer.Write(key, BakePayloadClass.Tile, TileBundleCodec.Encode(BakePayloadClass.Tile, "fixture/identity", local));
-            if (writer.RebuildFailures(key).Count != 0 || writer.TryRead(key, BakePayloadClass.Tile, Decode)?.Bounds != local.Bounds)
+            writer.Write(key, BakePayloadClass.Tile, "fixture/identity", TileBundleCodec.Encode(BakePayloadClass.Tile, "fixture/identity", local));
+            if (writer.RebuildFailures(key).Count != 0 || writer.TryRead(key, BakePayloadClass.Tile, "fixture/identity", Decode)?.Bounds != local.Bounds)
                 throw new InvalidOperationException("A valid replacement retained a rejected product's failure.");
             var reopened = new BakeCacheStore(localRoot);
-            if (reopened.TryRead(key, BakePayloadClass.Tile, Decode)?.Bounds != local.Bounds)
+            if (reopened.TryRead(key, BakePayloadClass.Tile, "fixture/identity", Decode)?.Bounds != local.Bounds)
                 throw new InvalidOperationException("Reopening the current ABI discarded a valid product.");
             File.WriteAllText(Path.Combine(localRoot, "cache.version"), "obsolete-abi");
             var updated = new BakeCacheStore(localRoot);
             updated.Initialize();
-            if (updated.CacheBytes != 0 || updated.TryRead(key, BakePayloadClass.Tile, Decode) is not null ||
+            if (updated.CacheBytes != 0 || updated.TryRead(key, BakePayloadClass.Tile, "fixture/identity", Decode) is not null ||
                 File.ReadAllText(Path.Combine(localRoot, "cache.version")) != BakeOptions.Abi)
                 throw new InvalidOperationException("An ABI change retained cached products or the old marker.");
             writer = updated;
@@ -168,28 +217,28 @@ public sealed class BakeCodecTests
             var rng = new Rng(76);
             for (var offset = 0; offset < cpuBytes.Length; offset += sizeof(int))
                 BinaryPrimitives.WriteInt32LittleEndian(cpuBytes.AsSpan(offset), rng.NextInt(int.MaxValue));
-            writer.Write(cpuKey, BakePayloadClass.Product, cpuBytes);
+            writer.Write(cpuKey, BakePayloadClass.Product, "fixture/identity", cpuBytes);
             var cpuIndex = CacheIndexes(localRoot).Single();
             var cpuPath = BakeCacheIndex.Files(cpuIndex).Single();
             var cpuFile = File.ReadAllBytes(cpuPath);
             if (cpuFile.Length <= BakeCacheStore.MaximumCompressedTileBytes ||
-                writer.TryRead(cpuKey, BakePayloadClass.Product, value => value) is not { } restoredCpu || !restoredCpu.SequenceEqual(cpuBytes))
+                writer.TryRead(cpuKey, BakePayloadClass.Product, "fixture/identity", value => value) is not { } restoredCpu || !restoredCpu.SequenceEqual(cpuBytes))
                 throw new InvalidOperationException("A CPU cache product retained the compressed or decoded render-tile limit.");
-            writer.Write(cpuKey, BakePayloadClass.Product, [1, 2, 3]);
-            var malformedCpu = writer.TryRead(cpuKey, BakePayloadClass.Product, value => value.Length == cpuBytes.Length ? value :
+            writer.Write(cpuKey, BakePayloadClass.Product, "fixture/identity", [1, 2, 3]);
+            var malformedCpu = writer.TryRead(cpuKey, BakePayloadClass.Product, "fixture/identity", value => value.Length == cpuBytes.Length ? value :
                 throw new InvalidDataException("Malformed local CPU fixture."));
             if (malformedCpu is not null || File.Exists(cpuIndex) || File.Exists(cpuPath) || writer.RebuildFailures(cpuKey).Count != 1)
                 throw new InvalidOperationException("A malformed CPU product survived local cache rejection.");
-            AssertThrown(() => writer.Write(key, BakePayloadClass.Tile, cpuBytes)).IsInstanceOf<InvalidDataException>();
+            AssertThrown(() => writer.Write(key, BakePayloadClass.Tile, "fixture/identity", cpuBytes)).IsInstanceOf<InvalidDataException>();
             writer.Clear();
             if (writer.CacheBytes != 0 || CacheIndexes(localRoot).Any())
                 throw new InvalidOperationException("Clearing retained local cache products.");
             writer.Stop();
-            AssertThrown(() => writer.Write(key, BakePayloadClass.Tile, [1])).IsInstanceOf<OperationCanceledException>();
-            AssertThrown(() => writer.TryRead(key, BakePayloadClass.Tile, Decode)).IsInstanceOf<OperationCanceledException>();
+            AssertThrown(() => writer.Write(key, BakePayloadClass.Tile, "fixture/identity", [1])).IsInstanceOf<OperationCanceledException>();
+            AssertThrown(() => writer.TryRead(key, BakePayloadClass.Tile, "fixture/identity", Decode)).IsInstanceOf<OperationCanceledException>();
             void RequireMissing()
             {
-                if (writer.TryRead(key, BakePayloadClass.Tile, Decode) is not null || File.Exists(localPath) ||
+                if (writer.TryRead(key, BakePayloadClass.Tile, "fixture/identity", Decode) is not null || File.Exists(localPath) ||
                     writer.RebuildFailures(key).Count != 1)
                     throw new InvalidOperationException("A damaged local product survived rejection or lost its cause.");
             }

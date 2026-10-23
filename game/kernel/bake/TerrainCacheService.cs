@@ -242,7 +242,7 @@ public sealed class TerrainCacheService : ITerrainPreparation, IDisposable, IAsy
     private T? Read<T>(BakeKey key, string identity, Func<byte[], T> decode, BakePayloadClass payload) where T : class
     {
         if (_options.Live) return null;
-        return Store.TryRead(key, payload, bytes => Decode(bytes, identity, decode));
+        return Store.TryRead(key, payload, identity, bytes => Decode(bytes, identity, decode));
     }
     private static T Decode<T>(byte[] bytes, string identity, Func<byte[], T> decode)
     {
@@ -261,7 +261,7 @@ public sealed class TerrainCacheService : ITerrainPreparation, IDisposable, IAsy
         if (_options.Live) return;
         using var stream = new MemoryStream();
         using (var writer = new BinaryWriter(stream, System.Text.Encoding.UTF8, leaveOpen: true)) { writer.Write(identity); writer.Write(bytes); }
-        Store.Write(key, payload, stream.ToArray());
+        Store.Write(key, payload, identity, stream.ToArray());
     }
     public void Dispose() => DisposeAsync().AsTask().GetAwaiter().GetResult();
     public async ValueTask DisposeAsync()

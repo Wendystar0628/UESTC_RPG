@@ -18,7 +18,7 @@ internal static class TileGeometrySection
         var surfaces = new GeometryBuffer[TileBinaryFields.Count(reader)];
         for (var i = 0; i < surfaces.Length; i++)
         {
-            surfaces[i] = GeometryBuffer.Freeze(Geometry(reader, key));
+            surfaces[i] = GeometryBuffer.TakeOwnership(Geometry(reader, key));
         }
         return new(id, surfaces, bounds);
     }

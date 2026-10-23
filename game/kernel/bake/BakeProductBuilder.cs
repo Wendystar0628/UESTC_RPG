@@ -23,23 +23,12 @@ internal sealed class BakeProductBuilder
         cancellation.ThrowIfCancellationRequested();
         _ = map.Data.Value;
         cancellation.ThrowIfCancellationRequested();
-        var module = map.Content.Modules.GetValueOrDefault(key.Module);
-        var interior = map.Content.Interiors.GetValueOrDefault(key.Module);
-        var matches = map.Content.Producers.Where(p => p.Value.CanBuild(key)).ToArray();
-        if (matches.Length > 1 || (module is not null || interior is not null) && matches.Length != 0)
-            throw new InvalidDataException("More than one producer claims this bake key.");
-        if (module is null && interior is null && matches.Length == 0) throw new InvalidDataException("No bake producer is registered for this key.");
-        var payloadClass = module is not null || interior is not null ? BakePayloadClass.Tile : matches[0].Value.PayloadClass;
-        var context = map.Content.GetPreparedBuildContext(module is not null ? module.Value :
-            interior is not null ? interior.Value : matches[0].Value);
-        var sources = map.Inputs.SourceIndex(context);
-        var inputHash = sources.TryProduct(key, out var preparedHash) ? preparedHash : map.Inputs.ProductInputHash(_terrain.CodeFingerprints, map, context, key);
-        sources.RememberProduct(key, inputHash);
+        var (module, interior, producer, context, inputHash, payloadClass) = ResolveInputs(map, key);
         var identity = BakeInputFingerprint.Identity(key, inputHash);
         _terrainPreparation.PrepareProduct(map, key);
         if (!_options.Live)
         {
-            var cached = _cache.TryReadParts(key, payloadClass, payload =>
+            var cached = _cache.TryReadParts(key, payloadClass, identity, payload =>
             {
                 var product = Decode(payloadClass, identity, key, payload);
                 RequireInteriorProduct(map, key, product);
@@ -56,7 +45,7 @@ internal sealed class BakeProductBuilder
         // Only a cache miss needs the evaluator; cached products keep the published read-only world.
         var buildContext = map.Content.CreateAssetContext(context);
         var built = module is not null ? map.Content.Geometry!.Build(key, buildContext, module.Value, diagnostics => map.Collect(key.Module, "geometry", diagnostics)) :
-            interior is not null ? BuildInterior(map, key, buildContext, interior.Value) : matches[0].Value.Build(key, buildContext, inputHash);
+            interior is not null ? BuildInterior(map, key, buildContext, interior.Value) : producer!.Build(key, buildContext, inputHash);
         cancellation.ThrowIfCancellationRequested();
         var bytes = Encode(payloadClass, identity, built, cancellation);
         cancellation.ThrowIfCancellationRequested();
@@ -68,9 +57,38 @@ internal sealed class BakeProductBuilder
         map.PipelineStatistics?.Add(validated, map.Content.Geometry);
         if (!_options.Live)
         {
-            _cache.WriteParts(key, payloadClass, bytes, cancellation);
+            _cache.WriteParts(key, payloadClass, identity, bytes, cancellation);
         }
         return validated;
+    }
+
+    internal bool MatchesInput(MapBuild map, BakeKey key)
+    {
+        var cancellation = map.Lifetime.Token;
+        cancellation.ThrowIfCancellationRequested();
+        if (_options.Live) return false;
+        _ = map.Data.Value;
+        cancellation.ThrowIfCancellationRequested();
+        var inputs = ResolveInputs(map, key);
+        return _cache.MatchesInput(key, inputs.Payload, BakeInputFingerprint.Identity(key, inputs.Hash), cancellation);
+    }
+
+    private (ContentModuleInput? Module, Interior? Interior, IBakeProducer? Producer, BuildContext Context,
+        string Hash, BakePayloadClass Payload) ResolveInputs(MapBuild map, BakeKey key)
+    {
+        var module = map.Content.Modules.GetValueOrDefault(key.Module);
+        var interior = map.Content.Interiors.GetValueOrDefault(key.Module);
+        var matches = map.Content.Producers.Where(p => p.Value.CanBuild(key)).ToArray();
+        if (matches.Length > 1 || (module is not null || interior is not null) && matches.Length != 0)
+            throw new InvalidDataException("More than one producer claims this bake key.");
+        if (module is null && interior is null && matches.Length == 0) throw new InvalidDataException("No bake producer is registered for this key.");
+        var payloadClass = module is not null || interior is not null ? BakePayloadClass.Tile : matches[0].Value.PayloadClass;
+        var context = map.Content.GetPreparedBuildContext(module is not null ? module.Value :
+            interior is not null ? interior.Value : matches[0].Value);
+        var sources = map.Inputs.SourceIndex(context);
+        var inputHash = sources.TryProduct(key, out var preparedHash) ? preparedHash : map.Inputs.ProductInputHash(_terrain.CodeFingerprints, map, context, key);
+        sources.RememberProduct(key, inputHash);
+        return (module, interior, matches.FirstOrDefault()?.Value, context, inputHash, payloadClass);
     }
 
     private IReadOnlyList<byte[]> Encode(BakePayloadClass payloadClass, string identity, object product, CancellationToken cancellation) =>

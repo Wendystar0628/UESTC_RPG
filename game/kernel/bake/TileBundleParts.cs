@@ -171,7 +171,7 @@ internal static class TileBundleParts
                 prototype ??= multiPrototype;
                 instances.Write(multi.InstanceData.Span);
                 if (instances.Length / BakedMultiMesh.InstanceStrideBytes != slice.Total) continue;
-                multis.Add(new(pending.Surface, slice.Total, instances.ToArray(), pending.Bounds));
+                multis.Add(BakedMultiMesh.TakeOwnership(pending.Surface, slice.Total, instances.ToArray(), pending.Bounds));
                 pending = null;
                 pendingSlice = null;
                 prototype = null;
