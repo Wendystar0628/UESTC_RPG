@@ -165,8 +165,7 @@ public partial class HudRoot : CanvasLayer, IBootParticipant, IAppLoadingPresent
     private void OnFlowChanged(AppState previous, AppState current)
     {
         SyncState();
-        if (previous == AppState.Boot && current == AppState.Title && _dependencies.Flow.LastError is { } errorKey)
-            _pages.Toast.Show(UiKit.T(errorKey), bar: "warning.fill");
+        if (current == AppState.Title) _pages.ReportTitleReturn(previous);
     }
 
     private void OnThemeSwitched(bool dark)

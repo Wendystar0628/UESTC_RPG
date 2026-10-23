@@ -178,7 +178,8 @@ internal sealed class HudLoading : IAppLoadingPresentation
         var preset = request?.Kind == EnterKind.NewGame ? descriptor?.World.Default : null;
         var season = preset?.Season ?? _dependencies.WorldState.SeasonTarget;
         var clock = preset?.Clock ?? _dependencies.WorldState.Clock;
-        var place = descriptor is null ? "" : Localized(descriptor.Name);
+        var weather = preset?.Weather ?? _dependencies.WorldState.Weather.Kind;
+        var place = descriptor is null ? "" : SaveMetaText.MapName(descriptor.Name);
         var action = request?.Kind switch
         {
             null => "loading.title",
@@ -195,14 +196,11 @@ internal sealed class HudLoading : IAppLoadingPresentation
             {
                 season = meta.Season;
                 clock = meta.Clock;
-                var map = maps.Maps.FirstOrDefault(item => item.Id == meta.Map);
-                place = meta.PlaceKey is { } key && Campus.Hud.I18n.Tr.Has(key) ? UiKit.T(key) : map is null ? place : Localized(map.Name);
+                weather = meta.Weather;
+                place = SaveMetaText.Place(meta, maps);
             }
         }
         return UiKit.T("loading.destination", ("action", UiKit.T(action)), ("place", place),
-            ("season", UiKit.T("hud.season." + TimeCard.SeasonCode(season).ToLowerInvariant())), ("clock", WorldTime.FormatClock(clock)));
+            ("moment", SaveMetaText.Moment(season, clock, weather)));
     }
-
-    private static string Localized(LocalizedName name) =>
-        TranslationServer.GetLocale().StartsWith("zh", StringComparison.OrdinalIgnoreCase) || name.En.Length == 0 ? name.Zh : name.En;
 }

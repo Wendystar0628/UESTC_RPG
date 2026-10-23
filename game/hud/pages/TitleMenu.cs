@@ -11,7 +11,7 @@ namespace Campus.Hud.Pages;
 /// <summary>
 /// 开始页的界面部分（UI-VISUAL、UI-NAV、SYS-TITLE）：按"压在画面上"处理，不随主题，不读 ui_night——
 /// 只用两套主题里相同的 over.title.* 令牌；左侧一条暗渐变，片名细体宽字距，下面一行真数据；
-/// 菜单：继续 / 新游戏 / 存档 / 设置 / 退出。只经 IAppFlow 写，只读 ISaveService。
+/// 菜单：继续 / 新游戏 / 存档 / 设置 / 退出。进入请求交界面根（HudPages），只读 ISaveService。
 /// </summary>
 public partial class TitleMenu : Control
 {
@@ -21,8 +21,9 @@ public partial class TitleMenu : Control
     private TechButton _continue = null!;
     private Control _backgroundParent = null!;
     private Control? _shade;
-    private HudTask _enter = null!;
 
+    /// <summary>继续与新游戏只发请求，进入与失败提示归界面根（HudPages）。</summary>
+    public event Action<EnterRequest>? EnterRequested;
     public event Action? SavesRequested;
     /// <summary>三个存档位都占着时的"新游戏"：由界面根以新游戏方式打开存档页，选位并确认覆盖（SYS-TITLE）。</summary>
     public event Action? OverwriteRequested;
@@ -32,9 +33,9 @@ public partial class TitleMenu : Control
 
     private static T Svc<T>() where T : class => Campus.Kernel.Registry.Kernel.Get<T>();
 
-    internal static TitleMenu Create(UiKit kit, Control parent, Control backgroundParent, HudTask enter)
+    internal static TitleMenu Create(UiKit kit, Control parent, Control backgroundParent)
     {
-        var menu = new TitleMenu { _kit = kit, _backgroundParent = backgroundParent, _enter = enter, MouseFilter = MouseFilterEnum.Ignore, Visible = false };
+        var menu = new TitleMenu { _kit = kit, _backgroundParent = backgroundParent, MouseFilter = MouseFilterEnum.Ignore, Visible = false };
         parent.AddChild(menu);
         menu.SetAnchorsAndOffsetsPreset(LayoutPreset.FullRect);
         return menu;
@@ -141,13 +142,12 @@ public partial class TitleMenu : Control
     private void Sync()
     {
         // 开始页没有世界实例：片名块写最近存档的世界状态，没有存档写默认状态。
-        var world = TitleWorld.Resolve(Svc<ISaveService>(), Svc<IMapService>());
-        _data.Text = $"{UiKit.T("hud.season." + TimeCard.SeasonCode(world.Season).ToLowerInvariant())} · " +
-                     $"{WorldTime.FormatClock(world.Clock)} · " +
-                     $"{UiKit.T("weather.cell." + WeatherStrip.CellKey(WeatherStrip.CellOf(world.Weather)))}";
+        var maps = Svc<IMapService>();
+        var world = TitleWorld.Resolve(Svc<ISaveService>(), maps);
+        _data.Text = SaveMetaText.Moment(world.Season, world.Clock, world.Weather);
         _continue.Off = world.Meta is null;
         _continueInfo.Visible = world.Meta is not null;
-        if (world.Meta is { } meta) _continueInfo.Text = SavePage.Summary(meta);
+        if (world.Meta is { } meta) _continueInfo.Text = SaveMetaText.Summary(meta, maps);
     }
 
     private void Pick(int index)
@@ -156,7 +156,7 @@ public partial class TitleMenu : Control
         {
             case 0:
                 if (_continue.Off) { Notice?.Invoke(UiKit.T("title.continue.none")); return; }
-                Enter(new EnterRequest(EnterKind.Continue));
+                EnterRequested?.Invoke(new EnterRequest(EnterKind.Continue));
                 break;
             case 1: NewGame(); break;
             case 2: SavesRequested?.Invoke(); break;
@@ -171,21 +171,6 @@ public partial class TitleMenu : Control
         var slots = Svc<ISaveService>().Slots;
         var empty = slots.FirstOrDefault(s => s.Health == SlotHealth.Empty);
         if (empty is null && slots.Count > 0) OverwriteRequested?.Invoke();
-        else Enter(new EnterRequest(EnterKind.NewGame, empty?.Slot));
-    }
-
-    // 进入由 IAppFlow 持有并处置失败（SYS-TITLE）；界面一侧的等待与失败提示归界面根的流程持有者，进行中不再开第二次。
-    private void Enter(EnterRequest request) => _enter.Start(token => EnterAndNotify(request, token));
-
-    private async Task EnterAndNotify(EnterRequest request, CancellationToken token)
-    {
-        var result = await Svc<IAppFlow>().Enter(request).WaitAsync(token);
-        switch (result)
-        {
-            case EnterResult.Entered: break;
-            case EnterResult.Rejected: break;
-            case EnterResult.Failed: Notice?.Invoke(UiKit.T("title.enter_failed")); break;
-            default: throw new InvalidOperationException("Unknown enter result.");
-        }
+        else EnterRequested?.Invoke(new EnterRequest(EnterKind.NewGame, empty?.Slot));
     }
 }
