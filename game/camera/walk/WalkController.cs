@@ -20,7 +20,7 @@ namespace Campus.Camera.Walk;
 [KernelNode("walk-controller")]
 [SaveSection("walk", Version = 1, Phase = RestorePhase.Pose, Order = 61)]
 public partial class WalkController : CharacterBody3D, IWalkController, IWalkTelemetry, IMapAware, IMapDataParticipant,
-    ISaveSection<WalkSave>, IViewContentReadiness
+    ISaveSection<WalkSaveData>, IViewContentReadiness
 {
     private readonly WalkBodyCollision _bodyCollision;
     private readonly WalkLocomotion _locomotion;
@@ -51,12 +51,20 @@ public partial class WalkController : CharacterBody3D, IWalkController, IWalkTel
     public int SpeedStep => _locomotion.SpeedStep;
     public bool IsSettled => !_terrain.LandingPointsPending && (!Active || (!_swimming.Active && Grounded && CollisionReady
         && !ExitRequested && _map is not null && !WalkSafetyQueries.InWater(_map.World.Spatial, _feet)));
-    public bool IsReady(Pose pose) => !_terrain.LandingPointsPending && !_persistence.HistoryPending;
+    public bool IsReady(Pose pose) => !_terrain.LandingPointsPending;
     public Exception? Failure => _terrain.Failure;
     public Pose BodyPose => new(_feet, _yaw, _pitch);
     public N.Vector3 ObserverEye => _feet + N.Vector3.UnitY * EyeHeight;
     N.Vector3 IWalkController.Velocity => Velocity.ToNumerics();
-    public Pose SettledEyePose => new(ResolveSettledFeet().Position + N.Vector3.UnitY * ShoreEyeHeight, _yaw, _pitch, _comfort.Fov);
+    public WalkSaveData CaptureSettled(Pose? destination = null) =>
+        _persistence.Capture(destination ?? ResolveSettledFeet(), _locomotion.Crouching, SpeedStep);
+
+    public Task<WalkSaveData> PrepareRestore(WalkSaveData data, RestoreContext context, CancellationToken cancellation = default)
+    {
+        RequireMap(context.Map);
+        return WalkPersistence.PrepareRestore(data, context, _map!, _terrain,
+            WalkSafetyQueries.DefaultFeet(KernelServices.Get<IMapService>(), context.Map), cancellation);
+    }
     public float EyeRollDeg => _comfort.EyeRollDeg(_appFrozen || _placement.EntryPending
         || _placement.NeedsCheck || !Active);
     private float EyeHeight => _swimming.Active ? WaterMotionRules.FeetBelowSurface + WaterMotionRules.EyeAboveSurface : ShoreEyeHeight;
@@ -95,7 +103,7 @@ public partial class WalkController : CharacterBody3D, IWalkController, IWalkTel
         _comfort = new(this, _telemetry);
         _swimming = new(_bodyCollision, () => CollisionReady = false, RequestExit);
         _placement = new(this, () => Space, PlacementEye);
-        _persistence = new(_placement, _terrain);
+        _persistence = new(_placement);
         Name = "WalkController";
         ProcessPriority = FramePriority.Camera;
         PhysicsInterpolationMode = PhysicsInterpolationModeEnum.Off;
@@ -229,7 +237,6 @@ public partial class WalkController : CharacterBody3D, IWalkController, IWalkTel
         if (_terrain.LandingPointsPending)
         {
             if (!_terrain.CompleteLandingPoints()) return;
-            _persistence.ValidateRestoredHistory(_map!);
         }
         StepPhysics(delta);
     }
@@ -455,7 +462,6 @@ public partial class WalkController : CharacterBody3D, IWalkController, IWalkTel
         _map = null;
         _placement.Unload();
         _terrain.Unload();
-        _persistence.Unload();
     }
 
     public void OnMapLoaded(IMapContext ctx)
@@ -467,26 +473,22 @@ public partial class WalkController : CharacterBody3D, IWalkController, IWalkTel
         _terrain.PrepareAuthoredLandings(ctx);
     }
 
-    public JsonTypeInfo<WalkSave> TypeInfo => _persistence.TypeInfo;
-    public WalkSave Capture(in CaptureContext context)
-    {
-        RequireMap(context.Map);
-        return _persistence.Capture(ResolveSettledFeet(), _locomotion.Crouching, SpeedStep);
-    }
+    public JsonTypeInfo<WalkSaveData> TypeInfo => _persistence.TypeInfo;
+    public WalkSaveData Capture(in CaptureContext context) =>
+        context.Observer.Walk ?? throw new InvalidOperationException("Capture requires the shared walking snapshot.");
 
-    public void Restore(WalkSave dto, RestoreContext context)
+    public void Restore(WalkSaveData dto, RestoreContext context)
     {
         ArgumentNullException.ThrowIfNull(dto);
         RequireMap(context.Map);
-        _persistence.RestoreHistory(dto, context, _map!);
+        _persistence.RestoreHistory(dto);
         _locomotion.RestoreCrouch(dto.Crouching);
         ApplyHeight();
         _locomotion.RestoreSpeedStep(dto.SpeedStep);
-        if (SpeedStep != dto.SpeedStep) context.Repair("walk: speed step clamped");
-        Place(_persistence.RestoreFeet(dto, context, _map!), WalkTuning.SaveRepairRadius);
+        Place(dto.Feet, WalkTuning.SaveRepairRadius);
     }
 
-    public WalkSave CreateDefault(NewGameContext context) => _persistence.CreateDefault(context);
+    public WalkSaveData CreateDefault(NewGameContext context) => _persistence.CreateDefault(context);
 
     private void RequireMap(MapId targetMap)
     {

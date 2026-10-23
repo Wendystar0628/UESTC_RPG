@@ -46,6 +46,7 @@ internal sealed class SaveLoading(SaveService owner) : IDisposable
         {
             await BeginRestoreOperation().ConfigureAwait(false);
             NewGameContext? defaults = null;
+            var repairs = new List<string>();
             var prepared = await _owner.OnFrame(() =>
             {
                 var result = _restore!.PrepareDefaultWorld(_owner.Options, _owner.Sections, _defaultRuleset,
@@ -55,16 +56,16 @@ internal sealed class SaveLoading(SaveService owner) : IDisposable
                 return result.Save;
             }).ConfigureAwait(false);
             await PrepareMap(prepared.Document.Meta.Map).ConfigureAwait(false);
-            await _owner.OnFrame(() => _restore!.RestorePhaseOf(prepared, RestorePhase.Content, [], defaults)).ConfigureAwait(false);
-            prepared = await PrepareViewPose(prepared, [], defaults).ConfigureAwait(false);
+            await _owner.OnFrame(() => _restore!.RestorePhaseOf(prepared, RestorePhase.Content, repairs, defaults)).ConfigureAwait(false);
+            prepared = await PrepareViewPose(prepared, repairs, defaults).ConfigureAwait(false);
             var wait = await _owner.OnFrame(() =>
             {
-                _restore!.RestorePhaseOf(prepared, RestorePhase.Pose, [], defaults);
+                _restore!.RestorePhaseOf(prepared, RestorePhase.Pose, repairs, defaults);
                 return _owner.Runtime.WaitDestination(_owner.Runtime.Camera.Pose, _owner.Runtime.Observer.Space, _owner.Runtime.Observer.Mode);
             }).ConfigureAwait(false);
             await wait.ConfigureAwait(false);
             await _owner.OnFrame(_restore!.Succeed).ConfigureAwait(false);
-            return new(LoadStatus.Loaded, _owner.Active, 0, []);
+            return new(LoadStatus.Loaded, _owner.Active, 0, repairs);
         }
         catch (Exception) when (_owner.Stopping) { throw; }
         catch (Exception error) { return await RestoreFailed(slot, error).ConfigureAwait(false); }
@@ -149,18 +150,37 @@ internal sealed class SaveLoading(SaveService owner) : IDisposable
 
     private async Task<PreparedSave> PrepareViewPose(PreparedSave prepared, List<string> repairs, NewGameContext? defaults = null)
     {
-        var section = prepared.Sections.FirstOrDefault(item => item.Registration.Section.TypeInfo.Type == typeof(ViewSaveData));
-        if (section is null) return prepared;
-        section = await _owner.OnFrame(() => _restore!.PreparePoseSection(section, repairs, defaults)).ConfigureAwait(false);
-        var dto = section.Dto;
-        if (dto is not ViewSaveData view) throw new InvalidDataException("The view section must use the shared view DTO.");
-        var preparing = await _owner.OnFrame(() => (_owner.Runtime.PreparePose ?? throw new InvalidOperationException("View restoration requires terrain preparation."))(view.Pose)).ConfigureAwait(false);
-        var pose = await preparing.ConfigureAwait(false);
+        var sections = prepared.Sections.ToArray();
+        var viewIndex = Array.FindIndex(sections, item => item.Registration.Section.TypeInfo.Type == typeof(ViewSaveData));
+        var walkIndex = Array.FindIndex(sections, item => item.Registration.Section.TypeInfo.Type == typeof(WalkSaveData));
+        if (viewIndex < 0 && walkIndex < 0) return prepared;
+        foreach (var index in new[] { viewIndex, walkIndex }.Where(index => index >= 0))
+            sections[index] = await _owner.OnFrame(() => _restore!.PreparePoseSection(sections[index], repairs, defaults)).ConfigureAwait(false);
+        WalkSaveData? walk = null;
+        if (walkIndex >= 0)
+        {
+            var section = sections[walkIndex];
+            if (section.Dto is not WalkSaveData data) throw new InvalidDataException("The walk section must use the shared walking DTO.");
+            var context = new RestoreContext { Map = section.Map, FromVersion = section.FromVersion, Missing = false };
+            var preparing = await _owner.OnFrame(() => (_owner.Runtime.PrepareWalk
+                ?? throw new InvalidOperationException("Walk restoration requires terrain and history preparation."))(data, context, _owner.Lifetime)).ConfigureAwait(false);
+            walk = await preparing.ConfigureAwait(false);
+            repairs.AddRange(context.Repairs);
+            sections[walkIndex] = section with { Dto = walk };
+        }
+        if (viewIndex < 0) return prepared with { Sections = sections };
+        var viewSection = sections[viewIndex];
+        if (viewSection.Dto is not ViewSaveData view) throw new InvalidDataException("The view section must use the shared view DTO.");
+        var target = view.Mode == ViewMode.Walk && walk is not null ? walk.EyePose() : view.Pose;
+        var preparation = await _owner.OnFrame(() => (_owner.Runtime.PreparePose
+            ?? throw new InvalidOperationException("View restoration requires terrain preparation."))(target)).ConfigureAwait(false);
+        var pose = await preparation.ConfigureAwait(false);
         if (pose != view.Pose) repairs.Add("view.pose");
+        sections[viewIndex] = viewSection with { Dto = view with { Pose = pose } };
         return prepared with
         {
             Document = prepared.Document with { Meta = prepared.Document.Meta with { Pose = pose } },
-            Sections = prepared.Sections.Select(item => ReferenceEquals(item.Registration, section.Registration) && item.Map == section.Map ? section with { Dto = view with { Pose = pose } } : item).ToArray()
+            Sections = sections
         };
     }
 

@@ -1,3 +1,5 @@
+using Campus.Contracts.Save;
+
 namespace Campus.Contracts;
 
 public readonly record struct InputActionEvent(string Action, bool Pressed, bool Echo);
@@ -29,8 +31,10 @@ public interface ITransitDriver
     ITransitHandle Start(Pose from, Pose to, TransitOptions? options = null);
     /// <summary>Runs a camera-owned mode commit under the same loading, cancellation and arrival lifecycle as teleport.</summary>
     ITransitHandle SwitchMode(Func<CancellationToken, Task<ModeSwitchResult>> apply);
-    /// <summary>The settled destination while a transit is active; null when no transit is running.</summary>
-    Pose? Destination { get; }
+    /// <summary>Start returns a request handle. Until terrain, space and target data are prepared, retain the
+    /// settled snapshot captured immediately before that request; then publish the accepted target snapshot.
+    /// Null means no request is active. Preparation never claims arrival or collision readiness.</summary>
+    ObserverSaveSnapshot? SaveSnapshot { get; }
     /// <summary>Cancels and drains all current and superseded executions, including loading cleanup; the driver remains reusable.</summary>
     Task CancelAsync();
 }

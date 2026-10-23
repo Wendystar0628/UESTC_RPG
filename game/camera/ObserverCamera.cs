@@ -515,8 +515,17 @@ public partial class ObserverCamera : Node, ICameraRig, IObserverState, IViewCon
 
     public System.Text.Json.Serialization.Metadata.JsonTypeInfo<ViewSaveData> TypeInfo => ViewJsonContext.Contract.ViewSaveData;
 
-    public ViewSaveData Capture(in CaptureContext context) =>
-        ObserverViewSave.Capture(this, _flight.SpeedStep, _transit, _walk, _flight.Map);
+    public ObserverSaveSnapshot CaptureSettledObserver(MapId map)
+    {
+        if (_transit?.SaveSnapshot is { } accepted)
+        {
+            if (accepted.Map != map) throw new InvalidOperationException("Transit snapshot belongs to another map.");
+            return accepted;
+        }
+        return ObserverViewSave.Capture(this, map, SpeedStep, _flight.SpeedStep, _walk, _flight.Map);
+    }
+
+    public ViewSaveData Capture(in CaptureContext context) => context.Observer.View;
 
     public void Restore(ViewSaveData data, RestoreContext context)
     {

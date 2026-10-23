@@ -1,5 +1,6 @@
 using System.Numerics;
 using Campus.Contracts.Maps;
+using Campus.Contracts.Save;
 
 namespace Campus.Contracts;
 
@@ -32,8 +33,10 @@ public interface IWalkController
     int SpeedStep { get; }
     /// <summary>Grounded, outside water, and not in a safety return or other unsettled move.</summary>
     bool IsSettled { get; }
-    /// <summary>Pure settled snapshot, resolved from the same feet destination as the walk save section.</summary>
-    Pose SettledEyePose { get; }
+    /// <summary>Pure settled walking state; an explicit prepared destination replaces only its feet.</summary>
+    WalkSaveData CaptureSettled(Pose? destination = null);
+    /// <summary>Prepares and validates feet and safety history before the immediate save-section Restore.</summary>
+    Task<WalkSaveData> PrepareRestore(WalkSaveData data, RestoreContext context, CancellationToken cancellation = default);
 
     /// <summary>Prepares a legal feet destination from an eye pose before the camera commits walk mode.</summary>
     /// <remarks>The result describes destination selection. Physics stays frozen until collision is ready.</remarks>

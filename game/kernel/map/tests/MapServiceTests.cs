@@ -79,7 +79,7 @@ public sealed class MapServiceTests
     public void MapsSaveUsesStringIdsAndVectorArraysAndRejectsUnknownFields()
     {
         var f = new Fixture(); f.Boot();
-        var context = new CaptureContext(SaveReason.Test, f.A, false) { Moment = new WorldSaveMoment(0, 0, Season.Autumn, 0) };
+        var context = new CaptureContext(SaveReason.Test, f.A, false) { Moment = new WorldSaveMoment(0, 0, Season.Autumn, 0), Observer = f.Camera.CaptureSettledObserver(f.A) };
         var dto = f.Service.Capture(in context);
         var json = JsonSerializer.Serialize(dto, f.Service.TypeInfo);
         AssertThat(json.Contains("\"current\":\"map-a\"", StringComparison.Ordinal) && json.Contains("\"position\":[", StringComparison.Ordinal)).OverrideFailureMessage("Map save lost contract ID/vector encoding.").IsTrue();
@@ -88,6 +88,21 @@ public sealed class MapServiceTests
         try { JsonSerializer.Deserialize(json[..^1] + ",\"unknown\":1}", f.Service.TypeInfo); }
         catch (JsonException) { return; }
         throw new InvalidOperationException("Unknown map save field was accepted.");
+    }
+
+    [TestCase, TestCategory(TestReason.Regression)]
+    public void CaptureProjectsTheSharedVisitWithoutCommittingItToLiveMapHistory()
+    {
+        var f = new Fixture(); f.Boot();
+        var before = f.Service.Visits.ToArray();
+        var view = new ViewSaveData(ViewMode.Fly, new(new(12, 20, 7), 43, -4), null, 1, 1);
+        var context = new CaptureContext(SaveReason.Quit, f.A, true)
+        {
+            Moment = new(0, 0, Season.Autumn, 0), Observer = new(f.A, view, null)
+        };
+        var saved = f.Service.Capture(in context);
+        AssertThat(saved.Current == f.A && saved.Visits.Single(v => v.Map == f.A).LastPose == view.Pose).IsTrue();
+        AssertThat(f.Service.Visits.SequenceEqual(before)).OverrideFailureMessage("Capture committed a projected visit into live state.").IsTrue();
     }
 
     [TestCase]

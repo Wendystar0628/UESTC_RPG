@@ -1,11 +1,8 @@
-using System.Text.Json;
 using Campus.Contracts;
 using Campus.Contracts.AppFlow;
 using Campus.Contracts.Maps;
 using Campus.Contracts.Save;
 using Campus.Kernel.Save.Format;
-using Campus.Kernel.Maps;
-using Campus.Kernel.World;
 using Campus.Kernel.Diagnostics;
 
 namespace Campus.Kernel.Save;
@@ -144,21 +141,11 @@ internal sealed class SaveWriting(SaveService owner)
         finally { _owner.Operation.Release(); }
     }
 
-    private async Task<SaveDocument> BuildDocument(Snapshot snapshot)
+    private Task<SaveDocument> BuildDocument(Snapshot snapshot) => Task.Run(() =>
     {
-        var document = await Task.Run(() =>
-        {
-            var raw = _owner.Sections.Serialize(snapshot.Sections, snapshot.Unknown, snapshot.Meta.Map, snapshot.Moment);
-            return new SaveDocument(SettledMetadata(snapshot.Meta, raw), raw, snapshot.Thumbnail);
-        }).ConfigureAwait(false);
-        var meta = await _owner.OnFrame(() =>
-        {
-            var region = _owner.Runtime.Maps.Current == document.Meta.Map
-                ? _owner.Runtime.Atlas.RegionAt(document.Meta.Pose.Position.X, document.Meta.Pose.Position.Z) : null;
-            return document.Meta with { Region = region, PlaceKey = region is null ? null : "place." + region };
-        }).ConfigureAwait(false);
-        return document with { Meta = meta };
-    }
+        var raw = _owner.Sections.Serialize(snapshot.Sections, snapshot.Unknown, snapshot.Meta.Map, snapshot.Moment);
+        return new SaveDocument(snapshot.Meta, raw, snapshot.Thumbnail);
+    });
 
     internal Task<DeleteResult> Delete(SlotId slot, ulong? generation)
     {
@@ -231,52 +218,24 @@ internal sealed class SaveWriting(SaveService owner)
             return null;
         var map = _owner.Runtime.Maps.Current;
         var moment = _owner.Runtime.WorldRestore.GetSaveMoment();
+        var observer = _owner.Runtime.Camera.CaptureSettledObserver(map);
+        if (observer.Map != map) throw new InvalidOperationException("Observer snapshot belongs to another map.");
         var visited = _owner.Runtime.Maps.Visits.Select(v => v.Map).Append(map).Distinct().OrderBy(m => m.Value, StringComparer.Ordinal).ToArray();
         var captures = new List<CapturedSection>(_owner.Sections.Registered.Count + visited.Length);
         foreach (var registration in _owner.Sections.Registered)
             foreach (var sectionMap in registration.Attribute.Scope == SaveScope.Global ? [map] : visited)
             {
-                var context = new CaptureContext(reason, sectionMap, forced || !_owner.Schedule.Safe) { Moment = moment };
+                var context = new CaptureContext(reason, sectionMap, forced || !_owner.Schedule.Safe) { Moment = moment, Observer = observer };
                 captures.Add(new(SaveSections.Key(registration.Attribute, sectionMap), registration, registration.Section.Capture(in context)));
             }
-        var world = _owner.Runtime.World;
-        var observer = _owner.Runtime.Observer;
-        var region = _owner.Runtime.Atlas.RegionAt(observer.Feet.X, observer.Feet.Z);
+        var view = observer.View;
+        var region = _owner.Runtime.Atlas.RegionAt(view.Pose.Position.X, view.Pose.Position.Z);
+        double clock = ((moment.WorldHours + moment.ClockOffset) % 24 + 24) % 24;
         var meta = new SaveMeta(SaveContainer.CurrentFormat, _owner.Active!.Value, SlotKind.Auto, generation, _newLine ? generation : _line,
-            _owner.Schedule.PlaySeconds, map, world.WorldHours, world.Clock, world.SeasonTarget, world.Weather.Kind,
-            observer.Mode, _owner.Runtime.Camera.Pose, observer.Space, region, region is null ? null : "place." + region,
+            _owner.Schedule.PlaySeconds, observer.Map, moment.WorldHours, clock, moment.Season, _owner.Runtime.World.Weather.Kind,
+            view.Mode, view.Pose, view.Space, region, region is null ? null : "place." + region,
             _owner.Runtime.UnixTime(), reason, _owner.Runtime.Ruleset.Current.Id.Value, HasThumb: thumbnail is not null);
         return new(meta, moment, captures, _unknown, thumbnail);
-    }
-
-    private SaveMeta SettledMetadata(SaveMeta meta, IReadOnlyDictionary<string, RawSaveSection> sections)
-    {
-        if (_owner.Sections.TryRaw<WorldSaveV1>(sections, meta.Map, out var world))
-        {
-            using var json = SaveContainer.ParseJson(world.Envelope);
-            var data = json.RootElement.GetProperty("data");
-            if (data.TryGetProperty("worldHours", out var hours) && data.TryGetProperty("clockOffset", out var offset))
-                meta = meta with { WorldHours = hours.GetDouble(), Clock = ((hours.GetDouble() + offset.GetDouble()) % 24 + 24) % 24 };
-            if (data.TryGetProperty("seasonTarget", out var season) && Enum.TryParse<Season>(season.GetString(), true, out var value))
-                meta = meta with { Season = value };
-        }
-        if (_owner.Sections.TryRaw<ViewSaveData>(sections, meta.Map, out var view))
-        {
-            using var json = SaveContainer.ParseJson(view.Envelope);
-            var data = json.RootElement.GetProperty("data");
-            var pose = JsonSerializer.Deserialize(data.GetProperty("pose"), SaveSummaryJsonContext.Strict.Pose);
-            var mode = JsonSerializer.Deserialize(data.GetProperty("mode"), SaveSummaryJsonContext.Strict.ViewMode);
-            var space = data.TryGetProperty("space", out var value) && value.ValueKind != JsonValueKind.Null
-                ? JsonSerializer.Deserialize(value, SaveSummaryJsonContext.Strict.NavSpace) : (NavSpace?)null;
-            meta = meta with { Pose = pose, Mode = mode, Space = space };
-        }
-        if (_owner.Sections.TryRaw<MapsSave>(sections, meta.Map, out var maps))
-        {
-            using var json = SaveContainer.ParseJson(maps.Envelope);
-            if (json.RootElement.GetProperty("data").TryGetProperty("current", out var current))
-                meta = meta with { Map = new(current.GetString() ?? throw new JsonException("Missing current map.")) };
-        }
-        return meta;
     }
 
     internal async Task<SaveResult> FlushForQuit(SaveReason reason, TimeSpan timeout)

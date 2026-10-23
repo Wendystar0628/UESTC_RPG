@@ -11,7 +11,7 @@ namespace Campus.Tests.World;
 internal static class WorldTestKit
 {
     public static CaptureContext SaveContext(WorldStateService world) =>
-        new(SaveReason.Quit, new("test-world"), true) { Moment = world.GetSaveMoment() };
+        new(SaveReason.Quit, new("test-world"), true) { Moment = world.GetSaveMoment(), Observer = new(new("test-world"), new(ViewMode.Fly, default, null, 1, 1), null) };
     public static RestoreContext Restore() => new() { Map = new("test-world"), FromVersion = 1, Missing = false };
     public static (double Hours, double Clock, double Target, double Season, WorldFlow Flow, double Anim,
         Body Sun, Body Moon, long Rev, long Instance, int Steps) LiveReadings(WorldStateService world, TestWeatherProcess weather) =>

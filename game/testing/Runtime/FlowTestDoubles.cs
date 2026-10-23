@@ -160,7 +160,7 @@ internal sealed class FlowTerrainPreparation : ITerrainPreparation, ICameraPoseV
 internal sealed class FlowTransitDriver : ITransitDriver
 {
     public bool IsReady => true;
-    public Pose? Destination => null;
+    public Campus.Contracts.Save.ObserverSaveSnapshot? SaveSnapshot => null;
     public Task Draining { get; set; } = Task.CompletedTask;
     public Task CancelAsync() => Draining;
     public ITransitHandle Start(Pose from, Pose to, TransitOptions? options = null) =>

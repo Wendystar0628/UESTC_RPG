@@ -1,6 +1,4 @@
-using System.Text;
 using System.Text.Json;
-using System.Text.Json.Nodes;
 using Campus.Contracts;
 using Campus.Contracts.Save;
 using Campus.Kernel.Maps;
@@ -78,6 +76,7 @@ public sealed class SaveSections
     public IReadOnlyDictionary<string, RawSaveSection> Serialize(IReadOnlyList<CapturedSection> captures,
         IReadOnlyDictionary<string, RawSaveSection> previous, MapId? expectedMap = null, WorldSaveMoment? moment = null)
     {
+        ValidateSnapshotTimeline(captures, expectedMap, moment);
         var output = new SortedDictionary<string, RawSaveSection>(StringComparer.Ordinal);
         foreach (var (key, raw) in previous.OrderBy(p => p.Key, StringComparer.Ordinal))
             if (Find(key) is null) output.Add(key, raw);
@@ -92,8 +91,6 @@ public sealed class SaveSections
             }
             output.Add(capture.Key, new(capture.Registration.Attribute.Version, stream.ToArray()));
         }
-        ValidateSnapshotTimeline(output, expectedMap, moment);
-        AlignCurrentMapVisit(output);
         return output;
     }
 
@@ -105,61 +102,20 @@ public sealed class SaveSections
         return new(key, registration, map, null, version, "Replaced invalid section: " + key) { Error = error };
     }
 
-    internal SaveSectionRegistration? ForPayload<T>() => Registered.SingleOrDefault(r => r.Section.TypeInfo.Type == typeof(T));
-
-    internal bool TryRaw<T>(IReadOnlyDictionary<string, RawSaveSection> sections, MapId map, out RawSaveSection raw)
+    private static void ValidateSnapshotTimeline(IReadOnlyList<CapturedSection> captures, MapId? expectedMap, WorldSaveMoment? moment)
     {
-        var registration = ForPayload<T>();
-        if (registration is not null && sections.TryGetValue(Key(registration.Attribute, map), out var found))
-        { raw = found; return true; }
-        raw = null!; return false;
-    }
-
-    private void AlignCurrentMapVisit(IDictionary<string, RawSaveSection> sections)
-    {
-        var mapsRegistration = ForPayload<MapsSave>();
-        var viewRegistration = ForPayload<ViewSaveData>();
-        if (mapsRegistration is null || viewRegistration is null) return;
-        var mapsKey = Key(mapsRegistration.Attribute, default);
-        var viewKey = Key(viewRegistration.Attribute, default);
-        if (!sections.TryGetValue(mapsKey, out var maps) || !sections.TryGetValue(viewKey, out var view)) return;
-        // The current visit and metadata describe the immutable view snapshot, including forced landings.
-        var mapEnvelope = JsonNode.Parse(maps.Envelope) ?? throw new JsonException("Missing maps envelope.");
-        var viewEnvelope = JsonNode.Parse(view.Envelope) ?? throw new JsonException("Missing view envelope.");
-        var data = mapEnvelope["data"] ?? throw new JsonException("Missing maps data.");
-        var current = data["current"]?.GetValue<string>() ?? throw new JsonException("Missing current map.");
-        var pose = viewEnvelope["data"]?["pose"] ?? throw new JsonException("Missing view pose.");
-        var mode = viewEnvelope["data"]?["mode"] ?? throw new JsonException("Missing view mode.");
-        var visits = data["visits"]?.AsArray() ?? throw new JsonException("Missing map visits.");
-        var visit = visits.FirstOrDefault(v => v?["map"]?.GetValue<string>() == current)
-            ?? throw new JsonException("Current map has no visit.");
-        visit["lastPose"] = pose.DeepClone(); visit["mode"] = mode.DeepClone();
-        sections[mapsKey] = new(maps.Version, Encoding.UTF8.GetBytes(mapEnvelope.ToJsonString()));
-    }
-
-    private void ValidateSnapshotTimeline(IReadOnlyDictionary<string, RawSaveSection> sections, MapId? expectedMap, WorldSaveMoment? moment)
-    {
-        if (expectedMap is { } map && TryRaw<MapsSave>(sections, map, out var maps))
-        {
-            using var json = SaveContainer.ParseJson(maps.Envelope);
-            if (json.RootElement.GetProperty("data").GetProperty("current").GetString() != map.Value)
-                throw new SaveFormatException("Map changed during snapshot; the generation was not written.");
-        }
-        if (!TryRaw<WorldSaveV1>(sections, expectedMap ?? default, out var world))
+        var maps = captures.Select(capture => capture.Dto).OfType<MapsSave>().SingleOrDefault();
+        if (expectedMap is { } map && maps is not null && maps.Current != map)
+            throw new SaveFormatException("Map changed during snapshot; the generation was not written.");
+        var world = captures.Select(capture => capture.Dto).OfType<WorldSaveV1>().SingleOrDefault();
+        if (world is null)
         {
             if (moment.HasValue) throw new SaveFormatException("The world snapshot section is missing.");
             return;
         }
-        using var worldJson = SaveContainer.ParseJson(world.Envelope);
-        var worldData = worldJson.RootElement.GetProperty("data");
-        if (moment is { } expected)
-        {
-            if (worldData.GetProperty("worldHours").GetDouble() != expected.WorldHours ||
-                worldData.GetProperty("clockOffset").GetDouble() != expected.ClockOffset ||
-                !Enum.TryParse<Season>(worldData.GetProperty("seasonTarget").GetString(), true, out var season) || season != expected.Season ||
-                worldData.GetProperty("flowRate").GetInt32() != expected.FlowRate)
-                throw new SaveFormatException("World section disagrees with the shared capture moment.");
-        }
+        if (moment is { } expected && (world.WorldHours != expected.WorldHours || world.ClockOffset != expected.ClockOffset
+            || world.SeasonTarget != expected.Season || world.FlowRate != expected.FlowRate))
+            throw new SaveFormatException("World section disagrees with the shared capture moment.");
     }
 
     public static string Key(SaveSectionAttribute attribute, MapId map) => attribute.Scope switch

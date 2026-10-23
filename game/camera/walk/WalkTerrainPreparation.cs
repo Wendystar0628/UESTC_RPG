@@ -6,9 +6,9 @@ using KernelServices = Campus.Kernel.Registry.Kernel;
 namespace Campus.Camera.Walk;
 
 /// <summary>Current-map terrain coverage, authored landing points and motion preparation.</summary>
-internal sealed class WalkTerrainPreparation
+internal sealed class WalkTerrainPreparation(ITerrainPreparation? preparation = null)
 {
-    private ITerrainPreparation? _terrain;
+    private ITerrainPreparation? _terrain = preparation;
     private IMapContext? _map;
     private Task? _terrainPreparation;
     private Task? _landingPointsPreparation;
@@ -30,11 +30,11 @@ internal sealed class WalkTerrainPreparation
         _landingPointsPreparation = _terrain!.PreparePoints(map, points);
     }
 
-    public void PrepareSavedHistory(WalkSafePoints history)
+    public async Task PrepareRestorePoints(IMapContext map, IReadOnlyList<Pose> points, CancellationToken cancellation)
     {
-        var points = history.Points.Select(p => new N.Vector2(p.Position.X, p.Position.Z)).ToArray();
-        var preparation = _terrain!.PreparePoints(_map!, points);
-        _landingPointsPreparation = _landingPointsPreparation is { } authored ? Task.WhenAll(authored, preparation) : preparation;
+        await _terrain!.PreparePoints(map, points.Select(p => new N.Vector2(p.Position.X, p.Position.Z)).ToArray(), cancellation);
+        cancellation.ThrowIfCancellationRequested();
+        if (!ReferenceEquals(_map, map)) throw new OperationCanceledException("Walking restore map was replaced.");
     }
 
     public bool CompleteLandingPoints()

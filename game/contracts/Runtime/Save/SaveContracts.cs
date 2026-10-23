@@ -60,6 +60,8 @@ public readonly record struct CaptureContext(SaveReason Reason, MapId Map, bool 
 {
     /// <summary>The shared settled endpoint captured once for every section in this save.</summary>
     public required WorldSaveMoment Moment { get; init; }
+    /// <summary>Captured once by the camera/walk owners before any section is captured.</summary>
+    public required ObserverSaveSnapshot Observer { get; init; }
 }
 // Forced：此刻不是安全时刻（退出，或顺延满 60 s），各段必须给出落定值（SYS-SAVE）
 public sealed class RestoreContext

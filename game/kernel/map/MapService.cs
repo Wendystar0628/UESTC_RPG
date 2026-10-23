@@ -34,7 +34,6 @@ public sealed class MapService(ICameraRig camera, IMapLifetime lifetime, IWorldM
     private Task? _drain;
     private bool _stopped;
     private bool _disposed;
-    private MapId _savedCurrent;
 
     public long Rev { get; private set; }
     public MapId Default => (_catalog ?? throw new InvalidOperationException("Map catalogue is not initialized.")).Default;
@@ -143,7 +142,6 @@ public sealed class MapService(ICameraRig camera, IMapLifetime lifetime, IWorldM
                 if (_mount is not { IsCompleted: true }) return;
                 _mount.GetAwaiter().GetResult();
                 Current = _target!.Descriptor.Id;
-                _savedCurrent = Current;
                 Rev++;
                 Finish(MapTravelResult.Arrived);
                 break;
@@ -216,19 +214,15 @@ public sealed class MapService(ICameraRig camera, IMapLifetime lifetime, IWorldM
 
     private sealed record PendingMapLoad(MapLoadInput Input, WorldModelLoadResult World);
 
-    private void RememberCurrent()
-    {
-        if (Context is null || string.IsNullOrEmpty(Current.Value)) return;
-        _visits[Current] = new(Current, _camera.Pose with { FovDeg = null }, _camera.Mode);
-    }
-
     private IReadOnlyList<MapVisit> SnapshotVisits() => Array.AsReadOnly(_visits.Values
         .OrderBy(v => v.Map.Value, StringComparer.Ordinal).ToArray());
 
     public MapsSave Capture(in CaptureContext context)
     {
-        if (_active is null) RememberCurrent();
-        return new(_active is null ? Current : _savedCurrent, SnapshotVisits());
+        var observer = context.Observer;
+        var visit = new MapVisit(observer.Map, observer.View.Pose, observer.View.Mode);
+        return new(observer.Map, _visits.Values.Where(v => v.Map != observer.Map).Append(visit)
+            .OrderBy(v => v.Map.Value, StringComparer.Ordinal).ToArray());
     }
 
     public void Restore(MapsSave dto, RestoreContext context)
@@ -250,7 +244,6 @@ public sealed class MapService(ICameraRig camera, IMapLifetime lifetime, IWorldM
         if (!restored.ContainsKey(dto.Current)) throw new InvalidDataException("Saved current map has no visit.");
         _visits.Clear();
         foreach (var visit in restored.Values.OrderBy(v => v.Map.Value, StringComparer.Ordinal)) _visits.Add(visit.Map, visit);
-        _savedCurrent = dto.Current;
     }
 
     public MapsSave CreateDefault(NewGameContext context)

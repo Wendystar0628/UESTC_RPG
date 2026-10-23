@@ -16,6 +16,7 @@ internal static class CoreRuntimeSnapshot
     {
         var map = KernelServices.Get<IMapService>();
         var moment = KernelServices.Get<IWorldRestore>().GetSaveMoment();
+        var observer = KernelServices.Get<ICameraRig>().CaptureSettledObserver(map.Current);
         var entries = KernelServices.Services.Query<ISaveSection>(RegistrationKind.Save)
             .OrderBy(entry => entry.Id, StringComparer.Ordinal).ThenBy(entry => entry.Scope).ToArray();
         if (!new[] { "world", "maps", "weather", "view", "walk" }.All(id => entries.Any(entry => entry.Id == id)))
@@ -33,7 +34,7 @@ internal static class CoreRuntimeSnapshot
                     : map.Visits.Select(visit => visit.Map).Append(map.Current).Distinct().OrderBy(id => id.Value, StringComparer.Ordinal).ToArray())
                 {
                     writer.WritePropertyName(attribute.Scope == SaveScope.Global ? entry.Id : "map:" + sectionMap.Value + "/" + entry.Id);
-                    var context = new CaptureContext(SaveReason.Test, sectionMap, false) { Moment = moment };
+                    var context = new CaptureContext(SaveReason.Test, sectionMap, false) { Moment = moment, Observer = observer };
                     JsonSerializer.Serialize(writer, section.Capture(in context), section.TypeInfo);
                 }
             }

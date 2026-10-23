@@ -31,7 +31,7 @@ public sealed class AtlasServiceTests
         AssertThat(!ReferenceEquals(test.Atlas.TypeInfo.Options, ContractJson.Options)).OverrideFailureMessage("Atlas context bound the shared options instance.").IsTrue();
         var pin = test.Atlas.AddPin(new(10, 20), PinShape.Flag)!;
         test.Atlas.Track(new("pin:" + pin.Id));
-        var capture = new CaptureContext(SaveReason.Test, test.Context.Descriptor.Id, false) { Moment = new WorldSaveMoment(0, 0, Season.Autumn, 0) };
+        var capture = new CaptureContext(SaveReason.Test, test.Context.Descriptor.Id, false) { Moment = new WorldSaveMoment(0, 0, Season.Autumn, 0), Observer = new(test.Context.Descriptor.Id, new(ViewMode.Fly, default, null, 1, 1), null) };
         var saved = test.Atlas.Capture(in capture);
         var bytes = JsonSerializer.SerializeToUtf8Bytes(saved, test.Atlas.TypeInfo);
         var decoded = JsonSerializer.Deserialize(bytes, test.Atlas.TypeInfo)!;
@@ -203,8 +203,8 @@ public sealed class AtlasServiceTests
         var test = new Fixture();
         test.Observer.Feet = new(100, 0, 100);
         test.Atlas.Travel(new("test-kiosk"), TravelStyle.Teleport);
-        var forced = new CaptureContext(SaveReason.Quit, test.Context.Descriptor.Id, true) { Moment = new WorldSaveMoment(0, 0, Season.Autumn, 0) };
-        var settled = new CaptureContext(SaveReason.Test, test.Context.Descriptor.Id, false) { Moment = new WorldSaveMoment(0, 0, Season.Autumn, 0) };
+        var forced = new CaptureContext(SaveReason.Quit, test.Context.Descriptor.Id, true) { Moment = new WorldSaveMoment(0, 0, Season.Autumn, 0), Observer = new(test.Context.Descriptor.Id, new(ViewMode.Fly, default, null, 1, 1), null) };
+        var settled = new CaptureContext(SaveReason.Test, test.Context.Descriptor.Id, false) { Moment = new WorldSaveMoment(0, 0, Season.Autumn, 0), Observer = new(test.Context.Descriptor.Id, new(ViewMode.Fly, default, null, 1, 1), null) };
         AssertThat(test.Atlas.Capture(in forced).VisitedAnchors.Contains("test-kiosk")).OverrideFailureMessage("Forced snapshot omitted terminal anchor.").IsTrue();
         AssertThat(test.Atlas.Capture(in settled).VisitedAnchors.Count == 0).OverrideFailureMessage("Forced capture changed live visit state.").IsTrue();
         test.Camera.Handle!.Cancel();
@@ -372,7 +372,7 @@ public sealed class AtlasServiceTests
     private sealed class Driver : ITransitDriver
     {
         public bool IsReady { get; set; } = true;
-        public Pose? Destination => null;
+        public ObserverSaveSnapshot? SaveSnapshot => null;
         public ITransitHandle Start(Pose from, Pose to, TransitOptions? options = null) => throw new NotSupportedException();
         public ITransitHandle SwitchMode(Func<CancellationToken, Task<ModeSwitchResult>> apply) => throw new NotSupportedException();
         public Task CancelAsync() => Task.CompletedTask;

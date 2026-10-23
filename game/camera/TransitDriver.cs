@@ -1,5 +1,6 @@
 using Campus.Contracts;
 using Campus.Contracts.Maps;
+using Campus.Contracts.Save;
 using Campus.Kernel.Diagnostics;
 using Godot;
 using N = System.Numerics;
@@ -22,8 +23,7 @@ public sealed class TransitDriver(ICameraRig camera, IAppLoadingPresentation loa
     private bool _disposed;
 
     public bool IsReady => !_disposed;
-    public Pose? Destination => _active is { Finished: false } active
-        ? active.Arrival?.Destination.Pose ?? (active.TerrainReady ? active.To : null) : null;
+    public ObserverSaveSnapshot? SaveSnapshot => _active is { Finished: false } active ? active.SaveSnapshot : null;
 
     public ITransitHandle Start(Pose from, Pose to, TransitOptions? options = null)
     {
@@ -47,6 +47,9 @@ public sealed class TransitDriver(ICameraRig camera, IAppLoadingPresentation loa
     {
         ObjectDisposedException.ThrowIf(_disposed, this);
         if (_drain is not null) throw new InvalidOperationException("Transit execution is draining.");
+        // This is the request boundary, before any display or placement can move. Preserve
+        // the current accepted state once, including normal movement since the previous request.
+        run.SaveSnapshot = camera.CaptureSettledObserver(maps.Current);
         _active?.Cancel();
         _executions.RemoveAll(execution => execution.Execution.IsCompleted && execution.Done.IsCompleted);
         _executions.Add(run);
@@ -113,6 +116,8 @@ public sealed class TransitDriver(ICameraRig camera, IAppLoadingPresentation loa
                 // covered-screen, arrival, cancellation and failure lifecycle for every entry.
                 var applied = await apply(run.Token);
                 run.Token.ThrowIfCancellationRequested();
+                if (applied is ModeSwitchResult.Ok or ModeSwitchResult.Relocated)
+                    AcceptModeSnapshot(run);
                 destination = applied switch
                 {
                     ModeSwitchResult.Ok or ModeSwitchResult.Relocated => camera.Mode switch
@@ -164,6 +169,19 @@ public sealed class TransitDriver(ICameraRig camera, IAppLoadingPresentation loa
         }
     }
 
+    private void AcceptModeSnapshot(TransitRun run)
+    {
+        var map = maps.Context ?? throw new InvalidOperationException("Mode entry has no mounted map.");
+        int speed = camera.Mode switch
+        {
+            ViewMode.Fly => run.SaveSnapshot.View.FlySpeedStep,
+            ViewMode.Walk => walk?.SpeedStep ?? throw new InvalidOperationException("Mode entry has no walking owner."),
+            _ => throw new InvalidOperationException("Unknown view mode.")
+        };
+        run.SaveSnapshot = ObserverViewSave.Capture(camera, map.Descriptor.Id, speed,
+            run.SaveSnapshot.View.FlySpeedStep, walk, map);
+    }
+
     private async Task<IMapArrival> PlaceDestination(SceneTree tree, IWalkController? body, TransitRun run)
     {
         if (body is null)
@@ -204,7 +222,16 @@ public sealed class TransitDriver(ICameraRig camera, IAppLoadingPresentation loa
             run.Cancel();
             return false;
         }
-        run.TerrainReady = true;
+        var walking = run.SaveSnapshot.Walk;
+        if (camera.Mode == ViewMode.Walk)
+        {
+            if (walk is null) throw new InvalidOperationException("Walking transit requires its state owner.");
+            walking = walk.CaptureSettled(new(run.LandOn ?? run.To.Position, run.To.YawDeg, 0));
+        }
+        var pose = camera.Mode == ViewMode.Walk && walking is not null ? walking.EyePose() : run.To with { FovDeg = null };
+        var view = run.SaveSnapshot.View with { Mode = camera.Mode, Pose = pose, Space = ObserverViewSave.SpaceAt(context, pose) };
+        // Acceptance is atomic and happens only after every spatial query can use prepared data.
+        run.SaveSnapshot = new(context.Descriptor.Id, view, walking);
         return true;
     }
 
@@ -240,7 +267,7 @@ public sealed class TransitDriver(ICameraRig camera, IAppLoadingPresentation loa
         public Pose To => to;
         public N.Vector3? LandOn => landOn;
         public bool Cancelled { get; private set; }
-        public bool TerrainReady { get; set; }
+        public ObserverSaveSnapshot SaveSnapshot { get; set; } = null!;
         public bool Finished => _done.Task.IsCompleted;
         public IMapArrival? Arrival { get; set; }
         public Func<CancellationToken, Task<ModeSwitchResult>>? ApplyMode { get; init; }

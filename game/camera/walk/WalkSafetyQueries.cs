@@ -8,7 +8,7 @@ namespace Campus.Camera.Walk;
 /// <summary>Pure position hints and registered region rules; native support is resolved after collision mounts.</summary>
 public static class WalkSafetyQueries
 {
-    public static WalkSave CreateDefault(IMapService maps, NewGameContext context) =>
+    public static WalkSaveData CreateDefault(IMapService maps, NewGameContext context) =>
         new(context.Boot?.Destination is { Mode: ViewMode.Walk } destination
             ? destination.Pose with { Position = destination.CollisionFeet ?? destination.Pose.Position - Vector3.UnitY * WalkRules.StandingEye }
             : DefaultFeet(maps, context.Map), false, WalkRules.DefaultSpeedStep, []);

@@ -1,11 +1,9 @@
 using System.Text.Json.Serialization;
-using Campus.Contracts;
+using Campus.Contracts.Save;
 
 namespace Campus.Camera.Walk;
 
-public sealed record WalkSave(Pose Feet, bool Crouching, int SpeedStep, IReadOnlyList<Pose> SafePoints);
-
 [JsonSourceGenerationOptions(PropertyNamingPolicy = JsonKnownNamingPolicy.CamelCase,
     DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull)]
-[JsonSerializable(typeof(WalkSave))]
+[JsonSerializable(typeof(WalkSaveData))]
 public partial class WalkSaveJsonContext : JsonSerializerContext;

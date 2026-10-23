@@ -101,7 +101,7 @@ public sealed class WorldRestoreTests
         var before = (world.WorldHours, world.Clock, world.SeasonPos, world.AnimTime,
             world.Rev, world.Instance, weather.Steps.Count);
         var moment = world.GetSaveMoment();
-        var context = new CaptureContext(SaveReason.Quit, new("test-world"), true) { Moment = moment };
+        var context = new CaptureContext(SaveReason.Quit, new("test-world"), true) { Moment = moment, Observer = new(new("test-world"), new(ViewMode.Fly, default, null, 1, 1), null) };
         var captured = world.Capture(in context);
         AssertThat(moment.WorldHours).IsEqual(captured.WorldHours);
         AssertThat(moment.ClockOffset).IsEqual(captured.ClockOffset);

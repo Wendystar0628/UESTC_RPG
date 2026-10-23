@@ -396,13 +396,14 @@ public sealed class SaveLifecycleTests
         AssertThat(fixture.Save.Slots[0].Meta?.Gen == 1 && fixture.Camera.Locks == 0 && fixture.Diagnostics.Errors.Count == 0).IsTrue();
     }
 
-    private sealed class Fixture : IDisposable
+    internal sealed class Fixture : IDisposable
     {
         public SaveService Save { get; } = new();
         public FakeWorld World { get; }
         public FakeCamera Camera { get; }
         public FakeMaps Maps { get; }
         public FakeWeather Weather { get; } = new();
+        public SettledObserverSaveTests.FakeWalk? Walk { get; init; }
         public TestDiagnosticLog Diagnostics { get; } = new();
         public int ExpectedErrors { get; init; }
         private readonly TestAppFlow _flow = new();
@@ -430,11 +431,18 @@ public sealed class SaveLifecycleTests
             var rules = new TestRuleset("test-policy", id: "test-rules");
             var bindings = new SaveRuntimeBindings(World, Maps, Camera, Camera, rules, new FakeAtlas(Maps), new TestAppLoadingPresentation(), _flow, Diagnostics,
                 _ => { }, World, WaitDestination,
-                () => { ThumbnailCaptures++; return ThumbnailBarrier?.Task ?? Task.FromResult(NextThumbnail); }, () => 1792082400, pose => Task.FromResult(pose));
-            var sections = new SaveSections([
+                () => { ThumbnailCaptures++; return ThumbnailBarrier?.Task ?? Task.FromResult(NextThumbnail); }, () => 1792082400, pose => Task.FromResult(pose))
+            {
+                PrepareWalk = Walk is { } walk ? walk.Prepare : null
+            };
+            var registrations = new List<SaveSectionRegistration>
+            {
                 new(new("world") { Phase = RestorePhase.World, Order = 10 }, World),
                 new(new("weather") { Phase = RestorePhase.World, Order = 21 }, Weather),
-                new(new("view") { Phase = RestorePhase.Pose, Order = 60 }, Camera)]);
+                new(new("view") { Phase = RestorePhase.Pose, Order = 60 }, Camera)
+            };
+            if (Walk is not null) registrations.Add(new(new("walk") { Phase = RestorePhase.Pose, Order = 61 }, Walk));
+            var sections = new SaveSections(registrations);
             await Pump(Save.Initialize(new(directory, true, null, null, 1), bindings, sections));
         }
         private async Task WaitDestination(Pose pose, NavSpace? space, ViewMode mode)
@@ -474,7 +482,7 @@ public sealed class SaveLifecycleTests
         }
     }
 
-    private sealed class FakeWorld(Func<bool> inFrame, List<string> log) : IWorldState, IWorldRestore, ISaveSection<WorldSaveV1>
+    internal sealed class FakeWorld(Func<bool> inFrame, List<string> log) : IWorldState, IWorldRestore, ISaveSection<WorldSaveV1>
     {
         public double Hours { get; set; } = 17.5;
         public Exception? CaptureFailure { get; set; }
@@ -516,15 +524,17 @@ public sealed class SaveLifecycleTests
         public WorldSaveV1 CreateDefault(NewGameContext context) =>
             new(context.Start.Clock, 0, (int)context.Start.Season, context.Start.Season, BaseFlow.Rate, BaseFlow.Rate, AnimTime);
     }
-    private sealed class FakeCamera(Func<bool> inFrame, List<string> log)
+    internal sealed class FakeCamera(Func<bool> inFrame, List<string> log)
         : TestCameraRig(null, new Pose(new Vector3(1, 2, 3), 0, 0)), IObserverState, ISaveSection<ViewSaveData>
     {
+        public ObserverSaveSnapshot? Held { get; set; }
+        public override ObserverSaveSnapshot CaptureSettledObserver(MapId map) => Held ?? base.CaptureSettledObserver(map);
         public Action? BeforeDefault { get; set; }
         public Exception? RestoreFailure { get; set; }
         public NewGameContext? DefaultContext { get; private set; }
         public Vector3 Feet => Pose.Position; public Vector3 Eye => Pose.Position; public float YawDeg => Pose.YawDeg; public NavSpace? Space => null;
         public JsonTypeInfo<ViewSaveData> TypeInfo => LifecycleJsonContext.Strict.ViewSaveData;
-        public ViewSaveData Capture(in CaptureContext context) { AssertThat(inFrame()).OverrideFailureMessage("View capture outside Save frame.").IsTrue(); return new(Mode, Pose, Space, 1, 1); }
+        public ViewSaveData Capture(in CaptureContext context) { AssertThat(inFrame()).OverrideFailureMessage("View capture outside Save frame.").IsTrue(); return context.Observer.View; }
         public void Restore(ViewSaveData dto, RestoreContext context)
         {
             AssertThat(inFrame()).OverrideFailureMessage("Pose restore outside Save frame.").IsTrue();
@@ -537,7 +547,7 @@ public sealed class SaveLifecycleTests
             return new(context.Mode, new(new Vector3(1, 2, 3), 0, 0), null, 1, 1);
         }
     }
-    private sealed class FakeWeather : ISaveSection<LifecycleWeather>
+    internal sealed class FakeWeather : ISaveSection<LifecycleWeather>
     {
         public double LastTickHours { get; set; } = 17.5;
         public WorldSaveMoment? CapturedMoment { get; private set; }
@@ -552,7 +562,7 @@ public sealed class SaveLifecycleTests
         { if (RestoreFailure is { } failure) throw failure; LastTickHours = dto.AtHours; }
         public LifecycleWeather CreateDefault(NewGameContext context) => new(new(WeatherMode.Auto, WeatherKind.Clear, 0), context.Start.Clock);
     }
-    private sealed class FakeMaps : TestMapService
+    internal sealed class FakeMaps : TestMapService
     {
         private static readonly MapId Id = new("test-map");
         private readonly List<string> _log;
@@ -604,6 +614,7 @@ public sealed record LifecycleWeather(WeatherSel Selection, double AtHours);
 [JsonSerializable(typeof(WorldSaveV1))]
 [JsonSerializable(typeof(ViewSaveData))]
 [JsonSerializable(typeof(LifecycleWeather))]
+[JsonSerializable(typeof(WalkSaveData))]
 internal partial class LifecycleJsonContext : JsonSerializerContext
 {
     internal static LifecycleJsonContext Strict { get; } = new(new JsonSerializerOptions(ContractJson.Options)

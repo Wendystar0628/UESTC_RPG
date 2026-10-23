@@ -1,4 +1,5 @@
 using Campus.Contracts;
+using Campus.Contracts.Save;
 
 namespace Campus.Tests;
 
@@ -9,6 +10,8 @@ namespace Campus.Tests;
 /// </summary>
 internal class TestCameraRig(IViewControl? view = null, Pose? pose = null, bool transit = false) : ICameraRig
 {
+    public virtual ObserverSaveSnapshot CaptureSettledObserver(MapId map) =>
+        new(map, new(Mode, Pose with { FovDeg = null }, null, 1, 1), null);
     public float RollDeg => 0;
     private readonly Dictionary<InputLockReason, int> _locks = [];
     private ViewMode? _mode;

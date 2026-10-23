@@ -15,4 +15,8 @@ public sealed record SaveRuntimeBindings(IWorldState World, IMapService Maps, IC
     IObserverState Observer, IRuleset Ruleset, IAtlasService Atlas, IAppLoadingPresentation Loading,
     IAppFlow AppFlow, IDiagnosticLog Diagnostics, Action<RulesetId> SelectRuleset, IWorldRestore WorldRestore,
     Func<Pose, NavSpace?, ViewMode, Task> WaitDestination, Func<Task<byte[]?>> CaptureThumbnail, Func<long> UnixTime,
-    Func<Pose, Task<Pose>>? PreparePose = null);
+    Func<Pose, Task<Pose>>? PreparePose = null)
+{
+    /// <summary>Invoked on the save frame; finishes terrain/history repairs before the immediate Pose restores.</summary>
+    public Func<WalkSaveData, RestoreContext, CancellationToken, Task<WalkSaveData>>? PrepareWalk { get; init; }
+}

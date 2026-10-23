@@ -8,19 +8,27 @@ namespace Campus.Camera;
 /// <summary>The view section's settled-pose, mode-admission and speed projection policy.</summary>
 internal static class ObserverViewSave
 {
-    public static ViewSaveData Capture(ObserverCamera camera, int flySpeedStep, ITransitDriver? transit,
-        IWalkController? walk, IMapContext? map)
+    public static ObserverSaveSnapshot Capture(ICameraRig camera, MapId map, int speedStep, int flySpeedStep,
+        IWalkController? walk, IMapContext? context)
     {
-        Pose settled = (camera.ActiveTransit is not null ? transit?.Destination : null) ?? (camera.Mode switch
+        if (context is null || context.Descriptor.Id != map) throw new InvalidOperationException("Cannot capture an observer before its map is mounted.");
+        var walking = walk?.CaptureSettled();
+        Pose settled = camera.Mode switch
         {
             ViewMode.Fly => camera.Pose,
-            ViewMode.Walk => walk?.SettledEyePose ?? camera.Pose,
+            ViewMode.Walk when walking is not null => walking.EyePose(),
+            ViewMode.Walk => throw new InvalidOperationException("Walking persistence is unavailable."),
             _ => throw new InvalidOperationException("Unknown view mode.")
-        });
-        var medium = map?.World.Spatial.MediumAt(settled.Position);
-        NavSpace? space = medium is { } current && current.Kind == MediumKind.Interior && current.Feature is { } feature
-            ? new(feature, checked((short)current.Storey)) : null;
-        return new(camera.Mode, settled with { FovDeg = null }, space, camera.SpeedStep, flySpeedStep);
+        };
+        return new(map, new(camera.Mode, settled with { FovDeg = null }, SpaceAt(context, settled),
+            speedStep, flySpeedStep), walking);
+    }
+
+    public static NavSpace? SpaceAt(IMapContext map, Pose pose)
+    {
+        var medium = map.World.Spatial.MediumAt(pose.Position);
+        return medium.Kind == MediumKind.Interior && medium.Feature is { } feature
+            ? new(feature, checked((short)medium.Storey)) : null;
     }
 
     public static ViewMode ValidateRestore(ViewSaveData data, IRuleset? rules, IWalkController? walk)

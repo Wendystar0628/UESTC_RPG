@@ -1,12 +1,15 @@
 using System.Numerics;
 using System.Text.Json.Serialization;
 using Campus.Contracts.Audio;
+using Campus.Contracts.Save;
 
 namespace Campus.Contracts;
 
 public interface ICameraRig
 {
     Pose Pose { get; }
+    /// <summary>Captures the held accepted destination, or the current settled owner state, without I/O or mutation.</summary>
+    ObserverSaveSnapshot CaptureSettledObserver(MapId map);
     /// <summary>Presentation-only roll, zero for explicit poses and outside live walking.</summary>
     float RollDeg { get; }
     float Speed { get; }

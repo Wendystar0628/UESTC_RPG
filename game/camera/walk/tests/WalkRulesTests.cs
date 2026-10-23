@@ -113,11 +113,11 @@ public sealed class WalkRulesTests
     [TestCategory(TestReason.Contract)]
     public void SaveRoundTripKeepsFeetLookCrouchSpeedAndSafePoints()
     {
-        var dto = new WalkSave(new(new(12.25f, 3, -7), 83, -12), true, 4,
+        var dto = new WalkSaveData(new(new(12.25f, 3, -7), 83, -12), true, 4,
             [new(new(11, 3, -7), 45, 9), new(new(10, 3, -7), 0, 0)]);
         var context = new WalkSaveJsonContext(new JsonSerializerOptions(ContractJson.Options));
-        var json = JsonSerializer.Serialize(dto, context.WalkSave);
-        var restored = JsonSerializer.Deserialize(json, context.WalkSave)!;
+        var json = JsonSerializer.Serialize(dto, context.WalkSaveData);
+        var restored = JsonSerializer.Deserialize(json, context.WalkSaveData)!;
         AssertThat(restored.Feet == dto.Feet && restored.Crouching && restored.SpeedStep == 4).OverrideFailureMessage("Walk save lost its physical state.").IsTrue();
         AssertThat(restored.SafePoints.SequenceEqual(dto.SafePoints)).OverrideFailureMessage("Walk save lost the existing safePoints field.").IsTrue();
         AssertThat(!json.Contains("velocity", StringComparison.OrdinalIgnoreCase)).OverrideFailureMessage("Transient velocity leaked into the save.").IsTrue();
@@ -228,6 +228,65 @@ public sealed class WalkRulesTests
         try { WalkSafetyQueries.DefaultFeet(maps, new("unknown-fixture")); }
         catch (ArgumentException) { unknownMapRejected = true; }
         AssertThat(unknownMapRejected).OverrideFailureMessage($"Expected {typeof(ArgumentException).Name}; a default feet position was invented instead.").IsTrue();
+    }
+
+    [TestCase, TestCategory(TestReason.Regression)]
+    public async Task RestorePreparationValidatesHistoryAfterTerrainAndFinishesEveryRepairBeforeCommit()
+    {
+        var terrain = new HistoryTerrain();
+        var map = new TestMapContext(FlightBoundsTests.CreateContext().Descriptor, new FakeWorld { Spatial = terrain });
+        var preparation = new WalkTerrainPreparation(terrain);
+        preparation.BindMap(map);
+        var safe = new Pose(new(1, 0, 1), 15, 0);
+        var unsafePoint = new Pose(new(2, -1, 2), 0, 0);
+        var invalid = new Pose(new(float.NaN, 0, 0), 0, 0);
+        var dto = new WalkSaveData(invalid with { YawDeg = 43, PitchDeg = 120 }, true, WalkRules.SpeedStepCount,
+            [safe, unsafePoint, invalid, new(new(1000, 0, 0), 0, 0)]);
+        var context = new RestoreContext { Map = map.Descriptor.Id, FromVersion = 1, Missing = false };
+        var preparing = WalkPersistence.PrepareRestore(dto, context, map, preparation, new(new(0, 0, 0), 0, 0), default);
+        await terrain.Entered.Task;
+        AssertThat(!preparing.IsCompleted && terrain.Queries == 0 && !terrain.Prepared).IsTrue();
+        terrain.Release.SetResult();
+        var prepared = await preparing;
+        AssertThat(prepared.SafePoints.SequenceEqual(new[] { safe }) && prepared.Feet.Position == safe.Position
+            && prepared.Feet.YawDeg == 43 && prepared.Feet.PitchDeg == 89
+            && prepared.SpeedStep == WalkRules.SpeedStepCount - 1).IsTrue();
+        AssertThat(context.Repairs.Contains("walk: unsafe history point removed")
+            && context.Repairs.Contains("walk: invalid feet replaced by a pending landing origin")
+            && dto.SafePoints.Count == 4 && float.IsNaN(dto.Feet.Position.X)).IsTrue();
+        int repairs = context.Repairs.Count;
+        await Task.Yield();
+        AssertThat(context.Repairs.Count == repairs).OverrideFailureMessage("Preparation left a late repair writer.").IsTrue();
+    }
+
+    private sealed class HistoryTerrain : ITerrainPreparation, ISpatialIndex
+    {
+        public TaskCompletionSource Entered { get; } = new();
+        public TaskCompletionSource Release { get; } = new();
+        public bool Prepared { get; private set; }
+        public int Queries { get; private set; }
+        public bool IsPrepared(IWorldModel world, Vector2 point) => Prepared;
+        public Task PrepareRegion(IMapContext context, MapRect region, CancellationToken cancellation = default) => throw new NotSupportedException();
+        public async Task PreparePoints(IMapContext context, IReadOnlyList<Vector2> points, CancellationToken cancellation = default)
+        {
+            AssertThat(points.All(point => float.IsFinite(point.X) && float.IsFinite(point.Y))).IsTrue();
+            Entered.TrySetResult();
+            await Release.Task.WaitAsync(cancellation);
+            Prepared = true;
+        }
+        public IReadOnlyList<FeatureId> Query(Box3 box) => [];
+        public float GroundY(float x, float z) => 0;
+        public CameraMedium MediumAt(Vector3 position)
+        {
+            if (!Prepared) throw new InvalidOperationException("History queried terrain before preparation.");
+            Queries++;
+            return position.Y < 0 ? new(MediumKind.Underwater) : new(MediumKind.Air);
+        }
+        public WalkClass WalkClassAt(float x, float z)
+        {
+            if (!Prepared) throw new InvalidOperationException("History queried terrain before preparation.");
+            return WalkClass.Walk;
+        }
     }
 
     private static (MapCatalogEntry Entry, IMapContext Context) LoadCampusSpawnFixture()
