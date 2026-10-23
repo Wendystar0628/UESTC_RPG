@@ -37,7 +37,7 @@ public partial class KeyLightDirector : Node, IQualityAware
     private IWorldState? _world;
     private IKeyLightPublisher? _state;
     private DirectionalLight3D? _light;
-    private ShadowSettings _settings = ShadowSettings.From(1, 1600f);
+    private ShadowSettings _settings = ShadowSettings.From(1, ShadowSettings.MaximumDistance);
     private N.Vector3 _writtenDir = new(float.NaN);
     private N.Vector3 _writtenOvercast = new(float.NaN);
 

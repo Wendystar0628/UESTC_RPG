@@ -129,7 +129,14 @@ BINDINGS = [('game/contracts/Materials/PaletteEncoding.cs', 'FirstSeasonalRow', 
   None),
  ('game/style/palette/keys/ColorScriptCurves.cs', 'NightSideFromDeg', 'SKY_NIGHT_SIDE_FROM', None, None),
  ('game/style/palette/keys/ColorScriptCurves.cs', 'NightSideToDeg', 'SKY_NIGHT_SIDE_TO', None, None),
- ('game/systems/vegetation/VegFade.cs', 'CloudReady', 'VEG_CLOUD_READY', None, None),
+ ('game/systems/vegetation/VegetationBuckets.cs', 'L0PlusDistance', 'VEG_LOD_L0', None, None),
+ ('game/systems/vegetation/VegetationBuckets.cs', 'L0Distance', 'VEG_LOD_L1', None, None),
+ ('game/systems/vegetation/VegetationBuckets.cs', 'ReferenceTreeHeight', 'VEG_TREE_REFERENCE_HEIGHT', None, None),
+ ('game/contracts/Spatial/TileGrid.cs', 'BaseEdge', 'VEG_NEAR_CELL_METRES', 'float', None),
+ ('game/contracts/Materials/RenderFade.cs', 'Seconds', 'TOON_FADE_SECONDS', None, None),
+ ('game/contracts/Runtime/Rendering/GlobalDataTextures.cs', 'TextureWidth', 'VEG_TRANSITION_WIDTH', 'int', None),
+ ('game/contracts/World/WorldTime.cs', 'AnimLoopSeconds', 'VEG_NEAR_START_BIAS_SECONDS', None, None),
+ ('game/systems/vegetation/VegFade.cs', 'LevelBandFraction', 'VEG_LEVEL_BAND_FRACTION', None, None),
  ('game/gen/vegetation/Understorey.cs', 'UnderVariantBit', 'VEG_VARIANT_UNDER', None, None)]
 
 # Only existing shader consumers are named here; their indices live in core.json.
@@ -170,8 +177,6 @@ PALETTE_BINDINGS = [
 
 # Existing scalar rule pairs form the shader's distance bands.
 VECTOR_BINDINGS = [
-    ('game/systems/vegetation/VegFade.cs', 'NearFadeStart', 'NearFadeEnd', 'VEG_POOL_FADE'),
-    ('game/systems/vegetation/VegFade.cs', 'CloudFadeStart', 'CloudFadeEnd', 'VEG_CLOUD_FADE'),
     ('game/gen/vegetation/Understorey.cs', 'FadeStart', 'DrawDistance', 'VEG_UNDER_FADE'),
 ]
 

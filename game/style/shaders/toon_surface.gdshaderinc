@@ -82,7 +82,7 @@ vec3 toon_analytic_normal(vec3 vtx, vec3 n_mesh, vec3 c, vec3 axis, int mode) {
 	return l > 1e-5 ? n / l : n_mesh;
 }
 
-// 4×4 Bayer 抖动淡化（ENG-PERF）：进度 = (fade_clock − |fade_t0|) / 0.25 s
+// 4×4 Bayer 抖动淡化（ENG-PERF）：持续时间由 RenderFade 生成的 TOON_FADE_SECONDS 提供
 const float TOON_BAYER[16] = float[](
 		0.0, 8.0, 2.0, 10.0,
 		12.0, 4.0, 14.0, 6.0,
@@ -93,7 +93,7 @@ bool toon_fade_discard(vec2 frag_xy) {
 	if (fade_t0 == 0.0) {
 		return false;
 	}
-	float p = clamp(mod(fade_clock - abs(fade_t0), anim_loop_seconds) / 0.25, 0.0, 1.0);
+	float p = clamp(mod(fade_clock - abs(fade_t0), anim_loop_seconds) / TOON_FADE_SECONDS, 0.0, 1.0);
 	int ix = int(mod(frag_xy.x, 4.0));
 	int iy = int(mod(frag_xy.y, 4.0));
 	float b = (TOON_BAYER[iy * 4 + ix] + 0.5) / 16.0;

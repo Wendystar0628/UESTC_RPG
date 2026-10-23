@@ -22,7 +22,7 @@ const float VEG_TWIG_MASS_MOTTLE = 0.35;            // 体内不透明度的起�
 const vec2 VEG_TWIG_MASS_PX = vec2(1.5, 4.0);       // 噪声格在屏幕上从前者到后者个像素，碎边与起伏从 0 放到满（远处不闪）
 const float VEG_TWIG_MASS_SNOW = 0.35;              // 覆雪只留这个比例：落叶树只在枝梢镶一线雪，不像常绿树冠顶一层白
 
-varying flat int v_row;       // 位 0–5 树种号（−1 记成 63），位 6 起是远近池交接的编码 × 1000（veg_pool_code）
+varying flat int v_row;       // 位 0–5 树种号（−1 记成 63），位 6 起是远近池交接的10-bit coverage interval（veg_pool_code）
 varying flat vec2 v_tint;
 varying flat float v_hash;
 varying float v_weight;
@@ -34,8 +34,8 @@ void vertex() {
 	vec3 cam = MAIN_CAM_INV_VIEW_MATRIX[3].xyz;
 	v_tint = veg_tint_noise(origin);
 	v_hash = CUSTOM0.w;
-	float fade = veg_pool_code(cam, origin, inst, CUSTOM2.w > 0.5, IN_SHADOW_PASS);
-	v_row = (inst.row & 63) | (int(round(fade * 1000.0)) << 6);
+	int fade = veg_pool_code(cam, origin, inst, CUSTOM2.w > 0.5, IN_SHADOW_PASS, INSTANCE_ID);
+	v_row = (inst.row & 63) | (fade << 6);
 	float a = veg_anchor(sp.a, veg_local_season(inst));
 	v_weight = (1.0 - smoothstep(0.15, 0.6, a)) * veg_winter_far(cam, origin, inst);
 	vec3 dir_m = normalize(inverse(mat3(MODEL_MATRIX)) * vec3(wind.x, 0.0, wind.y) + vec3(1e-5, 0.0, 0.0));
@@ -48,7 +48,7 @@ void vertex() {
 }
 
 void fragment() {
-	if (veg_pool_discard(FRAGCOORD.xy, float(v_row >> 6) / 1000.0)) {
+	if (veg_pool_discard(FRAGCOORD.xy, v_row >> 6)) {
 		discard;
 	}
 	TOON_FRAGMENT_BEGIN

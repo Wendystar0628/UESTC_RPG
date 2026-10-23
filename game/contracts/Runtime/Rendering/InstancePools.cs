@@ -47,7 +47,7 @@ public interface IInstancePool
     /// <summary>Sets a registered vec4 instance uniform; scalar and unregistered names are rejected.</summary>
     void SetParameter(StringName name, Vector4 value);
 
-    /// <summary>Sets an approved scalar instance uniform. Initial vegetation support permits ShadowProxy only; unsupported hosts fail explicitly.</summary>
+    /// <summary>Sets an approved scalar instance uniform (ShadowProxy, VegLevel or VegTransitionBase); unsupported hosts fail explicitly.</summary>
     void SetParameter(StringName name, float value) =>
         throw new NotSupportedException("This instance-pool implementation does not support scalar instance parameters.");
 

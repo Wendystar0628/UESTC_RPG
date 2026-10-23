@@ -6,7 +6,7 @@
 // 插片 3–5 张一簇（簇心压进团块），一簇同去同留、同明度；团块在外轮廓一圈按树种稳定的噪声剪成叶团锯齿边（max-011 评审③④）。
 // 人能站到冠下的树另有一层冠底叶簇，只在近处出，从树下仰看时冠底读成松软的叶团（max-011 23c3）。
 // 叶卡在主线版由本着色器按叶形层号程序化画出，细节版换成 Texture2DArray 的同号层。
-// 远近池交接（23c2c）：近池 L1 与远池替身在 135–165 m 按 Bayer 抖动互补交接，林下地被在绘制距离前抖动淡出（植被公共段 veg_pool_code）；
+// 近池逐株与近/远owner cell都按真实起时限时互补交接；距离只触发，静止时不会保留半档（veg_pool_code）；
 // 远处的碎边、叶形和团块法线按像素收拢，远处的树读成干净的绿色体块。
 // 顶点数据见 MotherModels：插片 CUSTOM0 = (插片中心, h2)，CUSTOM1 = (枝梢锚点, h3)，CUSTOM2 = (团心, 重要度序)；
 // 团块 CUSTOM0 = (团心, 团块哈希)，CUSTOM1 = (枝梢锚点, 开花哈希)，CUSTOM2 = (所属小球的球心, −1)。
@@ -82,7 +82,7 @@ const float VEG_UNDER_FIT = 1.3;           // 冠底叶卡正对镜头：卡片�
 
 // toon.gdshaderinc 已占 25 个 varying 分量，本着色器只剩 7 个（已用满，交接编码并进 v_row）：层号与标志合进一个整数，t0 直接读 v_spare（同是 COLOR.a）。
 varying flat int v_bits;      // 位 0–3 叶卡层号，位 4 开花，位 5 枝条笔触，位 6 团块（不裁切），位 7 冠底叶卡，位 8–15 插片自己的叶形种子
-varying flat int v_row;       // 位 0–5 树种号（−1 记成 63），位 6 起是远近池交接的编码 × 1000（veg_pool_code，23c2c）
+varying flat int v_row;       // 位 0–5 树种号（−1 记成 63），位 6 起是远近池交接的10-bit coverage interval（veg_pool_code，23c2c）
 varying flat float v_seed;
 varying flat vec2 v_tint;
 varying float v_s;
@@ -94,9 +94,9 @@ vec3 veg_tangent(vec3 n) {
 
 // 近池换级不跳变（§11.4）：高一级比低一级多出来的插片在过渡带里按重要度缩到 0
 float veg_card_keep(float imp, float dist, float height) {
-	float k = max(height, 1.0) / 12.0 * max(quality.x, 0.5);
-	float l0 = VEG_LOD_L0 * k;
-	float l1 = VEG_LOD_L1 * k;
+	float k = max(height, 1.0) / VEG_TREE_REFERENCE_HEIGHT * max(quality.x, 0.5);
+	float l0 = VEG_LOD_L0 * k * (1.0 - VEG_LEVEL_BAND_FRACTION);
+	float l1 = VEG_LOD_L1 * k * (1.0 - VEG_LEVEL_BAND_FRACTION);
 	float keep = mix(1.0, VEG_KEEP_L0, smoothstep(l0 * 0.9, l0, dist));
 	keep = mix(keep, VEG_KEEP_L1, smoothstep(l1 * 0.9, l1, dist));
 	return 1.0 - smoothstep(keep - 0.02, keep, imp);
@@ -104,9 +104,9 @@ float veg_card_keep(float imp, float dist, float height) {
 
 // 冠底叶卡的去留（23c3）：只在近处出。L0 只留前一半叶簇，换到 L1 之前全部缩到 0；只在 L0+ 画的（云团型）换到 L0 之前缩到 0
 float veg_under_keep(float w, float dist, float height) {
-	float k = max(height, 1.0) / 12.0 * max(quality.x, 0.5);
-	float l0 = VEG_LOD_L0 * k;
-	float l1 = VEG_LOD_L1 * k;
+	float k = max(height, 1.0) / VEG_TREE_REFERENCE_HEIGHT * max(quality.x, 0.5);
+	float l0 = VEG_LOD_L0 * k * (1.0 - VEG_LEVEL_BAND_FRACTION);
+	float l1 = VEG_LOD_L1 * k * (1.0 - VEG_LEVEL_BAND_FRACTION);
 	float keep = mix(1.0, w >= 2.0 ? 0.0 : VEG_UNDER_KEEP_L0, smoothstep(l0 * 0.9, l0, dist));
 	keep = mix(keep, 0.0, smoothstep(l1 * 0.9, l1, dist));
 	return 1.0 - smoothstep(keep - 0.02, keep, fract(w));
@@ -120,8 +120,8 @@ void vertex() {
 	vec3 dir_m = normalize(inv3 * vec3(wind.x, 0.0, wind.y) + vec3(1e-5, 0.0, 0.0));
 	v_tint = veg_tint_noise(origin);
 	// 远池替身的团块 CUSTOM2.w = −2（MotherModels.FarStandIn）
-	float fade = veg_pool_code(MAIN_CAM_INV_VIEW_MATRIX[3].xyz, origin, inst, CUSTOM2.w < -1.5, IN_SHADOW_PASS);
-	v_row = (inst.row & 63) | (int(round(fade * 1000.0)) << 6);
+	int fade = veg_pool_code(MAIN_CAM_INV_VIEW_MATRIX[3].xyz, origin, inst, CUSTOM2.w < -1.5, IN_SHADOW_PASS, INSTANCE_ID);
+	v_row = (inst.row & 63) | (fade << 6);
 	if (CUSTOM2.w < 0.0) {
 		// 团块与小球：NORMAL 是烘好的外壳法线，不再混合。季节值加团块哈希和高度的小偏移：树顶和向阳面先变（§9.4、§11.6）；
 		// 叶量按 smoothstep(0.15, 0.6, A) 向所属小球的球心收缩（§9.2）；云团型开花时小球按哈希换花色（§9.3）
@@ -367,7 +367,7 @@ float veg_card_shape(int layer, vec2 uv, float seed, float uv_px) {
 }
 
 void fragment() {
-	if (veg_pool_discard(FRAGCOORD.xy, float(v_row >> 6) / 1000.0)) {
+	if (veg_pool_discard(FRAGCOORD.xy, v_row >> 6)) {
 		discard;
 	}
 	// 背面也用外壳法线（引擎给背面翻过一次法线，这里翻回来）

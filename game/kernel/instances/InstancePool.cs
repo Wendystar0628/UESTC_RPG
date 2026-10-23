@@ -15,6 +15,8 @@ internal sealed class InstancePool(
     private static readonly StringName _shaderInstancePrecipK = InstanceShaderParameters.PrecipK;
     private static readonly StringName _shaderInstancePrecipV = InstanceShaderParameters.PrecipV;
     private static readonly StringName _shaderInstanceShadowProxy = InstanceShaderParameters.ShadowProxy;
+    private static readonly StringName _shaderInstanceVegLevel = InstanceShaderParameters.VegLevel;
+    private static readonly StringName _shaderInstanceVegTransitionBase = InstanceShaderParameters.VegTransitionBase;
 
     private MultiMeshInstance3D? _instance = instance;
     private MultiMesh? _multiMesh = multiMesh;
@@ -82,8 +84,8 @@ internal sealed class InstancePool(
     {
         RequireLive();
         ArgumentNullException.ThrowIfNull(name);
-        if (name != _shaderInstanceShadowProxy)
-            throw new ArgumentException("Only the registered shadow_proxy scalar is supported by instance pools.", nameof(name));
+        if (name != _shaderInstanceShadowProxy && name != _shaderInstanceVegLevel && name != _shaderInstanceVegTransitionBase)
+            throw new ArgumentException("The name is not a registered scalar instance parameter.", nameof(name));
         if (!float.IsFinite(value)) throw new ArgumentException("Instance parameters must be finite.", nameof(value));
         _instance!.SetInstanceShaderParameter(name, value);
     }

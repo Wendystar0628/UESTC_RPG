@@ -32,7 +32,7 @@ public readonly record struct StreamTile(TileKey Tile, LodLevel Level) : ICompar
 public sealed record StreamSettings
 {
     public float ReplanSeconds { get; init; } = .1f;
-    public float FadeSeconds { get; init; } = .25f;
+    public float FadeSeconds { get; init; } = RenderFade.Seconds;
     public double MountMilliseconds { get; init; } = KernelBudgets.StreamMountMilliseconds;
     public int MaximumPreparations { get; init; } = 2;
     public const float DefaultBaseErrorPixels = 1.5f;

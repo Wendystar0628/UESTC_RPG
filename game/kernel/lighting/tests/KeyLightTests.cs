@@ -135,21 +135,21 @@ public sealed class KeyLightTests
     [TestCategory(TestReason.Contract)]
     public void ShadowSettingsMatchPresets()
     {
-        var fine = ShadowSettings.From(1, 1600f);
+        var fine = ShadowSettings.From(1, ShadowSettings.MaximumDistance);
         AssertThat(fine is { AtlasSize: 4096, Splits: 4, MaxDistance: 1600f }).OverrideFailureMessage("fine preset").IsTrue();
         AssertThat(fine.Split1).AppendFailureMessage("split 1").IsEqualApprox(0.03f, TestTolerance.FloatRelative);
         AssertThat(fine.Split2).AppendFailureMessage("split 2").IsEqualApprox(0.12f, TestTolerance.FloatRelative);
         AssertThat(fine.Split3).AppendFailureMessage("split 3").IsEqualApprox(0.40f, TestTolerance.FloatRelative);
         AssertThat((fine.CasterMask & RenderLayers.Ground) == 0 && (fine.CasterMask & RenderLayers.BuildingsAndProps) != 0).OverrideFailureMessage("layers").IsTrue();
-        var twoSplits = ShadowSettings.From(0, 600f);
+        var twoSplits = ShadowSettings.From(0, ShadowSettings.MinimumDistance);
         AssertThat(twoSplits is { AtlasSize: 2048, Splits: 2, MaxDistance: 600f, Split1: 0.15f }).OverrideFailureMessage("two-split preset").IsTrue();
-        var custom = ShadowSettings.From(2, 600f);
+        var custom = ShadowSettings.From(2, ShadowSettings.MinimumDistance);
         AssertThat(custom.Split1 < custom.Split2 && custom.Split2 < custom.Split3 && custom.Split3 <= 0.6f).OverrideFailureMessage("custom splits ordered").IsTrue();
         var view = new QualityView(1, QualityPreset.Fine,
             Enumerable.Range(0, Enum.GetValues<QualityKnob>().Length).Select(i => (QualityKnob)i switch
             {
                 QualityKnob.ShadowQuality => 2f,
-                QualityKnob.ShadowDistance => 1600f,
+                QualityKnob.ShadowDistance => ShadowSettings.MaximumDistance,
                 _ => 0f,
             }).ToArray());
         AssertThat(ShadowSettings.From(view).AtlasSize == 8192).OverrideFailureMessage("ultra atlas from the quality view").IsTrue();

@@ -1,7 +1,6 @@
-using Campus.Contracts;
 using Campus.Contracts.Quality;
 
-namespace Campus.Kernel.Lighting;
+namespace Campus.Contracts;
 
 /// <summary>
 /// Engine-side shadow configuration for the two shadow knobs game/kernel/lighting/ owns (SYS-GRAPHICS, ENG-PERF).
@@ -13,6 +12,8 @@ public readonly record struct ShadowSettings(int AtlasSize, int Splits, float Ma
 {
     // ENG-PERF: PSSM 4 at 1600 m splits at 48 / 192 / 640 m; PSSM 2 uses Split1 = 0.15.
     private const float Near1 = 48f, Near2 = 192f, Near3 = 640f;
+    public const float MinimumDistance = 600f;
+    public const float MaximumDistance = 1600f;
 
     public static ShadowSettings From(QualityView view)
     {
@@ -30,7 +31,7 @@ public readonly record struct ShadowSettings(int AtlasSize, int Splits, float Ma
             2 => (8192, 4),
             _ => throw new ArgumentOutOfRangeException(nameof(quality), quality, "Shadow quality is 0, 1 or 2."),
         };
-        if (!float.IsFinite(distance) || distance < 600f || distance > 1600f)
+        if (!float.IsFinite(distance) || distance < MinimumDistance || distance > MaximumDistance)
             throw new ArgumentOutOfRangeException(nameof(distance), distance, "Shadow distance is 600–1600 m.");
         var mask = ~RenderLayers.NonCasters;
         if (splits == 2) return new(size, 2, distance, 0.15f, 0f, 0f, mask);

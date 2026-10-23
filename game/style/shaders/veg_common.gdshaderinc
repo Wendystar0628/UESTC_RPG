@@ -45,8 +45,10 @@ const float VEG_WIND_SPEED = 6.0;          // 风的相位沿风向传播的速�
 const float VEG_BLOB_SWAY = 0.045;         // 团块摆动（m，3–6 cm，0.6–1.2 Hz）
 const float VEG_CARD_FLUTTER = 0.015;      // 叶片颤动（m，1–2 cm，3–6 Hz）
 const float VEG_TRANS_FILL = 0.55;         // 透光最多把逆光影面补到 影 → 透光色 的这个比例（23d）
-const float VEG_LOD_L0 = 15.0;             // 近池三级的切换距离（12 m 树，ENG-PERF），乘 树高/12 × 细节系数
-const float VEG_LOD_L1 = 40.0;
+// Pool levels are written once by VegetationRuntime; shared materials keep the L1 default for static content.
+// Explicit indices match across the trunk/crown/twig materials sharing one MultiMesh (slot 3 is shadow_proxy).
+instance uniform float veg_level : instance_index(4) = 2.0;
+instance uniform float veg_transition_base : instance_index(5) = -1.0;
 const float VEG_BAND_AA = 0.75;            // 明暗档边的最小宽度：屏幕导数 fwidth(N·L) 的这个倍数（23c2c）
 
 struct VegInst {
@@ -318,52 +320,64 @@ float veg_edge_noise(vec3 wp, int row, int layer) {
 // 按 L0+ 的切换距离（12 m 树 15 m，乘 树高/12 × 细节系数）的倍数从前者到后者，近处 0、中距以外 1。两个着色器用同一个函数，所以互补
 const vec2 VEG_WINTER_MASS_NEAR = vec2(0.8, 1.3);
 float veg_winter_far(vec3 cam, vec3 origin, VegInst inst) {
-	float l0 = VEG_LOD_L0 * max(inst.height, 1.0) / 12.0 * max(quality.x, 0.5);
+	float l0 = VEG_LOD_L0 * max(inst.height, 1.0) / VEG_TREE_REFERENCE_HEIGHT * max(quality.x, 0.5);
 	float d = length(cam - (origin + vec3(0.0, 0.5 * inst.height, 0.0)));
 	return smoothstep(l0 * VEG_WINTER_MASS_NEAR.x, l0 * VEG_WINTER_MASS_NEAR.y, d);
 }
 
-// 远近池交接与淡出（WLD-VEGETATION、ENG-PERF，max-011 23c2c）。只用 4×4 Bayer 抖动（与 toon 的淡化同一张表），不用引擎的
-// visibility range 淡化。每株一个距离：主相机到树干脚点上方半个树高（与运行时分桶同一个点），两池同一个函数，所以像素互补：
-// 过渡带里近池（L1）留下 b ≥ t 的像素、远池替身留下 b < t 的像素。过渡带里的树同时在两池里（运行时按 Campus.Systems.Vegetation.VegetationBuckets 分桶）。
-// 远池替身由 MotherModels.FarStandIn 出模型，顶点里带记号：木质 CUSTOM2.w = 1，团块 CUSTOM2.w = −2。
-// 林下地被（Understorey 的 GroundPlant，INSTANCE_CUSTOM 外观变体位 1）没有远池，在绘制距离前抖动淡出，不在 100 m 上硬切。
-// 距离乘细节系数 quality.x（WLD-VEGETATION）。阴影通道不做（投影代理只在近池，抖动的影子会碎）。
-
-// cam 是主相机位置（vertex() 里的 MAIN_CAM_INV_VIEW_MATRIX[3].xyz）。编码成一个 flat 值：[0, 1] 近池（丢 b < v），[2, 3] 远池淡入（丢 b ≥ v − 2），[4, 5] 远池淡出（丢 b < v − 4）
-float veg_pool_code(vec3 cam, vec3 origin, VegInst inst, bool far_pool, bool shadow_pass) {
-	if (shadow_pass) {
-		return 0.0;
-	}
-	float d = length(cam - (origin + vec3(0.0, 0.5 * inst.height, 0.0)));
-	float q = max(quality.x, 0.5);
-	if ((inst.variant & VEG_VARIANT_UNDER) != 0) {
-		return smoothstep(VEG_UNDER_FADE.x, VEG_UNDER_FADE.y, d);
-	}
-	float t_in = smoothstep(VEG_POOL_FADE.x * q, VEG_POOL_FADE.y * q, d);
-	if (!far_pool) {
-		return t_in;
-	}
-	if (VEG_CLOUD_READY && d > 0.5 * (VEG_POOL_FADE.y + VEG_CLOUD_FADE.x) * q) {
-		return 4.0 + smoothstep(VEG_CLOUD_FADE.x * q, VEG_CLOUD_FADE.y * q, d);
-	}
-	return 2.0 + t_in;
+// L0 integer owner cells use the same floor-origin as VegetationNearReadyEncoding. Texture dimensions are the CPU's
+// ceil(max / BaseEdge) - floor(min / BaseEdge) result, avoiding a second rounding through map_rect's reciprocal extent.
+vec2 veg_near_ready(vec3 origin) {
+    ivec2 cell = ivec2(floor(origin.xz / VEG_NEAR_CELL_METRES)) - ivec2(floor(map_rect.xy / VEG_NEAR_CELL_METRES));
+    ivec2 size = textureSize(vegetation_near_ready, 0);
+    if (any(lessThan(cell, ivec2(0))) || any(greaterThanEqual(cell, size))) {
+        return vec2(0.0);
+    }
+    return texelFetch(vegetation_near_ready, cell, 0).rg;
 }
 
-bool veg_pool_discard(vec2 frag_xy, float code) {
-	if (code <= 0.0) {
-		return false;
-	}
-	int ix = int(mod(frag_xy.x, 4.0));
-	int iy = int(mod(frag_xy.y, 4.0));
-	float b = (TOON_BAYER[iy * 4 + ix] + 0.5) / 16.0;
-	if (code < 1.5) {
-		return b < code;
-	}
-	if (code < 3.5) {
-		return b >= code - 2.0;
-	}
-	return b < code - 4.0;
+float veg_near_weight(vec2 ready) {
+    if (ready.x < 0.5) return 0.0;
+    if (ready.y == 0.0) return 1.0;
+    float started = abs(ready.y) - VEG_NEAR_START_BIAS_SECONDS;
+    float t = clamp(mod(fade_clock - started + anim_loop_seconds, anim_loop_seconds) / TOON_FADE_SECONDS, 0.0, 1.0);
+    return ready.y > 0.0 ? t : 1.0 - t;
+}
+
+// One packed coverage interval preserves the seven-component vegetation varying budget: low/high each have 10 bits.
+// Near source occupies [t*n,n), target [0,t*n), far [n,1); all three are complementary, including a late ready cell.
+const int VEG_COVERAGE_BITS = 10;
+const int VEG_COVERAGE_MAX = (1 << VEG_COVERAGE_BITS) - 1;
+int veg_interval(float low, float high) {
+    return (int(round(clamp(low, 0.0, 1.0) * float(VEG_COVERAGE_MAX))) << VEG_COVERAGE_BITS) |
+        int(round(clamp(high, 0.0, 1.0) * float(VEG_COVERAGE_MAX)));
+}
+
+int veg_pool_code(vec3 cam, vec3 origin, VegInst inst, bool far_pool, bool shadow_pass, int instance_id) {
+    if (shadow_pass) return veg_interval(0.0, 1.0);
+    if ((inst.variant & VEG_VARIANT_UNDER) != 0) {
+        float d = length(cam - (origin + vec3(0.0, 0.5 * inst.height, 0.0)));
+        return veg_interval(smoothstep(VEG_UNDER_FADE.x, VEG_UNDER_FADE.y, d), 1.0);
+    }
+    float near_weight = veg_near_weight(veg_near_ready(origin));
+    if (far_pool) return veg_interval(near_weight, 1.0);
+    int slot = int(round(veg_transition_base)) + instance_id;
+    vec4 state = texelFetch(vegetation_lod_transition, ivec2(slot % VEG_TRANSITION_WIDTH, slot / VEG_TRANSITION_WIDTH), 0);
+    if (state.x == state.y) return veg_interval(0.0, near_weight);
+    float t = clamp(mod(fade_clock - state.z + anim_loop_seconds, anim_loop_seconds) / TOON_FADE_SECONDS, 0.0, 1.0);
+    if (abs(veg_level - state.x) < 0.5) return veg_interval(t * near_weight, near_weight);
+    return veg_interval(0.0, t * near_weight);
+}
+
+bool veg_pool_discard(vec2 frag_xy, int code) {
+    if (code == VEG_COVERAGE_MAX) return false;
+    if (code == 0) return true;
+    float low = float((code >> VEG_COVERAGE_BITS) & VEG_COVERAGE_MAX) / float(VEG_COVERAGE_MAX);
+    float high = float(code & VEG_COVERAGE_MAX) / float(VEG_COVERAGE_MAX);
+    int ix = int(mod(frag_xy.x, 4.0));
+    int iy = int(mod(frag_xy.y, 4.0));
+    float b = (TOON_BAYER[iy * 4 + ix] + 0.5) / 16.0;
+    return b < low || b >= high;
 }
 
 #endif

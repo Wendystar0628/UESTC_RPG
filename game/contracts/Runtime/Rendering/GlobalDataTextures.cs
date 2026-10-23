@@ -1,12 +1,53 @@
 using System.Diagnostics.CodeAnalysis;
 using Campus.Contracts;
+using Campus.Contracts.Maps;
 using Godot;
 
 namespace Campus.Contracts;
 
 /// <summary>
-/// Kernel handoff for existing global data textures: game/style/palette/keys/ owns palette production and game/style/ owns mat_table
-/// production. No texture is created or shader global read by this service.
+/// RG32F vegetation near-pool readiness: R is actual ready (0/1); G is zero when settled, otherwise a signed FadeClock
+/// start biased by WorldTime.AnimLoopSeconds (positive enter, negative exit). Exit keeps R=1 until its fade finishes.
+/// No mipmaps or colour conversion; nearest sampling with repeat disabled. World X is the column, world Z the row.
+/// Texel (0,0) covers the L0 integer cell containing Rect.Min, including a non-aligned map rectangle.
+/// </summary>
+public static class VegetationNearReadyEncoding
+{
+    public const int CellMetres = TileGrid.BaseEdge;
+    public const float StartBiasSeconds = WorldTime.AnimLoopSeconds;
+
+    public static float EncodeStart(float clock, bool entering) => (entering ? 1f : -1f) * (clock + StartBiasSeconds);
+
+    public static TileKey Origin(MapRect rect) => TileGrid.At(rect.Min);
+
+    public static int Width(MapRect rect) => checked((int)MathF.Ceiling(rect.Max.X / CellMetres) - Origin(rect).X);
+
+    public static int Height(MapRect rect) => checked((int)MathF.Ceiling(rect.Max.Y / CellMetres) - Origin(rect).Z);
+
+    /// <summary>Out-of-range owner cells are not ready; never clamp them onto an edge texel.</summary>
+    public static bool TryTexel(MapRect rect, TileKey tile, out int x, out int y)
+    {
+        var origin = Origin(rect);
+        x = tile.X - origin.X;
+        y = tile.Z - origin.Z;
+        return x >= 0 && y >= 0 && x < Width(rect) && y < Height(rect);
+    }
+}
+
+/// <summary>
+/// RGBA32F near-tree transition texels: (source level, target level, FadeClock start, reserved zero).
+/// Steady texels have equal source/target levels. A pool's contiguous block is addressed by VegTransitionBase + INSTANCE_ID.
+/// Compaction changes texel placement only; the producer retains each original tree record's transition state.
+/// </summary>
+public static class VegetationTransitionEncoding
+{
+    public const int TextureWidth = 1024;
+    public const int Channels = 4;
+}
+
+/// <summary>
+/// Kernel handoff for producer-owned global data textures. Palette, materials, sky and vegetation retain their own
+/// production/update responsibilities. No texture is created or shader global read by this service.
 /// </summary>
 public interface IGlobalDataTextureRegistry : IDisposable
 {

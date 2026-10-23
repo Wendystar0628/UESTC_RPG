@@ -93,6 +93,10 @@ public static class ShaderGlobals
     public const string LampTable = "lamp_table";
     /// <summary>Sole writer: Campus.Systems.Vegetation.SeasonalSurfaceNode.</summary>
     public const string TreeSpecies = "tree_species";
+    /// <summary>Sole writer: Campus.Systems.Vegetation.VegetationRuntime; RG32F L0-cell readiness and its FadeClock start, encoded by VegetationNearReadyEncoding.</summary>
+    public const string VegetationNearReady = "vegetation_near_ready";
+    /// <summary>Sole writer: Campus.Systems.Vegetation.VegetationRuntime; RGBA32F source/target levels and FadeClock start, addressed by VegetationTransitionEncoding.</summary>
+    public const string VegetationLodTransition = "vegetation_lod_transition";
     /// <summary>Sole writer: Campus.Style.Materials.ToonLibrary.</summary>
     public const string MatTable = "mat_table";
     /// <summary>Sole writer: Campus.Style.Materials.ToonLibrary.</summary>
@@ -127,6 +131,11 @@ public static class InstanceShaderParameters
 
     /// <summary>Enables noise cutout on vegetation shadow proxies.</summary>
     public const string ShadowProxy = "shadow_proxy";
+
+    /// <summary>VegetationRuntime's visible tree pool level: 0 L0Plus, 1 L0, 2 L1. The shader default is L1.</summary>
+    public const string VegLevel = "veg_level";
+    /// <summary>VegetationRuntime's first transition texel for this near pool's visible prefix; -1 means non-near content without a table.</summary>
+    public const string VegTransitionBase = "veg_transition_base";
 
     /// <summary>Landmark fog exemption, from zero to one; defaults to zero and is owned by game/systems/sky/.</summary>
     public const string FogExempt = "fog_exempt";

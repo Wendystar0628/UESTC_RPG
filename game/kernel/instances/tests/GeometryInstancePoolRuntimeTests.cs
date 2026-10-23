@@ -21,6 +21,7 @@ public sealed class GeometryInstancePoolRuntimeTests
     private static readonly StringName _shaderInstanceFadeT0 = InstanceShaderParameters.FadeT0;
     private static readonly StringName _shaderInstancePrecipD = InstanceShaderParameters.PrecipD;
     private static readonly StringName _shaderInstanceShadowProxy = InstanceShaderParameters.ShadowProxy;
+    private static readonly StringName _shaderInstanceVegLevel = InstanceShaderParameters.VegLevel;
 
     [TestCase]
     [TestCategory(TestReason.Contract)]
@@ -329,6 +330,9 @@ public sealed class GeometryInstancePoolRuntimeTests
         proxy.SetParameter(_shaderInstanceShadowProxy, 1f);
         AssertThat(proxyNode.GetInstanceShaderParameter(_shaderInstanceShadowProxy).AsSingle() == 1f).OverrideFailureMessage("The scalar instance parameter did not reach the native proxy.").IsTrue();
         AssertThat(bodyNode.GetInstanceShaderParameter(_shaderInstanceShadowProxy).AsSingle() == 0f).OverrideFailureMessage("Changing a proxy contaminated a body sharing its material.").IsTrue();
+        body.SetParameter(_shaderInstanceVegLevel, (float)Campus.Contracts.Vegetation.VegPool.L0);
+        AssertThat(bodyNode.GetInstanceShaderParameter(_shaderInstanceVegLevel).AsSingle() == (float)Campus.Contracts.Vegetation.VegPool.L0 &&
+            proxyNode.GetInstanceShaderParameter(_shaderInstanceVegLevel).AsSingle() == (float)Campus.Contracts.Vegetation.VegPool.L1).OverrideFailureMessage("A pool level must reach its instance without replacing another pool's L1 shader default.").IsTrue();
         {
             var thrown = false;
             try { proxy.SetParameter(_shaderInstanceShadowProxy, float.NaN); }

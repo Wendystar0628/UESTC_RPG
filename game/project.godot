@@ -484,6 +484,14 @@ tree_species={
 "type": "sampler2D",
 "value": ""
 }
+vegetation_near_ready={
+"type": "sampler2D",
+"value": ""
+}
+vegetation_lod_transition={
+"type": "sampler2D",
+"value": ""
+}
 mat_table={
 "type": "sampler2D",
 "value": ""

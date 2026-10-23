@@ -47,6 +47,8 @@ global uniform sampler2D window_override : filter_nearest, repeat_disable;
 global uniform sampler2D lamp_grid : filter_nearest, repeat_disable;
 global uniform sampler2D lamp_table : filter_nearest, repeat_disable;
 global uniform sampler2D tree_species : filter_nearest, repeat_disable;
+global uniform sampler2D vegetation_near_ready : filter_nearest, repeat_disable;
+global uniform sampler2D vegetation_lod_transition : filter_nearest, repeat_disable;
 global uniform sampler2D mat_table : filter_nearest, repeat_disable;
 global uniform sampler2D ground_mask : filter_nearest, repeat_disable;
 global uniform sampler2D terrain_height : filter_nearest, repeat_disable;

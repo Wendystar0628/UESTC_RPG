@@ -2,54 +2,86 @@ using Campus.Tests;
 using System.Numerics;
 using Campus.Contracts;
 using Campus.Contracts.Vegetation;
+using Campus.Contracts.Quality;
 using GdUnit4;
 using static GdUnit4.Assertions;
 
 namespace Campus.Systems.Vegetation.Tests;
 
-/// <summary>
-/// Pool choice of the vegetation runtime (WLD-VEGETATION): near bands scaled by tree height, 10% hysteresis outwards,
-/// the near side retains the cross-fade band; static geometry owns far stand-ins.
-/// </summary>
+/// <summary>Distance triggers, bounded transitions and separately selected shadow casters.</summary>
 [TestSuite]
 public sealed class VegetationBucketsTests
 {
-    [TestCase]
-    [TestCategory(TestReason.Contract)]
-    public void BandsFollowTheDistanceAndTheTreeHeight()
+    private static float First => VegetationBuckets.L0PlusDistance * QualityRules.DetailDistanceScale * (1f - VegFade.LevelBandFraction);
+    private static float Second => VegetationBuckets.L0Distance * QualityRules.DetailDistanceScale * (1f - VegFade.LevelBandFraction);
+    private static Vector3 Eye(float distance) => new(0, VegetationBuckets.ReferenceTreeHeight * .5f, distance);
+    private static VegetationBuckets Tree(float x = 0f)
     {
-        foreach (var (d, level) in new[] { (10f, 0), (20f, 1), (100f, 2), (160f, 2), (300f, 3), (1500f, 3) })
-            AssertThat(VegetationBuckets.Target(d, 1f, VegetationBuckets.NotNear) == level).OverrideFailureMessage($"{d} m on a 12 m tree").IsTrue();
-        // A 24 m tree keeps L0+ to 30 m; the near pool's outer bound does not scale.
-        AssertThat(VegetationBuckets.Target(25f, 2f, VegetationBuckets.NotNear) == 0).OverrideFailureMessage("tall tree L0+").IsTrue();
-        AssertThat(VegetationBuckets.Target(170f, 2f, VegetationBuckets.NotNear) == VegetationBuckets.NotNear).OverrideFailureMessage("near pool edge does not scale").IsTrue();
+        var records = new float[InstanceStreamLayout.FloatsPerInstance];
+        InstanceStreamLayout.Write(records, Matrix4x4.CreateTranslation(x, 0, 0), new(.1f, 16, .5f, VegetationBuckets.ReferenceTreeHeight));
+        return new(records);
     }
 
     [TestCase]
     [TestCategory(TestReason.Contract)]
-    public void TreesMoveInAtOnceAndOutOnlyPastTenPercent()
+    public void BandsFollowTheSharedQualityFactorAndTreeHeight()
     {
-        AssertThat(VegetationBuckets.Target(16f, 1f, 0) == 0 && VegetationBuckets.Target(17f, 1f, 0) == 1).OverrideFailureMessage("L0+ → L0 at 16.5 m").IsTrue();
-        AssertThat(VegetationBuckets.Target(180f, 1f, 2) == 2 && VegetationBuckets.Target(182f, 1f, 2) == VegetationBuckets.NotNear).OverrideFailureMessage("L1 out at 181.5 m").IsTrue();
-        AssertThat(VegetationBuckets.Target(14f, 1f, 1) == 0 && VegetationBuckets.Target(164f, 1f, VegetationBuckets.NotNear) == 2).OverrideFailureMessage("inwards at the band itself").IsTrue();
+        AssertThat(VegetationBuckets.Target(First * .8f, 1f, VegetationBuckets.NotNear) == (byte)VegPool.L0Plus).IsTrue();
+        AssertThat(VegetationBuckets.Target((First + Second) * .5f, 1f, VegetationBuckets.NotNear) == (byte)VegPool.L0).IsTrue();
+        AssertThat(VegetationBuckets.Target(Second * 1.5f, 1f, VegetationBuckets.NotNear) == (byte)VegPool.L1).IsTrue();
+        AssertThat(VegetationBuckets.Target(First * 1.5f, 2f, VegetationBuckets.NotNear) == (byte)VegPool.L0Plus).IsTrue();
+        AssertThat(VegetationBuckets.Target(First * .99f, 1f, (byte)VegPool.L0) == (byte)VegPool.L0 &&
+            VegetationBuckets.Target(First / VegetationBuckets.Hysteresis * .99f, 1f, (byte)VegPool.L0) == (byte)VegPool.L0Plus).OverrideFailureMessage("reverse triggers retain their distance hysteresis").IsTrue();
     }
 
     [TestCase]
-    [TestCategory(TestReason.Contract)]
-    public void UpdateReportsMovesAndResetDropsTheHistory()
+    [TestCategory(TestReason.Regression)]
+    public void ATransitionFinishesAndReleasesTheOldLevelWhileTheEyeIsStill()
     {
-        var records = new float[3 * InstanceStreamLayout.FloatsPerInstance];
-        InstanceStreamLayout.Write(records.AsSpan(0, 16), Matrix4x4.CreateTranslation(0f, 0f, 0f), new(0.1f, 16f, 0.5f, 12f));
-        InstanceStreamLayout.Write(records.AsSpan(16, 16), Matrix4x4.CreateTranslation(300f, 0f, 0f), new(0.2f, 16f, 0.5f, 12f));
-        InstanceStreamLayout.Write(records.AsSpan(32, 16), Matrix4x4.CreateTranslation(150f, 0f, 10f), new(0.3f, 16f, 0.5f, 12f));
-        var buckets = new VegetationBuckets(records);
-        var eye = new Vector3(0f, 6f, 10f);   // 10 m from the first tree's middle
-        AssertThat(buckets.Update(eye, reset: false) && buckets.Level(0) == 0).OverrideFailureMessage("first bucketing: near tree").IsTrue();
-        AssertThat(buckets.Level(1) == VegetationBuckets.NotNear).OverrideFailureMessage("first bucketing: far tree").IsTrue();
-        AssertThat(buckets.Level(2) == 2).OverrideFailureMessage("first bucketing: near L1 covers the transition band").IsTrue();
-        AssertThat(!buckets.Update(eye, reset: false)).OverrideFailureMessage("a still eye moves nothing").IsTrue();
-        var back = new Vector3(0f, 6f, 16f);  // inside the 10% band: stays L0+ unless reset
-        AssertThat(!buckets.Update(back, reset: false) && buckets.Level(0) == 0).OverrideFailureMessage("hysteresis holds").IsTrue();
-        AssertThat(buckets.Update(back, reset: true) && buckets.Level(0) == 1).OverrideFailureMessage("a new world instance re-buckets without history").IsTrue();
+        var buckets = Tree();
+        buckets.Update(Eye(0), false, VegetationBuckets.NearReach, 0, true);
+        var distance = (First + VegetationBuckets.L0PlusDistance * QualityRules.DetailDistanceScale) * .5f;
+        AssertThat(distance > First).OverrideFailureMessage("fixture must stop inside the trigger band").IsTrue();
+        var start = RenderFade.Seconds * 4f;
+        AssertThat(buckets.Update(Eye(distance), false, VegetationBuckets.NearReach, start, true) &&
+            buckets.Contains(0, VegPool.L0Plus) && buckets.Contains(0, VegPool.L0) && buckets.IsTransitioning).IsTrue();
+        buckets.Update(Eye(distance), false, VegetationBuckets.NearReach, start + RenderFade.Seconds * 1.5f, true);
+        AssertThat(!buckets.Contains(0, VegPool.L0Plus) && buckets.Contains(0, VegPool.L0) && !buckets.IsTransitioning &&
+            buckets.Level(0) == buckets.TargetLevel(0)).OverrideFailureMessage("a stationary camera must not keep two half-visible levels").IsTrue();
+        AssertThat(!buckets.Update(Eye(distance), false, VegetationBuckets.NearReach, start + RenderFade.Seconds * 2f, true)).OverrideFailureMessage("settled state requires no further prefix or texture upload").IsTrue();
+    }
+
+    [TestCase]
+    [TestCategory(TestReason.Regression)]
+    public void AReversalCompletesItsCurrentSegmentAcrossTheClockLoop()
+    {
+        var buckets = Tree();
+        buckets.Update(Eye(0), false, VegetationBuckets.NearReach, 0, true);
+        var started = WorldTime.AnimLoopSeconds - RenderFade.Seconds * .5f;
+        buckets.Update(Eye(First * 1.05f), false, VegetationBuckets.NearReach, started, true);
+        var originalStart = buckets.Started(0);
+        buckets.Update(Eye(0), false, VegetationBuckets.NearReach, 0, true);
+        AssertThat(buckets.Started(0) == originalStart && buckets.Level(0) == (byte)VegPool.L0Plus &&
+            buckets.TargetLevel(0) == (byte)VegPool.L0).OverrideFailureMessage("reversing before completion must not restart a half-fade").IsTrue();
+        var reversedAt = RenderFade.Seconds * .75f;
+        buckets.Update(Eye(0), false, VegetationBuckets.NearReach, reversedAt, true);
+        AssertThat(buckets.Level(0) == (byte)VegPool.L0 && buckets.TargetLevel(0) == (byte)VegPool.L0Plus &&
+            buckets.Started(0) == reversedAt).OverrideFailureMessage("the completed segment becomes the reverse segment's full starting level").IsTrue();
+        buckets.Update(Eye(0), false, VegetationBuckets.NearReach, reversedAt + RenderFade.Seconds * 1.5f, true);
+        AssertThat(!buckets.IsTransitioning && buckets.Level(0) == (byte)VegPool.L0Plus).IsTrue();
+    }
+
+    [TestCase]
+    [TestCategory(TestReason.Regression)]
+    public void ShadowMembershipIsIndependentOfVisibleCellReadinessAndTracksQuality()
+    {
+        var fine = ShadowSettings.From(1, ShadowSettings.MaximumDistance);
+        var shadowReach = fine.MaxDistance * fine.Split2;
+        AssertThat(shadowReach > VegetationBuckets.NearReach).OverrideFailureMessage("fixture must cover a tree beyond the near envelope").IsTrue();
+        var buckets = Tree((shadowReach + VegetationBuckets.NearReach) * .5f);
+        AssertThat(buckets.Update(Eye(0), false, shadowReach, 0, false) && buckets.Level(0) == VegetationBuckets.NotNear &&
+            buckets.InShadow(0)).OverrideFailureMessage("a shadow-only cell must not acquire visible near membership").IsTrue();
+        var balanced = ShadowSettings.From(0, ShadowSettings.MinimumDistance);
+        AssertThat(buckets.Update(Eye(0), false, balanced.MaxDistance * balanced.Split1, 0, false) && !buckets.InShadow(0)).IsTrue();
     }
 }

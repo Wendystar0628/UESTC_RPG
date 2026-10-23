@@ -2,7 +2,7 @@
 // 规格：WLD-VEGETATION；ENG-PERF；ART-STYLE（植被三阶）。
 // 看得见的树冠团块在 veg_card 里（max-011：团块与叶卡同一面）；这里的团块只出现在投影代理上，挖洞、随叶量收缩。
 // 树母型顶点数据：CUSTOM0.w < 0 是木质，其余是团块（CUSTOM2 = 所属团块或小球的球心）；
-// 远池替身的木质 CUSTOM2.w = 1，与近池 L1 在 135–165 m 按 Bayer 抖动互补交接（植被公共段 veg_pool_code，23c2c）。
+// 远池替身的木质 CUSTOM2.w = 1，按owner cell真实就绪起时与近池限时互补交接（veg_pool_code）。
 // 每株量读 INSTANCE_CUSTOM（§11.2），树种量读全局纹理 tree_species（§11.6）；按距离的判断只用 MAIN_CAM_INV_VIEW_MATRIX。
 shader_type spatial;
 render_mode blend_mix, depth_draw_opaque, cull_back, diffuse_lambert, specular_disabled, ambient_light_disabled;
@@ -20,7 +20,7 @@ const float VEG_HOLE_COVER = 0.42;         // 投影代理挖掉的比例
 
 // toon.gdshaderinc 已占 25 个 varying 分量，本着色器只剩 7 个（已用满，交接编码并进 v_row）：标志位合进一个整数，t0 直接读 v_spare（同是 COLOR.a）。
 varying flat int v_bits;      // 位 0 团块（否则木质），位 1 刷白，位 2 团块开花
-varying flat int v_row;       // 位 0–5 树种号（−1 记成 63），位 6 起是远近池交接的编码 × 1000（veg_pool_code，23c2c）
+varying flat int v_row;       // 位 0–5 树种号（−1 记成 63），位 6 起是远近池交接的10-bit coverage interval（veg_pool_code，23c2c）
 varying flat vec2 v_tint;
 varying float v_s;
 varying float v_ly;
@@ -66,15 +66,15 @@ void vertex() {
 	vec3 origin = MODEL_MATRIX[3].xyz;
 	v_tint = veg_tint_noise(origin);
 	// 远池替身的木质 CUSTOM2.w = 1（MotherModels.FarStandIn）；投影代理只进阴影通道，不淡化
-	float fade = veg_pool_code(MAIN_CAM_INV_VIEW_MATRIX[3].xyz, origin, inst, wood && CUSTOM2.w > 0.5, IN_SHADOW_PASS);
-	v_row = (inst.row & 63) | (int(round(fade * 1000.0)) << 6);
+	int fade = veg_pool_code(MAIN_CAM_INV_VIEW_MATRIX[3].xyz, origin, inst, wood && CUSTOM2.w > 0.5, IN_SHADOW_PASS, INSTANCE_ID);
+	v_row = (inst.row & 63) | (fade << 6);
 	vec3 dir_m = normalize(inverse(mat3(MODEL_MATRIX)) * vec3(wind.x, 0.0, wind.y) + vec3(1e-5, 0.0, 0.0));
 	VERTEX = veg_wind(VERTEX, origin, dir_m, inst, sp, hb, wood ? 0.0 : 1.0, 0.0);
 	TOON_VERTEX
 }
 
 void fragment() {
-	if (veg_pool_discard(FRAGCOORD.xy, float(v_row >> 6) / 1000.0)) {
+	if (veg_pool_discard(FRAGCOORD.xy, v_row >> 6)) {
 		discard;
 	}
 	if (shadow_proxy > 0.5 && (v_bits & 1) != 0 && veg_hole((INV_VIEW_MATRIX * vec4(VERTEX, 1.0)).xyz)) {
