@@ -40,6 +40,11 @@ public sealed class SaveSections
 
     public PreparedSave Prepare(SaveDocument document)
     {
+        // Inspect every known envelope before repairing anything: a future section makes the whole slot read-only.
+        foreach (var (key, raw) in document.Sections)
+            if (Find(key) is { } registration && raw.Version > registration.Attribute.Version)
+                throw new SaveFormatException("Save section comes from a newer version: " + key)
+                { IsNewer = true, Metadata = document.Meta };
         var maps = document.Sections.Keys.Where(k => k.StartsWith("map:", StringComparison.Ordinal))
             .Select(k => new MapId(k[4..k.IndexOf('/')])).Append(document.Meta.Map).Distinct().OrderBy(m => m.Value, StringComparer.Ordinal).ToArray();
         var prepared = new List<PreparedSection>();

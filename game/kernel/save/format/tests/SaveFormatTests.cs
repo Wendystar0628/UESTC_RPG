@@ -1,5 +1,6 @@
 using Campus.Tests;
 using System.Buffers.Binary;
+using System.IO.Compression;
 using System.Numerics;
 using System.Security.Cryptography;
 using System.Text;
@@ -41,14 +42,21 @@ public sealed class SaveFormatTests
         hash.AppendData(bytes, 0, 32); hash.AppendData(bytes, 64, bytes.Length - 64);
         hash.GetHashAndReset().CopyTo(bytes, 32);
     }
-    private static byte[] ReplaceCompressedBody(byte[] compressed)
+    private static byte[] ReplaceCompressedBody(byte[] compressed, SaveDocument? document = null)
     {
-        var source = SaveContainer.Encode(Document());
+        var source = SaveContainer.Encode(document ?? Document());
         var metaLength = (int)BinaryPrimitives.ReadUInt32LittleEndian(source.AsSpan(12));
         var bytes = new byte[64 + metaLength + compressed.Length];
         source.AsSpan(0, 64 + metaLength).CopyTo(bytes);
         BinaryPrimitives.WriteUInt32LittleEndian(bytes.AsSpan(16), (uint)compressed.Length);
         compressed.CopyTo(bytes, 64 + metaLength); Rehash(bytes); return bytes;
+    }
+
+    private static byte[] CompressBody(ReadOnlySpan<byte> body)
+    {
+        using var compressed = new MemoryStream();
+        using (var brotli = new BrotliStream(compressed, CompressionLevel.Fastest, leaveOpen: true)) brotli.Write(body);
+        return compressed.ToArray();
     }
 
     [TestCase]
@@ -203,17 +211,36 @@ public sealed class SaveFormatTests
 
     [TestCase]
     [TestCategory(TestReason.Contract)]
-    public void NoncoreErrorsAndVersionMismatchBecomeDefaults()
+    public void NoncoreErrorsAndOlderVersionsBecomeDefaults()
     {
         var older = Sections(null, 3, RestorePhase.Content).Prepare(Document());
         AssertThat(older.Sections[0].Dto is null && older.Sections[0].Repair is not null && older.Sections[0].Error is SaveFormatException).OverrideFailureMessage("A section with another version should be replaced by its default.").IsTrue();
-        var newer = Document() with { Sections = new Dictionary<string, RawSaveSection>
-        { ["world"] = new(2, "{\"v\":2,\"data\":{\"hours\":17.5}}"u8.ToArray()) } };
-        AssertThat(Sections(phase: RestorePhase.Content).Prepare(newer).Sections[0].Error is SaveFormatException)
-            .OverrideFailureMessage("A noncore version mismatch must use the same default-repair path in both directions.").IsTrue();
         var noncore = Sections(phase: RestorePhase.Content).Prepare(Document() with
         { Sections = new Dictionary<string, RawSaveSection> { ["world"] = new(1, "{\"v\":1,\"data\":{\"hours\":\"bad\"}}"u8.ToArray()) } });
         AssertThat(noncore.Sections[0].Dto is null && noncore.Sections[0].Repair is not null && noncore.Sections[0].Error is JsonException).OverrideFailureMessage("Invalid noncore section should be repaired independently.").IsTrue();
+    }
+
+    [TestCase]
+    [TestCategory(TestReason.Regression)]
+    public void ExpandedBrotliAndEncodingShareTheContainerLimit()
+    {
+        var body = new byte[SaveContainer.MaxFile + 1];
+        body.AsSpan().Fill((byte)' ');
+        var json = Encoding.UTF8.GetBytes("{\"format\":" + SaveContainer.CurrentFormat + ",\"sections\":{}}");
+        json.CopyTo(body, 0);
+        var compressed = CompressBody(body);
+        AssertThat(compressed.Length < SaveContainer.MaxCompressed && body.Length > SaveContainer.MaxFile).IsTrue();
+        var rejected = false;
+        try { SaveContainer.Decode(ReplaceCompressedBody(compressed)); }
+        catch (SaveFormatException) { rejected = true; }
+        AssertThat(rejected).OverrideFailureMessage("A small Brotli input expanded beyond the container limit.").IsTrue();
+        var boundary = SaveContainer.Decode(ReplaceCompressedBody(CompressBody(body.AsSpan(0, SaveContainer.MaxFile))));
+        AssertThat(boundary.Meta.Gen == Document().Meta.Gen && boundary.Sections.Count == 0).IsTrue();
+        var envelope = Encoding.UTF8.GetBytes("{\"v\":1,\"data\":{\"text\":\"" + new string('x', SaveContainer.MaxFile) + "\"}}");
+        rejected = false;
+        try { SaveContainer.Encode(Document() with { Sections = new Dictionary<string, RawSaveSection> { ["unseen"] = new(1, envelope) } }); }
+        catch (SaveFormatException) { rejected = true; }
+        AssertThat(rejected).OverrideFailureMessage("Encoding accepted JSON that its bounded decoder cannot read.").IsTrue();
     }
 
     [TestCase]
@@ -433,15 +460,101 @@ public sealed class SaveFormatTests
 
     [TestCase]
     [TestCategory(TestReason.Contract)]
-    public void NewerGenerationUsesPreviousGenerationAndUnreadableNewLineCannotBeWrittenOver()
+    public void NewerFormatsAndKnownSectionsAreReadOnlyWithoutRecoveryOrCleanup()
+    {
+        var newerHeader = SaveContainer.Encode(Document(2));
+        BinaryPrimitives.WriteUInt16LittleEndian(newerHeader.AsSpan(8), (ushort)(SaveContainer.CurrentFormat + 1));
+        Rehash(newerHeader);
+        var source = SaveContainer.Encode(Document(2));
+        var originalMetaLength = (int)BinaryPrimitives.ReadUInt32LittleEndian(source.AsSpan(12));
+        var metadata = JsonSerializer.SerializeToUtf8Bytes(Meta(2) with { Format = SaveContainer.CurrentFormat + 1 }, SaveFormatJsonContext.Strict.SaveMeta);
+        var newerMetadata = new byte[source.Length - originalMetaLength + metadata.Length];
+        source.AsSpan(0, SaveContainer.HeaderSize).CopyTo(newerMetadata);
+        metadata.CopyTo(newerMetadata, SaveContainer.HeaderSize);
+        source.AsSpan(SaveContainer.HeaderSize + originalMetaLength).CopyTo(newerMetadata.AsSpan(SaveContainer.HeaderSize + metadata.Length));
+        BinaryPrimitives.WriteUInt32LittleEndian(newerMetadata.AsSpan(12), (uint)metadata.Length);
+        Rehash(newerMetadata);
+        var newerBody = ReplaceCompressedBody(CompressBody(Encoding.UTF8.GetBytes(
+            "{\"format\":" + (SaveContainer.CurrentFormat + 1) + ",\"sections\":{}}")), Document(2));
+        var newerSection = SaveContainer.Encode(Document(2) with { Sections = new Dictionary<string, RawSaveSection>
+        { ["world"] = new(2, "{\"v\":2,\"data\":{\"hours\":17.5}}"u8.ToArray()) } });
+        var perMap = new SaveSections([
+            new(new("world") { Version = 1, Phase = RestorePhase.World, Order = 10 }, new TestSection()),
+            new(new("visit") { Version = 1, Phase = RestorePhase.Content, Order = 20, Scope = SaveScope.PerMap }, new TestSection())]);
+        var newerPerMap = SaveContainer.Encode(Document(2) with { Sections = new Dictionary<string, RawSaveSection>
+        {
+            ["world"] = new(1, "{\"v\":1,\"data\":{\"hours\":\"bad\"}}"u8.ToArray()),
+            ["map:other-map/visit"] = new(2, "{\"v\":2,\"data\":{\"hours\":17.5}}"u8.ToArray())
+        } });
+        foreach (var (registry, future) in new[]
+        {
+            (Sections(), newerHeader), (Sections(), newerMetadata), (Sections(), newerBody),
+            (Sections(), newerSection), (Sections(phase: RestorePhase.Content), newerSection), (perMap, newerPerMap)
+        })
+        {
+            using var temp = new TempSaveDirectory();
+            using (var writer = new SaveRepository(temp.Path, true, registry)) writer.Write(Document());
+            var previous = Path.Combine(temp.Path, "s1", "g000001.sav");
+            var previousBytes = File.ReadAllBytes(previous);
+            var latest = Path.Combine(temp.Path, "s1", "g000002.sav");
+            File.WriteAllBytes(latest, future);
+            using var reader = new SaveRepository(temp.Path, false, registry);
+            var staging = Path.Combine(temp.Path, "s1", ".save-future.tmp");
+            File.WriteAllBytes(staging, [0]);
+            AssertThat(reader.Scan(new("s1")).Info.Health == SlotHealth.Newer).IsTrue();
+            using var repository = new SaveRepository(temp.Path, true, registry);
+            var scanned = repository.Scan(new("s1"));
+            AssertThat(scanned.Info.Health == SlotHealth.Newer && scanned.Save is null && scanned.MaxGeneration == 2 && File.Exists(staging))
+                .OverrideFailureMessage("A future generation recovered an older save or was cleaned during initialization.").IsTrue();
+            foreach (var replace in new[] { false, true })
+            {
+                var rejected = false;
+                try { repository.Write(Document(3, 3), replaceUnusable: replace); }
+                catch (InvalidOperationException) { rejected = true; }
+                AssertThat(rejected).OverrideFailureMessage("Writing over a future slot was allowed.").IsTrue();
+            }
+            var externalRejected = false;
+            try { repository.ReadExternal(latest); }
+            catch (SaveFormatException) { externalRejected = true; }
+            AssertThat(externalRejected).OverrideFailureMessage("A future external save was prepared for restore.").IsTrue();
+            repository.Write(Document() with { Meta = Meta() with { Slot = new("s2") } });
+            AssertThat(File.ReadAllBytes(latest).SequenceEqual(future) && File.ReadAllBytes(previous).SequenceEqual(previousBytes) && File.Exists(staging) &&
+                !File.Exists(Path.Combine(temp.Path, "s1", "g000003.sav")))
+                .OverrideFailureMessage("Another slot's maintenance modified the read-only future slot.").IsTrue();
+        }
+    }
+
+    [TestCase]
+    [TestCategory(TestReason.Regression)]
+    public void FutureSlotStopsPendingMaintenanceWithoutDiscardingItsOriginalFailure()
+    {
+        using var temp = new TempSaveDirectory();
+        using var repository = new SaveRepository(temp.Path, true, Sections());
+        for (ulong gen = 1; gen <= SaveMaintenance.Retained; gen++) repository.Write(Document(gen));
+        var previous = Path.Combine(temp.Path, "s1", "g000001.sav");
+        using (var held = new FileStream(previous, FileMode.Open, FileAccess.Read, FileShare.Read)) repository.Write(Document(4));
+        AssertThat(repository.PendingMaintenanceErrors.Count != 0 && File.Exists(previous)).IsTrue();
+        var originalFailure = repository.PendingMaintenanceErrors[0];
+        var latest = Path.Combine(temp.Path, "s1", "g000005.sav");
+        var future = SaveContainer.Encode(Document(5));
+        BinaryPrimitives.WriteUInt16LittleEndian(future.AsSpan(8), (ushort)(SaveContainer.CurrentFormat + 1));
+        Rehash(future);
+        File.WriteAllBytes(latest, future);
+        repository.Write(Document() with { Meta = Meta() with { Slot = new("s2") } });
+        AssertThat(repository.Scan(new("s1")).Info.Health == SlotHealth.Newer && File.Exists(previous) &&
+            File.ReadAllBytes(latest).SequenceEqual(future) && repository.PendingMaintenanceErrors.Any(error => ReferenceEquals(error, originalFailure)))
+            .OverrideFailureMessage("A delayed sweep modified the future slot or discarded its earlier cleanup failure.").IsTrue();
+    }
+
+    [TestCase]
+    [TestCategory(TestReason.Contract)]
+    public void UnreadableNewLineCannotRecoverOrBeWrittenOver()
     {
         using var temp = new TempSaveDirectory();
         var root = temp.Path;
         using var repository = new SaveRepository(root, true, Sections());
         repository.Write(Document());
-        var newer = SaveContainer.Encode(Document(2)); BinaryPrimitives.WriteUInt16LittleEndian(newer.AsSpan(8), (ushort)(SaveContainer.CurrentFormat + 1)); Rehash(newer);
-        var path = Path.Combine(root, "s1", "g000002.sav"); File.WriteAllBytes(path, newer);
-        AssertThat(repository.Scan(new("s1")).Info.Meta?.Gen == 1).OverrideFailureMessage("A newer-format generation did not select the older one.").IsTrue();
+        var path = Path.Combine(root, "s1", "g000002.sav");
         File.WriteAllBytes(path, [0]);
         AssertThat(repository.Scan(new("s1")).Info.Health == SlotHealth.Corrupt).OverrideFailureMessage("An unknown generation identity must not infer an older world line.").IsTrue();
         var invalidNewLine = Document(2, 2) with

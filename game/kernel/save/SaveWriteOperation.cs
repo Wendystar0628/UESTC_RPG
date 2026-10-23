@@ -52,6 +52,8 @@ internal sealed class SaveWriteOperation
         var slot = document.Meta.Slot;
         if (!SaveContainer.ValidSlot(slot)) throw new ArgumentException("Invalid slot.");
         var current = repository.Scan(slot);
+        if (current.Info.Health == SlotHealth.Newer)
+            throw new InvalidOperationException("A slot from a newer version is read-only.");
         if (!replaceUnusable && current.Info.Health == SlotHealth.Corrupt)
             throw new InvalidOperationException("An unusable slot requires an explicit new game before writing.");
         if (document.Meta.Gen <= current.MaxGeneration) throw new InvalidOperationException("Save generation must increase.");

@@ -12,6 +12,7 @@ namespace Campus.Kernel.Save.Format;
 public sealed class SaveFormatException(string message, Exception? innerException = null) : Exception(message, innerException)
 {
     public SaveMeta? Metadata { get; internal set; }
+    internal bool IsNewer { get; init; }
 }
 
 public sealed record RawSaveSection([property: DataVersion] int Version, byte[] Envelope);
@@ -35,24 +36,25 @@ public static class SaveContainer
         var thumb = ValidateThumbnail(document.Thumbnail) ? document.Thumbnail : null;
         var meta = JsonSerializer.SerializeToUtf8Bytes(document.Meta with { HasThumb = thumb is not null }, SaveFormatJsonContext.Strict.SaveMeta);
         if (meta.Length > MaxMeta) throw new SaveFormatException("Save metadata exceeds 16 KiB.");
-        using var raw = new MemoryStream();
+        using var raw = new BoundedMemoryStream(MaxFile);
         using (var writer = new Utf8JsonWriter(raw))
         {
             writer.WriteStartObject(); writer.WriteNumber("format", CurrentFormat); writer.WriteStartObject("sections");
             foreach (var (key, section) in document.Sections.OrderBy(p => p.Key, StringComparer.Ordinal))
             {
                 ValidateSectionKey(key);
+                writer.WritePropertyName(key);
+                if (writer.BytesCommitted + writer.BytesPending + section.Envelope.Length > MaxFile)
+                    throw new SaveFormatException("Expanded save exceeds the container limit.");
                 using var envelope = ParseJson(section.Envelope);
                 ValidateEnvelope(envelope.RootElement, out var version);
                 if (version != section.Version) throw new SaveFormatException("Section version does not match its envelope.");
-                writer.WritePropertyName(key);
                 writer.WriteRawValue(section.Envelope, skipInputValidation: false);
             }
             writer.WriteEndObject(); writer.WriteEndObject();
         }
-        using var compressed = new MemoryStream();
+        using var compressed = new BoundedMemoryStream(MaxCompressed);
         using (var brotli = new BrotliStream(compressed, CompressionLevel.Fastest, leaveOpen: true)) raw.WriteTo(brotli);
-        if (compressed.Length > MaxCompressed) throw new SaveFormatException("Compressed save exceeds 16 MiB.");
         var bytes = new byte[checked(HeaderSize + meta.Length + (int)compressed.Length + (thumb?.Length ?? 0))];
         Magic.CopyTo(bytes);
         BinaryPrimitives.WriteUInt16LittleEndian(bytes.AsSpan(8), (ushort)CurrentFormat);
@@ -97,8 +99,13 @@ public static class SaveContainer
             throw new SaveFormatException("Invalid body or thumbnail lengths.");
         if (!CryptographicOperations.FixedTimeEquals(Hash(bytes), bytes.Slice(32, 32)))
             throw new SaveFormatException("SHA-256 mismatch.");
+        // SYS-SAVE-FORMAT: a future container is read-only even when its metadata schema is unknown.
+        if (headerFormat > CurrentFormat)
+            throw new SaveFormatException("Save container comes from a newer version.") { IsNewer = true };
         // Only metadata covered by a verified container hash can identify a world line for recovery.
         using var metaJson = ParseJson(memory.Slice(HeaderSize, (int)ml));
+        if (metaJson.RootElement.TryGetProperty("format", out var metadataFormat) && metadataFormat.GetInt32() > CurrentFormat)
+            throw new SaveFormatException("Save metadata comes from a newer version.") { IsNewer = true };
         var meta = JsonSerializer.Deserialize(metaJson.RootElement, SaveFormatJsonContext.Strict.SaveMeta)
             ?? throw new SaveFormatException("Missing metadata.");
         ValidateMeta(meta);
@@ -108,7 +115,7 @@ public static class SaveContainer
         if (headerFormat != CurrentFormat || (flags & ~3) != 0 || (flags & 1) == 0 ||
             ((flags & 2) != 0) != (tl != 0) || meta.HasThumb != (tl != 0))
             throw new SaveFormatException("Unsupported container flags.");
-        using var body = new MemoryStream();
+        using var body = new BoundedMemoryStream(MaxFile);
         try
         {
             using var brotli = new BrotliStream(new MemoryStream(memory.Slice(HeaderSize + (int)ml, (int)bl).ToArray()), CompressionMode.Decompress);
@@ -119,6 +126,8 @@ public static class SaveContainer
         var root = json.RootElement;
         RequireMembers(root, ["format", "sections"]);
         var format = root.GetProperty("format").GetInt32();
+        if (format > CurrentFormat)
+            throw new SaveFormatException("Save body comes from a newer version.") { IsNewer = true };
         if (format != meta.Format || format != CurrentFormat) throw new SaveFormatException("Body format mismatch.");
         var sectionsElement = root.GetProperty("sections");
         if (sectionsElement.ValueKind != JsonValueKind.Object) throw new SaveFormatException("sections must be an object.");
@@ -132,6 +141,24 @@ public static class SaveContainer
         var thumbnail = tl == 0 ? null : memory.Slice(HeaderSize + (int)ml + (int)bl, (int)tl).ToArray();
         if (!ValidateThumbnail(thumbnail)) thumbnail = null;
         return new(meta, sections, thumbnail);
+    }
+
+    // The existing container bounds also cap expanded JSON and encoded buffers, before a write can grow them.
+    private sealed class BoundedMemoryStream(int maximum) : MemoryStream
+    {
+        private void CheckWrite(int count)
+        {
+            if (Position > maximum - (long)count) throw new SaveFormatException("Save buffer exceeds its container limit.");
+        }
+
+        public override void Write(byte[] buffer, int offset, int count)
+        { CheckWrite(count); base.Write(buffer, offset, count); }
+
+        public override void Write(ReadOnlySpan<byte> buffer)
+        { CheckWrite(buffer.Length); base.Write(buffer); }
+
+        public override void WriteByte(byte value)
+        { CheckWrite(1); base.WriteByte(value); }
     }
 
     public static JsonDocument ParseJson(ReadOnlyMemory<byte> utf8)

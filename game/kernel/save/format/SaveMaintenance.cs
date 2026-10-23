@@ -33,8 +33,9 @@ internal sealed class SaveMaintenance(SaveRepository repository)
             var sweep = _pending[slot];
             try
             {
+                if (repository.Scan(slot).Info.Health == SlotHealth.Newer) continue;
+                if (sweep.Meta is { } committed && !DeleteOldGenerations(committed)) continue;
                 DeleteStaging(slot);
-                if (sweep.Meta is { } committed) DeleteOldGenerations(committed);
                 _pending.Remove(slot);
             }
             catch (Exception error) { RetainSweep(sweep, error); }
@@ -48,7 +49,7 @@ internal sealed class SaveMaintenance(SaveRepository repository)
         foreach (var path in Directory.EnumerateFiles(directory, SaveRepository.StagingPattern)) File.Delete(path);
     }
 
-    private void DeleteOldGenerations(SaveMeta meta)
+    private bool DeleteOldGenerations(SaveMeta meta)
     {
         var generations = repository.Generations(meta.Slot).OrderByDescending(g => g.Generation).ToArray();
         var preserved = new HashSet<string>(StringComparer.Ordinal);
@@ -58,10 +59,15 @@ internal sealed class SaveMaintenance(SaveRepository repository)
             // The just-verified generation is protected even when an earlier sweep is retried.
             if (generation.Generation == meta.Gen)
             { preserved.Add(generation.Path); retained++; continue; }
-            if (generation.Generation < meta.Line) continue;
             try { repository.Prepare(repository.Read(generation.Path, generation.Generation, meta.Slot)); }
+            catch (SaveFormatException error) when (error.IsNewer)
+            { RejectGeneration(preserved, generation.Path, true, error); return false; }
             catch (Exception error) when (error is SaveFormatException or IOException or UnauthorizedAccessException)
-            { PreserveUnreadable(preserved, generation.Path, error); continue; }
+            {
+                RejectGeneration(preserved, generation.Path, generation.Generation >= meta.Line, error);
+                continue;
+            }
+            if (generation.Generation < meta.Line) continue;
             if (retained++ < Retained) preserved.Add(generation.Path);
         }
         foreach (var generation in generations)
@@ -70,13 +76,14 @@ internal sealed class SaveMaintenance(SaveRepository repository)
             // Generations before Line belong to the world explicitly replaced by NewGame.
             File.Delete(generation.Path);
         }
+        return true;
     }
 
-    private static void PreserveUnreadable(HashSet<string> preserved, string path,
+    private static void RejectGeneration(HashSet<string> preserved, string path, bool preserve,
         [FailureHandler("SYS-SAVE-FORMAT")] Exception error)
     {
-        preserved.Add(path);
-        DiagnosticLog.Warning("Save maintenance preserved an unreadable generation in the current world line.", error);
+        if (preserve) preserved.Add(path);
+        DiagnosticLog.Warning("Save maintenance rejected a generation; only explicitly replaced world lines may be deleted.", error);
     }
 
     private static void RetainSweep(Sweep sweep, [FailureHandler("SYS-SAVE-FORMAT")] Exception error)

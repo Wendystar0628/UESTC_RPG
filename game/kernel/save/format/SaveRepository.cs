@@ -60,6 +60,11 @@ public sealed class SaveRepository : IDisposable
             catch (Exception error) when (error is SaveFormatException or IOException or UnauthorizedAccessException)
             {
                 metadata ??= (error as SaveFormatException)?.Metadata;
+                if (error is SaveFormatException { IsNewer: true })
+                {
+                    RejectGeneration(error);
+                    return new(new(slot, SlotKind.Auto, SlotHealth.Newer, metadata, paths.Length), null, maximum);
+                }
                 rejected++;
                 RejectGeneration(error);
                 // An unidentified generation may start a different world line; never infer its identity from an older file.
