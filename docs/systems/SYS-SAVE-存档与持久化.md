@@ -10,7 +10,7 @@ related: [CORE-INDEX, SYS-MOTION, SYS-VIEW, ENG-GATES, ENG-BUDGET, ENG-PERF, UI-
 contracts: [ISaveService, ISaveSection, SaveSectionAttribute, SlotId, SlotKind, SaveScope, SlotHealth, SaveMeta, SlotInfo, RestorePhase]
 data: ["user://saves/"]
 gates: [G5, G20]
-paths: ["game/kernel/save/**"]
+paths: ["game/kernel/save/**", "game/hud/pages/Save*.cs"]
 ---
 
 # SYS-SAVE · 存档与持久化

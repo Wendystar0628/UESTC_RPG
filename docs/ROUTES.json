@@ -1131,6 +1131,12 @@
   },
   {
    "docs": [
+    "SYS-SAVE"
+   ],
+   "glob": "game/hud/pages/Save*.cs"
+  },
+  {
+   "docs": [
     "UI-VISUAL"
    ],
    "glob": "game/hud/style/**"
