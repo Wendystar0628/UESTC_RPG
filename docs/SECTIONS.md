@@ -1639,9 +1639,9 @@
 
 - ENG-GATES-SHOTS §0 结论 · L21 · 717
   - ★ ENG-GATES-SHOTS §0.1 接入要点 · L29 · 398
-- ENG-GATES-SHOTS §1 审查视角 · L35 · 4.5k
+- ENG-GATES-SHOTS §1 审查视角 · L35 · 4.6k
   - ENG-GATES-SHOTS §1.1 命令行规则与截图默认串 · L39 · 721
-  - ENG-GATES-SHOTS §1.2 截图方式 · L54 · 990
+  - ENG-GATES-SHOTS §1.2 截图方式 · L54 · 1.0k
   - ENG-GATES-SHOTS §1.3 固定机位表与审查视角表 · L66 · 1.7k
   - ENG-GATES-SHOTS §1.4 路线与点位（主线之后） · L97 · 744
   - ENG-GATES-SHOTS §1.5 时季抽样（主线之后） · L107 · 350

@@ -3,7 +3,7 @@
 # 用法：powershell -NoProfile -File scripts/shots/fixed-shots.ps1 [-Ui] [-Only 名字,名字] [-Poses 机位文件] [-MovieFrames 600] [-MovieEvents '60:season=winter;90:season=spring'] [-Resolution 3840x2160] [-QualitySet 'render_scale=0.77']
 # 每轮先显式准备正式游戏构建与 Godot 原生增量导入。
 #   -Poses：换一份机位表（格式同 poses.txt），临时加拍的机位放仓库外，不改 poses.txt
-#   -Ui：在隔离桌面采集 ui-poses.txt 的开始页、行走 HUD 与地图页，默认 1920×1080；不能与 -Poses 或录像组合。
+#   -Ui：在隔离桌面采集 ui-poses.txt 的开始页、行走 HUD、大地图与设置卡各页签和存档页，默认 1920×1080；不能与 -Poses 或录像组合。
 #   -Resolution：透传引擎 --resolution；省略时截图与录像为 1280x720，界面为 1920x1080。
 #   -QualitySet：透传 --quality-set 的逗号分隔单项覆盖；省略时沿用精致预设，不追加覆盖。
 # 事件也可写在机位表第三列 --movie-events=...；帧号零起始，60 fps，第 60 帧即第 1 秒。
