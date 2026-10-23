@@ -93,7 +93,7 @@ paths: ["game/data/pipeline-combinations.json", "game/style/shaders/globals.gdsh
 
 - 不开额外缓冲（MSAA、TAA 与屏幕空间特效，ENG-BUDGET-RULES §2）；材质区分编进 ROUGHNESS 的 7 位材质 ID。
 - 预通道全场开（描线离不开它），颜色通道过度绘制接近 1；叶片卡按 alpha 轮廓裁小；玻璃靠室内映射按不透明画；雾在材质里算并写 `FOG`；水面默认不透明。
-- 渲染比例随预设、用 FSR1，只在设置界面改（加载类）；不做连续动态分辨率。
+- 渲染精度由玩家自选、默认 100%，不随预设；低于 100% 用 FSR1 放大，只在设置界面改（加载类，DECISION-319）；不做动态分辨率。
 
 ## 4 剔除
 

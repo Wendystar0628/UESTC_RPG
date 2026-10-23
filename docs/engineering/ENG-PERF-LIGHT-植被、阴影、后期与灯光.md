@@ -56,7 +56,7 @@ paths: ["game/kernel/lighting/KeyLightState.cs", "game/kernel/lighting/KeyLightM
 
 - **顺序**：预通道 → 不透明 → 天空 → Compositor `PostSky`（描线、边缘光、雨幕带）→ 透明 → `PostTransparent`（移轴、高光肩部、暗角、光斑）→ Glow → Tonemap Linear → 运行时 LUT → 去色带、抗锯齿、FSR1。界面画在链之后。
 - **描线**：材质 ID 编进 ROUGHNESS 的 7 位，前提是关闭 `screen_space_roughness_limiter`、不开 MSAA、预通道开。线画在前景一侧；ID 不同才描材质交界；天空与 400 m 以外提前退出。**线宽按内部分辨率换算**，名义宽度 ≥ 1 px 的线内部宽度不小于 1 个内部像素。远处倒角变窄后由凸边亮线接替倒角提亮；远雨幕带、闪光帧、边缘光并进同一次 dispatch，不另加通道。
-- **抗锯齿**：不用 TAA（一拍二、风动、细线会拖影）与 MSAA（ID 和法线不能 resolve）；SMAA 或 FXAA 随预设（SYS-GRAPHICS §1），不许侵蚀 1 px 线（ART-STYLE-LINES）。
+- **抗锯齿**：不用 TAA（一拍二、风动、细线会拖影）与 MSAA（ID 和法线不能 resolve）；SMAA（默认）或 FXAA 由玩家选、不随预设，任何渲染精度下都可与 FSR1 同开；FSR1 的锐化取玩家设置，渲染精度 100% 时不放大也不锐化（SYS-GRAPHICS §3）；不许侵蚀 1 px 线（ART-STYLE-LINES）。
 - **可关项**（移轴、光斑、光柱、暗角）的管线启动时就建好，关时先 0.5 s 淡到 0。
 - 窗灯光晕走 `fx_glow`（ENG-PERF §1.4）。
 

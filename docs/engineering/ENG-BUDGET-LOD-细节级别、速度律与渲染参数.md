@@ -57,7 +57,7 @@ gates: [G10]
 ## 2 流式加载与速度
 
 - **有效速度**（旁观）= min(滚轮档位速度, 6 + 0.5 × 离地高度) × 冲刺倍数（×2），上限 200 m/s。
-- **屏幕误差阈值** τ（值见 `StreamTile.BaseErrorPixels`），速度越快越放大；速度超过 15 m/s 不加载 L0，超过 45 m/s 不加载 L1。τ 按内部渲染高度计算，渲染比例低的档自动选更粗的级别。
+- **屏幕误差阈值** τ（值见 `StreamTile.BaseErrorPixels`），速度越快越放大；速度超过 15 m/s 不加载 L0，超过 45 m/s 不加载 L1。τ 按固定参考高度 1080 计算，不随渲染精度、输出分辨率与界面缩放变（DECISION-319）。
 - **行走**：行走的水平速度上限（`WalkTuning`）低于 15 m/s 门槛，近处总是 L0（SYS-WALK-BOUNDS §7）。
 - **豁免速度律**：点位跳转、传送、旁观切行走、进入游戏，路径或落点已知，改用"目的地预取 + 到达保证"（UI-NAV-WAYPOINTS §2、SYS-TITLE §3.1、ENG-PERF-STREAM §1）。约束只剩：跳转最后 25% 路程不超过速度律；到达帧要求目的地各环就绪，加载界面停到就绪。降落落点未就绪时镜头悬停等待（SYS-WALK §4）。
 
@@ -74,7 +74,7 @@ gates: [G10]
 做法见 ENG-PERF-LIGHT §2，阴影方向、强度、月影与天气修正的取值见 ART-SKYLIGHT §3.1，这里只列分级与预算参数。
 
 - **阴影**：一盏 DirectionalLight3D，太阳与月亮轮流；PSSM 4 级（均衡 2 级），级联边界、图尺寸与距离以 `game/kernel/lighting/ShadowSettings.cs` 为准；`LightAngularDistance` 为 0（不开 PCSS），软影滤波固定 Soft Medium；介质为室内时主光第一级范围缩到 8–12 m（0.5 s 过渡）。
-- **后期**：Compositor 在 POST_SKY 画描线与边缘光，POST_TRANSPARENT 画移轴与光斑，之后 Glow、Tonemap Linear、LUT、抗锯齿（SMAA 或 FXAA 随预设，SYS-GRAPHICS §1）。移轴、光斑、光柱、暗角玩家可关，关时 0.5 s 淡出。
+- **后期**：Compositor 在 POST_SKY 画描线与边缘光，POST_TRANSPARENT 画移轴与光斑，之后 Glow、Tonemap Linear、LUT、抗锯齿（SMAA 或 FXAA，由玩家选，SYS-GRAPHICS §3）。暗角玩家可关（移轴、光斑、光柱的开关在主线之后），关时 0.5 s 淡出。
 - **光柱**：室外每屏几根，室内同屏几组，计入楼内份额；细尘每屏几百粒。
 - **倒影**：SubViewport 每轴 1/4 分辨率，每帧只给一个湖，更新间隔随预设。
 - **灯**：不建真实点光，全部走灯表（含开放入口的门口灯）。

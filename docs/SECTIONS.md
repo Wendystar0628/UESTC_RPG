@@ -1123,19 +1123,19 @@
 
 ## SYS-GRAPHICS · 画面设置
 
-`docs/systems/SYS-GRAPHICS-画面设置.md` · 7.2k 字 · 主线三个画面预设与约 10 个单项、风格底线、应用方式、持久化；自动调节与首次分档在主线之后
-关键词：画面设置、画质、画面预设、设备档、均衡、精致、极致、单项、风格底线、风格默认、渲染比例、加载类设置、画面页、IQualityService、IQualityAware、QualityResponsive、QualityKnob、quality-presets.json、settings.json
+`docs/systems/SYS-GRAPHICS-画面设置.md` · 7.8k 字 · 主线三个效果预设与十余个单项、风格底线、应用方式、持久化；自动调节与首次分档在主线之后
+关键词：画面设置、画质、画面预设、设备档、均衡、精致、极致、单项、作用域、自定义、风格底线、风格默认、渲染精度、FSR 锐化、暗角、加载类设置、画面页、恢复默认、IQualityService、IQualityAware、QualityResponsive、QualityKnob、quality-presets.json、settings.json
 
-- SYS-GRAPHICS §0 结论 · L22 · 1.5k
-  - ★ SYS-GRAPHICS §0.1 接入要点 · L33 · 853
-- SYS-GRAPHICS §1 预设 · L45 · 710
-- SYS-GRAPHICS §2 风格底线与风格默认 · L62 · 694
-- SYS-GRAPHICS §3 单项与生效方式 · L75 · 1.2k
-- SYS-GRAPHICS §4 应用方式 · L99 · 465
-- SYS-GRAPHICS §5 自动推荐与自动调节（主线之后） · L109 · 398
-- SYS-GRAPHICS §6 持久化与恢复 · L118 · 297
-- SYS-GRAPHICS §7 画面页 · L124 · 137
-- SYS-GRAPHICS §8 待验证（P0） · L128 · 304
+- SYS-GRAPHICS §0 结论 · L22 · 1.7k
+  - ★ SYS-GRAPHICS §0.1 接入要点 · L33 · 943
+- SYS-GRAPHICS §1 预设 · L45 · 709
+- SYS-GRAPHICS §2 风格底线与风格默认 · L61 · 707
+- SYS-GRAPHICS §3 单项与生效方式 · L74 · 1.4k
+- SYS-GRAPHICS §4 应用方式 · L97 · 475
+- SYS-GRAPHICS §5 自动推荐与自动调节（主线之后） · L107 · 398
+- SYS-GRAPHICS §6 持久化与恢复 · L116 · 365
+- SYS-GRAPHICS §7 画面页 · L122 · 182
+- SYS-GRAPHICS §8 待验证（P0） · L126 · 358
 
 ## SYS-MAPS · 多地图
 
@@ -1443,19 +1443,19 @@
 
 ## UI-NAV · 界面与操作说明
 
-`docs/ui/UI-NAV-界面与操作说明.md` · 8.8k 字 · 界面有什么、怎么操作：常驻界面与呼出光标、组件的内容与交互、输入优先级与关键键位、无障碍与文本约定；点位与跳转见子文档
+`docs/ui/UI-NAV-界面与操作说明.md` · 9.0k 字 · 界面有什么、怎么操作：常驻界面与呼出光标、组件的内容与交互、输入优先级与关键键位、无障碍与文本约定；点位与跳转见子文档
 关键词：界面交互、快捷键、输入优先级、常驻界面、呼出光标、四角归属、时间环操作、天气签条、速度档、临时提示、到达标题、设置项、无障碍、读屏、文本键、地名来源
 
 - UI-NAV §0 结论 · L21 · 1.0k
   - ★ UI-NAV §0.1 接入要点 · L36 · 446
 - UI-NAV §1 允许什么、禁止什么 · L44 · 406
 - UI-NAV §2 常驻界面、光标与隐藏 · L53 · 848
-- UI-NAV §3 组件的内容与交互 · L72 · 3.1k
+- UI-NAV §3 组件的内容与交互 · L72 · 3.3k
   - UI-NAV §3.1 时间环 · L74 · 534
   - UI-NAV §3.2 季节、速度与观察模式 · L83 · 369
   - UI-NAV §3.3 点位目录 · L89 · 218
   - UI-NAV §3.4 到达标题 · L93 · 267
-  - UI-NAV §3.5 操作说明与设置 · L97 · 782
+  - UI-NAV §3.5 操作说明与设置 · L97 · 918
   - UI-NAV §3.6 临时提示 · L105 · 424
   - UI-NAV §3.7 天气签条 · L113 · 506
 - UI-NAV §4 输入 · L123 · 1.5k
@@ -1509,7 +1509,7 @@
 - UI-VISUAL-COMPONENTS §0 结论 · L21 · 493
   - ★ UI-VISUAL-COMPONENTS §0.1 接入要点 · L29 · 177
 - UI-VISUAL-COMPONENTS §1 字体与字号 · L34 · 394
-- UI-VISUAL-COMPONENTS §2 形状与材质 · L40 · 841
+- UI-VISUAL-COMPONENTS §2 形状与材质 · L40 · 833
 - UI-VISUAL-COMPONENTS §3 图标体系 · L50 · 514
   - UI-VISUAL-COMPONENTS §3.1 规格 · L52 · 163
   - UI-VISUAL-COMPONENTS §3.2 意象 · L56 · 238
@@ -1520,7 +1520,7 @@
   - UI-VISUAL-COMPONENTS §4.3 时间环 · L80 · 352
   - UI-VISUAL-COMPONENTS §4.4 天气签条、速度条与到达标题 · L89 · 306
   - UI-VISUAL-COMPONENTS §4.5 存档卡"存储模组"、等待灯与加载界面 · L95 · 647
-- UI-VISUAL-COMPONENTS §5 画面布局 · L103 · 858
+- UI-VISUAL-COMPONENTS §5 画面布局 · L103 · 936
 - UI-VISUAL-COMPONENTS §6 待验证 · L120 · 163
 
 ## UI-VISUAL-MOTION · 界面动效与减少动态效果
@@ -1582,21 +1582,21 @@
   - ★ ENG-BUDGET §0.1 接入要点 · L35 · 184
 - ENG-BUDGET §1 界面、外围、室内与音频的份额 · L41 · 148
 - ENG-BUDGET §2 预设与设备档的预算 · L45 · 1.6k
-- ENG-BUDGET §3 份额怎么分 · L76 · 445
+- ENG-BUDGET §3 份额怎么分 · L76 · 442
 - ENG-BUDGET §4 怎么测 · L84 · 160
 - ENG-BUDGET §5 待验证（P0） · L88 · 186
 
 ## ENG-BUDGET-LOD · 细节级别、速度律与渲染参数
 
-`docs/engineering/ENG-BUDGET-LOD-细节级别、速度律与渲染参数.md` · 4.3k 字 · 细节级别 L0+–L4 与 64 m 分块、旁观速度律与目的地预取、深度与近裁剪面、阴影后期倒影灯光的预算参数
+`docs/engineering/ENG-BUDGET-LOD-细节级别、速度律与渲染参数.md` · 4.4k 字 · 细节级别 L0+–L4 与 64 m 分块、旁观速度律与目的地预取、深度与近裁剪面、阴影后期倒影灯光的预算参数
 关键词：细节级别、L0+、L4、分块、四叉树、屏幕误差、速度律、目的地预取、到达保证、近裁剪面、远裁剪面、反向 Z、坐标精度、PSSM、光柱数量、倒影分辨率、灯盏数
 
 - ENG-BUDGET-LOD §0 结论 · L20 · 641
   - ★ ENG-BUDGET-LOD §0.1 接入要点 · L27 · 303
 - ENG-BUDGET-LOD §1 细节级别与分块 · L33 · 1.4k
-- ENG-BUDGET-LOD §2 流式加载与速度 · L57 · 462
+- ENG-BUDGET-LOD §2 流式加载与速度 · L57 · 485
 - ENG-BUDGET-LOD §3 深度与近裁剪面 · L64 · 360
-- ENG-BUDGET-LOD §4 阴影、后期、倒影、灯光 · L72 · 572
+- ENG-BUDGET-LOD §4 阴影、后期、倒影、灯光 · L72 · 582
 - ENG-BUDGET-LOD §5 待验证（P0） · L82 · 135
 
 ## ENG-BUDGET-RULES · 硬规则与工程设置
@@ -1634,17 +1634,17 @@
 
 ## ENG-GATES-SHOTS · 审查视角与截图
 
-`docs/engineering/ENG-GATES-SHOTS-审查视角与截图.md` · 6.3k 字 · 命令行规则与截图默认串、截图方式、固定机位表；V/E/T 视角表、飞行与行走路线、时季抽样与巡检点轮换（主线之后）
+`docs/engineering/ENG-GATES-SHOTS-审查视角与截图.md` · 6.4k 字 · 命令行规则与截图默认串、截图方式、固定机位表；V/E/T 视角表、飞行与行走路线、时季抽样与巡检点轮换（主线之后）
 关键词：审查视角、截图默认串、命令行规则、截图方式、截图就绪、流式屏障、录像、视角表、V1、E1、飞行路线、压力路线、点位 P00–P23、行走路线 W1–W14、时季抽样、巡检点轮换、review.json
 
 - ENG-GATES-SHOTS §0 结论 · L21 · 717
   - ★ ENG-GATES-SHOTS §0.1 接入要点 · L29 · 398
-- ENG-GATES-SHOTS §1 审查视角 · L35 · 4.6k
+- ENG-GATES-SHOTS §1 审查视角 · L35 · 4.7k
   - ENG-GATES-SHOTS §1.1 命令行规则与截图默认串 · L39 · 721
-  - ENG-GATES-SHOTS §1.2 截图方式 · L54 · 1.0k
-  - ENG-GATES-SHOTS §1.3 固定机位表与审查视角表 · L66 · 1.7k
-  - ENG-GATES-SHOTS §1.4 路线与点位（主线之后） · L97 · 744
-  - ENG-GATES-SHOTS §1.5 时季抽样（主线之后） · L107 · 350
+  - ENG-GATES-SHOTS §1.2 截图方式 · L54 · 1.1k
+  - ENG-GATES-SHOTS §1.3 固定机位表与审查视角表 · L67 · 1.7k
+  - ENG-GATES-SHOTS §1.4 路线与点位（主线之后） · L98 · 744
+  - ENG-GATES-SHOTS §1.5 时季抽样（主线之后） · L108 · 350
 
 ## ENG-GATES-VETO · 一票否决与收尾清单
 
@@ -1681,7 +1681,7 @@
   - ENG-PERF §1.4 着色器白名单 · L64 · 482
   - ENG-PERF §1.5 全局参数与数据纹理 · L73 · 476
 - ENG-PERF §2 着色器与编译 · L82 · 779
-- ENG-PERF §3 填充率与带宽 · L92 · 214
+- ENG-PERF §3 填充率与带宽 · L92 · 251
 - ENG-PERF §4 剔除 · L98 · 496
 - ENG-PERF §5 待验证（P0） · L104 · 166
 
@@ -1692,22 +1692,22 @@
 
 - ENG-PERF-ADAPT §0 结论 · L21 · 402
   - ★ ENG-PERF-ADAPT §0.1 接入要点 · L27 · 160
-- ENG-PERF-ADAPT §1 自适应与帧节奏 · L32 · 838
-  - ENG-PERF-ADAPT §1.1 运行时自适应（主线之后） · L34 · 519
-  - ENG-PERF-ADAPT §1.2 帧节奏与画面设置约束 · L43 · 305
-- ENG-PERF-ADAPT §2 测量、剖析与门禁 · L48 · 535
+- ENG-PERF-ADAPT §1 自适应与帧节奏 · L32 · 896
+  - ENG-PERF-ADAPT §1.1 运行时自适应（主线之后） · L34 · 490
+  - ENG-PERF-ADAPT §1.2 帧节奏与画面设置约束 · L43 · 392
+- ENG-PERF-ADAPT §2 测量、剖析与门禁 · L49 · 535
 
 ## ENG-PERF-LIGHT · 植被、阴影、后期与灯光
 
-`docs/engineering/ENG-PERF-LIGHT-植被、阴影、后期与灯光.md` · 4.0k 字 · 植被分级与风、飘落池、投影代理；阴影量化与日月交接的做法；后期链顺序、描线、抗锯齿；窗灯路灯通道与倒影
+`docs/engineering/ENG-PERF-LIGHT-植被、阴影、后期与灯光.md` · 4.1k 字 · 植被分级与风、飘落池、投影代理；阴影量化与日月交接的做法；后期链顺序、描线、抗锯齿；窗灯路灯通道与倒影
 关键词：植被分级、树冠云、风三层、ShadowsOnly 代理、投影物、方向量化、太阳贴地、退光线、日月交接、后期链、Compositor、描线材质 ID、CDL、LUT、灯光通道、路灯光斑、倒影视口
 
 - ENG-PERF-LIGHT §0 结论 · L21 · 546
   - ★ ENG-PERF-LIGHT §0.1 接入要点 · L28 · 214
 - ENG-PERF-LIGHT §1 植被 · L33 · 640
-- ENG-PERF-LIGHT §2 阴影、光照与后期 · L42 · 1.8k
+- ENG-PERF-LIGHT §2 阴影、光照与后期 · L42 · 1.9k
   - ENG-PERF-LIGHT §2.1 阴影 · L44 · 668
-  - ENG-PERF-LIGHT §2.2 后期链 · L55 · 590
+  - ENG-PERF-LIGHT §2.2 后期链 · L55 · 651
   - ENG-PERF-LIGHT §2.3 窗灯与路灯 · L63 · 411
   - ENG-PERF-LIGHT §2.4 倒影 · L69 · 165
 - ENG-PERF-LIGHT §3 待验证（P0） · L73 · 128
@@ -1996,7 +1996,7 @@
 
 ## REG-DECISIONS-SYSTEMS · 系统与工程决策
 
-`docs/registry/REG-DECISIONS-SYSTEMS-系统与工程决策.md` · 22.0k 字 · 界面、存档、音频、性能与画面设置、工程五个领域的已定决策
+`docs/registry/REG-DECISIONS-SYSTEMS-系统与工程决策.md` · 22.9k 字 · 界面、存档、音频、性能与画面设置、工程五个领域的已定决策
 关键词：决策、系统、工程、界面、存档、音频、性能、画面设置、预算、契约
 
 - REG-DECISIONS-SYSTEMS §0 结论 · L21 · 126
@@ -2004,10 +2004,10 @@
 - REG-DECISIONS-SYSTEMS §1 界面 · L29 · 4.6k
 - REG-DECISIONS-SYSTEMS §2 存档 · L65 · 1.9k
 - REG-DECISIONS-SYSTEMS §3 音频 · L85 · 2.2k
-- REG-DECISIONS-SYSTEMS §4 性能与画面设置 · L107 · 3.7k
-- REG-DECISIONS-SYSTEMS §5 工程 · L139 · 5.4k
-- REG-DECISIONS-SYSTEMS §6 地图与行走 · L175 · 1.0k
-- REG-DECISIONS-SYSTEMS §7 时间、季节、天气 · L186 · 2.4k
+- REG-DECISIONS-SYSTEMS §4 性能与画面设置 · L107 · 4.6k
+- REG-DECISIONS-SYSTEMS §5 工程 · L142 · 5.4k
+- REG-DECISIONS-SYSTEMS §6 地图与行走 · L178 · 1.0k
+- REG-DECISIONS-SYSTEMS §7 时间、季节、天气 · L189 · 2.4k
 
 ## REG-DECISIONS-WORLD · 世界与画面决策
 
@@ -2022,7 +2022,7 @@
 
 ## REG-GLOSSARY · 术语表
 
-`docs/registry/REG-GLOSSARY-术语表.md` · 20.2k 字 · 文档里专有说法的统一解释，按领域分组，每条一两句并给出细则所在的小节
+`docs/registry/REG-GLOSSARY-术语表.md` · 20.4k 字 · 文档里专有说法的统一解释，按领域分组，每条一两句并给出细则所在的小节
 关键词：术语、术语表、名词解释、同名异义、缩写、别名
 
 - REG-GLOSSARY §0 用法 · L21 · 261
@@ -2039,6 +2039,6 @@
 - REG-GLOSSARY §10 多地图 · L214 · 620
 - REG-GLOSSARY §11 界面 · L226 · 1.4k
 - REG-GLOSSARY §12 音频 · L253 · 1.1k
-- REG-GLOSSARY §13 画面设置与性能 · L274 · 1.7k
-- REG-GLOSSARY §14 工程与流程 · L301 · 2.4k
-- REG-GLOSSARY §15 同名异义 · L338 · 1.5k
+- REG-GLOSSARY §13 画面设置与性能 · L274 · 1.9k
+- REG-GLOSSARY §14 工程与流程 · L303 · 2.4k
+- REG-GLOSSARY §15 同名异义 · L340 · 1.5k
