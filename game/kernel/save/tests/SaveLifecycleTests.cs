@@ -145,7 +145,7 @@ public sealed class SaveLifecycleTests
         using var fixture = new SaveLifecycleFixture();
         await fixture.Start(); await fixture.Pump(fixture.Save.NewGame(new("s1"), 1));
         fixture.Flow = AppState.Playing; await fixture.Pump(fixture.Save.SaveNow(SaveReason.NewGame));
-        await fixture.Frames(200);
+        fixture.AdvanceFrames((int)(SaveSchedule.AttemptSpacingSeconds / .1) + 1);
         await fixture.PumpUntilIdle();
         AssertThat(fixture.Save.Slots[0].Meta?.Gen == 1).OverrideFailureMessage("An autosave was written without a request.").IsTrue();
         fixture.Save.Request(SaveReason.Interval);
