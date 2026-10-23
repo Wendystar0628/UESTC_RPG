@@ -10,8 +10,11 @@ namespace Campus.Contracts;
 public readonly record struct ShadowSettings(int AtlasSize, int Splits, float MaxDistance,
     float Split1, float Split2, float Split3, uint CasterMask)
 {
-    // ENG-PERF: PSSM 4 at 1600 m splits at 48 / 192 / 640 m; PSSM 2 uses Split1 = 0.15.
+    // ENG-PERF: PSSM 4 at 1600 m splits at 48 / 192 / 640 m.
     private const float Near1 = 48f, Near2 = 192f, Near3 = 640f;
+
+    /// <summary>With two splits the near cascade ends at this absolute distance, whatever the range (RESEARCH-045 audit).</summary>
+    public const float TwoSplitNear = 60f;
     public const float MinimumDistance = 600f;
     public const float MaximumDistance = 1600f;
 
@@ -34,7 +37,7 @@ public readonly record struct ShadowSettings(int AtlasSize, int Splits, float Ma
         if (!float.IsFinite(distance) || distance < MinimumDistance || distance > MaximumDistance)
             throw new ArgumentOutOfRangeException(nameof(distance), distance, "Shadow distance is 600–1600 m.");
         var mask = ~RenderLayers.NonCasters;
-        if (splits == 2) return new(size, 2, distance, 0.15f, 0f, 0f, mask);
+        if (splits == 2) return new(size, 2, distance, TwoSplitNear / distance, 0f, 0f, mask);
         // Keep the near cascades at their absolute size; the third boundary never exceeds 60 % of the range.
         var s1 = Near1 / distance;
         var s2 = Near2 / distance;

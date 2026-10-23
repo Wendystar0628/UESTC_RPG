@@ -5,7 +5,7 @@
   "presets": {
     "balanced": {
       "shadow_quality": 0,
-      "shadow_distance": 1000,
+      "shadow_distance": 600,
       "foliage_density": 0.75,
       "grass_radius": 12,
       "reflection_interval": 3,

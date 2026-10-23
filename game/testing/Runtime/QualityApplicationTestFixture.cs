@@ -11,6 +11,9 @@ namespace Campus.Tests;
 
 internal static class QualityApplicationTestFixture
 {
+    // 命令行会话叠加的阴影距离，取任何预设都不用的一档，测试才分得清它有没有漏进存盘。
+    internal const float CliShadowDistance = 1000;
+
     internal static async Task<(QualityService, FakeRuntime, FileStoreSpy)> CliSession(string name)
     {
         var runtime = new FakeRuntime();
@@ -20,7 +23,7 @@ internal static class QualityApplicationTestFixture
         var originalHash = store.Hash;
         await service.Initialize(BootPhase.AfterMapWarm, Context());
         await service.Apply(new(QualityPreset.Ultra, new Dictionary<QualityKnob, float>
-        { [QualityKnob.ShadowDistance] = 600, [QualityKnob.RenderScale] = .67f }), ApplyOrigin.CommandLine);
+        { [QualityKnob.ShadowDistance] = CliShadowDistance, [QualityKnob.RenderScale] = .67f }), ApplyOrigin.CommandLine);
         if (store.Hash != originalHash || store.SaveCount != 0) throw new InvalidOperationException("CLI application touched the file.");
         runtime.Booting = false;
         return (service, runtime, store);

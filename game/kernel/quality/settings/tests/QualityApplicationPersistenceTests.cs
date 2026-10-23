@@ -26,10 +26,11 @@ public sealed class QualityApplicationPersistenceTests
         await ApplyUser(service, new(service.Requested.Preset, next));
         var saved = store.Read()!;
         var values = Catalog().Resolve(saved, saved.Preset);
+        var balanced = Catalog().Resolve(QualityCatalog.Profile(QualityPreset.Balanced), QualityPreset.Balanced);
         if (store.SaveCount != 1 || store.Hash == beforeHash || saved.Preset != QualityPreset.Balanced ||
-            values[(int)QualityKnob.ShadowDistance] != 1000 || values[(int)QualityKnob.ParticleDensity] != .5f)
+            values[(int)QualityKnob.ShadowDistance] != balanced[(int)QualityKnob.ShadowDistance] || values[(int)QualityKnob.ParticleDensity] != .5f)
             throw new InvalidOperationException("User delta was dropped or a CLI override leaked into the saved profile.");
-        if (service.Requested.Preset != QualityPreset.Ultra || service.Effective[QualityKnob.ShadowDistance] != 600)
+        if (service.Requested.Preset != QualityPreset.Ultra || service.Effective[QualityKnob.ShadowDistance] != CliShadowDistance)
             throw new InvalidOperationException("Saving a user edit removed the live CLI overlay.");
     }
 
