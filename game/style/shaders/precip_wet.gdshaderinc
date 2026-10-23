@@ -138,7 +138,10 @@ float precip_reflect_hit(vec3 p, vec3 r) {
 // 湿面、湿边湿晕与积水（toon_puddle 的函数体调它；在 toon 的湿润变暗之后）。response：材质线表里的湿润响应
 void precip_puddle_apply(vec3 wpos, vec3 cam, vec3 n_w, bool interior, bool outskirt, float response,
 		inout vec3 lit, inout vec3 shade) {
-	// 导数一律在分支之前取
+	if (weather_b.x <= 0.0 && weather_b.y <= 0.0) {
+		return;
+	}
+	// 导数一律在下述逐片元分支之前取
 	vec3 v = normalize(wpos - cam);
 	float graze = 1.0 - abs(dot(v, n_w));
 	vec2 xz = wpos.xz;
