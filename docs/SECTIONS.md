@@ -1237,52 +1237,52 @@
 
 ## SYS-SAVE · 存档与持久化
 
-`docs/systems/SYS-SAVE-存档与持久化.md` · 3.8k 字 · 存档位与世界线、各存档段存什么不存什么；保存读档与格式安全见子文档
-关键词：存档、存档位、世界线、存档段、单实例锁、保留 3 代、继续、新游戏、不存什么、恢复阶段、ISaveService、ISaveSection、SaveSectionAttribute、RestorePhase
+`docs/systems/SYS-SAVE-存档与持久化.md` · 4.1k 字 · 存档位与世界线、各存档段存什么不存什么；保存读档与格式安全见子文档
+关键词：存档、存档位、世界线、存档段、单实例锁、条目、自动池、手动池、立即保存、删除存档、继续、新游戏、不存什么、恢复阶段、ISaveService、ISaveSection、SaveSectionAttribute、RestorePhase
 
-- SYS-SAVE §0 结论 · L22 · 730
+- SYS-SAVE §0 结论 · L22 · 770
   - ★ SYS-SAVE §0.1 接入要点 · L30 · 317
-- SYS-SAVE §1 存档模型 · L36 · 644
-- SYS-SAVE §2 存什么、不存什么 · L46 · 1.3k
+- SYS-SAVE §1 存档模型 · L36 · 926
+- SYS-SAVE §2 存什么、不存什么 · L48 · 1.3k
 
 ## SYS-SAVE-FLOW · 保存时机与读档流程
 
-`docs/systems/SYS-SAVE-FLOW-保存时机与读档流程.md` · 5.7k 字 · 保存时机、安全时刻与落定快照、退出保存、读档顺序、世界实例、状态一致、新游戏建档、校验修复
+`docs/systems/SYS-SAVE-FLOW-保存时机与读档流程.md` · 5.8k 字 · 保存时机、安全时刻与落定快照、退出保存、读档顺序、世界实例、状态一致、新游戏建档、校验修复
 关键词：保存、读档、自动保存、安全时刻、落定快照、续跑等价、世界实例、校验修复、退出保存、现实时间不计、SaveReason、LoadScope、CaptureContext、RestoreContext、NewGameContext、SaveStatus、SaveResult、LoadStatus、LoadResult、SaveState、IWorldState.Instance
 
-- SYS-SAVE-FLOW §0 结论 · L22 · 538
+- SYS-SAVE-FLOW §0 结论 · L22 · 552
   - ★ SYS-SAVE-FLOW §0.1 接入要点 · L29 · 278
-- SYS-SAVE-FLOW §1 保存时机与可靠性 · L35 · 1.3k
-  - SYS-SAVE-FLOW §1.1 时机 · L37 · 386
-  - SYS-SAVE-FLOW §1.2 安全时刻与落定快照 · L50 · 356
-  - SYS-SAVE-FLOW §1.3 写盘与失败 · L56 · 103
-  - SYS-SAVE-FLOW §1.4 退出 · L60 · 306
-  - SYS-SAVE-FLOW §1.5 保存状态与失败反馈 · L69 · 87
-- SYS-SAVE-FLOW §2 加载与一致性 · L73 · 2.4k
-  - SYS-SAVE-FLOW §2.1 加载流程 · L75 · 779
-  - SYS-SAVE-FLOW §2.2 世界实例：`IWorldState.Instance` · L89 · 358
-  - SYS-SAVE-FLOW §2.3 "状态一致"的定义 · L95 · 391
-  - SYS-SAVE-FLOW §2.4 天气 · L103 · 103
-  - SYS-SAVE-FLOW §2.5 新游戏 · L107 · 302
-  - SYS-SAVE-FLOW §2.6 校验修复 · L113 · 442
-- SYS-SAVE-FLOW §3 关着游戏的那段现实时间不计 · L128 · 243
-- SYS-SAVE-FLOW §4 待验证（P0） · L135 · 104
+- SYS-SAVE-FLOW §1 保存时机与可靠性 · L35 · 1.4k
+  - SYS-SAVE-FLOW §1.1 时机 · L37 · 466
+  - SYS-SAVE-FLOW §1.2 安全时刻与落定快照 · L53 · 356
+  - SYS-SAVE-FLOW §1.3 写盘与失败 · L59 · 119
+  - SYS-SAVE-FLOW §1.4 退出 · L63 · 306
+  - SYS-SAVE-FLOW §1.5 保存状态与失败反馈 · L72 · 127
+- SYS-SAVE-FLOW §2 加载与一致性 · L76 · 2.4k
+  - SYS-SAVE-FLOW §2.1 加载流程 · L78 · 779
+  - SYS-SAVE-FLOW §2.2 世界实例：`IWorldState.Instance` · L92 · 358
+  - SYS-SAVE-FLOW §2.3 "状态一致"的定义 · L98 · 391
+  - SYS-SAVE-FLOW §2.4 天气 · L106 · 103
+  - SYS-SAVE-FLOW §2.5 新游戏 · L110 · 302
+  - SYS-SAVE-FLOW §2.6 校验修复 · L116 · 442
+- SYS-SAVE-FLOW §3 关着游戏的那段现实时间不计 · L131 · 243
+- SYS-SAVE-FLOW §4 待验证（P0） · L138 · 104
 
 ## SYS-SAVE-FORMAT · 格式、损坏处理与安全
 
-`docs/systems/SYS-SAVE-FORMAT-格式、损坏处理与安全.md` · 4.2k 字 · 存档容器与序列化、格式号与段版本、坏档退回上一代、唯一的设置文件 settings.json、读档输入的安全
+`docs/systems/SYS-SAVE-FORMAT-格式、损坏处理与安全.md` · 4.3k 字 · 存档容器与序列化、格式号与段版本、坏档退回上一代、唯一的设置文件 settings.json、读档输入的安全
 关键词：存档容器、序列化、格式号、段版本、存档损坏、设置文件、settings.json、存档安全、缩略图、ReadOnlyReason
 
-- SYS-SAVE-FORMAT §0 结论 · L22 · 633
+- SYS-SAVE-FORMAT §0 结论 · L22 · 644
   - ★ SYS-SAVE-FORMAT §0.1 接入要点 · L30 · 264
 - SYS-SAVE-FORMAT §1 格式与版本 · L37 · 1.1k
   - SYS-SAVE-FORMAT §1.1 容器 · L39 · 432
   - SYS-SAVE-FORMAT §1.2 缩略图 · L49 · 152
   - SYS-SAVE-FORMAT §1.3 序列化约定 · L53 · 195
   - SYS-SAVE-FORMAT §1.4 版本 · L59 · 295
-- SYS-SAVE-FORMAT §2 存档损坏 · L66 · 472
-- SYS-SAVE-FORMAT §3 设置文件：唯一的 `settings.json` · L79 · 663
-- SYS-SAVE-FORMAT §4 安全：为什么禁止用 Resource 和 ConfigFile 存读档 · L89 · 533
+- SYS-SAVE-FORMAT §2 存档损坏 · L66 · 532
+- SYS-SAVE-FORMAT §3 设置文件：唯一的 `settings.json` · L80 · 663
+- SYS-SAVE-FORMAT §4 安全：为什么禁止用 Resource 和 ConfigFile 存读档 · L90 · 542
 
 ## SYS-TIME · 时间与季节
 
@@ -1456,7 +1456,7 @@
   - UI-NAV §3.3 点位目录 · L89 · 218
   - UI-NAV §3.4 到达标题 · L93 · 267
   - UI-NAV §3.5 操作说明与设置 · L97 · 782
-  - UI-NAV §3.6 临时提示 · L105 · 397
+  - UI-NAV §3.6 临时提示 · L105 · 424
   - UI-NAV §3.7 天气签条 · L113 · 506
 - UI-NAV §4 输入 · L123 · 1.5k
   - UI-NAV §4.1 Esc 与单键快捷键 · L125 · 320
@@ -1996,18 +1996,18 @@
 
 ## REG-DECISIONS-SYSTEMS · 系统与工程决策
 
-`docs/registry/REG-DECISIONS-SYSTEMS-系统与工程决策.md` · 21.4k 字 · 界面、存档、音频、性能与画面设置、工程五个领域的已定决策
+`docs/registry/REG-DECISIONS-SYSTEMS-系统与工程决策.md` · 21.8k 字 · 界面、存档、音频、性能与画面设置、工程五个领域的已定决策
 关键词：决策、系统、工程、界面、存档、音频、性能、画面设置、预算、契约
 
 - REG-DECISIONS-SYSTEMS §0 结论 · L21 · 126
   - ★ REG-DECISIONS-SYSTEMS §0.1 接入要点 · L25 · 56
 - REG-DECISIONS-SYSTEMS §1 界面 · L29 · 4.6k
-- REG-DECISIONS-SYSTEMS §2 存档 · L65 · 1.6k
-- REG-DECISIONS-SYSTEMS §3 音频 · L84 · 2.2k
-- REG-DECISIONS-SYSTEMS §4 性能与画面设置 · L106 · 3.5k
-- REG-DECISIONS-SYSTEMS §5 工程 · L137 · 5.4k
-- REG-DECISIONS-SYSTEMS §6 地图与行走 · L173 · 1.0k
-- REG-DECISIONS-SYSTEMS §7 时间、季节、天气 · L184 · 2.4k
+- REG-DECISIONS-SYSTEMS §2 存档 · L65 · 1.9k
+- REG-DECISIONS-SYSTEMS §3 音频 · L85 · 2.2k
+- REG-DECISIONS-SYSTEMS §4 性能与画面设置 · L107 · 3.5k
+- REG-DECISIONS-SYSTEMS §5 工程 · L138 · 5.4k
+- REG-DECISIONS-SYSTEMS §6 地图与行走 · L174 · 1.0k
+- REG-DECISIONS-SYSTEMS §7 时间、季节、天气 · L185 · 2.4k
 
 ## REG-DECISIONS-WORLD · 世界与画面决策
 
@@ -2022,7 +2022,7 @@
 
 ## REG-GLOSSARY · 术语表
 
-`docs/registry/REG-GLOSSARY-术语表.md` · 20.1k 字 · 文档里专有说法的统一解释，按领域分组，每条一两句并给出细则所在的小节
+`docs/registry/REG-GLOSSARY-术语表.md` · 20.2k 字 · 文档里专有说法的统一解释，按领域分组，每条一两句并给出细则所在的小节
 关键词：术语、术语表、名词解释、同名异义、缩写、别名
 
 - REG-GLOSSARY §0 用法 · L21 · 261
@@ -2035,10 +2035,10 @@
 - REG-GLOSSARY §6 室内与门 · L138 · 981
 - REG-GLOSSARY §7 观察模式、行走与跳转 · L154 · 1.4k
 - REG-GLOSSARY §8 平面地图与传送 · L178 · 932
-- REG-GLOSSARY §9 开始页与存档 · L195 · 1.0k
-- REG-GLOSSARY §10 多地图 · L213 · 620
-- REG-GLOSSARY §11 界面 · L225 · 1.4k
-- REG-GLOSSARY §12 音频 · L252 · 1.1k
-- REG-GLOSSARY §13 画面设置与性能 · L273 · 1.7k
-- REG-GLOSSARY §14 工程与流程 · L300 · 2.4k
-- REG-GLOSSARY §15 同名异义 · L337 · 1.5k
+- REG-GLOSSARY §9 开始页与存档 · L195 · 1.1k
+- REG-GLOSSARY §10 多地图 · L214 · 620
+- REG-GLOSSARY §11 界面 · L226 · 1.4k
+- REG-GLOSSARY §12 音频 · L253 · 1.1k
+- REG-GLOSSARY §13 画面设置与性能 · L274 · 1.7k
+- REG-GLOSSARY §14 工程与流程 · L301 · 2.4k
+- REG-GLOSSARY §15 同名异义 · L338 · 1.5k
