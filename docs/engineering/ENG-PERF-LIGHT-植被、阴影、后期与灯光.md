@@ -32,7 +32,7 @@ paths: ["game/kernel/lighting/KeyLightState.cs", "game/kernel/lighting/KeyLightM
 
 ## 1 植被
 
-- **分级**：按单株选级，不跟随格子；近池（150 m 内）每个"母模型 × 级"一个动态 MultiMesh，不超过 10 Hz 分级并整块写入；远池 64 m 一块静态随格烘焙；L3、L4 是树冠云并进格子几何。远距替身（团块低模或半八面体，P0 二选一）四季共用一套，不烘四季各一套。
+- **分级**：按单株选级，不跟随格子；近池（150 m 内）每个"母模型 × 级"一个动态 MultiMesh，不超过 10 Hz 分级并整块写入；远池 64 m 一块静态随格烘焙；L3、L4 是树冠云并进格子几何。L1 与远距替身都取 L0 外露团块的子集（只裁被挡住的团块，不另造形体），跨级剪影一致；远距替身四季共用一套，不烘四季各一套。
 - **树叶**用 alpha scissor 留在不透明通道，不用 alpha-to-coverage 与 alpha hash（无 TAA 时满屏噪点）。
 - **风**分主干、团块、叶片三层，相位读 `anim_time`；阴影通道编译同一段 `vertex()`，风与叶量缩放自动跟到影子，代价是阴影通道里的距离判断必须用主相机。系数只乘幅度、不改相位，快进、换季、换天气不让阵风错拍；`IWindField.Sample` 与着色器同一公式。
 - **飘落池、降水池、草**都是 MultiMesh，位置由 `anim_time` 与种子解析算出，没有状态，截图与录像可复现；降水池循环盒跟相机走，`vertex()` 读 `precip_occ` 让檐下无雨；密度用 `VisibleInstanceCount`（SYS-WEATHER §3、§6）。

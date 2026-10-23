@@ -1699,12 +1699,12 @@
 
 ## ENG-PERF-LIGHT · 植被、阴影、后期与灯光
 
-`docs/engineering/ENG-PERF-LIGHT-植被、阴影、后期与灯光.md` · 4.1k 字 · 植被分级与风、飘落池、投影代理；阴影量化与日月交接的做法；后期链顺序、描线、抗锯齿；窗灯路灯通道与倒影
+`docs/engineering/ENG-PERF-LIGHT-植被、阴影、后期与灯光.md` · 4.2k 字 · 植被分级与风、飘落池、投影代理；阴影量化与日月交接的做法；后期链顺序、描线、抗锯齿；窗灯路灯通道与倒影
 关键词：植被分级、树冠云、风三层、ShadowsOnly 代理、投影物、方向量化、太阳贴地、退光线、日月交接、后期链、Compositor、描线材质 ID、CDL、LUT、灯光通道、路灯光斑、倒影视口
 
 - ENG-PERF-LIGHT §0 结论 · L21 · 546
   - ★ ENG-PERF-LIGHT §0.1 接入要点 · L28 · 214
-- ENG-PERF-LIGHT §1 植被 · L33 · 640
+- ENG-PERF-LIGHT §1 植被 · L33 · 667
 - ENG-PERF-LIGHT §2 阴影、光照与后期 · L42 · 1.9k
   - ENG-PERF-LIGHT §2.1 阴影 · L44 · 668
   - ENG-PERF-LIGHT §2.2 后期链 · L55 · 651
