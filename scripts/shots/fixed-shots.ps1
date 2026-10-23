@@ -1,13 +1,16 @@
 ﻿# 启动游戏内统一拍摄服务；录像每机位独立进程，保留 Godot 原生文件，以服务元数据说明有效区间。
 # 产出：output/shots/、output/shots/ui/、output/movies/
-# 用法：powershell -NoProfile -File scripts/shots/fixed-shots.ps1 [-Ui] [-Only 名字,名字] [-Poses 机位文件] [-MovieFrames 600] [-MovieEvents '60:season=winter;90:season=spring']
+# 用法：powershell -NoProfile -File scripts/shots/fixed-shots.ps1 [-Ui] [-Only 名字,名字] [-Poses 机位文件] [-MovieFrames 600] [-MovieEvents '60:season=winter;90:season=spring'] [-Resolution 3840x2160] [-QualitySet 'render_scale=0.77']
 # 每轮先显式准备正式游戏构建与 Godot 原生增量导入。
 #   -Poses：换一份机位表（格式同 poses.txt），临时加拍的机位放仓库外，不改 poses.txt
-#   -Ui：在隔离桌面采集 ui-poses.txt 的开始页、行走 HUD 与地图页，1920×1080；不能与 -Poses 或录像组合。
+#   -Ui：在隔离桌面采集 ui-poses.txt 的开始页、行走 HUD 与地图页，默认 1920×1080；不能与 -Poses 或录像组合。
+#   -Resolution：透传引擎 --resolution；省略时截图与录像为 1280x720，界面为 1920x1080。
+#   -QualitySet：透传 --quality-set 的逗号分隔单项覆盖；省略时沿用精致预设，不追加覆盖。
 # 事件也可写在机位表第三列 --movie-events=...；帧号零起始，60 fps，第 60 帧即第 1 秒。
 # 整轮持有构建锁（WF-BUILD），不开声音；截图 output/shots/、总览 总览.jpg；录像 output/movies/机位名/，有效区间见 movie-segment.json。
 param([string[]]$Only = @(), [string]$Poses = '', [switch]$Ui,
-    [ValidateRange(0, 2147483647)][int]$MovieFrames = 0, [string]$MovieEvents = '')
+    [ValidateRange(0, 2147483647)][int]$MovieFrames = 0, [string]$MovieEvents = '',
+    [string]$Resolution = '', [string]$QualitySet = '')
 $ErrorActionPreference = 'Stop'
 $repo = (Resolve-Path (Join-Path $PSScriptRoot '..\..')).Path
 . (Join-Path $repo 'scripts\lib\common.ps1')
@@ -27,9 +30,12 @@ if ($Only.Count) {
     foreach ($name in $Only) { if ($name -notin $names) { throw "未知固定机位：$name" } }
     $names = @($names | Where-Object { $_ -in $Only })
 }
-$arguments = @('--path', "$repo\game", '--windowed', '--resolution', '1280x720', '--rendering-driver', 'd3d12', '--fixed-fps', '60',
+$sceneResolution = if ($Resolution) { $Resolution } else { '1280x720' }
+$uiResolution = if ($Resolution) { $Resolution } else { '1920x1080' }
+$qualityArguments = @(if ($QualitySet) { "--quality-set=$QualitySet" })
+$arguments = @('--path', "$repo\game", '--windowed', '--resolution', $sceneResolution, '--rendering-driver', 'd3d12', '--fixed-fps', '60',
     '--', "--shots-file=$poses", "--out=$out", '--anim=240', '--flow=0', '--mode=fly', '--ui=0', '--seed=1', '--weather-seed=1',
-    '--quality=fine', '--map=qingshuihe', '--title=0', '--save=off', '--audio=off')
+    '--quality=fine', '--map=qingshuihe', '--title=0', '--save=off', '--audio=off') + $qualityArguments
 if (-not $MovieFrames -and $Only.Count) { $arguments += "--shots=$($names -join ',')" }
 $lease = Enter-UESTCBuildLock $layout.Locks
 try {
@@ -46,9 +52,9 @@ try {
             # 开始页没有世界，不给位姿，拍摄标识用 ui。
             $shot = if ($pose -eq '-') { 'ui' } else { $pose }
             $poseArguments = @(if ($pose -ne '-') { "--pose=$pose" })
-            $pageArguments = @('--path', "$repo\game", '--windowed', '--resolution', '1920x1080', '--rendering-driver', 'd3d12', '--fixed-fps', '60',
+            $pageArguments = @('--path', "$repo\game", '--windowed', '--resolution', $uiResolution, '--rendering-driver', 'd3d12', '--fixed-fps', '60',
                 '--', "--shots=$shot") + $poseArguments + @("--out=$out", '--clock=17.5', '--season=autumn', '--weather=clear',
-                '--anim=240', '--flow=0', '--ui=1', '--seed=1', '--weather-seed=1', '--quality=fine', '--map=qingshuihe', '--save=off', '--audio=off')
+                '--anim=240', '--flow=0', '--ui=1', '--seed=1', '--weather-seed=1', '--quality=fine', '--map=qingshuihe', '--save=off', '--audio=off') + $qualityArguments
             $pageArguments += @($columns[2].Trim() -split '\s+')
             $result = Invoke-UESTCProcess $godot $pageArguments $repo (Join-Path $out "$name.log") -Visible -IsolatedDesktop -TimeoutSeconds 900 -Environment $testEnvironment
             Assert-UESTCCleanGodotLog $result
@@ -67,11 +73,11 @@ try {
             Get-ChildItem -LiteralPath $movieOut -File | Where-Object { $_.Extension -in '.png', '.wav', '.log', '.json' } |
                 ForEach-Object { Remove-Item -LiteralPath $_.FullName -Force }
             $nativePath = Join-Path $movieOut 'movie.png'
-            $movieArguments = @('--path', "$repo\game", '--windowed', '--resolution', '1280x720', '--rendering-driver', 'd3d12',
+            $movieArguments = @('--path', "$repo\game", '--windowed', '--resolution', $sceneResolution, '--rendering-driver', 'd3d12',
                 '--fixed-fps', '60', '--write-movie', $nativePath,
                 '--', "--shots-file=$poses", "--shots=$name", "--out=$movieOut", "--movie-frames=$MovieFrames",
                 '--anim=240', '--flow=0', '--mode=fly', '--ui=0', '--seed=1', '--weather-seed=1',
-                '--quality=fine', '--map=qingshuihe', '--title=0', '--save=off', '--audio=off')
+                '--quality=fine', '--map=qingshuihe', '--title=0', '--save=off', '--audio=off') + $qualityArguments
             if ($MovieEvents) { $movieArguments += "--movie-events=$MovieEvents" }
             $log = Join-Path $movieOut 'capture.log'
             $result = Invoke-UESTCProcess $godot $movieArguments $repo $log -Visible -IsolatedDesktop -TimeoutSeconds 900 -Environment $testEnvironment
