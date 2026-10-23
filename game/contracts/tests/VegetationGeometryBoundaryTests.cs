@@ -95,6 +95,27 @@ public sealed class VegetationGeometryBoundaryTests
 
     [TestCase]
     [TestCategory(TestReason.Contract)]
+    public void GrassIndexCopiesPublicInputsAndTakesOnlyTheOwnedMemberChannel()
+    {
+        var cell = new GrassPoolCell(-1, 0, 0, 1, LocalBounds);
+        var cells = new List<GrassPoolCell> { cell };
+        int[] members = [0];
+        var copied = new GrassPoolIndex(cells, members, 1);
+        var owned = GrassPoolIndex.TakeOwnership(cells, members, 1);
+        RequireOwned(owned.Members, members);
+        cells.Clear();
+        members[0] = 7;
+        AssertThat(copied.Cells.Single() == cell && copied.Members.Span[0] == 0 && copied.Capacity == 1).IsTrue();
+        AssertThat(owned.Cells.Single() == cell && owned.Members.Span[0] == 7).IsTrue();
+        var records = new float[InstanceStreamLayout.FloatsPerInstance];
+        var mother = VegetationMotherData.TakeOwnership("grass/fixture", records, [Prototype()], [LocalBounds], copied);
+        RequireOwned(mother.Records, records);
+        AssertThat(ReferenceEquals(mother.GrassIndex, copied) &&
+            new VegetationMotherData("tree", records, [Prototype()], [LocalBounds]).GrassIndex is null).IsTrue();
+    }
+
+    [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void AbsentVertexChannelsRemainAbsentAfterFreezing()
     {
         var source = Surface([]) with

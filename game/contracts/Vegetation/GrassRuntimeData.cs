@@ -37,3 +37,34 @@ public sealed class GrassRuntimeData(MapId map, IReadOnlyList<GrassAreaData> are
     public MapId Map { get; } = map;
     public IReadOnlyList<GrassAreaData> Areas { get; } = Array.AsReadOnly(areas.ToArray());
 }
+
+/// <summary>One occupied grass cell, in first-record order; Start/Count address the index's member channel.</summary>
+public readonly record struct GrassPoolCell(int X, int Z, int Start, int Count, Box3 Bounds);
+
+/// <summary>Frozen grass selection directory and its quality-independent capacity envelope.</summary>
+public sealed class GrassPoolIndex
+{
+    public const float CellSize = 8f;
+    public const float Reach = 24f;
+
+    public GrassPoolIndex(IReadOnlyList<GrassPoolCell> cells, ReadOnlyMemory<int> members, int capacity)
+        : this(cells, members.ToArray(), capacity) { }
+
+    private GrassPoolIndex(IReadOnlyList<GrassPoolCell> cells, int[] members, int capacity)
+    {
+        Cells = Array.AsReadOnly(cells.ToArray());
+        Members = members;
+        Capacity = capacity;
+    }
+
+    /// <summary>Takes exclusive ownership of members; the small cell directory still takes a snapshot.</summary>
+    public static GrassPoolIndex TakeOwnership(IReadOnlyList<GrassPoolCell> cells, int[] members, int capacity)
+    {
+        ArgumentNullException.ThrowIfNull(members);
+        return new(cells, members, capacity);
+    }
+
+    public IReadOnlyList<GrassPoolCell> Cells { get; }
+    public ReadOnlyMemory<int> Members { get; }
+    public int Capacity { get; }
+}

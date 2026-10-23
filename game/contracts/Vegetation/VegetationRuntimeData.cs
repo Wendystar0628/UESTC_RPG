@@ -23,10 +23,10 @@ public sealed class VegetationMotherData
 
     /// <summary>Takes exclusive ownership of the record array; prototype and bounds lists still take snapshots.</summary>
     public static VegetationMotherData TakeOwnership(string key, float[] records,
-        IReadOnlyList<GeometryPrototype> prototypes, IReadOnlyList<Box3> bounds)
+        IReadOnlyList<GeometryPrototype> prototypes, IReadOnlyList<Box3> bounds, GrassPoolIndex? grassIndex = null)
     {
         ArgumentNullException.ThrowIfNull(records);
-        return new(key, records, prototypes, bounds);
+        return new(key, records, prototypes, bounds) { GrassIndex = grassIndex };
     }
 
     public string Key { get; }
@@ -34,6 +34,8 @@ public sealed class VegetationMotherData
     public IReadOnlyList<GeometryPrototype> Prototypes { get; }
     /// <summary>World-space L0+ bounds in the same tree order as Records.</summary>
     public IReadOnlyList<Box3> Bounds { get; }
+    /// <summary>Required for a grass mother, absent for a tree mother.</summary>
+    public GrassPoolIndex? GrassIndex { get; init; }
 }
 
 /// <summary>Prepared tree or grass data for one requested owner tile.</summary>
