@@ -79,9 +79,11 @@ internal sealed class StageStartupTrace
         var windowHandle = DisplayServer.WindowGetNativeHandle(DisplayServer.HandleType.WindowHandle);
         var quality = KernelServices.Get<IQualityService>().Effective;
         var scale = quality[QualityKnob.RenderScale];
-        var focused = DisplayServer.WindowIsFocused();
-        var reason = FrameLimitPolicy.Reason(quality[QualityKnob.FrameRateLimit], focused);
-        GD.Print(FormattableString.Invariant($"STARTUP_ENVIRONMENT {FrameClock.MonotonicMilliseconds:R} frame={Engine.GetProcessFrames()} cursorVisible={cursorVisible} cursorHeld={cursorHeld} maxFps={Engine.MaxFps} vSync={DisplayServer.WindowGetVsyncMode()} screen={screen} screenReportedRefreshHz={DisplayServer.ScreenGetRefreshRate(screen):R} windowFocus={DisplayServer.WindowIsFocused()} windowHandle={windowHandle} windowWidth={size.X} windowHeight={size.Y} windowMode={DisplayServer.WindowGetMode()} frameLimitRequest={quality.Requested(QualityKnob.FrameRateLimit)} frameLimitReason={reason} renderScaleRequest={quality.Requested(QualityKnob.RenderScale):R} renderScaleEffective={scale:R} internalWidth={Math.Max(1, (int)(size.X * scale))} internalHeight={Math.Max(1, (int)(size.Y * scale))} physicsTicksPerSecond={Engine.PhysicsTicksPerSecond}"));
+        var vSync = DisplayServer.WindowGetVsyncMode();
+        var refreshRate = DisplayServer.ScreenGetRefreshRate(screen);
+        var limit = FrameLimitPolicy.Resolve(quality[QualityKnob.FrameRateLimit],
+            vSync != DisplayServer.VSyncMode.Disabled, refreshRate);
+        GD.Print(FormattableString.Invariant($"STARTUP_ENVIRONMENT {FrameClock.MonotonicMilliseconds:R} frame={Engine.GetProcessFrames()} cursorVisible={cursorVisible} cursorHeld={cursorHeld} maxFps={Engine.MaxFps} vSync={vSync} screen={screen} screenReportedRefreshHz={refreshRate:R} windowFocus={DisplayServer.WindowIsFocused()} windowHandle={windowHandle} windowWidth={size.X} windowHeight={size.Y} windowMode={DisplayServer.WindowGetMode()} frameLimitRequest={quality.Requested(QualityKnob.FrameRateLimit)} frameLimitReason={limit.Reason} renderScaleRequest={quality.Requested(QualityKnob.RenderScale):R} renderScaleEffective={scale:R} internalWidth={Math.Max(1, (int)(size.X * scale))} internalHeight={Math.Max(1, (int)(size.Y * scale))} physicsTicksPerSecond={Engine.PhysicsTicksPerSecond}"));
     }
 
     internal static void TraceTitleInputReady(IAppBootFlow boot)

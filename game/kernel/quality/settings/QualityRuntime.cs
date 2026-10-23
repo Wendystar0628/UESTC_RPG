@@ -28,7 +28,7 @@ public partial class QualityRuntime : Node, IQualityAware, IQualityRuntime
     private bool _closed;
     private bool _frameLimitInitialized;
     private float _requestedFrameLimit;
-    private int _appliedFrameLimit = -1;
+    private Window? _window;
     private List<TaskCompletionSource<double>> _frames = [];
     public override void _Ready()
     {
@@ -40,13 +40,16 @@ public partial class QualityRuntime : Node, IQualityAware, IQualityRuntime
         _closed = false;
         _qualityInitialized = false;
         _frameLimitInitialized = false;
-        _appliedFrameLimit = -1;
+        _window = GetWindow();
+        _window.SizeChanged += UpdateFrameLimit;
         _lifetime = _service.Bind(this);
     }
 
     public override void _ExitTree()
     {
         _closed = true;
+        if (_window is not null) _window.SizeChanged -= UpdateFrameLimit;
+        _window = null;
         if (_world is not null) _world.InstanceChanged -= OnWorldInstanceChanged;
         _service?.Unbind(this);
         foreach (var frame in _frames) frame.TrySetCanceled();
@@ -57,7 +60,6 @@ public partial class QualityRuntime : Node, IQualityAware, IQualityRuntime
     {
         if (_closed) return;
         _service.Tick(delta);
-        if (_frameLimitInitialized) UpdateFrameLimit();
         if (_qualityInitialized && _quality != _qualityTarget)
         {
             _qualityElapsed += Math.Max(0, delta);
@@ -73,6 +75,11 @@ public partial class QualityRuntime : Node, IQualityAware, IQualityRuntime
             if (_closed) frame.TrySetCanceled();
             else frame.TrySetResult(delta);
         }
+    }
+
+    public override void _Notification(int what)
+    {
+        if (what == NotificationWMPositionChanged || what == NotificationWMDpiChange) UpdateFrameLimit();
     }
 
     public Task<double> NextFrame(CancellationToken cancellationToken)
@@ -220,15 +227,18 @@ public partial class QualityRuntime : Node, IQualityAware, IQualityRuntime
         {
             _requestedFrameLimit = view[QualityKnob.FrameRateLimit];
             _frameLimitInitialized = true;
-            UpdateFrameLimit();
         }
+        if (change.Has(QualityKnob.FrameRateLimit) || change.Has(QualityKnob.VSync) ||
+            change.Has(QualityKnob.DisplayMode) || change.Has(QualityKnob.WindowSize)) UpdateFrameLimit();
     }
 
     private void UpdateFrameLimit()
     {
-        var limit = FrameLimitPolicy.Resolve(_requestedFrameLimit, DisplayServer.WindowIsFocused());
-        if (limit == _appliedFrameLimit) return;
-        Engine.MaxFps = limit;
-        _appliedFrameLimit = limit;
+        if (_closed || !_frameLimitInitialized) return;
+        var screen = DisplayServer.WindowGetCurrentScreen();
+        var limit = FrameLimitPolicy.Resolve(_requestedFrameLimit,
+            DisplayServer.WindowGetVsyncMode() != DisplayServer.VSyncMode.Disabled,
+            DisplayServer.ScreenGetRefreshRate(screen));
+        if (Engine.MaxFps != limit.MaxFps) Engine.MaxFps = limit.MaxFps;
     }
 }

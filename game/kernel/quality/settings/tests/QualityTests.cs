@@ -83,7 +83,7 @@ public sealed class QualityTests
         var state = new QualityState(catalog);
         var defaults = catalog.ResolveRequested(catalog.DefaultProfile, catalog.DefaultPreset);
         if (state.Effective[QualityKnob.RenderScale] != 1 || state.Effective[QualityKnob.FrameRateLimit] != 2)
-            throw new InvalidOperationException("Fresh settings must render at 100% and follow VSync.");
+            throw new InvalidOperationException("Fresh settings must render at 100% and follow display refresh.");
         state.Commit(new(QualityPreset.Fine, new Dictionary<QualityKnob, float>
         { [QualityKnob.RenderScale] = .77f, [QualityKnob.FrameRateLimit] = 1, [QualityKnob.WindowSize] = 2 }), ApplyOrigin.User, true);
         var before = state.Effective;
@@ -128,12 +128,23 @@ public sealed class QualityTests
     [TestCategory(TestReason.Contract)]
     public void FrameRateLimitOffersSixtyHundredTwentyAndRefresh()
     {
-        if (FrameLimitPolicy.Resolve(0, true) != 60 || FrameLimitPolicy.Resolve(1, true) != 120 || FrameLimitPolicy.Resolve(2, true) != 0)
-            throw new InvalidOperationException("Refresh following must leave the software cap unset (DECISION-309).");
-        foreach (var request in new[] { 0f, 1f, 2f })
-            if (FrameLimitPolicy.Resolve(request, false) != FrameLimitPolicy.UnfocusedFramesPerSecond)
-                throw new InvalidOperationException("Unfocused windows must use the background limit.");
-        if (FrameLimitPolicy.Resolve(2, true) != 0) throw new InvalidOperationException("Refocusing must restore refresh following.");
+        foreach (var vSync in new[] { false, true })
+            foreach (var refreshRate in new[] { -1f, 144f })
+            {
+                if (FrameLimitPolicy.Resolve(0, vSync, refreshRate) != (FrameLimitPolicy.DefaultFramesPerSecond, "requested") ||
+                    FrameLimitPolicy.Resolve(1, vSync, refreshRate) != (FrameLimitPolicy.HighFramesPerSecond, "requested"))
+                    throw new InvalidOperationException("Selected frame limits must be independent of VSync and display refresh.");
+                if (vSync && FrameLimitPolicy.Resolve(2, vSync, refreshRate) != (0, "vsync"))
+                    throw new InvalidOperationException("Synchronized refresh following must leave the software cap unset.");
+            }
+        foreach (var refreshRate in new[] { 144, 165 })
+            if (FrameLimitPolicy.Resolve(2, false, refreshRate) != (refreshRate, "refresh-rate"))
+                throw new InvalidOperationException("Unsynchronized refresh following must cap at the current display rate.");
+        if (FrameLimitPolicy.Resolve(2, false, 59.94f).MaxFps != FrameLimitPolicy.DefaultFramesPerSecond)
+            throw new InvalidOperationException("Fractional display rates must resolve to whole frames per second.");
+        foreach (var unknownRate in new[] { -1f, 0f, float.NaN, float.PositiveInfinity })
+            if (FrameLimitPolicy.Resolve(2, false, unknownRate) != (FrameLimitPolicy.DefaultFramesPerSecond, "refresh-fallback"))
+                throw new InvalidOperationException("Unknown display refresh must use the default frame limit.");
     }
 
     [TestCase]
