@@ -28,22 +28,22 @@ public sealed class QualityCatalog
     {
         _specs =
         [
-            Spec(QualityKnob.DisplayMode, ApplyClass.UnderLoading, KnobKind.Performance, KnobScope.Display, "display", KnobUnit.Number, 0, 2, 1, 0),
-            Spec(QualityKnob.WindowSize, ApplyClass.UnderLoading, KnobKind.Performance, KnobScope.Display, "display", KnobUnit.Number, 0, WindowSizes.Length - 1, 1, 0),
-            Spec(QualityKnob.VSync, ApplyClass.Immediate, KnobKind.Performance, KnobScope.Display, "display", KnobUnit.Number, 0, 1, 1, 0),
-            Spec(QualityKnob.FrameRateLimit, ApplyClass.Immediate, KnobKind.Performance, KnobScope.Display, "display", KnobUnit.Number, 0, 2, 1, 0),
-            Spec(QualityKnob.RenderScale, ApplyClass.UnderLoading, KnobKind.Performance, KnobScope.Clarity, "clarity", KnobUnit.Scale,
+            Spec(QualityKnob.DisplayMode, ApplyClass.UnderLoading, KnobKind.Performance, KnobScope.Display, KnobUnit.Number, 0, 2, 1, 0),
+            Spec(QualityKnob.WindowSize, ApplyClass.UnderLoading, KnobKind.Performance, KnobScope.Display, KnobUnit.Number, 0, WindowSizes.Length - 1, 1, 0),
+            Spec(QualityKnob.VSync, ApplyClass.Immediate, KnobKind.Performance, KnobScope.Display, KnobUnit.Number, 0, 1, 1, 0),
+            Spec(QualityKnob.FrameRateLimit, ApplyClass.Immediate, KnobKind.Performance, KnobScope.Display, KnobUnit.Number, 0, 2, 1, 0),
+            Spec(QualityKnob.RenderScale, ApplyClass.UnderLoading, KnobKind.Performance, KnobScope.Clarity, KnobUnit.Scale,
                 RenderScales[0], RenderScales[^1], 0, RenderScales[0], values: RenderScales),
-            Spec(QualityKnob.AntiAliasing, ApplyClass.UnderLoading, KnobKind.Performance, KnobScope.Clarity, "clarity", KnobUnit.Number, 0, 1, 1, 1, false),
-            Spec(QualityKnob.ShadowQuality, ApplyClass.UnderLoading, KnobKind.Floor, KnobScope.Effect, "lighting", KnobUnit.Number, 0, 2, 1, 0),
-            Spec(QualityKnob.ShadowDistance, ApplyClass.Immediate, KnobKind.Performance, KnobScope.Effect, "lighting", KnobUnit.Metres,
+            Spec(QualityKnob.AntiAliasing, ApplyClass.UnderLoading, KnobKind.Performance, KnobScope.Clarity, KnobUnit.Number, 0, 1, 1, 1, false),
+            Spec(QualityKnob.ShadowQuality, ApplyClass.UnderLoading, KnobKind.Floor, KnobScope.Effect, KnobUnit.Number, 0, 2, 1, 0),
+            Spec(QualityKnob.ShadowDistance, ApplyClass.Immediate, KnobKind.Performance, KnobScope.Effect, KnobUnit.Metres,
                 ShadowDistances[0], ShadowDistances[^1], 0, ShadowDistances[0], values: ShadowDistances),
-            Spec(QualityKnob.FoliageDensity, ApplyClass.Immediate, KnobKind.Performance, KnobScope.Effect, "scene", KnobUnit.Percent, 0.75f, 1, 0.25f, 0.75f),
-            Spec(QualityKnob.ReflectionInterval, ApplyClass.Immediate, KnobKind.Floor, KnobScope.Effect, "effects", KnobUnit.Number, 2, 4, 1, 4, false),
-            Spec(QualityKnob.ParticleDensity, ApplyClass.Immediate, KnobKind.Performance, KnobScope.Effect, "effects", KnobUnit.Percent, 0.5f, 1, 0.25f, 0.5f),
-            Spec(QualityKnob.FsrSharpness, ApplyClass.UnderLoading, KnobKind.Performance, KnobScope.Clarity, "clarity", KnobUnit.Number,
+            Spec(QualityKnob.FoliageDensity, ApplyClass.Immediate, KnobKind.Performance, KnobScope.Effect, KnobUnit.Percent, 0.75f, 1, 0.25f, 0.75f),
+            Spec(QualityKnob.ReflectionInterval, ApplyClass.Immediate, KnobKind.Floor, KnobScope.Effect, KnobUnit.Number, 2, 4, 1, 4, false),
+            Spec(QualityKnob.ParticleDensity, ApplyClass.Immediate, KnobKind.Performance, KnobScope.Effect, KnobUnit.Percent, 0.5f, 1, 0.25f, 0.5f),
+            Spec(QualityKnob.FsrSharpness, ApplyClass.UnderLoading, KnobKind.Performance, KnobScope.Clarity, KnobUnit.Number,
                 QualityRules.FsrSharpnessMin, QualityRules.FsrSharpnessMax, 0.1f, QualityRules.FsrSharpnessMin),
-            Spec(QualityKnob.Vignette, ApplyClass.Immediate, KnobKind.StyleDefault, KnobScope.Comfort, "comfort", KnobUnit.Number, 0, 1, 1, 0),
+            Spec(QualityKnob.Vignette, ApplyClass.Immediate, KnobKind.StyleDefault, KnobScope.Comfort, KnobUnit.Number, 0, 1, 1, 0),
         ];
         Knobs = Array.AsReadOnly(_specs);
         using var document = JsonDocument.Parse(json);
@@ -157,6 +157,6 @@ public sealed class QualityCatalog
     };
 
     private static KnobSpec Spec(QualityKnob knob, ApplyClass apply, KnobKind kind, KnobScope scope,
-        string group, KnobUnit unit, float min, float max, float step, float worst, bool higher = true, IReadOnlyList<float>? values = null) =>
-        new(knob, apply, kind, min, max, step, worst, higher, "quality." + Name(knob), group, unit) { Scope = scope, Load = Load(knob), Values = values };
+        KnobUnit unit, float min, float max, float step, float worst, bool higher = true, IReadOnlyList<float>? values = null) =>
+        new(knob, apply, kind, min, max, step, worst, higher, "quality." + Name(knob), unit) { Scope = scope, Load = Load(knob), Values = values };
 }

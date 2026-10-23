@@ -91,7 +91,7 @@ toast.photo.saved,已保存照片 · {folder},Photo saved · {folder}
 toast.photo.failed,照片没存下,Could not save the photo
 settings.title,设置,Settings
 settings.tab.keys,键位,Controls
-settings.tab.general,设置,General
+settings.tab.general,通用,General
 settings.tab.graphics,画面,Graphics
 settings.tab.sound,声音,Sound
 settings.tab.rebind,改键,Key bindings
@@ -115,13 +115,17 @@ settings.reduce_motion,减少动态效果,Reduce motion
 settings.follow_system,跟随系统,Follow system
 settings.ui_scale,界面缩放,Interface scale
 settings.fly_fov,旁观视场角,Fly field of view
+settings.fly_fov.hint,旁观时的视野角度。越大看得越广，画面边缘的拉伸也越明显。,"Field of view while flying. Wider shows more, with more stretching near the edges."
 settings.walk_fov,行走视场角,Walk field of view
+settings.walk_fov.hint,行走时的视野角度。容易晕时可以调大一些。,Field of view while walking. A wider view can help if you feel motion sick.
 settings.view_bobbing,视角晃动,View bobbing
+settings.view_bobbing.hint,行走时镜头随步伐起伏的幅度。容易晕时可以调低或关闭。,How much the camera bobs with each step while walking. Lower it or turn it off if you feel motion sick.
 settings.view_bobbing.half,50%,50%
 settings.view_bobbing.full,100%,100%
 settings.auto_jump,自动跳跃,Auto jump
 settings.single_keys,单键快捷键,Single-key shortcuts
 settings.show_perf,显示性能信息,Show performance
+settings.show_perf.hint,漫游时在画面一角显示帧率、帧时、显卡与内存占用等读数。,"While exploring, shows frame rate, frame time, GPU and memory readings in a corner of the screen."
 settings.storage,本机缓存,Local cache
 settings.storage.done,已完成,Complete
 settings.storage.running,进行中 {pct}%,In progress {pct}%
@@ -151,11 +155,14 @@ quality.preset.balanced,均衡,Balanced
 quality.preset.fine,精致,Fine
 quality.preset.ultra,极致,Ultra
 quality.preset.custom,自定义,Custom
+quality.preset,画质预设,Quality preset
+quality.preset.hint,预设只管效果项：光影、植被、水与粒子。显示、清晰度与镜头舒适项保持你的选择。改动任一效果项即为“自定义”。,"Presets set the effect options only: lighting, vegetation, water and particles. Display, clarity and comfort options keep your choices. Changing any effect option makes it Custom."
+quality.preset.custom.off,改动任一效果项后自动成为自定义,Becomes Custom when you change an effect option
 quality.group.display,显示 · DISPLAY,DISPLAY
 quality.group.clarity,清晰度 · CLARITY,CLARITY
-quality.group.lighting,光影 · LIGHTING,LIGHTING
-quality.group.scene,场景与植被 · SCENE,SCENE & VEGETATION
-quality.group.effects,水与粒子 · EFFECTS,WATER & PARTICLES
+quality.group.preset,预设 · PRESET,PRESET
+quality.group.effect,效果 · EFFECTS,EFFECTS
+quality.group.comfort,镜头与舒适 · COMFORT,VIEW & COMFORT
 quality.tag.loading,加载界面,Loading screen
 quality.tag.restart,重启,Restart
 quality.footnote,描线、分阶明暗与按材质的影色、柔光、平涂贴图、实时阴影与西湖倒影是本作画风，任何画质下都保留。,"Outlines, stepped shading, material-tinted shadows, soft light, flat textures, real-time shadows and West Lake reflections define the visual style and remain enabled at every quality level."
@@ -167,37 +174,65 @@ quality.pending.restart,{n} 项待应用 · 下次启动生效,{n} changes pendi
 quality.result.restart,已保存 · 下次启动生效,Saved · Effective next launch
 quality.result.deferred,过渡结束后生效,Effective after the transition
 quality.result.rejected,有项目超出范围，没有改动,Some values are out of range; nothing changed
+quality.reset,恢复默认,Restore defaults
+quality.reset.confirm,再按一次恢复默认,Press again to restore
+quality.reset.off,本页已是默认值,This page already uses the defaults
+quality.apply.immediate,即时生效,Applies immediately
+quality.apply.loading,经加载界面生效,Applies through the loading screen
+quality.apply.restart,下次启动生效,Applies on next launch
+quality.load.gpu,GPU,GPU
+quality.load.vram,显存,VRAM
+quality.load.cpu,CPU,CPU
+quality.note.idle,把指针移到一项上，或用方向键选中它，这里显示它的作用、生效方式和负载。,"Point at an option or select it with the arrow keys to see what it does, when it applies and what it costs."
 quality.display_mode,显示模式,Display mode
+quality.display_mode.hint,窗口、无边框全屏或独占全屏。无边框切出游戏更顺；独占全屏由游戏独占显示器。,"Windowed, borderless or exclusive fullscreen. Borderless switches away more smoothly; exclusive fullscreen gives the game the whole display."
 quality.display_mode.0,窗口,Windowed
 quality.display_mode.1,无边框,Borderless
 quality.display_mode.2,独占全屏,Exclusive fullscreen
 quality.window_size,窗口尺寸,Window size
+quality.window_size.hint,窗口模式下的窗口尺寸；全屏时不起作用。,Window size in windowed mode; has no effect in fullscreen.
 quality.window_size.0,1920×1080,1920×1080
 quality.window_size.1,1280×720,1280×720
 quality.window_size.2,1600×900,1600×900
 quality.window_size.3,2560×1440,2560×1440
 quality.window_size.4,3840×2160,3840×2160
 quality.v_sync,垂直同步,VSync
+quality.v_sync.hint,让画面与显示器刷新同步，避免撕裂。关闭后延迟略低，但转动镜头时可能出现撕裂。,"Syncs frames to the display refresh to prevent tearing. Turning it off lowers latency slightly, but the image may tear when the camera turns."
 quality.frame_rate_limit,帧率上限,Frame rate limit
+quality.frame_rate_limit.hint,每秒最多渲染多少帧。越高越流畅，显卡负载与功耗也越高。“跟随刷新率”由垂直同步限帧；切到后台时降到每秒 30 帧。,"The most frames rendered per second. Higher is smoother but raises GPU load and power use. Refresh rate is capped by VSync; in the background the game drops to 30 frames per second."
 quality.frame_rate_limit.0,60,60
 quality.frame_rate_limit.1,120,120
 quality.frame_rate_limit.2,跟随刷新率,Refresh rate
 quality.frame_rate_limit.2.hz,{hz} Hz（刷新率）,{hz} Hz (refresh rate)
-quality.render_scale,渲染比例,Render scale
+quality.render_scale,渲染精度,Render resolution
+quality.render_scale.hint,3D 画面按输出分辨率的多少渲染。低于 100% 时先在较低分辨率渲染、再用 FSR 1 放大，帧率更高，细线会变软。界面文字不受影响。,"How much of the output resolution the 3D view renders at. Below 100% it renders smaller and upscales with FSR 1: higher frame rate, softer fine lines. Interface text is unaffected."
+quality.render_scale.upscaled,内部 {internal} → 输出 {output} · FSR 1,Internal {internal} → output {output} · FSR 1
+quality.render_scale.native,内部 {output} · 与输出一致，不放大,"Internal {output} · Native, no upscaling"
 quality.anti_aliasing,抗锯齿,Anti-aliasing
+quality.anti_aliasing.hint,平滑物体边缘的锯齿。SMAA 边缘更干净；FXAA 更省，但细线会略糊。,Smooths jagged edges. SMAA keeps edges cleaner; FXAA is cheaper but blurs fine lines slightly.
 quality.anti_aliasing.0,SMAA 1x,SMAA 1x
 quality.anti_aliasing.1,FXAA,FXAA
 quality.shadow_quality,阴影质量,Shadow quality
+quality.shadow_quality.hint,阴影贴图的分辨率与级数。越高阴影边缘越清楚，显存与显卡负载越高。,"Shadow map resolution and cascade count. Higher gives crisper shadow edges, with more video memory and GPU load."
 quality.shadow_quality.0,2048·2,2048·2
 quality.shadow_quality.1,4096·4,4096·4
 quality.shadow_quality.2,8192·4,8192·4
 quality.shadow_distance,阴影距离,Shadow distance
+quality.shadow_distance.hint,多远以内的物体投下实时阴影。越远远景越立体，显卡负载越高。,"How far away objects still cast real-time shadows. Farther gives distant scenery more depth, with more GPU load."
 quality.foliage_density,植被与草密度,Foliage and grass density
+quality.foliage_density.hint,树丛与草的密度。调低后植被更稀疏，处理器与显卡负载更低。,"Density of shrubs and grass. Lower is sparser, with less CPU and GPU load."
 quality.reflection_interval,西湖倒影刷新,West Lake reflection update
+quality.reflection_interval.hint,水面倒影每隔几帧更新一次。间隔越大越省，快速移动时倒影略有滞后。,"How often water reflections update, in frames. Longer intervals are cheaper, but reflections lag slightly when moving fast."
 quality.reflection_interval.2,每 2 帧,Every 2 frames
 quality.reflection_interval.3,每 3 帧,Every 3 frames
 quality.reflection_interval.4,每 4 帧,Every 4 frames
 quality.particle_density,降水与粒子密度,Precipitation and particle density
+quality.particle_density.hint,雨、雪与飘落物的数量。调低后更省，天气效果更稀疏。,"Amount of rain, snow and falling leaves. Lower is cheaper, with sparser weather effects."
+quality.fsr_sharpness,FSR 锐化,FSR sharpening
+quality.fsr_sharpness.hint,FSR 1 放大后的锐化程度。数值越大越锐利，0 最弱；渲染精度低于 100% 时才起作用。,"Sharpening applied after FSR 1 upscaling. Higher values are sharper, 0 is the weakest; only applies below 100% render resolution."
+quality.fsr_sharpness.requires_upscaling,渲染精度为 100% 时不放大，锐化不起作用,"At 100% render resolution nothing is upscaled, so sharpening has no effect"
+quality.vignette,暗角,Vignette
+quality.vignette.hint,画面四角轻微压暗，是本作镜头风格的一部分。关闭后四角保持原有亮度。,"Gently darkens the corners of the image as part of the camera style. Turn it off to keep the corners at full brightness."
 sound.group.volume,音量 · VOLUME,VOLUME
 sound.group.calm,减少干扰 · CALM,REDUCE DISTRACTIONS
 sound.master,总音量,Master

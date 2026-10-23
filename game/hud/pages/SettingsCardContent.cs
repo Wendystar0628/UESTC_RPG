@@ -25,15 +25,6 @@ internal sealed class SettingsCardContent
 
     public System.Collections.IEnumerable BuildGeneral(Control page)
     {
-        var store = KernelRegistry.Get<ISettingsStore>();
-        var view = store.Section("ui");
-        // 视场、视角晃动与自动跳这四项在 ui 节里，HUD 建立之前就被读取（UiSettingDefinitions），改了立刻写盘，不经 HudSettings 的延迟写
-        Action<Control> View<T>(SettingDefinition<T> definition, Func<float, string>? format = null) where T : notnull =>
-            Row(definition, () => (T)SettingValues.Read(view, definition).Value, value =>
-            {
-                SettingValues.Write(view, definition.Key, value);
-                store.TrySave();
-            }, format);
         foreach (var step in Group(page, "settings.group.interface",
         [
             HudRow(HudSettingDefinitions.Theme),
@@ -42,14 +33,36 @@ internal sealed class SettingsCardContent
             HudRow(HudSettingDefinitions.ReduceTransparency),
             HudRow(HudSettingDefinitions.ReduceMotion),
             HudRow(HudSettingDefinitions.UiScale, Percent),
-            View(UiSettingDefinitions.FlyFov, Degrees),
-            View(UiSettingDefinitions.WalkFov, Degrees),
-            View(UiSettingDefinitions.ViewBobbing),
-            View(UiSettingDefinitions.AutoJump),
+            Row(UiSettingDefinitions.AutoJump, ReadView(UiSettingDefinitions.AutoJump), value => WriteView(UiSettingDefinitions.AutoJump, value), null),
             HudRow(HudSettingDefinitions.SingleKeyShortcuts),
         ])) yield return step;
 
         foreach (var step in BuildStorage(page)) yield return step;
+    }
+
+    /// <summary>
+    /// 画面页借用的 ui 节行：镜头与舒适组的视场与视角晃动、页尾性能信息组的开关。存储仍在 ui 节，
+    /// 分组、改动标记与恢复默认由画面页按这些行做。
+    /// </summary>
+    public (IReadOnlyList<SettingsUiRow> Comfort, IReadOnlyList<SettingsUiRow> Performance) GraphicsRows() =>
+    (
+        [
+            UiRow(UiSettingDefinitions.FlyFov, ReadView(UiSettingDefinitions.FlyFov), value => WriteView(UiSettingDefinitions.FlyFov, value), Degrees),
+            UiRow(UiSettingDefinitions.WalkFov, ReadView(UiSettingDefinitions.WalkFov), value => WriteView(UiSettingDefinitions.WalkFov, value), Degrees),
+            UiRow(UiSettingDefinitions.ViewBobbing, ReadView(UiSettingDefinitions.ViewBobbing), value => WriteView(UiSettingDefinitions.ViewBobbing, value), null),
+        ],
+        [UiRow(HudSettingDefinitions.ShowPerf, () => _settings.Get(HudSettingDefinitions.ShowPerf), value => _settings.Set(HudSettingDefinitions.ShowPerf, value), null)]
+    );
+
+    // 视场、视角晃动与自动跳在 ui 节里，HUD 建立之前就被读取（UiSettingDefinitions），改了立刻写盘，不经 HudSettings 的延迟写。
+    private static Func<T> ReadView<T>(SettingDefinition<T> definition) where T : notnull =>
+        () => (T)SettingValues.Read(KernelRegistry.Get<ISettingsStore>().Section("ui"), definition).Value;
+
+    private static void WriteView<T>(SettingDefinition<T> definition, T value) where T : notnull
+    {
+        var store = KernelRegistry.Get<ISettingsStore>();
+        SettingValues.Write(store.Section("ui"), definition.Key, value);
+        store.TrySave();
     }
 
     private System.Collections.IEnumerable BuildStorage(Control page)
@@ -130,10 +143,6 @@ internal sealed class SettingsCardContent
         _kit.Text(page, UiKit.T("keys.note"), "small", "text.2");
     }
 
-    /// <summary>画面页末尾的性能信息组：仍存 ui 节的 show_perf，经 HudSettings 即时生效。</summary>
-    public System.Collections.IEnumerable BuildPerformance(Control page) =>
-        Group(page, "settings.group.perf", [HudRow(HudSettingDefinitions.ShowPerf)]);
-
     /// <summary>一组设置：组标题加逐行，每建一行让出一帧（由 SettingsCard 分帧调度）。</summary>
     private System.Collections.IEnumerable Group(Control page, string titleKey, IEnumerable<Action<Control>> rows)
     {
@@ -148,42 +157,92 @@ internal sealed class SettingsCardContent
     private Action<Control> HudRow<T>(SettingDefinition<T> definition, Func<float, string>? format = null) where T : notnull =>
         Row(definition, () => _settings.Get(definition), value => _settings.Set(definition, value), format);
 
-    /// <summary>按定义生成一行：bool 是开关，带选项的 int 是下拉，带范围的 float 是推子；文案取定义的 LabelKey，值在建行时读。</summary>
     private Action<Control> Row<T>(SettingDefinition<T> definition, Func<T> read, Action<T> write, Func<float, string>? format) where T : notnull =>
-        (object)definition switch
-        {
-            SettingDefinition<bool> d => parent => Toggle(parent, d, (bool)(object)read(), value => write((T)(object)value)),
-            SettingDefinition<int> d => parent => Choice(parent, d, (int)(object)read(), value => write((T)(object)value)),
-            SettingDefinition<float> d => parent => Slider(parent, d, (float)(object)read(), value => write((T)(object)value),
-                format ?? throw new InvalidOperationException($"Slider setting '{d.Key}' needs a value format.")),
-            _ => throw new NotSupportedException($"Unsupported setting definition {definition.GetType()}."),
-        };
+        parent => Build(parent, definition, read(), write, format);
 
-    private void Toggle(Control parent, SettingDefinition<bool> definition, bool value, Action<bool> changed)
+    private SettingsUiRow UiRow<T>(SettingDefinition<T> definition, Func<T> read, Action<T> write, Func<float, string>? format) where T : notnull
+    {
+        Action<T>? sync = null;
+        return new(definition.LabelKey,
+            (parent, changed) =>
+            {
+                var (row, set) = Build(parent, definition, read(), value => { write(value); changed(); }, format);
+                sync = set;
+                return row;
+            },
+            () => !EqualityComparer<T>.Default.Equals(read(), definition.Default),
+            () =>
+            {
+                write(definition.Default);
+                sync?.Invoke(definition.Default);
+            });
+    }
+
+    /// <summary>按定义生成一行：bool 是开关，带选项的 int 是下拉，带范围的 float 是推子；文案取定义的 LabelKey。返回行与不发事件的同步委托。</summary>
+    private (HBoxContainer Row, Action<T> Set) Build<T>(Control parent, SettingDefinition<T> definition, T value, Action<T> write,
+        Func<float, string>? format) where T : notnull
+    {
+        switch ((object)definition)
+        {
+            case SettingDefinition<bool> d:
+            {
+                var (row, set) = Toggle(parent, d, (bool)(object)value, next => write((T)(object)next));
+                return (row, next => set((bool)(object)next));
+            }
+            case SettingDefinition<int> d:
+            {
+                var (row, set) = Choice(parent, d, (int)(object)value, next => write((T)(object)next));
+                return (row, next => set((int)(object)next));
+            }
+            case SettingDefinition<float> d:
+            {
+                var (row, set) = Slider(parent, d, (float)(object)value, next => write((T)(object)next),
+                    format ?? throw new InvalidOperationException($"Slider setting '{d.Key}' needs a value format."));
+                return (row, next => set((float)(object)next));
+            }
+            default:
+                throw new NotSupportedException($"Unsupported setting definition {definition.GetType()}.");
+        }
+    }
+
+    private (HBoxContainer, Action<bool>) Toggle(Control parent, SettingDefinition<bool> definition, bool value, Action<bool> changed)
     {
         var row = _kit.Layout.SettingRow(parent, UiKit.T(definition.LabelKey));
         var control = DipSwitch.Create(_kit, row, value);
         control.AccessibilityName = UiKit.T(definition.LabelKey);
         control.Toggled += changed;
+        return (row, next => control.Set(next, notify: false));
     }
 
-    private void Choice(Control parent, SettingDefinition<int> definition, int value, Action<int> changed)
+    private (HBoxContainer, Action<int>) Choice(Control parent, SettingDefinition<int> definition, int value, Action<int> changed)
     {
         var options = definition.Options ?? throw new InvalidOperationException("Setting options are required.");
-        var selected = options.ToList().FindIndex(option => option.Value == value);
-        if (selected < 0) selected = options.ToList().FindIndex(option => option.Value == definition.Default);
+        int Index(int next)
+        {
+            var index = options.ToList().FindIndex(option => option.Value == next);
+            return index >= 0 ? index : options.ToList().FindIndex(option => option.Value == definition.Default);
+        }
         var row = _kit.Layout.SettingRow(parent, UiKit.T(definition.LabelKey));
-        var control = Dropdown.Create(_kit, row, options.Select(option => UiKit.T(option.LabelKey)).ToArray(), selected);
+        var control = Dropdown.Create(_kit, row, options.Select(option => UiKit.T(option.LabelKey)).ToArray(), Index(value));
         control.AccessibilityName = UiKit.T(definition.LabelKey);
         control.Changed += index => changed(options[index].Value);
+        return (row, next => control.Select(Index(next), notify: false));
     }
 
-    private void Slider(Control parent, SettingDefinition<float> definition, float value, Action<float> changed, Func<float, string> format)
+    private (HBoxContainer, Action<float>) Slider(Control parent, SettingDefinition<float> definition, float value, Action<float> changed,
+        Func<float, string> format)
     {
         var range = definition.Range ?? throw new InvalidOperationException("Setting range is required.");
         var row = _kit.Layout.SettingRow(parent, UiKit.T(definition.LabelKey));
         var control = Fader.Create(_kit, row, (float)range.Min, (float)range.Max, (float)range.Step, value, format: format);
         control.AccessibilityName = UiKit.T(definition.LabelKey);
         control.Changed += changed;
+        return (row, next => control.Set(next, notify: false));
     }
 }
+
+/// <summary>
+/// 别的页借用的一行 ui 节设置：Build 建行并在玩家改值后回调；Modified 比较定义的默认值；
+/// Reset 写回默认并同步已建的控件（未建时只写值）。
+/// </summary>
+internal sealed record SettingsUiRow(string LabelKey, Func<Control, Action, HBoxContainer> Build, Func<bool> Modified, Action Reset);

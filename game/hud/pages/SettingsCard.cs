@@ -171,7 +171,7 @@ public partial class SettingsCard : Control
             {
                 SettingsPage.Keys => _content.BuildKeys(content),
                 SettingsPage.General => _content.BuildGeneral(content),
-                SettingsPage.Graphics => Then(_graphics.Build(content, _pageActions), _content.BuildPerformance(content)),
+                SettingsPage.Graphics => _graphics.Build(content, _pageActions, _content.GraphicsRows()),
                 SettingsPage.Sound => _content.BuildSound(content),
                 SettingsPage.Rebind => _bindings.Build(content),
                 _ => throw new InvalidOperationException("Unknown settings page."),
@@ -179,13 +179,6 @@ public partial class SettingsCard : Control
             _builders[page] = steps.GetEnumerator();
         }
         SetProcess(true);
-    }
-
-    // 画面页先建画质各组，再接性能信息这类 ui 节的行；画面页以后再收别的 ui 节行，也接在这里。
-    private static IEnumerable Then(IEnumerable first, IEnumerable second)
-    {
-        foreach (var step in first) yield return step;
-        foreach (var step in second) yield return step;
     }
 
     // 先呈现卡片外框，每帧只给当前页建少量设置行，行建好即显示；切页保留各页进度，关闭时连同进度一起释放。

@@ -28,7 +28,7 @@ public readonly record struct KnobLoad(byte Gpu, byte Vram, byte Cpu);
 
 public sealed record KnobSpec(QualityKnob Knob, ApplyClass Apply, KnobKind Kind,
     float Min, float Max, float Step, float WorstAllowed, bool HigherIsBetter,
-    string LabelKey, string Group, KnobUnit Unit)                               // 界面按它自动生成控件；枚举类的项按序号编码成 float
+    string LabelKey, KnobUnit Unit)                               // 界面按它自动生成控件；枚举类的项按序号编码成 float
 {
     public KnobScope Scope { get; init; }
     public KnobLoad Load { get; init; }
