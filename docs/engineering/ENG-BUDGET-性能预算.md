@@ -64,7 +64,7 @@ paths: ["game/kernel/renderer/geometry/**", "game/kernel/renderer/render-state/*
 
 **楼内视角份额**：镜头在开放室内、室外被遮挡体剔除，不设逐项静态上限，由 G10 的开放室内门厅位姿实测判断，不并入室外最坏视角，也不挤占 §3 室外份额。最坏视角是站在开放楼门厅里朝门外看，总量仍须在预设上限之内。一栋开放楼驻留 ≤ 30 MB、最多 2 栋（WLD-INTERIORS-BUILD §1.1），这是防呆，不是内容上限，超了按 WF-RULE §15 的数量级判断。
 
-**设备档目标**在 `budgets.json` 的 `deviceTargets`、`frameStutter`，G10 对比用：掉帧率（帧间隔超过目标 1.5 倍）、F1 卡顿、浸泡漂移、GPU p95、主线程 CPU p95。
+**设备档目标**在 `budgets.json` 的 `deviceTargets`、`frameStutter`，G10 对比用（开发机按原生 4K 精致核算，DECISION-318）：掉帧率（帧间隔超过目标 1.5 倍）、F1 卡顿、浸泡漂移、GPU p95、主线程 CPU p95。
 
 - 掉帧与卡顿是体验指标，GPU 与 CPU p95 是吞吐指标，都在默认预设"精致"下测，吞吐只判回归；主线程 CPU 含渲染提交与音频。
 - 玩家选高于推荐的预设时不保证帧率。

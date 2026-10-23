@@ -23,7 +23,7 @@
       "preset": "ultra",
       "fpsMinimum": 60,
       "droppedFramesPercentMax": 1,
-      "developer1440pGpuP95MsMax": 8,
+      "developer4kFineGpuP95MsMax": 5,
       "rtx4070GpuP95MsMax": 12.5,
       "developerCpuP95MsMax": 6
     }
