@@ -13,8 +13,9 @@ public enum SaveReason : byte
     Interval,      // 漫游态累计 5 分钟
     NewGame,       // 新游戏交还控制：写这条世界线的第一代
     Test,          // 门禁（--save-at）
+    Manual,        // 游戏内存档页立即保存
 }
-public enum SlotHealth : byte { Empty, Ok, Corrupt }
+public enum SlotHealth : byte { Empty, Ok, Corrupt, Newer }
 
 public sealed record SaveMeta(
     [property: DataVersion] int Format,                     // 容器格式号（SYS-SAVE-FORMAT）
@@ -40,13 +41,13 @@ public sealed class SaveSectionAttribute(string id) : RegistrationAttribute(Regi
     [DataVersion]
     public int Version { get; set; } = 1;         // 本段当前的 v；字段有任何增减都要加 1（SYS-SAVE）
     public SaveScope Scope { get; set; } = SaveScope.Global;
-    public RestorePhase Phase { get; set; } = RestorePhase.Content;   // 恢复阶段（SYS-SAVE）；G5 查 Phase 与 SYS-SAVE 的表一致
+    public RestorePhase Phase { get; set; } = RestorePhase.Content;   // 恢复阶段（SYS-SAVE）
     public int Order { get; set; }                // 阶段内的恢复顺序，小的先（SYS-SAVE）；G5 查不重复
 }
 public enum RestorePhase : byte
 {
-    World,     // 换图之前：maps、world、weather、map:<id>/weather；这一阶段结束时 Instance + 1
-    Content,   // 换图之后：map:<id>/atlas、progress 等
+    World,     // 换图之前：maps、world、weather；这一阶段结束时 Instance + 1
+    Content,   // 换图之后：map:<id>/atlas 等
     Pose,      // 落位：view、walk；完整恢复终点后等待真实到达。
 }
 
@@ -109,7 +110,7 @@ public sealed record SaveResult(SaveStatus Status, SlotId? Slot, ulong Gen, stri
 public enum LoadStatus : byte { Loaded, Empty, Corrupt, Failed }
 public sealed record LoadResult(LoadStatus Status, SlotId? Slot, ulong Gen, IReadOnlyList<string> Repairs, string? Error = null);
 public enum ReadOnlyReason : byte { None, SaveOff, OtherWindow }   // 不保存的原因：--save=off、另一个窗口持有锁（SYS-SAVE、SYS-SAVE）
-public sealed record SaveState(                                     // 保存状态（SYS-SAVE）：存档页、设置卡持续显示
+public sealed record SaveState(                                     // 保存状态（SYS-SAVE）：大页被动显示
     SlotId? Slot,                   // 当前存档位
     SaveStatus? Last,               // 本次运行最近一次写盘的结果；还没写过为 null
     string? ErrorKey,               // Last 为 Failed 时的原因，文案键，如 "save.error.disk_full"
@@ -125,8 +126,8 @@ public interface ISaveService                         // Kernel 服务（game/ke
     bool Busy { get; }                                // 后台写盘进行中
     SaveState State { get; }                          // 保存状态（SYS-SAVE）；值变时也发 SlotsChanged
     event Action? SlotsChanged;                       // 在主线程发出
-    void Request(SaveReason r);                       // 合并、限频（两次之间至少 30 s）、等安全时刻（SYS-SAVE）；只在漫游态有效；Quit、ToTitle 不走这里
-    Task<SaveResult> SaveNow(SaveReason r);           // 不等、不限频：新游戏交还控制、门禁
+    void Request(SaveReason r);                       // 自动请求合并、限频（两次尝试之间至少 30 s）、等安全时刻（SYS-SAVE）；只在漫游态有效；Quit、ToTitle、Manual 不走这里
+    Task<SaveResult> SaveNow(SaveReason r);           // NewGame、Test、Manual；不等安全时刻，不受自动请求下限约束
     // Both loads restore every phase and complete only after the real endpoint is ready.
     Task<LoadResult> Load(SlotId s);
     Task<LoadResult> LoadFile(string path);           // 源文件只读；之后写到 --save 指定的存档位，没指定就不写
@@ -134,7 +135,6 @@ public interface ISaveService                         // Kernel 服务（game/ke
     Task<LoadResult> NewGame(SlotId? s, uint? seed = null, WorldPreset? start = null, NewGameBoot? boot = null);
     // seed 为 null 时取一次熵（G4 唯一的熵源例外）；start 为 null 时取本图的 newGameStart（SYS-SAVE）
     Task<SaveResult> FlushForQuit(SaveReason r, TimeSpan timeout);
-    // r 只能是 Quit 或 ToTitle；旧代不受影响。Saved、Disabled、Deferred（有意不写）可以直接退出；
-    // Failed（写盘出错、读回校验不符、超时）不退出，由 IAppFlow 让观者选重试、返回游戏或仍然退出（SYS-SAVE、SYS-SAVE，DECISION-171）
+    // r 只能是 Quit 或 ToTitle；旧代不受影响。保存失败或超时也照常离开，回标题失败后在开始页提示一次（SYS-SAVE-FLOW）
     byte[]? Thumbnail(SlotId s);                      // 最新可读一代的 WebP 字节，界面自己解码（SYS-SAVE）
 }

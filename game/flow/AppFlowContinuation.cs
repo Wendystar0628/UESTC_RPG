@@ -89,7 +89,7 @@ internal sealed class AppFlowContinuation(ICameraRig camera, ISaveService saves,
     internal static bool Readable(SlotInfo? slot) => slot?.Health switch
     {
         SlotHealth.Ok => slot.Meta is not null,
-        SlotHealth.Empty or SlotHealth.Corrupt or null => false,
+        SlotHealth.Empty or SlotHealth.Corrupt or SlotHealth.Newer or null => false,
         _ => throw new InvalidOperationException("Unknown slot health."),
     };
     internal static bool Loaded(LoadStatus status) => status switch

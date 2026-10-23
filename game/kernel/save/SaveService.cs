@@ -157,6 +157,8 @@ public sealed class SaveService : ISaveService, IDisposable, IAsyncDisposable
             var active = Active!.Value;
             var current = await Task.Run(() => _repository!.Scan(active)).ConfigureAwait(false);
             await OnFrame(() => _slots[active] = current).ConfigureAwait(false);
+            if (current.Info.Health == SlotHealth.Newer)
+                return new(SaveStatus.Disabled, active, 0, "save.error.newer_slot");
             if (!_authorizedOverwrite && current.Info.Health == SlotHealth.Corrupt)
                 return new(SaveStatus.Disabled, active, 0, "save.error.read_only_slot");
             byte[]? thumbnail = _thumbnail;
@@ -334,7 +336,7 @@ public sealed class SaveService : ISaveService, IDisposable, IAsyncDisposable
             if (scan.Save is null) return new(scan.Info.Health switch
             {
                 SlotHealth.Empty => LoadStatus.Empty,
-                SlotHealth.Corrupt => LoadStatus.Corrupt,
+                SlotHealth.Corrupt or SlotHealth.Newer => LoadStatus.Corrupt,
                 _ => LoadStatus.Failed
             }, slot, 0, []);
             return await Restore(scan.Save, _options.WriteSlot ?? slot).ConfigureAwait(false);
