@@ -160,20 +160,44 @@ public sealed class AppLoadingFlowTests
         catch (OperationCanceledException) when (work.IsCanceled) { }
     }
 
-    [TestCase, TestCategory(TestReason.Smoke)]
-    public async Task ReturningToTitleClearsTheWorldWithoutLoadingAnotherEndpoint()
+    [TestCase(SaveStatus.Saved, null)]
+    [TestCase(SaveStatus.Deferred, null)]
+    [TestCase(SaveStatus.Failed, "save.error.io")]
+    [TestCase(SaveStatus.Failed, "save.error.timeout")]
+    [TestCategory(TestReason.Regression)]
+    public async Task ReturningToTitleClearsTheWorldAfterAnySaveResult(SaveStatus status, string? errorKey)
     {
         var rig = new FlowTestRig(); var saves = new FullSave(rig);
         using var flow = rig.CreateFlow(saves, Maps(), new TestAppExit(false));
         await Title(flow, rig);
         if (await flow.Enter(new(EnterKind.NewGame, new("s1"))) != EnterResult.Entered) throw new InvalidOperationException("New game failed.");
+        saves.FlushStatus = status; saves.FlushError = errorKey;
         var arrivals = rig.Runtime.Arrivals;
         await flow.ReturnToTitle();
         if (flow.State != AppState.Title || rig.Runtime.Arrival is not null || rig.Runtime.Arrivals != arrivals ||
-            saves.Loads != 0 || saves.Flushes != 1 || rig.World.Instance != 0 || !rig.Title.Visible || rig.Loading.Active)
+            saves.Loads != 0 || saves.Flushes != 1 || rig.World.Instance != 0 || !rig.Title.Visible || rig.Loading.Active ||
+            saves.State.Last != status || saves.State.ErrorKey != errorKey)
             throw new InvalidOperationException("Returning to title restored a world or waited for another arrival.");
         if (await flow.Enter(new(EnterKind.Continue)) != EnterResult.Entered || saves.Loads != 1 || saves.NewGames != 1 || saves.Saves != 1)
             throw new InvalidOperationException("Continue did not run a fresh complete load transaction.");
+    }
+
+    [TestCase(SaveStatus.Saved, true)]
+    [TestCase(SaveStatus.Disabled, true)]
+    [TestCase(SaveStatus.Deferred, false)]
+    [TestCase(SaveStatus.Failed, false)]
+    [TestCategory(TestReason.Regression)]
+    public async Task NewGameRequiresItsInitialSaveOrExplicitReadOnlyMode(SaveStatus status, bool accepted)
+    {
+        var rig = new FlowTestRig(); var saves = new FullSave(rig) { InitialSaveStatus = status };
+        using var flow = rig.CreateFlow(saves, Maps(), new TestAppExit(false));
+        await Title(flow, rig);
+        var entered = await flow.Enter(new(EnterKind.NewGame, new("s1")));
+        if (saves.Saves != 1 || entered != (accepted ? EnterResult.Entered : EnterResult.Failed) ||
+            flow.State != (accepted ? AppState.Playing : AppState.Title) || rig.Loading.Active || rig.Camera.InputLocked == accepted)
+            throw new InvalidOperationException("New game treated an unfinished or failed first save as playable.");
+        if (!accepted && (flow.Failure is not IOException || flow.LastError != "title.enter_failed" || rig.Diagnostics.Count != 1))
+            throw new InvalidOperationException("Initial-save failure did not keep its exception and localized flow error.");
     }
 
     [TestCase, TestCategory(TestReason.Smoke)]
@@ -231,6 +255,11 @@ public sealed class AppLoadingFlowTests
         public int Loads { get; private set; }
         public int Saves { get; private set; }
         public int Flushes { get; private set; }
+        public SaveStatus InitialSaveStatus { get; set; } = SaveStatus.Saved;
+        public SaveStatus FlushStatus { get; set; } = SaveStatus.Saved;
+        public string? FlushError { get; set; }
+        private SaveResult? _lastResult;
+        public override SaveState State => new(Active, _lastResult?.Status, _lastResult?.Error, null, ReadOnlyReason.None);
         public TaskCompletionSource ArrivalStarted { get; } = new();
         private static readonly Pose Landing = new(new(120, 1.7f, -70), 20, 0, UiSettingDefinitions.WalkFov.Default);
         private SaveMeta Meta => new(Campus.Kernel.Save.Format.SaveContainer.CurrentFormat, new("s1"), SlotKind.Auto, 1, 1, 0, Maps().Default,
@@ -241,7 +270,7 @@ public sealed class AppLoadingFlowTests
         public override Task<SaveResult> SaveNow(SaveReason reason)
         {
             if (rig.Runtime.Arrival?.Done.IsCompletedSuccessfully != true) throw new InvalidOperationException("Save preceded arrival.");
-            Saves++; return Task.FromResult(new SaveResult(SaveStatus.Saved, Active, 1));
+            Saves++; return Task.FromResult(new SaveResult(InitialSaveStatus, Active, 1));
         }
         public override Task<LoadResult> NewGame(SlotId? slot, uint? seed = null, WorldPreset? start = null, NewGameBoot? boot = null)
         { NewGames++; return Restore(slot); }
@@ -254,6 +283,6 @@ public sealed class AppLoadingFlowTests
             return new(LoadStatus.Loaded, slot, 1, []);
         }
         public override Task<SaveResult> FlushForQuit(SaveReason reason, TimeSpan timeout)
-        { Flushes++; return Task.FromResult(new SaveResult(SaveStatus.Saved, Active, 1)); }
+        { Flushes++; _lastResult = new(FlushStatus, Active, 1, FlushError); return Task.FromResult(_lastResult); }
     }
 }

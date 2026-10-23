@@ -13,7 +13,7 @@ internal sealed class AppFlowRecovery(IMapService maps, IWorldRestore restore, I
     private Task? _faultHold;
     private string? _errorOverride;
     internal Exception? Failure { get; private set; }
-    internal string? LastError => _errorOverride ?? Failure?.Message;
+    internal string? LastError => _errorOverride ?? (Failure is null ? null : "title.enter_failed");
     internal void ResetHold() => _faultHold = null;
     internal void BeginEntry() { Failure = null; _errorOverride = null; ResetHold(); }
     internal void CaptureFailure([FailureHandler("SYS-TITLE")] Exception error, AppState state)

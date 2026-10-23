@@ -22,34 +22,38 @@ public sealed class TitleQuitFlowTests
             throw new InvalidOperationException("Title exit created a world or bypassed resource shutdown.");
     }
 
-    [TestCase(false)]
-    [TestCase(true)]
+    [TestCase(false, "save.error.io")]
+    [TestCase(true, "save.error.io")]
+    [TestCase(false, "save.error.timeout")]
+    [TestCase(true, "save.error.timeout")]
     [TestCategory(TestReason.Regression)]
-    public async Task AFailedTitleWriterKeepsTitleAndAllowsAnExplicitExitRetry(bool alreadyFailed)
+    public async Task AFailedTitleWriterStillAwaitsResourceShutdown(bool alreadyFailed, string errorKey)
     {
-        var rig = new FlowTestRig(); var save = new TitleWriter(); var exit = new TestAppExit();
+        var rig = new FlowTestRig(); var save = new TitleWriter(); var exit = new TestAppExit { Gate = new() };
         using var flow = rig.CreateFlow(save, new TestMapService(), exit);
         await flow.PrepareBoot(new()); await flow.OpenTitle();
-        if (alreadyFailed) save.Complete(SaveStatus.Failed);
-        var failed = flow.Quit();
-        if (!alreadyFailed) save.Complete(SaveStatus.Failed);
-        await failed;
-        if (exit.Calls != 0 || flow.State != AppState.Title || rig.World.Instance != 0 || !rig.Camera.InputLocked)
-            throw new InvalidOperationException("A failed title writer resumed a nonexistent game world.");
-        save.RetryStatus = SaveStatus.Deferred;
-        var retry = flow.Quit(); await retry;
-        if (ReferenceEquals(failed, retry) || save.Flushes != 2 || exit.Calls != 1 || flow.State != AppState.Quitting)
-            throw new InvalidOperationException("The refused title exit could not be retried.");
+        if (alreadyFailed) save.Complete(SaveStatus.Failed, errorKey);
+        var quit = flow.Quit();
+        if (!alreadyFailed) save.Complete(SaveStatus.Failed, errorKey);
+        await Task.WhenAny(quit, exit.Started.Task);
+        if (exit.Calls != 1 || quit.IsCompleted || flow.State != AppState.Quitting || rig.World.Instance != 0 || !rig.Camera.InputLocked ||
+            save.State.Last != SaveStatus.Failed || save.State.ErrorKey != errorKey)
+            throw new InvalidOperationException("A failed title writer blocked exit or skipped the actual resource drain.");
+        exit.Gate.SetResult(); await quit;
+        if (!ReferenceEquals(quit, flow.Quit()) || save.Flushes != 1 || exit.Calls != 1)
+            throw new InvalidOperationException("The completed exit repeated saving or resource disposal.");
     }
 
     private sealed class TitleWriter : TestSaveService
     {
         private readonly TaskCompletionSource<SaveResult> _writing = new();
         public int Flushes { get; private set; }
-        internal SaveStatus? RetryStatus { get; set; }
+        private SaveState _state = new(null, null, null, null, ReadOnlyReason.None);
+        public override SaveState State => _state;
         public override bool Busy => !_writing.Task.IsCompleted;
         public override Task<SaveResult> FlushForQuit(SaveReason reason, TimeSpan timeout)
-        { Flushes++; return RetryStatus is { } status ? Task.FromResult(new SaveResult(status, null, 0)) : _writing.Task; }
-        internal void Complete(SaveStatus status) => _writing.SetResult(new(status, null, 0));
+        { Flushes++; return _writing.Task; }
+        internal void Complete(SaveStatus status, string? errorKey = null)
+        { _state = _state with { Last = status, ErrorKey = errorKey }; _writing.SetResult(new(status, null, 0, errorKey)); }
     }
 }

@@ -14,7 +14,6 @@ public sealed class AppFlowService : IAppFlow, IAppBootFlow, IBootParticipant, I
 {
     private readonly ICameraRig camera;
     private readonly ITransitDriver transit;
-    private readonly IAppLoadingPresentation loading;
     private readonly ISaveService saves;
     private readonly IMapService maps;
     private readonly IWorldState world;
@@ -29,7 +28,7 @@ public sealed class AppFlowService : IAppFlow, IAppBootFlow, IBootParticipant, I
     private readonly IMapRuntime _mapRuntime;
     private Task? _quit;
     private Task? _leaving;
-    private bool _leaveSaved;
+    private bool _leaveSaveCompleted;
     private Pose _leavePose;
     private bool _quitting;
     private EnterRequest? _request;
@@ -43,7 +42,7 @@ public sealed class AppFlowService : IAppFlow, IAppBootFlow, IBootParticipant, I
         ITransitDriver transit, IDiagnosticLog diagnostics, ISettingsStore? profileSettings = null)
     {
         _mapRuntime = mapRuntime;
-        this.camera = camera; this.transit = transit; this.loading = loading; this.saves = saves; this.maps = maps;
+        this.camera = camera; this.transit = transit; this.saves = saves; this.maps = maps;
         this.world = world; this.restore = restore; this.appExit = appExit; this.stream = stream;
         _resources = new(camera, restore, control, loading, frontispiece, mapRuntime, MarkPhase);
         _continuation = new(camera, saves, maps, restore, mapRuntime, stream,
@@ -137,7 +136,7 @@ public sealed class AppFlowService : IAppFlow, IAppBootFlow, IBootParticipant, I
             {
                 // The first generation belongs to this prepared Walk endpoint.
                 var saved = await saves.SaveNow(SaveReason.NewGame);
-                if (!AppFlowContinuation.CanLeave(saved.Status)) throw new IOException(saved.Error ?? "The new game could not be saved.");
+                if (!AppFlowContinuation.InitialSaveAccepted(saved.Status)) throw new IOException(saved.Error ?? "The new game could not be saved.");
                 _resources.CompleteSavePreparation();
             }
             _continuation.RequireHealthyWorld();
@@ -162,7 +161,7 @@ public sealed class AppFlowService : IAppFlow, IAppBootFlow, IBootParticipant, I
     {
         if (restore.RestoreFaulted) return _recovery.HoldRestoreFailure();
         if (!In(AppState.Playing)) return Task.CompletedTask;
-        _leaveSaved = false; _leavePose = camera.Pose;
+        _leaveSaveCompleted = false; _leavePose = camera.Pose;
         _resources.HoldInput(); _resources.HoldLoadingFlow(); Change(AppState.Leaving);
         _leaving = ReturnToTitleCore(); return _leaving;
     }
@@ -173,15 +172,10 @@ public sealed class AppFlowService : IAppFlow, IAppBootFlow, IBootParticipant, I
             await transit.CancelAsync();
             _leavePose = camera.Pose;
             await _resources.BeginLoading(null, save: true);
-            var saved = await saves.FlushForQuit(SaveReason.ToTitle, TimeSpan.FromSeconds(FlowTuning.TitleSaveTimeoutSeconds));
+            await FlushBeforeLeaving(SaveReason.ToTitle, FlowTuning.TitleSaveTimeoutSeconds);
+            _leaveSaveCompleted = true;
             if (restore.RestoreFaulted) { await _recovery.HoldRestoreFailure(); return; }
-            if (!AppFlowContinuation.CanLeave(saved.Status))
-            {
-                _resources.CompleteWorldPreparation(); _resources.CompleteSavePreparation();
-                await _continuation.PreparePlayableDestination(_startup.CaptureMode); await _resources.FinishLoading();
-                _resources.ReleaseFlow(); Change(AppState.Playing); _resources.ReleaseInput(); return;
-            }
-            _leaveSaved = true; _resources.CompleteSavePreparation();
+            _resources.CompleteSavePreparation();
             _resources.HoldTitleFlow();
             _mapRuntime.ClearDestination(); restore.EndInstance();
             await _resources.ShowTitle();
@@ -195,7 +189,7 @@ public sealed class AppFlowService : IAppFlow, IAppBootFlow, IBootParticipant, I
         {
             _recovery.CaptureFailure(error, State);
             if (restore.RestoreFaulted) { await _recovery.HoldRestoreFailure(); return; }
-            if (!_leaveSaved)
+            if (!_leaveSaveCompleted)
             {
                 camera.SetPose(_leavePose);
                 await _continuation.PreparePlayableDestination(_startup.CaptureMode); await _resources.FinishLoading(); _resources.ReleaseFlow();
@@ -226,7 +220,7 @@ public sealed class AppFlowService : IAppFlow, IAppBootFlow, IBootParticipant, I
         {
             // Save returns Deferred for a faulted restore: intentionally preserve the old generation.
             await transit.CancelAsync();
-            if (await QuitFaultedWorld()) await appExit.FinishQuit();
+            await QuitFaultedWorld(); await appExit.FinishQuit();
             return;
         }
         var save = previous switch
@@ -253,26 +247,11 @@ public sealed class AppFlowService : IAppFlow, IAppBootFlow, IBootParticipant, I
         Change(AppState.Quitting);
         if (restore.RestoreFaulted)
         {
-            if (await QuitFaultedWorld()) await appExit.FinishQuit();
+            await QuitFaultedWorld(); await appExit.FinishQuit();
             return;
         }
         if (save)
-        {
-            var result = await saves.FlushForQuit(SaveReason.Quit, TimeSpan.FromSeconds(FlowTuning.SaveTimeoutSeconds));
-            if (!AppFlowContinuation.CanLeave(result.Status))
-            {
-                if (restore.RestoreFaulted) { _quitting = false; await _recovery.HoldRestoreFailure(); return; }
-                _quitting = false;
-                if (loading.Active) await _resources.FinishLoading();
-                if (world.Instance == 0)
-                {
-                    _resources.HoldTitleFlow(); _resources.ReleaseLoadingFlow(); Change(AppState.Title);
-                    return;
-                }
-                _resources.ReleaseFlow(); Change(AppState.Playing); _resources.ReleaseInput();
-                return;
-            }
-        }
+            await FlushBeforeLeaving(SaveReason.Quit, FlowTuning.SaveTimeoutSeconds);
         // The stage owns resource disposal and engine shutdown. It must never
         // close merely because Changed announced the start of Quitting.
         await appExit.FinishQuit();
@@ -314,20 +293,25 @@ public sealed class AppFlowService : IAppFlow, IAppBootFlow, IBootParticipant, I
         MarkPhase("title-ready");
         return Task.CompletedTask;
     }
-    private async Task<bool> QuitFaultedWorld()
+    private async Task QuitFaultedWorld()
     {
         await _recovery.HoldRestoreFailure(); Change(AppState.Quitting);
+        await FlushBeforeLeaving(SaveReason.Quit, FlowTuning.SaveTimeoutSeconds);
+        _recovery.RetainRestoreError();
+    }
+    private async Task FlushBeforeLeaving(SaveReason reason, double timeoutSeconds)
+    {
         try
         {
-            var result = await saves.FlushForQuit(SaveReason.Quit, TimeSpan.FromSeconds(FlowTuning.SaveTimeoutSeconds));
-            if (AppFlowContinuation.CanLeave(result.Status)) return true;
+            // SYS-SAVE-FLOW: failures and bounded save waits never veto leaving.
+            // Save owns detached writes and publishes their eventual result through State/SlotsChanged.
+            // FinishQuit still waits for the real resource drain after this bounded save attempt.
+            await saves.FlushForQuit(reason, TimeSpan.FromSeconds(timeoutSeconds));
         }
         catch (Exception error) when (error is not OutOfMemoryException)
         {
-            _recovery.CaptureFailure(error, State); _recovery.RetainRestoreError();
+            _recovery.CaptureFailure(error, State);
         }
-        _quitting = false; Change(AppState.Title);
-        return false;
     }
     public void Dispose()
     {

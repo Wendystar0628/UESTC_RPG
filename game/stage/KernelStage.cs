@@ -496,20 +496,11 @@ public partial class KernelStage : Node3D, IAppExit, IAppFailure, IStageGateHost
             if (_appFailure.Failed) { await FinishQuit(2); return; }
             if (_cpuCommand) { await FinishQuit(130); return; }
             if (_flow is null) { await FinishQuit(); return; }
-            // All requests, including repeats, use the flow's shared quit task. It calls IAppExit
-            // only after saving and the user's final decision; observing Quitting is not permission to exit.
+            // All requests, including repeats, use the flow's shared quit task. After the save
+            // attempt it awaits IAppExit's resource shutdown; Quitting alone is not completion.
             await _flow.Quit();
             if (_shutdown.Started) { await _shutdown.Pending!; return; }
-            switch (_flow.State)
-            {
-                case AppState.Quitting: throw new InvalidOperationException("Quit completed without the IAppExit shutdown bridge.");
-                case AppState.Playing:
-                case AppState.Title: _closing = false; break;
-                case AppState.Boot:
-                case AppState.Entering:
-                case AppState.Leaving:
-                default: throw new InvalidOperationException("Quit completed without a final quit or resume decision.");
-            }
+            throw new InvalidOperationException("Quit completed without the IAppExit shutdown bridge.");
         }
         catch (Exception error) { Report(error); }
     }

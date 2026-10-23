@@ -102,10 +102,11 @@ internal sealed class AppFlowContinuation(ICameraRig camera, ISaveService saves,
     {
         if (!Loaded(result.Status)) throw new InvalidDataException(result.Error ?? "The requested world could not be restored.");
     }
-    internal static bool CanLeave(SaveStatus status) => status switch
+    internal static bool InitialSaveAccepted(SaveStatus status) => status switch
     {
-        SaveStatus.Saved or SaveStatus.Deferred or SaveStatus.Disabled => true,
-        SaveStatus.Failed => false,
+        // Explicit read-only runs keep their existing entry behavior; a pending write is not a first generation.
+        SaveStatus.Saved or SaveStatus.Disabled => true,
+        SaveStatus.Deferred or SaveStatus.Failed => false,
         _ => throw new ArgumentOutOfRangeException(nameof(status))
     };
     internal void OnStateChange(AppState state)
