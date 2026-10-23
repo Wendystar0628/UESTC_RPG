@@ -81,7 +81,10 @@ internal sealed class BankPlan
         [.. Sources(world).Where(source => includes is null || source.Ranges.Any(includes)).Select(source =>
             new BankPlan(source.Feature, world, (ITerrainBankSource)world.Terrain, source.Span, source.Start, source.End, includes))];
 
-    private static IEnumerable<BankSource> Sources(IWorldModel world)
+    private static IReadOnlyList<BankSource> Sources(IWorldModel world) =>
+        DerivedMemo.ForWorld<BankSource[]>(world, typeof(BankSource), () => CreateSources(world).ToArray());
+
+    private static IEnumerable<BankSource> CreateSources(IWorldModel world)
     {
         var registrations = world.Features.Values.Where(feature => feature.Kind.Value == T.BankKind && feature.OptionalText("form") == T.HardBankForm)
             .OrderBy(feature => feature.Id.Value, StringComparer.Ordinal).ToArray();

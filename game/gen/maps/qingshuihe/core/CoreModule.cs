@@ -1,23 +1,16 @@
-using Campus.Gen.World;
-using Campus.Gen.Parts.Street;
-using Campus.Gen.Parts.Roof;
-using Campus.Gen.Parts.Openings;
-using Campus.Gen.Parts.Circulation;
 using Campus.Contracts.Bake;
-using Campus.Gen.Geometry;
 using Campus.Gen.Sites;
 using Campus.Contracts;
 using Campus.Contracts.Maps;
 using Campus.Gen.Maps.Qingshuihe.Core.Annex;
 using Campus.Gen.Maps.Qingshuihe.Core.Axis;
 using Campus.Gen.Maps.Qingshuihe.Core.Entrance;
-using Campus.Gen.Maps.Qingshuihe.Core.Framework;
 using Campus.Gen.Maps.Qingshuihe.Core.Library;
 using Campus.Gen.Maps.Qingshuihe.Core.Museum;
 
 namespace Campus.Gen.Maps.Qingshuihe.Core;
 
-/// <summary>The core's directly registered zone sites; source selection happens before layout construction.</summary>
+/// <summary>The core's directly registered zone sites share frozen world layouts before range selection.</summary>
 [ContentModule("zone.core")]
 public sealed class CoreModule() : ZoneModuleBase(CoreSite.Pieces, CoreRanges.All, CoreSite.Claims),
     IWindowMetadataSource, ILightMetadataSource, IContentSourceTraceProvider
@@ -37,15 +30,22 @@ public static class CoreSite
     public static IReadOnlyList<ZoneSite> Pieces(IWorldModel world, Func<MapRect, bool>? includes = null)
     {
         ArgumentNullException.ThrowIfNull(world);
-        bool Selected(FeatureId feature) => CoreRanges.ForFeature(world, feature) is { } range && (includes?.Invoke(range) ?? true);
+        var pieces = DerivedMemo.ForWorld(world, typeof(CoreSite), () => CreatePieces(world));
+        return includes is null ? pieces : pieces.Where(piece =>
+            DerivedMemo.ForWorld(world, (typeof(CoreSite), piece), () => piece.Ranges(world)).Any(includes)).ToArray();
+    }
+
+    private static IReadOnlyList<ZoneSite> CreatePieces(IWorldModel world)
+    {
+        bool Selected(FeatureId feature) => world.Features.ContainsKey(feature);
         var plazaSelected = Selected(CoreIds.TimePlaza);
         var sundialSelected = Selected(CoreIds.Sundial);
         var librarySelected = Selected(CoreIds.Library);
         var stairSelected = Selected(CoreIds.LibraryStair);
         var museumSelected = Selected(CoreIds.Museum);
         var annexSelected = AnnexSite.Members.Where(member => Selected(member.Feature)).Select(member => member.Feature).ToHashSet();
-        var gardenSelected = CoreRanges.Garden(world) is { } gardenRange && (includes?.Invoke(gardenRange) ?? true);
-        // The stair and north blocks share the library plan; construct that dependency only for selected sources.
+        var gardenSelected = world.Features.ContainsKey(CoreIds.CourtWing);
+        // The stair and north blocks share the world's one immutable library shell.
         var library = librarySelected || stairSelected || annexSelected.Count > 0 || gardenSelected ? LibraryShell.From(world) : null;
         var annex = annexSelected.Count > 0 || gardenSelected ? AnnexSite.From(world, library) : null;
         ZoneSite?[] pieces =

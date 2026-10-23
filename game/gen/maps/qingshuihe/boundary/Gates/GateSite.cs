@@ -91,6 +91,11 @@ public sealed class GateSite(BoundaryTune.GateSpec spec) : ZoneSite
     {
         ArgumentNullException.ThrowIfNull(world);
         ArgumentNullException.ThrowIfNull(spec);
+        return DerivedMemo.ForWorld<GateLayout?>(world, (typeof(GateSite), spec), () => CreateOf(world, spec));
+    }
+
+    private static GateLayout? CreateOf(IWorldModel world, BoundaryTune.GateSpec spec)
+    {
         var road = world.Network.Roads.FirstOrDefault(r => r.Id.Value == spec.Road);
         if (road is null || world.Boundary.Outer.Count < 3) return null;
         var ring = new BoundaryRing(world.Boundary.Outer);

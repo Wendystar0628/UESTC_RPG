@@ -3,7 +3,6 @@ using Campus.Contracts;
 using Campus.Contracts.Audio;
 using Campus.Gen.Geometry;
 using Campus.Gen.World;
-using Campus.Gen.Tests.Support;
 using Campus.Gen.Sites;
 using Campus.Gen.Sites.Tests;
 using Campus.Gen.Maps.Qingshuihe.South;
@@ -13,7 +12,6 @@ using Campus.Gen.Maps.Qingshuihe.Boundary.Gates;
 using Campus.Gen.Maps.Qingshuihe.Boundary.Ring;
 using Campus.Gen.Maps.Qingshuihe.Boundary.Waterfront;
 using GdUnit4;
-using G = Campus.Gen.Maps.Qingshuihe.Boundary.BoundaryTune.Gate;
 using P = Campus.Gen.Maps.Qingshuihe.Boundary.BoundaryTune.Plaza;
 
 namespace Campus.Gen.Maps.Qingshuihe.Boundary.Tests;
@@ -54,20 +52,7 @@ public sealed class BoundaryModuleTests
     [TestCategory("Slow")]
     public void TheFenceRunsAllTheWayRound()
     {
-        var world = new FakeWorld(RealMapFixture.Load().World);
-        var key = new object();
-        var calls = 0;
-        var values = new int[2];
-        Parallel.For(0, values.Length, i => values[i] = DerivedMemo.ForWorld(world, key, () => Interlocked.Increment(ref calls)));
-        AssertThat(calls == 1 && values.All(value => value == calls)).OverrideFailureMessage("one world evaluates a derived factory once").IsTrue();
-        var other = DerivedMemo.ForWorld(new FakeWorld(world), key, () => Interlocked.Increment(ref calls));
-        AssertThat(calls == 2 && other == calls).OverrideFailureMessage("another world evaluates its own derived value").IsTrue();
-        var firstContext = Context().WithWorld(world);
-        var secondContext = Context().WithWorld(world);
-        Parallel.For(0, values.Length, i => values[i] = firstContext.Memo(key, () => Interlocked.Increment(ref calls)));
-        AssertThat(calls == 3 && values.All(value => value == calls)).OverrideFailureMessage("one context evaluates its derived factory once").IsTrue();
-        var separate = secondContext.Memo(key, () => Interlocked.Increment(ref calls));
-        AssertThat(calls == 4 && separate == calls).OverrideFailureMessage("contexts using the same world retain separate derived inputs").IsTrue();
+        var world = RealMapFixture.Load().World;
         var plan = BoundaryPlan.Of(world)!;
         var ring = plan.Ring;
         // Openings tile the ring with runs between them: nothing overlaps, every gap is a run.

@@ -82,14 +82,23 @@ internal sealed class BridgePlan
         foreach (var plan in Sources(world))
         {
             if (includes is not null && !includes(plan.Range)) continue;
-            plan.RoadY = (world.Terrain.HeightAt(plan.HeightPoints[0].X, plan.HeightPoints[0].Y)
-                + world.Terrain.HeightAt(plan.HeightPoints[1].X, plan.HeightPoints[1].Y)) * 0.5f;
-            plans.Add(plan);
+            plans.Add(DerivedMemo.ForWorld(world, plan, () => plan.WithTerrain(world)));
         }
         return plans;
     }
 
-    private static IEnumerable<BridgePlan> Sources(IWorldModel world)
+    private BridgePlan WithTerrain(IWorldModel world) =>
+        new(Id, Origin, Axis, Bands, StartA, StartK, EndA, EndK, HeightPoints, Lines)
+        {
+            Abutments = Abutments,
+            RoadY = (world.Terrain.HeightAt(HeightPoints[0].X, HeightPoints[0].Y)
+                + world.Terrain.HeightAt(HeightPoints[1].X, HeightPoints[1].Y)) * 0.5f,
+        };
+
+    private static IReadOnlyList<BridgePlan> Sources(IWorldModel world) =>
+        DerivedMemo.ForWorld<BridgePlan[]>(world, typeof(BridgePlan), () => CreateSources(world).ToArray());
+
+    private static IEnumerable<BridgePlan> CreateSources(IWorldModel world)
     {
         ArgumentNullException.ThrowIfNull(world);
         var lines = world.Network.Bridges.Concat(world.Network.Roads).GroupBy(l => l.Id.Value, StringComparer.Ordinal)

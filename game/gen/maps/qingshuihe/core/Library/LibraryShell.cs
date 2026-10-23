@@ -2,7 +2,6 @@ using Campus.Gen.World;
 using Campus.Gen.Sites;
 using Campus.Gen.Geometry;
 using System.Numerics;
-using System.Text.Json;
 using Campus.Contracts;
 using Campus.Contracts.Audio;
 using Campus.Contracts.Parts;
@@ -37,30 +36,33 @@ public sealed class LibraryShell : ZoneSite, IWindowedPiece
     private readonly LibraryOpeningLayout _windowLayout;
     private readonly LibraryTerrace _terrace;
 
-    private LibraryShell(LibraryPlan plan)
+    private LibraryShell(LibraryPlan plan, IWorldModel world)
     {
         Plan = plan;
         _windowLayout = new(plan);
         _terrace = new(plan);
+        _ground = world.Terrain.HeightAt;
+        CafeWalk = WalkFrom(world);
     }
 
-    public static LibraryShell? From(IWorldModel world)
+    public static LibraryShell? From(IWorldModel world) =>
+        DerivedMemo.ForWorld<LibraryShell?>(world, typeof(LibraryShell), () => CreateFrom(world));
+
+    private static LibraryShell? CreateFrom(IWorldModel world)
     {
         var plan = LibraryPlan.From(world);
         if (plan is null) return null;
-        var shell = new LibraryShell(plan) { _ground = world.Terrain.HeightAt };
-        shell.CafeWalk = shell.WalkFrom(world);
-        return shell;
+        return new LibraryShell(plan, world);
     }
 
     /// <summary>Ground height under a plan point (the world's terrain; game/gen/world/'s evaluator or the flat stub).</summary>
-    private Surface _ground = (_, _) => 0f;
+    private readonly Surface _ground;
 
     /// <summary>
     /// The paved link from the cafe apron to the nearest footway (16d-2, review of 16d): from inside the apron's front edge
     /// to the walk's edge, <see cref="LibraryStyle.CafeWalkWidth"/> wide; null when the apron already meets a walk or none is in reach.
     /// </summary>
-    public (Vector2 A, Vector2 B)? CafeWalk { get; private set; }
+    public (Vector2 A, Vector2 B)? CafeWalk { get; }
 
     private (Vector2 A, Vector2 B)? WalkFrom(IWorldModel world)
     {

@@ -102,7 +102,10 @@ public sealed class LirenSite : ZoneSite
         public IReadOnlyList<IReadOnlyList<Vector2>> BridgeNeighbours => Piers;
     }
 
-    internal static Footprints Rings(IWorldModel world)
+    internal static Footprints Rings(IWorldModel world) =>
+        DerivedMemo.ForWorld(world, typeof(Footprints), () => CreateRings(world));
+
+    private static Footprints CreateRings(IWorldModel world)
     {
         if (!world.Features.TryGetValue(new(Connector), out var connector))
             throw new InvalidOperationException($"Liren connector {Connector} is missing from the world model.");
