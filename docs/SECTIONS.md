@@ -1123,7 +1123,7 @@
 
 ## SYS-GRAPHICS · 画面设置
 
-`docs/systems/SYS-GRAPHICS-画面设置.md` · 7.8k 字 · 主线三个效果预设与十余个单项、风格底线、应用方式、持久化；自动调节与首次分档在主线之后
+`docs/systems/SYS-GRAPHICS-画面设置.md` · 8.0k 字 · 主线三个效果预设与十余个单项、风格底线、应用方式、持久化；自动调节与首次分档在主线之后
 关键词：画面设置、画质、画面预设、设备档、均衡、精致、极致、单项、作用域、自定义、风格底线、风格默认、渲染精度、FSR 锐化、暗角、加载类设置、画面页、恢复默认、IQualityService、IQualityAware、QualityResponsive、QualityKnob、quality-presets.json、settings.json
 
 - SYS-GRAPHICS §0 结论 · L22 · 1.7k
@@ -1131,9 +1131,9 @@
 - SYS-GRAPHICS §1 预设 · L45 · 709
 - SYS-GRAPHICS §2 风格底线与风格默认 · L61 · 707
 - SYS-GRAPHICS §3 单项与生效方式 · L74 · 1.4k
-- SYS-GRAPHICS §4 应用方式 · L97 · 475
+- SYS-GRAPHICS §4 应用方式 · L97 · 591
 - SYS-GRAPHICS §5 自动推荐与自动调节（主线之后） · L107 · 398
-- SYS-GRAPHICS §6 持久化与恢复 · L116 · 365
+- SYS-GRAPHICS §6 持久化与恢复 · L116 · 418
 - SYS-GRAPHICS §7 画面页 · L122 · 182
 - SYS-GRAPHICS §8 待验证（P0） · L126 · 358
 
@@ -1861,7 +1861,7 @@
 
 ## WF-RULE · 全员守则
 
-`docs/workflow/WF-RULE-全员守则.md` · 11.3k 字 · 所有会话和子代理都要守的规则：不过度工程化、不干等、文件操作、git 与直接改主线、主线优先、测试最小、少打架、一次性产物、bug 分级、精度按 demo 阶段定
+`docs/workflow/WF-RULE-全员守则.md` · 11.4k 字 · 所有会话和子代理都要守的规则：不过度工程化、不干等、文件操作、git 与直接改主线、主线优先、测试最小、少打架、一次性产物、bug 分级、精度按 demo 阶段定
 关键词：全员守则、不过度工程化、不向作者出选项、不预判时间、不短轮询、不干等、不重复复核、文件操作、删除规则、git、直接改主线、只提交自己的文件、出了问题向前修不回滚、不 stash、主线优先、测试最小、少和别人打架、一次迁完、拿不准就问、一次性产物、用完就删、bug 分级、阻断、先提交后修、修不收敛就停、数量级判断、demo 阶段、精度与画面相称
 
 - WF-RULE §0 结论 · L22 · 140
@@ -1872,7 +1872,7 @@
 - WF-RULE §4 不短轮询、不干等、不重复复核 · L52 · 290
 - WF-RULE §5 来信 · L58 · 40
 - WF-RULE §6 文件操作 · L62 · 564
-- WF-RULE §7 git 与直接改主线（DECISION-211） · L72 · 1.1k
+- WF-RULE §7 git 与直接改主线（DECISION-211） · L72 · 1.2k
 - WF-RULE §8 主线优先（DECISION-168） · L84 · 327
 - WF-RULE §9 测试最小（DECISION-167） · L91 · 531
 - WF-RULE §10 少和别人打架（DECISION-199） · L100 · 1.4k
@@ -1996,7 +1996,7 @@
 
 ## REG-DECISIONS-SYSTEMS · 系统与工程决策
 
-`docs/registry/REG-DECISIONS-SYSTEMS-系统与工程决策.md` · 22.9k 字 · 界面、存档、音频、性能与画面设置、工程五个领域的已定决策
+`docs/registry/REG-DECISIONS-SYSTEMS-系统与工程决策.md` · 23.1k 字 · 界面、存档、音频、性能与画面设置、工程五个领域的已定决策
 关键词：决策、系统、工程、界面、存档、音频、性能、画面设置、预算、契约
 
 - REG-DECISIONS-SYSTEMS §0 结论 · L21 · 126
@@ -2004,10 +2004,10 @@
 - REG-DECISIONS-SYSTEMS §1 界面 · L29 · 4.6k
 - REG-DECISIONS-SYSTEMS §2 存档 · L65 · 1.9k
 - REG-DECISIONS-SYSTEMS §3 音频 · L85 · 2.2k
-- REG-DECISIONS-SYSTEMS §4 性能与画面设置 · L107 · 4.6k
-- REG-DECISIONS-SYSTEMS §5 工程 · L142 · 5.4k
-- REG-DECISIONS-SYSTEMS §6 地图与行走 · L178 · 1.0k
-- REG-DECISIONS-SYSTEMS §7 时间、季节、天气 · L189 · 2.4k
+- REG-DECISIONS-SYSTEMS §4 性能与画面设置 · L107 · 4.8k
+- REG-DECISIONS-SYSTEMS §5 工程 · L143 · 5.4k
+- REG-DECISIONS-SYSTEMS §6 地图与行走 · L179 · 1.0k
+- REG-DECISIONS-SYSTEMS §7 时间、季节、天气 · L190 · 2.4k
 
 ## REG-DECISIONS-WORLD · 世界与画面决策
 
