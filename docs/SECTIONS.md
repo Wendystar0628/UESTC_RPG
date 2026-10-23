@@ -1280,9 +1280,9 @@
   - SYS-SAVE-FORMAT §1.2 缩略图 · L49 · 152
   - SYS-SAVE-FORMAT §1.3 序列化约定 · L53 · 195
   - SYS-SAVE-FORMAT §1.4 版本 · L59 · 295
-- SYS-SAVE-FORMAT §2 存档损坏 · L66 · 532
+- SYS-SAVE-FORMAT §2 存档损坏 · L66 · 560
 - SYS-SAVE-FORMAT §3 设置文件：唯一的 `settings.json` · L80 · 663
-- SYS-SAVE-FORMAT §4 安全：为什么禁止用 Resource 和 ConfigFile 存读档 · L90 · 542
+- SYS-SAVE-FORMAT §4 安全：为什么禁止用 Resource 和 ConfigFile 存读档 · L90 · 543
 
 ## SYS-TIME · 时间与季节
 
