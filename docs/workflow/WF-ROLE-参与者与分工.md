@@ -23,7 +23,7 @@ paths: ["AGENTS.md", "CLAUDE.md"]
 
 1. **总指挥只有一个，就是主会话**（§5）：只做判断；施工子代理不提交，由指挥统一编译后提交推送（§4，DECISION-219、DECISION-313）。
 2. **视觉风格只由 Claude 侧做，GPT 模型不做任何审美工作**（§3）：玩家看得见、听得见的结果，参数和取舍由主会话评审定值。
-3. **按模型长处分工**（§2）：Opus 管审美、判断与变通；Sonnet 做语言、看图和已定的活；Codex 主线管架构与工程指挥；gpt-6.1-sol 是 Codex 主线和工程施工的模型，gpt-6-astra 只做临时审计（DECISION-249）。
+3. **按模型长处分工**（§2）：Opus 管审美、判断与变通；Sonnet 做语言、看图和已定的活；Codex 主线管架构与工程指挥；gpt-6.1-sol 做 Codex 侧一般的施工与审查，gpt-6-astra 只接困难艰深的任务（DECISION-249）。
 4. **Claude 侧子代理都开在主会话下**（§1）；**Codex 主线是工程指挥官与重要决策者，施工交 gpt-6.1-sol 子代理**（§6）。
 
 ### 0.1 接入要点
@@ -41,7 +41,7 @@ paths: ["AGENTS.md", "CLAUDE.md"]
 | 主会话 | Claude Opus 5.5，Claude Code 交互会话 | 作者 |
 | 主会话的子代理 | Claude Opus 或 Sonnet，Agent 工具后台开，按施工队列行号取名 | 主会话 |
 | Codex 主线 | gpt-6.1-sol（日常 high，诊断 xhigh），Codex 应用里唯一的会话 | 主会话 |
-| Codex 主线的子代理 | 默认 gpt-6.1-sol，机械活 gpt-6-luna（medium），`spawn_agent` 开；gpt-6-astra 只做重难审计（§6） | Codex 主线 |
+| Codex 主线的子代理 | 按难度选：困难艰深的 gpt-6-astra，其余 gpt-6.1-sol，机械活 gpt-6-luna（medium），`spawn_agent` 开（§6） | Codex 主线 |
 
 - **Claude 侧只有一个账号**，不另设中间会话；额度见底见 WF-MODEL §9.4。
 - **Codex 侧只有 Codex 主线一个会话**，开在 Codex 应用里，作者能看到全过程；要用 GPT 就在它里面开子代理，不另开会话（DECISION-249）；派活与通信见 WF-COMMS §5。GPT 侧一律普通速度（DECISION-197）。
@@ -52,8 +52,8 @@ paths: ["AGENTS.md", "CLAUDE.md"]
 | --- | --- | --- |
 | Claude Opus 5.5 | 审美、判断、变通：画面、风格、内容，跨系统取舍，需要 Opus 的文档撰写 | 用量最贵，能交 Sonnet 的不交 Opus（WF-MODEL §2） |
 | Claude Sonnet | 规格已给全的简单部件，按已定预设填数据，世界文件与数据改动，测试与小修，中文文档改写、文案、看图初筛 | 不定风格，画面与风格的定值归主会话 |
-| gpt-6-astra | 最强的 GPT 档：跨模块根因、并发、确定性、资源寿命、存档迁移这类重大问题的诊断与审计 | 只开成临时审计子代理（§6）；不做审美 |
-| gpt-6.1-sol | 能力接近 gpt-6-astra，可高并发：Codex 主线本身和工程施工的模型，复杂的用 high 或 xhigh | 不做审美；子代理不自行改契约和共享工程文件（Codex 主线授权后可施工）；设计文档只按确切文字打补丁 |
+| gpt-6-astra | 最强的 GPT 档：跨模块根因、并发、确定性、资源寿命、存档迁移这类重大问题的诊断与审计 | 只接困难艰深的施工、调研与审查（§6）；不做审美 |
+| gpt-6.1-sol | 能力接近 gpt-6-astra，可高并发：Codex 侧一般施工与审查的模型，复杂的用 high 或 xhigh | 不做审美；子代理不自行改契约和共享工程文件（Codex 主线授权后可施工）；设计文档只按确切文字打补丁 |
 
 选哪个模型施工见 WF-MODEL §1–§4；两家模型各自易犯的行为与对应做法见 WF-MODEL §10。
 
@@ -97,4 +97,4 @@ paths: ["AGENTS.md", "CLAUDE.md"]
 
 **施工默认用 gpt-6.1-sol 子代理**：Codex 主线名下所有任务的施工，包括内核、确定性、契约与存档迁移相关的任务，用 `spawn_agent` 开 gpt-6.1-sol，复杂的用 high 或 xhigh。任务的归属与审查权不变。
 
-**gpt-6-astra 只做重难审计**（DECISION-249、DECISION-306）：Codex 侧的审查默认交 gpt-6.1-sol，收口结构审计也一样；只有重难的审查——跨模块根因、确定性、并发、资源寿命或存档迁移这类，或重大问题 gpt-6.1-sol 两次解决不了——Codex 主线才临时开一个 gpt-6-astra 子代理（xhigh）审计：只读，交回根因与改法即结束，施工仍交 gpt-6.1-sol。主会话要审计就写信请 Codex 主线开，信里写明是不是重难审查。其余一律用 gpt-6.1-sol。
+**Codex 子代理按难度选模型**（DECISION-249、DECISION-306）：困难艰深的任务——跨模块根因、确定性、并发、资源寿命、存档迁移这类施工与审查，重难的实测调研，或 gpt-6.1-sol 两次做不对的问题——派 gpt-6-astra（xhigh）；其余施工与审查一律 gpt-6.1-sol，收口结构审计默认也是 sol；纯机械的批量活派 gpt-6-luna。主线用 astra 不等于子代理都派 astra。主会话请审计时在信里写明是不是重难审查。
