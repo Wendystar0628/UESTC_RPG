@@ -289,6 +289,14 @@ title.enter_failed,没能进入，请再试一次,Could not enter. Please try ag
 title.leave_unsaved,最近的进度没能保存，继续将回到 {saved} 的存档。,Recent progress could not be saved. Continue will return to the save from {saved}.
 title.leave_unsaved.no_time,最近的进度没能保存。,Recent progress could not be saved.
 save.error.restore_world,没能恢复存档，已回到开始页，请重试或开始新游戏。,Could not restore the save. Returned to the title screen. Try again or start a new game.
+save.error.disk_full,磁盘空间不足，这次没有保存。,"Not enough disk space, so nothing was saved."
+save.error.permission,没有写入存档文件夹的权限，这次没有保存。,"No permission to write to the save folder, so nothing was saved."
+save.error.io,读写存档文件时出错，这次没有保存。,"A file error stopped the save."
+save.error.verification,写完后校验没通过，这次的存档作废，之前的存档仍可用。,"The new save failed verification and was discarded; earlier saves are still available."
+save.error.snapshot,没能记录当前状态，这次没有保存。,"Could not capture the current state, so nothing was saved."
+save.error.timeout,保存超时，这次没有存完。,"Saving timed out and did not finish."
+save.error.newer_slot,这个存档位来自更新版本，本版本不写入。,"This slot was made by a newer version and is not written by this one."
+save.error.read_only_slot,这个存档位读不出，未经确认不会写入。,"This slot cannot be read and is not written without confirmation."
 loading.title,返回标题,Return to title
 loading.destination,{action} · {place} · {moment},{action} · {place} · {moment}
 loading.progress,已准备 {completed} / {total} 项,{completed} of {total} preparation items ready
