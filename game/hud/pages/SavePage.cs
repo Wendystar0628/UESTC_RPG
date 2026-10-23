@@ -137,7 +137,7 @@ public partial class SavePage : Control
     {
         var scrim = _kit.Box(this, new UiFx(Fill: "scrim", Margin: 0));
         scrim.SetAnchorsAndOffsetsPreset(LayoutPreset.FullRect);
-        var frame = _kit.Layout.Page(this, UiKit.T(_intent == SaveIntent.NewGame ? "_saves.title.new_game" : "_saves.title"), "savesWidth", centered: true);
+        var frame = _kit.Layout.Page(this, UiKit.T(_intent == SaveIntent.NewGame ? "saves.title.new_game" : "saves.title"), "savesWidth", centered: true);
         frame.Tabs.Visible = false;
         // 只读签条：本窗口不保存的原因与设置卡的保存状态同一套文案。
         var readOnly = _saves.State.ReadOnly switch
@@ -168,7 +168,7 @@ public partial class SavePage : Control
         _kit.Button(frame.Footer, ButtonStyle.Secondary, UiKit.T("ui.common.back"), pressed: () => CloseRequested?.Invoke());
         _primary = _kit.Button(frame.Footer, ButtonStyle.Primary, "", "button.primary", pressed: Act);
         if (_intent == SaveIntent.NewGame)
-            _overwrite = _kit.Button(frame.Footer, ButtonStyle.Danger, UiKit.T("_saves.overwrite"), "button.primary", pressed: ShowConfirm);
+            _overwrite = _kit.Button(frame.Footer, ButtonStyle.Danger, UiKit.T("saves.overwrite"), "button.primary", pressed: ShowConfirm);
         _selected = Math.Clamp(keep ?? slots.ToList().FindIndex(s => s.Slot == _saves.Continue), 0, Math.Max(0, slots.Count - 1));
         if (slots.Count > 0) Select(_selected);
         else _primary.Off = true;
@@ -193,19 +193,19 @@ public partial class SavePage : Control
         if (_overwrite is not null)
         {
             _overwrite.Visible = overwrite;
-            _overwrite.OffReason = UiKit.T("_saves.newer");
+            _overwrite.OffReason = UiKit.T("saves.newer");
             _overwrite.Off = slot.Health == SlotHealth.Newer;
         }
-        _primary.Text = UiKit.T(slot.Health == SlotHealth.Empty ? "_saves.new_here" : "_saves.load");
-        _primary.OffReason = UiKit.T(!_fromTitle ? "_saves.only_from_title"
-            : slot.Health == SlotHealth.Newer ? "_saves.newer" : "_saves.corrupt");
+        _primary.Text = UiKit.T(slot.Health == SlotHealth.Empty ? "saves.new_here" : "saves.load");
+        _primary.OffReason = UiKit.T(!_fromTitle ? "saves.only_from_title"
+            : slot.Health == SlotHealth.Newer ? "saves.newer" : "saves.corrupt");
         _primary.Off = !Enterable(slot);
         _detail.Text = slot.Health switch
         {
-            SlotHealth.Empty => UiKit.T("_saves.detail.empty"),
-            SlotHealth.Ok => UiKit.T(overwrite ? "_saves.detail.overwrite" : "_saves.detail.ok"),
-            SlotHealth.Corrupt => UiKit.T(overwrite ? "_saves.detail.corrupt_overwrite" : "_saves.detail.corrupt"),
-            SlotHealth.Newer => UiKit.T("_saves.detail.newer"),
+            SlotHealth.Empty => UiKit.T("saves.detail.empty"),
+            SlotHealth.Ok => UiKit.T(overwrite ? "saves.detail.overwrite" : "saves.detail.ok"),
+            SlotHealth.Corrupt => UiKit.T(overwrite ? "saves.detail.corrupt_overwrite" : "saves.detail.corrupt"),
+            SlotHealth.Newer => UiKit.T("saves.detail.newer"),
             _ => throw new InvalidOperationException("Unknown slot health."),
         };
     }
