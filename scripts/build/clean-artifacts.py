@@ -9,7 +9,8 @@
 锁被持有就本次一项不删，免得删到正在写的产物。只列出时不碰锁。
 保护：观察台里未结的审计项和通知引用的 output/ 文件不删，连同它们所在的目录里的其余项也不删（作者还要看）；
 还在的任务单（.collab/tasks，结案即删）引用的路径不删，引用的是目录就连里面的内容，只保被引用的这一项，
-它的祖先目录里没被引用且已过期的兄弟照常可删；施工队列里未结行对应的 output/行号目录及其后缀目录也保留（使用完整大写行号）。
+它的祖先目录里没被引用且已过期的兄弟照常可删；施工队列里未结行对应的 output/行号目录及其后缀目录也保留（使用完整大写行号）；
+失败登记账本（.collab/tools/state/dashboard-events/failures.jsonl）里出处指向的证据也不删。
 按提交轮次而不按时间算：不开发就没有提交，什么都不会过期。
 
 用法：
@@ -171,6 +172,15 @@ def references():
     for r, _, fs in os.walk(os.path.join(ROOT, '.collab', 'tasks')):
         for f in (f for f in fs if f.endswith('.md')):
             tasks += [link.rstrip('./') for link in TASK_LINK.findall(open(os.path.join(r, f), encoding='utf-8').read())]
+    # 失败登记的出处是证据，账本里还在就不删；绝对路径截取 output/ 起的一段，去掉行号后缀，对各 output 根同样保护。
+    ledger = os.path.join(ROOT, '.collab', 'tools', 'state', 'dashboard-events', 'failures.jsonl')
+    if os.path.isfile(ledger):
+        with open(ledger, encoding='utf-8') as stream:
+            for line in (line for line in stream if line.strip()):
+                src = (json.loads(line).get('src') or '').replace(os.sep, '/')
+                at = src.find('output/')
+                if at == 0 or (at > 0 and src[at - 1] == '/'):
+                    tasks.append(src[at:].split(':', 1)[0].rstrip('./'))
     return audit, tasks, pattern
 
 
