@@ -20,15 +20,17 @@ public sealed class SaveFormatTests
     private static SaveMeta Meta(ulong gen = 1, ulong line = 1) => new(SaveContainer.CurrentFormat, new("s1"), SlotKind.Auto,
         gen, line, 20, new("test-map"), 17.5, 17.5, Season.Autumn, WeatherKind.Clear, ViewMode.Fly,
         new(new Vector3(1, 2, 3), 4, 5), null, null, null, 1792082400, SaveReason.Test);
-    private static SaveDocument Document(ulong gen = 1, ulong line = 1) => new(Meta(gen, line),
+    internal static SaveDocument Document(ulong gen = 1, ulong line = 1) => new(Meta(gen, line),
         new SortedDictionary<string, RawSaveSection>(StringComparer.Ordinal)
         { ["world"] = new(1, "{\"v\":1,\"data\":{\"hours\":17.5}}"u8.ToArray()) }, null);
-    private static SaveSections Sections(TestSection? section = null, int version = 1, RestorePhase phase = RestorePhase.World) =>
+    internal static SaveSections Sections(TestSection? section = null, int version = 1, RestorePhase phase = RestorePhase.World) =>
         new([new(new("world") { Version = version, Phase = phase, Order = 10 }, section ?? new())]);
-    private sealed class TempSaveDirectory : IDisposable
+    internal sealed class TempSaveDirectory : IDisposable
     {
         public string Path { get; } = System.IO.Path.Combine(System.IO.Path.GetTempPath(),
             "uestc-rpg-save-case-" + Environment.ProcessId + "-" + Interlocked.Increment(ref _testId));
+        public string Entry(ulong gen) => System.IO.Path.Combine(Path, "s1",
+            "g" + gen.ToString("D6", System.Globalization.CultureInfo.InvariantCulture) + ".sav");
 
         public void Dispose()
         {
@@ -359,7 +361,8 @@ public sealed class SaveFormatTests
         using (var held = new FileStream(Path.Combine(root, "s1", "g000001.sav"), FileMode.Open, FileAccess.Read, FileShare.Read))
         {
             var committed = repository.Write(Document(4));
-            AssertThat(committed.Info.Meta?.Gen == 4 && repository.PendingMaintenanceErrors.Count != 0)
+            AssertThat(committed.Info.Meta?.Gen == 4 && committed.Info.Generations == SaveSlots.AutoLimit + 1 &&
+                committed.Info.Entries.Count == committed.Info.Generations && repository.PendingMaintenanceErrors.Count != 0)
                 .OverrideFailureMessage("A deletion conflict must leave the new generation committed and maintenance pending.").IsTrue();
         }
         repository.Write(Document(5));
@@ -506,12 +509,12 @@ public sealed class SaveFormatTests
             var scanned = repository.Scan(new("s1"));
             AssertThat(scanned.Info.Health == SlotHealth.Newer && scanned.Save is null && scanned.MaxGeneration == 2 && File.Exists(staging))
                 .OverrideFailureMessage("A future generation recovered an older save or was cleaned during initialization.").IsTrue();
-            foreach (var replace in new[] { false, true })
+            foreach (var (replace, reason) in new[] { (false, SaveReason.NewGame), (true, SaveReason.Test) })
             {
                 var rejected = false;
-                try { repository.Write(Document(3, 3), replaceUnusable: replace); }
+                try { repository.Write(Document(3, 3) with { Meta = Meta(3, 3) with { Reason = reason } }, replaceUnusable: replace); }
                 catch (InvalidOperationException) { rejected = true; }
-                AssertThat(rejected).OverrideFailureMessage("Writing over a future slot was allowed.").IsTrue();
+                AssertThat(rejected).OverrideFailureMessage("An unconfirmed new game or ordinary write replaced a future slot.").IsTrue();
             }
             var externalRejected = false;
             try { repository.ReadExternal(latest); }
@@ -521,6 +524,11 @@ public sealed class SaveFormatTests
             AssertThat(File.ReadAllBytes(latest).SequenceEqual(future) && File.ReadAllBytes(previous).SequenceEqual(previousBytes) && File.Exists(staging) &&
                 !File.Exists(Path.Combine(temp.Path, "s1", "g000003.sav")))
                 .OverrideFailureMessage("Another slot's maintenance modified the read-only future slot.").IsTrue();
+            var replacement = repository.Write(Document(3, 3) with { Meta = Meta(3, 3) with { Reason = SaveReason.NewGame } },
+                replaceUnusable: true);
+            AssertThat(replacement.Info.Health == SlotHealth.Ok && replacement.Info.Meta?.Gen == 3 &&
+                replacement.Info.Entries.Count == 1 && !File.Exists(latest) && !File.Exists(previous))
+                .OverrideFailureMessage("An explicitly confirmed new game did not replace the future world after publication.").IsTrue();
         }
     }
 
@@ -530,7 +538,7 @@ public sealed class SaveFormatTests
     {
         using var temp = new TempSaveDirectory();
         using var repository = new SaveRepository(temp.Path, true, Sections());
-        for (ulong gen = 1; gen <= SaveMaintenance.Retained; gen++) repository.Write(Document(gen));
+        for (ulong gen = 1; gen <= SaveSlots.AutoLimit; gen++) repository.Write(Document(gen));
         var previous = Path.Combine(temp.Path, "s1", "g000001.sav");
         using (var held = new FileStream(previous, FileMode.Open, FileAccess.Read, FileShare.Read)) repository.Write(Document(4));
         AssertThat(repository.PendingMaintenanceErrors.Count != 0 && File.Exists(previous)).IsTrue();

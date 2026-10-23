@@ -8,7 +8,10 @@ public enum AppState : byte { Boot, Title, Entering, Playing, Leaving, Quitting 
 [Flags] public enum AppActivity : byte { None = 0, MapTransition = 1, CameraTransition = 2, SaveWrite = 4, SeasonTransition = 8 }
 public enum EnterKind : byte { NewGame, Continue, LoadSlot }
 public enum EnterResult : byte { Entered, Rejected, Failed }     // Failed：回到 Title 并提示原因
-public sealed record EnterRequest(EnterKind Kind, SlotId? Slot = null);   // SlotId 见存档块；NewGame 的 Slot 由开始页选定
+public sealed record EnterRequest(EnterKind Kind, SlotId? Slot = null)   // SlotId 见存档块；NewGame 的 Slot 由开始页选定
+{
+    public ulong? Gen { get; init; } // Only LoadSlot uses an exact entry; null selects the latest readable entry.
+}
 
 public interface IAppFlow                     // Kernel 服务（game/flow/），主线程；本身不逐帧运行，不直接读写任何 user:// 文件
 {

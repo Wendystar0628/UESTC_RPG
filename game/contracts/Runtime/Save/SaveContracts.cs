@@ -4,7 +4,7 @@ using Campus.Contracts.Maps;
 namespace Campus.Contracts.Save;
 // MapId、MapVisit 由多地图契约定义，存档只引用。现在只有 new MapId("qingshuihe")
 
-public enum SlotKind : byte { Auto }
+public enum SlotKind : byte { Auto } // Retained for the current disk format; entry type is determined only by SaveMeta.Reason.
 public enum SaveScope : byte { Global, PerMap }        // PerMap 的段在文件里的键是 "map:<MapId>/<段 ID>"
 public enum SaveReason : byte
 {
@@ -13,7 +13,7 @@ public enum SaveReason : byte
     Interval,      // 漫游态累计 5 分钟
     NewGame,       // 新游戏交还控制：写这条世界线的第一代
     Test,          // 门禁（--save-at）
-    Manual,        // 游戏内存档页立即保存
+    Manual,        // 游戏内立即保存，独立保留最近 SaveSlots.ManualLimit 份
 }
 public enum SlotHealth : byte { Empty, Ok, Corrupt, Newer }
 
@@ -32,7 +32,12 @@ public sealed record SaveMeta(
     SaveReason Reason,
     [property: DataId] string Ruleset = "sightseeing", // RulesetId.Value（规则集块）；预留 "rpg"
     bool HasThumb = false);
-public sealed record SlotInfo(SlotId Slot, SlotKind Kind, SlotHealth Health, SaveMeta? Meta, int Generations);
+public sealed record SaveEntry(ulong Gen, SlotHealth Health, SaveMeta? Meta);
+// Generations counts visible entries in the current world line; Meta is the latest readable entry.
+public sealed record SlotInfo(SlotId Slot, SlotKind Kind, SlotHealth Health, SaveMeta? Meta, int Generations)
+{
+    public IReadOnlyList<SaveEntry> Entries { get; init; } = [];
+}
 
 [AttributeUsage(AttributeTargets.Class, Inherited = false)]
 public sealed class SaveSectionAttribute(string id) : RegistrationAttribute(RegistrationKind.Save, id, RegistrationLifetime.Global)
@@ -109,6 +114,9 @@ public enum SaveStatus : byte { Saved, Deferred, Disabled, Failed }
 public sealed record SaveResult(SaveStatus Status, SlotId? Slot, ulong Gen, string? Error = null);
 public enum LoadStatus : byte { Loaded, Empty, Corrupt, Failed }
 public sealed record LoadResult(LoadStatus Status, SlotId? Slot, ulong Gen, IReadOnlyList<string> Repairs, string? Error = null);
+public enum DeleteStatus : byte { Deleted, Rejected, Failed }
+// Gen is null for whole-world-line deletion. Rejected means no files were changed.
+public sealed record DeleteResult(DeleteStatus Status, SlotId Slot, ulong? Gen, string? Error = null);
 public enum ReadOnlyReason : byte { None, SaveOff, OtherWindow }   // 不保存的原因：--save=off、另一个窗口持有锁（SYS-SAVE、SYS-SAVE）
 public sealed record SaveState(                                     // 保存状态（SYS-SAVE）：大页被动显示
     SlotId? Slot,                   // 当前存档位
@@ -130,6 +138,7 @@ public interface ISaveService                         // Kernel 服务（game/ke
     Task<SaveResult> SaveNow(SaveReason r);           // NewGame、Test、Manual；不等安全时刻，不受自动请求下限约束
     // Both loads restore every phase and complete only after the real endpoint is ready.
     Task<LoadResult> Load(SlotId s);
+    Task<LoadResult> Load(SlotId s, ulong gen);        // Exact entry; an unreadable or missing entry never falls back.
     Task<LoadResult> LoadFile(string path);           // 源文件只读；之后写到 --save 指定的存档位，没指定就不写
     // A null slot creates a complete temporary CLI world without activating or overwriting a save slot.
     Task<LoadResult> NewGame(SlotId? s, uint? seed = null, WorldPreset? start = null, NewGameBoot? boot = null);
@@ -137,4 +146,7 @@ public interface ISaveService                         // Kernel 服务（game/ke
     Task<SaveResult> FlushForQuit(SaveReason r, TimeSpan timeout);
     // r 只能是 Quit 或 ToTitle；旧代不受影响。保存失败或超时也照常离开，回标题失败后在开始页提示一次（SYS-SAVE-FLOW）
     byte[]? Thumbnail(SlotId s);                      // 最新可读一代的 WebP 字节，界面自己解码（SYS-SAVE）
+    byte[]? Thumbnail(SlotId s, ulong gen);           // Cached WebP bytes for the exact entry; no disk I/O.
+    Task<DeleteResult> DeleteEntry(SlotId s, ulong gen); // Confirmed manual-entry deletion, accepted only at Title.
+    Task<DeleteResult> DeleteSlot(SlotId s);          // Confirmed whole-world-line deletion, accepted only at Title.
 }

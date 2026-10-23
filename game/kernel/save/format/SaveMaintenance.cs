@@ -7,21 +7,23 @@ namespace Campus.Kernel.Save.Format;
 /// <summary>Owns abandoned staging and post-commit deletion work. Failed sweeps remain queued until the next commit.</summary>
 internal sealed class SaveMaintenance(SaveRepository repository)
 {
-    internal const int Retained = 3;
     private sealed class Sweep
     {
         public SaveMeta? Meta { get; set; }
+        public bool ReplacesWorld { get; set; }
         public Exception? Error { get; set; }
     }
     private readonly Dictionary<SlotId, Sweep> _pending = [];
     public IReadOnlyList<Exception> Errors => _pending.Values.Where(s => s.Error is not null).Select(s => s.Error!).ToArray();
 
     public void Initialize() => SweepPending();
+    public void Forget(SlotId slot) => _pending.Remove(slot);
 
-    public void AfterCommit(SaveMeta committed)
+    public void AfterCommit(SaveMeta committed, bool replacesWorld)
     {
-        if (_pending.TryGetValue(committed.Slot, out var existing)) existing.Meta = committed;
-        else _pending.Add(committed.Slot, new() { Meta = committed });
+        if (_pending.TryGetValue(committed.Slot, out var existing))
+        { existing.Meta = committed; existing.ReplacesWorld = replacesWorld; }
+        else _pending.Add(committed.Slot, new() { Meta = committed, ReplacesWorld = replacesWorld });
         SweepPending();
     }
 
@@ -33,7 +35,12 @@ internal sealed class SaveMaintenance(SaveRepository repository)
             var sweep = _pending[slot];
             try
             {
-                if (repository.Scan(slot).Info.Health == SlotHealth.Newer) continue;
+                var snapshot = repository.Scan(slot);
+                if (snapshot.Info.Health == SlotHealth.Newer &&
+                    (!sweep.ReplacesWorld || snapshot.Info.Entries.Any(e => e.Health == SlotHealth.Newer))) continue;
+                if (sweep.ReplacesWorld && sweep.Meta is { } replacement)
+                    foreach (var generation in repository.Generations(slot).Where(g => g.Generation < replacement.Line))
+                        File.Delete(generation.Path);
                 if (sweep.Meta is { } committed && !DeleteOldGenerations(committed)) continue;
                 DeleteStaging(slot);
                 _pending.Remove(slot);
@@ -53,13 +60,19 @@ internal sealed class SaveMaintenance(SaveRepository repository)
     {
         var generations = repository.Generations(meta.Slot).OrderByDescending(g => g.Generation).ToArray();
         var preserved = new HashSet<string>(StringComparer.Ordinal);
-        var retained = 0;
+        var automatic = 0;
+        var manual = 0;
         foreach (var generation in generations)
         {
             // The just-verified generation is protected even when an earlier sweep is retried.
             if (generation.Generation == meta.Gen)
-            { preserved.Add(generation.Path); retained++; continue; }
-            try { repository.Prepare(repository.Read(generation.Path, generation.Generation, meta.Slot)); }
+            { preserved.Add(generation.Path); Retain(meta.Reason); continue; }
+            SaveDocument document;
+            try
+            {
+                document = repository.Read(generation.Path, generation.Generation, meta.Slot);
+                repository.Prepare(document);
+            }
             catch (SaveFormatException error) when (error.IsNewer)
             { RejectGeneration(preserved, generation.Path, true, error); return false; }
             catch (Exception error) when (error is SaveFormatException or IOException or UnauthorizedAccessException)
@@ -68,7 +81,7 @@ internal sealed class SaveMaintenance(SaveRepository repository)
                 continue;
             }
             if (generation.Generation < meta.Line) continue;
-            if (retained++ < Retained) preserved.Add(generation.Path);
+            if (Retain(document.Meta.Reason)) preserved.Add(generation.Path);
         }
         foreach (var generation in generations)
         {
@@ -77,6 +90,14 @@ internal sealed class SaveMaintenance(SaveRepository repository)
             File.Delete(generation.Path);
         }
         return true;
+
+        bool Retain(SaveReason reason) => reason switch
+        {
+            SaveReason.Manual => manual++ < SaveSlots.ManualLimit,
+            SaveReason.Quit or SaveReason.ToTitle or SaveReason.Interval or SaveReason.NewGame or SaveReason.Test =>
+                automatic++ < SaveSlots.AutoLimit,
+            _ => throw new ArgumentOutOfRangeException(nameof(reason))
+        };
     }
 
     private static void RejectGeneration(HashSet<string> preserved, string path, bool preserve,

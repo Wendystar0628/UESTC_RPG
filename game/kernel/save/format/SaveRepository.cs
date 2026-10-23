@@ -1,13 +1,17 @@
 using System.Globalization;
+using System.Runtime.ExceptionServices;
 using Campus.Contracts;
 using Campus.Contracts.Save;
 using Campus.Kernel.Diagnostics;
 
 namespace Campus.Kernel.Save.Format;
 
-public sealed record SlotSnapshot(SlotInfo Info, PreparedSave? Save, ulong MaxGeneration);
+public sealed record SlotSnapshot(SlotInfo Info, PreparedSave? Save, ulong MaxGeneration)
+{
+    public IReadOnlyDictionary<ulong, byte[]> Thumbnails { get; init; } = new Dictionary<ulong, byte[]>();
+}
 
-/// <summary>One exclusive lock; verified same-directory staging files are renamed into immutable generations, three per slot.</summary>
+/// <summary>One exclusive lock; verified same-directory staging files become immutable entries retained in separate reason pools.</summary>
 public sealed class SaveRepository : IDisposable
 {
     internal const string StagingPattern = ".save-*.tmp";
@@ -34,46 +38,98 @@ public sealed class SaveRepository : IDisposable
         if (Enabled) _maintenance.Initialize();
     }
 
-    public SlotSnapshot Scan(SlotId slot)
+    public SlotSnapshot Scan(SlotId slot) => Scan(slot, null, out _, out _);
+
+    private SlotSnapshot Scan(SlotId slot, ulong? requested, out PreparedSave? selected, out Exception? selectionFailure)
     {
+        selected = null;
+        selectionFailure = null;
         var paths = Generations(slot).OrderByDescending(g => g.Generation).ToArray();
         if (paths.Length == 0) return new(new(slot, SlotKind.Auto, SlotHealth.Empty, null, 0), null, 0);
-        var maximum = paths[0].Generation;
-        var rejected = 0;
+        var entries = new List<SaveEntry>();
+        var thumbnails = new Dictionary<ulong, byte[]>();
         ulong? line = null;
         SaveMeta? lastMeta = null;
-        // Newest first; the first complete generation of the same world line wins. Unreadable files stay where they are.
+        PreparedSave? latest = null;
+        Exception? future = null;
+        var visible = true;
+        // Inspect every file for future versions; entry selection still stops at an unknown identity or world-line boundary.
         foreach (var (path, generation) in paths)
         {
             SaveMeta? metadata = null;
+            PreparedSave? prepared = null;
+            Exception? failure = null;
+            var health = SlotHealth.Ok;
             try
             {
                 var document = Read(path, generation, slot);
                 metadata = document.Meta;
-                if (line is { } expectedLine && document.Meta.Line != expectedLine) break;
-                line ??= document.Meta.Line;
-                lastMeta ??= document.Meta;
-                var save = _sections.Prepare(document);
-                return new(new(slot, SlotKind.Auto, SlotHealth.Ok, document.Meta,
-                    paths.Count(p => p.Generation >= document.Meta.Line) - rejected), save, maximum);
+                prepared = _sections.Prepare(document);
             }
             catch (Exception error) when (error is SaveFormatException or IOException or UnauthorizedAccessException)
             {
                 metadata ??= (error as SaveFormatException)?.Metadata;
-                if (error is SaveFormatException { IsNewer: true })
-                {
-                    RejectGeneration(error);
-                    return new(new(slot, SlotKind.Auto, SlotHealth.Newer, metadata, paths.Length), null, maximum);
-                }
-                rejected++;
+                failure = error;
+                health = error is SaveFormatException { IsNewer: true } ? SlotHealth.Newer : SlotHealth.Corrupt;
+                if (health == SlotHealth.Newer) future ??= error;
                 RejectGeneration(error);
-                // An unidentified generation may start a different world line; never infer its identity from an older file.
-                if (metadata is null || line is { } expectedLine && metadata.Line != expectedLine) break;
-                line ??= metadata.Line;
-                lastMeta ??= metadata;
             }
+            if (!visible) continue;
+            if (line is { } expectedLine && (generation < expectedLine || metadata is { } known && known.Line != expectedLine))
+            { visible = false; continue; }
+            entries.Add(new(generation, health, metadata));
+            line ??= metadata?.Line;
+            lastMeta ??= metadata;
+            latest ??= prepared;
+            if (prepared?.Document.Thumbnail is { } thumbnail) thumbnails.Add(generation, thumbnail);
+            if (requested == generation) { selected = prepared; selectionFailure = failure; }
+            // An unidentified generation may start a different world line; older files cannot establish its identity.
+            if (metadata is null) visible = false;
         }
-        return new(new(slot, SlotKind.Auto, SlotHealth.Corrupt, lastMeta, paths.Length), null, maximum);
+        if (future is not null) { selected = null; selectionFailure = future; }
+        var slotHealth = future is not null ? SlotHealth.Newer : latest is not null ? SlotHealth.Ok : SlotHealth.Corrupt;
+        var info = new SlotInfo(slot, SlotKind.Auto, slotHealth, latest?.Document.Meta ?? lastMeta, entries.Count)
+        { Entries = entries.AsReadOnly() };
+        return new(info, future is null ? latest : null, paths[0].Generation) { Thumbnails = thumbnails };
+    }
+
+    public PreparedSave ReadEntry(SlotId slot, ulong generation)
+    {
+        if (generation == 0) throw new ArgumentOutOfRangeException(nameof(generation));
+        Scan(slot, generation, out var selected, out var failure);
+        if (selected is not null) return selected;
+        if (failure is not null) ExceptionDispatchInfo.Capture(failure).Throw();
+        throw new SaveFormatException("The requested save entry is missing or outside the current world line.");
+    }
+
+    public SlotSnapshot DeleteEntry(SlotId slot, ulong generation)
+    {
+        var current = RequireWritable(slot);
+        var entry = current.Info.Entries.SingleOrDefault(e => e.Gen == generation);
+        if (entry?.Meta?.Reason != SaveReason.Manual)
+            throw new InvalidOperationException("Only an identified manual entry may be deleted individually.");
+        var path = Generations(slot).Single(g => g.Generation == generation).Path;
+        File.Delete(path);
+        return Scan(slot);
+    }
+
+    public SlotSnapshot DeleteSlot(SlotId slot)
+    {
+        // The service accepts this destructive operation only after explicit Title confirmation.
+        if (!Enabled) throw new InvalidOperationException("This process does not own the save lock.");
+        var directory = SlotDirectory(slot);
+        if (Directory.Exists(directory)) Directory.Delete(directory, recursive: true);
+        _maintenance.Forget(slot);
+        return Scan(slot);
+    }
+
+    private SlotSnapshot RequireWritable(SlotId slot)
+    {
+        if (!Enabled) throw new InvalidOperationException("This process does not own the save lock.");
+        var current = Scan(slot);
+        if (current.Info.Health == SlotHealth.Newer)
+            throw new InvalidOperationException("A slot from a newer version is read-only.");
+        return current;
     }
 
     public PreparedSave ReadExternal(string absolutePath)
@@ -95,7 +151,7 @@ public sealed class SaveRepository : IDisposable
         new SaveWriteOperation().Commit(this, document, writeFault, replaceUnusable);
 
     internal PreparedSave Prepare(SaveDocument document) => _sections.Prepare(document);
-    internal void Maintain(SaveDocument committed) => _maintenance.AfterCommit(committed.Meta);
+    internal void Maintain(SaveDocument committed, bool replacesWorld) => _maintenance.AfterCommit(committed.Meta, replacesWorld);
     internal string StagingPath(SlotId slot) => Path.Combine(SlotDirectory(slot), ".save-" + Path.GetRandomFileName() + ".tmp");
 
     private void EnterReadOnly([FailureHandler("SYS-SAVE")] IOException error)

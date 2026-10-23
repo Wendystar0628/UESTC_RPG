@@ -118,8 +118,12 @@ internal class TestSaveService : ISaveService
     public virtual void Request(SaveReason reason) { }
     public virtual Task<SaveResult> SaveNow(SaveReason reason) => throw new InvalidOperationException("Unexpected SaveNow.");
     public virtual Task<LoadResult> Load(SlotId slot) => throw new InvalidOperationException("Unexpected Load.");
+    public virtual Task<LoadResult> Load(SlotId slot, ulong gen) => throw new InvalidOperationException("Unexpected exact Load.");
     public virtual Task<LoadResult> LoadFile(string path) => throw new InvalidOperationException("Unexpected LoadFile.");
     public virtual Task<LoadResult> NewGame(SlotId? slot, uint? seed = null, WorldPreset? start = null, NewGameBoot? boot = null) => throw new InvalidOperationException("Unexpected NewGame.");
     public virtual Task<SaveResult> FlushForQuit(SaveReason reason, TimeSpan timeout) => throw new InvalidOperationException("Unexpected FlushForQuit.");
     public virtual byte[]? Thumbnail(SlotId slot) => null;
+    public virtual byte[]? Thumbnail(SlotId slot, ulong gen) => null;
+    public virtual Task<DeleteResult> DeleteEntry(SlotId slot, ulong gen) => throw new InvalidOperationException("Unexpected DeleteEntry.");
+    public virtual Task<DeleteResult> DeleteSlot(SlotId slot) => throw new InvalidOperationException("Unexpected DeleteSlot.");
 }

@@ -52,7 +52,8 @@ internal sealed class SaveWriteOperation
         var slot = document.Meta.Slot;
         if (!SaveContainer.ValidSlot(slot)) throw new ArgumentException("Invalid slot.");
         var current = repository.Scan(slot);
-        if (current.Info.Health == SlotHealth.Newer)
+        var replacesWorld = replaceUnusable && document.Meta.Reason == SaveReason.NewGame && document.Meta.Line == document.Meta.Gen;
+        if (current.Info.Health == SlotHealth.Newer && !replacesWorld)
             throw new InvalidOperationException("A slot from a newer version is read-only.");
         if (!replaceUnusable && current.Info.Health == SlotHealth.Corrupt)
             throw new InvalidOperationException("An unusable slot requires an explicit new game before writing.");
@@ -63,7 +64,6 @@ internal sealed class SaveWriteOperation
         var staging = repository.StagingPath(slot);
         var created = false;
         SaveDocument checkedDocument;
-        PreparedSave prepared;
         try
         {
             var bytes = SaveContainer.Encode(document);
@@ -81,7 +81,7 @@ internal sealed class SaveWriteOperation
             }
             stream.Dispose();
             checkedDocument = repository.Read(staging, document.Meta.Gen, slot);
-            prepared = repository.Prepare(checkedDocument);
+            repository.Prepare(checkedDocument);
             // SYS-SAVE-FORMAT: only a fully verified file may become a visible generation; never replace a published name.
             File.Move(staging, path);
         }
@@ -92,10 +92,8 @@ internal sealed class SaveWriteOperation
             throw;
         }
         // Rename is the commit boundary. Maintenance owns every later deletion/enumeration failure.
-        repository.Maintain(checkedDocument);
-        var generations = document.Meta.Line == current.Info.Meta?.Line ? current.Info.Generations + 1 : 1;
-        return new(new(slot, SlotKind.Auto, SlotHealth.Ok, checkedDocument.Meta, Math.Min(generations, SaveMaintenance.Retained)),
-            prepared, document.Meta.Gen);
+        repository.Maintain(checkedDocument, replacesWorld);
+        return repository.Scan(slot);
     }
 
     private void CloseFailedWrite(FileStream stream)
