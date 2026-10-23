@@ -40,6 +40,7 @@ DEPTH = 3
 COMMITS = 20
 FORMAT_DIR = re.compile(r'^(.+)-tbin-(\d+)$')
 TASK_LINK = re.compile(r'output/[\w./-]+', re.ASCII)  # 任务单里写的产物路径；只取 ASCII 段，中文名截在前缀
+LEDGER_LINK = re.compile(r'(?:(?<=^)|(?<=[/\s;；,，(（"]))output/[^\s;；,，()（）"]+')  # 失败登记出处里的每个产物路径
 
 
 def git(*args):
@@ -172,15 +173,14 @@ def references():
     for r, _, fs in os.walk(os.path.join(ROOT, '.collab', 'tasks')):
         for f in (f for f in fs if f.endswith('.md')):
             tasks += [link.rstrip('./') for link in TASK_LINK.findall(open(os.path.join(r, f), encoding='utf-8').read())]
-    # 失败登记的出处是证据，账本里还在就不删；绝对路径截取 output/ 起的一段，去掉行号后缀，对各 output 根同样保护。
+    # 失败登记的出处是证据，账本里还在就不删：一条出处可含几个路径和附注，逐个取 output/ 起的一段，
+    # 去掉行号后缀与括号附注，中文文件名保留，对各 output 根同样保护。
     ledger = os.path.join(ROOT, '.collab', 'tools', 'state', 'dashboard-events', 'failures.jsonl')
     if os.path.isfile(ledger):
         with open(ledger, encoding='utf-8') as stream:
             for line in (line for line in stream if line.strip()):
                 src = (json.loads(line).get('src') or '').replace(os.sep, '/')
-                at = src.find('output/')
-                if at == 0 or (at > 0 and src[at - 1] == '/'):
-                    tasks.append(src[at:].split(':', 1)[0].rstrip('./'))
+                tasks += [re.sub(r':\d+$', '', link).rstrip('./') for link in LEDGER_LINK.findall(src)]
     return audit, tasks, pattern
 
 
