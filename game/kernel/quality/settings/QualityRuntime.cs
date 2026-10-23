@@ -11,11 +11,9 @@ namespace Campus.Kernel.Quality.Settings;
 
 [KernelNode("quality")]
 [QualityResponsive(Order = 0, Owns = [QualityKnob.DisplayMode, QualityKnob.WindowSize, QualityKnob.VSync,
-    QualityKnob.FrameRateLimit, QualityKnob.RenderScale, QualityKnob.FoliageDensity])]
+    QualityKnob.FrameRateLimit, QualityKnob.FoliageDensity])]
 public partial class QualityRuntime : Node, IQualityAware, IQualityRuntime
 {
-    // Fixed detail distance factor; grass range and transition duration come from the preset catalog.
-    private const float DetailScale = 0.8f;
     private const double DestinationWaitSeconds = 1.2;
 
     private IQualityFrame _service = null!;
@@ -28,6 +26,9 @@ public partial class QualityRuntime : Node, IQualityAware, IQualityRuntime
     private bool _qualityInitialized;
     private CancellationToken _lifetime;
     private bool _closed;
+    private bool _frameLimitInitialized;
+    private float _requestedFrameLimit;
+    private int _appliedFrameLimit = -1;
     private List<TaskCompletionSource<double>> _frames = [];
     public override void _Ready()
     {
@@ -38,6 +39,8 @@ public partial class QualityRuntime : Node, IQualityAware, IQualityRuntime
         _world.InstanceChanged += OnWorldInstanceChanged;
         _closed = false;
         _qualityInitialized = false;
+        _frameLimitInitialized = false;
+        _appliedFrameLimit = -1;
         _lifetime = _service.Bind(this);
     }
 
@@ -54,6 +57,7 @@ public partial class QualityRuntime : Node, IQualityAware, IQualityRuntime
     {
         if (_closed) return;
         _service.Tick(delta);
+        if (_frameLimitInitialized) UpdateFrameLimit();
         if (_qualityInitialized && _quality != _qualityTarget)
         {
             _qualityElapsed += Math.Max(0, delta);
@@ -109,9 +113,6 @@ public partial class QualityRuntime : Node, IQualityAware, IQualityRuntime
         AppState.Title or AppState.Entering or AppState.Playing or AppState.Leaving or AppState.Quitting => false,
         _ => throw new InvalidOperationException("Unknown application state."),
     };
-    private static float RefreshRate => DisplayServer.ScreenGetRefreshRate(DisplayServer.WindowGetCurrentScreen());
-    public Vector2I OutputSize => DisplayServer.WindowGetSize();
-    public Vector2I ScreenSize => DisplayServer.ScreenGetSize(DisplayServer.WindowGetCurrentScreen());
 
     public async Task WaitForDestination(CancellationToken cancellationToken)
     {
@@ -177,7 +178,7 @@ public partial class QualityRuntime : Node, IQualityAware, IQualityRuntime
 
     private void SetVegetationQuality(QualityView view, in QualityChange change)
     {
-        var target = new Vector4(DetailScale, view[QualityKnob.FoliageDensity], _service.GrassRadius, 0);
+        var target = new Vector4(QualityRules.DetailDistanceScale, view[QualityKnob.FoliageDensity], _service.GrassRadius, 0);
         if (!_qualityInitialized || change.Origin == ApplyOrigin.Startup || Booting)
         {
             _qualityInitialized = true;
@@ -214,15 +215,20 @@ public partial class QualityRuntime : Node, IQualityAware, IQualityRuntime
             var size = QualityCatalog.WindowSizes[(int)view[QualityKnob.WindowSize]];
             DisplayServer.WindowSetSize(new(size.Width, size.Height));
         }
-        if (change.Has(QualityKnob.RenderScale))
-        {
-            var viewport = GetViewport();
-            viewport.Scaling3DMode = view[QualityKnob.RenderScale] < 1 ? Viewport.Scaling3DModeEnum.Fsr : Viewport.Scaling3DModeEnum.Bilinear;
-            viewport.Scaling3DScale = view[QualityKnob.RenderScale];
-        }
         if (change.Has(QualityKnob.VSync)) DisplayServer.WindowSetVsyncMode(view[QualityKnob.VSync] != 0 ? DisplayServer.VSyncMode.Enabled : DisplayServer.VSyncMode.Disabled);
         if (change.Has(QualityKnob.FrameRateLimit))
-            Engine.MaxFps = QualityCatalog.FrameLimit(view[QualityKnob.FrameRateLimit], RefreshRate);
+        {
+            _requestedFrameLimit = view[QualityKnob.FrameRateLimit];
+            _frameLimitInitialized = true;
+            UpdateFrameLimit();
+        }
     }
 
+    private void UpdateFrameLimit()
+    {
+        var limit = FrameLimitPolicy.Resolve(_requestedFrameLimit, DisplayServer.WindowIsFocused());
+        if (limit == _appliedFrameLimit) return;
+        Engine.MaxFps = limit;
+        _appliedFrameLimit = limit;
+    }
 }

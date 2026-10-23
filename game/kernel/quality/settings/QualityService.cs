@@ -3,7 +3,6 @@ using Campus.Contracts;
 using Campus.Contracts.Quality;
 using Campus.Contracts.Settings;
 using Campus.Contracts.Startup;
-using Godot;
 
 namespace Campus.Kernel.Quality.Settings;
 
@@ -13,8 +12,6 @@ public interface IQualityRuntime
     Task<double> NextFrame(CancellationToken cancellationToken);
     bool Transitioning { get; }
     bool Booting { get; }
-    Vector2I OutputSize { get; }
-    Vector2I ScreenSize { get; }
     IAppLoadingLease ShowLoading(CancellationToken cancellationToken);
     Task WaitForDestination(CancellationToken cancellationToken);
     void Dispatch(QualityView view, in QualityChange change);
@@ -76,6 +73,7 @@ public sealed class QualityService : IQualityFrame, IBootParticipant, IAsyncDisp
         _store = store;
     }
 
+    public QualityProfile Default => _catalog.DefaultProfile;
     public QualityProfile Requested => _state.Requested;
     public QualityView Effective => _state.Effective;
     public IReadOnlyList<KnobSpec> Knobs => _catalog.Knobs;
@@ -153,10 +151,6 @@ public sealed class QualityService : IQualityFrame, IBootParticipant, IAsyncDisp
         try
         {
             _state.CaptureMode = context.CaptureMode;
-            _catalog.PreserveOutputSize = CaptureMode;
-            var size = CaptureMode ? runtime.OutputSize : runtime.ScreenSize;
-            _catalog.OutputWidth = Math.Max(1, size.X);
-            _catalog.OutputHeight = Math.Max(1, size.Y);
             // settings.json > catalog default; captures never read user://. The command line is applied after this.
             var profile = (CaptureMode ? null : _store.Read()) ?? _catalog.DefaultProfile;
             _durableProfile = QualityCatalog.Freeze(profile);
@@ -394,14 +388,16 @@ public sealed class QualityService : IQualityFrame, IBootParticipant, IAsyncDisp
     /// <summary>Folds only the user's own edit into the saved profile, so a command-line overlay never reaches the file.</summary>
     private bool MergeUserIntoDurable(QualityProfile beforeLive, QualityProfile input)
     {
-        var before = _catalog.Resolve(beforeLive, beforeLive.Preset);
-        var after = _catalog.Resolve(Requested, Requested.Preset);
+        var before = _catalog.ResolveRequested(beforeLive, beforeLive.Preset);
+        var after = _catalog.ResolveRequested(Requested, Requested.Preset);
         var prior = _durableProfile;
-        var presetChosen = input.Preset != QualityPreset.Custom && (input.Preset != beforeLive.Preset || input.Overrides.Count == 0);
-        var baseline = presetChosen ? QualityCatalog.Profile(Requested.Preset) : prior;
+        var presetChosen = input.Preset != QualityPreset.Custom && (input.Preset != beforeLive.Preset || !input.Overrides.Keys.Any(knob => _catalog[knob].Scope == KnobScope.Effect));
+        var baseline = presetChosen ? new QualityProfile(Requested.Preset,
+            prior.Overrides.Where(pair => _catalog[pair.Key].Scope != KnobScope.Effect)
+                .ToDictionary(pair => pair.Key, pair => pair.Value)) : prior;
         var deltas = new Dictionary<QualityKnob, float>();
         foreach (var knob in QualityCatalog.All)
-            if (presetChosen || before[(int)knob] != after[(int)knob]) deltas[knob] = after[(int)knob];
+            if (presetChosen && _catalog[knob].Scope == KnobScope.Effect || before[(int)knob] != after[(int)knob]) deltas[knob] = after[(int)knob];
         _durableProfile = MergeDurable(baseline, deltas);
         return !SameProfile(prior, _durableProfile);
     }
@@ -410,7 +406,7 @@ public sealed class QualityService : IQualityFrame, IBootParticipant, IAsyncDisp
     {
         var overrides = baseline.Overrides.ToDictionary(pair => pair.Key, pair => pair.Value);
         foreach (var pair in deltas.OrderBy(pair => pair.Key)) overrides[pair.Key] = pair.Value;
-        // Reuse the existing canonicalization (including output-dependent render scale) without touching live state.
+        // Reuse the existing canonicalization (including scope defaults) without touching live state.
         var canonical = new QualityState(_catalog);
         canonical.Commit(new(baseline.Preset, overrides), ApplyOrigin.Startup, false);
         return canonical.Requested;

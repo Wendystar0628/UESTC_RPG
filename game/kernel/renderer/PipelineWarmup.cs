@@ -1,5 +1,8 @@
 using Campus.Contracts;
 using Campus.Contracts.Bake;
+using Campus.Contracts.Quality;
+using Campus.Kernel.Diagnostics;
+using KernelServices = Campus.Kernel.Registry.Kernel;
 using Godot;
 
 namespace Campus.Kernel.Renderer;
@@ -71,6 +74,7 @@ public sealed partial class PipelineWarmup : Node, IPipelinePreparation
         var owned = new List<Resource>();
         var spatial = new Node3D { Name = "PipelineInstances", Visible = false };
         var canvas = new CanvasLayer { Name = "PipelineCanvas", Layer = 4 };
+        Exception? failure = null;
         try
         {
             AddChild(spatial);
@@ -102,14 +106,68 @@ public sealed partial class PipelineWarmup : Node, IPipelinePreparation
             // This is a frame boundary, not compilation evidence or a stable-frame threshold.
             await FrameAwaiter.StartupReadyDrawAsync(this, static () => true,
                 timeout, cancellationToken);
+            var clarityCombination = combinations.First(item => item.Kind is not null && !item.Instanced &&
+                item.Primitive == BakedPrimitive.Triangles && item.Canvas == PipelineCanvasDraw.None);
+            await PrepareClarityAsync(clarityCombination, materials[(clarityCombination.Kind, clarityCombination.Shader)],
+                timeout, cancellationToken);
         }
-        finally
+        catch (Exception error) { failure = RetainedFailure.Append(failure, error); }
+        try { if (GodotObject.IsInstanceValid(spatial)) spatial.Free(); }
+        catch (Exception error) { failure = RetainedFailure.Append(failure, error); }
+        try { if (GodotObject.IsInstanceValid(canvas)) canvas.Free(); }
+        catch (Exception error) { failure = RetainedFailure.Append(failure, error); }
+        for (var i = owned.Count - 1; i >= 0; i--)
         {
-            if (GodotObject.IsInstanceValid(spatial)) spatial.Free();
-            if (GodotObject.IsInstanceValid(canvas)) canvas.Free();
-            for (var i = owned.Count - 1; i >= 0; i--)
-                if (GodotObject.IsInstanceValid(owned[i])) owned[i].Dispose();
+            try { if (GodotObject.IsInstanceValid(owned[i])) owned[i].Dispose(); }
+            catch (Exception error) { failure = RetainedFailure.Append(failure, error); }
         }
+        if (failure is not null) System.Runtime.ExceptionServices.ExceptionDispatchInfo.Capture(failure).Throw();
+    }
+
+    private async Task PrepareClarityAsync(PipelineCombination combination, Material material, TimeSpan timeout,
+        CancellationToken cancellationToken)
+    {
+        var quality = KernelServices.Get<IQualityService>();
+        var scaleSpec = quality.Knobs.Single(spec => spec.Knob == QualityKnob.RenderScale);
+        var aaSpec = quality.Knobs.Single(spec => spec.Knob == QualityKnob.AntiAliasing);
+        var scales = scaleSpec.Values ?? throw new InvalidDataException("Render precision requires discrete startup combinations.");
+        // A native render target keeps preparation independent of the interactive title and player's viewport.
+        // Always is required because this viewport's texture is deliberately never presented in the UI.
+        var viewport = new SubViewport
+        {
+            Name = "ClarityPreparation", Size = new Vector2I(64, 64), OwnWorld3D = true,
+            RenderTargetUpdateMode = SubViewport.UpdateMode.Always,
+            UseDebanding = GetViewport().UseDebanding,
+        };
+        ArrayMesh? mesh = null;
+        Exception? failure = null;
+        try
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            AddChild(viewport);
+            // The existing preparation triangle is clockwise from -Z, so view that face without changing its material.
+            viewport.AddChild(new Camera3D { Current = true, Position = new Vector3(.5f, .5f, -2), Rotation = new Vector3(0, Mathf.Pi, 0) });
+            mesh = CreateMesh(combination);
+            mesh.SurfaceSetMaterial(0, material); // borrowed: PrepareCoreAsync owns and releases the catalog material
+            viewport.AddChild(new MeshInstance3D { Mesh = mesh, CastShadow = GeometryInstance3D.ShadowCastingSetting.Off });
+            foreach (var scale in scales)
+            {
+                for (var aa = aaSpec.Min; aa <= aaSpec.Max; aa += aaSpec.Step)
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
+                    var clarity = ViewportClarity.MapClarity(scale, aa, quality.Effective.Requested(QualityKnob.FsrSharpness));
+                    ViewportClarity.ApplyClarity(viewport, clarity);
+                    await FrameAwaiter.StartupReadyDrawAsync(this, () => viewport.GetCamera3D() is not null,
+                        timeout, cancellationToken);
+                }
+            }
+        }
+        catch (Exception error) { failure = RetainedFailure.Append(failure, error); }
+        try { if (GodotObject.IsInstanceValid(viewport)) viewport.Free(); }
+        catch (Exception error) { failure = RetainedFailure.Append(failure, error); }
+        try { mesh?.Dispose(); }
+        catch (Exception error) { failure = RetainedFailure.Append(failure, error); }
+        if (failure is not null) System.Runtime.ExceptionServices.ExceptionDispatchInfo.Capture(failure).Throw();
     }
 
     private void MountCanvas(PipelineCombination combination, Material material, CanvasLayer canvas,

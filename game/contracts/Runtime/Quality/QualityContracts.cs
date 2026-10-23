@@ -1,23 +1,37 @@
 namespace Campus.Contracts.Quality;
 
+public static class QualityRules
+{
+    public const float DetailDistanceScale = 0.8f;
+    public const float FsrSharpnessMin = 0;
+    public const float FsrSharpnessMax = 2;
+}
+
 public enum QualityPreset : byte { Balanced, Fine, Ultra, Custom }              // 均衡、精致、极致、自定义
 public enum ApplyClass : byte { Immediate, Amortized, UnderLoading, Restart }       // 即时、即时（分帧）、加载界面、重启（SYS-GRAPHICS），由轻到重
 public enum KnobKind : byte { Floor, StyleDefault, Performance }                 // 风格底线（有最差值）、风格默认（可关）、性能项（SYS-GRAPHICS）
 
 public enum KnobUnit : byte { Number, Scale, Metres, Percent }
+public enum KnobScope : byte { Effect, Clarity, Display, Comfort }
 
-public enum QualityKnob : byte                      // 共 11 项，连续序号（QualityChange.Knobs 按序号置位）；--quality-set 用它的 snake_case
+public enum QualityKnob : byte                      // 连续序号（QualityChange.Knobs 按序号置位）；--quality-set 用它的 snake_case
 {
     DisplayMode, WindowSize, VSync, FrameRateLimit,
     RenderScale, AntiAliasing,
     ShadowQuality, ShadowDistance, FoliageDensity,
     ReflectionInterval, ParticleDensity,
+    FsrSharpness, Vignette,
 }
+
+/// <summary>Relative GPU, video-memory and CPU load, each from 0 (low) to 2 (high).</summary>
+public readonly record struct KnobLoad(byte Gpu, byte Vram, byte Cpu);
 
 public sealed record KnobSpec(QualityKnob Knob, ApplyClass Apply, KnobKind Kind,
     float Min, float Max, float Step, float WorstAllowed, bool HigherIsBetter,
     string LabelKey, string Group, KnobUnit Unit)                               // 界面按它自动生成控件；枚举类的项按序号编码成 float
 {
+    public KnobScope Scope { get; init; }
+    public KnobLoad Load { get; init; }
     /// <summary>When present, only these discrete values are selectable and valid.</summary>
     public IReadOnlyList<float>? Values { get; init; }
 }
@@ -82,12 +96,15 @@ public readonly record struct QualityChange(long Version, ulong Knobs, ApplyOrig
 }   // Loading：本次在加载界面完全遮盖时生效；为 false 时负责方自己淡化，不得硬切
 
 public readonly record struct KnobDelta(QualityKnob Knob, float From, float To, ApplyClass Apply);
+public readonly record struct KnobNote(QualityKnob Knob, string ReasonKey, float Effective);
 public sealed record ApplyPlan(
     QualityProfile Next,
     IReadOnlyList<KnobDelta> Deltas,                // 只列有变化的项
     ApplyClass Heaviest,                            // 最重的一类：有 UnderLoading 时界面才亮"应用"，有 Restart 时显示"启"
-    long VramBytes, long VramBudgetBytes,           // 按 SYS-GRAPHICS 的公式估的显存与 DXGI 给的预算；P2 之前为 0
-    IReadOnlyList<QualityKnob> Rejected);           // 劣于最差值、超出范围或不合法的项；不为空时 Apply 整体拒绝，什么也不改
+    IReadOnlyList<QualityKnob> Rejected)            // 劣于最差值、超出范围或不合法的项；不为空时 Apply 整体拒绝，什么也不改
+{
+    public IReadOnlyList<KnobNote> Notes { get; init; } = [];
+}
 
 public enum ApplyStatus : byte { Applied, Deferred, Rejected }
 public sealed record ApplyResult(
@@ -100,12 +117,13 @@ public sealed record ApplyResult(
 
 public interface IQualityService                    // Kernel 服务（SYS-GRAPHICS）；界面与门禁的唯一入口
 {
+    QualityProfile Default { get; }                 // 所有非效果项的默认值与默认效果预设
     QualityProfile Requested { get; }
     QualityView Effective { get; }                  // 实际生效值，读取无分配
     IReadOnlyList<KnobSpec> Knobs { get; }          // 单项目录（QualityCatalog）：画面页按它生成控件
     float PresetValue(QualityPreset p, QualityKnob k);   // 预设表 game/data/quality-presets.json 的取值
     event Action<QualityChange>? Changed;           // 主线程，值变才发
-    ApplyPlan Plan(QualityProfile next);            // 界面据此显示"加载界面""重启"生效标签与显存估计（UI-VISUAL）
+    ApplyPlan Plan(QualityProfile next);            // 界面据此显示"加载界面""重启"生效标签与依赖说明（UI-VISUAL）
     Task<ApplyResult> Apply(QualityProfile next, ApplyOrigin origin);
 }
 

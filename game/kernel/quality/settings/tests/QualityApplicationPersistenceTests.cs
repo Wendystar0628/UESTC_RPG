@@ -44,5 +44,27 @@ public sealed class QualityApplicationPersistenceTests
         var saved = store.Read()!;
         if (store.SaveCount == 0 || saved.Preset != QualityPreset.Ultra || saved.Overrides.Count != 0)
             throw new InvalidOperationException("Explicit preset selection was dropped or carried CLI overrides.");
+        if (service.Effective[QualityKnob.RenderScale] != .67f || service.Effective.Preset != QualityPreset.Ultra)
+            throw new InvalidOperationException("Effect preset selection changed the session's independent precision request.");
     }
+    [TestCase]
+    [TestCategory(TestReason.Regression)]
+    public async Task NativeSharpnessRequestIsSavedEvenThoughItHasNoCurrentGpuEffect()
+    {
+        var runtime = new FakeRuntime();
+        using var store = new FileStoreSpy("native-sharpness", null);
+        await using var service = new QualityService(Catalog(), store);
+        service.Bind(runtime);
+        await service.Initialize(BootPhase.AfterMapWarm, Context());
+        runtime.Booting = false;
+        var sharpness = QualityKnob.FsrSharpness;
+        if (service.Effective[QualityKnob.RenderScale] != 1 || service.Effective[sharpness] != 0)
+            throw new InvalidOperationException("This regression requires native rendering with inactive sharpening.");
+        var desired = service.Knobs.Single(spec => spec.Knob == sharpness).Max;
+        await ApplyUser(service, new(QualityPreset.Custom, new Dictionary<QualityKnob, float> { [sharpness] = desired }));
+        var saved = store.Read() ?? throw new InvalidOperationException("The independent sharpening request was not saved.");
+        if (store.SaveCount != 1 || saved.Overrides[sharpness] != desired || service.Effective[sharpness] != 0 || service.Effective.Requested(sharpness) != desired)
+            throw new InvalidOperationException("Inactive sharpening was confused with its requested value.");
+    }
+
 }

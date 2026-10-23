@@ -17,7 +17,7 @@ namespace Campus.Kernel.Post;
 /// Glow runs at the standard level; the finish pass applies the highlight shoulder and vignette.
 /// </summary>
 [KernelNode("post.chain")]
-[QualityResponsive(Order = 2, Owns = [QualityKnob.AntiAliasing], Reads = [QualityKnob.RenderScale])]
+[QualityResponsive(Order = 2, Owns = [QualityKnob.RenderScale, QualityKnob.AntiAliasing, QualityKnob.FsrSharpness, QualityKnob.Vignette])]
 public partial class PostChain : Node, IQualityAware, IMapAware, IViewContentReadiness
 {
     private const float FadeSeconds = 0.5f;            // glow level changes fade, never cut
@@ -43,6 +43,9 @@ public partial class PostChain : Node, IQualityAware, IMapAware, IViewContentRea
     private Godot.Environment? _environment;
     private Texture3Drd? _lut;
     private Vector4 _mapRect;
+    private float _vignette;
+    private float _vignetteTarget;
+    private bool _vignetteInitialized;
 
     public Exception? Failure => _outline.Failure ?? _finish.Failure;
     public bool IsReady(Pose pose) => _outline.Rendered && _finish.Rendered && _lut is not null;
@@ -92,15 +95,19 @@ public partial class PostChain : Node, IQualityAware, IMapAware, IViewContentRea
 
     public void ApplyQuality(QualityView view, in QualityChange change)
     {
-        if (change.Has(QualityKnob.AntiAliasing))
+        if (change.Has(QualityKnob.RenderScale) || change.Has(QualityKnob.AntiAliasing) || change.Has(QualityKnob.FsrSharpness))
         {
-            // Loading class: applied while the loading screen is fully covering (or at startup); rebuilds buffers only.
-            GetViewport().ScreenSpaceAA = (int)view[QualityKnob.AntiAliasing] switch
+            var clarity = ViewportClarity.MapClarity(view[QualityKnob.RenderScale], view[QualityKnob.AntiAliasing], view[QualityKnob.FsrSharpness]);
+            ViewportClarity.ApplyClarity(GetViewport(), clarity);
+        }
+        if (change.Has(QualityKnob.Vignette))
+        {
+            _vignetteTarget = view[QualityKnob.Vignette];
+            if (!_vignetteInitialized || change.Origin == ApplyOrigin.Startup)
             {
-                0 => Viewport.ScreenSpaceAAEnum.Smaa,
-                1 => Viewport.ScreenSpaceAAEnum.Fxaa,
-                var v => throw new ArgumentOutOfRangeException(nameof(view), v, "AntiAliasing knob"),
-            };
+                _vignette = _vignetteTarget;
+                _vignetteInitialized = true;
+            }
         }
     }
 
@@ -116,7 +123,8 @@ public partial class PostChain : Node, IQualityAware, IMapAware, IViewContentRea
     {
         if (_colorScript is null || _world is null || _key is null || _weather is null || _medium is null
             || _textures is null || _rig is null) return;
-        var dt = (float)Math.Min(delta, 0.25);
+        var dt = (float)Math.Clamp(delta, 0, 0.25);
+        _vignette = Mathf.MoveToward(_vignette, _vignetteTarget, dt / FadeSeconds);
         AttachToCamera();
         var environment = GetViewport().FindWorld3D()?.Environment;
         if (environment != _environment) ConfigureEnvironment(environment);
@@ -148,7 +156,7 @@ public partial class PostChain : Node, IQualityAware, IMapAware, IViewContentRea
             EdgeFog = _rig.EdgeFog,
             SunDir = new Vector3(_world.Sun.Dir.X, _world.Sun.Dir.Y, _world.Sun.Dir.Z),     // same source as sun_dir / moon_dir
             MoonDir = new Vector3(_world.Moon.Dir.X, _world.Moon.Dir.Y, _world.Moon.Dir.Z),
-            VignetteK = cs.Vignette,
+            VignetteK = cs.Vignette * _vignette,
             VignetteTint = new Vector3(cs.VignetteTint.X, cs.VignetteTint.Y, cs.VignetteTint.Z),
             CdlSlope = new Vector3(cs.CdlSlope.X, cs.CdlSlope.Y, cs.CdlSlope.Z),
             CdlOffset = new Vector3(cs.CdlOffset.X, cs.CdlOffset.Y, cs.CdlOffset.Z),

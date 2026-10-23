@@ -123,7 +123,7 @@ public sealed class QualityApplicationLifetimeTests
             runtime.HoldAt = boundary;
             if (boundary == "save") store.HeldWrite = new();
             var next = service.Requested.Overrides.ToDictionary(pair => pair.Key, pair => pair.Value);
-            // The CLI's FSR1 profile already uses FXAA; changing render scale still requires the screen.
+            // Changing render precision requires the screen regardless of the selected AA.
             next[QualityKnob.RenderScale] = 1;
             next[QualityKnob.ParticleDensity] = .5f;
             var pending = service.Apply(new(service.Requested.Preset, next), ApplyOrigin.User);

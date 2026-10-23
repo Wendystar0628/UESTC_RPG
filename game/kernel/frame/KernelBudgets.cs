@@ -7,12 +7,6 @@ namespace Campus.Kernel.Frame;
 /// </summary>
 public static class KernelBudgets
 {
-    // ENG-BUDGET: internal render pixels per preset (ultra also has a 4K figure)
-    public const double BalancedInternalPixels = 1_000_000;
-    public const double FineInternalPixels = 2_100_000;
-    public const double UltraInternalPixels = 3_700_000;
-    public const double UltraInternalPixelsAt4k = 4_900_000;
-
     // ENG-BUDGET: the shared per-frame stream mount budget
     public const double StreamMountMilliseconds = 1;
 

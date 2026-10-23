@@ -75,8 +75,6 @@ internal static class QualityApplicationTestFixture
         public bool Transitioning { get; set; }
         public bool QualityLoadingActive { get; private set; }
         public bool OtherLoadingActive { get; private set; }
-        public Godot.Vector2I OutputSize => new(1920, 1080);
-        public Godot.Vector2I ScreenSize => OutputSize;
         public bool FailDispatch { get; set; }
         public bool FailRollback { get; set; }
         public bool FailReadiness { get; set; }

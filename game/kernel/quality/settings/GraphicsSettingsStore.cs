@@ -1,7 +1,6 @@
 using Campus.Kernel.Diagnostics;
 using Campus.Contracts.Quality;
 using Campus.Contracts.Settings;
-using Godot;
 
 namespace Campus.Kernel.Quality.Settings;
 
@@ -15,12 +14,13 @@ public interface IGraphicsSettingsStore
 /// <summary>Graphics' view of the graphics section in settings.json: the preset and the knobs that differ from it.</summary>
 public sealed class GraphicsSettingsStore(ISettingsStore settings, QualityCatalog catalog) : IGraphicsSettingsStore
 {
+    private const int Schema = 2;
     private readonly ISettingsSection _section = settings.Section("graphics");
 
     public QualityProfile? Read()
     {
         // No graphics section means a fresh install or an intentional reset.
-        if (_section.Keys().Count == 0) return null;
+        if (!_section.TryFloat("schema", out var schema) || schema != Schema) return null;
         var preset = _section.String("preset") switch
         {
             "balanced" => QualityPreset.Balanced,
@@ -43,6 +43,7 @@ public sealed class GraphicsSettingsStore(ISettingsStore settings, QualityCatalo
     public Task Write(QualityProfile profile)
     {
         _section.Clear();
+        _section.Set("schema", Schema);
         _section.Set("preset", profile.Preset.ToString().ToLowerInvariant());
         var knobs = _section.Child("knobs");
         foreach (var pair in profile.Overrides.OrderBy(pair => pair.Key))

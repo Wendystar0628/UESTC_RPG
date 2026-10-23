@@ -1,6 +1,8 @@
 using Campus.Contracts;
 using Campus.Contracts.AppFlow;
 using Campus.Contracts.Maps;
+using Campus.Contracts.Quality;
+using Campus.Kernel.Quality.Settings;
 using Campus.Gates;
 using Campus.Kernel.Frame;
 using Campus.Kernel.Registry;
@@ -74,16 +76,25 @@ internal sealed class StageStartupTrace
     {
         var screen = DisplayServer.WindowGetCurrentScreen();
         var size = DisplayServer.WindowGetSize();
-        GD.Print(FormattableString.Invariant($"STARTUP_ENVIRONMENT {FrameClock.MonotonicMilliseconds:R} frame={Engine.GetProcessFrames()} cursorVisible={cursorVisible} cursorHeld={cursorHeld} maxFps={Engine.MaxFps} vSync={DisplayServer.WindowGetVsyncMode()} screen={screen} screenReportedRefreshHz={DisplayServer.ScreenGetRefreshRate(screen):R} windowFocus={DisplayServer.WindowIsFocused()} windowWidth={size.X} windowHeight={size.Y} windowMode={DisplayServer.WindowGetMode()} physicsTicksPerSecond={Engine.PhysicsTicksPerSecond}"));
+        var windowHandle = DisplayServer.WindowGetNativeHandle(DisplayServer.HandleType.WindowHandle);
+        var quality = KernelServices.Get<IQualityService>().Effective;
+        var scale = quality[QualityKnob.RenderScale];
+        var focused = DisplayServer.WindowIsFocused();
+        var reason = FrameLimitPolicy.Reason(quality[QualityKnob.FrameRateLimit], focused);
+        GD.Print(FormattableString.Invariant($"STARTUP_ENVIRONMENT {FrameClock.MonotonicMilliseconds:R} frame={Engine.GetProcessFrames()} cursorVisible={cursorVisible} cursorHeld={cursorHeld} maxFps={Engine.MaxFps} vSync={DisplayServer.WindowGetVsyncMode()} screen={screen} screenReportedRefreshHz={DisplayServer.ScreenGetRefreshRate(screen):R} windowFocus={DisplayServer.WindowIsFocused()} windowHandle={windowHandle} windowWidth={size.X} windowHeight={size.Y} windowMode={DisplayServer.WindowGetMode()} frameLimitRequest={quality.Requested(QualityKnob.FrameRateLimit)} frameLimitReason={reason} renderScaleRequest={quality.Requested(QualityKnob.RenderScale):R} renderScaleEffective={scale:R} internalWidth={Math.Max(1, (int)(size.X * scale))} internalHeight={Math.Max(1, (int)(size.Y * scale))} physicsTicksPerSecond={Engine.PhysicsTicksPerSecond}"));
     }
 
     internal static void TraceTitleInputReady(IAppBootFlow boot)
     {
+        var input = KernelServices.Get<IInputRouter>();
+        TraceEnvironment(input.CursorVisible, input.CursorHeld);
         GD.Print(FormattableString.Invariant($"STARTUP_PHASE title-input-ready {FrameClock.MonotonicMilliseconds:R} frame={Engine.GetProcessFrames()}{StartupReadiness(boot)}"));
     }
 
     internal static void TraceInputReady()
     {
+        var input = KernelServices.Get<IInputRouter>();
+        TraceEnvironment(input.CursorVisible, input.CursorHeld);
         GD.Print(FormattableString.Invariant($"STARTUP_PHASE input-ready {FrameClock.MonotonicMilliseconds:R} frame={Engine.GetProcessFrames()} mode={KernelServices.Get<ICameraRig>().Mode}"));
     }
 

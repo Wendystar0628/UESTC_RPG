@@ -20,19 +20,25 @@ public sealed class QualityState
     {
         _catalog = catalog;
         _basePreset = catalog.DefaultPreset;
-        Requested = catalog.Normalize(catalog.DefaultProfile, _basePreset);
+        Requested = QualityCatalog.Freeze(catalog.DefaultProfile);
         _values = catalog.Resolve(Requested, _basePreset);
         Effective = MakeView();
     }
 
-    public ApplyPlan Plan(QualityProfile next)
+    public ApplyPlan Plan(QualityProfile next) => Plan(next, preserveIndependent: true);
+
+    private ApplyPlan Plan(QualityProfile next, bool preserveIndependent)
     {
         ArgumentNullException.ThrowIfNull(next);
         ArgumentNullException.ThrowIfNull(next.Overrides);
         if (!Enum.IsDefined(next.Preset) || next.Schema != 1) throw new ArgumentException("Unsupported quality profile.", nameof(next));
         var rejected = next.Overrides.Where(pair => !_catalog.IsValid(pair.Key, pair.Value)).Select(pair => pair.Key).Order().ToArray();
-        if (rejected.Length != 0) return new(QualityCatalog.Freeze(next), [], ApplyClass.Immediate, 0, 0, rejected);
-        var frozen = _catalog.Normalize(next, _basePreset);
+        if (rejected.Length != 0) return new(QualityCatalog.Freeze(next), [], ApplyClass.Immediate, rejected);
+        // A preset selects effects. Other scopes keep their requests unless this request explicitly changes them.
+        var overrides = Requested.Overrides.Where(pair => preserveIndependent && _catalog[pair.Key].Scope != KnobScope.Effect)
+            .ToDictionary(pair => pair.Key, pair => pair.Value);
+        foreach (var pair in next.Overrides) overrides[pair.Key] = pair.Value;
+        var frozen = QualityCatalog.Freeze(next with { Overrides = overrides });
         var values = _catalog.Resolve(frozen, _basePreset);
         var preset = frozen.Preset == QualityPreset.Custom ? _basePreset : frozen.Preset;
         var grassRangeChanged = _catalog.GrassRadius(preset) != GrassRadius;
@@ -40,29 +46,27 @@ public sealed class QualityState
                 knob == QualityKnob.FoliageDensity && grassRangeChanged)
             .Select(knob => new KnobDelta(knob, _values[(int)knob], values[(int)knob], _catalog[knob].Apply)).ToArray();
         var heaviest = deltas.Length == 0 ? ApplyClass.Immediate : deltas.Max(delta => delta.Apply);
-        return new(frozen, Array.AsReadOnly(deltas), heaviest, 0, 0, []);
+        return new(frozen, Array.AsReadOnly(deltas), heaviest, []) { Notes = _catalog.Notes(frozen, _basePreset) };
     }
 
     public QualityChange Commit(QualityProfile next, ApplyOrigin origin, bool loading)
     {
-        var plan = Plan(next);
+        var plan = Plan(next, preserveIndependent: origin != ApplyOrigin.Startup);
         if (plan.Rejected.Count != 0) throw new ArgumentException("Cannot commit invalid quality values.", nameof(next));
         next = plan.Next;
         var values = _catalog.Resolve(next, _basePreset);
+        var previousRequests = _catalog.ResolveRequested(Requested, _basePreset);
+        var requests = _catalog.ResolveRequested(next, _basePreset);
         var previousGrassRadius = GrassRadius;
         if (next.Preset != QualityPreset.Custom) _basePreset = next.Preset;
-        var baselineOverrides = next.Overrides.Where(pair => pair.Key is QualityKnob.DisplayMode or QualityKnob.WindowSize)
-            .ToDictionary(pair => pair.Key, pair => pair.Value);
-        var baseline = _catalog.Resolve(new(_basePreset, baselineOverrides), _basePreset);
-        var overrides = next.Overrides.Where(pair => pair.Value !=
-            (pair.Key == QualityKnob.RenderScale ? baseline[(int)pair.Key] : _catalog.PresetValue(_basePreset, pair.Key)))
+        var overrides = next.Overrides.Where(pair => pair.Value != _catalog.PresetValue(_basePreset, pair.Key))
             .ToDictionary(pair => pair.Key, pair => pair.Value);
         Requested = QualityCatalog.Freeze(new(_basePreset, overrides));
         ulong mask = 0;
         // The fixed grass range belongs to the vegetation preset effect, including when all public knobs match.
         if (GrassRadius != previousGrassRadius) mask |= 1UL << (int)QualityKnob.FoliageDensity;
         foreach (var knob in QualityCatalog.All)
-            if (_values[(int)knob] != values[(int)knob]) mask |= 1UL << (int)knob;
+            if (_values[(int)knob] != values[(int)knob] || previousRequests[(int)knob] != requests[(int)knob]) mask |= 1UL << (int)knob;
         _values = values;
         if (origin == ApplyOrigin.Startup) mask = (1UL << QualityCatalog.Count) - 1;
         if (mask != 0) _version++;
@@ -85,6 +89,7 @@ public sealed class QualityState
 
     private QualityView MakeView()
     {
-        return new(_version, Requested.Overrides.Count == 0 ? _basePreset : QualityPreset.Custom, _values);
+        var customEffects = Requested.Overrides.Keys.Any(knob => _catalog[knob].Scope == KnobScope.Effect);
+        return new(_version, customEffects ? QualityPreset.Custom : _basePreset, _values, _catalog.ResolveRequested(Requested, _basePreset));
     }
 }

@@ -55,7 +55,9 @@ public static class BootWorldOverrides
         if (!options.Requested) return;
         var requested = quality.Requested;
         var preset = options.Preset ?? requested.Preset;
-        var overrides = options.Preset is not null ? new Dictionary<QualityKnob, float>() : new Dictionary<QualityKnob, float>(requested.Overrides);
+        var effects = quality.Knobs.Where(spec => spec.Scope == KnobScope.Effect).Select(spec => spec.Knob).ToHashSet();
+        var overrides = requested.Overrides.Where(pair => options.Preset is null || !effects.Contains(pair.Key))
+            .ToDictionary(pair => pair.Key, pair => pair.Value);
         foreach (var (knob, value) in options.Overrides) overrides[knob] = value;
         var profile = new QualityProfile(preset, overrides);
         var result = await quality.Apply(profile, ApplyOrigin.CommandLine);
