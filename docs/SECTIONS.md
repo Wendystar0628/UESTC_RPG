@@ -1247,24 +1247,24 @@
 
 ## SYS-SAVE-FLOW · 保存时机与读档流程
 
-`docs/systems/SYS-SAVE-FLOW-保存时机与读档流程.md` · 5.8k 字 · 保存时机、安全时刻与落定快照、退出保存、读档顺序、世界实例、状态一致、新游戏建档、校验修复
+`docs/systems/SYS-SAVE-FLOW-保存时机与读档流程.md` · 6.0k 字 · 保存时机、安全时刻与落定快照、退出保存、读档顺序、世界实例、状态一致、新游戏建档、校验修复
 关键词：保存、读档、自动保存、安全时刻、落定快照、续跑等价、世界实例、校验修复、退出保存、现实时间不计、SaveReason、LoadScope、CaptureContext、RestoreContext、NewGameContext、SaveStatus、SaveResult、LoadStatus、LoadResult、SaveState、IWorldState.Instance
 
 - SYS-SAVE-FLOW §0 结论 · L22 · 552
   - ★ SYS-SAVE-FLOW §0.1 接入要点 · L29 · 278
-- SYS-SAVE-FLOW §1 保存时机与可靠性 · L35 · 1.4k
+- SYS-SAVE-FLOW §1 保存时机与可靠性 · L35 · 1.5k
   - SYS-SAVE-FLOW §1.1 时机 · L37 · 466
-  - SYS-SAVE-FLOW §1.2 安全时刻与落定快照 · L53 · 356
+  - SYS-SAVE-FLOW §1.2 安全时刻与落定快照 · L53 · 397
   - SYS-SAVE-FLOW §1.3 写盘与失败 · L59 · 119
   - SYS-SAVE-FLOW §1.4 退出 · L63 · 306
   - SYS-SAVE-FLOW §1.5 保存状态与失败反馈 · L72 · 150
-- SYS-SAVE-FLOW §2 加载与一致性 · L76 · 2.4k
-  - SYS-SAVE-FLOW §2.1 加载流程 · L78 · 779
+- SYS-SAVE-FLOW §2 加载与一致性 · L76 · 2.5k
+  - SYS-SAVE-FLOW §2.1 加载流程 · L78 · 841
   - SYS-SAVE-FLOW §2.2 世界实例：`IWorldState.Instance` · L92 · 358
   - SYS-SAVE-FLOW §2.3 "状态一致"的定义 · L98 · 391
   - SYS-SAVE-FLOW §2.4 天气 · L106 · 103
   - SYS-SAVE-FLOW §2.5 新游戏 · L110 · 302
-  - SYS-SAVE-FLOW §2.6 校验修复 · L116 · 442
+  - SYS-SAVE-FLOW §2.6 校验修复 · L116 · 451
 - SYS-SAVE-FLOW §3 关着游戏的那段现实时间不计 · L131 · 243
 - SYS-SAVE-FLOW §4 待验证（P0） · L138 · 104
 
