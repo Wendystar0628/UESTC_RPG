@@ -341,8 +341,12 @@ vec4 half_res_clouds(vec3 dir, float pix) {
 	}
 	float w_sun = sky_side_weight(dir);
 	vec3 haze = sky_haze_color(w_sun);
-	vec4 cu = cumulus(dir, POSITION, pix, haze, false, vec3(0.0), vec3(0.0));
 	vec4 dk = overcast_deck(dir, POSITION, pix, haze, deck_amount());
+	// 层云完全不透明时，后层积云的合成权重为零；亮缝与半透明边缘仍求积云。
+	if (dk.a >= 1.0) {
+		return dk;
+	}
+	vec4 cu = cumulus(dir, POSITION, pix, haze, false, vec3(0.0), vec3(0.0));
 	return vec4(dk.rgb + (1.0 - dk.a) * cu.rgb, dk.a + (1.0 - dk.a) * cu.a);
 }
 
