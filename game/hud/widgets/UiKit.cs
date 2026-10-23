@@ -121,13 +121,18 @@ public sealed class UiKit
             SizeFlagsHorizontal = Control.SizeFlags.ExpandFill,
             Material = Materials.Text,
         };
+        // 4.7 的 Label 设了最大宽度就按最大宽度换行，并据此报期望尺寸；容器会长到子件的期望尺寸。
+        // 所以只在单列父容器里把最大宽度绑成父宽（这时它就是 Label 的实际宽度）。横排、流式、表格里
+        // 父宽不是 Label 的列宽，绑了会按整行宽换行、把行撑宽再被压回；不设最大宽度时期望尺寸为零，
+        // Label 按容器分给它的实际宽度换行。
+        var singleColumn = parent is BoxContainer { Vertical: true } or MarginContainer or PanelContainer;
         void FitText()
         {
-            // 自动换行的 Label 需要有限宽度；行高由当前字体得出，不能在首轮容器排版时塌成零。
+            // 行高由当前字体得出，不能在首轮容器排版时塌成零。
             var font = label.GetThemeFont("font");
             var fontSize = label.GetThemeFontSize("font_size");
             label.CustomMinimumSize = new Vector2(label.CustomMinimumSize.X, MathF.Ceiling(font.GetHeight(fontSize)));
-            if (label.AutowrapMode != TextServer.AutowrapMode.Off && parent.Size.X > 0)
+            if (singleColumn && label.AutowrapMode != TextServer.AutowrapMode.Off && parent.Size.X > 0)
                 label.CustomMaximumSize = new Vector2(parent.Size.X, -1);
         }
         label.ThemeChanged += FitText;

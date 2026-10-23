@@ -15,7 +15,7 @@
     "judgeAfterFastForward": true,
     "settings": { "theme": ["auto", "light", "dark"], "themeDefault": "auto", "resident": ["dark", "follow"], "residentDefault": "dark" },
     "pinnedDark": ["minimap", "timeCard", "timeStrip", "toast", "arrivalRecommend", "speedLeds", "viewMode", "weatherStrip", "hudIconButtons", "perfReadout"],
-    "followTheme": ["atlas", "settingsCard", "savePage", "dialog", "credits"],
+    "followTheme": ["atlas", "settingsCard", "savePage", "dialog"],
     "noTheme": ["titlePage", "loading", "overTitle"]
   },
 
