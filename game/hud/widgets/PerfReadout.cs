@@ -1,5 +1,6 @@
 using System.Globalization;
 using System.Text;
+using Campus.Contracts;
 using Campus.Hud.Style;
 using Godot;
 
@@ -7,7 +8,7 @@ namespace Campus.Hud.Widgets;
 
 /// <summary>
 /// 性能信息条（UI-NAV）：右上角三个钮的下方一行，帧率、帧时与窗口内最慢一帧、CPU 与 GPU 渲染耗时、本进程 CPU 占用与物理内存、渲染显存、
-/// 内部分辨率 → 输出分辨率与生效帧率上限，每 0.5 s 刷新一次。分辨率与上限读引擎上实际生效的值（视口倍率、Engine.MaxFps、垂直同步），不另算一份。
+/// 内部分辨率 → 输出分辨率与生效帧率上限，每 0.5 s 刷新一次。最慢一帧取窗口内内核发布的原始帧间隔（IFrameTiming）的最大值，引擎交来的步长会被截断平滑、漏报卡顿。分辨率与上限读引擎上实际生效的值（视口倍率、Engine.MaxFps、垂直同步），不另算一份。
 /// 常驻件，固定深屏（pin）。只在显示时存在：建时打开视口渲染耗时测量，移出场景树时关闭；刷新之间不分配托管内存（ENG-BUDGET）。
 /// </summary>
 public partial class PerfReadout : PanelContainer
@@ -20,16 +21,18 @@ public partial class PerfReadout : PanelContainer
     private readonly System.Diagnostics.Process _process = System.Diagnostics.Process.GetCurrentProcess();
     private string _tFps = "", _tFrame = "", _tCpuRender = "", _tGpuRender = "", _tCpuUsage = "", _tMem = "", _tVram = "", _tWorst = "", _tInternal = "", _tCap = "";
     private UiKit _kit = null!;
+    private IFrameTiming _timing = null!;
     private Label _label = null!;
     private Rid _viewport;
     private TimeSpan _lastCpuTime;
-    private double _since, _worst;
+    private double _since, _worst;   // _worst 单位毫秒
     private int _frames;
     public static PerfReadout Create(UiKit kit, Control parent)
     {
         var bar = new PerfReadout
         {
             _kit = kit,
+            _timing = Campus.Kernel.Registry.Kernel.Get<IFrameTiming>(),
             ThemeTypeVariation = UiThemeBuilder.PanelContainerType,
             Material = kit.Materials.Panel,
             SizeFlagsHorizontal = SizeFlags.ShrinkEnd,
@@ -67,10 +70,10 @@ public partial class PerfReadout : PanelContainer
 
     public override void _Process(double delta)
     {
-        // 时间只用引擎交来的帧间隔累计：计时归内核，界面不自己取时钟（G4）
+        // 界面不自己取时钟（G4）：刷新节拍与平均帧时用引擎步长，最慢一帧读内核的原始帧间隔，空值（刚就绪）跳过
         _since += delta;
         _frames++;
-        _worst = Math.Max(_worst, delta);
+        if (_timing.PreviousFrameMilliseconds is { } ms) _worst = Math.Max(_worst, ms);
         if (_since < Interval) return;
         Refresh(_since, _frames, _worst);
         _since = 0;
@@ -78,7 +81,7 @@ public partial class PerfReadout : PanelContainer
         _frames = 0;
     }
 
-    private void Refresh(double seconds, int frames, double worst)
+    private void Refresh(double seconds, int frames, double worstMs)
     {
         _process.Refresh();
         var cpuTime = _process.TotalProcessorTime;
@@ -87,7 +90,7 @@ public partial class PerfReadout : PanelContainer
 
         var frameMs = frames > 0 ? seconds * 1000 / frames : 0;
         var usage = seconds > 0 ? cpuUsed / (seconds * Cores) * 100 : 0;
-        Write(Engine.GetFramesPerSecond(), frameMs, worst * 1000,
+        Write(Engine.GetFramesPerSecond(), frameMs, worstMs,
             RenderingServer.ViewportGetMeasuredRenderTimeCpu(_viewport),
             RenderingServer.ViewportGetMeasuredRenderTimeGpu(_viewport), usage);
     }
