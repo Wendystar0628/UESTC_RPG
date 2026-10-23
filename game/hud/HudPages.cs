@@ -15,8 +15,8 @@ internal sealed class HudPages
     private readonly CanvasLayer _owner;
     private readonly HudRootDependencies _dependencies;
     private readonly Control _host;
-    // 界面发起的流程操作（进入、回标题）与画质应用各一个持有者，随 HUD 离树取消（Exit）。
-    private readonly HudTask _flow, _quality;
+    // 界面发起的流程操作（进入、回标题）、画质应用与存档操作（立即保存、删除）各一个持有者，随 HUD 离树取消（Exit）。
+    private readonly HudTask _flow, _quality, _storage;
     private bool _watchingLeaveSave;
     public TitleMenu Title { get; }
     public SettingsCard Settings { get; }
@@ -32,6 +32,7 @@ internal sealed class HudPages
         _host = view.PageHost;
         _flow = new HudTask(dependencies.Failure);
         _quality = new HudTask(dependencies.Failure);
+        _storage = new HudTask(dependencies.Failure);
         Toast = Widgets.Toast.Create(view.Kit, view.HintHost);
         Title = TitleMenu.Create(view.Kit, view.PageHost, view.BackgroundHost, dependencies.Saves, dependencies.Maps);
         Title.EnterRequested += request => StartEnter(request);
@@ -47,6 +48,8 @@ internal sealed class HudPages
         Saves = SavePage.Create(view.Kit, view.PageHost, view.DialogHost, dependencies.Saves, dependencies.Maps);
         Saves.CloseRequested += CloseSaves;
         Saves.EnterRequested += EnterFromSaves;
+        Saves.SaveNowRequested += SaveNow;
+        Saves.DeleteRequested += DeleteSave;
     }
 
     public void Exit()
@@ -54,6 +57,7 @@ internal sealed class HudPages
         StopLeaveSaveWatch();
         _flow.Cancel();
         _quality.Cancel();
+        _storage.Cancel();
         Settings.Close();
         Saves.Close();
     }
@@ -104,6 +108,34 @@ internal sealed class HudPages
         // 进入已经发出时不重开开始页：选中存档后直接由加载页盖住，不闪回菜单。
         if (_dependencies.Flow.State == AppState.Title && !_flow.Running) Title.Open();
         Changed();
+    }
+
+    // ---------------- 立即保存与删除 ----------------
+    // 存档页只发请求；写盘与删除由存档服务持有，界面一侧只等结果给回执（UI-NAV 临时提示），进行中不再开第二次。
+    private void SaveNow() => _storage.Start(SaveNowCore);
+
+    private async Task SaveNowCore(CancellationToken token)
+    {
+        var result = await _dependencies.Saves.SaveNow(SaveReason.Manual).WaitAsync(token);
+        if (result.Status == SaveStatus.Saved) Toast.Show(UiKit.T("saves.saved"));
+        // 没存上：存档服务给了原因键就写原因，否则只写"没存上"（SYS-SAVE-FLOW）。
+        else Warn(result.Error is { } key && Tr.Has(key) ? UiKit.T(key) : UiKit.T("saves.save_failed"));
+    }
+
+    private void DeleteSave(SlotId slot, ulong? gen) => _storage.Start(token => DeleteCore(slot, gen, token));
+
+    private async Task DeleteCore(SlotId slot, ulong? gen, CancellationToken token)
+    {
+        var saves = _dependencies.Saves;
+        var result = await (gen is { } entry ? saves.DeleteEntry(slot, entry) : saves.DeleteSlot(slot)).WaitAsync(token);
+        // 删成功由存档页随 SlotsChanged 重建体现；保存失败的原因文案说的是"没有保存"，删除失败不借用。
+        switch (result.Status)
+        {
+            case DeleteStatus.Deleted: break;
+            case DeleteStatus.Rejected: Warn(UiKit.T("save.error.delete_unavailable")); break;
+            case DeleteStatus.Failed: Warn(UiKit.T("saves.delete_failed")); break;
+            default: throw new InvalidOperationException("Unknown delete status.");
+        }
     }
 
     // ---------------- 进入与回标题 ----------------

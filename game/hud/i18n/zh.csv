@@ -306,7 +306,6 @@ saves.empty,空 · 新游戏,Empty · New game
 saves.corrupt,无法读取,Unreadable
 saves.load,读取,Load
 saves.new_here,在这里开始,Start here
-saves.only_from_title,从开始页读取或开始,Load or start from the title screen
 saves.detail.empty,这个存档位是空的。在这里开始新游戏，之后会一直自动保存到这里。,This slot is empty. Start a new game here; your progress will then be saved here automatically.
 saves.detail.ok,游玩时自动保存到这里；最新的进度读不出时，会退回上一次保存的进度。,"Progress is saved here automatically. If the newest save cannot be read, the previous one is used instead."
 saves.detail.corrupt,存档文件损坏，无法读取,The save file is damaged and cannot be read
@@ -322,7 +321,31 @@ saves.current,当前,Current
 saves.writing,保存中,Saving
 saves.read_only,只读,Read-only
 saves.newer,来自更新版本,From a newer version
-saves.detail.newer,这个存档来自更新版本的游戏。为了不损坏它，本版本只能查看，不能读取或覆盖。,"This save comes from a newer version of the game. To keep it safe, this version can only show it and cannot load or overwrite it."
+saves.detail.newer,这个存档来自更新版本的游戏。为了不损坏它，本版本不读取也不写入；确认后仍可覆盖它开始新游戏，或删除整个存档位。,"This save comes from a newer version of the game. To keep it safe, this version will not load or write to it. You can still confirm to overwrite it with a new game or delete the whole slot."
+saves.kind.auto,自动,Auto
+saves.kind.quit,退出时,On quit
+saves.kind.to_title,回标题时,On return to title
+saves.kind.manual,手动,Manual
+saves.counts,自动 {auto} 份 · 手动 {manual} 份,{auto} auto · {manual} manual
+saves.entries,SLOT {slot} · {count} 份存档,SLOT {slot} · {count} saves
+saves.save_now,立即保存,Save now
+saves.save_now.no_slot,这局游戏不写入存档位,This session does not write to a save slot
+saves.saved,已保存,Saved
+saves.save_failed,没存上,Not saved
+saves.replace,保存并替换,Save and replace
+saves.replace.title,替换最旧的手动存档？,Replace the oldest manual save?
+saves.replace.body,手动存档已满 {limit} 份。立即保存会替换最旧的一份，被替换的存档无法找回。,"Manual saves are full ({limit}). Saving now will replace the oldest one, which cannot be recovered."
+saves.delete,删除,Delete
+saves.delete_slot,删除存档位,Delete slot
+saves.delete_slot.title,删除这个存档位？,Delete this slot?
+saves.delete_slot.body,存档位 {slot} 的全部存档会被删除，此后无法找回。,All saves in slot {slot} will be deleted and cannot be recovered.
+saves.delete_slot.body_manual,存档位 {slot} 的全部存档会被删除，连同 {manual} 份手动存档，此后无法找回。,"All saves in slot {slot}, including {manual} manual saves, will be deleted and cannot be recovered."
+saves.delete_entry,删除这份,Delete this save
+saves.delete_entry.title,删除这份手动存档？,Delete this manual save?
+saves.delete_entry.body,存档位 {slot} 里的这份手动存档会被删除，此后无法找回。,This manual save in slot {slot} will be deleted and cannot be recovered.
+saves.delete_failed,没能删除存档,Could not delete the save
+saves.overwrite.body_manual,存档位 {slot} 里现有的进度会被新游戏替换，连同 {manual} 份手动存档，此后无法找回。,"Existing progress in slot {slot}, including {manual} manual saves, will be replaced by the new game and cannot be recovered."
+save.error.delete_unavailable,现在不能删除存档。,Saves cannot be deleted right now.
 rebind.rejected,这个键不能用：{reason},This key cannot be used: {reason}
 map.atlas.title,大地图,Map
 map.atlas.close,收起 · M,Close · M

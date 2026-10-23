@@ -7,7 +7,7 @@ using Godot;
 namespace Campus.Hud.Pages;
 
 /// <summary>
-/// 存档摘要文字的唯一一份：地点、世界时刻、游玩时长、保存时刻，以及开始页继续行的整行摘要（SYS-TITLE、SYS-SAVE）。
+/// 存档摘要文字的唯一一份：地点、世界时刻、游玩时长、保存时刻、条目类型与份数，以及开始页继续行的整行摘要（SYS-TITLE、SYS-SAVE）。
 /// 存档页、开始页与加载界面都从这里取，不各自拼写。
 /// </summary>
 internal static class SaveMetaText
@@ -33,6 +33,21 @@ internal static class SaveMetaText
     /// <summary>保存时刻按本地时间写成"年-月-日 时:分"；界面不读系统时钟，所以不写今天、昨天这类相对日。</summary>
     public static string SavedAt(long unix) =>
         unix <= 0 ? "—" : DateTimeOffset.FromUnixTimeSeconds(unix).ToLocalTime().ToString("yyyy-MM-dd HH:mm");
+
+    /// <summary>条目类型签条，按保存原因取：手动、退出时、回标题时，其余自动保存都写"自动"（SYS-SAVE-FLOW）。</summary>
+    public static string Kind(SaveReason reason) => UiKit.T(reason switch
+    {
+        SaveReason.Manual => "saves.kind.manual",
+        SaveReason.Quit => "saves.kind.quit",
+        SaveReason.ToTitle => "saves.kind.to_title",
+        SaveReason.Interval or SaveReason.NewGame or SaveReason.Test => "saves.kind.auto",
+        _ => throw new ArgumentOutOfRangeException(nameof(reason)),
+    });
+
+    /// <summary>存档卡的"自动 N 份 · 手动 M 份"；身份读不出的条目不计入任何一池（SaveEntryPools）。</summary>
+    public static string Counts(SlotInfo slot) => UiKit.T("saves.counts",
+        ("auto", SaveEntryPools.Auto(slot).Count().ToString(System.Globalization.CultureInfo.InvariantCulture)),
+        ("manual", SaveEntryPools.Manual(slot).Count().ToString(System.Globalization.CultureInfo.InvariantCulture)));
 
     /// <summary>开始页继续行：季 · 钟点 · 天气 · 地点 · 时长（SYS-TITLE）。</summary>
     public static string Summary(SaveMeta meta, IMapService maps) =>

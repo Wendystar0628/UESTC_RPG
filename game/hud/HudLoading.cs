@@ -192,7 +192,10 @@ internal sealed class HudLoading : IAppLoadingPresentation
         {
             var saves = _dependencies.Saves;
             var slot = request.Slot ?? saves.Continue;
-            if (saves.Slots.FirstOrDefault(item => item.Slot == slot)?.Meta is { } meta)
+            var info = saves.Slots.FirstOrDefault(item => item.Slot == slot);
+            // 读取指定的一份时去处写那一份，否则写存档位最新可读的一份。
+            var selected = request.Gen is { } gen ? info?.Entries.FirstOrDefault(entry => entry.Gen == gen)?.Meta : info?.Meta;
+            if (selected is { } meta)
             {
                 season = meta.Season;
                 clock = meta.Clock;
