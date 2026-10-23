@@ -224,7 +224,15 @@ vec3 sky_haze_color(float w_sun) {
 // 天空渐变（不含云和日月盘）：五段色带 + 地平线霾带 + 雾天整片靠拢
 vec3 sky_gradient(vec3 dir, float w_sun) {
 	float e = sky_alt_deg(dir);
-	vec3 c = ok_to_linear(mix(sky_column_lab(PAL_SKY_ANTI0, e), sky_column_lab(PAL_SKY_SUN0, e), w_sun));
+	vec3 lab;
+	if (w_sun <= 0.0) {
+		lab = sky_column_lab(PAL_SKY_ANTI0, e);
+	} else if (w_sun >= 1.0) {
+		lab = sky_column_lab(PAL_SKY_SUN0, e);
+	} else {
+		lab = mix(sky_column_lab(PAL_SKY_ANTI0, e), sky_column_lab(PAL_SKY_SUN0, e), w_sun);
+	}
+	vec3 c = ok_to_linear(lab);
 	float hz = exp2(-max(e, 0.0) / (0.5 * sky_haze_deg()));
 	c = mix(c, sky_haze_color(w_sun), e < 0.0 ? 1.0 : hz);
 	float fk = sky_fog_weather_k() * SKY_FOG_MIX * mix(1.0, 0.55, smoothstep(0.0, 40.0, e));
