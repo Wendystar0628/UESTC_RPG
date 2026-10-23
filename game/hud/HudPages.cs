@@ -139,9 +139,10 @@ internal sealed class HudPages
         if (previous == AppState.Entering) return;
         if (FlowErrorText() is { } error) { Warn(error); return; }
         if (previous != AppState.Leaving) return;
+        // 还在写就是这次离开的保存，结果没落定，State.Last 可能还是上一次的；写完了 Last 才是这次的结果。
         var saves = _dependencies.Saves;
-        if (saves.State.Last == SaveStatus.Failed) WarnLeaveUnsaved(saves.State);
-        else if (saves.Busy) WatchLeaveSave();
+        if (saves.Busy) WatchLeaveSave();
+        else if (saves.State.Last == SaveStatus.Failed) WarnLeaveUnsaved(saves.State);
     }
 
     // 本次离开的那一次后台写盘：开始页作用域内只订阅到它落定，失败提示一次；
