@@ -74,7 +74,7 @@ public sealed partial class VegetationRuntime : Node, IMapAware, IViewContentRea
     public StreamTileNeed Demand(in BakeTileEntry entry, in StreamDemandView view, bool resident)
     {
         if (!CanMount(entry.Key)) return StreamTileNeed.None;
-        var reach = entry.Key.Module == BakeModuleIds.VegetationGrass ? GrassPool.Reach : VegFade.NearFadeEnd;
+        var reach = entry.Key.Module == BakeModuleIds.VegetationGrass ? GrassPoolIndex.Reach : VegFade.NearFadeEnd;
         // Full near exit envelope; no view-frustum filter, because offscreen near trees still cast visible shadows.
         var eye = view.Eye.Position;
         var d = entry.Key.Module == BakeModuleIds.VegetationGrass
@@ -94,7 +94,8 @@ public sealed partial class VegetationRuntime : Node, IMapAware, IViewContentRea
             var grass = key.Module == BakeModuleIds.VegetationGrass;
             if (mother.Prototypes.Count != (grass ? 1 : Mother.PoolCount) ||
                 mother.Records.Length != mother.Bounds.Count * InstanceStreamLayout.FloatsPerInstance ||
-                grass != mother.Key.StartsWith(GrassPool.KeyPrefix, StringComparison.Ordinal))
+                grass != mother.Key.StartsWith(GrassPool.KeyPrefix, StringComparison.Ordinal) ||
+                grass != (mother.GrassIndex is not null))
                 throw new ArgumentException("Vegetation payload has an invalid mother layout.");
         }
         return new MountWork(this, content, priority, revision, _generation);
@@ -161,13 +162,13 @@ public sealed partial class VegetationRuntime : Node, IMapAware, IViewContentRea
 
     private sealed class MountedTile
     {
-        private readonly Box3[] _bounds;
+        private readonly IReadOnlyList<VegetationMotherData> _data;
         public MountedTile(VegetationTileContent content)
         {
             var id = content.Key.Detail.Replace('/', '.');
             Mothers = content.Key.Module == BakeModuleIds.VegetationTrees ? content.Mothers.Select(d => new Mother(d, id)).ToArray() : [];
             Grass = content.Key.Module == BakeModuleIds.VegetationGrass ? content.Mothers.Select(d => new GrassPool(d, id)).ToArray() : [];
-            _bounds = content.Mothers.SelectMany(d => d.Bounds).ToArray();
+            _data = content.Mothers;
         }
         public Mother[] Mothers { get; }
         public GrassPool[] Grass { get; }
@@ -183,12 +184,17 @@ public sealed partial class VegetationRuntime : Node, IMapAware, IViewContentRea
         }
         public bool NeededAt(N.Vector3 eye)
         {
-            var reach = Grass.Length > 0 ? GrassPool.Reach : VegFade.NearFadeEnd * VegetationBuckets.Hysteresis;
-            foreach (var bounds in _bounds)
+            var reach = Grass.Length > 0 ? GrassPoolIndex.Reach : VegFade.NearFadeEnd * VegetationBuckets.Hysteresis;
+            for (var m = 0; m < _data.Count; m++)
             {
-                var distance = Grass.Length > 0 ? MathF.Sqrt(bounds.HorizontalDistanceSquared(eye)) :
-                    MathF.Sqrt(bounds.DistanceSquared(eye));
-                if (distance <= reach) return true;
+                var mother = _data[m];
+                for (var b = 0; b < mother.Bounds.Count; b++)
+                {
+                    var bounds = mother.Bounds[b];
+                    var distance = Grass.Length > 0 ? MathF.Sqrt(bounds.HorizontalDistanceSquared(eye)) :
+                        MathF.Sqrt(bounds.DistanceSquared(eye));
+                    if (distance <= reach) return true;
+                }
             }
             return false;
         }

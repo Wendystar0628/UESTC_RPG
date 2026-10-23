@@ -28,7 +28,7 @@ public sealed class BakeAuxiliaryCodecTests
         var bytes = BakeProductCodec.Encode(BakePayloadClass.Product, "fixture", trees);
         var decoded = (VegetationTileContent)BakeProductCodec.Decode(BakePayloadClass.Product, "fixture", key, bytes);
         var mother = decoded.Mothers.Single();
-        if (!mother.Records.Span.SequenceEqual(record) || mother.Bounds.Single() != bounds)
+        if (!mother.Records.Span.SequenceEqual(record) || mother.Bounds.Single() != bounds || mother.GrassIndex is not null)
             throw new InvalidOperationException("Vegetation lost frozen mother data.");
         Verify(mother.Prototypes[3].Surfaces.Single());
         if (!bytes.SequenceEqual(BakeProductCodec.Encode(BakePayloadClass.Product, "fixture", decoded)))
@@ -61,6 +61,54 @@ public sealed class BakeAuxiliaryCodecTests
             throw new InvalidOperationException("Content output lost typed part parameters, placement or nested numeric channels.");
         if (!bytes.SequenceEqual(BakeProductCodec.Encode(BakePayloadClass.Product, "fixture", animals)))
             throw new InvalidOperationException("Fauna round trip changed canonical bytes.");
+    }
+
+    [TestCase]
+    [TestCategory(TestReason.Contract)]
+    public void GrassIndexRoundTripsAndRejectsMalformedDirectories()
+    {
+        var prototype = new GeometryPrototype("fixture.grass", [GeometryBuffer.Freeze(Surface())], new(Vector3.Zero, Vector3.One));
+        Box3[] bounds = [new(Vector3.Zero, Vector3.One), new(new(16, 0, 0), new(17, 1, 1))];
+        var records = new float[bounds.Length * InstanceStreamLayout.FloatsPerInstance];
+        for (var i = 0; i < bounds.Length; i++)
+            InstanceStreamLayout.Write(records.AsSpan(i * InstanceStreamLayout.FloatsPerInstance, InstanceStreamLayout.FloatsPerInstance),
+                Matrix4x4.CreateTranslation(bounds[i].Min), new(i, 2, 3, 4));
+        GrassPoolCell[] cells = [new(2, 0, 0, 1, bounds[1]), new(0, 0, 1, 1, bounds[0])];
+        var index = new GrassPoolIndex(cells, new[] { 1, 0 }, bounds.Length);
+        var key = BakeRequestKeys.Tile(new("fixture"), BakeModuleIds.VegetationGrass, default, LodLevel.L0);
+        VegetationTileContent Content(GrassPoolIndex? directory) => new(key, default,
+            [new("grass/fixture", records, [prototype], bounds) { GrassIndex = directory }]);
+        var bytes = BakeProductCodec.Encode(BakePayloadClass.Product, "fixture", Content(index));
+        var decoded = (VegetationTileContent)BakeProductCodec.Decode(BakePayloadClass.Product, "fixture", key, bytes);
+        var mother = decoded.Mothers.Single();
+        if (mother.GrassIndex is not { } saved || saved.Capacity != index.Capacity || !saved.Cells.SequenceEqual(index.Cells) ||
+            !saved.Members.Span.SequenceEqual(index.Members.Span) || !mother.Records.Span.SequenceEqual(records) ||
+            !mother.Bounds.SequenceEqual(bounds) || !bytes.SequenceEqual(BakeProductCodec.Encode(BakePayloadClass.Product, "fixture", decoded)))
+            throw new InvalidOperationException("Grass index or records changed during codec round trip.");
+        Reject(() => BakeProductCodec.Encode(BakePayloadClass.Product, "fixture", Content(null)));
+        var tree = Content(index) with { Key = key with { Module = BakeModuleIds.VegetationTrees },
+            Mothers = [new("tree", records, [prototype, prototype, prototype, prototype], bounds) { GrassIndex = index }] };
+        Reject(() => BakeProductCodec.Encode(BakePayloadClass.Product, "fixture", tree));
+        // Index is the final section: capacity, count, 40-byte cells, member count and member ints.
+        var start = bytes.Length - (3 * sizeof(int) + cells.Length * 40 + index.Members.Length * sizeof(int));
+        foreach (var (offset, value) in new[]
+        {
+            (0, 0), (0, bounds.Length + 1), (4, bounds.Length + 1),
+            (8 + 40, cells[0].X), (8 + 8, 1), (8 + 12, -1), (8 + 16, BitConverter.SingleToInt32Bits(float.NaN)),
+            (bytes.Length - start - 4, 1), (bytes.Length - start - 4, bounds.Length)
+        })
+        {
+            var broken = bytes.ToArray();
+            System.Buffers.Binary.BinaryPrimitives.WriteInt32LittleEndian(broken.AsSpan(start + offset), value);
+            Reject(() => BakeProductCodec.Decode(BakePayloadClass.Product, "fixture", key, broken));
+        }
+        Reject(() => BakeProductCodec.Decode(BakePayloadClass.Product, "fixture", key, bytes[..start]));
+        var empty = new VegetationTileContent(key, default,
+            [new("grass/empty", ReadOnlyMemory<float>.Empty, [prototype], []) { GrassIndex = new([], ReadOnlyMemory<int>.Empty, 1) }]);
+        var emptyBytes = BakeProductCodec.Encode(BakePayloadClass.Product, "fixture", empty);
+        if (((VegetationTileContent)BakeProductCodec.Decode(BakePayloadClass.Product, "fixture", key, emptyBytes))
+            .Mothers.Single().GrassIndex is not { Capacity: 1, Cells.Count: 0, Members.Length: 0 })
+            throw new InvalidOperationException("Empty grass mother lost its minimal capacity directory.");
     }
 
     [TestCase]

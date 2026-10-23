@@ -72,7 +72,8 @@ public static class GrassClumps
                 InstanceStreamLayout.Write(records.AsSpan(i * InstanceStreamLayout.FloatsPerInstance, InstanceStreamLayout.FloatsPerInstance), at, c.Custom);
                 bounds[i] = VegetationPrototypes.WorldBounds(prototype.Bounds, at);
             }
-            mothers.Add(new VegetationMotherData(KeyPrefix + Name(style), records, [prototype], bounds));
+            mothers.Add(VegetationMotherData.TakeOwnership(KeyPrefix + Name(style), records, [prototype], bounds,
+                GrassPoolIndexBuilder.Build(bounds)));
         }
         return mothers;
     }

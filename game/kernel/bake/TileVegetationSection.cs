@@ -22,6 +22,7 @@ internal static class TileVegetationSection
             foreach (var bounds in mother.Bounds) TileBinaryFields.Box(writer, bounds);
             writer.Write(mother.Prototypes.Count);
             foreach (var prototype in mother.Prototypes) TileGeometrySection.Prototype(writer, prototype, key);
+            if (mother.GrassIndex is { } index) GrassIndex(writer, index, key);
         }
     }
 
@@ -38,7 +39,8 @@ internal static class TileVegetationSection
             for (var j = 0; j < bounds.Length; j++) bounds[j] = TileBinaryFields.Box(reader);
             var prototypes = new GeometryPrototype[TileBinaryFields.Count(reader, 4)];
             for (var j = 0; j < prototypes.Length; j++) prototypes[j] = TileGeometrySection.Prototype(reader, key);
-            mothers[i] = VegetationMotherData.TakeOwnership(id, records, prototypes, bounds);
+            var index = key.Module == BakeModuleIds.VegetationGrass ? GrassIndex(reader, key, bounds.Length) : null;
+            mothers[i] = VegetationMotherData.TakeOwnership(id, records, prototypes, bounds, index);
             ValidateMother(key, mothers[i]);
         }
         if (mothers.Select(mother => mother.Key).Distinct(StringComparer.Ordinal).Count() != mothers.Length)
@@ -51,10 +53,55 @@ internal static class TileVegetationSection
         var count = mother.Records.Length / InstanceStreamLayout.FloatsPerInstance;
         if (string.IsNullOrWhiteSpace(mother.Key) ||
             mother.Records.Length % InstanceStreamLayout.FloatsPerInstance != 0 || mother.Bounds.Count != count ||
-            mother.Prototypes.Count != (key.Module == BakeModuleIds.VegetationTrees ? 4 : 1))
+            mother.Prototypes.Count != (key.Module == BakeModuleIds.VegetationTrees ? 4 : 1) ||
+            (key.Module == BakeModuleIds.VegetationGrass) != (mother.GrassIndex is not null))
             throw new InvalidDataException("Invalid vegetation mother records or prototype slots.");
         TileGeometrySection.Finite(mother.Records.Span);
         foreach (var bounds in mother.Bounds) TileGeometrySection.Bounds(bounds);
+        if (mother.GrassIndex is { } index) ValidateGrassIndex(index, count);
     }
 
+    private static void GrassIndex(BinaryWriter writer, GrassPoolIndex index, BakeKey key)
+    {
+        writer.Write(index.Capacity);
+        TileBinaryFields.Records(writer, index.Cells, (w, cell) =>
+        {
+            w.Write(cell.X); w.Write(cell.Z); w.Write(cell.Start); w.Write(cell.Count);
+            TileBinaryFields.Box(w, cell.Bounds);
+        });
+        TileBinaryFields.Channel(writer, index.Members.Span, key);
+    }
+
+    private static GrassPoolIndex GrassIndex(BinaryReader reader, BakeKey key, int count)
+    {
+        var capacity = reader.ReadInt32();
+        var cells = TileBinaryFields.Records(reader, key, r => new GrassPoolCell(
+            r.ReadInt32(), r.ReadInt32(), r.ReadInt32(), r.ReadInt32(), TileBinaryFields.Box(r)), count);
+        var members = TileBinaryFields.Channel<int>(reader, key);
+        return GrassPoolIndex.TakeOwnership(cells, members, capacity);
+    }
+
+    private static void ValidateGrassIndex(GrassPoolIndex index, int count)
+    {
+        if (index.Members.Length != count || index.Capacity < 1 || index.Capacity > Math.Max(1, count))
+            throw new InvalidDataException("Invalid grass index capacity or member count.");
+        var cells = new HashSet<(int, int)>();
+        var seen = new bool[count];
+        var start = 0;
+        foreach (var cell in index.Cells)
+        {
+            if (!cells.Add((cell.X, cell.Z)) || cell.Start != start || cell.Count <= 0 ||
+                cell.Count > index.Capacity || cell.Count > count - start)
+                throw new InvalidDataException("Invalid grass index cell range.");
+            TileGeometrySection.Bounds(cell.Bounds);
+            foreach (var member in index.Members.Span.Slice(start, cell.Count))
+            {
+                if ((uint)member >= (uint)count || seen[member])
+                    throw new InvalidDataException("Invalid grass index member coverage.");
+                seen[member] = true;
+            }
+            start += cell.Count;
+        }
+        if (start != count) throw new InvalidDataException("Incomplete grass index member coverage.");
+    }
 }

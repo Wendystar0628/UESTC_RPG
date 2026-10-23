@@ -91,6 +91,55 @@ public sealed class VegetationInputsTests
         AssertThat(all.Select(c => c.Position).Distinct().Count() == all.Count).IsTrue();
     }
 
+    [TestCase, TestCategory(TestReason.Contract)]
+    public void GrassDirectoryKeepsBoundaryCellsMemberOrderAndLocalCapacity()
+    {
+        var size = GrassPoolIndex.CellSize;
+        Box3 At(float x, float z) => new(new(x, 0, z), new(x, 1, z));
+        Box3[] bounds = [At(size, 0), At(-size, 0), At(size + 1, 0), At(0, 0), At(size * 12, 0), At(-1, 0)];
+        var index = GrassPoolIndexBuilder.Build(bounds);
+        GrassPoolCell[] cells =
+        [
+            new(1, 0, 0, 2, new(bounds[0].Min, bounds[2].Max)),
+            new(-1, 0, 2, 2, new(bounds[1].Min, bounds[5].Max)),
+            new(0, 0, 4, 1, bounds[3]),
+            new(12, 0, 5, 1, bounds[4])
+        ];
+        AssertThat(index.Cells.SequenceEqual(cells) && index.Members.Span.SequenceEqual(new[] { 0, 2, 1, 5, 3, 4 })).IsTrue();
+        AssertThat(index.Capacity == bounds.Length - 1).OverrideFailureMessage("The isolated far cell must not inflate the near pool.").IsTrue();
+        var dense = GrassPoolIndexBuilder.Build(Enumerable.Repeat(bounds[0], 6).ToArray());
+        AssertThat(dense.Capacity == dense.Members.Length && dense.Cells.Single().Count == dense.Members.Length).IsTrue();
+        var empty = GrassPoolIndexBuilder.Build([]);
+        AssertThat(empty.Capacity == 1 && empty.Cells.Count == 0 && empty.Members.Length == 0).IsTrue();
+    }
+
+    [TestCase, TestCategory(TestReason.Contract)]
+    public void BothGrassStylesBakeEveryRecordIntoTheirOwnDirectory()
+    {
+        var clumps = Enum.GetValues<GrassStyle>().SelectMany(style => new[]
+        {
+            new GrassClump(new(-4, 0, -4), 0, 1, .1f, 2, .3f, style),
+            new GrassClump(new(4, 1, 4), .5f, 1, .4f, 3, .6f, style)
+        }).ToArray();
+        var mothers = GrassClumps.Mothers(clumps);
+        AssertThat(mothers.Select(m => m.Key).SequenceEqual(new[] { "grass/short", "grass/tall" })).IsTrue();
+        foreach (var mother in mothers)
+        {
+            var index = mother.GrassIndex!;
+            AssertThat(mother.Records.Length == mother.Bounds.Count * InstanceStreamLayout.FloatsPerInstance &&
+                mother.Bounds.Count == 2 && index.Capacity == mother.Bounds.Count &&
+                index.Members.Span.SequenceEqual(new[] { 0, 1 }) && index.Cells.Sum(c => c.Count) == mother.Bounds.Count).IsTrue();
+            for (var i = 0; i < mother.Bounds.Count; i++)
+            {
+                var record = mother.Records.Span.Slice(i * InstanceStreamLayout.FloatsPerInstance, InstanceStreamLayout.FloatsPerInstance);
+                var x = record[3];
+                var input = clumps.Single(c => c.Style == (mother.Key.EndsWith("short", StringComparison.Ordinal) ? GrassStyle.Short : GrassStyle.Tall) && c.Position.X == x);
+                AssertThat(record[7] == input.Position.Y && record[11] == input.Position.Z && record[12] == input.Seed &&
+                    record[13] == input.Tone && record[14] == input.WindPos).IsTrue();
+            }
+        }
+    }
+
     private static BuildContext Context(bool withPlanting)
     {
         var root = RepositoryFixture.Root;
