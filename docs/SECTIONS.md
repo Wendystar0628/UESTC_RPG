@@ -1456,7 +1456,7 @@
   - UI-NAV §3.3 点位目录 · L89 · 218
   - UI-NAV §3.4 到达标题 · L93 · 267
   - UI-NAV §3.5 操作说明与设置 · L97 · 918
-  - UI-NAV §3.6 临时提示 · L105 · 424
+  - UI-NAV §3.6 临时提示 · L105 · 450
   - UI-NAV §3.7 天气签条 · L113 · 506
 - UI-NAV §4 输入 · L123 · 1.5k
   - UI-NAV §4.1 Esc 与单键快捷键 · L125 · 320
@@ -1503,7 +1503,7 @@
 
 ## UI-VISUAL-COMPONENTS · 字体、形状、图标、组件与布局
 
-`docs/ui/UI-VISUAL-COMPONENTS-字体、形状、图标、组件与布局.md` · 6.2k 字 · 界面字体与字号、形状与材质、图标体系，组件外观（含时间环、存档卡、加载界面）与画面布局（含大地图、设置卡）
+`docs/ui/UI-VISUAL-COMPONENTS-字体、形状、图标、组件与布局.md` · 6.4k 字 · 界面字体与字号、形状与材质、图标体系，组件外观（含时间环、存档卡、加载界面）与画面布局（含大地图、设置卡）
 关键词：加载界面、界面字体、思源黑体、字号阶梯、切角、1号脚、发丝线、过孔灯、走线、衍射光边、面板材质、轻度磨砂、图标体系、窗口图标、八角晶片、气象填图符号、通电隐喻、时间环外观、天气签条、速度LED条、存档卡、存储模组、等待灯、画面布局、中央60%、ui_metrics.json、IPaletteProbe
 
 - UI-VISUAL-COMPONENTS §0 结论 · L21 · 493
@@ -1514,14 +1514,14 @@
   - UI-VISUAL-COMPONENTS §3.1 规格 · L52 · 163
   - UI-VISUAL-COMPONENTS §3.2 意象 · L56 · 238
   - UI-VISUAL-COMPONENTS §3.3 窗口图标"八角晶片" · L63 · 102
-- UI-VISUAL-COMPONENTS §4 组件外观 · L67 · 1.9k
+- UI-VISUAL-COMPONENTS §4 组件外观 · L67 · 2.0k
   - UI-VISUAL-COMPONENTS §4.1 六种状态（"通电"隐喻） · L69 · 216
   - UI-VISUAL-COMPONENTS §4.2 控件与容器 · L74 · 320
   - UI-VISUAL-COMPONENTS §4.3 时间环 · L80 · 352
   - UI-VISUAL-COMPONENTS §4.4 天气签条、速度条与到达标题 · L89 · 306
-  - UI-VISUAL-COMPONENTS §4.5 存档卡"存储模组"、等待灯与加载界面 · L95 · 647
-- UI-VISUAL-COMPONENTS §5 画面布局 · L103 · 936
-- UI-VISUAL-COMPONENTS §6 待验证 · L120 · 163
+  - UI-VISUAL-COMPONENTS §4.5 存档卡"存储模组"、等待灯与加载界面 · L95 · 793
+- UI-VISUAL-COMPONENTS §5 画面布局 · L104 · 936
+- UI-VISUAL-COMPONENTS §6 待验证 · L121 · 163
 
 ## UI-VISUAL-MOTION · 界面动效与减少动态效果
 
