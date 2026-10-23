@@ -1277,7 +1277,7 @@
   - ★ SYS-SAVE-FORMAT §0.1 接入要点 · L30 · 264
 - SYS-SAVE-FORMAT §1 格式与版本 · L37 · 1.1k
   - SYS-SAVE-FORMAT §1.1 容器 · L39 · 432
-  - SYS-SAVE-FORMAT §1.2 缩略图 · L49 · 152
+  - SYS-SAVE-FORMAT §1.2 缩略图 · L49 · 166
   - SYS-SAVE-FORMAT §1.3 序列化约定 · L53 · 195
   - SYS-SAVE-FORMAT §1.4 版本 · L59 · 295
 - SYS-SAVE-FORMAT §2 存档损坏 · L66 · 560

@@ -48,7 +48,7 @@ paths: ["game/kernel/save/**"]
 
 ### 1.2 缩略图
 
-WebP 缩略图（尺寸以 `game/kernel/save/format/` 为准）。只在退出、返回标题、新游戏交还控制时抓新图（经游戏内统一拍摄服务抓帧，抓帧时隐藏界面，ENG-GATES-SHOTS §1.2），其余保存沿用上一代；缩放编码放后台；抓不到图不阻断存档。
+WebP 缩略图（尺寸以 `game/kernel/save/format/` 为准）。哪些保存抓新图、哪些沿用上一代以 SYS-SAVE-FLOW §1.1 的时机表为准；抓新图经游戏内统一拍摄服务抓帧，抓帧时隐藏界面（ENG-GATES-SHOTS §1.2）；缩放编码放后台；抓不到图不阻断存档。
 
 ### 1.3 序列化约定
 
