@@ -29,6 +29,7 @@
       <_CampusGdUnitRunnerStamp>$(IntermediateOutputPath)gdunit-test-runner.stamp</_CampusGdUnitRunnerStamp>
       <_CampusCloudNoiseStamp>$(IntermediateOutputPath)cloud-noise.stamp</_CampusCloudNoiseStamp>
       <_CampusCloudNoiseResource>$(MSBuildProjectDirectory)/data/cloud-noise.res</_CampusCloudNoiseResource>
+      <_CampusRDShaderStamp>$(IntermediateOutputPath)rd-shaders.stamp</_CampusRDShaderStamp>
       <_CampusStyleShaderStamp>$(IntermediateOutputPath)style-shaders.stamp</_CampusStyleShaderStamp>
       <_CampusBuildInformationSource>$([MSBuild]::NormalizePath('$(MSBuildProjectDirectory)', '$(IntermediateOutputPath)', 'BuildInfo.g.cs'))</_CampusBuildInformationSource>
       <_CampusBuildInformationStamp>$(IntermediateOutputPath)build-information.stamp</_CampusBuildInformationStamp>
@@ -39,6 +40,10 @@
       <!-- Conservative native globs track source changes; Python alone owns the shader bindings. -->
       <_CampusStyleShaderInput Include="**/*.cs;style/**/*.json;style/**/*.gdshaderinc;../scripts/build/generate-style-shaders.py"
                                Exclude="$(DefaultItemExcludes);@(CampusGeneratedCompile);@(CampusGeneratedFile)" />
+      <!-- Godot imports GLSL but does not record include dependencies. MSBuild owns their incrementality. -->
+      <_CampusRDShaderInput Include="style/**/*.glsl;style/**/*.glslinc;style/**/*.gdshaderinc;@(CampusGeneratedFile);addons/build_import/plugin.gd;../scripts/lib/start-game.ps1;../tools/godot-version.txt" />
+      <FileWrites Include="$(_CampusRDShaderStamp)" />
+      <Clean Include="$(_CampusRDShaderStamp)" />
       <_CampusCloudNoiseInput Include="$(MSBuildAllProjects);$(ProjectAssetsFile);addons/build_import/CloudNoiseBuild.cs;addons/build_import/plugin.gd;addons/build_import/plugin.cfg;systems/sky/CloudNoise.cs;contracts/Determinism/StableHash.cs;contracts/Determinism/IntegerNoise.cs;contracts/Math/ScalarMath.cs;project.godot;../tools/godot-version.txt" />
       <FileWrites Include="$(_CampusCloudNoiseStamp);$(_CampusCloudNoiseResource);$(_CampusCloudNoiseResource).uid" />
       <Clean Include="$(_CampusCloudNoiseStamp);$(_CampusCloudNoiseResource);$(_CampusCloudNoiseResource).uid" />
@@ -89,6 +94,14 @@
     <Exec Command="powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -Command &quot;&amp; { . '$(MSBuildProjectDirectory)/../scripts/lib/common.ps1'; . '$(MSBuildProjectDirectory)/../scripts/lib/start-game.ps1'; Invoke-UESTCCloudNoiseBuild -Root '$(MSBuildProjectDirectory)/..' }&quot;" />
     <Error Condition="!Exists('$(_CampusCloudNoiseResource)')" Text="The cloud noise generator did not produce $(_CampusCloudNoiseResource)." />
     <Touch Files="$(_CampusCloudNoiseStamp)" AlwaysCreate="true" />
+  </Target>
+  <Target Name="ImportRDShaders" AfterTargets="Build" DependsOnTargets="PrepareCampusGeneratedFiles;GenerateStyleShaders"
+          Condition="'$(DesignTimeBuild)' != 'true' And '$(IsTestProject)' != 'true'"
+          Inputs="$(MSBuildAllProjects);@(_CampusRDShaderInput)" Outputs="$(_CampusRDShaderStamp)">
+    <Delete Files="$(_CampusRDShaderStamp)" />
+    <MakeDir Directories="$(IntermediateOutputPath)" />
+    <Exec Command="powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -Command &quot;&amp; { . '$(MSBuildProjectDirectory)/../scripts/lib/common.ps1'; . '$(MSBuildProjectDirectory)/../scripts/lib/start-game.ps1'; Invoke-UESTCResourceImport -Root '$(MSBuildProjectDirectory)/..' -Godot (Get-UESTCGodot) -ReimportShaders }&quot;" />
+    <Touch Files="$(_CampusRDShaderStamp)" AlwaysCreate="true" />
   </Target>
   <Target Name="PrepareCampusBuildInformation" DependsOnTargets="PrepareCampusGeneratedFiles;ResolveReferences">
     <ItemGroup>

@@ -31,6 +31,30 @@ function Invoke-UESTCCloudNoiseBuild {
     Assert-UESTCCleanGodotLog $result
 }
 
+# 真实重导与常规扫描共用原生插件；只有 MSBuild 判定包含依赖失鲜时才传强制重导。
+function Invoke-UESTCResourceImport {
+    param([Parameter(Mandatory)][string]$Root, [Parameter(Mandatory)][string]$Godot,
+        [switch]$ReimportShaders, [Collections.IDictionary]$Environment = $null)
+    $out = Join-Path $Root 'output\start_game'
+    $null = [IO.Directory]::CreateDirectory($out)
+    try {
+        $arguments = @('--headless', '--editor', '--path', (Join-Path $Root 'game'), '--', '--build-import')
+        if ($ReimportShaders) { $arguments += '--reimport-rd-shaders' }
+        $import = Invoke-UESTCProcess $Godot $arguments $Root (Join-Path $out 'import.log') -TimeoutSeconds 600 -Environment $Environment
+        Assert-UESTCCleanGodotLog $import
+    } catch {
+        $importError = $_
+        try {
+            # 失效默认启动会检查的原生缓存，让下次启动重走已有准备链。
+            $cache = Join-Path $Root 'game\.godot\editor\filesystem_cache10'
+            if ([IO.File]::Exists($cache)) { [IO.File]::Delete($cache) }
+        } catch {
+            throw [AggregateException]::new('资源导入与缓存失效均失败。', [Exception[]]@($importError.Exception, $_.Exception))
+        }
+        throw
+    }
+}
+
 # 默认启动只判正式产物存在；不读取内容、时间戳或工作区输入。
 function Test-UESTCLaunchOutputs {
     param([Parameter(Mandatory)][string]$Root)
@@ -61,20 +85,7 @@ function Update-UESTCGameBuild {
     Invoke-UESTCProcess 'dotnet' @('build', (Join-Path $Root $target), '-c', 'Debug', '-warnaserror', '-v', 'q') $Root (Join-Path $out 'build.log') -Environment $Environment | Out-Null
     Write-Host '准备资源，原生增量导入中……'
     if ($Timing) { $Timing['importInvoked'] = $true }
-    try {
-        $import = Invoke-UESTCProcess $Godot @('--headless', '--editor', '--path', (Join-Path $Root 'game'), '--', '--build-import') $Root (Join-Path $out 'import.log') -TimeoutSeconds 600 -Environment $Environment
-        Assert-UESTCCleanGodotLog $import
-    } catch {
-        $importError = $_
-        try {
-            # 失效默认启动会检查的原生缓存，让下次启动重走已有准备链。
-            $cache = Join-Path $Root 'game\.godot\editor\filesystem_cache10'
-            if ([IO.File]::Exists($cache)) { [IO.File]::Delete($cache) }
-        } catch {
-            throw [AggregateException]::new('资源导入与缓存失效均失败。', [Exception[]]@($importError.Exception, $_.Exception))
-        }
-        throw
-    }
+    Invoke-UESTCResourceImport -Root $Root -Godot $Godot -Environment $Environment
     if ($Timing) { $Timing['preparationCompletedTimestamp'] = [Diagnostics.Stopwatch]::GetTimestamp() }
 }
 

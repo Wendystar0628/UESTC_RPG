@@ -30,6 +30,9 @@ public partial class CloudNoiseBuild : RefCounted
         return ResourceSaver.Save(image, CloudNoise.ResourcePath);
     }
 
+    // The GDScript owner releases this managed RefCounted before the editor shuts down.
+    public void Release() => Dispose();
+
     private static Result Generate(uint seed)
     {
         var r = new float[Size * Size];
