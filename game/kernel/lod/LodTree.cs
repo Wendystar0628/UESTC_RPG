@@ -3,12 +3,16 @@ using Campus.Contracts;
 
 namespace Campus.Kernel.Lod;
 
-/// <summary>One whole-map L4 root, then the fixed 512/256/128/64 metre quadtree.</summary>
+/// <summary>
+/// One whole-map L4 root, then the fixed 512/256/128/64 metre quadtree.
+/// Native mesh LOD and visibility ranges cannot enforce the all-children-ready semantic tile frontier.
+/// </summary>
 public sealed class LodTree
 {
     private readonly Dictionary<StreamTile, StreamTile[]> _children = [];
     private readonly Dictionary<StreamTile, Box3> _bounds = [];
     private readonly HashSet<StreamTile> _replacements = [];
+    private readonly HashSet<StreamTile> _previousRefined = [];
     private readonly StreamSettings _settings;
     public LodTree(Box3 mapBounds, StreamSettings settings)
     {
@@ -52,14 +56,17 @@ public sealed class LodTree
         _children.Add(tile, children.ToArray());
     }
 
-    public void Select(Vector3 camera, float speed, float height, float fovDegrees, LodLevel minimum,
-        HashSet<StreamTile> required, HashSet<StreamTile> refined)
+    /// <summary>Distances use the fixed 1080-line reference; each demand supplies its own refinement history.</summary>
+    public void Select(Vector3 camera, float speed, float fovDegrees, LodLevel minimum,
+        HashSet<StreamTile> previousRefined, HashSet<StreamTile> required, HashSet<StreamTile> refined)
     {
+        // Snapshot before clearing: callers may reuse their output as the next selection's history.
+        _previousRefined.Clear();
+        foreach (var tile in previousRefined) _previousRefined.Add(tile);
         required.Clear(); refined.Clear(); required.Add(StreamTile.Root);
         var fov = Math.Clamp(fovDegrees, 1, 179) * MathF.PI / 180;
         var reference = _settings.ReferenceFov * MathF.PI / 180;
-        var scale = Math.Max(1, height) / _settings.ReferenceHeight *
-            MathF.Tan(reference * .5f) / MathF.Tan(fov * .5f) *
+        var scale = MathF.Tan(reference * .5f) / MathF.Tan(fov * .5f) *
             StreamSettings.DefaultBaseErrorPixels / (_settings.BaseErrorPixels * (1 + Math.Max(0, speed) / 30));
         Visit(StreamTile.Root, camera, minimum, scale, required, refined);
     }
@@ -68,7 +75,10 @@ public sealed class LodTree
     {
         if (tile.Level <= minimum || tile.Level == LodLevel.L0) return;
         var threshold = _settings.Distances[(int)tile.Level - 1] * scale;
-        if (MathF.Sqrt(_bounds[tile].DistanceSquared(camera)) >= threshold) return;
+        var distance = MathF.Sqrt(_bounds[tile].DistanceSquared(camera));
+        if (_previousRefined.Contains(tile)
+            ? distance > threshold * StreamSettings.MergeDistanceScale
+            : distance >= threshold) return;
         refined.Add(tile);
         foreach (var child in Children(tile))
         {

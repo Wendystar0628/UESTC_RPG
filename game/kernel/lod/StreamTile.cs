@@ -36,8 +36,8 @@ public sealed record StreamSettings
     public double MountMilliseconds { get; init; } = KernelBudgets.StreamMountMilliseconds;
     public int MaximumPreparations { get; init; } = 2;
     public const float DefaultBaseErrorPixels = 1.5f;
+    public const float MergeDistanceScale = 1.1f;
     public float BaseErrorPixels { get; init; } = DefaultBaseErrorPixels;
-    public float ReferenceHeight { get; init; } = 1080;
     public float ReferenceFov { get; init; } = 60;
     public float[] Distances { get; init; } = [40, 150, 400, 800];
     public float[] PrefetchSeconds { get; init; } = [.5f, 1.5f, 3];

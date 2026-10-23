@@ -242,20 +242,36 @@ public sealed class StreamSchedulingTests
         if (queue.TryDequeue(out _)) throw new InvalidOperationException("A cancelled unissued request survived replan.");
     }
     [TestCase]
-    [TestCategory(TestReason.Contract)]
-    public void ParentStaysDrawnUntilComplementaryFadeFinishesAcrossClockWrap()
+    [TestCategory(TestReason.Regression)]
+    public void RetargetWaitsForComplementaryFadeAcrossClockWrap()
     {
-        var visibility = new TileVisibility(.25f); var root = StreamTile.Root;
+        var duration = new StreamSettings().FadeSeconds; var visibility = new TileVisibility(duration); var root = StreamTile.Root;
+        var start = WorldTime.AnimLoopSeconds - duration * 2; var changing = WorldTime.AnimLoopSeconds - duration / 2;
+        var pending = duration / 4; var next = duration; var done = duration * 2;
         var child = new StreamTile(new(0, 0), LodLevel.L3);
-        visibility.Apply(new HashSet<StreamTile> { root }, 479.5f, true, (_, _, _) => { });
-        if (visibility.IsSettled(479.5f)) throw new InvalidOperationException("Newly entering geometry was certified before its shader fade.");
-        visibility.Apply(new HashSet<StreamTile> { root }, 479.8f, true, (_, _, _) => { });
-        if (!visibility.IsSettled(479.8f)) throw new InvalidOperationException("Fully presented geometry was not ready.");
-        visibility.Apply(new HashSet<StreamTile> { child }, 479.9f, true, (_, _, _) => { });
-        visibility.Apply(new HashSet<StreamTile> { child }, .1f, true, (_, _, _) => { });
-        if (!visibility.Drawn.Contains(root) || visibility.IsSettled(.1f)) throw new InvalidOperationException("A partially presented replacement was certified ready.");
-        visibility.Apply(new HashSet<StreamTile> { child }, .2f, true, (_, _, _) => { });
-        if (visibility.Drawn.Contains(root) || !visibility.Drawn.Contains(child) || !visibility.IsSettled(.2f)) throw new InvalidOperationException("Fade completion left stale parent coverage or unreadiness.");
+        var grandchild = new StreamTile(new(0, 0), LodLevel.L2);
+        visibility.Apply(new HashSet<StreamTile> { root }, start, true, (_, _, _) => { });
+        if (visibility.IsSettled(start)) throw new InvalidOperationException("Newly entering geometry was certified before its shader fade.");
+        visibility.Apply(new HashSet<StreamTile> { root }, start + duration, true, (_, _, _) => { });
+        if (!visibility.IsSettled(start + duration)) throw new InvalidOperationException("Fully presented geometry was not ready.");
+        visibility.Apply(new HashSet<StreamTile> { child }, changing, true, (_, _, _) => { });
+        if (!visibility.Drawn.SetEquals(new HashSet<StreamTile> { root, child }))
+            throw new InvalidOperationException("The regression fixture did not start a parent/child blend.");
+        visibility.Apply(new HashSet<StreamTile> { grandchild }, pending, true, (_, _, _) => { });
+        if (!visibility.Drawn.Contains(root) || visibility.IsSettled(pending)) throw new InvalidOperationException("A partially presented replacement was certified ready.");
+        if (visibility.Drawn.Contains(grandchild)) throw new InvalidOperationException("Retargeting interrupted an unfinished complementary pair.");
+        visibility.Apply(new HashSet<StreamTile> { grandchild }, next, true, (_, _, _) => { });
+        if (visibility.Drawn.Contains(root) || !visibility.Drawn.Contains(child) || !visibility.Drawn.Contains(grandchild) || visibility.IsSettled(next))
+            throw new InvalidOperationException("The latest target did not begin its own complete fade.");
+        visibility.Apply(new HashSet<StreamTile> { grandchild }, done, true, (_, _, _) => { });
+        if (!visibility.Drawn.SetEquals(new HashSet<StreamTile> { grandchild }) || !visibility.IsSettled(done))
+            throw new InvalidOperationException("Fade completion left stale coverage or unreadiness.");
+        var many = Enumerable.Range(0, TestSamples.PerProperty).Select(index => new StreamTile(new(index, 0), LodLevel.L0)).ToHashSet();
+        visibility.Apply(many, duration * 4, true, (_, _, _) => { });
+        if (!visibility.Drawn.Contains(grandchild) || visibility.IsSettled(duration * 4))
+            throw new InvalidOperationException("A large target change bypassed the complementary fade.");
+        visibility.Apply(many, duration * 5, true, (_, _, _) => { });
+        if (!visibility.Drawn.SetEquals(many) || !visibility.IsSettled(duration * 5)) throw new InvalidOperationException("A large fade did not settle.");
     }
     private sealed class InteriorRequests : IBakeService, IBakeHandle
     {

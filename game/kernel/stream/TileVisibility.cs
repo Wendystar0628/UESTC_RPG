@@ -19,7 +19,7 @@ public sealed class TileVisibility(float fadeSeconds)
             if (Elapsed(clock, started) < fadeSeconds) return false;
         return true;
     }
-    public void Apply(IReadOnlySet<StreamTile> desired, float clock, bool fadesReady,
+    public void Apply(HashSet<StreamTile> desired, float clock, bool fadesReady,
         Action<StreamTile, bool, float> change)
     {
         // Finish old fades before beginning new ones. The shader uses the same wrapped clock.
@@ -36,17 +36,24 @@ public sealed class TileVisibility(float fadeSeconds)
         foreach (var tile in _scratch) _entering.Remove(tile);
         if (_target.SetEquals(desired)) return;
 
-        var count = _target.Count(t => !desired.Contains(t)) + desired.Count(t => !_target.Contains(t));
-        // Retargeting an unfinished blend directly prevents duplicate coverage at three levels.
-        var fade = fadesReady && count <= 50 && _retiring.Count == 0 && clock > .0001f;
-        _scratch.Clear(); _scratch.AddRange(_drawn.Where(t => !desired.Contains(t)).Order());
+        // Keep the current complementary pair intact; the next frame supplies the latest target.
+        if (_retiring.Count != 0 || _entering.Count != 0) return;
+        // Zero is the shader's settled sentinel, so a fade cannot begin at the exact clock origin.
+        var fade = fadesReady && clock > 0;
+        _scratch.Clear();
+        foreach (var tile in _drawn)
+            if (!desired.Contains(tile)) _scratch.Add(tile);
+        _scratch.Sort();
         foreach (var tile in _scratch)
         {
             _entering.Remove(tile);
             if (fade) { _retiring[tile] = clock; change(tile, true, -clock); }
             else { _retiring.Remove(tile); _drawn.Remove(tile); change(tile, false, 0); }
         }
-        foreach (var tile in desired.Order())
+        _scratch.Clear();
+        foreach (var tile in desired) _scratch.Add(tile);
+        _scratch.Sort();
+        foreach (var tile in _scratch)
         {
             var entering = !_target.Contains(tile);
             _retiring.Remove(tile); _drawn.Add(tile);
@@ -56,7 +63,8 @@ public sealed class TileVisibility(float fadeSeconds)
                 change(tile, true, fade ? clock : 0);
             }
         }
-        _target.Clear(); _target.UnionWith(desired);
+        _target.Clear();
+        foreach (var tile in desired) _target.Add(tile);
     }
     public void Clear()
     {

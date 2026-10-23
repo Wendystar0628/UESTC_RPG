@@ -66,8 +66,8 @@ public sealed class StreamLifecycleTests
         using var fixture = new StreamFixture(geometry: true, elevated: true);
         var tree = new LodTree(fixture.Context.Descriptor.Bounds, new());
         var required = new HashSet<StreamTile>(); var refined = new HashSet<StreamTile>();
-        tree.Select(fixture.Camera.Pose.Position, 0, fixture.Height, fixture.Camera.Pose.FovDeg!.Value,
-            LodLevel.L0, required, refined);
+        tree.Select(fixture.Camera.Pose.Position, 0, fixture.Camera.Pose.FovDeg!.Value,
+            LodLevel.L0, refined, required, refined);
         var frontier = required.Where(tile => !refined.Contains(tile)).ToArray();
         Check(frontier.Select(tile => tile.Level).Distinct().Count() > 1);
         var missing = frontier.OrderBy(tile => tile.Level).First();
@@ -193,7 +193,6 @@ internal static class StreamLifecycleTestSupport
         public ControlledGeometry Geometry { get; } = new();
         public FixtureCollisionParticipant CollisionParticipant { get; } = new();
         public StreamMountQueue Mount { get; } = new(() => 0);
-        public float Height => Director.GetViewport().GetVisibleRect().Size.Y * Director.GetViewport().Scaling3DScale;
         public StreamFixture(bool geometry = false, bool elevated = false, Task<PreparedBakeTiles>? catalog = null, bool staticTitle = false)
         {
             var bounds = elevated ? new Box3(new(-512, 0, -512), new(512, 10, 512)) : new Box3(N.Vector3.Zero, new(128, 10, 128));

@@ -2,19 +2,21 @@ using Campus.Contracts;
 using Campus.Contracts.Maps;
 using Campus.Kernel.Frame;
 using Campus.Kernel.Lod;
-using Godot;
 using N = System.Numerics;
 
 namespace Campus.Kernel.Stream;
 
-internal sealed class StreamSelection(StreamDirector host)
+internal sealed class StreamSelection
 {
-    private readonly StreamDirector _host = host;
+    private readonly StreamDirector _host;
     private readonly StreamSettings _settings = new();
     private readonly LodSpeedPolicy _speed = new();
     private readonly HashSet<StreamTile> _required = [], _refined = [], _destinationRequired = [], _destinationRefined = [], _visible = [];
-    private readonly HashSet<StreamTile> _viewRequired = [], _displayRefined = [], _predictionRequired = [], _predictionRefined = [];
-    private TileVisibility _visibility = new(.25f);
+    private readonly HashSet<StreamTile> _viewRequired = [], _displayRefined = [], _predictionRequired = [];
+    private readonly HashSet<StreamTile>[] _predictionRefined;
+    private readonly Func<StreamTile, bool> _tileReady;
+    private readonly Action<StreamTile, bool, float> _changeVisibility;
+    private TileVisibility _visibility;
     private LodTree? _tree;
     private TerrainPlan? _terrainPlan;
     private readonly List<TerrainPlan> _retiredPlans = [];
@@ -32,6 +34,14 @@ internal sealed class StreamSelection(StreamDirector host)
     private long _destinationSequence;
     private bool _haveCamera, _selectionApplied;
     private N.Vector3 _lastCamera, _velocity;
+    internal StreamSelection(StreamDirector host)
+    {
+        _host = host;
+        _predictionRefined = new HashSet<StreamTile>[_settings.PrefetchSeconds.Length];
+        for (var i = 0; i < _predictionRefined.Length; i++) _predictionRefined[i] = [];
+        _tileReady = TileReady; _changeVisibility = ChangeVisibility;
+        _visibility = new(_settings.FadeSeconds);
+    }
     internal StreamSettings Settings => _settings;
     internal LodTree? Tree => _tree;
     internal IReadOnlySet<StreamTile> Required => _required;
@@ -65,8 +75,6 @@ internal sealed class StreamSelection(StreamDirector host)
         if (!live && _destination is { } mounting) pose = mounting;
         if (!PreparePlanningTerrain(pose, live)) return;
         var tree = _tree ?? throw new InvalidOperationException("A map tree is required before planning.");
-        var viewport = _host.GetViewport();
-        var height = viewport.GetVisibleRect().Size.Y * viewport.Scaling3DScale;
         if (!_destinationConsumed && _destination is { } accepted && _interiorDestinationSequence != _destinationSequence)
         {
             var space = _destinationState!.Space;
@@ -76,10 +84,10 @@ internal sealed class StreamSelection(StreamDirector host)
             _host.Interiors!.Prefetch(space, accepted.Position);
             _interiorDestinationSequence = _destinationSequence;
         }
-        SelectEye(tree, ref pose, live, exempt, height);
-        SelectPrediction(tree, pose, live, exempt, height);
-        SelectArrival(tree, height);
-        _host.Pins.Select(height);
+        SelectEye(tree, ref pose, live, exempt);
+        SelectPrediction(tree, pose, live, exempt);
+        SelectArrival(tree);
+        _host.Pins.Select();
         _host.Interiors!.RefreshPriorities();
         var requests = new List<StreamRequest>();
         _host.Residency.QueueGeometryRequests(requests, pose);
@@ -161,7 +169,7 @@ internal sealed class StreamSelection(StreamDirector host)
         // An active arrival must be presentable even when its required detail differs from the current eye.
         // Hidden pinned resources and predictions never refine the displayed frontier.
         if (!_destinationConsumed && _destinationPlanned) _displayRefined.UnionWith(_destinationRefined);
-        _tree!.ResolveVisible(_displayRefined, _host.Residency.IsReady, _visible);
+        _tree!.ResolveVisible(_displayRefined, _tileReady, _visible);
     }
 
     private bool SelectionReady(IReadOnlySet<StreamTile> required, IReadOnlySet<StreamTile> refined)
@@ -190,14 +198,14 @@ internal sealed class StreamSelection(StreamDirector host)
         _ => throw new ArgumentOutOfRangeException(nameof(mode))
     };
 
-    private void SelectEye(LodTree tree, ref Pose pose, bool live, bool exempt, float height)
+    private void SelectEye(LodTree tree, ref Pose pose, bool live, bool exempt)
     {
-        _required.Clear(); _refined.Clear(); _required.Add(StreamTile.Root);
+        _required.Clear(); _required.Add(StreamTile.Root);
         _host.Participants.ResetParticipantDemand();
         if (live)
         {
             _host.Interiors!.Select(_host.Context!.World.Spatial.MediumAt(pose.Position), pose.Position);
-            tree.Select(pose.Position, exempt ? 0 : _host.Camera.Speed, height, pose.FovDeg ?? 60, _speed.Minimum, _required, _refined);
+            tree.Select(pose.Position, exempt ? 0 : _host.Camera.Speed, pose.FovDeg ?? 60, _speed.Minimum, _refined, _required, _refined);
             _host.Participants.SelectParticipants(pose, _required, destination: false, live: true, walkingCenter: _host.Observer.Mode switch
             {
                 ViewMode.Walk => _host.Observer.Feet,
@@ -209,18 +217,20 @@ internal sealed class StreamSelection(StreamDirector host)
         {
             pose = mountingDestination;
             _host.Interiors!.Select(_host.Context!.World.Spatial.MediumAt(pose.Position), pose.Position);
-            tree.Select(pose.Position, 0, height, pose.FovDeg ?? 60, LodLevel.L0, _required, _refined);
+            tree.Select(pose.Position, 0, pose.FovDeg ?? 60, LodLevel.L0, _refined, _required, _refined);
             _host.Participants.SelectParticipants(pose, _required, destination: false, live: false,
                 walkingDestination: _destinationState?.CollisionFeet ?? WalkingDestination(mountingDestination, _destinationMode));
         }
+        else _refined.Clear();
     }
-    private void SelectPrediction(LodTree tree, Pose pose, bool live, bool exempt, float height)
+    private void SelectPrediction(LodTree tree, Pose pose, bool live, bool exempt)
     {
         // Prediction is scheduling demand, not geometry that must be presented at the current eye.
         _viewRequired.Clear(); _viewRequired.UnionWith(_required);
         if (live && !exempt)
-            foreach (var seconds in _settings.PrefetchSeconds)
+            for (var i = 0; i < _settings.PrefetchSeconds.Length; i++)
             {
+                var seconds = _settings.PrefetchSeconds[i];
                 var map = _host.Context!.Descriptor;
                 var predicted = pose.Position + _velocity * seconds;
                 predicted.Y = Math.Clamp(predicted.Y, map.Roam.FloorY, map.Roam.CeilY);
@@ -230,16 +240,19 @@ internal sealed class StreamSelection(StreamDirector host)
                     var limit = map.Center + N.Vector2.Normalize(offset) * map.Roam.MaxRadius;
                     predicted.X = limit.X; predicted.Z = limit.Y;
                 }
-                tree.Select(predicted, _host.Camera.Speed, height, pose.FovDeg ?? 60, _speed.Minimum, _predictionRequired, _predictionRefined);
+                var history = _predictionRefined[i];
+                tree.Select(predicted, _host.Camera.Speed, pose.FovDeg ?? 60, _speed.Minimum, history, _predictionRequired, history);
                 _host.Participants.SelectParticipants(pose with { Position = predicted }, _predictionRequired, destination: false, live: false);
                 _required.UnionWith(_predictionRequired);
             }
+        else
+            foreach (var history in _predictionRefined) history.Clear();
     }
-    private void SelectArrival(LodTree tree, float height)
+    private void SelectArrival(LodTree tree)
     {
         if (!_destinationConsumed && _destination is { } destination)
         {
-            tree.Select(destination.Position, 0, height, destination.FovDeg ?? 60, LodLevel.L0, _destinationRequired, _destinationRefined);
+            tree.Select(destination.Position, 0, destination.FovDeg ?? 60, LodLevel.L0, _destinationRefined, _destinationRequired, _destinationRefined);
             _host.Participants.SelectParticipants(destination, _destinationRequired, destination: true, live: false,
                 walkingDestination: _destinationState?.CollisionFeet ?? WalkingDestination(destination, _destinationMode));
             _destinationPlanned = true;
@@ -309,6 +322,7 @@ internal sealed class StreamSelection(StreamDirector host)
 
     internal void Load(IMapContext context)
     {
+        ClearDemand();
         _speed.Reset(); _selectionApplied = false; _destinationConsumed = false;
         _haveCamera = false; _velocity = N.Vector3.Zero;
         _tree = new(context.Descriptor.Bounds, _settings);
@@ -325,6 +339,8 @@ internal sealed class StreamSelection(StreamDirector host)
     internal void ClearDemand()
     {
         _required.Clear(); _viewRequired.Clear(); _refined.Clear();
+        _predictionRequired.Clear();
+        foreach (var history in _predictionRefined) history.Clear();
         _destinationRequired.Clear(); _destinationRefined.Clear(); _displayRefined.Clear(); _visible.Clear(); _visibility.Clear();
     }
     internal void ResetWorld()
@@ -339,11 +355,13 @@ internal sealed class StreamSelection(StreamDirector host)
     {
         ResolveVisible();
         // Capture keeps the existing no-fade path and hides retired detail immediately.
-        _visibility.Apply(_visible, FrameClock.FadeSeconds, !_host.CaptureMode, (tile, visible, fade) =>
-        {
-            foreach (var bundle in _host.Residency.Groups[tile].Bundles) bundle.SetVisible(visible, fade);
-        });
+        _visibility.Apply(_visible, FrameClock.FadeSeconds, !_host.CaptureMode, _changeVisibility);
         _selectionApplied = true;
+    }
+    private bool TileReady(StreamTile tile) => _host.Residency.IsReady(tile);
+    private void ChangeVisibility(StreamTile tile, bool visible, float fade)
+    {
+        foreach (var bundle in _host.Residency.Groups[tile].Bundles) bundle.SetVisible(visible, fade);
     }
     private sealed record TerrainPlan(IMapContext Context, IWorldModel World, long Generation, long Sequence,
         Pose Pose, bool Live, Task Preparation, CancellationTokenSource Cancellation);

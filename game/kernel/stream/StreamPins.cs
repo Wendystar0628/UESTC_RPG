@@ -99,7 +99,7 @@ internal sealed class StreamPins(StreamDirector host)
         }
     }
 
-    internal void Select(float height)
+    internal void Select()
     {
         _required.Clear();
         _host.Interiors!.ResetPins();
@@ -119,8 +119,8 @@ internal sealed class StreamPins(StreamDirector host)
                         target.Space = new(building, checked((short)medium.Storey));
                     target.Classified = true;
                 }
-                _host.Selection.Tree!.Select(destination.Pose.Position, 0, height, destination.Pose.FovDeg ?? 60, LodLevel.L0,
-                    target.Required, target.Refined);
+                _host.Selection.Tree!.Select(destination.Pose.Position, 0, destination.Pose.FovDeg ?? 60, LodLevel.L0,
+                    target.Refined, target.Required, target.Refined);
                 _required.UnionWith(target.Required);
                 target.Participants.Clear(); target.Interiors.Clear();
                 _host.Participants.SelectParticipants(destination.Pose, target.Required, destination: false, live: false,
