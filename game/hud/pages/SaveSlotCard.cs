@@ -6,32 +6,36 @@ using Godot;
 
 namespace Campus.Hud.Pages;
 
-/// <summary>存档页的一张槽卡：缩略图、槽摘要、接点条与命中层；选中态只由存档页切换。</summary>
+/// <summary>存档页的一张槽卡：表头状态标签、缩略图、槽摘要、接点条与命中层（UI-VISUAL-COMPONENTS）；选中态与写入中只由存档页切换。</summary>
 internal sealed class SaveSlotCard
 {
     private readonly UiKit _kit;
     private readonly PanelContainer _panel;
     private readonly List<Panel> _contacts;
     private readonly bool _empty;
+    private readonly Label _writing;
 
     public TechButton Hit { get; }
 
-    private SaveSlotCard(UiKit kit, PanelContainer panel, List<Panel> contacts, bool empty, TechButton hit)
+    private SaveSlotCard(UiKit kit, PanelContainer panel, List<Panel> contacts, bool empty, Label writing, TechButton hit)
     {
         _kit = kit;
         _panel = panel;
         _contacts = contacts;
         _empty = empty;
+        _writing = writing;
         Hit = hit;
     }
 
     /// <summary>槽号的两位显示形式，卡头、提示与确认框共用。</summary>
     public static string Number(SlotId slot) => slot.Value.TrimStart('s').PadLeft(2, '0');
 
-    public static SaveSlotCard Build(UiKit kit, Control parent, SlotInfo slot, bool latest)
+    /// <param name="latest">最近保存的可读存档位（继续进入的那个）。</param>
+    /// <param name="current">本局正在自动保存的存档位，只在游戏内打开时标出。</param>
+    public static SaveSlotCard Build(UiKit kit, Control parent, SlotInfo slot, bool latest, bool current, ISaveService saves, IMapService maps)
     {
-        var empty = slot.Health == SlotHealth.Empty || slot.Meta is null;
-        var corrupt = slot.Health == SlotHealth.Corrupt;
+        // 空只看健康状态：坏档、新版本档读不出元信息时也不是空槽（SYS-SAVE-FORMAT）。
+        var empty = slot.Health == SlotHealth.Empty;
         var panel = kit.Panel(parent, CardFx(kit, empty, selected: false));
         var margin = kit.Layout.Margin(panel);
         var content = kit.Layout.Stack(margin, groups: false);
@@ -43,10 +47,41 @@ internal sealed class SaveSlotCard
             var diameter = kit.Tokens.F("metrics", "via", "core");
             lamp.CustomMinimumSize = new Vector2(diameter, diameter);
             lamp.SizeFlagsVertical = Control.SizeFlags.ShrinkCenter;
-            kit.Text(header, UiKit.T("saves.latest"), "small", "text.accent", wrap: false).SizeFlagsHorizontal = Control.SizeFlags.ShrinkEnd;
+            Tag(kit, header, "saves.latest", "text.accent");
         }
+        if (current) Tag(kit, header, "saves.current", "text.1");
+        var writing = Tag(kit, header, "saves.writing", "text.2");
+        writing.Visible = false;
+        // 只读用中性色，不借危险色（UI-VISUAL-COMPONENTS）。
+        if (slot.Health == SlotHealth.Newer) Tag(kit, header, "saves.read_only", "text.2");
+        Summary(kit, content, margin, slot, saves, maps);
+        var pins = kit.Layout.Row(content);
+        var contacts = new List<Panel>();
+        for (var i = 0; i < 16; i++)
+        {
+            var pin = kit.Box(pins, new UiFx(Line: "line.hair"));
+            pin.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
+            pin.CustomMinimumSize = new Vector2(0, kit.Layout.Metric("keycap") / 2f);
+            contacts.Add(pin);
+        }
+        // PanelContainer 把内容和命中层叠放；空文字按钮保留原生焦点、悬停和鼠标命中。
+        var hit = kit.Button(panel, ButtonStyle.Ghost, "");
+        hit.SizeFlagsHorizontal = hit.SizeFlagsVertical = Control.SizeFlags.ExpandFill;
+        hit.TooltipText = $"SLOT {Number(slot.Slot)}";
+        return new SaveSlotCard(kit, panel, contacts, empty, writing, hit);
+    }
+
+    /// <summary>
+    /// 卡身：左 16:9 缩略图、右槽摘要；存档卡与危险确认的缩略卡共用。
+    /// <paramref name="margin"/> 是外层留边容器，首次排版按它的左右留边估缩略图高度。
+    /// </summary>
+    public static void Summary(UiKit kit, Control parent, MarginContainer margin, SlotInfo slot, ISaveService saves, IMapService maps)
+    {
+        var empty = slot.Health == SlotHealth.Empty;
+        var corrupt = slot.Health == SlotHealth.Corrupt;
+        var newer = slot.Health == SlotHealth.Newer;
         // 所有槽共用同一内容区；空槽也保留缩略图占位和槽状态，不缩成只有接点的细条。
-        var body = kit.Layout.Row(content);
+        var body = kit.Layout.Row(parent);
         var aspect = kit.Layout.Add(body, new AspectRatioContainer
         {
             Ratio = 16f / 9f,
@@ -65,37 +100,25 @@ internal sealed class SaveSlotCard
         }
         aspect.Resized += FitPreviewHeight;
         var thumbnail = kit.Panel(aspect, new UiFx(Fill: corrupt ? "danger.fill" : "surface.sunk", Line: "line.hair"));
-        if (!empty && !corrupt) TryThumbnail(thumbnail, slot.Slot);
+        if (slot.Health == SlotHealth.Ok) TryThumbnail(thumbnail, saves.Thumbnail(slot.Slot));
         var data = kit.Layout.Stack(body, groups: false);
         if (empty)
         {
             data.Alignment = BoxContainer.AlignmentMode.Center;
             kit.Text(data, UiKit.T("saves.empty"), "body", "text.2", align: HorizontalAlignment.Center);
+            return;
         }
-        else
-        {
-            var meta = slot.Meta!;
-            var place = corrupt ? UiKit.T("saves.corrupt") : SaveMetaText.Place(meta, Campus.Kernel.Registry.Kernel.Get<IMapService>());
-            kit.Text(data, place, "h3", corrupt ? "danger.text" : "text.1");
-            kit.Text(data, SaveMetaText.Moment(meta), "small", "text.2");
-            kit.Text(data, SaveMetaText.PlayTime(meta.PlaySeconds), "data", "text.2");
-            kit.Text(data, SaveMetaText.SavedAt(meta.SavedAtUnix), "data", "text.2");
-        }
-        var pins = kit.Layout.Row(content);
-        var contacts = new List<Panel>();
-        for (var i = 0; i < 16; i++)
-        {
-            var pin = kit.Box(pins, new UiFx(Line: "line.hair"));
-            pin.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
-            pin.CustomMinimumSize = new Vector2(0, kit.Layout.Metric("keycap") / 2f);
-            contacts.Add(pin);
-        }
-        // PanelContainer 把内容和命中层叠放；空文字按钮保留原生焦点、悬停和鼠标命中。
-        var hit = kit.Button(panel, ButtonStyle.Ghost, "");
-        hit.SizeFlagsHorizontal = hit.SizeFlagsVertical = Control.SizeFlags.ExpandFill;
-        hit.TooltipText = $"SLOT {Number(slot.Slot)}";
-        return new SaveSlotCard(kit, panel, contacts, empty, hit);
+        var meta = slot.Meta;
+        var place = corrupt ? UiKit.T("saves.corrupt") : newer ? UiKit.T("saves.newer") : SaveMetaText.Place(meta!, maps);
+        kit.Text(data, place, "h3", corrupt ? "danger.text" : newer ? "text.2" : "text.1");
+        if (meta is null) return;
+        kit.Text(data, SaveMetaText.Moment(meta), "small", "text.2");
+        kit.Text(data, SaveMetaText.PlayTime(meta.PlaySeconds), "data", "text.2");
+        kit.Text(data, SaveMetaText.SavedAt(meta.SavedAtUnix), "data", "text.2");
     }
+
+    /// <summary>后台写盘进行中的静态标签；写入动效不在这里做。</summary>
+    public void SetWriting(bool writing) => _writing.Visible = writing;
 
     public void SetSelected(bool selected)
     {
@@ -109,9 +132,15 @@ internal sealed class SaveSlotCard
         Line: selected ? "primary.line" : empty ? "line.control" : "line.panel",
         Chamfer: kit.Tokens.Chamfer("card"), Flags: (empty ? UiFlags.Dashed : 0) | (selected ? UiFlags.SelectedIris : 0));
 
-    private static void TryThumbnail(Control parent, SlotId slot)
+    private static Label Tag(UiKit kit, Control header, string key, string role)
     {
-        var bytes = Campus.Kernel.Registry.Kernel.Get<ISaveService>().Thumbnail(slot);
+        var tag = kit.Text(header, UiKit.T(key), "small", role, wrap: false);
+        tag.SizeFlagsHorizontal = Control.SizeFlags.ShrinkEnd;
+        return tag;
+    }
+
+    private static void TryThumbnail(Control parent, byte[]? bytes)
+    {
         if (bytes is null || bytes.Length == 0) return;
         var image = new Image();
         if (image.LoadWebpFromBuffer(bytes) != Error.Ok) return;

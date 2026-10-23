@@ -1,5 +1,6 @@
 using Campus.Contracts;
 using Campus.Contracts.AppFlow;
+using Campus.Contracts.Maps;
 using Campus.Contracts.Save;
 using Campus.Hud.Style;
 using Campus.Hud.Widgets;
@@ -15,6 +16,8 @@ public partial class SavePage : Control
 {
     private readonly List<SaveSlotCard> _cards = [];
     private UiKit _kit = null!;
+    private ISaveService _saves = null!;
+    private IMapService _maps = null!;
     private SaveConfirm _confirm = null!;
     private TechButton _primary = null!;
     private TechButton? _overwrite;
@@ -26,18 +29,36 @@ public partial class SavePage : Control
     private bool _reported;
     private SaveIntent _intent;
     private bool _watching;
+    private bool _busy;
 
     public event Action? CloseRequested;
     /// <summary>读取或在此开始只发请求，进入、关页与失败提示归界面根（HudPages）。</summary>
     public event Action<EnterRequest>? EnterRequested;
+    // 输入占用与界面面上报不在界面根依赖里，仍按服务取。
     private static T Svc<T>() where T : class => Campus.Kernel.Registry.Kernel.Get<T>();
 
-    internal static SavePage Create(UiKit kit, Control parent, Control dialogParent)
+    internal static SavePage Create(UiKit kit, Control parent, Control dialogParent, ISaveService saves, IMapService maps)
     {
-        var page = new SavePage { _kit = kit, _confirm = new SaveConfirm(kit, dialogParent), MouseFilter = MouseFilterEnum.Stop, Visible = false };
+        var page = new SavePage
+        {
+            _kit = kit,
+            _saves = saves,
+            _maps = maps,
+            _confirm = new SaveConfirm(kit, dialogParent, saves, maps),
+            MouseFilter = MouseFilterEnum.Stop,
+            Visible = false,
+        };
         parent.AddChild(page);
         page.SetAnchorsAndOffsetsPreset(LayoutPreset.FullRect);
         return page;
+    }
+
+    public override void _Ready() => SetProcess(false);
+
+    // 写盘开始与结束都不单独发事件（结束时的 SlotsChanged 发在写入任务完成之前），开着时逐帧比对 Busy 切写入中标签。
+    public override void _Process(double delta)
+    {
+        if (_saves.Busy != _busy) UpdateWriting();
     }
 
     public void Open(bool fromTitle, SaveIntent intent = SaveIntent.Browse)
@@ -48,9 +69,10 @@ public partial class SavePage : Control
         ReleaseContent();
         Build(keep: null);
         Visible = true;
+        SetProcess(true);
         _lock ??= Svc<ICameraRig>().LockInput(InputLockReason.Menu);
         // 打开期间跟着存档变化重建卡片（自动保存、回标题后台写完），关页退订。
-        if (!_watching) { Svc<ISaveService>().SlotsChanged += Refresh; _watching = true; }
+        if (!_watching) { _saves.SlotsChanged += Refresh; _watching = true; }
         Modulate = new Color(1, 1, 1, 0);
         _fade = CreateTween();
         _fade.TweenProperty(this, "modulate:a", 1f, _kit.Motion.Fade(0.36f));
@@ -62,9 +84,10 @@ public partial class SavePage : Control
     public void Close()
     {
         Visible = false;
+        SetProcess(false);
         _lock?.Dispose();
         _lock = null;
-        if (_watching) { Svc<ISaveService>().SlotsChanged -= Refresh; _watching = false; }
+        if (_watching) { _saves.SlotsChanged -= Refresh; _watching = false; }
         _fade?.Kill();
         _fade = null;
         ReleaseContent();
@@ -114,58 +137,92 @@ public partial class SavePage : Control
     {
         var scrim = _kit.Box(this, new UiFx(Fill: "scrim", Margin: 0));
         scrim.SetAnchorsAndOffsetsPreset(LayoutPreset.FullRect);
-        var frame = _kit.Layout.Page(this, UiKit.T(_intent == SaveIntent.NewGame ? "saves.title.new_game" : "saves.title"), "savesWidth", centered: true);
+        var frame = _kit.Layout.Page(this, UiKit.T(_intent == SaveIntent.NewGame ? "_saves.title.new_game" : "_saves.title"), "savesWidth", centered: true);
         frame.Tabs.Visible = false;
+        // 只读签条：本窗口不保存的原因与设置卡的保存状态同一套文案。
+        var readOnly = _saves.State.ReadOnly switch
+        {
+            ReadOnlyReason.None => null,
+            ReadOnlyReason.SaveOff => "settings.save.off",
+            ReadOnlyReason.OtherWindow => "settings.save.other_window",
+            _ => throw new InvalidOperationException("Unknown read-only reason."),
+        };
+        if (readOnly is not null)
+            _kit.Text(frame.Header, UiKit.T(readOnly), "small", "text.2", wrap: false).SizeFlagsHorizontal = SizeFlags.ShrinkEnd;
         _kit.Text(frame.Header, "SAVES", "mono-caps", "text.2", wrap: false).SizeFlagsHorizontal = SizeFlags.ShrinkEnd;
         _kit.Button(frame.Header, ButtonStyle.Icon, "", icon: "close", pressed: () => CloseRequested?.Invoke());
 
-        var saves = Svc<ISaveService>();
-        var slots = saves.Slots;
+        var slots = _saves.Slots;
         var grid = _kit.Layout.Cards(frame.Body);
         for (var i = 0; i < slots.Count; i++)
         {
             var index = i;
-            var card = SaveSlotCard.Build(_kit, grid, slots[i], slots[i].Slot == saves.Continue);
+            var card = SaveSlotCard.Build(_kit, grid, slots[i], latest: slots[i].Slot == _saves.Continue,
+                current: !_fromTitle && slots[i].Slot == _saves.Active, _saves, _maps);
             card.Hit.Pressed += () => Select(index);
             card.Hit.FocusEntered += () => Select(index);
             _cards.Add(card);
         }
+        UpdateWriting();
         _detail = _kit.Text(frame.Body, "", "small", "text.2");
         _kit.Button(frame.Footer, ButtonStyle.Secondary, UiKit.T("ui.common.back"), pressed: () => CloseRequested?.Invoke());
         _primary = _kit.Button(frame.Footer, ButtonStyle.Primary, "", "button.primary", pressed: Act);
         if (_intent == SaveIntent.NewGame)
-            _overwrite = _kit.Button(frame.Footer, ButtonStyle.Danger, UiKit.T("saves.overwrite"), "button.primary", pressed: ShowConfirm);
-        _selected = Math.Clamp(keep ?? slots.ToList().FindIndex(s => s.Slot == saves.Continue), 0, Math.Max(0, slots.Count - 1));
+            _overwrite = _kit.Button(frame.Footer, ButtonStyle.Danger, UiKit.T("_saves.overwrite"), "button.primary", pressed: ShowConfirm);
+        _selected = Math.Clamp(keep ?? slots.ToList().FindIndex(s => s.Slot == _saves.Continue), 0, Math.Max(0, slots.Count - 1));
         if (slots.Count > 0) Select(_selected);
         else _primary.Off = true;
     }
 
+    /// <summary>写入中只标在当前存档位上（自动保存与离开时的保存都写它）。</summary>
+    private void UpdateWriting()
+    {
+        _busy = _saves.Busy;
+        var slots = _saves.Slots;
+        for (var i = 0; i < _cards.Count; i++) _cards[i].SetWriting(_busy && slots[i].Slot == _saves.Active);
+    }
+
     private void Select(int index)
     {
-        var slots = Svc<ISaveService>().Slots;
+        var slots = _saves.Slots;
         _selected = index;
         for (var i = 0; i < _cards.Count; i++) _cards[i].SetSelected(i == index);
         var slot = slots[index];
         var overwrite = _overwrite is not null && slot.Health != SlotHealth.Empty;
         _primary.Visible = !overwrite;
-        if (_overwrite is not null) _overwrite.Visible = overwrite;
-        _primary.Text = UiKit.T(slot.Meta is null ? "saves.new_here" : "saves.load");
-        _primary.OffReason = UiKit.T("saves.only_from_title");
-        _primary.Off = !_fromTitle || slot.Health == SlotHealth.Corrupt;
+        if (_overwrite is not null)
+        {
+            _overwrite.Visible = overwrite;
+            _overwrite.OffReason = UiKit.T("_saves.newer");
+            _overwrite.Off = slot.Health == SlotHealth.Newer;
+        }
+        _primary.Text = UiKit.T(slot.Health == SlotHealth.Empty ? "_saves.new_here" : "_saves.load");
+        _primary.OffReason = UiKit.T(!_fromTitle ? "_saves.only_from_title"
+            : slot.Health == SlotHealth.Newer ? "_saves.newer" : "_saves.corrupt");
+        _primary.Off = !Enterable(slot);
         _detail.Text = slot.Health switch
         {
-            SlotHealth.Empty => UiKit.T("saves.detail.empty"),
-            SlotHealth.Ok => UiKit.T(overwrite ? "saves.detail.overwrite" : "saves.detail.ok", ("gens", $"{slot.Generations}")),
-            SlotHealth.Corrupt => UiKit.T(overwrite ? "saves.detail.corrupt_overwrite" : "saves.detail.corrupt"),
+            SlotHealth.Empty => UiKit.T("_saves.detail.empty"),
+            SlotHealth.Ok => UiKit.T(overwrite ? "_saves.detail.overwrite" : "_saves.detail.ok"),
+            SlotHealth.Corrupt => UiKit.T(overwrite ? "_saves.detail.corrupt_overwrite" : "_saves.detail.corrupt"),
+            SlotHealth.Newer => UiKit.T("_saves.detail.newer"),
             _ => throw new InvalidOperationException("Unknown slot health."),
         };
     }
 
+    /// <summary>能否在这个存档位进入：只从开始页；新游戏可覆盖坏档，来自更新版本的档不读不写（SYS-SAVE-FORMAT）。</summary>
+    private bool Enterable(SlotInfo slot) => _fromTitle && slot.Health switch
+    {
+        SlotHealth.Empty or SlotHealth.Ok => true,
+        SlotHealth.Corrupt => _intent == SaveIntent.NewGame,
+        SlotHealth.Newer => false,
+        _ => throw new InvalidOperationException("Unknown slot health."),
+    };
+
     private void ShowConfirm()
     {
-        if (_confirm.IsOpen || !_fromTitle) return;
-        var slot = Svc<ISaveService>().Slots[_selected];
-        FocusWhenInteractive(_confirm.ShowOverwrite(slot.Slot, Act, HideConfirm));
+        if (_confirm.IsOpen) return;
+        FocusWhenInteractive(_confirm.ShowOverwrite(_saves.Slots[_selected], Act, HideConfirm));
     }
 
     private void HideConfirm()
@@ -190,9 +247,9 @@ public partial class SavePage : Control
 
     private void Act()
     {
-        if (!_fromTitle) return;
-        var slot = Svc<ISaveService>().Slots[_selected];
-        var request = _intent == SaveIntent.NewGame || slot.Meta is null
+        // 不能进入时读取与覆盖都断电，按钮本身拦住按下（TechButton），这里不再守门。
+        var slot = _saves.Slots[_selected];
+        var request = _intent == SaveIntent.NewGame || slot.Health == SlotHealth.Empty
             ? new EnterRequest(EnterKind.NewGame, slot.Slot)
             : new EnterRequest(EnterKind.LoadSlot, slot.Slot);
         EnterRequested?.Invoke(request);

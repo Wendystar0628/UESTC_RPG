@@ -56,6 +56,8 @@ public partial class WeatherStrip : PanelContainer
             b.TooltipText = UiKit.T("weather.cell." + CellKey(i));
             var index = i;
             b.Pressed += () => Pick(index);
+            // 不合季节的格断电，点它只出提示，不替观者换季（UI-NAV）。
+            b.OffPressed += () => Toast?.Invoke(UiKit.T("weather.thunder.off_season_toast"));
             _cells.Add(b);
         }
         _actual = _kit.Box(_cells[Clear], new UiFx(Fill: "graphic", Flags: UiFlags.Circle, Pin: true));
@@ -121,7 +123,6 @@ public partial class WeatherStrip : PanelContainer
     {
         if (cell == Auto) { _control.SetWeatherAuto(); Sync(); return; }
         var kind = Kind(cell, _model.Season);
-        if (!_model.World.IsNative(kind)) { Toast?.Invoke(UiKit.T("weather.thunder.off_season_toast")); return; }
         _control.SetWeather(kind);
         Sync();
         Toast?.Invoke(UiKit.T("weather.manual_toast", ("name", UiKit.T("weather.cell." + CellKey(cell)))));

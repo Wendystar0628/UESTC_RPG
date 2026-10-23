@@ -44,7 +44,7 @@ internal sealed class HudPages
         Settings.CloseRequested += CloseSettings;
         Settings.QuitRequested += RequestQuit;
         Settings.ToTitleRequested += ReturnToTitle;
-        Saves = SavePage.Create(view.Kit, view.PageHost, view.DialogHost);
+        Saves = SavePage.Create(view.Kit, view.PageHost, view.DialogHost, dependencies.Saves, dependencies.Maps);
         Saves.CloseRequested += CloseSaves;
         Saves.EnterRequested += EnterFromSaves;
     }

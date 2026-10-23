@@ -8,7 +8,7 @@ public enum ButtonStyle : byte { Primary, Secondary, Text, Danger, Icon, Segment
 /// <summary>
 /// 界面按钮（UI-VISUAL）：形状与颜色全部由 ui_panel kind 0 画，按钮自己的字和图标按 role 换色。
 /// 六种状态：常态、悬停（效果弹簧 0.15 s 进 / 0.2 s 出）、按下（0 ms 进 / 120 ms 出，内容下沉 1 px）、
-/// 焦点（衍射边 160 ms 收紧，只给键盘）、禁用（断电，仍可聚焦，读出原因）、选中（点亮）。
+/// 焦点（衍射边 160 ms 收紧，只给键盘）、禁用（断电，仍可聚焦，读出原因，按下不触发）、选中（点亮）。
 /// </summary>
 public partial class TechButton : Button
 {
@@ -16,11 +16,20 @@ public partial class TechButton : Button
     private Tween? _hoverTween, _focusTween;
     private float _hover, _focus;
     private bool _down, _off, _selected;
+    private string? _offReason;
 
     public ButtonStyle Style { get; private set; }
     public bool Pin { get; set; }
     public float Chamfer { get; set; }
-    public string? OffReason { get; set; }
+    /// <summary>断电原因，写进悬浮说明；断电期间改原因即时生效。</summary>
+    public string? OffReason
+    {
+        get => _offReason;
+        set { _offReason = value; if (_off) TooltipText = value ?? ""; }
+    }
+
+    /// <summary>断电时被按下（鼠标或确认键）：不发 Pressed、不切换，要出原因提示的使用方订阅这个。</summary>
+    public event Action? OffPressed;
     /// <summary>这个按钮代表的值（分段、天气格等用）。</summary>
     public int Value { get; set; }
 
@@ -30,11 +39,19 @@ public partial class TechButton : Button
         set { if (_selected == value) return; _selected = value; Refresh(); }
     }
 
-    /// <summary>断电态：字 n-500、边改虚线、不发光；仍可聚焦，悬浮说明写原因（UI-VISUAL）。</summary>
+    /// <summary>断电态：字 n-500、边改虚线、不发光；仍可聚焦，悬浮说明写原因，按下由控件拦住（UI-VISUAL）。</summary>
     public bool Off
     {
         get => _off;
-        set { if (_off == value) return; _off = value; TooltipText = value ? OffReason ?? "" : ""; Refresh(); }
+        set
+        {
+            if (_off == value) return;
+            _off = value;
+            TooltipText = value ? _offReason ?? "" : "";
+            // 断电后松开被拦住，ButtonUp 不会来，按下态在这里清掉。
+            if (value) _down = false;
+            Refresh();
+        }
     }
 
     /// <summary>常态的底色（压在实景上的常驻图标钮要有面板底，UI-VISUAL）；null 为透明。</summary>
@@ -229,6 +246,18 @@ public partial class TechButton : Button
             _underline.Size = new Vector2(width, 1);
         }
         if (_underline is not null) _underline.Visible = show;
+    }
+
+    // 脚本的 _GuiInput 先于原生 BaseButton 处理执行，断电时在这里接住按下与确认键，原生不再发 Pressed、Toggled。
+    // 不用原生 Disabled：它改走 disabled 主题态，且整段吞掉输入，点断电件出原因提示（OffPressed）就做不到（UI-VISUAL）。
+    public override void _GuiInput(InputEvent e)
+    {
+        if (!_off) return;
+        var mouse = e is InputEventMouseButton button && (ButtonMask & (MouseButtonMask)(1 << ((int)button.ButtonIndex - 1))) != 0;
+        var accept = e.IsAction("ui_accept", true);
+        if (!mouse && !accept) return;
+        AcceptEvent();
+        if (e.IsPressed() && !e.IsEcho()) OffPressed?.Invoke();
     }
 
     public override void _Notification(int what)

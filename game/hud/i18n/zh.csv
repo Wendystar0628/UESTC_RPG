@@ -265,7 +265,7 @@ saves.load,读取,Load
 saves.new_here,在这里开始,Start here
 saves.only_from_title,从开始页读取或开始,Load or start from the title screen
 saves.detail.empty,这个存档位是空的。在这里开始新游戏，之后会一直自动保存到这里。,This slot is empty. Start a new game here; your progress will then be saved here automatically.
-saves.detail.ok,自动保存 · 保留最近 {gens} 代,Autosave · Keeps the latest {gens} generations
+saves.detail.ok,游玩时自动保存到这里；最新的进度读不出时，会退回上一次保存的进度。,"Progress is saved here automatically. If the newest save cannot be read, the previous one is used instead."
 saves.detail.corrupt,存档文件损坏，无法读取,The save file is damaged and cannot be read
 saves.title.new_game,新游戏 · 选择存档位,New game · Choose a save slot
 saves.detail.overwrite,这个存档位已有进度。开始新游戏会替换它，旧进度不再保留。,This slot already has progress. Starting a new game will replace it permanently.
@@ -273,7 +273,13 @@ saves.detail.corrupt_overwrite,存档文件损坏，无法读取。可以覆盖�
 saves.overwrite,覆盖并开始,Overwrite and start
 saves.overwrite.title,覆盖这个存档？,Overwrite this save?
 saves.overwrite.body,存档位 {slot} 里现有的进度会被新游戏替换，此后无法找回。,Existing progress in slot {slot} will be replaced by the new game and cannot be recovered.
+saves.overwrite.body_corrupt,存档位 {slot} 的存档已无法读取，覆盖后文件将被替换。,The save in slot {slot} can no longer be read. Overwriting will replace its files.
 saves.overwrite.cancel,取消,Cancel
+saves.current,当前,Current
+saves.writing,保存中,Saving
+saves.read_only,只读,Read-only
+saves.newer,来自更新版本,From a newer version
+saves.detail.newer,这个存档来自更新版本的游戏。为了不损坏它，本版本只能查看，不能读取或覆盖。,"This save comes from a newer version of the game. To keep it safe, this version can only show it and cannot load or overwrite it."
 rebind.rejected,这个键不能用：{reason},This key cannot be used: {reason}
 map.atlas.title,大地图,Map
 map.atlas.close,收起 · M,Close · M

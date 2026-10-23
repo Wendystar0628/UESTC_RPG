@@ -88,6 +88,8 @@ public partial class TitleMenu : Control
         }
         _continue = _items[0];
         _continue.OffReason = UiKit.T("title.continue.none");
+        // 没有存档时继续断电，点它只出提示（SYS-TITLE）。
+        _continue.OffPressed += () => Notice?.Invoke(UiKit.T("title.continue.none"));
     }
 
     /// <summary>开始页与加载页共用同一片名字号选择。</summary>
@@ -153,10 +155,7 @@ public partial class TitleMenu : Control
     {
         switch (index)
         {
-            case 0:
-                if (_continue.Off) { Notice?.Invoke(UiKit.T("title.continue.none")); return; }
-                EnterRequested?.Invoke(new EnterRequest(EnterKind.Continue));
-                break;
+            case 0: EnterRequested?.Invoke(new EnterRequest(EnterKind.Continue)); break;
             case 1: NewGame(); break;
             case 2: SavesRequested?.Invoke(); break;
             case 3: SettingsRequested?.Invoke(); break;
