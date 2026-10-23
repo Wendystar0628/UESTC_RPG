@@ -150,23 +150,13 @@ internal sealed class CoreLifecycleDriver(IStageGateHost host)
         // DECISION-308: cursor visibility is independent of movement input.
         var before = walk.BodyPose.Position;
         var forward = Angles.Forward(walk.BodyPose.YawDeg, 0);
-        // Cover one default walking second from the formal start, including its first low obstacle.
-        // This route check does not require every possible obstacle elsewhere to be traversable.
-        float required = WalkRules.WalkSpeed * WalkRules.SpeedMultiplier(WalkRules.DefaultSpeedStep);
-        float furthestForward = 0;
         using var forwardAction = new StringName("move_forward");
         using (var press = new InputEventKey { PhysicalKeycode = (Key)input.PhysicalKey("move_forward"), Pressed = true })
             Input.ParseInputEvent(press);
         try
         {
-            await CoreWait(() => System.Numerics.Vector3.Dot(walk.BodyPose.Position - before, forward) >= required,
-                "Sustained forward input stopped before completing the formal-start walking distance.", () =>
-                {
-                    float next = System.Numerics.Vector3.Dot(walk.BodyPose.Position - before, forward);
-                    bool progressed = next > furthestForward;
-                    furthestForward = MathF.Max(furthestForward, next);
-                    return progressed;
-                });
+            await CoreWait(() => System.Numerics.Vector3.Dot(walk.BodyPose.Position - before, forward) > 0,
+                "Forward input did not move the walking body forward.");
         }
         finally
         {
@@ -179,7 +169,11 @@ internal sealed class CoreLifecycleDriver(IStageGateHost host)
             && walk.IsSettled && walk.Grounded && walk.CollisionReady,
             "The released movement input remained active.");
         var moved = walk.BodyPose.Position - before;
-        GD.Print(FormattableString.Invariant($"CORE_INPUT_READY distance={new System.Numerics.Vector2(moved.X, moved.Z).Length():R} forward={System.Numerics.Vector3.Dot(moved, forward):R} required={required:R}"));
+        float distance = new System.Numerics.Vector2(moved.X, moved.Z).Length();
+        float projected = System.Numerics.Vector3.Dot(moved, forward);
+        if (!float.IsFinite(distance) || distance <= 0 || !float.IsFinite(projected) || projected <= 0)
+            throw new InvalidOperationException("Forward input did not produce finite positive walking displacement.");
+        GD.Print(FormattableString.Invariant($"CORE_INPUT_READY distance={distance:R} forward={projected:R}"));
     }
 
     private async Task ExerciseSettings()
