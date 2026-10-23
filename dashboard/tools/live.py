@@ -251,7 +251,11 @@ def main():
                 observer.unschedule(schedules.pop((path, recursive)))
         for path, recursive in minimum.items():
             if (path, recursive) not in schedules:
-                schedules[path, recursive] = observer.schedule(handler, path, recursive=recursive)
+                try:
+                    schedules[path, recursive] = observer.schedule(handler, path, recursive=recursive)
+                except FileNotFoundError:
+                    # 列出后目录被删（如移除临时工作树）：本轮跳过，工作树根的删除通知会触发下一轮重排。
+                    continue
 
     lanes = tuple(dict.fromkeys(spec.lane for spec in DATASETS.values()))
     workers = {lane: ThreadPoolExecutor(max_workers=1, thread_name_prefix='dashboard-' + lane)
