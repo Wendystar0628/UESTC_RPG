@@ -10,7 +10,8 @@ namespace Campus.Hud.Pages;
 /// <summary>
 /// 画面页（UI-NAV、SYS-GRAPHICS）：页首是效果预设分段与恢复默认，下面按 KnobScope 分组列出目录里的单项，
 /// 镜头与舒适组另收 ui 节的视场与视角晃动，页尾是性能信息组；底部说明栏显示最近悬停或聚焦的一行。
-/// 画面设置只经 IQualityService.Plan / Apply；未应用的计划在关闭页面后保留。
+/// 画面设置只经 IQualityService.Plan / Apply，请求带明确的编辑意图：预设分段发 SelectPreset，恢复默认发 RestoreDefaults，
+/// 单项控件发 EditKnobs；同一份待应用计划里玩家明确改过的项累加进 EditedKnobs。未应用的计划在关闭页面后保留。
 /// </summary>
 internal sealed class SettingsCardGraphics
 {
@@ -20,8 +21,9 @@ internal sealed class SettingsCardGraphics
     private readonly UiKit _kit;
     // 界面一侧的应用等待只有一份，归界面根持有、随 HUD 离树取消；关页不取消，未应用的计划要保留。
     private readonly HudTask _applying;
-    private QualityProfile? _queued;   // 已明确请求应用的那份计划；之后才改、还没点"应用"的加载项不借它提交
-    private QualityProfile? _planned;  // 未应用的计划：所选预设加完整的单项覆盖（含沿用的非效果项）
+    private QualityRequest? _queued;   // 已明确请求应用的那份计划；之后才改、还没点"应用"的加载项不借它提交
+    private QualityRequest? _planned;  // 未应用的计划：意图、玩家改过的项与它们的取值，提交前一直保留
+    private QualityProfile? _next;     // _planned 经 Plan 得出的完整配置（ApplyPlan.Next），控件与标记按它显示
 
     private readonly List<Row> _rows = [];
     private IReadOnlyList<KnobNote> _notes = [];
@@ -232,16 +234,16 @@ internal sealed class SettingsCardGraphics
 
     private static KnobSpec Spec(IQualityService quality, QualityKnob knob) => quality.Knobs.First(spec => spec.Knob == knob);
 
-    private QualityProfile Shown(IQualityService quality) => _planned ?? quality.Requested;
+    private QualityProfile Shown(IQualityService quality) => _next ?? quality.Requested;
 
+    // 有待应用计划时按服务给出的 ApplyPlan.Next 显示，界面不自己推算意图的效果。
     private float RequestedValue(QualityKnob knob)
     {
         var quality = Quality;
-        if (_planned is not { } plan) return quality.Effective.Requested(knob);
-        if (plan.Overrides.TryGetValue(knob, out var value)) return value;
-        // 计划里没写的非效果项沿用当前请求，Plan 同样保留它们。
-        if (plan.Preset == QualityPreset.Custom || Spec(quality, knob).Scope != KnobScope.Effect) return quality.Effective.Requested(knob);
-        return quality.PresetValue(plan.Preset, knob);
+        if (_next is not { } next) return quality.Effective.Requested(knob);
+        if (next.Overrides.TryGetValue(knob, out var value)) return value;
+        if (next.Preset == QualityPreset.Custom) return quality.Effective.Requested(knob);
+        return quality.PresetValue(next.Preset, knob);
     }
 
     private static float DefaultValue(IQualityService quality, QualityKnob knob) =>
@@ -325,19 +327,21 @@ internal sealed class SettingsCardGraphics
     {
         Disarm();
         var quality = Quality;
-        // 预设只换效果项：显示、清晰度与舒适项保留当前（含未应用）的选择。
-        var kept = Shown(quality).Overrides.Where(pair => Spec(quality, pair.Key).Scope != KnobScope.Effect)
-            .ToDictionary(pair => pair.Key, pair => pair.Value);
-        Plan(new QualityProfile(preset, kept));
+        // 选预设由服务重置效果基底、保留独立偏好；本计划里玩家改过的非效果项继续算编辑，改过的效果项让位给预设。
+        var edited = (_planned is { } pending ? pending.EditedKnobs : []).Where(knob => Spec(quality, knob).Scope != KnobScope.Effect).ToArray();
+        var values = edited.ToDictionary(knob => knob, RequestedValue);
+        Plan(new QualityRequest(new QualityProfile(preset, values), QualityEditIntent.SelectPreset, edited));
         SyncKnobs();
     }
 
+    // 单项编辑沿用待应用计划的意图（选预设、恢复默认之后再改的项叠在其上），没有计划时是 EditKnobs；编辑项只增不减。
     private void Change(QualityKnob knob, float value)
     {
         Disarm();
-        var basis = Shown(Quality);
-        var overrides = new Dictionary<QualityKnob, float>(basis.Overrides) { [knob] = value };
-        Plan(new QualityProfile(basis.Preset, overrides));
+        var basis = _planned ?? new QualityRequest(Quality.Requested, QualityEditIntent.EditKnobs, []);
+        var overrides = new Dictionary<QualityKnob, float>(basis.Profile.Overrides) { [knob] = value };
+        var edited = basis.EditedKnobs.Contains(knob) ? basis.EditedKnobs : [.. basis.EditedKnobs, knob];
+        Plan(new QualityRequest(basis.Profile with { Overrides = overrides }, basis.Intent, edited));
     }
 
     // 恢复默认要按两次：第一次只把按钮换成确认文案，移开指针或焦点即撤销；第二次复位画质与本页的 ui 节行。
@@ -352,7 +356,7 @@ internal sealed class SettingsCardGraphics
         }
         Disarm();
         foreach (var row in _rows) row.Ui?.Reset();
-        Plan(Quality.Default);
+        Plan(new QualityRequest(Quality.Default, QualityEditIntent.RestoreDefaults, []));
         SyncKnobs();
     }
 
@@ -363,7 +367,7 @@ internal sealed class SettingsCardGraphics
         if (_reset is not null) _reset.Text = UiKit.T("quality.reset");
     }
 
-    private void Plan(QualityProfile next)
+    private void Plan(QualityRequest next)
     {
         var plan = Quality.Plan(next);
         _planned = next;
@@ -373,6 +377,7 @@ internal sealed class SettingsCardGraphics
 
     private void ShowPlan(ApplyPlan plan)
     {
+        _next = plan.Next;
         _notes = plan.Notes;
         if (_applyStatus is not null && _apply is not null)
         {
@@ -389,21 +394,21 @@ internal sealed class SettingsCardGraphics
     private void ShowRequested()
     {
         SyncKnobs();
-        _notes = Quality.Plan(Quality.Requested).Notes;
+        _notes = Quality.Plan(new QualityRequest(Quality.Requested, QualityEditIntent.EditKnobs, [])).Notes;
         UpdateState();
     }
 
     // 应用由 IQualityService 持有（SYS-GRAPHICS）；等待期间再次请求只记下这次请求的计划，这次结束后再应用它，不并行开第二次。
-    private void Request(QualityProfile profile)
+    private void Request(QualityRequest request)
     {
-        _queued = profile;
+        _queued = request;
         _applying.Start(ApplyQueued);
     }
 
     private async Task ApplyQueued(CancellationToken token)
     {
         ApplyResult result;
-        QualityProfile applied;
+        QualityRequest applied;
         do
         {
             applied = _queued ?? throw new InvalidOperationException("Apply started without a requested plan.");
@@ -421,6 +426,7 @@ internal sealed class SettingsCardGraphics
             return;
         }
         _planned = null;
+        _next = null;
         if (_applyStatus is not null && _apply is not null)
         {
             _applyStatus.Text = result.Status switch
