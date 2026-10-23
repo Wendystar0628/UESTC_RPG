@@ -120,7 +120,7 @@ public sealed record DeleteResult(DeleteStatus Status, SlotId Slot, ulong? Gen, 
 public enum ReadOnlyReason : byte { None, SaveOff, OtherWindow }   // 不保存的原因：--save=off、另一个窗口持有锁（SYS-SAVE、SYS-SAVE）
 public sealed record SaveState(                                     // 保存状态（SYS-SAVE）：大页被动显示
     SlotId? Slot,                   // 当前存档位
-    SaveStatus? Last,               // 本次运行最近一次写盘的结果；还没写过为 null
+    SaveStatus? Last,               // 当前活动位最近一次写盘的结果；换位后还没写过为 null
     string? ErrorKey,               // Last 为 Failed 时的原因，文案键，如 "save.error.disk_full"
     long? LastSavedAtUnix,          // 当前存档位最后一次成功保存的时间（最新可读一代 meta 的 savedAtUnix），只用于显示
     ReadOnlyReason ReadOnly);

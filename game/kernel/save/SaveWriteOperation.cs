@@ -7,10 +7,11 @@ using Campus.Kernel.Save.Format;
 namespace Campus.Kernel.Save;
 
 /// <summary>Owns one save's optional thumbnail, staging lifetime and failure result.</summary>
-internal sealed class SaveWriteOperation
+internal sealed class SaveWriteOperation(SlotId? slot = null)
 {
     private readonly List<Exception> _cleanupFailures = [];
     private int _snapshotDetached;
+    public SlotId? Slot { get; } = slot;
     public bool SnapshotDetached => Volatile.Read(ref _snapshotDetached) != 0;
     public Exception? Failure { get; private set; }
 
@@ -123,11 +124,11 @@ internal sealed class SaveWriteOperation
         Failure = error;
         var key = primary switch
         {
-            UnauthorizedAccessException => "save.error.permission",
-            IOException io when (io.HResult & 0xffff) is 39 or 112 => "save.error.disk_full",
-            IOException => "save.error.io",
-            SaveFormatException => "save.error.verification",
-            _ => "save.error.snapshot"
+            UnauthorizedAccessException => SaveErrorKeys.Permission,
+            IOException io when (io.HResult & 0xffff) is 39 or 112 => SaveErrorKeys.DiskFull,
+            IOException => SaveErrorKeys.Io,
+            SaveFormatException => SaveErrorKeys.Verification,
+            _ => SaveErrorKeys.Snapshot
         };
         var result = new SaveResult(SaveStatus.Failed, slot, generation, key);
         diagnostics.Error("Save operation failed.", Failure);

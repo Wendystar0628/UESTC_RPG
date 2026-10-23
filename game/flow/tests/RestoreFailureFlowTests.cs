@@ -31,7 +31,7 @@ public sealed class RestoreFailureFlowTests
             throw new InvalidOperationException("Recovery was rejected before reaching the save transaction.");
         if (!f.Camera.InputLocked || f.Loading.Active)
             throw new InvalidOperationException("A failed recovery exposed or unlocked the partial world.");
-        if (f.Flow.Failure is not InvalidDataException || f.Flow.LastError != "save.error.restore_world")
+        if (f.Flow.Failure is not InvalidDataException || f.Flow.LastError != SaveErrorKeys.RestoreWorld)
             throw new InvalidOperationException("The flow session must retain its original exception type while keeping the existing restore-error display.");
         if (f.Diagnostics.Count != 1)
             throw new InvalidOperationException("The expected restore failure was not logged exactly once: " + string.Join(Environment.NewLine, f.Diagnostics));
@@ -69,8 +69,8 @@ public sealed class RestoreFailureFlowTests
             throw new InvalidOperationException("A completed quit repeated final resource disposal.");
     }
 
-    [TestCase("save.error.io")]
-    [TestCase("save.error.timeout")]
+    [TestCase(SaveErrorKeys.Io)]
+    [TestCase(SaveErrorKeys.Timeout)]
     [TestCategory(TestReason.Regression)]
     public async Task FaultedWorldFlushFailureStillAwaitsResourceShutdown(string errorKey)
     {
@@ -91,7 +91,7 @@ public sealed class RestoreFailureFlowTests
         f.Save.FlushFailure = error; f.Exit.Gate = new();
         var quit = f.Flow.Quit(); await Task.WhenAny(quit, f.Exit.Started.Task);
         if (quit.IsCompleted || f.Flow.State != AppState.Quitting || !ReferenceEquals(f.Flow.Failure, error) ||
-            f.Flow.LastError != "save.error.restore_world" || f.Diagnostics.Count != 1)
+            f.Flow.LastError != SaveErrorKeys.RestoreWorld || f.Diagnostics.Count != 1)
             throw new InvalidOperationException("Thrown save failure blocked exit or exposed exception text.");
         f.Exit.Gate.SetResult(); await quit;
     }
@@ -130,13 +130,13 @@ public sealed class RestoreFailureFlowTests
         public TaskCompletionSource<SaveResult>? FlushGate { get; set; }
         public override IReadOnlyList<SlotInfo> Slots { get; } = [new(new("s1"), SlotKind.Auto, SlotHealth.Empty, null, 0)];
         public override SlotId? Continue => new("s1");
-        public override SaveState State { get; } = new(null, SaveStatus.Failed, "save.error.restore_world", null, ReadOnlyReason.None);
+        public override SaveState State { get; } = new(null, SaveStatus.Failed, SaveErrorKeys.RestoreWorld, null, ReadOnlyReason.None);
         public override Task<SaveResult> SaveNow(SaveReason reason) { Saves++; return Task.FromResult(new SaveResult(SaveStatus.Failed, null, 0)); }
         public override Task<LoadResult> Load(SlotId slot) => Failed(slot);
         public override Task<LoadResult> LoadFile(string path) => Failed(null);
         public override Task<LoadResult> NewGame(SlotId? slot, uint? seed = null, WorldPreset? start = null, NewGameBoot? boot = null) { NewGames++; return Failed(slot); }
         public override Task<SaveResult> FlushForQuit(SaveReason reason, TimeSpan timeout)
         { Flushes++; return FlushFailure is { } error ? Task.FromException<SaveResult>(error) : FlushGate?.Task ?? Task.FromResult(new SaveResult(FlushStatus, null, 0, FlushError)); }
-        private static Task<LoadResult> Failed(SlotId? slot) => Task.FromResult(new LoadResult(LoadStatus.Failed, slot, 0, [], "save.error.restore_world"));
+        private static Task<LoadResult> Failed(SlotId? slot) => Task.FromResult(new LoadResult(LoadStatus.Failed, slot, 0, [], SaveErrorKeys.RestoreWorld));
     }
 }

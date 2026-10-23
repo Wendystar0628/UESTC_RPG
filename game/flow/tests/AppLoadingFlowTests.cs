@@ -162,8 +162,8 @@ public sealed class AppLoadingFlowTests
 
     [TestCase(SaveStatus.Saved, null)]
     [TestCase(SaveStatus.Deferred, null)]
-    [TestCase(SaveStatus.Failed, "save.error.io")]
-    [TestCase(SaveStatus.Failed, "save.error.timeout")]
+    [TestCase(SaveStatus.Failed, SaveErrorKeys.Io)]
+    [TestCase(SaveStatus.Failed, SaveErrorKeys.Timeout)]
     [TestCategory(TestReason.Regression)]
     public async Task ReturningToTitleClearsTheWorldAfterAnySaveResult(SaveStatus status, string? errorKey)
     {

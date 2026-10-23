@@ -98,7 +98,7 @@ public sealed class SaveLifecycleTests
         AssertThat(detached ? title?.Status == SaveStatus.Deferred && !canceled : title is null && canceled)
             .OverrideFailureMessage("Title timeout ended a live snapshot or blocked a detached disk write.").IsTrue();
         AssertThat(!pending.Task.IsCompleted).OverrideFailureMessage("Title timeout canceled the sole disk writer.").IsTrue();
-        var failure = new SaveResult(SaveStatus.Failed, new("s1"), 2, "save.error.io");
+        var failure = new SaveResult(SaveStatus.Failed, new("s1"), 2, SaveErrorKeys.Io);
         pending.SetResult(failure);
         AssertThat(await operation.WaitForFlush(pending.Task, SaveReason.ToTitle, new("s1"), deadline.Token))
             .IsEqual(failure);
@@ -123,7 +123,7 @@ public sealed class SaveLifecycleTests
         fixture.Flow = AppState.Quitting;
         fixture.ThumbnailBarrier = new(TaskCreationOptions.RunContinuationsAsynchronously);
         var quit = await fixture.Pump(fixture.Save.FlushForQuit(SaveReason.Quit, TimeSpan.FromMilliseconds(30)));
-        AssertThat(quit.Status == SaveStatus.Failed && fixture.Save.Busy && fixture.Save.State.ErrorKey == "save.error.timeout").OverrideFailureMessage("Timeout canceled or silently accepted a save.").IsTrue();
+        AssertThat(quit.Status == SaveStatus.Failed && fixture.Save.Busy && fixture.Save.State.ErrorKey == SaveErrorKeys.Timeout).OverrideFailureMessage("Timeout canceled or silently accepted a save.").IsTrue();
         if (endedWorld)
         {
             fixture.World.EndInstance();
@@ -134,7 +134,7 @@ public sealed class SaveLifecycleTests
         fixture.ThumbnailBarrier.SetException(new IOException("Thumbnail capture failed."));
         var result = await fixture.Pump(retry);
         AssertThat(result.Status == (endedWorld ? SaveStatus.Failed : SaveStatus.Saved) && fixture.Save.State.Last == result.Status).OverrideFailureMessage("The existing write result was hidden by title exit.").IsTrue();
-        AssertThat(result.Error == (endedWorld ? "save.error.snapshot" : null)).IsTrue();
+        AssertThat(result.Error == (endedWorld ? SaveErrorKeys.Snapshot : null)).IsTrue();
         AssertThat(fixture.Save.Slots[0].Meta?.Gen == (endedWorld ? 1UL : 2UL)).OverrideFailureMessage("Retry launched a duplicate write or damaged the old generation.").IsTrue();
         var pose = fixture.Camera.Pose;
         fixture.Camera.SetPose(default);
@@ -207,7 +207,7 @@ public sealed class SaveLifecycleTests
         fixture.Weather.RestoreFailure = failure;
         var failed = await fixture.Pump(fixture.Save.Load(new("s1")));
         AssertThat(failed.Status == LoadStatus.Failed && fixture.World.RestoreFaulted && fixture.Camera.Locks == 1).OverrideFailureMessage("A partially restored world remained interactive.").IsTrue();
-        AssertThat(fixture.Save.State is { Last: SaveStatus.Failed, ErrorKey: "save.error.restore_world" }).OverrideFailureMessage("Restore failure is not visible through the save state.").IsTrue();
+        AssertThat(fixture.Save.State is { Last: SaveStatus.Failed, ErrorKey: SaveErrorKeys.RestoreWorld }).OverrideFailureMessage("Restore failure is not visible through the save state.").IsTrue();
         await fixture.Frames(10); // FakeWorld.Tick throws if a pending restore escaped the failing Save frame.
         AssertThat((await fixture.Pump(fixture.Save.SaveNow(SaveReason.Test))).Status == SaveStatus.Failed).OverrideFailureMessage("Faulted state was saved.").IsTrue();
         AssertThat((await fixture.Pump(fixture.Save.FlushForQuit(SaveReason.Quit, TimeSpan.FromSeconds(1)))).Status == SaveStatus.Deferred).OverrideFailureMessage("Fault exit attempted to serialize the partial world.").IsTrue();
@@ -244,7 +244,7 @@ public sealed class SaveLifecycleTests
             .OverrideFailureMessage("The injected pose failure did not occur after the World phase committed.").IsTrue();
         AssertThat(failed.Status == LoadStatus.Failed && fixture.World.RestoreFaulted && fixture.Camera.Locks == 1)
             .OverrideFailureMessage("A failure after the World commit released input or left the world usable.").IsTrue();
-        AssertThat(fixture.Save.State is { Last: SaveStatus.Failed, ErrorKey: "save.error.restore_world" })
+        AssertThat(fixture.Save.State is { Last: SaveStatus.Failed, ErrorKey: SaveErrorKeys.RestoreWorld })
             .OverrideFailureMessage("The post-commit failure was not reported by the save state.").IsTrue();
         await fixture.Frames(10);
         AssertThat(fixture.World.RestoreFaulted && fixture.Camera.Locks == 1 && fixture.Save.Slots[0].Meta?.Gen == 1)
@@ -268,6 +268,134 @@ public sealed class SaveLifecycleTests
         AssertThat(ReferenceEquals(fixture.Diagnostics.Errors.Single(), failure)).IsTrue();
     }
 
+    [TestCase]
+    [TestCategory(TestReason.Regression)]
+    public async Task ChangingActiveSlotClearsItsPreviousFailureAndKeepsQueuedResultsWithTheirSlot()
+    {
+        using var fixture = new Fixture { ExpectedErrors = 1 };
+        await fixture.Start();
+        var first = SaveSlots.Auto[0];
+        var second = SaveSlots.Auto[1];
+        await fixture.Pump(fixture.Save.NewGame(first, 1));
+        fixture.Flow = AppState.Playing;
+        fixture.World.CaptureFailure = new IOException("Injected capture failure.");
+        var failed = await fixture.Pump(fixture.Save.SaveNow(SaveReason.Test));
+        AssertThat(failed.Status == SaveStatus.Failed && failed.Slot == first &&
+            fixture.Save.State is { Last: SaveStatus.Failed, ErrorKey: SaveErrorKeys.Io } && fixture.Save.State.Slot == first)
+            .OverrideFailureMessage("The first slot did not acquire the real write failure needed for this regression.").IsTrue();
+
+        fixture.World.CaptureFailure = null;
+        fixture.Flow = AppState.Entering;
+        var switching = fixture.Save.NewGame(second, 2);
+        var queuedForFirst = fixture.Save.SaveNow(SaveReason.Test);
+        AssertThat((await fixture.Pump(switching)).Status == LoadStatus.Loaded && fixture.Save.Active == second)
+            .OverrideFailureMessage("The second slot was not actually activated.").IsTrue();
+        var stale = await fixture.Pump(queuedForFirst);
+        AssertThat(stale.Status == SaveStatus.Deferred && stale.Slot == first)
+            .OverrideFailureMessage("A queued save changed its slot while waiting for the restore.").IsTrue();
+        AssertThat(fixture.Save.State is { Last: null, ErrorKey: null } && fixture.Save.State.Slot == second)
+            .OverrideFailureMessage("The second slot inherited the first slot's failure or queued result.").IsTrue();
+        AssertThat(fixture.Diagnostics.Errors.Count).IsEqual(fixture.ExpectedErrors);
+    }
+
+    [TestCase]
+    [TestCategory(TestReason.Regression)]
+    public async Task FailedAutomaticAttemptsWaitThirtySecondsWhileExplicitSavesRemainImmediate()
+    {
+        using var fixture = new Fixture { ExpectedErrors = 2 };
+        await fixture.Start(); await fixture.Pump(fixture.Save.NewGame(SaveSlots.Auto[0], 1));
+        fixture.Flow = AppState.Playing;
+        fixture.World.CaptureFailure = new IOException("Injected capture failure.");
+        fixture.Save.Request(SaveReason.Interval);
+        for (var i = 0; i < TestSamples.FrameLoop && fixture.Diagnostics.Errors.Count == 0; i++) await fixture.Frames(1, 0);
+        await fixture.PumpUntilIdle();
+        AssertThat(fixture.Diagnostics.Errors.Count == 1 && fixture.Save.State.Last == SaveStatus.Failed).IsTrue();
+        var beforeRetry = (int)(SaveSchedule.AttemptSpacingSeconds / .1) - 10;
+        // Advance the existing frame clock without a real timer per simulated frame;
+        // drain at zero delta so an early retry cannot hide behind queued async work.
+        fixture.AdvanceFrames(beforeRetry);
+        await fixture.PumpUntilIdle();
+        AssertThat(fixture.Diagnostics.Errors.Count).IsEqual(1);
+        var explicitSave = await fixture.Pump(fixture.Save.SaveNow(SaveReason.Test), 0);
+        AssertThat(explicitSave.Status == SaveStatus.Failed && fixture.Diagnostics.Errors.Count == 2).IsTrue();
+        fixture.World.CaptureFailure = null;
+        fixture.AdvanceFrames(beforeRetry);
+        await fixture.PumpUntilIdle();
+        AssertThat(fixture.Diagnostics.Errors.Count == 2 && fixture.Save.Slots[0].Health == SlotHealth.Empty).IsTrue();
+        fixture.AdvanceFrames(20);
+        await fixture.PumpUntilIdle();
+        AssertThat(fixture.Save.Slots[0].Meta is { Gen: 1, Reason: SaveReason.Interval }).IsTrue();
+        fixture.Save.Request(SaveReason.Interval);
+        fixture.AdvanceFrames(beforeRetry - 10);
+        await fixture.PumpUntilIdle();
+        AssertThat(fixture.Save.Slots[0].Meta?.Gen).IsEqual(1UL);
+        fixture.AdvanceFrames(40); await fixture.PumpUntilIdle();
+        AssertThat(fixture.Save.Slots[0].Meta?.Gen).IsEqual(2UL);
+        AssertThat(fixture.Diagnostics.Errors.Count).IsEqual(fixture.ExpectedErrors);
+    }
+
+    [TestCase]
+    [TestCategory(TestReason.Regression)]
+    public async Task WriteEventsExposeTheRealBusyStateAtStartAndAfterCompletion()
+    {
+        using var fixture = new Fixture();
+        await fixture.Start(); await fixture.Pump(fixture.Save.NewGame(SaveSlots.Auto[0], 1));
+        fixture.Flow = AppState.Playing;
+        var busy = new List<bool>();
+        fixture.Save.SlotsChanged += () => busy.Add(fixture.Save.Busy);
+        var result = await fixture.Pump(fixture.Save.SaveNow(SaveReason.Test));
+        AssertThat(result.Status == SaveStatus.Saved && busy.SequenceEqual(new[] { true, false })).IsTrue();
+        AssertThat(!fixture.Save.Busy && fixture.Save.State.Last == SaveStatus.Saved).IsTrue();
+    }
+
+    [TestCase]
+    [TestCategory(TestReason.Regression)]
+    public async Task ManualSavesCaptureNewThumbnailsImmediatelyAndRotateOnlyTheirOwnPool()
+    {
+        using var fixture = new Fixture();
+        await fixture.Start(); await fixture.Pump(fixture.Save.NewGame(SaveSlots.Auto[0], 1));
+        fixture.Flow = AppState.Playing;
+        fixture.NextThumbnail = "RIFF\u0004\0\0\0WEBP"u8.ToArray();
+        await fixture.Pump(fixture.Save.SaveNow(SaveReason.NewGame), 0);
+        var previous = fixture.Save.Thumbnail(SaveSlots.Auto[0], 1);
+        fixture.NextThumbnail = "RIFF\u0005\0\0\0WEBPa"u8.ToArray();
+        for (var index = 0; index <= SaveSlots.ManualLimit; index++)
+            AssertThat((await fixture.Pump(fixture.Save.SaveNow(SaveReason.Manual), 0)).Status).IsEqual(SaveStatus.Saved);
+        var slot = fixture.Save.Slots[0];
+        AssertThat(fixture.ThumbnailCaptures == SaveSlots.ManualLimit + 2 && previous!.SequenceEqual("RIFF\u0004\0\0\0WEBP"u8.ToArray())).IsTrue();
+        AssertThat(slot.Entries.Count(entry => entry.Meta?.Reason == SaveReason.Manual) == SaveSlots.ManualLimit &&
+            slot.Entries.Any(entry => entry.Gen == 1) && !slot.Entries.Any(entry => entry.Gen == 2)).IsTrue();
+        var cached = fixture.Save.Thumbnail(slot.Slot)!;
+        File.Delete(fixture.EntryFile(slot.Meta!.Gen));
+        cached[0] = 0;
+        AssertThat(fixture.Save.Thumbnail(slot.Slot)!.SequenceEqual(fixture.NextThumbnail) &&
+            fixture.Save.Thumbnail(slot.Slot, 1)!.SequenceEqual(previous)).IsTrue();
+        AssertThat(fixture.Diagnostics.Errors.Count).IsEqual(0);
+    }
+
+    [TestCase]
+    [TestCategory(TestReason.Regression)]
+    public async Task ExactLoadKeepsTheLatestSummaryAndNeverRestoresAroundAnUnreadableEntry()
+    {
+        using var fixture = new Fixture();
+        await fixture.Start(); await fixture.Pump(fixture.Save.NewGame(SaveSlots.Auto[0], 1));
+        fixture.Flow = AppState.Playing; fixture.World.Hours = 23;
+        await fixture.Pump(fixture.Save.SaveNow(SaveReason.NewGame));
+        fixture.World.Hours = 30; await fixture.Pump(fixture.Save.SaveNow(SaveReason.Manual));
+        var loaded = await fixture.Pump(fixture.Save.Load(SaveSlots.Auto[0], 1));
+        AssertThat(loaded.Status == LoadStatus.Loaded && loaded.Gen == 1 && fixture.World.Hours == 23 &&
+            fixture.Save.Slots[0].Meta?.Gen == 2).IsTrue();
+        var document = SaveContainer.Decode(File.ReadAllBytes(fixture.EntryFile(2)));
+        var broken = document.Sections.ToDictionary(pair => pair.Key, pair => pair.Value);
+        var version = document.Sections["world"].Version;
+        broken["world"] = new(version, System.Text.Encoding.UTF8.GetBytes("{\"v\":" + version + ",\"data\":{\"worldHours\":\"bad\"}}"));
+        File.WriteAllBytes(fixture.EntryFile(2), SaveContainer.Encode(document with { Sections = broken }));
+        var instance = fixture.World.Instance;
+        var rejected = await fixture.Pump(fixture.Save.Load(SaveSlots.Auto[0], 2));
+        AssertThat(rejected.Status == LoadStatus.Corrupt && fixture.World.Instance == instance && fixture.World.Hours == 23).IsTrue();
+        AssertThat(fixture.Save.Slots[0].Meta?.Gen == 1 && fixture.Camera.Locks == 0 && fixture.Diagnostics.Errors.Count == 0).IsTrue();
+    }
+
     private sealed class Fixture : IDisposable
     {
         public SaveService Save { get; } = new();
@@ -282,6 +410,9 @@ public sealed class SaveLifecycleTests
         public List<string> Log { get; } = [];
         public bool Ready { get; set; } = true;
         public TaskCompletionSource<byte[]?>? ThumbnailBarrier { get; set; }
+        internal byte[]? NextThumbnail { get; set; }
+        internal int ThumbnailCaptures { get; private set; }
+        internal string EntryFile(ulong generation) => Path.Combine(_directory!, SaveSlots.Auto[0].Value, $"g{generation:D6}.sav");
         private bool _inFrame;
         private string? _directory;
         public Fixture()
@@ -299,7 +430,7 @@ public sealed class SaveLifecycleTests
             var rules = new TestRuleset("test-policy", id: "test-rules");
             var bindings = new SaveRuntimeBindings(World, Maps, Camera, Camera, rules, new FakeAtlas(Maps), new TestAppLoadingPresentation(), _flow, Diagnostics,
                 _ => { }, World, WaitDestination,
-                () => ThumbnailBarrier?.Task ?? Task.FromResult<byte[]?>(null), () => 1792082400, pose => Task.FromResult(pose));
+                () => { ThumbnailCaptures++; return ThumbnailBarrier?.Task ?? Task.FromResult(NextThumbnail); }, () => 1792082400, pose => Task.FromResult(pose));
             var sections = new SaveSections([
                 new(new("world") { Phase = RestorePhase.World, Order = 10 }, World),
                 new(new("weather") { Phase = RestorePhase.World, Order = 21 }, Weather),
@@ -308,21 +439,34 @@ public sealed class SaveLifecycleTests
         }
         private async Task WaitDestination(Pose pose, NavSpace? space, ViewMode mode)
         { while (!await Save.OnFrame(() => Ready)) { } }
-        public async Task Frames(int count)
+        public async Task Frames(int count, double delta = .1)
+        {
+            for (var i = 0; i < count; i++)
+            {
+                AdvanceFrames(1, delta);
+                await Task.Delay(1);
+            }
+        }
+        internal void AdvanceFrames(int count, double delta = .1)
         {
             for (var i = 0; i < count; i++)
             {
                 _inFrame = true;
-                try { World.Tick(); Save.Tick(.1); } finally { _inFrame = false; }
-                await Task.Delay(1);
+                try { World.Tick(); Save.Tick(delta); } finally { _inFrame = false; }
             }
         }
-        public async Task Pump(Task task)
+        internal async Task PumpUntilIdle()
         {
-            for (var i = 0; i < TestSamples.FrameLoop && !task.IsCompleted; i++) await Frames(1);
+            for (var i = 0; i < TestSamples.FrameLoop && Save.Busy; i++) await Frames(1, 0);
+            await Frames(2, 0);
+            AssertThat(!Save.Busy).OverrideFailureMessage("Save did not drain its attempt.").IsTrue();
+        }
+        public async Task Pump(Task task, double delta = .1)
+        {
+            for (var i = 0; i < TestSamples.FrameLoop && !task.IsCompleted; i++) await Frames(1, delta);
             AssertThat(task.IsCompleted).OverrideFailureMessage("Save lifecycle did not finish.").IsTrue(); await task;
         }
-        public async Task<T> Pump<T>(Task<T> task) { await Pump((Task)task); return await task; }
+        public async Task<T> Pump<T>(Task<T> task, double delta = .1) { await Pump((Task)task, delta); return await task; }
         public void Dispose()
         {
             Save.Dispose();
@@ -333,6 +477,7 @@ public sealed class SaveLifecycleTests
     private sealed class FakeWorld(Func<bool> inFrame, List<string> log) : IWorldState, IWorldRestore, ISaveSection<WorldSaveV1>
     {
         public double Hours { get; set; } = 17.5;
+        public Exception? CaptureFailure { get; set; }
         public double? TargetHours { get; set; }
         public bool RestoreFaulted { get; private set; }
         private bool _pending;
@@ -361,7 +506,9 @@ public sealed class SaveLifecycleTests
         public void Tick() { if (!RestoreFaulted) AssertThat(!_pending).OverrideFailureMessage("An uncommitted World phase escaped into the next frame.").IsTrue(); }
         public WorldSaveV1 Capture(in CaptureContext context)
         {
-            AssertThat(inFrame()).OverrideFailureMessage("Capture ran outside Save frame.").IsTrue(); var moment = context.Moment;
+            AssertThat(inFrame()).OverrideFailureMessage("Capture ran outside Save frame.").IsTrue();
+            if (CaptureFailure is { } failure) throw failure;
+            var moment = context.Moment;
             return new(moment.WorldHours, moment.ClockOffset, (int)moment.Season, moment.Season, moment.FlowRate, BaseFlow.Rate, AnimTime);
         }
         public void Restore(WorldSaveV1 dto, RestoreContext context)

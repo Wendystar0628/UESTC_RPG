@@ -22,10 +22,10 @@ public sealed class TitleQuitFlowTests
             throw new InvalidOperationException("Title exit created a world or bypassed resource shutdown.");
     }
 
-    [TestCase(false, "save.error.io")]
-    [TestCase(true, "save.error.io")]
-    [TestCase(false, "save.error.timeout")]
-    [TestCase(true, "save.error.timeout")]
+    [TestCase(false, SaveErrorKeys.Io)]
+    [TestCase(true, SaveErrorKeys.Io)]
+    [TestCase(false, SaveErrorKeys.Timeout)]
+    [TestCase(true, SaveErrorKeys.Timeout)]
     [TestCategory(TestReason.Regression)]
     public async Task AFailedTitleWriterStillAwaitsResourceShutdown(bool alreadyFailed, string errorKey)
     {

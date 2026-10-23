@@ -9,7 +9,7 @@ internal sealed class AppFlowRecovery(IMapService maps, IWorldRestore restore, I
     AppFlowResources resources, Func<bool> isQuitting,
     Action<AppState> changeState, Action<string, Exception> diagnostic)
 {
-    internal const string RestoreErrorKey = "save.error.restore_world";
+    internal const string RestoreErrorKey = SaveErrorKeys.RestoreWorld;
     private Task? _faultHold;
     private string? _errorOverride;
     internal Exception? Failure { get; private set; }
