@@ -237,10 +237,11 @@ internal sealed class SettingsCardGraphics
     private QualityProfile Shown(IQualityService quality) => _next ?? quality.Requested;
 
     // 有待应用计划时按服务给出的 ApplyPlan.Next 显示，界面不自己推算意图的效果。
-    private float RequestedValue(QualityKnob knob)
+    private float RequestedValue(QualityKnob knob) => RequestedValue(Quality, _next, knob);
+
+    private static float RequestedValue(IQualityService quality, QualityProfile? planned, QualityKnob knob)
     {
-        var quality = Quality;
-        if (_next is not { } next) return quality.Effective.Requested(knob);
+        if (planned is not { } next) return quality.Effective.Requested(knob);
         if (next.Overrides.TryGetValue(knob, out var value)) return value;
         if (next.Preset == QualityPreset.Custom) return quality.Effective.Requested(knob);
         return quality.PresetValue(next.Preset, knob);
@@ -326,13 +327,21 @@ internal sealed class SettingsCardGraphics
     private void ChoosePreset(QualityPreset preset)
     {
         Disarm();
-        var quality = Quality;
-        // 选预设由服务重置效果基底、保留独立偏好；本计划里玩家改过的非效果项继续算编辑，改过的效果项让位给预设。
-        var edited = (_planned is { } pending ? pending.EditedKnobs : []).Where(knob => Spec(quality, knob).Scope != KnobScope.Effect).ToArray();
-        var values = edited.ToDictionary(knob => knob, RequestedValue);
-        Plan(new QualityRequest(new QualityProfile(preset, values), QualityEditIntent.SelectPreset, edited));
+        Plan(PresetRequest(Quality, _planned, _next, preset));
         SyncKnobs();
     }
+
+    // 选预设由服务重置效果基底、保留独立偏好；本计划里玩家改过的非效果项继续算编辑，改过的效果项让位给预设。
+    // 待应用的是恢复默认时，它复位的独立项也算玩家的选择：全部非效果项连同计划取值并进编辑，否则服务会沿用已生效的独立偏好（DECISION-322）。
+    internal static QualityRequest PresetRequest(IQualityService quality, QualityRequest? pending, QualityProfile? planned, QualityPreset preset)
+    {
+        IEnumerable<QualityKnob> carried = pending is null ? [] : pending.Intent == QualityEditIntent.RestoreDefaults ? quality.Knobs.Select(spec => spec.Knob) : pending.EditedKnobs;
+        var edited = carried.Where(knob => Spec(quality, knob).Scope != KnobScope.Effect).ToArray();
+        var values = edited.ToDictionary(knob => knob, knob => RequestedValue(quality, planned, knob));
+        return new QualityRequest(new QualityProfile(preset, values), QualityEditIntent.SelectPreset, edited);
+    }
+
+    internal static QualityRequest ResetRequest(IQualityService quality) => new(quality.Default, QualityEditIntent.RestoreDefaults, []);
 
     // 单项编辑沿用待应用计划的意图（选预设、恢复默认之后再改的项叠在其上），没有计划时是 EditKnobs；编辑项只增不减。
     private void Change(QualityKnob knob, float value)
@@ -356,7 +365,7 @@ internal sealed class SettingsCardGraphics
         }
         Disarm();
         foreach (var row in _rows) row.Ui?.Reset();
-        Plan(new QualityRequest(Quality.Default, QualityEditIntent.RestoreDefaults, []));
+        Plan(ResetRequest(Quality));
         SyncKnobs();
     }
 
