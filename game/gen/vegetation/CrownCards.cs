@@ -99,7 +99,9 @@ internal static class CrownCards
         var blob = plan.Blobs[owner];
         var m = Vector3.Normalize(hit - blob.Center + new Vector3(0f, 1e-6f, 0f));
         var clusterCenter = hit - m * (radius * plan.Range(ClusterPressMin, ClusterPressMax) + blob.Radius * FacetSag);
-        var anchor = blob.Anchor + plan.RandomDirection() * plan.Range(0f, 0.3f);
+        // Winter twig strokes grow from the branch tip nearest the cluster, not from the tip its mass was hung on, so every
+        // secondary end carries strokes and none gathers the strokes of a whole mass (WLD-VEGETATION winter branches).
+        var anchor = plan.NearestTip(clusterCenter) + plan.RandomDirection() * plan.Range(0f, 0.3f);
         var h2 = plan.Next();
         var cluster = cards.Count;
         var members = plan.Count(ClusterMin, ClusterMax);

@@ -24,17 +24,19 @@ public sealed record TreeForm(
     float Droop,           // 0 none … 1 secondaries and cards hang (willow)
     float Lumps,           // blob bump amplitude (cloud balls use 0.13, ART-MODELING)
     int CloudSatellites,   // satellite balls around each cloud cluster
-    int Stems = 1);        // multi-stem shrubs and small trees
+    int Stems = 1,         // multi-stem shrubs and small trees
+    int Whorl = 1);        // leader forms: main branches leaving the trunk at one tier (metasequoia: opposite pairs)
 
 /// <summary>The mother-model shape table: one place for every tunable tree proportion (WLD-VEGETATION).</summary>
 public static class TreeForms
 {
     private static readonly Dictionary<string, TreeForm> Table = new(StringComparer.Ordinal)
     {
-        // Ginkgo: upright ovoid-cone, leader to the top, branches rising steeply (WLD-VEGETATION).
-        ["ginkgo"] = new(TreeStructure.Branching, 0.26f, 0.30f, 0.27f, 0.45f, true, 5, 7, 42f, 2, 3, 0.022f, 0.55f, 0f, 0.10f, 4),
-        // Metasequoia: narrow cone, straight leader, whorled near-horizontal tiers.
-        ["metaseq"] = new(TreeStructure.Branching, 0.10f, 0.12f, 0.17f, 1.00f, true, 8, 10, 8f, 2, 2, 0.020f, 0.50f, 0f, 0.08f, 4),
+        // Ginkgo: upright ovoid-cone, leader to the top, branches rising steeply, short side shoots along them (WLD-VEGETATION).
+        ["ginkgo"] = new(TreeStructure.Branching, 0.26f, 0.30f, 0.27f, 0.45f, true, 5, 7, 42f, 3, 4, 0.022f, 0.55f, 0f, 0.10f, 4),
+        // Metasequoia: narrow cone, straight leader, near-horizontal mains in opposite pairs, tier upon tier up to the
+        // leader top, so the bare winter crown still reads as a tower (WLD-VEGETATION).
+        ["metaseq"] = new(TreeStructure.Branching, 0.10f, 0.12f, 0.17f, 1.00f, true, 18, 20, 8f, 2, 2, 0.020f, 0.50f, 0f, 0.08f, 4, Whorl: 2),
         // Cherry, plum, crabapple, apricot: low, broad and spreading.
         ["spreading"] = new(TreeStructure.Branching, 0.24f, 0.32f, 0.62f, 0.05f, false, 4, 5, 30f, 2, 3, 0.026f, 0.38f, 0f, 0.13f, 4),
         // Maple, koelreuteria: rounded crown.

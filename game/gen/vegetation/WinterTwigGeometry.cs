@@ -10,7 +10,7 @@ namespace Campus.Gen.Vegetation;
 /// <summary>Builds the winter twig shell and its deterministic crown channels.</summary>
 internal static class WinterTwigGeometry
 {
-    private const int TwigMassRings = 9, TwigMassSides = 10;
+    private const int TwigMassRings = 9, TwigMassSides = 8;
 
     /// <summary>The twig-mass mesh of a mother model (veg_twig_mass); null for species without one. Tag 1 marks the far stand-in's copy.</summary>
     internal static VegetationPrototypeGeometry? TwigMass(TreePlan plan, PaletteCatalog palette, float tag)
@@ -30,8 +30,10 @@ internal static class WinterTwigGeometry
         }
         var wobble = new float[TwigMassRings * TwigMassSides];
         for (var i = 0; i < wobble.Length; i++) wobble[i] = 1f + (rng.NextFloat() * 2f - 1f) * TwigMassWobble;
+        // CUSTOM0.x = height in main-branch tiers (whole numbers at the tiers, veg_twig_mass draws its layers there).
+        float Tier(float y) => plan.TierPitch > 0f ? (y - plan.TierOrigin) / plan.TierPitch : 0f;
         void Vertex(Vector3 p, Vector3 n) =>
-            w.Add(p, n, 1f, color, Gradient(plan, p, n), new Vector4(axis with { Y = p.Y }, hash), Vector4.Zero,
+            w.Add(p, n, 1f, color, Gradient(plan, p, n), new Vector4(Tier(p.Y), 0f, 0f, hash), Vector4.Zero,
                 new Vector4(axis with { Y = p.Y }, tag), Vector2.Zero);
         // Bottom pole, rings, top pole (the leader tip).
         Vertex(axis + Vector3.UnitY * bottom, -Vector3.UnitY);

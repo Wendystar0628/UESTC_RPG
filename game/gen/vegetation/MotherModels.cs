@@ -308,8 +308,8 @@ public static class MotherModels
         return species.Deciduous && species.Card == CardShape.Needle;
     }
 
-    /// <summary>Twig-mass radius as a fraction of the crown envelope at the same height (narrower than the leafy crown).</summary>
-    public const float TwigMassWidth = 0.68f;
+    /// <summary>Twig-mass radius as a fraction of the crown envelope at the same height (about the reach of the main branches, so each twig layer runs out along its tier).</summary>
+    public const float TwigMassWidth = 0.85f;
 
     /// <summary>Relative crown height (0 bottom … 1 top) where the twig mass is widest; below it the base rounds in.</summary>
     public const float TwigMassWidest = 0.16f;

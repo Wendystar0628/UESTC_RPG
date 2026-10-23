@@ -15,9 +15,18 @@ internal static class TreeWoodGeometry
     /// <summary>The existing low-detail branch section, shared by L0 secondaries and L1 branches.</summary>
     private const int SimplifiedBranchSides = 4;
 
+    /// <summary>
+    /// L0+ main branches at least this thick at their base keep 12 sides; thinner ones take 8, whose facets sit under 8% of the
+    /// radius (about 9 mm on a 12 cm branch) and do not show within the L0+ range.
+    /// </summary>
+    private const float ThickBranchRadius = 0.12f;
+
     internal static void WriteWood(VegetationPrototypeGeometry w, TreePlan plan, VegLevel level, MotherColorIds ids)
     {
         var flarePhase = plan.Next() * 6.2831853f;
+        // Beyond L0 a winter twig mass (WinterTwigGeometry) carries the fine branches and the twig strokes have folded away
+        // (veg_winter_far), so L1 keeps only the mains, as chords.
+        var twigMass = HasTwigMass(plan.Species);
         foreach (var limb in plan.Limbs)
         {
             var sides = (limb.Level, level) switch
@@ -25,13 +34,15 @@ internal static class TreeWoodGeometry
                 (0, VegLevel.L0Plus) => 32,
                 (0, VegLevel.L0) => 16,
                 (0, _) => 6,
-                (1, VegLevel.L0Plus) => 12,
+                (1, VegLevel.L0Plus) => limb.Radii[0] >= ThickBranchRadius ? 12 : 8,
                 (1, VegLevel.L0) => 6,
                 (1, _) => SimplifiedBranchSides,
-                (_, VegLevel.L1) when plan.Species.Deciduous => SimplifiedBranchSides,
+                (_, VegLevel.L1) when plan.Species.Deciduous && !twigMass => SimplifiedBranchSides,
                 (_, VegLevel.L1) => 0,
                 (_, VegLevel.L0) => SimplifiedBranchSides,
-                _ => 6
+                // L0+ secondaries: 6 sides, or the simplified section when they are thinner than a third of the thick-branch
+                // radius (a 4 cm twig's square section sits 1.2 cm inside its smooth outline at most)
+                _ => limb.Radii[0] >= ThickBranchRadius / 3f ? 6 : SimplifiedBranchSides
             };
             if (sides == 0) continue;
             var points = new List<Vector3>(limb.Points);
@@ -42,7 +53,7 @@ internal static class TreeWoodGeometry
                 // branch instead of removing the entire secondary level: main branches keep their bend, secondaries
                 // use the chord between their attachment and tip. Counts, taper and reach still come from TreePlan.
                 var middle = points.Count / 2;
-                var keep = limb.Level == 1 ? new[] { 0, middle, points.Count - 1 } : new[] { 0, points.Count - 1 };
+                var keep = limb.Level == 1 && !twigMass ? new[] { 0, middle, points.Count - 1 } : new[] { 0, points.Count - 1 };
                 points = keep.Select(i => limb.Points[i]).ToList();
                 radii = keep.Select(i => limb.Radii[i]).ToList();
             }

@@ -316,13 +316,35 @@ float veg_edge_noise(vec3 wp, int row, int layer) {
 	return clamp((n - 0.5) * VEG_EDGE_CONTRAST + 0.5, 0.0, 1.0);
 }
 
-// 中距冬季细枝体（GAME-057，veg_twig_mass）与近处枝梢笔触的交叉淡化：每株一个距离（主相机到树干脚点上方半个树高，与远近池交接同一个点），
-// 按 L0+ 的切换距离（12 m 树 15 m，乘 树高/12 × 细节系数）的倍数从前者到后者，近处 0、中距以外 1。两个着色器用同一个函数，所以互补
-const vec2 VEG_WINTER_MASS_NEAR = vec2(0.8, 1.3);
+// 换级前先收插片、再限时交叉淡化（GAME-194，ENG-PERF）。距离按整株取（树干脚点上方半个树高，与 VegetationBuckets 分桶同一点），
+// 一株树前后两侧同步收。每个换级点的升级点 P = 换级距离 × 树高/12 × 细节系数 × (1 − 触发带) ÷ 滞回：走近时 VegetationBuckets 在 P 才换回细一级，
+// 走远时更晚才换粗一级。细一级多出来的插片在 [P·(1 − VEG_SHRINK_BAND), P] 里按重要度先后收到 0，过了 P 两档插片完全一致，
+// 交叉淡化只换团块细分与枝干，来回走都不在换模那一刻冒出或掉下插片
+const float VEG_SHRINK_BAND = 0.3;
+
+// 整株到主相机的距离，与 VegetationBuckets 的分桶点相同
+float veg_tree_dist(vec3 cam, vec3 origin, float height) {
+	return length(cam - origin - vec3(0.0, 0.5 * max(height, 1.0), 0.0));
+}
+
+// 换级点的升级点 P（m）
+float veg_level_point(float boundary, float height) {
+	return boundary * max(height, 1.0) / VEG_TREE_REFERENCE_HEIGHT * max(quality.x, 0.5)
+			* (1.0 - VEG_LEVEL_BAND_FRACTION) / VEG_LEVEL_HYSTERESIS;
+}
+
+// 换级点的收插片进度：0 还没开始收，1 已收完（到了升级点 P）
+float veg_shrink_u(float boundary, float dist, float height) {
+	float p = veg_level_point(boundary, height);
+	return clamp((dist / p - (1.0 - VEG_SHRINK_BAND)) / VEG_SHRINK_BAND, 0.0, 1.0);
+}
+
+// 中距冬季细枝体（veg_twig_mass）与枝梢笔触的交叉淡化（GAME-057、GAME-211）：从 L0 的升级点到 L1 的升级点（12 m 树约 12–33 m、
+// 19 m 树约 19–52 m）一整段慢慢交接，近排到远排同一棵树逐渐由细梢换成细枝体，交接带里不是两种画法硬拼；L0 的升级点以内只有
+// 主枝、二级枝和枝梢笔触，近处读得出三级枝序，不罩细枝体；L1 以外笔触已收完，整株交给细枝体。两个着色器用同一个函数，所以互补
 float veg_winter_far(vec3 cam, vec3 origin, VegInst inst) {
-	float l0 = VEG_LOD_L0 * max(inst.height, 1.0) / VEG_TREE_REFERENCE_HEIGHT * max(quality.x, 0.5);
-	float d = length(cam - (origin + vec3(0.0, 0.5 * inst.height, 0.0)));
-	return smoothstep(l0 * VEG_WINTER_MASS_NEAR.x, l0 * VEG_WINTER_MASS_NEAR.y, d);
+	return smoothstep(veg_level_point(VEG_LOD_L0, inst.height), veg_level_point(VEG_LOD_L1, inst.height),
+			veg_tree_dist(cam, origin, inst.height));
 }
 
 // L0 integer owner cells use the same floor-origin as VegetationNearReadyEncoding. Texture dimensions are the CPU's

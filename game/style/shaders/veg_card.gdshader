@@ -20,6 +20,9 @@ const float VEG_NEAR_COLLAPSE = 1.5;       // 1.5 m 内插片塌缩（§11.3）
 const float VEG_KEEP_L0 = 0.4;             // L0 留下的插片比例（MotherModels.CardCount 的前缀）
 const float VEG_KEEP_L1 = 0.0556;          // L1 留下的插片比例
 const float VEG_COVER_GROW = 1.5;          // 远处按像素外扩叶形的上限，保住树冠覆盖率（§11.1）
+const float VEG_TWIG_KEEP = 0.2;           // 换成枝梢笔触的插片比例，其余在裸冠里收到 0（§1.5）
+const float VEG_TWIG_ASPECT = 4.0;         // 枝梢笔触顺着二级枝拉长，至多这么多个卡宽（§1.5）
+const float VEG_TWIG_SNOW = 0.35;          // 枝梢笔触镶雪的宽度占叶卡雪宽的比例：细梢只镶上沿一线，不整根变白（§1.5）
 const float VEG_TWIG_MIN_PX = 0.5;         // 裸枝笔触按像素外扩的量（像素），保住约一个像素的线宽，不外扩成团
 // 远处叶卡化简（23c2c）：一张插片在屏幕上只剩几个像素时，叶形的细节逐像素闪烁；按 UV 的像素导数从前者到后者，叶形换成一个圆润的叶团
 // （覆盖率与叶簇相近）。枝条笔触、棕榈扇叶不换
@@ -79,11 +82,7 @@ const float VEG_UNDER_KEEP_L0 = 0.5;       // L0 留下的冠底叶簇比例（M
 const float VEG_UNDER_PULL = 1.3;          // 拉近的距离，按插片半径（簇心压进团块至多约 0.75 个半径，加团块面的下陷）
 const float VEG_UNDER_DL = 0.035;          // 冠底叶簇的明度起伏（OKLab L，±，一簇一个值）：仰看时一簇簇分得开，又不花
 const float VEG_UNDER_FIT = 1.3;           // 冠底叶卡正对镜头：卡片放大这么多（MotherModels.UnderCardScale），叶形按叶柄端缩回原大，不让卡片的直边切出叶形
-// 换级前先收插片、再限时交叉淡化（GAME-194，ENG-PERF）。距离按整株取（树干脚点上方半个树高，与 VegetationBuckets 分桶同一点），
-// 一株树前后两侧同步收。每个换级点的升级点 P = 换级距离 × 树高/12 × 细节系数 × (1 − 触发带) ÷ 滞回：走近时 VegetationBuckets 在 P 才换回细一级，
-// 走远时更晚才换粗一级。细一级多出来的插片在 [P·(1 − VEG_SHRINK_BAND), P] 里按重要度先后收到 0，过了 P 两档插片完全一致，
-// 交叉淡化只换团块细分与枝干，来回走都不在换模那一刻冒出或掉下插片
-const float VEG_SHRINK_BAND = 0.3;
+// 换级前先收插片、再限时交叉淡化（GAME-194，ENG-PERF）：进度与收插片带见 veg_common 的 veg_shrink_u
 // 一簇插片收完所占的带内进度：每簇平滑收小，同时有几十簇在收，整冠读成渐渐变稀，不一簇一簇闪掉
 const float VEG_SHRINK_SOFT = 0.3;
 // 留下的插片随同一进度放大（L0+→L0、L0→L1 两段，累乘），补回叶簇覆盖；放大时卡心朝团心内移同样的量，外缘不越过 CardReach
@@ -104,18 +103,6 @@ varying float v_s;
 vec3 veg_tangent(vec3 n) {
 	vec3 t = cross(vec3(0.0, 1.0, 0.0), n);
 	return dot(t, t) > 1e-6 ? normalize(t) : vec3(1.0, 0.0, 0.0);
-}
-
-// 整株到主相机的距离，与 VegetationBuckets 的分桶点相同
-float veg_tree_dist(vec3 cam, vec3 origin, float height) {
-	return length(cam - origin - vec3(0.0, 0.5 * max(height, 1.0), 0.0));
-}
-
-// 换级点的收插片进度：0 还没开始收，1 已收完（到了升级点 P）
-float veg_shrink_u(float boundary, float dist, float height) {
-	float p = boundary * max(height, 1.0) / VEG_TREE_REFERENCE_HEIGHT * max(quality.x, 0.5)
-			* (1.0 - VEG_LEVEL_BAND_FRACTION) / VEG_LEVEL_HYSTERESIS;
-	return clamp((dist / p - (1.0 - VEG_SHRINK_BAND)) / VEG_SHRINK_BAND, 0.0, 1.0);
 }
 
 // 远近交接前收 L1 插片的进度（按格的交接距离，不随树高）
@@ -200,6 +187,12 @@ void vertex() {
 			center = mix(CUSTOM1.xyz, c, k * smoothstep(0.15, 0.6, a));
 			twig = k < 0.5;
 			leafy = k;
+			// 裸冠只留一部分插片换成枝梢笔触（按每张自己的 h3，不按簇）：一个枝梢上几根散开的细梢，不把一簇叶卡并成一把羽毛笔刷（§1.5）；
+			// 其余插片随叶量收到 0，不换笔触
+			if (veg_hash(CUSTOM1.w, 47u) >= VEG_TWIG_KEEP) {
+				size = k;
+				twig = false;
+			}
 		}
 		int layer = twig ? sp.twig_card : (bloom ? sp.bloom_card : sp.leaf_card);
 		// 一簇共用 h2（同落、同明度、同去留）；叶形各张不同，种子取每张自己的 h3
@@ -240,8 +233,24 @@ void vertex() {
 		// 补偿放大朝团心内移：卡心退进团块，外缘停在放大前的位置
 		center += normalize(CUSTOM2.xyz - c + vec3(0.0, 1e-4, 0.0)) * (length(off) * size * (1.0 - 1.0 / keep.y));
 		VERTEX = center + (uw.x * t1 + uw.y * b1) * size;
-		// 插片用外壳法线（max-011 的统一树冠法线；棕榈扇叶用自己的法线）
-		NORMAL = nb;
+		vec3 card_n = nb;
+		if (twig) {
+			// 枝梢笔触顺着二级枝走（§1.5）：叶柄端（v = 0）落在枝梢锚点，主梢指向有叶时这张插片所在的位置，长度取那段距离，
+			// 一到 VEG_TWIG_ASPECT 个卡宽；卡面绕主梢转向镜头（沿轴的公告板），裸冠由一簇簇细梢填回有叶时的轮廓，不在枝头聚成星团
+			vec3 reach = c - center;
+			float rl = length(reach);
+			vec3 along = rl > 1e-4 ? reach / rl : b1;
+			vec3 side = cross(along, view_m);
+			side = dot(side, side) > 1e-6 ? normalize(side) : t1;
+			// +u 朝上：片元里枝梢镶雪往 +u 一侧挪
+			side *= side.y < 0.0 ? -1.0 : 1.0;
+			float wdt = length(off) * 1.4142;
+			VERTEX = center + (side * (UV.x - 0.5) * wdt + along * (UV.y * clamp(rl, wdt, wdt * VEG_TWIG_ASPECT))) * size;
+			card_n = normalize(side + view_m);
+		}
+		// 插片用外壳法线（max-011 的统一树冠法线；棕榈扇叶用自己的法线）。枝梢笔触是细圆枝，取它朝上、朝镜头的那一面的法线，
+		// 和枝干一样按枝自己受光，不按整冠外壳分出大片影面（§1.5：细梢与枝干读成同一种材质）
+		NORMAL = card_n;
 		VERTEX = veg_wind(VERTEX, origin, dir_m, inst, sp, h2, 1.0, 1.0);
 		if (under) {
 			// 沿主相机视线拉近，屏幕上的位置不变；冬季换成枝条笔触时不拉
@@ -481,7 +490,7 @@ void fragment() {
 	}
 	ALPHA_SCISSOR_THRESHOLD = 0.5;
 	// 着色用团块法线：外壳法线与团块自己的法线混合（棕榈扇叶用自己的法线）
-	if (sp.leaf_card != VEG_CARD_FROND) {
+	if (sp.leaf_card != VEG_CARD_FROND && (v_bits & 32) == 0) {
 		float clump_k = VEG_CLUMP_NORMAL * mix(1.0, VEG_CLUMP_FAR, smoothstep(VEG_CLUMP_FADE.x, VEG_CLUMP_FADE.y, length(VERTEX)));
 		NORMAL = normalize(mix(normalize(NORMAL), clump, clump_k));
 	}
@@ -514,15 +523,19 @@ void fragment() {
 		}
 	}
 	// 覆雪（§6.4）：团块按法线朝上的程度覆雪（常绿树冠顶一层白）；插片（裸枝笔触、叶簇）只在朝上的一侧镶一线雪——
-	// 形状在 UV 里往上挪一个雪宽就出了形状的那一条（叶卡的 v 轴是世界竖直方向在卡面上的投影）
+	// 形状在 UV 里往上挪一个雪宽就出了形状的那一条（叶卡的 v 轴是世界竖直方向在卡面上的投影，枝梢笔触的 +u 朝上）
 	float t_grad = twig ? -1.0 : v_spare;
 	float snow_k = 0.0;
 	if (mass) {
 		snow_k = veg_snow_cover(tctx.n_w.y, tctx.ao, veg_hash(v_seed, 43u));
 	} else if (snow >= VEG_SNOW_MIN) {
 		float w = VEG_SNOW_EDGE_W * smoothstep(VEG_SNOW_MIN, 0.7, snow) * smoothstep(-0.2, 0.4, shell_up);
-		float d_up = veg_card_shape(v_bits & 15, card_uv + vec2(0.0, w), card_seed, card_px);
+		// 枝梢笔触的 v 轴顺着二级枝、+u 朝上（vertex），往 +u 挪；叶卡往 +v 挪
+		vec2 up_uv = (v_bits & 32) != 0 ? vec2(w * VEG_TWIG_SNOW, 0.0) : vec2(0.0, w);
+		float d_up = veg_card_shape(v_bits & 15, card_uv + up_uv, card_seed, card_px);
 		snow_k = w > 1e-4 ? clamp(d_up / max(fwidth(d_up), 1e-4) + 0.5, 0.0, 1.0) : 0.0;
+		// 细梢上的一线雪窄于一个像素时不画：否则整根细梢按覆盖率混成灰白
+		snow_k *= (v_bits & 32) != 0 ? smoothstep(0.5, 1.5, up_uv.x / max(card_px, 1e-5)) : 1.0;
 	}
 	veg_snow_apply(sp, snow_k, lit, shade, lamp, t_grad, trans_k);
 	ToonCol tcol = veg_colors(tctx, tmat, lit, shade, lamp, t_grad, trans_k);

@@ -40,6 +40,10 @@ internal sealed class TreePlan
     public float BranchY { get; }
     public float TrunkRadius { get; }
     public List<Limb> Limbs { get; } = [];
+
+    /// <summary>Height of the first main-branch tier and the rise per tier on leader forms (0 when mains are not tiered).</summary>
+    public float TierOrigin { get; private set; }
+    public float TierPitch { get; private set; }
     public List<Blob> Blobs { get; } = [];
 
     /// <summary>Directions sampled when looking for holes in the crown (WLD-VEGETATION: no see-through gaps).</summary>
@@ -95,6 +99,11 @@ internal sealed class TreePlan
         if (Form.Leader || branches.Count == 0) branches.AddRange(Limbs.Where(l => l.Level == 0).Select(l => l.Tip));
         return branches;
     }
+
+    private Vector3[]? _tips;
+
+    /// <summary>The branch tip (<see cref="BranchTips"/>) nearest a point; asked once the skeleton is complete.</summary>
+    public Vector3 NearestTip(Vector3 p) => (_tips ??= BranchTips().ToArray()).MinBy(t => Vector3.DistanceSquared(t, p));
 
     public TreePlan(SpeciesInfo species, int variant)
     {
@@ -159,12 +168,22 @@ internal sealed class TreePlan
         var stemTops = BuildStems(stems, trunkTop);
 
         var mains = Count(Form.MainMin, Form.MainMax);
+        // Leader forms set their mains in tiers of Form.Whorl (one main per tier elsewhere): the members of a tier share
+        // its height and spread evenly round the trunk, and successive tiers turn on.
+        var whorl = Math.Max(1, Form.Whorl);
+        var tiers = (mains + whorl - 1) / whorl;
+        if (Form.Leader)
+        {
+            TierPitch = (Height * 0.88f - BranchY) / tiers;
+            TierOrigin = BranchY + 0.5f * TierPitch;
+        }
         var phase = Next() * Tau;
         var asym = TreeForms.Asymmetry(Variant);
         var leanAngle = MathF.Abs(CrownCenter.X) + MathF.Abs(CrownCenter.Z) > 1e-4f ? MathF.Atan2(CrownCenter.Z, CrownCenter.X) : 0f;
         for (var i = 0; i < mains; i++)
         {
-            var angle = phase + (i + Range(-0.3f, 0.3f)) * Tau / mains;
+            var tier = i / whorl;
+            var angle = phase + (tier + Range(-0.3f, 0.3f)) * Tau / tiers + i % whorl * Tau / whorl;
             if (asym > 0f) angle = BendTowards(angle, leanAngle, asym * 1.6f);
             var trunk = stemTops[i % stems];
             Vector3 origin;
@@ -173,7 +192,7 @@ internal sealed class TreePlan
             if (Form.Leader)
             {
                 var span = Height * 0.88f - BranchY;
-                var y = BranchY + span * (i + 0.5f + Range(-0.25f, 0.25f)) / mains;
+                var y = BranchY + span * (tier + 0.5f + Range(-0.25f, 0.25f) / whorl) / tiers;
                 origin = PointAt(trunk, y);
                 var t = (y - CrownCenter.Y) / CrownRy;
                 var reach = Envelope(t + 0.12f) * Range(0.78f, 0.92f);
@@ -193,7 +212,8 @@ internal sealed class TreePlan
             }
             var main = Curve(1, origin, tip, Form.MainPitchDeg, baseRadius, 0.3f, 6);
             Limbs.Add(main);
-            AddMainCrown(main);
+            // One core mass per tier: the other mains of a whorl carry masses the level budgets may prune.
+            AddMainCrown(main, core: i % whorl == 0);
         }
 
         AddBridges();
@@ -272,7 +292,7 @@ internal sealed class TreePlan
         Blobs[index] = top with { Center = host.Center + offset * (reach / distance) };
     }
 
-    private void AddMainCrown(Limb main)
+    private void AddMainCrown(Limb main, bool core)
     {
         var length = Length(main);
         var mainTip = main.Tip;
@@ -281,7 +301,9 @@ internal sealed class TreePlan
         var tips = new List<Vector3>();
         for (var j = 0; j < secondaries; j++)
         {
-            var f = 0.45f + 0.45f * (j + 0.5f) / secondaries + Range(-0.06f, 0.06f);
+            // Secondaries leave along the outer two thirds of the main, not only near its tip, so the bare crown reads
+            // main → secondary → twig strokes (WLD-VEGETATION winter branches).
+            var f = 0.3f + 0.6f * (j + 0.5f) / secondaries + Range(-0.06f, 0.06f);
             var origin = Along(main, f);
             var tangent = Vector3.Normalize(Along(main, MathF.Min(1f, f + 0.05f)) - Along(main, MathF.Max(0f, f - 0.05f)));
             var side = Vector3.Normalize(Vector3.Cross(Vector3.UnitY, tangent) + new Vector3(1e-4f, 0f, 0f));
@@ -302,10 +324,11 @@ internal sealed class TreePlan
             case CrownType.Mixed:
                 {
                     var mains = Math.Max(1, Form.MainMax);
-                    var rm = MathF.Max(0.4f, (Form.Leader ? Envelope((mainTip.Y - CrownCenter.Y) / CrownRy) * 0.78f : CrownRx * 0.92f / MathF.Cbrt(mains)))
+                    // A tier of several mains shares the leafy mass one main carries alone (the same volume in Whorl masses).
+                    var rm = MathF.Max(0.4f, (Form.Leader ? Envelope((mainTip.Y - CrownCenter.Y) / CrownRy) * 0.78f / MathF.Cbrt(Math.Max(1, Form.Whorl)) : CrownRx * 0.92f / MathF.Cbrt(mains)))
                         * (Species.Crown == CrownType.Mixed ? 1.12f : 1f);
                     var center = mainTip + outward * (rm * 0.15f) + Vector3.UnitY * (rm * 0.1f);
-                    AddBlob(center, rm, mainTip, true);
+                    AddBlob(center, rm, mainTip, core);
                     var subs = Math.Min(3, tips.Count);
                     for (var j = 0; j < subs; j++)
                     {
