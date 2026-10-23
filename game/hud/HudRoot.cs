@@ -24,8 +24,9 @@ public partial class HudRoot : CanvasLayer, IBootParticipant, IAppLoadingPresent
     private HudInput _input = null!;
     private HudLoading _loading = null!;
     private HudFrontispiece _frontispiece = null!;
-    private bool _initialized, _galleryTitle;
-    private SettingsPage? _gallerySettings;
+    private bool _initialized, _galleryTitle, _galleryChecks;
+    // 游戏内大页的画廊：进地图途中 Entering 会关掉大页，所以记下要开的页，到 Playing 再开（同 atlas）。
+    private Action? _galleryInGame;
     // 画廊任务的持有者：节点离树取消（不算失败），其余失败交 IAppFailure。
     private HudTask _gallery = null!;
 
@@ -103,6 +104,9 @@ public partial class HudRoot : CanvasLayer, IBootParticipant, IAppLoadingPresent
     public override void _ExitTree()
     {
         if (!_initialized) return;
+        // 排版检查没跑完就退出等于没测：截图先于检查收尾时照失败报，不静默取消（GAME-176）。
+        if (_galleryChecks && _gallery.Running)
+            _dependencies.Failure.Report(new TimeoutException("The UI gallery layout check did not finish before exit."));
         _gallery.Cancel();
         _loading.Exit();
         _frontispiece.Exit();
@@ -141,7 +145,7 @@ public partial class HudRoot : CanvasLayer, IBootParticipant, IAppLoadingPresent
             case AppState.Playing:
                 _residents.Build();
                 if (!_galleryTitle) _pages.Title.Close();
-                OpenGallerySettings();
+                OpenGalleryInGame();
                 break;
             case AppState.Entering:
             case AppState.Leaving:
@@ -195,33 +199,50 @@ public partial class HudRoot : CanvasLayer, IBootParticipant, IAppLoadingPresent
         return Task.CompletedTask;
     }
 
-    /// <summary>--ui-gallery=&lt;页名&gt;：启动时直接打开一页，供截图与评审（UI-VISUAL；完整的组件画廊归 35c）。</summary>
+    /// <summary>
+    /// --ui-gallery=&lt;页名&gt;：启动时直接打开一页，供截图与评审（UI-VISUAL；完整的组件画廊归 35c）。
+    /// 设置卡每个页签、存档页、大地图两个页签都有一页，界面轮逐页拍（scripts/shots/ui-poses.txt）；这些大页开着时同时跑排版收敛检查。
+    /// </summary>
     private void OpenGallery(string page)
     {
         switch (page)
         {
-            case "settings": OpenGallerySettings(SettingsPage.General); break;
-            case "graphics": OpenGallerySettings(SettingsPage.Graphics); break;
-            case "sound": OpenGallerySettings(SettingsPage.Sound); break;
-            case "keys": OpenGallerySettings(SettingsPage.Keys); break;
-            case "rebind": OpenGallerySettings(SettingsPage.Rebind); break;
-            case "saves": _pages.OpenSaves(fromTitle: true); break;
+            case "settings": OpenGalleryInGame(() => _pages.OpenSettings(SettingsPage.General, fromTitle: false)); break;
+            case "graphics": OpenGalleryInGame(() => _pages.OpenSettings(SettingsPage.Graphics, fromTitle: false)); break;
+            case "sound": OpenGalleryInGame(() => _pages.OpenSettings(SettingsPage.Sound, fromTitle: false)); break;
+            case "keys": OpenGalleryInGame(() => _pages.OpenSettings(SettingsPage.Keys, fromTitle: false)); break;
+            case "rebind": OpenGalleryInGame(() => _pages.OpenSettings(SettingsPage.Rebind, fromTitle: false)); break;
+            case "saves": OpenGalleryInGame(() => _pages.OpenSaves(fromTitle: false)); break;
             case "title": _residents.Clean = _galleryTitle = true; _pages.Title.Open(); break;
             case "hud": break; // The resident corners are always shown in Playing.
-            case "atlas": break; // The map HUD opens its own gallery after entering Playing.
-            case "layout": Widgets.UiLayoutGallery.Create(_view.Kit, _view.PageHost); break;
+            case "atlas" or "atlas-index": CheckGalleryLayout(); break; // The map HUD opens its own gallery after entering Playing.
+            case "layout": Widgets.UiLayoutGallery.Create(_view.Kit, _view.PageHost); CheckGalleryLayout(); break;
             case "census": StartGallery(lifetime => Census(3, lifetime)); break;
             default: throw new ArgumentException($"Unknown --ui-gallery page: {page}");
         }
     }
 
-    // 设置页画廊拍的是游戏内设置：进地图途中 Entering 会关掉设置页，所以记下要开的页，到 Playing 再开（同 atlas）。
-    private void OpenGallerySettings(SettingsPage? page = null)
+    private void OpenGalleryInGame(Action? open = null)
     {
-        _gallerySettings = page ?? _gallerySettings;
-        if (_gallerySettings is not { } open || _dependencies.Flow.State != AppState.Playing) return;
-        _gallerySettings = null;
-        _pages.OpenSettings(open, fromTitle: false);
+        if (open is not null)
+        {
+            _galleryInGame = open;
+            CheckGalleryLayout();
+        }
+        if (_galleryInGame is not { } pending || _dependencies.Flow.State != AppState.Playing) return;
+        _galleryInGame = null;
+        pending();
+    }
+
+    // 大页在 Playing 才开；进了 Playing 再等页面出现、结构落定，然后判尺寸是否反复变化（UiLayoutGallery.AssertSettledAsync）。
+    private void CheckGalleryLayout()
+    {
+        _galleryChecks = true;
+        StartGallery(async lifetime =>
+        {
+            while (!_dependencies.Flow.IsPlaying) await NextFrame(lifetime);
+            await Widgets.UiLayoutGallery.AssertSettledAsync(_view.PageHost, lifetime);
+        });
     }
 
     private void StartGallery(Func<CancellationToken, Task> run)

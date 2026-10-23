@@ -1,7 +1,13 @@
 # 界面轮：名字 | 已登记机位（开始页没有世界，写 -） | 真实启动页面与模式；1920×1080、ui=1、无声由 fixed-shots.ps1 统一指定。
 # 用法：powershell -NoProfile -File scripts/shots/fixed-shots.ps1 -Ui [-Only 名字,名字]
+# 设置卡每个页签、存档页、大地图两个页签各一行；这些大页开着时游戏内同跑排版收敛检查，--frames=120 让截图排在检查跑完之后。
 01-开始页 | - | --mode=fly --title=1 --ui-gallery=title
 02-行走HUD | P02 | --mode=walk --title=0 --ui-gallery=hud
-03-地图界面 | P02 | --mode=fly --title=0 --ui-gallery=atlas
-05-设置页 | P02 | --mode=walk --title=0 --ui-gallery=settings
-06-画面页 | P02 | --mode=walk --title=0 --ui-gallery=graphics
+03-地图界面 | P02 | --mode=fly --title=0 --ui-gallery=atlas --frames=120
+05-设置页 | P02 | --mode=walk --title=0 --ui-gallery=settings --frames=120
+06-画面页 | P02 | --mode=walk --title=0 --ui-gallery=graphics --frames=120
+07-声音页 | P02 | --mode=walk --title=0 --ui-gallery=sound --frames=120
+08-键位页 | P02 | --mode=walk --title=0 --ui-gallery=keys --frames=120
+09-改键页 | P02 | --mode=walk --title=0 --ui-gallery=rebind --frames=120
+10-存档页 | P02 | --mode=walk --title=0 --ui-gallery=saves --frames=120
+11-地图目录 | P02 | --mode=fly --title=0 --ui-gallery=atlas-index --frames=120

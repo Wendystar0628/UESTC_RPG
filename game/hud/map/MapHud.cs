@@ -33,7 +33,7 @@ public partial class MapHud : Node, IMapAware, IBootParticipant
     private long _atlasRev = -1;
 
     private bool _night;
-    private bool _galleryPending;
+    private AtlasTab? _galleryPending;
 
     // 两个控制共用的状态与依赖
     internal MapHudServices Services => _services!;
@@ -143,10 +143,10 @@ public partial class MapHud : Node, IMapAware, IBootParticipant
         ApplyNight(_services!.Theme.Dark);
         _base!.Poll(_map?.Id);
         var playing = _services!.Flow.IsPlaying;
-        if (_galleryPending && playing)
+        if (_galleryPending is { } tab && playing)
         {
-            _galleryPending = false;
-            _atlasCtl.Open(AtlasTab.Layers);
+            _galleryPending = null;
+            _atlasCtl.Open(tab);
         }
         _atlasCtl.Frame(dt, playing);
         _minimapCtl.Frame(dt, playing, off: MinimapOff || _map is null);
@@ -165,11 +165,11 @@ public partial class MapHud : Node, IMapAware, IBootParticipant
     public string Id => "hud-map";
     public int Order => 0;
 
-    /// <summary>启动参数在 BeforeMap 才到：这里只取 --ui-gallery=atlas；--ui=0 由界面根隐藏小地图所在的槽位。昼夜主题读 UiThemeClock.Dark（含 --ui-theme）。</summary>
+    /// <summary>启动参数在 BeforeMap 才到：这里只取 --ui-gallery=atlas、atlas-index（图层、索引两个页签）；--ui=0 由界面根隐藏小地图所在的槽位。昼夜主题读 UiThemeClock.Dark（含 --ui-theme）。</summary>
     public Task Initialize(BootPhase phase, BootContext context)
     {
         if (phase != BootPhase.BeforeMap) return Task.CompletedTask;
-        _galleryPending = context.Run.Ui.Gallery == "atlas";
+        _galleryPending = context.Run.Ui.Gallery switch { "atlas" => AtlasTab.Layers, "atlas-index" => AtlasTab.Index, _ => null };
         return Task.CompletedTask;
     }
 

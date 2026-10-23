@@ -4,9 +4,69 @@ using Godot;
 
 namespace Campus.Hud.Widgets;
 
-/// <summary>--ui-gallery=layout 的同一页布局样例；关闭时释放整棵树及其材质持有者。</summary>
+/// <summary>
+/// --ui-gallery=layout 的同一页布局样例；关闭时释放整棵树及其材质持有者。
+/// 另管画廊页的排版收敛检查（<see cref="AssertSettledAsync"/>），界面轮的大页与界面测试共用这一份判据。
+/// </summary>
 public static class UiLayoutGallery
 {
+    // 帧数按 demo 量级取：界面轮固定 60 帧，出现、落定、观察各约 2 s、0.2 s、0.5 s；结构一直在增删就按 4 s 判停滞。
+    private const int AppearFrames = 120, SettleFrames = 10, ObserveFrames = 30, StructureFrames = 240;
+
+    /// <summary>
+    /// 等 <paramref name="root"/> 下出现可见内容，结构（可见控件集合）连续 <see cref="SettleFrames"/> 帧不变后再看
+    /// <see cref="ObserveFrames"/> 帧：同一控件的尺寸在观察窗里变了两帧以上即抛 <see cref="InvalidOperationException"/>，
+    /// 这正是多列容器里换行文字"撑宽→压回→再撑宽"的活锁；一次性的后到变化（滚动条出现）不算。
+    /// 逐帧在帧首取落定的尺寸而不连 Resized：同帧内容器的多轮排版画不出来，只有跨帧反复才看得见。
+    /// </summary>
+    public static async Task AssertSettledAsync(Control root, CancellationToken lifetime)
+    {
+        var previous = new Dictionary<Control, Vector2>();
+        var current = new Dictionary<Control, Vector2>();
+        var changes = new Dictionary<Control, int>();
+        for (var frame = 0; ; frame++)
+        {
+            current.Clear();
+            Collect(root, current);
+            if (current.Count > 1) break;
+            if (frame >= AppearFrames) throw new TimeoutException($"No visible page appeared under {root.Name} for the layout check.");
+            await FrameAwaiter.ProcessAsync(root, lifetime);
+        }
+        int stable = 0, observed = 0;
+        for (var frame = 0; observed < ObserveFrames; frame++)
+        {
+            (previous, current) = (current, previous);
+            await FrameAwaiter.ProcessAsync(root, lifetime);
+            current.Clear();
+            Collect(root, current);
+            if (current.Count != previous.Count || current.Keys.Any(control => !previous.ContainsKey(control)))
+            {
+                if (frame >= StructureFrames) throw new TimeoutException($"The page under {root.Name} kept adding or removing controls.");
+                stable = observed = 0;
+                changes.Clear();
+                continue;
+            }
+            if (stable < SettleFrames) { stable++; continue; }
+            observed++;
+            foreach (var (control, size) in current)
+            {
+                if (size == previous[control]) continue;
+                var count = changes[control] = changes.GetValueOrDefault(control) + 1;
+                if (count >= 2)
+                    throw new InvalidOperationException($"Layout did not settle: {root.GetPathTo(control)} resized in {count} of {observed} observed frames ({previous[control]} -> {size}).");
+            }
+        }
+    }
+
+    // 只收真实可见的控件；内部子件（滚动条）一并算，隐藏的子树不参与排版。
+    private static void Collect(Control root, Dictionary<Control, Vector2> sizes)
+    {
+        if (!root.Visible) return;
+        sizes[root] = root.Size;
+        foreach (var child in root.GetChildren(includeInternal: true))
+            if (child is Control control) Collect(control, sizes);
+    }
+
     public static Control Create(UiKit kit, Control parent)
     {
         var layout = kit.Layout;
