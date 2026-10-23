@@ -19,7 +19,7 @@ namespace Campus.Systems.Water;
 /// </summary>
 [KernelNode("systems.water")]
 [KernelService(typeof(IReflectionWorld))]
-[QualityResponsive(Owns = [QualityKnob.ReflectionInterval])]
+[QualityResponsive(Owns = [QualityKnob.ReflectionInterval], Reads = [QualityKnob.RenderScale])]
 public partial class WaterSystem : Node, IMapAware, IQualityAware, IReflectionWorld
 {
     private static readonly StringName ReflectTex = ShaderGlobals.ReflectTex;
@@ -113,7 +113,7 @@ public partial class WaterSystem : Node, IMapAware, IQualityAware, IReflectionWo
         AddChild(_viewport);
         RenderingServer.GlobalShaderParameterSet(ReflectTex, _viewport.GetTexture());
         RenderingServer.GlobalShaderParameterSet(ReflectLake, -1);
-        GetViewport().SizeChanged += OnSizeChanged;
+        GetWindow().SizeChanged += OnSizeChanged;
         _available = _proxyMaterial is not null;
         if (_available) Changed?.Invoke();
     }
@@ -124,7 +124,7 @@ public partial class WaterSystem : Node, IMapAware, IQualityAware, IReflectionWo
         _available = false;
         Changed?.Invoke();
         if (_world is not null) _world.InstanceChanged -= OnWorldInstanceChanged;
-        GetViewport().SizeChanged -= OnSizeChanged;
+        GetWindow().SizeChanged -= OnSizeChanged;
         _lake = -1;
         RenderingServer.GlobalShaderParameterSet(ReflectLake, -1);
     }
@@ -193,6 +193,7 @@ public partial class WaterSystem : Node, IMapAware, IQualityAware, IReflectionWo
         // Style floor: every 2–4 frames, never off (SYS-GRAPHICS); anything outside clamps to the worst value.
         var n = (int)MathF.Round(view[QualityKnob.ReflectionInterval]);
         _interval = n is >= 2 and <= 4 ? n : 4;
+        if (change.Has(QualityKnob.RenderScale)) OnSizeChanged();
     }
 
     public override void _Process(double delta)
@@ -259,8 +260,10 @@ public partial class WaterSystem : Node, IMapAware, IQualityAware, IReflectionWo
 
     private Vector2I ReflectionSize()
     {
-        var size = GetViewport().GetVisibleRect().Size;
-        return new(Math.Max(1, (int)(size.X / 4f)), Math.Max(1, (int)(size.Y / 4f)));
+        // Window pixels are independent of UI canvas scaling; quality owns the applied 3D scale.
+        var size = GetWindow().Size;
+        var scale = GetViewport().Scaling3DScale / 4f;
+        return new(Math.Max(1, (int)(size.X * scale)), Math.Max(1, (int)(size.Y * scale)));
     }
 
     private void OnSizeChanged()
