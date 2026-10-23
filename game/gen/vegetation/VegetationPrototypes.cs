@@ -107,7 +107,7 @@ public static class VegetationPrototypes
                 var proxy = MotherModels.ShadowProxy(species, variant, palette);
                 return new GeometryPrototype(id, [GeometryBuffer.Freeze(proxy)], Pad(BoundsOf(proxy.Position)));
             case VegPool.Far:
-                // The far stand-in (MotherModels.FarStandIn, 23c2c): a five-sided trunk and the L1 merged masses at icosphere
+                // The far stand-in (MotherModels.FarStandIn, 23c2c): a five-sided trunk and the most exposed L1 masses at icosphere
                 // level 0, tagged so veg_card / veg_trunk cross-fade it against the near pool's L1; stemless balls have no wood.
                 var l1 = Get(species, variant, VegPool.L1, context);
                 var (farWood, farCrown, farTwig) = MotherModels.FarStandIn(species, variant, palette);

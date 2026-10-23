@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using Campus.Contracts;
@@ -7,7 +8,7 @@ using GdUnit4;
 
 namespace Campus.Gen.Vegetation.Tests;
 
-/// <summary>Far stand-in geometry and the generated understorey fade bit.</summary>
+/// <summary>Far stand-in and L1 crown geometry across the level fades, and the generated understorey fade bit.</summary>
 [TestSuite]
 public sealed class VegFadeTests
 {
@@ -36,7 +37,7 @@ public sealed class VegFadeTests
                 if (wood.Index.Length > 0 && (wood.Material != l1.Wood.Material || (wood.Uv is null) != (l1.Wood.Uv is null)))
                     throw new InvalidOperationException($"{s.Id}/{v}: wood layout differs from L1");
                 if ((TreeForms.Get(s.Form).Structure == TreeStructure.StemlessClusters) != (wood.Index.Length == 0)) throw new InvalidOperationException($"{s.Id}/{v}: wood presence");
-                // The stand-in stays within the L1 crown's bulk (the masses are the same lumpy surfaces at a coarser sampling).
+                // The stand-in stays within the L1 crown's bulk (a subset of L1's masses at a coarser sampling).
                 var (lo, hi) = Extent(crown.Position);
                 var (l1lo, l1hi) = Extent(l1.Crown.Position);
                 // A palm's stand-in is a swollen head ball standing in for the fronds: only its size is checked.
@@ -46,6 +47,33 @@ public sealed class VegFadeTests
         // Near models keep the near tags (wood 0, masses −1).
         var near = MotherModelTests.Mother(Table.Value.Get("ginkgo"), 0, VegLevel.L1);
         if (near.Wood.Custom2!.Where((_, i) => i % 4 == 3).Any(w => w != 0f)) throw new InvalidOperationException("near wood tagged");
+    }
+
+    [TestCase, TestCategory(TestReason.Regression)]
+    public void CoarserLevelsDrawSubsetsOfTheNearMasses()
+    {
+        // GAME-195: L1 and the far stand-in used to merge the masses into a few spheres, so the outline jumped at each swap.
+        // Now L1 draws a subset of the plan's own masses and the stand-in a subset of L1's, at their own centres (mass
+        // vertices carry their centre in CUSTOM0 and the tag in CUSTOM2.w: near −1, far −2).
+        var palette = MotherModelTests.Palette;
+        foreach (var id in new[] { "ginkgo", "camphor", "cherry" })
+        {
+            var s = Table.Value.Get(id);
+            var plan = new TreePlan(s, 0);
+            var l1 = Centres(MotherModelTests.Mother(s, 0, VegLevel.L1).Crown, -1f);
+            var far = Centres(MotherModels.FarStandIn(s, 0, palette).Crown, MotherModels.FarMassTag);
+            if (far.Count == 0 || !l1.IsSupersetOf(far)) throw new InvalidOperationException($"{id}: a far mass is not an L1 mass");
+            if (!plan.Blobs.Select(b => b.Center).ToHashSet().IsSupersetOf(l1)) throw new InvalidOperationException($"{id}: an L1 mass is not a near mass");
+        }
+    }
+
+    private static HashSet<System.Numerics.Vector3> Centres(GeometryBundle crown, float tag)
+    {
+        var (c, t) = (crown.Custom0!, crown.Custom2!);
+        var centres = new HashSet<System.Numerics.Vector3>();
+        for (var i = 0; i < c.Length; i += 4)
+            if (t[i + 3] == tag) centres.Add(new System.Numerics.Vector3(c[i], c[i + 1], c[i + 2]));
+        return centres;
     }
 
     [TestCase, TestCategory(TestReason.Contract)]

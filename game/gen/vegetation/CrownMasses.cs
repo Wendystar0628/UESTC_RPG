@@ -13,7 +13,7 @@ internal static class CrownMasses
     /// <summary>
     /// Icosphere level of one mass: 2 at L0+ and 1 at L0 (ENG-PERF; 23d: card and mixed masses as well, with their
     /// hidden faces left out, so the near outline is round instead of faceted); L0 then steps the most exposed up to 2
-    /// within its allowance. L1 uses merged masses at level 1.
+    /// within its allowance. L1 caps the masses L0 kept at 1, and its budget steps the least exposed down to 0.
     /// </summary>
     internal static int BlobDetail(VegLevel level) => level switch
     {
@@ -22,44 +22,38 @@ internal static class CrownMasses
         _ => throw new ArgumentOutOfRangeException(nameof(level), level, "Unknown vegetation level.")
     };
 
-    /// <summary>Masses drawn at a level, with their plan index, radius scale and detail (L1 keeps the enlarged core masses).</summary>
-    internal static List<(Blob Blob, int Index, float Scale, int Detail)> BlobsFor(TreePlan plan, VegLevel level)
+    /// <summary>
+    /// Masses a level starts from, with their plan index, radius scale and detail. L0+ and L0 take every plan mass. L1 takes
+    /// the masses L0 kept (<paramref name="finer"/>) with the same centres, radii and bump indices, so the L0→L1 swap only
+    /// drops the least exposed masses and coarsens the rest instead of moving the outline (SpeedTree-style LOD; the far
+    /// stand-in takes a subset of L1's the same way, <see cref="CrownMassBudget.FarStandIn"/>).
+    /// </summary>
+    internal static List<(Blob Blob, int Index, float Scale, int Detail)> BlobsFor(TreePlan plan, VegLevel level,
+        IReadOnlyList<(Blob Blob, int Index, float Scale, int Detail)>? finer)
     {
-        var list = new List<(Blob, int, float, int)>();
-        var crown = plan.Species.Crown;
-        if (level == VegLevel.L1)
-        {
-            var merged = plan.MergedBlobs(MaxMassesL1);
-            // Merged masses take indices after the plan's own, so their bumps differ from any near-level blob.
-            for (var i = 0; i < merged.Count; i++) list.Add((merged[i], plan.Blobs.Count + i, 1f, 1));
-            return list;
-        }
-        for (var i = 0; i < plan.Blobs.Count; i++)
-        {
-            var blob = plan.Blobs[i];
-            list.Add((blob, i, 1f, BlobDetail(level)));
-        }
-        return list;
+        if (level != VegLevel.L1) return plan.Blobs.Select((blob, i) => (blob, i, 1f, BlobDetail(level))).ToList();
+        ArgumentNullException.ThrowIfNull(finer);
+        return finer.Select(b => (b.Blob, b.Index, b.Scale, Math.Min(b.Detail, BlobDetail(level)))).ToList();
     }
 
-    internal static int CostOf(List<(Blob Blob, int Index, float Scale, int Detail)> blobs) =>
-        blobs.Sum(b => Icosphere.Get(b.Detail).Index.Length / 3);
-
     /// <summary>
-    /// The faces of each near mass that no other mass hides (23d). A face is hidden when all three corners lie inside one
-    /// other mass of the same set, at least <see cref="HiddenMargin"/> of its radius plus a level-1 facet below its lumpy
-    /// surface. Kept faces are cached per mass and detail; Reset after masses were pruned (they hide nothing any more).
+    /// The faces of each mass that no other mass hides (23d). A face is hidden when all three corners lie inside one
+    /// other mass of the same set, at least <see cref="HiddenMargin"/> of its radius plus <c>sag</c> below its lumpy surface:
+    /// the facet depth of the coarsest icosphere the set is drawn at, so the hiding mass's flat faces never uncover it.
+    /// Kept faces are cached per mass and detail; Reset after masses were pruned (they hide nothing any more).
     /// </summary>
     internal sealed class HiddenFaces
     {
         private readonly TreePlan _plan;
+        private readonly float _sag;
         private readonly Dictionary<int, Vector4[]> _bumps = [];
         private readonly Dictionary<(int Index, int Detail), int[]> _kept = [];
         private List<(Blob Blob, int Index)> _set = [];
 
-        public HiddenFaces(TreePlan plan, List<(Blob Blob, int Index, float Scale, int Detail)> blobs)
+        public HiddenFaces(TreePlan plan, List<(Blob Blob, int Index, float Scale, int Detail)> blobs, float sag)
         {
             _plan = plan;
+            _sag = sag;
             Reset(blobs);
         }
 
@@ -111,7 +105,7 @@ internal static class CrownMasses
         }
 
         /// <summary>Whether p lies inside the drawn surface of mass o by the margin (the inverse of <see cref="Surface"/>).</summary>
-        private static bool Swallows(Blob o, Vector4[] bumps, Vector3 p)
+        private bool Swallows(Blob o, Vector4[] bumps, Vector3 p)
         {
             var q = p - o.Center;
             // The lumpy surface never reaches past (1 + 1.05·lump) radii (and the squashed bottom less): far points are outside.
@@ -127,7 +121,7 @@ internal static class CrownMasses
                 sum += ScalarMath.Smoothstep(k) * b.W;
             }
             var r = o.Radius * (1f + o.Lump * (Math.Min(sum, 1.4f) - 0.35f));
-            return length < r * (1f - FacetSag) - HiddenMargin * o.Radius;
+            return length < r * (1f - _sag) - HiddenMargin * o.Radius;
         }
     }
 

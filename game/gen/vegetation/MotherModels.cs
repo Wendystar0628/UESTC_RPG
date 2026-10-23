@@ -75,10 +75,15 @@ public static class MotherModels
     /// </summary>
     public const float HiddenMargin = 0.06f;
 
-    /// <summary>L1 target (ENG-PERF: 0.6–0.9k); L1 merges its masses down to this many.</summary>
-    public const int MaxMassesL1 = 6;
+    /// <summary>
+    /// Kept faces of the far stand-in's masses (ENG-PERF: L2 150–300 triangles with the trunk): about 10–12 bare icosahedra.
+    /// </summary>
+    public const int FarMassTriangles = 240;
 
-    /// <summary>Upper end of the existing L1 triangle target, including the retained winter branch skeleton.</summary>
+    /// <summary>
+    /// Upper end of the L1 triangle target (ENG-PERF: 0.6–0.9k), including the retained winter branch skeleton: L1 keeps
+    /// the most exposed of the masses L0 kept, at icosphere level 0–1, within it.
+    /// </summary>
     public const int TrianglesL1 = 900;
 
     /// <summary>Cards stay within this fraction of the crown diameter outside the crown masses (max-011 review: 5%).</summary>
@@ -134,6 +139,9 @@ public static class MotherModels
     /// <summary>Depth of a level-1 icosphere's faces below its smooth lumpy surface, as a fraction of the mass radius.</summary>
     public const float FacetSag = 0.05f;
 
+    /// <summary>The same for a level-0 icosphere (a bare icosahedron: 1 − inradius / circumradius ≈ 0.2).</summary>
+    public const float IcosahedronSag = 0.2f;
+
     /// <summary>Crown-mass AO by depth below the shell: 1 on the shell, 1 − this deep in the crown (pushes the terminator only).</summary>
     public const float MassAoDepth = 0.15f;
 
@@ -175,18 +183,11 @@ public static class MotherModels
         var plan = new TreePlan(species, variant);
         var shell = new CrownShell(plan);
         var ids = IdsOf(species, palette);
-        var wood = new VegetationPrototypeGeometry(withUv: false);
-        var crown = new VegetationPrototypeGeometry(withUv: true);
-
-        WriteWood(wood, plan, level, ids);
         var twig = TwigMass(plan, palette, tag: 0f);
-        var (drawn, underTake) = CrownCards.Draw(plan, shell, level, ids, crown);
+        var (wood, crown, underTake, masses) = Level(plan, shell, level, ids, twig?.Triangles ?? 0);
         var cards = crown.Cards;
-        var masses = new CrownMassBudget(plan, level, drawn.Select(c => c.Owner).ToHashSet(),
-            wood.Triangles + crown.Triangles, twig?.Triangles ?? 0);
-        masses.FitLevel();
         foreach (var (blob, index, scale, detail) in masses.Blobs)
-            WriteBlob(crown, plan, shell, blob, index, scale, detail, ids, faces: masses.Hidden?.Kept(index, detail));
+            WriteBlob(crown, plan, shell, blob, index, scale, detail, ids, faces: masses.Hidden.Kept(index, detail));
 
         var woodBundle = wood.Bundle(WoodSpec(), flags: 0);
         var crownBundle = crown.Bundle(CrownSpec(species), flags: 8);
@@ -201,8 +202,26 @@ public static class MotherModels
     }
 
     /// <summary>
+    /// Wood, cards and fitted masses of one level; the caller writes the masses. L1's masses start from the ones L0 kept,
+    /// so every L1 mass is an L0 mass with the same surface.
+    /// </summary>
+    private static (VegetationPrototypeGeometry Wood, VegetationPrototypeGeometry Crown, int UnderTake, CrownMassBudget Masses) Level(
+        TreePlan plan, CrownShell shell, VegLevel level, MotherColorIds ids, int twigTriangles)
+    {
+        var wood = new VegetationPrototypeGeometry(withUv: false);
+        var crown = new VegetationPrototypeGeometry(withUv: true);
+        WriteWood(wood, plan, level, ids);
+        var (drawn, underTake) = CrownCards.Draw(plan, shell, level, ids, crown);
+        var finer = level == VegLevel.L1 ? Level(plan, shell, VegLevel.L0, ids, twigTriangles).Masses.Blobs : null;
+        var masses = new CrownMassBudget(plan, level, drawn.Select(c => c.Owner).ToHashSet(),
+            wood.Triangles + crown.Triangles, twigTriangles, finer);
+        return (wood, crown, underTake, masses);
+    }
+
+    /// <summary>
     /// The ShadowsOnly proxy of a mother model (WLD-VEGETATION, ENG-PERF): L1 wood plus the L1 masses scaled by
-    /// <see cref="ProxyScale"/>, drawn with veg_trunk and its shadow_proxy holes. One per mother model, shared by all levels.
+    /// <see cref="ProxyScale"/> with every face (scaled masses no longer hide each other's faces exactly), drawn with
+    /// veg_trunk and its shadow_proxy holes. One per mother model, shared by all levels.
     /// </summary>
     public static GeometryBundle ShadowProxy(SpeciesInfo species, int variant, PaletteCatalog palette)
     {
@@ -211,9 +230,10 @@ public static class MotherModels
         var plan = new TreePlan(species, variant);
         var shell = new CrownShell(plan);
         var ids = IdsOf(species, palette);
+        var masses = Level(plan, shell, VegLevel.L1, ids, TwigMass(plan, palette, tag: 0f)?.Triangles ?? 0).Masses;
         var w = new VegetationPrototypeGeometry(withUv: false);
         WriteWood(w, plan, VegLevel.L1, ids);
-        foreach (var (blob, index, _, detail) in BlobsFor(plan, VegLevel.L1))
+        foreach (var (blob, index, _, detail) in masses.Blobs)
             WriteBlob(w, plan, shell, blob, index, ProxyScale, detail, ids);
         return w.Bundle(WoodSpec(), flags: 0);
     }
@@ -229,9 +249,10 @@ public static class MotherModels
 
     /// <summary>
     /// The far-pool stand-in of a mother model (WLD-VEGETATION candidate A, mainline cut; max-011 23c2c): a
-    /// five-sided trunk from the buried foot to the crown base, and the L1 merged masses as level-0 lumpy icospheres sampled
-    /// on the same surface as the L1 masses (so the two meet in the cross-fade band with the same bulk, normals, colour and
-    /// crown gradient), no cards and no branches; about 130 triangles. Stemless balls (shrubs) have no wood. Wood is drawn
+    /// five-sided trunk from the buried foot to the crown base, and the most exposed of the masses L1 kept as lumpy level-0
+    /// icospheres (<see cref="CrownMassBudget.FarStandIn"/>: the same centres, radii, bumps, shell normals, colour and crown
+    /// gradient as the L1 masses it cross-fades with, so the outline holds and only coarsens), no cards and no branches;
+    /// about 250 triangles. Stemless balls (shrubs) have no wood. Wood is drawn
     /// with veg_trunk; the crown with veg_card in the same vertex layout as the near crown. Both carry the far tags
     /// (<see cref="FarWoodTag"/>, <see cref="FarMassTag"/>). The crown casts no shadow (the far pool has none). Species with a
     /// winter twig mass carry it too, tagged like the far wood.
@@ -257,10 +278,12 @@ public static class MotherModels
         }
         // A terminal-head crown consists of fronds (cards): the stand-in swells the head mass to about the frond reach instead.
         var terminalHead = plan.Form.Structure == TreeStructure.TerminalHead;
-        foreach (var (blob, index, scale, _) in BlobsFor(plan, VegLevel.L1))
+        var l1 = Level(plan, shell, VegLevel.L1, ids, TwigMass(plan, palette, tag: 0f)?.Triangles ?? 0).Masses;
+        var masses = CrownMassBudget.FarStandIn(plan, l1.Blobs);
+        foreach (var (blob, index, scale, detail) in masses.Blobs)
         {
             var s = terminalHead ? MathF.Max(scale, (blob.Radius * 0.6f + plan.Form.CardSize) * 0.8f / MathF.Max(blob.Radius, 0.1f)) : scale;
-            WriteBlob(crown, plan, shell, blob, index, s, detail: 0, ids, FarMassTag);
+            WriteBlob(crown, plan, shell, blob, index, s, detail, ids, FarMassTag, faces: masses.Hidden.Kept(index, detail));
         }
         return (wood.Bundle(WoodSpec(), flags: 0), crown.Bundle(CrownSpec(species), flags: 8),
             TwigMass(plan, palette, FarWoodTag)?.Bundle(TwigMassSpec(), flags: 8));

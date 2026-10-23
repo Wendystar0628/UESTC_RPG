@@ -16,10 +16,10 @@ internal sealed class Limb(int level)
 /// <summary>
 /// One crown mass. Card and mixed crowns use lumpy blobs (3–7 mains, 2–3 subs each); cloud crowns use the
 /// small balls of WLD-VEGETATION (core 0.8r, satellites, bridges). Anchor is the branch tip the cards of this
-/// blob retreat to in winter (WLD-VEGETATION). Group is the L1 merge group: −1 for blobs dropped at L1.
+/// blob retreat to in winter (WLD-VEGETATION). Core masses (one per main branch or cloud) are never pruned.
 /// </summary>
 internal sealed record Blob(Vector3 Center, float Radius, float Lump, int Bumps, float Hash, float BloomHash,
-    Vector3 Anchor, int Group, bool Core);
+    Vector3 Anchor, bool Core);
 
 /// <summary>
 /// Branch skeleton and crown masses of one mother model, decided once from the species and variant and then meshed
@@ -41,39 +41,6 @@ internal sealed class TreePlan
     public float TrunkRadius { get; }
     public List<Limb> Limbs { get; } = [];
     public List<Blob> Blobs { get; } = [];
-
-    /// <summary>
-    /// L1 masses (ENG-PERF "6–10 merged blobs"): one sphere per branch group covering its core and sub-blobs,
-    /// so the far crown keeps the near crown's volume; ungrouped masses (bridges, satellites, fillers) fold into the
-    /// nearest. Groups beyond <paramref name="max"/> merge pairwise, closest first, to hold the L1 triangle target.
-    /// </summary>
-    public List<Blob> MergedBlobs(int max)
-    {
-        var groups = Blobs.Where(b => b.Core).ToList();
-        var sets = groups.Select(core => Blobs.Where(b => b == core || (!b.Core && Nearest(groups, b.Center) == core)).ToList()).ToList();
-        while (sets.Count > Math.Max(1, max))
-        {
-            var (bi, bj, best) = (0, 1, float.MaxValue);
-            for (var i = 0; i < sets.Count; i++)
-                for (var j = i + 1; j < sets.Count; j++)
-                {
-                    var d = Vector3.Distance(Merge(sets[i]).Center, Merge(sets[j]).Center);
-                    if (d < best) (bi, bj, best) = (i, j, d);
-                }
-            sets[bi].AddRange(sets[bj]);
-            sets.RemoveAt(bj);
-        }
-        return sets.Select(Merge).ToList();
-    }
-
-    private static Blob Merge(List<Blob> members)
-    {
-        var core = members.FirstOrDefault(b => b.Core) ?? members[0];
-        var weight = members.Sum(b => b.Radius * b.Radius * b.Radius);
-        var center = members.Aggregate(Vector3.Zero, (acc, b) => acc + b.Center * (b.Radius * b.Radius * b.Radius)) / weight;
-        var radius = members.Max(b => Vector3.Distance(b.Center, center) + b.Radius) * 0.86f;
-        return core with { Center = center, Radius = MathF.Max(radius, core.Radius), Lump = MathF.Max(core.Lump, 0.15f), Bumps = 12 };
-    }
 
     /// <summary>Directions sampled when looking for holes in the crown (WLD-VEGETATION: no see-through gaps).</summary>
     public const int FillSamples = 96;
@@ -113,23 +80,13 @@ internal sealed class TreePlan
                 if (radius >= Vector3.Distance(center, probe) * 1.05f) break;
             }
             var anchor = tips.Count > 0 ? tips.MinBy(t => Vector3.DistanceSquared(t, center)) : center;
-            if (Species.Crown == CrownType.Cloud) AddBall(center, radius, anchor, -1, false);
-            else AddBlob(center, radius, anchor, -1, false);
+            if (Species.Crown == CrownType.Cloud) AddBall(center, radius, anchor, false);
+            else AddBlob(center, radius, anchor, false);
             added++;
         }
     }
 
-    private static Blob Nearest(List<Blob> cores, Vector3 p)
-    {
-        var best = cores[0];
-        foreach (var c in cores)
-            if (Vector3.DistanceSquared(c.Center, p) < Vector3.DistanceSquared(best.Center, p)) best = c;
-        return best;
-    }
     private readonly List<(Vector3 Center, float Radius, Vector3 Tip)> _clusters = [];
-
-    /// <summary>Group of bridge balls between clouds (kept at L1 as merged masses).</summary>
-    public const int BridgeGroup = -2;
 
     /// <summary>Branch tips cards retreat to in winter: every branch end, plus the trunk top of leaders and stemless forms.</summary>
     public IEnumerable<Vector3> BranchTips()
@@ -236,7 +193,7 @@ internal sealed class TreePlan
             }
             var main = Curve(1, origin, tip, Form.MainPitchDeg, baseRadius, 0.3f, 6);
             Limbs.Add(main);
-            AddMainCrown(main, i);
+            AddMainCrown(main);
         }
 
         AddBridges();
@@ -246,7 +203,7 @@ internal sealed class TreePlan
             var top = stemTops[0].Tip;
             var r = MathF.Max(0.45f, Envelope(0.75f) * 0.75f);
             var topIndex = Blobs.Count;
-            AddBlob(top - Vector3.UnitY * (r * 0.35f), r, top, 0, true);
+            AddBlob(top - Vector3.UnitY * (r * 0.35f), r, top, true);
             // Leader crowns get a body of masses along the leader (max-011: no sky through a metasequoia or ginkgo); the
             // masses at the branch tips then only shape the tiered outline around it.
             var tips = BranchTips().ToList();
@@ -254,7 +211,7 @@ internal sealed class TreePlan
             {
                 var rc = MathF.Max(0.35f, Envelope((y - CrownCenter.Y) / CrownRy) * LeaderBody);
                 var c = PointAt(stemTops[0], y + rc * 0.5f);
-                AddBlob(c, rc, tips.MinBy(t => Vector3.DistanceSquared(t, c)), -1, false);
+                AddBlob(c, rc, tips.MinBy(t => Vector3.DistanceSquared(t, c)), false);
                 y += rc * 1.2f;
             }
             NestLeaderTop(topIndex);
@@ -315,7 +272,7 @@ internal sealed class TreePlan
         Blobs[index] = top with { Center = host.Center + offset * (reach / distance) };
     }
 
-    private void AddMainCrown(Limb main, int index)
+    private void AddMainCrown(Limb main)
     {
         var length = Length(main);
         var mainTip = main.Tip;
@@ -348,13 +305,13 @@ internal sealed class TreePlan
                     var rm = MathF.Max(0.4f, (Form.Leader ? Envelope((mainTip.Y - CrownCenter.Y) / CrownRy) * 0.78f : CrownRx * 0.92f / MathF.Cbrt(mains)))
                         * (Species.Crown == CrownType.Mixed ? 1.12f : 1f);
                     var center = mainTip + outward * (rm * 0.15f) + Vector3.UnitY * (rm * 0.1f);
-                    AddBlob(center, rm, mainTip, index, true);
+                    AddBlob(center, rm, mainTip, true);
                     var subs = Math.Min(3, tips.Count);
                     for (var j = 0; j < subs; j++)
                     {
                         var tip = tips[j];
                         var rs = rm * Range(0.7f, 0.86f);
-                        AddBlob(tip + Vector3.UnitY * (rs * 0.15f), rs, tip, index, false);
+                        AddBlob(tip + Vector3.UnitY * (rs * 0.15f), rs, tip, false);
                     }
                     if (Species.Crown == CrownType.Mixed)
                     {
@@ -362,34 +319,34 @@ internal sealed class TreePlan
                         for (var k = 0; k < 2; k++)
                         {
                             var d = Vector3.Normalize(RandomDirection() + outward * 0.8f + Vector3.UnitY * 0.5f);
-                            AddBlob(center + d * (rm * 0.62f), rm * Range(0.5f, 0.62f), mainTip, -1, false);
+                            AddBlob(center + d * (rm * 0.62f), rm * Range(0.5f, 0.62f), mainTip, false);
                         }
                     }
                     break;
                 }
             case CrownType.Cloud:
-                AddCloudCluster(mainTip, outward, index, tips);
+                AddCloudCluster(mainTip, outward, tips);
                 break;
             default:
                 throw new InvalidOperationException($"Unknown crown {Species.Crown}.");
         }
     }
 
-    private void AddCloudCluster(Vector3 mainTip, Vector3 outward, int index, List<Vector3> tips)
+    private void AddCloudCluster(Vector3 mainTip, Vector3 outward, List<Vector3> tips)
     {
         // One big cloud: a core ball (0.8r) and 6–8 satellites (0.40–0.58r at 0.55–0.78r, leaning out and up),
         // all with 10–14 bumps of 0.13 and bottoms squashed to 0.7 (WLD-VEGETATION, ART-MODELING).
         var mains = Math.Max(1, Form.MainMax);
         var r = CrownRx * 0.8f / MathF.Cbrt(mains);
         var center = Vector3.Lerp(mainTip, CrownCenter, 0.1f) + Vector3.UnitY * (r * 0.1f);
-        AddBall(center, r * 0.8f, mainTip, index, true);
+        AddBall(center, r * 0.8f, mainTip, true);
         _clusters.Add((center, r, mainTip));
         var satellites = Form.CloudSatellites;
         for (var k = 0; k < satellites; k++)
         {
             var d = Vector3.Normalize(RandomDirection() + outward * 0.55f + Vector3.UnitY * 0.45f);
             var anchor = tips.Count > 0 ? tips[k % tips.Count] : mainTip;
-            AddBall(center + d * (r * Range(0.55f, 0.78f)), r * Range(0.40f, 0.58f), anchor, -1, false);
+            AddBall(center + d * (r * Range(0.55f, 0.78f)), r * Range(0.40f, 0.58f), anchor, false);
         }
     }
 
@@ -403,7 +360,7 @@ internal sealed class TreePlan
             var b = _clusters[(i + 1) % _clusters.Count];
             if (_clusters.Count == 2 && i == 1) break;
             var mid = (a.Center + b.Center) * 0.5f + Vector3.UnitY * (a.Radius * 0.1f);
-            AddBall(mid, (a.Radius + b.Radius) * 0.25f, a.Tip, BridgeGroup, false);
+            AddBall(mid, (a.Radius + b.Radius) * 0.25f, a.Tip, false);
         }
     }
 
@@ -420,7 +377,7 @@ internal sealed class TreePlan
         }
         Limbs.Add(trunk);
         // The fronds hang from a small head of leaf-coloured mass at the top of the stem.
-        AddBall(trunk.Tip + Vector3.UnitY * 0.15f, TrunkRadius * 2.2f, trunk.Tip, 0, true);
+        AddBall(trunk.Tip + Vector3.UnitY * 0.15f, TrunkRadius * 2.2f, trunk.Tip, true);
     }
 
     private void BuildStemlessClusters()
@@ -436,16 +393,16 @@ internal sealed class TreePlan
         {
             var dir = Azimuth(phase + i * Tau / clusters);
             var tip = new Vector3(CrownCenter.X, Height * 0.42f, CrownCenter.Z) + dir * (CrownRx * 0.36f);
-            AddCloudCluster(tip, dir, i, [trunk.Tip]);
+            AddCloudCluster(tip, dir, [trunk.Tip]);
         }
         AddBridges();
     }
 
-    private void AddBlob(Vector3 center, float radius, Vector3 anchor, int group, bool core) =>
-        Blobs.Add(new Blob(center, radius, Form.Lumps, 6 + _rng.NextInt(3), Next(), Next(), anchor, group, core));
+    private void AddBlob(Vector3 center, float radius, Vector3 anchor, bool core) =>
+        Blobs.Add(new Blob(center, radius, Form.Lumps, 6 + _rng.NextInt(3), Next(), Next(), anchor, core));
 
-    private void AddBall(Vector3 center, float radius, Vector3 anchor, int group, bool core) =>
-        Blobs.Add(new Blob(center, radius, 0.13f, 10 + _rng.NextInt(5), Next(), Next(), anchor, group, core));
+    private void AddBall(Vector3 center, float radius, Vector3 anchor, bool core) =>
+        Blobs.Add(new Blob(center, radius, 0.13f, 10 + _rng.NextInt(5), Next(), Next(), anchor, core));
 
     private void AddTrunkPoint(Limb trunk, float y, Vector3 offset, float radiusScale)
     {
