@@ -24,7 +24,7 @@ public sealed class MapHudContext(MapStyle style, UiKit ui)
     public UiKit Ui { get; } = ui;
     public string T(string key) => UiKit.T(key);
     public string T(string key, params (string Name, string Value)[] args) => UiKit.T(key, args);
-    public string Name(LocalizedName name) => TranslationServer.GetLocale().StartsWith("zh", StringComparison.OrdinalIgnoreCase) || name.En.Length == 0 ? name.Zh : name.En;
+    public string Name(LocalizedName name) => Campus.Hud.I18n.Tr.Name(name);
 
     /// <summary>地图的图标钮：SVG 图标经 UiKit 的图标材质随昼夜与常驻设置换色（UI-VISUAL-COMPONENTS）。</summary>
     public TechButton IconButton(Control parent, string icon, string key, bool pin = false)

@@ -179,7 +179,7 @@ internal sealed class HudLoading : IAppLoadingPresentation
         var season = preset?.Season ?? _dependencies.WorldState.SeasonTarget;
         var clock = preset?.Clock ?? _dependencies.WorldState.Clock;
         var weather = preset?.Weather ?? _dependencies.WorldState.Weather.Kind;
-        var place = descriptor is null ? "" : SaveMetaText.MapName(descriptor.Name);
+        var place = descriptor is null ? "" : Campus.Hud.I18n.Tr.Name(descriptor.Name);
         var action = request?.Kind switch
         {
             null => "loading.title",

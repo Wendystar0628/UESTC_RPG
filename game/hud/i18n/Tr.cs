@@ -1,4 +1,5 @@
 using KernelServices = Campus.Kernel.Registry.Kernel;
+using Campus.Contracts;
 using Campus.Contracts.Diagnostics;
 using Godot;
 
@@ -28,4 +29,8 @@ public static class Tr
     }
 
     public static bool Has(string key) => TranslationServer.Translate(key).ToString() != key;
+
+    /// <summary>按图数据里的中英名取当前语言的名字；英文缺省时用中文。图名、区名、点位名都走这里。</summary>
+    public static string Name(LocalizedName name) =>
+        TranslationServer.GetLocale().StartsWith("zh", StringComparison.OrdinalIgnoreCase) || name.En.Length == 0 ? name.Zh : name.En;
 }

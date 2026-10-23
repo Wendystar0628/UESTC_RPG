@@ -14,7 +14,7 @@ internal static class SaveMetaText
 {
     /// <summary>地点名：有地点翻译键用它，查不到时统一退回存档所在图的图名。</summary>
     public static string Place(SaveMeta meta, IMapService maps) =>
-        meta.PlaceKey is { } key && Campus.Hud.I18n.Tr.Has(key) ? UiKit.T(key) : MapName(Map(meta.Map, maps).Name);
+        meta.PlaceKey is { } key && Campus.Hud.I18n.Tr.Has(key) ? UiKit.T(key) : Campus.Hud.I18n.Tr.Name(Map(meta.Map, maps).Name);
 
     /// <summary>"季 · 钟点 · 天气"，片名块、存档卡与加载界面共用。</summary>
     public static string Moment(Season season, double clock, WeatherKind weather) =>
@@ -37,10 +37,6 @@ internal static class SaveMetaText
     /// <summary>开始页继续行：季 · 钟点 · 天气 · 地点 · 时长（SYS-TITLE）。</summary>
     public static string Summary(SaveMeta meta, IMapService maps) =>
         $"{Moment(meta)} · {Place(meta, maps)} · {PlayTime(meta.PlaySeconds)}";
-
-    /// <summary>图名按当前语言取；英文缺省时用中文。</summary>
-    public static string MapName(LocalizedName name) =>
-        TranslationServer.GetLocale().StartsWith("zh", StringComparison.OrdinalIgnoreCase) || name.En.Length == 0 ? name.Zh : name.En;
 
     private static MapDescriptor Map(MapId id, IMapService maps) =>
         maps.Maps.FirstOrDefault(map => map.Id == id) ?? throw new InvalidDataException($"Save refers to unknown map {id.Value}.");
