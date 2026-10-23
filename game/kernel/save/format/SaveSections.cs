@@ -1,7 +1,6 @@
 using System.Text.Json;
 using Campus.Contracts;
 using Campus.Contracts.Save;
-using Campus.Kernel.Maps;
 using Campus.Kernel.World;
 
 namespace Campus.Kernel.Save.Format;
@@ -74,9 +73,8 @@ public sealed class SaveSections
     }
 
     public IReadOnlyDictionary<string, RawSaveSection> Serialize(IReadOnlyList<CapturedSection> captures,
-        IReadOnlyDictionary<string, RawSaveSection> previous, MapId? expectedMap = null, WorldSaveMoment? moment = null)
+        IReadOnlyDictionary<string, RawSaveSection> previous)
     {
-        ValidateSnapshotTimeline(captures, expectedMap, moment);
         var output = new SortedDictionary<string, RawSaveSection>(StringComparer.Ordinal);
         foreach (var (key, raw) in previous.OrderBy(p => p.Key, StringComparer.Ordinal))
             if (Find(key) is null) output.Add(key, raw);
@@ -100,22 +98,6 @@ public sealed class SaveSections
         if (IsCore(registration.Attribute))
             throw new SaveFormatException("Invalid core section " + key, error);
         return new(key, registration, map, null, version, "Replaced invalid section: " + key) { Error = error };
-    }
-
-    private static void ValidateSnapshotTimeline(IReadOnlyList<CapturedSection> captures, MapId? expectedMap, WorldSaveMoment? moment)
-    {
-        var maps = captures.Select(capture => capture.Dto).OfType<MapsSave>().SingleOrDefault();
-        if (expectedMap is { } map && maps is not null && maps.Current != map)
-            throw new SaveFormatException("Map changed during snapshot; the generation was not written.");
-        var world = captures.Select(capture => capture.Dto).OfType<WorldSaveV1>().SingleOrDefault();
-        if (world is null)
-        {
-            if (moment.HasValue) throw new SaveFormatException("The world snapshot section is missing.");
-            return;
-        }
-        if (moment is { } expected && (world.WorldHours != expected.WorldHours || world.ClockOffset != expected.ClockOffset
-            || world.SeasonTarget != expected.Season || world.FlowRate != expected.FlowRate))
-            throw new SaveFormatException("World section disagrees with the shared capture moment.");
     }
 
     public static string Key(SaveSectionAttribute attribute, MapId map) => attribute.Scope switch

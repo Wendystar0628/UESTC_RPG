@@ -143,7 +143,7 @@ internal sealed class SaveWriting(SaveService owner)
 
     private Task<SaveDocument> BuildDocument(Snapshot snapshot) => Task.Run(() =>
     {
-        var raw = _owner.Sections.Serialize(snapshot.Sections, snapshot.Unknown, snapshot.Meta.Map, snapshot.Moment);
+        var raw = _owner.Sections.Serialize(snapshot.Sections, snapshot.Unknown);
         return new SaveDocument(snapshot.Meta, raw, snapshot.Thumbnail);
     });
 
@@ -206,7 +206,7 @@ internal sealed class SaveWriting(SaveService owner)
         { return result; }
     }
 
-    private sealed record Snapshot(SaveMeta Meta, WorldSaveMoment Moment, IReadOnlyList<CapturedSection> Sections,
+    private sealed record Snapshot(SaveMeta Meta, IReadOnlyList<CapturedSection> Sections,
         IReadOnlyDictionary<string, RawSaveSection> Unknown, byte[]? Thumbnail);
     private Snapshot? Capture(SaveReason reason, bool forced, ulong generation, byte[]? thumbnail)
     {
@@ -235,7 +235,7 @@ internal sealed class SaveWriting(SaveService owner)
             _owner.Schedule.PlaySeconds, observer.Map, moment.WorldHours, clock, moment.Season, _owner.Runtime.World.Weather.Kind,
             view.Mode, view.Pose, view.Space, region, region is null ? null : "place." + region,
             _owner.Runtime.UnixTime(), reason, _owner.Runtime.Ruleset.Current.Id.Value, HasThumb: thumbnail is not null);
-        return new(meta, moment, captures, _unknown, thumbnail);
+        return new(meta, captures, _unknown, thumbnail);
     }
 
     internal async Task<SaveResult> FlushForQuit(SaveReason reason, TimeSpan timeout)

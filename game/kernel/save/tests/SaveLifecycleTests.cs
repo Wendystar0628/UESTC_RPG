@@ -1,14 +1,9 @@
 using System.Numerics;
-using System.Text.Json;
-using System.Text.Json.Serialization;
-using System.Text.Json.Serialization.Metadata;
 using Campus.Contracts;
 using Campus.Contracts.AppFlow;
-using Campus.Contracts.Atlas;
 using Campus.Contracts.Maps;
 using Campus.Contracts.Save;
 using Campus.Kernel.Save.Format;
-using Campus.Kernel.World;
 using Campus.Tests;
 using GdUnit4;
 using static GdUnit4.Assertions;
@@ -18,12 +13,11 @@ namespace Campus.Kernel.Save.Tests;
 [TestSuite]
 public sealed class SaveLifecycleTests
 {
-    private static long _id;
     [TestCase]
     [TestCategory(TestReason.Smoke)]
     public async Task NewGameDefersPoseDefaultsUntilMapPreparationAndPreservesItsExplicitContext()
     {
-        using var fixture = new Fixture();
+        using var fixture = new SaveLifecycleFixture();
         await fixture.Start();
         fixture.Camera.BeforeDefault = () => AssertThat(fixture.Maps.HasPrepared).OverrideFailureMessage("A pose default was requested before its target map was prepared.").IsTrue();
         var start = new WorldPreset(6.5, Season.Winter, WeatherKind.Snow, .4f);
@@ -36,7 +30,7 @@ public sealed class SaveLifecycleTests
     [TestCategory(TestReason.Smoke)]
     public async Task FullLoadRestoresPoseOnceAndWaitsForDestinationBeforeCompleting()
     {
-        using var fixture = new Fixture();
+        using var fixture = new SaveLifecycleFixture();
         await fixture.Start();
         await fixture.Pump(fixture.Save.NewGame(new("s1"), 1));
         fixture.World.Hours = 91.25; fixture.Camera.SetPose(new(new Vector3(30, 40, 50), 70, -20));
@@ -61,7 +55,7 @@ public sealed class SaveLifecycleTests
     [TestCategory(TestReason.Smoke)]
     public async Task TemporaryNewGameAndEndedWorldNeverSelectOrWriteASlot()
     {
-        using var fixture = new Fixture();
+        using var fixture = new SaveLifecycleFixture();
         await fixture.Start();
         AssertThat(fixture.World.Instance == 0 && fixture.Save.Active is null && fixture.Log.Count == 0).OverrideFailureMessage("Reading slot summaries created a world.").IsTrue();
         fixture.Ready = false;
@@ -116,7 +110,7 @@ public sealed class SaveLifecycleTests
     [TestCategory(TestReason.Smoke)]
     public async Task QuitTimeoutRetainsQueuedWriteAndReportsItsRealOutcome(bool endedWorld)
     {
-        using var fixture = new Fixture { ExpectedErrors = endedWorld ? 1 : 0 };
+        using var fixture = new SaveLifecycleFixture { ExpectedErrors = endedWorld ? 1 : 0 };
         await fixture.Start(); await fixture.Pump(fixture.Save.NewGame(new("s1"), 1));
         fixture.Flow = AppState.Playing;
         await fixture.Pump(fixture.Save.SaveNow(SaveReason.NewGame));
@@ -149,7 +143,7 @@ public sealed class SaveLifecycleTests
     [TestCategory("Slow")]
     public async Task OnlyIntervalRequestsSaveAndTitleNeverWrites()
     {
-        using var fixture = new Fixture();
+        using var fixture = new SaveLifecycleFixture();
         await fixture.Start(); await fixture.Pump(fixture.Save.NewGame(new("s1"), 1));
         fixture.Flow = AppState.Playing; await fixture.Pump(fixture.Save.SaveNow(SaveReason.NewGame));
         await fixture.Frames(200);
@@ -168,7 +162,7 @@ public sealed class SaveLifecycleTests
     [TestCategory(TestReason.Smoke)]
     public async Task ForcedCaptureUsesOneMomentEvenWhenHudChangedTargetAfterWeatherTick()
     {
-        using var fixture = new Fixture();
+        using var fixture = new SaveLifecycleFixture();
         await fixture.Start(); await fixture.Pump(fixture.Save.NewGame(new("s1"), 1));
         fixture.Flow = AppState.Playing;
         fixture.World.TargetHours = 91.25;
@@ -184,7 +178,7 @@ public sealed class SaveLifecycleTests
     [TestCategory(TestReason.Smoke)]
     public async Task ActiveMapTransitionCannotWriteANewGeneration()
     {
-        using var fixture = new Fixture();
+        using var fixture = new SaveLifecycleFixture();
         await fixture.Start(); await fixture.Pump(fixture.Save.NewGame(new("s1"), 1));
         fixture.Flow = AppState.Playing;
         await fixture.Pump(fixture.Save.SaveNow(SaveReason.NewGame));
@@ -199,7 +193,7 @@ public sealed class SaveLifecycleTests
     [TestCategory(TestReason.Smoke)]
     public async Task WorldPhaseFailureAbortsInSameFrameAndBlocksWritesUntilFullRecovery()
     {
-        using var fixture = new Fixture { ExpectedErrors = 1 };
+        using var fixture = new SaveLifecycleFixture { ExpectedErrors = 1 };
         await fixture.Start(); await fixture.Pump(fixture.Save.NewGame(new("s1"), 1));
         fixture.Flow = AppState.Playing;
         await fixture.Pump(fixture.Save.SaveNow(SaveReason.NewGame));
@@ -226,7 +220,7 @@ public sealed class SaveLifecycleTests
     [TestCategory(TestReason.Regression)]
     public async Task FailureAfterWorldCommitAlsoFreezesAndCanRecoverByLoading()
     {
-        using var fixture = new Fixture { ExpectedErrors = 1 };
+        using var fixture = new SaveLifecycleFixture { ExpectedErrors = 1 };
         await fixture.Start(); await fixture.Pump(fixture.Save.NewGame(new("s1"), 1));
         fixture.Flow = AppState.Playing;
         fixture.World.Hours = 91.25;
@@ -272,7 +266,7 @@ public sealed class SaveLifecycleTests
     [TestCategory(TestReason.Regression)]
     public async Task ChangingActiveSlotClearsItsPreviousFailureAndKeepsQueuedResultsWithTheirSlot()
     {
-        using var fixture = new Fixture { ExpectedErrors = 1 };
+        using var fixture = new SaveLifecycleFixture { ExpectedErrors = 1 };
         await fixture.Start();
         var first = SaveSlots.Auto[0];
         var second = SaveSlots.Auto[1];
@@ -302,7 +296,7 @@ public sealed class SaveLifecycleTests
     [TestCategory(TestReason.Regression)]
     public async Task FailedAutomaticAttemptsWaitThirtySecondsWhileExplicitSavesRemainImmediate()
     {
-        using var fixture = new Fixture { ExpectedErrors = 2 };
+        using var fixture = new SaveLifecycleFixture { ExpectedErrors = 2 };
         await fixture.Start(); await fixture.Pump(fixture.Save.NewGame(SaveSlots.Auto[0], 1));
         fixture.Flow = AppState.Playing;
         fixture.World.CaptureFailure = new IOException("Injected capture failure.");
@@ -338,7 +332,7 @@ public sealed class SaveLifecycleTests
     [TestCategory(TestReason.Regression)]
     public async Task WriteEventsExposeTheRealBusyStateAtStartAndAfterCompletion()
     {
-        using var fixture = new Fixture();
+        using var fixture = new SaveLifecycleFixture();
         await fixture.Start(); await fixture.Pump(fixture.Save.NewGame(SaveSlots.Auto[0], 1));
         fixture.Flow = AppState.Playing;
         var busy = new List<bool>();
@@ -352,7 +346,7 @@ public sealed class SaveLifecycleTests
     [TestCategory(TestReason.Regression)]
     public async Task ManualSavesCaptureNewThumbnailsImmediatelyAndRotateOnlyTheirOwnPool()
     {
-        using var fixture = new Fixture();
+        using var fixture = new SaveLifecycleFixture();
         await fixture.Start(); await fixture.Pump(fixture.Save.NewGame(SaveSlots.Auto[0], 1));
         fixture.Flow = AppState.Playing;
         fixture.NextThumbnail = "RIFF\u0004\0\0\0WEBP"u8.ToArray();
@@ -377,7 +371,7 @@ public sealed class SaveLifecycleTests
     [TestCategory(TestReason.Regression)]
     public async Task ExactLoadKeepsTheLatestSummaryAndNeverRestoresAroundAnUnreadableEntry()
     {
-        using var fixture = new Fixture();
+        using var fixture = new SaveLifecycleFixture();
         await fixture.Start(); await fixture.Pump(fixture.Save.NewGame(SaveSlots.Auto[0], 1));
         fixture.Flow = AppState.Playing; fixture.World.Hours = 23;
         await fixture.Pump(fixture.Save.SaveNow(SaveReason.NewGame));
@@ -395,228 +389,4 @@ public sealed class SaveLifecycleTests
         AssertThat(rejected.Status == LoadStatus.Corrupt && fixture.World.Instance == instance && fixture.World.Hours == 23).IsTrue();
         AssertThat(fixture.Save.Slots[0].Meta?.Gen == 1 && fixture.Camera.Locks == 0 && fixture.Diagnostics.Errors.Count == 0).IsTrue();
     }
-
-    internal sealed class Fixture : IDisposable
-    {
-        public SaveService Save { get; } = new();
-        public FakeWorld World { get; }
-        public FakeCamera Camera { get; }
-        public FakeMaps Maps { get; }
-        public FakeWeather Weather { get; } = new();
-        public SettledObserverSaveTests.FakeWalk? Walk { get; init; }
-        public TestDiagnosticLog Diagnostics { get; } = new();
-        public int ExpectedErrors { get; init; }
-        private readonly TestAppFlow _flow = new();
-        public AppState Flow { get => _flow.State; set => _flow.SetState(value); }
-        public List<string> Log { get; } = [];
-        public bool Ready { get; set; } = true;
-        public TaskCompletionSource<byte[]?>? ThumbnailBarrier { get; set; }
-        internal byte[]? NextThumbnail { get; set; }
-        internal int ThumbnailCaptures { get; private set; }
-        internal string EntryFile(ulong generation) => Path.Combine(_directory!, SaveSlots.Auto[0].Value, $"g{generation:D6}.sav");
-        private bool _inFrame;
-        private string? _directory;
-        public Fixture()
-        {
-            World = new(() => _inFrame, Log); Camera = new(() => _inFrame, Log); Maps = new(Log);
-            Flow = AppState.Title;
-            _flow.ActivitySource = () =>
-                (Maps.Transition is { Done.IsCompleted: false } ? AppActivity.MapTransition : AppActivity.None) |
-                (Save.Busy ? AppActivity.SaveWrite : AppActivity.None);
-        }
-        public async Task Start()
-        {
-            var directory = Path.Combine(Path.GetTempPath(), "uestc-rpg-save-lifecycle-" + Environment.ProcessId + "-" + Interlocked.Increment(ref _id));
-            _directory = directory;
-            var rules = new TestRuleset("test-policy", id: "test-rules");
-            var bindings = new SaveRuntimeBindings(World, Maps, Camera, Camera, rules, new FakeAtlas(Maps), new TestAppLoadingPresentation(), _flow, Diagnostics,
-                _ => { }, World, WaitDestination,
-                () => { ThumbnailCaptures++; return ThumbnailBarrier?.Task ?? Task.FromResult(NextThumbnail); }, () => 1792082400, pose => Task.FromResult(pose))
-            {
-                PrepareWalk = Walk is { } walk ? walk.Prepare : null
-            };
-            var registrations = new List<SaveSectionRegistration>
-            {
-                new(new("world") { Phase = RestorePhase.World, Order = 10 }, World),
-                new(new("weather") { Phase = RestorePhase.World, Order = 21 }, Weather),
-                new(new("view") { Phase = RestorePhase.Pose, Order = 60 }, Camera)
-            };
-            if (Walk is not null) registrations.Add(new(new("walk") { Phase = RestorePhase.Pose, Order = 61 }, Walk));
-            var sections = new SaveSections(registrations);
-            await Pump(Save.Initialize(new(directory, true, null, null, 1), bindings, sections));
-        }
-        private async Task WaitDestination(Pose pose, NavSpace? space, ViewMode mode)
-        { while (!await Save.OnFrame(() => Ready)) { } }
-        public async Task Frames(int count, double delta = .1)
-        {
-            for (var i = 0; i < count; i++)
-            {
-                AdvanceFrames(1, delta);
-                await Task.Delay(1);
-            }
-        }
-        internal void AdvanceFrames(int count, double delta = .1)
-        {
-            for (var i = 0; i < count; i++)
-            {
-                _inFrame = true;
-                try { World.Tick(); Save.Tick(delta); } finally { _inFrame = false; }
-            }
-        }
-        internal async Task PumpUntilIdle()
-        {
-            for (var i = 0; i < TestSamples.FrameLoop && Save.Busy; i++) await Frames(1, 0);
-            await Frames(2, 0);
-            AssertThat(!Save.Busy).OverrideFailureMessage("Save did not drain its attempt.").IsTrue();
-        }
-        public async Task Pump(Task task, double delta = .1)
-        {
-            for (var i = 0; i < TestSamples.FrameLoop && !task.IsCompleted; i++) await Frames(1, delta);
-            AssertThat(task.IsCompleted).OverrideFailureMessage("Save lifecycle did not finish.").IsTrue(); await task;
-        }
-        public async Task<T> Pump<T>(Task<T> task, double delta = .1) { await Pump((Task)task, delta); return await task; }
-        public void Dispose()
-        {
-            Save.Dispose();
-            if (_directory is { } directory && Directory.Exists(directory)) Directory.Delete(directory, recursive: true);
-        }
-    }
-
-    internal sealed class FakeWorld(Func<bool> inFrame, List<string> log) : IWorldState, IWorldRestore, ISaveSection<WorldSaveV1>
-    {
-        public double Hours { get; set; } = 17.5;
-        public Exception? CaptureFailure { get; set; }
-        public double? TargetHours { get; set; }
-        public bool RestoreFaulted { get; private set; }
-        private bool _pending;
-        private long _serial;
-        public long Instance { get; private set; }
-        public event Action<long>? InstanceChanged;
-        public long Rev => 1; public double WorldHours => Hours; public double Clock => Hours % 24;
-        public double SeasonPos => 2; public Season SeasonTarget => Season.Autumn; public float SeasonAtmosphere => 0; public Body Sun => default; public Body Moon => default;
-        public float SunAltDegAt(double clock, Season season) => Sun.AltDeg;
-        public float MoonPhase => 1; public float Omega => 0; public Campus.Contracts.Flow Flow => new(1); public bool Scrubbing => false;
-        public Campus.Contracts.Flow BaseFlow => Flow;
-        public int LastFlowRate => BaseFlow.Rate;
-        public WorldTransition Transition => WorldTransition.None;
-        public WeatherSel Weather => new(WeatherMode.Auto, WeatherKind.Clear, 0); public WeatherVec WeatherNow => default;
-        public IReadOnlyList<WeatherSpan> WeatherAhead => []; public uint WeatherSeed => 1; public double AnimTime => 240; public double Step12 => 240;
-        public double PresetClock(ClockPreset preset, Season season) => 17.5; public bool IsNative(WeatherKind kind) => true;
-        public JsonTypeInfo<WorldSaveV1> TypeInfo => LifecycleJsonContext.Strict.WorldSaveV1;
-        public WorldSaveMoment GetSaveMoment() => new(TargetHours ?? Hours, 0, Season.Autumn, 1);
-        public void AbortRestore() { RestoreFaulted = true; _pending = false; log.Add("abort"); }
-        public void CompleteRestore()
-        {
-            AssertThat(_pending).OverrideFailureMessage("Commit without a fresh restore.").IsTrue(); _pending = false; RestoreFaulted = false; Instance = ++_serial; log.Add("instance");
-            InstanceChanged?.Invoke(Instance);
-        }
-        public void EndInstance() { _pending = false; Instance = 0; InstanceChanged?.Invoke(Instance); }
-        public void Tick() { if (!RestoreFaulted) AssertThat(!_pending).OverrideFailureMessage("An uncommitted World phase escaped into the next frame.").IsTrue(); }
-        public WorldSaveV1 Capture(in CaptureContext context)
-        {
-            AssertThat(inFrame()).OverrideFailureMessage("Capture ran outside Save frame.").IsTrue();
-            if (CaptureFailure is { } failure) throw failure;
-            var moment = context.Moment;
-            return new(moment.WorldHours, moment.ClockOffset, (int)moment.Season, moment.Season, moment.FlowRate, BaseFlow.Rate, AnimTime);
-        }
-        public void Restore(WorldSaveV1 dto, RestoreContext context)
-        { AssertThat(inFrame()).OverrideFailureMessage("Restore ran outside Save frame.").IsTrue(); Hours = dto.WorldHours; TargetHours = null; _pending = true; log.Add("world"); }
-        public WorldSaveV1 CreateDefault(NewGameContext context) =>
-            new(context.Start.Clock, 0, (int)context.Start.Season, context.Start.Season, BaseFlow.Rate, BaseFlow.Rate, AnimTime);
-    }
-    internal sealed class FakeCamera(Func<bool> inFrame, List<string> log)
-        : TestCameraRig(null, new Pose(new Vector3(1, 2, 3), 0, 0)), IObserverState, ISaveSection<ViewSaveData>
-    {
-        public ObserverSaveSnapshot? Held { get; set; }
-        public override ObserverSaveSnapshot CaptureSettledObserver(MapId map) => Held ?? base.CaptureSettledObserver(map);
-        public Action? BeforeDefault { get; set; }
-        public Exception? RestoreFailure { get; set; }
-        public NewGameContext? DefaultContext { get; private set; }
-        public Vector3 Feet => Pose.Position; public Vector3 Eye => Pose.Position; public float YawDeg => Pose.YawDeg; public NavSpace? Space => null;
-        public JsonTypeInfo<ViewSaveData> TypeInfo => LifecycleJsonContext.Strict.ViewSaveData;
-        public ViewSaveData Capture(in CaptureContext context) { AssertThat(inFrame()).OverrideFailureMessage("View capture outside Save frame.").IsTrue(); return context.Observer.View; }
-        public void Restore(ViewSaveData dto, RestoreContext context)
-        {
-            AssertThat(inFrame()).OverrideFailureMessage("Pose restore outside Save frame.").IsTrue();
-            if (RestoreFailure is { } failure) throw failure;
-            SetPose(dto.Pose); log.Add("view");
-        }
-        public ViewSaveData CreateDefault(NewGameContext context)
-        {
-            BeforeDefault?.Invoke(); DefaultContext = context;
-            return new(context.Mode, new(new Vector3(1, 2, 3), 0, 0), null, 1, 1);
-        }
-    }
-    internal sealed class FakeWeather : ISaveSection<LifecycleWeather>
-    {
-        public double LastTickHours { get; set; } = 17.5;
-        public WorldSaveMoment? CapturedMoment { get; private set; }
-        public Exception? RestoreFailure { get; set; }
-        public JsonTypeInfo<LifecycleWeather> TypeInfo => LifecycleJsonContext.Strict.LifecycleWeather;
-        public LifecycleWeather Capture(in CaptureContext context)
-        {
-            CapturedMoment = context.Moment;
-            return new(new(WeatherMode.Auto, WeatherKind.Clear, 0), CapturedMoment.Value.WorldHours);
-        }
-        public void Restore(LifecycleWeather dto, RestoreContext context)
-        { if (RestoreFailure is { } failure) throw failure; LastTickHours = dto.AtHours; }
-        public LifecycleWeather CreateDefault(NewGameContext context) => new(new(WeatherMode.Auto, WeatherKind.Clear, 0), context.Start.Clock);
-    }
-    internal sealed class FakeMaps : TestMapService
-    {
-        private static readonly MapId Id = new("test-map");
-        private readonly List<string> _log;
-        public FakeMaps(List<string> log)
-        {
-            _log = log;
-            Rev = 1; Default = Id; Current = Id;
-            Maps = [new(Id, new("测试", "Test"), MapKind.Outdoor, 1, 1,
-                new(0, 0, 32648, new(-100), new(100)), Vector2.Zero, new(new(-100), new(100)), new(new(-100), new(100)),
-                new(1, 0, 3000, -100, 1000, 30, 40, 150), new(-1, -1), new(1, 1), "spawn", [],
-                new(MapTimeRule.Shared, new(17.5, Season.Autumn, WeatherKind.Clear), new("测试", "Test"), false, "test"),
-                new("test", "test", []), [])];
-        }
-        public TaskCompletionSource<MapTravelResult>? Pending { get; set; }
-        public bool HasPrepared { get; private set; }
-        public override IMapTransition? Transition => Pending is { Task.IsCompleted: false } ? new TestMapTransition(Id, Id, Pending.Task) : null;
-        public override IReadOnlyList<MapVisit> Visits => [new(Id, default, ViewMode.Fly)];
-        public override Task Prepare(MapId map)
-        {
-            _log.Add("prepare-map"); HasPrepared = true;
-            return Task.CompletedTask;
-        }
-    }
-    private sealed class FakeAtlas(IMapService maps) : IAtlasService
-    {
-        public long Rev => 1; public MapId Map => maps.Current; public IReadOnlyList<AtlasMarker> Markers => []; public IReadOnlyList<AtlasRegion> Regions => [];
-        public MapRect PageRect => maps.Maps.Single(map => map.Id == maps.Current).DataRect;
-        public float ZoomMin => throw new NotSupportedException();
-        public float ZoomMax => throw new NotSupportedException();
-        public event Action? Changed { add { } remove { } }
-        public AtlasMarker? Find(MarkerId id) => null;
-        public UnlockState StateOf(MarkerId id) => UnlockState.Hidden;
-        public string? RegionAt(float x, float z) => null;
-        public bool CanTravel(MarkerId id, TravelStyle style, out TravelRefusal why) { why = TravelRefusal.Unavailable; return false; }
-        public ITransitHandle? Travel(MarkerId id, TravelStyle style) => null;
-        public MarkerId? Tracked => null;
-        public void Track(MarkerId? id) => throw new NotSupportedException();
-        public IReadOnlyList<CustomPin> Pins => [];
-        public CustomPin? AddPin(Vector2 at, PinShape shape) => null;
-        public void MovePin(int id, Vector2 at) => throw new NotSupportedException();
-        public void SetPinShape(int id, PinShape shape) => throw new NotSupportedException();
-        public void RemovePin(int id) => throw new NotSupportedException();
-        public string PolicyId => "test-policy";
-    }
-}
-
-public sealed record LifecycleWeather(WeatherSel Selection, double AtHours);
-[JsonSourceGenerationOptions(PropertyNamingPolicy = JsonKnownNamingPolicy.CamelCase, UseStringEnumConverter = true)]
-[JsonSerializable(typeof(WorldSaveV1))]
-[JsonSerializable(typeof(ViewSaveData))]
-[JsonSerializable(typeof(LifecycleWeather))]
-[JsonSerializable(typeof(WalkSaveData))]
-internal partial class LifecycleJsonContext : JsonSerializerContext
-{
-    internal static LifecycleJsonContext Strict { get; } = new(new JsonSerializerOptions(ContractJson.Options)
-    { RespectRequiredConstructorParameters = true, UnmappedMemberHandling = JsonUnmappedMemberHandling.Disallow, DefaultIgnoreCondition = JsonIgnoreCondition.Never });
 }

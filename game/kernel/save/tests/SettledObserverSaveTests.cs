@@ -1,5 +1,4 @@
 using System.Numerics;
-using System.Text.Json.Serialization.Metadata;
 using Campus.Contracts;
 using Campus.Contracts.AppFlow;
 using Campus.Contracts.Save;
@@ -7,7 +6,6 @@ using Campus.Kernel.Save.Format;
 using Campus.Tests;
 using GdUnit4;
 using static GdUnit4.Assertions;
-using Fixture = Campus.Kernel.Save.Tests.SaveLifecycleTests.Fixture;
 
 namespace Campus.Kernel.Save.Tests;
 
@@ -17,8 +15,8 @@ public sealed class SettledObserverSaveTests
     [TestCase, TestCategory(TestReason.Regression)]
     public async Task ForcedCaptureMetadataUsesTheSameSettledObserverAsTheViewAndWalkSections()
     {
-        var walking = new FakeWalk();
-        using var fixture = new Fixture { Walk = walking };
+        var walking = new SaveLifecycleFixture.FakeWalk();
+        using var fixture = new SaveLifecycleFixture { Walk = walking };
         await fixture.Start(); await fixture.Pump(fixture.Save.NewGame(new("s1"), 1));
         fixture.Flow = AppState.Playing;
         var target = new Pose(new(17, 23, 31), 44, -12);
@@ -39,8 +37,8 @@ public sealed class SettledObserverSaveTests
     [TestCase, TestCategory(TestReason.Regression)]
     public async Task WalkingPreparationRepairsReachThisLoadBeforeItsSingleImmediateRestore()
     {
-        var walking = new FakeWalk();
-        using var fixture = new Fixture { Walk = walking };
+        var walking = new SaveLifecycleFixture.FakeWalk();
+        using var fixture = new SaveLifecycleFixture { Walk = walking };
         await fixture.Start(); await fixture.Pump(fixture.Save.NewGame(new("s1"), 1));
         fixture.Flow = AppState.Playing;
         fixture.Camera.Held = new(fixture.Maps.Current, new(ViewMode.Fly, fixture.Camera.Pose with { FovDeg = null }, null, 1, 1), walking.Current);
@@ -59,26 +57,4 @@ public sealed class SettledObserverSaveTests
         await fixture.Frames(3);
         AssertThat(loaded.Repairs.Count == repairs && walking.Restores == restores + 1).IsTrue();
     }
-
-    internal sealed class FakeWalk : ISaveSection<WalkSaveData>
-    {
-        public WalkSaveData Current { get; private set; } = new(new(new(3, 0, 4), 0, 0), false, WalkRules.DefaultSpeedStep,
-            [new(new(3, 0, 4), 0, 0), new(new(7, 0, 8), 0, 0)]);
-        public TaskCompletionSource? Barrier { get; set; }
-        public TaskCompletionSource Entered { get; set; } = new();
-        public int Restores { get; private set; }
-        public JsonTypeInfo<WalkSaveData> TypeInfo => LifecycleJsonContext.Strict.WalkSaveData;
-        public WalkSaveData Capture(in CaptureContext context) => context.Observer.Walk!;
-        public void Restore(WalkSaveData data, RestoreContext context) { Current = data; Restores++; }
-        public WalkSaveData CreateDefault(NewGameContext context) => Current;
-        public async Task<WalkSaveData> Prepare(WalkSaveData data, RestoreContext context, CancellationToken cancellation)
-        {
-            Entered.TrySetResult();
-            if (Barrier is not { } barrier) return data;
-            await barrier.Task.WaitAsync(cancellation);
-            context.Repair("walk: unsafe history point removed");
-            return data with { SafePoints = data.SafePoints.Take(1).ToArray() };
-        }
-    }
-
 }
