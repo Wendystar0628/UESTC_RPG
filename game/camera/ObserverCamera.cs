@@ -3,6 +3,7 @@ using Campus.Contracts.AppFlow;
 using Campus.Contracts.Maps;
 using Campus.Contracts.Save;
 using Campus.Contracts.Settings;
+using Campus.Kernel.Diagnostics;
 using Godot;
 using AppBoot = Campus.Kernel.Boot.Boot;
 using KernelServices = Campus.Kernel.Registry.Kernel;
@@ -23,6 +24,7 @@ public partial class ObserverCamera : Node, ICameraRig, IObserverState, IViewCon
     private readonly ObserverPresentation _presentation;
     private readonly ObserverFlight _flight;
     private readonly ObserverControls _controls;
+    private readonly CommandNotification _notifications = new();
     private IAppFlow? _flow;
     private IRuleset? _rules;
     private IWalkController? _walk;
@@ -189,8 +191,11 @@ public partial class ObserverCamera : Node, ICameraRig, IObserverState, IViewCon
     {
         var transit = _transit?.CancelAsync() ?? Task.CompletedTask;
         var draining = Task.WhenAll(transit, _flight.DrainAsync(), _internalModeTask ?? Task.CompletedTask);
+        Exception? failure = null;
         try { await draining; }
-        catch { throw draining.Exception!; }
+        catch (Exception error) { failure = draining.Exception ?? error; }
+        if (_notifications.TakeFailure() is { } notification) failure = RetainedFailure.Append(failure, notification);
+        if (failure is not null) System.Runtime.ExceptionServices.ExceptionDispatchInfo.Capture(failure).Throw();
     }
 
     public void OnMapUnloading(MapId from)
@@ -379,7 +384,11 @@ public partial class ObserverCamera : Node, ICameraRig, IObserverState, IViewCon
                 if (_walk is null) return Task.FromResult(ModeSwitchResult.Refused);
                 var result = _walk.Enter(Pose);
                 if (result == ModeSwitchResult.Refused)
-                { WalkEntryRefused?.Invoke(); return Task.FromResult(result); }
+                {
+                    var refused = Task.FromResult(result);
+                    _notifications.Publish(WalkEntryRefused);
+                    return refused;
+                }
                 _walkEntry = new(TaskCreationOptions.RunContinuationsAsynchronously);
                 _flight.Reset(); _controls.State.Clear(); _flight.SetEdgeFog(0);
                 return _walkEntry.Task;
@@ -390,8 +399,9 @@ public partial class ObserverCamera : Node, ICameraRig, IObserverState, IViewCon
                 _mode = ViewMode.Fly;
                 SetPose(origin with { FovDeg = _presentation.DefaultFov(ViewMode.Fly) });
                 _flight.Reset(); _controls.State.Clear(); _flight.SetEdgeFog(0);
-                if (landingRefused) WalkEntryRefused?.Invoke();
-                return Task.FromResult(ModeSwitchResult.Ok);
+                var applied = Task.FromResult(ModeSwitchResult.Ok);
+                if (landingRefused) _notifications.Publish(WalkEntryRefused);
+                return applied;
             default: throw new ArgumentOutOfRangeException(nameof(mode));
         }
     }
@@ -411,7 +421,7 @@ public partial class ObserverCamera : Node, ICameraRig, IObserverState, IViewCon
                 if (failed.Done.IsCanceled) completion.TrySetCanceled();
                 else completion.TrySetException(failed.Done.Exception!.InnerExceptions);
             }
-            else { completion.TrySetResult(ModeSwitchResult.Refused); WalkEntryRefused?.Invoke(); }
+            else { completion.TrySetResult(ModeSwitchResult.Refused); _notifications.Publish(WalkEntryRefused); }
             return false;
         }
         if (!_walk.CollisionReady) return true;

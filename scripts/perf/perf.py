@@ -1,5 +1,5 @@
 """用有上限的中文表读取性能派生数据，不在展示层重算指标。
-用法：python -I -X utf8 scripts/perf/perf.py {latest,show,compare,slice,anomalies,selfcheck}；各子命令加 --help 查参数。
+用法：python -I -X utf8 scripts/perf/perf.py {latest,show,batch,compare,slice,anomalies,selfcheck}；各子命令加 --help 查参数。
 输入：output/perf 的分析器产出；产出：最多 100 行、16000 字符的中文表；selfcheck 只运行随附小样本，不写真实索引。
 """
 import argparse
@@ -132,18 +132,37 @@ def latest(out, args):
 
 def compare(out, args):
     left, right = find_summary(out, args.left), find_summary(out, args.right)
-    eligible = (left['comparisonKey'] == right['comparisonKey'] and left['scope'] == right['scope']
-                and left['calc'] == right['calc'] and not left.get('comparisonMissing') and not right.get('comparisonMissing'))
-    clean = all(s['origin'] == 'ai' and s['status'] in ('current', 'superseded') and at(s, 'build.dirty') is False for s in (left, right))
-    eligible &= clean
+    batch_id = at(left, 'run.protocol.batchId')
+    batch = next((row for row in load_index(out).get('batches', []) if row['id'] == batch_id), {})
+    group = next((row for row in batch.get('groups', []) if row['comparisonKey'] == left['comparisonKey']
+                  and row['calc'] == left['calc'] and row['origin'] == left['origin'] and row['scope'] == left['scope']), {})
+    left_phase, right_phase = at(left, 'run.protocol.phase'), at(right, 'run.protocol.phase')
+    eligible = (bool(batch_id) and batch_id == at(right, 'run.protocol.batchId') and batch.get('kind') == 'aba'
+                and batch.get('status') in ('current', 'superseded') and left_phase != right_phase
+                and all(s['origin'] == 'ai' and s['baseStatus'] == 'candidate' and s['status'] != 'partial'
+                        and at(s, 'build.dirty') is False and s['comparisonKey'] == left['comparisonKey']
+                        and s['scope'] == left['scope'] and s['calc'] == left['calc'] for s in (left, right)))
+    values = [group.get('phases', {}).get(phase, {}) for phase in (left_phase, right_phase)] if eligible else [{}, {}]
     yield f"{left['id']} → {right['id']}"
-    yield '可比：' + ('是；同键、同口径、同配置、有效常规运行。' if eligible else '否；比较键、口径、状态或来源不符合比较条件，差异不下结论。')
+    yield '可比：' + ('是；同批完整 A/B/A；展示所选阶段每场景三次中位。' if eligible else '否；须同批完整有效 A/B/A 的不同阶段，差异不下结论。')
     metrics = ('steady.cost.mainViewportGpuMs.p95', 'steady.cost.mainViewportCpuMs.p95',
-               'steady.cost.frameSetupCpuMs.p95', 'all.experience.averageFps', 'all.experience.low1Fps',
-               'all.experience.frameMs.p99')
+               'steady.cost.frameSetupCpuMs.p95', 'all.cost.hardware.wholeGpuMemoryMiB.maximum')
     yield from table(['指标', '左', '右', '差值（仅可比时）'],
-                     ((key, at(left, key), at(right, key), at(right, key) - at(left, key)
-                       if eligible and number(at(left, key)) and number(at(right, key)) else None) for key in metrics))
+                     ((key, at(values[0], key), at(values[1], key), at(values[1], key) - at(values[0], key)
+                       if eligible and number(at(values[0], key)) and number(at(values[1], key)) else None) for key in metrics))
+
+
+def batch_overview(out, args):
+    batch = next((row for row in load_index(out).get('batches', []) if row['id'] == args.id), None)
+    if batch is None:
+        raise ValueError('批次不存在')
+    yield f"批次 {batch['id']} | {STATUS.get(batch['status'], batch['status'])} | {batch['kind']} | 目标={batch.get('targetPhase')}"
+    yield '状态原因：' + cell(batch['statusReasons'])
+    for group in batch['groups']:
+        yield '比较键：' + cell(group['comparisonKey']) + f"；calc={group['calc']}；scope={group['scope']}"
+        yield from table(['阶段', '会话', '主 GPU p95 中位/ms', '帧准备 CPU p95 中位/ms'],
+                         ((phase, value['sessionIds'], at(value, 'steady.cost.mainViewportGpuMs.p95'),
+                           at(value, 'steady.cost.frameSetupCpuMs.p95')) for phase, value in group['phases'].items()))
 
 
 def anomalies(out, args):
@@ -189,7 +208,9 @@ def main():
     latest_parser.add_argument('--limit', type=int, default=2)
     show_parser = commands.add_parser('show', help='显示一个会话')
     show_parser.add_argument('id')
-    compare_parser = commands.add_parser('compare', help='检查可比性并列成本差值')
+    batch_parser = commands.add_parser('batch', help='读取分析器生成的批次完整性与场景中位')
+    batch_parser.add_argument('id')
+    compare_parser = commands.add_parser('compare', help='以两个会话定位同批 A/B/A 阶段，比较现成场景中位')
     compare_parser.add_argument('left')
     compare_parser.add_argument('right')
     for name in ('anomalies', 'slice'):
@@ -216,6 +237,8 @@ def main():
             lines = overview(find_summary(out, args.id))
         elif args.command == 'compare':
             lines = compare(out, args)
+        elif args.command == 'batch':
+            lines = batch_overview(out, args)
         elif args.command == 'anomalies':
             lines = anomalies(out, args)
         else:

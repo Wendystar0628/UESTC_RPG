@@ -261,8 +261,10 @@ public partial class GameCaptureNode : Node, IGameCapture, IRegistryExitParticip
     public async Task DrainForExitAsync()
     {
         if (_captureTask is not { } capture) return;
-        try { await capture; }
-        catch (OperationCanceledException) when (_exit.IsCancellationRequested && capture.IsCanceled) { }
+        // Every retained capture was returned to its caller. Observe that result only after its
+        // complete lifetime; StopCapture's own cancellation and UI-release failures stay with exit.
+        await capture.ConfigureAwait(ConfigureAwaitOptions.SuppressThrowing |
+            ConfigureAwaitOptions.ContinueOnCapturedContext);
     }
 
     public override void _ExitTree()

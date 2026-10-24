@@ -4,6 +4,7 @@ using System.Threading.Channels;
 using Campus.Contracts;
 using Campus.Contracts.Perf;
 using Campus.Kernel.Diagnostics;
+using Campus.Kernel.Frame;
 
 namespace Campus.Kernel.Inspect;
 
@@ -48,6 +49,11 @@ internal sealed class PerfRecordingSession
     public double RecordedSeconds => Math.Max(0, _recordingStop - _recordingStart) / 1000;
     public PerfFaultCode Fault { get { lock (_failureGate) return _fault; } }
     public Exception? HardwareError => _hardware?.Error;
+    private static readonly PerfSamplingFact AwaitingHardware = new()
+    { Capability = PerfFactCapability.Starting, Reason = "Awaiting recording hardware sample" };
+    public PerfSamplingFacts SamplingFacts => _hardware?.SamplingFacts ??
+        new(Id, null, null, AwaitingHardware, AwaitingHardware, AwaitingHardware, AwaitingHardware);
+    public double? ProcessCpuFraction => _hardware?.ProcessCpuFraction;
 
     // Register before Begin: each channel belongs to exactly one producer thread.
     public PerfValueChannel AddProducer(string source, string stream = "events")
@@ -59,8 +65,12 @@ internal sealed class PerfRecordingSession
     }
 
     public void StartWatchdog(IFrameStatistics frames, PerfValueChannel output) => _watchdog = new(frames, output, this);
-    public void StartHardware() => _hardware = new(AddProducer("nvml.slow", "hw"), AddProducer("nvml.fast", "hwfast"), _dictionary.HardwareIntervalMilliseconds);
+    public void StartHardware(RenderAdapterIdentity adapter) => _hardware = new(AddProducer("hardware.slow", "hw"),
+        AddProducer("nvml.fast", "hwfast"), _dictionary.HardwareIntervalMilliseconds, Id!, adapter);
     public void AttachCapture() => _captureAttached = true;
+    // Capture lifecycle is owned here; freeze its fact with the row before the writer can observe it.
+    public bool TryFrame(in FrameSample sample, ReadOnlySpan<ViewportFrameSample> viewports, long contextFlags) =>
+        Frames.TryWrite(in sample, viewports, contextFlags, _captureAttached);
     public void StopProducers()
     {
         _watchdog?.Stop();
@@ -118,7 +128,7 @@ internal sealed class PerfRecordingSession
     public void Stop(PerfEndReason reason, double time)
     {
         if (Volatile.Read(ref _stopped) != 0) return;
-        if (_hardware is { Joined: false }) throw new InvalidOperationException("NVML must finish shutdown and join before value channels close.");
+        if (_hardware is { Joined: false }) throw new InvalidOperationException("Hardware sampling must release and join before value channels close.");
         _reason = reason;
         _recordingStop = Volatile.Read(ref _recording) == 0 ? _recordingStart : time;
         _events.Writer.TryComplete();
@@ -342,14 +352,15 @@ internal sealed class PerfRecordingSession
     private void SetCaptureCapabilities()
     {
         var hardware = _hardware?.Snapshot();
+        _manifest["contextComplete"] = _captureAttached;
         if (_manifest["capabilities"] is JsonObject capabilities)
         {
             capabilities["slowSampling"] = _captureAttached ? "recorded" : "notAttached";
             capabilities["watchdog"] = _captureAttached ? "recorded" : "notAttached";
             capabilities["nvml"] = hardware?["state"]?.DeepClone() ?? JsonValue.Create("notAttached");
+            capabilities["samplingFacts"] = hardware?["samplingFacts"]?.DeepClone();
             var rules = _dictionary.Snapshot["nonSteadyRules"]!;
             _manifest["requiredCoverage"] = rules["requiredCoverage"]?.DeepClone();
-            _manifest["requiredMissing"] = _captureAttached ? new JsonArray() : rules["requiredCoverage"]?.DeepClone();
             _manifest["notAttached"] = rules["notAttached"]?.DeepClone();
             capabilities["eventContext"] = _captureAttached ? "recorded" : "notAttached";
         }

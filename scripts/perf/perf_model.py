@@ -102,6 +102,8 @@ def read_stream(directory, spec, schema, event_stream=False):
         if not isinstance(sequence, int) or (previous is not None and sequence <= previous):
             raise ValueError(f'流序号不递增: {path.name}')
         previous = sequence
+        if spec['file'] == 'hw.csv' and row.get('rowKind') not in ('nvml', 'samplingFacts'):
+            raise ValueError('硬件行种类不符')
         stamp = row.get('monotonicMs')
         if not number(stamp) or (not event_stream and previous_time is not None and stamp < previous_time):
             raise ValueError(f'流时刻不递增: {path.name}')
@@ -171,30 +173,29 @@ def mark_context(frames, events, dictionary):
     flags = {item['name']: item['value'] for item in dictionary['contextFlags']}
     mask = sum(flags[name] for name in dictionary['nonSteadyRules']['contextFlagNames'])
     intervals = []
-    for rule in dictionary['nonSteadyRules']['rules']:
-        opened = {}
+    rules = {rule['name']: rule for rule in dictionary['nonSteadyRules']['rules']}
+    for rule in rules.values():
+        # Flags already contain active operations and settling from the owner.
+        if rule.get('activeFlag'):
+            continue
         for event in events:
             if event['event'] not in rule['events']:
                 continue
             payload = event['payload']
             if rule.get('purpose') and payload.get('purpose') != rule['purpose']:
                 continue
-            key = (event['event'], payload.get('id'))
-            phase = payload.get('phase')
-            now = event['monotonicMs']
             if rule.get('purpose') == 'saveThumbnail':
-                intervals.append((now, now, event.get('collectionFrame')))
-            elif phase == 'begin':
-                opened[key] = now
-            elif phase in ('end', 'ready', 'complete') and key in opened:
-                intervals.append((opened.pop(key), now + rule['settleMs'], None))
-        intervals.extend((start, math.inf, None) for start in opened.values())
+                intervals.append((None, None, event.get('collectionFrame')))
+            elif rule.get('eventMode') == 'valueChange' and payload['observation'] == 'changed':
+                settling = rules[rule['settleRule']]['settleMs']
+                intervals.append((None, None, event.get('collectionFrame')))
+                intervals.append((event['monotonicMs'], event['monotonicMs'] + settling, None))
     for frame in frames:
         complete = frame.get('contextComplete') is True and frame.get('contextFlags') is not None
         active = complete and bool(frame['contextFlags'] & mask)
         active |= frame.get('appState', '').lower() in dictionary['nonSteadyRules']['appStates']
         active |= any((capture == frame['collectionFrame'] if capture is not None
-                       else start <= frame['monotonicMs'] <= end) for start, end, capture in intervals)
+                       else start is not None and start <= frame['monotonicMs'] < end) for start, end, capture in intervals)
         frame['_steady'] = bool(complete and not active)
         frame['_contextKnown'] = complete
 
@@ -213,6 +214,8 @@ def prepare_frames(frames, samples, events, dictionary):
                 caliber[event['event']] = payload['effective']
             elif event['event'] == 'window.size':
                 caliber[event['event']] = [payload.get('widthPx'), payload.get('heightPx')]
+            elif event['event'] == 'window.mode':
+                caliber[event['event']] = payload['mode']
             event_index += 1
         frame['_caliber'] = json.dumps(caliber, sort_keys=True, separators=(',', ':'))
         sample_index = bisect.bisect_right(sample_times, frame['monotonicMs']) - 1
@@ -289,6 +292,8 @@ def frame_rate(values):
 
 
 def normalized_gpu_load(row):
+    if row['rowKind'] != 'nvml':
+        return None
     keys = ('gpuUtilFraction', 'gpuClockMHz', 'gpuMaxClockMHz')
     return row[keys[0]] * row[keys[1]] / row[keys[2]] if all(number(row.get(key)) for key in keys) and row[keys[2]] > 0 else None
 
@@ -307,7 +312,7 @@ def experience(frames, hw, target, policy, scope, reason):
               and not b['_gap'] and a['_steady'] and b['_steady']]
     gpu_rows = [f for f in valid if number(f['_measuredGpuMs'])]
     gpu_dt = sum(f['dtMs'] for f in gpu_rows)
-    utilization = [h['gpuUtilFraction'] for h in hw if number(h.get('gpuUtilFraction'))]
+    utilization = [h['gpuUtilFraction'] for h in hw if h['rowKind'] == 'nvml' and number(h.get('gpuUtilFraction'))]
     normalized = [value for h in hw if (value := normalized_gpu_load(h)) is not None]
     return dict(n=n, averageFps=frame_rate(values), frameMs=distribution(values),
                 low1Fps=low(.01, 100), low01Fps=low(.001, 1000), low1TailN=tails[.01], low01TailN=tails[.001],
@@ -330,7 +335,7 @@ def costs(frames, samples, hw):
                            for key in sorted({key for f in frames for key in f['_viewports']})}
     result['memory'] = {key: distribution(s.get(key) for s in samples) for key in
                         ('workingSetMiB', 'managedHeapMiB', 'godotStaticMiB', 'engineVideoMemoryMiB', 'textureMemoryMiB', 'bufferMemoryMiB')}
-    result['hardware'] = {key: distribution(h.get(key) for h in hw) for key in
+    result['hardware'] = {key: distribution(h.get(key) for h in hw if h['rowKind'] == 'nvml') for key in
                           ('wholeGpuMemoryMiB', 'processVideoMemoryMiB', 'gpuClockMHz', 'powerW', 'temperatureC')}
     result['gcTotals'] = {key: sum(f[key] for f in frames if number(f.get(key))) if any(number(f.get(key)) for f in frames) else None
                           for key in ('gcPauseMs', 'gcGen0', 'gcGen1', 'gcGen2', 'allocatedBytes')}

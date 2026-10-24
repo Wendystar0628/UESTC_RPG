@@ -77,8 +77,8 @@ public sealed class ObserverTransitRuntimeTests
         await driver.CancelAsync();
     }
 
-    [TestCase, TestCategory(TestReason.Regression), RequireGodotRuntime]
-    public async Task CancelledModeEntryWaitsForItsExecutionAndLoadingCleanupFailure()
+    [TestCase(false), TestCase(true), TestCategory(TestReason.Regression), RequireGodotRuntime]
+    public async Task CancelledModeEntryDrainsExecutionAndDeliversLoadingCleanupFailureOnlyThroughDone(bool cancellationCallbackFails)
     {
         var camera = new TestCameraRig();
         var terrain = new FlowTerrainPreparation();
@@ -88,8 +88,15 @@ public sealed class ObserverTransitRuntimeTests
         var runtime = new FlowRuntimeTestStub(() => true);
         var driver = new TransitDriver(camera, loading, runtime, maps, terrain, terrain);
         var applying = new TaskCompletionSource<ModeSwitchResult>();
-        var handle = driver.SwitchMode(_ => applying.Task);
-        handle.Cancel();
+        var cancellationFailure = new InvalidOperationException("mode cancellation callback failed");
+        var handle = driver.SwitchMode(async cancellation =>
+        {
+            using var registration = cancellation.Register(() =>
+            {
+                if (cancellationCallbackFails) throw cancellationFailure;
+            });
+            return await applying.Task;
+        });
         var drain = driver.CancelAsync();
         if (handle.Done.IsCompleted || drain.IsCompleted || loading.Leases.Single().Releasing.Task.IsCompleted)
             throw new InvalidOperationException("Cancellation completed before the mode execution returned.");
@@ -102,8 +109,12 @@ public sealed class ObserverTransitRuntimeTests
         if (handle.Done.IsCompleted || drain.IsCompleted || runtime.Arrivals != 0)
             throw new InvalidOperationException("Cancelled execution completed before loading cleanup or published an arrival.");
         lease.Released.SetResult();
-        try { await drain; throw new InvalidOperationException("Drain lost cancelled execution cleanup failure."); }
-        catch (Exception error) when (ReferenceEquals(error, cleanup)) { }
+        if (cancellationCallbackFails)
+        {
+            try { await drain; throw new InvalidOperationException("Drain lost its cancellation callback failure."); }
+            catch (Exception error) when (ReferenceEquals(error, cancellationFailure)) { }
+        }
+        else await drain;
         try { await handle.Done; throw new InvalidOperationException("Done lost cancelled execution cleanup failure."); }
         catch (Exception error) when (ReferenceEquals(error, cleanup)) { }
         await driver.CancelAsync();

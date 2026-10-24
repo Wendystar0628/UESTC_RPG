@@ -19,6 +19,46 @@ namespace Campus.Tests;
 [TestSuite]
 public sealed class MapRuntimeFailureTests
 {
+    [TestCase(false), TestCase(true), TestCategory(TestReason.Regression), RequireGodotRuntime]
+    public async Task ArrivalObserversCannotChangePreparationAndReachMapShutdown(bool preparationFails)
+    {
+        var points = new TaskCompletionSource();
+        using var fixture = new MapRuntimeFixture(terrain: new ArrivalPreparation(points.Task));
+        var runtime = fixture.Runtime;
+        fixture.Stream.ResidentReady = fixture.Stream.DestinationReady = fixture.Producer.ContentReady = true;
+        runtime._Process(0);
+        var observed = new IOException("arrival observation failed");
+        var progress = new InvalidOperationException("progress observation failed");
+        var original = new InvalidDataException("terrain preparation failed");
+        var arrivals = 0; var changes = 0;
+        runtime.ArrivalChanged += _ => throw observed;
+        runtime.ArrivalChanged += current =>
+        {
+            arrivals++;
+            if (current is null) return;
+            current.ProgressChanged += () => throw progress;
+            current.ProgressChanged += () => changes++;
+        };
+        var arrival = runtime.Arrive(fixture.Camera.Pose, ViewMode.Fly);
+        AssertThat(arrivals == 1 && !points.Task.IsCompleted && !arrival.Done.IsCompleted && runtime.Failure is null).IsTrue();
+        if (preparationFails) points.SetException(original); else points.SetResult();
+        await FrameAwaiter.ProcessAsync(runtime);
+        runtime._Process(0);
+        if (preparationFails)
+        {
+            try { await arrival.Done; throw new InvalidOperationException("Preparation failure became success."); }
+            catch (AppStartupException error) { AssertThat(ReferenceEquals(error.InnerException, original)).IsTrue(); }
+        }
+        else AssertThat(arrival.Done.IsCompletedSuccessfully && arrival.Completed == arrival.Total && changes > 1 && runtime.Failure is null).IsTrue();
+        Exception? shutdown = null;
+        try { await runtime.ShutdownAsync(); } catch (Exception error) { shutdown = error; }
+        var aggregate = shutdown as AggregateException ?? throw new InvalidOperationException("Shutdown lost observation failures.");
+        var causes = aggregate.Flatten().InnerExceptions;
+        AssertThat(arrivals == 2 && causes.Contains(observed) &&
+            (preparationFails ? runtime.Failure is AppStartupException failure && ReferenceEquals(failure.InnerException, original)
+                : causes.Contains(progress) && runtime.Failure is null)).IsTrue();
+    }
+
     // 本组建的着色器与材质要等包装终结才归还原生引用；整组跑完在这里收齐，单跑本组时才不漏到引擎退出（DroppedNatives）。
     [After]
     public void ReleaseDroppedNatives() => DroppedNatives.Release();
@@ -229,7 +269,7 @@ internal static class MapRuntimeTestSupport
         public ArrivalCollision Collision { get; } = new();
         public TestCameraRig Camera { get; } = new();
         public Task Mount { get; }
-        public MapRuntimeFixture(IMapStreamState? stream = null, IMapContext? context = null)
+        public MapRuntimeFixture(IMapStreamState? stream = null, IMapContext? context = null, ITerrainPreparation? terrain = null)
         {
             var registry = new ServiceRegistry();
             if (stream is null)
@@ -239,13 +279,20 @@ internal static class MapRuntimeTestSupport
             }
             _stage.AddChild(Producer);
             Runtime.Bind(new(registry, stream ?? Stream, new RuntimeBake(), Collision, Renderer,
-                Camera, new FlowTerrainPreparation(), _view));
+                Camera, terrain ?? new FlowTerrainPreparation(), _view));
             _stage.AddChild(Runtime);
             ((SceneTree)Engine.GetMainLoop()).Root.AddChild(_stage);
             Runtime.SetProcess(false);
             Mount = Runtime.Mount(context ?? new TestMapContext(BackdropInputsTests.Descriptor()));
         }
         public void Dispose() { Runtime.StopNewWork(); _stage.Free(); _view.Free(); }
+    }
+
+    internal sealed class ArrivalPreparation(Task points) : ITerrainPreparation
+    {
+        public bool IsPrepared(IWorldModel world, N.Vector2 point) => true;
+        public Task PreparePoints(IMapContext context, IReadOnlyList<N.Vector2> locations, CancellationToken cancellation = default) => points;
+        public Task PrepareRegion(IMapContext context, MapRect region, CancellationToken cancellation = default) => Task.CompletedTask;
     }
 
     internal sealed class RuntimeRenderer : IRenderReadiness

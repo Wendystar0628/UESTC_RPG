@@ -43,7 +43,7 @@ public sealed class PerfEventContractTests
     }
 
     [TestCase, TestCategory(TestReason.Contract)]
-    public void ContextUsesDictionaryForDrawRecoveryAndDoesNotInventOwnerCoverage()
+    public void ContextUsesDictionaryForDrawRecovery()
     {
         var dictionary = new PerfFieldDictionary(File.ReadAllText(RepositoryFixture.FilePath("game", "data", "perf-fields.json")));
         var context = new PerfContextCapture(dictionary);
@@ -59,10 +59,10 @@ public sealed class PerfEventContractTests
         for (int index = 0; index < recoveryFrames; index++)
         {
             var captured = context.Capture(in frame, false, WorldTransition.None, false);
-            if ((captured.Flags & flag) == 0 || !captured.Complete)
-                throw new InvalidOperationException("Draw recovery or attached owner coverage was misclassified.");
+            if ((captured & flag) == 0)
+                throw new InvalidOperationException("Draw recovery was misclassified.");
         }
-        if ((context.Capture(in frame, false, WorldTransition.None, false).Flags & flag) != 0)
+        if ((context.Capture(in frame, false, WorldTransition.None, false) & flag) != 0)
             throw new InvalidOperationException("Draw recovery exceeded its dictionary rule.");
     }
 
@@ -100,7 +100,7 @@ public sealed class PerfEventContractTests
         context.Observe(in quality, 10);
         long all = Flag(dictionary, "newGameOrLoad") | Flag(dictionary, "mapTransition") | Flag(dictionary, "qualityApplying");
         var frame = PlayingFrame(10);
-        if ((context.Capture(in frame, false, WorldTransition.None, false).Flags & all) != all)
+        if ((context.Capture(in frame, false, WorldTransition.None, false) & all) != all)
             throw new InvalidOperationException("The colliding owner-operation trigger did not open all command windows.");
 
         enter = enter with { Phase = EnterCommandPhase.Completed, Result = EnterResult.Entered };
@@ -110,7 +110,7 @@ public sealed class PerfEventContractTests
         map = map with { Phase = MapPreparePhase.Completed, Result = MapTravelResult.Arrived };
         context.Observe(in map, 20);
         frame = PlayingFrame(20 + Settling(dictionary));
-        long flags = context.Capture(in frame, false, WorldTransition.None, false).Flags;
+        long flags = context.Capture(in frame, false, WorldTransition.None, false);
         if ((flags & Flag(dictionary, "newGameOrLoad")) == 0 || (flags & Flag(dictionary, "mapTransition")) != 0)
             throw new InvalidOperationException("One owner's completion closed another owner or a joined window stayed open.");
 
@@ -120,11 +120,11 @@ public sealed class PerfEventContractTests
         quality = quality with { Phase = QualityApplyPhase.Completed };
         context.Observe(in quality, frame.MonotonicMilliseconds);
         var completed = context.Capture(in frame, false, WorldTransition.None, false);
-        if ((completed.Flags & (Flag(dictionary, "newGameOrLoad") | Flag(dictionary, "qualityApplying"))) != 0 ||
-            (completed.Flags & Flag(dictionary, "qualitySettling")) == 0 || !completed.Complete || context.NotAttached.Length == 0)
+        if ((completed & (Flag(dictionary, "newGameOrLoad") | Flag(dictionary, "qualityApplying"))) != 0 ||
+            (completed & Flag(dictionary, "qualitySettling")) == 0 || context.NotAttached.Length == 0)
             throw new InvalidOperationException("No-change completion or optional coverage prevented the required context from closing.");
         frame = PlayingFrame(frame.MonotonicMilliseconds + Settling(dictionary));
-        if (context.Capture(in frame, false, WorldTransition.None, false).Flags != 0)
+        if (context.Capture(in frame, false, WorldTransition.None, false) != 0)
             throw new InvalidOperationException("A completed command exceeded its dictionary settling interval.");
     }
 
@@ -148,12 +148,12 @@ public sealed class PerfEventContractTests
         pending = pending with { Phase = QualityApplyPhase.Canceled };
         context.Observe(in pending, 10);
         var frame = PlayingFrame(10);
-        if (context.Capture(in frame, false, WorldTransition.None, false).Flags != 0)
+        if (context.Capture(in frame, false, WorldTransition.None, false) != 0)
             throw new InvalidOperationException("A non-working command opened a work or settling window.");
         joined = joined with { Phase = MapPreparePhase.Completed, Result = MapTravelResult.Arrived };
         if (context.Observe(in joined, 20)) throw new InvalidOperationException("A terminal boundary invented its missing start.");
         frame = PlayingFrame(20);
-        long flags = context.Capture(in frame, false, WorldTransition.None, false).Flags;
+        long flags = context.Capture(in frame, false, WorldTransition.None, false);
         if ((flags & Flag(dictionary, "mapTransition")) != 0 || (flags & Flag(dictionary, "transitionSettling")) == 0)
             throw new InvalidOperationException("An actual completion did not settle independently of its unknown start.");
     }
@@ -194,7 +194,7 @@ public sealed class PerfEventContractTests
         for (ulong collectionFrame = 10; collectionFrame <= 13; collectionFrame++)
         {
             var frame = PlayingFrame(10) with { CollectionFrame = collectionFrame };
-            bool excluded = (context.Capture(in frame, false, WorldTransition.None, false).Flags & Flag(dictionary, "captureFrame")) != 0;
+            bool excluded = (context.Capture(in frame, false, WorldTransition.None, false) & Flag(dictionary, "captureFrame")) != 0;
             if (excluded != (collectionFrame is 10 or 12))
                 throw new InvalidOperationException("Thumbnail exclusion drifted from the real readback collection frame.");
         }
@@ -204,7 +204,7 @@ public sealed class PerfEventContractTests
     private static long Flag(PerfFieldDictionary dictionary, string name) => dictionary.Snapshot["contextFlags"]!.AsArray()
         .Single(item => item!["name"]!.GetValue<string>() == name)!["value"]!.GetValue<long>();
     private static double Settling(PerfFieldDictionary dictionary) => dictionary.Snapshot["nonSteadyRules"]!["rules"]!.AsArray()
-        .Max(item => item!["settleMs"]!.GetValue<double>()) + 1;
+        .Where(item => item!["settleMs"] is not null).Max(item => item!["settleMs"]!.GetValue<double>()) + 1;
     private static FrameSample PlayingFrame(double time) => new() { MonotonicMilliseconds = time,
         Context = new(AppState.Playing, AppActivity.None, true, true, false) };
     private static QualityRequest QualityTarget() => new(new(QualityPreset.Balanced, new Dictionary<QualityKnob, float>()),

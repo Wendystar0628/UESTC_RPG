@@ -23,7 +23,6 @@ internal sealed class PerfContextCapture
     private int _resumeRemaining;
     private double _settleUntil, _qualityUntil;
     public string[] RequiredCoverage { get; }
-    public string[] RequiredMissing { get; }
     public string[] NotAttached { get; }
 
     public PerfContextCapture(PerfFieldDictionary dictionary)
@@ -32,13 +31,12 @@ internal sealed class PerfContextCapture
             _flags.Add(flag!["name"]!.GetValue<string>(), flag["value"]!.GetValue<long>());
         var rules = dictionary.Snapshot["nonSteadyRules"]!;
         RequiredCoverage = rules["requiredCoverage"]!.AsArray().Select(item => item!.GetValue<string>()).ToArray();
-        RequiredMissing = [];
         NotAttached = rules["notAttached"]!.AsArray().Select(item => item!.GetValue<string>()).ToArray();
         foreach (var state in rules["appStates"]!.AsArray()) _appStates.Add(Enum.Parse<AppState>(state!.GetValue<string>(), true));
         foreach (var rule in rules["rules"]!.AsArray())
         {
             string name = rule!["name"]!.GetValue<string>();
-            _settling.Add(name, rule["settleMs"]!.GetValue<double>());
+            if (rule["settleMs"] is { } settle) _settling.Add(name, settle.GetValue<double>());
             foreach (var eventName in rule["events"]!.AsArray()) _eventRules.Add(eventName!.GetValue<string>(), name);
             if (rule["activeFlag"] is { } activeFlag) _ruleFlags.Add(name, Flag(activeFlag.GetValue<string>()));
             if (name == "drawResume") _resumeFrames = rule["settleFrames"]!.GetValue<int>();
@@ -113,7 +111,7 @@ internal sealed class PerfContextCapture
         if (purpose == "saveThumbnail") _thumbnailFrames.Add(collectionFrame);
     }
 
-    public (long Flags, bool Complete) Capture(in FrameSample frame, bool loading, WorldTransition transition, bool arriving)
+    public long Capture(in FrameSample frame, bool loading, WorldTransition transition, bool arriving)
     {
         long bits = (long)frame.Context.Activity;
         foreach (var operation in _operations)
@@ -133,7 +131,7 @@ internal sealed class PerfContextCapture
             bits |= Flag("drawResuming");
             _resumeRemaining--;
         }
-        return (bits, RequiredMissing.Length == 0);
+        return bits;
     }
     private long Flag(string name) => _flags[name];
 }

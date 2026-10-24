@@ -255,6 +255,8 @@ def slow_anomalies(frames, streams, manifest, budgets, scope):
         return []
     policy, result = budgets['perfAnomalies'], []
     for sample in streams['hw']:
+        if sample['rowKind'] != 'nvml':
+            continue
         frame = nearest_frame(frames, sample['monotonicMs'])
         used, capacity = sample.get('wholeGpuMemoryMiB'), at(manifest, 'machine.vramMiB')
         if number(used) and number(capacity) and capacity > 0 and used >= policy['videoMemoryNearFraction'] * capacity:
@@ -282,7 +284,7 @@ def slow_anomalies(frames, streams, manifest, budgets, scope):
                     item['note'] = '首末增长候选，不声称内存泄漏；需诊断核查生命周期与驻留量'
                     result.append(item)
     if scope == 'full':
-        utilization = [s for s in streams['hw'] if number(s.get('gpuUtilFraction'))]
+        utilization = [s for s in streams['hw'] if s['rowKind'] == 'nvml' and number(s.get('gpuUtilFraction'))]
         for a, b in zip(utilization, utilization[1:]):
             delta = abs(b['gpuUtilFraction'] - a['gpuUtilFraction'])
             if delta > policy['utilizationSwingFraction']:

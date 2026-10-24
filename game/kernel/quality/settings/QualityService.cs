@@ -57,7 +57,8 @@ public sealed class QualityService : IQualityFrame, IBootParticipant, IAsyncDisp
     private readonly CommandNotification _commands = new();
     private double _debounce;
     private Task _lastSave = Task.CompletedTask;
-    private readonly HashSet<Task> _applications = [];
+    // A caller-owned application is retained only so shutdown still waits for its completion.
+    private readonly Dictionary<Task, bool> _applications = [];
     private Task? _disposal;
     private bool _disposed;
 
@@ -124,10 +125,11 @@ public sealed class QualityService : IQualityFrame, IBootParticipant, IAsyncDisp
         var applications = _applications.ToArray();
         if (_binding is { } binding) Unbind(binding.Runtime);
         var failures = new List<Exception>();
-        foreach (var application in applications)
+        foreach (var (application, ownsFailure) in applications)
         {
             try { await application; }
             catch (OperationCanceledException) when (application.IsCanceled) { }
+            catch (Exception) when (!ownsFailure) { _ = application.Exception; }
             catch (Exception error) { failures.Add(error); }
             finally { _applications.Remove(application); }
         }
@@ -201,7 +203,7 @@ public sealed class QualityService : IQualityFrame, IBootParticipant, IAsyncDisp
         if (origin == ApplyOrigin.Startup || origin == ApplyOrigin.CommandLine && runtime.Booting)
         {
             var application = ApplyDuringBoot(binding, new(operation, next, origin, null), plan.Next);
-            if (!application.IsCompleted) _applications.Add(application);
+            if (!application.IsCompleted) _applications.Add(application, false);
             return application;
         }
         var deferred = runtime.Transitioning || binding.Active is not null;
@@ -236,7 +238,7 @@ public sealed class QualityService : IQualityFrame, IBootParticipant, IAsyncDisp
         _commands.Publish(ApplyCommand, new QualityApplyEvent(request.Operation, QualityApplyPhase.Started, request.Edit, request.Origin, null));
         var active = Execute(binding, request);
         binding.Active = active;
-        if (!active.IsCompletedSuccessfully && !active.IsCanceled) _applications.Add(active);
+        if (!active.IsCompletedSuccessfully && !active.IsCanceled) _applications.Add(active, true);
     }
 
     private async Task<ApplyResult> ApplyDuringBoot(Binding binding, Request request, QualityProfile profile)
@@ -265,7 +267,6 @@ public sealed class QualityService : IQualityFrame, IBootParticipant, IAsyncDisp
     private async Task Execute(Binding binding, Request request)
     {
         var application = ApplyRequest(binding, request);
-        if (request.Completion is not null && !application.IsCompleted) _applications.Add(application);
         try
         {
             await application;
@@ -294,7 +295,6 @@ public sealed class QualityService : IQualityFrame, IBootParticipant, IAsyncDisp
                 throw;
             }
         }
-        finally { _applications.Remove(application); }
     }
 
     private async Task ApplyRequest(Binding binding, Request request)
@@ -421,17 +421,8 @@ public sealed class QualityService : IQualityFrame, IBootParticipant, IAsyncDisp
 
     private void Notify(Binding binding, in QualityChange change)
     {
-        if (binding.Token.IsCancellationRequested) return;
-        if (change.Knobs == 0 || Changed is null) return;
-        var failures = new List<Exception>();
-        foreach (Action<QualityChange> observer in Changed.GetInvocationList())
-        {
-            if (binding.Token.IsCancellationRequested) break;
-            try { observer(change); }
-            catch (OperationCanceledException) when (binding.Token.IsCancellationRequested) { break; }
-            catch (Exception error) { failures.Add(error); }
-        }
-        if (failures.Count > 0) throw new AggregateException("Quality observers failed.", failures);
+        if (binding.Token.IsCancellationRequested || change.Knobs == 0) return;
+        _commands.Publish(Changed, change);
     }
 
     /// <summary>Folds only the user's own edit into the saved profile, so a command-line overlay never reaches the file.</summary>

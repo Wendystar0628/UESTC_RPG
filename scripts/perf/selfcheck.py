@@ -13,66 +13,8 @@ from analyze import analyze_all, summary_for
 from perf_model import COSTS, PHASES, at, load_session, prepare_frames, read_json, rolling_medians, target_ms
 from perf_anomalies import DEEPEN_REPEAT_COUNT, annotate, anomaly, deepen, frame_anomalies
 from unittest.mock import patch
-
-
-def manifest(dictionary, identifier='SELFCHECK'):
-    return dict(schema=dictionary['schema'], id=identifier, origin='play', status='closed', complete=True,
-                startedAt='2000-01-01T00:00:00Z', endedAt='2000-01-01T00:00:05Z', recordedSeconds=5,
-                build=dict(commit=None, dirty=False, configuration='Debug', godot='selfcheck'),
-                machine=dict(id='selfcheck-only', gpu='RTX 4080', api='selfcheck', driver='selfcheck', os='selfcheck'),
-                display=dict(windowWidthPx=3840, windowHeightPx=2160, refreshHz=60),
-                desktop=dict(kind='interactive', isInputDesktop=True, windowFocused=True),
-                pacing=dict(maxFps=60, vsync='disabled'),
-                graphics=dict(preset='fine', effective={'selfcheck': True}, internalWidthPx=3840, internalHeightPx=2160),
-                run=dict(args=[], diagnostics=None), kernelBudgets=dict(streamMountMilliseconds=1),
-                clock=dict(anchors=[]), fieldDictionary=dictionary,
-                streams=[dict(file=spec['file'], state='recorded', droppedRows=0) for spec in dictionary['streams'].values()])
-
-
-def frame(dictionary, index, gpu=2, dt=10):
-    row = {c['name']: None if c['nullable'] else {'integer': 0, 'number': 0, 'string': '', 'boolean': False}.get(c['type'])
-           for c in dictionary['streams']['frames']['columns']}
-    row.update(schema=dictionary['schema'], sequence=index + 1, collectionFrame=index + 1000,
-               monotonicMs=(index + 1) * dt, dtMs=dt, phaseValidity=31,
-               physMs=0, procMs=dt / 4, lateMs=dt / 4, drawMs=dt / 4, tailMs=dt / 4,
-               mainViewportGpuMs=gpu, mainViewportCpuMs=1, frameSetupCpuMs=1,
-               appState='playing', appActivity=0, contextFlags=0, contextComplete=True,
-               gapBefore=False, viewportSamplesJson=[viewport(1, 'main', None, gpu)],
-               gcPauseMs=0, gcGen0=0, gcGen1=0, gcGen2=0, allocatedBytes=0)
-    row.update({key: 0 for key in ('pipelineCanvas', 'pipelineMesh', 'pipelineSurface', 'pipelineDraw', 'pipelineSpecialization', 'jitCompiledMethods')})
-    return row
-
-
-def viewport(identifier, role, source, gpu, skipped=False):
-    return dict(viewportId=identifier, role=role, sourceDrawFrame=source, gpuRenderMs=gpu,
-                cpuRenderMs=1, drewThisFrame=False if skipped else None,
-                resultUpdated=True if source is not None and not skipped else None,
-                sourceCpuBeginUs=None, sourceCpuEndUs=None)
-
-
-def streams(frames, dictionary):
-    # Real sessions contain clock anchors; include one so association handles a nonempty event list.
-    when = frames[0]['monotonicMs'] if frames else 0
-    anchor = dict(schema=dictionary['schema'], sequence=1, event='clock.anchor', source='selfcheck', collectionFrame=None,
-                  monotonicMs=when, payload=dict(unixMs=0, monotonicMs=when, readSpanMs=0))
-    return dict(frames=frames, samples=[], hw=[], hwfast=[], events=[anchor])
-
-
-def write_six(directory, meta, data, dictionary):
-    directory.mkdir(parents=True)
-    (directory / 'manifest.json').write_text(json.dumps(meta), encoding='utf-8')
-    (directory / '.lock').touch()
-    for name, spec in dictionary['streams'].items():
-        path = directory / spec['file']
-        if spec['kind'] == 'jsonl':
-            path.write_text(''.join(json.dumps(row) + '\n' for row in data[name]), encoding='utf-8')
-        else:
-            names = [c['name'] for c in spec['columns']]
-            with path.open('w', encoding='utf-8', newline='') as target:
-                writer = csv.DictWriter(target, fieldnames=names)
-                writer.writeheader()
-                for row in data[name]:
-                    writer.writerow({key: value if isinstance(value, str) else json.dumps(value, separators=(',', ':')) for key, value in row.items()})
+from selfcheck_fixtures import ai_run, manifest, mark_sample, frame, viewport, streams, write_six
+from selfcheck_context import check_context, check_window_changes, check_hardware_facts
 
 
 def check_snapshot(root, dictionary, budgets):
@@ -186,20 +128,158 @@ def check_manifest(root, dictionary, budgets):
     assert target_ms(meta) == 1000 / meta['pacing']['maxFps'], '真实 disabled 被当成开启垂直同步'
 
 
-def check_context(root, dictionary, budgets):
-    excluded = dictionary['nonSteadyRules']['contextFlagNames']
-    assert excluded, '字典未声明非稳态上下文位'
-    frames = [frame(dictionary, i) for i in range(len(dictionary['contextFlags']))]
-    for row, flag in zip(frames, dictionary['contextFlags']):
-        row['contextFlags'] = flag['value']
-    prepare_frames(frames, [], [], dictionary)
-    assert all(row['_steady'] == (flag['name'] not in excluded)
-               for row, flag in zip(frames, dictionary['contextFlags'])), '上下文位判定未遵守字典唯一清单'
-    frames = [frame(dictionary, i) for i in range(2)]
-    capture = dict(event='sync.readback', collectionFrame=frames[1]['collectionFrame'],
-                   monotonicMs=frames[0]['monotonicMs'], payload=dict(purpose='saveThumbnail'))
-    prepare_frames(frames, [], [capture], dictionary)
-    assert frames[0]['_steady'] and not frames[1]['_steady'], '缩略图未按真实采集帧号排除'
+def check_sampling_batches(root, dictionary, budgets):
+    """Regression：准备期极值不进样段；不完整批次与短跑不能产生基线。"""
+    from perf_batches import batch_results
+    from perf_store import git
+    warm = budgets['perfAnomalies']['medianMinimumFrames'] + 3
+    rows = [frame(dictionary, i, gpu=2 if i < warm else 100) for i in range(warm + 4)]
+    rows[0]['gcPauseMs'] = 999
+    start, end = rows[warm - 1]['monotonicMs'] + 5, rows[warm + 2]['monotonicMs']
+    data = mark_sample(streams(rows, dictionary), dictionary, begin=start, end=end)
+    meta = manifest(dictionary, 'SAMPLE')
+    meta.update(origin='ai')
+    meta['build']['commit'] = git(root, 'rev-parse', 'HEAD')[1]
+    run_value = ai_run()
+    summary, items, sampled, _ = summary_for(Path('fixture'), copy.deepcopy(meta), copy.deepcopy(data), dictionary, budgets, run_value)
+    assert sampled and len(sampled) == 2 and sampled[0]['monotonicMs'] - sampled[0]['dtMs'] >= start, '夹具没有排除跨界帧'
+    assert at(summary, 'all.cost.mainViewportGpuMs.n') == 2 and at(summary, 'all.cost.mainViewportGpuMs.p95') == 100
+    assert at(summary, 'all.cost.gcTotals.gcPauseMs') == 0, '准备期 GC 进入样段'
+    assert not any(item['type'] == 'costSpike' for item in items), '准备期 M 泄漏到短样段'
+    author = copy.deepcopy(meta)
+    author['origin'] = 'play'
+    play = summary_for(Path('fixture'), author, copy.deepcopy(data), dictionary, budgets, run_value)[0]
+    assert at(play, 'all.cost.mainViewportGpuMs.n') == len(rows), '作者会话被 AI 标记裁剪'
+    evidence = summary_for(Path('fixture'), meta, copy.deepcopy(data), dictionary, budgets, {})[0]
+    assert evidence['baseStatus'] == 'evidence' and at(evidence, 'all.cost.mainViewportGpuMs.n') == len(rows)
+    short = summary_for(Path('fixture'), meta, copy.deepcopy(data), dictionary, budgets, {**run_value, 'purpose': 'functional'})[0]
+    assert short['baseStatus'] == 'evidence', '功能短跑冒充基线'
+    for phases in ([], ['begin'], ['end', 'begin'], ['begin', 'begin', 'end'], ['begin', 'end', 'begin', 'end']):
+        broken = copy.deepcopy(data)
+        broken['events'] = [event for event in broken['events'] if event['event'] != 'segment']
+        for sequence, phase in enumerate(phases, 100):
+            broken['events'].append(dict(event='segment', sequence=sequence, monotonicMs=start + sequence,
+                                         payload=dict(id='sample', phase=phase)))
+        bad = summary_for(Path('fixture'), meta, broken, dictionary, budgets, run_value)[0]
+        assert bad['baseStatus'] == 'partial' and bad['sampleReasons'] and bad['all'] is None, phases
+
+    with tempfile.TemporaryDirectory(prefix='uestc-perf-batch-') as temporary:
+        out, author = Path(temporary) / 'perf', Path(temporary) / 'author'
+        for phase_index, (phase, gpu) in enumerate((('a1', 2), ('b1', 7), ('a2', 2))):
+            for repetition, value in enumerate((gpu, gpu + 10, gpu + 1), 1):
+                identifier = f'{phase}-{repetition}'
+                source = out / 'runs/aba' / identifier
+                meta = manifest(dictionary, identifier)
+                second = phase_index * 10 + repetition * 2
+                meta.update(origin='ai', startedAt=f'2000-01-01T00:00:{second:02d}Z',
+                            endedAt=f'2000-01-01T00:00:{second + 1:02d}Z')
+                meta['build']['commit'] = git(root, 'rev-parse', 'HEAD')[1]
+                sample = mark_sample(streams([frame(dictionary, i, gpu=value) for i in range(3)], dictionary), dictionary)
+                write_six(source, meta, sample, dictionary)
+                (source / 'run.json').write_text(json.dumps(ai_run(batch='aba', phase=phase, repetition=repetition, kind='aba')), encoding='utf-8')
+                if phase == 'a1' and repetition == 1:
+                    assert not analyze_all(root, out, author)['errors']
+                    first = read_json(out / 'index.json')
+                    assert first['batches'][0]['status'] == 'partial' and first['sessions'][0]['status'] == 'partial'
+                    assert 'all' not in first['batches'][0]['groups'][0]['phases']['a1'], '缺次批次输出了中位'
+        result = analyze_all(root, out, author)
+        assert not result['errors'], result
+        batch = read_json(out / 'index.json')['batches'][0]
+        assert batch['status'] in ('current', 'stale'), batch
+        assert at(batch['groups'][0], 'phases.a1.steady.cost.mainViewportGpuMs.p95') == 3
+        assert at(batch['groups'][0], 'phases.b1.steady.cost.mainViewportGpuMs.p95') == 8, '未按三次指标取中位'
+        entries = [read_json(path) for path in (out / 'derived').glob('*/summary.json')]
+        for mutate in ('duplicate', 'missing', 'key', 'commit', 'phaseCommit', 'order', 'functional'):
+            changed = copy.deepcopy(entries)
+            if mutate == 'duplicate':
+                changed.append(copy.deepcopy(changed[0]))
+            elif mutate == 'missing':
+                changed.pop()
+            elif mutate == 'key':
+                changed[0]['comparisonKey']['preset'] = 'another'
+            elif mutate == 'commit':
+                next(row for row in changed if at(row, 'run.protocol.phase') == 'a2')['build']['commit'] = 'another'
+            elif mutate == 'phaseCommit':
+                next(row for row in changed if at(row, 'run.protocol.phase') == 'b1')['build']['commit'] = 'another'
+            elif mutate == 'order':
+                next(row for row in changed if at(row, 'run.protocol.phase') == 'a1')['endedAt'] = '2000-01-01T00:00:30Z'
+            else:
+                changed[0].update(baseStatus='evidence')
+                changed[0]['run']['purpose'] = 'functional'
+            invalid, _ = batch_results(changed)
+            assert invalid[0]['status'] == 'partial' and all('all' not in phase for group in invalid[0]['groups']
+                                                           for phase in group['phases'].values()), mutate
+        # 真实六件往返也必须保持裁剪，且原始行数不变。
+        source = out / 'runs/sample/SAMPLE'
+        write_six(source, {**manifest(dictionary, 'SAMPLE'), 'origin': 'ai'}, data, dictionary)
+        (source / 'run.json').write_text(json.dumps(ai_run(batch='sample')), encoding='utf-8')
+        assert not analyze_all(root, out, author)['errors']
+        derived = read_json(out / 'derived/SAMPLE/summary.json')
+        assert at(derived, 'all.cost.mainViewportGpuMs.n') == 2
+        curves = read_json(out / 'derived/SAMPLE/curves.json')['levels'][0]
+        assert sum(row[2] for row in curves['buckets']) == 2, '曲线保留了准备期成本'
+        assert len(load_session(source, dictionary)[1]['frames']) == len(rows), '分析修改了原始数据'
+
+
+def check_batch_freshness(root, dictionary, budgets):
+    """Regression：真实 A→B 提交差异下，A2 留 stale，批次只由 B 目标判鲜。"""
+    from argparse import Namespace
+    from perf import compare
+    from perf_store import git
+    with tempfile.TemporaryDirectory(prefix='uestc-perf-aba-code-') as temporary:
+        repo = Path(temporary) / 'repo'
+        data_root = repo / 'game/data'
+        data_root.mkdir(parents=True)
+        (data_root / 'perf-fields.json').write_text(json.dumps(dictionary), encoding='utf-8')
+        (repo / 'budgets.json').write_text(json.dumps(budgets), encoding='utf-8')
+        marker = repo / 'game/fixture.txt'
+        marker.write_text('A', encoding='utf-8')
+        for arguments in (('init',), ('add', '.'), ('-c', 'user.name=selfcheck', '-c', 'user.email=selfcheck@example.invalid', 'commit', '-m', 'A')):
+            assert git(repo, *arguments)[0] == 0, arguments
+        commit_a = git(repo, 'rev-parse', 'HEAD')[1]
+        marker.write_text('B', encoding='utf-8')
+        assert git(repo, 'add', '.')[0] == 0
+        assert git(repo, '-c', 'user.name=selfcheck', '-c', 'user.email=selfcheck@example.invalid', 'commit', '-m', 'B')[0] == 0
+        commit_b = git(repo, 'rev-parse', 'HEAD')[1]
+        assert commit_a != commit_b and git(repo, 'diff', '--name-only', commit_a, commit_b, '--', 'game/')[1], '夹具未产生真实 game 差异'
+        out, author = repo / 'output/perf', Path(temporary) / 'author'
+        for phase_index, phase in enumerate(('a1', 'b1', 'a2')):
+            for repetition in (1, 2, 3):
+                identifier = f'{phase}-{repetition}'
+                meta = manifest(dictionary, identifier)
+                second = phase_index * 10 + repetition * 2
+                meta.update(origin='ai', startedAt=f'2000-01-01T00:00:{second:02d}Z',
+                            endedAt=f'2000-01-01T00:00:{second + 1:02d}Z')
+                meta['build']['commit'] = commit_b if phase == 'b1' else commit_a
+                source = out / 'runs/aba' / identifier
+                sample = mark_sample(streams([frame(dictionary, 0, gpu=7 if phase == 'b1' else 2)], dictionary), dictionary)
+                write_six(source, meta, sample, dictionary)
+                (source / 'run.json').write_text(json.dumps(ai_run(batch='aba', phase=phase, repetition=repetition, kind='aba')), encoding='utf-8')
+        assert not analyze_all(repo, out, author)['errors']
+        assert read_json(out / 'derived/a2-3/summary.json')['status'] == 'stale', 'A2 被伪称当前单次基线'
+        batch = read_json(out / 'index.json')['batches'][0]
+        assert batch['status'] == 'current' and batch['targetPhase'] == 'b1', batch
+        assert any('可比：是' in line for line in compare(out, Namespace(left='a1-1', right='b1-1')))
+        marker.write_text('C', encoding='utf-8')
+        assert git(repo, 'add', '.')[0] == 0
+        assert git(repo, '-c', 'user.name=selfcheck', '-c', 'user.email=selfcheck@example.invalid', 'commit', '-m', 'C')[0] == 0
+        assert not analyze_all(repo, out, author)['errors']
+        assert read_json(out / 'index.json')['batches'][0]['status'] == 'stale', 'B 目标过时代码被冒称当前批次'
+        assert any('可比：否' in line for line in compare(out, Namespace(left='a1-1', right='b1-1')))
+        path = out / 'runs/aba/a1-1/manifest.json'
+        original = read_json(path)
+        for change in ('environment', 'dirty', 'lineage'):
+            changed = copy.deepcopy(original)
+            if change == 'environment':
+                changed['build']['godot'] = 'another'
+            elif change == 'dirty':
+                changed['build']['dirty'] = True
+            else:
+                changed['build']['commit'] = '0' * len(commit_a)
+            path.write_text(json.dumps(changed), encoding='utf-8')
+            assert not analyze_all(repo, out, author)['errors']
+            batch = read_json(out / 'index.json')['batches'][0]
+            assert batch['status'] == 'partial' and 'all' not in batch['groups'][0]['phases']['a1'], change
 
 
 def check_processed_error(root, dictionary, budgets):
@@ -278,12 +358,14 @@ def check_failed_baseline(root, dictionary, budgets):
         out, author = Path(temporary) / 'perf', Path(temporary) / 'author'
         batch = out / 'runs/baseline'
         for identifier, day in (('OLDER', 1), ('CURRENT', 2)):
-            meta = manifest(dictionary, identifier)
-            meta.update(origin='ai', endedAt=f'2000-01-{day:02d}T00:00:05Z')
-            meta['build']['commit'] = git(root, 'rev-parse', 'HEAD')[1]
-            write_six(batch / identifier, meta, streams([frame(dictionary, 0)], dictionary), dictionary)
-        (batch / 'run.json').write_text(json.dumps(dict(scene='baseline-selfcheck', status='valid', exitCode=0,
-                timedOut=False, coverage=dict(route=dict(observed=1, required=1)))), encoding='utf-8')
+            for repeat in (1, 2, 3):
+                name = identifier if repeat == 3 else f'{identifier}-{repeat}'
+                meta = manifest(dictionary, name)
+                meta.update(origin='ai', endedAt=f'2000-01-{day:02d}T00:00:0{repeat}Z')
+                meta['build']['commit'] = git(root, 'rev-parse', 'HEAD')[1]
+                data = mark_sample(streams([frame(dictionary, 0)], dictionary), dictionary)
+                write_six(batch / name, meta, data, dictionary)
+                (batch / name / 'run.json').write_text(json.dumps(ai_run(batch=identifier, repetition=repeat)), encoding='utf-8')
         assert not analyze_all(root, out, author)['errors']
         baseline = read_json(out / 'derived/CURRENT/summary.json')
         assert baseline['status'] in ('current', 'stale'), '夹具没有建立当前基线'
@@ -337,7 +419,7 @@ def check_derived_curves(root, dictionary, budgets):
         data['hw'] = [dict(monotonicMs=10, gpuUtilFraction=.5, gpuClockMHz=1000, gpuMaxClockMHz=2000)]
         # The round trip uses the real schema; unspecified nullable hardware fields remain missing.
         data['hw'][0] = {**{c['name']: None for c in dictionary['streams']['hw']['columns']},
-                         **data['hw'][0], 'schema': dictionary['schema'], 'sequence': 1}
+                         **data['hw'][0], 'schema': dictionary['schema'], 'sequence': 1, 'rowKind': 'nvml'}
         write_six(source, manifest(dictionary, 'CURVES'), data, dictionary)
         analyzed = analyze_all(root, out, author)
         assert not analyzed['errors'], analyzed
@@ -505,9 +587,13 @@ def run(root):
     warm = policy['medianMinimumFrames']
     window = policy['medianWindowFrames']
     result = []
-    for check in (check_snapshot, check_median, check_pending, check_deepen, check_manifest, check_context):
+    for check in (check_snapshot, check_median, check_pending, check_deepen, check_manifest, check_context, check_window_changes, check_hardware_facts):
         check(root, dictionary, budgets)
+    result.append('通过 TOOL-447：帧上下文权威、命令事件不重建悬窗、窗口变化共享稳定时长，schema4 硬件事实与原生时间保真。')
     result.append('通过 TOOL-435：同 schema 重算与结构校验、M 保窗与换口径、pending 锁/索引/过期、deepen、清单枚举与上下文权威回归。')
+    check_sampling_batches(root, dictionary, budgets)
+    check_batch_freshness(root, dictionary, budgets)
+    result.append('通过 TOOL-448：真实样段裁剪、跨界帧排除与 M 重建，作者/非协议证据保留；三次/A-B-A 完整性与中位由分析器产出。')
     check_processed_error(root, dictionary, budgets)
     check_failed_baseline(root, dictionary, budgets)
     check_derived_curves(root, dictionary, budgets)

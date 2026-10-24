@@ -25,6 +25,7 @@ public sealed class PerformanceRecordingService : IPerformanceRecorder, IRegistr
     private readonly IQualityService _quality;
     private readonly Queue<Request> _requests = new();
     private readonly List<Task> _saves = [];
+    private readonly CommandNotification _notifications = new();
     private Task _processingTask = Task.CompletedTask;
     private bool _processing, _initialized, _exiting, _requested, _subscribed;
     private PerfRecordingState _state;
@@ -67,6 +68,15 @@ public sealed class PerformanceRecordingService : IPerformanceRecorder, IRegistr
         }
     }
     public event Action<PerfRecordingSnapshot>? StateChanged;
+    public PerfSamplingFacts SamplingFacts
+    {
+        get
+        {
+            RequireMainThread();
+            return _state is PerfRecordingState.Starting or PerfRecordingState.Recording or PerfRecordingState.Stopping
+                ? _session?.SamplingFacts ?? default : default;
+        }
+    }
     public PerfSessionEndResult? LastEndResult { get; private set; }
     public event Action<PerfSessionEndResult>? SessionEnded;
 
@@ -189,11 +199,7 @@ public sealed class PerformanceRecordingService : IPerformanceRecorder, IRegistr
             failure = RetainedFailure.Append(failure, cleanupError);
         }
         if (_fault == PerfFaultCode.None) _fault = PerfFaultCode.ProducerFailed;
-        try { ChangeState(PerfRecordingState.Faulted); }
-        catch (Exception notificationError)
-        {
-            failure = RetainedFailure.Append(failure, notificationError);
-        }
+        ChangeState(PerfRecordingState.Faulted);
         var ended = LastEndResult?.SessionId == _sessionId ? LastEndResult : null;
         if (ended?.Error is { } sessionError) failure = RetainedFailure.Append(failure, sessionError);
         LastEndResult = new(_sessionId ?? "", PerfEndReason.Failure, ended?.Closed ?? false,
@@ -201,7 +207,7 @@ public sealed class PerformanceRecordingService : IPerformanceRecorder, IRegistr
         try { ReceiveFailure(failure); }
         catch (Exception diagnosticError)
         {
-            failure = new AggregateException(failure, diagnosticError);
+            failure = RetainedFailure.Append(failure, diagnosticError);
             LastEndResult = LastEndResult with { Error = failure };
         }
         return failure;
@@ -249,7 +255,8 @@ public sealed class PerformanceRecordingService : IPerformanceRecorder, IRegistr
             _capture = new(current, _dictionary!, samples, _viewport ?? throw new InvalidOperationException("Recording viewport is not attached."));
             _capture.Start();
             current.StartWatchdog(_frames, watchdog);
-            current.StartHardware();
+            var adapter = await RenderAdapterIdentity.CaptureAsync();
+            current.StartHardware(adapter);
             current.AttachCapture();
             current.Begin(anchor);
         }
@@ -280,8 +287,8 @@ public sealed class PerformanceRecordingService : IPerformanceRecorder, IRegistr
         if (_state != PerfRecordingState.Recording || _session is not { } current) return;
         try
         {
-            var context = _capture!.OnFrame(in sample);
-            current.Frames.TryWrite(in sample, viewports, context.Flags, context.Complete);
+            long flags = _capture!.OnFrame(in sample);
+            current.TryFrame(in sample, viewports, flags);
         }
         catch (Exception error)
         {
@@ -303,9 +310,8 @@ public sealed class PerformanceRecordingService : IPerformanceRecorder, IRegistr
         StopAccepting(PerfEndReason.Failure);
         _fault = current.Fault;
         _requests.Enqueue(new(false, PerfEndReason.Failure, null));
-        try { ChangeState(PerfRecordingState.Faulted); }
-        catch (Exception error) { current.AddFailure(PerfFaultCode.ProducerFailed, error); }
-        finally { StartRequests(); }
+        ChangeState(PerfRecordingState.Faulted);
+        StartRequests();
     }
 
     private void StopAccepting(PerfEndReason reason)
@@ -338,7 +344,7 @@ public sealed class PerformanceRecordingService : IPerformanceRecorder, IRegistr
         _fault = result.Fault;
         LastEndResult = result;
         ChangeState(result.Fault == PerfFaultCode.None ? PerfRecordingState.Off : PerfRecordingState.Faulted);
-        SessionEnded?.Invoke(result);
+        _notifications.Publish(SessionEnded, result);
         if (acknowledgingFault)
         {
             _fault = PerfFaultCode.None;
@@ -362,7 +368,7 @@ public sealed class PerformanceRecordingService : IPerformanceRecorder, IRegistr
         var result = new PerfSessionEndResult(_sessionId ?? "", PerfEndReason.Failure, false, false, fault, error, 0, 0, 0);
         LastEndResult = result;
         ChangeState(PerfRecordingState.Faulted);
-        SessionEnded?.Invoke(result);
+        _notifications.Publish(SessionEnded, result);
     }
 
     private void ReceiveFailure([FailureHandler("ENG-PERF-DATA")] Exception error) =>
@@ -372,15 +378,7 @@ public sealed class PerformanceRecordingService : IPerformanceRecorder, IRegistr
     {
         if (_state == state) return;
         _state = state;
-        if (StateChanged is not { } changed) return;
-        var snapshot = Snapshot;
-        Exception? failure = null;
-        foreach (Action<PerfRecordingSnapshot> subscriber in changed.GetInvocationList())
-        {
-            try { subscriber(snapshot); }
-            catch (Exception error) { failure = RetainedFailure.Append(failure, error); }
-        }
-        if (failure is not null) System.Runtime.ExceptionServices.ExceptionDispatchInfo.Capture(failure).Throw();
+        _notifications.Publish(StateChanged, Snapshot);
     }
 
     public void PrepareForExit()
@@ -390,19 +388,21 @@ public sealed class PerformanceRecordingService : IPerformanceRecorder, IRegistr
         _exiting = true;
         StopAccepting(PerfEndReason.Exit);
         _requests.Enqueue(new(false, PerfEndReason.Exit, null));
-        try
-        {
-            if (_session is not null && _state != PerfRecordingState.Faulted) ChangeState(PerfRecordingState.Stopping);
-        }
-        catch (Exception error) { _session!.AddFailure(PerfFaultCode.ProducerFailed, error); }
-        finally { StartRequests(); }
+        if (_session is not null && _state != PerfRecordingState.Faulted) ChangeState(PerfRecordingState.Stopping);
+        StartRequests();
     }
 
     public async Task DrainForExitAsync()
     {
         PrepareForExit();
-        await _processingTask;
-        await Task.WhenAll(_saves);
+        Exception? failure = null;
+        try { await _processingTask; }
+        catch (Exception error) { failure = error; }
+        try { await Task.WhenAll(_saves); }
+        catch (Exception error) { failure = RetainedFailure.Append(failure, error); }
+        if (_notifications.TakeFailure() is { } notification)
+            failure = RetainedFailure.Append(failure, notification);
+        if (failure is not null) System.Runtime.ExceptionServices.ExceptionDispatchInfo.Capture(failure).Throw();
     }
 
     private static double Now() => FrameClock.MonotonicMilliseconds;

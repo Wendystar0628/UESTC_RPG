@@ -135,10 +135,8 @@ public sealed class QualityApplicationLifetimeTests
             Exception? shutdownFailure = null;
             try { await shutdown; }
             catch (Exception error) { shutdownFailure = error; }
-            var shutdownFailures = (shutdownFailure as AggregateException)?.Flatten().InnerExceptions;
-            AssertThat(shutdownFailures is not null && failures is not null &&
-                shutdownFailures.Count == failures.Count && failures.All(shutdownFailures.Contains))
-                .OverrideFailureMessage("Registry disposal did not receive the original application and cleanup failures.").IsTrue();
+            AssertThat(shutdownFailure is null)
+                .OverrideFailureMessage("Shutdown reported an application failure already delivered to its caller.").IsTrue();
             AssertThat(runtime.Failures.Count == 1).OverrideFailureMessage("Disposal reported the same application failure twice.").IsTrue();
         }
     }

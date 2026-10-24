@@ -29,7 +29,7 @@ internal sealed class SaveSchedule(SaveService owner)
             if (_interval >= IntervalSeconds && _request is null) Request(SaveReason.Interval);
         }
         if (_owner.Options.SaveAtFrame is { } at && _frame >= at && !_saveAtDone && Safe)
-        { _saveAtDone = true; _owner.Writing.SaveNow(SaveReason.Test); }
+        { _saveAtDone = true; _owner.Writing.StartSave(SaveReason.Test, forced: true, ownsFailure: true); }
         if (_request is { } reason && !_owner.Busy && _attemptAge >= AttemptSpacingSeconds &&
             (Safe || _requestAge >= SafetyDelaySeconds) && !_owner.Loading.Restoring &&
             Playing && _owner.Runtime.World.Instance != 0)
@@ -37,7 +37,7 @@ internal sealed class SaveSchedule(SaveService owner)
             var forced = !Safe;
             // Keep an automatic request pending until a successful write; failures retry at the same spacing.
             _requestAge = 0;
-            _owner.Writing.StartSave(reason, forced);
+            _owner.Writing.StartSave(reason, forced, ownsFailure: true);
         }
     }
     internal void ClearRequest() { _request = null; _requestAge = 0; }

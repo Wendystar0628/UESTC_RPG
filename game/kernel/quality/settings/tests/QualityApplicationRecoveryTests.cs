@@ -58,11 +58,10 @@ public sealed class QualityApplicationRecoveryTests
 
     [TestCase]
     [TestCategory(TestReason.Regression)]
-    public async Task ObserverFailuresRunAllObserversAndRestoreAppliedAndDurableState()
+    public async Task ObserverFailuresReachShutdownWithoutRollingBackAppliedOrDurableState()
     {
         var (service, runtime, store) = await CliSession("observer-failures");
         using var cleanup = store;
-        var before = service.Effective;
         var beforeHash = store.Hash;
         var first = new InvalidOperationException();
         var second = new IOException();
@@ -70,32 +69,37 @@ public sealed class QualityApplicationRecoveryTests
         service.Changed += _ => { if (++calls[0] == 1) throw first; };
         service.Changed += _ => { if (++calls[1] == 1) throw second; };
         service.Changed += _ => calls[2]++;
-        var pending = service.Apply(Edit(new(service.Requested.Preset,
-            new Dictionary<QualityKnob, float> { [QualityKnob.ParticleDensity] = .5f }), QualityKnob.ParticleDensity), ApplyOrigin.User);
+        var request = Edit(new(service.Requested.Preset,
+            new Dictionary<QualityKnob, float> { [QualityKnob.ParticleDensity] = .5f }), QualityKnob.ParticleDensity);
+        AssertThat(service.Effective[QualityKnob.ParticleDensity] != request.Profile.Overrides[QualityKnob.ParticleDensity]).IsTrue();
+        var pending = service.Apply(request, ApplyOrigin.User);
         service.Tick(.25);
+        var result = await pending;
+        AssertThat(result.Status == ApplyStatus.Applied && calls.All(count => count == 1) && runtime.Failures.Count == 0).IsTrue();
+        AssertThat(service.Effective[QualityKnob.ParticleDensity] == request.Profile.Overrides[QualityKnob.ParticleDensity] &&
+            runtime.EngineView![QualityKnob.ParticleDensity] == service.Effective[QualityKnob.ParticleDensity] &&
+            store.Read()!.Overrides[QualityKnob.ParticleDensity] == request.Profile.Overrides[QualityKnob.ParticleDensity] && store.Hash != beforeHash)
+            .OverrideFailureMessage("Observer failure rolled back an already applied and persisted edit.").IsTrue();
+        service.Tick(0);
         Exception? observed = null;
-        try { await pending; }
+        try { await service.DisposeAsync(); }
         catch (Exception error) { observed = error; }
         var failures = (observed as AggregateException)?.Flatten().InnerExceptions;
         AssertThat(failures is not null && failures.Count == 2 && failures.Contains(first) && failures.Contains(second))
-            .OverrideFailureMessage("Observer errors lost their original objects.").IsTrue();
-        AssertThat(calls.All(count => count == 2)).OverrideFailureMessage("Apply or rollback skipped an observer.").IsTrue();
-        AssertThat(QualityCatalog.All.All(knob => service.Effective[knob] == before[knob]) && store.Hash == beforeHash)
-            .OverrideFailureMessage("Observer failure escaped quality recovery.").IsTrue();
-        service.Tick(0);
-        await service.DisposeAsync();
+            .OverrideFailureMessage("Shutdown lost the original observation errors.").IsTrue();
     }
 
     [TestCase]
     [TestCategory(TestReason.Regression)]
-    public async Task ObserverCancellationRetainsEarlierNonCancellationFailure()
+    public async Task ObserverCancellationRetainsObservationFailuresForShutdown()
     {
         var (service, runtime, store) = await CliSession("observer-cancellation");
         using var cleanup = store;
         var original = new InvalidOperationException();
+        var cancellation = new OperationCanceledException();
         var lateCalls = 0;
         service.Changed += _ => throw original;
-        service.Changed += _ => { service.Unbind(runtime); throw new OperationCanceledException(); };
+        service.Changed += _ => { service.Unbind(runtime); throw cancellation; };
         service.Changed += _ => lateCalls++;
         var pending = service.Apply(Edit(new(service.Requested.Preset,
             new Dictionary<QualityKnob, float> { [QualityKnob.ParticleDensity] = .5f }), QualityKnob.ParticleDensity), ApplyOrigin.User);
@@ -103,11 +107,13 @@ public sealed class QualityApplicationRecoveryTests
         Exception? observed = null;
         try { await pending; }
         catch (Exception error) { observed = error; }
-        var failures = (observed as AggregateException)?.Flatten().InnerExceptions;
-        AssertThat(pending.IsFaulted && failures is not null && failures.Count == 1 && ReferenceEquals(failures[0], original))
-            .OverrideFailureMessage("Cancellation discarded an earlier observer failure.").IsTrue();
-        AssertThat(lateCalls == 0).IsTrue();
-        await service.DisposeAsync();
+        AssertThat(pending.IsCanceled && observed is OperationCanceledException && lateCalls == 1 && runtime.Failures.Count == 0).IsTrue();
+        Exception? shutdownFailure = null;
+        try { await service.DisposeAsync(); }
+        catch (Exception error) { shutdownFailure = error; }
+        var failures = (shutdownFailure as AggregateException)?.Flatten().InnerExceptions;
+        AssertThat(failures is not null && failures.Count == 2 && failures.Contains(original) && failures.Contains(cancellation))
+            .OverrideFailureMessage("Lifetime cancellation discarded observation failures.").IsTrue();
     }
 
     private static async Task VerifyFailedApplication(string name, bool failDispatch, bool takeover, bool failRollback)

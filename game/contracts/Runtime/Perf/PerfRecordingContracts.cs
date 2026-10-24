@@ -28,6 +28,8 @@ public interface IPerformanceRecorder
 {
     // 主线程读；RecordedSeconds 由服务按单调时钟现算，界面不读系统钟。
     PerfRecordingSnapshot Snapshot { get; }
+    // Main-thread cache read: no sampling, I/O or allocation. No recording returns default.
+    PerfSamplingFacts SamplingFacts { get; }
     // 仅实际状态变化通知；主线程发布，不能被后台 writer 直接调用。
     event Action<PerfRecordingSnapshot>? StateChanged;
     // 完成清理后发布；失败结果保留原 Exception；诊断服务收到同一原异常。

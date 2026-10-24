@@ -13,6 +13,53 @@ namespace Campus.Kernel.Save.Tests;
 public sealed class SettledObserverSaveTests
 {
     [TestCase, TestCategory(TestReason.Regression)]
+    public async Task CallerOwnedLoadFailureDoesNotFailShutdownAgain()
+    {
+        await using var fixture = new SaveLifecycleFixture();
+        await fixture.Start();
+        var loading = fixture.Save.Load(new("invalid-slot"));
+        Exception? observed = null;
+        try { await loading; }
+        catch (Exception error) { observed = error; }
+        AssertThat(loading.IsFaulted && observed is ArgumentOutOfRangeException).IsTrue();
+        await fixture.Save.DisposeAsync();
+        AssertThat(!fixture.Save.Enabled && fixture.Diagnostics.Errors.Count == 0).IsTrue();
+    }
+
+    [TestCase, TestCategory(TestReason.Regression)]
+    public async Task SlotObserversRunOutsideTheFrameLockAndCannotFailTheLoad()
+    {
+        var fixture = new SaveLifecycleFixture();
+        var original = new IOException();
+        Exception? retained = null;
+        var registeredOutsideLock = false;
+        var observed = 0;
+        Task<bool>? queued = null;
+        try
+        {
+            await fixture.Start();
+            fixture.Save.SlotsChanged += () =>
+            {
+                if (queued is not null) return;
+                registeredOutsideLock = Task.Run(() => { queued = fixture.Save.OnFrame(() => true); })
+                    .Wait(TimeSpan.FromSeconds(5));
+            };
+            fixture.Save.SlotsChanged += () => throw original;
+            fixture.Save.SlotsChanged += () => observed++;
+            var result = await fixture.Pump(fixture.Save.NewGame(SaveSlots.Auto[0], 1));
+            AssertThat(queued is not null && registeredOutsideLock && observed > 0).IsTrue();
+            AssertThat(result.Status == LoadStatus.Loaded && !fixture.World.RestoreFaulted && fixture.Diagnostics.Errors.Count == 0).IsTrue();
+            AssertThat(await fixture.Pump(queued!)).IsTrue();
+        }
+        finally
+        {
+            try { await fixture.DisposeAsync(); }
+            catch (Exception error) { retained = error; }
+        }
+        AssertThat(ReferenceEquals(retained, original)).IsTrue();
+    }
+
+    [TestCase, TestCategory(TestReason.Regression)]
     public async Task ForcedCaptureMetadataUsesTheSameSettledObserverAsTheViewAndWalkSections()
     {
         var walking = new SaveLifecycleFixture.FakeWalk();

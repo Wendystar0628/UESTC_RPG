@@ -3,6 +3,7 @@ using Campus.Contracts.AppFlow;
 using Campus.Contracts.Maps;
 using Campus.Contracts.Bake;
 using Campus.Kernel.Maps;
+using Campus.Kernel.Diagnostics;
 using Campus.Kernel.Registry;
 using Campus.Kernel.Renderer;
 using Godot;
@@ -40,6 +41,7 @@ public partial class MapRuntime : Node, IMapRuntime, IMapLifetime
     private AppStartupException? _failure;
     private readonly List<Exception> _failures = [];
     private readonly List<Task> _arrivalPreparations = [];
+    private readonly CommandNotification _observations = new();
     private ViewContentReadiness? _contentReadiness;
     private object[] _receivers = [];
     private bool ResidentReady => _mountPrepared && _stream?.ResidentReady == true && _renderer?.Pending == false && Failure is null;
@@ -122,7 +124,9 @@ public partial class MapRuntime : Node, IMapRuntime, IMapLifetime
         _mapGeneration++;
         await ReleaseAfterPreparation(_loaded, _preparing);
         PollFailures();
-        if (Failure is { } failure) System.Runtime.ExceptionServices.ExceptionDispatchInfo.Capture(failure).Throw();
+        var failure = Failure;
+        if (_observations.TakeFailure() is { } observation) failure = RetainedFailure.Append(failure, observation);
+        if (failure is not null) System.Runtime.ExceptionServices.ExceptionDispatchInfo.Capture(failure).Throw();
     }
 
     private async Task ReleaseAfterPreparation(MapId? loaded, Task? preparation)
@@ -230,7 +234,7 @@ public partial class MapRuntime : Node, IMapRuntime, IMapLifetime
     {
         _arrival?.Cancel(); _arrival = null;
         _stream!.ClearDestination();
-        ArrivalChanged?.Invoke(null);
+        _observations.Publish(ArrivalChanged, null);
     }
 
     public IMapArrival Arrive(Pose destination, ViewMode mode, NavSpace? space = null, System.Numerics.Vector3? collisionFeet = null)
@@ -238,10 +242,10 @@ public partial class MapRuntime : Node, IMapRuntime, IMapLifetime
         if (_stopping) throw new InvalidOperationException("The map runtime is shutting down.");
         if (!_mountPrepared) throw new InvalidOperationException("A map must be prepared before arrival.");
         _arrival?.Cancel();
-        var arrival = new ArrivalRun(new(destination, mode, space, collisionFeet));
+        var arrival = new ArrivalRun(new(destination, mode, space, collisionFeet), _observations);
         _arrival = arrival;
-        ArrivalChanged?.Invoke(arrival);
         _arrivalPreparations.Add(PrepareArrival(arrival, _context ?? throw new InvalidOperationException("Arrival requires the mounted map context."), _mapGeneration));
+        _observations.Publish(ArrivalChanged, arrival);
         return arrival;
     }
 
@@ -337,7 +341,7 @@ public partial class MapRuntime : Node, IMapRuntime, IMapLifetime
         {
             try { arrival.Cancel(); } catch (Exception error) { ReportFailure(error); }
             _arrival = null;
-            try { ArrivalChanged?.Invoke(null); } catch (Exception error) { ReportFailure(error); }
+            _observations.Publish(ArrivalChanged, null);
         }
     }
     public override void _ExitTree()
@@ -354,7 +358,7 @@ public partial class MapRuntime : Node, IMapRuntime, IMapLifetime
         TerrainRegion = 64, Collision = 128
     }
 
-    private sealed class ArrivalRun(MapStreamDestination destination) : IMapArrival
+    private sealed class ArrivalRun(MapStreamDestination destination, CommandNotification observations) : IMapArrival
     {
         private readonly TaskCompletionSource _done = new(TaskCreationOptions.RunContinuationsAsynchronously);
         private readonly CancellationTokenSource _cancellation = new();
@@ -379,7 +383,7 @@ public partial class MapRuntime : Node, IMapRuntime, IMapLifetime
         {
             if (Done.IsCompleted || (_required & step) == 0 || (_completed & step) != 0) return;
             _completed |= step;
-            ProgressChanged?.Invoke();
+            observations.Publish(ProgressChanged);
         }
         public void Cancel()
         {
@@ -390,7 +394,7 @@ public partial class MapRuntime : Node, IMapRuntime, IMapLifetime
         {
             if (!_done.TrySetResult()) return;
             ReleaseCancellation();
-            ProgressChanged?.Invoke();
+            observations.Publish(ProgressChanged);
         }
         public void FinishPreparation() { _preparationFinished = true; ReleaseCancellation(); }
         private void ReleaseCancellation() { if (_preparationFinished && Done.IsCompleted) _cancellation.Dispose(); }

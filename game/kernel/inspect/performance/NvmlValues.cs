@@ -19,7 +19,15 @@ internal sealed record NvmlStatus(string Capability, string? Reason = null, int?
 
 internal readonly record struct NvmlValue<T>(T? Value, NvmlStatus Status) where T : struct;
 internal sealed record NvmlIdentity(uint EnumerationIndex, string? Uuid, string? PciBusId,
-    NvmlStatus HandleStatus, NvmlStatus UuidStatus, NvmlStatus PciStatus);
+    NvmlStatus HandleStatus, NvmlStatus UuidStatus, NvmlStatus PciStatus)
+{
+    public uint? PciBus { get; init; }
+    public uint? PciDevice { get; init; }
+    public uint? PciFunction { get; init; }
+    public uint? PciVendorId { get; init; }
+    public uint? PciDeviceId { get; init; }
+    public uint? PciSubSystemId { get; init; }
+}
 internal enum NvmlMetric { Power = 0, GpuUtilization = 1, MemoryUtilization = 2 }
 internal enum NvmlPolicy { Power = 0, Thermal = 1, SyncBoost = 2, BoardLimit = 3, LowUtilization = 4, Reliability = 5 }
 
@@ -83,4 +91,3 @@ internal sealed record NvmlDeviceSample(NvmlIdentity Identity, NvmlSlowSample? S
     IReadOnlyList<NvmlFastBatch> Fast);
 internal sealed record NvmlBatch(double QueryStartMs, double QueryEndMs, NvmlStatus Status,
     IReadOnlyList<NvmlDeviceSample> Devices);
-internal sealed record NvmlCompletion(NvmlStatus? ShutdownStatus, Exception? Error);

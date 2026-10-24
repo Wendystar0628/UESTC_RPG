@@ -9,6 +9,16 @@ internal sealed class CommandNotification
     private readonly object _gate = new();
     private Exception? _failure;
 
+    internal void Publish(Action? observers)
+    {
+        if (observers is null) return;
+        foreach (Action observer in observers.GetInvocationList())
+        {
+            try { observer(); }
+            catch (Exception error) { Retain(error); }
+        }
+    }
+
     internal void Publish<T>(Action<T>? observers, T value)
     {
         if (observers is null) return;

@@ -52,6 +52,29 @@ public sealed class QualityApplicationRuntimeTests
             changes.Count == 0 && store.SaveCount == 0).IsTrue();
     }
 
+    [TestCase(ApplyOrigin.Startup)]
+    [TestCase(ApplyOrigin.CommandLine)]
+    [TestCategory(TestReason.Regression)]
+    public async Task DelayedBootFailureBelongsToItsCallerAfterShutdownDrainsIt(ApplyOrigin origin)
+    {
+        var runtime = new FakeRuntime();
+        using var store = new FileStoreSpy($"boot-failure-owner-{origin}", null);
+        await using var service = new QualityService(Catalog(), store);
+        service.Bind(runtime);
+        await service.Initialize(BootPhase.AfterMapWarm, Context());
+        runtime.HoldAt = "frame";
+        var original = new IOException();
+        var application = service.Apply(SelectPreset(QualityPreset.Ultra), origin);
+        AssertThat(!application.IsCompleted && runtime.HeldCalls == 1).IsTrue();
+        runtime.Held.SetException(original);
+        Exception? observed = null;
+        try { await application; }
+        catch (Exception error) { observed = error; }
+        AssertThat(application.IsFaulted && ReferenceEquals(observed, original)).IsTrue();
+        await service.DisposeAsync();
+        AssertThat(runtime.Failures.Count == 0).IsTrue();
+    }
+
     [TestCase]
     [TestCategory(TestReason.Regression)]
     public async Task BootCommandSuccessAndFailureCloseWithoutTreatingInitializationAsApply()

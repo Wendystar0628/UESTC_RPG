@@ -75,7 +75,9 @@ public sealed class TransitDriver(ICameraRig camera, IAppLoadingPresentation loa
         foreach (var run in runs)
             try { run.Cancel(); }
             catch (Exception error) { failure = RetainedFailure.Append(failure, error); }
-        foreach (var task in runs.SelectMany(run => new Task[] { run.Execution, run.Done }))
+        // Execute finishes only after arrival/loading cleanup and delivers those failures through
+        // Done to the caller. Drain owns cancellation and execution failures, not that result again.
+        foreach (var task in runs.Select(run => run.Execution))
         {
             try { await task; }
             catch (Exception error) { failure = RetainedFailure.Append(failure, task.Exception ?? error); }

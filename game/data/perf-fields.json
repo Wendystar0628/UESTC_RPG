@@ -1,5 +1,5 @@
 {
-  "schema": 3,
+  "schema": 4,
   "authority": "ENG-PERF-DATA",
   "draft": false,
   "encoding": {
@@ -125,9 +125,10 @@
           "view.mode",
           "map.arrival"
         ],
-        "interval": "owner begin to actual completion",
+        "interval": "frame contextFlags only; events retain owner/operation/phase evidence and never reconstruct non-steady intervals",
         "activeFlag": "mapTransition",
-        "settleMs": 2000
+        "settleMs": 2000,
+        "source": "frames.contextFlags; settling is already captured in qualitySettling/transitionSettling"
       },
       {
         "name": "newGameOrLoad",
@@ -135,18 +136,20 @@
           "game.enter",
           "save.load"
         ],
-        "interval": "owner queued/started to terminal; distinct (owner, operation) windows",
+        "interval": "frame contextFlags only; events retain owner/operation/phase evidence and never reconstruct non-steady intervals",
         "activeFlag": "newGameOrLoad",
-        "settleMs": 2000
+        "settleMs": 2000,
+        "source": "frames.contextFlags; settling is already captured in qualitySettling/transitionSettling"
       },
       {
         "name": "qualityApply",
         "events": [
           "settings.apply"
         ],
-        "interval": "started to completed/canceled/faulted; queued is tracked without applying; superseded/rejected do not settle",
+        "interval": "frame contextFlags only; events retain owner/operation/phase evidence and never reconstruct non-steady intervals",
         "activeFlag": "qualityApplying",
-        "settleMs": 2000
+        "settleMs": 2000,
+        "source": "frames.contextFlags; settling is already captured in qualitySettling/transitionSettling"
       },
       {
         "name": "saveThumbnail",
@@ -164,6 +167,16 @@
         "settleMs": 0,
         "settleFrames": 3,
         "source": "FrameSample.Context.WindowCanDraw false-to-true; contextFlags.drawResuming"
+      },
+      {
+        "name": "windowChange",
+        "events": [
+          "window.size",
+          "window.mode"
+        ],
+        "interval": "actual changed event through the qualityApply settling duration; current snapshot is not a change",
+        "eventMode": "valueChange",
+        "settleRule": "qualityApply"
       }
     ],
     "notAutomaticallyNonSteady": [
@@ -173,7 +186,7 @@
       "menu/input lock"
     ],
     "thresholdAuthority": "settleMs only here; no duplicate runtime or analyzer literals",
-    "contextCoverage": "contextComplete requires requiredCoverage only; notAttached is optional and does not block complete. Existing operations have unknown starts at recording entry; no command begin or operation is reconstructed from state/input.",
+    "contextCoverage": "contextComplete requires requiredCoverage only; notAttached is optional. Existing operations have unknown starts at recording entry; no command begin or operation is reconstructed from state/input.",
     "requiredCoverage": [
       "IAppFlow.EnterCommand",
       "ISaveService.LoadCommand",
@@ -405,10 +418,9 @@
         "requestedGeneration": "integer?; exact requested generation",
         "file": "string?",
         "result": "LoadResult?; actual active slot/source generation; NewGame retains Gen=0",
-        "startObserved": "boolean; observed queued/started boundary exists",
-        "timing": "mainThreadObservation"
+        "startObserved": "boolean; observed queued/started boundary exists"
       },
-      "timing": "cross-thread value queue drained on main sampling point; collectionFrame/monotonicMs are observation, not exact worker emission time"
+      "timing": "owner callbacks may run on any thread; FrameClock monotonicMs is captured at callback time, collectionFrame is captured only for main-thread callbacks and null on workers; queue drain never changes either timestamp"
     },
     "map.prepare": {
       "owner": "GAME-221",
@@ -523,15 +535,19 @@
     "window.mode": {
       "owner": "GAME-221",
       "payloadFields": {
-        "mode": "string"
-      }
+        "mode": "string",
+        "observation": "current|changed; current is the initial actual window snapshot, changed is emitted only when actual values differ"
+      },
+      "timing": "main-thread actual window observation; not a settings request or requested mode"
     },
     "window.size": {
       "owner": "GAME-221",
       "payloadFields": {
         "widthPx": "number",
-        "heightPx": "number"
-      }
+        "heightPx": "number",
+        "observation": "current|changed; current is the initial actual window snapshot, changed is emitted only when actual values differ"
+      },
+      "timing": "main-thread actual window observation; not a settings request or requested mode"
     },
     "display.refresh": {
       "owner": "GAME-221",
@@ -608,7 +624,6 @@
         "qualityRequested": "map<QualityKnob,float> camelCase keys",
         "qualityEffective": "map<QualityKnob,float> camelCase keys",
         "requiredCoverage": "string[]; dictionary nonSteadyRules.requiredCoverage",
-        "requiredMissing": "string[]; required coverage missing at recording entry",
         "notAttached": "string[]; optional deferred coverage, does not gate contextComplete",
         "commandIntervalStart": "unknownBeforeRecording; no prior command/operation is replayed",
         "loadingActive": "boolean",
@@ -622,7 +637,7 @@
         "destination": "MapStreamDestination",
         "result": "string?"
       },
-      "timing": "begin uses actual ArrivalChanged; end is first main-thread observation of Done; current is a snapshot, never replayed as a begin"
+      "timing": "begin uses actual ArrivalChanged; end is first main-thread observation of Done; current is a snapshot, never replayed as a begin; detached releases the observed handle, never opens or extends an analyzer interval"
     },
     "world.transition": {
       "owner": "GAME-221",
@@ -1016,7 +1031,7 @@
           "nullable": true,
           "unit": null,
           "source": "GAME-221 + perf-fields contextFlags",
-          "note": "Dictionary flags from owner snapshots; incomplete coverage is explicit in contextComplete and snapshot.initial.missing"
+          "note": "Dictionary flags from owner snapshots; incomplete coverage is explicit in contextComplete"
         },
         {
           "name": "contextComplete",
@@ -1235,7 +1250,6 @@
           "source": "GAME-221 main thread slow snapshot; each source independent",
           "note": ""
         },
-
         {
           "name": "managedHeapMiB",
           "type": "number",
@@ -1313,8 +1327,8 @@
           "type": "number",
           "nullable": true,
           "unit": "ratio",
-          "source": "Process TotalProcessorTime delta / monotonic delta / logical cores",
-          "note": "0..1; first interval null"
+          "source": "PerfRecordingSession.ProcessCpuFraction; Windows sampling worker cache",
+          "note": "Windows worker is the sole process CPU counter reader; latest completed cache value or null; main thread does not query or difference CPU counters"
         }
       ]
     },
@@ -1620,6 +1634,78 @@
           "unit": null,
           "source": "NvmlSlowSample.Policies",
           "note": "Each policy retains its own counter/interval/status/driverReferenceUs; policy durations overlap and must never be summed"
+        },
+        {
+          "name": "rowKind",
+          "type": "string",
+          "note": "nvml or samplingFacts; samplingFacts is one row per hardware poll",
+          "unit": null,
+          "source": "hardware worker",
+          "nullable": false
+        },
+        {
+          "name": "isRenderAdapter",
+          "type": "boolean",
+          "note": "Only NVML device rows",
+          "unit": null,
+          "source": "actual D3D12 LUID/BDF and unique NVML PCI match",
+          "nullable": true
+        },
+        {
+          "name": "wholeGpuUtilFraction",
+          "type": "number",
+          "note": "Actual rendering adapter only; NVML hardware averaging window remains unknown",
+          "unit": "ratio",
+          "source": "SamplingFacts.WholeGpuUtilFraction.Value",
+          "nullable": true
+        },
+        {
+          "name": "otherProcessesGpuUtilFraction",
+          "type": "number",
+          "note": "PDH GPU Engine; actual adapter only; exclude game PID, sum PIDs per physical engine then take maximum engine",
+          "unit": "ratio",
+          "source": "SamplingFacts.OtherProcessesGpuUtilFraction.Value",
+          "nullable": true
+        },
+        {
+          "name": "otherProcessesCpuUtilFraction",
+          "type": "number",
+          "note": "GetSystemTimes busy minus game process counters; incomplete processor-group coverage is unknown",
+          "unit": "ratio",
+          "source": "SamplingFacts.OtherProcessesCpuUtilFraction.Value",
+          "nullable": true
+        },
+        {
+          "name": "samplingFactsJson",
+          "type": "object",
+          "note": "Detached facts with separate capabilities, native codes, query and actual average windows",
+          "unit": null,
+          "source": "IPerformanceRecorder.SamplingFacts",
+          "nullable": true
+        },
+        {
+          "name": "cpuCountersJson",
+          "type": "object",
+          "note": "Current and preceding cumulative 100ns counters with separate system/process query spans, group coverage and read status",
+          "unit": null,
+          "source": "Windows.GetSystemTimes-GetProcessTimes",
+          "nullable": true
+        },
+        {
+          "name": "gpuEnginesJson",
+          "type": "object",
+          "note": "All actual engine instances: parsed PID/LUID/engine identity, uncapped formatted fraction and CStatus, raw counters and timestamp; collection timestamp is FILETIME 100ns",
+          "unit": null,
+          "source": "Windows.PDH.GPU Engine",
+          "nullable": true
+        },
+        {
+          "name": "renderAdapterJson",
+          "type": "object",
+          "note": "LUID, hardware IDs, BDF and per-call capability/status; no borrowed COM pointers",
+          "unit": null,
+          "source": "Godot D3D12 IDXGIAdapter.GetDesc and Windows D3DKMT",
+          "nullable": true
         }
       ]
     },

@@ -14,6 +14,33 @@ $ErrorActionPreference = 'Stop'
 $root = (Resolve-Path (Join-Path $PSScriptRoot '..\..\..')).Path
 . "$root\scripts\lib\common.ps1"
 . "$root\scripts\lib\start-game.ps1"
+function Invoke-StartupSessionAnalysis {
+    param([string]$Root, [string]$RecordingRoot, [string]$Mode)
+    # The analyzer's exit 1 covers the entire library; this round is owned by its source path.
+    $process = Invoke-UESTCProcess python @('-I','-X','utf8',(Join-Path $Root 'scripts\perf\analyze.py'),'--root',$Root) $Root `
+        -SuccessExitCodes @(0,1) -TextEncoding ([Text.Encoding]::UTF8)
+    Write-Host $process.Output
+    try {
+        $analysis = $process.StdOut | ConvertFrom-Json
+        if (-not $analysis) { throw 'Empty analysis result.' }
+    }
+    catch { throw [InvalidOperationException]::new("$Mode performance analysis did not return a result: $($process.Output)", $_.Exception) }
+    $manifests = @(Get-ChildItem -LiteralPath $RecordingRoot -Filter manifest.json -File -Recurse)
+    if ($manifests.Count -ne 1) { throw "Expected one closed performance session in $RecordingRoot, found $($manifests.Count)." }
+    $source = $manifests[0].Directory.FullName
+    $skipped = @($analysis.skipped | Where-Object { $_ -eq '分析锁被占用' -or $_ -eq $source })
+    if ($skipped.Count) { throw "$Mode performance analysis incomplete for ${source}: $($skipped -join '; ')" }
+    $indexPath = Join-Path $Root 'output\perf\index.json'
+    if (-not (Test-Path -LiteralPath $indexPath -PathType Leaf)) { throw "$Mode performance analysis incomplete for ${source}: missing $indexPath" }
+    $index = Get-Content -LiteralPath $indexPath -Raw -Encoding UTF8 | ConvertFrom-Json
+    $errors = @($index.errors | Where-Object { $_.source -eq $source })
+    if ($errors.Count) {
+        throw "$Mode performance analysis failed: $(($errors | ForEach-Object { "$($_.source): $($_.reason)" }) -join [Environment]::NewLine)"
+    }
+    if (-not @($index.sessions | Where-Object { $_.source -eq $source }).Count) {
+        throw "$Mode performance analysis incomplete for ${source}: no session in $indexPath"
+    }
+}
 $Output = Assert-UESTCChildPath $Output (Join-Path $root 'output\start_game\TOOL-215-profile')
 if (Test-Path -LiteralPath $Output) { throw 'Choose a fresh output directory.' }
 $performanceBatch = Join-Path $root ('output\perf\runs\startup-cpu-' + [IO.Path]::GetFileName($Output))
@@ -89,8 +116,7 @@ foreach ($mode in $Modes) {
         try {
             $lease = Enter-UESTCBuildLock (Get-UESTCLayout $root).Locks
             # The formal shutdown has drained the recorder before analysis reads the closed session.
-            & python -I -X utf8 (Join-Path $root 'scripts\perf\analyze.py') --root $root
-            if ($LASTEXITCODE -ne 0) { throw "$mode performance analysis failed." }
+            Invoke-StartupSessionAnalysis -Root $root -RecordingRoot $condition.performanceOutputDirectory -Mode $mode
             & dotnet $parser $round
             if ($LASTEXITCODE -ne 0) { throw "$mode CPU parse failed." }
         } finally { Exit-UESTCBuildLock $lease }

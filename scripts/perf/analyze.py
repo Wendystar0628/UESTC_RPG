@@ -19,9 +19,10 @@ from perf_model import (CALC, COSTS, PHASES, at, costs, experience, load_session
 from perf_anomalies import (LEVELS, MAX_PER_TYPE, annotate, anomaly, budget_checks,
                            deepen, frame_anomalies, merge_anomalies, slow_anomalies, window_analysis)
 from perf_store import (AI_BATCHES_KEEP, DIAGNOSTIC_BYTES_KEEP, HISTORY_PER_GROUP,
-                        atomic_json, author_root, basic_state, comparison_key, discover,
-                        exclusive, git, history_update, nearest_run, nearest_run_path, prune, rebuild_states)
+                        atomic_json, author_root, basic_state, batch_states, comparison_key, discover,
+                        exclusive, git, history_update, session_run, session_run_path, prune, rebuild_states)
 from perf_curves import curve_document
+from perf_batches import batch_results, sample_window, sampled_streams
 
 ROOT = Path(__file__).resolve().parents[2]
 
@@ -108,7 +109,16 @@ def budget_items(summary, frames, budgets):
 def summary_for(directory, manifest, streams, dictionary, budgets, run):
     scope, reason = scope_of(manifest)
     key, labels, missing = comparison_key(manifest, run)
-    status, reasons = basic_state(manifest, streams, run, missing, dictionary['schema'])
+    window, sampling_reasons = sample_window(manifest, streams, run) if streams is not None else (None, [])
+    if streams is not None:
+        prepare_frames(streams['frames'], streams['samples'], streams['events'], dictionary)
+        if window is not None:
+            streams = sampled_streams(streams, window)
+            if not streams['frames']:
+                sampling_reasons.append('正式采样段没有完整帧区间')
+        elif manifest.get('origin') == 'ai' and isinstance(run.get('protocol'), dict):
+            streams = {name: [] for name in streams}
+    status, reasons = basic_state(manifest, streams, run, missing, dictionary['schema'], sampling_reasons)
     summary = dict(id=session_id(manifest['id']), calc=CALC, schema=manifest['schema'], origin=manifest.get('origin'),
                    source=str(directory), endedAt=manifest.get('endedAt'), startedAt=manifest.get('startedAt'),
                    recordedSeconds=manifest.get('recordedSeconds'), scope=scope, scopeReason=reason,
@@ -116,12 +126,12 @@ def summary_for(directory, manifest, streams, dictionary, budgets, run):
                    baseStatus=status, baseReasons=reasons, status=status, statusReasons=reasons,
                    build=manifest.get('build'), environmentSignature={k: at(manifest, k) for k in
                          ('machine.driver', 'machine.os', 'build.godot')}, run=run,
+                   sampleWindow=window, sampleReasons=sampling_reasons,
                    all=None, steady=None, coverage=None, validity=[], budgets=[], anomalyCounts={}, deepen=[],
                    units=dict(frame='ms', memory='MiB', fractions='0..1', power='W', frequency='MHz', temperature='degC'))
-    if streams is None:
+    if streams is None or sampling_reasons:
         return summary, [], [], []
     frames, events = streams['frames'], streams['events']
-    prepare_frames(frames, streams['samples'], events, dictionary)
     viewport_fields = tuple(sorted({key for f in frames for key in f['_viewportCpuFields']}))
     medians = rolling_medians(frames, ('dtMs',) + COSTS + PHASES + viewport_fields, budgets['perfAnomalies'])
     annotate(frames, events, medians, budgets['perfAnomalies'])
@@ -259,7 +269,7 @@ def analysis_needed(root=ROOT, output=None, author=None, index=None, dictionary=
                 if not readable or (manifest_path(directory).name == 'manifest.pending.json' and not (directory / '.lock').is_file()):
                     continue
                 available = True
-                stamp = source_stamp(directory, dictionary, budgets, nearest_run_path(directory, out / 'runs'))
+                stamp = source_stamp(directory, dictionary, budgets, session_run_path(directory))
                 if not processed_input(out, directory, stamp, index.get('errors', []), sources):
                     return True
         except OSError:
@@ -277,7 +287,11 @@ def write_session(out, summary, items, frames, hwfast, dictionary, stamp, budget
         if counts[item['type']] <= MAX_PER_TYPE:
             limited.append(item)
     atomic_json(directory / 'anomalies.json', dict(calc=CALC, id=summary['id'], total=len(items), items=limited))
-    atomic_json(directory / 'hardware.json', dict(calc=CALC, id=summary['id'], hwfast=hwfast))
+    if streams is not None and summary.get('sampleWindow') is not None:
+        streams = sampled_streams(streams, summary['sampleWindow'])
+    if summary.get('sampleReasons'):
+        streams = None
+    atomic_json(directory / 'hardware.json', dict(calc=CALC, id=summary['id'], hw=streams['hw'] if streams is not None else None, hwfast=hwfast))
     hotframes = write_hotframes(directory / 'hotframes.csv', frames, items, dictionary, budgets['perfAnomalies']['associationFrames'])
     atomic_json(directory / 'curves.json', curve_document(summary, manifest, streams, hotframes))
     summary['inputStamp'] = stamp
@@ -305,14 +319,14 @@ def analyze_all(root=ROOT, output=None, author=None):
                                         and not (directory / '.lock').is_file()):
                         skipped.append(str(directory))
                         continue
-                    stamp = source_stamp(directory, dictionary, budgets, nearest_run_path(directory, out / 'runs'))
+                    stamp = source_stamp(directory, dictionary, budgets, session_run_path(directory))
                     prior_errors = prior_index.get('errors', [])
                     if processed_input(out, directory, stamp, prior_errors, sources):
                         errors.extend(error for error in prior_errors if error.get('source') == str(directory))
                         continue
                     manifest = read_json(manifest_path(directory))
                     identifier = session_id(manifest['id'])
-                    run, _ = nearest_run(directory, out / 'runs')
+                    run, _ = session_run(directory)
                     owner = conflicting_source(out, identifier, directory, sources)
                     if owner:
                         errors.append(dict(source=str(directory), id=identifier, kind='conflict',
@@ -335,7 +349,10 @@ def analyze_all(root=ROOT, output=None, author=None):
             summary = read_json(path)
             if summary['source'] in sources:
                 entries.append(summary)
-        entries = rebuild_states(entries, root)
+        failed_sources = {error['source'] for error in errors}
+        batches, blocked = batch_results(entries, failed_sources)
+        entries = rebuild_states(entries, root, blocked)
+        batches = batch_states(batches, entries, root)
         for entry in entries:
             atomic_json(out / 'derived' / entry['id'] / 'summary.json', entry)
         # 保留与身份判定仍使用失败来源上一份摘要，不能把旧会话升成当前基线。
@@ -347,7 +364,9 @@ def analyze_all(root=ROOT, output=None, author=None):
         available = [entry for entry in entries if entry['source'] not in failed_sources]
         changed_ids = {summary['id'] for summary in changed}
         history_update(out / 'history.jsonl', [entry for entry in available if entry['id'] in changed_ids])
-        index = dict(calc=CALC, repositoryState=repository_state(root),
+        batches = [batch for batch in batches if any(
+            Path(entry['source']).exists() and at(entry, 'run.protocol.batchId') == batch['id'] for entry in entries)]
+        index = dict(calc=CALC, repositoryState=repository_state(root), batches=batches,
                                             sessions=[index_entry(e) for e in available], errors=errors,
                                             retention=dict(aiBatches=AI_BATCHES_KEEP, historyPerGroup=HISTORY_PER_GROUP,
                                                            diagnosticBytes=DIAGNOSTIC_BYTES_KEEP), removed=removed)

@@ -89,9 +89,7 @@ public sealed class AppFlowService : IAppFlow, IAppBootFlow, IBootParticipant, I
         _resources.HoldInput();
         if (!restore.RestoreFaulted) _resources.HoldLoadingFlow();
         Change(AppState.Entering);
-        _commands.Publish(EnterCommand, new EnterCommandEvent(operation, EnterCommandPhase.Started, _request, null, false, null));
-        if (request.Kind is EnterKind.NewGame) MarkPhase("new-game-enter");
-        _entry = EnterCore(operation, _request, false); return _entry;
+        return StartEntry(operation, _request, false);
     }
     private Task<EnterResult> RejectEnter(long operation, EnterRequest target)
     {
@@ -110,11 +108,22 @@ public sealed class AppFlowService : IAppFlow, IAppBootFlow, IBootParticipant, I
         _resources.HoldInput();
         if (!restore.RestoreFaulted) _resources.HoldLoadingFlow();
         Change(AppState.Entering);
-        _commands.Publish(EnterCommand, new EnterCommandEvent(operation, EnterCommandPhase.Started, _request, null, true, null));
-        _entry = EnterCore(operation, _request, true);
-        if (await _entry != EnterResult.Entered)
+        if (await StartEntry(operation, _request, true) != EnterResult.Entered)
             throw Failure ?? new InvalidOperationException("Direct entry failed.");
         return _mapRuntime.Arrival ?? throw new InvalidOperationException("Direct entry has no prepared destination.");
+    }
+    private Task<EnterResult> StartEntry(long operation, EnterRequest target, bool direct)
+    {
+        var done = new TaskCompletionSource<EnterResult>(); _entry = done.Task;
+        _commands.Publish(EnterCommand, new EnterCommandEvent(operation, EnterCommandPhase.Started, target, null, direct, null));
+        if (!direct && target.Kind is EnterKind.NewGame) MarkPhase("new-game-enter");
+        _ = RunEntry(operation, target, direct, done);
+        return done.Task;
+    }
+    private async Task RunEntry(long operation, EnterRequest target, bool direct, TaskCompletionSource<EnterResult> done)
+    {
+        try { done.TrySetResult(await EnterCore(operation, target, direct)); }
+        catch (Exception error) { done.TrySetException(error); }
     }
     private async Task<EnterResult> EnterCore(long operation, EnterRequest target, bool direct)
     {
@@ -293,7 +302,7 @@ public sealed class AppFlowService : IAppFlow, IAppBootFlow, IBootParticipant, I
         _continuation.OnStateChange(state);
         Changed?.Invoke(old, state);
     }
-    private void MarkPhase(string phase) => PhaseReached?.Invoke(phase);
+    private void MarkPhase(string phase) => _commands.Publish(PhaseReached, phase);
 
     public Task MapReady => _startup.MapReady;
     public Task BackgroundReady => _startup.BackgroundReady;

@@ -14,7 +14,8 @@ public sealed class SaveService : ISaveService, IDisposable, IAsyncDisposable
     private readonly ConcurrentQueue<Action> _frames = new();
     private readonly object _frameGate = new();
     private readonly CancellationTokenSource _stop = new();
-    private readonly List<Task> _operations = [];
+    private readonly Dictionary<Task, bool> _operations = [];
+    private Action? _slotNotifications;
     private Task? _initialization, _disposal;
     private bool _stopping;
     private long _loadOperation;
@@ -58,7 +59,7 @@ public sealed class SaveService : ISaveService, IDisposable, IAsyncDisposable
             Options = options; Runtime = bindings; Sections = sections;
             Loading.Initialize();
             _initialization = operation;
-            _operations.Add(operation);
+            _operations.Add(operation, false);
         }
         try { handoff.SetResult(InitializeRepository(options, sections)); }
         catch (Exception error) { handoff.SetException(error); }
@@ -114,7 +115,7 @@ public sealed class SaveService : ISaveService, IDisposable, IAsyncDisposable
             slot, generation, file, null);
     internal void PublishLoad(in SaveLoadEvent value) => _commands.Publish(LoadCommand, value);
 
-    internal Task<T> Track<T>(Func<Task<T>> start, SaveLoadEvent? command = null)
+    internal Task<T> Track<T>(Func<Task<T>> start, SaveLoadEvent? command = null, bool ownsFailure = false)
     {
         var handoff = new TaskCompletionSource<Task<T>>(TaskCreationOptions.RunContinuationsAsynchronously);
         var operation = handoff.Task.Unwrap();
@@ -124,9 +125,10 @@ public sealed class SaveService : ISaveService, IDisposable, IAsyncDisposable
             stopping = _stopping;
             if (!stopping)
             {
-                _operations.RemoveAll(task => task.IsCompletedSuccessfully);
+                foreach (var completed in _operations.Where(pair => pair.Key.IsCompletedSuccessfully).Select(pair => pair.Key).ToArray())
+                    _operations.Remove(completed);
                 // Register before invoking start: Dispose must also wait for a synchronous subscriber.
-                _operations.Add(operation);
+                _operations.Add(operation, ownsFailure);
             }
         }
         if (stopping)
@@ -135,12 +137,23 @@ public sealed class SaveService : ISaveService, IDisposable, IAsyncDisposable
             throw new ObjectDisposedException(nameof(SaveService));
         }
         try { handoff.SetResult(start()); }
+        catch (OperationCanceledException error) when (error.CancellationToken.IsCancellationRequested)
+        {
+            handoff.SetCanceled(error.CancellationToken);
+            if (command is { } canceled) PublishLoad(canceled with { Phase = SaveLoadPhase.Canceled });
+        }
         catch (Exception error)
         {
             handoff.SetException(error);
             if (command is { } rejected) PublishLoad(rejected with { Phase = SaveLoadPhase.Rejected });
         }
         return operation;
+    }
+    // A bounded flush may return before the internally owned write; transfer only a failure actually delivered by that flush.
+    internal void HandOffFailure(Task operation)
+    {
+        lock (_frameGate)
+            if (_operations.ContainsKey(operation)) _operations[operation] = false;
     }
     public byte[]? Thumbnail(SlotId slot) => Snapshots.TryGetValue(slot, out var value) && value.Info.Meta is { } meta
         ? Thumbnail(slot, meta.Gen) : null;
@@ -169,7 +182,7 @@ public sealed class SaveService : ISaveService, IDisposable, IAsyncDisposable
             error = result.Status == SaveStatus.Failed ? result.Error : null;
         }
         State = new(Active, last, error, savedAt, Repository?.ReadOnly ?? ReadOnlyReason.None);
-        SlotsChanged?.Invoke();
+        _slotNotifications += SlotsChanged;
     }
     internal void ClearRestoreError()
     {
@@ -183,16 +196,24 @@ public sealed class SaveService : ISaveService, IDisposable, IAsyncDisposable
             if (_stopping) return Task.FromCanceled<T>(Lifetime);
             _frames.Enqueue(() =>
             {
+                T result = default!;
+                Exception? failure = null;
+                Action? observers;
                 lock (_frameGate)
                 {
                     if (_stopping) { completion.TrySetCanceled(Lifetime); return; }
-                    try { completion.SetResult(function()); }
+                    try { result = function(); }
                     catch (Exception error)
                     {
                         Loading.MarkFrameFailure(error);
-                        completion.SetException(error);
+                        failure = error;
                     }
+                    observers = _slotNotifications;
+                    _slotNotifications = null;
                 }
+                _commands.Publish(observers);
+                if (failure is not null) completion.SetException(failure);
+                else completion.SetResult(result);
             });
         }
         return completion.Task;
@@ -217,14 +238,19 @@ public sealed class SaveService : ISaveService, IDisposable, IAsyncDisposable
         Exception? failure = null;
         try { StopNewWork(); }
         catch (Exception error) { failure = RetainedFailure.Append(failure, error); }
-        Task[] pending;
+        KeyValuePair<Task, bool>[] pending;
         lock (_frameGate) pending = _operations.ToArray();
-        foreach (var task in pending)
+        var operationFailures = new List<(Task Operation, Exception Error)>();
+        foreach (var (task, _) in pending)
         {
             try { await task.ConfigureAwait(false); }
             catch (OperationCanceledException error) when (_stop.IsCancellationRequested && error.CancellationToken == Lifetime) { }
-            catch (Exception error) { failure = RetainedFailure.Append(failure, task.Exception ?? error); }
+            catch (Exception error) { operationFailures.Add((task, task.Exception ?? error)); }
         }
+        // A flush owns its own completion too; let it finish handing off any observed write failure before collecting ours.
+        lock (_frameGate)
+            foreach (var (operation, error) in operationFailures)
+                if (_operations[operation]) failure = RetainedFailure.Append(failure, error);
         try { Loading.Dispose(); }
         catch (Exception error) { failure = RetainedFailure.Append(failure, error); }
         try { Operation.Dispose(); }

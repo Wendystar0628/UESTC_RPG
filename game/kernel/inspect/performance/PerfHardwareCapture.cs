@@ -3,6 +3,7 @@ using System.Text.Json.Nodes;
 using Campus.Contracts;
 using Campus.Kernel.Frame;
 using Campus.Kernel.Diagnostics;
+using Campus.Contracts.Perf;
 
 namespace Campus.Kernel.Inspect;
 
@@ -15,9 +16,15 @@ internal sealed class PerfHardwareCapture
     private readonly Dictionary<uint, double> _previousQuery = new();
     private readonly Dictionary<uint, object> _devices = new();
     private readonly Dictionary<string, Exception> _errors = new();
-    private readonly NvmlSampler _sampler;
+    private readonly HardwareSampler _sampler;
+    private readonly string _sessionId;
+    private PerfSamplingFacts _facts;
+    private RenderAdapterIdentity _adapter;
+    private double? _processCpuFraction;
+    private bool _renderDeviceMatched;
     private NvmlStatus _status = new("starting", "Awaiting NVML initialization");
     private NvmlStatus? _shutdown;
+    private int? _pdhCloseCode;
     private string _slowState = "starting", _fastState = "starting";
     private bool _slowRecorded, _fastRecorded, _finished;
     private int _revision;
@@ -25,15 +32,22 @@ internal sealed class PerfHardwareCapture
     public bool Joined { get { lock (_gate) return _finished; } }
     public int Revision => Volatile.Read(ref _revision);
 
-    public PerfHardwareCapture(PerfValueChannel slow, PerfValueChannel fast, double pollMilliseconds)
+    public PerfHardwareCapture(PerfValueChannel slow, PerfValueChannel fast, double pollMilliseconds,
+        string sessionId, RenderAdapterIdentity adapter)
     {
         _slow = slow;
         _fast = fast;
-        _sampler = new NvmlSampler(() => FrameClock.MonotonicMilliseconds, Publish, pollMilliseconds);
+        _sessionId = sessionId;
+        _adapter = adapter;
+        var starting = new PerfSamplingFact { Capability = PerfFactCapability.Starting, Reason = "Awaiting hardware sample" };
+        _facts = new(sessionId, adapter.Luid, null, starting, starting, starting, starting);
+        _sampler = new HardwareSampler(() => FrameClock.MonotonicMilliseconds, Publish, pollMilliseconds, adapter);
         Completion = ObserveAsync(_sampler);
     }
 
     public void RequestStop() => _sampler.RequestStop();
+    public PerfSamplingFacts SamplingFacts { get { lock (_gate) return _facts; } }
+    public double? ProcessCpuFraction { get { lock (_gate) return _processCpuFraction; } }
 
     public async Task StopAsync()
     {
@@ -71,24 +85,30 @@ internal sealed class PerfHardwareCapture
         lock (_gate) return JsonSerializer.SerializeToNode(new
         {
             state = _status.Capability, status = StatusValue(_status), shutdown = _shutdown is null ? null : StatusValue(_shutdown),
-            joined = _finished, slowRecorded = _slowRecorded, fastRecorded = _fastRecorded,
-            renderDeviceAssociation = "unknown", renderDeviceAssociationReason = "NVML enumeration is not a rendering-device identity authority.",
+            joined = _finished, pdhCloseCode = _pdhCloseCode, slowRecorded = _slowRecorded, fastRecorded = _fastRecorded,
+            renderDeviceAssociation = _renderDeviceMatched ? "matched" : "unknown",
+            renderDeviceAssociationReason = !_renderDeviceMatched ? "Actual rendering adapter requires a unique BDF and hardware-ID NVML match." : null,
+            renderAdapter = AdapterValue(_adapter), samplingFacts = _facts,
             devices = _devices.OrderBy(pair => pair.Key).Select(pair => pair.Value).ToArray(),
             retainedExceptionCount = _errors.Count
         }, PerfFieldDictionary.JsonOptions)!;
     }
 
-    private async Task ObserveAsync(NvmlSampler sampler)
+    private async Task ObserveAsync(HardwareSampler sampler)
     {
         var result = await sampler.Completion.ConfigureAwait(false);
         lock (_gate)
         {
-            _shutdown = result.ShutdownStatus;
-            if (result.ShutdownStatus?.Error is { } shutdownError) RetainFailure("shutdown", shutdownError);
+            _shutdown = result.NvmlShutdownStatus;
+            _pdhCloseCode = result.PdhCloseCode;
+            if (result.NvmlShutdownStatus?.Error is { } shutdownError) RetainFailure("shutdown", shutdownError);
             if (result.Error is { } error)
             {
                 RetainFailure("worker", error);
-                _status = new("unavailable", "NVML worker failed", Error: error);
+                _status = new("unavailable", "Hardware worker failed", Error: error);
+                var unavailable = new PerfSamplingFact { Capability = PerfFactCapability.Unavailable,
+                    Reason = "Hardware worker failed", Source = "recording.hardware" };
+                _facts = new(_sessionId, _adapter.Luid, null, unavailable, unavailable, unavailable, unavailable);
             }
             else if (_status.Capability == "starting")
                 _status = new("unavailable", "Sampling stopped before initialization completed");
@@ -96,16 +116,30 @@ internal sealed class PerfHardwareCapture
         }
     }
 
-    private void Publish(NvmlBatch batch)
+    private void Publish(HardwareSamplingBatch sampling)
     {
         lock (_gate)
         {
+            var batch = sampling.Nvml;
+            _adapter = sampling.Adapter;
+            ObserveStatus("renderAdapter", _adapter.Status);
+            ObserveStatus("renderAdapterAddress", _adapter.AddressStatus);
+            var renderDevice = _adapter.Match(batch.Devices);
+            _renderDeviceMatched = renderDevice is not null;
+            _processCpuFraction = sampling.Cpu.ProcessFraction;
+            _facts = new(_sessionId, _adapter.Luid, renderDevice?.Identity.Uuid,
+                NvmlFact(renderDevice, batch.Status, performanceState: true), NvmlFact(renderDevice, batch.Status, performanceState: false),
+                sampling.GpuEngines.Fact, sampling.Cpu.Fact);
+            bool factsAccepted = _slow.TryRow(FactsRow(sampling, _facts, renderDevice?.Identity));
+            _slowRecorded |= factsAccepted && (_facts.OtherProcessesCpuUtilFraction.Value.HasValue ||
+                _facts.OtherProcessesGpuUtilFraction.Value.HasValue);
             _status = batch.Status;
             ObserveStatus("session", batch.Status);
             if (batch.Devices.Count == 0)
             {
                 var values = new Dictionary<string, object?>
                 {
+                    ["rowKind"] = "nvml",
                     ["queryStartMs"] = batch.QueryStartMs, ["queryEndMs"] = batch.QueryEndMs,
                     ["statusJson"] = new { session = StatusValue(batch.Status) }
                 };
@@ -113,7 +147,7 @@ internal sealed class PerfHardwareCapture
                 _fast.TryRow(new("hwfast", null, batch.QueryEndMs, new Dictionary<string, object?>(values)
                 { ["capability"] = batch.Status.Capability }));
             }
-            foreach (var device in batch.Devices) PublishDevice(batch, device);
+            foreach (var device in batch.Devices) PublishDevice(batch, device, renderDevice?.Identity.EnumerationIndex == device.Identity.EnumerationIndex);
             _slowState = Capability(batch.Devices.SelectMany(device => DeviceStatuses(device))
                 .Where(pair => !pair.Key.StartsWith("fast.", StringComparison.Ordinal) &&
                     pair.Key is not ("handle" or "gpuUuid" or "pciBusId")).Select(pair => pair.Value));
@@ -122,7 +156,7 @@ internal sealed class PerfHardwareCapture
         }
     }
 
-    private void PublishDevice(NvmlBatch batch, NvmlDeviceSample device)
+    private void PublishDevice(NvmlBatch batch, NvmlDeviceSample device, bool isRenderAdapter)
     {
         var identity = device.Identity;
         var statuses = DeviceStatuses(device);
@@ -135,7 +169,8 @@ internal sealed class PerfHardwareCapture
         };
         _previousQuery.TryGetValue(identity.EnumerationIndex, out double previous);
         var row = SlowRow(batch, device, _previousQuery.ContainsKey(identity.EnumerationIndex) ? previous : null, statuses);
-        bool accepted = _slow.TryRow(row);
+        var values = new Dictionary<string, object?>(row.Values) { ["rowKind"] = "nvml", ["isRenderAdapter"] = isRenderAdapter };
+        bool accepted = _slow.TryRow(row with { Values = values });
         _previousQuery[identity.EnumerationIndex] = device.Slow?.QueryStartMs ?? batch.QueryStartMs;
         _slowRecorded |= accepted && device.Slow is { } slow && HasSlowValues(slow);
         foreach (var fast in device.Fast)
@@ -146,10 +181,53 @@ internal sealed class PerfHardwareCapture
         }
     }
 
+    private static PerfSamplingFact NvmlFact(NvmlDeviceSample? device, NvmlStatus session, bool performanceState)
+    {
+        var slow = device?.Slow;
+        NvmlStatus status = slow is null ? session : performanceState ? slow.PerformanceState.Status : slow.GpuUtilFraction.Status;
+        double? value = slow is null ? null : performanceState ? slow.PerformanceState.Value : slow.GpuUtilFraction.Value;
+        return new()
+        {
+            Value = value,
+            Capability = value.HasValue ? PerfFactCapability.Supported : status.Capability == "unsupported"
+                ? PerfFactCapability.Unsupported : PerfFactCapability.Unavailable,
+            Reason = device is null ? "Actual rendering adapter has no unique NVML BDF/hardware-ID match" : status.Reason,
+            Source = performanceState ? "NVML.nvmlDeviceGetPerformanceState" : "NVML.nvmlDeviceGetUtilizationRates",
+            NativeCode = device is null ? null : status.NativeCode, QueryStartMs = slow?.QueryStartMs, QueryEndMs = slow?.QueryEndMs
+            // NVML does not expose the actual utilization averaging window; it must stay null.
+        };
+    }
+
+    private static PerfCapturedRow FactsRow(HardwareSamplingBatch sampling, PerfSamplingFacts facts, NvmlIdentity? identity) =>
+        new("hw", null, sampling.Nvml.QueryEndMs, new Dictionary<string, object?>
+        {
+            ["rowKind"] = "samplingFacts", ["deviceIndex"] = identity?.EnumerationIndex,
+            ["gpuUuid"] = identity?.Uuid, ["pciBusId"] = identity?.PciBusId,
+            ["queryStartMs"] = sampling.Nvml.QueryStartMs, ["queryEndMs"] = sampling.Nvml.QueryEndMs,
+            ["wholeGpuUtilFraction"] = facts.WholeGpuUtilFraction.Value,
+            ["otherProcessesGpuUtilFraction"] = facts.OtherProcessesGpuUtilFraction.Value,
+            ["otherProcessesCpuUtilFraction"] = facts.OtherProcessesCpuUtilFraction.Value,
+            ["systemCpuFraction"] = sampling.Cpu.SystemFraction,
+            ["samplingFactsJson"] = facts,
+            ["cpuCountersJson"] = new { current = sampling.Cpu.Current, previous = sampling.Cpu.Previous,
+                sampling.Cpu.SystemFraction, sampling.Cpu.ProcessFraction },
+            ["gpuEnginesJson"] = new { sampling.GpuEngines.CollectTimestamp100ns, sampling.GpuEngines.PreviousCollectMs, sampling.GpuEngines.RawQueryCode,
+                sampling.GpuEngines.Engines },
+            ["renderAdapterJson"] = AdapterValue(sampling.Adapter)
+        });
+
+    private static object AdapterValue(RenderAdapterIdentity adapter) => new
+    {
+        adapter.Luid, adapter.LuidText, adapter.VendorId, adapter.DeviceId, adapter.SubSystemId,
+        adapter.Bus, adapter.Device, adapter.Function, status = StatusValue(adapter.Status),
+        addressStatus = StatusValue(adapter.AddressStatus), adapter.CloseStatus
+    };
+
     internal static PerfCapturedRow SlowRow(NvmlBatch batch, NvmlDeviceSample device, double? previousQuery,
         IReadOnlyDictionary<string, NvmlStatus>? statuses = null)
     {
         var values = IdentityValues(device.Identity);
+        values["rowKind"] = "nvml";
         var slow = device.Slow;
         values["intervalStartMs"] = previousQuery;
         values["queryStartMs"] = slow?.QueryStartMs ?? batch.QueryStartMs;
@@ -227,7 +305,6 @@ internal sealed class PerfHardwareCapture
         {
             ["handle"] = device.Identity.HandleStatus, ["gpuUuid"] = device.Identity.UuidStatus, ["pciBusId"] = device.Identity.PciStatus,
             ["processVideoMemoryMiB"] = new("notAttached", "NVML process video-memory authority is not attached"),
-            ["systemCpuFraction"] = new("notAttached", "System CPU sampler is not attached"),
             ["availableRamMiB"] = new("notAttached", "System RAM sampler is not attached")
         };
         if (device.Slow is { } slow)

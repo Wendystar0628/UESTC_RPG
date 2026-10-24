@@ -11,6 +11,7 @@ import time
 from collections import defaultdict
 from pathlib import Path
 from perf_model import CALC, at, manifest_path, read_json
+from perf_batches import protocol_reasons
 
 AI_BATCHES_KEEP = 10
 HISTORY_PER_GROUP = 200
@@ -105,25 +106,19 @@ def discover(out, author):
     return sorted(paths)
 
 
-def nearest_run_path(directory, runs_root):
-    directory = Path(directory).resolve()
-    for candidate in (directory, *directory.parents):
-        run = candidate / 'run.json'
-        if run.is_file():
-            return run
-        if candidate == runs_root.resolve() or candidate.parent == candidate:
-            break
-    return None
+def session_run_path(directory):
+    run = Path(directory).resolve() / 'run.json'
+    return run if run.is_file() else None
 
 
-def nearest_run(directory, runs_root):
-    path = nearest_run_path(directory, runs_root)
+def session_run(directory):
+    path = session_run_path(directory)
     return (read_json(path), path) if path else ({}, None)
 
 
 def comparison_key(manifest, run):
     graphics, machine = manifest.get('graphics') or {}, manifest.get('machine') or {}
-    scene = run.get('scene') or run.get('scenario') or manifest.get('scene')
+    scene = run.get('scene') or manifest.get('scene')
     key = dict(scene=scene, machine=machine.get('id'), configuration=at(manifest, 'build.configuration'),
                preset=graphics.get('preset'), effectiveGraphics=graphics.get('effective'),
                outputResolution=[at(manifest, 'display.windowWidthPx'), at(manifest, 'display.windowHeightPx')],
@@ -135,7 +130,7 @@ def comparison_key(manifest, run):
     return key, labels, missing
 
 
-def basic_state(manifest, streams, run, missing, schema):
+def basic_state(manifest, streams, run, missing, schema, sampling_reasons=()):
     reasons = []
     if manifest.get('schema') != schema:
         return 'unsupported', ['schema 不是当前版本']
@@ -147,6 +142,11 @@ def basic_state(manifest, streams, run, missing, schema):
         return 'evidence', ['作者会话只作证据，不作 A/B 基线']
     if run.get('status') == 'invalid':
         return 'invalid', run.get('reasons') or ['采集前提不满足']
+    if (not isinstance(run.get('protocol'), dict) or run.get('purpose') in ('functional', 'diagnostic')
+            or at(manifest, 'run.diagnostics') or run.get('diagnostic')):
+        return 'evidence', ['非协议 AI、功能短跑与诊断采集不进入基线或比较']
+    reasons.extend(protocol_reasons(run))
+    reasons.extend(sampling_reasons)
     if not manifest.get('complete'):
         reasons.append('记录未完整结束或有丢行')
     if not streams['frames']:
@@ -163,27 +163,44 @@ def basic_state(manifest, streams, run, missing, schema):
         reasons.append('比较键缺值: ' + ', '.join(missing))
     if at(manifest, 'build.dirty') is not False:
         reasons.append('构建含未提交改动或干净状态未知')
-    diagnostics = at(manifest, 'run.diagnostics')
-    if diagnostics or run.get('diagnostic'):
-        return 'evidence', ['诊断采集不进入基线或常规均值']
     return ('partial', reasons) if reasons else ('candidate', [])
 
 
-def rebuild_states(entries, root):
-    groups = defaultdict(list)
-    for entry in entries:
-        entry['status'] = entry['baseStatus']
-        entry['statusReasons'] = list(entry.get('baseReasons', []))
-        groups[json.dumps([entry['comparisonKey'], entry['scope'], entry['calc']], sort_keys=True)].append(entry)
+def environment_signatures(entries):
     environment = {}
     for entry in sorted(entries, key=lambda e: e.get('endedAt') or ''):
         machine = entry['comparisonKey'].get('machine')
         if machine and entry.get('environmentSignature'):
             environment[machine] = entry['environmentSignature']
+    return environment
+
+
+def freshness_facts(entry, root, environment):
+    commit = at(entry, 'build.commit')
+    code, changes = git(root, 'diff', '--name-only', commit, 'HEAD', '--', 'game/')
+    dirty_code, dirty_changes = git(root, 'status', '--porcelain', '--', 'game/')
+    return dict(codeChanged=code != 0 or bool(changes) or dirty_code != 0 or bool(dirty_changes),
+                environmentChanged=environment.get(entry['comparisonKey']['machine']) != entry.get('environmentSignature'))
+
+
+def freshness_reasons(facts):
+    return (['构建之后 game/ 已变更'] if facts['codeChanged'] else []) + (
+        ['最近采集的驱动、系统或引擎版本已变化'] if facts['environmentChanged'] else [])
+
+
+def rebuild_states(entries, root, batch_blocked=None):
+    groups = defaultdict(list)
+    for entry in entries:
+        entry['status'] = entry['baseStatus']
+        entry['statusReasons'] = list(entry.get('baseReasons', []))
+        if entry['baseStatus'] == 'candidate' and entry['id'] in (batch_blocked or {}):
+            entry['status'], entry['statusReasons'] = 'partial', batch_blocked[entry['id']]
+        groups[json.dumps([entry['comparisonKey'], entry['scope'], entry['calc'], entry['origin']], sort_keys=True)].append(entry)
+    environment = environment_signatures(entries)
     for rows in groups.values():
         valid = []
         for entry in rows:
-            if entry['baseStatus'] != 'candidate':
+            if entry['status'] != 'candidate':
                 continue
             commit = at(entry, 'build.commit')
             if not commit or git(root, 'merge-base', '--is-ancestor', commit, 'HEAD')[0] != 0:
@@ -197,18 +214,36 @@ def rebuild_states(entries, root):
             continue
         current = valid[-1]
         current['status'] = 'current'
-        commit = at(current, 'build.commit')
-        reasons = []
-        code, changes = git(root, 'diff', '--name-only', commit, 'HEAD', '--', 'game/')
-        dirty_code, dirty_changes = git(root, 'status', '--porcelain', '--', 'game/')
-        if code != 0 or changes or dirty_code != 0 or dirty_changes:
-            reasons.append('构建之后 game/ 已变更')
-        newest = environment.get(current['comparisonKey']['machine'])
-        if newest != current.get('environmentSignature'):
-            reasons.append('最近采集的驱动、系统或引擎版本已变化')
+        reasons = freshness_reasons(freshness_facts(current, root, environment))
         if reasons:
             current['status'], current['statusReasons'] = 'stale', reasons
     return entries
+
+
+def batch_states(batches, entries, root):
+    by_id, environment = {entry['id']: entry for entry in entries}, environment_signatures(entries)
+    for batch in batches:
+        batch['targetPhase'] = 'b1' if batch['kind'] == 'aba' else 'a1'
+        if batch['status'] != 'candidate':
+            continue
+        rows = [by_id[identifier] for group in batch['groups'] for phase in group['phases'].values()
+                for identifier in phase['sessionIds']]
+        if any(row['status'] == 'partial' for row in rows):
+            batch['status'] = 'partial'
+            batch['statusReasons'] = sorted({reason for row in rows for reason in row.get('statusReasons', [])})
+            for group in batch['groups']:
+                for phase in group['phases'].values():
+                    phase.pop('all', None)
+                    phase.pop('steady', None)
+            continue
+        targets = [by_id[group['phases'][batch['targetPhase']]['sessionIds'][0]] for group in batch['groups']]
+        reasons = sorted({reason for target in targets for reason in
+                          freshness_reasons(freshness_facts(target, root, environment))})
+        # A1/A2 留原单会话状态，仅作同批控制；批次新鲜度由目标构建决定。
+        batch['status'] = 'stale' if reasons else 'current' if any(
+            row['status'] in ('current', 'stale') for row in rows) else 'superseded'
+        batch['statusReasons'] = reasons
+    return batches
 
 
 def history_group(row):

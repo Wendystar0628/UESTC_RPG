@@ -33,8 +33,8 @@ internal sealed class PerfEventCapture : IDisposable
     private readonly PerfSaveCommandQueue _saveCommands = new();
     private IMapArrival? _arrival;
     private bool _mapBound, _arrivalFinished, _disposed;
-    private double _nextSample, _lastCpuAt;
-    private TimeSpan? _lastCpu;
+    private double _nextSample;
+    private Vector2I _windowSize;
     private AppActivity _activity;
     private ViewMode _mode;
     private NavSpace? _space;
@@ -90,11 +90,13 @@ internal sealed class PerfEventCapture : IDisposable
             saveState = _save.State, saveBusy = _save.Busy,
             loadingActive = _loading.Active, loadingCovered = _loading.IsCovered,
             qualityRequested = PerfManifest.QualityValues(_quality, true), qualityEffective = PerfManifest.QualityValues(_quality, false),
-            requiredCoverage = _context.RequiredCoverage, requiredMissing = _context.RequiredMissing,
+            requiredCoverage = _context.RequiredCoverage,
             notAttached = _context.NotAttached,
             commandIntervalStart = "unknownBeforeRecording; existing operations are not replayed or assigned an operation number"
         });
-        OnSize();
+        CaptureWindowSize(initial: true);
+        _windowMode = DisplayServer.WindowGetMode();
+        Emit("window.mode", new { mode = _windowMode.ToString(), observation = "current" });
     }
 
     public void BindMap(bool initial = false)
@@ -128,7 +130,7 @@ internal sealed class PerfEventCapture : IDisposable
         }
     }
 
-    public (long Flags, bool Complete) OnFrame(in FrameSample frame)
+    public long OnFrame(in FrameSample frame)
     {
         DrainSaveCommands();
         CheckOwnerChanges(in frame);
@@ -151,12 +153,6 @@ internal sealed class PerfEventCapture : IDisposable
         DrainSaveCommands();
         if (now < _nextSample) return;
         _nextSample = now + _dictionary.SampleIntervalMilliseconds;
-        var cpu = System.Environment.CpuUsage.TotalTime;
-        double? cpuFraction = _lastCpu is { } previous && now > _lastCpuAt
-            ? Math.Clamp((cpu - previous).TotalMilliseconds / (now - _lastCpuAt) / System.Environment.ProcessorCount, 0, 1) : null;
-        _lastCpu = cpu; _lastCpuAt = now;
-        var mode = DisplayServer.WindowGetMode();
-        if (_windowMode != mode) { _windowMode = mode; Emit("window.mode", new { mode = mode.ToString() }); }
         float refresh = DisplayServer.ScreenGetRefreshRate(DisplayServer.WindowGetCurrentScreen());
         if (_refresh != refresh) { _refresh = refresh; Emit("display.refresh", new { refreshHz = refresh > 0 ? (float?)refresh : null }); }
         bool live = _world.Instance != 0 && _maps.Context is not null;
@@ -182,7 +178,7 @@ internal sealed class PerfEventCapture : IDisposable
             ["bufferMemoryMiB"] = Monitor(Performance.Monitor.RenderBufferMemUsed) / 1048576d,
             ["objectCount"] = Monitor(Performance.Monitor.ObjectCount), ["nodeCount"] = Monitor(Performance.Monitor.ObjectNodeCount),
             ["orphanNodeCount"] = Monitor(Performance.Monitor.ObjectOrphanNodeCount),
-            ["resourceCount"] = Monitor(Performance.Monitor.ObjectResourceCount), ["processCpuFraction"] = cpuFraction
+            ["resourceCount"] = Monitor(Performance.Monitor.ObjectResourceCount), ["processCpuFraction"] = _session.ProcessCpuFraction
         };
         _samples.TryRow(new("samples", Engine.GetProcessFrames(), now, values));
         if (_checkedFrames != 0) Emit("measurement.selfcheck", new
@@ -202,6 +198,8 @@ internal sealed class PerfEventCapture : IDisposable
 
     private void CheckOwnerChanges(in FrameSample frame)
     {
+        var mode = DisplayServer.WindowGetMode();
+        if (_windowMode != mode) { _windowMode = mode; Emit("window.mode", new { mode = mode.ToString(), observation = "changed" }); }
         if (_loadingActive != _loading.Active || _loadingCovered != _loading.IsCovered)
         {
             _loadingActive = _loading.Active; _loadingCovered = _loading.IsCovered;
@@ -368,12 +366,16 @@ internal sealed class PerfEventCapture : IDisposable
             }));
         }
     }
-    private void OnSize()
+    private void OnSize() => CaptureWindowSize(initial: false);
+
+    private void CaptureWindowSize(bool initial)
     {
         try
         {
-            var size = _viewport.GetVisibleRect().Size;
-            Emit("window.size", new { widthPx = size.X, heightPx = size.Y });
+            var size = DisplayServer.WindowGetSize();
+            if (!initial && size == _windowSize) return;
+            _windowSize = size;
+            Emit("window.size", new { widthPx = size.X, heightPx = size.Y, observation = initial ? "current" : "changed" });
         }
         catch (Exception error) { _session.AddFailure(PerfFaultCode.ProducerFailed, error); }
     }

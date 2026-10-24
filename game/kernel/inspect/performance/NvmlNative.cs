@@ -1,5 +1,6 @@
 using System.Runtime.InteropServices;
 using System.Text;
+using System.Globalization;
 
 namespace Campus.Kernel.Inspect;
 
@@ -105,7 +106,17 @@ internal static class NvmlNative
         }
         catch (Exception error) when (IsLoadFailure(error)) { uuidStatus = NvmlStatus.Missing(error); }
         var pci = Read(() => { int code = GetPci(handle, out var value); return (code, value); });
-        return new(index, uuid, pci.Value?.BusId, NvmlStatus.FromCode(Success), uuidStatus, pci.Status);
+        uint? function = null;
+        string? busId = pci.Value?.BusId;
+        int dot = busId?.LastIndexOf('.') ?? -1;
+        if (dot >= 0 && uint.TryParse(busId!.AsSpan(dot + 1), NumberStyles.HexNumber, CultureInfo.InvariantCulture, out uint parsed))
+            function = parsed;
+        return new(index, uuid, busId, NvmlStatus.FromCode(Success), uuidStatus, pci.Status)
+        {
+            PciBus = pci.Value?.Bus, PciDevice = pci.Value?.Device, PciFunction = function,
+            PciVendorId = pci.Value?.DeviceId & 0xffff, PciDeviceId = pci.Value?.DeviceId >> 16,
+            PciSubSystemId = pci.Value?.SubSystemId
+        };
     }
 
     internal static NvmlValue<uint> Clock(IntPtr device, uint type, bool maximum = false) => Read(() =>

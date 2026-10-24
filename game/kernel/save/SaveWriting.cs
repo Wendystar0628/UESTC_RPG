@@ -48,16 +48,16 @@ internal sealed class SaveWriting(SaveService owner)
         if (_owner.Initialized && _owner.Runtime.World.Instance == 0)
             return Task.FromResult(new SaveResult(SaveStatus.Deferred, _owner.Active, 0,
                 _owner.Loading.RestoreFaulted ? SaveErrorKeys.RestoreWorld : null));
-        return StartSave(reason, forced: true);
+        return StartSave(reason, forced: true, ownsFailure: false);
     }
 
-    internal Task<SaveResult> StartSave(SaveReason reason, bool forced)
+    internal Task<SaveResult> StartSave(SaveReason reason, bool forced, bool ownsFailure)
     {
         ObjectDisposedException.ThrowIf(_owner.Stopping, this);
         var operation = new SaveWriteOperation(_owner.Active);
         var instance = _owner.Initialized ? _owner.Runtime.World.Instance : 0;
         _writingOperation = operation;
-        return _writing = _owner.Track(() => RunMutation(() => SaveOperation(operation, reason, forced, instance), instance));
+        return _writing = _owner.Track(() => RunMutation(() => SaveOperation(operation, reason, forced, instance), instance), ownsFailure: ownsFailure);
     }
 
     private async Task<T> RunMutation<T>(Func<Task<T>> start, long? instance = null) where T : class
@@ -257,6 +257,11 @@ internal sealed class SaveWriting(SaveService owner)
             {
                 return await _owner.OnFrame(() => { var result = new SaveResult(SaveStatus.Failed, operation.Slot, 0, SaveErrorKeys.Timeout); _owner.Publish(result); return result; }).ConfigureAwait(false);
             }
+            catch
+            {
+                _owner.HandOffFailure(writing);
+                throw;
+            }
         }
         if (_owner.Loading.RestoreFaulted) return new(SaveStatus.Deferred, _owner.Active, 0, SaveErrorKeys.RestoreWorld);
         if (_owner.Active is null) return new(SaveStatus.Deferred, _owner.Active, 0);
@@ -267,9 +272,10 @@ internal sealed class SaveWriting(SaveService owner)
             catch (OperationCanceledException) { return new(SaveStatus.Deferred, _owner.Active, 0); }
         }
         // A timed-out write keeps running; retry shares it, rather than racing a second file writer.
+        if (_flush is { IsFaulted: true }) _owner.HandOffFailure(_flush);
         if (_flush is null || _flush.IsCompleted && _flush.Result.Status != SaveStatus.Saved)
         {
-            _flush = StartSave(reason, forced: true);
+            _flush = StartSave(reason, forced: true, ownsFailure: true);
             _flushOperation = _writingOperation;
         }
         var flush = _flush;
@@ -278,6 +284,11 @@ internal sealed class SaveWriting(SaveService owner)
         catch (OperationCanceledException)
         {
             return await _owner.OnFrame(() => { var result = new SaveResult(SaveStatus.Failed, flushOperation.Slot, 0, SaveErrorKeys.Timeout); _owner.Publish(result); return result; }).ConfigureAwait(false);
+        }
+        catch
+        {
+            _owner.HandOffFailure(flush);
+            throw;
         }
     }
 

@@ -1,10 +1,11 @@
 using Campus.Contracts;
+using Campus.Contracts.Perf;
 using Campus.Kernel.Inspect;
 using GdUnit4;
 
 namespace Campus.Tests;
 
-// Pure value tests: constructing the native producer is deliberately outside the CLR test host.
+// Public counter semantics are tested as values; the recording worker also proves its real stop/join path.
 [TestSuite]
 public sealed class PerformanceNvmlContractTests
 {
@@ -69,4 +70,79 @@ public sealed class PerformanceNvmlContractTests
     private static NvmlValue<ulong> Reading(ulong value) => new(value, Success());
     private static NvmlNative.Sample Sample(ulong timestamp, uint value) => new()
     { TimestampUs = timestamp, Value = new() { UnsignedInt = value } };
+
+    [TestCase, TestCategory(TestReason.Contract)]
+    public void OtherGpuExcludesGameAndForeignAdaptersAndUsesBusiestEngineAfterSummingPids()
+    {
+        const string actual = "00000000:00000001", foreign = "00000000:00000002";
+        GpuEngineRow Row(uint pid, string luid, uint engine, double fraction) => new()
+        { Instance = $"fixture-{pid}-{engine}", ProcessId = pid, AdapterLuid = luid,
+            PhysicalAdapter = 0, Engine = engine, EngineType = "3D", UtilFraction = fraction };
+        GpuEngineRow[] rows = [Row(7, actual, 0, .75), Row(8, actual, 0, .25), Row(9, actual, 0, .125),
+            Row(8, actual, 1, .25), Row(10, foreign, 0, 1)];
+        var fact = WindowsGpuEngineSampler.Aggregate(rows, actual, 7, 0, 100, 110, 0, 105);
+        if (fact.Capability != PerfFactCapability.Supported || fact.Value != .25 + .125 ||
+            fact.QueryStartMs != 100 || fact.QueryEndMs != 110)
+            throw new InvalidOperationException("Other-process GPU aggregation lost adapter/PID/engine semantics.");
+        var invalid = WindowsGpuEngineSampler.Aggregate([rows[1] with { CStatus = 0xc0000bba, UtilFraction = null }],
+            actual, 7, 0, 100, 110, 0, 105);
+        var initial = WindowsGpuEngineSampler.Aggregate(rows, actual, 7, 0, 100, 110, null, 105);
+        if (invalid.Value.HasValue || initial.Value.HasValue || invalid.Reason is null || initial.Reason is null)
+            throw new InvalidOperationException("Unknown GPU counter intervals became zero or supported values.");
+    }
+
+    [TestCase, TestCategory(TestReason.Contract)]
+    public void OtherCpuSubtractsGameFromSystemBusyWithoutAddingIdleTwiceAndRetainsCoverageFailure()
+    {
+        var previous = new CpuCounterRead { Idle100ns = 100, Kernel100ns = 300, User100ns = 200,
+            ProcessKernel100ns = 20, ProcessUser100ns = 30, SystemQueryStartMs = 9, SystemQueryEndMs = 10,
+            ProcessQueryStartMs = 11, ProcessQueryEndMs = 12, ProcessorGroups = 1, LogicalProcessors = 4 };
+        var current = previous with { Idle100ns = 125, Kernel100ns = 380, User100ns = 220,
+            ProcessKernel100ns = 35, ProcessUser100ns = 40, SystemQueryStartMs = 109, SystemQueryEndMs = 110,
+            ProcessQueryStartMs = 111, ProcessQueryEndMs = 112 };
+        var result = WindowsCpuSampler.Calculate(current, previous);
+        if (result.Fact.Capability != PerfFactCapability.Supported || result.Fact.Value != .5 ||
+            result.Previous != previous || result.Current != current || result.Fact.AverageStartMs != previous.SystemQueryEndMs)
+            throw new InvalidOperationException("CPU subtraction, raw counters or independent read windows changed.");
+        var grouped = WindowsCpuSampler.Calculate(current with { ProcessorGroups = 2, LogicalProcessors = 128 }, previous);
+        var failed = WindowsCpuSampler.Calculate(current with { SystemError = 5, Idle100ns = null }, previous);
+        var initial = WindowsCpuSampler.Calculate(current, null);
+        if (grouped.Fact.Value.HasValue || failed.Fact.Value.HasValue || initial.Fact.Value.HasValue ||
+            failed.Fact.NativeCode != 5 || grouped.Fact.Reason is null || initial.Fact.Reason is null)
+            throw new InvalidOperationException("Incomplete CPU source coverage was reported as a usable zero.");
+    }
+
+    [TestCase, TestCategory(TestReason.Contract)]
+    public void RenderGpuRequiresUniqueBdfAndHardwareIdsInsteadOfEnumerationOrder()
+    {
+        var adapter = new RenderAdapterIdentity { Luid = 1, Bus = 5, Device = 0, Function = 0,
+            VendorId = 0x10de, DeviceId = 0x1234, SubSystemId = 3, AddressStatus = Success() };
+        NvmlDeviceSample Device(uint index, uint bus) => new(new NvmlIdentity(index, $"gpu-{index}", null, Success(), Success(), Success())
+        { PciBus = bus, PciDevice = 0, PciFunction = 0, PciVendorId = adapter.VendorId,
+            PciDeviceId = adapter.DeviceId, PciSubSystemId = adapter.SubSystemId }, null, []);
+        var first = Device(0, 6);
+        var actual = Device(1, 5);
+        if (adapter.Match([first, actual]) != actual || adapter.Match([actual, Device(2, 5)]) is not null ||
+            (adapter with { Bus = null }).Match([actual]) is not null)
+            throw new InvalidOperationException("Rendering-adapter association guessed an index or an ambiguous PCI identity.");
+    }
+
+    [TestCase, TestCategory(TestReason.Contract)]
+    public async Task HardwareWorkerStopsJoinsAndReleasesBeforeReportingCompletion()
+    {
+        var observed = new TaskCompletionSource<HardwareSamplingBatch>(TaskCreationOptions.RunContinuationsAsynchronously);
+        var worker = new HardwareSampler(() => System.Environment.TickCount64, value => observed.TrySetResult(value),
+            1_000, new RenderAdapterIdentity());
+        try
+        {
+            var sample = await observed.Task.WaitAsync(TimeSpan.FromSeconds(15));
+            worker.RequestStop();
+            var stopped = await worker.StopAsync();
+            var repeated = await worker.StopAsync();
+            if (!worker.Completion.IsCompleted || !ReferenceEquals(stopped, repeated) || stopped.Error is not null ||
+                sample.Cpu.Fact.Source != WindowsCpuSampler.Source || sample.GpuEngines.Fact.Source != WindowsGpuEngineSampler.Source)
+                throw new InvalidOperationException("Hardware producer did not finish its owned source cleanup and join.");
+        }
+        finally { await worker.StopAsync(); }
+    }
 }

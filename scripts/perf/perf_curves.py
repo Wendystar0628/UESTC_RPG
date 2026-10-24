@@ -26,7 +26,7 @@ SERIES = [('dtMs', '帧时', 'ms', 'experience'), ('mainViewportGpuMs', '主视�
 
 def bucket_curves(summary, manifest, streams, limit):
     frames = streams['frames']
-    start = at(manifest, 'clock.recordingStartMs')
+    start = at(summary, 'sampleWindow.fromMs', at(manifest, 'clock.recordingStartMs'))
     start = start if number(start) else frames[0]['monotonicMs']
     stop = max([start] + [row['monotonicMs'] for name in ('frames', 'samples', 'hw') for row in streams[name]])
     seconds = max(1, math.ceil((stop - start) / 1000 / limit))
@@ -35,6 +35,8 @@ def bucket_curves(summary, manifest, streams, limit):
     allowed = {key for key, _, _, scope in SERIES if scope == 'cost' or summary['scope'] == 'full'}
     for name in ('frames', 'samples', 'hw'):
         for row in streams[name]:
+            if name == 'hw' and row['rowKind'] != 'nvml':
+                continue
             bucket = min(limit - 1, max(0, int((row['monotonicMs'] - start) / (seconds * 1000))))
             if name == 'frames':
                 counts[bucket] += 1
