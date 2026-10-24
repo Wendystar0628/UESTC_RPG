@@ -18,6 +18,8 @@ internal class TestMapService : IMapService
     public IMapContext? Context { get; set; }
     public virtual IReadOnlyList<MapVisit> Visits => [];
     public virtual IMapTransition? Transition => null;
+    public event Action<MapPrepareEvent>? PrepareCommand;
+    public void PublishPrepareCommand(MapPrepareEvent value) => PrepareCommand?.Invoke(value);
     public Func<MapId, string?, MapSpawn>? SpawnResolver { get; set; }
     public virtual MapSpawn ResolveSpawn(MapId map, string? spawn = null) =>
         SpawnResolver is { } resolve ? resolve(map, spawn) : throw new NotSupportedException();

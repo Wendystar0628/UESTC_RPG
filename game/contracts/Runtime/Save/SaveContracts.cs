@@ -129,6 +129,8 @@ public sealed record SaveState(                                     // 保存状
 
 public interface ISaveService                         // Kernel 服务（game/kernel/save/）；不加 Autoload
 {
+    /// <summary>Command-owner value boundaries; original failures stay on their existing channel.</summary>
+    event Action<SaveLoadEvent>? LoadCommand;
     bool Enabled { get; }                             // --save=off，或 .lock 被别的进程占着时为 false：不写、不挪任何文件
     IReadOnlyList<SlotInfo> Slots { get; }            // 扉页后读好；s1–s3 恒为三项
     SlotId? Continue { get; }                         // 最近保存的可读存档位（SYS-SAVE）；没有就是 null
@@ -152,3 +154,9 @@ public interface ISaveService                         // Kernel 服务（game/ke
     Task<DeleteResult> DeleteEntry(SlotId s, ulong gen); // Confirmed manual-entry deletion, accepted only at Title.
     Task<DeleteResult> DeleteSlot(SlotId s);          // Confirmed whole-world-line deletion, accepted only at Title.
 }
+
+public enum SaveLoadKind : byte { Slot, File, NewGame }
+public enum SaveLoadPhase : byte { Queued, Started, Rejected, Completed, Canceled, Faulted }
+public readonly record struct SaveLoadEvent(
+    long Operation, SaveLoadKind Kind, SaveLoadPhase Phase,
+    SlotId? Slot, ulong? RequestedGeneration, string? File, LoadResult? Result);

@@ -200,6 +200,8 @@ namespace Campus.Arch.Tests
     [KernelService(typeof(IMapService))]
     public sealed class ShutdownMapService : IMapService, IDisposable
     {
+        public event Action<MapPrepareEvent>? PrepareCommand;
+        public void PublishPrepareCommand(MapPrepareEvent value) => PrepareCommand?.Invoke(value);
         private readonly ShutdownProbe _probe;
         public ShutdownMapService(ShutdownProbe probe) { _probe = probe; probe.MapsConstructed++; }
         public long Rev => throw new NotSupportedException();

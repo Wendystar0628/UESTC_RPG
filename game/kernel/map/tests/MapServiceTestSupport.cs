@@ -24,7 +24,7 @@ internal static class MapServiceTestSupport
         public TestRuntime Runtime { get; } = new();
         public TestLoader Loader { get; }
         public TestData Data { get; }
-        public Fixture(bool initialize = true, bool waypointDefault = false)
+        public Fixture(bool initialize = true, bool waypointDefault = false, ICameraRig? camera = null)
         {
             var entries = new[] { A, B, C }.Select(MakeMap).ToArray();
             if (waypointDefault)
@@ -44,7 +44,7 @@ internal static class MapServiceTestSupport
             Data = new(Catalog); Loader = new(Catalog);
             var world = new TestWorldState(new TestWeatherProcess(), new TestRuleset());
             Camera = new(world);
-            Service = new(Camera, Runtime, Loader, Data);
+            Service = new(camera ?? Camera, Runtime, Loader, Data);
             if (initialize)
             {
                 var initialized = Service.Initialize();

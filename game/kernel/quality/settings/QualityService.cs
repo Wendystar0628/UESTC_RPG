@@ -43,7 +43,7 @@ public sealed class QualityService : IQualityFrame, IBootParticipant, IAsyncDisp
         public Binding(IQualityRuntime runtime) { Runtime = runtime; Token = Lifetime.Token; }
     }
 
-    private sealed record Request(QualityRequest Edit, ApplyOrigin Origin, TaskCompletionSource<ApplyResult>? Completion);
+    private sealed record Request(long Operation, QualityRequest Edit, ApplyOrigin Origin, TaskCompletionSource<ApplyResult>? Completion);
     private readonly QualityCatalog _catalog;
     private readonly QualityState _state;
     private readonly IGraphicsSettingsStore _store;
@@ -52,6 +52,7 @@ public sealed class QualityService : IQualityFrame, IBootParticipant, IAsyncDisp
     private bool _initialized;
     private bool _initializing;
     private Request? _pending;
+    private long _applyOperation;
     private double _debounce;
     private Task _lastSave = Task.CompletedTask;
     private readonly HashSet<Task> _applications = [];
@@ -81,6 +82,7 @@ public sealed class QualityService : IQualityFrame, IBootParticipant, IAsyncDisp
     public float GrassRadius => _state.GrassRadius;
     public float FoliageTransitionSeconds => _catalog.FoliageTransitionSeconds;
     public event Action<QualityChange>? Changed;
+    public event Action<QualityApplyEvent>? ApplyCommand;
     public string Id => "quality";
     public int Order => 100;
     public float PresetValue(QualityPreset preset, QualityKnob knob) => _catalog.PresetValue(preset, knob);
@@ -104,6 +106,8 @@ public sealed class QualityService : IQualityFrame, IBootParticipant, IAsyncDisp
         _initializing = false;
         binding.Lifetime.Cancel();
         binding.Lifetime.Dispose();
+        if (pending is not null)
+            ApplyCommand?.Invoke(new(pending.Operation, QualityApplyPhase.Canceled, pending.Edit, pending.Origin, null));
         pending?.Completion?.TrySetCanceled(binding.Token);
         if (binding.Active is { } active && (active.IsCompletedSuccessfully || active.IsCanceled))
             _deferredApplications.Remove(active);
@@ -167,25 +171,48 @@ public sealed class QualityService : IQualityFrame, IBootParticipant, IAsyncDisp
     public Task<ApplyResult> Apply(QualityRequest next, ApplyOrigin origin)
     {
         if (!Enum.IsDefined(origin)) throw new ArgumentOutOfRangeException(nameof(origin));
-        var plan = Plan(next);
-        if (plan.Rejected.Count != 0) return Task.FromResult(Result(ApplyStatus.Rejected, plan.Rejected));
-        next = next with
+        var operation = ++_applyOperation;
+        ApplyPlan plan;
+        Binding binding;
+        try
         {
-            Profile = QualityCatalog.Freeze(next.Profile.Preset == QualityPreset.Custom
-                ? next.Profile with { Preset = Requested.Preset } : next.Profile),
-            EditedKnobs = Array.AsReadOnly(next.EditedKnobs.Distinct().Order().ToArray()),
-        };
-        var binding = _binding ?? throw new InvalidOperationException("Quality runtime is not mounted.");
+            plan = Plan(next);
+            if (plan.Rejected.Count != 0)
+            {
+                var rejected = Result(ApplyStatus.Rejected, plan.Rejected);
+                ApplyCommand?.Invoke(new(operation, QualityApplyPhase.Rejected, next, origin, rejected));
+                return Task.FromResult(rejected);
+            }
+            next = next with
+            {
+                Profile = QualityCatalog.Freeze(next.Profile.Preset == QualityPreset.Custom
+                    ? next.Profile with { Preset = Requested.Preset } : next.Profile),
+                EditedKnobs = Array.AsReadOnly(next.EditedKnobs.Distinct().Order().ToArray()),
+            };
+            binding = _binding ?? throw new InvalidOperationException("Quality runtime is not mounted.");
+        }
+        catch
+        {
+            ApplyCommand?.Invoke(new(operation, QualityApplyPhase.Faulted, next, origin, null));
+            throw;
+        }
         var runtime = binding.Runtime;
         // The boot caller already owns an opaque screen; no second screen or transition wait is needed.
         if (origin == ApplyOrigin.Startup || origin == ApplyOrigin.CommandLine && runtime.Booting)
-            return ApplyDuringBoot(binding, plan.Next, origin);
+            return ApplyDuringBoot(binding, new(operation, next, origin, null), plan.Next);
         var deferred = runtime.Transitioning || binding.Active is not null;
-        _pending?.Completion?.TrySetResult(Result(ApplyStatus.Deferred));
+        if (_pending is { } superseded)
+        {
+            var replaced = Result(ApplyStatus.Deferred);
+            ApplyCommand?.Invoke(new(superseded.Operation, QualityApplyPhase.Superseded, superseded.Edit, superseded.Origin, replaced));
+            superseded.Completion?.TrySetResult(replaced);
+        }
         var completion = deferred ? null : new TaskCompletionSource<ApplyResult>(TaskCreationOptions.RunContinuationsAsynchronously);
-        _pending = new(next, origin, completion);
+        _pending = new(operation, next, origin, completion);
         _debounce = origin == ApplyOrigin.User && plan.Heaviest is ApplyClass.Immediate or ApplyClass.Amortized ? 0.2 : 0;
-        return completion?.Task ?? Task.FromResult(Result(ApplyStatus.Deferred));
+        var result = deferred ? Result(ApplyStatus.Deferred) : null;
+        ApplyCommand?.Invoke(new(operation, QualityApplyPhase.Queued, next, origin, result));
+        return completion?.Task ?? Task.FromResult(result!);
     }
 
     public void Tick(double delta)
@@ -202,19 +229,34 @@ public sealed class QualityService : IQualityFrame, IBootParticipant, IAsyncDisp
         if (_debounce > 0) return;
         var request = _pending;
         _pending = null;
+        ApplyCommand?.Invoke(new(request.Operation, QualityApplyPhase.Started, request.Edit, request.Origin, null));
         var active = Execute(binding, request);
         binding.Active = active;
         if (request.Completion is null && !active.IsCompletedSuccessfully && !active.IsCanceled)
             _deferredApplications.Add(active);
     }
 
-    private async Task<ApplyResult> ApplyDuringBoot(Binding binding, QualityProfile profile, ApplyOrigin origin)
+    private async Task<ApplyResult> ApplyDuringBoot(Binding binding, Request request, QualityProfile profile)
     {
-        await binding.Runtime.NextFrame(binding.Token).WaitAsync(binding.Token);
-        binding.Token.ThrowIfCancellationRequested();
-        Publish(binding, _state.Commit(profile, origin, true));
-        binding.Token.ThrowIfCancellationRequested();
-        return Result(ApplyStatus.Applied);
+        ApplyCommand?.Invoke(new(request.Operation, QualityApplyPhase.Started, request.Edit, request.Origin, null));
+        var phase = QualityApplyPhase.Faulted;
+        ApplyResult? result = null;
+        try
+        {
+            await binding.Runtime.NextFrame(binding.Token).WaitAsync(binding.Token);
+            binding.Token.ThrowIfCancellationRequested();
+            Publish(binding, _state.Commit(profile, request.Origin, true));
+            binding.Token.ThrowIfCancellationRequested();
+            result = Result(ApplyStatus.Applied);
+            phase = QualityApplyPhase.Completed;
+            return result;
+        }
+        catch (OperationCanceledException) when (binding.Token.IsCancellationRequested)
+        {
+            phase = QualityApplyPhase.Canceled;
+            throw;
+        }
+        finally { ApplyCommand?.Invoke(new(request.Operation, phase, request.Edit, request.Origin, result)); }
     }
 
     private async Task Execute(Binding binding, Request request)
@@ -225,14 +267,18 @@ public sealed class QualityService : IQualityFrame, IBootParticipant, IAsyncDisp
         try
         {
             await application;
-            request.Completion?.TrySetResult(Result(ApplyStatus.Applied));
+            var result = Result(ApplyStatus.Applied);
+            ApplyCommand?.Invoke(new(request.Operation, QualityApplyPhase.Completed, request.Edit, request.Origin, result));
+            request.Completion?.TrySetResult(result);
         }
         catch (OperationCanceledException) when (binding.Token.IsCancellationRequested)
         {
+            ApplyCommand?.Invoke(new(request.Operation, QualityApplyPhase.Canceled, request.Edit, request.Origin, null));
             request.Completion?.TrySetCanceled(binding.Token);
         }
         catch (Exception error)
         {
+            ApplyCommand?.Invoke(new(request.Operation, QualityApplyPhase.Faulted, request.Edit, request.Origin, null));
             // This observer belongs to the binding, so unmounting cannot discard a late failure.
             if (request.Completion is { } completion)
             {

@@ -18,21 +18,31 @@ public sealed class AppLoadEntryTests
     public async Task OnlyLoadSlotAcceptsAnExplicitGeneration(EnterKind kind)
     {
         using var f = new Fixture(); await f.OpenTitle();
-        var result = await f.Flow.Enter(new(kind, f.Save.Slot.Slot) { Gen = f.Save.Older.Gen });
+        List<EnterCommandEvent> commands = []; f.Flow.EnterCommand += commands.Add;
+        var request = new EnterRequest(kind, f.Save.Slot.Slot) { Gen = f.Save.Older.Gen };
+        var result = await f.Flow.Enter(request);
         if (result != EnterResult.Rejected || f.Flow.State != AppState.Title || f.Rig.Loading.Active ||
             !f.Rig.Title.Visible || f.Save.Loaded is not null || f.Save.ExactGen is not null)
             throw new InvalidOperationException("A generation was accepted outside the explicit entry load command.");
+        if (commands.Count != 1 || commands[0] != new EnterCommandEvent(1, EnterCommandPhase.Rejected,
+            request, EnterResult.Rejected, false, null))
+            throw new InvalidOperationException("Admission rejection started work or changed its requested target.");
     }
 
     [TestCase, TestCategory(TestReason.Regression)]
     public async Task SelectedEntryOwnsItsPrefetchArrivalAndExistingSaveSlot()
     {
         using var f = new Fixture(completeArrivalImmediately: false); await f.OpenTitle();
+        List<(EnterCommandEvent Command, AppState State, bool Covered, bool Locked)> commands = [];
+        f.Flow.EnterCommand += value => commands.Add((value, f.Flow.State, f.Rig.Loading.Active, f.Rig.Camera.InputLocked));
         var selected = f.Save.Older; var latest = f.Save.Slot.Meta!;
         if (selected.Gen == latest.Gen || selected.Mode == latest.Mode)
             throw new InvalidOperationException("The fixture must distinguish selected and latest endpoints.");
         var entering = f.Flow.Enter(new(EnterKind.LoadSlot, selected.Slot) { Gen = selected.Gen });
         await f.Save.ArrivalStarted.Task;
+        if (commands.Count != 1 || commands[0].Command.Phase != EnterCommandPhase.Started ||
+            commands[0].State != AppState.Entering || !commands[0].Locked || commands[0].Command.Result is not null)
+            throw new InvalidOperationException("Entry did not publish its real accepted work before arrival completion.");
         if (entering.IsCompleted || !f.Rig.Loading.Active || !f.Rig.Camera.InputLocked ||
             !f.Rig.Runtime.PinnedDestinations.Any(d => d.Pose == selected.Pose && d.Mode == selected.Mode) ||
             f.Rig.Runtime.PinnedDestinations.Any(d => d.Pose == latest.Pose && d.Mode == latest.Mode))
@@ -42,6 +52,11 @@ public sealed class AppLoadEntryTests
             f.Rig.Runtime.Destination?.Pose != selected.Pose || f.Rig.Runtime.Destination?.Mode != selected.Mode ||
             f.Save.Active != selected.Slot || f.Rig.Loading.Active || f.Rig.Camera.InputLocked)
             throw new InvalidOperationException("The selected generation did not own the complete restoration endpoint.");
+        var finished = commands.Last();
+        if (commands.Count != 2 || finished.Command != new EnterCommandEvent(commands[0].Command.Operation,
+            EnterCommandPhase.Completed, new(EnterKind.LoadSlot, selected.Slot) { Gen = selected.Gen }, EnterResult.Entered, false, null) ||
+            finished.State != AppState.Playing || finished.Covered || finished.Locked)
+            throw new InvalidOperationException("Entry completed its command before the existing input/loading handoff.");
         await f.Flow.ReturnToTitle();
         if (f.Save.FlushedSlot != selected.Slot || f.Save.Active != selected.Slot || f.Save.Slot.Meta != latest)
             throw new InvalidOperationException("Loading an old entry replaced the active save slot or its latest summary.");
@@ -54,9 +69,12 @@ public sealed class AppLoadEntryTests
     {
         using var f = new Fixture(); await f.OpenTitle();
         var request = new EnterRequest(kind, kind is EnterKind.LoadSlot ? f.Save.Slot.Slot : null);
+        List<EnterCommandEvent> commands = []; f.Flow.EnterCommand += commands.Add;
         if (await f.Flow.Enter(request) != EnterResult.Entered || f.Save.Loaded != f.Save.Slot.Meta ||
             f.Save.ExactGen is not null || f.Rig.Runtime.Destination?.Mode != f.Save.Slot.Meta!.Mode)
             throw new InvalidOperationException("A generation-free entry stopped restoring the latest readable entry.");
+        if (commands.Count != 2 || commands.Any(value => value.Target != (request with { Slot = f.Save.Slot.Slot })))
+            throw new InvalidOperationException("Accepted entry events lost the owner's resolved slot.");
     }
 
     [TestCase(false)]
@@ -75,9 +93,14 @@ public sealed class AppLoadEntryTests
             f.Save.Slot.Entries.Any(e => e.Gen == selected.Gen && e.Health == SlotHealth.Ok))
             throw new InvalidOperationException("The fixture must expose a readable latest entry and an unreadable selection.");
         await f.OpenTitle();
-        if (await f.Flow.Enter(new(EnterKind.LoadSlot, selected.Slot) { Gen = selected.Gen }) != EnterResult.Rejected ||
+        List<EnterCommandEvent> commands = []; f.Flow.EnterCommand += commands.Add;
+        var request = new EnterRequest(EnterKind.LoadSlot, selected.Slot) { Gen = selected.Gen };
+        if (await f.Flow.Enter(request) != EnterResult.Rejected ||
             f.Flow.State != AppState.Title || f.Save.LatestLoads != 0 || f.Save.ExactGen is not null || f.Rig.Loading.Active)
             throw new InvalidOperationException("An unreadable exact entry fell back to its readable latest sibling.");
+        if (commands.Count != 1 || commands[0] != new EnterCommandEvent(1, EnterCommandPhase.Rejected,
+            request, EnterResult.Rejected, false, null))
+            throw new InvalidOperationException("An unreadable selected entry published an accepted-work interval.");
     }
 
     [TestCase(EnterKind.Continue)]
@@ -101,11 +124,59 @@ public sealed class AppLoadEntryTests
     public async Task FailureOfTheExactLoadDoesNotRetryTheLatestOrExposeExceptionText()
     {
         using var f = new Fixture(); f.Save.FailExactLoad = true; await f.OpenTitle();
+        List<(EnterCommandEvent Command, AppState State, bool Covered)> commands = [];
+        f.Flow.EnterCommand += value => commands.Add((value, f.Flow.State, f.Rig.Loading.Active));
         if (await f.Flow.Enter(new(EnterKind.LoadSlot, f.Save.Slot.Slot) { Gen = f.Save.Older.Gen }) != EnterResult.Failed ||
             f.Save.ExactGen != f.Save.Older.Gen || f.Save.LatestLoads != 0 || f.Save.Loaded is not null ||
             f.Flow.State != AppState.Title || f.Flow.Failure is not InvalidDataException ||
             f.Flow.LastError != "title.enter_failed" || f.Rig.Loading.Active || f.Rig.Diagnostics.Count != 1)
             throw new InvalidOperationException("Exact-load failure retried a sibling or leaked its failure text to the title.");
+        if (commands.Count != 2 || commands[0].Command.Phase != EnterCommandPhase.Started ||
+            commands[1].Command != (commands[0].Command with { Phase = EnterCommandPhase.Completed, Result = EnterResult.Failed, ErrorKey = f.Flow.LastError }) ||
+            commands[1].State != AppState.Title || commands[1].Covered)
+            throw new InvalidOperationException("Failed entry closed its command before title recovery completed.");
+    }
+
+    [TestCase, TestCategory(TestReason.Contract)]
+    public async Task RejectedRequestsRetainTheirTargetsAndAdvanceTheOwnerOperation()
+    {
+        using var f = new Fixture(); List<EnterCommandEvent> commands = []; f.Flow.EnterCommand += commands.Add;
+        var request = new EnterRequest(EnterKind.NewGame, f.Save.Slot.Slot);
+        if (await f.Flow.Enter(request) != EnterResult.Rejected || f.Flow.State != AppState.Boot)
+            throw new InvalidOperationException("The fixture must reject title entry while booting.");
+        await f.OpenTitle();
+        var missing = new EnterRequest(EnterKind.NewGame);
+        if (await f.Flow.Enter(missing) != EnterResult.Rejected)
+            throw new InvalidOperationException("The fixture must reject new game without a selected slot.");
+        if (commands.Count != 2 || commands[0] != new EnterCommandEvent(1, EnterCommandPhase.Rejected,
+            request, EnterResult.Rejected, false, null) || commands[1] != new EnterCommandEvent(2,
+            EnterCommandPhase.Rejected, missing, EnterResult.Rejected, false, null))
+            throw new InvalidOperationException("Admission rejection lost its target or reused an operation number.");
+    }
+
+    [TestCase(false), TestCase(true), TestCategory(TestReason.Regression)]
+    public async Task DirectFileFailureClosesOnceAndPreservesTheOriginalException(bool fatal)
+    {
+        using var f = new Fixture();
+        Exception failure = fatal ? new OutOfMemoryException() : new IOException();
+        f.Save.FileFailure = failure;
+        if (await f.Flow.Enter(new(EnterKind.LoadSlot)) != EnterResult.Rejected)
+            throw new InvalidOperationException("The fixture must reject Enter before selecting its direct boot intent.");
+        List<EnterCommandEvent> commands = []; f.Flow.EnterCommand += commands.Add;
+        await f.Flow.PrepareBoot(new(ShowTitle: false, LoadFile: Path.Combine(RepositoryFixture.Root, "direct-entry.sav")));
+        await f.Flow.PrepareBackground(Task.CompletedTask, Task.CompletedTask);
+        Exception? actual = null;
+        try { await f.Flow.EnterDirect(); }
+        catch (Exception error) { actual = error; }
+        if (!ReferenceEquals(actual, failure) || f.Flow.State != AppState.Entering ||
+            !f.Rig.Loading.Active || !f.Rig.Camera.InputLocked || f.Save.Loaded is not null ||
+            !ReferenceEquals(f.Flow.Failure, fatal ? null : failure))
+            throw new InvalidOperationException("Direct entry changed the original failure or its existing cover ownership.");
+        var target = new EnterRequest(EnterKind.LoadSlot);
+        if (commands.Count != 2 || commands[0] != new EnterCommandEvent(2, EnterCommandPhase.Started, target, null, true, null) ||
+            commands[1] != new EnterCommandEvent(2, fatal ? EnterCommandPhase.Faulted : EnterCommandPhase.Completed,
+                target, fatal ? null : EnterResult.Failed, true, f.Flow.LastError))
+            throw new InvalidOperationException("Direct file failure fabricated a slot/result or duplicated its terminal event.");
     }
 
     [TestCase, TestCategory(TestReason.Regression)]
@@ -171,6 +242,7 @@ public sealed class AppLoadEntryTests
         internal ulong? ExactGen { get; private set; }
         internal int LatestLoads { get; private set; }
         internal bool FailExactLoad { get; set; }
+        internal Exception? FileFailure { get; set; }
         internal SlotId? FlushedSlot { get; private set; }
         internal TaskCompletionSource ArrivalStarted { get; } = new();
         internal EntrySave(FlowTestRig rig, SaveMeta older, SaveMeta latest)
@@ -183,6 +255,8 @@ public sealed class AppLoadEntryTests
         public override SlotId? Continue => Slot.Slot;
         public override SlotId? Active => Loaded?.Slot;
         public override Task<LoadResult> Load(SlotId slot) { LatestLoads++; return Restore(Slot.Meta!); }
+        public override Task<LoadResult> LoadFile(string path) => FileFailure is { } error
+            ? Task.FromException<LoadResult>(error) : base.LoadFile(path);
         public override Task<LoadResult> Load(SlotId slot, ulong gen)
         {
             ExactGen = gen;

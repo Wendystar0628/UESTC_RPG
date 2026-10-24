@@ -17,6 +17,7 @@ public sealed class SaveService : ISaveService, IDisposable, IAsyncDisposable
     private readonly List<Task> _operations = [];
     private Task? _initialization, _disposal;
     private bool _stopping;
+    private long _loadOperation;
     private IReadOnlyList<SlotInfo> _slotInfos = SaveSlots.Auto.Select(s => new SlotInfo(s, SlotKind.Auto, SlotHealth.Empty, null, 0)).ToArray();
     internal CancellationToken Lifetime { get; }
     internal SemaphoreSlim Operation { get; } = new(1, 1);
@@ -43,6 +44,7 @@ public sealed class SaveService : ISaveService, IDisposable, IAsyncDisposable
     public bool Busy => Writing.Busy;
     public SaveState State { get; private set; } = new(null, null, null, null, ReadOnlyReason.None);
     public event Action? SlotsChanged;
+    public event Action<SaveLoadEvent>? LoadCommand;
 
     public Task Initialize(SaveRuntimeOptions options, SaveRuntimeBindings bindings, SaveSections sections)
     {
@@ -75,23 +77,54 @@ public sealed class SaveService : ISaveService, IDisposable, IAsyncDisposable
     }
     public void Request(SaveReason reason) => Schedule.Request(reason);
     public Task<SaveResult> SaveNow(SaveReason reason) => Writing.SaveNow(reason);
-    public Task<LoadResult> NewGame(SlotId? slot, uint? seed = null, WorldPreset? start = null, NewGameBoot? boot = null) =>
-        Track(() => Loading.NewGame(slot, seed, start, boot));
-    public Task<LoadResult> Load(SlotId slot) => Track(() => Loading.Load(slot));
-    public Task<LoadResult> Load(SlotId slot, ulong gen) => Track(() => Loading.Load(slot, gen));
+    public Task<LoadResult> NewGame(SlotId? slot, uint? seed = null, WorldPreset? start = null, NewGameBoot? boot = null)
+    {
+        var command = NewLoadCommand(SaveLoadKind.NewGame, slot);
+        return Track(() => Loading.NewGame(command, slot, seed, start, boot), command);
+    }
+    public Task<LoadResult> Load(SlotId slot)
+    {
+        var command = NewLoadCommand(SaveLoadKind.Slot, slot);
+        return Track(() => Loading.Load(command, slot), command);
+    }
+    public Task<LoadResult> Load(SlotId slot, ulong gen)
+    {
+        var command = NewLoadCommand(SaveLoadKind.Slot, slot, gen);
+        return Track(() => Loading.Load(command, slot, gen), command);
+    }
     public Task<DeleteResult> DeleteEntry(SlotId slot, ulong gen) => Writing.Delete(slot, gen);
     public Task<DeleteResult> DeleteSlot(SlotId slot) => Writing.Delete(slot, null);
-    public Task<LoadResult> LoadFile(string path) => Track(() => Loading.LoadFile(path));
+    public Task<LoadResult> LoadFile(string path)
+    {
+        var command = NewLoadCommand(SaveLoadKind.File, null, file: path);
+        return Track(() => Loading.LoadFile(command, path), command);
+    }
     public Task<SaveResult> FlushForQuit(SaveReason reason, TimeSpan timeout) => Track(() => Writing.FlushForQuit(reason, timeout));
 
-    internal Task<T> Track<T>(Func<Task<T>> start) => (Task<T>)Track(() => (Task)start());
-    private Task Track(Func<Task> start)
+    internal SaveLoadEvent NewLoadCommand(SaveLoadKind kind, SlotId? slot,
+        ulong? generation = null, string? file = null) =>
+        new(Interlocked.Increment(ref _loadOperation), kind, SaveLoadPhase.Queued,
+            slot, generation, file, null);
+    internal void PublishLoad(in SaveLoadEvent value) => LoadCommand?.Invoke(value);
+
+    internal Task<T> Track<T>(Func<Task<T>> start, SaveLoadEvent? command = null) =>
+        (Task<T>)Track(() => (Task)start(), command);
+    private Task Track(Func<Task> start, SaveLoadEvent? command = null)
     {
         lock (_frameGate)
         {
+            if (_stopping && command is { } rejected)
+                PublishLoad(rejected with { Phase = SaveLoadPhase.Rejected });
             ObjectDisposedException.ThrowIf(_stopping, this);
             _operations.RemoveAll(task => task.IsCompletedSuccessfully);
-            var task = start(); _operations.Add(task); return task;
+            Task task;
+            try { task = start(); }
+            catch
+            {
+                if (command is { } failed) PublishLoad(failed with { Phase = SaveLoadPhase.Rejected });
+                throw;
+            }
+            _operations.Add(task); return task;
         }
     }
     public byte[]? Thumbnail(SlotId slot) => Snapshots.TryGetValue(slot, out var value) && value.Info.Meta is { } meta

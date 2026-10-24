@@ -85,10 +85,10 @@ internal static class PerfManifest
             missingReasons = new[]
             {
                 "Build commit/dirty identity is not attached; missing configuration remains null.",
-                "CPU P/E topology, dedicated VRAM and image/queue counts are not exposed by attached authorities; physical RAM is null if OS cannot report it.",
+                "CPU P/E topology and image/queue counts are not exposed by attached authorities; physical RAM is null if OS cannot report it. Render-device VRAM is null because NVML enumeration is not associated with the rendering device.",
                 "Power plan and HAGS capture is not attached. Software lists report fixed-name process presence, not whether an overlay or remote session is active.",
                 "Frame-limit reason is null if current policy inputs do not match the actual cap; quality apply origin is not exposed.",
-                "Owner command-event coverage is incomplete (eventCoverageMissing); contextComplete=false never certifies steady frames. Hardware producer attachment is reported separately.",
+                "Required command-event coverage and optional notAttached sources are reported separately; contextComplete=false never certifies steady frames. Hardware capability is established by actual NVML queries.",
                 "Desktop and focus facts remain null when GAME-229 cannot establish them; windowCanDraw is not desktop identity."
             }
         }, PerfFieldDictionary.JsonOptions)!.AsObject();

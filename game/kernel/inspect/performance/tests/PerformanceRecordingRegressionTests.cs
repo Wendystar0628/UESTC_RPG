@@ -114,8 +114,58 @@ public sealed class PerformanceRecordingRegressionTests
                 try { await opening; throw new InvalidOperationException("The throwing subscriber request succeeded."); }
                 catch (InvalidOperationException error) when (ReferenceEquals(error, original)) { }
                 if ((await queuedStop).State != PerfRecordingState.Off ||
-                    !ReferenceEquals(recorder.LastEndResult?.Error, original) || !diagnostics.Errors.Contains(original))
+                    !ReferenceEquals(recorder.LastEndResult?.Error, original) || diagnostics.Errors.Count != 1 ||
+                    !ReferenceEquals(diagnostics.Errors[0], original))
                     throw new InvalidOperationException("Request failure lost its original exception or blocked the queued stop.");
+            }
+            finally { await recorder.DrainForExitAsync(); }
+        }
+        finally { Directory.Delete(root, true); }
+    }
+
+    [TestCase(false), TestCase(true), TestCategory(TestReason.Regression), RequireGodotRuntime]
+    public async Task FaultingSubscriberCannotStrandCleanupFromWriterOrProducer(bool producer)
+    {
+        string root = PerformanceRecordingContractTests.TemporaryDirectory();
+        try
+        {
+            await using var settings = new SettingsStore(Path.Combine(root, "settings.json"));
+            var catalog = new QualityCatalog(File.ReadAllText(RepositoryFixture.FilePath("game", "data", "quality-presets.json")));
+            await using var quality = new QualityService(catalog, new GraphicsSettingsStore(settings, catalog));
+            using var frames = new FrameStatistics(((SceneTree)Engine.GetMainLoop()).Root);
+            var diagnostics = new TestDiagnosticLog();
+            var recorder = new PerformanceRecordingService(frames, settings, diagnostics, new TestInputRouter(), new RequiredResources(), quality);
+            var session = new PerfRecordingSession(root, PerfOrigin.Play, DateTimeOffset.UnixEpoch,
+                new PerfFieldDictionary(File.ReadAllText(RepositoryFixture.FilePath("game", "data", "perf-fields.json"))), new JsonObject());
+            try
+            {
+                if (!await session.Ready) throw new InvalidOperationException("The injected live session did not open.");
+                session.Begin(new(0, 0, 0));
+                if (!await session.StartedWriting) throw new InvalidOperationException("The injected live session did not start writing.");
+                // Inject an owned live session without booting unrelated map/render services.
+                const System.Reflection.BindingFlags fields = System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic;
+                typeof(PerformanceRecordingService).GetField("_session", fields)!.SetValue(recorder, session);
+                typeof(PerformanceRecordingService).GetField("_state", fields)!.SetValue(recorder, PerfRecordingState.Recording);
+                var original = new IOException();
+                var observer = new InvalidOperationException();
+                recorder.StateChanged += value => { if (value.State == PerfRecordingState.Faulted) throw observer; };
+                if (producer)
+                    typeof(PerformanceRecordingService).GetMethod("ProducerFailure", fields)!.Invoke(recorder, [original]);
+                else
+                {
+                    session.AddFailure(PerfFaultCode.WriteFailed, original);
+                    recorder.Poll();
+                }
+                var ended = await session.Completion.WaitAsync(TimeSpan.FromSeconds(5));
+                if (!ended.Closed || ended.Complete || ended.Error is not AggregateException aggregate ||
+                    !aggregate.Flatten().InnerExceptions.Contains(original) || !aggregate.Flatten().InnerExceptions.Contains(observer))
+                    throw new InvalidOperationException("Fault cleanup did not close the real session with both original failures.");
+                await recorder.DrainForExitAsync();
+                using var released = new FileStream(Path.Combine(root, ended.SessionId, ".lock"),
+                    FileMode.Open, System.IO.FileAccess.ReadWrite, FileShare.None);
+                if (diagnostics.Errors.Count != 1 || !ReferenceEquals(diagnostics.Errors[0], ended.Error) ||
+                    !File.Exists(Path.Combine(root, ended.SessionId, "manifest.json")))
+                    throw new InvalidOperationException("Fault cleanup did not publish and receive its end result exactly once.");
             }
             finally { await recorder.DrainForExitAsync(); }
         }

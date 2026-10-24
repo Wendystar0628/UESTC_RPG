@@ -136,6 +136,8 @@ public sealed record ApplyResult(
 
 public interface IQualityService                    // Kernel 服务（SYS-GRAPHICS）；界面与门禁的唯一入口
 {
+    /// <summary>Command-owner value boundaries; original failures stay on their existing channel.</summary>
+    event Action<QualityApplyEvent>? ApplyCommand;
     QualityProfile Default { get; }                 // 所有非效果项的默认值与默认效果预设
     QualityProfile Requested { get; }
     QualityView Effective { get; }                  // 实际生效值，读取无分配
@@ -165,3 +167,11 @@ public sealed class QualityResponsiveAttribute : Attribute   // 标在 Godot 侧
 // ParticleDensity：Owns（降水池），Reads（飘落池按同一系数降；萤火虫不降，SYS-GRAPHICS）
 // 着色器要的植被密度由 game/kernel/quality/ 合成全局参数 quality（vec4，ENG-PERF）
 // 设置由 settings.json 的统一读写方持久化；各包只经 IQualityService 和 IQualityAware 接收画面设置（SYS-GRAPHICS）
+
+public enum QualityApplyPhase : byte
+{
+    Queued, Started, Rejected, Completed, Superseded, Canceled, Faulted
+}
+public readonly record struct QualityApplyEvent(
+    long Operation, QualityApplyPhase Phase, QualityRequest Target,
+    ApplyOrigin Origin, ApplyResult? Result);

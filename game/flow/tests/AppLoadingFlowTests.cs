@@ -147,14 +147,19 @@ public sealed class AppLoadingFlowTests
         var rig = new FlowTestRig(); var saves = new FullSave(rig);
         var exit = new TestAppExit();
         using var flow = rig.CreateFlow(saves, Maps(), exit);
+        List<EnterCommandEvent> commands = []; flow.EnterCommand += commands.Add;
         await flow.PrepareBoot(new());
         var map = new TaskCompletionSource(); var global = new TaskCompletionSource();
         var work = flow.PrepareBackground(map.Task, global.Task);
         await rig.Title.Show(); await flow.OpenTitle();
         var entering = flow.Enter(new(EnterKind.NewGame, new("s1")));
+        if (commands.Count != 1 || commands[0].Phase != EnterCommandPhase.Started || entering.IsCompleted)
+            throw new InvalidOperationException("The fixture must start entry while its background wait is still active.");
         await flow.Quit();
         if (await entering != EnterResult.Rejected || saves.NewGames != 0 || flow.State != AppState.Quitting || exit.Calls != 1 || work.IsCompleted)
             throw new InvalidOperationException("Early quit created a world or abandoned its background task owner.");
+        if (commands.Count != 2 || commands[1] != (commands[0] with { Phase = EnterCommandPhase.Completed, Result = EnterResult.Rejected }))
+            throw new InvalidOperationException("An admitted entry canceled by quit must complete once with its real Rejected result.");
         map.SetCanceled(); global.SetResult();
         try { await work; throw new InvalidOperationException("Canceled background completed successfully."); }
         catch (OperationCanceledException) when (work.IsCanceled) { }
@@ -205,12 +210,17 @@ public sealed class AppLoadingFlowTests
     {
         var rig = new FlowTestRig(); var saves = new FullSave(rig);
         using var flow = rig.CreateFlow(saves, Maps(), new TestAppExit(false));
+        List<EnterCommandEvent> commands = []; flow.EnterCommand += commands.Add;
         await flow.PrepareBoot(new(ShowTitle: false));
         await flow.PrepareBackground(Task.CompletedTask, Task.CompletedTask);
         var arrival = await flow.EnterDirect();
         if (flow.State != AppState.Playing || saves.NewGames != 1 || saves.Active is not null || saves.Saves != 0 ||
             !ReferenceEquals(arrival, rig.Runtime.Arrival) || rig.Runtime.Arrivals != 1 || rig.Title.Visible)
             throw new InvalidOperationException("Direct entry activated a save slot or constructed a title world.");
+        var target = new EnterRequest(EnterKind.NewGame);
+        if (commands.Count != 2 || commands[0] != new EnterCommandEvent(1, EnterCommandPhase.Started, target, null, true, null) ||
+            commands[1] != (commands[0] with { Phase = EnterCommandPhase.Completed, Result = EnterResult.Entered }))
+            throw new InvalidOperationException("Direct entry fabricated a slot or skipped its shared command boundary.");
     }
 
     [TestCase, TestCategory(TestReason.Regression)]

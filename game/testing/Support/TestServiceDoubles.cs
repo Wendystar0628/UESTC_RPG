@@ -33,6 +33,8 @@ internal sealed class TestAppFlow : IAppFlow
     public string? LastError => null;
     public event Action<AppState, AppState>? Changed;
     public event Action<string>? PhaseReached { add { } remove { } }
+    public event Action<EnterCommandEvent>? EnterCommand;
+    public void PublishEnterCommand(EnterCommandEvent value) => EnterCommand?.Invoke(value);
     public int Observers => Changed?.GetInvocationList().Length ?? 0;
     public void SetState(AppState state)
     {
@@ -116,6 +118,8 @@ internal class TestSaveService : ISaveService
     public virtual bool Busy => false;
     public virtual SaveState State => new(Active, null, null, null, ReadOnlyReason.None);
     public event Action? SlotsChanged { add { } remove { } }
+    public event Action<SaveLoadEvent>? LoadCommand;
+    public void PublishLoadCommand(SaveLoadEvent value) => LoadCommand?.Invoke(value);
     public virtual void Request(SaveReason reason) { }
     public virtual Task<SaveResult> SaveNow(SaveReason reason) => throw new InvalidOperationException("Unexpected SaveNow.");
     public virtual Task<LoadResult> Load(SlotId slot) => throw new InvalidOperationException("Unexpected Load.");

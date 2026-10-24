@@ -119,6 +119,8 @@ public sealed class QualityApplicationPersistenceTests
         var knob = QualityKnob.Vignette;
         var values = new Dictionary<QualityKnob, float> { [knob] = catalog[knob].Min };
         var edits = new List<QualityKnob> { knob };
+        var commands = new List<QualityApplyEvent>();
+        service.ApplyCommand += commands.Add;
         runtime.Transitioning = true;
         await service.Apply(new(new(QualityPreset.Ultra, values), QualityEditIntent.EditKnobs, edits), ApplyOrigin.User);
         values[knob] = catalog[knob].Max;
@@ -127,6 +129,10 @@ public sealed class QualityApplicationPersistenceTests
         runtime.Transitioning = false;
         service.Tick(.25);
         service.Tick(0);
+        AssertThat(commands.Select(value => value.Phase).SequenceEqual(new[]
+            { QualityApplyPhase.Queued, QualityApplyPhase.Started, QualityApplyPhase.Completed }) &&
+            commands.All(value => value.Target.EditedKnobs.SequenceEqual(new[] { knob }) &&
+                value.Target.Profile.Overrides[knob] == catalog[knob].Min)).IsTrue();
         var expected = catalog.ResolveRequested(baseline, baseline.Preset);
         expected[(int)knob] = catalog[knob].Min;
         AssertSaved(store, baseline.Preset, expected);

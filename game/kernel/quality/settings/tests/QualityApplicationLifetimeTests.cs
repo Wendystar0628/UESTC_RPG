@@ -79,6 +79,8 @@ public sealed class QualityApplicationLifetimeTests
             var (service, runtime, store) = await CliSession($"close-release-failure-{canceled}");
             using var cleanup = store;
             var releaseFailure = new InvalidOperationException();
+            var commands = new List<QualityApplyEvent>();
+            service.ApplyCommand += commands.Add;
             runtime.HeldRelease = new();
             runtime.LoadingReleaseFailure = releaseFailure;
             runtime.FailReadiness = !canceled;
@@ -89,6 +91,7 @@ public sealed class QualityApplicationLifetimeTests
             service.Unbind(runtime);
             var shutdown = service.DisposeAsync().AsTask();
             AssertThat(!pending.IsCompleted).OverrideFailureMessage("The active request completed before releasing its loading lease.").IsTrue();
+            AssertThat(commands.Count == 2 && commands[^1].Phase == QualityApplyPhase.Started).IsTrue();
             AssertThat(!shutdown.IsCompleted).OverrideFailureMessage("Quality shutdown did not drain its unmounted application.").IsTrue();
             runtime.HeldRelease.SetResult();
             Exception? observed = null;
@@ -99,6 +102,8 @@ public sealed class QualityApplicationLifetimeTests
                 failures.Any(error => canceled ? error is OperationCanceledException : error is TimeoutException))
                 .OverrideFailureMessage("Loading release replaced the original application failure.").IsTrue();
             AssertThat(runtime.Failures.Count == 1 && ReferenceEquals(runtime.Failures[0], observed)).IsTrue();
+            AssertThat(commands.Count == 3 && commands[^1].Phase == QualityApplyPhase.Faulted && commands[^1].Result is null &&
+                commands.All(value => value.Operation == commands[0].Operation)).IsTrue();
             Exception? shutdownFailure = null;
             try { await shutdown; }
             catch (Exception error) { shutdownFailure = error; }
@@ -119,6 +124,8 @@ public sealed class QualityApplicationLifetimeTests
             var (service, runtime, store) = await CliSession($"close-{boundary}");
             using var cleanup = store;
             var changes = new List<QualityChange>();
+            var commands = new List<QualityApplyEvent>();
+            service.ApplyCommand += commands.Add;
             service.Changed += changes.Add;
             runtime.HoldAt = boundary;
             if (boundary == "save") store.HeldWrite = new();
@@ -145,6 +152,10 @@ public sealed class QualityApplicationLifetimeTests
             runtime.Held.TrySetResult(.1);
             store.HeldWrite?.TrySetResult();
             await closing.WaitAsync(TimeSpan.FromSeconds(5));
+            AssertThat(commands.Count == 5 && commands.Count(value => value.Phase == QualityApplyPhase.Canceled) == 2 &&
+                commands.Where(value => value.Phase == QualityApplyPhase.Canceled).All(value => value.Result is null) &&
+                commands.Where(value => value.Phase == QualityApplyPhase.Queued).All(queued =>
+                    commands.Count(value => value.Operation == queued.Operation && value.Phase == QualityApplyPhase.Canceled) == 1)).IsTrue();
             await Task.Yield();
             service.Tick(0);
             if (runtime.DispatchCount != dispatches || runtime.HideCount != hides || store.SaveCount != saves || changes.Count != 0)
@@ -161,6 +172,8 @@ public sealed class QualityApplicationLifetimeTests
             var (service, runtime, store) = await CliSession($"close-queued-{transitioning}");
             using var cleanup = store;
             runtime.Transitioning = transitioning;
+            var commands = new List<QualityApplyEvent>();
+            service.ApplyCommand += commands.Add;
             var dispatches = runtime.DispatchCount;
             var pending = service.Apply(Edit(new(service.Requested.Preset,
                 new Dictionary<QualityKnob, float> { [QualityKnob.ParticleDensity] = .5f }), QualityKnob.ParticleDensity), ApplyOrigin.User);
@@ -173,6 +186,9 @@ public sealed class QualityApplicationLifetimeTests
             service.Tick(20);
             if (runtime.DispatchCount != dispatches || store.SaveCount != 0)
                 throw new InvalidOperationException("Unbound service ran its queued application.");
+            AssertThat(commands.Count == 2 && commands[0].Phase == QualityApplyPhase.Queued &&
+                commands[1].Phase == QualityApplyPhase.Canceled && commands[1].Result is null &&
+                commands[0].Operation == commands[1].Operation).IsTrue();
         }
     }
 
@@ -190,6 +206,8 @@ public sealed class QualityApplicationLifetimeTests
             runtime.HoldAt = "frame";
             var dispatches = runtime.DispatchCount;
             var changes = 0;
+            var commands = new List<QualityApplyEvent>();
+            service.ApplyCommand += commands.Add;
             service.Changed += _ => changes++;
             var pending = initializing ? service.Initialize(BootPhase.AfterMapWarm, Context()) :
                 service.Apply(SelectPreset(QualityPreset.Ultra), ApplyOrigin.CommandLine);
@@ -198,6 +216,9 @@ public sealed class QualityApplicationLifetimeTests
             if (!token.IsCancellationRequested) throw new InvalidOperationException("Unbinding left the runtime lifetime open.");
             runtime.Held.TrySetResult(.1);
             await Task.Yield();
+            AssertThat(initializing ? commands.Count == 0 : commands.Count == 2 &&
+                commands[0].Phase == QualityApplyPhase.Started && commands[1].Phase == QualityApplyPhase.Canceled &&
+                commands[1].Result is null && commands[0].Operation == commands[1].Operation).IsTrue();
             if (runtime.DispatchCount != dispatches || changes != 0 || store.SaveCount != 0)
                 throw new InvalidOperationException("Closed boot application published or saved its late frame.");
         }

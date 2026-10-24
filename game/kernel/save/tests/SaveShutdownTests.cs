@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using Campus.Contracts.AppFlow;
 using Campus.Contracts.Save;
 using Campus.Kernel.Save.Format;
@@ -104,10 +105,18 @@ public sealed class SaveShutdownTests
         await using var f = new SaveLifecycleFixture();
         await f.Seed(); await f.Pump(f.Initialize());
         f.Storage.BlockReads();
+        var commands = new ConcurrentQueue<SaveLoadEvent>();
+        f.Save.LoadCommand += commands.Enqueue;
         var loading = external ? f.Save.LoadFile(f.Storage.GenerationFile!) : f.Save.Load(SaveSlots.Auto[0]);
         await f.Pump(Task.WhenAny(f.Storage.ReadEntered.Task, loading));
         AssertThat(f.Storage.ReadEntered.Task.IsCompletedSuccessfully && !loading.IsCompleted && f.Camera.Locks == 1).IsTrue();
         var queued = f.Save.NewGame(null, 2);
+        var admitted = commands.ToArray();
+        AssertThat(admitted.Select(value => value.Phase).SequenceEqual(new[] { SaveLoadPhase.Started, SaveLoadPhase.Queued })).IsTrue();
+        AssertThat(admitted[0].Kind == (external ? SaveLoadKind.File : SaveLoadKind.Slot) &&
+            (external ? admitted[0].Slot is null : admitted[0].Slot == SaveSlots.Auto[0]) &&
+            admitted[0].File == (external ? f.Storage.GenerationFile : null) && admitted[0].RequestedGeneration is null &&
+            admitted[1].Kind == SaveLoadKind.NewGame && admitted[1].Slot is null && admitted[1].Result is null).IsTrue();
         var closing = f.Save.DisposeAsync().AsTask();
         AssertThat(!closing.IsCompleted && !loading.IsCompleted).IsTrue();
         var rejected = 0;
@@ -117,6 +126,14 @@ public sealed class SaveShutdownTests
         AssertThat(rejected).IsEqual(3);
         f.Storage.ReleaseReads(); await closing;
         AssertThat(loading.IsCanceled && queued.IsCanceled && f.Camera.Locks == 0 && !f.Save.Enabled).IsTrue();
+        var events = commands.ToArray();
+        AssertThat(events.Where(value => value.Operation == admitted[0].Operation).Select(value => value.Phase)
+            .SequenceEqual(new[] { SaveLoadPhase.Started, SaveLoadPhase.Canceled })).IsTrue();
+        AssertThat(events.Where(value => value.Operation == admitted[1].Operation).Select(value => value.Phase)
+            .SequenceEqual(new[] { SaveLoadPhase.Queued, SaveLoadPhase.Canceled })).IsTrue();
+        AssertThat(events.Count(value => value.Phase == SaveLoadPhase.Rejected) == rejected &&
+            events.All(value => value.Result is null) &&
+            events.Select(value => value.Operation).Distinct().Count() == rejected + admitted.Length).IsTrue();
         using var unlocked = File.Open(Path.Combine(f.Storage.Folder.Path, ".lock"), FileMode.Open, FileAccess.ReadWrite, FileShare.None);
         AssertThat(f.Diagnostics.Errors.Count).IsEqual(0);
     }

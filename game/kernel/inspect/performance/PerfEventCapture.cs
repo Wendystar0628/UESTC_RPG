@@ -28,8 +28,8 @@ internal sealed class PerfEventCapture : IDisposable
     private readonly ISaveService _save = KernelServices.Get<ISaveService>();
     private readonly IAppLoadingPresentation _loading = KernelServices.Get<IAppLoadingPresentation>();
     private readonly Viewport _viewport;
-    private readonly System.Diagnostics.Process _process = System.Diagnostics.Process.GetCurrentProcess();
     private readonly PerfContextCapture _context;
+    private readonly PerfSaveCommandQueue _saveCommands = new();
     private IMapArrival? _arrival;
     private bool _mapBound, _arrivalFinished, _disposed;
     private double _nextSample, _lastCpuAt;
@@ -57,8 +57,7 @@ internal sealed class PerfEventCapture : IDisposable
         _dictionary = dictionary;
         _samples = samples;
         _viewport = viewport;
-        // AppFlow/Save/Map/Quality begin/terminal notifications remain pending their owner contracts.
-        _context = new(dictionary, requiredOwnerBoundariesAttached: false);
+        _context = new(dictionary, requiredOwnerBoundariesAttached: true);
         _mode = _observer.Mode; _space = _observer.Space; _mediumKind = _medium.Current.Kind;
         _activity = _app.Activity; _transition = _world.Transition; _season = _world.SeasonTarget;
         _weather = _world.Weather; _flow = _world.Flow;
@@ -71,6 +70,10 @@ internal sealed class PerfEventCapture : IDisposable
     {
         _app.Changed += OnAppState;
         _app.PhaseReached += OnAppPhase;
+        _app.EnterCommand += OnEnterCommand;
+        _maps.PrepareCommand += OnPrepareCommand;
+        _quality.ApplyCommand += OnApplyCommand;
+        _save.LoadCommand += _saveCommands.Enqueue;
         _world.InstanceChanged += OnWorldInstance;
         _ui.Changed += OnUi;
         _quality.Changed += OnQuality;
@@ -86,7 +89,9 @@ internal sealed class PerfEventCapture : IDisposable
             saveState = _save.State, saveBusy = _save.Busy,
             loadingActive = _loading.Active, loadingCovered = _loading.IsCovered,
             qualityRequested = PerfManifest.QualityValues(_quality, true), qualityEffective = PerfManifest.QualityValues(_quality, false),
-            missing = PerfContextCapture.MissingCoverage
+            requiredCoverage = _context.RequiredCoverage, requiredMissing = _context.RequiredMissing,
+            notAttached = _context.NotAttached,
+            commandIntervalStart = "unknownBeforeRecording; existing operations are not replayed or assigned an operation number"
         });
         OnSize();
     }
@@ -124,6 +129,7 @@ internal sealed class PerfEventCapture : IDisposable
 
     public (long Flags, bool Complete) OnFrame(in FrameSample frame)
     {
+        DrainSaveCommands(frame.CollectionFrame, frame.MonotonicMilliseconds);
         CheckOwnerChanges(in frame);
         CheckArrival();
         _checkedFrames++;
@@ -141,10 +147,10 @@ internal sealed class PerfEventCapture : IDisposable
     public void Poll()
     {
         double now = FrameClock.MonotonicMilliseconds;
+        DrainSaveCommands(Engine.GetProcessFrames(), now);
         if (now < _nextSample) return;
         _nextSample = now + _dictionary.SampleIntervalMilliseconds;
-        _process.Refresh();
-        var cpu = _process.TotalProcessorTime;
+        var cpu = System.Environment.CpuUsage.TotalTime;
         double? cpuFraction = _lastCpu is { } previous && now > _lastCpuAt
             ? Math.Clamp((cpu - previous).TotalMilliseconds / (now - _lastCpuAt) / System.Environment.ProcessorCount, 0, 1) : null;
         _lastCpu = cpu; _lastCpuAt = now;
@@ -167,7 +173,7 @@ internal sealed class PerfEventCapture : IDisposable
             ["seasonFraction"] = live ? _world.SeasonPos - Math.Floor(_world.SeasonPos) : null,
             ["weather"] = live ? _world.Weather.Kind.ToString() : null, ["weatherIntensity"] = live ? _world.Weather.Intensity : null,
             ["flowRate"] = live ? _world.Flow.Rate : null, ["worldTransition"] = live ? (int)_world.Transition : null,
-            ["workingSetMiB"] = _process.WorkingSet64 / 1048576d, ["privateMiB"] = _process.PrivateMemorySize64 / 1048576d,
+            ["workingSetMiB"] = System.Environment.WorkingSet / 1048576d, ["privateMiB"] = null,
             ["managedHeapMiB"] = GC.GetGCMemoryInfo().HeapSizeBytes / 1048576d,
             ["godotStaticMiB"] = Monitor(Performance.Monitor.MemoryStatic) / 1048576d,
             ["engineVideoMemoryMiB"] = Monitor(Performance.Monitor.RenderVideoMemUsed) / 1048576d,
@@ -252,7 +258,6 @@ internal sealed class PerfEventCapture : IDisposable
     }
     private void OnAppState(AppState from, AppState to)
     {
-        _context.Settle("newGameOrLoad");
         Emit("app.state", new { from = from.ToString(), to = to.ToString() });
     }
     private void OnAppPhase(string phase) => Emit("app.phase", new { phase });
@@ -260,11 +265,44 @@ internal sealed class PerfEventCapture : IDisposable
     private void OnUi() => Emit("ui.surface", new { surfaces = (int)_ui.Open, settingsPage = _ui.SettingsPage });
     private void OnQuality(QualityChange change)
     {
-        _context.Settle("qualityApply");
         Emit("settings.quality", new { change, requested = PerfManifest.QualityValues(_quality, true),
             effective = PerfManifest.QualityValues(_quality, false), observation = "ownerChanged" });
     }
     private void OnSave() => Emit("save.write", new { state = _save.State, busy = _save.Busy, active = _save.Active });
+    private void OnEnterCommand(EnterCommandEvent value)
+    {
+        double time = FrameClock.MonotonicMilliseconds;
+        bool startObserved = _context.Observe(in value, time);
+        Emit("game.enter", new { owner = "IAppFlow", operation = value.Operation, phase = value.Phase,
+            target = value.Target, result = value.Result, direct = value.Direct, errorKey = value.ErrorKey,
+            startObserved }, time: time);
+    }
+    private void OnPrepareCommand(MapPrepareEvent value)
+    {
+        double time = FrameClock.MonotonicMilliseconds;
+        bool startObserved = _context.Observe(in value, time);
+        Emit("map.prepare", new { owner = "IMapService", operation = value.Operation, phase = value.Phase,
+            from = value.From, to = value.To, result = value.Result, startObserved }, time: time);
+    }
+    private void OnApplyCommand(QualityApplyEvent value)
+    {
+        double time = FrameClock.MonotonicMilliseconds;
+        bool startObserved = _context.Observe(in value, time);
+        Emit("settings.apply", new { owner = "IQualityService", operation = value.Operation, phase = value.Phase,
+            target = value.Target, origin = value.Origin, result = value.Result, startObserved }, time: time);
+    }
+    // SaveLoading resumes off-thread. Its callback only copies a contract value into this independent queue.
+    // The main sampling point supplies observation time/frame; it never claims the original worker timestamp.
+    private void DrainSaveCommands(ulong frame, double time)
+    {
+        while (_saveCommands.TryDequeue(out var value))
+        {
+            bool startObserved = _context.Observe(in value, time);
+            Emit("save.load", new { owner = "ISaveService", operation = value.Operation, phase = value.Phase,
+                kind = value.Kind, requestedSlot = value.Slot, requestedGeneration = value.RequestedGeneration,
+                file = value.File, result = value.Result, startObserved, timing = "mainThreadObservation" }, frame, time);
+        }
+    }
     private void OnSize()
     {
         var size = _viewport.GetVisibleRect().Size;
@@ -272,7 +310,7 @@ internal sealed class PerfEventCapture : IDisposable
     }
     public void Readback(string phase, string purpose, ulong frame)
     {
-        if (purpose == "saveThumbnail") _context.ThumbnailFrame = frame;
+        _context.Readback(purpose, frame);
         Emit("sync.readback", new { phase, purpose }, frame);
     }
     private void Emit(string name, object payload, ulong? frame = null, double? time = null) =>
@@ -292,10 +330,34 @@ internal sealed class PerfEventCapture : IDisposable
         finally
         {
             _app.Changed -= OnAppState; _app.PhaseReached -= OnAppPhase;
+            _app.EnterCommand -= OnEnterCommand; _maps.PrepareCommand -= OnPrepareCommand;
+            _quality.ApplyCommand -= OnApplyCommand; _save.LoadCommand -= _saveCommands.Enqueue;
+            _saveCommands.Stop();
             _world.InstanceChanged -= OnWorldInstance; _ui.Changed -= OnUi;
             _quality.Changed -= OnQuality; _save.SlotsChanged -= OnSave; _viewport.SizeChanged -= OnSize;
-            _samples.Stop();
-            _process.Dispose();
+            try { DrainSaveCommands(Engine.GetProcessFrames(), FrameClock.MonotonicMilliseconds); }
+            finally
+            {
+                _samples.Stop();
+            }
         }
     }
+}
+
+/// <summary>Save callbacks may run on workers; a BCL value queue keeps them away from scene state and SingleWriter sinks.</summary>
+internal sealed class PerfSaveCommandQueue
+{
+    private readonly object _gate = new();
+    private readonly Queue<SaveLoadEvent> _values = new();
+    private bool _stopped;
+    public void Enqueue(SaveLoadEvent value)
+    {
+        lock (_gate)
+            if (!_stopped) _values.Enqueue(value);
+    }
+    public bool TryDequeue(out SaveLoadEvent value)
+    {
+        lock (_gate) return _values.TryDequeue(out value);
+    }
+    public void Stop() { lock (_gate) _stopped = true; }
 }

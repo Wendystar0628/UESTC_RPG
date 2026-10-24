@@ -33,87 +33,187 @@ internal sealed class SaveLoading(SaveService owner) : IDisposable
         finally { _owner.Operation.Release(); }
     }
     public void Dispose() => _restore?.Dispose();
-    internal Task<LoadResult> NewGame(SlotId? slot, uint? seed = null, WorldPreset? start = null, NewGameBoot? boot = null)
+    internal Task<LoadResult> NewGame(SaveLoadEvent command, SlotId? slot, uint? seed = null, WorldPreset? start = null, NewGameBoot? boot = null)
     {
         if (slot is { } selected && !SaveSlots.Auto.Contains(selected)) throw new ArgumentOutOfRangeException(nameof(slot));
-        return RestoreDefaultWorld(slot, seed, start, boot);
+        return RestoreDefaultWorld(command, slot, seed, start, boot);
     }
 
-    private async Task<LoadResult> RestoreDefaultWorld(SlotId? slot, uint? seed, WorldPreset? start, NewGameBoot? boot)
+    private async Task<LoadResult> RestoreDefaultWorld(SaveLoadEvent command, SlotId? slot, uint? seed, WorldPreset? start, NewGameBoot? boot)
     {
-        await _owner.Operation.WaitAsync(_owner.Lifetime).ConfigureAwait(false);
+        LoadResult? outcome = null;
+        bool ended = false, canceled = false;
         try
         {
-            await BeginRestoreOperation().ConfigureAwait(false);
-            NewGameContext? defaults = null;
-            var repairs = new List<string>();
-            var prepared = await _owner.OnFrame(() =>
+            var waiting = _owner.Operation.WaitAsync(_owner.Lifetime);
+            if (!waiting.IsCompleted) _owner.PublishLoad(command with { Phase = SaveLoadPhase.Queued });
+            await waiting.ConfigureAwait(false);
+            try
             {
-                var result = _restore!.PrepareDefaultWorld(_owner.Options, _owner.Sections, _defaultRuleset,
-                    slot, seed, start, boot, selected => checked(_owner.Snapshots[selected].MaxGeneration + 1));
-                defaults = result.Defaults;
-                _owner.Writing.NewWorld(slot);
-                return result.Save;
-            }).ConfigureAwait(false);
-            await PrepareMap(prepared.Document.Meta.Map).ConfigureAwait(false);
-            await _owner.OnFrame(() => _restore!.RestorePhaseOf(prepared, RestorePhase.Content, repairs, defaults)).ConfigureAwait(false);
-            prepared = await PrepareViewPose(prepared, repairs, defaults).ConfigureAwait(false);
-            var wait = await _owner.OnFrame(() =>
+                _owner.PublishLoad(command with { Phase = SaveLoadPhase.Started });
+                await BeginRestoreOperation().ConfigureAwait(false);
+                NewGameContext? defaults = null;
+                var repairs = new List<string>();
+                var prepared = await _owner.OnFrame(() =>
+                {
+                    var result = _restore!.PrepareDefaultWorld(_owner.Options, _owner.Sections, _defaultRuleset,
+                        slot, seed, start, boot, selected => checked(_owner.Snapshots[selected].MaxGeneration + 1));
+                    defaults = result.Defaults;
+                    _owner.Writing.NewWorld(slot);
+                    return result.Save;
+                }).ConfigureAwait(false);
+                await PrepareMap(prepared.Document.Meta.Map).ConfigureAwait(false);
+                await _owner.OnFrame(() => _restore!.RestorePhaseOf(prepared, RestorePhase.Content, repairs, defaults)).ConfigureAwait(false);
+                prepared = await PrepareViewPose(prepared, repairs, defaults).ConfigureAwait(false);
+                var wait = await _owner.OnFrame(() =>
+                {
+                    _restore!.RestorePhaseOf(prepared, RestorePhase.Pose, repairs, defaults);
+                    return _owner.Runtime.WaitDestination(_owner.Runtime.Camera.Pose, _owner.Runtime.Observer.Space, _owner.Runtime.Observer.Mode);
+                }).ConfigureAwait(false);
+                await wait.ConfigureAwait(false);
+                await _owner.OnFrame(_restore!.Succeed).ConfigureAwait(false);
+                outcome = new(LoadStatus.Loaded, _owner.Active, 0, repairs);
+                return outcome;
+            }
+            catch (Exception) when (_owner.Stopping) { throw; }
+            catch (Exception error) { outcome = await RestoreFailed(slot, error).ConfigureAwait(false); return outcome; }
+            finally
             {
-                _restore!.RestorePhaseOf(prepared, RestorePhase.Pose, repairs, defaults);
-                return _owner.Runtime.WaitDestination(_owner.Runtime.Camera.Pose, _owner.Runtime.Observer.Space, _owner.Runtime.Observer.Mode);
-            }).ConfigureAwait(false);
-            await wait.ConfigureAwait(false);
-            await _owner.OnFrame(_restore!.Succeed).ConfigureAwait(false);
-            return new(LoadStatus.Loaded, _owner.Active, 0, repairs);
+                await EndOperation().ConfigureAwait(false);
+                ended = true;
+            }
         }
-        catch (Exception) when (_owner.Stopping) { throw; }
-        catch (Exception error) { return await RestoreFailed(slot, error).ConfigureAwait(false); }
-        finally { await EndOperation().ConfigureAwait(false); }
+        catch (OperationCanceledException error) when (_owner.Stopping && error.CancellationToken == _owner.Lifetime)
+        {
+            canceled = true;
+            throw;
+        }
+        finally
+        {
+            _owner.PublishLoad(command with
+            {
+                Phase = ended && outcome is not null ? SaveLoadPhase.Completed :
+                    canceled ? SaveLoadPhase.Canceled : SaveLoadPhase.Faulted,
+                Result = ended && outcome is not null ? outcome : null
+            });
+        }
     }
 
-    internal async Task<LoadResult> Load(SlotId slot, ulong? generation = null)
+    internal async Task<LoadResult> Load(SaveLoadEvent command, SlotId slot, ulong? generation = null)
     {
-        if (!SaveSlots.Auto.Contains(slot)) throw new ArgumentOutOfRangeException(nameof(slot));
-        if (generation == 0) throw new ArgumentOutOfRangeException(nameof(generation));
-        await _owner.Operation.WaitAsync(_owner.Lifetime).ConfigureAwait(false);
+        LoadResult? outcome = null;
+        bool ended = false, canceled = false, rejected = false;
         try
         {
-            if (!_owner.Initialized) return new(LoadStatus.Failed, slot, 0, [], "Save service is not initialized.");
-            await BeginRestoreOperation().ConfigureAwait(false);
-            var scan = await Task.Run(() => _owner.Repository!.Scan(slot)).ConfigureAwait(false);
-            await _owner.OnFrame(() => { _owner.Snapshots[slot] = scan; _owner.Publish(null); }).ConfigureAwait(false);
-            if (scan.Save is null) return new(scan.Info.Health switch
+            if (!SaveSlots.Auto.Contains(slot))
             {
-                SlotHealth.Empty => LoadStatus.Empty,
-                SlotHealth.Corrupt or SlotHealth.Newer => LoadStatus.Corrupt,
-                _ => LoadStatus.Failed
-            }, slot, 0, []);
-            var prepared = generation is { } selected
-                ? await Task.Run(() => _owner.Repository!.ReadEntry(slot, selected)).ConfigureAwait(false) : scan.Save;
-            return await Restore(prepared, _owner.Options.WriteSlot ?? slot).ConfigureAwait(false);
+                rejected = true;
+                _owner.PublishLoad(command with { Phase = SaveLoadPhase.Rejected });
+                throw new ArgumentOutOfRangeException(nameof(slot));
+            }
+            if (generation == 0)
+            {
+                rejected = true;
+                _owner.PublishLoad(command with { Phase = SaveLoadPhase.Rejected });
+                throw new ArgumentOutOfRangeException(nameof(generation));
+            }
+            var waiting = _owner.Operation.WaitAsync(_owner.Lifetime);
+            if (!waiting.IsCompleted) _owner.PublishLoad(command with { Phase = SaveLoadPhase.Queued });
+            await waiting.ConfigureAwait(false);
+            try
+            {
+                _owner.PublishLoad(command with { Phase = SaveLoadPhase.Started });
+                if (!_owner.Initialized)
+                {
+                    outcome = new(LoadStatus.Failed, slot, 0, [], "Save service is not initialized.");
+                    return outcome;
+                }
+                await BeginRestoreOperation().ConfigureAwait(false);
+                var scan = await Task.Run(() => _owner.Repository!.Scan(slot)).ConfigureAwait(false);
+                await _owner.OnFrame(() => { _owner.Snapshots[slot] = scan; _owner.Publish(null); }).ConfigureAwait(false);
+                if (scan.Save is null)
+                {
+                    outcome = new(scan.Info.Health switch
+                    {
+                        SlotHealth.Empty => LoadStatus.Empty,
+                        SlotHealth.Corrupt or SlotHealth.Newer => LoadStatus.Corrupt,
+                        _ => LoadStatus.Failed
+                    }, slot, 0, []);
+                    return outcome;
+                }
+                var prepared = generation is { } selected
+                    ? await Task.Run(() => _owner.Repository!.ReadEntry(slot, selected)).ConfigureAwait(false) : scan.Save;
+                outcome = await Restore(prepared, _owner.Options.WriteSlot ?? slot).ConfigureAwait(false);
+                return outcome;
+            }
+            catch (Exception) when (_owner.Stopping) { throw; }
+            catch (SaveFormatException error) when (_restore?.MutationStarted != true)
+            { outcome = await RejectEntry(slot, generation, error).ConfigureAwait(false); return outcome; }
+            catch (Exception error) { outcome = await RestoreFailed(slot, error).ConfigureAwait(false); return outcome; }
+            finally
+            {
+                await EndOperation().ConfigureAwait(false);
+                ended = true;
+            }
         }
-        catch (Exception) when (_owner.Stopping) { throw; }
-        catch (SaveFormatException error) when (_restore?.MutationStarted != true)
-        { return await RejectEntry(slot, generation, error).ConfigureAwait(false); }
-        catch (Exception error) { return await RestoreFailed(slot, error).ConfigureAwait(false); }
-        finally { await EndOperation().ConfigureAwait(false); }
+        catch (OperationCanceledException error) when (_owner.Stopping && error.CancellationToken == _owner.Lifetime)
+        {
+            canceled = true;
+            throw;
+        }
+        finally
+        {
+            if (!rejected)
+                _owner.PublishLoad(command with
+                {
+                    Phase = ended && outcome is not null ? SaveLoadPhase.Completed :
+                        canceled ? SaveLoadPhase.Canceled : SaveLoadPhase.Faulted,
+                    Result = ended && outcome is not null ? outcome : null
+                });
+        }
     }
 
-    internal async Task<LoadResult> LoadFile(string path)
+    internal async Task<LoadResult> LoadFile(SaveLoadEvent command, string path)
     {
-        await _owner.Operation.WaitAsync(_owner.Lifetime).ConfigureAwait(false);
+        LoadResult? outcome = null;
+        bool ended = false, canceled = false;
         try
         {
-            await BeginRestoreOperation().ConfigureAwait(false);
-            var prepared = await Task.Run(() => _owner.Repository!.ReadExternal(path)).ConfigureAwait(false);
-            return await Restore(prepared, _owner.Options.WriteSlot).ConfigureAwait(false);
+            var waiting = _owner.Operation.WaitAsync(_owner.Lifetime);
+            if (!waiting.IsCompleted) _owner.PublishLoad(command with { Phase = SaveLoadPhase.Queued });
+            await waiting.ConfigureAwait(false);
+            try
+            {
+                _owner.PublishLoad(command with { Phase = SaveLoadPhase.Started });
+                await BeginRestoreOperation().ConfigureAwait(false);
+                var prepared = await Task.Run(() => _owner.Repository!.ReadExternal(path)).ConfigureAwait(false);
+                outcome = await Restore(prepared, _owner.Options.WriteSlot).ConfigureAwait(false);
+                return outcome;
+            }
+            catch (Exception) when (_owner.Stopping) { throw; }
+            catch (SaveFormatException error) when (_restore?.MutationStarted != true)
+            { outcome = await RejectExternalFile(error).ConfigureAwait(false); return outcome; }
+            catch (Exception error) { outcome = await RestoreFailed(null, error).ConfigureAwait(false); return outcome; }
+            finally
+            {
+                await EndOperation().ConfigureAwait(false);
+                ended = true;
+            }
         }
-        catch (Exception) when (_owner.Stopping) { throw; }
-        catch (SaveFormatException error) when (_restore?.MutationStarted != true)
-        { return await RejectExternalFile(error).ConfigureAwait(false); }
-        catch (Exception error) { return await RestoreFailed(null, error).ConfigureAwait(false); }
-        finally { await EndOperation().ConfigureAwait(false); }
+        catch (OperationCanceledException error) when (_owner.Stopping && error.CancellationToken == _owner.Lifetime)
+        {
+            canceled = true;
+            throw;
+        }
+        finally
+        {
+            _owner.PublishLoad(command with
+            {
+                Phase = ended && outcome is not null ? SaveLoadPhase.Completed :
+                    canceled ? SaveLoadPhase.Canceled : SaveLoadPhase.Faulted,
+                Result = ended && outcome is not null ? outcome : null
+            });
+        }
     }
 
     private async Task<LoadResult> Restore(PreparedSave prepared, SlotId? active)

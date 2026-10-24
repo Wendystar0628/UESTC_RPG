@@ -121,11 +121,12 @@
           "world.clockJump",
           "world.season",
           "transit",
-          "map.travel",
+          "map.prepare",
           "view.mode",
           "map.arrival"
         ],
         "interval": "owner begin to actual completion",
+        "activeFlag": "mapTransition",
         "settleMs": 2000
       },
       {
@@ -134,15 +135,17 @@
           "game.enter",
           "save.load"
         ],
-        "interval": "begin to actual ready",
+        "interval": "owner queued/started to terminal; distinct (owner, operation) windows",
+        "activeFlag": "newGameOrLoad",
         "settleMs": 2000
       },
       {
         "name": "qualityApply",
         "events": [
-          "settings.quality"
+          "settings.apply"
         ],
-        "interval": "apply begin to actual effective completion",
+        "interval": "started to completed/canceled/faulted; queued is tracked without applying; superseded/rejected do not settle",
+        "activeFlag": "qualityApplying",
         "settleMs": 2000
       },
       {
@@ -170,7 +173,21 @@
       "menu/input lock"
     ],
     "thresholdAuthority": "settleMs only here; no duplicate runtime or analyzer literals",
-    "contextCoverage": "contextComplete requires AppFlow/Save/Map/Quality owner boundaries plus existing app/arrival/readback coverage; optional world-command and input-lock request telemetry does not gate it; required owner boundaries currently notAttached",
+    "contextCoverage": "contextComplete requires requiredCoverage only; notAttached is optional and does not block complete. Existing operations have unknown starts at recording entry; no command begin or operation is reconstructed from state/input.",
+    "requiredCoverage": [
+      "IAppFlow.EnterCommand",
+      "ISaveService.LoadCommand",
+      "IMapService.PrepareCommand",
+      "IQualityService.ApplyCommand",
+      "IAppFlow.Changed",
+      "IMapRuntime.ArrivalChanged/Done",
+      "sync.readback"
+    ],
+    "notAttached": [
+      "ICameraRig: transit request target/rejection and input-lock reasons; handles are observed/current",
+      "IWorldState: clock/season/weather/flow command requests and rejection; values remain observed/current",
+      "IObserverState/IWalkController: mode/space changes are observed/current at published frames"
+    ],
     "contextFlagNames": [
       "mapTransition",
       "cameraTransition",
@@ -357,8 +374,17 @@
     },
     "game.enter": {
       "owner": "GAME-221",
-      "payloadFields": {},
-      "state": "notAttached; required owner boundary contract pending"
+      "payloadFields": {
+        "owner": "IAppFlow",
+        "operation": "integer; scoped to owner",
+        "phase": "started|rejected|completed|faulted",
+        "target": "EnterRequest; preserves requested kind/slot/gen",
+        "result": "EnterResult?",
+        "direct": "boolean",
+        "errorKey": "string?",
+        "startObserved": "boolean; false for terminal/rejection whose start was outside this recording"
+      },
+      "timing": "main-thread owner boundary; no initial state replay"
     },
     "save.write": {
       "owner": "GAME-221",
@@ -370,15 +396,39 @@
     },
     "save.load": {
       "owner": "GAME-221",
-      "payloadFields": {},
-      "state": "notAttached; required owner boundary contract pending"
+      "payloadFields": {
+        "owner": "ISaveService",
+        "operation": "integer; scoped to owner",
+        "phase": "queued|started|rejected|completed|canceled|faulted",
+        "kind": "SaveLoadKind",
+        "requestedSlot": "SlotId?; remains the request even when Result.Slot differs",
+        "requestedGeneration": "integer?; exact requested generation",
+        "file": "string?",
+        "result": "LoadResult?; actual active slot/source generation; NewGame retains Gen=0",
+        "startObserved": "boolean; observed queued/started boundary exists",
+        "timing": "mainThreadObservation"
+      },
+      "timing": "cross-thread value queue drained on main sampling point; collectionFrame/monotonicMs are observation, not exact worker emission time"
+    },
+    "map.prepare": {
+      "owner": "GAME-221",
+      "payloadFields": {
+        "owner": "IMapService",
+        "operation": "integer; scoped to owner; joined shares the started operation",
+        "phase": "started|joined|reused|rejected|completed",
+        "from": "MapId",
+        "to": "MapId",
+        "result": "MapTravelResult?",
+        "startObserved": "boolean; joined does not invent a missing start; reused/rejected do not open a window"
+      },
+      "timing": "real Prepare foundation/mount operation; playable destination readiness remains map.arrival, no independent switch/travel command exists"
     },
     "map.travel": {
       "owner": "GAME-221",
       "payloadFields": {
         "phase": "current|loaded|unloading",
         "map": "string?",
-        "requestedMap": "null; owner request event unavailable"
+        "requestedMap": "null; lifecycle snapshot only; real Prepare targets are in map.prepare"
       }
     },
     "transit": {
@@ -451,6 +501,19 @@
         "observation": "ownerChanged"
       }
     },
+    "settings.apply": {
+      "owner": "GAME-221",
+      "payloadFields": {
+        "owner": "IQualityService",
+        "operation": "integer; scoped to owner",
+        "phase": "queued|started|rejected|completed|superseded|canceled|faulted",
+        "target": "QualityRequest; profile/intent/editedKnobs",
+        "origin": "ApplyOrigin",
+        "result": "ApplyResult?",
+        "startObserved": "boolean; observed queued/started boundary exists"
+      },
+      "timing": "real Apply command; Changed stays a value notification; no-change success still closes; superseded/rejected and queue cancellation do not settle"
+    },
     "window.focus": {
       "owner": "GAME-221",
       "payloadFields": {
@@ -481,7 +544,8 @@
       "payloadFields": {
         "phase": "begin|end",
         "purpose": "photo|saveThumbnail"
-      }
+      },
+      "timing": "collectionFrame is the actual readback frame supplied by capture owner; saveThumbnail excludes only that collection frame"
     },
     "hang.begin": {
       "owner": "GAME-221",
@@ -543,7 +607,10 @@
         "saveBusy": "boolean",
         "qualityRequested": "map<QualityKnob,float> camelCase keys",
         "qualityEffective": "map<QualityKnob,float> camelCase keys",
-        "missing": "string[]",
+        "requiredCoverage": "string[]; dictionary nonSteadyRules.requiredCoverage",
+        "requiredMissing": "string[]; required coverage missing at recording entry",
+        "notAttached": "string[]; optional deferred coverage, does not gate contextComplete",
+        "commandIntervalStart": "unknownBeforeRecording; no prior command/operation is replayed",
         "loadingActive": "boolean",
         "loadingCovered": "boolean"
       }

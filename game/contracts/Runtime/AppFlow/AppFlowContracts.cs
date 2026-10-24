@@ -15,6 +15,8 @@ public sealed record EnterRequest(EnterKind Kind, SlotId? Slot = null)   // Slot
 
 public interface IAppFlow                     // Kernel 服务（game/flow/），主线程；本身不逐帧运行，不直接读写任何 user:// 文件
 {
+    /// <summary>Command-owner value boundaries; original failures stay on their existing channel.</summary>
+    event Action<EnterCommandEvent>? EnterCommand;
     AppState State { get; }                   // Boot → Title → Entering → Playing → Leaving → Title；任何状态都能走到 Quitting；
                                               // 保存失败或超时照常离开；Quitting 等真实排空与资源释放（SYS-SAVE-FLOW）
     long Rev { get; }
@@ -28,3 +30,8 @@ public interface IAppFlow                     // Kernel 服务（game/flow/）�
     Task ReturnToTitle();                      // 只在 Playing 接受；尝试保存后离开，失败与超时不拦；最终写盘结果读 ISaveService.State/SlotsChanged（SYS-SAVE-FLOW）
     Task Quit();                               // 任何状态；尝试保存后仍等待真实关闭完成（SYS-TITLE）
 }
+
+public enum EnterCommandPhase : byte { Started, Rejected, Completed, Faulted }
+public readonly record struct EnterCommandEvent(
+    long Operation, EnterCommandPhase Phase, EnterRequest Target,
+    EnterResult? Result, bool Direct, string? ErrorKey);

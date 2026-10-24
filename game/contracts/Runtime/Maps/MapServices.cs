@@ -31,6 +31,8 @@ public interface IMapTransition
 }
 public interface IMapService                 // Kernel 服务（SYS-MAPS）
 {
+    /// <summary>Command-owner value boundaries; original failures stay on their existing channel.</summary>
+    event Action<MapPrepareEvent>? PrepareCommand;
     long Rev { get; }                        // 地图基础挂载完成 + 1
     MapId Default { get; }                   // index.json 的默认图
     IReadOnlyList<MapDescriptor> Maps { get; }
@@ -59,3 +61,8 @@ public interface IMapAware                   // [KernelNode] 可选实现；雾�
     void OnMapLoaded(IMapContext ctx);       // 读新图的数据，重建本图的状态
 }
 public sealed record MapVisit(MapId Map, Pose LastPose, ViewMode Mode);
+
+public enum MapPreparePhase : byte { Started, Joined, Reused, Rejected, Completed }
+public readonly record struct MapPrepareEvent(
+    long Operation, MapPreparePhase Phase, MapId From, MapId To,
+    MapTravelResult? Result);

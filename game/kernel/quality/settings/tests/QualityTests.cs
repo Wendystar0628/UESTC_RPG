@@ -11,6 +11,38 @@ using static Campus.Tests.QualityApplicationTestFixture;
 public sealed class QualityTests
 {
     [TestCase]
+    [TestCategory(TestReason.Regression)]
+    public async Task ApplyAdmissionReportsRejectedAndFaultedWithoutInventingAppliedResults()
+    {
+        using var store = new FileStoreSpy("command-admission", null);
+        await using var service = new QualityService(Catalog(), store);
+        var commands = new List<QualityApplyEvent>();
+        service.ApplyCommand += commands.Add;
+        var invalid = Edit(new(service.Requested.Preset,
+            new Dictionary<QualityKnob, float> { [QualityKnob.FoliageDensity] = float.NaN }), QualityKnob.FoliageDensity);
+        var rejected = await service.Apply(invalid, ApplyOrigin.User);
+        if (rejected.Status != ApplyStatus.Rejected || rejected.Rejected.Count == 0)
+            throw new InvalidOperationException("Admission regression did not reach the plan rejection.");
+        if (commands.Count != 1 || commands[0].Phase != QualityApplyPhase.Rejected ||
+            !ReferenceEquals(commands[0].Result, rejected) || !ReferenceEquals(commands[0].Target, invalid))
+            throw new InvalidOperationException("Rejected admission lost its actual request or result.");
+        foreach (var (request, exceptionType) in new[]
+            { (Edit(service.Requested) with { Intent = (QualityEditIntent)byte.MaxValue }, typeof(ArgumentOutOfRangeException)),
+                (Edit(service.Requested), typeof(InvalidOperationException)) })
+        {
+            Exception? observed = null;
+            try { await service.Apply(request, ApplyOrigin.User); }
+            catch (Exception error) { observed = error; }
+            if (observed?.GetType() != exceptionType)
+                throw new InvalidOperationException("Admission regression did not preserve the original exception type.");
+        }
+        if (commands.Count != 3 || commands.Skip(1).Any(value => value.Phase != QualityApplyPhase.Faulted || value.Result is not null) ||
+            commands.Select(value => value.Operation).Distinct().Count() != commands.Count ||
+            commands.Any(value => value.Origin != ApplyOrigin.User))
+            throw new InvalidOperationException("Faulted admission started work, reused an operation or invented a result.");
+    }
+
+    [TestCase]
     [TestCategory(TestReason.Contract)]
     public void EveryPresetKeepsStyleFloorsAndHasAllKnobs()
     {

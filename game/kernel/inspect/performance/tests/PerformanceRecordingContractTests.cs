@@ -147,6 +147,70 @@ public sealed class PerformanceRecordingContractTests
             throw new InvalidOperationException("The final gap depended on a later successful enqueue.");
     }
 
+    [TestCase, TestCategory(TestReason.Contract)]
+    public void HardwareFastRowsKeepQueryMetadataEvenWhenTheDriverHasNoNewSamples()
+    {
+        var cursor = new NvmlSampleCursor();
+        var identity = new NvmlIdentity(3, "test-device", "0000:05:00.0", NvmlStatus.FromCode(NvmlNative.Success),
+            NvmlStatus.FromCode(NvmlNative.Success), NvmlStatus.FromCode(NvmlNative.Success));
+        var first = cursor.Observe(NvmlMetric.Power, NvmlStatus.FromCode(NvmlNative.Success),
+            [new() { TimestampUs = 10_000, Value = new() { UnsignedInt = 2_000 } }], 20, 30);
+        var empty = cursor.Observe(NvmlMetric.Power, NvmlStatus.SampleResult(NvmlNative.NotFound), [], 40, 50);
+        var rows = PerfHardwareCapture.FastRows(identity, empty).ToArray();
+        if (empty.Samples.Count != 0 || rows.Length != 1)
+            throw new InvalidOperationException("The fixture or empty-query metadata row is missing.");
+        var values = rows[0].Values;
+        if (rows[0].Frame.HasValue || values["driverTimestampUs"] is not null || values["value"] is not null ||
+            !Equals(values["capability"], first.Status.Capability) || !Equals(values["deviceIndex"], identity.EnumerationIndex) ||
+            !Equals(values["gpuUuid"], identity.Uuid) || !Equals(values["pciBusId"], identity.PciBusId) ||
+            !Equals(values["cursorBeforeUs"], first.CursorAfterUs) || !Equals(values["cursorAfterUs"], empty.CursorAfterUs) ||
+            !Equals(values["previousSuccessfulReadMs"], empty.PreviousSuccessfulReadMs) ||
+            !Equals(values["successfulReadSpanMs"], empty.SuccessfulReadSpanMs) || values["lostSampleCount"] is not null)
+            throw new InvalidOperationException("Empty driver queries fabricated samples or lost independent cursor and identity facts.");
+        if (values.Keys.Except(Dictionary().Columns[rows[0].Stream]).Any())
+            throw new InvalidOperationException("The hardware row contains fields the authoritative dictionary would discard.");
+    }
+
+    [TestCase, TestCategory(TestReason.Contract)]
+    public void HardwareSlowRowsPreserveIndependentCountersAndMissingFieldsWithoutSerializingExceptions()
+    {
+        var success = NvmlStatus.FromCode(NvmlNative.Success);
+        var unavailable = new NvmlStatus("unavailable", "entry point missing", Error: new EntryPointNotFoundException());
+        var energy = new NvmlCounterInterval
+        {
+            Cumulative = 4, Delta = null, IntervalStartMs = 100, ReadStartMs = 150, ReadEndMs = 160,
+            Reset = true, ReadGap = true, DriverReferenceUs = null, Status = success
+        };
+        var policy = energy with { Cumulative = 900_000, Delta = 200_000, IntervalStartMs = 20,
+            ReadStartMs = 170, ReadEndMs = 180, Reset = false, DriverReferenceUs = 4_000 };
+        var slow = new NvmlSlowSample
+        {
+            QueryStartMs = 140, QueryEndMs = 190, GpuUtilFraction = new(0.5, success), MemoryUtilFraction = new(null, unavailable),
+            WholeGpuMemoryMiB = new(null, unavailable), TotalMemoryMiB = new(null, unavailable), GpuClockMHz = new(null, unavailable),
+            GpuMaxClockMHz = new(null, unavailable), MemoryClockMHz = new(null, unavailable), PowerW = new(null, unavailable),
+            TemperatureC = new(null, unavailable), PerformanceState = new(null, unavailable), ThrottleReasonBits = new(null, unavailable),
+            Energy = energy, Policies = [new(NvmlPolicy.Thermal, policy)]
+        };
+        var identity = new NvmlIdentity(2, null, "0000:06:00.0", success, unavailable, success);
+        var device = new NvmlDeviceSample(identity, slow, []);
+        var row = PerfHardwareCapture.SlowRow(new(140, 190, success, [device]), device, 10);
+        var values = row.Values;
+        if (!Equals(values["energyReset"], true) || values["energyJ"] is not null || values["energyAveragePowerW"] is not null ||
+            !Equals(values["energyIntervalStartMs"], energy.IntervalStartMs) || !Equals(values["energyReadEndMs"], energy.ReadEndMs) ||
+            !Equals(values["violationThermalMs"], policy.Delta / 1_000_000d) || values["gpuMemoryUtilFraction"] is not null ||
+            !Equals(values["intervalStartMs"], 10d) || values["gpuUuid"] is not null || row.Frame.HasValue)
+            throw new InvalidOperationException("Slow hardware conversion fabricated values or merged independent counter intervals.");
+        var policies = System.Text.Json.JsonSerializer.SerializeToNode(values["policyIntervalsJson"], PerfFieldDictionary.JsonOptions)!;
+        var counter = policies[0]!["counter"]!;
+        var status = System.Text.Json.JsonSerializer.SerializeToNode(values["statusJson"], PerfFieldDictionary.JsonOptions)!;
+        if (counter["driverReferenceUs"]!.GetValue<ulong>() != policy.DriverReferenceUs ||
+            counter["intervalStartMs"]!.GetValue<double>() != policy.IntervalStartMs ||
+            status["gpuMemoryUtilFraction"]!["exceptionType"]!.GetValue<string>() != unavailable.Error!.GetType().FullName ||
+            status["gpuMemoryUtilFraction"]!.AsObject().ContainsKey("error") ||
+            values.Keys.Except(Dictionary().Columns[row.Stream]).Any())
+            throw new InvalidOperationException("Per-policy provenance, sanitized failure reason or dictionary coverage was lost.");
+    }
+
     private static PerfFieldDictionary Dictionary() => new(File.ReadAllText(RepositoryFixture.FilePath("game", "data", "perf-fields.json")));
     private static PerfRecordingSession Session(string root, PerfFieldDictionary dictionary) =>
         new(root, PerfOrigin.Ai, new DateTimeOffset(2026, 1, 1, 0, 0, 0, TimeSpan.Zero), dictionary, new JsonObject());

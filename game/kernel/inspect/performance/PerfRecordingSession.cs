@@ -34,6 +34,8 @@ internal sealed class PerfRecordingSession
     private readonly List<PerfValueChannel> _producers = [];
     private readonly Dictionary<string, long> _valueRows = new();
     private PerfHangWatchdog? _watchdog;
+    private PerfHardwareCapture? _hardware;
+    private int _hardwareRevision;
     private bool _captureAttached;
     public PerfFrameRing Frames { get; }
     public string? Id { get; private set; }
@@ -44,6 +46,7 @@ internal sealed class PerfRecordingSession
     public double RecordingStart => _recordingStart;
     public double RecordedSeconds => Math.Max(0, _recordingStop - _recordingStart) / 1000;
     public PerfFaultCode Fault { get { lock (_failureGate) return _fault; } }
+    public Exception? HardwareError => _hardware?.Error;
 
     // Register before Begin: each channel belongs to exactly one producer thread.
     public PerfValueChannel AddProducer(string source, string stream = "events")
@@ -55,13 +58,27 @@ internal sealed class PerfRecordingSession
     }
 
     public void StartWatchdog(IFrameStatistics frames, PerfValueChannel output) => _watchdog = new(frames, output, this);
+    public void StartHardware() => _hardware = new(AddProducer("nvml.slow", "hw"), AddProducer("nvml.fast", "hwfast"));
     public void AttachCapture() => _captureAttached = true;
-    public void StopProducers() => _watchdog?.Stop();
+    public void StopProducers()
+    {
+        _watchdog?.Stop();
+        _hardware?.RequestStop();
+    }
     public async Task DrainProducersAsync()
     {
-        if (_watchdog is not { } watchdog) return;
-        try { await watchdog.Completion; }
-        finally { watchdog.Release(); _watchdog = null; }
+        if (_watchdog is { } watchdog)
+        {
+            try { await watchdog.Completion; }
+            catch (Exception error) { AddFailure(PerfFaultCode.ProducerFailed, error); }
+            finally
+            {
+                try { watchdog.Release(); }
+                catch (Exception error) { AddFailure(PerfFaultCode.ProducerFailed, error); }
+                finally { _watchdog = null; }
+            }
+        }
+        if (_hardware is { } hardware) await hardware.StopAsync();
     }
 
     public PerfRecordingSession(string root, PerfOrigin origin, DateTimeOffset startedAt,
@@ -100,6 +117,7 @@ internal sealed class PerfRecordingSession
     public void Stop(PerfEndReason reason, double time)
     {
         if (Volatile.Read(ref _stopped) != 0) return;
+        if (_hardware is { Joined: false }) throw new InvalidOperationException("NVML must finish shutdown and join before value channels close.");
         _reason = reason;
         _recordingStop = Volatile.Read(ref _recording) == 0 ? _recordingStart : time;
         _events.Writer.TryComplete();
@@ -160,7 +178,7 @@ internal sealed class PerfRecordingSession
                     PerfFieldDictionary.PublishJson(Path.Combine(directory!, "manifest.pending.json"), _manifest);
                     PublishLatest("recording");
                     _startedWriting.TrySetResult(true);
-                    await DrainFramesAsync(outputs).ConfigureAwait(false);
+                    await DrainFramesAsync(outputs, directory!).ConfigureAwait(false);
                 }
                 catch (Exception error) { AddFailure(PerfFaultCode.WriteFailed, error); }
             }
@@ -189,6 +207,8 @@ internal sealed class PerfRecordingSession
         finally { _startedWriting.TrySetResult(false); closed = CloseOutputs(outputs, directory, sessionLock); }
         Exception? failure;
         lock (_failureGate) failure = _errors.Count switch { 0 => null, 1 => _errors[0], _ => new AggregateException(_errors) };
+        if (HardwareError is { } hardwareError)
+            failure = failure is null ? hardwareError : new AggregateException(failure, hardwareError);
         return new(Id ?? "", Fault == PerfFaultCode.None ? _reason : PerfEndReason.Failure, closed,
             IsComplete, Fault, failure, RecordedSeconds, _writtenFrames, Frames.DroppedFrames);
     }
@@ -246,7 +266,7 @@ internal sealed class PerfRecordingSession
         return closed;
     }
 
-    private async Task DrainFramesAsync(Dictionary<string, StreamWriter> outputs)
+    private async Task DrainFramesAsync(Dictionary<string, StreamWriter> outputs, string directory)
     {
         while (true)
         {
@@ -270,6 +290,13 @@ internal sealed class PerfRecordingSession
                     if (message.Event is { } item) WriteEvent(outputs["events"], item.Name, item.Frame, item.Time, item.Payload, producer.Source);
                     if (message.Row is { } row) WriteValue(outputs[row.Stream], row, message.Sequence);
                 }
+            if (_hardware is { } hardware && hardware.Revision != _hardwareRevision)
+            {
+                _hardwareRevision = hardware.Revision;
+                SetCaptureCapabilities();
+                SetStreams();
+                PerfFieldDictionary.PublishJson(Path.Combine(directory, "manifest.pending.json"), _manifest);
+            }
             if (Volatile.Read(ref _stopped) != 0 && Frames.Empty && _events.Reader.Completion.IsCompleted && _producers.All(p => p.Complete)) break;
             if (Fault != PerfFaultCode.None) break;
             await Task.Delay(10).ConfigureAwait(false);
@@ -312,11 +339,16 @@ internal sealed class PerfRecordingSession
     {
         if (_manifest["capabilities"] is JsonObject capabilities)
         {
-            capabilities["eventContext"] = _captureAttached ? "partial" : "notAttached";
             capabilities["slowSampling"] = _captureAttached ? "recorded" : "notAttached";
             capabilities["watchdog"] = _captureAttached ? "recorded" : "notAttached";
-            _manifest["eventCoverageMissing"] = JsonSerializer.SerializeToNode(PerfContextCapture.MissingCoverage, PerfFieldDictionary.JsonOptions);
+            capabilities["nvml"] = _hardware?.Snapshot()["state"]?.DeepClone() ?? JsonValue.Create("notAttached");
+            var rules = _dictionary.Snapshot["nonSteadyRules"]!;
+            _manifest["requiredCoverage"] = rules["requiredCoverage"]?.DeepClone();
+            _manifest["requiredMissing"] = _captureAttached ? new JsonArray() : rules["requiredCoverage"]?.DeepClone();
+            _manifest["notAttached"] = rules["notAttached"]?.DeepClone();
+            capabilities["eventContext"] = _captureAttached ? "recorded" : "notAttached";
         }
+        if (_hardware is { } hardware) _manifest["hardware"] = hardware.Snapshot();
     }
 
     private void PublishLatest(string state)
@@ -340,7 +372,8 @@ internal sealed class PerfRecordingSession
             {
                 ["file"] = spec["file"]!.DeepClone(), ["kind"] = name == "events" ? "jsonl" : "csv",
                 ["clock"] = "monotonicMs", ["rateHz"] = spec["rateHz"]?.DeepClone(),
-                ["state"] = name is "frames" or "events" || name == "samples" && _captureAttached ? "recorded" : "notAttached",
+                ["state"] = name is "hw" or "hwfast" ? _hardware?.StreamState(name) ?? "notAttached" :
+                    name is "frames" or "events" || name == "samples" && _captureAttached ? "recorded" : "notAttached",
                 ["writtenRows"] = name == "frames" ? _writtenFrames : name == "events" ? _writtenEvents : _valueRows.GetValueOrDefault(name),
                 ["droppedRows"] = name == "frames" ? Frames.DroppedFrames :
                     (name == "events" ? _droppedEvents : 0) + _producers.Where(p => p.Stream == name).Sum(p => p.Dropped)

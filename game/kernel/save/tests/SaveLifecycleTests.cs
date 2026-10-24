@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.Numerics;
 using Campus.Contracts;
 using Campus.Contracts.AppFlow;
@@ -20,9 +21,16 @@ public sealed class SaveLifecycleTests
         using var fixture = new SaveLifecycleFixture();
         await fixture.Start();
         fixture.Camera.BeforeDefault = () => AssertThat(fixture.Maps.HasPrepared).OverrideFailureMessage("A pose default was requested before its target map was prepared.").IsTrue();
+        var commands = new ConcurrentQueue<SaveLoadEvent>();
+        fixture.Save.LoadCommand += commands.Enqueue;
         var start = new WorldPreset(6.5, Season.Winter, WeatherKind.Snow, .4f);
         var result = await fixture.Pump(fixture.Save.NewGame(new("s1"), 733, start));
         AssertThat(result.Status == LoadStatus.Loaded && fixture.Camera.DefaultContext == new NewGameContext(733, fixture.Maps.Default, start, ViewMode.Fly)).OverrideFailureMessage("Deferred pose defaults lost the requested seed, map or starting preset.").IsTrue();
+        var events = commands.ToArray();
+        AssertThat(events.Select(value => value.Phase).SequenceEqual(new[] { SaveLoadPhase.Started, SaveLoadPhase.Completed })).IsTrue();
+        AssertThat(events.All(value => value.Operation == events[0].Operation && value.Operation > 0 &&
+            value.Kind == SaveLoadKind.NewGame && value.Slot == result.Slot && value.RequestedGeneration is null && value.File is null)).IsTrue();
+        AssertThat(events[0].Result is null && ReferenceEquals(events[1].Result, result) && result.Gen == 0).IsTrue();
         AssertThat(fixture.Diagnostics.Errors.Count).IsEqual(0);
     }
 
@@ -33,21 +41,30 @@ public sealed class SaveLifecycleTests
         using var fixture = new SaveLifecycleFixture();
         await fixture.Start();
         await fixture.Pump(fixture.Save.NewGame(new("s1"), 1));
+        var commands = new ConcurrentQueue<SaveLoadEvent>();
+        fixture.Save.LoadCommand += commands.Enqueue;
         fixture.World.Hours = 91.25; fixture.Camera.SetPose(new(new Vector3(30, 40, 50), 70, -20));
         fixture.Flow = AppState.Playing;
         AssertThat((await fixture.Pump(fixture.Save.SaveNow(SaveReason.NewGame))).Status == SaveStatus.Saved).OverrideFailureMessage("Initial save failed.").IsTrue();
+        AssertThat(commands.IsEmpty).OverrideFailureMessage("Saving a slot must not publish a load command.").IsTrue();
         fixture.Camera.SetPose(new(new Vector3(100, 200, 300), 0, 0));
         fixture.Flow = AppState.Entering; fixture.Log.Clear(); fixture.Ready = false;
         var instance = fixture.World.Instance;
         var loading = fixture.Save.Load(new("s1"));
         for (var frame = 0; frame < TestSamples.FrameLoop && !fixture.Log.Contains("view"); frame++) await fixture.Frames(1);
         AssertThat(!loading.IsCompleted).OverrideFailureMessage("Full load ignored destination readiness.").IsTrue();
+        AssertThat(commands.ToArray().Select(value => value.Phase).SequenceEqual(new[] { SaveLoadPhase.Started })).IsTrue();
         AssertThat(fixture.Log.SequenceEqual(new[] { "world", "instance", "prepare-map", "view" })).OverrideFailureMessage("World/instance/map/pose ordering changed.").IsTrue();
         AssertThat(fixture.Camera.Pose.Position == new Vector3(30, 40, 50)).OverrideFailureMessage("Full load did not restore the saved pose.").IsTrue();
         fixture.Ready = true;
         var loaded = await fixture.Pump(loading);
         AssertThat(loaded.Status == LoadStatus.Loaded && fixture.World.Instance == instance + 1).OverrideFailureMessage("Full load did not commit exactly one new instance.").IsTrue();
         AssertThat(fixture.Log.Count(x => x == "view") == 1 && fixture.Camera.Locks == 0).OverrideFailureMessage("Pose restored more than once or retained its input lease.").IsTrue();
+        var events = commands.ToArray();
+        AssertThat(events.Select(value => value.Phase).SequenceEqual(new[] { SaveLoadPhase.Started, SaveLoadPhase.Completed }) &&
+            events.All(value => value.Operation == events[0].Operation && value.Kind == SaveLoadKind.Slot &&
+                value.Slot == loaded.Slot && value.RequestedGeneration is null && value.File is null) &&
+            ReferenceEquals(events[1].Result, loaded)).IsTrue();
         AssertThat(fixture.Diagnostics.Errors.Count).IsEqual(0);
     }
 
@@ -377,6 +394,8 @@ public sealed class SaveLifecycleTests
         fixture.Flow = AppState.Playing; fixture.World.Hours = 23;
         await fixture.Pump(fixture.Save.SaveNow(SaveReason.NewGame));
         fixture.World.Hours = 30; await fixture.Pump(fixture.Save.SaveNow(SaveReason.Manual));
+        var commands = new ConcurrentQueue<SaveLoadEvent>();
+        fixture.Save.LoadCommand += commands.Enqueue;
         var loaded = await fixture.Pump(fixture.Save.Load(SaveSlots.Auto[0], 1));
         AssertThat(loaded.Status == LoadStatus.Loaded && loaded.Gen == 1 && fixture.World.Hours == 23 &&
             fixture.Save.Slots[0].Meta?.Gen == 2).IsTrue();
@@ -389,5 +408,9 @@ public sealed class SaveLifecycleTests
         var rejected = await fixture.Pump(fixture.Save.Load(SaveSlots.Auto[0], 2));
         AssertThat(rejected.Status == LoadStatus.Corrupt && fixture.World.Instance == instance && fixture.World.Hours == 23).IsTrue();
         AssertThat(fixture.Save.Slots[0].Meta?.Gen == 1 && fixture.Camera.Locks == 0 && fixture.Diagnostics.Errors.Count == 0).IsTrue();
+        var completed = commands.Where(value => value.Phase == SaveLoadPhase.Completed).ToArray();
+        AssertThat(completed.Length == 2 && completed[0].RequestedGeneration == loaded.Gen &&
+            completed[1].RequestedGeneration == rejected.Gen && completed[0].Operation != completed[1].Operation &&
+            ReferenceEquals(completed[0].Result, loaded) && ReferenceEquals(completed[1].Result, rejected)).IsTrue();
     }
 }

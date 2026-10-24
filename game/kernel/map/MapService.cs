@@ -26,6 +26,8 @@ public sealed class MapService(ICameraRig camera, IMapLifetime lifetime, IWorldM
     private Task<MapCatalog>? _catalogTask;
     private TaskCompletionSource? _initialization;
     private MapTransition? _active;
+    private long _prepareOperation;
+    private long _activePrepareOperation;
     private MapCatalogEntry? _target;
     private Task<PendingMapLoad>? _load;
     private Task? _mount;
@@ -41,6 +43,7 @@ public sealed class MapService(ICameraRig camera, IMapLifetime lifetime, IWorldM
     public MapId Current { get; private set; }
     public IMapContext? Context { get; private set; }
     public IMapTransition? Transition => _active;
+    public event Action<MapPrepareEvent>? PrepareCommand;
     public IReadOnlyList<MapVisit> Visits => SnapshotVisits();
     public JsonTypeInfo<MapsSave> TypeInfo => MapsSaveJsonContext.Contract.MapsSave;
     public string Id => "map-catalog";
@@ -73,23 +76,40 @@ public sealed class MapService(ICameraRig camera, IMapLifetime lifetime, IWorldM
 
     public async Task Prepare(MapId map)
     {
+        if (_stopped)
+            PrepareCommand?.Invoke(new(++_prepareOperation, MapPreparePhase.Rejected, Current, map, null));
         ObjectDisposedException.ThrowIf(_stopped, this);
         if (_active is { } pending)
         {
-            if (pending.To != map) throw new InvalidOperationException("A different map is already being prepared.");
+            if (pending.To != map)
+            {
+                PrepareCommand?.Invoke(new(++_prepareOperation, MapPreparePhase.Rejected, Current, map, null));
+                throw new InvalidOperationException("A different map is already being prepared.");
+            }
+            PrepareCommand?.Invoke(new(_activePrepareOperation, MapPreparePhase.Joined, pending.From, pending.To, null));
             await AwaitPreparation(pending);
             return;
         }
         if (Context is not null)
         {
-            if (Current != map) throw new InvalidOperationException("A different map is already mounted.");
+            if (Current != map)
+            {
+                PrepareCommand?.Invoke(new(++_prepareOperation, MapPreparePhase.Rejected, Current, map, null));
+                throw new InvalidOperationException("A different map is already mounted.");
+            }
+            PrepareCommand?.Invoke(new(++_prepareOperation, MapPreparePhase.Reused, Current, map, MapTravelResult.Arrived));
             return;
         }
         if (_catalog is null || !_catalog.TryGet(map, out var target) ||
             target.Descriptor.Kind != MapKind.Outdoor || target.Descriptor.World.Time != MapTimeRule.Shared)
+        {
+            PrepareCommand?.Invoke(new(++_prepareOperation, MapPreparePhase.Rejected, Current, map, null));
             throw new InvalidOperationException("Map preparation was rejected.");
+        }
         _target = target;
         var transition = _active = new MapTransition(Current, map);
+        _activePrepareOperation = ++_prepareOperation;
+        PrepareCommand?.Invoke(new(_activePrepareOperation, MapPreparePhase.Started, transition.From, transition.To, null));
         _input = _camera.LockInput(InputLockReason.MapTravel);
         _camera.ActiveTransit?.Cancel();
         await AwaitPreparation(transition);
@@ -152,11 +172,14 @@ public sealed class MapService(ICameraRig camera, IMapLifetime lifetime, IWorldM
     private Exception? Finish(MapTravelResult result, [FailureHandler("SYS-MAPS")] Exception? failure = null)
     {
         var finished = _active!;
+        var operation = _activePrepareOperation;
         _active = null; _target = null; _load = null; _mount = null;
         var input = _input; _input = null;
         try { input?.Dispose(); }
         catch (Exception error) { failure = Campus.Kernel.Diagnostics.RetainedFailure.Append(failure, error); }
-        finished.Complete(failure is null ? result : MapTravelResult.Failed, failure);
+        var finalResult = failure is null ? result : MapTravelResult.Failed;
+        finished.Complete(finalResult, failure);
+        PrepareCommand?.Invoke(new(operation, MapPreparePhase.Completed, finished.From, finished.To, finalResult));
         return failure;
     }
 

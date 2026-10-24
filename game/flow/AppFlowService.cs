@@ -35,6 +35,7 @@ public sealed class AppFlowService : IAppFlow, IAppBootFlow, IBootParticipant, I
     private bool _directEntry;
     private WorldPreset? _directStart;
     private NewGameBoot? _directBoot;
+    private long _enterOperation;
 
     public AppFlowService(ICameraRig camera, IAppLoadingPresentation loading, IAppFrontispiecePresentation frontispiece,
         ISaveService saves, IMapService maps, IWorldState world, IWorldControl control,
@@ -65,11 +66,13 @@ public sealed class AppFlowService : IAppFlow, IAppBootFlow, IBootParticipant, I
     public long Rev { get; private set; }
     public event Action<AppState, AppState>? Changed;
     public event Action<string>? PhaseReached;
+    public event Action<EnterCommandEvent>? EnterCommand;
 
     public Task<EnterResult> Enter(EnterRequest request)
     {
-        if (!In(AppState.Title)) return Task.FromResult(EnterResult.Rejected);
-        if (request.Gen is not null && request.Kind is not EnterKind.LoadSlot) return Task.FromResult(EnterResult.Rejected);
+        var operation = ++_enterOperation;
+        if (!In(AppState.Title)) return RejectEnter(operation, request);
+        if (request.Gen is not null && request.Kind is not EnterKind.LoadSlot) return RejectEnter(operation, request);
         var slot = request.Kind switch
         {
             EnterKind.NewGame => request.Slot,
@@ -77,20 +80,27 @@ public sealed class AppFlowService : IAppFlow, IAppBootFlow, IBootParticipant, I
             EnterKind.LoadSlot => request.Slot,
             _ => throw new ArgumentOutOfRangeException(nameof(request)),
         };
-        if (slot is null || _continuation.Info(slot.Value) is not { } info) return Task.FromResult(EnterResult.Rejected);
-        if (request.Kind is EnterKind.Continue or EnterKind.LoadSlot && !AppFlowContinuation.Readable(info, request.Gen)) return Task.FromResult(EnterResult.Rejected);
+        if (slot is null || _continuation.Info(slot.Value) is not { } info) return RejectEnter(operation, request);
+        if (request.Kind is EnterKind.Continue or EnterKind.LoadSlot && !AppFlowContinuation.Readable(info, request.Gen)) return RejectEnter(operation, request);
         _request = request with { Slot = slot }; _quitting = false; _directEntry = false;
         _recovery.BeginEntry(); _continuation.BeginEntry(_request);
         _resources.HoldInput();
         if (!restore.RestoreFaulted) _resources.HoldLoadingFlow();
         Change(AppState.Entering);
+        EnterCommand?.Invoke(new(operation, EnterCommandPhase.Started, _request, null, false, null));
         if (request.Kind is EnterKind.NewGame) MarkPhase("new-game-enter");
-        _entry = EnterCore(); return _entry;
+        _entry = EnterCore(operation, _request, false); return _entry;
+    }
+    private Task<EnterResult> RejectEnter(long operation, EnterRequest target)
+    {
+        EnterCommand?.Invoke(new(operation, EnterCommandPhase.Rejected, target, EnterResult.Rejected, false, null));
+        return Task.FromResult(EnterResult.Rejected);
     }
     public async Task<IMapArrival> EnterDirect(WorldPreset? start = null, NewGameBoot? boot = null)
     {
         if (!In(AppState.Boot) || _startup.ShowTitle)
             throw new InvalidOperationException("Direct entry requires an explicit boot entry intent.");
+        var operation = ++_enterOperation;
         var request = _startup.Request;
         _directEntry = true; _directStart = start; _directBoot = boot;
         _request = new(request.LoadFile is not null || request.Slot is not null ? EnterKind.LoadSlot : EnterKind.NewGame, request.Slot ?? (request.LoadFile is null ? _startup.WriteSlot : null));
@@ -98,14 +108,16 @@ public sealed class AppFlowService : IAppFlow, IAppBootFlow, IBootParticipant, I
         _resources.HoldInput();
         if (!restore.RestoreFaulted) _resources.HoldLoadingFlow();
         Change(AppState.Entering);
-        _entry = EnterCore();
+        EnterCommand?.Invoke(new(operation, EnterCommandPhase.Started, _request, null, true, null));
+        _entry = EnterCore(operation, _request, true);
         if (await _entry != EnterResult.Entered)
             throw Failure ?? new InvalidOperationException("Direct entry failed.");
         return _mapRuntime.Arrival ?? throw new InvalidOperationException("Direct entry has no prepared destination.");
     }
-    private async Task<EnterResult> EnterCore()
+    private async Task<EnterResult> EnterCore(long operation, EnterRequest target, bool direct)
     {
         var joiningBackground = false;
+        EnterResult? outcome = null;
         try
         {
             var newGame = _request!.Kind switch
@@ -141,21 +153,29 @@ public sealed class AppFlowService : IAppFlow, IAppBootFlow, IBootParticipant, I
                 _resources.CompleteSavePreparation();
             }
             _continuation.RequireHealthyWorld();
-            if (_quitting) { _resources.CompleteLoadingProgress(); _resources.ReleaseFlow(); return EnterResult.Entered; }
+            if (_quitting) { _resources.CompleteLoadingProgress(); _resources.ReleaseFlow(); outcome = EnterResult.Entered; return EnterResult.Entered; }
             await _resources.FinishLoading();
             _continuation.RequireHealthyWorld();
             _resources.ReleaseFlow(); Change(AppState.Playing); _resources.ReleaseInput();
+            outcome = EnterResult.Entered;
             return EnterResult.Entered;
         }
-        catch (OperationCanceledException) when (_quitting && joiningBackground && BackgroundReady.IsCanceled) { return EnterResult.Rejected; }
+        catch (OperationCanceledException) when (_quitting && joiningBackground && BackgroundReady.IsCanceled)
+        { outcome = EnterResult.Rejected; return EnterResult.Rejected; }
         catch (Exception error) when (error is not OutOfMemoryException)
         {
             _recovery.CaptureFailure(error, State);
-            if (_directEntry) return EnterResult.Failed;
+            if (_directEntry) { outcome = EnterResult.Failed; return EnterResult.Failed; }
             if (restore.RestoreFaulted) await _recovery.HoldRestoreFailure();
             else if (error is not AppStartupException && !BackgroundReady.IsFaulted && !BackgroundReady.IsCanceled && _mapRuntime.Failure is null)
                 await _recovery.RecoverTitle();
+            outcome = EnterResult.Failed;
             return EnterResult.Failed;
+        }
+        finally
+        {
+            EnterCommand?.Invoke(new(operation, outcome.HasValue ? EnterCommandPhase.Completed : EnterCommandPhase.Faulted,
+                target, outcome, direct, LastError));
         }
     }
     public Task ReturnToTitle()

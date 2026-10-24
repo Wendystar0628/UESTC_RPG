@@ -24,10 +24,10 @@ public sealed partial class PerformanceRecordingHost : Node, IMapAware, IRegistr
     public override void _Process(double delta)
     {
         _recorder.Poll();
-        if (_initialization is { IsCompleted: true })
+        if (_initialization is { IsCompleted: true } initialization)
         {
-            try { _initialization.GetAwaiter().GetResult(); }
-            catch (Exception error) { _recorder.ObserveRequestFailure(error); }
+            // The service receives request failures before completing this task; only observe it here.
+            _ = initialization.Exception;
             _initialization = null;
         }
     }
@@ -38,8 +38,7 @@ public sealed partial class PerformanceRecordingHost : Node, IMapAware, IRegistr
     public async Task DrainForExitAsync()
     {
         if (_initialization is not { } initialization) return;
-        try { await initialization; }
-        catch (Exception error) { _recorder.ObserveRequestFailure(error); }
-        finally { _initialization = null; }
+        await ((Task)initialization).ConfigureAwait(ConfigureAwaitOptions.ContinueOnCapturedContext | ConfigureAwaitOptions.SuppressThrowing);
+        _initialization = null;
     }
 }
