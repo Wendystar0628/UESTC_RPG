@@ -1,0 +1,306 @@
+using System.Text.Json;
+using System.Text.Json.Nodes;
+using System.Threading.Channels;
+using Campus.Contracts;
+using Campus.Contracts.Perf;
+
+namespace Campus.Kernel.Inspect;
+
+internal readonly record struct PerfClockAnchor(long UnixMs, double MonotonicMs, double ReadSpanMs);
+internal sealed record PerfCapturedEvent(string Name, ulong? Frame, double Time, object Payload,
+    PerfClockAnchor? Anchor = null, PerfGap Gap = default);
+
+/// <summary>One session owns its producers, bounded queues, exclusive directory lock and one IO task.</summary>
+internal sealed class PerfRecordingSession
+{
+    private readonly PerfFieldDictionary _dictionary;
+    private readonly JsonObject _manifest;
+    private readonly string _root;
+    private readonly PerfOrigin _origin;
+    private readonly object _failureGate = new();
+    private readonly List<Exception> _errors = [];
+    private PerfFaultCode _fault;
+    private readonly Channel<PerfCapturedEvent> _events = Channel.CreateBounded<PerfCapturedEvent>(
+        new BoundedChannelOptions(256) { SingleReader = true, SingleWriter = true, FullMode = BoundedChannelFullMode.Wait });
+    private readonly TaskCompletionSource<bool> _ready = new(TaskCreationOptions.RunContinuationsAsynchronously);
+    private int _stopped, _recording;
+    private PerfEndReason _reason;
+    private double _recordingStart, _recordingStop;
+    private PerfClockAnchor _firstAnchor;
+    private PerfClockAnchor _lastAnchor;
+    private long _eventSequence, _eventAttempts, _droppedEvents, _writtenEvents, _writtenFrames;
+    private PerfGap _eventGap;
+    public PerfFrameRing Frames { get; }
+    public string? Id { get; private set; }
+    public DateTimeOffset StartedAt { get; }
+    public Task<bool> Ready => _ready.Task;
+    public Task<PerfSessionEndResult> Completion { get; }
+    public double RecordingStart => _recordingStart;
+    public double RecordedSeconds => Math.Max(0, _recordingStop - _recordingStart) / 1000;
+    public PerfFaultCode Fault { get { lock (_failureGate) return _fault; } }
+
+    public PerfRecordingSession(string root, PerfOrigin origin, DateTimeOffset startedAt,
+        PerfFieldDictionary dictionary, JsonObject manifest, int viewportCapacity)
+    {
+        _root = root;
+        _origin = origin;
+        StartedAt = startedAt;
+        _dictionary = dictionary;
+        _manifest = manifest;
+        Frames = new(viewportCapacity);
+        Completion = Task.Run(WriteAsync);
+    }
+
+    public void Begin(PerfClockAnchor anchor)
+    {
+        _firstAnchor = anchor;
+        _lastAnchor = anchor;
+        _recordingStart = anchor.MonotonicMs;
+        Volatile.Write(ref _recording, 1);
+    }
+
+    public bool TryEvent(PerfCapturedEvent item)
+    {
+        long sequence = ++_eventAttempts;
+        if (_events.Writer.TryWrite(item with { Gap = _eventGap }))
+        {
+            _eventGap = default;
+            return true;
+        }
+        _droppedEvents++;
+        _eventGap = _eventGap.Add(sequence, item.Frame, item.Time);
+        return false;
+    }
+
+    public void Stop(PerfEndReason reason, double time)
+    {
+        if (Volatile.Read(ref _stopped) != 0) return;
+        _reason = reason;
+        _recordingStop = Volatile.Read(ref _recording) == 0 ? _recordingStart : time;
+        _events.Writer.TryComplete();
+        Volatile.Write(ref _stopped, 1);
+    }
+
+    public void AddFailure(PerfFaultCode code, [FailureHandler("ENG-PERF-DATA")] Exception error)
+    {
+        lock (_failureGate)
+        {
+            if (_fault == PerfFaultCode.None) _fault = code;
+            _errors.Add(error);
+        }
+    }
+
+    private async Task<PerfSessionEndResult> WriteAsync()
+    {
+        var outputs = new Dictionary<string, StreamWriter>();
+        FileStream? sessionLock = null;
+        string? directory = null;
+        bool closed = false;
+        try
+        {
+            try
+            {
+                if (_origin == PerfOrigin.Play) PerfSessionStorage.PruneAuthor(_root);
+                var opened = PerfSessionStorage.Open(_root, StartedAt, _origin);
+                Id = opened.Id;
+                directory = opened.Directory;
+                sessionLock = opened.Lock;
+                OpenOutputs(outputs, directory);
+                _ready.SetResult(true);
+            }
+            catch (Exception error)
+            {
+                AddFailure(PerfFaultCode.OpenFailed, error);
+                _ready.TrySetResult(false);
+            }
+
+            while (Volatile.Read(ref _recording) == 0 && Volatile.Read(ref _stopped) == 0 && Fault == PerfFaultCode.None)
+                await Task.Delay(10).ConfigureAwait(false);
+            if (Fault == PerfFaultCode.None && Volatile.Read(ref _recording) != 0)
+            {
+                try
+                {
+                    _manifest["clock"]!["recordingStartMs"] = _recordingStart;
+                    WriteEvent(outputs["events"], "session.start", null, _recordingStart,
+                        new { origin = Camel(_origin), sessionId = Id });
+                    WriteAnchor(outputs["events"], _firstAnchor);
+                    await DrainFramesAsync(outputs).ConfigureAwait(false);
+                }
+                catch (Exception error) { AddFailure(PerfFaultCode.WriteFailed, error); }
+            }
+
+            // The main-thread owner stops and detaches producers even if IO failed first.
+            while (Volatile.Read(ref _stopped) == 0) await Task.Delay(10).ConfigureAwait(false);
+            if (Fault == PerfFaultCode.None)
+            {
+                try
+                {
+                    WriteGap(outputs["events"], "frames", Frames.TailGap);
+                    WriteGap(outputs["events"], "events", _eventGap);
+                    WriteEvent(outputs["events"], "session.end", null, _recordingStop,
+                        new { reason = Camel(_reason), complete = IsComplete, fault = Camel(Fault) });
+                }
+                catch (Exception error) { AddFailure(PerfFaultCode.WriteFailed, error); }
+            }
+        }
+        catch (Exception error)
+        {
+            AddFailure(PerfFaultCode.WriteFailed, error);
+            _ready.TrySetResult(false);
+            while (Volatile.Read(ref _stopped) == 0) await Task.Delay(10).ConfigureAwait(false);
+        }
+        finally { closed = CloseOutputs(outputs, directory, sessionLock); }
+        Exception? failure;
+        lock (_failureGate) failure = _errors.Count switch { 0 => null, 1 => _errors[0], _ => new AggregateException(_errors) };
+        return new(Id ?? "", Fault == PerfFaultCode.None ? _reason : PerfEndReason.Failure, closed,
+            IsComplete, Fault, failure, RecordedSeconds, _writtenFrames, Frames.DroppedFrames);
+    }
+
+    private void OpenOutputs(Dictionary<string, StreamWriter> outputs, string directory)
+    {
+        PerfManifest.SetSession(_manifest, _dictionary, Id!, _origin, StartedAt);
+        foreach (string name in _dictionary.Columns.Keys)
+        {
+            var writer = PerfFieldDictionary.OpenText(Path.Combine(directory, name + (name == "events" ? ".jsonl" : ".csv")));
+            outputs.Add(name, writer);
+            if (name != "events") writer.WriteLine(string.Join(',', _dictionary.Columns[name]));
+            writer.Flush();
+        }
+        SetStreams();
+        PerfFieldDictionary.PublishJson(Path.Combine(directory, "manifest.pending.json"), _manifest);
+    }
+
+    private bool CloseOutputs(Dictionary<string, StreamWriter> outputs, string? directory, FileStream? sessionLock)
+    {
+        bool closed = false, resourcesClosed = true;
+        foreach (var writer in outputs.Values)
+        {
+            try { writer.Flush(); }
+            catch (Exception error) { AddFailure(PerfFaultCode.FinalizeFailed, error); }
+            try { writer.Dispose(); }
+            catch (Exception error) { AddFailure(PerfFaultCode.FinalizeFailed, error); resourcesClosed = false; }
+        }
+        while (Frames.Peek() is not null) Frames.Release();
+        while (_events.Reader.TryRead(out _)) { }
+        if (directory is not null && resourcesClosed)
+        {
+            try
+            {
+                FinishManifest();
+                PerfFieldDictionary.PublishJson(Path.Combine(directory, "manifest.json"), _manifest);
+                closed = true;
+                if (_origin == PerfOrigin.Play)
+                    PerfFieldDictionary.PublishJson(Path.Combine(_root, "latest.json"), new JsonObject
+                    { ["schema"] = _dictionary.Schema, ["id"] = Id, ["manifest"] = Id + "/manifest.json" });
+                File.Delete(Path.Combine(directory, "manifest.pending.json"));
+            }
+            catch (Exception error)
+            {
+                AddFailure(PerfFaultCode.FinalizeFailed, error);
+                // A latest-pointer failure does not reopen closed streams. Preserve it in the final manifest.
+                if (closed)
+                {
+                    try { FinishManifest(); PerfFieldDictionary.PublishJson(Path.Combine(directory, "manifest.json"), _manifest); }
+                    catch (Exception publishError) { AddFailure(PerfFaultCode.FinalizeFailed, publishError); closed = false; }
+                }
+            }
+        }
+        try { sessionLock?.Dispose(); }
+        catch (Exception error) { AddFailure(PerfFaultCode.FinalizeFailed, error); closed = false; }
+        return closed;
+    }
+
+    private async Task DrainFramesAsync(Dictionary<string, StreamWriter> outputs)
+    {
+        while (true)
+        {
+            while (Frames.Peek() is { } slot)
+            {
+                WriteGap(outputs["events"], "frames", slot.Gap);
+                PerfFrameWriter.Write(outputs["frames"], _dictionary, slot);
+                _writtenFrames++;
+                Frames.Release();
+            }
+            while (_events.Reader.TryRead(out var item))
+            {
+                WriteGap(outputs["events"], "events", item.Gap);
+                if (item.Anchor is { } anchor) WriteAnchor(outputs["events"], anchor);
+                else WriteEvent(outputs["events"], item.Name, item.Frame, item.Time, item.Payload, "main");
+            }
+            if (Volatile.Read(ref _stopped) != 0 && Frames.Empty && _events.Reader.Completion.IsCompleted) break;
+            if (Fault != PerfFaultCode.None) break;
+            await Task.Delay(10).ConfigureAwait(false);
+        }
+    }
+
+    private bool IsComplete => Fault == PerfFaultCode.None && Frames.DroppedFrames == 0 && _droppedEvents == 0;
+
+    private void FinishManifest()
+    {
+        _manifest["status"] = "closed";
+        _manifest["complete"] = IsComplete;
+        _manifest["fault"] = Camel(Fault);
+        _manifest["endReason"] = Camel(Fault == PerfFaultCode.None ? _reason : PerfEndReason.Failure);
+        _manifest["recordedSeconds"] = RecordedSeconds;
+        _manifest["clock"]!["recordingStopMs"] = Volatile.Read(ref _recording) == 0 ? null : JsonValue.Create(_recordingStop);
+        if (Volatile.Read(ref _recording) != 0)
+            _manifest["endedAt"] = DateTimeOffset.FromUnixTimeMilliseconds(_lastAnchor.UnixMs)
+                .AddMilliseconds(_recordingStop - _lastAnchor.MonotonicMs).ToString("O");
+        _manifest["counts"] = new JsonObject { ["writtenFrames"] = _writtenFrames, ["droppedFrames"] = Frames.DroppedFrames };
+        SetStreams();
+    }
+
+    private void SetStreams()
+    {
+        var streams = new JsonArray();
+        foreach (string name in _dictionary.Columns.Keys)
+        {
+            var spec = _dictionary.Snapshot["streams"]![name]!;
+            streams.Add(new JsonObject
+            {
+                ["file"] = spec["file"]!.DeepClone(), ["kind"] = name == "events" ? "jsonl" : "csv",
+                ["clock"] = "monotonicMs", ["rateHz"] = spec["rateHz"]?.DeepClone(),
+                ["state"] = name is "frames" or "events" ? "recorded" : "notAttached",
+                ["writtenRows"] = name == "frames" ? _writtenFrames : name == "events" ? _writtenEvents : 0,
+                ["droppedRows"] = name == "frames" ? Frames.DroppedFrames : name == "events" ? _droppedEvents : 0
+            });
+        }
+        _manifest["streams"] = streams;
+    }
+
+    private void WriteAnchor(StreamWriter writer, PerfClockAnchor anchor)
+    {
+        _lastAnchor = anchor;
+        var payload = new { anchor.UnixMs, anchor.MonotonicMs, anchor.ReadSpanMs };
+        _manifest["clock"]!["anchors"]!.AsArray().Add(JsonSerializer.SerializeToNode(payload, PerfFieldDictionary.JsonOptions));
+        WriteEvent(writer, "clock.anchor", null, anchor.MonotonicMs, payload);
+    }
+
+    private void WriteGap(StreamWriter writer, string stream, PerfGap gap)
+    {
+        if (gap.Rows == 0) return;
+        if (stream == "events")
+        {
+            // Writer lifecycle rows share this stream. Assign lost rows their place in its output sequence.
+            gap = gap with { FirstSequence = _eventSequence + 1, LastSequence = _eventSequence + gap.Rows };
+            _eventSequence += gap.Rows;
+        }
+        WriteEvent(writer, "record.gap", gap.LastCollectionFrame, gap.ToMs, new
+        {
+            stream, gap.FirstSequence, gap.LastSequence, gap.Rows, gap.FirstCollectionFrame,
+            gap.LastCollectionFrame, gap.FromMs, gap.ToMs
+        });
+    }
+
+    private void WriteEvent(StreamWriter writer, string name, ulong? frame, double time, object payload, string source = "writer")
+    {
+        writer.WriteLine(JsonSerializer.Serialize(new
+        {
+            schema = _dictionary.Schema, sequence = ++_eventSequence, collectionFrame = frame,
+            monotonicMs = time, @event = name, source, payload
+        }, PerfFieldDictionary.JsonOptions));
+        _writtenEvents++;
+    }
+
+    private static string Camel<T>(T value) where T : Enum => JsonNamingPolicy.CamelCase.ConvertName(value.ToString());
+}
