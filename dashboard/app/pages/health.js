@@ -450,7 +450,9 @@
         el.appendChild(h('div.hk-self.t-muted', Dash.lamp(null), h('span', '自测结果未确认')));
       }
       el.appendChild(h('div.hk-sub', '近 24 小时的报错'));
-      var errs = (hk.errors || []).slice().sort(function (a, b) { return (b.n || 0) - (a.n || 0); });
+      // errors 为 null 是钩子记账日志不存在，有没有报错不知道；[] 才是窗口内确实没报错
+      if (hk.errors == null) { el.appendChild(Dash.status('有没有报错未确认：没有钩子记账日志', 'muted')); return; }
+      var errs = hk.errors.slice().sort(function (a, b) { return (b.n || 0) - (a.n || 0); });
       if (!errs.length) { el.appendChild(Dash.status('近 24 小时钩子没有报错', 'ok')); return; }
       el.appendChild(Dash.charts.bars(errs.map(function (e) {
         return { key: e.hook, label: e.hook, value: e.n, note: '最近一次 ' + Dash.at(e.last), tone: ['level', 'warn'] };

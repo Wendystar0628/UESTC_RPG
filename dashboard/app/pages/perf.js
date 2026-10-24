@@ -525,6 +525,15 @@
     return f(x.value) + ' / ' + (x.limit == null ? '上限未知' : f(x.limit));
   }
 
+  /* 坏会话（perf.sessionErrors）：来源目录只写末一级、悬停看全路径；原因照后端原文 */
+  var ERROR_KIND = { content: '内容有误', io: '读写失败', conflict: '会话 ID 冲突', analysis: '分析失败', projection: '投影失败' };
+  function dirName(p) { var parts = String(p || '').split(/[\\/]/).filter(Boolean); return parts.length ? parts[parts.length - 1] : '来源未确认'; }
+  function sessionError(e) {
+    return h('div.note-line', { title: e.source || '' },
+      h('b', ERROR_KIND[e.kind] || e.kind || '出错'), ' ', dirName(e.source), e.id ? h('span.muted', '（会话 ' + e.id + '）') : null,
+      '：' + (e.reason || '没给原因'), e.conflictSource ? h('span.muted', '；冲突方 ' + dirName(e.conflictSource)) : null);
+  }
+
   Dash.panel({
     id: 'perf-sessions', page: PAGE, title: '会话列表', note: '录过哪些、留下了什么', caliber: CAL.sessions,
     span: 12, order: 70, window: 'commits', needs: ['perf'],
@@ -541,6 +550,12 @@
           h('span.pf-s-tags', Dash.mark('side', 'muted', s.scopeLabel), statusMark(s), Dash.mark('side', 'muted', '异常 ' + Dash.num(s.anomalyTotal))),
           h('span.pf-s-keep', LAYERS.map(function (x) { return h('span.pf-layer' + (r[x[0]] ? '.is-on' : ''), x[1]); })));
       })));
+      var errs = pd.sessionErrors || [];
+      if (errs.length) {
+        var items = errs.map(sessionError);
+        el.appendChild(h('div.pf-errs', Dash.status(errs.length + ' 个会话没读成，不算进上面的列表与趋势', 'warn'),
+          items.length > 3 ? items.slice(0, 3).concat([Dash.fold('还有 ' + (items.length - 3) + ' 个', items.slice(3))]) : items));
+      }
       var dc = pd.displayCoverage;
       var keep = pd.retention || {};
       el.appendChild(h('div.pf-keep',

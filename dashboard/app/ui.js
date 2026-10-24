@@ -192,6 +192,20 @@
     return late === true ? 'warn' : null;
   };
 
+  /* 后端给的缺数原因 [{code, fields, message}] 拼成一句；传 fields 时只取涉及这些字段的条目
+     （条目的 fields 为 [] 是所有条目、含 * 是窗口统计，都算涉及；'open' 也认 'open[].minutes'），没有就是 null */
+  function touches(f, q) { return f === '*' || f === q || f.indexOf(q + '.') === 0 || f.indexOf(q + '[') === 0; }
+  Dash.why = function (reasons, fields) {
+    var out = [];
+    (reasons || []).forEach(function (r) {
+      if (!r || !r.message || out.indexOf(r.message) >= 0) return;
+      var fs = r.fields || [];
+      if (fields && fs.length && !fs.some(function (f) { return fields.some(function (q) { return touches(f, q); }); })) return;
+      out.push(r.message);
+    });
+    return out.length ? out.join('；') : null;
+  };
+
   /* 指标卡：数、单位、一句 note、趋势箭头；vs 是箭头比的是什么（悬停显示），不传就不写；点了去 href */
   var TREND = { better: ['ok', '↑ 变好'], worse: ['warn', '↓ 变坏'], same: ['muted', '→ 持平'] };
   Dash.kpi = function (k) {
