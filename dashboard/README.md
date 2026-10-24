@@ -57,12 +57,13 @@ flow:      {coverage, kinds: [{key: GAME|TOOL|BATCH, label}],
 collab:    {coverage,
             letters: {cells: [{from, to, mark: 需定|待审|知会|插队, n, p50|null,
                               items: [{at, first}], openN}], unpaired, openN,
-                      open: [{at, first, minutes, from, to, mark}]},
-            audit: {rows, audited, unaudited, rate, found, newRows, missing: [{id, title, at, stage|null}]|null},
-            dispatch: {n, ok, rate, rules: [{key: R1..R5, label, bad}],
+                      open: [{at, first, minutes, from, to, mark}], reasons: [缺数原因]},
+            audit: {rows, audited, unaudited, rate, found, newRows, missing: [{id, title, at, stage|null}]|null, reasons: [缺数原因]},
+            dispatch: {n, ok, rate, rules: [{key: R1..R5, label, bad, unknown: 未判个数|null}],
                        bad: [{name, side, model, effort, rules: [key]}],
-                       hints: [{name, side, model, effort, text}], opus: [{name, row, at}]},
-            idle: [{who, minutes, longest: {from, to, rows: [id]}|null}]}
+                       hints: [{name, side, model, effort, text}], opus: [{name, row, at}], reasons: [缺数原因]},
+            idle: [{who, minutes, longest: {from, to, rows: [id]}|null, reasons: [缺数原因]}]}
+缺数原因 =  {code: 稳定原因键, fields: [相对本段字段路径，[] 为所有条目、* 为窗口统计], message: 中文原因}
 team:      {coverage, leads: [{who, model, effort, running, since,
                               rows: [{id, title, stage, since, who, jump, deps, waitedBy}], agents}],
             agents: [{id, name, side: claude|codex, model, effort, row, rowTitle,
@@ -76,7 +77,7 @@ health:    {coverage, at, level, summary, late: bool|null, counts: {ok, warn, ba
             roundsSummary: {n, flagged, last: {at, warn, bad}|null},
             gates: [{checkout, at, scope, gates: [{name: G1..G5, ok: true|false|null}], run, failed, failedNames}],
             tests: {days: [{day, count, lines, ratio, quickSec}]},
-            hooks: {selftest: {ok, total, failed: [一句], level}, errors: [{hook, n, last}]}}
+            hooks: {selftest: {ok, total, failed: [一句], level}, errors: [{hook, n, last}]|null}}
 failures:  {coverage: {from: 记账起点|null},
             window: {size, segment, commits|null, from: 时刻|null, n|null, rate|null,
                      unclassified|null, fresh|null, trend: better|worse|same|null, last: {at, minutes}|null},
@@ -110,6 +111,7 @@ perf:      {coverage: {from: 最早会话开始时刻|null}, caliber, units, lab
             series: [{key, label: 中文, unit, scope: cost|experience}],
             latest: {play: 会话id|null, ai: 会话id|null},
             sessions: [性能会话], trends: [性能趋势], details: {会话id: 性能曲线|null},
+            sessionErrors: [{source: 会话目录, id?: 会话id|null, kind: content|io|conflict|analysis|projection, reason, conflictSource?: 冲突持有方目录}],
             displayCoverage: {sessions: 显示会话数, totalSessions: 来源会话数, note}}
 保留项 =    {value: 现值|null, limit: 来源上限|null, unit}
 性能会话 =  {id, origin: play|ai, originLabel: 作者|AI, scope: full|cost, scopeLabel, scopeReason,
@@ -132,6 +134,7 @@ perf:      {coverage: {from: 最早会话开始时刻|null}, caliber, units, lab
 
 - `perf` 单位独立：帧与渲染耗时 ms、显存 MiB、比例 0–1、功耗 W、频率 MHz、温度 °C；`recordedSeconds` 是秒，区间及桶边界是进程单调时钟 ms，只有 recording.minutes 是分钟。归一化负载、GPU 忙碌比及预算 ratio 可超过 1，指标目录分别标“倍”。未知 null，零行 coverage 保留分析器的 null，不伪造空闲、正常或零成本。
 - 性能会话按完成时刻新到旧；latest 各来源独立取最新已关闭会话，缺作者或 AI 来源保留 null。all 与 steady 对应分析器全样本、明确稳态摘要，视图只投影已有值，不重新计算分位与 low。体验指标不适用时 reasons 给原因；cost 固定写“隔离桌面只判成本，不测帧时与帧率”，帧时、帧率与 GPU 占用均不画零。两列显存分别是 NVML 整卡已用与引擎记账；容量缺测不算比例。主视口 GPU 与视口 CPU 渲染允许近似 ±2 帧成本，只作分布、预算与趋势，不逐帧归因，也不从 GPU 占用猜瓶颈。目标线 line 仅适用时给值。
+- 单个会话失败由 `sessionErrors` 携 source、kind 与原始 reason，能确认身份时附 id；该来源的旧摘要不混入当前会话与趋势，好会话照常投影。内容错误只在输入变化后重解析；IO 与派生读写错误可在后续外部触发时重试，ID 冲突每轮按现存持有方重查，来源删除后重判并清理。状态与等级中文标签以 `scripts/perf/perf.py` 的 STATUS、LEVEL 为准。
 - `build.behindMainline` 用共享主线表的最新序号减构建序号，构建不在表中时为 null、原因沿用 build.reason；`all/steady.values.low01TailN` 与 `validFrameN` 原样投影分析器的尾样本数与有效帧数，不据 low 值反推。`frameLines` 的目标帧时复用分析器对记录清单限帧、垂直同步与刷新率的解释；重卡顿、严重卡顿和卡死阈值读取本轮分析器预算，成本口径、历史格式或来源不足给 null 与中文原因。
 - 跨提交趋势按比较键、scope、origin、calc 分组，点按主线序号升序，对同提交各次运行的 steady 摘要取中位；身份缺失或 dirty 不为 false 的运行只保留会话证据，不归入主线趋势。成本指标为目录前五项；体验趋势只给作者：平均帧率、1% low、0.1% low、帧时 p99、GPU 占用均值。保留层由 retained 如实给出，历史摘要只剩 history 时仍显示 summary 层；旧 calc 的会话与趋势标 stale，不能当当前基线。历史趋势直接读取分析器已有 history，保留上限从 index 与记录器清单快照取，不抄第二套常量。
 - 每提交 `anomaliesPerMinute` 先把每次运行分析器的异常组总数除以真实 `recordedSeconds` 再乘 60，最后取同提交运行摘要中位；不是原始发生次数，未测、无分析摘要或时长无效的运行不记零，参与数量与缺数原因分别给出。旧记录格式标 unsupported，只作历史证据；公开原因与说明由后端提供中文。
@@ -144,7 +147,9 @@ perf:      {coverage: {from: 最早会话开始时刻|null}, caliber, units, lab
 - blocked.rate=waiting/open；jump.rate=jumped/added，others=added-jumped，jump 覆盖不足保留 rate=null。链每一级含 stage。rework.pushes 是滚动近 30 天全部真实推送，时间升序；summary 同源，revert 优先于 audit，rate=(revert+audit)/n，完整历史或分母不足时为 null。none 只表示没有显式返工证据，不表示已审计。
 - team 行字段复制同轮 progress，队列无对应行则为 null。agents 按 stalled、running、unknown、done 排，未交回按开始升序，交回按结束降序；runMin 只用真实开始和在跑时刻或真实交回。leads.agents 与 sides 同源，等于 running+stalled；unknown 单列，doneN 为近一小时真实交回，覆盖不足为 null。停止、失败不算交回。
 - letters.open 是唯一未回信平铺列表，minutes 降序，未知在末尾；cells 只给对应 openN，抽屉按 from/to/mark 筛同一列表。audit.missing 与 unaudited 同一次差集，已知时条数相等，已不在队列的 stage=null；rate=audited/rows，dispatch.rate=ok/n。覆盖或来源不足为 null。
+- collab 各段 reasons 直接给缺数依据，不从 source 文本推断；coverage_missing/coverage_incomplete 分别表示没有记账起点/未满该段窗口（来信、审计、派单 7 天，空闲 24 小时），其余 code 对应字段事实缺失、无可配对回信或零分母。dispatch.rules[].unknown 逐规则计字段不足的派单，同一单可在某规则违规、在另一规则未判；窗口不足或存在未记录开工时刻的派单时为 null，0 才表示该规则全已判。
 - health 各组 counts 相加等于总 counts；groups.items 包含全部项，按 bad、warn、unknown、ok 排，正常标题同源。rounds 为最近 48 轮、时间升序；roundsSummary.last 只取同一末轮。钩子自测只在 hooks.selftest，其 level 与巡逻结论同源；at 为真实黑盒完成时刻，同源复用不改时刻，health.at 仍为巡逻确认时刻；无结构化计数则 ok/total=null。late 只由真实巡逻时刻和登记间隔决定，未知不判正常。
+- health.hooks.errors 只读 guard.jsonl 近 24 小时真实报错；日志不存在为 null，日志存在但窗口内无报错才为 []；读取失败仍沿采集 errors 发布。
 - failures 的窗口大小与段长只读 `monitor/failure-types.json`，读取共用 `read/failures.snapshot()`，不复述数值。窗口按登记时的 origin/main 提交序号取 `(current-size, current]`；起点所在提交的首次登记同样保留，分母为 `min(size, current-start.seq)`。rate=次数÷实际提交数×segment，不足一段为 null；majors 与 subs 的 lastSegment 表示最近一个 segment 的次数，段长同源取 window.segment，不输出旧字段。没开始记账时 coverage.from、窗口指标、类别计数与 fresh、segments 均为 null；原始读取或 Git 失败发布 errors。
 - failures.segments 固定覆盖窗口、旧到新，from 不含、to 包含；整体在起点之前 n/byMajor 为 null，跨起点 partial=true，不把未记账写为零。trend 仅在最新段已完整覆盖时与此前完整段次数均值比较，没有前序完整段为 null。未收录子类计入 window.n/unclassified，不进大类。子类别名由原始 reader 唯一解析。fresh 只计真实 added 晚于记账起点、位于已知窗口内的子类，种子 added=null 不算；window.fresh 同源汇总。
 - failures.records 为窗口内全量记录索引；recent、majors[].recent、subs[].recent、segments[].recent 都由 view 排成新到旧且最多 20 条。页面按 fmajor/fsub 选择现成索引，点提交段打开对应抽屉，不排序、切窗或重新统计；不公开 head、src、by 与原始日志路径。窗口内零条显示“窗口内没有登记”，登记数不等于实际失败数。

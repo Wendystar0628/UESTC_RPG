@@ -9,7 +9,7 @@ import tempfile
 from pathlib import Path
 from analyze import analyze_all, summary_for
 from perf_model import COSTS, PHASES, at, load_session, prepare_frames, read_json, rolling_medians, target_ms
-from perf_anomalies import DEEPEN_REPEAT_COUNT, annotate, anomaly, deepen, frame_anomalies
+from perf_anomalies import DEEPEN_REPEAT_COUNT, LEVELS, annotate, anomaly, deepen, frame_anomalies
 from unittest.mock import patch
 
 
@@ -180,7 +180,6 @@ def check_deepen(root, dictionary, budgets):
 
 def check_manifest(root, dictionary, budgets):
     meta = manifest(dictionary)
-    assert meta['pacing']['vsync'] == 'disabled' and meta['graphics']['preset'] == 'fine', '夹具未用真实驼峰枚举'
     meta['display']['refreshHz'] = None
     assert target_ms(meta) == 1000 / meta['pacing']['maxFps'], '真实 disabled 被当成开启垂直同步'
 
@@ -217,6 +216,43 @@ def check_processed_error(root, dictionary, budgets):
         assert not analyze.analysis_needed(root, out, author), '已处理错误仍被判为待分析'
         (source / 'frames.csv').write_text('changed', encoding='utf-8')
         assert analyze.analysis_needed(root, out, author), '错误输入变化后未重新判鲜'
+        (source / 'manifest.json').unlink()
+        assert analyze.analysis_needed(root, out, author), '删除错误来源后没有重新判鲜'
+        assert not analyze_all(root, [], out, author)['errors'], '已经删除的错误仍留在索引'
+
+        source = author / 'RETRY'
+        write_six(source, manifest(dictionary, 'BROKEN'), streams([frame(dictionary, 0)], dictionary), dictionary)
+        assert analyze_all(root, [], out, author)['analyzed'] == ['BROKEN']
+        with patch.object(analyze, 'load_session', side_effect=PermissionError('selfcheck read denied')) as loads:
+            # 输入改变后读失败；IO 恢复不需要再次改变输入。
+            (source / 'frames.csv').touch()
+            failed = analyze_all(root, [], out, author)
+            assert failed['errors'][0]['kind'] == 'io' and not read_json(out / 'index.json')['sessions']
+            assert analyze.analysis_needed(root, out, author), 'IO 失败被输入戳缓存'
+            index_stamp = (out / 'index.json').stat().st_mtime_ns
+            analyze_all(root, [], out, author)
+            assert loads.call_count == 2, 'IO 错误没有重新尝试'
+            assert (out / 'index.json').stat().st_mtime_ns == index_stamp, '同一 IO 错误重写 index 触发通知空转'
+        recovered = analyze_all(root, [], out, author)
+        assert recovered['analyzed'] == ['BROKEN'] and not recovered['errors'], recovered
+        (out / 'derived/BROKEN/anomalies.json').unlink()
+        assert analyze.analysis_needed(root, out, author), '缺失派生文件没有重新判鲜'
+        assert analyze_all(root, [], out, author)['analyzed'] == ['BROKEN']
+
+        other = author / 'SAME-ID'
+        write_six(other, manifest(dictionary, 'BROKEN'), streams([frame(dictionary, 0)], dictionary), dictionary)
+        conflict = analyze_all(root, [], out, author)
+        assert conflict['errors'][0]['kind'] == 'conflict', conflict
+        assert not analyze.analysis_needed(root, out, author), '未变冲突反复启动分析器'
+        (source / 'manifest.json').unlink()
+        assert analyze.analysis_needed(root, out, author), '冲突持有方删除后未重判'
+        resolved = analyze_all(root, [], out, author)
+        assert resolved['analyzed'] == ['BROKEN'] and not resolved['errors'], resolved
+        assert read_json(out / 'derived/BROKEN/summary.json')['source'] == str(other.resolve())
+        (other / 'manifest.json').unlink()
+        assert analyze.analysis_needed(root, out, author), '成功来源消失后未重判'
+        analyze_all(root, [], out, author)
+        assert not (out / 'derived/BROKEN').exists(), '已失去会话清单的来源仍保留派生'
 
 
 def check_derived_curves(root, dictionary, budgets):
@@ -275,18 +311,25 @@ def check_monitor_projection(root, dictionary, budgets):
         assert reads == [history_path], '同轮读取了不止一次性能历史'
         assert payload['details']['MONITOR']['columns'], '观察台未投影现成派生曲线'
         assert payload['retention']['historyPerGroup']['value'] == 1, '历史组现值错误'
-        assert 'freeze' not in payload['labels']['levels'], '残留不存在的异常等级'
+        assert payload['labels']['levels'].keys() == LEVELS.keys(), '视图等级未沿分析器权威清单'
+        good = author / 'GOOD'
+        write_six(good, manifest(dictionary, 'GOOD'), streams([frame(dictionary, 0)], dictionary), dictionary)
         (source / 'frames.csv').write_text('truncated', encoding='utf-8')
         with patch.object(reader, 'OUT', out), patch.object(reader.store, 'author_root', return_value=author), \
+             patch.object(reader.repo, 'mainline_commits', return_value={'commits': []}), \
              patch.object(analyze, 'analyze_all', side_effect=lambda **args: analyze_all(output=out, **args)) as calls:
             for _ in range(2):
-                try:
-                    reader.snapshot()
-                except ValueError:
-                    pass
-                else:
-                    raise AssertionError('坏会话没有向采集器交出真实错误')
+                payload = view.build(None)
+                assert [entry['id'] for entry in payload['sessions']] == ['GOOD'], '坏会话拖垮好会话或旧历史伪装当前数据'
+                assert payload['sessionErrors'][0]['source'] == str(source.resolve()) and payload['sessionErrors'][0]['reason']
+                assert payload['latest']['play'] == 'GOOD' and payload['details']['GOOD']['columns']
             assert calls.call_count == 1, '连续采集为同一坏会话空转分析器'
+        (source / 'manifest.json').write_text('{broken manifest', encoding='utf-8')
+        with patch.object(reader, 'OUT', out), patch.object(reader.store, 'author_root', return_value=author), \
+             patch.object(reader.repo, 'mainline_commits', return_value={'commits': []}), \
+             patch.object(analyze, 'analyze_all', side_effect=lambda **args: analyze_all(output=out, **args)):
+            payload = view.build(None)
+        assert payload['latest']['play'] == 'GOOD' and len(payload['sessionErrors']) == 1, '坏作者清单拖垮整页或重复报错'
 
 
 def check_retention_authority(root, dictionary, budgets):
@@ -316,7 +359,6 @@ def check_event_order(root, dictionary, budgets):
         data['events'] = [{**anchor, 'sequence': sequence, 'monotonicMs': stamp, 'event': event}
                           for sequence, stamp, event in ((1, 100, 'clock.anchor'), (2, 30, 'gc.detail'),
                                                          (3, 30, 'hang.begin'), (4, 20, 'record.gap'))]
-        assert data['events'][1]['monotonicMs'] < data['events'][0]['monotonicMs'], '夹具没有跨生产者时刻乱序'
         write_six(source, manifest(dictionary), data, dictionary)
         loaded = load_session(source, dictionary)[1]
         assert [row['sequence'] for row in loaded['events']] == [4, 2, 3, 1], '事件未按时刻与序号稳定排序'
@@ -359,6 +401,7 @@ def run(root):
     check_monitor_projection(root, dictionary, budgets)
     check_retention_authority(root, dictionary, budgets)
     result.append('通过 TOOL-437：错误输入只处理一次，输入变化重算；曲线、帧率与归一化负载由分析器派生。')
+    result.append('通过 TOOL-441：内容错误缓存、IO 重试与恢复、冲突重查、来源删除与派生缺失判鲜；好坏会话隔离，重复故障不自激通知。')
     check_event_order(root, dictionary, budgets)
     result.append('通过 TOOL-438：事件 sequence 先校验再按时刻稳定排序；重复序号与逐帧时刻倒退仍拒绝。')
     frames = [frame(dictionary, i, gpu=2 if i < warm else 8) for i in range(warm + window + warm)]

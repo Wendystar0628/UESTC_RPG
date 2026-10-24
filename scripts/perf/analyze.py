@@ -205,19 +205,37 @@ def repository_state(root):
     return [list(git(root, 'rev-parse', 'HEAD')), list(git(root, 'status', '--porcelain', '--', 'game/'))]
 
 
-def processed_input(out, directory, stamp, errors):
-    """同一次成功或失败均算已处理；错误输入变化才重新解析。"""
+def conflicting_source(out, identifier, directory, sources):
+    target = out / 'derived' / identifier / 'summary.json'
+    if target.is_file():
+        owner = read_json(target).get('source')
+        if owner != str(directory) and owner in sources:
+            return owner
+    return None
+
+
+def processed_input(out, directory, stamp, errors, sources):
+    """内容错误随输入缓存；冲突每轮重查持有方，IO 失败不算已处理。"""
     for error in errors:
-        if error.get('source') == str(directory) and error.get('calc') == CALC and error.get('inputStamp') == stamp:
+        if (error.get('kind') == 'content' and error.get('source') == str(directory)
+                and error.get('calc') == CALC and error.get('inputStamp') == stamp):
             return True
+    if any(error.get('source') == str(directory) and error.get('kind') not in ('content', 'conflict') for error in errors):
+        return False
     try:
         identifier = session_id(read_json(manifest_path(directory))['id'])
+        owner = conflicting_source(out, identifier, directory, sources)
+        if owner:
+            return any(error.get('kind') == 'conflict' and error.get('source') == str(directory)
+                       and error.get('conflictSource') == owner and error.get('calc') == CALC
+                       and error.get('inputStamp') == stamp for error in errors)
         target = out / 'derived' / identifier
         if not (target / 'summary.json').is_file():
             return False
         prior = read_json(target / 'summary.json')
         return (prior.get('source') == str(directory) and prior.get('calc') == CALC and
-                prior.get('inputStamp') == stamp and (target / 'curves.json').is_file())
+                prior.get('inputStamp') == stamp and all((target / name).is_file() for name in
+                    ('curves.json', 'anomalies.json', 'hardware.json', 'hotframes.csv')))
     except (ValueError, OSError, KeyError, TypeError):
         return False
 
@@ -230,15 +248,22 @@ def analysis_needed(root=ROOT, output=None, author=None, index=None, dictionary=
     index = index if index is not None else read_json(out / 'index.json') if (out / 'index.json').is_file() else {}
     dictionary = dictionary if dictionary is not None else read_json(root / 'game/data/perf-fields.json')
     budgets = budgets if budgets is not None else read_json(root / 'budgets.json')
+    directories = discover(out, author)
+    sources = {str(directory) for directory in directories}
+    if any(entry.get('source') not in sources for entry in index.get('sessions', []) + index.get('errors', [])):
+        return True
     available = False
-    for directory in discover(out, author):
-        with exclusive(directory / '.lock') as readable:
-            if not readable or (manifest_path(directory).name == 'manifest.pending.json' and not (directory / '.lock').is_file()):
-                continue
-            available = True
-            stamp = source_stamp(directory, dictionary, budgets, nearest_run_path(directory, out / 'runs'))
-            if not processed_input(out, directory, stamp, index.get('errors', [])):
-                return True
+    for directory in directories:
+        try:
+            with exclusive(directory / '.lock') as readable:
+                if not readable or (manifest_path(directory).name == 'manifest.pending.json' and not (directory / '.lock').is_file()):
+                    continue
+                available = True
+                stamp = source_stamp(directory, dictionary, budgets, nearest_run_path(directory, out / 'runs'))
+                if not processed_input(out, directory, stamp, index.get('errors', []), sources):
+                    return True
+        except OSError:
+            return True
     return available and (index.get('calc') != CALC or index.get('repositoryState') != repository_state(root))
 
 
@@ -270,48 +295,62 @@ def analyze_all(root=ROOT, sessions=(), output=None, author=None):
             return dict(analyzed=[], skipped=['分析锁被占用'], errors=[])
         prior_index = read_json(out / 'index.json') if (out / 'index.json').is_file() else {}
         # Discover and recheck under the shared lock: concurrent triggers cannot append duplicate history.
-        for directory in discover(out, author, sessions):
-            with exclusive(directory / '.lock') as readable:
-                if not readable or (manifest_path(directory).name == 'manifest.pending.json'
-                                    and not (directory / '.lock').is_file()):
-                    skipped.append(str(directory))
-                    continue
-                stamp = source_stamp(directory, dictionary, budgets, nearest_run_path(directory, out / 'runs'))
-                prior_errors = prior_index.get('errors', [])
-                if processed_input(out, directory, stamp, prior_errors):
-                    errors.extend(error for error in prior_errors if error.get('source') == str(directory))
-                    continue
-                try:
+        directories = discover(out, author, sessions)
+        sources = {str(directory) for directory in directories}
+        for directory in directories:
+            stamp, identifier, owner, parsing = None, None, None, False
+            try:
+                with exclusive(directory / '.lock') as readable:
+                    if not readable or (manifest_path(directory).name == 'manifest.pending.json'
+                                        and not (directory / '.lock').is_file()):
+                        skipped.append(str(directory))
+                        continue
+                    stamp = source_stamp(directory, dictionary, budgets, nearest_run_path(directory, out / 'runs'))
+                    prior_errors = prior_index.get('errors', [])
+                    if processed_input(out, directory, stamp, prior_errors, sources):
+                        errors.extend(error for error in prior_errors if error.get('source') == str(directory))
+                        continue
+                    parsing = True
                     manifest = read_json(manifest_path(directory))
                     identifier = session_id(manifest['id'])
                     run, _ = nearest_run(directory, out / 'runs')
-                    target = out / 'derived' / identifier / 'summary.json'
-                    if target.exists():
-                        prior = read_json(target)
-                        if prior.get('source') != str(directory):
-                            raise ValueError('会话 ID 与另一路径冲突，不覆盖已有派生')
+                    parsing = False
+                    owner = conflicting_source(out, identifier, directory, sources)
+                    if owner:
+                        errors.append(dict(source=str(directory), id=identifier, kind='conflict',
+                                           conflictSource=owner, reason='会话 ID 与另一路径冲突，不覆盖已有派生',
+                                           calc=CALC, inputStamp=stamp))
+                        continue
+                    parsing = True
                     manifest, streams = load_session(directory, dictionary)
                     summary, items, frames, hwfast = summary_for(directory, manifest, streams, dictionary, budgets, run)
+                    parsing = False
                     write_session(out, summary, items, frames, hwfast, dictionary, stamp, budgets, manifest, streams)
                     changed.append(summary)
-                except (ValueError, OSError, KeyError, TypeError) as error:
-                    errors.append(dict(source=str(directory), reason=str(error), calc=CALC, inputStamp=stamp))
+            except (ValueError, OSError, KeyError, TypeError) as error:
+                errors.append(dict(source=str(directory), id=identifier,
+                                   kind='io' if isinstance(error, OSError) else 'content' if parsing else 'analysis',
+                                   reason=str(error), calc=CALC, inputStamp=stamp))
         entries = []
         for path in sorted((out / 'derived').glob('*/summary.json')):
             summary = read_json(path)
-            if Path(summary['source']).exists():
+            if summary['source'] in sources and not any(error['source'] == summary['source'] for error in errors):
                 entries.append(summary)
         entries = rebuild_states(entries, root)
         for entry in entries:
             atomic_json(out / 'derived' / entry['id'] / 'summary.json', entry)
         removed = prune(out, entries)
         entries = [entry for entry in entries if Path(entry['source']).exists()]
+        errors = [error for error in errors if not any(Path(error['source']).is_relative_to(Path(path)) for path in removed)]
         changed_ids = {summary['id'] for summary in changed}
         history_update(out / 'history.jsonl', [entry for entry in entries if entry['id'] in changed_ids])
-        atomic_json(out / 'index.json', dict(calc=CALC, repositoryState=repository_state(root),
+        index = dict(calc=CALC, repositoryState=repository_state(root),
                                             sessions=[index_entry(e) for e in entries], errors=errors,
                                             retention=dict(aiBatches=AI_BATCHES_KEEP, historyPerGroup=HISTORY_PER_GROUP,
-                                                           diagnosticBytes=DIAGNOSTIC_BYTES_KEEP), removed=removed))
+                                                           diagnosticBytes=DIAGNOSTIC_BYTES_KEEP), removed=removed)
+        # 相同 IO 故障仍可由下一次外部采集重试，但不自写 index 制造文件通知空转。
+        if index != prior_index:
+            atomic_json(out / 'index.json', index)
     return dict(analyzed=[s['id'] for s in changed], skipped=skipped, errors=errors)
 
 

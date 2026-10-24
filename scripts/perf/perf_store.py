@@ -10,7 +10,7 @@ import subprocess
 import time
 from collections import defaultdict
 from pathlib import Path
-from perf_model import CALC, at, read_json
+from perf_model import CALC, at, manifest_path, read_json
 
 AI_BATCHES_KEEP = 10
 HISTORY_PER_GROUP = 200
@@ -306,7 +306,7 @@ def prune(out, entries):
             if not directory.is_dir() or not inside(directory, derived):
                 continue
             summary_path = directory / 'summary.json'
-            if summary_path.exists() and not Path(read_json(summary_path)['source']).exists():
+            if summary_path.exists() and not manifest_path(Path(read_json(summary_path)['source'])).is_file():
                 shutil.rmtree(directory)
                 removed.append(str(directory))
     attachments = diagnostic_attachments(runs)
