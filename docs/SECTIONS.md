@@ -1687,7 +1687,7 @@
 
 ## ENG-PERF-ADAPT · 自适应与测量
 
-`docs/engineering/ENG-PERF-ADAPT-自适应与测量.md` · 2.5k 字 · 运行时自适应的降级阶梯与控制律、帧节奏、测量与基准的做法
+`docs/engineering/ENG-PERF-ADAPT-自适应与测量.md` · 2.7k 字 · 运行时自适应的降级阶梯与控制律、帧节奏、测量与基准的做法
 关键词：自适应、自动调节画质、降级阶梯、控制律、剔除样本、帧节奏、吞吐基准、体验基准、体验脚本、掉帧、卡顿、GPU 计时
 
 - ENG-PERF-ADAPT §0 结论 · L21 · 402
@@ -1695,7 +1695,7 @@
 - ENG-PERF-ADAPT §1 自适应与帧节奏 · L32 · 896
   - ENG-PERF-ADAPT §1.1 运行时自适应（主线之后） · L34 · 490
   - ENG-PERF-ADAPT §1.2 帧节奏与画面设置约束 · L43 · 392
-- ENG-PERF-ADAPT §2 测量、剖析与门禁 · L49 · 535
+- ENG-PERF-ADAPT §2 测量、剖析与门禁 · L49 · 677
 
 ## ENG-PERF-LIGHT · 植被、阴影、后期与灯光
 
@@ -1996,7 +1996,7 @@
 
 ## REG-DECISIONS-SYSTEMS · 系统与工程决策
 
-`docs/registry/REG-DECISIONS-SYSTEMS-系统与工程决策.md` · 23.1k 字 · 界面、存档、音频、性能与画面设置、工程五个领域的已定决策
+`docs/registry/REG-DECISIONS-SYSTEMS-系统与工程决策.md` · 23.3k 字 · 界面、存档、音频、性能与画面设置、工程五个领域的已定决策
 关键词：决策、系统、工程、界面、存档、音频、性能、画面设置、预算、契约
 
 - REG-DECISIONS-SYSTEMS §0 结论 · L21 · 126
@@ -2004,10 +2004,10 @@
 - REG-DECISIONS-SYSTEMS §1 界面 · L29 · 4.6k
 - REG-DECISIONS-SYSTEMS §2 存档 · L65 · 1.9k
 - REG-DECISIONS-SYSTEMS §3 音频 · L85 · 2.2k
-- REG-DECISIONS-SYSTEMS §4 性能与画面设置 · L107 · 4.8k
-- REG-DECISIONS-SYSTEMS §5 工程 · L143 · 5.4k
-- REG-DECISIONS-SYSTEMS §6 地图与行走 · L179 · 1.0k
-- REG-DECISIONS-SYSTEMS §7 时间、季节、天气 · L190 · 2.4k
+- REG-DECISIONS-SYSTEMS §4 性能与画面设置 · L107 · 5.0k
+- REG-DECISIONS-SYSTEMS §5 工程 · L144 · 5.4k
+- REG-DECISIONS-SYSTEMS §6 地图与行走 · L180 · 1.0k
+- REG-DECISIONS-SYSTEMS §7 时间、季节、天气 · L191 · 2.4k
 
 ## REG-DECISIONS-WORLD · 世界与画面决策
 

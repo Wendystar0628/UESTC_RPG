@@ -49,6 +49,7 @@ paths: ["game/kernel/quality/**", "game/kernel/settings/**", "scripts/devices/**
 ## 2 测量、剖析与门禁
 
 - **机器**：吞吐、回归和份额核算在开发机（RTX 4080）上进行，`--gpu-index` 选卡。
+- **剖析权限**：开发机的 GPU 性能计数器对所有用户开放，Nsight 逐绘制抓帧与硬件计数器在普通权限的后台进程里跑，不提权、不以管理员身份启动代理会话；上屏帧率与帧间隔（PresentMon）要另给权限，只在体感卡而帧时正常、或验收稳帧时用（DECISION-323）。
 - **运行时测量**：GPU/CPU 计时读 `ViewportGetMeasuredRenderTime*`，调用与三角形读 `GetRenderInfo`；显存、对象、管线编译计数读 `Performance` 监视器。只看 p95 与超过 100 ms 的卡顿；掉帧指间隔超过目标 1.5 倍。
 - **自动化基准**从项目运行，窗口模式；命令行与截图默认串以 ENG-GATES-SHOTS §1 为准，门禁判据以 ENG-GATES §1 为准。吞吐模式关垂直同步、固定步长；体验模式开垂直同步、按真实时间。预设只由命令行决定，基准时自动调节关闭；不读 `user://` 的规则见 ENG-GATES-SHOTS §1.1。世界状态基准另加夏夜雷雨固定组合（ENG-BUDGET §2）；编译计数连续 10 帧不增才开始采样；A/B 前后各测几次取中位数。
 - **体验脚本**在体验模式下跑，判掉帧与卡顿，并要求跑完 DRAW 编译计数为 0；脚本清单见 ENG-GATES-SHOTS §1.4（主线之后）。
