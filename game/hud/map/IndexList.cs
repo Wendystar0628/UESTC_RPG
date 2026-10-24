@@ -28,7 +28,8 @@ public partial class IndexList : Control
 
     public event Action<MapEntry>? SelectionChanged;
     public event Action<MapEntry>? Activated;
-    public event Action<MapEntry>? Hovered;
+    /// <summary>指针进入某行时给出该行，离开时给 null。</summary>
+    public event Action<MapEntry?>? Hovered;
     public ISet<MarkerId> Here { get; } = new HashSet<MarkerId>();
     public MapEntry? SelectedEntry => _selected >= 0 && _selected < _rows.Count ? _rows[_selected].Entry : null;
     public bool OwnsFocus => _rows.Any(row => row.Button.HasFocus());
@@ -74,6 +75,7 @@ public partial class IndexList : Control
         button.TooltipText = $"{_ctx.Name(entry.Name)} · {entry.Id.Value}";
         button.AccessibilityName = button.TooltipText;
         button.MouseEntered += () => Hovered?.Invoke(entry);
+        button.MouseExited += () => Hovered?.Invoke(null);
         button.FocusEntered += () => SetSelected(index, notify: true);
         button.Pressed += () =>
         {
