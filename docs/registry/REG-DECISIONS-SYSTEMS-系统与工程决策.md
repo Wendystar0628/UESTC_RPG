@@ -143,7 +143,7 @@ gates: []
 | DECISION-325 | 性能体系分采样、记录、分析、展示四层，各一个写入方；分析在会话结束后离线跑：作者退出游戏后、AI 每次跑完、观察台发现未分析的会话时兜底（RESEARCH-048） | 性能 | ENG-PERF-DATA §1 | 生效 |
 | DECISION-326 | 画面页"性能信息"组加"记录性能数据"开关：默认关、即时生效，记录意图存 `ui` 节、跨启动保持；不是画质项，不随预设与恢复默认变；AI 用 `--perf-out`，不读写作者设置；DECISION-097 不改 | 性能、设置页 | ENG-PERF-DATA §1 | 生效 |
 | DECISION-327 | 记录逐帧原始流、2 Hz 慢采样、1 Hz 硬件、NVML 驱动样本缓冲与会话清单；玩家行为只订阅现有权威服务，不截获输入；未知与丢失留 null | 性能 | ENG-PERF-DATA §2 | 待原型验证 |
-| DECISION-328 | 作者与 AI 写同一套六件，只差清单来源与 AI 的 `run.json`；`STARTUP_FRAME` 逐帧日志下线 | 性能、启动测量 | ENG-PERF-DATA §2 | 生效 |
+| DECISION-328 | 作者与 AI 写同一套六件，只差清单来源与 AI 的 `run.json`；启动测量改读性能记录，旧的逐帧启动日志下线 | 性能、启动测量 | ENG-PERF-DATA §2 | 生效 |
 | DECISION-329 | 指标口径的权威是 ENG-PERF-DATA，实现只在 `scripts/perf`；原始带 `schema`、派生带 `calc`，只认当前、不写迁移，`calc` 变了就重算；AI 只经 `perf.py` 读性能数据，不打开逐帧原始文件 | 性能 | ENG-PERF-DATA §2、§3；ENG-PERF-MEASURE §3 | 生效 |
 | DECISION-330 | 帧内五段是回调边界 B0–B4 之间的墙钟区间，只作关联阶段；主线程周期只记原始增量，不换算毫秒、不进判据；视口结果确认来源与新鲜度后才合计，DECISION-318 仍判主视口。起因：第 10 路复核查实周期折算与视口隔帧计时都不能当确定毫秒 | 性能 | ENG-PERF-DATA §3 | 生效 |
 | DECISION-331 | 隔离桌面只判成本；体验字段照常定义、记录与展示，只来自作者自行开记录的游玩会话；不排作者录制，不追隔离桌面约 30 Hz 的成因（作者定） | 性能 | ENG-PERF-DATA §4；ENG-PERF-MEASURE §2 | 生效 |
