@@ -1,3 +1,5 @@
+using Campus.Kernel.Diagnostics;
+
 namespace Campus.Kernel.Inspect;
 
 /// <summary>
@@ -7,8 +9,7 @@ namespace Campus.Kernel.Inspect;
 /// </summary>
 internal sealed class NvmlSampler
 {
-    // ENG-PERF-DATA: both slow reads and driver-buffer queries occur at 1 Hz. This is not driver resolution.
-    private const int PollMilliseconds = 1000;
+    private readonly double _pollMilliseconds;
     private readonly Func<double> _clock;
     private readonly Action<NvmlBatch> _publish;
     private readonly ManualResetEventSlim _stop = new(false);
@@ -19,10 +20,11 @@ internal sealed class NvmlSampler
     private Task<NvmlCompletion>? _joined;
     private bool _stopRequested;
 
-    public NvmlSampler(Func<double> monotonicMilliseconds, Action<NvmlBatch> publish)
+    public NvmlSampler(Func<double> monotonicMilliseconds, Action<NvmlBatch> publish, double pollMilliseconds)
     {
         ArgumentNullException.ThrowIfNull(monotonicMilliseconds);
         ArgumentNullException.ThrowIfNull(publish);
+        _pollMilliseconds = pollMilliseconds;
         _clock = monotonicMilliseconds;
         _publish = publish;
         _thread = new Thread(Run) { IsBackground = true, Name = "Performance NVML" };
@@ -96,7 +98,7 @@ internal sealed class NvmlSampler
                 double queryEnd = _clock();
                 if (samples.Count > 0) _publish(new(queryStart, queryEnd, status, samples.ToArray()));
                 // Slow queries do not create catch-up bursts or fictitious 1-second intervals.
-                double remaining = PollMilliseconds - (queryEnd - queryStart);
+                double remaining = _pollMilliseconds - (queryEnd - queryStart);
                 if (_stop.Wait(TimeSpan.FromMilliseconds(Math.Max(0, remaining)))) break;
             }
         }
@@ -109,7 +111,7 @@ internal sealed class NvmlSampler
                 catch (Exception error)
                 {
                     shutdown = NvmlStatus.Missing(error);
-                    failure = failure is null ? error : new AggregateException(failure, error);
+                    failure = RetainedFailure.Append(failure, error);
                 }
             }
             _completion.TrySetResult(new(shutdown, failure));

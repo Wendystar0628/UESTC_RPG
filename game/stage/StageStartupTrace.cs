@@ -1,8 +1,5 @@
 using Campus.Contracts;
 using Campus.Contracts.AppFlow;
-using Campus.Contracts.Maps;
-using Campus.Contracts.Quality;
-using Campus.Kernel.Quality.Settings;
 using Campus.Gates;
 using Campus.Kernel.Frame;
 using Campus.Kernel.Registry;
@@ -11,17 +8,10 @@ using KernelServices = Campus.Kernel.Registry.Kernel;
 
 namespace Campus.Stage;
 
-/// <summary>Reads startup readiness and prints phase and optional renderer timing observations.</summary>
+/// <summary>Reads startup readiness and publishes phase and process-control observations.</summary>
 internal sealed class StageStartupTrace
 {
     private bool _preloadReadyTraced;
-    private readonly bool _profiling = System.Environment.GetEnvironmentVariable("UESTC_STARTUP_PROFILE") == "1";
-    private IObserverState? _profileObserver;
-    private IInputRouter? _profileInput;
-    private IWalkController? _profileWalk;
-    private bool? _profileCursorVisible;
-    private bool? _profileCursorHeld;
-    private static readonly StringName ForwardAction = "move_forward";
 
     internal static void TracePhase(string phase)
     {
@@ -36,64 +26,21 @@ internal sealed class StageStartupTrace
         GD.Print(FormattableString.Invariant($"STARTUP_PHASE {phase} {FrameClock.MonotonicMilliseconds:R} frame={Engine.GetProcessFrames()}{suffix}"));
     }
 
-    internal void TraceFrame(IFrameStatistics? statistics)
+    private static void TraceEnvironment()
     {
-        if (_profiling && statistics?.Latest is { } frame)
-        {
-            var state = frame.Context.State;
-            var movement = "";
-            if (state == AppState.Playing)
-            {
-                _profileObserver ??= KernelServices.Get<IObserverState>();
-                _profileInput ??= KernelServices.Get<IInputRouter>();
-                _profileWalk ??= KernelServices.Get<IWalkController>();
-                var cursorVisible = _profileInput.CursorVisible;
-                var cursorHeld = _profileInput.CursorHeld;
-                if (_profileCursorVisible != cursorVisible || _profileCursorHeld != cursorHeld)
-                {
-                    TraceEnvironment(cursorVisible, cursorHeld);
-                    _profileCursorVisible = cursorVisible;
-                    _profileCursorHeld = cursorHeld;
-                }
-                var feet = _profileObserver.Feet;
-                var walk = _profileWalk!;
-                var velocity = walk.Velocity;
-                movement = FormattableString.Invariant($" mode={_profileObserver.Mode} feetX={feet.X:R} feetY={feet.Y:R} feetZ={feet.Z:R} yawDeg={_profileObserver.YawDeg:R} forwardPressed={Input.IsActionPressed(ForwardAction)} cursorVisible={cursorVisible} cursorHeld={cursorHeld} walkActive={walk.Active} walkCollisionReady={walk.CollisionReady} walkVelocityX={velocity.X:R} walkVelocityY={velocity.Y:R} walkVelocityZ={velocity.Z:R}");
-            }
-            else
-            {
-                _profileCursorVisible = null;
-                _profileCursorHeld = null;
-            }
-            GD.Print(FormattableString.Invariant($"STARTUP_FRAME {frame.MonotonicMilliseconds:R} frame={frame.CollectionFrame} rendererCpuMs={frame.MainViewport.CpuRenderMilliseconds:R} rendererGpuMs={frame.MainViewport.GpuRenderMilliseconds:R} flow={state} pipelineSurface={frame.Pipelines.Surface} pipelineDraw={frame.Pipelines.Draw} pipelineCanvas={frame.Pipelines.Canvas} gcPauseMs={frame.Gc.PauseMilliseconds:R} maxFps={Engine.MaxFps} windowFocus={frame.Context.WindowFocused}{movement}"));
-        }
-    }
-
-    private static void TraceEnvironment(bool cursorVisible, bool cursorHeld)
-    {
-        var screen = DisplayServer.WindowGetCurrentScreen();
-        var size = DisplayServer.WindowGetSize();
         var windowHandle = DisplayServer.WindowGetNativeHandle(DisplayServer.HandleType.WindowHandle);
-        var quality = KernelServices.Get<IQualityService>().Effective;
-        var scale = quality[QualityKnob.RenderScale];
-        var vSync = DisplayServer.WindowGetVsyncMode();
-        var refreshRate = DisplayServer.ScreenGetRefreshRate(screen);
-        var limit = FrameLimitPolicy.Resolve(quality[QualityKnob.FrameRateLimit],
-            vSync != DisplayServer.VSyncMode.Disabled, refreshRate);
-        GD.Print(FormattableString.Invariant($"STARTUP_ENVIRONMENT {FrameClock.MonotonicMilliseconds:R} frame={Engine.GetProcessFrames()} cursorVisible={cursorVisible} cursorHeld={cursorHeld} maxFps={Engine.MaxFps} vSync={vSync} screen={screen} screenReportedRefreshHz={refreshRate:R} windowFocus={KernelServices.Get<IInputRouter>().DesktopState.WindowFocused} windowHandle={windowHandle} windowWidth={size.X} windowHeight={size.Y} windowMode={DisplayServer.WindowGetMode()} frameLimitRequest={quality.Requested(QualityKnob.FrameRateLimit)} frameLimitReason={limit.Reason} renderScaleRequest={quality.Requested(QualityKnob.RenderScale):R} renderScaleEffective={scale:R} internalWidth={Math.Max(1, (int)(size.X * scale))} internalHeight={Math.Max(1, (int)(size.Y * scale))} physicsTicksPerSecond={Engine.PhysicsTicksPerSecond}"));
+        GD.Print(FormattableString.Invariant($"STARTUP_ENVIRONMENT {FrameClock.MonotonicMilliseconds:R} frame={Engine.GetProcessFrames()} windowHandle={windowHandle}"));
     }
 
     internal static void TraceTitleInputReady(IAppBootFlow boot)
     {
-        var input = KernelServices.Get<IInputRouter>();
-        TraceEnvironment(input.CursorVisible, input.CursorHeld);
+        TraceEnvironment();
         GD.Print(FormattableString.Invariant($"STARTUP_PHASE title-input-ready {FrameClock.MonotonicMilliseconds:R} frame={Engine.GetProcessFrames()}{StartupReadiness(boot)}"));
     }
 
     internal static void TraceInputReady()
     {
-        var input = KernelServices.Get<IInputRouter>();
-        TraceEnvironment(input.CursorVisible, input.CursorHeld);
+        TraceEnvironment();
         GD.Print(FormattableString.Invariant($"STARTUP_PHASE input-ready {FrameClock.MonotonicMilliseconds:R} frame={Engine.GetProcessFrames()} mode={KernelServices.Get<ICameraRig>().Mode}"));
     }
 

@@ -2,6 +2,7 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using Campus.Contracts;
 using Campus.Kernel.Frame;
+using Campus.Kernel.Diagnostics;
 
 namespace Campus.Kernel.Inspect;
 
@@ -24,11 +25,11 @@ internal sealed class PerfHardwareCapture
     public bool Joined { get { lock (_gate) return _finished; } }
     public int Revision => Volatile.Read(ref _revision);
 
-    public PerfHardwareCapture(PerfValueChannel slow, PerfValueChannel fast)
+    public PerfHardwareCapture(PerfValueChannel slow, PerfValueChannel fast, double pollMilliseconds)
     {
         _slow = slow;
         _fast = fast;
-        _sampler = new NvmlSampler(() => FrameClock.MonotonicMilliseconds, Publish);
+        _sampler = new NvmlSampler(() => FrameClock.MonotonicMilliseconds, Publish, pollMilliseconds);
         Completion = ObserveAsync(_sampler);
     }
 
@@ -46,10 +47,12 @@ internal sealed class PerfHardwareCapture
     {
         get
         {
-            lock (_gate) return _errors.Count switch
+            lock (_gate)
             {
-                0 => null, 1 => _errors.Values.First(), _ => new AggregateException(_errors.Values)
-            };
+                Exception? failure = null;
+                foreach (var error in _errors.Values) failure = RetainedFailure.Append(failure, error);
+                return failure;
+            }
         }
     }
 
@@ -262,7 +265,7 @@ internal sealed class PerfHardwareCapture
 
     private void ObserveStatus(string field, NvmlStatus status)
     {
-        if (status.Error is { } error) RetainFailure(field, error);
+        if (status.Error is { } error && !NvmlNative.IsLoadFailure(error)) RetainFailure(field, error);
     }
 
     // Keep the first original per query site; repeated missing entry points cannot grow this without bound.

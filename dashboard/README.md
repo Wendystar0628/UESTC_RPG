@@ -64,7 +64,7 @@ collab:    {coverage,
                        hints: [{name, side, model, effort, text}], opus: [{name, row, at}], reasons: [缺数原因]},
             idle: [{who, minutes, longest: {from, to, rows: [id]}|null, reasons: [缺数原因]}]}
 缺数原因 =  {code: 稳定原因键, fields: [相对本段字段路径], message: 简短中文原因}
-fields 空数组表示整段受影响；a[] 表示 a 的每个元素，a[i] 只表示第 i 格（从 0 开始）；* 只匹配整个窗口的统计字段，不匹配明细、单格或其它缺数原因。
+fields 空数组表示整段受影响；a[] 表示 a 的每个元素，a[i] 只表示第 i 格（从 0 开始）；上级字段也算涉及。询问明细列表用 name[]。
 dispatch.rules 的 bad 与 unknown 计数针对已观察且开工时刻明确的派单，与 bad 明细一致；窗口未覆盖时 n、ok、rate 留 null，且没有可观察派单时规则计数也留 null 并给原因。
 team:      {coverage, leads: [{who, model, effort, running, since,
                               rows: [{id, title, stage, since, who, jump, deps, waitedBy}], agents}],

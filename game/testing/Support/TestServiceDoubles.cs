@@ -33,8 +33,7 @@ internal sealed class TestAppFlow : IAppFlow
     public string? LastError => null;
     public event Action<AppState, AppState>? Changed;
     public event Action<string>? PhaseReached { add { } remove { } }
-    public event Action<EnterCommandEvent>? EnterCommand;
-    public void PublishEnterCommand(EnterCommandEvent value) => EnterCommand?.Invoke(value);
+    public event Action<EnterCommandEvent>? EnterCommand { add { } remove { } }
     public int Observers => Changed?.GetInvocationList().Length ?? 0;
     public void SetState(AppState state)
     {

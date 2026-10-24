@@ -13,6 +13,34 @@ using static Campus.Tests.QualityApplicationTestFixture;
 [TestSuite]
 public sealed class QualityApplicationLifetimeTests
 {
+    [TestCase, TestCategory(TestReason.Regression)]
+    public async Task ThrowingCommandObserversLeaveReplacementCompletionAndUnbindClosed()
+    {
+        var (service, runtime, store) = await CliSession("command-observers");
+        using var cleanup = store;
+        var original = new IOException();
+        var observed = new List<QualityApplyEvent>();
+        service.ApplyCommand += _ => throw original;
+        service.ApplyCommand += observed.Add;
+        var edit = Edit(new(service.Requested.Preset,
+            new Dictionary<QualityKnob, float> { [QualityKnob.ParticleDensity] = .5f }), QualityKnob.ParticleDensity);
+        var replaced = service.Apply(edit, ApplyOrigin.User);
+        var applied = service.Apply(edit, ApplyOrigin.User);
+        AssertThat((await replaced).Status == ApplyStatus.Deferred).IsTrue();
+        service.Tick(.25);
+        AssertThat((await applied).Status == ApplyStatus.Applied).IsTrue();
+        service.Tick(0);
+        var canceled = service.Apply(edit, ApplyOrigin.User);
+        service.Unbind(runtime);
+        AssertThat(canceled.IsCanceled && observed.Any(value => value.Phase == QualityApplyPhase.Started) &&
+            observed.Any(value => value.Phase == QualityApplyPhase.Completed && value.Result?.Status == ApplyStatus.Applied) &&
+            observed.Count(value => value.Phase == QualityApplyPhase.Faulted) == 0 && runtime.Failures.Count == 0).IsTrue();
+        Exception? retained = null;
+        try { await service.DisposeAsync(); }
+        catch (Exception error) { retained = error; }
+        AssertThat(retained is AggregateException aggregate && aggregate.Flatten().InnerExceptions.Contains(original)).IsTrue();
+    }
+
     [TestCase]
     [TestCategory(TestReason.Regression)]
     public async Task ConcurrentUnbindDoesNotTurnConsumerFailureIntoCancellation()

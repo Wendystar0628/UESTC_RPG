@@ -316,7 +316,7 @@ public sealed class GeometryInstancePoolRuntimeTests
     [TestCategory(TestReason.Contract)]
     [TestCategory("NativeRender")]
     [RequireGodotRuntime]
-    public void ShadowProxyIsAValidatedScalarOnTheInstanceOnly()
+    public async Task ShadowProxyIsAValidatedScalarOnTheInstanceOnly()
     {
         using var fixture = Fixture.Create();
         var prototype = Prototype(GeometryBuffer.Freeze(Surface(fixture.Provider.FirstSpec)));
@@ -324,15 +324,21 @@ public sealed class GeometryInstancePoolRuntimeTests
         var body = fixture.Host.Mount(Spec("body", prototype));
         var proxyNode = FindPool(fixture.Host, "proxy");
         var bodyNode = FindPool(fixture.Host, "body");
+        // Godot populates instance shader defaults when it updates dirty render instances.
+        await fixture.Parent.ToSignal(RenderingServer.Singleton, RenderingServer.SignalName.FramePostDraw);
         AssertThat(proxyNode.Multimesh.Mesh.GetInstanceId() != bodyNode.Multimesh.Mesh.GetInstanceId()).OverrideFailureMessage("Pools without Map must keep exclusive native meshes even for the same prototype.").IsTrue();
         AssertThat(proxyNode.CastShadow == GeometryInstance3D.ShadowCastingSetting.ShadowsOnly &&
             bodyNode.CastShadow == GeometryInstance3D.ShadowCastingSetting.Off).OverrideFailureMessage("Explicit body/proxy shadow policy changed.").IsTrue();
         proxy.SetParameter(_shaderInstanceShadowProxy, 1f);
-        AssertThat(proxyNode.GetInstanceShaderParameter(_shaderInstanceShadowProxy).AsSingle() == 1f).OverrideFailureMessage("The scalar instance parameter did not reach the native proxy.").IsTrue();
-        AssertThat(bodyNode.GetInstanceShaderParameter(_shaderInstanceShadowProxy).AsSingle() == 0f).OverrideFailureMessage("Changing a proxy contaminated a body sharing its material.").IsTrue();
+        var proxyShadow = proxyNode.GetInstanceShaderParameter(_shaderInstanceShadowProxy);
+        var bodyShadow = bodyNode.GetInstanceShaderParameter(_shaderInstanceShadowProxy);
+        AssertThat(proxyShadow.VariantType == Variant.Type.Float && proxyShadow.AsSingle() == 1f).OverrideFailureMessage("The scalar instance parameter did not reach the native proxy.").IsTrue();
+        AssertThat(bodyShadow.VariantType == Variant.Type.Float && bodyShadow.AsSingle() == 0f).OverrideFailureMessage("Changing a proxy contaminated a body sharing its material.").IsTrue();
         body.SetParameter(_shaderInstanceVegLevel, (float)Campus.Contracts.Vegetation.VegPool.L0);
-        AssertThat(bodyNode.GetInstanceShaderParameter(_shaderInstanceVegLevel).AsSingle() == (float)Campus.Contracts.Vegetation.VegPool.L0 &&
-            proxyNode.GetInstanceShaderParameter(_shaderInstanceVegLevel).AsSingle() == (float)Campus.Contracts.Vegetation.VegPool.L1).OverrideFailureMessage("A pool level must reach its instance without replacing another pool's L1 shader default.").IsTrue();
+        var bodyLevel = bodyNode.GetInstanceShaderParameter(_shaderInstanceVegLevel);
+        var proxyLevel = proxyNode.GetInstanceShaderParameter(_shaderInstanceVegLevel);
+        AssertThat(bodyLevel.VariantType == Variant.Type.Float && bodyLevel.AsSingle() == (float)Campus.Contracts.Vegetation.VegPool.L0 &&
+            proxyLevel.VariantType == Variant.Type.Float && proxyLevel.AsSingle() == (float)Campus.Contracts.Vegetation.VegPool.L1).OverrideFailureMessage("A pool level must reach its instance without replacing another pool's L1 shader default.").IsTrue();
         {
             var thrown = false;
             try { proxy.SetParameter(_shaderInstanceShadowProxy, float.NaN); }

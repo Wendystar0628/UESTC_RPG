@@ -16,6 +16,8 @@ $root = (Resolve-Path (Join-Path $PSScriptRoot '..\..\..')).Path
 . "$root\scripts\lib\start-game.ps1"
 $Output = Assert-UESTCChildPath $Output (Join-Path $root 'output\start_game\TOOL-215-profile')
 if (Test-Path -LiteralPath $Output) { throw 'Choose a fresh output directory.' }
+$performanceBatch = Join-Path $root ('output\perf\runs\startup-cpu-' + [IO.Path]::GetFileName($Output))
+if ($Measurement -eq 'diagnostic' -and (Test-Path -LiteralPath $performanceBatch)) { throw 'Choose a fresh performance batch directory.' }
 if ($SystemFileCache -eq 'reboot-first-run' -and $JustPrebaked -eq 'yes') { throw 'A just-prebaked run cannot be declared OS-cold.' }
 if ($PlayingSample -and ($Measurement -ne 'diagnostic' -or $Modes.Count -ne 1 -or $Modes[0] -ne 'immediate')) {
     throw '-PlayingSample requires exactly -Modes immediate -Measurement diagnostic.'
@@ -68,6 +70,7 @@ foreach ($mode in $Modes) {
         preparation=$preparation;
         device=$Device; preset=if($PlayingSample){'fine'}else{'production-default'}; builtRevisionDeclaredByRoot=$BuiltRevision;
         playingSample=[bool]$PlayingSample;
+        performanceOutputDirectory=if($Measurement -eq 'diagnostic'){Join-Path $performanceBatch $mode}else{$null};
         startupScenario=if($PlayingSample){'playing'}else{$mode};
         presentation='private desktop; CPU/GPU work diagnostic only, presented FPS not measured';
         playingDisplay=if($PlayingSample){'--quality=fine --quality-set=display_mode=0; preset v_sync=1; no fixed-fps'}else{$null} }
@@ -85,6 +88,9 @@ foreach ($mode in $Modes) {
         $lease = $null
         try {
             $lease = Enter-UESTCBuildLock (Get-UESTCLayout $root).Locks
+            # The formal shutdown has drained the recorder before analysis reads the closed session.
+            & python -I -X utf8 (Join-Path $root 'scripts\perf\analyze.py') --root $root
+            if ($LASTEXITCODE -ne 0) { throw "$mode performance analysis failed." }
             & dotnet $parser $round
             if ($LASTEXITCODE -ne 0) { throw "$mode CPU parse failed." }
         } finally { Exit-UESTCBuildLock $lease }

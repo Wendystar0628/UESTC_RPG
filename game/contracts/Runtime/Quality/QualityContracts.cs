@@ -137,6 +137,7 @@ public sealed record ApplyResult(
 public interface IQualityService                    // Kernel 服务（SYS-GRAPHICS）；界面与门禁的唯一入口
 {
     /// <summary>Command-owner value boundaries; original failures stay on their existing channel.</summary>
+    /// <summary>Observation only; subscriber failures are retained by the publisher and delivered by its lifetime drain without changing the command result.</summary>
     event Action<QualityApplyEvent>? ApplyCommand;
     QualityProfile Default { get; }                 // 所有非效果项的默认值与默认效果预设
     QualityProfile Requested { get; }

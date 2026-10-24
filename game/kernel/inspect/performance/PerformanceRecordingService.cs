@@ -292,8 +292,9 @@ public sealed class PerformanceRecordingService : IPerformanceRecorder, IRegistr
     private void ProducerFailure([FailureHandler("ENG-PERF-DATA")] Exception error)
     {
         if (_session is not { } current) throw new InvalidOperationException("Producer failed without an owning session.", error);
-        current.TryEvent(new("producer.failure", null, Now(), new { producer = "main", exceptionType = error.GetType().FullName }));
         current.AddFailure(PerfFaultCode.ProducerFailed, error);
+        try { current.TryEvent(new("producer.failure", null, Now(), new { producer = "main", exceptionType = error.GetType().FullName })); }
+        catch (Exception recordingError) { current.AddFailure(PerfFaultCode.ProducerFailed, recordingError); }
         QueueFailureCleanup(current);
     }
 

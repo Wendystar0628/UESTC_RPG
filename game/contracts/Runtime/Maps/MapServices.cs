@@ -32,6 +32,7 @@ public interface IMapTransition
 public interface IMapService                 // Kernel 服务（SYS-MAPS）
 {
     /// <summary>Command-owner value boundaries; original failures stay on their existing channel.</summary>
+    /// <summary>Observation only; subscriber failures are retained by the publisher and delivered by its lifetime drain without changing the command result.</summary>
     event Action<MapPrepareEvent>? PrepareCommand;
     long Rev { get; }                        // 地图基础挂载完成 + 1
     MapId Default { get; }                   // index.json 的默认图

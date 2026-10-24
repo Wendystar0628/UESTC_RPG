@@ -323,9 +323,12 @@ def analyze_all(root=ROOT, output=None, author=None):
                     summary, items, frames, hwfast = summary_for(directory, manifest, streams, dictionary, budgets, run)
                     write_session(out, summary, items, frames, hwfast, dictionary, stamp, budgets, manifest, streams)
                     changed.append(summary)
-            except (ValueError, OSError, KeyError, TypeError) as error:
+            except OSError as error:
+                errors.append(dict(source=str(directory), id=identifier, kind='io',
+                                   reason=str(error), calc=CALC, inputStamp=stamp))
+            except Exception as error:
                 errors.append(dict(source=str(directory), id=identifier,
-                                   kind='io' if isinstance(error, OSError) else 'content',
+                                   kind='content',
                                    reason=str(error), calc=CALC, inputStamp=stamp))
         entries = []
         for path in sorted((out / 'derived').glob('*/summary.json')):
@@ -336,8 +339,10 @@ def analyze_all(root=ROOT, output=None, author=None):
         for entry in entries:
             atomic_json(out / 'derived' / entry['id'] / 'summary.json', entry)
         # 保留与身份判定仍使用失败来源上一份摘要，不能把旧会话升成当前基线。
+        removed = prune(out, entries)
+        errors = [error for error in errors if not any(
+            Path(error['source']).is_relative_to(Path(path)) for path in removed)]
         failed_sources = {error['source'] for error in errors}
-        removed = prune(out, entries, failed_sources)
         entries = [entry for entry in entries if Path(entry['source']).exists()]
         available = [entry for entry in entries if entry['source'] not in failed_sources]
         changed_ids = {summary['id'] for summary in changed}

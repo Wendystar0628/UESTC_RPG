@@ -1,24 +1,48 @@
-// 解析 Playing 日志，产出渲染/帧间隔、尖峰证据及实际位移观察。
-// 用法：由 CpuPhaseReport 经 CpuParse 入口创建；Frames 只读取既有证据与采样候选。
+// 读取分析器派生的公共性能指标与异常，仅关联阶段、日志和 EventPipe 栈。
+// 用法：由 CpuPhaseReport 创建；会话分析在游戏正式关闭排空后由 run.ps1 完成。
 using System.Globalization;
+using System.Text.Json;
 using System.Text.RegularExpressions;
-using static CpuTraceAnalysis;
 
 sealed class PlayingObservations
 {
-    private readonly RenderFrame[] rendererFrames;
     private readonly LogEvidence[] evidence;
+    private readonly JsonElement summary;
+    private readonly JsonElement anomalies;
+    private readonly string derivedDirectory;
 
-    public PlayingObservations(string logText)
+    public PlayingObservations(string logText, JsonElement performance)
     {
-        rendererFrames = Regex.Matches(logText,
-            @"(?m)^STARTUP_FRAME ([0-9.]+) frame=(\d+) rendererCpuMs=([0-9.Ee+-]+) rendererGpuMs=([0-9.Ee+-]+)([^\r\n]*)")
-            .Select(m => new RenderFrame(double.Parse(m.Groups[1].Value, CultureInfo.InvariantCulture),
-                long.Parse(m.Groups[2].Value, CultureInfo.InvariantCulture),
-                double.Parse(m.Groups[3].Value, CultureInfo.InvariantCulture),
-                double.Parse(m.Groups[4].Value, CultureInfo.InvariantCulture), m.Groups[5].Value)).ToArray();
         evidence = ReadLogEvidence(logText);
+        var recordingRoot = performance.GetProperty("recordingRoot").GetString()!;
+        var manifests = Directory.GetFiles(recordingRoot, "manifest.json", SearchOption.AllDirectories);
+        if (manifests.Length != 1) throw new InvalidDataException($"Expected one closed performance session in {recordingRoot}, found {manifests.Length}.");
+        using var manifest = JsonDocument.Parse(File.ReadAllText(manifests[0]));
+        var id = manifest.RootElement.GetProperty("id").GetString()!;
+        if (Path.GetFileName(id) != id || id is "." or "..") throw new InvalidDataException("Invalid performance session ID.");
+        derivedDirectory = Path.Combine(performance.GetProperty("derivedRoot").GetString()!, id);
+        summary = ReadDerived("summary.json");
+        anomalies = ReadDerived("anomalies.json");
+        if (!string.Equals(Path.GetFullPath(summary.GetProperty("source").GetString()!),
+                Path.GetDirectoryName(manifests[0]), StringComparison.OrdinalIgnoreCase))
+            throw new InvalidDataException("Performance summary belongs to a different recording.");
+        if (summary.GetProperty("id").GetString() != id || anomalies.GetProperty("id").GetString() != id ||
+            summary.GetProperty("calc").GetRawText() != anomalies.GetProperty("calc").GetRawText())
+            throw new InvalidDataException("Performance derived documents do not describe the same session/calculation.");
     }
+
+    private JsonElement ReadDerived(string name)
+    {
+        using var document = JsonDocument.Parse(File.ReadAllText(Path.Combine(derivedDirectory, name)));
+        return document.RootElement.Clone();
+    }
+
+    public object SessionReport() => new
+    {
+        derivedDirectory, summary, anomalies,
+        source = "scripts/perf/analyze.py; values, availability reasons and classifications are copied unchanged",
+        scope = "Whole recording, including formal shutdown. Startup phase windows below only select overlapping analyzer windows/anomalies; no phase distribution is recomputed."
+    };
 
     public object LogReport() => new
     {
@@ -29,119 +53,20 @@ sealed class PlayingObservations
         attribution = "Frame-number association and line-order brackets only. Unstamped exceptions are not assigned an invented timestamp. Absence of an error or cache line is not proof of no stalls or no baking."
     };
 
-    public object Frames(Window window, CpuPhaseReport phases, CpuTraceAnalysis analysis)
+    public object Phase(Window window, IReadOnlyDictionary<string, Anchor> boundaries)
     {
-        var boundaries = phases.Boundaries;
-        var samples = analysis.Samples;
-        var mainId = phases.MainId;
-        var origin = phases.Origin;
-        long? startFrame = window.From == "process-start" ? 0 : FrameOf(boundaries[window.From]);
-        var endFrame = FrameOf(boundaries[window.To]);
-        long? count = startFrame is not null && endFrame is not null && endFrame >= startFrame ? endFrame-startFrame : null;
-        var fromMs = window.From == "process-start" ? double.NegativeInfinity : boundaries[window.From].Milliseconds;
+        double? fromMs = window.From == "process-start" ? null : boundaries[window.From].Milliseconds;
         var toMs = boundaries[window.To].Milliseconds;
-        // Include the shared boundary observation so adjacent phase intervals meet without a fabricated gap.
-        var frames = rendererFrames.Where(x => x.Milliseconds >= fromMs && x.Milliseconds <= toMs).ToArray();
-        // Consecutive engine observations, never marker wall-time divided by a frame count.
-        var pairs = frames.Zip(frames.Skip(1), (a, b) => new {
-            fromFrame = a.Frame, toFrame = b.Frame, fromMilliseconds = a.Milliseconds,
-            toMilliseconds = b.Milliseconds, frameDelta = b.Frame - a.Frame,
-            intervalMilliseconds = b.Milliseconds - a.Milliseconds, end = b }).ToArray();
-        var valid = pairs.Where(x => x.frameDelta == 1 && x.intervalMilliseconds > 0 &&
-            double.IsFinite(x.intervalMilliseconds)).ToArray();
-        var spikes = valid.Where(x => x.intervalMilliseconds > 33).Select(x => new {
-            x.fromFrame, x.toFrame, x.fromMilliseconds, x.toMilliseconds, x.intervalMilliseconds,
-            rendererCpuAtEndMilliseconds = x.end.Cpu, rendererGpuAtEndMilliseconds = x.end.Gpu,
-            engineObservationSuffix = x.end.Details,
-            logEvidenceCandidates = evidence.Where(e => e.Frame is { } f ? f >= x.fromFrame && f <= x.toFrame :
-                e.PreviousFrame is { } before && e.NextFrame is { } after && before >= x.fromFrame && after <= x.toFrame).ToArray(),
-            clockAlignment = "EventPipe UTC inferred from observed engine anchors; nominal 20ms polling plus flush/scheduling uncertainty",
-            nearbyMainThreadSampledTimeCandidates = Top(samples.Where(s => s.ThreadId == mainId &&
-                s.Utc >= origin.AddMilliseconds(x.fromMilliseconds) && s.Utc < origin.AddMilliseconds(x.toMilliseconds)).ToArray(), true),
-            nearbyBakeBuildSampledTimeCandidates = Top(samples.Where(s =>
-                s.Utc >= origin.AddMilliseconds(x.fromMilliseconds) && s.Utc < origin.AddMilliseconds(x.toMilliseconds) &&
-                s.Frames.Any(f => f.Name.Contains("Campus.Kernel.Bake.BakeProductBuilder.Build", StringComparison.Ordinal) ||
-                    f.Name.Contains("Campus.Kernel.Bake.BakeGeometryBuilder.Build", StringComparison.Ordinal))).ToArray(), true),
-            attribution = "COINCIDENCE_ONLY; renderer timings may describe the preceding rendered frame; sampled-thread-time includes waits; no function CPU share"
-        }).ToArray();
-        return new {
-            status = count is null ? "FRAME_COUNT_NOT_MEASURED; marker frame field absent" : "ENGINE_PROCESS_FRAME_COUNTER_DIFFERENCE",
-            startFrame, endFrame, processFrameCount=count,
-            meanEngineObservationIntervalMilliseconds=count is > 0 ? (window.End-window.Start).TotalMilliseconds/count : (double?)null,
-            experiencePacingStatus="NOT_MEASURED; private-desktop cadence does not establish presented FPS or experience stutter; inspect measured renderer CPU/GPU work",
-            rendererStatus=frames.Length==0 ? "NOT_MEASURED; STARTUP_FRAME telemetry absent in window" : "FRAME_STATISTICS_VIEWPORT_RENDER_MEASUREMENTS",
-            rendererSamples=frames.Length,
-            rendererCpu=Distribution(frames.Select(x=>x.Cpu).ToArray()), rendererGpu=Distribution(frames.Select(x=>x.Gpu).ToArray()),
-            movement = Movement(frames),
-            processIntervals = new {
-                status = valid.Length == 0 ? "NOT_MEASURED; no consecutive positive finite STARTUP_FRAME intervals" :
-                    valid.Length == pairs.Length ? "CONTIGUOUS_ENGINE_PROCESS_OBSERVATIONS; DIAGNOSTIC_ONLY" : "PARTIAL_CONTIGUOUS_OBSERVATIONS; gaps excluded, never divided or backfilled",
-                distribution = Distribution(valid.Select(x => x.intervalMilliseconds).ToArray()),
-                rejectedPairs = pairs.Where(x => x.frameDelta != 1 || x.intervalMilliseconds <= 0 || !double.IsFinite(x.intervalMilliseconds))
-                    .Select(x => new { x.fromFrame, x.toFrame, x.frameDelta, x.intervalMilliseconds }).ToArray(),
-                spikesAbove33Milliseconds = spikes,
-                caveat = "Main-loop observation intervals, not presented frames or GPU completion latency. Both boundary observations are included; adjacent windows share one observation and no interval. Per-frame logging/EventPipe/CPU enumeration overhead is included, not subtracted. Raw godot.log is authoritative."
-            },
-            limit="Engine process frames are not presented-frame counts. Viewport renderer CPU/GPU samples describe render work (typically previous rendered frame); they are not process/main/worker OS CPU. Window assignment follows observation time. Render CPU and GPU overlap; never add them to wall time or OS CPU." };
-    }
-
-    private static long? FrameOf(Anchor a) => Regex.Match(a.Suffix, @"(?:^|\s)frame=(\d+)(?:\s|$)") is { Success: true } match
-        ? long.Parse(match.Groups[1].Value, CultureInfo.InvariantCulture) : null;
-
-    private static object Distribution(double[] input)
-    {
-        var values = input.Where(double.IsFinite).OrderBy(x => x).ToArray();
-        // Nearest rank retains measured values; no interpolation or estimated missing frames.
-        double? Percentile(double fraction) => values.Length == 0 ? null : values[Math.Max(0, (int)Math.Ceiling(values.Length * fraction) - 1)];
-        return new {
-            count = values.Length, rejectedNonFinite = input.Length - values.Length,
-            percentileMethod = "nearest-rank over finite measured observations",
-            p50Milliseconds = Percentile(.50), p95Milliseconds = Percentile(.95), p99Milliseconds = Percentile(.99),
-            meanMilliseconds = values.Length == 0 ? (double?)null : values.Average(),
-            maxMilliseconds = values.Length == 0 ? (double?)null : values[^1],
-            sumMilliseconds = values.Length == 0 ? (double?)null : values.Sum(),
-            above33Milliseconds = values.Count(x => x > 33), above100Milliseconds = values.Count(x => x > 100)
-        };
-    }
-
-    private static object Movement(RenderFrame[] frames)
-    {
-        var observations = frames.Select(frame => {
-            var fields = Regex.Matches(frame.Details, @"(\w+)=([^ ]+)")
-                .ToDictionary(m => m.Groups[1].Value, m => m.Groups[2].Value, StringComparer.Ordinal);
-            double? Number(string key) => fields.TryGetValue(key, out var text) &&
-                double.TryParse(text, NumberStyles.Float, CultureInfo.InvariantCulture, out var number) && double.IsFinite(number) ? number : null;
-            if (fields.GetValueOrDefault("flow") != "Playing" || fields.GetValueOrDefault("mode") != "Walk" ||
-                Number("feetX") is not { } x || Number("feetY") is not { } y || Number("feetZ") is not { } z ||
-                Number("yawDeg") is not { } yaw || !bool.TryParse(fields.GetValueOrDefault("forwardPressed"), out var pressed)) return null;
-            return new MovementFrame(frame.Frame, frame.Milliseconds, x, y, z, yaw, pressed,
-                bool.TryParse(fields.GetValueOrDefault("cursorVisible"), out var visible) ? visible : null,
-                bool.TryParse(fields.GetValueOrDefault("cursorHeld"), out var held) ? held : null);
-        }).Where(x => x is not null).Select(x => x!).ToArray();
-        if (observations.Length < 2) return new { status = "NOT_MEASURED; fewer than two complete Playing Walk pose/action observations", completeObservations = observations.Length };
-        var first = observations[0]; var last = observations[^1];
-        var pairs = observations.Zip(observations.Skip(1), (a, b) => new {
-            a, b, consecutive = b.Frame == a.Frame + 1, dx = b.X - a.X, dz = b.Z - a.Z }).ToArray();
-        var pressed = pairs.Where(p => p.consecutive && p.a.Pressed && p.b.Pressed).ToArray();
-        var direction = first.Yaw * Math.PI / 180;
-        var displacementX = last.X - first.X; var displacementZ = last.Z - first.Z;
-        var forward = displacementX * Math.Sin(direction) - displacementZ * Math.Cos(direction);
-        var positiveForward = pressed.Count(p => p.dx * Math.Sin(p.a.Yaw * Math.PI / 180) - p.dz * Math.Cos(p.a.Yaw * Math.PI / 180) > 0);
-        return new {
-            status = pressed.Length == 0 ? "NO_CONTIGUOUS_PRESSED_POSE_PAIRS; forward input not confirmed" :
-                positiveForward > 0 ? "PRESSED_ACTION_AND_POSITIVE_FORWARD_DISPLACEMENT_OBSERVED; route completion or unobstructed movement not established" :
-                "PRESSED_ACTION_WITHOUT_POSITIVE_FORWARD_DISPLACEMENT; blocked, consumed input or another cause remains unknown",
-            completeObservations = observations.Length, rejectedOrNonPlayingObservations = frames.Length - observations.Length,
-            first, last, pressedObservations = observations.Count(x => x.Pressed),
-            cursorVisibleObservations = observations.Count(x => x.CursorVisible == true),
-            cursorHeldObservations = observations.Count(x => x.CursorHeld == true),
-            cursorStateMissingObservations = observations.Count(x => x.CursorVisible is null || x.CursorHeld is null),
-            consecutivePressedPairs = pressed.Length, positiveForwardPressedPairs = positiveForward,
-            exactlyStationaryPressedPairs = pressed.Count(p => p.dx == 0 && p.dz == 0),
-            horizontalDisplacementMeters = Math.Sqrt(displacementX * displacementX + displacementZ * displacementZ),
-            forwardProjectionFromFirstYawMeters = forward,
-            observedHorizontalPathMeters = pairs.Where(p => p.consecutive).Sum(p => Math.Sqrt(p.dx * p.dx + p.dz * p.dz)),
-            limit = "Read-only IObserverState.Feet plus native action state; no coordinate edits, dead reckoning or expected-speed substitution. Stationary pressed frames are retained; collision is not inferred from zero displacement."
+        bool Overlaps(JsonElement item) => item.GetProperty("fromMs").GetDouble() <= toMs &&
+            (fromMs is null || item.GetProperty("toMs").GetDouble() >= fromMs);
+        return new
+        {
+            fromMilliseconds = fromMs, toMilliseconds = toMs,
+            analyzerWindows = summary.TryGetProperty("windows", out var windows) ?
+                windows.EnumerateArray().Where(Overlaps).ToArray() : null,
+            analyzerAnomalies = anomalies.GetProperty("items").EnumerateArray().Where(Overlaps).ToArray(),
+            unavailableReasons = summary.GetProperty("validity"),
+            limit = "Whole-session renderer CPU/GPU, phases, compilation and GC are in performanceSession.summary.all/steady.cost. Existing analyzer windows/anomalies are selected by overlap without splitting, reclassifying or recomputing them. Missing values and reasons remain as produced by the analyzer. EventPipe candidates for this phase are reported alongside this association."
         };
     }
 
@@ -152,14 +77,14 @@ sealed class PlayingObservations
         long? previous = null;
         for (var i = 0; i < lines.Length; i++)
         {
-            var match = Regex.Match(lines[i], @"^STARTUP_(?:FRAME|PHASE) .*?\bframe=(\d+)");
+            var match = Regex.Match(lines[i], @"^STARTUP_PHASE .*?\bframe=(\d+)");
             if (match.Success) previous = long.Parse(match.Groups[1].Value, CultureInfo.InvariantCulture);
             before[i] = previous;
         }
         long? next = null;
         for (var i = lines.Length - 1; i >= 0; i--)
         {
-            var match = Regex.Match(lines[i], @"^STARTUP_(?:FRAME|PHASE) .*?\bframe=(\d+)");
+            var match = Regex.Match(lines[i], @"^STARTUP_PHASE .*?\bframe=(\d+)");
             if (match.Success) next = long.Parse(match.Groups[1].Value, CultureInfo.InvariantCulture);
             after[i] = next;
         }
@@ -178,6 +103,4 @@ sealed class PlayingObservations
     }
 }
 
-record RenderFrame(double Milliseconds, long Frame, double Cpu, double Gpu, string Details);
-record MovementFrame(long Frame, double Milliseconds, double X, double Y, double Z, double Yaw, bool Pressed, bool? CursorVisible, bool? CursorHeld);
 record LogEvidence(string Kind, int Line, string Text, long? Frame, long? PreviousFrame, long? NextFrame);

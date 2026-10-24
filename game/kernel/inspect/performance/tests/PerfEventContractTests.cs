@@ -46,7 +46,7 @@ public sealed class PerfEventContractTests
     public void ContextUsesDictionaryForDrawRecoveryAndDoesNotInventOwnerCoverage()
     {
         var dictionary = new PerfFieldDictionary(File.ReadAllText(RepositoryFixture.FilePath("game", "data", "perf-fields.json")));
-        var context = new PerfContextCapture(dictionary, requiredOwnerBoundariesAttached: false);
+        var context = new PerfContextCapture(dictionary);
         var rule = dictionary.Snapshot["nonSteadyRules"]!["rules"]!.AsArray()
             .Single(item => item!["name"]!.GetValue<string>() == "drawResume")!;
         int recoveryFrames = rule["settleFrames"]!.GetValue<int>();
@@ -59,8 +59,8 @@ public sealed class PerfEventContractTests
         for (int index = 0; index < recoveryFrames; index++)
         {
             var captured = context.Capture(in frame, false, WorldTransition.None, false);
-            if ((captured.Flags & flag) == 0 || captured.Complete)
-                throw new InvalidOperationException("Draw recovery or missing owner coverage was misclassified.");
+            if ((captured.Flags & flag) == 0 || !captured.Complete)
+                throw new InvalidOperationException("Draw recovery or attached owner coverage was misclassified.");
         }
         if ((context.Capture(in frame, false, WorldTransition.None, false).Flags & flag) != 0)
             throw new InvalidOperationException("Draw recovery exceeded its dictionary rule.");
@@ -89,7 +89,7 @@ public sealed class PerfEventContractTests
     public void SameOperationNumbersRemainSeparateAcrossOwnersAndNoChangeApplyCloses()
     {
         var dictionary = Dictionary();
-        var context = new PerfContextCapture(dictionary, requiredOwnerBoundariesAttached: true);
+        var context = new PerfContextCapture(dictionary);
         var enter = new EnterCommandEvent(1, EnterCommandPhase.Started, new(EnterKind.NewGame), null, false, null);
         var save = new SaveLoadEvent(1, SaveLoadKind.NewGame, SaveLoadPhase.Queued, null, null, null, null);
         var map = new MapPrepareEvent(1, MapPreparePhase.Started, default, default, null);
@@ -132,7 +132,7 @@ public sealed class PerfEventContractTests
     public void ReuseRejectionSupersessionAndQueueCancellationDoNotInventWorkOrSettling()
     {
         var dictionary = Dictionary();
-        var context = new PerfContextCapture(dictionary, requiredOwnerBoundariesAttached: true);
+        var context = new PerfContextCapture(dictionary);
         var rejected = new EnterCommandEvent(1, EnterCommandPhase.Rejected, new(EnterKind.Continue), EnterResult.Rejected, false, null);
         var reused = new MapPrepareEvent(1, MapPreparePhase.Reused, default, default, MapTravelResult.Arrived);
         if (context.Observe(in rejected, 10) || context.Observe(in reused, 10))
@@ -158,7 +158,7 @@ public sealed class PerfEventContractTests
             throw new InvalidOperationException("An actual completion did not settle independently of its unknown start.");
     }
 
-    [TestCase, TestCategory(TestReason.Regression)]
+    [TestCase, TestCategory(TestReason.Regression), RequireGodotRuntime]
     public async Task SaveWorkerCallbacksPreserveRequestAndResultUntilMainDrainAndStop()
     {
         var queue = new PerfSaveCommandQueue();
@@ -177,9 +177,9 @@ public sealed class PerfEventContractTests
         // A previously captured delegate can arrive after unsubscription; Stop also rejects that callback.
         await Task.Run(() => save.PublishLoadCommand(value with { Operation = 2 }));
         save.LoadCommand -= queue.Enqueue;
-        if (!queue.TryDequeue(out var started) || started != value || !queue.TryDequeue(out var completed) ||
-            completed.Phase != SaveLoadPhase.Completed || completed.Slot != requested || completed.Result != result ||
-            completed.Result.Slot != actual || queue.TryDequeue(out _))
+        if (!queue.TryDequeue(out var started) || started.Value != value || started.Frame is not null || started.Time <= 0 || !queue.TryDequeue(out var completed) ||
+            completed.Value.Phase != SaveLoadPhase.Completed || completed.Value.Slot != requested || completed.Value.Result != result ||
+            completed.Value.Result.Slot != actual || completed.Frame is not null || completed.Time < started.Time || queue.TryDequeue(out _))
             throw new InvalidOperationException("Worker handoff changed source request/actual result, order, or accepted after stop.");
     }
 
@@ -187,7 +187,7 @@ public sealed class PerfEventContractTests
     public void ThumbnailExclusionUsesEveryActualCollectionFrameAndDoesNotIncludePhoto()
     {
         var dictionary = Dictionary();
-        var context = new PerfContextCapture(dictionary, requiredOwnerBoundariesAttached: true);
+        var context = new PerfContextCapture(dictionary);
         context.Readback("saveThumbnail", 10);
         context.Readback("saveThumbnail", 12);
         context.Readback("photo", 13);

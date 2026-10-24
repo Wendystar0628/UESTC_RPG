@@ -141,11 +141,10 @@ try {
     $scenario = if ($playingSample) { 'playing' } else { $Mode }
     $gameArgs = @("--save-dir=$save", '--title=1', "--startup-scenario=$scenario")
     if ($playingSample) { $gameArgs += @('--quality=fine', '--quality-set=display_mode=0') }
+    if ($diagnostic) { $gameArgs += "--perf-out=$($condition.performanceOutputDirectory)" }
     # All three conditions use normal production defaults; no gate/shots/frames CaptureMode.
     $arguments = @('--path', "$toolRoot\game", '--log-file', $log, '--') + $gameArgs
     $line = ($arguments | ForEach-Object { ConvertTo-UESTCProcessArgument $_ }) -join ' '
-    # Explicitly override inherited telemetry: experience must never enable per-frame logging.
-    $env:UESTC_STARTUP_PROFILE = if ($diagnostic) { '1' } else { '0' }
     $timing['engineLaunchRequestedTimestamp'] = [Diagnostics.Stopwatch]::GetTimestamp()
     $gameTree = New-Object Uestc.Tools.ProcessTree($window, $line, $toolRoot, $true, [Text.Encoding]::UTF8, $false, $null)
     $gameProcess = [Diagnostics.Process]::GetProcessById($gameTree.ProcessId)
@@ -334,10 +333,10 @@ try {
         playingSample=[ordered]@{ enabled=$playingSample; state=$playingState; edges=$playingEdges.ToArray();
             targetIdleSeconds=if($playingSample){$playingTargetSeconds['playing-idle-start']}else{$null}; targetForwardHoldSeconds=if($playingSample){$playingTargetSeconds['playing-forward-start']}else{$null};
             physicalKey=$forwardPhysicalKey; request=$moveRequested; release=$releaseRequested; processCpuReads=$playingCpu.ToArray();
-            method='Game-owned Input.ParseInputEvent; normal controller routing, real pose/velocity observations';
-            diagnosticOverhead='EventPipe, every-frame engine logging, incremental 20ms log polling, phase thread snapshots and nominal 1s process counters are enabled. Read durations are retained. No causal overhead subtraction or experience qualification.' };
+            method='Game-owned Input.ParseInputEvent; normal controller routing and actual driver phase observations';
+            diagnosticOverhead='EventPipe, performance recording, incremental 20ms phase log polling, phase thread snapshots and nominal 1s process counters are enabled. Read durations are retained. No causal overhead subtraction or experience qualification.' };
         baseline=(git -C $toolRoot rev-parse HEAD); captureMode=$false; cpuFunctionShare='NOT_MEASURED';
-        frameTelemetryEnvironment=if($diagnostic){'UESTC_STARTUP_PROFILE=1'}else{'UESTC_STARTUP_PROFILE=0'};
+        performance=if($diagnostic){[ordered]@{ recordingRoot=$condition.performanceOutputDirectory; derivedRoot=(Join-Path $toolRoot 'output\perf\derived') }}else{$null};
         timing=[ordered]@{ origin='script-entry Stopwatch timestamp; phase milliseconds retain the separate engine origin';
             scriptToEngineLaunchRequestSeconds=(Elapsed-Seconds $scriptEnteredTimestamp $timing.engineLaunchRequestedTimestamp);
             lockWaitSeconds=(Elapsed-Seconds $timing.lockRequestedTimestamp $timing.lockAcquiredTimestamp);
@@ -355,7 +354,7 @@ try {
             waitCondition=if($Mode -eq 'dwell'){'real-new-game-preload-ready-and-menu-input-ready'}elseif($Mode -eq 'immediate'){'menu-input-ready'}else{$null};
             observedMenuInputReadyToPreloadReadyWaitSeconds=if($null -eq $preloadObservedAt -or $null -eq $titleInputReadyAt){$null}else{[Math]::Max(0, $preloadObservedAt-$titleInputReadyAt)};
             engineMenuInputReadyToRequestSeconds=if($inputRequest){($inputRequest.milliseconds-$phaseByName['title-input-ready'].milliseconds)/1000}else{$null} };
-        caveat='Normal interactive --title=1 with isolated empty save/log. Input scenarios retain production defaults and use Input.ParseInputEvent through the normal menu/controller. Game-owned phase markers retain actual engine time/frame; observer UTC includes log flush/poll/scheduling delay. Dwell requires actual preloadReady=true at acceptance. Title experience ends at static menu input readiness; title diagnostic additionally includes resource preload. Hidden-desktop render pacing is not presented FPS or evidence of experience stutter; renderer CPU/GPU work is measured separately. Experience has no EventPipe/per-frame logging/CPU snapshots; diagnostic rounds do not establish experience-target passes. Actual movement comes from real poses/velocity, never the injected action alone.'
+        caveat='Normal interactive --title=1 with isolated empty save/log. Input scenarios retain production defaults and use Input.ParseInputEvent through the normal menu/controller. Game-owned phase markers retain actual engine time/frame; observer UTC includes log flush/poll/scheduling delay. Dwell requires actual preloadReady=true at acceptance. Title experience ends at static menu input readiness; title diagnostic additionally includes resource preload. Hidden-desktop render pacing is not presented FPS or evidence of experience stutter; renderer CPU/GPU work is measured separately. Experience has no EventPipe/performance recording/CPU snapshots; diagnostic rounds do not establish experience-target passes. Driver completion is not a displacement measurement; no movement is inferred from the injected action alone.'
     }
 
 } catch {

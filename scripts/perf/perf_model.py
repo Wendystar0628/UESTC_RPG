@@ -329,7 +329,7 @@ def costs(frames, samples, hw):
                                   for metric in ('cpuMs', 'gpuMs')}
                            for key in sorted({key for f in frames for key in f['_viewports']})}
     result['memory'] = {key: distribution(s.get(key) for s in samples) for key in
-                        ('workingSetMiB', 'privateMiB', 'managedHeapMiB', 'godotStaticMiB', 'engineVideoMemoryMiB', 'textureMemoryMiB', 'bufferMemoryMiB')}
+                        ('workingSetMiB', 'managedHeapMiB', 'godotStaticMiB', 'engineVideoMemoryMiB', 'textureMemoryMiB', 'bufferMemoryMiB')}
     result['hardware'] = {key: distribution(h.get(key) for h in hw) for key in
                           ('wholeGpuMemoryMiB', 'processVideoMemoryMiB', 'gpuClockMHz', 'powerW', 'temperatureC')}
     result['gcTotals'] = {key: sum(f[key] for f in frames if number(f.get(key))) if any(number(f.get(key)) for f in frames) else None

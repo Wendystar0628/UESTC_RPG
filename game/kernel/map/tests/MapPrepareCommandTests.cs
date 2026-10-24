@@ -158,20 +158,25 @@ public sealed class MapPrepareCommandTests
         f.Service.Dispose();
     }
 
-    [TestCase, TestCategory(TestReason.Contract)]
-    public void TestMapServicePublishesOnlyExplicitCommandValues()
+    [TestCase, TestCategory(TestReason.Regression), RequireGodotRuntime]
+    public async Task ThrowingCommandObserversCannotStrandOrFinishPreparationTwice()
     {
-        var service = new TestMapService();
-        var events = new List<MapPrepareEvent>();
-        service.PrepareCommand += events.Add;
-        service.Prepare(default).GetAwaiter().GetResult();
-        AssertThat(events.Count == 0).IsTrue();
-        var value = new MapPrepareEvent(1, MapPreparePhase.Reused, default, default, MapTravelResult.Arrived);
-        service.PublishPrepareCommand(value);
-        AssertThat(events.SequenceEqual(new[] { value })).IsTrue();
-        service.PrepareCommand -= events.Add;
-        service.PublishPrepareCommand(value);
-        AssertThat(events.Count == 1).IsTrue();
+        var f = new Fixture();
+        var original = new IOException();
+        var observed = new List<MapPrepareEvent>();
+        f.Service.PrepareCommand += _ => throw original;
+        f.Service.PrepareCommand += observed.Add;
+        var pending = f.Service.Prepare(f.A);
+        f.Until(() => pending.IsCompleted);
+        await pending;
+        AssertThat(observed.Count == 2 && observed[0].Phase == MapPreparePhase.Started &&
+            observed[1].Phase == MapPreparePhase.Completed && observed[1].Result == MapTravelResult.Arrived &&
+            f.Service.Transition is null && !f.Camera.InputLocked && f.Service.Rev == 1).IsTrue();
+        Exception? retained = null;
+        try { await f.Service.DrainAsync(); }
+        catch (Exception error) { retained = error; }
+        AssertThat(ReferenceEquals(retained, original)).IsTrue();
+        f.Service.Dispose();
     }
 
     private sealed class InputReleaseFailingCamera(Exception failure) : TestCameraRig, ICameraRig

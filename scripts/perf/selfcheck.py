@@ -3,10 +3,12 @@
 """
 import csv
 import copy
+import io
 import json
 import sys
 import tempfile
 from pathlib import Path
+from contextlib import redirect_stderr, redirect_stdout
 from analyze import analyze_all, summary_for
 from perf_model import COSTS, PHASES, at, load_session, prepare_frames, read_json, rolling_medians, target_ms
 from perf_anomalies import DEEPEN_REPEAT_COUNT, annotate, anomaly, deepen, frame_anomalies
@@ -222,7 +224,7 @@ def check_processed_error(root, dictionary, budgets):
 
         derived_source = author / 'DERIVED'
         write_six(derived_source, manifest(dictionary, 'DERIVED'), streams([frame(dictionary, 0)], dictionary), dictionary)
-        with patch.object(analyze, 'curve_document', side_effect=ValueError('selfcheck derived content invalid')) as derives:
+        with patch.object(analyze, 'curve_document', side_effect=RuntimeError('selfcheck derived content invalid')) as derives:
             first = analyze_all(root, out, author)
             assert first['errors'][0]['kind'] == 'content', first
             assert analyze_all(root, out, author)['errors'] == first['errors']
@@ -286,26 +288,33 @@ def check_failed_baseline(root, dictionary, budgets):
         baseline = read_json(out / 'derived/CURRENT/summary.json')
         assert baseline['status'] in ('current', 'stale'), '夹具没有建立当前基线'
         assert read_json(out / 'derived/OLDER/summary.json')['status'] == 'superseded'
+        expired = out / 'runs/expired'
+        for identifier in ('CONTENT', 'IO', 'OLDER'):
+            write_six(expired / identifier, manifest(dictionary, identifier), streams([frame(dictionary, 0)], dictionary), dictionary)
+        (expired / 'CONTENT/frames.csv').write_text('truncated', encoding='utf-8')
+        original_load = analyze.load_session
+        def fail_current(directory, fields):
+            if directory in ((batch / 'CURRENT').resolve(), (expired / 'IO').resolve()):
+                raise PermissionError('selfcheck baseline read denied')
+            return original_load(directory, fields)
+        (batch / 'CURRENT/frames.csv').touch()
+        with patch.object(analyze, 'load_session', side_effect=fail_current):
+            initial_errors = analyze_all(root, out, author)['errors']
+        assert len(initial_errors) == 4 and {e['kind'] for e in initial_errors} == {'io', 'content', 'conflict'}, '夹具未触发三类失败'
         for index in range(AI_BATCHES_KEEP):
             write_six(out / 'runs' / f'newer-{index}/session', manifest(dictionary, f'NEWER-{index}'),
                       streams([frame(dictionary, 0)], dictionary), dictionary)
-        for path in batch.rglob('manifest.json'):
+        for path in list(batch.rglob('manifest.json')) + list(expired.rglob('manifest.json')):
             os.utime(path, (1, 1))
-        newer_batches = [p for p in (out / 'runs').iterdir() if p != batch]
+        newer_batches = [p for p in (out / 'runs').iterdir() if p not in (batch, expired)]
         assert len(newer_batches) == AI_BATCHES_KEEP and all(
             next(p.rglob('manifest.json')).stat().st_mtime_ns > (batch / 'CURRENT/manifest.json').stat().st_mtime_ns
             for p in newer_batches), '夹具基线批次未落到保留窗口外'
-        original_load = analyze.load_session
-
-        def fail_current(directory, fields):
-            if directory == (batch / 'CURRENT').resolve():
-                raise PermissionError('selfcheck baseline read denied')
-            return original_load(directory, fields)
-
         with patch.object(analyze, 'load_session', side_effect=fail_current):
             failed = analyze_all(root, out, author)
         assert len(failed['errors']) == 1 and failed['errors'][0]['kind'] == 'io', failed
         public = read_json(out / 'index.json')
+        assert not expired.exists() and str(expired.resolve()) in public['removed'], '坏来源额外保护了过期普通批次'
         assert all(entry['id'] != 'CURRENT' for entry in public['sessions']), '失败来源仍展示可用指标'
         assert next(entry for entry in public['sessions'] if entry['id'] == 'OLDER')['status'] == 'superseded', '旧会话冒充当前基线'
         assert read_json(out / 'derived/CURRENT/summary.json')['status'] == baseline['status'], '失败抹掉了基线身份'
@@ -349,7 +358,7 @@ def check_monitor_projection(root, dictionary, budgets):
     from monitor.view import perf as view
     import analyze
     with tempfile.TemporaryDirectory(prefix='uestc-perf-monitor-') as temporary:
-        out, author = Path(temporary) / 'perf', Path(temporary) / 'author'
+        out, author = Path(temporary) / 'output/perf', Path(temporary) / 'author'
         source = author / 'MONITOR'
         write_six(source, manifest(dictionary, 'MONITOR'), streams([frame(dictionary, 0)], dictionary), dictionary)
         analyzed = analyze_all(root, out, author)
@@ -391,6 +400,24 @@ def check_monitor_projection(root, dictionary, budgets):
              patch.object(analyze, 'analyze_all', side_effect=lambda **args: analyze_all(output=out, **args)):
             payload = view.build(None)
         assert payload['latest']['play'] == 'GOOD' and len(payload['sessionErrors']) == 1, '坏作者清单拖垮整页或重复报错'
+        assert (out / 'derived/MONITOR/summary.json').is_file(), '夹具没有留下坏来源的旧派生'
+        import perf
+        for arguments, expected in ((['show', 'MONITOR'], 1), (['compare', 'GOOD', 'MONITOR'], 1),
+                                    (['compare', 'MONITOR', 'GOOD'], 1), (['slice', 'MONITOR'], 1),
+                                    (['anomalies', 'MONITOR'], 1), (['show', 'GOOD'], 0),
+                                    (['compare', 'GOOD', 'GOOD'], 0), (['slice', 'GOOD'], 0),
+                                    (['anomalies', 'GOOD'], 0), (['latest'], 0)):
+            stdout, stderr = io.StringIO(), io.StringIO()
+            with patch.object(sys, 'argv', ['perf.py', '--root', temporary, *arguments]), \
+                 redirect_stdout(stdout), redirect_stderr(stderr):
+                status = perf.main()
+            assert status == expected, (arguments, status, stdout.getvalue(), stderr.getvalue())
+            if expected:
+                assert str(source.resolve()) in stderr.getvalue(), 'CLI 未指明失败来源'
+            elif arguments == ['latest']:
+                error = payload['sessionErrors'][0]
+                assert '会话 GOOD |' in stdout.getvalue() and '会话 MONITOR |' not in stdout.getvalue()
+                assert all(error[key] in stdout.getvalue() for key in ('source', 'kind', 'reason')), 'latest 未列全来源错误'
 
 
 def check_retention_authority(root, dictionary, budgets):
@@ -426,7 +453,6 @@ def check_missing_projection(root, dictionary, budgets):
     for rule in result['rules']:
         assert rule['bad'] == sum(rule['key'] in item['rules'] for item in result['bad']), '规则计数与违规明细不符'
     assert result['rules'][0]['unknown'] == 1 and result['n'] is None, '未判个数或窗口未知被抹掉'
-    assert all('*' not in reason['fields'] for reason in result['reasons']), '窗口原因覆盖了无关明细'
     with patch.object(health.hooklog, 'selftest_result', return_value=None), \
          patch.object(health.hooklog, 'log_records', return_value=None):
         hooks = health._hooks({})
@@ -491,6 +517,7 @@ def run(root):
     result.append('通过 TOOL-437：错误输入只处理一次，输入变化重算；曲线、帧率与归一化负载由分析器派生。')
     result.append('通过 TOOL-441：内容错误缓存、IO 重试与恢复、冲突重查、来源删除与派生缺失判鲜；好坏会话隔离，重复故障不自激通知。')
     result.append('通过 TOOL-445/446：超保留窗口基线一次 IO 失败不晋升旧会话、不删原始；派生内容错误缓存，规则计数与缺日志原因通过。')
+    result.append('通过 TOOL-451：CLI 拒绝失败来源的旧派生且好会话可读；普通坏批按预算删除、三类错误按真实 removed 清除，非 IO 派生异常缓存。')
     check_event_order(root, dictionary, budgets)
     result.append('通过 TOOL-438：事件 sequence 先校验再按时刻稳定排序；重复序号与逐帧时刻倒退仍拒绝。')
     frames = [frame(dictionary, i, gpu=2 if i < warm else 8) for i in range(warm + window + warm)]

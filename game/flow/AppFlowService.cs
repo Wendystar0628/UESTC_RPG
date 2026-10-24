@@ -1,4 +1,5 @@
 using Campus.Contracts.Diagnostics;
+using Campus.Kernel.Diagnostics;
 using Campus.Contracts;
 using Campus.Contracts.AppFlow;
 using Campus.Contracts.Maps;
@@ -36,6 +37,7 @@ public sealed class AppFlowService : IAppFlow, IAppBootFlow, IBootParticipant, I
     private WorldPreset? _directStart;
     private NewGameBoot? _directBoot;
     private long _enterOperation;
+    private readonly CommandNotification _commands = new();
 
     public AppFlowService(ICameraRig camera, IAppLoadingPresentation loading, IAppFrontispiecePresentation frontispiece,
         ISaveService saves, IMapService maps, IWorldState world, IWorldControl control,
@@ -87,13 +89,13 @@ public sealed class AppFlowService : IAppFlow, IAppBootFlow, IBootParticipant, I
         _resources.HoldInput();
         if (!restore.RestoreFaulted) _resources.HoldLoadingFlow();
         Change(AppState.Entering);
-        EnterCommand?.Invoke(new(operation, EnterCommandPhase.Started, _request, null, false, null));
+        _commands.Publish(EnterCommand, new EnterCommandEvent(operation, EnterCommandPhase.Started, _request, null, false, null));
         if (request.Kind is EnterKind.NewGame) MarkPhase("new-game-enter");
         _entry = EnterCore(operation, _request, false); return _entry;
     }
     private Task<EnterResult> RejectEnter(long operation, EnterRequest target)
     {
-        EnterCommand?.Invoke(new(operation, EnterCommandPhase.Rejected, target, EnterResult.Rejected, false, null));
+        _commands.Publish(EnterCommand, new EnterCommandEvent(operation, EnterCommandPhase.Rejected, target, EnterResult.Rejected, false, null));
         return Task.FromResult(EnterResult.Rejected);
     }
     public async Task<IMapArrival> EnterDirect(WorldPreset? start = null, NewGameBoot? boot = null)
@@ -108,7 +110,7 @@ public sealed class AppFlowService : IAppFlow, IAppBootFlow, IBootParticipant, I
         _resources.HoldInput();
         if (!restore.RestoreFaulted) _resources.HoldLoadingFlow();
         Change(AppState.Entering);
-        EnterCommand?.Invoke(new(operation, EnterCommandPhase.Started, _request, null, true, null));
+        _commands.Publish(EnterCommand, new EnterCommandEvent(operation, EnterCommandPhase.Started, _request, null, true, null));
         _entry = EnterCore(operation, _request, true);
         if (await _entry != EnterResult.Entered)
             throw Failure ?? new InvalidOperationException("Direct entry failed.");
@@ -174,7 +176,7 @@ public sealed class AppFlowService : IAppFlow, IAppBootFlow, IBootParticipant, I
         }
         finally
         {
-            EnterCommand?.Invoke(new(operation, outcome.HasValue ? EnterCommandPhase.Completed : EnterCommandPhase.Faulted,
+            _commands.Publish(EnterCommand, new EnterCommandEvent(operation, outcome.HasValue ? EnterCommandPhase.Completed : EnterCommandPhase.Faulted,
                 target, outcome, direct, LastError));
         }
     }
@@ -341,6 +343,7 @@ public sealed class AppFlowService : IAppFlow, IAppBootFlow, IBootParticipant, I
         _startup.ObserveReadinessCompletion();
         try { _continuation.Dispose(); } catch (Exception error) { failures.Add(error); }
         try { _resources.Dispose(); } catch (Exception error) { failures.Add(error); }
+        if (_commands.TakeFailure() is { } notification) failures.Add(notification);
         if (failures.Count > 0) throw new AggregateException("Application flow cleanup failed.", failures);
     }
 }

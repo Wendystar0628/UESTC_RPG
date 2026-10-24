@@ -180,11 +180,11 @@ internal sealed class BakeSourceIndex
         Windows = _windows.OrderBy(pair => pair.Key.X).ThenBy(pair => pair.Key.Z).Select(pair => new BakeSourceCell(pair.Key, pair.Value)).ToArray(),
         Vegetation = Completed(_vegetation),
         Furniture = Completed(_furniture),
-        Products = _products.OrderBy(pair => pair.Key.Module, StringComparer.Ordinal).ThenBy(pair => pair.Key.Detail, StringComparer.Ordinal)
+        Products = _products.ToArray().OrderBy(pair => pair.Key.Module, StringComparer.Ordinal).ThenBy(pair => pair.Key.Detail, StringComparer.Ordinal)
             .Select(pair => new BakeProductInput(pair.Key, pair.Value)).ToArray()
     };
 
-    private static BakeSourceCell[] Completed(ConcurrentDictionary<TileKey, Lazy<string>> cells) => cells
+    private static BakeSourceCell[] Completed(ConcurrentDictionary<TileKey, Lazy<string>> cells) => cells.ToArray()
         .Where(pair => pair.Value.IsValueCreated).OrderBy(pair => pair.Key.X).ThenBy(pair => pair.Key.Z)
         .Select(pair => new BakeSourceCell(pair.Key, pair.Value.Value)).ToArray();
 

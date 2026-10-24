@@ -18,6 +18,7 @@ public sealed class SaveService : ISaveService, IDisposable, IAsyncDisposable
     private Task? _initialization, _disposal;
     private bool _stopping;
     private long _loadOperation;
+    private readonly CommandNotification _commands = new();
     private IReadOnlyList<SlotInfo> _slotInfos = SaveSlots.Auto.Select(s => new SlotInfo(s, SlotKind.Auto, SlotHealth.Empty, null, 0)).ToArray();
     internal CancellationToken Lifetime { get; }
     internal SemaphoreSlim Operation { get; } = new(1, 1);
@@ -48,14 +49,20 @@ public sealed class SaveService : ISaveService, IDisposable, IAsyncDisposable
 
     public Task Initialize(SaveRuntimeOptions options, SaveRuntimeBindings bindings, SaveSections sections)
     {
+        var handoff = new TaskCompletionSource<Task>(TaskCreationOptions.RunContinuationsAsynchronously);
+        var operation = handoff.Task.Unwrap();
         lock (_frameGate)
         {
             ObjectDisposedException.ThrowIf(_stopping, this);
             if (_initialization is not null) throw new InvalidOperationException("Save service was initialized twice.");
             Options = options; Runtime = bindings; Sections = sections;
             Loading.Initialize();
-            return _initialization = Track(() => InitializeRepository(options, sections));
+            _initialization = operation;
+            _operations.Add(operation);
         }
+        try { handoff.SetResult(InitializeRepository(options, sections)); }
+        catch (Exception error) { handoff.SetException(error); }
+        return operation;
     }
     private async Task InitializeRepository(SaveRuntimeOptions options, SaveSections sections)
     {
@@ -105,27 +112,35 @@ public sealed class SaveService : ISaveService, IDisposable, IAsyncDisposable
         ulong? generation = null, string? file = null) =>
         new(Interlocked.Increment(ref _loadOperation), kind, SaveLoadPhase.Queued,
             slot, generation, file, null);
-    internal void PublishLoad(in SaveLoadEvent value) => LoadCommand?.Invoke(value);
+    internal void PublishLoad(in SaveLoadEvent value) => _commands.Publish(LoadCommand, value);
 
-    internal Task<T> Track<T>(Func<Task<T>> start, SaveLoadEvent? command = null) =>
-        (Task<T>)Track(() => (Task)start(), command);
-    private Task Track(Func<Task> start, SaveLoadEvent? command = null)
+    internal Task<T> Track<T>(Func<Task<T>> start, SaveLoadEvent? command = null)
     {
+        var handoff = new TaskCompletionSource<Task<T>>(TaskCreationOptions.RunContinuationsAsynchronously);
+        var operation = handoff.Task.Unwrap();
+        bool stopping;
         lock (_frameGate)
         {
-            if (_stopping && command is { } rejected)
-                PublishLoad(rejected with { Phase = SaveLoadPhase.Rejected });
-            ObjectDisposedException.ThrowIf(_stopping, this);
-            _operations.RemoveAll(task => task.IsCompletedSuccessfully);
-            Task task;
-            try { task = start(); }
-            catch
+            stopping = _stopping;
+            if (!stopping)
             {
-                if (command is { } failed) PublishLoad(failed with { Phase = SaveLoadPhase.Rejected });
-                throw;
+                _operations.RemoveAll(task => task.IsCompletedSuccessfully);
+                // Register before invoking start: Dispose must also wait for a synchronous subscriber.
+                _operations.Add(operation);
             }
-            _operations.Add(task); return task;
         }
+        if (stopping)
+        {
+            if (command is { } rejected) PublishLoad(rejected with { Phase = SaveLoadPhase.Rejected });
+            throw new ObjectDisposedException(nameof(SaveService));
+        }
+        try { handoff.SetResult(start()); }
+        catch (Exception error)
+        {
+            handoff.SetException(error);
+            if (command is { } rejected) PublishLoad(rejected with { Phase = SaveLoadPhase.Rejected });
+        }
+        return operation;
     }
     public byte[]? Thumbnail(SlotId slot) => Snapshots.TryGetValue(slot, out var value) && value.Info.Meta is { } meta
         ? Thumbnail(slot, meta.Gen) : null;
@@ -219,6 +234,7 @@ public sealed class SaveService : ISaveService, IDisposable, IAsyncDisposable
         finally { Repository = null; }
         try { _stop.Dispose(); }
         catch (Exception error) { failure = RetainedFailure.Append(failure, error); }
+        if (_commands.TakeFailure() is { } notification) failure = RetainedFailure.Append(failure, notification);
         if (failure is not null) System.Runtime.ExceptionServices.ExceptionDispatchInfo.Capture(failure).Throw();
     }
     public void Dispose() => DisposeAsync().AsTask().GetAwaiter().GetResult();

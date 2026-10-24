@@ -475,7 +475,6 @@ public partial class KernelStage : Node3D, IAppExit, IAppFailure, IStageGateHost
         if (!_closing && !_appFailure.Failed && _mapRuntime?.Failure is { } failure && failure is not OperationCanceledException)
             Report(failure);
         _frameSampling?.Sample();
-        _startupTrace.TraceFrame(_statistics);
         if (_flow is IAppBootFlow boot && _flow.State is AppState.Title) _startupTrace.TracePreloadReady(boot);
         _gate.OnProcess();
     }

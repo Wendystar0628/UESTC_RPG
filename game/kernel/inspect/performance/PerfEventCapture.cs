@@ -1,4 +1,5 @@
 using Campus.Contracts;
+using Campus.Contracts.Perf;
 using Campus.Contracts.AppFlow;
 using Campus.Contracts.Maps;
 using Campus.Contracts.Quality;
@@ -57,7 +58,7 @@ internal sealed class PerfEventCapture : IDisposable
         _dictionary = dictionary;
         _samples = samples;
         _viewport = viewport;
-        _context = new(dictionary, requiredOwnerBoundariesAttached: true);
+        _context = new(dictionary);
         _mode = _observer.Mode; _space = _observer.Space; _mediumKind = _medium.Current.Kind;
         _activity = _app.Activity; _transition = _world.Transition; _season = _world.SeasonTarget;
         _weather = _world.Weather; _flow = _world.Flow;
@@ -73,7 +74,7 @@ internal sealed class PerfEventCapture : IDisposable
         _app.EnterCommand += OnEnterCommand;
         _maps.PrepareCommand += OnPrepareCommand;
         _quality.ApplyCommand += OnApplyCommand;
-        _save.LoadCommand += _saveCommands.Enqueue;
+        _save.LoadCommand += OnSaveCommand;
         _world.InstanceChanged += OnWorldInstance;
         _ui.Changed += OnUi;
         _quality.Changed += OnQuality;
@@ -129,7 +130,7 @@ internal sealed class PerfEventCapture : IDisposable
 
     public (long Flags, bool Complete) OnFrame(in FrameSample frame)
     {
-        DrainSaveCommands(frame.CollectionFrame, frame.MonotonicMilliseconds);
+        DrainSaveCommands();
         CheckOwnerChanges(in frame);
         CheckArrival();
         _checkedFrames++;
@@ -147,7 +148,7 @@ internal sealed class PerfEventCapture : IDisposable
     public void Poll()
     {
         double now = FrameClock.MonotonicMilliseconds;
-        DrainSaveCommands(Engine.GetProcessFrames(), now);
+        DrainSaveCommands();
         if (now < _nextSample) return;
         _nextSample = now + _dictionary.SampleIntervalMilliseconds;
         var cpu = System.Environment.CpuUsage.TotalTime;
@@ -173,7 +174,7 @@ internal sealed class PerfEventCapture : IDisposable
             ["seasonFraction"] = live ? _world.SeasonPos - Math.Floor(_world.SeasonPos) : null,
             ["weather"] = live ? _world.Weather.Kind.ToString() : null, ["weatherIntensity"] = live ? _world.Weather.Intensity : null,
             ["flowRate"] = live ? _world.Flow.Rate : null, ["worldTransition"] = live ? (int)_world.Transition : null,
-            ["workingSetMiB"] = System.Environment.WorkingSet / 1048576d, ["privateMiB"] = null,
+            ["workingSetMiB"] = System.Environment.WorkingSet / 1048576d,
             ["managedHeapMiB"] = GC.GetGCMemoryInfo().HeapSizeBytes / 1048576d,
             ["godotStaticMiB"] = Monitor(Performance.Monitor.MemoryStatic) / 1048576d,
             ["engineVideoMemoryMiB"] = Monitor(Performance.Monitor.RenderVideoMemUsed) / 1048576d,
@@ -250,63 +251,131 @@ internal sealed class PerfEventCapture : IDisposable
     private static string Completion(Task task) => task.IsCanceled ? "cancelled" : task.IsFaulted ? "failed" : "ready";
     private void OnArrival(IMapArrival? arrival)
     {
-        CheckArrival();
-        if (_arrival is not null && !_arrivalFinished) Emit("map.arrival", new { phase = "detached", destination = _arrival.Destination, result = "ownerReplaced" });
-        _arrival = arrival; _arrivalFinished = false;
-        if (arrival is not null) Emit("map.arrival", new { phase = "begin", destination = arrival.Destination, result = (string?)null });
-        CheckArrival();
+        try
+        {
+            CheckArrival();
+            if (_arrival is not null && !_arrivalFinished) Emit("map.arrival", new { phase = "detached", destination = _arrival.Destination, result = "ownerReplaced" });
+            _arrival = arrival; _arrivalFinished = false;
+            if (arrival is not null) Emit("map.arrival", new { phase = "begin", destination = arrival.Destination, result = (string?)null });
+            CheckArrival();
+        }
+        catch (Exception error) { _session.AddFailure(PerfFaultCode.ProducerFailed, error); }
     }
     private void OnAppState(AppState from, AppState to)
     {
-        Emit("app.state", new { from = from.ToString(), to = to.ToString() });
+        try
+        {
+            Emit("app.state", new { from = from.ToString(), to = to.ToString() });
+        }
+        catch (Exception error) { _session.AddFailure(PerfFaultCode.ProducerFailed, error); }
     }
-    private void OnAppPhase(string phase) => Emit("app.phase", new { phase });
-    private void OnWorldInstance(long instance) => Emit("world.instance", new { instance });
-    private void OnUi() => Emit("ui.surface", new { surfaces = (int)_ui.Open, settingsPage = _ui.SettingsPage });
+    private void OnAppPhase(string phase)
+    {
+        try
+        {
+            Emit("app.phase", new { phase });
+        }
+        catch (Exception error) { _session.AddFailure(PerfFaultCode.ProducerFailed, error); }
+    }
+    private void OnWorldInstance(long instance)
+    {
+        try
+        {
+            Emit("world.instance", new { instance });
+        }
+        catch (Exception error) { _session.AddFailure(PerfFaultCode.ProducerFailed, error); }
+    }
+    private void OnUi()
+    {
+        try
+        {
+            Emit("ui.surface", new { surfaces = (int)_ui.Open, settingsPage = _ui.SettingsPage });
+        }
+        catch (Exception error) { _session.AddFailure(PerfFaultCode.ProducerFailed, error); }
+    }
     private void OnQuality(QualityChange change)
     {
-        Emit("settings.quality", new { change, requested = PerfManifest.QualityValues(_quality, true),
-            effective = PerfManifest.QualityValues(_quality, false), observation = "ownerChanged" });
+        try
+        {
+            Emit("settings.quality", new { change, requested = PerfManifest.QualityValues(_quality, true),
+                effective = PerfManifest.QualityValues(_quality, false), observation = "ownerChanged" });
+        }
+        catch (Exception error) { _session.AddFailure(PerfFaultCode.ProducerFailed, error); }
     }
-    private void OnSave() => Emit("save.write", new { state = _save.State, busy = _save.Busy, active = _save.Active });
+    private void OnSave()
+    {
+        try
+        {
+            Emit("save.write", new { state = _save.State, busy = _save.Busy, active = _save.Active });
+        }
+        catch (Exception error) { _session.AddFailure(PerfFaultCode.ProducerFailed, error); }
+    }
     private void OnEnterCommand(EnterCommandEvent value)
     {
-        double time = FrameClock.MonotonicMilliseconds;
-        bool startObserved = _context.Observe(in value, time);
-        Emit("game.enter", new { owner = "IAppFlow", operation = value.Operation, phase = value.Phase,
-            target = value.Target, result = value.Result, direct = value.Direct, errorKey = value.ErrorKey,
-            startObserved }, time: time);
+        try
+        {
+            double time = FrameClock.MonotonicMilliseconds;
+            bool startObserved = _context.Observe(in value, time);
+            Emit("game.enter", new { owner = "IAppFlow", operation = value.Operation, phase = value.Phase,
+                target = value.Target, result = value.Result, direct = value.Direct, errorKey = value.ErrorKey,
+                startObserved }, time: time);
+        }
+        catch (Exception error) { _session.AddFailure(PerfFaultCode.ProducerFailed, error); }
     }
     private void OnPrepareCommand(MapPrepareEvent value)
     {
-        double time = FrameClock.MonotonicMilliseconds;
-        bool startObserved = _context.Observe(in value, time);
-        Emit("map.prepare", new { owner = "IMapService", operation = value.Operation, phase = value.Phase,
-            from = value.From, to = value.To, result = value.Result, startObserved }, time: time);
+        try
+        {
+            double time = FrameClock.MonotonicMilliseconds;
+            bool startObserved = _context.Observe(in value, time);
+            Emit("map.prepare", new { owner = "IMapService", operation = value.Operation, phase = value.Phase,
+                from = value.From, to = value.To, result = value.Result, startObserved }, time: time);
+        }
+        catch (Exception error) { _session.AddFailure(PerfFaultCode.ProducerFailed, error); }
     }
     private void OnApplyCommand(QualityApplyEvent value)
     {
-        double time = FrameClock.MonotonicMilliseconds;
-        bool startObserved = _context.Observe(in value, time);
-        Emit("settings.apply", new { owner = "IQualityService", operation = value.Operation, phase = value.Phase,
-            target = value.Target, origin = value.Origin, result = value.Result, startObserved }, time: time);
-    }
-    // SaveLoading resumes off-thread. Its callback only copies a contract value into this independent queue.
-    // The main sampling point supplies observation time/frame; it never claims the original worker timestamp.
-    private void DrainSaveCommands(ulong frame, double time)
-    {
-        while (_saveCommands.TryDequeue(out var value))
+        try
         {
+            double time = FrameClock.MonotonicMilliseconds;
             bool startObserved = _context.Observe(in value, time);
-            Emit("save.load", new { owner = "ISaveService", operation = value.Operation, phase = value.Phase,
+            Emit("settings.apply", new { owner = "IQualityService", operation = value.Operation, phase = value.Phase,
+                target = value.Target, origin = value.Origin, result = value.Result, startObserved }, time: time);
+        }
+        catch (Exception error) { _session.AddFailure(PerfFaultCode.ProducerFailed, error); }
+    }
+    // SaveLoading may resume off-thread: only timestamp and enqueue detached contract values here.
+    private void OnSaveCommand(SaveLoadEvent value)
+    {
+        try
+        {
+            _saveCommands.Enqueue(value);
+        }
+        catch (Exception error) { _session.AddFailure(PerfFaultCode.ProducerFailed, error); }
+    }
+    private void DrainSaveCommands()
+    {
+        while (_saveCommands.TryDequeue(out var captured))
+        {
+            var value = captured.Value;
+            bool startObserved = _context.Observe(in value, captured.Time);
+            // A worker has no collection frame. Do not replace null with the drain's current frame.
+            _session.TryEvent(new("save.load", captured.Frame, captured.Time, new
+            {
+                owner = "ISaveService", operation = value.Operation, phase = value.Phase,
                 kind = value.Kind, requestedSlot = value.Slot, requestedGeneration = value.RequestedGeneration,
-                file = value.File, result = value.Result, startObserved, timing = "mainThreadObservation" }, frame, time);
+                file = value.File, result = value.Result, startObserved
+            }));
         }
     }
     private void OnSize()
     {
-        var size = _viewport.GetVisibleRect().Size;
-        Emit("window.size", new { widthPx = size.X, heightPx = size.Y });
+        try
+        {
+            var size = _viewport.GetVisibleRect().Size;
+            Emit("window.size", new { widthPx = size.X, heightPx = size.Y });
+        }
+        catch (Exception error) { _session.AddFailure(PerfFaultCode.ProducerFailed, error); }
     }
     public void Readback(string phase, string purpose, ulong frame)
     {
@@ -331,11 +400,11 @@ internal sealed class PerfEventCapture : IDisposable
         {
             _app.Changed -= OnAppState; _app.PhaseReached -= OnAppPhase;
             _app.EnterCommand -= OnEnterCommand; _maps.PrepareCommand -= OnPrepareCommand;
-            _quality.ApplyCommand -= OnApplyCommand; _save.LoadCommand -= _saveCommands.Enqueue;
+            _quality.ApplyCommand -= OnApplyCommand; _save.LoadCommand -= OnSaveCommand;
             _saveCommands.Stop();
             _world.InstanceChanged -= OnWorldInstance; _ui.Changed -= OnUi;
             _quality.Changed -= OnQuality; _save.SlotsChanged -= OnSave; _viewport.SizeChanged -= OnSize;
-            try { DrainSaveCommands(Engine.GetProcessFrames(), FrameClock.MonotonicMilliseconds); }
+            try { DrainSaveCommands(); }
             finally
             {
                 _samples.Stop();
@@ -348,14 +417,17 @@ internal sealed class PerfEventCapture : IDisposable
 internal sealed class PerfSaveCommandQueue
 {
     private readonly object _gate = new();
-    private readonly Queue<SaveLoadEvent> _values = new();
+    internal readonly record struct Captured(SaveLoadEvent Value, double Time, ulong? Frame);
+    private readonly Queue<Captured> _values = new();
     private bool _stopped;
     public void Enqueue(SaveLoadEvent value)
     {
+        double time = FrameClock.MonotonicMilliseconds;
+        ulong? frame = OS.GetThreadCallerId() == OS.GetMainThreadId() ? Engine.GetProcessFrames() : null;
         lock (_gate)
-            if (!_stopped) _values.Enqueue(value);
+            if (!_stopped) _values.Enqueue(new(value, time, frame));
     }
-    public bool TryDequeue(out SaveLoadEvent value)
+    public bool TryDequeue(out Captured value)
     {
         lock (_gate) return _values.TryDequeue(out value);
     }

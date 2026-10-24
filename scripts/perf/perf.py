@@ -65,6 +65,10 @@ def find_summary(out, identifier):
     if not identifier or Path(identifier).name != identifier or identifier in ('.', '..'):
         raise ValueError('会话 ID 格式错误')
     summary = read_json(out / 'derived' / identifier / 'summary.json')
+    errors = [error for error in load_index(out).get('errors', []) if error['source'] == summary['source']]
+    if errors:
+        raise ValueError('会话来源已出错：' + cell(summary['source']) + '；' +
+                         '；'.join(cell(error['kind']) + '：' + cell(error['reason']) for error in errors))
     if summary['calc'] != CALC:
         raise ValueError('派生口径已过时；先运行 analyze.py 重算')
     return summary
@@ -97,14 +101,16 @@ def overview(summary):
 
 
 def latest(out, args):
-    entries = [s for s in load_index(out)['sessions'] if s['calc'] == CALC]
+    index = load_index(out)
+    errors = index.get('errors', [])
+    failed_sources = {error['source'] for error in errors}
+    entries = [s for s in index['sessions'] if s['calc'] == CALC and s['source'] not in failed_sources]
     if args.origin:
         entries = [s for s in entries if s['origin'] == args.origin]
     if args.scope:
         entries = [s for s in entries if s['scope'] == args.scope]
     if not entries:
         yield '暂无已分析会话；启动入口、AI 采集或观察台将触发 analyze.py。'
-        return
     entries.sort(key=lambda s: s.get('endedAt') or '', reverse=True)
     # Keep the newest source for each comparison group; partial/evidence remain visible with explicit state.
     groups = set()
@@ -119,6 +125,9 @@ def latest(out, args):
     for entry in shown:
         yield from overview(find_summary(out, entry['id']))
     yield f'会话总数 {len(entries)}；本次列出 {len(shown)} 个比较组。'
+    if errors:
+        yield '出错来源：'
+        yield from table(['来源', '种类', '原因'], ((error['source'], error['kind'], error['reason']) for error in errors))
 
 
 def compare(out, args):

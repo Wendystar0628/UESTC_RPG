@@ -17,18 +17,20 @@ internal sealed class PerfFieldDictionary
     public int Schema { get; }
     public double AnchorIntervalMilliseconds { get; }
     public double SampleIntervalMilliseconds { get; }
+    public double HardwareIntervalMilliseconds { get; }
     public IReadOnlyDictionary<string, string[]> Columns { get; }
 
     public PerfFieldDictionary(string text)
     {
         Snapshot = JsonNode.Parse(text) as JsonObject ?? throw new InvalidDataException("Performance dictionary root is missing.");
         Schema = Snapshot["schema"]!.GetValue<int>();
-        if (Schema != 2 || Snapshot["draft"]?.GetValue<bool>() != false)
+        if (Schema != 3 || Snapshot["draft"]?.GetValue<bool>() != false)
             throw new InvalidDataException("Unsupported performance dictionary schema or draft.");
         AnchorIntervalMilliseconds = Snapshot["clock"]!["anchorIntervalSeconds"]!.GetValue<double>() * 1000;
         if (!double.IsFinite(AnchorIntervalMilliseconds) || AnchorIntervalMilliseconds <= 0 || Snapshot["nonSteadyRules"] is not JsonObject)
             throw new InvalidDataException("Performance clock or context rules are invalid.");
         var streams = Snapshot["streams"] as JsonObject ?? throw new InvalidDataException("Performance streams are missing.");
+        HardwareIntervalMilliseconds = 1000 / streams["hw"]!["rateHz"]!.GetValue<double>();
         SampleIntervalMilliseconds = 1000 / streams["samples"]!["rateHz"]!.GetValue<double>();
         var columns = new Dictionary<string, string[]>();
         foreach (string stream in new[] { "frames", "samples", "hw", "hwfast", "events" })

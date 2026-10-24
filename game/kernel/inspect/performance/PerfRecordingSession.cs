@@ -3,6 +3,7 @@ using System.Text.Json.Nodes;
 using System.Threading.Channels;
 using Campus.Contracts;
 using Campus.Contracts.Perf;
+using Campus.Kernel.Diagnostics;
 
 namespace Campus.Kernel.Inspect;
 
@@ -58,7 +59,7 @@ internal sealed class PerfRecordingSession
     }
 
     public void StartWatchdog(IFrameStatistics frames, PerfValueChannel output) => _watchdog = new(frames, output, this);
-    public void StartHardware() => _hardware = new(AddProducer("nvml.slow", "hw"), AddProducer("nvml.fast", "hwfast"));
+    public void StartHardware() => _hardware = new(AddProducer("nvml.slow", "hw"), AddProducer("nvml.fast", "hwfast"), _dictionary.HardwareIntervalMilliseconds);
     public void AttachCapture() => _captureAttached = true;
     public void StopProducers()
     {
@@ -206,9 +207,12 @@ internal sealed class PerfRecordingSession
         }
         finally { _startedWriting.TrySetResult(false); closed = CloseOutputs(outputs, directory, sessionLock); }
         Exception? failure;
-        lock (_failureGate) failure = _errors.Count switch { 0 => null, 1 => _errors[0], _ => new AggregateException(_errors) };
-        if (HardwareError is { } hardwareError)
-            failure = failure is null ? hardwareError : new AggregateException(failure, hardwareError);
+        lock (_failureGate)
+        {
+            failure = null;
+            foreach (var error in _errors) failure = RetainedFailure.Append(failure, error);
+        }
+        if (HardwareError is { } hardwareError) failure = RetainedFailure.Append(failure, hardwareError);
         return new(Id ?? "", Fault == PerfFaultCode.None ? _reason : PerfEndReason.Failure, closed,
             IsComplete, Fault, failure, RecordedSeconds, _writtenFrames, Frames.DroppedFrames);
     }
@@ -337,18 +341,19 @@ internal sealed class PerfRecordingSession
 
     private void SetCaptureCapabilities()
     {
+        var hardware = _hardware?.Snapshot();
         if (_manifest["capabilities"] is JsonObject capabilities)
         {
             capabilities["slowSampling"] = _captureAttached ? "recorded" : "notAttached";
             capabilities["watchdog"] = _captureAttached ? "recorded" : "notAttached";
-            capabilities["nvml"] = _hardware?.Snapshot()["state"]?.DeepClone() ?? JsonValue.Create("notAttached");
+            capabilities["nvml"] = hardware?["state"]?.DeepClone() ?? JsonValue.Create("notAttached");
             var rules = _dictionary.Snapshot["nonSteadyRules"]!;
             _manifest["requiredCoverage"] = rules["requiredCoverage"]?.DeepClone();
             _manifest["requiredMissing"] = _captureAttached ? new JsonArray() : rules["requiredCoverage"]?.DeepClone();
             _manifest["notAttached"] = rules["notAttached"]?.DeepClone();
             capabilities["eventContext"] = _captureAttached ? "recorded" : "notAttached";
         }
-        if (_hardware is { } hardware) _manifest["hardware"] = hardware.Snapshot();
+        if (hardware is not null) _manifest["hardware"] = hardware;
     }
 
     private void PublishLatest(string state)

@@ -26,13 +26,13 @@ internal sealed class PerfContextCapture
     public string[] RequiredMissing { get; }
     public string[] NotAttached { get; }
 
-    public PerfContextCapture(PerfFieldDictionary dictionary, bool requiredOwnerBoundariesAttached)
+    public PerfContextCapture(PerfFieldDictionary dictionary)
     {
         foreach (var flag in dictionary.Snapshot["contextFlags"]!.AsArray())
             _flags.Add(flag!["name"]!.GetValue<string>(), flag["value"]!.GetValue<long>());
         var rules = dictionary.Snapshot["nonSteadyRules"]!;
         RequiredCoverage = rules["requiredCoverage"]!.AsArray().Select(item => item!.GetValue<string>()).ToArray();
-        RequiredMissing = requiredOwnerBoundariesAttached ? [] : RequiredCoverage;
+        RequiredMissing = [];
         NotAttached = rules["notAttached"]!.AsArray().Select(item => item!.GetValue<string>()).ToArray();
         foreach (var state in rules["appStates"]!.AsArray()) _appStates.Add(Enum.Parse<AppState>(state!.GetValue<string>(), true));
         foreach (var rule in rules["rules"]!.AsArray())

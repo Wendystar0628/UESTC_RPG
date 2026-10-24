@@ -1,5 +1,6 @@
 using System.Runtime.ExceptionServices;
 using Campus.Contracts;
+using Campus.Kernel.Diagnostics;
 using Campus.Contracts.Quality;
 using Campus.Contracts.Settings;
 using Campus.Contracts.Startup;
@@ -53,10 +54,10 @@ public sealed class QualityService : IQualityFrame, IBootParticipant, IAsyncDisp
     private bool _initializing;
     private Request? _pending;
     private long _applyOperation;
+    private readonly CommandNotification _commands = new();
     private double _debounce;
     private Task _lastSave = Task.CompletedTask;
     private readonly HashSet<Task> _applications = [];
-    private readonly HashSet<Task> _deferredApplications = [];
     private Task? _disposal;
     private bool _disposed;
 
@@ -106,11 +107,9 @@ public sealed class QualityService : IQualityFrame, IBootParticipant, IAsyncDisp
         _initializing = false;
         binding.Lifetime.Cancel();
         binding.Lifetime.Dispose();
-        if (pending is not null)
-            ApplyCommand?.Invoke(new(pending.Operation, QualityApplyPhase.Canceled, pending.Edit, pending.Origin, null));
         pending?.Completion?.TrySetCanceled(binding.Token);
-        if (binding.Active is { } active && (active.IsCompletedSuccessfully || active.IsCanceled))
-            _deferredApplications.Remove(active);
+        if (pending is not null)
+            _commands.Publish(ApplyCommand, new QualityApplyEvent(pending.Operation, QualityApplyPhase.Canceled, pending.Edit, pending.Origin, null));
     }
 
     public ValueTask DisposeAsync()
@@ -122,7 +121,7 @@ public sealed class QualityService : IQualityFrame, IBootParticipant, IAsyncDisp
     private async Task DrainApplications()
     {
         // Snapshot before cancellation can synchronously finish and retire an application.
-        var applications = _applications.Concat(_deferredApplications).ToArray();
+        var applications = _applications.ToArray();
         if (_binding is { } binding) Unbind(binding.Runtime);
         var failures = new List<Exception>();
         foreach (var application in applications)
@@ -130,8 +129,9 @@ public sealed class QualityService : IQualityFrame, IBootParticipant, IAsyncDisp
             try { await application; }
             catch (OperationCanceledException) when (application.IsCanceled) { }
             catch (Exception error) { failures.Add(error); }
-            finally { _deferredApplications.Remove(application); }
+            finally { _applications.Remove(application); }
         }
+        if (_commands.TakeFailure() is { } notification) failures.Add(notification);
         if (failures.Count > 0) throw new AggregateException("Quality shutdown failed.", failures);
     }
 
@@ -180,7 +180,7 @@ public sealed class QualityService : IQualityFrame, IBootParticipant, IAsyncDisp
             if (plan.Rejected.Count != 0)
             {
                 var rejected = Result(ApplyStatus.Rejected, plan.Rejected);
-                ApplyCommand?.Invoke(new(operation, QualityApplyPhase.Rejected, next, origin, rejected));
+                _commands.Publish(ApplyCommand, new QualityApplyEvent(operation, QualityApplyPhase.Rejected, next, origin, rejected));
                 return Task.FromResult(rejected);
             }
             next = next with
@@ -193,25 +193,29 @@ public sealed class QualityService : IQualityFrame, IBootParticipant, IAsyncDisp
         }
         catch
         {
-            ApplyCommand?.Invoke(new(operation, QualityApplyPhase.Faulted, next, origin, null));
+            _commands.Publish(ApplyCommand, new QualityApplyEvent(operation, QualityApplyPhase.Faulted, next, origin, null));
             throw;
         }
         var runtime = binding.Runtime;
         // The boot caller already owns an opaque screen; no second screen or transition wait is needed.
         if (origin == ApplyOrigin.Startup || origin == ApplyOrigin.CommandLine && runtime.Booting)
-            return ApplyDuringBoot(binding, new(operation, next, origin, null), plan.Next);
+        {
+            var application = ApplyDuringBoot(binding, new(operation, next, origin, null), plan.Next);
+            if (!application.IsCompleted) _applications.Add(application);
+            return application;
+        }
         var deferred = runtime.Transitioning || binding.Active is not null;
         if (_pending is { } superseded)
         {
             var replaced = Result(ApplyStatus.Deferred);
-            ApplyCommand?.Invoke(new(superseded.Operation, QualityApplyPhase.Superseded, superseded.Edit, superseded.Origin, replaced));
             superseded.Completion?.TrySetResult(replaced);
+            _commands.Publish(ApplyCommand, new QualityApplyEvent(superseded.Operation, QualityApplyPhase.Superseded, superseded.Edit, superseded.Origin, replaced));
         }
         var completion = deferred ? null : new TaskCompletionSource<ApplyResult>(TaskCreationOptions.RunContinuationsAsynchronously);
         _pending = new(operation, next, origin, completion);
         _debounce = origin == ApplyOrigin.User && plan.Heaviest is ApplyClass.Immediate or ApplyClass.Amortized ? 0.2 : 0;
         var result = deferred ? Result(ApplyStatus.Deferred) : null;
-        ApplyCommand?.Invoke(new(operation, QualityApplyPhase.Queued, next, origin, result));
+        _commands.Publish(ApplyCommand, new QualityApplyEvent(operation, QualityApplyPhase.Queued, next, origin, result));
         return completion?.Task ?? Task.FromResult(result!);
     }
 
@@ -221,7 +225,7 @@ public sealed class QualityService : IQualityFrame, IBootParticipant, IAsyncDisp
         if (binding.Active is { IsCompleted: true } completed)
         {
             binding.Active = null;
-            _deferredApplications.Remove(completed);
+            _applications.Remove(completed);
             if (!completed.IsCanceled) completed.GetAwaiter().GetResult();
         }
         if (_pending is null || binding.Active is not null || _initializing || binding.Runtime.Transitioning) return;
@@ -229,16 +233,15 @@ public sealed class QualityService : IQualityFrame, IBootParticipant, IAsyncDisp
         if (_debounce > 0) return;
         var request = _pending;
         _pending = null;
-        ApplyCommand?.Invoke(new(request.Operation, QualityApplyPhase.Started, request.Edit, request.Origin, null));
+        _commands.Publish(ApplyCommand, new QualityApplyEvent(request.Operation, QualityApplyPhase.Started, request.Edit, request.Origin, null));
         var active = Execute(binding, request);
         binding.Active = active;
-        if (request.Completion is null && !active.IsCompletedSuccessfully && !active.IsCanceled)
-            _deferredApplications.Add(active);
+        if (!active.IsCompletedSuccessfully && !active.IsCanceled) _applications.Add(active);
     }
 
     private async Task<ApplyResult> ApplyDuringBoot(Binding binding, Request request, QualityProfile profile)
     {
-        ApplyCommand?.Invoke(new(request.Operation, QualityApplyPhase.Started, request.Edit, request.Origin, null));
+        _commands.Publish(ApplyCommand, new QualityApplyEvent(request.Operation, QualityApplyPhase.Started, request.Edit, request.Origin, null));
         var phase = QualityApplyPhase.Faulted;
         ApplyResult? result = null;
         try
@@ -256,48 +259,42 @@ public sealed class QualityService : IQualityFrame, IBootParticipant, IAsyncDisp
             phase = QualityApplyPhase.Canceled;
             throw;
         }
-        finally { ApplyCommand?.Invoke(new(request.Operation, phase, request.Edit, request.Origin, result)); }
+        finally { _commands.Publish(ApplyCommand, new QualityApplyEvent(request.Operation, phase, request.Edit, request.Origin, result)); }
     }
 
     private async Task Execute(Binding binding, Request request)
     {
         var application = ApplyRequest(binding, request);
         if (request.Completion is not null && !application.IsCompleted) _applications.Add(application);
-        var deferredFailed = false;
         try
         {
             await application;
             var result = Result(ApplyStatus.Applied);
-            ApplyCommand?.Invoke(new(request.Operation, QualityApplyPhase.Completed, request.Edit, request.Origin, result));
             request.Completion?.TrySetResult(result);
+            _commands.Publish(ApplyCommand, new QualityApplyEvent(request.Operation, QualityApplyPhase.Completed, request.Edit, request.Origin, result));
         }
         catch (OperationCanceledException) when (binding.Token.IsCancellationRequested)
         {
-            ApplyCommand?.Invoke(new(request.Operation, QualityApplyPhase.Canceled, request.Edit, request.Origin, null));
             request.Completion?.TrySetCanceled(binding.Token);
+            _commands.Publish(ApplyCommand, new QualityApplyEvent(request.Operation, QualityApplyPhase.Canceled, request.Edit, request.Origin, null));
         }
         catch (Exception error)
         {
-            ApplyCommand?.Invoke(new(request.Operation, QualityApplyPhase.Faulted, request.Edit, request.Origin, null));
             // This observer belongs to the binding, so unmounting cannot discard a late failure.
             if (request.Completion is { } completion)
             {
                 completion.TrySetException(error);
+                _commands.Publish(ApplyCommand, new QualityApplyEvent(request.Operation, QualityApplyPhase.Faulted, request.Edit, request.Origin, null));
                 binding.Runtime.ReportError("[SYS-GRAPHICS] Quality apply failed:", error);
             }
             else
             {
-                deferredFailed = true;
+                _commands.Publish(ApplyCommand, new QualityApplyEvent(request.Operation, QualityApplyPhase.Faulted, request.Edit, request.Origin, null));
                 binding.Runtime.ReportError("[SYS-GRAPHICS] Quality apply failed:", error);
                 throw;
             }
         }
-        finally
-        {
-            _applications.Remove(application);
-            if (!deferredFailed && !ReferenceEquals(_binding, binding) && binding.Active is { } active)
-                _deferredApplications.Remove(active);
-        }
+        finally { _applications.Remove(application); }
     }
 
     private async Task ApplyRequest(Binding binding, Request request)

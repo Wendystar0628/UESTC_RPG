@@ -26,6 +26,7 @@ public sealed class MapService(ICameraRig camera, IMapLifetime lifetime, IWorldM
     private Task<MapCatalog>? _catalogTask;
     private TaskCompletionSource? _initialization;
     private MapTransition? _active;
+    private readonly Campus.Kernel.Diagnostics.CommandNotification _commands = new();
     private long _prepareOperation;
     private long _activePrepareOperation;
     private MapCatalogEntry? _target;
@@ -77,16 +78,16 @@ public sealed class MapService(ICameraRig camera, IMapLifetime lifetime, IWorldM
     public async Task Prepare(MapId map)
     {
         if (_stopped)
-            PrepareCommand?.Invoke(new(++_prepareOperation, MapPreparePhase.Rejected, Current, map, null));
+            _commands.Publish(PrepareCommand, new MapPrepareEvent(++_prepareOperation, MapPreparePhase.Rejected, Current, map, null));
         ObjectDisposedException.ThrowIf(_stopped, this);
         if (_active is { } pending)
         {
             if (pending.To != map)
             {
-                PrepareCommand?.Invoke(new(++_prepareOperation, MapPreparePhase.Rejected, Current, map, null));
+                _commands.Publish(PrepareCommand, new MapPrepareEvent(++_prepareOperation, MapPreparePhase.Rejected, Current, map, null));
                 throw new InvalidOperationException("A different map is already being prepared.");
             }
-            PrepareCommand?.Invoke(new(_activePrepareOperation, MapPreparePhase.Joined, pending.From, pending.To, null));
+            _commands.Publish(PrepareCommand, new MapPrepareEvent(_activePrepareOperation, MapPreparePhase.Joined, pending.From, pending.To, null));
             await AwaitPreparation(pending);
             return;
         }
@@ -94,22 +95,22 @@ public sealed class MapService(ICameraRig camera, IMapLifetime lifetime, IWorldM
         {
             if (Current != map)
             {
-                PrepareCommand?.Invoke(new(++_prepareOperation, MapPreparePhase.Rejected, Current, map, null));
+                _commands.Publish(PrepareCommand, new MapPrepareEvent(++_prepareOperation, MapPreparePhase.Rejected, Current, map, null));
                 throw new InvalidOperationException("A different map is already mounted.");
             }
-            PrepareCommand?.Invoke(new(++_prepareOperation, MapPreparePhase.Reused, Current, map, MapTravelResult.Arrived));
+            _commands.Publish(PrepareCommand, new MapPrepareEvent(++_prepareOperation, MapPreparePhase.Reused, Current, map, MapTravelResult.Arrived));
             return;
         }
         if (_catalog is null || !_catalog.TryGet(map, out var target) ||
             target.Descriptor.Kind != MapKind.Outdoor || target.Descriptor.World.Time != MapTimeRule.Shared)
         {
-            PrepareCommand?.Invoke(new(++_prepareOperation, MapPreparePhase.Rejected, Current, map, null));
+            _commands.Publish(PrepareCommand, new MapPrepareEvent(++_prepareOperation, MapPreparePhase.Rejected, Current, map, null));
             throw new InvalidOperationException("Map preparation was rejected.");
         }
         _target = target;
         var transition = _active = new MapTransition(Current, map);
         _activePrepareOperation = ++_prepareOperation;
-        PrepareCommand?.Invoke(new(_activePrepareOperation, MapPreparePhase.Started, transition.From, transition.To, null));
+        _commands.Publish(PrepareCommand, new MapPrepareEvent(_activePrepareOperation, MapPreparePhase.Started, transition.From, transition.To, null));
         _input = _camera.LockInput(InputLockReason.MapTravel);
         _camera.ActiveTransit?.Cancel();
         await AwaitPreparation(transition);
@@ -179,7 +180,7 @@ public sealed class MapService(ICameraRig camera, IMapLifetime lifetime, IWorldM
         catch (Exception error) { failure = Campus.Kernel.Diagnostics.RetainedFailure.Append(failure, error); }
         var finalResult = failure is null ? result : MapTravelResult.Failed;
         finished.Complete(finalResult, failure);
-        PrepareCommand?.Invoke(new(operation, MapPreparePhase.Completed, finished.From, finished.To, finalResult));
+        _commands.Publish(PrepareCommand, new MapPrepareEvent(operation, MapPreparePhase.Completed, finished.From, finished.To, finalResult));
         return failure;
     }
 
@@ -209,6 +210,8 @@ public sealed class MapService(ICameraRig camera, IMapLifetime lifetime, IWorldM
         if (_active is not null) failure = Finish(MapTravelResult.Failed, failure);
         if (failure is null) _initialization?.TrySetCanceled(_exit.Token);
         else _initialization?.TrySetException(failure);
+        if (_commands.TakeFailure() is { } notification)
+            failure = Campus.Kernel.Diagnostics.RetainedFailure.Append(failure, notification);
         if (failure is not null) System.Runtime.ExceptionServices.ExceptionDispatchInfo.Capture(failure).Throw();
     }
 
@@ -222,6 +225,8 @@ public sealed class MapService(ICameraRig camera, IMapLifetime lifetime, IWorldM
         _disposed = true;
         Context = null;
         _exit.Dispose();
+        if (_commands.TakeFailure() is { } notification)
+            System.Runtime.ExceptionServices.ExceptionDispatchInfo.Capture(notification).Throw();
     }
 
     private async Task<PendingMapLoad> LoadMap(MapCatalogEntry entry)

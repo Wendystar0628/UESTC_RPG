@@ -1,5 +1,5 @@
 {
-  "calc": 4,
+  "calc": 5,
   "authority": "ENG-PERF-DATA",
   "events": "Validate strictly increasing sequence in recorded order, then stable-sort by (monotonicMs, sequence) for cross-producer event association; other streams still require nondecreasing time",
   "summary": {

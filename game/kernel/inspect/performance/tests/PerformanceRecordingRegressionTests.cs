@@ -123,8 +123,8 @@ public sealed class PerformanceRecordingRegressionTests
         finally { Directory.Delete(root, true); }
     }
 
-    [TestCase(false), TestCase(true), TestCategory(TestReason.Regression), RequireGodotRuntime]
-    public async Task FaultingSubscriberCannotStrandCleanupFromWriterOrProducer(bool producer)
+    [TestCase, TestCategory(TestReason.Regression), RequireGodotRuntime]
+    public async Task ProducerStartupFailureDrainsThroughTheRealRecorderWithFaultingSubscriber()
     {
         string root = PerformanceRecordingContractTests.TemporaryDirectory();
         try
@@ -135,40 +135,59 @@ public sealed class PerformanceRecordingRegressionTests
             using var frames = new FrameStatistics(((SceneTree)Engine.GetMainLoop()).Root);
             var diagnostics = new TestDiagnosticLog();
             var recorder = new PerformanceRecordingService(frames, settings, diagnostics, new TestInputRouter(), new RequiredResources(), quality);
-            var session = new PerfRecordingSession(root, PerfOrigin.Play, DateTimeOffset.UnixEpoch,
-                new PerfFieldDictionary(File.ReadAllText(RepositoryFixture.FilePath("game", "data", "perf-fields.json"))), new JsonObject());
+            var observer = new InvalidOperationException();
+            recorder.StateChanged += value => { if (value.State == PerfRecordingState.Faulted) throw observer; };
             try
             {
-                if (!await session.Ready) throw new InvalidOperationException("The injected live session did not open.");
-                session.Begin(new(0, 0, 0));
-                if (!await session.StartedWriting) throw new InvalidOperationException("The injected live session did not start writing.");
-                // Inject an owned live session without booting unrelated map/render services.
-                const System.Reflection.BindingFlags fields = System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic;
-                typeof(PerformanceRecordingService).GetField("_session", fields)!.SetValue(recorder, session);
-                typeof(PerformanceRecordingService).GetField("_state", fields)!.SetValue(recorder, PerfRecordingState.Recording);
-                var original = new IOException();
-                var observer = new InvalidOperationException();
-                recorder.StateChanged += value => { if (value.State == PerfRecordingState.Faulted) throw observer; };
-                if (producer)
-                    typeof(PerformanceRecordingService).GetMethod("ProducerFailure", fields)!.Invoke(recorder, [original]);
-                else
-                {
-                    session.AddFailure(PerfFaultCode.WriteFailed, original);
-                    recorder.Poll();
-                }
-                var ended = await session.Completion.WaitAsync(TimeSpan.FromSeconds(5));
-                if (!ended.Closed || ended.Complete || ended.Error is not AggregateException aggregate ||
-                    !aggregate.Flatten().InnerExceptions.Contains(original) || !aggregate.Flatten().InnerExceptions.Contains(observer))
-                    throw new InvalidOperationException("Fault cleanup did not close the real session with both original failures.");
+                // The real startup owns an open writer before it rejects the missing viewport.
+                try { await recorder.InitializeAsync(new BootRunOptions { PerfOutputDirectory = root }); }
+                catch (AggregateException) { }
+                await recorder.DrainForExitAsync();
+                var ended = recorder.LastEndResult ?? throw new InvalidOperationException("The failed producer did not reach its recorder owner.");
+                var failures = (ended.Error as AggregateException)?.Flatten().InnerExceptions;
+                if (!ended.Closed || ended.Complete || failures is null || !failures.Contains(observer) ||
+                    !failures.Any(error => error is InvalidOperationException && !ReferenceEquals(error, observer)))
+                    throw new InvalidOperationException("Producer startup or observer failure escaped the real drain.");
                 await recorder.DrainForExitAsync();
                 using var released = new FileStream(Path.Combine(root, ended.SessionId, ".lock"),
                     FileMode.Open, System.IO.FileAccess.ReadWrite, FileShare.None);
-                if (diagnostics.Errors.Count != 1 || !ReferenceEquals(diagnostics.Errors[0], ended.Error) ||
-                    !File.Exists(Path.Combine(root, ended.SessionId, "manifest.json")))
-                    throw new InvalidOperationException("Fault cleanup did not publish and receive its end result exactly once.");
+                if (!File.Exists(Path.Combine(root, ended.SessionId, "manifest.json")) || diagnostics.Errors.Count != 1)
+                    throw new InvalidOperationException("The real failed session did not close and report exactly once.");
             }
             finally { await recorder.DrainForExitAsync(); }
         }
         finally { Directory.Delete(root, true); }
     }
+
+    [TestCase, TestCategory(TestReason.Regression)]
+    public async Task WriterSerializationFailureRetainsItsCauseAndClosesTheRealSession()
+    {
+        string root = PerformanceRecordingContractTests.TemporaryDirectory();
+        var original = new IOException();
+        var dictionary = new PerfFieldDictionary(File.ReadAllText(RepositoryFixture.FilePath("game", "data", "perf-fields.json")));
+        var session = new PerfRecordingSession(root, PerfOrigin.Ai, DateTimeOffset.UnixEpoch, dictionary, new JsonObject());
+        try
+        {
+            if (!await session.Ready) throw new InvalidOperationException("The real writer did not open.");
+            session.Begin(new(0, 0, 0));
+            if (!await session.StartedWriting) throw new InvalidOperationException("The real writer did not start.");
+            if (!session.TryEvent(new("failure.fixture", null, 1, new UnserializablePayload(original))))
+                throw new InvalidOperationException("The failure payload was not accepted by the writer.");
+            session.Stop(PerfEndReason.Failure, 2);
+            var ended = await session.Completion.WaitAsync(TimeSpan.FromSeconds(5));
+            if (!ended.Closed || ended.Complete || ended.Fault != PerfFaultCode.WriteFailed || !Contains(ended.Error, original))
+                throw new InvalidOperationException("Writer serialization lost its original cause or failed to close.");
+            using var released = new FileStream(Path.Combine(root, ended.SessionId, ".lock"), FileMode.Open, System.IO.FileAccess.ReadWrite, FileShare.None);
+        }
+        finally { session.Stop(PerfEndReason.Exit, 2); await session.Completion; Directory.Delete(root, true); }
+    }
+
+    private sealed class UnserializablePayload(Exception failure)
+    {
+        public string Value => throw failure;
+    }
+
+    private static bool Contains(Exception? retained, Exception original) => ReferenceEquals(retained, original) ||
+        retained is AggregateException aggregate && aggregate.InnerExceptions.Any(error => Contains(error, original)) ||
+        retained?.InnerException is { } inner && Contains(inner, original);
 }

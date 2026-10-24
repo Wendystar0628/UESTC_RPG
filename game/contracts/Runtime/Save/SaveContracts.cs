@@ -130,6 +130,8 @@ public sealed record SaveState(                                     // 保存状
 public interface ISaveService                         // Kernel 服务（game/kernel/save/）；不加 Autoload
 {
     /// <summary>Command-owner value boundaries; original failures stay on their existing channel.</summary>
+    /// <summary>Observation only; subscriber failures are retained by the publisher and delivered by its lifetime drain without changing the command result.</summary>
+    /// <remarks>May run on the calling or a worker thread. Subscribers handle thread-safe values only; callbacks never run under the save scheduling lock.</remarks>
     event Action<SaveLoadEvent>? LoadCommand;
     bool Enabled { get; }                             // --save=off，或 .lock 被别的进程占着时为 false：不写、不挪任何文件
     IReadOnlyList<SlotInfo> Slots { get; }            // 扉页后读好；s1–s3 恒为三项

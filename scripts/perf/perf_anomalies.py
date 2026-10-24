@@ -268,7 +268,7 @@ def slow_anomalies(frames, streams, manifest, budgets, scope):
     if len(samples) >= 2:
         duration = (samples[-1]['monotonicMs'] - samples[0]['monotonicMs']) / 1000
         if duration >= policy['memoryGrowthMinimumSeconds']:
-            for key in ('privateMiB', 'managedHeapMiB'):
+            for key in ('workingSetMiB', 'managedHeapMiB'):
                 values = [s for s in samples if number(s.get(key))]
                 if len(values) < 2:
                     continue

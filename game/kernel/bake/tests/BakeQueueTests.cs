@@ -15,6 +15,69 @@ public sealed class BakeQueueTests
 {
     [TestCase]
     [TestCategory(TestReason.Regression)]
+    public void SourceIndexSnapshotsStayOrderedAndCompleteWhileProductsArrive()
+    {
+        var context = BakeInputFixture.Context(new FakeWorld { Boundary = new([]) });
+        var source = new BakeSourceIndex(context);
+        const int rounds = 64, batch = 64;
+        var products = Enumerable.Range(0, (rounds + 1) * batch).Select(index =>
+            new BakeProductInput(new(context.Map.Id, "fixture.module", (rounds * batch - index).ToString("D5")), "stamp/" + index)).ToArray();
+        foreach (var product in products.Take(batch)) source.RememberProduct(product.Key, product.Stamp);
+        using var phases = new Barrier(2);
+        var writer = Task.Factory.StartNew(() =>
+        {
+            for (var round = 0; round < rounds; round++)
+            {
+                Meet();
+                foreach (var product in products.Skip((round + 1) * batch).Take(batch))
+                {
+                    source.RememberProduct(product.Key, product.Stamp);
+                    Thread.Yield();
+                }
+                Meet();
+            }
+        }, CancellationToken.None, TaskCreationOptions.LongRunning, TaskScheduler.Default);
+        var snapshots = new List<BakeSourceIndexData>();
+        var overlappingWrites = false;
+        try
+        {
+            for (var round = 0; round < rounds; round++)
+            {
+                Meet();
+                var before = source.ProductCount;
+                try
+                {
+                    snapshots.Add(source.Snapshot("fixture-source", "fixture-resident"));
+                    overlappingWrites |= source.ProductCount > before;
+                }
+                finally { Meet(); }
+            }
+        }
+        finally
+        {
+            phases.RemoveParticipant();
+            writer.GetAwaiter().GetResult();
+        }
+        if (!overlappingWrites) throw new InvalidOperationException("The fixture did not overlap source snapshots with arriving products.");
+        var expected = products.ToDictionary(product => product.Key, product => product.Stamp);
+        foreach (var snapshot in snapshots.Append(source.Snapshot("fixture-source", "fixture-resident")))
+        {
+            var sorted = snapshot.Products.OrderBy(product => product.Key.Module, StringComparer.Ordinal)
+                .ThenBy(product => product.Key.Detail, StringComparer.Ordinal);
+            if (!snapshot.Products.SequenceEqual(sorted) || snapshot.Products.Select(product => product.Key).Distinct().Count() != snapshot.Products.Length ||
+                snapshot.Products.Any(product => !expected.TryGetValue(product.Key, out var stamp) || stamp != product.Stamp))
+                throw new InvalidOperationException("A concurrent source snapshot lost product identity, stamps or deterministic ordering.");
+        }
+        if (source.Snapshot("fixture-source", "fixture-resident").Products.Length != products.Length)
+            throw new InvalidOperationException("The settled source snapshot omitted completed products.");
+        void Meet()
+        {
+            if (!phases.SignalAndWait(5000)) throw new TimeoutException("Concurrent source snapshot participants did not rendezvous.");
+        }
+    }
+
+    [TestCase]
+    [TestCategory(TestReason.Regression)]
     public void InteractiveIdentityHitsDoNotQueuePlaceholdersAndExplicitBatchStillSchedules()
     {
         var map = CatalogMap();

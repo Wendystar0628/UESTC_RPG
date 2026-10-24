@@ -24,9 +24,6 @@ sealed class CpuPhaseReport
     private readonly PlayingObservations playing;
 
     public int Pid => pid;
-    public int MainId => mainId;
-    public DateTime Origin => origin;
-    public IReadOnlyDictionary<string, Anchor> Boundaries => boundaries;
     public IReadOnlyList<Window> Windows => windows;
 
     public CpuPhaseReport(JsonElement root, string directory)
@@ -53,7 +50,7 @@ sealed class CpuPhaseReport
         if (flow && realtime is null) throw new InvalidDataException("Missing first Playing realtime after formal entry.");
         boundaries.TryGetValue("preload-ready", out preloadReady);
         if (!flow && preloadReady is null) throw new InvalidDataException("Diagnostic title requires real new-game preload-ready.");
-        playing = new PlayingObservations(File.ReadAllText(Path.Combine(directory, "godot.log")));
+        playing = new PlayingObservations(File.ReadAllText(Path.Combine(directory, "godot.log")), root.GetProperty("performance"));
         snapshots = root.GetProperty("cpuSnapshots").EnumerateArray().Select(x => new Snapshot(
             x.GetProperty("name").GetString()!, Utc(x.GetProperty("processCpuReadUtc")),
             Utc(x.GetProperty("startedUtc")), Utc(x.GetProperty("finishedUtc")), x.GetProperty("processCpuSeconds").GetDouble(),
@@ -135,6 +132,7 @@ sealed class CpuPhaseReport
             input = root.GetProperty("input").Clone(),
             playingSample = root.TryGetProperty("playingSample", out var playingSample) ? playingSample.Clone() : (JsonElement?)null,
             logEvidence = playing.LogReport(),
+            performanceSession = playing.SessionReport(),
             playingCpuIntervals = PlayingCpuIntervals(root),
             condition = ConditionReport(),
             clock = ClockReport(),
@@ -219,7 +217,7 @@ sealed class CpuPhaseReport
             startsBeforeTraceSession = window.Start < coverageStart, endsAfterTraceSession = window.End > coverageEnd,
             actualCpuCounters = cpu,
             gcAllocationSampling = analysis.SummarizeAllocations(windows.IndexOf(window), mainId),
-            frameStatistics = playing.Frames(window, this, analysis),
+            performanceAssociation = playing.Phase(window, boundaries),
             sampledThreadTimeEvents = selected.Length, cpuFunctionShare = "NOT_MEASURED",
             samplesMissingCallStack = selected.Count(x => !x.HasStack),
             samplesWithUnresolvedFrame = selected.Count(x => x.Frames.Any(f => f.Unresolved)),

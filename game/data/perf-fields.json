@@ -1,5 +1,5 @@
 {
-  "schema": 2,
+  "schema": 3,
   "authority": "ENG-PERF-DATA",
   "draft": false,
   "encoding": {
@@ -1235,14 +1235,7 @@
           "source": "GAME-221 main thread slow snapshot; each source independent",
           "note": ""
         },
-        {
-          "name": "privateMiB",
-          "type": "number",
-          "nullable": true,
-          "unit": "MiB",
-          "source": "GAME-221 main thread slow snapshot; each source independent",
-          "note": ""
-        },
+
         {
           "name": "managedHeapMiB",
           "type": "number",

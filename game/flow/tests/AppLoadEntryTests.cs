@@ -12,6 +12,26 @@ namespace Campus.Tests;
 [TestSuite]
 public sealed class AppLoadEntryTests
 {
+    [TestCase, TestCategory(TestReason.Regression)]
+    public async Task ThrowingCommandObserverDoesNotStrandEnteringOrChangeTheOutcome()
+    {
+        using var f = new Fixture();
+        await f.OpenTitle();
+        var original = new IOException();
+        var observed = new List<EnterCommandEvent>();
+        f.Flow.EnterCommand += _ => throw original;
+        f.Flow.EnterCommand += observed.Add;
+        var result = await f.Flow.Enter(new(EnterKind.LoadSlot, f.Save.Slot.Slot) { Gen = f.Save.Older.Gen });
+        if (result != EnterResult.Entered || f.Flow.State != AppState.Playing || f.Flow.Failure is not null ||
+            observed.Count != 2 || observed[^1].Result != EnterResult.Entered || f.Rig.Camera.InputLocked)
+            throw new InvalidOperationException("The command observer changed the real entry result or blocked a later observer.");
+        Exception? retained = null;
+        try { f.Flow.Dispose(); }
+        catch (Exception error) { retained = error; }
+        if (retained is not AggregateException aggregate || !aggregate.Flatten().InnerExceptions.Contains(original))
+            throw new InvalidOperationException("Flow disposal did not receive the original command exception.");
+    }
+
     [TestCase(EnterKind.NewGame)]
     [TestCase(EnterKind.Continue)]
     [TestCategory(TestReason.Contract)]

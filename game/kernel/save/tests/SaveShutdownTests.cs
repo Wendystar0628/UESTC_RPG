@@ -11,6 +11,58 @@ namespace Campus.Kernel.Save.Tests;
 [TestSuite]
 public sealed class SaveShutdownTests
 {
+    [TestCase, TestCategory(TestReason.Regression)]
+    public async Task ThrowingLoadObserversPreserveRestorationAndReachDisposal()
+    {
+        var f = new SaveLifecycleFixture();
+        var original = new IOException();
+        Exception? retained = null;
+        try
+        {
+            await f.Start();
+            var observed = new ConcurrentQueue<SaveLoadEvent>();
+            f.Save.LoadCommand += _ => throw original;
+            f.Save.LoadCommand += observed.Enqueue;
+            var result = await f.Pump(f.Save.NewGame(SaveSlots.Auto[0], 1));
+            AssertThat(result.Status == LoadStatus.Loaded && !f.World.RestoreFaulted && f.Diagnostics.Errors.Count == 0 &&
+                observed.Count == 2 && observed.Last().Phase == SaveLoadPhase.Completed && observed.Last().Result == result).IsTrue();
+        }
+        finally
+        {
+            try { await f.DisposeAsync(); }
+            catch (Exception error) { retained = error; }
+        }
+        AssertThat(ReferenceEquals(retained, original)).IsTrue();
+    }
+
+    [TestCase, TestCategory(TestReason.Regression)]
+    public async Task ShutdownTracksLoadBeforeItsSynchronousObserverReturns()
+    {
+        await using var f = new SaveLifecycleFixture();
+        await f.Start();
+        using var release = new ManualResetEventSlim();
+        var entered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        f.Save.LoadCommand += value =>
+        {
+            if (value.Phase != SaveLoadPhase.Started) return;
+            entered.TrySetResult();
+            release.Wait();
+        };
+        var loading = Task.Run(() => f.Save.Load(SaveSlots.Auto[0]));
+        Task? closing = null;
+        try
+        {
+            await entered.Task.WaitAsync(TimeSpan.FromSeconds(5));
+            closing = f.Save.DisposeAsync().AsTask();
+            AssertThat(!closing.IsCompleted && !loading.IsCompleted).IsTrue();
+        }
+        finally { release.Set(); }
+        try { await loading; }
+        catch (OperationCanceledException) when (loading.IsCanceled) { }
+        if (closing is not null) await closing.WaitAsync(TimeSpan.FromSeconds(5));
+        AssertThat(loading.IsCanceled && f.Diagnostics.Errors.Count == 0).IsTrue();
+    }
+
     [TestCase]
     [TestCategory(TestReason.Regression)]
     public async Task ClosingDuringTheInitialScanDrainsTheWorkerAndReleasesItsUnclaimedLock()
