@@ -38,6 +38,7 @@ DATASETS = {
     'health': Dataset(frozenset({'history:patrol', 'history:checkpoint', 'gates', 'code',
                                              'worktrees', 'hooks', 'patrol:interval'}), 1800, expiry=True),
     'failures': Dataset(frozenset({'history:failures', 'git', 'failure-types'}), 1800),
+    'perf': Dataset(frozenset({'perf', 'git'}), 3600, lane='slow', batch_s=10),
     'system': Dataset(frozenset({'scripts', 'settings', 'hooks', 'local', '@docs'}), 1800,
                       lane='slow', refresh_s=600),
     'hookfeed': Dataset(frozenset({'hooks', 'local', 'sessions', 'queue'}), 300,

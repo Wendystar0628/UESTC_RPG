@@ -15,7 +15,7 @@ import collect
 import datafile
 from catalog import DATASETS, CURATED_NAMES
 from monitor import history, util as U
-from monitor.read import codex, repo
+from monitor.read import codex, repo, perf
 
 LOCK_FILE = U.REPO + '/output/.locks/live.lock'
 CHECK_S = 15
@@ -84,6 +84,7 @@ def main():
     local = normalized(U.COLLAB + '/tools/monitor/local.json')
     failure_types = normalized(U.COLLAB + '/tools/monitor/failure-types.json')
     patrol_schedule = normalized(U.COLLAB + '/tools/README.md')
+    perf_files = {normalized(path) for path in perf.watch_files()}
     guard = normalized(U.COLLAB + '/tools/hooks/log/guard.jsonl')
     hook_stats = {normalized(U.COLLAB + '/tools/hooks/log/' + name)
                   for name in ('stats-guard.json', 'stats-steer.json')}
@@ -132,6 +133,8 @@ def main():
             result.add('queue')
         if path == failure_types:
             result.add('failure-types')
+        if path in perf_files:
+            result.add('perf')
         if path == patrol_schedule:
             result.add('patrol:interval')
         if path == local:
@@ -230,6 +233,7 @@ def main():
         wanted += [(root, True) for root in script_roots if os.path.isdir(root)]
         wanted += [(root, True) for root in code_roots | gate_roots]
         exact = set(rollout_paths) | checkout_paths | database | git_files | settings | model_paths
+        exact.update(perf_files)
         exact.update(root for root in script_roots if not os.path.isdir(root))
         exact.update((queue, local, patrol_schedule, failure_types, guard, agent_log, dashboard + '/index.html',
                       U.STATE + '/dashboard-ack.json'))

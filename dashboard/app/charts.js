@@ -1,5 +1,5 @@
 /* 观察台的统计图：ECharts（vendor/echarts.min.js）画常规图，桑基与密度条用 SVG/HTML 自绘（ECharts 的桑基画不了 0 次的虚线）。
-   每个函数返回一个节点；通用 opts：height、label（无障碍名）、caliber（悬停框末行的口径句）、unit、onClick(p)，
+   时间轴图（trend、band）在 charts-time.js。每个函数返回一个节点；通用 opts：height、label（无障碍名）、caliber（悬停框末行的口径句）、unit、onClick(p)，
    p = {index 类别下标, key, label, value, series 系列的 key}。颜色一律经 palette.js 的 tone: [组, 键]。
    节点进到可见页面、有了宽度才画，容器变宽变窄自动重排；面板重绘时 core 调 release 释放旧图；主题切换全部重画。接口见 README §3。 */
 (function () {
@@ -115,6 +115,9 @@
   }
 
   var C = Dash.charts = {};
+  /* 给 charts-time.js 的宿主与取色：时间轴图在那里，同一套悬停框、坐标轴与释放 */
+  C.internal = { host: host, own: own, tip: tip, css: css, tone: tone, toneVar: toneVar, alpha: alpha, unitOf: unitOf,
+    axisStyle: axisStyle, hiddenLegend: hiddenLegend, md: md };
 
   C.release = function (root) {
     live = live.filter(function (r) {
@@ -382,37 +385,6 @@
       var x = cells[e.data.i];
       return { index: e.data.i, key: x.r + ':' + x.c, label: rows[x.r] + ' · ' + cols[x.c], value: x.value, series: null };
     });
-  };
-
-  /* ---------- 折线：xs [标签或日期]；series [{key?, label, tone, values, axis: 0|1}]；opts.notes 每点一句；opts.units 两轴各自的单位 ---------- */
-  C.trend = function (xs, series, opts) {
-    opts = Object.assign({ height: 220 }, opts);
-    var two = series.some(function (s) { return s.axis === 1; });
-    var units = opts.units || [opts.unit || '', ''];
-    return host('trend', function () {
-      var ax = axisStyle();
-      var yAx = [Object.assign({}, ax, { type: 'value', min: 0, name: units[0] || '', nameTextStyle: { color: css('--text-3') } })];
-      if (two) yAx.push(Object.assign({}, ax, { type: 'value', min: 0, name: units[1] || '', splitLine: { show: false }, nameTextStyle: { color: css('--text-3') } }));
-      return {
-        grid: { left: 8, right: 8, top: 22, bottom: 8, containLabel: true },
-        legend: hiddenLegend(),
-        tooltip: { trigger: 'axis', formatter: function (ps) {
-          var i = ps[0].dataIndex;
-          return tip(isNaN(Dash.parseTime(xs[i])) ? String(xs[i]) : Dash.day(xs[i]),
-            ps.map(function (p) { var s = series[p.seriesIndex]; return p.seriesName + ' ' + Dash.num(p.value) + (units[s.axis || 0] ? ' ' + units[s.axis || 0] : ''); })
-              .concat(opts.notes && opts.notes[i] ? [opts.notes[i]] : []), opts.caliber);
-        } },
-        xAxis: Object.assign({}, ax, { type: 'category', data: xs.map(md), boundaryGap: false, splitLine: { show: false } }),
-        yAxis: yAx,
-        series: series.map(function (s) {
-          return { name: s.label, type: 'line', yAxisIndex: s.axis || 0, data: s.values, symbol: 'circle', symbolSize: 5, connectNulls: false,
-            lineStyle: { width: 2, color: tone(s.tone) }, itemStyle: { color: tone(s.tone) } };
-        })
-      };
-    }, opts, function (e) {
-      var s = series[e.seriesIndex];
-      return { index: e.dataIndex, key: xs[e.dataIndex], label: String(xs[e.dataIndex]), value: e.value, series: s.key == null ? s.label : s.key };
-    }, series);
   };
 
   /* ---------- 桑基（SVG）：nodes [{id, label, tone, depth, value, note?}]，id 全图唯一；links [{from, to, value}]；

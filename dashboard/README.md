@@ -1,6 +1,6 @@
 # 作者观察台
 
-作者了解项目的唯一入口：现在、施工、团队、健康、体系、动态、文档七页，回答当前推进、流水线、协作、运行状况、开发结构、最近变化与文档内容。双击 `打开观察台.cmd`，启动唯一实时采集与回环 HTTP 服务。作者过目不挡推进（DECISION-274），工程、架构与排期由两位指挥判断。
+作者了解项目的唯一入口：现在、施工、团队、健康、性能、体系、动态、文档八页，回答当前推进、流水线、协作、运行状况、游戏性能、开发结构、最近变化与文档内容。双击 `打开观察台.cmd`，启动唯一实时采集与回环 HTTP 服务。作者过目不挡推进（DECISION-274），工程、架构与排期由两位指挥判断。
 
 统计口径、时间窗口、排序与未知判断统一在 `monitor/view/`，失败登记的提交窗口由 writer、list 与 view 共用 `monitor/read/failures.window_records()` 纯函数；页面展示现成结果，保留按方向筛抽屉、按 parent 展开文档树、拼编号和用 `Dash.since` 显示经过时长等展示行为。历史不全照实显示已有事实，缺项保留“未确认”；不公开原始日志或完整会话。数据契约见 §1–§2，页面与交互见 §3–§5。
 
@@ -12,6 +12,8 @@
 - `attention.py` 独占作者输入事务：输入变更、过目重建、revision 校验、确认、attention/feedback 发布。`post.py`、采集与 HTTP 入口只调用它；先持输入事务锁，再经窄发布函数取得短锁。
 - `datafile.write()` 是唯一文件发布入口：原子替换 `Dash.put` 后提交内容签名与确认时刻；签名不含 updated，相同内容只推进确认。失败可发布 errors，不能推进确认。内部 `dashboard-publication.json` 只是当前发布快照，checked 是私有 name→ISO 表，不是历史或公开 SSE 载荷。
 - `failure-types.json` 的精确文件事件与 `history:failures`、既有 Git 引用事件驱动 failures；不新增计时器或巡逻入口。
+- `perf` 走慢道，10 秒合批、3600 秒判鲜；非递归精确监听作者性能根的 `latest.json`、`output/perf/index.json` 与根 `budgets.json`，主线 Git 移动同样触发。作者根复用分析器从 `game/project.godot` 自定义用户目录名推导；read 层只读关闭会话，发现未分析或输入失鲜时调用现有 `scripts/perf/analyze.py`。指标、有效性、好坏、异常与保留规则以该分析器的 index、derived、history 为唯一来源，不建立观察台性能历史。主线提交表由 `read/repo.mainline_commits()` 集中，failures 与 perf 共用。
+- `perf.recording` 只从 `latest.json` 的 recording 状态、所指会话锁占用和 pending 清单的开始时刻取事实，绝不读取记录中的逐帧文件；锁文件存在不表示仍在录制。录制器原子发布 recording/closed 指针后触发采集，前端按 since 显示经过时间。
 - `catalog.DATASETS` 是各份公开与内部结果的唯一登记，集中输入、确认间隔、通道、合批、行与样本需求、周期和到期属性。`datafile.AUTO_NAMES` 由公开项派生；collect 的 PRODUCERS 是唯一实际生产函数绑定，启动核对其输出名字与登记名集，live 按同表调度。`/api/data-names.js` 同次输出 `window.DashDataNames`（公开数据名）与 `window.DashQueueStates`（施工状态有序数组）；状态 key、中文名与顺序只由 `.collab/tools/monitor/queue-states.json` 定义，Python、Node 与前端共用。
 - 登记的 kind 区分公开结果、共享原始事实与界面发布；collect 仅核对实际生产输出与登记的名字集合，不再保存或比较第二份函数绑定。作者事务输出由 attention.BUILDERS 导出；策展输入名单统一在 catalog.CURATED_NAMES。判鲜仅对从未确认的来源返回空，已确认来源的坏时刻或坏间隔直接报错。
 - `serve.py` 只绑定 `127.0.0.1:8765`，提供静态文件、同源写入、SSE 与文档只读接口。服务 Observer 只观察发布元数据，不采集、不持发布锁等待客户端。唯一 `health.freshness(checked, intervals, now)` 纯函数算 stale/ratio；HTTP 只包装结果，业务指标不在服务计算。
@@ -101,8 +103,40 @@ feed:      {coverage, days: [{day, cells: [{side: null|claude|codex, type, n}]}]
 docs:      {count, domains: [{key, name, index, docs: [{code, title, summary, keywords, parent|null, updated}]}]}
 now:       {phase: {step: P0|P1|P2|P3|null, text, priority},
             kpis: [{key, label, value|null, unit, note, trend: better|worse|same|null, href}]}
+perf:      {coverage: {from: 最早会话开始时刻|null}, caliber, units, labels: {levels, phases},
+            recording: {since: ISO|null, minutes: 分钟|null}|null,
+            retention: {authorSessions, authorBytes, aiBatches, historyPerGroup, diagnosticBytes},
+            metrics: [{key, label: 中文, unit, scope: cost|experience}],
+            series: [{key, label: 中文, unit, scope: cost|experience}],
+            latest: {play: 会话id|null, ai: 会话id|null},
+            sessions: [性能会话], trends: [性能趋势], details: {会话id: 性能曲线|null},
+            displayCoverage: {sessions: 显示会话数, totalSessions: 来源会话数, note}}
+保留项 =    {value: 现值|null, limit: 来源上限|null, unit}
+性能会话 =  {id, origin: play|ai, originLabel: 作者|AI, scope: full|cost, scopeLabel, scopeReason,
+            status, statusLabel, statusReasons, startedAt, endedAt, recordedSeconds, calc,
+            build: {seq: 主线序号|null, subject: 首行|null, dirty: bool|null, configuration, behindMainline: 落后主线提交次数|null, reason},
+            comparisonKey, comparisonLabels, comparisonMissing, coverage, validity,
+            all: {values: {指标key: 数|null}, reasons: {缺数指标key: 中文原因}}, steady: 同all,
+            targets: [{metric, label, value, budget, budgetSource, applicable, ratio, exceeded, reason, line: 适用预算|null}],
+            frameLines: [{key: targetFrameMs|heavyStutterMs|severeStutterMs|freezeMs, label, value: 数|null, unit: ms, source: 中文来源, reason: 中文缺数原因|null}],
+            intervals: {context: [{state, label, fromMs, toMs, firstFrame, lastFrame}], segments: [带label的分析器活动事件], gaps: [缺口事件]},
+            anomalyCounts, anomalyTotal, anomalies: [分析器异常加typeLabel与levelLabel],
+            retained: {raw, summary, anomalies, hotframes}, vramCapacityMiB: 容量|null}
+性能趋势 =  {key, scope, origin, comparisonKey, calc, status: stale|unsupported|null, label: 各次运行摘要的中位,
+            points: [{seq, subject, dirty: false, n: 运行数, metrics: {指标key: 中位数|null},
+                      anomaliesPerMinute: 每分钟异常组数的运行摘要中位|null, anomalyRateRuns: 有效分母运行数, anomalyRateReason: 中文原因|null}]}
+性能曲线 =  {bucketSeconds, columns: [列名], buckets: [[按columns排列的值]],
+            hotframeColumns: [列名], hotframes: [[逐帧值]], hotframesTotal: 派生总行数,
+            seriesReasons: {缺数曲线key: 中文原因}, reason}
 ```
 
+- `perf` 单位独立：帧与渲染耗时 ms、显存 MiB、比例 0–1、功耗 W、频率 MHz、温度 °C；`recordedSeconds` 是秒，区间及桶边界是进程单调时钟 ms，只有 recording.minutes 是分钟。归一化负载、GPU 忙碌比及预算 ratio 可超过 1，指标目录分别标“倍”。未知 null，零行 coverage 保留分析器的 null，不伪造空闲、正常或零成本。
+- 性能会话按完成时刻新到旧；latest 各来源独立取最新已关闭会话，缺作者或 AI 来源保留 null。all 与 steady 对应分析器全样本、明确稳态摘要，视图只投影已有值，不重新计算分位与 low。体验指标不适用时 reasons 给原因；cost 固定写“隔离桌面只判成本，不测帧时与帧率”，帧时、帧率与 GPU 占用均不画零。两列显存分别是 NVML 整卡已用与引擎记账；容量缺测不算比例。主视口 GPU 与视口 CPU 渲染允许近似 ±2 帧成本，只作分布、预算与趋势，不逐帧归因，也不从 GPU 占用猜瓶颈。目标线 line 仅适用时给值。
+- `build.behindMainline` 用共享主线表的最新序号减构建序号，构建不在表中时为 null、原因沿用 build.reason；`all/steady.values.low01TailN` 与 `validFrameN` 原样投影分析器的尾样本数与有效帧数，不据 low 值反推。`frameLines` 的目标帧时复用分析器对记录清单限帧、垂直同步与刷新率的解释；重卡顿、严重卡顿和卡死阈值读取本轮分析器预算，成本口径、历史格式或来源不足给 null 与中文原因。
+- 跨提交趋势按比较键、scope、origin、calc 分组，点按主线序号升序，对同提交各次运行的 steady 摘要取中位；身份缺失或 dirty 不为 false 的运行只保留会话证据，不归入主线趋势。成本指标为目录前五项；体验趋势只给作者：平均帧率、1% low、0.1% low、帧时 p99、GPU 占用均值。保留层由 retained 如实给出，历史摘要只剩 history 时仍显示 summary 层；旧 calc 的会话与趋势标 stale，不能当当前基线。历史趋势直接读取分析器已有 history，保留上限从 index 与记录器清单快照取，不抄第二套常量。
+- 每提交 `anomaliesPerMinute` 先把每次运行分析器的异常组总数除以真实 `recordedSeconds` 再乘 60，最后取同提交运行摘要中位；不是原始发生次数，未测、无分析摘要或时长无效的运行不记零，参与数量与缺数原因分别给出。旧记录格式标 unsupported，只作历史证据；公开原因与说明由后端提供中文。
+- 性能曲线只给每来源最新会话；每桶为一秒或更粗，最多每会话 900 桶（整份最多 1800），columns 前三列为 fromMs、toMs、frames，其后按 series 顺序交替为 `keyMean`、`keyMax`，只聚合已测有效值；空桶不跨缺口补线，非稳态与活动区间由 intervals 覆盖。hotframes 是分析器已选重级以上的真实逐帧行，按 hotframeColumns 解包，最多显示前 1000 行，hotframesTotal 给总行数。为守 1 MB，后端必要时加粗桶、裁掉更早的非最新会话与趋势点，displayCoverage 公开显示范围；不修改原始记录或分析器保留数据。
+- 新增曲线 `fps`：Mean 按桶内有效帧数/有效帧时总和×1000 给出，Max 是最快有效帧对应的帧率，前端直接画列；`measuredViewportGpuMs` 只聚合分析器已确认来源的受测视口 GPU 合计；`normalizedGpuLoad` 与分析器同口径，用同条硬件读数的占用×当前频率/最大频率。`gpuUtilSampleAgeMs`、`gpuUtilSamplingWindowMs` 当前没有占用读数的原生时间与窗口来源，均为 null 并附 seriesReasons，不以查询时刻、查询间隔或另一通道的观测间隔顶替。
 - attention 仅公开当前 revision 未过目的 items，按 at 降序，未知在末尾；open 等于其条数。
 - hookfeed 四列固定按上述角色顺序，每列 items 为最近 8 次真实有注入的事件，新的在前。rules 与事件列表共读同一次 guard journal：只匹配同轮 people 样本中的当前主会话身份；子代理只取 running=true 的集合，Claude 侧还须属于当前主会话，Codex 侧沿用 people 的主线后代集合。没有在场身份时 rules=null，显示空态；有身份但最新 journal 缺 rulesAt 或 rulesCalls（含字段启用前的历史）则 at/calls/late 全为 null，显示未知，不从旧记录或其他会话补值。两字段齐全时，at 由 journal.rulesAt（最后整套顶层 stdout 成功交付的 Unix 毫秒）转 ISO，calls 原样取 journal.rulesCalls（此后工具数，刚完整交付为 0），不按事件或块名重算。多位在跑子代理取 rulesAt 最早的一位的成对事实，任一位事实未知则整列未知。late 仅由 view 用同轮当前时刻判满 30 分钟；未来到期点交既有 next_expiry，前端仅格式化时间、呈现次数及提示色。
 - progress.dwell 为三侧×五状态固定 15 项，当前已知起点的样本数为 n，med 为相同 min 的中位数。未结束 history 段 to=null；stageP80 只用同状态真实结束段。since 是进入当前状态的真实时刻。waiting 表示等前置或就绪且前置未完，或暂停。
@@ -193,7 +227,7 @@ GET /api/doc/search?q=词  → {ok, items: [{code, title, sec: {n, title, anchor
 
 ```
 dashboard/
-  index.html            外壳：页眉（两位指挥在不在跑、"N 份旧了"）、导航、页面容器、右下角提示条；按序加载 vendor/echarts、vendor/marked、/api/data-names.js（后端数据名单）、manifest、core、coverage、ui、palette、charts、reader
+  index.html            外壳：页眉（两位指挥在不在跑、"N 份旧了"）、导航、页面容器、右下角提示条；按序加载 vendor/echarts、vendor/marked、/api/data-names.js（后端数据名单）、manifest、core、coverage、ui、palette、charts、charts-time、reader
   vendor/
     echarts.min.js      Apache ECharts；许可在同目录 echarts-LICENSE.txt、echarts-NOTICE.txt
     marked.min.js       marked（Markdown 渲染）；许可在同目录 marked-LICENSE.txt
@@ -203,7 +237,8 @@ dashboard/
     coverage.js         卡底的记账起点：时间窗起点、哪块面板写（同一页每个起点一次）、卡底文字与刷新；依赖 core.js 的 Dash.internal，在其后加载
     ui.js               格式化与小组件、抽屉、悬停框
     palette.js          色表：语义（组, 键）→ CSS 变量与中文名；签条
-    charts.js           统计图（ECharts；桑基、密度条自绘）
+    charts.js           统计图（ECharts；桑基、密度条自绘）；宿主与取色经 Dash.charts.internal 给 charts-time.js
+    charts-time.js      时间轴图：trend、band 与它们共用的阈值线、区间色带、异常针；在 charts.js 之后加载
     reader.js           文档阅读器
     style.css           令牌（浅色、深色各一份）与通用组件样式
     pages/<页>.js|css   一页一对文件，只经 Dash 读数据
@@ -311,6 +346,7 @@ Dash.reader(el, {code, sec?, find?, docs})   文档阅读器（reader.js）；do
 | `gate` | `pass` 过、`fail` 没过、`skip` 没跑 |
 | `seq`、`timing` | 一组蓝，键是下标 |
 | `cat` | 十二色分类色，键是下标；系列多、要彼此分开时用（如健康页失败大类） |
+| `perf` | 异常五级 `info` 提示、`light` 轻、`heavy` 重、`severe` 严重、`freeze` 卡死（由灰经橙到深红）；曲线 `frame` `fps` `gpu` `measured` `cpu` `setup` `util` `load` `power` `vram` `vramEngine` `capacity`；五段 `physMs` `procMs` `lateMs` `drawMs` `tailMs`；标注 `target` 目标线、`idle` 非稳态、`activity` 在做什么；来源 `ai`（作者用 `side.author`） |
 
 ```
 Dash.colorVar(组, 键)  Dash.color(组, 键)  Dash.cssVar(name)  Dash.label(组, 键)  Dash.mark(组, 键, 字?)  Dash.modelKey(型号)
@@ -330,13 +366,16 @@ Dash.colorVar(组, 键)  Dash.color(组, 键)  Dash.cssVar(name)  Dash.label(组
 | `stack(cats, series, opts)` | `series [{key, label, tone, values}]` | 堆叠条；`opts.horizontal` 横向 |
 | `combo(days, bars, line, opts)` | `bars [{key, label, tone, values}]`（多条堆叠）、`line {key?, label, tone, values}` | 柱线组合；`opts.tips` 每天一段补充，悬停附上 |
 | `heat(rows, cols, cells, opts)` | rows、cols 是标签数组；`cells [{r, c, value, text?}]` | 热力；text 是格内小字；`p.index` 是 cells 下标 |
-| `trend(xs, series, opts)` | `series [{key?, label, tone, values, axis: 0|1}]` | 折线，axis 1 用右轴；`opts.units` 两轴单位；`opts.notes` 每点一句 |
+| `trend(xs, series, opts)` | `series [{key?, label, tone, values, axis: 0|1, dashed?}]`，或散点 `{label, tone, points: [{index, value, hollow?, ring?}]}` | 折线，axis 1 用右轴；散点同一横轴位置可有多点，hollow 空心、ring 加粗圈；`opts.units` 两轴单位；`opts.notes` 每点一句；`opts.titles` 每个横轴位置的悬停标题；标注见下（charts-time.js） |
+| `band(xs, series, opts)` | `series [{key?, label, tone, mean, max?, axis: 0|1, dashed?}]` | 均值线 + 最大值带：有 max 的在线上方画到最大值的浅色带；null 处断开不补线；`opts.zoom {from, to}` 横轴下标，缩到这一段并可拖动平移；`opts.titles`、标注同 trend（charts-time.js） |
 | `sankey(nodes, links, opts)` | `nodes [{id, label, tone, depth, value, note?}]`（id 全图唯一，value 是后端给的节点数，null 写未确认）；`links [{from, to, value}]` | 自绘 SVG；值为 0 或 null 的连线画细灰虚线；悬停节点高亮相连的线并写 note；`p.key` 是节点 id，`p.series` 是 node 或 link |
 | `strip(days, opts)` | `[{day, value}]` | 密度条，一天一格，深浅按数；`opts.coverage` 之前的格画虚线框；拖选 → `opts.onBrush({from, to})`，点一格 → `onClick`；`opts.selected {from, to}` 高亮 |
 
+trend 与 band 的标注：`opts.lines [{value, label, tone, axis?}]` 横向阈值线，只画调用方给的值；`opts.areas [{from, to, label?, tone, alpha?}]` 横轴下标区间的色带；`opts.pins [{index, value, label, tone}]` 异常针。
+
 ## 4 页面与面板
 
-导航七页，每页顶部一句"这页回答什么"（manifest 的 `ask`），右侧是这页的筛选条；每块一个标题、一句"这块回答什么"（`note`）与 ⓘ 口径（`caliber`）。各页的块 id 列在 `pages/<页>.js` 的头注释里，每块回答什么、口径是什么写在它的 `note` 与 `caliber` 里。
+导航八页，每页顶部一句"这页回答什么"（manifest 的 `ask`），右侧是这页的筛选条；每块一个标题、一句"这块回答什么"（`note`）与 ⓘ 口径（`caliber`）。各页的块 id 列在 `pages/<页>.js` 的头注释里，每块回答什么、口径是什么写在它的 `note` 与 `caliber` 里。
 
 | 页 | 回答什么 | 筛选 | 用到的数据 |
 | --- | --- | --- | --- |
@@ -344,6 +383,7 @@ Dash.colorVar(组, 键)  Dash.color(组, 键)  Dash.cssVar(name)  Dash.label(组
 | `#work` 施工 | 活在哪一段、流得顺不顺 | side | progress、flow |
 | `#team` 团队 | 谁在做哪行、两边配合得怎样 | — | team、collab、progress |
 | `#health` 健康 | 这套开发机器正不正常，游戏本体最近在哪类失败 | — | health、failures；新鲜度用 `Dash.freshness()` |
+| `#perf` 性能 | 游戏跑得顺不顺、成本花在哪、越改越快还是越慢 | — | perf |
 | `#system` 体系 | 钩子与脚本怎么搭起来、在送什么 | side | system、hookfeed、docs |
 | `#feed` 动态 | 最近发生了什么 | range、side、type | feed |
 | `#docs` 文档 | 查文档、读文档 | — | docs、`/api/doc`、`/api/doc/search` |
@@ -351,6 +391,8 @@ Dash.colorVar(组, 键)  Dash.color(组, 键)  Dash.cssVar(name)  Dash.label(组
 现在页六块：`now-attention` 等你过目（没点"知道了"的前 3 条，其余折叠；打开、知道了，7 栏）、`now-feedback` 给主会话留言（5 栏）、`now-progress` 推进到哪（P0–P3 四格阶段条、当前阶段与当前优先级两句、流水线比例条，点段到 `#work/work-board?stage=`；阶段号为 null 不画格，8 栏）、`now-pulse` 机器与人（健康灯与要看、有问题的个数 → `#health`；两位指挥的灯与在跑子代理数 → `#team`，4 栏）、`now-kpis` 六张指标卡（点卡到 `kpis[].href`）、`now-feed` 最近 5 条动态（点了到 `#feed`）。1440×900 一屏放下前三排。
 
 健康页在“总体”之后、“各组检查”之前依次增加 `health-fail` 指标卡（12 栏）、`health-fail-types` 大类到子类（5 栏）、`health-fail-trend` 提交段堆叠（7 栏）、`health-fail-recent` 最近登记（12 栏）；fmajor/fsub 保存在路由，筛选可清除。频率未确认显示 —；类别新增签与未收录类别提示共用既有组件与令牌。
+
+性能页八块，路由参数 src 选来源（缺省取完成时刻更晚的那份）、z 缩到本次异常的第几条、tg 与 tm 选趋势的比较组与指标：`perf-head` 页顶口径句“这页看趋势；调优以最新原始记录为准”，正在记录时加一行“正在记录（自 HH:MM，已 N 分钟）”，按 recording.since 走时；`perf-latest` 最新数据（来源签、完成时刻、时长、构建写主线序号与首行和落后主线次数、含未提交改动另标、设置签、口径与状态签；成本卡五张，显存峰值写 NVML 整卡已用 / 容量，引擎显存记账单列；体验卡五张，0.1% low 带尾样本数，cost 会话整行写后端原因）；`perf-frames` 帧时与帧率（逐桶帧时均值线与最大值带、右轴帧率列，frameLines 给值的目标帧时与卡顿阈值线，非稳态灰纹、在做什么色带、异常色带与针；cost 会话只写原因）；`perf-render` GPU 与 CPU 渲染（主视口 GPU、已确认受测视口 GPU 合计、视口 CPU 渲染、帧准备 CPU 四条带，缺的写 seriesReasons；目标线只在 targets[].line 给出时画）；`perf-gpu` GPU 占用与显存（占用、归一化负载（提示）与功耗，占用样本龄与采样窗口写值或 seriesReasons；NVML 整卡与引擎记账两条显存线和容量线；cost 会话占用一行写原因）；`perf-anomalies` 本次异常（时刻、级别、类别、关联阶段、持续、值 / 阈值、在做什么，悬停看候选原因；点一条把三张曲线缩到前后 10 秒，重级以上改画 hotframes 逐帧五段，cost 会话挂在渲染块；只链健康页，不写失败账本）；`perf-trend` 跨提交趋势（比较组 × 指标签，横轴主线序号，线是各次运行摘要的中位、细点单次运行、空心含未提交改动、圈最新，体验指标只给作者组；下方每分钟异常数）；`perf-sessions` 会话列表（每会话一行与留到哪层，卡底保留统计现值 / 上限）。后端的原因与说明原文照写。各块都按 window 'commits' 自写卡底，不用外壳的按天记账起点。
 
 **加页面、面板、数据源**：
 - 加页面：manifest 的 `pages` 加一项（`id`、`title`、`ask`、`file`、`filters?`），建 `pages/<页>.js` 与同名 `.css`，用 `Dash.panel` 注册。

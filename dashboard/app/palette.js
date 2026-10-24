@@ -91,6 +91,35 @@
       fail: ['--risk', '没过'],
       skip: ['--muted', '没跑']
     },
+    /* 性能页：曲线与五段一组冷色，异常五级由灰到深红（契约 perf.anomalies[].level）；来源"作者"用 side.author，AI 用 ai */
+    perf: {
+      info:       ['--pf-info', '提示'],
+      light:      ['--pf-light', '轻'],
+      heavy:      ['--pf-heavy', '重'],
+      severe:     ['--pf-severe', '严重'],
+      freeze:     ['--pf-freeze', '卡死'],
+      ai:         ['--seq-3', 'AI'],
+      frame:      ['--pf-frame', '帧时'],
+      fps:        ['--pf-fps', '实时帧率'],
+      gpu:        ['--pf-gpu', '主视口 GPU'],
+      measured:   ['--pf-measured', '受测视口 GPU 合计'],
+      cpu:        ['--pf-cpu', '视口 CPU 渲染'],
+      setup:      ['--pf-setup', '帧准备 CPU'],
+      util:       ['--pf-util', 'GPU 占用'],
+      load:       ['--pf-load', '归一化 GPU 负载'],
+      power:      ['--pf-power', '功耗'],
+      vram:       ['--pf-vram', 'NVML 整卡已用显存'],
+      vramEngine: ['--pf-vram-engine', '引擎显存记账'],
+      capacity:   ['--text-3', '显存容量'],
+      target:     ['--pf-target', '目标线'],
+      idle:       ['--pf-idle', '非稳态'],
+      activity:   ['--pf-activity', '在做什么'],
+      physMs:     ['--pf-phys', '物理区间'],
+      procMs:     ['--pf-proc', '处理区间'],
+      lateMs:     ['--pf-late', '处理后区间'],
+      drawMs:     ['--pf-draw', '绘制区间'],
+      tailMs:     ['--pf-tail', '绘制后区间']
+    },
     /* 分组色块：按顺序取的一组蓝（脚本分组、文档域），键是下标；timing（钩子时机）同用这一组 */
     seq: ['--seq-1', '--seq-2', '--seq-3', '--seq-4', '--seq-5', '--seq-6'],
     /* 分类色：十二档彼此分得开的色相，键是下标；类别多、要一眼分开的图用它（失败大类） */

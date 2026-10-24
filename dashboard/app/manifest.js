@@ -10,6 +10,7 @@ window.DashManifest = {
     { id: 'work',   title: '施工', ask: '活在哪一段、流得顺不顺', file: 'pages/work.js', filters: ['side'] },
     { id: 'team',   title: '团队', ask: '谁在做哪行、两边配合得怎样', file: 'pages/team.js' },
     { id: 'health', title: '健康', ask: '这套开发机器正不正常，游戏本体最近在哪类失败', file: 'pages/health.js' },
+    { id: 'perf',   title: '性能', ask: '游戏跑得顺不顺、成本花在哪、越改越快还是越慢', file: 'pages/perf.js' },
     { id: 'system', title: '体系', ask: '钩子与脚本怎么搭起来、在送什么', file: 'pages/system.js', filters: ['side'] },
     { id: 'feed',   title: '动态', ask: '最近发生了什么', file: 'pages/feed.js', filters: ['range', 'side', 'type'] },
     { id: 'docs',   title: '文档', ask: '查文档、读文档', file: 'pages/docs.js' }
@@ -31,6 +32,7 @@ window.DashManifest = {
     collab:    { label: '协作分析' },
     health:    { label: '健康' },
     failures:  { label: '游戏失败' },
+    perf:      { label: '性能' },
     system:    { label: '体系' },
     hookfeed:  { label: '最近注入' },
     feed:      { label: '动态' },
