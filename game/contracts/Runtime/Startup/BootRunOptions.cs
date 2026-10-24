@@ -5,7 +5,7 @@ using Campus.Contracts.Save;
 namespace Campus.Contracts.Startup;
 
 public enum BootRunMode : byte { Interactive, Capture, CpuBake }
-public enum StartupScenario : byte { Title, Immediate, Dwell, Playing }
+public enum StartupScenario : byte { Title, Immediate, Dwell, Playing, Route }
 
 /// <summary>Parsed startup choices. Map-dependent defaults are resolved after catalogue loading.</summary>
 public sealed record BootRunOptions
@@ -17,9 +17,12 @@ public sealed record BootRunOptions
     /// <summary>Command-wide map selection for CPU bake or registry checks; Flow.Map holds only a concrete map ID.</summary>
     public bool AllMaps { get; init; }
     public string? SaveDirectory { get; init; }
+    /// <summary>Explicit AI performance root; does not change interactive run behavior or author settings.</summary>
+    public string? PerfOutputDirectory { get; init; }
     public IReadOnlyList<string> TravelSequence { get; init; } = [];
     /// <summary>In-process player input sampling; retains normal interactive startup defaults.</summary>
     public StartupScenario? StartupScenario { get; init; }
+    public StartupRouteOptions? StartupRoute { get; init; }
     public BootFlowRequest Flow { get; init; } = new();
     public WorldBootOptions World { get; init; } = new();
     public UiBootOptions Ui { get; init; } = new();
@@ -32,6 +35,9 @@ public sealed record BootRunOptions
     public bool CaptureMode => Mode == BootRunMode.Capture;
     public bool CpuBakeMode => Mode == BootRunMode.CpuBake;
 }
+
+/// <summary>A requested map waypoint and continuous formal input route; the driver verifies the actual start.</summary>
+public sealed record StartupRouteOptions(string Start, ViewMode Mode, double DurationSeconds);
 
 public sealed record WorldBootOptions
 {

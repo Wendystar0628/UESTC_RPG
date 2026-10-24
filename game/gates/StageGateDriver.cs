@@ -86,6 +86,14 @@ public sealed class StageGateDriver(IStageGateHost host)
     {
         if (_finishing) return;
         var options = AppBoot.Options;
+        if (options.StartupScenario == Campus.Contracts.Startup.StartupScenario.Route)
+        {
+            _finishing = true;
+            try { await (_startupSampleTask ?? throw new InvalidOperationException("Route reached Playing without its menu input task.")); }
+            catch { _startupSampleFailureReported = true; throw; }
+            await host.Close();
+            return;
+        }
         if (options.TravelSequence.Count > 0)
         {
             _finishing = true;

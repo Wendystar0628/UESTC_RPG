@@ -20,7 +20,8 @@ public sealed class BootArguments
         "gen", "bake", "bake-bg", "bake-strict", "title", "save", "slot",
         "load", "save-dir", "save-at", "audio", "audio-fixed", "audio-seed", "audio-limiter", "audio-log",
         "ui-theme", "motion", "ui-scale", "ui-gallery", "ui-export-theme", "amb-solo", "amb-off", "amb-debug",
-        "audio-probe", "audio-out", "preset", "travel-sequence", "movie-frames", "movie-events", "startup-scenario"
+        "audio-probe", "audio-out", "preset", "travel-sequence", "movie-frames", "movie-events", "startup-scenario",
+        "route-start", "route-mode", "route-seconds", "perf-out"
     };
     private static readonly HashSet<string> Flags = new(StringComparer.Ordinal) { "audio-probe" };
     private static readonly string[] WorldKeys = ["clock", "season", "anim", "flow", "seed", "weather", "weather-intensity",
@@ -28,6 +29,7 @@ public sealed class BootArguments
     private readonly Dictionary<string, string> _values;
     private readonly HashSet<string> _provided;
     private IReadOnlyDictionary<QualityKnob, float> _qualityOverrides = new Dictionary<QualityKnob, float>();
+    private StartupRouteOptions? _startupRoute;
 
     private BootArguments(Dictionary<string, string> values)
     {
@@ -91,7 +93,8 @@ public sealed class BootArguments
 
     private void Validate()
     {
-        OneOf("startup-scenario", "title", "immediate", "dwell", "playing");
+        OneOf("startup-scenario", "title", "immediate", "dwell", "playing", "route");
+        ValidateRoute();
         foreach (var key in new[] { "ui", "title", "bench", "bake-bg", "bake-strict", "audio-fixed", "audio-limiter", "audio-log", "amb-debug" })
             OneOf(key, "0", "1");
         OneOf("season", "spring", "summer", "autumn", "winter");
@@ -116,13 +119,31 @@ public sealed class BootArguments
             if (Has(key) && !uint.TryParse(Value(key), NumberStyles.None, CultureInfo.InvariantCulture, out _)) throw Invalid(key);
         foreach (var key in new[] { "frames", "save-at", "movie-frames" })
             if (Has(key) && (!int.TryParse(Value(key), NumberStyles.None, CultureInfo.InvariantCulture, out var value) || value <= 0)) throw Invalid(key);
-        foreach (var key in new[] { "out", "load", "save-dir", "audio-out", "ui-export-theme" })
+        foreach (var key in new[] { "out", "load", "save-dir", "audio-out", "ui-export-theme", "perf-out" })
             if (Has(key) && !Path.IsPathFullyQualified(Value(key))) throw Invalid($"--{key} must be absolute.");
         _qualityOverrides = QualityOverrides();
         if (Has("shots") && Value("shots").Split(',').Any(id => id.Length == 0 || id.Any(c => !char.IsLetterOrDigit(c) && c is not '_' and not '-')))
             throw Invalid("Invalid screenshot identifier.");
         if (Has("travel-sequence") && Value("travel-sequence").Split(',').Any(id => id.Length == 0 || id.Any(char.IsWhiteSpace)))
             throw Invalid("Invalid travel sequence marker identifier.");
+    }
+
+    private void ValidateRoute()
+    {
+        string[] keys = ["route-start", "route-mode", "route-seconds"];
+        if (Value("startup-scenario") != "route")
+        {
+            if (keys.Any(Has)) throw Invalid("Route parameters require --startup-scenario=route.");
+            return;
+        }
+        if (keys.Any(key => !Has(key))) throw Invalid("Route scenarios require a start, mode and duration.");
+        if (new[] { "spawn", "pose", "mode" }.Any(Has))
+            throw Invalid("Route scenarios cannot be combined with spawn, pose or mode overrides.");
+        if (Value("route-start").Any(char.IsWhiteSpace)) throw Invalid("route-start");
+        OneOf("route-mode", "walk", "fly");
+        if (!double.TryParse(Value("route-seconds"), NumberStyles.Float, CultureInfo.InvariantCulture, out var seconds) ||
+            !double.IsFinite(seconds) || seconds <= 0) throw Invalid("route-seconds");
+        _startupRoute = new(Value("route-start"), Enum.Parse<ViewMode>(Value("route-mode"), true), seconds);
     }
 
     private void AddDefaults()
@@ -176,8 +197,10 @@ public sealed class BootArguments
             Title = Title,
             AllMaps = allMaps,
             SaveDirectory = Text("save-dir"),
+            PerfOutputDirectory = Text("perf-out"),
             TravelSequence = Text("travel-sequence")?.Split(',') ?? [],
             StartupScenario = Text("startup-scenario") is { } scenario ? Enum.Parse<StartupScenario>(scenario, true) : null,
+            StartupRoute = _startupRoute,
             Flow = new BootFlowRequest(ShowTitle: Title,
                 Slot: ParseSlot("slot", Text("slot")), LoadFile: Text("load"),
                 Map: !allMaps && Text("map") is { } map ? new MapId(map) : null, Spawn: Text("spawn"),

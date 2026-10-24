@@ -1,12 +1,75 @@
 using Campus.Kernel.Boot;
 using Campus.Contracts;
+using Campus.Contracts.Startup;
 using GdUnit4;
+using static GdUnit4.Assertions;
 
 namespace Campus.Tests;
 
 [TestSuite]
 public sealed class BootArgumentsTests
 {
+    [TestCase]
+    [TestCategory(TestReason.Contract)]
+    public void PerformanceOutputIsAnIndependentExplicitRoot()
+    {
+        var root = Path.Combine(Path.GetTempPath(), "campus-perf");
+        var options = BootArguments.Parse(["--perf-out=" + root]);
+        AssertThat(options.PerfOutputDirectory == root && options.StartupRoute is null &&
+            options.Mode == BootRunMode.Interactive && !options.Automated && options.Title).IsTrue();
+        var routed = BootArguments.Parse(["--perf-out=" + root, "--startup-scenario=route", "--route-start=route_point",
+            "--route-mode=walk", "--route-seconds=5"]);
+        AssertThat(routed.PerfOutputDirectory == root && routed.StartupRoute is not null).IsTrue();
+        foreach (var invalid in new[] { "--perf-out=", "--perf-out=relative/perf" })
+        {
+            ArgumentException? failure = null;
+            try { BootArguments.Parse([invalid]); }
+            catch (ArgumentException error) { failure = error; }
+            AssertThat(failure is not null).IsTrue();
+        }
+    }
+
+    [TestCase]
+    [TestCategory(TestReason.Contract)]
+    public void RoutesRetainTypedChoicesWithoutCaptureDefaults()
+    {
+        foreach (var (text, mode) in new[] { ("walk", ViewMode.Walk), ("fly", ViewMode.Fly) })
+        {
+            var options = BootArguments.Parse(["--startup-scenario=route", "--route-start=route_point",
+                "--route-mode=" + text, "--route-seconds=5.5"]);
+            AssertThat(options.StartupScenario == StartupScenario.Route &&
+                options.StartupRoute == new StartupRouteOptions("route_point", mode, 5.5)).IsTrue();
+            AssertThat(options.Mode == BootRunMode.Interactive && options.Title && !options.Automated &&
+                options.Flow.Spawn is null && options.World.Pose is null && options.World.ViewMode is null).IsTrue();
+        }
+    }
+
+    [TestCase]
+    [TestCategory(TestReason.Contract)]
+    public void RouteParametersRequireTheirScenarioAndValidCompleteChoices()
+    {
+        string[] valid = ["--startup-scenario=route", "--route-start=route_point", "--route-mode=walk", "--route-seconds=5"];
+        var invalid = new List<string[]>
+        {
+            new[] { "--route-start=route_point" },
+            new[] { "--startup-scenario=playing", "--route-mode=walk" }
+        };
+        for (var index = 1; index < valid.Length; index++) invalid.Add(valid.Where((_, i) => i != index).ToArray());
+        foreach (var seconds in new[] { "0", "-1", "NaN", "Infinity" })
+            invalid.Add([.. valid[..3], "--route-seconds=" + seconds]);
+        invalid.Add([valid[0], "--route-start=route point", valid[2], valid[3]]);
+        invalid.Add([valid[0], valid[1], "--route-mode=invalid", valid[3]]);
+        foreach (var conflict in new[] { "--mode=walk", "--spawn=route_point", "--pose=route_point", "--title=0", "--frames=5" })
+            invalid.Add([.. valid, conflict]);
+        foreach (var args in invalid)
+        {
+            ArgumentException? rejected = null;
+            try { BootArguments.Parse(args); }
+            catch (ArgumentException error) { rejected = error; }
+            AssertThat(rejected is not null).IsTrue();
+        }
+    }
+
     [TestCase]
     [TestCategory(TestReason.Contract)]
     public void CaptureDefaultsRemainSeparateFromExplicitArguments()
