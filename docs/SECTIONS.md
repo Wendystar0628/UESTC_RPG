@@ -1134,7 +1134,7 @@
 - SYS-GRAPHICS §4 应用方式 · L97 · 591
 - SYS-GRAPHICS §5 自动推荐与自动调节（主线之后） · L107 · 398
 - SYS-GRAPHICS §6 持久化与恢复 · L116 · 418
-- SYS-GRAPHICS §7 画面页 · L122 · 182
+- SYS-GRAPHICS §7 画面页 · L122 · 193
 - SYS-GRAPHICS §8 待验证（P0） · L126 · 358
 
 ## SYS-MAPS · 多地图
@@ -1270,7 +1270,7 @@
 
 ## SYS-SAVE-FORMAT · 格式、损坏处理与安全
 
-`docs/systems/SYS-SAVE-FORMAT-格式、损坏处理与安全.md` · 4.3k 字 · 存档容器与序列化、格式号与段版本、坏档退回上一代、唯一的设置文件 settings.json、读档输入的安全
+`docs/systems/SYS-SAVE-FORMAT-格式、损坏处理与安全.md` · 4.4k 字 · 存档容器与序列化、格式号与段版本、坏档退回上一代、唯一的设置文件 settings.json、读档输入的安全
 关键词：存档容器、序列化、格式号、段版本、存档损坏、设置文件、settings.json、存档安全、缩略图、ReadOnlyReason
 
 - SYS-SAVE-FORMAT §0 结论 · L22 · 644
@@ -1281,7 +1281,7 @@
   - SYS-SAVE-FORMAT §1.3 序列化约定 · L53 · 195
   - SYS-SAVE-FORMAT §1.4 版本 · L59 · 295
 - SYS-SAVE-FORMAT §2 存档损坏 · L66 · 560
-- SYS-SAVE-FORMAT §3 设置文件：唯一的 `settings.json` · L80 · 663
+- SYS-SAVE-FORMAT §3 设置文件：唯一的 `settings.json` · L80 · 716
 - SYS-SAVE-FORMAT §4 安全：为什么禁止用 Resource 和 ConfigFile 存读档 · L90 · 543
 
 ## SYS-TIME · 时间与季节
@@ -1443,19 +1443,19 @@
 
 ## UI-NAV · 界面与操作说明
 
-`docs/ui/UI-NAV-界面与操作说明.md` · 9.0k 字 · 界面有什么、怎么操作：常驻界面与呼出光标、组件的内容与交互、输入优先级与关键键位、无障碍与文本约定；点位与跳转见子文档
+`docs/ui/UI-NAV-界面与操作说明.md` · 9.2k 字 · 界面有什么、怎么操作：常驻界面与呼出光标、组件的内容与交互、输入优先级与关键键位、无障碍与文本约定；点位与跳转见子文档
 关键词：界面交互、快捷键、输入优先级、常驻界面、呼出光标、四角归属、时间环操作、天气签条、速度档、临时提示、到达标题、设置项、无障碍、读屏、文本键、地名来源
 
 - UI-NAV §0 结论 · L21 · 1.0k
-  - ★ UI-NAV §0.1 接入要点 · L36 · 446
-- UI-NAV §1 允许什么、禁止什么 · L44 · 406
-- UI-NAV §2 常驻界面、光标与隐藏 · L53 · 848
+  - ★ UI-NAV §0.1 接入要点 · L36 · 459
+- UI-NAV §1 允许什么、禁止什么 · L44 · 422
+- UI-NAV §2 常驻界面、光标与隐藏 · L53 · 907
 - UI-NAV §3 组件的内容与交互 · L72 · 3.3k
   - UI-NAV §3.1 时间环 · L74 · 534
   - UI-NAV §3.2 季节、速度与观察模式 · L83 · 369
   - UI-NAV §3.3 点位目录 · L89 · 218
   - UI-NAV §3.4 到达标题 · L93 · 267
-  - UI-NAV §3.5 操作说明与设置 · L97 · 918
+  - UI-NAV §3.5 操作说明与设置 · L97 · 975
   - UI-NAV §3.6 临时提示 · L105 · 450
   - UI-NAV §3.7 天气签条 · L113 · 506
 - UI-NAV §4 输入 · L123 · 1.5k
@@ -1546,7 +1546,7 @@
 
 - ENG-INDEX §0 结论 · L21 · 630
   - ★ ENG-INDEX §0.1 接入要点 · L29 · 168
-- ENG-INDEX §1 文档树 · L34 · 451
+- ENG-INDEX §1 文档树 · L34 · 452
 
 ## ENG-ARCH · 工程架构
 
@@ -1562,7 +1562,7 @@
   - ENG-ARCH 数据流 · L73 · 95
 - ENG-ARCH §2 边界与确定性 · L77 · 4.0k
   - ENG-ARCH 依赖方向 · L79 · 1.5k
-  - ENG-ARCH 确定性与禁用写法 · L90 · 612
+  - ENG-ARCH 确定性与禁用写法 · L90 · 584
   - ENG-ARCH 自动发现与模块接入 · L102 · 701
   - ENG-ARCH 仓库脚本自成一体 · L110 · 101
   - ENG-ARCH 生命周期与发布 · L114 · 826
@@ -1575,15 +1575,15 @@
 
 ## ENG-BUDGET · 性能预算
 
-`docs/engineering/ENG-BUDGET-性能预算.md` · 4.5k 字 · 性能预算的口径：设备档与预设、GPU 帧时分配、份额怎么分与超了怎么办、怎么测；细节级别、速度律与硬规则在子文档
+`docs/engineering/ENG-BUDGET-性能预算.md` · 4.4k 字 · 性能预算的口径：设备档与预设、GPU 帧时分配、份额怎么分与超了怎么办、怎么测；细节级别、速度律与硬规则在子文档
 关键词：性能预算、份额、份额分配、budgets.json、KernelBudgets、主会话余量、预算核账、预设资源上限、设备档目标、帧率目标、最低配置、独显中、独显高、楼内视角份额、GPU 帧时分配、阴影图档位、纹理上限
 
 - ENG-BUDGET §0 结论 · L21 · 767
   - ★ ENG-BUDGET §0.1 接入要点 · L35 · 184
 - ENG-BUDGET §1 界面、外围、室内与音频的份额 · L41 · 148
-- ENG-BUDGET §2 预设与设备档的预算 · L45 · 1.6k
+- ENG-BUDGET §2 预设与设备档的预算 · L45 · 1.5k
 - ENG-BUDGET §3 份额怎么分 · L76 · 442
-- ENG-BUDGET §4 怎么测 · L84 · 160
+- ENG-BUDGET §4 怎么测 · L84 · 156
 - ENG-BUDGET §5 待验证（P0） · L88 · 186
 
 ## ENG-BUDGET-LOD · 细节级别、速度律与渲染参数
@@ -1601,7 +1601,7 @@
 
 ## ENG-BUDGET-RULES · 硬规则与工程设置
 
-`docs/engineering/ENG-BUDGET-RULES-硬规则与工程设置.md` · 6.3k 字 · 违反即不能推送的 23 条硬规则，及 project.godot、渲染器等工程设置
+`docs/engineering/ENG-BUDGET-RULES-硬规则与工程设置.md` · 6.4k 字 · 违反即不能推送的 23 条硬规则，及 project.godot、渲染器等工程设置
 关键词：硬规则、性能规则、白名单着色器、不得新增光源、线程边界、全局着色器参数登记、风格底线不可关、存档只走一条路、本机烘焙同机确定、工程设置、渲染器、版本锁定
 
 - ENG-BUDGET-RULES §0 结论 · L21 · 949
@@ -1609,7 +1609,7 @@
 - ENG-BUDGET-RULES §1 硬规则（违反任何一条都不能推送） · L38 · 3.4k
   - ENG-BUDGET-RULES §1.1 渲染、材质与时间（第 1–10 条） · L40 · 1.6k
   - ENG-BUDGET-RULES §1.2 烘焙、线程、存档、音频与确定性（第 11–23 条） · L53 · 1.8k
-- ENG-BUDGET-RULES §2 工程设置 · L69 · 779
+- ENG-BUDGET-RULES §2 工程设置 · L69 · 856
 
 ## ENG-FAILS · 游戏失败观测
 
@@ -1621,16 +1621,15 @@
 
 ## ENG-GATES · 验收与门禁
 
-`docs/engineering/ENG-GATES-验收与门禁.md` · 5.0k 字 · 测试三档与何时跑、11 项门禁各验什么、入口与交付分工；审查视角与截图、一票否决与收尾清单在子文档
+`docs/engineering/ENG-GATES-验收与门禁.md` · 4.9k 字 · 测试三档与何时跑、11 项门禁各验什么、入口与交付分工；审查视角与截图、一票否决与收尾清单在子文档
 关键词：门禁、验收、测试三档、快检、核心专项、集中测试、gate.ps1、门禁表、门禁编号、DECISION-238、入口与交付分工、测试只锁本模块输出、构建锁
 
 - ENG-GATES §0 结论 · L21 · 937
   - ★ ENG-GATES §0.1 接入要点 · L34 · 338
-- ENG-GATES §1 门禁与测试节奏 · L41 · 2.9k
+- ENG-GATES §1 门禁与测试节奏 · L41 · 2.8k
   - ENG-GATES §1.1 测试三档 · L45 · 1.3k
   - ENG-GATES §1.2 门禁表 · L67 · 1.3k
-  - ENG-GATES §1.3 入口与交付分工 · L85 · 190
-- ENG-GATES §2 待验证（P0） · L90 · 172
+  - ENG-GATES §1.3 入口与交付分工 · L85 · 191
 
 ## ENG-GATES-SHOTS · 审查视角与截图
 
@@ -1640,11 +1639,11 @@
 - ENG-GATES-SHOTS §0 结论 · L21 · 717
   - ★ ENG-GATES-SHOTS §0.1 接入要点 · L29 · 398
 - ENG-GATES-SHOTS §1 审查视角 · L35 · 4.7k
-  - ENG-GATES-SHOTS §1.1 命令行规则与截图默认串 · L39 · 721
+  - ENG-GATES-SHOTS §1.1 命令行规则与截图默认串 · L39 · 696
   - ENG-GATES-SHOTS §1.2 截图方式 · L54 · 1.1k
   - ENG-GATES-SHOTS §1.3 固定机位表与审查视角表 · L67 · 1.7k
-  - ENG-GATES-SHOTS §1.4 路线与点位（主线之后） · L98 · 744
-  - ENG-GATES-SHOTS §1.5 时季抽样（主线之后） · L108 · 350
+  - ENG-GATES-SHOTS §1.4 路线与点位（主线之后） · L98 · 757
+  - ENG-GATES-SHOTS §1.5 时季抽样（主线之后） · L109 · 350
 
 ## ENG-GATES-VETO · 一票否决与收尾清单
 
@@ -1663,43 +1662,42 @@
 
 - ENG-LICENSE §0 结论 · L21 · 605
   - ★ ENG-LICENSE §0.1 接入要点 · L28 · 325
-- ENG-LICENSE §1 用户目录与日志 · L36 · 354
+- ENG-LICENSE §1 用户目录与日志 · L36 · 391
 - ENG-LICENSE §2 许可 · L42 · 1.1k
 - ENG-LICENSE §3 署名、窗口标题与图标 · L59 · 395
 
 ## ENG-PERF · 性能工程
 
-`docs/engineering/ENG-PERF-性能工程.md` · 6.0k 字 · 性能总原则与绘制管线：容器与合批、着色器白名单与全局参数、预热、填充率、剔除与图层
+`docs/engineering/ENG-PERF-性能工程.md` · 6.1k 字 · 性能总原则与绘制管线：容器与合批、着色器白名单与全局参数、预热、填充率、剔除与图层
 关键词：着色器白名单、全局着色器参数、ShaderGlobals、数据纹理、合批、自动实例化、MultiMesh、容器选型、管线预热、抖动淡化、级别过渡、填充率、遮挡剔除、渲染图层、顶点格式、D3D12
 
 - ENG-PERF §0 结论 · L21 · 1.2k
-  - ★ ENG-PERF §0.1 接入要点 · L38 · 422
-- ENG-PERF §1 绘制管线与合批 · L47 · 1.8k
-  - ENG-PERF §1.1 容器选型 · L49 · 344
-  - ENG-PERF §1.2 MultiMesh、网格 LOD 与级别过渡 · L56 · 389
-  - ENG-PERF §1.3 调用口径 · L62 · 123
-  - ENG-PERF §1.4 着色器白名单 · L66 · 482
-  - ENG-PERF §1.5 全局参数与数据纹理 · L75 · 476
-- ENG-PERF §2 着色器与编译 · L84 · 779
-- ENG-PERF §3 填充率与带宽 · L94 · 251
-- ENG-PERF §4 剔除 · L100 · 496
-- ENG-PERF §5 待验证（P0） · L106 · 166
+  - ★ ENG-PERF §0.1 接入要点 · L38 · 466
+- ENG-PERF §1 绘制管线与合批 · L48 · 1.8k
+  - ENG-PERF §1.1 容器选型 · L50 · 344
+  - ENG-PERF §1.2 MultiMesh、网格 LOD 与级别过渡 · L57 · 389
+  - ENG-PERF §1.3 调用口径 · L63 · 123
+  - ENG-PERF §1.4 着色器白名单 · L67 · 482
+  - ENG-PERF §1.5 全局参数与数据纹理 · L76 · 476
+- ENG-PERF §2 着色器与编译 · L85 · 779
+- ENG-PERF §3 填充率与带宽 · L95 · 251
+- ENG-PERF §4 剔除 · L101 · 496
+- ENG-PERF §5 待验证（P0） · L107 · 166
 
-## ENG-PERF-ADAPT · 自适应与测量
+## ENG-PERF-ADAPT · 自适应与帧节奏
 
-`docs/engineering/ENG-PERF-ADAPT-自适应与测量.md` · 2.6k 字 · 运行时自适应的降级阶梯与控制律、帧节奏、测量与基准的做法
-关键词：自适应、自动调节画质、降级阶梯、控制律、剔除样本、帧节奏、吞吐基准、体验基准、体验脚本、掉帧、卡顿、GPU 计时
+`docs/engineering/ENG-PERF-ADAPT-自适应与帧节奏.md` · 2.0k 字 · 运行时自适应的降级阶梯与控制律、帧节奏与画面设置的生效约束
+关键词：自适应、自动调节画质、降级阶梯、控制律、帧节奏、跟随刷新率、软件上限、情境限帧、画面设置生效、静止降频
 
-- ENG-PERF-ADAPT §0 结论 · L21 · 402
-  - ★ ENG-PERF-ADAPT §0.1 接入要点 · L27 · 160
+- ENG-PERF-ADAPT §0 结论 · L21 · 429
+  - ★ ENG-PERF-ADAPT §0.1 接入要点 · L27 · 154
 - ENG-PERF-ADAPT §1 自适应与帧节奏 · L32 · 814
-  - ENG-PERF-ADAPT §1.1 运行时自适应（主线之后） · L34 · 408
-  - ENG-PERF-ADAPT §1.2 帧节奏与画面设置约束 · L43 · 392
-- ENG-PERF-ADAPT §2 测量、剖析与门禁 · L49 · 677
+  - ENG-PERF-ADAPT §1.1 运行时自适应（主线之后） · L34 · 428
+  - ENG-PERF-ADAPT §1.2 帧节奏与画面设置约束 · L43 · 372
 
 ## ENG-PERF-DATA · 性能数据与分析
 
-`docs/engineering/ENG-PERF-DATA-性能数据与分析.md` · 8.0k 字 · 性能记录的四层与写入方、记录开关与会话寿命、原始流与时间基、指标口径与非稳态帧、测量范围、异常、比较键与保留、开销目标
+`docs/engineering/ENG-PERF-DATA-性能数据与分析.md` · 10.9k 字 · 性能记录的四层与写入方、记录开关与会话寿命、原始流与时间基、指标口径与非稳态帧、测量范围、异常、比较键与保留、开销目标
 关键词：性能记录、记录性能数据、记录服务、性能会话、六件、原始流、perf-fields.json、schema、calc、指标口径、体验口径、成本口径、五段、B0–B4、主线程周期、受测视口、受测视口 GPU 合计、成本尖峰、非稳态帧、掉帧、卡顿分级、1% low、scope、性能异常、比较键、性能数据保留、分析器
 
 - ENG-PERF-DATA §0 结论 · L21 · 1.3k
@@ -1714,13 +1712,13 @@
 - ENG-PERF-DATA §3 指标口径 · L97 · 2.3k
   - ENG-PERF-DATA §3.1 体验口径 · L106 · 838
   - ENG-PERF-DATA §3.2 成本口径 · L121 · 897
-- ENG-PERF-DATA §4 测量范围与 `scope` · L133 · 114
-- ENG-PERF-DATA §5 异常 · L137 · 366
-  - ENG-PERF-DATA §5.1 体验类 · L141 · 92
-  - ENG-PERF-DATA §5.2 成本与数据类 · L145 · 94
-  - ENG-PERF-DATA §5.3 归因与合并 · L149 · 77
-- ENG-PERF-DATA §6 比较键、状态与保留 · L153 · 132
-- ENG-PERF-DATA §7 开销目标 · L157 · 84
+- ENG-PERF-DATA §4 测量范围与 `scope` · L133 · 413
+- ENG-PERF-DATA §5 异常 · L143 · 1.9k
+  - ENG-PERF-DATA §5.1 体验类 · L152 · 644
+  - ENG-PERF-DATA §5.2 成本与数据类 · L168 · 616
+  - ENG-PERF-DATA §5.3 归因与合并 · L181 · 365
+- ENG-PERF-DATA §6 比较键、状态与保留 · L191 · 949
+- ENG-PERF-DATA §7 开销目标 · L210 · 328
 
 ## ENG-PERF-LIGHT · 植被、阴影、后期与灯光
 
@@ -1739,17 +1737,17 @@
 
 ## ENG-PERF-MEASURE · 测量与调优
 
-`docs/engineering/ENG-PERF-MEASURE-测量与调优.md` · 3.3k 字 · 性能测量的机器与剖析权限、AI 采集批次与场景套、以最新数据为准、诊断档与深挖、不采用的工具、调优轮次的长期规则与判停
+`docs/engineering/ENG-PERF-MEASURE-测量与调优.md` · 5.3k 字 · 性能测量的机器与剖析权限、AI 采集批次与场景套、以最新数据为准、诊断档与深挖、不采用的工具、调优轮次的长期规则与判停
 关键词：性能测量、AI 批次、run.ps1、perf.py、perf.py latest、固定机位套、路线套、传送套、采样前稳定、A/B/A、作废、污染标记、以最新为准、诊断档、deepen、采集条件标记、调优轮次、判停、隔离桌面、剖析权限
 
 - ENG-PERF-MEASURE §0 结论 · L21 · 789
   - ★ ENG-PERF-MEASURE §0.1 接入要点 · L31 · 334
-- ENG-PERF-MEASURE §1 机器与剖析权限 · L39 · 66
-- ENG-PERF-MEASURE §2 AI 批次 · L43 · 1.0k
-- ENG-PERF-MEASURE §3 以最新为准 · L57 · 319
-- ENG-PERF-MEASURE §4 诊断档与 `deepen` · L64 · 150
-- ENG-PERF-MEASURE §5 不采用的工具 · L68 · 76
-- ENG-PERF-MEASURE §6 调优规则与判停 · L72 · 98
+- ENG-PERF-MEASURE §1 机器与剖析权限 · L39 · 470
+- ENG-PERF-MEASURE §2 AI 批次 · L48 · 1.0k
+- ENG-PERF-MEASURE §3 以最新为准 · L62 · 319
+- ENG-PERF-MEASURE §4 诊断档与 `deepen` · L69 · 821
+- ENG-PERF-MEASURE §5 不采用的工具 · L82 · 606
+- ENG-PERF-MEASURE §6 调优规则与判停 · L98 · 461
 
 ## ENG-PERF-STREAM · 流式加载、本机烘焙与内存
 
@@ -2061,7 +2059,7 @@
 
 ## REG-GLOSSARY · 术语表
 
-`docs/registry/REG-GLOSSARY-术语表.md` · 20.4k 字 · 文档里专有说法的统一解释，按领域分组，每条一两句并给出细则所在的小节
+`docs/registry/REG-GLOSSARY-术语表.md` · 21.7k 字 · 文档里专有说法的统一解释，按领域分组，每条一两句并给出细则所在的小节
 关键词：术语、术语表、名词解释、同名异义、缩写、别名
 
 - REG-GLOSSARY §0 用法 · L21 · 261
@@ -2078,6 +2076,6 @@
 - REG-GLOSSARY §10 多地图 · L214 · 620
 - REG-GLOSSARY §11 界面 · L226 · 1.4k
 - REG-GLOSSARY §12 音频 · L253 · 1.1k
-- REG-GLOSSARY §13 画面设置与性能 · L274 · 1.9k
-- REG-GLOSSARY §14 工程与流程 · L303 · 2.4k
-- REG-GLOSSARY §15 同名异义 · L340 · 1.5k
+- REG-GLOSSARY §13 画面设置与性能 · L274 · 2.7k
+- REG-GLOSSARY §14 工程与流程 · L314 · 2.4k
+- REG-GLOSSARY §15 同名异义 · L351 · 2.0k

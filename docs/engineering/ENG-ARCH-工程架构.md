@@ -85,7 +85,7 @@ paths: ["game/**/*.cs", "game/kernel/bake/**", "game/testing/**", "game/gen/maps
 - **几何只经 `gen/geometry/GeometrySink`**：普通表面按完整顶点共享，保留材质及可选通道的边界；Indexed 保持已给定的顶点、索引、法线和自定义通道顺序，Positions 装配尚未分格的点集；`VertexFlag`、`GeometryVertexLimits` 只在契约里定义，生成器不自带位置法线数组。
 - **运行时内部**：各命名空间之间只经契约和 Kernel 服务交互；界面除 GodotSharp 外只依赖契约和 `Kernel.Get<T>()`，不用其他模块的内部类型。
 - **原生资源各有唯一创建方**：网格与渲染实例只由内核创建，其他模块经 `IRenderHost` 申请并按挂载句柄释放；`ShaderMaterial` 只由 Style 按白名单创建，其余经 `ToonSpec` 取；音频播放器与总线只由 Audio 创建；计时只出现在内核的帧、画质、巡检、存档和门禁里。这样每类资源只有一处记账与释放；逐条硬规则见 ENG-BUDGET-RULES §1。
-- **`user://` 每个文件一个读写方**：存档只由内核存档服务读写，本机烘焙缓存只由烘焙服务读写；不用 `ResourceLoader`、`ResourceSaver`，因为 Resource 能嵌入脚本、读入即执行（ENG-BUDGET-RULES §1 第 19、23 条）。
+- **`user://` 每个文件一个读写方**：存档只由内核存档服务读写，本机烘焙缓存只由烘焙服务读写，性能记录在游戏内只由记录服务读写、仓库脚本只读；不用 `ResourceLoader`、`ResourceSaver`，因为 Resource 能嵌入脚本、读入即执行（ENG-BUDGET-RULES §1 第 19、23 条）。
 
 ### 确定性与禁用写法
 
@@ -97,7 +97,7 @@ paths: ["game/**/*.cs", "game/kernel/bake/**", "game/testing/**", "game/gen/maps
 - 遍历字典、集合前先排序；一个 `Build()` 内部不做并行浮点归约，并行只在格与格之间，由内核调度。
 - 颜色只用色名，着色器用全局的 `anim_time` 而不用 `TIME`（ENG-BUDGET-RULES §1 第 1、4 条）；游戏代码不写 GDScript（编辑器与构建期工具外壳除外，DECISION-005），不手写 `uid://`，`main.tscn` 以外不放共享的 `.tscn`、`.tres`。
 
-由此保证：同一台机器上同一输入烘出同样的字节，缓存判鲜才可靠；运行时同一钟点、同一种子、同一串输入得到同样的画面；读档是换一个世界实例，续跑等价（SYS-SAVE-FLOW §2.3）。例外只有登记过的几处（新游戏取一次熵作天气种子、存档读一次系统时钟用于显示），以 G4 的登记为准。
+由此保证：同一台机器上同一输入烘出同样的字节，缓存判鲜才可靠；运行时同一钟点、同一种子、同一串输入得到同样的画面；读档是换一个世界实例，续跑等价（SYS-SAVE-FLOW §2.3）。例外只有登记过的几处，以 G4 的登记为准。
 
 ### 自动发现与模块接入
 

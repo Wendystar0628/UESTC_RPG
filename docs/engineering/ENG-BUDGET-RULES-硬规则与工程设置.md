@@ -72,6 +72,7 @@ paths: ["Directory.Build.props", "game/**/*.gdshader*", "game/kernel/**/*.cs", "
 
 - **固定项**四预设相同，运行时一律不动（§1 第 9 条）；随画面设置改的项按 SYS-GRAPHICS §3 的类别改。
 - **渲染器**：Forward+，默认 D3D12，不考虑兼容渲染器（跑不了 Compositor）和 Mobile 渲染器；渲染线程模式 Safe。Vulkan 只用于着色器源码级调试、交叉验证驱动问题和 D3D12 不可用时回落；截图与基准一律 D3D12，两个驱动的结果不混用。改默认为 Vulkan 须经主会话批准，前提是出现 D3D12 特有、短期绕不开的驱动问题，且 Vulkan 下 G10 不明显比 D3D12 差。
+- **帧队列与交换链**：图像数用引擎默认，不改；渲染线程模式 Separate 以后有渲染 CPU 瓶颈证据再单独试验（DECISION-340）。
 - **不用的引擎特性**（全项目唯一的清单）：SSAO、SSIL、SSR、SDFGI、体积雾、Environment 雾、反射探针、引擎 Decal、带阴影的点光与聚光；这些效果由自写的着色器与代理实现（ENG-PERF-LIGHT）。
 - **Environment**：背景用 Sky，环境光与反射源关，Tonemap Linear，Glow 常开，运行时不切。
 - **固定的渲染项**：深度预通道开且不改（描线读 normal_roughness），`screen_space_roughness_limiter`、MSAA、TAA、`hdr_2d` 关；`force_vertex_shading` 关，否则 `light()` 不执行。

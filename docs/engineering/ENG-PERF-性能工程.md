@@ -15,7 +15,7 @@ paths: ["game/data/pipeline-combinations.json", "game/style/shaders/globals.gdsh
 # ENG-PERF · 性能工程
 
 > **范围**：本文规定性能的总原则与绘制管线：容器与合批、着色器与全局参数、预热、填充率、剔除与渲染图层。Godot 4.7.2-stable .NET，Forward+，只做 PC；目标是视觉底线处处成立、细节按精度区分级、绝不卡帧。
-> **不在本文**：预算数值与硬规则（ENG-BUDGET，唯一的数值家）；流式、烘焙与内存（ENG-PERF-STREAM）；植被、阴影与后期（ENG-PERF-LIGHT）；自适应与测量（ENG-PERF-ADAPT）；契约（ENG-ARCH §3）；画面设置的单项与预设值（SYS-GRAPHICS）；门禁与命令行（ENG-GATES）。
+> **不在本文**：预算数值与硬规则（ENG-BUDGET，唯一的数值家）；流式、烘焙与内存（ENG-PERF-STREAM）；植被、阴影与后期（ENG-PERF-LIGHT）；自适应与帧节奏（ENG-PERF-ADAPT）；性能数据与指标口径（ENG-PERF-DATA）；测量与调优（ENG-PERF-MEASURE）；契约（ENG-ARCH §3）；画面设置的单项与预设值（SYS-GRAPHICS）；门禁与命令行（ENG-GATES）。
 > **查阅**：先读 §0；容器与合批看 §1；预热看 §2；剔除与图层看 §4
 
 ## 0 结论
@@ -25,13 +25,13 @@ paths: ["game/data/pipeline-combinations.json", "game/style/shaders/globals.gdsh
 3. **瓶颈在两头**：CPU 的提交与剔除，GPU 的多遍（预通道、颜色、4 级阴影）与后期。合批靠离线合并、自动实例化、MultiMesh（§1）；阴影只能靠减少投影物省钱（ENG-PERF-LIGHT §2.1）。
 4. **阴影用引擎原生 PSSM**；描线、边缘光、移轴、光斑、倒影、窗灯、路灯光斑自己实现；不用的引擎特性清单见 ENG-BUDGET-RULES §2。
 5. **主线程只挂载，不生成**；绝不卡帧、不穿地靠六条不变量（ENG-PERF-STREAM §1.2）。
-6. **预算按场景核算**，不按格平均；测量分吞吐（判回归）与体验（判达标）两类（ENG-PERF-ADAPT §2）。
+6. **预算按场景核算**，不按格平均；AI 测量只判成本口径（回归与预算），体验只来自作者开着记录的会话（ENG-PERF-MEASURE §2）。
 
 子文档：
 
 - **ENG-PERF-STREAM**（流式加载、本机烘焙与内存）：做流式、烘焙、碰撞挂载、内存时读。
 - **ENG-PERF-LIGHT**（植被、阴影、后期与灯光）：做植被、阴影、描线、窗灯路灯时读。
-- **ENG-PERF-ADAPT**（自适应与测量）：做自动调节、帧节奏、基准与剖析时读。
+- **ENG-PERF-ADAPT**（自适应与帧节奏）：做自动调节、帧节奏与画面设置生效时读。
 - **ENG-PERF-DATA**（性能数据与分析）：做性能记录、指标口径、异常判定与性能数据保留时读。
 - **ENG-PERF-MEASURE**（测量与调优）：采集性能、引用性能数或调优时读。
 
@@ -42,6 +42,7 @@ paths: ["game/data/pipeline-combinations.json", "game/style/shaders/globals.gdsh
 - **着色器读时间、季节、天气、介质、画面设置**：只读已登记的全局参数，每项一个写入方；新增先登记，不读回（§1.5）
 - **显示东西**：经 `IRenderHost` 申请，按 §1.1 选容器
 - **投影**：放在相机可见层上，按 §4 选层
+- **做性能判断或调优**：先按 ENG-PERF-MEASURE §3 取最新数据
 - **调参数、改设置**：不能触发管线重编译；会改特化常量的设置启动时定，画面设置按即时、加载、重启三类生效，时间、季节、天气、介质只改全局参数与纹理（§2、ENG-PERF-ADAPT §1.2）
 
 ## 1 绘制管线与合批

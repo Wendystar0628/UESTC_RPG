@@ -44,7 +44,7 @@ paths: ["docs/engineering/**"]
   - ENG-GATES-VETO 一票否决与收尾清单
 - ENG-FAILS 游戏失败观测
 - ENG-PERF 性能工程
-  - ENG-PERF-ADAPT 自适应与测量
+  - ENG-PERF-ADAPT 自适应与帧节奏
   - ENG-PERF-DATA 性能数据与分析
   - ENG-PERF-LIGHT 植被、阴影、后期与灯光
   - ENG-PERF-MEASURE 测量与调优

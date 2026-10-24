@@ -64,14 +64,14 @@ paths: ["game/kernel/renderer/geometry/**", "game/kernel/renderer/render-state/*
 
 **楼内视角份额**：镜头在开放室内、室外被遮挡体剔除，不设逐项静态上限，由 G10 的开放室内门厅位姿实测判断，不并入室外最坏视角，也不挤占 §3 室外份额。最坏视角是站在开放楼门厅里朝门外看，总量仍须在预设上限之内。一栋开放楼驻留 ≤ 30 MB、最多 2 栋（WLD-INTERIORS-BUILD §1.1），这是防呆，不是内容上限，超了按 WF-RULE §15 的数量级判断。
 
-**设备档目标**在 `budgets.json` 的 `deviceTargets`、`frameStutter`，G10 对比用（开发机按原生 4K 精致核算，DECISION-318）：掉帧率（帧间隔超过目标 1.5 倍）、F1 卡顿、浸泡漂移、GPU p95、主线程 CPU p95。
+**设备档目标**在 `budgets.json` 的 `deviceTargets`、`frameStutter`，G10 对比用（开发机按原生 4K 精致核算，DECISION-318）：掉帧率、F1 卡顿、浸泡漂移、GPU p95、CPU p95；掉帧与卡顿的定义见 ENG-PERF-DATA §3.1。
 
-- 掉帧与卡顿是体验指标，GPU 与 CPU p95 是吞吐指标，都在默认预设"精致"下测，吞吐只判回归；主线程 CPU 含渲染提交与音频。
+- GPU 与 CPU 预算对应的成本指标见 ENG-PERF-DATA §3.2（CPU 预算对视口 CPU 渲染）；掉帧与卡顿是体验指标；都在默认预设"精致"下测。
 - 玩家选高于推荐的预设时不保证帧率。
 
 **GPU 帧时分配**（精致预设下核算）：阴影约 1/5（4 级每帧全量重渲，不分快慢档）；预通道与不透明约 2/5（预通道不能关）；天空、透明、水、特效、倒影、后期与余量合计约 2/5。天气不另占份额，并入各项。
 
-**不计入帧时账的帧**（快进、换季转场、跳转、传送、切图、读档、画面设置生效、Title/Entering/Leaving 等）见 ENG-PERF-ADAPT §1.1，只按体验指标验收。
+**非稳态帧**不计入帧时账，定义与清单见 ENG-PERF-DATA §3。
 
 ## 3 份额怎么分
 
@@ -83,7 +83,7 @@ paths: ["game/kernel/renderer/geometry/**", "game/kernel/renderer/render-state/*
 
 ## 4 怎么测
 
-测量思路与自动化基准见 ENG-PERF-ADAPT §2，命令行与截图默认串见 ENG-GATES-SHOTS §1，门禁判据见 ENG-GATES §1。本文只定：吞吐与回归在开发机（RTX 4080）上测，不设中档参考机；G10 的采样点含行走贴地位姿、开放室内门厅等位姿和新游戏落地位姿。
+测量与采集见 ENG-PERF-MEASURE，命令行与截图默认串见 ENG-GATES-SHOTS §1，门禁判据见 ENG-GATES §1。本文只定：成本与回归在开发机（RTX 4080）上测，不设中档参考机；G10 的固定机位套含行走贴地位姿、开放室内门厅等位姿和新游戏落地位姿。
 
 ## 5 待验证（P0）
 
