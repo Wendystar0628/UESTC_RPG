@@ -9,7 +9,7 @@ namespace Campus.Hud.Widgets;
 /// <summary>
 /// 性能信息条（UI-NAV）：右上角三个钮的下方一行，帧率、帧时与窗口内最慢一帧、CPU 与 GPU 渲染耗时、本进程 CPU 占用与物理内存、渲染显存、
 /// 内部分辨率 → 输出分辨率与生效帧率上限，每 0.5 s 刷新一次。最慢一帧取窗口内内核发布的原始帧间隔（IFrameTiming）的最大值，引擎交来的步长会被截断平滑、漏报卡顿。分辨率与上限读引擎上实际生效的值（视口倍率、Engine.MaxFps、垂直同步），不另算一份。
-/// 常驻件，固定深屏（pin）。只在显示时存在：建时打开视口渲染耗时测量，移出场景树时关闭；刷新之间不分配托管内存（ENG-BUDGET）。
+/// 常驻件，固定深屏（pin）。只在显示时存在；视口渲染耗时测量由帧统计常开，本件只读不开关；刷新之间不分配托管内存（ENG-BUDGET）。
 /// </summary>
 public partial class PerfReadout : PanelContainer
 {
@@ -55,8 +55,6 @@ public partial class PerfReadout : PanelContainer
         UiLayout.BindResize(parent, bar, bar.Fit);
 
         bar._viewport = bar.GetViewport().GetViewportRid();
-        RenderingServer.ViewportSetMeasureRenderTime(bar._viewport, true);
-        bar._process.Refresh();
         bar._lastCpuTime = bar._process.TotalProcessorTime;
         bar.Write(Engine.GetFramesPerSecond(), 0, 0, 0, 0, 0);
         return bar;
@@ -64,7 +62,6 @@ public partial class PerfReadout : PanelContainer
 
     public override void _ExitTree()
     {
-        RenderingServer.ViewportSetMeasureRenderTime(_viewport, false);
         _process.Dispose();
     }
 
@@ -83,7 +80,6 @@ public partial class PerfReadout : PanelContainer
 
     private void Refresh(double seconds, int frames, double worstMs)
     {
-        _process.Refresh();
         var cpuTime = _process.TotalProcessorTime;
         var cpuUsed = (cpuTime - _lastCpuTime).TotalSeconds;
         _lastCpuTime = cpuTime;
@@ -105,7 +101,7 @@ public partial class PerfReadout : PanelContainer
             .Append(" · ").Append(_tCpuRender).Append(' ').Append(c, $"{cpuRenderMs:0.0}").Append(" ms")
             .Append(" · ").Append(_tGpuRender).Append(' ').Append(c, $"{gpuRenderMs:0.0}").Append(" ms")
             .Append(" · ").Append(_tCpuUsage).Append(' ').Append(c, $"{cpuUsagePct:0}").Append('%')
-            .Append(" · ").Append(_tMem).Append(' ').Append(c, $"{_process.WorkingSet64 / (1024.0 * 1024):0}").Append(" MB")
+            .Append(" · ").Append(_tMem).Append(' ').Append(c, $"{System.Environment.WorkingSet / (1024.0 * 1024):0}").Append(" MB")
             .Append(" · ").Append(_tVram).Append(' ').Append(c, $"{Performance.GetMonitor(Performance.Monitor.RenderVideoMemUsed) / (1024.0 * 1024):0}").Append(" MB");
         AppendResolution(c);
         _label.Text = _text.ToString();

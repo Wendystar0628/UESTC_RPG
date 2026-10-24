@@ -138,7 +138,7 @@ internal sealed class HudResidents
     {
         if (_perf is not { } perf) return;
         _perf = null;
-        perf.GetParent().RemoveChild(perf);   // 立即移出场景树，视口渲染耗时测量随之关闭
+        perf.GetParent().RemoveChild(perf);   // 立即移出场景树，停止刷新
         perf.QueueFree();
     }
 
