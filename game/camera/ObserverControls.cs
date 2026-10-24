@@ -14,6 +14,7 @@ internal sealed class ObserverControls(ObserverCamera camera, FlightTuning tunin
     private readonly InputLocks _locks = new();
     private readonly InputLocks _cursorRequests = new();
     private readonly InputBindings _bindings = new();
+    private readonly ObserverMouseCapture _mouseCapture = new();
     private long _nextLayer;
     private float _wheel;
     private bool _automated;
@@ -24,6 +25,7 @@ internal sealed class ObserverControls(ObserverCamera camera, FlightTuning tunin
     public bool CursorVisible { get; private set; }
     public bool CursorHeld { get; private set; }
     public event Action<bool>? CursorVisibilityChanged;
+    private bool CursorRequested => CursorHeld || _cursorRequests.Locked;
 
     public void Initialize(ISettingsStore? settings, bool automated)
     {
@@ -68,12 +70,14 @@ internal sealed class ObserverControls(ObserverCamera camera, FlightTuning tunin
         RefreshCapture();
     }
 
-    private void RefreshCapture()
+    public void RefreshCapture()
     {
-        bool visible = !_focused || CursorHeld || _cursorRequests.Locked;
+        bool visible = !_focused || CursorRequested;
         bool changed = CursorVisible != visible;
         CursorVisible = visible;
-        Input.MouseMode = visible ? Input.MouseModeEnum.Visible : Input.MouseModeEnum.Captured;
+        // Published cursor policy is not permission to touch the OS cursor; input event delivery
+        // and native capture eligibility are separate on an inactive desktop.
+        _mouseCapture.Refresh(!visible);
         if (changed) CursorVisibilityChanged?.Invoke(visible);
     }
 
@@ -126,7 +130,8 @@ internal sealed class ObserverControls(ObserverCamera camera, FlightTuning tunin
 
     private bool HandleLook(InputEventMouseMotion motion)
     {
-        if (!camera.IsPlaying || CursorVisible || Locked) return false;
+        // Focus controls the OS cursor, not delivery through the game's normal input route.
+        if (!camera.IsPlaying || CursorRequested || Locked) return false;
         camera.CancelTransitForInput();
         var relative = motion.ScreenRelative;
         var pose = camera.Pose with
@@ -141,7 +146,7 @@ internal sealed class ObserverControls(ObserverCamera camera, FlightTuning tunin
 
     private bool HandleMouseButton(InputEventMouseButton mouse)
     {
-        if (CursorVisible) return false;
+        if (CursorRequested) return false;
         if (mouse.ButtonIndex is not (MouseButton.WheelUp or MouseButton.WheelDown)) return false;
         _wheel += mouse.Factor * (mouse.ButtonIndex == MouseButton.WheelUp ? 1 : -1);
         int steps = (int)_wheel;

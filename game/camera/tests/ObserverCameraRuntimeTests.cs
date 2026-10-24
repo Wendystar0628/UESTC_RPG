@@ -12,7 +12,6 @@ public sealed class ObserverCameraRuntimeTests
     [TestCase, TestCategory(TestReason.Regression), RequireGodotRuntime]
     public void CursorLeasesAndRawHeldEventsRemainIndependentOfMovementLocks()
     {
-        var originalMouseMode = Input.MouseMode;
         var camera = new ObserverCamera();
         var controls = new ObserverControls(camera, camera.Tuning);
         var visibilityChanges = new List<bool>();
@@ -66,18 +65,13 @@ public sealed class ObserverCameraRuntimeTests
             // This isolated owner regression does not activate or refocus an OS window.
             controls.CursorVisibilityChanged -= visibilityChanges.Add;
             try { controls.SetFocused(false); }
-            finally
-            {
-                try { camera.Free(); }
-                finally { Input.MouseMode = originalMouseMode; }
-            }
+            finally { camera.Free(); }
         }
     }
 
     [TestCase, TestCategory(TestReason.Regression), RequireGodotRuntime]
-    public void WindowFocusNotificationsAloneDriveTheCursorAfterAnUnfocusedStart()
+    public void WindowFocusNotificationsDriveCursorPolicyAfterAnUnfocusedStart()
     {
-        var originalMouseMode = Input.MouseMode;
         var camera = new ObserverCamera();
         try
         {
@@ -100,8 +94,42 @@ public sealed class ObserverCameraRuntimeTests
         }
         finally
         {
-            try { camera.Free(); }
-            finally { Input.MouseMode = originalMouseMode; }
+            try { camera.ApplyWindowFocus(false); }
+            finally { camera.Free(); }
+        }
+    }
+
+    [TestCase, TestCategory(TestReason.Regression), TestCategory("NativeRender"), RequireGodotRuntime]
+    public void InactiveDesktopCannotCaptureTheSessionCursor()
+    {
+        // The NativeRender runner creates a real window on its private desktop. Do not substitute
+        // headless or fabricate the OS eligibility: this is the original failure's native condition.
+        if (DisplayServer.GetName() != "Windows" || !DisplayServer.WindowIsFocused())
+            throw new InvalidOperationException("The capture regression requires a locally focused native Windows window.");
+        var capture = new ObserverMouseCapture();
+        if (capture.IsInputDesktop)
+            throw new InvalidOperationException("The capture regression must run on the isolated, inactive desktop.");
+        if (Input.MouseMode != Input.MouseModeEnum.Visible)
+            throw new InvalidOperationException("The isolated runner must start without native capture.");
+        var camera = new ObserverCamera();
+        var controls = new ObserverControls(camera, camera.Tuning);
+        try
+        {
+            controls.Initialize(null, automated: true);
+            controls.SetFocused(true);
+            if (controls.CursorVisible || Input.MouseMode != Input.MouseModeEnum.Visible)
+                throw new InvalidOperationException("The inactive desktop must keep look input enabled without capturing the session cursor.");
+            using (controls.RequestCursor(InputLockReason.Menu))
+                if (!controls.CursorVisible || Input.MouseMode != Input.MouseModeEnum.Visible)
+                    throw new InvalidOperationException("A background cursor lease changed native capture.");
+            controls.RefreshCapture();
+            if (controls.CursorVisible || Input.MouseMode != Input.MouseModeEnum.Visible)
+                throw new InvalidOperationException("Releasing a background cursor lease acquired native capture.");
+        }
+        finally
+        {
+            try { controls.SetFocused(false); }
+            finally { camera.Free(); }
         }
     }
 

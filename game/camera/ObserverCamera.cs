@@ -92,6 +92,8 @@ public partial class ObserverCamera : Node, ICameraRig, IObserverState, IViewCon
 
     public override void _Process(double delta)
     {
+        // Desktop switches need not produce a Godot window-focus notification.
+        _controls.RefreshCapture();
         float seconds = (float)Math.Min(delta, Tuning.MaxFrameStep);
         if (!_flight.AdvanceFlowProjection(_presentation)) return;
         if (_worldResetPending)
