@@ -36,7 +36,7 @@ paths: [".collab/tasks/**"]
 
 - **写派工简报**：用 §8 的模板，只填本次任务特有的信息；入口、守则、回报写在 WF-ENTRY、WF-RULE、WF-COMMS，不抄。
 - **交回时**：在任务单末尾写"接续"段（§8.2）。
-- **开子代理**：按 §6；Codex 侧子代理共用工作目录，简报里必须写明邻居（§8.1）。
+- **开子代理**：按 §6；施工位置按 WF-FLOW §3.1，简报里必须写明邻居（§8.1）。
 - **派单、选 Opus 还是 Sonnet、决定开几个之前**：先看最近一次用量读数，读数超过 15 分钟就重读；开几个按任务量定，额度紧时少开（§9.1）。
 - **主账号剩余约 1%**：停止派新活（§9.4）。
 
@@ -104,7 +104,7 @@ Opus 贵，只用在观感还没定的地方。
 
 **Claude 侧**（主会话开）：用 Agent 工具在后台开，指定 `model: "opus"` 或 `"sonnet"`，`description` 的格式见 STD-CONVENTIONS §3.8，观察台按它把子代理对到在做的工作上；子代理的最终回复就是回报。开几个按任务量定，额度紧时少开（§9.1）。
 
-**Codex 侧**（Codex 主线）：用 `spawn_agent`（`task_name` 用小写类别、下划线、三位数与主题（如 `game_031_grass_puddles`、`tool_116_xxx`、`batch_007_xxx`），`message` 写完整简报）、`wait_agent`、`list_agents`、`send_input`。开几个按任务量定（§9.1）；`~/.codex/config.toml` 里的上限是软件自身的硬限制，照它办。模型在开的时候指定：默认 gpt-6.1-sol，机械活 gpt-6-luna，临时审计 gpt-6-astra（WF-ROLE §6）。Codex 子代理和 Codex 主线共用工作目录，简报里必须写明：只改点名的文件，读写用绝对路径，不碰邻居的文件，提交推送同 WF-RULE §7。
+**Codex 侧**（Codex 主线）：用 `spawn_agent`（`task_name` 用小写类别、下划线、三位数与主题（如 `game_031_grass_puddles`、`tool_116_xxx`、`batch_007_xxx`），`message` 写完整简报）、`wait_agent`、`list_agents`、`send_input`。开几个按任务量定（§9.1）；`~/.codex/config.toml` 里的上限是软件自身的硬限制，照它办。模型在开的时候指定：默认 gpt-6.1-sol，机械活 gpt-6-luna，临时审计 gpt-6-astra（WF-ROLE §6）。写游戏 C# 的 Codex 子代理在独立临时工作树（WF-FLOW §3.1），其余与 Codex 主线共用主检出；简报里必须写明：只改点名的文件，读写用绝对路径，不碰邻居的文件，提交推送同 WF-RULE §7。
 
 ## 7 子代理的生命周期：默认新开，靠任务单交接
 

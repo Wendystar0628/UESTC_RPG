@@ -11,7 +11,7 @@
   - ★ CORE-INDEX §0.1 接入要点 · L27 · 277
 - CORE-INDEX §1 信息地图 · L34 · 1.7k
 - CORE-INDEX §2 工作原则 · L84 · 1.8k
-- CORE-INDEX §3 协作与分工 · L97 · 915
+- CORE-INDEX §3 协作与分工 · L97 · 925
 - CORE-INDEX §4 文档规范 · L105 · 930
 - CORE-INDEX §5 代码规范 · L115 · 1.1k
 - CORE-INDEX §6 运行时与可靠性 · L126 · 950
@@ -1809,7 +1809,7 @@
 - WF-BUILD §1 改哪里 · L40 · 493
 - WF-BUILD §2 G4 拦不住的约定在哪 · L48 · 144
 - WF-BUILD §3 契约申请与冻结 · L52 · 338
-- WF-BUILD §4 构建与测试排队 · L59 · 820
+- WF-BUILD §4 构建与测试排队 · L59 · 832
 
 ## WF-COMMS · 交接与通信
 
@@ -1841,19 +1841,19 @@
 - WF-ENTRY §0 结论 · L21 · 384
   - ★ WF-ENTRY §0.1 接入要点 · L27 · 127
 - WF-ENTRY §1 主会话 · L33 · 1.1k
-- WF-ENTRY §2 子代理 · L59 · 1.3k
+- WF-ENTRY §2 子代理 · L59 · 1.2k
 - WF-ENTRY §3 Codex 主线 · L87 · 1.2k
 
 ## WF-FLOW · 开发流程
 
-`docs/workflow/WF-FLOW-开发流程.md` · 6.2k 字 · 一项任务从派工、施工（主检出只写不编译，工作树里交回前跑 G1）、统一编译推送、回报到评审的流程，防打架，按范围拆单，可调参数集中放
+`docs/workflow/WF-FLOW-开发流程.md` · 6.3k 字 · 一项任务从派工、施工（在临时工作树里写，交回前跑 G1 与受影响 G2）、统一编译推送、回报到评审的流程，防打架，按范围拆单，可调参数集中放
 关键词：开发流程、派工、施工单、按范围拆单、回报、评审、防打架、邻居、可调参数、DECISION-184、DECISION-211、评审通用结论
 
-- WF-FLOW §0 结论 · L22 · 516
+- WF-FLOW §0 结论 · L22 · 526
   - ★ WF-FLOW §0.1 接入要点 · L29 · 187
 - WF-FLOW §1 全流程一览 · L35 · 616
 - WF-FLOW §2 派工与拆单 · L46 · 1.4k
-  - WF-FLOW §2.1 防打架（DECISION-211） · L62 · 376
+  - WF-FLOW §2.1 防打架（DECISION-211） · L62 · 367
 - WF-FLOW §3 施工与回报 · L71 · 2.3k
   - WF-FLOW §3.1 统一编译（DECISION-219） · L77 · 2.0k
 - WF-FLOW §4 评审：审美与契约的交叉评审 · L90 · 702
@@ -1863,14 +1863,14 @@
 `docs/workflow/WF-MODEL-模型、子代理与额度.md` · 8.6k 字 · 按七问与难度选施工模型和推理强度，怎么开子代理、写简报，额度、并发与冻结，两家模型的易犯行为
 关键词：七问、选模型、Opus 与 Sonnet 的分界、机械活、gpt-6-luna 子代理、推理强度、升级先找原因、简单少量的活直接做、子代理、Agent 工具、spawn_agent、子代理生命周期、默认新开、简报模板、接续段、额度、5 小时窗口、每周额度、并发、额度刹车、get_usage、临近重置用足、Codex 额度、额度见底、冻结、切换账号、易犯行为、DECISION-184、DECISION-191、DECISION-226
 
-- WF-MODEL §0 结论 · L22 · 1.0k
-  - ★ WF-MODEL §0.1 接入要点 · L35 · 280
+- WF-MODEL §0 结论 · L22 · 1.1k
+  - ★ WF-MODEL §0.1 接入要点 · L35 · 282
 - WF-MODEL §1 按七问选施工模型 · L43 · 843
 - WF-MODEL §2 Opus 与 Sonnet 的分界（DECISION-193） · L57 · 440
 - WF-MODEL §3 机械活交谁 · L70 · 556
 - WF-MODEL §4 推理强度按难度选 · L79 · 679
 - WF-MODEL §5 升级、派单与直接做 · L94 · 424
-- WF-MODEL §6 怎么开子代理 · L101 · 693
+- WF-MODEL §6 怎么开子代理 · L101 · 726
 - WF-MODEL §7 子代理的生命周期：默认新开，靠任务单交接 · L109 · 451
 - WF-MODEL §8 简报模板与"接续"段 · L119 · 697
   - WF-MODEL §8.1 简报模板 · L121 · 402
@@ -2024,12 +2024,12 @@
 
 ## REG-DECISIONS-PROCESS · 协作与流程决策
 
-`docs/registry/REG-DECISIONS-PROCESS-协作与流程决策.md` · 18.5k 字 · 计划、协作、规范、登记四个域的已定决策：协作、流程、文档与代码规范、门禁流程
+`docs/registry/REG-DECISIONS-PROCESS-协作与流程决策.md` · 18.8k 字 · 计划、协作、规范、登记四个域的已定决策：协作、流程、文档与代码规范、门禁流程
 关键词：决策、流程、协作、文档规则、门禁流程、派工、主会话、子代理
 
 - REG-DECISIONS-PROCESS §0 结论 · L21 · 129
   - ★ REG-DECISIONS-PROCESS §0.1 接入要点 · L25 · 56
-- REG-DECISIONS-PROCESS §1 流程 · L29 · 17.8k
+- REG-DECISIONS-PROCESS §1 流程 · L29 · 18.2k
 
 ## REG-DECISIONS-SYSTEMS · 系统与工程决策
 
