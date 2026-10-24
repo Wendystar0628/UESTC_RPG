@@ -69,16 +69,17 @@
       var counts = n && ['ok', 'warn', 'bad'].every(function (k) { return typeof n[k] === 'number'; })
         ? h('div.hl-counts', '正常 ' + Dash.num(n.ok) + ' 项 · 要看 ' + Dash.num(n.warn) + ' 项 · 有问题 ' + Dash.num(n.bad) + ' 项') : null;
 
+      var shown = Dash.freshLevel(hd.level, hd.late);
       el.appendChild(h('div.hl-head',
-        h('span.hl-big.' + toneCls(hd.level), { role: 'img', 'aria-label': levelName(hd.level) }),
+        h('span.hl-big.' + toneCls(shown), { role: 'img', 'aria-label': levelName(shown) }),
         h('div.hl-main', h('div.hl-sentence', hd.summary || '还没有结论'), when, counts)));
 
       var groups = hd.groups || [];
       if (!groups.length) return;
       el.appendChild(h('div.hl-blocks', groups.map(function (g) {
-        var t = g.counts;
-        return h('button.hl-block.' + toneCls(g.level), { type: 'button', title: '看这一组的详情', on: { click: function () { jumpToGroup(g.key); } } },
-          h('span.hl-block-top', Dash.lamp(g.level), h('span.hl-block-name', g.label)),
+        var t = g.counts, gl = Dash.freshLevel(g.level, hd.late);
+        return h('button.hl-block.' + toneCls(gl), { type: 'button', title: '看这一组的详情', on: { click: function () { jumpToGroup(g.key); } } },
+          h('span.hl-block-top', Dash.lamp(gl), h('span.hl-block-name', g.label)),
           h('span.hl-block-n', '要看 ', h('b', Dash.num(t.warn)), '　有问题 ', h('b', Dash.num(t.bad)),
             t.unknown ? h('span', '　未确认 ', h('b', Dash.num(t.unknown))) : null));
       })));
@@ -145,7 +146,7 @@
       el.appendChild(h('div.hf-kpis',
         Dash.kpi({ label: '窗口内登记', value: w.n, unit: '次', note: '最近 ' + Dash.num(w.size) + ' 次提交' }),
         freq,
-        Dash.kpi({ label: '最近一次登记', value: w.last ? Dash.ago(w.last.at) : null, note: w.last ? Dash.at(w.last.at) : '窗口内没有登记' }),
+        Dash.kpi({ label: '最近一次登记', value: w.last ? Dash.ago(w.last.at) : null, note: w.last ? Dash.at(w.last.at) : w.n === 0 ? '窗口内没有登记' : '时刻未确认' }),
         Dash.kpi({ label: '新增类别', value: w.fresh, unit: '个', note: '记账起点之后新增、窗口内的子类' })));
       var zero = failZero(fd);
       if (zero) el.appendChild(zero);
@@ -302,7 +303,7 @@
     id: 'health-groups', page: 'health', title: '各组检查', note: '哪项不对、怎么办', caliber: CAL.groups,
     span: 8, order: 20, needs: ['health'],
     render: function (el, d) {
-      var groups = d.health.groups || [];
+      var groups = d.health.groups || [], late = d.health.late;
       groupEls = {};
       if (!groups.length) { el.appendChild(Dash.empty('巡逻还没有分组结果', '', true)); return; }
       el.appendChild(h('div.hg-list', groups.map(function (g) {
@@ -316,7 +317,7 @@
           t.bad ? h('span.t-risk', ' · 有问题 ' + t.bad) : null,
           t.warn ? h('span.t-warn', ' · 要看 ' + t.warn) : null,
           t.unknown ? h('span.t-muted', ' · 未确认 ' + t.unknown) : null);
-        var det = Dash.fold(h('span.hg-sum', Dash.lamp(g.level), h('span.hg-name', g.label), count), body, rest.length > 0);
+        var det = Dash.fold(h('span.hg-sum', Dash.lamp(Dash.freshLevel(g.level, late)), h('span.hg-name', g.label), count), body, rest.length > 0);
         det.dataset.group = g.key;
         groupEls[g.key] = det;
         return det;
@@ -328,8 +329,8 @@
 
   function openRound(round) {
     var flagged = round.flagged || [];
-    var body = !flagged.length
-      ? Dash.empty('这一轮没有要看的项', '', true)
+    var body = round.flagged == null ? Dash.empty('这一轮的明细未确认', '这一轮巡逻没留下逐项结果', true)
+      : !flagged.length ? Dash.empty('这一轮没有要看的项', '', true)
       : h('div.dr-groups', flagged.map(function (g) {
         return h('section.dr-group',
           h('div.dr-group-name', g.label || g.group),
@@ -411,17 +412,23 @@
       var tests = d.health.tests;
       var days = (tests && tests.days) || [];
       if (!days.length) { el.appendChild(Dash.empty('还没有测试记录', '', true)); return; }
+      /* 整列都没数的不画空线，在图下写没画哪条 */
+      var defs = [
+        { label: '测试个数', tone: ['seq', 1], unit: '个', values: days.map(function (x) { return x.count; }) },
+        { label: '快检耗时', tone: ['stage', 'integration'], unit: '秒', values: days.map(function (x) { return x.quickSec; }) }
+      ];
+      var drawn = defs.filter(function (s) { return s.values.some(function (v) { return v != null; }); });
+      var missed = defs.filter(function (s) { return drawn.indexOf(s) < 0; });
+      if (!drawn.length) { el.appendChild(Dash.empty('近 ' + days.length + ' 天的测试个数与快检耗时都没有记录', '', true)); return; }
       el.appendChild(Dash.charts.trend(
         days.map(function (x) { return shortDay(x.day); }),
-        [
-          { label: '测试个数', tone: ['seq', 1], axis: 0, values: days.map(function (x) { return x.count; }) },
-          { label: '快检耗时', tone: ['stage', 'integration'], axis: 1, values: days.map(function (x) { return x.quickSec; }) }
-        ],
-        { height: 220, label: '近 ' + days.length + ' 天测试个数与快检耗时', caliber: CAL.tests, units: ['个', '秒'],
+        drawn.map(function (s, i) { return { label: s.label, tone: s.tone, axis: i, values: s.values }; }),
+        { height: 220, label: '近 ' + days.length + ' 天' + drawn.map(function (s) { return s.label; }).join('与'), caliber: CAL.tests, units: drawn.map(function (s) { return s.unit; }),
           // 悬停时每个点多写一句行数与占比
           notes: days.map(function (x) { return Dash.num(x.lines) + ' 行，占生产代码 ' + pctText(x.ratio); }) }));
       var last = days[days.length - 1];
       el.appendChild(h('div.hl-foot', shortDay(last.day) + '：' + Dash.num(last.count) + ' 个测试，' + Dash.num(last.lines) + ' 行，占生产代码 ' + pctText(last.ratio) + '；快检 ' + Dash.num(last.quickSec) + ' 秒'));
+      if (missed.length) el.appendChild(h('div.note-line', '没画：' + missed.map(function (s) { return s.label; }).join('、') + '（近 ' + days.length + ' 天都没有记录）'));
     }
   });
 

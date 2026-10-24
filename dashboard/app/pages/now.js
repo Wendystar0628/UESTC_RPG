@@ -115,7 +115,7 @@
     render: function (el, d) {
       var c = d.health.counts || {};
       el.appendChild(h('a.np-row', { href: '#health' },
-        Dash.lamp(d.health.level),
+        Dash.lamp(Dash.freshLevel(d.health.level, d.health.late)),
         h('span.np-main', h('b', '健康'), h('span', '要看 ' + Dash.num(c.warn) + ' · 有问题 ' + Dash.num(c.bad))),
         h('span.np-go', '›')));
       var leads = d.team.leads || [];

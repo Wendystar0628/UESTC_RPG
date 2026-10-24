@@ -165,11 +165,12 @@
       var specs = side === 'all'
         ? [{ s: 'claude', k: 'all' }, { s: 'codex', k: 'all' }].concat(byKind)
         : [{ s: side, k: 'all' }].concat(byKind);
-      var empty = true, hasPrev = false;
+      var empty = true, known = false, hasPrev = false;
       var groups = specs.map(function (sp) {
         var e = list.filter(function (x) { return x.side === sp.s && x.kind === sp.k; })[0] || {};
         var cur = e.cur || null, prev = e.prev || null;
         if ((cur && cur.n) || (prev && prev.n)) empty = false;
+        if (cur && cur.n != null) known = true;
         if (prev) hasPrev = true;
         var name = sp.k === 'all' ? SIDE_NAME[sp.s] + (side === 'all' ? '' : ' · 全部')
           : (side === 'all' ? '' : SIDE_NAME[side] + ' · ') + sp.label;
@@ -178,7 +179,7 @@
           tone: sp.k === 'all' ? ['side', sp.s] : sp.tone, cur: cur, prev: prev
         };
       });
-      if (empty) { el.appendChild(Dash.empty('近 7 天还没有推送删行', '有了就在这里画')); return; }
+      if (empty) { el.appendChild(known ? Dash.empty('近 7 天还没有推送删行', '有了就在这里画') : Dash.empty('近 7 天推送删行的数量未确认', '后台记账够了就在这里画')); return; }
       el.appendChild(Dash.charts.box(groups, { height: 280, unit: '分钟', label: '流转时长', caliber: CAL.lead }));
       el.appendChild(h('div.note-line', hasPrev ? '实色是近 7 天，浅色虚线是前 7 天' : '前 7 天的记账还不够，先不画对比'));
     }
@@ -296,7 +297,7 @@
       if (chains.length) {
         el.appendChild(sec('等前置的链', Dash.tree(chains, { onClick: function (n) { openRow(all, n.key); } })));
       }
-      if (!longest.length && !chains.length) el.appendChild(h('div.note-line', waiting ? '这些行都不在最长的 5 条里' : '没有行在等'));
+      if (!longest.length && !chains.length) el.appendChild(h('div.note-line', waiting == null ? '在等的行数未确认' : waiting ? '这些行都不在最长的 5 条里' : '没有行在等'));
     }
   });
 
@@ -332,7 +333,8 @@
   });
 
   /* ---------- work-rework 返工 ---------- */
-  var REWORK = { none: ['level', 'ok'], revert: ['level', 'bad'], audit: ['level', 'warn'] };
+  /* none 只是没查到返工证据，不等于审过，不用正常色 */
+  var REWORK = { none: ['side', 'muted'], revert: ['level', 'bad'], audit: ['level', 'warn'] };
   var REWORK_NAME = { revert: '回滚', audit: '审计查实' };
 
   Dash.panel({
@@ -341,7 +343,8 @@
     needs: ['flow'],
     render: function (el, d) {
       var rw = d.flow.rework || {}, sm = rw.summary || {}, pushes = rw.pushes || [];
-      if (!sm.n) { el.appendChild(Dash.empty('还没有推送记账')); return; }
+      if (sm.n == null) { el.appendChild(Dash.empty('近 30 天推了几次未确认', '推送记账还没覆盖满 30 天')); return; }
+      if (!sm.n) { el.appendChild(Dash.empty('近 30 天没有推送')); return; }
       el.appendChild(h('div.wk-lead', '近 30 天 ', h('b', Dash.num(sm.n)), ' 次推送里 ', h('b', Dash.num(sm.revert + sm.audit)),
         ' 次有返工（', Dash.pct(sm.rate, 1), '）'));
       el.appendChild(Dash.dots(pushes.map(function (p) {
@@ -351,7 +354,7 @@
         };
       })));
       el.appendChild(h('div.wk-legend',
-        Dash.mark('level', 'ok', '没返工'), Dash.mark('level', 'bad', '回滚 ' + sm.revert), Dash.mark('level', 'warn', '审计查实 ' + sm.audit)));
+        Dash.mark('side', 'muted', '没查到返工'), Dash.mark('level', 'bad', '回滚 ' + sm.revert), Dash.mark('level', 'warn', '审计查实 ' + sm.audit)));
       var items = rw.items || [];
       if (items.length) {
         el.appendChild(sec('返工项', h('div', items.map(function (it) {

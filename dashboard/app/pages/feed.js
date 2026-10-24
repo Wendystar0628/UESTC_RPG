@@ -34,15 +34,21 @@
     Dash.go('feed', Object.assign({}, ctx.params, { from: from || null, to: to || null }));
   }
 
-  /* ---------- feed-strip ---------- */
-
-  function strip(el, d, ctx) {
-    var win = windowOf(ctx, d.feed), side = ctx.filters.side, types = ctx.filters.type;
-    var days = d.feed.days.map(function (day) {  // 所选格子里有一格覆盖不足（n 为 null），这一天就是未确认
+  /* 每天按侧与类型筛选后的条数；所选格子里有一格覆盖不足（n 为 null），这一天就是未确认（value 为 null） */
+  function dayTotals(feed, ctx) {
+    var side = ctx.filters.side, types = ctx.filters.type;
+    return feed.days.map(function (day) {
       var picked = day.cells.filter(function (c) { return (!types.length || types.indexOf(c.type) >= 0) && (side === 'all' || c.side === side); });
       var unknown = picked.some(function (c) { return c.n == null; });
       return { day: day.day, value: unknown ? null : picked.reduce(function (n, c) { return n + c.n; }, 0) };
     });
+  }
+
+  /* ---------- feed-strip ---------- */
+
+  function strip(el, d, ctx) {
+    var win = windowOf(ctx, d.feed);
+    var days = dayTotals(d.feed, ctx);
 
     el.appendChild(Dash.charts.strip(days, {
       unit: '条', label: '近 30 天，每天一格，深浅表示事件多少；按住拖选一段时间',
@@ -86,7 +92,11 @@
       return member === null || member === true;
     });
 
-    if (!rows.length) { el.appendChild(Dash.empty('这段时间没有这类动态', '', true)); return; }
+    if (!rows.length) {
+      var unsure = dayTotals(d.feed, ctx).some(function (x) { return x.day >= win.from && x.day <= win.to && x.value == null; });
+      el.appendChild(unsure ? Dash.empty('这段时间有没有这类动态未确认', '有的日子记账不全', true) : Dash.empty('这段时间没有这类动态', '', true));
+      return;
+    }
     el.appendChild(Dash.timeline(rows.map(function (it) {
       return { at: it.at, tone: ['feed', it.type], tag: Dash.label('feed', it.type), side: it.side, title: titleOf(it), body: bodyOf(it) };
     })));

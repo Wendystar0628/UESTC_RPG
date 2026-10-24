@@ -185,6 +185,13 @@
     return h('span.lamp' + (t ? '.t-' + t : '.is-unknown'), { title: t ? Dash.label('level', level) : '未确认', role: 'img', 'aria-label': t ? Dash.label('level', level) : '未确认' });
   };
 
+  /* 带过期标记的结论（如巡逻 health.late）画灯时用的等级：正常只在确认没过期（late 为 false）时照画，
+     过期了按"要看"，不知道过没过期按未确认；要看与有问题照原样，过期了也不抹掉 */
+  Dash.freshLevel = function (level, late) {
+    if (level !== 'ok' || late === false) return level;
+    return late === true ? 'warn' : null;
+  };
+
   /* 指标卡：数、单位、一句 note、趋势箭头；vs 是箭头比的是什么（悬停显示），不传就不写；点了去 href */
   var TREND = { better: ['ok', '↑ 变好'], worse: ['warn', '↓ 变坏'], same: ['muted', '→ 持平'] };
   Dash.kpi = function (k) {

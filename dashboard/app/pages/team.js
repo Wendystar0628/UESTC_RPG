@@ -305,7 +305,7 @@
       if (ruleFilter && !rules.some(function (r) { return r.key === ruleFilter; })) ruleFilter = null;
       if (rules.length) {
         el.appendChild(Dash.charts.bars(rules.map(function (r) {
-          return { key: r.key, label: r.key + ' ' + r.label, value: r.bad, tone: r.bad == null ? ['side', 'muted'] : ['level', r.bad ? 'bad' : 'ok'] };
+          return { key: r.key, label: r.key + ' ' + r.label, value: r.bad, tone: r.bad ? ['level', 'bad'] : r.bad == null || D.ok == null ? ['side', 'muted'] : ['level', 'ok'] };
         }), {
           label: '各条派单规则的违规个数', unit: '个违规', labelWidth: 200, textWidth: 90,
           onClick: function (p) { ruleFilter = ruleFilter === p.key ? null : p.key; Dash.redraw('team-dispatch'); }
@@ -318,6 +318,7 @@
       }
       el.appendChild(h('div.tm-viols', rows.length ? rows.map(violation)
         : D.bad == null ? h('div.tm-ok', Dash.status('违规名单未确认', 'muted'))
+        : D.ok == null ? h('div.tm-ok', Dash.status('判得出的里' + (ruleFilter ? '没有违反 ' + ruleFilter + ' 的' : '没有违规') + '，但有派单字段没记、没判，不能当作都合规', 'warn'))
         : h('div.tm-ok', Dash.status(ruleFilter ? '没有违反 ' + ruleFilter + ' 的' : '没有违规', 'ok'))));
       var hints = D.hints || [];
       var opus = D.opus || [];

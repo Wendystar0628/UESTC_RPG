@@ -315,6 +315,7 @@ Dash.item(id, title, side?)       编号 + 一句话 + 右侧签
 Dash.flowbar(counts, link?)       流水线五种状态比例条；link(段) 给跳转地址；Dash.stageKeys 五种状态的键
 Dash.sideKey(who)  Dash.modelName(m)  Dash.effortName(e)
 Dash.lamp(level)                  ok|warn|bad 的灯，null 空心"未确认"
+Dash.freshLevel(level, late)      带过期标记的结论画灯用的等级：ok 只在 late 为 false 时照画，过期按 warn，不知道过没过期按 null
 Dash.kpi({label, value, unit, note, trend, vs, href})   指标卡；trend better 绿"↑ 变好"、worse 橙"↓ 变坏"、same"→ 持平"、null 不画；vs 是趋势的比较口径（如"比前 7 天"），悬停显示，不传不写
 Dash.timeline(items, {compact?, onClick?})   items [{at, tone: [组, 键], tag, side?, title, sub?, body?}]；按天分组（compact 不分组）；side 画侧签；有 body 的点开展开；onClick(条目, 下标)
 Dash.tree(nodes, {onClick?, filter?})        nodes [{key, label, sub?, tone?, count?, kids?, open?, current?}]；onClick(节点)；
