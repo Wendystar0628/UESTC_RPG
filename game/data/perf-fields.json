@@ -1,5 +1,5 @@
 {
-  "schema": 4,
+  "schema": 5,
   "authority": "ENG-PERF-DATA",
   "draft": false,
   "encoding": {
@@ -157,7 +157,8 @@
           "sync.readback"
         ],
         "purpose": "saveThumbnail",
-        "interval": "the captured collection frame only",
+        "interval": "frame contextFlags only; events retain readback evidence and never reconstruct non-steady frames",
+        "activeFlag": "captureFrame",
         "settleMs": 0
       },
       {
@@ -1694,7 +1695,7 @@
         {
           "name": "gpuEnginesJson",
           "type": "object",
-          "note": "All actual engine instances: parsed PID/LUID/engine identity, uncapped formatted fraction and CStatus, raw counters and timestamp; collection timestamp is FILETIME 100ns",
+          "note": "Actual rendering LUID only. collectTimestamp100ns is PDH FILETIME, previousCollectMs is the previous monotonic collect endpoint, rawQueryCode is the independent raw-query status. recording contains adapterLuid, instanceCount and invalidInstanceCount for other PIDs; engineTypes contains engineType, otherProcessesUtilFraction (sum other PIDs per physical engine, then maximum within type), instanceCount and invalidInstanceCount; topProcesses contains the busiest few other PIDs, limited by WindowsGpuEngineSampler.TopProcessCount, with processId, utilFraction (maximum physical engine) and current engines. Retained engines carry identity, formatted fraction/CStatus, current raw counters/status and actual FILETIME 100ns average endpoints; no exact monotonic average mapping or repeated previous raw counter values. SamplingFacts is computed from all matching instances before recording selection; it is independent of retained PID count.",
           "unit": null,
           "source": "Windows.PDH.GPU Engine",
           "nullable": true

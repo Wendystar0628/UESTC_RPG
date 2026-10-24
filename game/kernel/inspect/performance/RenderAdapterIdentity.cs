@@ -21,22 +21,36 @@ internal sealed record RenderAdapterIdentity
     public NvmlStatus AddressStatus { get; init; } = new("unavailable", "Windows PCI address not queried");
     public int? CloseStatus { get; init; }
 
-    public static Task<RenderAdapterIdentity> CaptureAsync()
+    public static async Task<RenderAdapterIdentity> CaptureAsync(CancellationToken cancellationToken)
     {
+        cancellationToken.ThrowIfCancellationRequested();
         var completion = new TaskCompletionSource<RenderAdapterIdentity>(TaskCreationOptions.RunContinuationsAsynchronously);
         string driver = RenderingServer.GetCurrentRenderingDriverName();
         if (!OperatingSystem.IsWindows() || !string.Equals(driver, "d3d12", StringComparison.OrdinalIgnoreCase))
-            return Task.FromResult(new RenderAdapterIdentity { Status = new("unsupported", "Actual adapter capture requires Windows D3D12") });
+            return new() { Status = new("unsupported", "Actual adapter capture requires Windows D3D12") };
+        // Only queued work can be canceled. Once native access begins, its owner must drain it.
+        int started = 0;
+        using var cancellation = cancellationToken.Register(() =>
+        {
+            if (Interlocked.CompareExchange(ref started, -1, 0) == 0)
+                completion.TrySetCanceled(cancellationToken);
+        });
         try
         {
             RenderingServer.CallOnRenderThread(Callable.From(() =>
             {
+                if (Interlocked.CompareExchange(ref started, 1, 0) != 0) return;
                 try { completion.TrySetResult(CaptureOnRenderThread()); }
                 catch (Exception error) { completion.TrySetResult(new() { Status = NvmlStatus.Missing(error) }); }
             }));
         }
-        catch (Exception error) { completion.TrySetResult(new() { Status = NvmlStatus.Missing(error) }); }
-        return completion.Task;
+        catch (Exception error) { return new() { Status = NvmlStatus.Missing(error) }; }
+        try { return await completion.Task.WaitAsync(cancellationToken); }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            // WaitAsync releases a canceled queue wait; a running callback still owns native access.
+            return await completion.Task;
+        }
     }
 
     private static RenderAdapterIdentity CaptureOnRenderThread()

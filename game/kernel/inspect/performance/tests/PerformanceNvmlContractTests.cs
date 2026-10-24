@@ -1,3 +1,4 @@
+using System.Text.Json;
 using Campus.Contracts;
 using Campus.Contracts.Perf;
 using Campus.Kernel.Inspect;
@@ -71,6 +72,68 @@ public sealed class PerformanceNvmlContractTests
     private static NvmlNative.Sample Sample(ulong timestamp, uint value) => new()
     { TimestampUs = timestamp, Value = new() { UnsignedInt = value } };
 
+    internal static (NvmlIdentity Identity, NvmlFastBatch[] Batches, NvmlSampleCursor[] Cursors) BufferedFastFixture()
+    {
+        NvmlMetric[] metrics = [NvmlMetric.Power, NvmlMetric.GpuUtilization, NvmlMetric.MemoryUtilization];
+        int[] counts = [119, 71, 71];
+        var cursors = metrics.Select(_ => new NvmlSampleCursor()).ToArray();
+        var batches = metrics.Select((metric, index) => cursors[index].Observe(metric, Success(),
+            Enumerable.Range(1, counts[index]).Select(point => Sample((ulong)point * 1_000, 50)).ToArray(), 10, 20)).ToArray();
+        return (new(0, "fixture-gpu", null, Success(), Success(), Success()), batches, cursors);
+    }
+
+    [TestCase, TestCategory(TestReason.Regression)]
+    public async Task BufferedNativeBatchesDrainEveryRowAndContinueTheirIndependentCursors()
+    {
+        string root = PerformanceRecordingContractTests.TemporaryDirectory();
+        var dictionary = new PerfFieldDictionary(File.ReadAllText(RepositoryFixture.FilePath("game", "data", "perf-fields.json")));
+        var session = new PerfRecordingSession(root, PerfOrigin.Ai, DateTimeOffset.UnixEpoch, dictionary, new());
+        try
+        {
+            if (!await session.Ready) throw new InvalidOperationException("The native-batch writer did not open.");
+            var producer = session.AddProducer("nvml.fast", "hwfast");
+            var fixture = BufferedFastFixture();
+            var probe = new PerfValueChannel("fixture", "hwfast");
+            var row = new PerfCapturedRow("hwfast", null, 10, new Dictionary<string, object?>());
+            int slots = 0;
+            while (probe.TryRow(row)) slots++;
+            if (fixture.Batches.Sum(batch => batch.Samples.Count) <= slots)
+                throw new InvalidOperationException("The buffered first query no longer exceeds the unread row queue.");
+            var timestamps = new List<ulong>();
+            foreach (var batch in fixture.Batches)
+            {
+                if (!producer.TryFastBatch(fixture.Identity, batch)) throw new InvalidOperationException("A first native batch was rejected.");
+                timestamps.AddRange(batch.Samples.Select(point => point.DriverTimestampUs));
+            }
+            for (int index = 0; index < fixture.Batches.Length; index++)
+            {
+                var before = fixture.Batches[index];
+                var next = fixture.Cursors[index].Observe(before.Metric, Success(),
+                    [Sample(before.CursorAfterUs, 50), Sample(before.CursorAfterUs + 1_000, 50)], 30, 40);
+                if (next.CursorBeforeUs != before.CursorAfterUs || next.PreviousSuccessfulReadMs != before.QueryEndMs ||
+                    next.Samples.Count != 1 || !producer.TryFastBatch(fixture.Identity, next))
+                    throw new InvalidOperationException("The next native query lost its cursor or repeated an old sample.");
+                timestamps.Add(next.Samples[0].DriverTimestampUs);
+            }
+            var empty = fixture.Cursors[0].Observe(NvmlMetric.Power, NvmlStatus.SampleResult(NvmlNative.NotFound), [], 50, 60);
+            if (!producer.TryFastBatch(fixture.Identity, empty)) throw new InvalidOperationException("The empty query metadata was rejected.");
+            session.Begin(new(0, 0, 0));
+            session.Stop(PerfEndReason.Toggle, 60);
+            var ended = await session.Completion;
+            string directory = Path.Combine(root, ended.SessionId);
+            var lines = File.ReadAllLines(Path.Combine(directory, "hwfast.csv")).Skip(1).Select(line => line.Split(',')).ToArray();
+            int sequenceColumn = Array.IndexOf(dictionary.Columns["hwfast"], "sequence");
+            int timestampColumn = Array.IndexOf(dictionary.Columns["hwfast"], "driverTimestampUs");
+            if (!ended.Closed || !ended.Complete || producer.Dropped != 0 || lines.Length != timestamps.Count + 1 ||
+                lines.Where((line, index) => line[sequenceColumn] != PerfFieldDictionary.Csv(index + 1)).Any() ||
+                timestamps.Where((stamp, index) => lines[index][timestampColumn] != PerfFieldDictionary.Csv(stamp)).Any() ||
+                lines[^1][timestampColumn] != "null" ||
+                File.ReadLines(Path.Combine(directory, "events.jsonl")).Any(line => JsonSerializer.Deserialize<JsonElement>(line).GetProperty("event").GetString() == "record.gap"))
+                throw new InvalidOperationException("Native-batch drain lost a row, its sequence, metadata or completeness.");
+        }
+        finally { session.Stop(PerfEndReason.Exit, 60); await session.Completion; Directory.Delete(root, true); }
+    }
+
     [TestCase, TestCategory(TestReason.Contract)]
     public void OtherGpuExcludesGameAndForeignAdaptersAndUsesBusiestEngineAfterSummingPids()
     {
@@ -82,13 +145,48 @@ public sealed class PerformanceNvmlContractTests
             Row(8, actual, 1, .25), Row(10, foreign, 0, 1)];
         var fact = WindowsGpuEngineSampler.Aggregate(rows, actual, 7, 0, 100, 110, 0, 105);
         if (fact.Capability != PerfFactCapability.Supported || fact.Value != .25 + .125 ||
-            fact.QueryStartMs != 100 || fact.QueryEndMs != 110)
+            fact.QueryStartMs != 100 || fact.QueryEndMs != 110 || fact.Reason is not null)
             throw new InvalidOperationException("Other-process GPU aggregation lost adapter/PID/engine semantics.");
+        var recorded = WindowsGpuEngineSampler.ForRecording(rows, actual, 7);
+        if (recorded.TopProcesses.Any(process => process.ProcessId is 7 or 10) ||
+            recorded.EngineTypes.Single().OtherProcessesUtilFraction != fact.Value ||
+            recorded.InstanceCount != rows.Count(row => row.AdapterLuid == actual && row.ProcessId != 7))
+            throw new InvalidOperationException("Recorded engine totals lost adapter/PID filtering or complete aggregation.");
         var invalid = WindowsGpuEngineSampler.Aggregate([rows[1] with { CStatus = 0xc0000bba, UtilFraction = null }],
             actual, 7, 0, 100, 110, 0, 105);
         var initial = WindowsGpuEngineSampler.Aggregate(rows, actual, 7, 0, 100, 110, null, 105);
-        if (invalid.Value.HasValue || initial.Value.HasValue || invalid.Reason is null || initial.Reason is null)
+        var unavailable = WindowsGpuEngineSampler.ForRecording([rows[1] with { CStatus = 0xc0000bba, UtilFraction = null }], actual, 7);
+        if (invalid.Value.HasValue || initial.Value.HasValue || invalid.Reason is null || initial.Reason is null ||
+            unavailable.InvalidInstanceCount != unavailable.InstanceCount || unavailable.EngineTypes.Single().OtherProcessesUtilFraction.HasValue)
             throw new InvalidOperationException("Unknown GPU counter intervals became zero or supported values.");
+    }
+
+    [TestCase, TestCategory(TestReason.Regression)]
+    public void EngineRecordingRetainsCompleteTypeTotalsAndOnlyBusiestPidsWithRawWindows()
+    {
+        const string luid = "00000000:00000001";
+        const int instanceCount = 1_000;
+        var rows = Enumerable.Range(100, instanceCount).Select(pid => new GpuEngineRow
+        {
+            Instance = $"pid_{pid}_luid_0x00000000_0x00000001_phys_0_eng_0_engtype_3D",
+            ProcessId = (uint)pid, AdapterLuid = luid, PhysicalAdapter = 0, Engine = 0, EngineType = "3D",
+            UtilFraction = .5 / instanceCount, RawStatus = 0, RawFirstValue = pid, RawSecondValue = 10_000,
+            RawTimestamp100ns = 9_007_199_254_740_993, RawMultiCount = 1,
+            AverageStartTimestamp100ns = 9_007_199_254_730_993, AverageEndTimestamp100ns = 9_007_199_254_740_993
+        }).ToArray();
+        if (rows.Select(row => row.ProcessId).Distinct().Count() <= WindowsGpuEngineSampler.TopProcessCount)
+            throw new InvalidOperationException("The fixture does not reproduce the excess process payload.");
+        var recorded = WindowsGpuEngineSampler.ForRecording(rows, luid, 7);
+        var fact = WindowsGpuEngineSampler.Aggregate(rows, luid, 7, 0, 100, 110, 0, 105);
+        if (fact.Capability != PerfFactCapability.Supported || recorded.TopProcesses.Count != WindowsGpuEngineSampler.TopProcessCount ||
+            recorded.EngineTypes.Single().OtherProcessesUtilFraction != fact.Value ||
+            recorded.TopProcesses.Sum(process => process.UtilFraction) >= fact.Value ||
+            recorded.TopProcesses.SelectMany(process => process.Engines).Any(row => !rows.Contains(row)))
+            throw new InvalidOperationException("Recording selection changed complete totals or current raw windows.");
+        string all = PerfFieldDictionary.Csv(JsonSerializer.Serialize(rows, PerfFieldDictionary.JsonOptions));
+        string compact = PerfFieldDictionary.Csv(JsonSerializer.Serialize(recorded, PerfFieldDictionary.JsonOptions));
+        if (compact.Length >= all.Length) throw new InvalidOperationException("Engine recording kept the full instance payload.");
+        Console.WriteLine($"GAME245 serialized fixture: instances={rows.Length}, retainedPids={recorded.TopProcesses.Count}, allCsvBytes={all.Length}, compactCsvBytes={compact.Length}");
     }
 
     [TestCase, TestCategory(TestReason.Contract)]

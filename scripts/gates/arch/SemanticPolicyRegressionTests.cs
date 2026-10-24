@@ -24,12 +24,15 @@ public sealed class SemanticPolicyRegressionTests
     [TestCategory("Regression")]
     public void CatchPathsPreserveTheOriginalFailure()
     {
+        var equivalentSuffix = string.Concat(Enumerable.Repeat("_ = flag && flag; _ = flag || flag; _ = marker ?? marker;", 12));
         var file = Fixture("""
             class Sample {
                 static void Handle([FailureHandler("ENG-ARCH")] Exception error) { }
                 static void Unknown([FailureHandler("DOES-NOT-EXIST")] Exception error) { }
                 static void Log(string message) { }
                 static void Run() { }
+                System.Threading.Tasks.TaskCompletionSource? owned;
+                sealed class Receiver { public void Keep([FailureHandler("ENG-ARCH")] Exception error) { } }
                 class TaskCompletionSource {
                     public void SetException(Exception error) { }
                     public void SetException(string message) { }
@@ -52,6 +55,8 @@ public sealed class SemanticPolicyRegressionTests
                     if(flag) return StartupFailure.Stalled(renamed: alias, text: message);
                     return new StartupFailure(message, alias);
                 }
+                static Exception HandledFactory(Exception cause) { Handle(cause); return new Exception("x", cause); }
+                static Exception HandledReplacement(Exception cause) { Handle(cause); return new Exception("x"); }
                 static Exception MessageFailure(Exception cause) => new Exception(cause.Message);
                 static Exception? NullableFailure(Exception? cause) => new InvalidOperationException("x", cause);
                 static Exception OptionalFailure(Exception? cause = null) => new InvalidOperationException("x", cause);
@@ -81,6 +86,7 @@ public sealed class SemanticPolicyRegressionTests
                 void GoodThrow() { try { Run(); } catch { throw; } }
                 void GoodWrap() { try { Run(); } catch(Exception e) { throw new InvalidOperationException("x", e); } }
                 void GoodFactory(bool flag) { try { Run(); } catch(Exception e) { throw ChooseFailure(flag: flag, renamed: e, message: "x"); } }
+                void GoodFactoryAfterHandler() { try { Run(); } catch(Exception e) { throw HandledFactory(e); } }
                 void GoodNullableFactory() { try { Run(); } catch(Exception e) { throw NullableFailure(e)!; } }
                 void GoodOptionalFactory() { try { Run(); } catch(Exception e) { throw OptionalFailure(e); } }
                 void GoodRecursiveAggregate() { try { Run(); } catch(Exception e) { throw Accumulate(e, new AggregateException(new Exception())); } }
@@ -92,6 +98,7 @@ public sealed class SemanticPolicyRegressionTests
                 void GoodCollectedParams() { try { Run(); } catch(Exception e) { throw new CollectedFailure(new Exception(), e); } }
                 void GoodReceive() { try { Run(); } catch(Exception e) { var renamed = e; Handle(renamed); } }
                 void GoodNamed() { try { Run(); } catch(Exception e) { Handle(error: e); } }
+                void GoodNullableHandler(Receiver? receiver) { try { Run(); } catch(Exception e) { receiver?.Keep(e); if(receiver is null) throw; } }
                 int GoodInput() { try { Run(); } catch(System.IO.InvalidDataException e) { Handle(e); return 0; } return 1; }
                 void GoodCollect() { var errors = new List<Exception>(); try { Run(); } catch(Exception e) { errors.Add(e); } if(errors.Count != 0) throw new AggregateException(errors); }
                 void GoodCompletionSet() { var done = new System.Threading.Tasks.TaskCompletionSource(); try { Run(); } catch(Exception e) { done.SetException(e); } }
@@ -100,6 +107,25 @@ public sealed class SemanticPolicyRegressionTests
                 void GoodGenericCompletionTrySet() { var done = new System.Threading.Tasks.TaskCompletionSource<int>(); try { Run(); } catch(Exception e) { done.TrySetException(e); } }
                 void GoodCompletionCollection() { var done = new System.Threading.Tasks.TaskCompletionSource(); try { Run(); } catch(Exception e) { done.SetException(new Exception[] { new Exception(), e }); } }
                 void GoodGenericCompletionCollection() { var done = new System.Threading.Tasks.TaskCompletionSource<int>(); try { Run(); } catch(Exception e) { done.TrySetException(new[] { e }); } }
+                void GoodConditionalCompletion(System.Threading.Tasks.TaskCompletionSource? done) { try { Run(); } catch(Exception e) { done?.TrySetException(e); if(done is null) throw; } }
+                void GoodAssertedOwnedCompletion() { try { Run(); } catch(Exception e) { owned!.TrySetException(e); } }
+                void GoodAssertedCompletionContract(System.Threading.Tasks.TaskCompletionSource? done) { try { Run(); } catch(Exception e) { done!.SetException(e); } }
+                void GoodConditionalGenericCompletion(System.Threading.Tasks.TaskCompletionSource<int>? done) { try { Run(); } catch(Exception e) { done?.SetException(e); if(null == done) throw; } }
+                void GoodGuardedCompletion(System.Threading.Tasks.TaskCompletionSource? done) { try { Run(); } catch(Exception e) { if(done is not null) done?.TrySetException(e); else throw; } }
+                void GoodConditionalDispatch() { try { Run(); } catch(Exception e) { var failure = System.Runtime.ExceptionServices.ExceptionDispatchInfo.Capture(e); failure?.Throw(); } }
+                Exception GoodReferenceFilter(Exception original) { try { Run(); } catch(Exception e) when(ReferenceEquals(e, original)) { return original; } return new Exception(); }
+                Exception GoodReferenceNegated(Exception original) { try { Run(); } catch(Exception e) { if(!ReferenceEquals(original, e)) throw; return original; } return new Exception(); }
+                Exception GoodReferenceElse(Exception original) { try { Run(); } catch(Exception e) { if(ReferenceEquals(original, e)) return original; else throw; } return new Exception(); }
+                System.Threading.Tasks.Task GoodFailureTask() { try { Run(); } catch(Exception e) { return System.Threading.Tasks.Task.FromException(e); } return System.Threading.Tasks.Task.CompletedTask; }
+                System.Threading.Tasks.Task<int> GoodGenericFailureTask() { try { Run(); } catch(Exception e) { return System.Threading.Tasks.Task.FromException<int>(e); } return System.Threading.Tasks.Task.FromResult(1); }
+                async System.Threading.Tasks.Task<System.Threading.Tasks.Task> GoodHeldTask(System.Threading.Tasks.Task owned) { try { await owned.ConfigureAwait(false); } catch(Exception e) { return owned; } return owned; }
+                async System.Threading.Tasks.Task<Exception?> GoodHeldTaskFailure(System.Threading.Tasks.Task owned) { try { await owned; } catch(Exception e) { return owned.Exception; } return null; }
+                static Exception Append(Exception? retained, [FailureHandler("ENG-ARCH")] Exception error) => retained is null ? error : new AggregateException(retained, error);
+                void GoodRetainedAppend() { Exception? failure = null; try { Run(); } catch(Exception e) { failure = Append(failure, e); } if(failure is not null) System.Runtime.ExceptionServices.ExceptionDispatchInfo.Capture(failure).Throw(); }
+                void GoodReflectionUnwrap() { try { Run(); } catch(System.Reflection.TargetInvocationException e) when(e.InnerException is not null) { System.Runtime.ExceptionServices.ExceptionDispatchInfo.Capture(e.InnerException).Throw(); throw; } }
+                void GoodReflectionWrap() { try { Run(); } catch(System.Reflection.TargetInvocationException e) { throw new InvalidOperationException("x", e.InnerException ?? e); } }
+                async System.Threading.Tasks.Task GoodTaskInnerFailures(System.Threading.Tasks.Task owned) { var failures = new List<Exception>(); try { await owned.ConfigureAwait(false); } catch { failures.AddRange(owned.Exception!.InnerExceptions); } if(failures.Count > 0) throw new AggregateException(failures); }
+                void GoodGuardedCatchReceiver(Receiver? receiver) { try { if(receiver is not null) Run(); } catch(Exception e) { receiver!.Keep(e); } }
                 void GoodDispatchCapture() { try { Run(); } catch(Exception e) { System.Runtime.ExceptionServices.ExceptionDispatchInfo.Capture(e).Throw(); } }
                 void GoodDispatchStatic() { try { Run(); } catch(Exception e) { System.Runtime.ExceptionServices.ExceptionDispatchInfo.Throw(e); } }
                 void GoodDispatchOutside() { Exception? failure = null; try { Run(); } catch(Exception e) { failure = e; } if(failure is not null) System.Runtime.ExceptionServices.ExceptionDispatchInfo.Capture(failure).Throw(); }
@@ -107,6 +133,18 @@ public sealed class SemanticPolicyRegressionTests
                 void GoodCoalesceCollect() { List<Exception>? errors = null; try { Run(); } catch(Exception e) { (errors ??= []).Add(e); } if(errors is not null) throw new AggregateException(errors); }
                 void GoodCoalesceRetains() { List<Exception>? errors = null; try { Run(); } catch(Exception e) { (errors ??= []).Add(e); errors ??= []; } if(errors != null) throw new AggregateException(errors); }
                 void GoodConditionalCollect() { Exception? failure = null; try { Run(); } catch(Exception e) { failure = e; } try { Run(); } catch(Exception e) { failure = failure is null ? e : new AggregateException(failure, e); } if(failure is not null) System.Runtime.ExceptionServices.ExceptionDispatchInfo.Capture(failure).Throw(); }
+                void GoodEquivalentLocalSuffix(bool flag, string? marker) { Exception? failure = null; try { Run(); } catch(Exception e) { failure = e; } /* equivalent suffix */ if(failure is not null) throw failure; }
+                void BadEquivalentLocalSuffixCleared(bool flag, string? marker) { Exception? failure = null; try { Run(); } catch(Exception e) { failure = e; } /* equivalent suffix */ failure = null; if(failure is not null) throw failure; }
+                void GoodEquivalentCollectionSuffix(bool flag, string? marker) { var failures = new List<Exception>(); try { Run(); } catch(Exception e) { failures.Add(e); } /* equivalent suffix */ throw new AggregateException(failures); }
+                void BadEquivalentCollectionSuffixCleared(bool flag, string? marker) { var failures = new List<Exception>(); try { Run(); } catch(Exception e) { failures.Add(e); } /* equivalent suffix */ failures.Clear(); throw new AggregateException(failures); }
+                void GoodEquivalentDispatchSuffix(bool flag, string? marker) { System.Runtime.ExceptionServices.ExceptionDispatchInfo? failure = null; try { Run(); } catch(Exception e) { failure = System.Runtime.ExceptionServices.ExceptionDispatchInfo.Capture(e); } /* equivalent suffix */ if(failure is not null) failure.Throw(); }
+                void BadEquivalentDispatchSuffixCleared(bool flag, string? marker) { System.Runtime.ExceptionServices.ExceptionDispatchInfo? failure = null; try { Run(); } catch(Exception e) { failure = System.Runtime.ExceptionServices.ExceptionDispatchInfo.Capture(e); } /* equivalent suffix */ failure = null; if(failure is not null) failure.Throw(); }
+                void GoodThrowThroughFinally() { try { try { Run(); } catch(Exception e) { throw e; } } finally { Run(); } }
+                Exception GoodReturnThroughFinally() { try { try { Run(); } catch(Exception e) { return e; } return new Exception(); } finally { Run(); } }
+                void BadThrowReplacedByFinally() { try { try { Run(); } catch(Exception e) { throw e; } } finally { throw new Exception(); } }
+                Exception BadReturnReplacedByFinally() { try { try { Run(); } catch(Exception e) { return e; } return new Exception(); } finally { throw new Exception(); } }
+                void BadOuterCatchSwallows() { try { try { Run(); } catch(Exception e) { throw e; } } catch(Exception swallowed) { Log(swallowed.Message); } }
+                void GoodHandledBeforeFinally() { try { try { Run(); } catch(Exception e) { Handle(e); } } finally { throw new Exception(); } }
                 void BadConditionalDrops() { Exception? failure = null; try { Run(); } catch(Exception e) { failure = e; } failure = null; if(failure is not null) throw failure; }
                 void GoodNestedThrow() { try { Run(); } catch(Exception e) { try { throw e; } catch(Exception forwarded) { Handle(forwarded); } } }
                 void BadNestedSwallows() { try { Run(); } catch(Exception e) { try { throw e; } catch(Exception forwarded) { Log(forwarded.Message); } } }
@@ -115,6 +153,8 @@ public sealed class SemanticPolicyRegressionTests
                 void GoodFilter() { try { Run(); } catch(Exception e) when(e is OperationCanceledException) { } }
                 void BadBranch(bool flag) { try { Run(); } catch(Exception e) { if(flag) Handle(e); } }
                 void BadThrow() { try { Run(); } catch(Exception e) { throw new InvalidOperationException("x"); } }
+                void BadInnerReplacesCaught() { try { Run(); } catch(Exception e) { throw e.InnerException!; } }
+                void BadFactoryReturnAfterHandler() { try { Run(); } catch(Exception e) { throw HandledReplacement(e); } }
                 void BadFactoryMessage() { try { Run(); } catch(Exception e) { throw MessageFailure(e); } }
                 void BadOptionalFactory() { try { Run(); } catch(Exception e) { throw OptionalFailure(); } }
                 void BadRecursiveFactory() { try { Run(); } catch(Exception e) { throw RecursiveFailure(e); } }
@@ -140,6 +180,28 @@ public sealed class SemanticPolicyRegressionTests
                 void BadGenericCompletionNewFailure() { var done = new System.Threading.Tasks.TaskCompletionSource<int>(); try { Run(); } catch(Exception e) { done.SetException(new Exception()); } }
                 void BadCompletionCollection() { var done = new System.Threading.Tasks.TaskCompletionSource(); try { Run(); } catch(Exception e) { done.SetException(new[] { new Exception() }); } }
                 void BadGenericCompletionCollection() { var done = new System.Threading.Tasks.TaskCompletionSource<int>(); try { Run(); } catch(Exception e) { done.TrySetException(new[] { new Exception(e.Message) }); } }
+                void BadNullCompletion() { System.Threading.Tasks.TaskCompletionSource? done = null; try { Run(); } catch(Exception e) { done!.SetException(e); } }
+                void BadNullableCompletion(System.Threading.Tasks.TaskCompletionSource? done) { try { Run(); } catch(Exception e) { done?.TrySetException(e); } }
+                void BadNullableCompletionMissingPath(System.Threading.Tasks.TaskCompletionSource? done, bool flag) { try { Run(); } catch(Exception e) { done?.TrySetException(e); if(done is null && flag) throw; } }
+                void BadNullableCompletionReplacement(System.Threading.Tasks.TaskCompletionSource? done) { try { Run(); } catch(Exception e) { done?.SetException(e); if(done is null) throw new Exception(e.Message); } }
+                void BadNullableDirectCompletion(System.Threading.Tasks.TaskCompletionSource? done) { try { Run(); } catch(Exception e) { done.TrySetException(e); } }
+                void BadNullCompletionThenThrow() { try { Run(); } catch(Exception e) { owned = null; owned!.SetException(e); throw; } }
+                void BadAssignedNullCompletion() { var done = new System.Threading.Tasks.TaskCompletionSource(); done = null; try { Run(); } catch(Exception e) { done!.SetException(e); } }
+                void BadNullableHandler(Receiver? receiver) { try { Run(); } catch(Exception e) { receiver?.Keep(e); } }
+                void BadGuardMutation(Receiver? receiver) { try { if(receiver is not null) { receiver = null; Run(); } } catch(Exception e) { receiver.Keep(e); } }
+                IEnumerable<Exception> BadAggregateRootDrops() { try { Run(); } catch(AggregateException e) { return e.InnerExceptions; } return []; }
+                void BadCompletionReceiverOverwrite(System.Threading.Tasks.TaskCompletionSource? done) { try { Run(); } catch(Exception e) { if(done is not null) { done = null; done?.TrySetException(e); } else throw; } }
+                Exception BadReferenceReplacement(Exception original) { try { Run(); } catch(Exception e) { if(ReferenceEquals(original, e)) return new Exception(); throw; } return new Exception(); }
+                System.Threading.Tasks.Task BadUnrelatedFailureTask() { try { Run(); } catch(Exception e) { return System.Threading.Tasks.Task.FromException(new Exception(e.Message)); } return System.Threading.Tasks.Task.CompletedTask; }
+                void BadUnownedFailureTask() { try { Run(); } catch(Exception e) { _ = System.Threading.Tasks.Task.FromException(e); } }
+                async System.Threading.Tasks.Task<System.Threading.Tasks.Task> BadUnrelatedTask(System.Threading.Tasks.Task owned, System.Threading.Tasks.Task other) { try { await owned; } catch(Exception e) { return other; } return owned; }
+                async System.Threading.Tasks.Task<Exception?> BadUnrelatedTaskFailure(System.Threading.Tasks.Task owned, System.Threading.Tasks.Task other) { try { await owned; } catch(Exception e) { return other.Exception; } return null; }
+                async System.Threading.Tasks.Task<System.Threading.Tasks.Task> BadTimedWaitTask(System.Threading.Tasks.Task owned) { try { await owned.WaitAsync(TimeSpan.Zero); } catch(Exception e) { return owned; } return owned; }
+                async System.Threading.Tasks.Task<System.Threading.Tasks.Task> BadMultipleAwaitTask(System.Threading.Tasks.Task owned, System.Threading.Tasks.Task other) { try { await owned; await other; } catch(Exception e) { return owned; } return owned; }
+                async System.Threading.Tasks.Task<System.Threading.Tasks.Task> BadReplacedTask(System.Threading.Tasks.Task owned) { try { await owned; owned = System.Threading.Tasks.Task.CompletedTask; } catch(Exception e) { return owned; } return owned; }
+                async System.Threading.Tasks.Task<Exception?> BadPostAwaitFailure(System.Threading.Tasks.Task owned) { try { await owned; Run(); } catch(Exception e) { return owned.Exception; } return null; }
+                async System.Threading.Tasks.Task<Exception> GoodPostAwaitFallback(System.Threading.Tasks.Task owned) { try { await owned; Run(); } catch(Exception e) { return (Exception?)owned.Exception ?? e; } return new Exception(); }
+                void BadAppendReplacement() { try { Run(); } catch(Exception e) { _ = Append(null, new Exception(e.Message)); } }
                 void BadCompletionLambda() { var done = new System.Threading.Tasks.TaskCompletionSource(); try { Run(); } catch(Exception e) { Action later = () => done.SetException(e); } }
                 void BadDispatchCaptureOnly() { try { Run(); } catch(Exception e) { _ = System.Runtime.ExceptionServices.ExceptionDispatchInfo.Capture(e); } }
                 void BadDispatchNewFailure() { try { Run(); } catch(Exception e) { System.Runtime.ExceptionServices.ExceptionDispatchInfo.Capture(new Exception(e.Message)).Throw(); } }
@@ -158,7 +220,7 @@ public sealed class SemanticPolicyRegressionTests
                 class Carrier { public Exception Failure; }
                 void BadReceiver() { var left = new Carrier(); var right = new Carrier(); try { Run(); } catch(Exception e) { left.Failure = e; throw right.Failure; } }
             }
-            """);
+            """.Replace("/* equivalent suffix */", equivalentSuffix, StringComparison.Ordinal));
         var mismatches = new List<string>();
         foreach (var clause in file.Root.DescendantNodes().OfType<CatchClauseSyntax>())
         {
@@ -169,6 +231,77 @@ public sealed class SemanticPolicyRegressionTests
         }
         if (mismatches.Count != 0)
             throw new InvalidOperationException("Exception provenance regression: " + string.Join(", ", mismatches));
+    }
+
+    [TestCase]
+    [TestCategory("Regression")]
+    public void ShutdownObserversKeepTheRegisteredCallerTask()
+    {
+        const string returned = "Task Register(Task task, bool own = false) { tasks.Add(task, own); return task; }";
+        const string direct = "foreach(var (task, own) in pending) { try { await task; } catch(Exception) when(!own) { _ = task.Exception; } catch { throw; } }";
+        const string tuple = "var errors = new List<(Task Operation, Exception Error)>(); foreach(var (task, _) in pending) { try { await task.ConfigureAwait(false); } catch(Exception error) { errors.Add((task, task.Exception ?? error)); } } foreach(var (operation, error) in errors) if(tasks[operation]) Handle(error);";
+        const string lookup = "if(tasks.TryGetValue(operation, out var ownsFailure) && ownsFailure)";
+        var cases = new (string Name, string Register, string Drain, bool Expected)[]
+        {
+            ("returned observer", returned, direct, true),
+            ("guarded caller registration", returned.Replace("tasks.Add(task, own);", "if(!task.IsCompleted) tasks.Add(task, false);"), direct, true),
+            ("returned tuple", returned, tuple, true),
+            ("lookup after removed returned task", returned + " void Release(Task task) { tasks.Remove(task); }", tuple.Replace("if(tasks[operation])", lookup), true),
+            ("guarded ownership handoff", returned + " void Handoff(Task task) { if(tasks.ContainsKey(task)) tasks[task] = false; }", tuple.Replace("if(tasks[operation])", lookup), true),
+            ("nested callback return", returned.Replace("return task;", "Action queued = () => { if(flag) return; }; return task;"), direct, true),
+            ("success-only barrier", returned + " void Barrier() { var stopped = new TaskCompletionSource(); tasks.Add(stopped.Task, false); try { RunBarrier(); } finally { stopped.TrySetResult(); tasks.Remove(stopped.Task); } } void RunBarrier() { }", tuple.Replace("if(tasks[operation])", lookup), true),
+            ("exclusive registration and throw", returned.Replace("tasks.Add(task, own);", "if(!flag) tasks.Add(task, own); if(flag) throw new Exception();"), direct, true),
+            ("index registration returns caller", returned.Replace("tasks.Add(task, own);", "tasks[task] = false;"), direct, true),
+            ("index registration loses caller", "void Register(Task task) { tasks[task] = false; }", direct, false),
+            ("alias index registration loses caller", "void Register(Task task) { var alias = tasks; alias[task] = false; }", direct, false),
+            ("alias add registration loses caller", "void Register(Task task) { var alias = tasks; alias.Add(task, false); }", direct, false),
+            ("explicit throw after registration", returned.Replace("return task;", "if(flag) throw new Exception(); return task;"), direct, false),
+            ("faultable unreturned barrier", returned + " void Barrier() { var stopped = new TaskCompletionSource(); tasks.Add(stopped.Task, false); stopped.TrySetException(new Exception()); }", direct, false),
+            ("escaped barrier", returned + " void Barrier(Action<TaskCompletionSource> leak) { var stopped = new TaskCompletionSource(); tasks.Add(stopped.Task, false); leak(stopped); stopped.TrySetResult(); }", direct, false),
+            ("unknown missing owned registration", returned + " void RegisterOwned(Task task) { tasks.Add(task, true); } void Release(Task task) { tasks.Remove(task); }", tuple.Replace("if(tasks[operation])", lookup), false),
+            ("wrong lookup key", returned, tuple.Replace("if(tasks[operation])", "if(tasks.TryGetValue(other, out var ownsFailure) && ownsFailure)"), false),
+            ("wrong lookup owner", returned, tuple.Replace("if(tasks[operation])", "if(others.TryGetValue(operation, out var ownsFailure) && ownsFailure)"), false),
+            ("wrong handoff key", returned + " void Handoff(Task task) { if(tasks.ContainsKey(other)) tasks[task] = false; }", tuple.Replace("if(tasks[operation])", lookup), false),
+            ("locked registration and snapshot", returned.Replace("tasks.Add(task, own);", "lock(tasks) { if(!flag) tasks.Add(task, own); }"),
+                "KeyValuePair<Task,bool>[] saved; lock(tasks) saved = tasks.ToArray(); " + tuple.Replace("pending", "saved"), true),
+            ("replaced task completion owner", "Task Register() { var done = new TaskCompletionSource(); tasks.Add(done.Task, false); done = new TaskCompletionSource(); return done.Task; }", direct, false),
+            ("dictionary escapes to unknown writer", returned + " void Escape(Action<Dictionary<Task,bool>> mutate) { mutate(tasks); }", tuple.Replace("if(tasks[operation])", lookup), false),
+            ("different returned task", returned.Replace("return task;", "return Task.CompletedTask;"), direct, false),
+            ("different observed task", returned, direct.Replace("_ = task.Exception", "_ = other.Exception"), false),
+            ("unrelated flag", returned, direct.Replace("when(!own)", "when(!flag)"), false),
+            ("missing owner guard", returned, direct.Replace(" when(!own)", ""), false),
+            ("timed wait", returned, direct.Replace("await task;", "await task.WaitAsync(TimeSpan.Zero);"), false),
+            ("different awaited task", returned, direct.Replace("await task;", "await other;").Replace("_ = task.Exception", "_ = other.Exception"), false),
+            ("different tuple task", returned, tuple.Replace("errors.Add((task,", "errors.Add((other,"), false),
+            ("replacement tuple failure", returned, tuple.Replace("task.Exception ?? error", "new Exception()"), false),
+            ("missing owned delivery", returned, tuple.Replace("Handle(error);", "{ }"), false),
+            ("replacement owned failure", returned, tuple.Replace("Handle(error);", "Handle(new Exception());"), false),
+            ("uncovered owned branch", returned, tuple.Replace("if(tasks[operation])", "if(tasks[operation] && flag)"), false),
+        };
+        // Compile the independent ownership samples together; each still has its own registry and method symbols.
+        var file = Fixture(string.Join(Environment.NewLine, cases.Select((item, index) => $$"""
+            namespace Ownership{{index}} {
+                using System.Linq;
+                using System.Threading.Tasks;
+                class Sample {
+                    readonly Dictionary<Task, bool> tasks = [];
+                    readonly Task other = Task.CompletedTask;
+                    readonly Dictionary<Task, bool> others = [];
+                    bool flag;
+                    static void Handle([FailureHandler("ENG-ARCH")] Exception error) { }
+                    {{item.Register}}
+                    async Task Drain() { var pending = tasks.ToArray(); {{item.Drain}} }
+                }
+            }
+            """)));
+        var samples = file.Root.DescendantNodes().OfType<NamespaceDeclarationSyntax>()
+            .Where(space => space.Name.ToString().StartsWith("Ownership", StringComparison.Ordinal)).ToArray();
+        for (var index = 0; index < cases.Length; index++)
+        {
+            var clause = samples[index].DescendantNodes().OfType<CatchClauseSyntax>().First();
+            if (FailureFlow.Delivered(file, clause, new HashSet<string>(StringComparer.Ordinal) { "ENG-ARCH" }) != cases[index].Expected)
+                throw new InvalidOperationException("Task ownership regression: " + cases[index].Name);
+        }
     }
 
     [TestCase]

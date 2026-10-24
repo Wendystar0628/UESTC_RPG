@@ -59,7 +59,7 @@ public sealed partial class VegetationRuntime : Node, IMapAware, IViewContentRea
         _rig = KernelServices.Get<ICameraRig>();
         _world = KernelServices.Get<IWorldState>();
         SetShadowReach(KernelServices.Get<IQualityService>().Effective);
-        _world.InstanceChanged += OnWorldInstanceChanged;
+        _world.InstanceAdvancing += OnWorldInstanceChanged;
     }
 
     public void ApplyQuality(QualityView view, in QualityChange change) => SetShadowReach(view);
@@ -74,7 +74,7 @@ public sealed partial class VegetationRuntime : Node, IMapAware, IViewContentRea
 
     public override void _ExitTree()
     {
-        if (_world is not null) _world.InstanceChanged -= OnWorldInstanceChanged;
+        if (_world is not null) _world.InstanceAdvancing -= OnWorldInstanceChanged;
         FreeAll();
     }
 

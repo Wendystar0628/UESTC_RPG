@@ -13,6 +13,55 @@ namespace Campus.Kernel.Save.Tests;
 public sealed class SettledObserverSaveTests
 {
     [TestCase, TestCategory(TestReason.Regression)]
+    public async Task ShutdownWaitsForAClaimedFrameAfterItLeavesTheSchedulingLock()
+    {
+        await using var save = new SaveService();
+        using var release = new ManualResetEventSlim();
+        var entered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var frame = save.OnFrame(() => { entered.TrySetResult(); release.Wait(); return true; });
+        var ticking = Task.Run(() => save.Tick(0));
+        Task? closing = null;
+        try
+        {
+            await entered.Task.WaitAsync(TimeSpan.FromSeconds(5));
+            closing = Task.Run(async () => await save.DisposeAsync());
+            AssertThat(SpinWait.SpinUntil(() => save.Stopping, TimeSpan.FromSeconds(5)) && !closing.IsCompleted && !frame.IsCompleted).IsTrue();
+        }
+        finally { release.Set(); }
+        await ticking;
+        AssertThat(await frame).IsTrue();
+        await closing!.WaitAsync(TimeSpan.FromSeconds(5));
+    }
+
+    [TestCase, TestCategory(TestReason.Regression)]
+    public async Task WorldObserversRunOutsideTheFrameLockAndCannotFailTheLoad()
+    {
+        await using var fixture = new SaveLifecycleFixture();
+        var world = Campus.Tests.World.WorldTestKit.CreateWorld(new TestWeatherProcess(), initialize: false);
+        var original = new IOException();
+        var registeredOutsideLock = false;
+        var observed = 0;
+        Task<bool>? queued = null;
+        await fixture.Start();
+        fixture.World.InstanceAdvancing += _ =>
+        {
+            world.Freeze(fixture.World.Clock, fixture.World.SeasonTarget, WorldTime.InitialAnimTime);
+            world.CompleteRestore();
+        };
+        world.InstanceChanged += _ => registeredOutsideLock = Task.Run(() => { queued = fixture.Save.OnFrame(() => true); })
+            .Wait(TimeSpan.FromSeconds(5));
+        world.InstanceChanged += _ => throw original;
+        world.InstanceChanged += _ => observed++;
+        var result = await fixture.Pump(fixture.Save.NewGame(SaveSlots.Auto[0], 1));
+        AssertThat(registeredOutsideLock && queued is not null && observed == 1 && world.Instance > 0).IsTrue();
+        AssertThat(result.Status == LoadStatus.Loaded && !fixture.World.RestoreFaulted && fixture.Diagnostics.Errors.Count == 0).IsTrue();
+        AssertThat(await fixture.Pump(queued!)).IsTrue();
+        Exception? retained = null;
+        try { world.Dispose(); } catch (Exception error) { retained = error; }
+        AssertThat(ReferenceEquals(retained, original)).IsTrue();
+    }
+
+    [TestCase, TestCategory(TestReason.Regression)]
     public async Task CallerOwnedLoadFailureDoesNotFailShutdownAgain()
     {
         await using var fixture = new SaveLifecycleFixture();

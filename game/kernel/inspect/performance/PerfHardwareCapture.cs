@@ -130,9 +130,6 @@ internal sealed class PerfHardwareCapture
             _facts = new(_sessionId, _adapter.Luid, renderDevice?.Identity.Uuid,
                 NvmlFact(renderDevice, batch.Status, performanceState: true), NvmlFact(renderDevice, batch.Status, performanceState: false),
                 sampling.GpuEngines.Fact, sampling.Cpu.Fact);
-            bool factsAccepted = _slow.TryRow(FactsRow(sampling, _facts, renderDevice?.Identity));
-            _slowRecorded |= factsAccepted && (_facts.OtherProcessesCpuUtilFraction.Value.HasValue ||
-                _facts.OtherProcessesGpuUtilFraction.Value.HasValue);
             _status = batch.Status;
             ObserveStatus("session", batch.Status);
             if (batch.Devices.Count == 0)
@@ -147,7 +144,13 @@ internal sealed class PerfHardwareCapture
                 _fast.TryRow(new("hwfast", null, batch.QueryEndMs, new Dictionary<string, object?>(values)
                 { ["capability"] = batch.Status.Capability }));
             }
-            foreach (var device in batch.Devices) PublishDevice(batch, device, renderDevice?.Identity.EnumerationIndex == device.Identity.EnumerationIndex);
+            // Reads are sequential, but a missing handle has no slow query and uses the batch end.
+            // Keep equal-time devices stable and publish the completed batch facts last.
+            foreach (var device in batch.Devices.OrderBy(device => device.Slow?.QueryEndMs ?? batch.QueryEndMs))
+                PublishDevice(batch, device, renderDevice?.Identity.EnumerationIndex == device.Identity.EnumerationIndex);
+            bool factsAccepted = _slow.TryRow(FactsRow(sampling, _facts, renderDevice?.Identity));
+            _slowRecorded |= factsAccepted && (_facts.OtherProcessesCpuUtilFraction.Value.HasValue ||
+                _facts.OtherProcessesGpuUtilFraction.Value.HasValue);
             _slowState = Capability(batch.Devices.SelectMany(device => DeviceStatuses(device))
                 .Where(pair => !pair.Key.StartsWith("fast.", StringComparison.Ordinal) &&
                     pair.Key is not ("handle" or "gpuUuid" or "pciBusId")).Select(pair => pair.Value));
@@ -176,8 +179,7 @@ internal sealed class PerfHardwareCapture
         foreach (var fast in device.Fast)
         {
             ObserveStatus($"{identity.EnumerationIndex}.{MetricName(fast.Metric)}", fast.Status);
-            foreach (var fastRow in FastRows(identity, fast))
-                if (_fast.TryRow(fastRow) && fastRow.Values["value"] is not null) _fastRecorded = true;
+            if (_fast.TryFastBatch(identity, fast) && fast.Samples.Count != 0) _fastRecorded = true;
         }
     }
 
@@ -191,9 +193,10 @@ internal sealed class PerfHardwareCapture
             Value = value,
             Capability = value.HasValue ? PerfFactCapability.Supported : status.Capability == "unsupported"
                 ? PerfFactCapability.Unsupported : PerfFactCapability.Unavailable,
-            Reason = device is null ? "Actual rendering adapter has no unique NVML BDF/hardware-ID match" : status.Reason,
+            Reason = value.HasValue ? null : device is null && session.Capability == "supported"
+                ? "Actual rendering adapter has no unique NVML BDF/hardware-ID match" : status.Reason,
             Source = performanceState ? "NVML.nvmlDeviceGetPerformanceState" : "NVML.nvmlDeviceGetUtilizationRates",
-            NativeCode = device is null ? null : status.NativeCode, QueryStartMs = slow?.QueryStartMs, QueryEndMs = slow?.QueryEndMs
+            NativeCode = status.NativeCode, QueryStartMs = slow?.QueryStartMs, QueryEndMs = slow?.QueryEndMs
             // NVML does not expose the actual utilization averaging window; it must stay null.
         };
     }
@@ -212,7 +215,7 @@ internal sealed class PerfHardwareCapture
             ["cpuCountersJson"] = new { current = sampling.Cpu.Current, previous = sampling.Cpu.Previous,
                 sampling.Cpu.SystemFraction, sampling.Cpu.ProcessFraction },
             ["gpuEnginesJson"] = new { sampling.GpuEngines.CollectTimestamp100ns, sampling.GpuEngines.PreviousCollectMs, sampling.GpuEngines.RawQueryCode,
-                sampling.GpuEngines.Engines },
+                sampling.GpuEngines.Recording },
             ["renderAdapterJson"] = AdapterValue(sampling.Adapter)
         });
 

@@ -59,7 +59,7 @@ public partial class ObserverCamera : Node, ICameraRig, IObserverState, IViewCon
         _rules = KernelServices.Get<IRuleset>();
         _world = KernelServices.Get<IWorldState>();
         _flight.Initialize(KernelServices.Get<ITerrainPreparation>(), AppBoot.Options.Automated);
-        _world.InstanceChanged += OnWorldInstanceChanged;
+        _world.InstanceAdvancing += OnWorldInstanceChanged;
         if (KernelServices.Services.Query<IWalkController>(RegistrationKind.Service).Any(entry => !entry.IsStub))
             _walk = KernelServices.Get<IWalkController>();
         _transit = KernelServices.Get<ITransitDriver>();
@@ -67,7 +67,7 @@ public partial class ObserverCamera : Node, ICameraRig, IObserverState, IViewCon
         _controls.Initialize(settings, AppBoot.Options.Automated);
         _presentation.Bind(settings?.Section("ui"));
         Input.UseAccumulatedInput = false;
-        _flow.Changed += OnFlowChanged;
+        _flow.StateAdvancing += OnFlowChanged;
         _listener = new ObserverListener { Observer = this };
         AddChild(_listener);
         ApplyWindowFocus(DisplayServer.WindowIsFocused());
@@ -77,8 +77,8 @@ public partial class ObserverCamera : Node, ICameraRig, IObserverState, IViewCon
     {
         if (_world is null) return;
         ApplyWindowFocus(DisplayServer.WindowIsFocused());
-        _world.InstanceChanged += OnWorldInstanceChanged;
-        if (_flow is not null) _flow.Changed += OnFlowChanged;
+        _world.InstanceAdvancing += OnWorldInstanceChanged;
+        if (_flow is not null) _flow.StateAdvancing += OnFlowChanged;
         _worldResetPending = true;
     }
 
@@ -86,8 +86,8 @@ public partial class ObserverCamera : Node, ICameraRig, IObserverState, IViewCon
     {
         _modeRequestsStopped = true;
         CancelWalkEntry();
-        if (_flow is not null) _flow.Changed -= OnFlowChanged;
-        if (_world is not null) _world.InstanceChanged -= OnWorldInstanceChanged;
+        if (_flow is not null) _flow.StateAdvancing -= OnFlowChanged;
+        if (_world is not null) _world.InstanceAdvancing -= OnWorldInstanceChanged;
         ClearInputMotion();
         _controls.SetFocused(false);
     }

@@ -53,14 +53,14 @@ public partial class PrecipNode : Node, IQualityAware, IMapAware, IWeatherRender
     public override void _EnterTree()
     {
         ProcessPriority = FramePriority.Motion;
-        if (_world is not null) _world.InstanceChanged += OnWorldInstanceChanged;
+        if (_world is not null) _world.InstanceAdvancing += OnWorldInstanceChanged;
         _model.Reset();
     }
 
     public override void _Ready()
     {
         _world = KernelServices.Get<IWorldState>();
-        _world.InstanceChanged += OnWorldInstanceChanged;
+        _world.InstanceAdvancing += OnWorldInstanceChanged;
         _wind = KernelServices.Get<IWindField>();
         _camera = KernelServices.Get<ICameraRig>();
         _material = KernelServices.Get<IShaderMaterialSource>().Create(ShaderId.Precip);
@@ -73,7 +73,7 @@ public partial class PrecipNode : Node, IQualityAware, IMapAware, IWeatherRender
 
     public override void _ExitTree()
     {
-        if (_world is not null) _world.InstanceChanged -= OnWorldInstanceChanged;
+        if (_world is not null) _world.InstanceAdvancing -= OnWorldInstanceChanged;
         _pool?.Free();
         _pool = null;
     }

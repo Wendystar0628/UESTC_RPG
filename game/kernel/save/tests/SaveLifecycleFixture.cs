@@ -118,6 +118,7 @@ internal sealed class SaveLifecycleFixture : IDisposable, IAsyncDisposable
         private long _serial;
         public long Instance { get; private set; }
         public event Action<long>? InstanceChanged;
+        public event Action<long>? InstanceAdvancing;
         public long Rev => 1; public double WorldHours => Hours; public double Clock => Hours % 24;
         public double SeasonPos => 2; public Season SeasonTarget => Season.Autumn; public float SeasonAtmosphere => 0; public Body Sun => default; public Body Moon => default;
         public float SunAltDegAt(double clock, Season season) => Sun.AltDeg;
@@ -137,9 +138,10 @@ internal sealed class SaveLifecycleFixture : IDisposable, IAsyncDisposable
         public void CompleteRestore()
         {
             AssertThat(_pending).OverrideFailureMessage("Commit without a fresh restore.").IsTrue(); _pending = false; RestoreFaulted = false; Instance = ++_serial; log.Add("instance");
+            InstanceAdvancing?.Invoke(Instance);
             InstanceChanged?.Invoke(Instance);
         }
-        public void EndInstance() { _pending = false; Instance = 0; InstanceChanged?.Invoke(Instance); }
+        public void EndInstance() { _pending = false; Instance = 0; InstanceAdvancing?.Invoke(Instance); InstanceChanged?.Invoke(Instance); }
         public void Tick() { if (!RestoreFaulted) AssertThat(!_pending).OverrideFailureMessage("An uncommitted World phase escaped into the next frame.").IsTrue(); }
         public WorldSaveV1 Capture(in CaptureContext context)
         {

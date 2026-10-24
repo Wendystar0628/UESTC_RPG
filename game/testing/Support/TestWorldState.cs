@@ -15,6 +15,7 @@ internal sealed class TestWorldState(IWeatherProcess weather, IRuleset ruleset) 
     public long Rev { get; private set; } = 1;
     public long Instance { get; private set; }
     public event Action<long>? InstanceChanged;
+    public event Action<long>? InstanceAdvancing;
     public event Action? WalkEntryRefused { add { } remove { } }
     public double WorldHours { get; private set; } = 17.5;
     public double Clock => ((WorldHours + _clockOffset) % 24 + 24) % 24;
@@ -260,6 +261,7 @@ internal sealed class TestWorldState(IWeatherProcess weather, IRuleset ruleset) 
         // Test fixture celestial readouts are already settled; leave restored weather untouched.
         Instance = checked(++_instanceSerial);
         Rev++;
+        InstanceAdvancing?.Invoke(Instance);
         InstanceChanged?.Invoke(Instance);
     }
 
@@ -269,6 +271,7 @@ internal sealed class TestWorldState(IWeatherProcess weather, IRuleset ruleset) 
         if (Instance == 0) return;
         Instance = 0;
         Rev++;
+        InstanceAdvancing?.Invoke(Instance);
         InstanceChanged?.Invoke(Instance);
     }
 

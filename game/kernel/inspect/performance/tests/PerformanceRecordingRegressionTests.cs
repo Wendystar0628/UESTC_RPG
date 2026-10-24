@@ -22,6 +22,37 @@ namespace Campus.Tests;
 public sealed class PerformanceRecordingRegressionTests
 {
     [TestCase, TestCategory(TestReason.Regression)]
+    public async Task PreCanceledAdapterCaptureCompletesWithoutAccessingTheRenderer()
+    {
+        using var exit = new CancellationTokenSource();
+        exit.Cancel();
+        var capture = RenderAdapterIdentity.CaptureAsync(exit.Token);
+        if (!capture.IsCanceled)
+            throw new InvalidOperationException("An already stopped owner queued rendering work.");
+        try { await capture; }
+        catch (OperationCanceledException error) when (error.CancellationToken == exit.Token) { return; }
+        throw new InvalidOperationException("The adapter capture did not retain its owner's cancellation.");
+    }
+
+    [TestCase, TestCategory(TestReason.Regression), TestCategory("NativeRender"), RequireGodotRuntime]
+    public async Task ActualAdapterCaptureAndOwnerExitBothComplete()
+    {
+        using var exit = new CancellationTokenSource();
+        var actual = await RenderAdapterIdentity.CaptureAsync(exit.Token);
+        if (actual.Status.Capability != "supported" || actual.Luid is null)
+            throw new InvalidOperationException("The fixture did not capture the actual D3D12 rendering adapter.");
+        var stopping = RenderAdapterIdentity.CaptureAsync(exit.Token);
+        exit.Cancel();
+        try
+        {
+            var completed = await stopping;
+            if (completed.Luid != actual.Luid || completed.Status.Error is not null)
+                throw new InvalidOperationException("The started native capture lost its detached identity or failed while draining.");
+        }
+        catch (OperationCanceledException error) when (error.CancellationToken == exit.Token) { }
+    }
+
+    [TestCase, TestCategory(TestReason.Regression)]
     public void FirstPublishedFrameAlreadyHasRoomForEveryRegisteredViewport()
     {
         var ring = new PerfFrameRing(capacity: 1);

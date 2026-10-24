@@ -14,21 +14,24 @@ namespace Campus.Tests;
 public sealed class AppLoadingFlowTests
 {
     [TestCase, TestCategory(TestReason.Regression)]
-    public async Task ThrowingMilestoneObserverPreservesEntryLoadingAndLaterObservers()
+    public async Task ThrowingFlowObserversPreserveEntryLoadingAndLaterObservers()
     {
         var rig = new FlowTestRig(); var saves = new FullSave(rig);
         using var flow = rig.CreateFlow(saves, Maps(), new TestAppExit(false));
         var original = new IOException("milestone observation failed");
         List<string> phases = [];
+        var playingObservedAfterInput = false;
         flow.PhaseReached += _ => throw original;
         flow.PhaseReached += phases.Add;
+        flow.Changed += (_, _) => throw original;
+        flow.Changed += (_, next) => { if (next == AppState.Playing) playingObservedAfterInput = !rig.Camera.InputLocked; };
         await Title(flow, rig);
         if (!phases.Contains("title-ready") || flow.State != AppState.Title)
             throw new InvalidOperationException("Title observation blocked later observers or title readiness.");
         var result = await flow.Enter(new(EnterKind.NewGame, new("s1")));
         if (result != EnterResult.Entered || flow.State != AppState.Playing || flow.Failure is not null ||
             !phases.Contains("new-game-enter") || !phases.Contains("loading-complete") ||
-            rig.Loading.Active || rig.Camera.InputLocked || saves.Saves != 1)
+            rig.Loading.Active || rig.Camera.InputLocked || saves.Saves != 1 || !playingObservedAfterInput)
             throw new InvalidOperationException("Milestone observation changed entry or loading completion.");
         Exception? retained = null;
         try { flow.Dispose(); } catch (Exception error) { retained = error; }

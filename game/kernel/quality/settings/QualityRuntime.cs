@@ -36,7 +36,7 @@ public partial class QualityRuntime : Node, IQualityAware, IQualityRuntime
         _service = RuntimeKernel.Get<IQualityFrame>();
         _screen = RuntimeKernel.Get<IAppLoadingPresentation>();
         _world = RuntimeKernel.Get<IWorldState>();
-        _world.InstanceChanged += OnWorldInstanceChanged;
+        _world.InstanceAdvancing += OnWorldInstanceChanged;
         _closed = false;
         _qualityInitialized = false;
         _frameLimitInitialized = false;
@@ -50,7 +50,7 @@ public partial class QualityRuntime : Node, IQualityAware, IQualityRuntime
         _closed = true;
         if (_window is not null) _window.SizeChanged -= UpdateFrameLimit;
         _window = null;
-        if (_world is not null) _world.InstanceChanged -= OnWorldInstanceChanged;
+        if (_world is not null) _world.InstanceAdvancing -= OnWorldInstanceChanged;
         _service?.Unbind(this);
         foreach (var frame in _frames) frame.TrySetCanceled();
         _frames.Clear();

@@ -32,6 +32,7 @@ internal sealed class TestAppFlow : IAppFlow
     public long Rev { get; private set; }
     public string? LastError => null;
     public event Action<AppState, AppState>? Changed;
+    public event Action<AppState, AppState>? StateAdvancing;
     public event Action<string>? PhaseReached { add { } remove { } }
     public event Action<EnterCommandEvent>? EnterCommand { add { } remove { } }
     public int Observers => Changed?.GetInvocationList().Length ?? 0;
@@ -40,6 +41,7 @@ internal sealed class TestAppFlow : IAppFlow
         var previous = State;
         State = state;
         Rev++;
+        StateAdvancing?.Invoke(previous, state);
         Changed?.Invoke(previous, state);
     }
     public Task<EnterResult> Enter(EnterRequest request) => throw new NotSupportedException();

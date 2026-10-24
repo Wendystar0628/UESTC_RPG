@@ -29,6 +29,16 @@ internal sealed class CommandNotification
         }
     }
 
+    internal void Publish<T1, T2>(Action<T1, T2>? observers, T1 first, T2 second)
+    {
+        if (observers is null) return;
+        foreach (Action<T1, T2> observer in observers.GetInvocationList())
+        {
+            try { observer(first, second); }
+            catch (Exception error) { Retain(error); }
+        }
+    }
+
     private void Retain([FailureHandler("ENG-ARCH")] Exception error)
     {
         lock (_gate) _failure = RetainedFailure.Append(_failure, error);

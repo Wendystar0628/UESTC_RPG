@@ -44,7 +44,7 @@ public partial class AudioRuntime : Node, IAudioService, IAudioVoiceService, IMa
     public override void _EnterTree()
     {
         _enteredTree = true;
-        if (_world is not null) _world.InstanceChanged += OnWorldInstanceChanged;
+        if (_world is not null) _world.InstanceAdvancing += OnWorldInstanceChanged;
         _worldReset = true;
     }
 
@@ -100,7 +100,7 @@ public partial class AudioRuntime : Node, IAudioService, IAudioVoiceService, IMa
         AddChild(_ui);
         if (_enteredTree) _ui.Play();
         _world = RuntimeKernel.Get<IWorldState>();
-        if (_enteredTree) _world.InstanceChanged += OnWorldInstanceChanged;
+        if (_enteredTree) _world.InstanceAdvancing += OnWorldInstanceChanged;
         _loading = RuntimeKernel.Get<IAppLoadingPresentation>();
         _app = RuntimeKernel.Get<IAppFlow>();
         _surfaces = RuntimeKernel.Get<IUiSurfaceState>();
@@ -240,7 +240,7 @@ public partial class AudioRuntime : Node, IAudioService, IAudioVoiceService, IMa
 
     public override void _ExitTree()
     {
-        if (_world is not null) _world.InstanceChanged -= OnWorldInstanceChanged;
+        if (_world is not null) _world.InstanceAdvancing -= OnWorldInstanceChanged;
         _store?.Flush();
         _enteredTree = false;
     }

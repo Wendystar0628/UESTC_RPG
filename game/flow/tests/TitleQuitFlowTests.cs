@@ -7,6 +7,22 @@ namespace Campus.Tests;
 [TestSuite]
 public sealed class TitleQuitFlowTests
 {
+    [TestCase, TestCategory(TestReason.Regression)]
+    public async Task RequiredEntryParticipantFailureRemainsTheEntryFailure()
+    {
+        var rig = new FlowTestRig();
+        using var flow = rig.CreateFlow(new TestSaveService(), new TestMapService(), new TestAppExit(false));
+        await flow.PrepareBoot(new(ShowTitle: false));
+        await flow.PrepareBackground(Task.CompletedTask, Task.CompletedTask);
+        var original = new IOException();
+        flow.StateAdvancing += (_, next) => { if (next == AppState.Entering) throw original; };
+        Exception? actual = null;
+        try { await flow.EnterDirect(); } catch (Exception error) { actual = error; }
+        if (!ReferenceEquals(actual, original) || !ReferenceEquals(flow.Failure, original) ||
+            flow.State != AppState.Entering || !rig.Camera.InputLocked)
+            throw new InvalidOperationException("A required state participant was swallowed or lost its input ownership.");
+    }
+
     [TestCase]
     [TestCategory(TestReason.Regression)]
     public async Task TitleQuitWaitsForTheExistingWriterBeforeRequestingResourceShutdown()

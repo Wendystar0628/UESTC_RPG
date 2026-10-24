@@ -303,6 +303,12 @@ internal sealed class PerfRecordingSession
                     WriteGap(outputs["events"], producer.Stream, message!.Gap);
                     if (message.Event is { } item) WriteEvent(outputs["events"], item.Name, item.Frame, item.Time, item.Payload, producer.Source);
                     if (message.Row is { } row) WriteValue(outputs[row.Stream], row, message.Sequence);
+                    if (message.FastBatch is { } batch)
+                    {
+                        long sequence = message.Sequence;
+                        foreach (var fastRow in PerfHardwareCapture.FastRows(batch.Identity, batch.Values))
+                            WriteValue(outputs[fastRow.Stream], fastRow, sequence++);
+                    }
                 }
             if (_hardware is { } hardware && hardware.Revision != _hardwareRevision)
             {

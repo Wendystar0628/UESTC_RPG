@@ -22,20 +22,25 @@ internal sealed record GpuEngineRow
     public uint? RawMultiCount { get; init; }
     public ulong? AverageStartTimestamp100ns { get; init; }
     public ulong? AverageEndTimestamp100ns { get; init; }
-    public long? PreviousRawFirstValue { get; init; }
-    public long? PreviousRawSecondValue { get; init; }
 }
 internal sealed record GpuEngineSamplingRead(PerfSamplingFact Fact, long? CollectTimestamp100ns,
-    double? PreviousCollectMs, IReadOnlyList<GpuEngineRow> Engines)
+    double? PreviousCollectMs, GpuEngineRecording Recording)
 {
     public int? RawQueryCode { get; init; }
 }
+
+internal sealed record GpuEngineTypeSummary(string EngineType, double? OtherProcessesUtilFraction,
+    int InstanceCount, int InvalidInstanceCount);
+internal sealed record GpuProcessSummary(uint ProcessId, double? UtilFraction, IReadOnlyList<GpuEngineRow> Engines);
+internal sealed record GpuEngineRecording(string? AdapterLuid, int InstanceCount, int InvalidInstanceCount,
+    IReadOnlyList<GpuEngineTypeSummary> EngineTypes, IReadOnlyList<GpuProcessSummary> TopProcesses);
 
 /// <summary>Godot has no cross-process GPU counters. PDH GPU Engine is the single process authority;
 /// the recording worker owns this query and collects it synchronously (no PDH timer thread).</summary>
 internal sealed class WindowsGpuEngineSampler : IDisposable
 {
     internal const string Source = "Windows.PDH.GPU Engine";
+    internal const int TopProcessCount = 3;
     private const uint MoreData = 0x800007D2, FormatDoubleNoCap = 0x00000200 | 0x00008000;
     private static readonly Regex InstancePattern = new(
         @"^pid_(\d+)_luid_0x([0-9a-fA-F]+)_0x([0-9a-fA-F]+)_phys_(\d+)_eng_(\d+)_engtype_(.+)$",
@@ -65,11 +70,12 @@ internal sealed class WindowsGpuEngineSampler : IDisposable
         double collectMs = clock();
         IReadOnlyList<GpuEngineRow> rows = [];
         uint? rawStatus = null;
-        if (status == 0) rows = ReadRows(out status, out rawStatus);
+        if (status == 0) rows = ReadRows(luid, out status, out rawStatus);
         double end = clock();
         var fact = Aggregate(rows, luid, gameProcessId, status, start, end, _previousCollectMs, collectMs);
         var result = new GpuEngineSamplingRead(fact, collected ? timestamp : null,
-            _previousCollectMs, rows) { RawQueryCode = rawStatus.HasValue ? unchecked((int)rawStatus.Value) : null };
+            _previousCollectMs, ForRecording(rows, luid, gameProcessId))
+            { RawQueryCode = rawStatus.HasValue ? unchecked((int)rawStatus.Value) : null };
         _previousCollectMs = status == 0 ? collectMs : null;
         if (status != 0) _previousRaw.Clear();
         return result;
@@ -83,35 +89,61 @@ internal sealed class WindowsGpuEngineSampler : IDisposable
         if (status != 0) reason = "PDH GPU Engine query failed";
         else if (luid is null) reason = "Actual rendering adapter LUID is unknown";
         else if (previousCollectMs is null) reason = "Initial sample has no GPU Engine counter interval";
-        else if (rows.Any(row => row.AdapterLuid is null || row.ProcessId is null))
-            reason = "GPU Engine instance identity could not be parsed";
         else
         {
             var matching = rows.Where(row => row.AdapterLuid == luid).ToArray();
             if (matching.Length == 0) reason = "No GPU Engine instances for the actual rendering adapter";
+            else if (matching.Any(row => row.ProcessId is null || row.PhysicalAdapter is null || row.Engine is null || row.EngineType is null))
+                reason = "GPU Engine instance identity could not be parsed";
             else if (matching.Any(row => row.CStatus > 1 || row.UtilFraction is not >= 0))
                 reason = "Rendering adapter GPU Engine counter has no valid interval";
             else
             {
                 // Same engine is shared by PIDs; summing engines would double-count parallel execution.
-                var engines = matching.Where(row => row.ProcessId != gameProcessId)
-                    .GroupBy(row => (row.PhysicalAdapter, row.Engine))
-                    .Select(engine => engine.Sum(row => row.UtilFraction!.Value)).ToArray();
-                value = engines.Length == 0 ? 0 : engines.Max();
-                if (!double.IsFinite(value.Value) || value > 1)
-                { value = null; reason = "GPU Engine aggregate is outside the physical fraction range"; }
+                value = BusiestEngine(matching.Where(row => row.ProcessId != gameProcessId).ToArray());
+                if (value is null) reason = "GPU Engine aggregate is outside the physical fraction range";
             }
         }
         return new()
         {
             Value = value, Capability = value.HasValue ? PerfFactCapability.Supported : PerfFactCapability.Unavailable,
-            Reason = reason ?? "PDH raw averaging endpoints are FILETIME; exact process-monotonic mapping is unavailable",
+            Reason = reason,
             Source = Source, NativeCode = unchecked((int)status), QueryStartMs = start, QueryEndMs = end
             // Raw counter timestamps preserve actual per-instance average windows below; collection latency is not that window.
         };
     }
 
-    private IReadOnlyList<GpuEngineRow> ReadRows(out uint status, out uint? rawStatus)
+    internal static GpuEngineRecording ForRecording(IReadOnlyList<GpuEngineRow> rows, string? luid,
+        uint gameProcessId)
+    {
+        var matching = rows.Where(row => luid is not null && row.AdapterLuid == luid && row.ProcessId != gameProcessId).ToArray();
+        var types = matching.Where(row => row.EngineType is not null)
+            .GroupBy(row => row.EngineType!, StringComparer.Ordinal).OrderBy(group => group.Key, StringComparer.Ordinal)
+            .Select(group => new GpuEngineTypeSummary(group.Key, BusiestEngine(group), group.Count(),
+                group.Count(row => !Valid(row)))).ToArray();
+        var processes = matching.Where(row => row.ProcessId is not null).GroupBy(row => row.ProcessId!.Value)
+            .Select(group => new { ProcessId = group.Key, UtilFraction = BusiestEngine(group), Engines = group })
+            .OrderByDescending(process => process.UtilFraction).ThenBy(process => process.ProcessId)
+            .Take(TopProcessCount)
+            .Select(process => new GpuProcessSummary(process.ProcessId, process.UtilFraction,
+                process.Engines.OrderBy(row => row.PhysicalAdapter).ThenBy(row => row.Engine)
+                    .ThenBy(row => row.Instance, StringComparer.Ordinal).ToArray())).ToArray();
+        return new(luid, matching.Length, matching.Count(row => !Valid(row)), types, processes);
+    }
+
+    private static bool Valid(GpuEngineRow row) => row.ProcessId.HasValue && row.PhysicalAdapter.HasValue &&
+        row.Engine.HasValue && row.EngineType is not null && row.CStatus <= 1 &&
+        row.UtilFraction is { } fraction && fraction >= 0 && double.IsFinite(fraction);
+
+    private static double? BusiestEngine(IEnumerable<GpuEngineRow> rows)
+    {
+        if (rows.Any(row => !Valid(row))) return null;
+        double value = rows.GroupBy(row => (row.PhysicalAdapter, row.Engine))
+            .Select(engine => engine.Sum(row => row.UtilFraction!.Value)).DefaultIfEmpty(0).Max();
+        return double.IsFinite(value) && value <= 1 ? value : null;
+    }
+
+    private IReadOnlyList<GpuEngineRow> ReadRows(string? luid, out uint status, out uint? rawStatus)
     {
         rawStatus = null;
         uint size = 0, count = 0;
@@ -122,7 +154,8 @@ internal sealed class WindowsGpuEngineSampler : IDisposable
         {
             status = PdhGetFormattedCounterArrayW(_counter, FormatDoubleNoCap, ref size, out count, buffer);
             if (status != 0) return [];
-            var raw = ReadRawRows(out uint rawCode);
+            string? prefix = luid is null ? null : "_luid_0x" + luid.Replace(":", "_0x", StringComparison.Ordinal) + "_";
+            var raw = ReadRawRows(prefix, out uint rawCode);
             rawStatus = rawCode;
             var rows = new List<GpuEngineRow>();
             int stride = Marshal.SizeOf<FormattedItem>();
@@ -130,14 +163,15 @@ internal sealed class WindowsGpuEngineSampler : IDisposable
             {
                 var item = Marshal.PtrToStructure<FormattedItem>(IntPtr.Add(buffer, checked(index * stride)));
                 string name = Marshal.PtrToStringUni(item.Name) ?? "";
+                if (!MatchesAdapter(name, prefix)) continue;
                 RawValue? counter = raw.TryGetValue(name, out var found) ? found : null;
                 var row = Parse(name, item.Value.Status,
-                    item.Value.Status <= 1 && double.IsFinite(item.Value.Value) ? item.Value.Value / 100 : null, counter);
+                    item.Value.Status <= 1 && double.IsFinite(item.Value.Value) ? item.Value.Value / 100 : null, counter)
+                    with { AdapterLuid = luid };
                 if (counter is { Status: <= 1 } current && _previousRaw.TryGetValue(name, out var previous) && previous.Status <= 1 &&
                     current.Timestamp.Value > previous.Timestamp.Value)
                     row = row with { AverageStartTimestamp100ns = previous.Timestamp.Value,
-                        AverageEndTimestamp100ns = current.Timestamp.Value, PreviousRawFirstValue = previous.First,
-                        PreviousRawSecondValue = previous.Second };
+                        AverageEndTimestamp100ns = current.Timestamp.Value };
                 rows.Add(row);
             }
             _previousRaw = raw;
@@ -146,7 +180,7 @@ internal sealed class WindowsGpuEngineSampler : IDisposable
         finally { Marshal.FreeHGlobal(buffer); }
     }
 
-    private Dictionary<string, RawValue> ReadRawRows(out uint status)
+    private Dictionary<string, RawValue> ReadRawRows(string? prefix, out uint status)
     {
         var rows = new Dictionary<string, RawValue>(StringComparer.Ordinal);
         uint size = 0;
@@ -162,12 +196,15 @@ internal sealed class WindowsGpuEngineSampler : IDisposable
             {
                 var item = Marshal.PtrToStructure<RawItem>(IntPtr.Add(buffer, checked(index * stride)));
                 string? name = Marshal.PtrToStringUni(item.Name);
-                if (name is not null) rows[name] = item.Value;
+                if (name is not null && MatchesAdapter(name, prefix)) rows[name] = item.Value;
             }
             return rows;
         }
         finally { Marshal.FreeHGlobal(buffer); }
     }
+
+    private static bool MatchesAdapter(string instance, string? prefix) => prefix is not null &&
+        instance.Contains(prefix, StringComparison.OrdinalIgnoreCase);
 
     private static GpuEngineRow Parse(string instance, uint status, double? value, RawValue? raw)
     {

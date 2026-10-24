@@ -46,14 +46,14 @@ public partial class KeyLightDirector : Node, IQualityAware
     public override void _EnterTree()
     {
         ProcessPriority = FramePriority.KeyLight;
-        if (_world is not null) _world.InstanceChanged += OnWorldInstanceChanged;
+        if (_world is not null) _world.InstanceAdvancing += OnWorldInstanceChanged;
         _model.Reset();
     }
 
     public override void _Ready()
     {
         _world = KernelServices.Get<IWorldState>();
-        _world.InstanceChanged += OnWorldInstanceChanged;
+        _world.InstanceAdvancing += OnWorldInstanceChanged;
         _state = KernelServices.Get<IKeyLightPublisher>();
         EnsureLight();
         Step();
@@ -63,7 +63,7 @@ public partial class KeyLightDirector : Node, IQualityAware
 
     public override void _ExitTree()
     {
-        if (_world is not null) _world.InstanceChanged -= OnWorldInstanceChanged;
+        if (_world is not null) _world.InstanceAdvancing -= OnWorldInstanceChanged;
     }
 
     private void OnWorldInstanceChanged(long _) => _model.Reset();

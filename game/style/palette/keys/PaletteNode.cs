@@ -78,7 +78,7 @@ public partial class PaletteNode : Node, IColorScriptFrame, IPaletteProbe, IMapA
 
     public override void _EnterTree()
     {
-        if (_world is not null) _world.InstanceChanged += OnWorldInstanceChanged;
+        if (_world is not null) _world.InstanceAdvancing += OnWorldInstanceChanged;
         _worldReset = true;
     }
 
@@ -96,7 +96,7 @@ public partial class PaletteNode : Node, IColorScriptFrame, IPaletteProbe, IMapA
         if (_world is null)
         {
             _world = KernelServices.Get<IWorldState>();
-            _world.InstanceChanged += OnWorldInstanceChanged;
+            _world.InstanceAdvancing += OnWorldInstanceChanged;
         }
         var clock = _world.Clock;
         var season = _world.SeasonPos;
@@ -147,7 +147,7 @@ public partial class PaletteNode : Node, IColorScriptFrame, IPaletteProbe, IMapA
 
     public override void _ExitTree()
     {
-        if (_world is not null) _world.InstanceChanged -= OnWorldInstanceChanged;
+        if (_world is not null) _world.InstanceAdvancing -= OnWorldInstanceChanged;
         // Stop producing, unbind the global, then hand the texture back to the registry (it releases the native resource).
         SetProcess(false);
         RenderingServer.GlobalShaderParameterSet(_shaderGlobalPalette, default(Variant));

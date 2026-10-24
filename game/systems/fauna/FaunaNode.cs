@@ -117,7 +117,7 @@ public partial class FaunaNode : Node, IMapAware, IViewContentReadiness, IViewCa
         _rig = KernelServices.Get<ICameraRig>();
         _reflection = KernelServices.Get<IReflectionWorld>();
         _tileMounts.Initialize(_host, InitializeTile, VisibleNow, RecordFailure);
-        _world.InstanceChanged += OnWorldInstanceChanged;
+        _world.InstanceAdvancing += OnWorldInstanceChanged;
     }
 
     private void OnWorldInstanceChanged(long _)
@@ -128,7 +128,7 @@ public partial class FaunaNode : Node, IMapAware, IViewContentReadiness, IViewCa
 
     public override void _ExitTree()
     {
-        if (_world is not null) _world.InstanceChanged -= OnWorldInstanceChanged;
+        if (_world is not null) _world.InstanceAdvancing -= OnWorldInstanceChanged;
         Release();
     }
 

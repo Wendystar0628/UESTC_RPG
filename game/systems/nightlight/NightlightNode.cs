@@ -72,14 +72,14 @@ public partial class NightlightNode : Node, IMapAware, IViewContentReadiness, IV
     {
         ProcessPriority = FramePriority.Channels;
         _inventoryRev = long.MinValue;
-        if (_world is not null) _world.InstanceChanged += OnWorldInstanceChanged;
+        if (_world is not null) _world.InstanceAdvancing += OnWorldInstanceChanged;
         OnWorldInstanceChanged(0);
     }
 
     public override void _Ready()
     {
         _world = KernelServices.Get<IWorldState>();
-        _world.InstanceChanged += OnWorldInstanceChanged;
+        _world.InstanceAdvancing += OnWorldInstanceChanged;
         _sink = KernelServices.Get<ILightChannelSink>();
         _colors = KernelServices.Get<IColorScriptFrame>();
         _inventory = KernelServices.Get<ILightInventory>();
@@ -90,7 +90,7 @@ public partial class NightlightNode : Node, IMapAware, IViewContentReadiness, IV
 
     public override void _ExitTree()
     {
-        if (_world is not null) _world.InstanceChanged -= OnWorldInstanceChanged;
+        if (_world is not null) _world.InstanceAdvancing -= OnWorldInstanceChanged;
         _windows.Bind(null);
         _inventoryRev = long.MinValue;
         _glows?.Dispose();

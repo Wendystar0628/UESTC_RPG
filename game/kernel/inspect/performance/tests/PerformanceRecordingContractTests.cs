@@ -147,6 +147,49 @@ public sealed class PerformanceRecordingContractTests
             throw new InvalidOperationException("The final gap depended on a later successful enqueue.");
     }
 
+    [TestCase, TestCategory(TestReason.Regression)]
+    public async Task FullNativeBatchQueueKeepsActualRowLossInTheStoppedSession()
+    {
+        string root = TemporaryDirectory();
+        var session = Session(root, Dictionary());
+        try
+        {
+            if (!await session.Ready) throw new InvalidOperationException("The overflow writer did not open.");
+            var producer = session.AddProducer("nvml.fast", "hwfast");
+            var row = new PerfCapturedRow("hwfast", null, 10, new Dictionary<string, object?>());
+            long accepted = 0;
+            while (producer.TryRow(row)) accepted++;
+            if (accepted == 0 || producer.Dropped != 1) throw new InvalidOperationException("The unread queue did not fill.");
+            var fixture = PerformanceNvmlContractTests.BufferedFastFixture();
+            long lost = producer.Dropped;
+            foreach (var batch in fixture.Batches)
+            {
+                lost += PerfHardwareCapture.FastRows(fixture.Identity, batch).Count();
+                if (producer.TryFastBatch(fixture.Identity, batch)) throw new InvalidOperationException("The full queue accepted a native batch.");
+            }
+            if (producer.Dropped != lost || producer.TailGap.Rows != lost ||
+                producer.TailGap.FirstSequence != accepted + 1 || producer.TailGap.LastSequence != accepted + lost)
+                throw new InvalidOperationException("A rejected native batch was counted as messages instead of output rows.");
+            session.Begin(new(0, 0, 0));
+            session.Stop(PerfEndReason.Toggle, 30);
+            var ended = await session.Completion;
+            string directory = Path.Combine(root, ended.SessionId);
+            var manifest = JsonNode.Parse(File.ReadAllText(Path.Combine(directory, "manifest.json")))!;
+            var stream = manifest["streams"]!.AsArray().Single(item => item!["file"]!.GetValue<string>() == "hwfast.csv")!;
+            var events = File.ReadLines(Path.Combine(directory, "events.jsonl")).Select(line => JsonNode.Parse(line)!).ToArray();
+            var gap = events.Single(item => item["event"]!.GetValue<string>() == "record.gap")["payload"]!;
+            if (!ended.Closed || ended.Complete || ended.Fault != PerfFaultCode.None || manifest["complete"]!.GetValue<bool>() ||
+                stream["writtenRows"]!.GetValue<long>() != accepted || stream["droppedRows"]!.GetValue<long>() != lost ||
+                File.ReadAllLines(Path.Combine(directory, "hwfast.csv")).LongLength != accepted + 1 ||
+                gap["stream"]!.GetValue<string>() != "hwfast" || gap["rows"]!.GetValue<long>() != lost ||
+                gap["firstSequence"]!.GetValue<long>() != accepted + 1 || gap["lastSequence"]!.GetValue<long>() != accepted + lost ||
+                gap["fromMs"]!.GetValue<double>() != row.Time || gap["toMs"]!.GetValue<double>() != fixture.Batches[^1].QueryEndMs ||
+                events.Single(item => item["event"]!.GetValue<string>() == "session.end")["payload"]!["complete"]!.GetValue<bool>())
+                throw new InvalidOperationException("Stopped native-batch overflow lost its tail gap or advertised completeness.");
+        }
+        finally { session.Stop(PerfEndReason.Exit, 30); await session.Completion; Directory.Delete(root, true); }
+    }
+
     [TestCase, TestCategory(TestReason.Contract)]
     public void HardwareFastRowsKeepQueryMetadataEvenWhenTheDriverHasNoNewSamples()
     {

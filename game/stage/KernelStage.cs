@@ -208,6 +208,7 @@ public partial class KernelStage : Node3D, IAppExit, IAppFailure, IStageGateHost
         if (!ReferenceEquals(_flow, registry.Get<IAppBootFlow>()))
             throw new InvalidOperationException("IAppFlow and IAppBootFlow must resolve to the same instance.");
         _flow.Changed += OnFlowChanged;
+        _flow.StateAdvancing += OnFlowAdvancing;
         _mapRuntime = registry.Get<IMapRuntime>();
         view.Bind(registry.Get<ICameraRig>());
     }
@@ -436,13 +437,15 @@ public partial class KernelStage : Node3D, IAppExit, IAppFailure, IStageGateHost
 
     private void OnFlowChanged(AppState before, AppState after)
     {
-        // Playing is published immediately before ReleaseInput, with no await between them.
-        // Observe after that stack unwinds, without waiting for the first save to finish.
         if (before == AppState.Entering && after == AppState.Playing)
-        {
             Callable.From(TraceInputReady).CallDeferred();
-            if (_startupFinished) Callable.From(StartReadyCommands).CallDeferred();
-        }
+    }
+
+    private void OnFlowAdvancing(AppState before, AppState after)
+    {
+        // The stage owns these tasks; defer startup commands until the flow has released input.
+        if (before == AppState.Entering && after == AppState.Playing && _startupFinished)
+            Callable.From(StartReadyCommands).CallDeferred();
     }
 
     private void TraceInputReady()
@@ -533,6 +536,7 @@ public partial class KernelStage : Node3D, IAppExit, IAppFailure, IStageGateHost
         try { _captureLifetime.Cancel(); } catch (Exception error) { failures.Add(error); }
         try { await _gate.DrainStartupSample(); } catch (Exception error) { failures.Add(error); }
         try { if (_flow is not null) _flow.Changed -= OnFlowChanged; } catch (Exception error) { failures.Add(error); }
+        try { if (_flow is not null) _flow.StateAdvancing -= OnFlowAdvancing; } catch (Exception error) { failures.Add(error); }
         // The command owns its own baking resources; a close request must let its finally blocks
         // finish before the registry can release its dependencies and the engine can quit.
         if (_bakeCommandTask is not null)

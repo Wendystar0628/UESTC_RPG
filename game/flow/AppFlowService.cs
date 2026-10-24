@@ -38,6 +38,7 @@ public sealed class AppFlowService : IAppFlow, IAppBootFlow, IBootParticipant, I
     private NewGameBoot? _directBoot;
     private long _enterOperation;
     private readonly CommandNotification _commands = new();
+    private readonly Queue<(AppState Previous, AppState Current)> _stateNotifications = new();
 
     public AppFlowService(ICameraRig camera, IAppLoadingPresentation loading, IAppFrontispiecePresentation frontispiece,
         ISaveService saves, IMapService maps, IWorldState world, IWorldControl control,
@@ -50,7 +51,7 @@ public sealed class AppFlowService : IAppFlow, IAppBootFlow, IBootParticipant, I
         _resources = new(camera, restore, control, loading, frontispiece, mapRuntime, MarkPhase);
         _continuation = new(camera, saves, maps, restore, mapRuntime, stream,
             _resources, profileSettings);
-        _recovery = new(maps, restore, mapRuntime, _resources, () => _quitting, Change, diagnostics.Error);
+        _recovery = new(maps, restore, mapRuntime, _resources, () => _quitting, Change, PublishStateChanges, diagnostics.Error);
         _startup = new(maps, _continuation, _resources);
     }
     public AppState State { get; private set; } = AppState.Boot;
@@ -67,6 +68,7 @@ public sealed class AppFlowService : IAppFlow, IAppBootFlow, IBootParticipant, I
         ((world.Transition & WorldTransition.Season) != 0 ? AppActivity.SeasonTransition : AppActivity.None);
     public long Rev { get; private set; }
     public event Action<AppState, AppState>? Changed;
+    public event Action<AppState, AppState>? StateAdvancing;
     public event Action<string>? PhaseReached;
     public event Action<EnterCommandEvent>? EnterCommand;
 
@@ -86,9 +88,6 @@ public sealed class AppFlowService : IAppFlow, IAppBootFlow, IBootParticipant, I
         if (request.Kind is EnterKind.Continue or EnterKind.LoadSlot && !AppFlowContinuation.Readable(info, request.Gen)) return RejectEnter(operation, request);
         _request = request with { Slot = slot }; _quitting = false; _directEntry = false;
         _recovery.BeginEntry(); _continuation.BeginEntry(_request);
-        _resources.HoldInput();
-        if (!restore.RestoreFaulted) _resources.HoldLoadingFlow();
-        Change(AppState.Entering);
         return StartEntry(operation, _request, false);
     }
     private Task<EnterResult> RejectEnter(long operation, EnterRequest target)
@@ -105,9 +104,6 @@ public sealed class AppFlowService : IAppFlow, IAppBootFlow, IBootParticipant, I
         _directEntry = true; _directStart = start; _directBoot = boot;
         _request = new(request.LoadFile is not null || request.Slot is not null ? EnterKind.LoadSlot : EnterKind.NewGame, request.Slot ?? (request.LoadFile is null ? _startup.WriteSlot : null));
         _recovery.BeginEntry(); _continuation.BeginEntry(_request);
-        _resources.HoldInput();
-        if (!restore.RestoreFaulted) _resources.HoldLoadingFlow();
-        Change(AppState.Entering);
         if (await StartEntry(operation, _request, true) != EnterResult.Entered)
             throw Failure ?? new InvalidOperationException("Direct entry failed.");
         return _mapRuntime.Arrival ?? throw new InvalidOperationException("Direct entry has no prepared destination.");
@@ -115,8 +111,6 @@ public sealed class AppFlowService : IAppFlow, IAppBootFlow, IBootParticipant, I
     private Task<EnterResult> StartEntry(long operation, EnterRequest target, bool direct)
     {
         var done = new TaskCompletionSource<EnterResult>(); _entry = done.Task;
-        _commands.Publish(EnterCommand, new EnterCommandEvent(operation, EnterCommandPhase.Started, target, null, direct, null));
-        if (!direct && target.Kind is EnterKind.NewGame) MarkPhase("new-game-enter");
         _ = RunEntry(operation, target, direct, done);
         return done.Task;
     }
@@ -131,6 +125,12 @@ public sealed class AppFlowService : IAppFlow, IAppBootFlow, IBootParticipant, I
         EnterResult? outcome = null;
         try
         {
+            _resources.HoldInput();
+            if (!restore.RestoreFaulted) _resources.HoldLoadingFlow();
+            Change(AppState.Entering);
+            PublishStateChanges();
+            _commands.Publish(EnterCommand, new EnterCommandEvent(operation, EnterCommandPhase.Started, target, null, direct, null));
+            if (!direct && target.Kind is EnterKind.NewGame) MarkPhase("new-game-enter");
             var newGame = _request!.Kind switch
             {
                 EnterKind.NewGame => true,
@@ -168,6 +168,7 @@ public sealed class AppFlowService : IAppFlow, IAppBootFlow, IBootParticipant, I
             await _resources.FinishLoading();
             _continuation.RequireHealthyWorld();
             _resources.ReleaseFlow(); Change(AppState.Playing); _resources.ReleaseInput();
+            PublishStateChanges();
             outcome = EnterResult.Entered;
             return EnterResult.Entered;
         }
@@ -185,6 +186,7 @@ public sealed class AppFlowService : IAppFlow, IAppBootFlow, IBootParticipant, I
         }
         finally
         {
+            PublishStateChanges();
             _commands.Publish(EnterCommand, new EnterCommandEvent(operation, outcome.HasValue ? EnterCommandPhase.Completed : EnterCommandPhase.Faulted,
                 target, outcome, direct, LastError));
         }
@@ -195,13 +197,21 @@ public sealed class AppFlowService : IAppFlow, IAppBootFlow, IBootParticipant, I
         if (!In(AppState.Playing)) return Task.CompletedTask;
         _recovery.BeginEntry();
         _leaveSaveCompleted = false; _leavePose = camera.Pose;
-        _resources.HoldInput(); _resources.HoldLoadingFlow(); Change(AppState.Leaving);
-        _leaving = ReturnToTitleCore(); return _leaving;
+        var done = new TaskCompletionSource(); _leaving = done.Task;
+        _ = RunReturnToTitle(done);
+        return done.Task;
+    }
+    private async Task RunReturnToTitle(TaskCompletionSource done)
+    {
+        try { await ReturnToTitleCore(); done.TrySetResult(); }
+        catch (Exception error) { done.TrySetException(error); }
     }
     private async Task ReturnToTitleCore()
     {
         try
         {
+            _resources.HoldInput(); _resources.HoldLoadingFlow(); Change(AppState.Leaving);
+            PublishStateChanges();
             await transit.CancelAsync();
             _leavePose = camera.Pose;
             await _resources.BeginLoading(null, save: true);
@@ -230,6 +240,7 @@ public sealed class AppFlowService : IAppFlow, IAppBootFlow, IBootParticipant, I
             }
             else await _recovery.RecoverTitle();
         }
+        finally { PublishStateChanges(); }
     }
     public Task Quit()
     {
@@ -278,6 +289,7 @@ public sealed class AppFlowService : IAppFlow, IAppBootFlow, IBootParticipant, I
         // ToTitle may have returned after detaching its immutable snapshot while disk I/O continues.
         save |= saves.Busy;
         Change(AppState.Quitting);
+        PublishStateChanges();
         if (restore.RestoreFaulted)
         {
             await QuitFaultedWorld(); await appExit.FinishQuit();
@@ -300,7 +312,13 @@ public sealed class AppFlowService : IAppFlow, IAppBootFlow, IBootParticipant, I
         if (old is AppState.Title) _continuation.StopTitlePrefetch();
         State = state; Rev++;
         _continuation.OnStateChange(state);
-        Changed?.Invoke(old, state);
+        StateAdvancing?.Invoke(old, state);
+        _stateNotifications.Enqueue((old, state));
+    }
+    private void PublishStateChanges()
+    {
+        while (_stateNotifications.TryDequeue(out var state))
+            _commands.Publish(Changed, state.Previous, state.Current);
     }
     private void MarkPhase(string phase) => _commands.Publish(PhaseReached, phase);
 
@@ -324,11 +342,13 @@ public sealed class AppFlowService : IAppFlow, IAppBootFlow, IBootParticipant, I
         _resources.HoldTitleFlow();
         Change(AppState.Title);
         MarkPhase("title-ready");
+        PublishStateChanges();
         return Task.CompletedTask;
     }
     private async Task QuitFaultedWorld()
     {
         await _recovery.HoldRestoreFailure(); Change(AppState.Quitting);
+        PublishStateChanges();
         await FlushBeforeLeaving(SaveReason.Quit, FlowTuning.SaveTimeoutSeconds);
         _recovery.RetainRestoreError();
     }

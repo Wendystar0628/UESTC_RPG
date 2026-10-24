@@ -80,7 +80,7 @@ public partial class WaterSystem : Node, IMapAware, IQualityAware, IReflectionWo
 
     public override void _EnterTree()
     {
-        if (_world is not null) _world.InstanceChanged += OnWorldInstanceChanged;
+        if (_world is not null) _world.InstanceAdvancing += OnWorldInstanceChanged;
         _lake = -1;
     }
 
@@ -128,7 +128,7 @@ public partial class WaterSystem : Node, IMapAware, IQualityAware, IReflectionWo
         // Consumers synchronously release their proxy RIDs while the old world and material still exist.
         _available = false;
         Changed?.Invoke();
-        if (_world is not null) _world.InstanceChanged -= OnWorldInstanceChanged;
+        if (_world is not null) _world.InstanceAdvancing -= OnWorldInstanceChanged;
         GetWindow().SizeChanged -= OnSizeChanged;
         _lake = -1;
         RenderingServer.GlobalShaderParameterSet(ReflectLake, -1);

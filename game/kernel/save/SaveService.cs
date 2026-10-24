@@ -193,27 +193,38 @@ public sealed class SaveService : ISaveService, IDisposable, IAsyncDisposable
         var completion = new TaskCompletionSource<T>(TaskCreationOptions.RunContinuationsAsynchronously);
         lock (_frameGate)
         {
-            if (_stopping) return Task.FromCanceled<T>(Lifetime);
+            if (_stopping)
+            {
+                completion.SetCanceled(Lifetime);
+                return completion.Task;
+            }
+            // A claimed frame can finish outside the scheduling lock. Exit still owns its full execution,
+            // including synchronous observers, before releasing any runtime binding.
+            _operations.Add(completion.Task, false);
             _frames.Enqueue(() =>
             {
-                T result = default!;
-                Exception? failure = null;
-                Action? observers;
                 lock (_frameGate)
                 {
-                    if (_stopping) { completion.TrySetCanceled(Lifetime); return; }
-                    try { result = function(); }
-                    catch (Exception error)
+                    if (_stopping)
                     {
-                        Loading.MarkFrameFailure(error);
-                        failure = error;
+                        completion.TrySetCanceled(Lifetime);
+                        _operations.Remove(completion.Task);
+                        return;
                     }
-                    observers = _slotNotifications;
-                    _slotNotifications = null;
                 }
-                _commands.Publish(observers);
-                if (failure is not null) completion.SetException(failure);
-                else completion.SetResult(result);
+                try
+                {
+                    T result = default!;
+                    Exception? failure = null;
+                    try { result = function(); }
+                    catch (Exception error) { Loading.MarkFrameFailure(error); failure = error; }
+                    var observers = _slotNotifications;
+                    _slotNotifications = null;
+                    _commands.Publish(observers);
+                    if (failure is not null) completion.SetException(failure);
+                    else completion.SetResult(result);
+                }
+                finally { lock (_frameGate) _operations.Remove(completion.Task); }
             });
         }
         return completion.Task;
@@ -221,17 +232,40 @@ public sealed class SaveService : ISaveService, IDisposable, IAsyncDisposable
     public Task OnFrame(Action action) => OnFrame(() => { action(); return true; });
     public void StopNewWork()
     {
+        var stopped = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         lock (_frameGate)
         {
             if (_stopping) return;
             _stopping = true;
-            try { _stop.Cancel(); }
-            finally { while (_frames.TryDequeue(out var action)) action(); }
+            _operations.Add(stopped.Task, false);
+        }
+        try { _stop.Cancel(); }
+        finally
+        {
+            try { while (_frames.TryDequeue(out var action)) action(); }
+            finally
+            {
+                stopped.TrySetResult();
+                lock (_frameGate) _operations.Remove(stopped.Task);
+            }
         }
     }
     public ValueTask DisposeAsync()
     {
-        lock (_frameGate) return new(_disposal ??= DrainAndRelease());
+        TaskCompletionSource done;
+        lock (_frameGate)
+        {
+            if (_disposal is not null) return new(_disposal);
+            done = new(TaskCreationOptions.RunContinuationsAsynchronously);
+            _disposal = done.Task;
+        }
+        _ = CompleteDisposal(done);
+        return new(done.Task);
+    }
+    private async Task CompleteDisposal(TaskCompletionSource done)
+    {
+        try { await DrainAndRelease().ConfigureAwait(false); done.TrySetResult(); }
+        catch (Exception error) { done.TrySetException(error); }
     }
     private async Task DrainAndRelease()
     {
@@ -250,7 +284,8 @@ public sealed class SaveService : ISaveService, IDisposable, IAsyncDisposable
         // A flush owns its own completion too; let it finish handing off any observed write failure before collecting ours.
         lock (_frameGate)
             foreach (var (operation, error) in operationFailures)
-                if (_operations[operation]) failure = RetainedFailure.Append(failure, error);
+                if (_operations.TryGetValue(operation, out var ownsFailure) && ownsFailure)
+                    failure = RetainedFailure.Append(failure, error);
         try { Loading.Dispose(); }
         catch (Exception error) { failure = RetainedFailure.Append(failure, error); }
         try { Operation.Dispose(); }

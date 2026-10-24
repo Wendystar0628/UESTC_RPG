@@ -175,7 +175,7 @@ public partial class StreamDirector : Node, IMapAware, IMapStreamState, IStreamV
     {
         if (_owner is null) throw new InvalidOperationException("Stream dependencies must be bound before entering the tree.");
         _exiting = false;
-        _world.InstanceChanged += OnWorldInstanceChanged;
+        _world.InstanceAdvancing += OnWorldInstanceChanged;
         _reflections.Changed += _residency.OnReflectionChanged;
         OnWorldInstanceChanged(0);
     }
@@ -315,7 +315,7 @@ public partial class StreamDirector : Node, IMapAware, IMapStreamState, IStreamV
         // Registry awaited IMapLifetime.ShutdownAsync while the main thread and all bindings were still alive.
         // Exit callbacks only detach subscriptions; they never block or abandon asynchronous ownership.
         _exiting = true;
-        if (_world is not null) _world.InstanceChanged -= OnWorldInstanceChanged;
+        if (_world is not null) _world.InstanceAdvancing -= OnWorldInstanceChanged;
         if (_reflections is not null) _reflections.Changed -= _residency.OnReflectionChanged;
         _residency.DisposeMaterials();
     }

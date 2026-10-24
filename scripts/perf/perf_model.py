@@ -184,9 +184,7 @@ def mark_context(frames, events, dictionary):
             payload = event['payload']
             if rule.get('purpose') and payload.get('purpose') != rule['purpose']:
                 continue
-            if rule.get('purpose') == 'saveThumbnail':
-                intervals.append((None, None, event.get('collectionFrame')))
-            elif rule.get('eventMode') == 'valueChange' and payload['observation'] == 'changed':
+            if rule.get('eventMode') == 'valueChange' and payload['observation'] == 'changed':
                 settling = rules[rule['settleRule']]['settleMs']
                 intervals.append((None, None, event.get('collectionFrame')))
                 intervals.append((event['monotonicMs'], event['monotonicMs'] + settling, None))

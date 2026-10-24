@@ -20,6 +20,10 @@ public interface IWorldState                // Kernel 的服务（game/kernel/wo
                                             // 切图不变（SYS-SAVE、SYS-MAPS）。做平滑、带回差或保留历史的系统，看到它变了就直接落到新值
     // Main thread after a successful commit, or with zero when the active instance ends. Only reset local history here;
     // read camera/map-dependent values in the consumer's normal phase. Aborted World phases, map travel and ResetDefault do not notify.
+    // Synchronous instance participants; failures belong to the instance commit owner.
+    event Action<long>? InstanceAdvancing;
+    // Settled instance observations outside the owner's critical section and locks.
+    // Subscriber failures are retained until the publisher's lifetime drain.
     event Action<long>? InstanceChanged;
     double WorldHours { get; }              // 世界时间（h）：同一世界实例内单调递增，只增不减；暂停时不动
     double Clock { get; }                   // 美术钟点 0–24 h = (WorldHours + offset) mod 24（offset 见 §3"世界时间与天气的语义"）

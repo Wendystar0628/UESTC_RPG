@@ -126,9 +126,10 @@ perf:      {coverage: {from: 最早会话开始时刻|null}, caliber, units, lab
             intervals: {context: [{state, label, fromMs, toMs, firstFrame, lastFrame}], segments: [带label的分析器活动事件], gaps: [缺口事件]},
             anomalyCounts, anomalyTotal, anomalies: [分析器异常加typeLabel与levelLabel],
             retained: {raw, summary, anomalies, hotframes}, vramCapacityMiB: 容量|null}
-性能趋势 =  {key, scope, origin, comparisonKey, calc, status: stale|unsupported|null, label: 各次运行摘要的中位,
-            points: [{seq, subject, dirty: false, n: 运行数, metrics: {指标key: 中位数|null},
-                      anomaliesPerMinute: 每分钟异常组数的运行摘要中位|null, anomalyRateRuns: 有效分母运行数, anomalyRateReason: 中文原因|null}]}
+性能趋势 =  {key, scope, origin: ai, comparisonKey, calc, label: 分析器批次阶段成本中位,
+            points: [{seq, subject, dirty: false, n: 阶段运行数, batchId, phase: a1|b1|a2, sessionIds: [阶段会话id],
+                      status: current|stale|superseded, statusLabel: 中文状态, statusReasons: [分析器批次状态原因], metrics: {指标key: 阶段中位数|null},
+                      anomaliesPerMinute: null, anomalyRateRuns: 0, anomalyRateReason: 分析器批次阶段未提供异常率摘要}]}
 性能曲线 =  {bucketSeconds, columns: [列名], buckets: [[按columns排列的值]],
             hotframeColumns: [列名], hotframes: [[逐帧值]], hotframesTotal: 派生总行数,
             seriesReasons: {缺数曲线key: 中文原因}, reason}
@@ -138,8 +139,8 @@ perf:      {coverage: {from: 最早会话开始时刻|null}, caliber, units, lab
 - 性能会话按完成时刻新到旧；latest 各来源独立取最新已关闭会话，缺作者或 AI 来源保留 null。all 与 steady 对应分析器全样本、明确稳态摘要，视图只投影已有值，不重新计算分位与 low。体验指标不适用时 reasons 给原因；cost 固定写“隔离桌面只判成本，不测帧时与帧率”，帧时、帧率与 GPU 占用均不画零。两列显存分别是 NVML 整卡已用与引擎记账；容量缺测不算比例。主视口 GPU 与视口 CPU 渲染允许近似 ±2 帧成本，只作分布、预算与趋势，不逐帧归因，也不从 GPU 占用猜瓶颈。目标线 line 仅适用时给值。
 - 单个会话失败由 `sessionErrors` 携 source、kind 与原始 reason，能确认身份时附 id；该来源的旧摘要不混入当前会话与趋势，好会话照常投影。内容错误只在输入变化后重解析；IO 与派生读写错误可在后续外部触发时重试，ID 冲突每轮按现存持有方重查，来源删除后重判并清理。状态与等级中文标签以 `scripts/perf/perf.py` 的 STATUS、LEVEL 为准。
 - `build.behindMainline` 用共享主线表的最新序号减构建序号，构建不在表中时为 null、原因沿用 build.reason；`all/steady.values.low01TailN` 与 `validFrameN` 原样投影分析器的尾样本数与有效帧数，不据 low 值反推。`frameLines` 的目标帧时复用分析器对记录清单限帧、垂直同步与刷新率的解释；重卡顿、严重卡顿和卡死阈值读取本轮分析器预算，成本口径、历史格式或来源不足给 null 与中文原因。
-- 跨提交趋势按比较键、scope、origin、calc 分组，点按主线序号升序，对同提交各次运行的 steady 摘要取中位；身份缺失或 dirty 不为 false 的运行只保留会话证据，不归入主线趋势。成本指标为目录前五项；体验趋势只给作者：平均帧率、1% low、0.1% low、帧时 p99、GPU 占用均值。保留层由 retained 如实给出，历史摘要只剩 history 时仍显示 summary 层；旧 calc 的会话与趋势标 stale，不能当当前基线。历史趋势直接读取分析器已有 history，保留上限从 index 与记录器清单快照取，不抄第二套常量。
-- 每提交 `anomaliesPerMinute` 先把每次运行分析器的异常组总数除以真实 `recordedSeconds` 再乘 60，最后取同提交运行摘要中位；不是原始发生次数，未测、无分析摘要或时长无效的运行不记零，参与数量与缺数原因分别给出。旧记录格式标 unsupported，只作历史证据；公开原因与说明由后端提供中文。
+- 跨提交趋势唯一来源为分析器 `index.batches.groups.phases` 的现成 steady 成本中位，仅收 current、stale、superseded 完整批次与当前 calc，按比较键、scope、origin、calc 分组；功能、诊断、partial 与没有完整批次的会话不入趋势。每点对应 batchId 与 phase，同提交不同阶段不合并；单次散点只按该点 sessionIds 匹配，不能按比较组或 seq 带入其它会话。点上 status 与 statusReasons 保留分析器批次状态，stale 不冒充当前；身份缺失或 dirty 不为 false 的阶段只保留会话证据。成本指标为目录前五项，体验趋势值为 null。保留层由 retained 如实给出，历史摘要只剩 history 时仍显示 summary 层；history 仅作会话证据与保留统计，不参与趋势聚合，保留上限从 index 与记录器清单快照取。
+- 批次阶段尚未提供异常率摘要，`anomaliesPerMinute=null`、`anomalyRateRuns=0`，原因由后端给出；展示不按会话异常数与时长另算。旧 calc 会话标 stale、旧记录格式标 unsupported，只作历史证据；公开原因与说明由后端提供中文。
 - 性能曲线只给每来源最新会话，唯一来源为分析器的 `derived/<id>/curves.json`；档位、有效值聚合与高耗时帧投影由 `scripts/perf/perf_curves.py` 产出，计算口径以 `scripts/perf/derived-fields.json` 为准。每桶一秒或更粗，最多每会话 900 桶（整份最多 1800）；columns 前三列为 fromMs、toMs、frames，其后按 series 顺序交替为 `keyMean`、`keyMax`。空桶不跨缺口补线，非稳态与活动区间由 intervals 覆盖。hotframes 按 hotframeColumns 解包，最多前 1000 行，hotframesTotal 给分析器选中总行数。
 - 为守 1 MB，view 只选择已有曲线档位、裁掉更早的非最新会话与趋势点，并以 displayCoverage 公开显示范围；不读逐帧原始文件、不重新聚合或计算帧率与归一化负载。缺测保留 null 与分析器的 seriesReasons；`gpuUtilSampleAgeMs`、`gpuUtilSamplingWindowMs` 不以查询时刻或间隔顶替原生来源。旧 calc 或没有可用曲线的会话保留其状态与缺数原因。
 - attention 仅公开当前 revision 未过目的 items，按 at 降序，未知在末尾；open 等于其条数。

@@ -3,6 +3,7 @@ using System.Text.Json.Serialization.Metadata;
 using Campus.Contracts;
 using Campus.Contracts.Maps;
 using Campus.Contracts.Save;
+using Campus.Kernel.Diagnostics;
 using WorldFlow = Campus.Contracts.Flow;
 
 namespace Campus.Kernel.World;
@@ -23,11 +24,12 @@ public interface IWorldFrame : IWorldState, IMapAware
 [KernelService(typeof(IWorldRestore))]
 [SaveSection("world", Version = 1, Phase = RestorePhase.World, Order = 10)]
 public sealed class WorldStateService : IWorldFrame, IWorldControl,
-    IWorldRestore, ISaveSection<WorldSaveV1>
+    IWorldRestore, ISaveSection<WorldSaveV1>, IDisposable
 {
     private readonly IWeatherProcess _weather;
     private readonly IMotionSettings? _motion;
     private readonly WorldFlowArbiter _flow;
+    private readonly CommandNotification _notifications = new();
 
     public WorldStateService(IWeatherProcess weather, IMotionSettings? motion = null)
     {
@@ -64,6 +66,7 @@ public sealed class WorldStateService : IWorldFrame, IWorldControl,
     public long Rev { get; private set; } = 1;
     public long Instance { get; private set; }
     public event Action<long>? InstanceChanged;
+    public event Action<long>? InstanceAdvancing;
     public double WorldHours { get; private set; }
     public double Clock => ArtEphemeris.Wrap(WorldHours + _offset, 24);
     public double SeasonPos { get; private set; }
@@ -404,7 +407,8 @@ public sealed class WorldStateService : IWorldFrame, IWorldControl,
         _initializationApplied = true;
         Instance = checked(++_instanceSerial);
         Rev++;
-        InstanceChanged?.Invoke(Instance);
+        InstanceAdvancing?.Invoke(Instance);
+        _notifications.Publish(InstanceChanged, Instance);
     }
 
     public void EndInstance()
@@ -421,7 +425,14 @@ public sealed class WorldStateService : IWorldFrame, IWorldControl,
         Omega = 0;
         Instance = 0;
         Rev++;
-        InstanceChanged?.Invoke(Instance);
+        InstanceAdvancing?.Invoke(Instance);
+        _notifications.Publish(InstanceChanged, Instance);
+    }
+
+    public void Dispose()
+    {
+        if (_notifications.TakeFailure() is { } failure)
+            System.Runtime.ExceptionServices.ExceptionDispatchInfo.Capture(failure).Throw();
     }
 
     public void AbortRestore()

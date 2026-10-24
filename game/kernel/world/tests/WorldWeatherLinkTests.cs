@@ -15,6 +15,21 @@ namespace Campus.Tests.World;
 [TestSuite]
 public sealed class WorldWeatherLinkTests
 {
+    [TestCase(false), TestCase(true), TestCategory(TestReason.Regression)]
+    public void RequiredInstanceParticipantFailureRemainsTheOwnerFailure(bool ending)
+    {
+        using var world = CreateWorld(new TestWeatherProcess());
+        var original = new IOException();
+        var observed = false;
+        world.InstanceAdvancing += _ => throw original;
+        world.InstanceChanged += _ => observed = true;
+        if (!ending) world.Restore(world.Capture(SaveContext(world)), Restore());
+        Exception? actual = null;
+        try { if (ending) world.EndInstance(); else world.CompleteRestore(); }
+        catch (Exception error) { actual = error; }
+        AssertThat(ReferenceEquals(actual, original) && !observed).IsTrue();
+    }
+
     [TestCase]
     [TestCategory(TestReason.Contract)]
     public void WeatherIsNotSteppedBeforeTheFirstMapEnters()

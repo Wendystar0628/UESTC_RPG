@@ -19,12 +19,15 @@ def check_context(root, dictionary, budgets):
     assert all(row['_steady'] == (flag['name'] not in excluded)
                for row, flag in zip(frames, dictionary['contextFlags'])), '上下文位判定未遵守字典唯一清单'
     frames = [frame(dictionary, i) for i in range(2)]
-    capture = dict(event='sync.readback', collectionFrame=frames[1]['collectionFrame'],
+    flags = {item['name']: item['value'] for item in dictionary['contextFlags']}
+    frames[1]['contextFlags'] = flags['captureFrame']
+    capture = dict(event='sync.readback', collectionFrame=frames[0]['collectionFrame'],
                    monotonicMs=frames[0]['monotonicMs'], payload=dict(purpose='saveThumbnail'))
     prepare_frames(frames, [], [capture], dictionary)
-    assert frames[0]['_steady'] and not frames[1]['_steady'], '缩略图未按真实采集帧号排除'
+    assert frames[0]['_steady'] and not frames[1]['_steady'], '缩略图事件重建覆盖了逐帧上下文权威'
+    prepare_frames(frames, [], [], dictionary)
+    assert frames[0]['_steady'] and not frames[1]['_steady'], '缩略图缺少事件时丢失 captureFrame 权威'
 
-    flags = {item['name']: item['value'] for item in dictionary['contextFlags']}
     commands = [('save.load', 'ISaveService', 'queued'), ('save.load', 'ISaveService', 'started'),
                 ('save.load', 'ISaveService', 'completed'), ('game.enter', 'IAppFlow', 'started'),
                 ('game.enter', 'IAppFlow', 'completed'), ('map.prepare', 'IMapService', 'started'),
@@ -59,7 +62,6 @@ def check_window_changes(root, dictionary, budgets):
         prepare_frames(frames, [], [current], dictionary)
         assert all(row['_steady'] for row in frames), '初始窗口快照虚构了变化'
         changed_values = dict(widthPx=1280, heightPx=720) if name == 'window.size' else dict(mode='Fullscreen')
-        assert changed_values != values, '夹具未改变实际窗口值'
         changed = dict(event=name, monotonicMs=start, payload=dict(changed_values, observation='changed'))
         prepare_frames(frames, [], [current, changed], dictionary)
         assert [row['_steady'] for row in frames] == [True, False, False, True, True], '实际窗口变化边界或稳定时长错误'
@@ -87,8 +89,15 @@ def check_hardware_facts(root, dictionary, budgets):
                          processQueryStartMs=4.5, processQueryEndMs=6.5, kernel100ns=9007199254740993),
                          previous=dict(systemQueryStartMs=1, systemQueryEndMs=2), processFraction=None),
                      gpuEnginesJson=dict(collectTimestamp100ns=9007199254740993, previousCollectMs=2,
-                         rawQueryCode=0, engines=[dict(instance='pid_42_luid_0x0_0x1234_phys_0_eng_1_engtype_3D',
-                         utilFraction=1.2, cStatus=0, rawFirstValue=9007199254740993, rawTimestamp100ns=9007199254740995)]),
+                         rawQueryCode=0, recording=dict(adapterLuid='0x0000000000001234', instanceCount=1, invalidInstanceCount=0,
+                             engineTypes=[dict(engineType='3D', otherProcessesUtilFraction=.2, instanceCount=1, invalidInstanceCount=0)],
+                             topProcesses=[dict(processId=42, utilFraction=.2, engines=[dict(
+                                 instance='pid_42_luid_0x0_0x1234_phys_0_eng_1_engtype_3D', processId=42,
+                                 adapterLuid='0x0000000000001234', physicalAdapter=0, engine=1, engineType='3D',
+                                 utilFraction=.2, cStatus=0, rawStatus=0, rawFirstValue=9007199254740993,
+                                 rawSecondValue=1, rawTimestamp100ns=9007199254740995, rawMultiCount=1,
+                                 averageStartTimestamp100ns=9007199254740994,
+                                 averageEndTimestamp100ns=9007199254740995)])])),
                      renderAdapterJson=dict(luid=4660, luidText='0x1234', status=dict(capability='supported', nativeCode=0)))
         gpu = dict(base, schema=dictionary['schema'], sequence=2, monotonicMs=11, rowKind='nvml',
                    deviceIndex=0, gpuUtilFraction=.5, gpuClockMHz=1000, gpuMaxClockMHz=2000)

@@ -42,7 +42,7 @@ public sealed class BakeService : IBakeService, IBakeContextSource, IMapContentS
     {
         _maps = maps; _flow = flow;
         ApplyPhase(flow.State);
-        flow.Changed += PhaseChanged;
+        flow.StateAdvancing += PhaseChanged;
     }
 
     internal BakeService(BakeOptions options, TerrainCacheService terrain, BuildInputSnapshot globalInputs)
@@ -275,7 +275,7 @@ public sealed class BakeService : IBakeService, IBakeContextSource, IMapContentS
 
     private void Stop()
     {
-        if (_flow is not null) _flow.Changed -= PhaseChanged;
+        if (_flow is not null) _flow.StateAdvancing -= PhaseChanged;
         MapBuild[] maps;
         lock (_sync)
         {

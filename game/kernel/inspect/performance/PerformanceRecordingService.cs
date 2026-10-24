@@ -26,6 +26,7 @@ public sealed class PerformanceRecordingService : IPerformanceRecorder, IRegistr
     private readonly Queue<Request> _requests = new();
     private readonly List<Task> _saves = [];
     private readonly CommandNotification _notifications = new();
+    private readonly CancellationTokenSource _exit = new();
     private Task _processingTask = Task.CompletedTask;
     private bool _processing, _initialized, _exiting, _requested, _subscribed;
     private PerfRecordingState _state;
@@ -255,10 +256,18 @@ public sealed class PerformanceRecordingService : IPerformanceRecorder, IRegistr
             _capture = new(current, _dictionary!, samples, _viewport ?? throw new InvalidOperationException("Recording viewport is not attached."));
             _capture.Start();
             current.StartWatchdog(_frames, watchdog);
-            var adapter = await RenderAdapterIdentity.CaptureAsync();
+            var adapter = await RenderAdapterIdentity.CaptureAsync(_exit.Token);
+            if (_exiting && adapter.Status.Error is { } captureError)
+                current.AddFailure(PerfFaultCode.ProducerFailed, captureError);
+            _exit.Token.ThrowIfCancellationRequested();
             current.StartHardware(adapter);
             current.AttachCapture();
             current.Begin(anchor);
+        }
+        catch (OperationCanceledException error) when (_exit.IsCancellationRequested && error.CancellationToken == _exit.Token)
+        {
+            ReceiveEndFailure(await StopAsync(PerfEndReason.Exit));
+            return;
         }
         catch (Exception error)
         {
@@ -387,6 +396,7 @@ public sealed class PerformanceRecordingService : IPerformanceRecorder, IRegistr
         if (_exiting) return;
         _exiting = true;
         StopAccepting(PerfEndReason.Exit);
+        _exit.Cancel();
         _requests.Enqueue(new(false, PerfEndReason.Exit, null));
         if (_session is not null && _state != PerfRecordingState.Faulted) ChangeState(PerfRecordingState.Stopping);
         StartRequests();
@@ -398,6 +408,7 @@ public sealed class PerformanceRecordingService : IPerformanceRecorder, IRegistr
         Exception? failure = null;
         try { await _processingTask; }
         catch (Exception error) { failure = error; }
+        _exit.Dispose();
         try { await Task.WhenAll(_saves); }
         catch (Exception error) { failure = RetainedFailure.Append(failure, error); }
         if (_notifications.TakeFailure() is { } notification)

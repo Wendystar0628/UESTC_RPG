@@ -125,7 +125,7 @@ public partial class WalkController : CharacterBody3D, IWalkController, IWalkTel
         ResolveServices();
         _uiSettings = AppBoot.Options.Automated ? null : KernelServices.Get<ISettingsStore>().Section("ui");
         _comfort.BindSettings(_uiSettings);
-        _world!.InstanceChanged += OnWorldInstanceChanged;
+        _world!.InstanceAdvancing += OnWorldInstanceChanged;
         _bodyCollision.Initialize();
         _placement.Attach(this);
         _previousFeet = _feet = GlobalPosition.ToNumerics();
@@ -134,14 +134,14 @@ public partial class WalkController : CharacterBody3D, IWalkController, IWalkTel
     public override void _EnterTree()
     {
         if (!_bodyCollision.Initialized) return;
-        _world!.InstanceChanged += OnWorldInstanceChanged;
+        _world!.InstanceAdvancing += OnWorldInstanceChanged;
         _placement.Attach(this);
         _worldResetPending = true;
     }
 
     public override void _ExitTree()
     {
-        if (_world is not null) _world.InstanceChanged -= OnWorldInstanceChanged;
+        if (_world is not null) _world.InstanceAdvancing -= OnWorldInstanceChanged;
         _placement.Detach();
     }
 

@@ -1,5 +1,6 @@
 // Supplies project-owned syntax and semantics to the G4 source rules.
 // 用法：由架构与语义规则读取，真实项目加载交给 SourceWorkspace。
+using System.Runtime.CompilerServices;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 
@@ -15,6 +16,10 @@ internal sealed record SourceFile(string Path, SyntaxTree Tree, SemanticModel Mo
 
 internal static class SourceModel
 {
+    private static readonly ConditionalWeakTable<Compilation, ConditionalWeakTable<SyntaxTree, SemanticModel>> DeclarationModels = new();
+    private static SemanticModel CachedModel(Compilation compilation, SyntaxTree tree) =>
+        DeclarationModels.GetValue(compilation, _ => new()).GetValue(tree, value => compilation.GetSemanticModel(value));
+
     private static readonly Lazy<SourceWorkspace> Model = new(() => SourceWorkspace.Load(RepositoryRoot()));
     public static IEnumerable<Project> Projects => Model.Value.Solution.Projects;
     public static IEnumerable<SourceFile> Production => Model.Value.Files.Where(file => !file.IsTest);
@@ -37,16 +42,16 @@ internal static class SourceModel
     {
         var tree = declaration.SyntaxTree;
         // Tree identity keeps the current project, macro variant, or regression fixture's semantics.
-        if (context.Compilation.ContainsSyntaxTree(tree)) return context.Compilation.GetSemanticModel(tree);
+        if (context.Compilation.ContainsSyntaxTree(tree)) return ReferenceEquals(context.SyntaxTree, tree) ? context : CachedModel(context.Compilation, tree);
         // A source declaration's tree ownership can differ from the symbol's containing assembly.
         var owners = Model.Value.Compilations.Values.Where(compilation => compilation.ContainsSyntaxTree(tree)).ToArray();
-        if (owners.Length == 1) return owners[0].GetSemanticModel(tree);
+        if (owners.Length == 1) return CachedModel(owners[0], tree);
         if (owners.Length == 0) throw new InvalidOperationException(
             $"G4 could not locate the project declaration for {symbol.ToDisplayString()} in {tree.FilePath}: " +
             $"the exact syntax tree belongs to neither context {context.Compilation.Assembly.Identity} nor any cached project compilation.");
         var assembly = symbol.ContainingAssembly?.Identity;
         var matches = owners.Where(compilation => assembly is not null && compilation.Assembly.Identity.Equals(assembly)).ToArray();
-        if (matches.Length == 1) return matches[0].GetSemanticModel(tree);
+        if (matches.Length == 1) return CachedModel(matches[0], tree);
         throw new InvalidOperationException(
             $"G4 could not disambiguate the project declaration for {symbol.ToDisplayString()} in {tree.FilePath}: " +
             $"symbol assembly {assembly}; tree owners {string.Join("; ", owners.Select(compilation => compilation.Assembly.Identity))}.");
