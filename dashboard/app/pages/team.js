@@ -272,7 +272,7 @@
           h('div.tm-stat', h('b', Dash.num(A.found)), '条查实'),
           h('div.tm-stat', h('b', Dash.num(A.newRows)), '条转成了队列行'))));
       var unknownA = ['audited', 'unaudited', 'rate', 'found', 'newRows', 'missing'].filter(function (k) { return A[k] == null; });
-      if (unknownA.length) el.appendChild(h('div.note-line', unsure('有的数未确认', A.reasons, unknownA)));
+      if (unknownA.length) el.appendChild(h('div.note-line', unsure('有的数未确认', A.reasons, unknownA.map(function (k) { return k === 'missing' ? 'missing[]' : k; }))));
       el.appendChild(h('div.tm-sub', A.unaudited == null ? '没审的行数未确认' : A.unaudited ? '没审的 ' + Dash.num(A.unaudited) + ' 行' : '推上去的行都审过了'));
       if (missing.length) {
         el.appendChild(h('div.tm-list', lines(missing.map(function (r) {
@@ -330,7 +330,7 @@
           h('button.btn', { type: 'button', on: { click: function () { ruleFilter = null; Dash.redraw('team-dispatch'); } } }, '清除')));
       }
       el.appendChild(h('div.tm-viols', rows.length ? lines(rows.map(violation), 8, '个')
-        : D.bad == null ? h('div.tm-ok', Dash.status(unsure('违规名单未确认', D.reasons, ['bad']), 'muted'))
+        : D.bad == null ? h('div.tm-ok', Dash.status(unsure('违规名单未确认', D.reasons, ['bad[]']), 'muted'))
         : picked ? (picked.unknown === 0 ? h('div.tm-ok', Dash.status('没有违反 ' + ruleFilter + ' 的', 'ok'))
           : h('div.tm-ok', Dash.status('判得出的里没有违反 ' + ruleFilter + ' 的，' + (picked.unknown ? '另有 ' + Dash.num(picked.unknown) + ' 个没判' : '没判的个数未确认'), 'warn')))
         : D.ok == null ? h('div.tm-ok', Dash.status(unsure('判得出的里没有违规，但不能当作都合规', D.reasons, ['ok']), 'warn'))

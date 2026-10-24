@@ -162,7 +162,7 @@
     if (!rows.length) return null;
     var names = (pd.labels && pd.labels.phases) || {};
     var chart = Dash.charts.stack(rows.map(function (r) { return '帧 ' + r[idx.collectionFrame]; }), PHASES.map(function (k) {
-      return { key: k, label: names[k] || Dash.label('perf', k), tone: ['perf', k], values: rows.map(function (r) { return r[idx[k]]; }) };
+      return { key: k, label: names[k] || k, tone: ['perf', k], values: rows.map(function (r) { return r[idx[k]]; }) };
     }), { height: 260, unit: 'ms', label: '异常前后的逐帧五段', caliber: '五段是墙钟区间，只作关联阶段；分段不可用的帧留空' });
     return h('div.pf-hot', h('div.pf-sub', '逐帧五段 · ' + rows.length + ' 帧（重级以上的切片）'), chart);
   }

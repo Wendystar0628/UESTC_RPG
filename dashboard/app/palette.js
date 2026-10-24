@@ -91,12 +91,13 @@
       fail: ['--risk', '没过'],
       skip: ['--muted', '没跑']
     },
-    /* 性能页：曲线与五段一组冷色，异常四级由灰到红（契约 perf.anomalies[].level）；来源"作者"用 side.author，AI 用 ai */
+    /* 性能页：曲线与五段一组冷色，异常四级由灰到红（契约 perf.anomalies[].level）；来源"作者"用 side.author，AI 用 ai。
+       异常等级与五段只登记样式，中文名来自后端 perf.labels.levels、perf.labels.phases 与各条的 levelLabel */
     perf: {
-      info:       ['--pf-info', '提示'],
-      light:      ['--pf-light', '轻'],
-      heavy:      ['--pf-heavy', '重'],
-      severe:     ['--pf-severe', '严重'],
+      info:       ['--pf-info'],
+      light:      ['--pf-light'],
+      heavy:      ['--pf-heavy'],
+      severe:     ['--pf-severe'],
       ai:         ['--seq-3', 'AI'],
       frame:      ['--pf-frame', '帧时'],
       fps:        ['--pf-fps', '实时帧率'],
@@ -114,11 +115,11 @@
       idle:       ['--pf-idle', '非稳态'],
       unknown:    ['--pf-unknown', '上下文未知'],
       activity:   ['--pf-activity', '在做什么'],
-      physMs:     ['--pf-phys', '物理区间'],
-      procMs:     ['--pf-proc', '处理区间'],
-      lateMs:     ['--pf-late', '处理后区间'],
-      drawMs:     ['--pf-draw', '绘制区间'],
-      tailMs:     ['--pf-tail', '绘制后区间']
+      physMs:     ['--pf-phys'],
+      procMs:     ['--pf-proc'],
+      lateMs:     ['--pf-late'],
+      drawMs:     ['--pf-draw'],
+      tailMs:     ['--pf-tail']
     },
     /* 分组色块：按顺序取的一组蓝（脚本分组、文档域），键是下标；timing（钩子时机）同用这一组 */
     seq: ['--seq-1', '--seq-2', '--seq-3', '--seq-4', '--seq-5', '--seq-6'],
@@ -157,7 +158,7 @@
       return state ? state.label : String(key == null ? '—' : key);
     }
     var e = entry(group, key);
-    return e ? e[1] : String(key == null ? '—' : key);
+    return e && e[1] != null ? e[1] : String(key == null ? '—' : key);
   };
 
   Dash.modelKey = function (m) {
