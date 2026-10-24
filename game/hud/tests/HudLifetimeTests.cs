@@ -1,4 +1,4 @@
-using System.Reflection;
+using System.Runtime.CompilerServices;
 using Campus.Contracts;
 using Campus.Audio.Core;
 using Campus.Contracts.AppFlow;
@@ -35,26 +35,39 @@ public sealed class HudLifetimeTests
         settings.Set(HudSettingDefinitions.ReduceMotion, (int)ReduceMotionMode.On);
         var world = new WorldStateService(new TestWeatherProcess());
         var motion = new MotionPolicy(settings);
-        var baseline = Subscribers(settings, "Changed");
-        var worldBaseline = Subscribers(world, "InstanceChanged");
-        var resources = new RequiredResources();
-        var clock = new UiThemeClock(world, settings, motion, resources);
+        var clock = CycleThemeClock(settings, world, motion);
+        // 设置与世界在这之后仍活着：钟释放后还能被回收，才说明离树时两处订阅都已退掉。
+        AssertThat(Collected(clock)).OverrideFailureMessage("Freed clock is still held by a settings or world subscription.").IsTrue();
+        GC.KeepAlive(settings);
+        GC.KeepAlive(world);
+    }
+
+    // 单独成帧，调试构建下栈上不留钟的引用；返回弱引用给调用方判回收。
+    [MethodImpl(MethodImplOptions.NoInlining)]
+    private static WeakReference CycleThemeClock(HudSettings settings, WorldStateService world, MotionPolicy motion)
+    {
+        var clock = new UiThemeClock(world, settings, motion, new RequiredResources());
+        var switches = 0;
+        clock.Switched += _ => switches++;
         var parent = ((SceneTree)Engine.GetMainLoop()).Root;
         try
         {
-            for (var cycle = 0; cycle < 3; cycle++)
+            for (var cycle = 1; cycle <= 3; cycle++)
             {
                 parent.AddChild(clock);
-                AssertThat(!clock.Dark && Subscribers(settings, "Changed") == baseline + 1).OverrideFailureMessage("Clock did not bind exactly once on entry.").IsTrue();
-                AssertThat(Subscribers(world, "InstanceChanged") == worldBaseline + 1).OverrideFailureMessage("Clock did not bind world notification exactly once on entry.").IsTrue();
+                AssertThat(clock.Dark).OverrideFailureMessage("Clock did not take the configured light theme on entry.").IsFalse();
                 settings.Set(HudSettingDefinitions.Theme, (int)UiThemeMode.Dark);
-                AssertThat(clock.Dark).OverrideFailureMessage("Attached clock stopped responding to theme settings.").IsTrue();
+                AssertThat(clock.Dark && switches == cycle).OverrideFailureMessage("Attached clock did not switch once on a theme setting change.").IsTrue();
                 parent.RemoveChild(clock);
                 var front = clock.Front;
                 settings.Set(HudSettingDefinitions.Theme, (int)UiThemeMode.Light);
-                AssertThat(clock.Dark && clock.Front == front && Subscribers(settings, "Changed") == baseline).OverrideFailureMessage("Detached clock still observed settings or retained a service subscription.").IsTrue();
-                AssertThat(Subscribers(world, "InstanceChanged") == worldBaseline).OverrideFailureMessage("Detached clock retained a world observer.").IsTrue();
+                // 离树期间换一次世界实例：发给已退订的钟不该出错。
+                world.EndInstance();
+                world.Freeze(13, Season.Summer, 0);
+                world.CompleteRestore();
+                AssertThat(clock.Dark && clock.Front == front && switches == cycle).OverrideFailureMessage("Detached clock still responded to settings.").IsTrue();
             }
+            return new WeakReference(clock);
         }
         finally { clock.Free(); }
     }
@@ -77,8 +90,6 @@ public sealed class HudLifetimeTests
         var camera = new TestCameraRig(view);
         var model = new HudModel(world, camera, ruleset);
         var motion = new MotionPolicy(settings);
-        var settingsBaseline = Subscribers(settings, "Changed");
-        var worldBaseline = Subscribers(world, "InstanceChanged");
         camera.Mode = ViewMode.Walk;
         world.Freeze(13, Season.Summer, 0);
         world.CompleteRestore();
@@ -101,7 +112,6 @@ public sealed class HudLifetimeTests
             for (var cycle = 0; cycle < 3; cycle++)
             {
                 AssertThat(router.Layers == 3 && router.Observers == 1 && flow.Observers == 1).OverrideFailureMessage("HUD registered duplicate input layers or flow observers.").IsTrue();
-                AssertThat(Subscribers(world, "InstanceChanged") == worldBaseline + 2).OverrideFailureMessage("HUD root and theme clock did not bind world notifications exactly once.").IsTrue();
                 var dialog = new Control();
                 hud.DialogHost.AddChild(dialog);
                 // 宿主仲裁每帧跑一次：ProcessFrame 信号先于节点的 _Process，等两次才保证 HUD 至少处理过一帧。
@@ -113,11 +123,16 @@ public sealed class HudLifetimeTests
                 parent.RemoveChild(hud);
                 AssertThat(router.Layers == 0 && router.Observers == 0 && flow.Observers == 0).OverrideFailureMessage("Tree exit retained input layers or service observers.").IsTrue();
                 AssertThat(router.Cursors == 0).OverrideFailureMessage("Tree exit retained the HUD cursor lease.").IsTrue();
-                AssertThat(Subscribers(settings, "Changed") == settingsBaseline && Subscribers(world, "InstanceChanged") == worldBaseline).OverrideFailureMessage("Tree exit retained settings/world observers.").IsTrue();
                 AssertThat(Residents(corners) == 0).OverrideFailureMessage("Queued residents remained parented and could reenter before deletion.").IsTrue();
                 // 退树后释放上层内容，仲裁必须已停；重入时按现存子件重新仲裁。
                 hud.DialogHost.RemoveChild(dialog);
                 dialog.Free();
+                // 离树期间设置与世界照常变化：发给已退订的界面不该出错，重入时按现值重建。
+                var follows = settings.Get(HudSettingDefinitions.Resident) == (int)ResidentTheme.Follow;
+                settings.Set(HudSettingDefinitions.Resident, (int)(follows ? ResidentTheme.Dark : ResidentTheme.Follow));
+                world.EndInstance();
+                world.Freeze(13, Season.Summer, 0);
+                world.CompleteRestore();
                 router.PublishCursor(true);
                 flow.SetState(AppState.Boot);
                 flow.SetState(AppState.Playing);
@@ -141,9 +156,13 @@ public sealed class HudLifetimeTests
             AssertThat(router.Cursors == 0).OverrideFailureMessage("Closing the last panel did not return the cursor lease.").IsTrue();
             // 直接带可见弹层释放根，覆盖退出时子节点信号与宿主销毁的顺序。
             hud.DialogHost.AddChild(new Control());
+            var released = new WeakReference(hud);
             hud.Free();
             hud = null;
             AssertThat(router.Layers == 0 && router.Observers == 0 && flow.Observers == 0 && router.Cursors == 0).OverrideFailureMessage("Free retained HUD registrations.").IsTrue();
+            // 隔一帧再判，调试构建下本段栈上的临时引用已不在；设置、世界、流程与输入仍活着，界面还能被回收才说明订阅都已退掉。
+            await FrameAwaiter.ProcessAsync(parent);
+            AssertThat(Collected(released)).OverrideFailureMessage("Freed HUD is still held by a settings, world or service subscription.").IsTrue();
         }
         finally
         {
@@ -229,8 +248,14 @@ public sealed class HudLifetimeTests
             Resources: resources);
     }
 
-    private static int Subscribers(object source, string name) =>
-        ((Delegate?)source.GetType().GetField(name, BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(source))?.GetInvocationList().Length ?? 0;
+    // 退订的外部可见结果：释放以后，活着的服务不再经订阅持有界面，界面对象可以被回收。
+    private static bool Collected(WeakReference target)
+    {
+        GC.Collect();
+        GC.WaitForPendingFinalizers();
+        GC.Collect();
+        return !target.IsAlive;
+    }
 
     private static int Residents(Node root) => root.GetChildren().Sum(child =>
         (child is SpeedBar or TimeCard or TimeStrip or WeatherStrip ? 1 : 0) + Residents(child));
