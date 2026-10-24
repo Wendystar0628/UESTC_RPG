@@ -780,6 +780,12 @@
   },
   {
    "docs": [
+    "ENG-PERF-DATA"
+   ],
+   "glob": "game/data/perf-fields.json"
+  },
+  {
+   "docs": [
     "ENG-PERF",
     "ENG-PREVIEW",
     "SYS-VIEW"
@@ -2092,6 +2098,36 @@
     "WF-RULE"
    ],
    "glob": "scripts/lib/**"
+  },
+  {
+   "docs": [
+    "ENG-PERF-DATA"
+   ],
+   "glob": "scripts/perf/**"
+  },
+  {
+   "docs": [
+    "ENG-PERF-MEASURE"
+   ],
+   "glob": "scripts/perf/collection-plan.ps1"
+  },
+  {
+   "docs": [
+    "ENG-PERF-MEASURE"
+   ],
+   "glob": "scripts/perf/diagnostic-*"
+  },
+  {
+   "docs": [
+    "ENG-PERF-MEASURE"
+   ],
+   "glob": "scripts/perf/run.ps1"
+  },
+  {
+   "docs": [
+    "ENG-PERF-MEASURE"
+   ],
+   "glob": "scripts/perf/scenarios.json"
   },
   {
    "docs": [

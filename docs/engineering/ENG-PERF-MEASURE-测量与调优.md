@@ -10,7 +10,7 @@ related: [ENG-PERF-ADAPT, ENG-FAILS]
 contracts: []
 data: []
 gates: [G10]
-paths: []
+paths: ["scripts/perf/run.ps1", "scripts/perf/collection-plan.ps1", "scripts/perf/scenarios.json", "scripts/perf/diagnostic-*"]
 ---
 # ENG-PERF-MEASURE · 测量与调优
 

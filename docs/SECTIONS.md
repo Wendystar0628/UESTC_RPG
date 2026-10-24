@@ -1737,7 +1737,7 @@
 
 ## ENG-PERF-MEASURE · 测量与调优
 
-`docs/engineering/ENG-PERF-MEASURE-测量与调优.md` · 7.0k 字 · 性能测量的机器与剖析权限、AI 采集批次与场景套、以最新数据为准、诊断档与深挖、不采用的工具、调优轮次的长期规则与判停
+`docs/engineering/ENG-PERF-MEASURE-测量与调优.md` · 7.1k 字 · 性能测量的机器与剖析权限、AI 采集批次与场景套、以最新数据为准、诊断档与深挖、不采用的工具、调优轮次的长期规则与判停
 关键词：性能测量、AI 批次、run.ps1、perf.py、perf.py latest、固定机位套、路线套、传送套、采样前稳定、A/B/A、作废、污染标记、以最新为准、诊断档、deepen、采集条件标记、调优轮次、第 0 轮、距离表、必判集、判停、结束原因、单边判、隔离桌面、剖析权限
 
 - ENG-PERF-MEASURE §0 结论 · L21 · 861
