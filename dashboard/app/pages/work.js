@@ -165,12 +165,13 @@
       var specs = side === 'all'
         ? [{ s: 'claude', k: 'all' }, { s: 'codex', k: 'all' }].concat(byKind)
         : [{ s: side, k: 'all' }].concat(byKind);
-      var empty = true, known = false, hasPrev = false;
+      // 只有当前各组都确认为零才写"还没有"；有一组未知就是未确认
+      var empty = true, zero = true, hasPrev = false;
       var groups = specs.map(function (sp) {
         var e = list.filter(function (x) { return x.side === sp.s && x.kind === sp.k; })[0] || {};
         var cur = e.cur || null, prev = e.prev || null;
         if ((cur && cur.n) || (prev && prev.n)) empty = false;
-        if (cur && cur.n != null) known = true;
+        if (!cur || cur.n !== 0) zero = false;
         if (prev) hasPrev = true;
         var name = sp.k === 'all' ? SIDE_NAME[sp.s] + (side === 'all' ? '' : ' · 全部')
           : (side === 'all' ? '' : SIDE_NAME[side] + ' · ') + sp.label;
@@ -179,7 +180,7 @@
           tone: sp.k === 'all' ? ['side', sp.s] : sp.tone, cur: cur, prev: prev
         };
       });
-      if (empty) { el.appendChild(known ? Dash.empty('近 7 天还没有推送删行', '有了就在这里画') : Dash.empty('近 7 天推送删行的数量未确认', '后台记账够了就在这里画')); return; }
+      if (empty) { el.appendChild(zero ? Dash.empty('近 7 天还没有推送删行', '有了就在这里画') : Dash.empty('近 7 天推送删行的数量未确认', '后台记账够了就在这里画')); return; }
       el.appendChild(Dash.charts.box(groups, { height: 280, unit: '分钟', label: '流转时长', caliber: CAL.lead }));
       el.appendChild(h('div.note-line', hasPrev ? '实色是近 7 天，浅色虚线是前 7 天' : '前 7 天的记账还不够，先不画对比'));
     }
@@ -192,17 +193,22 @@
     needs: ['flow'], uses: ['side'],
     render: function (el, d, ctx) {
       var side = ctx.filters.side, stages = d.flow.stages || [];
-      var cats = [], ents = [];
+      var cats = [], ents = [], weeks = [];
       (side === 'all' ? ['claude', 'codex'] : [side]).forEach(function (s) {
         ['cur', 'prev'].forEach(function (w) {
           var e = stages.filter(function (x) { return Dash.sideKey(x.side) === s && x.week === w; })[0] || null;
           if (w === 'prev' && e && e.parts === null) return;
           ents.push(e);
+          weeks.push(w);
           cats.push(SIDE_NAME[s] + (w === 'cur' ? ' 近 7 天' : ' 前 7 天') + ' · ' + (e && e.n != null ? e.n + ' 行' : '行数未确认'));
         });
       });
-      if (ents.every(function (e) { return !e || e.n == null; })) { el.appendChild(Dash.empty('近 7 天推送删行的数量未确认', '后台记账够了就在这里画')); return; }
-      if (ents.every(function (e) { return !e || !e.n; })) { el.appendChild(Dash.empty('近 7 天还没有推送删行', '有了就在这里画')); return; }
+      // 都没有正数时：近 7 天各侧都确认为零才写"还没有"，前 7 天的零盖不过近 7 天的未知
+      if (!ents.some(function (e) { return e && e.n; })) {
+        var zero = ents.every(function (e, i) { return weeks[i] !== 'cur' || (e && e.n === 0); });
+        el.appendChild(zero ? Dash.empty('近 7 天还没有推送删行', '有了就在这里画') : Dash.empty('近 7 天推送删行的数量未确认', '后台记账够了就在这里画'));
+        return;
+      }
       var series = Dash.stageKeys.map(function (k) {
         return {
           key: k, label: Dash.label('stage', k), tone: ['stage', k],
