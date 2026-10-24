@@ -1697,7 +1697,7 @@
 
 ## ENG-PERF-DATA · 性能数据与分析
 
-`docs/engineering/ENG-PERF-DATA-性能数据与分析.md` · 11.1k 字 · 性能记录的四层与写入方、记录开关与会话寿命、原始流与时间基、指标口径与非稳态帧、测量范围、异常、比较键与保留、开销目标
+`docs/engineering/ENG-PERF-DATA-性能数据与分析.md` · 11.3k 字 · 性能记录的四层与写入方、记录开关与会话寿命、原始流与时间基、指标口径与非稳态帧、测量范围、异常、比较键与保留、开销目标
 关键词：性能记录、记录性能数据、记录服务、性能会话、六件、原始流、perf-fields.json、schema、calc、指标口径、体验口径、成本口径、五段、B0–B4、主线程周期、受测视口、受测视口 GPU 合计、成本尖峰、非稳态帧、掉帧、卡顿分级、1% low、scope、性能异常、比较键、性能数据保留、分析器
 
 - ENG-PERF-DATA §0 结论 · L21 · 1.3k
@@ -1706,19 +1706,19 @@
   - ENG-PERF-DATA §1.1 四层 · L45 · 449
   - ENG-PERF-DATA §1.2 记录开关与会话 · L53 · 593
   - ENG-PERF-DATA §1.3 线程分工 · L63 · 242
-- ENG-PERF-DATA §2 原始流与时间基 · L70 · 1.4k
-  - ENG-PERF-DATA §2.1 六件与存放 · L72 · 900
-  - ENG-PERF-DATA §2.2 字段、版本与时间基 · L89 · 518
-- ENG-PERF-DATA §3 指标口径 · L97 · 2.5k
-  - ENG-PERF-DATA §3.1 体验口径 · L106 · 838
-  - ENG-PERF-DATA §3.2 成本口径 · L121 · 1.1k
-- ENG-PERF-DATA §4 测量范围与 `scope` · L133 · 413
-- ENG-PERF-DATA §5 异常 · L143 · 1.9k
-  - ENG-PERF-DATA §5.1 体验类 · L152 · 644
-  - ENG-PERF-DATA §5.2 成本与数据类 · L168 · 616
-  - ENG-PERF-DATA §5.3 归因与合并 · L181 · 365
-- ENG-PERF-DATA §6 比较键、状态与保留 · L191 · 949
-- ENG-PERF-DATA §7 开销目标 · L210 · 328
+- ENG-PERF-DATA §2 原始流与时间基 · L70 · 1.7k
+  - ENG-PERF-DATA §2.1 六件与存放 · L72 · 1.1k
+  - ENG-PERF-DATA §2.2 字段、版本与时间基 · L91 · 518
+- ENG-PERF-DATA §3 指标口径 · L99 · 2.5k
+  - ENG-PERF-DATA §3.1 体验口径 · L108 · 838
+  - ENG-PERF-DATA §3.2 成本口径 · L123 · 1.1k
+- ENG-PERF-DATA §4 测量范围与 `scope` · L135 · 413
+- ENG-PERF-DATA §5 异常 · L145 · 1.9k
+  - ENG-PERF-DATA §5.1 体验类 · L154 · 644
+  - ENG-PERF-DATA §5.2 成本与数据类 · L170 · 616
+  - ENG-PERF-DATA §5.3 归因与合并 · L183 · 365
+- ENG-PERF-DATA §6 比较键、状态与保留 · L193 · 949
+- ENG-PERF-DATA §7 开销目标 · L212 · 328
 
 ## ENG-PERF-LIGHT · 植被、阴影、后期与灯光
 

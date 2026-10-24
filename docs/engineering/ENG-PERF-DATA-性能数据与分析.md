@@ -86,6 +86,8 @@ paths: []
 
 **存放**：作者根 `%APPDATA%\UESTC\perf\`，含 `latest.json` 与各会话目录，写入期间会话目录持 `.lock`，只由记录服务读写与修剪；AI 根 `output/perf/runs/<批次>/<运行>/<会话>/`；派生在 `output/perf/derived/<会话>/`，另有 `output/perf/index.json` 与 `output/perf/history.jsonl`，只由分析器写。
 
+**根级状态 `latest.json`**：每个输出根一份，只由记录服务原子替换。真正写出会话开始与时钟锚点之后才发布"记录中"（会话 ID、待定清单路径、实际开始时刻）；关闭时先原子发布正式 `manifest.json`，再改为"已关闭"。会话是否完成只认正式清单加可独占的锁，不另设完成标记；只剩 `manifest.pending.json` 且锁能独占的按已结束的不完整会话处理。观察台判"正在记录"只读 `latest.json`，不读逐帧文件。
+
 ### 2.2 字段、版本与时间基
 
 - **字段**：原始字段的名称、列序、类型、单位与含义以 `game/data/perf-fields.json` 为准，启动时核对、快照进清单；派生字段的字典在 `scripts/perf`。命名用 ASCII camelCase，物理量带单位后缀，比例 0–1（展示时再乘 100），容量写 MiB。
