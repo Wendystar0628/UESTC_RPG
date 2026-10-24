@@ -251,6 +251,17 @@ public sealed class HudLifetimeTests
         await FrameAwaiter.ProcessAsync(root);
         AssertThat(failure.Errors.Count == 1 && ReferenceEquals(failure.Errors[0], error) && !operation.Running)
             .OverrideFailureMessage("A failed UI operation did not hand its original exception to the failure receiver.").IsTrue();
+        // 服务按异步续体结束任务：操作体已结束、持有者的等待还没回来的那一刻再开，以前被当成正在跑拒掉，后交的意图无人等。
+        var serviced = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        AssertThat(operation.Start(_ => serviced.Task)).IsTrue();
+        var first = new InvalidOperationException();
+        serviced.SetException(first);
+        AssertThat(failure.Errors.Count == 1).OverrideFailureMessage("The fixture did not leave the first owner's wait pending.").IsTrue();
+        var second = new InvalidOperationException();
+        AssertThat(operation.Start(_ => Task.FromException(second))).OverrideFailureMessage("A start right after the previous body ended was refused.").IsTrue();
+        await FrameAwaiter.ProcessAsync(root);
+        AssertThat(failure.Errors.Count == 3 && failure.Errors.Contains(first) && failure.Errors.Contains(second))
+            .OverrideFailureMessage("An operation body ended or started in the owner's pending frame lost its failure.").IsTrue();
     }
 
     private static int Subscribers(object source, string name) =>
