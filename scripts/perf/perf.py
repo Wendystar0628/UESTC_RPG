@@ -1,6 +1,6 @@
 """用有上限的中文表读取性能派生数据，不在展示层重算指标。
 用法：python -I -X utf8 scripts/perf/perf.py {latest,show,compare,slice,anomalies,selfcheck}；各子命令加 --help 查参数。
-输入：output/perf 的分析器产出；产出：最多 100 行、16000 字符的中文表；selfcheck 只运行随附四例小样本，不写真实索引。
+输入：output/perf 的分析器产出；产出：最多 100 行、16000 字符的中文表；selfcheck 只运行随附小样本，不写真实索引。
 """
 import argparse
 import csv
@@ -193,7 +193,7 @@ def main():
         else:
             command.add_argument('--start', type=int)
             command.add_argument('--end', type=int)
-    commands.add_parser('selfcheck', help='运行四例小样本')
+    commands.add_parser('selfcheck', help='运行小样本与收口回归')
     args = parser.parse_args()
     if hasattr(args, 'limit'):
         args.limit = max(1, min(args.limit, MAX_ROWS))

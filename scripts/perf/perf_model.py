@@ -108,16 +108,38 @@ def read_stream(directory, spec, schema):
     return rows
 
 
+def manifest_path(directory):
+    final = Path(directory) / 'manifest.json'
+    return final if final.is_file() else Path(directory) / 'manifest.pending.json'
+
+
 def load_session(directory, dictionary):
     directory = Path(directory).resolve()
-    manifest = read_json(directory / 'manifest.json')
-    if manifest.get('status') != 'closed':
-        raise ValueError('未完成最终关闭；pending 不分析')
+    path = manifest_path(directory)
+    manifest = read_json(path)
     if manifest.get('schema') != dictionary['schema']:
         return manifest, None
     snapshot = manifest.get('fieldDictionary')
-    if not isinstance(snapshot, dict) or snapshot != dictionary:
-        raise ValueError('字段字典快照与当前 schema 不符')
+    if not isinstance(snapshot, dict) or snapshot.get('schema') != dictionary['schema']:
+        raise ValueError('字段字典快照 schema 不符')
+    recorded = snapshot.get('streams')
+    if not isinstance(recorded, dict) or recorded.keys() != dictionary['streams'].keys():
+        raise ValueError('字段字典快照流清单不符')
+    for name, spec in dictionary['streams'].items():
+        original = recorded[name]
+        if not isinstance(original, dict) or any(original.get(key) != spec[key] for key in ('file', 'kind')):
+            raise ValueError('字段字典快照流结构不符: ' + name)
+        columns = original.get('columns')
+        definition = lambda column: tuple(column[key] for key in ('name', 'type', 'nullable', 'unit'))
+        if not isinstance(columns, list) or any(not isinstance(c, dict) for c in columns):
+            raise ValueError('字段字典快照列结构不符: ' + name)
+        if [definition(c) for c in columns] != [definition(c) for c in spec['columns']]:
+            raise ValueError('字段字典快照列定义不符: ' + name)
+    # Only analyze_all's exclusive lease certifies an abandoned pending session.
+    # Its streams can be truncated; index the manifest without parsing unfinished rows.
+    if path.name == 'manifest.pending.json' or manifest.get('status') != 'closed':
+        manifest = {**manifest, 'status': 'partial', 'complete': False}
+        return manifest, None
     streams = {name: read_stream(directory, spec, dictionary['schema'])
                for name, spec in dictionary['streams'].items()}
     return manifest, streams
@@ -146,10 +168,7 @@ def target_ms(manifest):
 
 def mark_context(frames, events, dictionary):
     flags = {item['name']: item['value'] for item in dictionary['contextFlags']}
-    excluded = ('mapTransition', 'cameraTransition', 'seasonTransition', 'notPlaying',
-                'loadingVisible', 'qualityApplying', 'windowUnfocused', 'inputLocked',
-                'captureFrame', 'qualitySettling', 'newGameOrLoad')
-    mask = sum(flags.get(name, 0) for name in excluded)
+    mask = sum(flags[name] for name in dictionary['nonSteadyRules']['contextFlagNames'])
     intervals = []
     for rule in dictionary['nonSteadyRules']['rules']:
         opened = {}
@@ -184,7 +203,17 @@ def prepare_frames(frames, samples, events, dictionary):
     sample_times = [s['monotonicMs'] for s in samples]
     previous = None
     seen_draws = defaultdict(set)
+    event_index, caliber = 0, {}
     for frame in frames:
+        while event_index < len(events) and events[event_index]['monotonicMs'] <= frame['monotonicMs']:
+            event = events[event_index]
+            payload = event['payload']
+            if event['event'] == 'settings.quality' and payload.get('effective') is not None:
+                caliber[event['event']] = payload['effective']
+            elif event['event'] == 'window.size':
+                caliber[event['event']] = [payload.get('widthPx'), payload.get('heightPx')]
+            event_index += 1
+        frame['_caliber'] = json.dumps(caliber, sort_keys=True, separators=(',', ':'))
         sample_index = bisect.bisect_right(sample_times, frame['monotonicMs']) - 1
         sample = samples[sample_index] if sample_index >= 0 else {}
         frame['_sample'] = sample
@@ -235,19 +264,21 @@ def prepare_frames(frames, samples, events, dictionary):
 def rolling_medians(frames, fields, policy):
     windows = defaultdict(lambda: deque(maxlen=policy['medianWindowFrames']))
     previous_scene = None
+    previous_caliber = None
     result = []
     for frame in frames:
-        if frame['_gap'] or frame['_scene'] != previous_scene or not frame['_steady']:
+        if frame['_scene'] != previous_scene or frame['_caliber'] != previous_caliber:
             windows.clear()
         medians = {key: statistics.median(windows[key]) if len(windows[key]) >= policy['medianMinimumFrames'] else None
                    for key in fields}
         result.append(medians)
-        if frame['_steady']:
+        if frame['_steady'] and not frame['_gap']:
             for key in fields:
                 value = frame.get(key)
                 if number(value) and (key != 'dtMs' or frame['_dtValid']) and (key not in PHASES or frame['_phaseValid']):
                     windows[key].append(value)
         previous_scene = frame['_scene']
+        previous_caliber = frame['_caliber']
     return result
 
 
@@ -287,7 +318,6 @@ def costs(frames, samples, hw):
     result['viewports'] = {key: {metric: distribution(f['_viewports'].get(key, {}).get(metric) for f in frames)
                                   for metric in ('cpuMs', 'gpuMs')}
                            for key in sorted({key for f in frames for key in f['_viewports']})}
-    result['measuredViewportGpuMs'] = distribution(f['_measuredGpuMs'] for f in frames)
     result['memory'] = {key: distribution(s.get(key) for s in samples) for key in
                         ('workingSetMiB', 'privateMiB', 'managedHeapMiB', 'godotStaticMiB', 'engineVideoMemoryMiB', 'textureMemoryMiB', 'bufferMemoryMiB')}
     result['hardware'] = {key: distribution(h.get(key) for h in hw) for key in

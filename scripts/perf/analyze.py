@@ -1,4 +1,4 @@
-"""分析已关闭性能会话，串行发布派生、索引、历史并修剪 AI 数据。
+"""分析可独占的性能会话，串行发布派生、索引、历史并修剪 AI 数据。
 用法：python -I -X utf8 scripts/perf/analyze.py [会话或批次目录 ...] [--root 仓库] [--author-root 作者perf根]。
 输入：性能六件、game/data/perf-fields.json、budgets.json；产出：output/perf/derived/<id>/{summary.json,anomalies.json,hotframes.csv}、index.json、history.jsonl。
 """
@@ -14,7 +14,7 @@ from pathlib import Path
 # Python -I excludes the script directory; resolve only this repository-owned module directory.
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 sys.dont_write_bytecode = True
-from perf_model import (CALC, COSTS, PHASES, at, costs, experience, load_session, number,
+from perf_model import (CALC, COSTS, PHASES, at, costs, experience, load_session, manifest_path, number,
                         prepare_frames, read_json, rolling_medians, scope_of, target_ms)
 from perf_anomalies import (LEVELS, MAX_PER_TYPE, annotate, anomaly, budget_checks,
                            deepen, frame_anomalies, merge_anomalies, slow_anomalies, window_analysis)
@@ -107,7 +107,7 @@ def budget_items(summary, frames, budgets):
 def summary_for(directory, manifest, streams, dictionary, budgets, run):
     scope, reason = scope_of(manifest)
     key, labels, missing = comparison_key(manifest, run)
-    status, reasons = basic_state(manifest, streams, run, missing)
+    status, reasons = basic_state(manifest, streams, run, missing, dictionary['schema'])
     summary = dict(id=session_id(manifest['id']), calc=CALC, schema=manifest['schema'], origin=manifest.get('origin'),
                    source=str(directory), endedAt=manifest.get('endedAt'), startedAt=manifest.get('startedAt'),
                    recordedSeconds=manifest.get('recordedSeconds'), scope=scope, scopeReason=reason,
@@ -133,7 +133,7 @@ def summary_for(directory, manifest, streams, dictionary, budgets, run):
     summary['validity'] = validity(frames, streams, manifest)
     summary['unavailableDetectors'] = [
         dict(types=['hang', 'mountBudget', 'mountChurn', 'cacheMiss', 'backlogStall', 'loadingDuration', 'physicalStepLimit', 'presentMode'],
-             reason='schema 1 尚无对应已接通字段或已批准的事件 payload；不猜字段、不输出正常结论')]
+             reason='当前 schema 尚无对应已接通字段或已批准的事件 payload；不猜字段、不输出正常结论')]
     summary['timeline'] = timeline(frames, events)
     windows, window_items = window_analysis(frames, manifest, budgets, scope)
     summary['windows'] = windows
@@ -191,11 +191,12 @@ def write_hotframes(path, frames, items, dictionary, radius):
 
 
 def source_stamp(directory, dictionary, budgets, run_path):
-    paths = [directory / 'manifest.json'] + [directory / s['file'] for s in dictionary['streams'].values()]
+    paths = [manifest_path(directory)] + [directory / s['file'] for s in dictionary['streams'].values()]
     if run_path:
         paths.append(run_path)
     return dict(files={str(path): [path.stat().st_size, path.stat().st_mtime_ns] for path in paths if path.is_file()},
-                schema=dictionary['schema'], budgets=budgets)
+                schema=dictionary['schema'], budgets=budgets,
+                contextFlags=dictionary['contextFlags'], nonSteadyRules=dictionary['nonSteadyRules'])
 
 
 def write_session(out, summary, items, frames, hwfast, dictionary, stamp, budgets):
@@ -226,15 +227,13 @@ def analyze_all(root=ROOT, sessions=(), output=None, author=None):
         # Discover and recheck under the shared lock: concurrent triggers cannot append duplicate history.
         for directory in discover(out, author, sessions):
             with exclusive(directory / '.lock') as readable:
-                if not readable:
+                if not readable or (manifest_path(directory).name == 'manifest.pending.json'
+                                    and not (directory / '.lock').is_file()):
                     skipped.append(str(directory))
                     continue
                 try:
-                    manifest = read_json(directory / 'manifest.json')
+                    manifest = read_json(manifest_path(directory))
                     identifier = session_id(manifest['id'])
-                    if manifest.get('status') != 'closed':
-                        skipped.append(str(directory))
-                        continue
                     run, run_path = nearest_run(directory, out / 'runs')
                     stamp = source_stamp(directory, dictionary, budgets, run_path)
                     target = out / 'derived' / identifier / 'summary.json'

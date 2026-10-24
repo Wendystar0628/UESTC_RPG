@@ -77,6 +77,7 @@ def anomaly(kind, level, frame, value, threshold, source, metric=None, state=Fal
                 excessMs=max(0, value - threshold) if number(value) and number(threshold) else 0,
                 phase=None if metric in COSTS[:2] and frame.get('_mainViewportApproximate') else frame.get('_phase'),
                 candidates=[], bottleneck='不定', state=state,
+                attributionAvailable=not (metric in COSTS[:2] and frame.get('_mainViewportApproximate')),
                 sourceDrawFrames={key: view['sourceDrawFrame'] for key, view in frame.get('_viewports', {}).items()},
                 note=('主视口近似对齐（±2 帧）的成本样本；不作逐帧尖峰归因'
                       if metric in COSTS[:2] and frame.get('_mainViewportApproximate') else
@@ -299,7 +300,7 @@ def nearest_frame(frames, milliseconds):
 def merge_anomalies(items):
     grouped = defaultdict(list)
     for item in items:
-        grouped[(item['type'], item.get('metric'), item['level'], item.get('phase'), item['state'])].append(item)
+        grouped[(item['type'], item.get('metric'), item['level'], item.get('phase'), item['state'], item['attributionAvailable'])].append(item)
     merged = []
     for group in grouped.values():
         group.sort(key=lambda a: a['fromMs'])
@@ -324,10 +325,11 @@ def merge_anomalies(items):
 def deepen(items, manifest):
     result = []
     unexplained = Counter((a['type'], a.get('metric'), a.get('phase')) for a in items
-                          if not a['candidates'] and (LEVELS[a['level']] >= 2 or a['type'] == 'costSpike'))
+                          if a['attributionAvailable'] and not a['candidates']
+                          and (LEVELS[a['level']] >= 2 or a['type'] == 'costSpike'))
     for item in items:
         key = (item['type'], item.get('metric'), item.get('phase'))
-        if item['level'] != 'severe' and unexplained[key] < DEEPEN_REPEAT_COUNT:
+        if item['level'] != 'severe' and (not item['attributionAvailable'] or unexplained[key] < DEEPEN_REPEAT_COUNT):
             continue
         if any(r['type'] == item['type'] and r['metric'] == item.get('metric') and r['phase'] == item.get('phase') for r in result):
             continue

@@ -1,5 +1,5 @@
 {
-  "calc": 2,
+  "calc": 3,
   "authority": "ENG-PERF-DATA",
   "summary": {
     "all": "All observed valid values; per-field nulls remain missing",
@@ -9,8 +9,9 @@
     "budgets": "Independent checks; ratio is observed/budget and may exceed 1; exceeded=null if inapplicable or missing",
     "coverage": "Per-stream state and rows, per-field non-null fraction; 0..1 or null",
     "validity": "Only affected fields disabled; hardware loss does not disable engine metrics",
-    "deepen": "run.ps1 -DeepenSession <id>; pending TOOL-428/429 dependency; tools, original poseArgs and scene retained",
-    "inputStamp": "Current calc, schema, file size/mtime and budget snapshot; no checksum"
+    "median": "Prior valid steady frames in the same scene and caliber; nonsteady/gap rows do not enter or clear the window; scene/effective quality/output-size changes reset it",
+    "deepen": "run.ps1 -DeepenSession <id>; approximate main-viewport candidates do not count as unexplained; pending TOOL-428/429 dependency; tools, original poseArgs and scene retained",
+    "inputStamp": "Current calc, schema, file size/mtime, budget snapshot and current context rules; no checksum"
   },
   "runJson": {
     "owner": "scripts/perf/run.ps1",

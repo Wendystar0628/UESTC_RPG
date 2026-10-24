@@ -100,13 +100,15 @@ def discover(out, author, explicit=()):
     paths = set()
     for directory in (Path(out) / 'runs', Path(author)):
         if directory.exists():
-            paths.update(p.parent.resolve() for p in directory.rglob('manifest.json') if not p.is_symlink())
+            paths.update(p.parent.resolve() for pattern in ('manifest.json', 'manifest.pending.json')
+                         for p in directory.rglob(pattern) if not p.is_symlink())
     for path in explicit:
         directory = Path(path).resolve()
-        if (directory / 'manifest.json').is_file():
+        if any((directory / name).is_file() for name in ('manifest.json', 'manifest.pending.json')):
             paths.add(directory)
         elif directory.is_dir():
-            paths.update(p.parent.resolve() for p in directory.rglob('manifest.json') if not p.is_symlink())
+            paths.update(p.parent.resolve() for pattern in ('manifest.json', 'manifest.pending.json')
+                         for p in directory.rglob(pattern) if not p.is_symlink())
     return sorted(paths)
 
 
@@ -135,10 +137,14 @@ def comparison_key(manifest, run):
     return key, labels, missing
 
 
-def basic_state(manifest, streams, run, missing):
+def basic_state(manifest, streams, run, missing, schema):
     reasons = []
-    if manifest.get('schema') is None or streams is None:
+    if manifest.get('schema') != schema:
         return 'unsupported', ['schema 不是当前版本']
+    if manifest.get('status') != 'closed':
+        return 'partial', ['记录锁已释放但会话未完成关闭；未解析未闭合的原始流']
+    if streams is None:
+        return 'unsupported', ['当前 schema 的原始流不可用']
     if manifest.get('origin') == 'play':
         return 'evidence', ['作者会话只作证据，不作 A/B 基线']
     if run.get('status') == 'invalid':
@@ -236,6 +242,9 @@ def inside(path, parent):
 def unlocked_tree(directory):
     leases = contextlib.ExitStack()
     try:
+        if any(not (path.parent / '.lock').is_file() for path in Path(directory).rglob('manifest.pending.json')):
+            leases.close()
+            return None
         for path in Path(directory).rglob('.lock'):
             if not leases.enter_context(exclusive(path, allow_delete=True)):
                 leases.close()
@@ -251,7 +260,8 @@ def prune(out, entries):
     removed = []
     if runs.exists():
         batches = sorted((p for p in runs.iterdir() if p.is_dir() and not p.is_symlink()),
-                         key=lambda p: max((q.stat().st_mtime_ns for q in p.rglob('manifest.json')), default=p.stat().st_mtime_ns), reverse=True)
+                         key=lambda p: max((q.stat().st_mtime_ns for name in ('manifest.json', 'manifest.pending.json')
+                                            for q in p.rglob(name)), default=p.stat().st_mtime_ns), reverse=True)
         protected = set(batches[:AI_BATCHES_KEEP])
         for entry in entries:
             source = Path(entry['source']).resolve()
@@ -262,10 +272,9 @@ def prune(out, entries):
                 continue
             lease = unlocked_tree(batch)
             if lease is not None:
-                manifests = list(batch.rglob('manifest.json'))
-                complete = bool(manifests) and not list(batch.rglob('manifest.pending.json'))
                 try:
-                    if complete:
+                    manifests = [p for name in ('manifest.json', 'manifest.pending.json') for p in batch.rglob(name)]
+                    if manifests:
                         shutil.rmtree(batch)
                         removed.append(str(batch))
                 finally:
