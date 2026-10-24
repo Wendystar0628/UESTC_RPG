@@ -14,8 +14,8 @@ public partial class WorldTransitionPresentation : CanvasLayer, IWorldTransition
         ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize,
         StretchMode = TextureRect.StretchModeEnum.Scale,
     };
-    private readonly List<Capture> _owned = [];
-    private Capture? _current;
+    private readonly List<WorldTransitionCapture> _owned = [];
+    private WorldTransitionCapture? _current;
     private Task? _drain;
     private double _elapsed;
     private float _duration;
@@ -43,13 +43,16 @@ public partial class WorldTransitionPresentation : CanvasLayer, IWorldTransition
         if (!IsInsideTree()) throw new InvalidOperationException("World transitions require a mounted presentation.");
         var source = GetViewport().GetTexture();
         RetireCurrent();
-        var capture = new Capture();
+        var capture = new WorldTransitionCapture();
         _owned.Add(capture);
         _current = capture;
         capture.Work = RunCapture(capture, source);
         // Safe render mode executes the queued command here. Preserve an immediate native failure
         // at the requesting call instead of replacing it with a later "no capture" error.
-        if (capture.Work.IsFaulted) throw capture.Work.Exception!;
+        if (capture.Work.IsFaulted)
+        {
+            throw capture.TakeResult().Exception!;
+        }
     }
 
     public Task Crossfade(float seconds)
@@ -59,10 +62,11 @@ public partial class WorldTransitionPresentation : CanvasLayer, IWorldTransition
         var capture = _current ?? throw new InvalidOperationException("Capture the previous scene before crossfading.");
         if (!capture.Duration.TrySetResult(seconds))
             throw new InvalidOperationException("This captured frame is already crossfading.");
-        return capture.Work;
+        // Transfer the result, not the resource lifetime: Work still includes GPU release.
+        return capture.TakeResult();
     }
 
-    private async Task RunCapture(Capture capture, ViewportTexture source)
+    private async Task RunCapture(WorldTransitionCapture capture, ViewportTexture source)
     {
         Rid target = default;
         Texture2Drd? texture = null;
@@ -98,12 +102,12 @@ public partial class WorldTransitionPresentation : CanvasLayer, IWorldTransition
         try { await ReleaseGpu(texture, target); }
         catch (Exception error) { failure = failure is null ? error : new AggregateException(failure, error); }
         capture.Stop.Dispose();
-        // Failed work remains owned until registry drain, even if CapturePreviousFrame had no consumer.
+        // Retain failed work for drain; only results without a caller are reported there.
         if (failure is not null) ExceptionDispatchInfo.Capture(failure).Throw();
         _owned.Remove(capture);
     }
 
-    private async Task PresentCapture(Capture capture, Texture2Drd texture)
+    private async Task PresentCapture(WorldTransitionCapture capture, Texture2Drd texture)
     {
         _previous.Texture = texture;
         _previous.Modulate = Colors.White;
@@ -159,15 +163,7 @@ public partial class WorldTransitionPresentation : CanvasLayer, IWorldTransition
     public Task DrainForExitAsync()
     {
         PrepareForExit();
-        return _drain ??= DrainCaptures();
-    }
-
-    private async Task DrainCaptures()
-    {
-        var pending = Task.WhenAll(_owned.Select(capture => capture.Work));
-        try { await pending; }
-        catch { throw pending.Exception!; }
-        _owned.Clear();
+        return _drain ??= WorldTransitionCapture.DrainAsync(_owned);
     }
 
     public override void _ExitTree()
@@ -256,12 +252,43 @@ public partial class WorldTransitionPresentation : CanvasLayer, IWorldTransition
     {
         if (!GodotThread.IsMainThread()) throw new InvalidOperationException("World transitions begin on the Godot main thread.");
     }
+}
 
-    private sealed class Capture
+// This operation owns pure Task state; Godot rendering remains in WorldTransitionPresentation.
+internal sealed class WorldTransitionCapture
+{
+    internal readonly CancellationTokenSource Stop = new();
+    internal readonly TaskCompletionSource<float> Duration = new();
+    internal readonly TaskCompletionSource Faded = new();
+    internal Task Work = Task.CompletedTask;
+    private bool _callerOwnsResult;
+
+    internal Task TakeResult()
     {
-        internal readonly CancellationTokenSource Stop = new();
-        internal readonly TaskCompletionSource<float> Duration = new();
-        internal readonly TaskCompletionSource Faded = new();
-        internal Task Work = Task.CompletedTask;
+        _callerOwnsResult = true;
+        return Work;
+    }
+
+    internal static async Task DrainAsync(List<WorldTransitionCapture> owned)
+    {
+        var captures = owned.ToArray();
+        // Observe every result and finish every lifetime before deciding who receives failures.
+        await Task.WhenAll(captures.Select(capture => capture.Work)).ConfigureAwait(
+            ConfigureAwaitOptions.SuppressThrowing | ConfigureAwaitOptions.ContinueOnCapturedContext);
+        List<Exception>? failures = null;
+        foreach (var capture in captures)
+        {
+            if (capture._callerOwnsResult) continue;
+            if (capture.Work.IsFaulted)
+                (failures ??= []).Add(capture.Work.Exception!);
+            else if (capture.Work.IsCanceled)
+            {
+                // Expected stop cancellation completes RunCapture successfully; retain any other cancellation.
+                try { capture.Work.GetAwaiter().GetResult(); }
+                catch (OperationCanceledException error) { (failures ??= []).Add(error); }
+            }
+        }
+        owned.Clear();
+        if (failures is not null) throw new AggregateException(failures);
     }
 }
