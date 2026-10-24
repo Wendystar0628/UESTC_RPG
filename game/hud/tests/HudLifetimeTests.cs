@@ -213,7 +213,7 @@ public sealed class HudLifetimeTests
             WorldControl: world,
             Flow: flow,
             Exit: new TestAppExit(allowQuit: false),
-            Failure: new RecordingFailure(),
+            Failure: new HudTaskTests.RecordingFailure(),
             Audio: audio,
             PaletteCatalog: new PaletteRegistrySource(resources),
             ShaderMaterials: new ShaderMaterialSource(resources),
@@ -229,41 +229,6 @@ public sealed class HudLifetimeTests
             Resources: resources);
     }
 
-    [TestCase]
-    [TestCategory(TestReason.Regression)]
-    [RequireGodotRuntime]
-    public async Task HudTaskReportsOriginalFailureAndEndsQuietlyOnScopeCancel()
-    {
-        var root = ((SceneTree)Engine.GetMainLoop()).Root;
-        var failure = new RecordingFailure();
-        var operation = new HudTask(failure);
-        var pending = new TaskCompletionSource();
-        AssertThat(operation.Start(token => pending.Task.WaitAsync(token))).IsTrue();
-        AssertThat(operation.Start(_ => Task.CompletedTask)).OverrideFailureMessage("A running UI operation accepted a second start.").IsFalse();
-        // 作用域取消只结束界面一侧的等待，不算失败。
-        operation.Cancel();
-        await FrameAwaiter.ProcessAsync(root);
-        await FrameAwaiter.ProcessAsync(root);
-        AssertThat(!operation.Running && failure.Errors.Count == 0).OverrideFailureMessage("Scope cancellation was reported as a failure or kept the operation running.").IsTrue();
-        // 以前被丢弃的故障任务吞掉失败：现在原异常交给失败接收方。
-        var error = new InvalidOperationException();
-        AssertThat(operation.Start(_ => Task.FromException(error))).IsTrue();
-        await FrameAwaiter.ProcessAsync(root);
-        AssertThat(failure.Errors.Count == 1 && ReferenceEquals(failure.Errors[0], error) && !operation.Running)
-            .OverrideFailureMessage("A failed UI operation did not hand its original exception to the failure receiver.").IsTrue();
-        // 服务按异步续体结束任务：操作体已结束、持有者的等待还没回来的那一刻再开，以前被当成正在跑拒掉，后交的意图无人等。
-        var serviced = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-        AssertThat(operation.Start(_ => serviced.Task)).IsTrue();
-        var first = new InvalidOperationException();
-        serviced.SetException(first);
-        AssertThat(failure.Errors.Count == 1).OverrideFailureMessage("The fixture did not leave the first owner's wait pending.").IsTrue();
-        var second = new InvalidOperationException();
-        AssertThat(operation.Start(_ => Task.FromException(second))).OverrideFailureMessage("A start right after the previous body ended was refused.").IsTrue();
-        await FrameAwaiter.ProcessAsync(root);
-        AssertThat(failure.Errors.Count == 3 && failure.Errors.Contains(first) && failure.Errors.Contains(second))
-            .OverrideFailureMessage("An operation body ended or started in the owner's pending frame lost its failure.").IsTrue();
-    }
-
     private static int Subscribers(object source, string name) =>
         ((Delegate?)source.GetType().GetField(name, BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(source))?.GetInvocationList().Length ?? 0;
 
@@ -277,12 +242,6 @@ public sealed class HudLifetimeTests
     {
         public void SampleHorizon(Season season, WeatherVec weather, Span<System.Numerics.Vector3> srgb24) =>
             srgb24.Fill(System.Numerics.Vector3.Zero);
-    }
-
-    private sealed class RecordingFailure : IAppFailure
-    {
-        public List<Exception> Errors { get; } = [];
-        public void Report(Exception error) => Errors.Add(error);
     }
 
     private sealed class UnusedCapture : IGameCapture

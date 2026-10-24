@@ -43,6 +43,8 @@ internal sealed class HudResidents
         _dependencies.ViewControl.WalkEntryRefused += OnWalkEntryRefused;
     }
 
+    public HudTask[] Tasks => [_modeSwitch];
+
     public void Exit()
     {
         _modeSwitch.Cancel();

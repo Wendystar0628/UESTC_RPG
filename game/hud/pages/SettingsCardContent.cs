@@ -1,5 +1,4 @@
 using Campus.Contracts;
-using Campus.Contracts.AppFlow;
 using Campus.Contracts.Audio;
 using Campus.Contracts.Bake;
 using Campus.Contracts.Perf;
@@ -17,12 +16,14 @@ internal sealed class SettingsCardContent
     private readonly UiKit _kit;
     private readonly HudSettings _settings;
     private readonly SettingsCardBindings _bindings;
+    private readonly HudRequests _recording;
 
-    public SettingsCardContent(UiKit kit, HudSettings settings, SettingsCardBindings bindings)
+    public SettingsCardContent(UiKit kit, HudSettings settings, SettingsCardBindings bindings, HudRequests recording)
     {
         _kit = kit;
         _settings = settings;
         _bindings = bindings;
+        _recording = recording;
     }
 
     public System.Collections.IEnumerable BuildGeneral(Control page)
@@ -62,7 +63,7 @@ internal sealed class SettingsCardContent
 
     /// <summary>
     /// 记录性能数据（ENG-PERF-DATA）：开关与状态只经记录服务读写，不碰设置存储，不算改动、不随恢复默认变。
-    /// 开关显示记录意图；状态行订阅状态变化，页面可见时按引擎步长每秒重读一次已录时长；离树即退订并停止等待。
+    /// 开关显示记录意图；状态行订阅状态变化，页面可见时按引擎步长每秒重读一次已录时长；离树只退订与停止刷新。
     /// </summary>
     private (HBoxContainer Record, HBoxContainer Status) BuildRecording(Control group)
     {
@@ -73,23 +74,8 @@ internal sealed class SettingsCardContent
         toggle.AccessibilityName = label;
         var statusRow = _kit.Layout.SettingRow(group, UiKit.T(RecordingStatusKey));
         var status = _kit.Text(statusRow, "", "data", "text.2");
-        // 每次开关当场把意图交给服务（服务串行处理），界面按顺序逐个等完；某次失败交 IAppFailure 后接着等后面的，离树只停等待、不撤销已交出的意图。
-        var failure = KernelRegistry.Get<IAppFailure>();
-        var waiting = new HudTask(failure);
-        var requests = new Queue<Task<PerfRecordingSnapshot>>();
-        async Task Drain(CancellationToken token)
-        {
-            while (requests.TryDequeue(out var request))
-            {
-                try { await request.WaitAsync(token); }
-                catch (Exception error) when (!token.IsCancellationRequested) { failure.Report(error); }
-            }
-        }
-        toggle.Toggled += on =>
-        {
-            requests.Enqueue(recorder.SetRecordingAsync(on));
-            waiting.Start(Drain);
-        };
+        // 每次开关当场把意图交给服务，由 HUD 持有的请求队列逐个等完（HudRequests）；设置卡离树不丢弃已交出的请求与其失败。
+        toggle.Toggled += on => _recording.Submit(() => recorder.SetRecordingAsync(on));
         void Show(PerfRecordingSnapshot snapshot)
         {
             toggle.Set(snapshot.Requested, notify: false);
@@ -113,7 +99,6 @@ internal sealed class SettingsCardContent
         {
             recorder.StateChanged -= Show;
             tree.ProcessFrame -= Tick;
-            waiting.Cancel();
         };
         Show(recorder.Snapshot);
         return (record, statusRow);

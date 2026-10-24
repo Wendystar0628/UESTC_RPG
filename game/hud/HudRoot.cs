@@ -14,7 +14,7 @@ namespace Campus.Hud;
 [KernelService(typeof(IAppLoadingPresentation))]
 [KernelService(typeof(IAppScreenCoverage))]
 [KernelService(typeof(IAppFrontispiecePresentation))]
-public partial class HudRoot : CanvasLayer, IBootParticipant, IAppLoadingPresentation, IAppScreenCoverage, IAppFrontispiecePresentation
+public partial class HudRoot : CanvasLayer, IBootParticipant, IAppLoadingPresentation, IAppScreenCoverage, IAppFrontispiecePresentation, IRegistryExitParticipant
 {
     private HudRootDependencies _dependencies = null!;
     private UiBootOptions _args = new();
@@ -101,12 +101,22 @@ public partial class HudRoot : CanvasLayer, IBootParticipant, IAppLoadingPresent
     public override void _Input(InputEvent e) => _input.Input(e);
     public override void _UnhandledInput(InputEvent e) => _input.UnhandledInput(e);
 
+    // 界面发起的全部等待：应用退出先停接、取消，等它们交付完失败或取消，节点才离树释放界面（ENG-ARCH「关闭顺序」）。
+    private HudTask[] Tasks => [_gallery, .. _input.Tasks, .. _pages.Tasks, .. _residents.Tasks];
+
+    public void PrepareForExit()
+    {
+        if (!_initialized) return;
+        ReportUnfinishedGallery();
+        foreach (var task in Tasks) task.Stop();
+    }
+
+    public Task DrainForExitAsync() => _initialized ? Task.WhenAll(Tasks.Select(task => task.DrainAsync())) : Task.CompletedTask;
+
     public override void _ExitTree()
     {
         if (!_initialized) return;
-        // 排版检查没跑完就退出等于没测：截图先于检查收尾时照失败报，不静默取消（GAME-176）。
-        if (_galleryChecks && _gallery.Running)
-            _dependencies.Failure.Report(new TimeoutException("The UI gallery layout check did not finish before exit."));
+        ReportUnfinishedGallery();
         _gallery.Cancel();
         _loading.Exit();
         _frontispiece.Exit();
@@ -119,6 +129,13 @@ public partial class HudRoot : CanvasLayer, IBootParticipant, IAppLoadingPresent
         _residents.Exit();
         _pages.Exit();
         RequestReady();
+    }
+
+    // 排版检查没跑完就退出等于没测：截图先于检查收尾时照失败报，不静默取消（GAME-176）；退出排空后已不在跑，离树不重报。
+    private void ReportUnfinishedGallery()
+    {
+        if (_galleryChecks && _gallery.Running)
+            _dependencies.Failure.Report(new TimeoutException("The UI gallery layout check did not finish before exit."));
     }
 
     public override void _Notification(int what)

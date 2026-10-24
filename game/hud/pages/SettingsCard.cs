@@ -37,7 +37,8 @@ public partial class SettingsCard : Control
     public SettingsPage Page => _page;
     public bool Capturing => _bindings.Capturing;
 
-    internal static SettingsCard Create(UiKit kit, Control parent, HudSettings settings, IInputRouter router, HudTask qualityApply)
+    internal static SettingsCard Create(UiKit kit, Control parent, HudSettings settings, IInputRouter router, HudTask qualityApply,
+        HudRequests recording)
     {
         var card = new SettingsCard
         {
@@ -45,7 +46,7 @@ public partial class SettingsCard : Control
             MouseFilter = MouseFilterEnum.Ignore, Visible = false,
         };
         card._bindings = new SettingsCardBindings(kit, router);
-        card._content = new SettingsCardContent(kit, settings, card._bindings);
+        card._content = new SettingsCardContent(kit, settings, card._bindings, recording);
         card._graphics = new SettingsCardGraphics(kit, qualityApply);
         card._bindings.BindingsChanged += card.InvalidateKeys;
         parent.AddChild(card);

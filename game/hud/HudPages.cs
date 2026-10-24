@@ -17,6 +17,8 @@ internal sealed class HudPages
     private readonly Control _host;
     // 界面发起的流程操作（进入、回标题）、画质应用与存档操作（立即保存、删除）各一个持有者，随 HUD 离树取消（Exit）。
     private readonly HudTask _flow, _quality, _storage;
+    // 记录性能数据的开关请求：归 HUD、不随设置卡离树丢弃，HUD 退出时一并排空。
+    private readonly HudRequests _recording;
     private bool _watchingLeaveSave;
     public TitleMenu Title { get; }
     public SettingsCard Settings { get; }
@@ -33,6 +35,7 @@ internal sealed class HudPages
         _flow = new HudTask(dependencies.Failure);
         _quality = new HudTask(dependencies.Failure);
         _storage = new HudTask(dependencies.Failure);
+        _recording = new HudRequests(dependencies.Failure);
         Toast = Widgets.Toast.Create(view.Kit, view.HintHost);
         Title = TitleMenu.Create(view.Kit, view.PageHost, view.BackgroundHost, dependencies.Saves, dependencies.Maps);
         Title.EnterRequested += request => StartEnter(request);
@@ -41,7 +44,7 @@ internal sealed class HudPages
         Title.SettingsRequested += () => OpenSettings(SettingsPage.General, fromTitle: true);
         Title.QuitRequested += RequestQuit;
         Title.Notice += text => Toast.Show(text);
-        Settings = SettingsCard.Create(view.Kit, view.PageHost, dependencies.Settings, dependencies.InputRouter, _quality);
+        Settings = SettingsCard.Create(view.Kit, view.PageHost, dependencies.Settings, dependencies.InputRouter, _quality, _recording);
         Settings.CloseRequested += CloseSettings;
         Settings.QuitRequested += RequestQuit;
         Settings.ToTitleRequested += ReturnToTitle;
@@ -52,12 +55,13 @@ internal sealed class HudPages
         Saves.DeleteRequested += DeleteSave;
     }
 
+    // 应用退出时由 HudRoot 一并停接、排空（IRegistryExitParticipant）。
+    public HudTask[] Tasks => [_flow, _quality, _storage, _recording.Waiting];
+
     public void Exit()
     {
         StopLeaveSaveWatch();
-        _flow.Cancel();
-        _quality.Cancel();
-        _storage.Cancel();
+        foreach (var task in Tasks) task.Cancel();
         Settings.Close();
         Saves.Close();
     }

@@ -39,6 +39,8 @@ internal sealed class HudInput
         _arbitrating = true;
     }
 
+    public HudTask[] Tasks => [_photo];
+
     public void Exit()
     {
         _photo.Cancel();
