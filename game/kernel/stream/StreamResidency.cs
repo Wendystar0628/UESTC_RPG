@@ -96,7 +96,7 @@ internal sealed class StreamResidency(StreamDirector host)
                 group.GeometryRequested = true; group.Expected = _host.Preparation.Catalog!.Modules(tile).Count;
                 group.Mounted = group.Expected == 0; // Empty quadrants are valid geometry coverage.
             }
-            var priority = tile == StreamTile.Root || _host.Selection.DestinationRequired.Contains(tile) ? BakePriority.KnownDestination :
+            var priority = tile == StreamTile.Root || _host.Selection.DestinationRequired.Contains(tile) || _host.Pins.Required.Contains(tile) ? BakePriority.KnownDestination :
                 _host.Selection.Required.Contains(tile) ? BakePriority.Normal : BakePriority.Background;
             group.Priority = priority;
             if (group.Work is { } work) work.Priority = priority;

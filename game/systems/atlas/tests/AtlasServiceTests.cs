@@ -112,6 +112,89 @@ public sealed class AtlasServiceTests
 
     [TestCase]
     [TestCategory(TestReason.Contract)]
+    public void PrefetchRetainsOneRealDestinationAndOnlyTheLatestLeaseCanReleaseIt()
+    {
+        var test = new Fixture();
+        var before = test.Camera.Pose;
+        var arrival = test.Stream.Arrive(before, ViewMode.Fly);
+        var first = test.Atlas.Prefetch(new("test-kiosk"), TravelStyle.Teleport)!;
+        var marker = test.Atlas.Find(new("test-kiosk"))!;
+        var destination = test.Stream.PinnedDestinations.Single();
+        AssertThat(!first.Ready.IsCompleted && destination.Mode == ViewMode.Walk
+            && destination.CollisionFeet == marker.Teleport!.Stand!.Feet
+            && destination.Pose == (new MapSpawn(marker.Id.Value, marker.Teleport.Fly, marker.Teleport.Stand).ViewPose(ViewMode.Walk)
+                with { FovDeg = before.FovDeg })
+            && test.Camera.Pose == before && ReferenceEquals(test.Stream.Arrival, arrival)).IsTrue();
+        var same = test.Atlas.Prefetch(marker.Id, TravelStyle.Teleport)!;
+        AssertThat(first.Ready.IsCanceled && !same.Ready.IsCompleted && test.Stream.PinnedDestinations.Single() == destination).IsTrue();
+        first.Dispose();
+        AssertThat(test.Stream.PinnedDestinations.Single() == destination).IsTrue();
+        var latest = test.Atlas.Prefetch(new("test-post"), TravelStyle.Fly)!;
+        AssertThat(same.Ready.IsCanceled && test.Stream.PinnedDestinations.Single() != destination).IsTrue();
+        same.Dispose();
+        test.Stream.PinsReady = true;
+        test.Atlas.Tick();
+        AssertThat(latest.Ready.IsCompletedSuccessfully && test.Stream.PinnedDestinations.Count == 1).IsTrue();
+        latest.Dispose();
+        AssertThat(test.Stream.PinnedDestinations.Count == 0 && ReferenceEquals(test.Stream.Arrival, arrival)).IsTrue();
+    }
+
+    [TestCase]
+    [TestCategory(TestReason.Contract)]
+    public void TravelRetainsClaimedPrefetchUntilItFinishesAndIgnoresLateCardDisposal()
+    {
+        var test = new Fixture();
+        var id = new MarkerId("test-kiosk");
+        var prefetch = test.Atlas.Prefetch(id, TravelStyle.Teleport)!;
+        var destination = test.Stream.PinnedDestinations.Single();
+        var transit = test.Atlas.Travel(id, TravelStyle.Teleport)!;
+        prefetch.Dispose();
+        AssertThat(!prefetch.Ready.IsCompleted && test.Stream.PinnedDestinations.Single() == destination
+            && test.Atlas.Prefetch(new("test-post"), TravelStyle.Teleport) is null).IsTrue();
+        test.Stream.PinsReady = true;
+        test.Atlas.Tick();
+        AssertThat(prefetch.Ready.IsCompletedSuccessfully && test.Stream.PinnedDestinations.Single() == destination).IsTrue();
+        transit.Cancel();
+        test.Atlas.Tick();
+        AssertThat(test.Stream.PinnedDestinations.Count == 0 && test.Atlas.IsSettled).IsTrue();
+        var next = test.Atlas.Prefetch(new("test-post"), TravelStyle.Fly)!;
+        prefetch.Dispose();
+        AssertThat(test.Stream.PinnedDestinations.Count == 1).IsTrue();
+        test.Atlas.Travel(new("test-post"), TravelStyle.Fly);
+        test.Camera.Handle!.Completion.SetResult(TransitResult.Arrived);
+        test.Atlas.Tick();
+        AssertThat(test.Stream.PinnedDestinations.Count == 0).IsTrue();
+        next.Dispose();
+    }
+
+    [TestCase]
+    [TestCategory(TestReason.Contract)]
+    public void PrefetchPropagatesOriginalFailureAndUnloadCancelsWithoutClearingAnotherPin()
+    {
+        var test = new Fixture();
+        var prefetch = test.Atlas.Prefetch(new("test-roof"), TravelStyle.Teleport)!;
+        var target = test.Stream.PinnedDestinations.Single();
+        AssertThat(target.Mode == ViewMode.Fly && target.CollisionFeet is null && test.Observer.Mode == ViewMode.Walk
+            && test.View.Switches == 0 && !prefetch.Ready.IsCompleted).IsTrue();
+        var failure = new InvalidDataException("prefetch failure");
+        test.Stream.Failure = failure;
+        test.Atlas.Tick();
+        Exception? published = null;
+        try { prefetch.Ready.GetAwaiter().GetResult(); }
+        catch (InvalidDataException error) { published = error; }
+        AssertThat(ReferenceEquals(failure, published)).IsTrue();
+        prefetch.Dispose();
+        test.Stream.Failure = null;
+        var pending = test.Atlas.Prefetch(new("test-kiosk"), TravelStyle.Teleport)!;
+        test.Stream.SetPinnedDestinations([test.Stream.PinnedDestinations.Single(), target]);
+        test.Atlas.OnMapUnloading(test.Context.Descriptor.Id);
+        AssertThat(pending.Ready.IsCanceled && test.Stream.PinnedDestinations.SequenceEqual(new[] { target })).IsTrue();
+        pending.Dispose();
+        AssertThat(test.Stream.PinnedDestinations.SequenceEqual(new[] { target })).IsTrue();
+    }
+
+    [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void WalkingTravelToFlyOnlyMarkerSwitchesToFlyFirst()
     {
         var test = new Fixture();
@@ -306,6 +389,7 @@ public sealed class AtlasServiceTests
         internal TestView View { get; }
         internal TestAppFlow Flow { get; } = new();
         internal TestAudio Audio { get; } = new();
+        internal FlowRuntimeTestStub Stream { get; } = new(() => true);
         internal Observer Observer { get; } = new();
         internal FakeWorld World { get; }
         internal TestMapContext Context { get; }
@@ -326,7 +410,7 @@ public sealed class AtlasServiceTests
             Flow.ActivitySource = () =>
                 (maps.Transition is { Done.IsCompleted: false } ? AppActivity.MapTransition : AppActivity.None) |
                 (Camera.ActiveTransit is { Done.IsCompleted: false } ? AppActivity.CameraTransition : AppActivity.None);
-            Atlas.Connect(maps, Flow, Audio, View);
+            Atlas.Connect(maps, Flow, Audio, Stream, View);
             Reload();
         }
         internal void Reload() => Atlas.LoadMap(Context, new(1, Context.Descriptor.DataRect,

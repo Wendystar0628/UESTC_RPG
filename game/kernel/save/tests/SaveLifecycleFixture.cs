@@ -230,6 +230,7 @@ internal sealed class SaveLifecycleFixture : IDisposable, IAsyncDisposable
         public UnlockState StateOf(MarkerId id) => UnlockState.Hidden;
         public string? RegionAt(float x, float z) => null;
         public bool CanTravel(MarkerId id, TravelStyle style, out TravelRefusal why) { why = TravelRefusal.Unavailable; return false; }
+        public IAtlasPrefetch? Prefetch(MarkerId id, TravelStyle style) => null;
         public ITransitHandle? Travel(MarkerId id, TravelStyle style) => null;
         public MarkerId? Tracked => null;
         public void Track(MarkerId? id) => throw new NotSupportedException();

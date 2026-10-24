@@ -32,6 +32,8 @@ public sealed class AtlasService(ICameraRig camera, IObserverState observer, IRu
     private IAppFlow? _flow;
     private IAudioService? _audio;
     private IViewControl? _view;
+    private IMapStreamState? _stream;
+    private PrefetchLease? _prefetch, _transitPrefetch;
     private ITransitHandle? _transit;
     private IDisposable? _transitInput;
     private MarkerId? _destination;
@@ -54,9 +56,9 @@ public sealed class AtlasService(ICameraRig camera, IObserverState observer, IRu
     public JsonTypeInfo<AtlasSave> TypeInfo => AtlasJsonContext.Contract.AtlasSave;
 
     // Runtime-only services are connected after discovery to avoid Save -> Atlas -> Save cycles.
-    public void Connect(IMapService maps, IAppFlow flow, IAudioService audio, IViewControl? view = null)
+    public void Connect(IMapService maps, IAppFlow flow, IAudioService audio, IMapStreamState stream, IViewControl? view = null)
     {
-        _maps = maps; _flow = flow; _audio = audio; _view = view;
+        _maps = maps; _flow = flow; _audio = audio; _stream = stream; _view = view;
     }
 
     public void OnMapLoaded(IMapContext context)
@@ -77,6 +79,7 @@ public sealed class AtlasService(ICameraRig camera, IObserverState observer, IRu
         if (regions.Select(r => r.Id).Distinct(StringComparer.Ordinal).Count() != regions.Length)
             throw new JsonException("Atlas region and place IDs must be unique.");
         ReleaseTransit();
+        ReleasePrefetch();
         _context = context; Map = context.Descriptor.Id; _atlasRect = file.AtlasRect; _zoomMin = file.ZoomMin; _zoomMax = file.ZoomMax; _regionAt = null;
         _baseMarkers = Array.AsReadOnly(visible); Regions = Array.AsReadOnly(regions);
         _policy = AtlasPolicies.Create(ruleset.Current.UnlockPolicy);
@@ -182,6 +185,7 @@ public sealed class AtlasService(ICameraRig camera, IObserverState observer, IRu
         if (_context is null || from != Map) return;
         _transit?.Cancel();
         ReleaseTransit();
+        ReleasePrefetch();
         _context = null; _atlasRect = null; _zoomMin = _zoomMax = null; _regionAt = null; _baseMarkers = []; Regions = []; Map = default;
         _pins.Clear(); _unlock.Clear(); _visited.Clear(); _inside.Clear(); _nextPinId = 1; Tracked = null;
         RefreshMarkers(); Publish();
@@ -212,11 +216,42 @@ public sealed class AtlasService(ICameraRig camera, IObserverState observer, IRu
         why = TravelRefusal.None; return true;
     }
 
+    public IAtlasPrefetch? Prefetch(MarkerId id, TravelStyle style)
+    {
+        if (!CanTravel(id, style, out _) || _stream is null) return null;
+        var destination = PrefetchDestination(Find(id)!);
+        // The stream owns terrain work, resource mounting, cancellation and drain. Replacing an
+        // identical target changes only its lease; the stream retains the existing resource work.
+        _stream.SetPinnedDestinations([destination]);
+        _prefetch?.Cancel();
+        var lease = _prefetch = new(this, id, style, destination);
+        PollPrefetch(lease);
+        return lease;
+    }
+
+    private MapStreamDestination PrefetchDestination(AtlasMarker marker)
+    {
+        var spec = marker.Teleport!;
+        var mode = observer.Mode switch
+        {
+            ViewMode.Walk when spec.Stand is not null => ViewMode.Walk,
+            ViewMode.Walk or ViewMode.Fly => ViewMode.Fly,
+            _ => throw new InvalidOperationException("Unknown observer mode."),
+        };
+        var pose = new MapSpawn(marker.Id.Value, spec.Fly, spec.Stand).ViewPose(mode);
+        pose = pose with { FovDeg = pose.FovDeg ?? camera.Pose.FovDeg };
+        return new(pose, mode, CollisionFeet: mode == ViewMode.Walk ? spec.Stand!.Feet : null);
+    }
+
     public ITransitHandle? Travel(MarkerId id, TravelStyle style)
     {
         if (!CanTravel(id, style, out _)) return null;
+        var requestedStyle = style;
         style = TravelStyle.Teleport;
         var spec = Find(id)!.Teleport!;
+        var target = PrefetchDestination(Find(id)!);
+        var claimed = _prefetch is { } pending && pending.Marker == id && pending.Style == requestedStyle
+            && pending.Destination == target ? pending : null;
         // A walking observer cannot land on a viewpoint without a standing pose: change to the fly camera first.
         if (observer.Mode == ViewMode.Walk && spec.Stand is null)
         {
@@ -248,17 +283,22 @@ public sealed class AtlasService(ICameraRig camera, IObserverState observer, IRu
         };
         try
         {
+            if (claimed is not null) { _transitPrefetch = claimed; _prefetch = null; }
+            else ReleasePrefetch();
             _transit = camera.Transit(stand is null ? spec.Fly : spec.Fly with { YawDeg = stand.YawDeg }, options);
             _transitInput = input; _destination = id; _travelStyle = style;
             if (style == TravelStyle.Teleport) _audio?.PlayUi(UiCue.TeleportConfirm);
             return _transit;
         }
-        catch { input?.Dispose(); throw; }
+        catch { input?.Dispose(); ReleaseTransit(); throw; }
     }
 
     // Called only from the Systems frame step. Completion never mutates state on a thread-pool continuation.
     public void Tick()
     {
+        if (_flow?.IsPlaying != true) ReleasePrefetch();
+        if (_prefetch is { } prefetch) PollPrefetch(prefetch);
+        if (_transitPrefetch is { } retained) PollPrefetch(retained);
         if (_transit is { Done.IsCompleted: true } handle)
         {
             var arrived = handle.Done.IsCompletedSuccessfully && (handle.Done.Result switch
@@ -458,6 +498,47 @@ public sealed class AtlasService(ICameraRig camera, IObserverState observer, IRu
     private void ReleaseTransit()
     {
         _transit = null; _destination = null; _transitInput?.Dispose(); _transitInput = null;
+        if (_transitPrefetch is { } retained) { _transitPrefetch = null; ReleasePins(retained); }
+    }
+    private void PollPrefetch(PrefetchLease lease)
+    {
+        if (lease.Ready.IsCompleted) return;
+        if (_stream!.Failure is { } failure) lease.Fail(failure);
+        else if (_stream.PinnedDestinationReady(lease.Destination)) lease.Complete();
+    }
+    private void ReleasePrefetch()
+    {
+        if (_prefetch is not { } lease) return;
+        _prefetch = null; ReleasePins(lease);
+    }
+    private void ReleasePins(PrefetchLease lease)
+    {
+        lease.Cancel();
+        // Application flow owns pins outside Playing and clears/replaces them on that boundary.
+        // Never let a delayed card disposal remove title/entry pins or the formal arrival.
+        if (_flow?.IsPlaying == true && _stream is { } stream && stream.PinnedDestinations.Contains(lease.Destination))
+            stream.SetPinnedDestinations(stream.PinnedDestinations.Where(target => target != lease.Destination).ToArray());
+    }
+    private sealed class PrefetchLease(AtlasService owner, MarkerId marker, TravelStyle style, MapStreamDestination destination) : IAtlasPrefetch
+    {
+        private readonly TaskCompletionSource _ready = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        public MarkerId Marker => marker;
+        public TravelStyle Style => style;
+        public MapStreamDestination Destination => destination;
+        public Task Ready => _ready.Task;
+        public void Complete() => _ready.TrySetResult();
+        public void Cancel() => _ready.TrySetCanceled();
+        public void Fail(Exception failure)
+        {
+            _ready.TrySetException(failure);
+            // The stream keeps the same cause on the map failure channel; this owner also observes
+            // its result so a card released before reading Ready cannot leave an unobserved task.
+            _ = _ready.Task.Exception;
+        }
+        public void Dispose()
+        {
+            if (ReferenceEquals(owner._prefetch, this)) owner.ReleasePrefetch();
+        }
     }
     private bool Contains(Vector2 at) => VectorMath.Finite(at) && _atlasRect is { } rect
         && at.X >= rect.Min.X && at.X <= rect.Max.X && at.Y >= rect.Min.Y && at.Y <= rect.Max.Y;

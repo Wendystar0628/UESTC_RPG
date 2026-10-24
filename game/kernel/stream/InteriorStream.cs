@@ -72,7 +72,7 @@ internal sealed class InteriorStream(IBakeService bake, IStreamMountQueue mount,
     {
         if (space is { Building: not null } value)
         {
-            Request(value, position, BakePriority.Background, keys, true);
+            Request(value, position, BakePriority.KnownDestination, keys, true);
             _pinned.UnionWith(keys);
         }
     }
@@ -87,7 +87,7 @@ internal sealed class InteriorStream(IBakeService bake, IStreamMountQueue mount,
     {
         foreach (var layer in _layers.Values)
         {
-            layer.Priority = _destination.Contains(layer.Key) ? BakePriority.KnownDestination :
+            layer.Priority = _destination.Contains(layer.Key) || _pinned.Contains(layer.Key) ? BakePriority.KnownDestination :
                 _visible.Contains(layer.Key) ? BakePriority.InteriorPrefetch : BakePriority.Background;
             if (layer.Work is { } work) work.Priority = layer.Priority;
             if (_destination.Contains(layer.Key) || _visible.Contains(layer.Key) || _pinned.Contains(layer.Key)) bake.Ensure(layer.Key, layer.Priority);

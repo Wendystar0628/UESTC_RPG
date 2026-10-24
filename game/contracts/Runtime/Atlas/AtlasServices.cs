@@ -19,6 +19,13 @@ public interface IUnlockPolicy
     UnlockState OnVisit(AtlasMarker m, UnlockState now);          // 进入判定圈时调用
 }
 
+/// <summary>One retained destination's static-resource preparation. Ready faults with the original failure,
+/// or is cancelled when replaced/released. Dispose releases this lease; after Travel takes ownership it is inert.</summary>
+public interface IAtlasPrefetch : IDisposable
+{
+    Task Ready { get; }
+}
+
 public interface IAtlasService                                    // Kernel 服务（SYS-ATLAS-TRAVEL）；实现 IMapAware，切图时换底图和标记
 {
     long Rev { get; }
@@ -33,6 +40,7 @@ public interface IAtlasService                                    // Kernel 服�
     UnlockState StateOf(MarkerId id);
     string? RegionAt(float x, float z);                           // 8 m 区域栅格；返回地点 ID
     bool CanTravel(MarkerId id, TravelStyle style, out TravelRefusal why);
+    IAtlasPrefetch? Prefetch(MarkerId id, TravelStyle style);       // One retained destination; refuses with null. Does not move the observer or replace arrival.
     ITransitHandle? Travel(MarkerId id, TravelStyle style);       // 当前图内经 ICameraRig.Transit 到达标记；不准备或切换地图；拒绝时返回 null
     MarkerId? Tracked { get; }
     void Track(MarkerId? id);                                     // null 取消；同一时间只有一个

@@ -50,6 +50,9 @@ public sealed class StreamSchedulingTests
         stream.Pin(new(layout.Feature, checked((short)atriumFloor)), destination, pins);
         if (!pins.SetEquals(expected) || !bake.Keys.SequenceEqual(expected) || stream.ResourcesReady(pins) || !stream.DestinationReady)
             throw new InvalidOperationException("Pinned interior did not use real resource requests independently of the active destination barrier.");
+        stream.RefreshPriorities();
+        if (bake.Priorities.Any(priority => priority != BakePriority.KnownDestination))
+            throw new InvalidOperationException("Pinned destination resources did not keep destination priority.");
         stream.Prefetch(new(layout.Feature, checked((short)atriumFloor)), destination);
         if (bake.Keys.Distinct().Count() != expected.Length || stream.DestinationReady)
             throw new InvalidOperationException("Atrium-visible open storeys or the pending destination barrier changed.");
@@ -276,7 +279,8 @@ public sealed class StreamSchedulingTests
     private sealed class InteriorRequests : IBakeService, IBakeHandle
     {
         public List<BakeKey> Keys { get; } = [];
-        public IBakeHandle Ensure(BakeKey key, BakePriority priority) { Keys.Add(key); return this; }
+        public List<BakePriority> Priorities { get; } = [];
+        public IBakeHandle Ensure(BakeKey key, BakePriority priority) { Keys.Add(key); Priorities.Add(priority); return this; }
         public BakeCacheStatistics CacheStatistics => default;
         public BakeProgress Progress => default;
         public long CacheBytes => 0;

@@ -17,12 +17,12 @@ public partial class AtlasRuntime : Godot.Node, IMapAware, IMapDataParticipant
     private bool _productPublished;
 
     public AtlasRuntime(AtlasService atlas, AtlasBaseSource baseSource, IMapService maps, IAppFlow flow,
-        IAudioService audio, IBakeService bake, IViewControl view)
+        IAudioService audio, IBakeService bake, IViewControl view, IMapStreamState stream)
     {
         _atlas = atlas;
         _bake = bake;
         _baseSource = baseSource;
-        _atlas.Connect(maps, flow, audio, view);
+        _atlas.Connect(maps, flow, audio, stream, view);
     }
 
     public Task Prepare(IMapContext context)

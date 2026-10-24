@@ -152,11 +152,11 @@ internal sealed class StreamParticipants(StreamDirector host, ServiceRegistry re
             }
     }
 
-    internal static BakePriority ParticipantPriority(ParticipantTile item) => !item.CurrentRequired && !item.DestinationRequired
+    internal static BakePriority ParticipantPriority(ParticipantTile item) => !item.CurrentRequired && !item.DestinationRequired && !item.PinnedRequired
         ? BakePriority.Background : item.Participant.Kind switch
     {
         StreamMountKind.Collision => BakePriority.Collision,
-        StreamMountKind.Auxiliary => item.DestinationRequired ? BakePriority.KnownDestination : BakePriority.Normal,
+        StreamMountKind.Auxiliary => item.DestinationRequired || item.PinnedRequired ? BakePriority.KnownDestination : BakePriority.Normal,
         StreamMountKind.Visual => throw new InvalidOperationException("Visual geometry is not a tile participant."),
         _ => throw new ArgumentOutOfRangeException(nameof(item))
     };
