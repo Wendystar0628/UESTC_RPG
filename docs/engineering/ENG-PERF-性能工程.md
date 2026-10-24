@@ -32,6 +32,8 @@ paths: ["game/data/pipeline-combinations.json", "game/style/shaders/globals.gdsh
 - **ENG-PERF-STREAM**（流式加载、本机烘焙与内存）：做流式、烘焙、碰撞挂载、内存时读。
 - **ENG-PERF-LIGHT**（植被、阴影、后期与灯光）：做植被、阴影、描线、窗灯路灯时读。
 - **ENG-PERF-ADAPT**（自适应与测量）：做自动调节、帧节奏、基准与剖析时读。
+- **ENG-PERF-DATA**（性能数据与分析）：做性能记录、指标口径、异常判定与性能数据保留时读。
+- **ENG-PERF-MEASURE**（测量与调优）：采集性能、引用性能数或调优时读。
 
 ### 0.1 接入要点
 

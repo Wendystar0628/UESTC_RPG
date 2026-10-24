@@ -1541,12 +1541,12 @@
 
 ## ENG-INDEX · 工程总纲
 
-`docs/engineering/ENG-INDEX-工程总纲.md` · 1.5k 字 · 工程域总纲：架构、性能、验收、许可、开发工具（内容预览）与扩展路线的通用原则和文档树
+`docs/engineering/ENG-INDEX-工程总纲.md` · 1.6k 字 · 工程域总纲：架构、性能、验收、许可、开发工具（内容预览）与扩展路线的通用原则和文档树
 关键词：工程、工程总纲、文档树、ENG、工程架构、性能预算、性能工程、硬规则、验收、门禁、许可、内容预览、扩展路线、主线之后
 
 - ENG-INDEX §0 结论 · L21 · 630
   - ★ ENG-INDEX §0.1 接入要点 · L29 · 168
-- ENG-INDEX §1 文档树 · L34 · 398
+- ENG-INDEX §1 文档树 · L34 · 451
 
 ## ENG-ARCH · 工程架构
 
@@ -1669,33 +1669,58 @@
 
 ## ENG-PERF · 性能工程
 
-`docs/engineering/ENG-PERF-性能工程.md` · 5.9k 字 · 性能总原则与绘制管线：容器与合批、着色器白名单与全局参数、预热、填充率、剔除与图层
+`docs/engineering/ENG-PERF-性能工程.md` · 6.0k 字 · 性能总原则与绘制管线：容器与合批、着色器白名单与全局参数、预热、填充率、剔除与图层
 关键词：着色器白名单、全局着色器参数、ShaderGlobals、数据纹理、合批、自动实例化、MultiMesh、容器选型、管线预热、抖动淡化、级别过渡、填充率、遮挡剔除、渲染图层、顶点格式、D3D12
 
-- ENG-PERF §0 结论 · L21 · 1.1k
-  - ★ ENG-PERF §0.1 接入要点 · L36 · 422
-- ENG-PERF §1 绘制管线与合批 · L45 · 1.8k
-  - ENG-PERF §1.1 容器选型 · L47 · 344
-  - ENG-PERF §1.2 MultiMesh、网格 LOD 与级别过渡 · L54 · 389
-  - ENG-PERF §1.3 调用口径 · L60 · 123
-  - ENG-PERF §1.4 着色器白名单 · L64 · 482
-  - ENG-PERF §1.5 全局参数与数据纹理 · L73 · 476
-- ENG-PERF §2 着色器与编译 · L82 · 779
-- ENG-PERF §3 填充率与带宽 · L92 · 251
-- ENG-PERF §4 剔除 · L98 · 496
-- ENG-PERF §5 待验证（P0） · L104 · 166
+- ENG-PERF §0 结论 · L21 · 1.2k
+  - ★ ENG-PERF §0.1 接入要点 · L38 · 422
+- ENG-PERF §1 绘制管线与合批 · L47 · 1.8k
+  - ENG-PERF §1.1 容器选型 · L49 · 344
+  - ENG-PERF §1.2 MultiMesh、网格 LOD 与级别过渡 · L56 · 389
+  - ENG-PERF §1.3 调用口径 · L62 · 123
+  - ENG-PERF §1.4 着色器白名单 · L66 · 482
+  - ENG-PERF §1.5 全局参数与数据纹理 · L75 · 476
+- ENG-PERF §2 着色器与编译 · L84 · 779
+- ENG-PERF §3 填充率与带宽 · L94 · 251
+- ENG-PERF §4 剔除 · L100 · 496
+- ENG-PERF §5 待验证（P0） · L106 · 166
 
 ## ENG-PERF-ADAPT · 自适应与测量
 
-`docs/engineering/ENG-PERF-ADAPT-自适应与测量.md` · 2.7k 字 · 运行时自适应的降级阶梯与控制律、帧节奏、测量与基准的做法
+`docs/engineering/ENG-PERF-ADAPT-自适应与测量.md` · 2.6k 字 · 运行时自适应的降级阶梯与控制律、帧节奏、测量与基准的做法
 关键词：自适应、自动调节画质、降级阶梯、控制律、剔除样本、帧节奏、吞吐基准、体验基准、体验脚本、掉帧、卡顿、GPU 计时
 
 - ENG-PERF-ADAPT §0 结论 · L21 · 402
   - ★ ENG-PERF-ADAPT §0.1 接入要点 · L27 · 160
-- ENG-PERF-ADAPT §1 自适应与帧节奏 · L32 · 896
-  - ENG-PERF-ADAPT §1.1 运行时自适应（主线之后） · L34 · 490
+- ENG-PERF-ADAPT §1 自适应与帧节奏 · L32 · 814
+  - ENG-PERF-ADAPT §1.1 运行时自适应（主线之后） · L34 · 408
   - ENG-PERF-ADAPT §1.2 帧节奏与画面设置约束 · L43 · 392
 - ENG-PERF-ADAPT §2 测量、剖析与门禁 · L49 · 677
+
+## ENG-PERF-DATA · 性能数据与分析
+
+`docs/engineering/ENG-PERF-DATA-性能数据与分析.md` · 8.0k 字 · 性能记录的四层与写入方、记录开关与会话寿命、原始流与时间基、指标口径与非稳态帧、测量范围、异常、比较键与保留、开销目标
+关键词：性能记录、记录性能数据、记录服务、性能会话、六件、原始流、perf-fields.json、schema、calc、指标口径、体验口径、成本口径、五段、B0–B4、主线程周期、受测视口、受测视口 GPU 合计、成本尖峰、非稳态帧、掉帧、卡顿分级、1% low、scope、性能异常、比较键、性能数据保留、分析器
+
+- ENG-PERF-DATA §0 结论 · L21 · 1.3k
+  - ★ ENG-PERF-DATA §0.1 接入要点 · L34 · 451
+- ENG-PERF-DATA §1 四层与写入方 · L43 · 1.3k
+  - ENG-PERF-DATA §1.1 四层 · L45 · 449
+  - ENG-PERF-DATA §1.2 记录开关与会话 · L53 · 593
+  - ENG-PERF-DATA §1.3 线程分工 · L63 · 242
+- ENG-PERF-DATA §2 原始流与时间基 · L70 · 1.4k
+  - ENG-PERF-DATA §2.1 六件与存放 · L72 · 900
+  - ENG-PERF-DATA §2.2 字段、版本与时间基 · L89 · 518
+- ENG-PERF-DATA §3 指标口径 · L97 · 2.3k
+  - ENG-PERF-DATA §3.1 体验口径 · L106 · 838
+  - ENG-PERF-DATA §3.2 成本口径 · L121 · 897
+- ENG-PERF-DATA §4 测量范围与 `scope` · L133 · 114
+- ENG-PERF-DATA §5 异常 · L137 · 366
+  - ENG-PERF-DATA §5.1 体验类 · L141 · 92
+  - ENG-PERF-DATA §5.2 成本与数据类 · L145 · 94
+  - ENG-PERF-DATA §5.3 归因与合并 · L149 · 77
+- ENG-PERF-DATA §6 比较键、状态与保留 · L153 · 132
+- ENG-PERF-DATA §7 开销目标 · L157 · 84
 
 ## ENG-PERF-LIGHT · 植被、阴影、后期与灯光
 
@@ -1711,6 +1736,20 @@
   - ENG-PERF-LIGHT §2.3 窗灯与路灯 · L63 · 411
   - ENG-PERF-LIGHT §2.4 倒影 · L69 · 165
 - ENG-PERF-LIGHT §3 待验证（P0） · L73 · 128
+
+## ENG-PERF-MEASURE · 测量与调优
+
+`docs/engineering/ENG-PERF-MEASURE-测量与调优.md` · 3.3k 字 · 性能测量的机器与剖析权限、AI 采集批次与场景套、以最新数据为准、诊断档与深挖、不采用的工具、调优轮次的长期规则与判停
+关键词：性能测量、AI 批次、run.ps1、perf.py、perf.py latest、固定机位套、路线套、传送套、采样前稳定、A/B/A、作废、污染标记、以最新为准、诊断档、deepen、采集条件标记、调优轮次、判停、隔离桌面、剖析权限
+
+- ENG-PERF-MEASURE §0 结论 · L21 · 789
+  - ★ ENG-PERF-MEASURE §0.1 接入要点 · L31 · 334
+- ENG-PERF-MEASURE §1 机器与剖析权限 · L39 · 66
+- ENG-PERF-MEASURE §2 AI 批次 · L43 · 1.0k
+- ENG-PERF-MEASURE §3 以最新为准 · L57 · 319
+- ENG-PERF-MEASURE §4 诊断档与 `deepen` · L64 · 150
+- ENG-PERF-MEASURE §5 不采用的工具 · L68 · 76
+- ENG-PERF-MEASURE §6 调优规则与判停 · L72 · 98
 
 ## ENG-PERF-STREAM · 流式加载、本机烘焙与内存
 
@@ -1965,7 +2004,7 @@
   - STD-DOC §5.2 新内容放哪 · L166 · 306
 - STD-DOC §6 冲突与规则放哪 · L174 · 895
 - STD-DOC §7 新增文档 · L206 · 300
-- STD-DOC §8 登记新决策 · L212 · 211
+- STD-DOC §8 登记新决策 · L212 · 218
 - STD-DOC §9 维护 · L218 · 921
 
 ## REG-INDEX · 登记总纲
@@ -1996,7 +2035,7 @@
 
 ## REG-DECISIONS-SYSTEMS · 系统与工程决策
 
-`docs/registry/REG-DECISIONS-SYSTEMS-系统与工程决策.md` · 23.3k 字 · 界面、存档、音频、性能与画面设置、工程五个领域的已定决策
+`docs/registry/REG-DECISIONS-SYSTEMS-系统与工程决策.md` · 25.5k 字 · 界面、存档、音频、性能与画面设置、工程五个领域的已定决策
 关键词：决策、系统、工程、界面、存档、音频、性能、画面设置、预算、契约
 
 - REG-DECISIONS-SYSTEMS §0 结论 · L21 · 126
@@ -2004,10 +2043,10 @@
 - REG-DECISIONS-SYSTEMS §1 界面 · L29 · 4.6k
 - REG-DECISIONS-SYSTEMS §2 存档 · L65 · 1.9k
 - REG-DECISIONS-SYSTEMS §3 音频 · L85 · 2.2k
-- REG-DECISIONS-SYSTEMS §4 性能与画面设置 · L107 · 5.0k
-- REG-DECISIONS-SYSTEMS §5 工程 · L144 · 5.4k
-- REG-DECISIONS-SYSTEMS §6 地图与行走 · L180 · 1.0k
-- REG-DECISIONS-SYSTEMS §7 时间、季节、天气 · L191 · 2.4k
+- REG-DECISIONS-SYSTEMS §4 性能与画面设置 · L107 · 7.1k
+- REG-DECISIONS-SYSTEMS §5 工程 · L160 · 5.5k
+- REG-DECISIONS-SYSTEMS §6 地图与行走 · L196 · 1.0k
+- REG-DECISIONS-SYSTEMS §7 时间、季节、天气 · L207 · 2.4k
 
 ## REG-DECISIONS-WORLD · 世界与画面决策
 

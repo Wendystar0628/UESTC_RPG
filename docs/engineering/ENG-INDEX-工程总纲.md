@@ -45,7 +45,9 @@ paths: ["docs/engineering/**"]
 - ENG-FAILS 游戏失败观测
 - ENG-PERF 性能工程
   - ENG-PERF-ADAPT 自适应与测量
+  - ENG-PERF-DATA 性能数据与分析
   - ENG-PERF-LIGHT 植被、阴影、后期与灯光
+  - ENG-PERF-MEASURE 测量与调优
   - ENG-PERF-STREAM 流式加载、本机烘焙与内存
 - ENG-PREVIEW 内容预览
 - ENG-LICENSE 许可、署名与本机目录
