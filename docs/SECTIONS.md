@@ -1737,13 +1737,13 @@
 
 ## ENG-PERF-MEASURE · 测量与调优
 
-`docs/engineering/ENG-PERF-MEASURE-测量与调优.md` · 5.3k 字 · 性能测量的机器与剖析权限、AI 采集批次与场景套、以最新数据为准、诊断档与深挖、不采用的工具、调优轮次的长期规则与判停
+`docs/engineering/ENG-PERF-MEASURE-测量与调优.md` · 5.4k 字 · 性能测量的机器与剖析权限、AI 采集批次与场景套、以最新数据为准、诊断档与深挖、不采用的工具、调优轮次的长期规则与判停
 关键词：性能测量、AI 批次、run.ps1、perf.py、perf.py latest、固定机位套、路线套、传送套、采样前稳定、A/B/A、作废、污染标记、以最新为准、诊断档、deepen、采集条件标记、调优轮次、判停、隔离桌面、剖析权限
 
 - ENG-PERF-MEASURE §0 结论 · L21 · 789
   - ★ ENG-PERF-MEASURE §0.1 接入要点 · L31 · 334
 - ENG-PERF-MEASURE §1 机器与剖析权限 · L39 · 470
-- ENG-PERF-MEASURE §2 AI 批次 · L48 · 1.0k
+- ENG-PERF-MEASURE §2 AI 批次 · L48 · 1.1k
 - ENG-PERF-MEASURE §3 以最新为准 · L62 · 319
 - ENG-PERF-MEASURE §4 诊断档与 `deepen` · L69 · 821
 - ENG-PERF-MEASURE §5 不采用的工具 · L82 · 606
@@ -2033,7 +2033,7 @@
 
 ## REG-DECISIONS-SYSTEMS · 系统与工程决策
 
-`docs/registry/REG-DECISIONS-SYSTEMS-系统与工程决策.md` · 26.2k 字 · 界面、存档、音频、性能与画面设置、工程五个领域的已定决策
+`docs/registry/REG-DECISIONS-SYSTEMS-系统与工程决策.md` · 26.4k 字 · 界面、存档、音频、性能与画面设置、工程五个领域的已定决策
 关键词：决策、系统、工程、界面、存档、音频、性能、画面设置、预算、契约
 
 - REG-DECISIONS-SYSTEMS §0 结论 · L21 · 126
@@ -2041,10 +2041,10 @@
 - REG-DECISIONS-SYSTEMS §1 界面 · L29 · 4.6k
 - REG-DECISIONS-SYSTEMS §2 存档 · L65 · 1.9k
 - REG-DECISIONS-SYSTEMS §3 音频 · L85 · 2.2k
-- REG-DECISIONS-SYSTEMS §4 性能与画面设置 · L107 · 7.8k
-- REG-DECISIONS-SYSTEMS §5 工程 · L162 · 5.5k
-- REG-DECISIONS-SYSTEMS §6 地图与行走 · L198 · 1.0k
-- REG-DECISIONS-SYSTEMS §7 时间、季节、天气 · L209 · 2.4k
+- REG-DECISIONS-SYSTEMS §4 性能与画面设置 · L107 · 8.0k
+- REG-DECISIONS-SYSTEMS §5 工程 · L163 · 5.5k
+- REG-DECISIONS-SYSTEMS §6 地图与行走 · L199 · 1.0k
+- REG-DECISIONS-SYSTEMS §7 时间、季节、天气 · L210 · 2.4k
 
 ## REG-DECISIONS-WORLD · 世界与画面决策
 
