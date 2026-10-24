@@ -104,6 +104,39 @@ function Initialize-UESTCLaunch {
     Update-UESTCGameBuild -Root $Root -Godot $Godot -BuildLease $BuildLease -Timing $Timing
 }
 
+# Analyze the library once; only the caller's closed sources decide this capture's result.
+function Invoke-UESTCPerfAnalysis {
+    param([Parameter(Mandatory)][string]$Root,
+        [Parameter(Mandatory)][AllowEmptyCollection()][string[]]$SessionSources)
+    $process = Invoke-UESTCProcess python @('-I','-X','utf8',(Join-Path $Root 'scripts\perf\analyze.py'),'--root',$Root) $Root `
+        -SuccessExitCodes @(0,1) -TextEncoding ([Text.Encoding]::UTF8)
+    Write-Host $process.Output
+    try {
+        $analysis = $process.StdOut | ConvertFrom-Json
+        if (-not $analysis -or -not $analysis.PSObject.Properties['analyzed'] -or
+            -not $analysis.PSObject.Properties['skipped'] -or -not $analysis.PSObject.Properties['errors']) {
+            throw 'Missing analysis result.'
+        }
+    } catch { throw [InvalidOperationException]::new("Performance analysis did not return a result: $($process.Output)", $_.Exception) }
+    if ($analysis.skipped -contains '分析锁被占用') { throw 'Performance analysis incomplete: analysis lock is occupied.' }
+    if ($process.ExitCode -eq 1 -and -not @($analysis.errors).Count) {
+        throw 'Performance analysis failed without source errors.'
+    }
+    $indexPath = Join-Path $Root 'output\perf\index.json'
+    $index = Get-Content -LiteralPath $indexPath -Raw -Encoding UTF8 | ConvertFrom-Json
+    foreach ($source in $SessionSources) {
+        if ($analysis.skipped -contains $source) { throw "Performance analysis incomplete for ${source}: source was skipped." }
+        $manifest = Get-Content -LiteralPath (Join-Path $source 'manifest.json') -Raw -Encoding UTF8 | ConvertFrom-Json
+        # perf.py owns current-calc and failed-source rejection; do not duplicate them in callers.
+        $show = Invoke-UESTCProcess python @('-I','-X','utf8',(Join-Path $Root 'scripts\perf\perf.py'),
+            '--root',$Root,'show',$manifest.id) $Root -TextEncoding ([Text.Encoding]::UTF8)
+        Write-Host $show.Output
+        if (-not @($index.sessions | Where-Object { $_.id -eq $manifest.id -and $_.source -eq $source }).Count) {
+            throw "Performance analysis incomplete for ${source}: no matching session in $indexPath"
+        }
+    }
+}
+
 # ENG-PERF-DATA：只挂退出后的一次分析；进程隐藏运行，所有触发由分析器自己的锁串行化。
 function Start-UESTCPerfAnalysisWaiter {
     param([Parameter(Mandatory)][string]$Root, [Parameter(Mandatory)][Diagnostics.Process]$Game)

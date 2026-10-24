@@ -1,8 +1,13 @@
 // 编排 EventPipe/OS CPU 诊断并流式写入报告；持有证据文档与索引直到序列化完成。
-// 用法：dotnet CpuParse.dll <diagnostic-round-directory> [report-file-name]。
+// 用法：dotnet CpuParse.dll <diagnostic-round-directory> [report-file-name]；性能会话用 --perf-session <trace-directory> <session-directory>。
 using System.Text.Json;
 using Microsoft.Diagnostics.Tracing.Etlx;
 
+if (args.Length == 3 && args[0] == "--perf-session")
+{
+    PerfSessionCpuReport.Run(args[1], args[2]);
+    return;
+}
 if (args.Length is < 1 or > 2) throw new ArgumentException("Expected diagnostic directory and optional report file name.");
 var directory = Path.GetFullPath(args[0]);
 var reportName = args.Length == 2 ? args[1] : "cpu-hotspots.json";

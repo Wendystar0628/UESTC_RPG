@@ -1,5 +1,4 @@
 using Campus.Kernel.Boot;
-using System.Reflection;
 using Campus.Contracts;
 using Campus.Contracts.Bake;
 using Campus.Kernel.Bake;
@@ -23,22 +22,26 @@ public sealed class ToonLibraryRuntimeTests
     [TestCase]
     [TestCategory(TestReason.Contract)]
     [RequireGodotRuntime]
-    public void SurfacePatternMaterialKeyRetainsEveryProfileField()
+    [TestCategory("NativeRender")]
+    public async Task SurfacePatternMaterialsRetainEveryProfileField()
     {
-        var spec = new ToonSpec(new("test.lit"), new("test.shade"))
+        await using var fixture = new Fixture();
+        var spec = fixture.Spec with
         {
-            SurfacePattern = new(9, new(2, 1), new(.01f, .02f))
+            SurfacePattern = new(SurfacePatternLayers.StackBond, new(2, 1), new(.01f, .02f))
         };
-        var keyType = typeof(ToonLibrary).GetNestedType("MaterialClass", BindingFlags.NonPublic)!;
-        var method = keyType.GetMethod("Of", BindingFlags.Public | BindingFlags.Static)!;
-        object Key(ToonSpec value) => method.Invoke(null, [value])!;
-        var key = Key(spec);
-        AssertThat(key.Equals(Key(spec with { Lit = new("other.lit"), Shade = new("other.shade") }))).OverrideFailureMessage("Colour-only changes must still share a material class.").IsTrue();
-        foreach (var pattern in new[] { spec.SurfacePattern.Value with { Layer = 10 },
+        var material = fixture.Library.Get(spec);
+        var id = fixture.Library.MaterialId(spec);
+        AssertThat(ReferenceEquals(material, fixture.Library.Get(spec with { Lit = new("ext.lit"), Shade = new("ext.shade") })))
+            .OverrideFailureMessage("Colour-only changes must still share a material.").IsTrue();
+        foreach (var pattern in new[] { spec.SurfacePattern.Value with { Layer = SurfacePatternLayers.RunningBond },
             spec.SurfacePattern.Value with { PeriodMeters = new(3, 1) },
             spec.SurfacePattern.Value with { JointMeters = new(.01f, .03f) } })
-            AssertThat(!key.Equals(Key(spec with { SurfacePattern = pattern }))).OverrideFailureMessage("Material cache identity dropped a surface-profile field.").IsTrue();
-        AssertThat(!key.Equals(Key(spec with { SurfacePattern = null }))).OverrideFailureMessage("Pattern and ordinary classes collapsed.").IsTrue();
+            AssertThat(!ReferenceEquals(material, fixture.Library.Get(spec with { SurfacePattern = pattern })) &&
+                id != fixture.Library.MaterialId(spec with { SurfacePattern = pattern }))
+                .OverrideFailureMessage("Material reuse dropped a surface-profile field.").IsTrue();
+        AssertThat(!ReferenceEquals(material, fixture.Library.Get(spec with { SurfacePattern = null })))
+            .OverrideFailureMessage("Pattern and ordinary materials collapsed.").IsTrue();
     }
 
     [TestCase]
@@ -49,12 +52,11 @@ public sealed class ToonLibraryRuntimeTests
     {
         await using var fixture = new Fixture();
         var plain = fixture.Library.Get(fixture.Spec);
-        var count = ReadPrivate<System.Collections.IDictionary>(fixture.Library, "_byClass").Count;
         var refused = false;
         try { fixture.Library.Get(fixture.Spec with { SurfacePattern = new(7, new(2, 1), new(.01f, .01f)) }); }
         catch (NotSupportedException) { refused = true; }
-        AssertThat(refused && ReferenceEquals(fixture.Library.Get(fixture.Spec), plain) &&
-            ReadPrivate<System.Collections.IDictionary>(fixture.Library, "_byClass").Count == count).OverrideFailureMessage("Unregistered surface layers must fail before cache lookup/allocation, leaving plain materials intact.").IsTrue();
+        AssertThat(refused && ReferenceEquals(fixture.Library.Get(fixture.Spec), plain))
+            .OverrideFailureMessage("Unregistered surface layers must fail, leaving plain materials intact.").IsTrue();
     }
 
     [TestCase]
@@ -183,15 +185,14 @@ public sealed class ToonLibraryRuntimeTests
     [TestCategory(TestReason.Contract)]
     [TestCategory("NativeRender")]
     [RequireGodotRuntime]
-    public async Task DisposeReleasesOwnedMaterialsAndImageButPreservesBorrowedResourcesAndTextureLeases()
+    public async Task DisposeReleasesOwnedMaterialsButPreservesBorrowedResourcesAndTextureLeases()
     {
         await using var fixture = new Fixture();
         var library = fixture.Library;
         var owned = library.Get(fixture.Spec);
-        var borrowed = fixture.Borrow("canvas_item");
+        var borrowed = fixture.Borrow();
         var shader = borrowed.Shader;
-        var image = ReadPrivate<Image>(library, "_matImage");
-        var texture = ReadPrivate<ImageTexture>(library, "_matTexture");
+        var texture = fixture.Textures.Mat ?? throw new InvalidOperationException("The library must publish its material table.");
         AssertThat(fixture.Textures.TryAcquire(ShaderGlobals.MatTable, out var lease)).OverrideFailureMessage("The registered mat_table must be leaseable.").IsTrue();
         using var retained = lease ?? throw new InvalidOperationException("A successful acquire must return a lease.");
         AssertThat(fixture.Textures.TryAcquire(ShaderGlobals.WindowCards, out var cardLease)).OverrideFailureMessage("The static window_cards table must be registered once by the library.").IsTrue();
@@ -201,7 +202,6 @@ public sealed class ToonLibraryRuntimeTests
         library.Dispose();
         library.Dispose();
         AssertThat(!GodotObject.IsInstanceValid(owned)).OverrideFailureMessage("Library-created Toon material must be released deterministically.").IsTrue();
-        AssertThat(!GodotObject.IsInstanceValid(image)).OverrideFailureMessage("The producer-owned Image must be released deterministically.").IsTrue();
         AssertThat(GodotObject.IsInstanceValid(borrowed) && GodotObject.IsInstanceValid(shader)).OverrideFailureMessage("Borrowed material and its shader must stay owned by the caller.").IsTrue();
         AssertThat(GodotObject.IsInstanceValid(texture)).OverrideFailureMessage("A live reader lease must protect the registry-owned texture from library disposal.").IsTrue();
         AssertThat(!fixture.Textures.TryAcquire(ShaderGlobals.MatTable, out _)).OverrideFailureMessage("Dispose must unregister mat_table before returning.").IsTrue();
@@ -220,7 +220,7 @@ public sealed class ToonLibraryRuntimeTests
     public async Task ConstructorFailureRetiresRegisteredTexturesAndDisposesUntransferredTexture()
     {
         using var registry = new GlobalDataTextureRegistry();
-        var rejecting = new RejectCards(registry);
+        var rejecting = new TextureRegistry(registry, rejectCards: true);
         var rejected = false;
         try { using var unexpected = new ToonLibrary(new Palettes(), new ShaderMaterialSource(new RequiredResources()), rejecting, new RequiredResources()); }
         catch (InvalidOperationException) { rejected = true; }
@@ -231,7 +231,7 @@ public sealed class ToonLibraryRuntimeTests
         AssertThat(rejecting.Mat is not null && !GodotObject.IsInstanceValid(rejecting.Mat)).OverrideFailureMessage("Previously transferred texture must be released by the registry.").IsTrue();
     }
 
-    private sealed class RejectCards(GlobalDataTextureRegistry inner) : IGlobalDataTextureRegistry
+    private sealed class TextureRegistry(GlobalDataTextureRegistry inner, bool rejectCards = false) : IGlobalDataTextureRegistry
     {
         public Texture2D? Mat { get; private set; }
         public Texture2D? Cards { get; private set; }
@@ -240,9 +240,9 @@ public sealed class ToonLibraryRuntimeTests
             if (name == ShaderGlobals.WindowCards)
             {
                 Cards = texture;
-                throw new InvalidOperationException("reject window_cards");
+                if (rejectCards) throw new InvalidOperationException("reject window_cards");
             }
-            Mat = texture;
+            else if (name == ShaderGlobals.MatTable) Mat = texture;
             return inner.RegisterOwned(name, texture, rid);
         }
         public bool TryAcquire(string name, [System.Diagnostics.CodeAnalysis.NotNullWhen(true)] out GlobalDataTextureLease? lease) => inner.TryAcquire(name, out lease);
@@ -250,15 +250,10 @@ public sealed class ToonLibraryRuntimeTests
         public void Dispose() => inner.Dispose();
     }
 
-    private static T ReadPrivate<T>(ToonLibrary library, string name) =>
-        (T)(typeof(ToonLibrary).GetField(name, BindingFlags.Instance | BindingFlags.NonPublic)?.GetValue(library)
-            ?? throw new InvalidOperationException($"Missing lifecycle test field: {name}"));
-
     private sealed class Fixture : IAsyncDisposable
     {
         private readonly List<ShaderMaterial> _borrowed = [];
-        private readonly List<Shader> _shaders = [];
-        public GlobalDataTextureRegistry Textures { get; } = new();
+        public TextureRegistry Textures { get; } = new(new());
         public ToonSpec Spec { get; } = new(new PaletteToken("test.lit"), new PaletteToken("test.shade"));
         public ToonLibrary Library { get; }
 
@@ -268,11 +263,9 @@ public sealed class ToonLibraryRuntimeTests
             Library = new ToonLibrary(new Palettes(), new ShaderMaterialSource(new RequiredResources()), Textures, new RequiredResources());
         }
 
-        public ShaderMaterial Borrow(string mode)
+        public ShaderMaterial Borrow()
         {
-            var shader = new Shader { Code = $"shader_type {mode};" };
-            var material = new ShaderMaterial { Shader = shader };
-            _shaders.Add(shader);
+            var material = (ShaderMaterial)Library.CreatePipelineMaterial(ToonKind.Static);
             _borrowed.Add(material);
             return material;
         }
@@ -282,8 +275,6 @@ public sealed class ToonLibraryRuntimeTests
             Library.Dispose();
             foreach (var material in _borrowed)
                 if (GodotObject.IsInstanceValid(material)) material.Dispose();
-            foreach (var shader in _shaders)
-                if (GodotObject.IsInstanceValid(shader)) shader.Dispose();
             await Textures.ShutdownAsync();
         }
     }

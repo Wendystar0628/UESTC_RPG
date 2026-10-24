@@ -21,7 +21,7 @@ public sealed class BootArguments
         "load", "save-dir", "save-at", "audio", "audio-fixed", "audio-seed", "audio-limiter", "audio-log",
         "ui-theme", "motion", "ui-scale", "ui-gallery", "ui-export-theme", "amb-solo", "amb-off", "amb-debug",
         "audio-probe", "audio-out", "preset", "travel-sequence", "movie-frames", "movie-events", "startup-scenario",
-        "route-start", "route-mode", "route-seconds", "perf-out"
+        "route-start", "route-mode", "route-seconds", "perf-out", "perf-collection"
     };
     private static readonly HashSet<string> Flags = new(StringComparer.Ordinal) { "audio-probe" };
     private static readonly string[] WorldKeys = ["clock", "season", "anim", "flow", "seed", "weather", "weather-intensity",
@@ -30,6 +30,7 @@ public sealed class BootArguments
     private readonly HashSet<string> _provided;
     private IReadOnlyDictionary<QualityKnob, float> _qualityOverrides = new Dictionary<QualityKnob, float>();
     private StartupRouteOptions? _startupRoute;
+    private PerfCollectionOptions? _perfCollection;
 
     private BootArguments(Dictionary<string, string> values)
     {
@@ -70,6 +71,9 @@ public sealed class BootArguments
         if (result.Has("slot") && result.Has("load")) throw Invalid("--slot and --load are mutually exclusive.");
         if (result.HasLoad && WorldKeys.Any(result.Has)) throw Invalid("Saved state cannot be combined with world overrides.");
         result.Validate();
+        if (result.Has("perf-collection") && (!result.Has("perf-out") || result.CpuBakeMode ||
+            result.CaptureMode || result.Has("inspect") || result.HasLoad))
+            throw Invalid("--perf-collection requires --perf-out and cannot combine with bake, capture, inspect or saved-state load.");
         if (result.Value("map") == "*" && !result.CpuBakeMode && result.Value("gate") != "registry")
             throw Invalid("--map=* requires CPU baking or --gate=registry.");
         if (result.Has("travel-sequence") && (result.CpuBakeMode || result.CaptureMode || result.Has("inspect")))
@@ -95,6 +99,7 @@ public sealed class BootArguments
     {
         OneOf("startup-scenario", "title", "immediate", "dwell", "playing", "route");
         ValidateRoute();
+        ValidateCollection();
         foreach (var key in new[] { "ui", "title", "bench", "bake-bg", "bake-strict", "audio-fixed", "audio-limiter", "audio-log", "amb-debug" })
             OneOf(key, "0", "1");
         OneOf("season", "spring", "summer", "autumn", "winter");
@@ -144,6 +149,22 @@ public sealed class BootArguments
         if (!double.TryParse(Value("route-seconds"), NumberStyles.Float, CultureInfo.InvariantCulture, out var seconds) ||
             !double.IsFinite(seconds) || seconds <= 0) throw Invalid("route-seconds");
         _startupRoute = new(Value("route-start"), Enum.Parse<ViewMode>(Value("route-mode"), true), seconds);
+    }
+
+    private void ValidateCollection()
+    {
+        if (!Has("perf-collection")) return;
+        string path = Value("perf-collection");
+        if (!Path.IsPathFullyQualified(path)) throw Invalid("--perf-collection must be absolute.");
+        var options = JsonSerializer.Deserialize<PerfCollectionOptions>(File.ReadAllText(path), ContractJson.Options)
+            ?? throw Invalid("--perf-collection must contain a request.");
+        static bool Positive(double value) => double.IsFinite(value) && value > 0;
+        static bool Fraction(double value) => double.IsFinite(value) && value is >= 0 and <= 1;
+        if (string.IsNullOrWhiteSpace(options.SceneId) || string.IsNullOrWhiteSpace(options.SampleSegmentId) ||
+            options.StableFrames <= 0 || !Positive(options.RealtimeSeconds) || !Positive(options.SampleSeconds) ||
+            !Positive(options.MaximumFactAgeSeconds) || !Fraction(options.OtherGpuFraction) || !Fraction(options.OtherCpuFraction))
+            throw Invalid("--perf-collection contains invalid protocol values.");
+        _perfCollection = options;
     }
 
     private void AddDefaults()
@@ -198,6 +219,7 @@ public sealed class BootArguments
             AllMaps = allMaps,
             SaveDirectory = Text("save-dir"),
             PerfOutputDirectory = Text("perf-out"),
+            PerfCollection = _perfCollection,
             TravelSequence = Text("travel-sequence")?.Split(',') ?? [],
             StartupScenario = Text("startup-scenario") is { } scenario ? Enum.Parse<StartupScenario>(scenario, true) : null,
             StartupRoute = _startupRoute,

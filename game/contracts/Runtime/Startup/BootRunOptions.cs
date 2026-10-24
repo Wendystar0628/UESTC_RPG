@@ -19,6 +19,7 @@ public sealed record BootRunOptions
     public string? SaveDirectory { get; init; }
     /// <summary>Explicit AI performance root; does not change interactive run behavior or author settings.</summary>
     public string? PerfOutputDirectory { get; init; }
+    public PerfCollectionOptions? PerfCollection { get; init; }
     public IReadOnlyList<string> TravelSequence { get; init; } = [];
     /// <summary>In-process player input sampling; retains normal interactive startup defaults.</summary>
     public StartupScenario? StartupScenario { get; init; }

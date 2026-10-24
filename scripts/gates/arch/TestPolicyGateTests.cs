@@ -12,6 +12,16 @@ public sealed class TestPolicyGateTests
 {
     [TestCase]
     [TestCategory("Contract")]
+    public void TestFixturesUseBehaviorAndRuntimeObservations() => SourceModel.RequireNoViolations(
+        SourceModel.Tests.SelectMany(TestBehaviorPolicy.ReflectionAndAssertionViolations));
+
+    [TestCase]
+    [TestCategory("Contract")]
+    public async Task ExtraTestDoubleMethodsHaveConsumers() => SourceModel.RequireNoViolations(
+        await TestBehaviorPolicy.UnusedDoubleMethods(SourceModel.Tests, SourceModel.Solution));
+
+    [TestCase]
+    [TestCategory("Contract")]
     public void EveryTestCaseDeclaresExactlyOneReason()
     {
         var errors = new List<string>();

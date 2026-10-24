@@ -212,15 +212,6 @@ internal sealed class TestWorldState(IWeatherProcess weather, IRuleset ruleset) 
         Rev++;
     }
 
-    /// <summary>Called by the Test fixture save stub when starting a fresh world instance.</summary>
-    public void BeginNewInstance()
-    {
-        Restore(new WorldSaveMoment(17.5, 0, Season.Autumn, 1));
-        AnimTime = 240;
-        Mode = ViewMode.Fly;
-        CompleteRestore();
-    }
-
     public WorldSaveMoment GetSaveMoment()
     {
         EnsureControlsAvailable();
@@ -235,22 +226,6 @@ internal sealed class TestWorldState(IWeatherProcess weather, IRuleset ruleset) 
         _restorePending = false;
         RestoreFaulted = true;
         if (changed) Rev++;
-    }
-
-    /// <summary>Test fixture staging hook for a fresh load/new-game restore; no weather mutation or instance change.</summary>
-    public void Restore(in WorldSaveMoment moment)
-    {
-        if (!double.IsFinite(moment.WorldHours) || moment.WorldHours < 0 ||
-            !double.IsFinite(moment.ClockOffset) || !double.IsFinite(moment.WorldHours + moment.ClockOffset) ||
-            !Enum.IsDefined(moment.Season)) throw new ArgumentOutOfRangeException(nameof(moment));
-        ValidateRate(moment.FlowRate);
-        WorldHours = moment.WorldHours;
-        _clockOffset = moment.ClockOffset;
-        SeasonTarget = moment.Season;
-        BaseFlow = new Campus.Contracts.Flow(moment.FlowRate);
-        if (moment.FlowRate > 0) LastFlowRate = moment.FlowRate;
-        _restorePending = true;
-        // Keep the fault latch until the coordinator successfully commits all World sections.
     }
 
     public void CompleteRestore()

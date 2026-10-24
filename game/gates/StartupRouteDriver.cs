@@ -33,6 +33,7 @@ internal sealed class StartupRouteDriver(IStageGateHost host, StartupSampleInput
         await ReachStart(options.Start, maps.Current, camera, observer, walk);
         PrintPose("arrival", options.Start, observer, 0);
         // Atlas arrival and the requested point must agree before any route input is held.
+        if (RejectCollectedStart(StartupRouteProgress.StartFailure(requested, observer.Feet, observer.YawDeg))) return;
         _ = new StartupRouteProgress(requested, ViewMode.Walk, milliseconds,
             observer.Feet, observer.YawDeg, observer.Mode);
         switch (options.Mode)
@@ -44,6 +45,8 @@ internal sealed class StartupRouteDriver(IStageGateHost host, StartupSampleInput
                 break;
             default: throw new InvalidOperationException("Route requested an unsupported view mode.");
         }
+        if (RejectCollectedStart(StartupRouteProgress.StartFailure(requested, observer.Feet, observer.YawDeg) ??
+            ActiveFailure(options.Mode, camera, observer, walk))) return;
         PrintPose("start", options.Start, observer, 0);
         var progress = new StartupRouteProgress(requested, options.Mode, milliseconds,
             observer.Feet, observer.YawDeg, observer.Mode);
@@ -53,28 +56,50 @@ internal sealed class StartupRouteDriver(IStageGateHost host, StartupSampleInput
             throw new InvalidOperationException("The route inherited a held forward action.");
         var forwardKey = (Key)bindings.PhysicalKey("move_forward");
         GD.Print($"STARTUP_ROUTE_INPUT action=move_forward physicalKey={(int)forwardKey}");
-        await input.Press(forwardKey, true, "route-forward-start", "route-forward-end", async () =>
+        async Task<string?> Move()
         {
-            var started = FrameClock.MonotonicMilliseconds;
-            var nextSample = SampleMilliseconds;
-            while (true)
+            var failure = StartupRouteProgress.StartFailure(requested, observer.Feet, observer.YawDeg) ??
+                ActiveFailure(options.Mode, camera, observer, walk);
+            if (failure is not null) return failure;
+            await input.Press(forwardKey, true, "route-forward-start", "route-forward-end", async () =>
             {
-                await input.NextFrame();
-                RequireActive(options.Mode, camera, observer, walk);
-                var elapsed = FrameClock.MonotonicMilliseconds - started;
-                if (elapsed >= milliseconds || elapsed >= nextSample && milliseconds - elapsed >= SampleMilliseconds)
+                var started = FrameClock.MonotonicMilliseconds;
+                var nextSample = SampleMilliseconds;
+                while (true)
                 {
-                    progress.Observe(observer.Feet, observer.Mode, elapsed);
-                    PrintPose("sample", options.Start, observer, elapsed);
-                    nextSample = elapsed + SampleMilliseconds;
+                    await input.NextFrame();
+                    failure = ActiveFailure(options.Mode, camera, observer, walk);
+                    if (failure is not null) return;
+                    var elapsed = FrameClock.MonotonicMilliseconds - started;
+                    if (elapsed >= milliseconds || elapsed >= nextSample && milliseconds - elapsed >= SampleMilliseconds)
+                    {
+                        failure = progress.ObservationFailure(observer.Feet, observer.Mode, elapsed);
+                        if (failure is not null) return;
+                        progress.Observe(observer.Feet, observer.Mode, elapsed);
+                        PrintPose("sample", options.Start, observer, elapsed);
+                        nextSample = elapsed + SampleMilliseconds;
+                    }
+                    if (elapsed >= milliseconds) break;
                 }
-                if (elapsed >= milliseconds) break;
-            }
-            progress.Complete();
-        }, milliseconds, () => input.WaitForRelease(forwardAction));
+                failure = progress.CompletionFailure();
+            }, milliseconds, () => input.WaitForRelease(forwardAction));
+            return failure;
+        }
+        if (Campus.Kernel.Boot.Boot.Options.PerfCollection is { } collection)
+        {
+            if (!await new PerfCollectionDriver(host, collection).Run(Move)) return;
+        }
+        else if (await Move() is { } failure) throw new InvalidOperationException(failure);
         RequireActive(options.Mode, camera, observer, walk);
         PrintPose("settled", options.Start, observer, progress.ElapsedMilliseconds);
         GD.Print(FormattableString.Invariant($"STARTUP_ROUTE_COMPLETE start={options.Start} mode={observer.Mode} durationSeconds={options.DurationSeconds:R} elapsedMilliseconds={progress.ElapsedMilliseconds:R} distance={progress.Distance:R} forward={progress.ForwardDistance:R}"));
+    }
+
+    private bool RejectCollectedStart(string? reason)
+    {
+        if (reason is null || Campus.Kernel.Boot.Boot.Options.PerfCollection is not { } collection) return false;
+        new PerfCollectionDriver(host, collection).RejectInput(reason);
+        return true;
     }
 
     private async Task ReachStart(string start, MapId map, ICameraRig camera, IObserverState observer, IWalkController walk)
@@ -146,15 +171,20 @@ internal sealed class StartupRouteDriver(IStageGateHost host, StartupSampleInput
 
     private void RequireActive(ViewMode mode, ICameraRig camera, IObserverState observer, IWalkController walk)
     {
+        if (ActiveFailure(mode, camera, observer, walk) is { } failure) throw new InvalidOperationException(failure);
+    }
+
+    private string? ActiveFailure(ViewMode mode, ICameraRig camera, IObserverState observer, IWalkController walk)
+    {
         if (host.Flow.State != AppState.Playing || camera.Mode != mode || observer.Mode != mode || camera.ActiveTransit is not null)
-            throw new InvalidOperationException($"Route left its active Playing mode: requested {mode}, camera {camera.Mode}, observer {observer.Mode}, flow {host.Flow.State}.");
+            return $"Route left its active Playing mode: requested {mode}, camera {camera.Mode}, observer {observer.Mode}, flow {host.Flow.State}.";
         var valid = mode switch
         {
             ViewMode.Walk => walk.Active && !walk.ExitRequested && walk.CollisionReady,
             ViewMode.Fly => !walk.Active,
             _ => throw new InvalidOperationException("Route requested an unsupported view mode.")
         };
-        if (!valid) throw new InvalidOperationException("Route lost the production controller for its requested mode.");
+        return valid ? null : "Route lost the production controller for its requested mode.";
     }
 
     private static void PrintPose(string phase, string start, IObserverState observer, double elapsed)

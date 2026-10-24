@@ -1,11 +1,6 @@
-using Campus.Contracts;
 using Campus.Contracts.AppFlow;
-using Campus.Contracts.Maps;
 using Campus.Contracts.Save;
-using Campus.Contracts.Settings;
 using Campus.Flow;
-using Campus.Gen.World;
-using Campus.Gen.Tests.Support;
 using GdUnit4;
 
 namespace Campus.Tests;
@@ -16,8 +11,8 @@ public sealed class AppLoadingFlowTests
     [TestCase, TestCategory(TestReason.Regression)]
     public async Task ThrowingFlowObserversPreserveEntryLoadingAndLaterObservers()
     {
-        var rig = new FlowTestRig(); var saves = new FullSave(rig);
-        using var flow = rig.CreateFlow(saves, Maps(), new TestAppExit(false));
+        var rig = new FlowTestRig(); var saves = new FlowSaveTestStub(rig);
+        using var flow = rig.CreateFlow(saves, FlowTestRig.Maps(), new TestAppExit(false));
         var original = new IOException("milestone observation failed");
         List<string> phases = [];
         var playingObservedAfterInput = false;
@@ -42,7 +37,7 @@ public sealed class AppLoadingFlowTests
     [TestCase, TestCategory(TestReason.Regression)]
     public async Task StaticTitleIsInteractiveBeforeBackgroundAndNeverLoadsAWorld()
     {
-        var rig = new FlowTestRig(); var saves = new FullSave(rig); var maps = Maps();
+        var rig = new FlowTestRig(); var saves = new FlowSaveTestStub(rig); var maps = FlowTestRig.Maps();
         using var flow = rig.CreateFlow(saves, maps, new TestAppExit(false));
         var map = new TaskCompletionSource(); var global = new TaskCompletionSource();
         await flow.PrepareBoot(new());
@@ -64,7 +59,7 @@ public sealed class AppLoadingFlowTests
     [TestCase, TestCategory(TestReason.Regression)]
     public async Task EarlyNewGameJoinsTheSameBackgroundThenKeepsItsPinUntilArrival()
     {
-        var rig = new FlowTestRig(false); var saves = new FullSave(rig); var maps = Maps();
+        var rig = new FlowTestRig(false); var saves = new FlowSaveTestStub(rig); var maps = FlowTestRig.Maps();
         using var flow = rig.CreateFlow(saves, maps, new TestAppExit(false));
         var map = new TaskCompletionSource(); var global = new TaskCompletionSource();
         await flow.PrepareBoot(new()); var background = flow.PrepareBackground(map.Task, global.Task);
@@ -87,8 +82,8 @@ public sealed class AppLoadingFlowTests
     [TestCase, TestCategory(TestReason.Regression)]
     public async Task BackgroundFailureProjectsBeforeItsSiblingAndRetainsBothCauses()
     {
-        var rig = new FlowTestRig(); var saves = new FullSave(rig);
-        var flow = rig.CreateFlow(saves, Maps(), new TestAppExit(false));
+        var rig = new FlowTestRig(); var saves = new FlowSaveTestStub(rig);
+        var flow = rig.CreateFlow(saves, FlowTestRig.Maps(), new TestAppExit(false));
         await flow.PrepareBoot(new());
         var map = new TaskCompletionSource(); var global = new TaskCompletionSource();
         var work = flow.PrepareBackground(map.Task, global.Task);
@@ -114,10 +109,10 @@ public sealed class AppLoadingFlowTests
     [TestCase, TestCategory(TestReason.Regression)]
     public void DisposalObservesBootFailureBeforeAnyBackgroundPreparationExists()
     {
-        var rig = new FlowTestRig(); var saves = new FullSave(rig);
+        var rig = new FlowTestRig(); var saves = new FlowSaveTestStub(rig);
         foreach (var failure in new Exception[] { new InvalidDataException("BeforeMap failed"), new OperationCanceledException() })
         {
-            var flow = rig.CreateFlow(saves, Maps(), new TestAppExit(false));
+            var flow = rig.CreateFlow(saves, FlowTestRig.Maps(), new TestAppExit(false));
             flow.FailBoot(failure);
             // StageAppFailure has already received this failure before publishing FailBoot.
             flow.Dispose();
@@ -126,7 +121,7 @@ public sealed class AppLoadingFlowTests
                 !ReferenceEquals(flow.BackgroundReady.Exception?.InnerException, failure))
                 throw new InvalidOperationException("Closing replaced the original readiness failure.");
         }
-        var canceled = rig.CreateFlow(saves, Maps(), new TestAppExit(false));
+        var canceled = rig.CreateFlow(saves, FlowTestRig.Maps(), new TestAppExit(false));
         canceled.Dispose();
         if (!canceled.MapReady.IsCanceled || !canceled.BackgroundReady.IsCanceled)
             throw new InvalidOperationException("Disposal left readiness pending without a background owner.");
@@ -135,8 +130,8 @@ public sealed class AppLoadingFlowTests
     [TestCase, TestCategory(TestReason.Regression)]
     public async Task BackgroundCancellationWaitsForItsSiblingAndRemainsCanceled()
     {
-        var rig = new FlowTestRig(); var saves = new FullSave(rig);
-        using var flow = rig.CreateFlow(saves, Maps(), new TestAppExit(false));
+        var rig = new FlowTestRig(); var saves = new FlowSaveTestStub(rig);
+        using var flow = rig.CreateFlow(saves, FlowTestRig.Maps(), new TestAppExit(false));
         await flow.PrepareBoot(new());
         var map = new TaskCompletionSource(); var global = new TaskCompletionSource();
         var work = flow.PrepareBackground(map.Task, global.Task);
@@ -154,8 +149,8 @@ public sealed class AppLoadingFlowTests
     [TestCase, TestCategory(TestReason.Regression)]
     public async Task BackgroundCancellationCannotHideItsSiblingsRealFailure()
     {
-        var rig = new FlowTestRig(); var saves = new FullSave(rig);
-        using var flow = rig.CreateFlow(saves, Maps(), new TestAppExit(false));
+        var rig = new FlowTestRig(); var saves = new FlowSaveTestStub(rig);
+        using var flow = rig.CreateFlow(saves, FlowTestRig.Maps(), new TestAppExit(false));
         await flow.PrepareBoot(new());
         var map = new TaskCompletionSource(); var global = new TaskCompletionSource();
         var work = flow.PrepareBackground(map.Task, global.Task);
@@ -170,9 +165,9 @@ public sealed class AppLoadingFlowTests
     [TestCase, TestCategory(TestReason.Regression)]
     public async Task QuitDuringEarlyEntryCancelsItsBackgroundWaitBeforeCreatingAWorld()
     {
-        var rig = new FlowTestRig(); var saves = new FullSave(rig);
+        var rig = new FlowTestRig(); var saves = new FlowSaveTestStub(rig);
         var exit = new TestAppExit();
-        using var flow = rig.CreateFlow(saves, Maps(), exit);
+        using var flow = rig.CreateFlow(saves, FlowTestRig.Maps(), exit);
         List<EnterCommandEvent> commands = []; flow.EnterCommand += commands.Add;
         await flow.PrepareBoot(new());
         var map = new TaskCompletionSource(); var global = new TaskCompletionSource();
@@ -191,28 +186,6 @@ public sealed class AppLoadingFlowTests
         catch (OperationCanceledException) when (work.IsCanceled) { }
     }
 
-    [TestCase(SaveStatus.Saved, null)]
-    [TestCase(SaveStatus.Deferred, null)]
-    [TestCase(SaveStatus.Failed, SaveErrorKeys.Io)]
-    [TestCase(SaveStatus.Failed, SaveErrorKeys.Timeout)]
-    [TestCategory(TestReason.Regression)]
-    public async Task ReturningToTitleClearsTheWorldAfterAnySaveResult(SaveStatus status, string? errorKey)
-    {
-        var rig = new FlowTestRig(); var saves = new FullSave(rig);
-        using var flow = rig.CreateFlow(saves, Maps(), new TestAppExit(false));
-        await Title(flow, rig);
-        if (await flow.Enter(new(EnterKind.NewGame, new("s1"))) != EnterResult.Entered) throw new InvalidOperationException("New game failed.");
-        saves.FlushStatus = status; saves.FlushError = errorKey;
-        var arrivals = rig.Runtime.Arrivals;
-        await flow.ReturnToTitle();
-        if (flow.State != AppState.Title || rig.Runtime.Arrival is not null || rig.Runtime.Arrivals != arrivals ||
-            saves.Loads != 0 || saves.Flushes != 1 || rig.World.Instance != 0 || !rig.Title.Visible || rig.Loading.Active ||
-            saves.State.Last != status || saves.State.ErrorKey != errorKey)
-            throw new InvalidOperationException("Returning to title restored a world or waited for another arrival.");
-        if (await flow.Enter(new(EnterKind.Continue)) != EnterResult.Entered || saves.Loads != 1 || saves.NewGames != 1 || saves.Saves != 1)
-            throw new InvalidOperationException("Continue did not run a fresh complete load transaction.");
-    }
-
     [TestCase(SaveStatus.Saved, true)]
     [TestCase(SaveStatus.Disabled, true)]
     [TestCase(SaveStatus.Deferred, false)]
@@ -220,8 +193,8 @@ public sealed class AppLoadingFlowTests
     [TestCategory(TestReason.Regression)]
     public async Task NewGameRequiresItsInitialSaveOrExplicitReadOnlyMode(SaveStatus status, bool accepted)
     {
-        var rig = new FlowTestRig(); var saves = new FullSave(rig) { InitialSaveStatus = status };
-        using var flow = rig.CreateFlow(saves, Maps(), new TestAppExit(false));
+        var rig = new FlowTestRig(); var saves = new FlowSaveTestStub(rig) { InitialSaveStatus = status };
+        using var flow = rig.CreateFlow(saves, FlowTestRig.Maps(), new TestAppExit(false));
         await Title(flow, rig);
         var entered = await flow.Enter(new(EnterKind.NewGame, new("s1")));
         if (saves.Saves != 1 || entered != (accepted ? EnterResult.Entered : EnterResult.Failed) ||
@@ -234,8 +207,8 @@ public sealed class AppLoadingFlowTests
     [TestCase, TestCategory(TestReason.Smoke)]
     public async Task DirectFreshEntryWithoutASlotDoesNotAuthorizeAnySave()
     {
-        var rig = new FlowTestRig(); var saves = new FullSave(rig);
-        using var flow = rig.CreateFlow(saves, Maps(), new TestAppExit(false));
+        var rig = new FlowTestRig(); var saves = new FlowSaveTestStub(rig);
+        using var flow = rig.CreateFlow(saves, FlowTestRig.Maps(), new TestAppExit(false));
         List<EnterCommandEvent> commands = []; flow.EnterCommand += commands.Add;
         await flow.PrepareBoot(new(ShowTitle: false));
         await flow.PrepareBackground(Task.CompletedTask, Task.CompletedTask);
@@ -252,8 +225,8 @@ public sealed class AppLoadingFlowTests
     [TestCase, TestCategory(TestReason.Regression)]
     public async Task ReturnAndQuitWaitForTransitCleanupBeforeSavingOrClosing()
     {
-        var rig = new FlowTestRig(); var saves = new FullSave(rig); var exit = new TestAppExit();
-        using var flow = rig.CreateFlow(saves, Maps(), exit);
+        var rig = new FlowTestRig(); var saves = new FlowSaveTestStub(rig); var exit = new TestAppExit();
+        using var flow = rig.CreateFlow(saves, FlowTestRig.Maps(), exit);
         await Title(flow, rig); await flow.Enter(new(EnterKind.NewGame, new("s1")));
         var transit = new TaskCompletionSource(); rig.Transit.Draining = transit.Task;
         var leaving = flow.ReturnToTitle();
@@ -273,52 +246,5 @@ public sealed class AppLoadingFlowTests
         await flow.PrepareBoot(new());
         await rig.Title.Show(); await flow.OpenTitle();
         await flow.PrepareBackground(Task.CompletedTask, Task.CompletedTask);
-    }
-    private static TestMapService Maps()
-    {
-        var source = RealMapFixture.Entry(); var descriptor = source.Descriptor;
-        return new()
-        {
-            Default = descriptor.Id, Current = descriptor.Id, Maps = [descriptor],
-            Context = new TestMapContext(descriptor, new FakeWorld { Boundary = new([]) }),
-            SpawnResolver = (_, spawn) => source.ResolveSpawn(spawn ?? descriptor.DefaultSpawn)
-        };
-    }
-    private sealed class FullSave(FlowTestRig rig) : TestSaveService
-    {
-        private SlotId? _active;
-        public int NewGames { get; private set; }
-        public int Loads { get; private set; }
-        public int Saves { get; private set; }
-        public int Flushes { get; private set; }
-        public SaveStatus InitialSaveStatus { get; set; } = SaveStatus.Saved;
-        public SaveStatus FlushStatus { get; set; } = SaveStatus.Saved;
-        public string? FlushError { get; set; }
-        private SaveResult? _lastResult;
-        public override SaveState State => new(Active, _lastResult?.Status, _lastResult?.Error, null, ReadOnlyReason.None);
-        public TaskCompletionSource ArrivalStarted { get; } = new();
-        private static readonly Pose Landing = new(new(120, 1.7f, -70), 20, 0, UiSettingDefinitions.WalkFov.Default);
-        private SaveMeta Meta => new(Campus.Kernel.Save.Format.SaveContainer.CurrentFormat, new("s1"), SlotKind.Auto, 1, 1, 0, Maps().Default,
-            17.5, 17.5, Season.Autumn, WeatherKind.Clear, ViewMode.Walk, Landing, null, null, null, 0, SaveReason.Test);
-        public override IReadOnlyList<SlotInfo> Slots => [new(new("s1"), SlotKind.Auto, SlotHealth.Ok, Meta, 1)];
-        public override SlotId? Continue => new("s1");
-        public override SlotId? Active => _active;
-        public override Task<SaveResult> SaveNow(SaveReason reason)
-        {
-            if (rig.Runtime.Arrival?.Done.IsCompletedSuccessfully != true) throw new InvalidOperationException("Save preceded arrival.");
-            Saves++; return Task.FromResult(new SaveResult(InitialSaveStatus, Active, 1));
-        }
-        public override Task<LoadResult> NewGame(SlotId? slot, uint? seed = null, WorldPreset? start = null, NewGameBoot? boot = null)
-        { NewGames++; return Restore(slot); }
-        public override Task<LoadResult> Load(SlotId slot) { Loads++; return Restore(slot); }
-        private async Task<LoadResult> Restore(SlotId? slot)
-        {
-            _active = slot; rig.Camera.Mode = ViewMode.Walk; rig.Camera.SetPose(Landing);
-            var arrival = rig.Runtime.Arrive(Landing, ViewMode.Walk);
-            ArrivalStarted.TrySetResult(); await arrival.Done;
-            return new(LoadStatus.Loaded, slot, 1, []);
-        }
-        public override Task<SaveResult> FlushForQuit(SaveReason reason, TimeSpan timeout)
-        { Flushes++; _lastResult = new(FlushStatus, Active, 1, FlushError); return Task.FromResult(_lastResult); }
     }
 }

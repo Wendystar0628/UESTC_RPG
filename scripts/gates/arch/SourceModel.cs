@@ -22,6 +22,7 @@ internal static class SourceModel
 
     private static readonly Lazy<SourceWorkspace> Model = new(() => SourceWorkspace.Load(RepositoryRoot()));
     public static IEnumerable<Project> Projects => Model.Value.Solution.Projects;
+    internal static Solution Solution => Model.Value.Solution;
     public static IEnumerable<SourceFile> Production => Model.Value.Files.Where(file => !file.IsTest);
     public static IEnumerable<SourceFile> Tests => Model.Value.Files.Where(file => file.IsTest);
     public static Compilation ForProject(Project project) => Model.Value.Compilations[project.Id];

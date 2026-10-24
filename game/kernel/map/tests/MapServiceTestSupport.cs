@@ -72,15 +72,10 @@ internal static class MapServiceTestSupport
 
     internal sealed class TestData(MapCatalog catalog) : MapDataSource(new Campus.Kernel.Boot.RequiredResources())
     {
-        private readonly Dictionary<MapId, int> _versions = [];
-        private readonly Dictionary<MapId, int> _reads = [];
         private TaskCompletionSource<MapLoadInput>? _pendingRead;
         private MapLoadInput? _delayedInput;
         private TaskCompletionSource<MapCatalog>? _pendingCatalog;
         public List<MapLoadInput> Inputs { get; } = [];
-        public int RectWrites { get; private set; }
-        public void SetVersion(MapId map, int version) => _versions[map] = version;
-        public int ReadCount(MapId map) => _reads.GetValueOrDefault(map);
         public void DelayRead() => _pendingRead = new();
         public void ReleaseRead(Exception? failure = null)
         {
@@ -92,11 +87,9 @@ internal static class MapServiceTestSupport
         public override Task<MapCatalog> ReadCatalog() => _pendingCatalog?.Task ?? Task.FromResult(catalog);
         public override Task<MapLoadInput> ReadLoadInputAsync(MapCatalogEntry entry)
         {
-            _reads[entry.Descriptor.Id] = ReadCount(entry.Descriptor.Id) + 1;
             var files = new Dictionary<string, ReadOnlyMemory<byte>>(StringComparer.Ordinal)
             {
-                ["map.json"] = JsonSerializer.SerializeToUtf8Bytes(new { id = entry.Descriptor.Id.Value }),
-                ["world/geo.json"] = JsonSerializer.SerializeToUtf8Bytes(new { revision = _versions.GetValueOrDefault(entry.Descriptor.Id, 1) })
+                ["map.json"] = JsonSerializer.SerializeToUtf8Bytes(new { id = entry.Descriptor.Id.Value })
             };
             var input = new MapLoadInput(entry, BuildInputSnapshot.Freeze(files, "fixture/" + Inputs.Count));
             Inputs.Add(input);
@@ -104,21 +97,20 @@ internal static class MapServiceTestSupport
             return Task.FromResult(input);
         }
         public override MapClaimSnapshot? ReadClaims(MapId map) => null;
-        public override void WriteMapRect(MapRect rect) => RectWrites++;
+        public override void WriteMapRect(MapRect rect) { }
         public override void ReportError(string context, Exception error) { }
     }
     internal sealed class TestLoader(MapCatalog catalog) : IWorldModelLoader
     {
-        private readonly System.Collections.Concurrent.ConcurrentDictionary<IWorldModel, int> _worldVersions = new();
         private MapId? _delayMap;
         private TaskCompletionSource? _delayedEntered;
         private TaskCompletionSource? _releaseDelayed;
         private int _loads;
+        private int _completedLoads;
         public HashSet<MapId> Failing { get; } = [];
         public int Loads => Volatile.Read(ref _loads);
-        public int CompletedLoads => _worldVersions.Count;
+        public int CompletedLoads => Volatile.Read(ref _completedLoads);
         public bool DelayedLoadStarted => _delayedEntered?.Task.IsCompleted == true;
-        public int WorldVersion(IWorldModel world) => _worldVersions[world];
         public void DelayNext(MapId map)
         { _delayMap = map; _delayedEntered = new(); _releaseDelayed = new(); }
         public void ReleaseDelayed() => _releaseDelayed?.TrySetResult();
@@ -137,9 +129,9 @@ internal static class MapServiceTestSupport
             catalog.TryGet(map, out var entry);
             var d = entry.Descriptor;
             var world = new FakeWorld { Boundary = new([]) };
-            using var document = JsonDocument.Parse(files["world/geo.json"]);
-            _worldVersions[world] = document.RootElement.GetProperty("revision").GetInt32();
-            return new(world, d.Geo, d.Center, d.Bounds, d.TileMin, d.TileMax);
+            var result = new WorldModelLoadResult(world, d.Geo, d.Center, d.Bounds, d.TileMin, d.TileMax);
+            Interlocked.Increment(ref _completedLoads);
+            return result;
         }
     }
     internal sealed class TestRuntime : IMapRuntime, IMapLifetime
@@ -162,16 +154,9 @@ internal static class MapServiceTestSupport
         public bool MountReady => _mount?.Task.IsCompletedSuccessfully == true;
         public bool MountPending => _mount is { Task.IsCompleted: false };
         public int Arrivals { get; private set; }
-        public Pose? LastArrival { get; private set; }
         public List<MapId> Mounted { get; } = [];
-        public List<IMapContext> Contexts { get; } = [];
         public void DelayMount() => _delayMount = true;
         public void ReleaseMount() => _mount!.TrySetResult();
-        public void FailMount(string message)
-        {
-            Failure = new InvalidDataException(message);
-            _mount!.TrySetException(Failure);
-        }
         public string DescribeReadiness() => $"mountReady={MountReady},arrival={Arrival?.Done.Status}";
         public void StopNewWork() { _mount?.TrySetCanceled(); Arrival?.Cancel(); }
         public Task ShutdownAsync()
@@ -182,7 +167,6 @@ internal static class MapServiceTestSupport
         public Task Mount(IMapContext context)
         {
             Mounted.Add(context.Descriptor.Id);
-            Contexts.Add(context);
             _mount = new();
             if (!_delayMount) _mount.TrySetResult();
             return _mount.Task;
@@ -192,7 +176,6 @@ internal static class MapServiceTestSupport
             if (!MountReady) throw new InvalidOperationException("A map must be mounted before arrival.");
             Arrival?.Cancel();
             Arrivals++;
-            LastArrival = pose;
             var arrival = new TestArrival(new(pose, mode, space, collisionFeet));
             Arrival = arrival;
             ArrivalChanged?.Invoke(arrival);

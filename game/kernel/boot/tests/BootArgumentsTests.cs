@@ -1,6 +1,7 @@
 using Campus.Kernel.Boot;
 using Campus.Contracts;
 using Campus.Contracts.Startup;
+using System.Text.Json;
 using GdUnit4;
 using static GdUnit4.Assertions;
 
@@ -9,6 +10,61 @@ namespace Campus.Tests;
 [TestSuite]
 public sealed class BootArgumentsTests
 {
+    [TestCase]
+    [TestCategory(TestReason.Contract)]
+    public void CollectionReadsTheFrozenRequestAndRejectsMissingOrInvalidValues()
+    {
+        var root = Path.Combine(Path.GetTempPath(), "campus-collection-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(root);
+        var path = Path.Combine(root, "collection.json");
+        var request = new PerfCollectionOptions
+        {
+            SceneId = "fixture-scene", SampleSegmentId = "sample-fixture", FunctionalSmoke = true, SaveAfterSample = true, StableFrames = 2,
+            RealtimeSeconds = 1, SampleSeconds = 2, OtherGpuFraction = .2, OtherCpuFraction = .25, MaximumFactAgeSeconds = 3
+        };
+        try
+        {
+            File.WriteAllText(path, JsonSerializer.Serialize(request, ContractJson.Options));
+            var options = BootArguments.Parse(["--perf-out=" + root, "--perf-collection=" + path]);
+            AssertThat(options.PerfCollection == request && options.Mode == BootRunMode.Interactive && options.Title).IsTrue();
+            File.WriteAllText(path, JsonSerializer.Serialize(request with { FunctionalSmoke = false }, ContractJson.Options));
+            AssertThat(BootArguments.Parse(["--perf-out=" + root, "--perf-collection=" + path]).PerfCollection ==
+                (request with { FunctionalSmoke = false })).IsTrue();
+            var missingFlag = JsonSerializer.SerializeToNode(request, ContractJson.Options)!.AsObject();
+            missingFlag.Remove("functionalSmoke");
+            File.WriteAllText(path, missingFlag.ToJsonString());
+            JsonException? missingPurpose = null;
+            try { BootArguments.Parse(["--perf-out=" + root, "--perf-collection=" + path]); }
+            catch (JsonException error) { missingPurpose = error; }
+            AssertThat(missingPurpose is not null).IsTrue();
+            File.WriteAllText(path, JsonSerializer.Serialize(request, ContractJson.Options));
+            foreach (var invalid in new[]
+            {
+                new[] { "--perf-collection=" + path },
+                new[] { "--perf-out=" + root, "--perf-collection=relative.json" },
+                new[] { "--perf-out=" + root, "--perf-collection=" + path, "--bake=all" },
+                new[] { "--perf-out=" + root, "--perf-collection=" + path, "--frames=1" }
+            })
+            {
+                ArgumentException? failure = null;
+                try { BootArguments.Parse(invalid); }
+                catch (ArgumentException error) { failure = error; }
+                AssertThat(failure is not null).IsTrue();
+            }
+            File.WriteAllText(path, JsonSerializer.Serialize(request with { SampleSeconds = -1 }, ContractJson.Options));
+            ArgumentException? rejected = null;
+            try { BootArguments.Parse(["--perf-out=" + root, "--perf-collection=" + path]); }
+            catch (ArgumentException error) { rejected = error; }
+            AssertThat(rejected is not null).IsTrue();
+            File.WriteAllText(path, "{}");
+            JsonException? missing = null;
+            try { BootArguments.Parse(["--perf-out=" + root, "--perf-collection=" + path]); }
+            catch (JsonException error) { missing = error; }
+            AssertThat(missing is not null).IsTrue();
+        }
+        finally { File.Delete(path); Directory.Delete(root); }
+    }
+
     [TestCase]
     [TestCategory(TestReason.Contract)]
     public void PerformanceOutputIsAnIndependentExplicitRoot()

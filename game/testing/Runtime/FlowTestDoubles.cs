@@ -5,6 +5,9 @@ using Campus.Contracts.AppFlow;
 using Campus.Contracts.Maps;
 using Campus.Contracts.Save;
 using Campus.Flow;
+using Campus.Contracts.Settings;
+using Campus.Gen.Tests.Support;
+using Campus.Gen.World;
 
 namespace Campus.Tests;
 
@@ -27,6 +30,8 @@ internal sealed class TestAppLoadingPresentation : IAppLoadingPresentation
     public bool IsCovered => Active;
     public float Progress { get; private set; }
     public int Hides { get; private set; }
+    // Superseded leases release immediately; the final screen owns the visible fade.
+    public Task? HideGate { get; set; }
     public IAppLoadingLease Show(EnterRequest? request = null)
     {
         if (!Active) Progress = 0;
@@ -42,15 +47,18 @@ internal sealed class TestAppLoadingPresentation : IAppLoadingPresentation
         {
             if (!_released) owner.Progress = Math.Max(owner.Progress, total > 0 ? (float)completed / total : 0);
         }
-        public Task Hide()
+        public async Task Hide()
         {
-            if (_released) return Task.CompletedTask;
-            if (owner._leases.Count == 1 && owner.Progress != 1)
-                throw new InvalidOperationException("Loading hid before every item completed.");
+            if (_released) return;
+            if (owner._leases.Count == 1)
+            {
+                if (owner.Progress != 1)
+                    throw new InvalidOperationException("Loading hid before every item completed.");
+                if (owner.HideGate is { } gate) await gate;
+            }
             _released = true;
             owner._leases.Remove(this);
             if (!owner.Active) owner.Hides++;
-            return Task.CompletedTask;
         }
         public ValueTask DisposeAsync() => new(Hide());
     }
@@ -138,6 +146,17 @@ internal sealed class FlowTestRig
         new(Camera, Loading, Title, saves, maps, World, World, restore ?? World, exit, Runtime, Runtime,
             Transit, new FlowDiagnostics(Diagnostics));
 
+    internal static TestMapService Maps()
+    {
+        var source = RealMapFixture.Entry(); var descriptor = source.Descriptor;
+        return new()
+        {
+            Default = descriptor.Id, Current = descriptor.Id, Maps = [descriptor],
+            Context = new TestMapContext(descriptor, new FakeWorld { Boundary = new([]) }),
+            SpawnResolver = (_, spawn) => source.ResolveSpawn(spawn ?? descriptor.DefaultSpawn)
+        };
+    }
+
     private sealed class FlowDiagnostics(List<string> messages) : IDiagnosticLog
     {
         public void Error(string context, Exception error) => Error(context, error.ToString());
@@ -167,4 +186,42 @@ internal sealed class FlowTransitDriver : ITransitDriver
         throw new NotSupportedException("Flow does not start camera transit.");
     public ITransitHandle SwitchMode(Func<CancellationToken, Task<ModeSwitchResult>> apply) =>
         throw new NotSupportedException("Flow does not commit camera modes.");
+}
+
+internal sealed class FlowSaveTestStub(FlowTestRig rig) : TestSaveService
+{
+    private SlotId? _active;
+    public int NewGames { get; private set; }
+    public int Loads { get; private set; }
+    public int Saves { get; private set; }
+    public int Flushes { get; private set; }
+    public SaveStatus InitialSaveStatus { get; set; } = SaveStatus.Saved;
+    public SaveStatus FlushStatus { get; set; } = SaveStatus.Saved;
+    public string? FlushError { get; set; }
+    private SaveResult? _lastResult;
+    public override SaveState State => new(Active, _lastResult?.Status, _lastResult?.Error, null, ReadOnlyReason.None);
+    public TaskCompletionSource ArrivalStarted { get; } = new();
+    private static readonly Pose Landing = new(new(120, 1.7f, -70), 20, 0, UiSettingDefinitions.WalkFov.Default);
+    private SaveMeta Meta => new(Campus.Kernel.Save.Format.SaveContainer.CurrentFormat, new("s1"), SlotKind.Auto, 1, 1, 0, FlowTestRig.Maps().Default,
+        17.5, 17.5, Season.Autumn, WeatherKind.Clear, ViewMode.Walk, Landing, null, null, null, 0, SaveReason.Test);
+    public override IReadOnlyList<SlotInfo> Slots => [new(new("s1"), SlotKind.Auto, SlotHealth.Ok, Meta, 1)];
+    public override SlotId? Continue => new("s1");
+    public override SlotId? Active => _active;
+    public override Task<SaveResult> SaveNow(SaveReason reason)
+    {
+        if (rig.Runtime.Arrival?.Done.IsCompletedSuccessfully != true) throw new InvalidOperationException("Save preceded arrival.");
+        Saves++; return Task.FromResult(new SaveResult(InitialSaveStatus, Active, 1));
+    }
+    public override Task<LoadResult> NewGame(SlotId? slot, uint? seed = null, WorldPreset? start = null, NewGameBoot? boot = null)
+    { NewGames++; return Restore(slot); }
+    public override Task<LoadResult> Load(SlotId slot) { Loads++; return Restore(slot); }
+    private async Task<LoadResult> Restore(SlotId? slot)
+    {
+        _active = slot; rig.Camera.Mode = ViewMode.Walk; rig.Camera.SetPose(Landing);
+        var arrival = rig.Runtime.Arrive(Landing, ViewMode.Walk);
+        ArrivalStarted.TrySetResult(); await arrival.Done;
+        return new(LoadStatus.Loaded, slot, 1, []);
+    }
+    public override Task<SaveResult> FlushForQuit(SaveReason reason, TimeSpan timeout)
+    { Flushes++; _lastResult = new(FlushStatus, Active, 1, FlushError); return Task.FromResult(_lastResult); }
 }

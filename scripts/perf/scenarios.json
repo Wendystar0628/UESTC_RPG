@@ -1,0 +1,19 @@
+{
+  "map": "qingshuihe",
+  "fixed": [
+    { "id": "overview-default", "start": "pose", "waypoint": "P00", "mode": "fly", "world": "default", "saveAfterSample": false },
+    { "id": "lake-default", "start": "pose", "waypoint": "P10", "mode": "fly", "world": "default", "saveAfterSample": false },
+    { "id": "stairs-default", "start": "pose", "waypoint": "P20", "mode": "fly", "world": "default", "saveAfterSample": false },
+    { "id": "lake-storm", "start": "pose", "waypoint": "P10", "mode": "fly", "world": "summer-thunderstorm", "saveAfterSample": false },
+    { "id": "stairs-storm", "start": "pose", "waypoint": "P20", "mode": "fly", "world": "summer-thunderstorm", "saveAfterSample": false },
+    { "id": "lobby-outward", "start": "pose", "waypoint": "V2", "mode": "fly", "world": "default", "saveAfterSample": false },
+    { "id": "new-game-grounded", "start": "new-game", "world": "default", "saveAfterSample": true }
+  ],
+  "route": [
+    { "id": "walk-route", "start": "route", "waypoint": "P08", "mode": "walk", "world": "default", "seconds": 5 },
+    { "id": "fly-route", "start": "route", "waypoint": "P08", "mode": "fly", "world": "default", "seconds": 5 }
+  ],
+  "travel": [
+    { "id": "standing-travel", "start": "travel", "sequence": ["P08", "P10"], "world": "default" }
+  ]
+}

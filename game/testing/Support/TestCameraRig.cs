@@ -44,7 +44,6 @@ internal class TestCameraRig(IViewControl? view = null, Pose? pose = null, bool 
         _locks[reason] = _locks.GetValueOrDefault(reason) + 1;
         return new Lease(this, reason);
     }
-    public int LockCount(InputLockReason reason) => _locks.GetValueOrDefault(reason);
     private sealed class Lease(TestCameraRig owner, InputLockReason reason) : IDisposable
     {
         private TestCameraRig? _owner = owner;

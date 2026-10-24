@@ -41,6 +41,7 @@ public sealed class PerformanceRecordingService : IPerformanceRecorder, IRegistr
     private double _recordedSeconds, _lastAnchorMs;
     private Viewport? _viewport;
     private PerfEventCapture? _capture;
+    private PerfGpuStepsCapture? _gpuSteps;
 
     internal void AttachViewport(Viewport viewport) => _viewport = viewport;
     internal void MapLoaded() => _capture?.BindMap();
@@ -262,6 +263,8 @@ public sealed class PerformanceRecordingService : IPerformanceRecorder, IRegistr
             _exit.Token.ThrowIfCancellationRequested();
             current.StartHardware(adapter);
             current.AttachCapture();
+            if (_origin == PerfOrigin.Ai && PerfGpuStepsCapture.Requested)
+                _gpuSteps = new(Path.Combine(_root, current.Id!));
             current.Begin(anchor);
         }
         catch (OperationCanceledException error) when (_exit.IsCancellationRequested && error.CancellationToken == _exit.Token)
@@ -297,6 +300,7 @@ public sealed class PerformanceRecordingService : IPerformanceRecorder, IRegistr
         try
         {
             long flags = _capture!.OnFrame(in sample);
+            _gpuSteps?.CaptureFrame();
             current.TryFrame(in sample, viewports, flags);
         }
         catch (Exception error)
@@ -330,6 +334,7 @@ public sealed class PerformanceRecordingService : IPerformanceRecorder, IRegistr
         try { _capture?.Dispose(); }
         catch (Exception error) { _session.AddFailure(PerfFaultCode.ProducerFailed, error); }
         _capture = null;
+        _gpuSteps?.RequestStop();
         _session.StopProducers();
         _recordedSeconds = Math.Max(0, Now() - _session.RecordingStart) / 1000;
     }
@@ -344,6 +349,12 @@ public sealed class PerformanceRecordingService : IPerformanceRecorder, IRegistr
         bool acknowledgingFault = _state == PerfRecordingState.Faulted && reason == PerfEndReason.Toggle;
         StopAccepting(reason);
         if (_state != PerfRecordingState.Faulted) ChangeState(PerfRecordingState.Stopping);
+        if (_gpuSteps is { } gpuSteps)
+        {
+            try { await gpuSteps.DrainAsync(); }
+            catch (Exception error) { current.AddFailure(PerfFaultCode.ProducerFailed, error); }
+            finally { _gpuSteps = null; }
+        }
         await current.DrainProducersAsync();
         current.Stop(reason, Now());
         var result = await current.Completion;

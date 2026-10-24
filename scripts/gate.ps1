@@ -463,6 +463,11 @@ foreach ($id in $selected) {
                     $status = $detail.Status
                 }
             }
+            'G10' {
+                . (Join-Path $PSScriptRoot 'gates/performance.ps1')
+                $detail = Invoke-UESTCPerformanceGate -Root $root -Map $Map -BuildLease $gateLease
+                $status = $detail.Status
+            }
             default { $status = 'NotImplemented'; $detail = 'Centralized or core-specialist gate has no implementation yet; no pre-bake was started.' }
         }
         $results.Add([pscustomobject]@{ Gate=$id; Status=$status; Scope=$scope; Detail=$detail })

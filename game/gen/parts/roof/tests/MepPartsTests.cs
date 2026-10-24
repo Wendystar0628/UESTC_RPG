@@ -99,12 +99,7 @@ public sealed class MepPartsTests
         AssertThat(refused).OverrideFailureMessage("Characters without a glyph must be refused, not dropped.").IsTrue();
     }
 
-    private static BoxPartParams WithVariation(BoxPartParams defaults, int variation)
-    {
-        var copy = (BoxPartParams)defaults.GetType().GetMethod("<Clone>$")!.Invoke(defaults, null)!;
-        typeof(BoxPartParams).GetProperty(nameof(BoxPartParams.Variation))!.SetValue(copy, variation);
-        return copy;
-    }
+    private static BoxPartParams WithVariation(BoxPartParams defaults, int variation) => defaults with { Variation = variation };
 
     private static Vector3 P(GeometryBundle m, int i) => new(m.Position[3 * i], m.Position[3 * i + 1], m.Position[3 * i + 2]);
     private static Vector3 N(GeometryBundle m, int i) => new(m.Normal[3 * i], m.Normal[3 * i + 1], m.Normal[3 * i + 2]);

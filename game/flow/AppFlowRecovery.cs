@@ -7,7 +7,7 @@ namespace Campus.Flow;
 
 internal sealed class AppFlowRecovery(IMapService maps, IWorldRestore restore, IMapRuntime mapRuntime,
     AppFlowResources resources, Func<bool> isQuitting,
-    Action<AppState> changeState, Action publishStateChanges, Action<string, Exception> diagnostic)
+    Func<bool, Task> completeTitle, Action<string, Exception> diagnostic)
 {
     internal const string RestoreErrorKey = SaveErrorKeys.RestoreWorld;
     private Task? _faultHold;
@@ -46,9 +46,6 @@ internal sealed class AppFlowRecovery(IMapService maps, IWorldRestore restore, I
         if (isQuitting()) return;
         await resources.BeginLoading(null, save: false);
         mapRuntime.ClearDestination(); restore.EndInstance();
-        await resources.ShowTitle();
-        if (!keepBoot) changeState(AppState.Title);
-        try { await resources.FinishLoading(); resources.ReleaseLoadingFlow(); }
-        finally { publishStateChanges(); }
+        await completeTitle(keepBoot);
     }
 }

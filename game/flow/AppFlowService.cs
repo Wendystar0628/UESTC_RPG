@@ -51,7 +51,7 @@ public sealed class AppFlowService : IAppFlow, IAppBootFlow, IBootParticipant, I
         _resources = new(camera, restore, control, loading, frontispiece, mapRuntime, MarkPhase);
         _continuation = new(camera, saves, maps, restore, mapRuntime, stream,
             _resources, profileSettings);
-        _recovery = new(maps, restore, mapRuntime, _resources, () => _quitting, Change, PublishStateChanges, diagnostics.Error);
+        _recovery = new(maps, restore, mapRuntime, _resources, () => _quitting, CompleteTitle, diagnostics.Error);
         _startup = new(maps, _continuation, _resources);
     }
     public AppState State { get; private set; } = AppState.Boot;
@@ -221,12 +221,7 @@ public sealed class AppFlowService : IAppFlow, IAppBootFlow, IBootParticipant, I
             _resources.CompleteSavePreparation();
             _resources.HoldTitleFlow();
             _mapRuntime.ClearDestination(); restore.EndInstance();
-            await _resources.ShowTitle();
-            if (!_quitting)
-            {
-                Change(AppState.Title);
-                await _resources.FinishLoading(); _resources.ReleaseLoadingFlow();
-            }
+            await CompleteTitle();
         }
         catch (Exception error) when (error is not OutOfMemoryException)
         {
@@ -239,6 +234,19 @@ public sealed class AppFlowService : IAppFlow, IAppBootFlow, IBootParticipant, I
                 if (!_quitting) { Change(AppState.Playing); _resources.ReleaseInput(); }
             }
             else await _recovery.RecoverTitle();
+        }
+        finally { PublishStateChanges(); }
+    }
+    private async Task CompleteTitle(bool keepBoot = false)
+    {
+        try
+        {
+            await _resources.ShowTitle();
+            if (_quitting) return;
+            if (!keepBoot) Change(AppState.Title);
+            PublishStateChanges();
+            await _resources.FinishLoading();
+            _resources.ReleaseLoadingFlow();
         }
         finally { PublishStateChanges(); }
     }

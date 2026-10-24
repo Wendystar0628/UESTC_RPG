@@ -91,14 +91,23 @@ public sealed class StageGateDriver(IStageGateHost host)
             _finishing = true;
             try { await (_startupSampleTask ?? throw new InvalidOperationException("Route reached Playing without its menu input task.")); }
             catch { _startupSampleFailureReported = true; throw; }
-            await host.Close();
+            await CloseRun();
             return;
         }
         if (options.TravelSequence.Count > 0)
         {
             _finishing = true;
-            await RunTravelSequence(options.TravelSequence);
-            await host.Close();
+            if (options.PerfCollection is { } travelCollection)
+                await new PerfCollectionDriver(host, travelCollection).Run(() => RunTravelSequence(options.TravelSequence));
+            else if (await RunTravelSequence(options.TravelSequence) is { } failure) throw new InvalidOperationException(failure);
+            await CloseRun();
+            return;
+        }
+        if (options.PerfCollection is { } collection)
+        {
+            _finishing = true;
+            await new PerfCollectionDriver(host, collection).Run(verifyFixedStart: true);
+            await CloseRun();
             return;
         }
         if (options.Capture.Gate is "save-close" or "save-resume")
@@ -107,6 +116,14 @@ public sealed class StageGateDriver(IStageGateHost host)
             return;
         }
         if (options.Capture.Gate is null && options.Capture.Shots.Count > 0 && options.Capture.FrameLimit is null) { _finishing = true; _ = StageCapture.FinishRun(host); }
+    }
+
+    private async Task CloseRun()
+    {
+        if (AppBoot.Options.PerfCollection is null) { await host.Close(); return; }
+        GD.Print(FormattableString.Invariant($"PERF_COLLECTION_CLOSE_BEGIN {FrameClock.MonotonicMilliseconds:R}"));
+        await host.Close();
+        GD.Print(FormattableString.Invariant($"PERF_COLLECTION_CLOSE_END {FrameClock.MonotonicMilliseconds:R}"));
     }
 
     private async Task RunCore(string gate)
@@ -118,53 +135,55 @@ public sealed class StageGateDriver(IStageGateHost host)
         GD.Print("CORE_READY_CLOSE " + window);
     }
 
-    private async Task RunTravelSequence(IReadOnlyList<string> sequence)
+    private async Task<string?> RunTravelSequence(IReadOnlyList<string> sequence)
     {
         if (!host.Flow.IsPlaying) throw new InvalidOperationException("Travel sequence requires Playing after the normal entry flow.");
         var atlas = KernelServices.Get<IAtlasService>();
         var observer = KernelServices.Get<IObserverState>();
         var walk = KernelServices.Get<IWalkController>();
+        var input = new StartupSampleInput(host);
         RequireWalk();
-        while (!walk.Grounded || !walk.CollisionReady || !walk.IsSettled)
-            await NextFrame();
+        await input.WaitForPlayingWalk();
         var origin = observer.Feet;
         GD.Print(FormattableString.Invariant($"TRAVEL_SEQUENCE_START {sequence.Count} {FrameClock.MonotonicMilliseconds:R} mode={observer.Mode} feet_x={origin.X:R} feet_y={origin.Y:R} feet_z={origin.Z:R}"));
         for (var index = 0; index < sequence.Count; index++)
         {
             var id = new MarkerId(sequence[index]);
-            if (atlas.Find(id)?.Teleport?.Stand is null)
-                throw new InvalidOperationException("Travel sequence requires a standing destination: " + id.Value);
+            var stand = atlas.Find(id)?.Teleport?.Stand
+                ?? throw new InvalidOperationException("Travel sequence requires a standing destination: " + id.Value);
             if (!atlas.CanTravel(id, TravelStyle.Teleport, out var refusal))
                 throw new InvalidOperationException($"Travel sequence cannot start {id.Value}: {refusal}.");
             var handle = atlas.Travel(id, TravelStyle.Teleport)
                 ?? throw new InvalidOperationException("Travel sequence was refused: " + id.Value);
+            var progress = handle.Progress;
+            await input.Wait(() => handle.Done.IsCompleted, "Travel sequence transit stopped making progress.", () =>
+            {
+                var changed = progress != handle.Progress;
+                progress = handle.Progress;
+                return changed;
+            });
             if (await handle.Done != TransitResult.Arrived)
                 throw new InvalidOperationException("Travel sequence did not arrive: " + id.Value);
             // Done precedes Atlas.Tick's disposal of the input lease. Here is returned only after that release.
-            while (true)
+            await input.Wait(() =>
             {
-                host.CheckActive();
                 RequireWalk();
                 atlas.CanTravel(id, TravelStyle.Teleport, out refusal);
-                if (refusal == TravelRefusal.Here && walk.Grounded && walk.CollisionReady && walk.IsSettled) break;
                 if (refusal is not (TravelRefusal.Busy or TravelRefusal.Unavailable or TravelRefusal.Here))
                     throw new InvalidOperationException($"Travel sequence destination changed after arrival: {id.Value}, {refusal}.");
-                await NextFrame();
-            }
+                return refusal == TravelRefusal.Here && walk.Grounded && walk.CollisionReady && walk.IsSettled;
+            }, "Travel sequence arrival did not release its settled walk controller.");
+            if (StartupRouteProgress.StartFailure(new(stand.Feet, stand.YawDeg, 0), observer.Feet, observer.YawDeg) is { } failure)
+                return failure;
             GD.Print(FormattableString.Invariant($"TRAVEL_SEQUENCE_STEP_READY {index + 1} {id.Value} {FrameClock.MonotonicMilliseconds:R} mode={observer.Mode} grounded={walk.Grounded} collision={walk.CollisionReady}"));
         }
         GD.Print(FormattableString.Invariant($"TRAVEL_SEQUENCE_COMPLETE {sequence.Count} {FrameClock.MonotonicMilliseconds:R}"));
+        return null;
 
         void RequireWalk()
         {
             if (observer.Mode != ViewMode.Walk || !walk.Active || walk.ExitRequested)
                 throw new InvalidOperationException("Travel sequence requires the active production walk controller.");
-        }
-        async Task NextFrame()
-        {
-            host.CheckActive();
-            await FrameAwaiter.ProcessAsync(host.Stage, host.Lifetime);
-            RequireWalk();
         }
     }
 
