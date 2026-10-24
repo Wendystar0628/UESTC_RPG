@@ -57,13 +57,14 @@ public partial class MarkerLayer : Control
         Scale = new Vector2(k, k);
     }
 
-    /// <summary>屏幕点下的标记（大地图的悬停与单击），按画面上的距离取最近的一枚。</summary>
+    /// <summary>屏幕点下的标记（大地图的悬停与单击），按画面上的距离取最近的一枚。悬停每帧调用：按下标遍历，不经接口枚举器分配。</summary>
     public MapEntry? Pick(Vector2 viewportLocal, MapView view)
     {
         MapEntry? best = null;
         var bestD = IconSize * 0.7f;
-        foreach (var e in _entries)
+        for (var i = 0; i < _entries.Count; i++)
         {
+            var e = _entries[i];
             if (!Shows(e)) continue;
             var d = view.ToLocal(e.At, _viewport).DistanceTo(viewportLocal);
             if (d < bestD) { bestD = d; best = e; }

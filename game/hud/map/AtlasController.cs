@@ -24,6 +24,7 @@ internal sealed class AtlasController : IDisposable
     private IDisposable? _lease;
     private ITransitHandle? _pending;
     private readonly DestinationPrefetch _prefetch;
+    private MapEntry? _paperHover, _indexHover;
     private string _overlayKey = "";
     private int _statusKey = -1;
 
@@ -61,19 +62,9 @@ internal sealed class AtlasController : IDisposable
             page.Paper.SelectMarker(e.Id);
         };
         page.Index.Activated += OpenCard;
-        page.Index.Hovered += e =>
-        {
-            page.Paper.Markers.Hover = e?.Id;
-            page.Paper.Markers.Invalidate();
-            HoverPrefetch(e, DestinationPrefetch.IndexHoverSeconds);
-        };
+        page.Index.Hovered += e => { _indexHover = e; ApplyHover(); };
         page.Paper.Clicked += e => { if (e is null) CloseCard(); else OpenCard(e); };
-        page.Paper.HoverChanged += e =>
-        {
-            page.Paper.Markers.Hover = e?.Id;
-            page.Paper.Markers.Invalidate();
-            HoverPrefetch(e, DestinationPrefetch.MarkerHoverSeconds);
-        };
+        page.Paper.HoverChanged += e => { _paperHover = e; ApplyHover(); };
         page.Paper.Locate.Pressed += () => page.Paper.PanTo(PlayerAt());
         page.Paper.Fit.Pressed += FitAll;
         page.Paper.ConnectorFrom = () => page.Paper.Card.Entry is { } e ? page.Paper.View.ToLocal(e.At, page.Paper.CanvasSize) : null;
@@ -199,6 +190,7 @@ internal sealed class AtlasController : IDisposable
         Page.Visible = false;
         CoverOthers(false);
         CloseCard();
+        _paperHover = _indexHover = null;
         _prefetch.Clear();
         Page.QueueFree();
         _page = null;
@@ -315,12 +307,21 @@ internal sealed class AtlasController : IDisposable
         paper.Markers.NameSelected = false;
         paper.SelectMarker(e.Id);
         Page.Index.Select(e.Id);
-        if (!keepFocus && paper.Card.Primary.Visible && !paper.Card.Primary.Disabled) paper.Card.Primary.GrabFocus();
+        if (!keepFocus && paper.Card.Primary.Visible && !paper.Card.Primary.Off) paper.Card.Primary.GrabFocus();
         else if (!keepFocus) paper.Card.Track.GrabFocus();
     }
 
-    /// <summary>只有可传送的标记才计悬停；移到别处（含不可传送的标记）算移开。</summary>
-    private void HoverPrefetch(MapEntry? e, float dwellSeconds) => _prefetch.Hover(e is { Travelable: true } ? e.Id : null, dwellSeconds);
+    /// <summary>
+    /// 标记层的悬停与悬停预取只在这里写，由目录与地图纸两处悬停求出。地图纸的悬停按帧求、比目录的进出事件晚一帧，
+    /// 光标从纸面直接移到目录行的那一帧两者都有值，所以目录在先。只有可传送的标记才计悬停预取，移到别处（含不可传送的标记）算移开。
+    /// </summary>
+    private void ApplyHover()
+    {
+        var (e, dwellSeconds) = _indexHover is { } row ? (row, DestinationPrefetch.IndexHoverSeconds) : (_paperHover, DestinationPrefetch.MarkerHoverSeconds);
+        Page.Paper.Markers.Hover = e?.Id;
+        Page.Paper.Markers.Invalidate();
+        _prefetch.Hover(e is { Travelable: true } ? e.Id : null, dwellSeconds);
+    }
 
     private void CloseCard()
     {
@@ -398,10 +399,10 @@ internal sealed class AtlasController : IDisposable
         else if (e.IsActionPressed("waypoint_0")) FitAll();
         else if (key is Key.Equal or Key.KpAdd) Page.Paper.ZoomBy(1.25f, Page.Paper.CanvasSize * 0.5f);
         else if (key is Key.Minus or Key.KpSubtract) Page.Paper.ZoomBy(0.8f, Page.Paper.CanvasSize * 0.5f);
-        else if (card.Visible && card.Fly.Visible && !card.Fly.Disabled && e.IsActionPressed("toggle_mode"))
+        else if (card.Visible && card.Fly.Visible && !card.Fly.Off && e.IsActionPressed("toggle_mode"))
             TravelSelected(card.PrimaryStyle == TravelStyle.Teleport ? TravelStyle.Fly : TravelStyle.Teleport);
         else if (card.Visible && e.IsActionPressed("time_panel")) TrackSelected();
-        else if (card.Visible && card.Primary.Visible && !card.Primary.Disabled && (key is Key.Space || e.IsActionPressed("ui_accept")))
+        else if (card.Visible && card.Primary.Visible && !card.Primary.Off && (key is Key.Space || e.IsActionPressed("ui_accept")))
             TravelSelected(card.PrimaryStyle);
         _host.Handled();
     }

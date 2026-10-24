@@ -87,7 +87,6 @@ public partial class TravelCard : Control
         Primary.Visible = Fly.Visible = entry.Travelable;
         Primary.Text = _ctx.T(here ? "map.travel.here" : primary == TravelStyle.Teleport ? "map.travel.teleport" : "map.travel.fly");
         Fly.Text = _ctx.T(primary == TravelStyle.Teleport ? "map.travel.fly" : "map.travel.teleport");
-        Primary.Disabled = Fly.Disabled = here;
         Primary.Off = Fly.Off = here;
         Track.Text = _ctx.T(tracked ? "map.travel.untrack" : "map.travel.track");
         foreach (var button in new[] { Primary, Fly, Track })

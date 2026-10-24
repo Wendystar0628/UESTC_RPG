@@ -9,8 +9,8 @@ namespace Campus.Hud.Map;
 /// 大地图的地图纸（SYS-ATLAS）：由父容器分配可用空间，左上切角。
 /// 缩放范围取标记配置；滚轮以光标为中心连续缩放，左键拖动，WASD 或方向键平移。
 /// 拖动只改两个层的 Position；缩放档变化时重画（≤ 10 Hz），缩放动画中层按比例 Scale（SYS-ATLAS）。
-/// 悬停只在命中变了时发出：鼠标移动按光标取命中，视图变了（平移、拖动后、缩放、PanTo、FitTo）在下一帧按记住的光标重取；
-/// 拖动期间不悬停；光标离开纸面或移到卡片、按钮这些挡鼠标的子件上时撤掉悬停，也不重取。
+/// 悬停是派生状态：每帧由光标位置、指针是否在纸面上（不在卡片、按钮这些挡鼠标的子件上）、是否在拖动与当前视图求出，
+/// 命中变了才发出。鼠标事件只记光标、指针与拖动，不直接改悬停；视图怎么变的（平移、拖动、缩放、PanTo、FitTo）不用知道。
 /// </summary>
 public partial class AtlasPaper : Control
 {
@@ -33,7 +33,6 @@ public partial class AtlasPaper : Control
     private Vector2? _cursor;
     private bool _pointing;
     private MapEntry? _hover;
-    private MapView _hoverView;
     private Rect2? _fitPending;
     private readonly Label _readout;
     private readonly DrawHost _scale;
@@ -166,27 +165,19 @@ public partial class AtlasPaper : Control
         return v with { Center = c };
     }
 
-    /// <summary>每帧：键盘平移，然后把视图交给底图、标记层与玩家。</summary>
+    /// <summary>按住左键并已移动：地图正被拖动，单击（按下未移动）不算。</summary>
+    private bool Dragged => _dragging && _dragTravel > 0;
+
+    /// <summary>每帧：键盘平移，然后把视图交给底图、标记层与玩家，再按这一帧的光标与视图求悬停。</summary>
     public void Tick(float dt, Vector2 keyPan)
     {
         if (keyPan != Vector2.Zero) _view = Clamp(_view with { Center = _view.Center + keyPan * PanSpeed * dt / _view.Ppm });
         Base.SetView(_view);
         Markers.Follow(_view, Size);
-        // 命中按标记层刚跟上的视图取；拖动结束后的第一帧也从这里补回光标下的标记。
-        if (!_dragging && _pointing && _cursor is { } cursor && _view != _hoverView) HoverAt(cursor);
-    }
-
-    private void HoverAt(Vector2 local)
-    {
-        _hoverView = _view;
-        SetHover(Markers.Pick(local, _view));
-    }
-
-    private void SetHover(MapEntry? entry)
-    {
-        if (Equals(entry, _hover)) return;
-        _hover = entry;
-        HoverChanged?.Invoke(entry);
+        var hover = _pointing && !Dragged && _cursor is { } cursor ? Markers.Pick(cursor, _view) : null;
+        if (Equals(hover, _hover)) return;
+        _hover = hover;
+        HoverChanged?.Invoke(hover);
     }
 
     public override void _GuiInput(InputEvent e)
@@ -216,9 +207,7 @@ public partial class AtlasPaper : Control
                     _dragTravel += d.Length();
                     StopZoom();
                     _view = Clamp(_view with { Center = _view.Center - d / _view.Ppm });
-                    SetHover(null);
                 }
-                else HoverAt(mm.Position);
                 AcceptEvent();
                 break;
         }
@@ -226,8 +215,8 @@ public partial class AtlasPaper : Control
 
     public override void _Notification(int what)
     {
-        if (what == NotificationMouseExitSelf) { _pointing = false; SetHover(null); }
-        if (what == NotificationMouseExit) { _cursor = null; _pointing = false; SetHover(null); }
+        if (what == NotificationMouseExitSelf) _pointing = false;
+        if (what == NotificationMouseExit) { _cursor = null; _pointing = false; }
     }
 
     private void DrawOverlay(DrawHost h)

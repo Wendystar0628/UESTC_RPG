@@ -16,7 +16,7 @@ using Godot;
 
 namespace Campus.Tests;
 
-// GAME-254：光标停在标记上、视图被平移或拖动后，悬停与悬停预取仍停在原标记上。
+// GAME-254、GAME-255：光标停在标记上、视图被平移或拖动后，悬停与悬停预取仍停在原标记上，或拖回原视图后不回来。
 // 预取按 AtlasController 的接法接上：地图纸的悬停给 DestinationPrefetch，每帧先推进地图纸、再推进预取。
 [TestSuite]
 public sealed class AtlasPaperHoverTests
@@ -86,6 +86,40 @@ public sealed class AtlasPaperHoverTests
         fixture.Frame(0);
         AssertThat(paper.Markers.Pick(to, paper.View)?.Id == A.Id && fixture.Hover?.Id == A.Id)
             .OverrideFailureMessage("After the drag ended the marker under the cursor was not hovered again.").IsTrue();
+    }
+
+    // GAME-255：拖离再拖回原视图松手，视图与光标都和拖动前一样，悬停也要回来。
+    [TestCase]
+    [TestCategory(TestReason.Regression)]
+    [RequireGodotRuntime]
+    public void DraggingBackToTheSameViewRestoresTheHoverAndPrefetch()
+    {
+        using var fixture = new Fixture();
+        var paper = fixture.Paper;
+        var cursor = fixture.HoverOn(A);
+        fixture.Frame(DestinationPrefetch.MarkerHoverSeconds);
+        var before = paper.View;
+        var issued = fixture.Service.Issued;
+        AssertThat(fixture.Hover?.Id == A.Id && issued[^1].Id == A.Id && !issued[^1].Released)
+            .OverrideFailureMessage("The fixture hover on A did not prefetch A.").IsTrue();
+
+        // 触发条件：按住拖离，悬停撤掉；再拖回原处松手，视图、光标与光标下的标记都和拖动前相同。
+        var away = cursor + Vector2.Right * paper.Markers.IconSize * 2;
+        paper._GuiInput(new InputEventMouseButton { ButtonIndex = MouseButton.Left, Pressed = true, Position = cursor });
+        paper._GuiInput(new InputEventMouseMotion { Position = away });
+        fixture.Frame(0);
+        AssertThat(paper.View != before && fixture.Hover is null && issued.All(lease => lease.Released))
+            .OverrideFailureMessage("Dragging away did not move the map, clear the hover and release A.").IsTrue();
+        paper._GuiInput(new InputEventMouseMotion { Position = cursor });
+        paper._GuiInput(new InputEventMouseButton { ButtonIndex = MouseButton.Left, Pressed = false, Position = cursor });
+        AssertThat(paper.View == before && paper.Cursor == cursor && paper.Markers.Pick(cursor, paper.View)?.Id == A.Id)
+            .OverrideFailureMessage("Dragging back did not return to the same view with A under the resting cursor.").IsTrue();
+
+        fixture.Frame(0);
+        AssertThat(fixture.Hover?.Id == A.Id).OverrideFailureMessage("Releasing on the original view did not hover A again.").IsTrue();
+        fixture.Frame(DestinationPrefetch.MarkerHoverSeconds);
+        AssertThat(issued[^1].Id == A.Id && !issued[^1].Released && issued.Count(lease => !lease.Released) == 1)
+            .OverrideFailureMessage("The hover prefetch did not come back to A after the drag.").IsTrue();
     }
 
     private static MapEntry Entry(string id, float x) =>

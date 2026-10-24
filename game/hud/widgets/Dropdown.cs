@@ -68,9 +68,9 @@ public partial class Dropdown : OptionButton
         var fx = new UiFx(
             Fill: _open ? "surface.selected" : null,
             Line: _open ? "primary.line" : "line.control",
-            Role: Disabled ? "text.off" : "text.1",
-            Flags: (Disabled ? UiFlags.Dashed : 0) | (_open ? 0 : UiFlags.HoverSelected),
-            Hover: _hover && !Disabled ? 1 : 0,
+            Role: "text.1",
+            Flags: _open ? 0 : UiFlags.HoverSelected,
+            Hover: _hover ? 1 : 0,
             Focus: _focus ? 1 : 0,
             Pin: _pin);
         _kit.Apply(this, fx, remember: false);
