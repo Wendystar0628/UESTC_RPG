@@ -1,14 +1,16 @@
 """小样本与收口回归自检，只验证性能分析行为，不代表真实录制或性能达标。
-用法：python -I -X utf8 scripts/perf/perf.py selfcheck；输入当前字典和预算，产出五行结果，临时六件与派生自动清除。
+用法：python -I -X utf8 scripts/perf/perf.py selfcheck；输入当前字典和预算，产出自检结果，临时六件与派生自动清除。
 """
 import csv
 import copy
 import json
+import sys
 import tempfile
 from pathlib import Path
 from analyze import analyze_all, summary_for
 from perf_model import COSTS, PHASES, at, load_session, prepare_frames, read_json, rolling_medians, target_ms
 from perf_anomalies import DEEPEN_REPEAT_COUNT, annotate, anomaly, deepen, frame_anomalies
+from unittest.mock import patch
 
 
 def manifest(dictionary, identifier='SELFCHECK'):
@@ -199,6 +201,150 @@ def check_context(root, dictionary, budgets):
     assert frames[0]['_steady'] and not frames[1]['_steady'], '缩略图未按真实采集帧号排除'
 
 
+def check_processed_error(root, dictionary, budgets):
+    import analyze
+    with tempfile.TemporaryDirectory(prefix='uestc-perf-error-') as temporary:
+        out, author = Path(temporary) / 'perf', Path(temporary) / 'author'
+        source = author / 'BROKEN'
+        write_six(source, manifest(dictionary, 'BROKEN'), streams([frame(dictionary, 0)], dictionary), dictionary)
+        (source / 'frames.csv').write_text('truncated', encoding='utf-8')
+        with patch.object(analyze, 'load_session', wraps=analyze.load_session) as loads:
+            first = analyze_all(root, [], out, author)
+            assert first['errors'] and not first['analyzed'], '夹具未触发原始流解析失败'
+            second = analyze_all(root, [], out, author)
+            assert second['errors'] == first['errors'], '错误原因没有保留'
+            assert loads.call_count == 1, '同一错误输入被重复分析'
+        assert not analyze.analysis_needed(root, out, author), '已处理错误仍被判为待分析'
+        (source / 'frames.csv').write_text('changed', encoding='utf-8')
+        assert analyze.analysis_needed(root, out, author), '错误输入变化后未重新判鲜'
+
+
+def check_derived_curves(root, dictionary, budgets):
+    with tempfile.TemporaryDirectory(prefix='uestc-perf-curves-') as temporary:
+        out, author = Path(temporary) / 'perf', Path(temporary) / 'author'
+        source = author / 'CURVES'
+        gpu = at(budgets, 'deviceTargets.high.developer4kFineGpuP95MsMax') * 2
+        rows = [frame(dictionary, i, gpu=gpu) for i in range(2)]
+        rows[1]['dtMs'] = 30
+        rows[1]['phaseValidity'] = 0
+        data = streams(rows, dictionary)
+        data['hw'] = [dict(monotonicMs=10, gpuUtilFraction=.5, gpuClockMHz=1000, gpuMaxClockMHz=2000)]
+        # The round trip uses the real schema; unspecified nullable hardware fields remain missing.
+        data['hw'][0] = {**{c['name']: None for c in dictionary['streams']['hw']['columns']},
+                         **data['hw'][0], 'schema': dictionary['schema'], 'sequence': 1}
+        write_six(source, manifest(dictionary, 'CURVES'), data, dictionary)
+        analyzed = analyze_all(root, [], out, author)
+        assert not analyzed['errors'], analyzed
+        curves = read_json(out / 'derived/CURVES/curves.json')
+        detail = curves['levels'][0]
+        values = dict(zip(detail['columns'], detail['buckets'][0]))
+        assert values['fpsMean'] == 50 and values['fpsMax'] == 100, '派生帧率未按有效帧时计算'
+        assert values['normalizedGpuLoadMean'] == .25, '派生负载未沿硬件同条读数归一化'
+        assert detail['seriesReasons']['gpuUtilSampleAgeMs'], '缺测原生时间原因丢失'
+        assert curves['hotframesTotal'] == len(rows) == len(curves['hotframes']), '越预算夹具未选出两帧高耗时证据'
+        assert curves['hotframes'][1][3:8] == [None] * 5, '无效五段泄漏到逐帧投影'
+        assert all(len(level['buckets']) <= level['limit'] for level in curves['levels']), '派生桶数超过声明上限'
+
+
+def check_monitor_projection(root, dictionary, budgets):
+    sys.path.insert(0, str(root / '.collab/tools'))
+    from monitor.read import perf as reader
+    from monitor.view import perf as view
+    import analyze
+    with tempfile.TemporaryDirectory(prefix='uestc-perf-monitor-') as temporary:
+        out, author = Path(temporary) / 'perf', Path(temporary) / 'author'
+        source = author / 'MONITOR'
+        write_six(source, manifest(dictionary, 'MONITOR'), streams([frame(dictionary, 0)], dictionary), dictionary)
+        analyzed = analyze_all(root, [], out, author)
+        assert not analyzed['errors'], analyzed
+        history_path = out / 'history.jsonl'
+        reads = []
+        original_read = Path.read_text
+
+        def read_text(path, *args, **kwargs):
+            if path == history_path:
+                reads.append(path)
+            assert path.suffix != '.csv', '观察台读取了逐帧或硬件流'
+            return original_read(path, *args, **kwargs)
+
+        with patch.object(reader, 'OUT', out), patch.object(reader.store, 'author_root', return_value=author), \
+             patch.object(reader.repo, 'mainline_commits', return_value={'commits': []}), \
+             patch.object(Path, 'read_text', read_text), \
+             patch.object(analyze, 'load_session', side_effect=AssertionError('观察台重新解析了原始流')):
+            payload = view.build(None)
+        assert reads == [history_path], '同轮读取了不止一次性能历史'
+        assert payload['details']['MONITOR']['columns'], '观察台未投影现成派生曲线'
+        assert payload['retention']['historyPerGroup']['value'] == 1, '历史组现值错误'
+        assert 'freeze' not in payload['labels']['levels'], '残留不存在的异常等级'
+        (source / 'frames.csv').write_text('truncated', encoding='utf-8')
+        with patch.object(reader, 'OUT', out), patch.object(reader.store, 'author_root', return_value=author), \
+             patch.object(analyze, 'analyze_all', side_effect=lambda **args: analyze_all(output=out, **args)) as calls:
+            for _ in range(2):
+                try:
+                    reader.snapshot()
+                except ValueError:
+                    pass
+                else:
+                    raise AssertionError('坏会话没有向采集器交出真实错误')
+            assert calls.call_count == 1, '连续采集为同一坏会话空转分析器'
+
+
+def check_retention_authority(root, dictionary, budgets):
+    from perf_store import diagnostic_attachments, history_group
+    with tempfile.TemporaryDirectory(prefix='uestc-perf-retention-') as temporary:
+        runs = Path(temporary) / 'runs'
+        record = runs / 'batch'
+        record.mkdir(parents=True)
+        attachment, raw = record / 'capture.bin', record / 'frames.csv'
+        attachment.write_bytes(b'abcd')
+        raw.write_text('raw', encoding='utf-8')
+        (record / 'diagnostics.json').write_text(json.dumps({'attachments': ['capture.bin', 'capture.bin', 'frames.csv', '../outside.bin']}), encoding='utf-8')
+        (runs / 'outside.bin').write_bytes(b'outside')
+        assert diagnostic_attachments(runs) == [attachment.resolve()], '诊断附件重复计数或混入原始/越界文件'
+        a = dict(origin='play', comparisonKey={'scene': 'a'}, scope='full')
+        b = dict(origin='play', comparisonKey={'scene': 'b'}, scope='cost')
+        assert history_group(a) == history_group(b), '作者历史没有共用单组'
+        a['origin'], b['origin'] = 'ai', 'ai'
+        assert history_group(a) != history_group(b), 'AI 比较键与口径未分组'
+
+
+def check_event_order(root, dictionary, budgets):
+    with tempfile.TemporaryDirectory(prefix='uestc-perf-events-') as temporary:
+        source = Path(temporary) / 'session'
+        data = streams([frame(dictionary, i) for i in range(2)], dictionary)
+        anchor = data['events'][0]
+        data['events'] = [{**anchor, 'sequence': sequence, 'monotonicMs': stamp, 'event': event}
+                          for sequence, stamp, event in ((1, 100, 'clock.anchor'), (2, 30, 'gc.detail'),
+                                                         (3, 30, 'hang.begin'), (4, 20, 'record.gap'))]
+        assert data['events'][1]['monotonicMs'] < data['events'][0]['monotonicMs'], '夹具没有跨生产者时刻乱序'
+        write_six(source, manifest(dictionary), data, dictionary)
+        loaded = load_session(source, dictionary)[1]
+        assert [row['sequence'] for row in loaded['events']] == [4, 2, 3, 1], '事件未按时刻与序号稳定排序'
+        path = source / dictionary['streams']['events']['file']
+        data['events'][1]['sequence'] = data['events'][0]['sequence']
+        path.write_text(''.join(json.dumps(row) + '\n' for row in data['events']), encoding='utf-8')
+        try:
+            load_session(source, dictionary)
+        except ValueError:
+            pass
+        else:
+            raise AssertionError('乱序事件的重复 sequence 未拒绝')
+        path.write_text(json.dumps(anchor) + '\n', encoding='utf-8')
+        frames_path = source / dictionary['streams']['frames']['file']
+        rows = list(csv.DictReader(frames_path.read_text(encoding='utf-8').splitlines()))
+        rows[1]['monotonicMs'] = str(float(rows[0]['monotonicMs']) - 1)
+        with frames_path.open('w', encoding='utf-8', newline='') as stream:
+            writer = csv.DictWriter(stream, fieldnames=list(rows[0]))
+            writer.writeheader()
+            writer.writerows(rows)
+        try:
+            load_session(source, dictionary)
+        except ValueError:
+            pass
+        else:
+            raise AssertionError('逐帧流时刻倒退被接受')
+
+
 def run(root):
     dictionary, budgets = read_json(root / 'game/data/perf-fields.json'), read_json(root / 'budgets.json')
     policy = budgets['perfAnomalies']
@@ -208,6 +354,13 @@ def run(root):
     for check in (check_snapshot, check_median, check_pending, check_deepen, check_manifest, check_context):
         check(root, dictionary, budgets)
     result.append('通过 TOOL-435：同 schema 重算与结构校验、M 保窗与换口径、pending 锁/索引/过期、deepen、清单枚举与上下文权威回归。')
+    check_processed_error(root, dictionary, budgets)
+    check_derived_curves(root, dictionary, budgets)
+    check_monitor_projection(root, dictionary, budgets)
+    check_retention_authority(root, dictionary, budgets)
+    result.append('通过 TOOL-437：错误输入只处理一次，输入变化重算；曲线、帧率与归一化负载由分析器派生。')
+    check_event_order(root, dictionary, budgets)
+    result.append('通过 TOOL-438：事件 sequence 先校验再按时刻稳定排序；重复序号与逐帧时刻倒退仍拒绝。')
     frames = [frame(dictionary, i, gpu=2 if i < warm else 8) for i in range(warm + window + warm)]
     prepare_frames(frames, [], [], dictionary)
     medians = rolling_medians(frames, COSTS + PHASES + ('dtMs',), policy)

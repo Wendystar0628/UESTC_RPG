@@ -112,15 +112,20 @@ def discover(out, author, explicit=()):
     return sorted(paths)
 
 
-def nearest_run(directory, runs_root):
+def nearest_run_path(directory, runs_root):
     directory = Path(directory).resolve()
     for candidate in (directory, *directory.parents):
         run = candidate / 'run.json'
         if run.is_file():
-            return read_json(run), run
+            return run
         if candidate == runs_root.resolve() or candidate.parent == candidate:
             break
-    return {}, None
+    return None
+
+
+def nearest_run(directory, runs_root):
+    path = nearest_run_path(directory, runs_root)
+    return (read_json(path), path) if path else ({}, None)
 
 
 def comparison_key(manifest, run):
@@ -213,6 +218,10 @@ def rebuild_states(entries, root):
     return entries
 
 
+def history_group(row):
+    return 'play' if row['origin'] == 'play' else json.dumps([row['comparisonKey'], row['scope']], sort_keys=True)
+
+
 def history_update(path, summaries):
     rows = []
     if path.exists():
@@ -222,8 +231,7 @@ def history_update(path, summaries):
     unique.update({(row['id'], row['calc']): row for row in summaries})
     groups = defaultdict(list)
     for row in unique.values():
-        group = 'play' if row['origin'] == 'play' else json.dumps([row['comparisonKey'], row['scope']], sort_keys=True)
-        groups[group].append(row)
+        groups[history_group(row)].append(row)
     kept = []
     for group in groups.values():
         kept.extend(sorted(group, key=lambda r: r.get('endedAt') or '')[-HISTORY_PER_GROUP:])
@@ -253,6 +261,19 @@ def unlocked_tree(directory):
     except BaseException:
         leases.close()
         raise
+
+
+def diagnostic_attachments(runs):
+    """只枚举诊断清单明确登记且在本目录内的非原始文件。"""
+    attachments = set()
+    raw = {'manifest.json', 'manifest.pending.json', '.lock', 'frames.csv', 'samples.csv', 'hw.csv', 'hwfast.csv',
+           'events.jsonl', 'run.json', 'diagnostics.json'}
+    for record in Path(runs).rglob('diagnostics.json'):
+        for relative in read_json(record).get('attachments', []):
+            path = (record.parent / relative).resolve()
+            if path.name not in raw and inside(path, record.parent) and path.is_file():
+                attachments.add(path)
+    return sorted(attachments)
 
 
 def prune(out, entries):
@@ -288,17 +309,9 @@ def prune(out, entries):
             if summary_path.exists() and not Path(read_json(summary_path)['source']).exists():
                 shutil.rmtree(directory)
                 removed.append(str(directory))
-    attachments = []
-    if runs.exists():
-        for record in runs.rglob('diagnostics.json'):
-            meta = read_json(record)
-            for relative in meta.get('attachments', []):
-                path = (record.parent / relative).resolve()
-                raw = {'manifest.json', 'manifest.pending.json', '.lock', 'frames.csv', 'samples.csv', 'hw.csv', 'hwfast.csv', 'events.jsonl', 'run.json', 'diagnostics.json'}
-                if path.name not in raw and inside(path, record.parent) and path.is_file():
-                    attachments.append(path)
+    attachments = diagnostic_attachments(runs)
     total = sum(p.stat().st_size for p in attachments)
-    for path in sorted(set(attachments), key=lambda p: p.stat().st_mtime_ns):
+    for path in sorted(attachments, key=lambda p: p.stat().st_mtime_ns):
         if total <= DIAGNOSTIC_BYTES_KEEP:
             break
         total -= path.stat().st_size

@@ -1,6 +1,7 @@
 {
-  "calc": 3,
+  "calc": 4,
   "authority": "ENG-PERF-DATA",
+  "events": "Validate strictly increasing sequence in recorded order, then stable-sort by (monotonicMs, sequence) for cross-producer event association; other streams still require nondecreasing time",
   "summary": {
     "all": "All observed valid values; per-field nulls remain missing",
     "steady": "Only context-confirmed steady frames; unknown context is excluded",
@@ -12,6 +13,14 @@
     "median": "Prior valid steady frames in the same scene and caliber; nonsteady/gap rows do not enter or clear the window; scene/effective quality/output-size changes reset it",
     "deepen": "run.ps1 -DeepenSession <id>; approximate main-viewport candidates do not count as unexplained; pending TOOL-428/429 dependency; tools, original poseArgs and scene retained",
     "inputStamp": "Current calc, schema, file size/mtime, budget snapshot and current context rules; no checksum"
+  },
+  "curves": {
+    "file": "derived/<id>/curves.json; analyzer-owned, calc matches summary",
+    "levels": "Fixed bucket limits from perf_curves.CURVE_LIMITS; consumers select an existing level, never reaggregate raw streams",
+    "buckets": "fromMs,toMs,frames then series Mean/Max pairs; valid measured values only, missing remains null with seriesReasons",
+    "fps": "Mean=valid frame count/valid dt sum*1000; Max=1000/min valid dt; full scope only",
+    "normalizedGpuLoad": "Same sample utilization*clock/maxClock via perf_model.normalized_gpu_load; full scope only",
+    "hotframes": "Analyzer-selected heavy-or-worse rows, capped by perf_curves.HOTFRAME_LIMIT; invalid dt and phases are null; total before display cap"
   },
   "runJson": {
     "owner": "scripts/perf/run.ps1",

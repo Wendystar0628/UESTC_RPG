@@ -82,7 +82,7 @@ def parse_cell(raw, column):
     raise ValueError(f'未支持类型: {kind}')
 
 
-def read_stream(directory, spec, schema):
+def read_stream(directory, spec, schema, event_stream=False):
     path = directory / spec['file']
     if spec['kind'] == 'jsonl':
         rows = [json.loads(line, parse_constant=reject_constant) for line in path.read_text(encoding='utf-8-sig').splitlines() if line.strip()]
@@ -102,10 +102,10 @@ def read_stream(directory, spec, schema):
             raise ValueError(f'流序号不递增: {path.name}')
         previous = sequence
         stamp = row.get('monotonicMs')
-        if not number(stamp) or (previous_time is not None and stamp < previous_time):
+        if not number(stamp) or (not event_stream and previous_time is not None and stamp < previous_time):
             raise ValueError(f'流时刻不递增: {path.name}')
         previous_time = stamp
-    return rows
+    return sorted(rows, key=lambda row: (row['monotonicMs'], row['sequence'])) if event_stream else rows
 
 
 def manifest_path(directory):
@@ -140,7 +140,7 @@ def load_session(directory, dictionary):
     if path.name == 'manifest.pending.json' or manifest.get('status') != 'closed':
         manifest = {**manifest, 'status': 'partial', 'complete': False}
         return manifest, None
-    streams = {name: read_stream(directory, spec, dictionary['schema'])
+    streams = {name: read_stream(directory, spec, dictionary['schema'], event_stream=name == 'events')
                for name, spec in dictionary['streams'].items()}
     return manifest, streams
 
@@ -282,6 +282,16 @@ def rolling_medians(frames, fields, policy):
     return result
 
 
+def frame_rate(values):
+    duration = sum(values)
+    return 1000 * len(values) / duration if duration else None
+
+
+def normalized_gpu_load(row):
+    keys = ('gpuUtilFraction', 'gpuClockMHz', 'gpuMaxClockMHz')
+    return row[keys[0]] * row[keys[1]] / row[keys[2]] if all(number(row.get(key)) for key in keys) and row[keys[2]] > 0 else None
+
+
 def experience(frames, hw, target, policy, scope, reason):
     if scope != 'full':
         return {**dict.fromkeys(EXPERIENCE_FIELDS), 'reason': reason}
@@ -297,9 +307,8 @@ def experience(frames, hw, target, policy, scope, reason):
     gpu_rows = [f for f in valid if number(f['_measuredGpuMs'])]
     gpu_dt = sum(f['dtMs'] for f in gpu_rows)
     utilization = [h['gpuUtilFraction'] for h in hw if number(h.get('gpuUtilFraction'))]
-    normalized = [h['gpuUtilFraction'] * h['gpuClockMHz'] / h['gpuMaxClockMHz'] for h in hw
-                  if all(number(h.get(k)) for k in ('gpuUtilFraction', 'gpuClockMHz', 'gpuMaxClockMHz')) and h['gpuMaxClockMHz'] > 0]
-    return dict(n=n, averageFps=1000 * n / duration if duration else None, frameMs=distribution(values),
+    normalized = [value for h in hw if (value := normalized_gpu_load(h)) is not None]
+    return dict(n=n, averageFps=frame_rate(values), frameMs=distribution(values),
                 low1Fps=low(.01, 100), low01Fps=low(.001, 1000), low1TailN=tails[.01], low01TailN=tails[.001],
                 droppedFrameFraction=len(dropped) / n if target and n else None,
                 droppedTimeFraction=sum(dropped) / duration if target and duration else None,

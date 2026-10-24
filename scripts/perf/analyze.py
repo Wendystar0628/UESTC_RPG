@@ -1,6 +1,6 @@
 """分析可独占的性能会话，串行发布派生、索引、历史并修剪 AI 数据。
 用法：python -I -X utf8 scripts/perf/analyze.py [会话或批次目录 ...] [--root 仓库] [--author-root 作者perf根]。
-输入：性能六件、game/data/perf-fields.json、budgets.json；产出：output/perf/derived/<id>/{summary.json,anomalies.json,hotframes.csv}、index.json、history.jsonl。
+输入：性能六件、game/data/perf-fields.json、budgets.json；产出：output/perf/derived/<id>/ 的摘要、异常、曲线与高耗时帧、index.json、history.jsonl。
 """
 import argparse
 import csv
@@ -20,7 +20,8 @@ from perf_anomalies import (LEVELS, MAX_PER_TYPE, annotate, anomaly, budget_chec
                            deepen, frame_anomalies, merge_anomalies, slow_anomalies, window_analysis)
 from perf_store import (AI_BATCHES_KEEP, DIAGNOSTIC_BYTES_KEEP, HISTORY_PER_GROUP,
                         atomic_json, author_root, basic_state, comparison_key, discover,
-                        exclusive, history_update, nearest_run, prune, rebuild_states)
+                        exclusive, git, history_update, nearest_run, nearest_run_path, prune, rebuild_states)
+from perf_curves import curve_document
 
 ROOT = Path(__file__).resolve().parents[2]
 
@@ -188,6 +189,7 @@ def write_hotframes(path, frames, items, dictionary, radius):
             row = {key: json.dumps(frame.get(key), ensure_ascii=False, separators=(',', ':'))
                    if not isinstance(frame.get(key), str) else frame[key] for key in names}
             writer.writerow({**row, 'steady': str(frame['_steady']).lower(), 'associationPhase': frame['_phase'] or 'null'})
+    return [frames[index] for index in sorted(selected)]
 
 
 def source_stamp(directory, dictionary, budgets, run_path):
@@ -199,7 +201,48 @@ def source_stamp(directory, dictionary, budgets, run_path):
                 contextFlags=dictionary['contextFlags'], nonSteadyRules=dictionary['nonSteadyRules'])
 
 
-def write_session(out, summary, items, frames, hwfast, dictionary, stamp, budgets):
+def repository_state(root):
+    return [list(git(root, 'rev-parse', 'HEAD')), list(git(root, 'status', '--porcelain', '--', 'game/'))]
+
+
+def processed_input(out, directory, stamp, errors):
+    """同一次成功或失败均算已处理；错误输入变化才重新解析。"""
+    for error in errors:
+        if error.get('source') == str(directory) and error.get('calc') == CALC and error.get('inputStamp') == stamp:
+            return True
+    try:
+        identifier = session_id(read_json(manifest_path(directory))['id'])
+        target = out / 'derived' / identifier
+        if not (target / 'summary.json').is_file():
+            return False
+        prior = read_json(target / 'summary.json')
+        return (prior.get('source') == str(directory) and prior.get('calc') == CALC and
+                prior.get('inputStamp') == stamp and (target / 'curves.json').is_file())
+    except (ValueError, OSError, KeyError, TypeError):
+        return False
+
+
+def analysis_needed(root=ROOT, output=None, author=None, index=None, dictionary=None, budgets=None):
+    """只读判鲜入口；不读逐帧流，不发布文件，活动锁与无锁 pending 不参与。"""
+    root = Path(root).resolve()
+    out = Path(output).resolve() if output else root / 'output/perf'
+    author = Path(author).resolve() if author else author_root(root)
+    index = index if index is not None else read_json(out / 'index.json') if (out / 'index.json').is_file() else {}
+    dictionary = dictionary if dictionary is not None else read_json(root / 'game/data/perf-fields.json')
+    budgets = budgets if budgets is not None else read_json(root / 'budgets.json')
+    available = False
+    for directory in discover(out, author):
+        with exclusive(directory / '.lock') as readable:
+            if not readable or (manifest_path(directory).name == 'manifest.pending.json' and not (directory / '.lock').is_file()):
+                continue
+            available = True
+            stamp = source_stamp(directory, dictionary, budgets, nearest_run_path(directory, out / 'runs'))
+            if not processed_input(out, directory, stamp, index.get('errors', [])):
+                return True
+    return available and (index.get('calc') != CALC or index.get('repositoryState') != repository_state(root))
+
+
+def write_session(out, summary, items, frames, hwfast, dictionary, stamp, budgets, manifest, streams):
     directory = out / 'derived' / summary['id']
     directory.mkdir(parents=True, exist_ok=True)
     counts = Counter()
@@ -210,7 +253,8 @@ def write_session(out, summary, items, frames, hwfast, dictionary, stamp, budget
             limited.append(item)
     atomic_json(directory / 'anomalies.json', dict(calc=CALC, id=summary['id'], total=len(items), items=limited))
     atomic_json(directory / 'hardware.json', dict(calc=CALC, id=summary['id'], hwfast=hwfast))
-    write_hotframes(directory / 'hotframes.csv', frames, items, dictionary, budgets['perfAnomalies']['associationFrames'])
+    hotframes = write_hotframes(directory / 'hotframes.csv', frames, items, dictionary, budgets['perfAnomalies']['associationFrames'])
+    atomic_json(directory / 'curves.json', curve_document(summary, manifest, streams, hotframes))
     summary['inputStamp'] = stamp
     atomic_json(directory / 'summary.json', summary)
 
@@ -224,6 +268,7 @@ def analyze_all(root=ROOT, sessions=(), output=None, author=None):
     with exclusive(out / '.lock', timeout=30, create=True) as held:
         if not held:
             return dict(analyzed=[], skipped=['分析锁被占用'], errors=[])
+        prior_index = read_json(out / 'index.json') if (out / 'index.json').is_file() else {}
         # Discover and recheck under the shared lock: concurrent triggers cannot append duplicate history.
         for directory in discover(out, author, sessions):
             with exclusive(directory / '.lock') as readable:
@@ -231,24 +276,26 @@ def analyze_all(root=ROOT, sessions=(), output=None, author=None):
                                     and not (directory / '.lock').is_file()):
                     skipped.append(str(directory))
                     continue
+                stamp = source_stamp(directory, dictionary, budgets, nearest_run_path(directory, out / 'runs'))
+                prior_errors = prior_index.get('errors', [])
+                if processed_input(out, directory, stamp, prior_errors):
+                    errors.extend(error for error in prior_errors if error.get('source') == str(directory))
+                    continue
                 try:
                     manifest = read_json(manifest_path(directory))
                     identifier = session_id(manifest['id'])
-                    run, run_path = nearest_run(directory, out / 'runs')
-                    stamp = source_stamp(directory, dictionary, budgets, run_path)
+                    run, _ = nearest_run(directory, out / 'runs')
                     target = out / 'derived' / identifier / 'summary.json'
                     if target.exists():
                         prior = read_json(target)
                         if prior.get('source') != str(directory):
                             raise ValueError('会话 ID 与另一路径冲突，不覆盖已有派生')
-                        if prior.get('calc') == CALC and prior.get('inputStamp') == stamp:
-                            continue
                     manifest, streams = load_session(directory, dictionary)
                     summary, items, frames, hwfast = summary_for(directory, manifest, streams, dictionary, budgets, run)
-                    write_session(out, summary, items, frames, hwfast, dictionary, stamp, budgets)
+                    write_session(out, summary, items, frames, hwfast, dictionary, stamp, budgets, manifest, streams)
                     changed.append(summary)
                 except (ValueError, OSError, KeyError, TypeError) as error:
-                    errors.append(dict(source=str(directory), reason=str(error)))
+                    errors.append(dict(source=str(directory), reason=str(error), calc=CALC, inputStamp=stamp))
         entries = []
         for path in sorted((out / 'derived').glob('*/summary.json')):
             summary = read_json(path)
@@ -261,7 +308,8 @@ def analyze_all(root=ROOT, sessions=(), output=None, author=None):
         entries = [entry for entry in entries if Path(entry['source']).exists()]
         changed_ids = {summary['id'] for summary in changed}
         history_update(out / 'history.jsonl', [entry for entry in entries if entry['id'] in changed_ids])
-        atomic_json(out / 'index.json', dict(calc=CALC, sessions=[index_entry(e) for e in entries], errors=errors,
+        atomic_json(out / 'index.json', dict(calc=CALC, repositoryState=repository_state(root),
+                                            sessions=[index_entry(e) for e in entries], errors=errors,
                                             retention=dict(aiBatches=AI_BATCHES_KEEP, historyPerGroup=HISTORY_PER_GROUP,
                                                            diagnosticBytes=DIAGNOSTIC_BYTES_KEEP), removed=removed))
     return dict(analyzed=[s['id'] for s in changed], skipped=skipped, errors=errors)
