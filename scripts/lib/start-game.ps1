@@ -1,6 +1,6 @@
 ﻿# 正式启动的内部共用步骤：同一构建锁内只查已集成产物，存在即启动；首次缺失与显式准备共用普通构建及原生增量导入。
 # 用法：点引用 common.ps1 与本文件，再 Invoke-UESTCStartGame -Root <仓库> -Godot <引擎> [-BuildLease <已持有的锁>]。
-# 产出：output/start_game/；output/.locks/build.lock（默认玩上次集成版本，工作区半成品不触发编译）。
+# 产出：output/start_game/；退出后隐藏等待进程写 output/perf/ 派生；output/.locks/build.lock（默认玩上次集成版本，工作区半成品不触发编译）。
 # DECISION-256: keep the script-entry and engine clocks separate; external lock wait is never fabricated.
 function New-UESTCLaunchTiming {
     param([DateTime]$ScriptEnteredUtc = [DateTime]::UtcNow,
@@ -104,6 +104,22 @@ function Initialize-UESTCLaunch {
     Update-UESTCGameBuild -Root $Root -Godot $Godot -BuildLease $BuildLease -Timing $Timing
 }
 
+# ENG-PERF-DATA：只挂退出后的一次分析；进程隐藏运行，所有触发由分析器自己的锁串行化。
+function Start-UESTCPerfAnalysisWaiter {
+    param([Parameter(Mandatory)][string]$Root, [Parameter(Mandatory)][Diagnostics.Process]$Game)
+    $python = (Get-Command python -CommandType Application -ErrorAction Stop | Select-Object -First 1).Source
+    $waiter = Join-Path $Root 'scripts\perf\wait-analyze.ps1'
+    $arguments = @('-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-File', $waiter,
+        '-Root', $Root, '-GameProcessId', [string]$Game.Id,
+        '-StartedUtcTicks', [string]$Game.StartTime.ToUniversalTime().Ticks, '-Python', $python)
+    $commandLine = ($arguments | ForEach-Object { ConvertTo-UESTCProcessArgument $_ }) -join ' '
+    $out = Join-Path $Root 'output\start_game'
+    $null = [IO.Directory]::CreateDirectory($out)
+    return Start-Process -FilePath 'powershell.exe' -ArgumentList $commandLine -WorkingDirectory $Root -WindowStyle Hidden -PassThru `
+        -RedirectStandardOutput (Join-Path $out ('perf-analysis-' + $Game.Id + '.log')) `
+        -RedirectStandardError (Join-Path $out ('perf-analysis-' + $Game.Id + '.error.log'))
+}
+
 function Invoke-UESTCStartGame {
     param([Parameter(Mandatory)][string]$Root, [Parameter(Mandatory)][string]$Godot,
         [string[]]$GameArgs = @(), [IO.FileStream]$BuildLease = $null,
@@ -130,6 +146,9 @@ function Invoke-UESTCStartGame {
         $process = Start-Process -FilePath $window -ArgumentList $commandLine -WorkingDirectory $Root -WindowStyle Normal -PassThru
         $timing['engineStartUtc'] = $process.StartTime.ToUniversalTime().ToString('O')
         $timing['gamePid'] = $process.Id
+        $analysisWaiter = Start-UESTCPerfAnalysisWaiter -Root $Root -Game $process
+        $timing['perfAnalysisWaiterPid'] = $analysisWaiter.Id
+        $analysisWaiter.Dispose()
         $timing['menuRequested'] = -not ($GameArgs -contains '--title=0')
         $timing['status'] = 'ENGINE_STARTED'
         return $process

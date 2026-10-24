@@ -1,0 +1,34 @@
+{
+  "calc": 2,
+  "authority": "ENG-PERF-DATA",
+  "summary": {
+    "all": "All observed valid values; per-field nulls remain missing",
+    "steady": "Only context-confirmed steady frames; unknown context is excluded",
+    "experience": { "scope": "full only; cost values are null with reason", "frameMs": "ms, nearest rank", "low1Fps": "FPS, N>=100, ceil(0.01N) slowest tail", "low01Fps": "FPS, N>=1000, ceil(0.001N) slowest tail", "fractions": "0..1 except normalizedGpuLoad and measuredGpuBusyFraction may exceed 1", "windows": "Contiguous steady 1 s windows; no gap crossing" },
+    "cost": { "times": "ms", "memory": "MiB", "allocation": "allocatedBytes is whole-process B", "viewports": "role:instanceId; main accepts native costs approximately aligned +/-2 frames with unknown source/freshness; other viewports require fresh source-confirmed readings; GPU aggregate excludes unconfirmed sources", "phases": "B0-B4 wall intervals; association only, never CPU busy time", "mainViewportSpikes": "Cost candidates cover +/-2 frames; no exact phase/cause attribution; distributions, budgets, trends and DECISION-318 remain available" },
+    "budgets": "Independent checks; ratio is observed/budget and may exceed 1; exceeded=null if inapplicable or missing",
+    "coverage": "Per-stream state and rows, per-field non-null fraction; 0..1 or null",
+    "validity": "Only affected fields disabled; hardware loss does not disable engine metrics",
+    "deepen": "run.ps1 -DeepenSession <id>; pending TOOL-428/429 dependency; tools, original poseArgs and scene retained",
+    "inputStamp": "Current calc, schema, file size/mtime and budget snapshot; no checksum"
+  },
+  "runJson": {
+    "owner": "scripts/perf/run.ps1",
+    "location": "Nearest run.json ancestor of session within output/perf/runs",
+    "scene": "Stable scenario identity; part of comparisonKey",
+    "status": "valid|partial|invalid; one judgement with reasons[]",
+    "exitCode": "Actual process exit code or null",
+    "timedOut": "Actual timeout fact or null",
+    "coverage": "Named observed facts, each {observed:number,required:number}; e.g. frames, seconds, segments; all must reach requirements",
+    "diagnostic": "true only for diagnostic conditions; never a baseline",
+    "protocol": "A/B/A identity and completion facts belong to the runner; incomplete protocol must remain partial",
+    "note": "No complete/valid/satisfied duplicate booleans; missing actual facts produce partial"
+  },
+  "diagnosticsJson": {
+    "owner": "scripts/perf/run.ps1",
+    "location": "Beside diagnostic attachments under AI runs",
+    "attachments": "Relative file paths; analyzer enforces total bytes only inside this directory; raw six files are never attachments"
+  },
+  "outputLimits": "perf.py constants MAX_ROWS/MAX_LINES/MAX_CHARS",
+  "retention": "perf_store.py constants; author root is read-only and owned by recorder"
+}

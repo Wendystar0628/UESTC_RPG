@@ -1,0 +1,301 @@
+"""读取性能六件、保留来源与缺测，并计算 ENG-PERF-DATA 的基础指标。
+用法：由 analyze.py 与 perf.py 导入；输入会话六件、字段字典与预算，产出内存中的派生指标。
+"""
+import bisect
+import csv
+import json
+import math
+import statistics
+from collections import defaultdict, deque
+from pathlib import Path
+
+CALC = json.loads(Path(__file__).with_name('derived-fields.json').read_text(encoding='utf-8'))['calc']
+PHASES = ('physMs', 'procMs', 'lateMs', 'drawMs', 'tailMs')
+COSTS = ('mainViewportGpuMs', 'mainViewportCpuMs', 'frameSetupCpuMs')
+EXPERIENCE_FIELDS = ('averageFps', 'frameMs', 'low1Fps', 'low01Fps', 'low1TailN',
+                     'low01TailN', 'n', 'droppedFrameFraction', 'droppedTimeFraction',
+                     'heavyFramesPerMinute', 'severeFrameCount', 'framePacingP95Ms',
+                     'measuredGpuBusyFraction', 'gpuUtilFraction', 'normalizedGpuLoad', 'windows')
+
+
+def read_json(path):
+    return json.loads(Path(path).read_text(encoding='utf-8-sig'), parse_constant=reject_constant)
+
+
+def reject_constant(value):
+    raise ValueError('JSON 不允许非有限数: ' + value)
+
+
+def at(value, dotted, default=None):
+    for key in dotted.split('.'):
+        if not isinstance(value, dict) or key not in value:
+            return default
+        value = value[key]
+    return value
+
+
+def number(value):
+    return isinstance(value, (int, float)) and not isinstance(value, bool) and math.isfinite(value)
+
+
+def quantile(values, q):
+    values = sorted(v for v in values if number(v))
+    return values[max(0, math.ceil(q * len(values)) - 1)] if values else None
+
+
+def distribution(values):
+    values = [v for v in values if number(v)]
+    return dict(n=len(values), mean=statistics.fmean(values) if values else None,
+                p50=quantile(values, .5), p95=quantile(values, .95),
+                p99=quantile(values, .99), p999=quantile(values, .999),
+                maximum=max(values) if values else None)
+
+
+def parse_cell(raw, column):
+    if raw is None:
+        raise ValueError('CSV 行缺列')
+    if raw == 'null':
+        if not column['nullable']:
+            raise ValueError(f"非空字段缺值: {column['name']}")
+        return None
+    kind = column['type']
+    if kind == 'integer':
+        return int(raw)
+    if kind == 'number':
+        value = float(raw)
+        if not math.isfinite(value):
+            raise ValueError(f"非有限数: {column['name']}")
+        if column.get('unit') == 'ratio' and not 0 <= value <= 1:
+            raise ValueError(f"比例越界: {column['name']}")
+        return value
+    if kind == 'boolean':
+        if raw not in ('true', 'false'):
+            raise ValueError(f"布尔格式错误: {column['name']}")
+        return raw == 'true'
+    if kind in ('array', 'object'):
+        value = json.loads(raw, parse_constant=reject_constant)
+        if not isinstance(value, list if kind == 'array' else dict):
+            raise ValueError(f"结构字段类型错误: {column['name']}")
+        return value
+    if kind == 'string':
+        return raw
+    raise ValueError(f'未支持类型: {kind}')
+
+
+def read_stream(directory, spec, schema):
+    path = directory / spec['file']
+    if spec['kind'] == 'jsonl':
+        rows = [json.loads(line, parse_constant=reject_constant) for line in path.read_text(encoding='utf-8-sig').splitlines() if line.strip()]
+    else:
+        with path.open(encoding='utf-8-sig', newline='') as stream:
+            reader = csv.DictReader(stream)
+            if reader.fieldnames != [c['name'] for c in spec['columns']]:
+                raise ValueError(f'列名或顺序不符: {path.name}')
+            rows = [{c['name']: parse_cell(row.get(c['name']), c) for c in spec['columns']}
+                    for row in reader]
+    previous, previous_time = None, None
+    for row in rows:
+        if row.get('schema') != schema:
+            raise ValueError(f'行 schema 不符: {path.name}')
+        sequence = row.get('sequence')
+        if not isinstance(sequence, int) or (previous is not None and sequence <= previous):
+            raise ValueError(f'流序号不递增: {path.name}')
+        previous = sequence
+        stamp = row.get('monotonicMs')
+        if not number(stamp) or (previous_time is not None and stamp < previous_time):
+            raise ValueError(f'流时刻不递增: {path.name}')
+        previous_time = stamp
+    return rows
+
+
+def load_session(directory, dictionary):
+    directory = Path(directory).resolve()
+    manifest = read_json(directory / 'manifest.json')
+    if manifest.get('status') != 'closed':
+        raise ValueError('未完成最终关闭；pending 不分析')
+    if manifest.get('schema') != dictionary['schema']:
+        return manifest, None
+    snapshot = manifest.get('fieldDictionary')
+    if not isinstance(snapshot, dict) or snapshot != dictionary:
+        raise ValueError('字段字典快照与当前 schema 不符')
+    streams = {name: read_stream(directory, spec, dictionary['schema'])
+               for name, spec in dictionary['streams'].items()}
+    return manifest, streams
+
+
+def scope_of(manifest):
+    desktop = manifest.get('desktop') or {}
+    if desktop.get('kind') == 'interactive' and desktop.get('isInputDesktop') is True:
+        return 'full', None
+    reason = '隔离桌面不测' if desktop.get('kind') == 'isolated' else '桌面事实未确认，只测成本'
+    return 'cost', reason
+
+
+def target_ms(manifest):
+    pacing = manifest.get('pacing') or {}
+    limit = pacing.get('maxFps')
+    limits = [limit] if number(limit) and limit > 0 else []
+    vsync = pacing.get('vsync')
+    if vsync not in (None, False, 0, 'disabled', 'off'):
+        refresh = at(manifest, 'display.refreshHz')
+        if not number(refresh) or refresh <= 0:
+            return None
+        limits.append(refresh)
+    return 1000 / min(limits) if limits else None
+
+
+def mark_context(frames, events, dictionary):
+    flags = {item['name']: item['value'] for item in dictionary['contextFlags']}
+    excluded = ('mapTransition', 'cameraTransition', 'seasonTransition', 'notPlaying',
+                'loadingVisible', 'qualityApplying', 'windowUnfocused', 'inputLocked',
+                'captureFrame', 'qualitySettling', 'newGameOrLoad')
+    mask = sum(flags.get(name, 0) for name in excluded)
+    intervals = []
+    for rule in dictionary['nonSteadyRules']['rules']:
+        opened = {}
+        for event in events:
+            if event['event'] not in rule['events']:
+                continue
+            payload = event['payload']
+            if rule.get('purpose') and payload.get('purpose') != rule['purpose']:
+                continue
+            key = (event['event'], payload.get('id'))
+            phase = payload.get('phase')
+            now = event['monotonicMs']
+            if rule.get('purpose') == 'saveThumbnail':
+                intervals.append((now, now, event.get('collectionFrame')))
+            elif phase == 'begin':
+                opened[key] = now
+            elif phase in ('end', 'ready', 'complete') and key in opened:
+                intervals.append((opened.pop(key), now + rule['settleMs'], None))
+        intervals.extend((start, math.inf, None) for start in opened.values())
+    for frame in frames:
+        complete = frame.get('contextComplete') is True and frame.get('contextFlags') is not None
+        active = complete and bool(frame['contextFlags'] & mask)
+        active |= frame.get('appState', '').lower() in dictionary['nonSteadyRules']['appStates']
+        active |= any((capture == frame['collectionFrame'] if capture is not None
+                       else start <= frame['monotonicMs'] <= end) for start, end, capture in intervals)
+        frame['_steady'] = bool(complete and not active)
+        frame['_contextKnown'] = complete
+
+
+def prepare_frames(frames, samples, events, dictionary):
+    mark_context(frames, events, dictionary)
+    sample_times = [s['monotonicMs'] for s in samples]
+    previous = None
+    seen_draws = defaultdict(set)
+    for frame in frames:
+        sample_index = bisect.bisect_right(sample_times, frame['monotonicMs']) - 1
+        sample = samples[sample_index] if sample_index >= 0 else {}
+        frame['_sample'] = sample
+        frame['_scene'] = tuple(sample.get(k) for k in ('map', 'mode', 'building', 'floor', 'season', 'weather'))
+        gap = frame.get('gapBefore') is True or (previous is not None and frame['sequence'] != previous['sequence'] + 1)
+        frame['_gap'] = gap
+        frame['_dtValid'] = not gap and number(frame.get('dtMs')) and frame['dtMs'] > 0
+        frame['_phaseValid'] = frame.get('phaseValidity') == 31 and all(number(frame.get(k)) and frame[k] >= 0 for k in PHASES)
+        if frame['_phaseValid'] and number(frame.get('dtMs')):
+            frame['_phaseValid'] = math.isclose(sum(frame[k] for k in PHASES), frame['dtMs'], rel_tol=1e-5, abs_tol=.01)
+        viewports = frame.get('viewportSamplesJson')
+        total, confirmed = 0, isinstance(viewports, list)
+        frame['_viewports'] = {}
+        frame['_viewportCpuFields'] = []
+        frame['_mainViewportApproximate'] = False
+        frame['mainViewportGpuMs'] = frame['mainViewportCpuMs'] = None
+        for view in viewports or []:
+            key = f"{view['role']}:{view['viewportId']}"
+            source = view.get('sourceDrawFrame')
+            skipped = view.get('drewThisFrame') is False
+            valid = not skipped and view.get('resultUpdated') is True and source is not None
+            valid &= source not in seen_draws[key]
+            # DECISION-342 accepts main-viewport costs without claiming an exact source.
+            approximate = view['role'] == 'main' and not skipped and not valid
+            gpu = view.get('gpuRenderMs') if valid or approximate else None
+            cpu = view.get('cpuRenderMs') if valid or approximate else None
+            gpu = gpu if number(gpu) and gpu >= 0 else None
+            cpu = cpu if number(cpu) and cpu >= 0 else None
+            frame['_viewports'][key] = {'gpuMs': gpu, 'cpuMs': cpu, 'sourceDrawFrame': source,
+                                       'skipped': skipped, 'sourceConfirmed': bool(valid)}
+            if view['role'] == 'main':
+                frame['mainViewportGpuMs'], frame['mainViewportCpuMs'] = gpu, cpu
+                frame['_mainViewportApproximate'] = approximate
+            else:
+                metric = 'viewportCpuMs:' + key
+                frame[metric] = cpu
+                frame['_viewportCpuFields'].append(metric)
+            if not skipped:
+                confirmed &= valid and number(gpu)
+                if valid:
+                    seen_draws[key].add(source)
+                if number(gpu):
+                    total += gpu
+        frame['_measuredGpuMs'] = total if confirmed else None
+        previous = frame
+
+
+def rolling_medians(frames, fields, policy):
+    windows = defaultdict(lambda: deque(maxlen=policy['medianWindowFrames']))
+    previous_scene = None
+    result = []
+    for frame in frames:
+        if frame['_gap'] or frame['_scene'] != previous_scene or not frame['_steady']:
+            windows.clear()
+        medians = {key: statistics.median(windows[key]) if len(windows[key]) >= policy['medianMinimumFrames'] else None
+                   for key in fields}
+        result.append(medians)
+        if frame['_steady']:
+            for key in fields:
+                value = frame.get(key)
+                if number(value) and (key != 'dtMs' or frame['_dtValid']) and (key not in PHASES or frame['_phaseValid']):
+                    windows[key].append(value)
+        previous_scene = frame['_scene']
+    return result
+
+
+def experience(frames, hw, target, policy, scope, reason):
+    if scope != 'full':
+        return {**dict.fromkeys(EXPERIENCE_FIELDS), 'reason': reason}
+    valid = [f for f in frames if f['_dtValid']]
+    values = [f['dtMs'] for f in valid]
+    n, duration = len(values), sum(values)
+    tails = {ratio: math.ceil(n * ratio) for ratio in (.01, .001)}
+    low = lambda ratio, minimum: 1000 * tails[ratio] / sum(sorted(values, reverse=True)[:tails[ratio]]) if n >= minimum else None
+    dropped = [v for v in values if target is not None and v > policy['droppedFrameTargetMultiple'] * target]
+    pacing = [abs(b['dtMs'] - a['dtMs']) for a, b in zip(frames, frames[1:])
+              if a['_dtValid'] and b['_dtValid'] and b['sequence'] == a['sequence'] + 1
+              and not b['_gap'] and a['_steady'] and b['_steady']]
+    gpu_rows = [f for f in valid if number(f['_measuredGpuMs'])]
+    gpu_dt = sum(f['dtMs'] for f in gpu_rows)
+    utilization = [h['gpuUtilFraction'] for h in hw if number(h.get('gpuUtilFraction'))]
+    normalized = [h['gpuUtilFraction'] * h['gpuClockMHz'] / h['gpuMaxClockMHz'] for h in hw
+                  if all(number(h.get(k)) for k in ('gpuUtilFraction', 'gpuClockMHz', 'gpuMaxClockMHz')) and h['gpuMaxClockMHz'] > 0]
+    return dict(n=n, averageFps=1000 * n / duration if duration else None, frameMs=distribution(values),
+                low1Fps=low(.01, 100), low01Fps=low(.001, 1000), low1TailN=tails[.01], low01TailN=tails[.001],
+                droppedFrameFraction=len(dropped) / n if target and n else None,
+                droppedTimeFraction=sum(dropped) / duration if target and duration else None,
+                heavyFramesPerMinute=sum(v > policy['heavyStutterMs'] for v in values) * 60000 / duration if duration else None,
+                severeFrameCount=sum(v > policy['severeStutterMs'] for v in values),
+                framePacingP95Ms=quantile(pacing, .95),
+                measuredGpuBusyFraction=sum(f['_measuredGpuMs'] for f in gpu_rows) / gpu_dt if gpu_dt else None,
+                gpuUtilFraction=statistics.fmean(utilization) if utilization else None,
+                normalizedGpuLoad=statistics.fmean(normalized) if normalized else None, reason=None)
+
+
+def costs(frames, samples, hw):
+    fields = COSTS + PHASES + ('visibleDrawCalls', 'visiblePrimitives', 'shadowDrawCalls', 'shadowPrimitives',
+                              'gcPauseMs', 'allocatedBytes', 'managedHeapMiB')
+    result = {key: distribution(f.get(key) for f in frames if key not in PHASES or f['_phaseValid']) for key in fields}
+    result['viewports'] = {key: {metric: distribution(f['_viewports'].get(key, {}).get(metric) for f in frames)
+                                  for metric in ('cpuMs', 'gpuMs')}
+                           for key in sorted({key for f in frames for key in f['_viewports']})}
+    result['measuredViewportGpuMs'] = distribution(f['_measuredGpuMs'] for f in frames)
+    result['memory'] = {key: distribution(s.get(key) for s in samples) for key in
+                        ('workingSetMiB', 'privateMiB', 'managedHeapMiB', 'godotStaticMiB', 'engineVideoMemoryMiB', 'textureMemoryMiB', 'bufferMemoryMiB')}
+    result['hardware'] = {key: distribution(h.get(key) for h in hw) for key in
+                          ('wholeGpuMemoryMiB', 'processVideoMemoryMiB', 'gpuClockMHz', 'powerW', 'temperatureC')}
+    result['gcTotals'] = {key: sum(f[key] for f in frames if number(f.get(key))) if any(number(f.get(key)) for f in frames) else None
+                          for key in ('gcPauseMs', 'gcGen0', 'gcGen1', 'gcGen2', 'allocatedBytes')}
+    result['compilationTotals'] = {key: sum(max(0, b[key] - a[key]) for a, b in zip(frames, frames[1:])
+                                          if number(a.get(key)) and number(b.get(key)) and not b['_gap'])
+                                   if any(number(a.get(key)) and number(b.get(key)) and not b['_gap'] for a, b in zip(frames, frames[1:])) else None
+                                   for key in ('pipelineCanvas', 'pipelineMesh', 'pipelineSurface', 'pipelineDraw', 'pipelineSpecialization', 'jitCompiledMethods', 'jitCompilationMs')}
+    return result

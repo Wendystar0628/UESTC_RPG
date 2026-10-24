@@ -1,0 +1,1442 @@
+{
+  "schema": 1,
+  "authority": "ENG-PERF-DATA",
+  "draft": false,
+  "encoding": {
+    "text": "UTF-8 without BOM",
+    "csv": "RFC4180",
+    "newLine": "LF",
+    "decimal": "invariant",
+    "missingCsv": "null",
+    "missingJson": null,
+    "booleanCsv": [
+      "true",
+      "false"
+    ],
+    "nonFinite": "null",
+    "integers": "base10; retain uint64 precision",
+    "nestedCsv": "compact JSON with RFC4180 quoting"
+  },
+  "clock": {
+    "monotonicSource": "Godot.Time.GetTicksUsec",
+    "monotonicUnit": "ms",
+    "monotonicOrigin": "process boot, shared with GAME-218",
+    "anchorIntervalSeconds": 60,
+    "wallClockPurpose": [
+      "sessionId",
+      "startedAt",
+      "clockAnchors"
+    ],
+    "driverTimestamps": "raw wall-clock microseconds; never pretend exact frame alignment"
+  },
+  "contextFlags": [
+    {
+      "name": "mapTransition",
+      "value": 1,
+      "source": "AppActivity"
+    },
+    {
+      "name": "cameraTransition",
+      "value": 2,
+      "source": "AppActivity"
+    },
+    {
+      "name": "saveWrite",
+      "value": 4,
+      "source": "AppActivity"
+    },
+    {
+      "name": "seasonTransition",
+      "value": 8,
+      "source": "AppActivity"
+    },
+    {
+      "name": "notPlaying",
+      "value": 16,
+      "source": "AppState"
+    },
+    {
+      "name": "loadingVisible",
+      "value": 32,
+      "source": "GAME-221"
+    },
+    {
+      "name": "qualityApplying",
+      "value": 64,
+      "source": "GAME-221"
+    },
+    {
+      "name": "windowUnfocused",
+      "value": 128,
+      "source": "GAME-229"
+    },
+    {
+      "name": "inputLocked",
+      "value": 256,
+      "source": "input owner"
+    },
+    {
+      "name": "captureFrame",
+      "value": 512,
+      "source": "capture owner"
+    },
+    {
+      "name": "qualitySettling",
+      "value": 1024,
+      "source": "GAME-221 dictionary rules"
+    },
+    {
+      "name": "newGameOrLoad",
+      "value": 2048,
+      "source": "app/save owner"
+    }
+  ],
+  "nonSteadyRules": {
+    "owner": "GAME-221",
+    "unknownContext": "unknown; do not classify as steady",
+    "appStates": [
+      "title",
+      "entering",
+      "leaving"
+    ],
+    "rules": [
+      {
+        "name": "transition",
+        "events": [
+          "world.clockJump",
+          "world.season",
+          "transit",
+          "map.travel",
+          "view.mode"
+        ],
+        "interval": "owner begin to actual completion",
+        "settleMs": 2000
+      },
+      {
+        "name": "newGameOrLoad",
+        "events": [
+          "game.enter",
+          "save.load"
+        ],
+        "interval": "begin to actual ready",
+        "settleMs": 2000
+      },
+      {
+        "name": "qualityApply",
+        "events": [
+          "settings.quality"
+        ],
+        "interval": "apply begin to actual effective completion",
+        "settleMs": 2000
+      },
+      {
+        "name": "saveThumbnail",
+        "events": [
+          "sync.readback"
+        ],
+        "purpose": "saveThumbnail",
+        "interval": "the captured collection frame only",
+        "settleMs": 0
+      }
+    ],
+    "notAutomaticallyNonSteady": [
+      "weather slow transition",
+      "save write without thumbnail",
+      "focus loss",
+      "menu/input lock"
+    ],
+    "thresholdAuthority": "settleMs only here; no duplicate runtime or analyzer literals"
+  },
+  "objects": {
+    "viewportSample": [
+      {
+        "name": "viewportId",
+        "type": "integer",
+        "nullable": false,
+        "unit": null,
+        "source": "ViewportFrameSample.ViewportId",
+        "note": ""
+      },
+      {
+        "name": "role",
+        "type": "string",
+        "nullable": false,
+        "unit": null,
+        "source": "ViewportFrameSample.Role stable registration",
+        "note": ""
+      },
+      {
+        "name": "drewThisFrame",
+        "type": "boolean",
+        "nullable": true,
+        "unit": null,
+        "source": "owner draw report",
+        "note": "False is an explicit current-row skip; true requests alone do not prove actual drawing, so remain null"
+      },
+      {
+        "name": "resultUpdated",
+        "type": "boolean",
+        "nullable": true,
+        "unit": null,
+        "source": "proven readback freshness",
+        "note": "Main approximate costs do not confirm freshness; keep null without independent evidence"
+      },
+      {
+        "name": "sourceDrawFrame",
+        "type": "integer",
+        "nullable": true,
+        "unit": null,
+        "source": "proven render round source",
+        "note": "Unknown for main approximate costs; never infer by subtracting a fixed frame offset"
+      },
+      {
+        "name": "sourceCpuBeginUs",
+        "type": "integer",
+        "nullable": true,
+        "unit": "us",
+        "source": "raw timestamp CPU begin",
+        "note": ""
+      },
+      {
+        "name": "sourceCpuEndUs",
+        "type": "integer",
+        "nullable": true,
+        "unit": "us",
+        "source": "raw timestamp CPU end",
+        "note": ""
+      },
+      {
+        "name": "cpuRenderMs",
+        "type": "number",
+        "nullable": true,
+        "unit": "ms",
+        "source": "RenderingServer.ViewportGetMeasuredRenderTimeCpu for main; proven readback otherwise",
+        "alignment": "Main: approximate +/-2 frames (DECISION-342); on-demand: proven source only",
+        "provenance": "Main may carry a cost with null resultUpdated/sourceDrawFrame; no timestamp-name reads",
+        "note": "Wall-clock span including waits/preemption; current-row skip or non-drawable window is null; unconfirmed on-demand result is null"
+      },
+      {
+        "name": "gpuRenderMs",
+        "type": "number",
+        "nullable": true,
+        "unit": "ms",
+        "source": "RenderingServer.ViewportGetMeasuredRenderTimeGpu for main; proven readback otherwise",
+        "alignment": "Same as viewportSample.cpuRenderMs",
+        "provenance": "Same as viewportSample.cpuRenderMs; an approximate cost does not establish mergeable GPU timing",
+        "note": "Distributions/budgets/trends allowed; no exact per-frame spike attribution"
+      }
+    ]
+  },
+  "eventTypes": {
+    "session.start": {
+      "owner": "GAME-220",
+      "payloadFields": {
+        "origin": "string",
+        "sessionId": "string"
+      }
+    },
+    "session.end": {
+      "owner": "GAME-220",
+      "payloadFields": {
+        "reason": "string",
+        "complete": "boolean",
+        "fault": "string"
+      }
+    },
+    "record.gap": {
+      "owner": "GAME-220",
+      "payloadFields": {
+        "stream": "string",
+        "firstSequence": "integer",
+        "lastSequence": "integer",
+        "rows": "integer",
+        "firstCollectionFrame": "integer?",
+        "lastCollectionFrame": "integer?",
+        "fromMs": "number",
+        "toMs": "number"
+      }
+    },
+    "clock.anchor": {
+      "owner": "GAME-220",
+      "payloadFields": {
+        "unixMs": "integer",
+        "monotonicMs": "number",
+        "readSpanMs": "number"
+      }
+    },
+    "segment": {
+      "owner": "GAME-220",
+      "payloadFields": {
+        "id": "string",
+        "phase": "instant|begin|end"
+      }
+    },
+    "app.state": {
+      "owner": "GAME-221",
+      "payloadFields": {},
+      "state": "reserved; attach exact owner payload before emitting, schema increment if changed"
+    },
+    "app.phase": {
+      "owner": "GAME-221",
+      "payloadFields": {},
+      "state": "reserved; attach exact owner payload before emitting, schema increment if changed"
+    },
+    "app.activity": {
+      "owner": "GAME-221",
+      "payloadFields": {},
+      "state": "reserved; attach exact owner payload before emitting, schema increment if changed"
+    },
+    "game.enter": {
+      "owner": "GAME-221",
+      "payloadFields": {},
+      "state": "reserved; attach exact owner payload before emitting, schema increment if changed"
+    },
+    "save.write": {
+      "owner": "GAME-221",
+      "payloadFields": {},
+      "state": "reserved; attach exact owner payload before emitting, schema increment if changed"
+    },
+    "save.load": {
+      "owner": "GAME-221",
+      "payloadFields": {},
+      "state": "reserved; attach exact owner payload before emitting, schema increment if changed"
+    },
+    "map.travel": {
+      "owner": "GAME-221",
+      "payloadFields": {},
+      "state": "reserved; attach exact owner payload before emitting, schema increment if changed"
+    },
+    "transit": {
+      "owner": "GAME-221",
+      "payloadFields": {},
+      "state": "reserved; attach exact owner payload before emitting, schema increment if changed"
+    },
+    "view.mode": {
+      "owner": "GAME-221",
+      "payloadFields": {},
+      "state": "reserved; attach exact owner payload before emitting, schema increment if changed"
+    },
+    "view.medium": {
+      "owner": "GAME-221",
+      "payloadFields": {},
+      "state": "reserved; attach exact owner payload before emitting, schema increment if changed"
+    },
+    "view.space": {
+      "owner": "GAME-221",
+      "payloadFields": {},
+      "state": "reserved; attach exact owner payload before emitting, schema increment if changed"
+    },
+    "world.season": {
+      "owner": "GAME-221",
+      "payloadFields": {},
+      "state": "reserved; attach exact owner payload before emitting, schema increment if changed"
+    },
+    "world.weather": {
+      "owner": "GAME-221",
+      "payloadFields": {},
+      "state": "reserved; attach exact owner payload before emitting, schema increment if changed"
+    },
+    "world.flow": {
+      "owner": "GAME-221",
+      "payloadFields": {},
+      "state": "reserved; attach exact owner payload before emitting, schema increment if changed"
+    },
+    "world.clockJump": {
+      "owner": "GAME-221",
+      "payloadFields": {},
+      "state": "reserved; attach exact owner payload before emitting, schema increment if changed"
+    },
+    "input.lock": {
+      "owner": "GAME-221",
+      "payloadFields": {},
+      "state": "reserved; attach exact owner payload before emitting, schema increment if changed"
+    },
+    "settings.quality": {
+      "owner": "GAME-221",
+      "payloadFields": {},
+      "state": "reserved; attach exact owner payload before emitting, schema increment if changed"
+    },
+    "window.focus": {
+      "owner": "GAME-221",
+      "payloadFields": {},
+      "state": "reserved; attach exact owner payload before emitting, schema increment if changed"
+    },
+    "window.mode": {
+      "owner": "GAME-221",
+      "payloadFields": {},
+      "state": "reserved; attach exact owner payload before emitting, schema increment if changed"
+    },
+    "window.size": {
+      "owner": "GAME-221",
+      "payloadFields": {},
+      "state": "reserved; attach exact owner payload before emitting, schema increment if changed"
+    },
+    "display.refresh": {
+      "owner": "GAME-221",
+      "payloadFields": {},
+      "state": "reserved; attach exact owner payload before emitting, schema increment if changed"
+    },
+    "sync.readback": {
+      "owner": "GAME-221",
+      "payloadFields": {},
+      "state": "reserved; attach exact owner payload before emitting, schema increment if changed"
+    },
+    "hang.begin": {
+      "owner": "GAME-221",
+      "payloadFields": {},
+      "state": "reserved; attach exact owner payload before emitting, schema increment if changed"
+    },
+    "hang.end": {
+      "owner": "GAME-221",
+      "payloadFields": {},
+      "state": "reserved; attach exact owner payload before emitting, schema increment if changed"
+    },
+    "measurement.selfcheck": {
+      "owner": "GAME-221",
+      "payloadFields": {},
+      "state": "reserved; attach exact owner payload before emitting, schema increment if changed"
+    },
+    "gc.detail": {
+      "owner": "GAME-221",
+      "payloadFields": {},
+      "state": "reserved; attach exact owner payload before emitting, schema increment if changed"
+    },
+    "producer.failure": {
+      "owner": "GAME-221",
+      "payloadFields": {},
+      "state": "reserved; attach exact owner payload before emitting, schema increment if changed"
+    },
+    "snapshot.initial": {
+      "owner": "GAME-221",
+      "payloadFields": {},
+      "state": "reserved; attach exact owner payload before emitting, schema increment if changed"
+    }
+  },
+  "streams": {
+    "frames": {
+      "file": "frames.csv",
+      "kind": "csv",
+      "clock": "monotonicMs",
+      "rateHz": null,
+      "producer": "GAME-220 + GAME-218",
+      "columns": [
+        {
+          "name": "schema",
+          "type": "integer",
+          "nullable": false,
+          "unit": null,
+          "source": "dictionary.schema",
+          "note": ""
+        },
+        {
+          "name": "sequence",
+          "type": "integer",
+          "nullable": false,
+          "unit": null,
+          "source": "per-stream accepted attempt counter",
+          "note": ""
+        },
+        {
+          "name": "collectionFrame",
+          "type": "integer",
+          "nullable": true,
+          "unit": null,
+          "source": "Engine.GetProcessFrames; not GPU frame",
+          "note": ""
+        },
+        {
+          "name": "monotonicMs",
+          "type": "number",
+          "nullable": false,
+          "unit": "ms",
+          "source": "Godot.Time.GetTicksUsec / 1000",
+          "note": ""
+        },
+        {
+          "name": "dtMs",
+          "type": "number",
+          "nullable": true,
+          "unit": "ms",
+          "source": "FrameSample.FrameMilliseconds",
+          "note": "Raw previous B1 to current B1; first missing, never delta fallback"
+        },
+        {
+          "name": "phaseValidity",
+          "type": "integer",
+          "nullable": false,
+          "unit": null,
+          "source": "FrameSample.Phases.Validity",
+          "note": ""
+        },
+        {
+          "name": "physMs",
+          "type": "number",
+          "nullable": true,
+          "unit": "ms",
+          "source": "FrameSample.Phases",
+          "note": "Five wall-clock phases; previous B1-B4 plus current physical; all null if invalid"
+        },
+        {
+          "name": "procMs",
+          "type": "number",
+          "nullable": true,
+          "unit": "ms",
+          "source": "FrameSample.Phases",
+          "note": "Five wall-clock phases; previous B1-B4 plus current physical; all null if invalid"
+        },
+        {
+          "name": "lateMs",
+          "type": "number",
+          "nullable": true,
+          "unit": "ms",
+          "source": "FrameSample.Phases",
+          "note": "Five wall-clock phases; previous B1-B4 plus current physical; all null if invalid"
+        },
+        {
+          "name": "drawMs",
+          "type": "number",
+          "nullable": true,
+          "unit": "ms",
+          "source": "FrameSample.Phases",
+          "note": "Five wall-clock phases; previous B1-B4 plus current physical; all null if invalid"
+        },
+        {
+          "name": "tailMs",
+          "type": "number",
+          "nullable": true,
+          "unit": "ms",
+          "source": "FrameSample.Phases",
+          "note": "Five wall-clock phases; previous B1-B4 plus current physical; all null if invalid"
+        },
+        {
+          "name": "physicsSteps",
+          "type": "integer",
+          "nullable": false,
+          "unit": null,
+          "source": "FrameSample.Phases.PhysicsSteps",
+          "note": ""
+        },
+        {
+          "name": "mainCycles",
+          "type": "integer",
+          "nullable": true,
+          "unit": "cycles",
+          "source": "FrameSample.MainCycles",
+          "note": "Raw increment only; never converted to busy milliseconds"
+        },
+        {
+          "name": "drawCycles",
+          "type": "integer",
+          "nullable": true,
+          "unit": "cycles",
+          "source": "FrameSample.DrawCycles",
+          "note": ""
+        },
+        {
+          "name": "observerYawDeg",
+          "type": "number",
+          "nullable": true,
+          "unit": "deg",
+          "source": "IObserverState.YawDeg",
+          "note": ""
+        },
+        {
+          "name": "cameraPitchDeg",
+          "type": "number",
+          "nullable": true,
+          "unit": "deg",
+          "source": "ICameraRig.Pose.PitchDeg",
+          "note": ""
+        },
+        {
+          "name": "mainViewportCpuMs",
+          "type": "number",
+          "nullable": true,
+          "unit": "ms",
+          "source": "FrameSample.MainViewport.CpuRenderMilliseconds",
+          "alignment": "Same as viewportSample.cpuRenderMs",
+          "provenance": "Main RID passed by sole FrameStatistics owner; delayed native getter, exact source/freshness unknown",
+          "note": "Approximate cost distribution/budget/trend sample, including waits/preemption; skipped or non-drawable row is null; resume settling belongs to nonSteadyRules owner"
+        },
+        {
+          "name": "mainViewportGpuMs",
+          "type": "number",
+          "nullable": true,
+          "unit": "ms",
+          "source": "FrameSample.MainViewport.GpuRenderMilliseconds",
+          "alignment": "Same as viewportSample.gpuRenderMs",
+          "provenance": "Same as mainViewportCpuMs; sourceDrawFrame/resultUpdated stay null when unproven",
+          "note": "Approximate cost distribution/budget/trend and DECISION-318 sample; spike candidate only within +/-2 frames, no exact phase/cause attribution"
+        },
+        {
+          "name": "measuredViewportGpuMs",
+          "type": "number",
+          "nullable": true,
+          "unit": "ms",
+          "source": "FrameSample.MeasuredViewportGpuMilliseconds",
+          "note": "Null unless all registered viewport result sources/freshness confirmed and mergeable"
+        },
+        {
+          "name": "frameSetupCpuMs",
+          "type": "number",
+          "nullable": true,
+          "unit": "ms",
+          "source": "FrameSample.FrameSetupCpuMilliseconds",
+          "note": ""
+        },
+        {
+          "name": "frameSetupDrawFrame",
+          "type": "integer",
+          "nullable": true,
+          "unit": null,
+          "source": "FrameSample.FrameSetupDrawFrame",
+          "note": ""
+        },
+        {
+          "name": "visibleDrawCalls",
+          "type": "integer",
+          "nullable": true,
+          "unit": "count",
+          "source": "RenderCounts.VisibleDrawCalls",
+          "note": ""
+        },
+        {
+          "name": "visiblePrimitives",
+          "type": "integer",
+          "nullable": true,
+          "unit": "count",
+          "source": "RenderCounts.VisiblePrimitives",
+          "note": ""
+        },
+        {
+          "name": "shadowDrawCalls",
+          "type": "integer",
+          "nullable": true,
+          "unit": "count",
+          "source": "RenderCounts.ShadowDrawCalls",
+          "note": ""
+        },
+        {
+          "name": "shadowPrimitives",
+          "type": "integer",
+          "nullable": true,
+          "unit": "count",
+          "source": "RenderCounts.ShadowPrimitives",
+          "note": ""
+        },
+        {
+          "name": "pipelineCanvas",
+          "type": "integer",
+          "nullable": true,
+          "unit": "count",
+          "source": "FrameSample.Pipelines cumulative; analyzer differences by continuity",
+          "note": ""
+        },
+        {
+          "name": "pipelineMesh",
+          "type": "integer",
+          "nullable": true,
+          "unit": "count",
+          "source": "FrameSample.Pipelines cumulative; analyzer differences by continuity",
+          "note": ""
+        },
+        {
+          "name": "pipelineSurface",
+          "type": "integer",
+          "nullable": true,
+          "unit": "count",
+          "source": "FrameSample.Pipelines cumulative; analyzer differences by continuity",
+          "note": ""
+        },
+        {
+          "name": "pipelineDraw",
+          "type": "integer",
+          "nullable": true,
+          "unit": "count",
+          "source": "FrameSample.Pipelines cumulative; analyzer differences by continuity",
+          "note": ""
+        },
+        {
+          "name": "pipelineSpecialization",
+          "type": "integer",
+          "nullable": true,
+          "unit": "count",
+          "source": "FrameSample.Pipelines cumulative; analyzer differences by continuity",
+          "note": ""
+        },
+        {
+          "name": "gcPauseMs",
+          "type": "number",
+          "nullable": true,
+          "unit": "ms",
+          "source": "FrameSample.Gc.PauseMilliseconds",
+          "note": "Process-wide increment, not one function cost"
+        },
+        {
+          "name": "gcGen0",
+          "type": "integer",
+          "nullable": true,
+          "unit": "count",
+          "source": "FrameSample.Gc per collection interval",
+          "note": ""
+        },
+        {
+          "name": "gcGen1",
+          "type": "integer",
+          "nullable": true,
+          "unit": "count",
+          "source": "FrameSample.Gc per collection interval",
+          "note": ""
+        },
+        {
+          "name": "gcGen2",
+          "type": "integer",
+          "nullable": true,
+          "unit": "count",
+          "source": "FrameSample.Gc per collection interval",
+          "note": ""
+        },
+        {
+          "name": "allocatedBytes",
+          "type": "integer",
+          "nullable": true,
+          "unit": "B",
+          "source": "FrameSample.Gc.AllocatedBytes",
+          "note": "Process-wide approximate increment"
+        },
+        {
+          "name": "managedHeapMiB",
+          "type": "number",
+          "nullable": true,
+          "unit": "MiB",
+          "source": "FrameSample.Gc.ManagedHeapBytes / 1048576",
+          "note": ""
+        },
+        {
+          "name": "jitCompiledMethods",
+          "type": "integer",
+          "nullable": true,
+          "unit": "count",
+          "source": "FrameSample.Jit.CompiledMethods cumulative",
+          "note": ""
+        },
+        {
+          "name": "jitCompiledIlBytes",
+          "type": "integer",
+          "nullable": true,
+          "unit": "B",
+          "source": "FrameSample.Jit.CompiledIlBytes cumulative",
+          "note": ""
+        },
+        {
+          "name": "jitCompilationMs",
+          "type": "number",
+          "nullable": true,
+          "unit": "ms",
+          "source": "FrameSample.Jit.CompilationMilliseconds cumulative",
+          "note": ""
+        },
+        {
+          "name": "appState",
+          "type": "string",
+          "nullable": false,
+          "unit": null,
+          "source": "FrameSample.Context.State",
+          "note": ""
+        },
+        {
+          "name": "appActivity",
+          "type": "integer",
+          "nullable": false,
+          "unit": null,
+          "source": "FrameSample.Context.Activity",
+          "note": ""
+        },
+        {
+          "name": "windowFocused",
+          "type": "boolean",
+          "nullable": true,
+          "unit": null,
+          "source": "GAME-229 authoritative input desktop AND foreground focus",
+          "note": ""
+        },
+        {
+          "name": "windowCanDraw",
+          "type": "boolean",
+          "nullable": true,
+          "unit": null,
+          "source": "FrameSample.Context.WindowCanDraw",
+          "note": ""
+        },
+        {
+          "name": "treePaused",
+          "type": "boolean",
+          "nullable": true,
+          "unit": null,
+          "source": "FrameSample.Context.TreePaused",
+          "note": ""
+        },
+        {
+          "name": "contextFlags",
+          "type": "integer",
+          "nullable": true,
+          "unit": null,
+          "source": "GAME-221 + perf-fields contextFlags",
+          "note": "Null until owner event context attached; low four bits AppActivity"
+        },
+        {
+          "name": "contextComplete",
+          "type": "boolean",
+          "nullable": false,
+          "unit": null,
+          "source": "GAME-221 context ownership/coverage; false before attachment",
+          "note": ""
+        },
+        {
+          "name": "gapBefore",
+          "type": "boolean",
+          "nullable": false,
+          "unit": null,
+          "source": "Frame ring last dropped interval",
+          "note": "True invalidates current dtMs for complete experience windows"
+        },
+        {
+          "name": "viewportSamplesJson",
+          "type": "array",
+          "nullable": true,
+          "unit": null,
+          "source": "Copied IFrameStatistics viewport span",
+          "note": "JSON array in RFC4180 CSV cell; item schema viewportSample; main costs may be approximately aligned with unknown source/freshness; unconfirmed on-demand costs stay null; [] means no registered viewports, null means missing capture"
+        }
+      ]
+    },
+    "samples": {
+      "file": "samples.csv",
+      "kind": "csv",
+      "clock": "monotonicMs",
+      "rateHz": 2,
+      "producer": "GAME-221",
+      "columns": [
+        {
+          "name": "schema",
+          "type": "integer",
+          "nullable": false,
+          "unit": null,
+          "source": "dictionary.schema",
+          "note": ""
+        },
+        {
+          "name": "sequence",
+          "type": "integer",
+          "nullable": false,
+          "unit": null,
+          "source": "per-stream accepted attempt counter",
+          "note": ""
+        },
+        {
+          "name": "collectionFrame",
+          "type": "integer",
+          "nullable": true,
+          "unit": null,
+          "source": "Engine.GetProcessFrames; not GPU frame",
+          "note": ""
+        },
+        {
+          "name": "monotonicMs",
+          "type": "number",
+          "nullable": false,
+          "unit": "ms",
+          "source": "Godot.Time.GetTicksUsec / 1000",
+          "note": ""
+        },
+        {
+          "name": "xM",
+          "type": "number",
+          "nullable": true,
+          "unit": "m",
+          "source": "IObserverState settled body position",
+          "note": ""
+        },
+        {
+          "name": "yM",
+          "type": "number",
+          "nullable": true,
+          "unit": "m",
+          "source": "IObserverState settled body position",
+          "note": ""
+        },
+        {
+          "name": "zM",
+          "type": "number",
+          "nullable": true,
+          "unit": "m",
+          "source": "IObserverState settled body position",
+          "note": ""
+        },
+        {
+          "name": "speedMps",
+          "type": "number",
+          "nullable": true,
+          "unit": "m/s",
+          "source": "IObserverState/ICameraRig speed with owner semantics; GAME-221 verifies",
+          "note": ""
+        },
+        {
+          "name": "mode",
+          "type": "string",
+          "nullable": true,
+          "unit": null,
+          "source": "GAME-221 owner snapshot",
+          "note": ""
+        },
+        {
+          "name": "medium",
+          "type": "string",
+          "nullable": true,
+          "unit": null,
+          "source": "GAME-221 owner snapshot",
+          "note": ""
+        },
+        {
+          "name": "building",
+          "type": "string",
+          "nullable": true,
+          "unit": null,
+          "source": "GAME-221 owner snapshot",
+          "note": ""
+        },
+        {
+          "name": "floor",
+          "type": "string",
+          "nullable": true,
+          "unit": null,
+          "source": "GAME-221 owner snapshot",
+          "note": ""
+        },
+        {
+          "name": "appState",
+          "type": "string",
+          "nullable": true,
+          "unit": null,
+          "source": "GAME-221 owner snapshot",
+          "note": ""
+        },
+        {
+          "name": "map",
+          "type": "string",
+          "nullable": true,
+          "unit": null,
+          "source": "GAME-221 owner snapshot",
+          "note": ""
+        },
+        {
+          "name": "worldHours",
+          "type": "number",
+          "nullable": true,
+          "unit": "h",
+          "source": "IWorldState",
+          "note": ""
+        },
+        {
+          "name": "clockHours",
+          "type": "number",
+          "nullable": true,
+          "unit": "h",
+          "source": "IWorldState",
+          "note": ""
+        },
+        {
+          "name": "season",
+          "type": "string",
+          "nullable": true,
+          "unit": null,
+          "source": "IWorldState",
+          "note": ""
+        },
+        {
+          "name": "seasonFraction",
+          "type": "number",
+          "nullable": true,
+          "unit": "ratio",
+          "source": "IWorldState",
+          "note": ""
+        },
+        {
+          "name": "weather",
+          "type": "string",
+          "nullable": true,
+          "unit": null,
+          "source": "IWorldState",
+          "note": ""
+        },
+        {
+          "name": "weatherIntensity",
+          "type": "number",
+          "nullable": true,
+          "unit": "ratio",
+          "source": "IWorldState",
+          "note": ""
+        },
+        {
+          "name": "flowRate",
+          "type": "number",
+          "nullable": true,
+          "unit": null,
+          "source": "IWorldState",
+          "note": ""
+        },
+        {
+          "name": "worldTransition",
+          "type": "integer",
+          "nullable": true,
+          "unit": null,
+          "source": "IWorldState",
+          "note": ""
+        },
+        {
+          "name": "workingSetMiB",
+          "type": "number",
+          "nullable": true,
+          "unit": "MiB",
+          "source": "GAME-221 main thread slow snapshot; each source independent",
+          "note": ""
+        },
+        {
+          "name": "privateMiB",
+          "type": "number",
+          "nullable": true,
+          "unit": "MiB",
+          "source": "GAME-221 main thread slow snapshot; each source independent",
+          "note": ""
+        },
+        {
+          "name": "managedHeapMiB",
+          "type": "number",
+          "nullable": true,
+          "unit": "MiB",
+          "source": "GAME-221 main thread slow snapshot; each source independent",
+          "note": ""
+        },
+        {
+          "name": "godotStaticMiB",
+          "type": "number",
+          "nullable": true,
+          "unit": "MiB",
+          "source": "GAME-221 main thread slow snapshot; each source independent",
+          "note": ""
+        },
+        {
+          "name": "engineVideoMemoryMiB",
+          "type": "number",
+          "nullable": true,
+          "unit": "MiB",
+          "source": "GAME-221 main thread slow snapshot; each source independent",
+          "note": ""
+        },
+        {
+          "name": "textureMemoryMiB",
+          "type": "number",
+          "nullable": true,
+          "unit": "MiB",
+          "source": "GAME-221 main thread slow snapshot; each source independent",
+          "note": ""
+        },
+        {
+          "name": "bufferMemoryMiB",
+          "type": "number",
+          "nullable": true,
+          "unit": "MiB",
+          "source": "GAME-221 main thread slow snapshot; each source independent",
+          "note": ""
+        },
+        {
+          "name": "objectCount",
+          "type": "integer",
+          "nullable": true,
+          "unit": "count",
+          "source": "GAME-221 Godot monitor",
+          "note": ""
+        },
+        {
+          "name": "nodeCount",
+          "type": "integer",
+          "nullable": true,
+          "unit": "count",
+          "source": "GAME-221 Godot monitor",
+          "note": ""
+        },
+        {
+          "name": "orphanNodeCount",
+          "type": "integer",
+          "nullable": true,
+          "unit": "count",
+          "source": "GAME-221 Godot monitor",
+          "note": ""
+        },
+        {
+          "name": "resourceCount",
+          "type": "integer",
+          "nullable": true,
+          "unit": "count",
+          "source": "GAME-221 Godot monitor",
+          "note": ""
+        },
+        {
+          "name": "processCpuFraction",
+          "type": "number",
+          "nullable": true,
+          "unit": "ratio",
+          "source": "Process TotalProcessorTime delta / monotonic delta / logical cores",
+          "note": "0..1; first interval null"
+        }
+      ]
+    },
+    "hw": {
+      "file": "hw.csv",
+      "kind": "csv",
+      "clock": "monotonicMs",
+      "rateHz": 1,
+      "producer": "GAME-222",
+      "columns": [
+        {
+          "name": "schema",
+          "type": "integer",
+          "nullable": false,
+          "unit": null,
+          "source": "dictionary.schema",
+          "note": ""
+        },
+        {
+          "name": "sequence",
+          "type": "integer",
+          "nullable": false,
+          "unit": null,
+          "source": "per-stream accepted attempt counter",
+          "note": ""
+        },
+        {
+          "name": "collectionFrame",
+          "type": "integer",
+          "nullable": true,
+          "unit": null,
+          "source": "Engine.GetProcessFrames; not GPU frame",
+          "note": ""
+        },
+        {
+          "name": "monotonicMs",
+          "type": "number",
+          "nullable": false,
+          "unit": "ms",
+          "source": "Godot.Time.GetTicksUsec / 1000",
+          "note": ""
+        },
+        {
+          "name": "intervalStartMs",
+          "type": "number",
+          "nullable": true,
+          "unit": "ms",
+          "source": "hardware worker monotonic interval start",
+          "note": ""
+        },
+        {
+          "name": "gpuUtilFraction",
+          "type": "number",
+          "nullable": true,
+          "unit": "ratio",
+          "source": "NVML whole GPU kernel-active fraction",
+          "note": ""
+        },
+        {
+          "name": "gpuMemoryUtilFraction",
+          "type": "number",
+          "nullable": true,
+          "unit": "ratio",
+          "source": "NVML memory controller activity; not allocation ratio",
+          "note": ""
+        },
+        {
+          "name": "wholeGpuMemoryMiB",
+          "type": "number",
+          "nullable": true,
+          "unit": "MiB",
+          "source": "NVML whole card incl desktop/other processes",
+          "note": ""
+        },
+        {
+          "name": "processVideoMemoryMiB",
+          "type": "number",
+          "nullable": true,
+          "unit": "MiB",
+          "source": "process GPU memory source; null until explicitly supported",
+          "note": ""
+        },
+        {
+          "name": "gpuClockMHz",
+          "type": "number",
+          "nullable": true,
+          "unit": "MHz",
+          "source": "NVML",
+          "note": ""
+        },
+        {
+          "name": "gpuMaxClockMHz",
+          "type": "number",
+          "nullable": true,
+          "unit": "MHz",
+          "source": "NVML supported max",
+          "note": ""
+        },
+        {
+          "name": "memoryClockMHz",
+          "type": "number",
+          "nullable": true,
+          "unit": "MHz",
+          "source": "NVML",
+          "note": ""
+        },
+        {
+          "name": "powerW",
+          "type": "number",
+          "nullable": true,
+          "unit": "W",
+          "source": "NVML",
+          "note": ""
+        },
+        {
+          "name": "temperatureC",
+          "type": "number",
+          "nullable": true,
+          "unit": "degC",
+          "source": "NVML",
+          "note": ""
+        },
+        {
+          "name": "pstate",
+          "type": "string",
+          "nullable": true,
+          "unit": null,
+          "source": "NVML P0..P15 independent from B0..B4",
+          "note": ""
+        },
+        {
+          "name": "throttleReasonBits",
+          "type": "integer",
+          "nullable": true,
+          "unit": null,
+          "source": "NVML reasons raw mask",
+          "note": ""
+        },
+        {
+          "name": "energyJ",
+          "type": "number",
+          "nullable": true,
+          "unit": "J",
+          "source": "NVML monotonic cumulative energy difference; first/reset null",
+          "note": ""
+        },
+        {
+          "name": "violationPowerMs",
+          "type": "number",
+          "nullable": true,
+          "unit": "ms",
+          "source": "NVML policy violation cumulative interval delta",
+          "note": "Policies can overlap; do not sum"
+        },
+        {
+          "name": "violationThermalMs",
+          "type": "number",
+          "nullable": true,
+          "unit": "ms",
+          "source": "NVML policy violation cumulative interval delta",
+          "note": "Policies can overlap; do not sum"
+        },
+        {
+          "name": "violationLowUtilMs",
+          "type": "number",
+          "nullable": true,
+          "unit": "ms",
+          "source": "NVML policy violation cumulative interval delta",
+          "note": "Policies can overlap; do not sum"
+        },
+        {
+          "name": "systemCpuFraction",
+          "type": "number",
+          "nullable": true,
+          "unit": "ratio",
+          "source": "hardware slow source if supported",
+          "note": ""
+        },
+        {
+          "name": "availableRamMiB",
+          "type": "number",
+          "nullable": true,
+          "unit": "MiB",
+          "source": "OS memory info",
+          "note": ""
+        }
+      ]
+    },
+    "hwfast": {
+      "file": "hwfast.csv",
+      "kind": "csv",
+      "clock": "monotonicMs",
+      "rateHz": null,
+      "producer": "GAME-222",
+      "columns": [
+        {
+          "name": "schema",
+          "type": "integer",
+          "nullable": false,
+          "unit": null,
+          "source": "dictionary.schema",
+          "note": ""
+        },
+        {
+          "name": "sequence",
+          "type": "integer",
+          "nullable": false,
+          "unit": null,
+          "source": "per-stream accepted attempt counter",
+          "note": ""
+        },
+        {
+          "name": "collectionFrame",
+          "type": "integer",
+          "nullable": true,
+          "unit": null,
+          "source": "Engine.GetProcessFrames; not GPU frame",
+          "note": ""
+        },
+        {
+          "name": "monotonicMs",
+          "type": "number",
+          "nullable": false,
+          "unit": "ms",
+          "source": "Godot.Time.GetTicksUsec / 1000",
+          "note": ""
+        },
+        {
+          "name": "driverTimestampUs",
+          "type": "integer",
+          "nullable": true,
+          "unit": "us",
+          "source": "NVML raw driver timestamp; wall-clock domain",
+          "note": ""
+        },
+        {
+          "name": "queryStartMs",
+          "type": "number",
+          "nullable": true,
+          "unit": "ms",
+          "source": "hardware worker monotonic clock",
+          "note": ""
+        },
+        {
+          "name": "queryEndMs",
+          "type": "number",
+          "nullable": true,
+          "unit": "ms",
+          "source": "hardware worker monotonic clock",
+          "note": ""
+        },
+        {
+          "name": "observedIntervalMs",
+          "type": "number",
+          "nullable": true,
+          "unit": "ms",
+          "source": "difference of adjacent same-metric driver timestamps; first null",
+          "note": ""
+        },
+        {
+          "name": "metric",
+          "type": "string",
+          "nullable": false,
+          "unit": null,
+          "source": "powerW|gpuUtilFraction|gpuMemoryUtilFraction",
+          "note": ""
+        },
+        {
+          "name": "value",
+          "type": "number",
+          "nullable": true,
+          "unit": null,
+          "source": "NVML sample value; unit from metric",
+          "note": ""
+        },
+        {
+          "name": "capability",
+          "type": "string",
+          "nullable": false,
+          "unit": null,
+          "source": "supported|unsupported|unavailable|notAttached",
+          "note": ""
+        }
+      ]
+    },
+    "events": {
+      "file": "events.jsonl",
+      "kind": "jsonl",
+      "clock": "monotonicMs",
+      "rateHz": null,
+      "producer": "GAME-220/221/222",
+      "columns": [
+        {
+          "name": "schema",
+          "type": "integer",
+          "nullable": false,
+          "unit": null,
+          "source": "dictionary.schema",
+          "note": ""
+        },
+        {
+          "name": "sequence",
+          "type": "integer",
+          "nullable": false,
+          "unit": null,
+          "source": "per-stream accepted attempt counter",
+          "note": ""
+        },
+        {
+          "name": "collectionFrame",
+          "type": "integer",
+          "nullable": true,
+          "unit": null,
+          "source": "Engine.GetProcessFrames; not GPU frame",
+          "note": ""
+        },
+        {
+          "name": "monotonicMs",
+          "type": "number",
+          "nullable": false,
+          "unit": "ms",
+          "source": "Godot.Time.GetTicksUsec / 1000",
+          "note": ""
+        },
+        {
+          "name": "event",
+          "type": "string",
+          "nullable": false,
+          "unit": null,
+          "source": "registered eventTypes",
+          "note": ""
+        },
+        {
+          "name": "source",
+          "type": "string",
+          "nullable": false,
+          "unit": null,
+          "source": "main|watchdog|hardware|writer",
+          "note": ""
+        },
+        {
+          "name": "payload",
+          "type": "object",
+          "nullable": false,
+          "unit": null,
+          "source": "per-type payloadFields; immutable captured values",
+          "note": ""
+        }
+      ]
+    }
+  }
+}

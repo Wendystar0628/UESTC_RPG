@@ -83,6 +83,7 @@ public sealed class NodeBenchTests
     }
 
     [TestCase, TestCategory(TestReason.Contract)]
+    [TestCategory("Slow")]
     public void ANodeOnAPlazaSeatsItsBenchesOnItWithTheirBacksToItsEdge()
     {
         // Opus review 17:28, judged on a made-up 12 × 10 m pedestrian square on open ground with a rest node at its middle: the
@@ -102,6 +103,7 @@ public sealed class NodeBenchTests
     }
 
     [TestCase, TestCategory(TestReason.Contract)]
+    [TestCategory("Slow")]
     public void ANodeOnAWideWalkSeatsItsBenchesAtTheWalksEdge()
     {
         // Opus review 13c2b 21:05, judged on made-up walks on open ground with a rest node on them: a 5 m walk seats the node's benches on
@@ -126,6 +128,7 @@ public sealed class NodeBenchTests
     }
 
     [TestCase, TestCategory(TestReason.Contract)]
+    [TestCategory("Slow")]
     public void APlazaCarryingAWalkLineStillSeatsItsNodeBenches()
     {
         // Opus review 13c2b rework, on the made-up 12 × 10 m square with a 2.5 m footway running through its middle: the walk line does
