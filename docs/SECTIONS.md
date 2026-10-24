@@ -1568,7 +1568,7 @@
   - ENG-ARCH 生命周期与发布 · L114 · 826
   - ENG-ARCH 就绪与等待 · L125 · 261
 - ENG-ARCH §3 契约 · L132 · 1.2k
-- ENG-ARCH §4 资源与烘焙 · L145 · 2.0k
+- ENG-ARCH §4 资源与烘焙 · L145 · 2.1k
 - ENG-ARCH §5 未交付能力的占位边界 · L161 · 257
 - ENG-ARCH §6 架构导向 · L169 · 545
 - ENG-ARCH §7 扩展点（RPG） · L177 · 70
@@ -1846,7 +1846,7 @@
 
 ## WF-FLOW · 开发流程
 
-`docs/workflow/WF-FLOW-开发流程.md` · 6.3k 字 · 一项任务从派工、施工（在临时工作树里写，交回前跑 G1 与受影响 G2）、统一编译推送、回报到评审的流程，防打架，按范围拆单，可调参数集中放
+`docs/workflow/WF-FLOW-开发流程.md` · 6.4k 字 · 一项任务从派工、施工（在临时工作树里写，交回前跑 G1 与受影响 G2）、统一编译推送、回报到评审的流程，防打架，按范围拆单，可调参数集中放
 关键词：开发流程、派工、施工单、按范围拆单、回报、评审、防打架、邻居、可调参数、DECISION-184、DECISION-211、评审通用结论
 
 - WF-FLOW §0 结论 · L22 · 526
@@ -1854,8 +1854,8 @@
 - WF-FLOW §1 全流程一览 · L35 · 616
 - WF-FLOW §2 派工与拆单 · L46 · 1.4k
   - WF-FLOW §2.1 防打架（DECISION-211） · L62 · 367
-- WF-FLOW §3 施工与回报 · L71 · 2.3k
-  - WF-FLOW §3.1 统一编译（DECISION-219） · L77 · 2.0k
+- WF-FLOW §3 施工与回报 · L71 · 2.4k
+  - WF-FLOW §3.1 统一编译（DECISION-219） · L77 · 2.1k
 - WF-FLOW §4 评审：审美与契约的交叉评审 · L90 · 702
 
 ## WF-MODEL · 模型、子代理与额度
@@ -2024,12 +2024,12 @@
 
 ## REG-DECISIONS-PROCESS · 协作与流程决策
 
-`docs/registry/REG-DECISIONS-PROCESS-协作与流程决策.md` · 18.8k 字 · 计划、协作、规范、登记四个域的已定决策：协作、流程、文档与代码规范、门禁流程
+`docs/registry/REG-DECISIONS-PROCESS-协作与流程决策.md` · 19.1k 字 · 计划、协作、规范、登记四个域的已定决策：协作、流程、文档与代码规范、门禁流程
 关键词：决策、流程、协作、文档规则、门禁流程、派工、主会话、子代理
 
 - REG-DECISIONS-PROCESS §0 结论 · L21 · 129
   - ★ REG-DECISIONS-PROCESS §0.1 接入要点 · L25 · 56
-- REG-DECISIONS-PROCESS §1 流程 · L29 · 18.2k
+- REG-DECISIONS-PROCESS §1 流程 · L29 · 18.5k
 
 ## REG-DECISIONS-SYSTEMS · 系统与工程决策
 
