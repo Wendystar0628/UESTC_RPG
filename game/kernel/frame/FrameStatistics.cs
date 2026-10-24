@@ -98,7 +98,7 @@ public sealed class FrameStatistics : IFrameStatistics, IMeasuredViewportRegistr
             CollectionFrame = frame, MonotonicMilliseconds = now, FrameMilliseconds = _phases.FrameMilliseconds,
             Phases = _phases.Phases, MainCycles = _phases.MainCycles, DrawCycles = _phases.DrawCycles,
             ObserverYawDegrees = yaw, CameraPitchDegrees = pitch, Context = context,
-            MainViewport = _viewports.MainSample, MeasuredViewportGpuMilliseconds = null,
+            MainViewport = _viewports.MainSample,
             FrameSetupCpuMilliseconds = _completedSetup, FrameSetupDrawFrame = _completedSetupFrame,
             RenderCounts = new(RenderInfo(RenderingServer.ViewportRenderInfoType.Visible, RenderingServer.ViewportRenderInfo.DrawCallsInFrame),
                 RenderInfo(RenderingServer.ViewportRenderInfoType.Visible, RenderingServer.ViewportRenderInfo.PrimitivesInFrame),

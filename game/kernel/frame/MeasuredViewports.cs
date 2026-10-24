@@ -29,6 +29,8 @@ internal sealed class MeasuredViewports(Rid mainViewport) : IMeasuredViewportReg
         ArgumentException.ThrowIfNullOrWhiteSpace(role);
         foreach (var item in _registrations)
             if (item.Viewport == viewport) throw new InvalidOperationException("Viewport is already measured.");
+        if (_registrations.Count >= KernelBudgets.PerfMeasuredViewportLimit)
+            throw new InvalidOperationException("Measured viewport registrations exceed the recording resource budget.");
         RenderingServer.ViewportSetMeasureRenderTime(viewport, true);
         var registration = new Registration(this, viewport, role);
         _registrations.Add(registration);

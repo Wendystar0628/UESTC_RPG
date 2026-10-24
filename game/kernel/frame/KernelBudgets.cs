@@ -11,6 +11,8 @@ public static class KernelBudgets
     public const double PerfHangWatchdogSeconds = 5;
     public const int PerfAuthorRetainedSessions = 20;
     public const long PerfAuthorRetainedBytes = 2L * 1024 * 1024 * 1024;
+    // Fixed recording-ring resource budget; register before publishing, never drop a row to resize.
+    public const int PerfMeasuredViewportLimit = 8;
 
     // ENG-BUDGET: the shared per-frame stream mount budget
     public const double StreamMountMilliseconds = 1;

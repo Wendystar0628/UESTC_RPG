@@ -24,7 +24,6 @@ internal static class PerfFrameWriter
         ["cameraPitchDeg"] = row => row.Sample.CameraPitchDegrees,
         ["mainViewportCpuMs"] = row => row.Sample.MainViewport.CpuRenderMilliseconds,
         ["mainViewportGpuMs"] = row => row.Sample.MainViewport.GpuRenderMilliseconds,
-        ["measuredViewportGpuMs"] = row => row.Sample.MeasuredViewportGpuMilliseconds,
         ["frameSetupCpuMs"] = row => row.Sample.FrameSetupCpuMilliseconds,
         ["frameSetupDrawFrame"] = row => row.Sample.FrameSetupDrawFrame,
         ["visibleDrawCalls"] = row => row.Sample.RenderCounts.VisibleDrawCalls,
@@ -50,8 +49,8 @@ internal static class PerfFrameWriter
         ["windowFocused"] = row => row.Sample.Context.WindowFocused,
         ["windowCanDraw"] = row => row.Sample.Context.WindowCanDraw,
         ["treePaused"] = row => row.Sample.Context.TreePaused,
-        ["contextFlags"] = _ => null,
-        ["contextComplete"] = _ => false, // GAME-221 is not attached; never claim a steady frame.
+        ["contextFlags"] = row => row.ContextFlags,
+        ["contextComplete"] = row => row.ContextComplete,
         ["gapBefore"] = row => row.Gap.Rows > 0,
         ["viewportSamplesJson"] = Viewports
     };

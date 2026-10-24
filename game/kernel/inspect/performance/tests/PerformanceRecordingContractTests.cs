@@ -13,6 +13,52 @@ public sealed class PerformanceRecordingContractTests
     private static int _directorySequence;
 
     [TestCase, TestCategory(TestReason.Contract)]
+    public async Task AuthorLatestPointsAtRecordingOnlyAfterStartAndAtFormalManifestAfterClose()
+    {
+        string root = TemporaryDirectory();
+        var dictionary = Dictionary();
+        var session = new PerfRecordingSession(root, PerfOrigin.Play,
+            new DateTimeOffset(2026, 1, 1, 0, 0, 0, TimeSpan.Zero), dictionary, new JsonObject());
+        try
+        {
+            if (!await session.Ready) throw new InvalidOperationException("The author test session did not open.");
+            string latest = Path.Combine(root, "latest.json");
+            if (File.Exists(latest)) throw new InvalidOperationException("A reserved session was advertised as recording.");
+            var anchor = new PerfClockAnchor(0, 100, 0);
+            session.Begin(anchor);
+            if (!await session.StartedWriting) throw new InvalidOperationException("The session did not write its start.");
+            var pointer = JsonNode.Parse(File.ReadAllText(latest))!;
+            string directory = Path.Combine(root, session.Id!);
+            if (pointer["state"]!.GetValue<string>() != "recording" ||
+                pointer["manifest"]!.GetValue<string>() != session.Id + "/manifest.pending.json" ||
+                pointer["startedAt"]!.GetValue<DateTimeOffset>() != DateTimeOffset.FromUnixTimeMilliseconds(anchor.UnixMs) ||
+                File.Exists(Path.Combine(directory, "manifest.json")))
+                throw new InvalidOperationException("The recording pointer did not retain its actual state and start anchor.");
+            string[] writtenEvents;
+            using (var readable = new FileStream(Path.Combine(directory, "events.jsonl"), FileMode.Open,
+                FileAccess.Read, FileShare.ReadWrite))
+            using (var reader = new StreamReader(readable))
+                writtenEvents = reader.ReadToEnd().Split('\n', StringSplitOptions.RemoveEmptyEntries)
+                    .Select(line => JsonNode.Parse(line)!["event"]!.GetValue<string>()).ToArray();
+            if (!writtenEvents.Contains("session.start") || !writtenEvents.Contains("clock.anchor"))
+                throw new InvalidOperationException("The active pointer was published before start data reached the stream.");
+            session.Stop(PerfEndReason.Toggle, 120);
+            var result = await session.Completion;
+            pointer = JsonNode.Parse(File.ReadAllText(latest))!;
+            if (!result.Closed || pointer["state"]!.GetValue<string>() != "closed" ||
+                pointer["manifest"]!.GetValue<string>() != session.Id + "/manifest.json" ||
+                !File.Exists(Path.Combine(directory, "manifest.json")))
+                throw new InvalidOperationException("The closed pointer preceded or missed its formal manifest.");
+        }
+        finally
+        {
+            session.Stop(PerfEndReason.Exit, 120);
+            await session.Completion;
+            Directory.Delete(root, true);
+        }
+    }
+
+    [TestCase, TestCategory(TestReason.Contract)]
     public async Task StreamsFollowDictionaryAndFinalManifestWaitsForDrain()
     {
         string root = TemporaryDirectory();
@@ -87,7 +133,7 @@ public sealed class PerformanceRecordingContractTests
     [TestCase, TestCategory(TestReason.Contract)]
     public void AFullRingPreservesTheNextFrameGapAndTheFinalGap()
     {
-        var ring = new PerfFrameRing(0, 1);
+        var ring = new PerfFrameRing(capacity: 1);
         var sample = new FrameSample { CollectionFrame = 10, MonotonicMilliseconds = 100 };
         if (!ring.TryWrite(in sample, ReadOnlySpan<ViewportFrameSample>.Empty)) throw new InvalidOperationException("Empty ring rejected a row.");
         sample = sample with { CollectionFrame = 11, MonotonicMilliseconds = 110 };
@@ -103,8 +149,8 @@ public sealed class PerformanceRecordingContractTests
 
     private static PerfFieldDictionary Dictionary() => new(File.ReadAllText(RepositoryFixture.FilePath("game", "data", "perf-fields.json")));
     private static PerfRecordingSession Session(string root, PerfFieldDictionary dictionary) =>
-        new(root, PerfOrigin.Ai, new DateTimeOffset(2026, 1, 1, 0, 0, 0, TimeSpan.Zero), dictionary, new JsonObject(), 0);
-    private static string TemporaryDirectory()
+        new(root, PerfOrigin.Ai, new DateTimeOffset(2026, 1, 1, 0, 0, 0, TimeSpan.Zero), dictionary, new JsonObject());
+    internal static string TemporaryDirectory()
     {
         string path = Path.Combine(Path.GetTempPath(), $"uestc-perf-{Environment.ProcessId}-{Interlocked.Increment(ref _directorySequence)}");
         Directory.CreateDirectory(path);

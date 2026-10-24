@@ -54,10 +54,12 @@ public partial class GameCaptureNode : Node, IGameCapture, IRegistryExitParticip
     private string? _path;
     private string _diagnosticId = null!;
     private bool _busy, _exiting;
+    private PerformanceRecordingService _performance = null!;
 
     public override void _Ready()
     {
         _loading = KernelServices.Get<IAppLoadingPresentation>();
+        _performance = KernelServices.Get<PerformanceRecordingService>();
         _diagnosticId = KernelServices.Services.Entries.Single(entry =>
             entry.Kind == RegistrationKind.Node && entry.Type == GetType()).Id;
     }
@@ -105,7 +107,7 @@ public partial class GameCaptureNode : Node, IGameCapture, IRegistryExitParticip
         using var lifetime = CancellationTokenSource.CreateLinkedTokenSource(_exit.Token, cancellationToken);
         try
         {
-            var image = await ReadFrameAsync(hideUi: true, lifetime.Token, () =>
+            var image = await ReadFrameAsync("saveThumbnail", hideUi: true, lifetime.Token, () =>
             {
                 if (_loading.Active) throw new OperationCanceledException("A thumbnail cannot replace the loading cover.");
                 return true;
@@ -140,14 +142,18 @@ public partial class GameCaptureNode : Node, IGameCapture, IRegistryExitParticip
         FrameAwaiter.ReadyDrawAsync(this, () => Available() && (ready?.Invoke() ?? true),
             TimeSpan.FromSeconds(BootTuning.StalledSeconds), cancellationToken);
 
-    private async Task<Image> ReadFrameAsync(bool hideUi, CancellationToken cancellationToken, Func<bool>? ready = null)
+    private async Task<Image> ReadFrameAsync(string purpose, bool hideUi, CancellationToken cancellationToken, Func<bool>? ready = null)
     {
         HideUi(hideUi);
         try
         {
             await WaitForFrameAsync(ready, cancellationToken);
             cancellationToken.ThrowIfCancellationRequested();
-            var image = GetViewport().GetTexture().GetImage();
+            ulong frame = Engine.GetProcessFrames();
+            _performance.Readback("begin", purpose, frame);
+            Image image;
+            try { image = GetViewport().GetTexture().GetImage(); }
+            finally { _performance.Readback("end", purpose, frame); }
             if (!image.IsEmpty())
             {
                 try
@@ -167,7 +173,7 @@ public partial class GameCaptureNode : Node, IGameCapture, IRegistryExitParticip
     private async Task<string> SaveFrameAsync(string path, bool hideUi, bool unique, CancellationToken cancellationToken,
         Func<bool>? ready = null)
     {
-        var image = await ReadFrameAsync(hideUi, cancellationToken, ready);
+        var image = await ReadFrameAsync("photo", hideUi, cancellationToken, ready);
         var encoding = Task.Run(() =>
         {
             using (image)

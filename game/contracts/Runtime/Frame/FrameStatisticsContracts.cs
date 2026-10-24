@@ -68,7 +68,6 @@ public readonly record struct FrameSample
     public float? ObserverYawDegrees { get; init; }
     public float? CameraPitchDegrees { get; init; }
     public ViewportFrameSample MainViewport { get; init; }
-    public double? MeasuredViewportGpuMilliseconds { get; init; }
     // 在 B4 读取本次绘制已写入的 setup，保留来源，不与视口回读假定同帧。
     public double? FrameSetupCpuMilliseconds { get; init; }
     public ulong? FrameSetupDrawFrame { get; init; }

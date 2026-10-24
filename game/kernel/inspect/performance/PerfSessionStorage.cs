@@ -37,12 +37,14 @@ internal static class PerfSessionStorage
         var closed = new List<(string Directory, string Id, long Bytes, DateTimeOffset StartedAt)>();
         foreach (string directory in Directory.EnumerateDirectories(root))
         {
-            string manifestPath = Path.Combine(directory, "manifest.json");
-            if (!File.Exists(manifestPath)) continue;
             using var sessionLock = TryLock(directory);
             if (sessionLock is null) continue;
+            string manifestPath = Path.Combine(directory, "manifest.json");
+            bool formal = File.Exists(manifestPath);
+            if (!formal) manifestPath = Path.Combine(directory, "manifest.pending.json");
+            if (!File.Exists(manifestPath)) continue;
             var manifest = JsonNode.Parse(File.ReadAllText(manifestPath))?.AsObject();
-            if (manifest?["status"]?.GetValue<string>() != "closed" ||
+            if (manifest is null || formal && manifest["status"]?.GetValue<string>() != "closed" ||
                 manifest["id"]?.GetValue<string>() != Path.GetFileName(directory)) continue;
             long bytes = Directory.EnumerateFiles(directory, "*", SearchOption.AllDirectories).Sum(path => new FileInfo(path).Length);
             closed.Add((directory, Path.GetFileName(directory), bytes, manifest["startedAt"]!.GetValue<DateTimeOffset>()));

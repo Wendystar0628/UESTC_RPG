@@ -1,5 +1,5 @@
 {
-  "schema": 1,
+  "schema": 2,
   "authority": "ENG-PERF-DATA",
   "draft": false,
   "encoding": {
@@ -89,6 +89,21 @@
       "name": "newGameOrLoad",
       "value": 2048,
       "source": "app/save owner"
+    },
+    {
+      "name": "transitionSettling",
+      "value": 4096,
+      "source": "GAME-221 dictionary rules"
+    },
+    {
+      "name": "drawResuming",
+      "value": 8192,
+      "source": "GAME-221 dictionary rules"
+    },
+    {
+      "name": "worldOrArrivalTransition",
+      "value": 16384,
+      "source": "GAME-221 dictionary rules"
     }
   ],
   "nonSteadyRules": {
@@ -107,7 +122,8 @@
           "world.season",
           "transit",
           "map.travel",
-          "view.mode"
+          "view.mode",
+          "map.arrival"
         ],
         "interval": "owner begin to actual completion",
         "settleMs": 2000
@@ -137,6 +153,14 @@
         "purpose": "saveThumbnail",
         "interval": "the captured collection frame only",
         "settleMs": 0
+      },
+      {
+        "name": "drawResume",
+        "events": [],
+        "interval": "first drawable collection frames after a non-drawable window",
+        "settleMs": 0,
+        "settleFrames": 3,
+        "source": "FrameSample.Context.WindowCanDraw false-to-true; contextFlags.drawResuming"
       }
     ],
     "notAutomaticallyNonSteady": [
@@ -145,7 +169,22 @@
       "focus loss",
       "menu/input lock"
     ],
-    "thresholdAuthority": "settleMs only here; no duplicate runtime or analyzer literals"
+    "thresholdAuthority": "settleMs only here; no duplicate runtime or analyzer literals",
+    "contextCoverage": "contextComplete requires AppFlow/Save/Map/Quality owner boundaries plus existing app/arrival/readback coverage; optional world-command and input-lock request telemetry does not gate it; required owner boundaries currently notAttached",
+    "contextFlagNames": [
+      "mapTransition",
+      "cameraTransition",
+      "seasonTransition",
+      "notPlaying",
+      "loadingVisible",
+      "qualityApplying",
+      "captureFrame",
+      "qualitySettling",
+      "newGameOrLoad",
+      "transitionSettling",
+      "drawResuming",
+      "worldOrArrivalTransition"
+    ]
   },
   "objects": {
     "viewportSample": [
@@ -225,6 +264,32 @@
         "provenance": "Same as viewportSample.cpuRenderMs; an approximate cost does not establish mergeable GPU timing",
         "note": "Distributions/budgets/trends allowed; no exact per-frame spike attribution"
       }
+    ],
+    "nvmlPolicyInterval": [
+      {
+        "name": "policy",
+        "type": "string",
+        "nullable": false,
+        "unit": null,
+        "source": "NvmlPolicy",
+        "note": "power|thermal|syncBoost|boardLimit|lowUtilization|reliability"
+      },
+      {
+        "name": "counter",
+        "type": "object",
+        "nullable": false,
+        "unit": null,
+        "source": "NvmlCounterInterval",
+        "note": "Cumulative and delta are raw ns; intervalStartMs/readStartMs/readEndMs/elapsedMs are host monotonic ms; driverReferenceUs remains driver domain; reset/readGap/status are independent per policy"
+      },
+      {
+        "name": "violationMs",
+        "type": "number",
+        "nullable": true,
+        "unit": "ms",
+        "source": "NvmlPolicyInterval.ViolationMs",
+        "note": "Counter delta / 1000000; first/reset null; readGap retains the full longer cumulative interval"
+      }
     ]
   },
   "eventTypes": {
@@ -273,143 +338,253 @@
     },
     "app.state": {
       "owner": "GAME-221",
-      "payloadFields": {},
-      "state": "reserved; attach exact owner payload before emitting, schema increment if changed"
+      "payloadFields": {
+        "from": "string",
+        "to": "string"
+      }
     },
     "app.phase": {
       "owner": "GAME-221",
-      "payloadFields": {},
-      "state": "reserved; attach exact owner payload before emitting, schema increment if changed"
+      "payloadFields": {
+        "phase": "string"
+      }
     },
     "app.activity": {
       "owner": "GAME-221",
-      "payloadFields": {},
-      "state": "reserved; attach exact owner payload before emitting, schema increment if changed"
+      "payloadFields": {
+        "activity": "integer"
+      }
     },
     "game.enter": {
       "owner": "GAME-221",
       "payloadFields": {},
-      "state": "reserved; attach exact owner payload before emitting, schema increment if changed"
+      "state": "notAttached; required owner boundary contract pending"
     },
     "save.write": {
       "owner": "GAME-221",
-      "payloadFields": {},
-      "state": "reserved; attach exact owner payload before emitting, schema increment if changed"
+      "payloadFields": {
+        "state": "SaveState",
+        "busy": "boolean",
+        "active": "SlotId?"
+      }
     },
     "save.load": {
       "owner": "GAME-221",
       "payloadFields": {},
-      "state": "reserved; attach exact owner payload before emitting, schema increment if changed"
+      "state": "notAttached; required owner boundary contract pending"
     },
     "map.travel": {
       "owner": "GAME-221",
-      "payloadFields": {},
-      "state": "reserved; attach exact owner payload before emitting, schema increment if changed"
+      "payloadFields": {
+        "phase": "current|loaded|unloading",
+        "map": "string?",
+        "requestedMap": "null; owner request event unavailable"
+      }
     },
     "transit": {
       "owner": "GAME-221",
-      "payloadFields": {},
-      "state": "reserved; attach exact owner payload before emitting, schema increment if changed"
+      "payloadFields": {
+        "phase": "observed|end|detached",
+        "kind": "string",
+        "result": "string?"
+      },
+      "timing": "first observed owner handle and first observed terminal task state; no request target or exact command timestamp is claimed",
+      "requestCapability": "notAttached; owner snapshots/handles only, optional request telemetry deferred"
     },
     "view.mode": {
       "owner": "GAME-221",
-      "payloadFields": {},
-      "state": "reserved; attach exact owner payload before emitting, schema increment if changed"
+      "payloadFields": {
+        "mode": "string",
+        "observation": "ownerState"
+      }
     },
     "view.medium": {
       "owner": "GAME-221",
-      "payloadFields": {},
-      "state": "reserved; attach exact owner payload before emitting, schema increment if changed"
+      "payloadFields": {
+        "medium": "string"
+      }
     },
     "view.space": {
       "owner": "GAME-221",
-      "payloadFields": {},
-      "state": "reserved; attach exact owner payload before emitting, schema increment if changed"
+      "payloadFields": {
+        "space": "NavSpace?"
+      }
     },
     "world.season": {
       "owner": "GAME-221",
-      "payloadFields": {},
-      "state": "reserved; attach exact owner payload before emitting, schema increment if changed"
+      "payloadFields": {
+        "season": "string",
+        "observation": "ownerTarget"
+      },
+      "requestCapability": "notAttached; owner snapshots/handles only, optional request telemetry deferred"
     },
     "world.weather": {
       "owner": "GAME-221",
-      "payloadFields": {},
-      "state": "reserved; attach exact owner payload before emitting, schema increment if changed"
+      "payloadFields": {
+        "weather": "WeatherSel"
+      },
+      "requestCapability": "notAttached; owner snapshots/handles only, optional request telemetry deferred"
     },
     "world.flow": {
       "owner": "GAME-221",
-      "payloadFields": {},
-      "state": "reserved; attach exact owner payload before emitting, schema increment if changed"
+      "payloadFields": {
+        "rate": "integer"
+      },
+      "requestCapability": "notAttached; owner snapshots/handles only, optional request telemetry deferred"
     },
     "world.clockJump": {
       "owner": "GAME-221",
       "payloadFields": {},
-      "state": "reserved; attach exact owner payload before emitting, schema increment if changed"
+      "state": "notAttached; optional owner request telemetry deferred"
     },
     "input.lock": {
       "owner": "GAME-221",
       "payloadFields": {},
-      "state": "reserved; attach exact owner payload before emitting, schema increment if changed"
+      "state": "notAttached; optional owner request telemetry deferred"
     },
     "settings.quality": {
       "owner": "GAME-221",
-      "payloadFields": {},
-      "state": "reserved; attach exact owner payload before emitting, schema increment if changed"
+      "payloadFields": {
+        "change": "QualityChange",
+        "requested": "map<QualityKnob,float> camelCase keys",
+        "effective": "map<QualityKnob,float> camelCase keys",
+        "observation": "ownerChanged"
+      }
     },
     "window.focus": {
       "owner": "GAME-221",
-      "payloadFields": {},
-      "state": "reserved; attach exact owner payload before emitting, schema increment if changed"
+      "payloadFields": {
+        "focused": "boolean?"
+      }
     },
     "window.mode": {
       "owner": "GAME-221",
-      "payloadFields": {},
-      "state": "reserved; attach exact owner payload before emitting, schema increment if changed"
+      "payloadFields": {
+        "mode": "string"
+      }
     },
     "window.size": {
       "owner": "GAME-221",
-      "payloadFields": {},
-      "state": "reserved; attach exact owner payload before emitting, schema increment if changed"
+      "payloadFields": {
+        "widthPx": "number",
+        "heightPx": "number"
+      }
     },
     "display.refresh": {
       "owner": "GAME-221",
-      "payloadFields": {},
-      "state": "reserved; attach exact owner payload before emitting, schema increment if changed"
+      "payloadFields": {
+        "refreshHz": "number?"
+      }
     },
     "sync.readback": {
       "owner": "GAME-221",
-      "payloadFields": {},
-      "state": "reserved; attach exact owner payload before emitting, schema increment if changed"
+      "payloadFields": {
+        "phase": "begin|end",
+        "purpose": "photo|saveThumbnail"
+      }
     },
     "hang.begin": {
       "owner": "GAME-221",
-      "payloadFields": {},
-      "state": "reserved; attach exact owner payload before emitting, schema increment if changed"
+      "payloadFields": {
+        "boundary": "string",
+        "stalledSinceMs": "number"
+      }
     },
     "hang.end": {
       "owner": "GAME-221",
-      "payloadFields": {},
-      "state": "reserved; attach exact owner payload before emitting, schema increment if changed"
+      "payloadFields": {
+        "boundary": "string",
+        "stalledSinceMs": "number",
+        "resumedBoundary": "string?",
+        "reason": "heartbeatResumed|recordingStopped"
+      }
     },
     "measurement.selfcheck": {
       "owner": "GAME-221",
-      "payloadFields": {},
-      "state": "reserved; attach exact owner payload before emitting, schema increment if changed"
+      "payloadFields": {
+        "frames": "integer",
+        "missingPhases": "integer",
+        "missingTiming": "integer",
+        "phaseUnavailableFraction": "ratio",
+        "timingUnavailableFraction": "ratio"
+      }
     },
     "gc.detail": {
       "owner": "GAME-221",
-      "payloadFields": {},
-      "state": "reserved; attach exact owner payload before emitting, schema increment if changed"
+      "payloadFields": {
+        "pauseMs": "number",
+        "gen0": "integer",
+        "gen1": "integer",
+        "gen2": "integer",
+        "allocatedBytes": "integer",
+        "managedHeapMiB": "number"
+      }
     },
     "producer.failure": {
       "owner": "GAME-221",
-      "payloadFields": {},
-      "state": "reserved; attach exact owner payload before emitting, schema increment if changed"
+      "payloadFields": {
+        "producer": "string",
+        "exceptionType": "string?"
+      }
     },
     "snapshot.initial": {
       "owner": "GAME-221",
-      "payloadFields": {},
-      "state": "reserved; attach exact owner payload before emitting, schema increment if changed"
+      "payloadFields": {
+        "appState": "string",
+        "activity": "integer",
+        "map": "string?",
+        "worldInstance": "integer",
+        "mode": "string",
+        "space": "NavSpace?",
+        "medium": "string",
+        "surfaces": "integer",
+        "settingsPage": "string?",
+        "saveState": "SaveState",
+        "saveBusy": "boolean",
+        "qualityRequested": "map<QualityKnob,float> camelCase keys",
+        "qualityEffective": "map<QualityKnob,float> camelCase keys",
+        "missing": "string[]",
+        "loadingActive": "boolean",
+        "loadingCovered": "boolean"
+      }
+    },
+    "map.arrival": {
+      "owner": "GAME-221",
+      "payloadFields": {
+        "phase": "current|begin|end|detached",
+        "destination": "MapStreamDestination",
+        "result": "string?"
+      },
+      "timing": "begin uses actual ArrivalChanged; end is first main-thread observation of Done; current is a snapshot, never replayed as a begin"
+    },
+    "world.transition": {
+      "owner": "GAME-221",
+      "payloadFields": {
+        "transition": "integer",
+        "worldHours": "number",
+        "clockHours": "number"
+      }
+    },
+    "world.instance": {
+      "owner": "GAME-221",
+      "payloadFields": {
+        "instance": "integer"
+      }
+    },
+    "ui.surface": {
+      "owner": "GAME-221",
+      "payloadFields": {
+        "surfaces": "integer",
+        "settingsPage": "string?"
+      }
+    },
+    "loading.state": {
+      "owner": "GAME-221",
+      "payloadFields": {
+        "active": "boolean",
+        "covered": "boolean"
+      },
+      "timing": "first main-thread observation of the loading owner state"
     }
   },
   "streams": {
@@ -567,14 +742,6 @@
           "alignment": "Same as viewportSample.gpuRenderMs",
           "provenance": "Same as mainViewportCpuMs; sourceDrawFrame/resultUpdated stay null when unproven",
           "note": "Approximate cost distribution/budget/trend and DECISION-318 sample; spike candidate only within +/-2 frames, no exact phase/cause attribution"
-        },
-        {
-          "name": "measuredViewportGpuMs",
-          "type": "number",
-          "nullable": true,
-          "unit": "ms",
-          "source": "FrameSample.MeasuredViewportGpuMilliseconds",
-          "note": "Null unless all registered viewport result sources/freshness confirmed and mergeable"
         },
         {
           "name": "frameSetupCpuMs",
@@ -782,7 +949,7 @@
           "nullable": true,
           "unit": null,
           "source": "GAME-221 + perf-fields contextFlags",
-          "note": "Null until owner event context attached; low four bits AppActivity"
+          "note": "Dictionary flags from owner snapshots; incomplete coverage is explicit in contextComplete and snapshot.initial.missing"
         },
         {
           "name": "contextComplete",
@@ -878,8 +1045,8 @@
           "type": "number",
           "nullable": true,
           "unit": "m/s",
-          "source": "IObserverState/ICameraRig speed with owner semantics; GAME-221 verifies",
-          "note": ""
+          "source": "IWalkController.Velocity.Length for Walk; Fly null",
+          "note": "ICameraRig.Speed is a configured speed, not measured velocity"
         },
         {
           "name": "mode",
@@ -1135,8 +1302,8 @@
           "type": "number",
           "nullable": true,
           "unit": "ms",
-          "source": "hardware worker monotonic interval start",
-          "note": ""
+          "source": "hardware previous query interval start when known",
+          "note": "Generic sample interval; energy and policy intervals have independent clocks and must use their own fields"
         },
         {
           "name": "gpuUtilFraction",
@@ -1199,8 +1366,8 @@
           "type": "number",
           "nullable": true,
           "unit": "W",
-          "source": "NVML",
-          "note": ""
+          "source": "NvmlSlowSample.PowerW",
+          "note": "NVML power usage query; energy-derived average is stored separately"
         },
         {
           "name": "temperatureC",
@@ -1231,8 +1398,8 @@
           "type": "number",
           "nullable": true,
           "unit": "J",
-          "source": "NVML monotonic cumulative energy difference; first/reset null",
-          "note": ""
+          "source": "NvmlSlowSample.EnergyJ",
+          "note": "Delta J over its actual successful-read interval; first/reset null; readGap retains the full longer cumulative interval"
         },
         {
           "name": "violationPowerMs",
@@ -1273,6 +1440,126 @@
           "unit": "MiB",
           "source": "OS memory info",
           "note": ""
+        },
+        {
+          "name": "deviceIndex",
+          "type": "integer",
+          "nullable": true,
+          "unit": null,
+          "source": "NvmlIdentity",
+          "note": "Actual enumerated identity; null if the identity query is unavailable"
+        },
+        {
+          "name": "gpuUuid",
+          "type": "string",
+          "nullable": true,
+          "unit": null,
+          "source": "NvmlIdentity",
+          "note": "Actual enumerated identity; null if the identity query is unavailable"
+        },
+        {
+          "name": "pciBusId",
+          "type": "string",
+          "nullable": true,
+          "unit": null,
+          "source": "NvmlIdentity",
+          "note": "Actual enumerated identity; null if the identity query is unavailable"
+        },
+        {
+          "name": "statusJson",
+          "type": "object",
+          "nullable": true,
+          "unit": null,
+          "source": "NvmlStatus/per-field status",
+          "note": "Per-field capabilities, reason and native code; exception objects stay in the service failure/result receiver"
+        },
+        {
+          "name": "queryStartMs",
+          "type": "number",
+          "nullable": true,
+          "unit": "ms",
+          "source": "NvmlSlowSample",
+          "note": ""
+        },
+        {
+          "name": "queryEndMs",
+          "type": "number",
+          "nullable": true,
+          "unit": "ms",
+          "source": "NvmlSlowSample",
+          "note": ""
+        },
+        {
+          "name": "energyCumulativeJ",
+          "type": "number",
+          "nullable": true,
+          "unit": "J",
+          "source": "NvmlSlowSample.Energy.Cumulative / 1000",
+          "note": ""
+        },
+        {
+          "name": "energyAveragePowerW",
+          "type": "number",
+          "nullable": true,
+          "unit": "W",
+          "source": "NvmlSlowSample.EnergyAveragePowerW",
+          "note": "Energy interval delta divided by its own actual successful-read elapsed time; first/reset null; readGap means the interval spans failed queries"
+        },
+        {
+          "name": "energyIntervalStartMs",
+          "type": "number",
+          "nullable": true,
+          "unit": "ms",
+          "source": "NvmlSlowSample.Energy independent counter interval",
+          "note": ""
+        },
+        {
+          "name": "energyReadStartMs",
+          "type": "number",
+          "nullable": true,
+          "unit": "ms",
+          "source": "NvmlSlowSample.Energy independent counter interval",
+          "note": ""
+        },
+        {
+          "name": "energyReadEndMs",
+          "type": "number",
+          "nullable": true,
+          "unit": "ms",
+          "source": "NvmlSlowSample.Energy independent counter interval",
+          "note": ""
+        },
+        {
+          "name": "energyIntervalMs",
+          "type": "number",
+          "nullable": true,
+          "unit": "ms",
+          "source": "NvmlSlowSample.Energy independent counter interval",
+          "note": ""
+        },
+        {
+          "name": "energyReset",
+          "type": "boolean",
+          "nullable": true,
+          "unit": null,
+          "source": "NvmlSlowSample.Energy",
+          "note": "Null if hardware producer is not attached"
+        },
+        {
+          "name": "energyReadGap",
+          "type": "boolean",
+          "nullable": true,
+          "unit": null,
+          "source": "NvmlSlowSample.Energy",
+          "note": "Null if hardware producer is not attached"
+        },
+        {
+          "name": "policyIntervalsJson",
+          "type": "array",
+          "nullable": true,
+          "unit": null,
+          "source": "NvmlSlowSample.Policies",
+          "note": "Each policy retains its own counter/interval/status/driverReferenceUs; policy durations overlap and must never be summed"
         }
       ]
     },
@@ -1370,6 +1657,94 @@
           "unit": null,
           "source": "supported|unsupported|unavailable|notAttached",
           "note": ""
+        },
+        {
+          "name": "deviceIndex",
+          "type": "integer",
+          "nullable": true,
+          "unit": null,
+          "source": "NvmlIdentity",
+          "note": "Actual enumerated identity; null if the identity query is unavailable"
+        },
+        {
+          "name": "gpuUuid",
+          "type": "string",
+          "nullable": true,
+          "unit": null,
+          "source": "NvmlIdentity",
+          "note": "Actual enumerated identity; null if the identity query is unavailable"
+        },
+        {
+          "name": "pciBusId",
+          "type": "string",
+          "nullable": true,
+          "unit": null,
+          "source": "NvmlIdentity",
+          "note": "Actual enumerated identity; null if the identity query is unavailable"
+        },
+        {
+          "name": "statusJson",
+          "type": "object",
+          "nullable": true,
+          "unit": null,
+          "source": "NvmlStatus/per-field status",
+          "note": "Per-field capabilities, reason and native code; exception objects stay in the service failure/result receiver"
+        },
+        {
+          "name": "previousSuccessfulReadMs",
+          "type": "number",
+          "nullable": true,
+          "unit": "ms",
+          "source": "NvmlFastBatch",
+          "note": "Previous read and host span do not promise driver retention; null until known"
+        },
+        {
+          "name": "successfulReadSpanMs",
+          "type": "number",
+          "nullable": true,
+          "unit": "ms",
+          "source": "NvmlFastBatch",
+          "note": "Previous read and host span do not promise driver retention; null until known"
+        },
+        {
+          "name": "observedBufferSpanMs",
+          "type": "number",
+          "nullable": true,
+          "unit": "ms",
+          "source": "NvmlFastBatch",
+          "note": "Previous read and host span do not promise driver retention; null until known"
+        },
+        {
+          "name": "cursorBeforeUs",
+          "type": "integer",
+          "nullable": true,
+          "unit": "us",
+          "source": "NvmlFastBatch",
+          "note": "Raw driver-domain watermark, never a process-frame mapping"
+        },
+        {
+          "name": "cursorAfterUs",
+          "type": "integer",
+          "nullable": true,
+          "unit": "us",
+          "source": "NvmlFastBatch",
+          "note": "Raw driver-domain watermark, never a process-frame mapping"
+        },
+        {
+          "name": "lostSampleCount",
+          "type": "integer",
+          "nullable": true,
+          "unit": "count",
+          "source": "NvmlFastBatch.LostSampleCount",
+          "note": "Always null with the current NVML API; no guaranteed sample period or loss count is exposed"
+        },
+        {
+          "name": "continuityReasonsJson",
+          "type": "array",
+          "nullable": true,
+          "unit": null,
+          "source": "NvmlFastBatch.ContinuityReasons",
+          "note": "Explicit first-read, timestamp reversal/reset/duplicate and unproven retention/query gap reasons"
         }
       ]
     },

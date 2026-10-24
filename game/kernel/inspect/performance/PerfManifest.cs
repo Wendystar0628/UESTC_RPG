@@ -24,8 +24,9 @@ internal static class PerfManifest
         var windowSize = DisplayServer.WindowGetSize();
         var memory = OS.GetMemoryInfo();
         double? ramMiB = memory.TryGetValue("physical", out var physical) ? physical.AsInt64() / 1048576d : null;
-        var effective = quality.Knobs.ToDictionary(knob => knob.Knob.ToString(), knob => quality.Effective[knob.Knob]);
-        var requested = quality.Knobs.ToDictionary(knob => knob.Knob.ToString(), knob => quality.Effective.Requested(knob.Knob));
+        var effective = QualityValues(quality, requested: false);
+        var requested = QualityValues(quality, requested: true);
+        float renderScale = quality.Effective[QualityKnob.RenderScale];
         int threadModel = ProjectSettings.GetSettingWithOverride("rendering/driver/threads/thread_model").AsInt32();
         float refresh = DisplayServer.ScreenGetRefreshRate(screen);
         var vSync = DisplayServer.WindowGetVsyncMode();
@@ -46,7 +47,7 @@ internal static class PerfManifest
             {
                 screen, screenCount = DisplayServer.GetScreenCount(), screenWidthPx = screenSize.X,
                 screenHeightPx = screenSize.Y, refreshHz = float.IsFinite(refresh) && refresh > 0 ? (float?)refresh : null,
-                dpiScale = DisplayServer.ScreenGetScale(screen), windowMode = DisplayServer.WindowGetMode().ToString(),
+                dpiScale = DisplayServer.ScreenGetScale(screen), windowMode = DisplayServer.WindowGetMode(),
                 windowWidthPx = windowSize.X, windowHeightPx = windowSize.Y,
                 focused = desktop.WindowFocused, visible = DisplayServer.WindowCanDraw()
             },
@@ -58,7 +59,7 @@ internal static class PerfManifest
             environment = CaptureEnvironment(),
             pacing = new
             {
-                vsync = vSync.ToString(), maxFps = Engine.MaxFps,
+                vsync = vSync, maxFps = Engine.MaxFps,
                 requestedFrameLimit = quality.Effective.Requested(QualityKnob.FrameRateLimit),
                 frameLimitReason = Engine.MaxFps == pacing.MaxFps ? pacing.Reason : null,
                 reasonSource = "FrameLimitPolicy with current inputs, only when actual cap agrees",
@@ -66,8 +67,8 @@ internal static class PerfManifest
             },
             graphics = new
             {
-                preset = quality.Effective.Preset.ToString(), origin = (string?)null, requested, effective,
-                internalWidthPx = (int?)null, internalHeightPx = (int?)null
+                preset = quality.Effective.Preset, origin = (string?)null, requested, effective,
+                internalWidthPx = (int)(windowSize.X * renderScale), internalHeightPx = (int)(windowSize.Y * renderScale)
             },
             run = new { args = OS.GetCmdlineUserArgs(), outputDirectory = options.PerfOutputDirectory, diagnostics = (object?)null },
             kernelBudgets = new
@@ -86,20 +87,24 @@ internal static class PerfManifest
                 "Build commit/dirty identity is not attached; missing configuration remains null.",
                 "CPU P/E topology, dedicated VRAM and image/queue counts are not exposed by attached authorities; physical RAM is null if OS cannot report it.",
                 "Power plan and HAGS capture is not attached. Software lists report fixed-name process presence, not whether an overlay or remote session is active.",
-                "Frame-limit reason is null if current policy inputs do not match the actual cap; quality apply origin and internal render size are not exposed.",
-                "GAME-221 context/events/slow sampler/watchdog and GAME-222 hardware producer are not attached; null context is not steady.",
+                "Frame-limit reason is null if current policy inputs do not match the actual cap; quality apply origin is not exposed.",
+                "Owner command-event coverage is incomplete (eventCoverageMissing); contextComplete=false never certifies steady frames. Hardware producer attachment is reported separately.",
                 "Desktop and focus facts remain null when GAME-229 cannot establish them; windowCanDraw is not desktop identity."
             }
         }, PerfFieldDictionary.JsonOptions)!.AsObject();
         return root;
     }
 
+    internal static Dictionary<QualityKnob, float> QualityValues(IQualityService quality, bool requested) =>
+        quality.Knobs.ToDictionary(knob => knob.Knob,
+            knob => requested ? quality.Effective.Requested(knob.Knob) : quality.Effective[knob.Knob]);
+
     private static object CaptureMachine(double? ramMiB) => new
             {
                 id = Environment.MachineName, label = Environment.MachineName, cpu = OS.GetProcessorName(),
                 physicalCores = (int?)null, logicalCores = OS.GetProcessorCount(), ramMiB,
                 cpuTopology = (object?)null, gpu = RenderingServer.GetVideoAdapterName(), gpuVendor = RenderingServer.GetVideoAdapterVendor(),
-                gpuType = RenderingServer.GetVideoAdapterType().ToString(), vramMiB = (double?)null, driver = OS.GetVideoAdapterDriverInfo(),
+                gpuType = RenderingServer.GetVideoAdapterType(), vramMiB = (double?)null, driver = OS.GetVideoAdapterDriverInfo(),
                 api = RenderingServer.GetCurrentRenderingDriverName(), apiVersion = RenderingServer.GetVideoAdapterApiVersion(),
                 os = RuntimeInformation.OSDescription
             };
