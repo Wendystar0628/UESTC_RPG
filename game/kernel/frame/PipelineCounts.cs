@@ -1,11 +1,14 @@
+using Campus.Contracts;
 using Godot;
 
 namespace Campus.Kernel.Frame;
 
-public readonly record struct PipelineCounts(double Surface, double Draw, double Canvas)
+internal static class PipelineCounts
 {
-    public static PipelineCounts Read(bool canvas = true) => new(
-        Performance.GetMonitor(Performance.Monitor.PipelineCompilationsSurface),
-        Performance.GetMonitor(Performance.Monitor.PipelineCompilationsDraw),
-        canvas ? Performance.GetMonitor(Performance.Monitor.PipelineCompilationsCanvas) : 0);
+    internal static FramePipelineCounts Read() => new(
+        (long)Performance.GetMonitor(Performance.Monitor.PipelineCompilationsCanvas),
+        (long)Performance.GetMonitor(Performance.Monitor.PipelineCompilationsMesh),
+        (long)Performance.GetMonitor(Performance.Monitor.PipelineCompilationsSurface),
+        (long)Performance.GetMonitor(Performance.Monitor.PipelineCompilationsDraw),
+        (long)Performance.GetMonitor(Performance.Monitor.PipelineCompilationsSpecialization));
 }

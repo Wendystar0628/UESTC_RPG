@@ -25,6 +25,7 @@ public partial class KernelStage : Node3D, IAppExit, IAppFailure, IStageGateHost
 {
     private StageCamera? _view;
     private FrameStatistics? _statistics;
+    private StageFrameSampling? _frameSampling;
     private IAppFlow? _flow;
     private IMapRuntime? _mapRuntime;
     private bool _ready;
@@ -96,13 +97,17 @@ public partial class KernelStage : Node3D, IAppExit, IAppFailure, IStageGateHost
     {
         var registry = KernelServices.Services;
         var view = CreateStagePresentation(registry);
+        _statistics = new(GetViewport());
+        _statistics.Enable();
+        registry.Add<IFrameStatistics>(_statistics);
+        registry.Add<IMeasuredViewportRegistry>(_statistics);
         registry.InstantiateServices();
         BindHudDependencies(registry);
         BindMapDependencies(registry, view.Camera);
         AttachGlobalNodes(registry);
         BindRuntimeServices(registry, view);
-        _statistics = new(GetViewport());
-        _statistics.Enable();
+        _frameSampling = new(_statistics, GetTree(), (FrameClockNode)registry.Create(typeof(FrameClockNode)),
+            _flow!, registry.Get<IObserverState>(), registry.Get<ICameraRig>(), registry.Get<IInputRouter>());
         DisplayServer.WindowSetTitle("电光年华");
         GD.Print($"[ENG-ARCH][map=-][phase=compose] global objects={registry.Created.Count}");
     }
@@ -375,7 +380,6 @@ public partial class KernelStage : Node3D, IAppExit, IAppFailure, IStageGateHost
         {
             if (_realtimeStarted || !_startupFinished || _flow?.IsPlaying != true) return;
             _realtimeStarted = true;
-            _statistics!.MarkRealtime();
             _ready = true;
             Phase = "realtime";
             GD.Print($"[ENG-ARCH][map={KernelServices.Get<IMapService>().Current.Value}][phase=realtime] flow={_flow.State}; startup complete");
@@ -470,7 +474,7 @@ public partial class KernelStage : Node3D, IAppExit, IAppFailure, IStageGateHost
     {
         if (!_closing && !_appFailure.Failed && _mapRuntime?.Failure is { } failure && failure is not OperationCanceledException)
             Report(failure);
-        _statistics?.Sample();
+        _frameSampling?.Sample();
         _startupTrace.TraceFrame(_statistics);
         if (_flow is IAppBootFlow boot && _flow.State is AppState.Title) _startupTrace.TracePreloadReady(boot);
         _gate.OnProcess();
@@ -508,6 +512,7 @@ public partial class KernelStage : Node3D, IAppExit, IAppFailure, IStageGateHost
     public override void _ExitTree()
     {
         _treeExited = true;
+        _frameSampling?.Dispose();
         if (AppBoot.Failed || _shutdown.Complete) return;
         // Leaving the tree first destroys the lifetime required by async cleanup. Reject that
         // ownership violation synchronously; never start a replacement shutdown on a dead stage.
@@ -523,8 +528,8 @@ public partial class KernelStage : Node3D, IAppExit, IAppFailure, IStageGateHost
     internal async Task ShutdownAndQuit()
     {
         _ready = false;
-        _statistics = null;
         var failures = new List<Exception>();
+        try { _frameSampling?.Dispose(); } catch (Exception error) { failures.Add(error); }
         try { Phase = "shutdown"; } catch (Exception error) { failures.Add(error); }
         try { _captureLifetime.Cancel(); } catch (Exception error) { failures.Add(error); }
         try { await _gate.DrainStartupSample(); } catch (Exception error) { failures.Add(error); }
@@ -555,6 +560,8 @@ public partial class KernelStage : Node3D, IAppExit, IAppFailure, IStageGateHost
         try { await DisposeBootLoading(); } catch (Exception error) { failures.Add(error); }
         try { await KernelServices.Services.ShutdownAsync(this, _gate.TraceClose); }
         catch (Exception error) { failures.Add(error); }
+        try { _statistics?.Dispose(); } catch (Exception error) { failures.Add(error); }
+        _statistics = null;
         try { _gate.TraceClose("shutdown-complete"); } catch (Exception error) { failures.Add(error); }
         try { _gate.ReportShutdown(); } catch (Exception error) { failures.Add(error); }
         if (failures.Count > 0) Report(new AggregateException("Stage cleanup failed.", failures));

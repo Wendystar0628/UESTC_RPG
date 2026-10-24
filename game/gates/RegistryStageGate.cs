@@ -16,8 +16,7 @@ public static class RegistryStageGate
     {
         if (AppBoot.Options.Capture.Gate != "registry") return false;
         var report = RegistryGateRunner.Run(KernelServices.Services, ProjectSettings.GetSetting("campus/maps/index").AsString(),
-            AppBoot.Options.Flow.Map, AppBoot.Options.AllMaps, ReadData, [typeof(IAppExit),
-                typeof(Camera3D), typeof(WorldEnvironment), typeof(Godot.Environment), typeof(CanvasLayer)], DirAccess.GetFilesAt);
+            AppBoot.Options.Flow.Map, AppBoot.Options.AllMaps, ReadData, RegistryGateRunner.StageCompositionInputs, DirAccess.GetFilesAt);
         GD.Print("G5_REGISTRY_RESULT " + JsonSerializer.Serialize(report, ContractJson.Options));
         return true;
     }

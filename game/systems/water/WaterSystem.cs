@@ -33,6 +33,8 @@ public partial class WaterSystem : Node, IMapAware, IQualityAware, IReflectionWo
     private readonly IShaderMaterialSource? _materials;
     private readonly IMapContentSource? _content;
     private readonly IBakeContextSource? _builds;
+    private readonly IMeasuredViewportRegistry? _measurements;
+    private IDisposable? _viewportMeasurement;
     private ShaderMaterial? _proxyMaterial;
     private SubViewport? _viewport;
     private Camera3D? _mirror;
@@ -49,13 +51,14 @@ public partial class WaterSystem : Node, IMapAware, IQualityAware, IReflectionWo
     public WaterSystem() { }
 
     public WaterSystem(IMediumState medium, IWorldState world, IShaderMaterialSource materials,
-        IMapContentSource content, IBakeContextSource builds) : this()
+        IMapContentSource content, IBakeContextSource builds, IMeasuredViewportRegistry measurements) : this()
     {
         _medium = medium;
         _world = world;
         _materials = materials;
         _content = content;
         _builds = builds;
+        _measurements = measurements;
     }
 
     /// <summary>Lake number that currently has the planar reflection, or -1.</summary>
@@ -111,6 +114,7 @@ public partial class WaterSystem : Node, IMapAware, IQualityAware, IReflectionWo
         _viewport.AddChild(_mirror);
         _viewport.AddChild(new WorldEnvironment { Name = "ReflectionSky", Environment = _environment });
         AddChild(_viewport);
+        RegisterMeasurement();
         RenderingServer.GlobalShaderParameterSet(ReflectTex, _viewport.GetTexture());
         RenderingServer.GlobalShaderParameterSet(ReflectLake, -1);
         GetWindow().SizeChanged += OnSizeChanged;
@@ -120,6 +124,7 @@ public partial class WaterSystem : Node, IMapAware, IQualityAware, IReflectionWo
 
     public override void _ExitTree()
     {
+        UnregisterMeasurement();
         // Consumers synchronously release their proxy RIDs while the old world and material still exist.
         _available = false;
         Changed?.Invoke();
@@ -131,6 +136,8 @@ public partial class WaterSystem : Node, IMapAware, IQualityAware, IReflectionWo
 
     public void OnMapUnloading(MapId from)
     {
+        UnregisterMeasurement();
+        if (_viewport is not null) _viewport.RenderTargetUpdateMode = SubViewport.UpdateMode.Disabled;
         _lakes = new([]);
         _lake = -1;
         RenderingServer.GlobalShaderParameterSet(ReflectLake, -1);
@@ -146,6 +153,19 @@ public partial class WaterSystem : Node, IMapAware, IQualityAware, IReflectionWo
         _lakes = ReflectionLakes.FromBodies(bodies, ReflectionLakes.AreaSamples);
         _lake = -1;
         _frame = 0;
+        RegisterMeasurement();
+    }
+
+    private void RegisterMeasurement()
+    {
+        if (_viewportMeasurement is null && _viewport is not null)
+            _viewportMeasurement = _measurements?.Register(_viewport.GetViewportRid(), "倒影");
+    }
+
+    private void UnregisterMeasurement()
+    {
+        _viewportMeasurement?.Dispose();
+        _viewportMeasurement = null;
     }
 
     private void OnWorldInstanceChanged(long _)
@@ -199,18 +219,25 @@ public partial class WaterSystem : Node, IMapAware, IQualityAware, IReflectionWo
     public override void _Process(double delta)
     {
         if (_viewport is null || _mirror is null) return;
+        var drawRequested = UpdateReflection(_viewport, _mirror);
+        if (_viewportMeasurement is not null)
+            _measurements!.ReportDraw(_viewport.GetViewportRid(), Engine.GetProcessFrames(), drawRequested);
+    }
+
+    private bool UpdateReflection(SubViewport viewport, Camera3D mirror)
+    {
         // Keep the existing live rendering policy; this does not gate other source views' demand.
         var kind = _medium?.Current.Kind ?? MediumKind.Air;
         if (kind is MediumKind.Underwater or MediumKind.Underground)
         {
-            _viewport.RenderTargetUpdateMode = SubViewport.UpdateMode.Disabled;
-            return;
+            viewport.RenderTargetUpdateMode = SubViewport.UpdateMode.Disabled;
+            return false;
         }
         // The mirror must match the camera that renders this frame exactly, including its projection,
         // so it follows the viewport's current Camera3D rather than the rig's pose.
         var main = GetViewport().GetCamera3D();
-        if (main is null || _lakes.Lakes.Count == 0) return;
-        if (_frame++ % _interval != 0) return;
+        if (main is null || _lakes.Lakes.Count == 0) return false;
+        if (_frame++ % _interval != 0) return false;
 
         var eye = main.GlobalPosition;
         var transform = main.GlobalTransform;
@@ -220,8 +247,8 @@ public partial class WaterSystem : Node, IMapAware, IQualityAware, IReflectionWo
         CameraFrustum.Fill(cameraTransform, projection, _renderFrustum);
         if (!TrySelect(new(eye.X, eye.Y, eye.Z), _renderFrustum, out var slot, out var h))
         {
-            _viewport.RenderTargetUpdateMode = SubViewport.UpdateMode.Disabled;
-            return;
+            viewport.RenderTargetUpdateMode = SubViewport.UpdateMode.Disabled;
+            return false;
         }
         if (slot != _lake)
         {
@@ -235,16 +262,17 @@ public partial class WaterSystem : Node, IMapAware, IQualityAware, IReflectionWo
         var u = transform.Basis.Y;
         var forward = ReflectionLakes.ReflectDirection(new(f.X, f.Y, f.Z));
         var up = ReflectionLakes.ReflectDirection(new(u.X, u.Y, u.Z));
-        _mirror.Fov = main.Fov;
-        _mirror.Near = main.Near;
-        _mirror.Far = main.Far;
-        _mirror.KeepAspect = main.KeepAspect;
-        _mirror.CullMask = main.CullMask;
-        _mirror.LookAtFromPosition(new(position.X, position.Y, position.Z),
+        mirror.Fov = main.Fov;
+        mirror.Near = main.Near;
+        mirror.Far = main.Far;
+        mirror.KeepAspect = main.KeepAspect;
+        mirror.CullMask = main.CullMask;
+        mirror.LookAtFromPosition(new(position.X, position.Y, position.Z),
             new(position.X + forward.X, position.Y + forward.Y, position.Z + forward.Z), new(up.X, up.Y, up.Z));
-        var vp = _mirror.GetCameraProjection() * new Projection(_mirror.GlobalTransform.AffineInverse());
+        var vp = mirror.GetCameraProjection() * new Projection(mirror.GlobalTransform.AffineInverse());
         RenderingServer.GlobalShaderParameterSet(ReflectVp, vp);
-        _viewport.RenderTargetUpdateMode = SubViewport.UpdateMode.Once;
+        viewport.RenderTargetUpdateMode = SubViewport.UpdateMode.Once;
+        return true;
     }
 
     /// <summary>The reflection uses the main world's tone mapping (ENG-PERF); sky, ambient, glow and fog stay off.</summary>

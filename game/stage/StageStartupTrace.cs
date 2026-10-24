@@ -16,7 +16,6 @@ internal sealed class StageStartupTrace
 {
     private bool _preloadReadyTraced;
     private readonly bool _profiling = System.Environment.GetEnvironmentVariable("UESTC_STARTUP_PROFILE") == "1";
-    private IAppFlow? _profileFlow;
     private IObserverState? _profileObserver;
     private IInputRouter? _profileInput;
     private IWalkController? _profileWalk;
@@ -37,13 +36,11 @@ internal sealed class StageStartupTrace
         GD.Print(FormattableString.Invariant($"STARTUP_PHASE {phase} {FrameClock.MonotonicMilliseconds:R} frame={Engine.GetProcessFrames()}{suffix}"));
     }
 
-    internal void TraceFrame(FrameStatistics? statistics)
+    internal void TraceFrame(IFrameStatistics? statistics)
     {
-        if (_profiling && statistics is not null)
+        if (_profiling && statistics?.Latest is { } frame)
         {
-            var frame = statistics.Current;
-            _profileFlow ??= KernelServices.Get<IAppFlow>();
-            var state = _profileFlow.State;
+            var state = frame.Context.State;
             var movement = "";
             if (state == AppState.Playing)
             {
@@ -68,7 +65,7 @@ internal sealed class StageStartupTrace
                 _profileCursorVisible = null;
                 _profileCursorHeld = null;
             }
-            GD.Print(FormattableString.Invariant($"STARTUP_FRAME {FrameClock.MonotonicMilliseconds:R} frame={Engine.GetProcessFrames()} rendererCpuMs={frame.CpuRenderMilliseconds:R} rendererGpuMs={frame.GpuRenderMilliseconds:R} flow={state} pipelineSurface={frame.Pipelines.Surface:R} pipelineDraw={frame.Pipelines.Draw:R} pipelineCanvas={frame.Pipelines.Canvas:R} gcPauseMs={frame.GcPauseMilliseconds:R} maxFps={Engine.MaxFps} windowFocus={DisplayServer.WindowIsFocused()}{movement}"));
+            GD.Print(FormattableString.Invariant($"STARTUP_FRAME {frame.MonotonicMilliseconds:R} frame={frame.CollectionFrame} rendererCpuMs={frame.MainViewport.CpuRenderMilliseconds:R} rendererGpuMs={frame.MainViewport.GpuRenderMilliseconds:R} flow={state} pipelineSurface={frame.Pipelines.Surface} pipelineDraw={frame.Pipelines.Draw} pipelineCanvas={frame.Pipelines.Canvas} gcPauseMs={frame.Gc.PauseMilliseconds:R} maxFps={Engine.MaxFps} windowFocus={frame.Context.WindowFocused}{movement}"));
         }
     }
 
@@ -83,7 +80,7 @@ internal sealed class StageStartupTrace
         var refreshRate = DisplayServer.ScreenGetRefreshRate(screen);
         var limit = FrameLimitPolicy.Resolve(quality[QualityKnob.FrameRateLimit],
             vSync != DisplayServer.VSyncMode.Disabled, refreshRate);
-        GD.Print(FormattableString.Invariant($"STARTUP_ENVIRONMENT {FrameClock.MonotonicMilliseconds:R} frame={Engine.GetProcessFrames()} cursorVisible={cursorVisible} cursorHeld={cursorHeld} maxFps={Engine.MaxFps} vSync={vSync} screen={screen} screenReportedRefreshHz={refreshRate:R} windowFocus={DisplayServer.WindowIsFocused()} windowHandle={windowHandle} windowWidth={size.X} windowHeight={size.Y} windowMode={DisplayServer.WindowGetMode()} frameLimitRequest={quality.Requested(QualityKnob.FrameRateLimit)} frameLimitReason={limit.Reason} renderScaleRequest={quality.Requested(QualityKnob.RenderScale):R} renderScaleEffective={scale:R} internalWidth={Math.Max(1, (int)(size.X * scale))} internalHeight={Math.Max(1, (int)(size.Y * scale))} physicsTicksPerSecond={Engine.PhysicsTicksPerSecond}"));
+        GD.Print(FormattableString.Invariant($"STARTUP_ENVIRONMENT {FrameClock.MonotonicMilliseconds:R} frame={Engine.GetProcessFrames()} cursorVisible={cursorVisible} cursorHeld={cursorHeld} maxFps={Engine.MaxFps} vSync={vSync} screen={screen} screenReportedRefreshHz={refreshRate:R} windowFocus={KernelServices.Get<IInputRouter>().DesktopState.WindowFocused} windowHandle={windowHandle} windowWidth={size.X} windowHeight={size.Y} windowMode={DisplayServer.WindowGetMode()} frameLimitRequest={quality.Requested(QualityKnob.FrameRateLimit)} frameLimitReason={limit.Reason} renderScaleRequest={quality.Requested(QualityKnob.RenderScale):R} renderScaleEffective={scale:R} internalWidth={Math.Max(1, (int)(size.X * scale))} internalHeight={Math.Max(1, (int)(size.Y * scale))} physicsTicksPerSecond={Engine.PhysicsTicksPerSecond}"));
     }
 
     internal static void TraceTitleInputReady(IAppBootFlow boot)

@@ -15,6 +15,11 @@ public sealed record RegistryGateReport(string Scope, int Maps, int Services, in
 /// <summary>Headless declaration checks that never construct services, nodes, or geometry.</summary>
 public static class RegistryGateRunner
 {
+    // Instances supplied by KernelStage rather than declaration-driven construction.
+    public static IReadOnlyCollection<Type> StageCompositionInputs { get; } =
+        [typeof(Campus.Contracts.AppFlow.IAppExit), typeof(Godot.Camera3D), typeof(Godot.WorldEnvironment), typeof(Godot.Environment),
+            typeof(Godot.CanvasLayer), typeof(IRequiredResources), typeof(IFrameStatistics), typeof(IMeasuredViewportRegistry)];
+
     public static RegistryGateReport Run(ServiceRegistry registry, string indexPath, MapId? requestedMap, bool allMaps,
         Func<string, byte[]> read, IReadOnlyCollection<Type> compositionInputs, Func<string, IEnumerable<string>> files)
     {

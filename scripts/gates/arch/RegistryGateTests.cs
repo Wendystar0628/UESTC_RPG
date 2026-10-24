@@ -1,9 +1,7 @@
 using Campus.Contracts;
-using Campus.Contracts.AppFlow;
 using Campus.Kernel.Registry;
 using Campus.Gates;
 using GdUnit4;
-using Godot;
 
 namespace Campus.Arch.Tests;
 
@@ -20,8 +18,7 @@ public sealed class RegistryGateTests
         var chosen = registry.Entries.Single(entry => entry.Kind == RegistrationKind.Service && entry.Id == typeof(IWorldModel).FullName);
         if (chosen.Type != typeof(ReplacementWorld) || chosen.IsStub) throw new InvalidOperationException("Real world replacement was not selected.");
         RegistryGateRunner.ValidateConstructorGraph(registry,
-            [typeof(IAppExit), typeof(Camera3D),
-                typeof(WorldEnvironment), typeof(Godot.Environment), typeof(CanvasLayer)]);
+            RegistryGateRunner.StageCompositionInputs);
         var factory = RegistrationDiscovery.ResolveInterior(registry.Entries, "fixture.family.first");
         if (factory.Type != typeof(InteriorFactory)) throw new InvalidOperationException("Factory prefix registration was not selected.");
         if (ReplacementWorld.Constructed || InteriorFactory.Constructed)
