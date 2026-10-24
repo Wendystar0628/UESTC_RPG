@@ -194,14 +194,15 @@
 
   function sameCell(x, dir, mark) { return Dash.sideKey(x.from) === dir.from && Dash.sideKey(x.to) === dir.to && x.mark === mark; }
 
-  function letterDrawer(dir, mark, cell, open, reasons) {
+  function letterDrawer(dir, mark, cell, at, open, reasons) {
+    var my = at >= 0 ? 'cells[' + at + ']' : 'cells[]';
     var mine = open.filter(function (x) { return sameCell(x, dir, mark); });
     var body = [kv([
-      ['近 7 天', cell && cell.n != null ? Dash.num(cell.n) + ' 封' : unsure('未确认', reasons, ['cells[].n'])],
+      ['近 7 天', cell && cell.n != null ? Dash.num(cell.n) + ' 封' : unsure('未确认', reasons, [my + '.n'])],
       NEED_REPLY[mark] ? ['响应时间中位数', cell && cell.p50 != null ? dur(cell.p50) : cell && cell.n != null ? '没有可配对的回信' : '未确认'] : null
     ])];
     if (!NEED_REPLY[mark]) body.push(emptyLine('这一类不要求回信，不统计响应时间'));
-    else if (!cell || cell.openN == null) body.push(emptyLine(unsure('这一格没回的信数未确认', reasons, ['cells[].openN'])));
+    else if (!cell || cell.openN == null) body.push(emptyLine(unsure('这一格没回的信数未确认', reasons, [my + '.openN'])));
     else if (!mine.length) body.push(emptyLine('这一格没有没回的信'));
     else body.push(h('div.tm-sub', '没回的 ' + mine.length + ' 封，最久的在前'), mine.map(function (x) { return openLetter(mark, x); }));
     Dash.drawer({ title: dir.text + ' · ' + mark, body: h('div.tm-drawer', body) });
@@ -234,7 +235,7 @@
         height: 150, label: '近 7 天来信封数，按方向和标记',
         onClick: function (p) {
           var c = cells[p.index];
-          if (c) letterDrawer(c._dir, c._mark, c._cell, L.open || [], L.reasons);
+          if (c) letterDrawer(c._dir, c._mark, c._cell, src.indexOf(c._cell), L.open || [], L.reasons);
         }
       }));
       if (L.unpaired) el.appendChild(h('div.note-line', '另有 ' + Dash.num(L.unpaired) + ' 封没写行号，无法配对，不算响应时间'));

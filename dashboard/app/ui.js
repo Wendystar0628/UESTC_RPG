@@ -192,9 +192,18 @@
     return late === true ? 'warn' : null;
   };
 
-  /* 后端给的缺数原因 [{code, fields, message}] 拼成一句；传 fields 时只取涉及这些字段的条目
-     （条目的 fields 为 [] 是所有条目、含 * 是窗口统计，都算涉及；'open' 也认 'open[].minutes'），没有就是 null */
-  function touches(f, q) { return f === '*' || f === q || f.indexOf(q + '.') === 0 || f.indexOf(q + '[') === 0; }
+  /* 后端给的缺数原因 [{code, fields, message}] 拼成一句；传 fields 时只取涉及这些字段的条目，没有就是 null。
+     字段写法按契约（README 数据契约）：条目 fields 为 [] 是整段受影响，全都涉及；a[] 是 a 的每个元素，涉及 a[] 与任一 a[i]；
+     a[i] 只是第 i 格，涉及 a[i] 与问整列的 a[]，不涉及别的格；* 只涉及整个窗口的统计字段，即不带下标与子路径的顶层名。
+     一方是另一方的上级也算涉及：问 'open' 认 'open[].minutes'，条目写 'cells[]' 也管 'cells[2].n' */
+  function steps(p) { return String(p).replace(/\[/g, '.[').split('.').filter(Boolean); }
+  function stepHits(f, q) { return f === q || f === '[]' && q.charAt(0) === '[' || q === '[]' && f.charAt(0) === '['; }
+  function touches(f, q) {
+    if (f === '*') return q.indexOf('.') < 0 && q.indexOf('[') < 0;
+    var a = steps(f), b = steps(q);
+    for (var i = 0; i < Math.min(a.length, b.length); i++) if (!stepHits(a[i], b[i])) return false;
+    return true;
+  }
   Dash.why = function (reasons, fields) {
     var out = [];
     (reasons || []).forEach(function (r) {

@@ -525,12 +525,11 @@
     return f(x.value) + ' / ' + (x.limit == null ? '上限未知' : f(x.limit));
   }
 
-  /* 坏会话（perf.sessionErrors）：来源目录只写末一级、悬停看全路径；原因照后端原文 */
-  var ERROR_KIND = { content: '内容有误', io: '读写失败', conflict: '会话 ID 冲突', analysis: '分析失败', projection: '投影失败' };
+  /* 坏会话（perf.sessionErrors）：来源目录只写末一级、悬停看全路径；种类名与原因照后端原文，没给中文名就写 kind 原值 */
   function dirName(p) { var parts = String(p || '').split(/[\\/]/).filter(Boolean); return parts.length ? parts[parts.length - 1] : '来源未确认'; }
   function sessionError(e) {
     return h('div.note-line', { title: e.source || '' },
-      h('b', ERROR_KIND[e.kind] || e.kind || '出错'), ' ', dirName(e.source), e.id ? h('span.muted', '（会话 ' + e.id + '）') : null,
+      h('b', e.kindLabel || e.kind || '种类未确认'), ' ', dirName(e.source), e.id ? h('span.muted', '（会话 ' + e.id + '）') : null,
       '：' + (e.reason || '没给原因'), e.conflictSource ? h('span.muted', '；冲突方 ' + dirName(e.conflictSource)) : null);
   }
 
