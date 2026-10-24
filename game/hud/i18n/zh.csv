@@ -126,6 +126,19 @@ settings.auto_jump,自动跳跃,Auto jump
 settings.single_keys,单键快捷键,Single-key shortcuts
 settings.show_perf,显示性能信息,Show performance
 settings.show_perf.hint,漫游时在画面一角显示帧率、帧时、显卡与内存占用等读数。,"While exploring, shows frame rate, frame time, GPU and memory readings in a corner of the screen."
+graphics.performance.record,记录性能数据,Record performance data
+graphics.performance.record.hint,把帧时、负载与加载事件记到本机，供之后分析卡顿。打开即开始新的一段记录，关闭后写完已录数据再停；与“显示性能信息”互不影响，也不随恢复默认改变。,"Saves frame times, load and loading events on this computer for later stutter analysis. Turning it on starts a new recording; turning it off finishes writing what was recorded, then stops. Independent of Show performance and not changed by Restore defaults."
+graphics.performance.status,记录状态,Recording status
+graphics.performance.status.hint,性能记录当前所处的状态，记录中时显示已录时长。出现故障时已写的数据会保留，关掉再打开即重新开始记录。,"The current state of performance recording, with the recorded time while recording. After a fault, data already written is kept; turn recording off and on again to start a new recording."
+graphics.performance.status.off,已关闭,Off
+graphics.performance.status.starting,准备中,Starting
+graphics.performance.status.recording,记录中 · {time},Recording · {time}
+graphics.performance.status.stopping,停止中,Stopping
+graphics.performance.fault.invalid_dictionary,故障 · 字段表无效,Fault · invalid field list
+graphics.performance.fault.open_failed,故障 · 无法创建记录文件,Fault · could not create record files
+graphics.performance.fault.write_failed,故障 · 写入失败,Fault · write failed
+graphics.performance.fault.producer_failed,故障 · 采集中断,Fault · sampling stopped
+graphics.performance.fault.finalize_failed,故障 · 收尾失败,Fault · could not finish the recording
 settings.storage,本机缓存,Local cache
 settings.storage.done,已完成,Complete
 settings.storage.running,进行中 {pct}%,In progress {pct}%

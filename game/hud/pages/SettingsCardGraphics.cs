@@ -1,3 +1,4 @@
+using Campus.Contracts.Perf;
 using Campus.Contracts.Quality;
 using Campus.Hud.I18n;
 using Campus.Hud.Style;
@@ -12,6 +13,7 @@ namespace Campus.Hud.Pages;
 /// 镜头与舒适组另收 ui 节的视场与视角晃动，页尾是性能信息组；底部说明栏显示最近悬停或聚焦的一行。
 /// 画面设置只经 IQualityService.Plan / Apply，请求带明确的编辑意图：预设分段发 SelectPreset，恢复默认发 RestoreDefaults，
 /// 单项控件发 EditKnobs；同一份待应用计划里玩家明确改过的项累加进 EditedKnobs。未应用的计划在关闭页面后保留。
+/// 性能信息组末尾的记录行与状态行只接说明栏，不亮改动标记、不随恢复默认变（SYS-GRAPHICS）。
 /// </summary>
 internal sealed class SettingsCardGraphics
 {
@@ -43,10 +45,11 @@ internal sealed class SettingsCardGraphics
 
     private static IQualityService Quality => KernelRegistry.Get<IQualityService>();
 
-    /// <summary>一行：画质单项（Spec）、借来的 ui 节行（Ui），或两者都没有的预设行。</summary>
+    /// <summary>一行：画质单项（Spec）、借来的 ui 节行（Ui），或两者都没有的预设行与记录行（Immediate 标出即时生效）。</summary>
     private sealed class Row(string labelKey)
     {
         public string LabelKey { get; } = labelKey;
+        public bool Immediate { get; init; }
         public KnobSpec? Spec { get; init; }
         public SettingsUiRow? Ui { get; init; }
         public Control? Editor { get; init; }
@@ -55,7 +58,8 @@ internal sealed class SettingsCardGraphics
     }
 
     public System.Collections.IEnumerable Build(Control page, Control pageActions,
-        (IReadOnlyList<SettingsUiRow> Comfort, IReadOnlyList<SettingsUiRow> Performance) uiRows)
+        (IReadOnlyList<SettingsUiRow> Comfort, IReadOnlyList<SettingsUiRow> Performance,
+            Func<Control, (HBoxContainer Record, HBoxContainer Status)> Recording) uiRows)
     {
         // 页底在滚动区外：说明栏、待应用提示与"应用"。
         _graphicsActions = _kit.Layout.Stack(pageActions, groups: false);
@@ -94,6 +98,10 @@ internal sealed class SettingsCardGraphics
             BorrowedRow(performance, row);
             yield return null;
         }
+        var (record, status) = uiRows.Recording(performance);
+        Track(record, new Row(PerfSettingDefinitions.RecordPerformance.LabelKey) { Immediate = true }, marker: false);
+        Track(status, new Row(SettingsCardContent.RecordingStatusKey), marker: false);
+        yield return null;
         _kit.Text(page, UiKit.T("quality.footnote"), "small", "text.2");
     }
 
@@ -116,7 +124,7 @@ internal sealed class SettingsCardGraphics
         _reset.OffReason = UiKit.T("quality.reset.off");
         _reset.FocusExited += Disarm;
         _reset.MouseExited += Disarm;
-        Track(box, new Row("quality.preset"), marker: false);
+        Track(box, new Row("quality.preset"), marker: false, slot: false);
     }
 
     private void KnobRow(Control group, KnobSpec spec)
@@ -132,18 +140,21 @@ internal sealed class SettingsCardGraphics
     private void BorrowedRow(Control group, SettingsUiRow ui) =>
         Track(ui.Build(group, UpdateState), new Row(ui.LabelKey) { Ui = ui });
 
-    // 每行：名称前留改动标记的位置，悬停或聚焦行内任一控件时说明栏换成这一行。
-    private void Track(HBoxContainer box, Row row, bool marker = true)
+    // 每行：名称前留改动标记的位置（不带标记的行只留空位与上下行对齐，预设行没有名称、不留），悬停或聚焦行内任一控件时说明栏换成这一行。
+    private void Track(HBoxContainer box, Row row, bool marker = true, bool slot = true)
     {
-        if (marker)
+        if (slot)
         {
             var diameter = _kit.Tokens.F("metrics", "via", "core");
             var holder = _kit.Layout.Add(box, new Control { CustomMinimumSize = new Vector2(diameter, diameter), SizeFlagsVertical = Control.SizeFlags.ShrinkCenter });
             box.MoveChild(holder, 0);
-            var dot = _kit.Box(holder, new UiFx(Fill: "primary.line", Flags: UiFlags.Circle));
-            dot.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.FullRect);
-            dot.Visible = false;
-            row.Marker = dot;
+            if (marker)
+            {
+                var dot = _kit.Box(holder, new UiFx(Fill: "primary.line", Flags: UiFlags.Circle));
+                dot.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.FullRect);
+                dot.Visible = false;
+                row.Marker = dot;
+            }
         }
         box.MouseFilter = Control.MouseFilterEnum.Pass;
         void Point()
@@ -301,7 +312,7 @@ internal sealed class SettingsCardGraphics
         var spec = row.Spec;
         var condition = spec?.Apply switch
         {
-            null => row.Ui is null ? "" : UiKit.T("quality.apply.immediate"),
+            null => row.Ui is null && !row.Immediate ? "" : UiKit.T("quality.apply.immediate"),
             ApplyClass.Immediate or ApplyClass.Amortized => UiKit.T("quality.apply.immediate"),
             ApplyClass.UnderLoading => UiKit.T("quality.apply.loading"),
             ApplyClass.Restart => UiKit.T("quality.apply.restart"),

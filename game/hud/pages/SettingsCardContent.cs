@@ -1,6 +1,8 @@
 using Campus.Contracts;
+using Campus.Contracts.AppFlow;
 using Campus.Contracts.Audio;
 using Campus.Contracts.Bake;
+using Campus.Contracts.Perf;
 using Campus.Contracts.Save;
 using Campus.Contracts.Settings;
 using Campus.Hud.Widgets;
@@ -42,17 +44,105 @@ internal sealed class SettingsCardContent
 
     /// <summary>
     /// 画面页借用的 ui 节行：镜头与舒适组的视场与视角晃动、页尾性能信息组的开关。存储仍在 ui 节，
-    /// 分组、改动标记与恢复默认由画面页按这些行做。
+    /// 分组、改动标记与恢复默认由画面页按这些行做。Recording 建性能信息组的记录行与状态行，不是借用行。
     /// </summary>
-    public (IReadOnlyList<SettingsUiRow> Comfort, IReadOnlyList<SettingsUiRow> Performance) GraphicsRows() =>
+    public (IReadOnlyList<SettingsUiRow> Comfort, IReadOnlyList<SettingsUiRow> Performance,
+        Func<Control, (HBoxContainer Record, HBoxContainer Status)> Recording) GraphicsRows() =>
     (
         [
             UiRow(UiSettingDefinitions.FlyFov, ReadView(UiSettingDefinitions.FlyFov), value => WriteView(UiSettingDefinitions.FlyFov, value), Degrees),
             UiRow(UiSettingDefinitions.WalkFov, ReadView(UiSettingDefinitions.WalkFov), value => WriteView(UiSettingDefinitions.WalkFov, value), Degrees),
             UiRow(UiSettingDefinitions.ViewBobbing, ReadView(UiSettingDefinitions.ViewBobbing), value => WriteView(UiSettingDefinitions.ViewBobbing, value), null),
         ],
-        [UiRow(HudSettingDefinitions.ShowPerf, () => _settings.Get(HudSettingDefinitions.ShowPerf), value => _settings.Set(HudSettingDefinitions.ShowPerf, value), null)]
+        [UiRow(HudSettingDefinitions.ShowPerf, () => _settings.Get(HudSettingDefinitions.ShowPerf), value => _settings.Set(HudSettingDefinitions.ShowPerf, value), null)],
+        BuildRecording
     );
+
+    internal const string RecordingStatusKey = "graphics.performance.status";
+
+    /// <summary>
+    /// 记录性能数据（ENG-PERF-DATA）：开关与状态只经记录服务读写，不碰设置存储，不算改动、不随恢复默认变。
+    /// 开关显示记录意图；状态行订阅状态变化，页面可见时按引擎步长每秒重读一次已录时长；离树即退订并停止等待。
+    /// </summary>
+    private (HBoxContainer Record, HBoxContainer Status) BuildRecording(Control group)
+    {
+        var recorder = KernelRegistry.Get<IPerformanceRecorder>();
+        var label = UiKit.T(PerfSettingDefinitions.RecordPerformance.LabelKey);
+        var record = _kit.Layout.SettingRow(group, label);
+        var toggle = DipSwitch.Create(_kit, record, recorder.Snapshot.Requested);
+        toggle.AccessibilityName = label;
+        var statusRow = _kit.Layout.SettingRow(group, UiKit.T(RecordingStatusKey));
+        var status = _kit.Text(statusRow, "", "data", "text.2");
+        // 每次开关当场把意图交给服务（服务串行处理），界面按顺序逐个等完；某次失败交 IAppFailure 后接着等后面的，离树只停等待、不撤销已交出的意图。
+        var failure = KernelRegistry.Get<IAppFailure>();
+        var waiting = new HudTask(failure);
+        var requests = new Queue<Task<PerfRecordingSnapshot>>();
+        async Task Drain(CancellationToken token)
+        {
+            while (requests.TryDequeue(out var request))
+            {
+                try { await request.WaitAsync(token); }
+                catch (Exception error) when (!token.IsCancellationRequested) { failure.Report(error); }
+            }
+        }
+        toggle.Toggled += on =>
+        {
+            requests.Enqueue(recorder.SetRecordingAsync(on));
+            waiting.Start(Drain);
+        };
+        void Show(PerfRecordingSnapshot snapshot)
+        {
+            toggle.Set(snapshot.Requested, notify: false);
+            status.Text = RecordingStatus(snapshot);
+            _kit.Recolor(status, snapshot.State == PerfRecordingState.Faulted ? "danger.text" : "text.2");
+        }
+        // 已录时长由服务按单调时钟现算；界面不取时钟（G4），只用引擎步长定刷新节拍。
+        var since = 0.0;
+        void Tick()
+        {
+            if (!status.IsVisibleInTree()) return;
+            since += status.GetProcessDeltaTime();
+            if (since < 1) return;
+            since = 0;
+            if (recorder.Snapshot is { State: PerfRecordingState.Recording } snapshot) Show(snapshot);
+        }
+        var tree = group.GetTree();
+        recorder.StateChanged += Show;
+        tree.ProcessFrame += Tick;
+        status.TreeExiting += () =>
+        {
+            recorder.StateChanged -= Show;
+            tree.ProcessFrame -= Tick;
+            waiting.Cancel();
+        };
+        Show(recorder.Snapshot);
+        return (record, statusRow);
+    }
+
+    // 五态各一个文案键，故障按故障码取键，不显示异常文字；只有实际进入 Recording 才显示"记录中 · 时长"。
+    private static string RecordingStatus(PerfRecordingSnapshot snapshot) => snapshot.State switch
+    {
+        PerfRecordingState.Off => UiKit.T(RecordingStatusKey + ".off"),
+        PerfRecordingState.Starting => UiKit.T(RecordingStatusKey + ".starting"),
+        PerfRecordingState.Recording => UiKit.T(RecordingStatusKey + ".recording", ("time", Elapsed(snapshot.RecordedSeconds))),
+        PerfRecordingState.Stopping => UiKit.T(RecordingStatusKey + ".stopping"),
+        PerfRecordingState.Faulted => UiKit.T(snapshot.Fault switch
+        {
+            PerfFaultCode.InvalidDictionary => "graphics.performance.fault.invalid_dictionary",
+            PerfFaultCode.OpenFailed => "graphics.performance.fault.open_failed",
+            PerfFaultCode.WriteFailed => "graphics.performance.fault.write_failed",
+            PerfFaultCode.ProducerFailed => "graphics.performance.fault.producer_failed",
+            PerfFaultCode.FinalizeFailed => "graphics.performance.fault.finalize_failed",
+            _ => throw new InvalidOperationException($"Faulted recording without a fault code ({snapshot.Fault})."),
+        }),
+        _ => throw new InvalidOperationException("Unknown recording state."),
+    };
+
+    private static string Elapsed(double seconds)
+    {
+        var total = (long)Math.Floor(Math.Max(0, seconds));
+        return total >= 3600 ? $"{total / 3600}:{total / 60 % 60:00}:{total % 60:00}" : $"{total / 60:00}:{total % 60:00}";
+    }
 
     // 视场、视角晃动与自动跳在 ui 节里，HUD 建立之前就被读取（UiSettingDefinitions），改了立刻写盘，不经 HudSettings 的延迟写。
     private static Func<T> ReadView<T>(SettingDefinition<T> definition) where T : notnull =>
@@ -185,21 +275,21 @@ internal sealed class SettingsCardContent
         switch ((object)definition)
         {
             case SettingDefinition<bool> d:
-            {
-                var (row, set) = Toggle(parent, d, (bool)(object)value, next => write((T)(object)next));
-                return (row, next => set((bool)(object)next));
-            }
+                {
+                    var (row, set) = Toggle(parent, d, (bool)(object)value, next => write((T)(object)next));
+                    return (row, next => set((bool)(object)next));
+                }
             case SettingDefinition<int> d:
-            {
-                var (row, set) = Choice(parent, d, (int)(object)value, next => write((T)(object)next));
-                return (row, next => set((int)(object)next));
-            }
+                {
+                    var (row, set) = Choice(parent, d, (int)(object)value, next => write((T)(object)next));
+                    return (row, next => set((int)(object)next));
+                }
             case SettingDefinition<float> d:
-            {
-                var (row, set) = Slider(parent, d, (float)(object)value, next => write((T)(object)next),
-                    format ?? throw new InvalidOperationException($"Slider setting '{d.Key}' needs a value format."));
-                return (row, next => set((float)(object)next));
-            }
+                {
+                    var (row, set) = Slider(parent, d, (float)(object)value, next => write((T)(object)next),
+                        format ?? throw new InvalidOperationException($"Slider setting '{d.Key}' needs a value format."));
+                    return (row, next => set((float)(object)next));
+                }
             default:
                 throw new NotSupportedException($"Unsupported setting definition {definition.GetType()}.");
         }
