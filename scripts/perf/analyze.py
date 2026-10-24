@@ -1,5 +1,5 @@
 """分析可独占的性能会话，串行发布派生、索引、历史并修剪 AI 数据。
-用法：python -I -X utf8 scripts/perf/analyze.py [会话或批次目录 ...] [--root 仓库] [--author-root 作者perf根]。
+用法：python -I -X utf8 scripts/perf/analyze.py [--root 仓库] [--author-root 作者perf根]。
 输入：性能六件、game/data/perf-fields.json、budgets.json；产出：output/perf/derived/<id>/ 的摘要、异常、曲线与高耗时帧、index.json、history.jsonl。
 """
 import argparse
@@ -284,7 +284,7 @@ def write_session(out, summary, items, frames, hwfast, dictionary, stamp, budget
     atomic_json(directory / 'summary.json', summary)
 
 
-def analyze_all(root=ROOT, sessions=(), output=None, author=None):
+def analyze_all(root=ROOT, output=None, author=None):
     root = Path(root).resolve()
     out = Path(output).resolve() if output else root / 'output/perf'
     author = Path(author).resolve() if author else author_root(root)
@@ -295,10 +295,10 @@ def analyze_all(root=ROOT, sessions=(), output=None, author=None):
             return dict(analyzed=[], skipped=['分析锁被占用'], errors=[])
         prior_index = read_json(out / 'index.json') if (out / 'index.json').is_file() else {}
         # Discover and recheck under the shared lock: concurrent triggers cannot append duplicate history.
-        directories = discover(out, author, sessions)
+        directories = discover(out, author)
         sources = {str(directory) for directory in directories}
         for directory in directories:
-            stamp, identifier, owner, parsing = None, None, None, False
+            stamp, identifier, owner = None, None, None
             try:
                 with exclusive(directory / '.lock') as readable:
                     if not readable or (manifest_path(directory).name == 'manifest.pending.json'
@@ -310,42 +310,40 @@ def analyze_all(root=ROOT, sessions=(), output=None, author=None):
                     if processed_input(out, directory, stamp, prior_errors, sources):
                         errors.extend(error for error in prior_errors if error.get('source') == str(directory))
                         continue
-                    parsing = True
                     manifest = read_json(manifest_path(directory))
                     identifier = session_id(manifest['id'])
                     run, _ = nearest_run(directory, out / 'runs')
-                    parsing = False
                     owner = conflicting_source(out, identifier, directory, sources)
                     if owner:
                         errors.append(dict(source=str(directory), id=identifier, kind='conflict',
                                            conflictSource=owner, reason='会话 ID 与另一路径冲突，不覆盖已有派生',
                                            calc=CALC, inputStamp=stamp))
                         continue
-                    parsing = True
                     manifest, streams = load_session(directory, dictionary)
                     summary, items, frames, hwfast = summary_for(directory, manifest, streams, dictionary, budgets, run)
-                    parsing = False
                     write_session(out, summary, items, frames, hwfast, dictionary, stamp, budgets, manifest, streams)
                     changed.append(summary)
             except (ValueError, OSError, KeyError, TypeError) as error:
                 errors.append(dict(source=str(directory), id=identifier,
-                                   kind='io' if isinstance(error, OSError) else 'content' if parsing else 'analysis',
+                                   kind='io' if isinstance(error, OSError) else 'content',
                                    reason=str(error), calc=CALC, inputStamp=stamp))
         entries = []
         for path in sorted((out / 'derived').glob('*/summary.json')):
             summary = read_json(path)
-            if summary['source'] in sources and not any(error['source'] == summary['source'] for error in errors):
+            if summary['source'] in sources:
                 entries.append(summary)
         entries = rebuild_states(entries, root)
         for entry in entries:
             atomic_json(out / 'derived' / entry['id'] / 'summary.json', entry)
-        removed = prune(out, entries)
+        # 保留与身份判定仍使用失败来源上一份摘要，不能把旧会话升成当前基线。
+        failed_sources = {error['source'] for error in errors}
+        removed = prune(out, entries, failed_sources)
         entries = [entry for entry in entries if Path(entry['source']).exists()]
-        errors = [error for error in errors if not any(Path(error['source']).is_relative_to(Path(path)) for path in removed)]
+        available = [entry for entry in entries if entry['source'] not in failed_sources]
         changed_ids = {summary['id'] for summary in changed}
-        history_update(out / 'history.jsonl', [entry for entry in entries if entry['id'] in changed_ids])
+        history_update(out / 'history.jsonl', [entry for entry in available if entry['id'] in changed_ids])
         index = dict(calc=CALC, repositoryState=repository_state(root),
-                                            sessions=[index_entry(e) for e in entries], errors=errors,
+                                            sessions=[index_entry(e) for e in available], errors=errors,
                                             retention=dict(aiBatches=AI_BATCHES_KEEP, historyPerGroup=HISTORY_PER_GROUP,
                                                            diagnosticBytes=DIAGNOSTIC_BYTES_KEEP), removed=removed)
         # 相同 IO 故障仍可由下一次外部采集重试，但不自写 index 制造文件通知空转。
@@ -361,11 +359,10 @@ def index_entry(summary):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('sessions', nargs='*', type=Path)
     parser.add_argument('--root', type=Path, default=ROOT)
     parser.add_argument('--author-root', type=Path)
     args = parser.parse_args()
-    result = analyze_all(args.root, args.sessions, author=args.author_root)
+    result = analyze_all(args.root, author=args.author_root)
     print(json.dumps(result, ensure_ascii=False))
     return 1 if result['errors'] else 0
 

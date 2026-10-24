@@ -96,17 +96,10 @@ def author_root(root):
     return Path(os.environ.get('APPDATA', Path.home() / '.local/share')) / match[1] / 'perf'
 
 
-def discover(out, author, explicit=()):
+def discover(out, author):
     paths = set()
     for directory in (Path(out) / 'runs', Path(author)):
         if directory.exists():
-            paths.update(p.parent.resolve() for pattern in ('manifest.json', 'manifest.pending.json')
-                         for p in directory.rglob(pattern) if not p.is_symlink())
-    for path in explicit:
-        directory = Path(path).resolve()
-        if any((directory / name).is_file() for name in ('manifest.json', 'manifest.pending.json')):
-            paths.add(directory)
-        elif directory.is_dir():
             paths.update(p.parent.resolve() for pattern in ('manifest.json', 'manifest.pending.json')
                          for p in directory.rglob(pattern) if not p.is_symlink())
     return sorted(paths)
@@ -276,7 +269,7 @@ def diagnostic_attachments(runs):
     return sorted(attachments)
 
 
-def prune(out, entries):
+def prune(out, entries, failed_sources=()):
     out, runs = Path(out).resolve(), (Path(out) / 'runs').resolve()
     removed = []
     if runs.exists():
@@ -284,6 +277,10 @@ def prune(out, entries):
                          key=lambda p: max((q.stat().st_mtime_ns for name in ('manifest.json', 'manifest.pending.json')
                                             for q in p.rglob(name)), default=p.stat().st_mtime_ns), reverse=True)
         protected = set(batches[:AI_BATCHES_KEEP])
+        for source in failed_sources:
+            source = Path(source).resolve()
+            if inside(source, runs):
+                protected.add(runs / source.relative_to(runs).parts[0])
         for entry in entries:
             source = Path(entry['source']).resolve()
             if entry['status'] in ('current', 'stale') and inside(source, runs):

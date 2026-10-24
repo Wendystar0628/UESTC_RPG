@@ -5,13 +5,13 @@ import math
 import statistics
 import bisect
 from collections import Counter, defaultdict, deque
-from perf_model import COSTS, PHASES, at, distribution, number, quantile, target_ms
+from perf_model import COSTS, LEVEL, PHASES, at, distribution, number, quantile, target_ms
 
 MERGE_FRAME_MS = 250
 MERGE_STATE_MS = 3000
 MAX_PER_TYPE = 20
 DEEPEN_REPEAT_COUNT = 3
-LEVELS = {'info': 0, 'light': 1, 'heavy': 2, 'severe': 3}
+LEVELS = {key: rank for rank, key in enumerate(LEVEL)}
 
 
 def floor_of(metric, budgets, manifest):

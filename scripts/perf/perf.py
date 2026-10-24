@@ -10,7 +10,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 sys.dont_write_bytecode = True
-from perf_model import CALC, at, number, read_json
+from perf_model import CALC, LEVEL, at, number, read_json
 
 ROOT = Path(__file__).resolve().parents[2]
 MAX_ROWS = 50
@@ -18,7 +18,6 @@ MAX_LINES = 100
 MAX_CHARS = 16000
 MAX_CELL = 300
 STATUS = dict(current='当前基线', stale='过时', superseded='已替代', partial='不完整', invalid='作废', unsupported='格式不支持', evidence='证据')
-LEVEL = dict(info='提示', light='轻', heavy='重', severe='严重')
 TYPE = dict(dataValidity='数据有效性', costSpike='成本尖峰候选', budgetExceeded='预算越线', gcPause='GC 停顿',
             gen2='游玩时 gen2', compilation='管线或 JIT 编译', stutter='卡顿', freeze='冻结',
             loadingStutter='加载界面卡顿', sustainedDropped='持续掉帧', frameLimitFailure='限帧失效',

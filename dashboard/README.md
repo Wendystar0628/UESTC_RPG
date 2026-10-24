@@ -63,7 +63,9 @@ collab:    {coverage,
                        bad: [{name, side, model, effort, rules: [key]}],
                        hints: [{name, side, model, effort, text}], opus: [{name, row, at}], reasons: [缺数原因]},
             idle: [{who, minutes, longest: {from, to, rows: [id]}|null, reasons: [缺数原因]}]}
-缺数原因 =  {code: 稳定原因键, fields: [相对本段字段路径，[] 为所有条目、* 为窗口统计], message: 中文原因}
+缺数原因 =  {code: 稳定原因键, fields: [相对本段字段路径], message: 简短中文原因}
+fields 空数组表示整段受影响；a[] 表示 a 的每个元素，a[i] 只表示第 i 格（从 0 开始）；* 只匹配整个窗口的统计字段，不匹配明细、单格或其它缺数原因。
+dispatch.rules 的 bad 与 unknown 计数针对已观察且开工时刻明确的派单，与 bad 明细一致；窗口未覆盖时 n、ok、rate 留 null，且没有可观察派单时规则计数也留 null 并给原因。
 team:      {coverage, leads: [{who, model, effort, running, since,
                               rows: [{id, title, stage, since, who, jump, deps, waitedBy}], agents}],
             agents: [{id, name, side: claude|codex, model, effort, row, rowTitle,
@@ -77,7 +79,7 @@ health:    {coverage, at, level, summary, late: bool|null, counts: {ok, warn, ba
             roundsSummary: {n, flagged, last: {at, warn, bad}|null},
             gates: [{checkout, at, scope, gates: [{name: G1..G5, ok: true|false|null}], run, failed, failedNames}],
             tests: {days: [{day, count, lines, ratio, quickSec}]},
-            hooks: {selftest: {ok, total, failed: [一句], level}, errors: [{hook, n, last}]|null}}
+            hooks: {selftest: {ok, total, failed: [一句], level}, errors: [{hook, n, last}]|null, reasons: [缺数原因]}}
 failures:  {coverage: {from: 记账起点|null},
             window: {size, segment, commits|null, from: 时刻|null, n|null, rate|null,
                      unclassified|null, fresh|null, trend: better|worse|same|null, last: {at, minutes}|null},
@@ -111,7 +113,7 @@ perf:      {coverage: {from: 最早会话开始时刻|null}, caliber, units, lab
             series: [{key, label: 中文, unit, scope: cost|experience}],
             latest: {play: 会话id|null, ai: 会话id|null},
             sessions: [性能会话], trends: [性能趋势], details: {会话id: 性能曲线|null},
-            sessionErrors: [{source: 会话目录, id?: 会话id|null, kind: content|io|conflict|analysis|projection, reason, conflictSource?: 冲突持有方目录}],
+            sessionErrors: [{source: 会话目录, id?: 会话id|null, kind: content|io|conflict|projection, kindLabel: 中文种类, reason, conflictSource?: 冲突持有方目录}],
             displayCoverage: {sessions: 显示会话数, totalSessions: 来源会话数, note}}
 保留项 =    {value: 现值|null, limit: 来源上限|null, unit}
 性能会话 =  {id, origin: play|ai, originLabel: 作者|AI, scope: full|cost, scopeLabel, scopeReason,

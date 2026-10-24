@@ -10,6 +10,7 @@ from collections import defaultdict, deque
 from pathlib import Path
 
 CALC = json.loads(Path(__file__).with_name('derived-fields.json').read_text(encoding='utf-8'))['calc']
+LEVEL = dict(info='提示', light='轻', heavy='重', severe='严重')  # 从轻到重的唯一等级表。
 PHASES = ('physMs', 'procMs', 'lateMs', 'drawMs', 'tailMs')
 COSTS = ('mainViewportGpuMs', 'mainViewportCpuMs', 'frameSetupCpuMs')
 EXPERIENCE_FIELDS = ('averageFps', 'frameMs', 'low1Fps', 'low01Fps', 'low1TailN',

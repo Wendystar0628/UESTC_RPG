@@ -9,7 +9,7 @@ import tempfile
 from pathlib import Path
 from analyze import analyze_all, summary_for
 from perf_model import COSTS, PHASES, at, load_session, prepare_frames, read_json, rolling_medians, target_ms
-from perf_anomalies import DEEPEN_REPEAT_COUNT, LEVELS, annotate, anomaly, deepen, frame_anomalies
+from perf_anomalies import DEEPEN_REPEAT_COUNT, annotate, anomaly, deepen, frame_anomalies
 from unittest.mock import patch
 
 
@@ -132,15 +132,15 @@ def check_pending(root, dictionary, budgets):
         # A crashed stream may end in the middle of a row; pending indexing never parses it.
         (source / 'frames.csv').write_text('truncated', encoding='utf-8')
         (source / '.lock').unlink()
-        missing_lock = analyze_all(root, [], out, author)
+        missing_lock = analyze_all(root, out, author)
         assert str(source.resolve()) in missing_lock['skipped'], '没有可独占锁的 pending 被读进索引'
         (source / '.lock').touch()
         with exclusive(source / '.lock') as held:
             assert held
-            locked = analyze_all(root, [], out, author)
+            locked = analyze_all(root, out, author)
             assert str(source.resolve()) in locked['skipped'], '活动 pending 没有被发现并锁定跳过'
             assert not read_json(out / 'index.json')['sessions'], '活动 pending 被读进索引'
-        analyzed = analyze_all(root, [], out, author)
+        analyzed = analyze_all(root, out, author)
         assert analyzed['analyzed'] == ['ABANDONED'] and not analyzed['errors'], analyzed
         entry = read_json(out / 'index.json')['sessions'][0]
         assert entry['status'] == 'partial', '可独占的 pending 未作为 partial 进索引'
@@ -150,9 +150,9 @@ def check_pending(root, dictionary, budgets):
             write_six(newer, manifest(dictionary, f'NEWER-{i}'), streams([], dictionary), dictionary)
         with exclusive(source / '.lock') as held:
             assert held
-            active = analyze_all(root, [], out, author)
+            active = analyze_all(root, out, author)
             assert not active['errors'] and source.exists(), '修剪删除了锁仍占用的 pending'
-        final = analyze_all(root, [], out, author)
+        final = analyze_all(root, out, author)
         assert not final['errors'], final
         assert not source.exists(), '锁已释放的 pending 永不过期'
         assert not (out / 'derived/ABANDONED').exists(), '过期 pending 留下派生'
@@ -208,9 +208,9 @@ def check_processed_error(root, dictionary, budgets):
         write_six(source, manifest(dictionary, 'BROKEN'), streams([frame(dictionary, 0)], dictionary), dictionary)
         (source / 'frames.csv').write_text('truncated', encoding='utf-8')
         with patch.object(analyze, 'load_session', wraps=analyze.load_session) as loads:
-            first = analyze_all(root, [], out, author)
+            first = analyze_all(root, out, author)
             assert first['errors'] and not first['analyzed'], '夹具未触发原始流解析失败'
-            second = analyze_all(root, [], out, author)
+            second = analyze_all(root, out, author)
             assert second['errors'] == first['errors'], '错误原因没有保留'
             assert loads.call_count == 1, '同一错误输入被重复分析'
         assert not analyze.analysis_needed(root, out, author), '已处理错误仍被判为待分析'
@@ -218,41 +218,102 @@ def check_processed_error(root, dictionary, budgets):
         assert analyze.analysis_needed(root, out, author), '错误输入变化后未重新判鲜'
         (source / 'manifest.json').unlink()
         assert analyze.analysis_needed(root, out, author), '删除错误来源后没有重新判鲜'
-        assert not analyze_all(root, [], out, author)['errors'], '已经删除的错误仍留在索引'
+        assert not analyze_all(root, out, author)['errors'], '已经删除的错误仍留在索引'
+
+        derived_source = author / 'DERIVED'
+        write_six(derived_source, manifest(dictionary, 'DERIVED'), streams([frame(dictionary, 0)], dictionary), dictionary)
+        with patch.object(analyze, 'curve_document', side_effect=ValueError('selfcheck derived content invalid')) as derives:
+            first = analyze_all(root, out, author)
+            assert first['errors'][0]['kind'] == 'content', first
+            assert analyze_all(root, out, author)['errors'] == first['errors']
+            assert derives.call_count == 1 and not analyze.analysis_needed(root, out, author), '派生内容失败反复重跑'
+        (derived_source / 'frames.csv').touch()
+        assert analyze.analysis_needed(root, out, author), '派生内容失败的输入变化未重试'
+        assert analyze_all(root, out, author)['analyzed'] == ['DERIVED']
+        (derived_source / 'manifest.json').unlink()
 
         source = author / 'RETRY'
         write_six(source, manifest(dictionary, 'BROKEN'), streams([frame(dictionary, 0)], dictionary), dictionary)
-        assert analyze_all(root, [], out, author)['analyzed'] == ['BROKEN']
+        assert analyze_all(root, out, author)['analyzed'] == ['BROKEN']
         with patch.object(analyze, 'load_session', side_effect=PermissionError('selfcheck read denied')) as loads:
             # 输入改变后读失败；IO 恢复不需要再次改变输入。
             (source / 'frames.csv').touch()
-            failed = analyze_all(root, [], out, author)
+            failed = analyze_all(root, out, author)
             assert failed['errors'][0]['kind'] == 'io' and not read_json(out / 'index.json')['sessions']
             assert analyze.analysis_needed(root, out, author), 'IO 失败被输入戳缓存'
             index_stamp = (out / 'index.json').stat().st_mtime_ns
-            analyze_all(root, [], out, author)
+            analyze_all(root, out, author)
             assert loads.call_count == 2, 'IO 错误没有重新尝试'
             assert (out / 'index.json').stat().st_mtime_ns == index_stamp, '同一 IO 错误重写 index 触发通知空转'
-        recovered = analyze_all(root, [], out, author)
+        recovered = analyze_all(root, out, author)
         assert recovered['analyzed'] == ['BROKEN'] and not recovered['errors'], recovered
         (out / 'derived/BROKEN/anomalies.json').unlink()
         assert analyze.analysis_needed(root, out, author), '缺失派生文件没有重新判鲜'
-        assert analyze_all(root, [], out, author)['analyzed'] == ['BROKEN']
+        assert analyze_all(root, out, author)['analyzed'] == ['BROKEN']
 
         other = author / 'SAME-ID'
         write_six(other, manifest(dictionary, 'BROKEN'), streams([frame(dictionary, 0)], dictionary), dictionary)
-        conflict = analyze_all(root, [], out, author)
+        conflict = analyze_all(root, out, author)
         assert conflict['errors'][0]['kind'] == 'conflict', conflict
         assert not analyze.analysis_needed(root, out, author), '未变冲突反复启动分析器'
         (source / 'manifest.json').unlink()
         assert analyze.analysis_needed(root, out, author), '冲突持有方删除后未重判'
-        resolved = analyze_all(root, [], out, author)
+        resolved = analyze_all(root, out, author)
         assert resolved['analyzed'] == ['BROKEN'] and not resolved['errors'], resolved
         assert read_json(out / 'derived/BROKEN/summary.json')['source'] == str(other.resolve())
         (other / 'manifest.json').unlink()
         assert analyze.analysis_needed(root, out, author), '成功来源消失后未重判'
-        analyze_all(root, [], out, author)
+        analyze_all(root, out, author)
         assert not (out / 'derived/BROKEN').exists(), '已失去会话清单的来源仍保留派生'
+
+
+def check_failed_baseline(root, dictionary, budgets):
+    """Regression：超过批次窗口的当前来源读失败，旧会话不晋升、原始与错误保留。"""
+    import analyze
+    import os
+    from perf_store import AI_BATCHES_KEEP, git
+    with tempfile.TemporaryDirectory(prefix='uestc-perf-baseline-') as temporary:
+        out, author = Path(temporary) / 'perf', Path(temporary) / 'author'
+        batch = out / 'runs/baseline'
+        for identifier, day in (('OLDER', 1), ('CURRENT', 2)):
+            meta = manifest(dictionary, identifier)
+            meta.update(origin='ai', endedAt=f'2000-01-{day:02d}T00:00:05Z')
+            meta['build']['commit'] = git(root, 'rev-parse', 'HEAD')[1]
+            write_six(batch / identifier, meta, streams([frame(dictionary, 0)], dictionary), dictionary)
+        (batch / 'run.json').write_text(json.dumps(dict(scene='baseline-selfcheck', status='valid', exitCode=0,
+                timedOut=False, coverage=dict(route=dict(observed=1, required=1)))), encoding='utf-8')
+        assert not analyze_all(root, out, author)['errors']
+        baseline = read_json(out / 'derived/CURRENT/summary.json')
+        assert baseline['status'] in ('current', 'stale'), '夹具没有建立当前基线'
+        assert read_json(out / 'derived/OLDER/summary.json')['status'] == 'superseded'
+        for index in range(AI_BATCHES_KEEP):
+            write_six(out / 'runs' / f'newer-{index}/session', manifest(dictionary, f'NEWER-{index}'),
+                      streams([frame(dictionary, 0)], dictionary), dictionary)
+        for path in batch.rglob('manifest.json'):
+            os.utime(path, (1, 1))
+        newer_batches = [p for p in (out / 'runs').iterdir() if p != batch]
+        assert len(newer_batches) == AI_BATCHES_KEEP and all(
+            next(p.rglob('manifest.json')).stat().st_mtime_ns > (batch / 'CURRENT/manifest.json').stat().st_mtime_ns
+            for p in newer_batches), '夹具基线批次未落到保留窗口外'
+        original_load = analyze.load_session
+
+        def fail_current(directory, fields):
+            if directory == (batch / 'CURRENT').resolve():
+                raise PermissionError('selfcheck baseline read denied')
+            return original_load(directory, fields)
+
+        with patch.object(analyze, 'load_session', side_effect=fail_current):
+            failed = analyze_all(root, out, author)
+        assert len(failed['errors']) == 1 and failed['errors'][0]['kind'] == 'io', failed
+        public = read_json(out / 'index.json')
+        assert all(entry['id'] != 'CURRENT' for entry in public['sessions']), '失败来源仍展示可用指标'
+        assert next(entry for entry in public['sessions'] if entry['id'] == 'OLDER')['status'] == 'superseded', '旧会话冒充当前基线'
+        assert read_json(out / 'derived/CURRENT/summary.json')['status'] == baseline['status'], '失败抹掉了基线身份'
+        assert (batch / 'CURRENT/frames.csv').is_file() and public['errors'] == failed['errors'], '修剪丢掉了错误来源或错误事实'
+        assert analyze.analysis_needed(root, out, author), '一次 IO 故障不能在恢复后重试'
+        recovered = analyze_all(root, out, author)
+        assert 'CURRENT' in recovered['analyzed'] and not recovered['errors'], recovered
+        assert read_json(out / 'derived/CURRENT/summary.json')['status'] == baseline['status']
 
 
 def check_derived_curves(root, dictionary, budgets):
@@ -269,7 +330,7 @@ def check_derived_curves(root, dictionary, budgets):
         data['hw'][0] = {**{c['name']: None for c in dictionary['streams']['hw']['columns']},
                          **data['hw'][0], 'schema': dictionary['schema'], 'sequence': 1}
         write_six(source, manifest(dictionary, 'CURVES'), data, dictionary)
-        analyzed = analyze_all(root, [], out, author)
+        analyzed = analyze_all(root, out, author)
         assert not analyzed['errors'], analyzed
         curves = read_json(out / 'derived/CURVES/curves.json')
         detail = curves['levels'][0]
@@ -291,7 +352,7 @@ def check_monitor_projection(root, dictionary, budgets):
         out, author = Path(temporary) / 'perf', Path(temporary) / 'author'
         source = author / 'MONITOR'
         write_six(source, manifest(dictionary, 'MONITOR'), streams([frame(dictionary, 0)], dictionary), dictionary)
-        analyzed = analyze_all(root, [], out, author)
+        analyzed = analyze_all(root, out, author)
         assert not analyzed['errors'], analyzed
         history_path = out / 'history.jsonl'
         reads = []
@@ -311,7 +372,6 @@ def check_monitor_projection(root, dictionary, budgets):
         assert reads == [history_path], '同轮读取了不止一次性能历史'
         assert payload['details']['MONITOR']['columns'], '观察台未投影现成派生曲线'
         assert payload['retention']['historyPerGroup']['value'] == 1, '历史组现值错误'
-        assert payload['labels']['levels'].keys() == LEVELS.keys(), '视图等级未沿分析器权威清单'
         good = author / 'GOOD'
         write_six(good, manifest(dictionary, 'GOOD'), streams([frame(dictionary, 0)], dictionary), dictionary)
         (source / 'frames.csv').write_text('truncated', encoding='utf-8')
@@ -322,6 +382,7 @@ def check_monitor_projection(root, dictionary, budgets):
                 payload = view.build(None)
                 assert [entry['id'] for entry in payload['sessions']] == ['GOOD'], '坏会话拖垮好会话或旧历史伪装当前数据'
                 assert payload['sessionErrors'][0]['source'] == str(source.resolve()) and payload['sessionErrors'][0]['reason']
+                assert payload['sessionErrors'][0]['kindLabel'] == '内容错误', '坏会话缺少后端中文种类'
                 assert payload['latest']['play'] == 'GOOD' and payload['details']['GOOD']['columns']
             assert calls.call_count == 1, '连续采集为同一坏会话空转分析器'
         (source / 'manifest.json').write_text('{broken manifest', encoding='utf-8')
@@ -349,6 +410,31 @@ def check_retention_authority(root, dictionary, budgets):
         assert history_group(a) == history_group(b), '作者历史没有共用单组'
         a['origin'], b['origin'] = 'ai', 'ai'
         assert history_group(a) != history_group(b), 'AI 比较键与口径未分组'
+
+
+def check_missing_projection(root, dictionary, budgets):
+    """Regression：不完整窗口仍展示已判规则数，缺钩子日志保留缺数原因。"""
+    sys.path.insert(0, str(root / '.collab/tools'))
+    from monitor.view import collab, health
+    now = 2 * 86400
+    at = collab.U.iso(now - 30)
+    event = dict(at=at, sourceAt=at, event='started', payload=dict(id='selfcheck', side='codex',
+            name='invalid-name', model='gpt-6.1-sol', effort='high'))
+    reasons = collab._window_reasons(collab.U.iso(now - 3600), 7, now, ['n', 'ok', 'rate'])
+    result = collab._dispatch([event], now - 3600, now, False, reasons)
+    assert len(result['bad']) == 1 and result['bad'][0]['rules'] == ['R2'], '夹具未触发明确命名违规'
+    for rule in result['rules']:
+        assert rule['bad'] == sum(rule['key'] in item['rules'] for item in result['bad']), '规则计数与违规明细不符'
+    assert result['rules'][0]['unknown'] == 1 and result['n'] is None, '未判个数或窗口未知被抹掉'
+    assert all('*' not in reason['fields'] for reason in result['reasons']), '窗口原因覆盖了无关明细'
+    with patch.object(health.hooklog, 'selftest_result', return_value=None), \
+         patch.object(health.hooklog, 'log_records', return_value=None):
+        hooks = health._hooks({})
+    assert hooks['errors'] is None and any('errors' in r['fields'] for r in hooks['reasons']), '缺日志没有错误统计原因'
+    with patch.object(health.hooklog, 'selftest_result', return_value=None), \
+         patch.object(health.hooklog, 'log_records', return_value=[]):
+        hooks = health._hooks({})
+    assert hooks['errors'] == [] and not hooks['reasons'], '存在空日志被当成缺日志'
 
 
 def check_event_order(root, dictionary, budgets):
@@ -397,11 +483,14 @@ def run(root):
         check(root, dictionary, budgets)
     result.append('通过 TOOL-435：同 schema 重算与结构校验、M 保窗与换口径、pending 锁/索引/过期、deepen、清单枚举与上下文权威回归。')
     check_processed_error(root, dictionary, budgets)
+    check_failed_baseline(root, dictionary, budgets)
     check_derived_curves(root, dictionary, budgets)
     check_monitor_projection(root, dictionary, budgets)
     check_retention_authority(root, dictionary, budgets)
+    check_missing_projection(root, dictionary, budgets)
     result.append('通过 TOOL-437：错误输入只处理一次，输入变化重算；曲线、帧率与归一化负载由分析器派生。')
     result.append('通过 TOOL-441：内容错误缓存、IO 重试与恢复、冲突重查、来源删除与派生缺失判鲜；好坏会话隔离，重复故障不自激通知。')
+    result.append('通过 TOOL-445/446：超保留窗口基线一次 IO 失败不晋升旧会话、不删原始；派生内容错误缓存，规则计数与缺日志原因通过。')
     check_event_order(root, dictionary, budgets)
     result.append('通过 TOOL-438：事件 sequence 先校验再按时刻稳定排序；重复序号与逐帧时刻倒退仍拒绝。')
     frames = [frame(dictionary, i, gpu=2 if i < warm else 8) for i in range(warm + window + warm)]
@@ -450,14 +539,15 @@ def run(root):
 
     with tempfile.TemporaryDirectory(prefix='uestc-perf-selfcheck-') as temporary:
         work = Path(temporary)
-        source, out, author = work / 'sessions/SELFCHECK', work / 'perf', work / 'author'
+        out, author = work / 'perf', work / 'author'
+        source = author / 'SELFCHECK'
         meta = manifest(dictionary)
         meta['desktop'] = dict(kind='isolated', isInputDesktop=False, windowFocused=False)
         data = streams([frame(dictionary, i, gpu=6) for i in range(count)], dictionary)
         write_six(source, meta, data, dictionary)
-        first = analyze_all(root, [source], out, author)
+        first = analyze_all(root, out, author)
         assert first['analyzed'] == ['SELFCHECK'] and not first['errors'], first
-        second = analyze_all(root, [source], out, author)
+        second = analyze_all(root, out, author)
         assert not second['analyzed'] and not second['errors'], second
         summary = read_json(out / 'derived/SELFCHECK/summary.json')
         assert all(value is None for key, value in summary['all']['experience'].items() if key != 'reason'), 'cost 会话泄漏了体验字段'
@@ -468,7 +558,7 @@ def run(root):
         from perf_store import AI_BATCHES_KEEP, exclusive, prune
         with exclusive(source / '.lock') as held:
             assert held
-            locked = analyze_all(root, [source], out, author)
+            locked = analyze_all(root, out, author)
             assert str(source.resolve()) in locked['skipped'], '写入锁占用时仍读取会话'
         for index in range(AI_BATCHES_KEEP + 2):
             batch = out / 'runs' / f'batch-{index:02d}' / 'run/session'
