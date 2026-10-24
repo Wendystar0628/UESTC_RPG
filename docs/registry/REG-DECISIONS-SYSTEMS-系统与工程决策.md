@@ -157,6 +157,7 @@ gates: []
 | DECISION-339 | 体系建成后做第 0 轮标定与至多 3 轮调优，只按成本口径，按判停条件收尾 | 性能 | ENG-PERF-MEASURE §6 | 生效 |
 | DECISION-340 | 渲染线程维持 Safe，帧队列与交换链用引擎默认（帧队列 2、交换链 3），不写成永久禁令；Separate 以后有渲染 CPU 瓶颈证据再单独试验 | 性能、渲染 | ENG-BUDGET-RULES §2 | 生效 |
 | DECISION-341 | 应用代码不在主线程同步读回 GPU 资源：`Texture2D.GetImage`、`RenderingServer.Texture2DGet`、`RenderingDevice.TextureGetData` 由 G4 拦，只放行正式截图入口 `GameCaptureNode` 与加载期读导入纹理（`SceneTextTextures`）；转场快照改在渲染线程做 GPU 端复制，与禁用规则同批生效；引擎正常的帧同步与 Present 等待不在此列。起因：第 10 路复核与 07 路查实同步读回会让主线程空等 GPU（RESEARCH-048，GAME-228） | 性能、渲染 | ENG-BUDGET-RULES §1.2；`scripts/gates/arch/` | 生效 |
+| DECISION-342 | 主视口每帧绘制，其引擎视口计时（CPU、GPU）读数约晚两次绘制，按"近似对齐（±2 帧）"记为成本样本，用于分布、预算、趋势与 DECISION-318，不用于逐帧尖峰归因；本帧未绘制或窗口不能绘制时写 null，恢复绘制后的头几帧由非稳态规则剔除；按需绘制的视口（倒影等）来源与新鲜度未确认的仍写 null；不为确认来源在逐帧路径上分配。起因：GAME-218 首次探针查实逐帧确认来源要读计时名字，C# 公共接口每次分配字符串，违反逐帧零分配；全写 null 则成本调优失去主指标 | 性能 | ENG-PERF-DATA §3.2 | 生效 |
 
 ## 5 工程
 

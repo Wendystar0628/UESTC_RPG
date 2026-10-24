@@ -1697,7 +1697,7 @@
 
 ## ENG-PERF-DATA · 性能数据与分析
 
-`docs/engineering/ENG-PERF-DATA-性能数据与分析.md` · 10.9k 字 · 性能记录的四层与写入方、记录开关与会话寿命、原始流与时间基、指标口径与非稳态帧、测量范围、异常、比较键与保留、开销目标
+`docs/engineering/ENG-PERF-DATA-性能数据与分析.md` · 11.1k 字 · 性能记录的四层与写入方、记录开关与会话寿命、原始流与时间基、指标口径与非稳态帧、测量范围、异常、比较键与保留、开销目标
 关键词：性能记录、记录性能数据、记录服务、性能会话、六件、原始流、perf-fields.json、schema、calc、指标口径、体验口径、成本口径、五段、B0–B4、主线程周期、受测视口、受测视口 GPU 合计、成本尖峰、非稳态帧、掉帧、卡顿分级、1% low、scope、性能异常、比较键、性能数据保留、分析器
 
 - ENG-PERF-DATA §0 结论 · L21 · 1.3k
@@ -1709,9 +1709,9 @@
 - ENG-PERF-DATA §2 原始流与时间基 · L70 · 1.4k
   - ENG-PERF-DATA §2.1 六件与存放 · L72 · 900
   - ENG-PERF-DATA §2.2 字段、版本与时间基 · L89 · 518
-- ENG-PERF-DATA §3 指标口径 · L97 · 2.3k
+- ENG-PERF-DATA §3 指标口径 · L97 · 2.5k
   - ENG-PERF-DATA §3.1 体验口径 · L106 · 838
-  - ENG-PERF-DATA §3.2 成本口径 · L121 · 897
+  - ENG-PERF-DATA §3.2 成本口径 · L121 · 1.1k
 - ENG-PERF-DATA §4 测量范围与 `scope` · L133 · 413
 - ENG-PERF-DATA §5 异常 · L143 · 1.9k
   - ENG-PERF-DATA §5.1 体验类 · L152 · 644
@@ -2033,7 +2033,7 @@
 
 ## REG-DECISIONS-SYSTEMS · 系统与工程决策
 
-`docs/registry/REG-DECISIONS-SYSTEMS-系统与工程决策.md` · 25.9k 字 · 界面、存档、音频、性能与画面设置、工程五个领域的已定决策
+`docs/registry/REG-DECISIONS-SYSTEMS-系统与工程决策.md` · 26.2k 字 · 界面、存档、音频、性能与画面设置、工程五个领域的已定决策
 关键词：决策、系统、工程、界面、存档、音频、性能、画面设置、预算、契约
 
 - REG-DECISIONS-SYSTEMS §0 结论 · L21 · 126
@@ -2041,10 +2041,10 @@
 - REG-DECISIONS-SYSTEMS §1 界面 · L29 · 4.6k
 - REG-DECISIONS-SYSTEMS §2 存档 · L65 · 1.9k
 - REG-DECISIONS-SYSTEMS §3 音频 · L85 · 2.2k
-- REG-DECISIONS-SYSTEMS §4 性能与画面设置 · L107 · 7.5k
-- REG-DECISIONS-SYSTEMS §5 工程 · L161 · 5.5k
-- REG-DECISIONS-SYSTEMS §6 地图与行走 · L197 · 1.0k
-- REG-DECISIONS-SYSTEMS §7 时间、季节、天气 · L208 · 2.4k
+- REG-DECISIONS-SYSTEMS §4 性能与画面设置 · L107 · 7.8k
+- REG-DECISIONS-SYSTEMS §5 工程 · L162 · 5.5k
+- REG-DECISIONS-SYSTEMS §6 地图与行走 · L198 · 1.0k
+- REG-DECISIONS-SYSTEMS §7 时间、季节、天气 · L209 · 2.4k
 
 ## REG-DECISIONS-WORLD · 世界与画面决策
 
