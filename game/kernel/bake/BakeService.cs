@@ -59,6 +59,7 @@ public sealed class BakeService : IBakeService, IBakeContextSource, IMapContentS
     }
 
     public BakeProgress Progress => _queue.Progress;
+    public BakeCacheStatistics CacheStatistics => _cache.CacheStatistics;
     public long CacheBytes => _cache.CacheBytes;
     public Exception? Failure => _queue.Failure;
 

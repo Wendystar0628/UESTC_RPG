@@ -10,7 +10,8 @@ namespace Campus.Kernel.Stream;
 
 /// <summary>Destination/current-floor IF and adjacent IS use the same bake and mount paths as outdoor tiles.</summary>
 internal sealed class InteriorStream(IBakeService bake, IStreamMountQueue mount, StreamMaterials materials,
-    IReflectionWorld reflections, Action<PreparedTile> retire, bool captureMode, IStreamGeometryPreparation geometry)
+    IReflectionWorld reflections, Action<PreparedTile> retire, bool captureMode, IStreamGeometryPreparation geometry,
+    Action<StreamTileChange> changed)
 {
     private readonly Dictionary<BakeKey, Layer> _layers = [];
     private readonly List<Layer> _draining = [];
@@ -19,7 +20,27 @@ internal sealed class InteriorStream(IBakeService bake, IStreamMountQueue mount,
     private readonly Dictionary<FeatureId, IReadOnlyList<int>> _atriumStoreys = [];
     public Exception? Failure { get; private set; }
     private readonly List<Exception> _failures = [];
-    public int Preparations => _layers.Values.Concat(_draining).Count(layer => layer.Preparing is not null);
+    public int Preparations
+    {
+        get
+        {
+            var count = 0;
+            foreach (var layer in _layers.Values) if (layer.Preparing is not null) count++;
+            foreach (var layer in _draining) if (layer.Preparing is not null) count++;
+            return count;
+        }
+    }
+    public int Bakes
+    {
+        get
+        {
+            var count = 0;
+            foreach (var layer in _layers.Values) if (layer.Owner is null && !layer.Finished) count++;
+            foreach (var layer in _draining) if (layer.Owner is null && !layer.Finished) count++;
+            return count;
+        }
+    }
+    public int Retirements(bool unloading) => _draining.Count + (unloading ? _layers.Count : 0);
     public bool IsUnloaded => _context is null && _layers.Count == 0 && _draining.Count == 0;
     public IEnumerable<PreparedTile> Prepared => _layers.OrderBy(pair => pair.Key.Detail, StringComparer.Ordinal)
         .Select(pair => pair.Value.Prepared).OfType<PreparedTile>();
@@ -140,7 +161,7 @@ internal sealed class InteriorStream(IBakeService bake, IStreamMountQueue mount,
                     else
                     {
                         layer.Work = new VisualMountWork(layer.Key, [layer.Prepared!], layer.Revision, scenario, layer.Priority, materials, reflections,
-                            () => layer.Mounted = true, () => layer.Mounted = false, error => Fail(layer, error));
+                            () => SetMounted(layer), () => ClearMounted(layer), error => Fail(layer, error));
                         mount.Enqueue(layer.Work);
                     }
                 }
@@ -205,6 +226,19 @@ internal sealed class InteriorStream(IBakeService bake, IStreamMountQueue mount,
         }
     }
     private bool Ready(Layer layer) => layer.Failure is null && layer.Mounted && layer.Prepared is not null;
+    private void SetMounted(Layer layer)
+    {
+        layer.Mounted = true;
+        changed(new(layer.Key, StreamMountKind.Visual, layer.Revision, StreamTileChangeKind.Mounted,
+            layer.Prepared!.Bytes, FrameClock.MonotonicMilliseconds));
+    }
+    private void ClearMounted(Layer layer)
+    {
+        if (!layer.Mounted) return;
+        layer.Mounted = false;
+        changed(new(layer.Key, StreamMountKind.Visual, layer.Revision, StreamTileChangeKind.Unmounted,
+            layer.Prepared!.Bytes, FrameClock.MonotonicMilliseconds));
+    }
     private void Fail(Layer layer, [FailureHandler("ENG-PERF-STREAM")] Exception error)
     {
         layer.Failure = error;

@@ -12,8 +12,12 @@ public interface IBakeHandle
     Task Done { get; }
 }
 public readonly record struct BakeProgress(int Total, int Done, string Stage);
+/// <summary>Application-lifetime successful decode, normal miss and published rebuild counters.</summary>
+public readonly record struct BakeCacheStatistics(long Hits, long Misses, long Rebuilds);
+
 public interface IBakeService
 {
+    BakeCacheStatistics CacheStatistics { get; }
     IBakeHandle Ensure(BakeKey key, BakePriority priority);
     BakeProgress Progress { get; }
     Exception? Failure { get; }

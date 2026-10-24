@@ -64,9 +64,15 @@ public sealed class StreamMountQueueTests
     [TestCategory(TestReason.Contract)]
     public void MapRemovalRejectsLateWorkAndCancelsItOnce()
     {
-        var queue = new StreamMountQueue(() => 0);
+        var clock = 0d;
+        var queue = new StreamMountQueue(() => clock);
+        queue.Enqueue(new MountWork(StreamMountKind.Visual, queue.Revision, _ => clock++));
+        queue.Drain(VisibleWorld);
+        if (queue.LastMilliseconds <= 0) throw new InvalidOperationException("Fixture did not record mount time.");
         var old = new MountWork(StreamMountKind.Visual, queue.Revision, _ => throw new InvalidOperationException("A stale result mounted."));
-        queue.RemoveMap(new("map")); queue.Enqueue(old); queue.Drain(VisibleWorld);
+        queue.RemoveMap(new("map"));
+        if (queue.LastMilliseconds != 0) throw new InvalidOperationException("Map removal retained old frame time.");
+        queue.Enqueue(old); queue.Drain(VisibleWorld);
         if (old.Cancels != 1 || queue.Pending != 0) throw new InvalidOperationException("Old revision was retained.");
     }
     [TestCase]
@@ -248,7 +254,7 @@ public sealed class StreamMountQueueTests
             throw new InvalidOperationException("The failed map did not drain each queued owner once while retaining its failure.");
     }
 
-    private sealed class MountWork(StreamMountKind kind, long revision, Action<double> step, string module = "module", int slices = 1, Action? cancel = null, BakePriority? priority = null, MapId? map = null) : IStreamMountWork
+    internal sealed class MountWork(StreamMountKind kind, long revision, Action<double> step, string module = "module", int slices = 1, Action? cancel = null, BakePriority? priority = null, MapId? map = null) : IStreamMountWork
     {
         public Exception? KeyFailure, RevisionFailure;
         public BakeKey Key => KeyFailure is { } error ? throw error : new(map ?? new("map"), module, "L0/0/0");

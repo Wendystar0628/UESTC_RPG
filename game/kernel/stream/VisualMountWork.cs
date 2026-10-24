@@ -63,6 +63,9 @@ internal sealed class VisualMountWork(BakeKey key, IReadOnlyList<PreparedTile> b
     }
     public void Abandon()
     {
-        if (_cancelled) return; _cancelled = true; cancelled();
+        if (_cancelled) return;
+        _cancelled = true;
+        if (_complete) foreach (var bundle in _bundles) bundle.BeginRetirement();
+        cancelled();
     }
 }

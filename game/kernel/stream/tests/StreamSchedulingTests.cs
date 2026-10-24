@@ -38,7 +38,7 @@ public sealed class StreamSchedulingTests
         var layout = layouts.Values.Single(item => item.AtriumVisibleStoreys.Count > 0);
         var atriumFloor = layout.AtriumVisibleStoreys.Min();
         var bake = new InteriorRequests();
-        var stream = new InteriorStream(bake, new StreamMountQueue(() => 0), new StreamMaterials(null!, null!), null!, _ => { }, false, new StreamGeometryPreparation());
+        var stream = new InteriorStream(bake, new StreamMountQueue(() => 0), new StreamMaterials(null!, null!), null!, _ => { }, false, new StreamGeometryPreparation(), static _ => { });
         stream.Load(context, generation);
         var expected = layout.OpenStoreys.Where(floor => Math.Abs(floor - atriumFloor) <= 1 || layout.AtriumVisibleStoreys.Contains(floor)).Order()
             .Select(floor => new BakeKey(context.Descriptor.Id, "interior." + providerId,
@@ -82,7 +82,7 @@ public sealed class StreamSchedulingTests
                 slab.Foot != Campus.Contracts.Audio.FootMat.Auto && Campus.Gen.Geometry.PlanRings.PointInRing(xz, slab.Ring)))
                 throw new InvalidOperationException($"Outdoor source lost its existing site support: {source.Id}.");
             var bake = new InteriorRequests();
-            var stream = new InteriorStream(bake, new StreamMountQueue(() => 0), new StreamMaterials(null!, null!), null!, _ => { }, false, new StreamGeometryPreparation());
+            var stream = new InteriorStream(bake, new StreamMountQueue(() => 0), new StreamMaterials(null!, null!), null!, _ => { }, false, new StreamGeometryPreparation(), static _ => { });
             stream.Load(context); stream.Select(medium, position);
             if (bake.Keys.Count != 0) throw new InvalidOperationException("Outdoor medium requested an interior shell.");
             stream.Prefetch(new(source.Feature, checked((short)area.Index)), position);
@@ -134,7 +134,7 @@ public sealed class StreamSchedulingTests
         foreach (bool knownDestination in new[] { false, true })
         {
             var bake = new InteriorRequests();
-            var stream = new InteriorStream(bake, new StreamMountQueue(() => 0), new StreamMaterials(null!, null!), null!, _ => { }, false, new StreamGeometryPreparation());
+            var stream = new InteriorStream(bake, new StreamMountQueue(() => 0), new StreamMaterials(null!, null!), null!, _ => { }, false, new StreamGeometryPreparation(), static _ => { });
             stream.Load(context);
             if (knownDestination) stream.Prefetch(new(building, checked((short)medium.Storey)), waypoint.Fly.Position);
             else stream.Select(medium, waypoint.Fly.Position);
@@ -277,6 +277,7 @@ public sealed class StreamSchedulingTests
     {
         public List<BakeKey> Keys { get; } = [];
         public IBakeHandle Ensure(BakeKey key, BakePriority priority) { Keys.Add(key); return this; }
+        public BakeCacheStatistics CacheStatistics => default;
         public BakeProgress Progress => default;
         public long CacheBytes => 0;
         public BakeState State => BakeState.Pending;

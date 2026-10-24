@@ -256,6 +256,7 @@ internal static class MapRuntimeTestSupport
 
     internal sealed class RuntimeBake : IBakeService
     {
+        public BakeCacheStatistics CacheStatistics => default;
         public IBakeHandle Ensure(BakeKey key, BakePriority priority) => throw new NotSupportedException();
         public BakeProgress Progress => default;
         public Exception? Failure => null;

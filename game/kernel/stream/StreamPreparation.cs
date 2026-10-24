@@ -21,6 +21,19 @@ internal sealed class StreamPreparation(StreamDirector host, IStreamGeometryPrep
     private long _catalogGeneration;
     internal ModuleTileCatalog? Catalog => _catalog;
     internal int Preparations => _preparing.Count;
+    internal int Requests => _requests.Count;
+    internal int Bakes => _pending.Count + (_catalogTask is null ? 0 : 1);
+    internal int Retirements
+    {
+        get
+        {
+            var count = _catalogTask is not null && _catalogGeneration != _host.MapGeneration ? 1 : 0;
+            foreach (var pending in _pending) if (!_host.Residency.IsCurrent(pending)) count++;
+            foreach (var preparing in _preparing)
+                if (!_host.Residency.IsCurrentGeometry(preparing.Tile, preparing.Group, preparing.Revision, preparing.GeometryRevision)) count++;
+            return count;
+        }
+    }
     internal bool IsIdle => _pending.Count == 0 && _preparing.Count == 0 && _catalogTask is null;
     internal bool IsIssued(BakeKey key) => _issued.Contains(key);
     internal void Forget(BakeKey key) => _issued.Remove(key);
@@ -132,7 +145,9 @@ internal sealed class StreamPreparation(StreamDirector host, IStreamGeometryPrep
                 group.Queued = true;
                 var key = group.MountKey ?? throw new InvalidOperationException("Geometry mount has no source request identity.");
                 group.Work = new VisualMountWork(key, group.Bundles, _host.Mount.Revision, _host.GetViewport().GetWorld3D().Scenario,
-                    group.Priority, _host.Residency.Materials, _host.Reflections, () => group.Mounted = true, () => group.Mounted = false,
+                    group.Priority, _host.Residency.Materials, _host.Reflections,
+                    () => _host.Residency.SetMounted(group, preparing.Revision),
+                    () => _host.Residency.ClearMounted(group, preparing.Revision),
                     reason => _host.Fail(group.Tile, reason));
                 _host.Mount.Enqueue(group.Work);
             }

@@ -25,6 +25,9 @@ public interface IStreamMountWork
 /// <summary>The sole stream-mount executor owns FramePriority.StreamMount and all shared mount time accounting.</summary>
 public interface IStreamMountQueue
 {
+    int Pending { get; }
+    double LastMilliseconds { get; }
+    int WatchdogTrips { get; }
     /// <summary>Original mount and cancellation failures consumed by the map lifetime owner.</summary>
     Exception? Failure { get; }
     /// <summary>Monotonically increases when the map lifetime is unloaded.</summary>
@@ -71,3 +74,29 @@ public interface IStreamTileParticipant
     void Unmount(BakeKey key);
     Exception? Failure { get; }
 }
+
+/// <summary>Main-thread snapshots of existing stream owners; never a readiness or scheduling input.</summary>
+public interface IStreamStatistics
+{
+    StreamStatistics Statistics { get; }
+    event Action<StreamTileChange>? TileChanged;
+}
+
+public readonly record struct StreamStatistics
+{
+    public long Revision { get; init; }
+    public int PendingRequests { get; init; }
+    public int PendingBakes { get; init; }
+    public int PendingPreparations { get; init; }
+    public int PendingMounts { get; init; }
+    public int PendingRetirements { get; init; }
+    public double MountMilliseconds { get; init; }
+    public int WatchdogTrips { get; init; }
+    // Completed packed visual payload bytes, not driver upload bytes.
+    public long MountedBytes { get; init; }
+    public int MountedTilesDelta { get; init; }
+}
+
+public enum StreamTileChangeKind : byte { Mounted, Unmounted }
+public readonly record struct StreamTileChange(BakeKey Key, StreamMountKind Kind,
+    long Revision, StreamTileChangeKind Change, long? Bytes, double MonotonicMilliseconds);

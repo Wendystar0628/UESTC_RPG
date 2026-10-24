@@ -26,6 +26,21 @@ internal sealed class StreamResidency(StreamDirector host)
     internal StreamMaterials Materials => _materials;
     internal bool IsIdle => _groups.Count == 0 && _retiringBundles.Count == 0 && _detachPending.Count == 0 && (_materials?.IsEmpty ?? true);
     internal bool CanActivateVisual => _retiringBundles.Count == 0 && _detachPending.Count == 0;
+    internal int Retirements
+    {
+        get
+        {
+            var count = _retiringBundles.Count;
+            foreach (var group in _groups.Values)
+            {
+                foreach (var bundle in group.Bundles)
+                    if ((_host.Context is null || bundle.IsRetiring) && !bundle.IsDisposed) count++;
+                if (_host.Context is null)
+                    foreach (var item in group.Participants.Values) if (item.Mounted) count++;
+            }
+            return count;
+        }
+    }
     internal int MountedTiles => _groups.Values.Count(group => group.Mounted);
     internal long ResidentBytes => _groups.Values.Sum(group => group.Bundles.Sum(bundle => bundle.Bytes));
     internal bool RootMounted => _groups.TryGetValue(StreamTile.Root, out var root) && root.Failure is null && root.Mounted;
@@ -34,6 +49,23 @@ internal sealed class StreamResidency(StreamDirector host)
     {
         if (!_groups.TryGetValue(tile, out var group)) _groups.Add(tile, group = new(tile));
         return group;
+    }
+
+    internal void SetMounted(TileGroup group, long revision)
+    {
+        group.Mounted = true;
+        foreach (var bundle in group.Bundles)
+            _host.RecordTileChange(new(bundle.Key, StreamMountKind.Visual, revision,
+                StreamTileChangeKind.Mounted, bundle.Bytes, FrameClock.MonotonicMilliseconds));
+    }
+
+    internal void ClearMounted(TileGroup group, long revision)
+    {
+        if (!group.Mounted) return;
+        group.Mounted = false;
+        foreach (var bundle in group.Bundles)
+            _host.RecordTileChange(new(bundle.Key, StreamMountKind.Visual, revision,
+                StreamTileChangeKind.Unmounted, bundle.Bytes, FrameClock.MonotonicMilliseconds));
     }
 
     internal bool IsReady(StreamTile tile) => _groups.TryGetValue(tile, out var group) && group.GeometryRequested && group.Failure is null && group.Mounted;
@@ -160,6 +192,9 @@ internal sealed class StreamResidency(StreamDirector host)
     internal void Load() => _reflectionDirty = true;
     internal void DetachMap()
     {
+        foreach (var group in _groups.Values)
+            try { group.Work?.Abandon(); }
+            catch (Exception error) { _host.RecordFailure(error); }
         // Detach the entire retiring scene before FreeRid flushes dirty instances.
         foreach (var bundle in _groups.Values.SelectMany(group => group.Bundles)
                      .Concat(_host.Interiors?.Prepared ?? []).Concat(_retiringBundles).Distinct())

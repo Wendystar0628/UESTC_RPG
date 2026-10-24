@@ -21,6 +21,8 @@ internal sealed class StreamSelection
     private TerrainPlan? _terrainPlan;
     private readonly List<TerrainPlan> _retiredPlans = [];
     internal bool IsIdle => _terrainPlan is null && _retiredPlans.Count == 0;
+    internal int Preparations => _terrainPlan is null ? 0 : 1;
+    internal int Retirements => _retiredPlans.Count;
     private IMapContext? _plannedContext;
     private IWorldModel? _plannedWorld;
     private Pose _plannedPose;

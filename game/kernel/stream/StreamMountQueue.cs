@@ -65,6 +65,7 @@ public sealed class StreamMountQueue : IStreamMountQueue, IStreamMountFrame
     public void RemoveMap(MapId map)
     {
         Revision++;
+        LastMilliseconds = 0;
         for (var i = _pending.Count - 1; i >= 0; i--)
         {
             var work = _pending[i];

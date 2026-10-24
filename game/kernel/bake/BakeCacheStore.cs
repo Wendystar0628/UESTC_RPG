@@ -34,6 +34,7 @@ public sealed class BakeCacheStore
     // Readers keep a whole logical group stable; mutation and native shutdown wait for them.
     private readonly ReaderWriterLockSlim _sync = new();
     private long _bytes;
+    private long _hits, _misses, _rebuilds;
     private bool _bytesKnown;
     private volatile bool _initialized;
     private volatile bool _stopped;
@@ -50,6 +51,9 @@ public sealed class BakeCacheStore
         if (!Path.IsPathFullyQualified(root)) throw new ArgumentException("Cache root must be absolute.", nameof(root));
         _root = Path.TrimEndingDirectorySeparator(Path.GetFullPath(root));
     }
+
+    public BakeCacheStatistics CacheStatistics => new(Interlocked.Read(ref _hits),
+        Interlocked.Read(ref _misses), Interlocked.Read(ref _rebuilds));
 
     public long CacheBytes
     {
@@ -119,7 +123,12 @@ public sealed class BakeCacheStore
             {
                 ThrowIfStopped();
                 publication = _publications.GetValueOrDefault(key);
-                if (!File.Exists(path)) return null;
+                if (!File.Exists(path))
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
+                    Interlocked.Increment(ref _misses);
+                    return null;
+                }
                 ValidatePath(_root, path);
                 var count = BakeCacheIndex.Read(path, payload, identity);
                 ValidateEntry(BakeCacheIndex.DirectoryPath(path));
@@ -135,12 +144,14 @@ public sealed class BakeCacheStore
             cancellationToken.ThrowIfCancellationRequested();
             var product = decode(parts) ?? throw new InvalidDataException("Empty cached product.");
             cancellationToken.ThrowIfCancellationRequested();
+            Interlocked.Increment(ref _hits);
             return product;
         }
         catch (Exception error) when (error is IOException or InvalidDataException or ArgumentException or OverflowException or JsonException or UnauthorizedAccessException)
         {
             cancellationToken.ThrowIfCancellationRequested();
             RejectProduct(key, publication, error, cancellationToken);
+            Interlocked.Increment(ref _misses);
             return null;
         }
     }
@@ -235,6 +246,7 @@ public sealed class BakeCacheStore
             }
             // Publishing the small logical index is the commit point; it never contains geometry buffers.
             Publish(path, indexBytes, cancellationToken);
+            Interlocked.Increment(ref _rebuilds);
             foreach (var obsolete in BakeCacheIndex.Files(path).Skip(parts.Count)) DeleteProductFile(obsolete);
             _rejected.TryRemove(key, out _);
         }

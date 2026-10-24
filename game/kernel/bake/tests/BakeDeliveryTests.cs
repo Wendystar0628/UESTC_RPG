@@ -12,6 +12,55 @@ namespace Campus.Kernel.Bake.Tests;
 [TestSuite]
 public sealed class BakeDeliveryTests
 {
+    [TestCase, TestCategory(TestReason.Contract), RequireGodotRuntime]
+    public void CacheStatisticsCountLogicalDecodeMissAndPublicationWithoutResettingOnClear()
+    {
+        var root = Path.Combine(Path.GetTempPath(), "uestc-rpg-bake-statistics-" + Guid.NewGuid().ToString("N"));
+        var cache = new BakeCacheStore(root);
+        var key = new BakeKey(new("fixture"), "fixture.statistics", "product");
+        try
+        {
+            Check(new BakeCacheStatistics());
+            if (Read() is not null) throw new InvalidOperationException("Missing cache product was accepted.");
+            Check(new(0, 1, 0));
+            if (cache.MatchesInput(key, BakePayloadClass.Product, "fixture"))
+                throw new InvalidOperationException("Missing cache index was accepted.");
+            Check(new(0, 1, 0));
+            cache.WriteParts(key, BakePayloadClass.Product, "fixture", [new byte[] { 1 }, new byte[] { 2 }]);
+            Check(new(0, 1, 1));
+            if (Read()?.Length != 2) throw new InvalidOperationException("Complete logical cache product was lost.");
+            Check(new(1, 1, 1));
+            using var cancellation = new CancellationTokenSource();
+            AssertThrown(() => cache.TryReadParts(key, BakePayloadClass.Product, "fixture", parts =>
+            {
+                cancellation.Cancel();
+                return parts.SelectMany(part => part).ToArray();
+            }, cancellation.Token)).IsInstanceOf<OperationCanceledException>();
+            AssertThrown(() => cache.Write(key, BakePayloadClass.Product, "fixture", [3], cancellation.Token))
+                .IsInstanceOf<OperationCanceledException>();
+            Check(new(1, 1, 1));
+            if (cache.TryReadParts(key, BakePayloadClass.Product, "changed-input", static parts => parts[0]) is not null)
+                throw new InvalidOperationException("Stale cache input was accepted.");
+            Check(new(1, 2, 1));
+            cache.Clear();
+            Check(new(1, 2, 1));
+            if (new BakeCacheStore(root).CacheStatistics != default)
+                throw new InvalidOperationException("A new application store inherited the old counters.");
+
+            byte[]? Read() => cache.TryReadParts(key, BakePayloadClass.Product, "fixture",
+                static parts => parts.SelectMany(part => part).ToArray());
+            void Check(BakeCacheStatistics expected)
+            {
+                if (cache.CacheStatistics != expected) throw new InvalidOperationException("Cache counters crossed a logical operation or lifetime boundary.");
+            }
+        }
+        finally
+        {
+            cache.Stop();
+            if (Directory.Exists(root)) Directory.Delete(root, recursive: true);
+        }
+    }
+
     [TestCase]
     [TestCategory(TestReason.Contract)]
     [TestCategory(TestTag.Determinism)]

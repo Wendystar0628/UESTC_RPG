@@ -24,8 +24,9 @@ public interface IStreamVisualFrame
 
 [KernelService(typeof(IStreamVisualFrame))]
 [KernelService(typeof(IMapStreamState))]
+[KernelService(typeof(IStreamStatistics))]
 [KernelNode("stream.select")]
-public partial class StreamDirector : Node, IMapAware, IMapStreamState, IStreamVisualFrame
+public partial class StreamDirector : Node, IMapAware, IMapStreamState, IStreamVisualFrame, IStreamStatistics
 {
     private readonly StreamSelection _selection;
     private StreamPreparation _preparation = null!;
@@ -51,6 +52,8 @@ public partial class StreamDirector : Node, IMapAware, IMapStreamState, IStreamV
     private MapId? _unloadingMap;
     private Task? _drain;
     private bool _exiting, _captureMode, _checkRetention;
+    private long _statisticsRevision, _mountedBytes;
+    private int _watchdogBaseline, _mountedTilesDelta;
 
     public StreamDirector()
     {
@@ -95,6 +98,61 @@ public partial class StreamDirector : Node, IMapAware, IMapStreamState, IStreamV
     public bool ViewReady => _selection.ViewReady;
     /// <summary>Packed-buffer bytes, not compressed disk bytes or measured VRAM.</summary>
     public long ResidentBytes => _residency.ResidentBytes;
+    public event Action<StreamTileChange>? TileChanged;
+    public StreamStatistics Statistics
+    {
+        get
+        {
+            SynchronizeStatisticsRevision();
+            return new()
+            {
+                Revision = _mount.Revision,
+                PendingRequests = _preparation.Requests,
+                PendingBakes = _preparation.Bakes + (_interiors?.Bakes ?? 0),
+                PendingPreparations = _preparation.Preparations + (_interiors?.Preparations ?? 0) +
+                    _selection.Preparations + _pins.Preparations,
+                PendingMounts = _mount.Pending,
+                PendingRetirements = _residency.Retirements + _preparation.Retirements +
+                    (_interiors?.Retirements(_context is null) ?? 0) + _selection.Retirements + _pins.Retirements,
+                MountMilliseconds = _context is null ? 0 : _mount.LastMilliseconds,
+                WatchdogTrips = _context is null ? 0 : _mount.WatchdogTrips - _watchdogBaseline,
+                MountedBytes = _mountedBytes,
+                MountedTilesDelta = _mountedTilesDelta
+            };
+        }
+    }
+
+    private void SynchronizeStatisticsRevision()
+    {
+        if (_statisticsRevision == _mount.Revision) return;
+        _statisticsRevision = _mount.Revision; _watchdogBaseline = _mount.WatchdogTrips;
+        _mountedBytes = 0; _mountedTilesDelta = 0;
+    }
+
+    private void BeginStatisticsFrame()
+    {
+        SynchronizeStatisticsRevision();
+        _mountedBytes = 0; _mountedTilesDelta = 0;
+    }
+
+    internal void RecordTileChange(StreamTileChange change)
+    {
+        SynchronizeStatisticsRevision();
+        // Old owners retain their identity for events, but never add to a new map's frame.
+        if (_context is not null && change.Revision == _statisticsRevision)
+        {
+            switch (change.Change)
+            {
+                case StreamTileChangeKind.Mounted:
+                    _mountedTilesDelta++;
+                    if (change.Bytes is { } bytes) _mountedBytes += bytes;
+                    break;
+                case StreamTileChangeKind.Unmounted: _mountedTilesDelta--; break;
+                default: throw new ArgumentOutOfRangeException(nameof(change));
+            }
+        }
+        TileChanged?.Invoke(change);
+    }
 
     public void Bind(StreamDirectorDependencies dependencies)
     {
@@ -108,7 +166,9 @@ public partial class StreamDirector : Node, IMapAware, IMapStreamState, IStreamV
         _preparation = new(this, dependencies.Geometry);
         _participants = new(this, dependencies.Owner, dependencies.ViewCamera);
         _residency.InitializeMaterials(dependencies.Toon, dependencies.Shaders);
-        _interiors = new(_bake, _mount, _residency.Materials, _reflections, _residency.QueueRetirement, _captureMode, dependencies.Geometry);
+        _interiors = new(_bake, _mount, _residency.Materials, _reflections, _residency.QueueRetirement,
+            _captureMode, dependencies.Geometry, RecordTileChange);
+        BeginStatisticsFrame();
     }
 
     public override void _EnterTree()
@@ -127,6 +187,7 @@ public partial class StreamDirector : Node, IMapAware, IMapStreamState, IStreamV
         _mapGeneration++;
         _selection.BeginMapChange();
         _context = context; _failure = null; _failures.Clear(); _drain = null;
+        BeginStatisticsFrame(); _watchdogBaseline = _mount.WatchdogTrips;
         _selection.Load(context); _residency.Load();
         var contextSource = _contextSource;
         var firstModule = _owner!.Query<IContentModule>(RegistrationKind.Content, context.Descriptor.Id).FirstOrDefault();
@@ -139,6 +200,7 @@ public partial class StreamDirector : Node, IMapAware, IMapStreamState, IStreamV
         _unloadingMap = from;
         _mapGeneration++;
         _context = null;
+        BeginStatisticsFrame(); _watchdogBaseline = _mount.WatchdogTrips;
         Stop(_selection.BeginMapChange);
         Stop(() => SetPinnedDestinations(Array.Empty<MapStreamDestination>()));
         Stop(_selection.Unload);
@@ -181,6 +243,7 @@ public partial class StreamDirector : Node, IMapAware, IMapStreamState, IStreamV
     public void ClearDestination() => _selection.ClearDestination();
     public override void _Process(double delta)
     {
+        BeginStatisticsFrame();
         if (_exiting || _context is null) return;
         try
         {

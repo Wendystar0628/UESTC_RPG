@@ -3,6 +3,7 @@ using Campus.Contracts.Bake;
 using Campus.Kernel.Bake;
 using Campus.Kernel.Collision;
 using Campus.Kernel.Diagnostics;
+using Campus.Kernel.Frame;
 using Campus.Kernel.Lod;
 using Campus.Kernel.Renderer;
 using Campus.Kernel.Registry;
@@ -172,7 +173,12 @@ internal sealed class StreamParticipants(StreamDirector host, ServiceRegistry re
                 work.Cancel();
                 throw new InvalidDataException($"Participant mount identity mismatch: {pending.Request.Key}.");
             }
-            item.Work = new(work, () => _host.Residency.IsCurrent(pending), () => item.Mounted = true,
+            item.Work = new(work, () => _host.Residency.IsCurrent(pending), () =>
+                {
+                    item.Mounted = true;
+                    _host.RecordTileChange(new(work.Key, work.Kind, work.Revision, StreamTileChangeKind.Mounted,
+                        null, FrameClock.MonotonicMilliseconds));
+                },
                 error => FailParticipant(pending.Group, item, error), () => ParticipantPriority(item));
             _host.Mount.Enqueue(item.Work);
         }
@@ -230,13 +236,25 @@ internal sealed class StreamParticipants(StreamDirector host, ServiceRegistry re
         _retiredParticipants.Clear();
     }
 
-    private static void ReleaseParticipant(BakeKey key, ParticipantTile item)
+    private void ReleaseParticipant(BakeKey key, ParticipantTile item)
     {
         Exception? failure = null;
-        try { item.Work?.Cancel(); } catch (Exception error) { failure = error; }
-        try { item.Participant.Unmount(key); }
+        var unmounted = false;
+        try { item.Work?.Cancel(); } catch (Exception error) { failure = RetainedFailure.Append(failure, error); }
+        try { item.Participant.Unmount(key); unmounted = true; }
         catch (Exception error) { failure = RetainedFailure.Append(failure, error); }
+        var wasMounted = item.Mounted;
         item.Mounted = false;
+        try
+        {
+            if (unmounted && wasMounted)
+            {
+            var work = item.Work ?? throw new InvalidOperationException("Mounted participant has no work identity.");
+            _host.RecordTileChange(new(work.Key, work.Kind, work.Revision, StreamTileChangeKind.Unmounted,
+                null, FrameClock.MonotonicMilliseconds));
+        }
+        }
+        catch (Exception error) { failure = RetainedFailure.Append(failure, error); }
         if (failure is not null) System.Runtime.ExceptionServices.ExceptionDispatchInfo.Capture(failure).Throw();
     }
 

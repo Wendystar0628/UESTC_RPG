@@ -202,9 +202,11 @@ internal static class StreamLifecycleTestSupport
         public ControlledGeometry Geometry { get; } = new();
         public FixtureCollisionParticipant CollisionParticipant { get; } = new();
         public Collision Collision { get; } = new();
-        public StreamMountQueue Mount { get; } = new(() => 0);
-        public StreamFixture(bool geometry = false, bool elevated = false, Task<PreparedBakeTiles>? catalog = null, bool staticTitle = false)
+        public StreamMountQueue Mount { get; }
+        public StreamFixture(bool geometry = false, bool elevated = false, Task<PreparedBakeTiles>? catalog = null,
+            bool staticTitle = false, StreamMountQueue? mount = null)
         {
+            Mount = mount ?? new(() => 0);
             var bounds = elevated ? new Box3(new(-512, 0, -512), new(512, 10, 512)) : new Box3(N.Vector3.Zero, new(128, 10, 128));
             var map = BackdropInputsTests.Descriptor() with { Id = new("stream-fixture"), Bounds = bounds, TileMin = new((int)bounds.Min.X / TileGrid.BaseEdge, (int)bounds.Min.Z / TileGrid.BaseEdge),
                 TileMax = new((int)bounds.Max.X / TileGrid.BaseEdge - 1, (int)bounds.Max.Z / TileGrid.BaseEdge - 1) };
@@ -270,6 +272,7 @@ internal static class StreamLifecycleTestSupport
         { if (_handles.TryGetValue(key, out var value)) return value; var handle = new Handle(Bundle(key, bounds)); _handles.Add(key, handle); if (!Hold(key)) handle.Complete(); return handle; }
         public void CompleteLevel(LodLevel level) { foreach (var handle in Waiting.Where(handle => handle.TileKey.Level == level)) handle.Complete(); }
         public void Release() { Hold = _ => false; foreach (var handle in Waiting) handle.Complete(); }
+        public BakeCacheStatistics CacheStatistics => default;
         public BakeProgress Progress => default;
         public Exception? Failure => null;
         public long CacheBytes => 0;

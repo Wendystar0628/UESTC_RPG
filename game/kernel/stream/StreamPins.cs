@@ -14,6 +14,16 @@ internal sealed class StreamPins(StreamDirector host)
     private readonly List<PinnedTarget> _retired = [];
     private readonly HashSet<StreamTile> _required = [];
     internal bool IsIdle => _pinnedTargets.Length == 0 && _retired.Count == 0;
+    internal int Preparations
+    {
+        get
+        {
+            var count = 0;
+            foreach (var target in _pinnedTargets) if (!target.Completed) count++;
+            return count;
+        }
+    }
+    internal int Retirements => _retired.Count;
     internal IReadOnlyList<MapStreamDestination> PinnedDestinations => _pinnedDestinations;
     internal IReadOnlySet<StreamTile> Required => _required;
 
