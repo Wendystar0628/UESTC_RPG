@@ -2,11 +2,16 @@ using Campus.Contracts.Save;
 
 namespace Campus.Contracts;
 
+/// <summary>Native input owner facts; null means the platform fact is unavailable.</summary>
+public readonly record struct InputDesktopState(bool? IsInputDesktop, bool? WindowFocused);
+
 public readonly record struct InputActionEvent(string Action, bool Pressed, bool Echo);
 
 /// <summary>Shared keyboard action routing; physical key codes are numeric to keep Godot outside contracts.</summary>
 public interface IInputRouter
 {
+    /// <summary>Main-thread read of the sole input owner's native desktop and focus facts.</summary>
+    InputDesktopState DesktopState { get; }
     /// <summary>Lower priority values run first; equal priority layers run newest first.</summary>
     /// <remarks>A handler returning true consumes the event. Disposing a registration removes only that layer.</remarks>
     IDisposable RegisterLayer(string owner, int priority, Func<InputActionEvent, bool> handler);

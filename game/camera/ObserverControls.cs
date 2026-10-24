@@ -18,10 +18,13 @@ internal sealed class ObserverControls(ObserverCamera camera, FlightTuning tunin
     private long _nextLayer;
     private float _wheel;
     private bool _automated;
+    // Godot-local focus governs delivered input events, including formal injection on a private desktop.
+    // Native desktop/focus in ObserverMouseCapture alone governs OS capture and recorded WindowFocused.
     private bool _focused = true;
 
     public ObserverInputState State { get; } = new(tuning);
     public bool Locked => _locks.Locked;
+    public InputDesktopState DesktopState => _mouseCapture.DesktopState;
     public bool CursorVisible { get; private set; }
     public bool CursorHeld { get; private set; }
     public event Action<bool>? CursorVisibilityChanged;
@@ -130,8 +133,7 @@ internal sealed class ObserverControls(ObserverCamera camera, FlightTuning tunin
 
     private bool HandleLook(InputEventMouseMotion motion)
     {
-        // Focus controls the OS cursor, not delivery through the game's normal input route.
-        if (!camera.IsPlaying || CursorRequested || Locked) return false;
+        if (!camera.IsPlaying || CursorVisible || Locked) return false;
         camera.CancelTransitForInput();
         var relative = motion.ScreenRelative;
         var pose = camera.Pose with
@@ -146,7 +148,7 @@ internal sealed class ObserverControls(ObserverCamera camera, FlightTuning tunin
 
     private bool HandleMouseButton(InputEventMouseButton mouse)
     {
-        if (CursorRequested) return false;
+        if (CursorVisible) return false;
         if (mouse.ButtonIndex is not (MouseButton.WheelUp or MouseButton.WheelDown)) return false;
         _wheel += mouse.Factor * (mouse.ButtonIndex == MouseButton.WheelUp ? 1 : -1);
         int steps = (int)_wheel;

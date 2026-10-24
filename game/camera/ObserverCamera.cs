@@ -460,6 +460,7 @@ public partial class ObserverCamera : Node, ICameraRig, IObserverState, IViewCon
         _controls.RegisterLayer(owner, priority, handler);
     public IDisposable LockInput(InputLockReason reason) => _controls.LockInput(reason);
     public IDisposable RequestCursor(InputLockReason reason) => _controls.RequestCursor(reason);
+    public InputDesktopState DesktopState => _controls.DesktopState;
     public bool CursorVisible => _controls.CursorVisible;
     public bool CursorHeld => _controls.CursorHeld;
     public event Action<bool>? CursorVisibilityChanged

@@ -147,6 +147,7 @@ internal sealed class CoreLifecycleDriver(IStageGateHost host)
 
     private async Task ExerciseInput(ICameraRig camera, IWalkController walk, IInputRouter input)
     {
+        await ExerciseMouseFocus(camera, walk, input);
         // DECISION-308: cursor visibility is independent of movement input.
         var before = walk.BodyPose.Position;
         var forward = Angles.Forward(walk.BodyPose.YawDeg, 0);
@@ -174,6 +175,58 @@ internal sealed class CoreLifecycleDriver(IStageGateHost host)
         if (!float.IsFinite(distance) || distance <= 0 || !float.IsFinite(projected) || projected <= 0)
             throw new InvalidOperationException("Forward input did not produce finite positive walking displacement.");
         GD.Print(FormattableString.Invariant($"CORE_INPUT_READY distance={distance:R} forward={projected:R}"));
+    }
+
+    private async Task ExerciseMouseFocus(ICameraRig camera, IWalkController walk, IInputRouter input)
+    {
+        bool focused = DisplayServer.WindowIsFocused();
+        if (!focused || input.CursorVisible || host.Flow.State != AppState.Playing || !walk.Active)
+            throw new InvalidOperationException("Mouse regression requires the locally focused Playing walk controller without a cursor lease.");
+        using var motion = new InputEventMouseMotion { Relative = new(32, 0), ScreenRelative = new(32, 0) };
+        using var wheel = new InputEventMouseButton
+        {
+            ButtonIndex = walk.SpeedStep < WalkRules.SpeedStepCount - 1 ? MouseButton.WheelUp : MouseButton.WheelDown,
+            Pressed = true, Factor = 1
+        };
+        try
+        {
+            float before = camera.Pose.YawDeg;
+            Input.ParseInputEvent(motion);
+            await FrameAwaiter.ProcessAsync(host.Stage, host.Lifetime);
+            host.CheckActive();
+            if (!float.IsFinite(camera.Pose.YawDeg) || camera.Pose.YawDeg == before)
+                throw new InvalidOperationException("Locally focused mouse input did not change the real camera yaw.");
+
+            // Godot-local focus notifications leave the OS desktop and native window focus untouched.
+            host.Stage.PropagateNotification((int)Node.NotificationWMWindowFocusOut);
+            if (!input.CursorVisible)
+                throw new InvalidOperationException("Local focus loss did not publish a visible cursor.");
+            before = camera.Pose.YawDeg;
+            int speedStep = walk.SpeedStep;
+            Input.ParseInputEvent(motion);
+            Input.ParseInputEvent(wheel);
+            wheel.Pressed = false;
+            Input.ParseInputEvent(wheel);
+            await FrameAwaiter.ProcessAsync(host.Stage, host.Lifetime);
+            host.CheckActive();
+            if (camera.Pose.YawDeg != before || walk.SpeedStep != speedStep)
+                throw new InvalidOperationException("Unfocused mouse input changed camera yaw or walking speed.");
+
+            host.Stage.PropagateNotification((int)Node.NotificationWMWindowFocusIn);
+            if (input.CursorVisible)
+                throw new InvalidOperationException("Local focus return did not restore look input.");
+            Input.ParseInputEvent(motion);
+            await FrameAwaiter.ProcessAsync(host.Stage, host.Lifetime);
+            host.CheckActive();
+            if (!float.IsFinite(camera.Pose.YawDeg) || camera.Pose.YawDeg == before)
+                throw new InvalidOperationException("Mouse input did not change camera yaw after local focus returned.");
+            GD.Print("CORE_MOUSE_FOCUS_READY");
+        }
+        finally
+        {
+            host.Stage.PropagateNotification((int)(focused
+                ? Node.NotificationWMWindowFocusIn : Node.NotificationWMWindowFocusOut));
+        }
     }
 
     private async Task ExerciseSettings(IInputRouter input)

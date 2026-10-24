@@ -69,6 +69,7 @@ internal sealed class TestInputRouter : IInputRouter
         Cursors++;
         return new Lease(() => Cursors--);
     }
+    public InputDesktopState DesktopState { get; set; } = new(true, true);
     public bool CursorVisible => Cursors > 0;
     public bool CursorHeld => false;
     public bool TryRebind(string action, int physicalKey, int physicalLocation, out string? conflict) { conflict = null; return true; }

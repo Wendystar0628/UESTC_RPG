@@ -1,6 +1,7 @@
 using System.ComponentModel;
 using System.Runtime.InteropServices;
 using Godot;
+using Campus.Contracts;
 
 namespace Campus.Camera;
 
@@ -33,6 +34,8 @@ internal sealed class ObserverMouseCapture
             return receivingInput != 0;
         }
     }
+
+    internal InputDesktopState DesktopState => new(IsInputDesktop, CanCapture());
 
     private bool CanCapture()
     {
