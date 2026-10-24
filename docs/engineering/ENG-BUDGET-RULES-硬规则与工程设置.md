@@ -4,7 +4,7 @@ title: 硬规则与工程设置
 category: engineering
 parent: ENG-BUDGET
 summary: 违反即不能推送的 23 条硬规则，及 project.godot、渲染器等工程设置
-keywords: [硬规则, 性能规则, 白名单着色器, 不得新增光源, 线程边界, 全局着色器参数登记, 风格底线不可关, 存档只走一条路, 本机烘焙同机确定, 工程设置, 渲染器, 版本锁定]
+keywords: [硬规则, 性能规则, 白名单着色器, 不得新增光源, 线程与同步边界, 同步读回, GPU 端复制, DECISION-341, 全局着色器参数登记, 风格底线不可关, 存档只走一条路, 本机烘焙同机确定, 工程设置, 渲染器, 版本锁定]
 depends: [CORE-INDEX, ENG-BUDGET, ENG-ARCH, ENG-PERF, SYS-GRAPHICS, SYS-SAVE, SYS-AUDIO, WLD-INTERIORS, ART-STYLE]
 related: [ENG-GATES, WF-BUILD]
 contracts: []
@@ -57,7 +57,7 @@ paths: ["Directory.Build.props", "game/**/*.gdshader*", "game/kernel/**/*.cs", "
 13. **全局着色器参数必须先登记**（`game/contracts/Materials/ShaderGlobals.cs`，类型与默认值在 `game/project.godot` 的 `[shader_globals]`）；运行时不得 `GlobalShaderParameterAdd`、不得读回；每个参数只有一个写入方。
 14. **阴影投影物**必须在相机可见层上；草、插片、落叶、粒子、光晕、光锥一律 `cast_shadow = Off`；远处与植被的投影用 `ShadowsOnly` 代理。
 15. **着色器里按距离判断**用 `MAIN_CAM_INV_VIEW_MATRIX[3].xyz`，不用 `CAMERA_POSITION_WORLD`（阴影通道里它是灯的位置）；不用 `LIGHT_COLOR`（G4）。
-16. **线程边界**：工作线程只做纯 .NET 计算、读写本机缓存、`res://` 后台加载和 RenderingServer 资源创建；场景树、`RenderingServer.Instance*`、PhysicsServer3D 的 body 只在主线程；gen 里禁用 `Parallel`、`Task.Run`；在途生成任务不超过 max(2, 逻辑核数 − 2)。
+16. **线程与同步边界**：工作线程只做纯 .NET 计算、读写本机缓存、`res://` 后台加载和 RenderingServer 资源创建；场景树、`RenderingServer.Instance*`、PhysicsServer3D 的 body 只在主线程；gen 里禁用 `Parallel`、`Task.Run`；在途生成任务不超过 max(2, 逻辑核数 − 2)。应用代码不在主线程同步读回 GPU 资源，要用帧画面就在渲染线程做 GPU 端复制；放行的用途与 API 以 G4 的登记为准，引擎正常的帧同步不在此列（DECISION-341）。
 17. **风格底线不可关**（清单见 ART-STYLE-LINES §2）：任何预设、手动值和自动调节级别都不能关；实时阴影不低于 2048²、2 级，西湖倒影不低于每轴 1/4、每 4 帧；只有移轴、镜头光斑、光柱、暗角可关。最差值写在 `KnobSpec.WorstAllowed`，集中测试时在最差值配置下截图看一眼（G7）。
 18. **画面设置不改烘焙、碰撞和世界状态**：`Build()` 与 `Campus.Gen.*` 不感知画面设置；各模块只经 `IQualityService` 与 `[QualityResponsive]` 接收设置，不直接读设置文件；每个单项恰有一个负责方（G5）。
 19. **存档只走一条路**：只经 `ISaveService` 与 `[SaveSection]`，禁用 Godot Resource、ConfigFile、`StrToVar`、`BytesToVar*`、`GetVar`；只有 `Campus.Kernel.Save` 写 `user://saves`；快照不造成可见卡顿（主线程单帧 ≲ 1 ms），其余在线程池（SYS-SAVE-FORMAT §4）。

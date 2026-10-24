@@ -1601,14 +1601,14 @@
 
 ## ENG-BUDGET-RULES · 硬规则与工程设置
 
-`docs/engineering/ENG-BUDGET-RULES-硬规则与工程设置.md` · 6.4k 字 · 违反即不能推送的 23 条硬规则，及 project.godot、渲染器等工程设置
-关键词：硬规则、性能规则、白名单着色器、不得新增光源、线程边界、全局着色器参数登记、风格底线不可关、存档只走一条路、本机烘焙同机确定、工程设置、渲染器、版本锁定
+`docs/engineering/ENG-BUDGET-RULES-硬规则与工程设置.md` · 6.5k 字 · 违反即不能推送的 23 条硬规则，及 project.godot、渲染器等工程设置
+关键词：硬规则、性能规则、白名单着色器、不得新增光源、线程与同步边界、同步读回、GPU 端复制、DECISION-341、全局着色器参数登记、风格底线不可关、存档只走一条路、本机烘焙同机确定、工程设置、渲染器、版本锁定
 
 - ENG-BUDGET-RULES §0 结论 · L21 · 949
   - ★ ENG-BUDGET-RULES §0.1 接入要点 · L27 · 685
-- ENG-BUDGET-RULES §1 硬规则（违反任何一条都不能推送） · L38 · 3.4k
+- ENG-BUDGET-RULES §1 硬规则（违反任何一条都不能推送） · L38 · 3.5k
   - ENG-BUDGET-RULES §1.1 渲染、材质与时间（第 1–10 条） · L40 · 1.6k
-  - ENG-BUDGET-RULES §1.2 烘焙、线程、存档、音频与确定性（第 11–23 条） · L53 · 1.8k
+  - ENG-BUDGET-RULES §1.2 烘焙、线程、存档、音频与确定性（第 11–23 条） · L53 · 1.9k
 - ENG-BUDGET-RULES §2 工程设置 · L69 · 856
 
 ## ENG-FAILS · 游戏失败观测
@@ -2033,7 +2033,7 @@
 
 ## REG-DECISIONS-SYSTEMS · 系统与工程决策
 
-`docs/registry/REG-DECISIONS-SYSTEMS-系统与工程决策.md` · 25.5k 字 · 界面、存档、音频、性能与画面设置、工程五个领域的已定决策
+`docs/registry/REG-DECISIONS-SYSTEMS-系统与工程决策.md` · 25.9k 字 · 界面、存档、音频、性能与画面设置、工程五个领域的已定决策
 关键词：决策、系统、工程、界面、存档、音频、性能、画面设置、预算、契约
 
 - REG-DECISIONS-SYSTEMS §0 结论 · L21 · 126
@@ -2041,10 +2041,10 @@
 - REG-DECISIONS-SYSTEMS §1 界面 · L29 · 4.6k
 - REG-DECISIONS-SYSTEMS §2 存档 · L65 · 1.9k
 - REG-DECISIONS-SYSTEMS §3 音频 · L85 · 2.2k
-- REG-DECISIONS-SYSTEMS §4 性能与画面设置 · L107 · 7.1k
-- REG-DECISIONS-SYSTEMS §5 工程 · L160 · 5.5k
-- REG-DECISIONS-SYSTEMS §6 地图与行走 · L196 · 1.0k
-- REG-DECISIONS-SYSTEMS §7 时间、季节、天气 · L207 · 2.4k
+- REG-DECISIONS-SYSTEMS §4 性能与画面设置 · L107 · 7.5k
+- REG-DECISIONS-SYSTEMS §5 工程 · L161 · 5.5k
+- REG-DECISIONS-SYSTEMS §6 地图与行走 · L197 · 1.0k
+- REG-DECISIONS-SYSTEMS §7 时间、季节、天气 · L208 · 2.4k
 
 ## REG-DECISIONS-WORLD · 世界与画面决策
 

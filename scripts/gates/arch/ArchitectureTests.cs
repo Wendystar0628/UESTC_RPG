@@ -402,6 +402,33 @@ public sealed class ArchitectureTests
 
     [TestCase]
     [TestCategory("Contract")]
+    public void SynchronousGpuReadbacksStayAtDocumentedOwners()
+    {
+        SourceModel.RequireNoViolations(GpuReadbackViolations(SourceModel.Production));
+    }
+
+    private static IEnumerable<string> GpuReadbackViolations(IEnumerable<SourceFile> sources)
+    {
+        foreach (var file in sources)
+        foreach (var name in file.Root.DescendantNodes().OfType<SimpleNameSyntax>())
+        {
+            if (name.Identifier.ValueText is not ("GetImage" or "Texture2DGet" or "TextureGetData")) continue;
+            if (file.Model.GetSymbolInfo(name).Symbol is not IMethodSymbol method) continue;
+            var target = (SourceModel.Name(method.ContainingType), method.Name);
+            if (target is not (("Godot.Texture2D", "GetImage") or
+                ("Godot.RenderingServer", "Texture2DGet") or ("Godot.RenderingDevice", "TextureGetData"))) continue;
+            var owner = SourceModel.Owner(file.Model, name);
+            if (owner == "Campus.Kernel.Inspect.GameCaptureNode") continue;
+            // SceneTextTextures only reads imported atlas pages during construction (ENG-BUDGET-RULES).
+            if (owner == "Campus.Style.Materials.SceneTextTextures" && target == ("Godot.Texture2D", "GetImage") &&
+                file.Model.GetEnclosingSymbol(name.SpanStart) is IMethodSymbol { MethodKind: MethodKind.Constructor }) continue;
+            yield return file.At(name, $"Synchronous GPU readback: {owner} -> {method.ToDisplayString()}; " +
+                "only the documented capture and imported scene-text loading owners may read back (ENG-BUDGET-RULES).");
+        }
+    }
+
+    [TestCase]
+    [TestCategory("Contract")]
     public void EngineCreationTimingAndAudioCallsStayWithOwners()
     {
         DenyCallsOutside(@"^Campus\.Kernel\.", method =>
@@ -419,7 +446,12 @@ public sealed class ArchitectureTests
         DenyCallsOutside(@"^Campus\.(?:Kernel\.(?:Frame|Quality|Inspect|Save)(?:\.|$)|Gates(?:\.|$))", method =>
             method.DeclaringType.FullName == "System.Diagnostics.Stopwatch" ||
             IsMethod(method, "Godot.Time", "GetTicks") || IsConstructor(method, "Godot.Timer", "System.Timers.Timer"));
-        DenyCallsOutside(@"^Campus\.Kernel\.Save(?:\.|$)", method => IsMethod(method, "Godot.Time", "GetUnixTimeFromSystem"));
+        // ENG-PERF-DATA: only recording IDs and wall/monotonic anchors may use the system clock.
+        Check(Types().That().ResideInAssemblyMatching(@"^Campus(?:,|\.)")
+            .And().DoNotResideInNamespaceMatching(@"^Campus\.Kernel\.Save(?:\.|$)")
+            .And().DoNotHaveFullName("Campus.Kernel.Inspect.PerformanceRecordingService")
+            .Should().NotCallAny(Methods().Where(method => IsMethod(method, "Godot.Time", "GetUnixTimeFromSystem")))
+            .WithoutRequiringPositiveResults());
         DenyCallsOutside("(?!)", method =>
             IsMethod(method, "Godot.Engine", "SetTimeScale", "set_TimeScale") ||
             IsMethod(method, "Godot.RenderingServer", "GlobalShaderParameterGet") ||

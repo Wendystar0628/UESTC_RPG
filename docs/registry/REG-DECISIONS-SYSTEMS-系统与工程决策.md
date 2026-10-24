@@ -156,6 +156,7 @@ gates: []
 | DECISION-338 | 记录服务可读系统挂钟，只用于会话 ID、开始时刻与 60 s 锚点（G4 例外） | 性能、架构 | ENG-PERF-DATA §2；`scripts/gates/arch/` | 生效 |
 | DECISION-339 | 体系建成后做第 0 轮标定与至多 3 轮调优，只按成本口径，按判停条件收尾 | 性能 | ENG-PERF-MEASURE §6 | 生效 |
 | DECISION-340 | 渲染线程维持 Safe，帧队列与交换链用引擎默认（帧队列 2、交换链 3），不写成永久禁令；Separate 以后有渲染 CPU 瓶颈证据再单独试验 | 性能、渲染 | ENG-BUDGET-RULES §2 | 生效 |
+| DECISION-341 | 应用代码不在主线程同步读回 GPU 资源：`Texture2D.GetImage`、`RenderingServer.Texture2DGet`、`RenderingDevice.TextureGetData` 由 G4 拦，只放行正式截图入口 `GameCaptureNode` 与加载期读导入纹理（`SceneTextTextures`）；转场快照改在渲染线程做 GPU 端复制，与禁用规则同批生效；引擎正常的帧同步与 Present 等待不在此列。起因：第 10 路复核与 07 路查实同步读回会让主线程空等 GPU（RESEARCH-048，GAME-228） | 性能、渲染 | ENG-BUDGET-RULES §1.2；`scripts/gates/arch/` | 生效 |
 
 ## 5 工程
 
