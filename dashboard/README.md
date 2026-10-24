@@ -346,7 +346,7 @@ Dash.reader(el, {code, sec?, find?, docs})   文档阅读器（reader.js）；do
 | `gate` | `pass` 过、`fail` 没过、`skip` 没跑 |
 | `seq`、`timing` | 一组蓝，键是下标 |
 | `cat` | 十二色分类色，键是下标；系列多、要彼此分开时用（如健康页失败大类） |
-| `perf` | 异常五级 `info` 提示、`light` 轻、`heavy` 重、`severe` 严重、`freeze` 卡死（由灰经橙到深红）；曲线 `frame` `fps` `gpu` `measured` `cpu` `setup` `util` `load` `power` `vram` `vramEngine` `capacity`；五段 `physMs` `procMs` `lateMs` `drawMs` `tailMs`；标注 `target` 目标线、`idle` 非稳态、`activity` 在做什么；来源 `ai`（作者用 `side.author`） |
+| `perf` | 异常四级 `info` 提示、`light` 轻、`heavy` 重、`severe` 严重（由灰经橙到红）；曲线 `frame` `fps` `gpu` `measured` `cpu` `setup` `util` `load` `power` `vram` `vramEngine` `capacity`；五段 `physMs` `procMs` `lateMs` `drawMs` `tailMs`；标注 `target` 目标线、`idle` 非稳态、`unknown` 上下文未知、`activity` 在做什么；来源 `ai`（作者用 `side.author`） |
 
 ```
 Dash.colorVar(组, 键)  Dash.color(组, 键)  Dash.cssVar(name)  Dash.label(组, 键)  Dash.mark(组, 键, 字?)  Dash.modelKey(型号)

@@ -8,14 +8,14 @@
 
   var h = Dash.h;
   var PAGE = 'perf';
-  var HOT = { heavy: true, severe: true, freeze: true };   // 重级以上有逐帧切片
+  var HOT = { heavy: true, severe: true };                 // 重级以上有逐帧切片
   var NEAR_MS = 10000;                                      // 点异常时曲线缩到前后 10 秒
   var PHASES = ['physMs', 'procMs', 'lateMs', 'drawMs', 'tailMs'];
   var SHOWN = 12;                                           // 本次异常先列的条数，其余折叠
 
   var CAL = {
     latest: '默认取完成时刻更晚的来源；数是这次会话全部帧的摘要，好坏与有效性照分析器；主视口 GPU 与视口 CPU 渲染是近似 ±2 帧的成本，只看分布，不逐帧归因',
-    frames: '每桶一条均值线，浅色带画到桶内最慢一帧；帧率是每桶有效帧数 ÷ 有效帧时总和；灰纹是非稳态，色带与针是异常；缩到重级以上的异常时改画逐帧五段',
+    frames: '每桶一条均值线，浅色带画到桶内最慢一帧；帧率是每桶有效帧数 ÷ 有效帧时总和；灰纹是非稳态，紫纹是上下文未知（分析器判不出稳不稳态），色带与针是异常；缩到重级以上的异常时改画逐帧五段',
     render: '每桶均值线与桶内最大值带；渲染计时是延迟回读，尖峰前后 ±2 帧只作关联，不叫精确对齐；目标线只在本次会话条件与预算一致时画',
     gpu: '占用是有内核在跑的时间占比、整卡、相对当前频率，限帧时本该低，不能单独当卡顿症状；显存分 NVML 整卡已用与引擎记账两条线',
     anomalies: '分析器判出的异常，每类至多 20 条、按超出量排；关联阶段是墙钟区间里超出最多的一段，不据段名断言原因；点一条，上面的曲线缩到它前后 10 秒',
@@ -127,11 +127,13 @@
     return hit.length ? hit.filter(function (v, i) { return hit.indexOf(v) === i; }).join('、') : '—';
   }
 
-  /* 曲线上的标注：非稳态灰纹、在做什么、异常色带（跨过一桶的）与异常针；top 是针落在的高度 */
+  /* 曲线上的标注：非稳态灰纹、上下文未知紫纹、在做什么、异常色带（跨过一桶的）与异常针；top 是针落在的高度；
+     unknown 是未知区间段数，写进图注 */
   function curveMarks(s, u, top, zi) {
-    var areas = [], pins = [];
+    var areas = [], pins = [], unknown = 0;
     ((s.intervals && s.intervals.context) || []).forEach(function (c) {
       if (c.state === 'nonSteady') areas.push({ from: u.index(c.fromMs), to: u.index(c.toMs), tone: ['perf', 'idle'], alpha: 0.22 });
+      else if (c.state === 'unknown') { unknown++; areas.push({ from: u.index(c.fromMs), to: u.index(c.toMs), label: Dash.label('perf', 'unknown'), tone: ['perf', 'unknown'], alpha: 0.24 }); }
     });
     activities(s).forEach(function (a) { areas.push({ from: u.index(a.fromMs), to: u.index(a.toMs), label: a.label, tone: ['perf', 'activity'], alpha: 0.07 }); });
     (s.anomalies || []).forEach(function (a, i) {
@@ -141,8 +143,9 @@
       if (a.durationMs >= u.bucketMs) areas.push({ from: from, to: to, tone: ['perf', a.level], alpha: i === zi ? 0.38 : 0.18 });
       else pins.push({ index: from, value: top ? top[from] : null, label: a.typeLabel + ' · ' + a.levelLabel, tone: ['perf', a.level] });
     });
-    return { areas: areas, pins: pins };
+    return { areas: areas, pins: pins, unknown: unknown };
   }
+  function unknownNote(mk) { return mk.unknown ? Dash.label('perf', 'unknown') + ' ' + mk.unknown + ' 段（紫纹），这几段不分稳态与非稳态' : null; }
 
   function zoomOf(u, z) {
     if (!z) return null;
@@ -172,6 +175,13 @@
 
   /* 曲线缺数：后端在 seriesReasons 里给原因 */
   function seriesWhy(detail, key) { return (detail && detail.seriesReasons && detail.seriesReasons[key]) || '缺测'; }
+  /* 列不存在或全是 null 都算没有样本，返回 null，不画空图 */
+  function sampled(a) { return a && a.some(function (v) { return v != null; }) ? a : null; }
+  /* 没画的曲线：defs [[曲线key, 色键]] 与 series 同序，没画的那项为 null；写名称与后端原因 */
+  function missingOf(defs, series, names, detail) {
+    var miss = defs.filter(function (x, i) { return !series[i]; }).map(function (x) { return ((names[x[0]] || {}).label || Dash.label('perf', x[1])) + '（' + seriesWhy(detail, x[0]) + '）'; });
+    return miss.length ? h('div.note-line', '没画：' + miss.join('；')) : null;
+  }
 
   function noSession(el) { el.appendChild(Dash.empty('还没有已关闭的会话', '录一次性能或跑一次 AI 采集，关闭后这里出数', true)); }
   function noDetail(el) { el.appendChild(Dash.empty('这次会话没有逐秒曲线', '后端只给各来源最新会话的曲线；原始记录不在时也没有', true)); }
@@ -269,7 +279,7 @@
   /* ================= 2 帧时与帧率 ================= */
 
   /* 目标帧时与卡顿阈值线：只画后端给了值的；高出本段最慢一帧的不画，免得把曲线压扁，在注里写数 */
-  var LINE_TONE = { targetFrameMs: 'target', heavyStutterMs: 'heavy', severeStutterMs: 'severe', freezeMs: 'freeze' };
+  var LINE_TONE = { targetFrameMs: 'target', heavyStutterMs: 'heavy', severeStutterMs: 'severe', freezeMs: 'severe' };   // 卡死阈值判的是严重级的冻结
   function frameLines(s, peak) {
     var lines = [], notes = [];
     (s.frameLines || []).forEach(function (l) {
@@ -288,12 +298,12 @@
       if (!s) { noSession(el); return; }
       if (s.scope === 'cost') { el.appendChild(Dash.status((cur.detail && cur.detail.reason) || expReason(s, 'frameP99Ms'), 'muted')); return; }
       if (!cur.detail) { noDetail(el); return; }
-      var u = unpack(cur.detail), mean = u.col('dtMsMean'), max = u.col('dtMsMax');
-      if (!mean) { el.appendChild(Dash.empty('曲线里没有帧时这一列', '', true)); return; }
+      var u = unpack(cur.detail), mean = sampled(u.col('dtMsMean')), max = u.col('dtMsMax');
+      if (!mean) { el.appendChild(Dash.empty('这次会话没有帧时样本', seriesWhy(cur.detail, 'dtMs'), true)); return; }
       el.appendChild(zoomBar(cur.z));
       var hot = hotStack(pd, cur.detail, cur.z);
       if (hot) { el.appendChild(hot); return; }
-      var fps = u.col('fpsMean'), hasFps = !!fps && fps.some(function (v) { return v != null; });
+      var fps = sampled(u.col('fpsMean')), hasFps = !!fps;
       var mk = curveMarks(s, u, max || mean, cur.zi);
       var peak = (max || mean).reduce(function (a, v) { return v != null && v > a ? v : a; }, 0);
       var fl = frameLines(s, peak);
@@ -303,7 +313,7 @@
         areas: mk.areas, pins: mk.pins, zoom: zoomOf(u, cur.z), label: '逐桶帧时与帧率', caliber: CAL.frames }));
       var gaps = ((s.intervals && s.intervals.gaps) || []).length;
       el.appendChild(h('div.note-line', ['每桶 ' + cur.detail.bucketSeconds + ' 秒，共 ' + u.n + ' 桶', gaps ? '记录缺口 ' + gaps + ' 处，缺口处断开' : null,
-        hasFps ? null : '帧率：' + seriesWhy(cur.detail, 'fps')].concat(fl.notes).filter(Boolean).join('；')));
+        unknownNote(mk), hasFps ? null : '帧率：' + seriesWhy(cur.detail, 'fps')].concat(fl.notes).filter(Boolean).join('；')));
     }
   });
 
@@ -319,11 +329,11 @@
       var u = unpack(cur.detail);
       var defs = [['mainViewportGpuMs', 'gpu'], ['measuredViewportGpuMs', 'measured'], ['mainViewportCpuMs', 'cpu'], ['frameSetupCpuMs', 'setup']];
       var series = defs.map(function (x) {
-        var mean = u.col(x[0] + 'Mean');
-        return mean && mean.some(function (v) { return v != null; })
+        var mean = sampled(u.col(x[0] + 'Mean'));
+        return mean
           ? { key: x[0], label: (names[x[0]] || {}).label || Dash.label('perf', x[1]), tone: ['perf', x[1]], mean: mean, max: u.col(x[0] + 'Max'), axis: 0 } : null;
       });
-      var missing = defs.filter(function (x, i) { return !series[i]; }).map(function (x) { return ((names[x[0]] || {}).label || Dash.label('perf', x[1])) + '（' + seriesWhy(cur.detail, x[0]) + '）'; });
+      var missing = missingOf(defs, series, names, cur.detail);
       series = series.filter(Boolean);
       if (s.scope === 'cost') el.appendChild(zoomBar(cur.z));
       var hot = s.scope === 'cost' ? hotStack(pd, cur.detail, cur.z) : null;
@@ -337,8 +347,9 @@
         });
         el.appendChild(Dash.charts.band(u.xs, series, { height: 280, units: ['ms', ''], titles: u.titles, lines: lines,
           areas: mk.areas, pins: mk.pins, zoom: zoomOf(u, cur.z), label: '逐桶渲染耗时', caliber: CAL.render }));
+        if (unknownNote(mk)) el.appendChild(h('div.note-line', unknownNote(mk)));
       }
-      if (missing.length) el.appendChild(h('div.note-line', '没画：' + missing.join('；')));
+      if (missing) el.appendChild(missing);
     }
   });
 
@@ -354,14 +365,18 @@
       var u = unpack(cur.detail), zoom = zoomOf(u, cur.z);
       function lab(k, t) { return (names[k] || {}).label || Dash.label('perf', t); }
       function pct(a) { return a && a.map(function (v) { return v == null ? null : v * 100; }); }
-      var utilMean = s.scope === 'cost' ? null : u.col('gpuUtilFractionMean');
-      var power = u.col('powerWMean');
-      var left = [];
-      if (utilMean) left.push({ key: 'util', label: lab('gpuUtilFraction', 'util'), tone: ['perf', 'util'], mean: pct(utilMean), max: pct(u.col('gpuUtilFractionMax')), axis: 0 });
-      var load = s.scope === 'cost' ? null : u.col('normalizedGpuLoadMean');
-      var hasLoad = !!load && load.some(function (v) { return v != null; });
-      if (hasLoad) left.push({ key: 'load', label: lab('normalizedGpuLoad', 'load') + '（提示）', tone: ['perf', 'load'], mean: pct(load), axis: 0, dashed: true });
-      if (power) left.push({ key: 'power', label: lab('powerW', 'power'), tone: ['perf', 'power'], mean: power, axis: 1, dashed: true });
+      var utilMean = s.scope === 'cost' ? null : sampled(u.col('gpuUtilFractionMean'));
+      var power = sampled(u.col('powerWMean'));
+      var load = s.scope === 'cost' ? null : sampled(u.col('normalizedGpuLoadMean'));
+      var hasLoad = !!load;
+      var leftDefs = s.scope === 'cost' ? [['powerW', 'power']] : [['gpuUtilFraction', 'util'], ['powerW', 'power']];
+      var leftSeries = leftDefs.map(function (x) {
+        if (x[0] === 'powerW') return power ? { key: 'power', label: lab('powerW', 'power'), tone: ['perf', 'power'], mean: power, axis: 1, dashed: true } : null;
+        return utilMean ? { key: 'util', label: lab('gpuUtilFraction', 'util'), tone: ['perf', 'util'], mean: pct(utilMean), max: pct(u.col('gpuUtilFractionMax')), axis: 0 } : null;
+      });
+      var leftMissing = missingOf(leftDefs, leftSeries, names, cur.detail);
+      var left = leftSeries.filter(Boolean);
+      if (hasLoad) left.splice(utilMean ? 1 : 0, 0, { key: 'load', label: lab('normalizedGpuLoad', 'load') + '（提示）', tone: ['perf', 'load'], mean: pct(load), axis: 0, dashed: true });
       var notes = ['gpuUtilSampleAgeMs', 'gpuUtilSamplingWindowMs'].map(function (k) {
         var c = u.col(k + 'Mean'), v = c ? c.filter(function (x) { return x != null; }) : [];
         return v.length ? lab(k, 'util') + ' 最近 ' + fmt(v[v.length - 1], 'ms') : lab(k, 'util') + '：' + seriesWhy(cur.detail, k);
@@ -370,17 +385,19 @@
         s.scope === 'cost' ? h('div.pf-why', lab('gpuUtilFraction', 'util') + '：' + ((cur.detail && cur.detail.reason) || expReason(s, 'gpuUtilFraction'))) : null,
         left.length ? Dash.charts.band(u.xs, left, { height: 240, units: ['%', 'W'], titles: u.titles, zoom: zoom, label: 'GPU 占用与功耗', caliber: CAL.gpu })
           : Dash.empty('这次会话没有占用与功耗样本', '', true),
-        s.scope === 'cost' ? null : h('div.note-line', notes.join('；')));
+        leftMissing, s.scope === 'cost' ? null : h('div.note-line', notes.join('；')));
       var cap = s.vramCapacityMiB;
-      var vram = [['wholeGpuMemoryMiB', 'vram'], ['engineVideoMemoryMiB', 'vramEngine']].map(function (x) {
-        var mean = u.col(x[0] + 'Mean');
+      var vramDefs = [['wholeGpuMemoryMiB', 'vram'], ['engineVideoMemoryMiB', 'vramEngine']];
+      var vramSeries = vramDefs.map(function (x) {
+        var mean = sampled(u.col(x[0] + 'Mean'));
         return mean ? { key: x[0], label: lab(x[0], x[1]), tone: ['perf', x[1]], mean: mean, max: u.col(x[0] + 'Max'), axis: 0 } : null;
-      }).filter(Boolean);
+      });
+      var vramMissing = missingOf(vramDefs, vramSeries, names, cur.detail), vram = vramSeries.filter(Boolean);
       var b = h('div.col', h('div.pf-sub', '显存'),
         vram.length ? Dash.charts.band(u.xs, vram, { height: 240, units: ['MiB', ''], titles: u.titles, zoom: zoom, label: '显存',
           lines: cap != null ? [{ value: cap, label: '容量 ' + Dash.num(cap) + ' MiB', tone: ['perf', 'capacity'] }] : [], caliber: CAL.gpu })
           : Dash.empty('这次会话没有显存样本', '', true),
-        cap == null ? h('div.note-line', '显存容量缺测，不画容量线') : null);
+        vramMissing, cap == null ? h('div.note-line', '显存容量缺测，不画容量线') : null);
       el.appendChild(h('div.cols', a, b));
     }
   });
@@ -406,6 +423,15 @@
       h('span.pf-an-doing', doingAt(s, a)));
   }
 
+  /* 明细为空：只有状态是当前、明细确实留下时才是"这次没有异常"；其余照后端的状态与原因写缺数，不给正常的颜色 */
+  function noAnomalies(s) {
+    var kept = s.retained ? s.retained.anomalies : null;
+    if (kept === false) return Dash.status('异常明细没有留下，只剩条数', 'muted');
+    if (s.status === 'current' && kept === true) return Dash.status('这次没有异常', 'ok');
+    var why = (s.statusReasons || []).join('；');
+    return Dash.status('这次没有列出异常，但会话状态是' + (s.statusLabel ? '「' + s.statusLabel + '」' : '未知') + '，不能当作没有异常' + (why ? '：' + why : ''), s.status === 'invalid' ? 'bad' : 'warn');
+  }
+
   Dash.panel({
     id: 'perf-anomalies', page: PAGE, title: '本次异常', note: '这次哪里不对', caliber: CAL.anomalies,
     span: 12, order: 50, window: 'commits', needs: ['perf'], uses: ['params'],
@@ -420,7 +446,7 @@
         })),
         h('button.btn', { type: 'button', on: { click: function () { Dash.go('health'); } } }, '看健康页'));
       el.appendChild(top);
-      if (!list.length) { el.appendChild(Dash.status(s.retained && s.retained.anomalies === false ? '异常明细没有留下，只剩条数' : '这次没有异常', s.retained && s.retained.anomalies === false ? 'muted' : 'ok')); return; }
+      if (!list.length) { el.appendChild(noAnomalies(s)); return; }
       var ctxs = (s.intervals && s.intervals.context) || [];
       var t0 = cur.detail && cur.detail.buckets && cur.detail.buckets.length ? cur.detail.buckets[0][0] : ctxs.length ? ctxs[0].fromMs : null;
       var meta = Object.assign(byKey(pd.series), byKey(pd.metrics)), phases = (pd.labels && pd.labels.phases) || {};

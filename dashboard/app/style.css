@@ -44,9 +44,9 @@
   --pf-frame: #2a66c2;  --pf-fps: #7f9cc4;  --pf-gpu: #1e4f93;  --pf-cpu: #3f97d6;  --pf-setup: #7d8ea6;
   --pf-measured: #6f8fbf; --pf-load: #7aa7d6;
   --pf-util: #2f72c9;   --pf-power: #8c9ab0; --pf-vram: #1e4f93; --pf-vram-engine: #52a5dc;
-  --pf-target: #44546a; --pf-idle: #9aa9bb;  --pf-activity: #4b8bd4;
+  --pf-target: #44546a; --pf-idle: #9aa9bb;  --pf-unknown: #a48fc8; --pf-activity: #4b8bd4;
   --pf-phys: #8496ad;   --pf-proc: #2f6fc4;  --pf-late: #a9c8ea; --pf-draw: #1d4a87; --pf-tail: #c9d3df;
-  --pf-info: #8494a8;   --pf-light: #d98f2b; --pf-heavy: #c0560e; --pf-severe: #d0302a; --pf-freeze: #8e1b2e;
+  --pf-info: #8494a8;   --pf-light: #d98f2b; --pf-heavy: #c0560e; --pf-severe: #d0302a;
 
   /* 字号阶：给人看，偏大 */
   --fs-xs: 12.5px;
@@ -106,9 +106,9 @@
     --pf-frame: #6aa6f2;  --pf-fps: #9fb6d6;  --pf-gpu: #4f8fe0;  --pf-cpu: #7cc3f0;  --pf-setup: #9aa9bd;
     --pf-measured: #9db8e0; --pf-load: #a0c4ea;
     --pf-util: #6aa6f2;   --pf-power: #a3b0c2; --pf-vram: #4f8fe0; --pf-vram-engine: #8fd0f5;
-    --pf-target: #c4cfdc; --pf-idle: #6b7a8d;  --pf-activity: #62a0dc;
+    --pf-target: #c4cfdc; --pf-idle: #6b7a8d;  --pf-unknown: #8a76b0; --pf-activity: #62a0dc;
     --pf-phys: #8a9bb2;   --pf-proc: #5ea2f5;  --pf-late: #9cc6f0; --pf-draw: #3a78c8; --pf-tail: #4b5a6c;
-    --pf-info: #97a6b9;   --pf-light: #f0b35a; --pf-heavy: #f29a52; --pf-severe: #ff7d74; --pf-freeze: #ff5c7a;
+    --pf-info: #97a6b9;   --pf-light: #f0b35a; --pf-heavy: #f29a52; --pf-severe: #ff7d74;
   }
 }
 
