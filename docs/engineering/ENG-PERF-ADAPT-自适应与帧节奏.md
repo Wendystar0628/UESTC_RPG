@@ -22,12 +22,12 @@ paths: ["game/kernel/quality/**", "game/kernel/settings/**", "scripts/devices/**
 
 1. **自适应只往下调（主线之后）**：玩家手改的项锁定，只动即时类性能项，不动风格底线；每级降档 0.5–1 s 淡化；用完阶梯就停在最后一级（§1.1）。
 2. **设备档只决定推荐预设、帧率目标和自动调节预算（主线之后，§1.1）**；档位表见 ENG-BUDGET §2，首次分档见 SYS-GRAPHICS §5。
-3. **测量只判成本口径**：AI 采集与门禁按 ENG-PERF-MEASURE §2，口径见 ENG-PERF-DATA §3.2；测量时自动调节关闭（ENG-PERF-MEASURE §1）。
+3. **测量只判成本口径与两条单边判**：AI 采集与门禁按 ENG-PERF-MEASURE §2，口径见 ENG-PERF-DATA §3.2；测量时自动调节关闭（ENG-PERF-MEASURE §1）。
 
 ### 0.1 接入要点
 
 - **新增画面设置单项或可被自动调节的性能项**：按即时、加载、重启三类生效，自动调节只动即时类；不触发管线重编译（§1.1、§1.2）
-- **写基准或测量脚本**：只经 ENG-PERF-MEASURE §2 的入口，只判成本口径（ENG-PERF-DATA §3.2）
+- **写基准或测量脚本**：只经 ENG-PERF-MEASURE §2 的入口，只判成本口径与那里的两条单边判（ENG-PERF-DATA §3.2）
 
 ## 1 自适应与帧节奏
 

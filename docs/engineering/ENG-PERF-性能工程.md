@@ -25,7 +25,7 @@ paths: ["game/data/pipeline-combinations.json", "game/style/shaders/globals.gdsh
 3. **瓶颈在两头**：CPU 的提交与剔除，GPU 的多遍（预通道、颜色、4 级阴影）与后期。合批靠离线合并、自动实例化、MultiMesh（§1）；阴影只能靠减少投影物省钱（ENG-PERF-LIGHT §2.1）。
 4. **阴影用引擎原生 PSSM**；描线、边缘光、移轴、光斑、倒影、窗灯、路灯光斑自己实现；不用的引擎特性清单见 ENG-BUDGET-RULES §2。
 5. **主线程只挂载，不生成**；绝不卡帧、不穿地靠六条不变量（ENG-PERF-STREAM §1.2）。
-6. **预算按场景核算**，不按格平均；AI 测量只判成本口径（回归与预算），体验只来自作者开着记录的会话（ENG-PERF-MEASURE §2）。
+6. **预算按场景核算**，不按格平均；AI 测量只判成本口径（回归与预算）与两条单边判，体验只来自作者开着记录的会话（ENG-PERF-MEASURE §2）。
 
 子文档：
 
