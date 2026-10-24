@@ -1,6 +1,7 @@
 {
   "version": 1,
   "poses": [
-    { "id": "V1", "waypoint": "P00" }
+    { "id": "V1", "waypoint": "P00" },
+    { "id": "V2", "pose": { "position": [-160.79, 6.7, 75.34], "yawDeg": 127, "pitchDeg": -6, "fovDeg": null } }
   ]
 }
