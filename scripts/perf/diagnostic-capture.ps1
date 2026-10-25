@@ -1,4 +1,4 @@
-﻿﻿# EventPipe 诊断的私桌面工作进程：启动游戏，样段前附着收集器，样段结束后在游戏存活时停收集器，再正式关窗。
+﻿# EventPipe 诊断的私桌面工作进程：启动游戏，样段前附着收集器，样段结束后在游戏存活时停收集器，再正式关窗。
 # 用法：由 diagnostic-run.ps1 以 powershell -NoProfile -File scripts/perf/diagnostic-capture.ps1 -Work <诊断目录> 调用，读该目录 launch.json。
 param([Parameter(Mandatory)][string]$Work)
 $ErrorActionPreference='Stop'
