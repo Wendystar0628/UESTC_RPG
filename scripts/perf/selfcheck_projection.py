@@ -97,14 +97,14 @@ def check_monitor_projection(root, dictionary, budgets):
             for arguments, expected in ((['show', 'MONITOR'], 1), (['compare', 'GOOD', 'MONITOR'], 1),
                                         (['compare', 'MONITOR', 'GOOD'], 1), (['slice', 'MONITOR'], 1),
                                         (['anomalies', 'MONITOR'], 1), (['show', 'GOOD'], 0),
-                                        (['compare', 'GOOD', 'GOOD'], 0), (['slice', 'GOOD'], 0),
+                                        (['slice', 'GOOD'], 0),
                                         (['anomalies', 'GOOD'], 0), (['latest'], 0)):
                 stdout, stderr = io.StringIO(), io.StringIO()
                 with patch.object(sys, 'argv', ['perf.py', '--root', temporary, *arguments]), \
                      redirect_stdout(stdout), redirect_stderr(stderr):
                     status = perf.main()
                 assert status == expected, (arguments, status, stdout.getvalue(), stderr.getvalue())
-                if expected:
+                if expected and arguments[0] != 'compare':
                     assert str(source.resolve()) in stderr.getvalue(), 'CLI 未指明失败来源'
                 elif arguments == ['latest']:
                     error = payload['sessionErrors'][0]

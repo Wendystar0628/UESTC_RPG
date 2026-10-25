@@ -1,5 +1,5 @@
 {
-  "schema": 7,
+  "schema": 8,
   "authority": "ENG-PERF-DATA",
   "draft": false,
   "encoding": {
@@ -1645,14 +1645,6 @@
           "note": "Policies can overlap; do not sum"
         },
         {
-          "name": "systemCpuFraction",
-          "type": "number",
-          "nullable": true,
-          "unit": "ratio",
-          "source": "hardware slow source if supported",
-          "note": ""
-        },
-        {
           "name": "availableRamMiB",
           "type": "number",
           "nullable": true,
@@ -1813,14 +1805,6 @@
           "nullable": true
         },
         {
-          "name": "otherProcessesCpuUtilFraction",
-          "type": "number",
-          "note": "GetSystemTimes busy minus game process counters; incomplete processor-group coverage is unknown",
-          "unit": "ratio",
-          "source": "SamplingFacts.OtherProcessesCpuUtilFraction.Value",
-          "nullable": true
-        },
-        {
           "name": "samplingFactsJson",
           "type": "object",
           "note": "Detached facts with separate capabilities, native codes, query and actual average windows",
@@ -1831,7 +1815,7 @@
         {
           "name": "cpuCountersJson",
           "type": "object",
-          "note": "Current and preceding cumulative 100ns counters with separate system/process query spans, group coverage and read status",
+          "note": "Current and preceding cumulative 100ns counters, independent query spans and native read status; system counters supply only the processCpuFraction normalization denominator, never machine/other-process utilization",
           "unit": null,
           "source": "Windows.GetSystemTimes-GetProcessTimes",
           "nullable": true

@@ -22,7 +22,7 @@ internal sealed class PerfCollectionDriver(IStageGateHost host, PerfCollectionOp
     private FramePipelineCounts _samplePipelines;
     private string? _session;
     private double _begin, _end;
-    private bool _markedBegin, _markedEnd, _gpuObserved, _cpuObserved;
+    private bool _markedBegin, _markedEnd, _gpuObserved;
     private Pose? _fixedPose;
     private ViewMode _fixedMode;
     private bool _samplePartial;
@@ -57,8 +57,8 @@ internal sealed class PerfCollectionDriver(IStageGateHost host, PerfCollectionOp
         }
         ObserveSample(recorder);
         if (_reasons.Count > 0) return Finish(recorder, _samplePartial ? "partial" : "invalid", null);
-        if (!_gpuObserved || !_cpuObserved)
-            return Finish(recorder, "partial", "Sample has no fresh GPU/CPU query after its accepted Begin.");
+        if (!_gpuObserved)
+            return Finish(recorder, "partial", "Sample has no fresh GPU query after its accepted Begin.");
         End(recorder);
         if (!_markedEnd) return Finish(recorder, "partial", null);
         if (options.SaveAfterSample)
@@ -175,7 +175,6 @@ internal sealed class PerfCollectionDriver(IStageGateHost host, PerfCollectionOp
             if (!_movingSample) _reasons.Add("Pipeline compilation increased during the sample.");
         }
         _gpuObserved |= facts.OtherProcessesGpuUtilFraction.QueryEndMs > _begin;
-        _cpuObserved |= facts.OtherProcessesCpuUtilFraction.QueryEndMs > _begin;
     }
 
     private string? ObservePollution(in PerfSamplingFacts facts, string phase)
@@ -236,7 +235,7 @@ internal sealed class PerfCollectionDriver(IStageGateHost host, PerfCollectionOp
         sampleSegmentId = options.SampleSegmentId, sampleSeconds = _markedEnd ? (_end - _begin) / 1000 : 0,
         coverage = new { sampleBegin = new { observed = _markedBegin ? 1 : 0, required = 1 },
             sampleEnd = new { observed = _markedEnd ? 1 : 0, required = 1 },
-            gpu = new { observed = _gpuObserved ? 1 : 0, required = 1 }, cpu = new { observed = _cpuObserved ? 1 : 0, required = 1 },
+            gpu = new { observed = _gpuObserved ? 1 : 0, required = 1 },
             sample = new { observed = _markedEnd ? (_end - _begin) / 1000 : 0, required = options.SampleSeconds } }
     }, ContractJson.Options));
 

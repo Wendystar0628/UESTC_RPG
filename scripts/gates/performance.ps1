@@ -1,4 +1,4 @@
-﻿# G10 复用固定采集入口与分析器的批次中位，只判成本预算，缺测与协议不足保留原因。
+﻿# G10 复用固定采集入口与分析器的单轮结论，只判成本预算，缺测与确认不足保留原因。
 # 用法：由 scripts/gate.ps1 点引用后调用 Invoke-UESTCPerformanceGate；Read-UESTCPerformanceResult 只读已有批次。
 function Get-UESTCPerfField {
     param($Value, [string]$Path)
@@ -27,16 +27,12 @@ function Read-UESTCPerfJson {
 function Get-UESTCPerfCostChecks {
     param($Group, [Collections.Generic.List[string]]$Reasons)
     $scene = Get-UESTCPerfField $Group 'comparisonKey.scene'
-    $checks = @(Get-UESTCPerfField $Group 'phases.a1.distanceTable' | Where-Object { $null -ne $_ })
-    if (-not $checks.Count) { $Reasons.Add("${scene}: analyzer has no grouped distance table.") }
+    $checks = @(Get-UESTCPerfField $Group 'distanceTable' | Where-Object { $null -ne $_ })
     foreach ($check in $checks) {
         $metric = Get-UESTCPerfField $check 'metric'
         $tier = Get-UESTCPerfField $check 'tier'
-        if ($tier -notin @('within','above-stop','above-upper')) {
-            $Reasons.Add("${scene}/${metric}: " + (Get-UESTCPerfField $check 'reason'))
-        }
         [pscustomobject]@{ Scene=$scene; Metric=$metric; Value=(Get-UESTCPerfField $check 'value'); Budget=(Get-UESTCPerfField $check 'upper');
-            BudgetSource=(Get-UESTCPerfField $check 'source'); Tier=$tier; Exceeded=($tier -eq 'above-upper') }
+            BudgetSource=(Get-UESTCPerfField $check 'source'); Tier=$tier; Exceeded=(Get-UESTCPerfField $check 'exceeded') }
     }
 }
 
@@ -54,42 +50,33 @@ function Read-UESTCPerformanceResult {
         $reasons.Add('The fixed G10 plan has no covered post-sample Manual save scene.')
     }
     $perf = Join-Path $Root 'output/perf'
-    $phaseRoot = Assert-UESTCChildPath (Join-Path $perf ("runs/$Batch/a1")) (Join-Path $perf 'runs')
-    $phase = Read-UESTCPerfJson (Join-Path $phaseRoot 'phase.json') $reasons
-    if ((Get-UESTCPerfField $phase 'completed') -ne $true -or
-        (Get-UESTCPerfField $phase 'status') -ne 'completed' -or
-        (Get-UESTCPerfField $phase 'purpose') -ne 'baseline' -or
-        (Get-UESTCPerfField $phase 'protocol') -ne 'repeat3' -or
-        (Get-UESTCPerfField $phase 'phase') -ne 'a1' -or
-        (@(Get-UESTCPerfField $phase 'scenes') -join ',') -ne ($Scenes -join ',')) {
-        $reasons.Add('Formal repeat3/a1 phase is incomplete or its fixed-scene coverage differs.')
-        if (Get-UESTCPerfField $phase 'error') { $reasons.Add([string]$phase.error) }
-    }
-    if (Test-Path -LiteralPath $phaseRoot -PathType Container) {
-        foreach ($file in @(Get-ChildItem -LiteralPath $phaseRoot -Filter attempt.json -File -Recurse)) {
+    $index = Read-UESTCPerfJson (Join-Path $perf 'index.json') $reasons
+    $batches = @(@(Get-UESTCPerfField $index 'batches') | Where-Object { (Get-UESTCPerfField $_ 'id') -eq $Batch })
+    $batchResult = if ($batches.Count -eq 1) { $batches[0] } else { $null }
+    $sourceRoot = Get-UESTCPerfField $batchResult 'sourceRoot'
+    if (-not $sourceRoot -or -not [IO.Path]::IsPathRooted($sourceRoot)) {
+        $reasons.Add('Analyzer round registration has no absolute sourceRoot.')
+        $sourceRoot=$null
+    } else { $sourceRoot=[IO.Path]::GetFullPath($sourceRoot).TrimEnd('\','/') }
+    if ($sourceRoot -and (Test-Path -LiteralPath $sourceRoot -PathType Container)) {
+        foreach ($file in @(Get-ChildItem -LiteralPath $sourceRoot -Filter attempt.json -File -Recurse)) {
             $attempt = Read-UESTCPerfJson $file.FullName $reasons
             if (-not $attempt) { continue }
             $attempts.Add([pscustomobject]@{ Scene=$attempt.scene; Attempt=$file.Directory.Name;
                 Status=$attempt.status; Reasons=@(Get-UESTCPerfField $attempt 'reasons');
                 SessionId=(Get-UESTCPerfField $attempt 'observed.sessionId');
                 Save=(Get-UESTCPerfField $attempt 'observed.save'); Close=(Get-UESTCPerfField $attempt 'close') })
-            $observedSession = Get-UESTCPerfField $attempt 'observed.sessionId'
-            if ($observedSession -and -not $sessions.Contains($observedSession)) { $sessions.Add($observedSession) }
         }
     }
-    $index = Read-UESTCPerfJson (Join-Path $perf 'index.json') $reasons
     foreach ($errorRecord in @(Get-UESTCPerfField $index 'errors')) {
         $errorSource = Get-UESTCPerfField $errorRecord 'source'
-        if ($errorSource -and [IO.Path]::GetFullPath($errorSource).StartsWith($phaseRoot + [IO.Path]::DirectorySeparatorChar, [StringComparison]::OrdinalIgnoreCase)) {
+        if ($sourceRoot -and $errorSource -and [IO.Path]::GetFullPath($errorSource).StartsWith($sourceRoot + [IO.Path]::DirectorySeparatorChar, [StringComparison]::OrdinalIgnoreCase)) {
             $analysisErrors.Add($errorRecord)
         }
     }
-    $batches = @(@(Get-UESTCPerfField $index 'batches') | Where-Object { (Get-UESTCPerfField $_ 'id') -eq $Batch })
-    $batchResult = if ($batches.Count -eq 1) { $batches[0] } else { $null }
     if ((Get-UESTCPerfField $batchResult 'status') -ne 'current' -or
-        (Get-UESTCPerfField $batchResult 'kind') -ne 'repeat3' -or
-        (Get-UESTCPerfField $batchResult 'targetPhase') -ne 'a1') {
-        $reasons.Add('Analyzer has no current, complete repeat3 batch for this G10 request.')
+        (Get-UESTCPerfField $batchResult 'gateStatus') -notin @('Passed','Failed')) {
+        $reasons.Add('Analyzer has no current complete round with its required confirmation for this G10 request.')
         foreach ($reason in @(Get-UESTCPerfField $batchResult 'statusReasons')) { if ($reason) { $reasons.Add([string]$reason) } }
         foreach ($errorRecord in $analysisErrors) { $reasons.Add("Analyzer source '$($errorRecord.source)': $($errorRecord.reason)") }
     }
@@ -98,25 +85,24 @@ function Read-UESTCPerformanceResult {
     if (($actualScenes -join ',') -ne (($Scenes | Sort-Object) -join ',')) { $reasons.Add('Analyzer fixed-scene groups are missing, duplicated or unexpected.') }
     foreach ($group in $groups) {
         if ($null -eq $group) { continue }
-        Read-UESTCPerfGroup -Perf $perf -PhaseRoot $phaseRoot -Batch $Batch -Group $group -Index $index -SaveScenes $SaveScenes -Reasons $reasons -Sessions $sessions -Timings $timings
+        Read-UESTCPerfGroup -Perf $perf -SourceRoot $sourceRoot -Group $group -Index $index -SaveScenes $SaveScenes -Reasons $reasons -Sessions $sessions -Timings $timings
         foreach ($cost in @(Get-UESTCPerfCostChecks $group $reasons)) { $costs.Add($cost) }
     }
     $uniqueReasons = @($reasons | Select-Object -Unique)
     $exceeded = @($costs | Where-Object { $_.Exceeded })
-    $status = if ($uniqueReasons.Count) { 'Incomplete' } elseif ($exceeded.Count) { 'Failed' } else { 'Passed' }
+    $status = if ($uniqueReasons.Count) { 'Incomplete' } else { Get-UESTCPerfField $batchResult 'gateStatus' }
     return [pscustomobject]@{ Status=$status; Batch=$Batch; SessionIds=@($sessions | Select-Object -Unique); Attempts=$attempts.ToArray();
         IncompleteReasons=$uniqueReasons; CostChecks=$costs.ToArray(); Exceeded=$exceeded; AnalysisErrors=$analysisErrors.ToArray();
         SaveAndClose=$timings.ToArray(); TimingPolicy='Save and close durations are reported without thresholds.' }
 }
 
 function Read-UESTCPerfGroup {
-    param([string]$Perf, [string]$PhaseRoot, [string]$Batch, $Group, $Index,
+    param([string]$Perf, [string]$SourceRoot, $Group, $Index,
         [string[]]$SaveScenes,
         [Collections.Generic.List[string]]$Reasons, [Collections.Generic.List[string]]$Sessions,
         [Collections.Generic.List[object]]$Timings)
-    $ids = @(Get-UESTCPerfField $Group 'phases.a1.sessionIds')
+    $ids = @(Get-UESTCPerfField $Group 'sessionIds')
     $scene = Get-UESTCPerfField $Group 'comparisonKey.scene'
-    if ($ids.Count -ne 3 -or @($ids | Select-Object -Unique).Count -ne 3) { $Reasons.Add("${scene}: analyzer did not publish exactly three distinct sessions.") }
     foreach ($sessionId in $ids) {
         if (-not $sessionId -or [IO.Path]::GetFileName($sessionId) -ne $sessionId) { $Reasons.Add("${scene}: invalid session ID."); continue }
         $Sessions.Add([string]$sessionId)
@@ -124,20 +110,22 @@ function Read-UESTCPerfGroup {
         $summary = Read-UESTCPerfJson $summaryPath $Reasons
         if (-not $summary) { continue }
         $source = Get-UESTCPerfField $summary 'source'
-        if (-not $source -or -not [IO.Path]::GetFullPath($source).StartsWith($PhaseRoot + [IO.Path]::DirectorySeparatorChar, [StringComparison]::OrdinalIgnoreCase)) {
-            $Reasons.Add("${sessionId}: source is outside this fresh phase."); continue
+        if (-not $SourceRoot -or -not $source -or ([IO.Path]::GetFullPath($source) -ne $SourceRoot -and
+            -not [IO.Path]::GetFullPath($source).StartsWith($SourceRoot + [IO.Path]::DirectorySeparatorChar, [StringComparison]::OrdinalIgnoreCase))) {
+            $Reasons.Add("${sessionId}: source is outside this fresh round."); continue
         }
         $run = Read-UESTCPerfJson (Join-Path $source 'run.json') $Reasons
         if ($summary.id -ne $sessionId -or $summary.calc -ne (Get-UESTCPerfField $Index 'calc') -or $Group.calc -ne $summary.calc -or
             $summary.origin -ne 'ai' -or $summary.scope -ne 'cost' -or $summary.baseStatus -ne 'candidate' -or $summary.status -notin @('current','superseded') -or
             (Get-UESTCPerfField $run 'status') -ne 'valid' -or (Get-UESTCPerfField $run 'purpose') -ne 'baseline' -or
-            (Get-UESTCPerfField $run 'protocol.batchId') -ne $Batch -or (Get-UESTCPerfField $run 'scene') -ne $scene) {
+            (Get-UESTCPerfField $run 'exitCode') -ne 0 -or (Get-UESTCPerfField $run 'timedOut') -ne $false -or
+            (Get-UESTCPerfField $run 'scene') -ne $scene) {
             $Reasons.Add("${sessionId}: session is not current, valid formal cost evidence for this scene.")
         }
         foreach ($errorRecord in @(@(Get-UESTCPerfField $Index 'errors') | Where-Object { (Get-UESTCPerfField $_ 'source') -eq $source })) {
             $Reasons.Add("${sessionId}: $($errorRecord.reason)")
         }
-        foreach ($name in @('sampleBegin','sampleEnd','gpu','cpu','sample')) {
+        foreach ($name in @('sampleBegin','sampleEnd','gpu','sample')) {
             $observed = Get-UESTCPerfField $run "coverage.$name.observed"
             $required = Get-UESTCPerfField $run "coverage.$name.required"
             if (-not (Test-UESTCPerfNumber $observed) -or -not (Test-UESTCPerfNumber $required) -or $required -le 0 -or $observed -lt $required) {
@@ -181,8 +169,16 @@ function Invoke-UESTCPerformanceGate {
     $saveScenes = @($plan.fixed | Where-Object { $_.PSObject.Properties['saveAfterSample'] -and $_.saveAfterSample } | ForEach-Object { $_.id })
     $batch = 'G10-' + [DateTime]::UtcNow.ToString('yyyyMMdd-HHmmss') + '-' + [Guid]::NewGuid().ToString('N').Substring(0,8)
     $collectionError = ''
+    $roundNumber=0
+    $previousId=''
+    $registry=Join-Path $Root 'output/perf/rounds.json'
+    if (Test-Path -LiteralPath $registry) {
+        $rounds=(Get-Content -LiteralPath $registry -Raw | ConvertFrom-Json).rounds
+        $previous=@($rounds | Sort-Object number -Descending | Select-Object -First 1)
+        if ($previous.Count) { $roundNumber=[int]$previous[0].number+1; $previousId=$previous[0].id }
+    }
     try {
-        & (Join-Path $Root 'scripts/perf/run.ps1') -Batch $batch -Suite fixed -Scene $scenes -Mode formal -Protocol repeat3 -Phase a1 -BuildLease $BuildLease | Out-Host
+        & (Join-Path $Root 'scripts/perf/run.ps1') -Batch $batch -Suite fixed -Scene $scenes -Mode formal -RoundNumber $roundNumber -PreviousRound $previousId -BuildLease $BuildLease | Out-Host
     } catch { $collectionError = $_.Exception.ToString() }
     return Read-UESTCPerformanceResult -Root $Root -Batch $batch -Scenes $scenes -SaveScenes $saveScenes -CollectionError $collectionError
 }

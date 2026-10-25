@@ -34,12 +34,11 @@ public sealed class StartupRouteProgressTests
         var options = CollectionRequest();
         var conditions = new PerfCollectionConditions(options);
         var p0 = new PerfSamplingFact { Capability = PerfFactCapability.Supported, Value = 0, QueryEndMs = 1000 };
-        var facts = new PerfSamplingFacts("session", 1, "render-device", p0, default, p0, p0);
+        var facts = new PerfSamplingFacts("session", 1, "render-device", p0, default, p0);
         AssertThat(conditions.Missing(facts, 1000) is null && conditions.PerformanceReady(facts)).IsTrue();
         AssertThat(conditions.Missing(facts with { RenderGpuUuid = null }, 1000) is not null).IsTrue();
         AssertThat(conditions.Missing(facts, 1000 + options.MaximumFactAgeSeconds * 1000 + 1) is not null).IsTrue();
         AssertThat(conditions.RejectPollution(facts with { OtherProcessesGpuUtilFraction = p0 with { Value = .7 } }, out _)).IsTrue();
-        AssertThat(conditions.RejectPollution(facts with { OtherProcessesCpuUtilFraction = p0 with { Value = .8 } }, out _)).IsTrue();
         var unavailable = p0 with { Capability = PerfFactCapability.Unavailable, Value = null, Reason = "counter unavailable" };
         AssertThat(conditions.Missing(facts with { OtherProcessesGpuUtilFraction = unavailable }, 1000) is not null).IsTrue();
     }
@@ -52,13 +51,10 @@ public sealed class StartupRouteProgressTests
         var formal = new PerfCollectionConditions(options);
         var functional = new PerfCollectionConditions(options with { FunctionalSmoke = true });
         var p0 = new PerfSamplingFact { Capability = PerfFactCapability.Supported, Value = 0, QueryEndMs = 1000 };
-        var clean = new PerfSamplingFacts("session", 1, "render-device", p0, default, p0, p0);
+        var clean = new PerfSamplingFacts("session", 1, "render-device", p0, default, p0);
         foreach (var facts in new[]
         {
-            clean with { OtherProcessesGpuUtilFraction = p0 with { Value = options.OtherGpuFraction + .1 } },
-            clean with { OtherProcessesCpuUtilFraction = p0 with { Value = options.OtherCpuFraction + .1 } },
-            clean with { OtherProcessesGpuUtilFraction = p0 with { Value = options.OtherGpuFraction + .1 },
-                OtherProcessesCpuUtilFraction = p0 with { Value = options.OtherCpuFraction + .1 } }
+            clean with { OtherProcessesGpuUtilFraction = p0 with { Value = options.OtherGpuFraction + .1 } }
         })
         {
             AssertThat(formal.RejectPollution(facts, out var formalReason)).IsTrue();
@@ -68,14 +64,14 @@ public sealed class StartupRouteProgressTests
         }
         AssertThat(functional.RejectPollution(clean, out var cleanReason)).IsFalse();
         AssertThat(cleanReason is null).IsTrue();
-        var missing = clean with { OtherProcessesCpuUtilFraction = p0 with { Capability = PerfFactCapability.Unavailable, Value = null } };
+        var missing = clean with { OtherProcessesGpuUtilFraction = p0 with { Capability = PerfFactCapability.Unavailable, Value = null } };
         AssertThat(functional.Missing(missing, 1000) is not null).IsTrue();
     }
 
     private static PerfCollectionOptions CollectionRequest() => new()
     {
         SceneId = "condition-fixture", SampleSegmentId = "sample-fixture", FunctionalSmoke = false, StableFrames = 2,
-        RealtimeSeconds = 2, SampleSeconds = 1, OtherGpuFraction = .2, OtherCpuFraction = .25, MaximumFactAgeSeconds = 3
+        RealtimeSeconds = 2, SampleSeconds = 1, OtherGpuFraction = .2, MaximumFactAgeSeconds = 3
     };
 
     [TestCase]

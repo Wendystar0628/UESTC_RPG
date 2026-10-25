@@ -120,31 +120,35 @@ def load_session(directory, dictionary):
     directory = Path(directory).resolve()
     path = manifest_path(directory)
     manifest = read_json(path)
-    if manifest.get('schema') != dictionary['schema']:
-        return manifest, None
     snapshot = manifest.get('fieldDictionary')
-    if not isinstance(snapshot, dict) or snapshot.get('schema') != dictionary['schema']:
-        raise ValueError('字段字典快照 schema 不符')
+    if not isinstance(snapshot, dict) or snapshot.get('schema') != manifest.get('schema'):
+        raise ValueError('字段字典快照 schema 与记录不符')
     recorded = snapshot.get('streams')
-    if not isinstance(recorded, dict) or recorded.keys() != dictionary['streams'].keys():
-        raise ValueError('字段字典快照流清单不符')
+    if not isinstance(recorded, dict):
+        raise ValueError('字段字典快照流清单缺失')
     for name, spec in dictionary['streams'].items():
-        original = recorded[name]
+        original = recorded.get(name)
         if not isinstance(original, dict) or any(original.get(key) != spec[key] for key in ('file', 'kind')):
             raise ValueError('字段字典快照流结构不符: ' + name)
         columns = original.get('columns')
-        definition = lambda column: tuple(column[key] for key in ('name', 'type', 'nullable', 'unit'))
         if not isinstance(columns, list) or any(not isinstance(c, dict) for c in columns):
             raise ValueError('字段字典快照列结构不符: ' + name)
-        if [definition(c) for c in columns] != [definition(c) for c in spec['columns']]:
-            raise ValueError('字段字典快照列定义不符: ' + name)
+        by_name = {c.get('name'): c for c in columns}
+        if len(by_name) != len(columns):
+            raise ValueError('字段字典快照列名重复: ' + name)
+        for column in spec['columns']:
+            source = by_name.get(column['name'])
+            if source is None or any(source.get(key) != column.get(key) for key in ('type', 'nullable', 'unit')):
+                raise ValueError('当前指标所需字段语义不符: ' + name + '/' + column['name'])
     # Only analyze_all's exclusive lease certifies an abandoned pending session.
     # Its streams can be truncated; index the manifest without parsing unfinished rows.
     if path.name == 'manifest.pending.json' or manifest.get('status') != 'closed':
         manifest = {**manifest, 'status': 'partial', 'complete': False}
         return manifest, None
-    streams = {name: read_stream(directory, spec, dictionary['schema'], event_stream=name == 'events')
-               for name, spec in dictionary['streams'].items()}
+    streams = {name: read_stream(directory, recorded[name], snapshot['schema'], event_stream=name == 'events')
+               for name in dictionary['streams']}
+    streams = {name: [{column['name']: row.get(column['name']) for column in dictionary['streams'][name]['columns']}
+                      for row in rows] for name, rows in streams.items()}
     return manifest, streams
 
 

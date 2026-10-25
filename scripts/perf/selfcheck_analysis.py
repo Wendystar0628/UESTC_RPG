@@ -33,15 +33,27 @@ def check_snapshot(root, dictionary, budgets):
                 pass
             else:
                 raise AssertionError('快照的流路径或列结构未校验')
-        meta['schema'] = dictionary['schema'] - 1
-        (source / 'manifest.json').write_text(json.dumps(meta), encoding='utf-8')
-        old_meta, old_data = load_session(source, dictionary)
-        assert old_data is None, '旧 schema 被兼容解析'
-        unsupported = summary_for(source, old_meta, old_data, dictionary, budgets, {})[0]
-        assert unsupported['baseStatus'] == 'unsupported' and 'conclusion' not in unsupported
-        from perf import overview
-        conclusion = list(overview(unsupported))[-1]
-        assert 'schema 不支持' in conclusion and unsupported['baseReasons'][0] in conclusion, conclusion
+        # The recorded schema and column ordering belong to its own snapshot, not today's writer.
+        older = copy.deepcopy(dictionary)
+        older['schema'] -= 1
+        older['streams']['hw']['columns'].reverse()
+        older['streams']['hw']['columns'].append(dict(name='retiredCounter', type='integer', nullable=True, unit=None))
+        source_old = Path(temporary) / 'older'
+        original = manifest(older, 'OLDER-SNAPSHOT')
+        write_six(source_old, original, streams([frame(older, 0)], older), older)
+        old_meta, old_data = load_session(source_old, dictionary)
+        recalculated = summary_for(source_old, old_meta, old_data, dictionary, budgets, {})[0]
+        assert at(recalculated, 'steady.cost.mainViewportGpuMs.n') == 1
+        assert old_meta['schema'] == older['schema'] and recalculated['calc'] == summary['calc']
+        broken = copy.deepcopy(original)
+        broken['fieldDictionary']['streams']['frames']['columns'][0]['type'] = 'string'
+        (source_old / 'manifest.json').write_text(json.dumps(broken), encoding='utf-8')
+        try:
+            load_session(source_old, dictionary)
+        except ValueError:
+            pass
+        else:
+            raise AssertionError('当前必需字段语义变化仍被重算')
 
 
 def check_median(root, dictionary, budgets):

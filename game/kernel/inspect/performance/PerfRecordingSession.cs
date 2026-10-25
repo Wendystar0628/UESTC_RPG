@@ -49,7 +49,7 @@ internal sealed class PerfRecordingSession
     private static readonly PerfSamplingFact AwaitingHardware = new()
     { Capability = PerfFactCapability.Starting, Reason = "Awaiting recording hardware sample" };
     public PerfSamplingFacts SamplingFacts => _hardware?.SamplingFacts ??
-        new(Id, null, null, AwaitingHardware, AwaitingHardware, AwaitingHardware, AwaitingHardware);
+        new(Id, null, null, AwaitingHardware, AwaitingHardware, AwaitingHardware);
     public double? ProcessCpuFraction => _hardware?.ProcessCpuFraction;
 
     // Register before Begin: each channel belongs to exactly one producer thread.

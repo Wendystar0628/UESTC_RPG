@@ -33,20 +33,13 @@ internal sealed class PerfCollectionConditions(PerfCollectionOptions options)
         if (facts.RenderAdapterLuid is null || string.IsNullOrEmpty(facts.RenderGpuUuid))
             return "Actual rendering GPU identity is unconfirmed.";
         return Missing(facts.RenderGpuPerformanceState, now, "render GPU P-state") ??
-            Missing(facts.OtherProcessesGpuUtilFraction, now, "other-process GPU") ??
-            Missing(facts.OtherProcessesCpuUtilFraction, now, "other-process CPU");
+            Missing(facts.OtherProcessesGpuUtilFraction, now, "other-process GPU");
     }
 
     public bool RejectPollution(in PerfSamplingFacts facts, out string? reason)
     {
-        reason = (facts.OtherProcessesGpuUtilFraction.Value > options.OtherGpuFraction,
-            facts.OtherProcessesCpuUtilFraction.Value > options.OtherCpuFraction) switch
-        {
-            (true, true) => "Other processes exceeded the frozen PDH same-engine GPU and machine-minus-game CPU thresholds.",
-            (true, false) => "Other processes exceeded the frozen PDH same-engine GPU threshold.",
-            (false, true) => "Other processes exceeded the frozen machine-minus-game CPU threshold.",
-            _ => null
-        };
+        reason = facts.OtherProcessesGpuUtilFraction.Value > options.OtherGpuFraction
+            ? "Other processes exceeded the frozen PDH same-engine GPU threshold." : null;
         // DECISION-344: functional collection retains contamination while completing the activity.
         return reason is not null && !options.FunctionalSmoke;
     }

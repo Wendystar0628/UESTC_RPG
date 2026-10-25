@@ -1,5 +1,5 @@
 {
-  "calc": 11,
+  "calc": 12,
   "authority": "ENG-PERF-DATA",
   "events": "Validate strictly increasing sequence in recorded order, then stable-sort by (monotonicMs, sequence) for cross-producer event association; other streams still require nondecreasing time",
   "summary": {
@@ -27,7 +27,7 @@
     "median": "Prior valid steady frames in the same scene and caliber; nonsteady/gap rows do not enter or clear the window; scene/effective quality/output-size changes reset it",
     "deepen": "Runnable powershell.exe command with actual DeepenEntry and entry-specific DiagnosticTool; source poseArgs/conditions retained; no placeholder runner state",
     "inputStamp": "Current calc, schema, file size/mtime, budget snapshot and current context rules; no checksum",
-    "judgement": "Per-session raw pain quantities and required-check status; light-cost pain rates are decided only from batch phase totals. Missing required facts remain rerun, zero-tolerance quantities retain their own status.",
+    "judgement": "Per-session pain counts and required checks; scene confirmation keeps worse pain counts and one real rate sample. Only round route+travel totals judge light rate. Missing required facts leave acceptance unjudged while measured cost changes remain available.",
     "waits": "Whole-session command endpoints; missing endpoints stay missing. Startup targets are unjudged for every session until the actual double-click launcher start is recorded.",
     "streamFacts": "Source event count/latest snapshot for stream.tileChanged, bake.cache, map.arrival; no duplicate stream-statistics owner"
   },
@@ -41,17 +41,18 @@
   },
   "runJson": {
     "owner": "scripts/perf/run.ps1",
-    "location": "Nearest run.json ancestor of session within output/perf/runs",
+    "location": "Beside each recorded session",
     "scene": "Stable scenario identity; part of comparisonKey",
     "status": "valid|partial|invalid; one judgement with reasons[]",
     "exitCode": "Actual process exit code or null",
     "timedOut": "Actual timeout fact or null",
     "coverage": "Named observed facts, each {observed:number,required:number}; e.g. frames, seconds, segments; all must reach requirements",
     "diagnostic": "true only for diagnostic conditions; never a baseline",
-    "protocol": "A/B/A identity and completion facts belong to the runner; incomplete protocol must remain partial",
     "note": "No complete/valid/satisfied duplicate booleans; missing actual facts produce partial",
     "launcher": "Raw per-attempt script/Stopwatch and native process start/exit facts; process elapsed cannot prove a complete double-click launch is under budget. AI startup targets remain unjudged.",
-    "conditions": "Frozen suite, bool travelPrefetch, routePointIds and batch logicalPauseVerified/mainThreadLongStopVerified, noiseCalibrationBatchId, tuningSelectedMetrics; no runtime game toggles"
+    "conditions": "Frozen suite, bool travelPrefetch, routePointIds and batch logicalPauseVerified/mainThreadLongStopVerified, tuningSelectedMetrics; no runtime game toggles",
+    "roundId": "Analyzer round registration identity; sourceRoot and scene plan live only in rounds.json",
+    "confirmationOf": "Main session ID only for the one conditional confirmation"
   },
   "diagnosticsJson": {
     "owner": "scripts/perf/run.ps1",
@@ -60,5 +61,9 @@
   },
   "outputLimits": "perf.py constants MAX_ROWS/MAX_LINES/MAX_CHARS",
   "retention": "perf_store.py constants; author root is read-only and owned by recorder",
-  "batch": "Analyzer-only phase medians, distanceTable(value/upper/stop/ratio/tier), route+travel raw-frame pain totals/worst scene and zero-tolerance count/allowed0, required checks and max(abs(A1-A2),sigma0) strict ABA improvement; sigma0 from unchanged complete calibration batch"
+  "batch": "Analyzer-only registered round: one complete base-valid main per scene, at most one explicit confirmation, per-metric worse costs, distanceTable, pain, and explicit N-1 comparison",
+  "roundComparison": {
+    "minimumImprovementFraction": 0.05,
+    "confirmation": "One confirmation only when a metric is near upper/stop or a pain occurs once; select the whole real distribution for each worse judged statistic and name its source, never combine sample counts. Per-scene light-rate source keeps its real count/duration pair; only round route+travel totals judge the light limit."
+  }
 }

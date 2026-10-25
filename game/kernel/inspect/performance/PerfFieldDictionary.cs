@@ -24,7 +24,7 @@ internal sealed class PerfFieldDictionary
     {
         Snapshot = JsonNode.Parse(text) as JsonObject ?? throw new InvalidDataException("Performance dictionary root is missing.");
         Schema = Snapshot["schema"]!.GetValue<int>();
-        if (Schema != 7 || Snapshot["draft"]?.GetValue<bool>() != false)
+        if (Schema != 8 || Snapshot["draft"]?.GetValue<bool>() != false)
             throw new InvalidDataException("Unsupported performance dictionary schema or draft.");
         AnchorIntervalMilliseconds = Snapshot["clock"]!["anchorIntervalSeconds"]!.GetValue<double>() * 1000;
         if (!double.IsFinite(AnchorIntervalMilliseconds) || AnchorIntervalMilliseconds <= 0 || Snapshot["nonSteadyRules"] is not JsonObject)

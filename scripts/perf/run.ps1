@@ -1,11 +1,11 @@
 ﻿# AI 固定采集唯一入口：冻结条件，分开本树准备与私桌面采样，保留失败并交既有分析器。
-# 用法：powershell -File scripts/perf/run.ps1 -Batch TOOL-428-check [-Suite fixed|route|travel] [-Scene overview-default] [-PrepareBake]；正式协议加 -Mode formal -Protocol repeat3|aba -Phase a1|b1|a2；诊断用 -DeepenSession <id> [-DiagnosticTool gpu-profile,EventPipe,Nsight]。
+# 用法：powershell -File scripts/perf/run.ps1 -Batch TOOL-428-check [-Suite fixed|route|travel] [-Scene overview-default] [-PrepareBake]；正式轮加 -Mode formal -RoundNumber 0 [-PreviousRound id]；诊断用 -DeepenSession <id> [-DiagnosticTool gpu-profile,EventPipe,Nsight]。
 # 产出：output/perf/runs/<Batch>/<Phase>/<场景>/<重复-尝试>/<会话>/run.json 与原始六件；functional 永不进入比较。
 [CmdletBinding(DefaultParameterSetName='Collection')]
 param([Parameter(Mandatory,ParameterSetName='Collection')][ValidatePattern('^[A-Za-z0-9][A-Za-z0-9-]+$')][string]$Batch,
     [ValidateSet('fixed','route','travel')][string[]]$Suite=@('fixed','route','travel'), [string[]]$Scene=@(),
     [ValidateSet('functional-smoke','formal')][string]$Mode='functional-smoke',
-    [ValidateSet('repeat3','aba')][string]$Protocol='repeat3', [ValidateSet('a1','b1','a2')][string]$Phase='a1',
+    [ValidateRange(0,2147483647)][int]$RoundNumber=0, [string]$PreviousRound='',
     [switch]$PrepareBake, [IO.FileStream]$BuildLease=$null, [string]$BatchConditions='',
     [Parameter(Mandatory,ParameterSetName='Diagnostic')][ValidatePattern('^[A-Za-z0-9][A-Za-z0-9._-]*$')][string]$DeepenSession,
     [Parameter(ParameterSetName='Diagnostic')][ValidateSet('gpu-profile','EventPipe','Nsight')][string[]]$DiagnosticTool=@(),
@@ -24,16 +24,14 @@ if ($PSCmdlet.ParameterSetName -eq 'Diagnostic') {
 # DECISION-344: all thresholds are frozen here; normal small DWM load is below the GPU threshold.
 $stableFrames=10
 $realtimeSeconds=2
-$repetitions=3
 $sampleSeconds=30
 $smokeSeconds=2
 $maximumAttempts=3
 $otherGpuFraction=0.20
-$otherCpuFraction=0.40
 $maximumFactAgeSeconds=3
 $timeoutSeconds=600
 $judgement=[ordered]@{ logicalPauseVerified=$false; mainThreadLongStopVerified=$false;
-    noiseCalibrationBatchId=$null; tuningSelectedMetrics=@() }
+    tuningSelectedMetrics=@() }
 if ($BatchConditions) {
     $requested=Get-Content -LiteralPath $BatchConditions -Raw | ConvertFrom-Json
     foreach ($property in $requested.PSObject.Properties) {
@@ -44,7 +42,6 @@ if ($BatchConditions) {
         if ($judgement[$name] -isnot [bool]) { throw "$name must be a recorded round-zero boolean." }
     }
 }
-if ($Protocol -eq 'repeat3' -and $Phase -ne 'a1') { throw 'repeat3 only has a1.' }
 $plan=Get-Content -LiteralPath (Join-Path $PSScriptRoot 'scenarios.json') -Raw | ConvertFrom-Json
 $selected=@(Get-CollectionScenes $plan $Suite $Scene)
 if ($Mode -eq 'functional-smoke' -and -not $Scene.Count) {
@@ -52,12 +49,11 @@ if ($Mode -eq 'functional-smoke' -and -not $Scene.Count) {
 }
 $sceneIds=@($selected | ForEach-Object { $_.scene.id })
 $batchRoot=Assert-UESTCChildPath (Join-Path $root ('output\perf\runs\' + $Batch)) (Join-Path $root 'output\perf\runs')
-$phaseRoot=Join-Path $batchRoot $Phase
-if (Test-Path -LiteralPath $phaseRoot) { throw 'Choose a fresh batch/phase; prior data is retained.' }
-Assert-CollectionPhase $batchRoot $Protocol $Phase $sceneIds $judgement
-$null=[IO.Directory]::CreateDirectory($phaseRoot)
+$roundRoot=$batchRoot
+if (Test-Path -LiteralPath $roundRoot) { throw 'Choose a fresh round; prior data is retained.' }
+$null=[IO.Directory]::CreateDirectory($roundRoot)
 $purpose=if ($Mode -eq 'formal') { 'baseline' } else { 'functional' }
-$phaseRecord=[ordered]@{ purpose=$purpose; protocol=$Protocol; phase=$Phase; scenes=$sceneIds; status='preparing';
+$roundRecord=[ordered]@{ purpose=$purpose; number=$RoundNumber; previousId=$PreviousRound; scenes=$sceneIds; status='preparing';
     revision=(& git -C $root rev-parse HEAD).Trim(); preparation=$null; completed=$false;
     judgementConditions=$judgement; collectionScriptEnteredUtc=$collectionScriptEnteredUtc }
 $lease=$null
@@ -73,35 +69,37 @@ try {
     } else { $lease=Enter-UESTCBuildLock (Get-UESTCLayout $root).Locks; $heldLease=$lease }
     $preparation=New-UESTCLaunchTiming
     $preparation['lockWaitStatus']=if ($BuildLease) { 'ALREADY_HELD' } else { 'ACQUIRED_BY_COLLECTION' }
-    $phaseRecord.preparation=$preparation
-    Write-CollectionJson (Join-Path $phaseRoot 'phase.json') $phaseRecord
+    $roundRecord.preparation=$preparation
+    Write-CollectionJson (Join-Path $roundRoot 'round.json') $roundRecord
+    if ($Mode -eq 'formal') { Publish-CollectionRound $root $Batch $RoundNumber $roundRoot $sceneIds $PreviousRound }
     $godot=Get-UESTCGodot
-    $environment=New-UESTCTestEnvironment -Work $phaseRoot
+    $environment=New-UESTCTestEnvironment -Work $roundRoot
     $environment['UESTC_BAKE_CACHE']=$null
     Update-UESTCGameBuild -Root $root -Godot $godot -BuildLease $heldLease -Timing $preparation -Environment $environment
     $preparation['bakeRequested']=[bool]$PrepareBake
     if ($PrepareBake) {
         $bake=Invoke-UESTCProcess $godot @('--headless','--path',(Join-Path $root 'game'),'--','--bake=all',('--map=' + $plan.map)) `
-            $root (Join-Path $phaseRoot 'preparation-bake.log') -TimeoutSeconds 14400 -Environment $environment
+            $root (Join-Path $roundRoot 'preparation-bake.log') -TimeoutSeconds 14400 -Environment $environment
         Assert-UESTCCleanGodotLog $bake
         $preparation['bakeExitCode']=$bake.ExitCode
     }
-    $phaseRecord.status='collecting'
-    Write-CollectionJson (Join-Path $phaseRoot 'phase.json') $phaseRecord
-    $count=if ($Mode -eq 'formal') { $repetitions } else { 1 }
+    $roundRecord.status='collecting'
+    Write-CollectionJson (Join-Path $roundRoot 'round.json') $roundRecord
+    $count=if ($Mode -eq 'formal') { 2 } else { 1 }
     $attemptLimit=if ($Mode -eq 'formal') { $maximumAttempts } else { 1 }
     foreach ($item in $selected) {
-        for ($repeat=1; $repeat -le $count; $repeat++) {
+        $confirmationOf=$null
+        for ($sample=0; $sample -lt $count; $sample++) {
             $accepted=$false
             for ($attempt=1; $attempt -le $attemptLimit; $attempt++) {
                 $entry=$item.scene
-                $directory=Join-Path $phaseRoot ($entry.id + '\' + $repeat + '-' + $attempt)
+                $directory=Join-Path $roundRoot ($entry.id + '\' + $sample + '-' + $attempt)
                 $null=[IO.Directory]::CreateDirectory($directory)
                 $seconds=if ($Mode -ne 'formal') { $smokeSeconds } elseif ($item.kind -eq 'route') { $entry.seconds } else { $sampleSeconds }
                 $segment='sample-' + [Guid]::NewGuid().ToString('N')
                 $request=[ordered]@{ sceneId=$entry.id; sampleSegmentId=$segment; functionalSmoke=($Mode -eq 'functional-smoke'); stableFrames=$stableFrames;
                     realtimeSeconds=$realtimeSeconds; sampleSeconds=$seconds; otherGpuFraction=$otherGpuFraction;
-                    otherCpuFraction=$otherCpuFraction; maximumFactAgeSeconds=$maximumFactAgeSeconds;
+                    maximumFactAgeSeconds=$maximumFactAgeSeconds;
                     saveAfterSample=($entry.PSObject.Properties['saveAfterSample'] -and [bool]$entry.saveAfterSample) }
                 $request['suite']=$item.kind
                 $request['routePointIds']=@()
@@ -114,7 +112,7 @@ try {
                     timedOut=$false; coverage=@{}; purpose=$purpose; sampleSegmentId=$segment; attempt=$attempt; observed=$null;
                     polluted=$null; pollution=@();
                     close=@{ completed=$false; durationMs=$null; source='formal-close-task'; reason='Formal close start/end not observed.' };
-                    protocol=@{ kind=$Protocol; batchId=$Batch; scenes=$sceneIds; phase=$Phase; repetition=$repeat }; conditions=$request;
+                    roundId=$Batch; confirmationOf=$confirmationOf; conditions=$request;
                     collectionScriptEnteredUtc=$collectionScriptEnteredUtc;
                     launcher=@{ scriptEnteredUtc=$null; scriptEnteredTimestamp=$null; stopwatchFrequency=[Diagnostics.Stopwatch]::Frequency;
                         processExitUtc=$null; preparation='Batch build/import and optional bake precede this attempt; not a double-click launcher measurement.' } }
@@ -174,31 +172,40 @@ try {
                 }
                 if ($accepted -or $run.status -eq 'partial') { break }
             }
-            if (-not $accepted) { $failed=$true }
+            if (-not $accepted) { $failed=$true; break }
+            if ($Mode -eq 'formal' -and $sample -eq 0) {
+                Publish-CollectionRound $root $Batch $RoundNumber $roundRoot $sceneIds $PreviousRound
+                $index=Get-Content -LiteralPath (Join-Path $root 'output/perf/index.json') -Raw | ConvertFrom-Json
+                $round=@($index.batches | Where-Object { $_.id -eq $Batch })
+                $group=@($round.groups | Where-Object { $_.comparisonKey.scene -eq $entry.id })
+                if ($group.Count -ne 1) { throw 'Analyzer did not publish the collected scene.' }
+                if (-not $group[0].confirmationPending) { break }
+                $confirmationOf=$group[0].mainSessionId
+            }
         }
     }
-    $phaseRecord.completed=-not $failed
-    $phaseRecord.status=if ($failed) { 'incomplete' } else { 'completed' }
-} catch { $phaseRecord.status='failed'; $phaseRecord['error']=$_.Exception.ToString(); throw }
+    $roundRecord.completed=-not $failed
+    $roundRecord.status=if ($failed) { 'incomplete' } else { 'completed' }
+} catch { $roundRecord.status='failed'; $roundRecord['error']=$_.Exception.ToString(); throw }
 finally {
     try {
-        Write-CollectionJson (Join-Path $phaseRoot 'phase.json') $phaseRecord
+        Write-CollectionJson (Join-Path $roundRoot 'round.json') $roundRecord
         try { Invoke-UESTCPerfAnalysis -Root $root -SessionSources $acceptedSources }
         catch {
             $failed=$true
-            $phaseRecord['analysisError']=$_.Exception.ToString()
-            Write-Warning $phaseRecord.analysisError
+            $roundRecord['analysisError']=$_.Exception.ToString()
+            Write-Warning $roundRecord.analysisError
         }
         if ($Mode -eq 'formal') {
-            & python -I -X utf8 (Join-Path $PSScriptRoot 'perf.py') --root $root batch $Batch
+            Publish-CollectionRound $root $Batch $RoundNumber $roundRoot $sceneIds $PreviousRound
         } else {
             & python -I -X utf8 (Join-Path $PSScriptRoot 'perf.py') --root $root latest --origin ai --scope cost
         }
         if ($LASTEXITCODE -ne 0) { $failed=$true }
-        if ($failed -and $phaseRecord.completed) {
-            $phaseRecord.completed=$false
-            $phaseRecord.status='incomplete'
-            Write-CollectionJson (Join-Path $phaseRoot 'phase.json') $phaseRecord
+        if ($failed -and $roundRecord.completed) {
+            $roundRecord.completed=$false
+            $roundRecord.status='incomplete'
+            Write-CollectionJson (Join-Path $roundRoot 'round.json') $roundRecord
         }
     } finally {
         Exit-UESTCBuildLock $lease

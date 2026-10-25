@@ -70,10 +70,15 @@ def streams(frames, dictionary):
     return dict(frames=frames, samples=[], hw=[], hwfast=[], events=[anchor])
 
 
-def ai_run(scene='baseline-selfcheck', batch='fixture', phase='a1', repetition=1, kind='repeat3', scenes=None):
+def ai_run(scene='baseline-selfcheck', round_id='fixture', confirmation_of=None):
     return dict(scene=scene, purpose='baseline', status='valid', reasons=[], exitCode=0, timedOut=False,
                 coverage=dict(sample=dict(observed=1, required=1)), conditions=dict(suite='fixed'), sampleSegmentId='sample',
-                protocol=dict(kind=kind, batchId=batch, scenes=scenes or [scene], phase=phase, repetition=repetition))
+                roundId=round_id, confirmationOf=confirmation_of)
+
+
+def round_registration(source, scenes, identifier='fixture', number_=0, previous_id=None):
+    from pathlib import Path
+    return dict(id=identifier, number=number_, sourceRoot=str(Path(source).resolve()), scenes=list(scenes), previousId=previous_id)
 
 
 def mark_sample(data, dictionary, meta, begin=0, end=None):

@@ -96,6 +96,7 @@ def overview(summary):
                          ((row.get(key) for key in ('sequence', 'collectionFrame', 'monotonicMs', 'event', 'source'))
                           for row in gap['neighbours']))
     yield '比较键：' + cell(summary['comparisonKey'])
+    yield '构建提交：' + cell(at(summary, 'build.commit')) + '；原始 schema=' + cell(summary.get('schema'))
     yield '构建配置：' + cell(at(summary, 'build.configuration')) + '；含未提交改动：' + cell(at(summary, 'build.dirty'))
     metrics = [('主视口 GPU p95 / ms', at(summary, 'steady.cost.mainViewportGpuMs.p95')),
                ('视口 CPU 渲染 p95 / ms', at(summary, 'steady.cost.mainViewportCpuMs.p95')),
@@ -159,65 +160,73 @@ def latest(out, args):
         yield from table(['来源', '种类', '原因'], ((error['source'], error['kind'], error['reason']) for error in errors))
 
 
+def find_batch(out, identifier):
+    batch = next((row for row in load_index(out).get('batches', []) if row['id'] == identifier), None)
+    if batch is None:
+        raise ValueError('轮记录不存在')
+    return batch
+
+
 def compare(out, args):
-    left, right = find_summary(out, args.left), find_summary(out, args.right)
-    batch_id = at(left, 'run.protocol.batchId')
-    batch = next((row for row in load_index(out).get('batches', []) if row['id'] == batch_id), {})
-    group = next((row for row in batch.get('groups', []) if row['comparisonKey'] == left['comparisonKey']
-                  and row['calc'] == left['calc'] and row['origin'] == left['origin'] and row['scope'] == left['scope']), {})
-    left_phase, right_phase = at(left, 'run.protocol.phase'), at(right, 'run.protocol.phase')
-    eligible = (bool(batch_id) and batch_id == at(right, 'run.protocol.batchId') and batch.get('kind') == 'aba'
-                and batch.get('status') in ('current', 'superseded') and left_phase != right_phase
-                and all(s['origin'] == 'ai' and s['baseStatus'] == 'candidate' and s['status'] != 'partial'
-                        and at(s, 'build.dirty') is False and s['comparisonKey'] == left['comparisonKey']
-                        and s['scope'] == left['scope'] and s['calc'] == left['calc'] for s in (left, right)))
-    values = [group.get('phases', {}).get(phase, {}) for phase in (left_phase, right_phase)] if eligible else [{}, {}]
-    yield f"{left['id']} → {right['id']}"
-    yield '可比：' + ('是；同批完整 A/B/A；展示所选阶段每场景三次中位。' if eligible else '否；须同批完整有效 A/B/A 的不同阶段，差异不下结论。')
-    metrics = ('steady.cost.mainViewportGpuMs.p95', 'steady.cost.mainViewportCpuMs.p95',
-               'steady.cost.frameSetupCpuMs.p95', 'all.cost.hardware.wholeGpuMemoryMiB.maximum')
-    yield from table(['指标', '左', '右', '差值（仅可比时）'],
-                     ((key, at(values[0], key), at(values[1], key), at(values[1], key) - at(values[0], key)
-                       if eligible and number(at(values[0], key)) and number(at(values[1], key)) else None) for key in metrics))
+    previous, current = find_batch(out, args.left), find_batch(out, args.right)
+    if current['previousId'] != previous['id'] or current['number'] != previous['number'] + 1:
+        raise ValueError('只比较显式相邻轮 N-1 与 N')
+    yield f"第{previous['number']}轮 {previous['id']} → 第{current['number']}轮 {current['id']}"
+    yield from comparison_lines(current.get('comparison', []))
+
+
+def comparison_lines(rows):
+    yield from table(['场景/指标', '前轮', '本轮', '改善比例', '变化', '可合入', '原因'],
+                     ((row['scene'] + '/' + row['metric'], row['previous'], row['value'], row['improvementFraction'],
+                       row['change'], row['accepted'], row['reasons']) for row in rows))
+    if not rows:
+        yield '没有完整相邻轮比较；成本记录仍可查。'
 
 
 def batch_overview(out, args):
-    batch = next((row for row in load_index(out).get('batches', []) if row['id'] == args.id), None)
-    if batch is None:
-        raise ValueError('批次不存在')
-    yield f"批次 {batch['id']} | {STATUS.get(batch['status'], batch['status'])} | {batch['kind']} | 目标={batch.get('targetPhase')}"
+    batch = find_batch(out, args.id)
+    yield f"第{batch['number']}轮 {batch['id']} | {STATUS.get(batch['status'], batch['status'])} | 前轮={batch['previousId']}"
     yield '状态原因：' + cell(batch['statusReasons'])
-    yield '必判重跑项：' + cell([v for v in batch.get('requiredChecks', []) if v['status'] != 'measured'])
-    yield '批次痛点（路线+旅行全部运行，按原始帧）：' + cell(at(batch, 'pain.total'))
-    yield '必判集之外未判：' + cell(batch.get('unjudged'))
+    yield '原始根：' + cell(batch['sourceRoot'])
+    yield f"登记场景 {len(batch['scenes'])}；已选主采 {len(batch['groups'])}；确认 {sum(bool(group['confirmationSessionId']) for group in batch['groups'])}"
+    missing = {(check['key'], check.get('reason')) for check in batch.get('requiredChecks', []) if check['status'] != 'measured'}
+    yield from table(['未核必判', '原因'], sorted(missing))
+    yield '未核项目：' + cell(batch.get('unjudged'))
+    yield '本轮痛点：' + cell(batch.get('pain'))
+    yield '门禁结论：' + cell(batch.get('gateStatus'))
     for group in batch['groups']:
-        yield '比较键：' + cell(group['comparisonKey']) + f"；calc={group['calc']}；scope={group['scope']}"
-        yield from table(['阶段', '会话', '主 GPU p95 中位/ms', '帧准备 CPU p95 中位/ms'],
-                         ((phase, value['sessionIds'], at(value, 'steady.cost.mainViewportGpuMs.p95'),
-                           at(value, 'steady.cost.frameSetupCpuMs.p95')) for phase, value in group['phases'].items()))
+        main = find_summary(out, group['mainSessionId'])
+        key = group['comparisonKey']
+        yield '场景 ' + cell(key['scene']) + '；构建=' + cell(at(main, 'build.commit')) + '；原始schema=' + cell(main['schema'])
+        yield '输出/内部尺寸：' + cell(key['outputResolution']) + '/' + cell(key['internalResolution']) + f"；calc={group['calc']}；scope={group['scope']}"
+        yield from table(['主采', '确认', '主 GPU p95/ms', '帧准备 CPU p95/ms', '待确认', '原因'],
+                         [(group['mainSessionId'], group['confirmationSessionId'], at(group, 'steady.cost.mainViewportGpuMs.p95'),
+                           at(group, 'steady.cost.frameSetupCpuMs.p95'), group['confirmationPending'], group['confirmationReasons'])])
 
 
 def distance(out, args):
-    batch = next((row for row in load_index(out).get('batches', []) if row['id'] == args.id), None)
-    if batch is None:
-        raise ValueError('批次不存在')
-    phase = args.phase or batch.get('targetPhase') or ('b1' if batch['kind'] == 'aba' else 'a1')
-    yield f"批次 {batch['id']} | 阶段 {phase} | {STATUS.get(batch['status'], batch['status'])}"
-    rows = [row for group in batch['groups'] if not args.scene or group['comparisonKey']['scene'] == args.scene
-            for row in at(group, 'phases.' + phase + '.distanceTable', []) or []]
+    batch = find_batch(out, args.id)
+    yield f"第{batch['number']}轮 {batch['id']} | {STATUS.get(batch['status'], batch['status'])}"
+    groups = [group for group in batch['groups'] if not args.scene or group['comparisonKey']['scene'] == args.scene]
+    rows = [row for group in groups for row in group['distanceTable']]
     yield from table(['场景', '指标', '测值ms', '上沿ms', '停线ms', '比值', '档位'],
                      ((r['scene'], r['metric'], r['value'], r['upper'], r['stop'], r['ratio'], r['tier']) for r in rows))
-    pain = batch.get('pain', {}).get(phase, {})
-    yield from table(['零容忍痛点', '次数', '允许', '最差场景'],
-                     ((r['key'], r['count'], r['allowed'], pain.get('worstScenes', {}).get(r['key'])) for r in pain.get('zeroTolerance', [])))
-    yield '轻级：' + cell(pain.get('lightFramesPerMinute')) + ' 次/分钟；上限=' + cell(pain.get('lightLimit'))
-    yield '痛点判定：' + cell(pain.get('status'))
-    yield from table(['场景/指标', '改进', 'A之差', 'sigma0', '须严格大于', '可合入', '原因'],
-                     ((r['scene'] + '/' + r['metric'], r['improvement'], r['aDifference'], r['sigma0'],
-                       r['requiredImprovement'], r['accepted'], r['reasons']) for r in batch.get('abaAssessment', [])
-                      if not args.scene or r['scene'] == args.scene))
+    yield '痛点：' + cell(batch.get('pain'))
+    yield '未核项目：' + cell(batch.get('unjudged'))
+    yield '待确认场景：' + cell([dict(scene=g['comparisonKey']['scene'], reasons=g['confirmationReasons']) for g in groups if g['confirmationPending']])
+    yield from comparison_lines([row for group in groups for row in group.get('comparison', [])])
     if not rows:
-        yield '没有完整阶段距离表；按批次原因重跑，不能据空表判达标。'
+        yield '没有完整场景距离表；不能据空表判达标。'
+
+
+def record(out, args):
+    from perf_batches import register_round
+    from analyze import analyze_all
+    register_round(out, args.id, args.number, args.source_root, args.scene, args.previous_id)
+    result = analyze_all(args.root.resolve(), author=args.author_root)
+    if result['errors']:
+        raise ValueError('分析来源出错: ' + cell(result['errors']))
+    return batch_overview(out, args)
 
 
 def anomalies(out, args):
@@ -263,13 +272,12 @@ def main():
     latest_parser.add_argument('--limit', type=int, default=2)
     show_parser = commands.add_parser('show', help='显示一个会话')
     show_parser.add_argument('id')
-    batch_parser = commands.add_parser('batch', help='读取分析器生成的批次完整性与场景中位')
+    batch_parser = commands.add_parser('batch', help='读取分析器生成的轮完整性与单次/确认较差值')
     batch_parser.add_argument('id')
-    distance_parser = commands.add_parser('distance', help='只读分析器距离表、零容忍计数与散布判据')
+    distance_parser = commands.add_parser('distance', help='只读分析器距离表、痛点与相邻轮比较')
     distance_parser.add_argument('id')
-    distance_parser.add_argument('--phase', choices=('a1', 'b1', 'a2'))
     distance_parser.add_argument('--scene')
-    compare_parser = commands.add_parser('compare', help='以两个会话定位同批 A/B/A 阶段，比较现成场景中位')
+    compare_parser = commands.add_parser('compare', help='读取显式相邻两轮的分析器结论')
     compare_parser.add_argument('left')
     compare_parser.add_argument('right')
     for name in ('anomalies', 'slice'):
@@ -281,6 +289,13 @@ def main():
         else:
             command.add_argument('--start', type=int)
             command.add_argument('--end', type=int)
+    record_parser = commands.add_parser('record', help='登记唯一轮并经现有分析器离线重算')
+    record_parser.add_argument('id')
+    record_parser.add_argument('--number', type=int, required=True)
+    record_parser.add_argument('--source-root', type=Path, required=True)
+    record_parser.add_argument('--scene', action='append', required=True)
+    record_parser.add_argument('--previous-id')
+    record_parser.add_argument('--author-root', type=Path)
     commands.add_parser('selfcheck', help='运行小样本与收口回归')
     args = parser.parse_args()
     if hasattr(args, 'limit'):
@@ -296,6 +311,8 @@ def main():
             lines = overview(find_summary(out, args.id))
         elif args.command == 'compare':
             lines = compare(out, args)
+        elif args.command == 'record':
+            lines = record(out, args)
         elif args.command == 'batch':
             lines = batch_overview(out, args)
         elif args.command == 'distance':

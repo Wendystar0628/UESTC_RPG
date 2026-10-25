@@ -19,7 +19,7 @@
     render: '每桶均值线与桶内最大值带；渲染计时是延迟回读，尖峰前后 ±2 帧只作关联，不叫精确对齐；目标线只在本次会话条件与预算一致时画',
     gpu: '占用是有内核在跑的时间占比、整卡、相对当前频率，限帧时本该低，不能单独当卡顿症状；显存分 NVML 整卡已用与引擎记账两条线',
     anomalies: '分析器判出的异常，每类至多 20 条、按超出量排；关联阶段是墙钟区间里超出最多的一段，不据段名断言原因；点一条，上面的曲线缩到它前后 10 秒',
-    trend: '横轴一格是一个批次阶段，同一提交的不同阶段各占一格；线读分析器给的批次阶段稳态成本中位，细点是计入该中位的单次运行，圈是最新一次；只画成本指标；悬停看批次状态与原因；缺数照后端原因写',
+    trend: '横轴一格是一轮记录；线读分析器给的每轮稳态成本值（补测过的取两次中较差的），细点是这一轮的单次运行，圈是最新一次；只画成本指标；悬停看记录状态与原因；缺数照后端原因写',
     sessions: '每次会话一行，新的在前；留到哪层照现存文件；卡底的保留统计现值与上限都由后端给'
   };
 
@@ -462,14 +462,14 @@
 
   function groupLabel(g, i) { return (g.origin === 'play' ? '作者' : 'AI') + ' · ' + (g.scope === 'full' ? '成本与体验' : '仅成本') + ' · 第 ' + (i + 1) + ' 组'; }
 
-  /* 横轴一格一个批次阶段：同一提交的不同阶段各占一格，同提交同阶段的不同批次再标批次号 */
+  /* 横轴一格一轮记录：同一提交跑了几轮各占一格，同提交同轮号的不同记录再标批次号 */
   function pointAxis(pts) {
-    var base = pts.map(function (p) { return '#' + p.seq + ' ' + p.phase; }), seen = {};
+    var base = pts.map(function (p) { return '#' + p.seq + ' 第' + p.roundNumber + '轮'; }), seen = {};
     base.forEach(function (x) { seen[x] = (seen[x] || 0) + 1; });
     return base.map(function (x, i) { return seen[x] > 1 ? x + ' · ' + pts[i].batchId : x; });
   }
   function pointNote(p) {
-    return [Dash.num(p.n) + ' 次运行计入中位', '批次 ' + p.batchId + ' · ' + (p.statusLabel || p.status)]
+    return [Dash.num((p.sessionIds || []).length) + ' 次运行', '记录 ' + p.batchId + ' · ' + (p.statusLabel || p.status)]
       .concat(p.statusReasons || []).join('；');
   }
 
@@ -480,7 +480,7 @@
       var pd = d.perf;
       params = ctx.params;
       var groups = (pd.trends || []).filter(function (g) { return g.points && g.points.length; });
-      if (!groups.length) { el.appendChild(Dash.empty('分析器还没有给出批次阶段中位', '只收分析器认可的当前、过时与已替代批次里构建身份确认、不含未提交改动的阶段', true)); return; }
+      if (!groups.length) { el.appendChild(Dash.empty('分析器还没有给出轮次记录', '只收分析器认可的、构建身份确认且不含未提交改动的轮次记录', true)); return; }
       var gi = Math.min(Math.max(0, Number(ctx.params.tg) || 0), groups.length - 1), g = groups[gi];
       var keys = Object.keys(g.points[0].metrics);
       var metrics = (pd.metrics || []).filter(function (m) { return keys.indexOf(m.key) >= 0 && m.scope === 'cost'; });
@@ -507,14 +507,14 @@
       });
       var tone = g.origin === 'play' ? ['side', 'author'] : ['perf', 'ai'];
       var target = last ? (last.targets || []).filter(function (t) { return t.label === m.label && t.line != null; })[0] : null;
-      var titles = pts.map(function (p) { return '主线 #' + p.seq + (p.subject ? ' · ' + p.subject : '') + ' · 阶段 ' + p.phase; });
+      var titles = pts.map(function (p) { return '主线 #' + p.seq + (p.subject ? ' · ' + p.subject : '') + ' · 第 ' + p.roundNumber + ' 轮'; });
       el.appendChild(Dash.charts.trend(xs, [
-        { key: 'median', label: g.label, tone: tone, values: pts.map(function (p) { return show(p.metrics[m.key]); }) },
+        { key: 'round', label: g.label, tone: tone, values: pts.map(function (p) { return show(p.metrics[m.key]); }) },
         { key: 'runs', label: '单次运行', tone: tone, points: dots }
       ], { height: 260, units: [unit, ''], gap: true, label: m.label + '的跨提交趋势', caliber: CAL.trend,
         titles: titles, notes: pts.map(pointNote),
         lines: target ? [{ value: show(target.line), label: '目标 ' + fmt(target.line, m.unit), tone: ['perf', 'target'] }] : [] }));
-      el.appendChild(h('div.note-line', g.label + '；横轴是主线提交序号与批次阶段' + (unplaced ? '；另有 ' + unplaced + ' 次计入中位的运行不在会话列表或没有这项值，没画' : '')));
+      el.appendChild(h('div.note-line', g.label + '；横轴是主线提交序号与轮次' + (unplaced ? '；另有 ' + unplaced + ' 次运行不在会话列表或没有这项值，没画' : '')));
       el.appendChild(h('div.pf-sub', '每分钟异常数'));
       if (pts.every(function (p) { return p.anomaliesPerMinute == null; })) {
         var why = pts.map(function (p) { return p.anomalyRateReason || '缺测'; }).filter(function (x, i, a) { return a.indexOf(x) === i; });

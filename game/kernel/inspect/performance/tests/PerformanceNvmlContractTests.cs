@@ -4,6 +4,7 @@ using Campus.Contracts;
 using Campus.Contracts.Perf;
 using Campus.Kernel.Inspect;
 using GdUnit4;
+using static GdUnit4.Assertions;
 using static Campus.Tests.PerformanceTestSupport;
 
 namespace Campus.Tests;
@@ -179,24 +180,21 @@ public sealed class PerformanceNvmlContractTests
     }
 
     [TestCase, TestCategory(TestReason.Contract)]
-    public void OtherCpuSubtractsGameFromSystemBusyWithoutAddingIdleTwiceAndRetainsCoverageFailure()
+    public void ProcessCpuUsesSystemIntervalOnlyAsNormalizationAndRetainsCoverageFailure()
     {
-        var previous = new CpuCounterRead { Idle100ns = 100, Kernel100ns = 300, User100ns = 200,
+        var previous = new CpuCounterRead { Kernel100ns = 300, User100ns = 200,
             ProcessKernel100ns = 20, ProcessUser100ns = 30, SystemQueryStartMs = 9, SystemQueryEndMs = 10,
             ProcessQueryStartMs = 11, ProcessQueryEndMs = 12, ProcessorGroups = 1, LogicalProcessors = 4 };
-        var current = previous with { Idle100ns = 125, Kernel100ns = 380, User100ns = 220,
+        var current = previous with { Kernel100ns = 380, User100ns = 220,
             ProcessKernel100ns = 35, ProcessUser100ns = 40, SystemQueryStartMs = 109, SystemQueryEndMs = 110,
             ProcessQueryStartMs = 111, ProcessQueryEndMs = 112 };
         var result = WindowsCpuSampler.Calculate(current, previous);
-        if (result.Fact.Capability != PerfFactCapability.Supported || result.Fact.Value != .5 ||
-            result.Previous != previous || result.Current != current || result.Fact.AverageStartMs != previous.SystemQueryEndMs)
-            throw new InvalidOperationException("CPU subtraction, raw counters or independent read windows changed.");
+        AssertThat(result.ProcessFraction == .25 && result.Previous == previous && result.Current == current).IsTrue();
         var grouped = WindowsCpuSampler.Calculate(current with { ProcessorGroups = 2, LogicalProcessors = 128 }, previous);
-        var failed = WindowsCpuSampler.Calculate(current with { SystemError = 5, Idle100ns = null }, previous);
+        var failed = WindowsCpuSampler.Calculate(current with { SystemError = 5 }, previous);
         var initial = WindowsCpuSampler.Calculate(current, null);
-        if (grouped.Fact.Value.HasValue || failed.Fact.Value.HasValue || initial.Fact.Value.HasValue ||
-            failed.Fact.NativeCode != 5 || grouped.Fact.Reason is null || initial.Fact.Reason is null)
-            throw new InvalidOperationException("Incomplete CPU source coverage was reported as a usable zero.");
+        AssertThat(grouped.ProcessFraction is null && failed.ProcessFraction is null && initial.ProcessFraction is null).IsTrue();
+        AssertThat(failed.Reason is not null && grouped.Reason is not null && initial.Reason is not null).IsTrue();
     }
 
     [TestCase, TestCategory(TestReason.Regression)]
@@ -260,7 +258,7 @@ public sealed class PerformanceNvmlContractTests
             var stopped = await worker.StopAsync();
             var repeated = await worker.StopAsync();
             if (!worker.Completion.IsCompleted || !ReferenceEquals(stopped, repeated) || stopped.Error is not null ||
-                sample.Cpu.Fact.Source != WindowsCpuSampler.Source || sample.GpuEngines.Fact.Source != WindowsGpuEngineSampler.Source)
+                sample.GpuEngines.Fact.Source != WindowsGpuEngineSampler.Source)
                 throw new InvalidOperationException("Hardware producer did not finish its owned source cleanup and join.");
         }
         finally { await worker.StopAsync(); }

@@ -23,7 +23,7 @@ from perf_store import (AI_BATCHES_KEEP, DIAGNOSTIC_BYTES_KEEP, HISTORY_PER_GROU
                         atomic_json, author_root, basic_state, batch_states, comparison_key, discover,
                         exclusive, git, history_update, session_run, session_run_path, prune, rebuild_states)
 from perf_curves import curve_document
-from perf_batches import batch_results, sample_window, sampled_streams
+from perf_batches import assess_rounds, batch_results, read_rounds, sample_window, sampled_streams
 from perf_waits import wait_observations
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -120,9 +120,9 @@ def summary_for(directory, manifest, streams, dictionary, budgets, run):
             streams = sampled_streams(streams, window)
             if not streams['frames']:
                 sampling_reasons.append('正式采样段没有完整帧区间')
-        elif manifest.get('origin') == 'ai' and isinstance(run.get('protocol'), dict):
+        elif manifest.get('origin') == 'ai' and run.get('purpose') == 'baseline':
             streams = {name: [] for name in streams}
-    status, reasons = basic_state(manifest, streams, run, missing, dictionary['schema'], sampling_reasons)
+    status, reasons = basic_state(manifest, streams, run, missing, sampling_reasons)
     summary = dict(id=session_id(manifest['id']), calc=CALC, schema=manifest['schema'], origin=manifest.get('origin'),
                    source=str(directory), endedAt=manifest.get('endedAt'), startedAt=manifest.get('startedAt'),
                    recordedSeconds=manifest.get('recordedSeconds'), scope=scope, scopeReason=reason,
@@ -288,7 +288,8 @@ def analysis_needed(root=ROOT, output=None, author=None, index=None, dictionary=
     index = index if index is not None else read_json(out / 'index.json') if (out / 'index.json').is_file() else {}
     dictionary = dictionary if dictionary is not None else read_json(root / 'game/data/perf-fields.json')
     budgets = budgets if budgets is not None else read_json(root / 'budgets.json')
-    directories = discover(out, author)
+    rounds = read_rounds(out)
+    directories = discover(out, author, [row['sourceRoot'] for row in rounds])
     sources = {str(directory) for directory in directories}
     if any(entry.get('source') not in sources for entry in index.get('sessions', []) + index.get('errors', [])):
         return True
@@ -304,7 +305,7 @@ def analysis_needed(root=ROOT, output=None, author=None, index=None, dictionary=
                     return True
         except OSError:
             return True
-    return available and (index.get('calc') != CALC or index.get('repositoryState') != repository_state(root))
+    return available and (index.get('calc') != CALC or index.get('rounds') != rounds or index.get('repositoryState') != repository_state(root))
 
 
 def write_session(out, summary, items, frames, hwfast, dictionary, stamp, budgets, manifest, streams):
@@ -339,7 +340,8 @@ def analyze_all(root=ROOT, output=None, author=None):
             return dict(analyzed=[], skipped=['分析锁被占用'], errors=[])
         prior_index = read_json(out / 'index.json') if (out / 'index.json').is_file() else {}
         # Discover and recheck under the shared lock: concurrent triggers cannot append duplicate history.
-        directories = discover(out, author)
+        rounds = read_rounds(out)
+        directories = discover(out, author, [row['sourceRoot'] for row in rounds])
         sources = {str(directory) for directory in directories}
         for directory in directories:
             stamp, identifier, owner = None, None, None
@@ -380,9 +382,10 @@ def analyze_all(root=ROOT, output=None, author=None):
             if summary['source'] in sources:
                 entries.append(summary)
         failed_sources = {error['source'] for error in errors}
-        batches, blocked = batch_results(entries, budgets, failed_sources)
-        entries = rebuild_states(entries, root, blocked)
+        batches = batch_results(entries, budgets, failed_sources, rounds)
+        entries = rebuild_states(entries, root)
         batches = batch_states(batches, entries, root)
+        assess_rounds(batches)
         for entry in entries:
             atomic_json(out / 'derived' / entry['id'] / 'summary.json', entry)
         # 保留与身份判定仍使用失败来源上一份摘要，不能把旧会话升成当前基线。
@@ -394,9 +397,7 @@ def analyze_all(root=ROOT, output=None, author=None):
         available = [entry for entry in entries if entry['source'] not in failed_sources]
         changed_ids = {summary['id'] for summary in changed}
         history_update(out / 'history.jsonl', [entry for entry in available if entry['id'] in changed_ids])
-        batches = [batch for batch in batches if any(
-            Path(entry['source']).exists() and at(entry, 'run.protocol.batchId') == batch['id'] for entry in entries)]
-        index = dict(calc=CALC, repositoryState=repository_state(root), batches=batches,
+        index = dict(calc=CALC, rounds=rounds, repositoryState=repository_state(root), batches=batches,
                                             sessions=[index_entry(e) for e in available], errors=errors,
                                             retention=dict(aiBatches=AI_BATCHES_KEEP, historyPerGroup=HISTORY_PER_GROUP,
                                                            diagnosticBytes=DIAGNOSTIC_BYTES_KEEP), removed=removed)

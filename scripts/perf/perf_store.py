@@ -11,7 +11,6 @@ import time
 from collections import defaultdict
 from pathlib import Path
 from perf_model import CALC, at, manifest_path, read_json
-from perf_batches import protocol_reasons
 
 AI_BATCHES_KEEP = 10
 HISTORY_PER_GROUP = 200
@@ -97,9 +96,9 @@ def author_root(root):
     return Path(os.environ.get('APPDATA', Path.home() / '.local/share')) / match[1] / 'perf'
 
 
-def discover(out, author):
+def discover(out, author, source_roots=()):
     paths = set()
-    for directory in (Path(out) / 'runs', Path(author)):
+    for directory in (Path(out) / 'runs', Path(author), *(Path(source) for source in source_roots)):
         if directory.exists():
             paths.update(p.parent.resolve() for pattern in ('manifest.json', 'manifest.pending.json')
                          for p in directory.rglob(pattern) if not p.is_symlink())
@@ -130,10 +129,8 @@ def comparison_key(manifest, run):
     return key, labels, missing
 
 
-def basic_state(manifest, streams, run, missing, schema, sampling_reasons=()):
+def basic_state(manifest, streams, run, missing, sampling_reasons=()):
     reasons = []
-    if manifest.get('schema') != schema:
-        return 'unsupported', ['schema 不是当前版本']
     if manifest.get('status') != 'closed':
         return 'partial', ['记录锁已释放但会话未完成关闭；未解析未闭合的原始流']
     if streams is None:
@@ -145,10 +142,9 @@ def basic_state(manifest, streams, run, missing, schema, sampling_reasons=()):
         return 'evidence', ['作者会话只作证据，不作 A/B 基线']
     if run.get('status') == 'invalid':
         return 'invalid', run.get('reasons') or ['采集前提不满足']
-    if (not isinstance(run.get('protocol'), dict) or run.get('purpose') in ('functional', 'diagnostic')
+    if (run.get('purpose') != 'baseline'
             or at(manifest, 'run.diagnostics') or run.get('diagnostic')):
-        return 'evidence', ['非协议 AI、功能短跑与诊断采集不进入基线或比较']
-    reasons.extend(protocol_reasons(run))
+        return 'evidence', ['非正式 AI、功能短跑与诊断采集不进入基线或比较']
     reasons.extend(sampling_reasons)
     if not streams['frames']:
         reasons.append('没有逐帧记录')
@@ -191,13 +187,11 @@ def freshness_reasons(facts):
         ['最近采集的驱动、系统或引擎版本已变化'] if facts['environmentChanged'] else [])
 
 
-def rebuild_states(entries, root, batch_blocked=None):
+def rebuild_states(entries, root):
     groups = defaultdict(list)
     for entry in entries:
         entry['status'] = entry['baseStatus']
         entry['statusReasons'] = list(entry.get('baseReasons', []))
-        if entry['baseStatus'] == 'candidate' and entry['id'] in (batch_blocked or {}):
-            entry['status'], entry['statusReasons'] = 'partial', batch_blocked[entry['id']]
         groups[json.dumps([entry['comparisonKey'], entry['scope'], entry['calc'], entry['origin']], sort_keys=True)].append(entry)
     environment = environment_signatures(entries)
     for rows in groups.values():
@@ -226,26 +220,19 @@ def rebuild_states(entries, root, batch_blocked=None):
 def batch_states(batches, entries, root):
     by_id, environment = {entry['id']: entry for entry in entries}, environment_signatures(entries)
     for batch in batches:
-        batch['targetPhase'] = 'b1' if batch['kind'] == 'aba' else 'a1'
         if batch['status'] != 'candidate':
             continue
-        rows = [by_id[identifier] for group in batch['groups'] for phase in group['phases'].values()
-                for identifier in phase['sessionIds']]
+        rows = [by_id[identifier] for group in batch['groups'] for identifier in group['sessionIds']]
         if any(row['status'] == 'partial' for row in rows):
             batch['status'] = 'partial'
-            batch['statusReasons'] = sorted({reason for row in rows for reason in row.get('statusReasons', [])})
-            for group in batch['groups']:
-                for phase in group['phases'].values():
-                    phase.pop('all', None)
-                    phase.pop('steady', None)
+            batch['gateStatus'] = 'Incomplete'
+            batch['statusReasons'] = sorted({reason for row in rows if row['status'] == 'partial' for reason in row['statusReasons']})
             continue
-        targets = [by_id[group['phases'][batch['targetPhase']]['sessionIds'][0]] for group in batch['groups']]
-        reasons = sorted({reason for target in targets for reason in
-                          freshness_reasons(freshness_facts(target, root, environment))})
-        # A1/A2 留原单会话状态，仅作同批控制；批次新鲜度由目标构建决定。
+        reasons = sorted({reason for row in rows for reason in
+                          freshness_reasons(freshness_facts(row, root, environment))})
         batch['status'] = 'stale' if reasons else 'current' if any(
             row['status'] in ('current', 'stale') for row in rows) else 'superseded'
-        batch['statusReasons'] = reasons
+        batch['statusReasons'] = sorted(set(batch['statusReasons'] + reasons))
     return batches
 
 

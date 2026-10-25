@@ -78,89 +78,90 @@ def check_sampling_batches(root, dictionary, budgets):
     assert 'events.jsonl | recorded | 缺值 | 3' in projection and 'stream.tileChanged=1' in projection
     assert '缺口源区间' in projection and '1 | 4 | 30 | stream.tileChanged | main' in projection
 
-    with tempfile.TemporaryDirectory(prefix='uestc-perf-batch-') as temporary:
+    with tempfile.TemporaryDirectory(prefix='uestc-perf-round-') as temporary:
         out, author = Path(temporary) / 'perf', Path(temporary) / 'author'
-        for phase_index, (phase, gpu) in enumerate((('a1', 2), ('b1', 7), ('a2', 2))):
-            for repetition, value in enumerate((gpu, gpu + 10, gpu + 1), 1):
-                identifier = f'{phase}-{repetition}'
-                source = out / 'runs/aba' / identifier
-                meta = manifest(dictionary, identifier)
-                second = phase_index * 10 + repetition * 2
-                meta.update(origin='ai', startedAt=f'2000-01-01T00:00:{second:02d}Z',
-                            endedAt=f'2000-01-01T00:00:{second + 1:02d}Z')
-                meta['build']['commit'] = git(root, 'rev-parse', 'HEAD')[1]
-                sample = mark_sample(streams([frame(dictionary, i, gpu=value) for i in range(3)], dictionary), dictionary, meta)
-                write_six(source, meta, sample, dictionary)
-                (source / 'run.json').write_text(json.dumps(ai_run(batch='aba', phase=phase, repetition=repetition, kind='aba')), encoding='utf-8')
-                if phase == 'a1' and repetition == 1:
-                    assert not analyze_all(root, out, author)['errors']
-                    first = read_json(out / 'index.json')
-                    assert first['batches'][0]['status'] == 'partial' and first['sessions'][0]['status'] == 'partial'
-                    assert 'all' not in first['batches'][0]['groups'][0]['phases']['a1'], '缺次批次输出了中位'
-        result = analyze_all(root, out, author)
-        assert not result['errors'], result
-        batch = read_json(out / 'index.json')['batches'][0]
-        assert batch['status'] in ('current', 'stale'), batch
-        assert at(batch['groups'][0], 'phases.a1.steady.cost.mainViewportGpuMs.p95') == 3
-        assert at(batch['groups'][0], 'phases.b1.steady.cost.mainViewportGpuMs.p95') == 8, '未按三次指标取中位'
-        entries = [read_json(path) for path in (out / 'derived').glob('*/summary.json')]
-        sys.path.insert(0, str(root / '.collab/tools'))
-        from monitor.view.perf import trend_groups
-        commits = {meta['build']['commit']: dict(seq=1, subject='selfcheck')}
-        projected_entries = [{'summary': row} for row in entries]
-        trends = trend_groups([batch], projected_entries, commits)
-        assert len(trends) == 1 and len(trends[0]['points']) == 3, '完整 A/B/A 阶段未独立投影'
-        points = {point['phase']: point for point in trends[0]['points']}
-        assert points['b1']['metrics']['mainViewportGpuP95Ms'] == 8 and points['a1']['metrics']['mainViewportGpuP95Ms'] == 3
-        assert all(point['anomaliesPerMinute'] is None and point['anomalyRateReason'] for point in points.values()), '展示层重算了批次未提供的异常率'
-        authoritative = copy.deepcopy(batch)
-        authoritative['status'], authoritative['statusReasons'] = 'stale', ['构建之后 game/ 已变更']
-        authoritative['groups'][0]['phases']['b1']['steady']['cost']['mainViewportGpuMs']['p95'] = 123
-        projected = trend_groups([authoritative], projected_entries, commits)[0]['points']
-        assert next(point for point in projected if point['phase'] == 'b1')['metrics']['mainViewportGpuP95Ms'] == 123, '展示没有直接读取批次阶段中位'
-        assert all(point['status'] == 'stale' and point['statusReasons'] for point in projected), '历史批次失去 stale 说明'
-        for state in ('partial', 'invalid', 'evidence', 'unsupported', 'candidate'):
-            assert not trend_groups([{**batch, 'status': state}], projected_entries, commits), state
-        assert not trend_groups([], projected_entries, commits), '会话摘要绕过批次进入趋势'
-        for mutate in ('duplicate', 'missing', 'key', 'commit', 'phaseCommit', 'order', 'functional'):
-            changed = copy.deepcopy(entries)
-            if mutate == 'duplicate':
-                changed.append(copy.deepcopy(changed[0]))
-            elif mutate == 'missing':
-                changed.pop()
-            elif mutate == 'key':
-                changed[0]['comparisonKey']['preset'] = 'another'
-            elif mutate == 'commit':
-                next(row for row in changed if at(row, 'run.protocol.phase') == 'a2')['build']['commit'] = 'another'
-            elif mutate == 'phaseCommit':
-                next(row for row in changed if at(row, 'run.protocol.phase') == 'b1')['build']['commit'] = 'another'
-            elif mutate == 'order':
-                next(row for row in changed if at(row, 'run.protocol.phase') == 'a1')['endedAt'] = '2000-01-01T00:00:30Z'
-            else:
-                changed[0].update(baseStatus='evidence')
-                changed[0]['run']['purpose'] = 'functional'
-            invalid, _ = batch_results(changed, budgets)
-            assert invalid[0]['status'] == 'partial' and all('all' not in phase for group in invalid[0]['groups']
-                                                           for phase in group['phases'].values()), mutate
-            assert not trend_groups(invalid, [{'summary': row} for row in changed], commits), '无效或功能批次进入趋势: ' + mutate
-        # 真实六件往返也必须保持裁剪，且原始行数不变。
         source = out / 'runs/sample/SAMPLE'
         write_six(source, sample_meta, data, dictionary)
-        (source / 'run.json').write_text(json.dumps(ai_run(batch='sample')), encoding='utf-8')
+        (source / 'run.json').write_text(json.dumps(ai_run(round_id='sample')), encoding='utf-8')
         assert not analyze_all(root, out, author)['errors']
         derived = read_json(out / 'derived/SAMPLE/summary.json')
         assert at(derived, 'all.cost.mainViewportGpuMs.n') == 2
         curves = read_json(out / 'derived/SAMPLE/curves.json')['levels'][0]
         assert sum(row[2] for row in curves['buckets']) == 2, '曲线保留了准备期成本'
         assert len(load_session(source, dictionary)[1]['frames']) == len(rows), '分析修改了原始数据'
+        assert not read_json(out / 'index.json')['batches'], '无登记的会话进入轮记录'
+    check_round_selection(root, dictionary, budgets)
+
+
+def check_round_selection(root, dictionary, budgets):
+    from perf_batches import batch_results, ROUND_RULES, validate_rounds
+    from selfcheck_fixtures import round_registration
+    from perf_store import git
+    from monitor.view.perf import trend_groups
+    with tempfile.TemporaryDirectory(prefix='uestc-perf-round-selection-') as temporary:
+        source = Path(temporary)
+        entries = []
+        for identifier, value in (('old', 2), ('latest-a', 7), ('latest-z', 3)):
+            meta = manifest(dictionary, identifier)
+            meta.update(origin='ai', desktop=dict(kind='isolated'))
+            meta['build']['commit'] = git(root, 'rev-parse', 'HEAD')[1]
+            run = ai_run()
+            data = mark_sample(streams([frame(dictionary, 0, gpu=value)], dictionary), dictionary, meta)
+            entries.append(summary_for(source / identifier, meta, data, dictionary, budgets, run)[0])
+        registration = round_registration(source, ['baseline-selfcheck'])
+        rounds = batch_results(entries, budgets, rounds=[registration])
+        group = rounds[0]['groups'][0]
+        assert group['mainSessionId'] == 'old', '同结束/开始时间未按ID择最新'
+        entries[1]['endedAt'] = entries[2]['endedAt'] = '2000-01-02T00:00:05Z'
+        rounds = batch_results(entries, budgets, rounds=[registration])
+        group = rounds[0]['groups'][0]
+        assert group['mainSessionId'] == 'latest-z' and at(group, 'steady.cost.mainViewportGpuMs.p95') == 3
+        invalid = copy.deepcopy(entries[2]); invalid.update(id='invalid', baseStatus='invalid', endedAt='2000-01-03T00:00:00Z')
+        invalid['run']['status'] = 'invalid'
+        evidence = copy.deepcopy(invalid); evidence.update(id='functional', baseStatus='evidence'); evidence['run']['purpose']='functional'
+        result = batch_results(entries + [invalid, evidence], budgets, rounds=[registration])[0]
+        assert result['groups'][0]['mainSessionId'] == 'latest-z'
+        ruler = next(row for row in entries[2]['budgets'] if row['metric'] == 'mainViewportGpuMs')['budget']
+        threshold = ROUND_RULES['minimumImprovementFraction']
+        near = ruler * (1 - threshold / 2)
+        entries[2]['steady']['cost']['mainViewportGpuMs']['p95'] = near
+        result = batch_results(entries, budgets, rounds=[registration])[0]
+        assert result['groups'][0]['confirmationPending']
+        confirm = copy.deepcopy(entries[2]); confirm.update(id='confirm', endedAt='2000-01-03T00:00:00Z')
+        confirm['run']['confirmationOf'] = 'latest-z'
+        confirm['steady']['cost']['mainViewportGpuMs']['p95'] = near + 1
+        confirm['steady']['cost']['mainViewportGpuMs']['n'] = 7
+        confirm['steady']['cost']['mainViewportCpuMs']['n'] = 9
+        result = batch_results(entries + [confirm], budgets, rounds=[registration])[0]
+        assert result['groups'][0]['sessionIds'] == ['latest-z','confirm']
+        assert at(result['groups'][0], 'steady.cost.mainViewportGpuMs.p95') == near + 1
+        assert at(result['groups'][0], 'steady.cost.mainViewportGpuMs.n') == 7
+        assert at(result['groups'][0], 'steady.cost.mainViewportCpuMs.n') == at(entries[2], 'steady.cost.mainViewportCpuMs.n')
+        assert result['groups'][0]['metricSources']['steady.cost.mainViewportGpuMs']['sessionId'] == 'confirm'
+        assert result['groups'][0]['confirmationPending'] is False
+        duplicate = copy.deepcopy(confirm); duplicate['id']='duplicate'
+        assert batch_results(entries + [confirm, duplicate], budgets, rounds=[registration])[0]['status'] == 'partial'
+        result['status']='stale'
+        commit = entries[0]['build']['commit']
+        points = trend_groups([result], [dict(summary=row) for row in entries + [confirm]], {commit:dict(seq=1,subject='fixture')})
+        assert points[0]['points'][0]['roundNumber'] == 0 and points[0]['points'][0]['sessionIds'] == ['latest-z','confirm']
+        assert points[0]['points'][0]['metrics']['mainViewportGpuP95Ms'] == near + 1
+        bad = round_registration(source, ['baseline-selfcheck'], 'bad', 2, 'fixture')
+        try:
+            validate_rounds([registration, bad])
+        except ValueError:
+            pass
+        else:
+            raise AssertionError('跳轮的前轮引用被接受')
 
 
 def check_batch_freshness(root, dictionary, budgets):
-    """Regression：真实 A→B 提交差异下，A2 留 stale，批次只由 B 目标判鲜。"""
+    """Regression：两轮跨提交仍只引用明确前轮；当前轮判鲜不被旧构建拖回。"""
     from argparse import Namespace
     from perf import compare
     from perf_store import git
-    with tempfile.TemporaryDirectory(prefix='uestc-perf-aba-code-') as temporary:
+    from perf_batches import register_round
+    with tempfile.TemporaryDirectory(prefix='uestc-perf-round-code-') as temporary:
         repo = Path(temporary) / 'repo'
         data_root = repo / 'game/data'
         data_root.mkdir(parents=True)
@@ -170,50 +171,32 @@ def check_batch_freshness(root, dictionary, budgets):
         marker.write_text('A', encoding='utf-8')
         for arguments in (('init',), ('add', '.'), ('-c', 'user.name=selfcheck', '-c', 'user.email=selfcheck@example.invalid', 'commit', '-m', 'A')):
             assert git(repo, *arguments)[0] == 0, arguments
-        commit_a = git(repo, 'rev-parse', 'HEAD')[1]
+        first = git(repo, 'rev-parse', 'HEAD')[1]
         marker.write_text('B', encoding='utf-8')
         assert git(repo, 'add', '.')[0] == 0
         assert git(repo, '-c', 'user.name=selfcheck', '-c', 'user.email=selfcheck@example.invalid', 'commit', '-m', 'B')[0] == 0
-        commit_b = git(repo, 'rev-parse', 'HEAD')[1]
-        assert commit_a != commit_b and git(repo, 'diff', '--name-only', commit_a, commit_b, '--', 'game/')[1], '夹具未产生真实 game 差异'
+        second = git(repo, 'rev-parse', 'HEAD')[1]
+        assert first != second
         out, author = repo / 'output/perf', Path(temporary) / 'author'
-        for phase_index, phase in enumerate(('a1', 'b1', 'a2')):
-            for repetition in (1, 2, 3):
-                identifier = f'{phase}-{repetition}'
-                meta = manifest(dictionary, identifier)
-                second = phase_index * 10 + repetition * 2
-                meta.update(origin='ai', startedAt=f'2000-01-01T00:00:{second:02d}Z',
-                            endedAt=f'2000-01-01T00:00:{second + 1:02d}Z')
-                meta['build']['commit'] = commit_b if phase == 'b1' else commit_a
-                source = out / 'runs/aba' / identifier
-                sample = mark_sample(streams([frame(dictionary, 0, gpu=7 if phase == 'b1' else 2)], dictionary), dictionary, meta)
-                write_six(source, meta, sample, dictionary)
-                (source / 'run.json').write_text(json.dumps(ai_run(batch='aba', phase=phase, repetition=repetition, kind='aba')), encoding='utf-8')
+        for number_, commit in enumerate((first, second)):
+            identifier = 'round-' + str(number_)
+            meta = manifest(dictionary, identifier)
+            meta.update(origin='ai', desktop=dict(kind='isolated'), endedAt=f'2000-01-0{number_ + 1}T00:00:05Z')
+            meta['build']['commit'] = commit
+            source = out / 'runs' / identifier
+            sample_rows = [frame(dictionary, 0, gpu=2-number_)]
+            sample_rows[0]['frameSetupCpuMs'] = budgets['deviceTargets']['developer']['frameSetupCpuP95MsUpper'] / 2
+            sample = mark_sample(streams(sample_rows, dictionary), dictionary, meta)
+            write_six(source / identifier, meta, sample, dictionary)
+            (source / identifier / 'run.json').write_text(json.dumps(ai_run(round_id=identifier)), encoding='utf-8')
+            register_round(out, identifier, number_, source, ['baseline-selfcheck'], 'round-0' if number_ else None)
         assert not analyze_all(repo, out, author)['errors']
-        assert read_json(out / 'derived/a2-3/summary.json')['status'] == 'stale', 'A2 被伪称当前单次基线'
-        batch = read_json(out / 'index.json')['batches'][0]
-        assert batch['status'] == 'current' and batch['targetPhase'] == 'b1', batch
-        assert any('可比：是' in line for line in compare(out, Namespace(left='a1-1', right='b1-1')))
+        batches = read_json(out / 'index.json')['batches']
+        assert batches[0]['status'] == 'stale' and batches[1]['status'] == 'current', batches
+        assert any('improved' in line for line in compare(out, Namespace(left='round-0', right='round-1')))
         marker.write_text('C', encoding='utf-8')
-        assert git(repo, 'add', '.')[0] == 0
-        assert git(repo, '-c', 'user.name=selfcheck', '-c', 'user.email=selfcheck@example.invalid', 'commit', '-m', 'C')[0] == 0
         assert not analyze_all(repo, out, author)['errors']
-        assert read_json(out / 'index.json')['batches'][0]['status'] == 'stale', 'B 目标过时代码被冒称当前批次'
-        assert any('可比：否' in line for line in compare(out, Namespace(left='a1-1', right='b1-1')))
-        path = out / 'runs/aba/a1-1/manifest.json'
-        original = read_json(path)
-        for change in ('environment', 'dirty', 'lineage'):
-            changed = copy.deepcopy(original)
-            if change == 'environment':
-                changed['build']['godot'] = 'another'
-            elif change == 'dirty':
-                changed['build']['dirty'] = True
-            else:
-                changed['build']['commit'] = '0' * len(commit_a)
-            path.write_text(json.dumps(changed), encoding='utf-8')
-            assert not analyze_all(repo, out, author)['errors']
-            batch = read_json(out / 'index.json')['batches'][0]
-            assert batch['status'] == 'partial' and 'all' not in batch['groups'][0]['phases']['a1'], change
+        assert read_json(out / 'index.json')['batches'][1]['status'] == 'stale'
 
 
 def check_failed_baseline(root, dictionary, budgets):
@@ -225,14 +208,12 @@ def check_failed_baseline(root, dictionary, budgets):
         out, author = Path(temporary) / 'perf', Path(temporary) / 'author'
         batch = out / 'runs/baseline'
         for identifier, day in (('OLDER', 1), ('CURRENT', 2)):
-            for repeat in (1, 2, 3):
-                name = identifier if repeat == 3 else f'{identifier}-{repeat}'
-                meta = manifest(dictionary, name)
-                meta.update(origin='ai', endedAt=f'2000-01-{day:02d}T00:00:0{repeat}Z')
-                meta['build']['commit'] = git(root, 'rev-parse', 'HEAD')[1]
-                data = mark_sample(streams([frame(dictionary, 0)], dictionary), dictionary, meta)
-                write_six(batch / name, meta, data, dictionary)
-                (batch / name / 'run.json').write_text(json.dumps(ai_run(batch=identifier, repetition=repeat)), encoding='utf-8')
+            meta = manifest(dictionary, identifier)
+            meta.update(origin='ai', endedAt=f'2000-01-{day:02d}T00:00:05Z')
+            meta['build']['commit'] = git(root, 'rev-parse', 'HEAD')[1]
+            data = mark_sample(streams([frame(dictionary, 0)], dictionary), dictionary, meta)
+            write_six(batch / identifier, meta, data, dictionary)
+            (batch / identifier / 'run.json').write_text(json.dumps(ai_run(round_id=identifier)), encoding='utf-8')
         assert not analyze_all(root, out, author)['errors']
         baseline = read_json(out / 'derived/CURRENT/summary.json')
         assert baseline['status'] in ('current', 'stale'), '夹具没有建立当前基线'

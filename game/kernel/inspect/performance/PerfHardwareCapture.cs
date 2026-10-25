@@ -41,7 +41,7 @@ internal sealed class PerfHardwareCapture
         _sessionId = sessionId;
         _adapter = adapter;
         var starting = new PerfSamplingFact { Capability = PerfFactCapability.Starting, Reason = "Awaiting hardware sample" };
-        _facts = new(sessionId, adapter.Luid, null, starting, starting, starting, starting);
+        _facts = new(sessionId, adapter.Luid, null, starting, starting, starting);
         _sampler = new HardwareSampler(() => FrameClock.MonotonicMilliseconds, Publish, pollMilliseconds, adapter);
         Completion = ObserveAsync(_sampler);
     }
@@ -114,7 +114,7 @@ internal sealed class PerfHardwareCapture
                 _renderVramMiB = new(null, _status);
                 var unavailable = new PerfSamplingFact { Capability = PerfFactCapability.Unavailable,
                     Reason = "Hardware worker failed", Source = "recording.hardware" };
-                _facts = new(_sessionId, _adapter.Luid, null, unavailable, unavailable, unavailable, unavailable);
+                _facts = new(_sessionId, _adapter.Luid, null, unavailable, unavailable, unavailable);
             }
             else if (_status.Capability == "starting")
             {
@@ -145,7 +145,7 @@ internal sealed class PerfHardwareCapture
         _processCpuFraction = sampling.Cpu.ProcessFraction;
         _facts = new(_sessionId, _adapter.Luid, renderDevice?.Identity.Uuid,
             NvmlFact(renderDevice, batch.Status, performanceState: true), NvmlFact(renderDevice, batch.Status, performanceState: false),
-            sampling.GpuEngines.Fact, sampling.Cpu.Fact);
+            sampling.GpuEngines.Fact);
         _status = batch.Status;
         ObserveStatus("session", batch.Status);
         if (batch.Devices.Count == 0)
@@ -165,8 +165,7 @@ internal sealed class PerfHardwareCapture
         foreach (var device in batch.Devices.OrderBy(device => device.Slow?.QueryEndMs ?? batch.QueryEndMs))
             PublishDevice(batch, device, renderDevice?.Identity.EnumerationIndex == device.Identity.EnumerationIndex);
         bool factsAccepted = _slow.TryRow(FactsRow(sampling, _facts, renderDevice?.Identity));
-        _slowRecorded |= factsAccepted && (_facts.OtherProcessesCpuUtilFraction.Value.HasValue ||
-            _facts.OtherProcessesGpuUtilFraction.Value.HasValue);
+        _slowRecorded |= factsAccepted && (_processCpuFraction.HasValue || _facts.OtherProcessesGpuUtilFraction.Value.HasValue);
         _slowState = Capability(batch.Devices.SelectMany(device => DeviceStatuses(device))
             .Where(pair => !pair.Key.StartsWith("fast.", StringComparison.Ordinal) &&
                 pair.Key is not ("handle" or "gpuUuid" or "pciBusId")).Select(pair => pair.Value));
@@ -243,11 +242,9 @@ internal sealed class PerfHardwareCapture
             ["queryStartMs"] = sampling.Nvml.QueryStartMs, ["queryEndMs"] = sampling.Nvml.QueryEndMs,
             ["wholeGpuUtilFraction"] = facts.WholeGpuUtilFraction.Value,
             ["otherProcessesGpuUtilFraction"] = facts.OtherProcessesGpuUtilFraction.Value,
-            ["otherProcessesCpuUtilFraction"] = facts.OtherProcessesCpuUtilFraction.Value,
-            ["systemCpuFraction"] = sampling.Cpu.SystemFraction,
             ["samplingFactsJson"] = facts,
             ["cpuCountersJson"] = new { current = sampling.Cpu.Current, previous = sampling.Cpu.Previous,
-                sampling.Cpu.SystemFraction, sampling.Cpu.ProcessFraction },
+                sampling.Cpu.ProcessFraction, sampling.Cpu.Reason, source = WindowsCpuSampler.Source },
             ["gpuEnginesJson"] = new { sampling.GpuEngines.CollectTimestamp100ns, sampling.GpuEngines.PreviousCollectMs, sampling.GpuEngines.RawQueryCode,
                 sampling.GpuEngines.Recording },
             ["renderAdapterJson"] = AdapterValue(sampling.Adapter)

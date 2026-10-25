@@ -297,7 +297,7 @@ def gc_windows(frames, policy):
 
 
 def budget_checks(summary, manifest=None, budgets=None, runs=None):
-    """会话与阶段中位共用判据；消费者只筛 required/unjudged 并读取 tier。"""
+    """会话与单轮较差值共用判据；消费者只筛 required/unjudged 并读取 tier。"""
     run = runs[0]['run'] if runs else summary.get('run', {})
     suite = at(run, 'conditions.suite')
     scene = run.get('scene')
@@ -310,7 +310,7 @@ def budget_checks(summary, manifest=None, budgets=None, runs=None):
                               ('budget', 'stop', 'budgetSource', 'stopSource', 'required', 'unjudged')) for v in members)
             check['applicable'] = matching and all(v.get('applicable') is True and number(v.get('value')) for v in members)
             if check['required'] and not check['applicable']:
-                check['reason'] = ('阶段内预算或判据条件不一致，重跑' if not matching else
+                check['reason'] = ('主采与确认预算或判据条件不一致，重跑' if not matching else
                                    '；'.join(sorted({v.get('reason') or '必判成本缺测，重跑' for v in members})))
     else:
         target = budgets['deviceTargets']['developer']
@@ -448,7 +448,7 @@ def session_judgement(frames, streams, manifest, budgets, run, raw_items, checks
         if not check['required']:
             continue
         record(check['metric'], check['observed'], check['tier'] != 'rerun', check.get('reason'))
-    if manifest.get('origin') == 'ai' and isinstance(run.get('protocol'), dict) and suite not in ('fixed', 'route', 'travel'):
+    if manifest.get('origin') == 'ai' and run.get('purpose') == 'baseline' and suite not in ('fixed', 'route', 'travel'):
         record('suite', 0, False, '场景套未确认，重跑')
     if play:
         record('costStutter', len(visible), all(number(f.get(k)) for f in visible for k in COSTS))

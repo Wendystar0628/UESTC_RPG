@@ -21,7 +21,7 @@ public sealed class BootArgumentsTests
         var request = new PerfCollectionOptions
         {
             SceneId = "fixture-scene", SampleSegmentId = "sample-fixture", FunctionalSmoke = true, SaveAfterSample = true, StableFrames = 2,
-            RealtimeSeconds = 1, SampleSeconds = 2, OtherGpuFraction = .2, OtherCpuFraction = .25, MaximumFactAgeSeconds = 3,
+            RealtimeSeconds = 1, SampleSeconds = 2, OtherGpuFraction = .2, MaximumFactAgeSeconds = 3,
             RoutePointIds = ["road:fixture/0"], TravelPrefetch = true
         };
         try

@@ -162,8 +162,8 @@ public sealed class BootArguments
         static bool Fraction(double value) => double.IsFinite(value) && value is >= 0 and <= 1;
         if (string.IsNullOrWhiteSpace(options.SceneId) || string.IsNullOrWhiteSpace(options.SampleSegmentId) ||
             options.StableFrames <= 0 || !Positive(options.RealtimeSeconds) || !Positive(options.SampleSeconds) ||
-            !Positive(options.MaximumFactAgeSeconds) || !Fraction(options.OtherGpuFraction) || !Fraction(options.OtherCpuFraction))
-            throw Invalid("--perf-collection contains invalid protocol values.");
+            !Positive(options.MaximumFactAgeSeconds) || !Fraction(options.OtherGpuFraction))
+            throw Invalid("--perf-collection contains invalid collection values.");
         if (options.RoutePointIds is null || options.RoutePointIds.Any(string.IsNullOrWhiteSpace))
             throw Invalid("--perf-collection contains invalid route points.");
         _perfCollection = options;

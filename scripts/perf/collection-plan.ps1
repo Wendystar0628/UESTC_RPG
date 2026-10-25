@@ -1,4 +1,4 @@
-﻿# 固定采集入口的场景选择、正式参数与逐会话关闭发布；不计算指标或批次中位。
+﻿# 固定采集入口的场景选择、正式参数与逐会话关闭发布；不计算指标或轮比较。
 # 用法：仅由同目录 run.ps1 点引用。
 function Write-CollectionJson($Path, $Value) {
     [IO.File]::WriteAllText($Path, ($Value | ConvertTo-Json -Depth 16), (New-Object Text.UTF8Encoding $false))
@@ -18,18 +18,13 @@ function Get-CollectionScenes($Plan, [string[]]$Suites, [string[]]$Scenes) {
     return $selected
 }
 
-function Assert-CollectionPhase($BatchRoot, $Protocol, $Phase, [string[]]$Scenes, $JudgementConditions) {
-    if ($Phase -eq 'a1') { return }
-    $previous = if ($Phase -eq 'b1') { 'a1' } else { 'b1' }
-    $path = Join-Path $BatchRoot ($previous + '\phase.json')
-    if (-not (Test-Path -LiteralPath $path)) { throw 'A/B/A phases must be collected in order.' }
-    $record = Get-Content -LiteralPath $path -Raw | ConvertFrom-Json
-    if (($record.judgementConditions | ConvertTo-Json -Compress -Depth 8) -ne ($JudgementConditions | ConvertTo-Json -Compress -Depth 8)) {
-        throw 'Prior phase judgement conditions differ; batch conditions are frozen.'
-    }
-    if (-not $record.completed -or $record.protocol -ne $Protocol -or ($record.scenes -join ',') -ne ($Scenes -join ',')) {
-        throw 'Prior phase is incomplete or its frozen protocol/scenes differ.'
-    }
+function Publish-CollectionRound($Root, $Id, $Number, $SourceRoot, [string[]]$Scenes, $PreviousId) {
+    $arguments=@('-I','-X','utf8',(Join-Path $Root 'scripts/perf/perf.py'),'--root',$Root,
+        'record',$Id,'--number',[string]$Number,'--source-root',$SourceRoot)
+    if ($PreviousId) { $arguments += @('--previous-id',$PreviousId) }
+    foreach ($scene in $Scenes) { $arguments += @('--scene',$scene) }
+    & python @arguments | Out-Host
+    if ($LASTEXITCODE -ne 0) { throw 'Round registration or analysis failed.' }
 }
 
 function Get-CollectionArguments($Root, $Directory, $Plan, $Item, $Seconds, $RequestPath) {
@@ -61,7 +56,6 @@ function Publish-CollectionRun($Directory, $Run) {
         (Test-Path -LiteralPath (Join-Path $_.FullName 'manifest.pending.json'))
     })
     $accepted=$false
-    $requestedBatchId=$Run.protocol.batchId
     if ($sessions.Count -ne 1) { $Run.status='partial'; $Run.reasons += 'Expected exactly one recording session for this attempt.' }
     foreach ($session in $sessions) {
         $manifestPath = Join-Path $session.FullName 'manifest.json'
@@ -75,11 +69,6 @@ function Publish-CollectionRun($Directory, $Run) {
             if ($Run.observed -and $Run.observed.sessionId -ne $manifest.id) {
                 $Run.status='partial'; $Run.reasons += 'Completion does not identify this recording session.'
             }
-        }
-        if ($Run.status -ne 'valid') {
-            $Run['requestedBatchId']=$requestedBatchId
-            $Run.protocol.batchId = $requestedBatchId + '-rejected-' + $Run.protocol.phase + '-' + $Run.scene + '-' + $Run.protocol.repetition + '-' + $Run.attempt
-            if ($Run.purpose -eq 'baseline') { $Run.purpose='diagnostic' }
         }
         Write-CollectionJson (Join-Path $session.FullName 'run.json') $Run
         $accepted = $Run.status -eq 'valid'

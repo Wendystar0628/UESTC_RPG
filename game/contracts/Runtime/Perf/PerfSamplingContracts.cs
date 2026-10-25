@@ -25,5 +25,4 @@ public readonly record struct PerfSamplingFacts(
     string? RenderGpuUuid,
     PerfSamplingFact RenderGpuPerformanceState,
     PerfSamplingFact WholeGpuUtilFraction,
-    PerfSamplingFact OtherProcessesGpuUtilFraction,
-    PerfSamplingFact OtherProcessesCpuUtilFraction);
+    PerfSamplingFact OtherProcessesGpuUtilFraction);

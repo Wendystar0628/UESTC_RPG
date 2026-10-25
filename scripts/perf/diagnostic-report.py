@@ -85,13 +85,12 @@ def publish(root, work, source, exit_code):
     attachment_reasons, gpu_structure = attachment_state(work, session, condition['tool'])
     valid = valid and not attachment_reasons
     source_run = read_json(source / 'run.json')
-    protocol = dict(source_run['protocol'], batchId='diagnostic-' + session.name)
     run = dict(purpose='diagnostic', diagnostic=True, sourceSession=condition['sourceSession'], scene=condition['scene'],
                status='valid' if valid else 'partial', reasons=attachment_reasons + ([] if valid else ['Collector or game completion was incomplete.']),
                exitCode=exit_code, timedOut=False if capture.get('status') == 'completed' else None,
                sampleSegmentId=condition['collection']['sampleSegmentId'], conditions=condition['collection'], observed=observed,
                polluted=observed.get('polluted') if observed else None, pollution=observed.get('pollution', []) if observed else [],
-               protocol=protocol, coverage=observed.get('coverage', {}) if observed else {})
+               coverage=observed.get('coverage', {}) if observed else {})
     atomic_json(session / 'run.json', run)
     attachments = []
     for path in work.iterdir():
@@ -124,7 +123,7 @@ def publish(root, work, source, exit_code):
                   observedPerturbations=dict(polluted=run['polluted'], pollution=run['pollution'],
                       collectionSeconds=condition['collection']['sampleSeconds'], collectorElapsedUtc=[capture.get('startedUtc'), capture.get('endedUtc')]),
                   limitations=['Single diagnostic replay; ratios are observations, not calibrated profiler overhead or optimization conclusions.',
-                              'Diagnostic runs never enter baseline, A/B protocol or regular means.',
+                              'Diagnostic runs never enter baseline, round comparison or regular means.',
                               'EventPipe sampled-thread-time stacks are wall-clock samples, never CPU utilization.'])
     atomic_json(session / 'diagnostic.json', report)
     print(str(session))

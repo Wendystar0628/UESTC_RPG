@@ -1,45 +1,72 @@
-"""确认 AI 正式采样边界与三次/A-B-A 批次完整性，集中产出场景成本中位。
-用法：由 analyze.py 调用；输入 run.json、已有会话摘要与 segment 事实，产出 index.batches。
+"""由唯一轮登记选择完整单次，生成确认、较差值与相邻轮比较。
+用法：由 analyze.py 与 perf.py record 调用；输入 rounds.json 和会话摘要，产出 index.batches。
 """
+import copy
 import json
-import statistics
 from collections import defaultdict
-from datetime import datetime
-from perf_model import at, number
+from pathlib import Path
+from perf_model import COSTS, at, number, read_json
 from perf_anomalies import budget_checks
 
-REPETITIONS = (1, 2, 3)
-PHASES = dict(repeat3=('a1',), aba=('a1', 'b1', 'a2'))
+ROUND_RULES = read_json(Path(__file__).with_name('derived-fields.json'))['roundComparison']
 
 
-def protocol_reasons(run):
-    protocol = run.get('protocol')
-    if not isinstance(protocol, dict):
-        return ['AI 运行没有正式采样协议']
-    scenes = protocol.get('scenes')
-    kind = protocol.get('kind')
-    reasons = []
-    if not isinstance(kind, str) or kind not in PHASES or protocol.get('phase') not in PHASES[kind]:
-        reasons.append('批次种类或阶段不符')
-    if not isinstance(protocol.get('batchId'), str) or not protocol['batchId'].strip():
-        reasons.append('批次 ID 缺失')
-    if (not isinstance(scenes, list) or not scenes or any(not isinstance(s, str) or not s.strip() for s in scenes)
-            or len(set(scenes)) != len(scenes) or run.get('scene') not in scenes):
-        reasons.append('批次场景计划缺失、重复或未包含本场景')
-    if type(protocol.get('repetition')) is not int or protocol['repetition'] not in REPETITIONS:
-        reasons.append('场景重复序号不是 1、2、3')
-    if run.get('purpose') not in ('baseline', 'functional', 'diagnostic'):
-        reasons.append('运行用途未确认')
-    if not isinstance(run.get('sampleSegmentId'), str) or not run['sampleSegmentId'].strip():
-        reasons.append('正式采样段 ID 缺失')
-    return reasons
+def group_key(entry):
+    return json.dumps([entry['comparisonKey'], entry['calc'], entry['origin'], entry['scope']], sort_keys=True)
+
+
+def validate_rounds(rounds):
+    by_id, numbers = {}, set()
+    for row in sorted(rounds, key=lambda row: row['number']):
+        identifier, n, scenes = row['id'], row['number'], row['scenes']
+        if not isinstance(identifier, str) or not identifier or identifier in by_id:
+            raise ValueError('轮 ID 缺失或重复')
+        if type(n) is not int or n < 0 or n in numbers:
+            raise ValueError('轮序号缺失、重复或为负数')
+        if (not isinstance(scenes, list) or not scenes or len(set(scenes)) != len(scenes)
+                or any(not isinstance(scene, str) or not scene for scene in scenes)):
+            raise ValueError('轮场景计划缺失或重复')
+        if not isinstance(row.get('sourceRoot'), str) or not Path(row['sourceRoot']).is_absolute():
+            raise ValueError('轮原始根必须是绝对路径')
+        previous = row.get('previousId')
+        if n == 0 and previous is not None or n > 0 and (previous not in by_id or by_id[previous]['number'] != n - 1):
+            raise ValueError('前轮必须显式指向 N-1；第0轮无前轮')
+        by_id[identifier], numbers = row, numbers | {n}
+    return rounds
+
+
+def read_rounds(out):
+    path = Path(out) / 'rounds.json'
+    return validate_rounds(read_json(path)['rounds']) if path.is_file() else []
+
+
+def register_round(out, identifier, number_, source_root, scenes, previous_id=None):
+    from perf_store import atomic_json, exclusive
+    source = Path(source_root).resolve()
+    if not source.is_dir():
+        raise ValueError('轮原始根不存在')
+    row = dict(id=identifier, number=number_, sourceRoot=str(source), scenes=list(scenes), previousId=previous_id)
+    with exclusive(Path(out) / '.lock', timeout=30, create=True) as held:
+        if not held:
+            raise ValueError('分析锁被占用')
+        rounds = read_rounds(out)
+        prior = next((item for item in rounds if item['id'] == identifier), None)
+        if prior is not None and prior != row:
+            raise ValueError('已登记轮的身份、原始根或场景计划不能改写')
+        if prior is None:
+            rounds.append(row)
+        validate_rounds(rounds)
+        atomic_json(Path(out) / 'rounds.json', dict(rounds=sorted(rounds, key=lambda item: item['number'])))
+    return row
 
 
 def sample_window(manifest, streams, run):
     """边界只认成功入原始事件流的标记，不接受请求时长或入口猜测。"""
-    if manifest.get('origin') != 'ai' or not isinstance(run.get('protocol'), dict):
+    if manifest.get('origin') != 'ai' or run.get('purpose') not in ('baseline', 'functional'):
         return None, []
-    reasons = protocol_reasons(run)
+    if not isinstance(run.get('sampleSegmentId'), str) or not run['sampleSegmentId'].strip():
+        return None, ['正式采样段 ID 缺失']
+    reasons = []
     marks = [e for e in streams['events'] if e['event'] == 'segment'
              and e['payload'].get('id') == run.get('sampleSegmentId')]
     ordered = sorted(marks, key=lambda e: e['sequence'])
@@ -67,257 +94,227 @@ def sampled_streams(streams, window):
     start, end = window['fromMs'], window['toMs']
     selected = {name: [row for row in rows if start < row['monotonicMs'] <= end]
                 for name, rows in streams.items()}
-    # B1 行含上一帧区间，跨 Begin 的行无法拆成本，不能比例分摊或借准备期。
+    # 帧行含上一帧区间，跨 Begin 的行无法拆成本，不能比例分摊或借准备期。
     selected['frames'] = [row for row in selected['frames']
                           if number(row.get('dtMs')) and row['monotonicMs'] - row['dtMs'] >= start]
     return selected
 
 
-def group_key(entry):
-    return json.dumps([entry['comparisonKey'], entry['calc'], entry['origin'], entry['scope']], sort_keys=True)
+
+def latest_key(row):
+    return tuple(str(row.get(key) or '') for key in ('endedAt', 'startedAt', 'id'))
 
 
-def median_tree(values):
-    if all(isinstance(value, dict) for value in values):
-        return {key: median_tree([value.get(key) for value in values]) for key in sorted(set().union(*values))}
-    return statistics.median(values) if all(number(value) for value in values) else None
+def base_valid(row):
+    return row.get('origin') == 'ai' and row.get('baseStatus') == 'candidate'
 
 
-def phase_reasons(rows, kind):
-    reasons, times = [], {}
-    if any(not isinstance(row.get('environmentSignature'), dict) or any(
-            row['environmentSignature'].get(key) is None for key in ('machine.driver', 'machine.os', 'build.godot')) for row in rows):
-        reasons.append('同批驱动、系统或引擎环境缺失')
-    if len({json.dumps(row.get('environmentSignature'), sort_keys=True) for row in rows}) != 1:
-        reasons.append('同批驱动、系统或引擎环境不一致')
-    for phase in PHASES.get(kind, ()):
-        members = [row for row in rows if at(row, 'run.protocol.phase') == phase]
-        commits = {at(row, 'build.commit') for row in members}
-        if len(commits) != 1 or None in commits:
-            reasons.append(f'{phase} 构建提交不一致或缺失')
-        if kind != 'aba' or not members:
-            continue
-        try:
-            starts = [datetime.fromisoformat(row['startedAt']) for row in members]
-            ends = [datetime.fromisoformat(row['endedAt']) for row in members]
-            if any(start.tzinfo is None or end.tzinfo is None or start > end for start, end in zip(starts, ends)):
-                raise ValueError('缺少绝对时间或会话时间倒退')
-            times[phase] = (min(starts), max(ends))
-        except (KeyError, TypeError, ValueError):
-            reasons.append(f'{phase} 缺少可确认顺序的会话起止事实')
-    for before, after in (('a1', 'b1'), ('b1', 'a2')) if kind == 'aba' else ():
-        if before in times and after in times and times[before][1] > times[after][0]:
-            reasons.append(f'{before}/{after} 会话顺序不符或重叠')
-    return reasons
+def apply_confirmation(group, main, confirm):
+    """Keep each chosen distribution intact, including its actual n, and name its source session."""
+    sources = {}
+    for section in ('all', 'steady'):
+        for metric in COSTS:
+            path = section + '.cost.' + metric
+            a, b = at(main, path + '.p95'), at(confirm, path + '.p95')
+            chosen = confirm if number(a) and number(b) and b > a else main
+            group[section]['cost'][metric] = copy.deepcopy(at(chosen, path))
+            sources[path] = dict(sessionId=chosen['id'], statistic='p95', complete=number(a) and number(b))
+    # Whole-card memory is judged by its observed peak; retain that session's complete distribution.
+    path = 'all.cost.hardware.wholeGpuMemoryMiB'
+    a, b = at(main, path + '.maximum'), at(confirm, path + '.maximum')
+    chosen = confirm if number(a) and number(b) and b > a else main
+    group['all']['cost']['hardware']['wholeGpuMemoryMiB'] = copy.deepcopy(at(chosen, path))
+    sources[path] = dict(sessionId=chosen['id'], statistic='maximum', complete=number(a) and number(b))
+    group['metricSources'] = sources
 
 
-def batch_results(entries, budgets, failed_sources=()):
-    """缺一个正式单次就无批次基线；失败来源仍参与完整性，但不贡献指标。"""
-    batches = defaultdict(list)
-    for entry in entries:
-        identifier = at(entry, 'run.protocol.batchId')
-        if entry.get('origin') == 'ai' and isinstance(identifier, str) and identifier:
-            batches[identifier].append(entry)
-    results, blocked = [], {}
-    for identifier, rows in sorted(batches.items()):
-        first = rows[0]['run']['protocol']
-        kind, scenes = first.get('kind'), first.get('scenes')
-        kind = kind if isinstance(kind, str) else None
-        reasons, source_reasons, judgement_reasons = phase_reasons(rows, kind), [], []
-        groups = defaultdict(list)
-        for row in rows:
-            run, protocol = row['run'], row['run']['protocol']
-            reasons.extend(protocol_reasons(run))
-            if protocol.get('kind') != kind or protocol.get('scenes') != scenes:
-                reasons.append('同批场景计划或运行种类不一致')
-            if row['source'] in failed_sources:
-                source_reasons.append('批次会话来源分析失败: ' + row['id'])
-            if row['baseStatus'] != 'candidate':
-                reasons.append('批次含无效、未完成或证据运行: ' + row['id'])
-            if not isinstance(row.get('judgement'), dict):
-                judgement_reasons.append('必判摘要缺失: ' + row['id'])
-            for check in at(row, 'judgement.requiredChecks', []) or []:
-                if check['status'] != 'measured':
-                    judgement_reasons.append(row['id'] + '/' + check['key'] + ': ' + check['reason'])
-            groups[group_key(row)].append(row)
-        frozen_keys = ('logicalPauseVerified', 'mainThreadLongStopVerified', 'noiseCalibrationBatchId', 'tuningSelectedMetrics')
-        if len({json.dumps({key: at(row, 'run.conditions.' + key) for key in frozen_keys}, sort_keys=True) for row in rows}) != 1:
-            reasons.append('同批核验开关/散布基线/入选项条件不一致')
-        plan = scenes if isinstance(scenes, list) and all(isinstance(s, str) for s in scenes) else []
-        by_scene = defaultdict(list)
-        projected = []
-        for grouped in groups.values():
-            scene = grouped[0]['comparisonKey'].get('scene')
-            if not isinstance(scene, str):
-                reasons.append('场景 ID 不是字符串')
-                scene = None
-            by_scene[scene].append(grouped)
-            phases = {}
-            for phase in PHASES.get(kind, ()):
-                runs = [row for row in grouped if at(row, 'run.protocol.phase') == phase]
-                repeats = [at(row, 'run.protocol.repetition') for row in runs]
-                if sorted(repeats, key=str) != list(REPETITIONS):
-                    reasons.append(f'{scene}/{phase} 未恰好完成三次')
-                runs.sort(key=lambda row: str(at(row, 'run.protocol.repetition')))
-                if len({json.dumps({key: at(row, 'run.conditions.' + key) for key in ('suite', 'travelPrefetch')}, sort_keys=True)
-                        for row in grouped}) != 1:
-                    reasons.append(f'{scene} 场景套或旅行变体不一致')
-                phases[phase] = dict(sessionIds=[row['id'] for row in runs])
-            if kind == 'aba':
-                commits = {at(row, 'build.commit') for row in grouped if at(row, 'run.protocol.phase') in ('a1', 'a2')}
-                if len(commits) != 1 or None in commits:
-                    reasons.append(f'{scene} 的 A1/A2 构建提交不同或缺失')
-            projected.append(dict(comparisonKey=grouped[0]['comparisonKey'], calc=grouped[0]['calc'],
-                                  origin=grouped[0]['origin'], scope=grouped[0]['scope'], phases=phases))
-        if set(by_scene) != set(plan) or any(len(groups) != 1 for groups in by_scene.values()):
-            reasons.append('场景覆盖不足或同场景比较键/calc/origin/scope 不一致')
-        pain = {phase: batch_pain([row for row in rows if at(row, 'run.protocol.phase') == phase], budgets)
-                for phase in PHASES.get(kind, ())}
-        for phase, value in pain.items():
-            if any(at(row, 'run.protocol.phase') == phase and at(row, 'run.conditions.suite') in ('route', 'travel') for row in rows) and value['lightExceeded'] is None:
-                judgement_reasons.append(phase + '/lightCostStutter: 路线与传送批次合计稳态计率时长不足，重跑')
-        measurement_reasons = sorted(set(reasons + source_reasons))
-        blocking_reasons = sorted(set(reasons + judgement_reasons))
-        reasons = sorted(set(measurement_reasons + judgement_reasons))
-        status = ('invalid' if any(row['baseStatus'] == 'invalid' for row in rows) else
-                  'evidence' if all(row['baseStatus'] == 'evidence' for row in rows) else 'partial') if reasons else 'candidate'
-        if reasons:
-            # IO 故障不改既有会话基线身份与保留规则；批次仍 partial，读口不比较。
-            if blocking_reasons:
-                blocked.update({row['id']: blocking_reasons for row in rows if row['baseStatus'] == 'candidate'})
-        if not measurement_reasons:
-            populate_phase_costs(projected, groups)
-        result = dict(id=identifier, kind=kind, scenes=plan, status=status, statusReasons=reasons, groups=projected)
-        result['pain'] = pain
-        result['pain']['total'] = batch_pain(rows, budgets)
-        if measurement_reasons:
-            for pain in result['pain'].values():
-                pain['status'] = 'rerun'
-        result['requiredChecks'] = [dict(sessionId=row['id'], **check) for row in rows
-                                    for check in at(row, 'judgement.requiredChecks', []) or []]
-        result['unjudged'] = sorted({item['key'] for row in rows for item in at(row, 'waits.items', []) or [] if item['status'] == 'unjudged'})
-        result['unjudged'] += sorted({kind for row in rows for detector in row.get('unavailableDetectors', []) for kind in detector['types']})
-        result['unjudged'] += sorted({check['metric'] for row in rows for check in row.get('budgets', [])
-                                      if check['unjudged']})
-        results.append(result)
-    assess_aba(results, entries)
-    return results, blocked
-
-
-def populate_phase_costs(projected, groups):
-    for group in projected:
-        members = groups[group_key(group)]
-        for phase, value in group['phases'].items():
-            runs = [row for row in members if at(row, 'run.protocol.phase') == phase]
-            for title in ('all', 'steady'):
-                value[title] = dict(cost=median_tree([at(row, title + '.cost') for row in runs]))
-            value['distanceTable'] = distance_table(runs, value)
-
-
-def distance_table(runs, phase):
+def distance_table(runs, value):
     return [dict(scene=runs[0]['comparisonKey']['scene'], metric=check['metric'], value=check['value'],
                  upper=check['budget'], stop=check['stop'], ratio=check['ratio'], tier=check['tier'],
-                 selected=check['selected'], source=check['budgetSource'], stopSource=check['stopSource'], reason=check['reason'])
-            for check in budget_checks(phase, runs=runs) if check['required']]
+                 selected=check['selected'], exceeded=check['exceeded'], source=check['budgetSource'], stopSource=check['stopSource'], reason=check['reason'])
+            for check in budget_checks(value, runs=runs) if check['required']]
+
+
+def scene_pain(rows):
+    """同场景主采与确认逐项取较差；次数和轻级率不相加。"""
+    facts = [at(row, 'judgement.pain', {}) or {} for row in rows]
+    counts = {key: max(fact.get('counts', {}).get(key, 0) for fact in facts)
+              for key in set().union(*(fact.get('counts', {}) for fact in facts))}
+    rated = [(row, fact.get('lightFrames', 0) * 60000 / fact['steadyDurationMs'])
+             for row, fact in zip(rows, facts) if fact.get('steadyDurationMs', 0) > 0]
+    chosen, rate = max(rated, key=lambda item: item[1]) if rated and len(rated) == len(facts) else (None, None)
+    source = (dict(sessionId=chosen['id'], lightFrames=at(chosen, 'judgement.pain.lightFrames'),
+                   steadyDurationMs=at(chosen, 'judgement.pain.steadyDurationMs')) if chosen else None)
+    return dict(counts=counts, lightFrames=max((fact.get('lightFrames', 0) for fact in facts), default=0),
+                lightFramesPerMinute=rate, lightSource=source,
+                severityCounts={key: max(fact.get('severityCounts', {}).get(key, 0) for fact in facts) for key in ('heavy', 'severe')})
+
+
+def confirmation_reasons(group):
+    fraction = ROUND_RULES['minimumImprovementFraction']
+    reasons = []
+    for check in group['distanceTable']:
+        for line in ('upper', 'stop'):
+            value, boundary = check['value'], check[line]
+            if number(value) and number(boundary) and boundary > 0 and abs(value - boundary) / boundary < fraction:
+                reasons.append(check['metric'] + ' 接近' + line)
+    pain = group['pain']
+    reasons += ['痛点仅一次: ' + key for key, count in pain['counts'].items() if count == 1]
+    if pain['lightFrames'] == 1:
+        reasons.append('轻级痛点仅一次')
+    return reasons
 
 
 def batch_pain(rows, budgets):
-    """路线和旅行的所有原始运行合计；固定机位单列对照。"""
-    playing = [row for row in rows if at(row, 'run.conditions.suite') in ('route', 'travel')]
-    controls = [row for row in rows if at(row, 'run.conditions.suite') == 'fixed']
-    result = dict(counts={}, severityCounts=dict(heavy=0, severe=0), lightFrames=0, steadyDurationMs=0, worstScenes={},
-                  fixedControl=[dict(sessionId=row['id'], pain=at(row, 'judgement.pain')) for row in controls])
-    for row in playing:
-        pain = at(row, 'judgement.pain', {}) or {}
-        result['lightFrames'] += pain.get('lightFrames', 0)
-        result['steadyDurationMs'] += pain.get('steadyDurationMs', 0)
-        for key in result['severityCounts']:
-            result['severityCounts'][key] += pain.get('severityCounts', {}).get(key, 0)
-        for key, count in pain.get('counts', {}).items():
-            result['counts'][key] = result['counts'].get(key, 0) + count
-    for key in result['counts']:
-        scenes = defaultdict(int)
-        for row in playing:
-            scenes[row['comparisonKey']['scene']] += at(row, 'judgement.pain.counts.' + key, 0)
-        result['worstScenes'][key] = max(scenes, key=scenes.get) if scenes else None
-    light_scenes = defaultdict(lambda: [0, 0])
-    for row in playing:
-        scene = light_scenes[row['comparisonKey']['scene']]
-        scene[0] += at(row, 'judgement.pain.lightFrames', 0)
-        scene[1] += at(row, 'judgement.pain.steadyDurationMs', 0)
-    measured_rates = {scene: count * 60000 / duration for scene, (count, duration) in light_scenes.items() if duration}
-    result['worstScenes']['lightCostStutter'] = max(measured_rates, key=measured_rates.get) if measured_rates else None
-    duration = result['steadyDurationMs']
-    result['lightFramesPerMinute'] = result['lightFrames'] * 60000 / duration if duration else None
-    result['lightLimit'] = budgets['perfAnomalies']['lightCostStutterFramesPerMinuteMax']
-    result['lightExceeded'] = result['lightFramesPerMinute'] > result['lightLimit'] if duration else None
-    result['zeroTolerance'] = [dict(key=key, count=count, allowed=0) for key, count in result['counts'].items()]
-    complete = bool(playing) and all(at(row, 'judgement.requiredChecks') and all(
-        check['status'] == 'measured' for check in row['judgement']['requiredChecks']) for row in playing)
-    result['status'] = ('rerun' if not complete or not duration else 'pain' if any(result['counts'].values()) or
-                        result['lightExceeded'] else 'clear')
-    return result
+    """路线/旅行按场景较差结果汇总；确认不增加样本总时长或痛点数。"""
+    grouped = defaultdict(list)
+    for row in rows:
+        if at(row, 'run.conditions.suite') in ('route', 'travel'):
+            grouped[row['comparisonKey']['scene']].append(row)
+    values = {scene: scene_pain(members) for scene, members in grouped.items()}
+    counts = {key: sum(value['counts'].get(key, 0) for value in values.values())
+              for key in set().union(*(value['counts'] for value in values.values()))}
+    # Choose one real light-rate sample per scene, preserving its count and duration as a pair.
+    light_sources = [dict(scene=scene, **value['lightSource']) for scene, value in values.items() if value['lightSource']]
+    duration = sum(source['steadyDurationMs'] for source in light_sources)
+    light_frames = sum(source['lightFrames'] for source in light_sources)
+    missing_rate = any(value['lightSource'] is None and any(at(row, 'judgement.pain.steadyDurationMs', 0) > 0
+                       for row in grouped[scene]) for scene, value in values.items())
+    rate = light_frames * 60000 / duration if duration and not missing_rate else None
+    limit = budgets['perfAnomalies']['lightCostStutterFramesPerMinuteMax']
+    light_exceeded = rate > limit if rate is not None else None
+    complete = bool(rows) and all(at(row, 'judgement.requiredChecks') and all(check['status'] == 'measured' for check in row['judgement']['requiredChecks']) for row in rows)
+    return dict(counts=counts, lightFrames=light_frames, steadyDurationMs=duration, lightSources=light_sources, severityCounts={key: sum(value['severityCounts'][key] for value in values.values()) for key in ('heavy', 'severe')},
+                lightFramesPerMinute=rate, lightLimit=limit, lightExceeded=light_exceeded,
+                zeroTolerance=[dict(key=key, count=count, allowed=0) for key, count in counts.items()],
+                worstScenes={key: max(values, key=lambda scene: values[scene]['counts'].get(key, 0)) for key in counts},
+                fixedControl=[dict(sessionId=row['id'], pain=at(row, 'judgement.pain')) for row in rows if at(row, 'run.conditions.suite') == 'fixed'],
+                status='rerun' if not complete or grouped and rate is None else 'pain' if any(counts.values()) or light_exceeded is True else 'clear')
 
 
-def assess_aba(batches, entries):
-    by_id = {batch['id']: batch for batch in batches}
-    by_session = {row['id']: row for row in entries}
-    for batch in batches:
-        batch['abaAssessment'] = []
-        if batch['kind'] != 'aba':
-            continue
-        for group in batch['groups']:
-            phases = group['phases']
-            if any(not isinstance(stage.get('steady'), dict) for stage in phases.values()):
+def batch_results(entries, budgets, failed_sources=(), rounds=()):
+    results = []
+    for registration in validate_rounds(rounds):
+        reasons, groups, selected = [], [], []
+        source = Path(registration['sourceRoot']).resolve()
+        available = [row for row in entries if Path(row['source']).resolve().is_relative_to(source)]
+        for scene in registration['scenes']:
+            candidates = [row for row in available if row['comparisonKey'].get('scene') == scene
+                          and base_valid(row) and not at(row, 'run.confirmationOf')]
+            if not candidates:
+                reasons.append(scene + ': 无完整有效单次')
                 continue
-            session = by_session[phases['a1']['sessionIds'][0]]
-            calibration_id = at(session, 'run.conditions.noiseCalibrationBatchId')
-            calibration = by_id.get(calibration_id, {})
-            reference = next((g for g in calibration.get('groups', []) if g['comparisonKey'] == group['comparisonKey']
-                              and g['calc'] == group['calc'] and g['scope'] == group['scope']), None)
-            reference_sessions = ([by_session[identifier] for p in reference['phases'].values() for identifier in p['sessionIds']]
-                                  if reference else [])
-            unmodified_calibration = bool(reference_sessions) and len({at(row, 'build.commit') for row in reference_sessions}) == 1
-            group['noiseRanges'] = []
-            for distance in phases['b1']['distanceTable']:
-                metric = distance['metric']
-                values = [at(phases[p], 'steady.cost.' + metric + '.p95') for p in ('a1', 'b1', 'a2')]
-                if not all(number(v) for v in values):
+            main = max(candidates, key=latest_key)
+            if main['source'] in failed_sources:
+                reasons.append(scene + ': 最新完整单次来源分析失败，不晋升旧单次')
+                continue
+            confirmations = [row for row in available if at(row, 'run.confirmationOf') == main['id'] and base_valid(row)]
+            group = {key: copy.deepcopy(main[key]) for key in ('comparisonKey', 'calc', 'origin', 'scope', 'environmentSignature', 'all', 'steady')}
+            group.update(sessionIds=[main['id']], mainSessionId=main['id'], confirmationSessionId=None)
+            group['distanceTable'] = distance_table([main], group)
+            group['pain'] = scene_pain([main])
+            group['confirmationReasons'] = confirmation_reasons(group)
+            group['confirmationRequired'] = bool(group['confirmationReasons'])
+            members = [main]
+            if confirmations:
+                confirm = max(confirmations, key=latest_key)
+                frozen = ('suite', 'travelPrefetch', 'logicalPauseVerified', 'mainThreadLongStopVerified', 'tuningSelectedMetrics')
+                if (len(confirmations) != 1 or confirm['source'] in failed_sources or group_key(confirm) != group_key(main) or confirm['build'] != main['build']
+                        or confirm['environmentSignature'] != main['environmentSignature']
+                        or any(at(confirm, 'run.conditions.' + key) != at(main, 'run.conditions.' + key) for key in frozen)):
+                    reasons.append(scene + ': 确认次数或冻结条件不符')
+                else:
+                    members.append(confirm)
+                    group['sessionIds'].append(confirm['id'])
+                    group['confirmationSessionId'] = confirm['id']
+                    apply_confirmation(group, main, confirm)
+                    group['distanceTable'] = distance_table(members, group)
+                    group['pain'] = scene_pain(members)
+            group['confirmationPending'] = group['confirmationRequired'] and len(members) == 1
+            group['requiredChecks'] = [dict(sessionId=row['id'], **check) for row in members for check in at(row, 'judgement.requiredChecks', [])]
+            selected.extend(members)
+            groups.append(group)
+        if any(not isinstance(row.get('environmentSignature'), dict) or any(row['environmentSignature'].get(key) is None for key in ('machine.driver', 'machine.os', 'build.godot')) for row in selected):
+            reasons.append('本轮驱动/系统/引擎环境缺失')
+        if len({at(row, 'build.commit') for row in selected}) > 1 or len({json.dumps(row.get('environmentSignature'), sort_keys=True) for row in selected}) > 1:
+            reasons.append('本轮构建或驱动/系统/引擎环境不一致')
+        missing_checks = [check for group in groups for check in group['requiredChecks'] if check['status'] != 'measured']
+        unjudged = sorted({check['key'] for check in missing_checks} |
+                          {check['metric'] for row in selected for check in row.get('budgets', []) if check['unjudged']} |
+                          {item['key'] for row in selected for item in at(row, 'waits.items', []) or [] if item['status'] == 'unjudged'} |
+                          {kind for row in selected for detector in row.get('unavailableDetectors', []) for kind in detector['types']})
+        result = dict(**registration, groups=groups, status='partial' if reasons else 'candidate', statusReasons=reasons,
+                      requiredChecks=[check for group in groups for check in group['requiredChecks']],
+                      unjudged=unjudged, pain=batch_pain(selected, budgets) if selected else None,
+                      confirmationPending=any(group['confirmationPending'] for group in groups))
+        result['gateStatus'] = ('Incomplete' if reasons or missing_checks or result['confirmationPending'] or at(result, 'pain.status') == 'rerun' else
+                                'Failed' if any(check['tier'] == 'above-upper' for group in groups for check in group['distanceTable']) else 'Passed')
+        results.append(result)
+    assess_rounds(results)
+    return results
+
+
+def assess_rounds(rounds):
+    by_id = {row['id']: row for row in rounds}
+    fraction = ROUND_RULES['minimumImprovementFraction']
+    complete_statuses = ('candidate', 'current', 'stale', 'superseded')
+    for current in rounds:
+        previous = by_id.get(current['previousId'])
+        current['comparison'] = []
+        unknown, regressions = [], []
+        if previous:
+            if any(check['status'] != 'measured' for item in (previous, current) for check in item['requiredChecks']):
+                unknown.append('必判项目仍未核；不影响已测成本变化事实')
+            if previous['confirmationPending'] or current['confirmationPending']:
+                unknown.append('一次确认尚未完成')
+            if current['status'] == 'stale':
+                unknown.append('当前轮已过时，合入资格未判')
+            before_pain, after_pain = previous.get('pain') or {}, current.get('pain') or {}
+            if before_pain.get('status') == 'rerun' or after_pain.get('status') == 'rerun':
+                unknown.append('整轮痛点完整性未核')
+            for key, count in after_pain.get('counts', {}).items():
+                if count and before_pain.get('counts', {}).get(key) == 0:
+                    regressions.append('本轮新出痛点: ' + key)
+            if after_pain.get('lightExceeded') is True and before_pain.get('lightExceeded') is False:
+                regressions.append('本轮新出轻级痛点')
+            for scene in current['groups']:
+                before_scene = next((item for item in previous['groups'] if group_key(item) == group_key(scene)), None)
+                if before_scene is None:
+                    unknown.append(scene['comparisonKey']['scene'] + ': 相邻轮比较组缺失')
                     continue
-                group['noiseRanges'].append(dict(metric=metric, sigma0=max(values) - min(values)))
-                reference_values = ([at(reference, 'phases.' + p + '.steady.cost.' + metric + '.p95')
-                                     for p in ('a1', 'b1', 'a2')] if reference and calibration.get('kind') == 'aba'
-                                    and all(isinstance(stage.get('steady'), dict) for stage in reference['phases'].values())
-                                    and unmodified_calibration else [])
-                sigma = max(reference_values) - min(reference_values) if reference_values and all(number(v) for v in reference_values) else None
-                spread = abs(values[0] - values[2])
-                improvement = (values[0] + values[2]) / 2 - values[1]
-                ruler = max(spread, sigma) if sigma is not None else None
-                guards = regression_guards(phases, batch['pain'])
-                eligible = batch['status'] == 'candidate'
-                batch['abaAssessment'].append(dict(scene=group['comparisonKey']['scene'], metric=metric,
-                    improvement=improvement, aDifference=spread, sigma0=sigma, noiseCalibrationBatchId=calibration_id,
-                    requiredImprovement=ruler, accepted=improvement > ruler and not guards if ruler is not None and eligible else None,
-                    reasons=guards + ([] if sigma is not None else ['同场景同口径第0轮散布缺测，未判']) +
-                    ([] if eligible else ['必判未核或批次不完整，只提供成本校准事实'])))
-
-
-def regression_guards(phases, pain):
-    reasons = []
-    reference = {row['metric']: row for row in phases['a1'].get('distanceTable', [])}
-    other_a = {row['metric']: row for row in phases['a2'].get('distanceTable', [])}
-    for row in phases['b1'].get('distanceTable', []):
-        before, after = reference.get(row['metric'], {}), other_a.get(row['metric'], {})
-        for line, crossed, safe in (('upper', ('above-upper',), ('within', 'above-stop')),
-                                    ('stop', ('above-stop', 'above-upper'), ('within',))):
-            if line == 'stop' and not (row['selected'] and row['stop'] is not None):
-                continue
-            if row['tier'] in crossed and all(a.get('tier') in safe for a in (before, after)):
-                reasons.append(row['metric'] + ' 被推出' + line)
-    b, a1, a2 = (pain.get(phase, {}) for phase in ('b1', 'a1', 'a2'))
-    for key, count in b.get('counts', {}).items():
-        if count > 0 and a1.get('counts', {}).get(key) == 0 and a2.get('counts', {}).get(key) == 0:
-            reasons.append('B新出痛点: ' + key)
-    if b.get('lightExceeded') is True and all(a.get('lightExceeded') is False for a in (a1, a2)):
-        reasons.append('B新出轻级痛点')
-    return reasons
+                old = {row['metric']: row for row in before_scene['distanceTable']}
+                for row in scene['distanceTable']:
+                    prior = old.get(row['metric'], {})
+                    if row['tier'] == 'rerun' or prior.get('tier') == 'rerun':
+                        unknown.append(row['metric'] + ': 预算判据未核')
+                    for line in ('upper', 'stop'):
+                        if line == 'stop' and not row['selected']:
+                            continue
+                        if all(number(v) for v in (row['value'], row[line], prior.get('value'), prior.get(line))) and row['value'] > row[line] and prior['value'] <= prior[line]:
+                            regressions.append(row['metric'] + ' 被推出' + line)
+        for group in current['groups']:
+            before = next((item for item in previous['groups'] if group_key(item) == group_key(group)), None) if previous else None
+            comparisons, facts = [], []
+            acceptance = list(unknown)
+            guards = list(regressions)
+            if previous and (previous['status'] not in complete_statuses or current['status'] not in complete_statuses or before is None):
+                facts.append('相邻轮不完整或比较键/calc/scope/origin 不一致')
+            if before:
+                if before.get('environmentSignature') != group.get('environmentSignature'):
+                    facts.append('相邻轮驱动/系统/引擎环境不一致')
+                for metric in COSTS:
+                    value = at(group, 'steady.cost.' + metric + '.p95')
+                    old_value = at(before, 'steady.cost.' + metric + '.p95')
+                    improvement = (old_value - value) / old_value if number(value) and number(old_value) and old_value > 0 else None
+                    missing = [] if improvement is not None else ['前轮/本轮指标缺测或前轮分母非正']
+                    measured = not facts and improvement is not None
+                    change = ('improved' if improvement >= fraction else 'unchanged' if improvement > -fraction else 'regressed') if measured else 'unjudged'
+                    metric_acceptance = list(acceptance)
+                    if any(item.get('metricSources', {}).get('steady.cost.' + metric, {}).get('complete') is False for item in (before, group)):
+                        metric_acceptance.append('该指标确认成本缺测，较差值未核')
+                    comparisons.append(dict(scene=group['comparisonKey']['scene'], metric=metric, previous=old_value,
+                        value=value, improvementFraction=improvement, change=change,
+                        accepted=(improvement >= fraction and not guards) if measured and not metric_acceptance else None,
+                        reasons=facts + missing + metric_acceptance + guards))
+            group['comparison'] = comparisons
+            current['comparison'].extend(comparisons)

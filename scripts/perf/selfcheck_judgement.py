@@ -1,4 +1,4 @@
-"""验证判停必判缺测、绝对成本线、原始帧计次、等待单边判与散布边界。
+"""验证判停必判缺测、绝对成本线、原始帧计次、等待单边判与相邻轮比较。
 用法：由 perf.py selfcheck 编排；只用小样本，不启动游戏、不产生性能基线。
 """
 import copy
@@ -8,12 +8,12 @@ from argparse import Namespace
 from pathlib import Path
 from analyze import summary_for
 from perf_anomalies import budget_checks, merge_anomalies
-from perf_batches import batch_pain, batch_results, distance_table
+from perf_batches import batch_pain, batch_results, distance_table, ROUND_RULES
 from perf_model import COSTS, at
 from perf_curves import bucket_curves
 from perf_store import batch_states, git, rebuild_states
 from perf_waits import visible_intervals, wait_observations
-from selfcheck_fixtures import ai_run, frame, manifest, mark_sample, streams, viewport
+from selfcheck_fixtures import ai_run, frame, manifest, mark_sample, streams, viewport, round_registration
 
 
 def measured(dictionary, budgets, rows, conditions=None, events=None):
@@ -22,7 +22,7 @@ def measured(dictionary, budgets, rows, conditions=None, events=None):
     meta['desktop'] = dict(kind='isolated', isInputDesktop=False, windowFocused=False)
     data = streams(rows, dictionary)
     data['events'] += events or []
-    run = dict(scene='judgement-selfcheck', conditions=conditions or {})
+    run = dict(scene='judgement-selfcheck-' + str((conditions or {}).get('suite', 'unknown')), conditions=conditions or {})
     return summary_for(Path('fixture'), meta, data, dictionary, budgets, run)
 
 
@@ -103,36 +103,33 @@ def check_required_sets(root, dictionary, budgets):
         if suite in ('fixed', 'route'):
             for row in rows:
                 row['viewportSamplesJson'].append(viewport(2, 'reflection', None, None))
-        for repeat in (1, 2, 3):
-            meta = manifest(dictionary, f'{scene}-{repeat}')
-            meta.update(origin='ai')
-            meta['build']['commit'] = 'selfcheck'
-            meta['machine']['vramMiB'] = 1000
-            meta['desktop'] = dict(kind='isolated', isInputDesktop=False, windowFocused=False)
-            run = ai_run(scene=scene, repetition=repeat, scenes=['fixed-with-reflection', 'route', 'standing-travel-direct'])
-            run['conditions'] = dict(suite=suite, **enabled)
-            data = mark_sample(streams(copy.deepcopy(rows), dictionary), dictionary, meta)
-            data['hw'] = [dict(rowKind='nvml', isRenderAdapter=True, monotonicMs=10, wholeGpuMemoryMiB=100)]
-            entries.append(summary_for(Path(meta['id']), meta, data, dictionary, budgets, run)[0])
+        meta = manifest(dictionary, scene)
+        meta.update(origin='ai')
+        meta['build']['commit'] = 'selfcheck'
+        meta['machine']['vramMiB'] = 1000
+        meta['desktop'] = dict(kind='isolated', isInputDesktop=False, windowFocused=False)
+        run = ai_run(scene=scene)
+        run['conditions'] = dict(suite=suite, **enabled)
+        data = mark_sample(streams(copy.deepcopy(rows), dictionary), dictionary, meta)
+        data['hw'] = [dict(rowKind='nvml', isRenderAdapter=True, monotonicMs=10, wholeGpuMemoryMiB=100)]
+        entries.append(summary_for(Path(meta['id']), meta, data, dictionary, budgets, run)[0])
     reflected = entries[0]
     assert at(reflected, 'steady.cost.measuredViewportGpuMs.p95') is None
     aggregate = next(check for check in reflected['budgets'] if check['metric'] == 'measuredViewportGpuMs')
     assert aggregate['applicable'] is False and aggregate['exceeded'] is None and '未判' in aggregate['reason']
     assert {check['key'] for check in reflected['judgement']['requiredChecks']} == set(COSTS)
     assert {check['metric'] for check in distance_table([reflected], reflected)} == set(COSTS)
-    batch = batch_results(entries, budgets)[0][0]
+    registration = round_registration(Path.cwd(), [row['comparisonKey']['scene'] for row in entries])
+    batch = batch_results(entries, budgets, rounds=[registration])[0]
     assert 'measuredViewportGpuMs' in batch['unjudged']
-    assert not any('lightCostStutter' in reason for reason in batch['statusReasons'])
     assert batch['status'] == 'candidate', '完整路线加零稳态传送仍被要求重跑'
-    routes = copy.deepcopy([row for row in entries if at(row, 'run.conditions.suite') != 'fixed'])
-    for row in routes:
-        row['run']['protocol']['scenes'] = ['route', 'standing-travel-direct']
-    assert 'measuredViewportGpuMs' in batch_results(routes, budgets)[0][0]['unjudged'], '路线非主视口合计缺测未记未判'
-    empty = copy.deepcopy([row for row in entries if at(row, 'run.conditions.suite') == 'travel'])
-    for row in empty:
-        row['run']['protocol']['scenes'] = ['standing-travel-direct']
-    batch = batch_results(empty, budgets)[0][0]
-    assert any('a1/lightCostStutter:' in reason for reason in batch['statusReasons']), '批次零分母仍可判停'
+    routes = [row for row in entries if at(row, 'run.conditions.suite') != 'fixed']
+    route_plan = round_registration(Path.cwd(), [row['comparisonKey']['scene'] for row in routes])
+    assert 'measuredViewportGpuMs' in batch_results(routes, budgets, rounds=[route_plan])[0]['unjudged']
+    empty = [row for row in entries if at(row, 'run.conditions.suite') == 'travel']
+    empty_plan = round_registration(Path.cwd(), [row['comparisonKey']['scene'] for row in empty])
+    batch = batch_results(empty, budgets, rounds=[empty_plan])[0]
+    assert batch['pain']['lightFramesPerMinute'] is None and batch['pain']['status'] == 'rerun'
 
 
 def check_waits(root, dictionary, budgets):
@@ -202,50 +199,65 @@ def check_waits(root, dictionary, budgets):
     assert item(result['waits'], 'continueToWalkSecondsMax')['seconds'] == 6
 
 
-def check_aba_ruler(root, dictionary, budgets):
-    """Regression：改进必须严格越过两把散布尺，缺sigma0不默认为零。"""
-    entries = []
-    for batch, values in (('calibration', (5, 6, 5)), ('change', (6, 4.5, 6))):
-        for phase_index, (phase, gpu) in enumerate(zip(('a1', 'b1', 'a2'), values)):
-            for repeat in (1, 2, 3):
-                meta = manifest(dictionary, f'{batch}-{phase}-{repeat}')
-                second = phase_index * 10 + repeat * 2
-                meta.update(origin='ai', startedAt=f'2000-01-01T00:00:{second:02d}Z', endedAt=f'2000-01-01T00:00:{second + 1:02d}Z')
-                meta['build'].update(commit='baseline' if batch == 'calibration' or phase != 'b1' else 'candidate')
-                run = ai_run(batch=batch, phase=phase, repetition=repeat, kind='aba')
-                run['conditions']['noiseCalibrationBatchId'] = 'calibration'
-                data = mark_sample(streams([frame(dictionary, i, gpu=gpu) for i in range(3)], dictionary), dictionary, meta)
-                entries.append(summary_for(Path(meta['id']), meta, data, dictionary, budgets, run)[0])
-    batches, _ = batch_results(entries, budgets)
-    result = next(b for b in batches if b['id'] == 'change')
-    check = next(v for v in result['abaAssessment'] if v['metric'] == 'mainViewportGpuMs')
-    assert check['sigma0'] == 1 and check['requiredImprovement'] == 1 and check['accepted'] is True
-    unverified = copy.deepcopy(entries)
-    for row in unverified:
-        row['judgement']['requiredChecks'].append(dict(key='logicPause', observed=3, status='rerun', reason='第0轮未核'))
-    partial, blocked = batch_results(unverified, budgets)
-    calibration = next(b for b in partial if b['id'] == 'calibration')
-    assert calibration['status'] == 'partial' and len(blocked) == len(unverified)
-    assert at(calibration['groups'][0], 'phases.b1.steady.cost.mainViewportGpuMs.p95') == 6
-    assert next(v for v in calibration['groups'][0]['noiseRanges'] if v['metric'] == 'mainViewportGpuMs')['sigma0'] == 1
-    assert all(v['accepted'] is None for b in partial for v in b['abaAssessment']), '未核判据冒充合格基线'
-    broken = batch_results(unverified[:-1], budgets)[0]
-    incomplete = next(b for b in broken if b['id'] == 'change')
-    assert all('steady' not in stage for group in incomplete['groups'] for stage in group['phases'].values()), '协议缺次仍提供资格成本'
-    changed = copy.deepcopy(entries)
-    for row in changed:
-        if at(row, 'run.protocol.batchId') == 'change' and at(row, 'run.protocol.phase') == 'b1':
-            row['steady']['cost']['mainViewportGpuMs']['p95'] = 5
-    result = next(b for b in batch_results(changed, budgets)[0] if b['id'] == 'change')
-    assert next(v for v in result['abaAssessment'] if v['metric'] == 'mainViewportGpuMs')['accepted'] is False
-    for row in changed:
-        row['run']['conditions']['noiseCalibrationBatchId'] = 'missing'
-    result = next(b for b in batch_results(changed, budgets)[0] if b['id'] == 'change')
-    assert next(v for v in result['abaAssessment'] if v['metric'] == 'mainViewportGpuMs')['accepted'] is None
+def check_round_ruler(root, dictionary, budgets):
+    """Regression：相邻单次按规则值判收益，未核与确认缺测保留成本且禁止合入。"""
+    from perf_batches import scene_pain
+    entries, registrations = [], []
+    fraction = ROUND_RULES['minimumImprovementFraction']
+    for n, value in enumerate((4, 4 * (1 - fraction / 2))):
+        identifier = 'round-' + str(n)
+        source = Path.cwd() / identifier
+        meta = manifest(dictionary, identifier)
+        meta.update(origin='ai', desktop=dict(kind='isolated'))
+        meta['build']['commit'] = 'selfcheck'
+        run = ai_run(round_id=identifier)
+        sample_rows = [frame(dictionary, i, gpu=value) for i in range(3)]
+        for row in sample_rows:
+            row['frameSetupCpuMs'] = budgets['deviceTargets']['developer']['frameSetupCpuP95MsUpper'] / 2
+        data = mark_sample(streams(sample_rows, dictionary), dictionary, meta)
+        entries.append(summary_for(source / identifier, meta, data, dictionary, budgets, run)[0])
+        registrations.append(round_registration(source, ['baseline-selfcheck'], identifier, n, 'round-0' if n else None))
+    def result(rows):
+        return batch_results(rows, budgets, rounds=registrations)[1]
+    def check(round_):
+        return next(row for row in round_['comparison'] if row['metric'] == 'mainViewportGpuMs')
+    assert check(result(entries))['change'] == 'unchanged' and check(result(entries))['accepted'] is False
+    travel = copy.deepcopy(entries)
+    for row in travel:
+        row['run']['conditions']['suite'] = 'travel'
+        for budget in row['budgets']:
+            budget.update(required=False, applicable=False, exceeded=None)
+    assert not result(travel)['groups'][0]['distanceTable']
+    assert len(result(travel)['comparison']) == len(COSTS), '传送套不判帧预算，但已测成本变化仍须保留'
+
+    improved = copy.deepcopy(entries)
+    improved[1]['steady']['cost']['mainViewportGpuMs']['p95'] = 4 * (1 - fraction * 2)
+    assert check(result(improved))['accepted'] is True
+    for key in ('logicPause', 'mainThreadLongStop'):
+        improved[0]['judgement']['requiredChecks'].append(dict(key=key, observed=3, status='rerun', reason='第0轮未核'))
+    unverified = batch_results(improved, budgets, rounds=registrations)
+    assert unverified[0]['status'] == 'candidate' and unverified[0]['gateStatus'] == 'Incomplete'
+    assert at(unverified[0]['groups'][0], 'steady.cost.mainViewportGpuMs.p95') == 4
+    assert all(row['accepted'] is None for row in unverified[1]['comparison'])
+    assert next(row for row in unverified[1]['comparison'] if row['metric'] == 'mainViewportGpuMs')['change'] == 'improved'
+    assert {'logicPause', 'mainThreadLongStop'} <= set(unverified[0]['unjudged'])
+    # Confirmation pain is the worse observed count/rate, never their sum.
+    before, after = copy.deepcopy(entries[1]), copy.deepcopy(entries[1])
+    for row, count, duration in ((before, 1, 60000), (after, 2, 120000)):
+        row['judgement']['pain'].update(counts=dict(costStutter=count), lightFrames=count, steadyDurationMs=duration)
+    pain = scene_pain([before, after])
+    assert pain['counts']['costStutter'] == 2 and pain['lightFramesPerMinute'] == 1
+    assert 'lightExceeded' not in pain and 'lightLimit' not in pain
+    crossing = copy.deepcopy(entries)
+    crossing[1]['judgement']['pain']['counts']['gc'] = 1
+    assert check(result(crossing))['accepted'] is None
+    mismatch = copy.deepcopy(entries)
+    mismatch[1]['comparisonKey']['machine'] = 'different'
+    assert not result(mismatch)['comparison']
 
 
 def check_stopping(root, dictionary, budgets):
-    for check in (check_judgement, check_raw_counts, check_required_sets, check_waits, check_aba_ruler,
+    for check in (check_judgement, check_raw_counts, check_required_sets, check_waits, check_round_ruler,
                   check_batch_light, check_render_memory, check_budget_consumers):
         check(root, dictionary, budgets)
 
@@ -328,24 +340,23 @@ def check_budget_consumers(root, dictionary, budgets):
             out, batch_id, scene = fixture / 'output/perf', 'selfcheck-only', 'lake-default'
             out.mkdir(parents=True)
             entries = []
-            for repeat in (1, 2, 3):
-                identifier = f'fixture-{repeat}'
-                meta = manifest(dictionary, identifier)
-                meta.update(origin='ai', desktop=dict(kind='isolated', isInputDesktop=False, windowFocused=False))
-                meta['build']['commit'] = git(root, 'rev-parse', 'HEAD')[1]
-                if mismatch:
-                    meta['graphics']['preset'] = 'selfcheck-wrong-preset'
-                run = ai_run(scene=scene, batch=batch_id, repetition=repeat)
-                run['conditions']['tuningSelectedMetrics'] = [scene + '.' + metric]
-                data = mark_sample(streams([frame(dictionary, i, gpu=value) for i in range(3)], dictionary), dictionary, meta)
-                entries.append(summary_for(fixture / identifier, meta, data, dictionary, budgets, run)[0])
-            batches, blocked = batch_results(entries, budgets)
-            rebuild_states(entries, root, blocked)
+            identifier = 'fixture-single'
+            meta = manifest(dictionary, identifier)
+            meta.update(origin='ai', desktop=dict(kind='isolated', isInputDesktop=False, windowFocused=False))
+            meta['build']['commit'] = git(root, 'rev-parse', 'HEAD')[1]
+            if mismatch:
+                meta['graphics']['preset'] = 'selfcheck-wrong-preset'
+            run = ai_run(scene=scene, round_id=batch_id)
+            run['conditions']['tuningSelectedMetrics'] = [scene + '.' + metric]
+            data = mark_sample(streams([frame(dictionary, i, gpu=value) for i in range(3)], dictionary), dictionary, meta)
+            entries.append(summary_for(fixture / identifier, meta, data, dictionary, budgets, run)[0])
+            batches = batch_results(entries, budgets, rounds=[round_registration(fixture, [scene], batch_id)])
+            rebuild_states(entries, root)
             batch_states(batches, entries, root)
             batch = batches[0]
-            table = batch['groups'][0]['phases']['a1']['distanceTable']
+            table = batch['groups'][0]['distanceTable']
             selected = next(v for v in table if v['metric'] == metric)
             assert selected['tier'] == expected, selected
             (out / 'index.json').write_text(json.dumps(dict(calc=seed['calc'], batches=batches, sessions=entries, errors=[])), encoding='utf-8')
-            cli = list(distance(out, Namespace(id=batch_id, phase='a1', scene=None)))
+            cli = list(distance(out, Namespace(id=batch_id, scene=None)))
             assert any(line.split(' | ')[1:2] == [metric] and line.endswith(' | ' + expected) for line in cli)
