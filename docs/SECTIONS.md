@@ -1714,7 +1714,7 @@
   - ENG-PERF-DATA §3.2 成本口径 · L123 · 1.4k
 - ENG-PERF-DATA §4 测量范围与 `scope` · L138 · 247
 - ENG-PERF-DATA §5 异常 · L146 · 2.2k
-  - ENG-PERF-DATA §5.1 体验类 · L154 · 777
+  - ENG-PERF-DATA §5.1 体验类 · L154 · 788
   - ENG-PERF-DATA §5.2 成本与数据类 · L170 · 837
   - ENG-PERF-DATA §5.3 归因与合并 · L184 · 365
 - ENG-PERF-DATA §6 比较键、状态与保留 · L194 · 991
