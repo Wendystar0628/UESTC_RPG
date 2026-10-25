@@ -67,41 +67,75 @@ function Get-UESTCG2CompileScope {
         $pending.Enqueue($hostProject)
         $projects = New-Object 'Collections.Generic.HashSet[string]' ([StringComparer]::OrdinalIgnoreCase)
         $files = New-Object 'Collections.Generic.List[object]'
+        $inputs = New-Object 'Collections.Generic.HashSet[string]' ([StringComparer]::OrdinalIgnoreCase)
         $dependencies = New-Object 'Collections.Generic.HashSet[string]' ([StringComparer]::OrdinalIgnoreCase)
+        $itemKinds = @('Compile','ProjectReference','EmbeddedResource','Content','None','AdditionalFiles','EditorConfigFiles','Analyzer')
         while ($pending.Count) {
             $current = $pending.Dequeue()
             if (-not $projects.Add($current)) { continue }
             if (-not $Evaluations.ContainsKey($current)) {
-                # No target or restore: use MSBuild's evaluated graph in the test configuration.
+                # Evaluated items and imports describe the host's actual inputs; no target or restore is run.
                 $result = Invoke-UESTCProcess dotnet @('msbuild',$current,
-                    '-getItem:Compile,ProjectReference',"-property:Configuration=$Configuration",'-nologo','-verbosity:quiet') $Root `
+                    ('-getItem:' + ($itemKinds -join ',')),'-getProperty:MSBuildAllProjects',
+                    "-property:Configuration=$Configuration",'-nologo','-verbosity:quiet') $Root `
                     -TextEncoding ([Text.Encoding]::UTF8)
                 $evaluated = $result.StdOut | ConvertFrom-Json
                 if (-not $evaluated -or -not $evaluated.PSObject.Properties['Items'] -or
-                    -not $evaluated.Items -or -not $evaluated.Items.PSObject.Properties['Compile'] -or
-                    -not $evaluated.Items.PSObject.Properties['ProjectReference']) {
-                    throw "MSBuild output for '$current' does not contain Compile and ProjectReference items."
+                    -not $evaluated.Items -or -not $evaluated.PSObject.Properties['Properties'] -or
+                    -not $evaluated.Properties.PSObject.Properties['MSBuildAllProjects']) {
+                    throw "MSBuild output for '$current' does not contain evaluated items and imports."
                 }
-                $Evaluations[$current] = $evaluated.Items
+                foreach ($kind in $itemKinds) {
+                    if (-not $evaluated.Items.PSObject.Properties[$kind]) {
+                        throw "MSBuild output for '$current' does not contain $kind items."
+                    }
+                }
+                $Evaluations[$current] = $evaluated
             }
-            $items = $Evaluations[$current]
-            foreach ($item in @($items.Compile) + @($items.ProjectReference)) {
-                if (-not $item -or -not $item.PSObject.Properties['FullPath'] -or
-                    [string]::IsNullOrWhiteSpace($item.FullPath) -or -not [IO.Path]::IsPathRooted($item.FullPath)) {
-                    throw "MSBuild item in '$current' has no absolute FullPath."
+            $evaluation = $Evaluations[$current]
+            $items = $evaluation.Items
+            $projectInputs = New-Object 'Collections.Generic.HashSet[string]' ([StringComparer]::OrdinalIgnoreCase)
+            $null = $projectInputs.Add($current)
+            foreach ($kind in $itemKinds) {
+                foreach ($item in @($items.$kind)) {
+                    if (-not $item) { continue }
+                    # A None item is a runtime input only when MSBuild actually copies it for the host.
+                    if ($kind -eq 'None') {
+                        $copies = @('CopyToOutputDirectory','CopyToPublishDirectory' | ForEach-Object {
+                            if ($item.PSObject.Properties[$_]) { [string]$item.$_ }
+                        } | Where-Object { $_ -and $_ -ne 'Never' })
+                        if (-not $copies.Count) { continue }
+                    }
+                    if (-not $item.PSObject.Properties['FullPath'] -or
+                        [string]::IsNullOrWhiteSpace($item.FullPath) -or -not [IO.Path]::IsPathRooted($item.FullPath)) {
+                        throw "MSBuild $kind item in '$current' has no absolute FullPath."
+                    }
+                    $fullPath = [IO.Path]::GetFullPath($item.FullPath)
+                    if ($kind -eq 'ProjectReference') { $pending.Enqueue($fullPath) }
+                    $null = $projectInputs.Add($fullPath)
+                    if ($kind -eq 'Compile' -and $current -eq $hostProject) {
+                        $path = if ($fullPath.StartsWith($prefix, [StringComparison]::OrdinalIgnoreCase)) {
+                            $fullPath.Substring($prefix.Length).Replace('\','/')
+                        } else { $fullPath.Replace('\','/') }
+                        $files.Add([pscustomobject]@{ Path=$path; FullPath=$fullPath })
+                    }
                 }
             }
-            foreach ($reference in @($items.ProjectReference)) { $pending.Enqueue([IO.Path]::GetFullPath($reference.FullPath)) }
-            foreach ($fullPath in @($current) + @($items.Compile | ForEach-Object { [IO.Path]::GetFullPath($_.FullPath) })) {
+            foreach ($import in ([string]$evaluation.Properties.MSBuildAllProjects -split ';')) {
+                if ([string]::IsNullOrWhiteSpace($import)) { continue }
+                if (-not [IO.Path]::IsPathRooted($import)) { throw "MSBuild import in '$current' is not absolute: $import" }
+                $null = $projectInputs.Add([IO.Path]::GetFullPath($import))
+            }
+            foreach ($fullPath in $projectInputs) {
                 $path = if ($fullPath.StartsWith($prefix, [StringComparison]::OrdinalIgnoreCase)) {
                     $fullPath.Substring($prefix.Length).Replace('\','/')
                 } else { $fullPath.Replace('\','/') }
+                $null = $inputs.Add($path)
                 if ($current -ne $hostProject) { $null = $dependencies.Add($path) }
-                elseif ($fullPath -ne $hostProject) { $files.Add([pscustomobject]@{ Path=$path; FullPath=$fullPath }) }
             }
         }
-        return [pscustomobject]@{ CompileFiles=$files.ToArray(); DependencyPaths=$dependencies }
-    } catch { throw "Cannot evaluate G2 Compile items for '${Project}': $($_.Exception.Message)" }
+        return [pscustomobject]@{ CompileFiles=$files.ToArray(); InputPaths=$inputs; DependencyPaths=$dependencies }
+    } catch { throw "Cannot evaluate G2 host inputs for '${Project}': $($_.Exception.Message)" }
 }
 
 function Get-UESTCG2ProjectSelection {
@@ -110,11 +144,19 @@ function Get-UESTCG2ProjectSelection {
     $removedSources = @(Get-UESTCGitPaths $Root @('diff','--name-only','--diff-filter=D','-z',$BaseRef,'--') | Where-Object {
         $_ -match '\.cs$' -and $_ -in $normalizedChanges -and -not [IO.File]::Exists((Join-Path $Root $_))
     })
-    # Non-Compile build inputs and shared data can affect both test hosts.
+    # Shared data/build inputs affect both hosts; other inputs are owned by the evaluated graph.
     $shared = @($normalizedChanges | Where-Object { $_ -match '\.(props|targets|sln|slnx)$|^global\.json$|^game/(data/|style/palette/)' })
     $evaluations = @{}
+    $scopes = @{}
+    $owned = New-Object 'Collections.Generic.HashSet[string]' ([StringComparer]::OrdinalIgnoreCase)
+    foreach ($path in $shared) { $null = $owned.Add($path) }
     foreach ($project in @('game/Campus.Gen.Tests.csproj','game/Campus.Tests.csproj')) {
-        $scope = Get-UESTCG2CompileScope $Root $project $Configuration $evaluations
+        $scopes[$project] = Get-UESTCG2CompileScope $Root $project $Configuration $evaluations
+        foreach ($path in $scopes[$project].InputPaths) { $null = $owned.Add($path) }
+    }
+    $unmapped = @($normalizedChanges | Where-Object { $_ -match '^game/' -and -not $owned.Contains($_) -and $_ -notin $removedSources })
+    foreach ($project in @('game/Campus.Gen.Tests.csproj','game/Campus.Tests.csproj')) {
+        $scope = $scopes[$project]
         $reasons = New-Object 'Collections.Generic.List[string]'
         if ($ForceAll) { $reasons.Add('full G2 selection') }
         foreach ($path in $normalizedChanges) {
@@ -122,6 +164,11 @@ function Get-UESTCG2ProjectSelection {
             if ($scope.DependencyPaths.Contains($path)) { $reasons.Add("Referenced production project/source changed: $path") }
         }
         foreach ($path in $shared) { $reasons.Add("Shared dependency/project changed: $path") }
+        foreach ($path in $normalizedChanges) {
+            if ($scope.InputPaths.Contains($path) -and $path -notin @($scope.CompileFiles.Path)) {
+                $reasons.Add("Test host input changed: $path")
+            }
+        }
         $compileFiles = @($scope.CompileFiles)
         foreach ($path in $removedSources) {
             if ($path -notin @($compileFiles.Path) -and -not $scope.DependencyPaths.Contains($path)) {
@@ -156,7 +203,7 @@ function Get-UESTCG2ProjectSelection {
         }
         [pscustomobject]@{ Name=[IO.Path]::GetFileNameWithoutExtension($project); Project=$project;
             Selected=($allTests -or $classes.Count -gt 0); Reasons=@($reasons | Sort-Object -Unique); Filter=$filter;
-            CompileFileCount=$compileFiles.Count;
+            UnmappedRuntimeChanges=$unmapped; CompileFileCount=$compileFiles.Count;
             HasCompileFiles=($compileFiles.Count -gt 0) }
     }
 }
@@ -287,6 +334,9 @@ $g2Selection = if ($selected.Contains('G2')) { @(Get-UESTCG2ProjectSelection $ro
 $planObject['G2Selection'] = $g2Selection
 $selectionIncomplete = @(
     if ($runtimeChanges.Count -and $selected.Count -eq 0) { 'Runtime changes selected no gates.' }
+    foreach ($path in @($g2Selection | ForEach-Object { $_.UnmappedRuntimeChanges } | Sort-Object -Unique)) {
+        "Game runtime input is not owned by any evaluated G2 host: $path"
+    }
     foreach ($selection in @($g2Selection | Where-Object { $_.Selected -and -not $_.HasCompileFiles })) {
         "G2 selected project has no evaluated Compile items: $($selection.Project)"
     }
@@ -306,8 +356,8 @@ $g2TrxPaths = New-Object 'Collections.Generic.List[string]'
 $sourcePreflight = $false
 $gamePrepared = $false
 $gamePreparation = New-UESTCLaunchTiming
-if ($runtimeChanges.Count -and $selected.Count -eq 0) {
-    $results.Add([pscustomobject]@{ Gate='Selection'; Status='Incomplete'; Scope=$scope; Detail='Runtime changes selected no gates.' })
+if ($selectionIncomplete.Count) {
+    $results.Add([pscustomobject]@{ Gate='Selection'; Status='Incomplete'; Scope=$scope; Detail=($selectionIncomplete -join '; ') })
 }
 
 function Invoke-GateProcess {

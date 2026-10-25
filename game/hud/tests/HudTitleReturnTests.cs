@@ -50,7 +50,7 @@ public sealed class HudTitleReturnTests
         var hud = new HudRoot();
         try
         {
-            hud.Bind(HudLifetimeTests.Dependencies(settings, model, new MotionPolicy(settings), world, view, flow, router, audio, saves, maps));
+            hud.Bind(HudTestSupport.Dependencies(settings, model, new MotionPolicy(settings), world, view, flow, router, audio, saves, maps));
             parent.AddChild(hud);
             var toast = hud.HintHost.GetChildren().OfType<Toast>().Single();
             flow.SetState(AppState.Leaving);

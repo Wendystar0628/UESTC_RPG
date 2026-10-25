@@ -25,8 +25,8 @@ public sealed class PlantingTests
     {
         foreach (var gap in new[] { 6f, 8f, 12f })
         {
-            var world = PavementTests.Fixture(Group("a", -80, -65), Group("b", -65 + gap, -45 + gap));
-            var trees = PavementTests.PlantFixture(world).Trees.Where(t => t.Source == PlantSource.SportWall).ToArray();
+            var world = VegetationTestSupport.Fixture(Group("a", -80, -65), Group("b", -65 + gap, -45 + gap));
+            var trees = VegetationTestSupport.PlantFixture(world).Trees.Where(t => t.Source == PlantSource.SportWall).ToArray();
             if (trees.Length == 0 || trees.Any(t => t.Species.Id != "metaseq" || t.Species.Deciduous == false))
                 throw new InvalidOperationException("sport walls must use the deciduous metasequoia pipeline");
             var points = trees.Select(t => Vector2.Transform(new(t.Position.X, t.Position.Z), Matrix3x2.CreateRotation(-0.3f))).ToArray();
@@ -75,7 +75,7 @@ public sealed class PlantingTests
             {"id":"design:fixture-court","kind":"sport","props":{"sportGroup":"design:fixture-wall-group"},
              "geometry":{"type":"polygon","rings":{"outer":[[-80,-60],[-50,-60],[-50,-30],[-80,-30]],"holes":[]}}}
             """;
-        var baseline = PavementTests.PlantFixture(PavementTests.Fixture(group, court)).Trees.Where(t => t.Source == PlantSource.SportWall).ToArray();
+        var baseline = VegetationTestSupport.PlantFixture(VegetationTestSupport.Fixture(group, court)).Trees.Where(t => t.Source == PlantSource.SportWall).ToArray();
         var target = baseline.First();
         var x = target.Position.X;
         var z = target.Position.Z;
@@ -92,15 +92,15 @@ public sealed class PlantingTests
                 id = "fixture:source:way:4", kind = "road", props = new { highway = "residential", width = 2 },
                 geometry = new { type = "polyline", line = new { points = new[] { new[] { x - 5, z }, new[] { x + 5, z } } } }
             });
-            var layout = PavementTests.PlantFixture(PavementTests.Fixture(group, court, obstacle));
+            var layout = VegetationTestSupport.PlantFixture(VegetationTestSupport.Fixture(group, court, obstacle));
             var kept = layout.Trees.Where(t => t.Source == PlantSource.SportWall).ToArray();
             var keys = kept.Select(t => t.Key).ToHashSet(StringComparer.Ordinal);
             if (keys.Contains(target.Key))
                 throw new InvalidOperationException($"{kind}: a blocked wall trunk stayed");
-            if (!PavementTests.SameRecords(baseline.Where(t => keys.Contains(t.Key)), kept))
+            if (!VegetationTestSupport.SameRecords(baseline.Where(t => keys.Contains(t.Key)), kept))
                 throw new InvalidOperationException($"{kind}: another candidate changed identity or order");
             if (kind == "pavement" && (!layout.Avoided.Any(a => a.Tree.Key == target.Key) ||
-                !PavementTests.SameRecords(baseline, layout.BeforeGivingWay().Where(t => t.Source == PlantSource.SportWall))))
+                !VegetationTestSupport.SameRecords(baseline, layout.BeforeGivingWay().Where(t => t.Source == PlantSource.SportWall))))
                 throw new InvalidOperationException("wall pavement avoidance lost the original planting order");
         }
     }
@@ -110,7 +110,7 @@ public sealed class PlantingTests
         var root = RepositoryFixture.Root;
         var species = SpeciesTable.Parse(File.ReadAllBytes(Path.Combine(root, "game", "data", "vegetation", "species.json")));
         var rules = PlantingRules.Parse(RealMapFixture.ReadFiles()[VegetationInputs.PlantingKey].Span, species);
-        return (PavementTests.World(), species, rules);
+        return (VegetationTestSupport.World(), species, rules);
     }
 
     [TestCase, TestCategory(TestReason.Contract)]
@@ -118,7 +118,7 @@ public sealed class PlantingTests
     public void TheCampusIsPlantedAndTheAvenueHasOneRowEachSide()
     {
         var (world, species, rules) = Data.Value;
-        var a = PavementTests.WorldLayout.Value;
+        var a = VegetationTestSupport.WorldLayout.Value;
         var b = Planting.Build(world, species, rules, 1u);
         if (!a.Trees.Select(t => (t.Key, t.Position, t.Variant, t.Species.Id)).SequenceEqual(b.Trees.Select(t => (t.Key, t.Position, t.Variant, t.Species.Id))))
             throw new InvalidOperationException("two builds differ");
@@ -143,22 +143,22 @@ public sealed class PlantingTests
     [TestCase, TestCategory(TestReason.Contract)]
     public void EditingADistantGreenParcelKeepsLocalTrees()
     {
-        var original = PavementTests.FixtureLayout.Value.BeforeGivingWay();
+        var original = VegetationTestSupport.FixtureLayout.Value.BeforeGivingWay();
         if (!original.Any(t => t.Source == PlantSource.Grove)) throw new InvalidOperationException("the local parcel has no grove trees");
         var keys = original.Select(t => t.Key).ToHashSet(StringComparer.Ordinal);
-        var small = PavementTests.PlantFixture(PavementTests.Fixture(RemoteGreen(-75f))).BeforeGivingWay();
-        var enlarged = PavementTests.PlantFixture(PavementTests.Fixture(RemoteGreen(-50f))).BeforeGivingWay();
+        var small = VegetationTestSupport.PlantFixture(VegetationTestSupport.Fixture(RemoteGreen(-75f))).BeforeGivingWay();
+        var enlarged = VegetationTestSupport.PlantFixture(VegetationTestSupport.Fixture(RemoteGreen(-50f))).BeforeGivingWay();
         if (!small.Any(t => !keys.Contains(t.Key)) || !enlarged.Any(t => !keys.Contains(t.Key)))
             throw new InvalidOperationException("the distant parcel has no grove trees");
-        if (!PavementTests.SameRecords(original, small.Where(t => keys.Contains(t.Key))) ||
-            !PavementTests.SameRecords(original, enlarged.Where(t => keys.Contains(t.Key))))
+        if (!VegetationTestSupport.SameRecords(original, small.Where(t => keys.Contains(t.Key))) ||
+            !VegetationTestSupport.SameRecords(original, enlarged.Where(t => keys.Contains(t.Key))))
             throw new InvalidOperationException("a distant green edit changed a local tree or its order");
-        if (PavementTests.SameRecords(small.Where(t => !keys.Contains(t.Key)), enlarged.Where(t => !keys.Contains(t.Key))))
+        if (VegetationTestSupport.SameRecords(small.Where(t => !keys.Contains(t.Key)), enlarged.Where(t => !keys.Contains(t.Key))))
             throw new InvalidOperationException("enlarging the distant parcel did not exercise a planting change");
 
         static string RemoteGreen(float east) =>
             "{\"id\":\"design:fixture-remote-green\",\"kind\":\"green\",\"geometry\":{\"type\":\"polygon\",\"rings\":{\"outer\":[[-95,-70],[" +
-            PavementTests.F(east) + ",-70],[" + PavementTests.F(east) + ",70],[-95,70]],\"holes\":[]}},\"note\":\"Fixture: a distant green parcel.\"}";
+            VegetationTestSupport.F(east) + ",-70],[" + VegetationTestSupport.F(east) + ",70],[-95,70]],\"holes\":[]}},\"note\":\"Fixture: a distant green parcel.\"}";
     }
 
     [TestCase, TestCategory(TestReason.Contract)]
@@ -168,7 +168,7 @@ public sealed class PlantingTests
         // WLD-VEGETATION: ginkgo only on the avenue (with its OSM street trees), beside the main building and at the
         // student centre; never spread elsewhere.
         var (world, _, rules) = Data.Value;
-        var layout = PavementTests.WorldLayout.Value;
+        var layout = VegetationTestSupport.WorldLayout.Value;
         var allowed = rules.Groves.Areas.Where(a => a.Mix.Any(m => m.Species == "ginkgo"))
             .Select(a => (a.Radius, Features: world.Features.Values.Where(f => f.Name == a.Name).ToList())).ToList();
         foreach (var t in layout.Trees.Where(t => t.Species.Id == "ginkgo" && t.Source == PlantSource.Grove))
@@ -183,7 +183,7 @@ public sealed class PlantingTests
     public void TrunksKeepOffBuildingsWaterAndRoads()
     {
         var world = Data.Value.World;
-        var layout = PavementTests.WorldLayout.Value;
+        var layout = VegetationTestSupport.WorldLayout.Value;
         var blocking = world.Features.Values.SelectMany(f => new[] { "building", "water", "sport", "parking" }
             .SelectMany(kind => Parts(f, kind))).SelectMany(p => p.Geometry switch
             {
@@ -209,8 +209,8 @@ public sealed class PlantingTests
         // WLD-TERRAIN: y = HeightAt(centre); no tree where the grade exceeds 25%. A tilted test terrain with one steep band,
         // judged on the exclusive fixture (a local rule: the real campus is planted elsewhere).
         var terrain = TiltedTerrain.Create();
-        var layout = Planting.Build(new FakeWorld(PavementTests.FixtureWorld.Value) { Terrain = terrain }, PavementTests.Data.Species, PavementTests.FixtureRules, 1u);
-        var flat = PavementTests.FixtureLayout.Value;
+        var layout = Planting.Build(new FakeWorld(VegetationTestSupport.FixtureWorld.Value) { Terrain = terrain }, VegetationTestSupport.Data.Species, VegetationTestSupport.FixtureRules, 1u);
+        var flat = VegetationTestSupport.FixtureLayout.Value;
         foreach (var t in layout.Trees)
         {
             if (MathF.Abs(t.Position.Y - terrain.HeightAt(t.Position.X, t.Position.Z)) > TestTolerance.Position) throw new InvalidOperationException($"{t.Key} floats");
@@ -224,7 +224,7 @@ public sealed class PlantingTests
     public void TrunkCollidersFollowTheTrees()
     {
         // Judged on the exclusive fixture's trees over flat ground: the colliders follow any layout.
-        var layout = PavementTests.FixtureLayout.Value;
+        var layout = VegetationTestSupport.FixtureLayout.Value;
         var terrain = FlatTerrain.Default;
         var tree = layout.Trees.First(t => t.Source == PlantSource.Road);
         var tile = TileGrid.At(tree.Position);
@@ -255,7 +255,7 @@ public sealed class PlantingTests
     public void LeavesFallUnderTheCrownsAndCarpetTheAvenue()
     {
         var (world, species, rules) = Data.Value;
-        var layout = PavementTests.WorldLayout.Value;
+        var layout = VegetationTestSupport.WorldLayout.Value;
         var rect = new MapRect(world.Boundary.Outer.Aggregate(new Vector2(float.MaxValue), Vector2.Min),
             world.Boundary.Outer.Aggregate(new Vector2(float.MinValue), Vector2.Max));
         const float step = 1f;

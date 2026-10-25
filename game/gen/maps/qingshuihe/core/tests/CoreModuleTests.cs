@@ -14,6 +14,7 @@ using Campus.Tests;
 namespace Campus.Gen.Maps.Qingshuihe.Core.Tests;
 
 using static GdUnit4.Assertions;
+using static Campus.Gen.Maps.Qingshuihe.Core.Tests.CoreTestSupport;
 
 [TestSuite]
 public sealed class CoreModuleTests
@@ -356,22 +357,9 @@ public sealed class CoreModuleTests
     private static Vector3 P(GeometryBundle b, int i) => new(b.Position[3 * i], b.Position[3 * i + 1], b.Position[3 * i + 2]);
     private static Vector3 N(GeometryBundle b, int i) => new(b.Normal[3 * i], b.Normal[3 * i + 1], b.Normal[3 * i + 2]);
 
-    internal static BuildContext Context(IWorldModel world, PaletteCatalog? palette = null) =>
-        Campus.Tests.RealMapFixture.ZoneContext(new CoreModule(), world, palette, partLods: PartLodFixture.Catalog);
-
     /// <summary>A sunken disc at <paramref name="floor"/> out to <paramref name="radius"/>, rising at <paramref name="grade"/> back to 0.</summary>
     private static FormulaTerrain BowlTerrain(Vector2 centre, float radius, float floor, float grade) =>
         new((x, z) => MathF.Min(0f, floor + grade * MathF.Max(0f, Vector2.Distance(new(x, z), centre) - radius)));
-    internal static Vector2 Anchor(Campus.Gen.Sites.ZoneSite site) => site switch
-    {
-        TimePlaza value => value.Anchor,
-        Sundial value => value.Anchor,
-        Library.LibraryShell value => value.Anchor,
-        Entrance.GrandStair value => value.Anchor,
-        Museum.MuseumShell value => value.Anchor,
-        Annex.AnnexShell value => value.Anchor,
-        Annex.QuietGarden value => value.Anchor,
-        _ => throw new ArgumentOutOfRangeException(nameof(site)),
-    };
+
 
 }

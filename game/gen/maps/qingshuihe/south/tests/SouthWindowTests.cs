@@ -61,14 +61,13 @@ public sealed class SouthWindowTests
         var claimed = module.Claims.OfType<FeatureClaim>().Where(c => (c.Aspects & Aspects.Facade) != 0).Select(c => c.Feature).ToHashSet();
         foreach (var (name, view) in new[] { ("loaded", world), ("envelope", (IWorldModel)FakeWorld.Enveloped(world)) })
         {
-            string? Owner(FeatureId f, Aspects a) => claimed.Contains(f) ? "zone.south" : null;
-            var prepass = new BuildContext { CodeHash = "fixture", WindowNumbering = new((RealMapFixture.Entry().Descriptor).Id, new string('0', 64), []), SourceInputs = RealMapFixture.WindowInputs(RealMapFixture.Entry().Descriptor.Id), Catalog = Campus.Contracts.Tests.PaletteFixture.Catalog, World = view, Map = RealMapFixture.Entry().Descriptor, WorldSeed = 1, ClaimedBy = Owner };
-            var layouts = module.DescribeWindowLayouts(view, 1);
-            var snapshot = new global::Campus.Gen.Buildings.BuildingsModule().PrepareWindowNumbering(prepass, layouts);
+            var context = RealMapFixture.ZoneContext(module, view);
+            var layouts = module.DescribeWindowLayouts(view, context.WorldSeed);
+            var snapshot = context.WindowNumbering;
             var south = snapshot.Allocations.Where(a => claimed.Contains(a.Feature)).ToArray();
             AssertThat(south.Length == layouts.Sum(l => l.Grids.Count) && south.All(a => a.Columns > 0 && a.Rows > 0)).OverrideFailureMessage($"{name}: every south grid is allocated with cells ({south.Length} of {layouts.Sum(l => l.Grids.Count)})").IsTrue();
             AssertThat(snapshot.WindowCount <= WindowNumberingSnapshot.Capacity).OverrideFailureMessage($"{name}: the table fits ({snapshot.WindowCount})").IsTrue();
-            var metadata = module.DescribeWindows(new BuildContext { CodeHash = "fixture", Catalog = Campus.Contracts.Tests.PaletteFixture.Catalog, World = view, Map = RealMapFixture.Entry().Descriptor, WorldSeed = 1, ClaimedBy = Owner, WindowNumbering = snapshot });
+            var metadata = module.DescribeWindows(context);
             var ids = metadata.Windows.Select(w => w.Id).Concat(metadata.Facades.SelectMany(f => Enumerable.Range(0, f.Rows * f.Columns)
                 .Where(cell => !f.Skip.Contains(cell)).Select(cell => f.BaseId + cell / f.Columns * f.TotalColumns + f.ColumnStart + cell % f.Columns))).ToArray();
             AssertThat(ids.Length > 0 && ids.All(id => south.Any(a => id >= a.BaseId && id < a.BaseId + a.Count))).OverrideFailureMessage($"{name}: the zone's windows lie in its own blocks").IsTrue();
@@ -112,18 +111,8 @@ public sealed class SouthWindowTests
     {
         var world = RealMapFixture.Load().World;
         var module = new SouthModule();
-        // A stand-in for game/gen/buildings/'s allocation: the declared grids in canonical order after a block that shifts every base.
-        var specs = module.DescribeWindowLayouts(world, 1).SelectMany(l => l.Grids.Select(g => (l.Feature, g)))
-            .Prepend((new FeatureId("a-earlier"), new WindowGridSpec("block", 37, 3)))
-            .OrderBy(p => p.Item1.Value, StringComparer.Ordinal).ThenBy(p => p.Item2.Key, StringComparer.Ordinal);
-        var allocations = new List<WindowAllocation>();
-        var next = 0;
-        foreach (var (feature, grid) in specs)
-        {
-            allocations.Add(new(feature, grid.Key, next, grid.Columns, grid.Rows));
-            next += grid.Columns * grid.Rows;
-        }
-        var ctx = new BuildContext { CodeHash = "fixture", Catalog = Campus.Contracts.Tests.PaletteFixture.Catalog, World = world, Map = RealMapFixture.Entry().Descriptor, WorldSeed = 1, WindowNumbering = new(RealMapFixture.Entry().Descriptor.Id, new string('a', 64), allocations) };
+        var ctx = RealMapFixture.ZoneContext(module, world);
+        var allocations = ctx.WindowNumbering.Allocations;
         var threwWithoutSnapshot = false;
         try { module.DescribeWindows(RealMapFixture.ZoneContext(module, withWindowNumbering: false)); }
         catch (InvalidOperationException) { threwWithoutSnapshot = true; }
@@ -137,7 +126,7 @@ public sealed class SouthWindowTests
                     if (!f.Skip.Contains(r * f.Columns + c)) declared.Add(f.BaseId + r * f.TotalColumns + f.ColumnStart + c);
         declared.AddRange(metadata.Windows.Select(w => w.Id));
         AssertThat(declared.Count == declared.Distinct().Count()).OverrideFailureMessage("every window is declared once").IsTrue();
-        AssertThat(declared.All(id => allocations.Any(a => id >= a.BaseId && id < a.BaseId + a.Count && a.Feature.Value != "a-earlier"))).OverrideFailureMessage("declared IDs lie in the zone's blocks").IsTrue();
+        AssertThat(declared.All(id => allocations.Any(a => id >= a.BaseId && id < a.BaseId + a.Count))).OverrideFailureMessage("declared IDs lie in the zone's blocks").IsTrue();
 
         HashSet<int> Glass(LodLevel lod)
         {

@@ -150,9 +150,9 @@ public sealed class VegetationInputsTests
         var map = new Dictionary<string, ReadOnlyMemory<byte>>(StringComparer.Ordinal);
         if (withPlanting)
             map[VegetationInputs.PlantingKey] = RealMapFixture.ReadFiles()[VegetationInputs.PlantingKey];
-        return new BuildContext { CodeHash = "fixture", WindowNumbering = new(new MapId("fixture"), new string('0', 64), []), World = withPlanting ? PavementTests.World() : new FakeWorld(), Map = null!, WorldSeed = 1u, Catalog = Catalog, GlobalInputs = global, SourceInputs = BuildInputSnapshot.Freeze(map, "fixture").Entries };
+        return new BuildContext { CodeHash = "fixture", WindowNumbering = new(new MapId("fixture"), new string('0', 64), []), World = withPlanting ? VegetationTestSupport.World() : new FakeWorld(), Map = null!, WorldSeed = 1u, Catalog = Catalog, GlobalInputs = global, SourceInputs = BuildInputSnapshot.Freeze(map, "fixture").Entries };
     }
 
-    private static PaletteCatalog Catalog => MotherModelTests.Palette;
+    private static PaletteCatalog Catalog => VegetationTestSupport.Palette;
 
 }

@@ -17,7 +17,7 @@ public sealed class PerformanceHardwareRegressionTests
     [TestCase, TestCategory(TestReason.Regression), TestCategory("NativeRender"), RequireGodotRuntime]
     public async Task ManifestUsesRealWindowScaleAndTheSharedEnumConverter()
     {
-        string root = PerformanceRecordingContractTests.TemporaryDirectory();
+        string root = PerformanceTestSupport.TemporaryDirectory();
         PerfRecordingSession? session = null;
         try
         {

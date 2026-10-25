@@ -133,3 +133,10 @@ internal class TestSaveService : ISaveService
     public virtual Task<DeleteResult> DeleteEntry(SlotId slot, ulong gen) => throw new InvalidOperationException("Unexpected DeleteEntry.");
     public virtual Task<DeleteResult> DeleteSlot(SlotId slot) => throw new InvalidOperationException("Unexpected DeleteSlot.");
 }
+
+/// <summary>Records the original failures handed to the application failure receiver.</summary>
+internal sealed class TestAppFailure : IAppFailure
+{
+    public List<Exception> Errors { get; } = [];
+    public void Report(Exception error) => Errors.Add(error);
+}

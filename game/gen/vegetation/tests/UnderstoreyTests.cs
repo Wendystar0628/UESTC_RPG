@@ -22,14 +22,14 @@ public sealed class UnderstoreyTests
     [TestCategory("Slow")]
     public void NewSourcesComeLastAndAreStable()
     {
-        var layout = PavementTests.WorldLayout.Value;
+        var layout = VegetationTestSupport.WorldLayout.Value;
         var all = layout.BeforeGivingWay();
         var first = all.TakeWhile(t => t.Source <= PlantSource.Grove).Count();
         if (all.Skip(first).Any(t => t.Source <= PlantSource.Grove)) throw new InvalidOperationException("a rule tree follows a pit or design tree");
         var added = all.Skip(first).ToList();
         if (layout.Avoided.Any(a => a.Tree.Source > PlantSource.Grove)) throw new InvalidOperationException("a pit or design tree gave way");
-        var again = PavementTests.Plant(PavementTests.World()).Trees.Where(t => t.Source > PlantSource.Grove).ToList();
-        if (!PavementTests.SameRecords(again, added)) throw new InvalidOperationException("the new sources differ between two builds");
+        var again = VegetationTestSupport.Plant(VegetationTestSupport.World()).Trees.Where(t => t.Source > PlantSource.Grove).ToList();
+        if (!VegetationTestSupport.SameRecords(again, added)) throw new InvalidOperationException("the new sources differ between two builds");
         // Pit trees come before design trees; repeatability above also checks their complete order.
         var firstDesign = added.FindIndex(t => t.Source == PlantSource.Design);
         if (firstDesign >= 0 && added.Skip(firstDesign).Any(t => t.Source == PlantSource.Pit)) throw new InvalidOperationException("a pit tree follows a design tree");
@@ -38,14 +38,14 @@ public sealed class UnderstoreyTests
     [TestCase, TestCategory(TestReason.Contract)]
     public void AddingSourcesPreservesExistingRecordsAndOrder()
     {
-        var original = PavementTests.FixtureLayout.Value;
+        var original = VegetationTestSupport.FixtureLayout.Value;
         var first = new[] { Pit("design:fixture-held-pit", -70f, -20f), DesignTree("design:fixture-tree", -70f, 20f) };
-        var before = PavementTests.PlantFixture(PavementTests.Fixture(first));
-        var after = PavementTests.PlantFixture(PavementTests.Fixture(first.Concat(
+        var before = VegetationTestSupport.PlantFixture(VegetationTestSupport.Fixture(first));
+        var after = VegetationTestSupport.PlantFixture(VegetationTestSupport.Fixture(first.Concat(
             [Pit("design:fixture-added-pit", -70f, -50f), DesignTree("design:fixture-added-tree", -70f, 50f)]).ToArray()));
         foreach (var layout in new[] { before, after })
         {
-            if (!PavementTests.SameRecords(PavementTests.Original(layout.BeforeGivingWay()), original.BeforeGivingWay()))
+            if (!VegetationTestSupport.SameRecords(VegetationTestSupport.Original(layout.BeforeGivingWay()), original.BeforeGivingWay()))
                 throw new InvalidOperationException("a new source moved or reordered an original tree");
             var all = layout.BeforeGivingWay();
             var newSources = all.SkipWhile(t => t.Source <= PlantSource.Grove).Select(t => t.Source).ToList();
@@ -55,7 +55,7 @@ public sealed class UnderstoreyTests
         }
         var existing = before.Trees.Select(t => t.Key).ToHashSet(StringComparer.Ordinal);
         if (before.Count(PlantSource.Pit) != 1 || before.Count(PlantSource.Design) != 1 || after.Trees.Count != before.Trees.Count + 2 ||
-            !PavementTests.SameRecords(before.Trees, after.Trees.Where(t => existing.Contains(t.Key))))
+            !VegetationTestSupport.SameRecords(before.Trees, after.Trees.Where(t => existing.Contains(t.Key))))
             throw new InvalidOperationException("adding pit and design trees changed existing records or their order");
     }
 
@@ -63,13 +63,13 @@ public sealed class UnderstoreyTests
     [TestCategory("Slow")]
     public void TheAuthoredCoreCamphorsArePlanted()
     {
-        var world = PavementTests.World();
+        var world = VegetationTestSupport.World();
         var ids = world.Features.Values.Where(feature => feature.Zone == new ZoneId("core") &&
             feature.Kind.Value == "tree" && feature.TryText("species") == "camphor").Select(feature => feature.Id.Value).ToArray();
         foreach (var id in ids)
         {
-            var tree = PavementTests.WorldLayout.Value.Trees.SingleOrDefault(t => t.Key == id) ?? throw new InvalidOperationException($"{id} is not planted");
-            var feature = PavementTests.World().Features.Values.Single(f => f.Id.Value == id);
+            var tree = VegetationTestSupport.WorldLayout.Value.Trees.SingleOrDefault(t => t.Key == id) ?? throw new InvalidOperationException($"{id} is not planted");
+            var feature = VegetationTestSupport.World().Features.Values.Single(f => f.Id.Value == id);
             var at = ((PointGeometry)feature.Geometry).Position;
             if (tree.Source != PlantSource.Design || tree.Species.Id != "camphor" || MathF.Abs(tree.Height - feature.Height!.Value) > TestTolerance.Position ||
                 MathF.Abs(tree.Position.X - at.X) > TestTolerance.Position || MathF.Abs(tree.Position.Z - at.Z) > TestTolerance.Position)
@@ -81,17 +81,17 @@ public sealed class UnderstoreyTests
     public void APitThatHoldsATreeGetsNoOther()
     {
         // Exclusive fixture: one occupied square pit and one empty pit well away from every original tree.
-        var bare = PavementTests.FixtureLayout.Value;
+        var bare = VegetationTestSupport.FixtureLayout.Value;
         var held = bare.Trees.First(t => t.Source == PlantSource.Grove);
         var empty = new Vector2(-70f, -70f);
-        var world = PavementTests.Fixture(Pit("design:fixture-held-pit", held.Position.X, held.Position.Z),
+        var world = VegetationTestSupport.Fixture(Pit("design:fixture-held-pit", held.Position.X, held.Position.Z),
             Pit("design:fixture-empty-pit", empty.X, empty.Y));
-        var layout = PavementTests.PlantFixture(world);
+        var layout = VegetationTestSupport.PlantFixture(world);
         var pitTrees = layout.Trees.Where(t => t.Source == PlantSource.Pit).ToList();
         if (layout.PitsHeld != 1 || pitTrees.Count != 1 || pitTrees[0].Key != "design:fixture-empty-pit" ||
             Vector2.Distance(new(pitTrees[0].Position.X, pitTrees[0].Position.Z), empty) > TestTolerance.Position)
             throw new InvalidOperationException($"{layout.PitsHeld} pits held, pit trees: {string.Join(", ", pitTrees.Select(t => t.Key))}");
-        if (!PavementTests.SameRecords(PavementTests.Original(layout.Trees), PavementTests.Original(bare.Trees)))
+        if (!VegetationTestSupport.SameRecords(VegetationTestSupport.Original(layout.Trees), VegetationTestSupport.Original(bare.Trees)))
             throw new InvalidOperationException("the pits moved a rule tree");
     }
 
@@ -99,12 +99,12 @@ public sealed class UnderstoreyTests
     [TestCategory("Slow")]
     public void UnderstoreyKeepsOffPavementAndRoads()
     {
-        var world = PavementTests.Fixture(Pit("design:fixture-understorey-pit", -70f, -70f));
-        var species = PavementTests.Data.Species;
-        var rules = PavementTests.FixtureRules;
-        var trees = PavementTests.PlantFixture(world);
+        var world = VegetationTestSupport.Fixture(Pit("design:fixture-understorey-pit", -70f, -70f));
+        var species = VegetationTestSupport.Data.Species;
+        var rules = VegetationTestSupport.FixtureRules;
+        var trees = VegetationTestSupport.PlantFixture(world);
         CheckUnderstorey(world, species, rules, trees, requireKinds: true);
-        CheckUnderstorey(PavementTests.World(), species, PavementTests.Data.Rules, PavementTests.WorldLayout.Value, requireKinds: false);
+        CheckUnderstorey(VegetationTestSupport.World(), species, VegetationTestSupport.Data.Rules, VegetationTestSupport.WorldLayout.Value, requireKinds: false);
     }
 
     private static void CheckUnderstorey(IWorldModel world, SpeciesTable species, PlantingRules rules, PlantingLayout trees, bool requireKinds)
@@ -114,7 +114,7 @@ public sealed class UnderstoreyTests
         {
             if (requireKinds && under.Count(kind) == 0) throw new InvalidOperationException($"no {kind} in the exclusive fixture");
         }
-        var census = PavementTests.Census.Of(world);
+        var census = VegetationTestSupport.Census.Of(world);
         foreach (var p in under.Plants)
         {
             var at = new Vector2(p.Position.X, p.Position.Z);
@@ -141,7 +141,7 @@ public sealed class UnderstoreyTests
     public void UnderstoreyModelsAreClippedBalls()
     {
         // Shrubs and hedge modules are many and small: their mother models are the clipped-ball form.
-        var (species, _) = PavementTests.Data;
+        var (species, _) = VegetationTestSupport.Data;
         foreach (var id in new[] { "photinia", "loropetalum", "boxhedge" })
             if (TreeForms.Get(species.Get(id).Form).Structure != TreeStructure.StemlessClusters) throw new InvalidOperationException($"{id} is not a ball form");
     }
@@ -149,12 +149,12 @@ public sealed class UnderstoreyTests
     // ---------------------------------------------------------------------------------------------------------
 
     private static string DesignTree(string id, float x, float z) =>
-        "{\"id\":\"" + id + "\",\"kind\":\"tree\",\"geometry\":{\"type\":\"point\",\"position\":[" + PavementTests.F(x) + ",0," + PavementTests.F(z) +
+        "{\"id\":\"" + id + "\",\"kind\":\"tree\",\"geometry\":{\"type\":\"point\",\"position\":[" + VegetationTestSupport.F(x) + ",0," + VegetationTestSupport.F(z) +
         "]},\"height\":8,\"props\":{\"planter\":\"" + VegetationModule.ModuleId + "\",\"species\":\"camphor\"},\"note\":\"Fixture: an explicitly planted tree.\"}";
 
     private static string Pit(string id, float x, float z)
     {
-        string F(float v) => PavementTests.F(v);
+        string F(float v) => VegetationTestSupport.F(v);
         var ring = $"[[{F(x - 0.9f)},{F(z - 0.9f)}],[{F(x + 0.9f)},{F(z - 0.9f)}],[{F(x + 0.9f)},{F(z + 0.9f)}],[{F(x - 0.9f)},{F(z + 0.9f)}]]";
         return "{\"id\":\"" + id + "\",\"kind\":\"tree-pit\",\"geometry\":{\"type\":\"polygon\",\"rings\":{\"outer\":" + ring +
             ",\"holes\":[]}},\"height\":0.42,\"props\":{\"plant\":\"tree\",\"perPit\":1,\"size\":1.8},\"note\":\"Fixture: a square tree pit.\"}";

@@ -1,40 +1,21 @@
 using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
 using System.Numerics;
-using System.Text.Json;
 using Campus.Contracts;
 using Campus.Tests;
 using GdUnit4;
+using static Campus.Gen.Vegetation.Tests.VegetationTestSupport;
 
 namespace Campus.Gen.Vegetation.Tests;
 
 [TestSuite]
 public sealed class MotherModelTests
 {
-    private static readonly Lazy<(SpeciesTable Table, PaletteCatalog Palette)> Data = new(Load);
-
-    internal static PaletteCatalog Palette => Data.Value.Palette;
-
-    private static (SpeciesTable, PaletteCatalog) Load()
-    {
-        var root = RepositoryFixture.Root;
-        var table = SpeciesTable.Parse(File.ReadAllBytes(Path.Combine(root, "game", "data", "vegetation", "species.json")));
-        return (table, Campus.Contracts.Tests.PaletteFixture.Catalog);
-    }
-
-    private static readonly ConcurrentDictionary<(string Species, int Variant, VegLevel Level), MotherModel> Mothers = new();
-
-    /// <summary>A mother model built once per species, variant and level; the tests only read it.</summary>
-    internal static MotherModel Mother(SpeciesInfo species, int variant, VegLevel level) =>
-        Mothers.GetOrAdd((species.Id, variant, level), key => MotherModels.Build(species, key.Variant, key.Level, Palette));
-
     [TestCase, TestCategory(TestReason.Contract)]
     public void SpeciesTableCoversTheVegetationDoc()
     {
-        var (table, palette) = Data.Value;
+        var (table, palette) = ModelData.Value;
         if (table.Species.Count == 0) throw new InvalidOperationException($"only {table.Species.Count} species");
         foreach (var s in table.Species)
         {
@@ -54,7 +35,7 @@ public sealed class MotherModelTests
     [TestCase, TestCategory(TestReason.Contract)]
     public void PackedTableCarriesEveryRow()
     {
-        var (table, palette) = Data.Value;
+        var (table, palette) = ModelData.Value;
         var data = table.Pack(palette);
         if (data.Length != SpeciesTable.Width * SpeciesTable.Rows * 4) throw new InvalidOperationException("table size");
         foreach (var s in table.Species)
@@ -75,7 +56,7 @@ public sealed class MotherModelTests
     [TestCategory(TestReason.Contract)]
     public void MothersAreDeterministic()
     {
-        var (table, palette) = Data.Value;
+        var (table, palette) = ModelData.Value;
         foreach (var id in new[] { "ginkgo", "cherry", "camphor", "palm" })
         {
             var a = MotherModels.Build(table.Get(id), 3, VegLevel.L0Plus, palette);
@@ -89,7 +70,7 @@ public sealed class MotherModelTests
     [TestCase, TestCategory(TestReason.Contract), TestCategory("Slow")]
     public void LevelsAreNested()
     {
-        var table = Data.Value.Table;
+        var table = ModelData.Value.Table;
         foreach (var s in table.Species)
             for (var v = 0; v < TreeForms.Variants; v++)
             {
@@ -103,7 +84,7 @@ public sealed class MotherModelTests
     [TestCase, TestCategory(TestReason.Contract)]
     public void LowerLevelCardsArePrefixes()
     {
-        var table = Data.Value.Table;
+        var table = ModelData.Value.Table;
         foreach (var id in new[] { "ginkgo", "osmanthus", "nanmu" })
         {
             var cards = new[] { VegLevel.L0Plus, VegLevel.L0, VegLevel.L1 }
@@ -120,7 +101,7 @@ public sealed class MotherModelTests
     {
         // max-011 23c3: crowns one can stand under carry an underside layer at L0+ and, for card and mixed crowns, its leading
         // share at L0 (a prefix of whole clusters); L1, low crowns and palms carry none. The layer faces down.
-        var table = Data.Value.Table;
+        var table = ModelData.Value.Table;
         foreach (var (id, throughL0) in new[] { ("ginkgo", true), ("camphor", true), ("koelreuteria", false) })
         {
             var s = table.Get(id);
@@ -148,7 +129,7 @@ public sealed class MotherModelTests
     [TestCase, TestCategory(TestReason.Contract)]
     public void CardsHaveBranchAnchorsAndDistinctFacings()
     {
-        var table = Data.Value.Table;
+        var table = ModelData.Value.Table;
         foreach (var s in table.Species.Where(s => s.Deciduous))
         {
             var model = Mother(s, 0, VegLevel.L0Plus);
@@ -166,7 +147,7 @@ public sealed class MotherModelTests
     public void CardsHugTheCrown()
     {
         // max-011: cards sit on the outer masses and reach at most 5% of the crown diameter beyond them; no floating bits.
-        var table = Data.Value.Table;
+        var table = ModelData.Value.Table;
         foreach (var s in table.Species.Where(s => TreeForms.Get(s.Form).Structure != TreeStructure.TerminalHead))
         {
             var model = Mother(s, 0, VegLevel.L0Plus);
@@ -187,7 +168,7 @@ public sealed class MotherModelTests
         // max-011 review ④: cards come 3–5 to a cluster at every level (a level keeps whole clusters), the cards of a
         // cluster share their rank and h2, and the cluster's first card (its centre) sits inside a crown mass (measured on
         // the L0+ masses, the finest outline; lower levels draw the same masses with fewer vertices).
-        var table = Data.Value.Table;
+        var table = ModelData.Value.Table;
         foreach (var s in table.Species.Where(s => TreeForms.Get(s.Form).Structure != TreeStructure.TerminalHead))
             foreach (var level in new[] { VegLevel.L0Plus, VegLevel.L0, VegLevel.L1 })
             {
@@ -216,7 +197,7 @@ public sealed class MotherModelTests
     {
         // max-011: where two masses meet on the outside of the crown, their vertices carry nearly the same normal (the
         // shell's), so masses never shade apart. Hidden vertices deep inside the crown (AO pushed down) are skipped.
-        var table = Data.Value.Table;
+        var table = ModelData.Value.Table;
         foreach (var id in new[] { "ginkgo", "cherry", "camphor", "osmanthus" })
         {
             var model = Mother(table.Get(id), 0, VegLevel.L0);
@@ -240,7 +221,7 @@ public sealed class MotherModelTests
     {
         // max-011: metasequoia and ginkgo crowns showed sky through gaps between masses. Look through the crown at its
         // axis from 12 sides and 10 heights over the middle 80% of the crown: every sight line must meet a mass.
-        var table = Data.Value.Table;
+        var table = ModelData.Value.Table;
         foreach (var id in new[] { "metaseq", "ginkgo" })
             for (var v = 0; v < TreeForms.Variants; v++)
             {
@@ -284,7 +265,7 @@ public sealed class MotherModelTests
     [TestCase, TestCategory(TestReason.Contract)]
     public void TreesStandOnTheirRootsAndCarryTheirCrown()
     {
-        var table = Data.Value.Table;
+        var table = ModelData.Value.Table;
         foreach (var s in table.Species)
         {
             var m = Mother(s, 0, VegLevel.L0);

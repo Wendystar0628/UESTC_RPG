@@ -21,7 +21,7 @@ public sealed class MapRuntimeRuntimeTests
     [RequireGodotRuntime]
     public void FlyCaptureBindsEachPreparedWorldAndRejectsThePreviousWorld()
     {
-        var context = new TestMapContext(BackdropInputsTests.Descriptor());
+        var context = new TestMapContext(TestMapContext.BackdropDescriptor());
         using var fixture = new MapRuntimeFixture(context: context);
         var world = new WorldStateService(new TestWeatherProcess());
         var rig = fixture.Camera;
@@ -64,7 +64,7 @@ public sealed class MapRuntimeRuntimeTests
     [RequireGodotRuntime]
     public void CaptureKeepsArrivalIdentityWhileWalkingViewChanges()
     {
-        var context = new TestMapContext(BackdropInputsTests.Descriptor());
+        var context = new TestMapContext(TestMapContext.BackdropDescriptor());
         using var fixture = new MapRuntimeFixture(context: context);
         var runtime = fixture.Runtime;
         var rig = fixture.Camera;

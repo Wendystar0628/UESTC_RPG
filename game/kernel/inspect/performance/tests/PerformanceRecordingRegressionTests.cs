@@ -66,7 +66,7 @@ public sealed class PerformanceRecordingRegressionTests
     [TestCase, TestCategory(TestReason.Regression)]
     public void UnlockedCrashedPendingSessionsParticipateInAuthorRetention()
     {
-        string root = PerformanceRecordingContractTests.TemporaryDirectory();
+        string root = PerformanceTestSupport.TemporaryDirectory();
         try
         {
             string? oldest = null;
@@ -96,7 +96,7 @@ public sealed class PerformanceRecordingRegressionTests
     [TestCase, TestCategory(TestReason.Regression), RequireGodotRuntime]
     public async Task ThrowingObserversKeepTheRealRecordingAndQueuedStopSuccessful()
     {
-        string root = PerformanceRecordingContractTests.TemporaryDirectory();
+        string root = PerformanceTestSupport.TemporaryDirectory();
         try
         {
             await using var settings = new SettingsStore(Path.Combine(root, "settings.json"));
@@ -170,7 +170,7 @@ public sealed class PerformanceRecordingRegressionTests
     [TestCase, TestCategory(TestReason.Regression), RequireGodotRuntime]
     public async Task ProducerStartupFailureDrainsThroughTheRealRecorderWithFaultingSubscriber()
     {
-        string root = PerformanceRecordingContractTests.TemporaryDirectory();
+        string root = PerformanceTestSupport.TemporaryDirectory();
         try
         {
             await using var settings = new SettingsStore(Path.Combine(root, "settings.json"));
@@ -218,7 +218,7 @@ public sealed class PerformanceRecordingRegressionTests
     [TestCase, TestCategory(TestReason.Regression)]
     public async Task WriterSerializationFailureRetainsItsCauseAndClosesTheRealSession()
     {
-        string root = PerformanceRecordingContractTests.TemporaryDirectory();
+        string root = PerformanceTestSupport.TemporaryDirectory();
         var original = new IOException();
         var dictionary = new PerfFieldDictionary(File.ReadAllText(RepositoryFixture.FilePath("game", "data", "perf-fields.json")));
         var session = new PerfRecordingSession(root, PerfOrigin.Ai, DateTimeOffset.UnixEpoch, dictionary, new JsonObject());

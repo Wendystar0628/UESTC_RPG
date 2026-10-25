@@ -3,6 +3,7 @@ using Campus.Contracts;
 using Campus.Contracts.Perf;
 using Campus.Kernel.Inspect;
 using GdUnit4;
+using static Campus.Tests.PerformanceTestSupport;
 using Environment = System.Environment;
 
 namespace Campus.Tests;
@@ -10,7 +11,6 @@ namespace Campus.Tests;
 [TestSuite]
 public sealed class PerformanceRecordingContractTests
 {
-    private static int _directorySequence;
 
     [TestCase, TestCategory(TestReason.Contract)]
     public async Task AuthorLatestPointsAtRecordingOnlyAfterStartAndAtFormalManifestAfterClose()
@@ -179,7 +179,7 @@ public sealed class PerformanceRecordingContractTests
             long accepted = 0;
             while (producer.TryRow(row)) { accepted++; producer.Flush(); }
             if (accepted == 0 || producer.Dropped != 1) throw new InvalidOperationException("The unread queue did not fill.");
-            var fixture = PerformanceNvmlContractTests.BufferedFastFixture();
+            var fixture = PerformanceTestSupport.BufferedFastFixture();
             long lost = producer.Dropped;
             foreach (var batch in fixture.Batches)
             {
@@ -276,10 +276,5 @@ public sealed class PerformanceRecordingContractTests
     private static PerfFieldDictionary Dictionary() => new(File.ReadAllText(RepositoryFixture.FilePath("game", "data", "perf-fields.json")));
     private static PerfRecordingSession Session(string root, PerfFieldDictionary dictionary) =>
         new(root, PerfOrigin.Ai, new DateTimeOffset(2026, 1, 1, 0, 0, 0, TimeSpan.Zero), dictionary, new JsonObject());
-    internal static string TemporaryDirectory()
-    {
-        string path = Path.Combine(Path.GetTempPath(), $"uestc-perf-{Environment.ProcessId}-{Interlocked.Increment(ref _directorySequence)}");
-        Directory.CreateDirectory(path);
-        return path;
-    }
+
 }

@@ -4,6 +4,7 @@ using Campus.Contracts;
 using Campus.Contracts.Perf;
 using Campus.Kernel.Inspect;
 using GdUnit4;
+using static Campus.Tests.PerformanceTestSupport;
 
 namespace Campus.Tests;
 
@@ -68,25 +69,10 @@ public sealed class PerformanceNvmlContractTests
             throw new InvalidOperationException("Clock regression was hidden or converted to a fabricated sample count.");
     }
 
-    private static NvmlStatus Success() => NvmlStatus.FromCode(NvmlNative.Success);
-    private static NvmlValue<ulong> Reading(ulong value) => new(value, Success());
-    private static NvmlNative.Sample Sample(ulong timestamp, uint value) => new()
-    { TimestampUs = timestamp, Value = new() { UnsignedInt = value } };
-
-    internal static (NvmlIdentity Identity, NvmlFastBatch[] Batches, NvmlSampleCursor[] Cursors) BufferedFastFixture()
-    {
-        NvmlMetric[] metrics = [NvmlMetric.Power, NvmlMetric.GpuUtilization, NvmlMetric.MemoryUtilization];
-        int[] counts = [119, 71, 71];
-        var cursors = metrics.Select(_ => new NvmlSampleCursor()).ToArray();
-        var batches = metrics.Select((metric, index) => cursors[index].Observe(metric, Success(),
-            Enumerable.Range(1, counts[index]).Select(point => Sample((ulong)point * 1_000, 50)).ToArray(), 10, 20)).ToArray();
-        return (new(0, "fixture-gpu", null, Success(), Success(), Success()), batches, cursors);
-    }
-
     [TestCase, TestCategory(TestReason.Regression)]
     public async Task BufferedNativeBatchesDrainEveryRowAndContinueTheirIndependentCursors()
     {
-        string root = PerformanceRecordingContractTests.TemporaryDirectory();
+        string root = PerformanceTestSupport.TemporaryDirectory();
         var dictionary = new PerfFieldDictionary(File.ReadAllText(RepositoryFixture.FilePath("game", "data", "perf-fields.json")));
         var session = new PerfRecordingSession(root, PerfOrigin.Ai, DateTimeOffset.UnixEpoch, dictionary, new());
         try

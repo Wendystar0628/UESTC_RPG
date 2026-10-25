@@ -1,4 +1,5 @@
 using Campus.Gen.Tests.Support;
+using Campus.Kernel.Bake.Tests;
 using static GdUnit4.Assertions;
 using Campus.Gen.BakeInput;
 using System.Numerics;
@@ -250,10 +251,7 @@ public sealed class InteriorProviderScopeTests
     }
 
 
-    [InteriorProvider("fixture.box")]
-    public sealed class FixtureBoxInterior : BoxInteriorProvider
-    {
-    }
+
 
     // Deliberately lacks a registration attribute even though its type is discovered.
     private sealed class UnregisteredInterior : BoxInteriorProvider

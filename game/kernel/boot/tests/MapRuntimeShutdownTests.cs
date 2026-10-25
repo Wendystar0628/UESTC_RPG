@@ -29,7 +29,7 @@ public sealed class MapRuntimeShutdownTests
         var releasing = new InvalidOperationException("data cleanup failure");
         var first = new FirstLifetimeParticipant(order, preparation.Task, stopping);
         var second = new SecondLifetimeParticipant(order);
-        var context = new TestMapContext(BackdropInputsTests.Descriptor() with { Id = new("lifetime-fixture") });
+        var context = new TestMapContext(TestMapContext.BackdropDescriptor() with { Id = new("lifetime-fixture") });
         var registry = new ServiceRegistry();
         registry.Discover([typeof(FirstLifetimeParticipant), typeof(SecondLifetimeParticipant)], _ => "fixture");
         registry.Add(first); registry.Add(second);

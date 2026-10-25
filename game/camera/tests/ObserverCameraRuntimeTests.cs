@@ -18,7 +18,7 @@ public sealed class ObserverCameraRuntimeTests
         var tree = (SceneTree)Engine.GetMainLoop();
         var flow = new TestAppFlow();
         var rules = new TestRuleset(defaultViewMode: ViewMode.Walk);
-        var failure = new HudTaskTests.RecordingFailure();
+        var failure = new TestAppFailure();
         await using var settings = new SettingsStore(Path.Combine(Path.GetTempPath(), Guid.NewGuid() + ".json"));
         KernelServices.Services.Add<IAppFlow>(flow);
         KernelServices.Services.Add<IRuleset>(rules);
@@ -246,7 +246,7 @@ public sealed class ObserverCameraRuntimeTests
             throw new InvalidOperationException("The camera map-mount regression must run on Godot's main thread.");
 
         // Empty inline Spawns is valid when DefaultSpawn names a separate waypoint.
-        var context = FlightBoundsTests.CreateContext();
+        var context = FlightTestSupport.CreateContext();
         var camera = new ObserverCamera();
         try
         {

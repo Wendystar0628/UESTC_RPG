@@ -21,7 +21,7 @@ public sealed class GroundSourcesTests
     public void FaceInputQueriesActualPositionAndKeepsAmbiguousSourcesUnresolved()
     {
         const string plaza = """{"kind":"road","highway":"pedestrian"}""";
-        var world = TestWorld.Of([
+        var world = GroundTestSupport.Of([
             Entity("fixture:plaza-a", "road", plaza, Part("source:a", plaza, Rect(0, 0, 10, 10))),
             Entity("fixture:plaza-b", "road", plaza, Part("source:b", plaza, Rect(8, 0, 18, 10))),
             Entity("fixture:plaza-far", "road", plaza, Part("source:far", plaza, Rect(30, 0, 40, 10)))]);
@@ -41,7 +41,7 @@ public sealed class GroundSourcesTests
         Vector2[] points = [new(0, 20), new(10, 20), new(10, 30)];
         var feature = WorldFeatureFixture.Create("fixture:walk", "road", new PolylineGeometry(new(points)),
             """{"highway":"footway","width":2.5}""");
-        var layout = GroundLayout.Of(TestWorld.Of([feature]));
+        var layout = GroundLayout.Of(GroundTestSupport.Of([feature]));
         var context = new GroundSourceContext(layout.Near(new(0, 0), new(64, 64)), GroundSection.Default, 0f);
         var source = new GroundFaceInput(GroundSurface.Paver, GroundFaceRole.Top, context).SourcesAt(new(5, 20)).Single();
         AssertThat(source.Id == feature.Id && source.DirectionPath!.SequenceEqual(points) && ReferenceEquals(source.DirectionPath, source.Line)).OverrideFailureMessage("The batching input needs the source walk and ordered path, shared rather than copied for every face.").IsTrue();
@@ -73,7 +73,7 @@ public sealed class GroundSourcesTests
         // is a multi-polygon, which the old reader rejected.
         var block = Part("osm:way:1", Building, WithHole(Rect(-20f, -20f, 20f, 20f), Rect(-6f, -6f, 6f, 6f)));
         var annex = Part("osm:way:2", Building, Rect(30f, -5f, 40f, 5f));
-        var world = TestWorld.Of([Entity("test:relation:1", "building", """{"id":"test:relation:1","kind":"building"}""", block, annex)]);
+        var world = GroundTestSupport.Of([Entity("test:relation:1", "building", """{"id":"test:relation:1","kind":"building"}""", block, annex)]);
 
         var (shapes, _) = GroundSources.Read(world);
         AssertThat(shapes.Count == 2 && shapes.All(s => s.Kind == SurfaceKind.Building)).OverrideFailureMessage($"Expected two building footprints, got {shapes.Count}.").IsTrue();
@@ -85,7 +85,7 @@ public sealed class GroundSourcesTests
         AssertThat(Math.Abs((double)(-5.0) - (double)(layout.SignedDistance(SurfaceKind.Building, new(35f, 0f), 50f))) <= TestTolerance.Position).OverrideFailureMessage($"inside the annex: expected {-5.0}, got {layout.SignedDistance(SurfaceKind.Building, new(35f, 0f), 50f)}.").IsTrue();
         AssertThat(Math.Abs((double)(5.0) - (double)(layout.SignedDistance(SurfaceKind.Building, new(25f, 0f), 50f))) <= TestTolerance.Position).OverrideFailureMessage($"gap between the parts stays open: expected {5.0}, got {layout.SignedDistance(SurfaceKind.Building, new(25f, 0f), 50f)}.").IsTrue();
 
-        var masks = GroundMasks.Build(TestWorld.Context(world, 128f));
+        var masks = GroundMasks.Build(GroundTestSupport.Context(world, 128f));
         byte Shelter(float x, float z) { var (px, pz) = masks.Pixel(new(x, z)); return masks.Read(MaskChannel.Shelter, px, pz); }
         AssertThat(Shelter(0.5f, 0.5f) == 255).OverrideFailureMessage("The courtyard is open to rain and snow.").IsTrue();
         AssertThat(Shelter(-13.5f, 0.5f) == 0).OverrideFailureMessage("Under the block is sheltered.").IsTrue();
@@ -94,7 +94,7 @@ public sealed class GroundSourcesTests
 
         foreach (var lod in new[] { LodLevel.L0, LodLevel.L2 })
         {
-            var tile = new GroundModule().Build(TestWorld.Context(world), new TileKey(0, 0), lod);
+            var tile = new GroundModule().Build(GroundTestSupport.Context(world), new TileKey(0, 0), lod);
             var centres = new List<Vector2>();
             foreach (var mesh in tile.Meshes)
             {
@@ -130,7 +130,7 @@ public sealed class GroundSourcesTests
             Part("osm:way:16", """{"kind":"road","highway":"residential"}""", Rect(-30f, 40f, 30f, 46f)),
             Part("osm:way:17", """{"kind":"road","highway":"footway"}""", Rect(-30f, 50f, 30f, 52f)),
         };
-        var world = TestWorld.Of([Entity("test:way:1", "poi", """{"id":"test:way:1","kind":"poi"}""", parts)]);
+        var world = GroundTestSupport.Of([Entity("test:way:1", "poi", """{"id":"test:way:1","kind":"poi"}""", parts)]);
 
         var (shapes, _) = GroundSources.Read(world);
         var kinds = shapes.GroupBy(s => s.Kind).ToDictionary(g => g.Key, g => g.Count());
@@ -151,10 +151,10 @@ public sealed class GroundSourcesTests
     [TestCase, TestCategory(TestReason.Contract)]
     public void SingleSourceFeaturesReadTheSameWithOrWithoutParts()
     {
-        foreach (var authored in new[] { TestWorld.Street(), TestWorld.Junction() })
+        foreach (var authored in new[] { GroundTestSupport.Street(), GroundTestSupport.Junction() })
         {
             // The same features, each wrapped as its only part with the same props: the old single-source path.
-            var wrapped = TestWorld.Of(authored.Features.Values.Select(f => f with
+            var wrapped = GroundTestSupport.Of(authored.Features.Values.Select(f => f with
             {
                 Parts = [new WorldFeaturePart(f.Id.Value, f.Geometry, f.Height, f.Storeys) { Props = f.Props }]
             }), authored.Network);
@@ -169,8 +169,8 @@ public sealed class GroundSourcesTests
                 AssertThat((x.Rings is null && y.Rings is null) ||
                     (x.Rings!.Length == y.Rings!.Length && x.Rings.Zip(y.Rings).All(r => r.First.SequenceEqual(r.Second)))).OverrideFailureMessage($"Rings {k} differ.").IsTrue();
             }
-            var ground = new GroundModule().Build(TestWorld.Context(authored), new TileKey(0, 0), LodLevel.L0);
-            var again = new GroundModule().Build(TestWorld.Context(wrapped), new TileKey(0, 0), LodLevel.L0);
+            var ground = new GroundModule().Build(GroundTestSupport.Context(authored), new TileKey(0, 0), LodLevel.L0);
+            var again = new GroundModule().Build(GroundTestSupport.Context(wrapped), new TileKey(0, 0), LodLevel.L0);
             AssertThat(ground.Meshes.Count == again.Meshes.Count).OverrideFailureMessage("Bundle count differs.").IsTrue();
             for (var k = 0; k < ground.Meshes.Count; k++)
                 AssertThat(ground.Meshes[k].Position.SequenceEqual(again.Meshes[k].Position) &&
@@ -182,7 +182,7 @@ public sealed class GroundSourcesTests
     public void UnsupportedGroundGeometryIsRejected()
     {
         var odd = new Unsupported();
-        var withParts = TestWorld.Of([Entity("test:relation:7", "building", Building,
+        var withParts = GroundTestSupport.Of([Entity("test:relation:7", "building", Building,
             Part("osm:way:70", Building, Rect(0f, 0f, 4f, 4f)),
             new WorldFeaturePart("osm:way:71", odd, 5f, 1) { Props = Json(Building) })]);
         Exception? sourceError = null;
@@ -192,11 +192,11 @@ public sealed class GroundSourcesTests
         AssertThat(sourceError!).IsInstanceOf<InvalidOperationException>();
         // The same failure through the public build path is not swallowed on the way.
         Exception? buildError = null;
-        try { new GroundModule().Build(TestWorld.Context(withParts), new TileKey(0, 0), LodLevel.L0); }
+        try { new GroundModule().Build(GroundTestSupport.Context(withParts), new TileKey(0, 0), LodLevel.L0); }
         catch (Exception caught) { buildError = caught; }
         AssertThat(buildError).OverrideFailureMessage("Expected the unsupported geometry to be rejected.").IsNotNull();
         AssertThat(buildError!).IsInstanceOf<InvalidOperationException>();
-        var withoutParts = TestWorld.Of([new WorldFeature(new FeatureId("test:way:8"), new DesignKind("road"), odd)
+        var withoutParts = GroundTestSupport.Of([new WorldFeature(new FeatureId("test:way:8"), new DesignKind("road"), odd)
             { Props = Json("""{"highway":"service"}""") }]);
         Exception? plainError = null;
         try { GroundSources.Read(withoutParts); }
@@ -204,7 +204,7 @@ public sealed class GroundSourcesTests
         AssertThat(plainError).OverrideFailureMessage("Expected the unsupported geometry to be rejected.").IsNotNull();
         AssertThat(plainError!).IsInstanceOf<InvalidOperationException>();
         // A kind that never touches the ground is not read at all, whatever its geometry.
-        var green = TestWorld.Of([Entity("test:way:9", "green", """{"kind":"green"}""",
+        var green = GroundTestSupport.Of([Entity("test:way:9", "green", """{"kind":"green"}""",
             new WorldFeaturePart("osm:way:90", odd, 0f, null) { Props = Json("""{"kind":"green"}""") })]);
         AssertThat(GroundSources.Read(green).Shapes.Count == 0).OverrideFailureMessage("Green parts leave the lawn untouched.").IsTrue();
     }
@@ -215,7 +215,7 @@ public sealed class GroundSourcesTests
         // Entities known only by their anchor (no footprint in the data) arrive as point geometry, with or without a
         // part record: nothing to shape, and nothing to reject.
         var anchor = new PointGeometry(new Vector3(10f, 0f, 10f));
-        var world = TestWorld.Of(
+        var world = GroundTestSupport.Of(
         [
             WorldFeatureFixture.Create("test:way:20", "building", anchor, Building),
             WorldFeatureFixture.Create("test:way:21", "water", anchor),

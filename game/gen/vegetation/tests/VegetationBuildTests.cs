@@ -40,7 +40,7 @@ public sealed class VegetationBuildTests
     private static (string, BuildContext) Load()
     {
         var root = RepositoryFixture.Root;
-        var world = PavementTests.World();
+        var world = VegetationTestSupport.World();
         var global = BuildInputSnapshot.Freeze(new Dictionary<string, ReadOnlyMemory<byte>>(StringComparer.Ordinal)
         {
             [VegetationInputs.SpeciesKey] = File.ReadAllBytes(Path.Combine(root, "game", "data", "vegetation", "species.json"))
@@ -57,7 +57,7 @@ public sealed class VegetationBuildTests
             WorldSeed = 1u,
             GlobalInputs = global,
             SourceInputs = map.Entries,
-            Catalog = MotherModelTests.Palette
+            Catalog = VegetationTestSupport.Palette
         };
         return (root, ctx);
     }

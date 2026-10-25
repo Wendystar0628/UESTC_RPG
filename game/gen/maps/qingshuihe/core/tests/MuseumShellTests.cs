@@ -1,4 +1,5 @@
 using Campus.Gen.Geometry;
+using Campus.Gen.Sites.Tests;
 using System.Numerics;
 using System.Text.Json;
 using Campus.Contracts;
@@ -101,8 +102,9 @@ public sealed class MuseumShellTests
             var output = build.Finish(lod);
             var glass = output.Meshes.Where(m => m.Material.Spec.Kind == ToonKind.Glass).ToArray();
             AssertThat(glass.Length == 1).OverrideFailureMessage($"{lod}: one window-glass bundle ({glass.Length})").IsTrue();
-            for (var i = 0; i < glass[0].Uv2!.Length; i += 2)
-                AssertThat(glass[0].Uv2![i] == allocation.BaseId && (int)glass[0].Uv2![i + 1] / 32 == museum.Columns).OverrideFailureMessage("UV2 carries the museum's base and columns").IsTrue();
+            var glassIds = ZoneTestCells.WindowIds(glass).Ids;
+            AssertThat(glassIds.SetEquals(museum.Windows(numbering).Select(window => window.Id)))
+                .OverrideFailureMessage("numbered museum glass matches its declared windows").IsTrue();
             foreach (var m in output.Meshes)
             {
                 m.ValidateVertexData();
@@ -141,7 +143,7 @@ public sealed class MuseumShellTests
             var glass = output.Meshes.Where(m => m.Material.Spec.Kind == ToonKind.Glass).ToArray();
             AssertThat(glass.Length == 1).OverrideFailureMessage($"{lod}: one shared window-glass bundle ({glass.Length})").IsTrue();
             var bases = Enumerable.Range(0, glass[0].Uv2!.Length / 2).Select(i => glass[0].Uv2![2 * i]).Distinct().Order().ToArray();
-            var here = pieces.Where(p => p is IWindowedPiece && TileGrid.At(CoreModuleTests.Anchor(p), lod) == TileGrid.At(museum.Anchor, lod)).Select(p => ((IWindowedPiece)p).WindowLayout.Feature).ToHashSet();
+            var here = pieces.Where(p => p is IWindowedPiece && TileGrid.At(CoreTestSupport.Anchor(p), lod) == TileGrid.At(museum.Anchor, lod)).Select(p => ((IWindowedPiece)p).WindowLayout.Feature).ToHashSet();
             AssertThat(bases.SequenceEqual(numbering.Allocations.Where(a => here.Contains(a.Feature)).Select(a => (float)a.BaseId).Order())).OverrideFailureMessage($"{lod}: the shared bundle keeps each building's window base ({string.Join(", ", bases)})").IsTrue();
         }
     }
@@ -185,7 +187,7 @@ public sealed class MuseumShellTests
         var generic = new WindowAllocation(new FeatureId("fixture:generic-before"), "generic", 0, 101, 7);
         var library = new WindowAllocation(CoreIds.Library, LibraryShell.WindowKey, generic.Count, libraryColumns, LibraryShell.Rows);
         var museum = new WindowAllocation(CoreIds.Museum, MuseumShell.WindowKey, generic.Count + library.Count, museumColumns, MuseumShell.Rows);
-        return new(Campus.Tests.RealMapFixture.Entry().Descriptor.Id, new string('a', 64), [generic, library, museum, .. AnnexShellTests.Allocations(Campus.Tests.RealMapFixture.Load().World, museum.BaseId + museum.Count)]);
+        return new(Campus.Tests.RealMapFixture.Entry().Descriptor.Id, new string('a', 64), [generic, library, museum, .. CoreTestSupport.Allocations(Campus.Tests.RealMapFixture.Load().World, museum.BaseId + museum.Count)]);
     }
 
     private static float SegmentDistance(Vector2 a, Vector2 b, Vector2 c, Vector2 d)

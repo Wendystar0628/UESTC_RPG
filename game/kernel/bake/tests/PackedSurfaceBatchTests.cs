@@ -1,4 +1,5 @@
 using Campus.Tests;
+using static Campus.Kernel.Bake.Tests.BakeInputFixture;
 using System.Buffers.Binary;
 using System.Numerics;
 using Campus.Contracts;
@@ -164,34 +165,7 @@ public sealed class PackedSurfaceBatchTests
             throw new InvalidOperationException("The highest valid rebased u16 index was changed.");
     }
 
-    internal static void VerifySources(IReadOnlyList<BakedSurface> sources, BakedSurface merged, int positionStride, int normalStride)
-    {
-        var vertexOffset = 0; var indexOffset = 0;
-        foreach (var source in sources)
-        {
-            var attributeStride = source.AttributeData.Length / source.VertexCount;
-            for (var vertex = 0; vertex < source.VertexCount; vertex++)
-            {
-                if (!source.VertexData.Span.Slice(vertex * positionStride, positionStride).SequenceEqual(
-                        merged.VertexData.Span.Slice((vertexOffset + vertex) * positionStride, positionStride)) ||
-                    !source.VertexData.Span.Slice(source.VertexCount * positionStride + vertex * normalStride, normalStride).SequenceEqual(
-                        merged.VertexData.Span.Slice(merged.VertexCount * positionStride + (vertexOffset + vertex) * normalStride, normalStride)) ||
-                    !source.AttributeData.Span.Slice(vertex * attributeStride, attributeStride).SequenceEqual(
-                        merged.AttributeData.Span.Slice((vertexOffset + vertex) * attributeStride, attributeStride)))
-                    throw new InvalidOperationException("A position, normal/tangent, UV/UV2/custom/color/flag byte changed during concatenation.");
-            }
-            for (var triangle = 0; triangle < source.IndexCount; triangle += 3)
-                for (var corner = 0; corner < 3; corner++)
-                {
-                    var before = BinaryPrimitives.ReadUInt16LittleEndian(source.IndexData.Span[((triangle + corner) * 2)..]);
-                    var after = BinaryPrimitives.ReadUInt16LittleEndian(merged.IndexData.Span[((indexOffset + triangle + corner) * 2)..]);
-                    if (after - vertexOffset != before) throw new InvalidOperationException("A source triangle or its winding/order changed.");
-                }
-            vertexOffset += source.VertexCount; indexOffset += source.IndexCount;
-        }
-        if (vertexOffset != merged.VertexCount || indexOffset != merged.IndexCount)
-            throw new InvalidOperationException("A source vertex or index was lost or duplicated.");
-    }
+
 
     private static GeometryBundle ShadowGeometry() => new(new(new(new("fixture.lit"), new("fixture.shade"))),
         [0, 0, 0, 1, 0, 0, 0, 0, 1], [0, 1, 0, 0, 1, 0, 0, 1, 0], [0, 2, 1]);

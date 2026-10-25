@@ -1,5 +1,4 @@
 using Campus.Contracts;
-using Campus.Contracts.AppFlow;
 using Campus.Hud;
 using GdUnit4;
 using static GdUnit4.Assertions;
@@ -16,7 +15,7 @@ public sealed class HudTaskTests
     public async Task HudTaskReportsOriginalFailureAndEndsQuietlyOnScopeCancel()
     {
         var root = ((SceneTree)Engine.GetMainLoop()).Root;
-        var failure = new RecordingFailure();
+        var failure = new TestAppFailure();
         var operation = new HudTask(failure);
         var pending = new TaskCompletionSource();
         AssertThat(operation.Start(token => pending.Task.WaitAsync(token))).IsTrue();
@@ -62,7 +61,7 @@ public sealed class HudTaskTests
     public async Task HudRequestsKeepWaitingAfterCancelAndDrainEveryRequestOnExit()
     {
         var root = ((SceneTree)Engine.GetMainLoop()).Root;
-        var failure = new RecordingFailure();
+        var failure = new TestAppFailure();
         var requests = new HudRequests(failure);
         var first = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         var second = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -87,11 +86,5 @@ public sealed class HudTaskTests
         requests.Submit(() => { sent = true; return Task.CompletedTask; });
         AssertThat(failure.Errors.Count == 2 && ReferenceEquals(failure.Errors[1], secondError) && !sent)
             .OverrideFailureMessage("Drain lost a later request's failure, or a stopped holder sent a new request.").IsTrue();
-    }
-
-    internal sealed class RecordingFailure : IAppFailure
-    {
-        public List<Exception> Errors { get; } = [];
-        public void Report(Exception error) => Errors.Add(error);
     }
 }

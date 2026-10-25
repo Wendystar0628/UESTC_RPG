@@ -30,8 +30,9 @@ internal static class RealMapFixture
             WindowNumbering = numbering,
         };
         var prepass = Context(new(map.Id, new string('0', 64), []));
-        return withWindowNumbering ? Context(new Campus.Gen.Buildings.BuildingsModule()
-            .PrepareWindowNumbering(prepass, module.DescribeWindowLayouts(world, map.Seed))) : Context(null!);
+        return withWindowNumbering ? Context(DerivedMemo.ForWorld(world, (typeof(RealMapFixture), module.GetType()),
+            () => new Campus.Gen.Buildings.BuildingsModule()
+                .PrepareWindowNumbering(prepass, module.DescribeWindowLayouts(world, map.Seed)))) : Context(null!);
     }
 
     internal static IReadOnlyDictionary<string, ReadOnlyMemory<byte>> WindowInputs(MapId map,

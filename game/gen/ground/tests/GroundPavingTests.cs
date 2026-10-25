@@ -31,7 +31,7 @@ public sealed class GroundPavingTests
         foreach (var mesh in patterned)
         {
             mesh.ValidateVertexData();   // contract: UV and UV2 present, gate/K constant per triangle
-            AssertThat(mesh.Material.Spec.SurfacePattern == SurfaceMaterialCatalog.FromInputs(TestWorld.Context(world).SourceInputs)
+            AssertThat(mesh.Material.Spec.SurfacePattern == SurfaceMaterialCatalog.FromInputs(GroundTestSupport.Context(world).SourceInputs)
                 .Get(GroundPaving.GraniteMaterialId)).OverrideFailureMessage("The plaza uses its authored material profile.").IsTrue();
             AssertThat(mesh.Material.Spec with { SurfacePattern = null } == GroundPalette.Spec(GroundMaterial.Plaza)).OverrideFailureMessage("The profile is the only material difference from the plain plaza class.").IsTrue();
             AssertThat(mesh.ColorIndices!.All(id => id == GroundPalette.Id(GroundColor.Curb))).OverrideFailureMessage("Granite keeps its colour.").IsTrue();
@@ -94,7 +94,7 @@ public sealed class GroundPavingTests
 
     private static IReadOnlyList<GeometryBundle> Build(FakeWorld world)
     {
-        var ctx = TestWorld.Context(world);
+        var ctx = GroundTestSupport.Context(world);
         var meshes = new List<GeometryBundle>();
         foreach (var tile in new[] { new TileKey(0, 0), new TileKey(0, -1) })
             meshes.AddRange(new GroundModule().Build(ctx, tile, LodLevel.L0).Meshes);

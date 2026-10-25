@@ -82,20 +82,9 @@ public sealed class AnnexShellTests
         }
     }
 
-    /// <summary>Stand-in allocations of the north blocks' grids, in feature order from <paramref name="start"/> (test numbering helpers).</summary>
-    internal static IEnumerable<WindowAllocation> Allocations(IWorldModel world, int start)
-    {
-        foreach (var shell in CoreSite.Pieces(world).OfType<AnnexShell>().OrderBy(s => s.Feature.Value, StringComparer.Ordinal))
-        {
-            var allocation = new WindowAllocation(shell.Feature, AnnexShell.WindowKey, start, shell.Columns, shell.Rows);
-            start += allocation.Count;
-            yield return allocation;
-        }
-    }
-
     private static ContentOutput Build(AnnexShell piece, IWorldModel world, LodLevel lod)
     {
-        var context = CoreModuleTests.Context(world);
+        var context = CoreTestSupport.Context(world);
         return piece.TraceSources(context, lod).Single().Output;
     }
 

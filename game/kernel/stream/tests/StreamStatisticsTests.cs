@@ -30,7 +30,7 @@ public sealed class StreamStatisticsTests
             catalog: Task.FromResult(new Campus.Contracts.Bake.PreparedBakeTiles(modules, [])));
         await fixture.Until(() => fixture.Director.ViewReady && fixture.Director.Statistics.PendingBakes == 0 &&
             fixture.Director.Statistics.PendingPreparations == 0 && fixture.Director.Statistics.PendingMounts == 0);
-        string root = PerformanceRecordingContractTests.TemporaryDirectory();
+        string root = PerformanceTestSupport.TemporaryDirectory();
         var session = new PerfRecordingSession(root, Campus.Contracts.Perf.PerfOrigin.Ai,
             DateTimeOffset.UnixEpoch, new PerfFieldDictionary(File.ReadAllText(RepositoryFixture.FilePath("game", "data", "perf-fields.json"))), new JsonObject());
         var captured = new List<PerfCapturedEvent>();
@@ -99,7 +99,7 @@ public sealed class StreamStatisticsTests
         using var fixture = new StreamFixture(mount: queue);
         for (var frame = 0; frame < 3; frame++)
         {
-            queue.Enqueue(new StreamMountQueueTests.MountWork(StreamMountKind.Visual, queue.Revision,
+            queue.Enqueue(new StreamLifecycleTestSupport.MountWork(StreamMountKind.Visual, queue.Revision,
                 _ => clock += KernelBudgets.StreamMountMilliseconds * 3, map: fixture.Context.Descriptor.Id));
             queue.Drain(VisibleWorld);
         }

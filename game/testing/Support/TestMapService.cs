@@ -50,4 +50,14 @@ internal sealed record TestMapContext(MapDescriptor Descriptor, IWorldModel? Wor
         if (_preparedWorld is not null) throw new InvalidOperationException("Map interiors have already been published.");
         _preparedWorld = WorldModelSnapshot.WithInteriors(World, entries);
     }
+    internal static MapDescriptor BackdropDescriptor(string backdrop = "backdrop.json") => new(new("fixture-map"),
+        new("测试地图", "Fixture"), MapKind.Outdoor, 1, 1, new(0, 0, 32648, new(5000, -7000), new(5200, -6800)),
+        new(5100, -6900), new(new(5000, -28, -7000), new(5200, 2000, -6800)), new(new(5000, -7000), new(5200, -6800)),
+        new(.9f, 30, 3000, -28, 2000, 30, 40, 150), new(78, -110), new(81, -107), "spawn",
+        [new("spawn", new(new(5100, 20, -6900), 0, -15), null)],
+        new(MapTimeRule.Shared, new(17.5, Season.Autumn), new("默认", "Default"), false, "fixture"),
+        new("sky.json", backdrop, []), []);
+
+    internal static BuildInputSnapshot BackdropSnapshot(string key, string json) =>
+        BuildInputSnapshot.Freeze(new Dictionary<string, ReadOnlyMemory<byte>> { [key] = System.Text.Encoding.UTF8.GetBytes(json) }, "fixture");
 }

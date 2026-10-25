@@ -71,7 +71,7 @@ public sealed class GroundDiagonalTests
     [TestCase, TestCategory(TestReason.Contract)]
     public void TerrainDrapingFollowsTheSameDiagonal()
     {
-        var ctx = TestWorld.Context(TestWorld.Empty());
+        var ctx = GroundTestSupport.Context(GroundTestSupport.Empty());
         var extent = GroundLod.Tile(NativeTile, LodLevel.L0, ctx.Map.DataRect);
         var grid = TerrainGrid.For(FixtureTerrain(NativeTile, NativeField()), NativeTile, LodLevel.L0, extent);
         foreach (var (x, z, jolt) in Native)
@@ -103,9 +103,9 @@ public sealed class GroundDiagonalTests
         // so each fine cell has to be split along the same diagonal as the terrain grid.
         var tile = new TileKey(0, 0);
         var terrain = FixtureTerrain(tile, NativeField());
-        var world = TestWorld.Junction();
+        var world = GroundTestSupport.Junction();
         world.Terrain = terrain;
-        var ctx = TestWorld.Context(world);
+        var ctx = GroundTestSupport.Context(world);
         var section = GroundSection.Default;
         var extent = GroundLod.Tile(tile, LodLevel.L0, ctx.Map.DataRect);
         var grid = TerrainGrid.For(terrain, tile, LodLevel.L0, extent);

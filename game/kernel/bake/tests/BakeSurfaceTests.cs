@@ -200,7 +200,7 @@ public sealed class BakeSurfaceTests
             !on.AttributeData.Span.SequenceEqual(frozen.AttributeData.Span))
             throw new InvalidOperationException("Static patterns require the same fp32 UV/UV2 layout in mutable and frozen inputs.");
         var merged = PackedSurfaceBatcher.Merge([on, off]).Single();
-        PackedSurfaceBatchTests.VerifySources([on, off], merged, 12, 8);
+        BakeInputFixture.VerifySources([on, off], merged, 12, 8);
         foreach (var changed in new[] { pattern with { Layer = 2 }, pattern with { PeriodMeters = new(.8f, .75f) },
             pattern with { JointMeters = new(.008f, .012f) } })
         {

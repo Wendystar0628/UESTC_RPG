@@ -234,7 +234,7 @@ public sealed class WalkRulesTests
     public async Task RestorePreparationValidatesHistoryAfterTerrainAndFinishesEveryRepairBeforeCommit()
     {
         var terrain = new HistoryTerrain();
-        var map = new TestMapContext(FlightBoundsTests.CreateContext().Descriptor, new FakeWorld { Spatial = terrain });
+        var map = new TestMapContext(FlightTestSupport.CreateContext().Descriptor, new FakeWorld { Spatial = terrain });
         var preparation = new WalkTerrainPreparation(terrain);
         preparation.BindMap(map);
         var safe = new Pose(new(1, 0, 1), 15, 0);

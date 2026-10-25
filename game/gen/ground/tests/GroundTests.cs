@@ -22,7 +22,7 @@ public sealed class GroundTests
     [TestCase, TestCategory(TestReason.Contract)]
     public void EmptyWorldIsFlatLawnInBroadTones()
     {
-        var ctx = TestWorld.Context(TestWorld.Empty());
+        var ctx = GroundTestSupport.Context(GroundTestSupport.Empty());
         var tones = new HashSet<ushort>();
         var triangles = 0;
         for (var x = -2; x < 2; x++)
@@ -48,7 +48,7 @@ public sealed class GroundTests
     public void LawnTonesDoNotSpeckle()
     {
         // Every tone patch is broad: sample a 1 m grid and require each sample to share its tone with a neighbour.
-        var ctx = TestWorld.Context(TestWorld.Empty());
+        var ctx = GroundTestSupport.Context(GroundTestSupport.Empty());
         var tone = GroundSection.Default.Lawn;
         var seed = LawnNoise.Seed(ctx.WorldSeed);
         int Tone(float x, float z) { var n = LawnNoise.At(x, z, seed, tone); return n < tone.Low ? 0 : n < tone.High ? 1 : 2; }
@@ -65,7 +65,7 @@ public sealed class GroundTests
     [TestCase, TestCategory(TestReason.Contract)]
     public void StreetHasKerbPavingMarkingsAndValidGeometry()
     {
-        var ctx = TestWorld.Context(TestWorld.Street());
+        var ctx = GroundTestSupport.Context(GroundTestSupport.Street());
         var output = new GroundModule().Build(ctx, new TileKey(0, 0), LodLevel.L0);
         // GeometryBundle uses Material.Spec.Lit when no per-vertex colour array is supplied (scene lettering).
         var colours = output.Meshes.SelectMany(m => m.ColorIndices is { } ids ? ids :
@@ -89,7 +89,7 @@ public sealed class GroundTests
     [TestCase, TestCategory(TestReason.Contract)]
     public void KerbFaceSpansRoadToChamfer()
     {
-        var ctx = TestWorld.Context(TestWorld.Street());
+        var ctx = GroundTestSupport.Context(GroundTestSupport.Street());
         var output = new GroundModule().Build(ctx, new TileKey(0, 0), LodLevel.L0);
         // The kerb on the south side of the road: z = 3 (road edge). Face vertices with horizontal normals there.
         var kerb = output.Meshes.Where(m => m.Material.Spec == GroundPalette.Spec(GroundMaterial.Curb)).ToArray();
@@ -113,8 +113,8 @@ public sealed class GroundTests
     [TestCategory(TestReason.Contract)]
     public void BuildsAreDeterministic()
     {
-        var a = new GroundModule().Build(TestWorld.Context(TestWorld.Street()), new TileKey(0, 0), LodLevel.L0);
-        var b = new GroundModule().Build(TestWorld.Context(TestWorld.Street()), new TileKey(0, 0), LodLevel.L0);
+        var a = new GroundModule().Build(GroundTestSupport.Context(GroundTestSupport.Street()), new TileKey(0, 0), LodLevel.L0);
+        var b = new GroundModule().Build(GroundTestSupport.Context(GroundTestSupport.Street()), new TileKey(0, 0), LodLevel.L0);
         AssertThat(a.Meshes.Count == b.Meshes.Count).OverrideFailureMessage("Bundle count differs.").IsTrue();
         for (var k = 0; k < a.Meshes.Count; k++)
         {
@@ -127,7 +127,7 @@ public sealed class GroundTests
     [TestCase, TestCategory(TestReason.Contract)]
     public void TileSeamsShareVertices()
     {
-        var ctx = TestWorld.Context(TestWorld.Street());
+        var ctx = GroundTestSupport.Context(GroundTestSupport.Street());
         var left = new GroundModule().Build(ctx, new TileKey(-1, 0), LodLevel.L0);
         var right = new GroundModule().Build(ctx, new TileKey(0, 0), LodLevel.L0);
         HashSet<(float, float, float)> Seam(ContentOutput o) =>
@@ -148,7 +148,7 @@ public sealed class GroundTests
     [TestCase, TestCategory(TestReason.Contract)]
     public void HeightFieldMatchesSurfaces()
     {
-        var ctx = TestWorld.Context(TestWorld.Street());
+        var ctx = GroundTestSupport.Context(GroundTestSupport.Street());
         var colliders = new GroundModule().Collide(ctx, new TileKey(0, 0));
         AssertThat(colliders.Count == 1 && colliders[0] is HeightFieldCollider).OverrideFailureMessage("Each ground tile has one height field.").IsTrue();
         var collider = (HeightFieldCollider)colliders[0];
@@ -163,7 +163,7 @@ public sealed class GroundTests
     [TestCase, TestCategory(TestReason.Smoke)]
     public void AllLevelsBuild()
     {
-        var ctx = TestWorld.Context(TestWorld.Street());
+        var ctx = GroundTestSupport.Context(GroundTestSupport.Street());
         foreach (var lod in new[] { LodLevel.L1, LodLevel.L2, LodLevel.L3 })
         {
             var output = new GroundModule().Build(ctx, new TileKey(0, 0), lod);
@@ -179,7 +179,7 @@ public sealed class GroundTests
     [TestCase, TestCategory(TestReason.Contract)]
     public void MasksFollowSurfaces()
     {
-        var ctx = TestWorld.Context(TestWorld.Street(), 128f);
+        var ctx = GroundTestSupport.Context(GroundTestSupport.Street(), 128f);
         var masks = GroundMasks.Build(ctx, Section);
         AssertThat(masks.Width == 256 && masks.Height == 256).OverrideFailureMessage($"Mask size {masks.Width} x {masks.Height}.").IsTrue();
         AssertThat(masks.Mask1.Length == 256 * 256 * 4 && masks.Mask2.Length == masks.Mask1.Length).OverrideFailureMessage("RGBA8 buffers.").IsTrue();
@@ -198,9 +198,9 @@ public sealed class GroundTests
     public void GroundFollowsDesignedTerrain()
     {
         var terrain = Mound();
-        var world = TestWorld.Street();
+        var world = GroundTestSupport.Street();
         world.Terrain = terrain;
-        var ctx = TestWorld.Context(world);
+        var ctx = GroundTestSupport.Context(world);
         var module = new GroundModule(Section);
         var output = module.Build(ctx, new TileKey(0, 0), LodLevel.L0);
         var checkedLawn = 0;
@@ -261,7 +261,7 @@ public sealed class GroundTests
     [TestCase, TestCategory(TestReason.Contract)]
     public void JunctionCornersAreRounded()
     {
-        var ctx = TestWorld.Context(TestWorld.Junction());
+        var ctx = GroundTestSupport.Context(GroundTestSupport.Junction());
         var collider = new GroundModule().Collide(ctx, new TileKey(0, 0)).OfType<HeightFieldCollider>().Single();
         // (4, 4) lies in the corner between the two kerb lines (x, z > 3): asphalt with a fillet, raised lawn without.
         AssertThat(Math.Abs((double)(Section.RoadY) - (double)(GroundCollision.SampleHeight(collider, 4f, 4f))) <= TestTolerance.Position).OverrideFailureMessage($"fillet corner: expected {Section.RoadY}, got {GroundCollision.SampleHeight(collider, 4f, 4f)}.").IsTrue();
@@ -287,103 +287,4 @@ public sealed class GroundTests
                 AssertThat(Vector3.Dot(cross, n) < 0f).OverrideFailureMessage($"Triangle {t / 3} in {m.Material.Spec.Lit.Value} is back-facing: {P(0)} {P(1)} {P(2)} n {N(0)} {N(1)} {N(2)}.").IsTrue();
             }
     }
-}
-
-/// <summary>Small synthetic worlds: an east-west street with kerbs, a sidewalk, a plaza and a crossing footpath.</summary>
-internal static class TestWorld
-{
-
-    public static FakeWorld Empty() => Of([]);
-
-    /// <summary>Final ground surface at a point, classified on a 0.25 m lattice of the L0 tile that holds it (one tile field per world and tile, shared by the probes).</summary>
-    public static GroundSurface SurfaceAt(BuildContext context, float x, float z)
-    {
-        var key = TileGrid.At(new Vector2(x, z));
-        var tile = new GroundTile(key.X * TileGrid.BaseEdge, key.Z * TileGrid.BaseEdge, TileGrid.BaseEdge, TileGrid.BaseEdge / 256f);
-        var mesher = context.Memo((typeof(TestWorld), key), () =>
-        {
-            var layout = GroundLayout.Of(context);
-            var grid = TerrainGrid.For(FlatTerrain.Default, key, LodLevel.L0, tile);
-            var field = TileField.Build(layout, tile, GroundSection.Default, grid);
-            return new GroundMesher(field, GroundSection.Default, LodLevel.L0, layout, grid, new GroundSurfaceSink());
-        });
-        return mesher.SurfaceAt((int)MathF.Round((x - tile.X0) / tile.Cell), (int)MathF.Round((z - tile.Z0) / tile.Cell));
-    }
-
-    public static FakeWorld Of(IEnumerable<WorldFeature> features, WorldNetwork? network = null) => new()
-    {
-        Boundary = new([new(-200f, -200f), new(200f, -200f), new(200f, 200f), new(-200f, 200f)]),
-        Features = features.ToDictionary(f => f.Id),
-        Network = network ?? WorldNetwork.Empty,
-    };
-
-    public static FakeWorld Street()
-    {
-        var features = new List<WorldFeature>
-        {
-            WorldFeatureFixture.Create("osm:way:1", "road", new PolygonGeometry(Rect(-200f, -3f, 200f, 3f)), """{"highway":"residential"}"""),
-            WorldFeatureFixture.Create("osm:way:2", "road", new PolygonGeometry(Rect(-200f, 3f, 200f, 5.5f)), """{"highway":"footway"}"""),
-            WorldFeatureFixture.Create("osm:way:3", "road", new PolygonGeometry(Rect(20f, 8f, 40f, 20f)), """{"highway":"pedestrian"}"""),
-            WorldFeatureFixture.Create("osm:way:4", "road", new PolygonGeometry(Rect(30f, -12f, 32.5f, 8f)), """{"highway":"footway"}"""),
-            WorldFeatureFixture.Create("osm:way:5", "building", new PolygonGeometry(Rect(-40f, 20f, -20f, 40f)), "{}", height: 20f),
-        };
-        var roads = new List<NetworkLine>
-        {
-            new(new FeatureId("osm:way:1"), new Polyline([new(-200f, 0f), new(200f, 0f)]), 6f)
-                { Props = JsonDocument.Parse("""{"highway":"residential"}""").RootElement.Clone() },
-            new(new FeatureId("osm:way:4"), new Polyline([new(31.25f, -12f), new(31.25f, 8f)]), 2.5f)
-                { Props = JsonDocument.Parse("""{"highway":"footway"}""").RootElement.Clone() },
-        };
-        return Of(features, new WorldNetwork(roads, [], [], [], []));
-    }
-
-    /// <summary>A T junction: an east-west road and a road running south from it, both 6 m wide.</summary>
-    public static FakeWorld Junction()
-    {
-        var features = new List<WorldFeature>
-        {
-            WorldFeatureFixture.Create("osm:way:11", "road", new PolygonGeometry(Rect(-60f, -3f, 60f, 3f)), """{"highway":"residential"}"""),
-            WorldFeatureFixture.Create("osm:way:12", "road", new PolygonGeometry(Rect(-3f, 0f, 3f, 60f)), """{"highway":"residential"}"""),
-        };
-        var roads = new List<NetworkLine>
-        {
-            new(new FeatureId("osm:way:11"), new Polyline([new(-60f, 0f), new(0f, 0f), new(60f, 0f)]), 6f)
-                { Props = JsonDocument.Parse("""{"highway":"residential"}""").RootElement.Clone() },
-            new(new FeatureId("osm:way:12"), new Polyline([new(0f, 0f), new(0f, 60f)]), 6f)
-                { Props = JsonDocument.Parse("""{"highway":"residential"}""").RootElement.Clone() },
-        };
-        return Of(features, new WorldNetwork(roads, [], [], [], []));
-    }
-
-    public static BuildContext Context(IWorldModel world, float half = 1280f)
-    {
-        var rect = new MapRect(new(-half, -half), new(half, half));
-        var map = new MapDescriptor(new MapId("test"), new LocalizedName("测试", "Test"), MapKind.Outdoor, 1, 1u,
-            new GeoFrame(0d, 0d, 32648, new(-200f, -200f), new(200f, 200f)), Vector2.Zero,
-            new Box3(new(-half, -28f, -half), new(half, 2000f, half)), rect,
-            new RoamLimits(0.9f, 30f, 3000f, -28f, 2000f, 30f, 40f, 150f),
-            new TileKey(-20, -20), new TileKey(19, 19), "P00", [],
-            new MapWorldRules(MapTimeRule.Shared, new WorldPreset(17.5, Season.Autumn), new LocalizedName("落金初灯", "Golden Hour"), true, "chengdu"),
-            new MapEnvironment("sky.json", "backdrop.json", []), []);
-        return new BuildContext {
-            CodeHash = "fixture", WindowNumbering = new((map).Id, new string('0', 64), []), Catalog = Campus.Contracts.Tests.PaletteFixture.Catalog, World = world, Map = map,
-            WorldSeed = 1u, SourceInputs = MaterialInputs.Value.Entries, GlobalInputs = GlobalInputs.Value };
-    }
-
-    private static readonly Lazy<BuildInputSnapshot> GlobalInputs = new(() => BuildInputSnapshot.Freeze(
-        new Dictionary<string, ReadOnlyMemory<byte>>
-        {
-            [SceneTextInputs.AtlasKey] = System.IO.File.ReadAllBytes(RepositoryFixture.FilePath("game", "data", "scene-text", "atlas.json"))
-        }, "fixture"));
-
-    private static readonly Lazy<BuildInputSnapshot> MaterialInputs = new(() => BuildInputSnapshot.Freeze(
-        new Dictionary<string, ReadOnlyMemory<byte>>(StringComparer.Ordinal)
-        {
-            [SurfaceMaterialCatalog.SourcePath] = System.IO.File.ReadAllBytes(
-                System.IO.Path.Combine(RealMapFixture.DataDirectory(), SurfaceMaterialCatalog.SourcePath))
-        }, "fixture"));
-
-    private static PolygonRings Rect(float x0, float z0, float x1, float z1) =>
-        new([new(x0, z0), new(x1, z0), new(x1, z1), new(x0, z1)]);
-
 }

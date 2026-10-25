@@ -27,7 +27,7 @@ public sealed class GroundEffectiveRoadsTests
     public void AuthoredLineInFeaturesAndRoadsIsPavedOnce()
     {
         var points = new Vector2[] { new(0f, 20f), new(30f, 24f), new(60f, 20f) };
-        var both = TestWorld.Of([WorldFeatureFixture.Create("design:t-walk", "road", new PolylineGeometry(new Polyline(points)), RoadProps("footway", 3f))], new WorldNetwork([Road("design:t-walk", points, 3f)], [], [], [], []));
+        var both = GroundTestSupport.Of([WorldFeatureFixture.Create("design:t-walk", "road", new PolylineGeometry(new Polyline(points)), RoadProps("footway", 3f))], new WorldNetwork([Road("design:t-walk", points, 3f)], [], [], [], []));
         var (shapes, roads) = GroundSources.Read(both);
         AssertThat(roads.Count == 1).OverrideFailureMessage($"One centre line, got {roads.Count}.").IsTrue();
         var mine = shapes.Where(s => s.Id.Value == "design:t-walk").ToArray();
@@ -35,7 +35,7 @@ public sealed class GroundEffectiveRoadsTests
         AssertThat(mine[0].Kind == SurfaceKind.Walk && mine[0].Line!.SequenceEqual(points) && mine[0].HalfWidth == 1.5f).OverrideFailureMessage("A 3 m footway along its authored points.").IsTrue();
 
         // The network alone gives the same shapes: the feature copy adds nothing.
-        var networkOnly = GroundSources.Read(TestWorld.Of([], new WorldNetwork([Road("design:t-walk", points, 3f)], [], [], [], []))).Shapes;
+        var networkOnly = GroundSources.Read(GroundTestSupport.Of([], new WorldNetwork([Road("design:t-walk", points, 3f)], [], [], [], []))).Shapes;
         AssertThat(networkOnly.Count == shapes.Count && networkOnly.Zip(shapes).All(p => p.First.Id == p.Second.Id && p.First.Kind == p.Second.Kind &&
             p.First.HalfWidth == p.Second.HalfWidth && p.First.Line!.SequenceEqual(p.Second.Line!))).OverrideFailureMessage("Features copy changed the shapes.").IsTrue();
     }
@@ -47,7 +47,7 @@ public sealed class GroundEffectiveRoadsTests
         {
             var feature = WorldFeatureFixture.Create("fixture:" + type, "road",
                 new PolylineGeometry(new Polyline([new(0f, 0f), new(40f, 0f)])), RoadProps(type, 3f));
-            var (shapes, roads) = GroundSources.Read(TestWorld.Of([feature]));
+            var (shapes, roads) = GroundSources.Read(GroundTestSupport.Of([feature]));
             AssertThat(shapes.Count == 1 && roads.Count == 0).OverrideFailureMessage("A feature line outside the network keeps its surface.").IsTrue();
         }
     }
@@ -58,7 +58,7 @@ public sealed class GroundEffectiveRoadsTests
         var plaza = Rect(0f, 0f, 40f, 40f);
         var holed = new PolygonRings(plaza.Outer, [Rect(15f, 15f, 25f, 25f).Outer]);
         var second = new PolygonRings(Rect(60f, 0f, 80f, 20f).Outer, [Rect(66f, 6f, 74f, 14f).Outer]);
-        var world = TestWorld.Of(
+        var world = GroundTestSupport.Of(
         [
             WorldFeatureFixture.Create("design:t-plaza", "road", new PolygonGeometry(holed), RoadProps("pedestrian", null)),
             WorldFeatureFixture.Create("design:t-plaza-pair", "road", new MultiPolygonGeometry([holed with { Outer = Shift(holed.Outer, 100f), Holes = [Shift(holed.Holes[0], 100f)] }, second]), RoadProps("pedestrian", null)),
@@ -73,7 +73,7 @@ public sealed class GroundEffectiveRoadsTests
 
         // An original way is a polygon in the feature table and a centre line in the network under one ID: both are laid.
         var polygon = WorldFeatureFixture.Create("osm:way:5", "road", new PolygonGeometry(plaza), RoadProps("footway", null));
-        var both = TestWorld.Of([polygon], new WorldNetwork([Road("osm:way:5", [new(0f, 20f), new(40f, 20f)], 2.5f)], [], [], [], []));
+        var both = GroundTestSupport.Of([polygon], new WorldNetwork([Road("osm:way:5", [new(0f, 20f), new(40f, 20f)], 2.5f)], [], [], [], []));
         var laid = GroundSources.Read(both).Shapes;
         AssertThat(laid.Count == 2 && laid.Count(s => s.Rings is not null) == 1 && laid.Count(s => s.Line is not null) == 1).OverrideFailureMessage("Polygon as polygon, centre line as capsule.").IsTrue();
     }
@@ -88,29 +88,29 @@ public sealed class GroundEffectiveRoadsTests
             WorldFeatureFixture.Create("osm:way:2", "road", new PolygonGeometry(Rect(-100f, 3f, 100f, 5.5f)), RoadProps("footway", null)),
         };
         var network = new List<NetworkLine> { Road("osm:way:1", [new(-100f, 0f), new(100f, 0f)], 6f, "residential") };
-        var bare = TestWorld.Of(street, new WorldNetwork(network, [], [], [], []));
-        var bareContext = TestWorld.Context(bare);
-        var withWalk = TestWorld.Of([.. street, WorldFeatureFixture.Create("design:t-walk", "road", new PolylineGeometry(new Polyline(walk)), RoadProps("footway", 2.5f))], new WorldNetwork([.. network, Road("design:t-walk", walk, 2.5f)], [], [], [], []));
-        var withWalkContext = TestWorld.Context(withWalk);
-        var networkOnly = TestWorld.Of(street, new WorldNetwork([.. network, Road("design:t-walk", walk, 2.5f)], [], [], [], []));
+        var bare = GroundTestSupport.Of(street, new WorldNetwork(network, [], [], [], []));
+        var bareContext = GroundTestSupport.Context(bare);
+        var withWalk = GroundTestSupport.Of([.. street, WorldFeatureFixture.Create("design:t-walk", "road", new PolylineGeometry(new Polyline(walk)), RoadProps("footway", 2.5f))], new WorldNetwork([.. network, Road("design:t-walk", walk, 2.5f)], [], [], [], []));
+        var withWalkContext = GroundTestSupport.Context(withWalk);
+        var networkOnly = GroundTestSupport.Of(street, new WorldNetwork([.. network, Road("design:t-walk", walk, 2.5f)], [], [], [], []));
 
         // The walk and the sidewalk are one paved surface: no kerb, edging or step across the join, and none beside it.
         for (var z = 5.0f; z <= 30f; z += 0.5f)
             foreach (var x in new[] { 29.3f, 30f, 30.7f })
-                AssertThat(TestWorld.SurfaceAt(withWalkContext, x, z) == GroundSurface.Paver).OverrideFailureMessage($"({x}, {z}) is {TestWorld.SurfaceAt(withWalkContext, x, z)}, not plain paving.").IsTrue();
-        AssertThat(TestWorld.SurfaceAt(bareContext, 30f, 20f) != GroundSurface.Paver).OverrideFailureMessage("Without the walk that ground is lawn.").IsTrue();
+                AssertThat(GroundTestSupport.SurfaceAt(withWalkContext, x, z) == GroundSurface.Paver).OverrideFailureMessage($"({x}, {z}) is {GroundTestSupport.SurfaceAt(withWalkContext, x, z)}, not plain paving.").IsTrue();
+        AssertThat(GroundTestSupport.SurfaceAt(bareContext, 30f, 20f) != GroundSurface.Paver).OverrideFailureMessage("Without the walk that ground is lawn.").IsTrue();
 
         // The carriageway has no fillet or kerb of its own from a footway, and the footway's crossing sits where it meets the road.
         AssertThat(RoadGraph.Fillets(GroundSources.Read(withWalk).Roads).Count == 0).OverrideFailureMessage("A footway never rounds a carriageway corner.").IsTrue();
         var crossing = new Vector2[] { new(50f, -20f), new(50f, 20f) };
-        var crossed = TestWorld.Of(street, new WorldNetwork([.. network, Road("design:t-cross", crossing, 2.5f)], [], [], [], []));
-        var marks = GroundModule.AssembleMarkings(TestWorld.Context(crossed), Section).Markings;
+        var crossed = GroundTestSupport.Of(street, new WorldNetwork([.. network, Road("design:t-cross", crossing, 2.5f)], [], [], [], []));
+        var marks = GroundModule.AssembleMarkings(GroundTestSupport.Context(crossed), Section).Markings;
         AssertThat(marks.Crossings.Count == 1 && Vector2.Distance(marks.Crossings[0], new(50f, 0f)) < TestTolerance.Position).OverrideFailureMessage("An authored footway across the road gets one zebra where it crosses.").IsTrue();
         AssertThat(GroundModule.AssembleMarkings(bareContext, Section).Markings.Crossings.Count == 0).OverrideFailureMessage("No walk, no crossing.").IsTrue();
 
         // Feature and network copies together build the same tile as the network alone: no second layer, no z conflict.
-        var a = new GroundModule().Build(TestWorld.Context(withWalk), new TileKey(0, 0), LodLevel.L0);
-        var b = new GroundModule().Build(TestWorld.Context(networkOnly), new TileKey(0, 0), LodLevel.L0);
+        var a = new GroundModule().Build(GroundTestSupport.Context(withWalk), new TileKey(0, 0), LodLevel.L0);
+        var b = new GroundModule().Build(GroundTestSupport.Context(networkOnly), new TileKey(0, 0), LodLevel.L0);
         AssertThat(a.Meshes.Count == b.Meshes.Count && a.Meshes.Count > 0).OverrideFailureMessage("Bundle count differs.").IsTrue();
         for (var k = 0; k < a.Meshes.Count; k++)
         {

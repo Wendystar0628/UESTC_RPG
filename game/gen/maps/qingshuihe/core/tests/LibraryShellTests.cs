@@ -1,5 +1,6 @@
 using Campus.Gen.Geometry;
 using Campus.Gen.Sites;
+using Campus.Gen.Sites.Tests;
 using System.Numerics;
 using System.Text.Json;
 using Campus.Contracts;
@@ -101,8 +102,10 @@ public sealed class LibraryShellTests
             foreach (var g in glass.Concat(clear))
             {
                 AssertThat(g.Uv is not null && g.Uv2 is not null && g.Reserved is not null).OverrideFailureMessage("VF-B glass").IsTrue();
-                for (var i = 0; i < g.Uv2!.Length; i += 2)
-                    AssertThat(g.Uv2[i] == allocation.BaseId && (int)g.Uv2[i + 1] / 32 == shell.Columns).OverrideFailureMessage("UV2 carries the allocated base and the columns").IsTrue();
+                var ids = ZoneTestCells.WindowIds([g]).Ids;
+                if (g.Material.Spec.Kind == ToonKind.Glass)
+                    AssertThat(ids.Count > 0 && ids.All(id => id >= allocation.BaseId && id < allocation.BaseId + allocation.Count))
+                        .OverrideFailureMessage("window glass carries only IDs from the allocated block").IsTrue();
             }
             foreach (var m in output.Meshes)
             {
@@ -151,14 +154,8 @@ public sealed class LibraryShellTests
         var module = new CoreModule();
         var ctx = new BuildContext { CodeHash = "fixture", Catalog = Campus.Contracts.Tests.PaletteFixture.Catalog, World = world, Map = null!, WorldSeed = 1u, WindowNumbering = numbering, PartLods = PartLodFixture.Catalog };
         var output = module.Build(ctx, TileGrid.At(shell.Anchor, LodLevel.L0), LodLevel.L0);
-        var glassIds = new SortedSet<int>();
-        foreach (var g in output.Meshes.Where(m => m.Material.Spec.Kind is ToonKind.Glass or ToonKind.GlassNear))
-            for (var v = 0; v < g.Position.Length / 3; v++)
-            {
-                var columns = (int)(g.Uv2![2 * v + 1] / 32f);
-                if ((int)g.Uv2[2 * v] != allocation.BaseId) continue;
-                glassIds.Add((int)g.Uv2[2 * v] + (int)MathF.Floor(g.Uv![2 * v + 1]) * columns + (int)MathF.Floor(g.Uv[2 * v]));
-            }
+        var glassIds = ZoneTestCells.WindowIds(output.Meshes).Ids
+            .Where(id => id >= allocation.BaseId && id < allocation.BaseId + allocation.Count).ToHashSet();
         var windows = module.DescribeWindows(ctx).Windows.Where(w => w.Channel == LibraryStyle.LibraryWindowChannel && w.BaseId == allocation.BaseId).ToArray();
         var metaIds = new SortedSet<int>(windows.Select(w => w.Id));
         AssertThat(metaIds.Count == windows.Length).OverrideFailureMessage("one declaration per window").IsTrue();
@@ -308,7 +305,7 @@ public sealed class LibraryShellTests
         var library = new WindowAllocation(CoreIds.Library, LibraryShell.WindowKey, generic.Count, libraryColumns, LibraryShell.Rows);
         var columns = CoreSite.Pieces(Campus.Tests.RealMapFixture.Load().World).OfType<Museum.MuseumShell>().Single().Columns;
         var museum = new WindowAllocation(CoreIds.Museum, Museum.MuseumShell.WindowKey, generic.Count + library.Count, columns, Museum.MuseumShell.Rows);
-        var annex = AnnexShellTests.Allocations(Campus.Tests.RealMapFixture.Load().World, museum.BaseId + museum.Count).ToArray();
+        var annex = CoreTestSupport.Allocations(Campus.Tests.RealMapFixture.Load().World, museum.BaseId + museum.Count).ToArray();
         var end = annex.Length == 0 ? museum.BaseId + museum.Count : annex[^1].BaseId + annex[^1].Count;
         return new(Campus.Tests.RealMapFixture.Entry().Descriptor.Id, new string('a', 64),
         [

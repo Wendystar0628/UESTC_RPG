@@ -254,17 +254,5 @@ public sealed class StreamMountQueueTests
             throw new InvalidOperationException("The failed map did not drain each queued owner once while retaining its failure.");
     }
 
-    internal sealed class MountWork(StreamMountKind kind, long revision, Action<double> step, string module = "module", int slices = 1, Action? cancel = null, BakePriority? priority = null, MapId? map = null) : IStreamMountWork
-    {
-        public Exception? KeyFailure, RevisionFailure;
-        public BakeKey Key => KeyFailure is { } error ? throw error : new(map ?? new("map"), module, "L0/0/0");
-        public BakePriority EffectivePriority { get; set; } = priority ?? (kind == StreamMountKind.Collision ? BakePriority.Collision : BakePriority.Normal);
-        public BakePriority Priority => EffectivePriority;
-        public long Revision => RevisionFailure is { } error ? throw error : revision;
-        public StreamMountKind Kind { get; } = kind;
-        public int Cancels;
-        private int _steps;
-        public bool Step(double budgetMilliseconds) { step(budgetMilliseconds); return ++_steps >= slices; }
-        public void Cancel() { Cancels++; cancel?.Invoke(); }
-    }
+
 }

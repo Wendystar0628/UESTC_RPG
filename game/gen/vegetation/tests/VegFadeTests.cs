@@ -18,7 +18,7 @@ public sealed class VegFadeTests
     [TestCase, TestCategory(TestReason.Contract)]
     public void FarStandInIsLightTaggedAndShapedLikeL1()
     {
-        var palette = MotherModelTests.Palette;
+        var palette = VegetationTestSupport.Palette;
         foreach (var s in Table.Value.Species)
             for (var v = 0; v < TreeForms.Variants; v++)
             {
@@ -31,7 +31,7 @@ public sealed class VegFadeTests
                 for (var i = 3; i < wood.Custom2!.Length; i += 4)
                     if (wood.Custom2[i] != MotherModels.FarWoodTag) throw new InvalidOperationException($"{s.Id}/{v}: wood tag {wood.Custom2[i]}");
                 // Same vertex layout and material as the near crown and wood, so the far pool shares their warmed pipelines.
-                var l1 = MotherModelTests.Mother(s, v, VegLevel.L1);
+                var l1 = VegetationTestSupport.Mother(s, v, VegLevel.L1);
                 if (crown.Material != l1.Crown.Material || (crown.Uv is null) != (l1.Crown.Uv is null) || crown.Flags?[0] != l1.Crown.Flags?[0])
                     throw new InvalidOperationException($"{s.Id}/{v}: crown layout differs from L1");
                 if (wood.Index.Length > 0 && (wood.Material != l1.Wood.Material || (wood.Uv is null) != (l1.Wood.Uv is null)))
@@ -45,7 +45,7 @@ public sealed class VegFadeTests
                 if (hi.Y < l1hi.Y - 0.25f * (l1hi.Y - l1lo.Y)) throw new InvalidOperationException($"{s.Id}/{v}: stand-in crown much smaller than L1");
             }
         // Near models keep the near tags (wood 0, masses −1).
-        var near = MotherModelTests.Mother(Table.Value.Get("ginkgo"), 0, VegLevel.L1);
+        var near = VegetationTestSupport.Mother(Table.Value.Get("ginkgo"), 0, VegLevel.L1);
         if (near.Wood.Custom2!.Where((_, i) => i % 4 == 3).Any(w => w != 0f)) throw new InvalidOperationException("near wood tagged");
     }
 
@@ -55,12 +55,12 @@ public sealed class VegFadeTests
         // GAME-195: L1 and the far stand-in used to merge the masses into a few spheres, so the outline jumped at each swap.
         // Now L1 draws a subset of the plan's own masses and the stand-in a subset of L1's, at their own centres (mass
         // vertices carry their centre in CUSTOM0 and the tag in CUSTOM2.w: near −1, far −2).
-        var palette = MotherModelTests.Palette;
+        var palette = VegetationTestSupport.Palette;
         foreach (var id in new[] { "ginkgo", "camphor", "cherry" })
         {
             var s = Table.Value.Get(id);
             var plan = new TreePlan(s, 0);
-            var l1 = Centres(MotherModelTests.Mother(s, 0, VegLevel.L1).Crown, -1f);
+            var l1 = Centres(VegetationTestSupport.Mother(s, 0, VegLevel.L1).Crown, -1f);
             var far = Centres(MotherModels.FarStandIn(s, 0, palette).Crown, MotherModels.FarMassTag);
             if (far.Count == 0 || !l1.IsSupersetOf(far)) throw new InvalidOperationException($"{id}: a far mass is not an L1 mass");
             if (!plan.Blobs.Select(b => b.Center).ToHashSet().IsSupersetOf(l1)) throw new InvalidOperationException($"{id}: an L1 mass is not a near mass");

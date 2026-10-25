@@ -241,14 +241,13 @@ public sealed class WestModuleTests
         var world = World();
         var module = new WestModule();
         var claimed = module.Claims.OfType<FeatureClaim>().Where(c => (c.Aspects & Aspects.Facade) != 0).Select(c => c.Feature).ToHashSet();
-        string? Owner(FeatureId f, Aspects a) => claimed.Contains(f) ? "zone.west" : null;
-        var prepass = new BuildContext { CodeHash = "fixture", WindowNumbering = new((RealMapFixture.Entry().Descriptor).Id, new string('0', 64), []), SourceInputs = RealMapFixture.WindowInputs(RealMapFixture.Entry().Descriptor.Id), GlobalInputs = TextInputs(), Catalog = Campus.Contracts.Tests.PaletteFixture.Catalog, World = world, Map = RealMapFixture.Entry().Descriptor, WorldSeed = 1, ClaimedBy = Owner };
-        var layouts = module.DescribeWindowLayouts(world, 1);
-        var snapshot = new global::Campus.Gen.Buildings.BuildingsModule().PrepareWindowNumbering(prepass, layouts);
+        var context = RealMapFixture.ZoneContext(module, world, globalInputs: TextInputs());
+        var layouts = module.DescribeWindowLayouts(world, context.WorldSeed);
+        var snapshot = context.WindowNumbering;
         var ours = snapshot.Allocations.Where(a => claimed.Contains(a.Feature)).ToArray();
         AssertThat(ours.Length == layouts.Sum(l => l.Grids.Count) && ours.All(a => a.Columns > 0 && a.Rows > 0)).OverrideFailureMessage("every west grid is allocated with cells").IsTrue();
         AssertThat(snapshot.WindowCount <= WindowNumberingSnapshot.Capacity).OverrideFailureMessage($"the table fits ({snapshot.WindowCount})").IsTrue();
-        var metadata = module.DescribeWindows(new BuildContext { CodeHash = "fixture", GlobalInputs = TextInputs(), Catalog = Campus.Contracts.Tests.PaletteFixture.Catalog, World = world, Map = RealMapFixture.Entry().Descriptor, WorldSeed = 1, ClaimedBy = Owner, WindowNumbering = snapshot });
+        var metadata = module.DescribeWindows(context);
         AssertThat(metadata.Facades.Count > 0).OverrideFailureMessage("the west zone declares facade runs").IsTrue();
     }
 

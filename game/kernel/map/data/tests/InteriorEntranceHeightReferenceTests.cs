@@ -30,7 +30,7 @@ public sealed class InteriorEntranceHeightReferenceTests
     {
         foreach (var reference in new string?[] { null, "absolute" })
         {
-            var box = new InteriorProviderScopeTests.FixtureBoxInterior();
+            var box = new Campus.Kernel.Bake.Tests.FixtureBoxInterior();
             var providers = new Dictionary<string, IInteriorProvider> { [Provider] = box };
             AssertThrown(() => InteriorAssembly.Configure(Encoding.UTF8.GetBytes(Encoding.UTF8.GetString(Bytes(reference))
                 .Replace("\"version\":3", "\"version\":1", StringComparison.Ordinal)), providers)).IsInstanceOf<JsonException>();
@@ -48,7 +48,7 @@ public sealed class InteriorEntranceHeightReferenceTests
     [TestCategory(TestReason.Contract)]
     public void ExplicitTerrainResolvesPadAndBuildConfiguredKeepsAbsoluteCoordinates()
     {
-        var box = new InteriorProviderScopeTests.FixtureBoxInterior();
+        var box = new Campus.Kernel.Bake.Tests.FixtureBoxInterior();
         var providers = new Dictionary<string, IInteriorProvider> { [Provider] = box };
         var terrain = new ProbeTerrain();
         var bindings = InteriorAssembly.Configure(Bytes("pad"), providers, terrain);
@@ -123,7 +123,7 @@ public sealed class InteriorEntranceHeightReferenceTests
     [TestCategory(TestReason.Contract)]
     public void ClosedRegisterDoesNotChangeOpenProviderCallsOrNavigation()
     {
-        var provider = new InteriorProviderScopeTests.FixtureBoxInterior();
+        var provider = new Campus.Kernel.Bake.Tests.FixtureBoxInterior();
         var sourceProviders = new Dictionary<string, IInteriorProvider> { [Provider] = provider };
         var bindings = InteriorAssembly.Configure(Bytes(null), sourceProviders);
         var probe = new CountingProvider(provider);
@@ -188,7 +188,7 @@ public sealed class InteriorEntranceHeightReferenceTests
     [TestCase, TestCategory(TestReason.Regression)]
     public void PartRangeKeepsAnotherWingsSameNumberedFloorClosedAndRejectsAnInvalidElevatorStop()
     {
-        var provider = new InteriorProviderScopeTests.FixtureBoxInterior();
+        var provider = new Campus.Kernel.Bake.Tests.FixtureBoxInterior();
         var providers = new Dictionary<string, IInteriorProvider> { [Provider] = provider };
         var context = Context(providers);
         var world = (FakeWorld)context.World;
@@ -211,7 +211,7 @@ public sealed class InteriorEntranceHeightReferenceTests
         AssertThrown(() => InteriorAssembly.IndexEntries([invalid], bindings, providers, world, [])).IsInstanceOf<InvalidDataException>();
         var missing = Encoding.UTF8.GetBytes(Encoding.UTF8.GetString(catalog).Replace("open-wing", "missing", StringComparison.Ordinal));
         AssertThrown(() => InteriorAssembly.ConfigureForWorld(missing,
-            new Dictionary<string, IInteriorProvider> { [Provider] = new InteriorProviderScopeTests.FixtureBoxInterior() }, world))
+            new Dictionary<string, IInteriorProvider> { [Provider] = new Campus.Kernel.Bake.Tests.FixtureBoxInterior() }, world))
             .IsInstanceOf<InvalidDataException>();
     }
 

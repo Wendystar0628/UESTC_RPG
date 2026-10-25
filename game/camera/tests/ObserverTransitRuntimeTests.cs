@@ -20,7 +20,7 @@ public sealed class ObserverTransitRuntimeTests
             throw new InvalidOperationException("Transit regression requires a real Godot scene tree.");
         var camera = new TestCameraRig();
         var terrain = new FlowTerrainPreparation();
-        var maps = new TestMapService { Context = FlightBoundsTests.CreateContext() };
+        var maps = new TestMapService { Context = FlightTestSupport.CreateContext() };
         foreach (var failCleanup in new[] { false, true })
         {
             var original = new InvalidDataException("transit destination preparation failed");
@@ -60,7 +60,7 @@ public sealed class ObserverTransitRuntimeTests
             throw new InvalidOperationException("Transit regression requires a real Godot scene tree.");
         var camera = new TestCameraRig();
         var terrain = new FlowTerrainPreparation();
-        var maps = new TestMapService { Context = FlightBoundsTests.CreateContext() };
+        var maps = new TestMapService { Context = FlightTestSupport.CreateContext() };
         var original = new OperationCanceledException("arrival preparation cancelled independently");
         var cleanup = new OperationCanceledException("loading lifetime cancelled independently");
         var runtime = new FlowRuntimeTestStub(() => true) { Failure = original };
@@ -82,7 +82,7 @@ public sealed class ObserverTransitRuntimeTests
     {
         var camera = new TestCameraRig();
         var terrain = new FlowTerrainPreparation();
-        var maps = new TestMapService { Context = FlightBoundsTests.CreateContext() };
+        var maps = new TestMapService { Context = FlightTestSupport.CreateContext() };
         var cleanup = new InvalidDataException("loading cleanup failed after cancellation");
         var loading = new TransitPresentation(Task.CompletedTask, cleanup, holdCleanup: true);
         var runtime = new FlowRuntimeTestStub(() => true);
@@ -125,7 +125,7 @@ public sealed class ObserverTransitRuntimeTests
     {
         var camera = new TestCameraRig();
         var terrain = new FlowTerrainPreparation();
-        var maps = new TestMapService { Context = FlightBoundsTests.CreateContext() };
+        var maps = new TestMapService { Context = FlightTestSupport.CreateContext() };
         var covered = new TaskCompletionSource();
         var loading = new TransitPresentation(covered.Task, holdCleanup: true);
         var driver = new TransitDriver(camera, loading, new FlowRuntimeTestStub(() => true), maps, terrain, terrain);
@@ -156,7 +156,7 @@ public sealed class ObserverTransitRuntimeTests
     [TestCase, TestCategory(TestReason.Regression), RequireGodotRuntime]
     public async Task ForcedSnapshotsHoldThePreRequestStateUntilThePreparedDestinationIsAccepted()
     {
-        var baseMap = FlightBoundsTests.CreateContext();
+        var baseMap = FlightTestSupport.CreateContext();
         var terrain = new PendingDestination();
         var map = new TestMapContext(baseMap.Descriptor, new FakeWorld
         {

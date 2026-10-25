@@ -157,9 +157,9 @@ public sealed class StreamSchedulingTests
     {
         var context = new BuildContext
         {
-            CodeHash = "fixture", WindowNumbering = new((BackdropInputsTests.Descriptor()).Id, new string('0', 64), []),
+            CodeHash = "fixture", WindowNumbering = new((TestMapContext.BackdropDescriptor()).Id, new string('0', 64), []),
             Catalog = Campus.Contracts.Tests.PaletteFixture.Catalog,
-            Map = BackdropInputsTests.Descriptor(),
+            Map = TestMapContext.BackdropDescriptor(),
             World = new FakeWorld { Boundary = new([]) },
             WorldSeed = 1
         };
@@ -202,8 +202,8 @@ public sealed class StreamSchedulingTests
         using var queue = new BakeQueue(1, static () => { });
         using var entered = new ManualResetEventSlim();
         using var release = new ManualResetEventSlim();
-        var retiringContext = new TestMapContext(BackdropInputsTests.Descriptor() with { Id = new("retiring-fixture-map") });
-        var currentContext = new TestMapContext(BackdropInputsTests.Descriptor() with { Id = new("current-fixture-map") });
+        var retiringContext = new TestMapContext(TestMapContext.BackdropDescriptor() with { Id = new("retiring-fixture-map") });
+        var currentContext = new TestMapContext(TestMapContext.BackdropDescriptor() with { Id = new("current-fixture-map") });
         var oldKey = new BakeKey(retiringContext.Descriptor.Id, "fixture.root", "L4/0/0");
         var currentKey = new BakeKey(currentContext.Descriptor.Id, "fixture.root", "L4/0/0");
         var oldSession = new BakeQueue.MapSession(retiringContext.Descriptor.Id);

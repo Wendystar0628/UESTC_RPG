@@ -83,7 +83,7 @@ public sealed class GroundTreePitTests
 
         // In the mesh: every triangle whose centre lies inside a pit (a little in from its outline, InsideMargin) is stone frame or soil
         // at the pit's own heights, never a paving layer at the paving level.
-        var output = new GroundModule().Build(TestWorld.Context(world), new TileKey(0, 0), LodLevel.L0);
+        var output = new GroundModule().Build(GroundTestSupport.Context(world), new TileKey(0, 0), LodLevel.L0);
         var frame = GroundPalette.Id(GroundColor.Curb);
         var earth = GroundPalette.Id(GroundColor.Soil);
         var tops = new List<float>();
@@ -119,7 +119,7 @@ public sealed class GroundTreePitTests
     public void PitFramesCarryChamfersAndFacesInStone()
     {
         var world = PlazaWorld();
-        var output = new GroundModule().Build(TestWorld.Context(world), new TileKey(0, 0), LodLevel.L0);
+        var output = new GroundModule().Build(GroundTestSupport.Context(world), new TileKey(0, 0), LodLevel.L0);
         var frame = GroundPalette.Id(GroundColor.Curb);
         // The outer face and the inner face of the frame are vertical stone faces up to the frame top.
         var faces = 0;
@@ -144,10 +144,10 @@ public sealed class GroundTreePitTests
     [TestCase, TestCategory(TestReason.Contract)]
     public void NoPitDoesNotChangeTheGroundAndSiteStoneIsLeftAlone()
     {
-        var bare = new TestWorldBuilder().Plaza().Build();
+        var bare = new GroundTestSupportBuilder().Plaza().Build();
         AssertThat(GroundSources.Read(bare).Shapes.All(s => s.Kind != SurfaceKind.Pit)).OverrideFailureMessage("No tree-pit, no pit shape.").IsTrue();
 
-        var site = new TestWorldBuilder().Plaza()
+        var site = new GroundTestSupportBuilder().Plaza()
             .Pit("design:t-site", Square(20f, 20f, 1.8f, 0f), 0.42f, """{"plant":"tree","kerb":0.22,"soilAbove":0.32,"stone":"site"}""")
             .Pit("design:t-bed", null, 0.45f, """{"plant":"tree","radius":3.45,"seat":0.45}""")
             .Build();
@@ -177,7 +177,7 @@ public sealed class GroundTreePitTests
     [TestCase, TestCategory(TestReason.Contract)]
     public void PitSoilUsesTheGroundHeightFieldAndFootMaterial()
     {
-        var ctx = TestWorld.Context(PlazaWorld());
+        var ctx = GroundTestSupport.Context(PlazaWorld());
         var colliders = new GroundModule().Collide(ctx, new(0, 0));
         AssertThat(colliders.Count == 1 && colliders[0] is HeightFieldCollider).OverrideFailureMessage("Tree pits must not add exact support shapes.").IsTrue();
         var field = (HeightFieldCollider)colliders[0];
@@ -204,16 +204,16 @@ public sealed class GroundTreePitTests
     public void AnUntaggedPitchGetsNoWhiteLinesWhateverItsProportions()
     {
         // A 105 x 68 rectangle is football proportions. With a sport tag it is marked; without one it is plain grass.
-        var marked = TestWorld.Of([Pitch("test:way:1", "soccer", 0f, 0f)]);
-        var plain = TestWorld.Of([Pitch("test:way:2", null, 0f, 0f)]);
+        var marked = GroundTestSupport.Of([Pitch("test:way:1", "soccer", 0f, 0f)]);
+        var plain = GroundTestSupport.Of([Pitch("test:way:2", null, 0f, 0f)]);
         var markedShape = GroundSources.Read(marked).Shapes.Single();
         var plainShape = GroundSources.Read(plain).Shapes.Single();
         AssertThat(markedShape.Kind == SurfaceKind.Turf && markedShape.Marked).OverrideFailureMessage("A pitch that names its sport is marked turf.").IsTrue();
         AssertThat(plainShape.Kind == SurfaceKind.Turf && !plainShape.Marked).OverrideFailureMessage("A pitch without a sport tag is turf that is not marked.").IsTrue();
-        AssertThat(Quads(TestWorld.Context(marked)).Count > 100).OverrideFailureMessage("The tagged pitch has its lines.").IsTrue();
-        AssertThat(Quads(TestWorld.Context(plain)).Count == 0).OverrideFailureMessage("The untagged pitch has no lines.").IsTrue();
+        AssertThat(Quads(GroundTestSupport.Context(marked)).Count > 100).OverrideFailureMessage("The tagged pitch has its lines.").IsTrue();
+        AssertThat(Quads(GroundTestSupport.Context(plain)).Count == 0).OverrideFailureMessage("The untagged pitch has no lines.").IsTrue();
         // The same football-sized rectangle as the athletics-style untagged field of the real campus: still plain grass.
-        var output = new GroundModule().Build(TestWorld.Context(plain), new TileKey(0, 0), LodLevel.L0);
+        var output = new GroundModule().Build(GroundTestSupport.Context(plain), new TileKey(0, 0), LodLevel.L0);
         AssertThat(output.Meshes.All(m => m.Material.Spec.Lit.Value != "ground.marking.lit")).OverrideFailureMessage("No marking mesh is built for an untagged pitch.").IsTrue();
     }
 
@@ -245,7 +245,7 @@ public sealed class GroundTreePitTests
     // ---------------------------------------------------------------- fixtures and helpers
 
     /// <summary>An 80 m plaza with two square pits (one turned 30 degrees) and a 2 m strip, all inside it, in tile (0, 0).</summary>
-    private static FakeWorld PlazaWorld() => new TestWorldBuilder().Plaza()
+    private static FakeWorld PlazaWorld() => new GroundTestSupportBuilder().Plaza()
         .Pit("design:t-pits", null, AuthoredPitRim, """{"plant":"tree","perPit":1,"size":1.8,"kerb":0.22,"soilAbove":0.32}""",
             Square(20f, 20f, 1.8f, 0f), Square(36f, 20f, 1.8f, 30f))
         .Pit("design:t-strip", null, AuthoredStripRim, """{"plant":"tree","kerb":0.15,"soilAbove":0.14}""", Strip(30f, 30.05f, 50f, 32.05f))
@@ -314,11 +314,11 @@ public sealed class GroundTreePitTests
     private static JsonElement Json(string text) => JsonDocument.Parse(text).RootElement.Clone();
 
     /// <summary>Collects the features of a small test world: a plaza and any number of tree-pit records.</summary>
-    private sealed class TestWorldBuilder
+    private sealed class GroundTestSupportBuilder
     {
         private readonly List<WorldFeature> _features = [];
 
-        public TestWorldBuilder Plaza()
+        public GroundTestSupportBuilder Plaza()
         {
             var rings = new PolygonRings([new(4f, 4f), new(60f, 4f), new(60f, 60f), new(4f, 60f)]);
             _features.Add(WorldFeatureFixture.Create("osm:way:plaza", "road", new PolygonGeometry(rings),
@@ -327,7 +327,7 @@ public sealed class GroundTreePitTests
         }
 
         /// <summary>A tree-pit record: polygons, or a point at (20, 20) when none are given.</summary>
-        public TestWorldBuilder Pit(string id, PolygonRings? single, float height, string props, params PolygonRings[] polygons)
+        public GroundTestSupportBuilder Pit(string id, PolygonRings? single, float height, string props, params PolygonRings[] polygons)
         {
             PolygonRings[] all = single is null ? polygons : [single, .. polygons];
             WorldGeometry geometry = all.Length > 0 ? new MultiPolygonGeometry(all) : new PointGeometry(new Vector3(20f, 0f, 20f));
@@ -336,6 +336,6 @@ public sealed class GroundTreePitTests
             return this;
         }
 
-        public FakeWorld Build() => TestWorld.Of(_features);
+        public FakeWorld Build() => GroundTestSupport.Of(_features);
     }
 }
