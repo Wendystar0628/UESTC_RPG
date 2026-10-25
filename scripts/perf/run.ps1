@@ -29,7 +29,7 @@ $sampleSeconds=30
 $smokeSeconds=2
 $maximumAttempts=3
 $otherGpuFraction=0.20
-$otherCpuFraction=0.25
+$otherCpuFraction=0.40
 $maximumFactAgeSeconds=3
 $timeoutSeconds=600
 $judgement=[ordered]@{ logicalPauseVerified=$false; mainThreadLongStopVerified=$false;
