@@ -10,11 +10,10 @@ import subprocess
 import time
 from collections import defaultdict
 from pathlib import Path
-from perf_model import CALC, at, manifest_path, read_json
+from perf_model import at, manifest_path, read_json
 
 AI_BATCHES_KEEP = 10
 HISTORY_PER_GROUP = 200
-DIAGNOSTIC_BYTES_KEEP = 2 * 1024 ** 3
 
 
 @contextlib.contextmanager
@@ -143,9 +142,8 @@ def basic_state(manifest, streams, run, missing, sampling_reasons=()):
         return 'partial', [reason for reason in reasons if reason] or ['记录未完整结束或有丢行']
     if manifest.get('origin') == 'play':
         return 'evidence', ['作者会话只作证据，不作 A/B 基线']
-    if (run.get('purpose') != 'baseline'
-            or at(manifest, 'run.diagnostics') or run.get('diagnostic')):
-        return 'evidence', ['非正式 AI、功能短跑与诊断采集不进入基线或比较']
+    if run.get('purpose') != 'baseline':
+        return 'evidence', ['非正式 AI 与功能短跑不进入基线或比较']
     reasons.extend(sampling_reasons)
     if not streams['frames']:
         reasons.append('没有逐帧记录')
@@ -282,19 +280,6 @@ def unlocked_tree(directory):
         raise
 
 
-def diagnostic_attachments(runs):
-    """只枚举诊断清单明确登记且在本目录内的非原始文件。"""
-    attachments = set()
-    raw = {'manifest.json', 'manifest.pending.json', '.lock', 'frames.csv', 'samples.csv', 'hw.csv', 'hwfast.csv',
-           'events.jsonl', 'run.json', 'diagnostics.json'}
-    for record in Path(runs).rglob('diagnostics.json'):
-        for relative in read_json(record).get('attachments', []):
-            path = (record.parent / relative).resolve()
-            if path.name not in raw and inside(path, record.parent) and path.is_file():
-                attachments.add(path)
-    return sorted(attachments)
-
-
 def prune(out, entries):
     out, runs = Path(out).resolve(), (Path(out) / 'runs').resolve()
     removed = []
@@ -333,12 +318,4 @@ def prune(out, entries):
             if summary_path.exists() and not manifest_path(Path(read_json(summary_path)['source'])).is_file():
                 shutil.rmtree(directory)
                 removed.append(str(directory))
-    attachments = diagnostic_attachments(runs)
-    total = sum(p.stat().st_size for p in attachments)
-    for path in sorted(attachments, key=lambda p: p.stat().st_mtime_ns):
-        if total <= DIAGNOSTIC_BYTES_KEEP:
-            break
-        total -= path.stat().st_size
-        path.unlink()
-        removed.append(str(path))
     return removed

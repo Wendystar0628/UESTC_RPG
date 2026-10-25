@@ -1,5 +1,5 @@
-﻿# 固定采集入口的场景选择、正式参数与逐会话关闭发布；不计算指标或轮比较。
-# 用法：仅由同目录 run.ps1 点引用。
+﻿# 固定采集与诊断入口共用的场景选择、采集请求、启动参数与逐会话关闭发布；不计算指标或轮比较。
+# 用法：由同目录 run.ps1 点引用。
 function Write-CollectionJson($Path, $Value) {
     [IO.File]::WriteAllText($Path, ($Value | ConvertTo-Json -Depth 16), (New-Object Text.UTF8Encoding $false))
 }
@@ -16,6 +16,21 @@ function Get-CollectionScenes($Plan, [string[]]$Suites, [string[]]$Scenes) {
     if (@($selected.scene.id | Select-Object -Unique).Count -ne $selected.Count) { throw 'Duplicate scenes selected.' }
     if ($Scenes.Count -and @($Scenes | Where-Object { $_ -notin $selected.scene.id }).Count) { throw 'Unknown selected scene.' }
     return $selected
+}
+
+# DECISION-344: all collection thresholds are frozen here; normal small DWM load is below the GPU threshold.
+function New-CollectionRequest($Item, [bool]$FunctionalSmoke, [Collections.IDictionary]$Judgement) {
+    $entry=$Item.scene
+    $seconds=if ($FunctionalSmoke) { 2 } elseif ($Item.kind -eq 'route') { $entry.seconds } else { 30 }
+    $request=[ordered]@{ sceneId=$entry.id; sampleSegmentId=('sample-' + [Guid]::NewGuid().ToString('N')); functionalSmoke=$FunctionalSmoke;
+        stableFrames=10; realtimeSeconds=2; sampleSeconds=$seconds; otherGpuFraction=0.20; maximumFactAgeSeconds=3;
+        saveAfterSample=($entry.PSObject.Properties['saveAfterSample'] -and [bool]$entry.saveAfterSample) }
+    $request['suite']=$Item.kind
+    $request['routePointIds']=@()
+    if ($entry.PSObject.Properties['routePointIds']) { $request['routePointIds']=@($entry.routePointIds) }
+    $request['travelPrefetch']=if ($entry.PSObject.Properties['travelPrefetch']) { [bool]$entry.travelPrefetch } else { $false }
+    foreach ($name in $Judgement.Keys) { $request[$name]=$Judgement[$name] }
+    return $request
 }
 
 function Publish-CollectionRound($Root, $Id, $Number, $SourceRoot, [string[]]$Scenes, $PreviousId,

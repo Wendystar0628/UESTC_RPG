@@ -262,8 +262,6 @@ def anomalies(out, args):
                      ((TYPE.get(row['type'], row['type']), LEVEL[row['level']],
                        f"{row['firstFrame']}–{row['lastFrame']}", row['phase'],
                        f"{cell(row['value'])} / {cell(row['threshold'])}", row['candidates']) for row in rows[:args.limit]))
-    for item in summary.get('deepen', [])[:args.limit]:
-        yield '深挖：' + item['command'] + '；' + item['commandState']
 
 
 def slice_rows(out, args):

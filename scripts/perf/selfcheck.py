@@ -2,10 +2,10 @@
 用法：python -I -X utf8 scripts/perf/perf.py selfcheck；输入当前字典和预算，产出自检结果，临时六件与派生自动清除。
 """
 from perf_model import read_json
-from selfcheck_analysis import (check_snapshot, check_median, check_deepen, check_manifest, check_event_order,
+from selfcheck_analysis import (check_snapshot, check_median, check_gpu_budget, check_manifest, check_event_order,
                                 check_cost_windows, check_cold_gap, check_viewport_sources)
 from selfcheck_batches import check_sampling_batches, check_batch_freshness, check_failed_baseline
-from selfcheck_storage import check_pending, check_processed_error, check_retention_authority, check_roundtrip
+from selfcheck_storage import check_pending, check_processed_error, check_history_group, check_roundtrip
 from selfcheck_projection import check_derived_curves, check_monitor_projection, check_missing_projection
 from selfcheck_context import check_context, check_window_changes, check_hardware_facts
 from selfcheck_judgement import check_stopping
@@ -16,10 +16,10 @@ def run(root):
     configure_monitor(root)
     dictionary, budgets = read_json(root / 'game/data/perf-fields.json'), read_json(root / 'budgets.json')
     result = []
-    for check in (check_snapshot, check_median, check_pending, check_deepen, check_manifest, check_context, check_window_changes, check_hardware_facts):
+    for check in (check_snapshot, check_median, check_pending, check_gpu_budget, check_manifest, check_context, check_window_changes, check_hardware_facts):
         check(root, dictionary, budgets)
     result.append('通过 TOOL-447/457：缩略图与命令上下文只认帧位、窗口变化共享稳定时长，当前 schema 硬件聚合事实与原生时间保真。')
-    result.append('通过 TOOL-435：快照投影重算与字段语义校验、M 保窗与换口径、pending 锁/索引/过期、deepen、清单枚举与上下文权威回归。')
+    result.append('通过 TOOL-435：快照投影重算与字段语义校验、M 保窗与换口径、pending 锁/索引/过期、单次 GPU 上沿越限、清单枚举与上下文权威回归。')
     check_sampling_batches(root, dictionary, budgets)
     check_batch_freshness(root, dictionary, budgets)
     result.append('通过 TOOL-457：趋势只投影 index.batches 单轮及确认较差值；功能、partial 与无登记会话不入趋势，stale 保留说明。')
@@ -28,7 +28,7 @@ def run(root):
     check_failed_baseline(root, dictionary, budgets)
     check_derived_curves(root, dictionary, budgets)
     check_monitor_projection(root, dictionary, budgets)
-    check_retention_authority(root, dictionary, budgets)
+    check_history_group(root, dictionary, budgets)
     check_missing_projection(root, dictionary, budgets)
     result.append('通过 TOOL-437：错误输入只处理一次，输入变化重算；曲线、帧率与归一化负载由分析器派生。')
     result.append('通过 TOOL-441：内容错误缓存、IO 重试与恢复、冲突重查、来源删除与派生缺失判鲜；好坏会话隔离，重复故障不自激通知。')

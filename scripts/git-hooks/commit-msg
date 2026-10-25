@@ -25,7 +25,7 @@ try:
 except (OSError, ValueError, TypeError, KeyError, re.error) as error:
     print(f"row-kinds.json 读取失败：{error}", file=sys.stderr)
     sys.exit(2)
-pattern = r"^(?:" + row + r"(?:/" + row + r")* |(?:文档|工具|数据)[：:]|Merge |Revert |fixup! |squash! )"
+pattern = r"^(?:" + row + r"(?:/" + row + r")* |[一-鿿A-Za-z0-9]{1,10}[：:]|Merge |Revert |fixup! |squash! )"
 sys.exit(0 if re.match(pattern, sys.argv[1]) else 1)
 PY
 result=$?
@@ -35,6 +35,6 @@ case "$result" in
   2) exit 1 ;;
   *) echo "row-kinds.json 读取失败：python 退出码 $result。" >&2; exit 1 ;;
 esac
-echo "提交首行不合 STD-CONVENTIONS §3.8：写 \`<队列行号> <领域词>：一句话\`（如 \`GAME-034a 街道家具：主路口横排白色石球\`），没有行号的用 \`文档：\`、\`工具：\`、\`数据：\` 开头。" >&2
+echo "提交首行不合 STD-CONVENTIONS §3.8：写 \`<队列行号> <领域词>：一句话\`（如 \`GAME-034a 街道家具：主路口横排白色石球\`），没有行号的省去行号，写 \`<领域词>：一句话\`（如 \`文档：\`、\`性能：\`）。" >&2
 echo "这次的首行：$first" >&2
 exit 1

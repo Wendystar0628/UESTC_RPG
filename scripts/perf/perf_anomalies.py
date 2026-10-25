@@ -1,16 +1,14 @@
 """按 ENG-PERF-DATA 判性能异常、关联阶段与候选原因，不推断责任函数。
-用法：由 analyze.py 导入；输入已准备的帧、事件、清单和预算，产出异常、窗口和 deepen 条目。
+用法：由 analyze.py 导入；输入已准备的帧、事件、清单和预算，产出异常与窗口。
 """
-import math
 import statistics
 import bisect
-from collections import Counter, defaultdict, deque
-from perf_model import COSTS, LEVEL, PHASES, at, distribution, is_render_adapter, number, quantile, target_ms
+from collections import defaultdict
+from perf_model import COSTS, LEVEL, PHASES, at, is_render_adapter, number, quantile, target_ms
 
 MERGE_FRAME_MS = 250
 MERGE_STATE_MS = 3000
 MAX_PER_TYPE = 20
-DEEPEN_REPEAT_COUNT = 3
 LEVELS = {key: rank for rank, key in enumerate(LEVEL)}
 
 
@@ -520,33 +518,3 @@ def merge_anomalies(items):
                 merged.append(current)
     return sorted(merged, key=lambda a: (a['type'] != 'dataValidity', -LEVELS[a['level']], -a['excessMs'], a['fromMs']))
 
-
-def deepen(items, manifest, completed_tools=()):
-    result = []
-    unexplained = Counter((a['type'], a.get('metric'), a.get('phase')) for a in items
-                          if a['attributionAvailable'] and not a['candidates']
-                          and (LEVELS[a['level']] >= 2 or a['type'] == 'costSpike'))
-    for item in items:
-        key = (item['type'], item.get('metric'), item.get('phase'))
-        # ENG-PERF-MEASURE: budgetExceeded already carries budget_checks' judged upper breach.
-        gpu_budget = item['type'] == 'budgetExceeded' and item.get('metric') == 'mainViewportGpuMs'
-        if not gpu_budget and item['level'] != 'severe' and (not item['attributionAvailable'] or unexplained[key] < DEEPEN_REPEAT_COUNT):
-            continue
-        if any(r['type'] == item['type'] and r['metric'] == item.get('metric') and r['phase'] == item.get('phase') for r in result):
-            continue
-        phase = item.get('phase')
-        tools = (['gpu-profile', 'Nsight'] if item.get('metric') == 'mainViewportGpuMs' else
-                 ['gpu-profile'] if phase == 'drawMs' else ['EventPipe'])
-        tools = [tool for tool in tools if (*key, tool) not in completed_tools]
-        if not tools:
-            continue
-        args = [str(a) for a in at(manifest, 'run.args', []) if not str(a).startswith('--perf-out=')]
-        result.append(dict(type=item['type'], metric=item.get('metric'), phase=phase, tools=tools,
-                           firstFrame=item['firstFrame'], lastFrame=item['lastFrame'],
-                           scene=manifest.get('scene'), poseArgs=args,
-                           reason='已测主视口 GPU P95 超过预算上沿' if gpu_budget else
-                           '严重级' if item['level'] == 'severe' else '同会话反复且无事件原因',
-                           command="powershell.exe -NoProfile -Command \"& 'scripts/perf/run.ps1' -DeepenSession '" + str(manifest['id']).replace("'", "''") +
-                           "' -DeepenEntry " + str(len(result)) + " -DiagnosticTool " + ','.join("'" + tool + "'" for tool in tools) + '\"',
-                           commandState='ready'))
-    return result

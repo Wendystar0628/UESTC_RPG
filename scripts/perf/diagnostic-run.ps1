@@ -1,48 +1,46 @@
-﻿# 按既有 deepen 条目重放三种诊断，保留原条件与附件，不加入常规协议。
-# 用法：由 run.ps1 -DeepenSession <id> [-DiagnosticTool gpu-profile,EventPipe,Nsight] [-DeepenEntry 0] 调用。
-function Find-PerfDiagnosticTool([string]$Root, [string]$Name) {
-    if ($Name -eq 'EventPipe') {
-        return Get-UESTCDotnetTrace -Root $Root
-    } else {
-        $installed=Join-Path ${env:ProgramFiles} 'NVIDIA Corporation'
-        $path=@(Get-ChildItem -LiteralPath $installed -Directory -Filter 'Nsight Systems *' |
-            Sort-Object Name -Descending | ForEach-Object { Join-Path $_.FullName 'target-windows-x64\nsys.exe' } |
-            Where-Object { Test-Path -LiteralPath $_ } | Select-Object -First 1)[0]
-    }
-    if (-not $path -or -not (Test-Path -LiteralPath $path)) { throw "$Name is not installed in the configured local tool store." }
-    return $path
+﻿﻿# 单场景单工具诊断：沿用采集场景计划、构建准备与私桌面，产物写 output/perf/diagnostics/<时刻>-<场景>-<工具>/ 并打印摘要；不登记、不进分析。
+# 用法：由 run.ps1 -Scene <场景> -DiagnosticTool gpu-profile|EventPipe|Nsight 点引用调用。
+function Find-PerfNsight {
+    $installed=Join-Path ${env:ProgramFiles} 'NVIDIA Corporation'
+    $path=@(Get-ChildItem -LiteralPath $installed -Directory -Filter 'Nsight Systems *' -ErrorAction SilentlyContinue |
+        Sort-Object Name -Descending | ForEach-Object { Join-Path $_.FullName 'target-windows-x64\nsys.exe' } |
+        Where-Object { Test-Path -LiteralPath $_ } | Select-Object -First 1)
+    if (-not $path.Count) { throw 'Nsight Systems is not installed.' }
+    return $path[0]
 }
 
-function Invoke-PerfDiagnostic($Root, $SessionId, [string[]]$Tools, [int]$EntryIndex, [IO.FileStream]$BuildLease) {
-    $summaryPath=Join-Path $Root ('output\perf\derived\' + $SessionId + '\summary.json')
-    $summary=Get-Content -LiteralPath $summaryPath -Raw -Encoding UTF8 | ConvertFrom-Json
-    $entries=@($summary.deepen)
-    if ($EntryIndex -ge $entries.Count) { throw 'The requested session has no such deepen entry; analyze it first.' }
-    $entry=$entries[$EntryIndex]
-    $entryTools=@($entry.tools)
-    if (-not $entryTools.Count -or @($entryTools | Where-Object { $_ -notin @('gpu-profile','EventPipe','Nsight') }).Count) {
-        throw 'The selected deepen entry has no supported diagnostic tool plan.'
+function Build-PerfCpuParse($Root, $Directory, $TraceTool) {
+    $library=@(Get-ChildItem -LiteralPath (Join-Path (Split-Path $TraceTool -Parent) '.store\dotnet-trace') -Recurse -File -Filter 'Microsoft.Diagnostics.Tracing.TraceEvent.dll')
+    if ($library.Count -ne 1) { throw 'The pinned dotnet-trace store must identify exactly one TraceEvent assembly.' }
+    $project=Join-Path $Root 'scripts\build\startup-cpu\CpuParse.csproj'
+    $property='-p:TraceToolDir=' + $library[0].DirectoryName
+    $null=Invoke-UESTCProcess dotnet @('build',$project,$property,'--nologo','-v:q') $Root (Join-Path $Directory 'cpu-parser-build.log')
+    $target=(Invoke-UESTCProcess dotnet @('msbuild',$project,$property,'-nologo','-getProperty:TargetPath') $Root).StdOut.Trim()
+    if (-not (Test-Path -LiteralPath $target -PathType Leaf)) { throw 'CpuParse target path is missing.' }
+    return $target
+}
+
+function Write-PerfGpuSteps($Session) {
+    $rows=@(Import-Csv -LiteralPath (Join-Path $Session 'gpusteps.csv') -Encoding UTF8 | Where-Object { $_.valid -eq 'true' -and $_.index -ne '0' })
+    if (-not $rows.Count) { throw 'gpusteps.csv has no valid GPU marker intervals.' }
+    $culture=[Globalization.CultureInfo]::InvariantCulture
+    $table=foreach ($group in $rows | Group-Object name) {
+        [pscustomobject]@{ step=$group.Name; frames=$group.Count
+            gpuMeanMs=[Math]::Round(($group.Group | ForEach-Object { [double]::Parse($_.gpuSincePreviousMarkerMs,$culture) } | Measure-Object -Average).Average,3)
+            cpuMeanMs=[Math]::Round(($group.Group | ForEach-Object { [double]::Parse($_.cpuSincePreviousMarkerMs,$culture) } | Measure-Object -Average).Average,3) }
     }
-    if (-not $Tools.Count) { $Tools=$entryTools }
-    if (@($Tools | Where-Object { $_ -notin $entryTools }).Count) { throw 'Requested diagnostic tools differ from the selected deepen entry.' }
-    $source=[IO.Path]::GetFullPath($summary.source)
-    $manifest=Get-Content -LiteralPath (Join-Path $source 'manifest.json') -Raw -Encoding UTF8 | ConvertFrom-Json
-    $sourceRun=Get-Content -LiteralPath (Join-Path $source 'run.json') -Raw -Encoding UTF8 | ConvertFrom-Json
-    if (-not $manifest.complete -or $manifest.status -ne 'closed') { throw 'Diagnostic replay requires a closed source session.' }
-    $width=$manifest.graphics.targetWidthPx; $height=$manifest.graphics.targetHeightPx
-    foreach ($dimension in @($width,$height)) {
-        if ($dimension -isnot [ValueType] -or $dimension -is [bool] -or $dimension -le 0 -or
-            [double]::IsNaN([double]$dimension) -or [double]::IsInfinity([double]$dimension) -or
-            $dimension -ne [Math]::Truncate([double]$dimension)) { throw 'Source window dimensions are missing or invalid.' }
-    }
-    $sourceResolution=[string]$width + 'x' + [string]$height
-    if (-not $sourceRun.conditions -or -not $sourceRun.sampleSegmentId) { throw 'Source has no frozen collection request; recollect it through run.ps1.' }
-    if ($entry.scene -ne $sourceRun.scene) { throw 'Deepen scene differs from the frozen source run.' }
-    $directory=Join-Path $Root ('output\perf\runs\diagnostic-' + [DateTime]::UtcNow.ToString('yyyyMMddTHHmmss') + '-' + [Guid]::NewGuid().ToString('N'))
+    Write-Host ($table | Sort-Object gpuMeanMs -Descending | Format-Table -AutoSize | Out-String)
+}
+
+function Invoke-PerfDiagnostic($Root, [string[]]$Scene, [string]$Tool, [IO.FileStream]$BuildLease) {
+    if ($Scene.Count -ne 1) { throw 'Diagnostics take exactly one -Scene.' }
+    $plan=Get-Content -LiteralPath (Join-Path $Root 'scripts\perf\scenarios.json') -Raw -Encoding UTF8 | ConvertFrom-Json
+    $item=@(Get-CollectionScenes $plan @('fixed','route','travel') $Scene)[0]
+    $parent=Join-Path $Root 'output\perf\diagnostics'
+    $directory=Assert-UESTCChildPath (Join-Path $parent ([DateTime]::Now.ToString('yyyyMMddTHHmmss') + '-' + $item.scene.id + '-' + $Tool)) $parent
     $null=[IO.Directory]::CreateDirectory($directory)
     $lease=$null
-    $diagnosticFailed=$false
-    $diagnosticSources=[Collections.Generic.List[string]]::new()
+    # DECISION-346: the inherited override is removed, and every child uses this checkout's own default cache.
     $cache=$env:UESTC_BAKE_CACHE
     Remove-Item Env:UESTC_BAKE_CACHE -ErrorAction SilentlyContinue
     try {
@@ -54,53 +52,46 @@ function Invoke-PerfDiagnostic($Root, $SessionId, [string[]]$Tools, [int]$EntryI
         $environment=New-UESTCTestEnvironment -Work $directory
         $environment['UESTC_BAKE_CACHE']=$null
         Update-UESTCGameBuild -Root $Root -Godot $godot -BuildLease $heldLease -Environment $environment
-        $parserDll=$null
-        if ('EventPipe' -in $Tools) {
-            $traceTool=Find-PerfDiagnosticTool $Root 'EventPipe'
-            $traceLibrary=@(Get-ChildItem -LiteralPath (Join-Path (Split-Path $traceTool -Parent) '.store\dotnet-trace') -Recurse -File -Filter 'Microsoft.Diagnostics.Tracing.TraceEvent.dll')
-            if ($traceLibrary.Count -ne 1) { throw 'The pinned dotnet-trace store must identify exactly one TraceEvent assembly.' }
-            $parseBuild=Invoke-UESTCProcess dotnet @('build',(Join-Path $Root 'scripts\build\startup-cpu\CpuParse.csproj'),
-                ('-p:TraceToolDir=' + $traceLibrary[0].DirectoryName),'--nologo') $Root (Join-Path $directory 'cpu-parser-build.log')
-            $parserDll=Join-Path $Root 'output\start_game\TOOL-215-profile\bin\CpuParse\Debug\net10.0\CpuParse.dll'
-            if (-not (Test-Path -LiteralPath $parserDll)) { throw 'CpuParse build did not publish its existing CLI.' }
-        }
-        foreach ($tool in $Tools | Select-Object -Unique) {
-            $work=Join-Path $directory $tool
-            $null=[IO.Directory]::CreateDirectory($work)
-            $engine=Get-UESTCGodotHost -Godot $godot
-            $request=$sourceRun.conditions | ConvertTo-Json -Depth 16 | ConvertFrom-Json
-            $request.sampleSegmentId='diagnostic-' + [Guid]::NewGuid().ToString('N')
-            $request | Add-Member -NotePropertyName externalCloseAfterSample -NotePropertyValue ($tool -eq 'EventPipe') -Force
-            $requestPath=Join-Path $work 'collection.json'
-            Write-CollectionJson $requestPath $request
-            $poseArguments=@($entry.poseArgs | Where-Object { $_ -notmatch '^--(?:perf-out|perf-collection|save-dir)=' -and
-                $_ -notmatch '^--quality-set=display_mode=' })
-            $gameArguments=@('--path',(Join-Path $Root 'game'),'--fullscreen','--resolution',$sourceResolution)
-            if ($tool -eq 'gpu-profile') { $gameArguments+='--gpu-profile' }
-            $gameArguments+=@('--') + $poseArguments + @('--quality-set=display_mode=1') +
-                @(('--save-dir=' + (Join-Path $work 'save')),('--perf-out=' + $work),('--perf-collection=' + $requestPath))
-            $condition=[ordered]@{ purpose='diagnostic'; sourceSession=$SessionId; sourceDirectory=$source; entry=$entry;
-                tool=$tool; scene=$entry.scene; collection=$request; sourceCollection=$sourceRun.conditions;
-                engine=$engine; arguments=$gameArguments; desktop='isolated'; elevation='ordinary';
-                toolPath=$(if($tool -ne 'gpu-profile'){Find-PerfDiagnosticTool $Root $tool}else{$engine});
-                cpuProfile=$(if($tool -eq 'EventPipe'){'dotnet-sampled-thread-time'}else{$null});
-                parserDll=$parserDll; nominalSampleRateHz=$(if($tool -eq 'EventPipe'){100}else{$null}); sampleRateHz=$null;
-                sampleRateReason='Actual collector output and timestamp intervals are retained; no requested rate is asserted as measured.' }
-            $conditionPath=Join-Path $work 'condition.json'
-            Write-CollectionJson $conditionPath $condition
-            $environment=New-UESTCTestEnvironment -Work $work
-            $environment['UESTC_BAKE_CACHE']=$null
-            $result=Invoke-UESTCProcess powershell @('-NoProfile','-File',(Join-Path $Root 'scripts\perf\diagnostic-capture.ps1'),'-ConditionPath',$conditionPath) `
-                $Root (Join-Path $work 'capture.log') -TimeoutSeconds 720 -AllowFailure -IsolatedDesktop -Environment $environment -TextEncoding ([Text.Encoding]::UTF8)
-            & python -I -X utf8 (Join-Path $Root 'scripts\perf\diagnostic-report.py') --root $Root --work $work --source $source --exit-code $result.ExitCode
-            if ($LASTEXITCODE -eq 2) { $diagnosticFailed=$true }
-            elseif ($LASTEXITCODE -ne 0) { throw "Diagnostic publication failed: $work" }
-            foreach ($session in Get-ChildItem -LiteralPath $work -Directory | Where-Object { Test-Path -LiteralPath (Join-Path $_.FullName 'manifest.json') }) {
-                $diagnosticSources.Add($session.FullName)
+        $traceTool=if ($Tool -eq 'EventPipe') { Get-UESTCDotnetTrace -Root $Root } else { $null }
+        $parser=if ($traceTool) { Build-PerfCpuParse $Root $directory $traceTool } else { $null }
+        $request=New-CollectionRequest $item $false @{}
+        # EventPipe stops its collector while the target is alive, so the game waits for the owner's window close.
+        $request['externalCloseAfterSample']=($Tool -eq 'EventPipe')
+        $requestPath=Join-Path $directory 'collection.json'
+        Write-CollectionJson $requestPath $request
+        $arguments=@(Get-CollectionArguments $Root $directory $plan $item $request.sampleSeconds $requestPath)
+        if ($Tool -eq 'gpu-profile') { $arguments=@($arguments[0..1]) + @('--gpu-profile') + @($arguments[2..($arguments.Count-1)]) }
+        $engine=Get-UESTCGodotHost -Godot $godot
+        $log=Join-Path $directory 'game.log'
+        switch ($Tool) {
+            'gpu-profile' {
+                $result=Invoke-UESTCProcess $godot $arguments $Root $log -TimeoutSeconds 600 -IsolatedDesktop -Environment $environment -TextEncoding ([Text.Encoding]::UTF8)
+            }
+            'Nsight' {
+                # Windows CPU sampling/context-switch collection needs elevation. API tracing does not.
+                $nsight=@('profile','--trace=dx12,vulkan,nvtx','--sample=none','--cpuctxsw=none','--wait=all','--kill=false',
+                    ('--output=' + (Join-Path $directory 'graphics')),$engine) + $arguments
+                $result=Invoke-UESTCProcess (Find-PerfNsight) $nsight $Root $log -TimeoutSeconds 600 -IsolatedDesktop -Environment $environment -TextEncoding ([Text.Encoding]::UTF8)
+            }
+            'EventPipe' {
+                Write-CollectionJson (Join-Path $directory 'launch.json') ([ordered]@{ engine=$engine; arguments=$arguments; traceTool=$traceTool })
+                $result=Invoke-UESTCProcess powershell @('-NoProfile','-File',(Join-Path $Root 'scripts\perf\diagnostic-capture.ps1'),'-Work',$directory) `
+                    $Root (Join-Path $directory 'capture.log') -TimeoutSeconds 720 -IsolatedDesktop -Environment $environment -TextEncoding ([Text.Encoding]::UTF8)
+                $result=[pscustomobject]@{ Output=[IO.File]::ReadAllText($log); Log=$log }
             }
         }
-        Invoke-UESTCPerfAnalysis -Root $Root -SessionSources $diagnosticSources.ToArray()
-        if ($diagnosticFailed) { throw 'One or more diagnostic captures are incomplete; original attachments and conditions are retained.' }
+        Assert-UESTCCleanGodotLog $result
+        $sessions=@(Get-ChildItem -LiteralPath $directory -Directory | Where-Object { Test-Path -LiteralPath (Join-Path $_.FullName 'manifest.json') })
+        if ($sessions.Count -ne 1) { throw "Expected one closed recording in $directory." }
+        Write-Host "Diagnostic output: $directory"
+        switch ($Tool) {
+            'gpu-profile' { Write-PerfGpuSteps $sessions[0].FullName }
+            'Nsight' { Write-Host ('Nsight report: ' + (@(Get-ChildItem -LiteralPath $directory -File -Filter '*.nsys-rep').FullName -join ', ')) }
+            'EventPipe' {
+                $parsed=Invoke-UESTCProcess dotnet @($parser,'--perf-session',$directory,$sessions[0].FullName) $Root (Join-Path $directory 'cpu-parser.log') -TimeoutSeconds 600
+                Write-Host $parsed.StdOut
+            }
+        }
     } finally {
         Exit-UESTCBuildLock $lease
         if ($null -eq $cache) { Remove-Item Env:UESTC_BAKE_CACHE -ErrorAction SilentlyContinue } else { $env:UESTC_BAKE_CACHE=$cache }

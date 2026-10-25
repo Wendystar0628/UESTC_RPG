@@ -195,7 +195,10 @@ sealed class CpuTraceAnalysis
         };
     }
 
-    public static object[] Top(ThreadSample[] samples, bool inclusive)
+    public static object[] Top(ThreadSample[] samples, bool inclusive) => Ranked(samples, inclusive)
+        .Select(x => (object)new { frame = x.Key, sampledThreadTimeEvents = x.Value, cpuFunctionShare = "NOT_MEASURED" }).ToArray();
+
+    public static KeyValuePair<string, int>[] Ranked(ThreadSample[] samples, bool inclusive)
     {
         var counts = new Dictionary<string, int>(StringComparer.Ordinal);
         foreach (var sample in samples)
@@ -203,8 +206,7 @@ sealed class CpuTraceAnalysis
             var names = inclusive ? sample.Frames.Select(f => f.Name).Distinct(StringComparer.Ordinal) : sample.Frames.Take(1).Select(f => f.Name);
             foreach (var name in names) counts[name] = counts.GetValueOrDefault(name) + 1;
         }
-        return counts.OrderByDescending(x => x.Value).ThenBy(x => x.Key, StringComparer.Ordinal).Take(25)
-            .Select(x => (object)new { frame = x.Key, sampledThreadTimeEvents = x.Value, cpuFunctionShare = "NOT_MEASURED" }).ToArray();
+        return counts.OrderByDescending(x => x.Value).ThenBy(x => x.Key, StringComparer.Ordinal).Take(25).ToArray();
     }
 
     private static Frame Describe(TraceCodeAddress address)

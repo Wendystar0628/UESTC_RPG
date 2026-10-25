@@ -1,6 +1,6 @@
-﻿# AI 固定采集唯一入口：冻结条件，分开本树准备与私桌面采样，保留失败并交既有分析器。
-# 用法：powershell -File scripts/perf/run.ps1 -Batch <新来源名> [-Suite fixed|route|travel] [-Scene overview-default]；正式主采加 -Mode formal -RoundNumber 0 [-PreviousRound id]，同轮确认加 -Mode formal -ConfirmRound <既有轮ID>；诊断用 -DeepenSession <id>。
-# 产出：output/perf/runs/<Batch>/ 下独立主采、确认来源的 run.json 与六件；完整主采登记轮，确认失败保留原故障并待补。
+﻿# AI 固定采集与单场景诊断的唯一入口：冻结条件，分开本树准备与私桌面采样，保留失败并交既有分析器。
+# 用法：powershell -File scripts/perf/run.ps1 -Batch <新来源名> [-Suite fixed|route|travel] [-Scene overview-default]；正式主采加 -Mode formal -RoundNumber 0 [-PreviousRound id]，同轮确认加 -Mode formal -ConfirmRound <既有轮ID>；诊断用 -Scene <场景> -DiagnosticTool gpu-profile|EventPipe|Nsight。
+# 产出：output/perf/runs/<Batch>/ 下独立主采、确认来源的 run.json 与六件；完整主采登记轮，确认失败保留原故障并待补；诊断只写 output/perf/diagnostics/<时刻>-<场景>-<工具>/ 并打印摘要。
 [CmdletBinding(DefaultParameterSetName='Collection')]
 param([Parameter(Mandatory,ParameterSetName='Collection')][ValidatePattern('^[A-Za-z0-9][A-Za-z0-9-]+$')][string]$Batch,
     [ValidateSet('fixed','route','travel')][string[]]$Suite=@('fixed','route','travel'), [string[]]$Scene=@(),
@@ -8,9 +8,7 @@ param([Parameter(Mandatory,ParameterSetName='Collection')][ValidatePattern('^[A-
     [ValidateRange(0,2147483647)][int]$RoundNumber=0, [string]$PreviousRound='',
     [string]$ConfirmRound='',
     [switch]$PrepareBake, [IO.FileStream]$BuildLease=$null, [string]$BatchConditions='',
-    [Parameter(Mandatory,ParameterSetName='Diagnostic')][ValidatePattern('^[A-Za-z0-9][A-Za-z0-9._-]*$')][string]$DeepenSession,
-    [Parameter(ParameterSetName='Diagnostic')][ValidateSet('gpu-profile','EventPipe','Nsight')][string[]]$DiagnosticTool=@(),
-    [Parameter(ParameterSetName='Diagnostic')][ValidateRange(0,10000)][int]$DeepenEntry=0)
+    [Parameter(Mandatory,ParameterSetName='Diagnostic')][ValidateSet('gpu-profile','EventPipe','Nsight')][string]$DiagnosticTool)
 $ErrorActionPreference='Stop'
 $collectionScriptEnteredUtc=[DateTime]::UtcNow.ToString('O')
 $root=(Resolve-Path (Join-Path $PSScriptRoot '..\..')).Path
@@ -33,17 +31,10 @@ function Publish-CollectionConfirmations($Root, $Id, [string[]]$Sources, [Collec
 }
 if ($PSCmdlet.ParameterSetName -eq 'Diagnostic') {
     . (Join-Path $PSScriptRoot 'diagnostic-run.ps1')
-    Invoke-PerfDiagnostic -Root $root -SessionId $DeepenSession -Tools $DiagnosticTool -EntryIndex $DeepenEntry -BuildLease $BuildLease
+    Invoke-PerfDiagnostic -Root $root -Scene $Scene -Tool $DiagnosticTool -BuildLease $BuildLease
     return
 }
-# DECISION-344: all thresholds are frozen here; normal small DWM load is below the GPU threshold.
-$stableFrames=10
-$realtimeSeconds=2
-$sampleSeconds=30
-$smokeSeconds=2
 $maximumAttempts=3
-$otherGpuFraction=0.20
-$maximumFactAgeSeconds=3
 $timeoutSeconds=600
 $judgement=[ordered]@{ logicalPauseVerified=$false; mainThreadLongStopVerified=$false;
     tuningSelectedMetrics=@() }
@@ -139,23 +130,14 @@ try {
                 if ($confirmationOf -and $sourceRoot -notin $confirmationSources) { $confirmationSources += $sourceRoot }
                 $directory=Join-Path $sourceRoot ($sample.ToString() + '-' + $attempt)
                 $null=[IO.Directory]::CreateDirectory($directory)
-                $seconds=if ($Mode -ne 'formal') { $smokeSeconds } elseif ($item.kind -eq 'route') { $entry.seconds } else { $sampleSeconds }
-                $segment='sample-' + [Guid]::NewGuid().ToString('N')
-                $request=[ordered]@{ sceneId=$entry.id; sampleSegmentId=$segment; functionalSmoke=($Mode -eq 'functional-smoke'); stableFrames=$stableFrames;
-                    realtimeSeconds=$realtimeSeconds; sampleSeconds=$seconds; otherGpuFraction=$otherGpuFraction;
-                    maximumFactAgeSeconds=$maximumFactAgeSeconds;
-                    saveAfterSample=($entry.PSObject.Properties['saveAfterSample'] -and [bool]$entry.saveAfterSample) }
-                $request['suite']=$item.kind
-                $request['routePointIds']=@()
-                if ($entry.PSObject.Properties['routePointIds']) { $request['routePointIds']=@($entry.routePointIds) }
-                $request['travelPrefetch']=if ($entry.PSObject.Properties['travelPrefetch']) { [bool]$entry.travelPrefetch } else { $false }
-                foreach ($name in $judgement.Keys) { $request[$name]=$judgement[$name] }
+                $request=New-CollectionRequest $item ($Mode -eq 'functional-smoke') $judgement
+                $segment=$request.sampleSegmentId
                 if ($ConfirmRound) {
                     $request=[ordered]@{}
                     foreach ($property in $frozenRequest.PSObject.Properties) { $request[$property.Name]=$property.Value }
                     $request.sampleSegmentId=$segment
-                    $seconds=$request.sampleSeconds
                 }
+                $seconds=$request.sampleSeconds
                 $requestPath=Join-Path $directory 'collection.json'
                 Write-CollectionJson $requestPath $request
                 $run=[ordered]@{ scene=$entry.id; status='partial'; reasons=@('Process has not completed.'); exitCode=$null;

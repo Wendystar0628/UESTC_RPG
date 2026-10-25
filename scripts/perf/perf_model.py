@@ -55,7 +55,7 @@ def distribution(values):
 def baseline_readout(frames, manifest, run, budgets, window, source_frames):
     """ENG-PERF-DATA: only complete formal fixed samples can establish idle severe-frame evidence."""
     fixed = (manifest.get('origin') == 'ai' and run.get('purpose') == 'baseline'
-             and at(run, 'conditions.suite') == 'fixed' and run.get('diagnostic') is not True)
+             and at(run, 'conditions.suite') == 'fixed')
     playing = [f for f in frames if f.get('appState', '').lower() == 'playing']
     steady = [f for f in playing if f.get('_steady')]
     valid = [f for f in steady if f.get('_dtValid')]

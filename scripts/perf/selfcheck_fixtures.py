@@ -36,7 +36,7 @@ def manifest(dictionary, identifier='SELFCHECK'):
                 pacing=dict(maxFps=60, vsync='disabled'),
                 graphics=dict(preset='fine', effective={'selfcheck': True}, targetWidthPx=3840, targetHeightPx=2160,
                               internalWidthPx=3840, internalHeightPx=2160),
-                run=dict(args=[], diagnostics=None), kernelBudgets=dict(streamMountMilliseconds=1),
+                run=dict(args=[]), kernelBudgets=dict(streamMountMilliseconds=1),
                 clock=dict(anchors=[]), fieldDictionary=dictionary,
                 streams=[dict(file=spec['file'], state='recorded', droppedRows=0) for spec in dictionary['streams'].values()])
 

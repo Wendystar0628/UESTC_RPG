@@ -531,7 +531,7 @@
   /* ================= 7 会话列表 ================= */
 
   var LAYERS = [['raw', '原始记录'], ['hotframes', '逐帧切片'], ['anomalies', '异常明细'], ['summary', '摘要']];
-  var KEEP = [['authorSessions', '作者会话'], ['authorBytes', '作者记录'], ['aiBatches', 'AI 批次'], ['historyPerGroup', '每组历史'], ['diagnosticBytes', '诊断附件']];
+  var KEEP = [['authorSessions', '作者会话'], ['authorBytes', '作者记录'], ['aiBatches', 'AI 批次'], ['historyPerGroup', '每组历史']];
 
   function keepText(x) {
     if (!x) return '未知';

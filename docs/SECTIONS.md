@@ -4,15 +4,15 @@
 
 ## CORE-INDEX · 《电光年华》开发总纲
 
-`docs/README.md` · 8.8k 字 · 全项目唯一的顶层，只放每次开发都要掌握的全局：项目与约束、信息地图（信息在哪、仓库目录、只列标题的文档地图），以及全员共守的工作原则、协作与分工、文档规范与代码规范；具体内容一律在下层按需读
+`docs/README.md` · 8.9k 字 · 全项目唯一的顶层，只放每次开发都要掌握的全局：项目与约束、信息地图（信息在哪、仓库目录、只列标题的文档地图），以及全员共守的工作原则、协作与分工、文档规范与代码规范；具体内容一律在下层按需读
 关键词：总纲、顶层规则、项目与约束、硬约束、优先级、信息地图、文档地图、仓库目录、信息在哪、怎么查文档、按需读、钩子注入、电光年华、工作原则、协作与分工、文档规范、代码规范、实现优先、最小实现、最小测试、根因修复、同批清旧、维护体系、按完整改动提交、单一权威、写给大模型、文档精简、失败即报错
 
 - CORE-INDEX §0 项目与约束 · L20 · 640
   - ★ CORE-INDEX §0.1 接入要点 · L27 · 277
 - CORE-INDEX §1 信息地图 · L34 · 1.7k
 - CORE-INDEX §2 工作原则 · L84 · 1.8k
-- CORE-INDEX §3 协作与分工 · L97 · 925
-- CORE-INDEX §4 文档规范 · L105 · 930
+- CORE-INDEX §3 协作与分工 · L97 · 942
+- CORE-INDEX §4 文档规范 · L105 · 941
 - CORE-INDEX §5 代码规范 · L115 · 1.1k
 - CORE-INDEX §6 运行时与可靠性 · L126 · 950
 
@@ -1617,7 +1617,7 @@
 关键词：游戏失败观测、失败登记、失败类别、fail.py、failure-types.json、根因类别、表现桶、候选类别、提交窗口、逃逸的失败、健康页、整类排查、DECISION-285、DECISION-296
 
 - ENG-FAILS §0 结论 · L21 · 1.3k
-  - ★ ENG-FAILS §0.1 接入要点 · L31 · 224
+  - ★ ENG-FAILS §0.1 接入要点 · L31 · 223
 
 ## ENG-GATES · 验收与门禁
 
@@ -1697,13 +1697,13 @@
 
 ## ENG-PERF-DATA · 性能数据与分析
 
-`docs/engineering/ENG-PERF-DATA-性能数据与分析.md` · 12.0k 字 · 性能记录的四层与写入方、记录开关与会话寿命、原始流与时间基、指标口径与非稳态帧、测量范围、异常、比较键与保留、开销目标
+`docs/engineering/ENG-PERF-DATA-性能数据与分析.md` · 11.9k 字 · 性能记录的四层与写入方、记录开关与会话寿命、原始流与时间基、指标口径与非稳态帧、测量范围、异常、比较键与保留、开销目标
 关键词：性能记录、记录性能数据、记录服务、性能会话、六件、原始流、perf-fields.json、schema、calc、指标口径、体验口径、成本口径、五段、B0–B4、主线程周期、受测视口、受测视口 GPU 合计、成本尖峰、非稳态帧、掉帧、卡顿分级、1% low、scope、性能异常、比较键、性能数据保留、分析器
 
 - ENG-PERF-DATA §0 结论 · L21 · 1.3k
   - ★ ENG-PERF-DATA §0.1 接入要点 · L34 · 451
 - ENG-PERF-DATA §1 四层与写入方 · L43 · 1.3k
-  - ENG-PERF-DATA §1.1 四层 · L45 · 449
+  - ENG-PERF-DATA §1.1 四层 · L45 · 444
   - ENG-PERF-DATA §1.2 记录开关与会话 · L53 · 593
   - ENG-PERF-DATA §1.3 线程分工 · L63 · 242
 - ENG-PERF-DATA §2 原始流与时间基 · L70 · 1.7k
@@ -1714,11 +1714,11 @@
   - ENG-PERF-DATA §3.2 成本口径 · L123 · 1.4k
 - ENG-PERF-DATA §4 测量范围与 `scope` · L138 · 247
 - ENG-PERF-DATA §5 异常 · L146 · 2.2k
-  - ENG-PERF-DATA §5.1 体验类 · L154 · 788
-  - ENG-PERF-DATA §5.2 成本与数据类 · L170 · 837
-  - ENG-PERF-DATA §5.3 归因与合并 · L184 · 365
-- ENG-PERF-DATA §6 比较键、状态与保留 · L194 · 935
-- ENG-PERF-DATA §7 开销目标 · L212 · 337
+  - ENG-PERF-DATA §5.1 体验类 · L153 · 788
+  - ENG-PERF-DATA §5.2 成本与数据类 · L169 · 837
+  - ENG-PERF-DATA §5.3 归因与合并 · L183 · 365
+- ENG-PERF-DATA §6 比较键、状态与保留 · L193 · 919
+- ENG-PERF-DATA §7 开销目标 · L211 · 337
 
 ## ENG-PERF-LIGHT · 植被、阴影、后期与灯光
 
@@ -1737,20 +1737,20 @@
 
 ## ENG-PERF-MEASURE · 测量与调优
 
-`docs/engineering/ENG-PERF-MEASURE-测量与调优.md` · 7.6k 字 · 性能测量的机器与剖析权限、AI 采集批次与场景套、以最新数据为准、诊断档与深挖、不采用的工具、调优轮次的长期规则与判停
-关键词：性能测量、AI 批次、run.ps1、perf.py、perf.py latest、固定机位套、路线套、传送套、采样前稳定、单轮记录、作废、污染标记、以最新为准、诊断档、deepen、采集条件标记、调优轮次、第 0 轮、距离表、必判集、判停、结束原因、单边判、隔离桌面、剖析权限
+`docs/engineering/ENG-PERF-MEASURE-测量与调优.md` · 7.0k 字 · 性能测量的机器与剖析权限、AI 采集批次与场景套、以最新数据为准、诊断、不采用的工具、调优轮次的长期规则与判停
+关键词：性能测量、AI 批次、run.ps1、perf.py、perf.py latest、固定机位套、路线套、传送套、采样前稳定、单轮记录、作废、污染标记、以最新为准、诊断、采集条件标记、调优轮次、第 0 轮、距离表、必判集、判停、结束原因、单边判、隔离桌面、剖析权限
 
-- ENG-PERF-MEASURE §0 结论 · L21 · 869
-  - ★ ENG-PERF-MEASURE §0.1 接入要点 · L31 · 345
+- ENG-PERF-MEASURE §0 结论 · L21 · 902
+  - ★ ENG-PERF-MEASURE §0.1 接入要点 · L31 · 369
 - ENG-PERF-MEASURE §1 机器与剖析权限 · L39 · 526
 - ENG-PERF-MEASURE §2 AI 批次 · L48 · 1.6k
 - ENG-PERF-MEASURE §3 以最新为准 · L64 · 319
-- ENG-PERF-MEASURE §4 诊断档与 `deepen` · L71 · 1.1k
-- ENG-PERF-MEASURE §5 不采用的工具 · L84 · 606
-- ENG-PERF-MEASURE §6 调优规则与判停 · L100 · 1.6k
-  - ENG-PERF-MEASURE §6.1 第 0 轮 · L104 · 470
-  - ENG-PERF-MEASURE §6.2 第 1–3 轮 · L114 · 327
-  - ENG-PERF-MEASURE §6.3 判停与收尾 · L121 · 691
+- ENG-PERF-MEASURE §4 诊断 · L71 · 556
+- ENG-PERF-MEASURE §5 不采用的工具 · L82 · 601
+- ENG-PERF-MEASURE §6 调优规则与判停 · L98 · 1.6k
+  - ENG-PERF-MEASURE §6.1 第 0 轮 · L102 · 403
+  - ENG-PERF-MEASURE §6.2 第 1–3 轮 · L112 · 327
+  - ENG-PERF-MEASURE §6.3 判停与收尾 · L119 · 691
 
 ## ENG-PERF-STREAM · 流式加载、本机烘焙与内存
 
@@ -1849,17 +1849,18 @@
 
 ## WF-FLOW · 开发流程
 
-`docs/workflow/WF-FLOW-开发流程.md` · 6.4k 字 · 一项任务从派工、施工（在临时工作树里写，交回前跑 G1 与受影响 G2）、统一编译推送、回报到评审的流程，防打架，按范围拆单，可调参数集中放
+`docs/workflow/WF-FLOW-开发流程.md` · 6.8k 字 · 一项任务从派工、施工（在临时工作树里写，交回前跑 G1 与受影响 G2）、统一编译推送、回报到评审的流程，防打架，按范围拆单，可调参数集中放
 关键词：开发流程、派工、施工单、按范围拆单、回报、评审、防打架、邻居、可调参数、DECISION-184、DECISION-211、评审通用结论
 
 - WF-FLOW §0 结论 · L22 · 526
   - ★ WF-FLOW §0.1 接入要点 · L29 · 187
-- WF-FLOW §1 全流程一览 · L35 · 616
-- WF-FLOW §2 派工与拆单 · L46 · 1.4k
-  - WF-FLOW §2.1 防打架（DECISION-211） · L62 · 367
-- WF-FLOW §3 施工与回报 · L71 · 2.4k
-  - WF-FLOW §3.1 统一编译（DECISION-219） · L77 · 2.1k
-- WF-FLOW §4 评审：审美与契约的交叉评审 · L90 · 702
+- WF-FLOW §1 全流程一览 · L35 · 714
+- WF-FLOW §2 派工与拆单 · L48 · 1.4k
+  - WF-FLOW §2.1 防打架（DECISION-211） · L64 · 367
+- WF-FLOW §3 施工与回报 · L73 · 2.7k
+  - WF-FLOW §3.1 统一编译（DECISION-219） · L79 · 2.1k
+  - WF-FLOW §3.2 过度工程检查（DECISION-361） · L92 · 325
+- WF-FLOW §4 评审：审美与契约的交叉评审 · L98 · 702
 
 ## WF-MODEL · 模型、子代理与额度
 
@@ -1925,10 +1926,10 @@
 
 ## WF-STATUS · 施工状态、队列与调研入队
 
-`docs/workflow/WF-STATUS-施工状态、队列与调研入队.md` · 6.4k 字 · 施工状态文件怎么填、阶段与主线闸口、施工队列的格式与即时维护、队列平衡、交接单、调研入队流水线与旁路单
+`docs/workflow/WF-STATUS-施工状态、队列与调研入队.md` · 6.5k 字 · 施工状态文件怎么填、阶段与主线闸口、施工队列的格式与即时维护、队列平衡、交接单、调研入队流水线与旁路单
 关键词：阶段、主线闸口、P0–P3、施工队列、一行一件、即时维护、拆分重活、等前置、就绪、进行中、待集成、暂停、行号、施工状态、状态文件、当前 main、最近可运行入口、已冻结的契约组、队列平衡、积压、交接单、HANDOVER.md、接手、已集成、调研入队流水线、审计、交叉审核、调研简报、旁路单、DECISION-224、DECISION-324
 
-- WF-STATUS §0 结论 · L22 · 682
+- WF-STATUS §0 结论 · L22 · 718
   - ★ WF-STATUS §0.1 接入要点 · L31 · 260
 - WF-STATUS §1 施工状态文件怎么填 · L38 · 969
   - WF-STATUS §1.1 阶段与闸口 · L46 · 534
@@ -1981,13 +1982,13 @@
   - STD-CONVENTIONS §3.5 色名 · L149 · 364
   - STD-CONVENTIONS §3.6 枚举与扩展纪律 · L156 · 569
   - STD-CONVENTIONS §3.7 持久化 ID 的稳定 · L167 · 423
-  - STD-CONVENTIONS §3.8 文件与编号的命名格式 · L176 · 1.3k
+  - STD-CONVENTIONS §3.8 文件与编号的命名格式 · L176 · 1.4k
 - STD-CONVENTIONS §4 确定性 · L196 · 214
 - STD-CONVENTIONS §5 路径 · L203 · 186
 
 ## STD-DOC · 文档写法
 
-`docs/standards/STD-DOC-文档写法.md` · 11.5k 字 · 文档的分层与四级文档树、每份文档的形状（文件头、标题、范围块）、编码与引用、只写什么不写什么、体量上限、冲突层级、新增与维护
+`docs/standards/STD-DOC-文档写法.md` · 11.4k 字 · 文档的分层与四级文档树、每份文档的形状（文件头、标题、范围块）、编码与引用、只写什么不写什么、体量上限、冲突层级、新增与维护
 关键词：文档写法、分层、文档树、域总纲、主题文档、子文档、信息地图、渐进式披露、顶层规则、接入要点、文件头、范围块、查阅行、简题、编码、文件名、小节编号、引用写法、全局替换、只写现行规则、不写实现、一份权威、体量上限、冲突层级、规则放哪份、新增文档、登记决策、gen-index、check-docs、SECTIONS.md
 
 - STD-DOC §0 结论 · L21 · 1.1k
@@ -2001,12 +2002,12 @@
   - STD-DOC §4.1 取舍 · L115 · 590
   - STD-DOC §4.2 写法（DECISION-220） · L124 · 930
 - STD-DOC §5 体量上限 · L139 · 1.8k
-  - STD-DOC §5.1 长大了怎么拆（DECISION-222） · L159 · 577
-  - STD-DOC §5.2 新内容放哪 · L166 · 306
-- STD-DOC §6 冲突与规则放哪 · L174 · 895
-- STD-DOC §7 新增文档 · L206 · 300
-- STD-DOC §8 登记新决策 · L212 · 218
-- STD-DOC §9 维护 · L218 · 921
+  - STD-DOC §5.1 长大了怎么拆（DECISION-222） · L158 · 577
+  - STD-DOC §5.2 新内容放哪 · L165 · 306
+- STD-DOC §6 冲突与规则放哪 · L173 · 895
+- STD-DOC §7 新增文档 · L205 · 300
+- STD-DOC §8 登记新决策 · L211 · 218
+- STD-DOC §9 维护 · L217 · 921
 
 ## REG-INDEX · 登记总纲
 
@@ -2027,16 +2028,16 @@
 
 ## REG-DECISIONS-PROCESS · 协作与流程决策
 
-`docs/registry/REG-DECISIONS-PROCESS-协作与流程决策.md` · 20.1k 字 · 计划、协作、规范、登记四个域的已定决策：协作、流程、文档与代码规范、门禁流程
+`docs/registry/REG-DECISIONS-PROCESS-协作与流程决策.md` · 21.0k 字 · 计划、协作、规范、登记四个域的已定决策：协作、流程、文档与代码规范、门禁流程
 关键词：决策、流程、协作、文档规则、门禁流程、派工、主会话、子代理
 
 - REG-DECISIONS-PROCESS §0 结论 · L21 · 129
   - ★ REG-DECISIONS-PROCESS §0.1 接入要点 · L25 · 56
-- REG-DECISIONS-PROCESS §1 流程 · L29 · 19.5k
+- REG-DECISIONS-PROCESS §1 流程 · L29 · 20.3k
 
 ## REG-DECISIONS-SYSTEMS · 系统与工程决策
 
-`docs/registry/REG-DECISIONS-SYSTEMS-系统与工程决策.md` · 29.4k 字 · 界面、存档、音频、性能与画面设置、工程五个领域的已定决策
+`docs/registry/REG-DECISIONS-SYSTEMS-系统与工程决策.md` · 29.7k 字 · 界面、存档、音频、性能与画面设置、工程五个领域的已定决策
 关键词：决策、系统、工程、界面、存档、音频、性能、画面设置、预算、契约
 
 - REG-DECISIONS-SYSTEMS §0 结论 · L21 · 126
@@ -2044,10 +2045,10 @@
 - REG-DECISIONS-SYSTEMS §1 界面 · L29 · 4.6k
 - REG-DECISIONS-SYSTEMS §2 存档 · L65 · 1.9k
 - REG-DECISIONS-SYSTEMS §3 音频 · L85 · 2.2k
-- REG-DECISIONS-SYSTEMS §4 性能与画面设置 · L107 · 11.0k
-- REG-DECISIONS-SYSTEMS §5 工程 · L171 · 5.5k
-- REG-DECISIONS-SYSTEMS §6 地图与行走 · L207 · 1.0k
-- REG-DECISIONS-SYSTEMS §7 时间、季节、天气 · L218 · 2.4k
+- REG-DECISIONS-SYSTEMS §4 性能与画面设置 · L107 · 11.3k
+- REG-DECISIONS-SYSTEMS §5 工程 · L172 · 5.5k
+- REG-DECISIONS-SYSTEMS §6 地图与行走 · L208 · 1.0k
+- REG-DECISIONS-SYSTEMS §7 时间、季节、天气 · L219 · 2.4k
 
 ## REG-DECISIONS-WORLD · 世界与画面决策
 

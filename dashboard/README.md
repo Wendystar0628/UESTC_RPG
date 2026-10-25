@@ -108,7 +108,7 @@ now:       {phase: {step: P0|P1|P2|P3|null, text, priority},
             kpis: [{key, label, value|null, unit, note, trend: better|worse|same|null, href}]}
 perf:      {coverage: {from: 最早会话开始时刻|null}, caliber, units, labels: {levels, phases},
             recording: {since: ISO|null, minutes: 分钟|null}|null,
-            retention: {authorSessions, authorBytes, aiBatches, historyPerGroup, diagnosticBytes},
+            retention: {authorSessions, authorBytes, aiBatches, historyPerGroup},
             metrics: [{key, label: 中文, unit, scope: cost|experience}],
             series: [{key, label: 中文, unit, scope: cost|experience}],
             latest: {play: 会话id|null, ai: 会话id|null},

@@ -139,23 +139,13 @@ def check_stale_content_cache(root, out, author, dictionary):
             assert repaired['analyzed'] == ['STALE-CONTENT'] and not repaired['errors'] and loads.call_count == 1
 
 
-def check_retention_authority(root, dictionary, budgets):
-    from perf_store import diagnostic_attachments, history_group
-    with tempfile.TemporaryDirectory(prefix='uestc-perf-retention-') as temporary:
-        runs = Path(temporary) / 'runs'
-        record = runs / 'batch'
-        record.mkdir(parents=True)
-        attachment, raw = record / 'capture.bin', record / 'frames.csv'
-        attachment.write_bytes(b'abcd')
-        raw.write_text('raw', encoding='utf-8')
-        (record / 'diagnostics.json').write_text(json.dumps({'attachments': ['capture.bin', 'capture.bin', 'frames.csv', '../outside.bin']}), encoding='utf-8')
-        (runs / 'outside.bin').write_bytes(b'outside')
-        assert diagnostic_attachments(runs) == [attachment.resolve()], '诊断附件重复计数或混入原始/越界文件'
-        a = dict(origin='play', comparisonKey={'scene': 'a'}, scope='full')
-        b = dict(origin='play', comparisonKey={'scene': 'b'}, scope='cost')
-        assert history_group(a) == history_group(b), '作者历史没有共用单组'
-        a['origin'], b['origin'] = 'ai', 'ai'
-        assert history_group(a) != history_group(b), 'AI 比较键与口径未分组'
+def check_history_group(root, dictionary, budgets):
+    from perf_store import history_group
+    a = dict(origin='play', comparisonKey={'scene': 'a'}, scope='full')
+    b = dict(origin='play', comparisonKey={'scene': 'b'}, scope='cost')
+    assert history_group(a) == history_group(b), '作者历史没有共用单组'
+    a['origin'], b['origin'] = 'ai', 'ai'
+    assert history_group(a) != history_group(b), 'AI 比较键与口径未分组'
 
 
 def check_roundtrip(root, dictionary, budgets):

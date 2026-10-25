@@ -34,7 +34,7 @@ internal static class PerfManifest
                 desktop.IsInputDesktop, desktop.WindowFocused, source = "IInputRouter.DesktopState (GAME-229)"
             },
             environment = CaptureEnvironment(),
-            run = new { args = OS.GetCmdlineUserArgs(), outputDirectory = options.PerfOutputDirectory, diagnostics = (object?)null },
+            run = new { args = OS.GetCmdlineUserArgs(), outputDirectory = options.PerfOutputDirectory },
             kernelBudgets = new
             {
                 KernelBudgets.StreamMountMilliseconds, KernelBudgets.CollisionMountMilliseconds,

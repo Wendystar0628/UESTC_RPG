@@ -17,9 +17,9 @@ sys.dont_write_bytecode = True
 from perf_model import (CALC, COSTS, PHASES, at, baseline_readout, costs, experience, load_session, manifest_path, number,
                         prepare_frames, read_json, rolling_medians, scope_of, target_ms)
 from perf_anomalies import (LEVELS, MAX_PER_TYPE, annotate, anomaly, budget_checks,
-                           deepen, frame_anomalies, hang_anomalies, merge_anomalies, session_judgement,
+                           frame_anomalies, hang_anomalies, merge_anomalies, session_judgement,
                            slow_anomalies, window_analysis)
-from perf_store import (AI_BATCHES_KEEP, DIAGNOSTIC_BYTES_KEEP, HISTORY_PER_GROUP,
+from perf_store import (AI_BATCHES_KEEP, HISTORY_PER_GROUP,
                         atomic_json, author_root, basic_state, batch_states, comparison_key, discover,
                         exclusive, git, history_update, session_run, session_run_path, prune, rebuild_states)
 from perf_curves import curve_document
@@ -108,7 +108,7 @@ def budget_items(summary, frames, budgets):
     return result
 
 
-def summary_for(directory, manifest, streams, dictionary, budgets, run, diagnosed=()):
+def summary_for(directory, manifest, streams, dictionary, budgets, run):
     scope, reason = scope_of(manifest)
     key, labels, missing = comparison_key(manifest, run)
     window, sampling_reasons = sample_window(manifest, streams, run) if streams is not None else (None, [])
@@ -131,7 +131,7 @@ def summary_for(directory, manifest, streams, dictionary, budgets, run, diagnose
                    build=manifest.get('build'), environmentSignature={k: at(manifest, k) for k in
                          ('machine.driver', 'machine.os', 'build.godot')}, run=run,
                    sampleWindow=window, sampleReasons=sampling_reasons,
-                   all=None, steady=None, coverage=None, validity=[], budgets=[], anomalyCounts={}, deepen=[],
+                   all=None, steady=None, coverage=None, validity=[], budgets=[], anomalyCounts={},
                    waits=waits, judgement=None,
                    recording={key: manifest.get(key) for key in ('status', 'complete', 'fault', 'endReason', 'streams')},
                    eventDelivery=event_delivery(whole_streams['events']) if whole_streams is not None else None,
@@ -174,17 +174,6 @@ def summary_for(directory, manifest, streams, dictionary, budgets, run, diagnose
     for item in items:
         item['bottleneck'] = next((w['bottleneck'] for w in windows if w['fromMs'] <= item['fromMs'] <= w['toMs']), None) if scope == 'full' else None
     merged = merge_anomalies(items)
-    # Repeated clusters are counted before truncating the human-facing anomaly list.
-    # ENG-PERF-MEASURE: completed diagnostics suppress plans, never the anomaly facts.
-    identity = diagnostic_identity(manifest, run)
-    completed_tools = {key[2:] for key in diagnosed if key[:2] == identity} if identity else set()
-    summary['deepen'] = deepen(merged, {**manifest, 'scene': key['scene']}, completed_tools)
-    for item in summary['deepen']:
-        frame = next((f for f in frames if f['collectionFrame'] == item['firstFrame']), None)
-        item['sourceSessionDirectory'] = str(directory)
-        item['context'] = {name: frame['_sample'].get(name) if frame else None for name in
-                           ('map', 'mode', 'xM', 'yM', 'zM', 'season', 'worldHours', 'weather')}
-        item['context'].update({name: frame.get(name) if frame else None for name in ('observerYawDeg', 'cameraPitchDeg')})
     summary['anomalyCounts'] = dict(Counter(item['type'] for item in merged))
     summary['conclusion'] = ('仅成本口径；体验字段不可用。' if scope == 'cost' else '交互桌面体验与成本口径。') + '候选原因需诊断证据；不由 GPU 占用推出瓶颈。'
     return summary, merged, frames, hardware_clock(streams['hwfast'], manifest)
@@ -235,85 +224,13 @@ def write_hotframes(path, frames, items, dictionary, radius):
     return [frames[index] for index in sorted(selected)]
 
 
-def diagnostic_identity(manifest, run):
-    """Use the recorded build and comparison identity, without inferring a clean build."""
-    build = manifest.get('build') or {}
-    key, _, missing = comparison_key(manifest, run)
-    if not build.get('commit') or build.get('dirty') is not False or build.get('identityMissingReason') or missing:
-        return None
-    return json.dumps(build, sort_keys=True), json.dumps(key, sort_keys=True)
-
-
-def completed_diagnostic_clusters(directories):
-    """Read successful existing reports and their declared attachments, without reading raw streams."""
-    sources = {Path(directory).resolve() for directory in directories}
-    completed = set()
-    for directory in sorted(sources):
-        report_path = directory / 'diagnostic.json'
-        if not report_path.is_file():
-            continue
-        try:
-            report = read_json(report_path)
-            if (report.get('purpose') != 'diagnostic' or report.get('status') != 'valid'
-                    or at(report, 'actualCollector.status') != 'completed'
-                    or at(report, 'actualCollector.exitCode') != 0
-                    or at(report, 'attachmentAvailability.available') is not True):
-                continue
-            attachments = report.get('attachments')
-            if not isinstance(attachments, list) or not attachments:
-                continue
-            paths = [(directory / name).resolve() for name in attachments]
-            if any(not path.is_relative_to(directory) or not path.is_file() for path in paths):
-                continue
-            for path in paths:
-                with path.open('rb') as stream:
-                    stream.read(1)
-            condition = report['condition']
-            source = Path(condition['sourceDirectory']).resolve()
-            if source not in sources:
-                continue
-            original = read_json(source / 'manifest.json')
-            captured = read_json(directory / 'manifest.json')
-            source_run, _ = session_run(source)
-            captured_run, _ = session_run(directory)
-            identity = diagnostic_identity(original, source_run)
-            scene = source_run.get('scene')
-            entry = condition['entry']
-            tool = condition.get('tool')
-            if (identity is None or diagnostic_identity(captured, captured_run) != identity
-                    or 'build' in report.get('conditionDifferences', {})
-                    or original.get('status') != 'closed' or original.get('complete') is not True
-                    or captured.get('status') != 'closed' or captured.get('complete') is not True
-                    or original.get('id') != condition.get('sourceSession')
-                    or report.get('sourceSession') != original.get('id')
-                    or not scene or condition.get('scene') != scene or entry.get('scene') != scene
-                    or not entry.get('type') or tool not in entry.get('tools', [])):
-                continue
-            completed.add((*identity, entry['type'], entry.get('metric'), entry.get('phase'), tool))
-        except (OSError, ValueError, KeyError, TypeError):
-            # Incomplete or unreadable evidence cannot suppress a diagnostic request.
-            continue
-    return completed
-
-
-def source_stamp(directory, dictionary, budgets, run_path, diagnosed=()):
+def source_stamp(directory, dictionary, budgets, run_path):
     paths = [manifest_path(directory)] + [directory / s['file'] for s in dictionary['streams'].values()]
     if run_path:
         paths.append(run_path)
-    clusters = []
-    if diagnosed:
-        try:
-            manifest = read_json(manifest_path(directory))
-            run = read_json(run_path) if run_path else {}
-            identity = diagnostic_identity(manifest, run)
-            clusters = sorted((list(key[2:]) for key in diagnosed if key[:2] == identity), key=repr) if identity else []
-        except (OSError, ValueError, KeyError, TypeError):
-            # The normal session reader still owns and caches malformed-source failures.
-            pass
     return dict(files={str(path): [path.stat().st_size, path.stat().st_mtime_ns] for path in paths if path.is_file()},
                 schema=dictionary['schema'], budgets=budgets,
-                contextFlags=dictionary['contextFlags'], nonSteadyRules=dictionary['nonSteadyRules'],
-                diagnosedClusters=clusters)
+                contextFlags=dictionary['contextFlags'], nonSteadyRules=dictionary['nonSteadyRules'])
 
 
 def repository_state(root):
@@ -369,7 +286,6 @@ def analysis_needed(root=ROOT, output=None, author=None, index=None, dictionary=
     budgets = budgets if budgets is not None else read_json(root / 'budgets.json')
     rounds = read_rounds(out)
     directories = discover(out, author, [str(source) for row in rounds for source in round_sources(row)])
-    diagnosed = completed_diagnostic_clusters(directories)
     sources = {str(directory) for directory in directories}
     if any(entry.get('source') not in sources for entry in index.get('sessions', []) + index.get('errors', [])):
         return True
@@ -380,7 +296,7 @@ def analysis_needed(root=ROOT, output=None, author=None, index=None, dictionary=
                 if not readable or (manifest_path(directory).name == 'manifest.pending.json' and not (directory / '.lock').is_file()):
                     continue
                 available = True
-                stamp = source_stamp(directory, dictionary, budgets, session_run_path(directory), diagnosed)
+                stamp = source_stamp(directory, dictionary, budgets, session_run_path(directory))
                 if not processed_input(out, directory, stamp, index.get('errors', []), sources):
                     return True
         except OSError:
@@ -424,7 +340,6 @@ def analyze_all(root=ROOT, output=None, author=None, round_request=None, preview
         proposed = prepare_round(rounds, **round_request) if round_request is not None else None
         projected_rounds = ([row for row in rounds if row['id'] != proposed['id']] + [proposed]) if proposed else rounds
         directories = discover(out, author, [str(source) for row in projected_rounds for source in round_sources(row)])
-        diagnosed = completed_diagnostic_clusters(directories)
         sources = {str(directory) for directory in directories}
         for directory in directories:
             stamp, identifier, owner = None, None, None
@@ -434,7 +349,7 @@ def analyze_all(root=ROOT, output=None, author=None, round_request=None, preview
                                         and not (directory / '.lock').is_file()):
                         skipped.append(str(directory))
                         continue
-                    stamp = source_stamp(directory, dictionary, budgets, session_run_path(directory), diagnosed)
+                    stamp = source_stamp(directory, dictionary, budgets, session_run_path(directory))
                     prior_errors = prior_index.get('errors', [])
                     if processed_input(out, directory, stamp, prior_errors, sources):
                         errors.extend(error for error in prior_errors if error.get('source') == str(directory))
@@ -449,7 +364,7 @@ def analyze_all(root=ROOT, output=None, author=None, round_request=None, preview
                                            calc=CALC, inputStamp=stamp))
                         continue
                     manifest, streams = load_session(directory, dictionary)
-                    summary, items, frames, hwfast = summary_for(directory, manifest, streams, dictionary, budgets, run, diagnosed)
+                    summary, items, frames, hwfast = summary_for(directory, manifest, streams, dictionary, budgets, run)
                     write_session(out, summary, items, frames, hwfast, dictionary, stamp, budgets, manifest, streams)
                     changed.append(summary)
             except OSError as error:
@@ -510,8 +425,7 @@ def analyze_all(root=ROOT, output=None, author=None, round_request=None, preview
         history_update(out / 'history.jsonl', [entry for entry in available if entry['id'] in changed_ids])
         index = dict(calc=CALC, rounds=rounds, repositoryState=repository_state(root), batches=batches,
                                             sessions=[index_entry(e) for e in available], errors=errors,
-                                            retention=dict(aiBatches=AI_BATCHES_KEEP, historyPerGroup=HISTORY_PER_GROUP,
-                                                           diagnosticBytes=DIAGNOSTIC_BYTES_KEEP), removed=removed)
+                                            retention=dict(aiBatches=AI_BATCHES_KEEP, historyPerGroup=HISTORY_PER_GROUP), removed=removed)
         # 相同 IO 故障仍可由下一次外部采集重试，但不自写 index 制造文件通知空转。
         if index != prior_index:
             atomic_json(out / 'index.json', index)
