@@ -1902,7 +1902,7 @@
 
 ## WF-RULE · 全员守则
 
-`docs/workflow/WF-RULE-全员守则.md` · 11.3k 字 · 所有会话和子代理都要守的规则：不过度工程化、不干等、文件操作、git 与直接改主线、主线优先、测试最小、少打架、一次性产物、bug 分级、精度按 demo 阶段定
+`docs/workflow/WF-RULE-全员守则.md` · 11.4k 字 · 所有会话和子代理都要守的规则：不过度工程化、不干等、文件操作、git 与直接改主线、主线优先、测试最小、少打架、一次性产物、bug 分级、精度按 demo 阶段定
 关键词：全员守则、不过度工程化、不向作者出选项、不预判时间、不短轮询、不干等、不重复复核、文件操作、删除规则、git、直接改主线、只提交自己的文件、出了问题向前修不回滚、不 stash、主线优先、测试最小、少和别人打架、一次迁完、拿不准就问、一次性产物、用完就删、bug 分级、阻断、先提交后修、修不收敛就停、数量级判断、demo 阶段、精度与画面相称
 
 - WF-RULE §0 结论 · L22 · 140
@@ -1931,7 +1931,7 @@
 
 - WF-STATUS §0 结论 · L22 · 718
   - ★ WF-STATUS §0.1 接入要点 · L31 · 260
-- WF-STATUS §1 施工状态文件怎么填 · L38 · 969
+- WF-STATUS §1 施工状态文件怎么填 · L38 · 992
   - WF-STATUS §1.1 阶段与闸口 · L46 · 534
 - WF-STATUS §2 施工队列与队列平衡 · L56 · 2.0k
 - WF-STATUS §3 交接单 · L94 · 89
@@ -2028,12 +2028,12 @@
 
 ## REG-DECISIONS-PROCESS · 协作与流程决策
 
-`docs/registry/REG-DECISIONS-PROCESS-协作与流程决策.md` · 21.0k 字 · 计划、协作、规范、登记四个域的已定决策：协作、流程、文档与代码规范、门禁流程
+`docs/registry/REG-DECISIONS-PROCESS-协作与流程决策.md` · 21.2k 字 · 计划、协作、规范、登记四个域的已定决策：协作、流程、文档与代码规范、门禁流程
 关键词：决策、流程、协作、文档规则、门禁流程、派工、主会话、子代理
 
 - REG-DECISIONS-PROCESS §0 结论 · L21 · 129
   - ★ REG-DECISIONS-PROCESS §0.1 接入要点 · L25 · 56
-- REG-DECISIONS-PROCESS §1 流程 · L29 · 20.3k
+- REG-DECISIONS-PROCESS §1 流程 · L29 · 20.6k
 
 ## REG-DECISIONS-SYSTEMS · 系统与工程决策
 
