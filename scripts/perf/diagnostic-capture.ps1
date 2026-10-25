@@ -4,7 +4,7 @@ param([Parameter(Mandatory)][string]$ConditionPath)
 $ErrorActionPreference='Stop'
 $root=(Resolve-Path (Join-Path $PSScriptRoot '..\..')).Path
 . (Join-Path $root 'scripts\lib\common.ps1')
-$condition=Get-Content -LiteralPath $ConditionPath -Raw | ConvertFrom-Json
+$condition=Get-Content -LiteralPath $ConditionPath -Raw -Encoding UTF8 | ConvertFrom-Json
 $work=Split-Path $ConditionPath -Parent
 $principal=[Security.Principal.WindowsPrincipal]::new([Security.Principal.WindowsIdentity]::GetCurrent())
 if ($principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) { throw 'Diagnostic collectors require an ordinary, non-elevated token.' }

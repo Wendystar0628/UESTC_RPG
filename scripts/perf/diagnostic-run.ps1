@@ -19,7 +19,7 @@ function Find-PerfDiagnosticTool([string]$Root, [string]$Name) {
 
 function Invoke-PerfDiagnostic($Root, $SessionId, [string[]]$Tools, [int]$EntryIndex, [IO.FileStream]$BuildLease) {
     $summaryPath=Join-Path $Root ('output\perf\derived\' + $SessionId + '\summary.json')
-    $summary=Get-Content -LiteralPath $summaryPath -Raw | ConvertFrom-Json
+    $summary=Get-Content -LiteralPath $summaryPath -Raw -Encoding UTF8 | ConvertFrom-Json
     $entries=@($summary.deepen)
     if ($EntryIndex -ge $entries.Count) { throw 'The requested session has no such deepen entry; analyze it first.' }
     $entry=$entries[$EntryIndex]
@@ -30,8 +30,8 @@ function Invoke-PerfDiagnostic($Root, $SessionId, [string[]]$Tools, [int]$EntryI
     if (-not $Tools.Count) { $Tools=$entryTools }
     if (@($Tools | Where-Object { $_ -notin $entryTools }).Count) { throw 'Requested diagnostic tools differ from the selected deepen entry.' }
     $source=[IO.Path]::GetFullPath($summary.source)
-    $manifest=Get-Content -LiteralPath (Join-Path $source 'manifest.json') -Raw | ConvertFrom-Json
-    $sourceRun=Get-Content -LiteralPath (Join-Path $source 'run.json') -Raw | ConvertFrom-Json
+    $manifest=Get-Content -LiteralPath (Join-Path $source 'manifest.json') -Raw -Encoding UTF8 | ConvertFrom-Json
+    $sourceRun=Get-Content -LiteralPath (Join-Path $source 'run.json') -Raw -Encoding UTF8 | ConvertFrom-Json
     if (-not $manifest.complete -or $manifest.status -ne 'closed') { throw 'Diagnostic replay requires a closed source session.' }
     $width=$manifest.graphics.targetWidthPx; $height=$manifest.graphics.targetHeightPx
     foreach ($dimension in @($width,$height)) {
