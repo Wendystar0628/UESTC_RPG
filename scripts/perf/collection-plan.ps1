@@ -18,13 +18,20 @@ function Get-CollectionScenes($Plan, [string[]]$Suites, [string[]]$Scenes) {
     return $selected
 }
 
-function Publish-CollectionRound($Root, $Id, $Number, $SourceRoot, [string[]]$Scenes, $PreviousId) {
+function Publish-CollectionRound($Root, $Id, $Number, $SourceRoot, [string[]]$Scenes, $PreviousId,
+    [string]$ConfirmationRoot='', [switch]$Preview) {
     $arguments=@('-I','-X','utf8',(Join-Path $Root 'scripts/perf/perf.py'),'--root',$Root,
-        'record',$Id,'--number',[string]$Number,'--source-root',$SourceRoot)
-    if ($PreviousId) { $arguments += @('--previous-id',$PreviousId) }
-    foreach ($scene in $Scenes) { $arguments += @('--scene',$scene) }
-    & python @arguments | Out-Host
-    if ($LASTEXITCODE -ne 0) { throw 'Round registration or analysis failed.' }
+        'record',$Id)
+    if ($ConfirmationRoot) { $arguments += @('--confirmation-root',$ConfirmationRoot) }
+    else {
+        $arguments += @('--number',[string]$Number,'--source-root',$SourceRoot)
+        if ($PreviousId) { $arguments += @('--previous-id',$PreviousId) }
+        foreach ($scene in $Scenes) { $arguments += @('--scene',$scene) }
+    }
+    if ($Preview) { $arguments += '--preview' }
+    $result = Invoke-UESTCProcess python $arguments $Root -TextEncoding ([Text.Encoding]::UTF8)
+    if ($Preview) { return $result.StdOut | ConvertFrom-Json }
+    Write-Host $result.StdOut
 }
 
 function Get-CollectionArguments($Root, $Directory, $Plan, $Item, $Seconds, $RequestPath) {
@@ -62,7 +69,7 @@ function Publish-CollectionRun($Directory, $Run) {
         if (-not (Test-Path -LiteralPath $manifestPath)) {
             $Run.status='partial'; $Run.reasons += 'Recording did not publish a closed manifest.'
         } else {
-            $manifest = Get-Content -LiteralPath $manifestPath -Raw | ConvertFrom-Json
+            $manifest = Get-Content -LiteralPath $manifestPath -Raw -Encoding UTF8 | ConvertFrom-Json
             if (-not $manifest.complete -or $manifest.status -ne 'closed') {
                 $Run.status='partial'; $Run.reasons += 'Recording closed incompletely; raw data retained.'
             }

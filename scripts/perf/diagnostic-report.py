@@ -19,7 +19,7 @@ def frame_metrics(root, directory):
     dictionary = read_json(root / 'game/data/perf-fields.json')
     manifest, streams = load_session(directory, dictionary)
     if streams is None:
-        return {}, ['Recording schema is unsupported by the current analyzer.']
+        return {}, ['Recording has not closed; its raw streams are unavailable for analysis.']
     window, reasons = sample_window(manifest, streams, read_json(directory / 'run.json'))
     if reasons or window is None:
         return {}, reasons or ['Game-owned sample window is unavailable.']

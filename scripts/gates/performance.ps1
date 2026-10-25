@@ -1,5 +1,5 @@
-﻿# G10 复用固定采集入口与分析器的单轮结论，只判成本预算，缺测与确认不足保留原因。
-# 用法：由 scripts/gate.ps1 点引用后调用 Invoke-UESTCPerformanceGate；Read-UESTCPerformanceResult 只读已有批次。
+﻿# G10 只读分析器最新已登记轮与相邻轮比较，缺测、过时与确认不足保留原因。
+# 用法：由 scripts/gate.ps1 点引用后调用 Invoke-UESTCPerformanceGate；采集和轮登记仅由 scripts/perf 负责。
 function Get-UESTCPerfField {
     param($Value, [string]$Path)
     foreach ($part in $Path.Split('.')) {
@@ -20,7 +20,7 @@ function Test-UESTCPerfNumber {
 
 function Read-UESTCPerfJson {
     param([string]$Path, [Collections.Generic.List[string]]$Reasons)
-    try { return Get-Content -Raw -LiteralPath $Path -ErrorAction Stop | ConvertFrom-Json -ErrorAction Stop }
+    try { return Get-Content -Raw -Encoding UTF8 -LiteralPath $Path -ErrorAction Stop | ConvertFrom-Json -ErrorAction Stop }
     catch { $Reasons.Add("Cannot read '$Path': $($_.Exception.Message)"); return $null }
 }
 
@@ -53,12 +53,16 @@ function Read-UESTCPerformanceResult {
     $index = Read-UESTCPerfJson (Join-Path $perf 'index.json') $reasons
     $batches = @(@(Get-UESTCPerfField $index 'batches') | Where-Object { (Get-UESTCPerfField $_ 'id') -eq $Batch })
     $batchResult = if ($batches.Count -eq 1) { $batches[0] } else { $null }
-    $sourceRoot = Get-UESTCPerfField $batchResult 'sourceRoot'
-    if (-not $sourceRoot -or -not [IO.Path]::IsPathRooted($sourceRoot)) {
-        $reasons.Add('Analyzer round registration has no absolute sourceRoot.')
-        $sourceRoot=$null
-    } else { $sourceRoot=[IO.Path]::GetFullPath($sourceRoot).TrimEnd('\','/') }
-    if ($sourceRoot -and (Test-Path -LiteralPath $sourceRoot -PathType Container)) {
+    $sourceRoots = @()
+    foreach ($sourceRoot in @((Get-UESTCPerfField $batchResult 'sourceRoot')) + @(Get-UESTCPerfField $batchResult 'confirmationRoots' | Where-Object { $null -ne $_ })) {
+        if (-not $sourceRoot -or -not [IO.Path]::IsPathRooted($sourceRoot)) {
+            $reasons.Add('Analyzer round registration has no absolute source root.')
+            continue
+        }
+        $sourceRoots += [IO.Path]::GetFullPath($sourceRoot).TrimEnd('\','/')
+    }
+    foreach ($sourceRoot in $sourceRoots) {
+        if (-not (Test-Path -LiteralPath $sourceRoot -PathType Container)) { $reasons.Add("Round source '$sourceRoot' is missing."); continue }
         foreach ($file in @(Get-ChildItem -LiteralPath $sourceRoot -Filter attempt.json -File -Recurse)) {
             $attempt = Read-UESTCPerfJson $file.FullName $reasons
             if (-not $attempt) { continue }
@@ -70,7 +74,9 @@ function Read-UESTCPerformanceResult {
     }
     foreach ($errorRecord in @(Get-UESTCPerfField $index 'errors')) {
         $errorSource = Get-UESTCPerfField $errorRecord 'source'
-        if ($sourceRoot -and $errorSource -and [IO.Path]::GetFullPath($errorSource).StartsWith($sourceRoot + [IO.Path]::DirectorySeparatorChar, [StringComparison]::OrdinalIgnoreCase)) {
+        if ($errorSource -and @($sourceRoots | Where-Object {
+            [IO.Path]::GetFullPath($errorSource) -eq $_ -or [IO.Path]::GetFullPath($errorSource).StartsWith($_ + [IO.Path]::DirectorySeparatorChar, [StringComparison]::OrdinalIgnoreCase)
+        }).Count) {
             $analysisErrors.Add($errorRecord)
         }
     }
@@ -85,7 +91,7 @@ function Read-UESTCPerformanceResult {
     if (($actualScenes -join ',') -ne (($Scenes | Sort-Object) -join ',')) { $reasons.Add('Analyzer fixed-scene groups are missing, duplicated or unexpected.') }
     foreach ($group in $groups) {
         if ($null -eq $group) { continue }
-        Read-UESTCPerfGroup -Perf $perf -SourceRoot $sourceRoot -Group $group -Index $index -SaveScenes $SaveScenes -Reasons $reasons -Sessions $sessions -Timings $timings
+        Read-UESTCPerfGroup -Perf $perf -SourceRoots $sourceRoots -Group $group -Index $index -SaveScenes $SaveScenes -Reasons $reasons -Sessions $sessions -Timings $timings
         foreach ($cost in @(Get-UESTCPerfCostChecks $group $reasons)) { $costs.Add($cost) }
     }
     $uniqueReasons = @($reasons | Select-Object -Unique)
@@ -93,11 +99,12 @@ function Read-UESTCPerformanceResult {
     $status = if ($uniqueReasons.Count) { 'Incomplete' } else { Get-UESTCPerfField $batchResult 'gateStatus' }
     return [pscustomobject]@{ Status=$status; Batch=$Batch; SessionIds=@($sessions | Select-Object -Unique); Attempts=$attempts.ToArray();
         IncompleteReasons=$uniqueReasons; CostChecks=$costs.ToArray(); Exceeded=$exceeded; AnalysisErrors=$analysisErrors.ToArray();
-        SaveAndClose=$timings.ToArray(); TimingPolicy='Save and close durations are reported without thresholds.' }
+        SaveAndClose=$timings.ToArray(); Comparison=@(Get-UESTCPerfField $batchResult 'comparison');
+        TimingPolicy='Save and close durations are reported without thresholds.' }
 }
 
 function Read-UESTCPerfGroup {
-    param([string]$Perf, [string]$SourceRoot, $Group, $Index,
+    param([string]$Perf, [string[]]$SourceRoots, $Group, $Index,
         [string[]]$SaveScenes,
         [Collections.Generic.List[string]]$Reasons, [Collections.Generic.List[string]]$Sessions,
         [Collections.Generic.List[object]]$Timings)
@@ -110,9 +117,10 @@ function Read-UESTCPerfGroup {
         $summary = Read-UESTCPerfJson $summaryPath $Reasons
         if (-not $summary) { continue }
         $source = Get-UESTCPerfField $summary 'source'
-        if (-not $SourceRoot -or -not $source -or ([IO.Path]::GetFullPath($source) -ne $SourceRoot -and
-            -not [IO.Path]::GetFullPath($source).StartsWith($SourceRoot + [IO.Path]::DirectorySeparatorChar, [StringComparison]::OrdinalIgnoreCase))) {
-            $Reasons.Add("${sessionId}: source is outside this fresh round."); continue
+        if (-not $source -or -not @($SourceRoots | Where-Object {
+            [IO.Path]::GetFullPath($source) -eq $_ -or [IO.Path]::GetFullPath($source).StartsWith($_ + [IO.Path]::DirectorySeparatorChar, [StringComparison]::OrdinalIgnoreCase)
+        }).Count) {
+            $Reasons.Add("${sessionId}: source is outside this registered round."); continue
         }
         $run = Read-UESTCPerfJson (Join-Path $source 'run.json') $Reasons
         if ($summary.id -ne $sessionId -or $summary.calc -ne (Get-UESTCPerfField $Index 'calc') -or $Group.calc -ne $summary.calc -or
@@ -157,28 +165,18 @@ function Read-UESTCPerfGroup {
 function Invoke-UESTCPerformanceGate {
     param([Parameter(Mandatory)][string]$Root, [Parameter(Mandatory)][string]$Map,
         [Parameter(Mandatory)][IO.FileStream]$BuildLease)
-    $perfScript = Join-Path $Root 'scripts/perf/perf.py'
-    $check = Invoke-UESTCProcess python @('-I','-X','utf8',$perfScript,'--root',$Root,'selfcheck') $Root
-    Write-Host $check.StdOut
-    if (-not $BuildLease.CanRead -or -not $BuildLease.CanWrite) { throw 'The supplied G10 BuildLease is closed.' }
-    $plan = Get-Content -Raw -LiteralPath (Join-Path $Root 'scripts/perf/scenarios.json') | ConvertFrom-Json
+    $plan = Get-Content -Raw -Encoding UTF8 -LiteralPath (Join-Path $Root 'scripts/perf/scenarios.json') | ConvertFrom-Json
     if ($plan.map -ne $Map) {
         return [pscustomobject]@{ Status='Incomplete'; IncompleteReasons=@("Fixed collection map '$($plan.map)' differs from requested map '$Map'.") }
     }
-    $scenes = @($plan.fixed | ForEach-Object { $_.id })
-    $saveScenes = @($plan.fixed | Where-Object { $_.PSObject.Properties['saveAfterSample'] -and $_.saveAfterSample } | ForEach-Object { $_.id })
-    $batch = 'G10-' + [DateTime]::UtcNow.ToString('yyyyMMdd-HHmmss') + '-' + [Guid]::NewGuid().ToString('N').Substring(0,8)
-    $collectionError = ''
-    $roundNumber=0
-    $previousId=''
-    $registry=Join-Path $Root 'output/perf/rounds.json'
-    if (Test-Path -LiteralPath $registry) {
-        $rounds=(Get-Content -LiteralPath $registry -Raw | ConvertFrom-Json).rounds
-        $previous=@($rounds | Sort-Object number -Descending | Select-Object -First 1)
-        if ($previous.Count) { $roundNumber=[int]$previous[0].number+1; $previousId=$previous[0].id }
+    $reasons = New-Object 'Collections.Generic.List[string]'
+    $index = Read-UESTCPerfJson (Join-Path $Root 'output/perf/index.json') $reasons
+    $latest = @(Get-UESTCPerfField $index 'batches' | Sort-Object number -Descending | Select-Object -First 1)
+    $dictionary = Read-UESTCPerfJson (Join-Path $Root 'scripts/perf/derived-fields.json') $reasons
+    if (-not $latest.Count -or -not $latest[0] -or (Get-UESTCPerfField $index 'calc') -ne (Get-UESTCPerfField $dictionary 'calc')) {
+        return [pscustomobject]@{ Status='Incomplete'; IncompleteReasons=@($reasons.ToArray()) + @('No latest registered round analyzed with the current calc.'); Comparison=@() }
     }
-    try {
-        & (Join-Path $Root 'scripts/perf/run.ps1') -Batch $batch -Suite fixed -Scene $scenes -Mode formal -RoundNumber $roundNumber -PreviousRound $previousId -BuildLease $BuildLease | Out-Host
-    } catch { $collectionError = $_.Exception.ToString() }
-    return Read-UESTCPerformanceResult -Root $Root -Batch $batch -Scenes $scenes -SaveScenes $saveScenes -CollectionError $collectionError
+    $authored = @($plan.fixed) + @($plan.route) + @($plan.travel)
+    $saveScenes = @($authored | Where-Object { $_.PSObject.Properties['saveAfterSample'] -and $_.saveAfterSample -and $_.id -in $latest[0].scenes } | ForEach-Object { $_.id })
+    return Read-UESTCPerformanceResult -Root $Root -Batch $latest[0].id -Scenes @($latest[0].scenes) -SaveScenes $saveScenes
 }

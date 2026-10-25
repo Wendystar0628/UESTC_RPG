@@ -1,6 +1,6 @@
-"""用有上限的中文表读取性能派生数据，不在展示层重算指标。
-用法：python -I -X utf8 scripts/perf/perf.py {latest,show,batch,compare,slice,anomalies,selfcheck}；各子命令加 --help 查参数。
-输入：output/perf 的分析器产出；产出：最多 100 行、16000 字符的中文表；selfcheck 只运行随附小样本，不写真实索引。
+"""读取性能派生数据；record 经唯一分析器完成轮登记或同轮确认，不在展示层重算指标。
+用法：python -I -X utf8 scripts/perf/perf.py {latest,show,batch,distance,compare,record,slice,anomalies,selfcheck}；各子命令加 --help 查参数。
+输入：分析器产出与 record 指定来源；产出：有上限的中文表，record --preview 返回完整 JSON 临时投影；selfcheck 只写临时夹具。
 """
 import argparse
 import csv
@@ -17,7 +17,7 @@ MAX_ROWS = 50
 MAX_LINES = 100
 MAX_CHARS = 16000
 MAX_CELL = 300
-STATUS = dict(current='当前基线', stale='过时', superseded='已替代', partial='不完整', invalid='作废', unsupported='格式不支持', evidence='证据')
+STATUS = dict(current='当前基线', stale='过时', superseded='已替代', partial='不完整', invalid='作废', evidence='证据')
 TYPE = dict(dataValidity='数据有效性', costSpike='成本尖峰候选', budgetExceeded='预算越线', gcPause='GC 停顿',
             gen2='游玩时 gen2', compilation='管线或 JIT 编译', stutter='卡顿', freeze='冻结',
             loadingStutter='加载界面卡顿', sustainedDropped='持续掉帧', frameLimitFailure='限帧失效',
@@ -124,9 +124,8 @@ def overview(summary):
                       for v in at(summary, 'waits.items', []) or []))
     conclusion = summary.get('conclusion')
     if not conclusion:
-        unsupported = summary.get('baseStatus', summary['status']) == 'unsupported'
         reasons = summary.get('sampleReasons') or summary.get('baseReasons') or summary.get('statusReasons')
-        conclusion = ('当前 schema 不支持，未计算指标。' if unsupported else '采集或分析未完成，未计算指标。') + '原因：' + cell(reasons)
+        conclusion = '采集或分析未完成，未计算指标。原因：' + cell(reasons)
     yield '结论：' + conclusion
 
 
@@ -220,12 +219,16 @@ def distance(out, args):
 
 
 def record(out, args):
-    from perf_batches import register_round
     from analyze import analyze_all
-    register_round(out, args.id, args.number, args.source_root, args.scene, args.previous_id)
-    result = analyze_all(args.root.resolve(), author=args.author_root)
-    if result['errors']:
-        raise ValueError('分析来源出错: ' + cell(result['errors']))
+    request = dict(identifier=args.id, number_=args.number, source_root=args.source_root,
+                   scenes=args.scene, previous_id=args.previous_id, confirmation_root=args.confirmation_root)
+    result = analyze_all(args.root.resolve(), author=args.author_root, round_request=request, preview=args.preview)
+    if args.preview:
+        if result.get('projection') is None:
+            raise ValueError(result['registrationError'])
+        return [json.dumps(result['projection'], ensure_ascii=False)]
+    if result['registrationError']:
+        raise ValueError('当前轮未登记: ' + result['registrationError'])
     return batch_overview(out, args)
 
 
@@ -291,10 +294,12 @@ def main():
             command.add_argument('--end', type=int)
     record_parser = commands.add_parser('record', help='登记唯一轮并经现有分析器离线重算')
     record_parser.add_argument('id')
-    record_parser.add_argument('--number', type=int, required=True)
-    record_parser.add_argument('--source-root', type=Path, required=True)
-    record_parser.add_argument('--scene', action='append', required=True)
+    record_parser.add_argument('--number', type=int)
+    record_parser.add_argument('--source-root', type=Path)
+    record_parser.add_argument('--scene', action='append')
     record_parser.add_argument('--previous-id')
+    record_parser.add_argument('--confirmation-root', type=Path)
+    record_parser.add_argument('--preview', action='store_true', help='只返回同一判据的临时轮投影，不登记轮号')
     record_parser.add_argument('--author-root', type=Path)
     commands.add_parser('selfcheck', help='运行小样本与收口回归')
     args = parser.parse_args()
@@ -321,7 +326,7 @@ def main():
             lines = anomalies(out, args)
         else:
             lines = slice_rows(out, args)
-        print(bounded(lines))
+        print('\n'.join(lines) if args.command == 'record' and args.preview else bounded(lines))
         return 0
     except (OSError, ValueError, KeyError) as error:
         print(bounded(['无法读取性能派生：' + str(error)]), file=sys.stderr)

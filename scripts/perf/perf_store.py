@@ -133,15 +133,16 @@ def basic_state(manifest, streams, run, missing, sampling_reasons=()):
     reasons = []
     if manifest.get('status') != 'closed':
         return 'partial', ['记录锁已释放但会话未完成关闭；未解析未闭合的原始流']
-    if streams is None:
-        return 'unsupported', ['当前 schema 的原始流不可用']
+    if (manifest.get('origin') == 'ai' and run.get('status') == 'invalid'
+            and run.get('exitCode') == 0 and run.get('timedOut') is False
+            and manifest.get('fault') == 'none' and manifest.get('endReason') in ('exit', 'toggle')
+            and manifest.get('streams') and all(row.get('droppedRows') == 0 for row in manifest['streams'])):
+        return 'invalid', run.get('reasons') or ['采集前提不满足']
     if manifest.get('complete') is not True:
         reasons = [at(manifest, 'build.identityMissingReason'), manifest.get('conditionsMissingReason')]
         return 'partial', [reason for reason in reasons if reason] or ['记录未完整结束或有丢行']
     if manifest.get('origin') == 'play':
         return 'evidence', ['作者会话只作证据，不作 A/B 基线']
-    if run.get('status') == 'invalid':
-        return 'invalid', run.get('reasons') or ['采集前提不满足']
     if (run.get('purpose') != 'baseline'
             or at(manifest, 'run.diagnostics') or run.get('diagnostic')):
         return 'evidence', ['非正式 AI、功能短跑与诊断采集不进入基线或比较']
@@ -302,6 +303,11 @@ def prune(out, entries):
                          key=lambda p: max((q.stat().st_mtime_ns for name in ('manifest.json', 'manifest.pending.json')
                                             for q in p.rglob(name)), default=p.stat().st_mtime_ns), reverse=True)
         protected = set(batches[:AI_BATCHES_KEEP])
+        from perf_batches import read_rounds, round_sources
+        for registration in read_rounds(out):
+            for source in round_sources(registration):
+                if inside(source, runs):
+                    protected.add(runs / source.relative_to(runs).parts[0])
         for entry in entries:
             source = Path(entry['source']).resolve()
             if entry['status'] in ('current', 'stale') and inside(source, runs):

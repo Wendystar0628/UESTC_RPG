@@ -23,7 +23,7 @@ from perf_store import (AI_BATCHES_KEEP, DIAGNOSTIC_BYTES_KEEP, HISTORY_PER_GROU
                         atomic_json, author_root, basic_state, batch_states, comparison_key, discover,
                         exclusive, git, history_update, session_run, session_run_path, prune, rebuild_states)
 from perf_curves import curve_document
-from perf_batches import assess_rounds, batch_results, read_rounds, sample_window, sampled_streams
+from perf_batches import assess_rounds, batch_results, prepare_round, read_rounds, round_sources, sample_window, sampled_streams, validate_rounds
 from perf_waits import wait_observations
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -289,7 +289,7 @@ def analysis_needed(root=ROOT, output=None, author=None, index=None, dictionary=
     dictionary = dictionary if dictionary is not None else read_json(root / 'game/data/perf-fields.json')
     budgets = budgets if budgets is not None else read_json(root / 'budgets.json')
     rounds = read_rounds(out)
-    directories = discover(out, author, [row['sourceRoot'] for row in rounds])
+    directories = discover(out, author, [str(source) for row in rounds for source in round_sources(row)])
     sources = {str(directory) for directory in directories}
     if any(entry.get('source') not in sources for entry in index.get('sessions', []) + index.get('errors', [])):
         return True
@@ -329,7 +329,7 @@ def write_session(out, summary, items, frames, hwfast, dictionary, stamp, budget
     atomic_json(directory / 'summary.json', summary)
 
 
-def analyze_all(root=ROOT, output=None, author=None):
+def analyze_all(root=ROOT, output=None, author=None, round_request=None, preview=False):
     root = Path(root).resolve()
     out = Path(output).resolve() if output else root / 'output/perf'
     author = Path(author).resolve() if author else author_root(root)
@@ -337,11 +337,18 @@ def analyze_all(root=ROOT, output=None, author=None):
     changed, skipped, errors = [], [], []
     with exclusive(out / '.lock', timeout=30, create=True) as held:
         if not held:
-            return dict(analyzed=[], skipped=['分析锁被占用'], errors=[])
+            return dict(analyzed=[], skipped=['分析锁被占用'], errors=[], registrationError='分析锁被占用')
         prior_index = read_json(out / 'index.json') if (out / 'index.json').is_file() else {}
         # Discover and recheck under the shared lock: concurrent triggers cannot append duplicate history.
         rounds = read_rounds(out)
-        directories = discover(out, author, [row['sourceRoot'] for row in rounds])
+        proposed = prepare_round(rounds, **round_request) if round_request is not None else None
+        if proposed is not None and any(row['id'] == proposed['id'] for row in rounds) and not proposed.get('mainSessionIds'):
+            prior = next((row for row in prior_index.get('batches', []) if row['id'] == proposed['id']), {})
+            mains = {group['comparisonKey']['scene']: group['mainSessionId'] for group in prior.get('groups', [])}
+            if set(mains) == set(proposed['scenes']):
+                proposed['mainSessionIds'] = mains
+        projected_rounds = ([row for row in rounds if row['id'] != proposed['id']] + [proposed]) if proposed else rounds
+        directories = discover(out, author, [str(source) for row in projected_rounds for source in round_sources(row)])
         sources = {str(directory) for directory in directories}
         for directory in directories:
             stamp, identifier, owner = None, None, None
@@ -382,8 +389,34 @@ def analyze_all(root=ROOT, output=None, author=None):
             if summary['source'] in sources:
                 entries.append(summary)
         failed_sources = {error['source'] for error in errors}
-        batches = batch_results(entries, budgets, failed_sources, rounds)
         entries = rebuild_states(entries, root)
+        projection, registration_error = None, None
+        if proposed is not None:
+            projected = batch_states(batch_results(entries, budgets, failed_sources, projected_rounds), entries, root)
+            assess_rounds(projected)
+            projection = next(row for row in projected
+                              if row['id'] == proposed['id'])
+            pending = [source for source in skipped if any(Path(source).resolve().is_relative_to(parent)
+                       for parent in round_sources(proposed))]
+            if pending:
+                projection['statusReasons'].extend('轮来源仍被写入锁占用或尚未关闭: ' + source for source in pending)
+                projection['status'], projection['gateStatus'] = 'partial', 'Incomplete'
+            if projection['status'] == 'partial' or len(projection['groups']) != len(proposed['scenes']):
+                registration_error = '；'.join(projection['statusReasons']) or '轮场景覆盖不完整'
+            elif round_request.get('confirmation_root') is not None and not any(
+                    Path(row['source']).resolve().is_relative_to(Path(round_request['confirmation_root']).resolve())
+                    and row['id'] in {identifier for group in projection['groups'] for identifier in group['sessionIds'][1:]}
+                    for row in entries):
+                registration_error = '追加来源没有本轮所需的完整一次确认'
+            if not preview and registration_error is None:
+                proposed['mainSessionIds'] = {group['comparisonKey']['scene']: group['mainSessionId']
+                                              for group in projection['groups']}
+                # Recheck identity and N-1 under the same lock that publishes analysis and registration.
+                if read_rounds(out) != rounds:
+                    raise ValueError('轮登记在分析期间发生变化')
+                rounds = validate_rounds([row for row in rounds if row['id'] != proposed['id']] + [proposed])
+                atomic_json(out / 'rounds.json', dict(rounds=sorted(rounds, key=lambda row: row['number'])))
+        batches = batch_results(entries, budgets, failed_sources, rounds)
         batches = batch_states(batches, entries, root)
         assess_rounds(batches)
         for entry in entries:
@@ -404,7 +437,8 @@ def analyze_all(root=ROOT, output=None, author=None):
         # 相同 IO 故障仍可由下一次外部采集重试，但不自写 index 制造文件通知空转。
         if index != prior_index:
             atomic_json(out / 'index.json', index)
-    return dict(analyzed=[s['id'] for s in changed], skipped=skipped, errors=errors)
+    return dict(analyzed=[s['id'] for s in changed], skipped=skipped, errors=errors,
+                projection=projection, registrationError=registration_error)
 
 
 def index_entry(summary):

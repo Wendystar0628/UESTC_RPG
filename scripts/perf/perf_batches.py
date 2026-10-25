@@ -28,11 +28,19 @@ def validate_rounds(rounds):
             raise ValueError('轮场景计划缺失或重复')
         if not isinstance(row.get('sourceRoot'), str) or not Path(row['sourceRoot']).is_absolute():
             raise ValueError('轮原始根必须是绝对路径')
+        roots = row.get('confirmationRoots', [])
+        if (not isinstance(roots, list) or len(set(roots)) != len(roots)
+                or any(not isinstance(root, str) or not Path(root).is_absolute() for root in roots)):
+            raise ValueError('确认原始根必须是无重复的绝对路径')
+        mains = row.get('mainSessionIds')
+        if mains is not None and (not isinstance(mains, dict) or set(mains) != set(scenes)
+                                  or any(not isinstance(value, str) or not value for value in mains.values())):
+            raise ValueError('已冻结主采必须完整对应场景计划')
         previous = row.get('previousId')
         if n == 0 and previous is not None or n > 0 and (previous not in by_id or by_id[previous]['number'] != n - 1):
             raise ValueError('前轮必须显式指向 N-1；第0轮无前轮')
         by_id[identifier], numbers = row, numbers | {n}
-    return rounds
+    return sorted(rounds, key=lambda row: row['number'])
 
 
 def read_rounds(out):
@@ -40,23 +48,40 @@ def read_rounds(out):
     return validate_rounds(read_json(path)['rounds']) if path.is_file() else []
 
 
-def register_round(out, identifier, number_, source_root, scenes, previous_id=None):
-    from perf_store import atomic_json, exclusive
-    source = Path(source_root).resolve()
-    if not source.is_dir():
-        raise ValueError('轮原始根不存在')
-    row = dict(id=identifier, number=number_, sourceRoot=str(source), scenes=list(scenes), previousId=previous_id)
-    with exclusive(Path(out) / '.lock', timeout=30, create=True) as held:
-        if not held:
-            raise ValueError('分析锁被占用')
-        rounds = read_rounds(out)
-        prior = next((item for item in rounds if item['id'] == identifier), None)
-        if prior is not None and prior != row:
-            raise ValueError('已登记轮的身份、原始根或场景计划不能改写')
+def round_sources(registration):
+    return [Path(value).resolve() for value in
+            [registration['sourceRoot'], *registration.get('confirmationRoots', [])]]
+
+
+def prepare_round(rounds, identifier, number_=None, source_root=None, scenes=None, previous_id=None,
+                  confirmation_root=None):
+    """只在分析器持有共享锁时组装待投影身份，完整主采确认前不写登记。"""
+    prior = next((item for item in rounds if item['id'] == identifier), None)
+    if confirmation_root is not None:
         if prior is None:
-            rounds.append(row)
-        validate_rounds(rounds)
-        atomic_json(Path(out) / 'rounds.json', dict(rounds=sorted(rounds, key=lambda item: item['number'])))
+            raise ValueError('追加确认必须指向已登记轮')
+        if any(value is not None for value in (number_, source_root, scenes, previous_id)):
+            raise ValueError('追加确认不能改写轮身份、主采原始根、场景计划或前轮')
+        row = copy.deepcopy(prior)
+        root = str(Path(confirmation_root).resolve())
+        if any(Path(root).is_relative_to(source) or source.is_relative_to(Path(root)) for source in round_sources(row)):
+            raise ValueError('确认必须来自独立的新原始根，不能覆盖主采或重复确认来源')
+        row['confirmationRoots'] = [*row.get('confirmationRoots', []), root]
+    else:
+        if number_ is None or source_root is None or not scenes:
+            raise ValueError('新轮必须给出序号、原始根与完整场景计划')
+        row = dict(id=identifier, number=number_, sourceRoot=str(Path(source_root).resolve()),
+                   scenes=list(scenes), previousId=previous_id)
+        if prior is not None:
+            if any(prior[key] != row[key] for key in row):
+                raise ValueError('已登记轮的身份、原始根或场景计划不能改写')
+            row = copy.deepcopy(prior)
+        elif any(source.is_relative_to(other) or other.is_relative_to(source)
+                 for source in round_sources(row) for registered in rounds for other in round_sources(registered)):
+            raise ValueError('新轮不能复用已登记轮的主采或确认来源')
+    if any(not source.is_dir() for source in round_sources(row)):
+        raise ValueError('轮原始根不存在')
+    validate_rounds([item for item in rounds if item['id'] != identifier] + [row])
     return row
 
 
@@ -155,6 +180,8 @@ def confirmation_reasons(group):
     reasons = []
     for check in group['distanceTable']:
         for line in ('upper', 'stop'):
+            if line == 'stop' and not check['selected']:
+                continue
             value, boundary = check['value'], check[line]
             if number(value) and number(boundary) and boundary > 0 and abs(value - boundary) / boundary < fraction:
                 reasons.append(check['metric'] + ' 接近' + line)
@@ -197,10 +224,17 @@ def batch_results(entries, budgets, failed_sources=(), rounds=()):
     for registration in validate_rounds(rounds):
         reasons, groups, selected = [], [], []
         source = Path(registration['sourceRoot']).resolve()
-        available = [row for row in entries if Path(row['source']).resolve().is_relative_to(source)]
+        roots = round_sources(registration)
+        available = [row for row in entries if any(Path(row['source']).resolve().is_relative_to(root) for root in roots)]
+        reasons.extend('轮来源分析失败: ' + failed for failed in sorted(failed_sources)
+                       if any(Path(failed).resolve().is_relative_to(root) for root in roots))
+        reasons.extend(row['id'] + ': 轮来源存在未完成运行: ' + '；'.join(row.get('baseReasons', []))
+                       for row in available if row.get('baseStatus') == 'partial')
         for scene in registration['scenes']:
             candidates = [row for row in available if row['comparisonKey'].get('scene') == scene
-                          and base_valid(row) and not at(row, 'run.confirmationOf')]
+                          and Path(row['source']).resolve().is_relative_to(source)
+                          and base_valid(row) and not at(row, 'run.confirmationOf')
+                          and (not registration.get('mainSessionIds') or row['id'] == registration['mainSessionIds'].get(scene))]
             if not candidates:
                 reasons.append(scene + ': 无完整有效单次')
                 continue
@@ -218,11 +252,25 @@ def batch_results(entries, budgets, failed_sources=(), rounds=()):
             members = [main]
             if confirmations:
                 confirm = max(confirmations, key=latest_key)
-                frozen = ('suite', 'travelPrefetch', 'logicalPauseVerified', 'mainThreadLongStopVerified', 'tuningSelectedMetrics')
-                if (len(confirmations) != 1 or confirm['source'] in failed_sources or group_key(confirm) != group_key(main) or confirm['build'] != main['build']
-                        or confirm['environmentSignature'] != main['environmentSignature']
-                        or any(at(confirm, 'run.conditions.' + key) != at(main, 'run.conditions.' + key) for key in frozen)):
-                    reasons.append(scene + ': 确认次数或冻结条件不符')
+                frozen = [{key: value for key, value in at(row, 'run.conditions', {}).items()
+                           if key != 'sampleSegmentId'} for row in (main, confirm)]
+                mismatches = []
+                if len(confirmations) != 1:
+                    mismatches.append('有效确认次数不是一次')
+                if confirm['source'] in failed_sources:
+                    mismatches.append('确认来源分析失败')
+                if group_key(confirm) != group_key(main):
+                    mismatches.append('确认比较键/calc/origin/scope 不一致')
+                if confirm['build'] != main['build']:
+                    mismatches.append('确认的真实构建身份不一致')
+                if confirm['environmentSignature'] != main['environmentSignature']:
+                    mismatches.append('确认驱动/系统/引擎环境不一致')
+                changed = sorted(key for key in set(frozen[0]) | set(frozen[1])
+                                 if key not in frozen[0] or key not in frozen[1] or frozen[0][key] != frozen[1][key])
+                if changed:
+                    mismatches.append('确认冻结条件不符: ' + ', '.join(changed))
+                if mismatches:
+                    reasons.extend(scene + ': ' + reason for reason in mismatches)
                 else:
                     members.append(confirm)
                     group['sessionIds'].append(confirm['id'])
@@ -236,9 +284,16 @@ def batch_results(entries, budgets, failed_sources=(), rounds=()):
             groups.append(group)
         if any(not isinstance(row.get('environmentSignature'), dict) or any(row['environmentSignature'].get(key) is None for key in ('machine.driver', 'machine.os', 'build.godot')) for row in selected):
             reasons.append('本轮驱动/系统/引擎环境缺失')
-        if len({at(row, 'build.commit') for row in selected}) > 1 or len({json.dumps(row.get('environmentSignature'), sort_keys=True) for row in selected}) > 1:
+        if len({json.dumps(row.get('build'), sort_keys=True) for row in selected}) > 1 or len({json.dumps(row.get('environmentSignature'), sort_keys=True) for row in selected}) > 1:
             reasons.append('本轮构建或驱动/系统/引擎环境不一致')
+        referenced = {identifier for group in groups for identifier in group['sessionIds']}
+        for row in available:
+            if (not Path(row['source']).resolve().is_relative_to(source) and row['id'] not in referenced
+                    and base_valid(row)):
+                reasons.append(row['id'] + ': 追加来源不是本轮所需的一次有效确认')
         missing_checks = [check for group in groups for check in group['requiredChecks'] if check['status'] != 'measured']
+        missing_budgets = [check for group in groups for check in group['distanceTable'] if check['tier'] == 'rerun']
+        reasons.extend(check['scene'] + '/' + check['metric'] + ': ' + str(check['reason']) for check in missing_budgets)
         unjudged = sorted({check['key'] for check in missing_checks} |
                           {check['metric'] for row in selected for check in row.get('budgets', []) if check['unjudged']} |
                           {item['key'] for row in selected for item in at(row, 'waits.items', []) or [] if item['status'] == 'unjudged'} |
@@ -247,7 +302,7 @@ def batch_results(entries, budgets, failed_sources=(), rounds=()):
                       requiredChecks=[check for group in groups for check in group['requiredChecks']],
                       unjudged=unjudged, pain=batch_pain(selected, budgets) if selected else None,
                       confirmationPending=any(group['confirmationPending'] for group in groups))
-        result['gateStatus'] = ('Incomplete' if reasons or missing_checks or result['confirmationPending'] or at(result, 'pain.status') == 'rerun' else
+        result['gateStatus'] = ('Incomplete' if reasons or missing_checks or missing_budgets or result['confirmationPending'] or at(result, 'pain.status') == 'rerun' else
                                 'Failed' if any(check['tier'] == 'above-upper' for group in groups for check in group['distanceTable']) else 'Passed')
         results.append(result)
     assess_rounds(results)

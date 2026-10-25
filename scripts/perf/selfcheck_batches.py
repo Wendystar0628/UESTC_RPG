@@ -2,9 +2,13 @@
 用法：由 perf.py selfcheck 编排调用，复用 selfcheck_fixtures，不写真实会话。
 """
 import copy
+import io
 import json
+import shutil
+import subprocess
 import sys
 import tempfile
+from contextlib import redirect_stderr, redirect_stdout
 from pathlib import Path
 from unittest.mock import patch
 from analyze import analyze_all, summary_for
@@ -91,6 +95,7 @@ def check_sampling_batches(root, dictionary, budgets):
         assert len(load_session(source, dictionary)[1]['frames']) == len(rows), '分析修改了原始数据'
         assert not read_json(out / 'index.json')['batches'], '无登记的会话进入轮记录'
     check_round_selection(root, dictionary, budgets)
+    check_round_registration(root, dictionary, budgets)
 
 
 def check_round_selection(root, dictionary, budgets):
@@ -139,6 +144,14 @@ def check_round_selection(root, dictionary, budgets):
         assert at(result['groups'][0], 'steady.cost.mainViewportCpuMs.n') == at(entries[2], 'steady.cost.mainViewportCpuMs.n')
         assert result['groups'][0]['metricSources']['steady.cost.mainViewportGpuMs']['sessionId'] == 'confirm'
         assert result['groups'][0]['confirmationPending'] is False
+        inconsistent = copy.deepcopy(confirm)
+        next(row for row in inconsistent['budgets'] if row['metric'] == 'mainViewportGpuMs')['stop'] = ruler
+        inconsistent_result = batch_results(entries + [inconsistent], budgets, rounds=[registration])[0]
+        assert any(row['tier'] == 'rerun' for row in inconsistent_result['groups'][0]['distanceTable']), '夹具未触发主采/确认判据不一致'
+        assert inconsistent_result['gateStatus'] == 'Incomplete' and inconsistent_result['statusReasons']
+        inconsistent = copy.deepcopy(confirm)
+        inconsistent['run']['conditions']['logicalPauseVerified'] = True
+        assert batch_results(entries + [inconsistent], budgets, rounds=[registration])[0]['gateStatus'] == 'Incomplete'
         duplicate = copy.deepcopy(confirm); duplicate['id']='duplicate'
         assert batch_results(entries + [confirm, duplicate], budgets, rounds=[registration])[0]['status'] == 'partial'
         result['status']='stale'
@@ -160,7 +173,6 @@ def check_batch_freshness(root, dictionary, budgets):
     from argparse import Namespace
     from perf import compare
     from perf_store import git
-    from perf_batches import register_round
     with tempfile.TemporaryDirectory(prefix='uestc-perf-round-code-') as temporary:
         repo = Path(temporary) / 'repo'
         data_root = repo / 'game/data'
@@ -189,7 +201,9 @@ def check_batch_freshness(root, dictionary, budgets):
             sample = mark_sample(streams(sample_rows, dictionary), dictionary, meta)
             write_six(source / identifier, meta, sample, dictionary)
             (source / identifier / 'run.json').write_text(json.dumps(ai_run(round_id=identifier)), encoding='utf-8')
-            register_round(out, identifier, number_, source, ['baseline-selfcheck'], 'round-0' if number_ else None)
+            registered = analyze_all(repo, out, author, round_request=dict(identifier=identifier, number_=number_,
+                                      source_root=source, scenes=['baseline-selfcheck'], previous_id='round-0' if number_ else None))
+            assert not registered['registrationError'], registered
         assert not analyze_all(repo, out, author)['errors']
         batches = read_json(out / 'index.json')['batches']
         assert batches[0]['status'] == 'stale' and batches[1]['status'] == 'current', batches
@@ -197,6 +211,159 @@ def check_batch_freshness(root, dictionary, budgets):
         marker.write_text('C', encoding='utf-8')
         assert not analyze_all(repo, out, author)['errors']
         assert read_json(out / 'index.json')['batches'][1]['status'] == 'stale'
+
+
+def check_round_registration(root, dictionary, budgets):
+    """Regression：失败不占轮、历史错误隔离、同轮确认保主采，G10 纯读最新轮。"""
+    import perf
+    from perf_store import git
+    with tempfile.TemporaryDirectory(prefix='uestc-perf-registration-') as temporary:
+        repo, author = Path(temporary) / 'repo', Path(temporary) / 'author'
+        (repo / 'game/data').mkdir(parents=True)
+        (repo / 'game/data/perf-fields.json').write_text(json.dumps(dictionary), encoding='utf-8')
+        (repo / 'budgets.json').write_text(json.dumps(budgets), encoding='utf-8')
+        for arguments in (('init',), ('add', '.'), ('-c', 'user.name=selfcheck', '-c', 'user.email=selfcheck@example.invalid', 'commit', '-m', 'fixture')):
+            assert git(repo, *arguments)[0] == 0, arguments
+        commit = git(repo, 'rev-parse', 'HEAD')[1]
+        out, source = repo / 'output/perf', repo / 'output/perf/runs/main'
+        source.mkdir(parents=True)
+        upper = budgets['deviceTargets']['developer']['mainViewportGpuP95MsUpper']
+
+        def session(parent, identifier, scene, confirmation=None, condition_change=None, gpu=None, state='valid'):
+            meta = manifest(dictionary, identifier)
+            meta.update(origin='ai', desktop=dict(kind='isolated'), fault='none', endReason='exit')
+            meta['build']['commit'] = commit
+            run = ai_run(scene=scene, confirmation_of=confirmation)
+            run['conditions'].update(logicalPauseVerified=False, mainThreadLongStopVerified=False,
+                                     tuningSelectedMetrics=[], saveAfterSample=scene == 'first')
+            run['conditions'].update(condition_change or {})
+            run['coverage'] = {key: dict(observed=1, required=1) for key in ('sampleBegin', 'sampleEnd', 'gpu', 'sample')}
+            run['close'] = dict(completed=True, durationMs=1, source='formal-close-task', reason=None)
+            run['observed'] = dict(save=dict(reason='Manual', status='Saved', durationMs=1))
+            rows = [frame(dictionary, i, gpu=upper * .98 if gpu is None else gpu) for i in range(3)]
+            for row in rows:
+                row['frameSetupCpuMs'] = budgets['deviceTargets']['developer']['frameSetupCpuP95MsUpper'] / 2
+            data = streams(rows, dictionary)
+            if state == 'valid':
+                data = mark_sample(data, dictionary, meta)
+            else:
+                meta['complete'] = False
+                run.update(status=state, reasons=['Pre-sample GPU contamination' if state == 'invalid' else 'Interrupted sample'], polluted=state == 'invalid')
+            write_six(parent / identifier, meta, data, dictionary)
+            (parent / identifier / 'run.json').write_text(json.dumps(run), encoding='utf-8')
+
+        def cli(*arguments):
+            stdout, stderr = io.StringIO(), io.StringIO()
+            with patch.object(sys, 'argv', ['perf.py', '--root', str(repo), *map(str, arguments)]), redirect_stdout(stdout), redirect_stderr(stderr):
+                status = perf.main()
+            return status, stdout.getvalue(), stderr.getvalue()
+
+        record = ['record', 'fixture-round-0', '--number', '0', '--source-root', str(source),
+                  '--scene', 'first', '--scene', 'second', '--author-root', str(author)]
+        assert cli(*record)[0] == 1 and not (out / 'rounds.json').exists(), '空采集占用了轮号'
+        session(source, 'main-first', 'first')
+        broken = author / 'historical-error'
+        write_six(broken, manifest(dictionary, 'historical-error'), streams([frame(dictionary, 0)], dictionary), dictionary)
+        (broken / 'frames.csv').write_text('truncated', encoding='utf-8')
+        assert cli(*record)[0] == 1 and not (out / 'rounds.json').exists(), '场景覆盖不全占用了轮号'
+        session(source, 'main-second', 'second')
+        session(source, 'discarded-before-begin', 'first', state='invalid')
+        preview = cli(*record, '--preview')
+        assert preview[0] == 0 and len(json.loads(preview[1])['groups']) == 2 and not (out / 'rounds.json').exists()
+        result = cli(*record)
+        assert result[0] == 0, result
+        discarded = read_json(out / 'derived/discarded-before-begin/summary.json')
+        assert discarded['recording']['complete'] is False and discarded['sampleReasons'] and discarded['baseStatus'] == 'invalid'
+        registered = read_json(out / 'rounds.json')['rounds'][0]
+        assert registered['mainSessionIds'] == dict(first='main-first', second='main-second')
+        assert read_json(out / 'index.json')['errors'][0]['source'] == str(broken.resolve()), '历史错误被吞掉'
+        assert next(row for row in read_json(out / 'index.json')['batches'] if row['id'] == registered['id'])['confirmationPending']
+
+        bad = Path(temporary) / 'mismatched-confirmation'
+        session(bad, 'bad-confirm', 'first', 'main-first', dict(logicalPauseVerified=True))
+        append = ['record', registered['id'], '--confirmation-root', str(bad), '--author-root', str(author)]
+        preview = cli(*append, '--preview')
+        assert preview[0] == 0 and json.loads(preview[1])['gateStatus'] == 'Incomplete'
+        prior = (out / 'rounds.json').read_bytes()
+        assert cli(*append)[0] == 1 and (out / 'rounds.json').read_bytes() == prior, '不符冻结条件的确认被登记'
+        confirm = Path(temporary) / 'confirmations'
+        for scene in ('first', 'second'):
+            session(confirm, 'confirm-' + scene, scene, 'main-' + scene)
+        append = ['record', registered['id'], '--confirmation-root', str(confirm), '--author-root', str(author)]
+        result = cli(*append)
+        assert result[0] == 0, result
+        updated = read_json(out / 'rounds.json')['rounds'][0]
+        assert all(updated[key] == registered[key] for key in registered), '追加确认改写了轮身份或主采'
+        assert updated['confirmationRoots'] == [str(confirm.resolve())]
+        group = read_json(out / 'index.json')['batches'][0]['groups'][0]
+        assert group['sessionIds'] == ['main-first', 'confirm-first'] and not group['confirmationPending']
+        duplicate = Path(temporary) / 'duplicate'
+        session(duplicate, 'duplicate-confirm', 'first', 'main-first')
+        prior = (out / 'rounds.json').read_bytes()
+        assert cli('record', registered['id'], '--confirmation-root', duplicate, '--author-root', author)[0] == 1
+        assert (out / 'rounds.json').read_bytes() == prior, '重复确认改写了登记'
+        session(source, 'replacement', 'first', gpu=1)
+        assert cli(*record)[0] == 0
+        assert read_json(out / 'rounds.json')['rounds'][0]['mainSessionIds'] == registered['mainSessionIds']
+
+        next_source = out / 'runs/next'
+        for scene in ('first', 'second'):
+            session(next_source, 'next-' + scene, scene, gpu=upper / 2)
+        result = cli('record', 'fixture-round-1', '--number', '1', '--source-root', next_source,
+                     '--scene', 'first', '--scene', 'second', '--previous-id', registered['id'], '--author-root', author)
+        assert result[0] == 0, result
+        assert cli('compare', 'fixture-round-0', 'fixture-round-1')[0] == 0
+        assert cli('compare', 'fixture-round-1', 'fixture-round-0')[0] == 1
+        check_readonly_gate(root, repo, out)
+        session(source, 'interrupted', 'first', state='partial')
+        prior = (out / 'rounds.json').read_bytes()
+        result = cli(*record)
+        assert result[0] == 1 and '轮来源存在未完成运行' in result[2], result
+        assert (out / 'rounds.json').read_bytes() == prior
+        for identifier in ('faulted-invalid', 'dropped-invalid'):
+            session(source, identifier, 'first', state='invalid')
+            path = source / identifier / 'manifest.json'
+            meta = read_json(path)
+            if identifier == 'faulted-invalid':
+                meta['fault'] = 'writerFailed'
+            else:
+                meta['streams'][0]['droppedRows'] = 1
+            path.write_text(json.dumps(meta), encoding='utf-8')
+        assert cli(*record)[0] == 1
+        assert all(read_json(out / 'derived' / identifier / 'summary.json')['baseStatus'] == 'partial'
+                   for identifier in ('faulted-invalid', 'dropped-invalid')), 'invalid 掩盖了记录服务故障或丢行'
+        (source / 'main-first/frames.csv').write_text('truncated', encoding='utf-8')
+        prior = (out / 'rounds.json').read_bytes()
+        result = cli(*record)
+        assert result[0] == 1 and '轮来源分析失败' in result[2], result
+        assert (out / 'rounds.json').read_bytes() == prior, '当前主采源失败后登记仍被改写'
+
+
+def check_readonly_gate(root, repo, out):
+    """同一离线夹具直接调用既有 G10；保留文件字节与修改时刻，禁止隐式采集。"""
+    scripts = repo / 'scripts/perf'
+    scripts.mkdir(parents=True)
+    shutil.copyfile(root / 'scripts/perf/derived-fields.json', scripts / 'derived-fields.json')
+    plan = dict(map='qingshuihe', fixed=[dict(id='first', saveAfterSample=True), dict(id='second', saveAfterSample=False)], route=[], travel=[])
+    (scripts / 'scenarios.json').write_text(json.dumps(plan), encoding='utf-8')
+    before = {str(path): (path.read_bytes(), path.stat().st_mtime_ns) for path in out.rglob('*') if path.is_file()}
+    def quoted(value):
+        return "'" + str(value).replace("'", "''") + "'"
+    command = ("$ErrorActionPreference='Stop'; [Console]::OutputEncoding=[Text.UTF8Encoding]::new($false); "
+               ". " + quoted(root / 'scripts/gates/performance.ps1') + "; "
+               "function Assert-UESTCChildPath($Path,$Parent) { [IO.Path]::GetFullPath($Path) }; "
+               "function Invoke-UESTCProcess { throw 'G10 attempted process execution' }; "
+               "$lease=[IO.File]::Open(" + quoted(repo / 'gate-test.lock') + ",[IO.FileMode]::OpenOrCreate); "
+               "try { Invoke-UESTCPerformanceGate -Root " + quoted(repo) + " -Map qingshuihe -BuildLease $lease | ConvertTo-Json -Depth 32 -Compress } finally { $lease.Dispose() }")
+    shell = shutil.which('powershell.exe') or shutil.which('powershell') or shutil.which('pwsh')
+    assert shell, '离线 G10 回归需要 PowerShell'
+    result = subprocess.run([shell, '-NoProfile', '-NonInteractive', '-Command', command], capture_output=True, text=True, encoding='utf-8', timeout=30)
+    assert result.returncode == 0, (result.stdout, result.stderr)
+    detail = json.loads(result.stdout)
+    assert detail.get('Batch') == 'fixture-round-1' and set(detail['SessionIds']) == {'next-first', 'next-second'} and detail['Comparison'], detail
+    assert detail['Status'] == 'Passed' and not detail['IncompleteReasons'] and len(detail['SaveAndClose']) == 2, detail
+    after = {str(path): (path.read_bytes(), path.stat().st_mtime_ns) for path in out.rglob('*') if path.is_file()}
+    assert before == after, 'G10 改写了采集、登记或分析产物'
 
 
 def check_failed_baseline(root, dictionary, budgets):

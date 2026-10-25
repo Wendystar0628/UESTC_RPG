@@ -94,8 +94,8 @@ def check_monitor_projection(root, dictionary, budgets):
             assert payload['latest']['play'] == 'GOOD' and len(payload['sessionErrors']) == 1, '坏作者清单拖垮整页或重复报错'
             assert (out / 'derived/MONITOR/summary.json').is_file(), '夹具没有留下坏来源的旧派生'
             import perf
-            for arguments, expected in ((['show', 'MONITOR'], 1), (['compare', 'GOOD', 'MONITOR'], 1),
-                                        (['compare', 'MONITOR', 'GOOD'], 1), (['slice', 'MONITOR'], 1),
+            for arguments, expected in ((['show', 'MONITOR'], 1), (['compare', 'missing-round-0', 'missing-round-1'], 1),
+                                        (['compare', 'missing-round-1', 'missing-round-0'], 1), (['slice', 'MONITOR'], 1),
                                         (['anomalies', 'MONITOR'], 1), (['show', 'GOOD'], 0),
                                         (['slice', 'GOOD'], 0),
                                         (['anomalies', 'GOOD'], 0), (['latest'], 0)):

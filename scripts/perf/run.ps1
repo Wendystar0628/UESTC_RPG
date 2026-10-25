@@ -1,11 +1,12 @@
 ﻿# AI 固定采集唯一入口：冻结条件，分开本树准备与私桌面采样，保留失败并交既有分析器。
-# 用法：powershell -File scripts/perf/run.ps1 -Batch TOOL-428-check [-Suite fixed|route|travel] [-Scene overview-default] [-PrepareBake]；正式轮加 -Mode formal -RoundNumber 0 [-PreviousRound id]；诊断用 -DeepenSession <id> [-DiagnosticTool gpu-profile,EventPipe,Nsight]。
-# 产出：output/perf/runs/<Batch>/<Phase>/<场景>/<重复-尝试>/<会话>/run.json 与原始六件；functional 永不进入比较。
+# 用法：powershell -File scripts/perf/run.ps1 -Batch <新来源名> [-Suite fixed|route|travel] [-Scene overview-default]；正式主采加 -Mode formal -RoundNumber 0 [-PreviousRound id]，同轮确认加 -Mode formal -ConfirmRound <既有轮ID>；诊断用 -DeepenSession <id>。
+# 产出：output/perf/runs/<Batch>/<场景>/<主采或确认-尝试>/<会话>/run.json 与六件；完成主采后登记轮，失败与功能短跑只留运行事实。
 [CmdletBinding(DefaultParameterSetName='Collection')]
 param([Parameter(Mandatory,ParameterSetName='Collection')][ValidatePattern('^[A-Za-z0-9][A-Za-z0-9-]+$')][string]$Batch,
     [ValidateSet('fixed','route','travel')][string[]]$Suite=@('fixed','route','travel'), [string[]]$Scene=@(),
     [ValidateSet('functional-smoke','formal')][string]$Mode='functional-smoke',
     [ValidateRange(0,2147483647)][int]$RoundNumber=0, [string]$PreviousRound='',
+    [string]$ConfirmRound='',
     [switch]$PrepareBake, [IO.FileStream]$BuildLease=$null, [string]$BatchConditions='',
     [Parameter(Mandatory,ParameterSetName='Diagnostic')][ValidatePattern('^[A-Za-z0-9][A-Za-z0-9._-]*$')][string]$DeepenSession,
     [Parameter(ParameterSetName='Diagnostic')][ValidateSet('gpu-profile','EventPipe','Nsight')][string[]]$DiagnosticTool=@(),
@@ -33,7 +34,7 @@ $timeoutSeconds=600
 $judgement=[ordered]@{ logicalPauseVerified=$false; mainThreadLongStopVerified=$false;
     tuningSelectedMetrics=@() }
 if ($BatchConditions) {
-    $requested=Get-Content -LiteralPath $BatchConditions -Raw | ConvertFrom-Json
+    $requested=Get-Content -LiteralPath $BatchConditions -Raw -Encoding UTF8 | ConvertFrom-Json
     foreach ($property in $requested.PSObject.Properties) {
         if (-not $judgement.Contains($property.Name)) { throw "Unknown batch condition: $($property.Name)" }
         $judgement[$property.Name]=$property.Value
@@ -42,7 +43,10 @@ if ($BatchConditions) {
         if ($judgement[$name] -isnot [bool]) { throw "$name must be a recorded round-zero boolean." }
     }
 }
-$plan=Get-Content -LiteralPath (Join-Path $PSScriptRoot 'scenarios.json') -Raw | ConvertFrom-Json
+$plan=Get-Content -LiteralPath (Join-Path $PSScriptRoot 'scenarios.json') -Raw -Encoding UTF8 | ConvertFrom-Json
+if ($ConfirmRound -and ($Mode -ne 'formal' -or $BatchConditions -or $PSBoundParameters.ContainsKey('RoundNumber') -or $PreviousRound)) {
+    throw 'Confirmation requires formal mode and inherits the registered round identity and judgement conditions.'
+}
 $selected=@(Get-CollectionScenes $plan $Suite $Scene)
 if ($Mode -eq 'functional-smoke' -and -not $Scene.Count) {
     $selected=@($Suite | ForEach-Object { $kind=$_; $selected | Where-Object { $_.kind -eq $kind } | Select-Object -First 1 })
@@ -50,8 +54,23 @@ if ($Mode -eq 'functional-smoke' -and -not $Scene.Count) {
 $sceneIds=@($selected | ForEach-Object { $_.scene.id })
 $batchRoot=Assert-UESTCChildPath (Join-Path $root ('output\perf\runs\' + $Batch)) (Join-Path $root 'output\perf\runs')
 $roundRoot=$batchRoot
-if (Test-Path -LiteralPath $roundRoot) { throw 'Choose a fresh round; prior data is retained.' }
+if (Test-Path -LiteralPath $roundRoot) { throw 'Choose a fresh attempt source; prior data is retained.' }
 $null=[IO.Directory]::CreateDirectory($roundRoot)
+$roundId=if ($ConfirmRound) { $ConfirmRound } else { $Batch }
+$confirmationRoot=if ($ConfirmRound) { $roundRoot } else { '' }
+$projection=$null
+if ($ConfirmRound) {
+    $projection=Publish-CollectionRound $root $roundId $null $null @() $null -ConfirmationRoot $confirmationRoot -Preview
+    $pending=@($projection.groups | Where-Object { $_.confirmationPending } | ForEach-Object { $_.comparisonKey.scene })
+    if (-not $pending.Count -or @($Scene | Where-Object { $_ -notin $pending }).Count) { throw 'Only pending scenes of the registered round can be confirmed once.' }
+    $confirmationScenes=if ($Scene.Count) { $Scene } else { $pending }
+    $selected=@(Get-CollectionScenes $plan $Suite $confirmationScenes)
+    $sceneIds=@($projection.scenes)
+    $RoundNumber=$projection.number
+    $PreviousRound=$projection.previousId
+} elseif ($Mode -eq 'formal') {
+    $projection=Publish-CollectionRound $root $roundId $RoundNumber $roundRoot $sceneIds $PreviousRound -Preview
+}
 $purpose=if ($Mode -eq 'formal') { 'baseline' } else { 'functional' }
 $roundRecord=[ordered]@{ purpose=$purpose; number=$RoundNumber; previousId=$PreviousRound; scenes=$sceneIds; status='preparing';
     revision=(& git -C $root rev-parse HEAD).Trim(); preparation=$null; completed=$false;
@@ -71,7 +90,6 @@ try {
     $preparation['lockWaitStatus']=if ($BuildLease) { 'ALREADY_HELD' } else { 'ACQUIRED_BY_COLLECTION' }
     $roundRecord.preparation=$preparation
     Write-CollectionJson (Join-Path $roundRoot 'round.json') $roundRecord
-    if ($Mode -eq 'formal') { Publish-CollectionRound $root $Batch $RoundNumber $roundRoot $sceneIds $PreviousRound }
     $godot=Get-UESTCGodot
     $environment=New-UESTCTestEnvironment -Work $roundRoot
     $environment['UESTC_BAKE_CACHE']=$null
@@ -85,10 +103,17 @@ try {
     }
     $roundRecord.status='collecting'
     Write-CollectionJson (Join-Path $roundRoot 'round.json') $roundRecord
-    $count=if ($Mode -eq 'formal') { 2 } else { 1 }
+    $count=if ($Mode -eq 'formal' -and -not $ConfirmRound) { 2 } else { 1 }
     $attemptLimit=if ($Mode -eq 'formal') { $maximumAttempts } else { 1 }
     foreach ($item in $selected) {
         $confirmationOf=$null
+        $frozenRequest=$null
+        if ($ConfirmRound) {
+            $group=@($projection.groups | Where-Object { $_.comparisonKey.scene -eq $item.scene.id })[0]
+            $confirmationOf=$group.mainSessionId
+            $main=Get-Content -LiteralPath (Join-Path $root "output/perf/derived/$confirmationOf/summary.json") -Raw -Encoding UTF8 | ConvertFrom-Json
+            $frozenRequest=$main.run.conditions
+        }
         for ($sample=0; $sample -lt $count; $sample++) {
             $accepted=$false
             for ($attempt=1; $attempt -le $attemptLimit; $attempt++) {
@@ -106,13 +131,19 @@ try {
                 if ($entry.PSObject.Properties['routePointIds']) { $request['routePointIds']=@($entry.routePointIds) }
                 $request['travelPrefetch']=if ($entry.PSObject.Properties['travelPrefetch']) { [bool]$entry.travelPrefetch } else { $false }
                 foreach ($name in $judgement.Keys) { $request[$name]=$judgement[$name] }
+                if ($ConfirmRound) {
+                    $request=[ordered]@{}
+                    foreach ($property in $frozenRequest.PSObject.Properties) { $request[$property.Name]=$property.Value }
+                    $request.sampleSegmentId=$segment
+                    $seconds=$request.sampleSeconds
+                }
                 $requestPath=Join-Path $directory 'collection.json'
                 Write-CollectionJson $requestPath $request
                 $run=[ordered]@{ scene=$entry.id; status='partial'; reasons=@('Process has not completed.'); exitCode=$null;
                     timedOut=$false; coverage=@{}; purpose=$purpose; sampleSegmentId=$segment; attempt=$attempt; observed=$null;
                     polluted=$null; pollution=@();
                     close=@{ completed=$false; durationMs=$null; source='formal-close-task'; reason='Formal close start/end not observed.' };
-                    roundId=$Batch; confirmationOf=$confirmationOf; conditions=$request;
+                    roundId=$roundId; confirmationOf=$confirmationOf; conditions=$request;
                     collectionScriptEnteredUtc=$collectionScriptEnteredUtc;
                     launcher=@{ scriptEnteredUtc=$null; scriptEnteredTimestamp=$null; stopwatchFrequency=[Diagnostics.Stopwatch]::Frequency;
                         processExitUtc=$null; preparation='Batch build/import and optional bake precede this attempt; not a double-click launcher measurement.' } }
@@ -173,11 +204,9 @@ try {
                 if ($accepted -or $run.status -eq 'partial') { break }
             }
             if (-not $accepted) { $failed=$true; break }
-            if ($Mode -eq 'formal' -and $sample -eq 0) {
-                Publish-CollectionRound $root $Batch $RoundNumber $roundRoot $sceneIds $PreviousRound
-                $index=Get-Content -LiteralPath (Join-Path $root 'output/perf/index.json') -Raw | ConvertFrom-Json
-                $round=@($index.batches | Where-Object { $_.id -eq $Batch })
-                $group=@($round.groups | Where-Object { $_.comparisonKey.scene -eq $entry.id })
+            if ($Mode -eq 'formal' -and -not $ConfirmRound -and $sample -eq 0) {
+                $projection=Publish-CollectionRound $root $roundId $RoundNumber $roundRoot $sceneIds $PreviousRound -Preview
+                $group=@($projection.groups | Where-Object { $_.comparisonKey.scene -eq $entry.id })
                 if ($group.Count -ne 1) { throw 'Analyzer did not publish the collected scene.' }
                 if (-not $group[0].confirmationPending) { break }
                 $confirmationOf=$group[0].mainSessionId
@@ -196,12 +225,17 @@ finally {
             $roundRecord['analysisError']=$_.Exception.ToString()
             Write-Warning $roundRecord.analysisError
         }
-        if ($Mode -eq 'formal') {
-            Publish-CollectionRound $root $Batch $RoundNumber $roundRoot $sceneIds $PreviousRound
-        } else {
+        if ($Mode -eq 'formal' -and -not $failed -and $roundRecord.completed) {
+            try { Publish-CollectionRound $root $roundId $RoundNumber $roundRoot $sceneIds $PreviousRound -ConfirmationRoot $confirmationRoot }
+            catch {
+                $failed=$true
+                $roundRecord['analysisError']=$_.Exception.ToString()
+                Write-Warning $roundRecord.analysisError
+            }
+        } elseif ($Mode -ne 'formal') {
             & python -I -X utf8 (Join-Path $PSScriptRoot 'perf.py') --root $root latest --origin ai --scope cost
+            if ($LASTEXITCODE -ne 0) { $failed=$true }
         }
-        if ($LASTEXITCODE -ne 0) { $failed=$true }
         if ($failed -and $roundRecord.completed) {
             $roundRecord.completed=$false
             $roundRecord.status='incomplete'

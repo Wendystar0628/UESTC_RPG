@@ -328,6 +328,11 @@ def check_budget_consumers(root, dictionary, budgets):
     seed = measured(dictionary, budgets, [frame(dictionary, 0)], dict(suite='fixed'))[0]
     ruler = next(v for v in seed['budgets'] if v['stop'] is not None)
     metric, upper, stop = ruler['metric'], ruler['budget'], ruler['stop']
+    from perf_batches import confirmation_reasons
+    for value, picked, expected in ((stop, False, False), (stop, True, True), (upper, False, True)):
+        grouped = dict(distanceTable=[dict(metric=metric, value=value, upper=upper, stop=stop, selected=picked)],
+                       pain=dict(counts={}, lightFrames=0))
+        assert bool(confirmation_reasons(grouped)) is expected, (value, picked)
     for suite in (None, 'unknown', 'travel'):
         other = measured(dictionary, budgets, [frame(dictionary, 0)], dict(suite=suite))[0]
         assert not any(v['applicable'] for v in other['budgets'])
