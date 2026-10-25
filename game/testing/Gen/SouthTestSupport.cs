@@ -44,10 +44,6 @@ internal static class SouthTestSupport
         return MathF.Abs(Vector2.Dot(d, ux)) <= box.Half.X + 0.26f && MathF.Abs(Vector2.Dot(d, uz)) <= box.Half.Z + 0.26f;
     }
 
-    public static BuildContext Context()
-    {
-        // The south sites never read the map descriptor; the world model and seed are their whole input.
-        return new BuildContext { CodeHash = "fixture", WindowNumbering = new(new MapId("fixture"), new string('0', 64), []), Catalog = Campus.Contracts.Tests.PaletteFixture.Catalog, World = Campus.Tests.RealMapFixture.Load().World, Map = null!, WorldSeed = 1 };
-    }
+    public static BuildContext Context() => RealMapFixture.ZoneContext(new SouthModule());
 
 }

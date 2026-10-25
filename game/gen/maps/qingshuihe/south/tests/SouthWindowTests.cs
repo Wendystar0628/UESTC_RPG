@@ -125,7 +125,7 @@ public sealed class SouthWindowTests
         }
         var ctx = new BuildContext { CodeHash = "fixture", Catalog = Campus.Contracts.Tests.PaletteFixture.Catalog, World = world, Map = RealMapFixture.Entry().Descriptor, WorldSeed = 1, WindowNumbering = new(RealMapFixture.Entry().Descriptor.Id, new string('a', 64), allocations) };
         var threwWithoutSnapshot = false;
-        try { module.DescribeWindows(Context()); }
+        try { module.DescribeWindows(RealMapFixture.ZoneContext(module, withWindowNumbering: false)); }
         catch (InvalidOperationException) { threwWithoutSnapshot = true; }
         AssertThat(threwWithoutSnapshot).OverrideFailureMessage("positions need the numbering snapshot").IsTrue();
 
@@ -141,20 +141,16 @@ public sealed class SouthWindowTests
 
         HashSet<int> Glass(LodLevel lod)
         {
-            var ids = new HashSet<int>();
+            var meshes = new List<GeometryBundle>();
             var cells = ZoneTestCells.Items(module, ctx, lod).Select(i => (TileGrid.At(i.Anchor, lod).X, TileGrid.At(i.Anchor, lod).Z)).Distinct();
             foreach (var (x, z) in lod == LodLevel.L4 ? [(0, 0)] : cells)
             {
                 var glass = module.Build(ctx, new(x, z), lod).Meshes.Where(m => m.Uv2 is not null).ToArray();
-                AssertThat(glass.Length <= 2).OverrideFailureMessage($"{lod} cell ({x}, {z}): numbered panes merge into one bundle ({glass.Length})").IsTrue();
-                foreach (var mesh in glass)
-                    for (var v = 0; v < mesh.Uv2!.Length / 2; v++)
-                    {
-                        var columns = (int)MathF.Floor(mesh.Uv2[2 * v + 1] / 32f);
-                        ids.Add((int)mesh.Uv2[2 * v] + (int)MathF.Floor(mesh.Uv![2 * v + 1]) * columns + (int)MathF.Floor(mesh.Uv[2 * v]));
-                    }
+                var numbered = ZoneTestCells.WindowIds(glass).NumberedMeshes;
+                AssertThat(numbered <= 2).OverrideFailureMessage($"{lod} cell ({x}, {z}): numbered panes merge into one bundle (raw {glass.Length}, numbered {numbered})").IsTrue();
+                meshes.AddRange(glass);
             }
-            return ids;
+            return ZoneTestCells.WindowIds(meshes).Ids;
         }
         var near = Glass(LodLevel.L0);
         AssertThat(near.SetEquals(declared)).OverrideFailureMessage($"L0 glass carries exactly the declared windows ({near.Count} vs {declared.Count})").IsTrue();

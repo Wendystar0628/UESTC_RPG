@@ -201,7 +201,7 @@ public sealed class West19cTests
     private static float Distance(IReadOnlyList<Vector2> line, Vector2 point) =>
         MathF.Sqrt(PlanLines.PolylineDistanceSquared(line, point));
 
-    private static BuildContext Context(IWorldModel world) => new() { CodeHash = "fixture", WindowNumbering = new(new MapId("fixture"), new string('0', 64), []), GlobalInputs = TextInputs(), Catalog = Campus.Contracts.Tests.PaletteFixture.Catalog, World = world, Map = null!, WorldSeed = 1 };
+    private static BuildContext Context(IWorldModel world) => RealMapFixture.ZoneContext(new WestModule(), world, globalInputs: TextInputs());
 
     private static BuildInputSnapshot TextInputs() => BuildInputSnapshot.Freeze(new Dictionary<string, ReadOnlyMemory<byte>>
     {

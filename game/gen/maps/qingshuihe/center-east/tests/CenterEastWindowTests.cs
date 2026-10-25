@@ -60,7 +60,7 @@ public sealed class CenterEastWindowTests
         }
         var ctx = new BuildContext { CodeHash = "fixture", GlobalInputs = TextInputs(), Catalog = Campus.Contracts.Tests.PaletteFixture.Catalog, World = world, Map = Descriptor(), WorldSeed = 1, WindowNumbering = new(Descriptor().Id, new string('a', 64), allocations) };
         var exceptionThrown = false;
-        try { module.DescribeWindows(Context()); }
+        try { module.DescribeWindows(RealMapFixture.ZoneContext(module, withWindowNumbering: false)); }
         catch (InvalidOperationException) { exceptionThrown = true; }
         AssertThat(exceptionThrown).OverrideFailureMessage("positions need the numbering snapshot").IsTrue();
 
@@ -82,16 +82,9 @@ public sealed class CenterEastWindowTests
 
         HashSet<int> Glass(LodLevel lod)
         {
-            var ids = new HashSet<int>();
             var cells = ZoneTestCells.Items(module, ctx, lod).Select(i => TileGrid.At(i.Anchor, lod)).Distinct();
-            foreach (var tile in lod == LodLevel.L4 ? [new TileKey(0, 0)] : cells)
-                foreach (var mesh in module.Build(ctx, tile, lod).Meshes.Where(m => m.Material.Spec.Kind == ToonKind.Glass && m.Uv2 is not null))
-                    for (var v = 0; v < mesh.Uv2!.Length / 2; v++)
-                    {
-                        var columns = (int)MathF.Floor(mesh.Uv2[2 * v + 1] / 32f);
-                        ids.Add((int)mesh.Uv2[2 * v] + (int)MathF.Floor(mesh.Uv![2 * v + 1]) * columns + (int)MathF.Floor(mesh.Uv[2 * v]));
-                    }
-            return ids;
+            return ZoneTestCells.WindowIds((lod == LodLevel.L4 ? [new TileKey(0, 0)] : cells)
+                .SelectMany(tile => module.Build(ctx, tile, lod).Meshes)).Ids;
         }
         var near = Glass(LodLevel.L0);
         AssertThat(near.SetEquals(declared)).OverrideFailureMessage($"L0 glass carries exactly the declared windows ({near.Count} vs {declared.Count})").IsTrue();

@@ -86,11 +86,12 @@ public sealed class CoreModuleTests
                 padY: _ => throw new InvalidOperationException("Directory construction must not read pads.")),
         };
         var module = new CoreModule();
-        var cells = module.Tiles(Context(sourceOnly)).ToArray();
+        var sourceContext = Context(world).WithWorld(sourceOnly);
+        var cells = module.Tiles(sourceContext).ToArray();
         AssertThat(cells.Length > 0).OverrideFailureMessage("the directory comes from authored ranges without constructing pieces").IsTrue();
         var outside = new TileKey(cells.Max(cell => cell.X) + 1, cells.Max(cell => cell.Z) + 1);
-        AssertThat(module.Build(Context(sourceOnly), outside, LodLevel.L0).Meshes.Count == 0
-            && module.Collide(Context(sourceOnly), outside).Count == 0).OverrideFailureMessage("an unrelated request generates no core source or height reads").IsTrue();
+        AssertThat(module.Build(sourceContext, outside, LodLevel.L0).Meshes.Count == 0
+            && module.Collide(sourceContext, outside).Count == 0).OverrideFailureMessage("an unrelated request generates no core source or height reads").IsTrue();
     }
 
     [TestCase, TestCategory(TestReason.Contract)]
@@ -200,13 +201,14 @@ public sealed class CoreModuleTests
         var plaza = CoreSite.Pieces(world)[0];
         var tile = TileGrid.At(Anchor(plaza), LodLevel.L0);
         var module = new CoreModule();
-        _ = module.Build(Context(world), tile, LodLevel.L0);
-        var bare = new BuildContext { CodeHash = "fixture", WindowNumbering = new(new MapId("fixture"), new string('0', 64), []), Catalog = Campus.Contracts.Tests.PaletteFixture.Catalog, World = world, Map = null!, WorldSeed = 1u };
+        var context = Context(world);
+        _ = module.Build(context, tile, LodLevel.L0);
+        var bare = new BuildContext { CodeHash = "fixture", WindowNumbering = context.WindowNumbering, Catalog = context.Catalog, World = world, Map = context.Map, WorldSeed = context.WorldSeed };
         InvalidOperationException? missingLods = null;
         try { module.Build(bare, tile, LodLevel.L0); }
         catch (InvalidOperationException ex) { missingLods = ex; }
         AssertThat(missingLods is InvalidOperationException).OverrideFailureMessage("placed parts without BuildContext.PartLods are refused").IsTrue();
-        var empty = new BuildContext { CodeHash = "fixture", WindowNumbering = new(new MapId("fixture"), new string('0', 64), []), Catalog = Campus.Contracts.Tests.PaletteFixture.Catalog, World = world, Map = null!, WorldSeed = 1u, PartLods = new PartLodCatalog([]) };
+        var empty = new BuildContext { CodeHash = "fixture", WindowNumbering = context.WindowNumbering, Catalog = context.Catalog, World = world, Map = context.Map, WorldSeed = context.WorldSeed, PartLods = new PartLodCatalog([]) };
         KeyNotFoundException? unknownPart = null;
         try { module.Build(empty, tile, LodLevel.L0); }
         catch (KeyNotFoundException ex) { unknownPart = ex; }
@@ -354,15 +356,8 @@ public sealed class CoreModuleTests
     private static Vector3 P(GeometryBundle b, int i) => new(b.Position[3 * i], b.Position[3 * i + 1], b.Position[3 * i + 2]);
     private static Vector3 N(GeometryBundle b, int i) => new(b.Normal[3 * i], b.Normal[3 * i + 1], b.Normal[3 * i + 2]);
 
-    private static BuildContext Context(IWorldModel world, PaletteCatalog? palette = null) => new()
-    {
-        CodeHash = "fixture", WindowNumbering = new(new MapId("fixture"), new string('0', 64), []),
-        World = world,
-        Map = null!,
-        WorldSeed = 1u,
-        Catalog = palette ?? Campus.Contracts.Tests.PaletteFixture.Catalog,
-        PartLods = PartLodFixture.Catalog,
-    };
+    internal static BuildContext Context(IWorldModel world, PaletteCatalog? palette = null) =>
+        Campus.Tests.RealMapFixture.ZoneContext(new CoreModule(), world, palette, partLods: PartLodFixture.Catalog);
 
     /// <summary>A sunken disc at <paramref name="floor"/> out to <paramref name="radius"/>, rising at <paramref name="grade"/> back to 0.</summary>
     private static FormulaTerrain BowlTerrain(Vector2 centre, float radius, float floor, float grade) =>

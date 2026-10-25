@@ -51,7 +51,7 @@ public sealed class AnnexShellTests
         var o = door.Face.N;
         Console.WriteLine($"annex door: centre ({c.X:F4}, {c.Y:F2}, {c.Z:F4}) facing {Angles.Bearing(new(o.X, o.Z)):F1}° outside ({c.X + o.X * 2.5f:F4}, {c.Z + o.Z * 2.5f:F4}) inside ({c.X - o.X * 3f:F4}, {c.Z - o.Z * 3f:F4}) width {door.Hole.U1 - door.Hole.U0:F2}");
         AssertThat(annex.Collide().OfType<WallCollider>().Count(w => w.Tag == SurfaceTag.DoorClosed) == 1).OverrideFailureMessage("the closed door's bay is a DoorClosed wall").IsTrue();
-        var parts = Build(annex, LodLevel.L0).Parts;
+        var parts = Build(annex, world, LodLevel.L0).Parts;
         AssertThat(parts.Count(p => p.Part.Value == PartCatalog.DoorGlass) == 1).OverrideFailureMessage("one closed glass door").IsTrue();
     }
 
@@ -93,14 +93,9 @@ public sealed class AnnexShellTests
         }
     }
 
-    private static ContentOutput Build(Campus.Gen.Sites.ZoneSite piece, LodLevel lod)
+    private static ContentOutput Build(AnnexShell piece, IWorldModel world, LodLevel lod)
     {
-        var context = new BuildContext
-        {
-            CodeHash = "fixture", WindowNumbering = new(new MapId("fixture"), new string('0', 64), []),
-            Catalog = Campus.Contracts.Tests.PaletteFixture.Catalog, PartLods = PartLodFixture.Catalog,
-            World = null!, Map = null!, WorldSeed = 1u,
-        };
+        var context = CoreModuleTests.Context(world);
         return piece.TraceSources(context, lod).Single().Output;
     }
 

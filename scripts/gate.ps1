@@ -21,8 +21,6 @@ $slowTestSeconds = 2
 $testRecordMaxRuns = 30
 $testRecordMaxDays = 14
 $testCutCandidateCount = 20
-# Shared layer (contracts, planar geometry, public site tools, shared test fixtures): a change here selects every quick test.
-$publicLayerPattern = '^game/(contracts|gen/bakeinput|gen/geometry|gen/sites|testing)/'
 function Get-UESTCMainStage {
     param([string]$Root)
     $project = [IO.File]::ReadAllText((Join-Path $Root 'game/project.godot'))
@@ -61,59 +59,75 @@ function Get-UESTCAttributedChanges {
 }
 
 function Get-UESTCG2CompileScope {
-    param([string]$Root, [string]$Project, [string]$Configuration)
+    param([string]$Root, [string]$Project, [string]$Configuration, [hashtable]$Evaluations)
     try {
-        # No target or restore: evaluate the same configuration used by dotnet test.
-        $result = Invoke-UESTCProcess dotnet @('msbuild',(Join-Path $Root $Project),
-            '-getItem:Compile',"-property:Configuration=$Configuration",'-nologo','-verbosity:quiet') $Root `
-            -TextEncoding ([Text.Encoding]::UTF8)
-        $evaluated = $result.StdOut | ConvertFrom-Json
-        if (-not $evaluated -or -not $evaluated.PSObject.Properties['Items'] -or
-            -not $evaluated.Items -or -not $evaluated.Items.PSObject.Properties['Compile']) {
-            throw 'MSBuild output does not contain Items.Compile.'
-        }
         $prefix = [IO.Path]::GetFullPath($Root).TrimEnd('\','/') + [IO.Path]::DirectorySeparatorChar
+        $hostProject = [IO.Path]::GetFullPath((Join-Path $Root $Project))
+        $pending = New-Object 'Collections.Generic.Queue[string]'
+        $pending.Enqueue($hostProject)
+        $projects = New-Object 'Collections.Generic.HashSet[string]' ([StringComparer]::OrdinalIgnoreCase)
         $files = New-Object 'Collections.Generic.List[object]'
-        $seen = New-Object 'Collections.Generic.HashSet[string]' ([StringComparer]::OrdinalIgnoreCase)
-        foreach ($item in @($evaluated.Items.Compile)) {
-            if (-not $item -or -not $item.PSObject.Properties['FullPath'] -or
-                [string]::IsNullOrWhiteSpace($item.FullPath) -or -not [IO.Path]::IsPathRooted($item.FullPath)) {
-                throw 'MSBuild Compile item has no absolute FullPath.'
+        $dependencies = New-Object 'Collections.Generic.HashSet[string]' ([StringComparer]::OrdinalIgnoreCase)
+        while ($pending.Count) {
+            $current = $pending.Dequeue()
+            if (-not $projects.Add($current)) { continue }
+            if (-not $Evaluations.ContainsKey($current)) {
+                # No target or restore: use MSBuild's evaluated graph in the test configuration.
+                $result = Invoke-UESTCProcess dotnet @('msbuild',$current,
+                    '-getItem:Compile,ProjectReference',"-property:Configuration=$Configuration",'-nologo','-verbosity:quiet') $Root `
+                    -TextEncoding ([Text.Encoding]::UTF8)
+                $evaluated = $result.StdOut | ConvertFrom-Json
+                if (-not $evaluated -or -not $evaluated.PSObject.Properties['Items'] -or
+                    -not $evaluated.Items -or -not $evaluated.Items.PSObject.Properties['Compile'] -or
+                    -not $evaluated.Items.PSObject.Properties['ProjectReference']) {
+                    throw "MSBuild output for '$current' does not contain Compile and ProjectReference items."
+                }
+                $Evaluations[$current] = $evaluated.Items
             }
-            # FullPath is the physical source, including for linked/imported items.
-            $fullPath = [IO.Path]::GetFullPath($item.FullPath)
-            if (-not $seen.Add($fullPath)) { continue }
-            $path = if ($fullPath.StartsWith($prefix, [StringComparison]::OrdinalIgnoreCase)) {
-                $fullPath.Substring($prefix.Length)
-            } else { $fullPath }
-            $files.Add([pscustomobject]@{ Path=$path.Replace('\','/'); FullPath=$fullPath })
+            $items = $Evaluations[$current]
+            foreach ($item in @($items.Compile) + @($items.ProjectReference)) {
+                if (-not $item -or -not $item.PSObject.Properties['FullPath'] -or
+                    [string]::IsNullOrWhiteSpace($item.FullPath) -or -not [IO.Path]::IsPathRooted($item.FullPath)) {
+                    throw "MSBuild item in '$current' has no absolute FullPath."
+                }
+            }
+            foreach ($reference in @($items.ProjectReference)) { $pending.Enqueue([IO.Path]::GetFullPath($reference.FullPath)) }
+            foreach ($fullPath in @($current) + @($items.Compile | ForEach-Object { [IO.Path]::GetFullPath($_.FullPath) })) {
+                $path = if ($fullPath.StartsWith($prefix, [StringComparison]::OrdinalIgnoreCase)) {
+                    $fullPath.Substring($prefix.Length).Replace('\','/')
+                } else { $fullPath.Replace('\','/') }
+                if ($current -ne $hostProject) { $null = $dependencies.Add($path) }
+                elseif ($fullPath -ne $hostProject) { $files.Add([pscustomobject]@{ Path=$path; FullPath=$fullPath }) }
+            }
         }
-        return [pscustomobject]@{ CompileFiles=$files.ToArray() }
+        return [pscustomobject]@{ CompileFiles=$files.ToArray(); DependencyPaths=$dependencies }
     } catch { throw "Cannot evaluate G2 Compile items for '${Project}': $($_.Exception.Message)" }
 }
 
 function Get-UESTCG2ProjectSelection {
-    param([string]$Root, [string[]]$Changes, [bool]$ForceAll=$false, [string]$Configuration='Debug')
+    param([string]$Root, [string[]]$Changes, [bool]$ForceAll=$false, [string]$Configuration='Debug', [string]$BaseRef)
     $normalizedChanges = @($Changes | ForEach-Object { $_.Replace('\','/') })
-    # Contract, build and shared data changes can affect both test hosts.
-    $shared = @($normalizedChanges | Where-Object { $_ -match '^game/contracts/(?!Runtime/|tests/)|\.(props|targets|sln|slnx)$|^global\.json$|^game/(data/|style/palette/)' })
+    $removedSources = @(Get-UESTCGitPaths $Root @('diff','--name-only','--diff-filter=D','-z',$BaseRef,'--') | Where-Object {
+        $_ -match '\.cs$' -and $_ -in $normalizedChanges -and -not [IO.File]::Exists((Join-Path $Root $_))
+    })
+    # Non-Compile build inputs and shared data can affect both test hosts.
+    $shared = @($normalizedChanges | Where-Object { $_ -match '\.(props|targets|sln|slnx)$|^global\.json$|^game/(data/|style/palette/)' })
+    $evaluations = @{}
     foreach ($project in @('game/Campus.Gen.Tests.csproj','game/Campus.Tests.csproj')) {
-        $scope = Get-UESTCG2CompileScope $Root $project $Configuration
+        $scope = Get-UESTCG2CompileScope $Root $project $Configuration $evaluations
         $reasons = New-Object 'Collections.Generic.List[string]'
         if ($ForceAll) { $reasons.Add('full G2 selection') }
         foreach ($path in $normalizedChanges) {
-            if ($path -eq $project -or
-                ($project -eq 'game/Campus.Tests.csproj' -and $path -eq 'game/Campus.csproj')) { $reasons.Add("Test host changed: $path") }
+            if ($path -eq $project) { $reasons.Add("Test host changed: $path") }
+            if ($scope.DependencyPaths.Contains($path)) { $reasons.Add("Referenced production project/source changed: $path") }
         }
         foreach ($path in $shared) { $reasons.Add("Shared dependency/project changed: $path") }
-        $publicChanges = @($normalizedChanges | Where-Object { $_ -match $publicLayerPattern })
-        if ($publicChanges.Count) { $reasons.Add("Shared layer changed: $($publicChanges[0]) ($($publicChanges.Count) files)") }
-        if ($project -eq 'game/Campus.Tests.csproj') {
-            foreach ($path in @($normalizedChanges | Where-Object { $_ -match '^game/contracts/Runtime/' -and $_ -notmatch '/tests/' })) {
-                $reasons.Add("Runtime contract changed: $path")
+        $compileFiles = @($scope.CompileFiles)
+        foreach ($path in $removedSources) {
+            if ($path -notin @($compileFiles.Path) -and -not $scope.DependencyPaths.Contains($path)) {
+                $reasons.Add("Removed source ownership unavailable: $path")
             }
         }
-        $compileFiles = @($scope.CompileFiles)
         foreach ($file in $compileFiles) {
             if ($file.Path -in $normalizedChanges -and
                 [IO.File]::ReadAllText($file.FullPath) -notmatch '\[TestSuite(?:\(|\])') {
@@ -124,12 +138,7 @@ function Get-UESTCG2ProjectSelection {
         $allTests = $reasons.Count -gt 0
         $classes = New-Object 'Collections.Generic.List[string]'
         foreach ($file in $compileFiles) {
-            # The aggregate gen/**/tests glob is not a module boundary. Each
-            # test's own tests directory identifies the production module.
-            $module = if ($file.Path -match '^(?<module>.+)/tests/') { $Matches.module } else { '' }
-            $affected = $module -and @($normalizedChanges | Where-Object {
-                $_ -ieq $module -or $_.StartsWith($module+'/', [StringComparison]::OrdinalIgnoreCase)
-            }).Count -gt 0
+            $affected = $file.Path -in $normalizedChanges
             if (-not ($allTests -or $affected)) { continue }
             $source = [IO.File]::ReadAllText($file.FullPath)
             $namespace = [regex]::Match($source, '(?m)^\s*namespace\s+([\w.]+)\s*[;{]')
@@ -138,7 +147,7 @@ function Get-UESTCG2ProjectSelection {
                 $class = $namespace.Groups[1].Value + '.' + $suite.Groups[1].Value
                 if ($namespace.Success -and -not $classes.Contains($class)) { $classes.Add($class) }
             }
-            if ($affected) { $reasons.Add("Changed module '$module'") }
+            if ($affected -and $suites.Count) { $reasons.Add("Changed test suite '$($file.Path)'") }
         }
         $filter = 'TestCategory!=NativeRender&TestCategory!=G15Core'
         if (-not $ForceAll) { $filter += '&TestCategory!=Slow' }
@@ -274,7 +283,7 @@ if (-not ($Full -or $Smoke -or $Only.Count)) {
 }
 $scope = if ($Full) { 'Full' } elseif ($Only.Count) { 'Selected' } elseif ($Smoke) { 'Core' } else { 'Quick' }
 $planObject = [ordered]@{ Scope = $scope; BaseRef = $BaseRef; Branch = $branch; Gates = $selected.ToArray(); Preparation = 'Ordinary Debug build and native incremental import before game consumers; selecting G1 builds Campus.sln including test projects once, otherwise Campus.csproj'; ChangedPaths = $changes; Godot = $godot; Locks = $layout.Locks; BuildCapacity = 1; FormatPaths = $formatPaths; Bake = 'No pre-bake in quick/core; centralized bake gates not implemented' }
-$g2Selection = if ($selected.Contains('G2')) { @(Get-UESTCG2ProjectSelection $root $runtimeChanges ([bool]$Full) $Configuration) } else { @() }
+$g2Selection = if ($selected.Contains('G2')) { @(Get-UESTCG2ProjectSelection $root $runtimeChanges ([bool]$Full) $Configuration $BaseRef) } else { @() }
 $planObject['G2Selection'] = $g2Selection
 $selectionIncomplete = @(
     if ($runtimeChanges.Count -and $selected.Count -eq 0) { 'Runtime changes selected no gates.' }

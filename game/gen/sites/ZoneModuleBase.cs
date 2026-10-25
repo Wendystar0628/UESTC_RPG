@@ -65,6 +65,7 @@ public abstract class ZoneModuleBase : IContentModule, IOutdoorAccessSource
     public IReadOnlyList<Collider> Collide(BuildContext context, TileKey tile)
     {
         var colliders = new SiteColliders(context, tile);
+        if (!_ranges(context.World).Any(colliders.Includes)) return [];
         foreach (var site in _sites(context.World, colliders.Includes)) site.Collide(colliders);
         return colliders.Items.Where(item => TileGrid.At(item.Anchor) == tile).Select(item => item.Collider).ToArray();
     }
@@ -114,6 +115,7 @@ public abstract class ZoneModuleBase : IContentModule, IOutdoorAccessSource
             LodLevel.L2 or LodLevel.L3 or LodLevel.L4 => SiteDetail.Mass,
             _ => throw new ArgumentOutOfRangeException(nameof(lod)),
         }, tile);
+        if (!_ranges(context.World).Any(builder.Includes)) return [];
         foreach (var site in _sites(context.World, lod == LodLevel.L4 ? null : builder.Includes)) site.Build(builder);
         return builder.Items.Where(item => lod == LodLevel.L4 || TileGrid.At(item.Anchor, lod) == tile).ToArray();
     }

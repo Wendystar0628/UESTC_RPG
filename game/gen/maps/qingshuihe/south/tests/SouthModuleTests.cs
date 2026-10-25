@@ -57,9 +57,11 @@ public sealed class SouthModuleTests
             AssertThat(traces.Select(t => t.SourceId).Distinct(StringComparer.Ordinal).Count() == traces.Length).OverrideFailureMessage("source IDs are unique").IsTrue();
             foreach (var claim in module.Claims.OfType<FeatureClaim>())
                 AssertThat(traces.Any(t => t.Feature == claim.Feature && t.Output.Meshes.Count > 0 && t.Colliders.Count > 0 && t.OccupiedContours.Count > 0)).OverrideFailureMessage($"{lod}: claimed source {claim.Feature} has actual geometry, collision and material contours").IsTrue();
-            var cells = ZoneTestCells.Items(module, ctx, lod).Select(i => TileGrid.At(i.Anchor, lod)).Distinct();
+            var items = ZoneTestCells.Items(module, ctx, lod);
+            var cells = items.Select(i => TileGrid.At(i.Anchor, lod)).Distinct();
             var built = cells.Select(t => module.Build(ctx, t, lod)).ToArray();
-            AssertThat(Triangles(traces.SelectMany(t => t.Output.Meshes)).SequenceEqual(Triangles(built.SelectMany(o => o.Meshes)))).OverrideFailureMessage($"{lod}: complete source geometry reproduces the tiled production geometry").IsTrue();
+            var raw = items.Where(item => item.Mesh is not null).Select(item => GeometryPublication.Publish(item.Mesh!, item.HasLodChannel)).ToArray();
+            AssertThat(ZoneTestCells.SameTriangles(traces.SelectMany(t => t.Output.Meshes), raw)).OverrideFailureMessage($"{lod}: complete sources reproduce tiled geometry before batching").IsTrue();
             AssertThat(traces.SelectMany(t => t.Output.Parts).OrderBy(p => p.ToString(), StringComparer.Ordinal)
                 .SequenceEqual(built.SelectMany(o => o.Parts).OrderBy(p => p.ToString(), StringComparer.Ordinal))).OverrideFailureMessage($"{lod}: placed parts remain in their actual source").IsTrue();
             AssertThat(traces.SelectMany(t => t.Output.Instances).SequenceEqual(built.SelectMany(o => o.Instances))).OverrideFailureMessage($"{lod}: instance streams remain in their actual source").IsTrue();
@@ -78,19 +80,6 @@ public sealed class SouthModuleTests
             var connector = traces.Single(t => t.Feature == new FeatureId(Liren.LirenSite.Connector));
             var connectorPlan = Liren.LirenSite.Rings(ctx.World);
             AssertThat(connector.OccupiedContours.Count == Liren.LirenSite.Blocks(connectorPlan).Count() + Liren.LirenSite.Columns(connectorPlan).Count()).OverrideFailureMessage("connector contours contain only its generated blocks and columns").IsTrue();
-        }
-
-        static IEnumerable<string> Triangles(IEnumerable<GeometryBundle> meshes)
-        {
-            var result = new List<string>();
-            foreach (var mesh in meshes)
-                for (var i = 0; i < mesh.Index.Length; i += 3)
-                {
-                    string Vertex(int v) => string.Join(",", mesh.Position.Skip(v * 3).Take(3).Concat(mesh.Normal.Skip(v * 3).Take(3)).Select(BitConverter.SingleToInt32Bits));
-                    result.Add($"{mesh.Material}/{Vertex(mesh.Index[i])}/{Vertex(mesh.Index[i + 1])}/{Vertex(mesh.Index[i + 2])}");
-                }
-            result.Sort(StringComparer.Ordinal);
-            return result;
         }
     }
 

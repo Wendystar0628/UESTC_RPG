@@ -39,9 +39,11 @@ public sealed class CenterEastModuleTests
             AssertThat(traces.Select(t => t.SourceId).Distinct(StringComparer.Ordinal).Count() == traces.Length).OverrideFailureMessage("source IDs are unique").IsTrue();
             foreach (var claim in module.Claims.OfType<FeatureClaim>())
                 AssertThat(traces.Any(t => t.Feature == claim.Feature && t.Output.Meshes.Count > 0 && t.Colliders.Count > 0 && t.OccupiedContours.Count > 0)).OverrideFailureMessage($"{lod}: claimed source {claim.Feature} carries production output, collision and solid contours").IsTrue();
-            var cells = ZoneTestCells.Items(module, ctx, lod).Select(i => TileGrid.At(i.Anchor, lod)).Distinct();
+            var items = ZoneTestCells.Items(module, ctx, lod);
+            var cells = items.Select(i => TileGrid.At(i.Anchor, lod)).Distinct();
             var built = cells.Select(t => module.Build(ctx, t, lod)).ToArray();
-            AssertThat(Triangles(traces.SelectMany(t => t.Output.Meshes)).SequenceEqual(Triangles(built.SelectMany(o => o.Meshes)))).OverrideFailureMessage($"{lod}: source triangles reproduce tiled production").IsTrue();
+            var raw = items.Where(item => item.Mesh is not null).Select(item => GeometryPublication.Publish(item.Mesh!, item.HasLodChannel)).ToArray();
+            AssertThat(ZoneTestCells.SameTriangles(traces.SelectMany(t => t.Output.Meshes), raw)).OverrideFailureMessage($"{lod}: sources reproduce tiled geometry before batching").IsTrue();
             AssertThat(traces.SelectMany(t => t.Output.Parts).OrderBy(p => p.ToString(), StringComparer.Ordinal)
                 .SequenceEqual(built.SelectMany(o => o.Parts).OrderBy(p => p.ToString(), StringComparer.Ordinal))).OverrideFailureMessage("source parts reproduce production").IsTrue();
             AssertThat(traces.SelectMany(t => t.Output.Instances).SequenceEqual(built.SelectMany(o => o.Instances))).OverrideFailureMessage("source instances reproduce production").IsTrue();
@@ -60,18 +62,6 @@ public sealed class CenterEastModuleTests
             var frame = traces.Single(t => t.Feature == new FeatureId(CenterEastIds.Pinxue.Complex));
             foreach (var box in PinxueFrameSite.Bridges(ctx.World))
                 AssertThat(frame.OccupiedContours.Any(r => r.Outer.SequenceEqual(box.Frame.Rect(box.X0, box.Z0, box.X1, box.Z1)))).OverrideFailureMessage("the frame uses its actual bridge plans").IsTrue();
-        }
-
-        static IEnumerable<string> Triangles(IEnumerable<GeometryBundle> meshes)
-        {
-            var triangles = new List<string>();
-            foreach (var mesh in meshes)
-                for (var i = 0; i < mesh.Index.Length; i += 3)
-                {
-                    string Vertex(int v) => string.Join(",", mesh.Position.Skip(v * 3).Take(3).Concat(mesh.Normal.Skip(v * 3).Take(3)).Select(BitConverter.SingleToInt32Bits));
-                    triangles.Add($"{mesh.Material}/{Vertex(mesh.Index[i])}/{Vertex(mesh.Index[i + 1])}/{Vertex(mesh.Index[i + 2])}");
-                }
-            return triangles.Order(StringComparer.Ordinal);
         }
     }
 

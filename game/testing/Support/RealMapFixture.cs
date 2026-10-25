@@ -3,12 +3,37 @@ using System.Reflection;
 using Campus.Contracts;
 using Campus.Gen.World;
 using Campus.Gen.BakeInput;
+using Campus.Gen.Sites;
+using Campus.Contracts.Parts;
 
 namespace Campus.Tests;
 
 /// <summary>Real authored maps through the production catalogue parser and input capture.</summary>
 internal static class RealMapFixture
 {
+    /// <summary>A zone's real claims and window layouts through the production numbering prepass.</summary>
+    internal static BuildContext ZoneContext(ZoneModuleBase module, IWorldModel? world = null,
+        PaletteCatalog? palette = null, BuildInputSnapshot? globalInputs = null, bool withWindowNumbering = true,
+        PartLodCatalog? partLods = null)
+    {
+        world ??= Load().World;
+        var map = Entry().Descriptor;
+        var registration = module.GetType().GetCustomAttribute<ContentModuleAttribute>()
+            ?? throw new InvalidOperationException("The fixture zone must have its production registration.");
+        var claims = new MapClaimSnapshot([new(registration.Id, module.GetType().Assembly.GetName().Name!, false, module.Claims)]).Build(world);
+        BuildContext Context(WindowNumberingSnapshot numbering) => new()
+        {
+            CodeHash = "fixture", World = world, Map = map, WorldSeed = map.Seed,
+            Catalog = palette ?? Campus.Contracts.Tests.PaletteFixture.Catalog,
+            PartLods = partLods, ClaimedBy = claims.ClaimedBy,
+            SourceInputs = WindowInputs(map.Id), GlobalInputs = globalInputs ?? BuildInputSnapshot.Empty,
+            WindowNumbering = numbering,
+        };
+        var prepass = Context(new(map.Id, new string('0', 64), []));
+        return withWindowNumbering ? Context(new Campus.Gen.Buildings.BuildingsModule()
+            .PrepareWindowNumbering(prepass, module.DescribeWindowLayouts(world, map.Seed))) : Context(null!);
+    }
+
     internal static IReadOnlyDictionary<string, ReadOnlyMemory<byte>> WindowInputs(MapId map,
         WindowNumberingSnapshot? previous = null) => new Dictionary<string, ReadOnlyMemory<byte>>(StringComparer.Ordinal)
         {

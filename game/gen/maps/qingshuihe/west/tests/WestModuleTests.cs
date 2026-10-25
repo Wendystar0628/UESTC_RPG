@@ -37,9 +37,11 @@ public sealed class WestModuleTests
             foreach (var claim in module.Claims.OfType<FeatureClaim>())
                 AssertThat(traces.Any(t => t.Feature == claim.Feature && t.Output.Meshes.Count > 0 && t.Colliders.Count > 0 && t.OccupiedContours.Count > 0)).OverrideFailureMessage($"{lod}: claimed source {claim.Feature} carries production output, collision and solid contours").IsTrue();
             var size = TileGrid.Edge(lod);
-            var cells = ZoneTestCells.Items(module, ctx, lod).Select(i => new TileKey((int)MathF.Floor(i.Anchor.X / size), (int)MathF.Floor(i.Anchor.Y / size))).Distinct();
+            var items = ZoneTestCells.Items(module, ctx, lod);
+            var cells = items.Select(i => new TileKey((int)MathF.Floor(i.Anchor.X / size), (int)MathF.Floor(i.Anchor.Y / size))).Distinct();
             var built = cells.Select(t => module.Build(ctx, t, lod)).ToArray();
-            AssertThat(Triangles(traces.SelectMany(t => t.Output.Meshes)).SequenceEqual(Triangles(built.SelectMany(o => o.Meshes)))).OverrideFailureMessage($"{lod}: source triangles reproduce tiled production").IsTrue();
+            var raw = items.Where(item => item.Mesh is not null).Select(item => GeometryPublication.Publish(item.Mesh!, item.HasLodChannel)).ToArray();
+            AssertThat(ZoneTestCells.SameTriangles(traces.SelectMany(t => t.Output.Meshes), raw)).OverrideFailureMessage($"{lod}: sources reproduce tiled geometry before batching").IsTrue();
             AssertThat(traces.SelectMany(t => t.Output.Parts).OrderBy(p => p.ToString(), StringComparer.Ordinal)
                 .SequenceEqual(built.SelectMany(o => o.Parts).OrderBy(p => p.ToString(), StringComparer.Ordinal))).OverrideFailureMessage("source parts reproduce production").IsTrue();
             AssertThat(traces.SelectMany(t => t.Output.Instances).SequenceEqual(built.SelectMany(o => o.Instances))).OverrideFailureMessage("source instances reproduce production").IsTrue();
@@ -51,18 +53,6 @@ public sealed class WestModuleTests
             foreach (var block in SixLayout.Blocks.Where(b => b.Entity != S.EntityC))
                 AssertThat(traces.Single(t => t.Feature == new FeatureId(block.Entity)).OccupiedContours.Single().Outer
                     .SequenceEqual(SixLayout.Plan(ctx.World, block.Entity, block.Part).Outer)).OverrideFailureMessage("A and B carry only their own generated plan").IsTrue();
-        }
-
-        static IEnumerable<string> Triangles(IEnumerable<GeometryBundle> meshes)
-        {
-            var triangles = new List<string>();
-            foreach (var mesh in meshes)
-                for (var i = 0; i < mesh.Index.Length; i += 3)
-                {
-                    string Vertex(int v) => string.Join(",", mesh.Position.Skip(v * 3).Take(3).Concat(mesh.Normal.Skip(v * 3).Take(3)).Select(BitConverter.SingleToInt32Bits));
-                    triangles.Add($"{mesh.Material}/{Vertex(mesh.Index[i])}/{Vertex(mesh.Index[i + 1])}/{Vertex(mesh.Index[i + 2])}");
-                }
-            return triangles.Order(StringComparer.Ordinal);
         }
     }
 
@@ -238,15 +228,9 @@ public sealed class WestModuleTests
                     if (!f.Skip.Contains(r * f.Columns + c)) declared.Add(f.BaseId + r * f.TotalColumns + f.ColumnStart + c);
         AssertThat(declared.Count == declared.Distinct().Count() && declared.Count > 0).OverrideFailureMessage("every window is declared once").IsTrue();
         AssertThat(declared.All(id => allocations.Any(a => id >= a.BaseId && id < a.BaseId + a.Count && a.Feature.Value != "a-earlier"))).OverrideFailureMessage("declared IDs lie in the zone's grids").IsTrue();
-        var ids = new HashSet<int>();
-        var size = 64;
-        foreach (var (x, z) in ZoneTestCells.Items(module, ctx, LodLevel.L0).Select(i => ((int)MathF.Floor(i.Anchor.X / size), (int)MathF.Floor(i.Anchor.Y / size))).Distinct())
-            foreach (var mesh in module.Build(ctx, new(x, z), LodLevel.L0).Meshes.Where(m => m.Uv2 is not null && m.Material.Spec.Kind != ToonKind.SceneText))
-                for (var v = 0; v < mesh.Uv2!.Length / 2; v++)
-                {
-                    var columns = (int)MathF.Floor(mesh.Uv2[2 * v + 1] / 32f);
-                    ids.Add((int)mesh.Uv2[2 * v] + (int)MathF.Floor(mesh.Uv![2 * v + 1]) * columns + (int)MathF.Floor(mesh.Uv[2 * v]));
-                }
+        var cells = ZoneTestCells.Items(module, ctx, LodLevel.L0).Select(item => TileGrid.At(item.Anchor)).Distinct();
+        var (ids, unnumbered, _) = ZoneTestCells.WindowIds(cells.SelectMany(tile => module.Build(ctx, tile, LodLevel.L0).Meshes));
+        AssertThat(unnumbered > 0).OverrideFailureMessage("the zone also contains clear glass without numbered window cells").IsTrue();
         AssertThat(ids.SetEquals(declared)).OverrideFailureMessage($"L0 glass carries exactly the declared windows ({ids.Count} vs {declared.Count})").IsTrue();
     }
 
@@ -401,7 +385,7 @@ public sealed class WestModuleTests
         return stream.ToArray();
     }
 
-    private static BuildContext Context() => new() { CodeHash = "fixture", WindowNumbering = new(new MapId("fixture"), new string('0', 64), []), GlobalInputs = TextInputs(), Catalog = Campus.Contracts.Tests.PaletteFixture.Catalog, World = World(), Map = null!, WorldSeed = 1 };
+    private static BuildContext Context() => RealMapFixture.ZoneContext(new WestModule(), globalInputs: TextInputs());
 
     private static BuildInputSnapshot TextInputs() => BuildInputSnapshot.Freeze(new Dictionary<string, ReadOnlyMemory<byte>>
     {
