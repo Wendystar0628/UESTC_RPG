@@ -1621,13 +1621,13 @@
 
 ## ENG-GATES · 验收与门禁
 
-`docs/engineering/ENG-GATES-验收与门禁.md` · 4.9k 字 · 测试三档与何时跑、11 项门禁各验什么、入口与交付分工；审查视角与截图、一票否决与收尾清单在子文档
+`docs/engineering/ENG-GATES-验收与门禁.md` · 5.0k 字 · 测试三档与何时跑、11 项门禁各验什么、入口与交付分工；审查视角与截图、一票否决与收尾清单在子文档
 关键词：门禁、验收、测试三档、快检、核心专项、集中测试、gate.ps1、门禁表、门禁编号、DECISION-238、入口与交付分工、测试只锁本模块输出、构建锁
 
 - ENG-GATES §0 结论 · L21 · 937
   - ★ ENG-GATES §0.1 接入要点 · L34 · 338
-- ENG-GATES §1 门禁与测试节奏 · L41 · 2.9k
-  - ENG-GATES §1.1 测试三档 · L45 · 1.3k
+- ENG-GATES §1 门禁与测试节奏 · L41 · 3.0k
+  - ENG-GATES §1.1 测试三档 · L45 · 1.4k
   - ENG-GATES §1.2 门禁表 · L67 · 1.3k
   - ENG-GATES §1.3 入口与交付分工 · L85 · 191
 
@@ -2027,12 +2027,12 @@
 
 ## REG-DECISIONS-PROCESS · 协作与流程决策
 
-`docs/registry/REG-DECISIONS-PROCESS-协作与流程决策.md` · 19.4k 字 · 计划、协作、规范、登记四个域的已定决策：协作、流程、文档与代码规范、门禁流程
+`docs/registry/REG-DECISIONS-PROCESS-协作与流程决策.md` · 19.7k 字 · 计划、协作、规范、登记四个域的已定决策：协作、流程、文档与代码规范、门禁流程
 关键词：决策、流程、协作、文档规则、门禁流程、派工、主会话、子代理
 
 - REG-DECISIONS-PROCESS §0 结论 · L21 · 129
   - ★ REG-DECISIONS-PROCESS §0.1 接入要点 · L25 · 56
-- REG-DECISIONS-PROCESS §1 流程 · L29 · 18.8k
+- REG-DECISIONS-PROCESS §1 流程 · L29 · 19.1k
 
 ## REG-DECISIONS-SYSTEMS · 系统与工程决策
 
