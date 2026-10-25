@@ -167,6 +167,7 @@ def check_roundtrip(root, dictionary, budgets):
         out, author = work / 'perf', work / 'author'
         source = author / 'SELFCHECK'
         meta = manifest(dictionary)
+        meta['origin'] = 'ai'
         meta['desktop'] = dict(kind='isolated', isInputDesktop=False, windowFocused=False)
         data = streams([frame(dictionary, i, gpu=budgets['deviceTargets']['developer']['mainViewportGpuP95MsUpper'] * 2) for i in range(count)], dictionary)
         write_six(source, meta, data, dictionary)

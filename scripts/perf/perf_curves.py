@@ -35,7 +35,7 @@ def bucket_curves(summary, manifest, streams, limit):
     allowed = {key for key, _, _, scope in SERIES if scope == 'cost' or summary['scope'] == 'full'}
     for name in ('frames', 'samples', 'hw'):
         for row in streams[name]:
-            if name == 'hw' and row['rowKind'] != 'nvml':
+            if name == 'hw' and not is_render_adapter(row):
                 continue
             bucket = min(limit - 1, max(0, int((row['monotonicMs'] - start) / (seconds * 1000))))
             if name == 'frames':
@@ -50,8 +50,6 @@ def bucket_curves(summary, manifest, streams, limit):
                     groups[bucket]['normalizedGpuLoad'].append(value)
             for key in allowed:
                 if not number(row.get(key)):
-                    continue
-                if key == 'wholeGpuMemoryMiB' and not is_render_adapter(row):
                     continue
                 if name == 'frames' and ((key == 'dtMs' and not row['_dtValid']) or
                                          (key in PHASE_LABELS and not row['_phaseValid'])):

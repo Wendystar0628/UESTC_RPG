@@ -292,7 +292,7 @@ def frame_rate(values):
 
 
 def normalized_gpu_load(row):
-    if row['rowKind'] != 'nvml':
+    if not is_render_adapter(row):
         return None
     keys = ('gpuUtilFraction', 'gpuClockMHz', 'gpuMaxClockMHz')
     return row[keys[0]] * row[keys[1]] / row[keys[2]] if all(number(row.get(key)) for key in keys) and row[keys[2]] > 0 else None
@@ -317,7 +317,7 @@ def experience(frames, hw, target, policy, scope, reason):
               and not b['_gap'] and a['_steady'] and b['_steady']]
     gpu_rows = [f for f in valid if number(f['_measuredGpuMs'])]
     gpu_dt = sum(f['dtMs'] for f in gpu_rows)
-    utilization = [h['gpuUtilFraction'] for h in hw if h['rowKind'] == 'nvml' and number(h.get('gpuUtilFraction'))]
+    utilization = [h['gpuUtilFraction'] for h in hw if is_render_adapter(h) and number(h.get('gpuUtilFraction'))]
     normalized = [value for h in hw if (value := normalized_gpu_load(h)) is not None]
     return dict(n=n, averageFps=frame_rate(values), frameMs=distribution(values),
                 low1Fps=low(.01, 100), low01Fps=low(.001, 1000), low1TailN=tails[.01], low01TailN=tails[.001],
@@ -344,8 +344,7 @@ def costs(frames, samples, hw):
                            for key in sorted({key for f in frames for key in f['_viewports']})}
     result['memory'] = {key: distribution(s.get(key) for s in samples) for key in
                         ('workingSetMiB', 'managedHeapMiB', 'godotStaticMiB', 'engineVideoMemoryMiB', 'textureMemoryMiB', 'bufferMemoryMiB')}
-    result['hardware'] = {key: distribution(h.get(key) for h in hw if h['rowKind'] == 'nvml' and
-                                           (key not in ('wholeGpuMemoryMiB', 'processVideoMemoryMiB') or is_render_adapter(h))) for key in
+    result['hardware'] = {key: distribution(h.get(key) for h in hw if is_render_adapter(h)) for key in
                           ('wholeGpuMemoryMiB', 'processVideoMemoryMiB', 'gpuClockMHz', 'powerW', 'temperatureC')}
     result['gcTotals'] = {key: sum(f[key] for f in frames if number(f.get(key))) if any(number(f.get(key)) for f in frames) else None
                           for key in ('gcPauseMs', 'gcGen0', 'gcGen1', 'gcGen2', 'allocatedBytes')}

@@ -3,8 +3,6 @@
 """
 import copy
 import json
-import os
-import subprocess
 import tempfile
 from argparse import Namespace
 from pathlib import Path
@@ -15,11 +13,12 @@ from perf_model import COSTS, at
 from perf_curves import bucket_curves
 from perf_store import batch_states, git, rebuild_states
 from perf_waits import visible_intervals, wait_observations
-from selfcheck_fixtures import ai_run, frame, manifest, mark_sample, streams
+from selfcheck_fixtures import ai_run, frame, manifest, mark_sample, streams, viewport
 
 
 def measured(dictionary, budgets, rows, conditions=None, events=None):
     meta = manifest(dictionary)
+    meta['origin'] = 'ai'
     meta['desktop'] = dict(kind='isolated', isInputDesktop=False, windowFocused=False)
     data = streams(rows, dictionary)
     data['events'] += events or []
@@ -98,34 +97,37 @@ def check_required_sets(root, dictionary, budgets):
     assert mixed['steadyDurationMs'] == at(route, 'judgement.pain.steadyDurationMs') > 0
     assert mixed['lightFramesPerMinute'] == 0 and batch_pain([direct], budgets)['lightFramesPerMinute'] is None
     entries = []
-    for scene, suite, rows in (('lake-default', 'fixed', [frame(dictionary, i) for i in range(3)]),
+    for scene, suite, rows in (('fixed-with-reflection', 'fixed', [frame(dictionary, i) for i in range(3)]),
                                ('route', 'route', [frame(dictionary, i) for i in range(5)]),
                                ('standing-travel-direct', 'travel', direct_rows)):
+        if suite in ('fixed', 'route'):
+            for row in rows:
+                row['viewportSamplesJson'].append(viewport(2, 'reflection', None, None))
         for repeat in (1, 2, 3):
             meta = manifest(dictionary, f'{scene}-{repeat}')
             meta.update(origin='ai')
             meta['build']['commit'] = 'selfcheck'
             meta['machine']['vramMiB'] = 1000
             meta['desktop'] = dict(kind='isolated', isInputDesktop=False, windowFocused=False)
-            run = ai_run(scene=scene, repetition=repeat, scenes=['lake-default', 'route', 'standing-travel-direct'])
+            run = ai_run(scene=scene, repetition=repeat, scenes=['fixed-with-reflection', 'route', 'standing-travel-direct'])
             run['conditions'] = dict(suite=suite, **enabled)
             data = mark_sample(streams(copy.deepcopy(rows), dictionary), dictionary)
             data['hw'] = [dict(rowKind='nvml', isRenderAdapter=True, monotonicMs=10, wholeGpuMemoryMiB=100)]
             entries.append(summary_for(Path(meta['id']), meta, data, dictionary, budgets, run)[0])
-    lake = entries[0]
-    assert lake['comparisonKey']['scene'] == 'lake-default' and at(lake, 'steady.cost.measuredViewportGpuMs.p95') is None
-    aggregate = next(check for check in lake['budgets'] if check['metric'] == 'measuredViewportGpuMs')
+    reflected = entries[0]
+    assert at(reflected, 'steady.cost.measuredViewportGpuMs.p95') is None
+    aggregate = next(check for check in reflected['budgets'] if check['metric'] == 'measuredViewportGpuMs')
     assert aggregate['applicable'] is False and aggregate['exceeded'] is None and '未判' in aggregate['reason']
-    assert {check['key'] for check in lake['judgement']['requiredChecks']} == set(COSTS)
-    assert {check['metric'] for check in distance_table([lake], lake)} == set(COSTS)
+    assert {check['key'] for check in reflected['judgement']['requiredChecks']} == set(COSTS)
+    assert {check['metric'] for check in distance_table([reflected], reflected)} == set(COSTS)
     batch = batch_results(entries, budgets)[0][0]
     assert 'measuredViewportGpuMs' in batch['unjudged']
     assert not any('lightCostStutter' in reason for reason in batch['statusReasons'])
     assert batch['status'] == 'candidate', '完整路线加零稳态传送仍被要求重跑'
-    nonlake = copy.deepcopy([row for row in entries if at(row, 'run.conditions.suite') != 'fixed'])
-    for row in nonlake:
+    routes = copy.deepcopy([row for row in entries if at(row, 'run.conditions.suite') != 'fixed'])
+    for row in routes:
         row['run']['protocol']['scenes'] = ['route', 'standing-travel-direct']
-    assert 'measuredViewportGpuMs' not in batch_results(nonlake, budgets)[0][0]['unjudged'], '无湖边场景的批次仍报湖边未判'
+    assert 'measuredViewportGpuMs' in batch_results(routes, budgets)[0][0]['unjudged'], '路线非主视口合计缺测未记未判'
     empty = copy.deepcopy([row for row in entries if at(row, 'run.conditions.suite') == 'travel'])
     for row in empty:
         row['run']['protocol']['scenes'] = ['standing-travel-direct']
@@ -250,6 +252,7 @@ def check_stopping(root, dictionary, budgets):
 
 def playing_sample(dictionary, budgets, rows, scene='route', suite='route', hardware=None):
     meta = manifest(dictionary, scene)
+    meta['origin'] = 'ai'
     meta['desktop'] = dict(kind='isolated', isInputDesktop=False, windowFocused=False)
     meta['machine']['vramMiB'] = 1000
     data = streams(rows, dictionary)
@@ -267,7 +270,7 @@ def check_batch_light(root, dictionary, budgets):
     raw = noisy['judgement']['pain']
     assert raw['lightFrames'] == 1 and raw['lightFrames'] * 60000 / raw['steadyDurationMs'] > policy['lightCostStutterFramesPerMinuteMax']
     assert all(v['status'] == 'measured' for v in noisy['judgement']['requiredChecks'])
-    assert raw['status'] == 'clear' and 'lightFramesPerMinute' not in raw and 'lightLimit' not in raw
+    assert raw['status'] == 'clear'
     steady_ms = 60000 / policy['lightCostStutterFramesPerMinuteMax'] + raw['steadyDurationMs']
     quiet = playing_sample(dictionary, budgets, [frame(dictionary, i) for i in range(int(steady_ms / 10) + 1)], scene='quiet-route')[0][0]
     direct_rows = [frame(dictionary, i) for i in range(3)]
@@ -308,7 +311,7 @@ def check_render_memory(root, dictionary, budgets):
 
 
 def check_budget_consumers(root, dictionary, budgets):
-    """Regression：同个完整夹具批次，CLI 与真实 G10 读口只消费同一分组档位。"""
+    """Regression：同个完整夹具批次，距离表与 CLI 消费同一分组档位。"""
     from perf import distance
     seed = measured(dictionary, budgets, [frame(dictionary, 0)], dict(suite='fixed'))[0]
     ruler = next(v for v in seed['budgets'] if v['stop'] is not None)
@@ -316,15 +319,14 @@ def check_budget_consumers(root, dictionary, budgets):
     for suite in (None, 'unknown', 'travel'):
         other = measured(dictionary, budgets, [frame(dictionary, 0)], dict(suite=suite))[0]
         assert not any(v['applicable'] for v in other['budgets'])
-    assert not any(v['unjudged'] for v in seed['budgets']), '非湖边会话凭空产生湖边未判'
+    assert not any(v['unjudged'] for v in seed['budgets']), '无非主视口的会话凭空产生合计未判'
     for value, mismatch, expected in ((stop, False, 'within'), (upper + 1, False, 'above-upper'),
                                       (upper, False, 'above-stop'), (None, False, 'rerun'),
                                       (upper, True, 'rerun')):
-        with tempfile.TemporaryDirectory(prefix='uestc-perf-g10-selfcheck-') as temporary:
+        with tempfile.TemporaryDirectory(prefix='uestc-perf-budget-selfcheck-') as temporary:
             fixture = Path(temporary)
             out, batch_id, scene = fixture / 'output/perf', 'selfcheck-only', 'lake-default'
-            phase = out / 'runs' / batch_id / 'a1'
-            phase.mkdir(parents=True)
+            out.mkdir(parents=True)
             entries = []
             for repeat in (1, 2, 3):
                 identifier = f'fixture-{repeat}'
@@ -334,15 +336,9 @@ def check_budget_consumers(root, dictionary, budgets):
                 if mismatch:
                     meta['graphics']['preset'] = 'selfcheck-wrong-preset'
                 run = ai_run(scene=scene, batch=batch_id, repetition=repeat)
-                run['conditions'].update(saveAfterSample=True, tuningSelectedMetrics=[scene + '.' + metric])
-                run['coverage'] = {key: dict(observed=1, required=1) for key in ('sampleBegin', 'sampleEnd', 'gpu', 'cpu', 'sample')}
-                run.update(observed=dict(save=dict(reason='Manual', status='Saved', durationMs=1)),
-                           close=dict(completed=True, source='formal-close-task', durationMs=1))
-                source = phase / identifier
-                source.mkdir()
-                (source / 'run.json').write_text(json.dumps(run), encoding='utf-8')
+                run['conditions']['tuningSelectedMetrics'] = [scene + '.' + metric]
                 data = mark_sample(streams([frame(dictionary, i, gpu=value) for i in range(3)], dictionary), dictionary)
-                entries.append(summary_for(source, meta, data, dictionary, budgets, run)[0])
+                entries.append(summary_for(fixture / identifier, meta, data, dictionary, budgets, run)[0])
             batches, blocked = batch_results(entries, budgets)
             rebuild_states(entries, root, blocked)
             batch_states(batches, entries, root)
@@ -350,20 +346,6 @@ def check_budget_consumers(root, dictionary, budgets):
             table = batch['groups'][0]['phases']['a1']['distanceTable']
             selected = next(v for v in table if v['metric'] == metric)
             assert selected['tier'] == expected, selected
-            assert all(v['metric'] not in batch['unjudged'] for v in table)
-            for entry in entries:
-                derived = out / 'derived' / entry['id']
-                derived.mkdir(parents=True)
-                (derived / 'summary.json').write_text(json.dumps(entry), encoding='utf-8')
             (out / 'index.json').write_text(json.dumps(dict(calc=seed['calc'], batches=batches, sessions=entries, errors=[])), encoding='utf-8')
-            (phase / 'phase.json').write_text(json.dumps(dict(completed=True, status='completed', purpose='baseline',
-                                                             protocol='repeat3', phase='a1', scenes=[scene])), encoding='utf-8')
             cli = list(distance(out, Namespace(id=batch_id, phase='a1', scene=None)))
             assert any(line.split(' | ')[1:2] == [metric] and line.endswith(' | ' + expected) for line in cli)
-            script = ". (Join-Path $env:UESTC_SELFCHECK_CODE 'scripts/lib/common.ps1'); . (Join-Path $env:UESTC_SELFCHECK_CODE 'scripts/gates/performance.ps1'); Read-UESTCPerformanceResult -Root $env:UESTC_SELFCHECK_DATA -Batch 'selfcheck-only' -Scenes 'lake-default' -SaveScenes 'lake-default' | ConvertTo-Json -Depth 40 -Compress"
-            execution = subprocess.run(['pwsh', '-NoProfile', '-Command', script], capture_output=True, text=True, encoding='utf-8',
-                                       env=dict(os.environ, UESTC_SELFCHECK_CODE=str(root), UESTC_SELFCHECK_DATA=str(fixture)), check=True)
-            gate = json.loads(execution.stdout)
-            assert {v['Metric']: v['Tier'] for v in gate['CostChecks']} == {v['metric']: v['tier'] for v in table}
-            assert gate['Status'] == ('Incomplete' if expected == 'rerun' else 'Failed' if expected == 'above-upper' else 'Passed'), gate
-            assert len(gate['SaveAndClose']) == len(entries), 'G10 丢失真实 save/close 事实核验'

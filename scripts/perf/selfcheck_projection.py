@@ -22,11 +22,13 @@ def check_derived_curves(root, dictionary, budgets):
         rows[1]['dtMs'] = 30
         rows[1]['phaseValidity'] = 0
         data = streams(rows, dictionary)
-        data['hw'] = [dict(monotonicMs=10, gpuUtilFraction=.5, gpuClockMHz=1000, gpuMaxClockMHz=2000)]
+        data['hw'] = [dict(monotonicMs=10, isRenderAdapter=True, gpuUtilFraction=.5, gpuClockMHz=1000, gpuMaxClockMHz=2000)]
         # The round trip uses the real schema; unspecified nullable hardware fields remain missing.
         data['hw'][0] = {**{c['name']: None for c in dictionary['streams']['hw']['columns']},
                          **data['hw'][0], 'schema': dictionary['schema'], 'sequence': 1, 'rowKind': 'nvml'}
-        write_six(source, manifest(dictionary, 'CURVES'), data, dictionary)
+        meta = manifest(dictionary, 'CURVES')
+        meta['origin'] = 'ai'
+        write_six(source, meta, data, dictionary)
         (source / 'run.json').write_text(json.dumps(dict(conditions=dict(suite='fixed'))), encoding='utf-8')
         analyzed = analyze_all(root, out, author)
         assert not analyzed['errors'], analyzed

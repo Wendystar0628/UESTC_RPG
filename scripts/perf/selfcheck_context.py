@@ -100,7 +100,7 @@ def check_hardware_facts(root, dictionary, budgets):
                                  averageEndTimestamp100ns=9007199254740995)])])),
                      renderAdapterJson=dict(luid=4660, luidText='0x1234', status=dict(capability='supported', nativeCode=0)))
         gpu = dict(base, schema=dictionary['schema'], sequence=2, monotonicMs=11, rowKind='nvml',
-                   deviceIndex=0, gpuUtilFraction=.5, gpuClockMHz=1000, gpuMaxClockMHz=2000)
+                   deviceIndex=0, isRenderAdapter=True, gpuUtilFraction=.5, gpuClockMHz=1000, gpuMaxClockMHz=2000)
         data['hw'] = [facts, gpu]
         original = copy.deepcopy(data['hw'])
         write_six(source, manifest(dictionary, 'FACTS'), data, dictionary)

@@ -324,16 +324,19 @@ def budget_checks(summary, manifest=None, budgets=None, runs=None):
         keys = dict(mainViewportGpuMs=('mainViewportGpuP95MsUpper', 'mainViewportGpuP95MsStop'),
                     mainViewportCpuMs=('viewportCpuP95MsUpper', 'viewportCpuP95MsStop'),
                     frameSetupCpuMs=('frameSetupCpuP95MsUpper', None))
-        # ENG-PERF-DATA: only the lake's unconfirmed measured-viewports aggregate is deferred.
-        if isinstance(scene, str) and scene.startswith('lake-'):
+        # ENG-PERF-DATA: defer an incomplete aggregate when the session includes additional viewports.
+        if (any(not key.startswith('main:') for key in at(summary, 'all.cost.viewports', {}))
+                and at(summary, 'all.cost.measuredViewportGpuMs.p95') is None):
             keys['measuredViewportGpuMs'] = ('mainViewportGpuP95MsUpper', None)
         candidates = []
         for metric, (upper_key, stop_key) in keys.items():
             unjudged = metric == 'measuredViewportGpuMs'
-            required = not unjudged and suite in ('fixed', 'route')
+            author = manifest.get('origin') == 'play'
+            required = not unjudged and not author and suite in ('fixed', 'route')
             applies = required and applicable
             stop = target[stop_key] if stop_key and suite == 'fixed' else None
             reason = ('受测视口 GPU 合计来源尚未确认，未判' if unjudged else
+                      '作者会话不判帧成本预算' if author else
                       '传送套不判帧成本' if suite == 'travel' else '场景套未确认，不适用帧成本预算' if not required else
                       None if applies else '会话条件与开发机预算不一致')
             candidates.append(dict(metric=metric, budget=target[upper_key], stop=stop, required=required,
@@ -362,11 +365,11 @@ def slow_anomalies(frames, streams, manifest, budgets, scope):
         return []
     policy, result = budgets['perfAnomalies'], []
     for sample in streams['hw']:
-        if sample['rowKind'] != 'nvml':
+        if not is_render_adapter(sample):
             continue
         frame = nearest_frame(frames, sample['monotonicMs'])
         used, capacity = sample.get('wholeGpuMemoryMiB'), at(manifest, 'machine.vramMiB')
-        if is_render_adapter(sample) and number(used) and number(capacity) and capacity > 0 and used > policy['videoMemoryNearFraction'] * capacity:
+        if number(used) and number(capacity) and capacity > 0 and used > policy['videoMemoryNearFraction'] * capacity:
             result.append(anomaly('videoMemory', 'severe' if used > capacity else 'heavy', frame, used,
                                   policy['videoMemoryNearFraction'] * capacity, 'budgets.json.perfAnomalies.videoMemoryNearFraction', 'wholeGpuMemoryMiB', True))
         if (sample.get('throttleReasonBits') or 0) != 0:
@@ -391,7 +394,7 @@ def slow_anomalies(frames, streams, manifest, budgets, scope):
                     item['note'] = '首末增长候选，不声称内存泄漏；需诊断核查生命周期与驻留量'
                     result.append(item)
     if scope == 'full':
-        utilization = [s for s in streams['hw'] if s['rowKind'] == 'nvml' and number(s.get('gpuUtilFraction'))]
+        utilization = [s for s in streams['hw'] if is_render_adapter(s) and number(s.get('gpuUtilFraction'))]
         for a, b in zip(utilization, utilization[1:]):
             delta = abs(b['gpuUtilFraction'] - a['gpuUtilFraction'])
             if delta > policy['utilizationSwingFraction']:

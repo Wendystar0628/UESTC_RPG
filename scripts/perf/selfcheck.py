@@ -44,6 +44,6 @@ def run(root):
     result.append('通过 3/4：近似主视口不进合计；跳过行不复用主成本，未确认倒影留 null，已确认来源不重加。')
     check_roundtrip(root, dictionary, budgets)
     check_stopping(root, dictionary, budgets)
-    result.append('通过 TOOL-465：唯一预算判据贯通必判、距离表与 G10/CLI；轻级仅合批，渲染卡显存独立，所有启动目标未判。')
+    result.append('通过：唯一预算判据贯通必判、距离表与 CLI；轻级仅合批，渲染卡指标独立，所有启动目标未判。')
     result.append('通过 4/4：预算独立报、cost 体验全 null；六件往返、写入锁跳过、历史去重、按条数修剪和输出上限通过。')
     return result

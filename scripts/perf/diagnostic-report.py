@@ -10,7 +10,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 sys.dont_write_bytecode = True
-from perf_model import costs, distribution, load_session, number, prepare_frames, read_json, scope_of
+from perf_model import COSTS, costs, distribution, load_session, number, prepare_frames, read_json, scope_of
 from perf_store import atomic_json, comparison_key
 from perf_batches import sample_window, sampled_streams
 
@@ -26,7 +26,7 @@ def frame_metrics(root, directory):
     prepare_frames(streams['frames'], streams['samples'], streams['events'], dictionary)
     sampled = sampled_streams(streams, window)
     summaries = costs(sampled['frames'], sampled['samples'], sampled['hw'])
-    metrics = {key: summaries[key] for key in ('mainViewportGpuMs', 'mainViewportCpuMs', 'frameSetupCpuMs')}
+    metrics = {key: summaries[key] for key in COSTS}
     scope, _ = scope_of(manifest)
     if scope == 'full':
         metrics['dtMs'] = distribution(frame['dtMs'] for frame in sampled['frames'] if frame['_dtValid'])

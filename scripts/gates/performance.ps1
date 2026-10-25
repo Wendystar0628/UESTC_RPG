@@ -98,7 +98,7 @@ function Read-UESTCPerformanceResult {
     if (($actualScenes -join ',') -ne (($Scenes | Sort-Object) -join ',')) { $reasons.Add('Analyzer fixed-scene groups are missing, duplicated or unexpected.') }
     foreach ($group in $groups) {
         if ($null -eq $group) { continue }
-        Read-UESTCPerfGroup -Perf $perf -PhaseRoot $phaseRoot -Batch $Batch -Group $group -Index $index -SaveScenes $SaveScenes -Reasons $reasons -Sessions $sessions -Timings $timings | Out-Null
+        Read-UESTCPerfGroup -Perf $perf -PhaseRoot $phaseRoot -Batch $Batch -Group $group -Index $index -SaveScenes $SaveScenes -Reasons $reasons -Sessions $sessions -Timings $timings
         foreach ($cost in @(Get-UESTCPerfCostChecks $group $reasons)) { $costs.Add($cost) }
     }
     $uniqueReasons = @($reasons | Select-Object -Unique)
@@ -163,7 +163,6 @@ function Read-UESTCPerfGroup {
         }
         $Timings.Add([pscustomobject]@{ SessionId=$sessionId; SaveRequested=$saveRequested;
             Save=$save; Close=(Get-UESTCPerfField $run 'close') })
-        $summary
     }
 }
 
