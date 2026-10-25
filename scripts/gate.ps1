@@ -470,6 +470,7 @@ foreach ($id in $selected) {
             'G4' {
                 $newFiles = Test-UESTCNewCodeFiles $root $changes -BaseRef $BaseRef
                 $null = Test-UESTCSourceBoundaries $root
+                $null = Invoke-GateProcess 'G4-restore' dotnet @('restore',(Join-Path $game 'Campus.sln'))
                 $settings = Write-TestSettings
                 $null = Invoke-GateProcess 'G4-architecture' dotnet @('test',(Join-Path $root 'scripts/gates/arch/Campus.Arch.Tests.csproj'),'-c','Debug','--settings',$settings,'--logger','trx','--results-directory',(Join-Path $work 'arch-results'))
                 $detail = "New code placement/name checked ($($newFiles.CheckedNewCodeFiles) files); source and ArchUnitNET rules passed; BannedApiAnalyzers run in compilation."

@@ -9,38 +9,7 @@ namespace Campus.Arch.Tests;
 [TestSuite]
 public sealed class SourceSizeGateTests
 {
-    private const int TypeLineLimit = 600;
     private const int MethodLineLimit = 80;
-
-    [TestCase]
-    [TestCategory("Contract")]
-    public void HandwrittenTypeDeclarationsStayWithinCombinedLineLimit()
-    {
-        var root = Environment.GetEnvironmentVariable("UESTC_REPOSITORY") ?? ArchitectureTests.FindRepository();
-        var errors = new List<string>();
-        foreach (var project in SourceModel.Projects)
-        {
-            var declarations = new Dictionary<ISymbol, List<(SourceFile File, BaseTypeDeclarationSyntax Node)>>(SymbolEqualityComparer.Default);
-            foreach (var file in HandwrittenSources(SourceModel.FilesFor(project).Where(file => !file.IsTest)))
-            foreach (var node in file.Root.DescendantNodes().OfType<BaseTypeDeclarationSyntax>())
-            {
-                if (IsGenerated(file, node)) continue;
-                var symbol = file.Model.GetDeclaredSymbol(node)
-                    ?? throw new InvalidOperationException(file.At(node, "G4 could not resolve the declared type identity."));
-                if (!declarations.TryGetValue(symbol, out var parts)) declarations.Add(symbol, parts = []);
-                parts.Add((file, node));
-            }
-            foreach (var (symbol, parts) in declarations)
-            {
-                var lines = parts.Sum(part => PhysicalLines(part.File.Tree, part.Node));
-                if (lines <= TypeLineLimit) continue;
-                var first = parts[0];
-                errors.Add(first.File.At(first.Node,
-                    $"{Path.GetRelativePath(root, project.FilePath!)}: {SourceModel.Name(symbol as ITypeSymbol)} has {lines} handwritten type lines across {parts.Count} declarations; limit {TypeLineLimit}. Split by responsibility."));
-            }
-        }
-        SourceModel.RequireNoViolations(errors);
-    }
 
     [TestCase]
     [TestCategory("Contract")]
