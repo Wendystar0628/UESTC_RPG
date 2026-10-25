@@ -479,7 +479,7 @@ void fragment() {
 			glow += key_col * gain * max(sx, sy) * star_on;
 		}
 
-		glow += reflection_lamps_color(v_wpos, cam, 1.0);
+		glow += reflection_lamps_color(v_wpos, cam, 1.0, max(length(fp), 1e-4));
 		// ---- 岸边泡沫线：有断口，线宽随波起伏；外侧再一道断续的细线；冬季更宽更白（§1.4）
 		float winter = clamp(snow, 0.0, 1.0);
 		float fw_m = mix(WTR_FOAM_W, WTR_FOAM_W_WINTER, winter) * (channel ? WTR_FOAM_CHANNEL.x : 1.0);

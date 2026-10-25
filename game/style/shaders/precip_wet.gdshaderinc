@@ -145,9 +145,6 @@ void precip_puddle_apply(vec3 wpos, vec3 cam, vec3 n_w, bool interior, bool outs
 	vec3 v = normalize(wpos - cam);
 	float graze = 1.0 - abs(dot(v, n_w));
 	vec2 xz = wpos.xz;
-	float pot = precip_puddle_potential(xz);
-	float gx = precip_puddle_potential(xz + vec2(PW_GRAD_EPS, 0.0)) - pot;
-	float gz = precip_puddle_potential(xz + vec2(0.0, PW_GRAD_EPS)) - pot;
 	float aa = max(length(fwidth(xz)), 1e-4);
 	vec3 rv = reflect(v, vec3(0.0, 1.0, 0.0));
 	float d_el = fwidth(rv.y);
@@ -178,6 +175,9 @@ void precip_puddle_apply(vec3 wpos, vec3 cam, vec3 n_w, bool interior, bool outs
 	if (outskirt || level <= 0.0) {
 		return;
 	}
+	float pot = precip_puddle_potential(xz);
+	float gx = precip_puddle_potential(xz + vec2(PW_GRAD_EPS, 0.0)) - pot;
+	float gz = precip_puddle_potential(xz + vec2(0.0, PW_GRAD_EPS)) - pot;
 	float th = precip_puddle_threshold(level);
 	float g = max(length(vec2(gx, gz)) / PW_GRAD_EPS, 0.05);
 	float d = (th - pot) / g;                       // 到水边的米数，水里为负

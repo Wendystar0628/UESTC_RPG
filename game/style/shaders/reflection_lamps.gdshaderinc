@@ -33,12 +33,13 @@ float reflection_lamp_boundary(uint seed, float index, float count, float ratio,
 }
 
 // 返回加到本表面雾处理之前的线性 RGB；湿润遮罩和表面朝向由消费方提供。
-vec3 reflection_lamps_color(vec3 p_world, vec3 camera_world, float length_scale) {
+// pixel 由消费方在逐片元分支之前取 max(length(fwidth(p_world.xz)), 1e-4)。
+vec3 reflection_lamps_color(vec3 p_world, vec3 camera_world, float length_scale, float pixel) {
 	vec3 color = vec3(0.0);
 	float h_eff = lamp_heff();
 	float gain = LAMP_POOL_GAIN * 0.5 * lamp_pool_visibility(h_eff);
+	if (gain == 0.0) return color;
 	float strip_length = REFLECTION_LAMP_LENGTH * length_scale;
-	float pixel = max(length(fwidth(p_world.xz)), 1e-4);
 	float camera_height = camera_world.y - p_world.y;
 	if (camera_height <= 0.0) return color;
 	for (int i = 0; i < REFLECTION_LAMP_CAPACITY; i++) {
@@ -65,6 +66,7 @@ vec3 reflection_lamps_color(vec3 p_world, vec3 camera_world, float length_scale)
 			level = lamp_window_on(id, base_id, cols, slot, override_value);
 			lamp_color = pal_cur(lamp_window_cool(id, override_value) ? PAL_WINDOW_COOL : PAL_WINDOW_WARM);
 		}
+		if (level == 0.0) continue;
 		float source_height = source.y - p_world.y;
 		if (source_height <= 0.0) continue;
 		vec2 toward = camera_world.xz - source.xz;

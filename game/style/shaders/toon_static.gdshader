@@ -239,9 +239,12 @@ void fragment() {
 	// 与积水/湿面天光同一材质资格门；先筛底面，覆盖其上的落叶也不能把软地面重新点亮。
 	vec3 wet_reflection = vec3(0.0);
 	if (weather_b.x > 0.0) {
+		float reflection_pixel = max(length(fwidth(tctx.wpos.xz)), 1e-4);
 		float wet_gate = clamp(weather_b.x, 0.0, 1.0) * toon_wet_exposure(tctx) * smoothstep(PW_FLAT.x, PW_FLAT.y, tctx.n_w.y)
 			* smoothstep(PW_RESPONSE.x, PW_RESPONSE.y, tmat.wet);
-		wet_reflection = reflection_lamps_color(tctx.wpos, tctx.cam, 0.5) * wet_gate;
+		if (wet_gate != 0.0) {
+			wet_reflection = reflection_lamps_color(tctx.wpos, tctx.cam, 0.5, reflection_pixel) * wet_gate;
+		}
 	}
 	tcol.lit += wet_reflection * tmat.wet;
 	tcol.shade += wet_reflection * tmat.wet;
