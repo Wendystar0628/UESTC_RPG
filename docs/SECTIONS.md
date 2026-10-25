@@ -1697,7 +1697,7 @@
 
 ## ENG-PERF-DATA · 性能数据与分析
 
-`docs/engineering/ENG-PERF-DATA-性能数据与分析.md` · 11.6k 字 · 性能记录的四层与写入方、记录开关与会话寿命、原始流与时间基、指标口径与非稳态帧、测量范围、异常、比较键与保留、开销目标
+`docs/engineering/ENG-PERF-DATA-性能数据与分析.md` · 11.7k 字 · 性能记录的四层与写入方、记录开关与会话寿命、原始流与时间基、指标口径与非稳态帧、测量范围、异常、比较键与保留、开销目标
 关键词：性能记录、记录性能数据、记录服务、性能会话、六件、原始流、perf-fields.json、schema、calc、指标口径、体验口径、成本口径、五段、B0–B4、主线程周期、受测视口、受测视口 GPU 合计、成本尖峰、非稳态帧、掉帧、卡顿分级、1% low、scope、性能异常、比较键、性能数据保留、分析器
 
 - ENG-PERF-DATA §0 结论 · L21 · 1.3k
@@ -1714,7 +1714,7 @@
   - ENG-PERF-DATA §3.2 成本口径 · L123 · 1.4k
 - ENG-PERF-DATA §4 测量范围与 `scope` · L138 · 247
 - ENG-PERF-DATA §5 异常 · L146 · 2.2k
-  - ENG-PERF-DATA §5.1 体验类 · L154 · 730
+  - ENG-PERF-DATA §5.1 体验类 · L154 · 777
   - ENG-PERF-DATA §5.2 成本与数据类 · L170 · 837
   - ENG-PERF-DATA §5.3 归因与合并 · L184 · 365
 - ENG-PERF-DATA §6 比较键、状态与保留 · L194 · 991
@@ -1750,7 +1750,7 @@
 - ENG-PERF-MEASURE §6 调优规则与判停 · L98 · 1.6k
   - ENG-PERF-MEASURE §6.1 第 0 轮 · L102 · 492
   - ENG-PERF-MEASURE §6.2 第 1–3 轮 · L112 · 327
-  - ENG-PERF-MEASURE §6.3 判停与收尾 · L119 · 609
+  - ENG-PERF-MEASURE §6.3 判停与收尾 · L119 · 658
 
 ## ENG-PERF-STREAM · 流式加载、本机烘焙与内存
 
