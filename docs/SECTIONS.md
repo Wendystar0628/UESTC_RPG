@@ -1629,7 +1629,7 @@
 - ENG-GATES §1 门禁与测试节奏 · L41 · 3.0k
   - ENG-GATES §1.1 测试三档 · L45 · 1.4k
   - ENG-GATES §1.2 门禁表 · L67 · 1.3k
-  - ENG-GATES §1.3 入口与交付分工 · L85 · 191
+  - ENG-GATES §1.3 入口与交付分工 · L85 · 187
 
 ## ENG-GATES-SHOTS · 审查视角与截图
 

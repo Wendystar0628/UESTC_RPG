@@ -84,6 +84,6 @@ paths: ["scripts/gates/native-render.ps1", "game/data/maps/*/review.json", "scri
 
 ### 1.3 入口与交付分工
 
-入口 `scripts\gate.ps1 [-Paths <路径...>] [-BaseRef <基线>]`：默认跑快检，改动碰到核心体验时加核心专项；`-Smoke` 只跑主线冒烟；`-Full` 跑集中测试全量；`-Only G7,G10` 只跑指定门禁；入口先核对引擎版本，要显卡的门禁经构建锁一次只跑一个（WF-BUILD §4）。
+入口 `scripts\gate.ps1 [-Paths <路径...>] [-BaseRef <基线>]`：默认跑快检，改动碰到核心体验时加核心专项；`-Smoke` 只跑主线冒烟；`-Full` 跑集中测试全量；`-Only G7` 只跑指定门禁；入口先核对引擎版本，要显卡的门禁经构建锁一次只跑一个（WF-BUILD §4）。
 
 
