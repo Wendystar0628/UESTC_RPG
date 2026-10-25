@@ -2,11 +2,7 @@
 # 用法：由 run.ps1 -DeepenSession <id> [-DiagnosticTool gpu-profile,EventPipe,Nsight] [-DeepenEntry 0] 调用。
 function Find-PerfDiagnosticTool([string]$Root, [string]$Name) {
     if ($Name -eq 'EventPipe') {
-        $path=Join-Path $Root 'output\tools\dotnet-diagnostics\dotnet-trace.exe'
-        if (-not (Test-Path -LiteralPath $path)) {
-            $common=(& git -C $Root rev-parse --path-format=absolute --git-common-dir).Trim()
-            $path=Join-Path (Split-Path $common -Parent) 'output\tools\dotnet-diagnostics\dotnet-trace.exe'
-        }
+        return Get-UESTCDotnetTrace -Root $Root
     } else {
         $installed=Join-Path ${env:ProgramFiles} 'NVIDIA Corporation'
         $path=@(Get-ChildItem -LiteralPath $installed -Directory -Filter 'Nsight Systems *' |
@@ -71,12 +67,7 @@ function Invoke-PerfDiagnostic($Root, $SessionId, [string[]]$Tools, [int]$EntryI
         foreach ($tool in $Tools | Select-Object -Unique) {
             $work=Join-Path $directory $tool
             $null=[IO.Directory]::CreateDirectory($work)
-            $engine=$godot
-            if ($tool -eq 'EventPipe') {
-                # The console executable launches another PID; attach to the real host we own.
-                $engine=$godot -replace '_console\.exe$', '.exe'
-                if (-not (Test-Path -LiteralPath $engine -PathType Leaf)) { throw 'EventPipe requires the actual Godot host executable.' }
-            }
+            $engine=Get-UESTCGodotHost -Godot $godot
             $request=$sourceRun.conditions | ConvertTo-Json -Depth 16 | ConvertFrom-Json
             $request.sampleSegmentId='diagnostic-' + [Guid]::NewGuid().ToString('N')
             $request | Add-Member -NotePropertyName externalCloseAfterSample -NotePropertyValue ($tool -eq 'EventPipe') -Force
@@ -91,7 +82,7 @@ function Invoke-PerfDiagnostic($Root, $SessionId, [string[]]$Tools, [int]$EntryI
             $condition=[ordered]@{ purpose='diagnostic'; sourceSession=$SessionId; sourceDirectory=$source; entry=$entry;
                 tool=$tool; scene=$entry.scene; collection=$request; sourceCollection=$sourceRun.conditions;
                 engine=$engine; arguments=$gameArguments; desktop='isolated'; elevation='ordinary';
-                toolPath=$(if($tool -ne 'gpu-profile'){Find-PerfDiagnosticTool $Root $tool}else{$godot});
+                toolPath=$(if($tool -ne 'gpu-profile'){Find-PerfDiagnosticTool $Root $tool}else{$engine});
                 cpuProfile=$(if($tool -eq 'EventPipe'){'dotnet-sampled-thread-time'}else{$null});
                 parserDll=$parserDll; nominalSampleRateHz=$(if($tool -eq 'EventPipe'){100}else{$null}); sampleRateHz=$null;
                 sampleRateReason='Actual collector output and timestamp intervals are retained; no requested rate is asserted as measured.' }

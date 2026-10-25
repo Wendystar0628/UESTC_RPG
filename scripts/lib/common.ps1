@@ -291,6 +291,9 @@ namespace Uestc.Tools {
             [FieldOffset(14)] public char character;
         }
         [DllImport("kernel32.dll")] static extern IntPtr GetConsoleWindow();
+        [DllImport("kernel32.dll", SetLastError=true)] static extern IntPtr GetStdHandle(int name);
+        [DllImport("kernel32.dll", SetLastError=true)] static extern bool SetStdHandle(int name, IntPtr handle);
+        [DllImport("kernel32.dll", SetLastError=true)] static extern uint GetFileType(IntPtr handle);
         [DllImport("kernel32.dll", SetLastError=true)] static extern bool AllocConsole();
         [DllImport("kernel32.dll", SetLastError=true)] static extern bool FreeConsole();
         [DllImport("user32.dll")] static extern bool ShowWindow(IntPtr window, int command);
@@ -299,10 +302,22 @@ namespace Uestc.Tools {
         [DllImport("kernel32.dll", SetLastError=true)]
         static extern bool WriteConsoleInputW(SafeFileHandle handle, Input[] records, uint count, out uint written);
         public static bool Prepare() {
-            if (GetConsoleWindow() != IntPtr.Zero) return false;
+            // A window handle does not establish console attachment. Detach only this
+            // disposable worker; preserve redirected output when AllocConsole resets std handles.
+            var output = GetStdHandle(-11); var error = GetStdHandle(-12);
+            bool outputRedirected = GetFileType(output) == 3 || GetFileType(output) == 1;
+            bool errorRedirected = GetFileType(error) == 3 || GetFileType(error) == 1;
+            if (!FreeConsole()) throw new Win32Exception(Marshal.GetLastWin32Error());
             if (!AllocConsole()) throw new Win32Exception(Marshal.GetLastWin32Error());
-            ShowWindow(GetConsoleWindow(), 0);
-            return true;
+            try {
+                if (outputRedirected && !SetStdHandle(-11, output)) throw new Win32Exception(Marshal.GetLastWin32Error());
+                if (errorRedirected && !SetStdHandle(-12, error)) throw new Win32Exception(Marshal.GetLastWin32Error());
+                ShowWindow(GetConsoleWindow(), 0);
+                return true;
+            } catch (Exception failure) {
+                if (!FreeConsole()) failure.Data["EventPipeConsole.FreeConsole"] = new Win32Exception(Marshal.GetLastWin32Error());
+                throw;
+            }
         }
         public static void RequestStop() {
             // Open the worker's real private console, even when its standard input is NUL.
@@ -422,4 +437,23 @@ function Get-UESTCGitPaths {
 function Get-UESTCGodot {
     if ($env:UESTC_GODOT) { return [IO.Path]::GetFullPath($env:UESTC_GODOT) }
     return 'E:\Tools\Godot\Godot_v4.7.2-stable_mono_win64\Godot_v4.7.2-stable_mono_win64_console.exe'
+}
+
+
+# The console launcher is retained for build/import; production processes own the real host PID.
+function Get-UESTCGodotHost {
+    param([string]$Godot = (Get-UESTCGodot))
+    $hostPath = [IO.Path]::GetFullPath(($Godot -replace '_console\.exe$', '.exe'))
+    if (-not [IO.File]::Exists($hostPath)) { throw "Actual Godot host executable is missing: $hostPath" }
+    return $hostPath
+}
+
+function Get-UESTCDotnetTrace {
+    param([Parameter(Mandatory)][string]$Root)
+    $relative = 'output/tools/dotnet-diagnostics/dotnet-trace.exe'
+    foreach ($repository in @($Root, (Get-UESTCLayout $Root).Primary) | Select-Object -Unique) {
+        $path = [IO.Path]::GetFullPath((Join-Path $repository $relative))
+        if ([IO.File]::Exists($path)) { return $path }
+    }
+    throw 'dotnet-trace is not installed in the configured local tool store.'
 }

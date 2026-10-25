@@ -311,7 +311,7 @@ if (-not ($Full -or $Smoke -or $Only.Count)) {
         $_ -notin $existingBasePaths -or -not (Test-UESTCCommentOnlyChange $root $_ $BaseRef)
     })
 }
-$perfSelfcheckRequired = @($runtimeChanges | Where-Object { $_ -match '^scripts/perf/|^scripts/gates/performance\.ps1$' }).Count -gt 0
+$perfSelfcheckRequired = @($runtimeChanges | Where-Object { $_ -match '^scripts/perf/|^scripts/gates/performance\.ps1$|^game/data/perf-fields\.json$|^budgets\.json$' }).Count -gt 0
 $textOnlyQuick = -not ($Full -or $Smoke -or $Only.Count) -and $changes.Count -gt 0 -and $runtimeChanges.Count -eq 0
 $selected = New-Object 'Collections.Generic.List[string]'
 $gateIds = @('G1','G2','G3','G4','G5','G7','G10','G14','G15','G20','G21')

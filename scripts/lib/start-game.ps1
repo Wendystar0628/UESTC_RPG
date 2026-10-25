@@ -170,8 +170,7 @@ function Invoke-UESTCStartGame {
         } else { $timing['lockWaitStatus'] = 'ALREADY_HELD; external wait NOT_MEASURED' }
         $heldLease = if ($BuildLease) { $BuildLease } else { $lease }
         Initialize-UESTCLaunch -Root $Root -Godot $Godot -BuildLease $heldLease -Timing $timing
-        $window = $Godot -replace '_console\.exe$', '.exe'
-        if (-not [IO.File]::Exists($window)) { $window = $Godot }
+        $window = Get-UESTCGodotHost -Godot $Godot
         $arguments = @('--path', "$Root\game")
         if ($GameArgs.Count) { $arguments += @('--') + $GameArgs }
         $commandLine = ($arguments | ForEach-Object { ConvertTo-UESTCProcessArgument $_ }) -join ' '

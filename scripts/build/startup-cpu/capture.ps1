@@ -88,8 +88,7 @@ try {
     if (-not $outputsPresent) {
         throw 'Prepared launch outputs are incomplete: the formal assembly, published business manifest and native import cache must all exist; no build is allowed inside the measured launch interval.'
     }
-    $window = $godot -replace '_console\.exe$', '.exe'
-    if (-not [IO.File]::Exists($window)) { $window = $godot }
+    $window = Get-UESTCGodotHost -Godot $godot
     $log = Join-Path $Output 'godot.log'
     $save = Join-Path $Output 'save'
     $scenario = if ($playingSample) { 'playing' } else { $Mode }
@@ -108,7 +107,7 @@ try {
     $timing['status'] = 'ENGINE_STARTED'
     $attachRequestedUtc = $null
     if ($diagnostic) {
-        $eventPipe = @{ Target=$gameTree; ToolPath="$toolRoot\output\tools\dotnet-diagnostics\dotnet-trace.exe";
+        $eventPipe = @{ Target=$gameTree; ToolPath=(Get-UESTCDotnetTrace -Root $toolRoot);
             Root=$toolRoot; Output=$Output; Record=$collectorRecord; Deadline=[DateTime]::UtcNow.AddSeconds(300) }
         $timing['collector'] = $collectorRecord
         Invoke-UESTCEventPipeCapture -Action Start -Capture $eventPipe
