@@ -151,7 +151,7 @@ def check_cold_gap(root, dictionary, budgets):
     frames = [frame(dictionary, i, gpu=budgets['deviceTargets']['developer']['mainViewportGpuP95MsUpper'] * 2) for i in range(count)]
     frames[20]['gapBefore'] = True
     frames[20]['dtMs'] = 500
-    summary, items, _, _ = summary_for(Path('selfcheck'), manifest(dictionary), streams(frames, dictionary), dictionary, budgets, {})
+    summary, items, _, _ = summary_for(Path('selfcheck'), manifest(dictionary), streams(frames, dictionary), dictionary, budgets, dict(conditions=dict(suite='fixed')))
     assert not any(a['type'] == 'costSpike' for a in items), '冷启动不足暖窗仍出了相对判据'
     assert any(a['type'] == 'budgetExceeded' for a in items), '不足暖窗漏了绝对预算判据'
     assert at(summary, 'all.experience.averageFps') == 100, '跨 gap 间隔进入体验计算'

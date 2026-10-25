@@ -6,6 +6,7 @@ import statistics
 from collections import defaultdict
 from datetime import datetime
 from perf_model import at, number
+from perf_anomalies import budget_checks
 
 REPETITIONS = (1, 2, 3)
 PHASES = dict(repeat3=('a1',), aba=('a1', 'b1', 'a2'))
@@ -166,7 +167,7 @@ def batch_results(entries, budgets, failed_sources=()):
         pain = {phase: batch_pain([row for row in rows if at(row, 'run.protocol.phase') == phase], budgets)
                 for phase in PHASES.get(kind, ())}
         for phase, value in pain.items():
-            if any(at(row, 'run.protocol.phase') == phase and at(row, 'run.conditions.suite') in ('route', 'travel') for row in rows) and not number(value['lightFramesPerMinute']):
+            if any(at(row, 'run.protocol.phase') == phase and at(row, 'run.conditions.suite') in ('route', 'travel') for row in rows) and value['lightExceeded'] is None:
                 judgement_reasons.append(phase + '/lightCostStutter: 路线与传送批次合计稳态计率时长不足，重跑')
         measurement_reasons = sorted(set(reasons + source_reasons))
         blocking_reasons = sorted(set(reasons + judgement_reasons))
@@ -190,7 +191,7 @@ def batch_results(entries, budgets, failed_sources=()):
         result['unjudged'] = sorted({item['key'] for row in rows for item in at(row, 'waits.items', []) or [] if item['status'] == 'unjudged'})
         result['unjudged'] += sorted({kind for row in rows for detector in row.get('unavailableDetectors', []) for kind in detector['types']})
         result['unjudged'] += sorted({check['metric'] for row in rows for check in row.get('budgets', [])
-                                      if check['metric'] == 'measuredViewportGpuMs' and not check['applicable']})
+                                      if check['unjudged']})
         results.append(result)
     assess_aba(results, entries)
     return results, blocked
@@ -207,27 +208,10 @@ def populate_phase_costs(projected, groups):
 
 
 def distance_table(runs, phase):
-    result = []
-    first = runs[0]
-    if at(first, 'run.conditions.suite') not in ('fixed', 'route'):
-        return result
-    scene = first['comparisonKey']['scene']
-    selected = at(first, 'run.conditions.tuningSelectedMetrics', []) or []
-    for check in first.get('budgets', []):
-        if check['metric'] == 'measuredViewportGpuMs':
-            continue
-        metric = check['metric']
-        value = at(phase, 'steady.cost.' + metric + '.p95')
-        members = [next((v for v in row.get('budgets', []) if v['metric'] == metric), {}) for row in runs]
-        applicable = all(v.get('applicable') is True and number(v.get('value')) for v in members)
-        upper, stop = check['budget'], check.get('stop')
-        picked = scene + '.' + metric in selected
-        tier = ('rerun' if not applicable or not number(value) else 'above-upper' if value > upper else
-                'above-stop' if picked and stop is not None and value > stop else 'within')
-        result.append(dict(scene=scene, metric=metric, value=value, upper=upper, stop=stop,
-                           ratio=value / upper if number(value) and upper else None, tier=tier, selected=picked,
-                           source=check['budgetSource'], stopSource=check.get('stopSource')))
-    return result
+    return [dict(scene=runs[0]['comparisonKey']['scene'], metric=check['metric'], value=check['value'],
+                 upper=check['budget'], stop=check['stop'], ratio=check['ratio'], tier=check['tier'],
+                 selected=check['selected'], source=check['budgetSource'], stopSource=check['stopSource'], reason=check['reason'])
+            for check in budget_checks(phase, runs=runs) if check['required']]
 
 
 def batch_pain(rows, budgets):
@@ -259,11 +243,12 @@ def batch_pain(rows, budgets):
     duration = result['steadyDurationMs']
     result['lightFramesPerMinute'] = result['lightFrames'] * 60000 / duration if duration else None
     result['lightLimit'] = budgets['perfAnomalies']['lightCostStutterFramesPerMinuteMax']
+    result['lightExceeded'] = result['lightFramesPerMinute'] > result['lightLimit'] if duration else None
     result['zeroTolerance'] = [dict(key=key, count=count, allowed=0) for key, count in result['counts'].items()]
     complete = bool(playing) and all(at(row, 'judgement.requiredChecks') and all(
         check['status'] == 'measured' for check in row['judgement']['requiredChecks']) for row in playing)
     result['status'] = ('rerun' if not complete or not duration else 'pain' if any(result['counts'].values()) or
-                        result['lightFramesPerMinute'] > result['lightLimit'] else 'clear')
+                        result['lightExceeded'] else 'clear')
     return result
 
 
@@ -316,17 +301,16 @@ def regression_guards(phases, pain):
     other_a = {row['metric']: row for row in phases['a2'].get('distanceTable', [])}
     for row in phases['b1'].get('distanceTable', []):
         before, after = reference.get(row['metric'], {}), other_a.get(row['metric'], {})
-        for line in ('upper', 'stop'):
-            limit = row[line]
-            if line == 'stop' and not row['selected']:
+        for line, crossed, safe in (('upper', ('above-upper',), ('within', 'above-stop')),
+                                    ('stop', ('above-stop', 'above-upper'), ('within',))):
+            if line == 'stop' and not (row['selected'] and row['stop'] is not None):
                 continue
-            if number(limit) and all(number(a.get('value')) and a['value'] <= limit for a in (before, after)) and row['value'] > limit:
+            if row['tier'] in crossed and all(a.get('tier') in safe for a in (before, after)):
                 reasons.append(row['metric'] + ' 被推出' + line)
     b, a1, a2 = (pain.get(phase, {}) for phase in ('b1', 'a1', 'a2'))
     for key, count in b.get('counts', {}).items():
         if count > 0 and a1.get('counts', {}).get(key) == 0 and a2.get('counts', {}).get(key) == 0:
             reasons.append('B新出痛点: ' + key)
-    if (number(b.get('lightFramesPerMinute')) and b['lightFramesPerMinute'] > b['lightLimit'] and
-            all(number(a.get('lightFramesPerMinute')) and a['lightFramesPerMinute'] <= a['lightLimit'] for a in (a1, a2))):
+    if b.get('lightExceeded') is True and all(a.get('lightExceeded') is False for a in (a1, a2)):
         reasons.append('B新出轻级痛点')
     return reasons

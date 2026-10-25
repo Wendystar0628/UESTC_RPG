@@ -111,9 +111,8 @@ def wait_observations(manifest, events, run, budgets):
               for name in ('title-input-ready', 'input-ready')}
     launch = wall_monotonic(at(run, 'launcher.scriptEnteredUtc'), manifest)
     exit_time = wall_monotonic(at(run, 'launcher.processExitUtc'), manifest)
-    # ENG-PERF-DATA: AI launch facts exclude double-click work and cannot establish a startup upper bound.
-    reason = ('AI 运行起点晚于双击，启动三项目标未判' if manifest.get('origin') == 'ai'
-              else '双击启动起点与缓存条件缺测，启动三项目标未判')
+    # ENG-PERF-DATA: no session records the actual double-click start yet.
+    reason = '双击启动起点尚未接通，所有会话的启动三项目标未判'
     for key, endpoint in ((WAIT_KEYS[0], 'title-input-ready'), (WAIT_KEYS[1], 'title-input-ready'),
                           (WAIT_KEYS[2], 'input-ready')):
         result.append(observation(key, launch, phases[endpoint], manifest, budgets, 'run.launcher → app.phase', reason))

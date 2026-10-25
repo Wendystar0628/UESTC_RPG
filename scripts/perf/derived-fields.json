@@ -1,5 +1,5 @@
 {
-  "calc": 9,
+  "calc": 10,
   "authority": "ENG-PERF-DATA",
   "events": "Validate strictly increasing sequence in recorded order, then stable-sort by (monotonicMs, sequence) for cross-producer event association; other streams still require nondecreasing time",
   "summary": {
@@ -21,14 +21,14 @@
       "phases": "B0-B4 wall intervals; association only, never CPU busy time",
       "mainViewportSpikes": "Cost candidates cover +/-2 frames; no exact phase/cause attribution; distributions, budgets, trends and DECISION-348 remain available"
     },
-    "budgets": "Independent upper-bound checks; stop is separate and only fixed selected tuning items use it; missing/inapplicable remains null",
+    "budgets": "budget_checks is the single owner of applicability, reason, thresholds and tier. Consumers filter emitted fields; G10 uses the grouped distance-table tier without its own metric list or comparison.",
     "coverage": "Per-stream state and rows, per-field non-null fraction; 0..1 or null",
     "validity": "Only affected fields disabled; hardware loss does not disable engine metrics",
     "median": "Prior valid steady frames in the same scene and caliber; nonsteady/gap rows do not enter or clear the window; scene/effective quality/output-size changes reset it",
     "deepen": "Runnable powershell.exe command with actual DeepenEntry and entry-specific DiagnosticTool; source poseArgs/conditions retained; no placeholder runner state",
     "inputStamp": "Current calc, schema, file size/mtime, budget snapshot and current context rules; no checksum",
-    "judgement": "Analyzer-owned requiredChecks (measured|rerun), raw-frame pain counts, light count/steady milliseconds and threshold lines; budget crossings are not pains",
-    "waits": "Whole-session command events; enter endpoint is the first input-ready after its start and before the next enter command. Missing endpoints remain missing; AI startup targets are unjudged because process timing excludes launcher work.",
+    "judgement": "Per-session raw pain quantities and required-check status; light-cost pain rates are decided only from batch phase totals. Missing required facts remain rerun, zero-tolerance quantities retain their own status.",
+    "waits": "Whole-session command endpoints; missing endpoints stay missing. Startup targets are unjudged for every session until the actual double-click launcher start is recorded.",
     "streamFacts": "Source event count/latest snapshot for stream.tileChanged, bake.cache, map.arrival; no duplicate stream-statistics owner"
   },
   "curves": {

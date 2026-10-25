@@ -5,7 +5,7 @@ import math
 import statistics
 import bisect
 from collections import Counter, defaultdict, deque
-from perf_model import COSTS, LEVEL, PHASES, at, distribution, number, quantile, target_ms
+from perf_model import COSTS, LEVEL, PHASES, at, distribution, is_render_adapter, number, quantile, target_ms
 
 MERGE_FRAME_MS = 250
 MERGE_STATE_MS = 3000
@@ -296,34 +296,64 @@ def gc_windows(frames, policy):
     return result
 
 
-def budget_checks(summary, manifest, budgets):
-    target = budgets['deviceTargets']['developer']
-    graphics = manifest.get('graphics') or {}
-    applicable = (target['gpuNameContains'].lower() in str(at(manifest, 'machine.gpu', '')).lower()
-                  and graphics.get('preset') == target['preset']
-                  and at(manifest, 'display.windowWidthPx') == target['widthPx']
-                  and at(manifest, 'display.windowHeightPx') == target['heightPx']
-                  and graphics.get('internalWidthPx') == target['widthPx'] * target['renderScale']
-                  and graphics.get('internalHeightPx') == target['heightPx'] * target['renderScale'])
-    keys = dict(mainViewportGpuMs=('mainViewportGpuP95MsUpper', 'mainViewportGpuP95MsStop'),
-                mainViewportCpuMs=('viewportCpuP95MsUpper', 'viewportCpuP95MsStop'),
-                frameSetupCpuMs=('frameSetupCpuP95MsUpper', None),
-                measuredViewportGpuMs=('mainViewportGpuP95MsUpper', None))
+def budget_checks(summary, manifest=None, budgets=None, runs=None):
+    """会话与阶段中位共用判据；消费者只筛 required/unjudged 并读取 tier。"""
+    run = runs[0]['run'] if runs else summary.get('run', {})
+    suite = at(run, 'conditions.suite')
+    scene = run.get('scene')
+    selected = at(run, 'conditions.tuningSelectedMetrics', []) or []
+    if runs:
+        candidates = [dict(check) for check in runs[0].get('budgets', [])]
+        for check in candidates:
+            members = [next((v for v in row.get('budgets', []) if v['metric'] == check['metric']), {}) for row in runs]
+            matching = all(all(v.get(key) == check.get(key) for key in
+                              ('budget', 'stop', 'budgetSource', 'stopSource', 'required', 'unjudged')) for v in members)
+            check['applicable'] = matching and all(v.get('applicable') is True and number(v.get('value')) for v in members)
+            if check['required'] and not check['applicable']:
+                check['reason'] = ('阶段内预算或判据条件不一致，重跑' if not matching else
+                                   '；'.join(sorted({v.get('reason') or '必判成本缺测，重跑' for v in members})))
+    else:
+        target = budgets['deviceTargets']['developer']
+        graphics = manifest.get('graphics') or {}
+        applicable = (target['gpuNameContains'].lower() in str(at(manifest, 'machine.gpu', '')).lower()
+                      and graphics.get('preset') == target['preset']
+                      and at(manifest, 'display.windowWidthPx') == target['widthPx']
+                      and at(manifest, 'display.windowHeightPx') == target['heightPx']
+                      and graphics.get('internalWidthPx') == target['widthPx'] * target['renderScale']
+                      and graphics.get('internalHeightPx') == target['heightPx'] * target['renderScale'])
+        keys = dict(mainViewportGpuMs=('mainViewportGpuP95MsUpper', 'mainViewportGpuP95MsStop'),
+                    mainViewportCpuMs=('viewportCpuP95MsUpper', 'viewportCpuP95MsStop'),
+                    frameSetupCpuMs=('frameSetupCpuP95MsUpper', None))
+        # ENG-PERF-DATA: only the lake's unconfirmed measured-viewports aggregate is deferred.
+        if isinstance(scene, str) and scene.startswith('lake-'):
+            keys['measuredViewportGpuMs'] = ('mainViewportGpuP95MsUpper', None)
+        candidates = []
+        for metric, (upper_key, stop_key) in keys.items():
+            unjudged = metric == 'measuredViewportGpuMs'
+            required = not unjudged and suite in ('fixed', 'route')
+            applies = required and applicable
+            stop = target[stop_key] if stop_key and suite == 'fixed' else None
+            reason = ('受测视口 GPU 合计来源尚未确认，未判' if unjudged else
+                      '传送套不判帧成本' if suite == 'travel' else '场景套未确认，不适用帧成本预算' if not required else
+                      None if applies else '会话条件与开发机预算不一致')
+            candidates.append(dict(metric=metric, budget=target[upper_key], stop=stop, required=required,
+                                   unjudged=unjudged, applicable=applies, reason=reason,
+                                   budgetSource='budgets.json.deviceTargets.developer.' + upper_key,
+                                   stopSource='budgets.json.deviceTargets.developer.' + stop_key if stop is not None else None))
     checks = []
-    for metric, (upper_key, stop_key) in keys.items():
+    for check in candidates:
+        metric, upper, stop = check['metric'], check['budget'], check['stop']
         measured = at(summary, f'steady.cost.{metric}.p95')
-        suite = at(summary, 'run.conditions.suite')
-        selected = metric != 'measuredViewportGpuMs'
-        applies = applicable and selected and suite != 'travel'
-        stop = target[stop_key] if stop_key and suite == 'fixed' else None
-        checks.append(dict(metric=metric, value=measured, budget=target[upper_key], stop=stop,
-                           budgetSource='budgets.json.deviceTargets.developer.' + upper_key,
-                           stopSource='budgets.json.deviceTargets.developer.' + stop_key if stop is not None else None,
-                           applicable=applies, ratio=measured / target[upper_key] if number(measured) else None,
-                           exceeded=measured > target[upper_key] if applies and number(measured) else None,
-                           reason=('受测视口 GPU 合计来源尚未确认，未判' if not selected else
-                                   '传送套不判帧成本' if suite == 'travel' else
-                                   None if applies else '会话条件与开发机预算不一致')))
+        picked = str(scene) + '.' + metric in selected
+        judged = check['applicable'] and number(measured)
+        if check['required'] and not number(measured) and not check['reason']:
+            check['reason'] = '必判成本缺测，重跑'
+        tier = ('unjudged' if check['unjudged'] else 'not-applicable' if not check['required'] else
+                'rerun' if not judged else 'above-upper' if measured > upper else
+                'above-stop' if picked and stop is not None and measured > stop else 'within')
+        checks.append(dict(check, value=measured, observed=int(number(measured)), selected=picked, tier=tier,
+                           ratio=measured / upper if number(measured) and upper else None,
+                           exceeded=tier == 'above-upper' if judged else None))
     return checks
 
 
@@ -336,7 +366,7 @@ def slow_anomalies(frames, streams, manifest, budgets, scope):
             continue
         frame = nearest_frame(frames, sample['monotonicMs'])
         used, capacity = sample.get('wholeGpuMemoryMiB'), at(manifest, 'machine.vramMiB')
-        if number(used) and number(capacity) and capacity > 0 and used > policy['videoMemoryNearFraction'] * capacity:
+        if is_render_adapter(sample) and number(used) and number(capacity) and capacity > 0 and used > policy['videoMemoryNearFraction'] * capacity:
             result.append(anomaly('videoMemory', 'severe' if used > capacity else 'heavy', frame, used,
                                   policy['videoMemoryNearFraction'] * capacity, 'budgets.json.perfAnomalies.videoMemoryNearFraction', 'wholeGpuMemoryMiB', True))
         if (sample.get('throttleReasonBits') or 0) != 0:
@@ -409,9 +439,9 @@ def session_judgement(frames, streams, manifest, budgets, run, raw_items, checks
                              reason=None if complete else reason or '必判字段缺测，重跑'))
 
     for check in checks:
-        if suite not in ('fixed', 'route') or check['metric'] == 'measuredViewportGpuMs':
+        if not check['required']:
             continue
-        record(check['metric'], int(number(check['value'])), check['applicable'], check.get('reason'))
+        record(check['metric'], check['observed'], check['tier'] != 'rerun', check.get('reason'))
     if manifest.get('origin') == 'ai' and isinstance(run.get('protocol'), dict) and suite not in ('fixed', 'route', 'travel'):
         record('suite', 0, False, '场景套未确认，重跑')
     if play:
@@ -424,8 +454,9 @@ def session_judgement(frames, streams, manifest, budgets, run, raw_items, checks
                '第0轮尚未核实静置长停或不是隔离桌面，重跑')
         record('drawCompilation', len(visible), all(number(f.get('pipelineDraw')) for f in visible))
         record('gc', len(playing), all(number(f.get(k)) for f in playing for k in ('gcPauseMs', 'gcGen2', 'allocatedBytes')))
-        hardware = [h for h in streams['hw'] if h['rowKind'] == 'nvml' and number(h.get('wholeGpuMemoryMiB'))]
-        record('videoMemory', len(hardware), number(at(manifest, 'machine.vramMiB')) and at(manifest, 'machine.vramMiB') > 0)
+        hardware = [h for h in streams['hw'] if is_render_adapter(h) and number(h.get('wholeGpuMemoryMiB'))]
+        record('videoMemory', len(hardware), number(at(manifest, 'machine.vramMiB')) and at(manifest, 'machine.vramMiB') > 0,
+               '真实渲染卡显存行或容量缺测，重跑')
         event_state = next((s for s in manifest.get('streams', []) if s['file'] == 'events.jsonl'), {})
         record('hang', int(event_state.get('state') == 'recorded'), manifest.get('complete') is True)
     categories = dict(costStutter='costStutter', logicPause='logicPause', mainThreadLongStop='mainThreadLongStop',
@@ -447,15 +478,12 @@ def session_judgement(frames, streams, manifest, budgets, run, raw_items, checks
             levels[item['level']].add(item['firstSequence'])
     counts = {key: len(hits[key]) for key in ('costStutter', 'logicPause', 'mainThreadLongStop', 'drawCompilation', 'otherCompilation', 'gc', 'videoMemory', 'hang')}
     policy = budgets['perfAnomalies']
-    rate = len(light) * 60000 / duration if duration else None
     return dict(requiredChecks=required,
                 pain=dict(suite=suite, scene=run.get('scene'), counts=counts, lightFrames=len(light),
-                          steadyDurationMs=duration, lightFramesPerMinute=rate,
-                          lightLimit=policy['lightCostStutterFramesPerMinuteMax'], visibilityCandidates=candidates_count,
+                          steadyDurationMs=duration, visibilityCandidates=candidates_count,
                           severityCounts=dict(heavy=len(levels['heavy'] - levels['severe']), severe=len(levels['severe'])),
                           heavyOrWorseFrames=len(set().union(*hits.values())) if hits else 0,
-                          status='rerun' if any(v['status'] == 'rerun' for v in required) else 'pain' if any(counts.values()) or
-                          (rate is not None and rate > policy['lightCostStutterFramesPerMinuteMax']) else 'clear'),
+                          status='rerun' if any(v['status'] == 'rerun' for v in required) else 'pain' if any(counts.values()) else 'clear'),
                 lines=[dict(key='targetFrameMs', value=target_ms(manifest) if at(manifest, 'desktop.kind') == 'interactive' else None,
                             unit='ms', source='manifest.pacing/display', reason='体验目标仅交互桌面适用')] +
                       [dict(key=key, value=policy[key], unit='ms', source='budgets.json.perfAnomalies.' + key)

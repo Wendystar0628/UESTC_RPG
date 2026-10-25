@@ -170,6 +170,7 @@ def check_roundtrip(root, dictionary, budgets):
         meta['desktop'] = dict(kind='isolated', isInputDesktop=False, windowFocused=False)
         data = streams([frame(dictionary, i, gpu=budgets['deviceTargets']['developer']['mainViewportGpuP95MsUpper'] * 2) for i in range(count)], dictionary)
         write_six(source, meta, data, dictionary)
+        (source / 'run.json').write_text(json.dumps(dict(conditions=dict(suite='fixed'))), encoding='utf-8')
         first = analyze_all(root, out, author)
         assert first['analyzed'] == ['SELFCHECK'] and not first['errors'], first
         second = analyze_all(root, out, author)

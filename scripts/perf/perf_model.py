@@ -298,6 +298,11 @@ def normalized_gpu_load(row):
     return row[keys[0]] * row[keys[1]] / row[keys[2]] if all(number(row.get(key)) for key in keys) and row[keys[2]] > 0 else None
 
 
+def is_render_adapter(row):
+    """只认采集方按原生适配器身份确认的行，不从卡序号或显存读数猜。"""
+    return row.get('rowKind') == 'nvml' and row.get('isRenderAdapter') is True
+
+
 def experience(frames, hw, target, policy, scope, reason):
     if scope != 'full':
         return {**dict.fromkeys(EXPERIENCE_FIELDS), 'reason': reason}
@@ -339,7 +344,8 @@ def costs(frames, samples, hw):
                            for key in sorted({key for f in frames for key in f['_viewports']})}
     result['memory'] = {key: distribution(s.get(key) for s in samples) for key in
                         ('workingSetMiB', 'managedHeapMiB', 'godotStaticMiB', 'engineVideoMemoryMiB', 'textureMemoryMiB', 'bufferMemoryMiB')}
-    result['hardware'] = {key: distribution(h.get(key) for h in hw if h['rowKind'] == 'nvml') for key in
+    result['hardware'] = {key: distribution(h.get(key) for h in hw if h['rowKind'] == 'nvml' and
+                                           (key not in ('wholeGpuMemoryMiB', 'processVideoMemoryMiB') or is_render_adapter(h))) for key in
                           ('wholeGpuMemoryMiB', 'processVideoMemoryMiB', 'gpuClockMHz', 'powerW', 'temperatureC')}
     result['gcTotals'] = {key: sum(f[key] for f in frames if number(f.get(key))) if any(number(f.get(key)) for f in frames) else None
                           for key in ('gcPauseMs', 'gcGen0', 'gcGen1', 'gcGen2', 'allocatedBytes')}

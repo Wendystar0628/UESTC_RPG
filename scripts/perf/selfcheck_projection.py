@@ -2,6 +2,7 @@
 用法：由 perf.py selfcheck 编排调用，复用 selfcheck_fixtures，不写真实会话。
 """
 import io
+import json
 import sys
 import tempfile
 from pathlib import Path
@@ -26,6 +27,7 @@ def check_derived_curves(root, dictionary, budgets):
         data['hw'][0] = {**{c['name']: None for c in dictionary['streams']['hw']['columns']},
                          **data['hw'][0], 'schema': dictionary['schema'], 'sequence': 1, 'rowKind': 'nvml'}
         write_six(source, manifest(dictionary, 'CURVES'), data, dictionary)
+        (source / 'run.json').write_text(json.dumps(dict(conditions=dict(suite='fixed'))), encoding='utf-8')
         analyzed = analyze_all(root, out, author)
         assert not analyzed['errors'], analyzed
         curves = read_json(out / 'derived/CURVES/curves.json')

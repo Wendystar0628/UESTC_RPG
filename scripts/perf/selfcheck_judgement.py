@@ -2,11 +2,18 @@
 用法：由 perf.py selfcheck 编排；只用小样本，不启动游戏、不产生性能基线。
 """
 import copy
+import json
+import os
+import subprocess
+import tempfile
+from argparse import Namespace
 from pathlib import Path
 from analyze import summary_for
-from perf_anomalies import merge_anomalies
+from perf_anomalies import budget_checks, merge_anomalies
 from perf_batches import batch_pain, batch_results, distance_table
 from perf_model import COSTS, at
+from perf_curves import bucket_curves
+from perf_store import batch_states, git, rebuild_states
 from perf_waits import visible_intervals, wait_observations
 from selfcheck_fixtures import ai_run, frame, manifest, mark_sample, streams
 
@@ -65,7 +72,7 @@ def check_raw_counts(root, dictionary, budgets):
     assert at(summary, 'judgement.pain.counts.costStutter') == 0
     assert any(v['occurrences'] == 2 for v in merge_anomalies([v for v in items if v['type'] == 'costStutter']))
     only_budget = measured(dictionary, budgets, [frame(dictionary, i, gpu=budgets['deviceTargets']['developer']['mainViewportGpuP95MsUpper'] + 1)
-                                                for i in range(3)])[0]
+                                                for i in range(3)], dict(suite='fixed'))[0]
     assert any(v['exceeded'] is True for v in only_budget['budgets'])
     assert at(only_budget, 'judgement.pain.heavyOrWorseFrames') == 0
 
@@ -98,10 +105,12 @@ def check_required_sets(root, dictionary, budgets):
             meta = manifest(dictionary, f'{scene}-{repeat}')
             meta.update(origin='ai')
             meta['build']['commit'] = 'selfcheck'
+            meta['machine']['vramMiB'] = 1000
             meta['desktop'] = dict(kind='isolated', isInputDesktop=False, windowFocused=False)
             run = ai_run(scene=scene, repetition=repeat, scenes=['lake-default', 'route', 'standing-travel-direct'])
             run['conditions'] = dict(suite=suite, **enabled)
             data = mark_sample(streams(copy.deepcopy(rows), dictionary), dictionary)
+            data['hw'] = [dict(rowKind='nvml', isRenderAdapter=True, monotonicMs=10, wholeGpuMemoryMiB=100)]
             entries.append(summary_for(Path(meta['id']), meta, data, dictionary, budgets, run)[0])
     lake = entries[0]
     assert lake['comparisonKey']['scene'] == 'lake-default' and at(lake, 'steady.cost.measuredViewportGpuMs.p95') is None
@@ -112,8 +121,12 @@ def check_required_sets(root, dictionary, budgets):
     batch = batch_results(entries, budgets)[0][0]
     assert 'measuredViewportGpuMs' in batch['unjudged']
     assert not any('lightCostStutter' in reason for reason in batch['statusReasons'])
-    assert any('/videoMemory:' in reason for reason in batch['statusReasons']), '批次掩盖硬件缺源'
-    empty = [row for row in entries if at(row, 'run.conditions.suite') == 'travel']
+    assert batch['status'] == 'candidate', '完整路线加零稳态传送仍被要求重跑'
+    nonlake = copy.deepcopy([row for row in entries if at(row, 'run.conditions.suite') != 'fixed'])
+    for row in nonlake:
+        row['run']['protocol']['scenes'] = ['route', 'standing-travel-direct']
+    assert 'measuredViewportGpuMs' not in batch_results(nonlake, budgets)[0][0]['unjudged'], '无湖边场景的批次仍报湖边未判'
+    empty = copy.deepcopy([row for row in entries if at(row, 'run.conditions.suite') == 'travel'])
     for row in empty:
         row['run']['protocol']['scenes'] = ['standing-travel-direct']
     batch = batch_results(empty, budgets)[0][0]
@@ -160,16 +173,17 @@ def check_waits(root, dictionary, budgets):
     assert item(result, 'continueToWalkSecondsMax')['seconds'] == 1.005
     mismatched = [enter(0, 1, 'started'), enter(1000, 2, 'completed'), event('app.phase', 1005, phase='input-ready')]
     assert item(wait_observations(meta, mismatched, run, budgets), 'immediateNewGameToWalkSecondsMax')['toMs'] is None
-    meta.update(origin='ai', desktop=dict(kind='isolated', isInputDesktop=False))
-    for desktop in (dict(kind='isolated', isInputDesktop=False), dict(kind='interactive', isInputDesktop=True)):
-        meta['desktop'] = desktop
-        for end in (1, 60000):
-            phases = events + [event('app.phase', end, phase='title-input-ready'), event('app.phase', end + 5, phase='input-ready')]
-            phases.sort(key=lambda e: e['monotonicMs'])
-            result = wait_observations(meta, phases, run, budgets)
-            for key in ('warmLauncherToTitleSecondsMax', 'coldLauncherToTitleSecondsMax', 'firstRunLauncherToRealtimeSecondsMax'):
-                value = item(result, key)
-                assert value['seconds'] is not None and value['status'] == 'unjudged' and value['pain'] is None and value['reason']
+    for origin in ('ai', 'play'):
+        meta['origin'] = origin
+        for desktop in (dict(kind='isolated', isInputDesktop=False), dict(kind='interactive', isInputDesktop=True)):
+            meta['desktop'] = desktop
+            for end in (1, 60000):
+                phases = events + [event('app.phase', end, phase='title-input-ready'), event('app.phase', end + 5, phase='input-ready')]
+                phases.sort(key=lambda e: e['monotonicMs'])
+                result = wait_observations(meta, phases, run, budgets)
+                for key in ('warmLauncherToTitleSecondsMax', 'coldLauncherToTitleSecondsMax', 'firstRunLauncherToRealtimeSecondsMax'):
+                    value = item(result, key)
+                    assert value['seconds'] is not None and value['status'] == 'unjudged' and value['pain'] is None and value['reason']
     meta['desktop'] = dict(kind='isolated', isInputDesktop=False)
     missing_exit = item(wait_observations(meta, [], {}, budgets), 'exitSecondsMax')
     assert '终点缺测' in missing_exit['reason'] and '超限' not in missing_exit['reason']
@@ -229,5 +243,127 @@ def check_aba_ruler(root, dictionary, budgets):
 
 
 def check_stopping(root, dictionary, budgets):
-    for check in (check_judgement, check_raw_counts, check_required_sets, check_waits, check_aba_ruler):
+    for check in (check_judgement, check_raw_counts, check_required_sets, check_waits, check_aba_ruler,
+                  check_batch_light, check_render_memory, check_budget_consumers):
         check(root, dictionary, budgets)
+
+
+def playing_sample(dictionary, budgets, rows, scene='route', suite='route', hardware=None):
+    meta = manifest(dictionary, scene)
+    meta['desktop'] = dict(kind='isolated', isInputDesktop=False, windowFocused=False)
+    meta['machine']['vramMiB'] = 1000
+    data = streams(rows, dictionary)
+    data['hw'] = hardware if hardware is not None else [dict(rowKind='nvml', isRenderAdapter=True, monotonicMs=10, wholeGpuMemoryMiB=100)]
+    run = dict(scene=scene, conditions=dict(suite=suite, logicalPauseVerified=True, mainThreadLongStopVerified=True))
+    return summary_for(Path('fixture'), meta, data, dictionary, budgets, run), meta, data
+
+
+def check_batch_light(root, dictionary, budgets):
+    """Regression：单次高轻级率不改状态，路线稀释后只在合计判，零稳态传送不单独阻断。"""
+    policy = budgets['perfAnomalies']
+    rows = [frame(dictionary, i) for i in range(policy['medianMinimumFrames'] + 2)]
+    rows[-1]['frameSetupCpuMs'] = policy['lightCostStutterMs'] + 1
+    noisy = playing_sample(dictionary, budgets, rows)[0][0]
+    raw = noisy['judgement']['pain']
+    assert raw['lightFrames'] == 1 and raw['lightFrames'] * 60000 / raw['steadyDurationMs'] > policy['lightCostStutterFramesPerMinuteMax']
+    assert all(v['status'] == 'measured' for v in noisy['judgement']['requiredChecks'])
+    assert raw['status'] == 'clear' and 'lightFramesPerMinute' not in raw and 'lightLimit' not in raw
+    steady_ms = 60000 / policy['lightCostStutterFramesPerMinuteMax'] + raw['steadyDurationMs']
+    quiet = playing_sample(dictionary, budgets, [frame(dictionary, i) for i in range(int(steady_ms / 10) + 1)], scene='quiet-route')[0][0]
+    direct_rows = [frame(dictionary, i) for i in range(3)]
+    for row in direct_rows:
+        row['contextFlags'] = 1
+    direct = playing_sample(dictionary, budgets, direct_rows, scene='direct', suite='travel')[0][0]
+    assert direct['judgement']['pain']['steadyDurationMs'] == 0
+    assert direct['judgement']['pain']['status'] == 'clear' and all(v['status'] == 'measured' for v in direct['judgement']['requiredChecks'])
+    combined = batch_pain([noisy, quiet, direct], budgets)
+    assert combined['lightFrames'] == 1 and combined['lightExceeded'] is False and combined['status'] == 'clear'
+    assert batch_pain([noisy, direct], budgets)['lightExceeded'] is True
+
+
+def check_render_memory(root, dictionary, budgets):
+    """Regression：第二卡高显存不污染渲染卡异常/必判/峰值/曲线；身份或容量缺测照实重跑。"""
+    hardware = [dict(rowKind='nvml', isRenderAdapter=True, monotonicMs=10, wholeGpuMemoryMiB=100, processVideoMemoryMiB=50),
+                dict(rowKind='nvml', isRenderAdapter=False, monotonicMs=10, wholeGpuMemoryMiB=2000, processVideoMemoryMiB=1500)]
+    result, meta, data = playing_sample(dictionary, budgets, [frame(dictionary, i) for i in range(3)], hardware=hardware)
+    summary, items, _, _ = result
+    assert not any(v['type'] == 'videoMemory' for v in items) and at(summary, 'judgement.pain.status') == 'clear'
+    assert at(summary, 'all.cost.hardware.wholeGpuMemoryMiB.maximum') == 100
+    assert at(summary, 'all.cost.hardware.processVideoMemoryMiB.maximum') == 50
+    curve = bucket_curves(summary, meta, data, 900)
+    column = curve['columns'].index('wholeGpuMemoryMiBMax')
+    assert max(v[column] for v in curve['buckets'] if v[column] is not None) == 100
+    hardware[0]['isRenderAdapter'] = None
+    unknown = playing_sample(dictionary, budgets, [frame(dictionary, i) for i in range(3)], hardware=hardware)[0][0]
+    assert at(unknown, 'all.cost.hardware.wholeGpuMemoryMiB.maximum') is None
+    assert next(v for v in unknown['judgement']['requiredChecks'] if v['key'] == 'videoMemory')['status'] == 'rerun'
+    unknown_curve = bucket_curves(unknown, meta, data, 900)
+    assert all(v[column] is None for v in unknown_curve['buckets'])
+    hardware[0].update(isRenderAdapter=True, wholeGpuMemoryMiB=1000)
+    triggered = playing_sample(dictionary, budgets, [frame(dictionary, i) for i in range(3)], hardware=hardware)[0]
+    assert any(v['type'] == 'videoMemory' for v in triggered[1]) and at(triggered[0], 'judgement.pain.counts.videoMemory') > 0
+    meta['machine']['vramMiB'] = None
+    missing = summary_for(Path('fixture'), meta, data, dictionary, budgets, summary['run'])[0]
+    assert next(v for v in missing['judgement']['requiredChecks'] if v['key'] == 'videoMemory')['status'] == 'rerun'
+
+
+def check_budget_consumers(root, dictionary, budgets):
+    """Regression：同个完整夹具批次，CLI 与真实 G10 读口只消费同一分组档位。"""
+    from perf import distance
+    seed = measured(dictionary, budgets, [frame(dictionary, 0)], dict(suite='fixed'))[0]
+    ruler = next(v for v in seed['budgets'] if v['stop'] is not None)
+    metric, upper, stop = ruler['metric'], ruler['budget'], ruler['stop']
+    for suite in (None, 'unknown', 'travel'):
+        other = measured(dictionary, budgets, [frame(dictionary, 0)], dict(suite=suite))[0]
+        assert not any(v['applicable'] for v in other['budgets'])
+    assert not any(v['unjudged'] for v in seed['budgets']), '非湖边会话凭空产生湖边未判'
+    for value, mismatch, expected in ((stop, False, 'within'), (upper + 1, False, 'above-upper'),
+                                      (upper, False, 'above-stop'), (None, False, 'rerun'),
+                                      (upper, True, 'rerun')):
+        with tempfile.TemporaryDirectory(prefix='uestc-perf-g10-selfcheck-') as temporary:
+            fixture = Path(temporary)
+            out, batch_id, scene = fixture / 'output/perf', 'selfcheck-only', 'lake-default'
+            phase = out / 'runs' / batch_id / 'a1'
+            phase.mkdir(parents=True)
+            entries = []
+            for repeat in (1, 2, 3):
+                identifier = f'fixture-{repeat}'
+                meta = manifest(dictionary, identifier)
+                meta.update(origin='ai', desktop=dict(kind='isolated', isInputDesktop=False, windowFocused=False))
+                meta['build']['commit'] = git(root, 'rev-parse', 'HEAD')[1]
+                if mismatch:
+                    meta['graphics']['preset'] = 'selfcheck-wrong-preset'
+                run = ai_run(scene=scene, batch=batch_id, repetition=repeat)
+                run['conditions'].update(saveAfterSample=True, tuningSelectedMetrics=[scene + '.' + metric])
+                run['coverage'] = {key: dict(observed=1, required=1) for key in ('sampleBegin', 'sampleEnd', 'gpu', 'cpu', 'sample')}
+                run.update(observed=dict(save=dict(reason='Manual', status='Saved', durationMs=1)),
+                           close=dict(completed=True, source='formal-close-task', durationMs=1))
+                source = phase / identifier
+                source.mkdir()
+                (source / 'run.json').write_text(json.dumps(run), encoding='utf-8')
+                data = mark_sample(streams([frame(dictionary, i, gpu=value) for i in range(3)], dictionary), dictionary)
+                entries.append(summary_for(source, meta, data, dictionary, budgets, run)[0])
+            batches, blocked = batch_results(entries, budgets)
+            rebuild_states(entries, root, blocked)
+            batch_states(batches, entries, root)
+            batch = batches[0]
+            table = batch['groups'][0]['phases']['a1']['distanceTable']
+            selected = next(v for v in table if v['metric'] == metric)
+            assert selected['tier'] == expected, selected
+            assert all(v['metric'] not in batch['unjudged'] for v in table)
+            for entry in entries:
+                derived = out / 'derived' / entry['id']
+                derived.mkdir(parents=True)
+                (derived / 'summary.json').write_text(json.dumps(entry), encoding='utf-8')
+            (out / 'index.json').write_text(json.dumps(dict(calc=seed['calc'], batches=batches, sessions=entries, errors=[])), encoding='utf-8')
+            (phase / 'phase.json').write_text(json.dumps(dict(completed=True, status='completed', purpose='baseline',
+                                                             protocol='repeat3', phase='a1', scenes=[scene])), encoding='utf-8')
+            cli = list(distance(out, Namespace(id=batch_id, phase='a1', scene=None)))
+            assert any(line.split(' | ')[1:2] == [metric] and line.endswith(' | ' + expected) for line in cli)
+            script = ". (Join-Path $env:UESTC_SELFCHECK_CODE 'scripts/lib/common.ps1'); . (Join-Path $env:UESTC_SELFCHECK_CODE 'scripts/gates/performance.ps1'); Read-UESTCPerformanceResult -Root $env:UESTC_SELFCHECK_DATA -Batch 'selfcheck-only' -Scenes 'lake-default' -SaveScenes 'lake-default' | ConvertTo-Json -Depth 40 -Compress"
+            execution = subprocess.run(['pwsh', '-NoProfile', '-Command', script], capture_output=True, text=True, encoding='utf-8',
+                                       env=dict(os.environ, UESTC_SELFCHECK_CODE=str(root), UESTC_SELFCHECK_DATA=str(fixture)), check=True)
+            gate = json.loads(execution.stdout)
+            assert {v['Metric']: v['Tier'] for v in gate['CostChecks']} == {v['metric']: v['tier'] for v in table}
+            assert gate['Status'] == ('Incomplete' if expected == 'rerun' else 'Failed' if expected == 'above-upper' else 'Passed'), gate
+            assert len(gate['SaveAndClose']) == len(entries), 'G10 丢失真实 save/close 事实核验'

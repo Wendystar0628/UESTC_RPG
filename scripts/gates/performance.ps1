@@ -25,32 +25,18 @@ function Read-UESTCPerfJson {
 }
 
 function Get-UESTCPerfCostChecks {
-    param($Group, [object[]]$Summaries, [Collections.Generic.List[string]]$Reasons)
+    param($Group, [Collections.Generic.List[string]]$Reasons)
     $scene = Get-UESTCPerfField $Group 'comparisonKey.scene'
-    # G10 consumes upper bounds emitted by the sole analyzer; stop lines are for tuning only.
-    $metrics=@('mainViewportGpuMs','mainViewportCpuMs','frameSetupCpuMs')
-    foreach ($metric in $metrics) {
-        $checks = @($Summaries | ForEach-Object { @(Get-UESTCPerfField $_ 'budgets') | Where-Object { (Get-UESTCPerfField $_ 'metric') -eq $metric } })
-        $value = Get-UESTCPerfField $Group "phases.a1.steady.cost.$metric.p95"
-        if ($checks.Count -ne 3 -or @($checks | Where-Object {
-            (Get-UESTCPerfField $_ 'applicable') -ne $true -or
-            -not (Test-UESTCPerfNumber (Get-UESTCPerfField $_ 'value')) -or
-            -not (Test-UESTCPerfNumber (Get-UESTCPerfField $_ 'budget')) -or
-            (Get-UESTCPerfField $_ 'budget') -le 0 -or
-            (Get-UESTCPerfField $_ 'exceeded') -isnot [bool]
-        }).Count -or -not (Test-UESTCPerfNumber $value)) {
-            $Reasons.Add("${scene}/${metric}: budget conditions or measured cost are unavailable. " +
-                ((@($checks | ForEach-Object { Get-UESTCPerfField $_ 'reason' } | Where-Object { $_ } | Select-Object -Unique)) -join '; '))
-            continue
+    $checks = @(Get-UESTCPerfField $Group 'phases.a1.distanceTable' | Where-Object { $null -ne $_ })
+    if (-not $checks.Count) { $Reasons.Add("${scene}: analyzer has no grouped distance table.") }
+    foreach ($check in $checks) {
+        $metric = Get-UESTCPerfField $check 'metric'
+        $tier = Get-UESTCPerfField $check 'tier'
+        if ($tier -notin @('within','above-stop','above-upper')) {
+            $Reasons.Add("${scene}/${metric}: " + (Get-UESTCPerfField $check 'reason'))
         }
-        $budgets = @($checks | ForEach-Object { $_.budget } | Select-Object -Unique)
-        $sources = @($checks | ForEach-Object { $_.budgetSource } | Select-Object -Unique)
-        if ($budgets.Count -ne 1 -or $sources.Count -ne 1 -or -not $sources[0]) {
-            $Reasons.Add("${scene}/${metric}: analyzer budget differs within the three repetitions.")
-            continue
-        }
-        [pscustomobject]@{ Scene=$scene; Metric=$metric; Value=$value; Budget=$budgets[0];
-            BudgetSource=$sources[0]; Exceeded=($value -gt $budgets[0]) }
+        [pscustomobject]@{ Scene=$scene; Metric=$metric; Value=(Get-UESTCPerfField $check 'value'); Budget=(Get-UESTCPerfField $check 'upper');
+            BudgetSource=(Get-UESTCPerfField $check 'source'); Tier=$tier; Exceeded=($tier -eq 'above-upper') }
     }
 }
 
@@ -112,8 +98,8 @@ function Read-UESTCPerformanceResult {
     if (($actualScenes -join ',') -ne (($Scenes | Sort-Object) -join ',')) { $reasons.Add('Analyzer fixed-scene groups are missing, duplicated or unexpected.') }
     foreach ($group in $groups) {
         if ($null -eq $group) { continue }
-        $summaries = @(Read-UESTCPerfGroup -Perf $perf -PhaseRoot $phaseRoot -Batch $Batch -Group $group -Index $index -SaveScenes $SaveScenes -Reasons $reasons -Sessions $sessions -Timings $timings)
-        foreach ($cost in @(Get-UESTCPerfCostChecks $group $summaries $reasons)) { $costs.Add($cost) }
+        Read-UESTCPerfGroup -Perf $perf -PhaseRoot $phaseRoot -Batch $Batch -Group $group -Index $index -SaveScenes $SaveScenes -Reasons $reasons -Sessions $sessions -Timings $timings | Out-Null
+        foreach ($cost in @(Get-UESTCPerfCostChecks $group $reasons)) { $costs.Add($cost) }
     }
     $uniqueReasons = @($reasons | Select-Object -Unique)
     $exceeded = @($costs | Where-Object { $_.Exceeded })

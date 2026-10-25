@@ -4,7 +4,7 @@
 import math
 import statistics
 from collections import defaultdict
-from perf_model import CALC, at, frame_rate, normalized_gpu_load, number
+from perf_model import CALC, at, frame_rate, is_render_adapter, normalized_gpu_load, number
 
 CURVE_LIMITS = (900, 450, 225, 112, 56)
 HOTFRAME_LIMIT = 1000
@@ -50,6 +50,8 @@ def bucket_curves(summary, manifest, streams, limit):
                     groups[bucket]['normalizedGpuLoad'].append(value)
             for key in allowed:
                 if not number(row.get(key)):
+                    continue
+                if key == 'wholeGpuMemoryMiB' and not is_render_adapter(row):
                     continue
                 if name == 'frames' and ((key == 'dtMs' and not row['_dtValid']) or
                                          (key in PHASE_LABELS and not row['_phaseValid'])):
