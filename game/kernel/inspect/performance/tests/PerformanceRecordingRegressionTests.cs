@@ -6,6 +6,7 @@ using Campus.Contracts.Maps;
 using Campus.Contracts.Perf;
 using Campus.Contracts.Quality;
 using Campus.Contracts.Save;
+using Campus.Contracts.Settings;
 using Campus.Contracts.Startup;
 using Campus.Kernel.Boot;
 using Campus.Kernel.Frame;
@@ -66,6 +67,7 @@ public sealed class PerformanceRecordingRegressionTests
     [TestCase, TestCategory(TestReason.Contract), RequireGodotRuntime]
     public async Task MainThreadSamplingAndRecordingQueueHaveNoManagedAllocation()
     {
+        const int warmupFrames = 2, measuredFrames = 8;
         string root = PerformanceTestSupport.TemporaryDirectory();
         try
         {
@@ -77,24 +79,30 @@ public sealed class PerformanceRecordingRegressionTests
             frames.Enable();
             var diagnostics = new TestDiagnosticLog();
             var recorder = new PerformanceRecordingService(frames, settings, diagnostics, new TestInputRouter(), new RequiredResources(), quality);
-            var camera = new Campus.Camera.ObserverCamera();
+            var camera = new Campus.Camera.ObserverCamera { ProcessMode = Node.ProcessModeEnum.Disabled };
             var walk = new Campus.Camera.Walk.WalkController();
             var stream = new Campus.Kernel.Stream.StreamDirector();
             BindRecordingOwners(quality, camera, walk, stream);
             recorder.AttachViewport(tree.Root, new TestRenderDimensions());
             try
             {
+                KernelServices.Services.Add<IAppFailure>(new TestAppFailure());
+                KernelServices.Services.Add<ITerrainPreparation>(new FlowTerrainPreparation());
+                KernelServices.Services.Add<ITransitDriver>(new FlowTransitDriver());
+                KernelServices.Services.Add<ISettingsStore>(settings);
+                tree.Root.AddChild(camera);
+                if (!camera.IsNodeReady()) throw new InvalidOperationException("The camera did not enter its production ready lifecycle.");
                 var opened = await recorder.InitializeAsync(new BootRunOptions { PerfOutputDirectory = root });
                 if (opened.State != PerfRecordingState.Recording || opened.Fault != PerfFaultCode.None)
                     throw new InvalidOperationException("The actual recording chain did not start.");
                 var context = new FrameContextSample(AppState.Playing, default, false, true, false);
-                var elapsed = new long[TestSamples.PerProperty];
+                var elapsed = new long[measuredFrames];
                 FrameSample gcSample = default;
                 long allocated = 0;
                 ulong lastFrame = 0;
                 int measured = 0;
                 // Await and fixture work stay outside the call being measured. The real event subscriber enqueues it.
-                for (int index = 0; index < TestSamples.PerProperty * 2; index++)
+                for (int index = 0; index < warmupFrames + measuredFrames; index++)
                 {
                     await tree.Root.ToSignal(tree, SceneTree.SignalName.ProcessFrame);
                     if (OS.GetThreadCallerId() != OS.GetMainThreadId())
@@ -102,17 +110,17 @@ public sealed class PerformanceRecordingRegressionTests
                     ulong frame = Engine.GetProcessFrames();
                     lastFrame = frame;
                     frames.Begin(frame, FrameClock.MonotonicMilliseconds);
-                    if (index == TestSamples.PerProperty) GC.Collect(0, GCCollectionMode.Forced, blocking: true);
+                    if (index == warmupFrames) GC.Collect(0, GCCollectionMode.Forced, blocking: true);
                     double now = FrameClock.MonotonicMilliseconds;
                     long beforeBytes = GC.GetAllocatedBytesForCurrentThread();
                     long before = System.Diagnostics.Stopwatch.GetTimestamp();
                     frames.Sample(frame, now, in context, 0, 0, null);
                     long after = System.Diagnostics.Stopwatch.GetTimestamp();
                     long bytes = GC.GetAllocatedBytesForCurrentThread() - beforeBytes;
-                    if (index == TestSamples.PerProperty) gcSample = frames.Latest!.Value;
+                    if (index == warmupFrames) gcSample = frames.Latest!.Value;
                     frames.PreDraw(frame, FrameClock.MonotonicMilliseconds);
                     frames.PostDraw(frame, FrameClock.MonotonicMilliseconds);
-                    if (index < TestSamples.PerProperty) continue;
+                    if (index < warmupFrames) continue;
                     allocated += bytes;
                     elapsed[measured++] = after - before;
                 }
@@ -120,9 +128,9 @@ public sealed class PerformanceRecordingRegressionTests
                 var ended = recorder.LastEndResult;
                 if (measured != elapsed.Length || frames.Latest?.CollectionFrame != lastFrame ||
                     ended is not { Closed: true, Complete: true, Fault: PerfFaultCode.None, DroppedFrames: 0 } ||
-                    ended.WrittenFrames != TestSamples.PerProperty * 2 || diagnostics.Errors.Count != 0)
+                    ended.WrittenFrames != warmupFrames + measuredFrames || diagnostics.Errors.Count != 0)
                     throw new InvalidOperationException("The measured real sampler did not publish and write every queued frame.");
-                AssertRecordedGcDetail(root, ended!, in gcSample);
+                AssertRecordedGcFrame(root, ended!, in gcSample);
                 Array.Sort(elapsed);
                 double microseconds = 1_000_000d / System.Diagnostics.Stopwatch.Frequency;
                 Console.WriteLine($"PERF_RECORDING_OVERHEAD actual-main-thread sampling+enqueue N={measured} allocatedBytes={allocated} " +
@@ -141,19 +149,26 @@ public sealed class PerformanceRecordingRegressionTests
         finally { Directory.Delete(root, true); }
     }
 
-    private static void AssertRecordedGcDetail(string root, PerfSessionEndResult ended, in FrameSample sample)
+    private static void AssertRecordedGcFrame(string root, PerfSessionEndResult ended, in FrameSample sample)
     {
         if (sample.Gc.Gen0Collections == 0)
             throw new InvalidOperationException("The measured sampler did not observe the forced collection.");
+        using var csv = new Microsoft.VisualBasic.FileIO.TextFieldParser(Path.Combine(root, ended.SessionId, "frames.csv"));
+        csv.SetDelimiters(",");
+        string[] columns = csv.ReadFields() ?? throw new InvalidDataException("The recorded frames have no columns.");
+        var rows = new List<string[]>();
+        while (!csv.EndOfData) rows.Add(csv.ReadFields() ?? throw new InvalidDataException("The writer produced an empty frame row."));
         ulong frame = sample.CollectionFrame;
-        var captured = File.ReadLines(Path.Combine(root, ended.SessionId, "events.jsonl")).Select(line => JsonNode.Parse(line)!)
-            .SingleOrDefault(item => item["event"]!.GetValue<string>() == "gc.detail" && item["collectionFrame"]!.GetValue<ulong>() == frame);
-        var payload = captured?["payload"];
-        if (captured is null || payload is null || captured["source"]!.GetValue<string>() != "main" ||
-            captured["monotonicMs"]!.GetValue<double>() != sample.MonotonicMilliseconds || payload["pauseMs"]!.GetValue<double>() != sample.Gc.PauseMilliseconds ||
-            payload["gen0"]!.GetValue<int>() != sample.Gc.Gen0Collections || payload["gen1"]!.GetValue<int>() != sample.Gc.Gen1Collections ||
-            payload["gen2"]!.GetValue<int>() != sample.Gc.Gen2Collections || payload["allocatedBytes"]!.GetValue<long>() != sample.Gc.AllocatedBytes ||
-            payload["managedHeapMiB"]!.GetValue<double>() != sample.Gc.ManagedHeapBytes / 1048576d)
+        var captured = rows.SingleOrDefault(row => row[Array.IndexOf(columns, "collectionFrame")] == PerfFieldDictionary.Csv(frame));
+        var facts = new Dictionary<string, object>
+        {
+            ["monotonicMs"] = sample.MonotonicMilliseconds, ["gcPauseMs"] = sample.Gc.PauseMilliseconds,
+            ["gcGen0"] = sample.Gc.Gen0Collections, ["gcGen1"] = sample.Gc.Gen1Collections,
+            ["gcGen2"] = sample.Gc.Gen2Collections, ["allocatedBytes"] = sample.Gc.AllocatedBytes,
+            ["managedHeapMiB"] = sample.Gc.ManagedHeapBytes / 1048576d
+        };
+        if (captured is null || rows.Count != ended.WrittenFrames ||
+            facts.Any(fact => captured[Array.IndexOf(columns, fact.Key)] != PerfFieldDictionary.Csv(fact.Value)))
             throw new InvalidOperationException("The writer lost the measured collection's original frame facts.");
     }
 

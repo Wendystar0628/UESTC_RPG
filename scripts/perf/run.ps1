@@ -17,6 +17,20 @@ $root=(Resolve-Path (Join-Path $PSScriptRoot '..\..')).Path
 . (Join-Path $root 'scripts\lib\common.ps1')
 . (Join-Path $root 'scripts\lib\start-game.ps1')
 . (Join-Path $PSScriptRoot 'collection-plan.ps1')
+function Publish-CollectionConfirmations($Root, $Id, [string[]]$Sources, [Collections.IDictionary]$RoundRecord) {
+    $failed=$false
+    foreach ($source in $Sources) {
+        try { Publish-CollectionRound $Root $Id $null $null @() $null -ConfirmationRoot $source }
+        catch {
+            $failed=$true
+            if (-not $RoundRecord.Contains('confirmationErrors')) { $RoundRecord['confirmationErrors']=@() }
+            $confirmationError=[ordered]@{ source=$source; error=$_.Exception.ToString() }
+            $RoundRecord.confirmationErrors+=@($confirmationError)
+            Write-Warning $confirmationError.error
+        }
+    }
+    return $failed
+}
 if ($PSCmdlet.ParameterSetName -eq 'Diagnostic') {
     . (Join-Path $PSScriptRoot 'diagnostic-run.ps1')
     Invoke-PerfDiagnostic -Root $root -SessionId $DeepenSession -Tools $DiagnosticTool -EntryIndex $DeepenEntry -BuildLease $BuildLease
@@ -249,16 +263,7 @@ finally {
                 }
             }
             if ($registered) {
-                foreach ($source in $confirmationSources) {
-                    try { Publish-CollectionRound $root $roundId $null $null @() $null -ConfirmationRoot $source }
-                    catch {
-                        $failed=$true
-                        if (-not $roundRecord.Contains('confirmationErrors')) { $roundRecord['confirmationErrors']=@() }
-                        $confirmationError=[ordered]@{ source=$source; error=$_.Exception.ToString() }
-                        $roundRecord.confirmationErrors+=@($confirmationError)
-                        Write-Warning $confirmationError.error
-                    }
-                }
+                if (Publish-CollectionConfirmations $root $roundId $confirmationSources $roundRecord) { $failed=$true }
             }
         } else {
             & python -I -X utf8 (Join-Path $PSScriptRoot 'perf.py') --root $root latest --origin ai --scope cost

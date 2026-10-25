@@ -284,7 +284,7 @@ def check_event_order(root, dictionary, budgets):
         data = streams([frame(dictionary, i) for i in range(2)], dictionary)
         anchor = data['events'][0]
         data['events'] = [{**anchor, 'sequence': sequence, 'monotonicMs': stamp, 'event': event}
-                          for sequence, stamp, event in ((1, 100, 'clock.anchor'), (2, 30, 'gc.detail'),
+                          for sequence, stamp, event in ((1, 100, 'clock.anchor'), (2, 30, 'app.activity'),
                                                          (3, 30, 'hang.begin'), (4, 20, 'record.gap'))]
         write_six(source, manifest(dictionary), data, dictionary)
         loaded = load_session(source, dictionary)[1]

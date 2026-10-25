@@ -15,7 +15,7 @@ public sealed class VegFadeTests
     private static readonly Lazy<SpeciesTable> Table = new(() =>
         SpeciesTable.Parse(File.ReadAllBytes(Path.Combine(RepositoryFixture.Root, "game", "data", "vegetation", "species.json"))));
 
-    [TestCase, TestCategory(TestReason.Contract)]
+    [TestCase, TestCategory(TestReason.Contract), TestCategory("Slow")]
     public void FarStandInIsLightTaggedAndShapedLikeL1()
     {
         var palette = VegetationTestSupport.Palette;

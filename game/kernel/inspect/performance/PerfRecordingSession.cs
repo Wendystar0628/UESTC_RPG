@@ -274,13 +274,6 @@ internal sealed class PerfRecordingSession
             {
                 WriteGap(outputs["events"], "frames", slot.Gap);
                 PerfFrameWriter.Write(outputs["frames"], _dictionary, slot);
-                var sample = slot.Sample;
-                var gc = sample.Gc;
-                if (gc.Gen0Collections != 0 || gc.Gen1Collections != 0 || gc.Gen2Collections != 0 || gc.PauseMilliseconds > 0)
-                    WriteEvent(outputs["events"], "gc.detail", sample.CollectionFrame, sample.MonotonicMilliseconds,
-                        new { pauseMs = gc.PauseMilliseconds, gen0 = gc.Gen0Collections,
-                            gen1 = gc.Gen1Collections, gen2 = gc.Gen2Collections,
-                            allocatedBytes = gc.AllocatedBytes, managedHeapMiB = gc.ManagedHeapBytes / 1048576d }, "main");
                 _writtenFrames++;
                 Frames.Release();
             }

@@ -1,5 +1,5 @@
 {
-  "schema": 8,
+  "schema": 9,
   "authority": "ENG-PERF-DATA",
   "draft": false,
   "encoding": {
@@ -619,17 +619,6 @@
         "missingTiming": "integer",
         "phaseUnavailableFraction": "ratio",
         "timingUnavailableFraction": "ratio"
-      }
-    },
-    "gc.detail": {
-      "owner": "GAME-221",
-      "payloadFields": {
-        "pauseMs": "number",
-        "gen0": "integer",
-        "gen1": "integer",
-        "gen2": "integer",
-        "allocatedBytes": "integer",
-        "managedHeapMiB": "number"
       }
     },
     "producer.failure": {

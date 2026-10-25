@@ -362,6 +362,7 @@ public sealed class SaveLifecycleTests
 
     [TestCase]
     [TestCategory(TestReason.Regression)]
+    [TestCategory("Slow")]
     public async Task ManualSavesCaptureNewThumbnailsImmediatelyAndRotateOnlyTheirOwnPool()
     {
         using var fixture = new SaveLifecycleFixture();

@@ -368,30 +368,26 @@ def check_round_registration(root, dictionary, budgets):
 
 
 def check_confirmation_errors(root):
-    """Regression：执行正式入口的收尾块，多条确认失败保留各自来源与原异常。"""
+    """Regression：逐条确认发布保留所有失败，且不改写完整主轮事实。"""
     script = "'" + str(root / 'scripts/perf/run.ps1').replace("'", "''") + "'"
     command = r"""$ErrorActionPreference='Stop'; $WarningPreference='SilentlyContinue'
 [Console]::OutputEncoding=[Text.UTF8Encoding]::new($false)
 $tokens=$null; $errors=$null
 $ast=[Management.Automation.Language.Parser]::ParseFile(SCRIPT,[ref]$tokens,[ref]$errors)
 if ($errors.Count) { throw ($errors | Out-String) }
-$lifecycle=@($ast.EndBlock.Statements | Where-Object { $_ -is [Management.Automation.Language.TryStatementAst] -and $_.Finally })
-if ($lifecycle.Count -ne 1) { throw 'Collection lifecycle is ambiguous.' }
-$root='fixture'; $roundRoot='fixture'; $roundId='fixture'; $RoundNumber=0; $mainRoot='main'; $sceneIds=@('first','second'); $PreviousRound=$null
-$Mode='formal'; $ConfirmRound=''; $acceptedSources=@(); $completedMainScenes=@('first','second'); $selected=@('first','second')
-$confirmationSources=@('first-confirmation-source','second-confirmation-source')
-$roundRecord=[ordered]@{completed=$true; status='completed'}; $failed=$false; $lease=$null
-$inheritedBakeCache=$env:UESTC_BAKE_CACHE; $registeredMain=$false
-function Write-CollectionJson { param($Path,$Value) }
-function Invoke-UESTCPerfAnalysis { param($Root,$SessionSources) }
-function Exit-UESTCBuildLock { param($Lease) }
+$definition=$ast.Find({param($node) $node -is [Management.Automation.Language.FunctionDefinitionAst] -and $node.Name -eq 'Publish-CollectionConfirmations'},$true)
+if (-not $definition) { throw 'Confirmation publisher function is missing.' }
+. ([scriptblock]::Create($definition.Extent.Text))
+$confirmationSources=@('first-confirmation-source','second-confirmation-source','successful-confirmation-source')
+$roundRecord=[ordered]@{completed=$true; status='completed'; number=0; purpose='baseline'; scenes=@('first','second')}
+$published=@()
 function Publish-CollectionRound {
     param($Root,$Id,$Number,$SourceRoot,$Scenes,$PreviousId,$ConfirmationRoot)
-    if ($ConfirmationRoot) { throw ('Original confirmation failure: ' + $ConfirmationRoot) }
-    $script:registeredMain=$true
+    $script:published+=@($ConfirmationRoot)
+    if ($ConfirmationRoot -ne 'successful-confirmation-source') { throw ('Original confirmation failure: ' + $ConfirmationRoot) }
 }
-. ([scriptblock]::Create(($lifecycle[0].Finally.Statements | ForEach-Object { $_.Extent.Text }) -join "`n"))
-@{registeredMain=$registeredMain; failed=$failed; round=$roundRecord} | ConvertTo-Json -Depth 12 -Compress
+$failed=Publish-CollectionConfirmations 'fixture' 'fixture-round' $confirmationSources $roundRecord
+@{published=$published; failed=$failed; round=$roundRecord} | ConvertTo-Json -Depth 12 -Compress
 """.replace('SCRIPT', script)
     shell = shutil.which('powershell.exe') or shutil.which('powershell') or shutil.which('pwsh')
     assert shell, '确认失败回归需要 PowerShell'
@@ -399,9 +395,11 @@ function Publish-CollectionRound {
                             text=True, encoding='utf-8', timeout=30)
     assert result.returncode == 0, (result.stdout, result.stderr)
     observed = json.loads(result.stdout)
-    assert observed['registeredMain'] and observed['failed'], observed
+    assert observed['failed'] and observed['published'] == ['first-confirmation-source', 'second-confirmation-source',
+                                                          'successful-confirmation-source'], observed
     round_record = observed['round']
-    assert round_record['completed'] is False and round_record['status'] == 'incomplete', observed
+    assert round_record['completed'] and round_record['status'] == 'completed', observed
+    assert round_record['number'] == 0 and round_record['purpose'] == 'baseline' and round_record['scenes'] == ['first', 'second'], observed
     failures = round_record['confirmationErrors']
     assert [failure['source'] for failure in failures] == ['first-confirmation-source', 'second-confirmation-source'], observed
     assert all('Original confirmation failure: ' + failure['source'] in failure['error'] for failure in failures), observed
