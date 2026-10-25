@@ -503,6 +503,12 @@
   },
   {
    "docs": [
+    "ENG-PERF-DATA"
+   ],
+   "glob": "game/contracts/Runtime/Rendering/RenderDimensions.cs"
+  },
+  {
+   "docs": [
     "ENG-PERF-LIGHT"
    ],
    "glob": "game/contracts/Runtime/Rendering/ShadowSettings.cs"
@@ -1997,6 +2003,12 @@
     "WF-RULE"
    ],
    "glob": "scripts/build/**"
+  },
+  {
+   "docs": [
+    "ENG-PERF-DATA"
+   ],
+   "glob": "scripts/build/fingerprints/BuildIdentity.cs"
   },
   {
    "docs": [

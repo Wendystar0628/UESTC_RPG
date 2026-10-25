@@ -10,7 +10,7 @@ related: [ENG-PERF-MEASURE, ENG-PERF-ADAPT, ENG-GATES, SYS-GRAPHICS]
 contracts: []
 data: ["output/perf/", "game/data/perf-fields.json"]
 gates: []
-paths: ["scripts/perf/**", "game/data/perf-fields.json"]
+paths: ["scripts/perf/**", "game/data/perf-fields.json", "game/contracts/Runtime/Rendering/RenderDimensions.cs", "scripts/build/fingerprints/BuildIdentity.cs"]
 ---
 # ENG-PERF-DATA · 性能数据与分析
 
@@ -73,7 +73,7 @@ paths: ["scripts/perf/**", "game/data/perf-fields.json"]
 
 每个会话一个目录，作者与 AI 写同一套六件（DECISION-328）：
 
-- `manifest.json` 会话清单：构建、软硬件、显示与窗口、所在桌面、帧节奏、画质请求值与生效值、启动参数、运行时预算与字段字典快照、时钟锚点，条目以 `perf-fields.json` 为准；中途变化记事件，会话结束最后原子发布。
+- `manifest.json` 会话清单：构建、软硬件、显示与窗口、所在桌面、帧节奏、画质请求值与生效值、启动参数、运行时预算与字段字典快照、时钟锚点，条目以 `perf-fields.json` 为准；中途变化记事件，会话结束最后原子发布。构建身份（提交、是否有未提交改动、程序集 MVID）取自原生构建成功时写下的旁文件；AI 正式采样在开始那一刻冻结显示、渲染尺寸、画质与帧节奏条件；必填条目取不到，该次运行标未完成（DECISION-353）。
 - `frames.csv`：逐帧样本，每个采集帧一行。
 - `samples.csv`：2 Hz 慢采样（位姿、模式、世界、内存与进程 CPU）。
 - `hw.csv`：1 Hz 硬件样本；能耗与限频时间记区间增量，各限频时间可重叠、不相加。
