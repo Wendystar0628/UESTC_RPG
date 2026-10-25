@@ -528,7 +528,9 @@ def deepen(items, manifest):
                           and (LEVELS[a['level']] >= 2 or a['type'] == 'costSpike'))
     for item in items:
         key = (item['type'], item.get('metric'), item.get('phase'))
-        if item['level'] != 'severe' and (not item['attributionAvailable'] or unexplained[key] < DEEPEN_REPEAT_COUNT):
+        # ENG-PERF-MEASURE: budgetExceeded already carries budget_checks' judged upper breach.
+        gpu_budget = item['type'] == 'budgetExceeded' and item.get('metric') == 'mainViewportGpuMs'
+        if not gpu_budget and item['level'] != 'severe' and (not item['attributionAvailable'] or unexplained[key] < DEEPEN_REPEAT_COUNT):
             continue
         if any(r['type'] == item['type'] and r['metric'] == item.get('metric') and r['phase'] == item.get('phase') for r in result):
             continue
@@ -539,7 +541,8 @@ def deepen(items, manifest):
         result.append(dict(type=item['type'], metric=item.get('metric'), phase=phase, tools=tools,
                            firstFrame=item['firstFrame'], lastFrame=item['lastFrame'],
                            scene=manifest.get('scene'), poseArgs=args,
-                           reason='严重级' if item['level'] == 'severe' else '同会话反复且无事件原因',
+                           reason='已测主视口 GPU P95 超过预算上沿' if gpu_budget else
+                           '严重级' if item['level'] == 'severe' else '同会话反复且无事件原因',
                            command="powershell.exe -NoProfile -Command \"& 'scripts/perf/run.ps1' -DeepenSession '" + str(manifest['id']).replace("'", "''") +
                            "' -DeepenEntry " + str(len(result)) + " -DiagnosticTool " + ','.join("'" + tool + "'" for tool in tools) + '\"',
                            commandState='ready'))

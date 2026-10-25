@@ -108,7 +108,7 @@ def budget_items(summary, frames, budgets):
     return result
 
 
-def summary_for(directory, manifest, streams, dictionary, budgets, run):
+def summary_for(directory, manifest, streams, dictionary, budgets, run, diagnosed=()):
     scope, reason = scope_of(manifest)
     key, labels, missing = comparison_key(manifest, run)
     window, sampling_reasons = sample_window(manifest, streams, run) if streams is not None else (None, [])
@@ -171,7 +171,11 @@ def summary_for(directory, manifest, streams, dictionary, budgets, run):
         item['bottleneck'] = next((w['bottleneck'] for w in windows if w['fromMs'] <= item['fromMs'] <= w['toMs']), None) if scope == 'full' else None
     merged = merge_anomalies(items)
     # Repeated clusters are counted before truncating the human-facing anomaly list.
-    summary['deepen'] = deepen(merged, {**manifest, 'scene': key['scene']})
+    # ENG-PERF-MEASURE: completed diagnostics suppress plans, never the anomaly facts.
+    cluster_prefix = (at(manifest, 'build.commit'), key['scene'])
+    pending = [item for item in merged if cluster_prefix +
+               (item['type'], item.get('metric'), item.get('phase')) not in diagnosed]
+    summary['deepen'] = deepen(pending, {**manifest, 'scene': key['scene']})
     for item in summary['deepen']:
         frame = next((f for f in frames if f['collectionFrame'] == item['firstFrame']), None)
         item['sourceSessionDirectory'] = str(directory)
@@ -228,13 +232,68 @@ def write_hotframes(path, frames, items, dictionary, radius):
     return [frames[index] for index in sorted(selected)]
 
 
-def source_stamp(directory, dictionary, budgets, run_path):
+def completed_diagnostic_clusters(directories):
+    """Read successful existing reports and their declared attachments, without reading raw streams."""
+    sources = {Path(directory).resolve() for directory in directories}
+    completed = set()
+    for directory in sorted(sources):
+        report_path = directory / 'diagnostic.json'
+        if not report_path.is_file():
+            continue
+        try:
+            report = read_json(report_path)
+            if (report.get('purpose') != 'diagnostic' or report.get('status') != 'valid'
+                    or at(report, 'actualCollector.status') != 'completed'
+                    or at(report, 'actualCollector.exitCode') != 0):
+                continue
+            attachments = report.get('attachments')
+            if not isinstance(attachments, list) or not attachments:
+                continue
+            paths = [(directory / name).resolve() for name in attachments]
+            if any(not path.is_relative_to(directory) or not path.is_file() for path in paths):
+                continue
+            condition = report['condition']
+            source = Path(condition['sourceDirectory']).resolve()
+            if source not in sources:
+                continue
+            original = read_json(source / 'manifest.json')
+            captured = read_json(directory / 'manifest.json')
+            source_run, _ = session_run(source)
+            commit, scene = at(original, 'build.commit'), source_run.get('scene')
+            entry = condition['entry']
+            if (not commit or at(captured, 'build.commit') != commit
+                    or original.get('status') != 'closed' or original.get('complete') is not True
+                    or captured.get('status') != 'closed' or captured.get('complete') is not True
+                    or original.get('id') != condition.get('sourceSession')
+                    or report.get('sourceSession') != original.get('id')
+                    or not scene or condition.get('scene') != scene or entry.get('scene') != scene
+                    or not entry.get('type')):
+                continue
+            completed.add((commit, scene, entry['type'], entry.get('metric'), entry.get('phase')))
+        except (OSError, ValueError, KeyError, TypeError):
+            # Incomplete or unreadable evidence cannot suppress a diagnostic request.
+            continue
+    return completed
+
+
+def source_stamp(directory, dictionary, budgets, run_path, diagnosed=()):
     paths = [manifest_path(directory)] + [directory / s['file'] for s in dictionary['streams'].values()]
     if run_path:
         paths.append(run_path)
+    clusters = []
+    if diagnosed:
+        try:
+            manifest = read_json(manifest_path(directory))
+            run = read_json(run_path) if run_path else {}
+            prefix = (at(manifest, 'build.commit'), run.get('scene'))
+            clusters = sorted((list(key[2:]) for key in diagnosed if key[:2] == prefix), key=repr)
+        except (OSError, ValueError, KeyError, TypeError):
+            # The normal session reader still owns and caches malformed-source failures.
+            pass
     return dict(files={str(path): [path.stat().st_size, path.stat().st_mtime_ns] for path in paths if path.is_file()},
                 schema=dictionary['schema'], budgets=budgets,
-                contextFlags=dictionary['contextFlags'], nonSteadyRules=dictionary['nonSteadyRules'])
+                contextFlags=dictionary['contextFlags'], nonSteadyRules=dictionary['nonSteadyRules'],
+                diagnosedClusters=clusters)
 
 
 def repository_state(root):
@@ -290,6 +349,7 @@ def analysis_needed(root=ROOT, output=None, author=None, index=None, dictionary=
     budgets = budgets if budgets is not None else read_json(root / 'budgets.json')
     rounds = read_rounds(out)
     directories = discover(out, author, [str(source) for row in rounds for source in round_sources(row)])
+    diagnosed = completed_diagnostic_clusters(directories)
     sources = {str(directory) for directory in directories}
     if any(entry.get('source') not in sources for entry in index.get('sessions', []) + index.get('errors', [])):
         return True
@@ -300,7 +360,7 @@ def analysis_needed(root=ROOT, output=None, author=None, index=None, dictionary=
                 if not readable or (manifest_path(directory).name == 'manifest.pending.json' and not (directory / '.lock').is_file()):
                     continue
                 available = True
-                stamp = source_stamp(directory, dictionary, budgets, session_run_path(directory))
+                stamp = source_stamp(directory, dictionary, budgets, session_run_path(directory), diagnosed)
                 if not processed_input(out, directory, stamp, index.get('errors', []), sources):
                     return True
         except OSError:
@@ -344,6 +404,7 @@ def analyze_all(root=ROOT, output=None, author=None, round_request=None, preview
         proposed = prepare_round(rounds, **round_request) if round_request is not None else None
         projected_rounds = ([row for row in rounds if row['id'] != proposed['id']] + [proposed]) if proposed else rounds
         directories = discover(out, author, [str(source) for row in projected_rounds for source in round_sources(row)])
+        diagnosed = completed_diagnostic_clusters(directories)
         sources = {str(directory) for directory in directories}
         for directory in directories:
             stamp, identifier, owner = None, None, None
@@ -353,7 +414,7 @@ def analyze_all(root=ROOT, output=None, author=None, round_request=None, preview
                                         and not (directory / '.lock').is_file()):
                         skipped.append(str(directory))
                         continue
-                    stamp = source_stamp(directory, dictionary, budgets, session_run_path(directory))
+                    stamp = source_stamp(directory, dictionary, budgets, session_run_path(directory), diagnosed)
                     prior_errors = prior_index.get('errors', [])
                     if processed_input(out, directory, stamp, prior_errors, sources):
                         errors.extend(error for error in prior_errors if error.get('source') == str(directory))
@@ -368,7 +429,7 @@ def analyze_all(root=ROOT, output=None, author=None, round_request=None, preview
                                            calc=CALC, inputStamp=stamp))
                         continue
                     manifest, streams = load_session(directory, dictionary)
-                    summary, items, frames, hwfast = summary_for(directory, manifest, streams, dictionary, budgets, run)
+                    summary, items, frames, hwfast = summary_for(directory, manifest, streams, dictionary, budgets, run, diagnosed)
                     write_session(out, summary, items, frames, hwfast, dictionary, stamp, budgets, manifest, streams)
                     changed.append(summary)
             except OSError as error:

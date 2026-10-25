@@ -1,5 +1,5 @@
 {
-  "calc": 14,
+  "calc": 15,
   "authority": "ENG-PERF-DATA",
   "events": "Validate strictly increasing sequence in recorded order, then stable-sort by (monotonicMs, sequence) for cross-producer event association; other streams still require nondecreasing time",
   "summary": {
@@ -25,8 +25,8 @@
     "coverage": "Per-stream state and rows, per-field non-null fraction; 0..1 or null",
     "validity": "Only affected fields disabled; hardware loss does not disable engine metrics",
     "median": "Prior valid steady frames in the same scene and caliber; nonsteady/gap rows do not enter or clear the window; scene/effective quality/output-size changes reset it",
-    "deepen": "Runnable powershell.exe command with actual DeepenEntry and entry-specific DiagnosticTool; source poseArgs/conditions retained; no placeholder runner state",
-    "inputStamp": "Current calc, schema, file size/mtime, budget snapshot and current context rules; no checksum",
+    "deepen": "Runnable powershell.exe command with actual DeepenEntry and entry-specific DiagnosticTool; source poseArgs/conditions retained; no placeholder runner state. A measured mainViewportGpuMs upper breach emitted by budget_checks is sufficient for gpu-profile/Nsight. Suppress an already completed request only for matching actual commit, scene and type/metric/phase with successful diagnostic collector exit and existing declared attachments; anomaly facts remain visible.",
+    "inputStamp": "Current calc, schema, file size/mtime, budget snapshot and current context rules; no checksum. Include only successful diagnosed type/metric/phase keys relevant to this session's actual commit and scene.",
     "judgement": "Per-session pain counts and required checks; scene confirmation keeps worse pain counts and one real rate sample. Only round route+travel totals judge light rate. Missing required facts leave acceptance unjudged while measured cost changes remain available.",
     "waits": "Whole-session command endpoints; missing endpoints stay missing. Startup targets are unjudged for every session until the actual double-click launcher start is recorded.",
     "streamFacts": "Source event count/latest snapshot for stream.tileChanged, bake.cache, map.arrival; no duplicate stream-statistics owner"
