@@ -2031,7 +2031,7 @@
 
 ## REG-DECISIONS-SYSTEMS · 系统与工程决策
 
-`docs/registry/REG-DECISIONS-SYSTEMS-系统与工程决策.md` · 29.2k 字 · 界面、存档、音频、性能与画面设置、工程五个领域的已定决策
+`docs/registry/REG-DECISIONS-SYSTEMS-系统与工程决策.md` · 29.1k 字 · 界面、存档、音频、性能与画面设置、工程五个领域的已定决策
 关键词：决策、系统、工程、界面、存档、音频、性能、画面设置、预算、契约
 
 - REG-DECISIONS-SYSTEMS §0 结论 · L21 · 126
@@ -2039,7 +2039,7 @@
 - REG-DECISIONS-SYSTEMS §1 界面 · L29 · 4.6k
 - REG-DECISIONS-SYSTEMS §2 存档 · L65 · 1.9k
 - REG-DECISIONS-SYSTEMS §3 音频 · L85 · 2.2k
-- REG-DECISIONS-SYSTEMS §4 性能与画面设置 · L107 · 10.8k
+- REG-DECISIONS-SYSTEMS §4 性能与画面设置 · L107 · 10.7k
 - REG-DECISIONS-SYSTEMS §5 工程 · L171 · 5.5k
 - REG-DECISIONS-SYSTEMS §6 地图与行走 · L207 · 1.0k
 - REG-DECISIONS-SYSTEMS §7 时间、季节、天气 · L218 · 2.4k
@@ -2074,6 +2074,6 @@
 - REG-GLOSSARY §10 多地图 · L214 · 620
 - REG-GLOSSARY §11 界面 · L226 · 1.4k
 - REG-GLOSSARY §12 音频 · L253 · 1.1k
-- REG-GLOSSARY §13 画面设置与性能 · L274 · 2.8k
-- REG-GLOSSARY §14 工程与流程 · L314 · 2.4k
-- REG-GLOSSARY §15 同名异义 · L351 · 1.8k
+- REG-GLOSSARY §13 画面设置与性能 · L274 · 2.7k
+- REG-GLOSSARY §14 工程与流程 · L313 · 2.4k
+- REG-GLOSSARY §15 同名异义 · L350 · 1.8k

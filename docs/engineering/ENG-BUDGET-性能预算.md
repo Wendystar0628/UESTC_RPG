@@ -64,7 +64,7 @@ paths: ["game/kernel/renderer/geometry/**", "game/kernel/renderer/render-state/*
 
 **楼内视角份额**：镜头在开放室内、室外被遮挡体剔除，不设逐项静态上限，由 G10 的开放室内门厅位姿实测判断，不并入室外最坏视角，也不挤占 §3 室外份额。最坏视角是站在开放楼门厅里朝门外看，总量仍须在预设上限之内。一栋开放楼驻留 ≤ 30 MB、最多 2 栋（WLD-INTERIORS-BUILD §1.1），这是防呆，不是内容上限，超了按 WF-RULE §15 的数量级判断。
 
-**设备档目标**在 `budgets.json` 的 `deviceTargets`、`frameStutter`，G10 对比用：掉帧率、F1 卡顿、浸泡漂移、GPU p95、CPU p95；掉帧与卡顿的定义见 ENG-PERF-DATA §3.1。
+**设备档目标**在 `budgets.json` 的 `deviceTargets`；G10 看主视口 GPU p95、视口 CPU p95 与帧准备，指标定义见 ENG-PERF-DATA §3。
 
 - **开发机**（RTX 4080，原生 4K 精致）单列，不属哪一档：主视口 GPU p95、视口 CPU 渲染 p95 与帧准备 CPU p95 各设上沿，前两项另设停线；分析器的预算对照与 G10 读上沿，停线只供调优判断何时停，越线排进调优、修到停线（DECISION-318、DECISION-348）。5 ms 是主视口 GPU 目标带的中心，不设键、不当停线。
 - **最低档与中档**的目标是按 1080p 的推算值，不用于调优判断。

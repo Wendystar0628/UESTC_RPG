@@ -84,7 +84,7 @@ paths: ["scripts/perf/**", "game/data/perf-fields.json", "game/contracts/Runtime
 
 **来源差别**：清单的 `origin` 区分作者与 AI；AI 运行另有 `run.json`，不另起格式；诊断产物不进记录（ENG-PERF-MEASURE §4）。
 
-**存放**：作者根 `%APPDATA%\UESTC\perf\`，含 `latest.json` 与各会话目录，写入期间会话目录持 `.lock`，只由记录服务读写与修剪；AI 根是主检出的 `output/perf/runs/<来源名>/<场景>/<会话>/`；派生在 `output/perf/derived/<会话>/`（摘要与曲线），另有 `output/perf/index.json`，只由分析器写。
+**存放**：作者根 `%APPDATA%\UESTC\perf\`，含 `latest.json` 与各会话目录，写入期间会话目录持 `.lock`，只由记录服务读写与修剪；AI 根是主检出的 `output/perf/runs/<来源名>/<场景>/<会话>/`；派生在 `output/perf/derived/<会话>/`（摘要），另有 `output/perf/index.json`，只由分析器写。
 
 **根级状态 `latest.json`**：每个输出根一份，只由记录服务原子替换。真正写出会话开始与时钟锚点之后才发布"记录中"；关闭时先原子发布正式 `manifest.json`，再改为"已关闭"。会话是否完成只认正式清单加可独占的锁，不另设完成标记；只剩 `manifest.pending.json` 且锁能独占的按已结束的不完整会话处理。观察台判"正在记录"只读 `latest.json`，不读逐帧文件。
 

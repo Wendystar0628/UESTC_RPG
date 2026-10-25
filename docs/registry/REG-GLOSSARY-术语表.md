@@ -304,10 +304,9 @@ gates: []
 - **交互桌面**：作者正在看、有输入的那块 Windows 桌面；体验口径只认这里的会话（ENG-PERF-DATA §4）。
 - **隔离桌面**：`run.ps1` 在已登录的交互式会话里另建的不可见桌面，AI 采集在这里跑、只判成本（ENG-PERF-MEASURE §2）。
 - **1% low、0.1% low**：最慢 1%、0.1% 帧的平均帧率，样本不足记 null（ENG-PERF-DATA §3.1）。
-- **卡顿分级**：重卡、严重、冻结按 `budgets.json` 的毫秒线分，分析器只给交互桌面会话出重卡每分钟与严重帧数（ENG-PERF-DATA §3.1）。
+- **卡顿分级**：分析器只给交互桌面会话出重卡每分钟与严重帧数，线在 `budgets.json` 的 `perfAnomalies`（ENG-PERF-DATA §3.1）。
 - **五段**（边界 B0–B4）：物理、逻辑、延迟、绘制、尾段，是帧内回调边界之间的墙钟区间，只作关联阶段，不当纯 CPU 成本（ENG-PERF-DATA §3.2）。
 - **受测视口 GPU 合计**：来源与新鲜度已确认的受测视口 GPU 渲染之和，有未确认的就为 null；不是全进程 GPU 忙时（ENG-PERF-DATA §3.2）。
-- **成本卡顿**：成本指标单帧越过 `budgets.json` 的重、严重、冻结绝对线，是明显痛点之一（ENG-PERF-MEASURE §6，DECISION-348）。
 - **合理区间**：开发机成本指标不超过 `budgets.json` 的上沿；越线入选调优的项修到停线（ENG-BUDGET §2，ENG-PERF-MEASURE §6）。
 - **非稳态帧**：转场、读档、新游戏、画面设置生效等期间的帧，不进稳态摘要、不触发自动调节降级（ENG-PERF-DATA §3）。
 
