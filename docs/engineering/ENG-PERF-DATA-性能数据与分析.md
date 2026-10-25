@@ -202,10 +202,9 @@ paths: ["scripts/perf/**", "game/data/perf-fields.json", "game/contracts/Runtime
   - `superseded`：同键下已有更新的有效运行。
   - `partial`：未完成：截断、丢行、覆盖不足、非零退出或超时强杀。
   - `invalid`：作废：采集前提不满足或读回不符（ENG-PERF-MEASURE §2）。
-  - `unsupported`：`schema` 不是当前版本，不再分析。
   - `evidence`：作者会话的固定状态，只定位问题，不当基线。
   - 带未提交改动的实验运行永不成为 `current`。
-- **索引与历史**：`index.json` 列全部会话及其状态；`history.jsonl` 每次分析的会话一行摘要，供其他历史展示读；观察台的性能趋势只读 `index.json` 里各批次组的阶段中位，不从历史自算。
+- **索引与历史**：`index.json` 列全部会话及其状态；`history.jsonl` 每次分析的会话一行摘要，供其他历史展示读；观察台的性能趋势只读分析器的轮次记录，不从历史自算。
 - **作者根**：保留最近若干次，且已关闭会话合计不超过容量上限；不限单次录制长度。只删已关闭、锁可独占的整会话，不碰存档、设置与日志；锁已释放却仍标 open 的会话标 `partial` 后照常过期。
 - **AI 根与派生**：AI 根留最近若干批次与含 `current` 基线的批次，诊断附件另有总量上限；原始删了，派生跟着删，历史行保留；历史按比较组与作者各留若干行。由分析器在每次分析末尾修剪。
 - **清理工具**：`output/perf` 在 `clean-artifacts.py` 的保留名单里。

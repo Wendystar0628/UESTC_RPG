@@ -523,7 +523,7 @@
       }
       el.appendChild(Dash.charts.trend(xs, [
         { key: 'rate', label: '每分钟异常组数', tone: ['perf', 'heavy'], values: pts.map(function (p) { return p.anomaliesPerMinute; }) }
-      ], { height: 150, units: ['次/分钟', ''], gap: true, label: '每个批次阶段的每分钟异常数', caliber: CAL.trend, titles: titles,
+      ], { height: 150, units: ['次/分钟', ''], gap: true, label: '每轮的每分钟异常数', caliber: CAL.trend, titles: titles,
         notes: pts.map(function (p) { return p.anomaliesPerMinute == null ? '缺数：' + (p.anomalyRateReason || '缺测') : Dash.num(p.anomalyRateRuns) + ' 次运行计入'; }) }));
     }
   });
