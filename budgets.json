@@ -49,11 +49,6 @@
     "heavyStutterMs": 50,
     "severeStutterMs": 100
   },
-  "frameStutter": {
-    "route": "F1",
-    "framesAbove50msPerMinuteMax": 2,
-    "framesAbove100ms": 0
-  },
   "cache": {
     "limitBytes": 2684354560,
     "minimumFreeDiskBytes": 1073741824,

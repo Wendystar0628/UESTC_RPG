@@ -2,7 +2,7 @@
 # 产出：output/build/gates/、output/build/test-record.tsv
 # 用法：powershell scripts\gate.ps1 [-Only G1,G2,... [-Full] | -Smoke | -Full] [-Plan] [-Paths <路径...>] [-BaseRef <基线>] [-Map qingshuihe] [-Frames 300]
 #   默认：G1、受影响模块的 G2 和 G4，再加受影响的启动、行走、存档核心专项（核心专项驱动正式生产舞台）
-#   -Plan 只读，只列出会跑什么；-Full 请求保留的 11 道门，没做完的门返回 NotImplemented
+#   -Plan 只读，只列出会跑什么；-Full 请求保留的 10 道门，没做完的门返回 NotImplemented
 #   -Full 可与 -Only 组合限定门禁；选中 G2 时跑全量（含 Slow）及 NativeRender
 #   退出码：0 请求范围内已实现的都通过；1 有失败；2 范围未完成
 [CmdletBinding()]
@@ -313,7 +313,8 @@ if (-not ($Full -or $Smoke -or $Only.Count)) {
 }
 $textOnlyQuick = -not ($Full -or $Smoke -or $Only.Count) -and $changes.Count -gt 0 -and $runtimeChanges.Count -eq 0
 $selected = New-Object 'Collections.Generic.List[string]'
-$gateIds = @('G1','G2','G3','G4','G5','G7','G10','G14','G15','G20','G21')
+# G10 已退出自动门禁，编号不复用；集中测试按 ENG-GATES 用 perf.py latest 读性能指标。
+$gateIds = @('G1','G2','G3','G4','G5','G7','G14','G15','G20','G21')
 if ($Only.Count) { foreach ($id in ($Only -join ',' -split ',')) { if ($id -cnotin $gateIds -and $id -cnotin @('G5Smoke','G15Core','G20Core')) { throw "Unknown gate: $id" }; if (-not $selected.Contains($id)) { $selected.Add($id) } } }
 elseif ($Smoke) { $selected.Add('G5Smoke') }
 elseif ($Full) { foreach ($id in $gateIds) { $selected.Add($id) }; foreach ($id in @('G5Smoke','G15Core','G20Core')) { $selected.Add($id) } }
@@ -531,11 +532,6 @@ foreach ($id in $selected) {
                     $detail = Invoke-UESTCSaveCore -Root $root -Godot $godot -Locks $layout.Locks -Map $Map -SaveTestsAlreadyPassed:$saveSuitesPassed -BuildLease $gateLease
                     $status = $detail.Status
                 }
-            }
-            'G10' {
-                . (Join-Path $PSScriptRoot 'gates/performance.ps1')
-                $detail = Invoke-UESTCPerformanceGate -Root $root
-                $status = $detail.Status
             }
             default { $status = 'NotImplemented'; $detail = 'Centralized or core-specialist gate has no implementation yet; no pre-bake was started.' }
         }

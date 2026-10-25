@@ -117,7 +117,7 @@ perf:      {recording: {since: ISO|null}|null,
 构建 =      {seq: 主线序号|null, dirty: bool|null}
 ```
 
-- `perf.scenes` 一个场景一行，原样投影分析器 `index.json` 的 scenes：values 是最近一次的 metrics（时间取稳态 p95、内存取全程 p95，存档与关闭耗时是单次值），delta 是和同场景上一次的差，previousId 为 null 表示首次；budgets 只含分析器给了预算线的指标，over 由 deltaToBudget>0 得出。metrics 目录只列场景里实际出现的键，中文名与单位由 view 给，五段名取 `scripts/perf/perf_curves.py` 的 PHASE_LABELS。缺测保留 null，不画 0。
+- `perf.scenes` 一个场景一行，原样投影分析器 `index.json` 的 scenes：values 是最近一次的 metrics（时间取稳态 p95、内存取全程 p95，存档与关闭耗时是单次值），delta 是和同场景上一次的差，previousId 为 null 表示首次；budgets 只含分析器给了预算线的指标，over 由 deltaToBudget>0 得出。metrics 目录只列场景里实际出现的键，中文名与单位由 view 给，五段中文名由 view 内置。缺测保留 null，不画 0。
 - `perf.sessions` 是最近 20 个已分析会话、新到旧，totalSessions 是全部条数；build 由记录清单的 commit 对共享主线表得出，不在表中为 null。`sessionErrors` 照读源原文给 source、reason，能确认身份时附 id。
 - attention 仅公开当前 revision 未过目的 items，按 at 降序，未知在末尾；open 等于其条数。
 - hookfeed 四列固定按上述角色顺序，每列 items 为最近 8 次真实有注入的事件，新的在前。rules 与事件列表共读同一次 guard journal：只匹配同轮 people 样本中的当前主会话身份；子代理只取 running=true 的集合，Claude 侧还须属于当前主会话，Codex 侧沿用 people 的主线后代集合。没有在场身份时 rules=null，显示空态；有身份但最新 journal 缺 rulesAt 或 rulesCalls（含字段启用前的历史）则 at/calls/late 全为 null，显示未知，不从旧记录或其他会话补值。两字段齐全时，at 由 journal.rulesAt（最后整套顶层 stdout 成功交付的 Unix 毫秒）转 ISO，calls 原样取 journal.rulesCalls（此后工具数，刚完整交付为 0），不按事件或块名重算。多位在跑子代理取 rulesAt 最早的一位的成对事实，任一位事实未知则整列未知。late 仅由 view 用同轮当前时刻判满 30 分钟；未来到期点交既有 next_expiry，前端仅格式化时间、呈现次数及提示色。
