@@ -1,5 +1,7 @@
 using System.Numerics;
 using Campus.Contracts;
+using Campus.Gen.Geometry;
+using NetTopologySuite.Geometries;
 using Campus.Gen.Maps.Qingshuihe.Core.Library;
 using S = Campus.Gen.Maps.Qingshuihe.Core.LibraryInterior.LibraryInteriorStyle;
 
@@ -82,6 +84,22 @@ internal sealed class LibraryFrame
         var y = FloorY(storey);
         return Plan.Blocks.Where(b => b.Y0 <= y + 0.05f && b.Y1 >= y + 1f);
     }
+
+    /// <summary>
+    /// The storey's space footprint: the outline of the union of <see cref="BlocksAt"/>, the same blocks the shell interior lays
+    /// floors in. A storey's space is one ring (StoreyInfo), so its blocks must join into one polygon; the union's holes are only
+    /// the centimetre seams where neighbouring source rings nearly meet, not spaces, and the outline closes them.
+    /// </summary>
+    public IReadOnlyList<Vector2> Footprint(int storey)
+    {
+        var union = Factory.CreateMultiPolygon(BlocksAt(storey).Select(b => Factory.CreatePolygon(
+            b.Ring.Append(b.Ring[0]).Select(p => new Coordinate(p.X, p.Y)).ToArray())).ToArray()).Union();
+        if (union is not Polygon polygon)
+            throw new InvalidDataException($"Library storey {storey}'s blocks do not join into one footprint ({union.GeometryType}).");
+        return PlanRings.OpenRing(polygon.ExteriorRing.Coordinates.Select(c => new Vector2((float)c.X, (float)c.Y)));
+    }
+
+    private static readonly GeometryFactory Factory = new();
 
     /// <summary>Whether a block also stands in the next storey (otherwise its roof is this storey's ceiling).</summary>
     public bool Continues(Block block, int storey) => storey < Storeys && block.Y1 >= FloorY(storey + 1) + 1f;

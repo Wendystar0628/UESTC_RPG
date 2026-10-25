@@ -153,7 +153,7 @@ public sealed class LibraryInteriorProvider : IInteriorProvider, IInteriorCatalo
     private static InteriorLayout LibraryLayout(BuildContext ctx, FeatureId id, CatalogState catalog, IReadOnlyList<EntranceDecl> entrances)
     {
         var f = LibraryFrame.Of(ctx);
-        var storeys = Enumerable.Range(1, f.Storeys).Select(k => new StoreyInfo(k, f.FloorY(k), f.TopY(k) - f.FloorY(k), f.Core.Ring)).ToArray();
+        var storeys = Enumerable.Range(1, f.Storeys).Select(k => new StoreyInfo(k, f.FloorY(k), f.TopY(k) - f.FloorY(k), f.Footprint(k))).ToArray();
         var zones = new List<ZoneVolume>();
         ZoneVolume Zone(int storey, int index, ZoneKind kind, IReadOnlyList<Vector2> ring) => new(storey, storey * 100 + index, kind, ring,
             S.LightChannel, StableHash.Hash32(ctx.WorldSeed, id.Value, "library.light", storey.ToString(CultureInfo.InvariantCulture),

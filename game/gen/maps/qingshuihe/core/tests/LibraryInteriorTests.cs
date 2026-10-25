@@ -2,7 +2,10 @@ using System.Reflection;
 using System.Text.Json;
 using Campus.Contracts;
 using Campus.Contracts.Audio;
+using Campus.Gen.Geometry;
+using Campus.Gen.Maps.Qingshuihe.Core.Library;
 using Campus.Gen.Maps.Qingshuihe.Core.LibraryInterior;
+using System.Numerics;
 using GdUnit4;
 using Campus.Tests;
 
@@ -67,6 +70,30 @@ public sealed class LibraryInteriorTests
         if (floors.Contains(1) && floors.Contains(2))
             AssertThat(provider.CollisionStorey(ctx, CoreIds.Library, 1).Any(c => c is RampCollider { Tag: SurfaceTag.Stair }))
                 .OverrideFailureMessage("1F reaches 2F by stair").IsTrue();
+    }
+
+    /// <summary>
+    /// The 1F cafe door opens into the podium, outside the core: its inside point lies in the 1F storey footprint and in a frozen
+    /// open indoor area, so walking in through it is judged interior (the footprint once stopped at the core ring).
+    /// </summary>
+    [TestCase, TestCategory(TestReason.Regression)]
+    [TestCategory("Slow")]
+    public void CafeDoorInsidePointIsInTheOpenFirstFloor()
+    {
+        var world = RealMapFixture.Load().World;
+        var frame = LibraryFrame.Of(world);
+        var bay = LibraryShell.From(world)!.CafeDoor ?? throw new InvalidOperationException("Expected: the 1F cafe door");
+        var entry = world.Interiors.Get(CoreIds.Library) ?? throw new InvalidOperationException("Expected: the library index entry");
+        var door = entry.Entrances.MinBy(e => Vector3.Distance(e.Center, bay.Origin))!;
+        var inside = new Vector2(door.Inside.X, door.Inside.Z);
+        var podium = frame.Plan.CafeFace!.Value.Piece.Block;
+        AssertThat(!PlanRings.PointInRing(inside, frame.Core.Ring) && PlanRings.PointInRing(inside, podium.Ring))
+            .OverrideFailureMessage("trigger: the cafe door's inside point is in the podium, outside the core").IsTrue();
+        var storey = entry.Storeys.Single(s => door.Inside.Y >= s.FloorY && door.Inside.Y < s.FloorY + s.Height);
+        AssertThat(PlanRings.PointInRing(inside, storey.Footprint))
+            .OverrideFailureMessage($"storey {storey.Index} footprint holds the cafe door's inside point").IsTrue();
+        AssertThat(world.Interiors.AreaAt(CoreIds.Library, door.Inside) is { Kind: InteriorOpenPartKind.IndoorFloor } area && area.Index == storey.Index)
+            .OverrideFailureMessage("the cafe door's inside point is in an open indoor area of its storey").IsTrue();
     }
 
     [TestCase, TestCategory(TestReason.Regression)]
