@@ -110,6 +110,25 @@ def overview(summary):
                ('掉帧比例 / 0–1', at(summary, 'all.experience.droppedFrameFraction')),
                ('GPU 占用均值 / 0–1', at(summary, 'all.experience.gpuUtilFraction'))]
     yield from table(['指标', '值'], metrics)
+    yield from table(['关联墙钟段 / ms（不是纯 CPU）', 'N', 'p50', 'p95', 'p99', '最大'],
+                     ((section + '.' + metric, *(at(summary, section + '.cost.' + metric + '.' + key)
+                                                 for key in ('n', 'p50', 'p95', 'p99', 'maximum')))
+                      for section in ('all', 'steady') for metric in ('physMs', 'procMs', 'lateMs')))
+    baseline = summary.get('baselineReadout')
+    if baseline is not None:
+        yield '静置读口：' + cell(baseline.get('status')) + '；原因：' + cell(baseline.get('reasons'))
+        yield '静置取帧：' + cell(baseline.get('selection'))
+        coverage_counts = list((baseline.get('counts') or {}).items())
+        for offset in range(0, len(coverage_counts), 4):
+            yield '静置完整性：' + cell(dict(coverage_counts[offset:offset + 4]))
+        yield '静置采样段：' + cell(baseline.get('sampleWindow'))
+        yield from table(['静置帧间隔 / ms', 'N', 'p50', 'p95', 'p99', '最大'],
+                         [('dtMs', *(at(baseline, 'dtMs.' + key) for key in ('n', 'p50', 'p95', 'p99', 'maximum')))])
+        yield ('静置严重帧：' + cell(baseline.get('severeFrameCount')) + '；严格超过 / ms：' +
+               cell(baseline.get('severeThresholdMs')) + '；来源：' + cell(baseline.get('thresholdSource')))
+        yield cell(baseline.get('note'))
+    else:
+        yield '静置读口：缺值；未派生完整静置依据，逻辑段停顿与主线程长停不能据此启用。'
     if summary.get('scopeReason'):
         yield '体验缺值原因：' + summary['scopeReason']
     for check in summary.get('budgets', []):

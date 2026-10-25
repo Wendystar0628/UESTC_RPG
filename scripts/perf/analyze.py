@@ -14,7 +14,7 @@ from pathlib import Path
 # Python -I excludes the script directory; resolve only this repository-owned module directory.
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 sys.dont_write_bytecode = True
-from perf_model import (CALC, COSTS, PHASES, at, costs, experience, load_session, manifest_path, number,
+from perf_model import (CALC, COSTS, PHASES, at, baseline_readout, costs, experience, load_session, manifest_path, number,
                         prepare_frames, read_json, rolling_medians, scope_of, target_ms)
 from perf_anomalies import (LEVELS, MAX_PER_TYPE, annotate, anomaly, budget_checks,
                            deepen, frame_anomalies, hang_anomalies, merge_anomalies, session_judgement,
@@ -136,9 +136,13 @@ def summary_for(directory, manifest, streams, dictionary, budgets, run, diagnose
                    recording={key: manifest.get(key) for key in ('status', 'complete', 'fault', 'endReason', 'streams')},
                    eventDelivery=event_delivery(whole_streams['events']) if whole_streams is not None else None,
                    units=dict(frame='ms', memory='MiB', fractions='0..1', power='W', frequency='MHz', temperature='degC'))
+    if streams is not None:
+        frames, events = streams['frames'], streams['events']
+        summary['baselineReadout'] = baseline_readout(frames, manifest, run, budgets, window, whole_streams['frames'])
+    else:
+        summary['baselineReadout'] = baseline_readout([], manifest, run, budgets, window, [])
     if streams is None or sampling_reasons:
         return summary, [], [], []
-    frames, events = streams['frames'], streams['events']
     viewport_fields = tuple(sorted({key for f in frames for key in f['_viewportCpuFields']}))
     medians = rolling_medians(frames, ('dtMs',) + COSTS + PHASES + viewport_fields, budgets['perfAnomalies'])
     annotate(frames, events, medians, budgets['perfAnomalies'])

@@ -63,6 +63,100 @@ public sealed class PerformanceRecordingRegressionTests
             throw new InvalidOperationException("The first registered-viewport frame was dropped or truncated.");
     }
 
+    [TestCase, TestCategory(TestReason.Contract), RequireGodotRuntime]
+    public async Task MainThreadSamplingAndRecordingQueueHaveNoManagedAllocation()
+    {
+        string root = PerformanceTestSupport.TemporaryDirectory();
+        try
+        {
+            await using var settings = new SettingsStore(Path.Combine(root, "settings.json"));
+            var catalog = new QualityCatalog(File.ReadAllText(RepositoryFixture.FilePath("game", "data", "quality-presets.json")));
+            await using var quality = new QualityService(catalog, new GraphicsSettingsStore(settings, catalog));
+            var tree = (SceneTree)Engine.GetMainLoop();
+            using var frames = new FrameStatistics(tree.Root);
+            frames.Enable();
+            var diagnostics = new TestDiagnosticLog();
+            var recorder = new PerformanceRecordingService(frames, settings, diagnostics, new TestInputRouter(), new RequiredResources(), quality);
+            var camera = new Campus.Camera.ObserverCamera();
+            var walk = new Campus.Camera.Walk.WalkController();
+            var stream = new Campus.Kernel.Stream.StreamDirector();
+            BindRecordingOwners(quality, camera, walk, stream);
+            recorder.AttachViewport(tree.Root, new TestRenderDimensions());
+            try
+            {
+                var opened = await recorder.InitializeAsync(new BootRunOptions { PerfOutputDirectory = root });
+                if (opened.State != PerfRecordingState.Recording || opened.Fault != PerfFaultCode.None)
+                    throw new InvalidOperationException("The actual recording chain did not start.");
+                var context = new FrameContextSample(AppState.Playing, default, false, true, false);
+                var elapsed = new long[TestSamples.PerProperty];
+                FrameSample gcSample = default;
+                long allocated = 0;
+                ulong lastFrame = 0;
+                int measured = 0;
+                // Await and fixture work stay outside the call being measured. The real event subscriber enqueues it.
+                for (int index = 0; index < TestSamples.PerProperty * 2; index++)
+                {
+                    await tree.Root.ToSignal(tree, SceneTree.SignalName.ProcessFrame);
+                    if (OS.GetThreadCallerId() != OS.GetMainThreadId())
+                        throw new InvalidOperationException("Sampling overhead must be measured on the engine main thread.");
+                    ulong frame = Engine.GetProcessFrames();
+                    lastFrame = frame;
+                    frames.Begin(frame, FrameClock.MonotonicMilliseconds);
+                    if (index == TestSamples.PerProperty) GC.Collect(0, GCCollectionMode.Forced, blocking: true);
+                    double now = FrameClock.MonotonicMilliseconds;
+                    long beforeBytes = GC.GetAllocatedBytesForCurrentThread();
+                    long before = System.Diagnostics.Stopwatch.GetTimestamp();
+                    frames.Sample(frame, now, in context, 0, 0, null);
+                    long after = System.Diagnostics.Stopwatch.GetTimestamp();
+                    long bytes = GC.GetAllocatedBytesForCurrentThread() - beforeBytes;
+                    if (index == TestSamples.PerProperty) gcSample = frames.Latest!.Value;
+                    frames.PreDraw(frame, FrameClock.MonotonicMilliseconds);
+                    frames.PostDraw(frame, FrameClock.MonotonicMilliseconds);
+                    if (index < TestSamples.PerProperty) continue;
+                    allocated += bytes;
+                    elapsed[measured++] = after - before;
+                }
+                await recorder.SetRecordingAsync(false);
+                var ended = recorder.LastEndResult;
+                if (measured != elapsed.Length || frames.Latest?.CollectionFrame != lastFrame ||
+                    ended is not { Closed: true, Complete: true, Fault: PerfFaultCode.None, DroppedFrames: 0 } ||
+                    ended.WrittenFrames != TestSamples.PerProperty * 2 || diagnostics.Errors.Count != 0)
+                    throw new InvalidOperationException("The measured real sampler did not publish and write every queued frame.");
+                AssertRecordedGcDetail(root, ended!, in gcSample);
+                Array.Sort(elapsed);
+                double microseconds = 1_000_000d / System.Diagnostics.Stopwatch.Frequency;
+                Console.WriteLine($"PERF_RECORDING_OVERHEAD actual-main-thread sampling+enqueue N={measured} allocatedBytes={allocated} " +
+                    $"p50Us={elapsed[(int)Math.Ceiling(measured * .50) - 1] * microseconds:G4} " +
+                    $"p95Us={elapsed[(int)Math.Ceiling(measured * .95) - 1] * microseconds:G4} " +
+                    $"p99Us={elapsed[(int)Math.Ceiling(measured * .99) - 1] * microseconds:G4} maxUs={elapsed[^1] * microseconds:G4}; elapsed is reported without an invented threshold.");
+                if (allocated != 0)
+                    throw new InvalidOperationException("ENG-PERF-DATA sampling and enqueue allocated managed bytes on the main thread: " + allocated);
+            }
+            finally
+            {
+                try { await recorder.DrainForExitAsync().ConfigureAwait(ConfigureAwaitOptions.ContinueOnCapturedContext | ConfigureAwaitOptions.SuppressThrowing); }
+                finally { camera.Free(); walk.Free(); stream.Free(); }
+            }
+        }
+        finally { Directory.Delete(root, true); }
+    }
+
+    private static void AssertRecordedGcDetail(string root, PerfSessionEndResult ended, in FrameSample sample)
+    {
+        if (sample.Gc.Gen0Collections == 0)
+            throw new InvalidOperationException("The measured sampler did not observe the forced collection.");
+        ulong frame = sample.CollectionFrame;
+        var captured = File.ReadLines(Path.Combine(root, ended.SessionId, "events.jsonl")).Select(line => JsonNode.Parse(line)!)
+            .SingleOrDefault(item => item["event"]!.GetValue<string>() == "gc.detail" && item["collectionFrame"]!.GetValue<ulong>() == frame);
+        var payload = captured?["payload"];
+        if (captured is null || payload is null || captured["source"]!.GetValue<string>() != "main" ||
+            captured["monotonicMs"]!.GetValue<double>() != sample.MonotonicMilliseconds || payload["pauseMs"]!.GetValue<double>() != sample.Gc.PauseMilliseconds ||
+            payload["gen0"]!.GetValue<int>() != sample.Gc.Gen0Collections || payload["gen1"]!.GetValue<int>() != sample.Gc.Gen1Collections ||
+            payload["gen2"]!.GetValue<int>() != sample.Gc.Gen2Collections || payload["allocatedBytes"]!.GetValue<long>() != sample.Gc.AllocatedBytes ||
+            payload["managedHeapMiB"]!.GetValue<double>() != sample.Gc.ManagedHeapBytes / 1048576d)
+            throw new InvalidOperationException("The writer lost the measured collection's original frame facts.");
+    }
+
     [TestCase, TestCategory(TestReason.Regression)]
     public void UnlockedCrashedPendingSessionsParticipateInAuthorRetention()
     {

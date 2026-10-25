@@ -1,5 +1,5 @@
 {
-  "calc": 15,
+  "calc": 16,
   "authority": "ENG-PERF-DATA",
   "events": "Validate strictly increasing sequence in recorded order, then stable-sort by (monotonicMs, sequence) for cross-producer event association; other streams still require nondecreasing time",
   "summary": {
@@ -27,6 +27,7 @@
     "median": "Prior valid steady frames in the same scene and caliber; nonsteady/gap rows do not enter or clear the window; scene/effective quality/output-size changes reset it",
     "deepen": "Runnable powershell.exe command with actual DeepenEntry and entry-specific DiagnosticTool; source poseArgs/conditions retained; no placeholder runner state. A measured mainViewportGpuMs upper breach emitted by budget_checks is sufficient for gpu-profile/Nsight. Suppress an already completed request only for matching actual commit, scene and type/metric/phase with successful diagnostic collector exit and existing declared attachments; anomaly facts remain visible.",
     "inputStamp": "Current calc, schema, file size/mtime, budget snapshot and current context rules; no checksum. Include only successful diagnosed type/metric/phase keys relevant to this session's actual commit and scene.",
+    "baselineReadout": "Formal AI baseline fixed suite only, after the accepted sampleWindow projection; require Playing, confirmed steady context and valid dt. Check complete sample-window source frames before clipping invalid dt, and report excluded non-Playing/non-steady/Begin-crossing intervals, unknown context, invalid dt and gaps. dtMs uses observed valid idle intervals in ms with nearest-rank n/mean/p50/p95/p99/p999/maximum even when incomplete; route/travel/diagnostic/play or unconfirmed sample windows provide no idle evidence. severeThresholdMs comes only from budgets.json.perfAnomalies.severeStutterMs with thresholdSource; severeFrameCount counts all valid idle dt strictly above it only when session/run/frame-stream completeness and zero loss are confirmed, otherwise null; 0 is a measured zero only for a complete sample. Existing all/steady physMs/procMs/lateMs wall-interval distributions are displayed as physical/logical/late context, never pure CPU time or an automatic logical-pause/long-stop enablement.",
     "judgement": "Per-session pain counts and required checks; scene confirmation keeps worse pain counts and one real rate sample. Only round route+travel totals judge light rate. Missing required facts leave acceptance unjudged while measured cost changes remain available.",
     "waits": "Whole-session command endpoints; missing endpoints stay missing. Startup targets are unjudged for every session until the actual double-click launcher start is recorded.",
     "streamFacts": "Source event count/latest snapshot for stream.tileChanged, bake.cache, map.arrival; no duplicate stream-statistics owner"

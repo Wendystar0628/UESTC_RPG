@@ -33,6 +33,11 @@ public sealed class ServiceRegistry
     {
         ObjectDisposedException.ThrowIf(_disposed, this);
         if (_supplied.TryGetValue(service, out var supplied)) return supplied;
+        return ResolveService(service, map);
+    }
+
+    private object ResolveService(Type service, MapId? map)
+    {
         var entry = ForScope(map).SingleOrDefault(item => item.Kind == RegistrationKind.Service && item.Contract == service)
             ?? throw new InvalidOperationException($"Service is not registered: {service.FullName}");
         return Create(entry.Type, map);

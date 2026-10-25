@@ -5,8 +5,8 @@ import copy
 import tempfile
 from pathlib import Path
 from analyze import analyze_all
-from perf_model import prepare_frames, load_session, read_json, at
-from selfcheck_fixtures import manifest, frame, streams, write_six
+from perf_model import prepare_frames, load_session, read_json, at, baseline_readout
+from selfcheck_fixtures import manifest, frame, streams, write_six, ai_run
 
 
 def check_context(root, dictionary, budgets):
@@ -46,6 +46,33 @@ def check_context(root, dictionary, budgets):
         row['contextFlags'] = 0
     prepare_frames(frames, [], events[:1] + events[-2:], dictionary)
     assert all(row['_steady'] for row in frames), '未结束事件或 arrival detached 留下了悬窗'
+
+    meta, run = manifest(dictionary), ai_run()
+    meta['origin'], meta['desktop'] = 'ai', dict(kind='isolated')
+    window = dict(segmentId=run['sampleSegmentId'], fromMs=0, toMs=1000)
+    limit = budgets['perfAnomalies']['severeStutterMs']
+    rows = [frame(dictionary, i, dt=limit) for i in range(3)]
+    prepare_frames(rows, [], [], dictionary)
+    idle = baseline_readout(rows, meta, run, budgets, window, rows)
+    assert idle['status'] == 'measured' and idle['severeFrameCount'] == 0, '严重线相等被当成超过或完整零帧依据丢失'
+    rows[-1]['dtMs'] = limit + 1
+    assert baseline_readout(rows, meta, run, budgets, window, rows)['severeFrameCount'] == 1, '完整静置严重帧未从全部样段行派生'
+    for suite in ('route', 'travel'):
+        moved = copy.deepcopy(run)
+        moved['conditions']['suite'] = suite
+        excluded = baseline_readout(rows, meta, moved, budgets, window, rows)
+        assert excluded['severeFrameCount'] is None and excluded['dtMs']['n'] == 0, '非固定套混入静置依据'
+    for field, value in (('_dtValid', False), ('_gap', True), ('_contextKnown', False)):
+        missing = copy.deepcopy(rows)
+        missing[0][field] = value
+        assert baseline_readout(missing, meta, run, budgets, window, missing)['severeFrameCount'] is None, '缺测或缺口被补成静置严重零帧'
+    outside = copy.deepcopy(rows)
+    outside[-1]['_steady'] = False
+    assert baseline_readout(outside, meta, run, budgets, window, outside)['severeFrameCount'] == 0, '非稳态帧混入静置计数'
+    missing = copy.deepcopy(rows)
+    missing[0]['dtMs'], missing[0]['_dtValid'] = None, False
+    assert baseline_readout(missing[1:], meta, run, budgets, window, missing)['severeFrameCount'] is None, '样段投影丢弃缺测行后把静置当完整'
+    assert baseline_readout(rows, meta, run, budgets, None, rows)['severeFrameCount'] is None, '未确认样段变成已测'
 
 
 def check_window_changes(root, dictionary, budgets):

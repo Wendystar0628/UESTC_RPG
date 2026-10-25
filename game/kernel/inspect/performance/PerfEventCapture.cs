@@ -153,10 +153,6 @@ internal sealed class PerfEventCapture : IDisposable
         if (frame.Phases.Validity != FramePhaseValidity.All) _missingPhases++;
         if (frame.Context.WindowCanDraw && frame.MainViewport.DrewThisFrame != false &&
             (frame.MainViewport.CpuRenderMilliseconds is null || frame.MainViewport.GpuRenderMilliseconds is null)) _missingTiming++;
-        if (frame.Gc.Gen0Collections != 0 || frame.Gc.Gen1Collections != 0 || frame.Gc.Gen2Collections != 0 || frame.Gc.PauseMilliseconds > 0)
-            Emit("gc.detail", new { pauseMs = frame.Gc.PauseMilliseconds, gen0 = frame.Gc.Gen0Collections,
-                gen1 = frame.Gc.Gen1Collections, gen2 = frame.Gc.Gen2Collections,
-                allocatedBytes = frame.Gc.AllocatedBytes, managedHeapMiB = frame.Gc.ManagedHeapBytes / 1048576d }, frame.CollectionFrame, frame.MonotonicMilliseconds);
         return _context.Capture(in frame, _loading.Active, _world.Transition, _arrival is { Done.IsCompleted: false });
     }
 
