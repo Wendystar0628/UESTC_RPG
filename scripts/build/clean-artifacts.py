@@ -33,7 +33,7 @@ from ctypes import wintypes
 ROOT = os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..'))
 OUT = os.path.join(ROOT, 'output')
 BUILD_LOCK = os.path.join(OUT, '.locks', 'build.lock')
-KEEP = {'.locks', 'cache', 'shots', 'pipeline-wheels', 'posters', 'tools', 'prebake_game', 'perf'}  # 性能数据由分析器按会话/批次修剪；其余构建产物照原规则
+KEEP = {'.locks', 'cache', 'shots', 'pipeline-wheels', 'posters', 'tools', 'prebake_game', 'perf'}  # 性能原始数据与分析结果独立保留；其余构建产物照原规则
 CACHE_KEEP = {'bake'}  # output/cache 下长期保留的只有烘焙缓存
 BUILD_ROOTS = ('game', 'scripts', 'pipeline')  # 找已删工程的 bin/obj
 DEPTH = 3

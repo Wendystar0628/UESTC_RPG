@@ -1,6 +1,6 @@
 """计算每个已关闭会话的指标，并按场景发布最近一次 AI 采集与上次差值。
 用法：python -I -X utf8 scripts/perf/analyze.py [--root 仓库] [--author-root 作者perf根]。
-输入：记录器原始流、场景 run.json 与 budgets.json；产出：derived 摘要/曲线和 index.json；原始记录只读。
+输入：记录器原始流、场景 run.json 与 budgets.json；产出：derived 摘要和 index.json；原始记录只读。
 """
 import argparse
 import bisect
@@ -14,7 +14,6 @@ sys.dont_write_bytecode = True
 from perf_model import (CALC, COSTS, PHASES, at, costs, experience, load_session,
                         manifest_path, number, prepare_frames, read_json, target_ms)
 from perf_store import atomic_json, author_root, discover, exclusive, session_run, session_run_path
-from perf_curves import curve_document
 from perf_waits import wait_observations
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -86,7 +85,7 @@ def summary_for(directory, manifest, streams, dictionary, budgets, run):
                               engineVideoMemoryMiB=at(summary, 'all.cost.memory.engineVideoMemoryMiB.p95'))
     summary['metrics'].update(saveDurationMs=at(run, 'observed.save.durationMs'), closeDurationMs=at(run, 'close.durationMs'))
     summary['budgets'] = budget_checks(summary['metrics'], budgets)
-    return summary, selected
+    return summary
 
 
 def source_stamp(directory, dictionary, budgets):
@@ -101,33 +100,10 @@ def source_stamp(directory, dictionary, budgets):
 
 def processed_input(out, directory, stamp):
     path = out / 'derived' / session_id(read_json(manifest_path(directory))['id'])
-    if not (path / 'summary.json').is_file() or not (path / 'curves.json').is_file():
+    if not (path / 'summary.json').is_file():
         return False
     summary = read_json(path / 'summary.json')
     return summary.get('source') == str(directory) and summary.get('inputStamp') == stamp
-
-
-def analysis_needed(root=ROOT, output=None, author=None, index=None, dictionary=None, budgets=None):
-    root = Path(root).resolve()
-    out = Path(output).resolve() if output else root / 'output/perf'
-    author = Path(author).resolve() if author else author_root(root)
-    index = index if index is not None else read_json(out / 'index.json') if (out / 'index.json').is_file() else {}
-    dictionary = dictionary if dictionary is not None else read_json(root / 'game/data/perf-fields.json')
-    budgets = budgets if budgets is not None else read_json(root / 'budgets.json')
-    directories = discover(out, author)
-    for directory in directories:
-        try:
-            with exclusive(directory / '.lock') as readable:
-                if not readable or not (directory / 'manifest.json').is_file():
-                    continue
-                stamp = source_stamp(directory, dictionary, budgets)
-                if not processed_input(out, directory, stamp) and not any(
-                        e.get('source') == str(directory) and e.get('inputStamp') == stamp for e in index.get('errors', [])):
-                    return True
-        except (OSError, ValueError, KeyError, TypeError):
-            continue
-    listed = index.get('sessions', []) + index.get('errors', [])
-    return index.get('calc') != CALC or bool({e['source'] for e in listed} - {str(p) for p in directories})
 
 
 def metric_delta(current, previous):
@@ -191,9 +167,8 @@ def analyze_all(root=ROOT, output=None, author=None):
                             skipped.append(str(directory))
                             continue
                         run, _ = session_run(directory)
-                        summary, selected = summary_for(directory, manifest, streams, dictionary, budgets, run)
+                        summary = summary_for(directory, manifest, streams, dictionary, budgets, run)
                         summary['inputStamp'] = stamp
-                        atomic_json(target / 'curves.json', curve_document(summary, manifest, selected))
                         atomic_json(target / 'summary.json', summary)
                         changed.append(identifier)
                     entries.append(read_json(target / 'summary.json'))
