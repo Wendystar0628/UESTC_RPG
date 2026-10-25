@@ -17,8 +17,9 @@ namespace Campus.Kernel.Post;
 /// Glow runs at the standard level; the finish pass applies the highlight shoulder and vignette.
 /// </summary>
 [KernelNode("post.chain")]
+[KernelService(typeof(IRenderDimensions))]
 [QualityResponsive(Order = 2, Owns = [QualityKnob.RenderScale, QualityKnob.AntiAliasing, QualityKnob.FsrSharpness, QualityKnob.Vignette])]
-public partial class PostChain : Node, IQualityAware, IMapAware, IViewContentReadiness
+public partial class PostChain : Node, IQualityAware, IMapAware, IViewContentReadiness, IRenderDimensions
 {
     private const float FadeSeconds = 0.5f;            // glow level changes fade, never cut
     private const int GlowLevelCount = 2;              // standard glow: two consecutive levels
@@ -46,6 +47,8 @@ public partial class PostChain : Node, IQualityAware, IMapAware, IViewContentRea
     private float _vignette;
     private float _vignetteTarget;
     private bool _vignetteInitialized;
+
+    public RenderDimensions? Latest => _box.Dimensions;
 
     public Exception? Failure => _outline.Failure ?? _finish.Failure;
     public bool IsReady(Pose pose) => _outline.Rendered && _finish.Rendered && _lut is not null;
@@ -97,6 +100,7 @@ public partial class PostChain : Node, IQualityAware, IMapAware, IViewContentRea
     {
         if (change.Has(QualityKnob.RenderScale) || change.Has(QualityKnob.AntiAliasing) || change.Has(QualityKnob.FsrSharpness))
         {
+            _box.InvalidateDimensions();
             var clarity = ViewportClarity.MapClarity(view[QualityKnob.RenderScale], view[QualityKnob.AntiAliasing], view[QualityKnob.FsrSharpness]);
             ViewportClarity.ApplyClarity(GetViewport(), clarity);
         }
@@ -111,10 +115,14 @@ public partial class PostChain : Node, IQualityAware, IMapAware, IViewContentRea
         }
     }
 
-    public void OnMapUnloading(MapId from) { }
+    public void OnMapUnloading(MapId from)
+    {
+        _box.InvalidateDimensions(active: false);
+    }
 
     public void OnMapLoaded(IMapContext ctx)
     {
+        _box.InvalidateDimensions(active: true);
         var rect = ctx.Descriptor.DataRect;
         _mapRect = new Vector4(rect.Min.X, rect.Min.Y, 1f / (rect.Max.X - rect.Min.X), 1f / (rect.Max.Y - rect.Min.Y));
     }
@@ -187,6 +195,7 @@ public partial class PostChain : Node, IQualityAware, IMapAware, IViewContentRea
     {
         var camera = GetViewport().GetCamera3D();
         if (camera == _camera) return;
+        _box.InvalidateDimensions();
         if (_camera is not null && IsInstanceValid(_camera) && _camera.Compositor == _compositor) _camera.Compositor = null;
         _camera = camera;
         if (_camera is not null) _camera.Compositor = _compositor;

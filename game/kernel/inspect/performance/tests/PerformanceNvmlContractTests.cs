@@ -74,7 +74,7 @@ public sealed class PerformanceNvmlContractTests
     {
         string root = PerformanceTestSupport.TemporaryDirectory();
         var dictionary = new PerfFieldDictionary(File.ReadAllText(RepositoryFixture.FilePath("game", "data", "perf-fields.json")));
-        var session = new PerfRecordingSession(root, PerfOrigin.Ai, DateTimeOffset.UnixEpoch, dictionary, new());
+        var session = new PerfRecordingSession(root, PerfOrigin.Ai, DateTimeOffset.UnixEpoch, dictionary, PerformanceTestSupport.SessionManifest());
         try
         {
             if (!await session.Ready) throw new InvalidOperationException("The native-batch writer did not open.");

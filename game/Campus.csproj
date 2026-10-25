@@ -196,4 +196,17 @@ internal static class BuildInfo {
           Condition="'$(DesignTimeBuild)' != 'true' And '$(IsTestProject)' != 'true'">
     <Copy SourceFiles="$(_CampusCodeFingerprintManifest)" DestinationFiles="$(_CampusPublishedCodeFingerprintManifest)" SkipUnchangedFiles="true" />
   </Target>
+  <!-- Build completion, including native no-op builds, owns this detached identity. Git is never a compiler input. -->
+  <Target Name="IncludeCampusBuildIdentity" BeforeTargets="AssignTargetPaths">
+    <ItemGroup>
+      <None Include="$(TargetPath).identity.json" Link="$(TargetFileName).identity.json"
+            CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+    </ItemGroup>
+  </Target>
+  <Target Name="PublishCampusBuildIdentity" AfterTargets="Build" DependsOnTargets="PublishCampusCodeFingerprints"
+          Condition="'$(DesignTimeBuild)' != 'true' And '$(IsTestProject)' != 'true'">
+    <Exec Command="dotnet &quot;@(_CampusCodeFingerprintToolTargetPath)&quot; --build-identity &quot;$(TargetPath)&quot; &quot;$(MSBuildProjectDirectory)/..&quot;"
+          LogStandardErrorAsError="true" StdOutEncoding="utf-8" StdErrEncoding="utf-8" />
+    <ItemGroup><FileWrites Include="$(TargetPath).identity.json" /></ItemGroup>
+  </Target>
 </Project>

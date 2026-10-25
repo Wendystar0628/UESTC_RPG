@@ -110,7 +110,7 @@ public sealed class PerformanceRecordingRegressionTests
             var walk = new Campus.Camera.Walk.WalkController();
             var stream = new Campus.Kernel.Stream.StreamDirector();
             BindRecordingOwners(quality, camera, walk, stream);
-            recorder.AttachViewport(((SceneTree)Engine.GetMainLoop()).Root);
+            recorder.AttachViewport(((SceneTree)Engine.GetMainLoop()).Root, new TestRenderDimensions());
             var failures = new Dictionary<PerfRecordingState, Exception>
             {
                 [PerfRecordingState.Starting] = new InvalidOperationException(),
@@ -140,7 +140,11 @@ public sealed class PerformanceRecordingRegressionTests
                     failures.Values.Any(error => Contains(ended.Error, error)) || Contains(ended.Error, endFailure) ||
                     failures.Keys.Any(state => !observed.Contains(state)) || observed.Contains(PerfRecordingState.Faulted) ||
                     !ReferenceEquals(observedEnd, ended))
-                    throw new InvalidOperationException("Observation failure changed the recording result, skipped a later observer or blocked the queued stop.");
+                    throw new InvalidOperationException("Observation failure changed the recording result, skipped a later observer or blocked the queued stop. Result=" +
+                        recorder.LastEndResult + "; assemblyLocation=" + typeof(PerfManifest).Assembly.Location + "; missingReasons=" +
+                        (recorder.LastEndResult is { Closed: true } rejected
+                            ? JsonNode.Parse(File.ReadAllText(Path.Combine(root, rejected.SessionId, "manifest.json")))?["missingReasons"]?.ToJsonString()
+                            : null));
                 using (var released = new FileStream(Path.Combine(root, ended.SessionId, ".lock"),
                     FileMode.Open, System.IO.FileAccess.ReadWrite, FileShare.None)) { }
                 var manifest = JsonNode.Parse(File.ReadAllText(Path.Combine(root, ended.SessionId, "manifest.json")))!;
@@ -221,7 +225,7 @@ public sealed class PerformanceRecordingRegressionTests
         string root = PerformanceTestSupport.TemporaryDirectory();
         var original = new IOException();
         var dictionary = new PerfFieldDictionary(File.ReadAllText(RepositoryFixture.FilePath("game", "data", "perf-fields.json")));
-        var session = new PerfRecordingSession(root, PerfOrigin.Ai, DateTimeOffset.UnixEpoch, dictionary, new JsonObject());
+        var session = new PerfRecordingSession(root, PerfOrigin.Ai, DateTimeOffset.UnixEpoch, dictionary, PerformanceTestSupport.SessionManifest());
         try
         {
             if (!await session.Ready) throw new InvalidOperationException("The real writer did not open.");

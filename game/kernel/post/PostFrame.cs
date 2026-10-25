@@ -11,6 +11,7 @@ namespace Campus.Kernel.Post;
 /// </summary>
 internal struct PostFrame
 {
+    public long RenderGeneration;
     // Outline (post_outline.glsl)
     public float LineDarken;      // IColorScriptFrame.LineDarkness
     public float Flash;           // lightning flash 0..1: line_darken x 0.7 at full flash (SYS-WEATHER)
@@ -72,13 +73,34 @@ internal sealed class PostFrameBox
     private bool _closed;
     private PostFrame _finishFrame;
     private bool _finishValid;
+    private long _generation;
+    private RenderDimensions? _dimensions;
+    private bool _dimensionsActive;
+
+    public RenderDimensions? Dimensions { get { lock (_gate) return _dimensions; } }
+
+    public void PublishDimensions(long generation, in RenderDimensions dimensions)
+    {
+        lock (_gate)
+            if (!_closed && _dimensionsActive && generation == _generation) _dimensions = dimensions;
+    }
+
+    // Observation validity is independent of existing post inputs and texture leases.
+    public void InvalidateDimensions(bool? active = null)
+    {
+        lock (_gate)
+        {
+            _generation++;
+            _dimensions = null;
+            if (active is { } enabled) _dimensionsActive = enabled;
+        }
+    }
 
     /// <summary>Main thread: transfers leases even after Close; missing producers cancel pending input.</summary>
     public void Publish(in PostFrame frame, GlobalDataTextureLease? palette, GlobalDataTextureLease? matTable)
     {
         PostFrameBatch? batch = null;
-        if (palette is not null && matTable is not null) batch = new PostFrameBatch(frame, palette, matTable);
-        else
+        if (palette is null || matTable is null)
         {
             palette?.Dispose();
             matTable?.Dispose();
@@ -86,6 +108,12 @@ internal sealed class PostFrameBox
         PostFrameBatch? replaced, cancelled = null;
         lock (_gate)
         {
+            if (palette is not null && matTable is not null)
+            {
+                var published = frame;
+                published.RenderGeneration = _generation;
+                batch = new PostFrameBatch(published, palette, matTable);
+            }
             replaced = _closed ? batch : _pending;
             if (!_closed)
             {
@@ -147,6 +175,8 @@ internal sealed class PostFrameBox
         lock (_gate)
         {
             _closed = true;
+            _generation++;
+            _dimensions = null;
             pending = _pending;
             current = _current;
             _pending = _current = null;

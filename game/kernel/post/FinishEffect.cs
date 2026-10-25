@@ -126,6 +126,8 @@ public partial class FinishEffect : CompositorEffect
         _rd.ComputeListSetPushConstant(list, _pcBytes, 12 * sizeof(float));
         _rd.ComputeListDispatch(list, (uint)((size.X + 7) / 8), (uint)((size.Y + 7) / 8), 1);
         _rd.ComputeListEnd();
+        Inputs!.PublishDimensions(frame.RenderGeneration,
+            new((ulong)Engine.GetFramesDrawn(), buffers.GetTargetSize(), size));
         Volatile.Write(ref _rendered, true);
     }
 

@@ -32,7 +32,7 @@ public sealed class StreamStatisticsTests
             fixture.Director.Statistics.PendingPreparations == 0 && fixture.Director.Statistics.PendingMounts == 0);
         string root = PerformanceTestSupport.TemporaryDirectory();
         var session = new PerfRecordingSession(root, Campus.Contracts.Perf.PerfOrigin.Ai,
-            DateTimeOffset.UnixEpoch, new PerfFieldDictionary(File.ReadAllText(RepositoryFixture.FilePath("game", "data", "perf-fields.json"))), new JsonObject());
+            DateTimeOffset.UnixEpoch, new PerfFieldDictionary(File.ReadAllText(RepositoryFixture.FilePath("game", "data", "perf-fields.json"))), PerformanceTestSupport.SessionManifest());
         var captured = new List<PerfCapturedEvent>();
         try
         {

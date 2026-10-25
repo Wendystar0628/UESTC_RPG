@@ -17,6 +17,11 @@ internal static class Program
         try
         {
             Console.OutputEncoding = new UTF8Encoding(encoderShouldEmitUTF8Identifier: false);
+            if (args is ["--build-identity", var assembly, var repository])
+            {
+                await BuildIdentity.Write(Path.GetFullPath(assembly), Path.GetFullPath(repository));
+                return 0;
+            }
             var options = Options.Parse(args);
             MSBuildLocator.RegisterDefaults();
             await Generate(options);

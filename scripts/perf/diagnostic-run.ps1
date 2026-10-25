@@ -33,7 +33,7 @@ function Invoke-PerfDiagnostic($Root, $SessionId, [string[]]$Tools, [int]$EntryI
     $manifest=Get-Content -LiteralPath (Join-Path $source 'manifest.json') -Raw | ConvertFrom-Json
     $sourceRun=Get-Content -LiteralPath (Join-Path $source 'run.json') -Raw | ConvertFrom-Json
     if (-not $manifest.complete -or $manifest.status -ne 'closed') { throw 'Diagnostic replay requires a closed source session.' }
-    $width=$manifest.display.windowWidthPx; $height=$manifest.display.windowHeightPx
+    $width=$manifest.graphics.targetWidthPx; $height=$manifest.graphics.targetHeightPx
     foreach ($dimension in @($width,$height)) {
         if ($dimension -isnot [ValueType] -or $dimension -is [bool] -or $dimension -le 0 -or
             [double]::IsNaN([double]$dimension) -or [double]::IsInfinity([double]$dimension) -or
@@ -75,10 +75,11 @@ function Invoke-PerfDiagnostic($Root, $SessionId, [string[]]$Tools, [int]$EntryI
             $request.sampleSegmentId='diagnostic-' + [Guid]::NewGuid().ToString('N')
             $requestPath=Join-Path $work 'collection.json'
             Write-CollectionJson $requestPath $request
-            $poseArguments=@($entry.poseArgs | Where-Object { $_ -notmatch '^--(?:perf-out|perf-collection|save-dir)=' })
-            $gameArguments=@('--path',(Join-Path $Root 'game'),'--windowed','--resolution',$sourceResolution)
+            $poseArguments=@($entry.poseArgs | Where-Object { $_ -notmatch '^--(?:perf-out|perf-collection|save-dir)=' -and
+                $_ -notmatch '^--quality-set=display_mode=' })
+            $gameArguments=@('--path',(Join-Path $Root 'game'),'--fullscreen','--resolution',$sourceResolution)
             if ($tool -eq 'gpu-profile') { $gameArguments+='--gpu-profile' }
-            $gameArguments+=@('--') + $poseArguments +
+            $gameArguments+=@('--') + $poseArguments + @('--quality-set=display_mode=1') +
                 @(('--save-dir=' + (Join-Path $work 'save')),('--perf-out=' + $work),('--perf-collection=' + $requestPath))
             $condition=[ordered]@{ purpose='diagnostic'; sourceSession=$SessionId; sourceDirectory=$source; entry=$entry;
                 tool=$tool; scene=$entry.scene; collection=$request; sourceCollection=$sourceRun.conditions;

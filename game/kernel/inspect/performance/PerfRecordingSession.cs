@@ -9,7 +9,7 @@ namespace Campus.Kernel.Inspect;
 
 internal readonly record struct PerfClockAnchor(long UnixMs, double MonotonicMs, double ReadSpanMs);
 internal sealed record PerfCapturedEvent(string Name, ulong? Frame, double Time, object Payload,
-    PerfClockAnchor? Anchor = null);
+    PerfClockAnchor? Anchor = null, JsonObject? Conditions = null);
 
 /// <summary>One session owns its producers, bounded queues, exclusive directory lock and one IO task.</summary>
 internal sealed class PerfRecordingSession
@@ -283,6 +283,7 @@ internal sealed class PerfRecordingSession
                     WriteGap(outputs["events"], producer.Stream, message!.Gap);
                     if (message.Event is { } item)
                     {
+                        if (item.Conditions is { } conditions) PerfManifest.SetConditions(_manifest, conditions);
                         if (item.Anchor is { } anchor) WriteAnchor(outputs["events"], anchor);
                         else WriteEvent(outputs["events"], item.Name, item.Frame, item.Time, item.Payload, producer.Source);
                     }
@@ -307,7 +308,8 @@ internal sealed class PerfRecordingSession
         }
     }
 
-    private bool IsComplete => Fault == PerfFaultCode.None && Frames.DroppedFrames == 0 && _producers.All(p => p.Dropped == 0);
+    private bool IsComplete => Fault == PerfFaultCode.None && Frames.DroppedFrames == 0 && _producers.All(p => p.Dropped == 0)
+        && PerfManifest.IncompleteReason(_manifest) is null;
 
     private void WriteValue(StreamWriter writer, PerfCapturedRow row, long sequence)
     {
@@ -326,6 +328,11 @@ internal sealed class PerfRecordingSession
     private void FinishManifest()
     {
         SetCaptureCapabilities();
+        if (PerfManifest.IncompleteReason(_manifest) is { } reason)
+        {
+            var reasons = _manifest["missingReasons"]!.AsArray();
+            if (!reasons.Any(item => item?.GetValue<string>() == reason)) reasons.Add(reason);
+        }
         _manifest["status"] = "closed";
         _manifest["complete"] = IsComplete;
         _manifest["fault"] = Camel(Fault);
@@ -349,6 +356,9 @@ internal sealed class PerfRecordingSession
         {
             capabilities["slowSampling"] = _captureAttached ? "recorded" : "notAttached";
             capabilities["watchdog"] = _captureAttached ? "recorded" : "notAttached";
+            // PerfEventCapture.Start must attach both required owners before AttachCapture can complete.
+            capabilities["streamMount"] = _captureAttached ? "recorded" : "notAttached";
+            capabilities["bakeCache"] = _captureAttached ? "recorded" : "notAttached";
             capabilities["nvml"] = hardware?["state"]?.DeepClone() ?? JsonValue.Create("notAttached");
             capabilities["samplingFacts"] = hardware?["samplingFacts"]?.DeepClone();
             var rules = _dictionary.Snapshot["nonSteadyRules"]!;

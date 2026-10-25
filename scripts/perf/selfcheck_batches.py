@@ -20,16 +20,20 @@ def check_sampling_batches(root, dictionary, budgets):
     rows = [frame(dictionary, i, gpu=2 if i < warm else 100) for i in range(warm + 4)]
     rows[0]['gcPauseMs'] = 999
     start, end = rows[warm - 1]['monotonicMs'] + 5, rows[warm + 2]['monotonicMs']
-    data = mark_sample(streams(rows, dictionary), dictionary, begin=start, end=end)
     meta = manifest(dictionary, 'SAMPLE')
+    data = mark_sample(streams(rows, dictionary), dictionary, meta, begin=start, end=end)
     meta.update(origin='ai')
     meta['build']['commit'] = git(root, 'rev-parse', 'HEAD')[1]
+    sample_meta = copy.deepcopy(meta)
     run_value = ai_run()
     summary, items, sampled, _ = summary_for(Path('fixture'), copy.deepcopy(meta), copy.deepcopy(data), dictionary, budgets, run_value)
     assert sampled and len(sampled) == 2 and sampled[0]['monotonicMs'] - sampled[0]['dtMs'] >= start, '夹具没有排除跨界帧'
     assert at(summary, 'all.cost.mainViewportGpuMs.n') == 2 and at(summary, 'all.cost.mainViewportGpuMs.p95') == 100
     assert at(summary, 'all.cost.gcTotals.gcPauseMs') == 0, '准备期 GC 进入样段'
     assert not any(item['type'] == 'costSpike' for item in items), '准备期 M 泄漏到短样段'
+    for change in ({'samplingConditions': None}, {'samplingConditions': {**meta['samplingConditions'], 'monotonicMs': start + 1}}):
+        missing = summary_for(Path('fixture'), {**meta, **change}, copy.deepcopy(data), dictionary, budgets, run_value)[0]
+        assert missing['baseStatus'] == 'partial' and missing['sampleReasons'] and missing['all'] is None
     author = copy.deepcopy(meta)
     author['origin'] = 'play'
     play = summary_for(Path('fixture'), author, copy.deepcopy(data), dictionary, budgets, run_value)[0]
@@ -85,7 +89,7 @@ def check_sampling_batches(root, dictionary, budgets):
                 meta.update(origin='ai', startedAt=f'2000-01-01T00:00:{second:02d}Z',
                             endedAt=f'2000-01-01T00:00:{second + 1:02d}Z')
                 meta['build']['commit'] = git(root, 'rev-parse', 'HEAD')[1]
-                sample = mark_sample(streams([frame(dictionary, i, gpu=value) for i in range(3)], dictionary), dictionary)
+                sample = mark_sample(streams([frame(dictionary, i, gpu=value) for i in range(3)], dictionary), dictionary, meta)
                 write_six(source, meta, sample, dictionary)
                 (source / 'run.json').write_text(json.dumps(ai_run(batch='aba', phase=phase, repetition=repetition, kind='aba')), encoding='utf-8')
                 if phase == 'a1' and repetition == 1:
@@ -141,7 +145,7 @@ def check_sampling_batches(root, dictionary, budgets):
             assert not trend_groups(invalid, [{'summary': row} for row in changed], commits), '无效或功能批次进入趋势: ' + mutate
         # 真实六件往返也必须保持裁剪，且原始行数不变。
         source = out / 'runs/sample/SAMPLE'
-        write_six(source, {**manifest(dictionary, 'SAMPLE'), 'origin': 'ai'}, data, dictionary)
+        write_six(source, sample_meta, data, dictionary)
         (source / 'run.json').write_text(json.dumps(ai_run(batch='sample')), encoding='utf-8')
         assert not analyze_all(root, out, author)['errors']
         derived = read_json(out / 'derived/SAMPLE/summary.json')
@@ -182,7 +186,7 @@ def check_batch_freshness(root, dictionary, budgets):
                             endedAt=f'2000-01-01T00:00:{second + 1:02d}Z')
                 meta['build']['commit'] = commit_b if phase == 'b1' else commit_a
                 source = out / 'runs/aba' / identifier
-                sample = mark_sample(streams([frame(dictionary, 0, gpu=7 if phase == 'b1' else 2)], dictionary), dictionary)
+                sample = mark_sample(streams([frame(dictionary, 0, gpu=7 if phase == 'b1' else 2)], dictionary), dictionary, meta)
                 write_six(source, meta, sample, dictionary)
                 (source / 'run.json').write_text(json.dumps(ai_run(batch='aba', phase=phase, repetition=repetition, kind='aba')), encoding='utf-8')
         assert not analyze_all(repo, out, author)['errors']
@@ -226,7 +230,7 @@ def check_failed_baseline(root, dictionary, budgets):
                 meta = manifest(dictionary, name)
                 meta.update(origin='ai', endedAt=f'2000-01-{day:02d}T00:00:0{repeat}Z')
                 meta['build']['commit'] = git(root, 'rev-parse', 'HEAD')[1]
-                data = mark_sample(streams([frame(dictionary, 0)], dictionary), dictionary)
+                data = mark_sample(streams([frame(dictionary, 0)], dictionary), dictionary, meta)
                 write_six(batch / name, meta, data, dictionary)
                 (batch / name / 'run.json').write_text(json.dumps(ai_run(batch=identifier, repetition=repeat)), encoding='utf-8')
         assert not analyze_all(root, out, author)['errors']

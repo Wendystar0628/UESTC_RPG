@@ -40,10 +40,16 @@ public sealed class PerformanceRecordingService : IPerformanceRecorder, IRegistr
     private DateTimeOffset? _startedAt;
     private double _recordedSeconds, _lastAnchorMs;
     private Viewport? _viewport;
+    private IRenderDimensions? _renderDimensions;
+    private bool _conditionsFrozen;
     private PerfEventCapture? _capture;
     private PerfGpuStepsCapture? _gpuSteps;
 
-    internal void AttachViewport(Viewport viewport) => _viewport = viewport;
+    internal void AttachViewport(Viewport viewport, IRenderDimensions dimensions)
+    {
+        _viewport = viewport;
+        _renderDimensions = dimensions;
+    }
     internal void MapLoaded() => _capture?.BindMap();
     internal void MapUnloading() => _capture?.UnbindMap();
     internal void Readback(string phase, string purpose, ulong frame) => _capture?.Readback(phase, purpose, frame);
@@ -127,7 +133,15 @@ public sealed class PerformanceRecordingService : IPerformanceRecorder, IRegistr
             PerfMarkerPhase.Instant => "instant", PerfMarkerPhase.Begin => "begin", PerfMarkerPhase.End => "end",
             _ => throw new ArgumentOutOfRangeException(nameof(marker))
         };
-        return _session.TryEvent(new("segment", Engine.GetProcessFrames(), Now(), new { id = marker.Id, phase }));
+        ulong frame = Engine.GetProcessFrames();
+        double time = Now();
+        var conditions = !_conditionsFrozen && marker.Phase == PerfMarkerPhase.Begin &&
+            marker.Id == _options.PerfCollection?.SampleSegmentId
+            ? PerfManifest.CaptureConditions(_input.DesktopState, _quality, _renderDimensions?.Latest, marker.Id, frame, time)
+            : null;
+        bool accepted = _session.TryEvent(new("segment", frame, time, new { id = marker.Id, phase }, Conditions: conditions));
+        if (accepted && conditions is not null) _conditionsFrozen = true;
+        return accepted;
     }
 
     // Host housekeeping only; frame samples arrive exclusively through SamplePublished.
@@ -230,6 +244,7 @@ public sealed class PerformanceRecordingService : IPerformanceRecorder, IRegistr
         _sessionId = null;
         _startedAt = DateTimeOffset.FromUnixTimeMilliseconds((long)(Godot.Time.GetUnixTimeFromSystem() * 1000));
         _recordedSeconds = 0;
+        _conditionsFrozen = false;
         ChangeState(PerfRecordingState.Starting);
         try { _dictionary = new(_resources.ReadText("res://data/perf-fields.json")); }
         catch (Exception error)
@@ -239,7 +254,7 @@ public sealed class PerformanceRecordingService : IPerformanceRecorder, IRegistr
         }
         try
         {
-            var manifest = PerfManifest.Capture(_options, _input.DesktopState, _quality);
+            var manifest = PerfManifest.Capture(_options, _input.DesktopState, _quality, _renderDimensions?.Latest);
             _session = new(_root, _origin, _startedAt.Value, _dictionary, manifest);
         }
         catch (Exception error)

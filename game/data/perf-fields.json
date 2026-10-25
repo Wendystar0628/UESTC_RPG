@@ -1,5 +1,5 @@
 {
-  "schema": 6,
+  "schema": 7,
   "authority": "ENG-PERF-DATA",
   "draft": false,
   "encoding": {
@@ -16,6 +16,35 @@
     "nonFinite": "null",
     "integers": "base10; retain uint64 precision",
     "nestedCsv": "compact JSON with RFC4180 quoting"
+  },
+  "manifest": {
+    "build": {
+      "commit": "Actual Git commit captured only after a successful native Build of the accompanying assembly; never the runtime checkout HEAD.",
+      "dirty": "Actual working-tree dirty state of that successful native Build.",
+      "moduleVersionId": "MVID of the assembly belonging to the build identity; must match the loaded module.",
+      "missing": "Omit commit and dirty when unavailable or mismatched, report identityMissingReason, and leave the recording incomplete. Never repair historical identity."
+    },
+    "samplingConditions": {
+      "timing": "For an AI collection, freeze display, graphics and pacing exactly once when the matching sampleSegmentId Begin mark is accepted. Keep early recording and startup events; do not substitute end-of-run conditions.",
+      "fields": {
+        "segmentId": "Accepted sample segment identity.",
+        "collectionFrame": "Collection frame of the accepted Begin mark, uint64.",
+        "monotonicMs": "Milliseconds since process boot at the accepted Begin mark.",
+        "renderDrawFrame": "Source draw of the coherent real render-dimensions observation; not a claim of collection-frame alignment."
+      },
+      "missing": "Before the AI sample Begin, display, graphics and pacing are unavailable. Missing accepted sampling conditions leave the recording incomplete. Author recordings retain an explicitly recording-start snapshot."
+    },
+    "conditionsMissingReason": "Explicit reason when accepted sampling conditions cannot be established, such as missing Begin or unavailable real dimensions. Non-null leaves the recording incomplete; no synthetic size replacement.",
+    "capabilities": {
+      "streamMount": "recorded only after the real stream-statistics event producer is attached; otherwise notAttached.",
+      "bakeCache": "recorded only after the real cache-statistics producer is attached; otherwise notAttached."
+    },
+    "dimensions": {
+      "windowWidthPx/windowHeightPx": "Actual DisplayServer client size at condition capture.",
+      "targetWidthPx/targetHeightPx": "Actual main render target size reported by its rendering owner.",
+      "internalWidthPx/internalHeightPx": "Actual main internal render size reported by its rendering owner; never window size multiplied by render scale.",
+      "missing": "Unknown rendering dimensions remain null; no inferred dimensions or historical replacement."
+    }
   },
   "clock": {
     "monotonicSource": "Godot.Time.GetTicksUsec",

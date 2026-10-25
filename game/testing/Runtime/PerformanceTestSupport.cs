@@ -1,12 +1,26 @@
 using Campus.Contracts;
 using Campus.Contracts.Perf;
 using Campus.Kernel.Inspect;
+using System.Text.Json.Nodes;
 
 namespace Campus.Tests;
+
+internal sealed class TestRenderDimensions : IRenderDimensions
+{
+    public RenderDimensions? Latest { get; set; }
+}
 
 /// <summary>Synthetic native batches and temporary recording directories shared by performance and stream suites.</summary>
 internal static class PerformanceTestSupport
 {
+    internal static JsonObject SessionManifest() => new()
+    {
+        ["build"] = new JsonObject
+        {
+            ["commit"] = "synthetic-recording-fixture", ["dirty"] = false,
+            ["moduleVersionId"] = typeof(PerformanceTestSupport).Assembly.ManifestModule.ModuleVersionId.ToString("D")
+        }
+    };
     private static int _directorySequence;
     internal static string TemporaryDirectory()
     {

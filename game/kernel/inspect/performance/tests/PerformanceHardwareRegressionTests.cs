@@ -1,7 +1,6 @@
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using Campus.Contracts.Perf;
-using Campus.Contracts.Quality;
 using Campus.Contracts.Startup;
 using Campus.Kernel.Inspect;
 using Campus.Kernel.Quality.Settings;
@@ -15,7 +14,7 @@ namespace Campus.Tests;
 public sealed class PerformanceHardwareRegressionTests
 {
     [TestCase, TestCategory(TestReason.Regression), TestCategory("NativeRender"), RequireGodotRuntime]
-    public async Task ManifestUsesRealWindowScaleAndTheSharedEnumConverter()
+    public async Task ManifestUsesNativeWindowAndLeavesUnobservedRenderDimensionsUnknown()
     {
         string root = PerformanceTestSupport.TemporaryDirectory();
         PerfRecordingSession? session = null;
@@ -26,7 +25,7 @@ public sealed class PerformanceHardwareRegressionTests
             await using var quality = new QualityService(catalog, new GraphicsSettingsStore(settings, catalog));
             var window = DisplayServer.WindowGetSize();
             if (window.X <= 0 || window.Y <= 0) throw new InvalidOperationException("The native window-size trigger is unavailable.");
-            var captured = PerfManifest.Capture(new BootRunOptions(), new(true, true), quality);
+            var captured = PerfManifest.Capture(new BootRunOptions(), new(true, true), quality, null);
             if (captured["machine"]!["vramMiB"] is not null)
                 throw new InvalidOperationException("The fixture did not start before hardware capacity was attached.");
             var dictionary = new PerfFieldDictionary(File.ReadAllText(RepositoryFixture.FilePath("game", "data", "perf-fields.json")));
@@ -57,10 +56,11 @@ public sealed class PerformanceHardwareRegressionTests
                 manifest["machine"]!["vramMiB"]!.GetValue<double>() != expected ||
                 manifest["missingReasons"]!.AsArray().Any(reason => reason!.GetValue<string>().StartsWith("machine.vramMiB: ", StringComparison.Ordinal)))
                 throw new InvalidOperationException("The final manifest lost the matched worker's actual NVML total or kept a stale missing reason.");
-            float scale = quality.Effective[QualityKnob.RenderScale];
-            if (manifest["graphics"]!["internalWidthPx"]!.GetValue<int>() != (int)(window.X * scale) ||
-                manifest["graphics"]!["internalHeightPx"]!.GetValue<int>() != (int)(window.Y * scale))
-                throw new InvalidOperationException("The manifest lost the real internal resolution.");
+            if (manifest["display"]!["windowWidthPx"]!.GetValue<int>() != window.X ||
+                manifest["display"]!["windowHeightPx"]!.GetValue<int>() != window.Y ||
+                manifest["graphics"]!["internalWidthPx"] is not null || manifest["graphics"]!["internalHeightPx"] is not null ||
+                manifest["graphics"]!["targetWidthPx"] is not null || manifest["graphics"]!["targetHeightPx"] is not null)
+                throw new InvalidOperationException("The manifest inferred rendering dimensions without its rendering owner.");
             string? expectedPreset = JsonSerializer.SerializeToElement(quality.Effective.Preset, PerfFieldDictionary.JsonOptions).GetString();
             string? expectedVsync = JsonSerializer.SerializeToElement(DisplayServer.WindowGetVsyncMode(), PerfFieldDictionary.JsonOptions).GetString();
             if (manifest["graphics"]!["preset"]!.GetValue<string>() != expectedPreset ||

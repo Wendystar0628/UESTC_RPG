@@ -31,10 +31,11 @@ def manifest(dictionary, identifier='SELFCHECK'):
                 startedAt='2000-01-01T00:00:00Z', endedAt='2000-01-01T00:00:05Z', recordedSeconds=5,
                 build=dict(commit=None, dirty=False, configuration='Debug', godot='selfcheck'),
                 machine=dict(id='selfcheck-only', gpu='RTX 4080', api='selfcheck', driver='selfcheck', os='selfcheck'),
-                display=dict(windowWidthPx=3840, windowHeightPx=2160, refreshHz=60),
+                display=dict(windowWidthPx=3840, windowHeightPx=2160, refreshHz=60, windowMode='fullscreen'),
                 desktop=dict(kind='interactive', isInputDesktop=True, windowFocused=True),
                 pacing=dict(maxFps=60, vsync='disabled'),
-                graphics=dict(preset='fine', effective={'selfcheck': True}, internalWidthPx=3840, internalHeightPx=2160),
+                graphics=dict(preset='fine', effective={'selfcheck': True}, targetWidthPx=3840, targetHeightPx=2160,
+                              internalWidthPx=3840, internalHeightPx=2160),
                 run=dict(args=[], diagnostics=None), kernelBudgets=dict(streamMountMilliseconds=1),
                 clock=dict(anchors=[]), fieldDictionary=dictionary,
                 streams=[dict(file=spec['file'], state='recorded', droppedRows=0) for spec in dictionary['streams'].values()])
@@ -75,11 +76,14 @@ def ai_run(scene='baseline-selfcheck', batch='fixture', phase='a1', repetition=1
                 protocol=dict(kind=kind, batchId=batch, scenes=scenes or [scene], phase=phase, repetition=repetition))
 
 
-def mark_sample(data, dictionary, begin=0, end=None):
+def mark_sample(data, dictionary, meta, begin=0, end=None):
     end = end if end is not None else data['frames'][-1]['monotonicMs'] + 1
     for phase, when in (('begin', begin), ('end', end)):
         data['events'].append(dict(schema=dictionary['schema'], sequence=0, event='segment', source='selfcheck',
-                                   collectionFrame=None, monotonicMs=when, payload=dict(id='sample', phase=phase)))
+                                   collectionFrame=data['frames'][0]['collectionFrame'] if data['frames'] else 0,
+                                   monotonicMs=when, payload=dict(id='sample', phase=phase)))
+    meta['samplingConditions'] = dict(segmentId='sample', monotonicMs=begin, renderDrawFrame=0,
+                                     collectionFrame=data['frames'][0]['collectionFrame'] if data['frames'] else 0)
     data['events'].sort(key=lambda row: row['monotonicMs'])
     for sequence, row in enumerate(data['events'], 1):
         row['sequence'] = sequence

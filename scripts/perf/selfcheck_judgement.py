@@ -111,7 +111,7 @@ def check_required_sets(root, dictionary, budgets):
             meta['desktop'] = dict(kind='isolated', isInputDesktop=False, windowFocused=False)
             run = ai_run(scene=scene, repetition=repeat, scenes=['fixed-with-reflection', 'route', 'standing-travel-direct'])
             run['conditions'] = dict(suite=suite, **enabled)
-            data = mark_sample(streams(copy.deepcopy(rows), dictionary), dictionary)
+            data = mark_sample(streams(copy.deepcopy(rows), dictionary), dictionary, meta)
             data['hw'] = [dict(rowKind='nvml', isRenderAdapter=True, monotonicMs=10, wholeGpuMemoryMiB=100)]
             entries.append(summary_for(Path(meta['id']), meta, data, dictionary, budgets, run)[0])
     reflected = entries[0]
@@ -195,7 +195,7 @@ def check_waits(root, dictionary, budgets):
                   event('app.phase', end, phase='input-ready')]
         value = item(wait_observations(meta, phases, run, budgets), 'continueToWalkSecondsMax')
         assert value['status'] == expected and value['pain'] in (False, None)
-    data = mark_sample(streams([frame(dictionary, i) for i in range(5)], dictionary), dictionary, begin=20, end=50)
+    data = mark_sample(streams([frame(dictionary, i) for i in range(5)], dictionary), dictionary, meta, begin=20, end=50)
     data['events'] += [enter(0, 1, 'started', 'continue'), enter(5995, 1, 'completed', 'continue'),
                        event('app.phase', 6000, phase='input-ready')]
     result = summary_for(Path('fixture'), meta, data, dictionary, budgets, ai_run())[0]
@@ -214,7 +214,7 @@ def check_aba_ruler(root, dictionary, budgets):
                 meta['build'].update(commit='baseline' if batch == 'calibration' or phase != 'b1' else 'candidate')
                 run = ai_run(batch=batch, phase=phase, repetition=repeat, kind='aba')
                 run['conditions']['noiseCalibrationBatchId'] = 'calibration'
-                data = mark_sample(streams([frame(dictionary, i, gpu=gpu) for i in range(3)], dictionary), dictionary)
+                data = mark_sample(streams([frame(dictionary, i, gpu=gpu) for i in range(3)], dictionary), dictionary, meta)
                 entries.append(summary_for(Path(meta['id']), meta, data, dictionary, budgets, run)[0])
     batches, _ = batch_results(entries, budgets)
     result = next(b for b in batches if b['id'] == 'change')
@@ -337,7 +337,7 @@ def check_budget_consumers(root, dictionary, budgets):
                     meta['graphics']['preset'] = 'selfcheck-wrong-preset'
                 run = ai_run(scene=scene, batch=batch_id, repetition=repeat)
                 run['conditions']['tuningSelectedMetrics'] = [scene + '.' + metric]
-                data = mark_sample(streams([frame(dictionary, i, gpu=value) for i in range(3)], dictionary), dictionary)
+                data = mark_sample(streams([frame(dictionary, i, gpu=value) for i in range(3)], dictionary), dictionary, meta)
                 entries.append(summary_for(fixture / identifier, meta, data, dictionary, budgets, run)[0])
             batches, blocked = batch_results(entries, budgets)
             rebuild_states(entries, root, blocked)

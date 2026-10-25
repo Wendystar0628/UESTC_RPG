@@ -11,14 +11,13 @@ namespace Campus.Tests;
 [TestSuite]
 public sealed class PerformanceRecordingContractTests
 {
-
     [TestCase, TestCategory(TestReason.Contract)]
     public async Task AuthorLatestPointsAtRecordingOnlyAfterStartAndAtFormalManifestAfterClose()
     {
         string root = TemporaryDirectory();
         var dictionary = Dictionary();
         var session = new PerfRecordingSession(root, PerfOrigin.Play,
-            new DateTimeOffset(2026, 1, 1, 0, 0, 0, TimeSpan.Zero), dictionary, new JsonObject());
+            new DateTimeOffset(2026, 1, 1, 0, 0, 0, TimeSpan.Zero), dictionary, PerformanceTestSupport.SessionManifest());
         try
         {
             if (!await session.Ready) throw new InvalidOperationException("The author test session did not open.");
@@ -58,12 +57,15 @@ public sealed class PerformanceRecordingContractTests
         }
     }
 
-    [TestCase, TestCategory(TestReason.Contract)]
-    public async Task StreamsFollowDictionaryAndFinalManifestWaitsForDrain()
+    [TestCase(false, false), TestCase(true, false), TestCase(false, true), TestCategory(TestReason.Regression)]
+    public async Task StreamsFollowDictionaryAndFinalManifestWaitsForDrain(bool missingBuild, bool missingConditions)
     {
         string root = TemporaryDirectory();
         var dictionary = Dictionary();
-        var session = Session(root, dictionary);
+        var manifestFacts = PerformanceTestSupport.SessionManifest();
+        if (missingBuild) manifestFacts.Remove("build");
+        if (missingConditions) manifestFacts["conditionsMissingReason"] = "The requested sample Begin was never accepted.";
+        var session = new PerfRecordingSession(root, PerfOrigin.Ai, DateTimeOffset.UnixEpoch, dictionary, manifestFacts);
         try
         {
             if (!await session.Ready) throw new InvalidOperationException("The test session did not open.");
@@ -81,7 +83,9 @@ public sealed class PerformanceRecordingContractTests
                 throw new InvalidOperationException("The test frame was not accepted.");
             session.Stop(PerfEndReason.Toggle, 120);
             var result = await session.Completion;
-            if (result is not { Closed: true, Complete: true, WrittenFrames: 2, Error: null })
+            if (result is not { Closed: true, WrittenFrames: 2, DroppedFrames: 0, Error: null } ||
+                result.Complete != (!missingBuild && !missingConditions) ||
+                (!result.Complete && manifestFacts["missingReasons"]!.AsArray().Count == 0))
                 throw new InvalidOperationException("The accepted frame did not drain into a complete closed session.", result.Error);
             foreach (string stream in new[] { "frames", "samples", "hw", "hwfast" })
             {
@@ -275,6 +279,6 @@ public sealed class PerformanceRecordingContractTests
 
     private static PerfFieldDictionary Dictionary() => new(File.ReadAllText(RepositoryFixture.FilePath("game", "data", "perf-fields.json")));
     private static PerfRecordingSession Session(string root, PerfFieldDictionary dictionary) =>
-        new(root, PerfOrigin.Ai, new DateTimeOffset(2026, 1, 1, 0, 0, 0, TimeSpan.Zero), dictionary, new JsonObject());
+        new(root, PerfOrigin.Ai, new DateTimeOffset(2026, 1, 1, 0, 0, 0, TimeSpan.Zero), dictionary, PerformanceTestSupport.SessionManifest());
 
 }

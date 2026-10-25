@@ -17,7 +17,7 @@ public sealed partial class PerformanceRecordingHost : Node, IMapAware, IRegistr
     public override void _Ready()
     {
         _recorder = KernelServices.Get<PerformanceRecordingService>();
-        _recorder.AttachViewport(GetViewport());
+        _recorder.AttachViewport(GetViewport(), KernelServices.Get<IRenderDimensions>());
         _initialization = _recorder.InitializeAsync(AppBoot.Options);
     }
 

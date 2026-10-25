@@ -76,10 +76,12 @@ def publish(root, work, source, exit_code):
     capture_path = work / 'capture-result.json'
     capture = read_json(capture_path) if capture_path.is_file() else {}
     observed = collection_result(work)
+    recorded = read_json(session / 'manifest.json')
     valid = bool(exit_code == 0 and capture.get('status') == 'completed' and observed and observed.get('status') == 'valid'
                  and observed.get('scene') == condition['scene']
                  and observed.get('sampleSegmentId') == condition['collection']['sampleSegmentId']
-                 and observed.get('sessionId') == read_json(session / 'manifest.json').get('id'))
+                 and observed.get('sessionId') == recorded.get('id')
+                 and recorded.get('status') == 'closed' and recorded.get('complete') is True)
     attachment_reasons, gpu_structure = attachment_state(work, session, condition['tool'])
     valid = valid and not attachment_reasons
     source_run = read_json(source / 'run.json')

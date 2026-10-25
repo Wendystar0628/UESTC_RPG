@@ -50,6 +50,13 @@ def sample_window(manifest, streams, run):
     if reasons:
         return None, reasons
     begin, end = ordered
+    conditions = manifest.get('samplingConditions') or {}
+    if (manifest.get('conditionsMissingReason') is not None
+            or conditions.get('segmentId') != run['sampleSegmentId']
+            or conditions.get('collectionFrame') != begin.get('collectionFrame')
+            or conditions.get('monotonicMs') != begin['monotonicMs']
+            or type(conditions.get('renderDrawFrame')) is not int):
+        return None, [manifest.get('conditionsMissingReason') or '正式采样条件未在对应 Begin 冻结']
     window = dict(segmentId=run['sampleSegmentId'], fromMs=begin['monotonicMs'], toMs=end['monotonicMs'],
                   beginSequence=begin['sequence'], endSequence=end['sequence'])
     return window, []

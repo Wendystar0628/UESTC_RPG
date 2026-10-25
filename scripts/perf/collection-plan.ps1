@@ -35,8 +35,8 @@ function Assert-CollectionPhase($BatchRoot, $Protocol, $Phase, [string[]]$Scenes
 function Get-CollectionArguments($Root, $Directory, $Plan, $Item, $Seconds, $RequestPath) {
     $entry=$Item.scene
     $saveArgument = if ($entry.PSObject.Properties['saveAfterSample'] -and $entry.saveAfterSample) { '--save=1' } else { '--save=off' }
-    $arguments = @('--path',(Join-Path $Root 'game'),'--windowed','--resolution','3840x2160','--',('--map=' + $Plan.map),
-        '--quality=fine','--quality-set=display_mode=0','--audio=off','--flow=0',$saveArgument,
+    $arguments = @('--path',(Join-Path $Root 'game'),'--fullscreen','--resolution','3840x2160','--',('--map=' + $Plan.map),
+        '--quality=fine','--quality-set=display_mode=1','--audio=off','--flow=0',$saveArgument,
         ('--save-dir=' + (Join-Path $Directory 'save')),('--perf-out=' + $Directory),('--perf-collection=' + $RequestPath))
     switch ($Item.kind) {
         'fixed' {

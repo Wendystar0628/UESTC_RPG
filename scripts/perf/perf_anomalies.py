@@ -319,6 +319,9 @@ def budget_checks(summary, manifest=None, budgets=None, runs=None):
                       and graphics.get('preset') == target['preset']
                       and at(manifest, 'display.windowWidthPx') == target['widthPx']
                       and at(manifest, 'display.windowHeightPx') == target['heightPx']
+                      and at(manifest, 'display.windowMode') == 'fullscreen'
+                      and graphics.get('targetWidthPx') == target['widthPx']
+                      and graphics.get('targetHeightPx') == target['heightPx']
                       and graphics.get('internalWidthPx') == target['widthPx'] * target['renderScale']
                       and graphics.get('internalHeightPx') == target['heightPx'] * target['renderScale'])
         keys = dict(mainViewportGpuMs=('mainViewportGpuP95MsUpper', 'mainViewportGpuP95MsStop'),

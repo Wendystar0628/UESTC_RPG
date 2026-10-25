@@ -121,7 +121,7 @@ def comparison_key(manifest, run):
     scene = run.get('scene') or manifest.get('scene')
     key = dict(scene=scene, machine=machine.get('id'), configuration=at(manifest, 'build.configuration'),
                preset=graphics.get('preset'), effectiveGraphics=graphics.get('effective'),
-               outputResolution=[at(manifest, 'display.windowWidthPx'), at(manifest, 'display.windowHeightPx')],
+               outputResolution=[graphics.get('targetWidthPx'), graphics.get('targetHeightPx')],
                internalResolution=[graphics.get('internalWidthPx'), graphics.get('internalHeightPx')],
                pacing=manifest.get('pacing'), graphicsApi=machine.get('api'))
     missing = [k for k, value in key.items() if value is None or (isinstance(value, list) and None in value)]
@@ -138,6 +138,9 @@ def basic_state(manifest, streams, run, missing, schema, sampling_reasons=()):
         return 'partial', ['记录锁已释放但会话未完成关闭；未解析未闭合的原始流']
     if streams is None:
         return 'unsupported', ['当前 schema 的原始流不可用']
+    if manifest.get('complete') is not True:
+        reasons = [at(manifest, 'build.identityMissingReason'), manifest.get('conditionsMissingReason')]
+        return 'partial', [reason for reason in reasons if reason] or ['记录未完整结束或有丢行']
     if manifest.get('origin') == 'play':
         return 'evidence', ['作者会话只作证据，不作 A/B 基线']
     if run.get('status') == 'invalid':
@@ -147,8 +150,6 @@ def basic_state(manifest, streams, run, missing, schema, sampling_reasons=()):
         return 'evidence', ['非协议 AI、功能短跑与诊断采集不进入基线或比较']
     reasons.extend(protocol_reasons(run))
     reasons.extend(sampling_reasons)
-    if not manifest.get('complete'):
-        reasons.append('记录未完整结束或有丢行')
     if not streams['frames']:
         reasons.append('没有逐帧记录')
     if run.get('exitCode') != 0 or run.get('timedOut') is not False:
@@ -163,6 +164,8 @@ def basic_state(manifest, streams, run, missing, schema, sampling_reasons=()):
         reasons.append('比较键缺值: ' + ', '.join(missing))
     if at(manifest, 'build.dirty') is not False:
         reasons.append('构建含未提交改动或干净状态未知')
+    if not at(manifest, 'build.commit'):
+        reasons.append(at(manifest, 'build.identityMissingReason') or '构建提交身份缺失')
     return ('partial', reasons) if reasons else ('candidate', [])
 
 
