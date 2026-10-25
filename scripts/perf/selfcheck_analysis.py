@@ -9,7 +9,7 @@ from pathlib import Path
 from analyze import completed_diagnostic_clusters, source_stamp, summary_for
 from perf_model import COSTS, PHASES, at, load_session, prepare_frames, rolling_medians, target_ms
 from perf_anomalies import DEEPEN_REPEAT_COUNT, annotate, anomaly, deepen, frame_anomalies
-from selfcheck_fixtures import manifest, frame, viewport, streams, write_six
+from selfcheck_fixtures import manifest, frame, viewport, streams, write_six, mark_sample
 
 
 def check_snapshot(root, dictionary, budgets):
@@ -127,6 +127,45 @@ def check_deepen(root, dictionary, budgets):
         if case == 'cpu':
             assert any(a['type'] == 'budgetExceeded' and a['metric'] == 'mainViewportCpuMs' for a in items), '夹具未触发非 GPU 预算越限'
         assert not summary['deepen'], '未超、缺测、条件不符或非 GPU 越限借用了 GPU deepen：' + case
+    check_eventpipe_attachment(root, dictionary, budgets)
+
+
+def check_eventpipe_attachment(root, dictionary, budgets):
+    """Regression：附着身份与完整采样覆盖不借用退出成功或工具输出。"""
+    import runpy
+    diagnostic = runpy.run_path(str(root / 'scripts/perf/diagnostic-report.py'))
+    with tempfile.TemporaryDirectory(prefix='uestc-perf-eventpipe-selfcheck-') as temporary:
+        work = Path(temporary)
+        session = work / 'session'
+        meta = manifest(dictionary)
+        meta['clock']['anchors'] = [dict(unixMs=0, monotonicMs=0, readSpanMs=.1)]
+        data = streams([frame(dictionary, i) for i in range(10)], dictionary)
+        mark_sample(data, dictionary, meta, begin=20, end=100)
+        write_six(session, meta, data, dictionary)
+        condition = dict(collection=dict(sampleSegmentId='sample'))
+        capture = dict(gamePid=123, gameExitCode=0, exitCode=0,
+                       collectorReadyObservedUtc='1970-01-01T00:00:00.010Z', toolExitUtc='1970-01-01T00:00:00.200Z')
+        parsed = dict(processId=capture['gamePid'], EventsLost=0, Truncated=False, threads=[dict(samples=1)])
+        parsed_path = work / 'cpu-hotspots.json'
+        parsed_path.write_text(json.dumps(parsed), encoding='utf-8')
+        actual = diagnostic['eventpipe_coverage'](root, work, session, condition, capture)
+        assert actual['status'] == 'complete' and not actual['reasons'], '完整附着覆盖未通过'
+        for changed in (dict(collectorReadyObservedUtc=None), dict(collectorReadyObservedUtc='1970-01-01T00:00:00.050Z'),
+                        dict(toolExitUtc='1970-01-01T00:00:00.080Z'), dict(gamePid=124),
+                        dict(gameExitCode=1), dict(exitCode=1)):
+            actual = diagnostic['eventpipe_coverage'](root, work, session, condition, {**capture, **changed})
+            assert actual['status'] == 'partial' and actual['reasons'], '缺失/晚附着、早退出、错 PID 或失败退出仍完整：' + str(changed)
+        for changed in (dict(threads=[]), dict(EventsLost=1), dict(Truncated=True)):
+            parsed_path.write_text(json.dumps({**parsed, **changed}), encoding='utf-8')
+            actual = diagnostic['eventpipe_coverage'](root, work, session, condition, capture)
+            assert actual['status'] == 'partial' and actual['reasons'], '缺样或丢失/截断仍完整：' + str(changed)
+        completion = dict(sessionId=meta['id'], status='valid')
+        game_stdout = work / 'game.stdout.txt'
+        game_stdout.write_text('PERF_COLLECTION_RESULT ' + json.dumps(completion) + '\n', encoding='utf-8')
+        (work / 'tool.stdout.txt').write_text('PERF_COLLECTION_RESULT ' + json.dumps(dict(sessionId='collector')) + '\n', encoding='utf-8')
+        assert diagnostic['collection_result'](work, 'EventPipe') == completion, 'EventPipe 读到了工具的完成输出'
+        game_stdout.unlink()
+        assert diagnostic['collection_result'](work, 'EventPipe') is None, '缺游戏输出时借用了工具的完成输出'
 
 
 def _check_completed_diagnostics(dictionary, budgets, meta, run, rows, plan):

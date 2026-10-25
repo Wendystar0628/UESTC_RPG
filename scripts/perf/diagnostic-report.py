@@ -6,6 +6,7 @@ import csv
 import json
 import shutil
 import sys
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -33,14 +34,56 @@ def frame_metrics(root, directory):
     return metrics, []
 
 
-def collection_result(work):
+def collection_result(work, tool):
     matches = []
-    stdout = work / 'tool.stdout.txt'
+    stdout = work / ('game.stdout.txt' if tool == 'EventPipe' else 'tool.stdout.txt')
     if stdout.is_file():
         for line in stdout.read_text(encoding='utf-8-sig').splitlines():
             if line.startswith('PERF_COLLECTION_RESULT '):
                 matches.append(json.loads(line.split(' ', 1)[1]))
     return matches[0] if len(matches) == 1 else None
+
+
+def eventpipe_coverage(root, work, session, condition, capture):
+    """只按实际附着发布、退出时刻和成功入流的采样边界确认覆盖。"""
+    report = dict(status='partial', reasons=[])
+    reasons = report['reasons']
+    if capture.get('gameExitCode') != 0 or capture.get('exitCode') != 0:
+        reasons.append('Godot and EventPipe must both exit successfully.')
+    parsed = read_json(work / 'cpu-hotspots.json')
+    if parsed.get('processId') != capture.get('gamePid') or not capture.get('gamePid'):
+        reasons.append('Parsed managed PID differs from the owned Godot PID.')
+    if parsed.get('EventsLost') != 0 or parsed.get('Truncated') is not False:
+        reasons.append('EventPipe trace loss/truncation is nonzero or unknown.')
+    if not any(number(row.get('samples')) and row['samples'] > 0 for row in parsed.get('threads', [])):
+        reasons.append('EventPipe has no managed stack samples in the recording session.')
+    manifest, streams = load_session(session, read_json(root / 'game/data/perf-fields.json'))
+    marks = [] if streams is None else sorted((row for row in streams['events'] if row['event'] == 'segment'
+        and row['payload'].get('id') == condition['collection']['sampleSegmentId']), key=lambda row: row['sequence'])
+    if len(marks) != 2 or [row['payload'].get('phase') for row in marks] != ['begin', 'end']:
+        reasons.append('Diagnostic sample Begin/End are missing, duplicated or out of order.')
+    else:
+        try:
+            anchors = manifest['clock']['anchors']
+            anchor = anchors[0]
+            origin = datetime.fromtimestamp(anchor['unixMs'] / 1000, timezone.utc)
+            begin, end = (origin + timedelta(milliseconds=row['monotonicMs'] - anchor['monotonicMs']) for row in marks)
+            uncertainty = timedelta(milliseconds=max(row['readSpanMs'] for row in anchors))
+            attached_text, exited_text = capture.get('collectorReadyObservedUtc'), capture.get('toolExitUtc')
+            if not isinstance(attached_text, str) or not isinstance(exited_text, str):
+                raise ValueError('Collector attachment/exit timing is missing.')
+            attached = datetime.fromisoformat(attached_text.replace('Z', '+00:00'))
+            exited = datetime.fromisoformat(exited_text.replace('Z', '+00:00'))
+            report.update(sampleBeginUtc=begin.isoformat(), sampleEndUtc=end.isoformat(),
+                          collectorReadyObservedUtc=attached.isoformat(), collectorExitUtc=exited.isoformat(),
+                          clockReadSpanMs=uncertainty.total_seconds() * 1000)
+            if begin >= end or attached > begin - uncertainty or exited < end + uncertainty:
+                reasons.append('Observed EventPipe attachment does not cover the complete diagnostic sample interval.')
+        except (KeyError, IndexError, TypeError, ValueError, OverflowError) as error:
+            reasons.append('EventPipe coverage timing is unavailable: ' + str(error))
+    if not reasons:
+        report['status'] = 'complete'
+    return report
 
 
 def attachment_state(work, session, tool):
@@ -75,7 +118,7 @@ def publish(root, work, source, exit_code):
     session = sessions[0]
     capture_path = work / 'capture-result.json'
     capture = read_json(capture_path) if capture_path.is_file() else {}
-    observed = collection_result(work)
+    observed = collection_result(work, condition['tool'])
     recorded = read_json(session / 'manifest.json')
     valid = bool(exit_code == 0 and capture.get('status') == 'completed' and observed and observed.get('status') == 'valid'
                  and observed.get('scene') == condition['scene']
@@ -83,6 +126,10 @@ def publish(root, work, source, exit_code):
                  and observed.get('sessionId') == recorded.get('id')
                  and recorded.get('status') == 'closed' and recorded.get('complete') is True)
     attachment_reasons, gpu_structure = attachment_state(work, session, condition['tool'])
+    trace_coverage = None
+    if condition['tool'] == 'EventPipe' and (work / 'cpu-hotspots.json').is_file():
+        trace_coverage = eventpipe_coverage(root, work, session, condition, capture)
+        attachment_reasons.extend(trace_coverage['reasons'])
     valid = valid and not attachment_reasons
     source_run = read_json(source / 'run.json')
     run = dict(purpose='diagnostic', diagnostic=True, sourceSession=condition['sourceSession'], scene=condition['scene'],
@@ -117,7 +164,8 @@ def publish(root, work, source, exit_code):
                              if number(current[metric][stat]) and number(reference.get(metric, {}).get(stat)) and reference[metric][stat] > 0 else None
                              for stat in ('mean', 'p95')}
     report = dict(purpose='diagnostic', status=run['status'], sourceSession=condition['sourceSession'], referencePurpose=source_run.get('purpose'), condition=condition,
-                  attachments=attachments, actualCollector=capture, gpuStructure=gpu_structure, reference=reference, diagnostic=current,
+                  attachments=attachments, actualCollector=capture, gpuStructure=gpu_structure, eventPipeCoverage=trace_coverage,
+                  reference=reference, diagnostic=current,
                   diagnosticToRegularRatios=ratios, conditionDifferences=differences,
                   ratioUnavailableReasons=reference_reasons + current_reasons + missing_before + missing_after,
                   observedPerturbations=dict(polluted=run['polluted'], pollution=run['pollution'],

@@ -71,6 +71,12 @@ function Invoke-PerfDiagnostic($Root, $SessionId, [string[]]$Tools, [int]$EntryI
         foreach ($tool in $Tools | Select-Object -Unique) {
             $work=Join-Path $directory $tool
             $null=[IO.Directory]::CreateDirectory($work)
+            $engine=$godot
+            if ($tool -eq 'EventPipe') {
+                # The console executable launches another PID; attach to the real host we own.
+                $engine=$godot -replace '_console\.exe$', '.exe'
+                if (-not (Test-Path -LiteralPath $engine -PathType Leaf)) { throw 'EventPipe requires the actual Godot host executable.' }
+            }
             $request=$sourceRun.conditions | ConvertTo-Json -Depth 16 | ConvertFrom-Json
             $request.sampleSegmentId='diagnostic-' + [Guid]::NewGuid().ToString('N')
             $requestPath=Join-Path $work 'collection.json'
@@ -83,7 +89,7 @@ function Invoke-PerfDiagnostic($Root, $SessionId, [string[]]$Tools, [int]$EntryI
                 @(('--save-dir=' + (Join-Path $work 'save')),('--perf-out=' + $work),('--perf-collection=' + $requestPath))
             $condition=[ordered]@{ purpose='diagnostic'; sourceSession=$SessionId; sourceDirectory=$source; entry=$entry;
                 tool=$tool; scene=$entry.scene; collection=$request; sourceCollection=$sourceRun.conditions;
-                engine=$godot; arguments=$gameArguments; desktop='isolated'; elevation='ordinary';
+                engine=$engine; arguments=$gameArguments; desktop='isolated'; elevation='ordinary';
                 toolPath=$(if($tool -ne 'gpu-profile'){Find-PerfDiagnosticTool $Root $tool}else{$godot});
                 cpuProfile=$(if($tool -eq 'EventPipe'){'dotnet-sampled-thread-time'}else{$null});
                 parserDll=$parserDll; nominalSampleRateHz=$(if($tool -eq 'EventPipe'){100}else{$null}); sampleRateHz=$null;
