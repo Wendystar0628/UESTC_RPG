@@ -1626,7 +1626,7 @@
 
 - ENG-GATES §0 结论 · L21 · 937
   - ★ ENG-GATES §0.1 接入要点 · L34 · 338
-- ENG-GATES §1 门禁与测试节奏 · L41 · 3.0k
+- ENG-GATES §1 门禁与测试节奏 · L41 · 2.9k
   - ENG-GATES §1.1 测试三档 · L45 · 1.4k
   - ENG-GATES §1.2 门禁表 · L67 · 1.3k
   - ENG-GATES §1.3 入口与交付分工 · L85 · 191
@@ -1948,7 +1948,7 @@
 
 ## STD-CODE · 代码结构准则
 
-`docs/standards/STD-CODE-代码结构准则.md` · 8.4k 字 · 写代码时的结构规矩：先用 Godot 原生、依赖方向落地、规则值与数据各一份、失败交到底、控制规模、测试写法、异步与线程，以及 Godot API 先查签名
+`docs/standards/STD-CODE-代码结构准则.md` · 8.5k 字 · 写代码时的结构规矩：先用 Godot 原生、依赖方向落地、规则值与数据各一份、失败交到底、控制规模、测试写法、异步与线程，以及 Godot API 先查签名
 关键词：代码结构准则、先用原生、重复造轮子、判断次序、失败交付、结果载体、保留原异常、异步、任务有主、async void、线程边界、依赖方向、内核引用系统、生成层实现类、点名模块、单一来源、规则值、规则类、数据与代码分离、Tune 只放规则值、实体 ID 写数据、复用、公共层、死代码、死桩、诊断残留、单实现接口、吞错、兜底、文件规模、构造参数、清单文件、程序集过碎、测试写法、测试夹具、假实现、性质断言、signatures.txt、Godot API、GDScript
 
 - STD-CODE §0 结论 · L21 · 1.4k
@@ -1957,7 +1957,7 @@
 - STD-CODE §2 规则值与数据各一份 · L55 · 590
 - STD-CODE §3 先用现成，再复用，不复制 · L65 · 1.7k
 - STD-CODE §4 不留死代码，不写补丁 · L79 · 1.3k
-- STD-CODE §5 规模 · L93 · 269
+- STD-CODE §5 规模 · L93 · 322
 - STD-CODE §6 测试代码怎么写 · L99 · 1.1k
 - STD-CODE §7 异步与线程 · L113 · 437
 
@@ -2027,12 +2027,12 @@
 
 ## REG-DECISIONS-PROCESS · 协作与流程决策
 
-`docs/registry/REG-DECISIONS-PROCESS-协作与流程决策.md` · 19.7k 字 · 计划、协作、规范、登记四个域的已定决策：协作、流程、文档与代码规范、门禁流程
+`docs/registry/REG-DECISIONS-PROCESS-协作与流程决策.md` · 19.9k 字 · 计划、协作、规范、登记四个域的已定决策：协作、流程、文档与代码规范、门禁流程
 关键词：决策、流程、协作、文档规则、门禁流程、派工、主会话、子代理
 
 - REG-DECISIONS-PROCESS §0 结论 · L21 · 129
   - ★ REG-DECISIONS-PROCESS §0.1 接入要点 · L25 · 56
-- REG-DECISIONS-PROCESS §1 流程 · L29 · 19.1k
+- REG-DECISIONS-PROCESS §1 流程 · L29 · 19.3k
 
 ## REG-DECISIONS-SYSTEMS · 系统与工程决策
 
