@@ -311,6 +311,7 @@ if (-not ($Full -or $Smoke -or $Only.Count)) {
         $_ -notin $existingBasePaths -or -not (Test-UESTCCommentOnlyChange $root $_ $BaseRef)
     })
 }
+$perfSelfcheckRequired = @($runtimeChanges | Where-Object { $_ -match '^scripts/perf/|^scripts/gates/performance\.ps1$' }).Count -gt 0
 $textOnlyQuick = -not ($Full -or $Smoke -or $Only.Count) -and $changes.Count -gt 0 -and $runtimeChanges.Count -eq 0
 $selected = New-Object 'Collections.Generic.List[string]'
 $gateIds = @('G1','G2','G3','G4','G5','G7','G10','G14','G15','G20','G21')
@@ -470,6 +471,9 @@ foreach ($id in $selected) {
             'G4' {
                 $newFiles = Test-UESTCNewCodeFiles $root $changes -BaseRef $BaseRef
                 $null = Test-UESTCSourceBoundaries $root
+                if ($perfSelfcheckRequired) {
+                    $null = Invoke-GateProcess 'G4-perf-selfcheck' python @('-I','-X','utf8',(Join-Path $root 'scripts/perf/perf.py'),'--root',$root,'selfcheck')
+                }
                 $null = Invoke-GateProcess 'G4-restore' dotnet @('restore',(Join-Path $game 'Campus.sln'))
                 $settings = Write-TestSettings
                 $null = Invoke-GateProcess 'G4-architecture' dotnet @('test',(Join-Path $root 'scripts/gates/arch/Campus.Arch.Tests.csproj'),'-c','Debug','--settings',$settings,'--logger','trx','--results-directory',(Join-Path $work 'arch-results'))
@@ -535,7 +539,7 @@ foreach ($id in $selected) {
             }
             'G10' {
                 . (Join-Path $PSScriptRoot 'gates/performance.ps1')
-                $detail = Invoke-UESTCPerformanceGate -Root $root -Map $Map -BuildLease $gateLease
+                $detail = Invoke-UESTCPerformanceGate -Root $root -Map $Map
                 $status = $detail.Status
             }
             default { $status = 'NotImplemented'; $detail = 'Centralized or core-specialist gate has no implementation yet; no pre-bake was started.' }

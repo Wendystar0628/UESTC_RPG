@@ -1,5 +1,5 @@
 {
-  "calc": 13,
+  "calc": 14,
   "authority": "ENG-PERF-DATA",
   "events": "Validate strictly increasing sequence in recorded order, then stable-sort by (monotonicMs, sequence) for cross-producer event association; other streams still require nondecreasing time",
   "summary": {
@@ -61,7 +61,7 @@
   },
   "outputLimits": "perf.py constants MAX_ROWS/MAX_LINES/MAX_CHARS",
   "retention": "perf_store.py constants; author root is read-only and owned by recorder",
-  "batch": "Analyzer-only completed-main round registration: freeze one complete base-valid main per planned scene before assigning the round number; incomplete attempts never register. A registered round may append independent confirmation roots without replacing its main sessions, scene plan or N-1 identity. G10 only reads the latest registered round and comparison.",
+  "batch": "Analyzer-only completed-main round registration: freeze one complete base-valid main per planned scene before assigning the round number; incomplete main attempts never register. Confirmation source failures remain visible and pending without invalidating complete mains; source roles follow registration roots and confirmationOf, never directory names. A registered round may append independent confirmation roots without replacing its main sessions, scene plan or N-1 identity. G10 only reads the latest registered round and comparison.",
   "roundComparison": {
     "minimumImprovementFraction": 0.05,
     "confirmation": "One confirmation when a metric is near upper, a selected metric is near stop, or a pain occurs once. Main and confirmation must share complete comparison/build/environment identity and frozen conditions/budget criteria; a rerun budget tier makes the round Incomplete. Select the whole real distribution for each worse judged statistic and name its source, never combine sample counts. Per-scene light-rate source keeps its real count/duration pair; only round route+travel totals judge the light limit."

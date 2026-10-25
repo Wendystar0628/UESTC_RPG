@@ -261,6 +261,11 @@ def check_round_registration(root, dictionary, budgets):
         record = ['record', 'fixture-round-0', '--number', '0', '--source-root', str(source),
                   '--scene', 'first', '--scene', 'second', '--author-root', str(author)]
         assert cli(*record)[0] == 1 and not (out / 'rounds.json').exists(), '空采集占用了轮号'
+        missing = Path(temporary) / 'not-created'
+        absent = [*record]
+        absent[absent.index(str(source))] = str(missing)
+        preview = cli(*absent, '--preview')
+        assert preview[0] == 0 and not missing.exists() and not (out / 'rounds.json').exists(), '预检创建来源或登记了空轮'
         session(source, 'main-first', 'first')
         broken = author / 'historical-error'
         write_six(broken, manifest(dictionary, 'historical-error'), streams([frame(dictionary, 0)], dictionary), dictionary)
@@ -268,6 +273,7 @@ def check_round_registration(root, dictionary, budgets):
         assert cli(*record)[0] == 1 and not (out / 'rounds.json').exists(), '场景覆盖不全占用了轮号'
         session(source, 'main-second', 'second')
         session(source, 'discarded-before-begin', 'first', state='invalid')
+        session(source, 'failed-confirmation', 'first', 'main-first', state='partial')
         preview = cli(*record, '--preview')
         assert preview[0] == 0 and len(json.loads(preview[1])['groups']) == 2 and not (out / 'rounds.json').exists()
         result = cli(*record)
@@ -286,15 +292,31 @@ def check_round_registration(root, dictionary, budgets):
         assert preview[0] == 0 and json.loads(preview[1])['gateStatus'] == 'Incomplete'
         prior = (out / 'rounds.json').read_bytes()
         assert cli(*append)[0] == 1 and (out / 'rounds.json').read_bytes() == prior, '不符冻结条件的确认被登记'
+        (bad / 'bad-confirm/frames.csv').write_text('truncated', encoding='utf-8')
+        assert cli(*append)[0] == 1 and (out / 'rounds.json').read_bytes() == prior, '失败确认改写了主轮'
+        assert any(error['source'] == str((bad / 'bad-confirm').resolve())
+                   for error in read_json(out / 'index.json')['errors']), '确认源错误被吞掉'
+
+        mixed = Path(temporary) / 'mixed-confirmations'
+        session(mixed, 'confirm-first', 'first', 'main-first')
+        session(mixed, 'interrupted-confirm', 'second', 'main-second', state='partial')
+        session(mixed, 'broken-confirm', 'second', 'main-second')
+        (mixed / 'broken-confirm/frames.csv').write_text('truncated', encoding='utf-8')
+        assert cli('record', registered['id'], '--confirmation-root', mixed, '--author-root', author)[0] == 0
+        interim = read_json(out / 'index.json')['batches'][0]
+        assert interim['status'] != 'partial' and [g['comparisonKey']['scene'] for g in interim['groups']
+                                                 if g['confirmationPending']] == ['second'], interim
+        assert read_json(out / 'derived/interrupted-confirm/summary.json')['baseStatus'] == 'partial'
+        assert any(error['source'] == str((mixed / 'broken-confirm').resolve())
+                   for error in read_json(out / 'index.json')['errors']), '同来源确认错误被吞掉'
         confirm = Path(temporary) / 'confirmations'
-        for scene in ('first', 'second'):
-            session(confirm, 'confirm-' + scene, scene, 'main-' + scene)
+        session(confirm, 'confirm-second', 'second', 'main-second')
         append = ['record', registered['id'], '--confirmation-root', str(confirm), '--author-root', str(author)]
         result = cli(*append)
         assert result[0] == 0, result
         updated = read_json(out / 'rounds.json')['rounds'][0]
         assert all(updated[key] == registered[key] for key in registered), '追加确认改写了轮身份或主采'
-        assert updated['confirmationRoots'] == [str(confirm.resolve())]
+        assert updated['confirmationRoots'] == [str(mixed.resolve()), str(confirm.resolve())]
         group = read_json(out / 'index.json')['batches'][0]['groups'][0]
         assert group['sessionIds'] == ['main-first', 'confirm-first'] and not group['confirmationPending']
         duplicate = Path(temporary) / 'duplicate'
@@ -315,6 +337,11 @@ def check_round_registration(root, dictionary, budgets):
         assert cli('compare', 'fixture-round-0', 'fixture-round-1')[0] == 0
         assert cli('compare', 'fixture-round-1', 'fixture-round-0')[0] == 1
         check_readonly_gate(root, repo, out)
+        (mixed / 'confirm-first/frames.csv').write_text('truncated', encoding='utf-8')
+        assert cli(*record)[0] == 0, '确认来源变坏废掉了完整主采'
+        retained = read_json(out / 'index.json')['batches'][0]
+        assert retained['status'] != 'partial' and retained['groups'][0]['confirmationPending'], retained
+        assert read_json(out / 'rounds.json')['rounds'][0]['mainSessionIds'] == registered['mainSessionIds']
         session(source, 'interrupted', 'first', state='partial')
         prior = (out / 'rounds.json').read_bytes()
         result = cli(*record)
@@ -353,8 +380,7 @@ def check_readonly_gate(root, repo, out):
                ". " + quoted(root / 'scripts/gates/performance.ps1') + "; "
                "function Assert-UESTCChildPath($Path,$Parent) { [IO.Path]::GetFullPath($Path) }; "
                "function Invoke-UESTCProcess { throw 'G10 attempted process execution' }; "
-               "$lease=[IO.File]::Open(" + quoted(repo / 'gate-test.lock') + ",[IO.FileMode]::OpenOrCreate); "
-               "try { Invoke-UESTCPerformanceGate -Root " + quoted(repo) + " -Map qingshuihe -BuildLease $lease | ConvertTo-Json -Depth 32 -Compress } finally { $lease.Dispose() }")
+               "Invoke-UESTCPerformanceGate -Root " + quoted(repo) + " -Map qingshuihe | ConvertTo-Json -Depth 32 -Compress")
     shell = shutil.which('powershell.exe') or shutil.which('powershell') or shutil.which('pwsh')
     assert shell, '离线 G10 回归需要 PowerShell'
     result = subprocess.run([shell, '-NoProfile', '-NonInteractive', '-Command', command], capture_output=True, text=True, encoding='utf-8', timeout=30)

@@ -79,8 +79,6 @@ def prepare_round(rounds, identifier, number_=None, source_root=None, scenes=Non
         elif any(source.is_relative_to(other) or other.is_relative_to(source)
                  for source in round_sources(row) for registered in rounds for other in round_sources(registered)):
             raise ValueError('新轮不能复用已登记轮的主采或确认来源')
-    if any(not source.is_dir() for source in round_sources(row)):
-        raise ValueError('轮原始根不存在')
     validate_rounds([item for item in rounds if item['id'] != identifier] + [row])
     return row
 
@@ -226,10 +224,12 @@ def batch_results(entries, budgets, failed_sources=(), rounds=()):
         source = Path(registration['sourceRoot']).resolve()
         roots = round_sources(registration)
         available = [row for row in entries if any(Path(row['source']).resolve().is_relative_to(root) for root in roots)]
+        confirmation_sources = {row['source'] for row in available if at(row, 'run.confirmationOf')}
         reasons.extend('轮来源分析失败: ' + failed for failed in sorted(failed_sources)
-                       if any(Path(failed).resolve().is_relative_to(root) for root in roots))
+                       if Path(failed).resolve().is_relative_to(source) and failed not in confirmation_sources)
         reasons.extend(row['id'] + ': 轮来源存在未完成运行: ' + '；'.join(row.get('baseReasons', []))
-                       for row in available if row.get('baseStatus') == 'partial')
+                       for row in available if Path(row['source']).resolve().is_relative_to(source)
+                       and not at(row, 'run.confirmationOf') and row.get('baseStatus') == 'partial')
         for scene in registration['scenes']:
             candidates = [row for row in available if row['comparisonKey'].get('scene') == scene
                           and Path(row['source']).resolve().is_relative_to(source)
@@ -242,7 +242,8 @@ def batch_results(entries, budgets, failed_sources=(), rounds=()):
             if main['source'] in failed_sources:
                 reasons.append(scene + ': 最新完整单次来源分析失败，不晋升旧单次')
                 continue
-            confirmations = [row for row in available if at(row, 'run.confirmationOf') == main['id'] and base_valid(row)]
+            confirmations = [row for row in available if at(row, 'run.confirmationOf') == main['id']
+                             and base_valid(row) and row['source'] not in failed_sources]
             group = {key: copy.deepcopy(main[key]) for key in ('comparisonKey', 'calc', 'origin', 'scope', 'environmentSignature', 'all', 'steady')}
             group.update(sessionIds=[main['id']], mainSessionId=main['id'], confirmationSessionId=None)
             group['distanceTable'] = distance_table([main], group)
@@ -257,8 +258,6 @@ def batch_results(entries, budgets, failed_sources=(), rounds=()):
                 mismatches = []
                 if len(confirmations) != 1:
                     mismatches.append('有效确认次数不是一次')
-                if confirm['source'] in failed_sources:
-                    mismatches.append('确认来源分析失败')
                 if group_key(confirm) != group_key(main):
                     mismatches.append('确认比较键/calc/origin/scope 不一致')
                 if confirm['build'] != main['build']:
@@ -289,7 +288,7 @@ def batch_results(entries, budgets, failed_sources=(), rounds=()):
         referenced = {identifier for group in groups for identifier in group['sessionIds']}
         for row in available:
             if (not Path(row['source']).resolve().is_relative_to(source) and row['id'] not in referenced
-                    and base_valid(row)):
+                    and base_valid(row) and row['source'] not in failed_sources):
                 reasons.append(row['id'] + ': 追加来源不是本轮所需的一次有效确认')
         missing_checks = [check for group in groups for check in group['requiredChecks'] if check['status'] != 'measured']
         missing_budgets = [check for group in groups for check in group['distanceTable'] if check['tier'] == 'rerun']

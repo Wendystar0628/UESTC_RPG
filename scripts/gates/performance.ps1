@@ -163,8 +163,7 @@ function Read-UESTCPerfGroup {
 }
 
 function Invoke-UESTCPerformanceGate {
-    param([Parameter(Mandatory)][string]$Root, [Parameter(Mandatory)][string]$Map,
-        [Parameter(Mandatory)][IO.FileStream]$BuildLease)
+    param([Parameter(Mandatory)][string]$Root, [Parameter(Mandatory)][string]$Map)
     $plan = Get-Content -Raw -Encoding UTF8 -LiteralPath (Join-Path $Root 'scripts/perf/scenarios.json') | ConvertFrom-Json
     if ($plan.map -ne $Map) {
         return [pscustomobject]@{ Status='Incomplete'; IncompleteReasons=@("Fixed collection map '$($plan.map)' differs from requested map '$Map'.") }

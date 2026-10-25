@@ -342,11 +342,6 @@ def analyze_all(root=ROOT, output=None, author=None, round_request=None, preview
         # Discover and recheck under the shared lock: concurrent triggers cannot append duplicate history.
         rounds = read_rounds(out)
         proposed = prepare_round(rounds, **round_request) if round_request is not None else None
-        if proposed is not None and any(row['id'] == proposed['id'] for row in rounds) and not proposed.get('mainSessionIds'):
-            prior = next((row for row in prior_index.get('batches', []) if row['id'] == proposed['id']), {})
-            mains = {group['comparisonKey']['scene']: group['mainSessionId'] for group in prior.get('groups', [])}
-            if set(mains) == set(proposed['scenes']):
-                proposed['mainSessionIds'] = mains
         projected_rounds = ([row for row in rounds if row['id'] != proposed['id']] + [proposed]) if proposed else rounds
         directories = discover(out, author, [str(source) for row in projected_rounds for source in round_sources(row)])
         sources = {str(directory) for directory in directories}
@@ -396,8 +391,10 @@ def analyze_all(root=ROOT, output=None, author=None, round_request=None, preview
             assess_rounds(projected)
             projection = next(row for row in projected
                               if row['id'] == proposed['id'])
-            pending = [source for source in skipped if any(Path(source).resolve().is_relative_to(parent)
-                       for parent in round_sources(proposed))]
+            confirmation_sources = {row['source'] for row in entries if at(row, 'run.confirmationOf')}
+            pending = [source for source in skipped
+                       if Path(source).resolve().is_relative_to(Path(proposed['sourceRoot']).resolve())
+                       and source not in confirmation_sources]
             if pending:
                 projection['statusReasons'].extend('轮来源仍被写入锁占用或尚未关闭: ' + source for source in pending)
                 projection['status'], projection['gateStatus'] = 'partial', 'Incomplete'

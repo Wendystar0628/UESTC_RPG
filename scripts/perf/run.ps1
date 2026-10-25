@@ -1,6 +1,6 @@
 ﻿# AI 固定采集唯一入口：冻结条件，分开本树准备与私桌面采样，保留失败并交既有分析器。
 # 用法：powershell -File scripts/perf/run.ps1 -Batch <新来源名> [-Suite fixed|route|travel] [-Scene overview-default]；正式主采加 -Mode formal -RoundNumber 0 [-PreviousRound id]，同轮确认加 -Mode formal -ConfirmRound <既有轮ID>；诊断用 -DeepenSession <id>。
-# 产出：output/perf/runs/<Batch>/<场景>/<主采或确认-尝试>/<会话>/run.json 与六件；完成主采后登记轮，失败与功能短跑只留运行事实。
+# 产出：output/perf/runs/<Batch>/ 下独立主采、确认来源的 run.json 与六件；完整主采登记轮，确认失败保留原故障并待补。
 [CmdletBinding(DefaultParameterSetName='Collection')]
 param([Parameter(Mandatory,ParameterSetName='Collection')][ValidatePattern('^[A-Za-z0-9][A-Za-z0-9-]+$')][string]$Batch,
     [ValidateSet('fixed','route','travel')][string[]]$Suite=@('fixed','route','travel'), [string[]]$Scene=@(),
@@ -55,9 +55,9 @@ $sceneIds=@($selected | ForEach-Object { $_.scene.id })
 $batchRoot=Assert-UESTCChildPath (Join-Path $root ('output\perf\runs\' + $Batch)) (Join-Path $root 'output\perf\runs')
 $roundRoot=$batchRoot
 if (Test-Path -LiteralPath $roundRoot) { throw 'Choose a fresh attempt source; prior data is retained.' }
-$null=[IO.Directory]::CreateDirectory($roundRoot)
+$mainRoot=Join-Path $roundRoot 'main'
 $roundId=if ($ConfirmRound) { $ConfirmRound } else { $Batch }
-$confirmationRoot=if ($ConfirmRound) { $roundRoot } else { '' }
+$confirmationRoot=if ($ConfirmRound) { $roundRoot } else { Join-Path $roundRoot 'confirmation' }
 $projection=$null
 if ($ConfirmRound) {
     $projection=Publish-CollectionRound $root $roundId $null $null @() $null -ConfirmationRoot $confirmationRoot -Preview
@@ -69,7 +69,7 @@ if ($ConfirmRound) {
     $RoundNumber=$projection.number
     $PreviousRound=$projection.previousId
 } elseif ($Mode -eq 'formal') {
-    $projection=Publish-CollectionRound $root $roundId $RoundNumber $roundRoot $sceneIds $PreviousRound -Preview
+    $projection=Publish-CollectionRound $root $roundId $RoundNumber $mainRoot $sceneIds $PreviousRound -Preview
 }
 $purpose=if ($Mode -eq 'formal') { 'baseline' } else { 'functional' }
 $roundRecord=[ordered]@{ purpose=$purpose; number=$RoundNumber; previousId=$PreviousRound; scenes=$sceneIds; status='preparing';
@@ -78,6 +78,9 @@ $roundRecord=[ordered]@{ purpose=$purpose; number=$RoundNumber; previousId=$Prev
 $lease=$null
 $failed=$false
 $acceptedSources=@()
+$completedMainScenes=@()
+$confirmationSources=@()
+$null=[IO.Directory]::CreateDirectory($roundRoot)
 # DECISION-346: the inherited override is removed, and every child uses this checkout's own default cache.
 $inheritedBakeCache=$env:UESTC_BAKE_CACHE
 Remove-Item Env:UESTC_BAKE_CACHE -ErrorAction SilentlyContinue
@@ -118,7 +121,9 @@ try {
             $accepted=$false
             for ($attempt=1; $attempt -le $attemptLimit; $attempt++) {
                 $entry=$item.scene
-                $directory=Join-Path $roundRoot ($entry.id + '\' + $sample + '-' + $attempt)
+                $sourceRoot=if ($confirmationOf) { Join-Path $confirmationRoot $entry.id } else { Join-Path $mainRoot $entry.id }
+                if ($confirmationOf -and $sourceRoot -notin $confirmationSources) { $confirmationSources += $sourceRoot }
+                $directory=Join-Path $sourceRoot ($sample.ToString() + '-' + $attempt)
                 $null=[IO.Directory]::CreateDirectory($directory)
                 $seconds=if ($Mode -ne 'formal') { $smokeSeconds } elseif ($item.kind -eq 'route') { $entry.seconds } else { $sampleSeconds }
                 $segment='sample-' + [Guid]::NewGuid().ToString('N')
@@ -195,7 +200,12 @@ try {
                     $run.status='partial'; $run.reasons=@($_.Exception.ToString())
                     $run.timedOut=$_.Exception.Message -like 'Process timeout:*'
                 }
-                $accepted=Publish-CollectionRun $directory $run
+                try { $accepted=Publish-CollectionRun $directory $run }
+                catch {
+                    $run.status='partial'; $run.reasons += $_.Exception.ToString()
+                    Write-CollectionJson (Join-Path $directory 'attempt.json') $run
+                    $accepted=$false
+                }
                 if ($accepted) {
                     $acceptedSources += @(Get-ChildItem -LiteralPath $directory -Directory | Where-Object {
                         Test-Path -LiteralPath (Join-Path $_.FullName 'manifest.json')
@@ -204,8 +214,9 @@ try {
                 if ($accepted -or $run.status -eq 'partial') { break }
             }
             if (-not $accepted) { $failed=$true; break }
+            if (-not $confirmationOf) { $completedMainScenes += $entry.id }
             if ($Mode -eq 'formal' -and -not $ConfirmRound -and $sample -eq 0) {
-                $projection=Publish-CollectionRound $root $roundId $RoundNumber $roundRoot $sceneIds $PreviousRound -Preview
+                $projection=Publish-CollectionRound $root $roundId $RoundNumber $mainRoot $sceneIds $PreviousRound -Preview
                 $group=@($projection.groups | Where-Object { $_.comparisonKey.scene -eq $entry.id })
                 if ($group.Count -ne 1) { throw 'Analyzer did not publish the collected scene.' }
                 if (-not $group[0].confirmationPending) { break }
@@ -225,22 +236,37 @@ finally {
             $roundRecord['analysisError']=$_.Exception.ToString()
             Write-Warning $roundRecord.analysisError
         }
-        if ($Mode -eq 'formal' -and -not $failed -and $roundRecord.completed) {
-            try { Publish-CollectionRound $root $roundId $RoundNumber $roundRoot $sceneIds $PreviousRound -ConfirmationRoot $confirmationRoot }
-            catch {
-                $failed=$true
-                $roundRecord['analysisError']=$_.Exception.ToString()
-                Write-Warning $roundRecord.analysisError
+        if ($Mode -eq 'formal') {
+            $registered=[bool]$ConfirmRound
+            if (-not $ConfirmRound -and $completedMainScenes.Count -eq $selected.Count) {
+                try {
+                    Publish-CollectionRound $root $roundId $RoundNumber $mainRoot $sceneIds $PreviousRound
+                    $registered=$true
+                } catch {
+                    $failed=$true
+                    $roundRecord['registrationError']=$_.Exception.ToString()
+                    Write-Warning $roundRecord.registrationError
+                }
             }
-        } elseif ($Mode -ne 'formal') {
+            if ($registered) {
+                foreach ($source in $confirmationSources) {
+                    try { Publish-CollectionRound $root $roundId $null $null @() $null -ConfirmationRoot $source }
+                    catch {
+                        $failed=$true
+                        $roundRecord['confirmationError']=$_.Exception.ToString()
+                        Write-Warning $roundRecord.confirmationError
+                    }
+                }
+            }
+        } else {
             & python -I -X utf8 (Join-Path $PSScriptRoot 'perf.py') --root $root latest --origin ai --scope cost
             if ($LASTEXITCODE -ne 0) { $failed=$true }
         }
         if ($failed -and $roundRecord.completed) {
             $roundRecord.completed=$false
             $roundRecord.status='incomplete'
-            Write-CollectionJson (Join-Path $roundRoot 'round.json') $roundRecord
         }
+        Write-CollectionJson (Join-Path $roundRoot 'round.json') $roundRecord
     } finally {
         Exit-UESTCBuildLock $lease
         if ($null -eq $inheritedBakeCache) { Remove-Item Env:UESTC_BAKE_CACHE -ErrorAction SilentlyContinue }
