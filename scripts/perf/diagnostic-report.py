@@ -45,22 +45,52 @@ def collection_result(work, tool):
 
 
 def eventpipe_coverage(root, work, session, condition, capture):
-    """只按实际附着发布、退出时刻和成功入流的采样边界确认覆盖。"""
+    """核对真实样段、目标存活的 Stop/rundown 和托管样本中实际可用的方法。"""
     report = dict(status='partial', reasons=[])
     reasons = report['reasons']
     if capture.get('gameExitCode') != 0 or capture.get('exitCode') != 0:
         reasons.append('Godot and EventPipe must both exit successfully.')
-    parsed = read_json(work / 'cpu-hotspots.json')
+    try:
+        parsed = read_json(work / 'cpu-hotspots.json')
+        if not isinstance(parsed, dict):
+            raise ValueError('Expected an EventPipe report object.')
+    except (OSError, TypeError, ValueError) as error:
+        reasons.append('EventPipe parser output is unavailable: ' + str(error))
+        return report
     if parsed.get('processId') != capture.get('gamePid') or not capture.get('gamePid'):
         reasons.append('Parsed managed PID differs from the owned Godot PID.')
     if parsed.get('EventsLost') != 0 or parsed.get('Truncated') is not False:
         reasons.append('EventPipe trace loss/truncation is nonzero or unknown.')
     if not any(number(row.get('samples')) and row['samples'] > 0 for row in parsed.get('threads', [])):
-        reasons.append('EventPipe has no managed stack samples in the recording session.')
+        reasons.append('EventPipe has no thread stack samples in the diagnostic sample window.')
+    resolution = parsed.get('managedStackResolution')
+    report['managedStackResolution'] = resolution
+    if not isinstance(resolution, dict):
+        reasons.append('Managed sample method-resolution statistics are missing.')
+    else:
+        counts = [resolution.get(key) for key in ('managedSamples', 'managedSamplesWithResolvedMethods',
+                  'stackFrameOccurrences', 'resolvedMethodFrameOccurrences', 'distinctResolvedMethods')]
+        if any(not isinstance(value, int) or isinstance(value, bool) or value < 0 for value in counts):
+            reasons.append('Managed sample method-resolution counts are unavailable or invalid.')
+        else:
+            managed, with_methods, frames, resolved_frames, methods = counts
+            report['managedSampleMethodFraction'] = with_methods / managed if managed else None
+            # ENG-PERF-MEASURE: strictly more than half of Managed samples must have a method.
+            if not managed or with_methods > managed or with_methods * 2 <= managed:
+                reasons.append('Not more than half of Managed samples contain a resolved method.')
+            if not frames or not resolved_frames or not methods or resolved_frames > frames:
+                reasons.append('Managed samples did not produce usable resolved method frames.')
+            fraction = resolution.get('resolvedMethodFrameFraction')
+            if not number(fraction) or not 0 < fraction <= 1:
+                reasons.append('Managed stack-frame resolution fraction is unavailable.')
+    if capture.get('collectorStoppedWhileTargetAlive') is not True:
+        reasons.append('Collector Stop/rundown did not complete while the target remained alive.')
     manifest, streams = load_session(session, read_json(root / 'game/data/perf-fields.json'))
+    if parsed.get('sampleSegmentId') != condition['collection']['sampleSegmentId'] or parsed.get('session') != manifest.get('id'):
+        reasons.append('Parsed EventPipe sample or recording identity differs from this diagnostic session.')
     marks = [] if streams is None else sorted((row for row in streams['events'] if row['event'] == 'segment'
         and row['payload'].get('id') == condition['collection']['sampleSegmentId']), key=lambda row: row['sequence'])
-    if len(marks) != 2 or [row['payload'].get('phase') for row in marks] != ['begin', 'end']:
+    if len(marks) != 2 or [row['payload'].get('phase') for row in marks] != ['begin', 'end'] or marks[0]['sequence'] >= marks[1]['sequence']:
         reasons.append('Diagnostic sample Begin/End are missing, duplicated or out of order.')
     else:
         try:
@@ -69,16 +99,22 @@ def eventpipe_coverage(root, work, session, condition, capture):
             origin = datetime.fromtimestamp(anchor['unixMs'] / 1000, timezone.utc)
             begin, end = (origin + timedelta(milliseconds=row['monotonicMs'] - anchor['monotonicMs']) for row in marks)
             uncertainty = timedelta(milliseconds=max(row['readSpanMs'] for row in anchors))
-            attached_text, exited_text = capture.get('collectorReadyObservedUtc'), capture.get('toolExitUtc')
-            if not isinstance(attached_text, str) or not isinstance(exited_text, str):
-                raise ValueError('Collector attachment/exit timing is missing.')
-            attached = datetime.fromisoformat(attached_text.replace('Z', '+00:00'))
-            exited = datetime.fromisoformat(exited_text.replace('Z', '+00:00'))
+            timing = {}
+            for key in ('collectorReadyObservedUtc', 'collectorStopRequestedUtc', 'toolExitUtc', 'collectorFinishedUtc', 'gameExitUtc'):
+                text = capture.get(key)
+                if not isinstance(text, str):
+                    raise ValueError('Collector lifecycle timestamp is missing: ' + key)
+                timing[key] = datetime.fromisoformat(text.replace('Z', '+00:00'))
+                if timing[key].utcoffset() is None:
+                    raise ValueError('Collector lifecycle timestamp lacks its timezone: ' + key)
+            attached, stopped, exited, finished, game_exited = timing.values()
             report.update(sampleBeginUtc=begin.isoformat(), sampleEndUtc=end.isoformat(),
-                          collectorReadyObservedUtc=attached.isoformat(), collectorExitUtc=exited.isoformat(),
+                          **{key: value.isoformat() for key, value in timing.items()},
                           clockReadSpanMs=uncertainty.total_seconds() * 1000)
-            if begin >= end or attached > begin - uncertainty or exited < end + uncertainty:
+            if begin >= end or attached > begin - uncertainty or stopped < end + uncertainty:
                 reasons.append('Observed EventPipe attachment does not cover the complete diagnostic sample interval.')
+            if not attached <= stopped <= exited <= finished <= game_exited:
+                reasons.append('Collector Stop/rundown and formal game exit did not occur in the required order.')
         except (KeyError, IndexError, TypeError, ValueError, OverflowError) as error:
             reasons.append('EventPipe coverage timing is unavailable: ' + str(error))
     if not reasons:
@@ -86,7 +122,7 @@ def eventpipe_coverage(root, work, session, condition, capture):
     return report
 
 
-def attachment_state(work, session, tool):
+def attachment_state(work, session, tool, capture):
     attachment_reasons = []
     gpu_structure = None
     if tool == 'gpu-profile':
@@ -94,17 +130,54 @@ def attachment_state(work, session, tool):
         if steps.is_file():
             with steps.open(newline='', encoding='utf-8-sig') as stream:
                 rows = list(csv.DictReader(stream))
-            gpu_structure = dict(rows=len(rows), validRows=sum(row['valid'] == 'true' for row in rows),
-                                 invalidReasons=sorted({row['reason'] for row in rows if row['valid'] != 'true'}),
-                                 segments=len({row['structureSegment'] for row in rows}))
-            if not gpu_structure['validRows']:
-                attachment_reasons.append('GPU timestamps did not produce a rechecked valid structure segment.')
+            valid_steps = []
+            for row in rows:
+                if row.get('valid') != 'true' or row.get('index') == '0':
+                    continue
+                try:
+                    cpu = float(row['cpuSincePreviousMarkerMs'])
+                    gpu = float(row['gpuSincePreviousMarkerMs'])
+                except (KeyError, TypeError, ValueError) as error:
+                    attachment_reasons.append('GPU marker interval could not be read: ' + str(error))
+                    continue
+                if number(cpu) and number(gpu) and cpu >= 0 and gpu >= 0 and row.get('name') not in (None, '', 'null'):
+                    valid_steps.append(row)
+                else:
+                    attachment_reasons.append('GPU marker interval is nonfinite, negative or unnamed.')
+            gpu_structure = dict(rows=len(rows), validRows=sum(row.get('valid') == 'true' for row in rows), usableStepRows=len(valid_steps),
+                                 invalidReasons=sorted({row.get('reason', 'missing-reason') for row in rows if row.get('valid') != 'true'}),
+                                 segments=len({row.get('structureSegment') for row in rows}))
+            if not valid_steps:
+                attachment_reasons.append('GPU timestamps did not produce a rechecked structure with usable numeric marker intervals.')
         else:
             attachment_reasons.append('gpusteps.csv is missing.')
     elif tool == 'EventPipe' and not (work / 'cpu-hotspots.json').is_file():
         attachment_reasons.append('EventPipe parser did not produce cpu-hotspots.json.')
-    elif tool == 'Nsight' and not list(work.glob('*.nsys-rep')):
-        attachment_reasons.append('Nsight did not publish an nsys-rep attachment.')
+    elif tool == 'Nsight':
+        if not list(work.glob('*.nsys-rep')):
+            attachment_reasons.append('Nsight did not publish an nsys-rep attachment.')
+        if capture.get('nsightStatsExitCode') != 0:
+            attachment_reasons.append('Native Nsight stats did not successfully parse the captured report.')
+        reports = capture.get('nsightGpuReports', [])
+        usable_rows = 0
+        for name in reports:
+            path = work / name
+            if path.parent != work or not path.is_file():
+                attachment_reasons.append('Native Nsight GPU report is unavailable: ' + str(name))
+                continue
+            with path.open(newline='', encoding='utf-8-sig') as stream:
+                for row in csv.DictReader(stream):
+                    try:
+                        duration, instances = float(row['Total Time (ns)']), int(row['Instances'])
+                    except (KeyError, TypeError, ValueError) as error:
+                        attachment_reasons.append('Native Nsight GPU range could not be read: ' + str(error))
+                        continue
+                    if number(duration) and duration >= 0 and instances > 0 and row.get('Range'):
+                        usable_rows += 1
+                    else:
+                        attachment_reasons.append('Native Nsight GPU range has no finite duration, instances or name.')
+        if not usable_rows:
+            attachment_reasons.append('Native Nsight GPU range reports contain no usable measured GPU ranges.')
     return attachment_reasons, gpu_structure
 
 
@@ -113,7 +186,9 @@ def publish(root, work, source, exit_code):
     sessions = [path.parent for path in work.glob('*/manifest.json')]
     if len(sessions) != 1:
         atomic_json(work / 'diagnostic.json', dict(purpose='diagnostic', status='partial', condition=condition,
-                    exitCode=exit_code, reasons=['Expected exactly one closed diagnostic recording. Raw collector output retained.']))
+                    exitCode=exit_code, attachmentAvailability=dict(available=False,
+                    reasons=['Expected exactly one closed diagnostic recording. Raw collector output retained.']),
+                    reasons=['Expected exactly one closed diagnostic recording. Raw collector output retained.']))
         return False
     session = sessions[0]
     capture_path = work / 'capture-result.json'
@@ -125,7 +200,11 @@ def publish(root, work, source, exit_code):
                  and observed.get('sampleSegmentId') == condition['collection']['sampleSegmentId']
                  and observed.get('sessionId') == recorded.get('id')
                  and recorded.get('status') == 'closed' and recorded.get('complete') is True)
-    attachment_reasons, gpu_structure = attachment_state(work, session, condition['tool'])
+    try:
+        attachment_reasons, gpu_structure = attachment_state(work, session, condition['tool'], capture)
+    except (OSError, TypeError, ValueError, csv.Error) as error:
+        attachment_reasons = ['Diagnostic attachment could not be read: ' + type(error).__name__ + ': ' + str(error)]
+        gpu_structure = None
     trace_coverage = None
     if condition['tool'] == 'EventPipe' and (work / 'cpu-hotspots.json').is_file():
         trace_coverage = eventpipe_coverage(root, work, session, condition, capture)
@@ -146,6 +225,8 @@ def publish(root, work, source, exit_code):
             if not target.exists():
                 shutil.copyfile(path, target)
             attachments.append(path.name)
+    if condition['tool'] == 'gpu-profile' and (session / 'gpusteps.csv').is_file():
+        attachments.append('gpusteps.csv')
     reference, reference_reasons = frame_metrics(root, source)
     current, current_reasons = frame_metrics(root, session)
     before, _, missing_before = comparison_key(read_json(source / 'manifest.json'), source_run)
@@ -165,6 +246,7 @@ def publish(root, work, source, exit_code):
                              for stat in ('mean', 'p95')}
     report = dict(purpose='diagnostic', status=run['status'], sourceSession=condition['sourceSession'], referencePurpose=source_run.get('purpose'), condition=condition,
                   attachments=attachments, actualCollector=capture, gpuStructure=gpu_structure, eventPipeCoverage=trace_coverage,
+                  attachmentAvailability=dict(available=not attachment_reasons, reasons=attachment_reasons),
                   reference=reference, diagnostic=current,
                   diagnosticToRegularRatios=ratios, conditionDifferences=differences,
                   ratioUnavailableReasons=reference_reasons + current_reasons + missing_before + missing_after,

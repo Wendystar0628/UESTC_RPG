@@ -8,6 +8,8 @@ public sealed record PerfCollectionOptions
     public required string SampleSegmentId { get; init; }
     public required bool FunctionalSmoke { get; init; }
     public bool SaveAfterSample { get; init; }
+    /// <summary>EventPipe diagnostics keep the target alive after the real sample End until the owner closes its window.</summary>
+    public bool ExternalCloseAfterSample { get; init; }
     public string[] RoutePointIds { get; init; } = [];
     public bool TravelPrefetch { get; init; }
     public required int StableFrames { get; init; }

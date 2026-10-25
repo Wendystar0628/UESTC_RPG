@@ -79,6 +79,7 @@ function Invoke-PerfDiagnostic($Root, $SessionId, [string[]]$Tools, [int]$EntryI
             }
             $request=$sourceRun.conditions | ConvertTo-Json -Depth 16 | ConvertFrom-Json
             $request.sampleSegmentId='diagnostic-' + [Guid]::NewGuid().ToString('N')
+            $request | Add-Member -NotePropertyName externalCloseAfterSample -NotePropertyValue ($tool -eq 'EventPipe') -Force
             $requestPath=Join-Path $work 'collection.json'
             Write-CollectionJson $requestPath $request
             $poseArguments=@($entry.poseArgs | Where-Object { $_ -notmatch '^--(?:perf-out|perf-collection|save-dir)=' -and

@@ -18,16 +18,15 @@ if ($playingSample -and (-not $diagnostic -or $Mode -ne 'immediate')) { throw 'P
 $timing = New-UESTCLaunchTiming -ScriptEnteredUtc $scriptEnteredUtc -ScriptEnteredTimestamp $scriptEnteredTimestamp
 $lease = $null
 $trace = $null
+$eventPipe = $null
+$collectorRecord = [ordered]@{}
 $gameProcess = $null
 $gameTree = $null
 $failure = $null
 $cleanupFailures = [Collections.Generic.List[object]]::new()
 $result = $null
-$collectorFinishedUtc = $null
 $shutdown = [ordered]@{ status='NOT_REQUESTED'; windowHandle=$null; closeRequestedUtc=$null;
     closePostedTimestamp=$null; exitObservedUtc=$null; exitCode=$null }
-$stopped = $false
-$stopAttempted = $false
 $snapshots = [Collections.Generic.List[object]]::new()
 $playingCpu = [Collections.Generic.List[object]]::new()
 $playingEdges = [Collections.Generic.List[object]]::new()
@@ -40,32 +39,7 @@ $logReader = $null
 $pendingLog = ''
 $nextCpuRead = $null
 # ProcessTree owns the native primary process/thread identity and each job.
-# The private-console Stop binding below controls dotnet-trace, never player input.
 if (-not ('Uestc.Tools.ProcessTree' -as [type])) { Add-Type -Path "$toolRoot\scripts\lib\ProcessTree.cs" }
-Add-Type -TypeDefinition @"
-using System;
-using System.ComponentModel;
-using System.Runtime.InteropServices;
-public static class C215Launch {
-    [StructLayout(LayoutKind.Explicit, Size=20, CharSet=CharSet.Unicode)] struct Input {
-        [FieldOffset(0)] public ushort type;
-        [FieldOffset(4)] public int down;
-        [FieldOffset(8)] public ushort repeat;
-        [FieldOffset(10)] public ushort key;
-        [FieldOffset(14)] public char character;
-    }
-    [DllImport("kernel32.dll", SetLastError=true)] static extern IntPtr GetStdHandle(int number);
-    [DllImport("kernel32.dll", SetLastError=true)]
-    static extern bool WriteConsoleInputW(IntPtr handle, Input[] records, uint count, out uint written);
-    public static void RequestStop() {
-        // dotnet-trace ignores redirected stdin. Its inherited private console is real stdin.
-        var down = new Input { type=1, down=1, repeat=1, key=13, character='\r' };
-        var up = down; up.down=0; uint written;
-        if (!WriteConsoleInputW(GetStdHandle(-10), new[] {down,up}, 2, out written) || written!=2)
-            throw new Win32Exception(Marshal.GetLastWin32Error());
-    }
-}
-"@
 function Read-CpuSnapshot([string]$Name) {
     $startedUtc = [DateTime]::UtcNow.ToString('O')
     $gameProcess.Refresh()
@@ -97,26 +71,6 @@ function Read-PlayingCpu {
     $seconds = $gameProcess.TotalProcessorTime.TotalSeconds
     $playingCpu.Add([ordered]@{ readUtc=[DateTime]::UtcNow.ToString('O'); processCpuSeconds=$seconds;
         startedUtc=$started.ToString('O'); observerMilliseconds=([Diagnostics.Stopwatch]::GetTimestamp()-$readStarted)*1000.0/[Diagnostics.Stopwatch]::Frequency })
-}
-function Stop-OwnTrace {
-    $script:stopAttempted = $true
-    if ($trace.HasExited) { throw "Collector exited before requested Stop: $($trace.ExitCode)" }
-    $script:stopRequestedUtc = [DateTime]::UtcNow.ToString('O')
-    [C215Launch]::RequestStop()
-    # Complete EventPipe Stop and CLR rundown while the target remains alive.
-    $stopClock = [Diagnostics.Stopwatch]::StartNew()
-    while (-not $trace.HasExited) {
-        if ($stopClock.Elapsed.TotalSeconds -ge 120) { throw 'Collector did not finish Stop/rundown; its owned job will be reclaimed as a failed capture.' }
-        Start-Sleep -Milliseconds 100
-    }
-    $trace.Finish()
-    [IO.File]::WriteAllText((Join-Path $Output 'trace.stdout.txt'), $trace.StdOut)
-    [IO.File]::WriteAllText((Join-Path $Output 'trace.stderr.txt'), $trace.StdErr)
-    [IO.File]::WriteAllText((Join-Path $Output 'trace.exit.txt'), [string]$trace.ExitCode)
-    if ($trace.ExitCode -ne 0) { throw "Collector failed: $($trace.ExitCode)" }
-    if (-not [IO.File]::Exists((Join-Path $Output 'threads.nettrace'))) { throw 'Missing nettrace output.' }
-    $script:collectorFinishedUtc = [DateTime]::UtcNow.ToString('O')
-    $script:stopped = $true
 }
 try {
     $timing['lockRequestedTimestamp'] = [Diagnostics.Stopwatch]::GetTimestamp()
@@ -153,16 +107,13 @@ try {
     $timing['engineStartUtc'] = $processStart.ToString('O')
     $timing['status'] = 'ENGINE_STARTED'
     $attachRequestedUtc = $null
-    $stopRequestedUtc = $null
     if ($diagnostic) {
-        # CLR GC | Type | GCHeapAndTypeNames | Stack, verbose: native AllocationTick payloads/stacks.
-        $traceArguments = 'collect --process-id ' + $gameProcess.Id +
-            ' --profile dotnet-sampled-thread-time --providers Microsoft-Windows-DotNETRuntime:0x41080001:5 --output ' +
-            (ConvertTo-UESTCProcessArgument (Join-Path $Output 'threads.nettrace'))
-        $attachRequestedUtc = [DateTime]::UtcNow.ToString('O')
-        # visible=true shares this worker's private console; CONIN$ keeps Enter-to-stop
-        # while ProcessTree owns stdout/stderr pipes and the suspended launch/job.
-        $trace = New-Object Uestc.Tools.ProcessTree("$toolRoot\output\tools\dotnet-diagnostics\dotnet-trace.exe", $traceArguments, $toolRoot, $true, [Text.Encoding]::UTF8, $false, $null, $true)
+        $eventPipe = @{ Target=$gameTree; ToolPath="$toolRoot\output\tools\dotnet-diagnostics\dotnet-trace.exe";
+            Root=$toolRoot; Output=$Output; Record=$collectorRecord; Deadline=[DateTime]::UtcNow.AddSeconds(300) }
+        $timing['collector'] = $collectorRecord
+        Invoke-UESTCEventPipeCapture -Action Start -Capture $eventPipe
+        $trace = $eventPipe.Collector
+        $attachRequestedUtc = $collectorRecord.attachRequestedUtc
         Read-CpuSnapshot 'attach-request'
     }
     [ordered]@{ gamePid=$gameProcess.Id; mainOsThreadId=$mainThreadId;
@@ -264,7 +215,7 @@ try {
         Start-Sleep -Milliseconds 20
     }
     if (-not $completed) { throw "Startup sampling boundary was not observed; playingState=$playingState. Raw telemetry retained." }
-    if ($diagnostic) { Stop-OwnTrace }
+    if ($diagnostic) { Invoke-UESTCEventPipeCapture -Action Stop -Capture $eventPipe }
     if ($gameTree.HasExited) { throw 'Target exited before collector Stop/rundown completed.' }
     if ($null -eq $shutdown.windowHandle) { throw 'Sampling completed without the game-owned STARTUP_ENVIRONMENT windowHandle; raw telemetry retained.' }
     $shutdown.status = 'CLOSE_REQUESTED'
@@ -318,8 +269,10 @@ try {
         mode=$Mode; captureEndpoint=$captureEndpoint; commandLine=$line; measurement=$condition.measurement; condition=$condition; launcher=$timing;
         preparation=$condition.preparation;
         collector=if($diagnostic){'EventPipe dotnet-sampled-thread-time + CLR GC allocation/type/stack (0x41080001:5); NOT on-CPU'}else{'OFF'};
-        attachRequestedUtc=$attachRequestedUtc; collectorPid=if($trace){$trace.ProcessId}else{$null}; collectorStopRequestedUtc=$stopRequestedUtc;
-        collectorStoppedWhileTargetAlive=if($diagnostic){$stopped}else{$null}; collectorFinishedUtc=$collectorFinishedUtc;
+        attachRequestedUtc=$attachRequestedUtc; collectorPid=if($trace){$trace.ProcessId}else{$null};
+        collectorStopRequestedUtc=if($diagnostic){$collectorRecord.collectorStopRequestedUtc}else{$null};
+        collectorStoppedWhileTargetAlive=if($diagnostic){$collectorRecord.collectorStoppedWhileTargetAlive}else{$null};
+        collectorFinishedUtc=if($diagnostic){$collectorRecord.collectorFinishedUtc}else{$null};
         shutdown=$shutdown;
         phaseObservations=$anchors.ToArray(); cpuSnapshots=$snapshots.ToArray(); phasePollingMilliseconds=20;
         playingSample=[ordered]@{ enabled=$playingSample; state=$playingState; edges=$playingEdges.ToArray();
@@ -355,22 +308,12 @@ try {
 } finally {
     # Try every owned cleanup and evidence write; retain the primary error object when cleanup also fails.
     $cleanup = [ordered]@{
-        CollectorStop = { if ($trace -and -not $stopped -and -not $stopAttempted) { Stop-OwnTrace } }
-        CollectorExit = {
-            if ($trace -and $trace.HasExited) { [IO.File]::WriteAllText((Join-Path $Output 'trace.exit.txt'), [string]$trace.ExitCode) }
-        }
-        CollectorJob = { if ($trace) { $trace.Dispose() } }
+        Collector = { if ($eventPipe) { Invoke-UESTCEventPipeCapture -Action Dispose -Capture $eventPipe } }
         OwnedJob = { if ($gameTree) { $gameTree.Dispose() } }
         GameOutput = {
             if ($gameTree) {
                 [IO.File]::WriteAllText((Join-Path $Output 'game.stdout.txt'), $gameTree.StdOut)
                 [IO.File]::WriteAllText((Join-Path $Output 'game.stderr.txt'), $gameTree.StdErr)
-            }
-        }
-        CollectorOutput = {
-            if ($trace) {
-                [IO.File]::WriteAllText((Join-Path $Output 'trace.stdout.txt'), $trace.StdOut)
-                [IO.File]::WriteAllText((Join-Path $Output 'trace.stderr.txt'), $trace.StdErr)
             }
         }
         LogReader = { if ($logReader) { $logReader.Dispose() } }

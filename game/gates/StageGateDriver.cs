@@ -123,6 +123,9 @@ public sealed class StageGateDriver(IStageGateHost host)
     private async Task CloseRun()
     {
         if (AppBoot.Options.PerfCollection is null) { await host.Close(); return; }
+        // The EventPipe owner observes the existing collection result, stops/rundowns its
+        // collector while we remain alive, then enters this same formal chain with WM_CLOSE.
+        if (AppBoot.Options.PerfCollection.ExternalCloseAfterSample) return;
         GD.Print(FormattableString.Invariant($"PERF_COLLECTION_CLOSE_BEGIN {FrameClock.MonotonicMilliseconds:R}"));
         await host.Close();
         GD.Print(FormattableString.Invariant($"PERF_COLLECTION_CLOSE_END {FrameClock.MonotonicMilliseconds:R}"));

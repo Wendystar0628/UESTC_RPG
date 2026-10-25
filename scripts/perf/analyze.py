@@ -176,10 +176,9 @@ def summary_for(directory, manifest, streams, dictionary, budgets, run, diagnose
     merged = merge_anomalies(items)
     # Repeated clusters are counted before truncating the human-facing anomaly list.
     # ENG-PERF-MEASURE: completed diagnostics suppress plans, never the anomaly facts.
-    cluster_prefix = (at(manifest, 'build.commit'), key['scene'])
-    pending = [item for item in merged if cluster_prefix +
-               (item['type'], item.get('metric'), item.get('phase')) not in diagnosed]
-    summary['deepen'] = deepen(pending, {**manifest, 'scene': key['scene']})
+    identity = diagnostic_identity(manifest, run)
+    completed_tools = {key[2:] for key in diagnosed if key[:2] == identity} if identity else set()
+    summary['deepen'] = deepen(merged, {**manifest, 'scene': key['scene']}, completed_tools)
     for item in summary['deepen']:
         frame = next((f for f in frames if f['collectionFrame'] == item['firstFrame']), None)
         item['sourceSessionDirectory'] = str(directory)
@@ -236,6 +235,15 @@ def write_hotframes(path, frames, items, dictionary, radius):
     return [frames[index] for index in sorted(selected)]
 
 
+def diagnostic_identity(manifest, run):
+    """Use the recorded build and comparison identity, without inferring a clean build."""
+    build = manifest.get('build') or {}
+    key, _, missing = comparison_key(manifest, run)
+    if not build.get('commit') or build.get('dirty') is not False or build.get('identityMissingReason') or missing:
+        return None
+    return json.dumps(build, sort_keys=True), json.dumps(key, sort_keys=True)
+
+
 def completed_diagnostic_clusters(directories):
     """Read successful existing reports and their declared attachments, without reading raw streams."""
     sources = {Path(directory).resolve() for directory in directories}
@@ -248,7 +256,8 @@ def completed_diagnostic_clusters(directories):
             report = read_json(report_path)
             if (report.get('purpose') != 'diagnostic' or report.get('status') != 'valid'
                     or at(report, 'actualCollector.status') != 'completed'
-                    or at(report, 'actualCollector.exitCode') != 0):
+                    or at(report, 'actualCollector.exitCode') != 0
+                    or at(report, 'attachmentAvailability.available') is not True):
                 continue
             attachments = report.get('attachments')
             if not isinstance(attachments, list) or not attachments:
@@ -256,6 +265,9 @@ def completed_diagnostic_clusters(directories):
             paths = [(directory / name).resolve() for name in attachments]
             if any(not path.is_relative_to(directory) or not path.is_file() for path in paths):
                 continue
+            for path in paths:
+                with path.open('rb') as stream:
+                    stream.read(1)
             condition = report['condition']
             source = Path(condition['sourceDirectory']).resolve()
             if source not in sources:
@@ -263,17 +275,21 @@ def completed_diagnostic_clusters(directories):
             original = read_json(source / 'manifest.json')
             captured = read_json(directory / 'manifest.json')
             source_run, _ = session_run(source)
-            commit, scene = at(original, 'build.commit'), source_run.get('scene')
+            captured_run, _ = session_run(directory)
+            identity = diagnostic_identity(original, source_run)
+            scene = source_run.get('scene')
             entry = condition['entry']
-            if (not commit or at(captured, 'build.commit') != commit
+            tool = condition.get('tool')
+            if (identity is None or diagnostic_identity(captured, captured_run) != identity
+                    or 'build' in report.get('conditionDifferences', {})
                     or original.get('status') != 'closed' or original.get('complete') is not True
                     or captured.get('status') != 'closed' or captured.get('complete') is not True
                     or original.get('id') != condition.get('sourceSession')
                     or report.get('sourceSession') != original.get('id')
                     or not scene or condition.get('scene') != scene or entry.get('scene') != scene
-                    or not entry.get('type')):
+                    or not entry.get('type') or tool not in entry.get('tools', [])):
                 continue
-            completed.add((commit, scene, entry['type'], entry.get('metric'), entry.get('phase')))
+            completed.add((*identity, entry['type'], entry.get('metric'), entry.get('phase'), tool))
         except (OSError, ValueError, KeyError, TypeError):
             # Incomplete or unreadable evidence cannot suppress a diagnostic request.
             continue
@@ -289,8 +305,8 @@ def source_stamp(directory, dictionary, budgets, run_path, diagnosed=()):
         try:
             manifest = read_json(manifest_path(directory))
             run = read_json(run_path) if run_path else {}
-            prefix = (at(manifest, 'build.commit'), run.get('scene'))
-            clusters = sorted((list(key[2:]) for key in diagnosed if key[:2] == prefix), key=repr)
+            identity = diagnostic_identity(manifest, run)
+            clusters = sorted((list(key[2:]) for key in diagnosed if key[:2] == identity), key=repr) if identity else []
         except (OSError, ValueError, KeyError, TypeError):
             # The normal session reader still owns and caches malformed-source failures.
             pass

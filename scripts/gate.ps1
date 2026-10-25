@@ -343,6 +343,7 @@ $scope = if ($Full) { 'Full' } elseif ($Only.Count) { 'Selected' } elseif ($Smok
 $planObject = [ordered]@{ Scope = $scope; BaseRef = $BaseRef; Branch = $branch; Gates = $selected.ToArray(); Preparation = 'Ordinary Debug build and native incremental import before game consumers; selecting G1 builds Campus.sln including test projects once, otherwise Campus.csproj'; ChangedPaths = $changes; Godot = $godot; Locks = $layout.Locks; BuildCapacity = 1; FormatPaths = $formatPaths; Bake = 'No pre-bake in quick/core; centralized bake gates not implemented' }
 $g2Selection = if ($selected.Contains('G2')) { @(Get-UESTCG2ProjectSelection $root $runtimeChanges ([bool]$Full) $Configuration $BaseRef) } else { @() }
 $planObject['G2Selection'] = $g2Selection
+$planObject['G2ToolTests'] = @(if ($selected.Contains('G2') -and $perfSelfcheckRequired) { 'perf-selfcheck' })
 $selectionIncomplete = @(
     if ($runtimeChanges.Count -and $selected.Count -eq 0) { 'Runtime changes selected no gates.' }
     foreach ($path in @($g2Selection | ForEach-Object { $_.UnmappedRuntimeChanges } | Sort-Object -Unique)) {
@@ -439,6 +440,10 @@ foreach ($id in $selected) {
                 $testCount = 0
                 $notes = @()
                 try {
+                if ($perfSelfcheckRequired) {
+                    $null = Invoke-GateProcess 'G2-perf-selfcheck' python @('-I','-X','utf8',(Join-Path $root 'scripts/perf/perf.py'),'--root',$root,'selfcheck')
+                    $notes += 'perf selfcheck passed'
+                }
                 foreach ($selection in @($g2Selection | Where-Object { $_.Selected })) {
                     $test = $selection.Name
                     $project = Join-Path $root $selection.Project
@@ -455,10 +460,10 @@ foreach ($id in $selected) {
                     if ($g2Tests.Count) { Add-UESTCTestRecord $testRecordPath $g2Tests }
                     Write-UESTCSlowTests $g2Tests
                 }
-                if (-not @($g2Selection | Where-Object { $_.Selected }).Count) {
+                if (-not @($g2Selection | Where-Object { $_.Selected }).Count -and -not $perfSelfcheckRequired) {
                     $status = 'NotRun'
                     $notes += '无适用测试、未运行'
-                } elseif ($runCount -eq 0) { $status = 'Incomplete' }
+                } elseif (@($g2Selection | Where-Object { $_.Selected }).Count -and $runCount -eq 0) { $status = 'Incomplete' }
                 if ($Full) {
                     Write-UESTCCutCandidates $testRecordPath
                     $native = & (Join-Path $PSScriptRoot 'gates/native-render.ps1') -Root $root -BuildLease $gateLease
@@ -471,9 +476,6 @@ foreach ($id in $selected) {
             'G4' {
                 $newFiles = Test-UESTCNewCodeFiles $root $changes -BaseRef $BaseRef
                 $null = Test-UESTCSourceBoundaries $root
-                if ($perfSelfcheckRequired) {
-                    $null = Invoke-GateProcess 'G4-perf-selfcheck' python @('-I','-X','utf8',(Join-Path $root 'scripts/perf/perf.py'),'--root',$root,'selfcheck')
-                }
                 $null = Invoke-GateProcess 'G4-restore' dotnet @('restore',(Join-Path $game 'Campus.sln'))
                 $settings = Write-TestSettings
                 $null = Invoke-GateProcess 'G4-architecture' dotnet @('test',(Join-Path $root 'scripts/gates/arch/Campus.Arch.Tests.csproj'),'-c','Debug','--settings',$settings,'--logger','trx','--results-directory',(Join-Path $work 'arch-results'))

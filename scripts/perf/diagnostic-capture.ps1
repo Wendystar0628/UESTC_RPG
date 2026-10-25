@@ -25,7 +25,8 @@ switch ($condition.tool) {
 $record=[ordered]@{ executable=$executable; arguments=$arguments; tool=$condition.tool; elevated=$false;
     startedUtc=[DateTime]::UtcNow.ToString('O'); exitCode=$null; status='partial'; error=$null }
 $gameTree=$null
-$toolTree=$null
+$eventPipe=$null
+$failure=$null
 try {
     $version=Invoke-UESTCProcess $executable @('--version') $root (Join-Path $work 'tool-version.log') -TimeoutSeconds 30
     $record['versionOutput']=$version.Output.Trim()
@@ -40,9 +41,13 @@ try {
         $record['gameArguments']=@($condition.arguments)
         $record['gamePid']=$null
         $record['gameExitCode']=$null
-        $record['toolPid']=$null
-        $record['collectorReadyObservedUtc']=$null
-        $record['toolExitUtc']=$null
+        $record['gameExitUtc']=$null
+        $record['sampleEndObservedUtc']=$null
+        $record['windowHandle']=$null
+        $record['closeRequestedUtc']=$null
+        if ($condition.collection.externalCloseAfterSample -ne $true) {
+            throw 'EventPipe requires the explicit collection owner to keep the target alive for collector Stop/rundown.'
+        }
         # Both children inherit this worker's existing private desktop and profile.
         $gameTree=New-Object Uestc.Tools.ProcessTree($condition.engine,$gameArguments,$root,$false,[Text.Encoding]::UTF8,$false,$null)
         $record.gamePid=$gameTree.ProcessId
@@ -53,27 +58,41 @@ try {
             Start-Sleep -Milliseconds 100
         }
         $record['gameManagedReadyObservedUtc']=[DateTime]::UtcNow.ToString('O')
-        $arguments=@('collect','--process-id',[string]$gameTree.ProcessId,'--profile','dotnet-sampled-thread-time',
-            '--providers','Microsoft-Windows-DotNETRuntime:0x41080001:5','--output',(Join-Path $work 'threads.nettrace'))
-        $record.arguments=$arguments
-        $toolArguments=($arguments | ForEach-Object { ConvertTo-UESTCProcessArgument $_ }) -join ' '
-        $toolTree=New-Object Uestc.Tools.ProcessTree($executable,$toolArguments,$root,$false,[Text.Encoding]::UTF8,$false,$null)
-        $record.toolPid=$toolTree.ProcessId
-        while (-not $gameTree.HasExited -or -not $toolTree.HasExited) {
-            if (-not $record.collectorReadyObservedUtc -and $toolTree.StdOut -match '(?m)^Output File\s*:\s*[^\r\n]+\r?\n') {
-                # The collector prints this only after StartEventPipeSession succeeds.
-                $record.collectorReadyObservedUtc=[DateTime]::UtcNow.ToString('O')
+        $eventPipe=@{ Target=$gameTree; ToolPath=$executable; Root=$root; Output=$work; Record=$record; Deadline=$deadline }
+        Invoke-UESTCEventPipeCapture -Action Start -Capture $eventPipe
+        while ($true) {
+            if ($gameTree.HasExited) { throw "Godot exited before the observed diagnostic sample End: $($gameTree.ExitCode)." }
+            if ($eventPipe.Collector.HasExited) { throw "EventPipe collector exited before the diagnostic sample End: $($eventPipe.Collector.ExitCode)." }
+            $results=[regex]::Matches($gameTree.StdOut,'(?m)^PERF_COLLECTION_RESULT ([^\r\n]+)\r?\n')
+            if ($results.Count -gt 1) { throw 'Godot published duplicate collection results.' }
+            if ($results.Count -eq 1) {
+                $completion=$results[0].Groups[1].Value | ConvertFrom-Json
+                if ($completion.sampleSegmentId -ne $condition.collection.sampleSegmentId -or $completion.scene -ne $condition.scene -or
+                    $completion.coverage.sampleEnd.observed -ne 1) {
+                    throw 'Godot did not publish the requested real sample End; original result retained.'
+                }
+                $record.sampleEndObservedUtc=[DateTime]::UtcNow.ToString('O')
+                break
             }
-            if ($gameTree.HasExited -and $gameTree.ExitCode -ne 0) { throw "Godot exited with code $($gameTree.ExitCode)." }
-            if ($toolTree.HasExited -and $toolTree.ExitCode -ne 0) { throw "EventPipe collector exited with code $($toolTree.ExitCode)." }
-            if ([DateTime]::UtcNow -ge $deadline) { throw 'EventPipe/game did not complete within the capture lifetime.' }
+            if ([DateTime]::UtcNow -ge $deadline) { throw 'Godot did not publish its real sample End within the capture lifetime.' }
             Start-Sleep -Milliseconds 100
         }
-        $gameTree.Finish()
-        $toolTree.Finish()
-        $record.exitCode=$toolTree.ExitCode
+        $windows=[regex]::Matches($gameTree.StdOut,'(?m)^STARTUP_ENVIRONMENT [^\r\n]*\bwindowHandle=(\d+)(?:\s|$)')
+        if (-not $windows.Count) { throw 'Godot did not publish its existing native window identity.' }
+        $record.windowHandle=[long]::Parse($windows[$windows.Count-1].Groups[1].Value,[Globalization.CultureInfo]::InvariantCulture)
+        if ($record.windowHandle -le 0) { throw 'Godot published an invalid native window identity.' }
+        Invoke-UESTCEventPipeCapture -Action Stop -Capture $eventPipe
+        if ($gameTree.HasExited) { throw 'Godot exited before its formal window-close request.' }
+        $record.closeRequestedUtc=[DateTime]::UtcNow.ToString('O')
+        $record['closePostedTimestamp']=$gameTree.PostClose([IntPtr]$record.windowHandle)
+        $closeDeadline=[DateTime]::UtcNow.AddSeconds(30)
+        while (-not $gameTree.HasExited) {
+            if ([DateTime]::UtcNow -ge $closeDeadline) { throw 'Godot did not finish its formal window-close shutdown within 30 seconds.' }
+            Start-Sleep -Milliseconds 100
+        }
         $record.gameExitCode=$gameTree.ExitCode
-        $record.toolExitUtc=$toolTree.ProcessExitUtc.ToString('O')
+        $record.gameExitUtc=$gameTree.ProcessExitUtc.ToString('O')
+        $gameTree.Finish()
         if ($record.exitCode -ne 0 -or $record.gameExitCode -ne 0) { throw 'EventPipe collector or Godot exited unsuccessfully.' }
         $gameResult=[pscustomobject]@{ Output=$gameTree.StdOut+$gameTree.StdErr; Log=(Join-Path $work 'game.log') }
         Assert-UESTCCleanGodotLog $gameResult
@@ -86,6 +105,30 @@ try {
         [IO.File]::WriteAllText((Join-Path $work 'tool.stdout.txt'),$result.StdOut)
         [IO.File]::WriteAllText((Join-Path $work 'tool.stderr.txt'),$result.StdErr)
         Assert-UESTCCleanGodotLog $result
+        if ($record.status -eq 'completed' -and $condition.tool -eq 'Nsight') {
+            $reports=@(Get-ChildItem -LiteralPath $work -File -Filter '*.nsys-rep')
+            if ($reports.Count -ne 1) { throw 'Nsight did not publish exactly one native report.' }
+            $sessions=@(Get-ChildItem -LiteralPath $work -Directory | Where-Object { Test-Path -LiteralPath (Join-Path $_.FullName 'manifest.json') })
+            if ($sessions.Count -ne 1) { throw 'Nsight target did not publish exactly one closed recording.' }
+            $manifest=Get-Content -LiteralPath (Join-Path $sessions[0].FullName 'manifest.json') -Raw -Encoding UTF8 | ConvertFrom-Json
+            $gpuReport=switch ($manifest.machine.api) {
+                'd3d12' { 'dx12_gpu_marker_sum' }
+                'vulkan' { 'vulkan_gpu_marker_sum' }
+                default { throw "No native Nsight GPU range report is selected for the captured graphics API: $($manifest.machine.api)" }
+            }
+            # The installed 2025.6.3 native reports confirm measured GPU ranges, not API calls alone.
+            $statsArguments=@('stats','--report',$gpuReport,'--format','csv',
+                '--timeunit','nanoseconds','--force-export=true','--output',(Join-Path $work 'nsight-gpu'),$reports[0].FullName)
+            $record['nsightStatsArguments']=$statsArguments
+            $stats=Invoke-UESTCProcess $executable $statsArguments $root (Join-Path $work 'nsight-stats.log') `
+                -TimeoutSeconds 120 -AllowFailure -TextEncoding ([Text.Encoding]::UTF8)
+            $record['nsightStatsExitCode']=$stats.ExitCode
+            $record['nsightGpuReports']=@(('nsight-gpu_' + $gpuReport + '.csv') |
+                Where-Object { Test-Path -LiteralPath (Join-Path $work $_) -PathType Leaf })
+            [IO.File]::WriteAllText((Join-Path $work 'nsight-stats.stdout.txt'),$stats.StdOut)
+            [IO.File]::WriteAllText((Join-Path $work 'nsight-stats.stderr.txt'),$stats.StdErr)
+            if ($stats.ExitCode -ne 0) { throw "Native Nsight stats failed with exit $($stats.ExitCode). See nsight-stats.log." }
+        }
     }
     if ($record.status -eq 'completed' -and $condition.tool -eq 'EventPipe') {
         $sessions=@(Get-ChildItem -LiteralPath $work -Directory | Where-Object { Test-Path -LiteralPath (Join-Path $_.FullName 'manifest.json') })
@@ -94,42 +137,44 @@ try {
             (Join-Path $work 'cpu-parser.log') -TimeoutSeconds 120
         $record['cpuParserExitCode']=$parsed.ExitCode
     }
-} catch { $record.status='failed'; $record.error=$_.Exception.ToString() }
+} catch {
+    $failure=$_
+    $record.status='failed'
+    $record.error=$_.Exception.ToString()
+}
 finally {
-    foreach ($owned in @(@{tree=$toolTree;name='tool'},@{tree=$gameTree;name='game'})) {
-        if (-not $owned.tree) { continue }
-        try {
-            # Read natural exit status before cleanup can terminate an unfinished tree.
-            if ($owned.tree.HasExited) {
-                if ($owned.name -eq 'tool') {
-                    $record.exitCode=$owned.tree.ExitCode
-                    $record.toolExitUtc=$owned.tree.ProcessExitUtc.ToString('O')
-                } else { $record.gameExitCode=$owned.tree.ExitCode }
-            }
-            $owned.tree.Finish()
-        } catch {
+    # Try every owned cleanup/evidence step; preserve the primary exception object.
+    $cleanup=[ordered]@{
+        Collector={ if ($eventPipe) { Invoke-UESTCEventPipeCapture -Action Dispose -Capture $eventPipe } }
+        GameExit={ if ($gameTree -and $gameTree.HasExited) {
+            $record['gameExitCode']=$gameTree.ExitCode
+            $record['gameExitUtc']=$gameTree.ProcessExitUtc.ToString('O')
+        } }
+        GameDrain={ if ($gameTree) { $gameTree.Finish() } }
+        GameStdOut={ if ($gameTree) { [IO.File]::WriteAllText((Join-Path $work 'game.stdout.txt'),$gameTree.StdOut) } }
+        GameStdErr={ if ($gameTree) { [IO.File]::WriteAllText((Join-Path $work 'game.stderr.txt'),$gameTree.StdErr) } }
+        GameLog={ if ($gameTree) { [IO.File]::WriteAllText((Join-Path $work 'game.log'),($gameTree.StdOut+$gameTree.StdErr)) } }
+        CollectorStdOut={ if ($eventPipe -and $eventPipe.Collector) { [IO.File]::WriteAllText((Join-Path $work 'tool.stdout.txt'),$eventPipe.Collector.StdOut) } }
+        CollectorStdErr={ if ($eventPipe -and $eventPipe.Collector) { [IO.File]::WriteAllText((Join-Path $work 'tool.stderr.txt'),$eventPipe.Collector.StdErr) } }
+        CollectorLog={ if ($eventPipe -and $eventPipe.Collector) { [IO.File]::WriteAllText((Join-Path $work 'tool.log'),($eventPipe.Collector.StdOut+$eventPipe.Collector.StdErr)) } }
+        GameOwner={ if ($gameTree) { $gameTree.Dispose() } }
+    }
+    foreach ($step in $cleanup.GetEnumerator()) {
+        try { & $step.Value }
+        catch {
             $record.status='failed'
             if (-not $record.Contains('cleanupErrors')) { $record['cleanupErrors']=@() }
-            $record.cleanupErrors+=@($_.Exception.ToString())
-        } finally {
-            try {
-                [IO.File]::WriteAllText((Join-Path $work ($owned.name+'.stdout.txt')),$owned.tree.StdOut)
-                [IO.File]::WriteAllText((Join-Path $work ($owned.name+'.stderr.txt')),$owned.tree.StdErr)
-                [IO.File]::WriteAllText((Join-Path $work ($owned.name+'.log')),($owned.tree.StdOut+$owned.tree.StdErr))
-            } catch {
-                $record.status='failed'
-                if (-not $record.Contains('cleanupErrors')) { $record['cleanupErrors']=@() }
-                $record.cleanupErrors+=@($_.Exception.ToString())
-            } finally {
-                try { $owned.tree.Dispose() } catch {
-                    $record.status='failed'
-                    if (-not $record.Contains('cleanupErrors')) { $record['cleanupErrors']=@() }
-                    $record.cleanupErrors+=@($_.Exception.ToString())
-                }
-            }
+            $record.cleanupErrors+=@([ordered]@{ step=$step.Key; error=$_.Exception.ToString() })
+            if ($failure) { $failure.Exception.Data["DiagnosticCapture.$($step.Key)"]=$_.Exception }
+            else { $failure=$_ }
         }
     }
     $record['endedUtc']=[DateTime]::UtcNow.ToString('O')
-    [IO.File]::WriteAllText((Join-Path $work 'capture-result.json'),($record | ConvertTo-Json -Depth 12),(New-Object Text.UTF8Encoding $false))
+    try { [IO.File]::WriteAllText((Join-Path $work 'capture-result.json'),($record | ConvertTo-Json -Depth 12),(New-Object Text.UTF8Encoding $false)) }
+    catch {
+        if ($failure) { $failure.Exception.Data['DiagnosticCapture.ResultWrite']=$_.Exception }
+        else { $failure=$_ }
+    }
 }
+if ($failure) { throw $failure }
 if($record.status -ne 'completed'){exit 1}

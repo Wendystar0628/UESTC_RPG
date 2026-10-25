@@ -364,6 +364,47 @@ def check_round_registration(root, dictionary, budgets):
         result = cli(*record)
         assert result[0] == 1 and '轮来源分析失败' in result[2], result
         assert (out / 'rounds.json').read_bytes() == prior, '当前主采源失败后登记仍被改写'
+    check_confirmation_errors(root)
+
+
+def check_confirmation_errors(root):
+    """Regression：执行正式入口的收尾块，多条确认失败保留各自来源与原异常。"""
+    script = "'" + str(root / 'scripts/perf/run.ps1').replace("'", "''") + "'"
+    command = r"""$ErrorActionPreference='Stop'; $WarningPreference='SilentlyContinue'
+[Console]::OutputEncoding=[Text.UTF8Encoding]::new($false)
+$tokens=$null; $errors=$null
+$ast=[Management.Automation.Language.Parser]::ParseFile(SCRIPT,[ref]$tokens,[ref]$errors)
+if ($errors.Count) { throw ($errors | Out-String) }
+$lifecycle=@($ast.EndBlock.Statements | Where-Object { $_ -is [Management.Automation.Language.TryStatementAst] -and $_.Finally })
+if ($lifecycle.Count -ne 1) { throw 'Collection lifecycle is ambiguous.' }
+$root='fixture'; $roundRoot='fixture'; $roundId='fixture'; $RoundNumber=0; $mainRoot='main'; $sceneIds=@('first','second'); $PreviousRound=$null
+$Mode='formal'; $ConfirmRound=''; $acceptedSources=@(); $completedMainScenes=@('first','second'); $selected=@('first','second')
+$confirmationSources=@('first-confirmation-source','second-confirmation-source')
+$roundRecord=[ordered]@{completed=$true; status='completed'}; $failed=$false; $lease=$null
+$inheritedBakeCache=$env:UESTC_BAKE_CACHE; $registeredMain=$false
+function Write-CollectionJson { param($Path,$Value) }
+function Invoke-UESTCPerfAnalysis { param($Root,$SessionSources) }
+function Exit-UESTCBuildLock { param($Lease) }
+function Publish-CollectionRound {
+    param($Root,$Id,$Number,$SourceRoot,$Scenes,$PreviousId,$ConfirmationRoot)
+    if ($ConfirmationRoot) { throw ('Original confirmation failure: ' + $ConfirmationRoot) }
+    $script:registeredMain=$true
+}
+. ([scriptblock]::Create(($lifecycle[0].Finally.Statements | ForEach-Object { $_.Extent.Text }) -join "`n"))
+@{registeredMain=$registeredMain; failed=$failed; round=$roundRecord} | ConvertTo-Json -Depth 12 -Compress
+""".replace('SCRIPT', script)
+    shell = shutil.which('powershell.exe') or shutil.which('powershell') or shutil.which('pwsh')
+    assert shell, '确认失败回归需要 PowerShell'
+    result = subprocess.run([shell, '-NoProfile', '-NonInteractive', '-Command', command], capture_output=True,
+                            text=True, encoding='utf-8', timeout=30)
+    assert result.returncode == 0, (result.stdout, result.stderr)
+    observed = json.loads(result.stdout)
+    assert observed['registeredMain'] and observed['failed'], observed
+    round_record = observed['round']
+    assert round_record['completed'] is False and round_record['status'] == 'incomplete', observed
+    failures = round_record['confirmationErrors']
+    assert [failure['source'] for failure in failures] == ['first-confirmation-source', 'second-confirmation-source'], observed
+    assert all('Original confirmation failure: ' + failure['source'] in failure['error'] for failure in failures), observed
 
 
 def check_readonly_gate(root, repo, out):

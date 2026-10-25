@@ -253,8 +253,10 @@ finally {
                     try { Publish-CollectionRound $root $roundId $null $null @() $null -ConfirmationRoot $source }
                     catch {
                         $failed=$true
-                        $roundRecord['confirmationError']=$_.Exception.ToString()
-                        Write-Warning $roundRecord.confirmationError
+                        if (-not $roundRecord.Contains('confirmationErrors')) { $roundRecord['confirmationErrors']=@() }
+                        $confirmationError=[ordered]@{ source=$source; error=$_.Exception.ToString() }
+                        $roundRecord.confirmationErrors+=@($confirmationError)
+                        Write-Warning $confirmationError.error
                     }
                 }
             }

@@ -6,7 +6,7 @@ import copy
 import json
 import tempfile
 from pathlib import Path
-from analyze import completed_diagnostic_clusters, source_stamp, summary_for
+from analyze import completed_diagnostic_clusters, diagnostic_identity, source_stamp, summary_for
 from perf_model import COSTS, PHASES, at, load_session, prepare_frames, rolling_medians, target_ms
 from perf_anomalies import DEEPEN_REPEAT_COUNT, annotate, anomaly, deepen, frame_anomalies
 from selfcheck_fixtures import manifest, frame, viewport, streams, write_six, mark_sample
@@ -144,21 +144,39 @@ def check_eventpipe_attachment(root, dictionary, budgets):
         write_six(session, meta, data, dictionary)
         condition = dict(collection=dict(sampleSegmentId='sample'))
         capture = dict(gamePid=123, gameExitCode=0, exitCode=0,
-                       collectorReadyObservedUtc='1970-01-01T00:00:00.010Z', toolExitUtc='1970-01-01T00:00:00.200Z')
-        parsed = dict(processId=capture['gamePid'], EventsLost=0, Truncated=False, threads=[dict(samples=1)])
+                       collectorReadyObservedUtc='1970-01-01T00:00:00.010Z', toolExitUtc='1970-01-01T00:00:00.200Z',
+                       collectorStopRequestedUtc='1970-01-01T00:00:00.110Z', collectorStoppedWhileTargetAlive=True,
+                       collectorFinishedUtc='1970-01-01T00:00:00.210Z', gameExitUtc='1970-01-01T00:00:00.220Z')
+        # The acceptance denominator is Managed samples, not individual frame occurrences.
+        resolution = dict(managedSamples=3, managedSamplesWithResolvedMethods=2, stackFrameOccurrences=6,
+                          resolvedMethodFrameOccurrences=2, resolvedMethodFrameFraction=1 / 3, distinctResolvedMethods=2)
+        parsed = dict(processId=capture['gamePid'], EventsLost=0, Truncated=False, threads=[dict(samples=3)],
+                      managedStackResolution=resolution, session=meta['id'], sampleSegmentId=condition['collection']['sampleSegmentId'])
         parsed_path = work / 'cpu-hotspots.json'
         parsed_path.write_text(json.dumps(parsed), encoding='utf-8')
         actual = diagnostic['eventpipe_coverage'](root, work, session, condition, capture)
-        assert actual['status'] == 'complete' and not actual['reasons'], '完整附着覆盖未通过'
+        assert actual['status'] == 'complete' and not actual['reasons'], 'Managed样本方法解析严格过半且完整附着未通过'
         for changed in (dict(collectorReadyObservedUtc=None), dict(collectorReadyObservedUtc='1970-01-01T00:00:00.050Z'),
                         dict(toolExitUtc='1970-01-01T00:00:00.080Z'), dict(gamePid=124),
+                        dict(collectorStopRequestedUtc=None), dict(collectorStopRequestedUtc='1970-01-01T00:00:00.095Z'),
+                        dict(collectorStoppedWhileTargetAlive=False), dict(collectorFinishedUtc='1970-01-01T00:00:00.250Z'),
                         dict(gameExitCode=1), dict(exitCode=1)):
             actual = diagnostic['eventpipe_coverage'](root, work, session, condition, {**capture, **changed})
             assert actual['status'] == 'partial' and actual['reasons'], '缺失/晚附着、早退出、错 PID 或失败退出仍完整：' + str(changed)
-        for changed in (dict(threads=[]), dict(EventsLost=1), dict(Truncated=True)):
+        for changed in (dict(threads=[]), dict(EventsLost=1), dict(Truncated=True),
+                        dict(session='another-session'), dict(sampleSegmentId='another-sample')):
             parsed_path.write_text(json.dumps({**parsed, **changed}), encoding='utf-8')
             actual = diagnostic['eventpipe_coverage'](root, work, session, condition, capture)
-            assert actual['status'] == 'partial' and actual['reasons'], '缺样或丢失/截断仍完整：' + str(changed)
+            assert actual['status'] == 'partial' and actual['reasons'], '缺样、丢失/截断或错误会话/样段仍完整：' + str(changed)
+        for changed in (None, dict(managedSamples=0, managedSamplesWithResolvedMethods=0, stackFrameOccurrences=0,
+                                   resolvedMethodFrameOccurrences=0, resolvedMethodFrameFraction=None, distinctResolvedMethods=0),
+                        {**resolution, 'managedSamplesWithResolvedMethods': 0, 'resolvedMethodFrameOccurrences': 0,
+                         'resolvedMethodFrameFraction': 0, 'distinctResolvedMethods': 0},
+                        {**resolution, 'managedSamples': 2, 'managedSamplesWithResolvedMethods': 1,
+                         'resolvedMethodFrameOccurrences': 4, 'resolvedMethodFrameFraction': 2 / 3}):
+            parsed_path.write_text(json.dumps({**parsed, 'managedStackResolution': changed}), encoding='utf-8')
+            actual = diagnostic['eventpipe_coverage'](root, work, session, condition, capture)
+            assert actual['status'] == 'partial' and actual['reasons'], 'Managed方法解析缺测、零样本、零解析或恰好一半仍完整：' + str(changed)
         completion = dict(sessionId=meta['id'], status='valid')
         game_stdout = work / 'game.stdout.txt'
         game_stdout.write_text('PERF_COLLECTION_RESULT ' + json.dumps(completion) + '\n', encoding='utf-8')
@@ -170,13 +188,15 @@ def check_eventpipe_attachment(root, dictionary, budgets):
 
 def _check_completed_diagnostics(dictionary, budgets, meta, run, rows, plan):
     with tempfile.TemporaryDirectory(prefix='uestc-perf-diagnostic-') as temporary:
-        source, captured, unrelated = (Path(temporary) / name for name in ('source', 'captured', 'unrelated'))
+        source, captured, gpu, unrelated = (Path(temporary) / name for name in ('source', 'captured', 'gpu', 'unrelated'))
         original = copy.deepcopy(meta)
         original['build']['commit'] = 'selfcheck-source-commit'
+        original['build']['moduleVersionId'] = 'selfcheck-module'
         diagnostic = copy.deepcopy(original)
         diagnostic['id'] = 'DIAGNOSTIC-SELFCHECK'
         other_run = {**run, 'scene': 'unrelated-scene'}
-        for directory, manifest_data, run_data in ((source, original, run), (captured, diagnostic, {}),
+        for directory, manifest_data, run_data in ((source, original, run), (captured, diagnostic, run),
+                                                  (gpu, {**diagnostic, 'id': 'GPU-SELFCHECK'}, run),
                                                   (unrelated, original, other_run)):
             directory.mkdir()
             (directory / 'manifest.json').write_text(json.dumps(manifest_data), encoding='utf-8')
@@ -185,35 +205,69 @@ def _check_completed_diagnostics(dictionary, budgets, meta, run, rows, plan):
         attachment.write_bytes(b'selfcheck-declared-attachment')
         report_path = captured / 'diagnostic.json'
         report = dict(purpose='diagnostic', status='valid', sourceSession=original['id'],
-                      condition=dict(sourceDirectory=str(source), sourceSession=original['id'], scene=run['scene'], entry=plan),
-                      actualCollector=dict(status='completed', exitCode=0), attachments=[attachment.name])
+                      condition=dict(sourceDirectory=str(source), sourceSession=original['id'], scene=run['scene'], entry=plan, tool='Nsight'),
+                      actualCollector=dict(status='completed', exitCode=0), attachments=[attachment.name], conditionDifferences={},
+                      attachmentAvailability=dict(available=True, reasons=[]))
         report_path.write_text(json.dumps(report), encoding='utf-8')
-        directories = (source, captured, unrelated)
-        key = (original['build']['commit'], run['scene'], plan['type'], plan['metric'], plan['phase'])
+        directories = (source, captured, gpu, unrelated)
+        key = (*diagnostic_identity(original, run), plan['type'], plan['metric'], plan['phase'], 'Nsight')
         completed = completed_diagnostic_clusters(directories)
-        assert completed == {key}, '成功诊断未按真实源提交、场景和聚类消重'
+        assert completed == {key}, '成功诊断未按真实构建、比较条件、聚类和工具消重'
         before = source_stamp(source, dictionary, budgets, source / 'run.json')
         after = source_stamp(source, dictionary, budgets, source / 'run.json', completed)
         assert before != after and after['diagnosedClusters'], '成功诊断未令相关源失鲜'
         assert source_stamp(unrelated, dictionary, budgets, unrelated / 'run.json') == source_stamp(
             unrelated, dictionary, budgets, unrelated / 'run.json', completed), '诊断错误地令其他场景失鲜'
         summary, items, _, _ = summary_for(source, original, streams(copy.deepcopy(rows), dictionary), dictionary, budgets, run, completed)
-        assert not summary['deepen'] and any(a['type'] == plan['type'] and a['metric'] == plan['metric'] for a in items), '去重删除了异常事实或仍输出已诊断条目'
+        assert summary['deepen'][0]['tools'] == ['gpu-profile'] and "-DiagnosticTool 'gpu-profile'" in summary['deepen'][0]['command'], '单工具成功抹掉了其它工具或命令未同步'
+        assert any(a['type'] == plan['type'] and a['metric'] == plan['metric'] for a in items), '去重删除了异常事实'
+        gpu_attachment = gpu / 'gpu-evidence.csv'
+        gpu_attachment.write_text('selfcheck-available-evidence\n', encoding='utf-8')
+        gpu_report = {**report, 'condition': {**report['condition'], 'tool': 'gpu-profile'}, 'attachments': [gpu_attachment.name]}
+        (gpu / 'diagnostic.json').write_text(json.dumps(gpu_report), encoding='utf-8')
+        all_completed = completed_diagnostic_clusters(directories)
+        assert all_completed == {key, (*key[:-1], 'gpu-profile')}
+        assert source_stamp(source, dictionary, budgets, source / 'run.json', all_completed) != after, '不同完成工具没有各自进入判鲜键'
+        assert not summary_for(source, original, streams(copy.deepcopy(rows), dictionary), dictionary, budgets, run, all_completed)[0]['deepen'], '工具全成功仍保留条目'
+        (gpu / 'diagnostic.json').unlink()
         for state in ('partial', 'preparing'):
             report_path.write_text(json.dumps({**report, 'status': state}), encoding='utf-8')
             assert not completed_diagnostic_clusters(directories), '失败或准备中的诊断抑制了条目'
         failed = {**report, 'actualCollector': dict(status='failed', exitCode=1)}
         report_path.write_text(json.dumps(failed), encoding='utf-8')
         assert not completed_diagnostic_clusters(directories), '失败采集器抑制了条目'
+        for changed in ({**report, 'attachmentAvailability': None},
+                        {**report, 'attachmentAvailability': dict(available=False, reasons=['No usable methods'])},
+                        {key: value for key, value in report.items() if key != 'attachmentAvailability'}):
+            report_path.write_text(json.dumps(changed), encoding='utf-8')
+            assert not completed_diagnostic_clusters(directories), '缺失或不可用附件事实仍抑制条目'
+        report_path.write_text('invalid-json', encoding='utf-8')
+        assert not completed_diagnostic_clusters(directories), '损坏报告抑制了条目'
+        for field in ('type', 'metric', 'phase'):
+            changed = copy.deepcopy(report)
+            changed['condition']['entry'][field] = 'another-' + field
+            report_path.write_text(json.dumps(changed), encoding='utf-8')
+            remaining = summary_for(source, original, streams(copy.deepcopy(rows), dictionary), dictionary, budgets, run,
+                                    completed_diagnostic_clusters(directories))[0]['deepen']
+            assert remaining[0]['tools'] == plan['tools'], '其它聚类抑制了本条工具：' + field
+        for build in ({**original['build'], 'commit': 'another-commit'}, {**original['build'], 'dirty': True},
+                      {**original['build'], 'dirty': None}, {**original['build'], 'moduleVersionId': 'another-module'}):
+            (captured / 'manifest.json').write_text(json.dumps({**diagnostic, 'build': build}), encoding='utf-8')
+            report_path.write_text(json.dumps(report), encoding='utf-8')
+            assert not completed_diagnostic_clusters(directories), '其它构建或dirty/未知诊断抑制了源条目'
+        (captured / 'manifest.json').write_text(json.dumps(diagnostic), encoding='utf-8')
+        (source / 'manifest.json').write_text(json.dumps({**original, 'build': {**original['build'], 'dirty': True}}), encoding='utf-8')
+        assert not completed_diagnostic_clusters(directories), 'dirty源抑制了诊断条目'
+        (source / 'manifest.json').write_text(json.dumps(original), encoding='utf-8')
+        report_path.write_text(json.dumps({**report, 'conditionDifferences': {'build': {'reference': 'different'}}}), encoding='utf-8')
+        assert not completed_diagnostic_clusters(directories), '报告有构建差异仍抑制条目'
         report_path.write_text(json.dumps(report), encoding='utf-8')
-        diagnostic['build']['commit'] = 'another-commit'
-        (captured / 'manifest.json').write_text(json.dumps(diagnostic), encoding='utf-8')
-        assert not completed_diagnostic_clusters(directories), '其他提交的诊断抑制了源条目'
-        diagnostic['build']['commit'] = original['build']['commit']
-        (captured / 'manifest.json').write_text(json.dumps(diagnostic), encoding='utf-8')
+        restored_stamp = source_stamp(source, dictionary, budgets, source / 'run.json')
+        attached_stamp = source_stamp(source, dictionary, budgets, source / 'run.json', completed_diagnostic_clusters(directories))
+        assert attached_stamp != restored_stamp and attached_stamp['diagnosedClusters'], '恢复后的源未建立有附件的诊断判鲜键'
         attachment.unlink()
         completed = completed_diagnostic_clusters(directories)
-        assert not completed and source_stamp(source, dictionary, budgets, source / 'run.json', completed) == before, '附件缺失没有恢复源失鲜键'
+        assert not completed and source_stamp(source, dictionary, budgets, source / 'run.json', completed) == restored_stamp, '附件缺失没有恢复源失鲜键'
         summary = summary_for(source, original, streams(copy.deepcopy(rows), dictionary), dictionary, budgets, run, completed)[0]
         assert any(entry['type'] == plan['type'] and entry['metric'] == plan['metric'] for entry in summary['deepen']), '附件缺失后没有恢复 GPU 诊断候选'
 

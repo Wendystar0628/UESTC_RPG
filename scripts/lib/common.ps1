@@ -1,4 +1,5 @@
 ﻿# 公共函数库：仓库与锁目录布局、路径越界检查、构建锁、子进程与 git 调用、Godot 路径查找；兼容 Windows PowerShell 5.1。
+# 同时持有 EventPipe 收集器的附着、Stop/rundown、排空与私有控制台生命周期。
 # 用法：由其他脚本点引用（. scripts\lib\common.ps1），不单独运行
 # 产出：output/.locks/build.lock（主检出构建锁）；调用方 -Log 指定的日志文件（父目录由调用方传入）。
 Set-StrictMode -Version Latest
@@ -258,6 +259,137 @@ function Invoke-UESTCProcess {
             }
         }
     }
+}
+
+# Own one real-PID EventPipe collector from attachment through Stop/rundown and output drain.
+# The caller owns Target and calls Stop at its observed game boundary, then Dispose in finally.
+function Invoke-UESTCEventPipeCapture {
+    param([Parameter(Mandatory)][ValidateSet('Start','Stop','Dispose')][string]$Action,
+        [Parameter(Mandatory)][Collections.IDictionary]$Capture)
+    $record = $Capture.Record
+    if ($Action -eq 'Start') {
+        $Capture['Collector'] = $null
+        $Capture['OwnConsole'] = $false
+        $Capture['StopAttempted'] = $false
+        $Capture['Stopped'] = $false
+        foreach ($key in @('toolPid','attachRequestedUtc','collectorReadyObservedUtc','collectorStopRequestedUtc',
+                          'toolExitUtc','collectorFinishedUtc','collectorStoppedWhileTargetAlive','exitCode')) { $record[$key] = $null }
+        if (-not ('Uestc.Tools.ProcessTree' -as [type])) { Add-Type -Path (Join-Path $PSScriptRoot 'ProcessTree.cs') }
+        if (-not ('Uestc.Tools.EventPipeConsole' -as [type])) {
+            Add-Type -TypeDefinition @"
+using System;
+using System.ComponentModel;
+using System.Runtime.InteropServices;
+using Microsoft.Win32.SafeHandles;
+namespace Uestc.Tools {
+    public static class EventPipeConsole {
+        [StructLayout(LayoutKind.Explicit, Size=20, CharSet=CharSet.Unicode)] struct Input {
+            [FieldOffset(0)] public ushort type;
+            [FieldOffset(4)] public int down;
+            [FieldOffset(8)] public ushort repeat;
+            [FieldOffset(10)] public ushort key;
+            [FieldOffset(14)] public char character;
+        }
+        [DllImport("kernel32.dll")] static extern IntPtr GetConsoleWindow();
+        [DllImport("kernel32.dll", SetLastError=true)] static extern bool AllocConsole();
+        [DllImport("kernel32.dll", SetLastError=true)] static extern bool FreeConsole();
+        [DllImport("user32.dll")] static extern bool ShowWindow(IntPtr window, int command);
+        [DllImport("kernel32.dll", CharSet=CharSet.Unicode, SetLastError=true)]
+        static extern SafeFileHandle CreateFile(string name, uint access, uint share, IntPtr security, uint creation, uint flags, IntPtr template);
+        [DllImport("kernel32.dll", SetLastError=true)]
+        static extern bool WriteConsoleInputW(SafeFileHandle handle, Input[] records, uint count, out uint written);
+        public static bool Prepare() {
+            if (GetConsoleWindow() != IntPtr.Zero) return false;
+            if (!AllocConsole()) throw new Win32Exception(Marshal.GetLastWin32Error());
+            ShowWindow(GetConsoleWindow(), 0);
+            return true;
+        }
+        public static void RequestStop() {
+            // Open the worker's real private console, even when its standard input is NUL.
+            using (var input = CreateFile("CONIN$", 0xC0000000, 3, IntPtr.Zero, 3, 0, IntPtr.Zero)) {
+                if (input.IsInvalid) throw new Win32Exception(Marshal.GetLastWin32Error());
+                var down = new Input { type=1, down=1, repeat=1, key=13, character='\r' };
+                var up = down; up.down=0; uint written;
+                if (!WriteConsoleInputW(input, new[] {down,up}, 2, out written) || written != 2)
+                    throw new Win32Exception(Marshal.GetLastWin32Error());
+            }
+        }
+        public static void Release() {
+            if (!FreeConsole()) throw new Win32Exception(Marshal.GetLastWin32Error());
+        }
+    }
+}
+"@
+        }
+        $Capture.OwnConsole = [Uestc.Tools.EventPipeConsole]::Prepare()
+        if ($Capture.Target.HasExited) { throw 'EventPipe target exited before attachment.' }
+        $arguments = @('collect','--process-id',[string]$Capture.Target.ProcessId,'--profile','dotnet-sampled-thread-time',
+            '--providers','Microsoft-Windows-DotNETRuntime:0x41080001:5','--output',(Join-Path $Capture.Output 'threads.nettrace'))
+        $record['arguments'] = $arguments
+        $record.attachRequestedUtc = [DateTime]::UtcNow.ToString('O')
+        $line = ($arguments | ForEach-Object { ConvertTo-UESTCProcessArgument $_ }) -join ' '
+        $Capture.Collector = New-Object Uestc.Tools.ProcessTree($Capture.ToolPath,$line,$Capture.Root,$true,[Text.Encoding]::UTF8,$false,$null,$true)
+        $record.toolPid = $Capture.Collector.ProcessId
+        while ($Capture.Collector.StdOut -notmatch '(?m)^Output File\s*:\s*[^\r\n]+\r?\n') {
+            if ($Capture.Target.HasExited) { throw 'EventPipe target exited before successful attachment.' }
+            if ($Capture.Collector.HasExited) { throw "EventPipe collector exited before successful attachment: $($Capture.Collector.ExitCode)" }
+            if ([DateTime]::UtcNow -ge $Capture.Deadline) { throw 'EventPipe attachment did not complete within the capture lifetime.' }
+            Start-Sleep -Milliseconds 100
+        }
+        # Output File is published only after StartEventPipeSession succeeds.
+        $record.collectorReadyObservedUtc = [DateTime]::UtcNow.ToString('O')
+        return
+    }
+    if ($Action -eq 'Stop') {
+        if ($Capture.Stopped) { return }
+        $Capture.StopAttempted = $true
+        if ($Capture.Target.HasExited) { throw 'EventPipe target exited before collector Stop/rundown.' }
+        if ($Capture.Collector.HasExited) { throw "Collector exited before requested Stop: $($Capture.Collector.ExitCode)" }
+        $record.collectorStopRequestedUtc = [DateTime]::UtcNow.ToString('O')
+        [Uestc.Tools.EventPipeConsole]::RequestStop()
+        $stopClock = [Diagnostics.Stopwatch]::StartNew()
+        while (-not $Capture.Collector.HasExited) {
+            if ($Capture.Target.HasExited) { throw 'EventPipe target exited during collector Stop/rundown.' }
+            if ($stopClock.Elapsed.TotalSeconds -ge 120) { throw 'Collector did not finish Stop/rundown; its owned job will be reclaimed as a failed capture.' }
+            Start-Sleep -Milliseconds 100
+        }
+        $record.exitCode = $Capture.Collector.ExitCode
+        $record.toolExitUtc = $Capture.Collector.ProcessExitUtc.ToString('O')
+        $Capture.Collector.Finish()
+        $record.collectorFinishedUtc = [DateTime]::UtcNow.ToString('O')
+        $record.collectorStoppedWhileTargetAlive = -not $Capture.Target.HasExited
+        if (-not $record.collectorStoppedWhileTargetAlive) { throw 'Target exited before collector Stop/rundown completed.' }
+        if ($record.exitCode -ne 0) { throw "Collector failed: $($record.exitCode)" }
+        if (-not [IO.File]::Exists((Join-Path $Capture.Output 'threads.nettrace'))) { throw 'Missing nettrace output.' }
+        $Capture.Stopped = $true
+        return
+    }
+    $failure = $null
+    $cleanup = [ordered]@{
+        Stop = { if ($Capture.Collector -and -not $Capture.Stopped -and -not $Capture.StopAttempted) {
+            Invoke-UESTCEventPipeCapture -Action Stop -Capture $Capture
+        } }
+        Exit = { if ($Capture.Collector -and $Capture.Collector.HasExited) {
+            $record.exitCode = $Capture.Collector.ExitCode
+            $record.toolExitUtc = $Capture.Collector.ProcessExitUtc.ToString('O')
+        } }
+        Drain = { if ($Capture.Collector) { $Capture.Collector.Finish() } }
+        StdOut = { if ($Capture.Collector) { [IO.File]::WriteAllText((Join-Path $Capture.Output 'trace.stdout.txt'),$Capture.Collector.StdOut) } }
+        StdErr = { if ($Capture.Collector) { [IO.File]::WriteAllText((Join-Path $Capture.Output 'trace.stderr.txt'),$Capture.Collector.StdErr) } }
+        ExitRecord = { if ($null -ne $record.exitCode) { [IO.File]::WriteAllText((Join-Path $Capture.Output 'trace.exit.txt'),[string]$record.exitCode) } }
+        Collector = { if ($Capture.Collector) { $Capture.Collector.Dispose() } }
+        Console = { if ($Capture.OwnConsole) { [Uestc.Tools.EventPipeConsole]::Release(); $Capture.OwnConsole = $false } }
+    }
+    foreach ($step in $cleanup.GetEnumerator()) {
+        try { & $step.Value }
+        catch {
+            if (-not $record.Contains('cleanupErrors')) { $record['cleanupErrors'] = @() }
+            $record.cleanupErrors += @([ordered]@{ step=$step.Key; error=$_.Exception.ToString() })
+            if ($failure) { $failure.Exception.Data["EventPipe.$($step.Key)"] = $_.Exception }
+            else { $failure = $_ }
+        }
+    }
+    if ($failure) { throw $failure }
 }
 
 function Invoke-UESTCGit {

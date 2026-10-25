@@ -2,6 +2,7 @@
 // 用法：dotnet CpuParse.dll --perf-session <trace-directory> <closed-perf-session-directory>。
 using System.Text.Json;
 using Microsoft.Diagnostics.Tracing.Etlx;
+using Microsoft.Diagnostics.Tracing.EventPipe;
 
 static class PerfSessionCpuReport
 {
@@ -16,6 +17,7 @@ static class PerfSessionCpuReport
         var root = manifest.RootElement;
         if (root.GetProperty("status").GetString() != "closed") throw new InvalidDataException("Performance session is not closed.");
         string index = Path.Combine(directory, "threads.etlx");
+        Exception? failure = null;
         try
         {
             TraceLog.CreateFromEventPipeDataFile(Path.Combine(directory, "threads.nettrace"), index);
@@ -30,9 +32,19 @@ static class PerfSessionCpuReport
             DateTime utc = DateTimeOffset.FromUnixTimeMilliseconds(anchor.GetProperty("unixMs").GetInt64()).UtcDateTime;
             var events = File.ReadLines(Path.Combine(sessionDirectory, "events.jsonl"))
                 .Select(line => JsonSerializer.Deserialize<JsonElement>(line)).ToArray();
-            double start = events.Single(e => e.GetProperty("event").GetString() == "session.start").GetProperty("monotonicMs").GetDouble();
-            double end = events.Single(e => e.GetProperty("event").GetString() == "session.end").GetProperty("monotonicMs").GetDouble();
-            Window[] windows = [new("recording-session", "session.start", "session.end", utc.AddMilliseconds(start - mono), utc.AddMilliseconds(end - mono))];
+            string segmentId = condition.RootElement.GetProperty("collection").GetProperty("sampleSegmentId").GetString()
+                ?? throw new InvalidDataException("Diagnostic sample segment identity is missing.");
+            var marks = events.Where(e => e.GetProperty("event").GetString() == "segment" &&
+                e.GetProperty("payload").GetProperty("id").GetString() == segmentId).ToArray();
+            if (marks.Length != 2 || marks[0].GetProperty("payload").GetProperty("phase").GetString() != "begin" ||
+                marks[1].GetProperty("payload").GetProperty("phase").GetString() != "end" ||
+                marks[0].GetProperty("sequence").GetInt64() >= marks[1].GetProperty("sequence").GetInt64())
+                throw new InvalidDataException("Diagnostic sample must have exactly one ordered Begin/End pair.");
+            double start = marks[0].GetProperty("monotonicMs").GetDouble();
+            double end = marks[1].GetProperty("monotonicMs").GetDouble();
+            if (!double.IsFinite(start) || !double.IsFinite(end) || start >= end)
+                throw new InvalidDataException("Diagnostic sample Begin/End timestamps are invalid.");
+            Window[] windows = [new(segmentId, "segment.begin", "segment.end", utc.AddMilliseconds(start - mono), utc.AddMilliseconds(end - mono))];
             var analysis = new CpuTraceAnalysis(trace, ids[0], windows);
             analysis.ReadEvents();
             var samples = analysis.Samples.Where(s => s.Utc >= windows[0].Start && s.Utc < windows[0].End).ToArray();
@@ -46,18 +58,46 @@ static class PerfSessionCpuReport
                 samplingRateSource = "Not asserted: collector stdout retains effective providers; observed per-thread timestamp intervals follow.",
                 sampleMeaning = "dotnet-sampled-thread-time wall-clock managed thread stacks; not on-CPU samples or CPU utilization",
                 trace.EventsLost, trace.Truncated,
-                windows, clockAnchorReadSpanMs = anchors.Max(a => a.GetProperty("readSpanMs").GetDouble()),
+                sampleSegmentId = segmentId, windows, clockAnchorReadSpanMs = anchors.Max(a => a.GetProperty("readSpanMs").GetDouble()),
+                managedStackResolution = StackResolution(samples),
                 threads = samples.GroupBy(s => s.ThreadId).Select(group => ThreadReport(group)).ToArray(),
                 gcAllocationSampling = analysis.CreateAllocationReport(0),
+                sampleGcAllocationSampling = analysis.SummarizeAllocations(0, 0),
                 mainOsThreadId = (int?)null,
                 limitations = new[] { "Main OS thread identity is not supplied by the launched-process trace; no main-thread attribution is invented.",
                     "Observed sample rate is affected by thread lifetime, sample loss and profiler state; it is not CPU utilization or a guarantee of configured frequency.",
-                    "Recording window UTC is derived from captured monotonic/UTC anchors; boundary uncertainty is retained." }
+                    "Sample window UTC is derived from the exact segment Begin/End and captured monotonic/UTC anchors; boundary uncertainty is retained.",
+                    "Managed sample classification comes from the sample profiler. Stack-frame occurrence totals include native-or-unresolved frames inside those samples; that frame fraction is not the managed-sample method-availability fraction." }
             };
             using var output = File.Create(Path.Combine(directory, "cpu-hotspots.json"));
             JsonSerializer.Serialize(output, report, new JsonSerializerOptions { WriteIndented = true });
         }
-        finally { if (File.Exists(index)) File.Delete(index); }
+        catch (Exception error) { failure = error; throw; }
+        finally
+        {
+            try { if (File.Exists(index)) File.Delete(index); }
+            catch (Exception cleanup)
+            {
+                if (failure is null) throw;
+                throw new AggregateException("EventPipe parsing and trace-index cleanup both failed.", failure, cleanup);
+            }
+        }
+    }
+
+    private static object StackResolution(ThreadSample[] samples)
+    {
+        var managed = samples.Where(s => s.Type == nameof(ClrThreadSampleType.Managed)).ToArray();
+        var frames = managed.SelectMany(s => s.Frames).ToArray();
+        var resolved = frames.Where(f => !f.Unresolved).ToArray();
+        return new
+        {
+            managedSamples = managed.Length,
+            managedSamplesWithResolvedMethods = managed.Count(s => s.Frames.Any(f => !f.Unresolved)),
+            stackFrameOccurrences = frames.Length,
+            resolvedMethodFrameOccurrences = resolved.Length,
+            resolvedMethodFrameFraction = frames.Length == 0 ? (double?)null : (double)resolved.Length / frames.Length,
+            distinctResolvedMethods = resolved.Select(f => f.Name).Distinct(StringComparer.Ordinal).Count()
+        };
     }
 
     private static object ThreadReport(IGrouping<int, ThreadSample> group)
@@ -70,6 +110,7 @@ static class PerfSessionCpuReport
             osThreadId = group.Key, samples = ordered.Length, sampleTypes = ordered.GroupBy(s => s.Type).ToDictionary(g => g.Key, g => g.Count()),
             observedIntervalP50Ms = median, observedRateFromMedianIntervalHz = median > 0 ? 1000 / median : null,
             missingStackSamples = ordered.Count(s => !s.HasStack),
+            managedStackResolution = StackResolution(ordered),
             topStacks = ordered.GroupBy(s => string.Join("\n", s.Frames.Select(f => f.Name)))
                 .OrderByDescending(g => g.Count()).Take(30).Select(g => new { samples = g.Count(),
                     wallClockSampleFraction = (double)g.Count() / ordered.Length, framesLeafToRoot = g.First().Frames })

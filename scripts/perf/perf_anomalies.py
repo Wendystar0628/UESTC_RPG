@@ -521,7 +521,7 @@ def merge_anomalies(items):
     return sorted(merged, key=lambda a: (a['type'] != 'dataValidity', -LEVELS[a['level']], -a['excessMs'], a['fromMs']))
 
 
-def deepen(items, manifest):
+def deepen(items, manifest, completed_tools=()):
     result = []
     unexplained = Counter((a['type'], a.get('metric'), a.get('phase')) for a in items
                           if a['attributionAvailable'] and not a['candidates']
@@ -537,6 +537,9 @@ def deepen(items, manifest):
         phase = item.get('phase')
         tools = (['gpu-profile', 'Nsight'] if item.get('metric') == 'mainViewportGpuMs' else
                  ['gpu-profile'] if phase == 'drawMs' else ['EventPipe'])
+        tools = [tool for tool in tools if (*key, tool) not in completed_tools]
+        if not tools:
+            continue
         args = [str(a) for a in at(manifest, 'run.args', []) if not str(a).startswith('--perf-out=')]
         result.append(dict(type=item['type'], metric=item.get('metric'), phase=phase, tools=tools,
                            firstFrame=item['firstFrame'], lastFrame=item['lastFrame'],

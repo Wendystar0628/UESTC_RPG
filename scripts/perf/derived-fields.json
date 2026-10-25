@@ -1,5 +1,5 @@
 {
-  "calc": 16,
+  "calc": 17,
   "authority": "ENG-PERF-DATA",
   "events": "Validate strictly increasing sequence in recorded order, then stable-sort by (monotonicMs, sequence) for cross-producer event association; other streams still require nondecreasing time",
   "summary": {
@@ -25,8 +25,8 @@
     "coverage": "Per-stream state and rows, per-field non-null fraction; 0..1 or null",
     "validity": "Only affected fields disabled; hardware loss does not disable engine metrics",
     "median": "Prior valid steady frames in the same scene and caliber; nonsteady/gap rows do not enter or clear the window; scene/effective quality/output-size changes reset it",
-    "deepen": "Runnable powershell.exe command with actual DeepenEntry and entry-specific DiagnosticTool; source poseArgs/conditions retained; no placeholder runner state. A measured mainViewportGpuMs upper breach emitted by budget_checks is sufficient for gpu-profile/Nsight. Suppress an already completed request only for matching actual commit, scene and type/metric/phase with successful diagnostic collector exit and existing declared attachments; anomaly facts remain visible.",
-    "inputStamp": "Current calc, schema, file size/mtime, budget snapshot and current context rules; no checksum. Include only successful diagnosed type/metric/phase keys relevant to this session's actual commit and scene.",
+    "deepen": "Runnable powershell.exe command with actual DeepenEntry and entry-specific DiagnosticTool; source poseArgs/conditions retained; no placeholder runner state. A measured mainViewportGpuMs upper breach emitted by budget_checks is sufficient for gpu-profile/Nsight. Suppress each completed tool only for the same actual clean complete build and comparison identity, scene and type/metric/phase, with successful diagnostic collector exit, producer-confirmed attachment availability and readable declared attachments. tools and command retain only unfinished tools; remove the entry only when every required tool has succeeded. Anomaly facts remain visible.",
+    "inputStamp": "Current calc, schema, file size/mtime, budget snapshot and current context rules; no checksum. Include only successful diagnosed type/metric/phase/tool keys relevant to this session's actual clean complete build and comparison identity and scene; attachment availability is decided only by the diagnostic producer.",
     "baselineReadout": "Formal AI baseline fixed suite only, after the accepted sampleWindow projection; require Playing, confirmed steady context and valid dt. Check complete sample-window source frames before clipping invalid dt, and report excluded non-Playing/non-steady/Begin-crossing intervals, unknown context, invalid dt and gaps. dtMs uses observed valid idle intervals in ms with nearest-rank n/mean/p50/p95/p99/p999/maximum even when incomplete; route/travel/diagnostic/play or unconfirmed sample windows provide no idle evidence. severeThresholdMs comes only from budgets.json.perfAnomalies.severeStutterMs with thresholdSource; severeFrameCount counts all valid idle dt strictly above it only when session/run/frame-stream completeness and zero loss are confirmed, otherwise null; 0 is a measured zero only for a complete sample. Existing all/steady physMs/procMs/lateMs wall-interval distributions are displayed as physical/logical/late context, never pure CPU time or an automatic logical-pause/long-stop enablement.",
     "judgement": "Per-session pain counts and required checks; scene confirmation keeps worse pain counts and one real rate sample. Only round route+travel totals judge light rate. Missing required facts leave acceptance unjudged while measured cost changes remain available.",
     "waits": "Whole-session command endpoints; missing endpoints stay missing. Startup targets are unjudged for every session until the actual double-click launcher start is recorded.",
@@ -58,11 +58,15 @@
   "diagnosticsJson": {
     "owner": "scripts/perf/run.ps1",
     "location": "Beside diagnostic attachments under AI runs",
-    "attachments": "Relative file paths; analyzer enforces total bytes only inside this directory; raw six files are never attachments"
+    "attachments": "Relative file paths; analyzer enforces total bytes only inside this directory; raw six files are never attachments",
+    "attachmentAvailability": "diagnostic.json producer alone decides attachment availability with available/reasons; consumers require available=true and readable declared attachments. EventPipe requires managedSamplesWithResolvedMethods/managedSamples strictly greater than one half, with actual sample-window identity, loss/truncation and target-alive Stop/rundown facts."
   },
   "outputLimits": "perf.py constants MAX_ROWS/MAX_LINES/MAX_CHARS",
   "retention": "perf_store.py constants; author root is read-only and owned by recorder",
   "batch": "Analyzer-only completed-main round registration: freeze one complete base-valid main per planned scene before assigning the round number; incomplete main attempts never register. Confirmation source failures remain visible and pending without invalidating complete mains; source roles follow registration roots and confirmationOf, never directory names. A registered round may append independent confirmation roots without replacing its main sessions, scene plan or N-1 identity. G10 only reads the latest registered round and comparison.",
+  "roundJson": {
+    "confirmationErrors": "Every failed confirmation source remains in round.json as its own {source,error} entry; no later failure overwrites an earlier source error."
+  },
   "roundComparison": {
     "minimumImprovementFraction": 0.05,
     "confirmation": "One confirmation when a metric is near upper, a selected metric is near stop, or a pain occurs once. Main and confirmation must share complete comparison/build/environment identity and frozen conditions/budget criteria; a rerun budget tier makes the round Incomplete. Select the whole real distribution for each worse judged statistic and name its source, never combine sample counts. Per-scene light-rate source keeps its real count/duration pair; only round route+travel totals judge the light limit."
