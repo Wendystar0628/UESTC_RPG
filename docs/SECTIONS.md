@@ -1578,13 +1578,13 @@
 `docs/engineering/ENG-BUDGET-性能预算.md` · 4.8k 字 · 性能预算的口径：设备档与预设、GPU 帧时分配、份额怎么分与超了怎么办、怎么测；细节级别、速度律与硬规则在子文档
 关键词：性能预算、份额、份额分配、budgets.json、KernelBudgets、主会话余量、预算核账、预设资源上限、设备档目标、帧率目标、最低配置、独显中、独显高、楼内视角份额、GPU 帧时分配、阴影图档位、纹理上限
 
-- ENG-BUDGET §0 结论 · L21 · 888
+- ENG-BUDGET §0 结论 · L21 · 891
   - ★ ENG-BUDGET §0.1 接入要点 · L35 · 184
 - ENG-BUDGET §1 界面、外围、室内与音频的份额 · L41 · 148
 - ENG-BUDGET §2 预设与设备档的预算 · L45 · 1.7k
 - ENG-BUDGET §3 份额怎么分 · L79 · 442
 - ENG-BUDGET §4 怎么测 · L87 · 156
-- ENG-BUDGET §5 待验证（P0） · L91 · 253
+- ENG-BUDGET §5 待验证（P0） · L91 · 251
 
 ## ENG-BUDGET-LOD · 细节级别、速度律与渲染参数
 
@@ -1671,7 +1671,7 @@
 `docs/engineering/ENG-PERF-性能工程.md` · 6.1k 字 · 性能总原则与绘制管线：容器与合批、着色器白名单与全局参数、预热、填充率、剔除与图层
 关键词：着色器白名单、全局着色器参数、ShaderGlobals、数据纹理、合批、自动实例化、MultiMesh、容器选型、管线预热、抖动淡化、级别过渡、填充率、遮挡剔除、渲染图层、顶点格式、D3D12
 
-- ENG-PERF §0 结论 · L21 · 1.3k
+- ENG-PERF §0 结论 · L21 · 1.2k
   - ★ ENG-PERF §0.1 接入要点 · L38 · 466
 - ENG-PERF §1 绘制管线与合批 · L48 · 1.8k
   - ENG-PERF §1.1 容器选型 · L50 · 344
@@ -1689,36 +1689,33 @@
 `docs/engineering/ENG-PERF-ADAPT-自适应与帧节奏.md` · 2.0k 字 · 运行时自适应的降级阶梯与控制律、帧节奏与画面设置的生效约束
 关键词：自适应、自动调节画质、降级阶梯、控制律、帧节奏、跟随刷新率、软件上限、情境限帧、画面设置生效、静止降频
 
-- ENG-PERF-ADAPT §0 结论 · L21 · 444
-  - ★ ENG-PERF-ADAPT §0.1 接入要点 · L27 · 163
+- ENG-PERF-ADAPT §0 结论 · L21 · 432
+  - ★ ENG-PERF-ADAPT §0.1 接入要点 · L27 · 154
 - ENG-PERF-ADAPT §1 自适应与帧节奏 · L32 · 814
   - ENG-PERF-ADAPT §1.1 运行时自适应（主线之后） · L34 · 428
   - ENG-PERF-ADAPT §1.2 帧节奏与画面设置约束 · L43 · 372
 
 ## ENG-PERF-DATA · 性能数据与分析
 
-`docs/engineering/ENG-PERF-DATA-性能数据与分析.md` · 11.9k 字 · 性能记录的四层与写入方、记录开关与会话寿命、原始流与时间基、指标口径与非稳态帧、测量范围、异常、比较键与保留、开销目标
-关键词：性能记录、记录性能数据、记录服务、性能会话、六件、原始流、perf-fields.json、schema、calc、指标口径、体验口径、成本口径、五段、B0–B4、主线程周期、受测视口、受测视口 GPU 合计、成本尖峰、非稳态帧、掉帧、卡顿分级、1% low、scope、性能异常、比较键、性能数据保留、分析器
+`docs/engineering/ENG-PERF-DATA-性能数据与分析.md` · 9.3k 字 · 性能记录的四层与写入方、记录开关与会话寿命、原始流与时间基、指标口径与非稳态帧、测量范围、判定归属、比较、索引与保留、开销目标
+关键词：性能记录、记录性能数据、记录服务、性能会话、六件、原始流、perf-fields.json、schema、calc、指标口径、体验口径、成本口径、采样段、五段、B0–B4、主线程周期、受测视口、受测视口 GPU 合计、非稳态帧、掉帧、1% low、scope、场景指标、与上一次的差、预算对照、等待、index.json、性能数据保留、分析器
 
 - ENG-PERF-DATA §0 结论 · L21 · 1.3k
-  - ★ ENG-PERF-DATA §0.1 接入要点 · L34 · 451
+  - ★ ENG-PERF-DATA §0.1 接入要点 · L34 · 444
 - ENG-PERF-DATA §1 四层与写入方 · L43 · 1.3k
   - ENG-PERF-DATA §1.1 四层 · L45 · 444
   - ENG-PERF-DATA §1.2 记录开关与会话 · L53 · 593
   - ENG-PERF-DATA §1.3 线程分工 · L63 · 242
 - ENG-PERF-DATA §2 原始流与时间基 · L70 · 1.7k
   - ENG-PERF-DATA §2.1 六件与存放 · L72 · 1.1k
-  - ENG-PERF-DATA §2.2 字段、版本与时间基 · L91 · 588
-- ENG-PERF-DATA §3 指标口径 · L99 · 2.8k
-  - ENG-PERF-DATA §3.1 体验口径 · L108 · 861
-  - ENG-PERF-DATA §3.2 成本口径 · L123 · 1.4k
-- ENG-PERF-DATA §4 测量范围与 `scope` · L138 · 247
-- ENG-PERF-DATA §5 异常 · L146 · 2.2k
-  - ENG-PERF-DATA §5.1 体验类 · L153 · 788
-  - ENG-PERF-DATA §5.2 成本与数据类 · L169 · 837
-  - ENG-PERF-DATA §5.3 归因与合并 · L183 · 365
-- ENG-PERF-DATA §6 比较键、状态与保留 · L193 · 919
-- ENG-PERF-DATA §7 开销目标 · L211 · 337
+  - ENG-PERF-DATA §2.2 字段、版本与时间基 · L91 · 614
+- ENG-PERF-DATA §3 指标口径 · L99 · 2.5k
+  - ENG-PERF-DATA §3.1 体验口径 · L113 · 598
+  - ENG-PERF-DATA §3.2 成本口径 · L126 · 906
+- ENG-PERF-DATA §4 测量范围与 `scope` · L137 · 260
+- ENG-PERF-DATA §5 判定归属 · L145 · 236
+- ENG-PERF-DATA §6 比较、索引与保留 · L152 · 520
+- ENG-PERF-DATA §7 开销目标 · L160 · 337
 
 ## ENG-PERF-LIGHT · 植被、阴影、后期与灯光
 
@@ -1737,20 +1734,17 @@
 
 ## ENG-PERF-MEASURE · 测量与调优
 
-`docs/engineering/ENG-PERF-MEASURE-测量与调优.md` · 7.0k 字 · 性能测量的机器与剖析权限、AI 采集批次与场景套、以最新数据为准、诊断、不采用的工具、调优轮次的长期规则与判停
-关键词：性能测量、AI 批次、run.ps1、perf.py、perf.py latest、固定机位套、路线套、传送套、采样前稳定、单轮记录、作废、污染标记、以最新为准、诊断、采集条件标记、调优轮次、第 0 轮、距离表、必判集、判停、结束原因、单边判、隔离桌面、剖析权限
+`docs/engineering/ENG-PERF-MEASURE-测量与调优.md` · 5.2k 字 · 性能测量的机器与剖析权限、AI 采集入口与场景套、以最新数据为准、诊断、不采用的工具、调优怎么开始与何时停
+关键词：性能测量、AI 采集、run.ps1、perf.py、perf.py latest、perf.py compare、固定机位套、路线套、传送套、固定提交临时工作树、采样段、与上一次比、以最新为准、诊断、调优、预算线、明显痛点、隔离桌面、剖析权限
 
-- ENG-PERF-MEASURE §0 结论 · L21 · 902
-  - ★ ENG-PERF-MEASURE §0.1 接入要点 · L31 · 369
-- ENG-PERF-MEASURE §1 机器与剖析权限 · L39 · 526
-- ENG-PERF-MEASURE §2 AI 批次 · L48 · 1.6k
-- ENG-PERF-MEASURE §3 以最新为准 · L64 · 319
-- ENG-PERF-MEASURE §4 诊断 · L71 · 556
-- ENG-PERF-MEASURE §5 不采用的工具 · L82 · 601
-- ENG-PERF-MEASURE §6 调优规则与判停 · L98 · 1.6k
-  - ENG-PERF-MEASURE §6.1 第 0 轮 · L102 · 403
-  - ENG-PERF-MEASURE §6.2 第 1–3 轮 · L112 · 327
-  - ENG-PERF-MEASURE §6.3 判停与收尾 · L119 · 691
+- ENG-PERF-MEASURE §0 结论 · L21 · 846
+  - ★ ENG-PERF-MEASURE §0.1 接入要点 · L30 · 384
+- ENG-PERF-MEASURE §1 机器与剖析权限 · L38 · 486
+- ENG-PERF-MEASURE §2 AI 采集 · L47 · 1.0k
+- ENG-PERF-MEASURE §3 以最新为准 · L60 · 321
+- ENG-PERF-MEASURE §4 诊断 · L67 · 556
+- ENG-PERF-MEASURE §5 不采用的工具 · L78 · 601
+- ENG-PERF-MEASURE §6 调优 · L94 · 486
 
 ## ENG-PERF-STREAM · 流式加载、本机烘焙与内存
 
@@ -1953,7 +1947,7 @@
 关键词：代码结构准则、先用原生、重复造轮子、判断次序、失败交付、结果载体、保留原异常、异步、任务有主、async void、线程边界、依赖方向、内核引用系统、生成层实现类、点名模块、单一来源、规则值、规则类、数据与代码分离、Tune 只放规则值、实体 ID 写数据、复用、公共层、死代码、死桩、诊断残留、单实现接口、吞错、兜底、文件规模、构造参数、清单文件、程序集过碎、测试写法、测试夹具、假实现、性质断言、signatures.txt、Godot API、GDScript
 
 - STD-CODE §0 结论 · L21 · 1.5k
-  - ★ STD-CODE §0.1 接入要点 · L31 · 1.0k
+  - ★ STD-CODE §0.1 接入要点 · L31 · 995
 - STD-CODE §1 依赖方向 · L46 · 351
 - STD-CODE §2 规则值与数据各一份 · L55 · 590
 - STD-CODE §3 先用现成，再复用，不复制 · L65 · 1.7k
@@ -2033,11 +2027,11 @@
 
 - REG-DECISIONS-PROCESS §0 结论 · L21 · 129
   - ★ REG-DECISIONS-PROCESS §0.1 接入要点 · L25 · 56
-- REG-DECISIONS-PROCESS §1 流程 · L29 · 21.4k
+- REG-DECISIONS-PROCESS §1 流程 · L29 · 21.5k
 
 ## REG-DECISIONS-SYSTEMS · 系统与工程决策
 
-`docs/registry/REG-DECISIONS-SYSTEMS-系统与工程决策.md` · 29.7k 字 · 界面、存档、音频、性能与画面设置、工程五个领域的已定决策
+`docs/registry/REG-DECISIONS-SYSTEMS-系统与工程决策.md` · 29.2k 字 · 界面、存档、音频、性能与画面设置、工程五个领域的已定决策
 关键词：决策、系统、工程、界面、存档、音频、性能、画面设置、预算、契约
 
 - REG-DECISIONS-SYSTEMS §0 结论 · L21 · 126
@@ -2045,10 +2039,10 @@
 - REG-DECISIONS-SYSTEMS §1 界面 · L29 · 4.6k
 - REG-DECISIONS-SYSTEMS §2 存档 · L65 · 1.9k
 - REG-DECISIONS-SYSTEMS §3 音频 · L85 · 2.2k
-- REG-DECISIONS-SYSTEMS §4 性能与画面设置 · L107 · 11.3k
-- REG-DECISIONS-SYSTEMS §5 工程 · L172 · 5.5k
-- REG-DECISIONS-SYSTEMS §6 地图与行走 · L208 · 1.0k
-- REG-DECISIONS-SYSTEMS §7 时间、季节、天气 · L219 · 2.4k
+- REG-DECISIONS-SYSTEMS §4 性能与画面设置 · L107 · 10.8k
+- REG-DECISIONS-SYSTEMS §5 工程 · L171 · 5.5k
+- REG-DECISIONS-SYSTEMS §6 地图与行走 · L207 · 1.0k
+- REG-DECISIONS-SYSTEMS §7 时间、季节、天气 · L218 · 2.4k
 
 ## REG-DECISIONS-WORLD · 世界与画面决策
 
@@ -2063,7 +2057,7 @@
 
 ## REG-GLOSSARY · 术语表
 
-`docs/registry/REG-GLOSSARY-术语表.md` · 21.8k 字 · 文档里专有说法的统一解释，按领域分组，每条一两句并给出细则所在的小节
+`docs/registry/REG-GLOSSARY-术语表.md` · 21.5k 字 · 文档里专有说法的统一解释，按领域分组，每条一两句并给出细则所在的小节
 关键词：术语、术语表、名词解释、同名异义、缩写、别名
 
 - REG-GLOSSARY §0 用法 · L21 · 261
@@ -2080,6 +2074,6 @@
 - REG-GLOSSARY §10 多地图 · L214 · 620
 - REG-GLOSSARY §11 界面 · L226 · 1.4k
 - REG-GLOSSARY §12 音频 · L253 · 1.1k
-- REG-GLOSSARY §13 画面设置与性能 · L274 · 2.9k
-- REG-GLOSSARY §14 工程与流程 · L316 · 2.4k
-- REG-GLOSSARY §15 同名异义 · L353 · 2.0k
+- REG-GLOSSARY §13 画面设置与性能 · L274 · 2.8k
+- REG-GLOSSARY §14 工程与流程 · L314 · 2.4k
+- REG-GLOSSARY §15 同名异义 · L351 · 1.8k

@@ -56,7 +56,7 @@ paths: ["Directory.Build.props", "game/**/*.gdshader*", "game/kernel/**/*.cs", "
 12. **碰撞数据**本机烘焙，与可见几何同参数生成，不拿可见网格当 ConcavePolygonShape3D；碰撞 body 只在主线程创建、删除、入树，入树前加完形状；开放室内每个 body ≤ 250 个形状，每帧入树一个，单帧不超过 1 ms；自动门门体运行时恢复，不进烘焙碰撞；外围没有碰撞。
 13. **全局着色器参数必须先登记**（`game/contracts/Materials/ShaderGlobals.cs`，类型与默认值在 `game/project.godot` 的 `[shader_globals]`）；运行时不得 `GlobalShaderParameterAdd`、不得读回；每个参数只有一个写入方。
 14. **阴影投影物**必须在相机可见层上；草、插片、落叶、粒子、光晕、光锥一律 `cast_shadow = Off`；远处与植被的投影用 `ShadowsOnly` 代理。
-15. **着色器里按距离判断**用 `MAIN_CAM_INV_VIEW_MATRIX[3].xyz`，不用 `CAMERA_POSITION_WORLD`（阴影通道里它是灯的位置）；不用 `LIGHT_COLOR`（G4）。
+15. **着色器里按距离判断**用 `MAIN_CAM_INV_VIEW_MATRIX[3].xyz`，不用 `CAMERA_POSITION_WORLD`（阴影通道里它是灯的位置）；不用 `LIGHT_COLOR`。
 16. **线程与同步边界**：工作线程只做纯 .NET 计算、读写本机缓存、`res://` 后台加载和 RenderingServer 资源创建；场景树、`RenderingServer.Instance*`、PhysicsServer3D 的 body 只在主线程；gen 里禁用 `Parallel`、`Task.Run`；在途生成任务不超过 max(2, 逻辑核数 − 2)。应用代码不在主线程同步读回 GPU 资源，要用帧画面就在渲染线程做 GPU 端复制；放行的用途与 API 以 G4 的登记为准，引擎正常的帧同步不在此列（DECISION-341）。
 17. **风格底线不可关**（清单见 ART-STYLE-LINES §2）：任何预设、手动值和自动调节级别都不能关；实时阴影不低于 2048²、2 级，西湖倒影不低于每轴 1/4、每 4 帧；只有移轴、镜头光斑、光柱、暗角可关。最差值写在 `KnobSpec.WorstAllowed`，集中测试时在最差值配置下截图看一眼（G7）。
 18. **画面设置不改烘焙、碰撞和世界状态**：`Build()` 与 `Campus.Gen.*` 不感知画面设置；各模块只经 `IQualityService` 与 `[QualityResponsive]` 接收设置，不直接读设置文件；每个单项恰有一个负责方（G5）。
