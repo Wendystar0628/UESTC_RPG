@@ -1745,7 +1745,7 @@
 - ENG-PERF-MEASURE §1 机器与剖析权限 · L39 · 526
 - ENG-PERF-MEASURE §2 AI 批次 · L48 · 1.6k
 - ENG-PERF-MEASURE §3 以最新为准 · L64 · 319
-- ENG-PERF-MEASURE §4 诊断档与 `deepen` · L71 · 874
+- ENG-PERF-MEASURE §4 诊断档与 `deepen` · L71 · 936
 - ENG-PERF-MEASURE §5 不采用的工具 · L84 · 606
 - ENG-PERF-MEASURE §6 调优规则与判停 · L100 · 1.6k
   - ENG-PERF-MEASURE §6.1 第 0 轮 · L104 · 470
@@ -2027,12 +2027,12 @@
 
 ## REG-DECISIONS-PROCESS · 协作与流程决策
 
-`docs/registry/REG-DECISIONS-PROCESS-协作与流程决策.md` · 19.9k 字 · 计划、协作、规范、登记四个域的已定决策：协作、流程、文档与代码规范、门禁流程
+`docs/registry/REG-DECISIONS-PROCESS-协作与流程决策.md` · 20.1k 字 · 计划、协作、规范、登记四个域的已定决策：协作、流程、文档与代码规范、门禁流程
 关键词：决策、流程、协作、文档规则、门禁流程、派工、主会话、子代理
 
 - REG-DECISIONS-PROCESS §0 结论 · L21 · 129
   - ★ REG-DECISIONS-PROCESS §0.1 接入要点 · L25 · 56
-- REG-DECISIONS-PROCESS §1 流程 · L29 · 19.3k
+- REG-DECISIONS-PROCESS §1 流程 · L29 · 19.5k
 
 ## REG-DECISIONS-SYSTEMS · 系统与工程决策
 
