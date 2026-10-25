@@ -154,6 +154,16 @@ function Get-UESTCG2ProjectSelection {
         $scopes[$project] = Get-UESTCG2CompileScope $Root $project $Configuration $evaluations
         foreach ($path in $scopes[$project].InputPaths) { $null = $owned.Add($path) }
     }
+    # Godot loads project resources independently of MSBuild (the SDK disables default None items).
+    # Keep evaluated source/project ownership authoritative; only otherwise unowned non-C# resources
+    # belong to the runtime host. Unknown C# and MSBuild inputs must still report incomplete selection.
+    foreach ($path in $normalizedChanges) {
+        if ($path -match '^game/' -and -not $owned.Contains($path) -and
+            $path -notmatch '\.(cs|[^./]*proj|props|targets|sln|slnx)$') {
+            $null = $scopes['game/Campus.Tests.csproj'].InputPaths.Add($path)
+            $null = $owned.Add($path)
+        }
+    }
     $unmapped = @($normalizedChanges | Where-Object { $_ -match '^game/' -and -not $owned.Contains($_) -and $_ -notin $removedSources })
     foreach ($project in @('game/Campus.Gen.Tests.csproj','game/Campus.Tests.csproj')) {
         $scope = $scopes[$project]

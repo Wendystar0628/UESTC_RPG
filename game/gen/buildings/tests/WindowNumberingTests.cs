@@ -1,4 +1,5 @@
 using Campus.Tests;
+using Campus.Gen.Sites.Tests;
 using System.Numerics;
 using System.Text.Json;
 using Campus.Contracts;
@@ -130,8 +131,8 @@ public sealed class WindowNumberingTests
             foreach (var g in module.Build(ctx, tileB, lod).Meshes.Where(m => m.Material.Spec.Kind == ToonKind.Glass))
                 for (var i = 0; i < g.Position.Length / 3; i++)
                 {
-                    var id = (int)g.Uv2![2 * i] + (int)MathF.Floor(g.Uv![2 * i + 1]) * b.Columns + (int)MathF.Floor(g.Uv[2 * i]);
-                    AssertThat(g.Uv2[2 * i] == b.BaseId && id >= b.BaseId && id < b.BaseId + b.Count).OverrideFailureMessage("Expected: " + ($"{lod}: glass window {id} inside t:b's new block")).IsTrue();
+                    var id = ZoneTestCells.WindowId(g, i) ?? throw new InvalidOperationException("Numbered glass has no window grid.");
+                    AssertThat(g.Uv2![2 * i] == b.BaseId && id >= b.BaseId && id < b.BaseId + b.Count).OverrideFailureMessage("Expected: " + ($"{lod}: glass window {id} inside t:b's new block")).IsTrue();
                 }
         var metadata = module.DescribeWindows(ctx).Windows;
         AssertThat(metadata.Count > 0 && metadata.All(d => d.BaseId == b.BaseId && d.Id >= b.BaseId && d.Id < b.BaseId + b.Count)).OverrideFailureMessage("Expected: " + ("metadata on the new block")).IsTrue();

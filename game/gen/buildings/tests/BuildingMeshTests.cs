@@ -1,4 +1,5 @@
 using Campus.Gen.Geometry;
+using Campus.Gen.Sites.Tests;
 using Campus.Gen.Buildings.Mesh;
 using Campus.Tests;
 using System.Numerics;
@@ -41,9 +42,7 @@ public sealed class BuildingMeshTests
                 AssertThat(g.Uv2![2 * i] == block.Base).OverrideFailureMessage("Expected: " + ("UV2.x is the building window base")).IsTrue();
                 var packed = (int)MathF.Round(g.Uv2[2 * i + 1]);
                 AssertThat(packed / 32 == plan.TotalColumns).OverrideFailureMessage("Expected: " + ("UV2.y carries the grid column count")).IsTrue();
-                var col = (int)MathF.Floor(g.Uv![2 * i]);
-                var row = (int)MathF.Floor(g.Uv[2 * i + 1]);
-                var id = block.Base + row * plan.TotalColumns + col;
+                var id = ZoneTestCells.WindowId(g, i) ?? throw new InvalidOperationException("Numbered glass has no window grid.");
                 AssertThat(id >= block.Base && id < block.Base + block.Count).OverrideFailureMessage("Expected: " + ("window number inside the block")).IsTrue();
                 AssertThat((g.Reserved![i] & WindowCardEncoding.TypeMask) is >= 1 and <= 15).OverrideFailureMessage("Expected: " + ("window card type in the spare byte")).IsTrue();
             }
@@ -135,7 +134,7 @@ public sealed class BuildingMeshTests
                     for (var i = 0; i < g.Position.Length / 3; i++)
                     {
                         AssertThat(g.Uv2![2 * i] == block.Base && (int)MathF.Round(g.Uv2[2 * i + 1]) == plan.Profile.Channel + 32 * plan.TotalColumns).OverrideFailureMessage("Expected: " + ($"{plan.Key} {lod}: UV2 is (BaseId, slot + 32 × columns)")).IsTrue();
-                        var id = block.Base + (int)MathF.Floor(g.Uv![2 * i + 1]) * plan.TotalColumns + (int)MathF.Floor(g.Uv[2 * i]);
+                        var id = ZoneTestCells.WindowId(g, i) ?? throw new InvalidOperationException("Numbered glass has no window grid.");
                         AssertThat(expected.TryGetValue(id, out var card) && (g.Reserved![i] & WindowCardEncoding.TypeMask) == card).OverrideFailureMessage("Expected: " + ($"{plan.Key} {lod}: window {id} keeps its cell and card")).IsTrue();
                         seen.Add(id);
                     }

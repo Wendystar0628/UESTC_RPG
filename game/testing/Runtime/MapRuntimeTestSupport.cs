@@ -4,6 +4,7 @@ using Campus.Contracts;
 using Campus.Contracts.AppFlow;
 using Campus.Contracts.Bake;
 using Campus.Contracts.Maps;
+using Campus.Contracts.Startup;
 using Campus.Kernel.Boot;
 using Campus.Kernel.Registry;
 using Campus.Kernel.Renderer;
@@ -98,4 +99,12 @@ internal static class MapRuntimeTestSupport
         public SweepHit? SupportRay(N.Vector3 from, N.Vector3 to) => null;
         public int NearbyBoundaries(N.Vector3 feet, float radius, float height, Span<BoundaryHit> hits) => 0;
     }
+}
+
+internal sealed partial class MapRuntimeReadinessProducer : Node, IViewContentReadiness
+{
+    public bool ContentReady { get; set; }
+    public Pose? RequiredPose { get; set; }
+    public bool IsReady(Pose pose) => ContentReady && (RequiredPose is null || pose == RequiredPose);
+    public Exception? Failure { get; set; }
 }

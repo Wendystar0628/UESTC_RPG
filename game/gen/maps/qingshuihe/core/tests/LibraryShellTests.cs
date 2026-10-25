@@ -89,7 +89,7 @@ public sealed class LibraryShellTests
         var world = Campus.Tests.RealMapFixture.Load().World;
         var palette = Campus.Contracts.Tests.PaletteFixture.Catalog;
         var shell = Shell(world);
-        var numbering = Numbering(shell, shell.Columns);
+        var numbering = CoreTestSupport.Context(world, palette).WindowNumbering;
         var allocation = numbering.Get(CoreIds.Library, LibraryShell.WindowKey);
         foreach (var lod in Levels)
         {
@@ -103,9 +103,8 @@ public sealed class LibraryShellTests
             {
                 AssertThat(g.Uv is not null && g.Uv2 is not null && g.Reserved is not null).OverrideFailureMessage("VF-B glass").IsTrue();
                 var ids = ZoneTestCells.WindowIds([g]).Ids;
-                if (g.Material.Spec.Kind == ToonKind.Glass)
-                    AssertThat(ids.Count > 0 && ids.All(id => id >= allocation.BaseId && id < allocation.BaseId + allocation.Count))
-                        .OverrideFailureMessage("window glass carries only IDs from the allocated block").IsTrue();
+                AssertThat(ids.Count > 0 && ids.All(id => id >= allocation.BaseId && id < allocation.BaseId + allocation.Count))
+                    .OverrideFailureMessage("window glass carries only IDs from the allocated block").IsTrue();
             }
             foreach (var m in output.Meshes)
             {
@@ -148,11 +147,12 @@ public sealed class LibraryShellTests
     {
         var world = Campus.Tests.RealMapFixture.Load().World;
         var shell = Shell(world);
-        var numbering = Numbering(shell, shell.Columns);
+        var ctx = CoreTestSupport.Context(world);
+        var numbering = ctx.WindowNumbering;
         var allocation = numbering.Get(CoreIds.Library, LibraryShell.WindowKey);
-        AssertThat(allocation.BaseId == numbering.Allocations[0].Count).OverrideFailureMessage("a generic block in front moves the library base").IsTrue();
+        AssertThat(numbering.Allocations.Any(other => other.BaseId < allocation.BaseId))
+            .OverrideFailureMessage("the production prepass places other map windows before the library").IsTrue();
         var module = new CoreModule();
-        var ctx = new BuildContext { CodeHash = "fixture", Catalog = Campus.Contracts.Tests.PaletteFixture.Catalog, World = world, Map = null!, WorldSeed = 1u, WindowNumbering = numbering, PartLods = PartLodFixture.Catalog };
         var output = module.Build(ctx, TileGrid.At(shell.Anchor, LodLevel.L0), LodLevel.L0);
         var glassIds = ZoneTestCells.WindowIds(output.Meshes).Ids
             .Where(id => id >= allocation.BaseId && id < allocation.BaseId + allocation.Count).ToHashSet();
@@ -176,7 +176,10 @@ public sealed class LibraryShellTests
         shell.Build(build, LodLevel.L0);
         var glass = build.Finish(LodLevel.L0).Meshes.Where(m => m.Material.Spec.Kind is ToonKind.Glass or ToonKind.GlassNear).ToArray();
         AssertThat(glass.Length > 0 && glass.All(g => g.Uv is null && g.Uv2 is null)).OverrideFailureMessage("no base is invented without a snapshot").IsTrue();
-        var wrong = Numbering(shell, shell.Columns + 1);
+        var numbering = CoreTestSupport.Context(world).WindowNumbering;
+        var allocation = numbering.Get(CoreIds.Library, LibraryShell.WindowKey);
+        var wrong = new WindowNumberingSnapshot(numbering.Map, numbering.Fingerprint,
+            [allocation with { Columns = allocation.Columns + 1 }]);
         Exception? wrongAllocation = null;
         try { shell.Build(new CoreBuild(Campus.Contracts.Tests.PaletteFixture.Catalog) { WindowNumbering = wrong }, LodLevel.L0); }
         catch (InvalidOperationException ex) { wrongAllocation = ex; }
@@ -297,25 +300,6 @@ public sealed class LibraryShellTests
 
     private static LibraryShell Shell(IWorldModel world) =>
         CoreSite.Pieces(world).OfType<LibraryShell>().SingleOrDefault() ?? throw new InvalidOperationException("Expected: library shell piece");
-
-    /// <summary>A stand-in for game/gen/buildings/'s allocation: a 101 × 7 generic block sorted before the library, the museum and one block after it.</summary>
-    private static WindowNumberingSnapshot Numbering(LibraryShell shell, int libraryColumns)
-    {
-        var generic = new WindowAllocation(new FeatureId("fixture:generic-before"), "generic", 0, 101, 7);
-        var library = new WindowAllocation(CoreIds.Library, LibraryShell.WindowKey, generic.Count, libraryColumns, LibraryShell.Rows);
-        var columns = CoreSite.Pieces(Campus.Tests.RealMapFixture.Load().World).OfType<Museum.MuseumShell>().Single().Columns;
-        var museum = new WindowAllocation(CoreIds.Museum, Museum.MuseumShell.WindowKey, generic.Count + library.Count, columns, Museum.MuseumShell.Rows);
-        var annex = CoreTestSupport.Allocations(Campus.Tests.RealMapFixture.Load().World, museum.BaseId + museum.Count).ToArray();
-        var end = annex.Length == 0 ? museum.BaseId + museum.Count : annex[^1].BaseId + annex[^1].Count;
-        return new(Campus.Tests.RealMapFixture.Entry().Descriptor.Id, new string('a', 64),
-        [
-            generic,
-            library,
-            museum,
-            .. annex,
-            new WindowAllocation(new FeatureId("test:generic-after"), "generic", end, 10, 1),
-        ]);
-    }
 
     private static Vector3 P(GeometryBundle b, int i) => new(b.Position[3 * i], b.Position[3 * i + 1], b.Position[3 * i + 2]);
     private static Vector3 N(GeometryBundle b, int i) => new(b.Normal[3 * i], b.Normal[3 * i + 1], b.Normal[3 * i + 2]);

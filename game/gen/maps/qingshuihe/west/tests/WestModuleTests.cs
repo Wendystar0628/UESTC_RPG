@@ -209,17 +209,9 @@ public sealed class WestModuleTests
     {
         var world = World();
         var module = new WestModule();
-        var specs = module.DescribeWindowLayouts(world, 1).SelectMany(l => l.Grids.Select(g => (l.Feature, g)))
-            .Prepend((new FeatureId("a-earlier"), new WindowGridSpec("block", 37, 3)))
-            .OrderBy(p => p.Item1.Value, StringComparer.Ordinal).ThenBy(p => p.Item2.Key, StringComparer.Ordinal);
-        var allocations = new List<WindowAllocation>();
-        var next = 0;
-        foreach (var (feature, grid) in specs)
-        {
-            allocations.Add(new(feature, grid.Key, next, grid.Columns, grid.Rows));
-            next += grid.Columns * grid.Rows;
-        }
-        var ctx = new BuildContext { CodeHash = "fixture", GlobalInputs = TextInputs(), Catalog = Campus.Contracts.Tests.PaletteFixture.Catalog, World = world, Map = RealMapFixture.Entry().Descriptor, WorldSeed = 1, WindowNumbering = new(RealMapFixture.Entry().Descriptor.Id, new string('a', 64), allocations) };
+        var ctx = RealMapFixture.ZoneContext(module, world, globalInputs: TextInputs());
+        var claimed = module.Claims.OfType<FeatureClaim>().Select(claim => claim.Feature).ToHashSet();
+        var allocations = ctx.WindowNumbering.Allocations.Where(allocation => claimed.Contains(allocation.Feature)).ToArray();
         var metadata = module.DescribeWindows(ctx);
         var declared = new List<int>();
         foreach (var f in metadata.Facades)
@@ -227,7 +219,7 @@ public sealed class WestModuleTests
                 for (var c = 0; c < f.Columns; c++)
                     if (!f.Skip.Contains(r * f.Columns + c)) declared.Add(f.BaseId + r * f.TotalColumns + f.ColumnStart + c);
         AssertThat(declared.Count == declared.Distinct().Count() && declared.Count > 0).OverrideFailureMessage("every window is declared once").IsTrue();
-        AssertThat(declared.All(id => allocations.Any(a => id >= a.BaseId && id < a.BaseId + a.Count && a.Feature.Value != "a-earlier"))).OverrideFailureMessage("declared IDs lie in the zone's grids").IsTrue();
+        AssertThat(declared.All(id => allocations.Any(a => id >= a.BaseId && id < a.BaseId + a.Count))).OverrideFailureMessage("declared IDs lie in the zone's grids").IsTrue();
         var cells = ZoneTestCells.Items(module, ctx, LodLevel.L0).Select(item => TileGrid.At(item.Anchor)).Distinct();
         var (ids, unnumbered, _) = ZoneTestCells.WindowIds(cells.SelectMany(tile => module.Build(ctx, tile, LodLevel.L0).Meshes));
         AssertThat(unnumbered > 0).OverrideFailureMessage("the zone also contains clear glass without numbered window cells").IsTrue();

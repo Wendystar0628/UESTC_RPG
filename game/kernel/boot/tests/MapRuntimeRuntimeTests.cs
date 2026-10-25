@@ -8,7 +8,6 @@ using Campus.Kernel.World;
 using GdUnit4;
 using static GdUnit4.Assertions;
 using Godot;
-using Campus.Kernel.Registry;
 using N = System.Numerics;
 using static Campus.Tests.MapRuntimeTestSupport;
 
@@ -246,12 +245,4 @@ public sealed class MapRuntimeRuntimeTests
         AssertThat(ReferenceEquals(runtime.Failure, collected)).OverrideFailureMessage("Unchanged faults were collected twice.").IsTrue();
     }
 
-}
-
-internal sealed partial class MapRuntimeReadinessProducer : Node, IViewContentReadiness
-{
-    public bool ContentReady { get; set; }
-    public Pose? RequiredPose { get; set; }
-    public bool IsReady(Pose pose) => ContentReady && (RequiredPose is null || pose == RequiredPose);
-    public Exception? Failure { get; set; }
 }

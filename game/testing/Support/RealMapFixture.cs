@@ -91,11 +91,8 @@ internal static class RealMapFixture
         var entry = MapCatalog.ReadEntry(Entry(map), files);
         var id = entry.Descriptor.Id;
         options ??= new();
-        var registrations = RegistrationDiscovery.Discover(
-            new[] { "Campus.Gen", "Campus.Gen.Maps.Qingshuihe" }.Select(Assembly.Load).SelectMany(assembly => assembly.GetTypes()), _ => "fixture");
-        var claims = new MapClaimSnapshot(RegistrationDiscovery.Query<IContentModule>(registrations, RegistrationKind.Content, id)
-            .Select(entry => new MapClaimSource(entry.Id, entry.Owner, entry.Map is null,
-                ((IContentModule)RegistrationDiscovery.Construct(entry.Type, parameter => parameter.HasDefaultValue ? parameter.DefaultValue : throw new InvalidOperationException("Fixture registration has an unresolved dependency."))).Claims)));
+        var registrations = Registrations();
+        var claims = CaptureClaims(registrations, id);
         var loaded = WorldModelLoader.LoadWorld(new(entry.Descriptor), files, options);
         _ = claims.Build(loaded.World);
         if (files.TryGetValue("interiors.json", out var catalog))
@@ -123,6 +120,19 @@ internal static class RealMapFixture
         MapCatalog.ValidateDestinations(entry.Descriptor, files, loaded.World);
         return loaded;
     }
+
+    /// <summary>The registered map modules' production claims, resolved against the caller's world.</summary>
+    internal static MapClaimLedger Claims(IWorldModel world, MapId? map = null) =>
+        CaptureClaims(Registrations(), map ?? Entry().Descriptor.Id).Build(world);
+
+    private static IReadOnlyList<Registration> Registrations() => RegistrationDiscovery.Discover(
+        new[] { "Campus.Gen", "Campus.Gen.Maps.Qingshuihe" }.Select(Assembly.Load).SelectMany(assembly => assembly.GetTypes()), _ => "fixture");
+
+    private static MapClaimSnapshot CaptureClaims(IEnumerable<Registration> registrations, MapId map) =>
+        new(RegistrationDiscovery.Query<IContentModule>(registrations, RegistrationKind.Content, map)
+            .Select(entry => new MapClaimSource(entry.Id, entry.Owner, entry.Map is null,
+                ((IContentModule)RegistrationDiscovery.Construct(entry.Type, parameter => parameter.HasDefaultValue
+                    ? parameter.DefaultValue : throw new InvalidOperationException("Fixture registration has an unresolved dependency."))).Claims)));
 
     private static string ResourceDirectory(string resource)
     {

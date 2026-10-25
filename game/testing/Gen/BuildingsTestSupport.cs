@@ -101,7 +101,7 @@ internal static class BuildingsTestSupport
         ClaimedBy = (feature, aspect) => aspect == Aspects.Facade && claims?.Contains(feature.Value) == true ? "zone.south" : null,
     };
 
-    /// <summary>The kernel's prepass stand-in until game/kernel/bake/ runs it: the provider's snapshot, published in the context.</summary>
+    /// <summary>The production provider's snapshot published into this synthetic building fixture.</summary>
     internal static BuildContext Prepared(BuildContext ctx) => new()
     {
         CodeHash = ctx.CodeHash,
@@ -119,32 +119,9 @@ internal static class BuildingsTestSupport
         WindowNumbering = new BuildingsModule().PrepareWindowNumbering(ctx, []),
     };
 
-    /// <summary>
-    /// The claims ledger of the real campus (the kernel's MapClaimLedger, rebuilt): every zone pack's claims under its registered module ID.
-    /// The other content modules (furniture, ground, vegetation, water) claim nothing.
-    /// </summary>
-    internal static Func<FeatureId, Aspects, string?> RealClaims(IWorldModel world)
-    {
-        IContentModule[] zones = [new Campus.Gen.Maps.Qingshuihe.Core.CoreModule(), new Campus.Gen.Maps.Qingshuihe.South.SouthModule(),
-            new Campus.Gen.Maps.Qingshuihe.CenterEast.CenterEastModule(), new Campus.Gen.Maps.Qingshuihe.North.NorthModule()];
-        var owners = new Dictionary<(FeatureId, Aspects), string>();
-        foreach (var zone in zones)
-        {
-            var owner = zone.GetType().GetCustomAttributes(typeof(ContentModuleAttribute), false).OfType<ContentModuleAttribute>().Single().Id;
-            foreach (var claim in zone.Claims)
-            {
-                FeatureId[] claimed = claim switch
-                {
-                    FeatureClaim f => world.Features.ContainsKey(f.Feature) ? [f.Feature] : Array.Empty<FeatureId>(),
-                    AreaClaim a => [.. world.Features.Values.Where(f => f.Zone == a.Zone).Select(f => f.Id)],
-                    _ => throw new InvalidOperationException("Unknown claim kind."),
-                };
-                foreach (var feature in claimed)
-                    foreach (var aspect in Enum.GetValues<Aspects>().Where(a => (claim.Aspects & a) != 0)) owners.Add((feature, aspect), owner);
-            }
-        }
-        return (feature, aspect) => owners.TryGetValue((feature, aspect), out var owner) ? owner : null;
-    }
+    /// <summary>The real map's registered claims resolved through the production ledger.</summary>
+    internal static Func<FeatureId, Aspects, string?> RealClaims(IWorldModel world) =>
+        Campus.Tests.RealMapFixture.Claims(world).ClaimedBy;
 
     internal static ClaimedWindowLayout Layout(string feature, params (string Key, int Columns, int Rows)[] grids) =>
         new(new FeatureId(feature), [.. grids.Select(g => new WindowGridSpec(g.Key, g.Columns, g.Rows))]);

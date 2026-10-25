@@ -92,7 +92,7 @@ public sealed class MuseumShellTests
         var world = Campus.Tests.RealMapFixture.Load().World;
         var palette = Campus.Contracts.Tests.PaletteFixture.Catalog;
         var museum = Museum(world);
-        var numbering = Numbering(museum.Columns, 1);
+        var numbering = CoreTestSupport.Context(world, palette).WindowNumbering;
         var allocation = numbering.Get(CoreIds.Museum, MuseumShell.WindowKey);
         AssertThat(museum.Columns > 0 && museum.Clerestory.Count > 0).OverrideFailureMessage($"{museum.Columns} grid columns, {museum.Clerestory.Count} clerestory runs").IsTrue();
         foreach (var lod in Levels)
@@ -103,8 +103,12 @@ public sealed class MuseumShellTests
             var glass = output.Meshes.Where(m => m.Material.Spec.Kind == ToonKind.Glass).ToArray();
             AssertThat(glass.Length == 1).OverrideFailureMessage($"{lod}: one window-glass bundle ({glass.Length})").IsTrue();
             var glassIds = ZoneTestCells.WindowIds(glass).Ids;
-            AssertThat(glassIds.SetEquals(museum.Windows(numbering).Select(window => window.Id)))
-                .OverrideFailureMessage("numbered museum glass matches its declared windows").IsTrue();
+            var expectedIds = lod <= LodLevel.L2
+                ? museum.Windows(numbering).Select(window => window.Id)
+                : museum.Openings.Concat(museum.Clerestory)
+                    .SelectMany(opening => opening.Rows.Select(row => allocation.IdAt(opening.Column, row.Row)));
+            AssertThat(glassIds.SetEquals(expectedIds))
+                .OverrideFailureMessage($"{lod}: numbered museum glass matches its declared cells at this level").IsTrue();
             foreach (var m in output.Meshes)
             {
                 m.ValidateVertexData();
@@ -134,8 +138,8 @@ public sealed class MuseumShellTests
         var museum = pieces.OfType<MuseumShell>().Single();
         var tile = TileGrid.At(museum.Anchor, LodLevel.L3);
         AssertThat(tile == TileGrid.At(library.Anchor, LodLevel.L3)).OverrideFailureMessage("library and museum share an L3 cell").IsTrue();
-        var numbering = Numbering(museum.Columns, library.Columns);
-        var ctx = new BuildContext { CodeHash = "fixture", World = world, Map = null!, WorldSeed = 1u, Catalog = palette ?? Campus.Contracts.Tests.PaletteFixture.Catalog, WindowNumbering = numbering, PartLods = PartLodFixture.Catalog };
+        var ctx = CoreTestSupport.Context(world, palette);
+        var numbering = ctx.WindowNumbering;
         var module = new CoreModule();
         foreach (var lod in new[] { LodLevel.L3, LodLevel.L4 })
         {
@@ -179,15 +183,6 @@ public sealed class MuseumShellTests
         var build = new CoreBuild(Campus.Contracts.Tests.PaletteFixture.Catalog) { PartLods = PartLodFixture.Catalog };
         museum.Build(build, lod);
         return build.Finish(lod);
-    }
-
-    /// <summary>A stand-in for game/gen/buildings/'s allocation: a generic block, the library and the museum in ordinal feature order.</summary>
-    private static WindowNumberingSnapshot Numbering(int museumColumns, int libraryColumns)
-    {
-        var generic = new WindowAllocation(new FeatureId("fixture:generic-before"), "generic", 0, 101, 7);
-        var library = new WindowAllocation(CoreIds.Library, LibraryShell.WindowKey, generic.Count, libraryColumns, LibraryShell.Rows);
-        var museum = new WindowAllocation(CoreIds.Museum, MuseumShell.WindowKey, generic.Count + library.Count, museumColumns, MuseumShell.Rows);
-        return new(Campus.Tests.RealMapFixture.Entry().Descriptor.Id, new string('a', 64), [generic, library, museum, .. CoreTestSupport.Allocations(Campus.Tests.RealMapFixture.Load().World, museum.BaseId + museum.Count)]);
     }
 
     private static float SegmentDistance(Vector2 a, Vector2 b, Vector2 c, Vector2 d)

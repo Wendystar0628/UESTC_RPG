@@ -30,21 +30,26 @@ internal static class ZoneTestCells
         var ids = new HashSet<int>();
         var unnumbered = 0;
         var numberedMeshes = 0;
-        foreach (var mesh in meshes.Where(mesh => mesh.Material.Spec.Kind == ToonKind.Glass && mesh.Uv2 is not null))
+        foreach (var mesh in meshes.Where(mesh => (mesh.Material.Spec.Kind is ToonKind.Glass or ToonKind.GlassNear) && mesh.Uv2 is not null))
         {
             mesh.ValidateVertexData();
             var numbered = false;
             for (var vertex = 0; vertex < mesh.Uv2!.Length / 2; vertex++)
             {
-                var columns = (int)MathF.Floor(MathF.Round(mesh.Uv2[2 * vertex + 1]) / LightChannelCatalog.Count);
-                if (columns == 0) { unnumbered++; continue; }
+                if (WindowId(mesh, vertex) is not { } id) { unnumbered++; continue; }
                 numbered = true;
-                ids.Add((int)MathF.Round(mesh.Uv2[2 * vertex]) + (int)MathF.Floor(mesh.Uv![2 * vertex + 1]) * columns
-                    + (int)MathF.Floor(mesh.Uv[2 * vertex]));
+                ids.Add(id);
             }
             if (numbered) numberedMeshes++;
         }
         return (ids, unnumbered, numberedMeshes);
+    }
+
+    public static int? WindowId(GeometryBundle mesh, int vertex)
+    {
+        var columns = (int)MathF.Floor(MathF.Round(mesh.Uv2![2 * vertex + 1]) / LightChannelCatalog.Count);
+        return columns == 0 ? null : (int)MathF.Round(mesh.Uv2[2 * vertex])
+            + (int)MathF.Floor(mesh.Uv![2 * vertex + 1]) * columns + (int)MathF.Floor(mesh.Uv[2 * vertex]);
     }
 
     /// <summary>Compares source partitioning at the shared stage before GeometryBatch.Merge.</summary>
