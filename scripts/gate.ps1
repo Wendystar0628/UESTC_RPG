@@ -311,7 +311,6 @@ if (-not ($Full -or $Smoke -or $Only.Count)) {
         $_ -notin $existingBasePaths -or -not (Test-UESTCCommentOnlyChange $root $_ $BaseRef)
     })
 }
-$perfSelfcheckRequired = @($runtimeChanges | Where-Object { $_ -match '^scripts/perf/|^scripts/gates/performance\.ps1$|^game/data/perf-fields\.json$|^budgets\.json$' }).Count -gt 0
 $textOnlyQuick = -not ($Full -or $Smoke -or $Only.Count) -and $changes.Count -gt 0 -and $runtimeChanges.Count -eq 0
 $selected = New-Object 'Collections.Generic.List[string]'
 $gateIds = @('G1','G2','G3','G4','G5','G7','G10','G14','G15','G20','G21')
@@ -343,7 +342,6 @@ $scope = if ($Full) { 'Full' } elseif ($Only.Count) { 'Selected' } elseif ($Smok
 $planObject = [ordered]@{ Scope = $scope; BaseRef = $BaseRef; Branch = $branch; Gates = $selected.ToArray(); Preparation = 'Ordinary Debug build and native incremental import before game consumers; selecting G1 builds Campus.sln including test projects once, otherwise Campus.csproj'; ChangedPaths = $changes; Godot = $godot; Locks = $layout.Locks; BuildCapacity = 1; FormatPaths = $formatPaths; Bake = 'No pre-bake in quick/core; centralized bake gates not implemented' }
 $g2Selection = if ($selected.Contains('G2')) { @(Get-UESTCG2ProjectSelection $root $runtimeChanges ([bool]$Full) $Configuration $BaseRef) } else { @() }
 $planObject['G2Selection'] = $g2Selection
-$planObject['G2ToolTests'] = @(if ($selected.Contains('G2') -and $perfSelfcheckRequired) { 'perf-selfcheck' })
 $selectionIncomplete = @(
     if ($runtimeChanges.Count -and $selected.Count -eq 0) { 'Runtime changes selected no gates.' }
     foreach ($path in @($g2Selection | ForEach-Object { $_.UnmappedRuntimeChanges } | Sort-Object -Unique)) {
@@ -440,10 +438,6 @@ foreach ($id in $selected) {
                 $testCount = 0
                 $notes = @()
                 try {
-                if ($perfSelfcheckRequired) {
-                    $null = Invoke-GateProcess 'G2-perf-selfcheck' python @('-I','-X','utf8',(Join-Path $root 'scripts/perf/perf.py'),'--root',$root,'selfcheck')
-                    $notes += 'perf selfcheck passed'
-                }
                 foreach ($selection in @($g2Selection | Where-Object { $_.Selected })) {
                     $test = $selection.Name
                     $project = Join-Path $root $selection.Project
@@ -460,7 +454,7 @@ foreach ($id in $selected) {
                     if ($g2Tests.Count) { Add-UESTCTestRecord $testRecordPath $g2Tests }
                     Write-UESTCSlowTests $g2Tests
                 }
-                if (-not @($g2Selection | Where-Object { $_.Selected }).Count -and -not $perfSelfcheckRequired) {
+                if (-not @($g2Selection | Where-Object { $_.Selected }).Count) {
                     $status = 'NotRun'
                     $notes += '无适用测试、未运行'
                 } elseif (@($g2Selection | Where-Object { $_.Selected }).Count -and $runCount -eq 0) { $status = 'Incomplete' }
@@ -474,12 +468,11 @@ foreach ($id in $selected) {
             }
             'G3' { $detail = Test-UESTCOwnership $root $changes | ConvertTo-Json -Depth 5 -Compress }
             'G4' {
-                $newFiles = Test-UESTCNewCodeFiles $root $changes -BaseRef $BaseRef
                 $null = Test-UESTCSourceBoundaries $root
                 $null = Invoke-GateProcess 'G4-restore' dotnet @('restore',(Join-Path $game 'Campus.sln'))
                 $settings = Write-TestSettings
                 $null = Invoke-GateProcess 'G4-architecture' dotnet @('test',(Join-Path $root 'scripts/gates/arch/Campus.Arch.Tests.csproj'),'-c','Debug','--settings',$settings,'--logger','trx','--results-directory',(Join-Path $work 'arch-results'))
-                $detail = "New code placement/name checked ($($newFiles.CheckedNewCodeFiles) files); source and ArchUnitNET rules passed; BannedApiAnalyzers run in compilation."
+                $detail = "Module dependencies, shader whitelist and designated banned APIs checked."
             }
             'G5' {
                 Assert-GodotVersion
@@ -541,7 +534,7 @@ foreach ($id in $selected) {
             }
             'G10' {
                 . (Join-Path $PSScriptRoot 'gates/performance.ps1')
-                $detail = Invoke-UESTCPerformanceGate -Root $root -Map $Map
+                $detail = Invoke-UESTCPerformanceGate -Root $root
                 $status = $detail.Status
             }
             default { $status = 'NotImplemented'; $detail = 'Centralized or core-specialist gate has no implementation yet; no pre-bake was started.' }

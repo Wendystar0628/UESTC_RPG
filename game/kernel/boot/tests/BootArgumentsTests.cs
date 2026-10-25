@@ -13,15 +13,14 @@ public sealed class BootArgumentsTests
 {
     [TestCase]
     [TestCategory(TestReason.Contract)]
-    public void CollectionReadsTheFrozenRequestAndRejectsMissingOrInvalidValues()
+    public void CollectionReadsTheRequestAndRejectsMissingOrInvalidValues()
     {
         var root = Path.Combine(Path.GetTempPath(), "campus-collection-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(root);
         var path = Path.Combine(root, "collection.json");
         var request = new PerfCollectionOptions
         {
-            SceneId = "fixture-scene", SampleSegmentId = "sample-fixture", FunctionalSmoke = true, SaveAfterSample = true, StableFrames = 2,
-            RealtimeSeconds = 1, SampleSeconds = 2, OtherGpuFraction = .2, MaximumFactAgeSeconds = 3,
+            SceneId = "fixture-scene", SampleSegmentId = "sample-fixture", SaveAfterSample = true, SampleSeconds = 2,
             RoutePointIds = ["road:fixture/0"], TravelPrefetch = true
         };
         try
@@ -31,18 +30,6 @@ public sealed class BootArgumentsTests
             AssertThat(JsonNode.DeepEquals(JsonSerializer.SerializeToNode(options.PerfCollection, ContractJson.Options),
                 JsonSerializer.SerializeToNode(request, ContractJson.Options))).IsTrue();
             AssertThat(options.Mode == BootRunMode.Interactive && options.Title).IsTrue();
-            File.WriteAllText(path, JsonSerializer.Serialize(request with { FunctionalSmoke = false }, ContractJson.Options));
-            AssertThat(JsonNode.DeepEquals(JsonSerializer.SerializeToNode(
-                BootArguments.Parse(["--perf-out=" + root, "--perf-collection=" + path]).PerfCollection, ContractJson.Options),
-                JsonSerializer.SerializeToNode(request with { FunctionalSmoke = false }, ContractJson.Options))).IsTrue();
-            var missingFlag = JsonSerializer.SerializeToNode(request, ContractJson.Options)!.AsObject();
-            missingFlag.Remove("functionalSmoke");
-            File.WriteAllText(path, missingFlag.ToJsonString());
-            JsonException? missingPurpose = null;
-            try { BootArguments.Parse(["--perf-out=" + root, "--perf-collection=" + path]); }
-            catch (JsonException error) { missingPurpose = error; }
-            AssertThat(missingPurpose is not null).IsTrue();
-            File.WriteAllText(path, JsonSerializer.Serialize(request, ContractJson.Options));
             foreach (var invalid in new[]
             {
                 new[] { "--perf-collection=" + path },

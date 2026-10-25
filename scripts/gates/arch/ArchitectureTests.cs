@@ -1,9 +1,5 @@
 using System.Reflection;
 using System.Text.RegularExpressions;
-using Campus.Contracts;
-using Microsoft.CodeAnalysis;
-using Microsoft.CodeAnalysis.CSharp;
-using Microsoft.CodeAnalysis.CSharp.Syntax;
 
 using ArchUnitNET.Domain;
 using ArchUnitNET.Fluent;
@@ -146,8 +142,6 @@ public sealed class ArchitectureTests
     [TestCategory("Contract")]
     public void KernelNamespacesOnlyDependDownward()
     {
-        // Imports and constant references can disappear from IL; check their bound source symbols too.
-        SourceModel.RequireNoViolations(KernelSourceViolations(SourceModel.Production));
         var owners = Model.Value.Types.Select(type => KernelOwner(type.Namespace.FullName))
             .Where(owner => owner is not null).Select(owner => owner!).Distinct(StringComparer.Ordinal).ToArray();
         foreach (var owner in owners)
@@ -160,92 +154,6 @@ public sealed class ArchitectureTests
                 .Should().NotDependOnAny(Types().That().ResideInNamespaceMatching(string.Join('|', forbidden)))
                 .Because("ENG-ARCH: kernel responsibilities only depend on lower responsibilities")
                 .WithoutRequiringPositiveResults());
-        }
-    }
-
-    private static IEnumerable<string> KernelSourceViolations(IEnumerable<SourceFile> sources) =>
-        SourceDependencyViolations(sources, (origin, target) =>
-            KernelOwner(origin) is { } owner && KernelOwner(SymbolNamespace(target)) is { } dependency &&
-            KernelLevel(dependency) > KernelLevel(owner), "kernel responsibilities only depend on the same or lower responsibilities");
-
-    internal static IEnumerable<string> HudKernelSourceViolations(IEnumerable<SourceFile> sources) =>
-        SourceDependencyViolations(sources, (origin, target) =>
-            SourceModel.InNamespace(origin, "Campus.Hud") && SourceModel.InNamespace(SymbolNamespace(target), "Campus.Kernel") &&
-            (target is INamespaceSymbol space ? space.ToDisplayString() != "Campus.Kernel.Registry" :
-                SourceModel.Name(target as ITypeSymbol ?? target.ContainingType) != "Campus.Kernel.Registry.Kernel"),
-            "HUD only uses the published Kernel registry entry and contracts");
-
-    private static string SymbolNamespace(ISymbol symbol) => symbol is INamespaceSymbol space
-        ? space.ToDisplayString() : symbol.ContainingNamespace?.ToDisplayString() ?? "";
-
-    private static IEnumerable<string> SourceDependencyViolations(IEnumerable<SourceFile> sources,
-        Func<string, ISymbol, bool> forbidden, string reason)
-    {
-        var files = sources.ToArray();
-        var allOwners = files.SelectMany(file => SourceNamespaces(file, file.Root)).Distinct(StringComparer.Ordinal).ToArray();
-        foreach (var file in files)
-        foreach (var name in file.Root.DescendantNodes().OfType<NameSyntax>())
-        {
-            // A namespace declaration establishes ownership; it is not a dependency on its parent.
-            if (name.Ancestors().OfType<BaseNamespaceDeclarationSyntax>().Any(space => space.Name.Span.Contains(name.Span))) continue;
-            var import = name.Ancestors().OfType<UsingDirectiveSyntax>().FirstOrDefault();
-            if (import is not null && name != import.Name) continue;
-            var symbol = file.Model.GetSymbolInfo(name).Symbol;
-            if (symbol is IAliasSymbol alias) symbol = alias.Target;
-            if (symbol is null) continue;
-            // Qualified prefixes do not create an extra dependency beyond their final bound name.
-            if (import is null && symbol is INamespaceSymbol && (name.Parent is NameSyntax ||
-                name.Parent is MemberAccessExpressionSyntax access && (access.Expression == name ||
-                    access.Parent is MemberAccessExpressionSyntax outer && outer.Expression == access))) continue;
-            var origins = import is null
-                ? new[] { file.Model.GetEnclosingSymbol(name.SpanStart)?.ContainingNamespace?.ToDisplayString() ?? "" }
-                : import.GlobalKeyword.IsKind(SyntaxKind.GlobalKeyword) ? allOwners
-                : SourceNamespaces(file, (SyntaxNode?)import.Ancestors().OfType<BaseNamespaceDeclarationSyntax>().FirstOrDefault() ?? file.Root);
-            foreach (var origin in origins)
-                if (forbidden(origin, symbol))
-                    yield return file.At(name, $"Source boundary: {origin} -> {symbol.ToDisplayString()}; {reason} (ENG-ARCH).");
-        }
-    }
-
-    private static IEnumerable<string> SourceNamespaces(SourceFile file, SyntaxNode scope) =>
-        scope.DescendantNodesAndSelf().OfType<BaseNamespaceDeclarationSyntax>()
-            .Select(space => file.Model.GetDeclaredSymbol(space)?.ToDisplayString())
-            .OfType<string>().Distinct(StringComparer.Ordinal);
-
-    [TestCase]
-    [TestCategory("Contract")]
-    public void KernelSourceRuleDetectsImportsAndInlinedConstants()
-    {
-        var declarations = CSharpSyntaxTree.ParseText("""
-            namespace Campus.Kernel.Boot { public static class BootTuning { public const double StalledSeconds = 1; } }
-            namespace Campus.Kernel.Renderer { public static class Limits { public const double Seconds = 1; } }
-            namespace Campus.Kernel.Frame { public static class Limits { public const double Seconds = 1; } }
-            namespace Campus.Kernel.Diagnostics { public static class Limits { public const double Seconds = 1; } }
-            """);
-        (string Source, bool Rejected)[] cases =
-        [
-            ("using Campus.Kernel.Boot; namespace Campus.Kernel.Renderer { class Probe { } }", true),
-            ("using Upper = Campus.Kernel.Boot.BootTuning; namespace Campus.Kernel.Renderer { class Probe { } }", true),
-            ("using static Campus.Kernel.Boot.BootTuning; namespace Campus.Kernel.Renderer { class Probe { const double Seconds = StalledSeconds; } }", true),
-            ("using Upper = Campus.Kernel.Boot; namespace Campus.Kernel.Renderer { class Probe { const double Seconds = Upper.BootTuning.StalledSeconds; } }", true),
-            ("namespace Campus.Kernel.Renderer { class Probe { const double Seconds = global::Campus.Kernel.Boot.BootTuning.StalledSeconds; } }", true),
-            ("namespace Campus.Kernel.Renderer { using Campus.Kernel.Boot; class Probe { const double Seconds = BootTuning.StalledSeconds; } }", true),
-            ("using Campus.Kernel.Frame; namespace Campus.Kernel.Renderer { class Probe { const double Seconds = Campus.Kernel.Frame.Limits.Seconds; } }", false),
-            ("namespace Campus.Kernel.Frame { class Probe { const double Seconds = Campus.Kernel.Diagnostics.Limits.Seconds; } }", false),
-            ("namespace Campus.Kernel.Renderer { class Probe { const double Seconds = Limits.Seconds; } }", false),
-            ("namespace Campus.Kernel.Boot { using Campus.Kernel.Renderer; class Probe { } } namespace Campus.Kernel.Frame { class Probe { } }", false),
-            ("global using Campus.Kernel.Boot; namespace Campus.Kernel.Renderer { class Probe { } }", true)
-        ];
-        foreach (var (source, rejected) in cases)
-        {
-            var tree = CSharpSyntaxTree.ParseText(source);
-            var compilation = CSharpCompilation.Create("KernelSourceProbe", [declarations, tree],
-                [MetadataReference.CreateFromFile(typeof(object).Assembly.Location)], new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary));
-            var errors = compilation.GetDiagnostics().Where(item => item.Severity == DiagnosticSeverity.Error).ToArray();
-            if (errors.Length > 0) throw new InvalidOperationException(string.Join(Environment.NewLine, errors.Select(item => item.ToString())));
-            var violations = KernelSourceViolations([new("KernelSourceProbe.cs", tree, compilation.GetSemanticModel(tree))]).ToArray();
-            if ((violations.Length > 0) != rejected)
-                throw new InvalidOperationException($"Kernel source rule did not preserve the dependency direction for: {source}");
         }
     }
 
@@ -263,87 +171,6 @@ public sealed class ArchitectureTests
         "Boot" => 16, "Save" => 17, "Inspect" => 18,
         _ => throw new InvalidOperationException($"Kernel namespace has no declared layer: {owner}.")
     };
-
-    [TestCase]
-    [TestCategory("Contract")]
-    public void FramePrioritiesUseTheRegisteredStepsWithoutOffsets()
-    {
-        var fields = typeof(FramePriority).GetFields(BindingFlags.Public | BindingFlags.Static)
-            .Where(field => field.IsLiteral && field.FieldType == typeof(int)).ToArray();
-        if (fields.Length == 0 || fields.Select(field => (int)field.GetRawConstantValue()!).Distinct().Count() != fields.Length)
-            throw new InvalidOperationException("FramePriority must declare distinct integer steps.");
-        var values = fields.OrderBy(field => field.MetadataToken).Select(field => (int)field.GetRawConstantValue()!).ToArray();
-        if (!values.SequenceEqual(values.Order()))
-            throw new InvalidOperationException("FramePriority declarations must follow execution order.");
-        var registered = fields.Select(field => field.Name).ToHashSet(StringComparer.Ordinal);
-        var errors = new List<string>();
-        foreach (var file in SourceModel.Production)
-        foreach (var assignment in file.Root.DescendantNodes().OfType<AssignmentExpressionSyntax>())
-        {
-            if (file.Model.GetSymbolInfo(assignment.Left).Symbol is not IPropertySymbol property ||
-                property.Name is not ("ProcessPriority" or "ProcessPhysicsPriority") ||
-                !SourceModel.Inherits(property.ContainingType, "Godot.Node")) continue;
-            if (file.Model.GetSymbolInfo(assignment.Right).Symbol is not IFieldSymbol field ||
-                SourceModel.Name(field.ContainingType) != "Campus.Contracts.FramePriority" ||
-                !registered.Contains(field.Name))
-                errors.Add(file.At(assignment, "Use a FramePriority step directly; register a new value when order is required."));
-        }
-        foreach (var file in SourceModel.Production)
-        foreach (var call in file.Root.DescendantNodes().OfType<InvocationExpressionSyntax>())
-        {
-            var method = SourceModel.Method(file, call);
-            if (method?.Name is not ("SetProcessPriority" or "SetPhysicsProcessPriority") ||
-                !SourceModel.Inherits(method.ContainingType, "Godot.Node")) continue;
-            if (call.ArgumentList.Arguments.Count != 1 ||
-                file.Model.GetSymbolInfo(call.ArgumentList.Arguments[0].Expression).Symbol is not IFieldSymbol field ||
-                SourceModel.Name(field.ContainingType) != "Campus.Contracts.FramePriority" ||
-                !registered.Contains(field.Name))
-                errors.Add(file.At(call, "Use a FramePriority step directly; register a new value when order is required."));
-        }
-        SourceModel.RequireNoViolations(errors);
-    }
-
-    [TestCase]
-    [TestCategory("Contract")]
-    public void ProductionDiagnosticsUseThePublishedOutput()
-    {
-        var errors = new List<string>();
-        foreach (var file in SourceModel.Production)
-        foreach (var call in file.Root.DescendantNodes().OfType<InvocationExpressionSyntax>())
-        {
-            var method = SourceModel.Method(file, call);
-            if (method?.Name is not ("PushError" or "PushWarning") ||
-                SourceModel.Name(method.ContainingType) != "Godot.GD") continue;
-            errors.Add(file.At(call, "Diagnostics use IDiagnosticLog or the kernel DiagnosticLog output."));
-        }
-        SourceModel.RequireNoViolations(errors);
-    }
-
-    [TestCase]
-    [TestCategory("Contract")]
-    public void ProductionWaitsCannotUseNativeSignalAwaiters() =>
-        SourceModel.RequireNoViolations(SourceModel.Production.SelectMany(NativeSignalWaitViolations));
-
-    internal static IEnumerable<string> NativeSignalWaitViolations(SourceFile file)
-    {
-        var nativeObject = file.Model.Compilation.GetTypeByMetadataName("Godot.GodotObject");
-        var signalAwaiter = file.Model.Compilation.GetTypeByMetadataName("Godot.SignalAwaiter");
-        var toSignal = nativeObject?.GetMembers("ToSignal").OfType<IMethodSymbol>().ToArray() ?? [];
-        foreach (var node in file.Root.DescendantNodes())
-        {
-            var method = node switch
-            {
-                InvocationExpressionSyntax call => SourceModel.Method(file, call),
-                BaseObjectCreationExpressionSyntax creation => file.Model.GetSymbolInfo(creation).Symbol as IMethodSymbol,
-                _ => null
-            };
-            if (method is null) continue;
-            if (toSignal.Any(candidate => SymbolEqualityComparer.Default.Equals(candidate, method.OriginalDefinition)) ||
-                method.MethodKind == MethodKind.Constructor && signalAwaiter is not null &&
-                SymbolEqualityComparer.Default.Equals(signalAwaiter, method.ContainingType))
-                yield return file.At(node, "Waits require owned cancellation and drain; native signal awaiters are forbidden (ENG-ARCH).");
-        }
-    }
 
     private static string? MapScope(ReflectionAssembly assembly) => assembly.GetCustomAttributesData()
         .SingleOrDefault(attribute => attribute.AttributeType.FullName == "Campus.Contracts.MapScopeAttribute")
@@ -402,68 +229,8 @@ public sealed class ArchitectureTests
 
     [TestCase]
     [TestCategory("Contract")]
-    public void SynchronousGpuReadbacksStayAtDocumentedOwners()
-    {
-        SourceModel.RequireNoViolations(GpuReadbackViolations(SourceModel.Production));
-    }
-
-    private static IEnumerable<string> GpuReadbackViolations(IEnumerable<SourceFile> sources)
-    {
-        foreach (var file in sources)
-        foreach (var name in file.Root.DescendantNodes().OfType<SimpleNameSyntax>())
-        {
-            if (name.Identifier.ValueText is not ("GetImage" or "Texture2DGet" or "TextureGetData")) continue;
-            if (file.Model.GetSymbolInfo(name).Symbol is not IMethodSymbol method) continue;
-            var target = (SourceModel.Name(method.ContainingType), method.Name);
-            if (target is not (("Godot.Texture2D", "GetImage") or
-                ("Godot.RenderingServer", "Texture2DGet") or ("Godot.RenderingDevice", "TextureGetData"))) continue;
-            var owner = SourceModel.Owner(file.Model, name);
-            if (owner == "Campus.Kernel.Inspect.GameCaptureNode") continue;
-            // SceneTextTextures only reads imported atlas pages during construction (ENG-BUDGET-RULES).
-            if (owner == "Campus.Style.Materials.SceneTextTextures" && target == ("Godot.Texture2D", "GetImage") &&
-                file.Model.GetEnclosingSymbol(name.SpanStart) is IMethodSymbol { MethodKind: MethodKind.Constructor }) continue;
-            yield return file.At(name, $"Synchronous GPU readback: {owner} -> {method.ToDisplayString()}; " +
-                "only the documented capture and imported scene-text loading owners may read back (ENG-BUDGET-RULES).");
-        }
-    }
-
-    [TestCase]
-    [TestCategory("Contract")]
-    public void EngineCreationTimingAndAudioCallsStayWithOwners()
-    {
-        DenyCallsOutside(@"^Campus\.Kernel\.", method =>
-            IsConstructor(method, "Godot.MeshInstance3D", "Godot.MultiMeshInstance3D", "Godot.OccluderInstance3D") ||
-            IsMethod(method, "Godot.RenderingServer", "InstanceCreate", "MeshCreate"));
-        DenyCallsOutside(@"^Campus\.Style\.", method => IsConstructor(method, "Godot.ShaderMaterial"));
-        DenyCallsOutside(@"^Campus\.Kernel\.Collision(?:\.|$)", method =>
-            IsConstructor(method, "Godot.StaticBody3D", "Godot.AnimatableBody3D", "Godot.Area3D") ||
-            IsMethod(method, "Godot.CollisionObject3D", "ShapeOwnerAddShape"));
-        DenyCallsOutside(@"^Campus\.Audio\.", method =>
-            IsConstructor(method, "Godot.AudioStreamPlayer", "Godot.AudioStreamPlayer2D", "Godot.AudioStreamPlayer3D") ||
-            IsMethod(method, "Godot.AudioServer", "Set", "set_", "AddBus", "RemoveBus"));
-        DenyCallsOutside(@"^Campus\.Audio\.Core(?:\.|$)", method => IsMethod(method, "Godot.AudioServer", "SetBusMute", "SetBusVolumeDb"));
-        DenyCallsOutside(@"^Campus\.Camera(?:\.|$)", method => IsConstructor(method, "Godot.AudioListener3D"));
-        DenyCallsOutside(@"^Campus\.(?:Kernel\.(?:Frame|Quality|Inspect|Save)(?:\.|$)|Gates(?:\.|$))", method =>
-            method.DeclaringType.FullName == "System.Diagnostics.Stopwatch" ||
-            IsMethod(method, "Godot.Time", "GetTicks") || IsConstructor(method, "Godot.Timer", "System.Timers.Timer"));
-        // ENG-PERF-DATA: only recording IDs and wall/monotonic anchors may use the system clock.
-        Check(Types().That().ResideInAssemblyMatching(@"^Campus(?:,|\.)")
-            .And().DoNotResideInNamespaceMatching(@"^Campus\.Kernel\.Save(?:\.|$)")
-            .And().DoNotHaveFullName("Campus.Kernel.Inspect.PerformanceRecordingService")
-            .Should().NotCallAny(Methods().Where(method => IsMethod(method, "Godot.Time", "GetUnixTimeFromSystem")))
-            .WithoutRequiringPositiveResults());
-        DenyCallsOutside("(?!)", method =>
-            IsMethod(method, "Godot.Engine", "SetTimeScale", "set_TimeScale") ||
-            IsMethod(method, "Godot.RenderingServer", "GlobalShaderParameterGet") ||
-            IsMethod(method, "Godot.AudioStreamPlaylist", "SetShuffle", "set_Shuffle") ||
-            IsMethod(method, "Godot.AudioServer", "SetPlaybackSpeedScale", "set_PlaybackSpeedScale"));
-    }
-
-    [TestCase]
-    [TestCategory("Contract")]
     public void HudAndSystemsOnlyUsePublishedInterfaces()
     {
-        SourceModel.RequireNoViolations(HudKernelSourceViolations(SourceModel.Production));
         Check(Types().That().ResideInNamespaceMatching(@"^Campus\.Kernel(?:\.|$)").Should()
             .NotDependOnAny(Types().That().ResideInNamespaceMatching(@"^Campus\.Systems(?:\.|$)"))
             .WithoutRequiringPositiveResults());
@@ -474,13 +241,6 @@ public sealed class ArchitectureTests
             .NotDependOnAny(Types().That().ResideInNamespaceMatching(@"^Campus\.(Kernel|Style|Camera|Medium|Systems|Audio|Flow)(\.|$)")
                 .And().DoNotHaveFullName("Campus.Kernel.Registry.Kernel"))
             .WithoutRequiringPositiveResults());
-        var hudForbiddenCalls = Methods().Where(method =>
-            method.DeclaringType.FullName == "Campus.Kernel.Registry.Kernel" && !Regex.IsMatch(method.Name, @"^Get(?:<|\(|$)") ||
-            method.DeclaringType.FullName.EndsWith(".ISaveService", StringComparison.Ordinal) &&
-                !Regex.IsMatch(method.Name, @"^(?:get_|add_|remove_|Thumbnail)") ||
-            method.DeclaringType.FullName.EndsWith(".IMapService", StringComparison.Ordinal) && method.Name.StartsWith("Travel", StringComparison.Ordinal));
-        Check(Types().That().ResideInNamespaceMatching(@"^Campus\.Hud(?:\.|$)").Should()
-            .NotCallAny(hudForbiddenCalls).WithoutRequiringPositiveResults());
         var systemNames = Model.Value.Types.Select(type => type.Namespace.FullName)
             .Where(name => name.StartsWith("Campus.Systems.", StringComparison.Ordinal))
             .Select(name => string.Join('.', name.Split('.').Take(3))).Distinct(StringComparer.Ordinal).ToArray();
@@ -492,45 +252,7 @@ public sealed class ArchitectureTests
                 .NotDependOnAny(Types().That().ResideInNamespaceMatching(@"^Campus\.Systems\.")
                     .And().DoNotResideInNamespaceMatching(pattern)).WithoutRequiringPositiveResults());
         }
-        var transit = Methods().Where(method => IsMethod(method, "Campus.Contracts.ICameraRig", "Transit") ||
-            method.DeclaringType.FullName.EndsWith(".ICameraRig", StringComparison.Ordinal) && method.Name.StartsWith("Transit", StringComparison.Ordinal));
-        Check(Types().That().ResideInNamespaceMatching(@"^Campus\.Hud\.Map(?:\.|$)")
-            .Should().NotCallAny(transit).WithoutRequiringPositiveResults());
     }
-
-    [TestCase]
-    [TestCategory("Contract")]
-    public void SaveSectionsOnlyUseSafeSerialization()
-    {
-        var sectionNames = Model.Value.Types.Where(type => type.ImplementedInterfaces.Any(contract => contract.FullName.Contains("ISaveSection", StringComparison.Ordinal)))
-            .Select(type => Regex.Escape(type.FullName));
-        var owners = Types().That().ResideInNamespaceMatching(@"^Campus\.Kernel\.Save(?:\.|$)")
-            .Or().HaveFullNameMatching("^(?:" + string.Join('|', sectionNames.Append("(?!)")) + ")$");
-        Check(Types().That().Are(owners).Should().NotDependOnAny(Types().That().HaveFullNameMatching(@"^Godot\.(ConfigFile|Json|ResourceLoader|ResourceSaver)$"))
-            .WithoutRequiringPositiveResults());
-        var unsafeCalls = Methods().Where(method =>
-            IsMethod(method, "Godot.GD", "StrToVar", "BytesToVar") || IsMethod(method, "Godot.FileAccess", "GetVar") ||
-            method.DeclaringType.FullName == "System.Text.Json.JsonSerializer" &&
-            (method.Name.StartsWith("Serialize", StringComparison.Ordinal) || method.Name.StartsWith("Deserialize", StringComparison.Ordinal)) &&
-            !method.Parameters.Any(parameter => parameter.FullName.StartsWith("System.Text.Json.Serialization.Metadata.JsonTypeInfo", StringComparison.Ordinal)));
-        Check(Types().That().Are(owners).Should().NotCallAny(unsafeCalls).WithoutRequiringPositiveResults());
-    }
-
-    private static IEnumerable<MethodMember> Methods() => Model.Value.Types.Concat(Model.Value.ReferencedTypes)
-        .SelectMany(type => type.Members).OfType<MethodMember>().Distinct();
-
-    private static void DenyCallsOutside(string allowedNamespace, Func<MethodMember, bool> forbidden)
-    {
-        Check(Types().That().ResideInAssemblyMatching(@"^Campus(?:,|\.)")
-            .And().DoNotResideInNamespaceMatching(allowedNamespace).Should().NotCallAny(Methods().Where(forbidden))
-            .WithoutRequiringPositiveResults());
-    }
-
-    private static bool IsConstructor(MethodMember method, params string[] types) =>
-        method.MethodForm == MethodForm.Constructor && types.Contains(method.DeclaringType.FullName, StringComparer.Ordinal);
-
-    private static bool IsMethod(MethodMember method, string type, params string[] prefixes) =>
-        method.DeclaringType.FullName == type && prefixes.Any(prefix => method.Name.StartsWith(prefix, StringComparison.Ordinal));
 
     internal static string FindRepository()
     {

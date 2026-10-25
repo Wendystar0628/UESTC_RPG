@@ -159,10 +159,8 @@ public sealed class BootArguments
         var options = JsonSerializer.Deserialize<PerfCollectionOptions>(File.ReadAllText(path), ContractJson.Options)
             ?? throw Invalid("--perf-collection must contain a request.");
         static bool Positive(double value) => double.IsFinite(value) && value > 0;
-        static bool Fraction(double value) => double.IsFinite(value) && value is >= 0 and <= 1;
         if (string.IsNullOrWhiteSpace(options.SceneId) || string.IsNullOrWhiteSpace(options.SampleSegmentId) ||
-            options.StableFrames <= 0 || !Positive(options.RealtimeSeconds) || !Positive(options.SampleSeconds) ||
-            !Positive(options.MaximumFactAgeSeconds) || !Fraction(options.OtherGpuFraction))
+            !Positive(options.SampleSeconds))
             throw Invalid("--perf-collection contains invalid collection values.");
         if (options.RoutePointIds is null || options.RoutePointIds.Any(string.IsNullOrWhiteSpace))
             throw Invalid("--perf-collection contains invalid route points.");

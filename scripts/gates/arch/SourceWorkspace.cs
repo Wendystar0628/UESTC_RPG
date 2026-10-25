@@ -8,10 +8,9 @@ using Microsoft.CodeAnalysis.MSBuild;
 
 namespace Campus.Arch.Tests;
 
-internal sealed class SourceWorkspace(Solution solution, Dictionary<ProjectId, Compilation> compilations, SourceFile[] files)
+internal sealed class SourceWorkspace(Solution solution, SourceFile[] files)
 {
     public Solution Solution { get; } = solution;
-    public Dictionary<ProjectId, Compilation> Compilations { get; } = compilations;
     public SourceFile[] Files { get; } = files;
 
     public static SourceWorkspace Load(string root)
@@ -59,7 +58,6 @@ internal sealed class SourceWorkspace(Solution solution, Dictionary<ProjectId, C
                 RequireNoFailures(workspace, diagnostics);
             }
             var loaded = workspace.CurrentSolution;
-            var compilations = new Dictionary<ProjectId, Compilation>();
             var files = new List<SourceFile>();
             foreach (var project in loaded.Projects.OrderBy(project => project.FilePath, StringComparer.Ordinal))
             {
@@ -70,7 +68,6 @@ internal sealed class SourceWorkspace(Solution solution, Dictionary<ProjectId, C
                     diagnostic.Severity == DiagnosticSeverity.Error && !diagnostic.IsWarningAsError).ToArray();
                 if (errors.Length != 0) throw new InvalidOperationException($"G4 project {project.FilePath}:" + Environment.NewLine +
                     string.Join(Environment.NewLine, errors.Select(error => error.ToString())));
-                compilations.Add(project.Id, compilation);
                 foreach (var document in project.Documents)
                 {
                     if (document.FilePath is not { } path) continue;
@@ -84,7 +81,7 @@ internal sealed class SourceWorkspace(Solution solution, Dictionary<ProjectId, C
             }
             RequireNoFailures(workspace, diagnostics);
             if (files.Count == 0) throw new InvalidOperationException("G4 source model has no project sources.");
-            return new(loaded, compilations, files.OrderBy(file => file.Path, StringComparer.Ordinal).ToArray());
+            return new(loaded, files.OrderBy(file => file.Path, StringComparer.Ordinal).ToArray());
         }
         catch (Exception error)
         {

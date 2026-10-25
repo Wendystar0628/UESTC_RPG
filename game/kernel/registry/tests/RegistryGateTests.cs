@@ -3,7 +3,7 @@ using Campus.Kernel.Registry;
 using Campus.Gates;
 using GdUnit4;
 
-namespace Campus.Arch.Tests;
+namespace Campus.Tests;
 
 [TestSuite]
 public sealed class RegistryGateTests

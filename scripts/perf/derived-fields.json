@@ -1,66 +1,13 @@
 {
-  "calc": 17,
+  "calc": 18,
   "authority": "ENG-PERF-DATA",
-  "events": "Validate strictly increasing sequence in recorded order, then stable-sort by (monotonicMs, sequence) for cross-producer event association; other streams still require nondecreasing time",
   "summary": {
-    "all": "All observed valid values; per-field nulls remain missing",
-    "steady": "Only context-confirmed steady frames; unknown context is excluded",
-    "experience": {
-      "scope": "full only; cost values are null with reason",
-      "frameMs": "ms, nearest rank",
-      "low1Fps": "FPS, N>=100, ceil(0.01N) slowest tail",
-      "low01Fps": "FPS, N>=1000, ceil(0.001N) slowest tail",
-      "fractions": "0..1 except normalizedGpuLoad and measuredGpuBusyFraction may exceed 1",
-      "windows": "Contiguous steady 1 s windows; no gap crossing"
-    },
-    "cost": {
-      "times": "ms",
-      "memory": "MiB",
-      "allocation": "allocatedBytes is whole-process B",
-      "viewports": "role:instanceId; main accepts native costs approximately aligned +/-2 frames with unknown source/freshness; other viewports require fresh source-confirmed readings; GPU aggregate excludes unconfirmed sources",
-      "phases": "B0-B4 wall intervals; association only, never CPU busy time",
-      "mainViewportSpikes": "Cost candidates cover +/-2 frames; no exact phase/cause attribution; distributions, budgets, trends and DECISION-348 remain available"
-    },
-    "budgets": "budget_checks is the single owner of applicability, reason, thresholds and tier. Consumers filter emitted fields; G10 uses the grouped distance-table tier without its own metric list or comparison.",
-    "coverage": "Per-stream state and rows, per-field non-null fraction; 0..1 or null",
-    "validity": "Only affected fields disabled; hardware loss does not disable engine metrics",
-    "median": "Prior valid steady frames in the same scene and caliber; nonsteady/gap rows do not enter or clear the window; scene/effective quality/output-size changes reset it",
-    "inputStamp": "Current calc, schema, file size/mtime, budget snapshot and current context rules; no checksum.",
-    "baselineReadout": "Formal AI baseline fixed suite only, after the accepted sampleWindow projection; require Playing, confirmed steady context and valid dt. Check complete sample-window source frames before clipping invalid dt, and report excluded non-Playing/non-steady/Begin-crossing intervals, unknown context, invalid dt and gaps. dtMs uses observed valid idle intervals in ms with nearest-rank n/mean/p50/p95/p99/p999/maximum even when incomplete; route/travel/play or unconfirmed sample windows provide no idle evidence. severeThresholdMs comes only from budgets.json.perfAnomalies.severeStutterMs with thresholdSource; severeFrameCount counts all valid idle dt strictly above it only when session/run/frame-stream completeness and zero loss are confirmed, otherwise null; 0 is a measured zero only for a complete sample. Existing all/steady physMs/procMs/lateMs wall-interval distributions are displayed as physical/logical/late context, never pure CPU time or an automatic logical-pause/long-stop enablement.",
-    "judgement": "Per-session pain counts and required checks; scene confirmation keeps worse pain counts and one real rate sample. Only round route+travel totals judge light rate. Missing required facts leave acceptance unjudged while measured cost changes remain available.",
-    "waits": "Whole-session command endpoints; missing endpoints stay missing. Startup targets are unjudged for every session until the actual double-click launcher start is recorded.",
-    "streamFacts": "Source event count/latest snapshot for stream.tileChanged, bake.cache, map.arrival; no duplicate stream-statistics owner"
+    "all": "All observed numeric values in the sample segment; missing remains null",
+    "steady": "Context-confirmed steady frames; unknown context excluded",
+    "cost": "Distributions in ms, memory in MiB; phases are wall intervals, not pure CPU busy time",
+    "budgets": "Numeric developer upper lines from budgets.json; no acceptance or stopping judgement"
   },
-  "curves": {
-    "file": "derived/<id>/curves.json; analyzer-owned, calc matches summary",
-    "levels": "Fixed bucket limits from perf_curves.CURVE_LIMITS; consumers select an existing level, never reaggregate raw streams",
-    "buckets": "fromMs,toMs,frames then series Mean/Max pairs; valid measured values only, missing remains null with seriesReasons",
-    "fps": "Mean=valid frame count/valid dt sum*1000; Max=1000/min valid dt; full scope only",
-    "normalizedGpuLoad": "Same sample utilization*clock/maxClock via perf_model.normalized_gpu_load; full scope only",
-    "hotframes": "Analyzer-selected heavy-or-worse rows, capped by perf_curves.HOTFRAME_LIMIT; invalid dt and phases are null; total before display cap"
-  },
-  "runJson": {
-    "owner": "scripts/perf/run.ps1",
-    "location": "Beside each recorded session",
-    "scene": "Stable scenario identity; part of comparisonKey",
-    "status": "valid|partial|invalid; one judgement with reasons[]",
-    "exitCode": "Actual process exit code or null",
-    "timedOut": "Actual timeout fact or null",
-    "coverage": "Named observed facts, each {observed:number,required:number}; e.g. frames, seconds, segments; all must reach requirements",
-    "note": "No complete/valid/satisfied duplicate booleans; missing actual facts produce partial",
-    "launcher": "Raw per-attempt script/Stopwatch and native process start/exit facts; process elapsed cannot prove a complete double-click launch is under budget. AI startup targets remain unjudged.",
-    "conditions": "Frozen suite, bool travelPrefetch, routePointIds and batch logicalPauseVerified/mainThreadLongStopVerified, tuningSelectedMetrics; no runtime game toggles",
-    "roundId": "Analyzer round registration identity; sourceRoot and scene plan live only in rounds.json",
-    "confirmationOf": "Main session ID only for the one conditional confirmation"
-  },
-  "outputLimits": "perf.py constants MAX_ROWS/MAX_LINES/MAX_CHARS",
-  "retention": "perf_store.py constants; author root is read-only and owned by recorder",
-  "batch": "Analyzer-only completed-main round registration: freeze one complete base-valid main per planned scene before assigning the round number; incomplete main attempts never register. Confirmation source failures remain visible and pending without invalidating complete mains; source roles follow registration roots and confirmationOf, never directory names. A registered round may append independent confirmation roots without replacing its main sessions, scene plan or N-1 identity. G10 only reads the latest registered round and comparison.",
-  "roundJson": {
-    "confirmationErrors": "Every failed confirmation source remains in round.json as its own {source,error} entry; no later failure overwrites an earlier source error."
-  },
-  "roundComparison": {
-    "minimumImprovementFraction": 0.05,
-    "confirmation": "One confirmation when a metric is near upper, a selected metric is near stop, or a pain occurs once. Main and confirmation must share complete comparison/build/environment identity and frozen conditions/budget criteria; a rerun budget tier makes the round Incomplete. Select the whole real distribution for each worse judged statistic and name its source, never combine sample counts. Per-scene light-rate source keeps its real count/duration pair; only round route+travel totals judge the light limit."
-  }
+  "scenes": "Latest AI session for each scene, previous session ID, metrics and per-metric value - previous plus signed change fraction; author sessions are shown separately",
+  "curves": "Existing analyzer buckets; consumers select a level",
+  "inputStamp": "File size/mtime, calc, dictionary and budgets; no build identity or condition freezing"
 }

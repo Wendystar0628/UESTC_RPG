@@ -8,7 +8,7 @@ using Campus.Kernel.Registry;
 using Campus.Gates;
 using GdUnit4;
 
-namespace Campus.Arch.Tests
+namespace Campus.Tests
 {
     [TestSuite]
     public sealed class ServiceRegistryTests
@@ -289,5 +289,5 @@ namespace Campus.Arch.Tests
 namespace Campus.Kernel.Stubs.Tests
 {
     [SaveSection("fixture-weather", IsStub = true, Scope = SaveScope.Global, Phase = RestorePhase.World, Order = 991)]
-    public sealed class GlobalWeatherStub : Campus.Arch.Tests.RegistrySaveFixture { }
+    public sealed class GlobalWeatherStub : Campus.Tests.RegistrySaveFixture { }
 }

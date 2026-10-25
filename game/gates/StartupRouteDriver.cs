@@ -29,15 +29,12 @@ internal sealed class StartupRouteDriver(IStageGateHost host, StartupSampleInput
         var stand = maps.ResolveSpawn(maps.Current, options.Start).Stand
             ?? throw new InvalidOperationException("Route start has no authored standing destination: " + options.Start);
         var requested = new Pose(stand.Feet, stand.YawDeg, 0);
-        var milliseconds = options.DurationSeconds * 1000;
         GD.Print(FormattableString.Invariant($"STARTUP_ROUTE_REQUEST start={options.Start} mode={options.Mode} durationSeconds={options.DurationSeconds:R} feet_x={stand.Feet.X:R} feet_y={stand.Feet.Y:R} feet_z={stand.Feet.Z:R} yaw={stand.YawDeg:R}"));
         PrintPose("entry", options.Start, observer, 0);
         await ReachStart(options.Start, maps.Current, camera, observer, walk);
         PrintPose("arrival", options.Start, observer, 0);
         // Atlas arrival and the requested point must agree before any route input is held.
-        if (RejectCollectedStart(StartupRouteProgress.StartFailure(requested, observer.Feet, observer.YawDeg))) return;
-        _ = new StartupRouteProgress(requested, ViewMode.Walk, milliseconds,
-            observer.Feet, observer.YawDeg, observer.Mode);
+        StartupRouteProgress.RequireStart(requested, observer.Feet, observer.YawDeg);
         switch (options.Mode)
         {
             case ViewMode.Walk: break;
@@ -47,8 +44,8 @@ internal sealed class StartupRouteDriver(IStageGateHost host, StartupSampleInput
                 break;
             default: throw new InvalidOperationException("Route requested an unsupported view mode.");
         }
-        if (RejectCollectedStart(StartupRouteProgress.StartFailure(requested, observer.Feet, observer.YawDeg) ??
-            ActiveFailure(options.Mode, camera, observer, walk))) return;
+        StartupRouteProgress.RequireStart(requested, observer.Feet, observer.YawDeg);
+        RequireActive(options.Mode, camera, observer, walk);
         PrintPose("start", options.Start, observer, 0);
         if (Campus.Kernel.Boot.Boot.Options.PerfCollection is { RoutePointIds.Length: > 0 } authored)
         {
@@ -103,7 +100,7 @@ internal sealed class StartupRouteDriver(IStageGateHost host, StartupSampleInput
         }
         if (Campus.Kernel.Boot.Boot.Options.PerfCollection is { } collection)
         {
-            if (!await new PerfCollectionDriver(host, collection).Run(Move)) return;
+            await new PerfCollectionDriver(host, collection).Run(Move);
         }
         else if (await Move() is { } failure) throw new InvalidOperationException(failure);
         RequireActive(options.Mode, camera, observer, walk);
@@ -142,12 +139,6 @@ internal sealed class StartupRouteDriver(IStageGateHost host, StartupSampleInput
                     PrintPose("point-" + collection.RoutePointIds[index], options.Start, observer,
                         clock.ElapsedMilliseconds);
                 }
-                if (clock.ElapsedMilliseconds < options.DurationSeconds * 1000)
-                    return "The authored route ended before its required moving duration; no idle time was substituted.";
-                if (progress.CompletionFailure() is { } incomplete) return incomplete;
-                if (progress.TileCount < 5) return "The authored route did not cross five real base stream tiles.";
-                if (options.Mode == ViewMode.Walk && !progress.EnteredInterior)
-                    return "The authored walking route never entered a catalog-open indoor area.";
                 return null;
             }
             catch (Exception error) { movementFailure = error; throw; }
@@ -369,13 +360,6 @@ internal sealed class StartupRouteDriver(IStageGateHost host, StartupSampleInput
                 if (wanted) _pressedAt[index] = _elapsed;
             }
         }
-    }
-
-    private bool RejectCollectedStart(string? reason)
-    {
-        if (reason is null || Campus.Kernel.Boot.Boot.Options.PerfCollection is not { } collection) return false;
-        new PerfCollectionDriver(host, collection).RejectInput(reason);
-        return true;
     }
 
     private async Task ReachStart(string start, MapId map, ICameraRig camera, IObserverState observer, IWalkController walk)

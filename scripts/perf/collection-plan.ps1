@@ -1,4 +1,4 @@
-﻿# 固定采集与诊断入口共用的场景选择、采集请求、启动参数与逐会话关闭发布；不计算指标或轮比较。
+﻿# 固定采集与诊断入口共用的场景选择、采集请求、启动参数与逐会话发布；不计算指标。
 # 用法：由同目录 run.ps1 点引用。
 function Write-CollectionJson($Path, $Value) {
     [IO.File]::WriteAllText($Path, ($Value | ConvertTo-Json -Depth 16), (New-Object Text.UTF8Encoding $false))
@@ -18,38 +18,17 @@ function Get-CollectionScenes($Plan, [string[]]$Suites, [string[]]$Scenes) {
     return $selected
 }
 
-# DECISION-344: all collection thresholds are frozen here; normal small DWM load is below the GPU threshold.
-function New-CollectionRequest($Item, [bool]$FunctionalSmoke, [Collections.IDictionary]$Judgement) {
+# DECISION-363: preparation and sample markers belong to the game driver; no condition gate here.
+function New-CollectionRequest($Item) {
     $entry=$Item.scene
-    $seconds=if ($FunctionalSmoke) { 2 } elseif ($Item.kind -eq 'route') { $entry.seconds } else { 30 }
-    $request=[ordered]@{ sceneId=$entry.id; sampleSegmentId=('sample-' + [Guid]::NewGuid().ToString('N')); functionalSmoke=$FunctionalSmoke;
-        stableFrames=10; realtimeSeconds=2; sampleSeconds=$seconds; otherGpuFraction=0.20; maximumFactAgeSeconds=3;
-        saveAfterSample=($entry.PSObject.Properties['saveAfterSample'] -and [bool]$entry.saveAfterSample) }
-    $request['suite']=$Item.kind
-    $request['routePointIds']=@()
-    if ($entry.PSObject.Properties['routePointIds']) { $request['routePointIds']=@($entry.routePointIds) }
-    $request['travelPrefetch']=if ($entry.PSObject.Properties['travelPrefetch']) { [bool]$entry.travelPrefetch } else { $false }
-    foreach ($name in $Judgement.Keys) { $request[$name]=$Judgement[$name] }
-    return $request
+    $seconds=if ($Item.kind -eq 'route') { $entry.seconds } else { 30 }
+    return [ordered]@{ sceneId=$entry.id; sampleSegmentId=('sample-' + [Guid]::NewGuid().ToString('N'));
+        sampleSeconds=$seconds; saveAfterSample=($entry.PSObject.Properties['saveAfterSample'] -and [bool]$entry.saveAfterSample);
+        routePointIds=@($(if ($entry.PSObject.Properties['routePointIds']) { $entry.routePointIds }));
+        travelPrefetch=($entry.PSObject.Properties['travelPrefetch'] -and [bool]$entry.travelPrefetch) }
 }
 
-function Publish-CollectionRound($Root, $Id, $Number, $SourceRoot, [string[]]$Scenes, $PreviousId,
-    [string]$ConfirmationRoot='', [switch]$Preview) {
-    $arguments=@('-I','-X','utf8',(Join-Path $Root 'scripts/perf/perf.py'),'--root',$Root,
-        'record',$Id)
-    if ($ConfirmationRoot) { $arguments += @('--confirmation-root',$ConfirmationRoot) }
-    else {
-        $arguments += @('--number',[string]$Number,'--source-root',$SourceRoot)
-        if ($PreviousId) { $arguments += @('--previous-id',$PreviousId) }
-        foreach ($scene in $Scenes) { $arguments += @('--scene',$scene) }
-    }
-    if ($Preview) { $arguments += '--preview' }
-    $result = Invoke-UESTCProcess python $arguments $Root -TextEncoding ([Text.Encoding]::UTF8)
-    if ($Preview) { return $result.StdOut | ConvertFrom-Json }
-    Write-Host $result.StdOut
-}
-
-function Get-CollectionArguments($Root, $Directory, $Plan, $Item, $Seconds, $RequestPath) {
+function Get-CollectionArguments($Root, $Directory, $Plan, $Item, $RequestPath) {
     $entry=$Item.scene
     $saveArgument = if ($entry.PSObject.Properties['saveAfterSample'] -and $entry.saveAfterSample) { '--save=1' } else { '--save=off' }
     $arguments = @('--path',(Join-Path $Root 'game'),'--fullscreen','--resolution','3840x2160','--',('--map=' + $Plan.map),
@@ -74,28 +53,9 @@ function Get-CollectionArguments($Root, $Directory, $Plan, $Item, $Seconds, $Req
 
 function Publish-CollectionRun($Directory, $Run) {
     $sessions = @(Get-ChildItem -LiteralPath $Directory -Directory | Where-Object {
-        (Test-Path -LiteralPath (Join-Path $_.FullName 'manifest.json')) -or
-        (Test-Path -LiteralPath (Join-Path $_.FullName 'manifest.pending.json'))
+        Test-Path -LiteralPath (Join-Path $_.FullName 'manifest.json')
     })
-    $accepted=$false
-    if ($sessions.Count -ne 1) { $Run.status='partial'; $Run.reasons += 'Expected exactly one recording session for this attempt.' }
-    foreach ($session in $sessions) {
-        $manifestPath = Join-Path $session.FullName 'manifest.json'
-        if (-not (Test-Path -LiteralPath $manifestPath)) {
-            $Run.status='partial'; $Run.reasons += 'Recording did not publish a closed manifest.'
-        } else {
-            $manifest = Get-Content -LiteralPath $manifestPath -Raw -Encoding UTF8 | ConvertFrom-Json
-            if (-not $manifest.complete -or $manifest.status -ne 'closed') {
-                $Run.status='partial'; $Run.reasons += 'Recording closed incompletely; raw data retained.'
-            }
-            if ($Run.observed -and $Run.observed.sessionId -ne $manifest.id) {
-                $Run.status='partial'; $Run.reasons += 'Completion does not identify this recording session.'
-            }
-        }
-        Write-CollectionJson (Join-Path $session.FullName 'run.json') $Run
-        $accepted = $Run.status -eq 'valid'
-    }
-    if (-not $sessions.Count) { $Run.status='partial'; $Run.reasons += 'No recording session was created.' }
-    Write-CollectionJson (Join-Path $Directory 'attempt.json') $Run
-    return $accepted
+    foreach ($session in $sessions) { Write-CollectionJson (Join-Path $session.FullName 'run.json') $Run }
+    Write-CollectionJson (Join-Path $Directory 'run.json') $Run
+    return @($sessions | ForEach-Object { $_.FullName })
 }

@@ -1,4 +1,4 @@
-"""将分析器已确认的样本写成限量曲线与高耗时帧投影。
+"""将分析器的数值样本写成限量曲线。
 用法：由 analyze.write_session 调用；产出 derived/<id>/curves.json，展示层只选择现成档位。
 """
 import math
@@ -7,7 +7,6 @@ from collections import defaultdict
 from perf_model import CALC, at, frame_rate, is_render_adapter, normalized_gpu_load, number
 
 CURVE_LIMITS = (900, 450, 225, 112, 56)
-HOTFRAME_LIMIT = 1000
 EXPERIENCE_REASON = '隔离桌面只判成本，不测帧时与帧率'
 PHASE_LABELS = dict(physMs='物理区间', procMs='处理区间', lateMs='处理后区间', drawMs='绘制区间', tailMs='绘制后区间')
 
@@ -76,18 +75,7 @@ def bucket_curves(summary, manifest, streams, limit):
                 buckets=buckets, seriesReasons=reasons, reason=EXPERIENCE_REASON if summary['scope'] == 'cost' else None)
 
 
-def curve_document(summary, manifest, streams, hotframes):
-    columns = ['collectionFrame', 'monotonicMs', 'dtMs', *PHASE_LABELS,
-               'mainViewportGpuMs', 'mainViewportCpuMs', 'frameSetupCpuMs']
-    rows = []
-    for frame in hotframes[:HOTFRAME_LIMIT]:
-        row = [frame.get(key) for key in columns]
-        if summary['scope'] == 'cost' or not frame['_dtValid']:
-            row[2] = None
-        if not frame['_phaseValid']:
-            row[3:8] = [None] * 5
-        rows.append(row)
+def curve_document(summary, manifest, streams):
     return dict(calc=CALC, id=summary['id'],
                 levels=[bucket_curves(summary, manifest, streams, limit) for limit in CURVE_LIMITS]
-                       if streams and streams['frames'] else [],
-                hotframeColumns=columns, hotframes=rows, hotframesTotal=len(hotframes))
+                       if streams and streams['frames'] else [])

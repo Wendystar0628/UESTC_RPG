@@ -1,4 +1,4 @@
-﻿﻿# 单场景单工具诊断：沿用采集场景计划、构建准备与私桌面，产物写 output/perf/diagnostics/<时刻>-<场景>-<工具>/ 并打印摘要；不登记、不进分析。
+﻿# 单场景单工具诊断：沿用采集场景计划、构建准备与私桌面，产物写 output/perf/diagnostics/<时刻>-<场景>-<工具>/ 并打印摘要；不登记、不进分析。
 # 用法：由 run.ps1 -Scene <场景> -DiagnosticTool gpu-profile|EventPipe|Nsight 点引用调用。
 function Find-PerfNsight {
     $installed=Join-Path ${env:ProgramFiles} 'NVIDIA Corporation'
@@ -32,11 +32,11 @@ function Write-PerfGpuSteps($Session) {
     Write-Host ($table | Sort-Object gpuMeanMs -Descending | Format-Table -AutoSize | Out-String)
 }
 
-function Invoke-PerfDiagnostic($Root, [string[]]$Scene, [string]$Tool, [IO.FileStream]$BuildLease) {
+function Invoke-PerfDiagnostic($Root, [string[]]$Scene, [string]$Tool, [IO.FileStream]$BuildLease, [string]$OutputRoot) {
     if ($Scene.Count -ne 1) { throw 'Diagnostics take exactly one -Scene.' }
     $plan=Get-Content -LiteralPath (Join-Path $Root 'scripts\perf\scenarios.json') -Raw -Encoding UTF8 | ConvertFrom-Json
     $item=@(Get-CollectionScenes $plan @('fixed','route','travel') $Scene)[0]
-    $parent=Join-Path $Root 'output\perf\diagnostics'
+    $parent=Join-Path $OutputRoot 'diagnostics'
     $directory=Assert-UESTCChildPath (Join-Path $parent ([DateTime]::Now.ToString('yyyyMMddTHHmmss') + '-' + $item.scene.id + '-' + $Tool)) $parent
     $null=[IO.Directory]::CreateDirectory($directory)
     $lease=$null
@@ -54,12 +54,12 @@ function Invoke-PerfDiagnostic($Root, [string[]]$Scene, [string]$Tool, [IO.FileS
         Update-UESTCGameBuild -Root $Root -Godot $godot -BuildLease $heldLease -Environment $environment
         $traceTool=if ($Tool -eq 'EventPipe') { Get-UESTCDotnetTrace -Root $Root } else { $null }
         $parser=if ($traceTool) { Build-PerfCpuParse $Root $directory $traceTool } else { $null }
-        $request=New-CollectionRequest $item $false @{}
+        $request=New-CollectionRequest $item
         # EventPipe stops its collector while the target is alive, so the game waits for the owner's window close.
         $request['externalCloseAfterSample']=($Tool -eq 'EventPipe')
         $requestPath=Join-Path $directory 'collection.json'
         Write-CollectionJson $requestPath $request
-        $arguments=@(Get-CollectionArguments $Root $directory $plan $item $request.sampleSeconds $requestPath)
+        $arguments=@(Get-CollectionArguments $Root $directory $plan $item $requestPath)
         if ($Tool -eq 'gpu-profile') { $arguments=@($arguments[0..1]) + @('--gpu-profile') + @($arguments[2..($arguments.Count-1)]) }
         $engine=Get-UESTCGodotHost -Godot $godot
         $log=Join-Path $directory 'game.log'

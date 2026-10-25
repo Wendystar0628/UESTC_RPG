@@ -108,7 +108,7 @@ public sealed class StageGateDriver(IStageGateHost host)
         if (options.PerfCollection is { } collection)
         {
             _finishing = true;
-            await new PerfCollectionDriver(host, collection).Run(verifyFixedStart: true);
+            await new PerfCollectionDriver(host, collection).Run();
             await CloseRun();
             return;
         }

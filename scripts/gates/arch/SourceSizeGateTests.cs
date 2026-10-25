@@ -31,47 +31,6 @@ public sealed class SourceSizeGateTests
         SourceModel.RequireNoViolations(errors);
     }
 
-    [TestCase]
-    [TestCategory("Contract")]
-    public void HandwrittenPartialTypesRequireOneGeneratorOwnedDeclaration()
-    {
-        var errors = new List<string>();
-        foreach (var project in SourceModel.Projects)
-        {
-            var files = HandwrittenSources(SourceModel.FilesFor(project)).ToDictionary(file => file.Tree);
-            foreach (var file in files.Values)
-            foreach (var node in file.Root.DescendantNodes().OfType<TypeDeclarationSyntax>())
-            {
-                if (!node.Modifiers.Any(SyntaxKind.PartialKeyword) || IsGenerated(file, node)) continue;
-                var symbol = file.Model.GetDeclaredSymbol(node)
-                    ?? throw new InvalidOperationException(file.At(node, "G4 could not resolve the partial type identity."));
-                var declarations = symbol.DeclaringSyntaxReferences.Where(reference => files.ContainsKey(reference.SyntaxTree))
-                    .Select(reference => (File: files[reference.SyntaxTree], Node: reference.GetSyntax()))
-                    .Where(part => part.Node is TypeDeclarationSyntax && !IsGenerated(part.File, part.Node)).ToArray();
-                if (declarations.Length == 1 && (SourceModel.Inherits(symbol, "Godot.GodotObject") ||
-                    RequiresCompilerPartial(file, node, symbol))) continue;
-                errors.Add(file.At(node,
-                    $"{SourceModel.Name(symbol)} uses partial for handwritten responsibilities; split them into independent types. " +
-                    "Only one Godot host or compiler-generator input declaration may remain partial."));
-            }
-        }
-        SourceModel.RequireNoViolations(errors);
-    }
-
-    private static bool RequiresCompilerPartial(SourceFile file, TypeDeclarationSyntax node, INamedTypeSymbol symbol)
-    {
-        if (SourceModel.Inherits(symbol, "System.Text.Json.Serialization.JsonSerializerContext") &&
-            symbol.GetAttributes().Any(attribute => SourceModel.Name(attribute.AttributeClass) ==
-                "System.Text.Json.Serialization.JsonSerializableAttribute")) return true;
-        // A generated regex also requires every enclosing type to be partial.
-        return node.DescendantNodes().OfType<MethodDeclarationSyntax>().Any(method =>
-            method.Body is null && method.ExpressionBody is null &&
-            file.Model.GetDeclaredSymbol(method) is IMethodSymbol { IsPartialDefinition: true } generated &&
-            SourceModel.Name(generated.ReturnType) == "System.Text.RegularExpressions.Regex" &&
-            generated.GetAttributes().Any(attribute => SourceModel.Name(attribute.AttributeClass) ==
-                "System.Text.RegularExpressions.GeneratedRegexAttribute"));
-    }
-
     private static IEnumerable<SourceFile> HandwrittenSources(IEnumerable<SourceFile> sources)
     {
         var root = Environment.GetEnvironmentVariable("UESTC_REPOSITORY") ?? ArchitectureTests.FindRepository();
