@@ -91,36 +91,6 @@
       fail: ['--risk', '没过'],
       skip: ['--muted', '没跑']
     },
-    /* 性能页：曲线与五段一组冷色，异常四级由灰到红（契约 perf.anomalies[].level）；来源"作者"用 side.author，AI 用 ai。
-       异常等级与五段只登记样式，中文名来自后端 perf.labels.levels、perf.labels.phases 与各条的 levelLabel */
-    perf: {
-      info:       ['--pf-info'],
-      light:      ['--pf-light'],
-      heavy:      ['--pf-heavy'],
-      severe:     ['--pf-severe'],
-      ai:         ['--seq-3', 'AI'],
-      frame:      ['--pf-frame', '帧时'],
-      fps:        ['--pf-fps', '实时帧率'],
-      gpu:        ['--pf-gpu', '主视口 GPU'],
-      measured:   ['--pf-measured', '受测视口 GPU 合计'],
-      cpu:        ['--pf-cpu', '视口 CPU 渲染'],
-      setup:      ['--pf-setup', '帧准备 CPU'],
-      util:       ['--pf-util', 'GPU 占用'],
-      load:       ['--pf-load', '归一化 GPU 负载'],
-      power:      ['--pf-power', '功耗'],
-      vram:       ['--pf-vram', 'NVML 整卡已用显存'],
-      vramEngine: ['--pf-vram-engine', '引擎显存记账'],
-      capacity:   ['--text-3', '显存容量'],
-      target:     ['--pf-target', '目标线'],
-      idle:       ['--pf-idle', '非稳态'],
-      unknown:    ['--pf-unknown', '上下文未知'],
-      activity:   ['--pf-activity', '在做什么'],
-      physMs:     ['--pf-phys'],
-      procMs:     ['--pf-proc'],
-      lateMs:     ['--pf-late'],
-      drawMs:     ['--pf-draw'],
-      tailMs:     ['--pf-tail']
-    },
     /* 分组色块：按顺序取的一组蓝（脚本分组、文档域），键是下标；timing（钩子时机）同用这一组 */
     seq: ['--seq-1', '--seq-2', '--seq-3', '--seq-4', '--seq-5', '--seq-6'],
     /* 分类色：十二档彼此分得开的色相，键是下标；类别多、要一眼分开的图用它（失败大类） */
