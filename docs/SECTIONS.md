@@ -1744,13 +1744,13 @@
   - ★ ENG-PERF-MEASURE §0.1 接入要点 · L31 · 345
 - ENG-PERF-MEASURE §1 机器与剖析权限 · L39 · 526
 - ENG-PERF-MEASURE §2 AI 批次 · L48 · 1.6k
-- ENG-PERF-MEASURE §3 以最新为准 · L63 · 319
-- ENG-PERF-MEASURE §4 诊断档与 `deepen` · L70 · 821
-- ENG-PERF-MEASURE §5 不采用的工具 · L83 · 606
-- ENG-PERF-MEASURE §6 调优规则与判停 · L99 · 1.6k
-  - ENG-PERF-MEASURE §6.1 第 0 轮 · L103 · 470
-  - ENG-PERF-MEASURE §6.2 第 1–3 轮 · L113 · 327
-  - ENG-PERF-MEASURE §6.3 判停与收尾 · L120 · 691
+- ENG-PERF-MEASURE §3 以最新为准 · L64 · 319
+- ENG-PERF-MEASURE §4 诊断档与 `deepen` · L71 · 821
+- ENG-PERF-MEASURE §5 不采用的工具 · L84 · 606
+- ENG-PERF-MEASURE §6 调优规则与判停 · L100 · 1.6k
+  - ENG-PERF-MEASURE §6.1 第 0 轮 · L104 · 470
+  - ENG-PERF-MEASURE §6.2 第 1–3 轮 · L114 · 327
+  - ENG-PERF-MEASURE §6.3 判停与收尾 · L121 · 691
 
 ## ENG-PERF-STREAM · 流式加载、本机烘焙与内存
 
