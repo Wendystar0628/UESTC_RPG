@@ -1,4 +1,5 @@
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using Campus.Contracts;
 using Campus.Contracts.Perf;
 using Campus.Kernel.Inspect;
@@ -212,19 +213,52 @@ public sealed class PerformanceNvmlContractTests
             throw new InvalidOperationException("Incomplete CPU source coverage was reported as a usable zero.");
     }
 
-    [TestCase, TestCategory(TestReason.Contract)]
+    [TestCase, TestCategory(TestReason.Regression)]
     public void RenderGpuRequiresUniqueBdfAndHardwareIdsInsteadOfEnumerationOrder()
     {
         var adapter = new RenderAdapterIdentity { Luid = 1, Bus = 5, Device = 0, Function = 0,
-            VendorId = 0x10de, DeviceId = 0x1234, SubSystemId = 3, AddressStatus = Success() };
+            VendorId = 0x10de, DeviceId = 0x1234, SubSystemId = 3, Status = Success(), AddressStatus = Success() };
+        var unavailable = NvmlStatus.FromCode(NvmlNative.NotSupported);
+        var counter = new NvmlCounterInterval { Cumulative = null, Delta = null, IntervalStartMs = null,
+            ReadStartMs = 10, ReadEndMs = 20, Reset = false, ReadGap = true, DriverReferenceUs = null, Status = unavailable };
+        var slow = new NvmlSlowSample
+        {
+            QueryStartMs = 10, QueryEndMs = 20, TotalMemoryMiB = new(8192, Success()),
+            GpuUtilFraction = new(null, unavailable), MemoryUtilFraction = new(null, unavailable),
+            WholeGpuMemoryMiB = new(null, unavailable), GpuClockMHz = new(null, unavailable), GpuMaxClockMHz = new(null, unavailable),
+            MemoryClockMHz = new(null, unavailable), PowerW = new(null, unavailable), TemperatureC = new(null, unavailable),
+            PerformanceState = new(null, unavailable), ThrottleReasonBits = new(null, unavailable), Energy = counter, Policies = []
+        };
         NvmlDeviceSample Device(uint index, uint bus) => new(new NvmlIdentity(index, $"gpu-{index}", null, Success(), Success(), Success())
         { PciBus = bus, PciDevice = 0, PciFunction = 0, PciVendorId = adapter.VendorId,
-            PciDeviceId = adapter.DeviceId, PciSubSystemId = adapter.SubSystemId }, null, []);
-        var first = Device(0, 6);
+            PciDeviceId = adapter.DeviceId, PciSubSystemId = adapter.SubSystemId }, slow, []);
+        var first = Device(0, 6) with { Slow = slow with { TotalMemoryMiB = new(4096, Success()) } };
         var actual = Device(1, 5);
         if (adapter.Match([first, actual]) != actual || adapter.Match([actual, Device(2, 5)]) is not null ||
             (adapter with { Bus = null }).Match([actual]) is not null)
             throw new InvalidOperationException("Rendering-adapter association guessed an index or an ambiguous PCI identity.");
+        var manifest = new JsonObject { ["machine"] = new JsonObject { ["vramMiB"] = null }, ["missingReasons"] = new JsonArray("other") };
+        foreach (var devices in new NvmlDeviceSample[][] { [first], [actual, Device(2, 5)],
+            [actual with { Slow = slow with { TotalMemoryMiB = new(null, unavailable) } }],
+            [actual with { Slow = slow with { TotalMemoryMiB = new(slow.TotalMemoryMiB.Value, unavailable) } }],
+            [actual with { Slow = slow with { TotalMemoryMiB = new(null, Success()) } }], [actual with { Slow = null }] })
+        {
+            var missing = PerfHardwareCapture.RenderMemory(adapter, new(10, 20, Success(), devices), out _);
+            PerfRecordingSession.SetHardwareCapacity(manifest, missing);
+            var saved = JsonNode.Parse(manifest.ToJsonString(PerfFieldDictionary.JsonOptions))!;
+            if (saved["machine"]!["vramMiB"] is not null || missing.Status.Reason is null ||
+                saved["missingReasons"]!.AsArray().Count != 2 ||
+                !saved["missingReasons"]!.AsArray().Any(reason => reason?.GetValue<string>() == "machine.vramMiB: " + missing.Status.Reason))
+                throw new InvalidOperationException("Missing or ambiguous hardware became a capacity, or accumulated stale reasons.");
+        }
+        var memory = PerfHardwareCapture.RenderMemory(adapter, new(10, 20, Success(), [first, actual]), out var matched);
+        if (matched != actual || memory.Value is null || first.Slow!.TotalMemoryMiB.Value == memory.Value)
+            throw new InvalidOperationException("The fixture did not exercise a positive capacity on the non-first rendering GPU.");
+        PerfRecordingSession.SetHardwareCapacity(manifest, memory);
+        var recorded = JsonNode.Parse(manifest.ToJsonString(PerfFieldDictionary.JsonOptions))!;
+        if (recorded["machine"]!["vramMiB"]!.GetValue<double>() != actual.Slow!.TotalMemoryMiB.Value ||
+            recorded["missingReasons"]!.AsArray().Count != 1)
+            throw new InvalidOperationException("The production manifest writer lost the matched NVML total or kept a stale missing reason.");
     }
 
     [TestCase, TestCategory(TestReason.Contract)]

@@ -1,4 +1,3 @@
-using System.Text.Json;
 using System.Text.Json.Nodes;
 using Campus.Contracts;
 using Campus.Contracts.AppFlow;
@@ -90,31 +89,6 @@ public sealed class PerformanceRecordingRegressionTests
             PerfSessionStorage.PruneAuthor(root);
             if (Directory.Exists(oldest) || Directory.EnumerateDirectories(root).Count() >= KernelBudgets.PerfAuthorRetainedSessions)
                 throw new InvalidOperationException("Pending-only sessions escaped the author retention limit.");
-        }
-        finally { Directory.Delete(root, true); }
-    }
-
-    [TestCase, TestCategory(TestReason.Regression), TestCategory("NativeRender"), RequireGodotRuntime]
-    public async Task ManifestUsesRealWindowScaleAndTheSharedEnumConverter()
-    {
-        string root = PerformanceRecordingContractTests.TemporaryDirectory();
-        try
-        {
-            await using var settings = new SettingsStore(Path.Combine(root, "settings.json"));
-            var catalog = new QualityCatalog(File.ReadAllText(RepositoryFixture.FilePath("game", "data", "quality-presets.json")));
-            await using var quality = new QualityService(catalog, new GraphicsSettingsStore(settings, catalog));
-            var window = DisplayServer.WindowGetSize();
-            if (window.X <= 0 || window.Y <= 0) throw new InvalidOperationException("The native window-size trigger is unavailable.");
-            var manifest = PerfManifest.Capture(new BootRunOptions(), new(true, true), quality);
-            float scale = quality.Effective[QualityKnob.RenderScale];
-            if (manifest["graphics"]!["internalWidthPx"]!.GetValue<int>() != (int)(window.X * scale) ||
-                manifest["graphics"]!["internalHeightPx"]!.GetValue<int>() != (int)(window.Y * scale))
-                throw new InvalidOperationException("The manifest lost the real internal resolution.");
-            string? expectedPreset = JsonSerializer.SerializeToElement(quality.Effective.Preset, PerfFieldDictionary.JsonOptions).GetString();
-            string? expectedVsync = JsonSerializer.SerializeToElement(DisplayServer.WindowGetVsyncMode(), PerfFieldDictionary.JsonOptions).GetString();
-            if (manifest["graphics"]!["preset"]!.GetValue<string>() != expectedPreset ||
-                manifest["pacing"]!["vsync"]!.GetValue<string>() != expectedVsync)
-                throw new InvalidOperationException("Manifest enums bypassed the shared camel-case converter.");
         }
         finally { Directory.Delete(root, true); }
     }

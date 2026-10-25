@@ -5,8 +5,8 @@ import copy
 from pathlib import Path
 from analyze import summary_for
 from perf_anomalies import merge_anomalies
-from perf_batches import batch_results
-from perf_model import at
+from perf_batches import batch_pain, batch_results, distance_table
+from perf_model import COSTS, at
 from perf_waits import visible_intervals, wait_observations
 from selfcheck_fixtures import ai_run, frame, manifest, mark_sample, streams
 
@@ -14,10 +14,9 @@ from selfcheck_fixtures import ai_run, frame, manifest, mark_sample, streams
 def measured(dictionary, budgets, rows, conditions=None, events=None):
     meta = manifest(dictionary)
     meta['desktop'] = dict(kind='isolated', isInputDesktop=False, windowFocused=False)
-    meta['machine']['vramMiB'] = 16000
     data = streams(rows, dictionary)
     data['events'] += events or []
-    run = dict(conditions=conditions or {})
+    run = dict(scene='judgement-selfcheck', conditions=conditions or {})
     return summary_for(Path('fixture'), meta, data, dictionary, budgets, run)
 
 
@@ -71,34 +70,120 @@ def check_raw_counts(root, dictionary, budgets):
     assert at(only_budget, 'judgement.pain.heavyOrWorseFrames') == 0
 
 
+def check_required_sets(root, dictionary, budgets):
+    """Regression：直接传送零稳态不强求帧成本，轻级计率合批，缺显存容量照实重跑。"""
+    enabled = dict(logicalPauseVerified=True, mainThreadLongStopVerified=True)
+    direct_rows = [frame(dictionary, i) for i in range(5)]
+    for row in direct_rows:
+        row['contextFlags'] = 1
+    direct = measured(dictionary, budgets, direct_rows, dict(suite='travel', **enabled))[0]
+    assert at(direct, 'steady.cost.frameSetupCpuMs.n') == 0, '夹具未触发零稳态传送'
+    checks = {check['key']: check for check in direct['judgement']['requiredChecks']}
+    assert not set(COSTS) & checks.keys() and 'lightCostStutter' not in checks
+    assert checks['costStutter']['status'] == 'measured' and checks['gc']['status'] == 'measured'
+    assert checks['videoMemory']['status'] == 'rerun', '缺容量/硬件源冒充显存已判'
+    assert all(check['exceeded'] is None for check in direct['budgets']), '传送套仍判帧成本预算'
+    assert not distance_table([direct], direct), '传送套仍进入帧成本距离表'
+    route = measured(dictionary, budgets, [frame(dictionary, i) for i in range(5)], dict(suite='route', **enabled))[0]
+    assert set(COSTS) <= {check['key'] for check in route['judgement']['requiredChecks']}
+    assert {check['metric'] for check in distance_table([route], route)} == set(COSTS)
+    mixed = batch_pain([route, direct], budgets)
+    assert mixed['steadyDurationMs'] == at(route, 'judgement.pain.steadyDurationMs') > 0
+    assert mixed['lightFramesPerMinute'] == 0 and batch_pain([direct], budgets)['lightFramesPerMinute'] is None
+    entries = []
+    for scene, suite, rows in (('lake-default', 'fixed', [frame(dictionary, i) for i in range(3)]),
+                               ('route', 'route', [frame(dictionary, i) for i in range(5)]),
+                               ('standing-travel-direct', 'travel', direct_rows)):
+        for repeat in (1, 2, 3):
+            meta = manifest(dictionary, f'{scene}-{repeat}')
+            meta.update(origin='ai')
+            meta['build']['commit'] = 'selfcheck'
+            meta['desktop'] = dict(kind='isolated', isInputDesktop=False, windowFocused=False)
+            run = ai_run(scene=scene, repetition=repeat, scenes=['lake-default', 'route', 'standing-travel-direct'])
+            run['conditions'] = dict(suite=suite, **enabled)
+            data = mark_sample(streams(copy.deepcopy(rows), dictionary), dictionary)
+            entries.append(summary_for(Path(meta['id']), meta, data, dictionary, budgets, run)[0])
+    lake = entries[0]
+    assert lake['comparisonKey']['scene'] == 'lake-default' and at(lake, 'steady.cost.measuredViewportGpuMs.p95') is None
+    aggregate = next(check for check in lake['budgets'] if check['metric'] == 'measuredViewportGpuMs')
+    assert aggregate['applicable'] is False and aggregate['exceeded'] is None and '未判' in aggregate['reason']
+    assert {check['key'] for check in lake['judgement']['requiredChecks']} == set(COSTS)
+    assert {check['metric'] for check in distance_table([lake], lake)} == set(COSTS)
+    batch = batch_results(entries, budgets)[0][0]
+    assert 'measuredViewportGpuMs' in batch['unjudged']
+    assert not any('lightCostStutter' in reason for reason in batch['statusReasons'])
+    assert any('/videoMemory:' in reason for reason in batch['statusReasons']), '批次掩盖硬件缺源'
+    empty = [row for row in entries if at(row, 'run.conditions.suite') == 'travel']
+    for row in empty:
+        row['run']['protocol']['scenes'] = ['standing-travel-direct']
+    batch = batch_results(empty, budgets)[0][0]
+    assert any('a1/lightCostStutter:' in reason for reason in batch['statusReasons']), '批次零分母仍可判停'
+
+
 def check_waits(root, dictionary, budgets):
-    """Regression：整场事件不随样段裁剪，真实展示增长才重置停滞，隔离超限只未判。"""
+    """Regression：真实进场端点可晚于完成、不串下次请求；缺终点和 AI 启动不误判。"""
     def event(name, when, **payload):
         return dict(schema=dictionary['schema'], sequence=int(when) + 1, event=name, source='selfcheck',
                     monotonicMs=when, collectionFrame=None, payload=payload)
+    def enter(when, operation, phase, kind='newgame'):
+        return event('game.enter', when, owner='IAppFlow', operation=operation, phase=phase, target=dict(kind=kind))
+    def item(result, key):
+        return next(v for v in result['items'] if v['key'] == key)
     events = [event('loading.state', 0, active=True, covered=True, progress=0),
               event('loading.state', 1000, active=True, covered=True, progress=.1),
               event('map.arrival', 15000, phase='progress', completed=99, total=100),
               event('loading.state', 23000, active=False, covered=False, progress=.1)]
-    intervals = visible_intervals(events)
-    assert intervals[0]['longestNoProgressMs'] == 22000, 'arrival或通知代替了真实可见增长'
+    assert visible_intervals(events)[0]['longestNoProgressMs'] == 22000, 'arrival或通知代替了真实可见增长'
     meta = manifest(dictionary)
     meta['clock']['anchors'] = [dict(unixMs=946684800000, monotonicMs=0, readSpanMs=0)]
-    entry = event('app.phase', 6000, phase='title-input-ready')
-    run = dict(conditions=dict(startupCache='warm'), launcher=dict(scriptEnteredUtc='2000-01-01T00:00:00Z', basis='launcher-script-entry'))
-    play = wait_observations(meta, events + [entry], run, budgets)
-    assert next(v for v in play['items'] if v['key'] == 'warmLauncherToTitleSecondsMax')['status'] == 'exceeded'
+    run = dict(launcher=dict(scriptEnteredUtc='2000-01-01T00:00:00Z', processExitUtc='2000-01-01T00:00:07Z'))
+    entry_events = [enter(0, 1, 'started'), enter(1000, 1, 'completed'), event('app.phase', 1005, phase='input-ready'),
+                    enter(2000, 2, 'started', 'continue'), enter(3000, 2, 'completed', 'continue'),
+                    event('app.phase', 3005, phase='input-ready'), enter(4000, 3, 'started', 'loadslot'),
+                    enter(4500, 3, 'completed', 'loadslot'), event('app.phase', 4505, phase='input-ready'),
+                    event('app.phase', 4900, phase='preload-ready'), enter(5000, 4, 'started'),
+                    enter(5500, 4, 'completed'), event('app.phase', 5505, phase='input-ready'),
+                    event('app.state', 6000, to='quitting')]
+    observed = wait_observations(meta, entry_events, run, budgets)
+    for key, seconds in (('immediateNewGameToWalkSecondsMax', 1.005), ('continueToWalkSecondsMax', 1.005),
+                         ('loadSlotToWalkSecondsMax', .505), ('preloadedNewGameToWalkSecondsMax', .505), ('exitSecondsMax', 1)):
+        value = item(observed, key)
+        assert value['seconds'] == seconds and value['status'] == 'observed-pass' and value['reason'] is None
+    missing_events = [enter(0, 1, 'started'), enter(1000, 1, 'completed')]
+    missing = item(wait_observations(meta, missing_events, run, budgets), 'immediateNewGameToWalkSecondsMax')
+    assert missing['seconds'] is None and missing['status'] == 'unjudged' and '终点缺测' in missing['reason']
+    assert '超限' not in missing['reason']
+    chained = missing_events + [enter(2000, 2, 'started', 'continue'), enter(3000, 2, 'completed', 'continue'),
+                               event('app.phase', 3005, phase='input-ready')]
+    result = wait_observations(meta, chained, run, budgets)
+    assert item(result, 'immediateNewGameToWalkSecondsMax')['toMs'] is None, '后次进场端点补到了前次'
+    assert item(result, 'continueToWalkSecondsMax')['seconds'] == 1.005
+    mismatched = [enter(0, 1, 'started'), enter(1000, 2, 'completed'), event('app.phase', 1005, phase='input-ready')]
+    assert item(wait_observations(meta, mismatched, run, budgets), 'immediateNewGameToWalkSecondsMax')['toMs'] is None
+    meta.update(origin='ai', desktop=dict(kind='isolated', isInputDesktop=False))
+    for desktop in (dict(kind='isolated', isInputDesktop=False), dict(kind='interactive', isInputDesktop=True)):
+        meta['desktop'] = desktop
+        for end in (1, 60000):
+            phases = events + [event('app.phase', end, phase='title-input-ready'), event('app.phase', end + 5, phase='input-ready')]
+            phases.sort(key=lambda e: e['monotonicMs'])
+            result = wait_observations(meta, phases, run, budgets)
+            for key in ('warmLauncherToTitleSecondsMax', 'coldLauncherToTitleSecondsMax', 'firstRunLauncherToRealtimeSecondsMax'):
+                value = item(result, key)
+                assert value['seconds'] is not None and value['status'] == 'unjudged' and value['pain'] is None and value['reason']
     meta['desktop'] = dict(kind='isolated', isInputDesktop=False)
-    isolated = wait_observations(meta, events + [entry], run, budgets)
-    value = next(v for v in isolated['items'] if v['key'] == 'warmLauncherToTitleSecondsMax')
-    assert value['seconds'] == 6 and value['status'] == 'unjudged' and value['pain'] is None
+    missing_exit = item(wait_observations(meta, [], {}, budgets), 'exitSecondsMax')
+    assert '终点缺测' in missing_exit['reason'] and '超限' not in missing_exit['reason']
+    limit_ms = budgets['waits']['continueToWalkSecondsMax'] * 1000
+    for end, expected in ((limit_ms, 'observed-pass'), (limit_ms + 1, 'unjudged')):
+        phases = [enter(0, 1, 'started', 'continue'), enter(end - 5, 1, 'completed', 'continue'),
+                  event('app.phase', end, phase='input-ready')]
+        value = item(wait_observations(meta, phases, run, budgets), 'continueToWalkSecondsMax')
+        assert value['status'] == expected and value['pain'] in (False, None)
     data = mark_sample(streams([frame(dictionary, i) for i in range(5)], dictionary), dictionary, begin=20, end=50)
-    data['events'] += [entry]
-    ai = ai_run()
-    ai.update(run)
-    meta['origin'] = 'ai'
-    result = summary_for(Path('fixture'), meta, data, dictionary, budgets, ai)[0]
-    assert next(v for v in result['waits']['items'] if v['key'] == 'warmLauncherToTitleSecondsMax')['seconds'] == 6
+    data['events'] += [enter(0, 1, 'started', 'continue'), enter(5995, 1, 'completed', 'continue'),
+                       event('app.phase', 6000, phase='input-ready')]
+    result = summary_for(Path('fixture'), meta, data, dictionary, budgets, ai_run())[0]
+    assert item(result['waits'], 'continueToWalkSecondsMax')['seconds'] == 6
 
 
 def check_aba_ruler(root, dictionary, budgets):
@@ -144,5 +229,5 @@ def check_aba_ruler(root, dictionary, budgets):
 
 
 def check_stopping(root, dictionary, budgets):
-    for check in (check_judgement, check_raw_counts, check_waits, check_aba_ruler):
+    for check in (check_judgement, check_raw_counts, check_required_sets, check_waits, check_aba_ruler):
         check(root, dictionary, budgets)

@@ -341,7 +341,9 @@ internal sealed class PerfRecordingSession
 
     private void SetCaptureCapabilities()
     {
-        var hardware = _hardware?.Snapshot();
+        var memory = new NvmlValue<double>(null, new("notAttached", "Hardware sampler is not attached"));
+        var hardware = _hardware?.Snapshot(out memory);
+        SetHardwareCapacity(_manifest, memory);
         _manifest["contextComplete"] = _captureAttached;
         if (_manifest["capabilities"] is JsonObject capabilities)
         {
@@ -355,6 +357,20 @@ internal sealed class PerfRecordingSession
             capabilities["eventContext"] = _captureAttached ? "recorded" : "notAttached";
         }
         if (hardware is not null) _manifest["hardware"] = hardware;
+    }
+
+    internal static void SetHardwareCapacity(JsonObject manifest, NvmlValue<double> memory)
+    {
+        if (manifest["machine"] is not JsonObject machine) return;
+        machine["vramMiB"] = memory.Value.HasValue ? JsonValue.Create(memory.Value.Value) : null;
+        const string prefix = "machine.vramMiB: ";
+        var reasons = manifest["missingReasons"] as JsonArray;
+        if (reasons is null) manifest["missingReasons"] = reasons = new JsonArray();
+        for (int index = reasons.Count - 1; index >= 0; index--)
+            if (reasons[index]?.GetValue<string>().StartsWith(prefix, StringComparison.Ordinal) == true)
+                reasons.RemoveAt(index);
+        if (!memory.Value.HasValue)
+            reasons.Add(prefix + (memory.Status.Reason ?? memory.Status.Capability));
     }
 
     private void PublishLatest(string state)

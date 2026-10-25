@@ -23,6 +23,7 @@ internal sealed class PerfHardwareCapture
     private double? _processCpuFraction;
     private bool _renderDeviceMatched;
     private NvmlStatus _status = new("starting", "Awaiting NVML initialization");
+    private NvmlValue<double> _renderVramMiB = new(null, new("starting", "Awaiting hardware sample"));
     private NvmlStatus? _shutdown;
     private int? _pdhCloseCode;
     private string _slowState = "starting", _fastState = "starting";
@@ -80,18 +81,22 @@ internal sealed class PerfHardwareCapture
     }
 
     // Called exclusively by the IO owner, which receives a detached snapshot under the producer lock.
-    public JsonNode Snapshot()
+    public JsonNode Snapshot(out NvmlValue<double> renderVramMiB)
     {
-        lock (_gate) return JsonSerializer.SerializeToNode(new
+        lock (_gate)
         {
-            state = _status.Capability, status = StatusValue(_status), shutdown = _shutdown is null ? null : StatusValue(_shutdown),
-            joined = _finished, pdhCloseCode = _pdhCloseCode, slowRecorded = _slowRecorded, fastRecorded = _fastRecorded,
-            renderDeviceAssociation = _renderDeviceMatched ? "matched" : "unknown",
-            renderDeviceAssociationReason = !_renderDeviceMatched ? "Actual rendering adapter requires a unique BDF and hardware-ID NVML match." : null,
-            renderAdapter = AdapterValue(_adapter), samplingFacts = _facts,
-            devices = _devices.OrderBy(pair => pair.Key).Select(pair => pair.Value).ToArray(),
-            retainedExceptionCount = _errors.Count
-        }, PerfFieldDictionary.JsonOptions)!;
+            renderVramMiB = _renderVramMiB;
+            return JsonSerializer.SerializeToNode(new
+            {
+                state = _status.Capability, status = StatusValue(_status), shutdown = _shutdown is null ? null : StatusValue(_shutdown),
+                joined = _finished, pdhCloseCode = _pdhCloseCode, slowRecorded = _slowRecorded, fastRecorded = _fastRecorded,
+                renderDeviceAssociation = _renderDeviceMatched ? "matched" : "unknown",
+                renderDeviceAssociationReason = !_renderDeviceMatched ? "Actual rendering adapter requires a unique BDF and hardware-ID NVML match." : null,
+                renderAdapter = AdapterValue(_adapter), samplingFacts = _facts,
+                devices = _devices.OrderBy(pair => pair.Key).Select(pair => pair.Value).ToArray(),
+                retainedExceptionCount = _errors.Count
+            }, PerfFieldDictionary.JsonOptions)!;
+        }
     }
 
     private async Task ObserveAsync(HardwareSampler sampler)
@@ -106,12 +111,16 @@ internal sealed class PerfHardwareCapture
             {
                 RetainFailure("worker", error);
                 _status = new("unavailable", "Hardware worker failed", Error: error);
+                _renderVramMiB = new(null, _status);
                 var unavailable = new PerfSamplingFact { Capability = PerfFactCapability.Unavailable,
                     Reason = "Hardware worker failed", Source = "recording.hardware" };
                 _facts = new(_sessionId, _adapter.Luid, null, unavailable, unavailable, unavailable, unavailable);
             }
             else if (_status.Capability == "starting")
+            {
                 _status = new("unavailable", "Sampling stopped before initialization completed");
+                _renderVramMiB = new(null, _status);
+            }
             Interlocked.Increment(ref _revision);
         }
     }
@@ -131,7 +140,7 @@ internal sealed class PerfHardwareCapture
         _adapter = sampling.Adapter;
         ObserveStatus("renderAdapter", _adapter.Status);
         ObserveStatus("renderAdapterAddress", _adapter.AddressStatus);
-        var renderDevice = _adapter.Match(batch.Devices);
+        _renderVramMiB = RenderMemory(_adapter, batch, out var renderDevice);
         _renderDeviceMatched = renderDevice is not null;
         _processCpuFraction = sampling.Cpu.ProcessFraction;
         _facts = new(_sessionId, _adapter.Luid, renderDevice?.Identity.Uuid,
@@ -163,6 +172,25 @@ internal sealed class PerfHardwareCapture
                 pair.Key is not ("handle" or "gpuUuid" or "pciBusId")).Select(pair => pair.Value));
         _fastState = Capability(batch.Devices.SelectMany(device => device.Fast).Select(fast => fast.Status));
         Interlocked.Increment(ref _revision);
+    }
+
+    internal static NvmlValue<double> RenderMemory(RenderAdapterIdentity adapter, NvmlBatch batch,
+        out NvmlDeviceSample? device)
+    {
+        device = adapter.Match(batch.Devices);
+        if (!batch.Status.IsSuccess) return new(null, batch.Status);
+        if (!adapter.Status.IsSuccess) return new(null, adapter.Status);
+        if (!adapter.AddressStatus.IsSuccess) return new(null, adapter.AddressStatus);
+        if (device is null)
+            return new(null, new("unavailable", "Actual rendering adapter has no unique NVML BDF/hardware-ID match"));
+        if (!device.Identity.HandleStatus.IsSuccess) return new(null, device.Identity.HandleStatus);
+        if (!device.Identity.PciStatus.IsSuccess) return new(null, device.Identity.PciStatus);
+        if (device.Slow is not { } slow)
+            return new(null, new("unavailable", "Matched NVML device has no memory sample"));
+        var memory = slow.TotalMemoryMiB;
+        if (!memory.Status.IsSuccess || memory.Status.Capability != "supported") return new(null, memory.Status);
+        return memory.Value is > 0 && double.IsFinite(memory.Value.Value) ? memory :
+            new(null, new("unavailable", "NVML total-memory query returned no positive finite capacity", memory.Status.NativeCode));
     }
 
     private void PublishDevice(NvmlBatch batch, NvmlDeviceSample device, bool isRenderAdapter)

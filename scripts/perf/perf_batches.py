@@ -163,6 +163,11 @@ def batch_results(entries, budgets, failed_sources=()):
                                   origin=grouped[0]['origin'], scope=grouped[0]['scope'], phases=phases))
         if set(by_scene) != set(plan) or any(len(groups) != 1 for groups in by_scene.values()):
             reasons.append('场景覆盖不足或同场景比较键/calc/origin/scope 不一致')
+        pain = {phase: batch_pain([row for row in rows if at(row, 'run.protocol.phase') == phase], budgets)
+                for phase in PHASES.get(kind, ())}
+        for phase, value in pain.items():
+            if any(at(row, 'run.protocol.phase') == phase and at(row, 'run.conditions.suite') in ('route', 'travel') for row in rows) and not number(value['lightFramesPerMinute']):
+                judgement_reasons.append(phase + '/lightCostStutter: 路线与传送批次合计稳态计率时长不足，重跑')
         measurement_reasons = sorted(set(reasons + source_reasons))
         blocking_reasons = sorted(set(reasons + judgement_reasons))
         reasons = sorted(set(measurement_reasons + judgement_reasons))
@@ -175,8 +180,7 @@ def batch_results(entries, budgets, failed_sources=()):
         if not measurement_reasons:
             populate_phase_costs(projected, groups)
         result = dict(id=identifier, kind=kind, scenes=plan, status=status, statusReasons=reasons, groups=projected)
-        result['pain'] = {phase: batch_pain([row for row in rows if at(row, 'run.protocol.phase') == phase], budgets)
-                          for phase in PHASES.get(kind, ())}
+        result['pain'] = pain
         result['pain']['total'] = batch_pain(rows, budgets)
         if measurement_reasons:
             for pain in result['pain'].values():
@@ -185,6 +189,8 @@ def batch_results(entries, budgets, failed_sources=()):
                                     for check in at(row, 'judgement.requiredChecks', []) or []]
         result['unjudged'] = sorted({item['key'] for row in rows for item in at(row, 'waits.items', []) or [] if item['status'] == 'unjudged'})
         result['unjudged'] += sorted({kind for row in rows for detector in row.get('unavailableDetectors', []) for kind in detector['types']})
+        result['unjudged'] += sorted({check['metric'] for row in rows for check in row.get('budgets', [])
+                                      if check['metric'] == 'measuredViewportGpuMs' and not check['applicable']})
         results.append(result)
     assess_aba(results, entries)
     return results, blocked
@@ -203,10 +209,12 @@ def populate_phase_costs(projected, groups):
 def distance_table(runs, phase):
     result = []
     first = runs[0]
+    if at(first, 'run.conditions.suite') not in ('fixed', 'route'):
+        return result
     scene = first['comparisonKey']['scene']
     selected = at(first, 'run.conditions.tuningSelectedMetrics', []) or []
     for check in first.get('budgets', []):
-        if check['metric'] == 'measuredViewportGpuMs' and not check['applicable']:
+        if check['metric'] == 'measuredViewportGpuMs':
             continue
         metric = check['metric']
         value = at(phase, 'steady.cost.' + metric + '.p95')

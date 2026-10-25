@@ -34,12 +34,14 @@ def observation(key, start, end, manifest, budgets, source, reason=None, visible
     policy = budgets['waits']
     limit = policy[key]
     seconds = (end - start) / 1000 if number(start) and number(end) and end >= start else None
+    if reason is None and seconds is None:
+        reason = '等待起点/终点缺测' if not number(start) or not number(end) else '等待端点次序无效'
     isolated = scope_of(manifest)[0] == 'cost'
     status = 'unjudged'
     if seconds is not None and reason is None:
         status = 'observed-pass' if seconds <= limit else 'unjudged' if isolated else 'exceeded'
     pain = None if seconds is None or reason else (seconds > limit * policy['visibleProgressPainMultiple'] if visible_progress else False)
-    if number(stalled_ms):
+    if number(stalled_ms) and reason is None:
         pain = pain or stalled_ms > policy['noVisibleProgressSecondsMax'] * 1000
     # Isolated wall time is only an upper bound; exceeding it cannot establish a player pain.
     if isolated and (status != 'observed-pass' or pain):
@@ -79,26 +81,27 @@ def visible_intervals(events):
 
 
 def entry_observations(events, manifest, run, budgets):
-    result, starts = [], {}
+    result = []
+    starts = [(index, event) for index, event in enumerate(events)
+              if event['event'] == 'game.enter' and event['payload'].get('phase') == 'started']
     phases = [e for e in events if e['event'] == 'app.phase']
-    for event in events:
-        if event['event'] != 'game.enter':
-            continue
-        payload, now = event['payload'], event['monotonicMs']
-        identity = (payload.get('owner'), payload.get('operation'))
-        if payload.get('phase') == 'started':
-            starts[identity] = event
-        elif payload.get('phase') == 'completed' and identity in starts:
-            begin = starts.pop(identity)
-            start = begin['monotonicMs']
-            kind = str(at(begin, 'payload.target.kind', '')).lower()
-            key = {'continue': 'continueToWalkSecondsMax', 'loadslot': 'loadSlotToWalkSecondsMax'}.get(kind)
-            if kind == 'newgame':
-                preloaded = any(p['monotonicMs'] <= start and p['payload'].get('phase') == 'preload-ready' for p in phases)
-                key = 'preloadedNewGameToWalkSecondsMax' if preloaded else 'immediateNewGameToWalkSecondsMax'
-            end = next((p['monotonicMs'] for p in phases if start <= p['monotonicMs'] <= now and p['payload'].get('phase') == 'input-ready'), None)
-            if key:
-                result.append(observation(key, start, end, manifest, budgets, 'game.enter started → app.phase input-ready'))
+    for position, (index, begin) in enumerate(starts):
+        stop = starts[position + 1][0] if position + 1 < len(starts) else len(events)
+        following = events[index + 1:stop]
+        identity = (begin['payload'].get('owner'), begin['payload'].get('operation'))
+        completed = any(e['event'] == 'game.enter' and e['payload'].get('phase') == 'completed'
+                        and (e['payload'].get('owner'), e['payload'].get('operation')) == identity for e in following)
+        start = begin['monotonicMs']
+        kind = str(at(begin, 'payload.target.kind', '')).lower()
+        key = {'continue': 'continueToWalkSecondsMax', 'loadslot': 'loadSlotToWalkSecondsMax'}.get(kind)
+        if kind == 'newgame':
+            preloaded = any(p['monotonicMs'] <= start and p['payload'].get('phase') == 'preload-ready' for p in phases)
+            key = 'preloadedNewGameToWalkSecondsMax' if preloaded else 'immediateNewGameToWalkSecondsMax'
+        end = next((e['monotonicMs'] for e in following if e['event'] == 'app.phase'
+                    and e['payload'].get('phase') == 'input-ready'), None) if completed else None
+        if key:
+            reason = None if end is not None else '本次进场命令的真实就绪终点缺测'
+            result.append(observation(key, start, end, manifest, budgets, 'game.enter started → app.phase input-ready', reason))
     return result
 
 
@@ -108,14 +111,11 @@ def wait_observations(manifest, events, run, budgets):
               for name in ('title-input-ready', 'input-ready')}
     launch = wall_monotonic(at(run, 'launcher.scriptEnteredUtc'), manifest)
     exit_time = wall_monotonic(at(run, 'launcher.processExitUtc'), manifest)
-    condition = at(run, 'conditions.startupCache')
-    for state, key, endpoint in (('warm', WAIT_KEYS[0], 'title-input-ready'), ('cold', WAIT_KEYS[1], 'title-input-ready'),
-                                 ('first-run', WAIT_KEYS[2], 'input-ready')):
-        reason = None if condition == state else '启动缓存条件未确认或不属本次条件'
-        if at(run, 'launcher.basis') != 'launcher-script-entry':
-            reason = 'prepared-attempt起点不等于完整启动脚本入口，该启动目标未判'
-        if state != 'warm' and scope_of(manifest)[0] != 'full':
-            reason = '冷启动与驱动管线缓存为空只看作者会话'
+    # ENG-PERF-DATA: AI launch facts exclude double-click work and cannot establish a startup upper bound.
+    reason = ('AI 运行起点晚于双击，启动三项目标未判' if manifest.get('origin') == 'ai'
+              else '双击启动起点与缓存条件缺测，启动三项目标未判')
+    for key, endpoint in ((WAIT_KEYS[0], 'title-input-ready'), (WAIT_KEYS[1], 'title-input-ready'),
+                          (WAIT_KEYS[2], 'input-ready')):
         result.append(observation(key, launch, phases[endpoint], manifest, budgets, 'run.launcher → app.phase', reason))
     quitting = next((e['monotonicMs'] for e in events if e['event'] == 'app.state' and str(e['payload'].get('to')).lower() == 'quitting'), None)
     result.append(observation('exitSecondsMax', quitting, exit_time, manifest, budgets, 'app.state Quitting → native GetProcessTimes'))

@@ -33,7 +33,7 @@ $otherCpuFraction=0.25
 $maximumFactAgeSeconds=3
 $timeoutSeconds=600
 $judgement=[ordered]@{ logicalPauseVerified=$false; mainThreadLongStopVerified=$false;
-    noiseCalibrationBatchId=$null; tuningSelectedMetrics=@(); startupCache='unknown' }
+    noiseCalibrationBatchId=$null; tuningSelectedMetrics=@() }
 if ($BatchConditions) {
     $requested=Get-Content -LiteralPath $BatchConditions -Raw | ConvertFrom-Json
     foreach ($property in $requested.PSObject.Properties) {
@@ -43,7 +43,6 @@ if ($BatchConditions) {
     foreach ($name in @('logicalPauseVerified','mainThreadLongStopVerified')) {
         if ($judgement[$name] -isnot [bool]) { throw "$name must be a recorded round-zero boolean." }
     }
-    if ($judgement.startupCache -notin @('warm','cold','first-run','unknown')) { throw 'Unknown startup-cache condition.' }
 }
 if ($Protocol -eq 'repeat3' -and $Phase -ne 'a1') { throw 'repeat3 only has a1.' }
 $plan=Get-Content -LiteralPath (Join-Path $PSScriptRoot 'scenarios.json') -Raw | ConvertFrom-Json
@@ -118,7 +117,7 @@ try {
                     protocol=@{ kind=$Protocol; batchId=$Batch; scenes=$sceneIds; phase=$Phase; repetition=$repeat }; conditions=$request;
                     collectionScriptEnteredUtc=$collectionScriptEnteredUtc;
                     launcher=@{ scriptEnteredUtc=$null; scriptEnteredTimestamp=$null; stopwatchFrequency=[Diagnostics.Stopwatch]::Frequency;
-                        processExitUtc=$null; basis='prepared-attempt'; preparation='Batch build/import and optional bake precede this attempt; not a double-click launcher measurement.' } }
+                        processExitUtc=$null; preparation='Batch build/import and optional bake precede this attempt; not a double-click launcher measurement.' } }
                 $arguments=@(Get-CollectionArguments $root $directory $plan $item $seconds $requestPath)
                 try {
                     $run.launcher.scriptEnteredUtc=[DateTime]::UtcNow.ToString('O')

@@ -87,7 +87,6 @@ def anomaly(kind, level, frame, value, threshold, source, metric=None, state=Fal
 def cost_stutters(frames, index, median, policy, run, manifest):
     """成本绝对线不等暖窗；渲染回读只按关联窗口的遮挡事实分类。"""
     frame, result = frames[index], []
-    frame['_costMedianReady'] = all(number(median.get(k)) for k in COSTS)
     for metric in COSTS:
         value = frame.get(metric)
         if not number(value):
@@ -313,16 +312,18 @@ def budget_checks(summary, manifest, budgets):
     checks = []
     for metric, (upper_key, stop_key) in keys.items():
         measured = at(summary, f'steady.cost.{metric}.p95')
-        suite, scene = at(summary, 'run.conditions.suite'), at(summary, 'run.scene')
-        selected = metric != 'measuredViewportGpuMs' or (suite == 'fixed' and scene in ('lake-default', 'lake-storm'))
-        applies = applicable and selected
+        suite = at(summary, 'run.conditions.suite')
+        selected = metric != 'measuredViewportGpuMs'
+        applies = applicable and selected and suite != 'travel'
         stop = target[stop_key] if stop_key and suite == 'fixed' else None
         checks.append(dict(metric=metric, value=measured, budget=target[upper_key], stop=stop,
                            budgetSource='budgets.json.deviceTargets.developer.' + upper_key,
                            stopSource='budgets.json.deviceTargets.developer.' + stop_key if stop is not None else None,
                            applicable=applies, ratio=measured / target[upper_key] if number(measured) else None,
                            exceeded=measured > target[upper_key] if applies and number(measured) else None,
-                           reason=None if applies else '会话条件与开发机预算不一致或非湖边合计场景'))
+                           reason=('受测视口 GPU 合计来源尚未确认，未判' if not selected else
+                                   '传送套不判帧成本' if suite == 'travel' else
+                                   None if applies else '会话条件与开发机预算不一致')))
     return checks
 
 
@@ -408,7 +409,7 @@ def session_judgement(frames, streams, manifest, budgets, run, raw_items, checks
                              reason=None if complete else reason or '必判字段缺测，重跑'))
 
     for check in checks:
-        if check['metric'] == 'measuredViewportGpuMs' and not (suite == 'fixed' and run.get('scene') in ('lake-default', 'lake-storm')):
+        if suite not in ('fixed', 'route') or check['metric'] == 'measuredViewportGpuMs':
             continue
         record(check['metric'], int(number(check['value'])), check['applicable'], check.get('reason'))
     if manifest.get('origin') == 'ai' and isinstance(run.get('protocol'), dict) and suite not in ('fixed', 'route', 'travel'):
@@ -421,8 +422,6 @@ def session_judgement(frames, streams, manifest, budgets, run, raw_items, checks
         record('mainThreadLongStop', sum(f['_dtValid'] for f in playing),
                at(manifest, 'desktop.kind') == 'isolated' and at(run, 'conditions.mainThreadLongStopVerified') is True,
                '第0轮尚未核实静置长停或不是隔离桌面，重跑')
-        record('lightCostStutter', sum(f.get('_costMedianReady') is True for f in steady), duration > 0,
-               '稳态暖窗或计率时长不足，重跑')
         record('drawCompilation', len(visible), all(number(f.get('pipelineDraw')) for f in visible))
         record('gc', len(playing), all(number(f.get(k)) for f in playing for k in ('gcPauseMs', 'gcGen2', 'allocatedBytes')))
         hardware = [h for h in streams['hw'] if h['rowKind'] == 'nvml' and number(h.get('wholeGpuMemoryMiB'))]

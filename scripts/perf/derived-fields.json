@@ -1,5 +1,5 @@
 {
-  "calc": 8,
+  "calc": 9,
   "authority": "ENG-PERF-DATA",
   "events": "Validate strictly increasing sequence in recorded order, then stable-sort by (monotonicMs, sequence) for cross-producer event association; other streams still require nondecreasing time",
   "summary": {
@@ -28,7 +28,7 @@
     "deepen": "Runnable powershell.exe command with actual DeepenEntry and entry-specific DiagnosticTool; source poseArgs/conditions retained; no placeholder runner state",
     "inputStamp": "Current calc, schema, file size/mtime, budget snapshot and current context rules; no checksum",
     "judgement": "Analyzer-owned requiredChecks (measured|rerun), raw-frame pain counts, light count/steady milliseconds and threshold lines; budget crossings are not pains",
-    "waits": "Whole-session events and native process timing, never clipped to sample; isolated elapsed <= upper gives observed-pass, exceeded gives unjudged; prepared-attempt is not a complete launcher measurement",
+    "waits": "Whole-session command events; enter endpoint is the first input-ready after its start and before the next enter command. Missing endpoints remain missing; AI startup targets are unjudged because process timing excludes launcher work.",
     "streamFacts": "Source event count/latest snapshot for stream.tileChanged, bake.cache, map.arrival; no duplicate stream-statistics owner"
   },
   "curves": {
@@ -50,7 +50,7 @@
     "diagnostic": "true only for diagnostic conditions; never a baseline",
     "protocol": "A/B/A identity and completion facts belong to the runner; incomplete protocol must remain partial",
     "note": "No complete/valid/satisfied duplicate booleans; missing actual facts produce partial",
-    "launcher": "Per-attempt scriptEnteredUtc/Stopwatch timestamp/frequency and native ProcessExitUtc; basis=prepared-attempt excludes preceding batch prep and cannot claim complete launcher elapsed; collectionScriptEnteredUtc records batch start",
+    "launcher": "Raw per-attempt script/Stopwatch and native process start/exit facts; process elapsed cannot prove a complete double-click launch is under budget. AI startup targets remain unjudged.",
     "conditions": "Frozen suite, bool travelPrefetch, routePointIds and batch logicalPauseVerified/mainThreadLongStopVerified, noiseCalibrationBatchId, tuningSelectedMetrics; no runtime game toggles"
   },
   "diagnosticsJson": {

@@ -308,20 +308,11 @@ try {
         ($phaseByName['input-ready'].milliseconds - $inputRequest.milliseconds) / 1000
     } else { $null }
     $budgets = (Get-Content -LiteralPath (Join-Path $toolRoot 'budgets.json') -Raw | ConvertFrom-Json).waits
-    $cacheEvidenceKnown = -not [string]::IsNullOrWhiteSpace($condition.cacheEvidence) -and
-        $condition.cacheEvidence.Trim() -notin @('NOT_MEASURED','unknown')
-    $validGeometry = $condition.geometryCache -eq 'valid' -and $cacheEvidenceKnown
-    function Budget-Observation([string]$Key, $Actual, [bool]$Applicable, [string]$Endpoint) {
-        $limit = $budgets.$Key
-        $status = if (-not $Applicable -or $null -eq $Actual) { 'NOT_MEASURED' }
-            elseif ($diagnostic) { 'DIAGNOSTIC_ONLY' }
-            elseif ($Key -eq 'firstRunLauncherToRealtimeSecondsMax') { 'NOT_JUDGED_ISOLATED_CACHE_CONDITION' }
-            elseif ($Actual -le $limit) { 'MEETS_OBSERVED_PROXY_TARGET' } else { 'NOT_JUDGED_ISOLATED_EXCEEDS_TARGET' }
-        return [ordered]@{ key=$Key; targetSeconds=$limit; observedSeconds=$Actual; status=$status; endpoint=$Endpoint }
-    }
-    $checks = @(
-        (Budget-Observation 'firstRunLauncherToRealtimeSecondsMax' $realtimeSeconds ($validGeometry -and $condition.pipelineCache -eq 'first-run') 'script-entry to first Playing realtime observation after formal entry')
-    )
+    # ENG-PERF-DATA: AI startup observations cannot prove the full double-click upper bound.
+    $checks = @([ordered]@{ key='firstRunLauncherToRealtimeSecondsMax';
+        targetSeconds=$budgets.firstRunLauncherToRealtimeSecondsMax; observedSeconds=$realtimeSeconds;
+        status='NOT_JUDGED_AI_STARTUP'; endpoint='script-entry to first Playing realtime observation after formal entry';
+        reason='AI launch timing excludes the full double-click path; startup targets remain unjudged.' })
     $result = [ordered]@{ gamePid=$gameProcess.Id; mainOsThreadId=$mainThreadId; engineStartUtc=$processStart.ToString('O');
         mainThreadIdentification='CreateProcessW primary OS thread ID; compare only OS IDs, never CLR ManagedThreadID';
         mode=$Mode; captureEndpoint=$captureEndpoint; commandLine=$line; measurement=$condition.measurement; condition=$condition; launcher=$timing;

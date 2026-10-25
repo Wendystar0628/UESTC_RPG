@@ -34,4 +34,4 @@ Playing 在上述 immediate 正式入场后，等待真实 Playing、宿主 real
 
 缓存分别用 `-GeometryCache valid|missing|unknown`、`-PipelineCache first-run|unknown`、`-SystemFileCache warm|reboot-first-run|unknown` 声明，附 `-CacheEvidence`、`-JustPrebaked yes|no|unknown` 与 `-Device`。声明针对显式准备后的状态，脚本不清缓存，预烘后不能宣称 OS 冷。每轮使用新的 APPDATA/LOCALAPPDATA，管线条件只能是 first-run 或 unknown，当前入口不提供热管线测量；系统文件缓存的 warm 独立声明。同批只有首轮可沿用 reboot-first-run 系统文件条件，后续自动记 unknown。
 
-`budgetObservations` 只消费 `budgets.json.waits` 的首次管线到正式 Playing 端点与适用条件；依赖热管线的菜单热/冷、预载/立即请求到 Walk 预算不由当前入口测量。缓存证据缺失、条件未知或端点缺失为 `NOT_MEASURED`，条件齐备的诊断为 `DIAGNOSTIC_ONLY`，隔离桌面的首次管线缓存条件为 `NOT_JUDGED_ISOLATED_CACHE_CONDITION`（仅作者会话判此目标）。隔离桌面超过目标只记未判并保留原值，不能据此判失败，不增加门禁。此入口不是 G5/G10，也不替代既有核心生命周期真实方向位移检查。
+`budgetObservations` 保留首次管线到正式 Playing 的真实观测秒数与 `budgets.json.waits` 目标；AI 启动计时没有覆盖双击完整路径，始终为 `NOT_JUDGED_AI_STARTUP`，不能证明启动三项目标达标。端点缺失时观测秒数留空。菜单热/冷、预载/立即请求到 Walk 预算不由当前入口测量。此入口不是 G5/G10，也不替代既有核心生命周期真实方向位移检查。
