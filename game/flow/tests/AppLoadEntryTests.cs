@@ -49,32 +49,34 @@ public sealed class AppLoadEntryTests
             throw new InvalidOperationException("Admission rejection started work or changed its requested target.");
     }
 
-    [TestCase, TestCategory(TestReason.Regression)]
-    public async Task SelectedEntryOwnsItsPrefetchArrivalAndExistingSaveSlot()
+    [TestCase(EnterKind.LoadSlot), TestCase(EnterKind.Continue), TestCategory(TestReason.Regression)]
+    public async Task SelectedEntryOwnsItsPrefetchArrivalAndExistingSaveSlot(EnterKind kind)
     {
         using var f = new Fixture(completeArrivalImmediately: false); await f.OpenTitle();
         List<(EnterCommandEvent Command, AppState State, bool Covered, bool Locked)> commands = [];
         f.Flow.EnterCommand += value => commands.Add((value, f.Flow.State, f.Rig.Loading.Active, f.Rig.Camera.InputLocked));
-        var selected = f.Save.Older; var latest = f.Save.Slot.Meta!;
-        if (selected.Gen == latest.Gen || selected.Mode == latest.Mode)
+        var latest = f.Save.Slot.Meta!;
+        var selected = kind is EnterKind.LoadSlot ? f.Save.Older : latest;
+        if (f.Save.Older.Gen == latest.Gen || f.Save.Older.Mode == latest.Mode || f.Rig.Runtime.PinnedDestinations.Count != 2)
             throw new InvalidOperationException("The fixture must distinguish selected and latest endpoints.");
-        var entering = f.Flow.Enter(new(EnterKind.LoadSlot, selected.Slot) { Gen = selected.Gen });
+        var request = new EnterRequest(kind, selected.Slot) { Gen = kind is EnterKind.LoadSlot ? selected.Gen : null };
+        var entering = f.Flow.Enter(request);
         await f.Save.ArrivalStarted.Task;
         if (commands.Count != 1 || commands[0].Command.Phase != EnterCommandPhase.Started ||
             commands[0].State != AppState.Entering || !commands[0].Locked || commands[0].Command.Result is not null)
             throw new InvalidOperationException("Entry did not publish its real accepted work before arrival completion.");
         if (entering.IsCompleted || !f.Rig.Loading.Active || !f.Rig.Camera.InputLocked ||
-            !f.Rig.Runtime.PinnedDestinations.Any(d => d.Pose == selected.Pose && d.Mode == selected.Mode) ||
-            f.Rig.Runtime.PinnedDestinations.Any(d => d.Pose == latest.Pose && d.Mode == latest.Mode))
-            throw new InvalidOperationException("Entry retained the latest endpoint instead of the selected entry's endpoint.");
+            f.Rig.Runtime.PinnedDestinations.Count != 1 ||
+            !f.Rig.Runtime.PinnedDestinations.Any(d => d.Pose == selected.Pose && d.Mode == selected.Mode))
+            throw new InvalidOperationException("Entry retained an endpoint other than its selected entry.");
         f.Rig.Runtime.CompleteArrival();
-        if (await entering != EnterResult.Entered || f.Save.ExactGen != selected.Gen || f.Save.Loaded != selected ||
+        if (await entering != EnterResult.Entered || f.Save.ExactGen != request.Gen || f.Save.Loaded != selected ||
             f.Rig.Runtime.Destination?.Pose != selected.Pose || f.Rig.Runtime.Destination?.Mode != selected.Mode ||
             f.Save.Active != selected.Slot || f.Rig.Loading.Active || f.Rig.Camera.InputLocked)
             throw new InvalidOperationException("The selected generation did not own the complete restoration endpoint.");
         var finished = commands.Last();
         if (commands.Count != 2 || finished.Command != new EnterCommandEvent(commands[0].Command.Operation,
-            EnterCommandPhase.Completed, new(EnterKind.LoadSlot, selected.Slot) { Gen = selected.Gen }, EnterResult.Entered, false, null) ||
+                EnterCommandPhase.Completed, request, EnterResult.Entered, false, null) ||
             finished.State != AppState.Playing || finished.Covered || finished.Locked)
             throw new InvalidOperationException("Entry completed its command before the existing input/loading handoff.");
         await f.Flow.ReturnToTitle();

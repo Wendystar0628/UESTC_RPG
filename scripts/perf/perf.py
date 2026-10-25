@@ -24,7 +24,8 @@ TYPE = dict(dataValidity='数据有效性', costSpike='成本尖峰候选', budg
             gpuIdleCandidate='GPU 空等候选', sustainedIdleCandidate='持续空等候选', gcWindow='GC 窗合计',
             allocationStorm='全进程分配风暴')
 TYPE.update(framePacing='帧节奏抖动', videoMemory='整卡显存逼近', clockThrottle='降频位背景',
-            memoryGrowth='内存增长候选', utilizationSwing='占用读数波动')
+            memoryGrowth='内存增长候选', utilizationSwing='占用读数波动', costStutter='成本卡顿',
+            logicPause='逻辑段停顿', mainThreadLongStop='主线程长停', manualSaveThumbnail='手动存档缩略帧', hang='卡死')
 
 
 def cell(value):
@@ -77,6 +78,23 @@ def find_summary(out, identifier):
 def overview(summary):
     yield f"会话 {summary['id']} | {STATUS.get(summary['status'], summary['status'])} | calc={summary['calc']} | scope={summary['scope']}"
     yield '状态原因：' + cell(summary.get('statusReasons'))
+    yield '采集运行状态：' + cell(at(summary, 'run.status')) + '；原因：' + cell(at(summary, 'run.reasons'))
+    recording = summary.get('recording') or {}
+    yield '记录完整性：' + cell({key: recording.get(key) for key in ('status', 'complete', 'fault', 'endReason')})
+    yield from table(['原始流', '状态', '写出行', '丢行'],
+                     ((row.get('file'), row.get('state'), row.get('writtenRows'), row.get('droppedRows'))
+                      for row in recording.get('streams') or []))
+    delivery = summary.get('eventDelivery') or {}
+    counts = list((delivery.get('counts') or {}).items())
+    for offset in range(0, len(counts), 4):
+        yield '全会话事件次数：' + '；'.join(name + '=' + str(count) for name, count in counts[offset:offset + 4])
+    for gap in delivery.get('gaps', [])[:10]:
+        payload = gap['payload']
+        yield '事件缺口：' + cell({key: payload.get(key) for key in ('stream', 'rows', 'firstSequence', 'lastSequence')})
+        yield '缺口源区间：' + cell({key: payload.get(key) for key in ('firstCollectionFrame', 'lastCollectionFrame', 'fromMs', 'toMs')})
+        yield from table(['邻近事件序号', '采集帧', '单调ms', '事件', '来源'],
+                         ((row.get(key) for key in ('sequence', 'collectionFrame', 'monotonicMs', 'event', 'source'))
+                          for row in gap['neighbours']))
     yield '比较键：' + cell(summary['comparisonKey'])
     yield '构建配置：' + cell(at(summary, 'build.configuration')) + '；含未提交改动：' + cell(at(summary, 'build.dirty'))
     metrics = [('主视口 GPU p95 / ms', at(summary, 'steady.cost.mainViewportGpuMs.p95')),
@@ -97,7 +115,18 @@ def overview(summary):
         state = '越线' if check['exceeded'] is True else '预算内' if check['exceeded'] is False else '不适用或缺测'
         yield f"预算 {check['metric']}：{state}；比值={cell(check['ratio'])}；{check['budgetSource']}"
     yield '异常：' + cell(summary.get('anomalyCounts'))
-    yield '结论：' + summary.get('conclusion', '当前 schema 不支持，未计算指标。')
+    judgement = summary.get('judgement') or {}
+    yield '必判：' + cell(judgement.get('requiredChecks'))
+    yield '成本痛点（固定套只作对照）：' + cell(judgement.get('pain'))
+    yield from table(['等待', '观测秒', '上限秒', '状态', '原因'],
+                     ((v['key'], v['seconds'], v['upperSeconds'], v['status'], v['reason'])
+                      for v in at(summary, 'waits.items', []) or []))
+    conclusion = summary.get('conclusion')
+    if not conclusion:
+        unsupported = summary.get('baseStatus', summary['status']) == 'unsupported'
+        reasons = summary.get('sampleReasons') or summary.get('baseReasons') or summary.get('statusReasons')
+        conclusion = ('当前 schema 不支持，未计算指标。' if unsupported else '采集或分析未完成，未计算指标。') + '原因：' + cell(reasons)
+    yield '结论：' + conclusion
 
 
 def latest(out, args):
@@ -158,11 +187,37 @@ def batch_overview(out, args):
         raise ValueError('批次不存在')
     yield f"批次 {batch['id']} | {STATUS.get(batch['status'], batch['status'])} | {batch['kind']} | 目标={batch.get('targetPhase')}"
     yield '状态原因：' + cell(batch['statusReasons'])
+    yield '必判重跑项：' + cell([v for v in batch.get('requiredChecks', []) if v['status'] != 'measured'])
+    yield '批次痛点（路线+旅行全部运行，按原始帧）：' + cell(at(batch, 'pain.total'))
+    yield '必判集之外未判：' + cell(batch.get('unjudged'))
     for group in batch['groups']:
         yield '比较键：' + cell(group['comparisonKey']) + f"；calc={group['calc']}；scope={group['scope']}"
         yield from table(['阶段', '会话', '主 GPU p95 中位/ms', '帧准备 CPU p95 中位/ms'],
                          ((phase, value['sessionIds'], at(value, 'steady.cost.mainViewportGpuMs.p95'),
                            at(value, 'steady.cost.frameSetupCpuMs.p95')) for phase, value in group['phases'].items()))
+
+
+def distance(out, args):
+    batch = next((row for row in load_index(out).get('batches', []) if row['id'] == args.id), None)
+    if batch is None:
+        raise ValueError('批次不存在')
+    phase = args.phase or batch.get('targetPhase') or ('b1' if batch['kind'] == 'aba' else 'a1')
+    yield f"批次 {batch['id']} | 阶段 {phase} | {STATUS.get(batch['status'], batch['status'])}"
+    rows = [row for group in batch['groups'] if not args.scene or group['comparisonKey']['scene'] == args.scene
+            for row in at(group, 'phases.' + phase + '.distanceTable', []) or []]
+    yield from table(['场景', '指标', '测值ms', '上沿ms', '停线ms', '比值', '档位'],
+                     ((r['scene'], r['metric'], r['value'], r['upper'], r['stop'], r['ratio'], r['tier']) for r in rows))
+    pain = batch.get('pain', {}).get(phase, {})
+    yield from table(['零容忍痛点', '次数', '允许', '最差场景'],
+                     ((r['key'], r['count'], r['allowed'], pain.get('worstScenes', {}).get(r['key'])) for r in pain.get('zeroTolerance', [])))
+    yield '轻级：' + cell(pain.get('lightFramesPerMinute')) + ' 次/分钟；上限=' + cell(pain.get('lightLimit'))
+    yield '痛点判定：' + cell(pain.get('status'))
+    yield from table(['场景/指标', '改进', 'A之差', 'sigma0', '须严格大于', '可合入', '原因'],
+                     ((r['scene'] + '/' + r['metric'], r['improvement'], r['aDifference'], r['sigma0'],
+                       r['requiredImprovement'], r['accepted'], r['reasons']) for r in batch.get('abaAssessment', [])
+                      if not args.scene or r['scene'] == args.scene))
+    if not rows:
+        yield '没有完整阶段距离表；按批次原因重跑，不能据空表判达标。'
 
 
 def anomalies(out, args):
@@ -210,6 +265,10 @@ def main():
     show_parser.add_argument('id')
     batch_parser = commands.add_parser('batch', help='读取分析器生成的批次完整性与场景中位')
     batch_parser.add_argument('id')
+    distance_parser = commands.add_parser('distance', help='只读分析器距离表、零容忍计数与散布判据')
+    distance_parser.add_argument('id')
+    distance_parser.add_argument('--phase', choices=('a1', 'b1', 'a2'))
+    distance_parser.add_argument('--scene')
     compare_parser = commands.add_parser('compare', help='以两个会话定位同批 A/B/A 阶段，比较现成场景中位')
     compare_parser.add_argument('left')
     compare_parser.add_argument('right')
@@ -239,6 +298,8 @@ def main():
             lines = compare(out, args)
         elif args.command == 'batch':
             lines = batch_overview(out, args)
+        elif args.command == 'distance':
+            lines = distance(out, args)
         elif args.command == 'anomalies':
             lines = anomalies(out, args)
         else:

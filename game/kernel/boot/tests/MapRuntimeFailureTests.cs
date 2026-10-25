@@ -323,8 +323,9 @@ internal static class MapRuntimeTestSupport
         public Task DrainAsync() => Task.CompletedTask;
         public MapStreamDestination? Destination { get; private set; }
         public bool HasPendingDestination => !DestinationReady;
-        public IReadOnlyList<MapStreamDestination> PinnedDestinations { get; private set; } = [];
-        public void SetPinnedDestinations(IReadOnlyList<MapStreamDestination> destinations) => PinnedDestinations = destinations;
+        private readonly TestDestinationPins _pins = new();
+        public IReadOnlyList<MapStreamDestination> PinnedDestinations => _pins.Destinations;
+        public IDisposable PinDestination(MapStreamDestination destination) => _pins.Acquire(destination);
         public bool PinnedDestinationReady(MapStreamDestination destination) => PinnedDestinations.Contains(destination);
         public void ClearDestination() => Destination = null;
         public void Prefetch(Pose destination, ViewMode mode, NavSpace? space = null, System.Numerics.Vector3? collisionFeet = null) => Destination = new(destination, mode, space, collisionFeet);

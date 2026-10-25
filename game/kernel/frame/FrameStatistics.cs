@@ -81,7 +81,8 @@ public sealed class FrameStatistics : IFrameStatistics, IMeasuredViewportRegistr
         _pendingSetupFrame = (ulong)Engine.GetFramesDrawn();
     }
 
-    internal void Sample(ulong frame, double now, in FrameContextSample context, float yaw, float pitch)
+    internal void Sample(ulong frame, double now, in FrameContextSample context, float yaw, float pitch,
+        StreamStatistics? stream)
     {
         if (_publishedFrame == frame) return;
         PublishBoundary(FrameBoundary.B2, frame, now);
@@ -97,7 +98,7 @@ public sealed class FrameStatistics : IFrameStatistics, IMeasuredViewportRegistr
         {
             CollectionFrame = frame, MonotonicMilliseconds = now, FrameMilliseconds = _phases.FrameMilliseconds,
             Phases = _phases.Phases, MainCycles = _phases.MainCycles, DrawCycles = _phases.DrawCycles,
-            ObserverYawDegrees = yaw, CameraPitchDegrees = pitch, Context = context,
+            ObserverYawDegrees = yaw, CameraPitchDegrees = pitch, Context = context, Stream = stream,
             MainViewport = _viewports.MainSample,
             FrameSetupCpuMilliseconds = _completedSetup, FrameSetupDrawFrame = _completedSetupFrame,
             RenderCounts = new(RenderInfo(RenderingServer.ViewportRenderInfoType.Visible, RenderingServer.ViewportRenderInfo.DrawCallsInFrame),

@@ -237,7 +237,8 @@ function Invoke-UESTCProcess {
         $stdoutText = $process.StdOut
         $stderrText = $process.StdErr
         $output = $stdoutText + $stderrText
-        $result = [pscustomobject]@{ ExitCode = $process.ExitCode; StdOut = $stdoutText; StdErr = $stderrText; Output = $output; Log = $Log }
+        $result = [pscustomobject]@{ ExitCode = $process.ExitCode; ProcessExitUtc = $process.ProcessExitUtc;
+            StdOut = $stdoutText; StdErr = $stderrText; Output = $output; Log = $Log }
         if (-not $AllowFailure -and $result.ExitCode -notin $SuccessExitCodes) {
             $location = if ($Log) { " See $Log." } else { '' }
             $diagnostic = if ($stderrText.Trim()) { $stderrText.Trim() } else { $stdoutText.Trim() }

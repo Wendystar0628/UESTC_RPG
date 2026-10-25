@@ -1,6 +1,5 @@
 using System.Text.Json;
 using System.Text.Json.Nodes;
-using System.Threading.Channels;
 using Campus.Contracts;
 using Campus.Contracts.Perf;
 using Campus.Kernel.Diagnostics;
@@ -10,7 +9,7 @@ namespace Campus.Kernel.Inspect;
 
 internal readonly record struct PerfClockAnchor(long UnixMs, double MonotonicMs, double ReadSpanMs);
 internal sealed record PerfCapturedEvent(string Name, ulong? Frame, double Time, object Payload,
-    PerfClockAnchor? Anchor = null, PerfGap Gap = default);
+    PerfClockAnchor? Anchor = null);
 
 /// <summary>One session owns its producers, bounded queues, exclusive directory lock and one IO task.</summary>
 internal sealed class PerfRecordingSession
@@ -22,8 +21,7 @@ internal sealed class PerfRecordingSession
     private readonly object _failureGate = new();
     private readonly List<Exception> _errors = [];
     private PerfFaultCode _fault;
-    private readonly Channel<PerfCapturedEvent> _events = Channel.CreateBounded<PerfCapturedEvent>(
-        new BoundedChannelOptions(256) { SingleReader = true, SingleWriter = true, FullMode = BoundedChannelFullMode.Wait });
+    private readonly PerfValueChannel _events = new("main");
     private readonly TaskCompletionSource<bool> _ready = new(TaskCreationOptions.RunContinuationsAsynchronously);
     private readonly TaskCompletionSource<bool> _startedWriting = new(TaskCreationOptions.RunContinuationsAsynchronously);
     private int _stopped, _recording;
@@ -31,8 +29,7 @@ internal sealed class PerfRecordingSession
     private double _recordingStart, _recordingStop;
     private PerfClockAnchor _firstAnchor;
     private PerfClockAnchor _lastAnchor;
-    private long _eventSequence, _eventAttempts, _droppedEvents, _writtenEvents, _writtenFrames;
-    private PerfGap _eventGap;
+    private long _eventSequence, _writtenEvents, _writtenFrames;
     private readonly List<PerfValueChannel> _producers = [];
     private readonly Dictionary<string, long> _valueRows = new();
     private PerfHangWatchdog? _watchdog;
@@ -101,29 +98,21 @@ internal sealed class PerfRecordingSession
         _dictionary = dictionary;
         _manifest = manifest;
         Frames = new();
+        _producers.Add(_events);
         Completion = Task.Run(WriteAsync);
     }
 
     public void Begin(PerfClockAnchor anchor)
     {
+        FlushEvents();
         _firstAnchor = anchor;
         _lastAnchor = anchor;
         _recordingStart = anchor.MonotonicMs;
         Volatile.Write(ref _recording, 1);
     }
 
-    public bool TryEvent(PerfCapturedEvent item)
-    {
-        long sequence = ++_eventAttempts;
-        if (_events.Writer.TryWrite(item with { Gap = _eventGap }))
-        {
-            _eventGap = default;
-            return true;
-        }
-        _droppedEvents++;
-        _eventGap = _eventGap.Add(sequence, item.Frame, item.Time);
-        return false;
-    }
+    public bool TryEvent(PerfCapturedEvent item) => _events.TryEvent(item);
+    public void FlushEvents() => _events.Flush();
 
     public void Stop(PerfEndReason reason, double time)
     {
@@ -131,7 +120,6 @@ internal sealed class PerfRecordingSession
         if (_hardware is { Joined: false }) throw new InvalidOperationException("Hardware sampling must release and join before value channels close.");
         _reason = reason;
         _recordingStop = Volatile.Read(ref _recording) == 0 ? _recordingStart : time;
-        _events.Writer.TryComplete();
         foreach (var producer in _producers) producer.Stop();
         Volatile.Write(ref _stopped, 1);
     }
@@ -201,7 +189,6 @@ internal sealed class PerfRecordingSession
                 try
                 {
                     WriteGap(outputs["events"], "frames", Frames.TailGap);
-                    WriteGap(outputs["events"], "events", _eventGap);
                     foreach (var producer in _producers) WriteGap(outputs["events"], producer.Stream, producer.TailGap);
                     WriteEvent(outputs["events"], "session.end", null, _recordingStop,
                         new { reason = Camel(_reason), complete = IsComplete, fault = Camel(Fault) });
@@ -252,7 +239,6 @@ internal sealed class PerfRecordingSession
             catch (Exception error) { AddFailure(PerfFaultCode.FinalizeFailed, error); resourcesClosed = false; }
         }
         while (Frames.Peek() is not null) Frames.Release();
-        while (_events.Reader.TryRead(out _)) { }
         foreach (var producer in _producers) while (producer.TryRead(out _)) { }
         if (directory is not null && resourcesClosed)
         {
@@ -291,17 +277,15 @@ internal sealed class PerfRecordingSession
                 _writtenFrames++;
                 Frames.Release();
             }
-            while (_events.Reader.TryRead(out var item))
-            {
-                WriteGap(outputs["events"], "events", item.Gap);
-                if (item.Anchor is { } anchor) WriteAnchor(outputs["events"], anchor);
-                else WriteEvent(outputs["events"], item.Name, item.Frame, item.Time, item.Payload, "main");
-            }
             foreach (var producer in _producers)
                 while (producer.TryRead(out var message))
                 {
                     WriteGap(outputs["events"], producer.Stream, message!.Gap);
-                    if (message.Event is { } item) WriteEvent(outputs["events"], item.Name, item.Frame, item.Time, item.Payload, producer.Source);
+                    if (message.Event is { } item)
+                    {
+                        if (item.Anchor is { } anchor) WriteAnchor(outputs["events"], anchor);
+                        else WriteEvent(outputs["events"], item.Name, item.Frame, item.Time, item.Payload, producer.Source);
+                    }
                     if (message.Row is { } row) WriteValue(outputs[row.Stream], row, message.Sequence);
                     if (message.FastBatch is { } batch)
                     {
@@ -317,13 +301,13 @@ internal sealed class PerfRecordingSession
                 SetStreams();
                 PerfFieldDictionary.PublishJson(Path.Combine(directory, "manifest.pending.json"), _manifest);
             }
-            if (Volatile.Read(ref _stopped) != 0 && Frames.Empty && _events.Reader.Completion.IsCompleted && _producers.All(p => p.Complete)) break;
+            if (Volatile.Read(ref _stopped) != 0 && Frames.Empty && _producers.All(p => p.Complete)) break;
             if (Fault != PerfFaultCode.None) break;
             await Task.Delay(10).ConfigureAwait(false);
         }
     }
 
-    private bool IsComplete => Fault == PerfFaultCode.None && Frames.DroppedFrames == 0 && _droppedEvents == 0 && _producers.All(p => p.Dropped == 0);
+    private bool IsComplete => Fault == PerfFaultCode.None && Frames.DroppedFrames == 0 && _producers.All(p => p.Dropped == 0);
 
     private void WriteValue(StreamWriter writer, PerfCapturedRow row, long sequence)
     {
@@ -398,7 +382,7 @@ internal sealed class PerfRecordingSession
                     name is "frames" or "events" || name == "samples" && _captureAttached ? "recorded" : "notAttached",
                 ["writtenRows"] = name == "frames" ? _writtenFrames : name == "events" ? _writtenEvents : _valueRows.GetValueOrDefault(name),
                 ["droppedRows"] = name == "frames" ? Frames.DroppedFrames :
-                    (name == "events" ? _droppedEvents : 0) + _producers.Where(p => p.Stream == name).Sum(p => p.Dropped)
+                    _producers.Where(p => p.Stream == name).Sum(p => p.Dropped)
             });
         }
         _manifest["streams"] = streams;

@@ -94,6 +94,8 @@ public readonly record struct StreamStatistics
     public int WatchdogTrips { get; init; }
     // Completed packed visual payload bytes, not driver upload bytes.
     public long MountedBytes { get; init; }
+    // Successfully completed mounts this frame; unlike MountedTilesDelta, never subtracts retirements.
+    public int MountedTiles { get; init; }
     public int MountedTilesDelta { get; init; }
 }
 

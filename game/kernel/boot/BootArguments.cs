@@ -164,6 +164,8 @@ public sealed class BootArguments
             options.StableFrames <= 0 || !Positive(options.RealtimeSeconds) || !Positive(options.SampleSeconds) ||
             !Positive(options.MaximumFactAgeSeconds) || !Fraction(options.OtherGpuFraction) || !Fraction(options.OtherCpuFraction))
             throw Invalid("--perf-collection contains invalid protocol values.");
+        if (options.RoutePointIds is null || options.RoutePointIds.Any(string.IsNullOrWhiteSpace))
+            throw Invalid("--perf-collection contains invalid route points.");
         _perfCollection = options;
     }
 

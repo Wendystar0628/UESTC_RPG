@@ -2,6 +2,7 @@ using Campus.Kernel.Boot;
 using Campus.Contracts;
 using Campus.Contracts.Startup;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using GdUnit4;
 using static GdUnit4.Assertions;
 
@@ -20,16 +21,20 @@ public sealed class BootArgumentsTests
         var request = new PerfCollectionOptions
         {
             SceneId = "fixture-scene", SampleSegmentId = "sample-fixture", FunctionalSmoke = true, SaveAfterSample = true, StableFrames = 2,
-            RealtimeSeconds = 1, SampleSeconds = 2, OtherGpuFraction = .2, OtherCpuFraction = .25, MaximumFactAgeSeconds = 3
+            RealtimeSeconds = 1, SampleSeconds = 2, OtherGpuFraction = .2, OtherCpuFraction = .25, MaximumFactAgeSeconds = 3,
+            RoutePointIds = ["road:fixture/0"], TravelPrefetch = true
         };
         try
         {
             File.WriteAllText(path, JsonSerializer.Serialize(request, ContractJson.Options));
             var options = BootArguments.Parse(["--perf-out=" + root, "--perf-collection=" + path]);
-            AssertThat(options.PerfCollection == request && options.Mode == BootRunMode.Interactive && options.Title).IsTrue();
+            AssertThat(JsonNode.DeepEquals(JsonSerializer.SerializeToNode(options.PerfCollection, ContractJson.Options),
+                JsonSerializer.SerializeToNode(request, ContractJson.Options))).IsTrue();
+            AssertThat(options.Mode == BootRunMode.Interactive && options.Title).IsTrue();
             File.WriteAllText(path, JsonSerializer.Serialize(request with { FunctionalSmoke = false }, ContractJson.Options));
-            AssertThat(BootArguments.Parse(["--perf-out=" + root, "--perf-collection=" + path]).PerfCollection ==
-                (request with { FunctionalSmoke = false })).IsTrue();
+            AssertThat(JsonNode.DeepEquals(JsonSerializer.SerializeToNode(
+                BootArguments.Parse(["--perf-out=" + root, "--perf-collection=" + path]).PerfCollection, ContractJson.Options),
+                JsonSerializer.SerializeToNode(request with { FunctionalSmoke = false }, ContractJson.Options))).IsTrue();
             var missingFlag = JsonSerializer.SerializeToNode(request, ContractJson.Options)!.AsObject();
             missingFlag.Remove("functionalSmoke");
             File.WriteAllText(path, missingFlag.ToJsonString());

@@ -1,13 +1,11 @@
 using Campus.Contracts;
 using Campus.Contracts.AppFlow;
-using Campus.Contracts.Atlas;
 using Campus.Contracts.Maps;
 using Campus.Kernel.Boot;
 using Campus.Kernel.Frame;
 using Campus.Kernel.Inspect;
 using Godot;
 using AppBoot = Campus.Kernel.Boot.Boot;
-using KernelServices = Campus.Kernel.Registry.Kernel;
 
 namespace Campus.Gates;
 
@@ -97,9 +95,13 @@ public sealed class StageGateDriver(IStageGateHost host)
         if (options.TravelSequence.Count > 0)
         {
             _finishing = true;
+            var travel = new PerfTravelDriver(host);
             if (options.PerfCollection is { } travelCollection)
-                await new PerfCollectionDriver(host, travelCollection).Run(() => RunTravelSequence(options.TravelSequence));
-            else if (await RunTravelSequence(options.TravelSequence) is { } failure) throw new InvalidOperationException(failure);
+            {
+                var collector = new PerfCollectionDriver(host, travelCollection) { TravelSegments = travel.Segments };
+                await collector.Run(() => travel.Run(options.TravelSequence, travelCollection.TravelPrefetch));
+            }
+            else if (await travel.Run(options.TravelSequence, false) is { } failure) throw new InvalidOperationException(failure);
             await CloseRun();
             return;
         }
@@ -133,58 +135,6 @@ public sealed class StageGateDriver(IStageGateHost host)
         var window = await new CoreLifecycleDriver(host).Run(gate);
         _awaitingClose = true;
         GD.Print("CORE_READY_CLOSE " + window);
-    }
-
-    private async Task<string?> RunTravelSequence(IReadOnlyList<string> sequence)
-    {
-        if (!host.Flow.IsPlaying) throw new InvalidOperationException("Travel sequence requires Playing after the normal entry flow.");
-        var atlas = KernelServices.Get<IAtlasService>();
-        var observer = KernelServices.Get<IObserverState>();
-        var walk = KernelServices.Get<IWalkController>();
-        var input = new StartupSampleInput(host);
-        RequireWalk();
-        await input.WaitForPlayingWalk();
-        var origin = observer.Feet;
-        GD.Print(FormattableString.Invariant($"TRAVEL_SEQUENCE_START {sequence.Count} {FrameClock.MonotonicMilliseconds:R} mode={observer.Mode} feet_x={origin.X:R} feet_y={origin.Y:R} feet_z={origin.Z:R}"));
-        for (var index = 0; index < sequence.Count; index++)
-        {
-            var id = new MarkerId(sequence[index]);
-            var stand = atlas.Find(id)?.Teleport?.Stand
-                ?? throw new InvalidOperationException("Travel sequence requires a standing destination: " + id.Value);
-            if (!atlas.CanTravel(id, TravelStyle.Teleport, out var refusal))
-                throw new InvalidOperationException($"Travel sequence cannot start {id.Value}: {refusal}.");
-            var handle = atlas.Travel(id, TravelStyle.Teleport)
-                ?? throw new InvalidOperationException("Travel sequence was refused: " + id.Value);
-            var progress = handle.Progress;
-            await input.Wait(() => handle.Done.IsCompleted, "Travel sequence transit stopped making progress.", () =>
-            {
-                var changed = progress != handle.Progress;
-                progress = handle.Progress;
-                return changed;
-            });
-            if (await handle.Done != TransitResult.Arrived)
-                throw new InvalidOperationException("Travel sequence did not arrive: " + id.Value);
-            // Done precedes Atlas.Tick's disposal of the input lease. Here is returned only after that release.
-            await input.Wait(() =>
-            {
-                RequireWalk();
-                atlas.CanTravel(id, TravelStyle.Teleport, out refusal);
-                if (refusal is not (TravelRefusal.Busy or TravelRefusal.Unavailable or TravelRefusal.Here))
-                    throw new InvalidOperationException($"Travel sequence destination changed after arrival: {id.Value}, {refusal}.");
-                return refusal == TravelRefusal.Here && walk.Grounded && walk.CollisionReady && walk.IsSettled;
-            }, "Travel sequence arrival did not release its settled walk controller.");
-            if (StartupRouteProgress.StartFailure(new(stand.Feet, stand.YawDeg, 0), observer.Feet, observer.YawDeg) is { } failure)
-                return failure;
-            GD.Print(FormattableString.Invariant($"TRAVEL_SEQUENCE_STEP_READY {index + 1} {id.Value} {FrameClock.MonotonicMilliseconds:R} mode={observer.Mode} grounded={walk.Grounded} collision={walk.CollisionReady}"));
-        }
-        GD.Print(FormattableString.Invariant($"TRAVEL_SEQUENCE_COMPLETE {sequence.Count} {FrameClock.MonotonicMilliseconds:R}"));
-        return null;
-
-        void RequireWalk()
-        {
-            if (observer.Mode != ViewMode.Walk || !walk.Active || walk.ExitRequested)
-                throw new InvalidOperationException("Travel sequence requires the active production walk controller.");
-        }
     }
 
     /// <summary>--frames: ends the run after a fixed number of realtime frames.</summary>

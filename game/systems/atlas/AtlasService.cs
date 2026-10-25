@@ -222,9 +222,9 @@ public sealed class AtlasService(ICameraRig camera, IObserverState observer, IRu
         var destination = PrefetchDestination(Find(id)!);
         // The stream owns terrain work, resource mounting, cancellation and drain. Replacing an
         // identical target changes only its lease; the stream retains the existing resource work.
-        _stream.SetPinnedDestinations([destination]);
-        _prefetch?.Cancel();
-        var lease = _prefetch = new(this, id, style, destination);
+        var pin = _stream.PinDestination(destination);
+        ReleasePrefetch();
+        var lease = _prefetch = new(this, id, destination, pin);
         PollPrefetch(lease);
         return lease;
     }
@@ -246,11 +246,10 @@ public sealed class AtlasService(ICameraRig camera, IObserverState observer, IRu
     public ITransitHandle? Travel(MarkerId id, TravelStyle style)
     {
         if (!CanTravel(id, style, out _)) return null;
-        var requestedStyle = style;
         style = TravelStyle.Teleport;
         var spec = Find(id)!.Teleport!;
         var target = PrefetchDestination(Find(id)!);
-        var claimed = _prefetch is { } pending && pending.Marker == id && pending.Style == requestedStyle
+        var claimed = _prefetch is { } pending && pending.Marker == id
             && pending.Destination == target ? pending : null;
         // A walking observer cannot land on a viewpoint without a standing pose: change to the fly camera first.
         if (observer.Mode == ViewMode.Walk && spec.Stand is null)
@@ -513,21 +512,16 @@ public sealed class AtlasService(ICameraRig camera, IObserverState observer, IRu
     }
     private void ReleasePins(PrefetchLease lease)
     {
-        lease.Cancel();
-        // Application flow owns pins outside Playing and clears/replaces them on that boundary.
-        // Never let a delayed card disposal remove title/entry pins or the formal arrival.
-        if (_flow?.IsPlaying == true && _stream is { } stream && stream.PinnedDestinations.Contains(lease.Destination))
-            stream.SetPinnedDestinations(stream.PinnedDestinations.Where(target => target != lease.Destination).ToArray());
+        lease.Release();
     }
-    private sealed class PrefetchLease(AtlasService owner, MarkerId marker, TravelStyle style, MapStreamDestination destination) : IAtlasPrefetch
+    private sealed class PrefetchLease(AtlasService owner, MarkerId marker, MapStreamDestination destination, IDisposable pin) : IAtlasPrefetch
     {
         private readonly TaskCompletionSource _ready = new(TaskCreationOptions.RunContinuationsAsynchronously);
         public MarkerId Marker => marker;
-        public TravelStyle Style => style;
         public MapStreamDestination Destination => destination;
         public Task Ready => _ready.Task;
         public void Complete() => _ready.TrySetResult();
-        public void Cancel() => _ready.TrySetCanceled();
+        public void Release() { _ready.TrySetCanceled(); pin.Dispose(); }
         public void Fail(Exception failure)
         {
             _ready.TrySetException(failure);

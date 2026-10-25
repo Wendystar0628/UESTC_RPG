@@ -23,10 +23,23 @@ function Invoke-PerfDiagnostic($Root, $SessionId, [string[]]$Tools, [int]$EntryI
     $entries=@($summary.deepen)
     if ($EntryIndex -ge $entries.Count) { throw 'The requested session has no such deepen entry; analyze it first.' }
     $entry=$entries[$EntryIndex]
+    $entryTools=@($entry.tools)
+    if (-not $entryTools.Count -or @($entryTools | Where-Object { $_ -notin @('gpu-profile','EventPipe','Nsight') }).Count) {
+        throw 'The selected deepen entry has no supported diagnostic tool plan.'
+    }
+    if (-not $Tools.Count) { $Tools=$entryTools }
+    if (@($Tools | Where-Object { $_ -notin $entryTools }).Count) { throw 'Requested diagnostic tools differ from the selected deepen entry.' }
     $source=[IO.Path]::GetFullPath($summary.source)
     $manifest=Get-Content -LiteralPath (Join-Path $source 'manifest.json') -Raw | ConvertFrom-Json
     $sourceRun=Get-Content -LiteralPath (Join-Path $source 'run.json') -Raw | ConvertFrom-Json
     if (-not $manifest.complete -or $manifest.status -ne 'closed') { throw 'Diagnostic replay requires a closed source session.' }
+    $width=$manifest.display.windowWidthPx; $height=$manifest.display.windowHeightPx
+    foreach ($dimension in @($width,$height)) {
+        if ($dimension -isnot [ValueType] -or $dimension -is [bool] -or $dimension -le 0 -or
+            [double]::IsNaN([double]$dimension) -or [double]::IsInfinity([double]$dimension) -or
+            $dimension -ne [Math]::Truncate([double]$dimension)) { throw 'Source window dimensions are missing or invalid.' }
+    }
+    $sourceResolution=[string]$width + 'x' + [string]$height
     if (-not $sourceRun.conditions -or -not $sourceRun.sampleSegmentId) { throw 'Source has no frozen collection request; recollect it through run.ps1.' }
     if ($entry.scene -ne $sourceRun.scene) { throw 'Deepen scene differs from the frozen source run.' }
     $directory=Join-Path $Root ('output\perf\runs\diagnostic-' + [DateTime]::UtcNow.ToString('yyyyMMddTHHmmss') + '-' + [Guid]::NewGuid().ToString('N'))
@@ -63,7 +76,7 @@ function Invoke-PerfDiagnostic($Root, $SessionId, [string[]]$Tools, [int]$EntryI
             $requestPath=Join-Path $work 'collection.json'
             Write-CollectionJson $requestPath $request
             $poseArguments=@($entry.poseArgs | Where-Object { $_ -notmatch '^--(?:perf-out|perf-collection|save-dir)=' })
-            $gameArguments=@('--path',(Join-Path $Root 'game'))
+            $gameArguments=@('--path',(Join-Path $Root 'game'),'--windowed','--resolution',$sourceResolution)
             if ($tool -eq 'gpu-profile') { $gameArguments+='--gpu-profile' }
             $gameArguments+=@('--') + $poseArguments +
                 @(('--save-dir=' + (Join-Path $work 'save')),('--perf-out=' + $work),('--perf-collection=' + $requestPath))

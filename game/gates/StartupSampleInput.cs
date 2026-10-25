@@ -95,11 +95,25 @@ internal sealed class StartupSampleInput(IStageGateHost host)
         }
     }
 
-    private static void SendKey(Key key, bool pressed, bool physical)
+    public static void SendKey(Key key, bool pressed, bool physical)
     {
         using var input = new InputEventKey { Pressed = pressed, PhysicalKeycode = key };
         if (!physical) input.Keycode = key;
         Input.ParseInputEvent(input);
+    }
+
+    public async Task ReleaseKeys(Key[] keys, bool[] held, Exception? movementFailure, Func<Task> afterRelease)
+    {
+        try
+        {
+            for (var index = 0; index < held.Length; index++)
+                if (held[index]) { SendKey(keys[index], false, true); held[index] = false; }
+            if (host.Lifetime.IsCancellationRequested) return;
+            await NextFrame();
+            await afterRelease();
+        }
+        catch (Exception release) when (movementFailure is not null)
+        { throw new AggregateException("Authored route and input release both failed.", movementFailure, release); }
     }
 
     public static void Trace(string phase, double? targetMilliseconds = null)

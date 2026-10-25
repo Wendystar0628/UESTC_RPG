@@ -96,13 +96,14 @@ public sealed class PerformanceNvmlContractTests
             var probe = new PerfValueChannel("fixture", "hwfast");
             var row = new PerfCapturedRow("hwfast", null, 10, new Dictionary<string, object?>());
             int slots = 0;
-            while (probe.TryRow(row)) slots++;
+            while (probe.TryRow(row)) { slots++; probe.Flush(); }
             if (fixture.Batches.Sum(batch => batch.Samples.Count) <= slots)
                 throw new InvalidOperationException("The buffered first query no longer exceeds the unread row queue.");
             var timestamps = new List<ulong>();
             foreach (var batch in fixture.Batches)
             {
                 if (!producer.TryFastBatch(fixture.Identity, batch)) throw new InvalidOperationException("A first native batch was rejected.");
+                producer.Flush();
                 timestamps.AddRange(batch.Samples.Select(point => point.DriverTimestampUs));
             }
             for (int index = 0; index < fixture.Batches.Length; index++)
@@ -114,6 +115,7 @@ public sealed class PerformanceNvmlContractTests
                     next.Samples.Count != 1 || !producer.TryFastBatch(fixture.Identity, next))
                     throw new InvalidOperationException("The next native query lost its cursor or repeated an old sample.");
                 timestamps.Add(next.Samples[0].DriverTimestampUs);
+                producer.Flush();
             }
             var empty = fixture.Cursors[0].Observe(NvmlMetric.Power, NvmlStatus.SampleResult(NvmlNative.NotFound), [], 50, 60);
             if (!producer.TryFastBatch(fixture.Identity, empty)) throw new InvalidOperationException("The empty query metadata was rejected.");

@@ -141,13 +141,13 @@ public sealed class AtlasServiceTests
 
     [TestCase]
     [TestCategory(TestReason.Contract)]
-    public void TravelRetainsClaimedPrefetchUntilItFinishesAndIgnoresLateCardDisposal()
+    public void TravelRetainsClaimedPrefetchAcrossStyleChangeAndIgnoresLateCardDisposal()
     {
         var test = new Fixture();
         var id = new MarkerId("test-kiosk");
         var prefetch = test.Atlas.Prefetch(id, TravelStyle.Teleport)!;
         var destination = test.Stream.PinnedDestinations.Single();
-        var transit = test.Atlas.Travel(id, TravelStyle.Teleport)!;
+        var transit = test.Atlas.Travel(id, TravelStyle.Fly)!;
         prefetch.Dispose();
         AssertThat(!prefetch.Ready.IsCompleted && test.Stream.PinnedDestinations.Single() == destination
             && test.Atlas.Prefetch(new("test-post"), TravelStyle.Teleport) is null).IsTrue();
@@ -186,10 +186,14 @@ public sealed class AtlasServiceTests
         prefetch.Dispose();
         test.Stream.Failure = null;
         var pending = test.Atlas.Prefetch(new("test-kiosk"), TravelStyle.Teleport)!;
-        test.Stream.SetPinnedDestinations([test.Stream.PinnedDestinations.Single(), target]);
+        using var unrelated = test.Stream.PinDestination(target);
+        using var shared = test.Stream.PinDestination(test.Stream.PinnedDestinations.First(destination => destination != target));
+        test.Flow.SetState(AppState.Leaving);
         test.Atlas.OnMapUnloading(test.Context.Descriptor.Id);
-        AssertThat(pending.Ready.IsCanceled && test.Stream.PinnedDestinations.SequenceEqual(new[] { target })).IsTrue();
+        AssertThat(pending.Ready.IsCanceled && test.Stream.PinnedDestinations.Count == 2).IsTrue();
         pending.Dispose();
+        AssertThat(test.Stream.PinnedDestinations.Count == 2).IsTrue();
+        shared.Dispose();
         AssertThat(test.Stream.PinnedDestinations.SequenceEqual(new[] { target })).IsTrue();
     }
 

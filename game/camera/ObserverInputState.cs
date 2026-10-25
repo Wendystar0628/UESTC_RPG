@@ -30,19 +30,32 @@ public sealed class ObserverInputState(FlightTuning tuning)
         RecoverHeld = Held("recover") ? RecoverHeld + seconds : 0;
     }
 
-    public bool Press(string action)
+    public (bool Consumed, bool DoubleSpace) Press(string action)
     {
-        if (!_held.Add(action)) return false;
-        if (action == "move_forward")
-        { _doubleSprint = _forwardGap <= tuning.DoublePressSeconds; _forwardGap = 0; }
-        if (action == "jump") _jump = true;
-        if (action != "move_up") return false;
-        bool doubleSpace = _spaceWasShort && _modeCooldown <= 0 && _spaceGap <= tuning.DoubleSpaceSeconds;
-        _spaceGap = doubleSpace ? 10 : 0;
-        _spaceHeld = 0;
-        _spaceWasShort = false;
-        if (doubleSpace) _modeCooldown = tuning.ModeSwitchCooldown;
-        return doubleSpace;
+        switch (action)
+        {
+            case "move_forward":
+                if (_held.Add(action))
+                { _doubleSprint = _forwardGap <= tuning.DoublePressSeconds; _forwardGap = 0; }
+                return (true, false);
+            case "jump":
+                if (_held.Add(action)) _jump = true;
+                return (true, false);
+            case "move_up":
+                if (!_held.Add(action)) return (true, false);
+                bool doubleSpace = _spaceWasShort && _modeCooldown <= 0 && _spaceGap <= tuning.DoubleSpaceSeconds;
+                _spaceGap = doubleSpace ? 10 : 0;
+                _spaceHeld = 0;
+                _spaceWasShort = false;
+                if (doubleSpace) _modeCooldown = tuning.ModeSwitchCooldown;
+                return (true, doubleSpace);
+            case "move_backward": case "move_left": case "move_right": case "move_down":
+            case "sprint": case "crouch": case "recover":
+                _held.Add(action);
+                return (true, false);
+            default:
+                return (false, false);
+        }
     }
 
     public void Release(string action)

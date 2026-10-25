@@ -15,6 +15,8 @@ internal sealed class AppFlowContinuation(ICameraRig camera, ISaveService saves,
     private MapStreamDestination? _newGameDestination;
     private bool _titleActive;
     private EnterRequest? _entryRequest;
+    private readonly Dictionary<MapStreamDestination, IDisposable> _titlePins = [];
+    private IMapContext? _titlePinContext;
     private readonly ISettingsSection? _cameraSettings = profileSettings?.Section("ui");
     internal bool NewGamePreloadReady => _newGameDestination is { } destination &&
         destination.Pose.FovDeg == UserFov(ViewMode.Walk, false) && stream.PinnedDestinationReady(destination);
@@ -135,7 +137,7 @@ internal sealed class AppFlowContinuation(ICameraRig camera, ISaveService saves,
                 break;
             case AppState.Entering: _titleActive = true; break;
             case AppState.Boot: case AppState.Playing: case AppState.Leaving: case AppState.Quitting:
-                stream.SetPinnedDestinations([]);
+                ReleaseTitlePins();
                 break;
             default: throw new ArgumentOutOfRangeException(nameof(state));
         }
@@ -143,17 +145,32 @@ internal sealed class AppFlowContinuation(ICameraRig camera, ISaveService saves,
     internal void RefreshTitlePrefetch()
     {
         if (!_titleActive || maps.Context is null)
-        { stream.SetPinnedDestinations([]); return; }
+        { ReleaseTitlePins(); return; }
+        if (!ReferenceEquals(_titlePinContext, maps.Context)) ReleaseTitlePins();
+        _titlePinContext = maps.Context;
         var destinations = new List<MapStreamDestination>(2);
-        if (maps.Default == maps.Current)
+        _newGameDestination = null;
+        if ((_entryRequest is null || _entryRequest.Kind is EnterKind.NewGame) && maps.Default == maps.Current)
             destinations.Add(_newGameDestination = NewGameDestination()!);
-        var meta = _entryRequest is { Kind: EnterKind.Continue or EnterKind.LoadSlot, Slot: { } requested }
-            ? ReadableMeta(Info(requested), _entryRequest.Gen)
-            : saves.Continue is { } slot ? ReadableMeta(Info(slot)) : null;
+        var meta = _entryRequest switch
+        {
+            { Kind: EnterKind.Continue or EnterKind.LoadSlot, Slot: { } requested } => ReadableMeta(Info(requested), _entryRequest.Gen),
+            null => saves.Continue is { } slot ? ReadableMeta(Info(slot)) : null,
+            { Kind: EnterKind.NewGame or EnterKind.Continue or EnterKind.LoadSlot } => null,
+            _ => throw new ArgumentOutOfRangeException(nameof(_entryRequest))
+        };
         if (meta is not null && meta.Map == maps.Current)
             destinations.Add(new(meta.Pose with { FovDeg = meta.Pose.FovDeg ?? UserFov(meta.Mode, false) }, meta.Mode, meta.Space,
                 meta.Mode == ViewMode.Walk ? meta.Pose.Position - System.Numerics.Vector3.UnitY * WalkRules.StandingEye : null));
-        stream.SetPinnedDestinations(destinations);
+        foreach (var destination in destinations)
+            if (!_titlePins.ContainsKey(destination)) _titlePins.Add(destination, stream.PinDestination(destination));
+        foreach (var destination in _titlePins.Keys.Where(destination => !destinations.Contains(destination)).ToArray())
+        { _titlePins[destination].Dispose(); _titlePins.Remove(destination); }
+    }
+    internal void ReleaseTitlePins()
+    {
+        foreach (var pin in _titlePins.Values) pin.Dispose();
+        _titlePins.Clear(); _newGameDestination = null; _titlePinContext = null;
     }
     internal void RetainTitlePrefetch() => _titleActive = true;
     internal void StopTitlePrefetch()
@@ -162,7 +179,7 @@ internal sealed class AppFlowContinuation(ICameraRig camera, ISaveService saves,
     }
     public void Dispose()
     {
-        StopTitlePrefetch(); stream.SetPinnedDestinations([]);
+        _titleActive = false; StopTitlePrefetch(); ReleaseTitlePins();
     }
     private MapStreamDestination? NewGameDestination()
     {

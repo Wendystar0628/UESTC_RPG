@@ -2,6 +2,7 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using Campus.Contracts;
 using Campus.Contracts.AppFlow;
+using Campus.Contracts.Bake;
 using Campus.Contracts.Maps;
 using Campus.Contracts.Perf;
 using Campus.Contracts.Quality;
@@ -133,7 +134,8 @@ public sealed class PerformanceRecordingRegressionTests
             var recorder = new PerformanceRecordingService(frames, settings, diagnostics, new TestInputRouter(), resources, quality);
             var camera = new Campus.Camera.ObserverCamera();
             var walk = new Campus.Camera.Walk.WalkController();
-            BindRecordingOwners(quality, camera, walk);
+            var stream = new Campus.Kernel.Stream.StreamDirector();
+            BindRecordingOwners(quality, camera, walk, stream);
             recorder.AttachViewport(((SceneTree)Engine.GetMainLoop()).Root);
             var failures = new Dictionary<PerfRecordingState, Exception>
             {
@@ -185,7 +187,7 @@ public sealed class PerformanceRecordingRegressionTests
             finally
             {
                 try { await recorder.DrainForExitAsync().ConfigureAwait(ConfigureAwaitOptions.ContinueOnCapturedContext | ConfigureAwaitOptions.SuppressThrowing); }
-                finally { camera.Free(); walk.Free(); }
+                finally { camera.Free(); walk.Free(); stream.Free(); }
             }
         }
         finally { Directory.Delete(root, true); }
@@ -268,7 +270,7 @@ public sealed class PerformanceRecordingRegressionTests
     }
 
     private static void BindRecordingOwners(IQualityService quality, Campus.Camera.ObserverCamera camera,
-        Campus.Camera.Walk.WalkController walk)
+        Campus.Camera.Walk.WalkController walk, IStreamStatistics stream)
     {
         KernelServices.Services.Add<IRuleset>(new TestRuleset());
         KernelServices.Services.Add<IAppFlow>(new TestAppFlow());
@@ -283,6 +285,8 @@ public sealed class PerformanceRecordingRegressionTests
         KernelServices.Services.Add<IQualityService>(quality);
         KernelServices.Services.Add<ISaveService>(new TestSaveService());
         KernelServices.Services.Add<IAppLoadingPresentation>(new TestAppLoadingPresentation());
+        KernelServices.Services.Add<IStreamStatistics>(stream);
+        KernelServices.Services.Add<IBakeService>(new StreamLifecycleTestSupport.StreamBake(default));
     }
 
     private static bool Contains(Exception? retained, Exception original) => ReferenceEquals(retained, original) ||

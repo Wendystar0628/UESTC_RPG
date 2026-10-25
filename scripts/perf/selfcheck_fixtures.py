@@ -5,6 +5,27 @@ import csv
 import json
 
 
+def configure_monitor(root):
+    """工作树只复用只读协作库；投影用本树文件，所有可写路径由夹具另行绑定。"""
+    import importlib.util
+    import subprocess
+    import sys
+    from pathlib import Path
+    common = Path(subprocess.check_output(['git', '-C', str(root), 'rev-parse', '--path-format=absolute', '--git-common-dir'], text=True).strip())
+    sys.path.append(str(common.parent / '.collab/tools'))
+    # Load this checkout's CLI before the monitor reader adds its shared tool path.
+    import perf
+    import monitor.view
+    local = root / '.collab/tools/monitor/view/perf.py'
+    if local.is_file():
+        spec = importlib.util.spec_from_file_location('monitor.view.perf', local)
+        module = importlib.util.module_from_spec(spec)
+        sys.modules['monitor.view.perf'] = module
+        spec.loader.exec_module(module)
+        monitor.view.perf = module
+    sys.path.insert(0, str(root / 'scripts/perf'))
+
+
 def manifest(dictionary, identifier='SELFCHECK'):
     return dict(schema=dictionary['schema'], id=identifier, origin='play', status='closed', complete=True,
                 startedAt='2000-01-01T00:00:00Z', endedAt='2000-01-01T00:00:05Z', recordedSeconds=5,
@@ -50,7 +71,7 @@ def streams(frames, dictionary):
 
 def ai_run(scene='baseline-selfcheck', batch='fixture', phase='a1', repetition=1, kind='repeat3', scenes=None):
     return dict(scene=scene, purpose='baseline', status='valid', reasons=[], exitCode=0, timedOut=False,
-                coverage=dict(sample=dict(observed=1, required=1)), sampleSegmentId='sample',
+                coverage=dict(sample=dict(observed=1, required=1)), conditions=dict(suite='fixed'), sampleSegmentId='sample',
                 protocol=dict(kind=kind, batchId=batch, scenes=scenes or [scene], phase=phase, repetition=repetition))
 
 

@@ -1,14 +1,87 @@
 using Campus.Camera;
 using Campus.Contracts;
 using Campus.Contracts.AppFlow;
+using Campus.Contracts.Settings;
+using Campus.Kernel.Settings;
 using GdUnit4;
 using Godot;
+using KernelServices = Campus.Kernel.Registry.Kernel;
 
 namespace Campus.Tests;
 
 [TestSuite]
 public sealed class ObserverCameraRuntimeTests
 {
+    [TestCase, TestCategory(TestReason.Regression), RequireGodotRuntime]
+    public async Task UnhandledActionsOnlyStopAtTheirActualCameraOrRouterConsumer()
+    {
+        var tree = (SceneTree)Engine.GetMainLoop();
+        var flow = new TestAppFlow();
+        var rules = new TestRuleset(defaultViewMode: ViewMode.Walk);
+        var failure = new HudTaskTests.RecordingFailure();
+        await using var settings = new SettingsStore(Path.Combine(Path.GetTempPath(), Guid.NewGuid() + ".json"));
+        KernelServices.Services.Add<IAppFlow>(flow);
+        KernelServices.Services.Add<IRuleset>(rules);
+        KernelServices.Services.Add<IAppFailure>(failure);
+        KernelServices.Services.Add<IWorldState>(new TestWorldState(new TestWeatherProcess(), rules));
+        KernelServices.Services.Add<ITerrainPreparation>(new FlowTerrainPreparation());
+        KernelServices.Services.Add<ITransitDriver>(new FlowTransitDriver());
+        KernelServices.Services.Add<ISettingsStore>(settings);
+        var camera = new ObserverCamera { ProcessMode = Node.ProcessModeEnum.Disabled };
+        var controls = new ObserverControls(camera, camera.Tuning);
+        try
+        {
+            tree.Root.AddChild(camera);
+            controls.Initialize(null, automated: true);
+            if (!camera.IsPlaying || camera.Mode != ViewMode.Walk)
+                throw new InvalidOperationException("The regression did not enter the playing camera input branch.");
+            foreach (string action in InputBindings.Actions)
+            {
+                if (action is "toggle_mode" || action == InputBindings.CursorAction) continue;
+                var binding = InputMap.ActionGetEvents(action).OfType<InputEventKey>().Single();
+                using var down = new InputEventKey
+                { PhysicalKeycode = binding.PhysicalKeycode, Location = binding.Location, Pressed = true };
+                using var up = new InputEventKey
+                { PhysicalKeycode = binding.PhysicalKeycode, Location = binding.Location, Pressed = false };
+                if (!down.IsActionPressed(action))
+                    throw new InvalidOperationException("The physical binding did not reach its configured action.");
+                bool expected = new ObserverInputState(camera.Tuning).Press(action).Consumed;
+                if (action is "map" or "atlas_index" or "minimap" && expected)
+                    throw new InvalidOperationException("A map action entered camera-owned input state.");
+                controls.ObserveInput(down);
+                if (controls.HandleUnhandled(down, flow) != expected)
+                    throw new InvalidOperationException($"Camera consumption did not match its actual action: {action}");
+                if (action == "move_forward" && controls.State.Move.Y <= 0)
+                    throw new InvalidOperationException("The camera stopped accepting forward input.");
+                controls.ObserveInput(up);
+                if (controls.HandleUnhandled(up, flow) || controls.State.Move != System.Numerics.Vector2.Zero)
+                    throw new InvalidOperationException("A release was swallowed or left movement held.");
+            }
+            using var move = new InputEventAction { Action = "move_forward", Pressed = true };
+            using var map = new InputEventAction { Action = "map", Pressed = true };
+            using (controls.LockInput(InputLockReason.Menu))
+                if (controls.HandleUnhandled(move, flow) || controls.HandleUnhandled(map, flow)
+                    || controls.State.Move != System.Numerics.Vector2.Zero)
+                    throw new InvalidOperationException("Locked input entered camera state or consumed a foreign action.");
+            bool lowerReached = false;
+            using (controls.RegisterLayer("lower", 10, _ => { lowerReached = true; return false; }))
+            using (controls.RegisterLayer("upper", 0, _ => true))
+                if (!controls.HandleUnhandled(move, flow) || !controls.HandleUnhandled(map, flow)
+                    || lowerReached || controls.State.Move != System.Numerics.Vector2.Zero)
+                    throw new InvalidOperationException("A router-consumed action propagated or entered camera state.");
+            using var mode = new InputEventAction { Action = "toggle_mode", Pressed = true };
+            if (!controls.HandleUnhandled(mode, flow) || camera.Mode != ViewMode.Fly || failure.Errors.Count != 0)
+                throw new InvalidOperationException("The camera stopped consuming and applying its mode action.");
+        }
+        finally
+        {
+            controls.SetFocused(false);
+            camera.PrepareForExit();
+            await camera.DrainForExitAsync();
+            camera.Free();
+        }
+    }
+
     [TestCase, TestCategory(TestReason.Regression), RequireGodotRuntime]
     public void CursorLeasesAndRawHeldEventsRemainIndependentOfMovementLocks()
     {

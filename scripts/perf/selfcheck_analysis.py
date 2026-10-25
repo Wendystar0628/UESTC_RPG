@@ -35,7 +35,13 @@ def check_snapshot(root, dictionary, budgets):
                 raise AssertionError('快照的流路径或列结构未校验')
         meta['schema'] = dictionary['schema'] - 1
         (source / 'manifest.json').write_text(json.dumps(meta), encoding='utf-8')
-        assert load_session(source, dictionary)[1] is None, '旧 schema 被兼容解析'
+        old_meta, old_data = load_session(source, dictionary)
+        assert old_data is None, '旧 schema 被兼容解析'
+        unsupported = summary_for(source, old_meta, old_data, dictionary, budgets, {})[0]
+        assert unsupported['baseStatus'] == 'unsupported' and 'conclusion' not in unsupported
+        from perf import overview
+        conclusion = list(overview(unsupported))[-1]
+        assert 'schema 不支持' in conclusion and unsupported['baseReasons'][0] in conclusion, conclusion
 
 
 def check_median(root, dictionary, budgets):
@@ -67,7 +73,7 @@ def check_deepen(root, dictionary, budgets):
     prepare_frames(frames, [], [], dictionary)
     medians = rolling_medians(frames, COSTS, policy)
     annotate(frames, [], medians, policy)
-    items = frame_anomalies(frames, manifest(dictionary), budgets, medians, 'cost')
+    items = frame_anomalies(frames, manifest(dictionary), budgets, medians, 'cost', {})
     spikes = [a for a in items if a['type'] == 'costSpike' and a['metric'] in COSTS[:2]]
     assert len(spikes) == 2 and all(not a['candidates'] for a in spikes), '夹具未触发主视口两项近似尖峰'
     assert not deepen(spikes * DEEPEN_REPEAT_COUNT, manifest(dictionary)), '近似主视口候选被误计为缺原因'
@@ -142,7 +148,7 @@ def check_cold_gap(root, dictionary, budgets):
     policy = budgets['perfAnomalies']
     warm = policy['medianMinimumFrames']
     count = min(60, warm - 1)
-    frames = [frame(dictionary, i, gpu=6) for i in range(count)]
+    frames = [frame(dictionary, i, gpu=budgets['deviceTargets']['developer']['mainViewportGpuP95MsUpper'] * 2) for i in range(count)]
     frames[20]['gapBefore'] = True
     frames[20]['dtMs'] = 500
     summary, items, _, _ = summary_for(Path('selfcheck'), manifest(dictionary), streams(frames, dictionary), dictionary, budgets, {})

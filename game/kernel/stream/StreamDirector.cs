@@ -53,7 +53,7 @@ public partial class StreamDirector : Node, IMapAware, IMapStreamState, IStreamV
     private Task? _drain;
     private bool _exiting, _captureMode, _checkRetention;
     private long _statisticsRevision, _mountedBytes;
-    private int _watchdogBaseline, _mountedTilesDelta;
+    private int _watchdogBaseline, _mountedTiles, _mountedTilesDelta;
 
     public StreamDirector()
     {
@@ -117,6 +117,7 @@ public partial class StreamDirector : Node, IMapAware, IMapStreamState, IStreamV
                 MountMilliseconds = _context is null ? 0 : _mount.LastMilliseconds,
                 WatchdogTrips = _context is null ? 0 : _mount.WatchdogTrips - _watchdogBaseline,
                 MountedBytes = _mountedBytes,
+                MountedTiles = _mountedTiles,
                 MountedTilesDelta = _mountedTilesDelta
             };
         }
@@ -126,13 +127,13 @@ public partial class StreamDirector : Node, IMapAware, IMapStreamState, IStreamV
     {
         if (_statisticsRevision == _mount.Revision) return;
         _statisticsRevision = _mount.Revision; _watchdogBaseline = _mount.WatchdogTrips;
-        _mountedBytes = 0; _mountedTilesDelta = 0;
+        _mountedBytes = 0; _mountedTiles = 0; _mountedTilesDelta = 0;
     }
 
     private void BeginStatisticsFrame()
     {
         SynchronizeStatisticsRevision();
-        _mountedBytes = 0; _mountedTilesDelta = 0;
+        _mountedBytes = 0; _mountedTiles = 0; _mountedTilesDelta = 0;
     }
 
     internal void RecordTileChange(StreamTileChange change)
@@ -144,6 +145,7 @@ public partial class StreamDirector : Node, IMapAware, IMapStreamState, IStreamV
             switch (change.Change)
             {
                 case StreamTileChangeKind.Mounted:
+                    _mountedTiles++;
                     _mountedTilesDelta++;
                     if (change.Bytes is { } bytes) _mountedBytes += bytes;
                     break;
@@ -202,7 +204,7 @@ public partial class StreamDirector : Node, IMapAware, IMapStreamState, IStreamV
         _context = null;
         BeginStatisticsFrame(); _watchdogBaseline = _mount.WatchdogTrips;
         Stop(_selection.BeginMapChange);
-        Stop(() => SetPinnedDestinations(Array.Empty<MapStreamDestination>()));
+        Stop(_pins.StopNewWork);
         Stop(_selection.Unload);
         Stop(_preparation.Unload);
         Stop(_selection.ClearDemand);
@@ -239,7 +241,7 @@ public partial class StreamDirector : Node, IMapAware, IMapStreamState, IStreamV
         catch (Exception error) { RecordFailure(error); }
     }
     public void Prefetch(Pose destination, ViewMode mode, NavSpace? space = null, System.Numerics.Vector3? collisionFeet = null) => _selection.Prefetch(destination, mode, space, collisionFeet);
-    public void SetPinnedDestinations(IReadOnlyList<MapStreamDestination> destinations) => _pins.SetPinnedDestinations(destinations);
+    public IDisposable PinDestination(MapStreamDestination destination) => _pins.PinDestination(destination);
     public void ClearDestination() => _selection.ClearDestination();
     public override void _Process(double delta)
     {

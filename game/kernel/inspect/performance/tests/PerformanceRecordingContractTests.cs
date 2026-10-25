@@ -71,12 +71,17 @@ public sealed class PerformanceRecordingContractTests
             if (File.Exists(Path.Combine(directory, "manifest.json")) || !File.Exists(Path.Combine(directory, "manifest.pending.json")))
                 throw new InvalidOperationException("A writable session was published as closed before drain.");
             session.Begin(new(0, 100, 0));
-            var sample = new FrameSample { CollectionFrame = 1, MonotonicMilliseconds = 110, FrameMilliseconds = 10 };
-            if (!session.Frames.TryWrite(in sample, ReadOnlySpan<ViewportFrameSample>.Empty))
+            var streamSample = new StreamStatistics { Revision = 7, MountedTiles = 2, MountedTilesDelta = -1,
+                WatchdogTrips = 3, MountMilliseconds = .5, MountedBytes = 64 };
+            var sample = new FrameSample { CollectionFrame = 1, MonotonicMilliseconds = 110,
+                FrameMilliseconds = 10, Stream = streamSample };
+            var missingStream = sample with { CollectionFrame = 2, MonotonicMilliseconds = 115, Stream = null };
+            if (!session.Frames.TryWrite(in sample, ReadOnlySpan<ViewportFrameSample>.Empty) ||
+                !session.Frames.TryWrite(in missingStream, ReadOnlySpan<ViewportFrameSample>.Empty))
                 throw new InvalidOperationException("The test frame was not accepted.");
             session.Stop(PerfEndReason.Toggle, 120);
             var result = await session.Completion;
-            if (result is not { Closed: true, Complete: true, WrittenFrames: 1, Error: null })
+            if (result is not { Closed: true, Complete: true, WrittenFrames: 2, Error: null })
                 throw new InvalidOperationException("The accepted frame did not drain into a complete closed session.", result.Error);
             foreach (string stream in new[] { "frames", "samples", "hw", "hwfast" })
             {
@@ -84,8 +89,22 @@ public sealed class PerformanceRecordingContractTests
                 if (header != string.Join(',', dictionary.Columns[stream]))
                     throw new InvalidOperationException("A CSV header differs from the authoritative dictionary.");
             }
-            if (File.ReadAllLines(Path.Combine(directory, "frames.csv")).Length != 2)
+            var rows = File.ReadAllLines(Path.Combine(directory, "frames.csv"));
+            if (rows.Length != result.WrittenFrames + 1)
                 throw new InvalidOperationException("The frame row was lost at session stop.");
+            // These rows have no viewport payloads; no CSV cell contains a comma.
+            var known = rows[1].Split(','); var missing = rows[2].Split(',');
+            string Value(string field) => known[Array.IndexOf(dictionary.Columns["frames"], field)];
+            if (Value("streamRevision") != PerfFieldDictionary.Csv(streamSample.Revision) ||
+                Value("streamMountedTiles") != PerfFieldDictionary.Csv(streamSample.MountedTiles) ||
+                Value("streamMountedTilesDelta") != PerfFieldDictionary.Csv(streamSample.MountedTilesDelta) ||
+                Value("streamWatchdogTrips") != PerfFieldDictionary.Csv(streamSample.WatchdogTrips) ||
+                Value("streamMountMs") != PerfFieldDictionary.Csv(streamSample.MountMilliseconds) ||
+                Value("pendingStreamMounts") != PerfFieldDictionary.Csv(streamSample.PendingMounts) ||
+                dictionary.Columns["frames"].Select((field, index) => (field, index))
+                    .Any(item => (item.field.StartsWith("stream", StringComparison.Ordinal) ||
+                        item.field.StartsWith("pendingStream", StringComparison.Ordinal)) && missing[item.index] != "null"))
+                throw new InvalidOperationException("Stream serialization changed the owner snapshot or replaced missing facts with zero.");
             var manifest = JsonNode.Parse(File.ReadAllText(Path.Combine(directory, "manifest.json")))!;
             if (manifest["status"]!.GetValue<string>() != "closed" ||
                 !JsonNode.DeepEquals(manifest["fieldDictionary"], dictionary.Snapshot))
@@ -158,7 +177,7 @@ public sealed class PerformanceRecordingContractTests
             var producer = session.AddProducer("nvml.fast", "hwfast");
             var row = new PerfCapturedRow("hwfast", null, 10, new Dictionary<string, object?>());
             long accepted = 0;
-            while (producer.TryRow(row)) accepted++;
+            while (producer.TryRow(row)) { accepted++; producer.Flush(); }
             if (accepted == 0 || producer.Dropped != 1) throw new InvalidOperationException("The unread queue did not fill.");
             var fixture = PerformanceNvmlContractTests.BufferedFastFixture();
             long lost = producer.Dropped;

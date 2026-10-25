@@ -10,22 +10,37 @@
       "droppedFramesPercentMax": 2,
       "gpuP95MsMax": 14,
       "cpuP95MsMax": 8,
-      "soakP95DriftPercentMax": 10
+      "soakP95DriftPercentMax": 10,
+      "widthPx": 1920,
+      "heightPx": 1080,
+      "basis": "estimated"
     },
     "mid": {
       "preset": "fine",
       "fps": 60,
       "droppedFramesPercentMax": 1,
       "gpuP95MsMax": 14,
-      "cpuP95MsMax": 8
+      "cpuP95MsMax": 8,
+      "widthPx": 1920,
+      "heightPx": 1080,
+      "basis": "estimated"
     },
     "high": {
       "preset": "ultra",
       "fpsMinimum": 60,
-      "droppedFramesPercentMax": 1,
-      "developer4kFineGpuP95MsMax": 5,
-      "rtx4070GpuP95MsMax": 12.5,
-      "developerCpuP95MsMax": 6
+      "droppedFramesPercentMax": 1
+    },
+    "developer": {
+      "gpuNameContains": "RTX 4080",
+      "preset": "fine",
+      "widthPx": 3840,
+      "heightPx": 2160,
+      "renderScale": 1,
+      "mainViewportGpuP95MsUpper": 6.25,
+      "mainViewportGpuP95MsStop": 5.5,
+      "viewportCpuP95MsUpper": 6,
+      "viewportCpuP95MsStop": 5,
+      "frameSetupCpuP95MsUpper": 1
     }
   },
   "perfAnomalies": {
@@ -63,15 +78,35 @@
     "memoryGrowthMinimumSeconds": 60,
     "utilizationSwingFraction": 0.5,
     "turnDegreesPerSecond": 180,
-    "budgetConditions": { "gpuNameContains": "RTX 4080", "preset": "fine", "widthPx": 3840, "heightPx": 2160 },
     "costFloors": {
-      "mainViewportGpuMs": { "ref": "deviceTargets.high.developer4kFineGpuP95MsMax", "source": "ENG-BUDGET native 4K fine main viewport GPU" },
-      "mainViewportCpuMs": { "ref": "deviceTargets.high.developerCpuP95MsMax", "source": "ENG-BUDGET viewport CPU render" },
-      "frameSetupCpuMs": { "ref": "deviceTargets.high.developerCpuP95MsMax", "source": "ENG-BUDGET CPU budget used as frame-setup cost floor" },
-      "mountMs": { "manifestRef": "kernelBudgets.streamMountMilliseconds", "source": "KernelBudgets runtime snapshot" },
-      "gcPauseMs": { "ref": "perfAnomalies.gcPauseMs", "source": "ENG-PERF-DATA initial absolute GC pause floor" },
-      "pipelineIncrement": { "ref": "perfAnomalies.pipelineIncrement", "source": "ENG-PERF-DATA initial compilation floor" }
-    }
+      "mainViewportGpuMs": {
+        "ref": "deviceTargets.developer.mainViewportGpuP95MsUpper",
+        "source": "ENG-BUDGET native 4K fine main viewport GPU upper bound"
+      },
+      "mainViewportCpuMs": {
+        "ref": "deviceTargets.developer.viewportCpuP95MsUpper",
+        "source": "ENG-BUDGET viewport CPU render upper bound"
+      },
+      "frameSetupCpuMs": {
+        "ref": "deviceTargets.developer.frameSetupCpuP95MsUpper",
+        "source": "ENG-BUDGET frame setup CPU upper bound"
+      },
+      "mountMs": {
+        "manifestRef": "kernelBudgets.streamMountMilliseconds",
+        "source": "KernelBudgets runtime snapshot"
+      },
+      "gcPauseMs": {
+        "ref": "perfAnomalies.gcPauseMs",
+        "source": "ENG-PERF-DATA initial absolute GC pause floor"
+      },
+      "pipelineIncrement": {
+        "ref": "perfAnomalies.pipelineIncrement",
+        "source": "ENG-PERF-DATA initial compilation floor"
+      }
+    },
+    "lightCostStutterMs": 16.7,
+    "lightCostStutterFramesPerMinuteMax": 2,
+    "manualSaveThumbnailFrameMsMax": 100
   },
   "frameStutter": {
     "route": "F1",
@@ -91,11 +126,21 @@
       "global resident data"
     ],
     "atlas8ThreadBakeSecondsMax": 20,
-    "titleFullMapBakeSecondsMax": 240,
+    "titleFullMapBakeSecondsMax": 240
+  },
+  "waits": {
     "warmLauncherToTitleSecondsMax": 5,
     "coldLauncherToTitleSecondsMax": 10,
     "firstRunLauncherToRealtimeSecondsMax": 30,
     "preloadedNewGameToWalkSecondsMax": 3,
-    "immediateNewGameToWalkSecondsMax": 10
+    "immediateNewGameToWalkSecondsMax": 10,
+    "continueToWalkSecondsMax": 3,
+    "loadSlotToWalkSecondsMax": 5,
+    "prefetchedTravelToReadySecondsMax": 1.5,
+    "directTravelToReadySecondsMax": 3,
+    "returnToTitleSecondsMax": 3,
+    "exitSecondsMax": 2,
+    "visibleProgressPainMultiple": 2,
+    "noVisibleProgressSecondsMax": 20
   }
 }

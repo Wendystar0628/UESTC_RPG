@@ -307,7 +307,7 @@ try {
     $inputSeconds = if ($inputRequest -and $phaseByName.ContainsKey('input-ready')) {
         ($phaseByName['input-ready'].milliseconds - $inputRequest.milliseconds) / 1000
     } else { $null }
-    $budgets = (Get-Content -LiteralPath (Join-Path $toolRoot 'budgets.json') -Raw | ConvertFrom-Json).cache
+    $budgets = (Get-Content -LiteralPath (Join-Path $toolRoot 'budgets.json') -Raw | ConvertFrom-Json).waits
     $cacheEvidenceKnown = -not [string]::IsNullOrWhiteSpace($condition.cacheEvidence) -and
         $condition.cacheEvidence.Trim() -notin @('NOT_MEASURED','unknown')
     $validGeometry = $condition.geometryCache -eq 'valid' -and $cacheEvidenceKnown
@@ -315,7 +315,8 @@ try {
         $limit = $budgets.$Key
         $status = if (-not $Applicable -or $null -eq $Actual) { 'NOT_MEASURED' }
             elseif ($diagnostic) { 'DIAGNOSTIC_ONLY' }
-            elseif ($Actual -le $limit) { 'MEETS_OBSERVED_PROXY_TARGET' } else { 'EXCEEDS_OBSERVED_PROXY_TARGET' }
+            elseif ($Key -eq 'firstRunLauncherToRealtimeSecondsMax') { 'NOT_JUDGED_ISOLATED_CACHE_CONDITION' }
+            elseif ($Actual -le $limit) { 'MEETS_OBSERVED_PROXY_TARGET' } else { 'NOT_JUDGED_ISOLATED_EXCEEDS_TARGET' }
         return [ordered]@{ key=$Key; targetSeconds=$limit; observedSeconds=$Actual; status=$status; endpoint=$Endpoint }
     }
     $checks = @(

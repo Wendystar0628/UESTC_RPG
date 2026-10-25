@@ -6,11 +6,12 @@ param([Parameter(Mandatory,ParameterSetName='Collection')][ValidatePattern('^[A-
     [ValidateSet('fixed','route','travel')][string[]]$Suite=@('fixed','route','travel'), [string[]]$Scene=@(),
     [ValidateSet('functional-smoke','formal')][string]$Mode='functional-smoke',
     [ValidateSet('repeat3','aba')][string]$Protocol='repeat3', [ValidateSet('a1','b1','a2')][string]$Phase='a1',
-    [switch]$PrepareBake, [IO.FileStream]$BuildLease=$null,
+    [switch]$PrepareBake, [IO.FileStream]$BuildLease=$null, [string]$BatchConditions='',
     [Parameter(Mandatory,ParameterSetName='Diagnostic')][ValidatePattern('^[A-Za-z0-9][A-Za-z0-9._-]*$')][string]$DeepenSession,
-    [Parameter(ParameterSetName='Diagnostic')][ValidateSet('gpu-profile','EventPipe','Nsight')][string[]]$DiagnosticTool=@('gpu-profile','EventPipe','Nsight'),
+    [Parameter(ParameterSetName='Diagnostic')][ValidateSet('gpu-profile','EventPipe','Nsight')][string[]]$DiagnosticTool=@(),
     [Parameter(ParameterSetName='Diagnostic')][ValidateRange(0,10000)][int]$DeepenEntry=0)
 $ErrorActionPreference='Stop'
+$collectionScriptEnteredUtc=[DateTime]::UtcNow.ToString('O')
 $root=(Resolve-Path (Join-Path $PSScriptRoot '..\..')).Path
 . (Join-Path $root 'scripts\lib\common.ps1')
 . (Join-Path $root 'scripts\lib\start-game.ps1')
@@ -31,6 +32,19 @@ $otherGpuFraction=0.20
 $otherCpuFraction=0.25
 $maximumFactAgeSeconds=3
 $timeoutSeconds=600
+$judgement=[ordered]@{ logicalPauseVerified=$false; mainThreadLongStopVerified=$false;
+    noiseCalibrationBatchId=$null; tuningSelectedMetrics=@(); startupCache='unknown' }
+if ($BatchConditions) {
+    $requested=Get-Content -LiteralPath $BatchConditions -Raw | ConvertFrom-Json
+    foreach ($property in $requested.PSObject.Properties) {
+        if (-not $judgement.Contains($property.Name)) { throw "Unknown batch condition: $($property.Name)" }
+        $judgement[$property.Name]=$property.Value
+    }
+    foreach ($name in @('logicalPauseVerified','mainThreadLongStopVerified')) {
+        if ($judgement[$name] -isnot [bool]) { throw "$name must be a recorded round-zero boolean." }
+    }
+    if ($judgement.startupCache -notin @('warm','cold','first-run','unknown')) { throw 'Unknown startup-cache condition.' }
+}
 if ($Protocol -eq 'repeat3' -and $Phase -ne 'a1') { throw 'repeat3 only has a1.' }
 $plan=Get-Content -LiteralPath (Join-Path $PSScriptRoot 'scenarios.json') -Raw | ConvertFrom-Json
 $selected=@(Get-CollectionScenes $plan $Suite $Scene)
@@ -41,11 +55,12 @@ $sceneIds=@($selected | ForEach-Object { $_.scene.id })
 $batchRoot=Assert-UESTCChildPath (Join-Path $root ('output\perf\runs\' + $Batch)) (Join-Path $root 'output\perf\runs')
 $phaseRoot=Join-Path $batchRoot $Phase
 if (Test-Path -LiteralPath $phaseRoot) { throw 'Choose a fresh batch/phase; prior data is retained.' }
-Assert-CollectionPhase $batchRoot $Protocol $Phase $sceneIds
+Assert-CollectionPhase $batchRoot $Protocol $Phase $sceneIds $judgement
 $null=[IO.Directory]::CreateDirectory($phaseRoot)
 $purpose=if ($Mode -eq 'formal') { 'baseline' } else { 'functional' }
 $phaseRecord=[ordered]@{ purpose=$purpose; protocol=$Protocol; phase=$Phase; scenes=$sceneIds; status='preparing';
-    revision=(& git -C $root rev-parse HEAD).Trim(); preparation=$null; completed=$false }
+    revision=(& git -C $root rev-parse HEAD).Trim(); preparation=$null; completed=$false;
+    judgementConditions=$judgement; collectionScriptEnteredUtc=$collectionScriptEnteredUtc }
 $lease=$null
 $failed=$false
 $acceptedSources=@()
@@ -89,21 +104,32 @@ try {
                     realtimeSeconds=$realtimeSeconds; sampleSeconds=$seconds; otherGpuFraction=$otherGpuFraction;
                     otherCpuFraction=$otherCpuFraction; maximumFactAgeSeconds=$maximumFactAgeSeconds;
                     saveAfterSample=($entry.PSObject.Properties['saveAfterSample'] -and [bool]$entry.saveAfterSample) }
+                $request['suite']=$item.kind
+                $request['routePointIds']=@()
+                if ($entry.PSObject.Properties['routePointIds']) { $request['routePointIds']=@($entry.routePointIds) }
+                $request['travelPrefetch']=if ($entry.PSObject.Properties['travelPrefetch']) { [bool]$entry.travelPrefetch } else { $false }
+                foreach ($name in $judgement.Keys) { $request[$name]=$judgement[$name] }
                 $requestPath=Join-Path $directory 'collection.json'
                 Write-CollectionJson $requestPath $request
                 $run=[ordered]@{ scene=$entry.id; status='partial'; reasons=@('Process has not completed.'); exitCode=$null;
                     timedOut=$false; coverage=@{}; purpose=$purpose; sampleSegmentId=$segment; attempt=$attempt; observed=$null;
                     polluted=$null; pollution=@();
                     close=@{ completed=$false; durationMs=$null; source='formal-close-task'; reason='Formal close start/end not observed.' };
-                    protocol=@{ kind=$Protocol; batchId=$Batch; scenes=$sceneIds; phase=$Phase; repetition=$repeat }; conditions=$request }
+                    protocol=@{ kind=$Protocol; batchId=$Batch; scenes=$sceneIds; phase=$Phase; repetition=$repeat }; conditions=$request;
+                    collectionScriptEnteredUtc=$collectionScriptEnteredUtc;
+                    launcher=@{ scriptEnteredUtc=$null; scriptEnteredTimestamp=$null; stopwatchFrequency=[Diagnostics.Stopwatch]::Frequency;
+                        processExitUtc=$null; basis='prepared-attempt'; preparation='Batch build/import and optional bake precede this attempt; not a double-click launcher measurement.' } }
                 $arguments=@(Get-CollectionArguments $root $directory $plan $item $seconds $requestPath)
                 try {
+                    $run.launcher.scriptEnteredUtc=[DateTime]::UtcNow.ToString('O')
+                    $run.launcher.scriptEnteredTimestamp=[Diagnostics.Stopwatch]::GetTimestamp()
                     $environment=New-UESTCTestEnvironment -Work $directory
                     $environment['UESTC_BAKE_CACHE']=$null
                     $result=Invoke-UESTCProcess -Executable $godot -Arguments $arguments -WorkingDirectory $root `
                         -Log (Join-Path $directory 'game.log') -TimeoutSeconds $timeoutSeconds -AllowFailure `
                         -IsolatedDesktop -Environment $environment -TextEncoding ([Text.Encoding]::UTF8)
                     $run.exitCode=$result.ExitCode
+                    if ($null -ne $result.ProcessExitUtc) { $run.launcher.processExitUtc=$result.ProcessExitUtc.ToString('O') }
                     if ($result.ExitCode -eq 0) {
                         $closeMarks=[regex]::Matches($result.StdOut, '(?m)^PERF_COLLECTION_CLOSE_(BEGIN|END) ([0-9.Ee+-]+)\r?$')
                         $closeBegin=@($closeMarks | Where-Object { $_.Groups[1].Value -eq 'BEGIN' })

@@ -47,6 +47,7 @@ public sealed class PerformanceRecordingService : IPerformanceRecorder, IRegistr
     internal void MapLoaded() => _capture?.BindMap();
     internal void MapUnloading() => _capture?.UnbindMap();
     internal void Readback(string phase, string purpose, ulong frame) => _capture?.Readback(phase, purpose, frame);
+    internal void AppPhase(string phase, ulong frame, double time) => _capture?.AppPhase(phase, frame, time);
 
     public PerformanceRecordingService(IFrameStatistics frames, ISettingsStore settings, IDiagnosticLog diagnostics,
         IInputRouter input, IRequiredResources resources, IQualityService quality)
@@ -134,6 +135,12 @@ public sealed class PerformanceRecordingService : IPerformanceRecorder, IRegistr
     {
         RequireMainThread();
         if (_session is not { } current) return;
+        try { PollSession(current); }
+        finally { current.FlushEvents(); }
+    }
+
+    private void PollSession(PerfRecordingSession current)
+    {
         if (_state == PerfRecordingState.Recording)
         {
             try { _capture?.Poll(); }
@@ -307,6 +314,7 @@ public sealed class PerformanceRecordingService : IPerformanceRecorder, IRegistr
         {
             ProducerFailure(error);
         }
+        finally { current.FlushEvents(); }
     }
 
     private void ProducerFailure([FailureHandler("ENG-PERF-DATA")] Exception error)
@@ -334,6 +342,7 @@ public sealed class PerformanceRecordingService : IPerformanceRecorder, IRegistr
         try { _capture?.Dispose(); }
         catch (Exception error) { _session.AddFailure(PerfFaultCode.ProducerFailed, error); }
         _capture = null;
+        _session.FlushEvents();
         _gpuSteps?.RequestStop();
         _session.StopProducers();
         _recordedSeconds = Math.Max(0, Now() - _session.RecordingStart) / 1000;

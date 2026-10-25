@@ -84,11 +84,63 @@ def anomaly(kind, level, frame, value, threshold, source, metric=None, state=Fal
                       '关联阶段是墙钟区间；渲染回读仅在关联窗口内定位'))
 
 
-def frame_anomalies(frames, manifest, budgets, medians, scope):
+def cost_stutters(frames, index, median, policy, run, manifest):
+    """成本绝对线不等暖窗；渲染回读只按关联窗口的遮挡事实分类。"""
+    frame, result = frames[index], []
+    frame['_costMedianReady'] = all(number(median.get(k)) for k in COSTS)
+    for metric in COSTS:
+        value = frame.get(metric)
+        if not number(value):
+            continue
+        radius = policy['associationFrames'] if metric in COSTS[:2] else 0
+        nearby = frames[max(0, index - radius):index + radius + 1]
+        states = {f['_covered'] for f in nearby}
+        visibility = 'visible' if states == {False} else 'covered' if states == {True} else 'candidate'
+        if radius and len(nearby) != 2 * radius + 1:
+            visibility = 'candidate'
+        manual = (metric == 'frameSetupCpuMs' and frame['_capture'] and at(run, 'observed.save.reason') == 'Manual'
+                  and any(e['event'] == 'sync.readback' and e['payload'].get('purpose') == 'saveThumbnail'
+                          and e.get('collectionFrame') == frame['collectionFrame'] for e in frame['_nearEvents']))
+        level, threshold = None, None
+        if manual:
+            threshold = policy['manualSaveThumbnailFrameMsMax']
+            level = 'severe' if value > threshold else None
+        else:
+            for key, proposed in (('freezeMs', 'severe'), ('severeStutterMs', 'severe'), ('heavyStutterMs', 'heavy')):
+                if value > policy[key]:
+                    level, threshold = proposed, policy[key]
+                    break
+            baseline = median.get(metric)
+            if level is None and frame['_steady'] and number(baseline):
+                threshold = max(policy['lightCostStutterMs'], policy['lightStutterMedianMultiple'] * baseline)
+                if value > threshold:
+                    level = 'light'
+        if level is not None:
+            kind = 'manualSaveThumbnail' if manual else 'costStutter'
+            item = anomaly(kind, level if visibility != 'candidate' else 'info', frame, value, threshold,
+                           'budgets.json.perfAnomalies', metric)
+            item.update(visibility=visibility, severity=level, frozen=value > policy['freezeMs'],
+                        associationFromFrame=nearby[0]['collectionFrame'], associationToFrame=nearby[-1]['collectionFrame'])
+            result.append(item)
+    if frame['_phaseValid'] and at(run, 'conditions.logicalPauseVerified') is True:
+        value = sum(frame[k] for k in PHASES[:3])
+        for key, level in (('freezeMs', 'severe'), ('severeStutterMs', 'severe'), ('heavyStutterMs', 'heavy')):
+            if value > policy[key]:
+                result.append(anomaly('logicPause', level, frame, value, policy[key], 'budgets.json.perfAnomalies', 'logicWallMs'))
+                break
+    if (at(manifest, 'desktop.kind') == 'isolated' and frame['_dtValid']
+            and at(run, 'conditions.mainThreadLongStopVerified') is True
+            and frame['dtMs'] > policy['severeStutterMs']):
+        result.append(anomaly('mainThreadLongStop', 'severe', frame, frame['dtMs'], policy['severeStutterMs'],
+                              'budgets.json.perfAnomalies.severeStutterMs', 'dtMs'))
+    return result
+
+
+def frame_anomalies(frames, manifest, budgets, medians, scope, run):
     policy, target = budgets['perfAnomalies'], target_ms(manifest)
     result = []
     for i, frame in enumerate(frames):
-        row = []
+        row = cost_stutters(frames, i, medians[i], policy, run, manifest)
         for metric in COSTS + tuple(frame.get('_viewportCpuFields', [])):
             floor, source = floor_of('mainViewportCpuMs' if metric.startswith('viewportCpuMs:') else metric, budgets, manifest)
             value, median = frame.get(metric), medians[i].get(metric)
@@ -113,7 +165,7 @@ def frame_anomalies(frames, manifest, budgets, medians, scope):
                 if delta is None or delta <= policy['pipelineIncrement']:
                     continue
                 level = 'heavy' if metric == 'pipelineDraw' else 'info'
-                if metric in ('pipelineCanvas', 'pipelineSurface') and frame['_steady']:
+                if metric in ('pipelineCanvas', 'pipelineSurface') and frame['_covered'] is False:
                     level = 'light'
                 row.append(anomaly('compilation', level, frame, delta, policy['pipelineIncrement'],
                                    'budgets.json.perfAnomalies.pipelineIncrement', metric))
@@ -143,7 +195,7 @@ def frame_anomalies(frames, manifest, budgets, medians, scope):
         for item in row:
             if item['metric'] not in COSTS[:2] or not frame['_mainViewportApproximate']:
                 item['candidates'] = candidates(frames, i, policy)
-        if any(a['type'] in ('stutter', 'costSpike') and
+        if any(a['type'] in ('stutter', 'costSpike', 'costStutter', 'logicPause', 'mainThreadLongStop') and
                not (a['metric'] in COSTS[:2] and frame['_mainViewportApproximate']) for a in row):
             for item in row:
                 if item['type'] == 'compilation' and item['metric'] in ('pipelineCanvas', 'pipelineSurface'):
@@ -152,12 +204,13 @@ def frame_anomalies(frames, manifest, budgets, medians, scope):
     return result
 
 
-def time_windows(frames):
+def time_windows(frames, include_nonsteady=False):
     rows, elapsed = [], 0
     for frame in frames:
-        if not frame['_dtValid'] or not frame['_steady'] or (rows and frame['_scene'] != rows[-1]['_scene']):
+        valid = frame['_dtValid'] and (frame['_steady'] or include_nonsteady and frame.get('appState', '').lower() == 'playing')
+        if not valid or (rows and frame['_scene'] != rows[-1]['_scene']):
             rows, elapsed = [], 0
-        if not frame['_dtValid'] or not frame['_steady']:
+        if not valid:
             continue
         rows.append(frame)
         elapsed += frame['dtMs']
@@ -170,7 +223,7 @@ def window_analysis(frames, manifest, budgets, scope):
     policy, target = budgets['perfAnomalies'], target_ms(manifest)
     windows, result = [], []
     candidate, streak, established = None, 0, '不定'
-    drop_streak = idle_streak = alloc_streak = 0
+    drop_streak = idle_streak = 0
     previous_end = None
     for rows in time_windows(frames):
         duration = sum(f['dtMs'] for f in rows)
@@ -179,7 +232,7 @@ def window_analysis(frames, manifest, budgets, scope):
         first = rows[0]
         if previous_end is not None and first['sequence'] != previous_end + 1:
             candidate, streak, established = None, 0, '不定'
-            drop_streak = idle_streak = alloc_streak = 0
+            drop_streak = idle_streak = 0
         previous_end = rows[-1]['sequence']
         current = '不定'
         if scope == 'full' and number(gpu):
@@ -211,42 +264,65 @@ def window_analysis(frames, manifest, budgets, scope):
             if idle_streak >= policy['stateHysteresisWindows']:
                 result.append(anomaly('sustainedIdleCandidate', 'info', first, busy, policy['idleGpuFraction'],
                                       'budgets.json.perfAnomalies', 'measuredGpuBusyFraction', True))
-        gc = sum(f.get('gcPauseMs') or 0 for f in rows)
-        if gc > policy['gcWindowPauseMs']:
-            result.append(anomaly('gcWindow', 'heavy', first, gc, policy['gcWindowPauseMs'], 'budgets.json.perfAnomalies.gcWindowPauseMs', 'gcPauseMs', True))
-        allocation = sum(f.get('allocatedBytes') or 0 for f in rows) / 1048576 * 1000 / duration
-        alloc_streak = alloc_streak + 1 if allocation > policy['allocationMiBPerSecond'] else 0
-        if alloc_streak >= policy['allocationSustainedWindows']:
-            result.append(anomaly('allocationStorm', 'severe' if allocation > policy['allocationSevereMiBPerSecond'] else 'heavy', first,
-                                  allocation, policy['allocationMiBPerSecond'], 'budgets.json.perfAnomalies', 'allocatedMiBPerSecond', True))
         for item in result:
             if item['firstSequence'] == first['sequence'] and item['state']:
                 item.update(toMs=rows[-1]['monotonicMs'], durationMs=duration, lastFrame=rows[-1]['collectionFrame'], lastSequence=rows[-1]['sequence'])
         windows.append(window)
     for item in result:
         item['bottleneck'] = next((w['bottleneck'] for w in windows if w['fromMs'] <= item['fromMs'] <= w['toMs']), '不定')
-    return windows, result
+    return windows, result + gc_windows(frames, policy)
+
+
+def gc_windows(frames, policy):
+    result, streak, previous_end = [], 0, None
+    for rows in time_windows(frames, include_nonsteady=True):
+        duration, first = sum(f['dtMs'] for f in rows), rows[0]
+        if previous_end is not None and first['sequence'] != previous_end + 1:
+            streak = 0
+        previous_end = rows[-1]['sequence']
+        pause = sum(f.get('gcPauseMs') or 0 for f in rows)
+        allocation = sum(f.get('allocatedBytes') or 0 for f in rows) / 1048576 * 1000 / duration
+        streak = streak + 1 if allocation > policy['allocationMiBPerSecond'] else 0
+        specs = []
+        if pause > policy['gcWindowPauseMs']:
+            specs.append(('gcWindow', 'heavy', pause, policy['gcWindowPauseMs'], 'gcPauseMs'))
+        if streak >= policy['allocationSustainedWindows']:
+            specs.append(('allocationStorm', 'severe' if allocation > policy['allocationSevereMiBPerSecond'] else 'heavy',
+                          allocation, policy['allocationMiBPerSecond'], 'allocatedMiBPerSecond'))
+        for kind, level, value, threshold, metric in specs:
+            item = anomaly(kind, level, first, value, threshold, 'budgets.json.perfAnomalies', metric, True)
+            item.update(toMs=rows[-1]['monotonicMs'], durationMs=duration,
+                        lastFrame=rows[-1]['collectionFrame'], lastSequence=rows[-1]['sequence'])
+            result.append(item)
+    return result
 
 
 def budget_checks(summary, manifest, budgets):
-    # Conditions identify the existing developer target; cost spike floors remain usable elsewhere.
-    conditions = budgets['perfAnomalies']['budgetConditions']
+    target = budgets['deviceTargets']['developer']
     graphics = manifest.get('graphics') or {}
-    applicable = (conditions['gpuNameContains'].lower() in str(at(manifest, 'machine.gpu', '')).lower()
-                  and graphics.get('preset') == conditions['preset']
-                  and at(manifest, 'display.windowWidthPx') == conditions['widthPx']
-                  and at(manifest, 'display.windowHeightPx') == conditions['heightPx']
-                  and graphics.get('internalWidthPx') == conditions['widthPx']
-                  and graphics.get('internalHeightPx') == conditions['heightPx'])
+    applicable = (target['gpuNameContains'].lower() in str(at(manifest, 'machine.gpu', '')).lower()
+                  and graphics.get('preset') == target['preset']
+                  and at(manifest, 'display.windowWidthPx') == target['widthPx']
+                  and at(manifest, 'display.windowHeightPx') == target['heightPx']
+                  and graphics.get('internalWidthPx') == target['widthPx'] * target['renderScale']
+                  and graphics.get('internalHeightPx') == target['heightPx'] * target['renderScale'])
+    keys = dict(mainViewportGpuMs=('mainViewportGpuP95MsUpper', 'mainViewportGpuP95MsStop'),
+                mainViewportCpuMs=('viewportCpuP95MsUpper', 'viewportCpuP95MsStop'),
+                frameSetupCpuMs=('frameSetupCpuP95MsUpper', None),
+                measuredViewportGpuMs=('mainViewportGpuP95MsUpper', None))
     checks = []
-    for metric in COSTS:
-        floor, source = floor_of(metric, budgets, manifest)
+    for metric, (upper_key, stop_key) in keys.items():
         measured = at(summary, f'steady.cost.{metric}.p95')
-        budget_applies = applicable and metric != 'frameSetupCpuMs'
-        checks.append(dict(metric=metric, value=measured, budget=floor, budgetSource=source,
-                           applicable=budget_applies, ratio=measured / floor if number(measured) and floor else None,
-                           exceeded=measured > floor if budget_applies and number(measured) and floor else None,
-                           reason=None if budget_applies else '会话条件与现有预算不一致；帧准备仅借用 CPU 底线'))
+        suite, scene = at(summary, 'run.conditions.suite'), at(summary, 'run.scene')
+        selected = metric != 'measuredViewportGpuMs' or (suite == 'fixed' and scene in ('lake-default', 'lake-storm'))
+        applies = applicable and selected
+        stop = target[stop_key] if stop_key and suite == 'fixed' else None
+        checks.append(dict(metric=metric, value=measured, budget=target[upper_key], stop=stop,
+                           budgetSource='budgets.json.deviceTargets.developer.' + upper_key,
+                           stopSource='budgets.json.deviceTargets.developer.' + stop_key if stop is not None else None,
+                           applicable=applies, ratio=measured / target[upper_key] if number(measured) else None,
+                           exceeded=measured > target[upper_key] if applies and number(measured) else None,
+                           reason=None if applies else '会话条件与开发机预算不一致或非湖边合计场景'))
     return checks
 
 
@@ -259,7 +335,7 @@ def slow_anomalies(frames, streams, manifest, budgets, scope):
             continue
         frame = nearest_frame(frames, sample['monotonicMs'])
         used, capacity = sample.get('wholeGpuMemoryMiB'), at(manifest, 'machine.vramMiB')
-        if number(used) and number(capacity) and capacity > 0 and used >= policy['videoMemoryNearFraction'] * capacity:
+        if number(used) and number(capacity) and capacity > 0 and used > policy['videoMemoryNearFraction'] * capacity:
             result.append(anomaly('videoMemory', 'severe' if used > capacity else 'heavy', frame, used,
                                   policy['videoMemoryNearFraction'] * capacity, 'budgets.json.perfAnomalies.videoMemoryNearFraction', 'wholeGpuMemoryMiB', True))
         if (sample.get('throttleReasonBits') or 0) != 0:
@@ -299,6 +375,94 @@ def nearest_frame(frames, milliseconds):
     return frames[max(0, index)]
 
 
+def hang_anomalies(frames, events):
+    if not frames:
+        return []
+    result = []
+    for event in events:
+        if event['event'] != 'hang.begin':
+            continue
+        payload = event['payload']
+        duration = event['monotonicMs'] - payload['stalledSinceMs']
+        item = anomaly('hang', 'severe', nearest_frame(frames, event['monotonicMs']), duration, None,
+                       'manifest.kernelBudgets; hang.begin watchdog event', state=True)
+        item.update(fromMs=payload['stalledSinceMs'], toMs=event['monotonicMs'], durationMs=duration,
+                    phase=payload['boundary'], candidates=['hang.begin'])
+        result.append(item)
+    return result
+
+
+def session_judgement(frames, streams, manifest, budgets, run, raw_items, checks):
+    """合并前记录命中帧与测量完整性；预算越线不进入痛点计数。"""
+    suite = at(run, 'conditions.suite')
+    play = suite in ('route', 'travel')
+    playing = [f for f in frames if f.get('appState', '').lower() == 'playing']
+    visible = [f for f in playing if f['_covered'] is False]
+    steady = [f for f in frames if f['_steady'] and f['_dtValid']]
+    duration = sum(f['dtMs'] for f in steady)
+    required = []
+
+    def record(key, n, enabled=True, reason=None):
+        complete = n > 0 and enabled
+        required.append(dict(key=key, observed=n, status='measured' if complete else 'rerun',
+                             reason=None if complete else reason or '必判字段缺测，重跑'))
+
+    for check in checks:
+        if check['metric'] == 'measuredViewportGpuMs' and not (suite == 'fixed' and run.get('scene') in ('lake-default', 'lake-storm')):
+            continue
+        record(check['metric'], int(number(check['value'])), check['applicable'], check.get('reason'))
+    if manifest.get('origin') == 'ai' and isinstance(run.get('protocol'), dict) and suite not in ('fixed', 'route', 'travel'):
+        record('suite', 0, False, '场景套未确认，重跑')
+    if play:
+        record('costStutter', len(visible), all(number(f.get(k)) for f in visible for k in COSTS))
+        record('logicPause', sum(f['_phaseValid'] for f in playing),
+               at(run, 'conditions.logicalPauseVerified') is True and all(f['_phaseValid'] for f in playing),
+               '第0轮尚未核实逻辑三段或分段缺测，重跑')
+        record('mainThreadLongStop', sum(f['_dtValid'] for f in playing),
+               at(manifest, 'desktop.kind') == 'isolated' and at(run, 'conditions.mainThreadLongStopVerified') is True,
+               '第0轮尚未核实静置长停或不是隔离桌面，重跑')
+        record('lightCostStutter', sum(f.get('_costMedianReady') is True for f in steady), duration > 0,
+               '稳态暖窗或计率时长不足，重跑')
+        record('drawCompilation', len(visible), all(number(f.get('pipelineDraw')) for f in visible))
+        record('gc', len(playing), all(number(f.get(k)) for f in playing for k in ('gcPauseMs', 'gcGen2', 'allocatedBytes')))
+        hardware = [h for h in streams['hw'] if h['rowKind'] == 'nvml' and number(h.get('wholeGpuMemoryMiB'))]
+        record('videoMemory', len(hardware), number(at(manifest, 'machine.vramMiB')) and at(manifest, 'machine.vramMiB') > 0)
+        event_state = next((s for s in manifest.get('streams', []) if s['file'] == 'events.jsonl'), {})
+        record('hang', int(event_state.get('state') == 'recorded'), manifest.get('complete') is True)
+    categories = dict(costStutter='costStutter', logicPause='logicPause', mainThreadLongStop='mainThreadLongStop',
+                      gcWindow='gc', allocationStorm='gc', videoMemory='videoMemory', hang='hang')
+    hits, levels, light, candidates_count = defaultdict(set), defaultdict(set), set(), 0
+    for item in raw_items:
+        if item['type'] == 'costStutter' and item.get('visibility') == 'candidate':
+            candidates_count += 1
+        if item['type'] == 'costStutter' and item.get('visibility') != 'visible':
+            continue
+        if item['type'] == 'hang' and not any(f['sequence'] == item['firstSequence'] and
+                                            f.get('appState', '').lower() == 'playing' for f in frames):
+            continue
+        if item['type'] == 'costStutter' and item['level'] == 'light':
+            light.add(item['firstSequence'])
+        category = ('drawCompilation' if item.get('metric') == 'pipelineDraw' else 'otherCompilation') if item['type'] == 'compilation' else categories.get(item['type'])
+        if category and LEVELS[item['level']] >= LEVELS['heavy']:
+            hits[category].add(item['firstSequence'])
+            levels[item['level']].add(item['firstSequence'])
+    counts = {key: len(hits[key]) for key in ('costStutter', 'logicPause', 'mainThreadLongStop', 'drawCompilation', 'otherCompilation', 'gc', 'videoMemory', 'hang')}
+    policy = budgets['perfAnomalies']
+    rate = len(light) * 60000 / duration if duration else None
+    return dict(requiredChecks=required,
+                pain=dict(suite=suite, scene=run.get('scene'), counts=counts, lightFrames=len(light),
+                          steadyDurationMs=duration, lightFramesPerMinute=rate,
+                          lightLimit=policy['lightCostStutterFramesPerMinuteMax'], visibilityCandidates=candidates_count,
+                          severityCounts=dict(heavy=len(levels['heavy'] - levels['severe']), severe=len(levels['severe'])),
+                          heavyOrWorseFrames=len(set().union(*hits.values())) if hits else 0,
+                          status='rerun' if any(v['status'] == 'rerun' for v in required) else 'pain' if any(counts.values()) or
+                          (rate is not None and rate > policy['lightCostStutterFramesPerMinuteMax']) else 'clear'),
+                lines=[dict(key='targetFrameMs', value=target_ms(manifest) if at(manifest, 'desktop.kind') == 'interactive' else None,
+                            unit='ms', source='manifest.pacing/display', reason='体验目标仅交互桌面适用')] +
+                      [dict(key=key, value=policy[key], unit='ms', source='budgets.json.perfAnomalies.' + key)
+                       for key in ('heavyStutterMs', 'severeStutterMs', 'freezeMs', 'lightCostStutterMs', 'manualSaveThumbnailFrameMsMax')])
+
+
 def merge_anomalies(items):
     grouped = defaultdict(list)
     for item in items:
@@ -336,12 +500,14 @@ def deepen(items, manifest):
         if any(r['type'] == item['type'] and r['metric'] == item.get('metric') and r['phase'] == item.get('phase') for r in result):
             continue
         phase = item.get('phase')
-        tools = ['EventPipe', 'Nsight'] if phase != 'drawMs' else ['gpu-profile', 'Nsight', 'EventPipe']
+        tools = (['gpu-profile', 'Nsight'] if item.get('metric') == 'mainViewportGpuMs' else
+                 ['gpu-profile'] if phase == 'drawMs' else ['EventPipe'])
         args = [str(a) for a in at(manifest, 'run.args', []) if not str(a).startswith('--perf-out=')]
         result.append(dict(type=item['type'], metric=item.get('metric'), phase=phase, tools=tools,
                            firstFrame=item['firstFrame'], lastFrame=item['lastFrame'],
                            scene=manifest.get('scene'), poseArgs=args,
                            reason='严重级' if item['level'] == 'severe' else '同会话反复且无事件原因',
-                           command='pwsh -NoProfile -File scripts/perf/run.ps1 -DeepenSession ' + "'" + str(manifest['id']).replace("'", "''") + "'",
-                           commandState='requires TOOL-428/429 runner; preserve poseArgs and collection conditions'))
+                           command="powershell.exe -NoProfile -Command \"& 'scripts/perf/run.ps1' -DeepenSession '" + str(manifest['id']).replace("'", "''") +
+                           "' -DeepenEntry " + str(len(result)) + " -DiagnosticTool " + ','.join("'" + tool + "'" for tool in tools) + '\"',
+                           commandState='ready'))
     return result

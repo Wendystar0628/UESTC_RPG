@@ -114,6 +114,29 @@ def check_processed_error(root, dictionary, budgets):
         assert analyze.analysis_needed(root, out, author), '成功来源消失后未重判'
         analyze_all(root, out, author)
         assert not (out / 'derived/BROKEN').exists(), '已失去会话清单的来源仍保留派生'
+        check_stale_content_cache(root, out, author, dictionary)
+
+
+def check_stale_content_cache(root, out, author, dictionary):
+    """Regression：旧内容错误不能借当前有效摘要永远滞留，当前坏输入仍缓存。"""
+    import analyze
+    source = author / 'STALE-CONTENT'
+    write_six(source, manifest(dictionary, 'STALE-CONTENT'), streams([frame(dictionary, 0)], dictionary), dictionary)
+    assert analyze_all(root, out, author)['analyzed'] == ['STALE-CONTENT']
+    index_path = out / 'index.json'
+    summary = read_json(out / 'derived/STALE-CONTENT/summary.json')
+    for stale in ('calc', 'stamp'):
+        index = read_json(index_path)
+        stamp = dict(summary['inputStamp'])
+        if stale == 'stamp':
+            stamp['schema'] = -1
+        index['errors'] = [dict(source=str(source.resolve()), id='STALE-CONTENT', kind='content',
+                                reason='selfcheck stale content', calc=analyze.CALC - (stale == 'calc'), inputStamp=stamp)]
+        index_path.write_text(json.dumps(index), encoding='utf-8')
+        assert analyze.analysis_needed(root, out, author), '过期内容错误借用了现存摘要缓存'
+        with patch.object(analyze, 'load_session', wraps=analyze.load_session) as loads:
+            repaired = analyze_all(root, out, author)
+            assert repaired['analyzed'] == ['STALE-CONTENT'] and not repaired['errors'] and loads.call_count == 1
 
 
 def check_retention_authority(root, dictionary, budgets):
@@ -145,7 +168,7 @@ def check_roundtrip(root, dictionary, budgets):
         source = author / 'SELFCHECK'
         meta = manifest(dictionary)
         meta['desktop'] = dict(kind='isolated', isInputDesktop=False, windowFocused=False)
-        data = streams([frame(dictionary, i, gpu=6) for i in range(count)], dictionary)
+        data = streams([frame(dictionary, i, gpu=budgets['deviceTargets']['developer']['mainViewportGpuP95MsUpper'] * 2) for i in range(count)], dictionary)
         write_six(source, meta, data, dictionary)
         first = analyze_all(root, out, author)
         assert first['analyzed'] == ['SELFCHECK'] and not first['errors'], first

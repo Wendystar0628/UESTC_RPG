@@ -56,6 +56,7 @@ internal sealed class PerfHangWatchdog
                 while (!_stop.IsCancellationRequested)
                 {
                     detector.Observe(frames.StageSnapshot, FrameClock.MonotonicMilliseconds, Emit);
+                    output.Flush();
                     _stop.Token.WaitHandle.WaitOne(TimeSpan.FromSeconds(KernelBudgets.PerfHangWatchdogSeconds / 10));
                 }
             }

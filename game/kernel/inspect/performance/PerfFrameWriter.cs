@@ -52,7 +52,18 @@ internal static class PerfFrameWriter
         ["contextFlags"] = row => row.ContextFlags,
         ["contextComplete"] = row => row.ContextComplete,
         ["gapBefore"] = row => row.Gap.Rows > 0,
-        ["viewportSamplesJson"] = Viewports
+        ["viewportSamplesJson"] = Viewports,
+        ["streamRevision"] = row => row.Sample.Stream?.Revision,
+        ["pendingStreamRequests"] = row => row.Sample.Stream?.PendingRequests,
+        ["pendingStreamBakes"] = row => row.Sample.Stream?.PendingBakes,
+        ["pendingStreamPreparations"] = row => row.Sample.Stream?.PendingPreparations,
+        ["pendingStreamMounts"] = row => row.Sample.Stream?.PendingMounts,
+        ["pendingStreamRetirements"] = row => row.Sample.Stream?.PendingRetirements,
+        ["streamMountMs"] = row => row.Sample.Stream?.MountMilliseconds,
+        ["streamWatchdogTrips"] = row => row.Sample.Stream?.WatchdogTrips,
+        ["streamMountedBytes"] = row => row.Sample.Stream?.MountedBytes,
+        ["streamMountedTilesDelta"] = row => row.Sample.Stream?.MountedTilesDelta,
+        ["streamMountedTiles"] = row => row.Sample.Stream?.MountedTiles
     };
 
     public static void ValidateColumns(string[] columns)

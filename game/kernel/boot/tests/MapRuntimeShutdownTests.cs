@@ -125,8 +125,9 @@ public sealed class MapRuntimeShutdownTests
         public bool DestinationReady => false;
         public MapStreamDestination? Destination => null;
         public bool HasPendingDestination => false;
-        public IReadOnlyList<MapStreamDestination> PinnedDestinations => [];
-        public void SetPinnedDestinations(IReadOnlyList<MapStreamDestination> destinations) { }
+        private readonly TestDestinationPins _pins = new();
+        public IReadOnlyList<MapStreamDestination> PinnedDestinations => _pins.Destinations;
+        public IDisposable PinDestination(MapStreamDestination destination) => _pins.Acquire(destination);
         public bool PinnedDestinationReady(MapStreamDestination destination) => false;
         public void ClearDestination() { }
         public void Prefetch(Pose destination, ViewMode mode, NavSpace? space = null, System.Numerics.Vector3? collisionFeet = null) => throw new NotSupportedException();

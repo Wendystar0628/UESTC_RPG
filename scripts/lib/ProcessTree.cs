@@ -32,6 +32,17 @@ namespace Uestc.Tools
         {
             get { uint code; Check(GetExitCodeProcess(process, out code)); return unchecked((int)code); }
         }
+        public DateTime? ProcessExitUtc
+        {
+            get
+            {
+                if (!HasExited) { return null; }
+                System.Runtime.InteropServices.ComTypes.FILETIME created, exited, kernel, user;
+                Check(GetProcessTimes(process, out created, out exited, out kernel, out user));
+                long fileTime = ((long)(uint)exited.dwHighDateTime << 32) | (uint)exited.dwLowDateTime;
+                return DateTime.FromFileTimeUtc(fileTime);
+            }
+        }
         public bool HasExited
         {
             get
@@ -376,6 +387,9 @@ namespace Uestc.Tools
         [DllImport("kernel32.dll", SetLastError = true, CharSet = CharSet.Unicode)] private static extern bool CreateProcess(string application, StringBuilder command, IntPtr processAttributes, IntPtr threadAttributes, bool inherit, uint flags, IntPtr environment, string directory, ref StartupInfo startup, out ProcessInformation process);
         [DllImport("kernel32.dll", SetLastError = true)] private static extern uint ResumeThread(IntPtr thread);
         [DllImport("kernel32.dll", SetLastError = true)] private static extern bool GetExitCodeProcess(IntPtr process, out uint exitCode);
+        [DllImport("kernel32.dll", SetLastError = true)] private static extern bool GetProcessTimes(IntPtr process,
+            out System.Runtime.InteropServices.ComTypes.FILETIME created, out System.Runtime.InteropServices.ComTypes.FILETIME exited,
+            out System.Runtime.InteropServices.ComTypes.FILETIME kernel, out System.Runtime.InteropServices.ComTypes.FILETIME user);
         [DllImport("kernel32.dll", SetLastError = true)] private static extern uint WaitForSingleObject(IntPtr handle, uint milliseconds);
         [DllImport("kernel32.dll", SetLastError = true)] private static extern bool TerminateProcess(IntPtr process, uint exitCode);
         [DllImport("kernel32.dll")] private static extern bool CloseHandle(IntPtr handle);

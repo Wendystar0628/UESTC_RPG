@@ -18,12 +18,15 @@ function Get-CollectionScenes($Plan, [string[]]$Suites, [string[]]$Scenes) {
     return $selected
 }
 
-function Assert-CollectionPhase($BatchRoot, $Protocol, $Phase, [string[]]$Scenes) {
+function Assert-CollectionPhase($BatchRoot, $Protocol, $Phase, [string[]]$Scenes, $JudgementConditions) {
     if ($Phase -eq 'a1') { return }
     $previous = if ($Phase -eq 'b1') { 'a1' } else { 'b1' }
     $path = Join-Path $BatchRoot ($previous + '\phase.json')
     if (-not (Test-Path -LiteralPath $path)) { throw 'A/B/A phases must be collected in order.' }
     $record = Get-Content -LiteralPath $path -Raw | ConvertFrom-Json
+    if (($record.judgementConditions | ConvertTo-Json -Compress -Depth 8) -ne ($JudgementConditions | ConvertTo-Json -Compress -Depth 8)) {
+        throw 'Prior phase judgement conditions differ; batch conditions are frozen.'
+    }
     if (-not $record.completed -or $record.protocol -ne $Protocol -or ($record.scenes -join ',') -ne ($Scenes -join ',')) {
         throw 'Prior phase is incomplete or its frozen protocol/scenes differ.'
     }
@@ -32,7 +35,7 @@ function Assert-CollectionPhase($BatchRoot, $Protocol, $Phase, [string[]]$Scenes
 function Get-CollectionArguments($Root, $Directory, $Plan, $Item, $Seconds, $RequestPath) {
     $entry=$Item.scene
     $saveArgument = if ($entry.PSObject.Properties['saveAfterSample'] -and $entry.saveAfterSample) { '--save=1' } else { '--save=off' }
-    $arguments = @('--path',(Join-Path $Root 'game'),'--',('--map=' + $Plan.map),
+    $arguments = @('--path',(Join-Path $Root 'game'),'--windowed','--resolution','3840x2160','--',('--map=' + $Plan.map),
         '--quality=fine','--quality-set=display_mode=0','--audio=off','--flow=0',$saveArgument,
         ('--save-dir=' + (Join-Path $Directory 'save')),('--perf-out=' + $Directory),('--perf-collection=' + $RequestPath))
     switch ($Item.kind) {
@@ -42,7 +45,7 @@ function Get-CollectionArguments($Root, $Directory, $Plan, $Item, $Seconds, $Req
         }
         'route' {
             $arguments += @('--title=1','--startup-scenario=route',('--route-start=' + $entry.waypoint),
-                ('--route-mode=' + $entry.mode),('--route-seconds=' + $Seconds))
+                ('--route-mode=' + $entry.mode),('--route-seconds=' + $entry.seconds))
         }
         'travel' { $arguments += @('--title=0','--mode=walk',('--travel-sequence=' + ($entry.sequence -join ','))) }
     }

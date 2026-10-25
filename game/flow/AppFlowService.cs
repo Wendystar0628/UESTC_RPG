@@ -20,7 +20,6 @@ public sealed class AppFlowService : IAppFlow, IAppBootFlow, IBootParticipant, I
     private readonly IWorldState world;
     private readonly IWorldRestore restore;
     private readonly IAppExit appExit;
-    private readonly IMapStreamState stream;
     private readonly AppFlowResources _resources;
     private readonly AppFlowContinuation _continuation;
     private readonly AppFlowStartup _startup;
@@ -47,7 +46,7 @@ public sealed class AppFlowService : IAppFlow, IAppBootFlow, IBootParticipant, I
     {
         _mapRuntime = mapRuntime;
         this.camera = camera; this.transit = transit; this.saves = saves; this.maps = maps;
-        this.world = world; this.restore = restore; this.appExit = appExit; this.stream = stream;
+        this.world = world; this.restore = restore; this.appExit = appExit;
         _resources = new(camera, restore, control, loading, frontispiece, mapRuntime, MarkPhase);
         _continuation = new(camera, saves, maps, restore, mapRuntime, stream,
             _resources, profileSettings);
@@ -155,7 +154,7 @@ public sealed class AppFlowService : IAppFlow, IAppBootFlow, IBootParticipant, I
             _continuation.RequireHealthyWorld();
             await _continuation.PreparePlayableDestination(_startup.CaptureMode);
             // The real destination now owns residency; keep the pins through its terrain preparation.
-            stream.SetPinnedDestinations([]);
+            _continuation.ReleaseTitlePins();
             if (newGame && _request.Slot is not null)
             {
                 // The first generation belongs to this prepared Walk endpoint.

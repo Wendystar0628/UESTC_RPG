@@ -69,10 +69,26 @@ internal sealed class TestAppFrontispiecePresentation : IAppFrontispiecePresenta
     public Task Show() { Visible = true; return Task.CompletedTask; }
     public Task Hide(float seconds) { Visible = false; return Task.CompletedTask; }
 }
+internal sealed class TestDestinationPins
+{
+    private readonly List<Lease> _leases = [];
+    public IReadOnlyList<MapStreamDestination> Destinations => _leases.Select(lease => lease.Destination).Distinct().ToArray();
+    public IDisposable Acquire(MapStreamDestination destination)
+    {
+        var lease = new Lease(this, destination); _leases.Add(lease); return lease;
+    }
+    private sealed class Lease(TestDestinationPins owner, MapStreamDestination destination) : IDisposable
+    {
+        public MapStreamDestination Destination => destination;
+        public void Dispose() => owner._leases.Remove(this);
+    }
+}
+
 internal sealed class FlowRuntimeTestStub(Func<bool> covered) : IMapRuntime, IMapStreamState
 {
-    public IReadOnlyList<MapStreamDestination> PinnedDestinations { get; private set; } = [];
-    public void SetPinnedDestinations(IReadOnlyList<MapStreamDestination> destinations) => PinnedDestinations = destinations.ToArray();
+    private readonly TestDestinationPins _pins = new();
+    public IReadOnlyList<MapStreamDestination> PinnedDestinations => _pins.Destinations;
+    public IDisposable PinDestination(MapStreamDestination destination) => _pins.Acquire(destination);
     public bool PinsReady { get; set; }
     public bool PinnedDestinationReady(MapStreamDestination destination) => PinsReady && PinnedDestinations.Contains(destination);
     public void ClearDestination() { _arrival?.Cancel(); _arrival = null; ArrivalChanged?.Invoke(null); }

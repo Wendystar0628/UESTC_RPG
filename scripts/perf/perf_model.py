@@ -196,6 +196,8 @@ def mark_context(frames, events, dictionary):
                        else start is not None and start <= frame['monotonicMs'] < end) for start, end, capture in intervals)
         frame['_steady'] = bool(complete and not active)
         frame['_contextKnown'] = complete
+        frame['_covered'] = bool((frame.get('contextFlags') or 0) & 32) if complete else None
+        frame['_capture'] = bool((frame.get('contextFlags') or 0) & 512) if complete else None
 
 
 def prepare_frames(frames, samples, events, dictionary):
@@ -325,9 +327,13 @@ def experience(frames, hw, target, policy, scope, reason):
 
 
 def costs(frames, samples, hw):
-    fields = COSTS + PHASES + ('visibleDrawCalls', 'visiblePrimitives', 'shadowDrawCalls', 'shadowPrimitives',
+    fields = COSTS + PHASES + ('streamMountMs', 'streamMountedTiles', 'streamMountedTilesDelta',
+                              'streamWatchdogTrips', 'pendingStreamRequests', 'pendingStreamBakes',
+                              'pendingStreamPreparations', 'pendingStreamMounts', 'pendingStreamRetirements',
+                              'visibleDrawCalls', 'visiblePrimitives', 'shadowDrawCalls', 'shadowPrimitives',
                               'gcPauseMs', 'allocatedBytes', 'managedHeapMiB')
     result = {key: distribution(f.get(key) for f in frames if key not in PHASES or f['_phaseValid']) for key in fields}
+    result['measuredViewportGpuMs'] = distribution(f['_measuredGpuMs'] for f in frames)
     result['viewports'] = {key: {metric: distribution(f['_viewports'].get(key, {}).get(metric) for f in frames)
                                   for metric in ('cpuMs', 'gpuMs')}
                            for key in sorted({key for f in frames for key in f['_viewports']})}

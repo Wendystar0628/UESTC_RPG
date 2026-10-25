@@ -27,8 +27,10 @@ function Read-UESTCPerfJson {
 function Get-UESTCPerfCostChecks {
     param($Group, [object[]]$Summaries, [Collections.Generic.List[string]]$Reasons)
     $scene = Get-UESTCPerfField $Group 'comparisonKey.scene'
-    # The analyzer explicitly marks frameSetupCpuMs as a borrowed floor, never a budget.
-    foreach ($metric in @('mainViewportGpuMs','mainViewportCpuMs')) {
+    # G10 consumes upper bounds emitted by the sole analyzer; stop lines are for tuning only.
+    $metrics=@('mainViewportGpuMs','mainViewportCpuMs','frameSetupCpuMs')
+    if ($scene -in @('lake-default','lake-storm')) { $metrics+='measuredViewportGpuMs' }
+    foreach ($metric in $metrics) {
         $checks = @($Summaries | ForEach-Object { @(Get-UESTCPerfField $_ 'budgets') | Where-Object { (Get-UESTCPerfField $_ 'metric') -eq $metric } })
         $value = Get-UESTCPerfField $Group "phases.a1.steady.cost.$metric.p95"
         if ($checks.Count -ne 3 -or @($checks | Where-Object {

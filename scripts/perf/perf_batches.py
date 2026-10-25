@@ -103,7 +103,7 @@ def phase_reasons(rows, kind):
     return reasons
 
 
-def batch_results(entries, failed_sources=()):
+def batch_results(entries, budgets, failed_sources=()):
     """缺一个正式单次就无批次基线；失败来源仍参与完整性，但不贡献指标。"""
     batches = defaultdict(list)
     for entry in entries:
@@ -115,7 +115,7 @@ def batch_results(entries, failed_sources=()):
         first = rows[0]['run']['protocol']
         kind, scenes = first.get('kind'), first.get('scenes')
         kind = kind if isinstance(kind, str) else None
-        reasons, source_reasons = phase_reasons(rows, kind), []
+        reasons, source_reasons, judgement_reasons = phase_reasons(rows, kind), [], []
         groups = defaultdict(list)
         for row in rows:
             run, protocol = row['run'], row['run']['protocol']
@@ -126,7 +126,15 @@ def batch_results(entries, failed_sources=()):
                 source_reasons.append('批次会话来源分析失败: ' + row['id'])
             if row['baseStatus'] != 'candidate':
                 reasons.append('批次含无效、未完成或证据运行: ' + row['id'])
+            if not isinstance(row.get('judgement'), dict):
+                judgement_reasons.append('必判摘要缺失: ' + row['id'])
+            for check in at(row, 'judgement.requiredChecks', []) or []:
+                if check['status'] != 'measured':
+                    judgement_reasons.append(row['id'] + '/' + check['key'] + ': ' + check['reason'])
             groups[group_key(row)].append(row)
+        frozen_keys = ('logicalPauseVerified', 'mainThreadLongStopVerified', 'noiseCalibrationBatchId', 'tuningSelectedMetrics')
+        if len({json.dumps({key: at(row, 'run.conditions.' + key) for key in frozen_keys}, sort_keys=True) for row in rows}) != 1:
+            reasons.append('同批核验开关/散布基线/入选项条件不一致')
         plan = scenes if isinstance(scenes, list) and all(isinstance(s, str) for s in scenes) else []
         by_scene = defaultdict(list)
         projected = []
@@ -143,6 +151,9 @@ def batch_results(entries, failed_sources=()):
                 if sorted(repeats, key=str) != list(REPETITIONS):
                     reasons.append(f'{scene}/{phase} 未恰好完成三次')
                 runs.sort(key=lambda row: str(at(row, 'run.protocol.repetition')))
+                if len({json.dumps({key: at(row, 'run.conditions.' + key) for key in ('suite', 'travelPrefetch')}, sort_keys=True)
+                        for row in grouped}) != 1:
+                    reasons.append(f'{scene} 场景套或旅行变体不一致')
                 phases[phase] = dict(sessionIds=[row['id'] for row in runs])
             if kind == 'aba':
                 commits = {at(row, 'build.commit') for row in grouped if at(row, 'run.protocol.phase') in ('a1', 'a2')}
@@ -152,20 +163,162 @@ def batch_results(entries, failed_sources=()):
                                   origin=grouped[0]['origin'], scope=grouped[0]['scope'], phases=phases))
         if set(by_scene) != set(plan) or any(len(groups) != 1 for groups in by_scene.values()):
             reasons.append('场景覆盖不足或同场景比较键/calc/origin/scope 不一致')
-        blocking_reasons = sorted(set(reasons))
-        reasons = sorted(set(reasons + source_reasons))
+        measurement_reasons = sorted(set(reasons + source_reasons))
+        blocking_reasons = sorted(set(reasons + judgement_reasons))
+        reasons = sorted(set(measurement_reasons + judgement_reasons))
         status = ('invalid' if any(row['baseStatus'] == 'invalid' for row in rows) else
                   'evidence' if all(row['baseStatus'] == 'evidence' for row in rows) else 'partial') if reasons else 'candidate'
         if reasons:
             # IO 故障不改既有会话基线身份与保留规则；批次仍 partial，读口不比较。
             if blocking_reasons:
                 blocked.update({row['id']: blocking_reasons for row in rows if row['baseStatus'] == 'candidate'})
-        else:
-            for group in projected:
-                members = groups[group_key(group)]
-                for phase, value in group['phases'].items():
-                    runs = [row for row in members if at(row, 'run.protocol.phase') == phase]
-                    for title in ('all', 'steady'):
-                        value[title] = dict(cost=median_tree([at(row, title + '.cost') for row in runs]))
-        results.append(dict(id=identifier, kind=kind, scenes=plan, status=status, statusReasons=reasons, groups=projected))
+        if not measurement_reasons:
+            populate_phase_costs(projected, groups)
+        result = dict(id=identifier, kind=kind, scenes=plan, status=status, statusReasons=reasons, groups=projected)
+        result['pain'] = {phase: batch_pain([row for row in rows if at(row, 'run.protocol.phase') == phase], budgets)
+                          for phase in PHASES.get(kind, ())}
+        result['pain']['total'] = batch_pain(rows, budgets)
+        if measurement_reasons:
+            for pain in result['pain'].values():
+                pain['status'] = 'rerun'
+        result['requiredChecks'] = [dict(sessionId=row['id'], **check) for row in rows
+                                    for check in at(row, 'judgement.requiredChecks', []) or []]
+        result['unjudged'] = sorted({item['key'] for row in rows for item in at(row, 'waits.items', []) or [] if item['status'] == 'unjudged'})
+        result['unjudged'] += sorted({kind for row in rows for detector in row.get('unavailableDetectors', []) for kind in detector['types']})
+        results.append(result)
+    assess_aba(results, entries)
     return results, blocked
+
+
+def populate_phase_costs(projected, groups):
+    for group in projected:
+        members = groups[group_key(group)]
+        for phase, value in group['phases'].items():
+            runs = [row for row in members if at(row, 'run.protocol.phase') == phase]
+            for title in ('all', 'steady'):
+                value[title] = dict(cost=median_tree([at(row, title + '.cost') for row in runs]))
+            value['distanceTable'] = distance_table(runs, value)
+
+
+def distance_table(runs, phase):
+    result = []
+    first = runs[0]
+    scene = first['comparisonKey']['scene']
+    selected = at(first, 'run.conditions.tuningSelectedMetrics', []) or []
+    for check in first.get('budgets', []):
+        if check['metric'] == 'measuredViewportGpuMs' and not check['applicable']:
+            continue
+        metric = check['metric']
+        value = at(phase, 'steady.cost.' + metric + '.p95')
+        members = [next((v for v in row.get('budgets', []) if v['metric'] == metric), {}) for row in runs]
+        applicable = all(v.get('applicable') is True and number(v.get('value')) for v in members)
+        upper, stop = check['budget'], check.get('stop')
+        picked = scene + '.' + metric in selected
+        tier = ('rerun' if not applicable or not number(value) else 'above-upper' if value > upper else
+                'above-stop' if picked and stop is not None and value > stop else 'within')
+        result.append(dict(scene=scene, metric=metric, value=value, upper=upper, stop=stop,
+                           ratio=value / upper if number(value) and upper else None, tier=tier, selected=picked,
+                           source=check['budgetSource'], stopSource=check.get('stopSource')))
+    return result
+
+
+def batch_pain(rows, budgets):
+    """路线和旅行的所有原始运行合计；固定机位单列对照。"""
+    playing = [row for row in rows if at(row, 'run.conditions.suite') in ('route', 'travel')]
+    controls = [row for row in rows if at(row, 'run.conditions.suite') == 'fixed']
+    result = dict(counts={}, severityCounts=dict(heavy=0, severe=0), lightFrames=0, steadyDurationMs=0, worstScenes={},
+                  fixedControl=[dict(sessionId=row['id'], pain=at(row, 'judgement.pain')) for row in controls])
+    for row in playing:
+        pain = at(row, 'judgement.pain', {}) or {}
+        result['lightFrames'] += pain.get('lightFrames', 0)
+        result['steadyDurationMs'] += pain.get('steadyDurationMs', 0)
+        for key in result['severityCounts']:
+            result['severityCounts'][key] += pain.get('severityCounts', {}).get(key, 0)
+        for key, count in pain.get('counts', {}).items():
+            result['counts'][key] = result['counts'].get(key, 0) + count
+    for key in result['counts']:
+        scenes = defaultdict(int)
+        for row in playing:
+            scenes[row['comparisonKey']['scene']] += at(row, 'judgement.pain.counts.' + key, 0)
+        result['worstScenes'][key] = max(scenes, key=scenes.get) if scenes else None
+    light_scenes = defaultdict(lambda: [0, 0])
+    for row in playing:
+        scene = light_scenes[row['comparisonKey']['scene']]
+        scene[0] += at(row, 'judgement.pain.lightFrames', 0)
+        scene[1] += at(row, 'judgement.pain.steadyDurationMs', 0)
+    measured_rates = {scene: count * 60000 / duration for scene, (count, duration) in light_scenes.items() if duration}
+    result['worstScenes']['lightCostStutter'] = max(measured_rates, key=measured_rates.get) if measured_rates else None
+    duration = result['steadyDurationMs']
+    result['lightFramesPerMinute'] = result['lightFrames'] * 60000 / duration if duration else None
+    result['lightLimit'] = budgets['perfAnomalies']['lightCostStutterFramesPerMinuteMax']
+    result['zeroTolerance'] = [dict(key=key, count=count, allowed=0) for key, count in result['counts'].items()]
+    complete = bool(playing) and all(at(row, 'judgement.requiredChecks') and all(
+        check['status'] == 'measured' for check in row['judgement']['requiredChecks']) for row in playing)
+    result['status'] = ('rerun' if not complete or not duration else 'pain' if any(result['counts'].values()) or
+                        result['lightFramesPerMinute'] > result['lightLimit'] else 'clear')
+    return result
+
+
+def assess_aba(batches, entries):
+    by_id = {batch['id']: batch for batch in batches}
+    by_session = {row['id']: row for row in entries}
+    for batch in batches:
+        batch['abaAssessment'] = []
+        if batch['kind'] != 'aba':
+            continue
+        for group in batch['groups']:
+            phases = group['phases']
+            if any(not isinstance(stage.get('steady'), dict) for stage in phases.values()):
+                continue
+            session = by_session[phases['a1']['sessionIds'][0]]
+            calibration_id = at(session, 'run.conditions.noiseCalibrationBatchId')
+            calibration = by_id.get(calibration_id, {})
+            reference = next((g for g in calibration.get('groups', []) if g['comparisonKey'] == group['comparisonKey']
+                              and g['calc'] == group['calc'] and g['scope'] == group['scope']), None)
+            reference_sessions = ([by_session[identifier] for p in reference['phases'].values() for identifier in p['sessionIds']]
+                                  if reference else [])
+            unmodified_calibration = bool(reference_sessions) and len({at(row, 'build.commit') for row in reference_sessions}) == 1
+            group['noiseRanges'] = []
+            for distance in phases['b1']['distanceTable']:
+                metric = distance['metric']
+                values = [at(phases[p], 'steady.cost.' + metric + '.p95') for p in ('a1', 'b1', 'a2')]
+                if not all(number(v) for v in values):
+                    continue
+                group['noiseRanges'].append(dict(metric=metric, sigma0=max(values) - min(values)))
+                reference_values = ([at(reference, 'phases.' + p + '.steady.cost.' + metric + '.p95')
+                                     for p in ('a1', 'b1', 'a2')] if reference and calibration.get('kind') == 'aba'
+                                    and all(isinstance(stage.get('steady'), dict) for stage in reference['phases'].values())
+                                    and unmodified_calibration else [])
+                sigma = max(reference_values) - min(reference_values) if reference_values and all(number(v) for v in reference_values) else None
+                spread = abs(values[0] - values[2])
+                improvement = (values[0] + values[2]) / 2 - values[1]
+                ruler = max(spread, sigma) if sigma is not None else None
+                guards = regression_guards(phases, batch['pain'])
+                eligible = batch['status'] == 'candidate'
+                batch['abaAssessment'].append(dict(scene=group['comparisonKey']['scene'], metric=metric,
+                    improvement=improvement, aDifference=spread, sigma0=sigma, noiseCalibrationBatchId=calibration_id,
+                    requiredImprovement=ruler, accepted=improvement > ruler and not guards if ruler is not None and eligible else None,
+                    reasons=guards + ([] if sigma is not None else ['同场景同口径第0轮散布缺测，未判']) +
+                    ([] if eligible else ['必判未核或批次不完整，只提供成本校准事实'])))
+
+
+def regression_guards(phases, pain):
+    reasons = []
+    reference = {row['metric']: row for row in phases['a1'].get('distanceTable', [])}
+    other_a = {row['metric']: row for row in phases['a2'].get('distanceTable', [])}
+    for row in phases['b1'].get('distanceTable', []):
+        before, after = reference.get(row['metric'], {}), other_a.get(row['metric'], {})
+        for line in ('upper', 'stop'):
+            limit = row[line]
+            if line == 'stop' and not row['selected']:
+                continue
+            if number(limit) and all(number(a.get('value')) and a['value'] <= limit for a in (before, after)) and row['value'] > limit:
+                reasons.append(row['metric'] + ' 被推出' + line)
+    b, a1, a2 = (pain.get(phase, {}) for phase in ('b1', 'a1', 'a2'))
+    for key, count in b.get('counts', {}).items():
+        if count > 0 and a1.get('counts', {}).get(key) == 0 and a2.get('counts', {}).get(key) == 0:
+            reasons.append('B新出痛点: ' + key)
+    if (number(b.get('lightFramesPerMinute')) and b['lightFramesPerMinute'] > b['lightLimit'] and
+            all(number(a.get('lightFramesPerMinute')) and a['lightFramesPerMinute'] <= a['lightLimit'] for a in (a1, a2))):
+        reasons.append('B新出轻级痛点')
+    return reasons

@@ -17,12 +17,14 @@ sys.dont_write_bytecode = True
 from perf_model import (CALC, COSTS, PHASES, at, costs, experience, load_session, manifest_path, number,
                         prepare_frames, read_json, rolling_medians, scope_of, target_ms)
 from perf_anomalies import (LEVELS, MAX_PER_TYPE, annotate, anomaly, budget_checks,
-                           deepen, frame_anomalies, merge_anomalies, slow_anomalies, window_analysis)
+                           deepen, frame_anomalies, hang_anomalies, merge_anomalies, session_judgement,
+                           slow_anomalies, window_analysis)
 from perf_store import (AI_BATCHES_KEEP, DIAGNOSTIC_BYTES_KEEP, HISTORY_PER_GROUP,
                         atomic_json, author_root, basic_state, batch_states, comparison_key, discover,
                         exclusive, git, history_update, session_run, session_run_path, prune, rebuild_states)
 from perf_curves import curve_document
 from perf_batches import batch_results, sample_window, sampled_streams
+from perf_waits import wait_observations
 
 ROOT = Path(__file__).resolve().parents[2]
 
@@ -110,6 +112,8 @@ def summary_for(directory, manifest, streams, dictionary, budgets, run):
     scope, reason = scope_of(manifest)
     key, labels, missing = comparison_key(manifest, run)
     window, sampling_reasons = sample_window(manifest, streams, run) if streams is not None else (None, [])
+    whole_streams = streams
+    waits = wait_observations(manifest, streams['events'], run, budgets) if streams is not None else None
     if streams is not None:
         prepare_frames(streams['frames'], streams['samples'], streams['events'], dictionary)
         if window is not None:
@@ -128,6 +132,9 @@ def summary_for(directory, manifest, streams, dictionary, budgets, run):
                          ('machine.driver', 'machine.os', 'build.godot')}, run=run,
                    sampleWindow=window, sampleReasons=sampling_reasons,
                    all=None, steady=None, coverage=None, validity=[], budgets=[], anomalyCounts={}, deepen=[],
+                   waits=waits, judgement=None,
+                   recording={key: manifest.get(key) for key in ('status', 'complete', 'fault', 'endReason', 'streams')},
+                   eventDelivery=event_delivery(whole_streams['events']) if whole_streams is not None else None,
                    units=dict(frame='ms', memory='MiB', fractions='0..1', power='W', frequency='MHz', temperature='degC'))
     if streams is None or sampling_reasons:
         return summary, [], [], []
@@ -143,14 +150,19 @@ def summary_for(directory, manifest, streams, dictionary, budgets, run):
     summary['coverage'] = coverage(streams, dictionary, manifest)
     summary['validity'] = validity(frames, streams, manifest)
     summary['unavailableDetectors'] = [
-        dict(types=['hang', 'mountBudget', 'mountChurn', 'cacheMiss', 'backlogStall', 'loadingDuration', 'physicalStepLimit', 'presentMode'],
-             reason='当前 schema 尚无对应已接通字段或已批准的事件 payload；不猜字段、不输出正常结论')]
+        dict(types=['mountBudget', 'mountChurn', 'cacheMiss', 'backlogStall', 'physicalStepLimit', 'presentMode', 'manualSaveThumbnail'],
+             reason='本批尚未接通对应完整判据或手动缩略帧不在正式样段内，明确未判')]
+    summary['streamFacts'] = {name: dict(events=len(rows), latest=rows[-1]['payload'] if rows else None)
+                              for name in ('stream.tileChanged', 'bake.cache', 'map.arrival')
+                              for rows in [[e for e in whole_streams['events'] if e['event'] == name]]}
     summary['timeline'] = timeline(frames, events)
     windows, window_items = window_analysis(frames, manifest, budgets, scope)
     summary['windows'] = windows
     summary['budgets'] = budget_checks(summary, manifest, budgets)
-    items = (frame_anomalies(frames, manifest, budgets, medians, scope) + window_items
-             + budget_items(summary, frames, budgets) + slow_anomalies(frames, streams, manifest, budgets, scope))
+    items = (frame_anomalies(frames, manifest, budgets, medians, scope, run) + window_items
+             + budget_items(summary, frames, budgets) + slow_anomalies(frames, streams, manifest, budgets, scope)
+             + hang_anomalies(whole_streams['frames'], whole_streams['events']))
+    summary['judgement'] = session_judgement(frames, streams, manifest, budgets, run, items, summary['budgets'])
     if frames and summary['validity']:
         mark = anomaly('dataValidity', 'info', frames[0], None, None, 'game/data/perf-fields.json', state=True)
         mark['candidates'] = [v['field'] + ': ' + v['reason'] for v in summary['validity']]
@@ -169,6 +181,20 @@ def summary_for(directory, manifest, streams, dictionary, budgets, run):
     summary['anomalyCounts'] = dict(Counter(item['type'] for item in merged))
     summary['conclusion'] = ('仅成本口径；体验字段不可用。' if scope == 'cost' else '交互桌面体验与成本口径。') + '候选原因需诊断证据；不由 GPU 占用推出瓶颈。'
     return summary, merged, frames, hardware_clock(streams['hwfast'], manifest)
+
+
+def event_delivery(events):
+    """Project full-session delivery facts before sample clipping, including partial sessions."""
+    # load_session sorts by observation time; loss neighbours must retain the actual writer order.
+    ordered = sorted(events, key=lambda event: event['sequence'])
+    metadata = ('sequence', 'collectionFrame', 'monotonicMs', 'event', 'source')
+    gaps = []
+    for index, event in enumerate(ordered):
+        if event['event'] == 'record.gap':
+            gaps.append(dict(**{key: event.get(key) for key in metadata}, payload=event['payload'],
+                             neighbours=[{key: row.get(key) for key in metadata}
+                                         for row in ordered[max(0, index - 2):index] + ordered[index + 1:index + 3]]))
+    return dict(counts=dict(sorted(Counter(event['event'] for event in events).items())), gaps=gaps)
 
 
 def steady_samples(samples, frames):
@@ -226,6 +252,9 @@ def conflicting_source(out, identifier, directory, sources):
 
 def processed_input(out, directory, stamp, errors, sources):
     """内容错误随输入缓存；冲突每轮重查持有方，IO 失败不算已处理。"""
+    if any(error.get('kind') == 'content' and error.get('source') == str(directory)
+           and (error.get('calc') != CALC or error.get('inputStamp') != stamp) for error in errors):
+        return False
     for error in errors:
         if (error.get('kind') == 'content' and error.get('source') == str(directory)
                 and error.get('calc') == CALC and error.get('inputStamp') == stamp):
@@ -244,6 +273,7 @@ def processed_input(out, directory, stamp, errors, sources):
             return False
         prior = read_json(target / 'summary.json')
         return (prior.get('source') == str(directory) and prior.get('calc') == CALC and
+                'recording' in prior and 'eventDelivery' in prior and
                 prior.get('inputStamp') == stamp and all((target / name).is_file() for name in
                     ('curves.json', 'anomalies.json', 'hardware.json', 'hotframes.csv')))
     except (ValueError, OSError, KeyError, TypeError):
@@ -350,7 +380,7 @@ def analyze_all(root=ROOT, output=None, author=None):
             if summary['source'] in sources:
                 entries.append(summary)
         failed_sources = {error['source'] for error in errors}
-        batches, blocked = batch_results(entries, failed_sources)
+        batches, blocked = batch_results(entries, budgets, failed_sources)
         entries = rebuild_states(entries, root, blocked)
         batches = batch_states(batches, entries, root)
         for entry in entries:
@@ -378,7 +408,8 @@ def analyze_all(root=ROOT, output=None, author=None):
 
 def index_entry(summary):
     return {key: summary.get(key) for key in ('id', 'calc', 'schema', 'source', 'origin', 'endedAt', 'scope',
-            'comparisonKey', 'comparisonLabels', 'status', 'statusReasons', 'build', 'anomalyCounts', 'recordedSeconds')}
+            'comparisonKey', 'comparisonLabels', 'status', 'statusReasons', 'build', 'anomalyCounts', 'recordedSeconds',
+            'judgement', 'waits')}
 
 
 def main():

@@ -16,7 +16,7 @@ def check_derived_curves(root, dictionary, budgets):
     with tempfile.TemporaryDirectory(prefix='uestc-perf-curves-') as temporary:
         out, author = Path(temporary) / 'perf', Path(temporary) / 'author'
         source = author / 'CURVES'
-        gpu = at(budgets, 'deviceTargets.high.developer4kFineGpuP95MsMax') * 2
+        gpu = at(budgets, 'deviceTargets.developer.mainViewportGpuP95MsUpper') * 2
         rows = [frame(dictionary, i, gpu=gpu) for i in range(2)]
         rows[1]['dtMs'] = 30
         rows[1]['phaseValidity'] = 0
@@ -44,67 +44,68 @@ def check_monitor_projection(root, dictionary, budgets):
     from monitor.read import perf as reader
     from monitor.view import perf as view
     import analyze
-    with tempfile.TemporaryDirectory(prefix='uestc-perf-monitor-') as temporary:
-        out, author = Path(temporary) / 'output/perf', Path(temporary) / 'author'
-        source = author / 'MONITOR'
-        write_six(source, manifest(dictionary, 'MONITOR'), streams([frame(dictionary, 0)], dictionary), dictionary)
-        analyzed = analyze_all(root, out, author)
-        assert not analyzed['errors'], analyzed
-        history_path = out / 'history.jsonl'
-        reads = []
-        original_read = Path.read_text
+    with patch.object(reader.U, 'REPO', str(root)):
+        with tempfile.TemporaryDirectory(prefix='uestc-perf-monitor-') as temporary:
+            out, author = Path(temporary) / 'output/perf', Path(temporary) / 'author'
+            source = author / 'MONITOR'
+            write_six(source, manifest(dictionary, 'MONITOR'), streams([frame(dictionary, 0)], dictionary), dictionary)
+            analyzed = analyze_all(root, out, author)
+            assert not analyzed['errors'], analyzed
+            history_path = out / 'history.jsonl'
+            reads = []
+            original_read = Path.read_text
 
-        def read_text(path, *args, **kwargs):
-            if path == history_path:
-                reads.append(path)
-            assert path.suffix != '.csv', '观察台读取了逐帧或硬件流'
-            return original_read(path, *args, **kwargs)
+            def read_text(path, *args, **kwargs):
+                if path == history_path:
+                    reads.append(path)
+                assert path.suffix != '.csv', '观察台读取了逐帧或硬件流'
+                return original_read(path, *args, **kwargs)
 
-        with patch.object(reader, 'OUT', out), patch.object(reader.store, 'author_root', return_value=author), \
-             patch.object(reader.repo, 'mainline_commits', return_value={'commits': []}), \
-             patch.object(Path, 'read_text', read_text), \
-             patch.object(analyze, 'load_session', side_effect=AssertionError('观察台重新解析了原始流')):
-            payload = view.build(None)
-        assert reads == [history_path], '同轮读取了不止一次性能历史'
-        assert payload['details']['MONITOR']['columns'], '观察台未投影现成派生曲线'
-        assert payload['retention']['historyPerGroup']['value'] == 1, '历史组现值错误'
-        good = author / 'GOOD'
-        write_six(good, manifest(dictionary, 'GOOD'), streams([frame(dictionary, 0)], dictionary), dictionary)
-        (source / 'frames.csv').write_text('truncated', encoding='utf-8')
-        with patch.object(reader, 'OUT', out), patch.object(reader.store, 'author_root', return_value=author), \
-             patch.object(reader.repo, 'mainline_commits', return_value={'commits': []}), \
-             patch.object(analyze, 'analyze_all', side_effect=lambda **args: analyze_all(output=out, **args)) as calls:
-            for _ in range(2):
+            with patch.object(reader, 'OUT', out), patch.object(reader.store, 'author_root', return_value=author), \
+                 patch.object(reader.repo, 'mainline_commits', return_value={'commits': []}), \
+                 patch.object(Path, 'read_text', read_text), \
+                 patch.object(analyze, 'load_session', side_effect=AssertionError('观察台重新解析了原始流')):
                 payload = view.build(None)
-                assert [entry['id'] for entry in payload['sessions']] == ['GOOD'], '坏会话拖垮好会话或旧历史伪装当前数据'
-                assert payload['sessionErrors'][0]['source'] == str(source.resolve()) and payload['sessionErrors'][0]['reason']
-                assert payload['sessionErrors'][0]['kindLabel'] == '内容错误', '坏会话缺少后端中文种类'
-                assert payload['latest']['play'] == 'GOOD' and payload['details']['GOOD']['columns']
-            assert calls.call_count == 1, '连续采集为同一坏会话空转分析器'
-        (source / 'manifest.json').write_text('{broken manifest', encoding='utf-8')
-        with patch.object(reader, 'OUT', out), patch.object(reader.store, 'author_root', return_value=author), \
-             patch.object(reader.repo, 'mainline_commits', return_value={'commits': []}), \
-             patch.object(analyze, 'analyze_all', side_effect=lambda **args: analyze_all(output=out, **args)):
-            payload = view.build(None)
-        assert payload['latest']['play'] == 'GOOD' and len(payload['sessionErrors']) == 1, '坏作者清单拖垮整页或重复报错'
-        assert (out / 'derived/MONITOR/summary.json').is_file(), '夹具没有留下坏来源的旧派生'
-        import perf
-        for arguments, expected in ((['show', 'MONITOR'], 1), (['compare', 'GOOD', 'MONITOR'], 1),
-                                    (['compare', 'MONITOR', 'GOOD'], 1), (['slice', 'MONITOR'], 1),
-                                    (['anomalies', 'MONITOR'], 1), (['show', 'GOOD'], 0),
-                                    (['compare', 'GOOD', 'GOOD'], 0), (['slice', 'GOOD'], 0),
-                                    (['anomalies', 'GOOD'], 0), (['latest'], 0)):
-            stdout, stderr = io.StringIO(), io.StringIO()
-            with patch.object(sys, 'argv', ['perf.py', '--root', temporary, *arguments]), \
-                 redirect_stdout(stdout), redirect_stderr(stderr):
-                status = perf.main()
-            assert status == expected, (arguments, status, stdout.getvalue(), stderr.getvalue())
-            if expected:
-                assert str(source.resolve()) in stderr.getvalue(), 'CLI 未指明失败来源'
-            elif arguments == ['latest']:
-                error = payload['sessionErrors'][0]
-                assert '会话 GOOD |' in stdout.getvalue() and '会话 MONITOR |' not in stdout.getvalue()
-                assert all(error[key] in stdout.getvalue() for key in ('source', 'kind', 'reason')), 'latest 未列全来源错误'
+            assert reads == [history_path], '同轮读取了不止一次性能历史'
+            assert payload['details']['MONITOR']['columns'], '观察台未投影现成派生曲线'
+            assert payload['retention']['historyPerGroup']['value'] == 1, '历史组现值错误'
+            good = author / 'GOOD'
+            write_six(good, manifest(dictionary, 'GOOD'), streams([frame(dictionary, 0)], dictionary), dictionary)
+            (source / 'frames.csv').write_text('truncated', encoding='utf-8')
+            with patch.object(reader, 'OUT', out), patch.object(reader.store, 'author_root', return_value=author), \
+                 patch.object(reader.repo, 'mainline_commits', return_value={'commits': []}), \
+                 patch.object(analyze, 'analyze_all', side_effect=lambda **args: analyze_all(output=out, **args)) as calls:
+                for _ in range(2):
+                    payload = view.build(None)
+                    assert [entry['id'] for entry in payload['sessions']] == ['GOOD'], '坏会话拖垮好会话或旧历史伪装当前数据'
+                    assert payload['sessionErrors'][0]['source'] == str(source.resolve()) and payload['sessionErrors'][0]['reason']
+                    assert payload['sessionErrors'][0]['kindLabel'] == '内容错误', '坏会话缺少后端中文种类'
+                    assert payload['latest']['play'] == 'GOOD' and payload['details']['GOOD']['columns']
+                assert calls.call_count == 1, '连续采集为同一坏会话空转分析器'
+            (source / 'manifest.json').write_text('{broken manifest', encoding='utf-8')
+            with patch.object(reader, 'OUT', out), patch.object(reader.store, 'author_root', return_value=author), \
+                 patch.object(reader.repo, 'mainline_commits', return_value={'commits': []}), \
+                 patch.object(analyze, 'analyze_all', side_effect=lambda **args: analyze_all(output=out, **args)):
+                payload = view.build(None)
+            assert payload['latest']['play'] == 'GOOD' and len(payload['sessionErrors']) == 1, '坏作者清单拖垮整页或重复报错'
+            assert (out / 'derived/MONITOR/summary.json').is_file(), '夹具没有留下坏来源的旧派生'
+            import perf
+            for arguments, expected in ((['show', 'MONITOR'], 1), (['compare', 'GOOD', 'MONITOR'], 1),
+                                        (['compare', 'MONITOR', 'GOOD'], 1), (['slice', 'MONITOR'], 1),
+                                        (['anomalies', 'MONITOR'], 1), (['show', 'GOOD'], 0),
+                                        (['compare', 'GOOD', 'GOOD'], 0), (['slice', 'GOOD'], 0),
+                                        (['anomalies', 'GOOD'], 0), (['latest'], 0)):
+                stdout, stderr = io.StringIO(), io.StringIO()
+                with patch.object(sys, 'argv', ['perf.py', '--root', temporary, *arguments]), \
+                     redirect_stdout(stdout), redirect_stderr(stderr):
+                    status = perf.main()
+                assert status == expected, (arguments, status, stdout.getvalue(), stderr.getvalue())
+                if expected:
+                    assert str(source.resolve()) in stderr.getvalue(), 'CLI 未指明失败来源'
+                elif arguments == ['latest']:
+                    error = payload['sessionErrors'][0]
+                    assert '会话 GOOD |' in stdout.getvalue() and '会话 MONITOR |' not in stdout.getvalue()
+                    assert all(error[key] in stdout.getvalue() for key in ('source', 'kind', 'reason')), 'latest 未列全来源错误'
 
 
 def check_missing_projection(root, dictionary, budgets):

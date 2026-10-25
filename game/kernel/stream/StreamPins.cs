@@ -27,30 +27,44 @@ internal sealed class StreamPins(StreamDirector host)
     internal IReadOnlyList<MapStreamDestination> PinnedDestinations => _pinnedDestinations;
     internal IReadOnlySet<StreamTile> Required => _required;
 
-    internal void SetPinnedDestinations(IReadOnlyList<MapStreamDestination> destinations)
+    internal IDisposable PinDestination(MapStreamDestination destination)
     {
-        ArgumentNullException.ThrowIfNull(destinations);
-        if (_host.Context is null && destinations.Count > 0)
-            throw new InvalidOperationException("Pinned destinations require the mounted map.");
-        var replacement = destinations.Distinct().ToArray();
-        var targets = new List<PinnedTarget>(replacement.Length);
-        foreach (var destination in replacement)
+        ArgumentNullException.ThrowIfNull(destination);
+        var context = _host.Context ?? throw new InvalidOperationException("Pinned destinations require the mounted map.");
+        var target = _pinnedTargets.FirstOrDefault(target => target.Destination == destination && Current(target));
+        if (target is null)
         {
-            var existing = _pinnedTargets.FirstOrDefault(target => target.Destination == destination && Current(target));
-            if (existing is not null) targets.Add(existing);
-            else
-            {
-                var cancellation = new CancellationTokenSource();
-                targets.Add(new(destination, _host.MapGeneration, _host.Context!, cancellation,
-                    PreparePinnedTerrain(_host.Terrain, _host.Context!, destination, cancellation.Token)));
-            }
+            var cancellation = new CancellationTokenSource();
+            target = new(destination, _host.MapGeneration, context, cancellation,
+                PreparePinnedTerrain(_host.Terrain, context, destination, cancellation.Token));
+            _pinnedTargets = [.. _pinnedTargets, target];
+            RefreshDestinations();
         }
-        foreach (var target in _pinnedTargets)
-            if (!targets.Contains(target)) Retire(target);
-        _pinnedTargets = targets.ToArray();
-        _pinnedDestinations = Array.AsReadOnly(replacement);
+        target.Requests++;
+        return new PinLease(this, target);
+    }
+
+    private void Release(PinnedTarget target)
+    {
+        if (!Current(target) || target.Requests == 0) return;
+        if (--target.Requests > 0) return;
+        _pinnedTargets = _pinnedTargets.Where(active => !ReferenceEquals(active, target)).ToArray();
+        Retire(target);
+        RefreshDestinations();
+    }
+
+    private void RefreshDestinations()
+    {
+        _pinnedDestinations = Array.AsReadOnly(_pinnedTargets.Select(target => target.Destination).ToArray());
         _required.Clear();
         _host.Selection.RequestReplan();
+    }
+
+    internal void StopNewWork()
+    {
+        foreach (var target in _pinnedTargets) { target.Requests = 0; Retire(target); }
+        _pinnedTargets = [];
+        RefreshDestinations();
     }
 
     private bool Current(PinnedTarget target) => target.Generation == _host.MapGeneration &&
@@ -162,8 +176,7 @@ internal sealed class StreamPins(StreamDirector host)
 
     internal async Task DrainAsync()
     {
-        foreach (var target in _pinnedTargets) Retire(target);
-        _pinnedTargets = []; _pinnedDestinations = Array.Empty<MapStreamDestination>(); _required.Clear();
+        StopNewWork();
         foreach (var target in _retired)
         {
             try { await target.Preparation; }
@@ -172,6 +185,17 @@ internal sealed class StreamPins(StreamDirector host)
             target.Cancellation.Dispose();
         }
         _retired.Clear();
+    }
+
+    private sealed class PinLease(StreamPins owner, PinnedTarget target) : IDisposable
+    {
+        private bool _released;
+        public void Dispose()
+        {
+            if (_released) return;
+            _released = true;
+            owner.Release(target);
+        }
     }
 
     private sealed class PinnedTarget(MapStreamDestination destination, long generation, IMapContext context,
@@ -188,6 +212,7 @@ internal sealed class StreamPins(StreamDirector host)
         public HashSet<BakeKey> Participants { get; } = [];
         public HashSet<BakeKey> Interiors { get; } = [];
         public NavSpace? Space;
+        public int Requests;
         public bool Completed, Classified, Selected;
         public Exception? Failure;
     }

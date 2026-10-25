@@ -46,6 +46,33 @@ def check_sampling_batches(root, dictionary, budgets):
                                          payload=dict(id='sample', phase=phase)))
         bad = summary_for(Path('fixture'), meta, broken, dictionary, budgets, run_value)[0]
         assert bad['baseStatus'] == 'partial' and bad['sampleReasons'] and bad['all'] is None, phases
+        from perf import overview
+        conclusion = list(overview(bad))[-1]
+        assert '未完成' in conclusion and 'schema 不支持' not in conclusion and bad['sampleReasons'][0] in conclusion, conclusion
+
+    delivery_data = copy.deepcopy(data)
+    # This source order differs from observation-time order, as it does after load_session.
+    delivery_data['events'] = [dict(event='stream.tileChanged', sequence=1, collectionFrame=4,
+                                    monotonicMs=30, source='main', payload={}),
+                               dict(event='record.gap', sequence=5, collectionFrame=4, monotonicMs=20,
+                                    source='writer', payload=dict(stream='events', rows=3, firstSequence=2,
+                                    lastSequence=4, firstCollectionFrame=4, lastCollectionFrame=4, fromMs=10, toMs=20)),
+                               dict(event='session.end', sequence=6, collectionFrame=None, monotonicMs=40,
+                                    source='writer', payload={})]
+    delivery_data['events'].sort(key=lambda event: event['monotonicMs'])
+    delivery_meta = copy.deepcopy(meta)
+    delivery_meta['complete'] = False
+    next(row for row in delivery_meta['streams'] if row['file'] == 'events.jsonl')['droppedRows'] = 3
+    failed_run = {**run_value, 'status': 'partial', 'reasons': ['events dropped rows']}
+    partial = summary_for(Path('fixture'), delivery_meta, delivery_data, dictionary, budgets, failed_run)[0]
+    assert partial['sampleReasons'] and partial['all'] is None
+    assert partial['recording']['complete'] is False and partial['eventDelivery']['counts']['stream.tileChanged'] == 1
+    gap = partial['eventDelivery']['gaps'][0]
+    assert gap['payload']['rows'] == 3 and [row['sequence'] for row in gap['neighbours']] == [1, 6]
+    projection = '\n'.join(overview(partial))
+    assert '采集运行状态：partial' in projection and 'events dropped rows' in projection
+    assert 'events.jsonl | recorded | 缺值 | 3' in projection and 'stream.tileChanged=1' in projection
+    assert '缺口源区间' in projection and '1 | 4 | 30 | stream.tileChanged | main' in projection
 
     with tempfile.TemporaryDirectory(prefix='uestc-perf-batch-') as temporary:
         out, author = Path(temporary) / 'perf', Path(temporary) / 'author'
@@ -108,7 +135,7 @@ def check_sampling_batches(root, dictionary, budgets):
             else:
                 changed[0].update(baseStatus='evidence')
                 changed[0]['run']['purpose'] = 'functional'
-            invalid, _ = batch_results(changed)
+            invalid, _ = batch_results(changed, budgets)
             assert invalid[0]['status'] == 'partial' and all('all' not in phase for group in invalid[0]['groups']
                                                            for phase in group['phases'].values()), mutate
             assert not trend_groups(invalid, [{'summary': row} for row in changed], commits), '无效或功能批次进入趋势: ' + mutate

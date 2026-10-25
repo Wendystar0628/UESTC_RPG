@@ -135,10 +135,10 @@ public sealed class FlightTests
         input.Release("move_forward");
         AssertThat(!input.Sprint).OverrideFailureMessage("Forward release did not end sprint.").IsTrue();
         input.Press("move_up"); input.Advance(.25f); input.Release("move_up");
-        AssertThat(!input.Press("move_up")).OverrideFailureMessage("Long ascent press accidentally switched mode.").IsTrue();
+        AssertThat(!input.Press("move_up").DoubleSpace).OverrideFailureMessage("Long ascent press accidentally switched mode.").IsTrue();
         input.Clear();
         input.Press("move_up"); input.Advance(.1f); input.Release("move_up");
-        AssertThat(input.Press("move_up")).OverrideFailureMessage("Short double-space did not switch mode.").IsTrue();
+        AssertThat(input.Press("move_up").DoubleSpace).OverrideFailureMessage("Short double-space did not switch mode.").IsTrue();
     }
 
     [TestCase]

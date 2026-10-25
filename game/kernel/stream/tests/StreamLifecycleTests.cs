@@ -33,14 +33,24 @@ public sealed class StreamLifecycleTests
         fixture.Tick();
         Check(!fixture.Director.DestinationReady && !fixture.Director.ViewReady && terrain.Work.Count > 0);
         var destination = fixture.Director.Destination;
-        var pins = new[] { new MapStreamDestination(target, ViewMode.Walk), new MapStreamDestination(target, ViewMode.Fly) };
-        fixture.Director.SetPinnedDestinations(pins); pins[0] = pins[1];
+        using var walking = fixture.Director.PinDestination(new(target, ViewMode.Walk));
+        using var flying = fixture.Director.PinDestination(new(target, ViewMode.Fly));
         Check(fixture.Director.PinnedDestinations[0].Mode == ViewMode.Walk && ReferenceEquals(destination, fixture.Director.Destination));
-        fixture.Director.SetPinnedDestinations([]);
-        Check(fixture.Director.PinnedDestinations.Count == 0 && ReferenceEquals(destination, fixture.Director.Destination));
+        walking.Dispose();
+        Check(fixture.Director.PinnedDestinations.Single().Mode == ViewMode.Fly && ReferenceEquals(destination, fixture.Director.Destination));
         var drain = fixture.Unload();
         foreach (var work in terrain.Work) work.SetResult();
         await drain;
+        Check(fixture.Director.PinnedDestinations.Count == 0);
+        terrain.Prepared = true; ((FakeWorld)fixture.Context.World).Spatial = new FlatSpatial();
+        fixture.Director.OnMapLoaded(fixture.Context);
+        using var nextGeneration = fixture.Director.PinDestination(new(target, ViewMode.Fly));
+        flying.Dispose();
+        Check(fixture.Director.PinnedDestinations.Single() == new MapStreamDestination(target, ViewMode.Fly));
+        await fixture.Until(() => fixture.Director.PinnedDestinationReady(new(target, ViewMode.Fly)));
+        nextGeneration.Dispose();
+        Check(fixture.Director.PinnedDestinations.Count == 0);
+        await fixture.Unload();
     }
     [TestCase, TestCategory(TestReason.Regression), TestCategory("NativeRender"), RequireGodotRuntime]
     public async Task CurrentViewAndArrivalRequireFineGeometryToReplaceItsCoarseAncestor()
@@ -93,14 +103,15 @@ public sealed class StreamLifecycleTests
     {
         using var fixture = new StreamFixture(geometry: true, elevated: true, staticTitle: true);
         var target = new MapStreamDestination(fixture.Camera.Pose with { Position = new(100, 2, 100) }, ViewMode.Fly);
-        fixture.Director.SetPinnedDestinations([target]);
+        using var first = fixture.Director.PinDestination(target);
         Check(!fixture.Director.PinnedDestinationReady(target) && fixture.Director.Destination is null);
         await fixture.Until(() => fixture.Director.PinnedDestinationReady(target));
         var eye = fixture.Camera.Pose;
         var owners = fixture.Geometry.Prepared.ToArray();
         Check(owners.Length > 1 && fixture.Director.Destination is null && fixture.Camera.Pose == eye);
         Check(owners.Where(owner => BakeRequestKeys.Parse(owner.Key).Level != LodLevel.L4).All(owner => owner.VisibleInstanceCount == 0));
-        fixture.Director.SetPinnedDestinations([target]);
+        using var shared = fixture.Director.PinDestination(target);
+        first.Dispose(); first.Dispose();
         Check(fixture.Director.PinnedDestinationReady(target));
         fixture.Camera.SetPose(target.Pose);
         fixture.Director.Prefetch(target.Pose, target.Mode, target.Space, target.CollisionFeet);
@@ -109,7 +120,7 @@ public sealed class StreamLifecycleTests
         fixture.Director.ClearDestination(); fixture.Tick();
         Check(fixture.Director.Destination is null && fixture.Director.PinnedDestinationReady(target) && !fixture.Director.ViewReady);
         Check(owners.Where(owner => BakeRequestKeys.Parse(owner.Key).Level != LodLevel.L4).All(owner => owner.VisibleInstanceCount == 0));
-        fixture.Director.SetPinnedDestinations([]);
+        shared.Dispose();
         Check(!fixture.Director.PinnedDestinationReady(target));
         await fixture.Unload();
         Check(!fixture.Director.PinnedDestinationReady(target));
@@ -123,7 +134,7 @@ public sealed class StreamLifecycleTests
         fixture.CollisionParticipant.ResourcesUploaded = false;
         var feet = new N.Vector3(20, 0, 20);
         var target = new MapStreamDestination(fixture.Camera.Pose, ViewMode.Walk, CollisionFeet: feet);
-        fixture.Director.SetPinnedDestinations([target]);
+        using var pin = fixture.Director.PinDestination(target);
         await fixture.Until(() => fixture.CollisionParticipant.Mounted.Count > 0);
         Check(!fixture.Director.PinnedDestinationReady(target));
         fixture.CollisionParticipant.ResourcesUploaded = true;
@@ -138,7 +149,7 @@ public sealed class StreamLifecycleTests
         await fixture.Until(() => fixture.Director.DestinationReady && fixture.Director.PinnedDestinationReady(target));
         Check(fixture.Director.ViewReady && fixture.Director.DestinationReady && fixture.Director.PinnedDestinationReady(target));
         fixture.Director.ClearDestination();
-        fixture.Director.SetPinnedDestinations([]);
+        pin.Dispose();
         Check(!fixture.Director.PinnedDestinationReady(target));
         fixture.Tick();
         Check(fixture.CollisionParticipant.Mounted.Count == 0);
@@ -168,7 +179,7 @@ public sealed class StreamLifecycleTests
         fixture.Terrain.Prepared = false;
         ((FakeWorld)fixture.Context.World).Spatial = new FlatSpatial(forbidden: "Terrain has not been prepared.");
         fixture.Director.Prefetch(fixture.Camera.Pose, ViewMode.Fly);
-        fixture.Director.SetPinnedDestinations([new(fixture.Camera.Pose, ViewMode.Fly)]);
+        using var pin = fixture.Director.PinDestination(new(fixture.Camera.Pose, ViewMode.Fly));
         fixture.Tick();
         var draining = fixture.Unload();
         Check(fixture.Terrain.Work.Count == 2 && !draining.IsCompleted && !fixture.Director.IsUnloaded && fixture.Terrain.Tokens.All(token => token.IsCancellationRequested));

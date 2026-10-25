@@ -1,3 +1,6 @@
+using System.Text.Json;
+using System.Text.Json.Nodes;
+using Campus.Kernel.Inspect;
 using Campus.Contracts;
 using Campus.Contracts.Bake;
 using Campus.Kernel.Bake;
@@ -14,6 +17,62 @@ public sealed class StreamStatisticsTests
     [After]
     public void ReleaseDroppedNatives() => DroppedNatives.Release();
 
+    [TestCase, TestCategory(TestReason.Regression), TestCategory("NativeRender"), RequireGodotRuntime]
+    public async Task OneRealMapRetirementBurstKeepsEveryEventThroughBeginAndStop()
+    {
+        var probe = new PerfValueChannel("probe", "samples");
+        var row = new PerfCapturedRow("samples", null, 0, new Dictionary<string, object?>());
+        var slots = 0;
+        while (probe.TryRow(row)) { slots++; probe.Flush(); }
+        var modules = Enumerable.Range(0, slots + 1).ToDictionary(index => "fixture.geometry-" + index,
+            _ => (IReadOnlyList<TileKey>)[new(0, 0)]);
+        using var fixture = new StreamLifecycleTestSupport.StreamFixture(geometry: true,
+            catalog: Task.FromResult(new Campus.Contracts.Bake.PreparedBakeTiles(modules, [])));
+        await fixture.Until(() => fixture.Director.ViewReady && fixture.Director.Statistics.PendingBakes == 0 &&
+            fixture.Director.Statistics.PendingPreparations == 0 && fixture.Director.Statistics.PendingMounts == 0);
+        string root = PerformanceRecordingContractTests.TemporaryDirectory();
+        var session = new PerfRecordingSession(root, Campus.Contracts.Perf.PerfOrigin.Ai,
+            DateTimeOffset.UnixEpoch, new PerfFieldDictionary(File.ReadAllText(RepositoryFixture.FilePath("game", "data", "perf-fields.json"))), new JsonObject());
+        var captured = new List<PerfCapturedEvent>();
+        try
+        {
+            if (!await session.Ready) throw new InvalidOperationException("The retirement writer did not open.");
+            fixture.Director.TileChanged += change =>
+            {
+                var value = new PerfCapturedEvent("stream.tileChanged", Godot.Engine.GetProcessFrames(), change.MonotonicMilliseconds, change);
+                captured.Add(value);
+                if (!session.TryEvent(value)) throw new InvalidOperationException("A same-frame retirement was rejected.");
+            };
+            await fixture.Unload();
+            if (captured.Count <= slots || captured.Select(value => value.Frame).Distinct().Count() != 1)
+                throw new InvalidOperationException("The fixture did not retire more events than the old single-row queue in one frame.");
+            session.Begin(new(0, 0, 0));
+            if (!await session.StartedWriting) throw new InvalidOperationException("The retirement writer did not start.");
+            var tail = new PerfCapturedEvent("retirement.tail", captured[^1].Frame, captured[^1].Time + 1, new { });
+            captured.Add(tail);
+            if (!session.TryEvent(tail)) throw new InvalidOperationException("The final unsealed publication was rejected.");
+            session.Stop(Campus.Contracts.Perf.PerfEndReason.Exit, tail.Time);
+            var ended = await session.Completion;
+            var directory = Path.Combine(root, ended.SessionId);
+            var manifest = JsonNode.Parse(File.ReadAllText(Path.Combine(directory, "manifest.json")))!;
+            var stream = manifest["streams"]!.AsArray().Single(value => value!["file"]!.GetValue<string>() == "events.jsonl")!;
+            var written = File.ReadLines(Path.Combine(directory, "events.jsonl")).Select(line => JsonNode.Parse(line)!).ToArray();
+            var actual = written.Where(value => value["source"]!.GetValue<string>() == "main").ToArray();
+            if (!ended.Closed || !ended.Complete || !manifest["complete"]!.GetValue<bool>() ||
+                stream["droppedRows"]!.GetValue<long>() != 0 || actual.Length != captured.Count ||
+                written.Any(value => value["event"]!.GetValue<string>() == "record.gap"))
+                throw new InvalidOperationException("A real retirement burst lost rows or advertised an incomplete drain.");
+            for (var index = 0; index < captured.Count; index++)
+                if (actual[index]["sequence"]!.GetValue<long>() != index + 3 ||
+                    actual[index]["collectionFrame"]!.GetValue<ulong>() != captured[index].Frame ||
+                    actual[index]["monotonicMs"]!.GetValue<double>() != captured[index].Time ||
+                    !JsonNode.DeepEquals(actual[index]["payload"], JsonSerializer.SerializeToNode(captured[index].Payload, PerfFieldDictionary.JsonOptions)))
+                    throw new InvalidOperationException("Event publication changed source order, frame, time or payload.");
+        }
+        finally { session.Stop(Campus.Contracts.Perf.PerfEndReason.Exit, 0); await session.Completion; Directory.Delete(root, true); }
+    }
+
+
     [TestCase, TestCategory(TestReason.Contract), RequireGodotRuntime]
     public async Task UnloadRetainsCatalogBacklogUntilItsActualTaskDrains()
     {
@@ -25,7 +84,7 @@ public sealed class StreamStatisticsTests
         var during = fixture.Director.Statistics;
         Check(!draining.IsCompleted && during.Revision > before.Revision &&
             during.PendingBakes > 0 && during.PendingRetirements > 0);
-        Check(during.MountedBytes == 0 && during.MountedTilesDelta == 0 &&
+        Check(during.MountedBytes == 0 && during.MountedTiles == 0 && during.MountedTilesDelta == 0 &&
             during.MountMilliseconds == 0 && during.WatchdogTrips == 0);
         catalog.SetResult(new(new Dictionary<string, IReadOnlyList<TileKey>>(), []));
         await draining;
@@ -69,6 +128,7 @@ public sealed class StreamStatisticsTests
             var frame = changes.Skip(cursor).ToArray(); cursor = changes.Count;
             Check(sample.MountedBytes == frame.Where(change => change.Change == StreamTileChangeKind.Mounted)
                 .Sum(change => change.Bytes ?? 0));
+            Check(sample.MountedTiles == frame.Count(change => change.Change == StreamTileChangeKind.Mounted));
             Check(sample.MountedTilesDelta == frame.Sum(change => change.Change switch
             {
                 StreamTileChangeKind.Mounted => 1,
@@ -86,7 +146,7 @@ public sealed class StreamStatisticsTests
             mounted.Where(change => change.Kind == StreamMountKind.Collision).All(change => change.Bytes is null));
         fixture.Tick();
         Check(changes.Count == cursor && fixture.Director.Statistics.MountedBytes == 0 &&
-            fixture.Director.Statistics.MountedTilesDelta == 0);
+            fixture.Director.Statistics.MountedTiles == 0 && fixture.Director.Statistics.MountedTilesDelta == 0);
         var revision = fixture.Mount.Revision;
         await fixture.Unload();
         var unmounted = changes.Where(change => change.Change == StreamTileChangeKind.Unmounted).ToArray();
@@ -165,5 +225,5 @@ public sealed class StreamStatisticsTests
     private static void RequireEmpty(StreamStatistics sample) => Check(sample.PendingRequests == 0 &&
         sample.PendingBakes == 0 && sample.PendingPreparations == 0 && sample.PendingMounts == 0 &&
         sample.PendingRetirements == 0 && sample.MountMilliseconds == 0 && sample.WatchdogTrips == 0 &&
-        sample.MountedBytes == 0 && sample.MountedTilesDelta == 0);
+        sample.MountedBytes == 0 && sample.MountedTiles == 0 && sample.MountedTilesDelta == 0);
 }

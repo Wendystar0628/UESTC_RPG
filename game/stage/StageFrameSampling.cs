@@ -2,6 +2,7 @@ using Campus.Contracts;
 using Campus.Contracts.AppFlow;
 using Campus.Kernel.Frame;
 using Godot;
+using KernelServices = Campus.Kernel.Registry.Kernel;
 
 namespace Campus.Stage;
 
@@ -15,6 +16,7 @@ internal sealed class StageFrameSampling : IDisposable
     private readonly IObserverState _observer;
     private readonly ICameraRig _camera;
     private readonly IInputRouter _input;
+    private readonly IStreamStatistics _stream;
     private bool _disposed;
 
     internal StageFrameSampling(FrameStatistics statistics, SceneTree tree, FrameClockNode clock,
@@ -22,6 +24,7 @@ internal sealed class StageFrameSampling : IDisposable
     {
         _statistics = statistics; _tree = tree; _clock = clock;
         _flow = flow; _observer = observer; _camera = camera; _input = input;
+        _stream = KernelServices.Get<IStreamStatistics>();
         tree.PhysicsFrame += Physics;
         clock.ProcessStarted += statistics.Begin;
         RenderingServer.FramePreDraw += PreDraw;
@@ -35,7 +38,7 @@ internal sealed class StageFrameSampling : IDisposable
         var now = FrameClock.MonotonicMilliseconds;
         var context = new FrameContextSample(_flow.State, _flow.Activity,
             _input.DesktopState.WindowFocused, DisplayServer.WindowCanDraw(), _tree.Paused);
-        _statistics.Sample(frame, now, in context, _observer.YawDeg, _camera.Pose.PitchDeg);
+        _statistics.Sample(frame, now, in context, _observer.YawDeg, _camera.Pose.PitchDeg, _stream.Statistics);
     }
 
     private void Physics() => _statistics.Physics(Engine.GetProcessFrames(), FrameClock.MonotonicMilliseconds);

@@ -66,24 +66,37 @@ public sealed class PerfEventContractTests
             throw new InvalidOperationException("Draw recovery exceeded its dictionary rule.");
     }
 
-    [TestCase, TestCategory(TestReason.Contract)]
+    [TestCase, TestCategory(TestReason.Regression)]
     public void ProducerQueueKeepsAcceptedValuesAndTailLossUntilDrained()
     {
         var channel = new PerfValueChannel("main", "samples");
         var row = new PerfCapturedRow("samples", 3, 100, new Dictionary<string, object?> { ["xM"] = null });
         long accepted = 0;
-        while (channel.TryRow(row)) accepted++;
+        while (channel.TryRow(row)) { accepted++; channel.Flush(); }
+        if (accepted == 0 || channel.Dropped != 1 || !channel.TryRead(out var first) || first!.Sequence != 1)
+            throw new InvalidOperationException("The unread publication queue did not fill.");
+        const int recoveredRows = 3;
+        for (var index = 0; index < recoveredRows; index++)
+            if (!channel.TryRow(row)) throw new InvalidOperationException("The released slot did not accept the next publication.");
+        channel.Flush();
+        if (channel.TryRow(row)) throw new InvalidOperationException("The full publication queue accepted another publication.");
         channel.Stop();
-        long read = 0;
+        long read = 1;
+        PerfGap recovered = default;
         while (channel.TryRead(out var message))
         {
             read++;
-            if (message!.Row != row || message.Sequence != read)
+            if (message!.Gap.Rows != 0) recovered = message.Gap;
+            if (message.Row != row || message.Sequence != read + (read > accepted ? 1 : 0))
                 throw new InvalidOperationException("The producer queue changed an accepted value or its order.");
         }
-        if (read != accepted || !channel.Complete || channel.TailGap.Rows != channel.Dropped || channel.Dropped == 0)
+        if (read != accepted + recoveredRows || !channel.Complete || recovered.Rows != 1 ||
+            recovered.FirstSequence != accepted + 1 || recovered.LastSequence != accepted + 1 ||
+            channel.Dropped != recovered.Rows + channel.TailGap.Rows || channel.TailGap.Rows != 1 ||
+            channel.TailGap.LastSequence != accepted + recoveredRows + channel.Dropped)
             throw new InvalidOperationException("Producer drain lost an accepted value or the final gap.");
     }
+
 
     [TestCase, TestCategory(TestReason.Contract)]
     public void SameOperationNumbersRemainSeparateAcrossOwnersAndNoChangeApplyCloses()

@@ -2,6 +2,7 @@ using Campus.Contracts;
 using Campus.Contracts.AppFlow;
 using Campus.Gates;
 using Campus.Kernel.Frame;
+using Campus.Kernel.Inspect;
 using Campus.Kernel.Registry;
 using Godot;
 using KernelServices = Campus.Kernel.Registry.Kernel;
@@ -35,20 +36,29 @@ internal sealed class StageStartupTrace
     internal static void TraceTitleInputReady(IAppBootFlow boot)
     {
         TraceEnvironment();
-        GD.Print(FormattableString.Invariant($"STARTUP_PHASE title-input-ready {FrameClock.MonotonicMilliseconds:R} frame={Engine.GetProcessFrames()}{StartupReadiness(boot)}"));
+        var time = FrameClock.MonotonicMilliseconds;
+        var frame = Engine.GetProcessFrames();
+        GD.Print(FormattableString.Invariant($"STARTUP_PHASE title-input-ready {time:R} frame={frame}{StartupReadiness(boot)}"));
+        KernelServices.Get<PerformanceRecordingService>().AppPhase("title-input-ready", frame, time);
     }
 
     internal static void TraceInputReady()
     {
         TraceEnvironment();
-        GD.Print(FormattableString.Invariant($"STARTUP_PHASE input-ready {FrameClock.MonotonicMilliseconds:R} frame={Engine.GetProcessFrames()} mode={KernelServices.Get<ICameraRig>().Mode}"));
+        var time = FrameClock.MonotonicMilliseconds;
+        var frame = Engine.GetProcessFrames();
+        GD.Print(FormattableString.Invariant($"STARTUP_PHASE input-ready {time:R} frame={frame} mode={KernelServices.Get<ICameraRig>().Mode}"));
+        KernelServices.Get<PerformanceRecordingService>().AppPhase("input-ready", frame, time);
     }
 
     internal void TracePreloadReady(IAppBootFlow boot)
     {
         if (_preloadReadyTraced || !boot.NewGamePreloadReady) return;
         _preloadReadyTraced = true;
-        GD.Print(FormattableString.Invariant($"STARTUP_PHASE preload-ready {FrameClock.MonotonicMilliseconds:R} frame={Engine.GetProcessFrames()}{StartupReadiness(boot)}"));
+        var time = FrameClock.MonotonicMilliseconds;
+        var frame = Engine.GetProcessFrames();
+        GD.Print(FormattableString.Invariant($"STARTUP_PHASE preload-ready {time:R} frame={frame}{StartupReadiness(boot)}"));
+        KernelServices.Get<PerformanceRecordingService>().AppPhase("preload-ready", frame, time);
     }
     private static string StartupReadiness(IAppBootFlow boot) =>
         $" mapReady={boot.MapReady.IsCompletedSuccessfully} preloadReady={boot.NewGamePreloadReady}";

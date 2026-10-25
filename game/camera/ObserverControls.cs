@@ -186,7 +186,7 @@ internal sealed class ObserverControls(ObserverCamera camera, FlightTuning tunin
             bool echo = input.IsEcho();
             if (Dispatch(new(action, pressed, echo))) return true;
             if (Locked || !pressed || echo) continue;
-            bool doubleSpace = State.Press(action);
+            var (consumed, doubleSpace) = State.Press(action);
             if (action == "toggle_mode" || doubleSpace && camera.CanDoubleSpace())
             {
                 camera.RequestMode(camera.Mode switch
@@ -197,8 +197,8 @@ internal sealed class ObserverControls(ObserverCamera camera, FlightTuning tunin
                 }, doubleSpace ? ModeSwitchVia.DoubleSpace : ModeSwitchVia.Key);
                 return true;
             }
-            if (action.StartsWith("move_", StringComparison.Ordinal) || action is "jump" or "crouch" or "sprint")
-                camera.CancelTransitForInput();
+            if (!consumed) continue;
+            if (action != "recover") camera.CancelTransitForInput();
             handled = true;
         }
         return handled;

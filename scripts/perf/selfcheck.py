@@ -8,9 +8,12 @@ from selfcheck_batches import check_sampling_batches, check_batch_freshness, che
 from selfcheck_storage import check_pending, check_processed_error, check_retention_authority, check_roundtrip
 from selfcheck_projection import check_derived_curves, check_monitor_projection, check_missing_projection
 from selfcheck_context import check_context, check_window_changes, check_hardware_facts
+from selfcheck_judgement import check_stopping
+from selfcheck_fixtures import configure_monitor
 
 
 def run(root):
+    configure_monitor(root)
     dictionary, budgets = read_json(root / 'game/data/perf-fields.json'), read_json(root / 'budgets.json')
     result = []
     for check in (check_snapshot, check_median, check_pending, check_deepen, check_manifest, check_context, check_window_changes, check_hardware_facts):
@@ -40,5 +43,6 @@ def run(root):
     check_viewport_sources(root, dictionary, budgets)
     result.append('通过 3/4：近似主视口不进合计；跳过行不复用主成本，未确认倒影留 null，已确认来源不重加。')
     check_roundtrip(root, dictionary, budgets)
+    check_stopping(root, dictionary, budgets)
     result.append('通过 4/4：预算独立报、cost 体验全 null；六件往返、写入锁跳过、历史去重、按条数修剪和输出上限通过。')
     return result

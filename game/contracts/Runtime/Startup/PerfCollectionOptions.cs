@@ -8,6 +8,8 @@ public sealed record PerfCollectionOptions
     public required string SampleSegmentId { get; init; }
     public required bool FunctionalSmoke { get; init; }
     public bool SaveAfterSample { get; init; }
+    public string[] RoutePointIds { get; init; } = [];
+    public bool TravelPrefetch { get; init; }
     public required int StableFrames { get; init; }
     public required double RealtimeSeconds { get; init; }
     public required double SampleSeconds { get; init; }

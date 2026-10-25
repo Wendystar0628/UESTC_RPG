@@ -70,8 +70,9 @@ public interface IMapStreamState
     bool HasPendingDestination { get; }
     /// <summary>Retained static-resource destinations in the active map; they never replace the formal arrival.</summary>
     IReadOnlyList<MapStreamDestination> PinnedDestinations { get; }
-    /// <summary>Main-thread demand replacement; unchanged targets retain their work. An empty collection releases pins.</summary>
-    void SetPinnedDestinations(IReadOnlyList<MapStreamDestination> destinations);
+    /// <summary>Main-thread lease for one retained destination. Equal destinations share work;
+    /// disposing releases only this request. Map unload invalidates leases before draining resources.</summary>
+    IDisposable PinDestination(MapStreamDestination destination);
     /// <summary>Queries current-generation mounted and retained resources, independently of world/view/physics arrival.</summary>
     bool PinnedDestinationReady(MapStreamDestination destination);
     /// <summary>Clears formal/current demand, preserving pins and reusable resident resources.</summary>

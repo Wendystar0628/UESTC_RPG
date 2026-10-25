@@ -27,9 +27,13 @@ internal sealed class PerfCollectionDriver(IStageGateHost host, PerfCollectionOp
     private ViewMode _fixedMode;
     private bool _samplePartial;
     private SaveObservation? _save;
+    private bool _movingSample;
+    private bool _pipelineCompilationObserved;
+    internal IReadOnlyList<PerfTravelSegment> TravelSegments { get; set; } = [];
 
     public async Task<bool> Run(Func<Task<string?>>? activity = null, bool verifyFixedStart = false)
     {
+        _movingSample = activity is not null;
         var recorder = KernelServices.Get<IPerformanceRecorder>();
         // Title NewGame uses its canonical world. Apply the explicit collection flow through its sole owner.
         if (Boot.Options.World.FlowRate is { } flow) KernelServices.Get<IWorldControl>().SetFlow(flow);
@@ -49,7 +53,7 @@ internal sealed class PerfCollectionDriver(IStageGateHost host, PerfCollectionOp
             frames.SamplePublished += Observe;
             try { if (await activity() is { } failure) _reasons.Add(failure); }
             finally { frames.SamplePublished -= Observe; }
-            if (FrameClock.MonotonicMilliseconds - _begin < options.SampleSeconds * 1000) await SampleIdle(recorder);
+            if (_reasons.Count == 0 && FrameClock.MonotonicMilliseconds - _begin < options.SampleSeconds * 1000) await SampleIdle(recorder);
         }
         ObserveSample(recorder);
         if (_reasons.Count > 0) return Finish(recorder, _samplePartial ? "partial" : "invalid", null);
@@ -158,8 +162,6 @@ internal sealed class PerfCollectionDriver(IStageGateHost host, PerfCollectionOp
             _samplePartial = true;
             _reasons.Add("The accepted recording session changed during sample.");
         }
-        else if (KernelServices.Get<IFrameStatistics>().Latest?.Pipelines != _samplePipelines)
-            _reasons.Add("Pipeline compilation increased during the sample.");
         else if (_conditions.Missing(facts, now) is { } missing)
         {
             _samplePartial = true;
@@ -167,6 +169,11 @@ internal sealed class PerfCollectionDriver(IStageGateHost host, PerfCollectionOp
         }
         else if (!_conditions.PerformanceReady(facts)) _reasons.Add("The matched rendering GPU left P0 during sample.");
         else if (ObservePollution(facts, "during-sample") is { } pollution) _reasons.Add("During sample: " + pollution);
+        if (KernelServices.Get<IFrameStatistics>().Latest?.Pipelines is { } pipelines && pipelines != _samplePipelines)
+        {
+            _pipelineCompilationObserved = true;
+            if (!_movingSample) _reasons.Add("Pipeline compilation increased during the sample.");
+        }
         _gpuObserved |= facts.OtherProcessesGpuUtilFraction.QueryEndMs > _begin;
         _cpuObserved |= facts.OtherProcessesCpuUtilFraction.QueryEndMs > _begin;
     }
@@ -223,6 +230,7 @@ internal sealed class PerfCollectionDriver(IStageGateHost host, PerfCollectionOp
         status = !_markedEnd && _markedBegin ? "partial" : status,
         reasons = _reasons, scene = options.SceneId, sessionId = _session,
         functionalSmoke = options.FunctionalSmoke, save = _save,
+        pipelineCompilationObserved = _pipelineCompilationObserved, travelSegments = TravelSegments,
         polluted = _pollution.Count > 0 ? true : status == "valid" ? false : (bool?)null, pollution = _pollution,
         samplingFacts = KernelServices.Get<IPerformanceRecorder>().SamplingFacts,
         sampleSegmentId = options.SampleSegmentId, sampleSeconds = _markedEnd ? (_end - _begin) / 1000 : 0,

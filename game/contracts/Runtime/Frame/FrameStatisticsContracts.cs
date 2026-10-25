@@ -76,6 +76,8 @@ public readonly record struct FrameSample
     public FrameGcSample Gc { get; init; }
     public FrameJitSample Jit { get; init; }
     public FrameContextSample Context { get; init; }
+    // Same-frame owner snapshot, collected after StreamMount; telemetry only, never a scheduling input.
+    public StreamStatistics? Stream { get; init; }
 }
 
 public readonly record struct FrameDisplayWindow

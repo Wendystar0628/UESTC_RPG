@@ -4,6 +4,7 @@ using Campus.Contracts.AppFlow;
 using Campus.Contracts.Maps;
 using Campus.Contracts.Quality;
 using Campus.Contracts.Save;
+using Campus.Contracts.Bake;
 using Campus.Kernel.Frame;
 using Godot;
 using KernelServices = Campus.Kernel.Registry.Kernel;
@@ -28,6 +29,8 @@ internal sealed class PerfEventCapture : IDisposable
     private readonly IQualityService _quality = KernelServices.Get<IQualityService>();
     private readonly ISaveService _save = KernelServices.Get<ISaveService>();
     private readonly IAppLoadingPresentation _loading = KernelServices.Get<IAppLoadingPresentation>();
+    private readonly IStreamStatistics _stream = KernelServices.Get<IStreamStatistics>();
+    private readonly IBakeService _bake = KernelServices.Get<IBakeService>();
     private readonly Viewport _viewport;
     private readonly PerfContextCapture _context;
     private readonly PerfSaveCommandQueue _saveCommands = new();
@@ -47,6 +50,8 @@ internal sealed class PerfEventCapture : IDisposable
     private bool _transitFinished;
     private bool? _focus;
     private bool _loadingActive, _loadingCovered;
+    private float _loadingProgress;
+    private BakeCacheStatistics? _cacheStatistics;
     private DisplayServer.WindowMode _windowMode;
     private float _refresh;
     private long _checkedFrames, _missingPhases, _missingTiming;
@@ -63,6 +68,7 @@ internal sealed class PerfEventCapture : IDisposable
         _activity = _app.Activity; _transition = _world.Transition; _season = _world.SeasonTarget;
         _weather = _world.Weather; _flow = _world.Flow;
         _loadingActive = _loading.Active; _loadingCovered = _loading.IsCovered;
+        _loadingProgress = _loading.Progress;
         _windowMode = DisplayServer.WindowGetMode();
         _refresh = DisplayServer.ScreenGetRefreshRate(DisplayServer.WindowGetCurrentScreen());
     }
@@ -80,6 +86,8 @@ internal sealed class PerfEventCapture : IDisposable
         _quality.Changed += OnQuality;
         _save.SlotsChanged += OnSave;
         _viewport.SizeChanged += OnSize;
+        // The stream owner is application-lived; keep old-revision retirement facts through map drain.
+        _stream.TileChanged += OnStreamTileChanged;
         if (_maps.Context is not null) BindMap(initial: true);
         Emit("snapshot.initial", new
         {
@@ -97,6 +105,8 @@ internal sealed class PerfEventCapture : IDisposable
         CaptureWindowSize(initial: true);
         _windowMode = DisplayServer.WindowGetMode();
         Emit("window.mode", new { mode = _windowMode.ToString(), observation = "current" });
+        Emit("loading.state", new { active = _loadingActive, covered = _loadingCovered, progress = _loadingProgress });
+        CaptureCacheStatistics();
     }
 
     public void BindMap(bool initial = false)
@@ -105,10 +115,12 @@ internal sealed class PerfEventCapture : IDisposable
         _mapBound = true;
         _runtime.ArrivalChanged += OnArrival;
         _arrival = _runtime.Arrival;
+        if (_arrival is not null) _arrival.ProgressChanged += OnArrivalProgress;
         _arrivalFinished = _arrival?.Done.IsCompleted ?? false;
         if (_arrival is { } arrival)
             Emit("map.arrival", new { phase = "current", destination = arrival.Destination,
-                result = arrival.Done.IsCompleted ? Completion(arrival.Done) : "waiting" });
+                result = arrival.Done.IsCompleted ? Completion(arrival.Done) : "waiting",
+                completed = arrival.Completed, total = arrival.Total });
         Emit("map.travel", new { phase = initial ? "current" : "loaded", map = _maps.Context?.Descriptor.Id.ToString(), requestedMap = (string?)null });
     }
 
@@ -119,12 +131,13 @@ internal sealed class PerfEventCapture : IDisposable
         {
             CheckArrival();
             if (_arrival is not null && !_arrivalFinished)
-                Emit("map.arrival", new { phase = "detached", destination = _arrival.Destination, result = "mapUnloading" });
+                EmitArrival("detached", "mapUnloading");
             Emit("map.travel", new { phase = "unloading", map = _maps.Current.ToString(), requestedMap = (string?)null });
         }
         finally
         {
             _runtime.ArrivalChanged -= OnArrival;
+            if (_arrival is not null) _arrival.ProgressChanged -= OnArrivalProgress;
             _arrival = null;
             _mapBound = false;
         }
@@ -135,6 +148,7 @@ internal sealed class PerfEventCapture : IDisposable
         DrainSaveCommands();
         CheckOwnerChanges(in frame);
         CheckArrival();
+        CaptureCacheStatistics();
         _checkedFrames++;
         if (frame.Phases.Validity != FramePhaseValidity.All) _missingPhases++;
         if (frame.Context.WindowCanDraw && frame.MainViewport.DrewThisFrame != false &&
@@ -181,6 +195,7 @@ internal sealed class PerfEventCapture : IDisposable
             ["resourceCount"] = Monitor(Performance.Monitor.ObjectResourceCount), ["processCpuFraction"] = _session.ProcessCpuFraction
         };
         _samples.TryRow(new("samples", Engine.GetProcessFrames(), now, values));
+        _samples.Flush();
         if (_checkedFrames != 0) Emit("measurement.selfcheck", new
         {
             frames = _checkedFrames, missingPhases = _missingPhases, missingTiming = _missingTiming,
@@ -200,10 +215,11 @@ internal sealed class PerfEventCapture : IDisposable
     {
         var mode = DisplayServer.WindowGetMode();
         if (_windowMode != mode) { _windowMode = mode; Emit("window.mode", new { mode = mode.ToString(), observation = "changed" }); }
-        if (_loadingActive != _loading.Active || _loadingCovered != _loading.IsCovered)
+        if (_loadingActive != _loading.Active || _loadingCovered != _loading.IsCovered || _loadingProgress != _loading.Progress)
         {
             _loadingActive = _loading.Active; _loadingCovered = _loading.IsCovered;
-            Emit("loading.state", new { active = _loadingActive, covered = _loadingCovered });
+            _loadingProgress = _loading.Progress;
+            Emit("loading.state", new { active = _loadingActive, covered = _loadingCovered, progress = _loadingProgress });
         }
         if (_activity != frame.Context.Activity) { _activity = frame.Context.Activity; Emit("app.activity", new { activity = (int)_activity }); }
         if (_mode != _observer.Mode) { _mode = _observer.Mode; _context.Settle("transition"); Emit("view.mode", new { mode = _mode.ToString(), observation = "ownerState" }); }
@@ -243,7 +259,7 @@ internal sealed class PerfEventCapture : IDisposable
         if (_arrival is null || _arrivalFinished || !_arrival.Done.IsCompleted) return;
         _arrivalFinished = true;
         _context.Settle("transition");
-        Emit("map.arrival", new { phase = "end", destination = _arrival.Destination, result = Completion(_arrival.Done) });
+        EmitArrival("end", Completion(_arrival.Done));
     }
     // The map/camera owner retains the original failure; recording observes its task terminal status only.
     private static string Completion(Task task) => task.IsCanceled ? "cancelled" : task.IsFaulted ? "failed" : "ready";
@@ -252,12 +268,51 @@ internal sealed class PerfEventCapture : IDisposable
         try
         {
             CheckArrival();
-            if (_arrival is not null && !_arrivalFinished) Emit("map.arrival", new { phase = "detached", destination = _arrival.Destination, result = "ownerReplaced" });
+            if (_arrival is not null)
+            {
+                _arrival.ProgressChanged -= OnArrivalProgress;
+                if (!_arrivalFinished) EmitArrival("detached", "ownerReplaced");
+            }
             _arrival = arrival; _arrivalFinished = false;
-            if (arrival is not null) Emit("map.arrival", new { phase = "begin", destination = arrival.Destination, result = (string?)null });
+            if (arrival is not null)
+            {
+                arrival.ProgressChanged += OnArrivalProgress;
+                EmitArrival("begin", null);
+            }
             CheckArrival();
         }
         catch (Exception error) { _session.AddFailure(PerfFaultCode.ProducerFailed, error); }
+    }
+    private void OnArrivalProgress()
+    {
+        if (_disposed || _arrival is null) return;
+        try { EmitArrival("progress", null); }
+        catch (Exception error) { _session.AddFailure(PerfFaultCode.ProducerFailed, error); }
+    }
+    private void EmitArrival(string phase, string? result)
+    {
+        if (_arrival is not { } arrival) return;
+        Emit("map.arrival", new { phase, destination = arrival.Destination, result,
+            completed = arrival.Completed, total = arrival.Total });
+    }
+    private void OnStreamTileChanged(StreamTileChange change)
+    {
+        if (_disposed) return;
+        try
+        {
+            Emit("stream.tileChanged", new { key = change.Key, kind = change.Kind.ToString(),
+                revision = change.Revision, change = change.Change.ToString(), bytes = change.Bytes },
+                Engine.GetProcessFrames(), change.MonotonicMilliseconds);
+        }
+        catch (Exception error) { _session.AddFailure(PerfFaultCode.ProducerFailed, error); }
+    }
+    private void CaptureCacheStatistics()
+    {
+        var current = _bake.CacheStatistics;
+        if (_cacheStatistics == current) return;
+        string observation = _cacheStatistics is null ? "current" : "changed";
+        _cacheStatistics = current;
+        Emit("bake.cache", new { hits = current.Hits, misses = current.Misses, rebuilds = current.Rebuilds, observation });
     }
     private void OnAppState(AppState from, AppState to)
     {
@@ -267,11 +322,13 @@ internal sealed class PerfEventCapture : IDisposable
         }
         catch (Exception error) { _session.AddFailure(PerfFaultCode.ProducerFailed, error); }
     }
-    private void OnAppPhase(string phase)
+    private void OnAppPhase(string phase) => AppPhase(phase, null, null);
+    internal void AppPhase(string phase, ulong? frame, double? time)
     {
+        if (_disposed) return;
         try
         {
-            Emit("app.phase", new { phase });
+            Emit("app.phase", new { phase }, frame, time);
         }
         catch (Exception error) { _session.AddFailure(PerfFaultCode.ProducerFailed, error); }
     }
@@ -393,6 +450,8 @@ internal sealed class PerfEventCapture : IDisposable
         _disposed = true;
         try
         {
+            try { CaptureCacheStatistics(); }
+            catch (Exception error) { _session.AddFailure(PerfFaultCode.ProducerFailed, error); }
             UnbindMap();
             CheckTransit();
             if (_transit is not null && !_transitFinished)
@@ -401,6 +460,7 @@ internal sealed class PerfEventCapture : IDisposable
         finally
         {
             _app.Changed -= OnAppState; _app.PhaseReached -= OnAppPhase;
+            _stream.TileChanged -= OnStreamTileChanged;
             _app.EnterCommand -= OnEnterCommand; _maps.PrepareCommand -= OnPrepareCommand;
             _quality.ApplyCommand -= OnApplyCommand; _save.LoadCommand -= OnSaveCommand;
             _saveCommands.Stop();

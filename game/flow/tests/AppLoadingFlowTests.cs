@@ -1,3 +1,4 @@
+using Campus.Contracts;
 using Campus.Contracts.AppFlow;
 using Campus.Contracts.Save;
 using Campus.Flow;
@@ -51,8 +52,8 @@ public sealed class AppLoadingFlowTests
             throw new InvalidOperationException("Map readiness did not immediately pin both title endpoints.");
         rig.Runtime.PinsReady = true;
         if (!flow.NewGamePreloadReady) throw new InvalidOperationException("Preload readiness did not query held stream resources.");
-        rig.Runtime.SetPinnedDestinations([]);
-        if (flow.NewGamePreloadReady) throw new InvalidOperationException("Released pins retained a copied ready flag.");
+        rig.Runtime.PinsReady = false;
+        if (flow.NewGamePreloadReady) throw new InvalidOperationException("Lost resource readiness retained a copied ready flag.");
         global.SetResult(); await background;
     }
 
@@ -68,8 +69,8 @@ public sealed class AppLoadingFlowTests
         if (entering.IsCompleted || saves.NewGames != 0 || !rig.Loading.Active || rig.Title.Visible)
             throw new InvalidOperationException("Early entry did not cover and join background preparation.");
         map.SetResult(); await flow.MapReady;
-        if (saves.NewGames != 0 || rig.Runtime.PinnedDestinations.Count != 2)
-            throw new InvalidOperationException("Entry bypassed global preparation or lost its pins.");
+        if (saves.NewGames != 0 || rig.Runtime.PinnedDestinations.Count != 1 || !rig.Runtime.PinnedDestinations.All(d => d.Mode == ViewMode.Walk))
+            throw new InvalidOperationException("Selected new game retained an unselected endpoint or bypassed global preparation.");
         global.SetResult(); await background; await saves.ArrivalStarted.Task;
         if (entering.IsCompleted || saves.Saves != 0 || rig.Runtime.PinnedDestinations.Count == 0)
             throw new InvalidOperationException("Entry released residency or saved before its real arrival.");

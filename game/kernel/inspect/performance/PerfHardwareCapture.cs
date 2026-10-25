@@ -120,43 +120,49 @@ internal sealed class PerfHardwareCapture
     {
         lock (_gate)
         {
-            var batch = sampling.Nvml;
-            _adapter = sampling.Adapter;
-            ObserveStatus("renderAdapter", _adapter.Status);
-            ObserveStatus("renderAdapterAddress", _adapter.AddressStatus);
-            var renderDevice = _adapter.Match(batch.Devices);
-            _renderDeviceMatched = renderDevice is not null;
-            _processCpuFraction = sampling.Cpu.ProcessFraction;
-            _facts = new(_sessionId, _adapter.Luid, renderDevice?.Identity.Uuid,
-                NvmlFact(renderDevice, batch.Status, performanceState: true), NvmlFact(renderDevice, batch.Status, performanceState: false),
-                sampling.GpuEngines.Fact, sampling.Cpu.Fact);
-            _status = batch.Status;
-            ObserveStatus("session", batch.Status);
-            if (batch.Devices.Count == 0)
-            {
-                var values = new Dictionary<string, object?>
-                {
-                    ["rowKind"] = "nvml",
-                    ["queryStartMs"] = batch.QueryStartMs, ["queryEndMs"] = batch.QueryEndMs,
-                    ["statusJson"] = new { session = StatusValue(batch.Status) }
-                };
-                _slow.TryRow(new("hw", null, batch.QueryEndMs, values));
-                _fast.TryRow(new("hwfast", null, batch.QueryEndMs, new Dictionary<string, object?>(values)
-                { ["capability"] = batch.Status.Capability }));
-            }
-            // Reads are sequential, but a missing handle has no slow query and uses the batch end.
-            // Keep equal-time devices stable and publish the completed batch facts last.
-            foreach (var device in batch.Devices.OrderBy(device => device.Slow?.QueryEndMs ?? batch.QueryEndMs))
-                PublishDevice(batch, device, renderDevice?.Identity.EnumerationIndex == device.Identity.EnumerationIndex);
-            bool factsAccepted = _slow.TryRow(FactsRow(sampling, _facts, renderDevice?.Identity));
-            _slowRecorded |= factsAccepted && (_facts.OtherProcessesCpuUtilFraction.Value.HasValue ||
-                _facts.OtherProcessesGpuUtilFraction.Value.HasValue);
-            _slowState = Capability(batch.Devices.SelectMany(device => DeviceStatuses(device))
-                .Where(pair => !pair.Key.StartsWith("fast.", StringComparison.Ordinal) &&
-                    pair.Key is not ("handle" or "gpuUuid" or "pciBusId")).Select(pair => pair.Value));
-            _fastState = Capability(batch.Devices.SelectMany(device => device.Fast).Select(fast => fast.Status));
-            Interlocked.Increment(ref _revision);
+            try { PublishBatch(sampling); }
+            finally { _slow.Flush(); _fast.Flush(); }
         }
+    }
+
+    private void PublishBatch(HardwareSamplingBatch sampling)
+    {
+        var batch = sampling.Nvml;
+        _adapter = sampling.Adapter;
+        ObserveStatus("renderAdapter", _adapter.Status);
+        ObserveStatus("renderAdapterAddress", _adapter.AddressStatus);
+        var renderDevice = _adapter.Match(batch.Devices);
+        _renderDeviceMatched = renderDevice is not null;
+        _processCpuFraction = sampling.Cpu.ProcessFraction;
+        _facts = new(_sessionId, _adapter.Luid, renderDevice?.Identity.Uuid,
+            NvmlFact(renderDevice, batch.Status, performanceState: true), NvmlFact(renderDevice, batch.Status, performanceState: false),
+            sampling.GpuEngines.Fact, sampling.Cpu.Fact);
+        _status = batch.Status;
+        ObserveStatus("session", batch.Status);
+        if (batch.Devices.Count == 0)
+        {
+            var values = new Dictionary<string, object?>
+            {
+                ["rowKind"] = "nvml",
+                ["queryStartMs"] = batch.QueryStartMs, ["queryEndMs"] = batch.QueryEndMs,
+                ["statusJson"] = new { session = StatusValue(batch.Status) }
+            };
+            _slow.TryRow(new("hw", null, batch.QueryEndMs, values));
+            _fast.TryRow(new("hwfast", null, batch.QueryEndMs, new Dictionary<string, object?>(values)
+            { ["capability"] = batch.Status.Capability }));
+        }
+        // Reads are sequential, but a missing handle has no slow query and uses the batch end.
+        // Keep equal-time devices stable and publish the completed batch facts last.
+        foreach (var device in batch.Devices.OrderBy(device => device.Slow?.QueryEndMs ?? batch.QueryEndMs))
+            PublishDevice(batch, device, renderDevice?.Identity.EnumerationIndex == device.Identity.EnumerationIndex);
+        bool factsAccepted = _slow.TryRow(FactsRow(sampling, _facts, renderDevice?.Identity));
+        _slowRecorded |= factsAccepted && (_facts.OtherProcessesCpuUtilFraction.Value.HasValue ||
+            _facts.OtherProcessesGpuUtilFraction.Value.HasValue);
+        _slowState = Capability(batch.Devices.SelectMany(device => DeviceStatuses(device))
+            .Where(pair => !pair.Key.StartsWith("fast.", StringComparison.Ordinal) &&
+                pair.Key is not ("handle" or "gpuUuid" or "pciBusId")).Select(pair => pair.Value));
+        _fastState = Capability(batch.Devices.SelectMany(device => device.Fast).Select(fast => fast.Status));
+        Interlocked.Increment(ref _revision);
     }
 
     private void PublishDevice(NvmlBatch batch, NvmlDeviceSample device, bool isRenderAdapter)

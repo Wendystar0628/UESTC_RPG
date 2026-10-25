@@ -1,5 +1,5 @@
 {
-  "schema": 5,
+  "schema": 6,
   "authority": "ENG-PERF-DATA",
   "draft": false,
   "encoding": {
@@ -378,7 +378,9 @@
       "owner": "GAME-221",
       "payloadFields": {
         "phase": "string"
-      }
+      },
+      "source": "IAppFlow.PhaseReached; StageStartupTrace existing title-input-ready, preload-ready and input-ready readiness observations",
+      "timing": "Existing flow milestones keep their publication time; the three StageStartupTrace milestones use the same captured process frame and monotonic observation time as STARTUP_PHASE. preload-ready is the first title-frame observation of current-generation NewGamePreloadReady, never a predicted completion."
     },
     "app.activity": {
       "owner": "GAME-221",
@@ -634,11 +636,13 @@
     "map.arrival": {
       "owner": "GAME-221",
       "payloadFields": {
-        "phase": "current|begin|end|detached",
+        "phase": "current|begin|progress|end|detached",
         "destination": "MapStreamDestination",
-        "result": "string?"
+        "result": "string?",
+        "completed": "integer",
+        "total": "integer"
       },
-      "timing": "begin uses actual ArrivalChanged; end is first main-thread observation of Done; current is a snapshot, never replayed as a begin; detached releases the observed handle, never opens or extends an analyzer interval"
+      "timing": "begin uses actual ArrivalChanged; progress uses the current handle ProgressChanged owner publication; every phase copies actual Completed/Total. end is first main-thread observation of Done; current is a snapshot, never replayed as a begin; detached releases the observed handle, never opens or extends an analyzer interval. The map runtime remains the handle and readiness owner; no synthetic operation ID is assigned."
     },
     "world.transition": {
       "owner": "GAME-221",
@@ -665,9 +669,32 @@
       "owner": "GAME-221",
       "payloadFields": {
         "active": "boolean",
-        "covered": "boolean"
+        "covered": "boolean",
+        "progress": "number"
       },
-      "timing": "first main-thread observation of the loading owner state"
+      "timing": "Recording-start snapshot and each first main-thread frame observation of changed active, covered or progress. progress is the real currently presented top-lease fraction in [0,1], after the presentation owner applies monotonic display policy; never inferred from map.arrival counts. It describes visible progress only while active and covered; unchanged snapshots do not create progress events.",
+      "source": "IAppLoadingPresentation.Active/IsCovered/Progress"
+    },
+    "stream.tileChanged": {
+      "owner": "IStreamStatistics.TileChanged",
+      "payloadFields": {
+        "key": "BakeKey",
+        "kind": "Visual|Collision|Auxiliary",
+        "revision": "integer",
+        "change": "Mounted|Unmounted",
+        "bytes": "integer?"
+      },
+      "timing": "One event per real owner publication; monotonicMs is StreamTileChange.MonotonicMilliseconds at occurrence and collectionFrame is the main-thread observed process frame. Old-generation unmounts keep their source revision and key; they never add to a new revision frame count. bytes is packed visual payload bytes; unknown collision/auxiliary bytes remain null."
+    },
+    "bake.cache": {
+      "owner": "IBakeService.CacheStatistics",
+      "payloadFields": {
+        "hits": "integer",
+        "misses": "integer",
+        "rebuilds": "integer",
+        "observation": "current|changed"
+      },
+      "timing": "Application-lifetime cumulative successful decoded logical products, normal misses and successfully published logical rebuilds from BakeCacheStore; never reset by map unload or cache Clear. current is the recording-start snapshot; changed is the first main-thread observation of a changed snapshot, with a final snapshot at producer stop. monotonicMs is observation time, not a fabricated individual cache-operation occurrence time. No map/revision attribution or synthesized delta counters."
     }
   },
   "streams": {
@@ -1057,6 +1084,94 @@
           "unit": null,
           "source": "Copied IFrameStatistics viewport span",
           "note": "JSON array in RFC4180 CSV cell; item schema viewportSample; main costs may be approximately aligned with unknown source/freshness; unconfirmed on-demand costs stay null; [] means no registered viewports, null means missing capture"
+        },
+        {
+          "name": "streamRevision",
+          "type": "integer",
+          "nullable": true,
+          "unit": null,
+          "source": "FrameSample.Stream.Revision",
+          "note": "Mount queue revision; increases at map unload; all stream counters are interpreted within this owner revision. Missing owner snapshot remains null."
+        },
+        {
+          "name": "pendingStreamRequests",
+          "type": "integer",
+          "nullable": true,
+          "unit": null,
+          "source": "FrameSample.Stream.PendingRequests",
+          "note": "B2 current owner backlog snapshot after this process frame StreamMount. Missing owner snapshot remains null."
+        },
+        {
+          "name": "pendingStreamBakes",
+          "type": "integer",
+          "nullable": true,
+          "unit": null,
+          "source": "FrameSample.Stream.PendingBakes",
+          "note": "B2 current owner backlog snapshot after this process frame StreamMount. Missing owner snapshot remains null."
+        },
+        {
+          "name": "pendingStreamPreparations",
+          "type": "integer",
+          "nullable": true,
+          "unit": null,
+          "source": "FrameSample.Stream.PendingPreparations",
+          "note": "B2 current owner backlog snapshot after this process frame StreamMount. Missing owner snapshot remains null."
+        },
+        {
+          "name": "pendingStreamMounts",
+          "type": "integer",
+          "nullable": true,
+          "unit": null,
+          "source": "FrameSample.Stream.PendingMounts",
+          "note": "B2 current owner backlog snapshot after this process frame StreamMount. Missing owner snapshot remains null."
+        },
+        {
+          "name": "pendingStreamRetirements",
+          "type": "integer",
+          "nullable": true,
+          "unit": null,
+          "source": "FrameSample.Stream.PendingRetirements",
+          "note": "B2 current owner backlog snapshot after this process frame StreamMount. Missing owner snapshot remains null."
+        },
+        {
+          "name": "streamMountMs",
+          "type": "number",
+          "nullable": true,
+          "unit": "ms",
+          "source": "FrameSample.Stream.MountMilliseconds",
+          "note": "This process frame shared StreamMount Drain wall-clock duration, including retirement release and finish callbacks; not isolated CPU time. Missing owner snapshot remains null."
+        },
+        {
+          "name": "streamWatchdogTrips",
+          "type": "integer",
+          "nullable": true,
+          "unit": null,
+          "source": "FrameSample.Stream.WatchdogTrips",
+          "note": "Owner cumulative visible-mount watchdog trips within the current map/revision; not a per-frame increment; unloaded owner reports true zero. Missing owner snapshot remains null."
+        },
+        {
+          "name": "streamMountedBytes",
+          "type": "integer",
+          "nullable": true,
+          "unit": "bytes",
+          "source": "FrameSample.Stream.MountedBytes",
+          "note": "This process frame completed packed visual payload bytes; not compressed cache bytes or driver upload bytes; collisions/auxiliary have unknown per-tile bytes and contribute no visual payload bytes. Missing owner snapshot remains null."
+        },
+        {
+          "name": "streamMountedTilesDelta",
+          "type": "integer",
+          "nullable": true,
+          "unit": null,
+          "source": "FrameSample.Stream.MountedTilesDelta",
+          "note": "This process frame successful mounts minus completed unmounts across owner kinds; signed net change, not positive mount count. Missing owner snapshot remains null."
+        },
+        {
+          "name": "streamMountedTiles",
+          "type": "integer",
+          "nullable": true,
+          "unit": null,
+          "source": "FrameSample.Stream.MountedTiles",
+          "note": "This process frame successful completed owner payload mounts across kinds; no subtraction for unmounts, no count for partial Step advances. Missing owner snapshot remains null."
         }
       ]
     },

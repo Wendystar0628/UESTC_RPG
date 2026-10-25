@@ -1,19 +1,127 @@
 {
   "map": "qingshuihe",
   "fixed": [
-    { "id": "overview-default", "start": "pose", "waypoint": "P00", "mode": "fly", "world": "default", "saveAfterSample": false },
-    { "id": "lake-default", "start": "pose", "waypoint": "P10", "mode": "fly", "world": "default", "saveAfterSample": false },
-    { "id": "stairs-default", "start": "pose", "waypoint": "P20", "mode": "fly", "world": "default", "saveAfterSample": false },
-    { "id": "lake-storm", "start": "pose", "waypoint": "P10", "mode": "fly", "world": "summer-thunderstorm", "saveAfterSample": false },
-    { "id": "stairs-storm", "start": "pose", "waypoint": "P20", "mode": "fly", "world": "summer-thunderstorm", "saveAfterSample": false },
-    { "id": "lobby-outward", "start": "pose", "waypoint": "V2", "mode": "fly", "world": "default", "saveAfterSample": false },
-    { "id": "new-game-grounded", "start": "new-game", "world": "default", "saveAfterSample": true }
+    {
+      "id": "overview-default",
+      "start": "pose",
+      "waypoint": "P00",
+      "mode": "fly",
+      "world": "default",
+      "saveAfterSample": false
+    },
+    {
+      "id": "overview-storm",
+      "start": "pose",
+      "waypoint": "P00",
+      "mode": "fly",
+      "world": "summer-thunderstorm",
+      "saveAfterSample": false
+    },
+    {
+      "id": "lake-default",
+      "start": "pose",
+      "waypoint": "P10",
+      "mode": "fly",
+      "world": "default",
+      "saveAfterSample": false
+    },
+    {
+      "id": "stairs-default",
+      "start": "pose",
+      "waypoint": "P20",
+      "mode": "fly",
+      "world": "default",
+      "saveAfterSample": false
+    },
+    {
+      "id": "lake-storm",
+      "start": "pose",
+      "waypoint": "P10",
+      "mode": "fly",
+      "world": "summer-thunderstorm",
+      "saveAfterSample": false
+    },
+    {
+      "id": "stairs-storm",
+      "start": "pose",
+      "waypoint": "P20",
+      "mode": "fly",
+      "world": "summer-thunderstorm",
+      "saveAfterSample": false
+    },
+    {
+      "id": "lobby-outward",
+      "start": "pose",
+      "waypoint": "V2",
+      "mode": "fly",
+      "world": "default",
+      "saveAfterSample": false
+    },
+    {
+      "id": "new-game-grounded",
+      "start": "new-game",
+      "world": "default",
+      "saveAfterSample": true
+    }
   ],
   "route": [
-    { "id": "walk-route", "start": "route", "waypoint": "P08", "mode": "walk", "world": "default", "seconds": 5 },
-    { "id": "fly-route", "start": "route", "waypoint": "P08", "mode": "fly", "world": "default", "seconds": 5 }
+    {
+      "id": "walk-route",
+      "start": "route",
+      "waypoint": "P08",
+      "mode": "walk",
+      "world": "default",
+      "seconds": 60,
+      "routePointIds": [
+        "road:design:core-ginkgo-walk-west/4",
+        "road:qsh:source:way:687770517/5",
+        "road:qsh:source:way:687770517/4",
+        "road:qsh:source:way:687770517/3",
+        "road:qsh:source:way:687770517/2",
+        "road:qsh:source:way:687770517/1",
+        "road:qsh:source:way:687770517/0",
+        "road:qsh:source:way:1293455737/0",
+        "door:lib.cafe/outside",
+        "door:lib.cafe/inside"
+      ]
+    },
+    {
+      "id": "fly-route",
+      "start": "route",
+      "waypoint": "P08",
+      "mode": "fly",
+      "world": "default",
+      "seconds": 60,
+      "routePointIds": [
+        "P03",
+        "P05",
+        "P20",
+        "P08"
+      ]
+    }
   ],
   "travel": [
-    { "id": "standing-travel", "start": "travel", "sequence": ["P08", "P10"], "world": "default" }
+    {
+      "id": "standing-travel-direct",
+      "start": "travel",
+      "sequence": [
+        "P08",
+        "P10",
+        "P04"
+      ],
+      "travelPrefetch": false,
+      "world": "default"
+    },
+    {
+      "id": "standing-travel-prefetched",
+      "start": "travel",
+      "sequence": [
+        "P08",
+        "P10",
+        "P04"
+      ],
+      "travelPrefetch": true,
+      "world": "default"
+    }
   ]
 }
