@@ -5,13 +5,6 @@ from datetime import datetime
 from perf_model import at, number
 
 
-WAIT_KEYS = ('warmLauncherToTitleSecondsMax', 'coldLauncherToTitleSecondsMax',
-             'firstRunLauncherToRealtimeSecondsMax', 'preloadedNewGameToWalkSecondsMax',
-             'immediateNewGameToWalkSecondsMax', 'continueToWalkSecondsMax', 'loadSlotToWalkSecondsMax',
-             'prefetchedTravelToReadySecondsMax', 'directTravelToReadySecondsMax',
-             'returnToTitleSecondsMax', 'exitSecondsMax')
-
-
 def wall_monotonic(value, manifest):
     if not isinstance(value, str):
         return None
@@ -67,18 +60,14 @@ def entry_observations(events, budgets):
 
 
 def wait_observations(manifest, events, run, budgets):
-    result = entry_observations(events, budgets)
-    phases = {name: next((e['monotonicMs'] for e in events if e['event'] == 'app.phase' and e['payload'].get('phase') == name), None)
-              for name in ('title-input-ready', 'input-ready')}
-    launch = wall_monotonic(at(run, 'launcher.scriptEnteredUtc'), manifest)
+    result = [item for item in entry_observations(events, budgets)
+              if manifest.get('origin') != 'ai' or any(
+                  e['event'] == 'app.phase' and e['payload'].get('phase') == 'title-input-ready'
+                  and e['monotonicMs'] < item['fromMs'] for e in events)]
     exit_time = wall_monotonic(at(run, 'launcher.processExitUtc'), manifest)
-    # ENG-PERF-DATA: no session records the actual double-click start yet.
-    reason = '未记录实际双击起点；这里只显示脚本入口到就绪的墙钟'
-    for key, endpoint in ((WAIT_KEYS[0], 'title-input-ready'), (WAIT_KEYS[1], 'title-input-ready'),
-                          (WAIT_KEYS[2], 'input-ready')):
-        result.append(observation(key, launch, phases[endpoint], budgets, 'run.launcher → app.phase', reason))
     quitting = next((e['monotonicMs'] for e in events if e['event'] == 'app.state' and str(e['payload'].get('to')).lower() == 'quitting'), None)
-    result.append(observation('exitSecondsMax', quitting, exit_time, budgets, 'app.state Quitting → native GetProcessTimes'))
+    if quitting is not None:
+        result.append(observation('exitSecondsMax', quitting, exit_time, budgets, 'app.state Quitting → native GetProcessTimes'))
     leaving = None
     for event in events:
         if event['event'] != 'app.state':
@@ -96,8 +85,4 @@ def wait_observations(manifest, events, run, budgets):
         result.append({**observation(key, segment.get('fromMs'), segment.get('toMs'), budgets,
                                      'PerfCollectionDriver actual Travel request → arrival/walk/input ready', reason),
                        'segment': segment.get('index'), 'markerId': segment.get('markerId')})
-    present = {item['key'] for item in result}
-    for key in WAIT_KEYS:
-        if key not in present:
-            result.append(observation(key, None, None, budgets, None, '对应请求/真实就绪端点尚未采到'))
     return dict(items=result)
