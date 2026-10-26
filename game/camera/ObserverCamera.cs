@@ -50,6 +50,8 @@ public partial class ObserverCamera : Node, ICameraRig, IObserverState, IViewCon
         _flight = new(Tuning);
         _controls = new(this, Tuning);
         ProcessPriority = FramePriority.Camera;
+        // Before the walk body's default physics priority, so each tick moves with the input it was given.
+        ProcessPhysicsPriority = FramePriority.Camera;
     }
 
     public override void _Ready()
@@ -127,10 +129,18 @@ public partial class ObserverCamera : Node, ICameraRig, IObserverState, IViewCon
                 _flight.Advance(Pose, _controls.State, seconds, _presentation);
                 break;
             case ViewMode.Walk:
-                AdvanceWalkInput();
+                AdvanceWalkRecovery();
                 break;
             default: throw new InvalidOperationException("Unknown view mode.");
         }
+    }
+
+    // The same gate as the Walk branch of _Process; held keys and presses arrive through input events before physics.
+    public override void _PhysicsProcess(double delta)
+    {
+        if (IsPlaying && _mode == ViewMode.Walk && !_worldResetPending && _walkEntry is null
+            && ActiveTransit is not { Done.IsCompleted: false })
+            Walk.SetInput(_controls.TakeWalkInput());
     }
 
     private void SyncWalkPlacementPresentation()
@@ -147,18 +157,18 @@ public partial class ObserverCamera : Node, ICameraRig, IObserverState, IViewCon
         if (_presentation.Value != destination.Pose) SetPose(destination.Pose);
     }
 
-    private void AdvanceWalkInput()
+    private IWalkController Walk => _walk
+        ?? throw new InvalidOperationException("Walk mode requires the restored game/camera/walk/ controller.");
+
+    private void AdvanceWalkRecovery()
     {
         _flight.SetEdgeFog(0);
-        if (_walk is null)
-            throw new InvalidOperationException("Walk mode requires the restored game/camera/walk/ controller.");
+        var walk = Walk;
         var input = _controls.State;
-        _walk.SetInput(_controls.Locked ? default : new WalkInput(input.Move, input.Sprint,
-            input.JumpHeld, input.TakeJump(), input.Crouch));
         if (!_controls.Locked && input.RecoverHeld >= Tuning.ReturnHoldSeconds && !_recoverTriggered)
         {
             _recoverTriggered = true;
-            if (!_walk.ReturnToSafety()) RequestMode(ViewMode.Fly, ModeSwitchVia.Key);
+            if (!walk.ReturnToSafety()) RequestMode(ViewMode.Fly, ModeSwitchVia.Key);
         }
         if (input.RecoverHeld == 0) _recoverTriggered = false;
     }

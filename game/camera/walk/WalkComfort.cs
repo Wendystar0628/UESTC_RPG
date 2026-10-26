@@ -63,14 +63,13 @@ internal sealed class WalkComfort(CharacterBody3D body, WalkMovementTelemetry te
         bool smallGroundStep = sample.Grounded && wasGrounded && !jumped
             && MathF.Abs(rise) <= WalkRules.StepHeight + WalkTuning.SafeMargin
             && (stepped || body.GetFloorNormal().Y >= 1f - WalkTuning.SafeMargin);
+        // Only a small grounded step adds lag. Jumps, falls and larger moves add none and let the remaining
+        // lag decay with the same time constants, so the eye stays continuous; teleports and freezes use Reset.
         if (smallGroundStep)
-        {
             _stepCameraOffset = Math.Clamp(_stepCameraOffset - rise,
                 -WalkTuning.MaximumStepCameraLag, WalkTuning.MaximumStepCameraLag);
-            float seconds = _stepCameraOffset < 0 ? WalkTuning.StepUpCameraSeconds : WalkTuning.StepDownCameraSeconds;
-            _stepCameraOffset *= MathF.Exp(-dt / seconds);
-        }
-        else _stepCameraOffset = _previousStepCameraOffset = 0;
+        float seconds = _stepCameraOffset < 0 ? WalkTuning.StepUpCameraSeconds : WalkTuning.StepDownCameraSeconds;
+        _stepCameraOffset *= MathF.Exp(-dt / seconds);
 
         _previousBobOffset = _bobOffset;
         _previousBobRoll = _bobRoll;
@@ -87,9 +86,10 @@ internal sealed class WalkComfort(CharacterBody3D body, WalkMovementTelemetry te
         _bobRoll = local.Z;
     }
 
-    public void AdvanceFov(float dt, bool sprint, bool grounded, Vector3 requested)
+    public void AdvanceFov(float dt, bool sprint, Vector3 requested)
     {
-        float desiredFov = WalkFov * (sprint && grounded && requested.LengthSquared() > 0 ? WalkTuning.SprintFovMultiplier : 1f);
+        // Sprint keeps its target through a jump, so the view does not narrow in the air and widen again on landing.
+        float desiredFov = WalkFov * (sprint && requested.LengthSquared() > 0 ? WalkTuning.SprintFovMultiplier : 1f);
         _fov += (desiredFov - _fov) * (1f - MathF.Exp(-dt / WalkTuning.FovResponseSeconds));
     }
 }

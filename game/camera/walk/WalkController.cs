@@ -335,7 +335,7 @@ public partial class WalkController : CharacterBody3D, IWalkController, IWalkTel
         if (_placement.ShouldRecordSafety(Grounded))
             _placement.RecordSafety(BodyPose, Grounded, _placement.IsSafeRecordPoint(MotionSample, _swimming.Active,
                 CollisionReady, _bodyCollision.Height));
-        _comfort.AdvanceFov(dt, plan.Sprint, Grounded, requested);
+        _comfort.AdvanceFov(dt, plan.Sprint, requested);
     }
 
     private void UpdateSwimming(WaterQueryResult result)

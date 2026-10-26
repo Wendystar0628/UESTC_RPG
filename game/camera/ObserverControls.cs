@@ -105,6 +105,10 @@ internal sealed class ObserverControls(ObserverCamera camera, FlightTuning tunin
 
     public void ResetWheel() => _wheel = 0;
 
+    /// <summary>One physics step's walk snapshot; the jump press edge is consumed by the first step that takes it.</summary>
+    public WalkInput TakeWalkInput() => Locked ? default
+        : new(State.Move, State.Sprint, State.JumpHeld, State.TakeJump(), State.Crouch);
+
     public void ObserveInput(InputEvent input)
     {
         // _Input runs before GUI routing, so a control cannot swallow the cursor release.

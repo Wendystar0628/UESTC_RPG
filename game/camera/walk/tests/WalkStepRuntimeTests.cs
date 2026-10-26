@@ -4,6 +4,7 @@ using Campus.Contracts.Audio;
 using GdUnit4;
 using Godot;
 using static GdUnit4.Assertions;
+using N = System.Numerics;
 
 namespace Campus.Tests;
 
@@ -50,6 +51,41 @@ public sealed class WalkStepRuntimeTests
             if (GodotObject.IsInstanceValid(viewport)) viewport.Free();
         }
     }
+
+    [TestCase, TestCategory(TestReason.Regression), RequireGodotRuntime]
+    public void StairCameraLagCarriesIntoAnImmediateJumpAndSettlesWithinItsAirtime()
+    {
+        var body = new CharacterBody3D();
+        try
+        {
+            var comfort = new WalkComfort(body, new WalkMovementTelemetry(body, new WalkBodyCollision(body)));
+            var map = FlightTestSupport.CreateContext();
+            float dt = 1f / Engine.PhysicsTicksPerSecond;
+            float fraction = (float)Math.Clamp(Engine.GetPhysicsInterpolationFraction(), 0, 1);
+            // Climb one rule-height step in place: no horizontal speed, so gait bob stays out of the eye.
+            var ground = N.Vector3.Zero;
+            var stair = ground + N.Vector3.UnitY * WalkRules.StepHeight;
+            comfort.AdvanceComfort(Sample(stair, ground, true), map, dt, true, false, true, false);
+            float decay = MathF.Exp(-dt / WalkTuning.StepUpCameraSeconds);
+            float lag = -Math.Min(WalkRules.StepHeight, WalkTuning.MaximumStepCameraLag) * decay;
+            var takeoff = Sample(stair + N.Vector3.UnitY * (WalkTuning.JumpSpeed * dt), stair, false);
+            comfort.AdvanceComfort(takeoff, map, dt, true, true, false, false);
+            AssertThat(MathF.Abs(EyeLag(comfort, takeoff, fraction) - float.Lerp(lag, lag * decay, fraction)) <= TestTolerance.Position)
+                .OverrideFailureMessage("Jumping straight off a stair dropped the stair camera lag instead of carrying it into the air.").IsTrue();
+            var airborne = Sample(takeoff.Feet, takeoff.Feet, false);
+            for (float air = 0; air < 2 * WalkTuning.JumpSpeed / WalkTuning.Gravity; air += dt)
+                comfort.AdvanceComfort(airborne, map, dt, false, false, false, false);
+            AssertThat(MathF.Abs(EyeLag(comfort, airborne, fraction)) <= TestTolerance.Position)
+                .OverrideFailureMessage("The carried stair camera lag did not settle within one jump's airtime.").IsTrue();
+        }
+        finally { body.Free(); }
+    }
+
+    private static WalkMotionSample Sample(N.Vector3 feet, N.Vector3 previous, bool grounded) =>
+        new(feet, previous, 0, grounded, default, false);
+
+    private static float EyeLag(WalkComfort comfort, WalkMotionSample sample, float fraction) =>
+        comfort.RenderEye(sample, 0, 0).Position.Y - float.Lerp(sample.PreviousFeet.Y, sample.Feet.Y, fraction);
 
     private static (CharacterBody3D Body, StaticBody3D Step, WalkBodyCollision Collision) CreateNativeBodies(
         SubViewport viewport, BoxShape3D floorShape, BoxShape3D stepShape, SurfaceTag tag, float dt)

@@ -1,4 +1,5 @@
 using Campus.Camera;
+using Campus.Camera.Walk;
 using Campus.Contracts;
 using Campus.Contracts.AppFlow;
 using Campus.Contracts.Settings;
@@ -78,6 +79,58 @@ public sealed class ObserverCameraRuntimeTests
             controls.SetFocused(false);
             camera.PrepareForExit();
             await camera.DrainForExitAsync();
+            camera.Free();
+        }
+    }
+
+    [TestCase, TestCategory(TestReason.Regression), RequireGodotRuntime]
+    public void WalkJumpPressesStartExactlyOnePhysicsStepWhateverTheStepsPerFrame()
+    {
+        var camera = new ObserverCamera();
+        var walk = new WalkController();
+        var body = new CharacterBody3D();
+        try
+        {
+            if (camera.ProcessPhysicsPriority >= walk.ProcessPhysicsPriority)
+                throw new InvalidOperationException("Walk input is committed after the walk body's physics step that should use it.");
+            var controls = new ObserverControls(camera, camera.Tuning);
+            var locomotion = new WalkLocomotion(new WalkBodyCollision(body));
+            var map = FlightTestSupport.CreateContext();
+            var collision = new StreamLifecycleTestSupport.Collision();
+            float dt = 1f / Engine.PhysicsTicksPerSecond;
+            int Frame(int steps)
+            {
+                int jumps = 0;
+                for (int step = 0; step < steps; step++)
+                {
+                    locomotion.SetInput(controls.TakeWalkInput());
+                    locomotion.AdvanceJumpClock(dt);
+                    locomotion.PrepareInput(dt, true, false, default);
+                    if (locomotion.Integrate(dt, true, false, default, 0, default, default, map, collision, null).Jumped) jumps++;
+                }
+                return jumps;
+            }
+            controls.State.Press("jump");
+            if (Frame(3) != 1) throw new InvalidOperationException("A held press in a multi-step frame did not jump exactly once.");
+            controls.State.Release("jump");
+            locomotion.ResetPlacement();
+            controls.State.Press("jump");
+            int zeroStep = Frame(0);
+            controls.State.Release("jump");
+            if (zeroStep != 0 || Frame(1) != 1) throw new InvalidOperationException("A tap in a frame without physics steps was lost.");
+            locomotion.ResetPlacement();
+            controls.State.Press("jump");
+            controls.State.Release("jump");
+            if (Frame(1) != 1 || Frame(1) != 0) throw new InvalidOperationException("A tap did not start exactly one jump.");
+            locomotion.ResetPlacement();
+            controls.State.Press("jump");
+            if (Frame((int)(WalkTuning.HeldJumpInterval / dt) - 1) != 1)
+                throw new InvalidOperationException("Holding jump repeated it before the held-jump interval.");
+        }
+        finally
+        {
+            body.Free();
+            walk.Free();
             camera.Free();
         }
     }
