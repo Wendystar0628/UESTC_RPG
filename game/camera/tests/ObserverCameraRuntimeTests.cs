@@ -83,8 +83,11 @@ public sealed class ObserverCameraRuntimeTests
         }
     }
 
+    // Guards two facts: the camera's physics priority precedes the walk body's, and WalkLocomotion's
+    // jump latch consumes one press exactly once whatever the physics steps per frame.
+    // 相机提交路径由核心专项 CoreLifecycleDriver.ExerciseInput 的真实组合覆盖。
     [TestCase, TestCategory(TestReason.Regression), RequireGodotRuntime]
-    public void WalkJumpPressesStartExactlyOnePhysicsStepWhateverTheStepsPerFrame()
+    public void CameraPhysicsPrecedesWalkAndLocomotionLatchesEachJumpPressOnceWhateverTheStepsPerFrame()
     {
         var camera = new ObserverCamera();
         var walk = new WalkController();
