@@ -32,6 +32,7 @@ internal sealed class GrassPool
     private float[] _scratch = [];
     private IInstancePool? _pool;
     private N.Vector2? _at;
+    private N.Vector2? _selectionAt;
 
     public GrassPool(VegetationMotherData data, string tileId)
     {
@@ -52,6 +53,7 @@ internal sealed class GrassPool
             Layer, GeometryInstance3D.ShadowCastingSetting.Off) { Map = map });
         _pool.WriteBuffer(_scratch);
         _at = null;
+        _selectionAt = null;
     }
 
     public void Refresh(N.Vector3 eye, bool reset)
@@ -63,12 +65,14 @@ internal sealed class GrassPool
         var n = 0;
         var min = new N.Vector3(float.MaxValue);
         var max = new N.Vector3(float.MinValue);
+        var changed = false;
         for (var c = 0; c < _index.Cells.Count; c++)
         {
             var cell = _index.Cells[c];
-            var dx = MathF.Max(0f, MathF.Max(cell.X * GrassPoolIndex.CellSize - at.X, at.X - (cell.X + 1) * GrassPoolIndex.CellSize));
-            var dz = MathF.Max(0f, MathF.Max(cell.Z * GrassPoolIndex.CellSize - at.Y, at.Y - (cell.Z + 1) * GrassPoolIndex.CellSize));
-            if (dx * dx + dz * dz > GrassPoolIndex.Reach * GrassPoolIndex.Reach) continue;
+            var selected = Contains(cell, at);
+            // The frozen directory fixes records and order; compare selected cells, including equal-count replacements.
+            changed |= selected != (_selectionAt is { } previous && Contains(cell, previous));
+            if (!selected) continue;
             foreach (var i in _index.Members.Span.Slice(cell.Start, cell.Count))
             {
                 _records.Span.Slice(i * Stride, Stride).CopyTo(_scratch.AsSpan(n * Stride, Stride));
@@ -77,22 +81,34 @@ internal sealed class GrassPool
             min = N.Vector3.Min(min, cell.Bounds.Min);
             max = N.Vector3.Max(max, cell.Bounds.Max);
         }
-        pool.VisibleCount = 0;
         if (n == 0)
         {
-            pool.SetAabb(Parked);
+            if (pool.VisibleCount != 0) pool.VisibleCount = 0;
+            if (changed) pool.SetAabb(Parked);
+            _selectionAt = at;
             return;
         }
-        _scratch.AsSpan(n * Stride).Clear();
-        pool.WriteBuffer(_scratch);
-        var size = max - min;
-        pool.SetAabb(new Aabb(new Vector3(min.X, min.Y, min.Z), new Vector3(size.X, size.Y, size.Z)));
-        pool.VisibleCount = n;
+        if (changed)
+        {
+            _scratch.AsSpan(n * Stride).Clear();
+            pool.WriteBuffer(_scratch);
+            var size = max - min;
+            pool.SetAabb(new Aabb(new Vector3(min.X, min.Y, min.Z), new Vector3(size.X, size.Y, size.Z)));
+        }
+        if (pool.VisibleCount != n) pool.VisibleCount = n;
+        _selectionAt = at;
+    }
+
+    private static bool Contains(GrassPoolCell cell, N.Vector2 at)
+    {
+        var dx = MathF.Max(0f, MathF.Max(cell.X * GrassPoolIndex.CellSize - at.X, at.X - (cell.X + 1) * GrassPoolIndex.CellSize));
+        var dz = MathF.Max(0f, MathF.Max(cell.Z * GrassPoolIndex.CellSize - at.Y, at.Y - (cell.Z + 1) * GrassPoolIndex.CellSize));
+        return !(dx * dx + dz * dz > GrassPoolIndex.Reach * GrassPoolIndex.Reach);
     }
 
     public void Hide()
     {
-        if (_pool is not null) _pool.VisibleCount = 0;
+        if (_pool is { VisibleCount: > 0 }) _pool.VisibleCount = 0;
         _at = null;
     }
 
@@ -101,6 +117,7 @@ internal sealed class GrassPool
         _pool?.Free();
         _pool = null;
         _at = null;
+        _selectionAt = null;
     }
 
 }

@@ -480,6 +480,8 @@ public sealed partial class VegetationRuntime : Node, IMapAware, IViewContentRea
             for (var p = 0; p < PoolCount; p++)
             {
                 if (_pools[p] is not { } pool) continue;
+                // Records, bounds and traversal order are frozen for this mother; only membership changes their prefix.
+                var changed = Buckets.MembershipChanged(Order[p]);
                 var count = 0;
                 var min = new N.Vector3(float.MaxValue);
                 var max = new N.Vector3(float.MinValue);
@@ -490,13 +492,17 @@ public sealed partial class VegetationRuntime : Node, IMapAware, IViewContentRea
                     min = N.Vector3.Min(min, _bounds[i].Min);
                     max = N.Vector3.Max(max, _bounds[i].Max);
                 }
-                pool.VisibleCount = 0;
-                if (count == 0) { pool.SetAabb(Parked); continue; }
-                Array.Clear(_scratch);
+                if (count == 0)
+                {
+                    if (pool.VisibleCount != 0) pool.VisibleCount = 0;
+                    if (changed) pool.SetAabb(Parked);
+                    continue;
+                }
+                if (changed) Array.Clear(_scratch);
                 for (var k = 0; k < count; k++)
                 {
                     var member = _members[k];
-                    _records.AsSpan(member * Stride, Stride).CopyTo(_scratch.AsSpan(k * Stride, Stride));
+                    if (changed) _records.AsSpan(member * Stride, Stride).CopyTo(_scratch.AsSpan(k * Stride, Stride));
                     if (p < _transitionSlots.Length)
                     {
                         var slot = _transitionSlots[p];
@@ -504,16 +510,19 @@ public sealed partial class VegetationRuntime : Node, IMapAware, IViewContentRea
                         _transitions.Write(slot + k, Buckets.Level(member), Buckets.TargetLevel(member), Buckets.Started(member));
                     }
                 }
-                pool.WriteBuffer(_scratch);
-                var size = max - min;
-                pool.SetAabb(new Aabb(new Vector3(min.X, min.Y, min.Z), new Vector3(size.X, size.Y, size.Z)));
-                pool.VisibleCount = count;
+                if (changed)
+                {
+                    pool.WriteBuffer(_scratch);
+                    var size = max - min;
+                    pool.SetAabb(new Aabb(new Vector3(min.X, min.Y, min.Z), new Vector3(size.X, size.Y, size.Z)));
+                }
+                if (pool.VisibleCount != count) pool.VisibleCount = count;
             }
         }
 
         public void Hide()
         {
-            foreach (var pool in _pools) if (pool is not null) pool.VisibleCount = 0;
+            foreach (var pool in _pools) if (pool is { VisibleCount: > 0 }) pool.VisibleCount = 0;
         }
 
         public void Free()

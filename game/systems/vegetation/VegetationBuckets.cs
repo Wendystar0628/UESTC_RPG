@@ -28,6 +28,7 @@ public sealed class VegetationBuckets
     private readonly float[] _started;
     private readonly bool[] _shadow;
     private int _transitions;
+    private int _membershipChanges;
 
     /// <summary>Records are the 16-float instance records: the trunk foot is the translation, the height is INSTANCE_CUSTOM.w.</summary>
     public VegetationBuckets(ReadOnlySpan<float> records)
@@ -65,41 +66,57 @@ public sealed class VegetationBuckets
 
     public bool InShadow(int tree) => _shadow[tree];
 
+    internal bool MembershipChanged(VegPool pool) => (_membershipChanges & (1 << (byte)pool)) != 0;
+
     /// <summary>Original record order is the stable tree identity; prefix compaction never changes its clock.</summary>
     public bool Update(N.Vector3 eye, bool reset, float shadowReach, float clock, bool nearVisible)
     {
         var changed = false;
+        _membershipChanges = 0;
         for (var i = 0; i < _level.Length; i++)
         {
             var d = N.Vector3.Distance(eye, _centre[i]);
             var shadow = d <= shadowReach;
-            if (_shadow[i] != shadow) { _shadow[i] = shadow; changed = true; }
-            if (_started[i] >= 0f && Elapsed(clock, _started[i]) >= RenderFade.Seconds)
+            if (_shadow[i] != shadow)
             {
-                _level[i] = _target[i];
-                _started[i] = -1f;
-                _transitions--;
+                _shadow[i] = shadow;
+                _membershipChanges |= 1 << (byte)VegPool.Shadow;
                 changed = true;
             }
-            if (!nearVisible || reset || _level[i] == NotNear)
-            {
-                var next = nearVisible ? Target(d, _scale[i], NotNear) : NotNear;
-                if (_started[i] >= 0f) _transitions--;
-                changed |= _level[i] != next || _target[i] != next || _started[i] >= 0f;
-                _level[i] = _target[i] = next;
-                _started[i] = -1f;
-                continue;
-            }
-            // Finish the current segment before applying a reversal; there is no half-fade restart.
-            if (_started[i] >= 0f) continue;
-            var near = Target(d, _scale[i], _level[i]);
-            if (near == _level[i]) continue;
-            _target[i] = near;
-            _started[i] = clock;
-            _transitions++;
-            changed = true;
+            var before = (1 << _level[i]) | (1 << _target[i]);
+            changed |= UpdateLevel(i, d, reset, clock, nearVisible);
+            _membershipChanges |= before ^ ((1 << _level[i]) | (1 << _target[i]));
         }
         return changed;
+    }
+
+    private bool UpdateLevel(int i, float d, bool reset, float clock, bool nearVisible)
+    {
+        var changed = false;
+        if (_started[i] >= 0f && Elapsed(clock, _started[i]) >= RenderFade.Seconds)
+        {
+            _level[i] = _target[i];
+            _started[i] = -1f;
+            _transitions--;
+            changed = true;
+        }
+        if (!nearVisible || reset || _level[i] == NotNear)
+        {
+            var next = nearVisible ? Target(d, _scale[i], NotNear) : NotNear;
+            if (_started[i] >= 0f) _transitions--;
+            changed |= _level[i] != next || _target[i] != next || _started[i] >= 0f;
+            _level[i] = _target[i] = next;
+            _started[i] = -1f;
+            return changed;
+        }
+        // Finish the current segment before applying a reversal; there is no half-fade restart.
+        if (_started[i] >= 0f) return changed;
+        var near = Target(d, _scale[i], _level[i]);
+        if (near == _level[i]) return changed;
+        _target[i] = near;
+        _started[i] = clock;
+        _transitions++;
+        return true;
     }
 
     public static float Elapsed(float clock, float started) =>
