@@ -36,12 +36,17 @@ internal sealed class FaunaTileMountWork(FaunaTileMounts mounts, FaunaTile tile,
                 continue;
             }
             Begin(i);
-            // Each original site contains one species and therefore one fur/feather surface.
-            // Replacing it in the same Step preserves the off-screen latch across queue frames.
             if (!latch.Applied || latch.Set != _target)
             {
-                foreach (var handle in latch.Handles) mounts.Host.Unmount(handle);
-                latch.Handles.Clear();
+                // Commit the off-screen display change in this same step. Native owners remain
+                // in the latch until the shared queue reports their actual release.
+                while (latch.Handles.Count > 0)
+                {
+                    var handle = latch.Handles[^1];
+                    latch.RetiringHandles.Add(handle);
+                    latch.Handles.RemoveAt(latch.Handles.Count - 1);
+                    mounts.Host.Unmount(handle);
+                }
                 var output = _target is { } set ? site.Sets[(int)set] : ContentOutput.Empty;
                 if (output.Meshes.Count > 0 || output.Parts.Count > 0 || output.Instances.Count > 0)
                     latch.Handles.Add(mounts.Host.Mount(output));
@@ -50,7 +55,7 @@ internal sealed class FaunaTileMountWork(FaunaTileMounts mounts, FaunaTile tile,
             return false;
         }
         tile.Mounted = true;
-        tile.Work = null;
+        if (ReferenceEquals(tile.Work, this)) tile.Work = null;
         return true;
     }
 
@@ -75,6 +80,11 @@ internal sealed class FaunaTileMountWork(FaunaTileMounts mounts, FaunaTile tile,
         _version = latch.Version;
     }
 
-    protected override void Release() { mounts.Free(tile); tile.Work = null; }
+    protected override void Cancelled()
+    {
+        tile.Retiring = true; tile.Mounted = false;
+        if (tile.Work is { } update && !ReferenceEquals(update, this)) update.Cancel();
+    }
+    protected override bool Release(double budgetMilliseconds) => mounts.ReleaseStep(tile, budgetMilliseconds);
     protected override void Failed(Exception error) => mounts.Failed(error);
 }

@@ -2,6 +2,7 @@ using Campus.Contracts;
 using Campus.Contracts.Maps;
 using Campus.Gen.Collision;
 using Campus.Kernel.Diagnostics;
+using Campus.Kernel.Frame;
 using Campus.Kernel.Renderer;
 using Godot;
 using N = System.Numerics;
@@ -13,12 +14,13 @@ public interface ICollisionMountRuntime : ICollisionWorld
     MapId? Map { get; }
     long Revision { get; }
     void Attach(Node3D root, IMapContext context);
-    void BeginTile(TileKey tile);
-    void MountBody(TileKey tile, IReadOnlyList<Collider> colliders);
-    void CompleteTile(TileKey tile);
+    object BeginTile(TileKey tile);
+    bool MountBodyStep(object owner, IReadOnlyList<Collider> colliders, double budgetMilliseconds);
+    void CompleteTile(object owner);
+    void RetireTile(object owner);
     bool IsTileReady(TileKey tile);
-    void FailTile(TileKey tile, Exception error);
-    void RemoveTile(TileKey tile);
+    void FailTile(object owner, Exception error);
+    bool RemoveTileStep(object owner, double budgetMilliseconds);
     void Unload();
 }
 
@@ -67,13 +69,14 @@ public sealed class CollisionWorld : ICollisionMountRuntime
     public void Attach(Node3D root, IMapContext context)
     {
         MainThread();
-        Unload();
+        if (_tiles.Count != 0) throw new InvalidOperationException("Collision owners must drain before attaching a map.");
+        Revision++;
         _root = root;
         _context = context;
         Failure = null;
     }
 
-    public bool IsTileReady(TileKey tile) => _tiles.TryGetValue(tile, out var state) && state.Ready;
+    public bool IsTileReady(TileKey tile) => _tiles.TryGetValue(tile, out var state) && state.Ready && !state.Retiring;
 
     public bool Ready(N.Vector3 p, float r)
     {
@@ -94,104 +97,121 @@ public sealed class CollisionWorld : ICollisionMountRuntime
                     if (dx * dx + dz * dz > r * r) continue;
                 }
                 // Outside the declared tile rectangle is never silently treated as physical ground.
-                if (!_tiles.TryGetValue(tile, out var state) || !state.Ready) return false;
+                if (!_tiles.TryGetValue(tile, out var state) || !state.Ready || state.Retiring) return false;
             }
         return true;
     }
 
-    public void BeginTile(TileKey tile)
+    public object BeginTile(TileKey tile)
     {
         MainThread();
         if (_root is null || _context is null) throw new InvalidOperationException("Collision map is not attached.");
-        if (!_tiles.TryAdd(tile, new())) throw new InvalidOperationException($"Duplicate collision tile: {tile}.");
+        if (_tiles.TryGetValue(tile, out var current) && !current.Retiring)
+            throw new InvalidOperationException($"Duplicate collision tile: {tile}.");
+        var state = new TileState(tile, _root);
+        _tiles[tile] = state;
+        return state;
     }
 
-    /// <summary>One atomic body: no shape additions are allowed after AddChild.</summary>
-    public void MountBody(TileKey tile, IReadOnlyList<Collider> colliders)
+    /// <summary>Checks the shared remainder between shapes; AddChild occurs only after the whole body is ready.</summary>
+    public bool MountBodyStep(object owner, IReadOnlyList<Collider> colliders, double budgetMilliseconds)
     {
         MainThread();
+        var state = (TileState)owner;
+        if (state.Ready || state.Retiring) throw new InvalidOperationException("Collision tile is not pending.");
         if (colliders.Count is < 1 or > CollisionGeometry.MaxShapesPerBody) throw new ArgumentException("A body needs 1..250 shapes.");
-        if (_root is null || !_tiles.TryGetValue(tile, out var state) || state.Ready) throw new InvalidOperationException("Collision tile is not pending.");
-        var bodyIndex = state.Bodies.Count;
+        if (budgetMilliseconds <= 0) return false;
+        var start = FrameClock.MonotonicMilliseconds;
         var first = colliders[0];
-        var origin = TileGrid.Origin(tile);
-        StaticBody3D? body = null;
-        var rid = default(Rid);
-        try
+        if (state.Pending is null)
         {
-            body = new StaticBody3D
-            {
-                Name = $"Collision_{tile.X}_{tile.Z}_{bodyIndex}",
-                Position = new Vector3(origin.X, 0, origin.Y),
-                CollisionLayer = 1u << (int)first.Tag,
-                CollisionMask = 0,
-            };
-            rid = body.GetRid();
-            body.SetMeta("surface", (int)first.Tag);
-            body.SetMeta("foot", (int)first.Foot);
-            body.SetMeta("tile_x", tile.X);
-            body.SetMeta("tile_z", tile.Z);
-            foreach (var source in colliders)
-            {
-                if (source.Tag != first.Tag || source.Foot != first.Foot || !Enum.IsDefined(source.Tag) || !Enum.IsDefined(source.Foot) || source.Tag == SurfaceTag.Water)
-                    throw new ArgumentException("A collision body must have a single valid surface and material.");
-                var (shape, transform) = CollisionShapeFactory.MakeShape(source);
-                using var ownedShape = shape;
-                shape.SetMeta("surface", (int)source.Tag);
-                shape.SetMeta("foot", (int)source.Foot);
-                var owner = body.CreateShapeOwner(shape);
-                body.ShapeOwnerSetTransform(owner, transform);
-                body.ShapeOwnerAddShape(owner, shape);
-            }
-            if (body.IsInsideTree() || ShapeCount(body) != colliders.Count)
-            { _incompleteMounts++; throw new InvalidOperationException("Collision body entered the tree before all shapes were ready."); }
-            _root.AddChild(body);
-            _bodySurfaces.Add(rid, first.Tag);
-            state.Bodies.Add(new(body, rid));
-            state.Shapes += colliders.Count;
+            var body = new StaticBody3D();
+            var mounted = new MountedBody(body);
+            state.Bodies.Add(mounted); state.Pending = mounted;
+            var origin = TileGrid.Origin(state.Tile);
+            body.Name = $"Collision_{state.Tile.X}_{state.Tile.Z}_{state.Bodies.Count - 1}";
+            body.Position = new Vector3(origin.X, 0, origin.Y);
+            body.CollisionLayer = 1u << (int)first.Tag; body.CollisionMask = 0;
+            mounted.Rid = body.GetRid();
+            body.SetMeta("surface", (int)first.Tag); body.SetMeta("foot", (int)first.Foot);
+            body.SetMeta("tile_x", state.Tile.X); body.SetMeta("tile_z", state.Tile.Z);
+            state.Batch = colliders;
         }
-        catch
+        if (!ReferenceEquals(state.Batch, colliders)) throw new InvalidOperationException("A pending collision body changed its source batch.");
+        var pending = state.Pending.Body;
+        while (state.Shape < colliders.Count)
         {
-            _bodySurfaces.Remove(rid);
-            if (body is not null && GodotObject.IsInstanceValid(body)) body.Free();
-            throw;
+            if (FrameClock.MonotonicMilliseconds - start >= budgetMilliseconds) return false;
+            var source = colliders[state.Shape];
+            if (source.Tag != first.Tag || source.Foot != first.Foot || !Enum.IsDefined(source.Tag) || !Enum.IsDefined(source.Foot) || source.Tag == SurfaceTag.Water)
+                throw new ArgumentException("A collision body must have a single valid surface and material.");
+            var (shape, transform) = CollisionShapeFactory.MakeShape(source);
+            state.PendingShape = shape;
+            shape.SetMeta("surface", (int)source.Tag); shape.SetMeta("foot", (int)source.Foot);
+            var shapeOwner = pending.CreateShapeOwner(shape);
+            pending.ShapeOwnerSetTransform(shapeOwner, transform); pending.ShapeOwnerAddShape(shapeOwner, shape);
+            state.Shape++; state.Shapes++;
+            shape.Dispose(); state.PendingShape = null;
         }
+        if (FrameClock.MonotonicMilliseconds - start >= budgetMilliseconds) return false;
+        if (pending.IsInsideTree() || ShapeCount(pending) != colliders.Count)
+        { _incompleteMounts++; throw new InvalidOperationException("Collision body entered the tree before all shapes were ready."); }
+        state.Root.AddChild(pending);
+        _bodySurfaces.Add(state.Pending.Rid, first.Tag);
+        state.Pending.Shapes = colliders.Count;
+        state.Pending = null; state.Batch = null; state.Shape = 0;
+        return true;
     }
 
-    public void CompleteTile(TileKey tile)
+    public void CompleteTile(object owner)
     {
-        MainThread();
-        if (!_tiles.TryGetValue(tile, out var state)) throw new InvalidOperationException("Unknown collision tile.");
+        MainThread(); var state = (TileState)owner;
+        if (state.Retiring || state.Pending is not null) throw new InvalidOperationException("Collision tile is not complete.");
         state.Ready = true;
     }
 
-    public void FailTile(TileKey tile, Exception error)
+    public void RetireTile(object owner)
     {
-        MainThread();
-        Failure = RetainedFailure.Append(Failure, error);
-        RemoveTile(tile);
+        MainThread(); var state = (TileState)owner;
+        state.Ready = false; state.Retiring = true;
     }
 
-    public void RemoveTile(TileKey tile)
+    public void FailTile(object owner, Exception error)
     {
-        MainThread();
-        if (!_tiles.Remove(tile, out var state)) return;
-        foreach (var mounted in state.Bodies)
+        MainThread(); Failure = RetainedFailure.Append(Failure, error); RetireTile(owner);
+    }
+
+    public bool RemoveTileStep(object owner, double budgetMilliseconds)
+    {
+        MainThread(); var state = (TileState)owner; RetireTile(state);
+        var start = FrameClock.MonotonicMilliseconds;
+        if (state.PendingShape is { } pendingShape)
         {
-            // Remove by the saved RID even when the managed wrapper was already freed.
-            _bodySurfaces.Remove(mounted.Rid);
-            if (GodotObject.IsInstanceValid(mounted.Body)) mounted.Body.Free();
+            pendingShape.Dispose(); state.PendingShape = null;
+            return false;
         }
+        if (state.Bodies.Count > 0)
+            do
+            {
+                var mounted = state.Bodies[^1];
+                if (GodotObject.IsInstanceValid(mounted.Body)) mounted.Body.Free();
+                _bodySurfaces.Remove(mounted.Rid);
+                state.Bodies.RemoveAt(state.Bodies.Count - 1);
+                state.Shapes -= ReferenceEquals(state.Pending, mounted) ? state.Shape : mounted.Shapes;
+                if (ReferenceEquals(state.Pending, mounted)) { state.Pending = null; state.Batch = null; state.Shape = 0; }
+            } while (state.Bodies.Count > 0 && FrameClock.MonotonicMilliseconds - start < budgetMilliseconds);
+        if (state.Bodies.Count != 0) return false;
+        if (_tiles.TryGetValue(state.Tile, out var current) && ReferenceEquals(current, state)) _tiles.Remove(state.Tile);
+        if (_context is null && _tiles.Count == 0) { _boundaryProbe?.Dispose(); _boundaryProbe = null; }
+        return true;
     }
 
     public void Unload()
     {
         MainThread();
-        _boundaryProbe?.Dispose();
-        _boundaryProbe = null;
-        foreach (var tile in _tiles.Keys.OrderBy(t => t.X).ThenBy(t => t.Z).ToArray()) RemoveTile(tile);
-        _bodySurfaces.Clear();
-        _context = null; _root = null; Failure = null; Revision++;
+        foreach (var state in _tiles.Values) RetireTile(state);
+        _context = null; _root = null; Revision++;
+        if (_tiles.Count == 0) { _boundaryProbe?.Dispose(); _boundaryProbe = null; }
     }
 
     public SupportHit? SupportY(float x, float z, float yHint)
@@ -289,6 +309,17 @@ public sealed class CollisionWorld : ICollisionMountRuntime
         return null;
     }
     private static int ShapeCount(StaticBody3D body) => body.GetShapeOwners().Sum(owner => body.ShapeOwnerGetShapeCount((uint)owner));
-    private sealed record MountedBody(StaticBody3D Body, Rid Rid);
-    private sealed class TileState { public bool Ready; public int Shapes; public List<MountedBody> Bodies { get; } = []; }
+    private sealed class MountedBody(StaticBody3D body)
+    { public StaticBody3D Body { get; } = body; public Rid Rid; public int Shapes; }
+    private sealed class TileState(TileKey tile, Node3D root)
+    {
+        public TileKey Tile { get; } = tile;
+        public Node3D Root { get; } = root;
+        public bool Ready, Retiring;
+        public int Shapes, Shape;
+        public MountedBody? Pending;
+        public Shape3D? PendingShape;
+        public IReadOnlyList<Collider>? Batch;
+        public List<MountedBody> Bodies { get; } = [];
+    }
 }

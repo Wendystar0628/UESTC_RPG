@@ -22,8 +22,8 @@ public sealed class StreamMountQueueTests
             queue.Enqueue(new MountWork(StreamMountKind.Collision, queue.Revision, _ => collisionSteps++));
             queue.Drain(covered ? CoveredScreen : VisibleWorld, release: budget =>
             {
-                if (!covered && budget > KernelBudgets.StreamMountMilliseconds - KernelBudgets.CollisionMountMilliseconds)
-                    throw new InvalidOperationException("Retirement took the reserved collision budget.");
+                if (!covered && budget > KernelBudgets.StreamMountMilliseconds)
+                    throw new InvalidOperationException("Retirement exceeded the shared frame remainder.");
             }, canActivateVisual: () => !retiring);
             if (collisionSteps != 1 || visualSteps != 0 || queue.Pending != 1)
                 throw new InvalidOperationException("Retirement did not apply visual-only backpressure.");
@@ -258,5 +258,55 @@ public sealed class StreamMountQueueTests
             throw new InvalidOperationException("The failed map did not drain each queued owner once while retaining its failure.");
     }
 
+
+    [TestCase, TestCategory(TestReason.Regression)]
+    public void MountsUseBudgetBeforeRetirementAndZeroRemainderStillAdvancesOneUnit()
+    {
+        var clock = 0d; var order = new List<string>(); var detachSteps = 0;
+        var queue = new StreamMountQueue(() => clock);
+        var retired = new MountWork(StreamMountKind.Auxiliary, queue.Revision, _ => throw new InvalidOperationException(),
+            release: budget => { Check(budget == 0); order.Add("release"); }, releaseSlices: 2);
+        queue.Retire(retired);
+        Check(retired.Cancels == 1 && retired.Releases == 0 && queue.PendingRetirements == 1 && queue.Pending == 0);
+        queue.Drain(VisibleWorld, prepare: () => throw new InvalidDataException(),
+            release: _ => detachSteps++, canReleaseRetired: () => false);
+        Check(detachSteps == 1 && retired.Releases == 0 && queue.PendingRetirements == 1);
+        queue.Enqueue(new MountWork(StreamMountKind.Visual, queue.Revision, _ => { order.Add("mount"); clock += KernelBudgets.StreamMountMilliseconds; }));
+        queue.Drain(VisibleWorld, release: _ => detachSteps++, canReleaseRetired: () => detachSteps >= 2);
+        Check(order.SequenceEqual(["mount", "release"]) && queue.PendingRetirements == 1);
+        queue.RemoveMap(new("map"));
+        queue.Drain(VisibleWorld, prepare: () => throw new InvalidDataException());
+        Check(retired.Releases == 2 && queue.PendingRetirements == 0 && retired.Cancels == 1);
+    }
+
+    [TestCase, TestCategory(TestReason.Regression)]
+    public void FailedRetirementKeepsItsOwnerAndResumesAfterTheFailureIsRemoved()
+    {
+        var queue = new StreamMountQueue(() => 0);
+        var original = new IOException(); var fault = true;
+        var work = new MountWork(StreamMountKind.Visual, queue.Revision, _ => { },
+            release: _ => { if (fault) throw original; });
+        queue.Retire(work); queue.RemoveMap(new("map")); queue.Drain(VisibleWorld);
+        Check(ReferenceEquals(queue.Failure, original) && queue.PendingRetirements == 1 && work.Releases == 0);
+        fault = false; queue.Drain(VisibleWorld);
+        Check(queue.PendingRetirements == 0 && work.Releases == 1 && ReferenceEquals(queue.Failure, original));
+    }
+
+    [TestCase, TestCategory(TestReason.Regression), RequireGodotRuntime]
+    public async Task FailedReleaseKeepsTheMapOwnedUntilExplicitDrainResumes()
+    {
+        using var fixture = new StreamFixture(); await fixture.Until(() => fixture.Director.ViewReady);
+        var original = new IOException("retirement failed"); var fault = true;
+        var owner = new MountWork(StreamMountKind.Auxiliary, fixture.Mount.Revision, _ => { },
+            release: _ => { if (fault) throw original; }, map: fixture.Context.Descriptor.Id);
+        fixture.Mount.Retire(owner);
+        try { await fixture.Unload(); throw new InvalidOperationException("The failed release did not reach its lifetime owner."); }
+        catch (Exception error) when (ReferenceEquals(error, original)) { }
+        Check(!fixture.Director.IsUnloaded && fixture.Mount.PendingRetirements == 1 && owner.Releases == 0);
+        fault = false;
+        try { await fixture.Director.DrainAsync(); throw new InvalidOperationException("Retry lost the original release failure."); }
+        catch (Exception error) when (ReferenceEquals(error, original)) { }
+        Check(fixture.Director.IsUnloaded && fixture.Mount.PendingRetirements == 0 && owner.Releases == 1 && !fixture.Mount.RetirementFailed);
+    }
 
 }

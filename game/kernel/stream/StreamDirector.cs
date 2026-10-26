@@ -17,6 +17,7 @@ public sealed record StreamDirectorDependencies(ServiceRegistry Owner, IBakeCont
 public interface IStreamVisualFrame
 {
     bool CanActivateVisual { get; }
+    bool CanReleaseRetiredInstances { get; }
     bool ViewReady { get; }
     void PrepareMountFrame();
     void CompleteMountFrame(double remainingMilliseconds);
@@ -80,8 +81,8 @@ public partial class StreamDirector : Node, IMapAware, IMapStreamState, IStreamV
     public MapStreamDestination? Destination => _selection.Destination;
     public bool HasPendingDestination => _selection.HasPendingDestination;
     public IReadOnlyList<MapStreamDestination> PinnedDestinations => _pins.PinnedDestinations;
-    public bool IsUnloaded => _context is null && _unloadingMap is null && _selection.IsIdle && _pins.IsIdle &&
-        _preparation.IsIdle && _residency.IsIdle && (_interiors?.IsUnloaded ?? true);
+    public bool IsUnloaded => _owner is null || (_context is null && _unloadingMap is null && _selection.IsIdle && _pins.IsIdle &&
+        _preparation.IsIdle && _residency.IsIdle && (_interiors?.IsUnloaded ?? true) && _mount.Pending == 0 && _mount.PendingRetirements == 0);
     public bool ResidentReady => Failure is null && _context is not null && _preparation.Catalog is not null && _residency.RootMounted;
     public bool DestinationReady => _selection.DestinationReady;
     public bool PinnedDestinationReady(MapStreamDestination destination) => _pins.DestinationReady(destination);
@@ -95,6 +96,7 @@ public partial class StreamDirector : Node, IMapAware, IMapStreamState, IStreamV
     public int MountedTiles => _residency.MountedTiles;
     public int VisibleTiles => _selection.VisibleTiles;
     public bool CanActivateVisual => _residency.CanActivateVisual;
+    public bool CanReleaseRetiredInstances => _residency.CanReleaseRetiredInstances;
     /// <summary>The view shares the complete selected-geometry barrier with a formal arrival.</summary>
     public bool ViewReady => _selection.ViewReady;
     /// <summary>Packed-buffer bytes, not compressed disk bytes or measured VRAM.</summary>
@@ -113,7 +115,7 @@ public partial class StreamDirector : Node, IMapAware, IMapStreamState, IStreamV
                 PendingPreparations = _preparation.Preparations + (_interiors?.Preparations ?? 0) +
                     _selection.Preparations + _pins.Preparations,
                 PendingMounts = _mount.Pending,
-                PendingRetirements = _residency.Retirements + _preparation.Retirements +
+                PendingRetirements = _mount.PendingRetirements + _residency.Retirements + _preparation.Retirements +
                     (_interiors?.Retirements(_context is null) ?? 0) + _selection.Retirements + _pins.Retirements,
                 MountMilliseconds = _context is null ? 0 : _mount.LastMilliseconds,
                 WatchdogTrips = _context is null ? 0 : _mount.WatchdogTrips - _watchdogBaseline,
@@ -170,7 +172,7 @@ public partial class StreamDirector : Node, IMapAware, IMapStreamState, IStreamV
         _participants = new(this, dependencies.Owner, dependencies.ViewCamera);
         _residency.InitializeMaterials(dependencies.Toon, dependencies.Shaders);
         _interiors = new(_bake, _mount, _residency.Materials, _reflections, _residency.QueueRetirement,
-            _captureMode, dependencies.Geometry, RecordTileChange);
+            _captureMode, dependencies.Geometry, RecordTileChange, _residency.QueueDetach, () => _residency.CanReleaseRetiredInstances);
         BeginStatisticsFrame();
     }
 
@@ -222,6 +224,7 @@ public partial class StreamDirector : Node, IMapAware, IMapStreamState, IStreamV
     {
         if (_context is { } context) OnMapUnloading(context.Descriptor.Id);
         Stop(_residency.DetachMap);
+        if (_interiors is not null) Stop(_interiors.Unload);
         if (_unloadingMap is { } map) Stop(() => _mount.RemoveMap(map));
         try { await _selection.DrainAsync(); } catch (Exception error) { RecordFailure(error); }
         try { await _pins.DrainAsync(); } catch (Exception error) { RecordFailure(error); }
@@ -230,8 +233,18 @@ public partial class StreamDirector : Node, IMapAware, IMapStreamState, IStreamV
             try { await _interiors.DrainAsync(); } catch (Exception error) { RecordFailure(error); }
         Stop(_participants.UnloadParticipants);
         Stop(_residency.Unload);
-        if (_selection.IsIdle && _pins.IsIdle && _preparation.IsIdle && _residency.IsIdle && (_interiors?.IsUnloaded ?? true))
-            _unloadingMap = null;
+        // ProcessFrame precedes node processing. Let the executor get a complete frame on every
+        // explicit drain attempt before observing its release-failure flag from the next boundary.
+        if (_mount.Pending > 0 || _mount.PendingRetirements > 0 || !_residency.IsIdle)
+            await FrameAwaiter.ProcessAsync(this);
+        while (_mount.Pending > 0 || _mount.PendingRetirements > 0 || !_residency.IsIdle)
+        {
+            await FrameAwaiter.ProcessAsync(this);
+            if (_mount is IStreamMountFrame { RetirementFailed: true }) break;
+        }
+        if (_selection.IsIdle && _pins.IsIdle && _preparation.IsIdle && _residency.IsIdle && (_interiors?.IsUnloaded ?? true) &&
+            _mount.Pending == 0 && _mount.PendingRetirements == 0)
+        { _preparation.CompleteUnload(); _unloadingMap = null; }
         PollFailures();
         if (Failure is { } failure) System.Runtime.ExceptionServices.ExceptionDispatchInfo.Capture(failure).Throw();
     }
@@ -289,7 +302,7 @@ public partial class StreamDirector : Node, IMapAware, IMapStreamState, IStreamV
     }
     public void ReleaseRetired(double budgetMilliseconds)
     {
-        if (_context is not null && !_exiting && Failure is null) _residency.ReleaseRetired(budgetMilliseconds);
+        _residency.ReleaseRetired(budgetMilliseconds);
     }
     private void OnWorldInstanceChanged(long _) => _selection.ResetWorld();
     internal void RequestRetention() => _checkRetention = true;

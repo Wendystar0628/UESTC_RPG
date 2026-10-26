@@ -117,8 +117,10 @@ public sealed class NightlightTileTests
         var map = new MapId("fixture.preload");
         var host = new ReadyPoolHost(new ReadyPool());
         var materials = new ReadyMaterialSource();
-        var mounts = new GlowTileMounts(host, materials);
+        var queue = new Campus.Kernel.Stream.StreamMountQueue(() => 0);
+        var mounts = new GlowTileMounts(host, materials, () => true);
         mounts.Bind(map);
+        var owners = new List<IStreamMountWork>();
         NightlightTileContent Tile(int x)
         {
             var center = new Vector3(x * TileGrid.BaseEdge, 0f, 0f);
@@ -132,6 +134,7 @@ public sealed class NightlightTileTests
             foreach (var tile in new[] { current, background })
             {
                 var work = mounts.CreateMount(tile.Key, tile, BakePriority.Background, 0);
+                owners.Add(work);
                 AssertThat(work.Step(1d)).IsTrue();
             }
             var currentPool = host.Mounted[0];
@@ -150,7 +153,7 @@ public sealed class NightlightTileTests
             currentPool.Available = false;
             AssertThat(!mounts.IsReady(in view)).OverrideFailureMessage("Selected resource readiness remains mandatory.").IsTrue();
         }
-        finally { mounts.Dispose(); }
+        finally { mounts.Bind(null); foreach (var owner in owners) queue.Retire(owner); queue.Drain(Campus.Tests.StreamLifecycleTestSupport.CoveredScreen); mounts.Dispose(); }
     }
 
     private sealed class ReadyMaterialSource : IShaderMaterialSource

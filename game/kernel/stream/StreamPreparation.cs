@@ -123,14 +123,14 @@ internal sealed class StreamPreparation(StreamDirector host, IStreamGeometryPrep
         for (var i = _preparing.Count - 1; i >= 0; i--)
         {
             var preparing = _preparing[i];
-            if (preparing.Failed || !preparing.Task.IsCompleted) continue;
+            if (!preparing.Task.IsCompleted) continue;
             if (!preparing.Task.IsCompletedSuccessfully)
             {
                 try { preparing.Task.GetAwaiter().GetResult(); }
                 catch (OperationCanceledException) when (preparing.Task.IsCanceled) { }
                 catch (Exception error) { _host.Fail(preparing.Tile, error); }
-                // Failed initialization may also have failed cleanup. Keep its owner until explicit drain.
-                preparing.Failed = true;
+                _host.Residency.QueueRetirement(preparing.Owner);
+                _preparing.RemoveAt(i);
                 continue;
             }
             var prepared = preparing.Owner;
@@ -148,7 +148,7 @@ internal sealed class StreamPreparation(StreamDirector host, IStreamGeometryPrep
                     group.Priority, _host.Residency.Materials, _host.Reflections,
                     () => _host.Residency.SetMounted(group, preparing.Revision),
                     () => _host.Residency.ClearMounted(group, preparing.Revision),
-                    reason => _host.Fail(group.Tile, reason));
+                    reason => _host.Fail(group.Tile, reason), _host.Residency.QueueDetach, () => _host.Residency.CanReleaseRetiredInstances);
                 _host.Mount.Enqueue(group.Work);
             }
         }
@@ -161,9 +161,10 @@ internal sealed class StreamPreparation(StreamDirector host, IStreamGeometryPrep
     }
     internal void Unload()
     {
-        _catalog = null; _requests.Clear(); _issued.Clear();
+        _catalog = null; _requests.Clear();
         // CPU and GPU tasks keep their input ownership until terminal and are harvested normally.
     }
+    internal void CompleteUnload() => _issued.Clear();
     internal async Task DrainAsync()
     {
         if (_catalogTask is { } catalog)
@@ -185,14 +186,12 @@ internal sealed class StreamPreparation(StreamDirector host, IStreamGeometryPrep
             try { await preparing.Task; }
             catch (OperationCanceledException) when (preparing.Task.IsCanceled) { }
             catch (Exception error) { _host.RecordFailure(error); }
-            try { prepared.Dispose(); }
-            catch (Exception error) { _host.RecordFailure(error); }
-            if (prepared.IsDisposed) _preparing.RemoveAt(i);
+            _host.Residency.QueueRetirement(prepared);
+            _preparing.RemoveAt(i);
         }
     }
     internal sealed record Pending(StreamRequest Request, IBakeHandle Handle, long Revision, TileGroup Group,
         long GeometryRevision, ParticipantTile? Participant);
-    private sealed record Preparing(StreamTile Tile, long Revision, PreparedTile Owner, Task Task, TileGroup Group, long GeometryRevision)
-    { public bool Failed { get; set; } }
+    private sealed record Preparing(StreamTile Tile, long Revision, PreparedTile Owner, Task Task, TileGroup Group, long GeometryRevision);
 
 }

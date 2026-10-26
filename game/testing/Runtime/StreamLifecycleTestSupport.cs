@@ -24,6 +24,7 @@ internal static class StreamLifecycleTestSupport
     internal sealed class StreamFixture : IDisposable
     {
         private readonly Node3D _stage = new();
+        private bool _drainSubscribed;
         private readonly Camera3D _view = new() { Current = true };
         private readonly ShaderMaterial _material = new ShaderMaterialSource(new RequiredResources()).Create(ShaderId.VegTrunk);
         public StreamDirector Director { get; } = new();
@@ -66,7 +67,8 @@ internal static class StreamLifecycleTestSupport
         public void Tick(bool mount = true)
         {
             Director._Process(.1);
-            if (mount) Mount.Drain(CoveredScreen, Director.PrepareMountFrame, Director.CompleteMountFrame, Director.ReleaseRetired, () => Director.CanActivateVisual);
+            if (mount) Mount.Drain(CoveredScreen, Director.PrepareMountFrame, Director.CompleteMountFrame, Director.ReleaseRetired,
+                () => Director.CanActivateVisual, () => Director.CanReleaseRetiredInstances);
             else { Director.PrepareMountFrame(); Director.CompleteMountFrame(100); }
             if (Director.Failure is { } failure) throw failure;
         }
@@ -76,8 +78,19 @@ internal static class StreamLifecycleTestSupport
             { Tick(mount); if (ready()) return; await FrameAwaiter.ProcessAsync(Director); }
             throw new TimeoutException("Stream fixture did not reach its public lifecycle condition.");
         }
-        public Task Unload() { Director.OnMapUnloading(Context.Descriptor.Id); return Director.DrainAsync(); }
-        public void Dispose() { _stage.Free(); _material.Dispose(); }
+        public Task Unload()
+        {
+            if (!_drainSubscribed)
+            { ((SceneTree)Engine.GetMainLoop()).ProcessFrame += DrainFrame; _drainSubscribed = true; }
+            Director.OnMapUnloading(Context.Descriptor.Id); return Director.DrainAsync();
+        }
+        private void DrainFrame() => Mount.Drain(CoveredScreen, Director.PrepareMountFrame, Director.CompleteMountFrame,
+            Director.ReleaseRetired, () => Director.CanActivateVisual, () => Director.CanReleaseRetiredInstances);
+        public void Dispose()
+        {
+            if (_drainSubscribed) ((SceneTree)Engine.GetMainLoop()).ProcessFrame -= DrainFrame;
+            _stage.Free(); _material.Dispose();
+        }
     }
     private sealed class CatalogSource(Task<PreparedBakeTiles> catalog) : IBakeContextSource
     {
@@ -153,7 +166,7 @@ internal static class StreamLifecycleTestSupport
     {
         public StreamTileNeed Need { get; set; }
         public bool Retained { get; private set; }
-        public HashSet<BakeKey> Mounted { get; } = [];
+        public Dictionary<BakeKey, StreamMountWork> Mounted { get; } = [];
         public StreamMountKind Kind => StreamMountKind.Collision;
         public bool CanMount(BakeKey key) => BakeRequestKeys.Parse(key).Collision;
         public StreamTileNeed Demand(in BakeTileEntry entry, in StreamDemandView view, bool resident)
@@ -171,18 +184,26 @@ internal static class StreamLifecycleTestSupport
         public IStreamMountWork CreateMount(BakeKey key, object product, BakePriority priority, long revision) =>
             new MountWork(this, key, priority, revision);
         public bool ResourcesUploaded { get; set; } = true;
-        public bool IsReady(BakeKey key) => ResourcesUploaded && Mounted.Contains(key);
-        public void Unmount(BakeKey key) => Mounted.Remove(key);
+        public bool IsReady(BakeKey key) => ResourcesUploaded && Mounted.TryGetValue(key, out var work) && !work.IsCancelled;
         public Exception? Failure { get; set; }
 
         private sealed class MountWork(FixtureCollisionParticipant owner, BakeKey key, BakePriority priority, long revision)
             : StreamMountWork(key, priority, revision, StreamMountKind.Collision)
         {
             protected override bool IsCurrent => true;
-            protected override bool MountStep(double budgetMilliseconds) { owner.Mounted.Add(Key); return true; }
-            protected override void Release() { }
+            protected override bool MountStep(double budgetMilliseconds) { owner.Mounted[Key] = this; return true; }
+            protected override bool Release(double budgetMilliseconds)
+            {
+                if (owner.Mounted.TryGetValue(Key, out var current) && ReferenceEquals(current, this)) owner.Mounted.Remove(Key);
+                return true;
+            }
             protected override void Failed(Exception error) => owner.Failure = error;
         }
+    }
+    internal static async Task ReleasePreparedAsync(PreparedTile tile)
+    {
+        var root = ((SceneTree)Engine.GetMainLoop()).Root;
+        while (!tile.ReleaseOne()) await FrameAwaiter.ProcessAsync(root);
     }
     private sealed class Observer(TestCameraRig camera) : IObserverState { public N.Vector3 Feet => camera.Pose.Position; public N.Vector3 Eye => Feet; public float YawDeg => camera.Pose.YawDeg; public NavSpace? Space => null; public ViewMode Mode => ViewMode.Fly; }
     internal sealed class Collision : ICollisionWorld
@@ -195,14 +216,14 @@ internal static class StreamLifecycleTestSupport
         public SweepHit? SupportRay(N.Vector3 from, N.Vector3 to) => null;
         public int NearbyBoundaries(N.Vector3 feet, float radius, float height, Span<BoundaryHit> hits) => 0;
     }
-    internal sealed class Materials(Material material) : IToonMaterialProvider, IShaderMaterialSource { public Material Get(ToonSpec spec) => material; public Material CreatePipelineMaterial(ToonKind kind) => throw new NotSupportedException(); public ShaderMaterial Create(ShaderId shader) => throw new NotSupportedException(); }
+    internal sealed class Materials(Material material) : IToonMaterialProvider, IShaderMaterialSource { public Exception? Failure { get; set; } public Material Get(ToonSpec spec) => Failure is { } error ? throw error : material; public Material CreatePipelineMaterial(ToonKind kind) => throw new NotSupportedException(); public ShaderMaterial Create(ShaderId shader) => throw new NotSupportedException(); }
     internal sealed class Reflection : IReflectionWorld
     {
         public Rid Scenario => default; public Material ProxyMaterial => throw new NotSupportedException();
         public event Action? Changed { add { } remove { } }
         public bool TryGetDemand(in StreamDemandView source, out StreamDemandView reflected) { reflected = default; return false; }
     }
-    internal sealed class MountWork(StreamMountKind kind, long revision, Action<double> step, string module = "module", int slices = 1, Action? cancel = null, BakePriority? priority = null, MapId? map = null) : IStreamMountWork
+    internal sealed class MountWork(StreamMountKind kind, long revision, Action<double> step, string module = "module", int slices = 1, Action? cancel = null, Action<double>? release = null, int releaseSlices = 1, BakePriority? priority = null, MapId? map = null) : IStreamMountWork
     {
         public Exception? KeyFailure, RevisionFailure;
         public BakeKey Key => KeyFailure is { } error ? throw error : new(map ?? new("map"), module, "L0/0/0");
@@ -210,9 +231,10 @@ internal static class StreamLifecycleTestSupport
         public BakePriority Priority => EffectivePriority;
         public long Revision => RevisionFailure is { } error ? throw error : revision;
         public StreamMountKind Kind { get; } = kind;
-        public int Cancels;
+        public int Cancels, Releases;
         private int _steps;
         public bool Step(double budgetMilliseconds) { step(budgetMilliseconds); return ++_steps >= slices; }
         public void Cancel() { Cancels++; cancel?.Invoke(); }
+        public bool ReleaseStep(double budgetMilliseconds) { release?.Invoke(budgetMilliseconds); return ++Releases >= releaseSlices; }
     }
 }

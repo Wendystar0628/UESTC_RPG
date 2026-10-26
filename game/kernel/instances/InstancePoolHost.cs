@@ -22,6 +22,7 @@ public sealed partial class InstancePoolHost : Node3D, IInstancePoolHost, IMapAw
     private IShaderMaterialSource? _shaderSource;
     private MapId? _activeMap;
     private bool _mounted;
+    private bool _accepting;
     private bool _exiting;
     private long _nextNodeId;
 
@@ -40,7 +41,7 @@ public sealed partial class InstancePoolHost : Node3D, IInstancePoolHost, IMapAw
     {
         RequireMainThread();
         ProcessPriority = FramePriority.StreamMount;
-        _mounted = true;
+        _mounted = _accepting = true;
         _exiting = false;
     }
 
@@ -50,17 +51,10 @@ public sealed partial class InstancePoolHost : Node3D, IInstancePoolHost, IMapAw
         _mounted = false;
         _exiting = true;
         _activeMap = null;
-        try
-        {
-            foreach (var pool in _orderedPools.ToArray()) pool.Free();
-        }
-        finally
-        {
-            _prototypeMeshes.Clear();
-            // Created shader materials are cached for this host lifetime; borrowed Toon materials are never disposed.
-            foreach (var pair in _shaderMaterials.OrderBy(pair => pair.Key)) pair.Value.Dispose();
-            _shaderMaterials.Clear();
-        }
+        if (_orderedPools.Count != 0) throw new InvalidOperationException("Instance-pool owners must drain before host exit.");
+        // Created materials remain borrowed until the last pool owner has returned its mesh.
+        foreach (var pair in _shaderMaterials.OrderBy(pair => pair.Key)) pair.Value.Dispose();
+        _shaderMaterials.Clear();
     }
 
     public void OnMapUnloading(MapId from)
@@ -68,21 +62,22 @@ public sealed partial class InstancePoolHost : Node3D, IInstancePoolHost, IMapAw
         RequireMainThread();
         ValidateMapId(from);
         var unloadingActiveMap = _activeMap == from;
-        if (unloadingActiveMap) _activeMap = null;
-        foreach (var pool in _orderedPools.Where(pool => pool.Map == from).ToArray()) pool.Free();
-        if (unloadingActiveMap) _prototypeMeshes.Clear();
+        if (unloadingActiveMap) { _activeMap = null; _accepting = false; }
+        // Consumers own their pools through the shared stream retirement queue.
+        // Their final Free returns the shared mesh; clearing this table here would lose those borrows.
     }
 
     public void OnMapLoaded(IMapContext ctx)
     {
-        RequireMounted();
+        RequireMainThread();
+        if (!_mounted || _exiting || !IsInsideTree()) throw new InvalidOperationException("The instance-pool host is not mounted.");
         ArgumentNullException.ThrowIfNull(ctx);
         ArgumentNullException.ThrowIfNull(ctx.Descriptor);
         var map = ctx.Descriptor.Id;
         ValidateMapId(map);
         if (_activeMap is { } active && active != map)
             throw new InvalidOperationException("Unload the previous pool map before loading another map.");
-        _activeMap = map;
+        _activeMap = map; _accepting = true;
     }
 
     /// <summary>Stable CPU allocation/submission snapshot.</summary>
@@ -261,7 +256,6 @@ public sealed partial class InstancePoolHost : Node3D, IInstancePoolHost, IMapAw
         return material;
     }
 
-    internal bool IsExiting => _exiting;
     internal void Release(InstancePool pool)
     {
         if (_pools.TryGetValue(pool.Id, out var mounted) && ReferenceEquals(mounted, pool)) _pools.Remove(pool.Id);
@@ -272,9 +266,9 @@ public sealed partial class InstancePoolHost : Node3D, IInstancePoolHost, IMapAw
     {
         if (sharedMesh is not null)
         {
-            if (--sharedMesh.References != 0) return;
+            if (sharedMesh.References > 1) { sharedMesh.References--; return; }
             if (_prototypeMeshes.TryGetValue(sharedMesh.Id, out var current) && ReferenceEquals(current, sharedMesh))
-                _prototypeMeshes.Remove(sharedMesh.Id);
+                { mesh.Dispose(); _prototypeMeshes.Remove(sharedMesh.Id); return; }
         }
         mesh.Dispose();
     }
@@ -297,7 +291,7 @@ public sealed partial class InstancePoolHost : Node3D, IInstancePoolHost, IMapAw
     private void RequireMounted()
     {
         RequireMainThread();
-        if (!_mounted || _exiting || !IsInsideTree() || IsQueuedForDeletion())
+        if (!_mounted || !_accepting || _exiting || !IsInsideTree() || IsQueuedForDeletion())
             throw new InvalidOperationException("The instance-pool host must be mounted before its consumers.");
     }
     private void RequireUnique(string id)

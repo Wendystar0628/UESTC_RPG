@@ -30,7 +30,7 @@ internal sealed class FaunaTileMounts
     public void LoadMap(MapId map) => Map = map;
     public void ClearMap() => Map = null;
     public bool TryGet(BakeKey key, out FaunaTile tile) => _tiles.TryGetValue(key, out tile!);
-    public bool IsCurrent(FaunaTile tile) => _generation == tile.Generation && Map == tile.Content.Key.Map;
+    public bool IsCurrent(FaunaTile tile) => _generation == tile.Generation && Map == tile.Content.Key.Map && !tile.Retiring;
     public bool IsVisible(Box3 bounds) => _visible!(bounds);
     public void Failed(Exception error) => _failed!(error);
 
@@ -54,29 +54,41 @@ internal sealed class FaunaTileMounts
         return _tiles.TryGetValue(tile.Content.Key, out var current) && ReferenceEquals(current, tile);
     }
 
-    public void Unmount(BakeKey key)
-    {
-        if (!_tiles.Remove(key, out var tile)) return;
-        tile.Work?.Cancel();
-        Free(tile);
-    }
-
-    public void Free(FaunaTile tile)
+    public bool ReleaseStep(FaunaTile tile, double budgetMilliseconds)
     {
         tile.Mounted = false;
-        foreach (var latch in tile.Latches)
+        var start = Campus.Kernel.Frame.FrameClock.MonotonicMilliseconds;
+        do
         {
-            foreach (var handle in latch.Handles) _host!.Unmount(handle);
-            latch.Handles.Clear();
-            latch.Applied = false;
-            latch.Requested = false;
-        }
+            if (tile.ReleaseLatch >= tile.Latches.Length)
+            {
+                if (_tiles.TryGetValue(tile.Content.Key, out var current) && ReferenceEquals(current, tile)) _tiles.Remove(tile.Content.Key);
+                return true;
+            }
+            var latch = tile.Latches[tile.ReleaseLatch];
+            var handles = latch.RetiringHandles.Count > 0 ? latch.RetiringHandles : latch.Handles;
+            if (handles.Count > 0)
+            {
+                var handle = handles[^1];
+                Host.Unmount(handle);
+                if (!Host.IsReleased(handle)) return false;
+                handles.RemoveAt(handles.Count - 1);
+            }
+            else
+            { latch.Applied = latch.Requested = false; tile.ReleaseLatch++; }
+        } while (Campus.Kernel.Frame.FrameClock.MonotonicMilliseconds - start < budgetMilliseconds);
+        return false;
+    }
+
+    public void HarvestReleased(FaunaTile tile)
+    {
+        foreach (var latch in tile.Latches)
+            for (var index = latch.RetiringHandles.Count - 1; index >= 0; index--)
+                if (Host.IsReleased(latch.RetiringHandles[index])) latch.RetiringHandles.RemoveAt(index);
     }
 
     public void Release()
     {
         _generation++;
-        foreach (var tile in _tiles.Values) { tile.Work?.Cancel(); Free(tile); }
-        _tiles.Clear();
     }
 }

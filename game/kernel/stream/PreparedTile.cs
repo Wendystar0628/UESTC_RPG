@@ -8,7 +8,7 @@ using Godot;
 namespace Campus.Kernel.Stream;
 
 /// <summary>Owns its meshes, multimeshes and instances. Scenario and material RIDs remain borrowed.</summary>
-public sealed class PreparedTile : IDisposable
+public sealed class PreparedTile
 {
     private static readonly StringName _shaderInstanceFadeT0 = InstanceShaderParameters.FadeT0;
     // Diagnostic index of existing owners; release remains entirely with each PreparedTile.
@@ -97,16 +97,7 @@ public sealed class PreparedTile : IDisposable
             }
             lock (_liveGate) _live.Add(this);
         }
-        catch (Exception failure)
-        {
-            try { Dispose(); }
-            catch (Exception cleanup)
-            {
-                System.Runtime.ExceptionServices.ExceptionDispatchInfo.Capture(RetainedFailure.Append(failure, cleanup)).Throw();
-                throw;
-            }
-            throw;
-        }
+        catch { throw; }
     }
     /// <summary>Advances one render-server operation in the existing mount budget before any instances mount.</summary>
     internal bool InitializeDrawOne(int index)
@@ -274,52 +265,6 @@ public sealed class PreparedTile : IDisposable
                 RenderingServer.InstanceSetVisible(_reflectionInstances[i], _hardVisible);
     }
     private static Aabb Bounds(Box3 box) => new(box.Min.ToGodot(), box.Size.ToGodot());
-    public void Dispose()
-    {
-        if (_disposed) return;
-        BeginRetirement();
-        List<Exception>? failures = null;
-        // Each successful detach/free advances only its own ownership. A failed RID remains retryable.
-        for (var i = _instances.Count - 1; i >= 0; i--)
-        {
-            if (_reflectionInstances[i].IsValid)
-            {
-                if (!_reflectionDetached[i])
-                    try { DetachInstance(_reflectionInstances[i]); _reflectionDetached[i] = true; }
-                    catch (Exception error) { (failures ??= []).Add(error); }
-                try { FreeOwnedInstance(_reflectionInstances[i]); _reflectionInstances[i] = default; }
-                catch (Exception error) { (failures ??= []).Add(error); }
-            }
-            if (_instances[i].IsValid)
-            {
-                if (!_mainDetached[i])
-                    try { DetachInstance(_instances[i]); _mainDetached[i] = true; _mainVisible[i] = false; }
-                    catch (Exception error) { (failures ??= []).Add(error); }
-                try { FreeOwnedInstance(_instances[i]); _instances[i] = default; }
-                catch (Exception error) { (failures ??= []).Add(error); }
-            }
-            if (_instances[i].IsValid || _reflectionInstances[i].IsValid) continue;
-            _instances.RemoveAt(i); _reflectionInstances.RemoveAt(i); _mainVisible.RemoveAt(i);
-            _mainDetached.RemoveAt(i); _reflectionDetached.RemoveAt(i);
-        }
-        // An instance may still borrow any base. Preserve all bases until every instance is gone.
-        // Stop on a storage failure: a MultiMesh must release before its prototype mesh.
-        if (_instances.Count == 0)
-            while (_storage.Count > 0)
-            {
-                var index = _storage.Count - 1;
-                try { RenderingServer.FreeRid(_storage[index].Rid); _storage.RemoveAt(index); }
-                catch (Exception error) { (failures ??= []).Add(error); break; }
-            }
-        _detachCursor = _instances.Count - 1;
-        _disposed = _instances.Count == 0 && _storage.Count == 0;
-        if (_disposed)
-        {
-            _draws.Clear();
-            lock (_liveGate) _live.Remove(this);
-        }
-        if (failures is not null) throw new AggregateException("Prepared tile release failed.", failures);
-    }
     public void BeginRetirement()
     {
         if (_retiring || _disposed) return;
@@ -341,7 +286,6 @@ public sealed class PreparedTile : IDisposable
         }
         _detachCursor--; return false;
     }
-    public void DetachAll() { while (!DetachOne()) { } }
     private static void DetachInstance(Rid instance)
     {
 

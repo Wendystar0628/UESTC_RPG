@@ -206,8 +206,8 @@ public static class InstancePoolRuntimeFixture
                 AssertThat(thrown).OverrideFailureMessage($"Expected {typeof(ObjectDisposedException).Name}.").IsTrue();
             }
             var next = host.Mount(spec);
-            parent.RemoveChild(host);
             next.Free();
+            parent.RemoveChild(host);
             AssertThat(host.GetStatistics().Count == 0 && GodotObject.IsInstanceValid(material)).OverrideFailureMessage("Tree exit retained a pool.").IsTrue();
             {
                 var thrown = false;

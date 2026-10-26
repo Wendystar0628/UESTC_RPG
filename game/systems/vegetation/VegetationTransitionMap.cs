@@ -83,8 +83,8 @@ internal sealed class VegetationTransitionMap : IDisposable
     public void Dispose()
     {
         if (_closed) return;
-        _closed = true;
         Image.Dispose();
+        _closed = true;
         _free.Clear();
         _values = [];
     }

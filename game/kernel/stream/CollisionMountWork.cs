@@ -15,7 +15,8 @@ public sealed class CollisionMountWork : StreamMountWork
     private readonly long _worldRevision;
     private readonly IReadOnlyList<Collider>[] _batches;
     private int _next;
-    private bool _started;
+    private object? _owner;
+    internal object? Owner => _owner;
 
     public CollisionMountWork(ICollisionMountRuntime world, CollisionTile tile, long revision)
         : base(tile.Key, BakePriority.Collision, revision, StreamMountKind.Collision)
@@ -29,20 +30,18 @@ public sealed class CollisionMountWork : StreamMountWork
 
     protected override bool MountStep(double budgetMilliseconds)
     {
-        if (!_started) { _world.BeginTile(_tile.Tile); _started = true; }
-        if (_next < _batches.Length) _world.MountBody(_tile.Tile, _batches[_next++]);
+        _owner ??= _world.BeginTile(_tile.Tile);
+        if (_next < _batches.Length && _world.MountBodyStep(_owner, _batches[_next], budgetMilliseconds)) _next++;
         if (_next != _batches.Length) return false;
-        _world.CompleteTile(_tile.Tile);
+        _world.CompleteTile(_owner);
         return true;
     }
 
-    protected override void Release()
-    {
-        if (_started && _world.Revision == _worldRevision) _world.RemoveTile(_tile.Tile);
-    }
+    protected override void Cancelled()
+    { if (_owner is not null) _world.RetireTile(_owner); }
+
+    protected override bool Release(double budgetMilliseconds) => _owner is null || _world.RemoveTileStep(_owner, budgetMilliseconds);
 
     protected override void Failed(Exception error)
-    {
-        if (_world.Revision == _worldRevision) _world.FailTile(_tile.Tile, error);
-    }
+    { if (_owner is not null) _world.FailTile(_owner, error); }
 }

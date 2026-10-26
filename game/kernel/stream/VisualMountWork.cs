@@ -9,11 +9,13 @@ namespace Campus.Kernel.Stream;
 
 internal sealed class VisualMountWork(BakeKey key, IReadOnlyList<PreparedTile> bundles, long revision, Rid scenario,
     BakePriority priority, StreamMaterials materials, IReflectionWorld reflections,
-    Action mounted, Action cancelled, Action<Exception> fail) : IStreamMountWork, IStreamMountCancellationState
+    Action mounted, Action cancelled, Action<Exception> fail, Action<PreparedTile> detach, Func<bool> detached) : IStreamMountWork, IStreamMountCancellationState
 {
     // Membership belongs to this request, rather than the residency list that retirement clears and reuses.
     private readonly PreparedTile[] _bundles = bundles.ToArray();
-    private int _bundle, _draw;
+    private readonly PreparedTile.Draw[] _bindings = bundles.SelectMany(bundle => bundle.Draws).ToArray();
+    private int _bundle, _draw, _release;
+    private bool _released;
     private bool _initializing = true;
     private bool _cancelled, _complete;
     public bool IsCancelled => _cancelled;
@@ -24,6 +26,7 @@ internal sealed class VisualMountWork(BakeKey key, IReadOnlyList<PreparedTile> b
     public bool Step(double budgetMilliseconds)
     {
         if (_cancelled || _complete) return true;
+        if (budgetMilliseconds <= 0) return false;
         try
         {
             var start = FrameClock.MonotonicMilliseconds;
@@ -62,20 +65,23 @@ internal sealed class VisualMountWork(BakeKey key, IReadOnlyList<PreparedTile> b
     }
     public void Cancel()
     {
-        if (_complete || _cancelled) return;
-        List<Exception>? failures = null;
-        try { Abandon(); }
-        catch (Exception error) { (failures ??= []).Add(error); }
-        foreach (var bundle in _bundles)
-            try { bundle.Dispose(); }
-            catch (Exception error) { (failures ??= []).Add(error); }
-        if (failures is not null) throw new AggregateException("Visual mount release failed.", failures);
-    }
-    public void Abandon()
-    {
         if (_cancelled) return;
         _cancelled = true;
-        if (_complete) foreach (var bundle in _bundles) bundle.BeginRetirement();
+        foreach (var bundle in _bundles) detach(bundle);
+    }
+    public bool ReleaseStep(double budgetMilliseconds)
+    {
+        Cancel();
+        if (_released) return true;
+        if (!detached()) return false;
+        var start = FrameClock.MonotonicMilliseconds;
+        if (_release < _bundles.Length)
+            do { if (_bundles[_release].ReleaseOne()) _release++; }
+            while (_release < _bundles.Length && FrameClock.MonotonicMilliseconds - start < budgetMilliseconds);
+        if (_release != _bundles.Length) return false;
+        materials?.Forget(_bindings);
+        _released = true;
         cancelled();
+        return true;
     }
 }

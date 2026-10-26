@@ -57,7 +57,7 @@ public partial class FaunaNode : Node, IMapAware, IViewContentReadiness, IViewCa
         return _tileMounts.CreateMount(content, priority, revision);
     }
 
-    public bool IsReady(BakeKey key) => Failure is null && !_force && _tileMounts.TryGet(key, out var tile) && TileReady(tile);
+    public bool IsReady(BakeKey key) => Failure is null && _tileMounts.Map == key.Map && !_force && _tileMounts.TryGet(key, out var tile) && TileReady(tile);
 
     public bool IsReady(Pose pose)
     {
@@ -87,7 +87,7 @@ public partial class FaunaNode : Node, IMapAware, IViewContentReadiness, IViewCa
 
     private bool TileReady(FaunaTile tile)
     {
-        if (_world is not { Instance: > 0 } || !tile.Mounted) return false;
+        if (_world is not { Instance: > 0 } || tile.Retiring || !tile.Mounted) return false;
         for (var i = 0; i < tile.Latches.Length; i++)
         {
             var latch = tile.Latches[i];
@@ -129,7 +129,7 @@ public partial class FaunaNode : Node, IMapAware, IViewContentReadiness, IViewCa
     public override void _ExitTree()
     {
         if (_world is not null) _world.InstanceAdvancing -= OnWorldInstanceChanged;
-        Release();
+        if (_tileMounts.Tiles.Count != 0) throw new InvalidOperationException("Fauna owners must drain before exit.");
     }
 
     public void OnMapUnloading(MapId from) { Release(); _tileMounts.ClearMap(); }
@@ -137,7 +137,7 @@ public partial class FaunaNode : Node, IMapAware, IViewContentReadiness, IViewCa
     public void OnMapLoaded(IMapContext context)
     {
         ArgumentNullException.ThrowIfNull(context);
-        Release();
+        if (_tileMounts.Tiles.Count != 0) throw new InvalidOperationException("Fauna owners must drain before map load.");
         _tileMounts.LoadMap(context.Descriptor.Id);
         _error = null;
         _force = true;
@@ -166,6 +166,8 @@ public partial class FaunaNode : Node, IMapAware, IViewContentReadiness, IViewCa
             }
             foreach (var tile in _tileMounts.Tiles)
             {
+                if (tile.Retiring) continue;
+                _tileMounts.HarvestReleased(tile);
                 for (var i = 0; i < tile.Latches.Length; i++)
                 {
                     var site = tile.Content.Content.Sites[i];
@@ -231,8 +233,6 @@ public partial class FaunaNode : Node, IMapAware, IViewContentReadiness, IViewCa
         for (var i = 0; i < tile.Latches.Length; i++)
             Request(tile.Latches[i], Target(tile.Content.Content.Sites[i]), anywhere: true, visible: false);
     }
-
-    public void Unmount(BakeKey key) => _tileMounts.Unmount(key);
 
     private void Release()
     {

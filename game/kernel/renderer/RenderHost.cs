@@ -3,6 +3,7 @@ using System.Reflection;
 using Campus.Contracts;
 using Campus.Contracts.Bake;
 using Campus.Contracts.Maps;
+using Campus.Kernel.Frame;
 using Godot;
 using KernelServices = Campus.Kernel.Registry.Kernel;
 using N = System.Numerics;
@@ -19,6 +20,7 @@ public partial class RenderHost : Node3D, IRenderHost, IRenderReadiness, IMapAwa
     {
         public Node3D Root { get; } = root;
         public bool Pending { get; set; } = true;
+        public Task? Preparation;
         public List<ArrayMesh> Meshes { get; } = [];
         public List<Draw> Draws { get; } = [];
     }
@@ -31,15 +33,22 @@ public partial class RenderHost : Node3D, IRenderHost, IRenderReadiness, IMapAwa
     }
     private sealed record Surface(GeometryBundle Geometry, N.Matrix4x4 Transform, PaletteToken? Tint, bool IgnoreOcclusion);
     private readonly Dictionary<ulong, Entry> _entries = [];
-    private readonly List<(Node3D Root, int Draws)> _retiring = [];
+    private readonly Dictionary<ulong, Entry> _retiring = [];
+    private IStreamMountQueue? _queue;
+    private MapId? _map;
+    private bool _accepting;
     private readonly Dictionary<ShaderId, ShaderMaterial> _shaderMaterials = [];
     private int _peakDraws;
     private IToonMaterialProvider? _materials;
     private PaletteCatalog? _catalog;
     private IReflectionWorld? _reflection;
     private ulong _next;
+    public RenderHost() { }
+    internal RenderHost(IToonMaterialProvider materials, PaletteCatalog catalog, IReflectionWorld reflection, IStreamMountQueue queue)
+    { _materials = materials; _catalog = catalog; _reflection = reflection; _queue = queue; }
     public Exception? Failure { get; private set; }
     public bool Pending => _entries.Values.Any(entry => entry.Pending);
+    public bool IsReleased(RenderHandle handle) => !_entries.ContainsKey(handle.Value) && !_retiring.ContainsKey(handle.Value);
     public bool IsReady(RenderHandle handle) => _entries.TryGetValue(handle.Value, out var entry) && !entry.Pending;
 
     /// <summary>Raw reflection instances are not scene-tree nodes; main instances are scanned there.</summary>
@@ -48,19 +57,20 @@ public partial class RenderHost : Node3D, IRenderHost, IRenderReadiness, IMapAwa
 
     public override void _Ready()
     {
-        _materials = KernelServices.Get<IToonMaterialProvider>();
+        _materials ??= KernelServices.Get<IToonMaterialProvider>();
+        _queue ??= KernelServices.Get<IStreamMountQueue>();
         // The source publishes one immutable object shared with the baker and other indexed hosts.
         _catalog ??= KernelServices.Get<IPaletteCatalogSource>().Catalog;
-        _reflection = KernelServices.Get<IReflectionWorld>();
+        _reflection ??= KernelServices.Get<IReflectionWorld>();
         _reflection.Changed += RebuildReflectionProxies;
         ProcessPriority = FramePriority.StreamMount;
-        RenderingServer.Singleton.FramePostDraw += ReportReleasedInstances;
         GD.Print($"[ENG-ARCH][phase=render-instances] event=ready globalUniformSlots=" +
             ProjectSettings.GetSetting("rendering/limits/global_shader_variables/buffer_size").AsInt64());
     }
     public RenderHandle Mount(ContentOutput content)
     {
         ArgumentNullException.ThrowIfNull(content);
+        if (!_accepting || _map is null) throw new InvalidOperationException("RenderHost is not accepting map mounts.");
         if (content.Instances.Count > 0)
             throw new NotSupportedException("Dynamic RenderHost does not support ContentOutput.Instances; submit static instance batches through the game/kernel/bake/ bake/stream path.");
         if (_materials is null) throw new InvalidOperationException("RenderHost has not entered the stage.");
@@ -69,9 +79,9 @@ public partial class RenderHost : Node3D, IRenderHost, IRenderReadiness, IMapAwa
         var root = new Node3D { Name = $"Render_{handle}" };
         var entry = new Entry(root);
         _entries.Add(handle, entry);
-        AddChild(root);
         try
         {
+            AddChild(root);
             var parts = content.Parts.Select(part =>
             {
                 var matches = KernelServices.Services.Query<IPartDef>(RegistrationKind.Part).Where(item => item.Id == part.Part.Value).ToArray();
@@ -82,12 +92,13 @@ public partial class RenderHost : Node3D, IRenderHost, IRenderReadiness, IMapAwa
                 var registration = matches[0];
                 return (Part: part, Definition: KernelServices.Services.Create(registration.Type));
             }).ToArray();
-            _ = PrepareAndMount(handle, entry, content.Meshes, parts, catalog);
+            entry.Preparation = PrepareAndMount(handle, entry, content.Meshes, parts, catalog);
         }
         catch (Exception error)
         {
-            DiagnosticLog.Error($"[ENG-ARCH][phase=render-part-resolve][handle={handle}]", error);
-            Unmount(new(handle));
+            RecordFailure(error);
+            try { Unmount(new(handle)); }
+            catch (Exception cleanup) { RecordFailure(cleanup); }
             throw;
         }
         return new(handle);
@@ -96,33 +107,26 @@ public partial class RenderHost : Node3D, IRenderHost, IRenderReadiness, IMapAwa
     private async Task PrepareAndMount(ulong handle, Entry entry, IReadOnlyList<GeometryBundle> geometry,
         (PlacedPart Part, object Definition)[] parts, PaletteCatalog catalog)
     {
-        var phase = "render-geometry-build";
         try
         {
             // Prepared geometry must finish native submission inside the caller's mount budget.
             var surfaces = parts.Length == 0 ? PrepareSurfaces(geometry, parts, catalog)
                 : await Task.Run(() => PrepareSurfaces(geometry, parts, catalog));
             if (!_entries.TryGetValue(handle, out var current) || !ReferenceEquals(entry, current)) return;
-            phase = "render-geometry-upload";
             foreach (var surface in surfaces)
             {
                 if (surface.Geometry.Index.Length == 0) continue;
-                var mesh = Upload(surface.Geometry, surface.Tint, catalog);
-                entry.Meshes.Add(mesh);
+                var mesh = Upload(entry, surface.Geometry, surface.Tint, catalog);
                 var material = surface.Geometry.Shader is { } shader ? ResolveShader(shader) : _materials!.Get(surface.Geometry.Material.Spec);
-                var instance = new MeshInstance3D
-                {
-                    Mesh = mesh,
-                    MaterialOverride = material,
-                    Transform = surface.Transform.ToGodot(),
-                    IgnoreOcclusionCulling = surface.IgnoreOcclusion,
-                    CastShadow = MaterialShaders.HasNoShadow(surface.Geometry.Material.Spec.Kind, surface.Geometry.Shader, surface.Geometry.Flags)
-                        ? GeometryInstance3D.ShadowCastingSetting.Off : GeometryInstance3D.ShadowCastingSetting.On,
-                    Visible = true
-                };
-                entry.Root.AddChild(instance);
+                var instance = new MeshInstance3D();
                 var draw = new Draw(instance, mesh, surface.Geometry);
                 entry.Draws.Add(draw);
+                instance.Mesh = mesh; instance.MaterialOverride = material;
+                instance.Transform = surface.Transform.ToGodot(); instance.IgnoreOcclusionCulling = surface.IgnoreOcclusion;
+                instance.CastShadow = MaterialShaders.HasNoShadow(surface.Geometry.Material.Spec.Kind, surface.Geometry.Shader, surface.Geometry.Flags)
+                    ? GeometryInstance3D.ShadowCastingSetting.Off : GeometryInstance3D.ShadowCastingSetting.On;
+                instance.Visible = true;
+                entry.Root.AddChild(instance);
                 CreateReflectionProxy(draw);
             }
             entry.Pending = false;
@@ -130,7 +134,6 @@ public partial class RenderHost : Node3D, IRenderHost, IRenderReadiness, IMapAwa
         }
         catch (Exception error)
         {
-            DiagnosticLog.Error($"[ENG-ARCH][phase={phase}][handle={handle}]", error);
             RecordFailure(error);
             if (!_entries.ContainsKey(handle)) return;
             try { Unmount(new(handle)); }
@@ -177,34 +180,87 @@ public partial class RenderHost : Node3D, IRenderHost, IRenderReadiness, IMapAwa
         return build((T)parameters);
     }
 
-    private ArrayMesh Upload(GeometryBundle source, PaletteToken? tint, PaletteCatalog catalog)
+    private static ArrayMesh Upload(Entry entry, GeometryBundle source, PaletteToken? tint, PaletteCatalog catalog)
     {
         var mesh = new ArrayMesh();
-        try
-        {
-            GeometrySurfaceUpload.Append(mesh, source, catalog, tint);
-            return mesh;
-        }
-        catch { mesh.Dispose(); throw; }
+        entry.Meshes.Add(mesh);
+        GeometrySurfaceUpload.Append(mesh, source, catalog, tint);
+        return mesh;
     }
     public void Unmount(RenderHandle handle)
     {
         if (!_entries.Remove(handle.Value, out var entry)) return;
-        foreach (var draw in entry.Draws) FreeReflectionProxy(draw);
-        _retiring.Add((entry.Root, entry.Draws.Count));
-        entry.Root.QueueFree();
-        foreach (var mesh in entry.Meshes) mesh.Dispose();
-        ReportInstanceCounts("queued-free", handle.Value);
+        _retiring.Add(handle.Value, entry);
+        _queue!.Retire(new EntryRetirement(this, handle.Value, entry, _map ?? throw new InvalidOperationException("Dynamic entry has no map owner."), _queue.Revision));
+        // Normal display replacement hides the complete old group inside its mount step.
+        // Map shutdown only stops producers here; its covered retirement queue owns native teardown.
+        if (_accepting) entry.Root.Visible = false;
+        ReportInstanceCounts("retiring", handle.Value);
     }
-    private void ReportReleasedInstances()
+
+    private sealed class EntryRetirement(RenderHost host, ulong handle, Entry entry, MapId map, long revision)
+        : IStreamMountWork
     {
-        var count = _retiring.RemoveAll(item => !GodotObject.IsInstanceValid(item.Root));
-        if (count > 0) ReportInstanceCounts("nodes-freed-postdraw", 0);
+        public BakeKey Key { get; } = new(map, "render.dynamic", handle.ToString(System.Globalization.CultureInfo.InvariantCulture));
+        public BakePriority Priority => BakePriority.Background;
+        public long Revision { get; } = revision;
+        public StreamMountKind Kind => StreamMountKind.Auxiliary;
+        private bool _released;
+
+        // Unmount already revoked this entry's identity; this owner can only retire.
+        public bool Step(double budgetMilliseconds) => true;
+        public void Cancel() { }
+        public bool ReleaseStep(double budgetMilliseconds)
+        {
+            if (_released) return true;
+            try { return _released = Release(budgetMilliseconds); }
+            catch (Exception error) { host.RecordFailure(error); throw; }
+        }
+
+        private bool Release(double budgetMilliseconds)
+        {
+            if (entry.Preparation is { IsCompleted: false }) return false;
+            if (entry.Preparation is { } preparation)
+            {
+                entry.Preparation = null;
+                try { preparation.GetAwaiter().GetResult(); }
+                catch (Exception error) { host.RecordFailure(error); }
+            }
+            var start = FrameClock.MonotonicMilliseconds;
+            do
+            {
+                if (entry.Draws.Count > 0)
+                {
+                    var draw = entry.Draws[^1];
+                    if (draw.Proxy.IsValid) FreeReflectionProxy(draw);
+                    else
+                    {
+                        if (GodotObject.IsInstanceValid(draw.Instance))
+                        { draw.Instance.Mesh = null; draw.Instance.MaterialOverride = null; draw.Instance.Free(); }
+                        entry.Draws.RemoveAt(entry.Draws.Count - 1);
+                    }
+                }
+                else if (entry.Meshes.Count > 0)
+                { entry.Meshes[^1].Dispose(); entry.Meshes.RemoveAt(entry.Meshes.Count - 1); }
+                else
+                {
+                    if (GodotObject.IsInstanceValid(entry.Root))
+                    {
+                        if (entry.Root.GetChildCount() != 0) throw new InvalidOperationException("Dynamic render root still owns draws.");
+                        entry.Root.Free();
+                    }
+                    if (host._retiring.TryGetValue(handle, out var current) && ReferenceEquals(current, entry)) host._retiring.Remove(handle);
+                    host.ReportInstanceCounts("released", handle);
+                    return true;
+                }
+            } while (FrameClock.MonotonicMilliseconds - start < budgetMilliseconds);
+            return false;
+        }
     }
     private void ReportInstanceCounts(string action, ulong handle)
     {
         var draws = _entries.Values.SelectMany(entry => entry.Draws).ToArray();
-        var retiring = _retiring.Sum(item => item.Draws);
+        var retiring = _retiring.Values.Sum(item => item.Draws.Count);
         _peakDraws = Math.Max(_peakDraws, draws.Length + retiring);
         var materials = draws.Select(draw => draw.Instance.MaterialOverride).Distinct(ReferenceEqualityComparer.Instance).Count();
         GD.Print($"[ENG-ARCH][phase=render-instances] event={action} handle={handle} handles={_entries.Count} " +
@@ -212,18 +268,21 @@ public partial class RenderHost : Node3D, IRenderHost, IRenderReadiness, IMapAwa
     }
     public override void _ExitTree()
     {
-        RenderingServer.Singleton.FramePostDraw -= ReportReleasedInstances;
         if (_reflection is not null) _reflection.Changed -= RebuildReflectionProxies;
-        foreach (var handle in _entries.Keys.Order().ToArray()) Unmount(new(handle));
+        if (_entries.Count != 0 || _retiring.Count != 0) throw new InvalidOperationException("Dynamic render owners must drain before exit.");
         foreach (var pair in _shaderMaterials.OrderBy(pair => pair.Key)) pair.Value.Dispose();
         _shaderMaterials.Clear();
     }
     public void OnMapUnloading(MapId from)
     {
+        _accepting = false;
         foreach (var handle in _entries.Keys.Order().ToArray()) Unmount(new(handle));
-        Failure = null;
     }
-    public void OnMapLoaded(IMapContext context) { }
+    public void OnMapLoaded(IMapContext context)
+    {
+        if (_entries.Count != 0 || _retiring.Count != 0) throw new InvalidOperationException("Dynamic render owners must drain before map load.");
+        _map = context.Descriptor.Id; _accepting = true; Failure = null;
+    }
 
     private Material ResolveShader(ShaderId shader)
     {
@@ -237,6 +296,7 @@ public partial class RenderHost : Node3D, IRenderHost, IRenderReadiness, IMapAwa
     {
         if (!draw.Source.Reflect || _reflection is null || !_reflection.Scenario.IsValid) return;
         var proxy = RenderingServer.InstanceCreate2(draw.Mesh.GetRid(), _reflection.Scenario);
+        draw.Proxy = proxy;
         try
         {
             RenderingServer.InstanceGeometrySetMaterialOverride(proxy, _reflection.ProxyMaterial.GetRid());
@@ -244,7 +304,7 @@ public partial class RenderHost : Node3D, IRenderHost, IRenderReadiness, IMapAwa
             RenderingServer.InstanceSetTransform(proxy, draw.Instance.GlobalTransform);
             draw.Proxy = proxy;
         }
-        catch { RenderingServer.FreeRid(proxy); throw; }
+        catch { throw; }
     }
 
     private static void FreeReflectionProxy(Draw draw)

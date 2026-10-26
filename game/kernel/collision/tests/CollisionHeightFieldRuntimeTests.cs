@@ -30,6 +30,7 @@ public sealed class CollisionHeightFieldRuntimeTests
         var viewport = new SubViewport { World3D = native, Size = new(32, 32) };
         var root = new Node3D();
         var world = new CollisionWorld();
+        var owners = new List<object>();
         try
         {
             tree.Root.AddChild(viewport); viewport.AddChild(root); world.Attach(root, FixtureContext());
@@ -37,9 +38,10 @@ public sealed class CollisionHeightFieldRuntimeTests
             {
                 var at = new N.Vector2(tile.X * 64 + 12, tile.Z * 64 + 24);
                 var post = new PostCollider(at, .4f, 0, 3, SurfaceTag.Barrier);
-                world.BeginTile(tile);
-                world.MountBody(tile, CollisionGeometry.Localize([post], tile));
-                world.CompleteTile(tile);
+                var owner = world.BeginTile(tile); owners.Add(owner);
+                var colliders = CollisionGeometry.Localize([post], tile);
+                while (!world.MountBodyStep(owner, colliders, .3)) await FrameAwaiter.ProcessAsync(root);
+                world.CompleteTile(owner);
             }
             await root.ToSignal(tree, SceneTree.SignalName.PhysicsFrame);
             await root.ToSignal(tree, SceneTree.SignalName.PhysicsFrame);
@@ -50,7 +52,12 @@ public sealed class CollisionHeightFieldRuntimeTests
                 AssertThat(hit is { Tag: SurfaceTag.Barrier } && hit.Value.T > 0 && hit.Value.T < 1).OverrideFailureMessage("A world-coordinate post was shifted away from its actual tile: " + tile).IsTrue();
             }
         }
-        finally { world.Unload(); if (GodotObject.IsInstanceValid(viewport)) viewport.Free(); }
+        finally
+        {
+            world.Unload();
+            foreach (var owner in owners) while (!world.RemoveTileStep(owner, .3)) await FrameAwaiter.ProcessAsync(root);
+            if (GodotObject.IsInstanceValid(viewport)) viewport.Free();
+        }
     }
 
     [TestCase(Timeout = 30000)]
@@ -65,6 +72,7 @@ public sealed class CollisionHeightFieldRuntimeTests
         var viewport = new SubViewport { World3D = nativeWorld, Size = new(32, 32) };
         var root = new Node3D();
         var world = new CollisionWorld();
+        var owners = new List<object>();
         try
         {
             tree.Root.AddChild(viewport);
@@ -74,7 +82,7 @@ public sealed class CollisionHeightFieldRuntimeTests
             world.Attach(root, context);
             for (var x = -1; x <= 1; x++)
                 for (var z = -1; z <= 1; z++)
-                    if (x != 0 || z != 0) { world.BeginTile(new(x, z)); world.CompleteTile(new(x, z)); }
+                    if (x != 0 || z != 0) { var owner = world.BeginTile(new(x, z)); owners.Add(owner); world.CompleteTile(owner); }
             var feet = new N.Vector3(8, .01f, 8);
             AssertThat(!world.Ready(feet, .3f)).OverrideFailureMessage("A missing center collision tile became ready.").IsTrue();
             var colliders = await Task.Run(() => CollisionGeometry.Localize(Fixture(), new(0, 0)));
@@ -86,6 +94,7 @@ public sealed class CollisionHeightFieldRuntimeTests
                 AssertThat(!world.Ready(feet, .3f)).OverrideFailureMessage("A partially mounted collision tile became ready.").IsTrue();
                 await root.ToSignal(tree, SceneTree.SignalName.PhysicsFrame);
             }
+            owners.Add(mount.Owner!);
             await root.ToSignal(tree, SceneTree.SignalName.PhysicsFrame);
             await root.ToSignal(tree, SceneTree.SignalName.PhysicsFrame);
             AssertThat(world.Ready(feet, .3f)).OverrideFailureMessage("The mounted 3x3 neighborhood is not ready.").IsTrue();
@@ -147,15 +156,18 @@ public sealed class CollisionHeightFieldRuntimeTests
                 && mounted.MainThreadViolations == 0 && mounted.IncompleteMounts == 0).OverrideFailureMessage("Invalid atomic collision mounting.").IsTrue();
             var mountedBodies = root.GetChildren().OfType<StaticBody3D>().ToArray();
             var original = new InvalidDataException("collision tile failed");
-            world.FailTile(new(0, 0), original);
+            world.FailTile(mount.Owner!, original);
             AssertThat(ReferenceEquals(world.Failure, original) && !world.Ready(feet, .3f)).OverrideFailureMessage("Collision failure lost its original exception or left its tile ready.").IsTrue();
+            AssertThat(mountedBodies.Any(GodotObject.IsInstanceValid)).OverrideFailureMessage("FailTile synchronously destroyed its retained owner.").IsTrue();
+            while (!mount.ReleaseStep(.3)) await FrameAwaiter.ProcessAsync(root);
             AssertThat(mountedBodies.All(body => !GodotObject.IsInstanceValid(body))).OverrideFailureMessage("Removing a tile retained its native bodies.").IsTrue();
             await root.ToSignal(tree, SceneTree.SignalName.PhysicsFrame);
             await root.ToSignal(tree, SceneTree.SignalName.PhysicsFrame);
             AssertThat(world.SupportY(8, 8, 1) is null).OverrideFailureMessage("Removed height-field collision is still present.").IsTrue();
             world.Unload();
+            foreach (var owner in owners) while (!world.RemoveTileStep(owner, .3)) await FrameAwaiter.ProcessAsync(root);
             var unloaded = world.Diagnostics;
-            AssertThat(world.Failure is null).OverrideFailureMessage("Unload retained the previous map's collision failure.").IsTrue();
+            AssertThat(ReferenceEquals(world.Failure, original)).OverrideFailureMessage("Unload lost the original collision failure.").IsTrue();
             AssertThat(unloaded.Bodies == 0 && unloaded.Shapes == 0 && unloaded.Tiles == 0 && unloaded.RegisteredBodies == 0
                 && !world.Ready(feet, .3f)).OverrideFailureMessage("Unload retained native collision state.").IsTrue();
 
@@ -173,7 +185,36 @@ public sealed class CollisionHeightFieldRuntimeTests
         finally
         {
             world.Unload();
+            foreach (var owner in owners) while (!world.RemoveTileStep(owner, .3)) await FrameAwaiter.ProcessAsync(root);
             if (GodotObject.IsInstanceValid(viewport)) viewport.Free();
+        }
+    }
+
+    [TestCase, TestCategory(TestReason.Regression), TestCategory("NativeRender"), RequireGodotRuntime]
+    public async Task HalfBuiltCancelledBodyKeepsOwnershipAndCannotRemoveANewerTile()
+    {
+        var tree = (SceneTree)Engine.GetMainLoop(); var root = new Node3D(); tree.Root.AddChild(root);
+        var world = new CollisionWorld(); var context = FixtureContext(); world.Attach(root, context);
+        var tile = new TileKey(0, 0); var key = CollisionBakeProducer.Key(context.Descriptor.Id, tile);
+        var content = new CollisionTile(key, tile, context.Descriptor.Bounds,
+            CollisionGeometry.Localize(Fixture(), tile));
+        var old = new CollisionMountWork(world, content, 0);
+        object? current = null;
+        try
+        {
+            AssertThat(!old.Step(double.Epsilon) && world.Diagnostics.Bodies > 0 && root.GetChildCount() == 0).IsTrue();
+            old.Cancel();
+            AssertThat(world.Diagnostics.Bodies > 0 && !world.IsTileReady(tile)).IsTrue();
+            current = world.BeginTile(tile); world.CompleteTile(current);
+            while (!old.ReleaseStep(0)) await FrameAwaiter.ProcessAsync(root);
+            AssertThat(world.IsTileReady(tile)).OverrideFailureMessage("Retiring an old token removed the current same-key owner.").IsTrue();
+        }
+        finally
+        {
+            world.Unload();
+            while (!old.ReleaseStep(.3)) await FrameAwaiter.ProcessAsync(root);
+            if (current is not null) while (!world.RemoveTileStep(current, .3)) await FrameAwaiter.ProcessAsync(root);
+            root.Free();
         }
     }
 

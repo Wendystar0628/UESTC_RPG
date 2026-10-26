@@ -39,6 +39,12 @@ internal sealed class StreamMaterials(IToonMaterialProvider toon, IShaderMateria
     {
         foreach (var draw in draws) _bindings.Remove(draw);
     }
+    internal bool ReleaseOne()
+    {
+        foreach (var (shader, material) in _owned)
+        { material.Dispose(); _owned.Remove(shader); return false; }
+        _bindings.Clear(); return true;
+    }
     public void Dispose()
     {
         List<Exception>? failures = null;

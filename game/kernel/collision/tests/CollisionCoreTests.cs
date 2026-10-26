@@ -77,7 +77,7 @@ public sealed class CollisionCoreTests
         var viewport = new SubViewport { World3D = native, Size = new(32, 32) };
         var root = new Node3D();
         var collision = new CollisionWorld();
-        var resident = new HashSet<TileKey>();
+        var resident = new Dictionary<TileKey, CollisionMountWork>();
         var character = CreateCharacter();
         try
         {
@@ -111,12 +111,14 @@ public sealed class CollisionCoreTests
                 GD.Print($"G15Core point={point.Id} authored={stand.Feet} landing={feet} finish={finish} resident={resident.Count}");
             }
             collision.Unload();
+            await ReleaseResident();
             AssertThat(collision.Diagnostics.Tiles == 0 && collision.Diagnostics.Bodies == 0).OverrideFailureMessage("The short route retained collision after unloading.").IsTrue();
             GD.Print("G15Core complete: P01/P08 landing and nearby walking only; no full route traversal.");
         }
         finally
         {
             collision.Unload();
+            await ReleaseResident();
             if (GodotObject.IsInstanceValid(viewport)) viewport.Free();
         }
 
@@ -126,24 +128,35 @@ public sealed class CollisionCoreTests
             var needed = new HashSet<TileKey>();
             for (var z = center.Z - 1; z <= center.Z + 1; z++)
                 for (var x = center.X - 1; x <= center.X + 1; x++) needed.Add(new(x, z));
-            foreach (var tile in resident.Where(tile => !needed.Contains(tile)).ToArray())
+            foreach (var tile in resident.Keys.Where(tile => !needed.Contains(tile)).ToArray())
             {
-                collision.RemoveTile(tile);
+                resident[tile].Cancel();
+                while (!resident[tile].ReleaseStep(.3)) await FrameAwaiter.ProcessAsync(root);
                 resident.Remove(tile);
             }
             foreach (var tile in needed.OrderBy(tile => tile.Z).ThenBy(tile => tile.X))
             {
-                if (resident.Contains(tile)) continue;
+                if (resident.ContainsKey(tile)) continue;
                 var product = await Task.Run(() => products.Build(map, CollisionBakeProducer.Key(id, tile))) as CollisionTile
                     ?? throw new InvalidDataException("The formal collision producer returned another product.");
                 var work = new CollisionMountWork(collision, product, 0);
                 while (!work.Step(.3)) await root.ToSignal(tree, SceneTree.SignalName.ProcessFrame);
                 AssertThat(work.Complete).OverrideFailureMessage("Nearby collision did not mount: " + work.Failure).IsTrue();
-                resident.Add(tile);
+                resident.Add(tile, work);
             }
             AssertThat(resident.Count <= 9).OverrideFailureMessage("The short route loaded more than a 3x3 neighbourhood.").IsTrue();
             await root.ToSignal(tree, SceneTree.SignalName.PhysicsFrame);
             await root.ToSignal(tree, SceneTree.SignalName.PhysicsFrame);
+        }
+
+        async Task ReleaseResident()
+        {
+            foreach (var work in resident.Values)
+            {
+                work.Cancel();
+                while (!work.ReleaseStep(.3)) await FrameAwaiter.ProcessAsync(root);
+            }
+            resident.Clear();
         }
 
         async Task MoveFor(float seconds, N.Vector3 horizontal, string point, N.Vector3 start)

@@ -23,7 +23,8 @@ public abstract class StreamMountWork(BakeKey key, BakePriority priority, long r
 
     protected abstract bool IsCurrent { get; }
     protected abstract bool MountStep(double budgetMilliseconds);
-    protected abstract void Release();
+    protected virtual void Cancelled() { }
+    protected abstract bool Release(double budgetMilliseconds);
     protected abstract void Failed(Exception error);
 
     public bool Step(double budgetMilliseconds)
@@ -52,8 +53,21 @@ public abstract class StreamMountWork(BakeKey key, BakePriority priority, long r
 
     public void Cancel()
     {
-        if (IsCancelled || Complete) return;
+        if (IsCancelled) return;
         IsCancelled = true;
-        Release();
+        Cancelled();
+    }
+
+    public bool ReleaseStep(double budgetMilliseconds)
+    {
+        Cancel();
+        try { return Release(budgetMilliseconds); }
+        catch (Exception error)
+        {
+            Failure = RetainedFailure.Append(Failure, error);
+            try { Failed(error); }
+            catch (Exception reporting) { throw RetainedFailure.Append(error, reporting); }
+            throw;
+        }
     }
 }

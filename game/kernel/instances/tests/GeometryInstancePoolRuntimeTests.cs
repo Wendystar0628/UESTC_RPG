@@ -177,6 +177,7 @@ public sealed class GeometryInstancePoolRuntimeTests
         AssertThat(mappedNode.GetMeta("map_id").AsString() == mapA.Value).OverrideFailureMessage("The native pool lost map attribution.").IsTrue();
         fixture.Host.OnMapUnloading(mapA);
         fixture.Host.OnMapUnloading(mapA);
+        AssertThat(GodotObject.IsInstanceValid(mappedNode) && GodotObject.IsInstanceValid(mappedMesh)).OverrideFailureMessage("Stopping the host stole the consumer-owned pools.").IsTrue();
         mapped.Free();
         mappedPeer.Free();
         AssertThat(!GodotObject.IsInstanceValid(mappedNode) && !GodotObject.IsInstanceValid(mappedMulti) &&
@@ -196,8 +197,8 @@ public sealed class GeometryInstancePoolRuntimeTests
             AssertThat(thrown).OverrideFailureMessage($"Expected {typeof(InvalidOperationException).Name}.").IsTrue();
         }
 
-        fixture.Host.Free();
         global.Free();
+        fixture.Host.Free();
         global.Free();
         AssertThat(!GodotObject.IsInstanceValid(globalMesh)).OverrideFailureMessage("Host exit retained the global pool mesh.").IsTrue();
         AssertThat(!GodotObject.IsInstanceValid(fixture.Source.Created.Single())).OverrideFailureMessage("Host exit did not dispose its cached ShaderMaterial.").IsTrue();

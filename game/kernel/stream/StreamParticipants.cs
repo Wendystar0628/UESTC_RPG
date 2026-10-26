@@ -141,6 +141,7 @@ internal sealed class StreamParticipants(StreamDirector host, ServiceRegistry re
         foreach (var group in _host.Residency.Groups.Values)
             foreach (var (key, item) in group.Participants)
             {
+                if (item.Retiring) continue;
                 if (item.Need == StreamTileNeed.None) continue;
                 var priority = ParticipantPriority(item);
                 if (!_host.Preparation.IsIssued(key))
@@ -163,14 +164,15 @@ internal sealed class StreamParticipants(StreamDirector host, ServiceRegistry re
 
     internal void MountParticipant(Pending pending, ParticipantTile item)
     {
+        IStreamMountWork? work = null;
         try
         {
             var product = pending.Handle.Product ?? throw new InvalidDataException($"Bake returned no product for {pending.Request.Key}.");
             var priority = ParticipantPriority(item);
-            var work = item.Participant.CreateMount(pending.Request.Key, product, priority, pending.Revision);
+            work = item.Participant.CreateMount(pending.Request.Key, product, priority, pending.Revision);
             if (work.Key != pending.Request.Key || work.Revision != pending.Revision || work.Kind != item.Participant.Kind)
             {
-                work.Cancel();
+                _host.Mount.Retire(work);
                 throw new InvalidDataException($"Participant mount identity mismatch: {pending.Request.Key}.");
             }
             item.Work = new(work, () => _host.Residency.IsCurrent(pending), () =>
@@ -179,10 +181,15 @@ internal sealed class StreamParticipants(StreamDirector host, ServiceRegistry re
                     _host.RecordTileChange(new(work.Key, work.Kind, work.Revision, StreamTileChangeKind.Mounted,
                         null, FrameClock.MonotonicMilliseconds));
                 },
+                () => CompleteRetirement(item),
                 error => FailParticipant(pending.Group, item, error), () => ParticipantPriority(item));
             _host.Mount.Enqueue(item.Work);
         }
-        catch (Exception error) { FailParticipant(pending.Group, item, error); }
+        catch (Exception error)
+        {
+            if (work is not null && item.Work is null) _host.Mount.Retire(work);
+            FailParticipant(pending.Group, item, error);
+        }
     }
 
     internal bool ParticipantsReady(bool destination)
@@ -190,7 +197,7 @@ internal sealed class StreamParticipants(StreamDirector host, ServiceRegistry re
         foreach (var group in _host.Residency.Groups.Values)
             foreach (var (key, item) in group.Participants)
                 if ((destination ? item.DestinationRequired : item.CurrentRequired) &&
-                    (item.Failure is not null || !item.Mounted || !item.Participant.IsReady(key))) return false;
+                    (item.Retiring || item.Failure is not null || !item.Mounted || !item.Participant.IsReady(key))) return false;
         return true;
     }
 
@@ -201,7 +208,7 @@ internal sealed class StreamParticipants(StreamDirector host, ServiceRegistry re
             foreach (var (key, item) in group.Participants)
             {
                 if (!keys.Contains(key)) continue;
-                if (!item.PinnedRequired || item.Failure is not null || !item.Mounted || !item.Participant.IsReady(key)) return false;
+                if (item.Retiring || !item.PinnedRequired || item.Failure is not null || !item.Mounted || !item.Participant.IsReady(key)) return false;
                 found++;
             }
         return found == keys.Count;
@@ -226,45 +233,53 @@ internal sealed class StreamParticipants(StreamDirector host, ServiceRegistry re
             _retiredParticipants.Clear();
             foreach (var (key, item) in group.Participants)
             {
+                if (item.Retiring) continue;
                 if (item.Need != StreamTileNeed.None) continue;
                 // Keep mounted near content until geometry covering its owner is actually drawn.
                 if (_host.Selection.Destination is not null && item.Participant.Kind == StreamMountKind.Auxiliary && item.KeepForCoverage && item.Mounted && !_host.Residency.HasGeometryCoverage(group.Tile)) continue;
-                ReleaseParticipant(key, item); _host.Preparation.Forget(key); _retiredParticipants.Add(key);
+                ReleaseParticipant(item);
             }
-            foreach (var key in _retiredParticipants) group.Participants.Remove(key);
         }
         _retiredParticipants.Clear();
     }
 
-    private void ReleaseParticipant(BakeKey key, ParticipantTile item)
+    private void ReleaseParticipant(ParticipantTile item)
     {
-        Exception? failure = null;
-        var unmounted = false;
-        try { item.Work?.Cancel(); } catch (Exception error) { failure = RetainedFailure.Append(failure, error); }
-        try { item.Participant.Unmount(key); unmounted = true; }
-        catch (Exception error) { failure = RetainedFailure.Append(failure, error); }
-        var wasMounted = item.Mounted;
+        if (item.Retiring) return;
+        item.Retiring = true;
+        if (item.Work is { } work) _host.Mount.Retire(work);
+        else item.Released = true;
+    }
+
+    private void CompleteRetirement(ParticipantTile item)
+    {
+        item.Released = true;
+        if (!item.Mounted) return;
         item.Mounted = false;
-        try
+        var work = item.Work!;
+        _host.RecordTileChange(new(work.Key, work.Kind, work.Revision, StreamTileChangeKind.Unmounted,
+            null, FrameClock.MonotonicMilliseconds));
+    }
+
+    internal void HarvestRetired()
+    {
+        foreach (var group in _host.Residency.Groups.Values)
         {
-            if (unmounted && wasMounted)
-            {
-            var work = item.Work ?? throw new InvalidOperationException("Mounted participant has no work identity.");
-            _host.RecordTileChange(new(work.Key, work.Kind, work.Revision, StreamTileChangeKind.Unmounted,
-                null, FrameClock.MonotonicMilliseconds));
+            _retiredParticipants.Clear();
+            foreach (var (key, item) in group.Participants)
+                if (item.Retiring && item.Released) _retiredParticipants.Add(key);
+            foreach (var key in _retiredParticipants)
+            { group.Participants.Remove(key); _host.Preparation.Forget(key); }
         }
-        }
-        catch (Exception error) { failure = RetainedFailure.Append(failure, error); }
-        if (failure is not null) System.Runtime.ExceptionServices.ExceptionDispatchInfo.Capture(failure).Throw();
+        _retiredParticipants.Clear();
     }
 
     internal void UnloadParticipants()
     {
         foreach (var group in _host.Residency.Groups.Values)
             foreach (var (key, item) in group.Participants)
-                try { ReleaseParticipant(key, item); }
+                try { ReleaseParticipant(item); }
                 catch (Exception error) { _host.RecordFailure(error); }
-        _participants = [];
         _participantEntries = [];
     }
 
@@ -277,6 +292,7 @@ internal sealed class StreamParticipants(StreamDirector host, ServiceRegistry re
         public ParticipantMountWork? Work;
         public StreamTileNeed Need;
         public bool CurrentRequired, DestinationRequired, PinnedRequired, KeepForCoverage, Mounted;
+        public bool Retiring, Released;
         public Exception? Failure;
     }
 }

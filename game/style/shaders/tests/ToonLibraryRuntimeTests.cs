@@ -90,9 +90,9 @@ public sealed class ToonLibraryRuntimeTests
             [BakeSurfacePacker.Pack(source, bounds, new Palettes().Catalog)]);
         var restored = (TileBundle)TileBundleCodec.Decode(BakePayloadClass.Tile, "fixture/pattern", key, TileBundleCodec.Encode(BakePayloadClass.Tile, "fixture/pattern", bundle));
         var scenario = RenderingServer.ScenarioCreate();
+        var prepared = new PreparedTile(restored);
         try
         {
-            using var prepared = new PreparedTile(restored);
             prepared.Initialize(restored);
             using var materials = new StreamMaterials(fixture.Library, new ShaderMaterialSource(new RequiredResources()));
             var draw = prepared.Draws.Single();
@@ -109,7 +109,11 @@ public sealed class ToonLibraryRuntimeTests
                     gate[vertex] == new Vector2(source.Uv2![vertex * 2], source.Uv2[vertex * 2 + 1]) &&
                     colors[vertex].R8 == 64).OverrideFailureMessage("Native static upload changed metre coordinates, per-face gate/K or logical palette colour.").IsTrue();
         }
-        finally { RenderingServer.FreeRid(scenario); }
+        finally
+        {
+            while (!prepared.ReleaseOne()) await FrameAwaiter.ProcessAsync(((SceneTree)Engine.GetMainLoop()).Root);
+            RenderingServer.FreeRid(scenario);
+        }
         var refused = false;
         try { fixture.Library.Get(spec with { Kind = ToonKind.Glass }); }
         catch (ArgumentException) { refused = true; }

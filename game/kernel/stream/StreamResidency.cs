@@ -15,6 +15,8 @@ internal sealed class StreamResidency(StreamDirector host)
     private readonly StreamDirector _host = host;
     private readonly Dictionary<StreamTile, TileGroup> _groups = [];
     private StreamMaterials _materials = null!;
+    private MapId _map;
+    private IStreamMountWork? _materialRetirement;
     private readonly Queue<PreparedTile> _reflectionRefresh = [];
     private readonly Queue<PreparedTile> _retiringBundles = [];
     private readonly Queue<PreparedTile> _detachPending = [];
@@ -25,25 +27,13 @@ internal sealed class StreamResidency(StreamDirector host)
     internal IReadOnlyDictionary<StreamTile, TileGroup> Groups => _groups;
     internal StreamMaterials Materials => _materials;
     internal bool IsIdle => _groups.Count == 0 && _retiringBundles.Count == 0 && _detachPending.Count == 0 && (_materials?.IsEmpty ?? true);
-    internal bool CanActivateVisual => _retiringBundles.Count == 0 && _detachPending.Count == 0;
-    internal int Retirements
-    {
-        get
-        {
-            var count = _retiringBundles.Count;
-            foreach (var group in _groups.Values)
-            {
-                foreach (var bundle in group.Bundles)
-                    if ((_host.Context is null || bundle.IsRetiring) && !bundle.IsDisposed) count++;
-                if (_host.Context is null)
-                    foreach (var item in group.Participants.Values) if (item.Mounted) count++;
-            }
-            return count;
-        }
-    }
+    internal bool CanReleaseRetiredInstances => _detachPending.Count == 0;
+    internal bool CanActivateVisual => _retiringBundles.Count == 0 && !_groups.Values.Any(group => group.RetiringGeometry);
+    internal int Retirements => _host.Context is null
+        ? _groups.Values.Count(group => !group.RetiringGeometry) : 0;
     internal int MountedTiles => _groups.Values.Count(group => group.Mounted);
     internal long ResidentBytes => _groups.Values.Sum(group => group.Bundles.Sum(bundle => bundle.Bytes));
-    internal bool RootMounted => _groups.TryGetValue(StreamTile.Root, out var root) && root.Failure is null && root.Mounted;
+    internal bool RootMounted => _groups.TryGetValue(StreamTile.Root, out var root) && root.Failure is null && !root.RetiringGeometry && root.Mounted;
 
     internal TileGroup GetGroup(StreamTile tile)
     {
@@ -91,6 +81,7 @@ internal sealed class StreamResidency(StreamDirector host)
         foreach (var tile in wanted)
         {
             var group = GetGroup(tile);
+            if (group.RetiringGeometry) continue;
             if (!group.GeometryRequested)
             {
                 group.GeometryRequested = true; group.Expected = _host.Preparation.Catalog!.Modules(tile).Count;
@@ -129,30 +120,83 @@ internal sealed class StreamResidency(StreamDirector host)
         {
             var group = _groups[tile];
             if (!group.GeometryRequested && group.Participants.Count > 0) continue;
-            group.Work?.Abandon(); group.Work = null;
-            foreach (var bundle in group.Bundles) QueueRetirement(bundle);
-            foreach (var key in group.Keys) _host.Preparation.Forget(key);
-            group.Bundles.Clear(); group.Keys.Clear(); group.MountKey = null; group.Expected = 0;
-            group.Queued = group.Mounted = group.GeometryRequested = false; group.GeometryRevision++;
-            group.Failure = null;
-            if (group.Participants.Count == 0) _groups.Remove(tile);
+            RetireGeometry(group);
         }
+    }
+
+    private void RetireGeometry(TileGroup group)
+    {
+        if (group.RetiringGeometry) return;
+        group.RetiringGeometry = true;
+        group.GeometryRequested = false;
+        if (group.Work is { } work) _host.Mount.Retire(work);
+        else foreach (var bundle in group.Bundles) QueueRetirement(bundle);
+    }
+
+    private void HarvestRetiredGroups()
+    {
+        foreach (var group in _groups.Values)
+        {
+            if (!group.RetiringGeometry || group.Bundles.Any(bundle => !bundle.IsDisposed)) continue;
+            ClearMounted(group, group.Work?.Revision ?? _host.Mount.Revision);
+            foreach (var key in group.Keys) _host.Preparation.Forget(key);
+            group.Bundles.Clear(); group.Keys.Clear(); group.Work = null; group.MountKey = null;
+            group.Expected = 0; group.Queued = group.Mounted = group.RetiringGeometry = false;
+            group.GeometryRevision++; group.Failure = null;
+        }
+        foreach (var tile in _groups.Where(pair => !pair.Value.GeometryRequested && !pair.Value.RetiringGeometry &&
+                     pair.Value.Bundles.Count == 0 && pair.Value.Participants.Count == 0).Select(pair => pair.Key).ToArray())
+            _groups.Remove(tile);
     }
 
     internal void QueueRetirement(PreparedTile bundle)
     {
-        _materials.Forget(bundle.Draws); bundle.BeginRetirement();
-        _retiringBundles.Enqueue(bundle); _detachPending.Enqueue(bundle);
+        QueueDetach(bundle);
+        _retiringBundles.Enqueue(bundle);
+        _host.Mount.Retire(new PreparedRetirement(bundle, _host.Mount.Revision, _host.RecordFailure, () => CanReleaseRetiredInstances));
+        _materials.Forget(bundle.Draws);
+    }
+
+    internal void QueueDetach(PreparedTile bundle)
+    {
+        bundle.BeginRetirement();
+        if (!_detachPending.Contains(bundle)) _detachPending.Enqueue(bundle);
     }
 
     internal void ReleaseRetired(double budgetMilliseconds)
     {
         var start = FrameClock.MonotonicMilliseconds;
-        while (_detachPending.TryPeek(out var pending) && FrameClock.MonotonicMilliseconds - start < budgetMilliseconds)
-            if (pending.DetachOne()) _detachPending.Dequeue();
-        if (_detachPending.Count > 0) return;
-        while (_retiringBundles.TryPeek(out var bundle) && FrameClock.MonotonicMilliseconds - start < budgetMilliseconds)
-            if (bundle.ReleaseOne()) _retiringBundles.Dequeue();
+        if (_detachPending.TryPeek(out var pending))
+            do
+            {
+                if (pending.DetachOne()) _detachPending.Dequeue();
+                if (FrameClock.MonotonicMilliseconds - start >= budgetMilliseconds) break;
+            } while (_detachPending.TryPeek(out pending));
+        _host.Participants.HarvestRetired();
+        HarvestRetiredGroups();
+        var count = _retiringBundles.Count;
+        for (var index = 0; index < count; index++)
+        {
+            var bundle = _retiringBundles.Dequeue();
+            if (!bundle.IsDisposed) _retiringBundles.Enqueue(bundle);
+        }
+        if (_host.Context is null) Unload();
+    }
+
+    private sealed class PreparedRetirement(PreparedTile bundle, long revision, Action<Exception> failed, Func<bool> detached)
+        : StreamMountWork(bundle.Key, BakePriority.Background, revision, StreamMountKind.Visual)
+    {
+        protected override bool IsCurrent => false;
+        protected override bool MountStep(double budgetMilliseconds) => throw new InvalidOperationException("Retired geometry cannot mount.");
+        protected override bool Release(double budgetMilliseconds)
+        {
+            var start = FrameClock.MonotonicMilliseconds;
+            if (!detached()) return false;
+            do { if (bundle.ReleaseOne()) return true; }
+            while (FrameClock.MonotonicMilliseconds - start < budgetMilliseconds);
+            return false;
+        }
+        protected override void Failed(Exception error) => failed(error);
     }
 
     internal void OnReflectionChanged() => _reflectionDirty = true;
@@ -189,45 +233,43 @@ internal sealed class StreamResidency(StreamDirector host)
             : pending.Group.GeometryRequested && pending.Group.GeometryRevision == pending.GeometryRevision);
 
     internal void InitializeMaterials(IToonMaterialProvider provider, IShaderMaterialSource shaders) => _materials = new(provider, shaders);
-    internal void Load() => _reflectionDirty = true;
+    internal void Load() { _reflectionDirty = true; _map = _host.Context!.Descriptor.Id; _materialRetirement = null; }
     internal void DetachMap()
     {
         foreach (var group in _groups.Values)
-            try { group.Work?.Abandon(); }
-            catch (Exception error) { _host.RecordFailure(error); }
-        // Detach the entire retiring scene before FreeRid flushes dirty instances.
-        foreach (var bundle in _groups.Values.SelectMany(group => group.Bundles)
-                     .Concat(_host.Interiors?.Prepared ?? []).Concat(_retiringBundles).Distinct())
-            try { bundle.DetachAll(); }
+            try { RetireGeometry(group); }
             catch (Exception error) { _host.RecordFailure(error); }
     }
     internal void Unload()
     {
-        foreach (var group in _groups.Values)
-        {
-            foreach (var bundle in group.Bundles)
-                try { bundle.Dispose(); }
-                catch (Exception error) { _host.RecordFailure(error); }
-            group.Bundles.RemoveAll(bundle => bundle.IsDisposed);
-        }
-        foreach (var tile in _groups.Where(pair => pair.Value.Bundles.Count == 0).Select(pair => pair.Key).ToArray())
-            _groups.Remove(tile);
-        var retiredCount = _retiringBundles.Count;
-        for (var i = 0; i < retiredCount; i++)
-        {
-            var retired = _retiringBundles.Dequeue();
-            try { retired.Dispose(); }
-            catch (Exception error) { _host.RecordFailure(error); }
-            if (!retired.IsDisposed) _retiringBundles.Enqueue(retired);
-        }
-        _detachPending.Clear();
-        foreach (var retired in _retiringBundles) _detachPending.Enqueue(retired);
+        DetachMap();
         _reflectionRefresh.Clear(); _reflectionCursor = 0; _reflectionMaterial = null; _reflectionScenario = default;
-        // Prepared instances still borrow these bindings, including a late worker whose release failed.
+        // Bindings remain borrowed until every queued owner, including late preparation, is empty.
         if (_groups.Count == 0 && _retiringBundles.Count == 0 && _host.Preparation.IsIdle && (_host.Interiors?.IsUnloaded ?? true))
-            try { _materials?.Dispose(); } catch (Exception error) { _host.RecordFailure(error); }
+            if (_materials is { IsEmpty: false } && _materialRetirement is null)
+            {
+                _materialRetirement = new MaterialRetirement(_materials, _map, _host.Mount.Revision, _host.RecordFailure);
+                _host.Mount.Retire(_materialRetirement);
+            }
     }
-    internal void DisposeMaterials() => _materials?.Dispose();
+    private sealed class MaterialRetirement(StreamMaterials materials, MapId map, long revision, Action<Exception> failed)
+        : StreamMountWork(new(map, "stream.materials", "bindings"), BakePriority.Background, revision, StreamMountKind.Auxiliary)
+    {
+        protected override bool IsCurrent => false;
+        protected override bool MountStep(double budgetMilliseconds) => throw new InvalidOperationException("Retired material bindings cannot mount.");
+        protected override bool Release(double budgetMilliseconds)
+        {
+            var start = FrameClock.MonotonicMilliseconds;
+            do { if (materials.ReleaseOne()) return true; }
+            while (FrameClock.MonotonicMilliseconds - start < budgetMilliseconds);
+            return false;
+        }
+        protected override void Failed(Exception error) => failed(error);
+    }
+    internal void DisposeMaterials()
+    {
+        if (_materials is { IsEmpty: false }) throw new InvalidOperationException("Stream material bindings must drain before exit.");
+    }
     internal sealed class TileGroup(StreamTile tile)
     {
         public StreamTile Tile { get; } = tile;
@@ -239,7 +281,7 @@ internal sealed class StreamResidency(StreamDirector host)
         public HashSet<BakeKey> Keys { get; } = [];
         public BakeKey? MountKey;
         public VisualMountWork? Work;
-        public bool Queued, Mounted;
+        public bool Queued, Mounted, RetiringGeometry;
         public BakePriority Priority;
         public Exception? Failure;
     }

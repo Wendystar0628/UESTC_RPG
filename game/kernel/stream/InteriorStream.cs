@@ -11,7 +11,7 @@ namespace Campus.Kernel.Stream;
 /// <summary>Destination/current-floor IF and adjacent IS use the same bake and mount paths as outdoor tiles.</summary>
 internal sealed class InteriorStream(IBakeService bake, IStreamMountQueue mount, StreamMaterials materials,
     IReflectionWorld reflections, Action<PreparedTile> retire, bool captureMode, IStreamGeometryPreparation geometry,
-    Action<StreamTileChange> changed)
+    Action<StreamTileChange> changed, Action<PreparedTile> detach, Func<bool> detached)
 {
     private readonly Dictionary<BakeKey, Layer> _layers = [];
     private readonly List<Layer> _draining = [];
@@ -161,7 +161,7 @@ internal sealed class InteriorStream(IBakeService bake, IStreamMountQueue mount,
                     else
                     {
                         layer.Work = new VisualMountWork(layer.Key, [layer.Prepared!], layer.Revision, scenario, layer.Priority, materials, reflections,
-                            () => SetMounted(layer), () => ClearMounted(layer), error => Fail(layer, error));
+                            () => SetMounted(layer), () => ClearMounted(layer), error => Fail(layer, error), detach, detached);
                         mount.Enqueue(layer.Work);
                     }
                 }
@@ -225,8 +225,7 @@ internal sealed class InteriorStream(IBakeService bake, IStreamMountQueue mount,
             }
             if (!outside && layer.IdleSeconds < 20) continue;
             if (layer.Failure is not null) continue;
-            layer.Work?.Abandon();
-            if (layer.Preparing is null && layer.Owner is { } owner) { retire(owner); layer.Owner = layer.Prepared = null; }
+            RetireLayer(layer);
             _layers.Remove(layer.Key);
             if (layer.Preparing is not null || layer.Handle.State is BakeState.Pending or BakeState.Running) _draining.Add(layer);
         }
@@ -266,7 +265,7 @@ internal sealed class InteriorStream(IBakeService bake, IStreamMountQueue mount,
         _context = null; _destination.Clear(); _visible.Clear(); _pinned.Clear(); _atriumStoreys.Clear();
         foreach (var layer in _layers.Values)
         {
-            try { layer.Work?.Abandon(); }
+            try { RetireLayer(layer); }
             catch (Exception error) { Fail(layer, error); }
             _draining.Add(layer);
         }
@@ -288,16 +287,19 @@ internal sealed class InteriorStream(IBakeService bake, IStreamMountQueue mount,
                 catch (Exception error) { Fail(layer, error); }
                 finally { layer.Preparing = null; }
             }
-            try { layer.Owner?.Dispose(); }
+            try { RetireLayer(layer); }
             catch (Exception error) { Fail(layer, error); }
-            if (layer.Owner is null || layer.Owner.IsDisposed)
-            {
-                layer.Owner = layer.Prepared = null; layer.Mounted = false;
-                _draining.RemoveAt(i);
-            }
+            _draining.RemoveAt(i);
         }
         if (_failures.Count == 1) System.Runtime.ExceptionServices.ExceptionDispatchInfo.Capture(_failures[0]).Throw();
         if (_failures.Count > 1) throw new AggregateException("Interior stream drain failed.", _failures);
+    }
+    private void RetireLayer(Layer layer)
+    {
+        if (layer.Preparing is not null || layer.Retiring) return;
+        layer.Retiring = true;
+        if (layer.Work is { } work) mount.Retire(work);
+        else if (layer.Owner is { } owner) retire(owner);
     }
     private sealed class Layer(BakeKey key, IBakeHandle handle, long revision, BakePriority priority, FeatureId building)
     {
@@ -313,6 +315,6 @@ internal sealed class InteriorStream(IBakeService bake, IStreamMountQueue mount,
         public PreparedTile? Owner;
         public PreparedTile? Prepared;
         public Exception? Failure;
-        public bool Mounted, Visible, Finished;
+        public bool Mounted, Visible, Finished, Retiring;
     }
 }

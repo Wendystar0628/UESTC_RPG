@@ -165,7 +165,11 @@ public sealed class ServiceRegistry
     }
 
     /// <summary>Stop map/background work, exit nodes with bindings intact, then release owned objects and scene children.</summary>
-    public Task ShutdownAsync(Node? scene = null, Action<string>? trace = null) => _shutdown ??= Shutdown(scene, trace);
+    public Task ShutdownAsync(Node? scene = null, Action<string>? trace = null)
+    {
+        if (_shutdown is null || _shutdown.IsCompleted && !_disposed) _shutdown = Shutdown(scene, trace);
+        return _shutdown;
+    }
 
     private async Task Shutdown(Node? scene, Action<string>? trace)
     {
@@ -179,6 +183,15 @@ public sealed class ServiceRegistry
             if (lifetime is not null) await lifetime.ShutdownAsync();
         }
         catch (Exception error) { failures.Add(error); }
+        var streamsDrained = true;
+        foreach (var stream in CreatedInstances<IMapStreamState>())
+            try { streamsDrained &= stream.IsUnloaded; }
+            catch (Exception error) { failures.Add(error); streamsDrained = false; }
+        if (!streamsDrained)
+        {
+            if (failures.Count > 0) throw new AggregateException("Map resources remain owned after shutdown failed.", failures);
+            throw new InvalidOperationException("The map stream must finish draining before registry teardown.");
+        }
         // Runtime drain owns map release; global teardown must not reenter that phase.
         _releasingOwned = true;
         var participants = _created.AsEnumerable().Reverse().Select(item => item.Instance).OfType<IRegistryExitParticipant>().ToArray();

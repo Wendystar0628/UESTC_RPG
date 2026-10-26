@@ -8,7 +8,8 @@ namespace Campus.Kernel.Stream;
 
 public interface IStreamMountFrame
 {
-    void Drain(IAppScreenCoverage coverage, Action? prepare = null, Action<double>? finish = null, Action<double>? release = null, Func<bool>? canActivateVisual = null);
+    bool RetirementFailed { get; }
+    void Drain(IAppScreenCoverage coverage, Action? prepare = null, Action<double>? finish = null, Action<double>? release = null, Func<bool>? canActivateVisual = null, Func<bool>? canReleaseRetired = null);
 }
 
 /// <summary>The sole owner of the shared collision/visual mount budget and covered-screen refresh slices.</summary>
@@ -17,6 +18,8 @@ public interface IStreamMountFrame
 public sealed class StreamMountQueue : IStreamMountQueue, IStreamMountFrame
 {
     private readonly List<IStreamMountWork> _pending = [];
+    private readonly List<IStreamMountWork> _retiring = [];
+    private int _retirementCursor;
     private readonly Campus.Kernel.Lod.StreamSettings _settings = new();
     private readonly MountWatchdog _watchdog;
     private readonly Func<double> _clock;
@@ -26,8 +29,10 @@ public sealed class StreamMountQueue : IStreamMountQueue, IStreamMountFrame
         _clock = clock ?? (() => FrameClock.MonotonicMilliseconds);
     }
     public Exception? Failure { get; private set; }
+    public bool RetirementFailed { get; private set; }
     public long Revision { get; private set; } = 1;
     public int Pending => _pending.Count;
+    public int PendingRetirements => _retiring.Count;
     public double LastMilliseconds { get; private set; }
     public int WatchdogTrips => _watchdog.Trips;
     public void Enqueue(IStreamMountWork work)
@@ -35,13 +40,13 @@ public sealed class StreamMountQueue : IStreamMountQueue, IStreamMountFrame
         try
         {
             ArgumentNullException.ThrowIfNull(work);
-            if (work.Revision != Revision) { Cancel(work); return; }
+            if (work.Revision != Revision) { Retire(work); return; }
             _pending.Add(work);
         }
         catch (Exception error)
         {
             RecordFailure(error);
-            if (work is not null) { Cancel(work); _pending.Remove(work); }
+            if (work is not null) Retire(work);
         }
     }
     private static int Compare(IStreamMountWork a, IStreamMountWork b)
@@ -74,49 +79,49 @@ public sealed class StreamMountQueue : IStreamMountQueue, IStreamMountFrame
                 if (work.Key.Map != map) continue;
             }
             catch (Exception error) { RecordFailure(error); }
-            Cancel(work); _pending.RemoveAt(i);
+            Retire(work);
         }
     }
-    private void Cancel(IStreamMountWork work)
+    public void Retire(IStreamMountWork work)
     {
+        ArgumentNullException.ThrowIfNull(work);
+        for (var index = _pending.Count - 1; index >= 0; index--)
+            if (ReferenceEquals(_pending[index], work)) _pending.RemoveAt(index);
+        foreach (var owner in _retiring) if (ReferenceEquals(owner, work)) return;
+        _retiring.Add(work);
         try { work.Cancel(); }
         catch (Exception error) { RecordFailure(error); }
     }
     private void RecordFailure([FailureHandler("ENG-PERF-STREAM")] Exception error) =>
         Failure = RetainedFailure.Append(Failure, error);
 
-    public void Drain(IAppScreenCoverage coverage, Action? prepare = null, Action<double>? finish = null, Action<double>? release = null, Func<bool>? canActivateVisual = null)
+    public void Drain(IAppScreenCoverage coverage, Action? prepare = null, Action<double>? finish = null, Action<double>? release = null, Func<bool>? canActivateVisual = null, Func<bool>? canReleaseRetired = null)
     {
-        try { DrainFrame(coverage.IsCovered, prepare, finish, release, canActivateVisual); }
+        RetirementFailed = false;
+        try { DrainFrame(coverage.IsCovered, prepare, finish, release, canActivateVisual, canReleaseRetired); }
         catch (Exception error)
         {
             RecordFailure(error);
-            foreach (var work in _pending) Cancel(work);
-            _pending.Clear();
+            while (_pending.Count > 0) Retire(_pending[^1]);
+            try { release?.Invoke(0); } catch (Exception cleanup) { RetirementFailed = true; RecordFailure(cleanup); }
+            try { if (canReleaseRetired?.Invoke() != false) AdvanceRetirement(0); }
+            catch (Exception cleanup) { RetirementFailed = true; RecordFailure(cleanup); }
         }
     }
 
-    private void DrainFrame(bool covered, Action? prepare, Action<double>? finish, Action<double>? release, Func<bool>? canActivateVisual)
+    private void DrainFrame(bool covered, Action? prepare, Action<double>? finish, Action<double>? release, Func<bool>? canActivateVisual, Func<bool>? canReleaseRetired)
     {
         // Demand changes upgrade the existing work without cancelling or enqueuing another mount.
         var start = _clock();
         prepare?.Invoke();
         _pending.Sort(Compare);
         var frameBudget = covered ? KernelBudgets.StreamCoveredMountMilliseconds : _settings.MountMilliseconds;
-        var retiring = canActivateVisual is not null && !canActivateVisual();
-        try
-        {
-            var releaseBudget = covered ? frameBudget : retiring
-                ? Math.Max(0, frameBudget - KernelBudgets.CollisionMountMilliseconds) : Math.Min(.25, frameBudget);
-            release?.Invoke(Math.Min(releaseBudget, Math.Max(0, frameBudget - (_clock() - start))));
-        }
-        catch (Exception error) { RecordFailure(error); }
         var collisionUsed = false; var visualUsed = false;
         for (var i = 0; i < _pending.Count;)
         {
             var work = _pending[i];
-            if (work is IStreamMountCancellationState { IsCancelled: true }) { _pending.RemoveAt(i); continue; }
-            if (work.Revision != Revision) { Cancel(work); _pending.RemoveAt(i); continue; }
+            if (work is IStreamMountCancellationState { IsCancelled: true }) { Retire(work); continue; }
+            if (work.Revision != Revision) { Retire(work); continue; }
             var elapsed = _clock() - start;
             var remaining = frameBudget - elapsed;
             if (remaining <= 0) break;
@@ -138,14 +143,17 @@ public sealed class StreamMountQueue : IStreamMountQueue, IStreamMountFrame
             }
             try
             {
-                if (work.Step(budget)) _pending.RemoveAt(i);
+                if (work.Step(budget))
+                {
+                    if (work is IStreamMountCancellationState { IsCancelled: true }) Retire(work);
+                    else _pending.RemoveAt(i);
+                }
                 else if (!covered) i++;
             }
             catch (Exception error)
             {
                 RecordFailure(error);
-                Cancel(work);
-                _pending.RemoveAt(i);
+                Retire(work);
             }
         }
         try
@@ -154,8 +162,31 @@ public sealed class StreamMountQueue : IStreamMountQueue, IStreamMountFrame
                 ? Math.Max(0, frameBudget - (_clock() - start)) : 0);
         }
         catch (Exception error) { RecordFailure(error); }
+        try { release?.Invoke(Math.Max(0, frameBudget - (_clock() - start))); }
+        catch (Exception error) { RetirementFailed = true; RecordFailure(error); }
+        // Mounting has first use of the shared slice. One bounded retirement unit must still
+        // progress when an indivisible native call consumed its remainder, after detach is safe (ENG-PERF-STREAM).
+        for (var attempts = canReleaseRetired?.Invoke() != false ? _retiring.Count : 0; attempts > 0; attempts--)
+        {
+            var remaining = Math.Max(0, frameBudget - (_clock() - start));
+            AdvanceRetirement(remaining);
+            if (remaining <= 0 || _clock() - start >= frameBudget) break;
+        }
         LastMilliseconds = _clock() - start;
         if (!covered) _watchdog.Observe(LastMilliseconds, _clock());
+    }
+
+    private void AdvanceRetirement(double budgetMilliseconds)
+    {
+        if (_retiring.Count == 0) return;
+        _retirementCursor %= _retiring.Count;
+        var owner = _retiring[_retirementCursor];
+        try
+        {
+            if (owner.ReleaseStep(budgetMilliseconds)) { _retiring.RemoveAt(_retirementCursor); return; }
+        }
+        catch (Exception error) { RetirementFailed = true; RecordFailure(error); }
+        _retirementCursor++;
     }
 
 }

@@ -15,6 +15,7 @@ internal sealed class FaunaLatch
     public long Version;
     public bool AllowVisible;
     public readonly List<RenderHandle> Handles = [];
+    public readonly List<RenderHandle> RetiringHandles = [];
 }
 
 internal sealed class FaunaTile(FaunaTileContent content, BakePriority priority, long revision, long generation)
@@ -25,5 +26,7 @@ internal sealed class FaunaTile(FaunaTileContent content, BakePriority priority,
     public readonly long Generation = generation;
     public readonly FaunaLatch[] Latches = content.Content.Sites.Select(_ => new FaunaLatch()).ToArray();
     public FaunaTileMountWork? Work;
+    public bool Retiring;
+    public int ReleaseLatch;
     public bool Mounted;
 }

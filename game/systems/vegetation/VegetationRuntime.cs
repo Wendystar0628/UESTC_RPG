@@ -28,6 +28,8 @@ public sealed partial class VegetationRuntime : Node, IMapAware, IViewContentRea
     private const double Interval = 0.1;
     private readonly Dictionary<BakeKey, MountedTile> _tiles = [];
     private IInstancePoolHost? _host;
+    private IStreamMountQueue? _mountQueue;
+    private IStreamVisualFrame? _streamFrame;
     private ICameraRig? _rig;
     private IWorldState? _world;
     private MapId? _map;
@@ -56,6 +58,8 @@ public sealed partial class VegetationRuntime : Node, IMapAware, IViewContentRea
     {
         ProcessPriority = FramePriority.Systems;
         _host = KernelServices.Get<IInstancePoolHost>();
+        _mountQueue = KernelServices.Get<IStreamMountQueue>();
+        _streamFrame = KernelServices.Get<IStreamVisualFrame>();
         _rig = KernelServices.Get<ICameraRig>();
         _world = KernelServices.Get<IWorldState>();
         SetShadowReach(KernelServices.Get<IQualityService>().Effective);
@@ -75,7 +79,8 @@ public sealed partial class VegetationRuntime : Node, IMapAware, IViewContentRea
     public override void _ExitTree()
     {
         if (_world is not null) _world.InstanceAdvancing -= OnWorldInstanceChanged;
-        FreeAll();
+        if (_tiles.Count != 0 || _nearReadyImage is not null || _transitionMap is not null)
+            throw new InvalidOperationException("Vegetation owners must drain before exit.");
     }
 
     private void OnWorldInstanceChanged(long _)
@@ -87,7 +92,8 @@ public sealed partial class VegetationRuntime : Node, IMapAware, IViewContentRea
 
     public void OnMapLoaded(IMapContext context)
     {
-        FreeAll();
+        if (_tiles.Count != 0) throw new InvalidOperationException("Vegetation owners must drain before map load.");
+        _generation++;
         Failure = null;
         _map = context.Descriptor.Id;
         PrepareDataTextures(context.Descriptor.DataRect);
@@ -95,8 +101,10 @@ public sealed partial class VegetationRuntime : Node, IMapAware, IViewContentRea
 
     public void OnMapUnloading(MapId from)
     {
-        FreeAll();
-        _map = null;
+        if (_map != from) return;
+        _generation++; _map = null;
+        _mountQueue!.Retire(new TextureRetirement(this, from, _mountQueue.Revision));
+        _worldReset = true; _capture = null; _since = Interval;
     }
 
     public bool CanMount(BakeKey key) => key.Module is BakeModuleIds.VegetationTrees or BakeModuleIds.VegetationGrass;
@@ -133,7 +141,7 @@ public sealed partial class VegetationRuntime : Node, IMapAware, IViewContentRea
         return new MountWork(this, content, priority, revision, _generation);
     }
 
-    public bool IsReady(BakeKey key) => Failure is null && _tiles.TryGetValue(key, out var tile) && tile.Ready;
+    public bool IsReady(BakeKey key) => Failure is null && _map == key.Map && _tiles.TryGetValue(key, out var tile) && tile.Ready;
 
     public bool IsReady(Pose pose)
     {
@@ -145,15 +153,6 @@ public sealed partial class VegetationRuntime : Node, IMapAware, IViewContentRea
     }
 
     public void PrepareCapture(Pose pose) => _capture = pose;
-
-    public void Unmount(BakeKey key)
-    {
-        if (!_tiles.Remove(key, out var tile)) return;
-        tile.ResetNear();
-        WriteNearReady(tile);
-        UploadDataTextures();
-        tile.Free();
-    }
 
     public override void _Process(double delta)
     {
@@ -174,6 +173,7 @@ public sealed partial class VegetationRuntime : Node, IMapAware, IViewContentRea
             var clock = FrameClock.FadeSeconds;
             foreach (var tile in _tiles.Values)
             {
+                if (tile.Retiring) continue;
                 tile.UpdateNear(eye, clock);
                 if (!tile.NeededAt(eye, TreeReach) && !tile.NearActive) { tile.Hide(); WriteNearReady(tile); continue; }
                 foreach (var mother in tile.Mothers) mother.Refresh(eye, reset, _shadowReach, clock, tile.NearActive,
@@ -202,16 +202,17 @@ public sealed partial class VegetationRuntime : Node, IMapAware, IViewContentRea
         catch (Exception cleanup) { Failure = RetainedFailure.Append(Failure, cleanup); }
     }
 
-    private void FreeAll()
+    private sealed class TextureRetirement(VegetationRuntime owner, MapId map, long revision)
+        : StreamMountWork(new(map, BakeModuleIds.VegetationTrees, "textures"), BakePriority.Background, revision, StreamMountKind.Auxiliary)
     {
-        _generation++;
-        ClearNearReady();
-        foreach (var tile in _tiles.Values) tile.Free();
-        _tiles.Clear();
-        ReleaseDataTextures();
-        _worldReset = true;
-        _capture = null;
-        _since = Interval;
+        protected override bool IsCurrent => false;
+        protected override bool MountStep(double budgetMilliseconds) => throw new InvalidOperationException("Retiring textures cannot mount.");
+        protected override bool Release(double budgetMilliseconds)
+        {
+            if (owner._tiles.Count != 0) return false;
+            owner.ReleaseDataTextures(); return true;
+        }
+        protected override void Failed(Exception error) => owner.RecordFailure(error);
     }
 
     private void PrepareDataTextures(MapRect rect)
@@ -231,7 +232,7 @@ public sealed partial class VegetationRuntime : Node, IMapAware, IViewContentRea
             RenderingServer.GlobalShaderParameterSet(_shaderGlobalNearReady, _nearReadyTexture);
             RenderingServer.GlobalShaderParameterSet(_shaderGlobalTransition, _transitionTexture);
         }
-        catch { ReleaseDataTextures(); throw; }
+        catch { throw; }
     }
 
     private void ReleaseDataTextures()
@@ -315,6 +316,8 @@ public sealed partial class VegetationRuntime : Node, IMapAware, IViewContentRea
                 }
             if (min.X <= max.X) _treeBounds = new(min, max);
         }
+        public bool Retiring;
+        private int _release;
         public bool IsTrees { get; }
         public TileKey Tile { get; }
         public bool NearActive => _near.Active;
@@ -343,6 +346,7 @@ public sealed partial class VegetationRuntime : Node, IMapAware, IViewContentRea
         {
             get
             {
+                if (Retiring) return false;
                 foreach (var mother in Mothers) if (!mother.Ready) return false;
                 foreach (var grass in Grass) if (!grass.Ready) return false;
                 return true;
@@ -371,10 +375,13 @@ public sealed partial class VegetationRuntime : Node, IMapAware, IViewContentRea
             foreach (var grass in Grass) grass.Hide();
             AppliedEye = null;
         }
-        public void Free()
+        public bool FreeOne()
         {
-            foreach (var mother in Mothers) mother.Free();
-            foreach (var grass in Grass) grass.Free();
+            var treeUnits = Mothers.Length * Mother.PoolCount;
+            if (_release < treeUnits) Mothers[_release / Mother.PoolCount].FreePool(_release % Mother.PoolCount);
+            else if (_release < treeUnits + Grass.Length) Grass[_release - treeUnits].Free();
+            else return true;
+            _release++; return false;
         }
     }
 
@@ -390,6 +397,7 @@ public sealed partial class VegetationRuntime : Node, IMapAware, IViewContentRea
             _owner = owner;
             _generation = generation;
             _tile = new(content, owner._transitionMap ?? throw new InvalidOperationException("The vegetation transition map is unavailable."));
+            if (!owner._tiles.TryAdd(Key, _tile)) throw new InvalidOperationException("Vegetation tile is already owned.");
         }
         protected override bool IsCurrent => _owner._generation == _generation && _owner._map == Key.Map;
         protected override bool MountStep(double budgetMilliseconds)
@@ -401,11 +409,25 @@ public sealed partial class VegetationRuntime : Node, IMapAware, IViewContentRea
             else if (_unit < treeUnits + _tile.Grass.Length) _tile.Grass[_unit - treeUnits].Mount(host, Key.Map);
             _unit++;
             if (_unit < treeUnits + _tile.Grass.Length) return false;
-            if (!_owner._tiles.TryAdd(Key, _tile)) throw new InvalidOperationException("Vegetation tile is already mounted.");
             _owner._since = Interval;
             return true;
         }
-        protected override void Release() => _tile.Free();
+        protected override void Cancelled() { _tile.Retiring = true; _tile.ResetNear(); }
+        protected override bool Release(double budgetMilliseconds)
+        {
+            if (!_owner._streamFrame!.CanReleaseRetiredInstances) return false;
+            var start = FrameClock.MonotonicMilliseconds;
+            do
+            {
+                if (_tile.FreeOne())
+                {
+                    if (_owner._tiles.TryGetValue(Key, out var current) && ReferenceEquals(current, _tile)) _owner._tiles.Remove(Key);
+                    _owner.WriteNearReady(_tile); _owner.UploadDataTextures();
+                    return true;
+                }
+            } while (FrameClock.MonotonicMilliseconds - start < budgetMilliseconds);
+            return false;
+        }
         protected override void Failed(Exception error) => _owner.RecordFailure(error);
     }
 
@@ -525,16 +547,13 @@ public sealed partial class VegetationRuntime : Node, IMapAware, IViewContentRea
             foreach (var pool in _pools) if (pool is { VisibleCount: > 0 }) pool.VisibleCount = 0;
         }
 
-        public void Free()
+        public void FreePool(int p)
         {
-            for (var p = 0; p < PoolCount; p++)
-            {
-                _pools[p]?.Free();
-                _pools[p] = null;
-                if (p >= _transitionSlots.Length) continue;
-                _transitions.Release(_transitionSlots[p], Buckets.Count);
-                _transitionSlots[p] = -1;
-            }
+            _pools[p]?.Free();
+            _pools[p] = null;
+            if (p >= _transitionSlots.Length) return;
+            _transitions.Release(_transitionSlots[p], Buckets.Count);
+            _transitionSlots[p] = -1;
         }
 
     }

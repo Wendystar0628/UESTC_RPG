@@ -17,29 +17,37 @@ public interface IStreamMountWork
     /// A visual step may advance multiple instances within one tile and its budget; it never starts another tile.
     /// On exception the queue calls Cancel and reports the failure. No background generation is allowed here.</remarks>
     bool Step(double budgetMilliseconds);
-    /// <summary>Idempotently cancels unfinished work and releases its partially mounted objects on the main thread.</summary>
-    /// <remarks>After successful completion the producer owns the mounted objects and releases them on map unload.</remarks>
+    /// <summary>Stops further mounting and immediately revokes readiness; native ownership remains until ReleaseStep completes.</summary>
     void Cancel();
+    /// <summary>Releases bounded main-thread units, including partial or completed mounts. True means ownership is empty.</summary>
+    /// <remarks>Even with zero remainder, advances at most one indivisible release unit. Native calls cannot be preempted.</remarks>
+    bool ReleaseStep(double budgetMilliseconds);
 }
 
 /// <summary>The sole stream-mount executor owns FramePriority.StreamMount and all shared mount time accounting.</summary>
 public interface IStreamMountQueue
 {
+    /// <summary>Unfinished mounts only; never includes retirement owners.</summary>
     int Pending { get; }
+    /// <summary>Actual retirement owners still retained by this queue, including failed releases and pending native preparation.</summary>
+    int PendingRetirements { get; }
     double LastMilliseconds { get; }
     int WatchdogTrips { get; }
-    /// <summary>Original mount and cancellation failures consumed by the map lifetime owner.</summary>
+    /// <summary>Original mount, cancellation and release failures consumed by the map lifetime owner.</summary>
     Exception? Failure { get; }
     /// <summary>Monotonically increases when the map lifetime is unloaded.</summary>
     long Revision { get; }
-    /// <summary>Main-thread enqueue. Rejects stale revisions or maps and cancels their unfinished work.</summary>
+    /// <summary>Main-thread enqueue. Rejects stale revisions or maps and retires their actual work.</summary>
     void Enqueue(IStreamMountWork work);
-    /// <summary>Cancels this map's queued work and invalidates prior request revisions.</summary>
+    /// <summary>Stops mounting and retains the actual owner until its release completes, regardless of revision or failure.</summary>
+    void Retire(IStreamMountWork work);
+    /// <summary>Stops this map's queued mounts, retires them and invalidates prior request revisions.</summary>
     /// <remarks>Only the map-unload coordinator calls this from its map-unload callback. Producers separately cancel their own work
-    /// and release completed mounts; they do not advance the shared queue revision.</remarks>
+    /// and retire completed mounts; they do not advance the shared queue revision.</remarks>
     void RemoveMap(MapId map);
 }
-// Visible-frame caps: total <= 1.0 ms; Collision <= one Step and <= 0.3 ms of that total;
+// Mounts have first use of the existing frame slice; retirement uses its remainder, with one bounded release unit per frame.
+// Visible-frame target: total <= 1.0 ms plus an indivisible native operation; Collision <= one Step and <= 0.3 ms of that total;
 // Visual <= one Step. Auxiliary work shares the remainder. Actual opaque screen coverage
 // permits multiple tiles/steps in a shared UI-responsive slice; readiness rules are unchanged.
 
@@ -71,7 +79,6 @@ public interface IStreamTileParticipant
     IStreamMountWork CreateMount(BakeKey key, object product, BakePriority priority, long revision);
     /// <summary>Mounted resources are ready. World/view display state belongs to IViewContentReadiness.</summary>
     bool IsReady(BakeKey key);
-    void Unmount(BakeKey key);
     Exception? Failure { get; }
 }
 

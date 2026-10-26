@@ -6,6 +6,7 @@ using Campus.Contracts.Startup;
 using Campus.Kernel.Instances;
 using Campus.Kernel.Lighting;
 using Campus.Kernel.Renderer;
+using Campus.Kernel.Stream;
 using Campus.Systems.Nightlight.Glow;
 using Campus.Systems.Nightlight.Schedule;
 using Campus.Systems.Nightlight.Lamps;
@@ -34,6 +35,7 @@ public partial class NightlightNode : Node, IMapAware, IViewContentReadiness, IV
     private ILightInventory? _inventory;
     private GlowTileMounts? _glows;
     private readonly NightlightReflections _reflections = new();
+    private IStreamMountQueue? _mountQueue;
     private ICameraRig? _camera;
     private IReflectionWorld? _reflection;
     private readonly N.Plane[] _planes = new N.Plane[CameraFrustum.PlaneCount];
@@ -83,7 +85,9 @@ public partial class NightlightNode : Node, IMapAware, IViewContentReadiness, IV
         _sink = KernelServices.Get<ILightChannelSink>();
         _colors = KernelServices.Get<IColorScriptFrame>();
         _inventory = KernelServices.Get<ILightInventory>();
-        _glows = new(KernelServices.Get<IInstancePoolHost>(), KernelServices.Get<IShaderMaterialSource>());
+        _mountQueue = KernelServices.Get<IStreamMountQueue>();
+        var stream = KernelServices.Get<IStreamVisualFrame>();
+        _glows = new(KernelServices.Get<IInstancePoolHost>(), KernelServices.Get<IShaderMaterialSource>(), () => stream.CanReleaseRetiredInstances);
         _camera = KernelServices.Get<ICameraRig>();
         _reflection = KernelServices.Get<IReflectionWorld>();
     }
@@ -104,11 +108,10 @@ public partial class NightlightNode : Node, IMapAware, IViewContentReadiness, IV
         _schedule = null;
         _map = null;
         Lamps = [];
-        _reflections.Dispose();
         _windows.Bind(null);
         _inventoryRev = long.MinValue;
         _glows?.Bind(null);
-        FreeTextures();
+        _mountQueue!.Retire(new TextureRetirement(this, from, _mountQueue.Revision));
     }
 
     public void OnMapLoaded(IMapContext ctx)
@@ -227,9 +230,16 @@ public partial class NightlightNode : Node, IMapAware, IViewContentReadiness, IV
     public IStreamMountWork CreateMount(BakeKey key, object product, BakePriority priority, long revision) =>
         (_glows ?? throw new InvalidOperationException("Nightlight glow mounting is not ready.")).CreateMount(key, product, priority, revision);
     public bool IsReady(BakeKey key) => _glows?.IsReady(key) ?? false;
-    public void Unmount(BakeKey key)
+    private sealed class TextureRetirement(NightlightNode owner, MapId map, long revision)
+        : StreamMountWork(new(map, BakeModuleIds.NightlightLamps, "textures"), BakePriority.Background, revision, StreamMountKind.Auxiliary)
     {
-        // Only retiring content used by the applied views invalidates their lighting/reflection submission.
-        if (_glows?.Unmount(key) == true) _appliedPose = null;
+        protected override bool IsCurrent => false;
+        protected override bool MountStep(double budgetMilliseconds) => throw new InvalidOperationException("Retiring textures cannot mount.");
+        protected override bool Release(double budgetMilliseconds)
+        {
+            if (owner._glows is { IsDrained: false }) return false;
+            owner._reflections.Dispose(); owner.FreeTextures(); return true;
+        }
+        protected override void Failed(Exception error) { if (owner._glows is { } glows) glows.RecordFailure(error); }
     }
 }

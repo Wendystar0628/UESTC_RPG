@@ -1,6 +1,8 @@
 using Campus.Contracts;
 using Campus.Kernel.Registry;
 using GdUnit4;
+using Godot;
+using Campus.Contracts.Maps;
 
 namespace Campus.Tests;
 
@@ -44,6 +46,41 @@ public sealed class RegistryExitLifetimeTests
             second.Release.TrySetResult();
             try { await registry.ShutdownAsync(); }
             catch (AggregateException error) when (error.Flatten().InnerExceptions.Any(cause => ReferenceEquals(cause, original))) { }
+        }
+    }
+
+    [TestCase, TestCategory(TestReason.Regression), RequireGodotRuntime]
+    public async Task FailedMapDrainKeepsNodesAndBindingsUntilAnExplicitShutdownResumes()
+    {
+        var original = new IOException("native retirement failed");
+        var probe = new ShutdownProbe(); probe.RuntimeDrain.SetException(original);
+        var registry = new ServiceRegistry(); registry.Add(probe);
+        registry.Discover([typeof(ShutdownMapLifetime), typeof(MapLifetimeService), typeof(MapRuntimeTestSupport.ArrivalStream)], _ => "fixture");
+        var lifetime = registry.Get<IMapLifetime>(); var map = new MapId("fixture-map");
+        var stream = (MapRuntimeTestSupport.ArrivalStream)registry.Create(typeof(MapRuntimeTestSupport.ArrivalStream), map);
+        stream.OnMapLoaded(new TestMapContext(TestMapContext.BackdropDescriptor() with { Id = map }));
+        var owner = (MapLifetimeService)registry.Create(typeof(MapLifetimeService), map);
+        var scene = new Node(); var child = new Node(); scene.AddChild(child);
+        ((SceneTree)Engine.GetMainLoop()).Root.AddChild(scene);
+        try
+        {
+            var first = registry.ShutdownAsync(scene);
+            await RequireOriginal(first);
+            if (owner.Disposed || child.GetParent() != scene || !ReferenceEquals(lifetime, registry.Get<IMapLifetime>()))
+                throw new InvalidOperationException("A failed native drain detached nodes or removed live bindings.");
+            stream.OnMapUnloading(map);
+            var resumed = registry.ShutdownAsync(scene);
+            if (ReferenceEquals(first, resumed)) throw new InvalidOperationException("An explicit retry reused the failed incomplete shutdown task.");
+            await RequireOriginal(resumed);
+            if (!owner.Disposed || GodotObject.IsInstanceValid(child) || !ReferenceEquals(resumed, registry.ShutdownAsync(scene)))
+                throw new InvalidOperationException("A drained map did not finish registry teardown with its original failure retained.");
+        }
+        finally { scene.Free(); }
+
+        async Task RequireOriginal(Task shutdown)
+        {
+            try { await shutdown; throw new InvalidOperationException("Shutdown swallowed its original native failure."); }
+            catch (AggregateException error) when (error.Flatten().InnerExceptions.Contains(original)) { }
         }
     }
 

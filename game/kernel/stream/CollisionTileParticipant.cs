@@ -54,10 +54,5 @@ public partial class CollisionTileParticipant : Node3D, IMapAware, IStreamTilePa
     public bool IsReady(BakeKey key) => Failure is null && _world is { } world && world.Map == key.Map &&
         world.IsTileReady(CollisionBakeProducer.ParseTile(key.Detail));
 
-    public void Unmount(BakeKey key)
-    {
-        if (_world is { } world && world.Map == key.Map) world.RemoveTile(CollisionBakeProducer.ParseTile(key.Detail));
-    }
-
     private void Reset() { _world?.Unload(); _context = null; }
 }

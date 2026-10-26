@@ -103,31 +103,17 @@ internal sealed class InstancePool(
     {
         InstancePoolHost.RequireMainThread();
         if (_freed) return;
-        _freed = true;
-        _visibleCount = 0;
-        host.Release(this);
-        var ownedInstance = _instance;
-        var ownedMultiMesh = _multiMesh;
-        var ownedMesh = _mesh;
-        var borrowedMesh = _sharedMesh;
-        _instance = null;
-        _multiMesh = null;
-        _mesh = null;
-        _sharedMesh = null;
-        try
+        _visibleCount = 0; _hasBuffer = false;
+        if (_instance is { } ownedInstance)
         {
             if (GodotObject.IsInstanceValid(ownedInstance))
-            {
-                ownedInstance!.Multimesh = null;
-                if (host.IsExiting) ownedInstance.QueueFree();
-                else ownedInstance.Free();
-            }
+            { ownedInstance.Multimesh = null; ownedInstance.Free(); }
+            _instance = null;
         }
-        finally
-        {
-            try { ownedMultiMesh?.Dispose(); }
-            finally { if (ownedMesh is not null) host.ReleaseMesh(ownedMesh, borrowedMesh); }
-        }
+        if (_multiMesh is { } ownedMultiMesh) { ownedMultiMesh.Dispose(); _multiMesh = null; }
+        if (_mesh is { } ownedMesh) { host.ReleaseMesh(ownedMesh, _sharedMesh); _mesh = null; _sharedMesh = null; }
+        _freed = true;
+        host.Release(this);
     }
 
     private void RequireLive()

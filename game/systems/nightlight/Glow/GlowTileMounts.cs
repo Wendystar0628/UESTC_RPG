@@ -8,10 +8,11 @@ using N = System.Numerics;
 
 namespace Campus.Systems.Nightlight.Glow;
 
-internal sealed class GlowTileMounts(IInstancePoolHost pools, IShaderMaterialSource materials)
+internal sealed class GlowTileMounts(IInstancePoolHost pools, IShaderMaterialSource materials, Func<bool> detached)
 {
     private readonly IInstancePoolHost _pools = pools;
-    private sealed record MountedTile(NightlightTileContent Content, GlowMount Mount)
+    private readonly Func<bool> _detached = detached;
+    private sealed record MountedTile(NightlightTileContent Content, GlowMount Mount, MountWork Work)
     {
         public BakeTileEntry Entry { get; } = new(Content.Key, Content.Glow.Bounds);
     }
@@ -22,15 +23,17 @@ internal sealed class GlowTileMounts(IInstancePoolHost pools, IShaderMaterialSou
     private ShaderMaterial? _windowMaterial;
     private MapId? _map;
     public IReadOnlyList<NightlightTileContent> ReflectionTiles => _reflectionTiles;
+    internal void RecordFailure(Exception error) => Failure = Campus.Kernel.Diagnostics.RetainedFailure.Append(Failure, error);
+    public bool IsDrained => _mounted.Count == 0;
     public Exception? Failure { get; private set; }
     public bool IsReady(in StreamDemandView view)
     {
-        if (Failure is not null) return false;
+        if (Failure is not null || _map is null) return false;
         foreach (var tile in _mounted.Values)
         {
             var entry = tile.Entry;
             if (Demand(in entry, in view, resident: true) == StreamTileNeed.Required &&
-                (!tile.Mount.IsReady || !tile.Mount.VisibleReady)) return false;
+                (tile.Work.IsCancelled || !tile.Mount.IsReady || !tile.Mount.VisibleReady)) return false;
         }
         return true;
     }
@@ -40,6 +43,7 @@ internal sealed class GlowTileMounts(IInstancePoolHost pools, IShaderMaterialSou
         _reflectionTiles.Clear();
         foreach (var tile in _mounted.Values)
         {
+            if (tile.Work.IsCancelled) continue;
             var entry = tile.Entry;
             var required = Demand(in entry, in view, resident: true) == StreamTileNeed.Required ||
                 mirrored && Demand(in entry, in reflection, resident: true) == StreamTileNeed.Required;
@@ -56,14 +60,15 @@ internal sealed class GlowTileMounts(IInstancePoolHost pools, IShaderMaterialSou
 
     public void Bind(MapId? map)
     {
-        FreeTiles();
+        if (map is not null && !IsDrained) throw new InvalidOperationException("Glow owners must drain before binding another map.");
+        StopTiles();
         _map = map;
-        Failure = null;
+        if (map is not null) Failure = null;
     }
 
     public void Dispose()
     {
-        Bind(null);
+        if (!IsDrained) throw new InvalidOperationException("Glow owners must drain before exit.");
         _lampMaterial?.Dispose();
         _windowMaterial?.Dispose();
         _lampMaterial = null;
@@ -97,20 +102,11 @@ internal sealed class GlowTileMounts(IInstancePoolHost pools, IShaderMaterialSou
     }
 
     public bool IsReady(BakeKey key) => Failure is null && _map == key.Map &&
-        _mounted.TryGetValue(key, out var tile) && tile.Mount.IsReady;
+        _mounted.TryGetValue(key, out var tile) && !tile.Work.IsCancelled && tile.Mount.IsReady;
 
-    public bool Unmount(BakeKey key)
-    {
-        if (!_mounted.Remove(key, out var tile)) return false;
-        tile.Mount.Free();
-        return _reflectionTiles.Remove(tile.Content);
-    }
-
-    private void FreeTiles()
+    private void StopTiles()
     {
         _generation++;
-        foreach (var tile in _mounted.Values) tile.Mount.Free();
-        _mounted.Clear();
         _reflectionTiles.Clear();
     }
 
@@ -124,18 +120,21 @@ internal sealed class GlowTileMounts(IInstancePoolHost pools, IShaderMaterialSou
         protected override bool MountStep(double budgetMilliseconds)
         {
             _mount = new(tile.Glow.Kind, $"{Key.Module}.{tile.Tile.X}.{tile.Tile.Z}");
+            owner._mounted.Add(Key, new(tile, _mount, this));
             _mount.Upload(owner._pools, () => owner.GlowMaterial(tile.Glow.Kind), tile.Glow);
-            owner.Unmount(Key);
-            owner._mounted.Add(Key, new(tile, _mount));
             return true;
         }
 
-        protected override void Release()
+        protected override bool Release(double budgetMilliseconds)
         {
+            if (!owner._detached()) return false;
             _mount?.Free();
             _mount = null;
+            if (owner._mounted.TryGetValue(Key, out var current) && ReferenceEquals(current.Work, this)) owner._mounted.Remove(Key);
+            owner._reflectionTiles.Remove(tile);
+            return true;
         }
-        protected override void Failed(Exception error) => owner.Failure = error;
+        protected override void Failed(Exception error) => owner.RecordFailure(error);
     }
 
 }

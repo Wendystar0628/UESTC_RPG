@@ -14,6 +14,7 @@ public partial class StreamMountNode : Node
     private Action<double>? _finish;
     private Action<double>? _release;
     private Func<bool>? _visualAdmission;
+    private Func<bool>? _retirementAdmission;
     public override void _Ready()
     {
         ProcessPriority = FramePriority.StreamMount;
@@ -24,7 +25,9 @@ public partial class StreamMountNode : Node
         _finish = _director.CompleteMountFrame;
         _release = _director.ReleaseRetired;
         _visualAdmission = VisualAdmission;
+        _retirementAdmission = RetirementAdmission;
     }
-    public override void _Process(double delta) => _queue?.Drain(_coverage, _prepare, _finish, _release, _visualAdmission);
+    public override void _Process(double delta) => _queue?.Drain(_coverage, _prepare, _finish, _release, _visualAdmission, _retirementAdmission);
     private bool VisualAdmission() => _director?.CanActivateVisual ?? true;
+    private bool RetirementAdmission() => _director!.CanReleaseRetiredInstances;
 }
