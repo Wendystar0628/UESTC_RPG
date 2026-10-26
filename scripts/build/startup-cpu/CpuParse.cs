@@ -15,7 +15,7 @@ if (string.IsNullOrWhiteSpace(reportName) || Path.GetFileName(reportName) != rep
     !reportName.EndsWith(".json", StringComparison.OrdinalIgnoreCase))
     throw new ArgumentException("Report must be a JSON file name within the diagnostic directory.");
 using var result = JsonDocument.Parse(File.ReadAllText(Path.Combine(directory, "result.json")));
-var phases = new CpuPhaseReport(result.RootElement, directory);
+var phases = new CpuPhaseReport(result.RootElement);
 var traceIndexPath = Path.Combine(directory, "threads.etlx");
 try
 {

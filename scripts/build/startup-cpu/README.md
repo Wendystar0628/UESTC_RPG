@@ -18,9 +18,9 @@ Playing 在上述 immediate 正式入场后，等待真实 Playing、宿主 real
 
 `title` 体验终点是静态菜单可输入；Title 没有实时世界。Title 诊断还等真实 `preload-ready`，`captureEndpoint` 明示包含后台准备。进入轮必须观测到真实 `new-game-enter`、Enter 释放、Playing 后首个 `realtime` 和首次 Walk `input-ready`；Playing 诊断再等完整动作释放落定。请求至 Walk 的时长直接用同一引擎时钟；启动脚本至菜单/实时仍是外层观测边界，包含日志刷新、名义 20 ms 轮询与调度延迟。不插值、不扣估算开销，不将输入释放代理称为首次步行响应。
 
-诊断的公共性能指标与异常以 `scripts/perf/analyze.py` 为唯一计算方。游戏记录到 `output/perf/runs/startup-cpu-<批次名>/<轮次>/<会话>/`，正式退出排空后批次入口调用分析器；派生保存在 `output/perf/derived/<会话>/`。`cpu-hotspots.json.performanceSession` 原样带入 `summary.json` 与 `anomalies.json`，渲染 CPU/GPU、五段墙钟区间、编译与 GC 在摘要的 `all/steady.cost`，覆盖率、不可用原因与会话状态也一并保留。缺少会话、派生或来源不匹配直接失败，不从日志补算。诊断入口没有常规路线覆盖声明，分析器可将会话标为不完整；它不建立基线资格。
+公共性能指标由 `scripts/perf/analyze.py` 计算，通过 `scripts/perf/perf.py` 读取。CPU 解析器独立读取已有启动阶段与原生追踪，不嵌入或关联性能派生文件。
 
-阶段报告只选择与真实引擎阶段边界相交的分析器窗口和异常，并关联 EventPipe 主线程栈候选，不裁切窗口、不重算分布或阈值。会话摘要覆盖整个记录，包含正式关闭，不能当作单个启动阶段的统计。异常邻近栈与日志只说明候选，不证明函数 CPU 份额或因果；隐藏桌面的体验字段与缺测原因由分析器决定。实际位移仍由既有核心生命周期方向位移专项验证，启动诊断不从输入标记推出位移。
+阶段报告按真实引擎阶段边界汇总 EventPipe 线程栈；含等待的采样只提供调用线索，不证明函数 CPU 份额或因果。实际位移由既有核心生命周期方向位移专项验证，不从输入标记推出位移。
 
 进程/线程 CPU 计数用 BCL 读取，约 1 s 累计差和阶段计数并非逐帧 CPU。启动复用 `ProcessTree` 持有本轮 job，primary OS TID 取其 `CreateProcessW` 返回值，不能用线程枚举顺序或 CLR ManagedThreadID 猜测。私有控制台的 Enter 仅停止现有 dotnet-trace 收集器并完成 rundown，不是玩家操作。EventPipe 是含等待的 sampled-thread-time，不能当 on-CPU 栈。所有诊断工具开销留在观测值内。
 
@@ -28,10 +28,10 @@ Playing 在上述 immediate 正式入场后，等待真实 Playing、宿主 real
 
 诊断同时采集 CLR AllocationTick，`gcAllocationSampling` 按阶段、OS 线程与类型汇总分配量子及缺失；这不是逐对象账目，也不能把分配栈归为某次 GC 暂停的原因。`topAllocationStacks.stackId` 在根级 `gcAllocationSampling.allocationCallStacks` 查完整栈，ID 只在该份报告内有效。没有事件、类型或栈时保留 `NOT_MEASURED`。已有 trace 可用 `dotnet CpuParse.dll <轮目录> <新报告名>.json` 重解析，无需重新采集。
 
-解析器职责：`CpuParse.cs` 管参数、资源寿命与编排；`CpuPhaseReport.cs` 读取轮次证据、构造时窗并生成实际 OS CPU、阶段与总报告；`CpuTraceAnalysis.cs` 读取 TraceLog、在线聚合 AllocationTick 并共享原生栈索引、CodeAddress 描述缓存与完整分配栈表；`PlayingObservations.cs` 读取分析器派生及日志证据，只做阶段、异常与栈的关联。入口持有 `JsonDocument` 与 `TraceLog` 直至流式 JSON 序列化完成，随后关闭索引并清理 `threads.etlx`；不保存原始分配 tick，不逐事件展开分配栈。
+解析器职责：`CpuParse.cs` 管参数、资源寿命与编排；`CpuPhaseReport.cs` 读取轮次证据、构造时窗并生成实际 OS CPU、阶段与总报告；`CpuTraceAnalysis.cs` 读取 TraceLog、在线聚合 AllocationTick 并共享原生栈索引、CodeAddress 描述缓存与完整分配栈表。入口持有 `JsonDocument` 与 `TraceLog` 直至流式 JSON 序列化完成，随后关闭索引并清理 `threads.etlx`；不保存原始分配 tick，不逐事件展开分配栈。
 
 批次先持共享构建锁，通过 `Update-UESTCGameBuild` 普通构建与 Godot 增量导入，预烘由 Root 按条件安排。`preparation.json` 留真实准备时间和调用，单独于每轮 capture 脚本计时。每轮再取锁，用产品同一 `Test-UESTCLaunchOutputs` 检查正式程序集、已发布业务清单、构建期静态资源与原生导入缓存存在，不判断新旧；缺失直接失败，正式计时内不补构建。每轮保留 `launch.json`、`launcher-timing.json`、`result.json` 和隔离 save/log；原生启动绑定、等锁与输出检查开销计入脚本进入时长。
 
 缓存分别用 `-GeometryCache valid|missing|unknown`、`-PipelineCache first-run|unknown`、`-SystemFileCache warm|reboot-first-run|unknown` 声明，附 `-CacheEvidence`、`-JustPrebaked yes|no|unknown` 与 `-Device`。声明针对显式准备后的状态，脚本不清缓存，预烘后不能宣称 OS 冷。每轮使用新的 APPDATA/LOCALAPPDATA，管线条件只能是 first-run 或 unknown，当前入口不提供热管线测量；系统文件缓存的 warm 独立声明。同批只有首轮可沿用 reboot-first-run 系统文件条件，后续自动记 unknown。
 
-`budgetObservations` 保留首次管线到正式 Playing 的真实观测秒数与 `budgets.json.waits` 目标；AI 启动计时没有覆盖双击完整路径，始终为 `NOT_JUDGED_AI_STARTUP`，不能证明启动三项目标达标。端点缺失时观测秒数留空。菜单热/冷、预载/立即请求到 Walk 预算不由当前入口测量。此入口不是 G5/G10，也不替代既有核心生命周期真实方向位移检查。
+`budgetObservations` 保留首次管线到正式 Playing 的真实观测秒数与 `budgets.json.waits` 目标；AI 启动计时没有覆盖双击完整路径，始终为 `NOT_JUDGED_AI_STARTUP`，不能证明启动三项目标达标。端点缺失时观测秒数留空。菜单热/冷、预载/立即请求到 Walk 预算不由当前入口测量。此入口不替代既有核心生命周期真实方向位移检查。
