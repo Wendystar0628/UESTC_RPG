@@ -6,10 +6,11 @@
 // 构建步骤从本文件生成计算着色器用的 fog.glslinc（ART-SKYLIGHT）。
 //
 // 对外签名（定稿，不再改）：
-//   vec4 fog_eval(vec3 world_pos, vec3 cam_pos)                    rgb = 雾色（线性），a = 混合量，直接赋给 FOG
+//   vec4 fog_eval(vec3 world_pos, vec3 cam_pos)                    rgb = 雾色（线性），a = 混合量，直接赋给 FOG；a 为 0 且没有介质、湖面雾时 rgb 不求（为 0）
 //   vec4 fog_eval_biased(vec3 world_pos, vec3 cam_pos, float exempt)     exempt：地标雾豁免系数 0–1（instance uniform fog_exempt，
 //                                                                        ENG-PERF）；1 时非换季起雾不近于 200 m、剪影不近于 800 m
 //   vec3 fog_desaturate(vec3 c, float dist)                        起雾距离（取各时刻关键帧）起降饱和，作用在受光色和影色上
+//   float fog_desat_amount(float dist) / vec3 fog_desaturate_by(vec3 c, float k)   同上拆成两步：降饱和量每片元取一次，再逐色调
 //   float fog_equiv_dist(vec3 world_pos, vec3 cam_pos)             等效雾程（按高度积分），fog_desaturate 的 dist 用它
 //   vec3 fog_sky(vec3 dir_w)                                       天空渐变（五段 OKLab 单调三次 + 霾带），与天空着色器同一规则
 //   float sky_side_weight(vec3 dir)                                太阳侧权重（真实太阳，入夜换月亮）
@@ -275,11 +276,23 @@ float fog_equiv_dist(vec3 world_pos, vec3 cam_pos) {
 	return dist * avg;
 }
 
-vec3 fog_desaturate(vec3 c, float dist) {
+// 降饱和量 k（与颜色无关）：同一片元的几次降饱和先取一次，再逐色调 fog_desaturate_by
+float fog_desat_amount(float dist) {
 	float start = fog_range(0.0).x;
-	float k = FOG_DESAT * smoothstep(start, max(start * 2.0, start + 1.0), dist);
+	return FOG_DESAT * smoothstep(start, max(start * 2.0, start + 1.0), dist);
+}
+
+// k 为 0 时混合权重为 0，原样返回，不取亮度
+vec3 fog_desaturate_by(vec3 c, float k) {
+	if (k == 0.0) {
+		return c;
+	}
 	float l = dot(c, vec3(0.2126, 0.7152, 0.0722));
 	return mix(c, vec3(l), k);
+}
+
+vec3 fog_desaturate(vec3 c, float dist) {
+	return fog_desaturate_by(c, fog_desat_amount(dist));
 }
 
 vec4 fog_eval_biased(vec3 world_pos, vec3 cam_pos, float exempt) {
@@ -311,11 +324,16 @@ vec4 fog_eval_biased(vec3 world_pos, vec3 cam_pos, float exempt) {
 	float a_g = g_dens * (1.0 - smoothstep(0.0, g_top, world_pos.y)) * (1.0 - exp(-dist / 40.0));
 	a = 1.0 - (1.0 - a) * (1.0 - a_g);
 
-	// 雾色：与天空地平线的霾色同源同规则（太阳侧权重、雾天向 weather.fog 靠），远景剪影与天空无缝
-	vec3 col = sky_haze_color(sky_side_weight(dir));
+	// 雾色：与天空地平线的霾色同源同规则（太阳侧权重、雾天向 weather.fog 靠），远景剪影与天空无缝。
+	// 调用方都按 a 混合雾色，只有水面另按湖面雾（fog_low.z）叠这份雾色：雾量为 0、又没有介质和湖面雾时雾色不参与混合，不求
+	a = clamp(a, 0.0, 1.0);
+	vec3 col = vec3(0.0);
+	if (a != 0.0 || medium.z > 0.0 || fog_low.z > 0.0) {
+		col = sky_haze_color(sky_side_weight(dir));
+	}
 
 	// 介质：楼里、地下、水下（medium.z 混合度，medium.w 能见度）
-	vec4 res = vec4(col, clamp(a, 0.0, 1.0));
+	vec4 res = vec4(col, a);
 	if (medium.z > 0.0) {
 		float a_m = 1.0 - exp(-dist / max(medium.w, 0.5));
 		res = mix(res, vec4(medium_color.rgb, a_m), clamp(medium.z, 0.0, 1.0));

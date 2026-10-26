@@ -460,24 +460,28 @@ void fragment() {
 		float px_m = -VERTEX.z * 2.0 / (PROJECTION_MATRIX[1][1] * VIEWPORT_SIZE.y);
 		float to_edge = (1.0 - rim) / max(fwidth(rim), 1e-5) * px_m;
 		float under_rim = smoothstep(0.45, 0.65, rim);
-		// 远处：按世界坐标噪声在 rim 带里剪（23b 定稿）
-		float band_far = mix(smoothstep(VEG_EDGE_RIM0, VEG_EDGE_RIM1, rim), (1.0 - smoothstep(0.0, VEG_EDGE_FAR_UNDER_W, to_edge)) * under_rim, down);
 		// 团块外缘在远处也剪最外一圈，强度照近处（0.35），不在冠内剪出大洞
 		// 只在树冠外轮廓一带剪（23d）：冠内团块的外缘不剪，前面的团块后面没有别的团块时，不在冠内开出带描线的透镜形大洞
 		float clump_band = VEG_EDGE_CLUMP * smoothstep(VEG_EDGE_NEAR_RIM0, VEG_EDGE_NEAR_RIM1, 1.0 - abs(dot(clump, VIEW)))
 				* smoothstep(VEG_EDGE_CLUMP_SHELL.x, VEG_EDGE_CLUMP_SHELL.y, rim);
-		band_far = max(band_far, clump_band * VEG_EDGE_NEAR / VEG_EDGE_FAR);
-		float px_k = smoothstep(VEG_EDGE_PX.x, VEG_EDGE_PX.y, VEG_EDGE_CELL / max(px_m, 1e-4));
-		float cut = VEG_EDGE_DEPTH * VEG_EDGE_FAR * band_far * px_k;
-		// 不剪时噪声整体抬过阈值，不留零星的孔
-		float e_far = veg_edge_noise((INV_VIEW_MATRIX * vec4(VERTEX, 1.0)).xyz, row, sp.leaf_card) - cut + 0.5 * (1.0 - px_k);
 		// 近处：缺口噪声取朝轮廓的方向，按树错开（v_tint 是每株一个值）
 		float band_near = mix(smoothstep(VEG_EDGE_NEAR_RIM0, VEG_EDGE_NEAR_RIM1, rim), (1.0 - smoothstep(0.0, VEG_EDGE_NEAR_UNDER_W, to_edge)) * under_rim, down);
 		band_near = max(band_near, clump_band);
 		float cut_near = VEG_EDGE_DEPTH * VEG_EDGE_NEAR * band_near;
 		vec3 toward = mat3(INV_VIEW_MATRIX) * normalize(n - facing * VIEW + vec3(0.0, 1e-5, 0.0));
 		float e_near = veg_edge_noise(toward * VEG_EDGE_NEAR_SPAN + vec3(53.1 * v_tint.x, 41.7 * v_tint.y, 29.3 * (v_tint.x + v_tint.y)), row, sp.leaf_card) - cut_near;
-		float e = mix(e_near, e_far, far_k);
+		// far_k 为 0 时远处一路的权重为 0，不求；e 的导数在分支之后取
+		float e = e_near;
+		if (far_k != 0.0) {
+			// 远处：按世界坐标噪声在 rim 带里剪（23b 定稿）
+			float band_far = mix(smoothstep(VEG_EDGE_RIM0, VEG_EDGE_RIM1, rim), (1.0 - smoothstep(0.0, VEG_EDGE_FAR_UNDER_W, to_edge)) * under_rim, down);
+			band_far = max(band_far, clump_band * VEG_EDGE_NEAR / VEG_EDGE_FAR);
+			float px_k = smoothstep(VEG_EDGE_PX.x, VEG_EDGE_PX.y, VEG_EDGE_CELL / max(px_m, 1e-4));
+			float cut = VEG_EDGE_DEPTH * VEG_EDGE_FAR * band_far * px_k;
+			// 不剪时噪声整体抬过阈值，不留零星的孔
+			float e_far = veg_edge_noise((INV_VIEW_MATRIX * vec4(VERTEX, 1.0)).xyz, row, sp.leaf_card) - cut + 0.5 * (1.0 - px_k);
+			e = mix(e_near, e_far, far_k);
+		}
 		ALPHA = clamp(e / max(fwidth(e), 1e-4) + 0.5, 0.0, 1.0);
 	} else {
 		// v_bits 是 flat 的，同一个图元内分支一致，fwidth 不受影响

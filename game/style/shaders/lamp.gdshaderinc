@@ -310,23 +310,28 @@ vec3 lamp_rim_lift(vec3 base, vec3 lc, float y) {
 	return c * (y / max(lamp_luma(c), 1e-4));
 }
 
-// 光斑着色（卡通材质在湿润、积水之后调用）：把灯光加在当前的受光色和影色上，不替换底色。
-// lamp_lit = 该材质的灯照色（调色板行 1，线性，已乘湿润变暗），即固有色在 lamp.warm 下的颜色；
-// 别的灯色按相对 lamp.warm 的比值换算。亮芯加灯照色；外圈按亮芯亮度的 LAMP_POOL_RIM 沿灯色抬亮底色，只做收边。
+// 卡通材质表面一处的光斑权重（与颜色无关，同一片元的几次取色共用）：已乘朝向，朝下的面 col = −1。
 // n_w = 世界法线（toon 传 c.n_w，含插值与解析法线）：n.y 在 LAMP_WALL_NY 一段里地面一支与竖直面一支平滑混合，
 // 曲面上明暗随法线连续变化，平地（n.y = 1）、平墙（n.y = 0）只走各自一支；朝下的面按 LAMP_DOWN_NY 不受光斑。
 // 竖直面上沿弧线的过渡宽度另取 fwidth(p.y)，只在片元里调用（toon 进来前的分支只看材质标志与全局太阳高度）。
-void lamp_pool_shade(vec3 p, vec3 n_w, float aa, vec3 lamp_lit, inout vec3 lit, inout vec3 shade) {
+LampPool lamp_pool_surface(vec3 p, vec3 n_w, float aa) {
 	float aa_wall = max(aa, fwidth(p.y));   // 导数在提前返回之前取
 	float ny = n_w.y / max(length(n_w), 1e-6);
 	float facing = smoothstep(LAMP_DOWN_NY.x, LAMP_DOWN_NY.y, ny);
 	if (facing <= 0.0) {
-		return;
+		return LampPool(0.0, 0.0, -1);
 	}
 	float wall_t = 1.0 - smoothstep(LAMP_WALL_NY.x, LAMP_WALL_NY.y, ny);
 	LampPool q = lamp_pool_eval_surface(p, aa, wall_t, aa_wall);
 	q.core *= facing;
 	q.rim *= facing;
+	return q;
+}
+
+// 光斑着色（卡通材质在湿润、积水之后调用）：把灯光加在当前的受光色和影色上，不替换底色。q 来自 lamp_pool_surface。
+// lamp_lit = 该材质的灯照色（调色板行 1，线性，已乘湿润变暗），即固有色在 lamp.warm 下的颜色；
+// 别的灯色按相对 lamp.warm 的比值换算。亮芯加灯照色；外圈按亮芯亮度的 LAMP_POOL_RIM 沿灯色抬亮底色，只做收边。
+void lamp_pool_shade(LampPool q, vec3 lamp_lit, inout vec3 lit, inout vec3 shade) {
 	if (q.col < 0 || q.core + q.rim <= 0.0) {
 		return;
 	}

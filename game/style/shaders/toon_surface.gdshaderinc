@@ -110,11 +110,6 @@ float toon_wet_exposure(ToonCtx c) {
 			(c.flags & TOON_F_INTERIOR) != 0, (c.flags & TOON_F_OUTSKIRT) != 0);
 }
 
-// wet = 湿润 × 暴露 × 材质响应（材质响应在 mat_table 行 1 的 A）
-float toon_wet(ToonCtx c, ToonMat m) {
-	return clamp(weather_b.x, 0.0, 1.0) * toon_wet_exposure(c) * m.wet;
-}
-
 // 积水（SYS-WEATHER，公共函数归 game/systems/weather/precip/）：在湿润变暗之后，按积水遮罩把受光色、影色换成积水色；ROUGHNESS 不动。
 // response 使用材质表行 1 的 A，已经由 toon_mat 解码为 m.wet。
 void toon_puddle(ToonCtx c, ToonMat m, inout vec3 lit, inout vec3 shade) {
@@ -150,11 +145,16 @@ int toon_window_curtain(vec4 o) {
 // 观感参数都在 lamp.gdshaderinc 开头。室内不画（室内灯另走室内光）。
 // 竖直面按世界法线 c.n_w 判（含插值与解析法线），曲面上光斑的分界是光滑的；边缘过渡宽度 c.pool_aa 在 TOON_FRAGMENT_BEGIN 里按统一控制流算好。
 // ---------------------------------------------------------------------------
-void toon_lamp_pool(ToonCtx c, vec3 lamp, inout vec3 lit, inout vec3 shade) {
+// 光斑权重与颜色无关：toon_shared 里每片元取一次，不画时 col = −1
+LampPool toon_lamp_pool_at(ToonCtx c) {
 	if ((c.flags & TOON_F_INTERIOR) != 0 || lamp_heff() >= LAMP_POOL_DAY_DEG.y) {
-		return;
+		return LampPool(0.0, 0.0, -1);
 	}
-	lamp_pool_shade(c.wpos, c.n_w, c.pool_aa, lamp, lit, shade);
+	return lamp_pool_surface(c.wpos, c.n_w, c.pool_aa);
+}
+
+void toon_lamp_pool(ToonCtx c, vec3 lamp, inout vec3 lit, inout vec3 shade) {
+	lamp_pool_shade(toon_lamp_pool_at(c), lamp, lit, shade);
 }
 
 // ---------------------------------------------------------------------------
@@ -234,16 +234,30 @@ vec3 toon_spec(ToonCtx c, ToonMat m, float sp, float spw) {
 	return pal_cur(PAL_SUN_LIGHT) * (TOON_SPEC_K * m.k_spec * mask * (1.0 - toon_overcast()));
 }
 
+// 取色里与颜色、色号和湿润响应都无关的量：同一片元按同一个 ctx、材质只差湿润响应的几次取色
+// （toon_static 的地面覆盖层）共用一份，每片元只算一次
+struct ToonShared {
+	float emit_k;      // 自发光亮度
+	float wet_base;    // 湿润 × 暴露；乘材质响应（mat_table 行 1 的 A）即湿润
+	LampPool pool;     // 路灯光斑权重
+	float desat_k;     // 200 m 起的降饱和量
+};
+
+ToonShared toon_shared(ToonCtx c, ToonMat m) {
+	return ToonShared(toon_emissive_level(c, m), clamp(weather_b.x, 0.0, 1.0) * toon_wet_exposure(c),
+			toon_lamp_pool_at(c), fog_desat_amount(fog_equiv_dist(c.wpos, c.cam)));
+}
+
 // 给定颜色的取色入口（contract-24 第 2 条）：lit、shade、lamp 是调用方取好的受光色、影色、灯照色（线性），
 // 例如植被按局部季节从季相行取样（WLD-VEGETATION）。其后的处理与 toon_colors 完全相同：
 // 天光渐变、地面反光、湿润与积水（按 mat_table 的湿润响应，不湿的材质登记 Wet = 0）、路灯光斑、倒角提亮
 // （只给登记了 BevelLift 的材质）、自发光、200 m 降饱和、明暗档、透光、暖边；室内标志位照旧乘光斑增益，并加窗光斑辉光。
-ToonCol toon_colors_from(ToonCtx c, ToonMat m, vec3 lit, vec3 shade, vec3 lamp) {
+ToonCol toon_colors_from_shared(ToonCtx c, ToonMat m, ToonShared sh, vec3 lit, vec3 shade, vec3 lamp) {
 	bool interior = (c.flags & TOON_F_INTERIOR) != 0;
 	float gain = interior ? interior_light.x : 1.0;
 
 	// 自发光的颜色取湿润之前的灯照色：亮着的灯牌不因下雨变暗
-	float emit_k = toon_emissive_level(c, m);
+	float emit_k = sh.emit_k;
 	vec3 emit_c = emit_k > 0.0 ? toon_emissive_color(c, lamp) : vec3(0.0);
 
 	// 明暗层次与影色冷暖（max-110 110a）：室外、白天、晴天
@@ -256,7 +270,7 @@ ToonCol toon_colors_from(ToonCtx c, ToonMat m, vec3 lit, vec3 shade, vec3 lamp) 
 	shade = mix(shade, shade * pal_cur(PAL_BOUNCE_GROUND) * 1.6, bounce);
 
 	// 湿润变暗（ROUGHNESS 不动）
-	float wet = toon_wet(c, m);
+	float wet = sh.wet_base * m.wet;
 	float wk = 1.0 - TOON_WET_DARKEN * wet;
 	lit *= wk;
 	shade *= wk;
@@ -264,7 +278,7 @@ ToonCol toon_colors_from(ToonCtx c, ToonMat m, vec3 lit, vec3 shade, vec3 lamp) 
 	toon_puddle(c, m, lit, shade);
 
 	// 路灯光斑：在湿润与积水之后，所以湿地面上的光斑也跟着暗、积水里也亮
-	toon_lamp_pool(c, lamp, lit, shade);
+	lamp_pool_shade(sh.pool, lamp, lit, shade);
 
 	// 倒角带提亮（ART-STYLE）：按法线曲率判倒角带，只改明暗，不写 NORMAL
 	float bevel = smoothstep(2.0, 4.0, c.kappa) * step(1e-4, m.bevel_lit);
@@ -281,10 +295,9 @@ ToonCol toon_colors_from(ToonCtx c, ToonMat m, vec3 lit, vec3 shade, vec3 lamp) 
 	}
 
 	// 200 m 起降饱和（雾函数的一段，作用在受光色和影色上）
-	float fd = fog_equiv_dist(c.wpos, c.cam);
-	lit = fog_desaturate(lit, fd);
-	shade = fog_desaturate(shade, fd);
-	lamp = fog_desaturate(lamp, fd);
+	lit = fog_desaturate_by(lit, sh.desat_k);
+	shade = fog_desaturate_by(shade, sh.desat_k);
+	lamp = fog_desaturate_by(lamp, sh.desat_k);
 
 	// 明暗档
 	float bw = m.band;
@@ -330,12 +343,16 @@ ToonCol toon_colors_from(ToonCtx c, ToonMat m, vec3 lit, vec3 shade, vec3 lamp) 
 	return ToonCol(lit, shade, lamp, trans, rim, vec3(0.0), deep_mix, bw, half_level, push, gain);
 }
 
+ToonCol toon_colors_from(ToonCtx c, ToonMat m, vec3 lit, vec3 shade, vec3 lamp) {
+	return toon_colors_from_shared(c, m, toon_shared(c, m), lit, shade, lamp);
+}
+
 // 按色号取色：室外取调色板行 0 的受光、影，室内取行 3（室内受光色）、行 2（室内影色）；灯照色取行 1。
 // 发光常量（40–63）没有这些行，灭时的一对由常量推出（见 TOON_EMIT_OFF_*）。
-ToonCol toon_colors(ToonCtx c, ToonMat m) {
+ToonCol toon_colors_shared(ToonCtx c, ToonMat m, ToonShared sh) {
 	if (toon_is_const(c.cid)) {
 		vec3 e = ok_adjust(pal_cur(c.cid), TOON_EMIT_OFF_KL, TOON_EMIT_OFF_KC, 0.0);
-		return toon_colors_from(c, m, e * pal_cur(PAL_SUN_LIGHT), e * pal_cur(PAL_SHADOW_1) / TOON_SHADOW1_REF,
+		return toon_colors_from_shared(c, m, sh, e * pal_cur(PAL_SUN_LIGHT), e * pal_cur(PAL_SHADOW_1) / TOON_SHADOW1_REF,
 				e * pal_cur(PAL_LAMP_WARM));
 	}
 	bool interior = (c.flags & TOON_F_INTERIOR) != 0;
@@ -348,7 +365,11 @@ ToonCol toon_colors(ToonCtx c, ToonMat m) {
 		lit = pal_fetch(c.cid, PAL_ROW_CUR);
 		shade = pal_fetch(c.cid + PAL_SHADE_OFFSET, PAL_ROW_CUR);
 	}
-	return toon_colors_from(c, m, lit, shade, pal_fetch(c.cid, PAL_ROW_LAMP));
+	return toon_colors_from_shared(c, m, sh, lit, shade, pal_fetch(c.cid, PAL_ROW_LAMP));
+}
+
+ToonCol toon_colors(ToonCtx c, ToonMat m) {
+	return toon_colors_shared(c, m, toon_shared(c, m));
 }
 
 // EMISSION：影（植被深影按 L ×0.88、C ×0.95 由影色算出）+ 闪光帧 + 额外自发光

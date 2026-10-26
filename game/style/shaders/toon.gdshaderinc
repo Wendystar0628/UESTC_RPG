@@ -30,7 +30,7 @@
 #include "res://style/shaders/fog.gdshaderinc"
 #include "res://style/shaders/precip_wet.gdshaderinc"
 
-// 灯光通道、窗灯、灯具亮灭与路灯光斑的公共求值（lamp_channel、lamp_window_*、lamp_fixture_level、lamp_pool_shade；MAP-QSH-ATMOSPHERE），fx_glow、降水与倒影代理共用同一份
+// 灯光通道、窗灯、灯具亮灭与路灯光斑的公共求值（lamp_channel、lamp_window_*、lamp_fixture_level、lamp_pool_surface、lamp_pool_shade；MAP-QSH-ATMOSPHERE），fx_glow、降水与倒影代理共用同一份
 #include "res://style/shaders/lamp.gdshaderinc"
 
 #include "res://style/shaders/toon_look.gdshaderinc"

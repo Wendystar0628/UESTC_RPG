@@ -46,27 +46,17 @@ vec3 reflection_lamps_color(vec3 p_world, vec3 camera_world, float length_scale,
 		vec4 reference = texelFetch(refl_lamps, ivec2(i, 0), 0);
 		int kind = int(round(reference.x));
 		if (kind == 0) continue;
+		// 先只取位置做几何剔除（灯具取灯头、窗取第 1 行），落在灯条里再取亮度与颜色
 		vec3 source;
-		vec3 lamp_color;
-		float level;
+		LampData lamp;
+		vec4 window;
 		if (kind == 1) {
-			LampData lamp = lamp_fetch(int(round(reference.y)));
+			lamp = lamp_fetch(int(round(reference.y)));
 			source = lamp.base + vec3(0.0, lamp.head, 0.0);
-			lamp_color = pal_cur(lamp.col);
-			level = lamp_level(lamp, h_eff);
 		} else {
-			vec4 window = texelFetch(refl_lamps, ivec2(i, 1), 0);
-			int id = int(round(reference.y));
-			int base_id = int(round(reference.z));
-			int slot = int(mod(reference.w, float(LIGHT_CHANNEL_COUNT)));
-			int cols = int(floor(reference.w / float(LIGHT_CHANNEL_COUNT)));
-			bool outskirts = (int(round(window.w)) & 1) != 0;
-			vec4 override_value = outskirts ? vec4(0.0) : lamp_window_override(id);
+			window = texelFetch(refl_lamps, ivec2(i, 1), 0);
 			source = window.xyz;
-			level = lamp_window_on(id, base_id, cols, slot, override_value);
-			lamp_color = pal_cur(lamp_window_cool(id, override_value) ? PAL_WINDOW_COOL : PAL_WINDOW_WARM);
 		}
-		if (level == 0.0) continue;
 		float source_height = source.y - p_world.y;
 		if (source_height <= 0.0) continue;
 		vec2 toward = camera_world.xz - source.xz;
@@ -81,6 +71,22 @@ vec3 reflection_lamps_color(vec3 p_world, vec3 camera_world, float length_scale,
 		float t = along / strip_length;
 		float half_width = REFLECTION_LAMP_WIDTH * 0.5;
 		if (along < 0.0 || along >= strip_length || abs(across) > half_width + pixel) continue;
+		vec3 lamp_color;
+		float level;
+		if (kind == 1) {
+			lamp_color = pal_cur(lamp.col);
+			level = lamp_level(lamp, h_eff);
+		} else {
+			int id = int(round(reference.y));
+			int base_id = int(round(reference.z));
+			int slot = int(mod(reference.w, float(LIGHT_CHANNEL_COUNT)));
+			int cols = int(floor(reference.w / float(LIGHT_CHANNEL_COUNT)));
+			bool outskirts = (int(round(window.w)) & 1) != 0;
+			vec4 override_value = outskirts ? vec4(0.0) : lamp_window_override(id);
+			level = lamp_window_on(id, base_id, cols, slot, override_value);
+			lamp_color = pal_cur(lamp_window_cool(id, override_value) ? PAL_WINDOW_COOL : PAL_WINDOW_WARM);
+		}
+		if (level == 0.0) continue;
 		// 稳定引用作种子，不读灯条表槽号，排序变化不会换一套断口。
 		uint seed = lamp_hash_u(uint(round(reference.y)) * 131u + uint(kind) * 193u);
 		float count = 5.0 + floor(lamp_hash01(seed) * 3.0);

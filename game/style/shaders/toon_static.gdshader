@@ -84,30 +84,38 @@ float pat_dl(vec2 uv, vec2 fw, vec2 gate_k, vec3 wpos, vec3 n_w) {
 	vec2 g = uv / period;
 	vec2 w = fw / period;
 	float cell_px = min(period.x / max(fw.x, 1e-6), period.y / max(fw.y, 1e-6));
-	vec2 jl = min(max(j, PAT_MIN_LINE_PX * w), vec2(0.5));
-	float cu = pattern_layer == 2 ? pat_bond_line(g, jl.x, w) : pat_line(g.x, jl.x, w.x);
-	float cv = pat_line(g.y, jl.y, w.y);
-	float cover = 1.0 - (1.0 - cu) * (1.0 - cv);
 	float avg = 1.0 - (1.0 - j.x) * (1.0 - j.y);
-	cover = mix(avg, cover, smoothstep(PAT_FADE_PX.x, PAT_FADE_PX.y, cell_px));
-	// 斑驳在世界空间里各向同性：地面取 xz，墙面取（沿墙水平, 高度），不随 UV 的分段铺向跳变
-	vec2 along = normalize(vec2(-n_w.z, n_w.x) + vec2(1e-5, 0.0));
-	vec2 q = (abs(n_w.y) > 0.7 ? wpos.xz : vec2(dot(wpos.xz, along), wpos.y)) / PAT_MOTTLE_SCALE;
-	float mottle = (0.65 * pat_noise(q) + 0.35 * pat_noise(q * 2.03 + vec2(17.3, 5.1))) * PAT_MOTTLE_DL;
-	mottle *= smoothstep(PAT_MOTTLE_FADE_PX.x, PAT_MOTTLE_FADE_PX.y, cell_px);
+	// 格子小于 PAT_FADE_PX.x 时缝线的权重为 0，只剩面积平均，不求缝线覆盖率
+	float line_k = smoothstep(PAT_FADE_PX.x, PAT_FADE_PX.y, cell_px);
+	float cover = avg;
+	if (line_k != 0.0) {
+		vec2 jl = min(max(j, PAT_MIN_LINE_PX * w), vec2(0.5));
+		float cu = pattern_layer == 2 ? pat_bond_line(g, jl.x, w) : pat_line(g.x, jl.x, w.x);
+		float cv = pat_line(g.y, jl.y, w.y);
+		cover = mix(avg, 1.0 - (1.0 - cu) * (1.0 - cv), line_k);
+	}
+	// 斑驳在世界空间里各向同性：地面取 xz，墙面取（沿墙水平, 高度），不随 UV 的分段铺向跳变；格子小于 PAT_MOTTLE_FADE_PX.x 时为 0，不求噪声
+	float mottle_k = smoothstep(PAT_MOTTLE_FADE_PX.x, PAT_MOTTLE_FADE_PX.y, cell_px);
+	float mottle = 0.0;
+	if (mottle_k != 0.0) {
+		vec2 along = normalize(vec2(-n_w.z, n_w.x) + vec2(1e-5, 0.0));
+		vec2 q = (abs(n_w.y) > 0.7 ? wpos.xz : vec2(dot(wpos.xz, along), wpos.y)) / PAT_MOTTLE_SCALE;
+		mottle = (0.65 * pat_noise(q) + 0.35 * pat_noise(q * 2.03 + vec2(17.3, 5.1))) * PAT_MOTTLE_DL;
+		mottle *= mottle_k;
+	}
 	float on = gate_k.x > 0.5 ? 1.0 : 0.0;
 	return on * (PAT_JOINT_DL * cover + mottle);
 }
 
-// toon_colors 的同一套取色，受光、影、灯照色先加图案的 ΔL，再走 toon_colors_from 的全部处理（湿润、积水、光斑……）
-ToonCol pat_colors(ToonCtx c, ToonMat m, float dl) {
+// toon_colors 的同一套取色，受光、影、灯照色先加图案的 ΔL，再走 toon_colors_from_shared 的全部处理（湿润、积水、光斑……）
+ToonCol pat_colors(ToonCtx c, ToonMat m, ToonShared sh, float dl) {
 	if (toon_is_const(c.cid) || (c.flags & TOON_F_INTERIOR) != 0) {
-		return toon_colors(c, m);
+		return toon_colors_shared(c, m, sh);
 	}
 	vec3 lit = ok_adjust(pal_fetch(c.cid, PAL_ROW_CUR), 1.0, 1.0, dl);
 	vec3 shade = ok_adjust(pal_fetch(c.cid + PAL_SHADE_OFFSET, PAL_ROW_CUR), 1.0, 1.0, dl);
 	vec3 lamp = ok_adjust(pal_fetch(c.cid, PAL_ROW_LAMP), 1.0, 1.0, dl);
-	return toon_colors_from(c, m, lit, shade, lamp);
+	return toon_colors_from_shared(c, m, sh, lit, shade, lamp);
 }
 
 // 地面覆盖只读同图的潜势与 game/systems/vegetation/seasons/ 的季节量；不切材质、不随换季重建几何。
@@ -155,6 +163,12 @@ float ground_snow_coverage(float potential, float normalized_amount) {
 // 远处收回面积覆盖，避免叶形成为闪烁的细碎点。
 float ground_leaf_rank(vec2 xz, bool fan, bool petal, float broad_rank) {
 	vec2 grid = xz / GROUND_LEAF_CELL;
+	float leaf_px = 1.0 / max(length(fwidth(grid)), 1e-5);
+	// 单叶小于 GROUND_LEAF_RESOLVE_PX.x 时叶形权重为 0，只剩面积覆盖，不求叶形（导数在这之前取）
+	float resolve = smoothstep(GROUND_LEAF_RESOLVE_PX.x, GROUND_LEAF_RESOLVE_PX.y, leaf_px);
+	if (resolve == 0.0) {
+		return broad_rank;
+	}
 	ivec2 cell = ivec2(floor(grid));
 	float h = pat_hash(cell);
 	float angle = 6.2831853 * h;
@@ -168,11 +182,11 @@ float ground_leaf_rank(vec2 xz, bool fan, bool petal, float broad_rank) {
 		shape = abs(p.x) / (petal ? 0.27 : 0.30) + p.y * p.y / 0.20;
 	}
 	float single = mix(h * 0.55, 0.55 + h * 0.45, smoothstep(0.85, 1.0, shape));
-	float leaf_px = 1.0 / max(length(fwidth(grid)), 1e-5);
-	return mix(broad_rank, single, smoothstep(GROUND_LEAF_RESOLVE_PX.x, GROUND_LEAF_RESOLVE_PX.y, leaf_px));
+	return mix(broad_rank, single, resolve);
 }
 
-ToonCol ground_cover_colors(ToonCtx c, ToonMat m, ToonCol base, float rank, float rank_aa, vec2 leaf_rank, vec2 leaf_aa, float leaf_detail, vec3 wet_reflection) {
+// sh：底面取色时取好的 ToonShared；各层只换色号与湿润响应，光斑、降饱和、湿润系数不再逐层求
+ToonCol ground_cover_colors(ToonCtx c, ToonMat m, ToonShared sh, ToonCol base, float rank, float rank_aa, vec2 leaf_rank, vec2 leaf_aa, float leaf_detail, vec3 wet_reflection) {
 	vec4 mask = texture(ground_mask, map_uv(c.wpos));
 	vec4 shelter = texture(ground_mask2, map_uv(c.wpos));
 	// 银杏叶在其他落叶/花瓣上，雪在最上；雪下仍能露出金叶。树冠投影下的雪潜势乘 0.6。
@@ -200,7 +214,7 @@ ToonCol ground_cover_colors(ToonCtx c, ToonMat m, ToonCol base, float rank, floa
 		leaf_mat.wet = 0.6;
 		// 满铺时仍能辨认单叶；明度差与铺装缝线共用同一可调参数，远处归回平涂。
 		float detail = step(0.55, layer == 1 ? leaf_rank.y : leaf_rank.x) * leaf_detail * PAT_JOINT_DL;
-		ToonCol leaf = pat_colors(leaf_ctx, leaf_mat, detail);
+		ToonCol leaf = pat_colors(leaf_ctx, leaf_mat, sh, detail);
 		leaf.lit += wet_reflection * leaf_mat.wet;
 		leaf.shade += wet_reflection * leaf_mat.wet;
 		leaf.lamp += wet_reflection * leaf_mat.wet;
@@ -213,7 +227,7 @@ ToonCol ground_cover_colors(ToonCtx c, ToonMat m, ToonCol base, float rank, floa
 		snow_ctx.cid = GROUND_SNOW;
 		ToonMat snow_mat = m;
 		snow_mat.wet = 0.0;
-		ToonCol snow_color = toon_colors(snow_ctx, snow_mat);
+		ToonCol snow_color = toon_colors_shared(snow_ctx, snow_mat, sh);
 		result.lit = mix(result.lit, snow_color.lit, snow_cover);
 		result.shade = mix(result.shade, snow_color.shade, snow_cover);
 		result.lamp = mix(result.lamp, snow_color.lamp, snow_cover);
@@ -228,13 +242,14 @@ void vertex() {
 void fragment() {
 	TOON_FRAGMENT_BEGIN
 	vec2 pat_fw = fwidth(UV);
+	ToonShared tsh = toon_shared(tctx, tmat);
 	ToonCol tcol;
 	if (tmat.escalator) {
-		tcol = pat_colors(tctx, tmat, escalator_dl(UV.y, pat_fw.y));
+		tcol = pat_colors(tctx, tmat, tsh, escalator_dl(UV.y, pat_fw.y));
 	} else if (pattern_layer == 0) {
-		tcol = toon_colors(tctx, tmat);
+		tcol = toon_colors_shared(tctx, tmat, tsh);
 	} else {
-		tcol = pat_colors(tctx, tmat, pat_dl(UV, pat_fw, UV2, tctx.wpos, tctx.n_w));
+		tcol = pat_colors(tctx, tmat, tsh, pat_dl(UV, pat_fw, UV2, tctx.wpos, tctx.n_w));
 	}
 	// 与积水/湿面天光同一材质资格门；先筛底面，覆盖其上的落叶也不能把软地面重新点亮。
 	vec3 wet_reflection = vec3(0.0);
@@ -260,7 +275,7 @@ void fragment() {
 		vec2 leaf_aa = max(fwidth(ranks), vec2(1e-5));
 		float leaf_px = GROUND_LEAF_CELL / max(length(fwidth(tctx.wpos.xz)), 1e-5);
 		float detail = smoothstep(GROUND_LEAF_RESOLVE_PX.x, GROUND_LEAF_RESOLVE_PX.y, leaf_px);
-		tcol = ground_cover_colors(tctx, tmat, tcol, cover_rank, cover_aa, ranks, leaf_aa, detail, wet_reflection);
+		tcol = ground_cover_colors(tctx, tmat, tsh, tcol, cover_rank, cover_aa, ranks, leaf_aa, detail, wet_reflection);
 	}
 	TOON_FRAGMENT_END(tcol)
 }

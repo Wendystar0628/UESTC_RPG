@@ -1,7 +1,7 @@
 // precip_wet.gdshaderinc：湿润与积水的公共函数（game/systems/weather/precip/）。
 // 规格：SYS-WEATHER（湿面、积水）、§3 第 5 条、§7（湿润与积水）；ENG-PERF。
-// 挂点归 game/style/：toon.gdshaderinc 在 fog.gdshaderinc 之后 include 本文件，toon_wet_exposure、toon_wet、toon_puddle
-// 三个挂点的函数体调这里。water 与外围也可以 include（雨点环）。本文件只读 globals 与 fog 的函数，自己不 include。
+// 挂点归 game/style/：toon.gdshaderinc 在 fog.gdshaderinc 之后 include 本文件，toon_wet_exposure、toon_puddle
+// 两个挂点的函数体调这里。water 与外围也可以 include（雨点环）。本文件只读 globals 与 fog 的函数，自己不 include。
 //
 // 共用规则值来自 Campus.Contracts.WetSurface，经构建步骤生成；G2 比对同一组输入。
 // 主线版：地面遮罩 2 还没有烘焙（R 积水潜势、G 建筑遮蔽、B 树冠遮蔽），积水潜势先用程序噪声，遮蔽只按朝向；
