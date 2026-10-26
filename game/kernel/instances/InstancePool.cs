@@ -64,6 +64,7 @@ internal sealed class InstancePool(
             if (value < 0 || value > Capacity) throw new ArgumentOutOfRangeException(nameof(value));
             if (value > 0 && !_hasBuffer)
                 throw new InvalidOperationException("Write the complete instance buffer before showing the pool.");
+            if (value == _visibleCount) return;
             _multiMesh!.VisibleInstanceCount = value;
             _visibleCount = value;
             _instance!.Visible = value > 0;

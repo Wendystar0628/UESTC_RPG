@@ -291,7 +291,7 @@ public sealed partial class InstancePoolHost : Node3D, IInstancePoolHost, IMapAw
 
     internal static void RequireMainThread()
     {
-        if (OS.GetThreadCallerId() != OS.GetMainThreadId())
+        if (!GodotThread.IsMainThread())
             throw new InvalidOperationException("Instance-pool operations must run on the Godot main thread.");
     }
     private void RequireMounted()
