@@ -1366,7 +1366,7 @@
   - SYS-WALK §3.1 视场角、舒适度与键位 · L68 · 641
   - SYS-WALK §3.2 行走模式的镜头 · L78 · 1.2k
 - SYS-WALK §4 模式切换 · L109 · 626
-- SYS-WALK §5 控制器的规则 · L118 · 708
+- SYS-WALK §5 控制器的规则 · L118 · 740
 - SYS-WALK §6 待验证 · L129 · 293
 
 ## SYS-WALK-BIKE · 骑行
