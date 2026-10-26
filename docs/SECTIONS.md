@@ -1734,17 +1734,17 @@
 
 ## ENG-PERF-MEASURE · 测量与调优
 
-`docs/engineering/ENG-PERF-MEASURE-测量与调优.md` · 5.2k 字 · 性能测量的机器与剖析权限、AI 采集入口与场景套、以最新数据为准、诊断、不采用的工具、调优怎么开始与何时停
+`docs/engineering/ENG-PERF-MEASURE-测量与调优.md` · 5.3k 字 · 性能测量的机器与剖析权限、AI 采集入口与场景套、以最新数据为准、诊断、不采用的工具、调优怎么开始与何时停
 关键词：性能测量、AI 采集、run.ps1、perf.py、perf.py latest、perf.py compare、固定机位套、路线套、传送套、固定提交临时工作树、采样段、与上一次比、以最新为准、诊断、调优、预算线、明显痛点、隔离桌面、剖析权限
 
 - ENG-PERF-MEASURE §0 结论 · L21 · 846
   - ★ ENG-PERF-MEASURE §0.1 接入要点 · L30 · 384
 - ENG-PERF-MEASURE §1 机器与剖析权限 · L38 · 486
-- ENG-PERF-MEASURE §2 AI 采集 · L47 · 1.0k
-- ENG-PERF-MEASURE §3 以最新为准 · L60 · 321
-- ENG-PERF-MEASURE §4 诊断 · L67 · 545
-- ENG-PERF-MEASURE §5 不采用的工具 · L78 · 601
-- ENG-PERF-MEASURE §6 调优 · L94 · 486
+- ENG-PERF-MEASURE §2 AI 采集 · L47 · 1.1k
+- ENG-PERF-MEASURE §3 以最新为准 · L61 · 321
+- ENG-PERF-MEASURE §4 诊断 · L68 · 545
+- ENG-PERF-MEASURE §5 不采用的工具 · L79 · 601
+- ENG-PERF-MEASURE §6 调优 · L95 · 486
 
 ## ENG-PERF-STREAM · 流式加载、本机烘焙与内存
 
