@@ -34,7 +34,7 @@ public sealed record StreamSettings
     public float ReplanSeconds { get; init; } = .1f;
     public float FadeSeconds { get; init; } = RenderFade.Seconds;
     public double MountMilliseconds { get; init; } = KernelBudgets.StreamMountMilliseconds;
-    public int MaximumPreparations { get; init; } = 2;
+    public int MaximumPreparations { get; init; } = KernelBudgets.StreamMaximumPreparations;
     public const float DefaultBaseErrorPixels = 1.5f;
     public const float MergeDistanceScale = 1.1f;
     public float BaseErrorPixels { get; init; } = DefaultBaseErrorPixels;
