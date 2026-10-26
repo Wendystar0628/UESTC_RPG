@@ -70,7 +70,7 @@ paths: ["scripts/perf/run.ps1", "scripts/perf/collection-plan.ps1", "scripts/per
 
 - **入口**：`run.ps1 -Scene <场景> -DiagnosticTool <gpu-profile|EventPipe|Nsight>`，跑一个场景加一种工具，产物放诊断目录并打印摘要；不登记、不进记录、不和基线比、不判有效、不去重。
 - **`--gpu-profile`**：游戏内逐步骤 GPU 耗时，用来排序哪个渲染步骤贵，不当绝对值。
-- **EventPipe**：本机 `dotnet-trace` 附着游戏进程，解析与 `scripts/build/startup-cpu` 共用；收集器要在游戏还活着时停下，方法名才解析得出，所以游戏在样段结束后等收集器停完再退出；样本是墙钟栈采样，占比不写成 CPU 利用率。
+- **EventPipe**：本机 `dotnet-trace` 附着游戏进程，解析器在 `scripts/perf/cpu`；收集器要在游戏还活着时停下，方法名才解析得出，所以游戏在样段结束后等收集器停完再退出；样本是墙钟栈采样，占比不写成 CPU 利用率。
 - **Nsight**：普通权限（§1）抓 GPU 帧，只看相对占比。
 - **结果**：看得懂就用；不完整（比如方法名没解析出来）就换工具或重跑，不为它建判据。
 - **不常开**：常规批次、门禁与启动目标的体验测量都不带诊断工具（§2）。
