@@ -9,17 +9,6 @@ function Find-PerfNsight {
     return $path[0]
 }
 
-function Build-PerfCpuParse($Root, $Directory, $TraceTool) {
-    $library=@(Get-ChildItem -LiteralPath (Join-Path (Split-Path $TraceTool -Parent) '.store\dotnet-trace') -Recurse -File -Filter 'Microsoft.Diagnostics.Tracing.TraceEvent.dll')
-    if ($library.Count -ne 1) { throw 'The pinned dotnet-trace store must identify exactly one TraceEvent assembly.' }
-    $project=Join-Path $Root 'scripts\build\startup-cpu\CpuParse.csproj'
-    $property='-p:TraceToolDir=' + $library[0].DirectoryName
-    $null=Invoke-UESTCProcess dotnet @('build',$project,$property,'--nologo','-v:q') $Root (Join-Path $Directory 'cpu-parser-build.log')
-    $target=(Invoke-UESTCProcess dotnet @('msbuild',$project,$property,'-nologo','-getProperty:TargetPath') $Root).StdOut.Trim()
-    if (-not (Test-Path -LiteralPath $target -PathType Leaf)) { throw 'CpuParse target path is missing.' }
-    return $target
-}
-
 function Write-PerfGpuSteps($Session) {
     $rows=@(Import-Csv -LiteralPath (Join-Path $Session 'gpusteps.csv') -Encoding UTF8 | Where-Object { $_.valid -eq 'true' -and $_.index -ne '0' })
     if (-not $rows.Count) { throw 'gpusteps.csv has no valid GPU marker intervals.' }

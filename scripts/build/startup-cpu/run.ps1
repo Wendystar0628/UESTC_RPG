@@ -55,10 +55,8 @@ if ($Measurement -eq 'diagnostic') {
     try {
         $lease = Enter-UESTCBuildLock (Get-UESTCLayout $root).Locks
         # Diagnostic-tool build is setup, outside each product launch interval.
-        & dotnet build "$PSScriptRoot\CpuParse.csproj" -v:q
-        if ($LASTEXITCODE -ne 0) { throw 'CpuParse build failed.' }
-        $parser = (& dotnet msbuild "$PSScriptRoot\CpuParse.csproj" -nologo -getProperty:TargetPath).Trim()
-        if ($LASTEXITCODE -ne 0 -or -not (Test-Path -LiteralPath $parser -PathType Leaf)) { throw 'CpuParse target path is missing.' }
+        $traceTool = Get-UESTCDotnetTrace -Root $root
+        $parser = Build-PerfCpuParse $root $Output $traceTool
     } finally { Exit-UESTCBuildLock $lease }
 }
 $index = 0

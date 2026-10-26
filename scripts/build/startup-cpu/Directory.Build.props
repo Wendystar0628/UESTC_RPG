@@ -3,6 +3,5 @@
     <RepoRoot>$(MSBuildThisFileDirectory)..\..\..\</RepoRoot>
     <BaseOutputPath>$(RepoRoot)output\start_game\TOOL-215-profile\bin\CpuParse\</BaseOutputPath>
     <BaseIntermediateOutputPath>$(RepoRoot)output\start_game\TOOL-215-profile\obj\CpuParse\</BaseIntermediateOutputPath>
-    <TraceToolDir>$(RepoRoot)output\tools\dotnet-diagnostics\.store\dotnet-trace\10.0.750501\dotnet-trace\10.0.750501\tools\net8.0\any</TraceToolDir>
   </PropertyGroup>
 </Project>
