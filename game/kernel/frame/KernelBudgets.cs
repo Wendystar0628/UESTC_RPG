@@ -17,7 +17,7 @@ public static class KernelBudgets
     // ENG-BUDGET: the shared per-frame stream mount budget
     public const double StreamMountMilliseconds = 1;
 
-    // DECISION-366; comparison sessions 20261026-054800-ai and 20261026-055012-ai.
+    // ENG-BUDGET / DECISION-366; perf-walk-combined4-20261026-9177af1a: 20261026-054800-ai / 20261026-055012-ai.
     public const int StreamMaximumPreparations = 4;
 
     // ENG-BUDGET: the collision share of that mount budget
