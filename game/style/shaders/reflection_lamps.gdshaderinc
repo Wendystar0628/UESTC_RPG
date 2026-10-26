@@ -87,13 +87,16 @@ vec3 reflection_lamps_color(vec3 p_world, vec3 camera_world, float length_scale,
 		float ratio = mix(REFLECTION_LAMP_SPACING_RATIO.x, REFLECTION_LAMP_SPACING_RATIO.y, lamp_hash01(seed + 3u));
 		// 等比和反解后只需看所在截与邻界，不逐灯遍历全部5–7截。
 		float segment = min(floor(log(1.0 - t * (1.0 - pow(ratio, count))) / log(ratio)), count - 1.0);
+		float original_segment = segment;
 		float lower = reflection_lamp_boundary(seed, segment, count, ratio, strip_length, across);
 		float upper = reflection_lamp_boundary(seed, segment + 1.0, count, ratio, strip_length, across);
 		if (along < lower) segment -= 1.0;
 		else if (along >= upper) segment += 1.0;
 		segment = clamp(segment, 0.0, count - 1.0);
-		lower = reflection_lamp_boundary(seed, segment, count, ratio, strip_length, across);
-		upper = reflection_lamp_boundary(seed, segment + 1.0, count, ratio, strip_length, across);
+		if (segment != original_segment) {
+			lower = reflection_lamp_boundary(seed, segment, count, ratio, strip_length, across);
+			upper = reflection_lamp_boundary(seed, segment + 1.0, count, ratio, strip_length, across);
+		}
 		uint key = seed + uint(segment) * 31u + 101u;
 		float progress = segment / (count - 1.0);
 		float duty = mix(REFLECTION_LAMP_DUTY.y, REFLECTION_LAMP_DUTY.x, progress)

@@ -164,10 +164,12 @@ void precip_puddle_apply(vec3 wpos, vec3 cam, vec3 n_w, bool interior, bool outs
 		lit = max(mix(vec3(dot(lit, vec3(0.2126, 0.7152, 0.0722))), lit, kc), vec3(0.0));
 		shade = max(mix(vec3(dot(shade, vec3(0.2126, 0.7152, 0.0722))), shade, kc), vec3(0.0));
 		float band = smoothstep(PW_SHEEN_GRAZE.x, PW_SHEEN_GRAZE.y, graze);
-		vec3 sky = fog_sky(reflect(v, n_w));
 		float k = PW_SHEEN_K * wet * band * hard;
-		lit = mix(lit, sky, k);
-		shade = mix(shade, sky, k);
+		if (k != 0.0) {
+			vec3 sky = fog_sky(reflect(v, n_w));
+			lit = mix(lit, sky, k);
+			shade = mix(shade, sky, k);
+		}
 	}
 
 	// 积水：近乎水平的硬质面，只在潜势高的低洼处按阈值长出；外围 O1、O2 不积水
