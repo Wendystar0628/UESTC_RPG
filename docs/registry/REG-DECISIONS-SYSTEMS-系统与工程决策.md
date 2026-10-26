@@ -146,7 +146,7 @@ gates: []
 | DECISION-328 | 作者与 AI 写同一套六件，只差清单来源与 AI 的 `run.json`；启动测量改读性能记录，旧的逐帧启动日志下线 | 性能、启动测量 | ENG-PERF-DATA §2 | 生效 |
 | DECISION-329 | 指标口径的权威是 ENG-PERF-DATA，实现只在 `scripts/perf`；原始带 `schema`、派生带 `calc`，只认当前、不写迁移，`calc` 变了就重算；AI 只经 `perf.py` 读性能数据，不打开逐帧原始文件 | 性能 | ENG-PERF-DATA §2、§3；ENG-PERF-MEASURE §3 | 生效 |
 | DECISION-330 | 帧内五段是回调边界 B0–B4 之间的墙钟区间，只作关联阶段；主线程周期只记原始增量，不换算毫秒、不进判据；视口结果确认来源与新鲜度后才合计，DECISION-318 仍判主视口。起因：第 10 路复核查实周期折算与视口隔帧计时都不能当确定毫秒 | 性能 | ENG-PERF-DATA §3 | 生效 |
-| DECISION-331 | 隔离桌面只判成本；体验字段照常定义、记录与展示，只来自作者自行开记录的游玩会话；不排作者录制，不追隔离桌面约 30 Hz 的成因（作者定）；加载墙钟只列实测与 `waits` 上限，启动三项在双击起点接通前只作参考（RESEARCH-049，DECISION-363） | 性能 | ENG-PERF-DATA §4；ENG-PERF-MEASURE §2 | 生效 |
+| DECISION-331 | 隔离桌面只判成本；体验字段照常定义、记录与展示，只来自作者自行开记录的游玩会话；不排作者录制，不追隔离桌面约 30 Hz 的成因（作者定）；加载墙钟只列实测与 `waits` 上限，启动三项在双击起点接通前不出（RESEARCH-049，DECISION-363） | 性能 | ENG-PERF-DATA §4；ENG-PERF-MEASURE §2 | 生效 |
 | DECISION-332 | 游戏内只做卡死看门狗与离散事件，不做性能判定；分析器只出指标、与上一次的差和预算对照，不判异常、不判运行有效与否；是否登记为失败按 ENG-FAILS §0 判，分析器不自动登记（DECISION-363 删去异常判定与成本尖峰） | 性能 | ENG-PERF-DATA §5 | 生效 |
 | DECISION-333 | 低 GPU 占用、归一负载与频率变化只作背景，不据以判瓶颈 | 性能 | ENG-PERF-DATA §3.1 | 生效 |
 | DECISION-334 | AI 采集唯一入口 `scripts/perf/run.ps1`：在固定提交的临时工作树里跑，固定机位套、路线套、传送套每场景采一遍（DECISION-354），主检出照常提交；不建吞吐模式 | 性能 | ENG-PERF-MEASURE §2 | 待原型验证 |
