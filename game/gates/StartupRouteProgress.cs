@@ -1,6 +1,5 @@
 using System.Numerics;
 using Campus.Contracts;
-using Campus.Contracts.Bake;
 
 namespace Campus.Gates;
 
@@ -16,14 +15,8 @@ internal sealed class StartupRouteProgress
     private readonly bool _allowTurns;
     private Vector3 _previous;
     private double _previousMilliseconds;
-    private readonly HashSet<TileKey> _tiles = [];
-    private readonly HashSet<LodLevel> _mountedLevels = [];
     public float Distance { get; private set; }
     public float ForwardDistance { get; private set; }
-    public double ElapsedMilliseconds => _previousMilliseconds;
-    public int TileCount => _tiles.Count;
-    public IReadOnlyCollection<LodLevel> MountedLevels => _mountedLevels;
-    public bool EnteredInterior { get; private set; }
 
     public StartupRouteProgress(Pose requested, ViewMode mode, double durationMilliseconds,
         Vector3 actual, float actualYaw, ViewMode actualMode, bool allowTurns = false)
@@ -39,20 +32,6 @@ internal sealed class StartupRouteProgress
         RequireMode(actualMode);
         RequireStart(requested, actual, actualYaw);
         _previous = actual;
-        _tiles.Add(TileGrid.At(actual));
-    }
-
-    public void ObserveContext(Vector3 actual, NavSpace? space, IWorldModel world)
-    {
-        _tiles.Add(TileGrid.At(actual));
-        if (space is { Building: { } building } indoor && world.Interiors.IsOpen(building, indoor.Floor, actual))
-            EnteredInterior = true;
-    }
-
-    public void ObserveTile(StreamTileChange change)
-    {
-        if (change.Kind == StreamMountKind.Visual && change.Change == StreamTileChangeKind.Mounted &&
-            change.Key.Detail.StartsWith('L')) _mountedLevels.Add(BakeRequestKeys.Parse(change.Key).Level);
     }
 
     internal static string? StartFailure(Pose requested, Vector3 actual, float actualYaw)

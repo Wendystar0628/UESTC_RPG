@@ -29,10 +29,7 @@ internal sealed class StartupRouteDriver(IStageGateHost host, StartupSampleInput
         var stand = maps.ResolveSpawn(maps.Current, options.Start).Stand
             ?? throw new InvalidOperationException("Route start has no authored standing destination: " + options.Start);
         var requested = new Pose(stand.Feet, stand.YawDeg, 0);
-        GD.Print(FormattableString.Invariant($"STARTUP_ROUTE_REQUEST start={options.Start} mode={options.Mode} durationSeconds={options.DurationSeconds:R} feet_x={stand.Feet.X:R} feet_y={stand.Feet.Y:R} feet_z={stand.Feet.Z:R} yaw={stand.YawDeg:R}"));
-        PrintPose("entry", options.Start, observer, 0);
         await ReachStart(options.Start, maps.Current, camera, observer, walk);
-        PrintPose("arrival", options.Start, observer, 0);
         // Atlas arrival and the requested point must agree before any route input is held.
         StartupRouteProgress.RequireStart(requested, observer.Feet, observer.YawDeg);
         switch (options.Mode)
@@ -46,7 +43,6 @@ internal sealed class StartupRouteDriver(IStageGateHost host, StartupSampleInput
         }
         StartupRouteProgress.RequireStart(requested, observer.Feet, observer.YawDeg);
         RequireActive(options.Mode, camera, observer, walk);
-        PrintPose("start", options.Start, observer, 0);
         if (Campus.Kernel.Boot.Boot.Options.PerfCollection is { RoutePointIds.Length: > 0 } authored)
         {
             await RunAuthored(options, authored, requested);
@@ -69,13 +65,12 @@ internal sealed class StartupRouteDriver(IStageGateHost host, StartupSampleInput
         if (Input.IsActionPressed(forwardAction))
             throw new InvalidOperationException("The route inherited a held forward action.");
         var forwardKey = (Key)bindings.PhysicalKey("move_forward");
-        GD.Print($"STARTUP_ROUTE_INPUT action=move_forward physicalKey={(int)forwardKey}");
         async Task<string?> Move()
         {
             var failure = StartupRouteProgress.StartFailure(requested, observer.Feet, observer.YawDeg) ??
                 ActiveFailure(options.Mode, camera, observer, walk);
             if (failure is not null) return failure;
-            await input.Press(forwardKey, true, "route-forward-start", "route-forward-end", async () =>
+            await input.Press(forwardKey, true, async () =>
             {
                 var clock = MovementClock(options.Mode, camera, observer, walk);
                 var nextSample = SampleMilliseconds;
@@ -89,13 +84,12 @@ internal sealed class StartupRouteDriver(IStageGateHost host, StartupSampleInput
                         failure = progress.ObservationFailure(observer.Feet, observer.Mode, elapsed);
                         if (failure is not null) return;
                         progress.Observe(observer.Feet, observer.Mode, elapsed);
-                        PrintPose("sample", options.Start, observer, elapsed);
                         nextSample = elapsed + SampleMilliseconds;
                     }
                     if (elapsed >= milliseconds) break;
                 }
                 failure = progress.CompletionFailure();
-            }, milliseconds, () => input.WaitForRelease(forwardAction));
+            }, () => input.WaitForRelease(forwardAction));
             return failure;
         }
         if (Campus.Kernel.Boot.Boot.Options.PerfCollection is { } collection)
@@ -104,8 +98,6 @@ internal sealed class StartupRouteDriver(IStageGateHost host, StartupSampleInput
         }
         else if (await Move() is { } failure) throw new InvalidOperationException(failure);
         RequireActive(options.Mode, camera, observer, walk);
-        PrintPose("settled", options.Start, observer, progress.ElapsedMilliseconds);
-        GD.Print(FormattableString.Invariant($"STARTUP_ROUTE_COMPLETE start={options.Start} mode={observer.Mode} durationSeconds={options.DurationSeconds:R} elapsedMilliseconds={progress.ElapsedMilliseconds:R} distance={progress.Distance:R} forward={progress.ForwardDistance:R}"));
     }
 
     private async Task RunAuthored(StartupRouteOptions options, PerfCollectionOptions collection, Pose requested)
@@ -120,7 +112,6 @@ internal sealed class StartupRouteDriver(IStageGateHost host, StartupSampleInput
         var keys = actions.Select(action => (Key)bindings.PhysicalKey(action)).ToArray();
         var held = new bool[actions.Length];
         var steering = new RouteSteering(keys, held, observer.Feet);
-        var stream = KernelServices.Get<IStreamStatistics>();
         var progress = new StartupRouteProgress(requested, options.Mode, options.DurationSeconds * 1000,
             observer.Feet, observer.YawDeg, observer.Mode, allowTurns: true);
         async Task<string?> Move()
@@ -130,21 +121,17 @@ internal sealed class StartupRouteDriver(IStageGateHost host, StartupSampleInput
             var clock = MovementClock(options.Mode, camera, observer, walk);
             var nextSample = SampleMilliseconds;
             Exception? movementFailure = null;
-            stream.TileChanged += progress.ObserveTile;
             try
             {
                 for (var index = 0; index < points.Length; index++)
                 {
                     await MoveToPoint(points[index], options, context, steering, clock, Track);
-                    PrintPose("point-" + collection.RoutePointIds[index], options.Start, observer,
-                        clock.ElapsedMilliseconds);
                 }
                 return null;
             }
             catch (Exception error) { movementFailure = error; throw; }
             finally
             {
-                stream.TileChanged -= progress.ObserveTile;
                 await input.ReleaseKeys(keys, held, movementFailure, () => input.Wait(
                     () => camera.Speed < .0001f && (!walk.Active || walk.IsSettled),
                     "The authored route did not settle after native movement release."));
@@ -153,15 +140,12 @@ internal sealed class StartupRouteDriver(IStageGateHost host, StartupSampleInput
             void Track()
             {
                 var elapsed = clock.ElapsedMilliseconds;
-                progress.ObserveContext(observer.Feet, observer.Space, context.World);
                 if (elapsed < nextSample) return;
                 progress.Observe(observer.Feet, observer.Mode, elapsed);
-                PrintPose("sample", options.Start, observer, elapsed);
                 nextSample = elapsed + SampleMilliseconds;
             }
         }
         await new PerfCollectionDriver(host, collection).Run(Move);
-        GD.Print($"STARTUP_ROUTE_COVERAGE tiles={progress.TileCount} mountedLevels={string.Join(",", progress.MountedLevels.Order())} enteredInterior={progress.EnteredInterior} elapsedMilliseconds={progress.ElapsedMilliseconds:R}");
     }
 
     private async Task MoveToPoint(RoutePoint target, StartupRouteOptions options, IMapContext context,
@@ -225,7 +209,6 @@ internal sealed class StartupRouteDriver(IStageGateHost host, StartupSampleInput
         {
             var pausedAt = _lastReadyAt ?? _started;
             var progress = Progress();
-            StartupSampleInput.Trace("route-collision-wait-start");
             try
             {
                 await input.Wait(ready, "The route's production walking collision stopped making preparation or mount progress.", () =>
@@ -241,7 +224,6 @@ internal sealed class StartupRouteDriver(IStageGateHost host, StartupSampleInput
                 var resumedAt = FrameClock.MonotonicMilliseconds;
                 _excludedMilliseconds += resumedAt - pausedAt;
                 _lastReadyAt = resumedAt;
-                StartupSampleInput.Trace("route-collision-wait-end");
             }
         }
 
@@ -378,7 +360,6 @@ internal sealed class StartupRouteDriver(IStageGateHost host, StartupSampleInput
         var previousArrival = host.MapRuntime.Arrival;
         var transit = atlas.Travel(destination.Id, TravelStyle.Teleport)
             ?? throw new InvalidOperationException("The production Atlas refused the route start: " + start);
-        GD.Print($"STARTUP_ROUTE_TRAVEL start={start} marker={destination.Id.Value}");
         var bake = KernelServices.Get<IBakeService>();
         var progress = (transit.Progress, bake.Progress, host.MapRuntime.Arrival, host.MapRuntime.Arrival?.Completed);
         await input.Wait(() => transit.Done.IsCompleted, "The production Atlas route arrival stopped making progress.", () =>
@@ -414,8 +395,7 @@ internal sealed class StartupRouteDriver(IStageGateHost host, StartupSampleInput
     {
         using var toggleAction = new StringName("toggle_mode");
         if (Input.IsActionPressed(toggleAction)) throw new InvalidOperationException("The route inherited a held mode toggle.");
-        await input.Press((Key)bindings.PhysicalKey("toggle_mode"), true,
-            "route-fly-press", "route-fly-release", input.NextFrame);
+        await input.Press((Key)bindings.PhysicalKey("toggle_mode"), true, input.NextFrame);
         var loading = KernelServices.Get<IAppLoadingPresentation>();
         var progress = (observer.Mode, camera.ActiveTransit?.Progress, loading.Active, host.MapRuntime.Arrival?.Completed);
         await input.Wait(() => host.Flow.State == AppState.Playing && observer.Mode == ViewMode.Fly &&
@@ -448,11 +428,5 @@ internal sealed class StartupRouteDriver(IStageGateHost host, StartupSampleInput
         var position = observer.Feet;
         var pending = KernelServices.Get<IStreamStatistics>().Statistics;
         return FormattableString.Invariant($"Route lost the production controller for its requested mode: requested={mode} active={walk.Active} exitRequested={walk.ExitRequested} collisionReady={walk.CollisionReady} x={position.X:R} y={position.Y:R} z={position.Z:R} streamRevision={pending.Revision} pendingRequests={pending.PendingRequests} pendingBakes={pending.PendingBakes} pendingPreparations={pending.PendingPreparations} pendingMounts={pending.PendingMounts} pendingRetirements={pending.PendingRetirements}.");
-    }
-
-    private static void PrintPose(string phase, string start, IObserverState observer, double elapsed)
-    {
-        var p = observer.Feet;
-        GD.Print(FormattableString.Invariant($"STARTUP_ROUTE_POSE phase={phase} start={start} mode={observer.Mode} time={FrameClock.MonotonicMilliseconds:R} elapsedMilliseconds={elapsed:R} x={p.X:R} y={p.Y:R} z={p.Z:R} yaw={observer.YawDeg:R}"));
     }
 }

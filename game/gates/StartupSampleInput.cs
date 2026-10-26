@@ -70,13 +70,11 @@ internal sealed class StartupSampleInput(IStageGateHost host)
         host.CheckActive();
     }
 
-    public async Task Press(Key key, bool physical, string start, string end, Func<Task> whilePressed,
-        double? targetMilliseconds = null, Func<Task>? afterRelease = null)
+    public async Task Press(Key key, bool physical, Func<Task> whilePressed, Func<Task>? afterRelease = null)
     {
         Exception? failure = null;
         try
         {
-            Trace(start, targetMilliseconds);
             SendKey(key, true, physical);
             await whilePressed();
         }
@@ -86,7 +84,6 @@ internal sealed class StartupSampleInput(IStageGateHost host)
             try
             {
                 SendKey(key, false, physical);
-                Trace(end);
                 // A cancelled stage still receives key-up; its shutdown owns controller teardown.
                 if (!host.Lifetime.IsCancellationRequested && afterRelease is not null) await afterRelease();
             }
@@ -114,12 +111,5 @@ internal sealed class StartupSampleInput(IStageGateHost host)
         }
         catch (Exception release) when (movementFailure is not null)
         { throw new AggregateException("Authored route and input release both failed.", movementFailure, release); }
-    }
-
-    public static void Trace(string phase, double? targetMilliseconds = null)
-    {
-        var target = targetMilliseconds is { } milliseconds
-            ? FormattableString.Invariant($" targetMilliseconds={milliseconds:R}") : "";
-        GD.Print(FormattableString.Invariant($"STARTUP_PHASE {phase} {FrameClock.MonotonicMilliseconds:R} frame={Engine.GetProcessFrames()}{target}"));
     }
 }

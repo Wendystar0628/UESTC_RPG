@@ -103,9 +103,7 @@ public sealed class BootArgumentsTests
         var invalid = new List<string[]>
         {
             new[] { "--route-start=route_point" },
-            new[] { "--startup-scenario=title" },
-            new[] { "--startup-scenario=dwell" },
-            new[] { "--startup-scenario=playing" },
+            new[] { "--startup-scenario=unknown" },
             new[] { "--startup-scenario=immediate", "--route-mode=walk" }
         };
         for (var index = 1; index < valid.Length; index++) invalid.Add(valid.Where((_, i) => i != index).ToArray());

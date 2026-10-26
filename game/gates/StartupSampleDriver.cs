@@ -28,7 +28,7 @@ internal sealed class StartupSampleDriver(IStageGateHost host)
         host.CheckActive();
         if (host.Flow.State != AppState.Title)
             throw new InvalidOperationException("Startup input requires the real title menu.");
-        await _input.Press(Key.Enter, false, "title-enter-press", "title-enter-release", _input.NextFrame);
+        await _input.Press(Key.Enter, false, _input.NextFrame);
         await _input.Wait(() => host.Flow.State != AppState.Title, "The normal title menu did not accept Enter.");
         if (scenario == StartupScenario.Route)
             await new StartupRouteDriver(host, _input).Run(AppBoot.Options.StartupRoute

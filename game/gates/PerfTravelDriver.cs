@@ -29,7 +29,6 @@ internal sealed class PerfTravelDriver(IStageGateHost host)
         var observer = KernelServices.Get<IObserverState>();
         var walk = KernelServices.Get<IWalkController>();
         await _input.WaitForPlayingWalk();
-        GD.Print($"TRAVEL_SEQUENCE_START {sequence.Count} {FrameClock.MonotonicMilliseconds:R}");
         for (var index = 0; index < sequence.Count; index++)
         {
             var id = new MarkerId(sequence[index]);
@@ -57,9 +56,7 @@ internal sealed class PerfTravelDriver(IStageGateHost host)
                 return failure;
             segment.ToMs = FrameClock.MonotonicMilliseconds;
             segment.Completed = true;
-            GD.Print($"TRAVEL_SEQUENCE_STEP_READY {index + 1} {id.Value} {segment.ToMs:R} mode={observer.Mode} grounded={walk.Grounded} collision={walk.CollisionReady}");
         }
-        GD.Print($"TRAVEL_SEQUENCE_COMPLETE {sequence.Count} {FrameClock.MonotonicMilliseconds:R}");
         return null;
     }
 
@@ -138,7 +135,7 @@ internal sealed class PerfTravelDriver(IStageGateHost host)
     private async Task<ITransitHandle?> ConfirmCard()
     {
         ITransitHandle? handle = null;
-        await _input.Press(Key.Enter, false, "travel-card-confirm", "travel-card-confirm-release", async () =>
+        await _input.Press(Key.Enter, false, async () =>
         {
             handle = KernelServices.Get<ICameraRig>().ActiveTransit;
             await _input.NextFrame();
@@ -148,6 +145,5 @@ internal sealed class PerfTravelDriver(IStageGateHost host)
     }
 
     private Control? Focus() => host.Stage.GetViewport().GuiGetFocusOwner();
-    private Task Tap(Key key, bool physical) => _input.Press(key, physical,
-        "travel-card-key-down", "travel-card-key-up", _input.NextFrame);
+    private Task Tap(Key key, bool physical) => _input.Press(key, physical, _input.NextFrame);
 }
