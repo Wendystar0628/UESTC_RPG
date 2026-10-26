@@ -5,7 +5,7 @@ using Campus.Contracts.Save;
 namespace Campus.Contracts.Startup;
 
 public enum BootRunMode : byte { Interactive, Capture, CpuBake }
-public enum StartupScenario : byte { Title, Immediate, Dwell, Playing, Route }
+public enum StartupScenario : byte { Immediate, Route }
 
 /// <summary>Parsed startup choices. Map-dependent defaults are resolved after catalogue loading.</summary>
 public sealed record BootRunOptions

@@ -1,7 +1,0 @@
-<Project>
-  <PropertyGroup>
-    <RepoRoot>$(MSBuildThisFileDirectory)..\..\..\</RepoRoot>
-    <BaseOutputPath>$(RepoRoot)output\start_game\TOOL-215-profile\bin\CpuParse\</BaseOutputPath>
-    <BaseIntermediateOutputPath>$(RepoRoot)output\start_game\TOOL-215-profile\obj\CpuParse\</BaseIntermediateOutputPath>
-  </PropertyGroup>
-</Project>

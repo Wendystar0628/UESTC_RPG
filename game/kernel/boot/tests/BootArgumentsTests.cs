@@ -79,8 +79,11 @@ public sealed class BootArgumentsTests
 
     [TestCase]
     [TestCategory(TestReason.Contract)]
-    public void RoutesRetainTypedChoicesWithoutCaptureDefaults()
+    public void StartupScenariosRetainTypedChoicesWithoutCaptureDefaults()
     {
+        var immediate = BootArguments.Parse(["--startup-scenario=immediate"]);
+        AssertThat(immediate.StartupScenario == StartupScenario.Immediate && immediate.StartupRoute is null &&
+            immediate.Mode == BootRunMode.Interactive && immediate.Title && !immediate.Automated).IsTrue();
         foreach (var (text, mode) in new[] { ("walk", ViewMode.Walk), ("fly", ViewMode.Fly) })
         {
             var options = BootArguments.Parse(["--startup-scenario=route", "--route-start=route_point",
@@ -100,7 +103,10 @@ public sealed class BootArgumentsTests
         var invalid = new List<string[]>
         {
             new[] { "--route-start=route_point" },
-            new[] { "--startup-scenario=playing", "--route-mode=walk" }
+            new[] { "--startup-scenario=title" },
+            new[] { "--startup-scenario=dwell" },
+            new[] { "--startup-scenario=playing" },
+            new[] { "--startup-scenario=immediate", "--route-mode=walk" }
         };
         for (var index = 1; index < valid.Length; index++) invalid.Add(valid.Where((_, i) => i != index).ToArray());
         foreach (var seconds in new[] { "0", "-1", "NaN", "Infinity" })

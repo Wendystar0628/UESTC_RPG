@@ -1,0 +1,7 @@
+<Project>
+  <PropertyGroup>
+    <RepoRoot>$(MSBuildThisFileDirectory)..\..\..\</RepoRoot>
+    <BaseOutputPath>$(RepoRoot)output\perf\tools\bin\CpuParse\</BaseOutputPath>
+    <BaseIntermediateOutputPath>$(RepoRoot)output\perf\tools\obj\CpuParse\</BaseIntermediateOutputPath>
+  </PropertyGroup>
+</Project>

@@ -97,7 +97,7 @@ public sealed class BootArguments
 
     private void Validate()
     {
-        OneOf("startup-scenario", "title", "immediate", "dwell", "playing", "route");
+        OneOf("startup-scenario", "immediate", "route");
         ValidateRoute();
         ValidateCollection();
         foreach (var key in new[] { "ui", "title", "bench", "bake-bg", "bake-strict", "audio-fixed", "audio-limiter", "audio-log", "amb-debug" })

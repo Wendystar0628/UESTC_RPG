@@ -9,18 +9,6 @@ function Find-PerfNsight {
     return $path[0]
 }
 
-function Write-PerfGpuSteps($Session) {
-    $rows=@(Import-Csv -LiteralPath (Join-Path $Session 'gpusteps.csv') -Encoding UTF8 | Where-Object { $_.valid -eq 'true' -and $_.index -ne '0' })
-    if (-not $rows.Count) { throw 'gpusteps.csv has no valid GPU marker intervals.' }
-    $culture=[Globalization.CultureInfo]::InvariantCulture
-    $table=foreach ($group in $rows | Group-Object name) {
-        [pscustomobject]@{ step=$group.Name; frames=$group.Count
-            gpuMeanMs=[Math]::Round(($group.Group | ForEach-Object { [double]::Parse($_.gpuSincePreviousMarkerMs,$culture) } | Measure-Object -Average).Average,3)
-            cpuMeanMs=[Math]::Round(($group.Group | ForEach-Object { [double]::Parse($_.cpuSincePreviousMarkerMs,$culture) } | Measure-Object -Average).Average,3) }
-    }
-    Write-Host ($table | Sort-Object gpuMeanMs -Descending | Format-Table -AutoSize | Out-String)
-}
-
 function Invoke-PerfDiagnostic($Root, [string[]]$Scene, [string]$Tool, [IO.FileStream]$BuildLease, [string]$OutputRoot) {
     if ($Scene.Count -ne 1) { throw 'Diagnostics take exactly one -Scene.' }
     $plan=Get-Content -LiteralPath (Join-Path $Root 'scripts\perf\scenarios.json') -Raw -Encoding UTF8 | ConvertFrom-Json
@@ -74,7 +62,10 @@ function Invoke-PerfDiagnostic($Root, [string[]]$Scene, [string]$Tool, [IO.FileS
         if ($sessions.Count -ne 1) { throw "Expected one closed recording in $directory." }
         Write-Host "Diagnostic output: $directory"
         switch ($Tool) {
-            'gpu-profile' { Write-PerfGpuSteps $sessions[0].FullName }
+            'gpu-profile' {
+                $profiles=[regex]::Matches([IO.File]::ReadAllText($log),'(?m)^GPU PROFILE \([^\r\n]+\):[ \t]*\r?\n(?:[ \t]+-[^\r\n]+\r?\n)+')
+                if ($profiles.Count) { Write-Host -NoNewline $profiles[$profiles.Count-1].Value }
+            }
             'Nsight' { Write-Host ('Nsight report: ' + (@(Get-ChildItem -LiteralPath $directory -File -Filter '*.nsys-rep').FullName -join ', ')) }
             'EventPipe' {
                 $parsed=Invoke-UESTCProcess dotnet @($parser,'--perf-session',$directory,$sessions[0].FullName) $Root (Join-Path $directory 'cpu-parser.log') -TimeoutSeconds 600

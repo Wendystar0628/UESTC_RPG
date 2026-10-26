@@ -80,3 +80,5 @@ static class PerfSessionCpuReport
             .OrderByDescending(g => g.Count()).Take(30).Select(g => new { samples = g.Count(), framesLeafToRoot = g.First().Frames })
     };
 }
+
+record Window(string Name, string From, string To, DateTime Start, DateTime End);
