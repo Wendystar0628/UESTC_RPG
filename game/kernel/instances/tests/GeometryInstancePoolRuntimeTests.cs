@@ -1,8 +1,13 @@
 using Campus.Kernel.Boot;
 using Campus.Contracts;
 using Campus.Contracts.Maps;
+using Campus.Contracts.Bake;
+using Campus.Contracts.Quality;
+using Campus.Contracts.Vegetation;
 using Campus.Kernel.Instances;
 using Campus.Kernel.Renderer;
+using Campus.Kernel.Stream;
+using Campus.Systems.Vegetation;
 using Campus.Style.Materials;
 using GdUnit4;
 using static GdUnit4.Assertions;
@@ -378,6 +383,55 @@ public sealed class GeometryInstancePoolRuntimeTests
             AssertThat(thrown).OverrideFailureMessage($"Expected {typeof(ObjectDisposedException).Name}.").IsTrue();
         }
         body.Free();
+    }
+
+    [TestCase, TestCategory(TestReason.Regression), TestCategory("NativeRender"), RequireGodotRuntime]
+    public void VegetationRefreshDuringPartialMountStillUploadsTheActualTrees()
+    {
+        using var fixture = Fixture.Create();
+        using var transitions = new VegetationTransitionMap();
+        var stream = new StreamDirector();
+        var runtime = new VegetationRuntime();
+        IStreamMountWork? work = null;
+        try
+        {
+            var map = new MapId("vegetation-mount-fixture");
+            fixture.Host.OnMapLoaded(Context(map));
+            var world = new TestWorldState(new TestWeatherProcess(), new TestRuleset());
+            world.Freeze(17.5, Season.Autumn, WorldTime.InitialAnimTime); world.CompleteRestore();
+            var distance = (VegetationBuckets.L0PlusDistance + VegetationBuckets.L0Distance) * QualityRules.DetailDistanceScale * .5f;
+            var foot = new N.Vector3(2, 0, 3);
+            var eye = foot + new N.Vector3(0, VegetationBuckets.ReferenceTreeHeight * .5f, distance);
+            // Bind the isolated owner's existing services without registering a second application or entering the scene tree.
+            foreach (var (name, value) in new (string, object)[]
+            {
+                ("_host", fixture.Host), ("_streamFrame", stream), ("_world", world),
+                ("_rig", new TestCameraRig(pose: new Pose(eye, 0, 0))), ("_map", map), ("_transitionMap", transitions)
+            }) typeof(VegetationRuntime).GetField(name, System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!.SetValue(runtime, value);
+            var records = new float[InstanceStreamLayout.FloatsPerInstance];
+            InstanceStreamLayout.Write(records, N.Matrix4x4.CreateTranslation(foot), new(0, 0, 0, VegetationBuckets.ReferenceTreeHeight));
+            var prototype = Prototype(GeometryBuffer.Freeze(Surface(fixture.Provider.FirstSpec)));
+            var prototypes = new[] { prototype, prototype, prototype, prototype };
+            var key = new BakeKey(map, BakeModuleIds.VegetationTrees, "L0/0/0");
+            var content = new VegetationTileContent(key, default, [new("fixture", records, prototypes, [new(foot, foot + N.Vector3.One)])]);
+            work = runtime.CreateMount(key, content, BakePriority.Normal, 1);
+            AssertThat(VegetationBuckets.Target(distance, 1f, VegetationBuckets.NotNear) == (byte)VegPool.L0 &&
+                !work.Step(1) && fixture.Host.GetChildCount() > 0 && fixture.Host.GetChildCount() < prototypes.Length && !runtime.IsReady(key))
+                .OverrideFailureMessage("The fixture must refresh a partial tile before its tree's target pool exists.").IsTrue();
+            runtime._Process(.1);
+            while (!work.Step(1)) { }
+            runtime._Process(.1);
+            if (runtime.Failure is { } failure) throw failure;
+            var visible = fixture.Host.GetChildren().OfType<MultiMeshInstance3D>().Where(node => node.Multimesh.VisibleInstanceCount > 0).ToArray();
+            AssertThat(runtime.IsReady(key) && visible.Sum(node => node.Multimesh.VisibleInstanceCount) == content.Mothers.Sum(mother => mother.Bounds.Count) &&
+                visible.All(node => node.Multimesh.GetBuffer().SequenceEqual(records)))
+                .OverrideFailureMessage("The visible native prefixes must contain the actual tree records after a partial-mount refresh.").IsTrue();
+        }
+        finally
+        {
+            if (work is not null) while (!work.ReleaseStep(0)) { }
+            runtime.Free(); stream.Free();
+        }
     }
 
     private static GeometryBundle Surface(ToonSpec spec) => new(new(spec),

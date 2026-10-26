@@ -297,14 +297,9 @@ public partial class RenderHost : Node3D, IRenderHost, IRenderReadiness, IMapAwa
         if (!draw.Source.Reflect || _reflection is null || !_reflection.Scenario.IsValid) return;
         var proxy = RenderingServer.InstanceCreate2(draw.Mesh.GetRid(), _reflection.Scenario);
         draw.Proxy = proxy;
-        try
-        {
-            RenderingServer.InstanceGeometrySetMaterialOverride(proxy, _reflection.ProxyMaterial.GetRid());
-            RenderingServer.InstanceGeometrySetCastShadowsSetting(proxy, RenderingServer.ShadowCastingSetting.Off);
-            RenderingServer.InstanceSetTransform(proxy, draw.Instance.GlobalTransform);
-            draw.Proxy = proxy;
-        }
-        catch { throw; }
+        RenderingServer.InstanceGeometrySetMaterialOverride(proxy, _reflection.ProxyMaterial.GetRid());
+        RenderingServer.InstanceGeometrySetCastShadowsSetting(proxy, RenderingServer.ShadowCastingSetting.Off);
+        RenderingServer.InstanceSetTransform(proxy, draw.Instance.GlobalTransform);
     }
 
     private static void FreeReflectionProxy(Draw draw)

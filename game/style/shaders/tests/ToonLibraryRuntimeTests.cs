@@ -91,10 +91,10 @@ public sealed class ToonLibraryRuntimeTests
         var restored = (TileBundle)TileBundleCodec.Decode(BakePayloadClass.Tile, "fixture/pattern", key, TileBundleCodec.Encode(BakePayloadClass.Tile, "fixture/pattern", bundle));
         var scenario = RenderingServer.ScenarioCreate();
         var prepared = new PreparedTile(restored);
+        var materials = new StreamMaterials(fixture.Library, new ShaderMaterialSource(new RequiredResources()));
         try
         {
             prepared.Initialize(restored);
-            using var materials = new StreamMaterials(fixture.Library, new ShaderMaterialSource(new RequiredResources()));
             var draw = prepared.Draws.Single();
             var material = materials.Resolve(draw);
             prepared.MountOne(0, scenario, material.GetRid());
@@ -112,6 +112,7 @@ public sealed class ToonLibraryRuntimeTests
         finally
         {
             while (!prepared.ReleaseOne()) await FrameAwaiter.ProcessAsync(((SceneTree)Engine.GetMainLoop()).Root);
+            while (!materials.ReleaseOne()) await FrameAwaiter.ProcessAsync(((SceneTree)Engine.GetMainLoop()).Root);
             RenderingServer.FreeRid(scenario);
         }
         var refused = false;

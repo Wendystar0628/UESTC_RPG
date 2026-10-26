@@ -266,7 +266,7 @@ internal sealed class StreamResidency(StreamDirector host)
         }
         protected override void Failed(Exception error) => failed(error);
     }
-    internal void DisposeMaterials()
+    internal void RequireMaterialsDrained()
     {
         if (_materials is { IsEmpty: false }) throw new InvalidOperationException("Stream material bindings must drain before exit.");
     }

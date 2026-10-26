@@ -173,7 +173,7 @@ public sealed partial class VegetationRuntime : Node, IMapAware, IViewContentRea
             var clock = FrameClock.FadeSeconds;
             foreach (var tile in _tiles.Values)
             {
-                if (tile.Retiring) continue;
+                if (!tile.Mounted || tile.Retiring) continue;
                 tile.UpdateNear(eye, clock);
                 if (!tile.NeededAt(eye, TreeReach) && !tile.NearActive) { tile.Hide(); WriteNearReady(tile); continue; }
                 foreach (var mother in tile.Mothers) mother.Refresh(eye, reset, _shadowReach, clock, tile.NearActive,
@@ -218,21 +218,17 @@ public sealed partial class VegetationRuntime : Node, IMapAware, IViewContentRea
     private void PrepareDataTextures(MapRect rect)
     {
         _mapRect = rect;
-        try
-        {
-            var registry = KernelServices.Get<IGlobalDataTextureRegistry>();
-            _nearReadyImage = Image.CreateEmpty(VegetationNearReadyEncoding.Width(rect), VegetationNearReadyEncoding.Height(rect), false, Image.Format.Rgf);
-            _nearReadyImage.Fill(Colors.Transparent);
-            _nearReadyTexture = ImageTexture.CreateFromImage(_nearReadyImage);
-            _nearReadyRegistration = registry.RegisterOwned(ShaderGlobals.VegetationNearReady, _nearReadyTexture, _nearReadyTexture.GetRid());
-            _transitionMap = new VegetationTransitionMap();
-            _transitionTexture = ImageTexture.CreateFromImage(_transitionMap.Image);
-            _transitionRegistration = registry.RegisterOwned(ShaderGlobals.VegetationLodTransition, _transitionTexture, _transitionTexture.GetRid());
-            _transitionMap.Uploaded();
-            RenderingServer.GlobalShaderParameterSet(_shaderGlobalNearReady, _nearReadyTexture);
-            RenderingServer.GlobalShaderParameterSet(_shaderGlobalTransition, _transitionTexture);
-        }
-        catch { throw; }
+        var registry = KernelServices.Get<IGlobalDataTextureRegistry>();
+        _nearReadyImage = Image.CreateEmpty(VegetationNearReadyEncoding.Width(rect), VegetationNearReadyEncoding.Height(rect), false, Image.Format.Rgf);
+        _nearReadyImage.Fill(Colors.Transparent);
+        _nearReadyTexture = ImageTexture.CreateFromImage(_nearReadyImage);
+        _nearReadyRegistration = registry.RegisterOwned(ShaderGlobals.VegetationNearReady, _nearReadyTexture, _nearReadyTexture.GetRid());
+        _transitionMap = new VegetationTransitionMap();
+        _transitionTexture = ImageTexture.CreateFromImage(_transitionMap.Image);
+        _transitionRegistration = registry.RegisterOwned(ShaderGlobals.VegetationLodTransition, _transitionTexture, _transitionTexture.GetRid());
+        _transitionMap.Uploaded();
+        RenderingServer.GlobalShaderParameterSet(_shaderGlobalNearReady, _nearReadyTexture);
+        RenderingServer.GlobalShaderParameterSet(_shaderGlobalTransition, _transitionTexture);
     }
 
     private void ReleaseDataTextures()
@@ -316,6 +312,7 @@ public sealed partial class VegetationRuntime : Node, IMapAware, IViewContentRea
                 }
             if (min.X <= max.X) _treeBounds = new(min, max);
         }
+        public bool Mounted;
         public bool Retiring;
         private int _release;
         public bool IsTrees { get; }
@@ -346,7 +343,7 @@ public sealed partial class VegetationRuntime : Node, IMapAware, IViewContentRea
         {
             get
             {
-                if (Retiring) return false;
+                if (!Mounted || Retiring) return false;
                 foreach (var mother in Mothers) if (!mother.Ready) return false;
                 foreach (var grass in Grass) if (!grass.Ready) return false;
                 return true;
@@ -409,6 +406,7 @@ public sealed partial class VegetationRuntime : Node, IMapAware, IViewContentRea
             else if (_unit < treeUnits + _tile.Grass.Length) _tile.Grass[_unit - treeUnits].Mount(host, Key.Map);
             _unit++;
             if (_unit < treeUnits + _tile.Grass.Length) return false;
+            _tile.Mounted = true;
             _owner._since = Interval;
             return true;
         }

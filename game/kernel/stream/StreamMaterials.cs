@@ -6,7 +6,7 @@ using Godot;
 namespace Campus.Kernel.Stream;
 
 /// <summary>Owns only materials returned by Create. Toon and reflection materials are borrowed.</summary>
-internal sealed class StreamMaterials(IToonMaterialProvider toon, IShaderMaterialSource shaders) : IDisposable
+internal sealed class StreamMaterials(IToonMaterialProvider toon, IShaderMaterialSource shaders)
 {
     private readonly Dictionary<ShaderId, ShaderMaterial> _owned = [];
     private readonly Dictionary<PreparedTile.Draw, Material> _bindings = new(ReferenceEqualityComparer.Instance);
@@ -44,14 +44,5 @@ internal sealed class StreamMaterials(IToonMaterialProvider toon, IShaderMateria
         foreach (var (shader, material) in _owned)
         { material.Dispose(); _owned.Remove(shader); return false; }
         _bindings.Clear(); return true;
-    }
-    public void Dispose()
-    {
-        List<Exception>? failures = null;
-        foreach (var (shader, material) in _owned.OrderBy(pair => pair.Key).ToArray())
-            try { material.Dispose(); _owned.Remove(shader); }
-            catch (Exception error) { (failures ??= []).Add(error); }
-        _bindings.Clear();
-        if (failures is not null) throw new AggregateException("Stream material release failed.", failures);
     }
 }

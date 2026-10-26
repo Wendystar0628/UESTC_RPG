@@ -195,28 +195,32 @@ public sealed class StreamPreparationLifecycleTests
             for (var interrupt = 1; interrupt < TestSamples.FrameLoop && !completed; interrupt++)
             {
                 var owner = new PreparedTile(bundle);
-                using var materials = new StreamMaterials(new Materials(material), new Materials(material));
-                await new StreamGeometryPreparation().PrepareAsync(owner, bundle);
-                Check(owner.Draws.Count(draw => !draw.Base.IsValid) == bundle.MultiMeshes.Count && owner.Instances.Count == 0);
-                var ready = false;
-                var work = new VisualMountWork(key, [owner], 1, scenario, BakePriority.Normal, materials, new Reflection(),
-                    () => ready = true, () => { }, error => throw error, tile => tile.BeginRetirement(), () => true);
-                for (var slice = 0; slice < interrupt && !completed; slice++)
+                var materials = new StreamMaterials(new Materials(material), new Materials(material));
+                try
                 {
-                    completed = work.Step(double.Epsilon);
-                    Check(ready == completed && (ready || owner.VisibleInstanceCount == 0));
-                    Check(owner.Draws.All(draw => draw.PendingMultiMesh is null) || owner.Instances.Count == 0);
+                    await new StreamGeometryPreparation().PrepareAsync(owner, bundle);
+                    Check(owner.Draws.Count(draw => !draw.Base.IsValid) == bundle.MultiMeshes.Count && owner.Instances.Count == 0);
+                    var ready = false;
+                    var work = new VisualMountWork(key, [owner], 1, scenario, BakePriority.Normal, materials, new Reflection(),
+                        () => ready = true, () => { }, error => throw error, tile => tile.BeginRetirement(), () => true);
+                    for (var slice = 0; slice < interrupt && !completed; slice++)
+                    {
+                        completed = work.Step(double.Epsilon);
+                        Check(ready == completed && (ready || owner.VisibleInstanceCount == 0));
+                        Check(owner.Draws.All(draw => draw.PendingMultiMesh is null) || owner.Instances.Count == 0);
+                    }
+                    if (ready)
+                    {
+                        Check(owner.Instances.Count == owner.Draws.Count);
+                        foreach (var draw in owner.Draws.Where(draw => draw.Base != draw.Mesh))
+                            Check(RenderingServer.MultimeshGetInstanceCount(draw.Base) > 0 &&
+                                RenderingServer.MultimeshGetBuffer(draw.Base).Length * sizeof(float) == BakedMultiMesh.InstanceStrideBytes);
+                    }
+                    work.Cancel();
+                    while (!work.ReleaseStep(0)) await FrameAwaiter.ProcessAsync(((SceneTree)Engine.GetMainLoop()).Root);
+                    Check(owner.IsDisposed && owner.Instances.Count == 0 && owner.Draws.Count == 0);
                 }
-                if (ready)
-                {
-                    Check(owner.Instances.Count == owner.Draws.Count);
-                    foreach (var draw in owner.Draws.Where(draw => draw.Base != draw.Mesh))
-                        Check(RenderingServer.MultimeshGetInstanceCount(draw.Base) > 0 &&
-                            RenderingServer.MultimeshGetBuffer(draw.Base).Length * sizeof(float) == BakedMultiMesh.InstanceStrideBytes);
-                }
-                work.Cancel();
-                while (!work.ReleaseStep(0)) await FrameAwaiter.ProcessAsync(((SceneTree)Engine.GetMainLoop()).Root);
-                Check(owner.IsDisposed && owner.Instances.Count == 0 && owner.Draws.Count == 0);
+                finally { while (!materials.ReleaseOne()) await FrameAwaiter.ProcessAsync(((SceneTree)Engine.GetMainLoop()).Root); }
             }
             Check(completed);
         }

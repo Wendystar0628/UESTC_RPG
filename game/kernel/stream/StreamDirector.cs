@@ -339,6 +339,6 @@ public partial class StreamDirector : Node, IMapAware, IMapStreamState, IStreamV
         _exiting = true;
         if (_world is not null) _world.InstanceAdvancing -= OnWorldInstanceChanged;
         if (_reflections is not null) _reflections.Changed -= _residency.OnReflectionChanged;
-        _residency.DisposeMaterials();
+        _residency.RequireMaterialsDrained();
     }
 }

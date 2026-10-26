@@ -72,32 +72,28 @@ public sealed class PreparedTile
         if (_initializationStarted || _retiring || _disposed) throw new InvalidOperationException("Prepared tile initialization starts once.");
         _initializationStarted = true;
         if (bundle.Key != Key) throw new InvalidOperationException("Prepared tile input does not match its owner.");
-        try
+        // Reserve ownership before native creation, including the later main-thread MultiMeshes.
+        _storage.EnsureCapacity(bundle.Surfaces.Count + bundle.MultiMeshes.Count * 2);
+        _draws.EnsureCapacity(bundle.Surfaces.Count + bundle.MultiMeshes.Count);
+        foreach (var surface in bundle.Surfaces)
         {
-            // Reserve ownership before native creation, including the later main-thread MultiMeshes.
-            _storage.EnsureCapacity(bundle.Surfaces.Count + bundle.MultiMeshes.Count * 2);
-            _draws.EnsureCapacity(bundle.Surfaces.Count + bundle.MultiMeshes.Count);
-            foreach (var surface in bundle.Surfaces)
-            {
-                if (surface.VertexCount == 0) continue;
-                var mesh = CreateMesh(surface);
-                _draws.Add(new(mesh, mesh, surface.At.ToGodot(), surface.Material,
-                    surface.IgnoreOcclusionCulling, surface.Shader, surface.Reflect,
-                    bundle.Level == LodLevel.L4 && surface.Shader == ShaderId.DioramaFar, surface.NoShadow));
-            }
-            foreach (var item in bundle.MultiMeshes)
-            {
-                if (item.InstanceCount == 0 || item.Surface.VertexCount == 0) continue;
-                if (!BitConverter.IsLittleEndian) throw new PlatformNotSupportedException("Packed instance buffers require a little-endian engine.");
-                var mesh = CreateMesh(item.Surface);
-                _draws.Add(new(default, mesh, Transform3D.Identity, item.Surface.Material,
-                    item.Surface.IgnoreOcclusionCulling, item.Surface.Shader, item.Surface.Reflect,
-                    bundle.Level == LodLevel.L4 && item.Surface.Shader == ShaderId.DioramaFar, item.Surface.NoShadow)
-                { PendingMultiMesh = item });
-            }
-            lock (_liveGate) _live.Add(this);
+            if (surface.VertexCount == 0) continue;
+            var mesh = CreateMesh(surface);
+            _draws.Add(new(mesh, mesh, surface.At.ToGodot(), surface.Material,
+                surface.IgnoreOcclusionCulling, surface.Shader, surface.Reflect,
+                bundle.Level == LodLevel.L4 && surface.Shader == ShaderId.DioramaFar, surface.NoShadow));
         }
-        catch { throw; }
+        foreach (var item in bundle.MultiMeshes)
+        {
+            if (item.InstanceCount == 0 || item.Surface.VertexCount == 0) continue;
+            if (!BitConverter.IsLittleEndian) throw new PlatformNotSupportedException("Packed instance buffers require a little-endian engine.");
+            var mesh = CreateMesh(item.Surface);
+            _draws.Add(new(default, mesh, Transform3D.Identity, item.Surface.Material,
+                item.Surface.IgnoreOcclusionCulling, item.Surface.Shader, item.Surface.Reflect,
+                bundle.Level == LodLevel.L4 && item.Surface.Shader == ShaderId.DioramaFar, item.Surface.NoShadow)
+            { PendingMultiMesh = item });
+        }
+        lock (_liveGate) _live.Add(this);
     }
     /// <summary>Advances one render-server operation in the existing mount budget before any instances mount.</summary>
     internal bool InitializeDrawOne(int index)
