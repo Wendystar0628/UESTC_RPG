@@ -144,17 +144,17 @@ internal sealed class InteriorStream(IBakeService bake, IStreamMountQueue mount,
             availablePreparations--;
         }
     }
-    private async Task Initialize(PreparedTile owner, TileBundle bundle) => await geometry.PrepareAsync(owner, bundle);
+    private async Task Initialize(PreparedTile owner, TileBundle bundle) => await geometry.PrepareAsync(owner, bundle).ConfigureAwait(false);
 
-    public void Finish(Rid scenario, bool allowVisibility)
+    public void HarvestPreparations(Rid scenario)
     {
         foreach (var layer in _layers.Values)
         {
-            if (layer.Preparing is { IsCompleted: true } task)
+            if (!layer.Finished && layer.Preparing is { IsCompleted: true } task)
             {
-                layer.Preparing = null;
                 if (task.IsCompletedSuccessfully)
                 {
+                    layer.Preparing = null;
                     layer.Prepared = layer.Owner;
                     if (_context is null || layer.Revision != mount.Revision)
                     { retire(layer.Owner!); layer.Owner = layer.Prepared = null; layer.Finished = true; }
@@ -173,21 +173,15 @@ internal sealed class InteriorStream(IBakeService bake, IStreamMountQueue mount,
                     layer.Finished = true;
                 }
             }
-            if (!allowVisibility || layer.Prepared is null || !layer.Mounted) continue;
-            var visible = _visible.Contains(layer.Key) && Ready(layer);
-            if (layer.Visible == visible) continue;
-            layer.Visible = visible;
-            // Zero is the shader's fully visible sentinel, rather than a zero-duration interpolation.
-            layer.Prepared.SetVisible(visible, visible && !captureMode ? FrameClock.FadeSeconds : 0);
         }
         for (var i = _draining.Count - 1; i >= 0; i--)
         {
             var layer = _draining[i];
-            if (layer.Preparing is { IsCompleted: true } pending)
+            if (!layer.Finished && layer.Preparing is { IsCompleted: true } pending)
             {
-                layer.Preparing = null;
+                layer.Finished = true;
                 if (pending.IsCompletedSuccessfully)
-                { retire(layer.Owner!); layer.Owner = layer.Prepared = null; }
+                { layer.Preparing = null; retire(layer.Owner!); layer.Owner = layer.Prepared = null; }
                 else
                     try { pending.GetAwaiter().GetResult(); }
                     catch (OperationCanceledException) when (pending.IsCanceled) { }
@@ -203,6 +197,18 @@ internal sealed class InteriorStream(IBakeService bake, IStreamMountQueue mount,
             foreach (var key in _layers.Where(pair => pair.Value.Owner is null && (pair.Value.Finished ||
                          pair.Value.Preparing is null && pair.Value.Handle.State is BakeState.Ready or BakeState.Failed))
                      .Select(pair => pair.Key).ToArray()) _layers.Remove(key);
+    }
+    public void ApplyVisibility()
+    {
+        foreach (var layer in _layers.Values)
+        {
+            if (layer.Prepared is null || !layer.Mounted) continue;
+            var visible = _visible.Contains(layer.Key) && Ready(layer);
+            if (layer.Visible == visible) continue;
+            layer.Visible = visible;
+            // Zero is the shader's fully visible sentinel, rather than a zero-duration interpolation.
+            layer.Prepared.SetVisible(visible, visible && !captureMode ? FrameClock.FadeSeconds : 0);
+        }
     }
     public void AdvanceRetention(double delta, System.Numerics.Vector3 camera)
     {

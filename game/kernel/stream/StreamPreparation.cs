@@ -90,7 +90,7 @@ internal sealed class StreamPreparation(StreamDirector host, IStreamGeometryPrep
     }
 
     // Capture synchronous provider faults on the same real initialization task while retaining its owner.
-    private async Task Initialize(PreparedTile owner, TileBundle bundle) => await _geometry.PrepareAsync(owner, bundle);
+    private async Task Initialize(PreparedTile owner, TileBundle bundle) => await _geometry.PrepareAsync(owner, bundle).ConfigureAwait(false);
 
     private static async Task<ModuleTileCatalog> BuildCatalog(Task<PreparedBakeTiles> tiles)
     {
@@ -117,7 +117,7 @@ internal sealed class StreamPreparation(StreamDirector host, IStreamGeometryPrep
         }
     }
 
-    internal void FinishMountFrame()
+    internal void HarvestPreparations()
     {
         // This method is called only inside the 900 budget accounting, including stale-result disposal.
         for (var i = _preparing.Count - 1; i >= 0; i--)

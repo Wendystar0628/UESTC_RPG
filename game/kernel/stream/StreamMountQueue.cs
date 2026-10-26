@@ -8,7 +8,7 @@ namespace Campus.Kernel.Stream;
 
 public interface IStreamMountFrame
 {
-    void Drain(IAppScreenCoverage coverage, Action<double>? finish = null, Action<double>? release = null, Func<bool>? canActivateVisual = null);
+    void Drain(IAppScreenCoverage coverage, Action? prepare = null, Action<double>? finish = null, Action<double>? release = null, Func<bool>? canActivateVisual = null);
 }
 
 /// <summary>The sole owner of the shared collision/visual mount budget and covered-screen refresh slices.</summary>
@@ -85,9 +85,9 @@ public sealed class StreamMountQueue : IStreamMountQueue, IStreamMountFrame
     private void RecordFailure([FailureHandler("ENG-PERF-STREAM")] Exception error) =>
         Failure = RetainedFailure.Append(Failure, error);
 
-    public void Drain(IAppScreenCoverage coverage, Action<double>? finish = null, Action<double>? release = null, Func<bool>? canActivateVisual = null)
+    public void Drain(IAppScreenCoverage coverage, Action? prepare = null, Action<double>? finish = null, Action<double>? release = null, Func<bool>? canActivateVisual = null)
     {
-        try { DrainFrame(coverage.IsCovered, finish, release, canActivateVisual); }
+        try { DrainFrame(coverage.IsCovered, prepare, finish, release, canActivateVisual); }
         catch (Exception error)
         {
             RecordFailure(error);
@@ -96,17 +96,19 @@ public sealed class StreamMountQueue : IStreamMountQueue, IStreamMountFrame
         }
     }
 
-    private void DrainFrame(bool covered, Action<double>? finish, Action<double>? release, Func<bool>? canActivateVisual)
+    private void DrainFrame(bool covered, Action? prepare, Action<double>? finish, Action<double>? release, Func<bool>? canActivateVisual)
     {
         // Demand changes upgrade the existing work without cancelling or enqueuing another mount.
         var start = _clock();
+        prepare?.Invoke();
         _pending.Sort(Compare);
         var frameBudget = covered ? KernelBudgets.StreamCoveredMountMilliseconds : _settings.MountMilliseconds;
         var retiring = canActivateVisual is not null && !canActivateVisual();
         try
         {
-            release?.Invoke(covered ? frameBudget : retiring
-                ? Math.Max(0, frameBudget - KernelBudgets.CollisionMountMilliseconds) : Math.Min(.25, frameBudget));
+            var releaseBudget = covered ? frameBudget : retiring
+                ? Math.Max(0, frameBudget - KernelBudgets.CollisionMountMilliseconds) : Math.Min(.25, frameBudget);
+            release?.Invoke(Math.Min(releaseBudget, Math.Max(0, frameBudget - (_clock() - start))));
         }
         catch (Exception error) { RecordFailure(error); }
         var collisionUsed = false; var visualUsed = false;

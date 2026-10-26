@@ -18,7 +18,8 @@ public interface IStreamVisualFrame
 {
     bool CanActivateVisual { get; }
     bool ViewReady { get; }
-    void FinishMountFrame(double remainingMilliseconds);
+    void PrepareMountFrame();
+    void CompleteMountFrame(double remainingMilliseconds);
     void ReleaseRetired(double budgetMilliseconds);
 }
 
@@ -256,25 +257,31 @@ public partial class StreamDirector : Node, IMapAware, IMapStreamState, IStreamV
             _pins.PollPinnedPreparation();
             if (Failure is not null || _preparation.Catalog is null || _selection.Tree is null) return;
             _selection.Update(delta);
-            // Current demand is applied before harvesting handles, so a selected pin upgrades in place.
-            _preparation.PollHandles(background: false);
-            _interiors?.Poll(Math.Max(0, _selection.Settings.MaximumPreparations - _preparation.Preparations - _interiors.Preparations));
-            _preparation.PollHandles(background: true);
-            _interiors?.Poll(Math.Max(0, _selection.Settings.MaximumPreparations - _preparation.Preparations - _interiors.Preparations), background: true);
-            if (_interiors?.Failure is { } interiorError) RecordFailure(interiorError);
             _preparation.IssueQueued();
             _interiors?.AdvanceRetention(delta, _camera.Pose.Position);
         }
         catch (Exception error) { RecordFailure(error); }
     }
-    public void FinishMountFrame(double remainingMilliseconds)
+    public void PrepareMountFrame()
     {
         PollFailures();
         if (_context is null || _exiting || Failure is not null) return;
-        _preparation.FinishMountFrame();
-        _interiors?.Finish(GetViewport().GetWorld3D().Scenario, remainingMilliseconds >= .1);
+        _preparation.HarvestPreparations();
+        _interiors?.HarvestPreparations(GetViewport().GetWorld3D().Scenario);
         PollFailures();
-        if (Failure is not null) return;
+        if (Failure is not null || _preparation.Catalog is null || _selection.Tree is null) return;
+        // Current demand is already applied; reclaim completed slots before admitting more preparation.
+        _preparation.PollHandles(background: false);
+        _interiors?.Poll(Math.Max(0, _selection.Settings.MaximumPreparations - _preparation.Preparations - _interiors.Preparations));
+        _preparation.PollHandles(background: true);
+        _interiors?.Poll(Math.Max(0, _selection.Settings.MaximumPreparations - _preparation.Preparations - _interiors.Preparations), background: true);
+        PollFailures();
+    }
+    public void CompleteMountFrame(double remainingMilliseconds)
+    {
+        PollFailures();
+        if (_context is null || _exiting || Failure is not null) return;
+        if (remainingMilliseconds >= .1) _interiors?.ApplyVisibility();
         if (_checkRetention) { _checkRetention = false; _residency.RetireUnneeded(); }
         if (_selection.Tree is null || _preparation.Catalog is null || remainingMilliseconds < .1 || !_selection.PlanCurrent) return;
         _residency.RefreshReflectionWorld(remainingMilliseconds * .25);

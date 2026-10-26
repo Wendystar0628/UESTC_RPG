@@ -108,10 +108,13 @@ public sealed class StreamMountQueueTests
     {
         var clock = 0d; var finishBudget = -1d; var steps = 0;
         var queue = new StreamMountQueue(() => clock);
-        queue.Enqueue(new MountWork(StreamMountKind.Collision, queue.Revision,
-            _ => { steps++; clock += KernelBudgets.StreamCoveredMountMilliseconds / 2; }, slices: 3));
-        queue.Drain(CoveredScreen, remaining => finishBudget = remaining);
-        if (queue.Pending != 1 || steps != 2 || finishBudget != 0)
+        var work = new MountWork(StreamMountKind.Collision, queue.Revision,
+            _ => { steps++; clock += KernelBudgets.StreamCoveredMountMilliseconds / 2; }, slices: 3);
+        queue.Drain(CoveredScreen, prepare: () =>
+        {
+            queue.Enqueue(work); clock += KernelBudgets.StreamCoveredMountMilliseconds / 2;
+        }, finish: remaining => finishBudget = remaining);
+        if (queue.Pending != 1 || steps != 1 || finishBudget != 0)
             throw new InvalidOperationException("Covered mounting failed to yield for the loading UI.");
         queue.Drain(CoveredScreen);
         if (queue.Pending != 0 || steps != 3)
@@ -209,7 +212,7 @@ public sealed class StreamMountQueueTests
     [TestCase, TestCategory(TestReason.Regression)]
     public void FrameCoverageAdmissionReleaseFinishAndClockFaultsReachTheQueueOwner()
     {
-        for (var point = 0; point < 5; point++)
+        for (var point = 0; point < 6; point++)
         {
             var original = new InvalidDataException("frame boundary failed");
             var queue = new StreamMountQueue(point == 3 ? () => throw original : () => 0);
@@ -217,6 +220,7 @@ public sealed class StreamMountQueueTests
             var work = new MountWork(StreamMountKind.Visual, queue.Revision, _ => steps++);
             queue.Enqueue(work);
             queue.Drain(new Coverage(() => point == 4 ? throw original : false),
+                prepare: () => { if (point == 5) throw original; },
                 finish: _ => { if (point == 2) throw original; },
                 release: _ => { if (point == 1) throw original; },
                 canActivateVisual: () => point == 0 ? throw original : true);

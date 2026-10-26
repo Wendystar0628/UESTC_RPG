@@ -66,8 +66,8 @@ internal static class StreamLifecycleTestSupport
         public void Tick(bool mount = true)
         {
             Director._Process(.1);
-            if (mount) Mount.Drain(CoveredScreen, Director.FinishMountFrame, Director.ReleaseRetired, () => Director.CanActivateVisual);
-            else Director.FinishMountFrame(100);
+            if (mount) Mount.Drain(CoveredScreen, Director.PrepareMountFrame, Director.CompleteMountFrame, Director.ReleaseRetired, () => Director.CanActivateVisual);
+            else { Director.PrepareMountFrame(); Director.CompleteMountFrame(100); }
             if (Director.Failure is { } failure) throw failure;
         }
         public async Task Until(Func<bool> ready, bool mount = true)

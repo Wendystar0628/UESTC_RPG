@@ -89,6 +89,21 @@ public sealed class StreamPreparationLifecycleTests
     }
 
     [TestCase, TestCategory(TestReason.Regression), TestCategory("NativeRender"), RequireGodotRuntime]
+    public async Task CompletedPreparationMountsInTheCurrentFrameAndReusesItsSlot()
+    {
+        using var fixture = new StreamFixture(geometry: true);
+        await fixture.Until(() => fixture.Geometry.Prepared.Count > 0, mount: false);
+        var owner = fixture.Geometry.Prepared[0];
+        Check(owner.Draws.Count > 0 && owner.Instances.Count == 0 && fixture.Mount.Pending == 0 &&
+            fixture.Director.Statistics.PendingPreparations > 0);
+        var started = fixture.Geometry.Prepared.Count;
+        fixture.Tick();
+        Check(owner.Instances.Count > 0 && fixture.Geometry.Prepared.Count > started);
+        await fixture.Unload();
+        Check(fixture.Director.IsUnloaded && fixture.Geometry.Prepared.All(tile => tile.IsDisposed));
+    }
+
+    [TestCase, TestCategory(TestReason.Regression), TestCategory("NativeRender"), RequireGodotRuntime]
     public async Task ShutdownAwaitsLateNativePreparationAndReleasesItsActualOwner()
     {
         using var fixture = new StreamFixture(geometry: true);
@@ -111,7 +126,8 @@ public sealed class StreamPreparationLifecycleTests
         var original = new InvalidDataException("native preparation failed");
         fixture.Geometry.Fail(original);
         Check(fixture.Director.Failure is null);
-        fixture.Director.FinishMountFrame(100);
+        try { await fixture.Until(() => fixture.Director.Failure is not null); }
+        catch (Exception error) when (ReferenceEquals(error, original)) { }
         Check(ReferenceEquals(fixture.Director.Failure, original));
         Check(fixture.Geometry.Prepared.Count > 0 && fixture.Geometry.Prepared.All(tile => !tile.IsDisposed));
         fixture.Director._Process(0);
@@ -129,14 +145,14 @@ public sealed class StreamPreparationLifecycleTests
         using var fixture = new StreamFixture();
         await fixture.Until(() => fixture.Director.ViewReady);
         var original = new AggregateException();
-        fixture.Mount.Drain(VisibleWorld, _ => throw original);
+        fixture.Mount.Drain(VisibleWorld, finish: _ => throw original);
         fixture.Director._Process(0);
         Check(ReferenceEquals(fixture.Director.Failure, original));
         fixture.Director._Process(0);
         Check(ReferenceEquals(fixture.Director.Failure, original));
         var later = new InvalidDataException("later mount failure");
         var nested = new AggregateException();
-        fixture.Mount.Drain(VisibleWorld, _ => throw new AggregateException(original, later, nested));
+        fixture.Mount.Drain(VisibleWorld, finish: _ => throw new AggregateException(original, later, nested));
         fixture.Director._Process(0);
         var published = fixture.Director.Failure as AggregateException
             ?? throw new InvalidOperationException("Stream failure lost its collected causes.");
@@ -155,7 +171,7 @@ public sealed class StreamPreparationLifecycleTests
         using var fixture = new StreamFixture();
         await fixture.Until(() => fixture.Director.ViewReady);
         var original = new InvalidDataException("mount queue failed");
-        fixture.Mount.Drain(VisibleWorld, _ => throw original);
+        fixture.Mount.Drain(VisibleWorld, finish: _ => throw original);
         Check(fixture.Director.Failure is null);
         _ = fixture.Director.ResidentReady;
         _ = fixture.Director.DestinationReady;
