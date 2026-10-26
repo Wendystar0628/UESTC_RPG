@@ -14,6 +14,7 @@ internal sealed class VisualMountWork(BakeKey key, IReadOnlyList<PreparedTile> b
     // Membership belongs to this request, rather than the residency list that retirement clears and reuses.
     private readonly PreparedTile[] _bundles = bundles.ToArray();
     private int _bundle, _draw;
+    private bool _initializing = true;
     private bool _cancelled, _complete;
     public bool IsCancelled => _cancelled;
     public BakeKey Key { get; } = key;
@@ -28,9 +29,18 @@ internal sealed class VisualMountWork(BakeKey key, IReadOnlyList<PreparedTile> b
             var start = FrameClock.MonotonicMilliseconds;
             do
             {
-                if (_bundle >= _bundles.Length) { mounted(); _complete = true; return true; }
+                if (_bundle >= _bundles.Length)
+                {
+                    if (_initializing) { _initializing = false; _bundle = _draw = 0; continue; }
+                    mounted(); _complete = true; return true;
+                }
                 var bundle = _bundles[_bundle];
                 if (_draw >= bundle.Draws.Count) { _bundle++; _draw = 0; continue; }
+                if (_initializing)
+                {
+                    if (bundle.InitializeDrawOne(_draw)) _draw++;
+                    continue;
+                }
                 var draw = bundle.Draws[_draw];
                 var reflectionScenario = reflections.Scenario;
                 var reflectionMaterial = reflectionScenario.IsValid ? reflections.ProxyMaterial : null;

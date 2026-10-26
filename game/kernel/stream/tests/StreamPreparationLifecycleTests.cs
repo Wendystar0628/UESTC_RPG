@@ -104,6 +104,48 @@ public sealed class StreamPreparationLifecycleTests
     }
 
     [TestCase, TestCategory(TestReason.Regression), TestCategory("NativeRender"), RequireGodotRuntime]
+    public async Task MultiMeshMountYieldsBeforePublicationAndCancellationReleasesEveryPartialOwner()
+    {
+        var bounds = new Box3(N.Vector3.Zero, N.Vector3.One);
+        var key = new BakeKey(new("fixture"), "fixture.native", "L4/0/0");
+        var bundle = Bundle(key, bounds, multiMeshes: true);
+        Check(bundle.MultiMeshes.Count > 1);
+        using var material = new StandardMaterial3D();
+        var scenario = RenderingServer.ScenarioCreate();
+        try
+        {
+            var completed = false;
+            for (var interrupt = 1; interrupt < TestSamples.FrameLoop && !completed; interrupt++)
+            {
+                using var owner = new PreparedTile(bundle);
+                using var materials = new StreamMaterials(new Materials(material), new Materials(material));
+                await new StreamGeometryPreparation().PrepareAsync(owner, bundle);
+                Check(owner.Draws.Count(draw => !draw.Base.IsValid) == bundle.MultiMeshes.Count && owner.Instances.Count == 0);
+                var ready = false;
+                var work = new VisualMountWork(key, [owner], 1, scenario, BakePriority.Normal, materials, new Reflection(),
+                    () => ready = true, () => { }, error => throw error);
+                for (var slice = 0; slice < interrupt && !completed; slice++)
+                {
+                    completed = work.Step(0);
+                    Check(ready == completed && (ready || owner.VisibleInstanceCount == 0));
+                    Check(owner.Draws.All(draw => draw.PendingMultiMesh is null) || owner.Instances.Count == 0);
+                }
+                if (ready)
+                {
+                    Check(owner.Instances.Count == owner.Draws.Count);
+                    foreach (var draw in owner.Draws.Where(draw => draw.Base != draw.Mesh))
+                        Check(RenderingServer.MultimeshGetInstanceCount(draw.Base) > 0 &&
+                            RenderingServer.MultimeshGetBuffer(draw.Base).Length * sizeof(float) == BakedMultiMesh.InstanceStrideBytes);
+                }
+                work.Cancel(); owner.Dispose();
+                Check(owner.IsDisposed && owner.Instances.Count == 0 && owner.Draws.Count == 0);
+            }
+            Check(completed);
+        }
+        finally { RenderingServer.FreeRid(scenario); }
+    }
+
+    [TestCase, TestCategory(TestReason.Regression), TestCategory("NativeRender"), RequireGodotRuntime]
     public async Task ShutdownAwaitsLateNativePreparationAndReleasesItsActualOwner()
     {
         using var fixture = new StreamFixture(geometry: true);

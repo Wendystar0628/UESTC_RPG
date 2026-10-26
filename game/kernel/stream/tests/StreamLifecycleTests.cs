@@ -55,7 +55,7 @@ public sealed class StreamLifecycleTests
     [TestCase, TestCategory(TestReason.Regression), TestCategory("NativeRender"), RequireGodotRuntime]
     public async Task CurrentViewAndArrivalRequireFineGeometryToReplaceItsCoarseAncestor()
     {
-        using var fixture = new StreamFixture(geometry: true);
+        using var fixture = new StreamFixture(geometry: true, multiMeshes: true);
         fixture.Bake.Hold = key => BakeRequestKeys.Parse(key).Level is LodLevel.L0 or LodLevel.L4;
         fixture.Director.Prefetch(fixture.Camera.Pose, ViewMode.Fly);
         await fixture.Until(() => fixture.Bake.Waiting.Any(handle => handle.TileKey.Level == LodLevel.L0));
@@ -65,7 +65,8 @@ public sealed class StreamLifecycleTests
         Check(!fixture.Director.ViewReady && !fixture.Director.DestinationReady);
         fixture.Bake.Release();
         await fixture.Until(() => fixture.Mount.Pending > 0, mount: false);
-        Check(!fixture.Director.ViewReady && !fixture.Director.DestinationReady);
+        Check(fixture.Geometry.Prepared.Any(owner => owner.Draws.Any(draw => !draw.Base.IsValid)) &&
+            !fixture.Director.ViewReady && !fixture.Director.DestinationReady);
         await fixture.Until(() => fixture.Director.ViewReady && fixture.Director.DestinationReady);
         Check(fixture.Geometry.Prepared.Any(tile => tile.VisibleInstanceCount > 0));
         await fixture.Unload();

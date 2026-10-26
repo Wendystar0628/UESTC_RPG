@@ -36,7 +36,7 @@ internal static class StreamLifecycleTestSupport
         public Collision Collision { get; } = new();
         public StreamMountQueue Mount { get; }
         public StreamFixture(bool geometry = false, bool elevated = false, Task<PreparedBakeTiles>? catalog = null,
-            bool staticTitle = false, StreamMountQueue? mount = null)
+            bool staticTitle = false, StreamMountQueue? mount = null, bool multiMeshes = false)
         {
             Mount = mount ?? new(() => 0);
             var bounds = elevated ? new Box3(new(-512, 0, -512), new(512, 10, 512)) : new Box3(N.Vector3.Zero, new(128, 10, 128));
@@ -44,7 +44,7 @@ internal static class StreamLifecycleTestSupport
                 TileMax = new((int)bounds.Max.X / TileGrid.BaseEdge - 1, (int)bounds.Max.Z / TileGrid.BaseEdge - 1) };
             Context = new(map, new FakeWorld { Boundary = new([]) });
             Camera = new(pose: elevated ? new Pose(new(-193, 158, 111), 0, -68, 60) : new Pose(new(64, 2, 64), 0, 0, 60));
-            Bake = new(bounds);
+            Bake = new(bounds, multiMeshes);
             var modules = new Dictionary<string, IReadOnlyList<TileKey>>();
             if (geometry)
             {
@@ -95,13 +95,13 @@ internal static class StreamLifecycleTestSupport
         { if (Prepared) return Task.CompletedTask; var work = new TaskCompletionSource(); Work.Add(work); Tokens.Add(cancellation); return work.Task; }
         public Task PrepareRegion(IMapContext context, MapRect region, CancellationToken cancellation = default) => Task.CompletedTask;
     }
-    internal sealed class StreamBake(Box3 bounds) : IBakeService
+    internal sealed class StreamBake(Box3 bounds, bool multiMeshes = false) : IBakeService
     {
         private readonly Dictionary<BakeKey, Handle> _handles = [];
         public Func<BakeKey, bool> Hold { get; set; } = _ => false;
         public IReadOnlyList<Handle> Waiting => _handles.Values.Where(handle => !handle.Done.IsCompleted).ToArray();
         public IBakeHandle Ensure(BakeKey key, BakePriority priority)
-        { if (_handles.TryGetValue(key, out var value)) return value; var handle = new Handle(Bundle(key, bounds)); _handles.Add(key, handle); if (!Hold(key)) handle.Complete(); return handle; }
+        { if (_handles.TryGetValue(key, out var value)) return value; var handle = new Handle(Bundle(key, bounds, multiMeshes)); _handles.Add(key, handle); if (!Hold(key)) handle.Complete(); return handle; }
         public void CompleteLevel(LodLevel level) { foreach (var handle in Waiting.Where(handle => handle.TileKey.Level == level)) handle.Complete(); }
         public void Release() { Hold = _ => false; foreach (var handle in Waiting) handle.Complete(); }
         public BakeCacheStatistics CacheStatistics => default;
@@ -138,12 +138,15 @@ internal static class StreamLifecycleTestSupport
         public void Release() { Hold = false; foreach (var (_, done) in Waiting) done.SetResult(); Waiting.Clear(); }
         public void Fail(Exception error) { Hold = false; foreach (var (_, done) in Waiting) done.SetException(error); Waiting.Clear(); }
     }
-    internal static TileBundle Bundle(BakeKey key, Box3 bounds)
+    internal static TileBundle Bundle(BakeKey key, Box3 bounds, bool multiMeshes = false)
     {
         var parsed = BakeRequestKeys.Parse(key);
         var source = new GeometryBundle(new(new ToonSpec(new("wall.lit"), new("wall.shade"))),
             [0, 0, 0, 1, 0, 0, 0, 0, 1], [0, 1, 0, 0, 1, 0, 0, 1, 0], [0, 1, 2]);
-        return new(key, parsed.Tile, parsed.Level, bounds, [BakeSurfacePacker.Pack(source, bounds, Campus.Contracts.Tests.PaletteFixture.Catalog)]);
+        var packed = BakeSurfacePacker.Pack(source, bounds, Campus.Contracts.Tests.PaletteFixture.Catalog);
+        return new(key, parsed.Tile, parsed.Level, bounds, [packed],
+            multiMeshes ? [new(packed, 1, new byte[BakedMultiMesh.InstanceStrideBytes], bounds),
+                          new(packed, 1, new byte[BakedMultiMesh.InstanceStrideBytes], bounds)] : []);
     }
     [KernelService(typeof(FixtureCollisionParticipant), Map = "stream-fixture")]
     internal sealed class FixtureCollisionParticipant : IStreamTileParticipant
@@ -192,8 +195,8 @@ internal static class StreamLifecycleTestSupport
         public SweepHit? SupportRay(N.Vector3 from, N.Vector3 to) => null;
         public int NearbyBoundaries(N.Vector3 feet, float radius, float height, Span<BoundaryHit> hits) => 0;
     }
-    private sealed class Materials(Material material) : IToonMaterialProvider, IShaderMaterialSource { public Material Get(ToonSpec spec) => material; public Material CreatePipelineMaterial(ToonKind kind) => throw new NotSupportedException(); public ShaderMaterial Create(ShaderId shader) => throw new NotSupportedException(); }
-    private sealed class Reflection : IReflectionWorld
+    internal sealed class Materials(Material material) : IToonMaterialProvider, IShaderMaterialSource { public Material Get(ToonSpec spec) => material; public Material CreatePipelineMaterial(ToonKind kind) => throw new NotSupportedException(); public ShaderMaterial Create(ShaderId shader) => throw new NotSupportedException(); }
+    internal sealed class Reflection : IReflectionWorld
     {
         public Rid Scenario => default; public Material ProxyMaterial => throw new NotSupportedException();
         public event Action? Changed { add { } remove { } }

@@ -18,6 +18,8 @@ public sealed class PreparedTile : IDisposable
     public sealed record Draw(Rid Base, Rid Mesh, Transform3D At, ToonRef Material,
         bool IgnoreOcclusionCulling, ShaderId? Shader, bool Reflect, bool Resident = false, bool NoShadow = false)
     {
+        public Rid Base { get; internal set; } = Base;
+        internal BakedMultiMesh? PendingMultiMesh { get; set; }
         public bool IsWater => Shader is ShaderId.Water;
         public bool Reflects => Reflect && !IsWater;
     }
@@ -28,6 +30,7 @@ public sealed class PreparedTile : IDisposable
     private readonly List<bool> _mainDetached = [], _reflectionDetached = [];
     private readonly List<Draw> _draws = [];
     private bool _initializationStarted;
+    private int _multiStep;
     private bool _disposed;
     private bool _retiring;
     private int _detachCursor = -1;
@@ -71,6 +74,9 @@ public sealed class PreparedTile : IDisposable
         if (bundle.Key != Key) throw new InvalidOperationException("Prepared tile input does not match its owner.");
         try
         {
+            // Reserve ownership before native creation, including the later main-thread MultiMeshes.
+            _storage.EnsureCapacity(bundle.Surfaces.Count + bundle.MultiMeshes.Count * 2);
+            _draws.EnsureCapacity(bundle.Surfaces.Count + bundle.MultiMeshes.Count);
             foreach (var surface in bundle.Surfaces)
             {
                 if (surface.VertexCount == 0) continue;
@@ -82,19 +88,12 @@ public sealed class PreparedTile : IDisposable
             foreach (var item in bundle.MultiMeshes)
             {
                 if (item.InstanceCount == 0 || item.Surface.VertexCount == 0) continue;
-                var mesh = CreateMesh(item.Surface);
-                var multi = RenderingServer.MultimeshCreate();
-                if (!multi.IsValid) throw new InvalidOperationException("MultiMesh creation failed.");
-                _storage.Add((multi, true));
-                RenderingServer.MultimeshAllocateData(multi, item.InstanceCount,
-                    RenderingServer.MultimeshTransformFormat.Transform3D, false, true);
-                RenderingServer.MultimeshSetMesh(multi, mesh);
                 if (!BitConverter.IsLittleEndian) throw new PlatformNotSupportedException("Packed instance buffers require a little-endian engine.");
-                RenderingServer.MultimeshSetBuffer(multi, MemoryMarshal.Cast<byte, float>(item.InstanceData.Span));
-                RenderingServer.MultimeshSetCustomAabb(multi, Bounds(item.Bounds));
-                _draws.Add(new(multi, mesh, Transform3D.Identity, item.Surface.Material,
+                var mesh = CreateMesh(item.Surface);
+                _draws.Add(new(default, mesh, Transform3D.Identity, item.Surface.Material,
                     item.Surface.IgnoreOcclusionCulling, item.Surface.Shader, item.Surface.Reflect,
-                    bundle.Level == LodLevel.L4 && item.Surface.Shader == ShaderId.DioramaFar, item.Surface.NoShadow));
+                    bundle.Level == LodLevel.L4 && item.Surface.Shader == ShaderId.DioramaFar, item.Surface.NoShadow)
+                { PendingMultiMesh = item });
             }
             lock (_liveGate) _live.Add(this);
         }
@@ -108,6 +107,43 @@ public sealed class PreparedTile : IDisposable
             }
             throw;
         }
+    }
+    /// <summary>Advances one render-server operation in the existing mount budget before any instances mount.</summary>
+    internal bool InitializeDrawOne(int index)
+    {
+        ObjectDisposedException.ThrowIf(_disposed, this);
+        if (_retiring) throw new InvalidOperationException("A retiring tile cannot initialize native storage.");
+        var draw = _draws[index];
+        if (draw.PendingMultiMesh is not { } item) return true;
+        // Safe rendering defers worker MultiMesh calls to the next main-thread server call. Keep all
+        // of them here, with a budget check between operations and ownership retained before each call.
+        switch (_multiStep)
+        {
+            case 0:
+                var multi = RenderingServer.MultimeshCreate();
+                if (!multi.IsValid) throw new InvalidOperationException("MultiMesh creation failed.");
+                _storage.Add((multi, true));
+                draw.Base = multi;
+                break;
+            case 1:
+                RenderingServer.MultimeshAllocateData(draw.Base, item.InstanceCount,
+                    RenderingServer.MultimeshTransformFormat.Transform3D, false, true);
+                break;
+            case 2:
+                RenderingServer.MultimeshSetMesh(draw.Base, draw.Mesh);
+                break;
+            case 3:
+                RenderingServer.MultimeshSetBuffer(draw.Base, MemoryMarshal.Cast<byte, float>(item.InstanceData.Span));
+                break;
+            case 4:
+                RenderingServer.MultimeshSetCustomAabb(draw.Base, Bounds(item.Bounds));
+                draw.PendingMultiMesh = null;
+                _multiStep = 0;
+                return false;
+            default: throw new InvalidOperationException("Unknown MultiMesh initialization step.");
+        }
+        _multiStep++;
+        return false;
     }
     private Rid CreateMesh(BakedSurface surface)
     {
@@ -158,6 +194,7 @@ public sealed class PreparedTile : IDisposable
         ObjectDisposedException.ThrowIf(_disposed, this);
         if (_retiring) throw new InvalidOperationException("A retiring tile cannot accept new native instances.");
         var draw = _draws[index];
+        if (draw.PendingMultiMesh is not null) throw new InvalidOperationException("MultiMesh storage must finish initializing before mounting.");
         // MultiMesh references a prototype mesh; all material assignment remains on the main thread.
         RenderingServer.MeshSurfaceSetMaterial(draw.Mesh, 0, material);
         var instance = RenderingServer.InstanceCreate2(draw.Base, scenario);
