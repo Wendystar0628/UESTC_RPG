@@ -1755,7 +1755,7 @@
   - ★ ENG-PERF-STREAM §0.1 接入要点 · L28 · 217
 - ENG-PERF-STREAM §1 流式加载 · L34 · 2.1k
   - ENG-PERF-STREAM §1.1 本机烘焙、缓存与加载 · L36 · 668
-  - ENG-PERF-STREAM §1.2 帧内请求、挂载与六条不变量 · L44 · 691
+  - ENG-PERF-STREAM §1.2 帧内请求、挂载与六条不变量 · L44 · 694
   - ENG-PERF-STREAM §1.3 碰撞级与室内包 · L57 · 364
   - ENG-PERF-STREAM §1.4 外围与目的地预取 · L61 · 324
 - ENG-PERF-STREAM §2 主线程与 C# · L65 · 315
