@@ -1,7 +1,6 @@
 using Campus.Kernel.Diagnostics;
 using System.Reflection;
 using Campus.Contracts;
-using Campus.Contracts.Bake;
 using Campus.Contracts.Maps;
 using Campus.Kernel.Frame;
 using Godot;
@@ -191,25 +190,18 @@ public partial class RenderHost : Node3D, IRenderHost, IRenderReadiness, IMapAwa
     {
         if (!_entries.Remove(handle.Value, out var entry)) return;
         _retiring.Add(handle.Value, entry);
-        _queue!.Retire(new EntryRetirement(this, handle.Value, entry, _map ?? throw new InvalidOperationException("Dynamic entry has no map owner."), _queue.Revision));
+        _queue!.Retire(new EntryRetirement(this, handle.Value, entry));
         // Normal display replacement hides the complete old group inside its mount step.
         // Map shutdown only stops producers here; its covered retirement queue owns native teardown.
         if (_accepting) entry.Root.Visible = false;
         ReportInstanceCounts("retiring", handle.Value);
     }
 
-    private sealed class EntryRetirement(RenderHost host, ulong handle, Entry entry, MapId map, long revision)
-        : IStreamMountWork
+    private sealed class EntryRetirement(RenderHost host, ulong handle, Entry entry)
+        : IStreamReleaseWork
     {
-        public BakeKey Key { get; } = new(map, "render.dynamic", handle.ToString(System.Globalization.CultureInfo.InvariantCulture));
-        public BakePriority Priority => BakePriority.Background;
-        public long Revision { get; } = revision;
-        public StreamMountKind Kind => StreamMountKind.Auxiliary;
         private bool _released;
 
-        // Unmount already revoked this entry's identity; this owner can only retire.
-        public bool Step(double budgetMilliseconds) => true;
-        public void Cancel() { }
         public bool ReleaseStep(double budgetMilliseconds)
         {
             if (_released) return true;

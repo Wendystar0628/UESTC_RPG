@@ -4,6 +4,7 @@ using Campus.Contracts.Maps;
 using Campus.Contracts.Bake;
 using Campus.Contracts.Quality;
 using Campus.Contracts.Vegetation;
+using Campus.Kernel.Frame;
 using Campus.Kernel.Instances;
 using Campus.Kernel.Renderer;
 using Campus.Kernel.Stream;
@@ -391,8 +392,13 @@ public sealed class GeometryInstancePoolRuntimeTests
     {
         using var fixture = Fixture.Create();
         using var transitions = new VegetationTransitionMap();
+        var rect = new MapRect(N.Vector2.Zero, new N.Vector2(TileGrid.BaseEdge));
+        using var nearReady = Image.CreateEmpty(VegetationNearReadyEncoding.Width(rect), VegetationNearReadyEncoding.Height(rect), false, Image.Format.Rgf);
+        nearReady.Fill(Colors.Transparent);
         var stream = new StreamDirector();
         var runtime = new VegetationRuntime();
+        var previousClock = FrameClock.FadeSeconds;
+        FrameClock.FadeSeconds = RenderFade.Seconds;
         IStreamMountWork? work = null;
         try
         {
@@ -410,7 +416,7 @@ public sealed class GeometryInstancePoolRuntimeTests
             {
                 ("_host", fixture.Host), ("_streamFrame", stream), ("_world", world),
                 ("_rig", new TestCameraRig(pose: new Pose(eye, 0, 0))), ("_map", map), ("_transitionMap", transitions),
-                ("_shadowReach", distance * 2)
+                ("_shadowReach", distance * 2), ("_mapRect", rect), ("_nearReadyImage", nearReady)
             }) typeof(VegetationRuntime).GetField(name, System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!.SetValue(runtime, value);
             var records = new float[InstanceStreamLayout.FloatsPerInstance];
             InstanceStreamLayout.Write(records, N.Matrix4x4.CreateTranslation(foot), new(0, 0, 0, VegetationBuckets.ReferenceTreeHeight));
@@ -429,16 +435,26 @@ public sealed class GeometryInstancePoolRuntimeTests
             AssertThat(fixture.Host.GetChildCount() == prototypes.Length && Uploaded() == 0 &&
                 (grass || VegetationBuckets.Target(distance, 1f, VegetationBuckets.NotNear) == (byte)VegPool.L0))
                 .OverrideFailureMessage("The fixture must reach allocated pools whose first real records have not been uploaded by Process.").IsTrue();
+            var initialClock = FrameClock.FadeSeconds + RenderFade.Seconds;
             bool complete;
             do
             {
                 var before = Uploaded();
                 runtime._Process(.1);
                 AssertThat(Uploaded() == before).OverrideFailureMessage("Process consumed an incomplete tile's initial membership.").IsTrue();
+                FrameClock.FadeSeconds += RenderFade.Seconds;
                 complete = work.Step(1);
                 AssertThat(Uploaded() - before <= 1 && runtime.IsReady(key) == complete)
                     .OverrideFailureMessage("An initial mount step must upload at most one pool and publish only after the last pool.").IsTrue();
             } while (!complete);
+            if (!staticPreload && !grass)
+            {
+                AssertThat(FrameClock.FadeSeconds - initialClock > RenderFade.Seconds && Uploaded() > 0)
+                    .OverrideFailureMessage("The real initial tree uploads must span longer than one near fade.").IsTrue();
+                var ready = nearReady.GetPixel(0, 0);
+                AssertThat(ready.R == 1f && ready.G == VegetationNearReadyEncoding.EncodeStart(FrameClock.FadeSeconds, true))
+                    .OverrideFailureMessage("Near coverage must begin its fade when the actual last pool publishes readiness.").IsTrue();
+            }
             if (staticPreload)
             {
                 AssertThat(!runtime.IsReady(new Pose(eye, 0, 0)) && fixture.Host.GetChildren().OfType<MultiMeshInstance3D>().All(node => node.Multimesh.VisibleInstanceCount == 0))
@@ -457,6 +473,7 @@ public sealed class GeometryInstancePoolRuntimeTests
         }
         finally
         {
+            FrameClock.FadeSeconds = previousClock;
             if (work is not null) while (!work.ReleaseStep(0)) { }
             runtime.Free(); stream.Free();
         }

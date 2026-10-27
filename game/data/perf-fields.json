@@ -1157,7 +1157,7 @@
           "nullable": true,
           "unit": "ms",
           "source": "FrameSample.Stream.MountMilliseconds",
-          "note": "This process frame shared StreamMount Drain wall-clock duration, including retirement release and finish callbacks; not isolated CPU time. Missing owner snapshot remains null."
+          "note": "本帧挂载 Step 同步耗时，不含准备、可见性完成与释放；缺失 owner 快照保持 null。"
         },
         {
           "name": "streamWatchdogTrips",

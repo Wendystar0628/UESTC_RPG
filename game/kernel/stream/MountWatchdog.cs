@@ -1,6 +1,6 @@
 namespace Campus.Kernel.Stream;
 
-/// <summary>Pure budget policy; all timing values are supplied by Campus.Kernel.Frame.</summary>
+/// <summary>Pure mount-step budget policy with local cooldown and recovery rules.</summary>
 public sealed class MountWatchdog
 {
     private readonly double _budgetMilliseconds;

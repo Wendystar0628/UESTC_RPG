@@ -447,6 +447,11 @@ public sealed partial class VegetationRuntime : Node, IMapAware, IViewContentRea
             if (_initialUnit < units) return false;
             _tile.AppliedEye = world > 0 ? _initialEye : null;
             _tile.Mounted = true;
+            if (world > 0)
+            {
+                // Near coverage starts only when every initial pool is ready to replace its far layer.
+                _tile.ResetNear(); _tile.UpdateNear(_initialEye, FrameClock.FadeSeconds);
+            }
             _owner.WriteNearReady(_tile); _owner.UploadDataTextures();
             _owner._since = Interval;
             return true;
