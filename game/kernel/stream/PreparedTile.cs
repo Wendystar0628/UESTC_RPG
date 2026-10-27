@@ -1,3 +1,4 @@
+using System.Buffers;
 using System.Runtime.InteropServices;
 using Campus.Contracts;
 using Campus.Contracts.Bake;
@@ -147,33 +148,44 @@ public sealed class PreparedTile
                 _ => throw new InvalidDataException("Unknown baked primitive.")
             }),
             ["format"] = unchecked((long)surface.Format),
-            ["vertex_data"] = surface.VertexData.ToArray(),
             ["vertex_count"] = surface.VertexCount,
             ["aabb"] = Bounds(surface.Bounds),
-            ["attribute_data"] = surface.AttributeData.ToArray(),
-            ["skin_data"] = surface.SkinData.ToArray(),
-            ["index_data"] = surface.IndexData.ToArray(),
             ["index_count"] = surface.IndexCount,
             ["uv_scale"] = new Vector4(surface.UvScale.X, surface.UvScale.Y, surface.UvScale.Z, surface.UvScale.W)
         };
+        SetPackedData(data, "vertex_data", surface.VertexData);
+        SetPackedData(data, "attribute_data", surface.AttributeData);
+        SetPackedData(data, "skin_data", surface.SkinData);
+        SetPackedData(data, "index_data", surface.IndexData);
         using var lods = new Godot.Collections.Array();
-        var lodOwners = new List<Godot.Collections.Dictionary>();
+        foreach (var lod in surface.Lods)
+        {
+            using var dictionary = new Godot.Collections.Dictionary { ["edge_length"] = lod.Error };
+            SetPackedData(dictionary, "index_data", lod.IndexData);
+            using var value = Variant.CreateFrom(dictionary);
+            lods.Add(value);
+        }
+        using var lodsValue = Variant.CreateFrom(lods);
+        data["lods"] = lodsValue;
+        using var surfacesOwner = new Godot.Collections.Array();
+        var surfaces = new Godot.Collections.Array<Godot.Collections.Dictionary>(surfacesOwner);
+        surfaces.Add(data);
+        var mesh = RenderingServer.MeshCreateFromSurfaces(surfaces);
+        if (!mesh.IsValid) throw new InvalidDataException($"GPU mesh creation failed for {Key}.");
+        _storage.Add((mesh, false)); return mesh;
+    }
+    private static void SetPackedData(Godot.Collections.Dictionary target, string key, ReadOnlyMemory<byte> source)
+    {
+        var buffer = ArrayPool<byte>.Shared.Rent(source.Length);
         try
         {
-            foreach (var lod in surface.Lods)
-            {
-                var dictionary = new Godot.Collections.Dictionary { ["edge_length"] = lod.Error, ["index_data"] = lod.IndexData.ToArray() };
-                lodOwners.Add(dictionary); lods.Add(dictionary);
-            }
-            data["lods"] = lods;
-            using var surfacesOwner = new Godot.Collections.Array();
-            var surfaces = new Godot.Collections.Array<Godot.Collections.Dictionary>(surfacesOwner);
-            surfaces.Add(data);
-            var mesh = RenderingServer.MeshCreateFromSurfaces(surfaces);
-            if (!mesh.IsValid) throw new InvalidDataException($"GPU mesh creation failed for {Key}.");
-            _storage.Add((mesh, false)); return mesh;
+            source.Span.CopyTo(buffer);
+            // Godot 4.7.2 copies this exact span into native PackedByteArray storage synchronously.
+            using var value = Variant.CreateFrom(buffer.AsSpan(0, source.Length));
+            using var nativeKey = Variant.CreateFrom(key);
+            target[nativeKey] = value;
         }
-        finally { foreach (var lod in lodOwners) lod.Dispose(); }
+        finally { ArrayPool<byte>.Shared.Return(buffer); }
     }
     public Rid MountOne(int index, Rid scenario, Rid material, Rid reflectionScenario = default,
         Material? reflectionMaterial = null)

@@ -63,19 +63,45 @@ public sealed class StreamPreparationLifecycleTests
     {
         var bounds = new Box3(N.Vector3.Zero, N.Vector3.One);
         var key = new BakeKey(new("fixture"), "fixture.native", "L4/0/0");
-        var valid = Bundle(key, bounds).Surfaces[0];
+        var source = Bundle(key, bounds).Surfaces[0];
+        var lod = new BakedMeshLod(1f, source.IndexCount, new byte[] { 0, 0, 2, 0, 1, 0 });
+        var valid = new BakedSurface(source.Material, source.Format, source.Primitive, source.VertexCount, source.IndexCount,
+            source.VertexData, source.AttributeData, source.IndexData, bounds, lods: [lod], uvScale: source.UvScale);
         var invalid = new BakedSurface(valid.Material, 0, valid.Primitive, valid.VertexCount, valid.IndexCount,
             valid.VertexData, valid.AttributeData, valid.IndexData, bounds);
         var bundle = new TileBundle(key, StreamTile.Root.Tile, LodLevel.L4, bounds, [valid, invalid]);
         var owner = new PreparedTile(bundle);
         var task = new StreamGeometryPreparation().PrepareAsync(owner, bundle);
-        Exception? original = null;
-        try { await task; throw new InvalidOperationException("Invalid native input initialized successfully."); }
-        catch (InvalidDataException error) { original = error; }
-        Check(task.IsFaulted && !owner.IsDisposed && owner.Draws.Count > 0);
-        try { await task; throw new InvalidOperationException("Faulted initialization became successful."); }
-        catch (Exception error) when (ReferenceEquals(error, original)) { }
-        await ReleasePreparedAsync(owner);
+        try
+        {
+            Exception? original = null;
+            try { await task; throw new InvalidOperationException("Invalid native input initialized successfully."); }
+            catch (InvalidDataException error) { original = error; }
+            Check(task.IsFaulted && !owner.IsDisposed && owner.Draws.Count > 0);
+            using var native = RenderingServer.MeshGetSurface(owner.Draws[0].Mesh, 0);
+            using var vertices = native["vertex_data"];
+            using var attributes = native["attribute_data"];
+            using var indices = native["index_data"];
+            Check(vertices.AsByteArray().AsSpan().SequenceEqual(valid.VertexData.Span) &&
+                attributes.AsByteArray().AsSpan().SequenceEqual(valid.AttributeData.Span) &&
+                indices.AsByteArray().AsSpan().SequenceEqual(valid.IndexData.Span));
+            if (native.ContainsKey("skin_data"))
+            {
+                using var skin = native["skin_data"];
+                Check(skin.AsByteArray().Length == valid.SkinData.Length);
+            }
+            using var lodsValue = native["lods"];
+            using var lods = lodsValue.AsGodotArray();
+            Check(lods.Count == valid.Lods.Count);
+            using var lodValue = lods[0];
+            using var nativeLod = lodValue.AsGodotDictionary();
+            using var lodIndices = nativeLod["index_data"];
+            Check(nativeLod["edge_length"].AsSingle() == lod.Error &&
+                lodIndices.AsByteArray().AsSpan().SequenceEqual(lod.IndexData.Span));
+            try { await task; throw new InvalidOperationException("Faulted initialization became successful."); }
+            catch (Exception error) when (ReferenceEquals(error, original)) { }
+        }
+        finally { await ReleasePreparedAsync(owner); }
         Check(owner.IsDisposed);
     }
 
