@@ -87,6 +87,9 @@ internal sealed class WeatherSettings
 internal sealed class WeatherTimeline(WeatherProfile profile, uint seed, MapId map, WeatherSettings settings)
 {
     private readonly Dictionary<long, WeatherSpan[]> _days = [];
+    private readonly List<WeatherSpan> _segments = [];
+    private readonly List<WeatherSpan> _automatic = [];
+    private readonly List<double> _cuts = [];
     private Season _season;
     private double _offset;
     private bool _primed;
@@ -165,17 +168,20 @@ internal sealed class WeatherTimeline(WeatherProfile profile, uint seed, MapId m
     }
 
     /// <summary>The next 24 hours as contiguous spans, merged where the weather does not change.</summary>
-    public WeatherSpan[] Ahead(double hours)
+    public void Ahead(double hours, List<WeatherSpan> result)
     {
-        if (settings.Manual is { } manual) return [new(hours, hours + 24, manual.Kind, manual.Intensity)];
-        var merged = new List<WeatherSpan>();
+        result.Clear();
+        if (settings.Manual is { } manual)
+        {
+            result.Add(new(hours, hours + 24, manual.Kind, manual.Intensity));
+            return;
+        }
         foreach (var span in Segments(hours, hours + 24))
         {
-            if (merged.Count > 0 && merged[^1].Kind == span.Kind && merged[^1].Intensity == span.Intensity)
-                merged[^1] = merged[^1] with { ToHours = span.ToHours };
-            else merged.Add(span);
+            if (result.Count > 0 && result[^1].Kind == span.Kind && result[^1].Intensity == span.Intensity)
+                result[^1] = result[^1] with { ToHours = span.ToHours };
+            else result.Add(span);
         }
-        return merged.ToArray();
     }
 
     /// <summary>Convolve the piecewise-constant targets with a smoothstep-derivative kernel of the profile's blend length:
@@ -206,11 +212,17 @@ internal sealed class WeatherTimeline(WeatherProfile profile, uint seed, MapId m
     /// <summary>The automatic days over [lo, hi] with quiet and pin windows applied, cut into contiguous spans.</summary>
     private List<WeatherSpan> Segments(double lo, double hi)
     {
-        var result = new List<WeatherSpan>();
+        // Queries consume these spans before the next query; only Ahead publishes into its owner's container.
+        var result = _segments;
+        result.Clear();
         if (!(hi > lo)) return result;
-        var auto = new List<WeatherSpan>();
+        var auto = _automatic;
+        auto.Clear();
         for (long day = DayOf(lo), last = DayOf(hi); day <= last; day++) auto.AddRange(DaySpans(day));
-        var cuts = new SortedSet<double> { lo, hi };
+        var cuts = _cuts;
+        cuts.Clear();
+        cuts.Add(lo);
+        cuts.Add(hi);
         foreach (var span in auto)
         {
             Cut(span.FromHours);
@@ -219,9 +231,12 @@ internal sealed class WeatherTimeline(WeatherProfile profile, uint seed, MapId m
         Cut(settings.PinFrom);
         Cut(settings.PinTo);
         Cut(settings.QuietUntil);
+        cuts.Sort();
         double from = lo;
-        foreach (double cut in cuts.Skip(1))
+        for (int i = 1; i < cuts.Count; i++)
         {
+            double cut = cuts[i];
+            if (cut == from) continue;
             var (kind, intensity) = Overlay((from + cut) / 2, auto);
             result.Add(new(from, cut, kind, intensity));
             from = cut;

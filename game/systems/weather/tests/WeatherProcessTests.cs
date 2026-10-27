@@ -261,8 +261,13 @@ public sealed class WeatherProcessTests
     {
         var p = Create(1, Season.Autumn, Profile);
         p.Step(Tick(16.1)); var before = p.Now;
+        var beforeAhead = p.Ahead.ToArray();
         for (int i = 0; i < 40; i++) p.Step(Tick(16.1) with { FlowRate = 0, RealDt = .5 });
-        AssertThat(p.Now == before).OverrideFailureMessage("Paused natural weather changed.").IsTrue();
+        AssertThat(p.Now == before && p.Ahead.SequenceEqual(beforeAhead)).OverrideFailureMessage("Paused natural weather or forecast changed.").IsTrue();
+        p.Select(new(WeatherMode.Manual, WeatherKind.Rain, .6f));
+        p.Step(Tick(16.1) with { FlowRate = 0 });
+        AssertThat(p.Ahead.SequenceEqual(new[] { new WeatherSpan(16.1, 16.1 + 24, WeatherKind.Rain, .6f) }))
+            .OverrideFailureMessage("A paused manual choice did not refresh the full forecast window.").IsTrue();
         AssertThrown(() => p.ValidateBoot(new(1, WeatherKind.Snow), Season.Summer)).IsInstanceOf<ArgumentException>();
         AssertThrown(() => p.ValidateBoot(new(1, Wet: float.NaN), Season.Autumn)).IsInstanceOf<ArgumentException>();
         p.Reset(new(4));

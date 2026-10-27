@@ -8,8 +8,10 @@ namespace Campus.Systems.Weather;
 /// </summary>
 [KernelService(typeof(IWeatherProcess))]
 [KernelService(typeof(WeatherProcess))]
-public sealed class WeatherProcess(IWeatherProfileSource profiles, IMotionSettings? motion = null) : IWeatherProcess
+public sealed class WeatherProcess : IWeatherProcess
 {
+    private readonly IWeatherProfileSource _profiles;
+    private readonly IMotionSettings? _motion;
     private WeatherSettings _set = new();
     private WeatherTimeline? _line;
     private WeatherProfile? _profile;
@@ -20,12 +22,20 @@ public sealed class WeatherProcess(IWeatherProfileSource profiles, IMotionSettin
     private double _blendElapsed = 3;
     private double? _jumpFrom, _jumpTo;
     private WeatherVec _jumpVector;
-    private IReadOnlyList<WeatherSpan> _ahead = Array.Empty<WeatherSpan>();
+    private readonly List<WeatherSpan> _ahead = [];
     public WeatherSel Selection { get; private set; } = new(WeatherMode.Auto, WeatherKind.Clear, 1);
     public WeatherVec Now { get; private set; } = WeatherVectors.For(WeatherKind.Clear, 1);
-    public IReadOnlyList<WeatherSpan> Ahead => _ahead;
+    // Current main-thread forecast, read immediately by the HUD rather than retained as a snapshot.
+    public IReadOnlyList<WeatherSpan> Ahead { get; }
     public uint Seed { get; private set; }
     public bool Transitioning => _blendElapsed < 3 || _jumpTo.HasValue;
+
+    public WeatherProcess(IWeatherProfileSource profiles, IMotionSettings? motion = null)
+    {
+        _profiles = profiles;
+        _motion = motion;
+        Ahead = _ahead.AsReadOnly();
+    }
 
     public bool IsNative(WeatherKind k, Season s) => WeatherRules.IsNative(k, s);
 
@@ -53,7 +63,7 @@ public sealed class WeatherProcess(IWeatherProfileSource profiles, IMotionSettin
         _jumpFrom = _jumpTo = null;
         Selection = new(WeatherMode.Auto, WeatherKind.Clear, 1);
         Now = WeatherVectors.For(WeatherKind.Clear, 1);
-        _ahead = Array.Empty<WeatherSpan>();
+        _ahead.Clear();
     }
 
     public void Step(in WeatherTick t)
@@ -64,6 +74,7 @@ public sealed class WeatherProcess(IWeatherProfileSource profiles, IMotionSettin
             throw new ArgumentOutOfRangeException(nameof(t));
         if (t.FlowRate is not (0 or 1 or 10 or 60 or 360 or 1440)) throw new ArgumentOutOfRangeException(nameof(t));
         WeatherRules.ValidateSeason(t.Season);
+        bool refreshAhead = _hours != t.WorldHours || !_set.FrameBound || _boot is not null;
         var line = Line();
         if (!_set.FrameBound) _set.Reseason(t.Season, t.ClockOffset);
         if (_boot is { } boot)
@@ -91,13 +102,13 @@ public sealed class WeatherProcess(IWeatherProfileSource profiles, IMotionSettin
             var target = Vector(t.WorldHours);
             if (_blendElapsed < 3)
             {
-                _blendElapsed = motion?.ReduceMotion == true ? 3 : Math.Min(3, _blendElapsed + t.RealDt);
+                _blendElapsed = _motion?.ReduceMotion == true ? 3 : Math.Min(3, _blendElapsed + t.RealDt);
                 Now = WeatherVectors.Lerp(_blendFrom, target, ScalarMath.Smoothstep((float)(_blendElapsed / 3)));
             }
             else Now = target;
         }
         Selection = line.SelectionAt(t.WorldHours);
-        _ahead = Array.AsReadOnly(line.Ahead(t.WorldHours));
+        if (refreshAhead) line.Ahead(t.WorldHours, _ahead);
     }
 
     public void Select(WeatherSel sel)
@@ -173,7 +184,7 @@ public sealed class WeatherProcess(IWeatherProfileSource profiles, IMotionSettin
         ValidateHours(worldHours);
         if (string.IsNullOrWhiteSpace(map.Value)) throw new ArgumentException("Map is required.", nameof(map));
         _map = map;
-        _profile = profiles.Load(profile);
+        _profile = _profiles.Load(profile);
         _line = null;
         _hours = worldHours;
         _jumpFrom = _jumpTo = null;
@@ -276,7 +287,7 @@ public sealed class WeatherProcess(IWeatherProfileSource profiles, IMotionSettin
     private void Refresh(WeatherTimeline line)
     {
         Selection = line.SelectionAt(_hours);
-        _ahead = Array.AsReadOnly(line.Ahead(_hours));
+        line.Ahead(_hours, _ahead);
     }
 
     /// <summary>Command-line weather lands once the first Step has bound the season; it overrides map defaults.</summary>
