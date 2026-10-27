@@ -8,11 +8,11 @@ using CustomFormat = Godot.RenderingServer.ArrayCustomFormat;
 
 namespace Campus.Kernel.Bake;
 
-/// <summary>Stably groups compatible opaque surfaces without decoding or changing any vertex bytes.</summary>
+/// <summary>Batches compatible surfaces without decoding or changing any vertex bytes.</summary>
 /// <remarks>
 /// Only the pinned BakeSurfacePacker layouts are accepted. An unsupported surface is retained by reference and
-/// ends the current segment. Keys retain first-appearance order; sources within each key retain their
-/// vertex/triangle order. Transparent surfaces retain their original order and references.
+/// ends the current segment. Static keys retain first-appearance order; Glass merges only adjacent matching
+/// keys. Sources within each batch retain their vertex/triangle order, including transparent source order.
 /// This operates within one TileBundle's ordinary surfaces, never on MultiMesh prototypes or instance streams.
 /// </remarks>
 internal static class PackedSurfaceBatcher
@@ -31,6 +31,10 @@ internal static class PackedSurfaceBatcher
             {
                 Flush(); output.Add(surface); continue;
             }
+            // Glass has only one adjacent-key group; either transition also fences the Static segment.
+            if (groups.Count != 0 &&
+                (surface.Material.Spec.Kind == ToonKind.Glass || groups[0][0].Material.Spec.Kind == ToonKind.Glass) &&
+                !SameKey(groups[0][0], surface)) Flush();
             // Explicit first-appearance groups keep output independent of hashing or dictionary enumeration.
             var group = groups.Find(candidate => SameKey(candidate[0], surface));
             if (group is null) { group = []; groups.Add(group); }
@@ -64,7 +68,7 @@ internal static class PackedSurfaceBatcher
     private static bool TryLayout(BakedSurface surface, out Layout layout)
     {
         layout = default;
-        if (surface.Shader is not null || surface.Material.Spec.Kind != ToonKind.Static ||
+        if (surface.Shader is not null || surface.Material.Spec.Kind is not (ToonKind.Static or ToonKind.Glass) ||
             surface.Primitive != BakedPrimitive.Triangles || surface.VertexCount <= 0 || surface.IndexCount <= 0 ||
             surface.SkinData.Length != 0 || surface.Lods.Count != 0) return false;
         var format = (Format)surface.Format;

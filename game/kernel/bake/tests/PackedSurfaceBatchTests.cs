@@ -62,21 +62,23 @@ public sealed class PackedSurfaceBatchTests
     [TestCategory(TestReason.Contract)]
     public void KnownLayoutsRetainEverySourceVertexAttributeAndTriangleByte()
     {
-        foreach (var uv2 in new[] { false, true })
+        foreach (var (uv2, kind) in new[] { (false, ToonKind.Static), (true, ToonKind.Glass), (true, ToonKind.Static) })
             for (var customMask = 0; customMask < 8; customMask++)
             {
-                var sources = Enumerable.Range(0, 3).Select(index => Surface(index, uv2, customMask, accent: index == 2)).ToArray();
-                var other = Copy(Surface(9, uv2, customMask), material: new(sources[0].Material.Spec with { Wet = .3f }));
+                var sources = Enumerable.Range(0, 3).Select(index => Surface(index, uv2, customMask, accent: index == 2, kind: kind)).ToArray();
+                var other = Copy(Surface(9, uv2, customMask, kind: kind), material: new(sources[0].Material.Spec with { Wet = .3f }));
                 if (sources[0].Material == sources[2].Material ||
                     ToonMaterialClass.Of(sources[0].Material.Spec) != ToonMaterialClass.Of(sources[2].Material.Spec))
                     throw new InvalidOperationException("The fixture must use different palette pairs from the same material class.");
-                var grouped = PackedSurfaceBatcher.Merge([sources[0], other, sources[1], sources[2]]);
+                BakedSurface[] input = kind == ToonKind.Glass ? [sources[0], sources[1], sources[2], other]
+                    : [sources[0], other, sources[1], sources[2]];
+                var grouped = PackedSurfaceBatcher.Merge(input);
                 if (grouped.Count != 2 || !ReferenceEquals(grouped[1], other) || grouped[0].Material != sources[0].Material)
-                    throw new InvalidOperationException("Opaque keys or their first-source material lost stable first-appearance order.");
+                    throw new InvalidOperationException("Compatible keys or their first-source material lost stable first-appearance order.");
                 var merged = grouped[0];
                 VerifySources(sources, merged, uv2 ? 12 : 8, uv2 ? 8 : 4);
                 var key = BakeRequestKeys.Tile(new("fixture"), "batch", new(-1, 2), LodLevel.L0);
-                var before = new TileBundle(key, new(-1, 2), LodLevel.L0, Bounds(), [sources[0], other, sources[1], sources[2]]);
+                var before = new TileBundle(key, new(-1, 2), LodLevel.L0, Bounds(), input);
                 var after = new TileBundle(key, new(-1, 2), LodLevel.L0, Bounds(), grouped);
                 if (after.Stats.Surfaces != 2 || before.Stats.Surfaces != 4 || before.Stats.Vertices != after.Stats.Vertices ||
                     before.Stats.Triangles != after.Stats.Triangles || before.Stats.Bytes != after.Stats.Bytes)
@@ -95,21 +97,34 @@ public sealed class PackedSurfaceBatchTests
     [TestCategory(TestReason.Contract)]
     public void EveryMetadataDifferenceSeparatesStableGroups()
     {
-        var original = Surface(0, true, 0);
-        var differences = new[]
+        foreach (var kind in new[] { ToonKind.Static, ToonKind.Glass })
         {
-            Copy(original, material: new(original.Material.Spec with { Wet = .3f })),
-            Copy(original, variant: new VariantTag()), Copy(original, reflect: true), Copy(original, ignore: true),
-            Copy(original, uvScale: new(2, 1, 0, 0)), Copy(original, at: Matrix4x4.CreateTranslation(-4, 0, 2)),
-            Copy(original, bounds: new(new(-128, -16, -128), new(128, 128, 128))), Surface(0, true, 1),
-            Copy(original, uvScale: new(BitConverter.Int32BitsToSingle(unchecked((int)0x80000000)), 0, 0, 0))
-        };
-        foreach (var different in differences)
-        {
-            var merged = PackedSurfaceBatcher.Merge([original, different, original]);
-            if (merged.Count != 2 || !ReferenceEquals(merged[1], different))
-                throw new InvalidOperationException("A metadata difference was discarded or stable key order changed.");
-            VerifySources([original, original], merged[0], 12, 8);
+            var original = Surface(0, true, 0, kind: kind);
+            var differences = new[]
+            {
+                Copy(original, material: new(original.Material.Spec with { Wet = .3f })),
+                Copy(original, variant: new VariantTag()), Copy(original, reflect: true), Copy(original, ignore: true),
+                Copy(original, uvScale: new(2, 1, 0, 0)), Copy(original, at: Matrix4x4.CreateTranslation(-4, 0, 2)),
+                Copy(original, bounds: new(new(-128, -16, -128), new(128, 128, 128))), Surface(0, true, 1, kind: kind),
+                Copy(original, noShadow: !original.NoShadow),
+                Copy(original, uvScale: new(BitConverter.Int32BitsToSingle(unchecked((int)0x80000000)), 0, 0, 0))
+            };
+            foreach (var different in differences)
+            {
+                var merged = PackedSurfaceBatcher.Merge([original, different, original]);
+                if (kind == ToonKind.Glass)
+                {
+                    if (merged.Count != 3 || !ReferenceEquals(merged[0], original) ||
+                        !ReferenceEquals(merged[1], different) || !ReferenceEquals(merged[2], original))
+                        throw new InvalidOperationException("Glass crossed a different metadata key or changed transparent source order.");
+                }
+                else
+                {
+                    if (merged.Count != 2 || !ReferenceEquals(merged[1], different))
+                        throw new InvalidOperationException("A metadata difference was discarded or stable key order changed.");
+                    VerifySources([original, original], merged[0], 12, 8);
+                }
+            }
         }
     }
 
@@ -117,39 +132,62 @@ public sealed class PackedSurfaceBatchTests
     [TestCategory(TestReason.Contract)]
     public void UnsupportedShadersTopologySkinLodsAndLayoutsRemainOriginalReferences()
     {
-        var original = Surface(0, true, 0);
-        var unsupported = new[]
+        foreach (var kind in new[] { ToonKind.Static, ToonKind.Glass })
         {
-            Copy(original, shader: ShaderId.Water), Copy(original, material: new(original.Material.Spec with { Kind = ToonKind.Glass })),
-            Copy(original, material: new(original.Material.Spec with { Kind = ToonKind.GlassNear })),
-            Copy(original, primitive: BakedPrimitive.TriangleStrip), Copy(original, skin: new byte[] { 1 }),
-            Copy(original, lods: [new BakedMeshLod(1f, original.IndexCount, original.IndexData)]),
-            Copy(original, format: original.Format | (1UL << 60)),
-            Copy(original, format: original.Format | (ulong)Format.FormatCustom3),
-            Copy(original, format: original.Format | (ulong)Format.FlagCompressAttributes),
-            Copy(original, attributes: original.AttributeData[..^1])
-        };
-        foreach (var surface in unsupported)
-        {
-            var retained = PackedSurfaceBatcher.Merge([surface, surface]);
-            if (retained.Count != 2 || !ReferenceEquals(retained[0], surface) || !ReferenceEquals(retained[1], surface))
-                throw new InvalidOperationException("An unsupported surface was reinterpreted, merged or replaced.");
-            var fenced = PackedSurfaceBatcher.Merge([original, original, surface, original, original]);
-            if (fenced.Count != 3 || !ReferenceEquals(fenced[1], surface))
-                throw new InvalidOperationException("An unsupported surface failed to separate opaque segments.");
-            VerifySources([original, original], fenced[0], 12, 8);
-            VerifySources([original, original], fenced[2], 12, 8);
+            var original = Surface(0, true, 0, kind: kind);
+            var unsupported = new[]
+            {
+                Copy(original, shader: ShaderId.Water),
+                Copy(original, material: new(original.Material.Spec with { Kind = ToonKind.GlassNear })),
+                Copy(original, primitive: BakedPrimitive.TriangleStrip), Copy(original, skin: new byte[] { 1 }),
+                Copy(original, lods: [new BakedMeshLod(1f, original.IndexCount, original.IndexData)]),
+                Copy(original, format: original.Format | (1UL << 60)),
+                Copy(original, format: original.Format | (ulong)Format.FormatCustom3),
+                Copy(original, format: original.Format | (ulong)Format.FlagCompressAttributes),
+                Copy(original, attributes: original.AttributeData[..^1])
+            };
+            foreach (var surface in unsupported)
+            {
+                var retained = PackedSurfaceBatcher.Merge([surface, surface]);
+                if (retained.Count != 2 || !ReferenceEquals(retained[0], surface) || !ReferenceEquals(retained[1], surface))
+                    throw new InvalidOperationException("An unsupported surface was reinterpreted, merged or replaced.");
+                var fenced = PackedSurfaceBatcher.Merge([original, original, surface, original, original]);
+                if (fenced.Count != 3 || !ReferenceEquals(fenced[1], surface))
+                    throw new InvalidOperationException("An unsupported surface failed to separate supported segments.");
+                VerifySources([original, original], fenced[0], 12, 8);
+                VerifySources([original, original], fenced[2], 12, 8);
+            }
+            var custom = Surface(0, true, 1, kind: kind);
+            var differentCustomEncoding = Copy(custom, format: custom.Format ^ (1UL << (int)Format.FormatCustom0Shift));
+            if (PackedSurfaceBatcher.Merge([differentCustomEncoding, differentCustomEncoding]).Count != 2)
+                throw new InvalidOperationException("A non-RGBAFloat custom layout was accepted with a matching layout.");
         }
-        var glass = Copy(original, material: new(original.Material.Spec with { Kind = ToonKind.Glass }));
-        var tintedGlass = Copy(original, material: new(glass.Material.Spec with { Lit = new("fixture.accent"), Shade = new("fixture.accent.shade") }));
-        var transparentOrder = PackedSurfaceBatcher.Merge([original, glass, tintedGlass, glass, original]);
-        BakedSurface[] expectedOrder = [original, glass, tintedGlass, glass, original];
-        if (transparentOrder.Count != expectedOrder.Length || transparentOrder.Where((surface, index) => !ReferenceEquals(surface, expectedOrder[index])).Any())
-            throw new InvalidOperationException("Transparent surfaces or their surrounding opaque segments were reordered.");
-        var custom = Surface(0, true, 1);
-        var differentCustomEncoding = Copy(custom, format: custom.Format ^ (1UL << (int)Format.FormatCustom0Shift));
-        if (PackedSurfaceBatcher.Merge([differentCustomEncoding, differentCustomEncoding]).Count != 2)
-            throw new InvalidOperationException("A non-RGBAFloat custom layout was accepted with a matching layout.");
+    }
+
+    [TestCase]
+    [TestCategory(TestReason.Regression)]
+    public void GlassBatchesOnlyAdjacentMatchingKeysWithoutCrossingOtherSurfaces()
+    {
+        var sources = Enumerable.Range(0, 8).Select(index => Surface(index, true, 0, accent: index % 2 != 0, kind: ToonKind.Glass)).ToArray();
+        var different = Copy(sources[0], material: new(sources[0].Material.Spec with { Wet = .3f }));
+        var opaque = Surface(9, true, 0);
+        var unsupported = Copy(sources[0], material: new(sources[0].Material.Spec with { Kind = ToonKind.GlassNear }));
+        if (sources[0].Material.Spec.Kind != ToonKind.Glass || sources[0].Material == sources[1].Material ||
+            ToonMaterialClass.Of(sources[0].Material.Spec) != ToonMaterialClass.Of(sources[1].Material.Spec))
+            throw new InvalidOperationException("The fixture must contain distinct palettes in adjacent matching Glass keys.");
+        var merged = PackedSurfaceBatcher.Merge([sources[0], sources[1], different, sources[2], sources[3],
+            opaque, sources[4], sources[5], unsupported, sources[6], sources[7]]);
+        if (merged.Count != 7 || !ReferenceEquals(merged[1], different) || !ReferenceEquals(merged[3], opaque) ||
+            !ReferenceEquals(merged[5], unsupported))
+            throw new InvalidOperationException("Glass crossed a different key, opaque surface or unsupported surface.");
+        for (var index = 0; index < 4; index++)
+            VerifySources([sources[index * 2], sources[index * 2 + 1]], merged[index * 2], 12, 8);
+        var fenced = PackedSurfaceBatcher.Merge([opaque, opaque, sources[0], sources[1], opaque, opaque]);
+        if (fenced.Count != 3)
+            throw new InvalidOperationException("A Glass segment failed to separate opaque groups.");
+        VerifySources([opaque, opaque], fenced[0], 12, 8);
+        VerifySources([sources[0], sources[1]], fenced[1], 12, 8);
+        VerifySources([opaque, opaque], fenced[2], 12, 8);
     }
 
     [TestCase]
@@ -197,12 +235,12 @@ public sealed class PackedSurfaceBatchTests
 
     private static GeometryBundle ShadowGeometry() => new(new(new(new("fixture.lit"), new("fixture.shade"))),
         [0, 0, 0, 1, 0, 0, 0, 0, 1], [0, 1, 0, 0, 1, 0, 0, 1, 0], [0, 2, 1]);
-    private static BakedSurface Surface(int id, bool uv2, int customMask, bool accent = false)
+    private static BakedSurface Surface(int id, bool uv2, int customMask, bool accent = false, ToonKind kind = ToonKind.Static)
     {
         float[] Custom(int channel) => Enumerable.Range(0, 12).Select(index => index == 0 ?
             BitConverter.Int32BitsToSingle(unchecked((int)0x80000000)) : id * 100 + channel * 20 + index + .125f).ToArray();
         var geometry = new GeometryBundle(new(new(new(accent ? "fixture.accent" : "fixture.lit"),
-            new(accent ? "fixture.accent.shade" : "fixture.shade"))),
+            new(accent ? "fixture.accent.shade" : "fixture.shade")) { Kind = kind }),
             [-20 + id, 2, 11, -17 + id, 3, 11, -18 + id, 6, 11], [0, 0, 1, 0, 0, 1, 0, 0, 1], [2, 0, 1],
             Ao: [.1f, .5f, .9f], Uv: [0, 0, 1, 0, 0, 1], Uv2: uv2 ? [65535, 961, 65536, 1025, 16777216, -1] : null)
         {
@@ -230,11 +268,11 @@ public sealed class PackedSurfaceBatchTests
     private static BakedSurface Copy(BakedSurface source, ToonRef? material = null, ulong? format = null,
         BakedPrimitive? primitive = null, Matrix4x4? at = null, Box3? bounds = null, Vector4? uvScale = null,
         VariantTag? variant = null, bool reflect = false, bool ignore = false, ShaderId? shader = null,
-        IReadOnlyList<BakedMeshLod>? lods = null, ReadOnlyMemory<byte> skin = default, ReadOnlyMemory<byte>? attributes = null) =>
+        IReadOnlyList<BakedMeshLod>? lods = null, ReadOnlyMemory<byte> skin = default, ReadOnlyMemory<byte>? attributes = null, bool? noShadow = null) =>
         new(material ?? source.Material, format ?? source.Format, primitive ?? source.Primitive, source.VertexCount, source.IndexCount,
             source.VertexData, attributes ?? source.AttributeData, source.IndexData, bounds ?? source.Bounds,
             at: at ?? source.At, lods: lods, skinData: skin, uvScale: uvScale ?? source.UvScale, variant: variant, ignoreOcclusionCulling: ignore)
-        { Shader = shader, Reflect = reflect, NoShadow = source.NoShadow };
+        { Shader = shader, Reflect = reflect, NoShadow = noShadow ?? source.NoShadow };
     private static Box3 Bounds() => new(new(-64, -16, -64), new(64, 64, 64));
     private static PaletteCatalog Palette() => new(new PaletteRegistry([
         new(new("fixture.lit"), new(64), Vector3.One, "fixture", false, PaletteRole.Lit),
