@@ -42,6 +42,7 @@ internal sealed class NightlightReflections
             _reflectionImage = Image.CreateFromData(ReflectionLampSelection.Capacity, ReflectionLampSelection.Rows,
                 false, Image.Format.Rgbaf, bytes);
             _reflectionTexture = ImageTexture.CreateFromImage(_reflectionImage);
+            RenderingServer.GlobalShaderParameterSet(ReflectionLampsGlobal, _reflectionTexture);
         }
         else
         {
@@ -49,6 +50,5 @@ internal sealed class NightlightReflections
                 false, Image.Format.Rgbaf, bytes);
             _reflectionTexture.Update(_reflectionImage);
         }
-        RenderingServer.GlobalShaderParameterSet(ReflectionLampsGlobal, _reflectionTexture);
     }
 }
