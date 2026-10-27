@@ -248,39 +248,159 @@ public sealed class StreamSchedulingTests
     [TestCategory(TestReason.Regression)]
     public void RetargetWaitsForComplementaryFadeAcrossClockWrap()
     {
-        var duration = new StreamSettings().FadeSeconds; var visibility = new TileVisibility(duration); var root = StreamTile.Root;
+        var duration = new StreamSettings().FadeSeconds; var visibility = new TileVisibility(duration, static () => 0); var root = StreamTile.Root;
         var start = WorldTime.AnimLoopSeconds - duration * 2; var changing = WorldTime.AnimLoopSeconds - duration / 2;
         var pending = duration / 4; var next = duration; var done = duration * 2;
         var child = new StreamTile(new(0, 0), LodLevel.L3);
         var grandchild = new StreamTile(new(0, 0), LodLevel.L2);
-        visibility.Apply(new HashSet<StreamTile> { root }, start, true, (_, _, _) => { });
-        if (visibility.IsSettled(start)) throw new InvalidOperationException("Newly entering geometry was certified before its shader fade.");
-        visibility.Apply(new HashSet<StreamTile> { root }, start + duration, true, (_, _, _) => { });
-        if (!visibility.IsSettled(start + duration)) throw new InvalidOperationException("Fully presented geometry was not ready.");
-        visibility.Apply(new HashSet<StreamTile> { child }, changing, true, (_, _, _) => { });
+        visibility.Apply(new HashSet<StreamTile> { root }, start, true, (_, _, _) => { }, double.PositiveInfinity);
+        if (visibility.IsSettled) throw new InvalidOperationException("Newly entering geometry was certified before its shader fade.");
+        visibility.Apply(new HashSet<StreamTile> { root }, start + duration, true, (_, _, _) => { }, double.PositiveInfinity);
+        if (!visibility.IsSettled) throw new InvalidOperationException("Fully presented geometry was not ready.");
+        visibility.Apply(new HashSet<StreamTile> { child }, changing, true, (_, _, _) => { }, double.PositiveInfinity);
         if (!visibility.Drawn.SetEquals(new HashSet<StreamTile> { root, child }))
             throw new InvalidOperationException("The regression fixture did not start a parent/child blend.");
-        visibility.Apply(new HashSet<StreamTile> { grandchild }, pending, true, (_, _, _) => { });
-        if (!visibility.Drawn.Contains(root) || visibility.IsSettled(pending)) throw new InvalidOperationException("A partially presented replacement was certified ready.");
+        visibility.Apply(new HashSet<StreamTile> { grandchild }, pending, true, (_, _, _) => { }, double.PositiveInfinity);
+        if (!visibility.Drawn.Contains(root) || visibility.IsSettled) throw new InvalidOperationException("A partially presented replacement was certified ready.");
         if (visibility.Drawn.Contains(grandchild)) throw new InvalidOperationException("Retargeting interrupted an unfinished complementary pair.");
-        visibility.Apply(new HashSet<StreamTile> { grandchild }, next, true, (_, _, _) => { });
-        if (visibility.Drawn.Contains(root) || !visibility.Drawn.Contains(child) || !visibility.Drawn.Contains(grandchild) || visibility.IsSettled(next))
+        visibility.Apply(new HashSet<StreamTile> { grandchild }, next, true, (_, _, _) => { }, double.PositiveInfinity);
+        if (visibility.Drawn.Contains(root) || !visibility.Drawn.Contains(child) || !visibility.Drawn.Contains(grandchild) || visibility.IsSettled)
             throw new InvalidOperationException("The latest target did not begin its own complete fade.");
-        visibility.Apply(new HashSet<StreamTile> { grandchild }, done, true, (_, _, _) => { });
-        if (!visibility.Drawn.SetEquals(new HashSet<StreamTile> { grandchild }) || !visibility.IsSettled(done))
+        visibility.Apply(new HashSet<StreamTile> { grandchild }, done, true, (_, _, _) => { }, double.PositiveInfinity);
+        if (!visibility.Drawn.SetEquals(new HashSet<StreamTile> { grandchild }) || !visibility.IsSettled)
             throw new InvalidOperationException("Fade completion left stale coverage or unreadiness.");
         var many = Enumerable.Range(0, TestSamples.PerProperty).Select(index => new StreamTile(new(index, 0), LodLevel.L0)).ToHashSet();
-        visibility.Apply(many, duration * 4, true, (_, _, _) => { });
-        if (!visibility.Drawn.Contains(grandchild) || visibility.IsSettled(duration * 4))
+        visibility.Apply(many, duration * 4, true, (_, _, _) => { }, double.PositiveInfinity);
+        if (!visibility.Drawn.Contains(grandchild) || visibility.IsSettled)
             throw new InvalidOperationException("A large target change bypassed the complementary fade.");
-        visibility.Apply(many, duration * 5, true, (_, _, _) => { });
-        if (!visibility.Drawn.SetEquals(many) || !visibility.IsSettled(duration * 5)) throw new InvalidOperationException("A large fade did not settle.");
+        visibility.Apply(many, duration * 5, true, (_, _, _) => { }, double.PositiveInfinity);
+        if (!visibility.Drawn.SetEquals(many) || !visibility.IsSettled) throw new InvalidOperationException("A large fade did not settle.");
     }
-    private sealed class InteriorRequests : IBakeService, IBakeHandle
+    [TestCase, TestCategory(TestReason.Regression)]
+    public void RealFrontierGroupsShareBudgetWithoutSplittingParentCoverage()
+    {
+        var tree = new LodTree(new(System.Numerics.Vector3.Zero, new(1024, 10, 512)), new());
+        var branches = tree.Children(StreamTile.Root);
+        if (branches.Count < 2 || branches.Any(branch => tree.Children(branch).Count < 2))
+            throw new InvalidOperationException("The fixture must contain independent real replacement groups.");
+        var time = 0d;
+        var visibility = new TileVisibility(new StreamSettings().FadeSeconds, () => time);
+        var original = branches.ToHashSet();
+        var desired = branches.SelectMany(tree.Children).ToHashSet();
+        visibility.Apply(original, 0, false, (_, _, _) => time++, double.PositiveInfinity);
+        visibility.Apply(desired, 0, false, (_, _, _) => time++, 1);
+        var first = tree.Children(branches[0]).Append(branches[1]).ToHashSet();
+        if (!visibility.Drawn.SetEquals(first) || visibility.IsSettled)
+            throw new InvalidOperationException("One budget slice split complementary coverage or certified an unprocessed group.");
+        // A group that has not started follows the latest demand, without publishing stale detail.
+        visibility.Apply(first, 0, false, (_, _, _) => throw new InvalidOperationException("Unchanged frontier was rewritten."), 1);
+        if (!visibility.IsSettled) throw new InvalidOperationException("An abandoned unstarted group still blocked readiness.");
+        visibility.Apply(desired, 0, false, (_, _, _) => time++, 1);
+        if (!visibility.Drawn.SetEquals(desired) || !visibility.IsSettled)
+            throw new InvalidOperationException("The next real group failed to finish atomically.");
+        // An actual L4 replacement spans both L3 branches and must remain one indivisible group.
+        visibility.Apply([StreamTile.Root], 0, false, (_, _, _) => time++, 1);
+        if (!visibility.Drawn.SetEquals([StreamTile.Root]) || !visibility.IsSettled)
+            throw new InvalidOperationException("A root replacement was divided into independent L3 changes.");
+    }
+
+    [TestCase, TestCategory(TestReason.Regression)]
+    public void AnActiveGroupKeepsItsPairWhileIndependentGroupsUseLaterSlices()
+    {
+        var duration = new StreamSettings().FadeSeconds;
+        var tree = new LodTree(new(System.Numerics.Vector3.Zero, new(1024, 10, 512)), new());
+        var branches = tree.Children(StreamTile.Root);
+        var time = 0d;
+        var visibility = new TileVisibility(duration, () => time);
+        var desired = branches.SelectMany(tree.Children).ToHashSet();
+        visibility.Apply(branches.ToHashSet(), 0, false, (_, _, _) => time++, double.PositiveInfinity);
+        visibility.Apply(desired, duration, true, (_, _, _) => time++, 1);
+        if (!visibility.Drawn.Contains(branches[0]) || !tree.Children(branches[0]).All(visibility.Drawn.Contains) ||
+            !visibility.Drawn.Contains(branches[1]) || tree.Children(branches[1]).Any(visibility.Drawn.Contains))
+            throw new InvalidOperationException("The first slice did not preserve the active complementary pair.");
+        var retarget = branches.ToHashSet();
+        visibility.Apply(retarget, duration * 1.5f, true, (_, _, _) => time++, 1);
+        if (!tree.Children(branches[0]).All(visibility.Drawn.Contains) || visibility.IsSettled)
+            throw new InvalidOperationException("Retargeting interrupted the active pair.");
+        // Complete cleanup, then allow the latest target to start its inverse group in a later slice.
+        visibility.Apply(retarget, duration * 2, true, (_, _, _) => time++, 1);
+        visibility.Apply(retarget, duration * 2, true, (_, _, _) => time++, 1);
+        visibility.Apply(retarget, duration * 3, true, (_, _, _) => time++, double.PositiveInfinity);
+        if (!visibility.Drawn.SetEquals(retarget) || !visibility.IsSettled)
+            throw new InvalidOperationException("The active group failed to settle to the latest target.");
+    }
+
+    [TestCase, TestCategory(TestReason.Regression), TestCategory("NativeRender"), RequireGodotRuntime]
+    public async Task InteriorFloorReplacementsWaitForReadyPairsAndShareTheFrameRemainder()
+    {
+        var map = TestMapContext.BackdropDescriptor();
+        var building = new FeatureId("fixture.floors");
+        System.Numerics.Vector2[] ring = [new(0, 0), new(2, 0), new(2, 2), new(0, 2)];
+        var storeys = new[] { new StoreyInfo(0, 0, 3, ring), new StoreyInfo(1, 3, 3, ring) };
+        var context = new TestMapContext(map, new FakeWorld { Interiors = new FakeInteriors(new InteriorIndexEntry(building,
+            storeys, [], true, "fixture.floors", storeys.Select(floor => floor.Index).ToArray(),
+            storeys.Select(floor => new InteriorOpenArea(InteriorOpenPartKind.IndoorFloor, floor.Index, floor.FloorY, floor.Height, ring)).ToArray())) });
+        var template = StreamLifecycleTestSupport.Bundle(new(map.Id, "fixture.floors", "L0/0/0"), map.Bounds);
+        var bake = new InteriorRequests(template);
+        var queue = new StreamMountQueue(() => 0);
+        var geometry = new StreamLifecycleTestSupport.ControlledGeometry();
+        using var material = new Godot.StandardMaterial3D();
+        var materials = new StreamMaterials(new StreamLifecycleTestSupport.Materials(material), null!);
+        var tick = 0d;
+        var stream = new InteriorStream(bake, queue, materials, new StreamLifecycleTestSupport.Reflection(),
+            tile => tile.BeginRetirement(), true, geometry, static _ => { }, tile => tile.BeginRetirement(), () => true, () => tick++);
+        var scenario = Godot.RenderingServer.ScenarioCreate();
+        try
+        {
+            stream.Load(context);
+            stream.Select(new(MediumKind.Interior, building, storeys[0].Index), new(1, 1, 1));
+            Mount(); stream.ApplyVisibility(double.PositiveInfinity);
+            if (!stream.VisibilityReady || geometry.Prepared.Count != storeys.Length || geometry.Prepared.Any(tile => tile.VisibleInstanceCount == 0))
+                throw new InvalidOperationException("The fixture must show both real floor products before changing IF/IS demand.");
+            stream.Select(new(MediumKind.Interior, building, storeys[1].Index), new(1, 4, 1));
+            stream.ApplyVisibility(double.PositiveInfinity);
+            if (stream.VisibilityReady || geometry.Prepared.Any(tile => tile.VisibleInstanceCount == 0))
+                throw new InvalidOperationException("An unmounted floor replacement removed its old coverage.");
+            Mount(); stream.ApplyVisibility(0);
+            if (stream.VisibilityReady) throw new InvalidOperationException("Zero remaining budget published pending visibility groups.");
+            stream.ApplyVisibility(2);
+            if (stream.VisibilityReady || !Covered())
+                throw new InvalidOperationException("A partial frame left a floor uncovered or prematurely ready.");
+            stream.ApplyVisibility(2);
+            if (!stream.VisibilityReady || !Covered())
+                throw new InvalidOperationException("The remaining floor group did not finish atomically.");
+        }
+        finally
+        {
+            await stream.DrainAsync();
+            while (queue.PendingRetirements > 0 && queue.Failure is null) queue.Drain(StreamLifecycleTestSupport.CoveredScreen);
+            foreach (var tile in geometry.Prepared) await StreamLifecycleTestSupport.ReleasePreparedAsync(tile);
+            while (!materials.ReleaseOne()) { }
+            Godot.RenderingServer.FreeRid(scenario);
+        }
+        void Mount()
+        {
+            stream.RefreshPriorities(); stream.Poll(new StreamSettings().MaximumPreparations);
+            stream.HarvestPreparations(scenario);
+            queue.Drain(StreamLifecycleTestSupport.CoveredScreen);
+            if (stream.Failure is { } error) throw error;
+            if (queue.Failure is { } mountError) throw mountError;
+        }
+        bool Covered() => geometry.Prepared.GroupBy(tile => tile.Key.Detail[..tile.Key.Detail.LastIndexOf('/')])
+            .All(floor => floor.Sum(tile => tile.VisibleInstanceCount) == template.Surfaces.Count);
+    }
+
+    private sealed class InteriorRequests(TileBundle? template = null) : IBakeService, IBakeHandle
     {
         public List<BakeKey> Keys { get; } = [];
         public List<BakePriority> Priorities { get; } = [];
-        public IBakeHandle Ensure(BakeKey key, BakePriority priority) { Keys.Add(key); Priorities.Add(priority); return this; }
+        public IBakeHandle Ensure(BakeKey key, BakePriority priority)
+        {
+            Keys.Add(key); Priorities.Add(priority);
+            if (template is null) return this;
+            var handle = new StreamLifecycleTestSupport.Handle(new(key, template.Tile, template.Level, template.Bounds, template.Surfaces));
+            handle.Complete(); return handle;
+        }
         public BakeCacheStatistics CacheStatistics => default;
         public BakeProgress Progress => default;
         public long CacheBytes => 0;

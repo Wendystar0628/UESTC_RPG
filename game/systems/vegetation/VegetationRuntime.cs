@@ -103,7 +103,7 @@ public sealed partial class VegetationRuntime : Node, IMapAware, IViewContentRea
     {
         if (_map != from) return;
         _generation++; _map = null;
-        _mountQueue!.Retire(new TextureRetirement(this, from, _mountQueue.Revision));
+        _mountQueue!.Retire(new TextureRetirement(this));
         _worldReset = true; _capture = null; _since = Interval;
     }
 
@@ -202,17 +202,21 @@ public sealed partial class VegetationRuntime : Node, IMapAware, IViewContentRea
         catch (Exception cleanup) { Failure = RetainedFailure.Append(Failure, cleanup); }
     }
 
-    private sealed class TextureRetirement(VegetationRuntime owner, MapId map, long revision)
-        : StreamMountWork(new(map, BakeModuleIds.VegetationTrees, "textures"), BakePriority.Background, revision, StreamMountKind.Auxiliary)
+    private sealed class TextureRetirement(VegetationRuntime owner) : IStreamReleaseWork
     {
-        protected override bool IsCurrent => false;
-        protected override bool MountStep(double budgetMilliseconds) => throw new InvalidOperationException("Retiring textures cannot mount.");
-        protected override bool Release(double budgetMilliseconds)
+        public bool ReleaseStep(double budgetMilliseconds)
         {
-            if (owner._tiles.Count != 0) return false;
-            owner.ReleaseDataTextures(); return true;
+            try
+            {
+                if (owner._tiles.Count != 0) return false;
+                owner.ReleaseDataTextures(); return true;
+            }
+            catch (Exception error)
+            {
+                owner.RecordFailure(error);
+                throw;
+            }
         }
-        protected override void Failed(Exception error) => owner.RecordFailure(error);
     }
 
     private void PrepareDataTextures(MapRect rect)
@@ -367,7 +371,7 @@ public sealed partial class VegetationRuntime : Node, IMapAware, IViewContentRea
         }
         public void Hide()
         {
-            if (AppliedEye is null) return;
+            if (Mounted && AppliedEye is null) return;
             foreach (var mother in Mothers) mother.Hide();
             foreach (var grass in Grass) grass.Hide();
             AppliedEye = null;
@@ -388,6 +392,10 @@ public sealed partial class VegetationRuntime : Node, IMapAware, IViewContentRea
         private readonly long _generation;
         private readonly MountedTile _tile;
         private int _unit;
+        private int _initialUnit;
+        private long _initialWorld = -1;
+        private N.Vector3 _initialEye;
+        private float _initialShadowReach;
         public MountWork(VegetationRuntime owner, VegetationTileContent content, BakePriority priority, long revision, long generation)
             : base(content.Key, priority, revision, StreamMountKind.Auxiliary)
         {
@@ -401,12 +409,45 @@ public sealed partial class VegetationRuntime : Node, IMapAware, IViewContentRea
         {
             var host = _owner._host ?? throw new InvalidOperationException("Vegetation pool host is unavailable.");
             var treeUnits = _tile.Mothers.Length * Mother.PoolCount;
+            var units = treeUnits + _tile.Grass.Length;
             // At most one native pool upload in a queue step.
-            if (_unit < treeUnits) _tile.Mothers[_unit / Mother.PoolCount].Mount(host, Key.Map, _unit % Mother.PoolCount);
-            else if (_unit < treeUnits + _tile.Grass.Length) _tile.Grass[_unit - treeUnits].Mount(host, Key.Map);
-            _unit++;
-            if (_unit < treeUnits + _tile.Grass.Length) return false;
+            if (_unit < units)
+            {
+                if (_unit < treeUnits) _tile.Mothers[_unit / Mother.PoolCount].Mount(host, Key.Map, _unit % Mother.PoolCount);
+                else _tile.Grass[_unit - treeUnits].Mount(host, Key.Map);
+                _unit++;
+                return false;
+            }
+            var world = _owner._world?.Instance ?? 0;
+            if (_initialWorld != world)
+            {
+                _tile.Hide(); _tile.ResetNear();
+                _initialUnit = 0; _initialWorld = world;
+                _initialEye = (_owner._capture ?? _owner._rig!.Pose).Position;
+                _initialShadowReach = _owner._shadowReach;
+                if (world > 0) _tile.UpdateNear(_initialEye, FrameClock.FadeSeconds);
+            }
+            if (_initialUnit < treeUnits)
+            {
+                var mother = _tile.Mothers[_initialUnit / Mother.PoolCount];
+                var p = _initialUnit % Mother.PoolCount;
+                // Keep the bucket change flags intact until every pool has consumed this initial view.
+                if (p == 0) mother.Buckets.Update(_initialEye, true, _initialShadowReach, FrameClock.FadeSeconds, _tile.NearActive);
+                mother.RefreshPool(p, initial: true);
+                if (world == 0) mother.Hide();
+            }
+            // Static preload has no display world; it still finishes real uploads without waiting for one.
+            else if (_initialUnit < units)
+            {
+                var grass = _tile.Grass[_initialUnit - treeUnits];
+                grass.Refresh(_initialEye, true);
+                if (world == 0) grass.Hide();
+            }
+            _initialUnit++;
+            if (_initialUnit < units) return false;
+            _tile.AppliedEye = world > 0 ? _initialEye : null;
             _tile.Mounted = true;
+            _owner.WriteNearReady(_tile); _owner.UploadDataTextures();
             _owner._since = Interval;
             return true;
         }
@@ -497,47 +538,49 @@ public sealed partial class VegetationRuntime : Node, IMapAware, IViewContentRea
         public void Refresh(N.Vector3 eye, bool reset, float shadowReach, float clock, bool nearVisible, bool force)
         {
             if (!Buckets.Update(eye, reset, shadowReach, clock, nearVisible) && !reset && !force) return;
-            for (var p = 0; p < PoolCount; p++)
+            for (var p = 0; p < PoolCount; p++) RefreshPool(p);
+        }
+
+        public void RefreshPool(int p, bool initial = false)
+        {
+            if (_pools[p] is not { } pool) return;
+            // Records, bounds and traversal order are frozen for this mother; only membership changes their prefix.
+            var changed = initial || Buckets.MembershipChanged(Order[p]);
+            var count = 0;
+            var min = new N.Vector3(float.MaxValue);
+            var max = new N.Vector3(float.MinValue);
+            for (var i = 0; i < Buckets.Count; i++)
             {
-                if (_pools[p] is not { } pool) continue;
-                // Records, bounds and traversal order are frozen for this mother; only membership changes their prefix.
-                var changed = Buckets.MembershipChanged(Order[p]);
-                var count = 0;
-                var min = new N.Vector3(float.MaxValue);
-                var max = new N.Vector3(float.MinValue);
-                for (var i = 0; i < Buckets.Count; i++)
-                {
-                    if (!(Order[p] == VegPool.Shadow ? Buckets.InShadow(i) : Buckets.Contains(i, Order[p]))) continue;
-                    _members[count++] = i;
-                    min = N.Vector3.Min(min, _bounds[i].Min);
-                    max = N.Vector3.Max(max, _bounds[i].Max);
-                }
-                if (count == 0)
-                {
-                    if (pool.VisibleCount != 0) pool.VisibleCount = 0;
-                    if (changed) pool.SetAabb(Parked);
-                    continue;
-                }
-                if (changed) Array.Clear(_scratch);
-                for (var k = 0; k < count; k++)
-                {
-                    var member = _members[k];
-                    if (changed) _records.AsSpan(member * Stride, Stride).CopyTo(_scratch.AsSpan(k * Stride, Stride));
-                    if (p < _transitionSlots.Length)
-                    {
-                        var slot = _transitionSlots[p];
-                        if (slot < 0) throw new InvalidOperationException("A visible near pool has no transition slots.");
-                        _transitions.Write(slot + k, Buckets.Level(member), Buckets.TargetLevel(member), Buckets.Started(member));
-                    }
-                }
-                if (changed)
-                {
-                    pool.WriteBuffer(_scratch);
-                    var size = max - min;
-                    pool.SetAabb(new Aabb(new Vector3(min.X, min.Y, min.Z), new Vector3(size.X, size.Y, size.Z)));
-                }
-                if (pool.VisibleCount != count) pool.VisibleCount = count;
+                if (!(Order[p] == VegPool.Shadow ? Buckets.InShadow(i) : Buckets.Contains(i, Order[p]))) continue;
+                _members[count++] = i;
+                min = N.Vector3.Min(min, _bounds[i].Min);
+                max = N.Vector3.Max(max, _bounds[i].Max);
             }
+            if (count == 0)
+            {
+                if (pool.VisibleCount != 0) pool.VisibleCount = 0;
+                if (changed) pool.SetAabb(Parked);
+                return;
+            }
+            if (changed) Array.Clear(_scratch);
+            for (var k = 0; k < count; k++)
+            {
+                var member = _members[k];
+                if (changed) _records.AsSpan(member * Stride, Stride).CopyTo(_scratch.AsSpan(k * Stride, Stride));
+                if (p < _transitionSlots.Length)
+                {
+                    var slot = _transitionSlots[p];
+                    if (slot < 0) throw new InvalidOperationException("A visible near pool has no transition slots.");
+                    _transitions.Write(slot + k, Buckets.Level(member), Buckets.TargetLevel(member), Buckets.Started(member));
+                }
+            }
+            if (changed)
+            {
+                pool.WriteBuffer(_scratch);
+                var size = max - min;
+                pool.SetAabb(new Aabb(new Vector3(min.X, min.Y, min.Z), new Vector3(size.X, size.Y, size.Z)));
+            }
+            if (pool.VisibleCount != count) pool.VisibleCount = count;
         }
 
         public void Hide()

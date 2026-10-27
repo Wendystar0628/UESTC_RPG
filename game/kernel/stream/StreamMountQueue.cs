@@ -18,7 +18,7 @@ public interface IStreamMountFrame
 public sealed class StreamMountQueue : IStreamMountQueue, IStreamMountFrame
 {
     private readonly List<IStreamMountWork> _pending = [];
-    private readonly List<IStreamMountWork> _retiring = [];
+    private readonly List<IStreamReleaseWork> _retiring = [];
     private int _retirementCursor;
     private readonly Campus.Kernel.Lod.StreamSettings _settings = new();
     private readonly MountWatchdog _watchdog;
@@ -82,14 +82,14 @@ public sealed class StreamMountQueue : IStreamMountQueue, IStreamMountFrame
             Retire(work);
         }
     }
-    public void Retire(IStreamMountWork work)
+    public void Retire(IStreamReleaseWork work)
     {
         ArgumentNullException.ThrowIfNull(work);
         for (var index = _pending.Count - 1; index >= 0; index--)
             if (ReferenceEquals(_pending[index], work)) _pending.RemoveAt(index);
         foreach (var owner in _retiring) if (ReferenceEquals(owner, work)) return;
         _retiring.Add(work);
-        try { work.Cancel(); }
+        try { if (work is IStreamMountWork mount) mount.Cancel(); }
         catch (Exception error) { RecordFailure(error); }
     }
     private void RecordFailure([FailureHandler("ENG-PERF-STREAM")] Exception error) =>
@@ -98,6 +98,7 @@ public sealed class StreamMountQueue : IStreamMountQueue, IStreamMountFrame
     public void Drain(IAppScreenCoverage coverage, Action? prepare = null, Action<double>? finish = null, Action<double>? release = null, Func<bool>? canActivateVisual = null, Func<bool>? canReleaseRetired = null)
     {
         RetirementFailed = false;
+        LastMilliseconds = 0;
         try { DrainFrame(coverage.IsCovered, prepare, finish, release, canActivateVisual, canReleaseRetired); }
         catch (Exception error)
         {
@@ -143,7 +144,11 @@ public sealed class StreamMountQueue : IStreamMountQueue, IStreamMountFrame
             }
             try
             {
-                if (work.Step(budget))
+                bool completed;
+                var stepStart = _clock();
+                try { completed = work.Step(budget); }
+                finally { LastMilliseconds += _clock() - stepStart; }
+                if (completed)
                 {
                     if (work is IStreamMountCancellationState { IsCancelled: true }) Retire(work);
                     else _pending.RemoveAt(i);
@@ -172,7 +177,6 @@ public sealed class StreamMountQueue : IStreamMountQueue, IStreamMountFrame
             AdvanceRetirement(remaining);
             if (remaining <= 0 || _clock() - start >= frameBudget) break;
         }
-        LastMilliseconds = _clock() - start;
         if (!covered) _watchdog.Observe(LastMilliseconds, _clock());
     }
 

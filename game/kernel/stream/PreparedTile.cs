@@ -242,6 +242,8 @@ public sealed class PreparedTile
         _hardVisible = visible && fadeStart >= 0;
         for (var i = 0; i < _instances.Count; i++)
         {
+            // Resident Diorama is shown at mount and stays visible until the owner detaches.
+            if (_draws[i].Resident) continue;
             var instance = _instances[i];
             if (_draws[i].Shader is null)
             {

@@ -11,9 +11,11 @@ namespace Campus.Kernel.Stream;
 /// <summary>Destination/current-floor IF and adjacent IS use the same bake and mount paths as outdoor tiles.</summary>
 internal sealed class InteriorStream(IBakeService bake, IStreamMountQueue mount, StreamMaterials materials,
     IReflectionWorld reflections, Action<PreparedTile> retire, bool captureMode, IStreamGeometryPreparation geometry,
-    Action<StreamTileChange> changed, Action<PreparedTile> detach, Func<bool> detached)
+    Action<StreamTileChange> changed, Action<PreparedTile> detach, Func<bool> detached, Func<double>? clock = null)
 {
+    private readonly Func<double> _clock = clock ?? (static () => FrameClock.MonotonicMilliseconds);
     private readonly Dictionary<BakeKey, Layer> _layers = [];
+    private readonly List<Layer> _visibilityOrder = [];
     private readonly List<Layer> _draining = [];
     private readonly HashSet<BakeKey> _destination = [], _visible = [], _pinned = [];
     private IMapContext? _context;
@@ -44,7 +46,16 @@ internal sealed class InteriorStream(IBakeService bake, IStreamMountQueue mount,
     public bool IsUnloaded => _context is null && _layers.Count == 0 && _draining.Count == 0;
     public IEnumerable<PreparedTile> Prepared => _layers.OrderBy(pair => pair.Key.Detail, StringComparer.Ordinal)
         .Select(pair => pair.Value.Prepared).OfType<PreparedTile>();
-    public bool DestinationReady => Failure is null && _destination.All(key => Ready(_layers[key]));
+    public bool DestinationReady => Failure is null && VisibilityReady && _destination.All(key => Ready(_layers[key]));
+    public bool VisibilityReady
+    {
+        get
+        {
+            foreach (var layer in _layers.Values)
+                if (layer.Visible != _visible.Contains(layer.Key) || _visible.Contains(layer.Key) && !Ready(layer)) return false;
+            return true;
+        }
+    }
     public void Load(IMapContext context, BuildContext? generation = null)
     {
         _context = context; Failure = null; _failures.Clear(); _atriumStoreys.Clear();
@@ -116,7 +127,7 @@ internal sealed class InteriorStream(IBakeService bake, IStreamMountQueue mount,
             var key = new BakeKey(_context.Descriptor.Id, "interior." + entry.ProviderId,
                 FormattableString.Invariant($"{building.Value}/{storey}/{detail}"));
             target.Add(key);
-            if (!_layers.ContainsKey(key)) _layers.Add(key, new(key, bake.Ensure(key, priority), mount.Revision, priority, building));
+            if (!_layers.ContainsKey(key)) _layers.Add(key, new(key, bake.Ensure(key, priority), mount.Revision, priority, building, storey));
             else if (priority == BakePriority.KnownDestination) bake.Ensure(key, priority);
         }
     }
@@ -198,16 +209,52 @@ internal sealed class InteriorStream(IBakeService bake, IStreamMountQueue mount,
                          pair.Value.Preparing is null && pair.Value.Handle.State is BakeState.Ready or BakeState.Failed))
                      .Select(pair => pair.Key).ToArray()) _layers.Remove(key);
     }
-    public void ApplyVisibility()
+    public void ApplyVisibility(double budgetMilliseconds)
     {
-        foreach (var layer in _layers.Values)
+        var start = _clock();
+        _visibilityOrder.Clear();
+        foreach (var layer in _layers.Values) _visibilityOrder.Add(layer);
+        _visibilityOrder.Sort(static (a, b) =>
         {
-            if (layer.Prepared is null || !layer.Mounted) continue;
-            var visible = _visible.Contains(layer.Key) && Ready(layer);
+            var building = StringComparer.Ordinal.Compare(a.Building.Value, b.Building.Value);
+            if (building != 0) return building;
+            var storey = a.Storey.CompareTo(b.Storey);
+            return storey != 0 ? storey : StringComparer.Ordinal.Compare(a.Key.Detail, b.Key.Detail);
+        });
+        for (var cursor = 0; cursor < _visibilityOrder.Count;)
+        {
+            var first = _visibilityOrder[cursor];
+            var end = cursor + 1;
+            while (end < _visibilityOrder.Count && _visibilityOrder[end].Building == first.Building &&
+                _visibilityOrder[end].Storey == first.Storey) end++;
+            var ready = true; var pending = false;
+            for (var i = cursor; i < end; i++)
+            {
+                var layer = _visibilityOrder[i];
+                var visible = _visible.Contains(layer.Key);
+                if (visible && !Ready(layer)) ready = false;
+                if (visible != layer.Visible) pending = true;
+            }
+            // Keep the old IF/IS until this floor's entire requested replacement can be shown.
+            // I0 stays with the outdoor owner and retains its existing fallback behavior.
+            if (ready && pending)
+            {
+                if (_clock() - start >= budgetMilliseconds) return;
+                ApplyVisibilityGroup(cursor, end);
+            }
+            cursor = end;
+        }
+    }
+    private void ApplyVisibilityGroup(int first, int end)
+    {
+        for (var i = first; i < end; i++)
+        {
+            var layer = _visibilityOrder[i];
+            var visible = _visible.Contains(layer.Key);
             if (layer.Visible == visible) continue;
-            layer.Visible = visible;
             // Zero is the shader's fully visible sentinel, rather than a zero-duration interpolation.
-            layer.Prepared.SetVisible(visible, visible && !captureMode ? FrameClock.FadeSeconds : 0);
+            layer.Prepared!.SetVisible(visible, visible && !captureMode ? FrameClock.FadeSeconds : 0);
+            layer.Visible = visible;
         }
     }
     public void AdvanceRetention(double delta, System.Numerics.Vector3 camera)
@@ -215,7 +262,7 @@ internal sealed class InteriorStream(IBakeService bake, IStreamMountQueue mount,
         if (_context is null) return;
         foreach (var layer in _layers.Values.OrderBy(layer => layer.Key.Detail, StringComparer.Ordinal).ToArray())
         {
-            if (_visible.Contains(layer.Key) || _destination.Contains(layer.Key) || _pinned.Contains(layer.Key)) { layer.IdleSeconds = 0; continue; }
+            if (layer.Visible || _visible.Contains(layer.Key) || _destination.Contains(layer.Key) || _pinned.Contains(layer.Key)) { layer.IdleSeconds = 0; continue; }
             layer.IdleSeconds += Math.Clamp(delta, 0, .1);
             var outside = false;
             if (_context.World.Features.TryGetValue(layer.Building, out var building))
@@ -269,7 +316,7 @@ internal sealed class InteriorStream(IBakeService bake, IStreamMountQueue mount,
             catch (Exception error) { Fail(layer, error); }
             _draining.Add(layer);
         }
-        _layers.Clear();
+        _layers.Clear(); _visibilityOrder.Clear();
     }
     public async Task DrainAsync()
     {
@@ -301,13 +348,14 @@ internal sealed class InteriorStream(IBakeService bake, IStreamMountQueue mount,
         if (layer.Work is { } work) mount.Retire(work);
         else if (layer.Owner is { } owner) retire(owner);
     }
-    private sealed class Layer(BakeKey key, IBakeHandle handle, long revision, BakePriority priority, FeatureId building)
+    private sealed class Layer(BakeKey key, IBakeHandle handle, long revision, BakePriority priority, FeatureId building, int storey)
     {
         public BakeKey Key { get; } = key;
         public IBakeHandle Handle { get; } = handle;
         public long Revision { get; } = revision;
         public BakePriority Priority { get; set; } = priority;
         public FeatureId Building { get; } = building;
+        public int Storey { get; } = storey;
         public double IdleSeconds;
         public VisualMountWork? Work;
         public Task? Preparing;

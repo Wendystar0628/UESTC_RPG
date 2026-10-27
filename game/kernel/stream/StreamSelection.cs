@@ -42,7 +42,7 @@ internal sealed class StreamSelection
         _predictionRefined = new HashSet<StreamTile>[_settings.PrefetchSeconds.Length];
         for (var i = 0; i < _predictionRefined.Length; i++) _predictionRefined[i] = [];
         _tileReady = TileReady; _changeVisibility = ChangeVisibility;
-        _visibility = new(_settings.FadeSeconds);
+        _visibility = new(_settings.FadeSeconds, static () => FrameClock.MonotonicMilliseconds);
     }
     internal StreamSettings Settings => _settings;
     internal LodTree? Tree => _tree;
@@ -55,7 +55,8 @@ internal sealed class StreamSelection
     internal MapStreamDestination? Destination => _destinationState;
     internal bool HasPendingDestination => _destinationState is not null && !_destinationConsumed;
     internal int VisibleTiles => _visibility.Drawn.Count;
-    internal bool ViewReady => SelectionReady(_viewRequired, _refined) && _host.Participants.ParticipantsReady(destination: false);
+    internal bool ViewReady => SelectionReady(_viewRequired, _refined) && (_host.Interiors?.VisibilityReady ?? true) &&
+        _host.Participants.ParticipantsReady(destination: false);
 
     internal bool DestinationReady => _destinationConsumed ? _host.Failure is null && _host.Context is not null : _destinationPlanned && _destination is { } destination &&
         SelectionReady(_destinationRequired, _destinationRefined) && _host.Participants.ParticipantsReady(destination: true) && (_host.Interiors?.DestinationReady ?? true) && (_destinationMode switch
@@ -177,7 +178,7 @@ internal sealed class StreamSelection
     private bool SelectionReady(IReadOnlySet<StreamTile> required, IReadOnlySet<StreamTile> refined)
     {
         if (!_host.ResidentReady || !_selectionApplied || !PlanCurrent ||
-            _tree is null || required.Count == 0 || !_visibility.IsSettled(FrameClock.FadeSeconds)) return false;
+            _tree is null || required.Count == 0 || !_visibility.IsSettled) return false;
         foreach (var tile in required)
             if (!refined.Contains(tile) && !HasVisibleCoverage(tile)) return false;
         return true;
@@ -328,7 +329,7 @@ internal sealed class StreamSelection
         _speed.Reset(); _selectionApplied = false; _destinationConsumed = false;
         _haveCamera = false; _velocity = N.Vector3.Zero;
         _tree = new(context.Descriptor.Bounds, _settings);
-        _visibility = new(_settings.FadeSeconds);
+        _visibility = new(_settings.FadeSeconds, static () => FrameClock.MonotonicMilliseconds);
         RequestReplan();
     }
     internal void Unload()
@@ -353,11 +354,13 @@ internal sealed class StreamSelection
     internal void BeginMapChange() { StopPlanning(); _interiorDestinationSequence = -1; }
     internal void StopPlanning() { CancelTerrainPlan(); _planReady = false; }
     internal void RequestReplan() => _replan = _settings.ReplanSeconds;
-    internal void ApplyVisibility()
+    internal void ApplyVisibility(double budgetMilliseconds)
     {
+        var start = FrameClock.MonotonicMilliseconds;
         ResolveVisible();
         // Capture keeps the existing no-fade path and hides retired detail immediately.
-        _visibility.Apply(_visible, FrameClock.FadeSeconds, !_host.CaptureMode, _changeVisibility);
+        _visibility.Apply(_visible, FrameClock.FadeSeconds, !_host.CaptureMode, _changeVisibility,
+            Math.Max(0, budgetMilliseconds - (FrameClock.MonotonicMilliseconds - start)));
         _selectionApplied = true;
     }
     private bool TileReady(StreamTile tile) => _host.Residency.IsReady(tile);

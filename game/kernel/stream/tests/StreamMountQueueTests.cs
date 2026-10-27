@@ -35,12 +35,16 @@ public sealed class StreamMountQueueTests
     [TestCategory(TestReason.Contract)]
     public void FailedMountCancelsAndLeavesNoQueuedWork()
     {
+        var clock = 0d; var remaining = -1d;
         var original = new InvalidOperationException("fixture failure");
-        var queue = new StreamMountQueue(() => 0);
-        var failed = new MountWork(StreamMountKind.Visual, queue.Revision, _ => throw original);
-        queue.Enqueue(failed); queue.Drain(VisibleWorld);
+        var queue = new StreamMountQueue(() => clock);
+        var failed = new MountWork(StreamMountKind.Visual, queue.Revision,
+            _ => { clock += KernelBudgets.StreamMountMilliseconds / 4; throw original; },
+            cancel: () => clock += KernelBudgets.StreamMountMilliseconds / 4);
+        queue.Enqueue(failed); queue.Drain(VisibleWorld, finish: value => remaining = value);
         if (failed.Cancels != 1 || queue.Pending != 0 || !ReferenceEquals(queue.Failure, original))
             throw new InvalidOperationException("Failed mount was not cancelled and removed.");
+        Check(queue.LastMilliseconds == KernelBudgets.StreamMountMilliseconds / 4 && remaining == KernelBudgets.StreamMountMilliseconds / 2);
     }
     [TestCase]
     [TestCategory(TestReason.Contract)]
@@ -76,13 +80,56 @@ public sealed class StreamMountQueueTests
         if (old.Cancels != 1 || queue.Pending != 0) throw new InvalidOperationException("Old revision was retained.");
     }
     [TestCase]
-    [TestCategory(TestReason.Contract)]
-    public void ThreeDoubleBudgetOverrunsPauseActivationFor250Milliseconds()
+    [TestCategory(TestReason.Regression)]
+    public void RepeatedMountOverrunsReduceTheBudgetAndRecoverAfterCooldown()
     {
-        var watchdog = new MountWatchdog(1);
-        watchdog.Observe(2.1, 10); watchdog.Observe(2.1, 20); watchdog.Observe(2.1, 30);
-        if (watchdog.CanActivate(279) || !watchdog.CanActivate(280) || watchdog.VisualBudgetMilliseconds != .5)
-            throw new InvalidOperationException("Mount watchdog did not preserve its cooldown and reduced budget.");
+        var clock = 0d; var budget = 0d;
+        var queue = new StreamMountQueue(() => clock);
+        for (var trip = 0; trip < 2; trip++)
+        {
+            for (var frame = 0; frame < 3; frame++)
+            {
+                queue.Enqueue(new MountWork(StreamMountKind.Visual, queue.Revision,
+                    _ => clock += KernelBudgets.StreamMountMilliseconds * 3));
+                queue.Drain(VisibleWorld);
+            }
+            Check(queue.WatchdogTrips == trip + 1 && queue.LastMilliseconds > KernelBudgets.StreamMountMilliseconds * 2);
+            if (trip == 0) clock += 250;
+        }
+        queue.Enqueue(new MountWork(StreamMountKind.Visual, queue.Revision, value => budget = value));
+        clock += 249; queue.Drain(VisibleWorld);
+        Check(queue.Pending == 1 && budget == 0);
+        clock++; queue.Drain(VisibleWorld);
+        Check(budget == KernelBudgets.StreamMountMilliseconds / 4 && queue.Pending == 0);
+        queue.Enqueue(new MountWork(StreamMountKind.Visual, queue.Revision, value => budget = value));
+        queue.Drain(VisibleWorld); Check(budget == KernelBudgets.StreamMountMilliseconds / 2);
+        queue.Enqueue(new MountWork(StreamMountKind.Visual, queue.Revision, value => budget = value));
+        queue.Drain(VisibleWorld); Check(budget == KernelBudgets.StreamMountMilliseconds);
+    }
+
+    [TestCase, TestCategory(TestReason.Regression)]
+    public void NonMountFrameTimeUsesTheSharedSliceWithoutTrippingTheMountWatchdog()
+    {
+        var clock = 0d; var released = 0; var finishBudget = -1d; var releaseBudget = -1d;
+        var queue = new StreamMountQueue(() => clock);
+        IStreamReleaseWork owner = new ReleaseWork(_ => { released++; clock += KernelBudgets.StreamMountMilliseconds * 3; });
+        for (var frame = 0; frame < 3; frame++)
+        {
+            queue.Retire(owner);
+            queue.Enqueue(new MountWork(StreamMountKind.Visual, queue.Revision,
+                _ => clock += KernelBudgets.StreamMountMilliseconds / 4));
+            queue.Drain(VisibleWorld, prepare: () => clock += KernelBudgets.StreamMountMilliseconds / 4,
+                finish: remaining => { finishBudget = remaining; clock += remaining; },
+                release: remaining => releaseBudget = remaining);
+            Check(finishBudget == KernelBudgets.StreamMountMilliseconds / 2 && releaseBudget == 0);
+            Check(queue.LastMilliseconds == KernelBudgets.StreamMountMilliseconds / 4 && queue.WatchdogTrips == 0);
+        }
+        Check(released == 3 && queue.PendingRetirements == 0);
+    }
+
+    private sealed class ReleaseWork(Action<double> release) : IStreamReleaseWork
+    {
+        public bool ReleaseStep(double budgetMilliseconds) { release(budgetMilliseconds); return true; }
     }
     [TestCase]
     [TestCategory(TestReason.Contract)]
@@ -283,13 +330,12 @@ public sealed class StreamMountQueueTests
     public void FailedRetirementKeepsItsOwnerAndResumesAfterTheFailureIsRemoved()
     {
         var queue = new StreamMountQueue(() => 0);
-        var original = new IOException(); var fault = true;
-        var work = new MountWork(StreamMountKind.Visual, queue.Revision, _ => { },
-            release: _ => { if (fault) throw original; });
+        var original = new IOException(); var fault = true; var released = 0;
+        var work = new ReleaseWork(_ => { if (fault) throw original; released++; });
         queue.Retire(work); queue.RemoveMap(new("map")); queue.Drain(VisibleWorld);
-        Check(ReferenceEquals(queue.Failure, original) && queue.PendingRetirements == 1 && work.Releases == 0);
+        Check(ReferenceEquals(queue.Failure, original) && queue.PendingRetirements == 1 && released == 0);
         fault = false; queue.Drain(VisibleWorld);
-        Check(queue.PendingRetirements == 0 && work.Releases == 1 && ReferenceEquals(queue.Failure, original));
+        Check(queue.PendingRetirements == 0 && released == 1 && ReferenceEquals(queue.Failure, original));
     }
 
     [TestCase, TestCategory(TestReason.Regression), RequireGodotRuntime]

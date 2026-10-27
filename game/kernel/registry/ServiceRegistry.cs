@@ -167,8 +167,7 @@ public sealed class ServiceRegistry
     /// <summary>Stop map/background work, exit nodes with bindings intact, then release owned objects and scene children.</summary>
     public Task ShutdownAsync(Node? scene = null, Action<string>? trace = null)
     {
-        if (_shutdown is null || _shutdown.IsCompleted && !_disposed) _shutdown = Shutdown(scene, trace);
-        return _shutdown;
+        return _shutdown ??= Shutdown(scene, trace);
     }
 
     private async Task Shutdown(Node? scene, Action<string>? trace)

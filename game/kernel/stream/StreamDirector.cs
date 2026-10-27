@@ -292,13 +292,15 @@ public partial class StreamDirector : Node, IMapAware, IMapStreamState, IStreamV
     }
     public void CompleteMountFrame(double remainingMilliseconds)
     {
+        var start = FrameClock.MonotonicMilliseconds;
         PollFailures();
         if (_context is null || _exiting || Failure is not null) return;
-        if (remainingMilliseconds >= .1) _interiors?.ApplyVisibility();
+        _interiors?.ApplyVisibility(Math.Max(0, remainingMilliseconds - (FrameClock.MonotonicMilliseconds - start)));
         if (_checkRetention) { _checkRetention = false; _residency.RetireUnneeded(); }
-        if (_selection.Tree is null || _preparation.Catalog is null || remainingMilliseconds < .1 || !_selection.PlanCurrent) return;
-        _residency.RefreshReflectionWorld(remainingMilliseconds * .25);
-        _selection.ApplyVisibility();
+        if (_selection.Tree is null || _preparation.Catalog is null || !_selection.PlanCurrent) return;
+        var remaining = Math.Max(0, remainingMilliseconds - (FrameClock.MonotonicMilliseconds - start));
+        if (remaining > 0) _residency.RefreshReflectionWorld(remaining * .25);
+        _selection.ApplyVisibility(Math.Max(0, remainingMilliseconds - (FrameClock.MonotonicMilliseconds - start)));
     }
     public void ReleaseRetired(double budgetMilliseconds)
     {

@@ -172,6 +172,9 @@ public static class FramePriority
     public const int MapRuntime = 901;      // 本帧挂载后推进地图就绪屏障
     public const int Save = 1000;           // game/kernel/save/：业务状态的最后一步，拍快照；读档时在这一步恢复，下一帧所有系统同时看到新世界（SYS-SAVE）
     public const int Stage = 1001;          // 存档快照后更新组合根的诊断与关闭编排
+
+    // ProcessPhysicsPriority has its own order: submit walk input before the body's default priority 0.
+    public const int WalkInputPhysics = -1101;
 }
 
 public readonly record struct WindSample(float Gust, float Phase);

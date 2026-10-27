@@ -17,7 +17,12 @@ public sealed class MountWatchdog
     public void Observe(double elapsedMilliseconds, double nowMilliseconds)
     {
         _overruns = elapsedMilliseconds > _budgetMilliseconds * 2 ? _overruns + 1 : 0;
-        if (_overruns < 3) return;
+        if (_overruns < 3)
+        {
+            if (_overruns == 0 && CanActivate(nowMilliseconds))
+                VisualBudgetMilliseconds = Math.Min(_budgetMilliseconds, VisualBudgetMilliseconds * 2);
+            return;
+        }
         VisualBudgetMilliseconds = Math.Max(.1, VisualBudgetMilliseconds * .5);
         _resumeAt = nowMilliseconds + 250;
         _overruns = 0; Trips++;

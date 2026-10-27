@@ -385,8 +385,9 @@ public sealed class GeometryInstancePoolRuntimeTests
         body.Free();
     }
 
-    [TestCase, TestCategory(TestReason.Regression), TestCategory("NativeRender"), RequireGodotRuntime]
-    public void VegetationRefreshDuringPartialMountStillUploadsTheActualTrees()
+    [TestCase(false, false), TestCase(true, false), TestCase(false, true), TestCase(true, true)]
+    [TestCategory(TestReason.Regression), TestCategory("NativeRender"), RequireGodotRuntime]
+    public void VegetationRefreshDuringPartialMountStillUploadsTheActualRecords(bool staticPreload, bool grass)
     {
         using var fixture = Fixture.Create();
         using var transitions = new VegetationTransitionMap();
@@ -398,34 +399,61 @@ public sealed class GeometryInstancePoolRuntimeTests
             var map = new MapId("vegetation-mount-fixture");
             fixture.Host.OnMapLoaded(Context(map));
             var world = new TestWorldState(new TestWeatherProcess(), new TestRuleset());
-            world.Freeze(17.5, Season.Autumn, WorldTime.InitialAnimTime); world.CompleteRestore();
-            var distance = (VegetationBuckets.L0PlusDistance + VegetationBuckets.L0Distance) * QualityRules.DetailDistanceScale * .5f;
+            world.Freeze(17.5, Season.Autumn, WorldTime.InitialAnimTime);
+            if (!staticPreload) world.CompleteRestore();
+            var distance = grass ? GrassPoolIndex.Reach * .5f :
+                (VegetationBuckets.L0PlusDistance + VegetationBuckets.L0Distance) * QualityRules.DetailDistanceScale * .5f;
             var foot = new N.Vector3(2, 0, 3);
             var eye = foot + new N.Vector3(0, VegetationBuckets.ReferenceTreeHeight * .5f, distance);
             // Bind the isolated owner's existing services without registering a second application or entering the scene tree.
             foreach (var (name, value) in new (string, object)[]
             {
                 ("_host", fixture.Host), ("_streamFrame", stream), ("_world", world),
-                ("_rig", new TestCameraRig(pose: new Pose(eye, 0, 0))), ("_map", map), ("_transitionMap", transitions)
+                ("_rig", new TestCameraRig(pose: new Pose(eye, 0, 0))), ("_map", map), ("_transitionMap", transitions),
+                ("_shadowReach", distance * 2)
             }) typeof(VegetationRuntime).GetField(name, System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!.SetValue(runtime, value);
             var records = new float[InstanceStreamLayout.FloatsPerInstance];
             InstanceStreamLayout.Write(records, N.Matrix4x4.CreateTranslation(foot), new(0, 0, 0, VegetationBuckets.ReferenceTreeHeight));
             var prototype = Prototype(GeometryBuffer.Freeze(Surface(fixture.Provider.FirstSpec)));
-            var prototypes = new[] { prototype, prototype, prototype, prototype };
-            var key = new BakeKey(map, BakeModuleIds.VegetationTrees, "L0/0/0");
-            var content = new VegetationTileContent(key, default, [new("fixture", records, prototypes, [new(foot, foot + N.Vector3.One)])]);
+            var prototypes = grass ? new[] { prototype } : new[] { prototype, prototype, prototype, prototype };
+            var key = new BakeKey(map, grass ? BakeModuleIds.VegetationGrass : BakeModuleIds.VegetationTrees, "L0/0/0");
+            var bounds = new Box3(foot, foot + N.Vector3.One);
+            var index = grass ? new GrassPoolIndex([new(0, 0, 0, 1, bounds)], new[] { 0 }, 1) : null;
+            var content = new VegetationTileContent(key, default, [new(grass ? "grass/fixture" : "fixture", records, prototypes, [bounds]) { GrassIndex = index }]);
             work = runtime.CreateMount(key, content, BakePriority.Normal, 1);
-            AssertThat(VegetationBuckets.Target(distance, 1f, VegetationBuckets.NotNear) == (byte)VegPool.L0 &&
-                !work.Step(1) && fixture.Host.GetChildCount() > 0 && fixture.Host.GetChildCount() < prototypes.Length && !runtime.IsReady(key))
-                .OverrideFailureMessage("The fixture must refresh a partial tile before its tree's target pool exists.").IsTrue();
-            runtime._Process(.1);
-            while (!work.Step(1)) { }
+            for (var p = 0; p < prototypes.Length; p++)
+            {
+                AssertThat(!work.Step(1) && !runtime.IsReady(key)).OverrideFailureMessage("Resource allocation must not publish a tile before its initial view uploads.").IsTrue();
+                runtime._Process(.1);
+            }
+            AssertThat(fixture.Host.GetChildCount() == prototypes.Length && Uploaded() == 0 &&
+                (grass || VegetationBuckets.Target(distance, 1f, VegetationBuckets.NotNear) == (byte)VegPool.L0))
+                .OverrideFailureMessage("The fixture must reach allocated pools whose first real records have not been uploaded by Process.").IsTrue();
+            bool complete;
+            do
+            {
+                var before = Uploaded();
+                runtime._Process(.1);
+                AssertThat(Uploaded() == before).OverrideFailureMessage("Process consumed an incomplete tile's initial membership.").IsTrue();
+                complete = work.Step(1);
+                AssertThat(Uploaded() - before <= 1 && runtime.IsReady(key) == complete)
+                    .OverrideFailureMessage("An initial mount step must upload at most one pool and publish only after the last pool.").IsTrue();
+            } while (!complete);
+            if (staticPreload)
+            {
+                AssertThat(!runtime.IsReady(new Pose(eye, 0, 0)) && fixture.Host.GetChildren().OfType<MultiMeshInstance3D>().All(node => node.Multimesh.VisibleInstanceCount == 0))
+                    .OverrideFailureMessage("Static resource preload must complete without publishing a display world.").IsTrue();
+                world.CompleteRestore();
+            }
             runtime._Process(.1);
             if (runtime.Failure is { } failure) throw failure;
             var visible = fixture.Host.GetChildren().OfType<MultiMeshInstance3D>().Where(node => node.Multimesh.VisibleInstanceCount > 0).ToArray();
-            AssertThat(runtime.IsReady(key) && visible.Sum(node => node.Multimesh.VisibleInstanceCount) == content.Mothers.Sum(mother => mother.Bounds.Count) &&
+            AssertThat(runtime.IsReady(key) && visible.Where(node => node.CastShadow != GeometryInstance3D.ShadowCastingSetting.ShadowsOnly)
+                .Sum(node => node.Multimesh.VisibleInstanceCount) == content.Mothers.Sum(mother => mother.Bounds.Count) &&
                 visible.All(node => node.Multimesh.GetBuffer().SequenceEqual(records)))
-                .OverrideFailureMessage("The visible native prefixes must contain the actual tree records after a partial-mount refresh.").IsTrue();
+                .OverrideFailureMessage("The visible native prefixes must contain the actual records after a partial-mount refresh.").IsTrue();
+
+            int Uploaded() => fixture.Host.GetChildren().OfType<MultiMeshInstance3D>().Count(node => node.Multimesh.GetBuffer().SequenceEqual(records));
         }
         finally
         {

@@ -4,8 +4,16 @@ namespace Campus.Contracts;
 
 public enum StreamMountKind : byte { Visual, Collision, Auxiliary }
 
+/// <summary>A real main-thread resource owner retained until its bounded release is complete.</summary>
+public interface IStreamReleaseWork
+{
+    /// <summary>Releases bounded main-thread units. True means ownership is empty.</summary>
+    /// <remarks>Even with zero remainder, advances at most one indivisible release unit. Native calls cannot be preempted.</remarks>
+    bool ReleaseStep(double budgetMilliseconds);
+}
+
 /// <summary>Prepared main-thread work; it owns its engine objects without exposing engine types.</summary>
-public interface IStreamMountWork
+public interface IStreamMountWork : IStreamReleaseWork
 {
     BakeKey Key { get; }
     BakePriority Priority { get; }
@@ -19,9 +27,6 @@ public interface IStreamMountWork
     bool Step(double budgetMilliseconds);
     /// <summary>Stops further mounting and immediately revokes readiness; native ownership remains until ReleaseStep completes.</summary>
     void Cancel();
-    /// <summary>Releases bounded main-thread units, including partial or completed mounts. True means ownership is empty.</summary>
-    /// <remarks>Even with zero remainder, advances at most one indivisible release unit. Native calls cannot be preempted.</remarks>
-    bool ReleaseStep(double budgetMilliseconds);
 }
 
 /// <summary>The sole stream-mount executor owns FramePriority.StreamMount and all shared mount time accounting.</summary>
@@ -31,6 +36,7 @@ public interface IStreamMountQueue
     int Pending { get; }
     /// <summary>Actual retirement owners still retained by this queue, including failed releases and pending native preparation.</summary>
     int PendingRetirements { get; }
+    /// <summary>Time spent in mount Step calls this frame, excluding preparation, visibility completion and release.</summary>
     double LastMilliseconds { get; }
     int WatchdogTrips { get; }
     /// <summary>Original mount, cancellation and release failures consumed by the map lifetime owner.</summary>
@@ -39,8 +45,9 @@ public interface IStreamMountQueue
     long Revision { get; }
     /// <summary>Main-thread enqueue. Rejects stale revisions or maps and retires their actual work.</summary>
     void Enqueue(IStreamMountWork work);
-    /// <summary>Stops mounting and retains the actual owner until its release completes, regardless of revision or failure.</summary>
-    void Retire(IStreamMountWork work);
+    /// <summary>Retains the actual release owner until completion, regardless of revision or failure.</summary>
+    /// <remarks>A mount owner is cancelled immediately to stop mounting and revoke readiness. A release-only owner has no mount identity or cancellation.</remarks>
+    void Retire(IStreamReleaseWork work);
     /// <summary>Stops this map's queued mounts, retires them and invalidates prior request revisions.</summary>
     /// <remarks>Only the map-unload coordinator calls this from its map-unload callback. Producers separately cancel their own work
     /// and retire completed mounts; they do not advance the shared queue revision.</remarks>

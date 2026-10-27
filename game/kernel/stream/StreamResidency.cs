@@ -1,5 +1,6 @@
 using Campus.Contracts;
 using Campus.Contracts.Bake;
+using Campus.Kernel.Diagnostics;
 using Campus.Kernel.Frame;
 using Campus.Kernel.Lod;
 using Campus.Kernel.Renderer;
@@ -15,8 +16,7 @@ internal sealed class StreamResidency(StreamDirector host)
     private readonly StreamDirector _host = host;
     private readonly Dictionary<StreamTile, TileGroup> _groups = [];
     private StreamMaterials _materials = null!;
-    private MapId _map;
-    private IStreamMountWork? _materialRetirement;
+    private IStreamReleaseWork? _materialRetirement;
     private readonly Queue<PreparedTile> _reflectionRefresh = [];
     private readonly Queue<PreparedTile> _retiringBundles = [];
     private readonly Queue<PreparedTile> _detachPending = [];
@@ -153,7 +153,7 @@ internal sealed class StreamResidency(StreamDirector host)
     {
         QueueDetach(bundle);
         _retiringBundles.Enqueue(bundle);
-        _host.Mount.Retire(new PreparedRetirement(bundle, _host.Mount.Revision, _host.RecordFailure, () => CanReleaseRetiredInstances));
+        _host.Mount.Retire(new PreparedRetirement(bundle, _host.RecordFailure, () => CanReleaseRetiredInstances));
         _materials.Forget(bundle.Draws);
     }
 
@@ -183,20 +183,25 @@ internal sealed class StreamResidency(StreamDirector host)
         if (_host.Context is null) Unload();
     }
 
-    private sealed class PreparedRetirement(PreparedTile bundle, long revision, Action<Exception> failed, Func<bool> detached)
-        : StreamMountWork(bundle.Key, BakePriority.Background, revision, StreamMountKind.Visual)
+    private sealed class PreparedRetirement(PreparedTile bundle, Action<Exception> failed, Func<bool> detached) : IStreamReleaseWork
     {
-        protected override bool IsCurrent => false;
-        protected override bool MountStep(double budgetMilliseconds) => throw new InvalidOperationException("Retired geometry cannot mount.");
-        protected override bool Release(double budgetMilliseconds)
+        public bool ReleaseStep(double budgetMilliseconds)
         {
-            var start = FrameClock.MonotonicMilliseconds;
-            if (!detached()) return false;
-            do { if (bundle.ReleaseOne()) return true; }
-            while (FrameClock.MonotonicMilliseconds - start < budgetMilliseconds);
-            return false;
+            try
+            {
+                var start = FrameClock.MonotonicMilliseconds;
+                if (!detached()) return false;
+                do { if (bundle.ReleaseOne()) return true; }
+                while (FrameClock.MonotonicMilliseconds - start < budgetMilliseconds);
+                return false;
+            }
+            catch (Exception error)
+            {
+                try { failed(error); }
+                catch (Exception reporting) { throw RetainedFailure.Append(error, reporting); }
+                throw;
+            }
         }
-        protected override void Failed(Exception error) => failed(error);
     }
 
     internal void OnReflectionChanged() => _reflectionDirty = true;
@@ -233,7 +238,7 @@ internal sealed class StreamResidency(StreamDirector host)
             : pending.Group.GeometryRequested && pending.Group.GeometryRevision == pending.GeometryRevision);
 
     internal void InitializeMaterials(IToonMaterialProvider provider, IShaderMaterialSource shaders) => _materials = new(provider, shaders);
-    internal void Load() { _reflectionDirty = true; _map = _host.Context!.Descriptor.Id; _materialRetirement = null; }
+    internal void Load() { _reflectionDirty = true; _materialRetirement = null; }
     internal void DetachMap()
     {
         foreach (var group in _groups.Values)
@@ -248,23 +253,28 @@ internal sealed class StreamResidency(StreamDirector host)
         if (_groups.Count == 0 && _retiringBundles.Count == 0 && _host.Preparation.IsIdle && (_host.Interiors?.IsUnloaded ?? true))
             if (_materials is { IsEmpty: false } && _materialRetirement is null)
             {
-                _materialRetirement = new MaterialRetirement(_materials, _map, _host.Mount.Revision, _host.RecordFailure);
+                _materialRetirement = new MaterialRetirement(_materials, _host.RecordFailure);
                 _host.Mount.Retire(_materialRetirement);
             }
     }
-    private sealed class MaterialRetirement(StreamMaterials materials, MapId map, long revision, Action<Exception> failed)
-        : StreamMountWork(new(map, "stream.materials", "bindings"), BakePriority.Background, revision, StreamMountKind.Auxiliary)
+    private sealed class MaterialRetirement(StreamMaterials materials, Action<Exception> failed) : IStreamReleaseWork
     {
-        protected override bool IsCurrent => false;
-        protected override bool MountStep(double budgetMilliseconds) => throw new InvalidOperationException("Retired material bindings cannot mount.");
-        protected override bool Release(double budgetMilliseconds)
+        public bool ReleaseStep(double budgetMilliseconds)
         {
-            var start = FrameClock.MonotonicMilliseconds;
-            do { if (materials.ReleaseOne()) return true; }
-            while (FrameClock.MonotonicMilliseconds - start < budgetMilliseconds);
-            return false;
+            try
+            {
+                var start = FrameClock.MonotonicMilliseconds;
+                do { if (materials.ReleaseOne()) return true; }
+                while (FrameClock.MonotonicMilliseconds - start < budgetMilliseconds);
+                return false;
+            }
+            catch (Exception error)
+            {
+                try { failed(error); }
+                catch (Exception reporting) { throw RetainedFailure.Append(error, reporting); }
+                throw;
+            }
         }
-        protected override void Failed(Exception error) => failed(error);
     }
     internal void RequireMaterialsDrained()
     {

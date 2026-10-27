@@ -51,7 +51,7 @@ public partial class ObserverCamera : Node, ICameraRig, IObserverState, IViewCon
         _controls = new(this, Tuning);
         ProcessPriority = FramePriority.Camera;
         // Before the walk body's default physics priority, so each tick moves with the input it was given.
-        ProcessPhysicsPriority = FramePriority.Camera;
+        ProcessPhysicsPriority = FramePriority.WalkInputPhysics;
     }
 
     public override void _Ready()

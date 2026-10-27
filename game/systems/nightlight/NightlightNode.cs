@@ -3,6 +3,7 @@ using Campus.Contracts;
 using Campus.Contracts.Maps;
 using Campus.Contracts.Bake;
 using Campus.Contracts.Startup;
+using Campus.Kernel.Diagnostics;
 using Campus.Kernel.Instances;
 using Campus.Kernel.Lighting;
 using Campus.Kernel.Renderer;
@@ -111,7 +112,7 @@ public partial class NightlightNode : Node, IMapAware, IViewContentReadiness, IV
         _windows.Bind(null);
         _inventoryRev = long.MinValue;
         _glows?.Bind(null);
-        _mountQueue!.Retire(new TextureRetirement(this, from, _mountQueue.Revision));
+        _mountQueue!.Retire(new TextureRetirement(this));
     }
 
     public void OnMapLoaded(IMapContext ctx)
@@ -230,16 +231,21 @@ public partial class NightlightNode : Node, IMapAware, IViewContentReadiness, IV
     public IStreamMountWork CreateMount(BakeKey key, object product, BakePriority priority, long revision) =>
         (_glows ?? throw new InvalidOperationException("Nightlight glow mounting is not ready.")).CreateMount(key, product, priority, revision);
     public bool IsReady(BakeKey key) => _glows?.IsReady(key) ?? false;
-    private sealed class TextureRetirement(NightlightNode owner, MapId map, long revision)
-        : StreamMountWork(new(map, BakeModuleIds.NightlightLamps, "textures"), BakePriority.Background, revision, StreamMountKind.Auxiliary)
+    private sealed class TextureRetirement(NightlightNode owner) : IStreamReleaseWork
     {
-        protected override bool IsCurrent => false;
-        protected override bool MountStep(double budgetMilliseconds) => throw new InvalidOperationException("Retiring textures cannot mount.");
-        protected override bool Release(double budgetMilliseconds)
+        public bool ReleaseStep(double budgetMilliseconds)
         {
-            if (owner._glows is { IsDrained: false }) return false;
-            owner._reflections.Dispose(); owner.FreeTextures(); return true;
+            try
+            {
+                if (owner._glows is { IsDrained: false }) return false;
+                owner._reflections.Dispose(); owner.FreeTextures(); return true;
+            }
+            catch (Exception error)
+            {
+                try { if (owner._glows is { } glows) glows.RecordFailure(error); }
+                catch (Exception reporting) { throw RetainedFailure.Append(error, reporting); }
+                throw;
+            }
         }
-        protected override void Failed(Exception error) { if (owner._glows is { } glows) glows.RecordFailure(error); }
     }
 }

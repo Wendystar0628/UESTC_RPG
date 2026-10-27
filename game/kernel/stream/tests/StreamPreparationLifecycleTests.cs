@@ -335,6 +335,9 @@ public sealed class StreamPreparationLifecycleTests
             var resident = prepared.Draws.Count(draw => draw.Resident);
             if (prepared.VisibleInstanceCount != resident || resident == 0 || resident == prepared.Draws.Count)
                 throw new InvalidOperationException("Resident background stayed hidden until a root selection, or ordinary coarse geometry appeared early.");
+            prepared.SetVisible(true, 0);
+            if (prepared.VisibleInstanceCount != prepared.Draws.Count)
+                throw new InvalidOperationException("Root activation failed to show ordinary coarse geometry beside its resident background.");
             prepared.SetVisible(false, 0);
             if (prepared.VisibleInstanceCount != resident)
                 throw new InvalidOperationException("Refining the root hid its resident background.");
