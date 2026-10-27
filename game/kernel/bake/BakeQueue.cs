@@ -49,7 +49,7 @@ internal sealed class BakeQueue : IDisposable
         }
     }
 
-    public IBakeHandle Ensure(MapSession session, BakeKey key, BakePriority priority, Func<object> build)
+    public IBakeHandle Ensure<TState>(MapSession session, BakeKey key, BakePriority priority, TState state, Func<TState, object> build)
     {
         if (!Enum.IsDefined(priority)) throw new ArgumentOutOfRangeException(nameof(priority));
         lock (_sync)
@@ -67,7 +67,7 @@ internal sealed class BakeQueue : IDisposable
                 }
                 return found.Handle;
             }
-            var job = new Job(session, key, priority, build);
+            var job = CreateJob(session, key, priority, state, build);
             _jobs.Add((session, key), job);
             _total++;
             _queue.Enqueue(job, ((int)priority, ++_order));
@@ -82,6 +82,10 @@ internal sealed class BakeQueue : IDisposable
             return job.Handle;
         }
     }
+
+    // Keep the captured factory in this miss-only helper; Ensure hits and promotions allocate no closure.
+    private static Job CreateJob<TState>(MapSession session, BakeKey key, BakePriority priority, TState state, Func<TState, object> build) =>
+        new(session, key, priority, () => build(state));
 
     public void SetLimit(int limit)
     {

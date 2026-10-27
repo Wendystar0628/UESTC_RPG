@@ -344,9 +344,9 @@ public sealed class BakeWindowTests
         {
             var key = collision ? BakeRequestKeys.Collision(context.Map.Id, "cancelled", default) :
                 BakeRequestKeys.Tile(context.Map.Id, "cancelled", default, LodLevel.L0);
-            var handle = queue.Ensure(map.Work, key, BakePriority.Background, () =>
+            var handle = queue.Ensure(map.Work, key, BakePriority.Background, (products, map, key), state =>
             {
-                try { return products.Build(map, key); }
+                try { return state.products.Build(state.map, state.key); }
                 catch (Exception error) { stopped = error; failed.Set(); throw; }
             });
             var signal = WaitHandle.WaitAny([started.WaitHandle, failed.WaitHandle], TimeSpan.FromSeconds(5));
@@ -356,7 +356,7 @@ public sealed class BakeWindowTests
             var firstDrain = queue.ForgetMap(map.Work);
             var secondDrain = queue.ForgetMap(map.Work);
             map.Lifetime.Cancel();
-            AssertThrown(() => queue.Ensure(map.Work, key, BakePriority.Background, () => new object()))
+            AssertThrown(() => queue.Ensure(map.Work, key, BakePriority.Background, key, static _ => new object()))
                 .IsInstanceOf<OperationCanceledException>();
             if (firstDrain.IsCompleted || secondDrain.IsCompleted || handle.Done.IsCompleted)
                 throw new InvalidOperationException("A drain completed before the accepted producer stopped.");

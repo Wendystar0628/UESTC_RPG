@@ -101,7 +101,7 @@ public sealed class BakeService : IBakeService, IBakeContextSource, IMapContentS
         {
             var current = _maps?.Context;
             if (current is null || current.Descriptor.Id != key.Map)
-                return _queue.Ensure(new(key.Map), key, priority, () => throw new InvalidOperationException("Requested map is not mounted."));
+                return _queue.Ensure(new(key.Map), key, priority, key, static _ => throw new InvalidOperationException("Requested map is not mounted."));
             map = Mount(current);
         }
         return Schedule(map, key, priority);
@@ -250,7 +250,8 @@ public sealed class BakeService : IBakeService, IBakeContextSource, IMapContentS
         lock (_sync)
         {
             if (_stopped || !map.Active) throw new OperationCanceledException("Map unloaded before request scheduling.");
-            return _queue.Ensure(map.Work, key, priority, () => _products.Build(map, key));
+            return _queue.Ensure(map.Work, key, priority, (Products: _products, Map: map, Key: key),
+                static state => state.Products.Build(state.Map, state.Key));
         }
     }
 

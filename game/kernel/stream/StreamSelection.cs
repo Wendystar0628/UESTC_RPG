@@ -20,6 +20,8 @@ internal sealed class StreamSelection
     private LodTree? _tree;
     private TerrainPlan? _terrainPlan;
     private readonly List<TerrainPlan> _retiredPlans = [];
+    private readonly List<StreamRequest> _requests = [];
+    private readonly List<N.Vector2> _planningPoints = new(2);
     internal bool IsIdle => _terrainPlan is null && _retiredPlans.Count == 0;
     internal int Preparations => _terrainPlan is null ? 0 : 1;
     internal int Retirements => _retiredPlans.Count;
@@ -92,10 +94,11 @@ internal sealed class StreamSelection
         SelectArrival(tree);
         _host.Pins.Select();
         _host.Interiors!.RefreshPriorities();
-        var requests = new List<StreamRequest>();
-        _host.Residency.QueueGeometryRequests(requests, pose);
-        _host.Participants.QueueParticipants(requests, pose);
-        _host.Preparation.ReplaceRequests(requests);
+        _requests.Clear();
+        _host.Residency.QueueGeometryRequests(_requests, pose);
+        _host.Participants.QueueParticipants(_requests, pose);
+        _host.Preparation.ReplaceRequests(_requests);
+        _requests.Clear();
         _host.RequestRetention();
         _plannedContext = _host.Context; _plannedWorld = _host.Context!.World; _plannedPose = pose;
         _plannedLive = live; _plannedSequence = _destinationSequence; _planReady = true;
@@ -107,18 +110,20 @@ internal sealed class StreamSelection
         var same = _terrainPlan is { } pending && ReferenceEquals(pending.Context, context) && ReferenceEquals(pending.World, context.World) &&
             pending.Generation == _host.MapGeneration && pending.Sequence == _destinationSequence && pending.Pose == pose && pending.Live == live;
         if (!same) CancelTerrainPlan();
-        var points = new List<N.Vector2>(2);
+        var points = _planningPoints;
+        points.Clear();
         if (live || _destination is not null) points.Add(new(pose.Position.X, pose.Position.Z));
         if (!_destinationConsumed && _destination is { } destination)
         {
             var target = new N.Vector2(destination.Position.X, destination.Position.Z);
             if (!points.Contains(target)) points.Add(target);
         }
-        if (points.All(point => _host.Terrain.IsPrepared(context.World, point))) { CancelTerrainPlan(); return true; }
+        if (PlanningPointsPrepared(context.World)) { CancelTerrainPlan(); return true; }
         _planReady = false;
         if (_terrainPlan is null)
         {
             var cancellation = new CancellationTokenSource();
+            // PreparePoints materializes block identities synchronously before starting workers.
             _terrainPlan = new(context, context.World, _host.MapGeneration, _destinationSequence, pose, live,
                 _host.Terrain.PreparePoints(context, points, cancellation.Token), cancellation);
             _host.Preparation.ClearRequests();
@@ -126,9 +131,16 @@ internal sealed class StreamSelection
         if (!_terrainPlan.Preparation.IsCompleted) return false;
         try { _terrainPlan.Preparation.GetAwaiter().GetResult(); }
         catch (Exception error) { _host.RecordFailure(error); CancelTerrainPlan(); return false; }
-        if (!points.All(point => _host.Terrain.IsPrepared(context.World, point)))
+        if (!PlanningPointsPrepared(context.World))
             throw new InvalidOperationException("Terrain preparation completed without the current planning points.");
         CancelTerrainPlan(); return true;
+    }
+
+    private bool PlanningPointsPrepared(IWorldModel world)
+    {
+        foreach (var point in _planningPoints)
+            if (!_host.Terrain.IsPrepared(world, point)) return false;
+        return true;
     }
 
     internal void CancelTerrainPlan()
@@ -341,6 +353,7 @@ internal sealed class StreamSelection
     }
     internal void ClearDemand()
     {
+        _requests.Clear(); _planningPoints.Clear();
         _required.Clear(); _viewRequired.Clear(); _refined.Clear();
         _predictionRequired.Clear();
         foreach (var history in _predictionRefined) history.Clear();

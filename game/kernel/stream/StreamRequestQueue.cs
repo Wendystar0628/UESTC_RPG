@@ -25,9 +25,9 @@ public sealed class StreamRequestQueue
     {
         public int CompareTo(RequestOrder other)
         {
-            var order = Request.Priority.CompareTo(other.Request.Priority);
+            var order = ((byte)Request.Priority).CompareTo((byte)other.Request.Priority);
             if (order != 0) return order;
-            order = other.Request.Tile.Level.CompareTo(Request.Tile.Level);
+            order = ((byte)other.Request.Tile.Level).CompareTo((byte)Request.Tile.Level);
             if (order != 0) return order;
             order = Request.NeededInSeconds.CompareTo(other.Request.NeededInSeconds);
             if (order != 0) return order;

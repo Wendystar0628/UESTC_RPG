@@ -13,7 +13,7 @@ public readonly record struct StreamTile(TileKey Tile, LodLevel Level) : ICompar
     public static StreamTile Root => new(new(0, 0), LodLevel.L4);
     public int CompareTo(StreamTile other)
     {
-        var level = other.Level.CompareTo(Level); // Coarse first; stable tie-breaks across runs.
+        var level = ((byte)other.Level).CompareTo((byte)Level); // Coarse first; stable tie-breaks across runs.
         if (level != 0) return level;
         var x = Tile.X.CompareTo(other.Tile.X);
         return x != 0 ? x : Tile.Z.CompareTo(other.Tile.Z);

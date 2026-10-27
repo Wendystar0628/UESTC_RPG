@@ -88,7 +88,7 @@ public sealed class BakeQueueTests
         var product = new object();
         var catalog = new BakeCatalog(options, queue, (current, key, priority) =>
         {
-            handle = queue.Ensure(current.Work, key, priority, () => product);
+            handle = queue.Ensure(current.Work, key, priority, product, static value => value);
         }, static (_, _) => true);
         catalog.SetPhase(AppState.Title);
         var thread = catalog.Begin(map) ?? throw new InvalidOperationException("Interactive catalog did not start.");
@@ -141,7 +141,7 @@ public sealed class BakeQueueTests
         using var queue = new BakeQueue(1, static () => { });
         var session = new BakeQueue.MapSession(new("fixture"));
         var error = new InvalidDataException("Invalid authoritative bake input.");
-        var handle = queue.Ensure(session, new(new("fixture"), "fixture.module", "fixture"), BakePriority.Normal, () => throw error);
+        var handle = queue.Ensure(session, new(new("fixture"), "fixture.module", "fixture"), BakePriority.Normal, error, static failure => throw failure);
         if (!SpinWait.SpinUntil(() => handle.State == BakeState.Failed, 5000)) throw new TimeoutException("Bake failure did not arrive.");
         Exception? awaited = null;
         try { handle.Done.GetAwaiter().GetResult(); }
@@ -168,11 +168,11 @@ public sealed class BakeQueueTests
         var session = new BakeQueue.MapSession(new("fixture"));
         var error = new InvalidDataException("Fault after map cancellation.");
         var key = new BakeKey(new("fixture"), "fixture.module", "fixture");
-        var handle = queue.Ensure(session, key, BakePriority.Normal, () =>
+        var handle = queue.Ensure(session, key, BakePriority.Normal, (started, release, error), static state =>
         {
-            started.Set();
-            if (!release.Wait(TimeSpan.FromSeconds(5))) throw new TimeoutException("Worker fixture did not release.");
-            throw error;
+            state.started.Set();
+            if (!state.release.Wait(TimeSpan.FromSeconds(5))) throw new TimeoutException("Worker fixture did not release.");
+            throw state.error;
         });
         try
         {
@@ -181,7 +181,7 @@ public sealed class BakeQueueTests
             var second = queue.ForgetMap(session);
             if (first.IsCompleted || second.IsCompleted || handle.Done.IsCompleted)
                 throw new InvalidOperationException("Unload completed before the worker.");
-            AssertThrown(() => queue.Ensure(session, key, BakePriority.Normal, () => new object()))
+            AssertThrown(() => queue.Ensure(session, key, BakePriority.Normal, key, static _ => new object()))
                 .IsInstanceOf<OperationCanceledException>();
             release.Set();
             foreach (var task in new[] { first, second, handle.Done })
@@ -215,7 +215,7 @@ public sealed class BakeQueueTests
         });
         try
         {
-            queue.Ensure(session, new(new("fixture"), "fixture.module", "fixture"), BakePriority.Normal, static () => new object());
+            queue.Ensure(session, new(new("fixture"), "fixture.module", "fixture"), BakePriority.Normal, session, static _ => new object());
             if (!entered.Wait(TimeSpan.FromSeconds(5))) throw new TimeoutException("Publication did not start.");
             if (queue.Progress.Done == queue.Progress.Total) throw new InvalidOperationException("Batch completed before source index publication.");
         }
@@ -235,10 +235,10 @@ public sealed class BakeQueueTests
         var session = new BakeQueue.MapSession(new("fixture"));
         try
         {
-            var handle = queue.Ensure(session, key, BakePriority.KnownDestination, () =>
+            var handle = queue.Ensure(session, key, BakePriority.KnownDestination, (started, release), static state =>
             {
-                started.Set();
-                if (!release.Wait(TimeSpan.FromSeconds(5))) throw new TimeoutException("Fixture worker release timed out.");
+                state.started.Set();
+                if (!state.release.Wait(TimeSpan.FromSeconds(5))) throw new TimeoutException("Fixture worker release timed out.");
                 return new object();
             });
             if (!started.Wait(TimeSpan.FromSeconds(5))) throw new TimeoutException("Fixture worker did not start.");
@@ -271,15 +271,15 @@ public sealed class BakeQueueTests
         var pendingRan = false;
         try
         {
-            var running = queue.Ensure(session, key, BakePriority.Normal, () =>
+            var running = queue.Ensure(session, key, BakePriority.Normal, (started, release), state =>
             {
-                started.Set();
-                if (!release.Wait(TimeSpan.FromSeconds(5))) throw new TimeoutException("Fixture worker release timed out.");
+                state.started.Set();
+                if (!state.release.Wait(TimeSpan.FromSeconds(5))) throw new TimeoutException("Fixture worker release timed out.");
                 finished = true;
                 return new object();
             });
             if (!started.Wait(TimeSpan.FromSeconds(5))) throw new TimeoutException("Fixture worker did not start.");
-            var pending = queue.Ensure(session, key with { Detail = "pending" }, BakePriority.Background, () =>
+            var pending = queue.Ensure(session, key with { Detail = "pending" }, BakePriority.Background, key, _ =>
             {
                 pendingRan = true;
                 return new object();
@@ -287,7 +287,7 @@ public sealed class BakeQueueTests
             queue.Stop(); // Must return while generation is still paused.
             AssertThat(running.State == BakeState.Failed && pending.State == BakeState.Failed && !finished)
                 .OverrideFailureMessage("Stopping waited for generation or left publishable work.").IsTrue();
-            AssertThrown(() => queue.Ensure(session, key, BakePriority.Normal, () => new object()))
+            AssertThrown(() => queue.Ensure(session, key, BakePriority.Normal, key, static _ => new object()))
                 .IsInstanceOf<ObjectDisposedException>();
             release.Set();
             queue.Dispose(); // Even after Stop, ordinary disposal must join the remaining CPU worker.

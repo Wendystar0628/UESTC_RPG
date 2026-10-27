@@ -55,7 +55,7 @@ public sealed class StreamMountQueue : IStreamMountQueue, IStreamMountFrame
         if (background != 0) return background;
         var kind = Rank(a.Kind).CompareTo(Rank(b.Kind));
         if (kind != 0) return kind;
-        var priority = a.Priority.CompareTo(b.Priority);
+        var priority = ((byte)a.Priority).CompareTo((byte)b.Priority);
         if (priority != 0) return priority;
         var module = StringComparer.Ordinal.Compare(a.Key.Module, b.Key.Module);
         return module != 0 ? module : StringComparer.Ordinal.Compare(a.Key.Detail, b.Key.Detail);

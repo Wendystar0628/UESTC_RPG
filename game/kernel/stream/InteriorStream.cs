@@ -16,6 +16,8 @@ internal sealed class InteriorStream(IBakeService bake, IStreamMountQueue mount,
     private readonly Func<double> _clock = clock ?? (static () => FrameClock.MonotonicMilliseconds);
     private readonly Dictionary<BakeKey, Layer> _layers = [];
     private readonly List<Layer> _visibilityOrder = [];
+    private readonly List<(Layer Layer, int Order)> _layerSnapshot = [];
+    private readonly List<int> _storeyOrder = [];
     private readonly List<Layer> _draining = [];
     private readonly HashSet<BakeKey> _destination = [], _visible = [], _pinned = [];
     private IMapContext? _context;
@@ -46,7 +48,15 @@ internal sealed class InteriorStream(IBakeService bake, IStreamMountQueue mount,
     public bool IsUnloaded => _context is null && _layers.Count == 0 && _draining.Count == 0;
     public IEnumerable<PreparedTile> Prepared => _layers.OrderBy(pair => pair.Key.Detail, StringComparer.Ordinal)
         .Select(pair => pair.Value.Prepared).OfType<PreparedTile>();
-    public bool DestinationReady => Failure is null && VisibilityReady && _destination.All(key => Ready(_layers[key]));
+    public bool DestinationReady
+    {
+        get
+        {
+            if (Failure is not null || !VisibilityReady) return false;
+            foreach (var key in _destination) if (!Ready(_layers[key])) return false;
+            return true;
+        }
+    }
     public bool VisibilityReady
     {
         get
@@ -120,8 +130,12 @@ internal sealed class InteriorStream(IBakeService bake, IStreamMountQueue mount,
             return;
         }
         var atrium = _atriumStoreys.GetValueOrDefault(building);
-        foreach (var storey in entry.OpenStoreys.Where(storey => Math.Abs(storey - space.Floor) <= 1 ||
-                     atrium is not null && atrium.Contains(space.Floor) && atrium.Contains(storey)).Order())
+        _storeyOrder.Clear();
+        foreach (var storey in entry.OpenStoreys)
+            if (Math.Abs(storey - space.Floor) <= 1 || atrium is not null && atrium.Contains(space.Floor) && atrium.Contains(storey))
+                _storeyOrder.Add(storey);
+        _storeyOrder.Sort();
+        foreach (var storey in _storeyOrder)
         {
             var detail = storey == space.Floor ? "IF" : "IS";
             var key = new BakeKey(_context.Descriptor.Id, "interior." + entry.ProviderId,
@@ -133,7 +147,13 @@ internal sealed class InteriorStream(IBakeService bake, IStreamMountQueue mount,
     }
     public void Poll(int availablePreparations, bool background = false)
     {
-        foreach (var layer in _layers.Values.OrderBy(layer => layer.Priority).ThenBy(layer => layer.Key.Detail, StringComparer.Ordinal))
+        SnapshotLayers();
+        _layerSnapshot.Sort(static (a, b) =>
+        {
+            var priority = ((byte)a.Layer.Priority).CompareTo((byte)b.Layer.Priority);
+            return priority != 0 ? priority : CompareDetail(a, b);
+        });
+        foreach (var (layer, _) in _layerSnapshot)
         {
             if ((layer.Priority == BakePriority.Background) != background) continue;
             if (layer.Preparing is not null || layer.Owner is not null || layer.Failure is not null) continue;
@@ -154,6 +174,17 @@ internal sealed class InteriorStream(IBakeService bake, IStreamMountQueue mount,
             layer.Preparing = Initialize(layer.Owner, bundle);
             availablePreparations--;
         }
+        _layerSnapshot.Clear();
+    }
+    private void SnapshotLayers()
+    {
+        _layerSnapshot.Clear();
+        foreach (var layer in _layers.Values) _layerSnapshot.Add((layer, _layerSnapshot.Count));
+    }
+    private static int CompareDetail((Layer Layer, int Order) a, (Layer Layer, int Order) b)
+    {
+        var detail = StringComparer.Ordinal.Compare(a.Layer.Key.Detail, b.Layer.Key.Detail);
+        return detail != 0 ? detail : a.Order.CompareTo(b.Order);
     }
     private async Task Initialize(PreparedTile owner, TileBundle bundle) => await geometry.PrepareAsync(owner, bundle).ConfigureAwait(false);
 
@@ -205,9 +236,13 @@ internal sealed class InteriorStream(IBakeService bake, IStreamMountQueue mount,
             }
         }
         if (_context is null)
-            foreach (var key in _layers.Where(pair => pair.Value.Owner is null && (pair.Value.Finished ||
-                         pair.Value.Preparing is null && pair.Value.Handle.State is BakeState.Ready or BakeState.Failed))
-                     .Select(pair => pair.Key).ToArray()) _layers.Remove(key);
+        {
+            SnapshotLayers();
+            foreach (var (layer, _) in _layerSnapshot)
+                if (layer.Owner is null && (layer.Finished ||
+                    layer.Preparing is null && layer.Handle.State is BakeState.Ready or BakeState.Failed)) _layers.Remove(layer.Key);
+            _layerSnapshot.Clear();
+        }
     }
     public void ApplyVisibility(double budgetMilliseconds)
     {
@@ -260,7 +295,9 @@ internal sealed class InteriorStream(IBakeService bake, IStreamMountQueue mount,
     public void AdvanceRetention(double delta, System.Numerics.Vector3 camera)
     {
         if (_context is null) return;
-        foreach (var layer in _layers.Values.OrderBy(layer => layer.Key.Detail, StringComparer.Ordinal).ToArray())
+        SnapshotLayers();
+        _layerSnapshot.Sort(CompareDetail);
+        foreach (var (layer, _) in _layerSnapshot)
         {
             if (layer.Visible || _visible.Contains(layer.Key) || _destination.Contains(layer.Key) || _pinned.Contains(layer.Key)) { layer.IdleSeconds = 0; continue; }
             layer.IdleSeconds += Math.Clamp(delta, 0, .1);
@@ -276,6 +313,7 @@ internal sealed class InteriorStream(IBakeService bake, IStreamMountQueue mount,
             _layers.Remove(layer.Key);
             if (layer.Preparing is not null || layer.Handle.State is BakeState.Pending or BakeState.Running) _draining.Add(layer);
         }
+        _layerSnapshot.Clear();
     }
     private bool Ready(Layer layer) => layer.Failure is null && layer.Mounted && layer.Prepared is not null;
     private void SetMounted(Layer layer)
@@ -316,7 +354,7 @@ internal sealed class InteriorStream(IBakeService bake, IStreamMountQueue mount,
             catch (Exception error) { Fail(layer, error); }
             _draining.Add(layer);
         }
-        _layers.Clear(); _visibilityOrder.Clear();
+        _layers.Clear(); _visibilityOrder.Clear(); _layerSnapshot.Clear(); _storeyOrder.Clear();
     }
     public async Task DrainAsync()
     {

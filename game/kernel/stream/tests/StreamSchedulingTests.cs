@@ -174,15 +174,15 @@ public sealed class StreamSchedulingTests
         using var release = new ManualResetEventSlim();
         var caller = Environment.CurrentManagedThreadId;
         var session = new BakeQueue.MapSession(key.Map);
-        var handle = queue.Ensure(session, key, BakePriority.KnownDestination, () =>
+        var handle = queue.Ensure(session, key, BakePriority.Background, (entered, release, builder, key, context, module), static state =>
         {
-            entered.Set(); release.Wait();
-            return builder.Build(key, context, module, _ => { });
+            state.entered.Set(); state.release.Wait();
+            return state.builder.Build(state.key, state.context, state.module, _ => { });
         });
         try
         {
             if (!entered.Wait(5000) || !ReferenceEquals(handle,
-                queue.Ensure(session, key, BakePriority.KnownDestination, () => throw new InvalidOperationException("Duplicate build."))))
+                queue.Ensure(session, key, BakePriority.KnownDestination, key, static _ => throw new InvalidOperationException("Duplicate build."))))
                 throw new InvalidOperationException("A repeated root request created another bake operation.");
             release.Set();
             if (!SpinWait.SpinUntil(() => handle.State is BakeState.Ready or BakeState.Failed, 5000))
@@ -207,7 +207,7 @@ public sealed class StreamSchedulingTests
         var oldKey = new BakeKey(retiringContext.Descriptor.Id, "fixture.root", "L4/0/0");
         var currentKey = new BakeKey(currentContext.Descriptor.Id, "fixture.root", "L4/0/0");
         var oldSession = new BakeQueue.MapSession(retiringContext.Descriptor.Id);
-        var old = queue.Ensure(oldSession, oldKey, BakePriority.KnownDestination, () => { entered.Set(); release.Wait(); return new object(); });
+        var old = queue.Ensure(oldSession, oldKey, BakePriority.KnownDestination, (entered, release), static state => { state.entered.Set(); state.release.Wait(); return new object(); });
         try
         {
             if (!entered.Wait(5000)) throw new InvalidOperationException("Old worker did not start.");
@@ -217,7 +217,7 @@ public sealed class StreamSchedulingTests
                 throw new InvalidOperationException("Forget detached the retiring map's worker before it finished.");
             var currentSession = new BakeQueue.MapSession(currentContext.Descriptor.Id);
             var expected = new object();
-            var current = queue.Ensure(currentSession, currentKey, BakePriority.KnownDestination, () => expected);
+            var current = queue.Ensure(currentSession, currentKey, BakePriority.KnownDestination, expected, static value => value);
             release.Set();
             if (!SpinWait.SpinUntil(() => current.State is BakeState.Ready or BakeState.Failed, 5000) ||
                 old.State != BakeState.Failed || current.State != BakeState.Ready || !ReferenceEquals(current.Product, expected))
@@ -225,7 +225,7 @@ public sealed class StreamSchedulingTests
             Task.WhenAll(firstDrain, secondDrain).GetAwaiter().GetResult();
             var original = new InvalidOperationException("Active build failure.");
             var failed = queue.Ensure(currentSession, currentKey with { Detail = "L3/0/0" }, BakePriority.KnownDestination,
-                () => throw original);
+                original, static error => throw error);
             if (!SpinWait.SpinUntil(() => failed.State == BakeState.Failed, 5000) ||
                 failed.Product is not null || !ReferenceEquals(failed.Failure, original))
                 throw new InvalidOperationException("An active build failure became a ready or empty product.");
@@ -243,6 +243,13 @@ public sealed class StreamSchedulingTests
         if (!queue.TryDequeue(out var first) || first != collision) throw new InvalidOperationException("Collision did not get the first slot.");
         queue.Replace([]);
         if (queue.TryDequeue(out _)) throw new InvalidOperationException("A cancelled unissued request survived replan.");
+        var coarse = new StreamRequest(new(new("map"), "coarse", "L4/0/0"), StreamTile.Root, BakePriority.Normal, 1);
+        var laterFine = new StreamRequest(new(new("map"), "fine", "L0/1/0"), new(new(1, 0), LodLevel.L0), BakePriority.Normal, 1);
+        var earlierFine = laterFine with { Tile = fine, Key = laterFine.Key with { Detail = "L0/0/0" } };
+        queue.Replace([laterFine, earlierFine, coarse]);
+        foreach (var expected in new[] { coarse, earlierFine, laterFine })
+            if (!queue.TryDequeue(out var actual) || actual != expected)
+                throw new InvalidOperationException("Equal-priority requests lost coarse-first or coordinate ordering.");
     }
     [TestCase]
     [TestCategory(TestReason.Regression)]

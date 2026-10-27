@@ -15,6 +15,8 @@ internal sealed class StreamResidency(StreamDirector host)
 {
     private readonly StreamDirector _host = host;
     private readonly Dictionary<StreamTile, TileGroup> _groups = [];
+    private readonly HashSet<StreamTile> _wanted = [];
+    private readonly List<StreamTile> _tileOrder = [];
     private StreamMaterials _materials = null!;
     private IStreamReleaseWork? _materialRetirement;
     private readonly Queue<PreparedTile> _reflectionRefresh = [];
@@ -28,11 +30,44 @@ internal sealed class StreamResidency(StreamDirector host)
     internal StreamMaterials Materials => _materials;
     internal bool IsIdle => _groups.Count == 0 && _retiringBundles.Count == 0 && _detachPending.Count == 0 && (_materials?.IsEmpty ?? true);
     internal bool CanReleaseRetiredInstances => _detachPending.Count == 0;
-    internal bool CanActivateVisual => _retiringBundles.Count == 0 && !_groups.Values.Any(group => group.RetiringGeometry);
-    internal int Retirements => _host.Context is null
-        ? _groups.Values.Count(group => !group.RetiringGeometry) : 0;
-    internal int MountedTiles => _groups.Values.Count(group => group.Mounted);
-    internal long ResidentBytes => _groups.Values.Sum(group => group.Bundles.Sum(bundle => bundle.Bytes));
+    internal bool CanActivateVisual
+    {
+        get
+        {
+            if (_retiringBundles.Count != 0) return false;
+            foreach (var group in _groups.Values) if (group.RetiringGeometry) return false;
+            return true;
+        }
+    }
+    internal int Retirements
+    {
+        get
+        {
+            if (_host.Context is not null) return 0;
+            var count = 0;
+            foreach (var group in _groups.Values) if (!group.RetiringGeometry) count++;
+            return count;
+        }
+    }
+    internal int MountedTiles
+    {
+        get
+        {
+            var count = 0;
+            foreach (var group in _groups.Values) if (group.Mounted) count++;
+            return count;
+        }
+    }
+    internal long ResidentBytes
+    {
+        get
+        {
+            var bytes = 0L;
+            foreach (var group in _groups.Values)
+                foreach (var bundle in group.Bundles) bytes += bundle.Bytes;
+            return bytes;
+        }
+    }
     internal bool RootMounted => _groups.TryGetValue(StreamTile.Root, out var root) && root.Failure is null && !root.RetiringGeometry && root.Mounted;
 
     internal TileGroup GetGroup(StreamTile tile)
@@ -77,8 +112,12 @@ internal sealed class StreamResidency(StreamDirector host)
 
     internal void QueueGeometryRequests(List<StreamRequest> requests, Pose pose)
     {
-        var wanted = _host.Selection.Required.Concat(_host.Selection.DestinationRequired).Concat(_host.Pins.Required).Distinct().Order().ToArray();
-        foreach (var tile in wanted)
+        _wanted.Clear();
+        _wanted.UnionWith(_host.Selection.Required); _wanted.UnionWith(_host.Selection.DestinationRequired); _wanted.UnionWith(_host.Pins.Required);
+        _tileOrder.Clear();
+        foreach (var tile in _wanted) _tileOrder.Add(tile);
+        _tileOrder.Sort();
+        foreach (var tile in _tileOrder)
         {
             var group = GetGroup(tile);
             if (group.RetiringGeometry) continue;
@@ -86,6 +125,13 @@ internal sealed class StreamResidency(StreamDirector host)
             {
                 group.GeometryRequested = true; group.Expected = _host.Preparation.Catalog!.Modules(tile).Count;
                 group.Mounted = group.Expected == 0; // Empty quadrants are valid geometry coverage.
+                foreach (var module in _host.Preparation.Catalog.Modules(tile))
+                {
+                    var key = BakeRequestKeys.Tile(_host.Context!.Descriptor.Id, module, tile.Tile, tile.Level);
+                    // Catalog modules are ordinally ordered; keep these identities for this geometry lifetime.
+                    group.MountKey ??= key;
+                    group.Keys.Add(key);
+                }
             }
             var priority = tile == StreamTile.Root || _host.Selection.DestinationRequired.Contains(tile) || _host.Pins.Required.Contains(tile) ? BakePriority.KnownDestination :
                 _host.Selection.Required.Contains(tile) ? BakePriority.Normal : BakePriority.Background;
@@ -96,12 +142,8 @@ internal sealed class StreamResidency(StreamDirector host)
             var approach = toTile.LengthSquared() > 0 ? N.Vector3.Dot(_host.Selection.Velocity, N.Vector3.Normalize(toTile)) : 0;
             var radius = _host.Selection.Settings.Distances[Math.Min((int)tile.Level, 3)];
             var neededIn = (distance - radius) / Math.Max(1, approach);
-            foreach (var module in _host.Preparation.Catalog!.Modules(tile))
+            foreach (var key in group.Keys)
             {
-                var key = BakeRequestKeys.Tile(_host.Context!.Descriptor.Id, module, tile.Tile, tile.Level);
-                // Catalog modules are ordinally ordered; use the first requested identity, never returned geometry.
-                group.MountKey ??= key;
-                group.Keys.Add(key);
                 if (!_host.Preparation.IsIssued(key)) requests.Add(new(key, tile, priority, neededIn));
                 // Re-Ensure promotes an already issued background request without restarting it.
                 else
@@ -115,8 +157,12 @@ internal sealed class StreamResidency(StreamDirector host)
     internal void RetireUnneeded()
     {
         _host.Participants.RetireParticipants();
-        foreach (var tile in _groups.Keys.Where(tile => tile != StreamTile.Root && !_host.Selection.Required.Contains(tile) &&
-                     !_host.Selection.DestinationRequired.Contains(tile) && !_host.Pins.Required.Contains(tile) && !_host.Selection.Visibility.Drawn.Contains(tile)).Order().ToArray())
+        _tileOrder.Clear();
+        foreach (var tile in _groups.Keys)
+            if (tile != StreamTile.Root && !_host.Selection.Required.Contains(tile) && !_host.Selection.DestinationRequired.Contains(tile) &&
+                !_host.Pins.Required.Contains(tile) && !_host.Selection.Visibility.Drawn.Contains(tile)) _tileOrder.Add(tile);
+        _tileOrder.Sort();
+        foreach (var tile in _tileOrder)
         {
             var group = _groups[tile];
             if (!group.GeometryRequested && group.Participants.Count > 0) continue;
@@ -137,23 +183,30 @@ internal sealed class StreamResidency(StreamDirector host)
     {
         foreach (var group in _groups.Values)
         {
-            if (!group.RetiringGeometry || group.Bundles.Any(bundle => !bundle.IsDisposed)) continue;
+            if (!group.RetiringGeometry || HasUnreleasedBundle(group)) continue;
             ClearMounted(group, group.Work?.Revision ?? _host.Mount.Revision);
             foreach (var key in group.Keys) _host.Preparation.Forget(key);
             group.Bundles.Clear(); group.Keys.Clear(); group.Work = null; group.MountKey = null;
             group.Expected = 0; group.Queued = group.Mounted = group.RetiringGeometry = false;
             group.GeometryRevision++; group.Failure = null;
         }
-        foreach (var tile in _groups.Where(pair => !pair.Value.GeometryRequested && !pair.Value.RetiringGeometry &&
-                     pair.Value.Bundles.Count == 0 && pair.Value.Participants.Count == 0).Select(pair => pair.Key).ToArray())
-            _groups.Remove(tile);
+        _tileOrder.Clear();
+        foreach (var (tile, group) in _groups)
+            if (!group.GeometryRequested && !group.RetiringGeometry && group.Bundles.Count == 0 && group.Participants.Count == 0) _tileOrder.Add(tile);
+        foreach (var tile in _tileOrder) _groups.Remove(tile);
+    }
+
+    private static bool HasUnreleasedBundle(TileGroup group)
+    {
+        foreach (var bundle in group.Bundles) if (!bundle.IsDisposed) return true;
+        return false;
     }
 
     internal void QueueRetirement(PreparedTile bundle)
     {
         QueueDetach(bundle);
         _retiringBundles.Enqueue(bundle);
-        _host.Mount.Retire(new PreparedRetirement(bundle, _host.RecordFailure, () => CanReleaseRetiredInstances));
+        _host.Mount.Retire(new PreparedRetirement(bundle, this));
         _materials.Forget(bundle.Draws);
     }
 
@@ -183,21 +236,21 @@ internal sealed class StreamResidency(StreamDirector host)
         if (_host.Context is null) Unload();
     }
 
-    private sealed class PreparedRetirement(PreparedTile bundle, Action<Exception> failed, Func<bool> detached) : IStreamReleaseWork
+    private sealed class PreparedRetirement(PreparedTile bundle, StreamResidency residency) : IStreamReleaseWork
     {
         public bool ReleaseStep(double budgetMilliseconds)
         {
             try
             {
                 var start = FrameClock.MonotonicMilliseconds;
-                if (!detached()) return false;
+                if (!residency.CanReleaseRetiredInstances) return false;
                 do { if (bundle.ReleaseOne()) return true; }
                 while (FrameClock.MonotonicMilliseconds - start < budgetMilliseconds);
                 return false;
             }
             catch (Exception error)
             {
-                try { failed(error); }
+                try { residency._host.RecordFailure(error); }
                 catch (Exception reporting) { throw RetainedFailure.Append(error, reporting); }
                 throw;
             }
@@ -214,8 +267,11 @@ internal sealed class StreamResidency(StreamDirector host)
         {
             _reflectionDirty = false; _reflectionScenario = scenario; _reflectionMaterial = material;
             _reflectionRefresh.Clear(); _reflectionCursor = 0;
-            foreach (var group in _groups.OrderBy(pair => pair.Key).Select(pair => pair.Value))
-                foreach (var bundle in group.Bundles) _reflectionRefresh.Enqueue(bundle);
+            _tileOrder.Clear();
+            foreach (var tile in _groups.Keys) _tileOrder.Add(tile);
+            _tileOrder.Sort();
+            foreach (var tile in _tileOrder)
+                foreach (var bundle in _groups[tile].Bundles) _reflectionRefresh.Enqueue(bundle);
             if (_host.Interiors is not null) foreach (var bundle in _host.Interiors.Prepared) _reflectionRefresh.Enqueue(bundle);
         }
         var start = FrameClock.MonotonicMilliseconds;
@@ -288,7 +344,7 @@ internal sealed class StreamResidency(StreamDirector host)
         public long GeometryRevision;
         public Dictionary<BakeKey, ParticipantTile> Participants { get; } = [];
         public List<PreparedTile> Bundles { get; } = [];
-        public HashSet<BakeKey> Keys { get; } = [];
+        public List<BakeKey> Keys { get; } = [];
         public BakeKey? MountKey;
         public VisualMountWork? Work;
         public bool Queued, Mounted, RetiringGeometry;
