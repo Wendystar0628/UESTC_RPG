@@ -1668,19 +1668,19 @@
 
 ## ENG-PERF · 性能工程
 
-`docs/engineering/ENG-PERF-性能工程.md` · 6.2k 字 · 性能总原则与绘制管线：容器与合批、着色器白名单与全局参数、预热、填充率、剔除与图层
+`docs/engineering/ENG-PERF-性能工程.md` · 6.3k 字 · 性能总原则与绘制管线：容器与合批、着色器白名单与全局参数、预热、填充率、剔除与图层
 关键词：着色器白名单、全局着色器参数、ShaderGlobals、数据纹理、合批、自动实例化、MultiMesh、容器选型、管线预热、抖动淡化、级别过渡、填充率、遮挡剔除、渲染图层、顶点格式、D3D12
 
 - ENG-PERF §0 结论 · L21 · 1.2k
   - ★ ENG-PERF §0.1 接入要点 · L38 · 466
-- ENG-PERF §1 绘制管线与合批 · L48 · 1.9k
+- ENG-PERF §1 绘制管线与合批 · L48 · 2.0k
   - ENG-PERF §1.1 容器选型 · L50 · 344
   - ENG-PERF §1.2 MultiMesh、网格 LOD 与级别过渡 · L57 · 389
   - ENG-PERF §1.3 调用口径 · L63 · 123
-  - ENG-PERF §1.4 着色器白名单 · L67 · 482
+  - ENG-PERF §1.4 着色器白名单 · L67 · 517
   - ENG-PERF §1.5 全局参数与数据纹理 · L76 · 570
 - ENG-PERF §2 着色器与编译 · L85 · 779
-- ENG-PERF §3 填充率与带宽 · L95 · 251
+- ENG-PERF §3 填充率与带宽 · L95 · 259
 - ENG-PERF §4 剔除 · L101 · 496
 - ENG-PERF §5 待验证（P0） · L107 · 166
 
