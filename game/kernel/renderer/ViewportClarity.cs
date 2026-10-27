@@ -6,6 +6,8 @@ namespace Campus.Kernel.Renderer;
 /// <summary>Shares native viewport clarity mapping and writes between production and isolated preparation.</summary>
 internal static class ViewportClarity
 {
+    internal const int MeshLodReferenceHeight = 1080;
+
     internal readonly record struct ClaritySettings(Viewport.Scaling3DModeEnum Mode, float Scale,
         Viewport.ScreenSpaceAAEnum AntiAliasing, float Sharpness);
 
@@ -26,5 +28,14 @@ internal static class ViewportClarity
         if (viewport.Scaling3DScale != settings.Scale) viewport.Scaling3DScale = settings.Scale;
         if (viewport.ScreenSpaceAA != settings.AntiAliasing) viewport.ScreenSpaceAA = settings.AntiAliasing;
         if (viewport.FsrSharpness != settings.Sharpness) viewport.FsrSharpness = settings.Sharpness;
+    }
+
+    // DECISION-319: keep native mesh LOD at the fixed reference height, independent of internal 3D scale.
+    internal static float MapMeshLodThreshold(int outputHeight) => outputHeight / (float)MeshLodReferenceHeight;
+
+    internal static void ApplyMeshLod(Viewport viewport, int outputHeight)
+    {
+        var threshold = MapMeshLodThreshold(outputHeight);
+        if (viewport.MeshLodThreshold != threshold) viewport.MeshLodThreshold = threshold;
     }
 }

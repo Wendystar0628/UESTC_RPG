@@ -251,5 +251,17 @@ public sealed class QualityTests
             throw new InvalidOperationException("Increasing player sharpness did not reach Godot's sharper endpoint.");
     }
 
+    [TestCase, TestCategory(TestReason.Regression)]
+    public void MeshLodUsesTheFixedVerticalReferenceAcrossOutputResizes()
+    {
+        var reference = ViewportClarity.MeshLodReferenceHeight;
+        foreach (var (height, expected) in new[] { (reference * 2, 2f), (reference, 1f),
+            (reference + reference / 3, 4f / 3), (reference, 1f) })
+        {
+            if (ViewportClarity.MapMeshLodThreshold(height) != expected)
+                throw new InvalidOperationException("Mesh LOD did not preserve the fixed vertical reference after an output resize.");
+        }
+    }
+
     private static QualityCatalog Catalog() => new(File.ReadAllText(RepositoryFixture.FilePath("game", "data", "quality-presets.json")));
 }

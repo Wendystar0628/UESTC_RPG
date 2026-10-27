@@ -145,6 +145,7 @@ public sealed partial class PipelineWarmup : Node, IPipelinePreparation
         {
             cancellationToken.ThrowIfCancellationRequested();
             AddChild(viewport);
+            ViewportClarity.ApplyMeshLod(viewport, viewport.Size.Y);
             // The existing preparation triangle is clockwise from -Z, so view that face without changing its material.
             viewport.AddChild(new Camera3D { Current = true, Position = new Vector3(.5f, .5f, -2), Rotation = new Vector3(0, Mathf.Pi, 0) });
             mesh = CreateMesh(combination);

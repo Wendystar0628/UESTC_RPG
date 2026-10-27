@@ -129,6 +129,9 @@ public partial class PostChain : Node, IQualityAware, IMapAware, IViewContentRea
 
     public override void _Process(double delta)
     {
+        // The finish pass publishes the actual output target separately from the scaled 3D buffers.
+        if (_box.Dimensions is { } dimensions)
+            ViewportClarity.ApplyMeshLod(GetViewport(), dimensions.TargetSizePx.Y);
         if (_colorScript is null || _world is null || _key is null || _weather is null || _medium is null
             || _textures is null || _rig is null) return;
         var dt = (float)Math.Clamp(delta, 0, 0.25);
