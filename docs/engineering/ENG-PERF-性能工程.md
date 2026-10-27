@@ -79,7 +79,7 @@ paths: ["game/data/pipeline-combinations.json", "game/style/shaders/globals.gdsh
 
 - **登记以代码为准**：名字见 `game/contracts/Materials/ShaderGlobals.cs`，类型与默认值见 `game/project.godot` 的 `[shader_globals]`，G5 比对；未登记着色器编译失败，新增先申请。
 - 写入方与读回的规则见 ENG-BUDGET-RULES §1 第 13 条。计算着色器读不到全局参数，Compositor 的 C# 每帧把需要的项写进 push constant。
-- 数据纹理只更新内容、不换 RID；全图纹理共用 `map_rect`，范围外取"无数据"；外围不读全图纹理，季节覆盖潜势写进顶点；切图时写入方在 `OnMapLoaded` 重建；释放权归内核全局纹理登记处。色号编解码只在契约 `PaletteEncoding` 里一份。
+- 数据纹理只更新内容、不换 RID；**纹理类全局参数只在创建或切图重建时设一次，内容变了只 `ImageTexture.Update`**：重设同一张纹理也会让所有声明它的材质重建绑定、全部实例重刷，走动中逐次重设会卡帧。全图纹理共用 `map_rect`，范围外取"无数据"；外围不读全图纹理，季节覆盖潜势写进顶点；切图时写入方在 `OnMapLoaded` 重建；释放权归内核全局纹理登记处。色号编解码只在契约 `PaletteEncoding` 里一份。
 - 数据纹理同样以代码登记为准；调色板行布局见 ART-COLORSCRIPT §1.1。
 
 ## 2 着色器与编译
