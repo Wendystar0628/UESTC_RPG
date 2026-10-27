@@ -29,6 +29,7 @@ function Invoke-PerfDiagnostic($Root, [string[]]$Scene, [string]$Tool, [IO.FileS
         $environment=New-UESTCTestEnvironment -Work $directory
         $environment['UESTC_BAKE_CACHE']=$null
         Update-UESTCGameBuild -Root $Root -Godot $godot -BuildLease $heldLease -Environment $environment
+        Invoke-PerfBake -Root $Root -Godot $godot -Directory $directory -Map $plan.map -Environment $environment
         $traceTool=if ($Tool -eq 'EventPipe') { Get-UESTCDotnetTrace -Root $Root } else { $null }
         $parser=if ($traceTool) { Build-PerfCpuParse $Root $directory $traceTool } else { $null }
         $request=New-CollectionRequest $item

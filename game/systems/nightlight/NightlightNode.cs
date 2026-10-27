@@ -3,7 +3,6 @@ using Campus.Contracts;
 using Campus.Contracts.Maps;
 using Campus.Contracts.Bake;
 using Campus.Contracts.Startup;
-using Campus.Kernel.Diagnostics;
 using Campus.Kernel.Instances;
 using Campus.Kernel.Lighting;
 using Campus.Kernel.Renderer;
@@ -235,17 +234,8 @@ public partial class NightlightNode : Node, IMapAware, IViewContentReadiness, IV
     {
         public bool ReleaseStep(double budgetMilliseconds)
         {
-            try
-            {
-                if (owner._glows is { IsDrained: false }) return false;
-                owner._reflections.Dispose(); owner.FreeTextures(); return true;
-            }
-            catch (Exception error)
-            {
-                try { if (owner._glows is { } glows) glows.RecordFailure(error); }
-                catch (Exception reporting) { throw RetainedFailure.Append(error, reporting); }
-                throw;
-            }
+            if (owner._glows is { IsDrained: false }) return false;
+            owner._reflections.Dispose(); owner.FreeTextures(); return true;
         }
     }
 }

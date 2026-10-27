@@ -189,6 +189,7 @@ public sealed class StreamMountQueue : IStreamMountQueue, IStreamMountFrame
         {
             if (owner.ReleaseStep(budgetMilliseconds)) { _retiring.RemoveAt(_retirementCursor); return; }
         }
+        // The queue retains both the owner and its original failure for StreamDirector's map drain.
         catch (Exception error) { RetirementFailed = true; RecordFailure(error); }
         _retirementCursor++;
     }

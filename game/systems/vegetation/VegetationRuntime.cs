@@ -206,16 +206,8 @@ public sealed partial class VegetationRuntime : Node, IMapAware, IViewContentRea
     {
         public bool ReleaseStep(double budgetMilliseconds)
         {
-            try
-            {
-                if (owner._tiles.Count != 0) return false;
-                owner.ReleaseDataTextures(); return true;
-            }
-            catch (Exception error)
-            {
-                owner.RecordFailure(error);
-                throw;
-            }
+            if (owner._tiles.Count != 0) return false;
+            owner.ReleaseDataTextures(); return true;
         }
     }
 

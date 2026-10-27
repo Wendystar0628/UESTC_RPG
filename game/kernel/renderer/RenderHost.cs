@@ -205,8 +205,7 @@ public partial class RenderHost : Node3D, IRenderHost, IRenderReadiness, IMapAwa
         public bool ReleaseStep(double budgetMilliseconds)
         {
             if (_released) return true;
-            try { return _released = Release(budgetMilliseconds); }
-            catch (Exception error) { host.RecordFailure(error); throw; }
+            return _released = Release(budgetMilliseconds);
         }
 
         private bool Release(double budgetMilliseconds)

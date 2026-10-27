@@ -3,13 +3,18 @@
 [CmdletBinding(DefaultParameterSetName='Collection')]
 param([Parameter(Mandatory,ParameterSetName='Collection')][ValidatePattern('^[A-Za-z0-9][A-Za-z0-9-]+$')][string]$Batch,
     [ValidateSet('fixed','route','travel')][string[]]$Suite=@('fixed','route','travel'), [string[]]$Scene=@(),
-    [switch]$PrepareBake, [IO.FileStream]$BuildLease=$null,
+    [IO.FileStream]$BuildLease=$null,
     [Parameter(Mandatory,ParameterSetName='Diagnostic')][ValidateSet('gpu-profile','EventPipe','Nsight')][string]$DiagnosticTool)
 $ErrorActionPreference='Stop'
 $root=(Resolve-Path (Join-Path $PSScriptRoot '..\..')).Path
 . (Join-Path $root 'scripts\lib\common.ps1')
 . (Join-Path $root 'scripts\lib\start-game.ps1')
 . (Join-Path $PSScriptRoot 'collection-plan.ps1')
+function Invoke-PerfBake($Root, $Godot, $Directory, $Map, $Environment) {
+    $bake=Invoke-UESTCProcess $Godot @('--headless','--path',(Join-Path $Root 'game'),'--','--bake=all',('--map=' + $Map)) `
+        $Root (Join-Path $Directory 'preparation-bake.log') -TimeoutSeconds 14400 -Environment $Environment
+    Assert-UESTCCleanGodotLog $bake
+}
 # Main remains free to commit; the caller supplies an existing detached worktree at the chosen commit.
 if (-not (Test-Path -LiteralPath (Join-Path $root '.git') -PathType Leaf)) {
     throw 'Run collection or diagnostics from a temporary Git worktree at a fixed commit.'
@@ -42,11 +47,7 @@ try {
     $environment=New-UESTCTestEnvironment -Work $directory
     $environment['UESTC_BAKE_CACHE']=$null
     Update-UESTCGameBuild -Root $root -Godot $godot -BuildLease $heldLease -Environment $environment
-    if ($PrepareBake) {
-        $bake=Invoke-UESTCProcess $godot @('--headless','--path',(Join-Path $root 'game'),'--','--bake=all',('--map=' + $plan.map)) `
-            $root (Join-Path $directory 'preparation-bake.log') -TimeoutSeconds 14400 -Environment $environment
-        Assert-UESTCCleanGodotLog $bake
-    }
+    Invoke-PerfBake -Root $root -Godot $godot -Directory $directory -Map $plan.map -Environment $environment
     foreach ($item in $selected) {
         $sceneDirectory=Join-Path $directory $item.scene.id
         $null=[IO.Directory]::CreateDirectory($sceneDirectory)

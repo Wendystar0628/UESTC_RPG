@@ -1,6 +1,5 @@
 using Campus.Contracts;
 using Campus.Contracts.Bake;
-using Campus.Kernel.Diagnostics;
 using Campus.Kernel.Frame;
 using Campus.Kernel.Lod;
 using Campus.Kernel.Renderer;
@@ -240,20 +239,11 @@ internal sealed class StreamResidency(StreamDirector host)
     {
         public bool ReleaseStep(double budgetMilliseconds)
         {
-            try
-            {
-                var start = FrameClock.MonotonicMilliseconds;
-                if (!residency.CanReleaseRetiredInstances) return false;
-                do { if (bundle.ReleaseOne()) return true; }
-                while (FrameClock.MonotonicMilliseconds - start < budgetMilliseconds);
-                return false;
-            }
-            catch (Exception error)
-            {
-                try { residency._host.RecordFailure(error); }
-                catch (Exception reporting) { throw RetainedFailure.Append(error, reporting); }
-                throw;
-            }
+            var start = FrameClock.MonotonicMilliseconds;
+            if (!residency.CanReleaseRetiredInstances) return false;
+            do { if (bundle.ReleaseOne()) return true; }
+            while (FrameClock.MonotonicMilliseconds - start < budgetMilliseconds);
+            return false;
         }
     }
 
@@ -309,27 +299,18 @@ internal sealed class StreamResidency(StreamDirector host)
         if (_groups.Count == 0 && _retiringBundles.Count == 0 && _host.Preparation.IsIdle && (_host.Interiors?.IsUnloaded ?? true))
             if (_materials is { IsEmpty: false } && _materialRetirement is null)
             {
-                _materialRetirement = new MaterialRetirement(_materials, _host.RecordFailure);
+                _materialRetirement = new MaterialRetirement(_materials);
                 _host.Mount.Retire(_materialRetirement);
             }
     }
-    private sealed class MaterialRetirement(StreamMaterials materials, Action<Exception> failed) : IStreamReleaseWork
+    private sealed class MaterialRetirement(StreamMaterials materials) : IStreamReleaseWork
     {
         public bool ReleaseStep(double budgetMilliseconds)
         {
-            try
-            {
-                var start = FrameClock.MonotonicMilliseconds;
-                do { if (materials.ReleaseOne()) return true; }
-                while (FrameClock.MonotonicMilliseconds - start < budgetMilliseconds);
-                return false;
-            }
-            catch (Exception error)
-            {
-                try { failed(error); }
-                catch (Exception reporting) { throw RetainedFailure.Append(error, reporting); }
-                throw;
-            }
+            var start = FrameClock.MonotonicMilliseconds;
+            do { if (materials.ReleaseOne()) return true; }
+            while (FrameClock.MonotonicMilliseconds - start < budgetMilliseconds);
+            return false;
         }
     }
     internal void RequireMaterialsDrained()

@@ -342,17 +342,16 @@ public sealed class StreamMountQueueTests
     public async Task FailedReleaseKeepsTheMapOwnedUntilExplicitDrainResumes()
     {
         using var fixture = new StreamFixture(); await fixture.Until(() => fixture.Director.ViewReady);
-        var original = new IOException("retirement failed"); var fault = true;
-        var owner = new MountWork(StreamMountKind.Auxiliary, fixture.Mount.Revision, _ => { },
-            release: _ => { if (fault) throw original; }, map: fixture.Context.Descriptor.Id);
+        var original = new IOException("retirement failed"); var fault = true; var releases = 0;
+        var owner = new ReleaseWork(_ => { if (fault) throw original; releases++; });
         fixture.Mount.Retire(owner);
         try { await fixture.Unload(); throw new InvalidOperationException("The failed release did not reach its lifetime owner."); }
         catch (Exception error) when (ReferenceEquals(error, original)) { }
-        Check(!fixture.Director.IsUnloaded && fixture.Mount.PendingRetirements == 1 && owner.Releases == 0);
+        Check(!fixture.Director.IsUnloaded && fixture.Mount.PendingRetirements == 1 && releases == 0);
         fault = false;
         try { await fixture.Director.DrainAsync(); throw new InvalidOperationException("Retry lost the original release failure."); }
         catch (Exception error) when (ReferenceEquals(error, original)) { }
-        Check(fixture.Director.IsUnloaded && fixture.Mount.PendingRetirements == 0 && owner.Releases == 1 && !fixture.Mount.RetirementFailed);
+        Check(fixture.Director.IsUnloaded && fixture.Mount.PendingRetirements == 0 && releases == 1 && !fixture.Mount.RetirementFailed);
     }
 
 }
