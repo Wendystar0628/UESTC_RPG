@@ -134,7 +134,7 @@ paths: ["game/**/*.cs", "game/kernel/bake/**", "game/testing/**", "game/gen/maps
 - 契约在 `game/contracts/`（`Campus.Contracts`，运行时边界契约 `Campus.Contracts.Runtime`）；签名、注释和 JSON 格式以源码为准，文档不抄签名。契约按领域归目录，不设杂物目录；`Runtime/Maps` 是地图运行时契约的唯一目录。
 - **帧顺序以契约 `FramePriority` 为准**：每个登记步的优先级值唯一，同值登记节点按节点 ID 序执行；步内不声明前后关系，需要先后的节点使用不同登记值，使用方直接引用登记项（DECISION-135）。
 - **`BuildContext`**：`CodeHash` 与 `WindowNumbering` 必须显式提供，无窗口地图和编号前置上下文提供空编号快照；`WithWorld` 只切换冻结世界并保留其余输入；`BuildingSet` 只接受 `BuildContext`。`CaptureContext` 必须携带同次保存唯一的 `WorldSaveMoment`，存档段不另取时刻。
-- 改契约，或加着色器全局参数、着色器文件、程序集引用、NuGet 包，向 Codex 主线申请（WF-BUILD §1、WF-BUILD §3）；改动与全部使用方、数据和文档同批迁移，不保留旧接口（WF-RULE §10，DECISION-209、DECISION-214）。
+- 改契约，或加着色器全局参数、着色器文件、程序集引用、NuGet 包，向 Codex 主线申请（WF-BUILD §1、WF-BUILD §3）；改动与全部使用方（含实现者与读取方）、数据和文档同批迁移，不保留旧接口（WF-RULE §10，DECISION-209、DECISION-214）。
 - **分批冻结**（DECISION-134）：某组契约的真实生产方与使用方在主线上接通、核心专项通过后，由主会话宣布冻结，之后只增不改；冻结的组记进施工状态。
 - **演进约束**（为 RPG 扩展留口，ENG-ROADMAP）：record 只加 init 属性，不动位置参数；接口加成员带默认实现，或另开新接口；不改已有签名或枚举序号；不让 `Build()` 读运行时状态；不为剧情改烘焙产物或烘焙碰撞，剧情带来的世界变化放在运行时层：显隐掩码、物体差分、运行时门体、导航覆盖。
 - 画面相关的契约（`ToonSpec`、调色板、着色器全局参数、界面令牌）由主会话确认字段够用、命名与美术文档一致。
