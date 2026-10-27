@@ -205,8 +205,20 @@ public sealed class BakeSurfaceTests
             pattern with { JointMeters = new(.008f, .012f) } })
         {
             var other = BakeSurfacePacker.Pack(source with { Material = new(source.Material.Spec with { SurfacePattern = changed }) }, Bounds(), Palette());
-            if (PackedSurfaceBatcher.Merge([on, other, off]).Count != 3)
-                throw new InvalidOperationException("Different pattern profiles were merged into one material class.");
+            var grouped = PackedSurfaceBatcher.Merge([on, other, off]);
+            if (grouped.Count != 2 || grouped[0].Material.Spec.SurfacePattern != pattern ||
+                !ReferenceEquals(grouped[1], other))
+                throw new InvalidOperationException("Pattern profiles were mixed or lost stable first-appearance order.");
+            BakeInputFixture.VerifySources([on, off], grouped[0], 12, 8);
+            var groupedKey = BakeRequestKeys.Tile(new("fixture"), "fixture.pattern", new(0, 0), LodLevel.L0);
+            var groupedTile = new TileBundle(groupedKey, new(0, 0), LodLevel.L0, Bounds(), grouped);
+            var groupedBytes = TileBundleCodec.Encode(BakePayloadClass.Tile, "fixture/pattern/grouped", groupedTile);
+            var groupedRestored = (TileBundle)TileBundleCodec.Decode(BakePayloadClass.Tile, "fixture/pattern/grouped", groupedKey, groupedBytes);
+            BakeInputFixture.VerifySources([on, off], groupedRestored.Surfaces[0], 12, 8);
+            BakeInputFixture.VerifySources([other], groupedRestored.Surfaces[1], 12, 8);
+            if (groupedRestored.Surfaces[0].Material.Spec.SurfacePattern != pattern ||
+                groupedRestored.Surfaces[1].Material.Spec.SurfacePattern != changed)
+                throw new InvalidOperationException("Cache decoding lost separated pattern profiles.");
         }
         var key = BakeRequestKeys.Tile(new("fixture"), "fixture.pattern", new(0, 0), LodLevel.L0);
         var bundle = new TileBundle(key, new(0, 0), LodLevel.L0, Bounds(), [merged]);

@@ -58,4 +58,13 @@ public sealed record ToonSpec(PaletteToken Lit, PaletteToken Shade)
             throw new ArgumentException("Surface pattern joints must be finite and satisfy 0 <= joint < period on each axis.", nameof(SurfacePattern));
     }
 }
+/// <summary>Shader, shade-band and line-table identity; vertex palette colours are excluded.</summary>
+public readonly record struct ToonMaterialClass(ToonKind Kind, ShadeSteps Steps, float Band, ToonNormal Normal,
+    LineClass Line, ToonFx Fx, PaletteToken? Backface, ChannelId? Emissive, float Translucency, float Wet,
+    SurfacePatternSpec? SurfacePattern)
+{
+    public static ToonMaterialClass Of(ToonSpec s) =>
+        new(s.Kind, s.Steps, s.Band, s.Normal, s.Line, s.Fx, s.Backface, s.Emissive, s.Translucency, s.Wet, s.SurfacePattern);
+}
+
 public readonly record struct ToonRef(ToonSpec Spec);

@@ -65,19 +65,27 @@ public sealed class PackedSurfaceBatchTests
         foreach (var uv2 in new[] { false, true })
             for (var customMask = 0; customMask < 8; customMask++)
             {
-                var sources = Enumerable.Range(0, 3).Select(index => Surface(index, uv2, customMask)).ToArray();
-                var merged = PackedSurfaceBatcher.Merge(sources).Single();
+                var sources = Enumerable.Range(0, 3).Select(index => Surface(index, uv2, customMask, accent: index == 2)).ToArray();
+                var other = Copy(Surface(9, uv2, customMask), material: new(sources[0].Material.Spec with { Wet = .3f }));
+                if (sources[0].Material == sources[2].Material ||
+                    ToonMaterialClass.Of(sources[0].Material.Spec) != ToonMaterialClass.Of(sources[2].Material.Spec))
+                    throw new InvalidOperationException("The fixture must use different palette pairs from the same material class.");
+                var grouped = PackedSurfaceBatcher.Merge([sources[0], other, sources[1], sources[2]]);
+                if (grouped.Count != 2 || !ReferenceEquals(grouped[1], other) || grouped[0].Material != sources[0].Material)
+                    throw new InvalidOperationException("Opaque keys or their first-source material lost stable first-appearance order.");
+                var merged = grouped[0];
                 VerifySources(sources, merged, uv2 ? 12 : 8, uv2 ? 8 : 4);
                 var key = BakeRequestKeys.Tile(new("fixture"), "batch", new(-1, 2), LodLevel.L0);
-                var before = new TileBundle(key, new(-1, 2), LodLevel.L0, Bounds(), sources);
-                var after = new TileBundle(key, new(-1, 2), LodLevel.L0, Bounds(), [merged]);
-                if (after.Stats.Surfaces != 1 || before.Stats.Surfaces != 3 || before.Stats.Vertices != after.Stats.Vertices ||
+                var before = new TileBundle(key, new(-1, 2), LodLevel.L0, Bounds(), [sources[0], other, sources[1], sources[2]]);
+                var after = new TileBundle(key, new(-1, 2), LodLevel.L0, Bounds(), grouped);
+                if (after.Stats.Surfaces != 2 || before.Stats.Surfaces != 4 || before.Stats.Vertices != after.Stats.Vertices ||
                     before.Stats.Triangles != after.Stats.Triangles || before.Stats.Bytes != after.Stats.Bytes)
                     throw new InvalidOperationException("Batching changed vertex/triangle/raw-byte statistics or kept the old surface count.");
                 var identity = BakeOptions.Abi + "/fixture/batch";
                 var encoded = TileBundleCodec.Encode(BakePayloadClass.Tile, identity, after);
                 var restored = (TileBundle)TileBundleCodec.Decode(BakePayloadClass.Tile, identity, key, encoded);
-                VerifySources(sources, restored.Surfaces.Single(), uv2 ? 12 : 8, uv2 ? 8 : 4);
+                VerifySources(sources, restored.Surfaces[0], uv2 ? 12 : 8, uv2 ? 8 : 4);
+                VerifySources([other], restored.Surfaces[1], uv2 ? 12 : 8, uv2 ? 8 : 4);
                 if (!encoded.SequenceEqual(TileBundleCodec.Encode(BakePayloadClass.Tile, identity, restored)))
                     throw new InvalidOperationException("Batched cache round-trip bytes changed.");
             }
@@ -85,7 +93,7 @@ public sealed class PackedSurfaceBatchTests
 
     [TestCase]
     [TestCategory(TestReason.Contract)]
-    public void EveryMetadataDifferenceFencesBatchesWithoutReorderingOtherSurfaces()
+    public void EveryMetadataDifferenceSeparatesStableGroups()
     {
         var original = Surface(0, true, 0);
         var differences = new[]
@@ -99,8 +107,9 @@ public sealed class PackedSurfaceBatchTests
         foreach (var different in differences)
         {
             var merged = PackedSurfaceBatcher.Merge([original, different, original]);
-            if (merged.Count != 3 || !ReferenceEquals(merged[0], original) || !ReferenceEquals(merged[1], different) || !ReferenceEquals(merged[2], original))
-                throw new InvalidOperationException("A metadata difference was discarded or nonadjacent surfaces were reordered/merged.");
+            if (merged.Count != 2 || !ReferenceEquals(merged[1], different))
+                throw new InvalidOperationException("A metadata difference was discarded or stable key order changed.");
+            VerifySources([original, original], merged[0], 12, 8);
         }
     }
 
@@ -111,7 +120,8 @@ public sealed class PackedSurfaceBatchTests
         var original = Surface(0, true, 0);
         var unsupported = new[]
         {
-            Copy(original, shader: ShaderId.Water), Copy(original, material: new(original.Material.Spec with { Kind = ToonKind.GlassNear })),
+            Copy(original, shader: ShaderId.Water), Copy(original, material: new(original.Material.Spec with { Kind = ToonKind.Glass })),
+            Copy(original, material: new(original.Material.Spec with { Kind = ToonKind.GlassNear })),
             Copy(original, primitive: BakedPrimitive.TriangleStrip), Copy(original, skin: new byte[] { 1 }),
             Copy(original, lods: [new BakedMeshLod(1f, original.IndexCount, original.IndexData)]),
             Copy(original, format: original.Format | (1UL << 60)),
@@ -124,7 +134,18 @@ public sealed class PackedSurfaceBatchTests
             var retained = PackedSurfaceBatcher.Merge([surface, surface]);
             if (retained.Count != 2 || !ReferenceEquals(retained[0], surface) || !ReferenceEquals(retained[1], surface))
                 throw new InvalidOperationException("An unsupported surface was reinterpreted, merged or replaced.");
+            var fenced = PackedSurfaceBatcher.Merge([original, original, surface, original, original]);
+            if (fenced.Count != 3 || !ReferenceEquals(fenced[1], surface))
+                throw new InvalidOperationException("An unsupported surface failed to separate opaque segments.");
+            VerifySources([original, original], fenced[0], 12, 8);
+            VerifySources([original, original], fenced[2], 12, 8);
         }
+        var glass = Copy(original, material: new(original.Material.Spec with { Kind = ToonKind.Glass }));
+        var tintedGlass = Copy(original, material: new(glass.Material.Spec with { Lit = new("fixture.accent"), Shade = new("fixture.accent.shade") }));
+        var transparentOrder = PackedSurfaceBatcher.Merge([original, glass, tintedGlass, glass, original]);
+        BakedSurface[] expectedOrder = [original, glass, tintedGlass, glass, original];
+        if (transparentOrder.Count != expectedOrder.Length || transparentOrder.Where((surface, index) => !ReferenceEquals(surface, expectedOrder[index])).Any())
+            throw new InvalidOperationException("Transparent surfaces or their surrounding opaque segments were reordered.");
         var custom = Surface(0, true, 1);
         var differentCustomEncoding = Copy(custom, format: custom.Format ^ (1UL << (int)Format.FormatCustom0Shift));
         if (PackedSurfaceBatcher.Merge([differentCustomEncoding, differentCustomEncoding]).Count != 2)
@@ -146,8 +167,15 @@ public sealed class PackedSurfaceBatchTests
         if (!restored.Surfaces.Single().NoShadow)
             throw new InvalidOperationException("The batched cache round trip lost native shadow exclusion.");
         var mixed = PackedSurfaceBatcher.Merge([source, BakeSurfacePacker.Pack(ShadowGeometry(), Bounds(), Palette())]);
-        if (mixed.Count != 1 || mixed.Single().NoShadow)
-            throw new InvalidOperationException("Shadow exclusion split a visible batch or disabled casting for its mixed source surfaces.");
+        if (mixed.Count != 2 || !mixed[0].NoShadow || mixed[1].NoShadow)
+            throw new InvalidOperationException("Different native shadow modes were merged or changed.");
+        var mixedTile = new TileBundle(key, default, LodLevel.L1, Bounds(), mixed);
+        var mixedRestored = (TileBundle)TileBundleCodec.Decode(BakePayloadClass.Tile, "fixture/shadow/mixed", key,
+            TileBundleCodec.Encode(BakePayloadClass.Tile, "fixture/shadow/mixed", mixedTile));
+        if (mixedRestored.Surfaces.Count != 2 || !mixedRestored.Surfaces[0].NoShadow || mixedRestored.Surfaces[1].NoShadow ||
+            !BakePipelineCatalog.Combinations(mixedRestored).Select(pipeline => pipeline.Shadows).Order()
+                .SequenceEqual(new[] { PipelineShadowMode.Off, PipelineShadowMode.On }.Order()))
+            throw new InvalidOperationException("Cache or pipeline preparation lost the separate native shadow modes.");
     }
 
     [TestCase]
@@ -169,11 +197,12 @@ public sealed class PackedSurfaceBatchTests
 
     private static GeometryBundle ShadowGeometry() => new(new(new(new("fixture.lit"), new("fixture.shade"))),
         [0, 0, 0, 1, 0, 0, 0, 0, 1], [0, 1, 0, 0, 1, 0, 0, 1, 0], [0, 2, 1]);
-    private static BakedSurface Surface(int id, bool uv2, int customMask)
+    private static BakedSurface Surface(int id, bool uv2, int customMask, bool accent = false)
     {
         float[] Custom(int channel) => Enumerable.Range(0, 12).Select(index => index == 0 ?
             BitConverter.Int32BitsToSingle(unchecked((int)0x80000000)) : id * 100 + channel * 20 + index + .125f).ToArray();
-        var geometry = new GeometryBundle(new(new(new("fixture.lit"), new("fixture.shade")) { Kind = uv2 ? ToonKind.Glass : ToonKind.Static }),
+        var geometry = new GeometryBundle(new(new(new(accent ? "fixture.accent" : "fixture.lit"),
+            new(accent ? "fixture.accent.shade" : "fixture.shade"))),
             [-20 + id, 2, 11, -17 + id, 3, 11, -18 + id, 6, 11], [0, 0, 1, 0, 0, 1, 0, 0, 1], [2, 0, 1],
             Ao: [.1f, .5f, .9f], Uv: [0, 0, 1, 0, 0, 1], Uv2: uv2 ? [65535, 961, 65536, 1025, 16777216, -1] : null)
         {

@@ -28,7 +28,7 @@ public sealed class ToonLibrary : IToonMaterialProvider, IDisposable
     private readonly PaletteCatalog _catalog;
     private readonly IShaderMaterialSource _source;
     private readonly IRequiredResources _resources;
-    private readonly Dictionary<MaterialClass, ToonEntry> _byClass = [];
+    private readonly Dictionary<ToonMaterialClass, ToonEntry> _byClass = [];
     private SceneTextTextures? _sceneTextTextures;
     private readonly byte[] _matBytes = new byte[MatTable.ByteCount];
     private readonly Image _matImage;
@@ -122,7 +122,7 @@ public sealed class ToonLibrary : IToonMaterialProvider, IDisposable
         ArgumentNullException.ThrowIfNull(spec);
         // 图样的形状与层号在命中缓存之前校验：没登记的层不会借用已有的无图样材质。
         SurfacePatternLayers.Validate(spec);
-        var key = MaterialClass.Of(spec);
+        var key = ToonMaterialClass.Of(spec);
         lock (_gate)
         {
             ObjectDisposedException.ThrowIf(_disposed, this);
@@ -207,12 +207,4 @@ public sealed class ToonLibrary : IToonMaterialProvider, IDisposable
 
     private sealed record ToonEntry(byte Id, Material Material);
 
-    /// <summary>材质类：ToonSpec 里决定着色器、明暗档和线表的字段；颜色字段不在内。</summary>
-    private readonly record struct MaterialClass(ToonKind Kind, ShadeSteps Steps, float Band, ToonNormal Normal,
-        LineClass Line, ToonFx Fx, PaletteToken? Backface, ChannelId? Emissive, float Translucency, float Wet,
-        SurfacePatternSpec? SurfacePattern)
-    {
-        public static MaterialClass Of(ToonSpec s) =>
-            new(s.Kind, s.Steps, s.Band, s.Normal, s.Line, s.Fx, s.Backface, s.Emissive, s.Translucency, s.Wet, s.SurfacePattern);
-    }
 }

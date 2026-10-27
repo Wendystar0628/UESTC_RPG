@@ -8,10 +8,11 @@ using CustomFormat = Godot.RenderingServer.ArrayCustomFormat;
 
 namespace Campus.Kernel.Bake;
 
-/// <summary>Concatenates adjacent opaque surfaces with matching layouts without decoding or changing any vertex bytes.</summary>
+/// <summary>Stably groups compatible opaque surfaces without decoding or changing any vertex bytes.</summary>
 /// <remarks>
 /// Only the pinned BakeSurfacePacker layouts are accepted. An unsupported surface is retained by reference and
-/// ends the current batch. Global surface order and every source's vertex/triangle order remain unchanged.
+/// ends the current segment. Keys retain first-appearance order; sources within each key retain their
+/// vertex/triangle order. Transparent surfaces retain their original order and references.
 /// This operates within one TileBundle's ordinary surfaces, never on MultiMesh prototypes or instance streams.
 /// </remarks>
 internal static class PackedSurfaceBatcher
@@ -23,34 +24,47 @@ internal static class PackedSurfaceBatcher
     public static IReadOnlyList<BakedSurface> Merge(IReadOnlyList<BakedSurface> surfaces)
     {
         var output = new List<BakedSurface>(surfaces.Count);
-        var batch = new List<BakedSurface>();
-        var vertices = 0;
-        var layout = default(Layout);
+        var groups = new List<List<BakedSurface>>();
         foreach (var surface in surfaces)
         {
-            if (!TryLayout(surface, out var nextLayout))
+            if (!TryLayout(surface, out _))
             {
                 Flush(); output.Add(surface); continue;
             }
-            if (batch.Count != 0 && (!SameKey(batch[0], surface) || vertices + surface.VertexCount > GeometryVertexLimits.Maximum)) Flush();
-            if (batch.Count == 0) layout = nextLayout;
-            batch.Add(surface); vertices += surface.VertexCount;
+            // Explicit first-appearance groups keep output independent of hashing or dictionary enumeration.
+            var group = groups.Find(candidate => SameKey(candidate[0], surface));
+            if (group is null) { group = []; groups.Add(group); }
+            group.Add(surface);
         }
         Flush();
         return output.AsReadOnly();
 
         void Flush()
         {
-            if (batch.Count == 0) return;
-            output.Add(batch.Count == 1 ? batch[0] : Concatenate(batch, layout, vertices));
-            batch.Clear(); vertices = 0;
+            foreach (var group in groups)
+            {
+                TryLayout(group[0], out var layout);
+                var batch = new List<BakedSurface>();
+                var vertices = 0;
+                foreach (var source in group)
+                {
+                    if (batch.Count != 0 && vertices + source.VertexCount > GeometryVertexLimits.Maximum)
+                    {
+                        output.Add(batch.Count == 1 ? batch[0] : Concatenate(batch, layout, vertices));
+                        batch.Clear(); vertices = 0;
+                    }
+                    batch.Add(source); vertices += source.VertexCount;
+                }
+                output.Add(batch.Count == 1 ? batch[0] : Concatenate(batch, layout, vertices));
+            }
+            groups.Clear();
         }
     }
 
     private static bool TryLayout(BakedSurface surface, out Layout layout)
     {
         layout = default;
-        if (surface.Shader is not null || surface.Material.Spec.Kind is not (ToonKind.Static or ToonKind.Glass) ||
+        if (surface.Shader is not null || surface.Material.Spec.Kind != ToonKind.Static ||
             surface.Primitive != BakedPrimitive.Triangles || surface.VertexCount <= 0 || surface.IndexCount <= 0 ||
             surface.SkinData.Length != 0 || surface.Lods.Count != 0) return false;
         var format = (Format)surface.Format;
@@ -78,7 +92,8 @@ internal static class PackedSurfaceBatcher
     }
 
     private static bool SameKey(BakedSurface a, BakedSurface b) =>
-        a.Material == b.Material && a.Format == b.Format && a.Primitive == b.Primitive && a.Shader == b.Shader &&
+        ToonMaterialClass.Of(a.Material.Spec) == ToonMaterialClass.Of(b.Material.Spec) &&
+        a.Format == b.Format && a.Primitive == b.Primitive && a.Shader == b.Shader && a.NoShadow == b.NoShadow &&
         a.Variant == b.Variant && a.Reflect == b.Reflect && a.IgnoreOcclusionCulling == b.IgnoreOcclusionCulling &&
         BitsEqual(a.At, b.At) && BitsEqual(a.Bounds, b.Bounds) && BitsEqual(a.UvScale, b.UvScale) &&
         BitsEqual(a.Material.Spec.Band, b.Material.Spec.Band) && BitsEqual(a.Material.Spec.Wet, b.Material.Spec.Wet) &&
@@ -112,6 +127,6 @@ internal static class PackedSurfaceBatcher
         var first = sources[0];
         return new(first.Material, first.Format, first.Primitive, vertexCount, indexCount, vertices, attributes, indices,
             first.Bounds, at: first.At, uvScale: first.UvScale, variant: first.Variant, ignoreOcclusionCulling: first.IgnoreOcclusionCulling)
-        { Shader = first.Shader, Reflect = first.Reflect, NoShadow = sources.All(source => source.NoShadow) };
+        { Shader = first.Shader, Reflect = first.Reflect, NoShadow = first.NoShadow };
     }
 }
